@@ -494,6 +494,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../verkraftet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Was das DMS verkraftet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lasttest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lasttest selbst durchführen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../verschluesselung/" class="md-nav__link">
         
   
@@ -2529,7 +2585,7 @@
 </tbody>
 </table>
 <h2 id="last">Viele gleichzeitige Anfragen<a class="headerlink" href="#last" title="Permanent link">&para;</a></h2>
-<p>Ein Haushalt hat 2–6 Benutzer, ein Kleinbetrieb 10–20. Ein Benutzer löst selbst schon mehrere Anfragen gleichzeitig aus (die Ablage öffnen sind 6–10), dazu kommen WebDAV-Programme, Pakete und Skripte. <strong>100 gleichzeitige Anfragen</strong> – etwa 10–15 Personen, die im selben Moment klicken – sind die realistische Obergrenze; dafür ist das DMS ausgelegt und wird regelmäßig gemessen (Lasttest, #544). Mehr kommt im Betrieb kaum vor, etwa bei einem falsch eingestellten WebDAV-Programm.</p>
+<p>Ein Haushalt hat 2–6 Benutzer, ein Kleinbetrieb 10–20. Ein Benutzer löst selbst schon mehrere Anfragen gleichzeitig aus (die Ablage öffnen sind 6–10), dazu kommen WebDAV-Programme, Pakete und Skripte. <strong>100 gleichzeitige Anfragen</strong> – etwa 10–15 Personen, die im selben Moment klicken – sind die realistische Obergrenze; dafür ist das DMS ausgelegt und wird regelmäßig gemessen (Lasttest in drei Stufen, #544, #563). Was welches Gerät verkraftet, steht unter <a href="../verkraftet/">Was das DMS verkraftet</a>; selbst messen kannst du mit dem <a href="../lasttest/">Lasttest</a>. Mehr kommt im Betrieb kaum vor, etwa bei einem falsch eingestellten WebDAV-Programm.</p>
 <ul>
 <li><strong>Überlastschutz:</strong> Laufen schon <strong>250</strong> Anfragen gleichzeitig (<code>DMS_MAX_ANFRAGEN</code>), bekommt jede weitere sofort die Antwort „Das DMS ist gerade sehr beschäftigt. Bitte versuche es in ein paar Sekunden noch einmal.“ (HTTP 503 mit <code>Retry-After: 5</code>) – statt in einer immer längeren Warteschlange zu hängen, bis Browser und Programme aufgeben. So bleiben Antwortzeiten und Arbeitsspeicher begrenzt, und das DMS erholt sich von selbst, sobald die Last nachlässt. Die Gesundheitsprüfung des Containers wird nie abgewiesen. Greift der Schutz, steht höchstens einmal je Minute „Überlast: …“ im <a href="../fehlersuche/#protokoll">Protokoll</a>.</li>
 <li><strong>Verbindungen zur Datenbank:</strong> höchstens <strong>10</strong> gleichzeitig. Im Lasttest mit 100 gleichzeitigen Anfragen lagen 5, 10 und 20 Verbindungen gleichauf: Der Engpass ist die Rechenzeit, die sich Server und PostgreSQL teilen, nicht die Zahl der Verbindungen. Jede Verbindung kostet PostgreSQL etwa 5–10 MB Arbeitsspeicher. Erst mit deutlich mehr Kernen (oder PostgreSQL auf einem eigenen Rechner) können mehr helfen: <code>DMS_DB_VERBINDUNGEN</code> (2–100; PostgreSQL erlaubt in der Vorgabe 100 Verbindungen insgesamt). Wie lange Abfragen auf eine freie Verbindung warten, zeigt <strong>Werkbank → Datenbank-Anbindung</strong> unter <em>Auslastung des Servers</em>.</li>
