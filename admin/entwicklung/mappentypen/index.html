@@ -887,6 +887,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#erkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#archivmodus" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2443,6 +2454,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#erkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#archivmodus" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2523,7 +2545,7 @@
 <p><img alt="Mappentyp Vertrag in der Werkbank" src="../bilder/werkbank-mappentyp.png" /></p>
 <p>Wie Benutzer mit den Mappen arbeiten, beschreibt das <a href="https://motom001.github.io/dms/benutzer/mappen/">Benutzerhandbuch</a>.</p>
 <h2 id="aufbau-des-editors">Aufbau des Editors<a class="headerlink" href="#aufbau-des-editors" title="Permanent link">&para;</a></h2>
-<p>Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: <strong>Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Berechtigungen → Testlauf</strong>.</p>
+<p>Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: <strong>Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Erkennung → Berechtigungen → Testlauf</strong>.</p>
 <ul>
 <li>Jeder Bereich lässt sich mit einem Klick auf seine Überschrift <strong>ein- und ausklappen</strong>. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 mit Erinnerung“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.</li>
 <li>Ein <strong>neuer</strong> Mappentyp ist ganz aufgeklappt, ein <strong>bestehender</strong> startet eingeklappt. Was du auf- oder zuklappst, merkt sich dein Gerät je Mappentyp.</li>
@@ -2597,7 +2619,12 @@
 <h3 id="fur-die-erkennung-nutzen">Für die Erkennung nutzen<a class="headerlink" href="#fur-die-erkennung-nutzen" title="Permanent link">&para;</a></h3>
 <p>Mit dem Haken <strong>Für die Erkennung nutzen</strong> an einem Feld sagst du der Erkennung im DMS, dass sich der Wert zum Wiedererkennen eignet bzw. dass sie das Feld füllen darf. Die Erkennung läuft im DMS selbst, ohne KI und ohne Internet:</p>
 <ul>
-<li><strong>Vorschläge beim Zuordnen von Post:</strong> Steht der Wert eines markierten Felds – z. B. Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail-Adresse, Internetseite (auch als Domain einer E-Mail-Adresse), Telefon oder Name – im Text eines Briefs, schlägt das DMS diese Mappe als <strong>Absender</strong> vor, mit Begründung („gefunden: Kundennummer 100-4711“). Ein Typ mit markiertem Namen oder Kontaktangaben gilt als möglicher Absender (Organisation, Niederlassung, Person); ein Typ, der nur Nummern markiert (z. B. Vertragsnummer), als mögliche <strong>Zielmappe</strong>. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, <code>100-4711</code> findet also auch <code>100 4711</code>. Gerechnet wird einmal, sobald der Volltext einer Post fertig ist – egal ob von der eingebauten Texterkennung oder einem Paket.</li>
+<li>
+<p><strong>Vorschläge beim Zuordnen von Post:</strong> Steht der Wert eines markierten Felds – z. B. Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail-Adresse, Internetseite (auch als Domain einer E-Mail-Adresse), Telefon oder Name – im Text eines Briefs, schlägt das DMS diese Mappe als <strong>Absender</strong> vor, mit Begründung („gefunden: Kundennummer 100-4711“). Ein Typ mit markiertem Namen oder Kontaktangaben gilt als möglicher Absender (Organisation, Niederlassung, Person); ein Typ, der nur Nummern markiert (z. B. Vertragsnummer), als mögliche <strong>Zielmappe</strong>. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, <code>100-4711</code> findet also auch <code>100 4711</code>. Gerechnet wird einmal, sobald der Volltext einer Post fertig ist – egal ob von der eingebauten Texterkennung oder einem Paket.</p>
+</li>
+<li>
+<p><strong>Aus Dokument ausfüllen:</strong> In einer Mappe füllt die Erkennung die markierten Felder aus einem Foto oder Dokument als Vorschlag (siehe <a href="#erkennung">Erkennung</a>). Hat ein Mappentyp gar keine markierten Felder, nimmt sie alle, deren Art sie aus der Bezeichnung erkennt. Verweisfelder schlagen eine vorhandene Mappe des Zieltyps vor, die im Text steht – an ihren markierten Feldern, sonst am Titel.</p>
+</li>
 </ul>
 <p>Geeignet sind Text, Langtext, Zahl, Betrag, Datum, Auswahlliste und Verweis – Passwortfelder nie. Ist der Haken an, wählst du optional <strong>Was steht im Feld?</strong> (Name oder Firma, Nummer, IBAN, E-Mail-Adresse, Telefon, Straße, PLZ, Ort …). Ohne Angabe schließt das DMS es aus Feldart, Kennung und Bezeichnung („Kundennummer“ → Nummer, „E-Mail“ → E-Mail-Adresse); was es erkannt hat, steht in der Auswahl hinter <em>automatisch</em>. Der <strong>Erkennungshinweis</strong> ist ein freier Text, z. B. „Kundennummer oben rechts, Muster 100-####“ – ein Muster nach dem Wort <em>Muster</em> (<code>#</code> = Ziffer, <code>A</code> = Großbuchstabe) sucht die Erkennung gezielt.</p>
 <p>Die Pakete der Registry (z. B. <em>Basis</em>) markieren ihre Felder selbst. Bei einem Update übernimmt das DMS die Markierung nur an Feldern, an denen du noch nichts eingestellt hast; die Vorschau nennt sie unter „für die Erkennung“.</p>
@@ -2819,6 +2846,13 @@
 <p class="admonition-title">Bewusst einfach</p>
 <p>Der Verbleib gilt für die ganze Mappe, nicht für jeden einzelnen Scan. <em>Liegt hier</em> zeigt nur, was direkt an diesem Ort liegt; was in Orten darunter liegt, siehst du über <em>Enthält</em> Ebene für Ebene. Wann man das Papier überhaupt aufheben sollte, steht im Benutzerhandbuch unter <a href="https://motom001.github.io/dms/benutzer/aktuell/original/">Original behalten oder vernichten?</a>.</p>
 </div>
+<h2 id="erkennung">Erkennung<a class="headerlink" href="#erkennung" title="Permanent link">&para;</a></h2>
+<p>Unter <strong>Erkennung</strong> (nicht bei Systemmappentypen) stellst du den Knopf <strong>Aus Dokument ausfüllen</strong> ein, den Benutzer oben in jeder Mappe dieses Typs sehen:</p>
+<ul>
+<li><strong>Knopf zeigen</strong> (Standard: an) – abwählen blendet ihn aus, z. B. bei Mappentypen ohne Papier.</li>
+<li><strong>Beschriftung</strong> – z. B. „Visitenkarte scannen“ beim Mappentyp <em>Person</em> oder „Kassenbon fotografieren“; leer heißt er „Aus Dokument ausfüllen“.</li>
+</ul>
+<p>Darunter steht, welche Felder für die Erkennung markiert sind; markieren lässt sich jedes Feld unter <a href="#fur-die-erkennung-nutzen">Für die Erkennung nutzen</a>. Die Erkennung ist eingebaut und arbeitet ohne KI: Muster für E-Mail, Telefon, Internetseite, IBAN, Datum, Betrag, PLZ/Ort, Briefkopf und Visitenkarte sowie vCards (<code>.vcf</code>); Fotos und PDFs liest die <a href="../texterkennung/">Texterkennung</a> sofort (höchstens 5 Seiten, mit den Sprachen ihrer Einstellungen). Jeder Wert wird gegen die Feldart geprüft, bevor er erscheint; gespeichert wird erst mit <em>Mappe speichern</em>. QR-Codes (z. B. vCard-QR auf Visitenkarten) liest sie noch nicht. Eine Erkennung über Pakete, etwa mit KI auf dem eigenen Rechner, kommt später.</p>
 <h2 id="archivmodus">Archivmodus<a class="headerlink" href="#archivmodus" title="Permanent link">&para;</a></h2>
 <p>Zwischen Registern und Berechtigungen schaltest du den <strong>Archivmodus</strong> ein: Mappen und Dokumente dieses Mappentyps lassen sich dann bis zum Ende einer Aufbewahrungsfrist nicht löschen, und Dokumente ändern sich nur noch als neue Version. Frist, Stichtag und was währenddessen gilt, stehen unter <a href="../archiv/">Archivmodus und Aufbewahrung</a>.</p>
 <h2 id="stempel-beim-weitergeben">Stempel beim Weitergeben<a class="headerlink" href="#stempel-beim-weitergeben" title="Permanent link">&para;</a></h2>

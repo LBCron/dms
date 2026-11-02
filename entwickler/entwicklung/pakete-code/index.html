@@ -655,6 +655,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#erkennung-feldbeschreibung-und-antwort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung: Feldbeschreibung und Antwort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nutzliche-endpunkte-der-api-v1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -976,6 +987,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#erkennung-feldbeschreibung-und-antwort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung: Feldbeschreibung und Antwort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#nutzliche-endpunkte-der-api-v1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1246,6 +1268,12 @@
 <li><strong>Werkbank → Pakete → <em>Paket</em></strong>: Der Abschnitt <strong>Paket-Läufer</strong> zeigt, ob der Läufer läuft, die letzten Aufrufe mit Dauer und Speicher, offene und aufgegebene Ereignisse und das Protokoll des Pakets.</li>
 <li>Ereignis auslösen (z. B. eine Datei hochladen) oder eine Aktion klicken.</li>
 </ol>
+<h2 id="erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort<a class="headerlink" href="#erkennung-feldbeschreibung-und-antwort" title="Permanent link">&para;</a></h2>
+<p>Die eingebaute Erkennung (DMS #391) arbeitet gegen eine <strong>Feldbeschreibung des Mappentyps</strong>: <code>GET /api/v1/typen/{id}/erkennungsschema</code> liefert sie als JSON Schema 2020-12. Je Feld gibt es ein Objekt mit <code>wert</code> (Schema nach Feldart: Datum <code>JJJJ-MM-TT</code>, Betrag <code>{ betrag, waehrung }</code>, Auswahl nur aus der Liste, Verweis als Mappen-Id), <code>sicherheit</code> (<code>hoch</code>, <code>mittel</code>, <code>niedrig</code>) und <code>fundstelle</code> (Textstelle). Dazu <code>title</code> (Bezeichnung), <code>description</code> (Hilfetext und Erkennungshinweis), <code>x-dms-feldtyp</code>, <code>x-dms-erkennung</code> (Art, z. B. <code>email</code>) und <code>x-dms-markiert</code>. Passwortfelder und feste Felder stehen nie darin.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"wert"</span><span class="p">:</span><span class="w"> </span><span class="s2">"anna.beispiel@elektro-muster.de"</span><span class="p">,</span><span class="w"> </span><span class="nt">"sicherheit"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hoch"</span><span class="p">,</span><span class="w"> </span><span class="nt">"fundstelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"anna.beispiel@elektro-muster.de"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"plz"</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="w"> </span><span class="nt">"wert"</span><span class="p">:</span><span class="w"> </span><span class="s2">"01234"</span><span class="p">,</span><span class="w"> </span><span class="nt">"sicherheit"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mittel"</span><span class="p">,</span><span class="w"> </span><span class="nt">"fundstelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Elektro Muster GmbH · Musterweg 12 · 01234 Musterstadt"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>So sieht die Antwort von <code>POST /api/v1/typen/{id}/vorschlaege</code> aus (unter <code>vorschlaege</code>), und so soll später auch eine Engine aus einem Paket antworten (DMS #511, nach dem Paket-Läufer): Das DMS prüft jede Antwort gegen die Feldtypen und verwirft unbekannte Felder, falsche Typen und Werte außerhalb der Auswahl. Schon heute nutzbar: Ein Paket mit dem Recht, Dokumente zu lesen, kann einen Volltext schreiben – die Erkennung startet danach von selbst (internes Ereignis „Volltext fertig“).</p>
 <h2 id="nutzliche-endpunkte-der-api-v1">Nützliche Endpunkte der API v1<a class="headerlink" href="#nutzliche-endpunkte-der-api-v1" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi).</li>
