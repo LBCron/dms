@@ -133,4 +133,4 @@ Mehrere Pakete testest du auch als eigenen Katalog: `python3 werkzeuge/katalog.p
 
 ## Ausblick
 
-- **Pakete mit Code** gibt es seit 0.88.0: WebAssembly-Module, die auf Ereignisse reagieren und mit bestätigten Rechten über die API arbeiten – siehe [Pakete mit Code](pakete-code.md).
+- **Pakete mit Code** gibt es seit 0.88.0: WebAssembly-Module, die auf Ereignisse reagieren und mit bestätigten Rechten über die API arbeiten – siehe [Pakete mit Code](pakete-code.md), mit der Übersicht der [Schnittstellen des Kerns](pakete-code.md#schnittstellen) (Vektoren, Antworten, Erkennung, Texterkennung, [Dateien umwandeln](pakete-code.md#dateien-umwandeln)).

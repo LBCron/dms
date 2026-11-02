@@ -103,6 +103,8 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
 
       <HerkunftBlock s={s} />
 
+      <UmwandlungBlock s={s} />
+
       <ErkannteSprachen s={s} />
 
       <section className="blatt" id="warteschlange">
@@ -169,6 +171,36 @@ function HerkunftBlock({ s }: { s: OcrStatus }) {
       <dl className="eigenschaften">
         {zeilen.map(([k, n]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{zahl(n)}</dd></div>)}
       </dl>
+    </section>
+  );
+}
+
+/**
+ * Andere Dateitypen (#577): je Typ, wie viele Dokumente es gibt und ob ein Paket sie umwandelt – sonst welches Paket
+ * aus dem Katalog es könnte, mit dem Weg zur Installation.
+ */
+function UmwandlungBlock({ s }: { s: OcrStatus }) {
+  const u = s.umwandlung;
+  if (!u) return null;
+  return (
+    <section className="blatt" id="umwandlung">
+      <h2 className="h3">{tx('volltext.werkbank.umwandlung.titel')} <Hilfe ort="werkbank.texterkennung.umwandlung" /></h2>
+      <p className="leise">{tx('volltext.werkbank.umwandlung.einleitung')}</p>
+      {!u.typen.length ? <p className="leise">{tx('volltext.werkbank.umwandlung.keine')}</p> : (
+        <table className="tabelle klein">
+          <thead><tr><th>{tx('volltext.werkbank.umwandlung.typ')}</th><th className="zahlzelle">{tx('volltext.werkbank.umwandlung.anzahl')}</th><th>{tx('volltext.werkbank.umwandlung.paket')}</th></tr></thead>
+          <tbody>{u.typen.map((x) => (
+            <tr key={x.mime}>
+              <td>{x.name} {x.name !== x.mime && <span className="leise mono">{x.mime}</span>}</td>
+              <td className="zahlzelle">{zahl(x.anzahl)}</td>
+              <td>{x.paket ? <Link to={`/werkbank/pakete/${x.paket.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.durch', { paket: x.paket.name })}</Link>
+                : x.katalog ? <>{tx('volltext.werkbank.umwandlung.katalog', { paket: x.katalog.name })} <Link to={`/werkbank/pakete/${x.katalog.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.installieren')}</Link></>
+                : <span className="leise">{tx('volltext.werkbank.umwandlung.keins')}</span>}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
+      {u.typen.some((x) => !x.paket && x.katalog) && <p className="leise klein">{tx('volltext.werkbank.umwandlung.nachholen')}</p>}
     </section>
   );
 }

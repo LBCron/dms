@@ -8,8 +8,9 @@ import { HERKUNFT, MAX_DATEIGROESSE, OCR_STAENDE, type Mappentyp, type Mappe, ty
 import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
 import { herkunftText } from '../volltext';
 import { volltextHerkunft } from '../../../shared/src/volltext';
+import { fassungAusInfo } from '../../../shared/src/dateiumwandlung';
 import { t } from '../sprache';
-import { api, dokumentUrl, versionUrl, type Fundstelle } from '../api';
+import { api, dokumentUrl, fassungUrl, versionUrl, type Fundstelle } from '../api';
 import { useDaten } from '../daten';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
@@ -152,7 +153,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const [text, setText] = useState<{ id: string; text: string | null } | null>(null);
   const standVon = (x: Dokument) => ocr[x.id] ?? x.ocr;
   // Wartet es auf das Paket, nur solange eins installiert ist (#459: ohne Paket wartet es, bis eins kommt).
-  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket); });
+  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket) || h?.art === 'umwandlung'; });
   useEffect(() => {
     if (!offen || !dokumente.length) return;
     const t = setTimeout(() => {
@@ -328,7 +329,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                               {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
-                        {!weg && <OcrAnzeige s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
+                        {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
@@ -469,7 +470,7 @@ function DokTeilen({ d }: { d: Dokument }) {
 }
 
 /** Stand der Texterkennung an einem Dokument (#45) mit Herkunft des Texts (#458). */
-function OcrAnzeige({ s, sprache: feld, erneut, neu, text, textOffen }: { s?: OcrStand; sprache?: string | null; erneut(): void; /** „Neu erzeugen“ (#458), nur mit Recht Bearbeiten. */ neu?: () => void; text(): void; textOffen: boolean }) {
+function OcrAnzeige({ id, s, sprache: feld, erneut, neu, text, textOffen }: { id: string; s?: OcrStand; sprache?: string | null; erneut(): void; /** „Neu erzeugen“ (#458), nur mit Recht Bearbeiten. */ neu?: () => void; text(): void; textOffen: boolean }) {
   if (!s || s.stand === 'keiner') return null;
   // Sprache des Volltexts (#400) als eigenes Feld; bei älteren Dokumenten aus dem Hinweis der Texterkennung (#395).
   const sprache = s.stand !== 'fertig' ? null : feld ? { sprache: feld } : spracheAusInfo(s.info);
@@ -477,10 +478,13 @@ function OcrAnzeige({ s, sprache: feld, erneut, neu, text, textOffen }: { s?: Oc
   // Woher der Text kommt (#458): aus dem PDF, vom Paket – oder es wartet auf das Paket (mit Fortschritt des Pakets).
   const herkunft = herkunftText(s);
   const fortschritt = s.stand === 'paket' ? /\(Paket .+?\) – (.+)$/.exec(s.info ?? '')?.[1] : undefined;
+  // Aus der umgewandelten Fassung eines Pakets (#577): gekennzeichnet, mit Link zur Fassung.
+  const fassung = s.stand === 'fertig' ? fassungAusInfo(s.info) : null;
   return (
     <span className="ocrstand klein">
       <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {OCR_STAENDE[s.stand]}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachname(sprache.sprache)}` : ''}</span>
       {herkunft && <span className="leise">{herkunft}{fortschritt ? ` · ${fortschritt}` : ''}</span>}
+      {fassung && <span className="leise">{t('volltext.herkunft.fassung', { paket: fassung })} <a className="textknopf" href={fassungUrl(id)} target="_blank" rel="noreferrer" title={t('volltext.herkunft.fassung.titel')}>{t('volltext.herkunft.fassung.ansehen')}</a></span>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && s.info && <span className="leise">{s.info}</span>}
       {s.stand === 'fertig' && <button type="button" className="textknopf" onClick={text}>{textOffen ? 'Text ausblenden' : 'Text anzeigen'}</button>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && <button type="button" className="textknopf" onClick={erneut}>Erneut versuchen</button>}

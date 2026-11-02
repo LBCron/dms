@@ -12,6 +12,8 @@ import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import type { OcrErgebnis, Repo } from './repo';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
+import { dateitypName, infoFassung, infoUmwandlung, katalogUmwandlung, UMWANDELN_MAX_BYTES } from '../../shared/src/dateiumwandlung';
+import { t } from './sprache';
 
 /**
  * Volltext (#45, #458, #459).
@@ -25,6 +27,9 @@ import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/
  *   Volltext schreibt – bzw. bis eins installiert ist. Jedes Ergebnis geht über `nachher` an die Pakete (Ereignis
  *   volltext.fertig, auch ohne Text).
  * - Sprache (#395, #400): die erkannte Sprache des Texts steht am Ende des Hinweises und als eigenes Feld.
+ * - Andere Dateitypen (#577, z. B. TIFF): Gibt es ein Paket mit `dms:umwandeln` dafür, wartet das Dokument auf seine
+ *   Fassung („wartet auf Umwandlung“); mit der Fassung (PDF, PNG oder JPEG) geht es weiter wie oben – das Ereignis
+ *   nennt dann den Typ der Fassung (`mime`) und den des Originals (`original`). Ohne Paket: ausgelassen mit Hinweis.
  */
 
 const log = protokoll.modul('texterkennung');
@@ -149,6 +154,16 @@ export interface KernErgebnis {
   neu: boolean;
   /** Gemischte PDFs (#458): Seiten ohne Textebene (ab 1) – das Paket erkennt nur diese und hängt sie an. */
   seitenOhneText?: number[];
+  /** Umgewandelte Datei (#577): Typ der Fassung, die der Kern gelesen hat, und Typ des Originals. */
+  mime?: string;
+  original?: string;
+}
+
+/** Dateien umwandeln (#577): die Fassung einer Datei und das zuständige Paket (dateiumwandlung.ts). */
+export interface TexterkennungUmwandlung {
+  lies(sha: string): Promise<{ info: { mime: string; paket: { name: string; version: string } }; inhalt: Buffer } | null>;
+  paketFuer(mime: string): Promise<{ id: string; name: string } | null>;
+  anfordern(d: Dokument[]): Promise<number>;
 }
 
 export class Texterkennung {
@@ -165,6 +180,8 @@ export class Texterkennung {
   pause: () => boolean = () => false;
   /** Das installierte Paket für die Texterkennung (#458); null = keins. */
   paket: () => Promise<TexterkennungPaket | null> = async () => null;
+  /** Dateien umwandeln (#577); ohne: andere Dateitypen bleiben ausgelassen. */
+  umwandlung: TexterkennungUmwandlung | null = null;
 
   constructor(
     private repo: Repo,
@@ -259,9 +276,11 @@ export class Texterkennung {
     const jetzt = await this.repo.holeDokument(d.id).catch(() => undefined);
     if (!jetzt) return;
     if (!neu && jetzt.ocr?.stand === 'fertig' && jetzt.ocr.info?.startsWith(PAKET_TEXT)) { log.info('Texterkennung verworfen: Volltext kam schon von einem Paket', { dokument: d.name, id: d.id }); return; }
-    // Seiten ohne Text (#458) gehören nicht ins Repo, nur ins Ereignis.
+    // Seiten ohne Text (#458) und der Typ der Fassung (#577) gehören nicht ins Repo, nur ins Ereignis.
     const ohneText = (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
     delete (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
+    const fassung = (e as OcrErgebnis & { fassung?: string }).fassung;
+    delete (e as OcrErgebnis & { fassung?: string }).fassung;
     try { await this.repo.ocrSetze(d.id, e); } catch (f) {
       // Auch nach den Wiederholungen nicht gespeichert (#575): nie still ohne Volltext – Stand „Fehler“ mit Hinweis,
       // damit es in Werkbank → Volltext auffällt und „Fehlgeschlagene erneut“ es wieder einreiht.
@@ -277,29 +296,56 @@ export class Texterkennung {
     if (abbruch.signal.aborted) return;
     // Gemischt nur, wenn es auch Text gibt; bei text: false erkennt das Paket ohnehin alle Seiten.
     const gemischt = e.stand === 'paket' && !!e.text && hatText(e.text) && ohneText?.length ? { seitenOhneText: ohneText } : {};
-    try { this.nachher?.(jetzt, e, { text: !!e.text && hatText(e.text), neu, ...gemischt }); } catch { /* nur Benachrichtigung */ }
+    // Wartet es auf die Umwandlung (#577), gibt es noch nichts zu melden – das Ereignis kommt mit der Fassung.
+    if (fassung === 'wartet') return;
+    const umgewandelt = fassung ? { mime: fassung, original: jetzt.mime } : {};
+    try { this.nachher?.(jetzt, e, { text: !!e.text && hatText(e.text), neu, ...gemischt, ...umgewandelt }); } catch { /* nur Benachrichtigung */ }
   }
 
   private async ergebnis(d: Dokument, signal?: AbortSignal, neu = false): Promise<OcrErgebnis> {
-    if (!DATEITYPEN[d.mime]) return { stand: 'ausgelassen', info: `Dateityp ${d.mime} bekommt keinen Volltext.`, text: null };
+    if (!DATEITYPEN[d.mime]) return this.umgewandelt(d, signal, neu);
     if (d.groesse > MAX_MB * 1024 * 1024) return { stand: 'ausgelassen', info: `Größer als ${MAX_MB} MB.`, text: null };
     // Der Kern liest nur die Textebene (#458, #459); Scans und Bilder erkennt das Paket – ist keins installiert,
     // wartet das Dokument, bis eins kommt.
     return this.nurTextebene(d, await this.paket().catch(() => null), neu, signal);
   }
 
-  /** Datei lesen: Textebene (poppler). */
-  private async lese(d: Dokument, signal?: AbortSignal): Promise<OcrErgebnis & { ohneText?: number[] }> {
+  /**
+   * Andere Dateitypen (#577): mit Fassung eines Pakets weiter wie ein PDF bzw. Bild dieses Typs; ohne Fassung, aber
+   * mit zuständigem Paket wartet das Dokument auf die Umwandlung (und die Datei geht an das Paket); sonst ausgelassen
+   * mit Hinweis auf ein passendes Paket.
+   */
+  private async umgewandelt(d: Dokument, signal: AbortSignal | undefined, neu: boolean): Promise<OcrErgebnis> {
+    const f = await this.umwandlung?.lies(d.sha256).catch(() => null);
+    if (f && DATEITYPEN[f.info.mime]) {
+      const r = await this.nurTextebene({ ...d, mime: f.info.mime }, await this.paket().catch(() => null), neu, signal, f);
+      return { ...r, fassung: f.info.mime } as OcrErgebnis;
+    }
+    const name = dateitypName(d.mime);
+    const p = await this.umwandlung?.paketFuer(d.mime).catch(() => null);
+    if (p && d.groesse <= UMWANDELN_MAX_BYTES) {
+      await this.umwandlung!.anfordern([d]);
+      return { stand: 'paket', info: infoUmwandlung(p), seiten: d.ocr?.seiten ?? null, fassung: 'wartet' } as OcrErgebnis;
+    }
+    if (p) return { stand: 'ausgelassen', info: t('pakete.fassung.zu-gross', { typ: name, mb: UMWANDELN_MAX_BYTES / 1048576 }), text: null };
+    const k = katalogUmwandlung(d.mime);
+    return { stand: 'ausgelassen', info: k ? t('pakete.fassung.ohne-paket', { typ: name, paket: k.name }) : t('pakete.fassung.ohne-paket-typ', { typ: name }), text: null };
+  }
+
+  /** Datei lesen: Textebene (poppler). Mit `fassung` (#577) deren Inhalt statt der Datei des Dokuments. */
+  private async lese(d: Dokument, signal?: AbortSignal, fassung?: { info: { paket: { name: string; version: string } }; inhalt: Buffer }): Promise<OcrErgebnis & { ohneText?: number[] }> {
     const dir = await mkdtemp(join(tmpdir(), 'dms-ocr-'));
     try {
       const pfad = join(dir, 'datei');
-      await writeFile(pfad, await alsBuffer(await this.dateien.lies(d.sha256)));
+      await writeFile(pfad, fassung ? fassung.inhalt : await alsBuffer(await this.dateien.lies(d.sha256)));
       if (signal?.aborted) throw new Error('abgebrochen');
       const r = await this.engine(pfad, d.mime, { maxSeiten: MAX_SEITEN, werkzeuge: await this.werkzeugeLaden(), signal });
       // Erkannte Sprache am Ende des Hinweises (#395) – für Anzeige und Statistik.
       const sprache = erkenneSprache(r.text);
+      // Aus der umgewandelten Fassung (#577): steht vor der Sprache im Hinweis.
+      const herkunft = fassung ? ` – ${infoFassung(fassung.info.paket)}` : '';
       // Sprache als eigenes Feld (#400): Die Volltextsuche nimmt die Wortstämme dieser Sprache.
-      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ohneText: r.ohneText ?? [] };
+      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + herkunft + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ohneText: r.ohneText ?? [] };
     } finally { await rm(dir, { recursive: true, force: true }); }
   }
 
@@ -308,13 +354,13 @@ export class Texterkennung {
    * Texterkennung (Stand paket; ohne Paket „kein Paket installiert“); vorhandener Text bleibt so lange stehen, damit
    * die Suche ihn findet. Bilder haben keine Textebene: Sie warten gleich auf das Paket.
    */
-  private async nurTextebene(d: Dokument, paket: TexterkennungPaket | null, neu: boolean, signal?: AbortSignal): Promise<OcrErgebnis> {
+  private async nurTextebene(d: Dokument, paket: TexterkennungPaket | null, neu: boolean, signal?: AbortSignal, fassung?: { info: { paket: { name: string; version: string } }; inhalt: Buffer }): Promise<OcrErgebnis> {
     const wartet: OcrErgebnis = { stand: 'paket', info: infoWartet(paket), seiten: d.ocr?.seiten ?? null };
     // Gleiche Datei schon mit Text (auch von der früheren eingebauten Texterkennung oder einem Paket): übernehmen.
     const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
     if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null };
     if (d.mime !== 'application/pdf') return wartet;
-    const r = await this.lese(d, signal);
+    const r = await this.lese(d, signal, fassung);
     // Gemischt (Text und gescannte Seiten): wartet auch auf das Paket – es erkennt nur die Seiten ohne Text. „Neu“ ohne
     // Paket ändert nichts: Der Text aus dem PDF gilt.
     const ohne = (r as OcrErgebnis & { ohneText?: number[] }).ohneText ?? [];

@@ -10,6 +10,7 @@ export function herkunftText(o: OcrStand | null | undefined): string | null {
     case 'pdf': return t('volltext.herkunft.pdf');
     case 'paket': return t('volltext.herkunft.paket', { paket: h.paket });
     case 'wartet': return h.paket ? t('volltext.herkunft.wartet', { paket: h.paket }) : t('volltext.herkunft.wartet-ohne');
+    case 'umwandlung': return t('volltext.herkunft.umwandlung', { paket: h.paket });
     case 'eingebaut': return t('volltext.herkunft.eingebaut');
     case 'api': return t('volltext.herkunft.api');
   }

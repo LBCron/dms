@@ -28,12 +28,37 @@ Ohne Paket bleiben Scans und Fotos ohne Text („wartet auf Texterkennung – ke
 
 ![Werkbank → Texterkennung](bilder/werkbank-texterkennung.png)
 
+## Andere Dateitypen { #andere-dateitypen }
+
+Das DMS liest selbst nur **PDF, JPEG und PNG**. Für andere Dateitypen gibt es Vorschaubild und Volltext, wenn ein **Paket zum Umwandeln** installiert ist (Recht [Dateien umwandeln](pakete.md#recht-umwandeln), seit Version 0.137): Das Paket macht aus der Datei eine **umgewandelte Fassung** (PDF, PNG oder JPEG), daraus entstehen das Vorschaubild und der Volltext – bei einem Scan über das Paket Texterkennung. Das Dokument bleibt die Originaldatei; Herunterladen, Weitergeben und Versionen betreffen immer das Original.
+
+| Dateityp | Vorschau und Volltext mit | Fassung |
+| --- | --- | --- |
+| PDF, JPEG, PNG | dem DMS selbst (Scans und Fotos: Paket **Texterkennung**) | – |
+| TIFF (auch mehrseitig, z. B. vom Scanner), WebP, GIF (erstes Bild), BMP | Paket **Bildformate** (dazu für den Text: Paket **Texterkennung**) | TIFF → PDF, WebP → JPEG, GIF und BMP → PNG |
+| HEIC/HEIF (Fotos vom iPhone) | noch keinem Paket – siehe unten | – |
+| Word, Excel, PowerPoint, OpenDocument, E-Mails | noch keinem Paket (geplant, dms-registry #30) | – |
+
+So sieht es aus:
+
+1. Ohne passendes Paket steht am Dokument „Volltext: ausgelassen“ mit dem Hinweis, welches Paket hilft (z. B. „TIFF-Dateien bekommen Vorschau und Volltext mit dem Paket „Bildformate““); neben dem Dokument steht das Dateisymbol.
+2. Installierst du das Paket, gehen **alle vorhandenen Dateien** dieser Typen an das Paket – neue gleich beim Hochladen. Bis die Fassung da ist, steht am Dokument „wartet auf Umwandlung (Paket …)“.
+3. Mit der Fassung entsteht das Vorschaubild (Hinweis beim Darüberfahren: „Vorschau aus der umgewandelten Fassung eines Pakets“) und der Volltext. Am Dokument steht dann z. B. „Text aus dem PDF · aus der umgewandelten Fassung (Bildformate 1.0.0)“ mit dem Link **Fassung ansehen**; in der Historie der Mappe „umgewandelte Fassung erstellt“.
+4. Kann das Paket eine Datei nicht lesen (z. B. beschädigt), steht sein Grund am Dokument („Umwandlung durch Paket Bildformate: …“). **Erneut versuchen** gibt die Datei noch einmal an das Paket.
+
+**Werkbank → Texterkennung → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
+
+**Sicherung:** Die Fassungen liegen wie die Vorschaubilder neben den Dateien, aber **nicht in der Sicherung** – sie lassen sich jederzeit neu erzeugen. Nach einer Wiederherstellung holt **Werkbank → Wartungsoperationen → Vorschaubilder nachholen** sie nach (der Volltext ist Teil der Sicherung und bleibt).
+
+**Warum noch kein Paket für HEIC?** HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter *Einstellungen → Kamera → Formate* „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.
+
 ## Werkbank → Texterkennung
 
 Die Seite ist eine **Übersicht**; Einstellungen der Erkennung gibt es hier nicht mehr (sie stehen beim Paket):
 
 - **Texterkennung für Scans und Bilder:** welches Paket die Texterkennung übernimmt, mit Link zu seinen Einstellungen, und wie viele Dokumente gerade darauf warten. Fehlt das Paket, steht hier der Hinweis mit **Jetzt installieren**.
 - **Woher der Text kommt:** wie viele Dokumente ihren Text aus dem PDF haben, vom Paket, von der früheren eingebauten Texterkennung (bis 0.133), ohne Text sind, auf die Texterkennung warten oder einen Fehler hatten.
+- **Andere Dateitypen:** TIFF, WebP und Co. – wie viele es gibt und welches Paket sie umwandelt (siehe [Andere Dateitypen](#andere-dateitypen)).
 - **Erkannte Sprachen** mit dem Hinweis, wenn dem Paket Sprachdaten fehlen (siehe [Weitere Sprachen](#weitere-sprachen)).
 - **Warteschlange**, **Werkzeuge** (poppler) und **Aufträge** (siehe unten).
 
@@ -81,7 +106,7 @@ Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texte
 **Werkbank → Wartungsoperationen** sammelt Arbeiten am ganzen Bestand, die du bei Bedarf anstößt:
 
 - **Volltext neu erzeugen** – für Dokumente ohne Text oder für alle, siehe unten.
-- **Vorschaubilder nachholen** erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit `pdftoppm` (poppler, im Image enthalten).
+- **Vorschaubilder nachholen** erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit `pdftoppm` (poppler, im Image enthalten). Dateien anderer Typen ohne Fassung (z. B. TIFF) gibt es dabei an das [Paket zum Umwandeln](#andere-dateitypen), falls eins installiert ist.
 - **Alle Dateien prüfen** liest jede gespeicherte Datei, auch ältere Versionen, und vergleicht sie mit ihrem Prüfwert. So fällt auf, wenn eine Datei auf dem Speicher verändert wurde oder fehlt. Mehr dazu unter [Alle Dateien prüfen](archiv.md#alle-dateien-prufen).
 - **Nummern nachträglich vergeben** gibt Mappen eine Nummer, die angelegt wurden, bevor ihr Feld einen Nummernkreis bekam. Mehr dazu unter [Nummern nachträglich vergeben](nummernkreise.md#nummern-nachtraglich-vergeben).
 - **Absender bereinigen** leert falsche Absender bei älterer Post, siehe unten.
@@ -93,7 +118,7 @@ Alle laufen im Hintergrund; das DMS bleibt dabei benutzbar.
 
 Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an das Paket für die Texterkennung.
 
-- **Für Dokumente ohne Text** – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Ersetzt das frühere „Volltext nachholen“.
+- **Für Dokumente ohne Text** – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Dazu gehören auch [andere Dateitypen](#andere-dateitypen) wie TIFF: Ohne Fassung gehen sie an das Paket zum Umwandeln, mit Fassung wird diese gelesen. Ersetzt das frühere „Volltext nachholen“.
 - **Für alle Dokumente** – nach einer Rückfrage mit der Anzahl. Das ist ein **ausdrückliches Neu**: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.
 
 Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 35 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter **Werkbank → Texterkennung** („wartet auf Texterkennung“).

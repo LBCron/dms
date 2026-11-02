@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
+import { kernTyp } from '../../../shared/src/dateiumwandlung';
 import { vorschauUrl } from '../api';
+import { t } from '../sprache';
 
 /**
  * Kleines Vorschaubild der ersten Seite (#332), 40 × 52 px.
  * Gibt es (noch) keins, steht dort ein Dateisymbol mit der Endung. Direkt nach dem Hochladen
  * entsteht das Bild im Hintergrund – deshalb zwei weitere Versuche nach kurzer Zeit.
+ * Andere Dateitypen (#577) haben eins, wenn ein Paket sie umgewandelt hat: ein Versuch; das Bild ist als Vorschau
+ * aus der umgewandelten Fassung gekennzeichnet.
  */
-const MIT_VORSCHAU = ['application/pdf', 'image/jpeg', 'image/png'];
 
 const endung = (name: string, mime: string) => {
   const e = /\.([a-z0-9]{1,5})$/i.exec(name)?.[1];
@@ -15,10 +18,12 @@ const endung = (name: string, mime: string) => {
 };
 
 export function Vorschaubild({ d }: { d: { id: string; name: string; mime: string; sha256: string } }) {
-  const moeglich = MIT_VORSCHAU.includes(d.mime);
+  const moeglich = kernTyp(d.mime);
   const [versuch, setVersuch] = useState(0);
-  const [fehlt, setFehlt] = useState(!moeglich);
-  useEffect(() => { setVersuch(0); setFehlt(!moeglich); }, [d.id, d.sha256, moeglich]);
+  // Ohne erkannten Dateityp (octet-stream) gibt es auch keine Fassung: gleich das Dateisymbol.
+  const ohne = d.mime === 'application/octet-stream';
+  const [fehlt, setFehlt] = useState(ohne);
+  useEffect(() => { setVersuch(0); setFehlt(ohne); }, [d.id, d.sha256, moeglich, ohne]);
   useEffect(() => {
     if (!fehlt || !moeglich || versuch >= 2) return;
     const t = setTimeout(() => { setVersuch((v) => v + 1); setFehlt(false); }, 2500 * (versuch + 1));
@@ -26,5 +31,5 @@ export function Vorschaubild({ d }: { d: { id: string; name: string; mime: strin
   }, [fehlt, moeglich, versuch]);
   return fehlt
     ? <span className="vorschaubild ohne" aria-hidden="true">{endung(d.name, d.mime)}</span>
-    : <img className="vorschaubild" src={vorschauUrl(d, versuch)} alt="" width={40} height={52} loading="lazy" decoding="async" onError={() => setFehlt(true)} />;
+    : <img className="vorschaubild" src={vorschauUrl(d, versuch)} alt="" title={moeglich ? undefined : t('volltext.vorschau.fassung')} width={40} height={52} loading="lazy" decoding="async" onError={() => setFehlt(true)} />;
 }

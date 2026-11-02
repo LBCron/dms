@@ -204,6 +204,11 @@ export interface OcrStatus {
   paket?: { id: string; name: string; version: string; sprachen?: string[] } | null;
   /** #459: woher der Volltext fertiger Dokumente kommt. */
   herkunft?: { pdf: number; paket: number; api: number; eingebaut: number; sonst: number; ohneText: number };
+  /** #577: Pakete zum Umwandeln und je anderem Dateityp, wer zuständig ist (oder welches Paket im Katalog es wäre). */
+  umwandlung?: {
+    pakete: Array<{ id: string; name: string; version: string; typen: string[] }>;
+    typen: Array<{ mime: string; name: string; anzahl: number; paket: { id: string; name: string } | null; katalog: { id: string; name: string } | null }>;
+  };
 }
 export interface Zaehler {
   typen: Record<string, { anzahl: number; unpassend: number; demo: number }>; eingang: number; sichten?: Record<string, number>;
@@ -852,6 +857,8 @@ export interface VerkleinernEinstellung { automatisch: boolean; abMb: number; st
 export interface PdfSeiten { id: string; name: string; version: number; sha256: string; anzahl: number; drehungen: number[]; bilderBis: number }
 /** Bild einer Seite (#335); die Adresse trägt den Prüfwert, ein neues PDF hat neue Bilder. */
 export const seitenbildUrl = (d: { id: string; sha256: string }, nr: number) => `/api/dokumente/${d.id}/seiten/${nr}/bild?v=${d.sha256.slice(0, 12)}`;
+/** Umgewandelte Fassung eines Dokuments (#577): PDF, PNG oder JPEG aus einem Paket. */
+export const fassungUrl = (id: string) => `/api/dokumente/${id}/fassung`;
 export const vorschauUrl = (d: { id: string; sha256: string }, versuch = 0) => `/api/dokumente/${d.id}/vorschau?v=${d.sha256.slice(0, 12)}${versuch ? `&n=${versuch}` : ''}`;
 /** Wo eine gleiche Datei schon liegt (#333) – nur lesbare Mappen. */
 export interface Fundstelle { mappeId: string; typId: string; titel: string; typ: string; register: string; name: string; erstellt: string }

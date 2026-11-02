@@ -195,6 +195,10 @@ Will ein Update andere Adressen, fragt das DMS erneut.
 
 **„Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“** – Das Paket ist dann die [Texterkennung](texterkennung.md) des DMS: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit [Dokumente lesen und Volltext schreiben](#recht-dokumente).
 
+#### Dateien umwandeln { #recht-umwandeln }
+
+**„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“** – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis [Datei umwandeln](#ereignis-datei-umwandeln)) und gibt eine **umgewandelte Fassung** zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe [Andere Dateitypen](texterkennung.md#andere-dateitypen)). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem [Dokumente lesen](#recht-dokumente) (die Originaldatei).
+
 ### Dienst-Adresse { #dienst-adresse }
 
 Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. **Ollama** auf deinem Heimserver (fertiges Beispiel und Anleitung: [KI lokal betreiben](ki-lokal.md)). Die Adresse dieses Dienstes trägst du in den **Einstellungen** des Pakets ein (Werkbank → Pakete → *Paket* → Reiter „Einstellungen“):
@@ -266,6 +270,12 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 **Wann:** Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: aus der Textebene eines PDFs, von einem Paket wie **Texterkennung** oder über die API. Seit Version 0.133 auch dann, wenn das DMS **keinen Text** gefunden hat (z. B. bei einem Scan) – genau das braucht ein Paket, das die [Texterkennung übernimmt](#recht-texterkennung). Pakete von vor 0.133 bekommen es weiter nur mit Text. Für ein Paket mit dem Recht [Vektoren zu Dokumenten](#recht-vektoren) schickt das DMS dieses Ereignis außerdem für den **Bestand** nach (siehe [Ähnlichkeit](#aehnlichkeit)).
 
 **Typisch:** Scans erkennen – das Paket **Texterkennung** (ab 2.0); aus dem Volltext etwas berechnen – das Paket **KI lokal – Ähnlichkeit** rechnet daraus den Vektor des Dokuments.
+
+#### Eine Datei soll umgewandelt werden { #ereignis-datei-umwandeln }
+
+**Wann:** Seit Version 0.137 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht [Dateien umwandeln](#recht-umwandeln) zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei **Vorschaubilder nachholen** und bei **Volltext neu erzeugen** (für Dateien ohne Fassung). Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).
+
+**Typisch:** Das Paket **Bildformate** macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.
 
 #### Die Einstellungen des Pakets wurden geändert { #ereignis-einstellungen-geandert }
 

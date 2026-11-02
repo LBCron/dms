@@ -154,9 +154,10 @@ Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument f
 | *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. Steht dort „kein Paket installiert“, bitte deinen Administrator, das Paket Texterkennung zu installieren. |
 | *Volltext: fertig* | Das Dokument ist durchsuchbar. **Text anzeigen** zeigt, was erkannt wurde. |
 | *Volltext: Fehler* | Etwas ging schief, z. B. eine beschädigte Datei. **Erneut versuchen** stellt es noch einmal an. |
-| *Volltext: ausgelassen* | Für diesen Dateityp (z. B. Word, Excel) oder diese Größe gibt es keinen Volltext. |
+| *Volltext: wartet auf Umwandlung* | Das DMS liest den Dateityp (z. B. TIFF) nicht selbst; ein Paket macht gerade eine Fassung daraus, aus der Vorschau und Text entstehen. |
+| *Volltext: ausgelassen* | Für diesen Dateityp (z. B. Word, Excel) oder diese Größe gibt es keinen Volltext. Gibt es ein Paket, das den Typ umwandeln kann, steht sein Name daneben – frag deinen Administrator. |
 
-Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, die z. B. ein Programm oder der Scanner mitgeliefert hat) oder „Texterkennung durch Paket …“ (aus dem Bild erkannt). Mit **Neu erzeugen** lässt du den Text eines Dokuments noch einmal lesen und erkennen – etwa, wenn die Erkennung schlecht war.
+Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, die z. B. ein Programm oder der Scanner mitgeliefert hat) oder „Texterkennung durch Paket …“ (aus dem Bild erkannt). Bei Dateien, die das DMS nicht selbst liest (z. B. TIFF-Scans), steht dazu „aus der umgewandelten Fassung (Paket …)“: Ein Paket hat daraus ein PDF oder Bild gemacht, aus dem Vorschau und Text stammen. **Fassung ansehen** öffnet diese Fassung; das Dokument selbst bleibt die Originaldatei. Mit **Neu erzeugen** lässt du den Text eines Dokuments noch einmal lesen und erkennen – etwa, wenn die Erkennung schlecht war.
 
 Erkannter Text aus Scans ist nicht immer fehlerfrei – je besser die Vorlage, desto besser das Ergebnis.
 

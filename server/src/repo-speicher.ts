@@ -699,6 +699,12 @@ export function speicherRepo(): Repo {
     },
 
     async dokumenteMitSha(sha) { return [...dokumente.values()].filter((d) => d.sha256 === sha).map(kopie); },
+    async dokumenteMitTyp(mimes) { return [...dokumente.values()].filter((d) => mimes.includes(d.mime)).sort((a, b) => a.erstellt.localeCompare(b.erstellt) || a.id.localeCompare(b.id)).map(kopie); },
+    async dokumentTypen() {
+      const z: Record<string, number> = {};
+      for (const d of dokumente.values()) z[d.mime] = (z[d.mime] ?? 0) + 1;
+      return z;
+    },
     async grossePdfs(ab, max) {
       return [...dokumente.values()].filter((d) => d.mime === 'application/pdf' && d.groesse >= ab).sort((a, b) => b.groesse - a.groesse).slice(0, max)
         .map((d) => ({ ...kopie(d), aeltere: versionen.get(d.id)?.length ?? 0 }));
