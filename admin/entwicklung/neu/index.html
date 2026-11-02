@@ -363,6 +363,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01442" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.144.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.144.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01441" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -375,7 +425,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#geandert" class="md-nav__link">
+  <a href="#geandert_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Geändert
@@ -425,7 +475,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -436,7 +486,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -2477,6 +2527,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01442" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.144.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.144.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01441" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2489,7 +2589,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#geandert" class="md-nav__link">
+  <a href="#geandert_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Geändert
@@ -2539,7 +2639,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2550,7 +2650,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -2601,8 +2701,27 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01441">0.144.1<a class="headerlink" href="#01441" title="Permanent link">&para;</a></h2>
+<h2 id="01442">0.144.2<a class="headerlink" href="#01442" title="Permanent link">&para;</a></h2>
 <h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Echte Projektschlüssel für den Paketkatalog</strong> (#594, motom001/dms-registry#74): Das DMS prüft die Signatur des offiziellen Katalogs jetzt mit den öffentlichen Schlüsseln des Maintainers statt mit Testschlüsseln. Fingerabdrücke (auch in <code>SECURITY.md</code>):</li>
+<li>Signierschlüssel <code>6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728</code></li>
+<li>Reserveschlüssel <code>4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954</code></li>
+<li><strong>Was du als Admin merkst:</strong> vorerst nichts. Bis die Registry den Katalog signiert, bleibt er unsigniert, und die Vorschau zeigt wie bisher den Hinweis „nicht signiert“. Danach steht dort „signiert vom DMS-Projekt“. Den Hinweis „prüft noch mit Testschlüsseln“ gibt es nicht mehr.</li>
+<li><strong>Ältere Versionen (0.141.0 bis 0.144.1)</strong> kennen nur die Testschlüssel. Sobald die Registry signiert, zeigen sie beim offiziellen Katalog „Signatur ungültig“ und verlangen vor jeder Installation eine Bestätigung – aktualisiere deshalb.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch, Pakete: Absatz zu älteren Versionen statt „Testschlüssel“.</li>
+<li>Entwicklerhandbuch, Pakete → Projektschlüssel austauschen: Schlüssel und Fingerabdrücke, wie Tests eigene Schlüssel mitgeben.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Tests signieren nur mit eigenen Testschlüsseln (Option <code>projektSchluessel</code>), nie mit den eingebauten. Im Betrieb lassen sich die Projektschlüssel nicht von außen ändern (keine Umgebungsvariable, keine Einstellung). Neue Tests prüfen, dass keine Testschlüssel eingebaut sind, dass <code>SECURITY.md</code> und <code>SECURITY.en.md</code> dieselben Fingerabdrücke nennen und dass ein mit Testschlüsseln signierter Katalog im Betrieb als ungültig gilt.</li>
+<li>Keine Migration, keine neue Abhängigkeit.</li>
+</ul>
+<h2 id="01441">0.144.1<a class="headerlink" href="#01441" title="Permanent link">&para;</a></h2>
+<h3 id="geandert_1">Geändert<a class="headerlink" href="#geandert_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Lasttest, Stufe „groß“</strong> (#563): Die Steigerung beginnt jetzt bei <strong>5</strong> gleichzeitigen Anfragen, dann 10, danach wie bisher ab 25 in Schritten von 25. Im ersten Lauf lag schon die bisherige Startstufe 25 über der Grenze – die Grenze stand nur als „unter 25“ im Bericht. Jetzt steht dort auch für kleine Geräte eine echte Zahl. Mit <code>--start</code> beginnt die Steigerung wie bisher genau beim angegebenen Wert.</li>
 </ul>
@@ -2621,11 +2740,11 @@
 <li>Im Lasttest-Modus ist das DMS <strong>keine nutzbare Ablage</strong>: Unter dem Port gibt es nur die Seite (alle anderen Schnittstellen antworten mit 503), das eigentliche DMS läuft nur innerhalb des Containers. Die Seite zeigt keine Zugangsdaten, keinen Einrichtungscode und keine Adressen. Den Knopf zum Herunterfahren gibt es nur in diesem Modus.</li>
 <li>Die Variable steht in keiner Vorlage für App-Stores oder NAS, nur in der Anleitung (ein Test prüft das).</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch: <strong>Lasttest selbst durchführen</strong> neu – zuerst der Weg über die Docker-Oberfläche und den Browser (mit Bildschirmfotos der Seite, hell, dunkel und am Handy), dann ein Befehl für die Konsole (<code>docker run -d --rm … -e DMS_LASTTEST=klein</code>), wann ein Ordner für <code>/data</code> sinnvoll ist (bestimmten Datenträger messen), und der bisherige Weg mit <code>dms-lasttest</code> unter „Für Fortgeschrittene“.</li>
 </ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h3 id="technik_1">Technik<a class="headerlink" href="#technik_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Lasttest-Modus in <code>server/src/lasttestmodus.ts</code>: Das DMS lauscht dafür nur auf 127.0.0.1 (freier Port); das vorhandene Skript <code>server/test/lasttest.mjs</code> (im Image <code>dms-lasttest</code>) läuft als Kindprozess und meldet seine Schritte über IPC – keine zweite Messlogik. Neu im Skript: <code>--pruefen</code> (nur die Sperre, legt nichts an) und Platzhalter für Gerät und Speicher im Ergebnisblock. Speicherart über <code>/sys</code> (<code>server/src/speicherart.ts</code>). Gemeinsame Typen in <code>shared/src/lasttest.ts</code>, Seite <code>web/src/lasttest.tsx</code>, Texte in <code>shared/src/sprachen/de/lasttest.json</code>.</li>
 <li>Für Fortgeschrittene und Tests: <code>DMS_LASTTEST_DAUER</code> (Sekunden je Durchgang, wie <code>--dauer</code>).</li>
