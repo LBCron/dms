@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.129/leistung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.130/leistung/">
       
       
         <link rel="prev" href="../pakete/">
@@ -1268,6 +1268,8 @@
 <li><strong>Keine Zugriffe in Schleifen über Mappen oder Dokumente.</strong> Für Massenarbeit gibt es gebündelte Methoden (<code>dokumenteVon</code>, <code>volltexte</code>, <code>versionenVonDokumenten</code>, <code>notizenVon</code>, <code>aufgabenVonMappen</code>, <code>historieVon</code>). Ein Zugriff kostet auch lokal etwa eine halbe Millisekunde – bei 10.000 Mappen sind das Sekunden.</li>
 <li><strong>Nach Massenläufen die Statistik auffrischen:</strong> <code>Dienst.aktualisiereStatistik()</code> (Demo-Daten erzeugen und entfernen; die Wiederherstellung macht es selbst). Für <code>dokumente</code> nur über die Spalten in <code>STATISTIK_SPALTEN</code>: Ohne Spaltenliste berechnet PostgreSQL auch die Statistik des Index <code>to_tsvector('german', volltext)</code> – über eine Minute bei 20.000 Dokumenten statt 0,1 Sekunden.</li>
 <li><strong>Lange Rechenarbeit gibt nach.</strong> Server und Oberfläche teilen sich einen Node-Prozess: Was die Ereignisschleife blockiert, verzögert jede Anfrage – und erscheint in der Messung der Datenbankzugriffe als „langer Zugriff“, obwohl die Datenbank schnell war. Schleifen über viele Elemente geben mit <code>takt()</code> (<code>server/src/demo.ts</code>) oder <code>setImmediate</code> nach; große Daten werden mit dem asynchronen <code>zlib</code> gepackt statt im Hauptthread.</li>
+<li><strong>Schwere Arbeit in den Arbeiter.</strong> Was Sekunden rechnet (PDF, große Tabellen), gehört in den <a href="../aufbau/#arbeiter-pool">Arbeiter-Pool</a> (#542), nicht in den Hauptfaden – auch nicht mit Pausen.</li>
+<li><strong>Kein <code>indexOf</code> in Sortierungen über viele Elemente.</strong> <code>liste.sort((a, b) =&gt; ids.indexOf(a.id) - ids.indexOf(b.id))</code> ist quadratisch: Bei 20.000 Mappen sind das Sekunden bis über eine halbe Minute im Hauptfaden (#542). Erst einen Index bauen (<code>inReihenfolge</code> in <code>dienst.ts</code>).</li>
 </ul>
 
 

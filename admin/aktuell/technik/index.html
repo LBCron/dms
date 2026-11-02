@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.129/technik/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.130/technik/">
       
       
         <link rel="prev" href="../api/">
@@ -2478,6 +2478,11 @@
 <td>PDF bearbeiten</td>
 <td>pdf-lib (MIT), nur über eine gemeinsame Stelle im Server gekapselt (#541); Bewertung der Alternativen im <a href="https://motom001.github.io/dms/entwickler/aktuell/aufbau/#pdf-stelle">Entwicklerhandbuch</a></td>
 <td>Stempel, Export, Seiten bearbeiten, Schwärzen, Verkleinern, Vorschau, Auskunft, Aufkleber</td>
+</tr>
+<tr>
+<td>Arbeiter</td>
+<td><code>node:worker_threads</code>, ohne zusätzliche Bibliothek: ein kleiner Pool neben dem Hauptfaden (#542), siehe <a href="../speicherplatz/#arbeiter-fur-pdf-und-exporte">Systemzustand</a></td>
+<td>PDF-Arbeiten und große Exporte, ohne dass andere Benutzer warten</td>
 </tr>
 <tr>
 <td>Verschlüsselung</td>
