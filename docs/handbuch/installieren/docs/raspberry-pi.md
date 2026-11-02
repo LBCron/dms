@@ -184,8 +184,7 @@ Das DMS läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen
 **Erstens: Werkzeuge bereitlegen.**
 
 ```sh
-sudo apt update
-sudo apt install ca-certificates curl
+--8<-- "docker-apt-1-werkzeuge.txt"
 ```
 
 Der erste Befehl holt die aktuelle Liste der Programme, der zweite installiert zwei kleine Helfer: `ca-certificates` prüft, ob eine Internetseite echt ist, `curl` lädt Dateien herunter. Meist sind beide schon da; dann meldet der Pi nur `is already the newest version` (auf Deutsch `ist schon die neueste Version`).
@@ -193,18 +192,7 @@ Der erste Befehl holt die aktuelle Liste der Programme, der zweite installiert z
 **Zweitens: die Paketquelle von Docker eintragen.**
 
 ```sh
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
-Types: deb
-URIs: https://download.docker.com/linux/debian
-Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
-Components: stable
-Architectures: $(dpkg --print-architecture)
-Signed-By: /etc/apt/keyrings/docker.asc
-EOF
-sudo apt update
+--8<-- "docker-apt-2-debian.txt"
 ```
 
 Was die Zeilen tun:
@@ -218,7 +206,7 @@ Was die Zeilen tun:
 **Drittens: Docker installieren.**
 
 ```sh
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+--8<-- "docker-apt-3-pakete.txt"
 ```
 
 Das installiert Docker selbst (`docker-ce`), den Befehl `docker` (`docker-ce-cli`), den Teil, der die Container tatsächlich laufen lässt (`containerd.io`), und zwei Erweiterungen, darunter **Docker Compose** (`docker-compose-plugin`) – damit startet das DMS seine zwei Container gemeinsam. Der Pi zeigt, wie viel er herunterladen will, und fragt `Do you want to continue? [Y/n]` (auf Deutsch `Möchten Sie fortfahren? [J/n]`): einfach ++enter++ drücken. Das dauert einige Minuten. Docker startet danach von selbst, auch nach jedem Neustart.
