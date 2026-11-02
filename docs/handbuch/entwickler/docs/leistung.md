@@ -139,6 +139,8 @@ Der Administrator ist der ungünstigste Fall: Ihm gehören alle Fristen ohne Emp
 
 `server/test/lasttest.mjs` (#544, #563) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js. Im Image steckt es als Befehl `dms-lasttest` (Betreiber: Administratorhandbuch → [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/)).
 
+**Lasttest-Modus** (#612): Mit `DMS_LASTTEST=klein|mittel|gross|alle` lauscht das DMS nur auf 127.0.0.1 (freier Port) und startet das Skript als Kindprozess (`fork`, IPC) gegen diese Adresse; unter dem eigentlichen Port gibt es nur die Seite mit Fortschritt und Ergebnis (`server/src/lasttestmodus.ts`, `web/src/lasttest.tsx`, gemeinsame Typen in `shared/src/lasttest.ts`). Das Skript meldet seine Schritte mit `process.send` (nur mit IPC-Kanal, auf der Konsole ändert sich nichts) und schickt am Ende Bericht und Ergebnisblock mit den Platzhaltern `{{geraet}}` und `{{speicher}}`, die die Seite füllt. Vorher prüft `lasttest.mjs --pruefen` die Sperre der echten Ablage, ohne etwas anzulegen; schlägt sie an, startet das DMS normal und meldet den Grund in der Werkbank-Übersicht (`lasttestAbbruch`). `DMS_LASTTEST_DAUER` entspricht `--dauer`. Tests: `lasttestmodus.test.ts`, mit PostgreSQL `lasttestmodus-e2e.test.ts` (Stufe klein mit 3 s Messdauer, etwa eine Minute).
+
 ```bash
 # DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein
 # und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000; 2 % mit einem Brief als PDF)

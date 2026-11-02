@@ -255,6 +255,8 @@ export interface RoutenExtras {
   anbindung?: AnbindungVerwaltung;
   /** Hinweis zu HAUSHALT_ID (übernommen oder abweichend). */
   mandantHinweis?: string | null;
+  /** DMS_LASTTEST gesetzt, aber der Lasttest läuft nicht (echte Ablage, #612): Grund für die Übersicht. */
+  lasttestAbbruch?: () => string | null;
   /** Für Tests: Abruf fremder Adressen beim Versionsabgleich. */
   abruf?: (url: string) => Promise<unknown>;
   log?: (m: string) => void;
@@ -1311,6 +1313,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         variablen: ueberfluessigeVariablen({ ordner: x.ordner?.ueberfluessig, datenbank: x.anbindung?.stand().umgebung === 'gleich', haushalt: !!(x.mandantHinweis && process.env.HAUSHALT_ID) }),
         // DATABASE_URL weicht von der Anbindung in /data/geheim ab und wird ignoriert (#119).
         anbindung: x.anbindung ? { umgebung: x.anbindung.stand().umgebung, neustartNoetig: x.anbindung.stand().neustartNoetig } : null,
+        // DMS_LASTTEST in einer echten Installation (#612): nicht gestartet, das DMS läuft normal.
+        lasttestAbbruch: x.lasttestAbbruch?.() ?? null,
         einrichtung: x.einrichtung ? await sicher(() => x.einrichtung!.stand()) : null,
         // Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist.
         zahlen: await werkbankZahlen({

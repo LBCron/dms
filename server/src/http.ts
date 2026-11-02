@@ -84,6 +84,8 @@ interface Optionen {
   einrichtung?: Einrichtung;
   anbindung?: AnbindungVerwaltung;
   mandantHinweis?: string | null;
+  /** DMS_LASTTEST gesetzt, aber der Lasttest läuft nicht (echte Ablage, #612): Grund für die Übersicht. */
+  lasttestAbbruch?: () => string | null;
   abruf?: (url: string) => Promise<unknown>;
   /** Erlaubte Ursprünge zum Einbetten (#239, DMS_EINBETTEN). */
   einbetten?: Einbetten;

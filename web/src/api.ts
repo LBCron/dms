@@ -6,6 +6,7 @@ import type { Stufe as KleinStufe } from '../../shared/src/verkleinern';
 import type { Bereich, SchwaerzSeite } from '../../shared/src/schwaerzen';
 import type { Archiv } from '../../shared/src/archiv';
 import type { UeberfluessigeVariable } from '../../shared/src/umgebungsvariablen';
+import type { LasttestStand } from '../../shared/src/lasttest';
 import type { Abwesenheit, Aufgabe, Ausschnitt, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
@@ -271,6 +272,8 @@ export interface KontoStatus {
   einrichtung?: EinrichtungStatus | null;
   /** Favoriten benachrichtigen (#506): für diesen Benutzer in der Werkbank erlaubt? */
   favoritenBenachrichtigung?: boolean | null;
+  /** Lasttest-Modus (#612): Das DMS misst und zeigt nur die Seite mit Fortschritt und Ergebnis. */
+  lasttest?: boolean;
 }
 type FreigabeStand = { freigabe: FavoritenFreigabe; rollen: Array<{ id: string; name: string; system: boolean }> };
 export interface AnbindungAnsicht { host: string; port: number; datenbank: string; benutzer: string; passwortGesetzt: boolean }
@@ -357,6 +360,10 @@ export interface LinkErgebnis { benutzer: Benutzer; mailVerschickt: boolean; lin
 
 export const api = {
   status: () => anfrage<KontoStatus>('GET', '/api/konto/status'),
+  /* Lasttest-Modus (#612) */
+  lasttest: () => anfrage<LasttestStand>('GET', '/api/lasttest'),
+  lasttestAngaben: (angaben: Partial<LasttestStand['angaben']>) => anfrage<LasttestStand>('POST', '/api/lasttest/angaben', angaben),
+  lasttestBeenden: () => anfrage<{ ok: true }>('POST', '/api/lasttest/beenden', {}),
   /* Einrichtungsassistent (#119) */
   einrichtungCode: () => anfrage<{ ok: true }>('POST', '/api/einrichtung/code'),
   einrichtungDbPruefen: (anbindung: AnbindungEingabe) => anfrage<AnbindungPruefung>('POST', '/api/einrichtung/datenbank/pruefen', { anbindung }),
@@ -987,6 +994,8 @@ export interface WerkbankUebersicht {
   adminSchluessel?: number;
   /** Datenbank-Anbindung (#119): DATABASE_URL abweichend, Neustart nötig. */
   anbindung?: { umgebung: 'fehlt' | 'gleich' | 'abweichend'; neustartNoetig: boolean } | null;
+  /** DMS_LASTTEST gesetzt, aber nicht gestartet, weil hier echte Daten liegen (#612). */
+  lasttestAbbruch?: string | null;
   /** Einrichtungsassistent (#119): übersprungene Schritte. */
   einrichtung?: EinrichtungStand | null;
   /** Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist; null = unbekannt. */

@@ -59,6 +59,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   // Datenbank-Anbindung (#119)
   if (u.anbindung?.umgebung === 'abweichend') h.push({ art: 'warn', text: <><strong>DATABASE_URL weicht von der Datenbank-Anbindung ab und wird ignoriert.</strong> Führend ist die Anbindung unter /data/geheim; entferne die Variable aus der Compose-Datei.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
   if (u.anbindung?.neustartNoetig) h.push({ art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart des DMS.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
+  // DMS_LASTTEST in einer echten Installation (#612): Der Lasttest ist nicht gestartet, das DMS läuft normal.
+  if (u.lasttestAbbruch) h.push({ art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/technik', knopf: t('lasttest.uebersicht.knopf') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
   const nachholen: Record<string, { text: string; ziel: string; knopf: string }> = {
     benutzer: { text: 'einen normalen Benutzer für die Ablage anlegen – Administratoren arbeiten nicht in der Ablage', ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' },
