@@ -894,7 +894,11 @@ export type SystemlastAntwort = import('../../shared/src/systemlast').Systemlast
   schleife: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null; warnungSeit?: string | null; grenzeMs?: number; minuten?: number } | null;
   /** Arbeiter für PDF und große Exporte (#542). */
   arbeiter?: import('../../shared/src/systemlast').ArbeiterStand;
+  /** Erweiterungen der Suche (#562); null = nicht lesbar. */
+  erweiterungen?: ErweiterungStand[] | null;
 };
+/** Datenbank-Erweiterung der Suche (#562): ok, fehlt oder in einem Schema, das eine Wiederherstellung löscht. */
+export interface ErweiterungStand { name: 'pg_trgm' | 'unaccent'; schema: string | null; zustand: 'ok' | 'fehlt' | 'gefaehrdet' }
 export interface DatenbankStand {
   einstellungen: MessEinstellungen | null; langlaeufer: Langlaeufer[]; laufend: LaufendeAbfrage[]; auslastung?: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null;
   /** Verbindungen zur Datenbank und Warten auf eine freie (#544). */
@@ -920,6 +924,8 @@ export interface WerkbankUebersicht {
   speicherplatz?: SpeicherplatzStand | null;
   /** Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %. */
   auslastung?: Array<'cpu' | 'speicher'>;
+  /** Erweiterungen der Suche, die fehlen oder gefährdet liegen (#562). */
+  erweiterungen?: ErweiterungStand[];
   /** Frühere Variablen, die aus der Compose-Datei entfernt werden können (#115), je mit Grund (#478). */
   variablen?: UeberfluessigeVariable[];
   /** API-Schlüssel von Administratoren (#128). */

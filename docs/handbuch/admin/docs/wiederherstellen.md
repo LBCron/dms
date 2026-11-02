@@ -9,6 +9,7 @@ Eine [Sicherung](sicherung.md) spielst du in der Werkbank ein – ohne Kommandoz
 - Eingespielt wird erst in einen **eigenen, leeren Bereich** der Datenbank und einen Ordner neben den Dokumenten. Umgeschaltet wird erst, wenn alles geklappt hat. Bricht etwas ab – Fehler, falscher Schlüssel, zu wenig Platz –, bleibt der bisherige Stand **unverändert**.
 - Geprüft werden: die Prüfsumme der Datei, die Entschlüsselung (am Ende der Datei steht ein Prüfwert; ist die Datei verändert, merkt das DMS es), das [Prüfwort](sicherung.md#was-eine-sicherung-enthalt), die Anzahl der Mappen, Dokumente, Benutzer und Dateien.
 - Eine **ältere** Sicherung in einem neueren DMS geht: Danach laufen die fehlenden Änderungen der Datenbank. Eine **neuere** Sicherung in einem älteren DMS verweigert es mit einer klaren Meldung – aktualisiere dann zuerst das DMS.
+- Zuletzt prüft das DMS die **Erweiterungen der Datenbank**, die die Suche braucht (`pg_trgm` für Tippfehler und Wortteile, `unaccent` für Umlaute). Sie liegen im eigenen Schema `erweiterungen_dms`, das eine Wiederherstellung nicht anfasst. Fehlt eine, steht das als **Hinweis** im Ablauf und in der Abschlussmeldung – die Daten sind trotzdem vollständig; Abhilfe unter [Suche → Erweiterungen der Datenbank](suche.md#erweiterungen-der-datenbank).
 - Auch ein Wechsel auf eine neue **Hauptversion von PostgreSQL** geht so: neues PostgreSQL leer starten, Sicherung einspielen.
 - Nach dem Umschalten **startet das DMS neu** (Docker startet es mit `restart: unless-stopped` sofort wieder). Danach erscheint die Abschlussmeldung, und alle melden sich neu an – mit den Zugangsdaten aus der Zeit der Sicherung.
 - Jeder Schritt steht im [Protokoll](fehlersuche.md#protokoll), Modul *sicherung*.
@@ -45,6 +46,8 @@ Gehört zur Sicherung ein anderer Schlüssel als der jetzige, legt das DMS die b
 Eine Sicherung ist erst dann gut, wenn sie sich einspielen lässt. Deshalb spielt das DMS **sonntags um 04:00** (einstellbar unter *Sicherung → Probe-Wiederherstellung*) die neueste Sicherung probeweise ein – in einen vorübergehenden Bereich, das laufende DMS bleibt unberührt – und prüft sie wie oben, dazu die Prüfwerte von bis zu 20 Dateien. **Jetzt probeweise wiederherstellen** startet sie sofort.
 
 ![Probe-Wiederherstellung](bilder/werkbank-sicherung-probe.png)
+
+Auch die Probe prüft die Erweiterungen der Datenbank (siehe oben); fehlt eine, steht beim Schritt *Erweiterungen der Datenbank* ein Hinweis, die Probe gilt trotzdem als erfolgreich.
 
 Das Ergebnis steht je Sicherung in der Liste und als Ampel in der Übersicht: **grün** = letzte Probe erfolgreich und höchstens 8 Tage alt, **gelb** = älter oder noch nie, **rot** = fehlgeschlagen. Schlägt eine Probe fehl, bekommen alle Administratoren eine Mail. Im aktiven Wartungsmodus und bei zu wenig freiem Platz pausiert die Probe. Die Probe braucht den **aktuellen Schlüssel** dieses DMS: Eine Sicherung mit einem früheren Schlüssel (nach einem [Schlüsselwechsel](verschluesselung.md#schlussel-wechseln)) lässt sich nicht probeweise einspielen; die Probe schlägt dann mit einem Hinweis auf den Schlüssel fehl.
 

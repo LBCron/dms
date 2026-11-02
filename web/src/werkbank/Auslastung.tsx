@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Messpunkt } from '../../../shared/src/systemlast';
-import { api, type Schleifenverzoegerung, type SystemlastAntwort } from '../api';
+import { api, type ErweiterungStand, type Schleifenverzoegerung, type SystemlastAntwort } from '../api';
 import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
 import { t } from '../sprache';
@@ -94,6 +94,26 @@ function Schleife({ s }: { s: SystemlastAntwort['schleife'] }) {
       <p>{w ? t('systemzustand.schleife.wert', { median: ms(w.median), max: ms(w.max) }) : <NV />}</p>
       <p className="leise klein">{t('systemzustand.schleife.hilfe')} <Link to="/werkbank/anbindung" className="verweis">{t('systemzustand.schleife.verweis')}</Link>.</p>
     </div>
+  );
+}
+
+/**
+ * Erweiterungen der Suche (#562): nur wenn eine fehlt oder in einem Schema liegt, das eine Wiederherstellung löscht –
+ * mit Abhilfe, statt dass die Suche still schlechter wird.
+ */
+export function ErweiterungenHinweis({ liste }: { liste?: ErweiterungStand[] | null }) {
+  const probleme = (liste ?? []).filter((e) => e.zustand !== 'ok');
+  if (!probleme.length) return null;
+  return (
+    <section className="blatt" id="erweiterungen">
+      <h2 className="h3">{t('systemzustand.erweiterung.titel')} <Hilfe ort="werkbank.erweiterungen" /></h2>
+      {probleme.map((e) => (
+        <div key={e.name} className="hinweis warn">
+          <p><strong>{e.zustand === 'gefaehrdet' ? t('systemzustand.erweiterung.gefaehrdet', { name: e.name, schema: e.schema ?? '' }) : t.frei(`systemzustand.erweiterung.${e.name === 'pg_trgm' ? 'trgm' : e.name}.fehlt`)}</strong></p>
+          <p>{e.zustand === 'gefaehrdet' ? t('systemzustand.erweiterung.gefaehrdet.abhilfe') : t.frei(`systemzustand.erweiterung.${e.name === 'pg_trgm' ? 'trgm' : e.name}.abhilfe`)}</p>
+        </div>
+      ))}
+    </section>
   );
 }
 
