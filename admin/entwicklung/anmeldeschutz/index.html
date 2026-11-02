@@ -2729,6 +2729,13 @@
 <div class="admonition tip">
 <p class="admonition-title">Im eigenen Netz</p>
 <p>Läuft der Anbieter im Heimnetz (z. B. Keycloak auf dem NAS), geht auch <code>http://</code> – aber nur für Adressen im eigenen Netz. Das DMS muss den Anbieter selbst erreichen können.</p>
+<p>Als eigenes Netz gelten:</p>
+<ul>
+<li><code>localhost</code> und Namen ohne Punkt (z. B. <code>http://keycloak:8080</code>),</li>
+<li>private IP-Adressen: <code>10.x.x.x</code>, <code>172.16–31.x.x</code>, <code>192.168.x.x</code>, <code>127.x.x.x</code> sowie private und lokale IPv6-Adressen (<code>::1</code>, <code>fc…</code>/<code>fd…</code>, <code>fe80…</code>),</li>
+<li>Namen mit den Endungen <code>.local</code>, <code>.lan</code>, <code>.internal</code> und <code>.home.arpa</code> – die offizielle Endung für Heimnetze (z. B. <code>http://auth.home.arpa</code>).</li>
+</ul>
+<p>Nur die echte Endung zählt: <code>auth.home.arpa.example.org</code> ist eine Adresse im Internet und braucht <code>https://</code>. Andere Namen wie <code>.fritz.box</code> oder <code>.home</code> brauchen ebenfalls <code>https://</code> – oder du gibst dem Anbieter einen Namen unter <code>.home.arpa</code> bzw. nimmst seine IP-Adresse. Dasselbe gilt für die Endpunkte bei <a href="../postfaecher/#anderer-anbieter">Postfächern</a> mit „anderem Anbieter“.</p>
 </div>
 
 

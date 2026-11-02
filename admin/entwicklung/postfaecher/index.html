@@ -2747,7 +2747,7 @@
 </ol>
 <p>Google bietet für Gmail keinen Gerätecode an; das DMS braucht dafür eine Adresse, die dein Browser erreicht (https).</p>
 <h3 id="anderer-anbieter">Anderer Anbieter<a class="headerlink" href="#anderer-anbieter" title="Permanent link">&para;</a></h3>
-<p>Für andere Anbieter mit IMAP und OAuth 2.0 trägst du <em>Autorisierungs-Endpunkt</em>, <em>Token-Endpunkt</em>, wahlweise den <em>Gerätecode-Endpunkt</em> und den <em>Bereich</em> (Scope, meist mit <code>offline_access</code>) selbst ein – sie stehen in der Dokumentation des Anbieters. Je DMS gibt es eine solche Einstellung.</p>
+<p>Für andere Anbieter mit IMAP und OAuth 2.0 trägst du <em>Autorisierungs-Endpunkt</em>, <em>Token-Endpunkt</em>, wahlweise den <em>Gerätecode-Endpunkt</em> und den <em>Bereich</em> (Scope, meist mit <code>offline_access</code>) selbst ein – sie stehen in der Dokumentation des Anbieters. Je DMS gibt es eine solche Einstellung. Die Endpunkte brauchen <code>https://</code>; <code>http://</code> geht nur im eigenen Netz – welche Adressen dazu zählen (z. B. <code>.lan</code> oder <code>.home.arpa</code>), steht unter <a href="../anmeldeschutz/#anmeldung-uber-einen-anbieter-openid-connect">Anmeldung über einen Anbieter</a>.</p>
 <h2 id="was-beim-ubernehmen-passiert">Was beim Übernehmen passiert<a class="headerlink" href="#was-beim-ubernehmen-passiert" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Jede Mail wird eine Post</strong>: Kanal <em>E-Mail</em>, Richtung eingehend, Stand <em>Neu</em>; Betreff, Datum und Absender (Name und Adresse) aus der Mail; <em>Für</em> aus dem Postfach. Angelegt hat sie das <em>Postfach</em>, kein Benutzer. Die Historie nennt Postfach, Absender und Zeit.</li>
