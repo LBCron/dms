@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.113/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.114/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0113" class="md-skip">
+        <a href="#neu-in-version-0114" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01130" class="md-nav__link">
+  <a href="#01140" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.113.0
+        0.114.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.113.0">
+    <nav class="md-nav" aria-label="0.114.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,17 +379,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technik
       
     </span>
   </a>
@@ -2004,15 +1993,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01130" class="md-nav__link">
+  <a href="#01140" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.113.0
+        0.114.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.113.0">
+    <nav class="md-nav" aria-label="0.114.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2020,17 +2009,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technik
       
     </span>
   </a>
@@ -2073,27 +2051,23 @@
   
 
 
-<h1 id="neu-in-version-0113">Neu in Version 0.113<a class="headerlink" href="#neu-in-version-0113" title="Permanent link">&para;</a></h1>
-<h2 id="01130">0.113.0<a class="headerlink" href="#01130" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0114">Neu in Version 0.114<a class="headerlink" href="#neu-in-version-0114" title="Permanent link">&para;</a></h1>
+<h2 id="01140">0.114.0<a class="headerlink" href="#01140" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vorschläge beim Zuordnen von Post</strong> (#336): Sobald der Text einer Post da ist, sucht das DMS darin – offline, ohne KI, nur mit Mustern und dem Abgleich mit deinen Mappen.</li>
-<li>Kasten <strong>Erkannt</strong> an der Post: <strong>Absender</strong> mit Begründung („gefunden: Kundennummer 100-4711“), <strong>Datum</strong> des Schreibens, <strong>Gesamtbetrag</strong> und Nummern (Kunden-, Rechnungs-, Vertragsnummer). Ein Klick trägt Absender bzw. Datum an der Post ein.</li>
-<li>Unbekannter Absender: <strong>Als neue Organisation anlegen</strong> mit Name und Anschrift aus dem Briefkopf, wenn er sicher erkennbar ist.</li>
-<li>Unter <strong>Zuordnen …</strong> stehen <strong>Vorschläge</strong> für die Zielmappe – Treffer über eine Vertragsnummer, Mappen, die auf den Absender verweisen, frühere Post dieses Absenders –, der beste ist vorausgewählt und als Vorschlag markiert. Bei „neue Mappe“ sind Datum, Betrag, Nummern und der Verweis auf den Absender vorbelegt.</li>
-<li>Nur Mappen, die du lesen darfst. <strong>Neu erkennen</strong> rechnet nach einer neuen Organisation noch einmal.</li>
-<li><strong>Feld-Eigenschaft „Für die Erkennung nutzen“</strong> im Mappentyp (#336): mit optionaler Art (Nummer, IBAN, E-Mail …) und Erkennungshinweis. Pakete markieren ihre Felder selbst; ein Update übernimmt die Markierung an Feldern, an denen du nichts eingestellt hast.</li>
-<li>Schnittstelle: <code>GET /post/{id}/erkennung</code> und <code>POST /post/{id}/erkennung</code> (neu rechnen); <code>erkennung</code> am Feld eines Mappentyps.</li>
-<li>Benutzerhandbuch <em>Post</em> → <strong>Vorschläge beim Zuordnen</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Für die Erkennung nutzen</strong>, Entwicklerhandbuch <em>Pakete</em> (Feld <code>erkennung</code>).</li>
-</ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Die Erkennung startet auf das neue interne Ereignis <strong>„Volltext fertig“</strong> (eingebaute Texterkennung, Pakete, Schnittstelle), nicht auf das Ende der eingebauten Texterkennung – so läuft sie auch mit der Texterkennung als Paket weiter.</li>
-<li>Migration <code>045_erkennung.sql</code>: Tabelle <code>erkennungen</code> (Ergebnis je Post, ohne Titel; fällt mit der Post weg).</li>
+<li><strong>Aus Dokument ausfüllen</strong> (#391, Stufe 1): Oben in jeder Mappe (neu und bestehend) – Foto machen oder Datei wählen (Foto, PDF, vCard; Vorder- und Rückseite zusammen) bzw. ein Dokument der Mappe nehmen, und das DMS trägt die erkannten Angaben als <strong>Vorschlag</strong> in die Felder ein. Beispiel: <strong>Visitenkarte scannen</strong> bei einer Person – Name, Funktion, Telefon, Mobil, E-Mail, Anschrift und Organisation.</li>
+<li>Dieselbe eingebaute Erkennung wie beim Zuordnen von Post (#336): offline, ohne KI. Fotos und PDFs liest die Texterkennung sofort, vCards direkt.</li>
+<li>Am Feld steht, wie sicher der Wert ist und wo er stand; <strong>Zurücknehmen</strong> einzeln oder alle. Ausgefüllte Felder bleiben, der Wert aus dem Dokument steht als <strong>Alternative</strong> mit <strong>Übernehmen</strong> daneben.</li>
+<li>Verweisfelder: eine vorhandene Mappe, die im Text steht (z. B. die Firma an Name oder E-Mail-Domain); sonst <strong>„Organisation“ mit diesen Angaben anlegen</strong> nach einer Rückfrage.</li>
+<li>Gespeichert wird erst mit <strong>Mappe speichern</strong>; das Foto liegt dann im Dokumentenregister (abwählbar).</li>
+<li>Nie für Passwortfelder und feste Felder; nur mit dem Recht, die Mappe zu bearbeiten bzw. anzulegen.</li>
+<li>Werkbank → Mappentyp → <strong>Erkennung</strong>: eigene <strong>Beschriftung</strong> des Knopfs (z. B. „Visitenkarte scannen“) oder ausblenden; gefüllt werden die Felder, die „für die Erkennung“ markiert sind (ohne Markierung alle mit erkennbarer Art).</li>
+<li>Schnittstelle: <code>POST /typen/{id}/vorschlaege</code> (Text oder Dokumente), <code>POST /typen/{id}/vorschlaege/datei</code> (Foto, PDF, vCard), <code>GET /typen/{id}/erkennungsschema</code> (Feldbeschreibung als JSON Schema; jede Antwort wird dagegen geprüft); <code>ausDokument</code> am Mappentyp.</li>
+<li>Benutzerhandbuch <em>Mappen</em> → <strong>Aus Dokument ausfüllen</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Erkennung</strong>, Entwicklerhandbuch <em>Pakete mit Code</em> → <strong>Erkennung: Feldbeschreibung und Antwort</strong>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.112.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.112.0...v0.113.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.113.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.113.0...v0.114.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

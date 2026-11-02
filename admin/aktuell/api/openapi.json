@@ -3145,6 +3145,253 @@
         }
       }
     },
+    "/typen/{id}/vorschlaege": {
+      "post": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Vorschläge für Mappentyp aus Dokument",
+        "description": "Aus Dokument ausfüllen (#391, eingebaute Erkennung ohne KI): Vorschläge für die Felder des Mappentyps aus text und/oder den Volltexten der Dokumente dokumente (Ids, Lesen nötig; ohne Volltext 409). Mit mappe (Id einer Mappe dieses Typs) braucht es Bearbeiten, sonst das Recht, Mappen des Typs anzulegen. Gefüllt werden die Felder, die „für die Erkennung“ markiert sind (hat der Typ keine, alle mit erkennbarer Art); Passwortfelder und feste Felder nie. Jeder Wert ist gegen die Feldart geprüft: Datum JJJJ-MM-TT, Betrag {betrag, waehrung}, Auswahl nur aus der Liste, Verweis als Mappen-Id einer lesbaren Mappe. Nichts wird gespeichert.",
+        "operationId": "postTypenMitidVorschlaege",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Mappentyps (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VorschlaegeEingabe"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypVorschlaege"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/typen/{id}/vorschlaege/datei": {
+      "post": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Vorschläge aus einer Datei (Foto, PDF, vCard)",
+        "description": "Wie POST /typen/{id}/vorschlaege, der Text kommt aus der Datei im Körper (roh, höchstens 30 MB): Fotos und PDFs über die Texterkennung (sofort, höchstens 5 Seiten), vCards (.vcf) direkt. Die Datei wird nicht gespeichert; die Antwort enthält zusätzlich text (der gelesene Text, z. B. um Vorder- und Rückseite einer Visitenkarte zusammen an POST /typen/{id}/vorschlaege zu geben). 415 bei anderen Dateiarten, 503 ohne Texterkennung.",
+        "operationId": "postTypenMitidVorschlaegeDatei",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Mappentyps (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "description": "Dateiname (z. B. karte.jpg, kontakt.vcf)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "typ",
+            "in": "query",
+            "required": false,
+            "description": "MIME-Typ",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mappe",
+            "in": "query",
+            "required": false,
+            "description": "Id der Mappe, die gefüllt wird (sonst eine neue)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypVorschlaege"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/typen/{id}/erkennungsschema": {
+      "get": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Feldbeschreibung für die Erkennung (JSON Schema)",
+        "description": "Die Felder des Mappentyps als JSON Schema 2020-12 (#391): je Feld ein Objekt { wert, sicherheit, fundstelle } mit dem Schema des Werts nach Feldart, Bezeichnung (title), Hilfetext und Erkennungshinweis (description) sowie x-dms-feldtyp, x-dms-erkennung (Art) und x-dms-markiert. Ohne Passwortfelder und feste Felder. So sieht auch die Antwort einer Engine aus Paketen aus (#511).",
+        "operationId": "getTypenMitidErkennungsschema",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Mappentyps (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonSchema"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/post/{id}/erkennung": {
       "get": {
         "tags": [
@@ -7183,6 +7430,20 @@
           "felder"
         ],
         "properties": {
+          "ausDokument": {
+            "type": "object",
+            "nullable": true,
+            "description": "„Aus Dokument ausfüllen“ (#391): eigene Beschriftung des Knopfs (höchstens 40 Zeichen) oder aus = true blendet ihn aus; null = Standard. Systemtypen haben den Knopf nie.",
+            "properties": {
+              "aus": {
+                "type": "boolean"
+              },
+              "beschriftung": {
+                "type": "string",
+                "example": "Visitenkarte scannen"
+              }
+            }
+          },
           "name": {
             "type": "string"
           },
@@ -8334,6 +8595,115 @@
             "$ref": "#/components/schemas/Mappe"
           }
         }
+      },
+      "VorschlaegeEingabe": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text, z. B. von Fotos (höchstens 200.000 Zeichen)"
+          },
+          "dokumente": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Dokumente mit Volltext (höchstens 10)"
+          },
+          "mappe": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Mappe dieses Typs, die gefüllt wird"
+          }
+        }
+      },
+      "TypVorschlaege": {
+        "type": "object",
+        "properties": {
+          "vorschlaege": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "wert": {
+                  "description": "Wert im Format der Feldart (wie Werte)"
+                },
+                "sicherheit": {
+                  "type": "string",
+                  "enum": [
+                    "hoch",
+                    "mittel",
+                    "niedrig"
+                  ]
+                },
+                "fundstelle": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Je Feldkennung"
+          },
+          "bezuege": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "titel": {
+                  "type": "string"
+                },
+                "typId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "description": "Titel der vorgeschlagenen Mappen in Verweisfeldern"
+          },
+          "neu": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "typId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "werte": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "fundstelle": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Verweisfeld ohne passende Mappe: Vorschlag, eine neue (z. B. Organisation) mit diesen Werten anzulegen"
+          },
+          "verworfen": {
+            "type": "integer",
+            "description": "Werte, die die Prüfung gegen die Feldtypen verworfen hat"
+          },
+          "zeichen": {
+            "type": "integer",
+            "description": "Länge des gelesenen Texts"
+          },
+          "text": {
+            "type": "string",
+            "description": "Nur bei /datei: der gelesene Text"
+          },
+          "info": {
+            "type": "string",
+            "description": "Nur bei /datei: wie gelesen wurde"
+          }
+        }
+      },
+      "JsonSchema": {
+        "type": "object",
+        "description": "JSON Schema 2020-12",
+        "additionalProperties": true
       },
       "Erkennung": {
         "type": "object",
