@@ -5815,7 +5815,11 @@ export class Dienst {
           ...(volltext ? { volltext: volltext.text } : {}),
         });
         if (volltext) await this.repo.ocrSetze(v.id, { stand: 'fertig', ...volltext });
+        // Der Vektor (#442) stammt noch aus dem ungeschwärzten Text: weg damit; das Ereignis „Volltext fertig“
+        // lässt Pakete (z. B. Ähnlichkeit) ihn aus dem geschwärzten Text neu berechnen.
+        await this.repo.vektorLoesche(v.id);
         this.danach(() => this.neueDateien([v]));
+        if (volltext) this.danach(() => void this.volltextFertig({ dokument: v.id, mappe: d.mappeId }, { quelle: 'kern', text: !!volltext.text.trim(), mime: r.mime, seiten: volltext.seiten ?? null }).catch(() => {}));
         const x = await this.nachNeuerVersion(d, { ...v, ocr: volltext ? { stand: 'fertig' } as Dokument['ocr'] : v.ocr }, typ, reg, von);
         await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: d.name, text: `geschwärzte Fassung als Version ${x.version ?? ''} von „${d.name}“ erstellt (${stellen})`, version: x.version, stellen: r.bereiche, seiten: r.betroffen });
         return x;

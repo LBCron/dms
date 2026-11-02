@@ -143,6 +143,9 @@ Gut zu wissen:
 - Vektortext wird dabei zu einem Bild – die Kopie ist meist etwas größer und nicht ganz so scharf wie ein PDF direkt aus einem Programm.
 - Schwärzen geht mit dem Recht „Bearbeiten“ an der Mappe, für höchstens 300 Seiten auf einmal (längere PDFs vorher [teilen](#pdf-bearbeiten)), nicht bei PDFs mit Passwortschutz.
 - Das **Original** enthält weiterhin alles. Gib die geschwärzte Kopie weiter – per [E-Mail, Export oder Link](versenden.md).
+- **Schwärzen schützt beim Hinausgeben, nicht innerhalb des DMS:** Wer die Mappe lesen darf, sieht auch das Original (bzw. bei „Neue Version“ die ältere Version). Soll eine Person im Haushalt die Stellen nicht sehen, gehört das Original in eine Mappe, die sie nicht lesen darf – oder du löschst es nach dem Schwärzen.
+- **Suchbegriffe** finden ein Wort auch über eine Silbentrennung am Zeilenende („Mül-“ / „ler“), mit weichem Trennzeichen und in Großbuchstaben mit „SS“ statt „ß“. Kontrolliere trotzdem die Vorschau: Falsch erkannter Text in einer Textebene (z. B. aus einer fremden Texterkennung) wird nicht gefunden – dort hilft nur ein aufgezogener Bereich.
+- Gibt ein PDF die Drehung einer Seite nicht eindeutig an, bricht das Schwärzen mit einer Meldung ab, statt Kästen neben die Wörter zu setzen. Dann das PDF einmal neu speichern (z. B. „Drucken als PDF“) und erneut schwärzen.
 
 ## Volltext
 

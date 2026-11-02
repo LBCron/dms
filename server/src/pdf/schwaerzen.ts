@@ -56,6 +56,29 @@ function starte(befehl: string, args: string[], zeit = ZEIT_MS): Promise<string>
   });
 }
 
+/**
+ * Drehung je Seite so, wie poppler sie zeichnet (pdfinfo „Page N rot“). pdf-lib liest manche ungültige
+ * Angaben (z. B. `/Rotate 90.0`) anders als poppler – dann lägen die Kästen neben den Wörtern. Ohne pdfinfo
+ * bleibt es bei der Angabe von pdf-lib; die Prüfung der Bildmaße beim Schwärzen fängt Abweichungen ab.
+ */
+export async function popplerDrehungen(ein: string, vorgabe: number[]): Promise<number[]> {
+  let aus: string;
+  try { aus = await starte('pdfinfo', ['-f', '1', '-l', String(vorgabe.length), ein]); } catch { return vorgabe; }
+  const d = [...vorgabe];
+  for (const m of aus.matchAll(/^Page\s+(\d+)\s+rot:\s+(-?\d+)/gm)) {
+    const i = Number(m[1]) - 1;
+    if (i >= 0 && i < d.length) d[i] = ((Number(m[2]) % 360) + 360) % 360;
+  }
+  return d;
+}
+
+/** Stimmt das gerenderte Bild in der Lage (hoch/quer) mit der Analyse überein? Sonst lägen Kästen daneben. */
+export function lagePasst(bildBreite: number, bildHoehe: number, seiteBreite: number, seiteHoehe: number): boolean {
+  if (!(bildBreite > 0 && bildHoehe > 0 && seiteBreite > 0 && seiteHoehe > 0)) return false;
+  const a = bildBreite / bildHoehe, b = seiteBreite / seiteHoehe;
+  return Math.abs(a - b) / b < 0.03;
+}
+
 function popplerFehler(e: unknown, was: string): never {
   if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Fachfehler(503, 'poppler (pdftoppm/pdftotext) fehlt – hier lässt sich nicht schwärzen.');
   throw new Fachfehler(422, `${was}: ${(e as Error).message}`);
@@ -162,11 +185,12 @@ const ohneText = (s: SchwaerzSeite) => !s.woerter.length;
  */
 export async function analysiere(inhalt: Buffer, mime: string): Promise<Analyse> {
   const pdf = await arbeitsPdf(inhalt, mime);
-  const drehungen = await seitenlage(pdf);
+  const lage = await seitenlage(pdf);
   const dir = await mkdtemp(join(tmpdir(), 'dms-schwarz-'));
   try {
     const ein = join(dir, 'ein.pdf');
     await writeFile(ein, pdf);
+    const drehungen = await popplerDrehungen(ein, lage);
     let html: string;
     try { html = await starte('pdftotext', ['-bbox', '-cropbox', '-enc', 'UTF-8', ein, '-']); } catch (e) { popplerFehler(e, 'Der Text ließ sich nicht lesen'); }
     const seiten = liesBbox(html, drehungen);
@@ -353,6 +377,10 @@ export async function schwaerze(inhalt: Buffer, mime: string, analyse: Analyse, 
         await rm(join(dir, name), { force: true });
         const k = pnmKopf(px);
         const nr = a + j;
+        // Liegt das Bild anders als die Seite der Analyse (hoch statt quer), lägen die Kästen daneben:
+        // lieber abbrechen als eine Schwärzung ausgeben, unter der der Text sichtbar bleibt.
+        const s = analyse.seiten[nr - 1];
+        if (!bild && !lagePasst(k.breite, k.hoehe, s.breite, s.hoehe)) throw new Fachfehler(422, `Seite ${nr}: Die Lage der Seite (Drehung) ist im PDF nicht eindeutig angegeben. Damit nichts sichtbar bleibt, wird nicht geschwärzt. Lade das PDF einmal neu gespeichert hoch (z. B. „Drucken als PDF“).`);
         maleSchwarz(px, k, bereiche.filter((x) => x.seite === nr));
         roh.push({ nr, px, k, grau: istGrau(px, k) });
       }
