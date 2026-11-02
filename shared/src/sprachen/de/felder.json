@@ -49,5 +49,17 @@
   "wartung.spalte.mappe": "Mappe",
   "wartung.spalte.wert": "Angabe",
   "wartung.spalte.grund": "Was nicht passt",
-  "paket.formate": "Format bzw. Grenzen: {felder}"
+  "paket.formate": "Format bzw. Grenzen: {felder}",
+  "auswahl.entfernen": "Entfernen",
+  "auswahl.lade": "Lade …",
+  "verweis.gewaehlt": "Gewählte Mappen",
+  "verweis.suchen": "{typ} suchen …",
+  "verweis.nichts": "Nichts gefunden.",
+  "verweis.leer": "Noch keine Mappe in „{typ}“.",
+  "verweis.mehr": "{zahl} insgesamt – tippe, um einzugrenzen.",
+  "verweis.unpassend": "passt nicht mehr zum Filter",
+  "verweis.unpassend.titel": "Bleibt gültig; neu wählen lässt sich nur, was zur Auswahl passt.",
+  "verweis.aendern": "Ändern",
+  "verweis.entfernen": "Verweis „{titel}“ entfernen",
+  "verweis.entfernen.ohne": "Verweis entfernen"
 }

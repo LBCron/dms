@@ -387,7 +387,6 @@ a.textknopf { text-decoration: none; }
 }
 .bedingungneu { align-self: flex-start; }
 .suchformular .bedingungneu select { width: auto; max-width: 100%; font-weight: 600; color: var(--akzent); }
-.typwahl-ref .suchchips { margin-bottom: 2px; }
 .suchzusammenfassung { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .suchzusammenfassung > .suchchips, .suchzusammenfassung > p { flex: 1 1 16em; min-width: 0; }
 .chiptext { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }

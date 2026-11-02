@@ -10,6 +10,7 @@ import { t } from '../sprache';
 import { Symbol } from '../Symbol';
 import { titelOder } from '../seiten';
 import { MappenWahl } from './MappeFormular';
+import { Mehrfachauswahl } from './Mehrfachauswahl';
 
 /**
  * Erweiterte Suche (#199, #426): oben in der Mitte das Formular, darunter die Treffer mit den Bedingungen als
@@ -140,43 +141,21 @@ export function Suchformular({ suche, fokus, zeigeTreffer, einklappen }: { suche
 }
 
 /**
- * Mappentypen wählen (#426) wie beim Referenzfeld: Suchfeld mit Vorschlägen, gewählte als Chips mit Entfernen.
- * Ohne Auswahl gelten alle lesbaren Mappentypen.
+ * Mappentypen wählen (#426) mit derselben Mehrfachauswahl wie ein Verweisfeld (#602): Suchfeld mit Vorschlägen,
+ * die gewählten Typen darunter, je mit „Entfernen“. Ohne Auswahl gelten alle lesbaren Mappentypen.
  */
 function TypWahl({ lesbar, gewaehlt, setze }: { lesbar: Mappentyp[]; gewaehlt: Mappentyp[]; setze(l: Mappentyp[]): void }) {
   const [eingabe, setEingabe] = useState('');
   const [offen, setOffen] = useState(false);
   const q = eingabe.trim().toLowerCase();
   const auswahl = lesbar.filter((x) => !gewaehlt.some((y) => y.id === x.id) && (!q || x.name.toLowerCase().includes(q)));
-  const waehle = (x: Mappentyp) => { setze([...gewaehlt, x]); setEingabe(''); setOffen(false); };
+  const waehle = (id: string) => { const x = auswahl.find((y) => y.id === id); if (!x) return; setze([...gewaehlt, x]); setEingabe(''); setOffen(false); };
   return (
-    <div className="refbox typwahl-ref">
-      {gewaehlt.length > 0 && (
-        <ul className="suchchips" aria-label={t('suche.typen')}>
-          {gewaehlt.map((x) => (
-            <li key={x.id} className="chip suchchip">{x.name}
-              <button type="button" className="chipweg" aria-label={t('suche.typen.entfernen', { name: x.name })} title={t('suche.typen.entfernen', { name: x.name })}
-                onClick={() => setze(gewaehlt.filter((y) => y.id !== x.id))}><Symbol name="schliessen" /></button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="wahl" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOffen(false); }}>
-        <input id="such-typen" type="search" role="combobox" aria-expanded={offen} aria-autocomplete="list" autoComplete="off" aria-label={t('suche.typen.suchen')}
-          placeholder={t('suche.typen.suchen')} value={eingabe}
-          onFocus={() => setOffen(true)} onChange={(e) => { setEingabe(e.target.value); setOffen(true); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setOffen(false);
-            if (e.key === 'Enter') { e.preventDefault(); if (auswahl[0]) waehle(auswahl[0]); }
-          }} />
-        {offen && (
-          <div className="wahlliste" role="listbox" aria-label={t('suche.typen')}>
-            {!auswahl.length ? <p className="leise klein">{t('suche.typen.keine')}</p>
-              : auswahl.map((x) => <button key={x.id} type="button" role="option" aria-selected={false} onClick={() => waehle(x)}>{x.name}</button>)}
-          </div>
-        )}
-      </div>
-    </div>
+    <Mehrfachauswahl id="such-typen" name={t('suche.typen')} platzhalter={t('suche.typen.suchen')} eingabeLabel={t('suche.typen.suchen')}
+      eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen}
+      vorschlaege={auswahl.map((x) => ({ id: x.id, text: x.name }))} leerText={t('suche.typen.keine')} waehle={waehle}
+      gewaehlt={gewaehlt.map((x) => ({ id: x.id, inhalt: x.name, entfernenText: t('suche.typen.entfernen', { name: x.name }) }))}
+      entferne={(id) => setze(gewaehlt.filter((y) => y.id !== id))} />
   );
 }
 

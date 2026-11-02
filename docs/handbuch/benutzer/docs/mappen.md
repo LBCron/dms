@@ -89,7 +89,9 @@ Passwörter erscheinen nie im Titel, in Listen oder in der Suche. Steht am Feld 
 
 ### Auf andere Mappen verweisen
 
-Ein **Verweis** verbindet zwei Mappen – die Rechnung mit ihrem Vertrag, den Vertrag mit dem Vertragspartner. Tippe in das Feld ein paar Buchstaben des Titels und wähle die passende Mappe aus den Vorschlägen. Bei Feldern, die mehrere Verweise erlauben, wiederholst du das.
+Ein **Verweis** verbindet zwei Mappen – die Rechnung mit ihrem Vertrag, den Vertrag mit dem Vertragspartner. Tippe in das Feld ein paar Buchstaben des Titels und wähle die passende Mappe aus den Vorschlägen. Mit der Tastatur übernimmt **Enter** den ersten Vorschlag, **Esc** schließt die Liste.
+
+Bei Feldern, die **mehrere Verweise** erlauben (z. B. *Für Rechnungen* bei einer Zahlung), wiederholst du das. Das Suchfeld bleibt oben direkt unter der Beschriftung; die gewählten Mappen stehen **darunter**, jede mit **Entfernen**. So wählst du überall mehrere Einträge aus einer Liste, auch die Mappentypen in der [Erweiterten Suche](ablage.md#erweiterte-suche).
 
 Gibt es die Mappe noch nicht, führt **+ … anlegen** unter dem Feld direkt zum Anlegen.
 
