@@ -1415,7 +1415,7 @@ node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>alle
 </tr>
 <tr>
 <td>groß</td>
-<td>ab 25 gleichzeitig alle <code>--schritt-dauer</code> (120) Sekunden 25 mehr, bis p95 &gt; 3 s, Fehlerquote &gt; 1 % oder der Überlastschutz greift (503); danach 1000 gleichzeitig (höchstens 60 s) mit Anmeldeschutz-Probe, dann Erholung</td>
+<td>5, 10, dann ab 25 gleichzeitig alle <code>--schritt-dauer</code> (120) Sekunden 25 mehr (<code>--start</code> beginnt genau dort), bis p95 &gt; 3 s, Fehlerquote &gt; 1 % oder der Überlastschutz greift (503); danach 1000 gleichzeitig (höchstens 60 s) mit Anmeldeschutz-Probe, dann Erholung</td>
 <td>200.000 Mappen</td>
 <td><strong>Messung:</strong> Grenze = höchste Stufe ohne Abbruch; mit <code>--vorher</code> Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt. <strong>Pflicht:</strong> keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar, Erholung (20 Anfragen in Folge mit p95 ≤ 1 s) innerhalb von 30 s, Anmeldeschutz sperrt nach falschen Passwörtern auch das richtige (429)</td>
 </tr>

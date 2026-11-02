@@ -2643,7 +2643,7 @@
 <tr>
 <td><code>gross</code></td>
 <td>Belastungsgrenze</td>
-<td>alle 2 Minuten 25 gleichzeitige Anfragen mehr, bis 95 % nicht mehr unter 3 s bleiben, mehr als 1 % fehlschlagen oder der <a href="../technik/#last">Überlastschutz</a> greift; danach kurz 1000 gleichzeitig</td>
+<td>alle 2 Minuten mehr gleichzeitige Anfragen (5, 10, 25, 50, 75 …), bis 95 % nicht mehr unter 3 s bleiben, mehr als 1 % fehlschlagen oder der <a href="../technik/#last">Überlastschutz</a> greift; danach kurz 1000 gleichzeitig</td>
 <td>200.000 Mappen</td>
 <td>kein fester Wert – gemessen wird, <strong>wo die Grenze liegt</strong>; Pflicht: kein Absturz, Erholung von selbst</td>
 </tr>
@@ -2761,7 +2761,7 @@
 <p><strong>Aufräumen:</strong> Test-Container stoppen und löschen (<code>docker rm -f dms-test</code>), die Ordner der Test-Installation löschen.</p>
 </li>
 </ol>
-<p>Optionen: <code>--geraet "…"</code> und <code>--speicher HDD|SSD|NVMe</code> tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). <code>--dauer &lt;Sekunden&gt;</code> ändert die Messdauer von <code>klein</code> und <code>mittel</code> (Vorgabe 120; im Weg über den Browser mit der Variable <code>DMS_LASTTEST_DAUER</code>). <code>--start</code>, <code>--schritt</code> und <code>--schritt-dauer</code> ändern die Steigerung von <code>gross</code> (Vorgabe 25, 25, 120 Sekunden), <code>--bis &lt;n&gt;</code> begrenzt sie. <code>--bericht &lt;Datei&gt;</code> speichert den Bericht.</p>
+<p>Optionen: <code>--geraet "…"</code> und <code>--speicher HDD|SSD|NVMe</code> tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). <code>--dauer &lt;Sekunden&gt;</code> ändert die Messdauer von <code>klein</code> und <code>mittel</code> (Vorgabe 120; im Weg über den Browser mit der Variable <code>DMS_LASTTEST_DAUER</code>). <code>--start</code>, <code>--schritt</code> und <code>--schritt-dauer</code> ändern die Steigerung von <code>gross</code> (Vorgabe: 5 und 10, dann ab 25 in Schritten von 25, je 120 Sekunden; mit <code>--start</code> beginnt sie genau dort), <code>--bis &lt;n&gt;</code> begrenzt sie. <code>--bericht &lt;Datei&gt;</code> speichert den Bericht.</p>
 <p>Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (<code>--ziel http://…:8099</code>); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.</p>
 <h2 id="ergebnis-lesen">Ergebnis lesen<a class="headerlink" href="#ergebnis-lesen" title="Permanent link">&para;</a></h2>
 <ul>
