@@ -6,8 +6,9 @@
 import { uebersetzer } from '../../shared/src/sprache';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import mail from '../../shared/src/sprachen/de/mail.json';
+import mappen from '../../shared/src/sprachen/de/mappen.json';
 import pakete from '../../shared/src/sprachen/de/pakete.json';
 import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ anmeldung, mail, pakete, systemzustand, werkbank });
+export const t = uebersetzer({ anmeldung, mail, mappen, pakete, systemzustand, werkbank });

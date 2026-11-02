@@ -34,6 +34,8 @@ interface V1 {
   body?: string | 'binaer';
   antwort?: string | 'binaer' | null;
   status?: number;
+  /** Beschreibung der Antwort 409 (z. B. gleichzeitig geändert, #609). */
+  konflikt?: string;
 }
 
 const passwoerter: Parameter = { name: 'passwoerter', wo: 'query', typ: 'string', beschreibung: '„anzeigen“: Passwortfelder im Klartext statt nur {gesetzt, lesbar}. Nur mit einem API-Schlüssel mit dem Recht „Passwörter lesen“ (sonst 403); jeder Abruf steht im Protokoll.' };
@@ -163,7 +165,8 @@ export const V1_TABELLE: V1[] = [
     beschreibung: 'Zusammenlegen (#490): Die Seiten der Post quelle (PDFs und Fotos in ihrer Reihenfolge) kommen ans Ende des ersten PDFs dieser Post (hat sie keins, entsteht eins); quelle kommt in den Papierkorb. Andere Dateiarten: 422. Braucht Bearbeiten an dieser Post und Löschen an quelle.',
     intern: { methode: 'POST', pfad: '/api/post/:id/zusammenlegen' }, parameter: [id('der Post, die bleibt')], body: 'Zusammenlegen', antwort: 'PostAusFotos' },
   { methode: 'POST', pfad: '/mappen', gruppe: 'Ablage', zusammenfassung: 'Mappe anlegen', beschreibung: 'Die Werte werden wie in der Oberfläche geprüft (Pflichtfelder, Längen, eindeutige Werte, Verweise, Formate und Datumsgrenzen). Bei Fehlern: 422 mit den Feldnamen in der Meldung und `details` je Feld.', intern: { methode: 'POST', pfad: '/api/mappen' }, body: 'MappeEingabe', antwort: 'Mappe', status: 201 },
-  { methode: 'PUT', pfad: '/mappen/{id}', gruppe: 'Ablage', zusammenfassung: 'Mappe ändern', beschreibung: 'Übergebene Werte ersetzen die bisherigen; Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern.', intern: { methode: 'PUT', pfad: '/api/mappen/:id' }, parameter: [id('der Mappe')], body: 'MappeAenderung', antwort: 'Mappe' },
+  { methode: 'PUT', pfad: '/mappen/{id}', gruppe: 'Ablage', zusammenfassung: 'Mappe ändern', beschreibung: 'Übergebene Werte ersetzen die bisherigen; nicht übergebene Felder bleiben, wie sie gerade gespeichert sind – schicke nur, was du ändern willst. Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern. Gleichzeitig bearbeiten (#609): Mit stand (der Wert geaendert der Mappe, so wie du sie gelesen hast) prüft das DMS, ob seitdem jemand eines der übergebenen Felder geändert hat. Dann kommt 409 mit details: Mappenkonflikt (betroffene Felder, wer, wann, aktueller Wert) und nichts wird gespeichert; andere Felder werden ohne Rückfrage zusammengeführt. Den eigenen Wert trotzdem übernehmen: noch einmal mit stand aus der 409-Antwort senden; den anderen behalten: das Feld weglassen. Ohne stand keine Prüfung (wie bis 0.143): Die übergebenen Felder gelten.', intern: { methode: 'PUT', pfad: '/api/mappen/:id' }, parameter: [id('der Mappe')], body: 'MappeAenderung', antwort: 'Mappe',
+    konflikt: 'Mit stand: Seitdem hat jemand dasselbe Feld anders geändert (details: Mappenkonflikt); nichts gespeichert' },
   { methode: 'DELETE', pfad: '/mappen/{id}', gruppe: 'Ablage', zusammenfassung: 'Mappe löschen', beschreibung: 'Samt ihrer Dokumente. 409, solange andere Mappen auf sie verweisen. Ist der Papierkorb an, kommt sie dorthin und lässt sich wiederherstellen. Jede Löschung steht im Löschprotokoll (#470) – mit dem API-Schlüssel als „Schnittstelle“.', intern: { methode: 'DELETE', pfad: '/api/mappen/:id' }, parameter: [id('der Mappe'), { name: 'grund', wo: 'query', typ: 'string', beschreibung: 'Grund fürs Löschprotokoll (#470): frist, verlangen, nicht_noetig oder sonstiges' }, { name: 'grundText', wo: 'query', typ: 'string', beschreibung: 'Freier Text zum Grund, ohne Personenbezug (höchstens 200 Zeichen)' }], antwort: null, status: 204 },
 
   {
@@ -362,7 +365,22 @@ const SCHEMAS: Record<string, Schema> = {
     },
   },
   MappeEingabe: { type: 'object', required: ['typId', 'werte'], properties: { typId: uuid, werte: ref('Werte') } },
-  MappeAenderung: { type: 'object', required: ['werte'], properties: { werte: ref('Werte') } },
+  MappeAenderung: { type: 'object', required: ['werte'], properties: {
+    werte: { ...ref('Werte'), description: 'Nur die Felder, die sich ändern sollen; fehlende Felder bleiben unverändert (#609)' },
+    stand: { ...zeit, description: 'Optional (#609): „geaendert“ der Mappe beim Lesen. Hat sich seitdem ein übergebenes Feld geändert und soll es anders lauten, kommt 409 statt Überschreiben.' },
+  } },
+  Mappenkonflikt: {
+    type: 'object', description: 'Gleichzeitig bearbeiten (#609): details der 409-Antwort von PUT /mappen/{id}',
+    properties: {
+      stand: { ...zeit, description: 'Aktueller Stand der Mappe – mit ihm noch einmal senden, um die eigenen Werte zu übernehmen' },
+      konflikte: { type: 'array', items: { type: 'object', properties: {
+        feld: { type: 'string', description: 'Kennung des Felds' }, label: { type: 'string' },
+        deins: { type: 'string', description: 'Dein Wert, lesbar (leer bei Passwortfeldern)' }, aktuell: { type: 'string', description: 'Jetziger Wert, lesbar (leer bei Passwortfeldern)' },
+        wert: { description: 'Jetziger Wert wie in werte; fehlt bei Passwortfeldern' }, geheim: { type: 'boolean', description: 'Passwortfeld' },
+        von: { ...uuid, nullable: true, description: 'Wer zuletzt geändert hat; null = das DMS selbst' }, name: { type: 'string' }, zeit,
+      } } },
+    },
+  },
   Bezug: { type: 'object', properties: { titel: { type: 'string' }, typId: uuid } },
   PapierkorbEintrag: {
     type: 'object',
@@ -664,6 +682,7 @@ export function openapi(version: string, serverUrl?: string): Schema {
     if (e.parameter?.some((p) => p.wo === 'path')) fehler[404] = { description: 'Nicht gefunden', content: inhalt('Fehler') };
     if (e.body && e.body !== 'binaer') fehler[422] = { description: 'Eingaben ungültig (details: Prüfergebnis)', content: inhalt('Fehler') };
     if (e.methode === 'DELETE') fehler[409] = { description: 'Kann (noch) nicht gelöscht werden', content: inhalt('Fehler') };
+    if (e.konflikt) fehler[409] = { description: e.konflikt, content: inhalt('Fehler') };
     const status = String(e.status ?? 200);
     (paths[e.pfad] ??= {})[e.methode.toLowerCase()] = {
       tags: [e.gruppe],

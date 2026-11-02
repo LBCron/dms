@@ -13,7 +13,7 @@ import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
-import { istUuid, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
+import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 /** Sprachmarke im Hinweis der Texterkennung (#395) samt Konfidenz, zum Ersetzen (#400). */
 const log = protokoll.modul('texterkennung');
@@ -400,6 +400,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
   const SUCHINDEX = sql.unsafe(SUCHINDEX_TEXT);
+  // „Zuletzt geändert“ (#609): auf Millisekunden genau (wie in der API) und bei jedem Schreiben größer als vorher.
+  const STAND_WEITER = sql.unsafe(`greatest(date_trunc('milliseconds', clock_timestamp()), date_trunc('milliseconds', geaendert) + interval '1 millisecond')`);
   /**
    * Suchkonfigurationen der Sprachen, die in der Ablage vorkommen (#400): Deutsch immer, dazu die der Dokumente.
    * Eine Minute gemerkt; neu, sobald eine Sprache gesetzt wird. Lockerer Indexlauf über (haushalt_id, sprache), dazu
@@ -740,18 +742,26 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND lower(d.archivnummer) = lower(${nummer})`;
       return r ? alsDokument(r) : undefined;
     },
-    async aendereMappe(id, werte, vs, benutzerId) {
+    async aendereMappe(id, werte, vs, benutzerId, fw) {
       return sql.begin(async (tx) => {
+        let neu = werte; let verweise = vs;
+        // Feldweise (#609): unter Sperre der Zeile auf den aktuellen Stand legen.
+        if (fw) {
+          const [a] = await tx`SELECT werte, geaendert FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id} FOR UPDATE`;
+          if (a && fw.stand !== undefined && iso(a.geaendert) !== fw.stand) throw new StandVeraltet();
+          neu = feldweise((a?.werte as Werte | undefined) ?? {}, fw.basis, werte);
+          verweise = fw.verweise(neu);
+        }
         const [r] = await tx`
-          UPDATE mappen SET werte = ${json(sql, werte)}, geaendert = now(), geaendert_von = ${benutzerId}, passt = true, problem = NULL
+          UPDATE mappen SET werte = ${json(sql, neu)}, geaendert = ${STAND_WEITER}, geaendert_von = ${benutzerId}, passt = true, problem = NULL
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING *`;
-        await schreibeVerweise(tx, id, vs);
+        await schreibeVerweise(tx, id, verweise);
         return alsMappe(r);
       });
     },
     async beruehreMappe(id, benutzerId) {
-      await sql`UPDATE mappen SET geaendert = now(), geaendert_von = ${benutzerId} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      await sql`UPDATE mappen SET geaendert = ${STAND_WEITER}, geaendert_von = ${benutzerId} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
     },
     async holeSystemMappe(kennung) {
       const [r] = await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND system_kennung = ${kennung}`;

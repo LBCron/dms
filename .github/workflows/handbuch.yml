@@ -120,6 +120,16 @@ jobs:
         env:
           DMS_URL: http://localhost:3000
 
+      # Gleichzeitig bearbeiten (#609): dieselbe Mappe in zwei Fenstern, Rückfrage hell/dunkel, breit/Handy.
+      - name: Gleichzeitig bearbeiten prüfen
+        working-directory: docs/handbuch/screenshots
+        run: |
+          set -o pipefail
+          node gleichzeitig-pruefen.mjs "$RUNNER_TEMP/mobil" 2>&1 | tee -a "$RUNNER_TEMP/aufnahme.log"
+        shell: bash
+        env:
+          DMS_URL: http://localhost:3000
+
       # Immer (#489): Bilder in iPhone SE/15/17 Pro-Größe zum Nachsehen, bei Fehlern mit den Fundstellen.
       - name: Bilder der iPhone-Prüfung hochladen
         if: always()

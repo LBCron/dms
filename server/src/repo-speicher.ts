@@ -12,7 +12,7 @@ import { teilenAb, type Seitensprache } from '../../shared/src/seitensprachen';
 import { ausschnittAus } from './repo-pg';
 import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, woerterIn, type Varianten } from '../../shared/src/suche';
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
-import type { AuskunftLinkIntern, PapierkorbEintrag, Repo, Rueckverweis, SortierungIntern, Synonymgruppe, Verweis } from './repo';
+import { feldweise, StandVeraltet, type AuskunftLinkIntern, type PapierkorbEintrag, type Repo, type Rueckverweis, type SortierungIntern, type Synonymgruppe, type Verweis } from './repo';
 import { passt as passtLoesch, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 
 /** Trefferlisten (#75) immer in beiden Formen: Liste der Trefferlisten und Spalten der Standardliste. */
@@ -128,6 +128,8 @@ export function speicherRepo(): Repo {
       .map(([q]) => q)).size,
   };
   const jetzt = () => new Date().toISOString();
+  /** „Zuletzt geändert“ (#609): bei jedem Schreiben mindestens eine Millisekunde später als vorher. */
+  const standWeiter = (vorher: string) => new Date(Math.max(Date.now(), Date.parse(vorher) + 1)).toISOString();
   const kopie = <T>(x: T): T => structuredClone(x);
   /** Wie die Sortierung in PostgreSQL: leere Werte immer zuletzt. */
   const wertFuer = (m: Mappe, so: SortierungIntern): string | number | boolean | null => {
@@ -271,14 +273,18 @@ export function speicherRepo(): Repo {
       const d = [...dokumente.values()].find((x) => x.archivnummer?.toLowerCase() === nummer.toLowerCase());
       return d && { ...kopie(d), aeltere: versionen.get(d.id)?.length ?? 0 };
     },
-    async aendereMappe(id, werte, vs, benutzerId) {
-      const m = { ...mappen.get(id)!, werte: kopie(werte), geaendert: jetzt(), geaendertVon: benutzerId, passt: true, problem: null };
-      mappen.set(id, m); verweise.set(id, kopie(vs));
+    async aendereMappe(id, werte, vs, benutzerId, fw) {
+      const a = mappen.get(id)!;
+      // Feldweise (#609) wie in PostgreSQL: nur Geändertes auf den aktuellen Stand legen.
+      if (fw?.stand !== undefined && a.geaendert !== fw.stand) throw new StandVeraltet();
+      const neu = fw ? feldweise(a.werte, fw.basis, werte) : werte;
+      const m = { ...a, werte: kopie(neu), geaendert: standWeiter(a.geaendert), geaendertVon: benutzerId, passt: true, problem: null };
+      mappen.set(id, m); verweise.set(id, kopie(fw ? fw.verweise(neu) : vs));
       return kopie(m);
     },
     async beruehreMappe(id, benutzerId) {
       const m = mappen.get(id);
-      if (m) mappen.set(id, { ...m, geaendert: jetzt(), geaendertVon: benutzerId });
+      if (m) mappen.set(id, { ...m, geaendert: standWeiter(m.geaendert), geaendertVon: benutzerId });
     },
     async holeSystemMappe(kennung) { const m = [...mappen.values()].find((x) => x.systemKennung === kennung); return m && kopie(m); },
     async loescheMappe(id) {

@@ -45,6 +45,24 @@ curl -X POST -H "Authorization: Bearer dms_…" -H "Content-Type: application/js
 
 Die Ids der Mappentypen und die Kennungen ihrer Felder (`key`) liefert `GET /api/v1/typen`.
 
+### Mappe ändern, auch gleichzeitig mit anderen { #mappe-aendern }
+
+`PUT /api/v1/mappen/{id}` ändert nur die Felder, die in `werte` stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb **nur, was du ändern willst** – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.
+
+Mit `stand` prüft das DMS zusätzlich, ob seit deinem Lesen jemand **dasselbe Feld** geändert hat (#609). `stand` ist der Wert `geaendert` der Mappe aus `GET /api/v1/mappen/{id}`:
+
+```sh
+curl -X PUT -H "Authorization: Bearer dms_…" -H "Content-Type: application/json" \
+  -d '{"werte": {"betrag": {"betrag": 398, "waehrung": "EUR"}}, "stand": "2026-11-02T16:58:12.345Z"}' \
+  http://<NAS>:8080/api/v1/mappen/<Id>
+```
+
+- Hat seitdem niemand eines der übergebenen Felder anders geändert, speichert das DMS – auch wenn andere Felder inzwischen geändert wurden; die bleiben.
+- Sonst kommt **409** und nichts wird gespeichert. In `details` stehen `stand` (der aktuelle) und `konflikte`: je Feld `feld`, `label`, `deins`, `aktuell` (lesbar), `wert` (der jetzige Wert wie in `werte`; nicht bei Passwörtern), `von`, `name` und `zeit` der letzten Änderung.
+- Deinen Wert trotzdem übernehmen: dieselbe Anfrage mit `stand` aus der 409-Antwort. Den anderen Wert behalten: das Feld weglassen.
+
+Ohne `stand` prüft das DMS nichts – wie bis 0.143.0 gilt, was du schickst. Bestehende Skripte laufen unverändert weiter; nicht übergebene Felder setzt das DMS nie zurück. „Zuletzt geändert“ (`geaendert`) ist auf die Millisekunde genau und wird bei jedem Speichern größer – vergleiche es als Text, rechne nicht damit.
+
 !!! note "Namen in der API"
     Die Schnittstelle behält ihre Namen, auch wo die Oberfläche seit 0.73 andere Wörter verwendet: `sicht` ist die **Ansicht**, `sicht=eingang` die Liste **Zu erledigen**, `key` die **Kennung** eines Felds, Registers oder Mappentyps, die Feldart `referenz` der **Verweis**, das Register der Art `protokoll` die **Historie** und `mandant` bzw. `haushalt_id` der **Haushalt**.
 

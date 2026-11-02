@@ -11,6 +11,7 @@ import pakete from '../../shared/src/sprachen/de/pakete.json';
 import erkennung from '../../shared/src/sprachen/de/erkennung.json';
 import felder from '../../shared/src/sprachen/de/felder.json';
 import fragen from '../../shared/src/sprachen/de/fragen.json';
+import mappen from '../../shared/src/sprachen/de/mappen.json';
 import profil from '../../shared/src/sprachen/de/profil.json';
 import spalten from '../../shared/src/sprachen/de/spalten.json';
 import suche from '../../shared/src/sprachen/de/suche.json';
@@ -18,4 +19,4 @@ import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
 import volltext from '../../shared/src/sprachen/de/volltext.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, anmeldung, anstehend, erkennung, felder, fragen, pakete, profil, spalten, suche, systemzustand, volltext, werkbank });
+export const t = uebersetzer({ aehnlich, anmeldung, anstehend, erkennung, felder, fragen, mappen, pakete, profil, spalten, suche, systemzustand, volltext, werkbank });
