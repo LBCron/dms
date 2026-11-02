@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { FrageAusschnitt, VerlaufEintrag } from '../../../shared/src/fragen';
+import type { FrageAusschnitt, FrageGekuerzt, VerlaufEintrag } from '../../../shared/src/fragen';
 import { api, frageStellen } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
@@ -21,6 +21,8 @@ interface Runde {
   teil: string;
   antwort?: string;
   quellen?: Array<{ id: string; typId: string; titel: string; nr: number[] }>;
+  /** Vom Paket gekürzt (#564): nur diese Ausschnitte gingen an die KI, frühere Einträge des Chats fielen weg. */
+  gekuerzt?: FrageGekuerzt;
   fehler?: string;
   laeuft: boolean;
 }
@@ -59,7 +61,7 @@ export function FragAblage() {
       await frageStellen(frage, vorher, (z) => {
         if (z.art === 'ausschnitte') aendereLetzte((r) => ({ ...r, ausschnitte: z.ausschnitte, mappen: z.mappen }));
         else if (z.art === 'teil') aendereLetzte((r) => ({ ...r, teil: r.teil + z.text }));
-        else if (z.art === 'fertig') aendereLetzte((r) => ({ ...r, antwort: z.text, quellen: z.quellen, laeuft: false }));
+        else if (z.art === 'fertig') aendereLetzte((r) => ({ ...r, antwort: z.text, quellen: z.quellen, ...(z.gekuerzt ? { gekuerzt: z.gekuerzt } : {}), laeuft: false }));
         else aendereLetzte((r) => ({ ...r, fehler: z.text, laeuft: false }));
       }, ab.signal);
       aendereLetzte((r) => (r.laeuft ? { ...r, laeuft: false, fehler: r.antwort ? undefined : t('fragen.abgebrochen') } : r));
@@ -95,6 +97,8 @@ export function FragAblage() {
 
 function RundeAnzeige({ r }: { r: Runde }) {
   const text = r.antwort ?? r.teil;
+  // Gekürzt (#564): nur die Ausschnitte zeigen, die wirklich an die KI gingen – und sagen, dass es weniger waren.
+  const geschickt = r.ausschnitte && r.gekuerzt ? r.ausschnitte.filter((a) => r.gekuerzt!.geschickt.includes(a.nr)) : r.ausschnitte;
   return (
     <li className="frag-runde">
       <p className="frag-frage"><span className="sr-only">{t('fragen.du')}: </span>{r.frage}</p>
@@ -108,9 +112,11 @@ function RundeAnzeige({ r }: { r: Runde }) {
         {r.ausschnitte && (r.ausschnitte.length
           ? (
             <details className="frag-stellen">
-              <summary className="klein">{t('fragen.geschickt', { anzahl: r.ausschnitte.length, mappen: r.mappen ?? 0 })}</summary>
+              <summary className="klein">{r.gekuerzt
+                ? t('fragen.geschickt.gekuerzt', { geschickt: geschickt!.length, anzahl: r.ausschnitte.length })
+                : t('fragen.geschickt', { anzahl: r.ausschnitte.length, mappen: r.mappen ?? 0 })}</summary>
               <ol className="frag-ausschnitte">
-                {r.ausschnitte.map((a) => (
+                {geschickt!.map((a) => (
                   <li key={a.nr} value={a.nr}>
                     <Link to={`/ablage/start/${a.mappe.id}`} className="verweis">{titelOder(a.mappe.titel)}</Link>
                     <span className="leise klein"> · {a.quelle.art === 'dokument' ? t('fragen.quelle.dokument', { name: a.quelle.name }) : t('fragen.quelle.angaben')}</span>
@@ -121,6 +127,7 @@ function RundeAnzeige({ r }: { r: Runde }) {
             </details>
           )
           : <p className="leise klein">{t('fragen.geschickt.keine')}</p>)}
+        {r.gekuerzt && r.gekuerzt.verlauf > 0 && <p className="leise klein">{t('fragen.verlauf.gekuerzt', { anzahl: r.gekuerzt.verlauf })}</p>}
       </div>
     </li>
   );

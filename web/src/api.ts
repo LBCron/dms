@@ -48,6 +48,8 @@ export interface TypVorschlaege {
   /** Womit erkannt wurde (#511). */
   engine?: { art: 'eingebaut' } | { art: 'paket'; id: string; name: string };
   hinweis?: string;
+  /** Das Paket hat nur einen Teil des Dokumenttexts gelesen (#564). */
+  gekuerzt?: true;
 }
 /** Erkennung per Paket (#511): Standard in der Werkbank und Pakete mit dms:erkennen. */
 export interface ErkennungStand { standard: { paket: string | null; abfluss?: boolean }; pakete: Array<{ id: string; name: string; netz: boolean; laeuft: boolean }> }

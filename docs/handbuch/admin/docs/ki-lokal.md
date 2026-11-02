@@ -115,11 +115,13 @@ Die Compose-Datei setzt ein paar Werte, die auf einem NAS wichtig sind:
 
 | Einstellung | im Beispiel | warum |
 | --- | --- | --- |
-| `OLLAMA_CONTEXT_LENGTH` | `8192` | So viel Text liest das Modell auf einmal (etwa 20 000 Zeichen Deutsch). Ohne Grafikkarte nimmt Ollama sonst **4 096** – dann **lässt Ollama ältere Nachrichten still weg**, wenn eine Anfrage zu lang ist: bei langen Chats die Ausschnitte, bei langen Dokumenten den Text. Die Antwort hat dann keine Grundlage. |
+| `OLLAMA_CONTEXT_LENGTH` | `8192` | So viel Text liest das Modell auf einmal (etwa 20 000 Zeichen Deutsch). Ohne Grafikkarte nimmt Ollama sonst **4 096** – dann **lässt Ollama ältere Nachrichten still weg**, wenn eine Anfrage zu lang ist: bei langen Chats die Ausschnitte, bei langen Dokumenten den Text. Die Antwort hat dann keine Grundlage. Trag denselben Wert im Paket unter **Kontextlänge** ein (siehe unten). |
 | `mem_limit` | `6g` | Speichergrenze für den KI-Container. Braucht das Modell mehr, beendet Docker den Container (er startet neu); dann ein kleineres Modell nehmen oder die Grenze erhöhen. |
 | `cpu_shares` | `256` | Rechnen DMS und KI gleichzeitig, bekommt das DMS Vorrang – die Ablage bleibt bedienbar. |
 | `OLLAMA_KEEP_ALIVE` | `30m` | Das Modell bleibt 30 Minuten nach der letzten Frage im Speicher; danach ist der Speicher frei, und die nächste Frage lädt es neu (einige Sekunden). |
 | `OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS` | `1` | eine Anfrage, ein Modell zur Zeit – berechenbarer Speicher |
+
+**Kontextlänge im Paket:** Der KI-Assistent (ab 1.2.0) hat die Einstellung **Kontextlänge** (Standard 8 192 Token, passend zum Beispiel). Ist eine Anfrage länger, kürzt **das Paket** selbst, bevor Ollama still abschneidet – und sagt es: bei *Frag deine Ablage* „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“ (bei langen Chats fallen zuerst ältere Fragen und Antworten weg), bei *Aus Dokument ausfüllen* „Dokumenttext gekürzt“. Stell die Kontextlänge **nie größer** ein als `OLLAMA_CONTEXT_LENGTH` – sonst schneidet Ollama wieder still ab. Größer heißt: mehr Text auf einmal, aber mehr Speicher und langsameres Lesen. Die Anzeige braucht DMS ab 0.138.0.
 
 Für *Aus Dokument ausfüllen* mit **langen Dokumenten** reicht 8 192 nicht ganz (das DMS gibt bis zu 50 000 Zeichen mit). Mit `16384` braucht der Container etwa 0,5–1 GB mehr; ohne Grafikkarte überschreiten so lange Texte aber ohnehin die Zeitgrenze, und die eingebaute Erkennung übernimmt.
 
@@ -249,7 +251,9 @@ Ganz ohne Zusatzgerät läuft die **Ähnlichkeitssuche** mit dem Paket **KI loka
 | *Verbindung testen*: Modell nicht da | Lief `modell-laden` durch (`docker compose logs modell-laden`)? Stimmt der Name im Paket genau mit `x-modell` überein? Nachholen mit `docker compose up -d modell-laden`. |
 | DMS startet nicht: „network dms-ki … could not be found“ | Das KI-Projekt zuerst starten – oder die Zeilen für `dms-ki` wieder aus der Compose-Datei des DMS nehmen. |
 | Container `ollama` startet immer wieder neu | Meist die Speichergrenze: `docker inspect <Container> --format '{{.State.OOMKilled}}'` zeigt `true`. Kleineres Modell oder `mem_limit` erhöhen. |
-| Antwort passt nicht zu den Ausschnitten oder ist „aus der Luft gegriffen“ | Zu wenig Kontext – `OLLAMA_CONTEXT_LENGTH` prüfen (siehe [Kontext](#kontext-speicher)); bei langen Chats die Seite neu laden. |
+| Antwort passt nicht zu den Ausschnitten oder ist „aus der Luft gegriffen“ | Zu wenig Kontext – `OLLAMA_CONTEXT_LENGTH` prüfen und die **Kontextlänge** im Paket nicht größer einstellen (siehe [Kontext](#kontext-speicher)); bei langen Chats **Neuer Chat**. |
+| „(gekürzt)“ bei *Frag deine Ablage* oder „Dokumenttext gekürzt“ | Die Anfrage war länger als die **Kontextlänge** des Pakets. Weniger Zeichen je Frage einstellen oder – mit genug Speicher – `OLLAMA_CONTEXT_LENGTH` und die Kontextlänge im Paket gemeinsam erhöhen. |
+| *Aus Dokument ausfüllen*: „hat nichts Brauchbares geliefert“ | Der Dienst hat geantwortet, aber keinen Wert, der zu den Feldern passt – die eingebaute Erkennung hat übernommen. Bei kleinen Modellen kommt das vor; ein größeres Modell oder klarere Feldbezeichnungen helfen. |
 | Antwort bricht ab oder *Aus Dokument ausfüllen* nimmt immer die eingebaute Erkennung | Zeitgrenze erreicht – siehe [Einstellungen für ein NAS](#nas-einstellungen), kleineres Modell oder Grafik. |
 | Die Ablage wird träge, während die KI rechnet | Das Modell beansprucht den Prozessor. `cpu_shares` aus dem Beispiel übernehmen; notfalls weniger Ausschnitte je Frage. |
 

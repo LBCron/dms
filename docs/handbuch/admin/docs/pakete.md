@@ -220,7 +220,9 @@ Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst,
 
 **Was das DMS mit der Antwort macht:** Es prüft jeden Wert gegen die Feldart wie bei der eingebauten Erkennung. Falsche Typen, unbekannte Felder und Werte außerhalb einer Auswahl verwirft es und vermerkt das im [Protokoll](fehlersuche.md#protokoll) (Feld und Grund, ohne Werte). Die Werte erscheinen nur als **Vorschlag**; gespeichert wird erst mit *Mappe speichern*. Unter dem Ergebnis steht „Erkannt mit „*Paket*“.“
 
-**Wenn das Paket nicht antwortet** (läuft nicht, Dienst nicht erreichbar, keine Antwort nach 60 Sekunden, Antwort unbrauchbar), übernimmt die eingebaute Erkennung; der Benutzer sieht einen Hinweis darauf.
+**Wenn das Paket nicht antwortet** (läuft nicht, Dienst nicht erreichbar, keine Antwort nach 60 Sekunden, Antwort unbrauchbar), übernimmt die eingebaute Erkennung; der Benutzer sieht einen Hinweis darauf. Antwortet es, aber ohne einen Wert, der die Prüfung besteht, heißt der Hinweis „*Paket* hat nichts Brauchbares geliefert“ – auch dann übernimmt die eingebaute Erkennung.
+
+**Gekürzter Text:** Liest das Paket nur einen Teil des Texts – weil das DMS höchstens 50 000 Zeichen mitgibt oder das Paket für seinen KI-Dienst kürzt (beim KI-Assistenten: Einstellung *Kontextlänge*, siehe [KI lokal betreiben](ki-lokal.md#kontext-speicher)) –, steht unter dem Ergebnis „Dokumenttext gekürzt“. Angaben weiter hinten im Dokument fehlen dann vielleicht.
 
 ### Frag deine Ablage { #frag-deine-ablage }
 

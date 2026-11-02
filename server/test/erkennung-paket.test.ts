@@ -123,6 +123,20 @@ describe('Aus Dokument ausfüllen per Paket (#511)', () => {
     assert.deepEqual((g.body as { pakete: Array<{ id: string; netz: boolean }> }).pakete.map((p) => [p.id, p.netz]), [['ki', false], ['wolke', true]]);
   });
 
+  it('Text gekürzt (#564): vom Paket gemeldet (nur in der Hülle „vorschlaege“) oder vom Kern über 50 000 Zeichen', async () => {
+    const x = await aufbau();
+    await x.d.erkennung.setzeStandard({ paket: 'ki' });
+    let r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);
+    assert.equal(r.gekuerzt, undefined);
+    x.setzeAntwort(async () => '{"vorschlaege":{"vorname":{"wert":"Jonas","sicherheit":"hoch"}},"gekuerzt":true}');
+    r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);
+    assert.deepEqual([r.engine.art, r.gekuerzt, Object.keys(r.vorschlaege).includes('vorname')], ['paket', true, true]);
+    x.setzeAntwort(async () => '{"vorname":{"wert":"Jonas"}}');
+    r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE + ' Füllwort'.repeat(6000) }, x.A);
+    assert.equal(r.gekuerzt, true, 'der Kern schickt höchstens 50 000 Zeichen');
+    assert.equal(String(x.eingaenge.at(-1)!.text).length, 50_000);
+  });
+
   it('antwortet das Paket nicht oder unbrauchbar: eingebaute Erkennung mit Hinweis', async () => {
     const x = await aufbau();
     await x.d.erkennung.setzeStandard({ paket: 'ki' });
@@ -138,6 +152,14 @@ describe('Aus Dokument ausfüllen per Paket (#511)', () => {
     x.setzeAntwort(async () => 'Ergebnis:\n```json\n{"vorschlaege":{"email":{"wert":"jonas.beispiel@musterbau.example","sicherheit":"hoch"}}}\n```');
     r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);
     assert.deepEqual([r.engine.art, Object.keys(r.vorschlaege)], ['paket', ['email']]);
+    // Geantwortet, aber nichts Brauchbares (#564): eingebaut mit eigenem Hinweis – nicht „hat nicht geantwortet“.
+    for (const leer of ['{"vorschlaege":{}}', '{"geburtstag":{"wert":"31.02.2026"}}']) {
+      x.setzeAntwort(async () => leer);
+      r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);
+      assert.deepEqual(r.engine, { art: 'eingebaut' }, leer);
+      assert.equal(r.hinweis, '„Erkennung ki“ hat nichts Brauchbares geliefert – die eingebaute Erkennung hat übernommen.');
+      assert.equal(r.vorschlaege.email.wert, 'jonas.beispiel@musterbau.example');
+    }
     // Paket läuft nicht (nicht geladen): eingebaut mit Hinweis.
     x.d.erkennung.anbieter = { pakete: () => [], erkenne: async () => { throw new Error('nie'); } };
     r = await x.d.erkennung.fuerTyp(x.person.id, { text: KARTE }, x.A);

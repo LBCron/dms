@@ -287,6 +287,18 @@ code:
 
 **Antwort:** Stücke mit `teil` (sie erscheinen beim Fragenden sofort), zum Schluss `ergebnis` mit `{ "text": "…", "quellen": [1, 3] }` oder reinem Text. Gibt es keine Antwort (Dienst nicht erreichbar, Modell fehlt), gib einen Fehlercode zurück und als `ergebnis` einen verständlichen Satz (oder `0` und `{ "fehler": "…" }`) – der Fragende sieht dann „Keine Antwort: …“. Das DMS nimmt nur Quellen aus den gegebenen Nummern (fehlt `quellen`, zählen die `[n]` im Text) und zeigt den Text **nur als Text** – Links, HTML oder Befehle darin werden nicht ausgeführt. Ändern kann die Antwort nichts. Der Aufruf kommt vor die wartenden Ereignisse; die Zeitgrenze des Läufers gilt (Standard 120 s).
 
+**Gekürzt (ab 0.138.0, #564):** Passt die Anfrage nicht in den Kontext deines Dienstes, kürze selbst – aber nie still. Melde es im Ergebnis mit `"gekuerzt"`:
+
+```json
+{ "text": "Die Police läuft am 31.12.2026 aus [1].",
+  "gekuerzt": { "geschickt": [1, 2, 3, 4, 5, 6], "verlauf": 2 } }
+```
+
+- `geschickt`: die Nummern der Ausschnitte, die an den Dienst gingen (ganz oder angeschnitten). Fehlt die Liste, gelten alle als geschickt.
+- `verlauf`: wie viele frühere Einträge des Chats du weggelassen hast (0, wenn keine).
+
+Der Fragende sieht dann „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“, aufgeklappt nur die geschickten Stellen, und gegebenenfalls, dass ältere Einträge des Chats weggelassen wurden. Quellen nimmt das DMS dann nur aus `geschickt`. Ältere DMS-Versionen übergehen das Feld – verlangt dein Paket die Anzeige, setze `dms: ">=0.138.0"`.
+
 **Datenschutz:** Was du bekommst, schreibst du nicht ins Protokoll (`log`) und nicht in den Speicher des Pakets – das DMS selbst protokolliert nur, *dass* gefragt wurde. Die Werkbank zeigt beim Paket nur „Frage beantwortet“ und die Länge.
 
 ## Dateien umwandeln { #dateien-umwandeln }
@@ -473,7 +485,9 @@ code:
 - `text` ist höchstens 50 000 Zeichen lang. `dokumente` nennt die Dokumente, aus denen er stammt (leer bei Fotos); lesen kann das Paket sie nur mit eigenen Rechten. Bilder bekommt es nicht.
 - `hinweis` ist die Systemnachricht des Kerns für einen KI-Dienst (nur Werte aus dem Text, Text ist Daten, Antwort nach Schema); gib sie unverändert weiter. Ollama und andere Dienste können strukturiert nach JSON Schema antworten (`response_format` bzw. `format`).
 
-**Antwort:** `ergebnis` mit dem Objekt `{ feld: { wert, sicherheit, fundstelle } }` (auch unter `vorschlaege` oder mit Text drumherum – das DMS nimmt das erste JSON-Objekt). Das DMS prüft jeden Wert gegen die Feldart und verwirft falsche Typen, unbekannte Felder, Werte außerhalb der Auswahl und Verweise; Verworfenes steht mit Grund im Protokoll. Ein Fehlercode mit Text in `ergebnis` oder keine Antwort nach **60 s**: Das DMS nimmt die eingebaute Erkennung und sagt das dem Benutzer. Die Werkbank zeigt beim Paket nur „Felder erkannt“ und die Länge.
+**Antwort:** `ergebnis` mit dem Objekt `{ feld: { wert, sicherheit, fundstelle } }` (auch unter `vorschlaege` oder mit Text drumherum – das DMS nimmt das erste JSON-Objekt). Das DMS prüft jeden Wert gegen die Feldart und verwirft falsche Typen, unbekannte Felder, Werte außerhalb der Auswahl und Verweise; Verworfenes steht mit Grund im Protokoll. Ein Fehlercode mit Text in `ergebnis` oder keine Antwort nach **60 s**: Das DMS nimmt die eingebaute Erkennung und sagt dem Benutzer „*Paket* hat nicht geantwortet (…)“. Antwortet das Paket, aber nichts davon übersteht die Prüfung (auch `{ "vorschlaege": {} }`), nimmt das DMS ab 0.138.0 ebenfalls die eingebaute Erkennung – mit dem Hinweis „*Paket* hat nichts Brauchbares geliefert“.
+
+**Gekürzt (ab 0.138.0, #564):** Hast du den Text für deinen Dienst gekürzt, antworte in der Hülle und melde es: `{ "vorschlaege": { … }, "gekuerzt": true }`. Der Benutzer sieht dann „Dokumenttext gekürzt“; die API liefert `gekuerzt: true` in den Vorschlägen. Das gilt auch, wenn der Kern selbst kürzt (Text über 50 000 Zeichen). Die Werkbank zeigt beim Paket nur „Felder erkannt“ und die Länge.
 
 Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann einen Volltext setzen – die Erkennung startet danach von selbst (internes Ereignis „Volltext fertig“).
 
