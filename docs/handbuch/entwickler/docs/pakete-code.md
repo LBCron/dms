@@ -15,6 +15,7 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:erkennen` | 0.125.0 | Felder für „Aus Dokument ausfüllen“ vorschlagen | [Erkennung als Paket](#erkennung-als-paket-dmserkennen) |
 | `dms:texterkennung` | 0.133.0 | Texterkennung für Scans und Bilder übernehmen | [Texterkennung übernehmen](#texterkennung) |
 | `dms:umwandeln` | 0.137.0 | Dateien, die der Kern nicht liest (TIFF, WebP …), in PDF, PNG oder JPEG umwandeln – für Vorschaubild und Volltext | **[Dateien umwandeln](#dateien-umwandeln)** – mit den Formaten, die ein Paket zurückgeben darf |
+| `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
 
 ## So läuft Code im DMS
 
@@ -52,7 +53,7 @@ code:
   ```
 
 - **Dokumente:** `lesen` erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), `schreiben` zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.
-- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – und `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln).
+- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – und `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus).
 - **Dateitypen zum Umwandeln (`code.umwandeln`, seit 0.137.0):** nur mit `dms:umwandeln` – die MIME-Typen, für die das Paket zuständig ist, z. B. `[image/tiff, image/webp]`. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.
 - **Netzwerk/Internet (`netz`):** nur `https://`, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).
 - **Dienst-Adresse als Einstellung** (seit 0.124.0): Statt einer festen Adresse in `netz` kann ein Paket eine Einstellung vom Typ `adresse` verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit `http://` (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, **ohne** `standard` – höchstens mit `beispiel`, das im leeren Feld steht:
@@ -78,6 +79,7 @@ code:
 | `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit `volltext.fertig` (`quelle: kern`) und mit denselben Daten. Neue Pakete nehmen `volltext.fertig`. | wie `volltext.fertig`, `seiten` |
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
+| `sicherung.fertig` | Seit 0.142.0, nur mit `dms:sicherung-lesen`: Eine Sicherung liegt fertig im Sicherungsordner – siehe [Sicherung außer Haus](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
 
 ### Volltext fertig (`volltext.fertig`) { #volltext-fertig }
 
@@ -186,7 +188,7 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 |---|---|
 | `api(json, len)` | HTTP-Status. `json`: `{"methode":"GET","pfad":"/mappen/…","body":{…}}` – Pfade der [API v1](https://motom001.github.io/dms/admin/aktuell/api/) ohne `/api/v1`. Antwort mit `antwort_*` abholen. |
 | `api_binaer(json, len, body, blen)` | Wie `api`, mit Rohdaten als Body; den Inhaltstyp nennt `"typ"` im JSON (Standard `application/octet-stream`). |
-| `netz(json, len, body, blen)` | HTTP-Status oder negativ bei Fehler. `json`: `{"methode":"POST","url":"https://…","kopf":{…}}`. Nur Adressen aus `code.netz` und die bestätigte Dienst-Adresse; 30 s, höchstens 10 MB Antwort. |
+| `netz(json, len, body, blen)` | HTTP-Status oder negativ bei Fehler. `json`: `{"methode":"POST","url":"https://…","kopf":{…}}`. Nur Adressen aus `code.netz` und die bestätigte Dienst-Adresse; 30 s (seit 0.142.0 mit mehr als 1 MB Körper so lange wie der Aufruf – zum Hochladen in Teilen), höchstens 10 MB Antwort. Weiterleitungen folgt der Läufer nicht. |
 | `netz_strom(json, len, body, blen)` | Seit 0.124.0. Wie `netz`, liefert aber nur den HTTP-Status; den Körper liest `netz_weiter` Stück für Stück (z. B. eine Antwort mit `"stream": true`). Die ganze Antwort darf so lange dauern wie der Aufruf, jedes Stück höchstens 30 s; zusammen höchstens 10 MB. |
 | `netz_weiter()` | Seit 0.124.0. Länge des nächsten Stücks (mit `antwort_lesen` abholen), `0` am Ende, negativ bei Fehler. |
 | `teil(text, len)` | Seit 0.124.0. Ein Stück einer Antwort an das DMS, das es gleich weitergibt (z. B. an den Chat „Frag deine Ablage“). `0` oder `-1` (zu viel: je Stück 8 000, zusammen 64 000 Zeichen). Maßgeblich bleibt `ergebnis`. |
@@ -477,6 +479,80 @@ static int32_t umwandeln(const char *dok, const char *sha) {
 }
 ```
 
+## Sicherung außer Haus { #sicherung-ausser-haus }
+
+Seit 0.142.0 (#585) bringt ein Paket mit dem Recht `dms:sicherung-lesen` jede Sicherung auf einen externen Speicher und prüft sie dort – z. B. **Sicherungsziel WebDAV** in der Registry. Der Kern sichert wie immer **zuerst lokal**; danach meldet er die fertige Sicherung, das Paket liest die **verschlüsselte** Datei in Stücken, lädt sie hoch und meldet je Sicherung zurück. Den Schlüssel und Inhalte bekommt es nie, und es liest nur die Sicherung aus seinem Ereignis – nie den ganzen Sicherungsordner.
+
+### Im Manifest { #sicherung-manifest }
+
+```yaml
+dms: ">=0.142.0"
+code:
+  sprache: c
+  quelle: code/
+  ereignisse: [sicherung.fertig]
+  rechte:
+    schnittstellen: ["dms:sicherung-lesen"]
+  netz: []                      # Ziel als Einstellung vom Typ adresse
+  einstellungen:
+    - abschnitt: Ziel
+      felder:
+        - { schluessel: adresse, name: Adresse, typ: adresse, pflicht: true }
+        - { schluessel: benutzer, name: Benutzer, typ: text }
+        - { schluessel: passwort, name: Passwort, typ: geheim }
+```
+
+`dms:sicherung-lesen` und `sicherung.fertig` gibt es nur zusammen. Zugangsdaten sind Einstellungen vom Typ `geheim` (verschlüsselt gespeichert, nie angezeigt); ins Netz darf das Paket nur zur bestätigten Adresse. Mappen und Dokumente braucht es nicht.
+
+### Ablauf { #sicherung-ablauf }
+
+```mermaid
+sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:sicherung-lesen)
+  participant Z as Ziel (WebDAV, S3 …)
+  K->>K: Sicherung lokal fertig
+  K->>P: sicherung.fertig (name, groesse, sha256 …)
+  loop Stück für Stück, über mehrere Aufrufe
+    P->>K: GET /sicherungen/{name}/datei?versatz=…&laenge=…
+    P->>Z: Teil hochladen
+    P-->>K: {"weiter": {…}} (Fortsetzung)
+  end
+  P->>Z: zusammensetzen, Metadaten daneben, prüfen
+  P->>K: PUT /sicherungen/{name}/extern (geprueft)
+```
+
+1. **Ereignis `sicherung.fertig`** nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). `daten` sind die **schlanken Metadaten** und der Name:
+
+    ```json
+    { "name": "2026-11-02_0300-automatisch", "datei": "2026-11-02_0300-automatisch.dms-sicherung",
+      "groesse": 1834567890, "sha256": "…", "beginn": "2026-11-02T02:00:00.000Z", "format": 1, "schlank": true,
+      "verschluesselung": { "verfahren": "AES-256-GCM, …", "fingerabdruck": "…" } }
+    ```
+
+    Keine Person, keine Versionen, keine Zähler, keine Haushalts-Id. Genau diese Angaben (ohne `name`) legt das Paket als `<name>.json` neben die Datei aufs Ziel – damit lässt sich die Kopie [wiederherstellen](https://motom001.github.io/dms/admin/aktuell/wiederherstellen/#aus-einer-kopie-ausser-haus). `GET /sicherungen/{name}` liefert sie ebenfalls. Dateinamen am Ziel: `<name>.dms-sicherung` und `<name>.json` – ohne Haushalts- oder Personennamen.
+2. **Lesen in Stücken:** `GET /sicherungen/{name}/datei?versatz=…&laenge=…` (über `dms.api`) liefert höchstens **8 MB** roh; der Kopf `X-DMS-Groesse` nennt die Größe der Datei, am Ende kommt ein leerer Körper. **Lade nie die ganze Sicherung in den Speicher** – sie hat schnell mehrere GB, ein Aufruf hat 256 MB.
+3. **Hochladen in Teilen:** Je Stück eine Anfrage mit `dms.netz` (Körper = Stück), z. B. Nextcloud-Chunking (`/remote.php/dav/uploads/…`, Teile ab 5 MB), `Content-Range` bei WebDAV-Servern, die es können, oder S3 Multipart. Eine Anfrage mit mehr als 1 MB Körper darf so lange dauern wie der Aufruf.
+4. **Fortsetzung:** Nach etwa der halben Zeitgrenze antwortet das Paket mit `{"weiter": {"versatz": …, …}}` (siehe [Fortsetzung](#fortsetzung)); der Läufer ruft es gleich wieder auf und speichert den Stand. Schlägt ein Aufruf fehl (Netz weg), setzt die Wiederholung (1, 5, 30 Minuten, 2, 6 Stunden) an der letzten gespeicherten Stelle an – nicht von vorn. Für Stände, die über das Ereignis hinaus gelten (z. B. „zuletzt vollständig geprüft“), gibt es den [Speicher des Pakets](#importe-aus-dms). Die Zeit je Sicherung insgesamt begrenzen die 500 Fortsetzungen je Ereignis.
+5. **Prüfen:** am besten mit der Prüfsumme des Ziels (S3 `x-amz-checksum-sha256`), sonst Größe und Zurücklesen (SHA-256 über die ganze Datei mit `Range`-Anfragen bis 10 MB; bei großen Dateien Stichproben, regelmäßig vollständig). Kann das Ziel nicht lesen (Nextcloud-Dateiablage), sag das ehrlich: `hochgeladen` statt `geprueft`.
+6. **Rückmeldung:** `PUT /sicherungen/{name}/extern` mit
+
+    | Feld | |
+    |---|---|
+    | `status` | `laeuft` (gern mit `bytes`, `gesamt`), `hochgeladen`, `geprueft`, `fehlgeschlagen` |
+    | `pruefung` | bei `geprueft`: `pruefsumme` oder `stichprobe`; bei `hochgeladen`: `groesse` oder `keine` |
+    | `grund` | verständlich, Pflicht bei `fehlgeschlagen` („Passwort falsch“, „Speicher voll“, „Prüfsumme am Ziel weicht ab“) |
+    | `endgueltig` | bei `fehlgeschlagen`: Eine Wiederholung hilft nicht – die Administratoren bekommen eine E-Mail. Vorübergehendes (Netz weg) meldest du besser als `laeuft` mit `grund`. |
+    | `ziel` | Ziel in Worten, ohne Zugangsdaten (der Kern entfernt `benutzer:passwort@` aus Adressen) |
+
+    **Werkbank → Sicherung** zeigt den Stand je Sicherung („lokal ✓ · extern ✓ geprüft“), die Übersicht einen Hinweis bei Fehlern oder wenn seit mehr als 2 Tagen keine neuere Kopie ankam. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, setzt der Kern selbst `fehlgeschlagen` (endgültig).
+
+Antworten der drei Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.
+
+### Löschschutz { #sicherung-loeschschutz }
+
+Wer das DMS übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit **so wenig Rechten wie möglich** auskommen: nur hochladen (S3: `PutObject` ohne `DeleteObject`, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe **aus** und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/sicherung-ausser-haus/#loschschutz).
+
 ## Ausprobieren
 
 1. Paket als ZIP im **Expertenmodus** hochladen (siehe [Eigenes Paket testen](pakete.md#eigenes-paket-testen)) und die Rechte bestätigen.
@@ -531,6 +607,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 
 - `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.
 - `PUT /dokumente/{id}/fassung` und `PUT /dokumente/{id}/vorschaubild` – siehe [Dateien umwandeln](#dateien-umwandeln) (Recht `dms:umwandeln`).
+- `GET /sicherungen/{name}`, `GET /sicherungen/{name}/datei?versatz=&laenge=` und `PUT /sicherungen/{name}/extern` – siehe [Sicherung außer Haus](#sicherung-ausser-haus) (Recht `dms:sicherung-lesen`, seit 0.142.0).
 - `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab DMS 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
 - `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch `weitere` – siehe [Sprachen je Seite](#seitensprachen).
 - Ab 0.139.0: `PUT /dokumente/{id}/volltext` mit Seiten (`\f`) und `seitensprachen`, `GET /dokumente/{id}/volltext` mit `seiten` – siehe [Sprachen je Seite](#seitensprachen).

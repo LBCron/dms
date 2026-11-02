@@ -1,0 +1,278 @@
+/**
+ * Sicherung außer Haus (#585): Ereignis nach der Sicherung, Lesen nur der gemeldeten, verschlüsselten Datei in Stücken,
+ * Rückmeldung je Sicherung, Hinweise und E-Mail, Aufbewahrung („lokal nur die neueste“), Notfallblatt.
+ */
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, it } from 'node:test';
+import type { Datenquelle } from '../src/datenbankabzug';
+import { speicherEinstellungen } from '../src/einstellungen';
+import { notfallblatt } from '../src/notfallblatt';
+import { schluesselRecht } from '../src/laeufer/verwaltung';
+import { ohneZugangsdaten, Sicherung, schlankeMetadaten, type ExternAnbindung, type SchlankeMetadaten } from '../src/sicherung';
+import { Tresor } from '../src/tresor';
+import { EREIGNISSE, liesCode, rechteText, SCHNITTSTELLEN } from '../../shared/src/pakete';
+import { HILFE } from '../../shared/src/hilfe';
+
+const HAUSHALT = '00000000-0000-4000-8000-000000000001';
+const TAG = 24 * 3600_000;
+const ordnerListe: string[] = [];
+after(async () => { for (const o of ordnerListe) await rm(o, { recursive: true, force: true }); });
+
+function daten(): Datenquelle {
+  return {
+    async imSchnappschuss(f) {
+      return f({
+        postgres: '17.0', migrationen: ['001_a.sql'], tabellen: [{ name: 'mappen', spalten: ['id'] }],
+        zaehler: { mappen: 1, dokumente: 0, benutzer: 1 },
+        inhalt: async () => (async function* () { yield Buffer.from('1\n'); })(),
+      });
+    },
+    async groesse() { return 10; },
+  };
+}
+
+async function aufbau(o: { pakete?: Array<{ id: string; name: string; adresse: string | null }> } = {}) {
+  const wurzel = await mkdtemp(join(tmpdir(), 'dms-extern-'));
+  ordnerListe.push(wurzel);
+  const einstellungen = speicherEinstellungen();
+  const tresor = new Tresor(einstellungen, join(wurzel, 'geheim', 'dms.schluessel'), () => null);
+  await tresor.laden();
+  await tresor.erzeuge();
+  await mkdir(join(wurzel, 'files', HAUSHALT, 'ab'), { recursive: true });
+  // Etwas Zufall, damit die Datei größer ist als ein paar Bytes (Stücke lesen).
+  await writeFile(join(wurzel, 'files', HAUSHALT, 'ab', 'gross'), Buffer.from(Array.from({ length: 300_000 }, (_, i) => (i * 7919) % 251)));
+  let jetzt = new Date('2026-11-02T03:00:00Z');
+  const mails: Array<{ betreff: string; text: string }> = [];
+  const s = new Sicherung(join(wurzel, 'sicherung'), join(wurzel, 'files'), HAUSHALT, {
+    tresor, einstellungen, daten: daten(), mountinfo: '/gibt-es-nicht', jetzt: () => jetzt,
+    umgebung: async () => ({ dms: '0.142.0', node: '24', system: 'Linux', architektur: 'x64' }),
+    anAdmins: async (betreff, text) => { mails.push({ betreff, text }); },
+  });
+  const gemeldet: Array<SchlankeMetadaten & { name: string }> = [];
+  const pakete = o.pakete ?? [{ id: 'sicherung_webdav', name: 'Sicherungsziel WebDAV', adresse: 'https://cloud.example.org' }];
+  const ext: ExternAnbindung = { pakete: async () => pakete, melde: async (d) => { gemeldet.push(d); } };
+  s.extern = ext;
+  const sichere = async (art: 'manuell' | 'automatisch' = 'manuell') => (await (await s.starte(art, 'lena@example.org')).fertig)!;
+  return { s, wurzel, einstellungen, mails, gemeldet, pakete, sichere, tresor, stelle: (d: Date) => { jetzt = d; } };
+}
+
+describe('Sicherung außer Haus (#585)', () => {
+  it('meldet jede fertige Sicherung mit schlanken Metadaten – ohne Person, Umgebung, Zähler, Haushalt', async () => {
+    const { s, gemeldet, sichere } = await aufbau();
+    const meta = await sichere();
+    assert.equal(gemeldet.length, 1);
+    const d = gemeldet[0];
+    assert.deepEqual(Object.keys(d).sort(), ['beginn', 'datei', 'format', 'groesse', 'name', 'schlank', 'sha256', 'verschluesselung']);
+    assert.equal(d.datei, meta.datei);
+    assert.equal(d.sha256, meta.sha256);
+    assert.equal(d.groesse, meta.groessen.sicherungBytes);
+    const text = JSON.stringify(d);
+    for (const weg of ['lena@example.org', HAUSHALT, '0.142.0', 'Linux', 'mappen']) assert.ok(!text.includes(weg), `${weg} gehört nicht in die schlanken Metadaten`);
+    const e = (await s.liste())[0];
+    assert.deepEqual(Object.keys(e.extern!), ['sicherung_webdav']);
+    assert.equal(e.extern!.sicherung_webdav.status, 'offen');
+    assert.deepEqual(await s.externMeta('sicherung_webdav', e.name), { name: e.name, ...schlankeMetadaten(meta) });
+  });
+
+  it('ohne Paket kein Ereignis und kein Stand; die Sicherung selbst bleibt unberührt', async () => {
+    const { s, gemeldet, sichere } = await aufbau({ pakete: [] });
+    const meta = await sichere();
+    assert.ok(meta);
+    assert.equal(gemeldet.length, 0);
+    assert.equal((await s.liste())[0].extern, undefined);
+    assert.equal((await s.zustand()).extern, null);
+  });
+
+  it('liest nur die gemeldete Sicherung, in Stücken, genau die verschlüsselte Datei', async () => {
+    const { s, sichere } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    const datei = await readFile(join(s.ordner, meta.datei));
+    const teile: Buffer[] = [];
+    for (let ab = 0; ; ) {
+      const { inhalt, groesse } = await s.externStueck('sicherung_webdav', name, String(ab), '65536');
+      assert.equal(groesse, datei.length);
+      if (!inhalt.length) break;
+      teile.push(inhalt); ab += inhalt.length;
+    }
+    const zusammen = Buffer.concat(teile);
+    assert.ok(zusammen.equals(datei));
+    assert.equal(createHash('sha256').update(zusammen).digest('hex'), meta.sha256);
+    // Fremdes Paket, unbekannte Sicherung, Pfade daneben, ungültige Grenzen.
+    await assert.rejects(s.externStueck('anderes', name, '0', '10'), /nicht gemeldet/);
+    await assert.rejects(s.externStueck('sicherung_webdav', '2026-01-01_0000-manuell', '0', '10'), /gibt es nicht/);
+    await assert.rejects(s.externStueck('sicherung_webdav', '../geheim/dms', '0', '10'), /Ungültiger Name/);
+    await assert.rejects(s.externStueck('sicherung_webdav', `.${name}`, '0', '10'), /Ungültiger Name/);
+    await assert.rejects(s.externStueck('sicherung_webdav', name, '-1', '10'), /versatz/);
+    await assert.rejects(s.externStueck('sicherung_webdav', name, '0', String(9 * 1024 * 1024)), /laenge/);
+    await assert.rejects(s.externMeta('anderes', name), /nicht gemeldet/);
+  });
+
+  it('Rückmeldung je Sicherung: prüft die Angaben, entfernt Zugangsdaten, zeigt den Stand', async () => {
+    const { s, sichere } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    await assert.rejects(s.externRueckmeldung('sicherung_webdav', name, { status: 'toll' }), /status/);
+    await assert.rejects(s.externRueckmeldung('sicherung_webdav', name, { status: 'geprueft' }), /pruefsumme oder stichprobe/);
+    await assert.rejects(s.externRueckmeldung('sicherung_webdav', name, { status: 'hochgeladen', pruefung: 'pruefsumme' }), /status: geprueft/);
+    await assert.rejects(s.externRueckmeldung('sicherung_webdav', name, { status: 'fehlgeschlagen' }), /Grund/);
+    await assert.rejects(s.externRueckmeldung('fremd', name, { status: 'laeuft' }), /nicht gemeldet/);
+    const l = await s.externRueckmeldung('sicherung_webdav', name, { status: 'laeuft', bytes: 10, gesamt: meta.groessen.sicherungBytes, ziel: 'WebDAV https://lena:geheim@cloud.example.org/remote.php/dav/files/lena/DMS' });
+    assert.equal(l.ziel, 'WebDAV https://cloud.example.org/remote.php/dav/files/lena/DMS', 'ohne Benutzer und Passwort');
+    const g = await s.externRueckmeldung('sicherung_webdav', name, { status: 'geprueft', pruefung: 'pruefsumme' });
+    assert.equal(g.status, 'geprueft');
+    assert.equal(g.ziel, l.ziel, 'das Ziel bleibt stehen');
+    const z = await s.zustand();
+    assert.equal(z.extern?.letzte?.name, name);
+    assert.equal(z.extern?.zuAlt, false);
+    assert.equal(z.extern?.fehler, null);
+    assert.deepEqual((await s.externZiele()).map((x) => x.ziel), [l.ziel]);
+    assert.equal(ohneZugangsdaten('https://a:b@x.example.org/p und http://c@y.example.org'), 'https://x.example.org/p und http://y.example.org');
+  });
+
+  it('gleichzeitige Rückmeldungen und eine neue Sicherung gehen nicht verloren', async () => {
+    const { s, sichere, stelle } = await aufbau({ pakete: [{ id: 'a', name: 'A', adresse: null }, { id: 'b', name: 'B', adresse: null }] });
+    const erste = (await sichere()).datei.replace('.dms-sicherung', '');
+    stelle(new Date('2026-11-02T04:00:00Z'));
+    const [, , zweite] = await Promise.all([
+      s.externRueckmeldung('a', erste, { status: 'geprueft', pruefung: 'pruefsumme' }),
+      s.externRueckmeldung('b', erste, { status: 'hochgeladen', pruefung: 'groesse' }),
+      sichere(),
+    ]);
+    const liste = await s.liste();
+    const e1 = liste.find((x) => x.name === erste)!;
+    assert.deepEqual([e1.extern!.a.status, e1.extern!.b.status], ['geprueft', 'hochgeladen']);
+    assert.deepEqual(Object.keys(liste.find((x) => x.name === zweite.datei.replace('.dms-sicherung', ''))!.extern!).sort(), ['a', 'b']);
+  });
+
+  it('falsche Prüfsumme am Ziel: fehlgeschlagen, Hinweis und genau eine E-Mail, die nur das Ziel nennt', async () => {
+    const { s, sichere, mails } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    await s.externRueckmeldung('sicherung_webdav', name, { status: 'fehlgeschlagen', grund: 'Die Prüfsumme am Ziel weicht ab.', endgueltig: true });
+    await new Promise((r) => setTimeout(r, 20));
+    const z = await s.zustand();
+    assert.equal(z.extern?.fehler?.stand.grund, 'Die Prüfsumme am Ziel weicht ab.');
+    assert.equal(mails.length, 1);
+    assert.match(mails[0].betreff, /Kopie außer Haus fehlgeschlagen/);
+    assert.match(mails[0].text, /Sicherungsziel WebDAV \(https:\/\/cloud\.example\.org\)/);
+    assert.match(mails[0].text, /lokale Sicherung ist davon nicht betroffen/);
+    assert.equal(await s.melde(), null, 'einmal je Vorfall');
+    assert.equal(mails.length, 1);
+    // Ein Fehlversuch, den die Wiederholung behebt: kein Fehler mehr.
+    await s.externRueckmeldung('sicherung_webdav', name, { status: 'geprueft', pruefung: 'pruefsumme' });
+    assert.equal((await s.zustand()).extern?.fehler, null);
+  });
+
+  it('vorübergehender Fehler ohne „endgueltig“: Hinweis ja, E-Mail nein; aufgegeben: endgültig mit E-Mail', async () => {
+    const { s, sichere, mails } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    await s.externRueckmeldung('sicherung_webdav', name, { status: 'fehlgeschlagen', grund: 'Netz unterbrochen' });
+    assert.equal(await s.melde(), null);
+    assert.equal(mails.length, 0);
+    await s.externAufgegeben('sicherung_webdav', name, 'Zeitgrenze erreicht');
+    await new Promise((r) => setTimeout(r, 20));
+    const st = (await s.liste())[0].extern!.sicherung_webdav;
+    assert.equal(st.status, 'fehlgeschlagen');
+    assert.equal(st.endgueltig, true);
+    assert.match(st.grund!, /aufgegeben: Netz unterbrochen/);
+    assert.equal(mails.length, 1);
+    // Schon erfolgreich: aufgeben ändert nichts.
+    await s.externRueckmeldung('sicherung_webdav', name, { status: 'hochgeladen', pruefung: 'groesse' });
+    await s.externAufgegeben('sicherung_webdav', name, 'x');
+    assert.equal((await s.liste())[0].extern!.sicherung_webdav.status, 'hochgeladen');
+  });
+
+  it('mehr als 2 Tage ohne neue Kopie außer Haus: Hinweis und E-Mail; frische Kopie beendet den Vorfall', async () => {
+    const { s, sichere, mails, stelle } = await aufbau();
+    const erste = await sichere();
+    await s.externRueckmeldung('sicherung_webdav', erste.datei.replace('.dms-sicherung', ''), { status: 'geprueft', pruefung: 'stichprobe' });
+    stelle(new Date('2026-11-03T03:00:00Z'));
+    const zweite = await sichere();
+    assert.equal((await s.zustand()).extern?.zuAlt, false, 'erst einen Tag offen');
+    stelle(new Date('2026-11-05T04:00:00Z'));
+    const z = await s.zustand();
+    assert.equal(z.extern?.zuAlt, true);
+    assert.equal(z.extern?.letzte?.name, erste.datei.replace('.dms-sicherung', ''));
+    assert.equal(await s.melde(), `extern-alt:${erste.datei.replace('.dms-sicherung', '')}`);
+    assert.match(mails.at(-1)!.betreff, /Kopie außer Haus ist zu alt/);
+    assert.ok(!mails.at(-1)!.text.includes('geheim'));
+    await s.externRueckmeldung('sicherung_webdav', zweite.datei.replace('.dms-sicherung', ''), { status: 'geprueft', pruefung: 'pruefsumme' });
+    assert.equal((await s.zustand()).extern?.zuAlt, false);
+    // Ein entferntes Paket zählt nicht mehr (kein Dauer-Alarm).
+  });
+
+  it('Aufbewahrung: „lokal nur die neueste“, laufende Kopien bleiben stehen (höchstens 2 Tage), Stand verschwindet mit der Sicherung', async () => {
+    const { s, sichere, stelle } = await aufbau();
+    await s.speicherePlan({ nurNeueste: true }, 'test');
+    assert.equal((await s.plan()).nurNeueste, true);
+    const a = await sichere('automatisch');
+    stelle(new Date('2026-11-03T03:00:00Z'));
+    await sichere('automatisch');
+    // Die erste ist noch „offen“ (keine Rückmeldung) und jünger als 2 Tage: bleibt.
+    assert.equal((await s.liste()).length, 2);
+    await s.externRueckmeldung('sicherung_webdav', a.datei.replace('.dms-sicherung', ''), { status: 'geprueft', pruefung: 'pruefsumme' });
+    stelle(new Date('2026-11-04T03:00:00Z'));
+    const c = await sichere('automatisch');
+    const namen = (await s.liste()).map((x) => x.name);
+    // a ist außer Haus und weg; b ist noch unterwegs (1 Tag) und bleibt; c ist die neueste.
+    assert.equal(namen.length, 2, namen.join(', '));
+    assert.equal(namen[0], c.datei.replace('.dms-sicherung', ''));
+    assert.ok(!namen.includes(a.datei.replace('.dms-sicherung', '')));
+    const ext = (await s.einstellungen.lies('sicherung_extern')) as Record<string, unknown>;
+    assert.ok(!(a.datei.replace('.dms-sicherung', '') in ext), 'Stand der entfernten Sicherung ist weg');
+    stelle(new Date('2026-11-07T03:00:00Z'));
+    await sichere('automatisch');
+    assert.equal((await s.liste()).length, 1, 'nach 2 Tagen gilt die Aufbewahrung auch für hängende Kopien');
+    assert.equal((await s.speicher()).hochrechnung.stueck, 1);
+    // „lokal keine“ gibt es nicht.
+    assert.equal((await s.speicherePlan({ aufbewahrung: { taeglich: 0, woechentlich: 0, monatlich: 0 }, nurNeueste: true }, 't')).nurNeueste, true);
+  });
+
+  it('Prüfen (Prüfsumme) geht auch mit der schlanken Metadaten-Datei vom Ziel', async () => {
+    const { s, sichere } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    await writeFile(join(s.ordner, `${name}.json`), JSON.stringify(schlankeMetadaten(meta)));
+    const e = (await s.liste())[0];
+    assert.equal(e.meta, null);
+    assert.equal(e.schlank?.sha256, meta.sha256);
+    s.pruefe(name, 'test');
+    for (let i = 0; i < 200 && s.laeuft(); i++) await new Promise((r) => setTimeout(r, 10));
+    assert.deepEqual(s.aktuellerLauf()?.ergebnis, { ok: true });
+    assert.deepEqual((await readdir(s.ordner)).filter((n) => n.startsWith('.')), []);
+  });
+
+  it('Notfallblatt nennt das Ziel ohne Passwort und warnt, den Schlüssel dazuzulegen', async () => {
+    const pdf = notfallblatt({
+      name: 'DMS', haushaltId: HAUSHALT, adresse: 'https://dms.example.org', version: '0.142.0', erstellt: new Date('2026-11-02T10:00:00Z'),
+      schluessel: 'A'.repeat(43), fingerabdruck: 'ab12', sicherungsordner: '/data/sicherung', schluesselordner: '/data/geheim',
+      aussenziele: [{ name: 'Sicherungsziel WebDAV', adresse: 'https://lena:geheim@cloud.example.org', ziel: null }],
+    });
+    const hat = (t: string) => pdf.includes(Buffer.from(t, 'latin1'));
+    assert.ok(hat('Kopie außer Haus'));
+    assert.ok(hat('Sicherungsziel WebDAV: https://cloud.example.org'), 'Paket und Adresse');
+    assert.ok(!hat('geheim@') && !hat('lena:'), 'kein Benutzer, kein Passwort');
+    assert.ok(hat('liegt nicht auf dem Ziel'));
+  });
+
+  it('Recht und Ereignis: nur zusammen, im Manifest lesbar, in der Rückfrage verständlich, Schlüssel darf rückmelden', () => {
+    assert.ok('sicherung.fertig' in EREIGNISSE);
+    assert.match(SCHNITTSTELLEN['dms:sicherung-lesen'], /kann sie nicht öffnen/);
+    const gut = liesCode({ sprache: 'c', ereignisse: ['sicherung.fertig'], rechte: { schnittstellen: ['dms:sicherung-lesen'] } });
+    assert.deepEqual(gut.fehler, []);
+    assert.deepEqual(gut.code!.rechte.lesen, []);
+    assert.equal(schluesselRecht(gut.code!), 'schreiben', 'PUT /sicherungen/{name}/extern');
+    assert.match(liesCode({ sprache: 'c', rechte: { schnittstellen: ['dms:sicherung-lesen'] } }).fehler.join(' '), /braucht das Ereignis sicherung.fertig/);
+    assert.match(liesCode({ sprache: 'c', ereignisse: ['sicherung.fertig'] }).fehler.join(' '), /nur mit code.rechte.schnittstellen: \[dms:sicherung-lesen\]/);
+    const zeilen = rechteText(gut.code!, (v) => v);
+    assert.ok(zeilen.some((z) => /verschlüsselte Sicherung lesen.*\(dms:sicherung-lesen\)/.test(z)), zeilen.join('\n'));
+    assert.ok(zeilen.some((z) => /Sicherung ist fertig/.test(z)), zeilen.join('\n'));
+    assert.ok(HILFE['pakete.recht.sicherung'] && HILFE['pakete.ereignis.sicherung_fertig'] && HILFE['sicherung.extern']);
+  });
+});

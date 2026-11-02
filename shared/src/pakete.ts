@@ -265,6 +265,7 @@ export const EREIGNISSE = {
   'volltext.fertig': 'Der Volltext eines Dokuments ist fertig (auch ohne Text)',
   'paket.einstellungen_geaendert': 'Die Einstellungen des Pakets wurden geändert',
   'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die das DMS nicht selbst liest)',
+  'sicherung.fertig': 'Eine Sicherung ist fertig (verschlüsselt) und kann außer Haus kopiert werden',
 } as const;
 export type EreignisArt = keyof typeof EREIGNISSE;
 /**
@@ -277,6 +278,7 @@ export const SCHNITTSTELLEN = {
   'dms:erkennen': 'Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt',
   'dms:texterkennung': 'Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt',
   'dms:umwandeln': 'Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
+  'dms:sicherung-lesen': 'Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)',
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
 /** Ab dieser Version kennt das DMS `code.rechte.schnittstellen` und das Ereignis `volltext.fertig` (#442). */
@@ -288,7 +290,12 @@ export const DMS_VEKTOREN_AB = '0.120.0';
  */
 export const DMS_ANTWORTEN_AB = '0.124.0';
 /** Hilfe-Ort je Schnittstelle (Administratorhandbuch, Pakete mit Code). */
-export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln' };
+export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln', 'dms:sicherung-lesen': 'pakete.recht.sicherung' };
+/**
+ * Ab dieser Version (#585) kennt das DMS das Ereignis `sicherung.fertig` und die Schnittstelle `dms:sicherung-lesen`:
+ * Ein Paket liest die verschlüsselte Sicherung in Stücken, kopiert sie außer Haus und meldet je Sicherung zurück.
+ */
+export const DMS_SICHERUNG_AB = '0.142.0';
 /** Ab dieser Version kennt das DMS die Schnittstelle `dms:erkennen` (#511): Erkennung für „Aus Dokument ausfüllen“. */
 export const DMS_ERKENNEN_AB = '0.125.0';
 /**
@@ -402,6 +409,10 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   if (willUmwandeln && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht auch code.rechte.dokumente: lesen – das Paket liest die Originaldatei.');
   if (willUmwandeln && !ereignisse.includes('datei.umwandeln')) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht das Ereignis datei.umwandeln in code.ereignisse.');
   if (!willUmwandeln && ereignisse.includes('datei.umwandeln')) fehler.push('code.ereignisse: datei.umwandeln gibt es nur mit code.rechte.schnittstellen: [dms:umwandeln].');
+  // Sicherung außer Haus (#585): Lesen der verschlüsselten Sicherung nur zusammen mit dem Ereignis – und umgekehrt.
+  const willSichern = schnittstellen.includes('dms:sicherung-lesen');
+  if (willSichern && !ereignisse.includes('sicherung.fertig')) fehler.push('code.rechte.schnittstellen: dms:sicherung-lesen braucht das Ereignis sicherung.fertig in code.ereignisse.');
+  if (!willSichern && ereignisse.includes('sicherung.fertig')) fehler.push('code.ereignisse: sicherung.fertig gibt es nur mit code.rechte.schnittstellen: [dms:sicherung-lesen].');
   const netz = liste(x.netz, 'code.netz');
   for (const n of netz) {
     let ok = false;
@@ -455,6 +466,7 @@ export const EREIGNIS_HILFE: Record<EreignisArt, Hilfeort> = {
   'volltext.fertig': 'pakete.ereignis.volltext_fertig',
   'paket.einstellungen_geaendert': 'pakete.ereignis.einstellungen_geaendert',
   'datei.umwandeln': 'pakete.ereignis.datei_umwandeln',
+  'sicherung.fertig': 'pakete.ereignis.sicherung_fertig',
 };
 
 /** Ein Punkt der Rechte-Liste in der Vorschau (#449): Text, Handbuch-Stelle, ggf. Unterliste (Ereignisse). */

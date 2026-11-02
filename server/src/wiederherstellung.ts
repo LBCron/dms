@@ -11,7 +11,7 @@ import { bezeichner, OHNE_INHALT, type Tabelle } from './datenbankabzug';
 import { beschreibe, liesErweiterungen, problemeAus, TRIGRAMM_INDEXNAMEN, trigrammIndizes } from './erweiterungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
-import { ortszeit, type Metadaten, type Sicherung } from './sicherung';
+import { ortszeit, type Eintragsliste, type Metadaten, type SchlankeMetadaten, type Sicherung } from './sicherung';
 import { liesKopf, liesSicherung, sha256Von, ZWECK } from './sicherungsformat';
 import { entschluesseleMit, fingerabdruck, leiteAb, PRUEFWORT, schluesselAusText } from './tresor';
 import { STATISTIK_SPALTEN } from './repo-pg';
@@ -138,10 +138,20 @@ export class Wiederherstellung {
   async abgleich(name: string, schluesselText?: string): Promise<Abgleich> {
     const eintrag = (await this.q.sicherung.liste()).find((x) => x.name === name);
     if (!eintrag) throw new Fachfehler(404, 'Diese Sicherung gibt es im Sicherungsordner nicht (mehr). „Neu prüfen“ liest den Ordner neu.');
-    if (!eintrag.meta) throw new Fachfehler(422, 'Zu dieser Sicherung fehlt die Metadaten-Datei (.json). Lege sie mit in den Sicherungsordner.');
-    const m = eintrag.meta;
-    const heute = await this.q.laufzeit();
     const probleme: string[] = []; const hinweise: string[] = [];
+    // Kopie außer Haus (#585): daneben nur die schlanke Metadaten-Datei – den Rest liest das DMS mit dem Schlüssel aus der Sicherung.
+    const aussen = !eintrag.meta && eintrag.schlank ? await this.metaAusSicherung(eintrag as Eintragsliste & { schlank: SchlankeMetadaten }, schluesselText) : null;
+    if (!eintrag.meta && !aussen) throw new Fachfehler(422, 'Zu dieser Sicherung fehlt die Metadaten-Datei (.json). Lege sie mit in den Sicherungsordner – bei einer Kopie außer Haus die .json vom Ziel.');
+    const m = eintrag.meta ?? aussen!.meta;
+    if (aussen) {
+      hinweise.push('Neben dieser Sicherung liegt nur die schlanke Metadaten-Datei (Kopie außer Haus). Version und Umfang liest das DMS mit dem Schlüssel aus der Sicherung selbst.');
+      if (aussen.problem) probleme.push(aussen.problem);
+      if (!aussen.gelesen) {
+        if (!aussen.problem) hinweise.push(`Gib den Schlüssel vom Notfallblatt ein (Fingerabdruck ${m.verschluesselung.fingerabdruck}) – dann prüft das DMS die Sicherung.`);
+        return { name, meta: m, vergleich: [], probleme, hinweise, schluesselNoetig: true };
+      }
+    }
+    const heute = await this.q.laufzeit();
     // Die .json liegt unverschlüsselt daneben: was in Pfade einfließt, streng prüfen.
     if (m.datei !== `${name}.dms-sicherung` || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.haushaltId ?? '') || !Array.isArray(m.migrationen) || m.migrationen.some((x) => !/^[\w.-]+\.sql$/.test(String(x)))) {
       throw new Fachfehler(422, 'Die Metadaten-Datei (.json) dieser Sicherung ist ungültig oder verändert.');
@@ -149,16 +159,19 @@ export class Wiederherstellung {
     const vergleich: Abgleich['vergleich'] = [];
 
     const unbekannt = m.migrationen.filter((x) => !heute.migrationen.includes(x));
-    const dms = vergleicheVersion(m.umgebung.dms, heute.dms);
+    const dms = aussen ? -1 : vergleicheVersion(m.umgebung.dms, heute.dms);
     if (unbekannt.length) {
       probleme.push(`Die Sicherung stammt von einem neueren DMS (${m.umgebung.dms}, Datenbank-Stand ${m.umgebung.datenbankStand}). Dieses DMS (${heute.dms}) kennt ${unbekannt.length === 1 ? 'eine Änderung' : `${unbekannt.length} Änderungen`} der Datenbank nicht. Aktualisiere zuerst das DMS.`);
     }
-    vergleich.push({ was: 'DMS', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? 'älter – wird nach dem Einspielen auf den heutigen Stand gebracht' : undefined });
+    if (aussen) vergleich.push({ was: 'DMS', damals: 'unbekannt', heute: heute.dms, urteil: unbekannt.length ? 'fehler' : 'ok', info: unbekannt.length ? undefined : 'steht nicht in der schlanken Metadaten-Datei; maßgeblich ist der Datenbank-Stand' });
+    else vergleich.push({ was: 'DMS', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? 'älter – wird nach dem Einspielen auf den heutigen Stand gebracht' : undefined });
     const fehlende = heute.migrationen.filter((x) => !m.migrationen.includes(x)).length;
     vergleich.push({ was: 'Datenbank-Stand', damals: m.umgebung.datenbankStand ?? '–', heute: heute.migrationen.at(-1) ?? '–', urteil: unbekannt.length ? 'fehler' : fehlende ? 'ok' : 'gleich', info: fehlende && !unbekannt.length ? `${fehlende} ${fehlende === 1 ? 'Änderung läuft' : 'Änderungen laufen'} danach` : undefined });
-    const pgDamals = m.umgebung.postgres.split('.')[0]; const pgHeute = heute.postgres.split('.')[0];
-    vergleich.push({ was: 'PostgreSQL', damals: m.umgebung.postgres, heute: heute.postgres, urteil: pgDamals === pgHeute ? 'gleich' : 'ok', info: pgDamals !== pgHeute ? 'andere Hauptversion – geht, die Daten werden neu eingelesen' : undefined });
-    vergleich.push({ was: 'Architektur', damals: m.umgebung.architektur, heute: heute.architektur, urteil: m.umgebung.architektur === heute.architektur ? 'gleich' : 'ok' });
+    if (!aussen) {
+      const pgDamals = m.umgebung.postgres.split('.')[0]; const pgHeute = heute.postgres.split('.')[0];
+      vergleich.push({ was: 'PostgreSQL', damals: m.umgebung.postgres, heute: heute.postgres, urteil: pgDamals === pgHeute ? 'gleich' : 'ok', info: pgDamals !== pgHeute ? 'andere Hauptversion – geht, die Daten werden neu eingelesen' : undefined });
+      vergleich.push({ was: 'Architektur', damals: m.umgebung.architektur, heute: heute.architektur, urteil: m.umgebung.architektur === heute.architektur ? 'gleich' : 'ok' });
+    }
     vergleich.push({ was: 'Haushalts-Id', damals: m.haushaltId, heute: heute.haushaltId, urteil: m.haushaltId === heute.haushaltId ? 'gleich' : 'hinweis', info: m.haushaltId !== heute.haushaltId ? 'abweichend – siehe Hinweis' : undefined });
     if (m.haushaltId !== heute.haushaltId) {
       hinweise.push(this.q.mandantUebernehmen
@@ -166,7 +179,7 @@ export class Wiederherstellung {
         : `Die Sicherung gehört zum Haushalt ${m.haushaltId}, dieses DMS ist auf ${heute.haushaltId} eingestellt – sonst sind die Daten nicht zu sehen.`);
     }
 
-    let schluesselNoetig = this.q.tresor.fingerabdruck !== m.verschluesselung.fingerabdruck;
+    let schluesselNoetig = !aussen?.mitEingabe && this.q.tresor.fingerabdruck !== m.verschluesselung.fingerabdruck;
     if (schluesselText !== undefined && schluesselText.trim()) {
       const k = schluesselAusText(schluesselText);
       if (!k) probleme.push('Der eingegebene Schlüssel hat nicht die richtige Form: 43 Zeichen aus A–Z, a–z, 0–9, - und _ (Leerzeichen zählen nicht).');
@@ -179,6 +192,49 @@ export class Wiederherstellung {
       if (kopf.fingerabdruck !== m.verschluesselung.fingerabdruck) probleme.push('Sicherungsdatei und Metadaten passen nicht zusammen (verschiedene Schlüssel).');
     } catch (e) { probleme.push((e as Error).message); }
     return { name, meta: m, vergleich, probleme, hinweise, schluesselNoetig };
+  }
+
+  /**
+   * Metadaten aus der Sicherung selbst (#585), wenn daneben nur die schlanke Fassung liegt: Mit dem Schlüssel (eingegeben
+   * oder der dieses DMS, wenn der Fingerabdruck passt) wird nur der erste Eintrag (Inhaltsangabe) entschlüsselt.
+   * Echt ist die Datei erst, wenn beim Einspielen der GCM-Prüfwert am Ende stimmt. Ohne Schlüssel: gelesen = false.
+   */
+  private async metaAusSicherung(e: Eintragsliste & { schlank: SchlankeMetadaten }, schluesselText?: string): Promise<{ meta: Metadaten; gelesen: boolean; mitEingabe: boolean; problem?: string }> {
+    const s = e.schlank;
+    if (s.datei !== `${e.name}.dms-sicherung` || !/^[0-9a-f]{64}$/.test(String(s.sha256)) || typeof s.verschluesselung?.fingerabdruck !== 'string') {
+      throw new Fachfehler(422, 'Die Metadaten-Datei (.json) dieser Sicherung ist ungültig oder verändert.');
+    }
+    const meta: Metadaten = {
+      format: 1, datei: s.datei, haushaltId: '', art: 'manuell', ausgeloestVon: '–', beginn: s.beginn, ende: s.beginn, dauerSekunden: 0,
+      umgebung: { dms: '–', datenbankStand: null, postgres: '–', node: '–', system: '–', architektur: '–' },
+      // dateien: -1 = unbekannt (steht erst am Ende der Sicherung); geprüft wird dann gegen den Endeintrag.
+      anzahl: { mappen: 0, dokumente: 0, benutzer: 0, dateien: -1, tabellen: 0 } as Metadaten['anzahl'],
+      groessen: { datenbankBytes: 0, dateienBytes: e.bytes, sicherungBytes: e.bytes },
+      verschluesselung: { verfahren: String(s.verschluesselung.verfahren ?? ''), fingerabdruck: s.verschluesselung.fingerabdruck }, sha256: s.sha256, migrationen: [],
+    };
+    const text = schluesselText?.trim() ? schluesselText : null;
+    const k = text ? schluesselAusText(text) : this.q.tresor.fingerabdruck === meta.verschluesselung.fingerabdruck ? schluesselAusText(this.q.tresor.alsText() ?? '') : null;
+    if (text && !k) return { meta, gelesen: false, mitEingabe: false, problem: 'Der eingegebene Schlüssel hat nicht die richtige Form: 43 Zeichen aus A–Z, a–z, 0–9, - und _ (Leerzeichen zählen nicht).' };
+    if (!k) return { meta, gelesen: false, mitEingabe: false };
+    if (fingerabdruck(k) !== meta.verschluesselung.fingerabdruck) return { meta, gelesen: false, mitEingabe: false, problem: `Der eingegebene Schlüssel hat den Fingerabdruck ${fingerabdruck(k)}; die Sicherung braucht ${meta.verschluesselung.fingerabdruck}. Nimm das Notfallblatt zu dieser Sicherung.` };
+    try {
+      const it = liesSicherung(join(this.q.sicherung.ordner, s.datei), leiteAb(k, ZWECK))[Symbol.asyncIterator]();
+      const erst = await it.next();
+      await it.return?.(undefined);
+      const kopf = (erst.done ? null : erst.value.art === 'M' ? erst.value.kopf : null) as { haushaltId?: unknown; migrationen?: unknown; tabellen?: unknown; ohneInhalt?: unknown; zaehler?: Record<string, unknown> } | null;
+      if (!kopf) throw new Error('Die Sicherung beginnt nicht mit der Inhaltsangabe – die Datei ist beschädigt.');
+      const migrationen = Array.isArray(kopf.migrationen) ? kopf.migrationen.map(String) : [];
+      const ohne = new Set(Array.isArray(kopf.ohneInhalt) ? kopf.ohneInhalt.map(String) : []);
+      const tabellen = Array.isArray(kopf.tabellen) ? (kopf.tabellen as Array<{ name?: unknown }>).filter((t) => !ohne.has(String(t?.name))).length : 0;
+      const z = kopf.zaehler ?? {};
+      return {
+        meta: { ...meta, haushaltId: String(kopf.haushaltId ?? ''), migrationen, umgebung: { ...meta.umgebung, datenbankStand: migrationen.at(-1) ?? null },
+          anzahl: { ...meta.anzahl, mappen: Number(z.mappen) || 0, dokumente: Number(z.dokumente) || 0, benutzer: Number(z.benutzer) || 0, tabellen } as Metadaten['anzahl'] },
+        gelesen: true, mitEingabe: !!text,
+      };
+    } catch (x) {
+      return { meta, gelesen: false, mitEingabe: false, problem: `Die Sicherung lässt sich mit diesem Schlüssel nicht lesen: ${(x as Error).message}` };
+    }
   }
 
   private schluessel(m: Metadaten, schluesselText?: string): Buffer {
@@ -319,7 +375,8 @@ export class Wiederherstellung {
       const leeren = (await neu`SELECT tablename FROM pg_tables WHERE schemaname = ${schema} AND tablename <> 'schema_migrationen'`).map((r) => bezeichner(r.tablename as string));
       if (leeren.length) await neu.unsafe(`TRUNCATE ${leeren.join(', ')} CASCADE`);
       if (!probe) await mkdir(staging, { recursive: true });
-      let tabellen = 0; let dateien = 0; let stichprobe = 0; let iDatei = 0; let endeTabellen: number | null = null;
+      let tabellen = 0; let dateien = 0; let stichprobe = 0; let iDatei = 0; let endeTabellen: number | null = null; let dateienEnde: number | null = null;
+      // Ohne Anzahl (schlanke Metadaten, #585) jede Datei prüfen.
       const jede = Math.max(1, Math.ceil(m.anzahl.dateien / 20));
       let zaehlerSicherung: Record<string, number> | null = null;
       // Umgewandelte Fassungen (#577, seit 0.140.1 in der Sicherung): Prüfwert des Inhalts und der in den Angaben.
@@ -376,6 +433,7 @@ export class Wiederherstellung {
           dateien++;
         } else if (e.art === 'E') {
           endeTabellen = Number(e.kopf.tabellen);
+          dateienEnde = Number(e.kopf.dateien);
         }
       }
       // Erst hier ist der GCM-Prüfwert geprüft: Die Datei ist echt und vollständig.
@@ -415,7 +473,9 @@ export class Wiederherstellung {
       const soll = zaehlerSicherung ?? m.anzahl;
       const abw = (['mappen', 'dokumente', 'benutzer'] as const).filter((x) => ist[x] !== Number(soll[x]));
       if (abw.length) throw new Error(`Die Anzahl stimmt nicht: ${abw.map((x) => `${x} ${ist[x]} statt ${soll[x]}`).join(', ')}.`);
-      if (m.anzahl.dateien !== dateien) throw new Error(`Die Anzahl der Dateien stimmt nicht: ${dateien} statt ${m.anzahl.dateien}.`);
+      // Kopie außer Haus mit schlanken Metadaten (#585): Anzahl aus dem Endeintrag der Sicherung (dateienEnde).
+      const dateienSoll = m.anzahl.dateien >= 0 ? m.anzahl.dateien : dateienEnde;
+      if (dateienSoll !== dateien) throw new Error(`Die Anzahl der Dateien stimmt nicht: ${dateien} statt ${dateienSoll ?? 'unbekannt'}.`);
       ok(`${ist.mappen} Mappen, ${ist.dokumente} Dokumente, ${ist.benutzer} Benutzer`);
 
       schritt('Auf den heutigen Stand bringen');

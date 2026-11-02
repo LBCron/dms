@@ -216,6 +216,10 @@ Will ein Update andere Adressen, fragt das DMS erneut.
 
 **„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“** – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis [Datei umwandeln](#ereignis-datei-umwandeln)) und gibt eine **umgewandelte Fassung** zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe [Andere Dateitypen](texterkennung.md#andere-dateitypen)). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem [Dokumente lesen](#recht-dokumente) (die Originaldatei).
 
+#### Sicherung lesen { #recht-sicherung-lesen }
+
+**„Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte) (dms:sicherung-lesen)“** – Seit Version 0.142. Nach jeder Sicherung bekommt das Paket das Ereignis [Sicherung fertig](#ereignis-sicherung-fertig) und darf **genau diese** Sicherungsdatei in Stücken lesen – verschlüsselt, so wie sie im Sicherungsordner liegt – und ihre schlanken Metadaten (Größe, Prüfsumme, Zeitpunkt, Fingerabdruck des Schlüssels). Den Schlüssel, die Inhalte und andere Dateien des Sicherungsordners bekommt es nie. Es meldet je Sicherung zurück, ob die Kopie angekommen und geprüft ist; das zeigt **Werkbank → Sicherung**. Mappen und Dokumente sieht es mit diesem Recht nicht. Siehe [Sicherung außer Haus](sicherung-ausser-haus.md).
+
 ### Dienst-Adresse { #dienst-adresse }
 
 Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. **Ollama** auf deinem Heimserver (fertiges Beispiel und Anleitung: [KI lokal betreiben](ki-lokal.md)). Die Adresse dieses Dienstes trägst du in den **Einstellungen** des Pakets ein (Werkbank → Pakete → *Paket* → Reiter „Einstellungen“):
@@ -295,6 +299,12 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 **Wann:** Seit Version 0.137 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht [Dateien umwandeln](#recht-umwandeln) zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei **Vorschaubilder nachholen** und bei **Volltext neu erzeugen** (für Dateien ohne Fassung). Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).
 
 **Typisch:** Das Paket **Bildformate** macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.
+
+#### Eine Sicherung ist fertig { #ereignis-sicherung-fertig }
+
+**Wann:** Seit Version 0.142 nach jeder erfolgreichen Sicherung – von Hand, automatisch oder vor einer Wiederherstellung –, sobald sie vollständig im Sicherungsordner liegt. Nur Pakete mit dem Recht [Sicherung lesen](#recht-sicherung-lesen) bekommen es. Schlägt die Kopie fehl, wiederholt das DMS das Ereignis (nach 1, 5, 30 Minuten, 2 und 6 Stunden); danach gilt sie als fehlgeschlagen und die Administratoren bekommen eine E-Mail.
+
+**Typisch:** Das Paket **Sicherungsziel WebDAV** lädt die verschlüsselte Sicherung auf Nextcloud, ein NAS oder zum Hoster und prüft sie dort.
 
 #### Die Einstellungen des Pakets wurden geändert { #ereignis-einstellungen-geandert }
 

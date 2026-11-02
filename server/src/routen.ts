@@ -330,6 +330,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   /** Benutzer mit ihren weiteren Rollen (#27). */
   const mitRollen = async (b: Benutzer) => ({ ...b, rollen: (await dienst.weitereRollen()).get(b.id) ?? [] });
   const sicherung = () => { if (!x.sicherung) throw new Fachfehler(404, 'Sicherungen sind nicht eingerichtet.'); return x.sicherung; };
+  /** Paket mit dms:sicherung-lesen (#585) – Menschen und andere Pakete bekommen 403. */
+  const sicherungsPaket = async (a: Anfrage): Promise<string> => {
+    const p = (await zg(a)).paket;
+    if (!p) throw new Fachfehler(403, t('pakete.sicherung.nur-pakete'));
+    if (!p.schnittstellen?.includes('dms:sicherung-lesen')) throw new Fachfehler(403, t('pakete.sicherung.recht'));
+    return p.id;
+  };
   /** Persönlicher Export (#255): je Benutzer, ob er gerade läuft. */
   const eigeneExporte = new Map<string, { laeuft: boolean; fehler: string | null }>();
   // Vollexport (#254): neben den Sicherungen, Unterordner export/.
@@ -1156,7 +1163,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'GET', pfad: '/api/wiederherstellung/sicherungen', zugang: 'offen', handler: async (a) => {
       const art = await wh().pruefeZugang(a.benutzer?.rolle === 'admin', a.einrichtungscode);
-      return ok({ art, ordner: sicherung().ordner, liste: (await sicherung().liste()).map((e) => ({ name: e.name, bytes: e.bytes, meta: e.meta })) });
+      return ok({ art, ordner: sicherung().ordner, liste: (await sicherung().liste()).map((e) => ({ name: e.name, bytes: e.bytes, meta: e.meta, ...(e.schlank ? { schlank: e.schlank } : {}) })) });
     } },
     { methode: 'POST', pfad: '/api/wiederherstellung/abgleich', zugang: 'offen', handler: async (a) => {
       await wh().pruefeZugang(a.benutzer?.rolle === 'admin', a.einrichtungscode);
@@ -1178,6 +1185,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/werkbank/sicherung/plan', zugang: 'admin', handler: async (a) => ok(await sicherung().speicherePlan(a.body, ich(a).email)) },
     { methode: 'POST', pfad: '/api/werkbank/sicherung/:name/pruefen', zugang: 'admin', handler: async (a) => ok(sicherung().pruefe(a.params.name, ich(a).email)) },
     { methode: 'DELETE', pfad: '/api/werkbank/sicherung/:name', zugang: 'admin', handler: async (a) => { await sicherung().loesche(a.params.name, ich(a).email); return leer; } },
+    // Sicherung außer Haus (#585): nur Pakete mit dms:sicherung-lesen, nur die Sicherungen aus ihrem Ereignis sicherung.fertig –
+    // die verschlüsselte Datei in Stücken, schlanke Metadaten und die Rückmeldung. Nie Schlüssel, nie andere Dateien.
+    { methode: 'GET', pfad: '/api/sicherungen/:name', zugang: 'angemeldet', handler: async (a) => ok(await sicherung().externMeta(await sicherungsPaket(a), a.params.name)) },
+    { methode: 'GET', pfad: '/api/sicherungen/:name/datei', zugang: 'angemeldet', handler: async (a) => {
+      const s = await sicherung().externStueck(await sicherungsPaket(a), a.params.name, a.query.versatz, a.query.laenge);
+      return { datei: { inhalt: s.inhalt, name: `${a.params.name}.dms-sicherung`, mime: 'application/octet-stream', anzeigen: false, groesse: s.inhalt.length, koepfe: { 'x-dms-groesse': String(s.groesse), 'cache-control': 'no-store' } } };
+    } },
+    { methode: 'PUT', pfad: '/api/sicherungen/:name/extern', zugang: 'angemeldet', handler: async (a) => ok(await sicherung().externRueckmeldung(await sicherungsPaket(a), a.params.name, a.body)) },
     { methode: 'GET', pfad: '/api/werkbank/notfallblatt', zugang: 'admin', handler: async (a) => {
       const t = tresor();
       const text = t.alsText();
@@ -1189,6 +1204,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
         version: eigeneVersion(), erstellt: jetzt, schluessel: text, fingerabdruck: t.fingerabdruck,
         sicherungsordner: x.sicherung?.ordner ?? '/data/sicherung', schluesselordner: dirname(t.datei),
+        aussenziele: x.sicherung ? await x.sicherung.externZiele().catch(() => []) : [],
       });
       if (x.sicherung) await x.sicherung.notfallblattErstellt(ich(a).email);
       else L.system.warn('Notfallblatt heruntergeladen', { von: ich(a).email, fingerabdruck: t.fingerabdruck });
@@ -2034,7 +2050,7 @@ export function modulAus(url: string): string {
   if (/^\/api\/(konto|benutzer|personen|rollen)\b/.test(url)) return 'konto';
   if (/^\/api\/(dokumente|mappen\/[^/]+\/dokumente)\b/.test(url)) return 'dokumente';
   if (/^\/api\/(mappen|sichten|papierkorb|notizen|aufgaben)\b/.test(url)) return 'ablage';
-  if (/^\/api\/(werkbank\/(sicherung|notfallblatt|wiederherstellung)|wiederherstellung)\b/.test(url)) return 'sicherung';
+  if (/^\/api\/(werkbank\/(sicherung|notfallblatt|wiederherstellung)|wiederherstellung|(v1\/)?sicherungen)\b/.test(url)) return 'sicherung';
   if (/^\/api\/(typen|werkbank|beispiele)\b/.test(url)) return 'werkbank';
   return 'http';
 }

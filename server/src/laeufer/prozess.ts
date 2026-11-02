@@ -93,7 +93,9 @@ async function netz(g: Geladen, json: string, body: Uint8Array | undefined, stro
   const kopf = Object.fromEntries(Object.entries(a.kopf ?? {}).filter(([k]) => !/^(host|cookie|authorization-dms)$/i.test(k)).map(([k, v]) => [k, String(v)]));
   // Stück für Stück: Die ganze Antwort darf so lange dauern wie der Aufruf; jedes Stück höchstens NETZ_MS.
   const ende = new AbortController();
-  const uhr = setTimeout(() => ende.abort(new Error('Zeitgrenze erreicht')), strom ? strom.ms : NETZ_MS);
+  // Hochladen in Teilen (#585, z. B. ein Stück einer Sicherung): ab 1 MB Körper darf die Anfrage so lange dauern wie der Aufruf.
+  const lang = (body?.length ?? 0) > 1024 * 1024;
+  const uhr = setTimeout(() => ende.abort(new Error('Zeitgrenze erreicht')), strom ? strom.ms : lang ? grenzen.sekunden * 1000 : NETZ_MS);
   uhr.unref?.();
   try {
     const r = await fetch(url, { method: (a.methode ?? 'GET').toUpperCase(), headers: kopf, body: body && body.length ? body : undefined, redirect: 'manual', signal: ende.signal });

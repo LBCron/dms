@@ -301,8 +301,19 @@ export interface SicherungsMeta {
   groessen: { datenbankBytes: number; dateienBytes: number; sicherungBytes: number };
   verschluesselung: { verfahren: string; fingerabdruck: string }; sha256: string; migrationen: string[];
 }
-export interface SicherungEintrag { name: string; meta: SicherungsMeta | null; bytes: number; pruefung?: { am: string; ok: boolean }; probe?: { am: string; ok: boolean; info: string } }
-export interface SicherungsPlan { aktiv: boolean; uhrzeit: string; haeufigkeit: 'taeglich' | 'woechentlich'; wochentag: number; aufbewahrung: { taeglich: number; woechentlich: number; monatlich: number }; mindestFreiGB: number; aktivSeit: string | null }
+/** Sicherung außer Haus (#585): schlanke Metadaten (vom Ziel) und Stand der Kopie je Paket. */
+export interface SicherungSchlank { format: number; schlank: true; datei: string; groesse: number; sha256: string; beginn: string; verschluesselung: { verfahren: string; fingerabdruck: string } }
+export type ExternStatus = 'offen' | 'laeuft' | 'hochgeladen' | 'geprueft' | 'fehlgeschlagen';
+export interface ExternStand { status: ExternStatus; pruefung?: 'pruefsumme' | 'stichprobe' | 'groesse' | 'keine'; grund?: string; endgueltig?: boolean; ziel?: string; bytes?: number; gesamt?: number; seit: string; am: string }
+export interface Sicherungsziel { id: string; name: string; adresse: string | null; ziel?: string | null }
+export interface ExternZustand {
+  ziele: Sicherungsziel[];
+  letzte: { name: string; paket: string; beginn: string; stand: ExternStand } | null;
+  fehler: { name: string; paket: string; beginn: string; stand: ExternStand } | null;
+  zuAlt: boolean;
+}
+export interface SicherungEintrag { name: string; meta: SicherungsMeta | null; schlank?: SicherungSchlank; bytes: number; pruefung?: { am: string; ok: boolean }; probe?: { am: string; ok: boolean; info: string }; extern?: Record<string, ExternStand> }
+export interface SicherungsPlan { aktiv: boolean; uhrzeit: string; haeufigkeit: 'taeglich' | 'woechentlich'; wochentag: number; aufbewahrung: { taeglich: number; woechentlich: number; monatlich: number }; mindestFreiGB: number; aktivSeit: string | null; /** #585 */ nurNeueste?: boolean }
 export interface SicherungsLauf { art: string; titel: string; status: 'laeuft' | 'fertig' | 'fehler'; schritt: string; bytes: number; gesamt: number; gestartet: string; beendet?: string; fehler?: string; ergebnis?: unknown }
 export interface Notfallblattstand { am: string | null; von: string | null; fingerabdruck: string | null; aktuell: boolean }
 export interface SicherungsZustand {
@@ -314,6 +325,8 @@ export interface SicherungsZustand {
   ort: { ordner: string; volume: boolean | null; gleichePlatte: boolean | null };
   /** Probe-Wiederherstellung (#109). */
   probe?: ProbeStand;
+  /** Kopie außer Haus (#585); null ohne Paket mit dms:sicherung-lesen. */
+  extern?: ExternZustand | null;
 }
 export interface SicherungStand {
   lauf: SicherungsLauf | null; liste: SicherungEintrag[]; plan: SicherungsPlan; zustand: SicherungsZustand;
@@ -363,7 +376,7 @@ export const api = {
   sicherungPruefen: (name: string) => anfrage<SicherungsLauf>('POST', `/api/werkbank/sicherung/${encodeURIComponent(name)}/pruefen`),
   whStatus: () => anfrage<{ lauf: WhLauf | null; abschluss: WhAbschluss | null }>('GET', '/api/wiederherstellung/status'),
   whAbschlussGesehen: () => anfrage<null>('POST', '/api/wiederherstellung/abschluss-gesehen'),
-  whSicherungen: () => anfrage<{ art: 'frisch' | 'laufend'; ordner: string; liste: Array<{ name: string; bytes: number; meta: SicherungsMeta | null }> }>('GET', '/api/wiederherstellung/sicherungen'),
+  whSicherungen: () => anfrage<{ art: 'frisch' | 'laufend'; ordner: string; liste: Array<{ name: string; bytes: number; meta: SicherungsMeta | null; schlank?: SicherungSchlank }> }>('GET', '/api/wiederherstellung/sicherungen'),
   whAbgleich: (name: string, schluessel?: string) => anfrage<WhAbgleich>('POST', '/api/wiederherstellung/abgleich', { name, ...(schluessel ? { schluessel } : {}) }),
   whStart: (d: { name: string; schluessel?: string; bestaetigt?: boolean }) => anfrage<WhLauf>('POST', '/api/wiederherstellung/start', d),
   probeStarten: (name?: string) => anfrage<WhLauf>('POST', '/api/werkbank/sicherung/probe', name ? { name } : {}),

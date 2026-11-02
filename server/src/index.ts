@@ -39,6 +39,8 @@ import { ordnerAblage, Vorschaubilder } from './vorschau';
 import { Dateiumwandlung, fassungsOrdner, ordnerFassungen, zieheFassungenUm } from './dateiumwandlung';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
+import { hatSchnittstelle } from '../../shared/src/pakete';
+import { adressfelder } from '../../shared/src/paketeinstellungen';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
 import { maxAnfragenAus, Ueberlastschutz } from './ueberlast';
 import { Systemlast } from './systemlast';
@@ -318,6 +320,17 @@ texterkennung.nachher = (d, e, k) => {
 };
 // Texterkennung als Paket (#458): das installierte Paket mit dms:texterkennung.
 texterkennung.paket = () => dienst.texterkennungPaket();
+// Sicherung außer Haus (#585): Pakete mit dms:sicherung-lesen bekommen jede fertige Sicherung (Ereignis sicherung.fertig),
+// lesen die verschlüsselte Datei in Stücken und melden je Sicherung zurück. Adresse: die bestätigte aus den Einstellungen.
+sicherung.extern = {
+  pakete: async () => Promise.all((await dienst.listePakete()).filter((p) => hatSchnittstelle(p.laeufer, 'dms:sicherung-lesen')).map(async (p) => {
+    const werte = p.einstellungen ? (await dienst.paketEinstellungen(p.id))?.werte ?? {} : {};
+    const adresse = p.einstellungen ? adressfelder(p.einstellungen).map((f) => werte[f.schluessel]).find((v): v is string => typeof v === 'string' && !!v) ?? null : null;
+    return { id: p.id, name: p.name, adresse };
+  })),
+  melde: (daten) => dienst.melde('sicherung.fertig', { ...daten }, undefined, null, (p) => hatSchnittstelle(p.laeufer, 'dms:sicherung-lesen')),
+};
+dienst.sicherungAufgegeben = (paket, name, fehler) => sicherung.externAufgegeben(paket, name, fehler);
 wartung.beimAusschalten(() => void paketlaeufer.stelleZu());
 // Systemzustand → Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk jede Minute, nur im Arbeitsspeicher.
 const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett', schleife: () => !!messung.auslastung.warnung() });

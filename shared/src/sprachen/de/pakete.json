@@ -117,5 +117,7 @@
   "quelle.bestaetigen.titel": "Schlüssel dieses Katalogs bestätigen?",
   "quelle.bestaetigen.text": "Vergleiche den Fingerabdruck mit dem, den der Anbieter auf seiner Webseite nennt. Stimmt auch nur ein Zeichen nicht, bestätige nicht.",
   "quelle.bestaetigen.ja": "Fingerabdruck stimmt",
-  "quelle.erklaerung": "Hat ein Katalog einen eigenen Schlüssel, zeigt das DMS beim Hinzufügen den Fingerabdruck. Vergleiche ihn mit der Webseite des Anbieters."
+  "quelle.erklaerung": "Hat ein Katalog einen eigenen Schlüssel, zeigt das DMS beim Hinzufügen den Fingerabdruck. Vergleiche ihn mit der Webseite des Anbieters.",
+  "sicherung.nur-pakete": "Sicherungen außer Haus kopieren nur Pakete mit dem Recht „dms:sicherung-lesen“.",
+  "sicherung.recht": "Dieses Paket hat das Recht „dms:sicherung-lesen“ nicht (Rechte aus dem Manifest)."
 }
