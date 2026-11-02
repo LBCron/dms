@@ -81,7 +81,7 @@ const DEMO_JE_LAUF = 50_000;
 export const STUFEN = {
   klein: { bildet: 'Haushalt (2–5 Personen)', gleichzeitig: 25, mappen: 5_000, export: false, ziel: { p95Ms: 300, fehlerquote: 0 }, ciGrenze: { p95Ms: 300 } },
   mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, ziel: { p95Ms: 1000, fehlerquote: 0.001 }, ciGrenze: { p95Ms: 2860 } },
-  gross: { bildet: 'Belastungsgrenze', mappen: 200_000, start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
+  gross: { bildet: 'Belastungsgrenze', mappen: 200_000, vorstufen: [5, 10], start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
 };
 /** Pflichten der großen Stufe (wie „Überlast“ in #544): kein Absturz, begrenzter Speicher, Erholung, Anmeldeschutz. */
 export const PFLICHT = { ohneAntwort: 0, speicherMb: 1536, erholungMs: 30_000, erholungP95Ms: 1000 };
@@ -512,9 +512,13 @@ async function grosseStufe(v, lauf, dauer) {
   const bis = Number(arg('--bis', s.hoechstens));
   const start = Number(arg('--start', s.start));
   const schritt = Number(arg('--schritt', s.schritt));
+  // Vorgabe 5, 10, dann ab 25 in 25er-Schritten – damit auch eine Grenze unter 25 eine echte Zahl ist (#563).
+  // Mit --start beginnt die Steigerung genau dort.
+  const stufenfolge = [...(hat('--start') ? [] : s.vorstufen.filter((n) => n < start && n <= bis))];
+  for (let n = start; n <= bis; n += schritt) stufenfolge.push(n);
   const schritte = [];
   let grenze = null; let grund = null;
-  for (let n = start; n <= bis; n += schritt) {
+  for (const n of stufenfolge) {
     const e = await lauf({ name: `groß ${n}`, n, dauer: schrittDauer, mitExport: false });
     schritte.push(e);
     grund = e.serverAusfaelle > 2 ? 'Server nicht erreichbar'
@@ -540,7 +544,7 @@ async function grosseStufe(v, lauf, dauer) {
   return {
     stufe: 'gross', art: 'messung', schritte, ueberlast, erholung: erholt, anmeldeschutz: anmelde, verfehlt,
     // Schon der erste Schritt zu viel: Grenze 0 heißt „unter dem ersten Schritt“.
-    grenze: grenze ? { gleichzeitig: grenze.n, jeSekunde: grenze.jeSekunde, p95: grenze.p95 } : { gleichzeitig: 0, jeSekunde: 0, p95: null, unter: start },
+    grenze: grenze ? { gleichzeitig: grenze.n, jeSekunde: grenze.jeSekunde, p95: grenze.p95 } : { gleichzeitig: 0, jeSekunde: 0, p95: null, unter: stufenfolge[0] ?? start },
     grund,
   };
 }

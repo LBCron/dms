@@ -11,7 +11,7 @@ Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Pr
 | --- | --- | --- | --- | --- |
 | `klein` | Haushalt (2–5 Personen) | 25 gleichzeitige Anfragen, gemischt wie im Alltag | 5.000 Mappen | 95 % der Antworten schneller als 0,3 s, keine Fehler |
 | `mittel` | Kleinbetrieb (10–15 Personen) | 100 gleichzeitig, dazu ein großer Export nach dem anderen | 50.000 Mappen | 95 % schneller als 1 s, weniger als 0,1 % Fehler |
-| `gross` | Belastungsgrenze | alle 2 Minuten 25 gleichzeitige Anfragen mehr, bis 95 % nicht mehr unter 3 s bleiben, mehr als 1 % fehlschlagen oder der [Überlastschutz](technik.md#last) greift; danach kurz 1000 gleichzeitig | 200.000 Mappen | kein fester Wert – gemessen wird, **wo die Grenze liegt**; Pflicht: kein Absturz, Erholung von selbst |
+| `gross` | Belastungsgrenze | alle 2 Minuten mehr gleichzeitige Anfragen (5, 10, 25, 50, 75 …), bis 95 % nicht mehr unter 3 s bleiben, mehr als 1 % fehlschlagen oder der [Überlastschutz](technik.md#last) greift; danach kurz 1000 gleichzeitig | 200.000 Mappen | kein fester Wert – gemessen wird, **wo die Grenze liegt**; Pflicht: kein Absturz, Erholung von selbst |
 
 **Ziel und CI-Grenze:** Das **Ziel** ist, was das Projekt zusagen möchte. Die wöchentliche Messung auf den Rechnern von GitHub prüft daneben eine **CI-Grenze**: den ersten Lauf dort plus 20 % – für `klein` 0,3 s (wie das Ziel), für `mittel` 2,86 s. Nur wenn sie verfehlt ist, wird der Lauf rot; sie wird mit der Zeit nur strenger, bis sie das Ziel erreicht. Ein verfehltes Ziel heißt: Das Projekt muss das DMS dort schneller machen. Was die Rechner von GitHub und gemeldete Geräte schaffen, steht unter [Was das DMS verkraftet](verkraftet.md).
 
@@ -113,7 +113,7 @@ Der Lasttest steckt als Befehl `dms-lasttest` im Image. So misst du ohne die Sei
 
 4. **Aufräumen:** Test-Container stoppen und löschen (`docker rm -f dms-test`), die Ordner der Test-Installation löschen.
 
-Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). `--dauer <Sekunden>` ändert die Messdauer von `klein` und `mittel` (Vorgabe 120; im Weg über den Browser mit der Variable `DMS_LASTTEST_DAUER`). `--start`, `--schritt` und `--schritt-dauer` ändern die Steigerung von `gross` (Vorgabe 25, 25, 120 Sekunden), `--bis <n>` begrenzt sie. `--bericht <Datei>` speichert den Bericht.
+Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). `--dauer <Sekunden>` ändert die Messdauer von `klein` und `mittel` (Vorgabe 120; im Weg über den Browser mit der Variable `DMS_LASTTEST_DAUER`). `--start`, `--schritt` und `--schritt-dauer` ändern die Steigerung von `gross` (Vorgabe: 5 und 10, dann ab 25 in Schritten von 25, je 120 Sekunden; mit `--start` beginnt sie genau dort), `--bis <n>` begrenzt sie. `--bericht <Datei>` speichert den Bericht.
 
 Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (`--ziel http://…:8099`); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.
 
