@@ -14,7 +14,7 @@ import { chromium } from 'playwright';
 
 const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const ZIEL = process.argv[2] ?? 'suche-fehler';
-const ADMIN = { email: 'anna@example.org', passwort: 'handbuch-passwort-1' };
+const ADMIN = { email: 'lena@example.org', passwort: 'handbuch-passwort-1' };
 
 const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify(ADMIN) });
 if (!anm.ok) throw new Error(`Anmelden: ${anm.status} ${await anm.text()}`);

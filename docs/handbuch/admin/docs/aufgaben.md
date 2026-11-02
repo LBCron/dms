@@ -41,11 +41,11 @@ Der **Filter** über der Liste grenzt ein nach:
 
 Bei Urlaub, Krankheit oder wenn die Zuständigkeit wechselt, verteilst du viele Aufgaben in einem Schritt neu:
 
-1. Grenze die Liste mit dem Filter ein, z. B. *Empfänger: Ben*.
+1. Grenze die Liste mit dem Filter ein, z. B. *Empfänger: Jonas*.
 2. Hake die Aufgaben links an – oder **Alle angezeigten auswählen** (das gilt nur für die gerade gefilterten). Daneben steht, wie viele ausgewählt sind.
 3. In der Leiste darüber **Ausgewählte weitergeben an** einen Benutzer wählen und **Weitergeben**. Eine Rückfrage nennt Anzahl und Ziel.
 
-Danach steht dort, wie viele weitergegeben wurden – und welche nicht und warum, etwa „Carl darf die Mappe nicht lesen“ oder „liegt schon bei Carl“. Was nicht ging, bleibt ausgewählt; du kannst es gleich an jemand anderen geben. Jede Weitergabe steht in der Historie ihrer Mappe. Der neue Empfänger bekommt **eine** Sammelbenachrichtigung unter „Zu erledigen“ (Art *Zugewiesen*, an deiner Benutzer-Mappe: „Anna hat dir 12 Aufgaben weitergegeben“) statt vieler einzelner; gibst du ihm weitere, bevor er sie erledigt hat, zählt sie nur hoch.
+Danach steht dort, wie viele weitergegeben wurden – und welche nicht und warum, etwa „Carl darf die Mappe nicht lesen“ oder „liegt schon bei Carl“. Was nicht ging, bleibt ausgewählt; du kannst es gleich an jemand anderen geben. Jede Weitergabe steht in der Historie ihrer Mappe. Der neue Empfänger bekommt **eine** Sammelbenachrichtigung unter „Zu erledigen“ (Art *Zugewiesen*, an deiner Benutzer-Mappe: „Lena hat dir 12 Aufgaben weitergegeben“) statt vieler einzelner; gibst du ihm weitere, bevor er sie erledigt hat, zählt sie nur hoch.
 
 Als Ziel gehen nur Benutzer, die die jeweilige Mappe lesen dürfen – wie beim einzelnen Weitergeben; Dienstkonten von Paketen stehen nicht zur Wahl. **Als erledigt markieren** erledigt die Auswahl auf einmal; *Passt nicht*-Aufgaben bleiben offen, bis die Mappe wieder passt. Für andere Programme gibt es dasselbe über die [Schnittstelle](api.md) (`POST /api/v1/aufgaben/weitergeben` und `…/erledigt`).
 

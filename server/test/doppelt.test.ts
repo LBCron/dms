@@ -99,7 +99,7 @@ describe('Doppelte Dateien (#333)', () => {
 
   it('Postfach: Hinweis „Doppelt“ an der Post, ohne Titel', async () => {
     const { d } = await aufbau();
-    const mail: GeleseneMail = { messageId: '<x@example.org>', betreff: 'Rechnung', datum: null, absenderName: 'Stadtwerke', absenderAdresse: 'a@stadtwerke.de', text: '',
+    const mail: GeleseneMail = { messageId: '<x@example.org>', betreff: 'Rechnung', datum: null, absenderName: 'Stadtwerke', absenderAdresse: 'a@stadtwerke.example', text: '',
       anhaenge: [{ name: 'Rechnung.pdf', mime: 'application/pdf', inhalt: SCAN, eingebettet: false }, { name: 'AGB.pdf', mime: 'application/pdf', inhalt: Buffer.from('%PDF-1.4 AGB'), eingebettet: false }] };
     const sitzung: ImapSitzung = {
       uidValidity: '1', anzahl: 1,

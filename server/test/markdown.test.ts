@@ -15,7 +15,7 @@ describe('Markdown (#53)', () => {
 
   it('erlaubt nur sichere Links und kennt kein HTML', () => {
     assert.equal(inline('[x](https://example.org)')[0].art, 'link');
-    assert.equal(inline('[x](mailto:a@b.de)')[0].art, 'link');
+    assert.equal(inline('[x](mailto:a@b.example)')[0].art, 'link');
     assert.ok(!inline('[x](javascript:alert(1))').some((t) => t.art === 'link'), 'javascript: bleibt Text');
     const html = zerlege('<script>alert(1)</script> <img src=x onerror=alert(1)>');
     assert.equal(html[0].art, 'absatz');
@@ -24,7 +24,7 @@ describe('Markdown (#53)', () => {
 
   it('liefert reinen Text und Erwähnungen', () => {
     const id = '11111111-1111-4111-8111-111111111111';
-    const md = `## Hinweis\n\nBitte **${'prüfen'}**, ${erwaehnung('Ben Beispiel', id)}!\n\n- [Portal](https://x.de)`;
+    const md = `## Hinweis\n\nBitte **${'prüfen'}**, ${erwaehnung('Ben Beispiel', id)}!\n\n- [Portal](https://x.example)`;
     assert.equal(alsText(md), 'Hinweis Bitte prüfen, @Ben Beispiel! Portal');
     assert.deepEqual(erwaehnungen(md), [id]);
     assert.equal(formatiere({ key: 'n', label: 'N', typ: 'formatiert' }, '**fett**'), 'fett');

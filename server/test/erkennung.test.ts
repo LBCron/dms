@@ -27,7 +27,7 @@ Summe netto 70,76 €
 MwSt 19 % 13,44 €
 Gesamtbetrag 84,20 €
 Der Betrag wird am 20.03.2026 von Ihrem Konto DE89 3704 0044 0532 0130 00 abgebucht.
-Tel. 0351 123456-0 · service@stadtwerke-musterstadt.de · www.stadtwerke-musterstadt.de
+Tel. 0351 123456-0 · service@stadtwerke-musterstadt.example · www.stadtwerke-musterstadt.example
 USt-IdNr. DE123456789`;
 
 export const KARTE = `Elektro Muster GmbH
@@ -37,8 +37,8 @@ Musterweg 12
 01234 Musterstadt
 Tel. 0351 7654321
 Mobil 0171 1234567
-anna.beispiel@elektro-muster.de
-www.elektro-muster.de`;
+anna.beispiel@elektro-muster.example
+www.elektro-muster.example`;
 
 describe('Erkennung: Muster (#336)', () => {
   it('liest aus einem erfundenen Brief Datum, Gesamtbetrag, Nummern, IBAN, USt-Id, Kontakt und Briefkopf', () => {
@@ -50,8 +50,8 @@ describe('Erkennung: Muster (#336)', () => {
     assert.deepEqual(a.nummern.map((n) => [n.label, n.wert]), [['Kundennummer', '100-4711'], ['Rechnungsnummer', 'R-2026-0042']]);
     assert.equal(a.ibans[0].wert, 'DE89 3704 0044 0532 0130 00');
     assert.equal(a.ustids[0].wert, 'DE123456789');
-    assert.equal(a.emails[0].wert, 'service@stadtwerke-musterstadt.de');
-    assert.equal(a.internet[0].wert, 'www.stadtwerke-musterstadt.de');
+    assert.equal(a.emails[0].wert, 'service@stadtwerke-musterstadt.example');
+    assert.equal(a.internet[0].wert, 'www.stadtwerke-musterstadt.example');
     assert.equal(a.telefon[0].wert, '0351 123456-0');
     assert.deepEqual({ ...a.briefkopf, fundstelle: undefined }, { name: 'Stadtwerke Musterstadt GmbH', strasse: 'Hauptstraße', hausnummer: '1', plz: '01067', ort: 'Musterstadt', fundstelle: undefined });
   });
@@ -73,7 +73,7 @@ describe('Erkennung: Muster (#336)', () => {
     assert.equal(k.mobil[0].wert, '0171 1234567');
     assert.equal(k.telefon[0].wert, '0351 7654321');
     assert.equal(k.briefkopf?.ort, 'Musterstadt');
-    const v = findeAngaben('BEGIN:VCARD\nVERSION:3.0\nN:Beispiel;Ben;;;\nORG:Beispiel AG\nTITLE:Kundenberater\nTEL;TYPE=CELL:0171 7777777\nEMAIL:ben@beispiel-ag.de\nADR;TYPE=WORK:;;Ringstraße 3;Musterstadt;;01234;Deutschland\nEND:VCARD');
+    const v = findeAngaben('BEGIN:VCARD\nVERSION:3.0\nN:Beispiel;Ben;;;\nORG:Beispiel AG\nTITLE:Kundenberater\nTEL;TYPE=CELL:0171 7777777\nEMAIL:ben@beispiel-ag.example\nADR;TYPE=WORK:;;Ringstraße 3;Musterstadt;;01234;Deutschland\nEND:VCARD');
     assert.deepEqual([v.person?.vorname, v.person?.nachname, v.person?.funktion, v.briefkopf?.name, v.briefkopf?.strasse, v.briefkopf?.hausnummer, v.mobil[0]?.wert], ['Ben', 'Beispiel', 'Kundenberater', 'Beispiel AG', 'Ringstraße', '3', '0171 7777777']);
   });
 
@@ -98,7 +98,7 @@ describe('Erkennung: Muster (#336)', () => {
     ] };
     const mappen = [
       { id: 'sw', typId: 't-org', werte: { name: 'Stadtwerke Musterstadt', kundennummer: '1004711' } },
-      { id: 'bank', typId: 't-org', werte: { name: 'Beispielbank', internet: 'https://www.beispielbank.de' } },
+      { id: 'bank', typId: 't-org', werte: { name: 'Beispielbank', internet: 'https://www.beispielbank.example' } },
       { id: 'notiz', typId: 't-org', werte: { name: 'Xy', notiz: 'Hauptstraße' } },
     ];
     const t = findeMappen(BRIEF, [org], mappen);
@@ -106,7 +106,7 @@ describe('Erkennung: Muster (#336)', () => {
     assert.ok(t[0].stark);
     assert.deepEqual(t[0].gruende, ['Name Stadtwerke Musterstadt', 'Kundennummer 1004711'], 'Kundennummer trotz anderer Schreibweise (100-4711)');
     assert.equal(eindeutigerTreffer(t)?.mappeId, 'sw');
-    assert.equal(findeMappen('Ihre Beispielbank, info@beispielbank.de', [org], mappen)[0].mappeId, 'bank');
+    assert.equal(findeMappen('Ihre Beispielbank, info@beispielbank.example', [org], mappen)[0].mappeId, 'bank');
     assert.ok(istAbsenderTyp({ felder: org.felder }));
     assert.ok(!istAbsenderTyp({ felder: [{ key: 'nr', label: 'Vertragsnummer', typ: 'text', erkennung: {} }] }));
   });
@@ -284,7 +284,7 @@ describe('Aus Dokument ausfüllen (#391, Stufe 1)', () => {
     const { d, A, person, organisation } = await mitPerson();
     const r = await d.erkennung.fuerTyp(person.id, { text: KARTE }, await d.zugriff(A));
     const werte = Object.fromEntries(Object.entries(r.vorschlaege).map(([k, v]) => [k, v.wert]));
-    assert.deepEqual(werte, { vorname: 'Anna', nachname: 'Beispiel', funktion: 'Elektromeisterin', telefon: '0351 7654321', mobil: '0171 1234567', email: 'anna.beispiel@elektro-muster.de', plz: '01234', ort: 'Musterstadt' });
+    assert.deepEqual(werte, { vorname: 'Anna', nachname: 'Beispiel', funktion: 'Elektromeisterin', telefon: '0351 7654321', mobil: '0171 1234567', email: 'anna.beispiel@elektro-muster.example', plz: '01234', ort: 'Musterstadt' });
     assert.equal(r.vorschlaege.email.sicherheit, 'hoch');
     assert.deepEqual(r.neu.organisation, { typId: organisation.id, werte: { name: 'Elektro Muster GmbH', strasse: 'Musterweg', hausnummer: '12', plz: '01234', ort: 'Musterstadt' }, fundstelle: 'Elektro Muster GmbH · Musterweg 12 · 01234 Musterstadt' });
     assert.ok(r.zeichen > 50);
@@ -328,9 +328,9 @@ describe('Aus Dokument ausfüllen (#391, Stufe 1)', () => {
     await assert.rejects(d.erkennung.fuerTyp(person.id, { dokumente: [dok.id], mappe: m.id }, await d.zugriff(A)), (e: Error & { status?: number }) => e.status === 409);
     await d.schreibeVolltext(dok.id, { text: KARTE }, { id: anna.id, herkunft: 'Test', paket: false });
     assert.equal((await d.erkennung.fuerTyp(person.id, { dokumente: [dok.id], mappe: m.id }, await d.zugriff(A))).vorschlaege.mobil.wert, '0171 1234567');
-    const vcf = Buffer.from('BEGIN:VCARD\nVERSION:3.0\nN:Beispiel;Ben;;;\nTITLE:Kundenberater\nEMAIL:ben@beispiel-ag.de\nEND:VCARD\n');
+    const vcf = Buffer.from('BEGIN:VCARD\nVERSION:3.0\nN:Beispiel;Ben;;;\nTITLE:Kundenberater\nEMAIL:ben@beispiel-ag.example\nEND:VCARD\n');
     const r = await rufe(A, 'POST', '/api/typen/:id/vorschlaege/datei', { params: { id: person.id }, query: { name: 'ben.vcf', typ: 'text/vcard' }, body: vcf }) as { body: { vorschlaege: Record<string, { wert: unknown }>; text: string } };
-    assert.deepEqual([r.body.vorschlaege.vorname.wert, r.body.vorschlaege.nachname.wert, r.body.vorschlaege.funktion.wert, r.body.vorschlaege.email.wert], ['Ben', 'Beispiel', 'Kundenberater', 'ben@beispiel-ag.de']);
+    assert.deepEqual([r.body.vorschlaege.vorname.wert, r.body.vorschlaege.nachname.wert, r.body.vorschlaege.funktion.wert, r.body.vorschlaege.email.wert], ['Ben', 'Beispiel', 'Kundenberater', 'ben@beispiel-ag.example']);
     assert.match(r.body.text, /BEGIN:VCARD/);
     await assert.rejects(rufe(A, 'POST', '/api/typen/:id/vorschlaege/datei', { params: { id: person.id }, query: { name: 'x.zip', typ: 'application/zip' }, body: Buffer.from('PK\u0003\u0004') }), (e: Error & { status?: number }) => e.status === 503 || e.status === 415);
     const typ = (await d.typenFuer(await d.zugriff(A))).find((t) => t.id === person.id)!;
@@ -346,8 +346,8 @@ describe('Aus Dokument ausfüllen: Texterkennung sofort (#391)', () => {
     if (!(await pruefeWerkzeuge()).pdftotext) { t.skip('pdftotext fehlt'); return; }
     const { pdfMitText } = await import('./hilfen');
     const ocr = new Texterkennung(speicherRepo(), speicherDateien());
-    const r = await ocr.erkenneSofort(pdfMitText(['Elektro Muster GmbH', 'anna.beispiel@elektro-muster.de'], 12), 'application/pdf');
-    assert.match(r.text, /anna\.beispiel@elektro-muster\.de/);
+    const r = await ocr.erkenneSofort(pdfMitText(['Elektro Muster GmbH', 'anna.beispiel@elektro-muster.example'], 12), 'application/pdf');
+    assert.match(r.text, /anna\.beispiel@elektro-muster\.example/);
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     d.verbindeTexterkennung(ocr);
     assert.match((await d.textAusDatei(pdfMitText(['Mobil 0171 1234567']), 'karte.pdf', 'application/pdf')).text, /0171 1234567/);

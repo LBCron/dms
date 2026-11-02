@@ -188,7 +188,7 @@ export function PostfachEditor({ z, id }: { z: PostfachZustand; id: string }) {
               {d.personen.filter((p) => p.aktiv !== false).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select></label>
           <label className="eigenschaft"><span>Nur von diesen Absendern <small>Adressen oder Domains, durch Komma getrennt; leer = alle</small></span>
-            <input id="pf-absender" value={Array.isArray(e.absender) ? e.absender.join(', ') : e.absender} placeholder="rechnung@stadtwerke.de, bank.de" onChange={(x) => setze({ absender: x.target.value })} /></label>
+            <input id="pf-absender" value={Array.isArray(e.absender) ? e.absender.join(', ') : e.absender} placeholder="rechnung@stadtwerke.example, bank.example" onChange={(x) => setze({ absender: x.target.value })} /></label>
           <label className="eigenschaft"><span>Nach dem Übernehmen</span>
             <select id="pf-nachher" value={e.nachher} onChange={(x) => setze({ nachher: x.target.value as PostfachEingabe['nachher'] })}>
               <option value="verschieben">in einen Ordner verschieben</option><option value="gelesen">nur als gelesen markieren</option><option value="loeschen">löschen</option>

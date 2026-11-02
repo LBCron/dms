@@ -1,4 +1,5 @@
 # Messergebnis Lasttest (#563): Betreiber melden freiwillig, was das DMS auf ihrer Hardware verkraftet.
+# Sammel-Issue für alle Messergebnisse: #576.
 # Daraus pflegt das Projekt die Tabelle „Was das DMS verkraftet“ im Administratorhandbuch.
 # Das DMS selbst meldet nichts (keine Telemetrie, #389) – Rückmeldung gibt es nur auf diesem Weg.
 name: Messergebnis Lasttest · Load test result
@@ -11,13 +12,15 @@ body:
       value: |
         Danke, dass du den Lasttest auf deinem Gerät hast laufen lassen! Wie das geht, steht im Administratorhandbuch unter [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/). Aus den Meldungen entsteht die Tabelle [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/).
 
+        Alle Messergebnisse sammeln wir im Issue [#576 Messergebnisse Lasttest](https://github.com/motom001/dms/issues/576) – dort siehst du, was andere gemessen haben. Statt dieses Formulars geht auch ein Kommentar dort.
+
         Der Lasttest läuft **nur gegen eine eigene Test-Installation**, nie gegen deine echte Ablage.
 
         > **Dieser Beitrag ist öffentlich sichtbar.** Der Ergebnisblock enthält keine Namen, Adressen oder Rechnernamen – trage auch sonst keine ein: keine Namen, Domains, IP-Adressen, Seriennummern oder Bildschirmfotos mit echten Unterlagen.
 
         ---
 
-        **English:** Thank you for running the load test on your device! How to run it is described in the administrator manual (in German) under [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/). The reports are collected in the table [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/). Only run the load test **against a separate test installation**, never against your real documents.
+        **English:** Thank you for running the load test on your device! How to run it is described in the administrator manual (in German) under [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/). The reports are collected in the table [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/); all results are gathered in issue [#576](https://github.com/motom001/dms/issues/576), where you can see what others measured – instead of this form, a comment there works too. Only run the load test **against a separate test installation**, never against your real documents.
 
         > **This post is publicly visible.** The result block contains no names, addresses or host names – do not add any elsewhere either: no names, domains, IP addresses, serial numbers or screenshots of real documents.
   - type: input

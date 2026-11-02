@@ -4,7 +4,7 @@
   "format.internetseite": "Internetseite",
   "format.iban": "IBAN",
   "format.plz": "PLZ",
-  "fehler.email": "Eine E-Mail-Adresse sieht so aus: name@example.org – mit @ und einer Endung wie .org oder .de.",
+  "fehler.email": "Eine E-Mail-Adresse sieht so aus: name@example.org – mit @ und einer Endung wie .de oder .org.",
   "fehler.telefon": "Eine Telefonnummer enthält nur Ziffern, + am Anfang, Leerzeichen, /, - und Klammern.",
   "fehler.internetseite": "Eine Internetseite sieht so aus: www.example.org oder https://www.example.org – ohne Leerzeichen.",
   "fehler.iban.aufbau": "Eine IBAN beginnt mit zwei Buchstaben für das Land und zwei Prüfziffern, z. B. DE89 3704 0044 0532 0130 00.",

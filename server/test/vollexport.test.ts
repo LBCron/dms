@@ -30,7 +30,7 @@ describe('Vollexport (#254)', () => {
       { key: 'name', label: 'Name', typ: 'text' }, { key: 'benutzer', label: 'Benutzername', typ: 'text' }, { key: 'pw', label: 'Passwort', typ: 'passwort' },
       { key: 'partner', label: 'Partner', typ: 'referenz', zielTyp: partner.id }, { key: 'betrag', label: 'Betrag', typ: 'betrag' }, { key: 'ab', label: 'Ab', typ: 'datum' },
     ], register: [{ key: 'daten', name: 'Daten', art: 'felder' }, { key: 'dok', name: 'Unterlagen', art: 'dokumente', versionierung: true }] });
-    const p = await d.legeMappeAn({ typId: partner.id, werte: { name: 'Stadtwerke, Nord', email: 'info@sw.de', telefon: '0123' } });
+    const p = await d.legeMappeAn({ typId: partner.id, werte: { name: 'Stadtwerke, Nord', email: 'info@sw.example', telefon: '0123' } });
     const z = await d.legeMappeAn({ typId: konto.id, werte: { name: 'Portal', benutzer: 'anna', pw: 'geheim123', partner: p.id, betrag: { betrag: 12.5, waehrung: 'EUR' }, ab: '2026-12-01' } });
     const dok = (await d.ladeHoch(z.id, { register: 'dok', name: 'Vertrag.pdf' }, Buffer.from('%PDF-1.4 eins'), null)).dokument;
     await d.ersetzeDokument(dok.id, {}, Buffer.from('%PDF-1.4 zwei'), null);
@@ -61,7 +61,7 @@ describe('Vollexport (#254)', () => {
     assert.match(zugang, /\(gesetzt\)/);
     assert.ok(!(await lies('daten/zugang.jsonl')).includes('geheim123'));
     assert.ok(!(await lies('struktur/benutzer.json')).includes('hash'));
-    assert.match(await lies('kontakte/partner.vcf'), /BEGIN:VCARD\r\nVERSION:4\.0\r\nFN:Stadtwerke\\, Nord\r\nEMAIL:info@sw\.de\r\nTEL:0123/);
+    assert.match(await lies('kontakte/partner.vcf'), /BEGIN:VCARD\r\nVERSION:4\.0\r\nFN:Stadtwerke\\, Nord\r\nEMAIL:info@sw\.example\r\nTEL:0123/);
     assert.ok(!pfade.includes('passwoerter.csv'));
     // Prüfen
     assert.deepEqual(await pruefeExport(r.ordner), { ok: true, dateien: m.dateien.length, fehlend: [], abweichend: [] });

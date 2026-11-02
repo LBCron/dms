@@ -149,10 +149,10 @@ describe('Anmeldung über OpenID Connect (#241)', () => {
   });
 
   it('E-Mail aus email, preferred_username oder upn; unbestätigte Adresse abgelehnt', () => {
-    assert.equal(identitaetAus({ sub: '1', preferred_username: 'Bob@Firma.de', given_name: 'Bob', family_name: 'B' }, 'groups').email, 'bob@firma.de');
-    assert.equal(identitaetAus({ sub: '1', preferred_username: 'Bob@Firma.de', given_name: 'Bob', family_name: 'B' }, 'groups').name, 'Bob B');
-    assert.deepEqual(identitaetAus({ sub: '1', email: 'a@b.de', rollen: 'x' }, 'rollen').gruppen, ['x']);
-    assert.throws(() => identitaetAus({ sub: '1', email: 'a@b.de', email_verified: false }, 'groups'), status(403));
+    assert.equal(identitaetAus({ sub: '1', preferred_username: 'Bob@Firma.example', given_name: 'Bob', family_name: 'B' }, 'groups').email, 'bob@firma.example');
+    assert.equal(identitaetAus({ sub: '1', preferred_username: 'Bob@Firma.example', given_name: 'Bob', family_name: 'B' }, 'groups').name, 'Bob B');
+    assert.deepEqual(identitaetAus({ sub: '1', email: 'a@b.example', rollen: 'x' }, 'rollen').gruppen, ['x']);
+    assert.throws(() => identitaetAus({ sub: '1', email: 'a@b.example', email_verified: false }, 'groups'), status(403));
     assert.throws(() => identitaetAus({ sub: '1', preferred_username: 'bob' }, 'groups'), /E-Mail-Adresse/);
   });
 

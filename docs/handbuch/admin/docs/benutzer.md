@@ -54,7 +54,7 @@ Mit **Anzeigen** unter *Was sieht ein Benutzer?* siehst du je Mappentyp, wie vie
 
 Meldet ein Benutzer einen Fehler, kannst du dich mit **Als … anmelden** als dieser Benutzer anmelden und siehst das DMS genau so wie er – mit seinen Rechten. Oben steht die ganze Zeit ein gelber Warnhinweis mit **Zurück zum eigenen Konto** – auf jeder Seite, auch am Handy. Das ist der einzige Weg zurück; im Menü unter dem Namen steht dafür kein Eintrag, damit du die Vertretung nicht aus Versehen beendest. Der Menüeintrag zum Konto heißt in dieser Zeit **Konto von …** und zeigt das Konto des Benutzers, nicht deins.
 
-![Als Ben angemeldet: gelber Warnhinweis oben, im Menü „Konto von Ben Beispiel“](bilder/vertretung.png)
+![Als Jonas angemeldet: gelber Warnhinweis oben, im Menü „Konto von Jonas Beispiel“](bilder/vertretung.png)
 
 Der Benutzer sieht bei seiner nächsten Anmeldung, wer wann in seinem Namen gearbeitet hat. Alles, was du in dieser Zeit tust, geschieht unter seinem Konto.
 

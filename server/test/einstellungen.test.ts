@@ -59,9 +59,9 @@ describe('Einstellungen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE_UR
     const konten = { beendeAlleSitzungenAusser: async () => 0 };
     const w = new Wartung(pgEinstellungen(sql, HAUSHALT), konten);
     await w.laden();
-    await w.einschalten({ text: 'Test', ende: null, vorlauf: 0 }, { email: 'a@b.de' }, null);
-    await w.jetztAktiv({ email: 'a@b.de' }, null);
-    await w.ausschalten('a@b.de');
+    await w.einschalten({ text: 'Test', ende: null, vorlauf: 0 }, { email: 'a@b.example' }, null);
+    await w.jetztAktiv({ email: 'a@b.example' }, null);
+    await w.ausschalten('a@b.example');
     const neu = new Wartung(pgEinstellungen(sql, HAUSHALT), konten);
     await neu.laden();
     assert.equal(neu.stand.stufe, 'aus');

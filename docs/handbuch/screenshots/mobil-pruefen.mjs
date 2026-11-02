@@ -33,7 +33,7 @@ import { chromium, devices, webkit } from 'playwright';
 
 const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const ZIEL = process.argv[2] ?? 'mobil-fehler';
-const ADMIN = { email: process.env.DMS_EMAIL ?? 'anna@example.org', passwort: process.env.DMS_PASSWORT ?? 'handbuch-passwort-1' };
+const ADMIN = { email: process.env.DMS_EMAIL ?? 'lena@example.org', passwort: process.env.DMS_PASSWORT ?? 'handbuch-passwort-1' };
 const BROWSER = process.env.MOBIL_BROWSER === 'chromium' ? chromium : webkit;
 const SEITEN = [
   '/ablage/eingang',

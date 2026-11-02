@@ -18,8 +18,9 @@ import { chromium } from 'playwright';
 
 const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const ZIEL = process.argv[2] ?? 'bilder';
-const ADMIN = { email: 'anna@example.org', name: 'Anna Beispiel', passwort: 'handbuch-passwort-1' };
-const MITGLIED = { email: 'ben@example.org', name: 'Ben Beispiel', passwort: 'handbuch-passwort-2' };
+// Persona-Namen (Lena: Einsteigerin, richtet ein; Jonas: Familienmitglied) und nur Beispiel-Domains (example.org).
+const ADMIN = { email: 'lena@example.org', name: 'Lena Beispiel', passwort: 'handbuch-passwort-1' };
+const MITGLIED = { email: 'jonas@example.org', name: 'Jonas Beispiel', passwort: 'handbuch-passwort-2' };
 
 /* ---------- Daten über die Schnittstelle vorbereiten ---------- */
 
@@ -408,7 +409,7 @@ async function main() {
 
   // Schwärzen (#392): Suchbegriff überall, IBAN als Vorschlag angehakt, Vorschau der schwarzen Bereiche.
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Kontoauszug.pdf')}&typ=application/pdf`,
-    beispielPdf('Anna Beispiel - IBAN DE89 3704 0044 0532 0130 00 - Telefon 0351 1234567'), true);
+    beispielPdf('Lena Beispiel - IBAN DE89 3704 0044 0532 0130 00 - Telefon 0351 1234567'), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
   await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
   const auszug = s.locator('.dokumentliste li', { hasText: /^Kontoauszug\.pdf/ }).first();
@@ -639,7 +640,7 @@ async function main() {
   await geheZu(s, `/ablage/favoriten/${d.strom.id}`);
   await s.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
   await bild(s, 'favoriten');
-  // Favorit = Abo (#422): Ben ändert einen Favoriten von Anna – Punkt in der Liste, „Geändert“ unter Zu erledigen.
+  // Favorit = Abo (#422): Jonas ändert einen Favoriten von Lena – Punkt in der Liste, „Geändert“ unter Zu erledigen.
   {
     const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: MITGLIED.email, passwort: MITGLIED.passwort }) });
     const benCookie = (anm.headers.get('set-cookie') ?? '').split(';')[0];
@@ -772,12 +773,12 @@ async function main() {
   await s.keyboard.press('Escape');
   await ueber.waitFor({ state: 'detached' });
 
-  // Fehler nachstellen (#418): eigene Admin-Sitzung, als Ben anmelden; zurück nur über den gelben Banner.
+  // Fehler nachstellen (#418): eigene Admin-Sitzung, als Jonas anmelden; zurück nur über den gelben Banner.
   {
     const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: ADMIN.email, passwort: ADMIN.passwort }) });
     const adminCookie = (anm.headers.get('set-cookie') ?? '').split(';')[0];
-    const ben = (await api('GET', '/api/benutzer')).find((b) => b.email === MITGLIED.email);
-    const v = await fetch(`${BASIS}/api/benutzer/${ben.id}/vertreten`, { method: 'POST', headers: { 'x-dms': '1', cookie: adminCookie } });
+    const jonas = (await api('GET', '/api/benutzer')).find((b) => b.email === MITGLIED.email);
+    const v = await fetch(`${BASIS}/api/benutzer/${jonas.id}/vertreten`, { method: 'POST', headers: { 'x-dms': '1', cookie: adminCookie } });
     const vc = (v.headers.get('set-cookie') ?? adminCookie).split(';')[0];
     const [name, wert] = vc.split('=');
     const kv = await browser.newContext({ viewport: { width: 1100, height: 520 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin' });
@@ -858,7 +859,7 @@ async function main() {
   await s.locator('.stempeleditor').waitFor();
   await bild(s, 'werkbank-stempel');
   // Datenschutz (#396): Vertragspartner „betrifft eine Person“, Auskunft für die Stadtwerke gesammelt – Prüfliste.
-  await api('PUT', '/api/werkbank/datenschutz', { verantwortlicher: 'Familie Beispiel\nMusterweg 1, 01067 Dresden', empfaenger: '', typen: { [d.typ('Vertragspartner').id]: { person: true, zweck: 'Verträge und Rechnungen des Haushalts' } } });
+  await api('PUT', '/api/werkbank/datenschutz', { verantwortlicher: 'Familie Beispiel\nMusterweg 1, 01234 Musterstadt', empfaenger: '', typen: { [d.typ('Vertragspartner').id]: { person: true, zweck: 'Verträge und Rechnungen des Haushalts' } } });
   await geheZu(s, `/werkbank/datenschutz?mappe=${d.stadtwerke.id}`);
   await s.getByRole('button', { name: 'Sammeln', exact: true }).click();
   await s.getByRole('heading', { name: '3. Prüfen' }).waitFor();
