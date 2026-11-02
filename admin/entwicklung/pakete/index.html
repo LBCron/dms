@@ -1006,8 +1006,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-antworten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fragen an die Ablage beantworten
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dienst-adresse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dienst-Adresse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frag-deine-ablage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frag deine Ablage
+      
+    </span>
+  </a>
   
 </li>
         
@@ -2740,8 +2773,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-antworten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fragen an die Ablage beantworten
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dienst-adresse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dienst-Adresse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frag-deine-ablage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frag deine Ablage
+      
+    </span>
+  </a>
   
 </li>
         
@@ -3001,6 +3067,7 @@
 <ul>
 <li><strong>Abschnitte</strong> mit Feldern und <strong>Listen</strong> gleich aufgebauter Einträge (z. B. eine Regel je Eintrag) mit <strong>+ Eintrag</strong>, Löschen und – wenn das Paket es erlaubt – Sortieren mit ↑/↓.</li>
 <li><strong>Felder</strong> wie bei den Mappentypen: Text, mehrzeiliger Text, Zahl, Ja/Nein, Datum, Auswahl, Mehrfachauswahl und <strong>Verweise</strong> auf einen Mappentyp, ein Feld eines Mappentyps, einen Benutzer, eine Rolle oder eine Ansicht. Verweise wählst du aus Listen; gespeichert wird die feste Id, nicht der Name – Umbenennen schadet also nicht.</li>
+<li><strong>Dienst-Adresse</strong> (z. B. eines KI-Dienstes): Die einzige Adresse, zu der das Paket außer den festen Adressen aus seinem Manifest ins Netz darf – siehe <a href="#dienst-adresse">Dienst-Adresse</a>. Sie ist nie voreingestellt; im leeren Feld steht höchstens ein Beispiel. Beim Speichern einer neuen oder geänderten Adresse fragt das DMS nach und zeigt, wohin Daten gehen.</li>
 <li><strong>Geheimnisse</strong> (z. B. Zugangsdaten) verschlüsselt das DMS mit seinem Schlüssel (siehe <a href="../verschluesselung/">Verschlüsselung</a>). Nach dem Speichern zeigt es sie nie wieder an, nur <strong>gesetzt</strong> mit <strong>Ändern</strong> und <strong>Löschen</strong>.</li>
 <li>Beim <strong>Speichern</strong> prüft das DMS Mappentyp, Pflichtfelder, Auswahlwerte und ob Verweise existieren, und zeigt Fehler am Feld.</li>
 <li><strong>Aktionen</strong> des Pakets erscheinen als Knöpfe (z. B. „Regeln jetzt anwenden“), die Antwort des Pakets steht darüber. Eine Zeitgrenze verhindert, dass ein Knopf hängt.</li>
@@ -3016,7 +3083,7 @@
 <h2 id="pakete-mit-code">Pakete mit Code<a class="headerlink" href="#pakete-mit-code" title="Permanent link">&para;</a></h2>
 <p>Manche Pakete bringen <strong>Code</strong> mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und auf die <strong>Aktionen</strong> im Reiter „Einstellungen“. Das DMS führt ihn im <strong>Paket-Läufer</strong> aus:</p>
 <ul>
-<li><strong>Abgeschottet:</strong> Der Code ist WebAssembly und läuft in einem eigenen Prozess des DMS, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt – meist gar nicht.</li>
+<li><strong>Abgeschottet:</strong> Der Code ist WebAssembly und läuft in einem eigenen Prozess des DMS, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt, und unter der <a href="#dienst-adresse">Dienst-Adresse</a>, die du in seinen Einstellungen einträgst – meist gar nicht.</li>
 <li><strong>Nur bestätigte Rechte:</strong> Vor der Installation zeigt die Vorschau, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a> und <a href="#ereignisse">Ereignisse</a>). Erst wenn du das bestätigst, installiert das DMS. Will ein <strong>Update</strong> mehr Rechte oder andere Adressen, fragt das DMS erneut.</li>
 <li><strong>Dienstkonto:</strong> Für jedes Paket mit Code legt das DMS ein Dienstkonto „Paket <em>Name</em>“ an. Mit ihm arbeitet der Code über die API; die Historie zeigt deshalb, was ein Paket geändert hat. Dienstkonten erscheinen nicht unter <strong>Benutzer</strong>, melden sich nie an und können <strong>nie löschen</strong> – auch nicht mit Rechten auf alle Mappentypen. Benutzer und Passwörter sehen sie nicht.</li>
 <li><strong>Grenzen:</strong> Jeder Aufruf hat höchstens 256 MB Speicher und 2 Minuten Zeit; es laufen höchstens zwei Aufrufe gleichzeitig. Was die Grenzen reißt, bricht ab, ohne das DMS zu stören.</li>
@@ -3088,6 +3155,52 @@
 <li><strong>„Zugriff auf Netzwerk/Internet nur zu: <em>Adressen</em>“</strong> – Der Code darf nur diese Adressen erreichen (immer <code>https://</code>, auch Pfade darunter), z. B. einen Dienst im Internet oder ein Gerät in deinem Netzwerk. Alles andere sperrt der Paket-Läufer, auch Weiterleitungen. Wozu das Paket die Adressen braucht, erklärt sein README – was du dorthin schickst, verlässt dein DMS.</li>
 </ul>
 <p>Will ein Update andere Adressen, fragt das DMS erneut.</p>
+<ul>
+<li><strong>„… zu: der Adresse aus der Einstellung „<em>Name</em>“ (trägst du ein und bestätigst sie)“</strong> – Das Paket bringt keine feste Adresse mit, sondern fragt nach einer <a href="#dienst-adresse">Dienst-Adresse</a>, etwa der deines KI-Dienstes. Erst wenn du sie in den Einstellungen einträgst und bestätigst, erreicht der Code genau diese Adresse.</li>
+</ul>
+<h4 id="recht-antworten">Fragen an die Ablage beantworten<a class="headerlink" href="#recht-antworten" title="Permanent link">&para;</a></h4>
+<p><strong>„Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die das DMS mitgibt (dms:antworten)“</strong> – Mit diesem Recht erscheint in der Ablage das Feld <a href="#frag-deine-ablage">Frag deine Ablage</a>. Das Paket bekommt je Frage nur die Frage, den bisherigen Chat und wenige Ausschnitte, die das DMS selbst herausgesucht hat – <strong>mit den Rechten des Fragenden</strong>. Es liest dabei nichts selbst aus der Ablage (dafür bräuchte es die Rechte oben) und kann nichts ändern: Das DMS zeigt nur seinen Text und prüft die Quellen.</p>
+<h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
+<p>Ein Paket wie <strong>KI-Assistent</strong> rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. <strong>Ollama</strong> auf deinem Heimserver. Die Adresse dieses Dienstes trägst du in den <strong>Einstellungen</strong> des Pakets ein (Werkbank → Pakete → <em>Paket</em> → Reiter „Einstellungen“):</p>
+<ul>
+<li><strong>Nie voreingestellt.</strong> Im leeren Feld steht höchstens ein Beispiel wie <code>http://ollama:11434/v1</code> – gespeichert ist nichts, bis du eine Adresse einträgst.</li>
+<li><strong>Bestätigen.</strong> Beim Speichern einer neuen oder geänderten Adresse fragt das DMS <strong>„Daten an diese Adresse schicken?“</strong> und nennt sie. Erst mit <strong>Adresse bestätigen und speichern</strong> gilt sie; das Protokoll vermerkt „Dienst-Adresse von Paket … bestätigt“ mit der Adresse.</li>
+<li><strong>Nur dorthin.</strong> Der Paket-Läufer erlaubt Netz nur zu dieser Adresse und Pfaden darunter (gleicher Rechner, gleicher Port), ohne Weiterleitungen. Weil Dienste im Heimnetz selten HTTPS sprechen, ist hier auch <code>http://</code> erlaubt. Zugangsdaten gehören nicht in die Adresse, sondern in ein eigenes Feld (Geheimnis).</li>
+<li><strong>Betrieb und Hosting dieses Dienstes liegen außerhalb des DMS.</strong> Läuft er bei dir im eigenen Netz, verlassen die Daten das Haus nicht. Gehört er einem anderen Anbieter, ist das eine <strong>Vertrauensbeziehung zu diesem Dienstleister</strong> – wie beim Hosten des DMS selbst: Standort, Auftragsverarbeitung, Speicherung, Nutzung zum Training. Diese Entscheidung triffst du mit dem Eintragen und Bestätigen; das DMS hat dafür keinen weiteren Schalter. Den Hinweis zeigt es auch schon in der Vorschau vor der Installation.</li>
+</ul>
+<h3 id="frag-deine-ablage">Frag deine Ablage<a class="headerlink" href="#frag-deine-ablage" title="Permanent link">&para;</a></h3>
+<p>Ist ein Paket mit dem Recht <a href="#recht-antworten">Fragen an die Ablage beantworten</a> installiert und geladen, steht auf der Startseite der Ablage das Feld <strong>„Frag deine Ablage“</strong> (siehe <a href="https://motom001.github.io/dms/benutzer/aktuell/startseite/#frag-deine-ablage">Benutzerhandbuch</a>). So läuft eine Frage ab:</p>
+<ol>
+<li>Der Browser schickt die Frage und den bisherigen Chat an das DMS.</li>
+<li>Das DMS sucht <strong>selbst</strong> passende Stellen – im Volltext der Dokumente, in Titel und Feldern der Mappen und, wenn ein Paket mit <a href="#recht-vektoren">Vektoren</a> da ist, nach Ähnlichkeit –, <strong>nur in Mappen, die der Fragende lesen darf</strong>. Passwortfelder und Benutzer sind nie dabei.</li>
+<li>Es schneidet höchstens so viele <strong>Ausschnitte</strong> heraus, wie unten eingestellt, und gibt sie mit der Frage dem Paket – als <strong>Daten gekennzeichnet</strong>, mit dem Hinweis an den KI-Dienst, darin stehende Anweisungen nicht zu befolgen.</li>
+<li>Das Paket fragt den Dienst unter der <a href="#dienst-adresse">Dienst-Adresse</a> und gibt die Antwort Stück für Stück zurück.</li>
+<li>Das DMS zeigt die Antwort als <strong>Text</strong> (nichts davon wird ausgeführt oder gespeichert) und darunter die genannten <strong>Quellen</strong> – nur Mappen aus den mitgegebenen Ausschnitten, noch einmal auf Lesbarkeit geprüft. Unter jeder Antwort steht aufklappbar <strong>„An die KI geschickt: n Ausschnitte aus m Mappen“</strong> mit genau diesen Stellen.</li>
+</ol>
+<p><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt im Abschnitt <strong>Frag deine Ablage</strong> die <strong>Höchstmenge je Frage</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Bereich</th>
+<th>Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Höchstens Ausschnitte je Frage</strong></td>
+<td>1 bis 20</td>
+<td>8</td>
+</tr>
+<tr>
+<td><strong>Höchstens Zeichen je Frage</strong> (alle Ausschnitte zusammen)</td>
+<td>500 bis 30 000</td>
+<td>6 000</td>
+</tr>
+</tbody>
+</table>
+<p>Ein einzelner Ausschnitt ist höchstens 1 500 Zeichen lang. Weniger heißt: weniger Daten an den Dienst und schnellere Antworten, aber eher „steht nicht in den Ausschnitten“.</p>
+<p><strong>Kein Protokoll der Inhalte:</strong> Den Chat hält nur der Browser (bis zum Neuladen); der Server speichert weder Fragen noch Ausschnitte noch Antworten. Das Protokoll des DMS vermerkt nur „Frage an die Ablage gestellt“ mit Anzahl der Ausschnitte und Dauer, die Werkbank beim Paket nur „Frage beantwortet“ mit der Länge der Antwort. Je Benutzer läuft eine Frage zur Zeit, im ganzen DMS höchstens vier.</p>
 <h3 id="ereignisse">Ereignisse<a class="headerlink" href="#ereignisse" title="Permanent link">&para;</a></h3>
 <p>Unter <strong>„Reagiert auf diese Ereignisse:“</strong> nennt die Vorschau, wann der Code von selbst läuft – je Ereignis eine Zeile mit <strong>?</strong>. Ohne Ereignisse läuft er nur, wenn du im Reiter <strong>Einstellungen</strong> eine Aktion auslöst. Ein Ereignis gibt dem Paket keine weiteren Rechte: Es erfährt nur, <em>dass</em> etwas passiert ist (z. B. die Kennung der neuen Post), und arbeitet dann mit den Rechten oben. Kommen in einem Update nur Ereignisse dazu, fragt das DMS deshalb nicht erneut. Was ein Paket selbst ändert, wird ihm nicht zurückgemeldet.</p>
 <h4 id="ereignis-post-angelegt">Neue Post ist angelegt<a class="headerlink" href="#ereignis-post-angelegt" title="Permanent link">&para;</a></h4>
