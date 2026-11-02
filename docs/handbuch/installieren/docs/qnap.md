@@ -1,5 +1,8 @@
 # QNAP-NAS (Container Station)
 
+!!! info "Geprüft: Vorlage automatisch, Gerät noch nicht"
+    Die Vorlage auf dieser Seite startet bei jeder Änderung probehalber auf den Rechnern von GitHub (Linux mit Docker, amd64). Von einem echten Gerät gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 So richtest du das DMS auf einem QNAP-NAS mit QTS 5 oder QuTS hero und **Container Station 3** ein, ohne Kommandozeile.
 
 !!! note "Alternative: ein Container"

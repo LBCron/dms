@@ -1,5 +1,8 @@
 # ZimaOS
 
+!!! info "Geprüft: noch keine Meldung"
+    Für diesen Weg gibt es noch keine Meldung von einem Gerät. Das Image selbst prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 So installierst du das DMS auf einem Gerät mit **ZimaOS**, z. B. einem ZimaCube oder ZimaBoard. Du brauchst weder Compose-Datei noch Kommandozeile. Die App bringt ihre eigene Datenbank mit: Sie läuft im selben Container und ist schon angebunden.
 
 !!! tip "CasaOS statt ZimaOS?"

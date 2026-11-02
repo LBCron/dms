@@ -1,5 +1,8 @@
 # PC oder Mini-PC mit Linux
 
+!!! info "Geprüft: Image automatisch, Gerät noch nicht"
+    Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Ein alter Bürorechner, ein ausgedienter Laptop oder ein kleiner Mini-PC mit Intel- oder AMD-Prozessor reicht für das DMS gut aus. Diese Seite ist auch die Grundlage für [virtuelle Maschinen](proxmox.md). Für den Raspberry Pi gibt es eine eigene [Anleitung Schritt für Schritt](raspberry-pi.md) mit Einrichtungsskript.
 
 **Du brauchst:** 2 GB Arbeitsspeicher oder mehr, etwa 20 GB für System und Programme, dazu Platz für deine Dokumente und Sicherungen. Eine SSD macht das DMS spürbar schneller.

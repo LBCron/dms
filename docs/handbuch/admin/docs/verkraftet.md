@@ -4,6 +4,8 @@ Gemessen mit dem [Lasttest](lasttest.md) in drei Stufen: **klein** (Haushalt, 25
 
 Die erste Zeile misst das Projekt jede Woche auf den Rechnern von GitHub (Workflow *Lasttest*); dort laufen DMS, PostgreSQL und der Lasttest auf demselben Rechner. Die übrigen Zeilen sind Meldungen von Betreibern – gesammelt im Issue [Messergebnisse Lasttest (#576)](https://github.com/motom001/dms/issues/576) und in [eigenen Meldungen](https://github.com/motom001/dms/issues?q=label%3Amessergebnis-lasttest), jede mit Version und Datum, denn neue Versionen können schneller oder langsamer sein.
 
+Auf welchen Geräten das Projekt das DMS selbst prüft – und bis wann voraussichtlich –, zeigt das Installationshandbuch unter [Geprüfte Plattformen](https://motom001.github.io/dms/installieren/aktuell/plattformen/).
+
 | Gerät | CPU / Kerne | RAM | Speicher | Image | DMS | klein p95 | mittel p95 | groß: Grenze | Stand |
 | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
 | GitHub-Rechner (ubuntu-latest) | 4 Kerne (x64) | 16 GB | SSD | ohne Container, PostgreSQL 17 daneben | 0.132.0 | folgt | folgt | folgt | erster wöchentlicher Lauf steht aus |

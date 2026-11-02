@@ -1,5 +1,8 @@
 # umbrelOS
 
+!!! info "Geprüft: noch keine Meldung"
+    Für diesen Weg gibt es noch keine Meldung von einem Gerät. Das Image selbst prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 So installierst du das DMS auf einem Heimserver mit **umbrelOS**, z. B. einem Umbrel Home oder einem Mini-PC mit umbrelOS. Du brauchst weder Compose-Datei noch Kommandozeile. Die App bringt ihre eigene Datenbank mit und ist schon angebunden.
 
 ## 1. DMS-Store hinzufügen

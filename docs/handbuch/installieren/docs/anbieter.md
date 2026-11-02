@@ -1,5 +1,8 @@
 # Ohne eigenen Server: das DMS bei einem Anbieter
 
+!!! info "Geprüft: Image automatisch, Gerät noch nicht"
+    Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Anbieter gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Du hast kein NAS und keinen Heimserver und möchtest auch keinen betreiben? Dann kannst du das DMS bei einem **Anbieter** laufen lassen: Du mietest Rechenleistung und Speicher in einem Rechenzentrum, das DMS läuft dort, und du erreichst es im Browser von überall. Deine Unterlagen liegen dann nicht mehr bei dir zu Hause, sondern bei diesem Anbieter – darum lohnt es sich, ihn sorgfältig auszuwählen.
 
 Diese Seite nennt **keine Anbieter**, sondern **Merkmale, die du prüfst**. Anbieter und Preise ändern sich schnell; eine Liste wäre bald veraltet und sähe nach Werbung aus. Mit der Checkliste unten kannst du jedes Angebot selbst einschätzen.

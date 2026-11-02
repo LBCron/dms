@@ -1,5 +1,8 @@
 # Raspberry Pi – Schritt für Schritt
 
+!!! info "Geprüft: Vorlage und arm64-Image automatisch, Gerät noch nicht"
+    Das Image für arm64 prüfen die Rechner von GitHub bei jeder Änderung auf einem echten ARM-Rechner, die Vorlage startet dort probehalber (amd64). Von einem Raspberry Pi gibt es noch keine Meldung; für das Projekt suchen wir einen Raspberry Pi 5 ([#589](https://github.com/motom001/dms/issues/589)). Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Mit dieser Anleitung bringst du das DMS auf einem **Raspberry Pi 4 oder 5** zum Laufen – vom Auspacken bis zur ersten Anmeldung. Du brauchst dafür keine IT-Kenntnisse. Ein paar Befehle tippst du ab oder kopierst sie, jeder ist erklärt. Rechne mit **etwa einer Stunde**, das meiste davon ist Warten.
 
 **So ist jeder Schritt aufgebaut:** was du tust · was du danach siehst · was hilft, wenn es nicht klappt · wo die **offizielle Anleitung** steht. Sieht bei dir etwas anders aus als hier – Programme bekommen neue Versionen –, findest du dort den aktuellen Stand.

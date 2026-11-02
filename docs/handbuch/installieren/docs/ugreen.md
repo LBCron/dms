@@ -1,5 +1,8 @@
 # UGREEN-NAS (UGOS Pro)
 
+!!! success "Geprüft: vom Projekt getestet"
+    Das Projekt testet das DMS selbst auf einem **UGREEN DXP4800 Plus** (amd64); dort läuft es auch im Alltag, siehe [So läuft es beim Entwickler](beispiel.md). Die erste Prüfung mit Messwerten und das Datum, bis wann wir es voraussichtlich prüfen, stehen noch aus. Die Vorlage startet außerdem bei jeder Änderung probehalber auf den Rechnern von GitHub. Mehr unter [Geprüfte Plattformen](plattformen.md).
+
 So richtest du das DMS auf einem UGREEN-NAS mit UGOS Pro ein. Die App **Docker** von UGREEN legt das DMS als *Projekt* aus einer Vorlage an.
 
 !!! info "Bald im App Center?"

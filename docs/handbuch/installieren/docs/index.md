@@ -28,7 +28,7 @@ Das DMS läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder je
 | **anderer Server mit Docker** | [Docker Compose](docker.md) | ☆☆☆ mittel: Kommandozeile oder eigene Docker-Oberfläche |
 | **kein eigenes Gerät** | [bei einem Anbieter](anbieter.md): fertige App, Docker-Plattform oder eigener vServer | ☆ bis ☆☆☆ je nach Weg – mit Checkliste, worauf du beim Anbieter achtest |
 
-Alle Wege brauchen ein Gerät mit **amd64** (Intel, AMD) oder **arm64** (z. B. Raspberry Pi 4/5) und etwa 1 GB freien Arbeitsspeicher. Dazu kommt Platz für deine Dokumente.
+Alle Wege brauchen ein Gerät mit **amd64** (Intel, AMD) oder **arm64** (z. B. Raspberry Pi 4/5) und etwa 1 GB freien Arbeitsspeicher. Dazu kommt Platz für deine Dokumente. Auf welchen Geräten das Projekt das DMS selbst prüft und was andere gemeldet haben, steht unter [Geprüfte Plattformen](plattformen.md).
 
 !!! tip "Du hast noch nichts davon?"
     Am einfachsten ist ein kleiner Heimserver mit **umbrelOS** oder **ZimaOS**, z. B. ein Mini-PC oder ein ZimaBoard. Dort installierst du das DMS wie eine App auf dem Handy. Ein NAS von Synology, UGREEN oder QNAP geht ebenso und kümmert sich zusätzlich um deine Festplatten. Willst du gar kein Gerät betreiben, läuft das DMS auch [bei einem Anbieter](anbieter.md) – worauf du dann achtest, steht dort.

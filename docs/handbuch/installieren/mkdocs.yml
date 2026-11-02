@@ -64,6 +64,7 @@ extra:
 
 nav:
   - "Was hast du?": index.md
+  - "Geprüfte Plattformen": plattformen.md
   - Mit einem Klick:
       - umbrelOS: umbrel.md
       - ZimaOS: zimaos.md

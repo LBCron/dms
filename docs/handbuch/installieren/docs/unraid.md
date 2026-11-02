@@ -1,5 +1,8 @@
 # Unraid
 
+!!! info "Geprüft: Vorlage automatisch, Gerät noch nicht"
+    Die Vorlage auf dieser Seite startet bei jeder Änderung probehalber auf den Rechnern von GitHub (Linux mit Docker, amd64). Von einem echten Gerät gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 So richtest du das DMS auf **Unraid 6.12 oder neuer** ein. Weil das DMS zwei Container braucht (DMS und Datenbank), geht es am einfachsten mit dem Plugin **Docker Compose Manager**.
 
 !!! info "Bald in Community Applications?"
