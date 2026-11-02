@@ -895,6 +895,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#text-in-verweise-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text in Verweise umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#entfernen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2585,6 +2596,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#text-in-verweise-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text in Verweise umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#entfernen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2880,6 +2902,27 @@
 <li>neue Felder und Register bei vorhandenen Mappentypen.</li>
 </ul>
 <p>Es <strong>löscht nichts</strong> und <strong>überschreibt nichts</strong>, was du selbst geändert hast: Hast du einen Mappentyp umbenannt, Felder ergänzt oder eine Ansicht gelöscht, bleibt das so.</p>
+<h2 id="text-in-verweise-umwandeln">Text in Verweise umwandeln<a class="headerlink" href="#text-in-verweise-umwandeln" title="Permanent link">&para;</a></h2>
+<p>Manche Pakete hatten früher ein <strong>Textfeld</strong>, wo eigentlich ein <strong>Verweis</strong> hingehört – zum Beispiel „Halter: Lena Muster“ am Fahrzeug statt eines Verweises auf die <strong>Person</strong> Lena Muster. Eine neuere Version des Pakets bringt dafür ein Verweisfeld mit und sagt, aus welchem Textfeld es sich füllen lässt. <strong>Updates ändern nichts heimlich:</strong></p>
+<ul>
+<li>Das Update legt das Verweisfeld <strong>zusätzlich</strong> an. Das alte Textfeld bleibt mit allen Werten, nichts wird umgeschrieben. Die Vorschau des Updates sagt schon, wie viele Angaben sich danach umwandeln lassen.</li>
+<li>Danach steht im Paket unter <strong>Text in Verweise umwandeln</strong>, was offen ist, etwa „Fahrzeug – Halter: 3 Angaben in „Halter“ (Text) können Verweise auf Person werden“.</li>
+</ul>
+<p><strong>Vorschau …</strong> zeigt je Name einen Vorschlag, den du in jeder Zeile ändern kannst:</p>
+<ul>
+<li><strong>vorhandene Person:</strong> gleicher Name, ohne Groß- und Kleinschreibung und Leerzeichen („lena muster“ = „Lena Muster“, auch „Muster Lena“). Passen mehrere, steht das dabei – wähle dann die richtige.</li>
+<li><strong>Neu anlegen:</strong> legt eine Person mit Vor- und Nachname an. Vorgeschlagen, wenn der Text wie ein Name aussieht.</li>
+<li><strong>Überspringen:</strong> Der Text bleibt, z. B. bei „Familie“ oder „Auto MU-ST 123“.</li>
+</ul>
+<p>Darf ein Feld mehrere Verweise haben (Inhaber eines Kontos, Versicherte), teilt das DMS den Text an „und“, Komma, Schrägstrich oder „&amp;“: „Lena und Tom Muster“ wird zu „Lena Muster“ und „Tom Muster“. Umgewandelt wird eine Mappe nur, wenn <strong>jeder</strong> ihrer Namen eine Person bekommt.</p>
+<p><strong>Ausgelassen</strong> werden Mappen, die du nicht bearbeiten darfst, Mappen im <a href="../archiv/">Archivmodus</a> innerhalb der Aufbewahrungsfrist und Mappen, deren Verweis schon gesetzt ist. Die Vorschau nennt jede mit Grund.</p>
+<p><strong>Umwandeln</strong> setzt den Verweis und leert das Textfeld. Jede Änderung steht in der <strong>Historie</strong> der Mappe („Paket-Update: Text in Verweis umgewandelt“). Außerdem:</p>
+<ul>
+<li>Das alte Textfeld ist keine Pflicht mehr. Ist es leer, zeigt die Ablage es in der Mappe nicht mehr.</li>
+<li>Titel-Vorlage und Trefferlisten zeigen den Verweis statt des Texts, das Verweisfeld rückt an die Stelle des Textfelds. Mappen, die du übersprungen hast, zeigen dort weiter ihren Text.</li>
+</ul>
+<p><strong>Rückgängig …</strong> unter „Bisherige Umwandlungen“ nimmt einen ganzen Vorgang zurück: Text zurück, Verweis leer, neu angelegte Personen in den Papierkorb, sofern nichts anderes mehr auf sie verweist, Mappentyp wie vorher. Was seit der Umwandlung jemand geändert hat, bleibt und wird genannt. Die Vorgänge sind Teil der <a href="../sicherung/">Sicherung</a>.</p>
+<p>Für Paket-Autoren steht das Format (<code>aus_text</code>) in den <a href="https://github.com/motom001/dms-registry/blob/main/REGELN.md#text-in-verweis-umwandeln">Regeln der Registry</a>.</p>
 <h2 id="entfernen">Entfernen<a class="headerlink" href="#entfernen" title="Permanent link">&para;</a></h2>
 <p><strong>Entfernen</strong> löscht die Mappentypen und Ansichten des Pakets und seinen Eintrag. Das geht nur,</p>
 <ul>
