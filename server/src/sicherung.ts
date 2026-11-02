@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'n
 import { join, relative, sep } from 'node:path';
 import { OHNE_INHALT, type Datenquelle, type Zaehler } from './datenbankabzug';
 import type { Einstellungen } from './einstellungen';
+import { FASSUNG_PFAD } from './dateiumwandlung';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { schreibeSicherung, sha256Von, ZWECK, type Eintrag } from './sicherungsformat';
@@ -35,7 +36,8 @@ export interface Metadaten {
   art: Sicherungsart;
   ausgeloestVon: string;
   beginn: string; ende: string; dauerSekunden: number;
-  anzahl: Zaehler & { dateien: number; tabellen: number };
+  /** fassungen (seit 0.140.1, #577): umgewandelte Fassungen von Paketen; zählen auch in `dateien` (je zwei Dateien). */
+  anzahl: Zaehler & { dateien: number; tabellen: number; fassungen?: number };
   groessen: { datenbankBytes: number; dateienBytes: number; sicherungBytes: number };
   verschluesselung: { verfahren: string; fingerabdruck: string };
   sha256: string;
@@ -407,7 +409,7 @@ export class Sicherung {
     log.info('Sicherung begonnen', { name, art, von });
     try {
       const umgebung = await this.q.umgebung();
-      let dateienBytes = 0; let dateien = 0; let datenbankBytes = 0;
+      let dateienBytes = 0; let dateien = 0; let fassungen = 0; let datenbankBytes = 0;
       for await (const f of dateienUnter(this.dateiOrdner)) dateienBytes += f.groesse;
       lauf.gesamt = dateienBytes + (await this.q.daten.groesse().catch(() => 0));
       const ergebnis = await this.q.daten.imSchnappschuss(async (s) => {
@@ -422,8 +424,10 @@ export class Sicherung {
             yield { art: 'T', kopf: { tabelle: t.name, spalten: t.spalten }, daten: (async function* () { for await (const c of quelle) { datenbankBytes += c.length; yield c; } })() };
           }
           lauf.schritt = 'Dateien';
+          // Mit den Dateien: Designs und die umgewandelten Fassungen von Paketen (#577) mit ihren Angaben.
           for await (const f of dateienUnter(ordner)) {
             dateien++;
+            if (f.pfad.endsWith('.fassung') && FASSUNG_PFAD.test(f.pfad)) fassungen++;
             yield { art: 'D', kopf: { pfad: f.pfad, groesse: f.groesse }, daten: createReadStream(f.voll) as AsyncIterable<Buffer> };
           }
           yield { art: 'E', kopf: { tabellen: tabellen.length, dateien } };
@@ -437,7 +441,7 @@ export class Sicherung {
         format: 1, datei: `${name}${ENDUNG}`, haushaltId: this.haushaltId,
         umgebung: { ...umgebung, datenbankStand: ergebnis.s.migrationen.at(-1) ?? null, postgres: ergebnis.s.postgres },
         art, ausgeloestVon: von, beginn: beginn.toISOString(), ende: ende.toISOString(), dauerSekunden: Math.round((ende.getTime() - beginn.getTime()) / 1000),
-        anzahl: { ...ergebnis.s.zaehler, dateien, tabellen: ergebnis.s.tabellen },
+        anzahl: { ...ergebnis.s.zaehler, dateien, tabellen: ergebnis.s.tabellen, fassungen },
         groessen: { datenbankBytes, dateienBytes, sicherungBytes: ergebnis.g.bytes },
         verschluesselung: { verfahren: 'AES-256-GCM, Schlüssel per HKDF-SHA256 aus dem Schlüssel der Werkbank abgeleitet, Inhalt gzip-komprimiert', fingerabdruck },
         sha256: ergebnis.g.sha256,

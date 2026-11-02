@@ -21,7 +21,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
   type Sql = any;
   let haupt: Sql;
   const offen: Sql[] = [];
-  const dbs = [`dms_wh_quelle_${process.pid}`, `dms_wh_ziel_${process.pid}`, `dms_wh_wechsel_${process.pid}`];
+  const dbs = [`dms_wh_quelle_${process.pid}`, `dms_wh_ziel_${process.pid}`, `dms_wh_wechsel_${process.pid}`, `dms_wh_fassq_${process.pid}`, `dms_wh_fassz_${process.pid}`];
   const urlVon = (db: string) => { const u = new URL(url!); u.pathname = `/${db}`; return u.toString(); };
 
   before(async () => {
@@ -279,6 +279,93 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     assert.equal(e.probe?.ok, true);
     const ampel = await q.sicherung.probeAmpel(true);
     assert.equal(ampel.ampel, 'gruen');
+  });
+
+  it('umgewandelte Fassungen (#577) kommen mit: nach der Wiederherstellung ohne Paket sind Fassung, Volltext und Vorschau da', async () => {
+    const { Dateiumwandlung, fassungsOrdner, ordnerFassungen } = await import('../src/dateiumwandlung');
+    const { Dienst } = await import('../src/dienst');
+    const { pgRepo } = await import('../src/repo-pg');
+    const { ordnerSpeicher } = await import('../src/dateispeicher');
+    const { speicherAblage, Vorschaubilder } = await import('../src/vorschau');
+    const { pdfMitText } = await import('./hilfen');
+    const { createHash } = await import('node:crypto');
+    const { cp, mkdir } = await import('node:fs/promises');
+    /** Dienst mit Fassungen, Vorschaubildern (Ersatz-Erzeuger) – wie index.ts, ohne Paket. */
+    const verbinde = (s: Sql, wurzel: string, dienst?: InstanceType<typeof Dienst>) => {
+      const dateien = ordnerSpeicher(join(wurzel, 'files'), HAUSHALT);
+      const d = dienst ?? new Dienst(pgRepo(s, HAUSHALT), dateien, {});
+      const vorschau = new Vorschaubilder(speicherAblage(), dateien, async (inhalt, mime) => Buffer.from(`vorschau:${mime}:${inhalt.length}`));
+      d.verbindeVorschau(vorschau);
+      const u = new Dateiumwandlung(d.umwandlungAnbindung(ordnerFassungen(fassungsOrdner(join(wurzel, 'files'), HAUSHALT)), vorschau));
+      d.verbindeUmwandlung(u, vorschau);
+      vorschau.fassung = (sha) => u.lies(sha);
+      return { d, u, vorschau };
+    };
+    const q = await system(dbs[3], { mitSchluessel: true });
+    const quelleU = verbinde(q.sql, q.wurzel, q.dienst);
+    const typ = await q.dienst.legeTypAn({ name: 'Scan', felder: [{ key: 'name', label: 'Name', typ: 'text', pflicht: true }], register: [
+      { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name'] }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente' }] });
+    const m = await q.dienst.legeMappeAn({ typId: typ.id, werte: { name: 'Scans von Lena' } });
+    const tiff = Buffer.concat([Buffer.from([0x49, 0x49, 42, 0, 8, 0, 0, 0]), Buffer.alloc(64, 7)]);
+    const dok = (await q.dienst.ladeHoch(m.id, { register: 'dokumente', name: 'scan.tif', typ: 'image/tiff' }, tiff, null)).dokument;
+    assert.equal(dok.mime, 'image/tiff');
+    // Die Fassung, wie das Paket Bildformate sie geliefert hätte, und der Text daraus.
+    const pdf = pdfMitText(['Kontoauszug Oktober']);
+    const info = { mime: 'application/pdf', groesse: pdf.length, sha256: createHash('sha256').update(pdf).digest('hex'), paket: { id: 'bildformate', name: 'Bildformate', version: '1.0.0' }, erstellt: new Date().toISOString() };
+    const ablage = ordnerFassungen(fassungsOrdner(join(q.wurzel, 'files'), HAUSHALT));
+    await ablage.schreibe(dok.sha256, info, pdf);
+    await q.dienst.schreibeVolltext(dok.id, { text: 'Kontoauszug Oktober' }, { id: 'kern', herkunft: 'Text aus dem PDF', paket: false });
+    // Eine halbe Fassung (nur Inhalt, ohne Angaben) – z. B. während der Sicherung entstanden – kommt nicht mit.
+    await mkdir(join(q.wurzel, 'files', HAUSHALT, 'fassungen', 'ee'), { recursive: true });
+    await writeFile(join(q.wurzel, 'files', HAUSHALT, 'fassungen', 'ee', `${'e'.repeat(64)}.fassung`), 'halb');
+    assert.equal((await quelleU.u.pakete()).length, 0, 'kein Paket installiert');
+
+    const meta = (await (await q.sicherung.starte('manuell', 'lena@example.org')).fertig)!;
+    assert.ok(meta, JSON.stringify(q.sicherung.aktuellerLauf()));
+    assert.equal(meta.anzahl.fassungen, 2, 'Fassungen in den Metadaten (die halbe zählt beim Sichern mit)');
+    const name = meta.datei.replace('.dms-sicherung', '');
+
+    // Probe: prüft Fassung gegen Angaben, nennt sie und die unvollständige.
+    const p = await q.w.starteProbe(name, 'test');
+    assert.equal(await p.fertig, true, JSON.stringify(q.w.aktuellerLauf(), null, 1));
+    assert.match(q.w.aktuellerLauf()!.schritte.find((x) => x.name === 'Entschlüsseln und Einspielen')!.info!, /eine umgewandelte Fassung \(1 unvollständig, nicht übernommen\)/);
+
+    // Frisches System ohne Paket; dort liegt schon eine andere Fassung derselben Datei (anderes Paket) – die aus der
+    // Sicherung ersetzt sie.
+    const z = await system(dbs[4]);
+    await cp(q.sicherung.ordner, z.sicherung.ordner, { recursive: true });
+    const fremd = pdfMitText(['ganz anders umgewandelt']);
+    await ordnerFassungen(fassungsOrdner(join(z.wurzel, 'files'), HAUSHALT)).schreibe(dok.sha256, { ...info, groesse: fremd.length, sha256: 'x', paket: { id: 'anders', name: 'Anders', version: '9.0.0' } }, fremd);
+    await z.w.starte({ name, schluessel: q.tresor.alsText()! }, null);
+    const lauf = await warte(z.w);
+    assert.equal(lauf.status, 'neustart', JSON.stringify(lauf, null, 1));
+    await new Promise((r) => setTimeout(r, 1700));
+    assert.ok(!existsSync(join(z.wurzel, 'files', HAUSHALT, 'fassungen', 'ee', `${'e'.repeat(64)}.fassung`)), 'halbe Fassung nicht übernommen');
+
+    const neu = await frisch(dbs[4]);
+    const zielU = verbinde(neu, z.wurzel);
+    assert.equal((await zielU.u.pakete()).length, 0, 'auch hier kein Paket');
+    const f = await zielU.d.fassungVon(dok.id);
+    assert.deepEqual(f.inhalt, pdf, 'Fassung ansehen: dieselbe Fassung wie vorher');
+    assert.deepEqual(f.info.paket, info.paket);
+    assert.equal(f.info.sha256, info.sha256);
+    assert.equal(await pgRepo(neu, HAUSHALT).volltext(dok.id), 'Kontoauszug Oktober', 'Volltext');
+    assert.match((await pgRepo(neu, HAUSHALT).holeDokument(dok.id))!.ocr!.info ?? '', /umgewandelten Fassung \(Paket Bildformate 1\.0\.0\)/);
+    // Vorschau: beim ersten Anzeigen aus der Fassung (ohne Paket).
+    const d2 = (await pgRepo(neu, HAUSHALT).holeDokument(dok.id))!;
+    assert.equal(await zielU.vorschau.bild(d2), null, 'erst eingereiht');
+    let bild: Buffer | null = null;
+    for (let i = 0; i < 500 && !bild; i++) { await new Promise((r) => setTimeout(r, 20)); bild = await zielU.vorschau.bild(d2); }
+    assert.equal(bild?.toString(), `vorschau:application/pdf:${pdf.length}`);
+
+    // Vollexport: die Fassung steht neben dem Original und in dokumente.csv.
+    const { vollexport } = await import('../src/vollexport');
+    const ex = await vollexport(zielU.d.vollexportQuelle({ mandant: 'Test', version: '0', benutzer: async () => ({ benutzer: [], vertretungen: [] }), designs: async () => [], protokoll: () => [] }), join(z.wurzel, 'export'), {});
+    const rel = ex.pfade.dokumente.get(dok.id)!;
+    assert.deepEqual(await readFile(join(ex.ordner, ...`${rel}.fassung.pdf`.split('/'))), pdf);
+    const csvText = await readFile(join(ex.ordner, 'daten', 'dokumente.csv'), 'utf8');
+    assert.ok(csvText.split('\r\n')[0].endsWith(',pfad,fassung'));
+    assert.ok(csvText.includes(`${rel}.fassung.pdf`));
   });
 
   it('Schlüsselwechsel (#47): ganz oder gar nicht in PostgreSQL; ältere Sicherungen brauchen den alten Schlüssel', async () => {

@@ -8,14 +8,17 @@
  * - Das Paket liest das Original (`GET /dokumente/{id}/inhalt`) und gibt die Fassung zurück
  *   (`PUT /dokumente/{id}/fassung?sha256=…`), auf Wunsch auch ein Vorschaubild (`PUT /dokumente/{id}/vorschaubild`).
  * - Die Fassung gehört zum Inhalt (Prüfwert), nicht zum Dokument: Gleiche Dateien teilen sie, eine neue Version
- *   braucht eine neue. Sie liegt wie die Vorschaubilder außerhalb des Haushaltsordners und geht nicht in die
- *   Sicherung – sie lässt sich jederzeit neu erzeugen. Das Original bleibt unverändert das Dokument.
+ *   braucht eine neue. Das Original bleibt unverändert das Dokument.
+ * - Seit 0.140.1 liegt sie **im Haushaltsordner** (`<haushalt>/fassungen/`) und geht mit in die Sicherung und den
+ *   Vollexport (Maintainer-Entscheidung zu #577: Die Fassung wird weiterverarbeitet; nach einer Wiederherstellung soll
+ *   alles so dastehen wie vorher – auch ohne das Paket oder mit einer neueren Fassung davon). Nur die Vorschaubilder
+ *   bleiben draußen: Sie lassen sich jederzeit gleich neu erzeugen, und nichts verweist auf sie.
  * - Mit der Fassung entstehen Vorschaubild (vorschau.ts) und Volltext (texterkennung.ts: Textebene bzw. Paket
  *   Texterkennung) wie bei einem PDF oder Foto.
  */
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BILDPUNKTE_MAX, dateitypName, FASSUNG_MAX_BYTES, kernTyp, UMWANDELN_MAX_BYTES, VORSCHAUBILD_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
@@ -33,6 +36,39 @@ export const FASSUNG_SEITEN_MAX = 1000;
 export const ANGEFORDERT_MS = 30 * 60_000;
 
 /* ---------- Ablage ---------- */
+
+/** Ordner der Fassungen im Haushaltsordner – damit gehen sie mit in die Sicherung (#577). */
+export const FASSUNGEN_ORDNER = 'fassungen';
+/** Pfad einer Fassung relativ zum Haushaltsordner (so steht er in der Sicherung): Prüfwert und Art der Datei. */
+export const FASSUNG_PFAD = /^fassungen\/[0-9a-f]{2}\/([0-9a-f]{64})\.(json|fassung)$/;
+/** Ordner der Fassungen eines Haushalts unter der Wurzel der Dateien (/data/files). */
+export const fassungsOrdner = (dateiWurzel: string, haushalt: string) => join(dateiWurzel, haushalt, FASSUNGEN_ORDNER);
+
+/**
+ * Fassungen von ihrem früheren Ort (0.137.0–0.140.0: `<wurzel>/fassungen/<haushalt>`, außerhalb der Sicherung) in den
+ * Haushaltsordner verschieben. Beim Start; mehrfach ausführbar. Liefert, wie viele Dateien umgezogen sind.
+ */
+export async function zieheFassungenUm(dateiWurzel: string, haushalt: string): Promise<number> {
+  const alt = join(dateiWurzel, FASSUNGEN_ORDNER, haushalt);
+  const neu = fassungsOrdner(dateiWurzel, haushalt);
+  let n = 0;
+  for (const o of await readdir(alt).catch(() => [] as string[])) {
+    if (!/^[0-9a-f]{2}$/.test(o)) continue;
+    for (const name of await readdir(join(alt, o)).catch(() => [] as string[])) {
+      if (!/^[0-9a-f]{64}\.(json|fassung)$/.test(name)) continue;
+      const ziel = join(neu, o, name);
+      await mkdir(join(neu, o), { recursive: true });
+      // Gibt es sie am neuen Ort schon, gilt die (neuer oder aus einer Wiederherstellung).
+      if (await stat(ziel).then(() => true, () => false)) await rm(join(alt, o, name), { force: true });
+      else { await rename(join(alt, o, name), ziel); n++; }
+    }
+  }
+  // Leere Ordner entfernen (übrig gebliebene .tmp-Dateien eines Abbruchs mit).
+  await rm(alt, { recursive: true, force: true }).catch(() => {});
+  await rmdir(join(dateiWurzel, FASSUNGEN_ORDNER)).catch(() => {});
+  if (n) log.info('Umgewandelte Fassungen in den Haushaltsordner verschoben (gehen jetzt mit in die Sicherung)', { dateien: n });
+  return n;
+}
 
 export interface FassungsAblage {
   info(sha: string): Promise<FassungInfo | null>;

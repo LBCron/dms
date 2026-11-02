@@ -339,7 +339,7 @@ Der Fragende sieht dann „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)�
 
 ## Dateien umwandeln { #dateien-umwandeln }
 
-Seit 0.137.0 (#577) liest der Kern selbst nur **PDF, JPEG und PNG** – für Vorschaubild, Textebene und Seitenbilder (poppler). Alle anderen Dateitypen (TIFF, WebP, GIF, BMP, HEIC, Office …) kann ein Paket mit dem Recht `dms:umwandeln` **umwandeln**: Es bekommt die Datei, gibt eine **Fassung** in einem Format zurück, das der Kern kennt, und der Kern macht daraus Vorschaubild und Volltext wie bei einem PDF oder Foto. **Das Original bleibt unverändert das Dokument** – Herunterladen, Weitergeben, Versionen, Prüfwert und Sicherung betreffen immer die Originaldatei. Ein Beispiel ist das Paket **Bildformate** in der Registry (TIFF, WebP, GIF, BMP).
+Seit 0.137.0 (#577) liest der Kern selbst nur **PDF, JPEG und PNG** – für Vorschaubild, Textebene und Seitenbilder (poppler). Alle anderen Dateitypen (TIFF, WebP, GIF, BMP, HEIC, Office …) kann ein Paket mit dem Recht `dms:umwandeln` **umwandeln**: Es bekommt die Datei, gibt eine **Fassung** in einem Format zurück, das der Kern kennt, und der Kern macht daraus Vorschaubild und Volltext wie bei einem PDF oder Foto. **Das Original bleibt unverändert das Dokument** – Herunterladen, Weitergeben, Versionen und Prüfwert betreffen immer die Originaldatei; die Fassung geht zusätzlich mit in Sicherung und Vollexport. Ein Beispiel ist das Paket **Bildformate** in der Registry (TIFF, WebP, GIF, BMP).
 
 ### Im Manifest { #umwandeln-manifest }
 
@@ -415,7 +415,7 @@ Ist kein Paket für einen Dateityp installiert, bleibt alles wie vor 0.137.0: Da
 - **Mehrseitiges** (z. B. ein TIFF mit 12 Seiten) gibst du als **PDF** zurück, eine Seite je Bild. Die Seitengröße bestimmt die Auflösung: Bildpunkte × 72 / dpi ergibt pt. Mit der echten Auflösung des Scans sieht eine Texterkennung mit dieser dpi genau die Bildpunkte des Originals.
 - **Ein einzelnes Bild** gibst du am einfachsten als PNG (verlustfrei, für Grafiken und Schwarzweiß) oder JPEG (Fotos) zurück; der Kern behandelt es wie ein hochgeladenes Foto (eine Seite, Originalgröße).
 - Die Fassung gehört zur **Datei** (Prüfwert), nicht zum Dokument: Dokumente mit derselben Datei teilen sie; eine neue Version braucht eine neue. Eine neue Fassung ersetzt die alte.
-- **Speicher:** Fassungen liegen wie Vorschaubilder neben den Dateien, aber **nicht in der Sicherung** – sie lassen sich neu erzeugen (nach einer Wiederherstellung: *Vorschaubilder nachholen*).
+- **Speicher:** Fassungen liegen seit 0.140.1 im Haushaltsordner (`<haushalt>/fassungen/<ab>/<sha256 des Originals>.fassung` und `.json` mit Typ, Prüfwert und Paket) und gehen **mit in die Sicherung** und den Vollexport: Nach einer Wiederherstellung ist die Fassung da, auch wenn dein Paket fehlt oder in einer neuen Version anders umwandeln würde. Das Paket wird für diese Dateien nicht erneut gefragt. Nur Vorschaubilder bleiben draußen; ein eigenes Vorschaubild deines Pakets ersetzt der Kern nach einer Wiederherstellung durch eins aus der Fassung.
 
 **Antworten:**
 

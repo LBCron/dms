@@ -12,12 +12,13 @@ Jede Sicherung besteht aus zwei Dateien im Sicherungsordner, z. B.:
 
 | Datei | Inhalt |
 | --- | --- |
-| `2026-10-29_0200-automatisch.dms-sicherung` | Datenbank und alle Dateien (Dokumente, Logos, Bilder gemeldeter Fehler), gepackt und **verschlüsselt** |
-| `2026-10-29_0200-automatisch.json` | Metadaten, lesbar: Haushalts-Id (Feld `haushaltId`), Versionen (DMS, Datenbank-Stand, PostgreSQL, Node.js, Betriebssystem, Architektur), Art, Beginn und Dauer, Anzahl Mappen, Dokumente und Benutzer, Größen, Verschlüsselung mit Fingerabdruck des Schlüssels und die **SHA-256-Prüfsumme** der Sicherungsdatei |
+| `2026-10-29_0200-automatisch.dms-sicherung` | Datenbank und alle Dateien (Dokumente, [umgewandelte Fassungen](texterkennung.md#andere-dateitypen), Logos, Bilder gemeldeter Fehler), gepackt und **verschlüsselt** |
+| `2026-10-29_0200-automatisch.json` | Metadaten, lesbar: Haushalts-Id (Feld `haushaltId`), Versionen (DMS, Datenbank-Stand, PostgreSQL, Node.js, Betriebssystem, Architektur), Art, Beginn und Dauer, Anzahl Mappen, Dokumente, Benutzer und umgewandelter Fassungen (Feld `anzahl.fassungen`), Größen, Verschlüsselung mit Fingerabdruck des Schlüssels und die **SHA-256-Prüfsumme** der Sicherungsdatei |
 
 - Verschlüsselt wird mit AES-256-GCM. Der Schlüssel dafür wird aus dem Schlüssel unter **Werkbank → [Verschlüsselung](verschluesselung.md)** abgeleitet – derselbe wie für Passwortfelder. **Ohne diesen Schlüssel ist eine Sicherung nicht lesbar.** Er steht nie in der Sicherung, nur in der Schlüsseldatei und auf dem [Notfallblatt](#notfallblatt).
 - Angemeldete Sitzungen gehören nicht dazu: Nach einer Wiederherstellung meldet sich jeder neu an.
-- Die **Vorschaubilder** der Dokumente gehören ebenfalls nicht dazu – sie entstehen nach einer Wiederherstellung von selbst neu.
+- Die **umgewandelten Fassungen** von Paketen (z. B. ein TIFF-Scan als PDF, siehe [Andere Dateitypen](texterkennung.md#andere-dateitypen)) gehören seit Version 0.140.1 **dazu**, mit der Angabe, welches Paket sie erzeugt hat. Nach einer Wiederherstellung sind Fassung, Volltext und Vorschau so da wie vorher – auch wenn das Paket nicht mehr installiert ist oder eine neuere Version heute anders umwandeln würde.
+- Die **Vorschaubilder** der Dokumente gehören nicht dazu – sie entstehen nach einer Wiederherstellung von selbst neu (aus der Datei bzw. der Fassung), und nichts verweist auf sie. Der Grundsatz: Im Zweifel kommt etwas in die Sicherung; draußen bleibt nur, was sich jederzeit gleich neu erzeugen lässt.
 - Die Datenbank liest das DMS selbst – unabhängig von der PostgreSQL-Version. Eine Sicherung taugt deshalb auch für den Wechsel auf eine neue Hauptversion von PostgreSQL.
 - Ein **Prüfwort** (ein bekanntes Wort, verschlüsselt in der Datenbank) zeigt nach einer Wiederherstellung, ob der richtige Schlüssel greift.
 

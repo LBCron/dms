@@ -36,7 +36,7 @@ import { einrichtungsmodus } from './einrichtungsmodus';
 import { Einrichtung } from './einrichtung';
 import { bestimmeMandant, mandantNamen } from './mandant';
 import { ordnerAblage, Vorschaubilder } from './vorschau';
-import { Dateiumwandlung, ordnerFassungen } from './dateiumwandlung';
+import { Dateiumwandlung, fassungsOrdner, ordnerFassungen, zieheFassungenUm } from './dateiumwandlung';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
@@ -226,9 +226,10 @@ const vorschau = new Vorschaubilder(ordnerAblage(join(ordner.dateien, 'vorschau'
 dienst.verbindeVorschau(vorschau);
 vorschau.pause = () => wartung.aktiv;
 wartung.beimAusschalten(() => vorschau.anstossen());
-// Dateien umwandeln (#577): Fassungen aus Paketen mit dms:umwandeln – wie die Vorschaubilder außerhalb des
-// Haushaltsordners (nicht in der Sicherung, lassen sich neu erzeugen). Daraus Vorschaubild und Volltext.
-const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassungen(join(ordner.dateien, 'fassungen', cfg.haushalt)), vorschau));
+// Dateien umwandeln (#577): Fassungen aus Paketen mit dms:umwandeln im Haushaltsordner – sie gehen mit in die
+// Sicherung (seit 0.140.1; vorher lagen sie daneben und ziehen beim Start um). Daraus Vorschaubild und Volltext.
+await zieheFassungenUm(ordner.dateien, cfg.haushalt).catch((e) => log.warn('Umgewandelte Fassungen nicht verschoben', { fehler: (e as Error).message }));
+const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassungen(fassungsOrdner(ordner.dateien, cfg.haushalt)), vorschau));
 dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
 texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };

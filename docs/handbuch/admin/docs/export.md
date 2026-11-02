@@ -34,7 +34,7 @@ dms-export-2026-10-31-14-05-00/
     papierkorb.jsonl, papierkorb-dokumente.jsonl, vertretungen.jsonl, favoriten.csv,
     loeschprotokoll.csv  (Löschprotokoll, ohne Inhalte)
   ablage/<Typ>/<Titel> [Id]/
-    mappe.json  mappe.pdf  <Register>/<Datei>  <Datei>.txt  <Register>/Versionen/
+    mappe.json  mappe.pdf  <Register>/<Datei>  <Datei>.txt  <Datei>.fassung.pdf  <Register>/Versionen/
   uebersicht/<typ>.pdf   alle Mappen eines Typs
   kalender/fristen.ics   offene Fristen, Aufgaben mit Datum, Erinnerungen
   kontakte/<typ>.vcf     Kontakte (vCard 4.0)
@@ -48,7 +48,7 @@ dms-export-2026-10-31-14-05-00/
 - **Datum** `JJJJ-MM-TT`, Zeitpunkte ISO 8601 in UTC; **Zahlen** mit Punkt; **Beträge** als Spalten `<feld>` und `<feld>_waehrung`.
 - **Ids** als UUID; **Verweise** doppelt: als Id (`<feld>`) und als Titel (`<feld>_titel`).
 - **JSON Lines**: eine Mappe bzw. ein Eintrag je Zeile, verlustfrei.
-- **Dokumente im Original**, nicht umgewandelt; ältere Versionen unter `Versionen/` (`v1 Rechnung.pdf`).
+- **Dokumente im Original**, nicht umgewandelt; ältere Versionen unter `Versionen/` (`v1 Rechnung.pdf`). Hat ein Paket eine Datei [umgewandelt](texterkennung.md#andere-dateitypen) (z. B. einen TIFF-Scan in ein PDF), liegt die Fassung daneben als `<Datei>.fassung.pdf` (bzw. `.png`, `.jpg`); `dokumente.csv` nennt sie in der Spalte `fassung` (seit 0.140.1).
 - **Formatversion** steht im Manifest; Änderungen am Format stehen in den Release Notes.
 
 `manifest.json` nennt unter `tabellen` für jede Tabelle der Datenbank, wo sie im Export steht – oder warum nicht (z. B. Sitzungen, API-Schlüssel, Zugangsdaten für Mail und Postfächer). Ein Test sorgt dafür, dass keine neue Tabelle unbemerkt fehlt.

@@ -5908,6 +5908,8 @@ export class Dienst {
       versionen: (ids) => r.versionenVonDokumenten(ids),
       volltexte: (ids) => r.volltexte(ids),
       datei: (sha) => this.dateien.lies(sha),
+      // Umgewandelte Fassungen (#577) neben dem Original – wie in der Sicherung.
+      fassung: async (sha) => { const f = await this.umwandlung?.lies(sha); return f ? { mime: f.info.mime, inhalt: f.inhalt } : null; },
       notizen: (ids) => r.notizenVon(ids),
       aufgaben: (ids) => r.aufgabenVonMappen(ids),
       erinnerungen: () => r.erinnerungen(),
@@ -6278,6 +6280,8 @@ export class Dienst {
       papierkorb: async () => [], papierkorbDokumente: async () => [],
       dokumente: async (ids) => (await this.repo.dokumenteVon(ids)).filter((d) => dok.has(d.id)),
       versionen: async () => [],
+      // Die Auskunft enthält die Dokumente, wie sie abgelegt sind – ohne Fassungen von Paketen (#577).
+      fassung: undefined,
       notizen: async (ids) => (await this.repo.notizenVon(ids)).filter((n) => not.has(n.id)),
       aufgaben: async () => [], erinnerungen: async () => [], favoriten: async () => [],
       // Historie: ohne frühere Auskünfte (deren Begründungen sind intern); Mappen mit zurückgehaltenen

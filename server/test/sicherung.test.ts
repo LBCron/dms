@@ -58,7 +58,7 @@ describe('Sicherung (#103–#105)', () => {
     assert.equal(meta.haushaltId, HAUSHALT);
     assert.equal(meta.verschluesselung.fingerabdruck, tresor.fingerabdruck);
     assert.equal(meta.umgebung.datenbankStand, '002_b.sql');
-    assert.deepEqual(meta.anzahl, { mappen: 2, dokumente: 1, benutzer: 1, dateien: 2, tabellen: 1 });
+    assert.deepEqual(meta.anzahl, { mappen: 2, dokumente: 1, benutzer: 1, dateien: 2, tabellen: 1, fassungen: 0 });
     const namen = (await readdir(s.ordner)).sort();
     assert.equal(namen.length, 2, namen.join(', '));
     assert.ok(namen.some((n) => n.endsWith('.json')) && namen.some((n) => n.endsWith('.dms-sicherung')));

@@ -348,3 +348,37 @@ describe('Dateien umwandeln (#577): API für Pakete', () => {
     assert.equal(datei.koepfe['x-dms-fassung-paket'], 'bildformate 1.0.0');
   });
 });
+
+describe('Dateien umwandeln (#577): Ablage im Haushaltsordner (seit 0.140.1, in der Sicherung)', () => {
+  it('zieht Fassungen vom früheren Ort um; vorhandene am neuen Ort bleiben; mehrfach ausführbar', async () => {
+    const { mkdtemp, readFile, readdir, rm } = await import('node:fs/promises');
+    const { existsSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { FASSUNG_PFAD, fassungsOrdner, ordnerFassungen, zieheFassungenUm } = await import('../src/dateiumwandlung');
+    const wurzel = await mkdtemp(join(tmpdir(), 'dms-fassung-umzug-'));
+    try {
+      const haushalt = '00000000-0000-4000-8000-000000000001';
+      const a = 'a'.repeat(64); const b = 'b'.repeat(64);
+      const alt = ordnerFassungen(join(wurzel, 'fassungen', haushalt));
+      const info = (n: string) => ({ mime: 'application/pdf', groesse: 1, sha256: n, paket: { id: 'p', name: 'P', version: '1' }, erstellt: '' });
+      await alt.schreibe(a, info('alt-a'), Buffer.from('A'));
+      await alt.schreibe(b, info('alt-b'), Buffer.from('B alt'));
+      const neu = ordnerFassungen(fassungsOrdner(wurzel, haushalt));
+      await neu.schreibe(b, info('neu-b'), Buffer.from('B neu'));
+      assert.equal(await zieheFassungenUm(wurzel, haushalt), 2, 'a.json und a.fassung');
+      assert.equal(fassungsOrdner(wurzel, haushalt), join(wurzel, haushalt, 'fassungen'));
+      assert.equal((await neu.lies(a))?.inhalt.toString(), 'A');
+      assert.equal((await neu.lies(b))?.inhalt.toString(), 'B neu', 'am neuen Ort vorhandene gilt');
+      assert.equal((await neu.info(b))?.sha256, 'neu-b');
+      assert.ok(!existsSync(join(wurzel, 'fassungen')), 'alter Ordner weg');
+      assert.equal(await zieheFassungenUm(wurzel, haushalt), 0);
+      // So stehen sie in der Sicherung (Pfad relativ zum Haushaltsordner).
+      const namen = (await readdir(join(wurzel, haushalt, 'fassungen', 'aa'))).sort();
+      assert.deepEqual(namen, [`${a}.fassung`, `${a}.json`]);
+      assert.ok(namen.every((n) => FASSUNG_PFAD.test(`fassungen/aa/${n}`)));
+      assert.ok(!FASSUNG_PFAD.test(`aa/${a}`) && !FASSUNG_PFAD.test('designs/aa/x.json'));
+      assert.equal(JSON.parse(await readFile(join(wurzel, haushalt, 'fassungen', 'aa', `${a}.json`), 'utf8')).sha256, 'alt-a');
+    } finally { await rm(wurzel, { recursive: true, force: true }); }
+  });
+});
