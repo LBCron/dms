@@ -4,7 +4,7 @@
 
 - **Node.js 24** (LTS) und npm
 - **Docker** (für PostgreSQL 17; oder eine eigene PostgreSQL-Installation)
-- optional **Tesseract** mit deutschen Sprachdaten und **poppler-utils** für die Texterkennung
+- optional **poppler-utils** für die Textebene von PDFs, Vorschaubilder und Schwärzen (die Texterkennung ist ein Paket, siehe [Pakete mit Code](pakete-code.md#texterkennung))
 - optional **Python 3** mit `mkdocs-material` für die Handbücher
 
 ## Projekt holen und starten

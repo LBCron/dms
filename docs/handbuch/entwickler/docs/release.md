@@ -43,7 +43,7 @@ So liest du sie: Stimmt der Satz noch? Wenn nicht, korrigieren. Ist er gewollt (
 
 ### Images prüfen, Herkunftsnachweis und Stückliste
 
-- **Trivy** prüft beide Images auf bekannte Lücken in den Systempaketen (Alpine, Tesseract, PostgreSQL in `dms-komplett`) und in den Node-Bibliotheken im Image.
+- **Trivy** prüft beide Images auf bekannte Lücken in den Systempaketen (Alpine, poppler, PostgreSQL in `dms-komplett`) und in den Node-Bibliotheken im Image.
     - **Im Pull Request** (Job `image-probe`, amd64): Lücken der Stufe *kritisch*, für die es eine Korrektur gibt, lassen die Prüfung fehlschlagen; *hoch* mit Korrektur erscheint als Warnung. Funde ohne Korrektur blockieren nicht.
     - **Auf `main`, bei Tags und beim wöchentlichen Neubau** (Job `image-zusammen`): Das fertige Image wird geprüft und die Funde landen unter **Security → Code scanning** (Kategorie `image-dms` bzw. `image-dms-komplett`). Hier wird nur gemeldet, das Image ist ja schon veröffentlicht.
     - Bewusst hingenommene Funde stehen mit Begründung und Prüfdatum in `.trivyignore`.

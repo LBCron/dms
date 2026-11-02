@@ -1467,6 +1467,18 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         ORDER BY d.erstellt, d.id`)
         .map((r: Zeile) => ({ id: r.id as string, typId: r.typ_id as string, registerKey: r.register_key as string }));
     },
+    async volltextHerkunft() {
+      const [r] = await sql`
+        SELECT count(*) FILTER (WHERE leer)::int AS ohne,
+          count(*) FILTER (WHERE NOT leer AND i LIKE 'Texterkennung durch Paket %')::int AS paket,
+          count(*) FILTER (WHERE NOT leer AND i LIKE 'Textebene des PDFs%')::int AS pdf,
+          count(*) FILTER (WHERE NOT leer AND i LIKE 'Volltext über die API%')::int AS api,
+          count(*) FILTER (WHERE NOT leer AND i NOT LIKE 'Texterkennung durch Paket %' AND i NOT LIKE 'Textebene des PDFs%' AND i NOT LIKE 'Volltext über die API%' AND i LIKE '%Texterkennung%')::int AS eingebaut,
+          count(*) FILTER (WHERE NOT leer AND i NOT LIKE 'Texterkennung durch Paket %' AND i NOT LIKE 'Textebene des PDFs%' AND i NOT LIKE 'Volltext über die API%' AND i NOT LIKE '%Texterkennung%')::int AS sonst
+        FROM (SELECT coalesce(btrim(volltext), '') = '' AS leer, regexp_replace(coalesce(ocr_info, ''), '^übernommen \\(gleicher Inhalt\\): ', '') AS i
+          FROM dokumente WHERE haushalt_id = ${haushaltId} AND ocr_stand = 'fertig') x`;
+      return { pdf: r.pdf as number, paket: r.paket as number, api: r.api as number, eingebaut: r.eingebaut as number, sonst: r.sonst as number, ohneText: r.ohne as number };
+    },
     async ocrSprachen() {
       const z: Record<string, number> = {};
       for (const r of await sql`

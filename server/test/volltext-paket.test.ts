@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { describe, it } from 'node:test';
 import { crc32, deflateSync } from 'node:zlib';
 import { PDFDocument } from 'pdf-lib';
@@ -50,24 +51,23 @@ const paket = (id: string, o: { schnittstellen?: string[]; dms?: string; ereigni
 });
 
 /**
- * Aufbau mit Ersatz-Engine: „Scans“ (Dateiname mit scan) haben keine Textebene; die eingebaute Texterkennung
- * (werkzeuge.tesseract gesetzt) erkennt TEXT. Zählt, wie oft die Engine mit bzw. ohne Tesseract lief.
+ * Aufbau mit Ersatz-Engine (Textebene): „Scans“ haben keine Textebene, „gemischt“ hat Text und Seiten ohne Text.
+ * Zählt, wie oft der Kern eine Datei las.
  */
 async function aufbau(mitPaket = true) {
   const repo = speicherRepo();
   const dateien = speicherDateien();
   const einstellungen = speicherEinstellungen();
   const d = new Dienst(repo, dateien, { einstellungen });
-  const laeufe = { mitTesseract: 0, ohne: 0 };
+  const laeufe = { gelesen: 0 };
   let scanJetzt: boolean | 'gemischt' = false;
-  const engine: Engine = async (_pfad, _mime, o) => {
+  const engine: Engine = async () => {
     const scan = scanJetzt;
-    if (scan === 'gemischt' && !o.werkzeuge.tesseract) { laeufe.ohne++; return { text: TEXT, seiten: 3, info: 'Textebene des PDFs', ohneText: [2, 3] }; }
-    if (o.werkzeuge.tesseract) { laeufe.mitTesseract++; return { text: TEXT, seiten: 1, info: 'Texterkennung (deu+eng)' }; }
-    laeufe.ohne++;
-    return scan ? { text: '', seiten: 2, info: 'Textebene des PDFs' } : { text: TEXT, seiten: 1, info: 'Textebene des PDFs' };
+    laeufe.gelesen++;
+    if (scan === 'gemischt') return { text: TEXT, seiten: 3, info: 'Textebene des PDFs', ohneText: [2, 3] };
+    return scan ? { text: '', seiten: 2, info: 'Textebene des PDFs', ohneText: [1, 2] } : { text: TEXT, seiten: 1, info: 'Textebene des PDFs', ohneText: [] };
   };
-  const t = new Texterkennung(repo, dateien, einstellungen, engine, async () => ({ tesseract: 'tesseract 5', sprachen: ['deu', 'eng'], pdftotext: true, pdftoppm: true }));
+  const t = new Texterkennung(repo, dateien, einstellungen, engine, async () => ({ pdftotext: true, pdftoppm: true }));
   d.verbindeTexterkennung(t);
   t.paket = () => d.texterkennungPaket();
   t.nachher = (dok, e, k) => {
@@ -91,7 +91,9 @@ async function aufbau(mitPaket = true) {
     return id;
   };
   const ereignisse = async (art = 'volltext.fertig') => (await repo.faelligeEreignisse(1000)).filter((e) => e.art === art);
-  return { d, t, repo, m, hoch, laeufe, ereignisse };
+  /** Wie die nächste gelesene Datei aussieht (für Dokumente, die später noch einmal gelesen werden). */
+  const alsScan = (v: boolean | 'gemischt') => { scanJetzt = v; };
+  return { d, t, repo, m, hoch, laeufe, ereignisse, alsScan };
 }
 
 describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
@@ -123,11 +125,10 @@ describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
     assert.equal((await ereignisse('texterkennung.fertig')).length, 2, 'texterkennung.fertig auch ohne Text');
 
     // Bilder haben keine Textebene: gleich ans Paket, ohne die Datei zu lesen.
-    const vorher = laeufe.ohne;
+    const vorher = laeufe.gelesen;
     const bild = await hoch('foto.jpg', 'image/jpeg', Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0]));
     assert.equal((await repo.holeDokument(bild))!.ocr?.stand, 'paket');
-    assert.equal(laeufe.ohne, vorher);
-    assert.equal(laeufe.mitTesseract, 0, 'mit Paket keine eingebaute Texterkennung');
+    assert.equal(laeufe.gelesen, vorher);
   });
 
   it('gemischtes PDF (Text und Scan-Seiten): wartet auf das Paket, Ereignis mit Text und seitenOhneText', async () => {
@@ -215,12 +216,49 @@ describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
     assert.equal((await d.volltext(mitText)).text, TEXT, 'Text aus dem PDF bleibt');
   });
 
-  it('ohne Paket: eingebaute Texterkennung wie bisher, Ereignis mit Text', async () => {
-    const { repo, hoch, laeufe, ereignisse } = await aufbau(false);
+  it('ohne Paket (#459): Scans warten auf ein Paket; wird eins installiert, gehen sie an das Paket', async () => {
+    const { d, repo, hoch, ereignisse, alsScan } = await aufbau(false);
+    const mitText = await hoch('brief.pdf', 'application/pdf', pdfMitText([TEXT]));
+    assert.equal((await repo.holeDokument(mitText))!.ocr?.stand, 'fertig', 'PDFs mit Text brauchen kein Paket');
     const scan = await hoch('scan.pdf', 'application/pdf', pdfMitText(['scan']), true);
-    assert.equal((await repo.holeDokument(scan))!.ocr?.stand, 'fertig');
-    assert.equal(laeufe.mitTesseract, 1);
-    assert.deepEqual((await ereignisse()).map((e) => [e.paketId, e.daten.text]), [['vektor', true]]);
+    const s = (await repo.holeDokument(scan))!;
+    assert.equal(s.ocr?.stand, 'paket');
+    assert.equal(s.ocr?.info, infoWartet(null));
+    assert.deepEqual(volltextHerkunft(s.ocr), { art: 'wartet', paket: null });
+    assert.deepEqual((await ereignisse()).map((e) => [e.paketId, e.daten.text]), [['vektor', true]], 'ohne Text an kein älteres Paket');
+    // „Neu erzeugen“ ohne Paket: Der Text aus dem PDF gilt weiter.
+    await d.texterkennungErneut(mitText);
+    await warte(async () => (await repo.holeDokument(mitText))!.ocr?.stand === 'fertig');
+    assert.equal((await d.volltext(mitText)).text, TEXT);
+    // Paket kommt: Wartende gehen wie neue Dokumente durch Textebene und Paket.
+    await d.speicherePaket(paket('texterkennung', { schnittstellen: ['dms:texterkennung'], dms: '>=0.133.0' }));
+    alsScan(true);
+    assert.equal(await d.texterkennungPaketDa(), 1);
+    await warte(async () => (await repo.holeDokument(scan))!.ocr?.info === infoWartet({ name: 'Texterkennung' }));
+    const ev = (await ereignisse()).filter((e) => e.paketId === 'texterkennung');
+    assert.deepEqual(ev.map((e) => [e.daten.dokument, e.daten.text]), [[scan, false]]);
+    assert.deepEqual((await d.texterkennungPaket())?.sprachen, ['deu', 'eng']);
+    await d.speicherePaket({ ...paket('texterkennung_fra'), abhaengigkeiten: { texterkennung: '>=2.0.0' } });
+    assert.deepEqual((await d.texterkennungPaket())?.sprachen, ['deu', 'eng', 'fra'], 'Sprach-Zusatzpaket');
+  });
+
+  it('Update (#459): vorhandener Volltext – auch von der früheren eingebauten Texterkennung – bleibt; Wartende gehen an das Paket', async () => {
+    const { d, t, repo, m, ereignisse } = await aufbau();
+    // Bestand wie vor dem Update: erkannt von der eingebauten Texterkennung, Textebene, noch wartend.
+    const lege = async (name: string) => (await repo.legeDokumentAn({ id: randomUUID(), mappeId: m.id, registerKey: 'dokumente', name, mime: 'application/pdf', groesse: 10, sha256: createHash('sha256').update(name).digest('hex'), anzeigbar: true, erstellt: new Date().toISOString(), erstelltVon: null })).id;
+    const alt = await lege('alt'), ebene = await lege('ebene'), wartend = await lege('wartend');
+    await repo.ocrSetze(alt, { stand: 'fertig', text: 'Gescannter Brief der Stadtwerke', seiten: 1, info: 'Texterkennung (deu+eng) · Sprache: deu (90 %)', sprache: 'deu' });
+    await repo.ocrSetze(ebene, { stand: 'fertig', text: TEXT, seiten: 1, info: 'Textebene des PDFs' });
+    await (d as unknown as { dateien: { schreibe(sha: string, b: Buffer): Promise<void> } }).dateien.schreibe(createHash('sha256').update('wartend').digest('hex'), pdfMitText(['wartend']));
+    await repo.ocrEinreihen([wartend]);
+    await t.start();
+    await warte(async () => (await repo.holeDokument(wartend))!.ocr?.stand !== 'wartet');
+    assert.equal((await d.volltext(alt)).text, 'Gescannter Brief der Stadtwerke');
+    assert.equal((await repo.holeDokument(alt))!.ocr?.info, 'Texterkennung (deu+eng) · Sprache: deu (90 %)');
+    assert.deepEqual(volltextHerkunft((await repo.holeDokument(alt))!.ocr), { art: 'eingebaut' });
+    assert.equal((await d.volltext(ebene)).text, TEXT);
+    assert.ok((await ereignisse()).some((e) => e.paketId === 'texterkennung' && e.daten.dokument === wartend));
+    assert.deepEqual(await repo.volltextHerkunft(), { pdf: 2, paket: 0, api: 0, eingebaut: 1, sonst: 0, ohneText: 0 });
   });
 
   it('Manifest: dms:texterkennung ist bekannt; wer bekommt Ereignisse ohne Text', () => {
@@ -294,6 +332,10 @@ describe('Volltext-Ablauf (#458) mit PostgreSQL', () => {
       await repo.ereignisDaten(e.id, { ...e.daten, weiter: { seite: 3 }, abschnitt: 1 });
       assert.deepEqual((await repo.faelligeEreignisse(10)).find((x) => x.id === e.id)!.daten.weiter, { seite: 3 });
       assert.equal(await repo.loescheOffeneEreignisse('volltext.fertig', [ohne]), 1);
+      // Herkunft (#459): aus dem Hinweis, wie volltextHerkunft.
+      assert.deepEqual(await repo.volltextHerkunft(), { pdf: 1, paket: 0, api: 0, eingebaut: 0, sonst: 0, ohneText: 0 });
+      await repo.ocrSetze(ohne, { stand: 'fertig', text: TEXT, info: 'übernommen (gleicher Inhalt): Texterkennung durch Paket Texterkennung 2.0.0' });
+      assert.deepEqual(await repo.volltextHerkunft(), { pdf: 1, paket: 1, api: 0, eingebaut: 0, sonst: 0, ohneText: 0 });
       assert.equal((await repo.faelligeEreignisse(10)).filter((x) => x.daten.dokument === ohne && x.art === 'volltext.fertig').length, 0);
     } finally {
       await sql.end();

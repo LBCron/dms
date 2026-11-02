@@ -4,19 +4,20 @@ import { FormateUnpassend } from './FormateUnpassend';
 import { AbsenderBereinigen } from './AbsenderBereinigen';
 import { useCallback, useEffect, useState } from 'react';
 import { OCR_STAENDE, type OcrStandArt } from '../../../shared/src/model';
-import { api, type OcrEinstellungen, type OcrStatus } from '../api';
+import { api, type OcrStatus } from '../api';
 import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
-import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { rueckfrage } from '../rueckfrage';
 import { WARTUNG_GEAENDERT } from '../wartung';
-import { sprachname, sprachvorschlaege, TEXTSPRACHEN } from '../../../shared/src/textsprache';
+import { sprachname, sprachvorschlaege } from '../../../shared/src/textsprache';
+import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import type { Auftrag as HintergrundAuftrag } from '../api';
 import { t as tx } from '../sprache';
 
 /**
- * Werkbank → Texterkennung (#45): Werkzeuge, Einstellungen, Warteschlange.
+ * Werkbank → Texterkennung (#45, #459): Übersicht – welches Paket die Texterkennung übernimmt, woher der Text der
+ * Dokumente kommt, erkannte Sprachen, Warteschlange und Aufträge. Einstellungen der Erkennung stehen beim Paket.
  * Werkbank → Wartungsoperationen: Volltext neu erzeugen (#458), alle Dateien prüfen (#212),
  * Nummern nachträglich vergeben. Sicherung, Wiederherstellung und Export sind eigene Bereiche.
  */
@@ -94,25 +95,13 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Texterkennung</h1>
-        <p className="leise">Volltext für die Suche: Textebene von PDFs und Texterkennung für Scans und Bilder. Neue Dokumente bekommen im Hintergrund einen Volltext: Bei PDFs liest das DMS zuerst die vorhandene Textebene, nur Seiten ohne Text gehen durch die Texterkennung. Ob ein Dokumentenregister einen Volltext erzeugt, stellst du am Mappentyp ein. <Hilfe ort="werkbank.texterkennung" /></p>
+        <p className="leise">{tx('volltext.werkbank.einleitung')} <Hilfe ort="werkbank.texterkennung" /></p>
       </div>
       <PauseHinweis t={t} wartungAn={wartungAn} />
 
       <PaketBlock s={s} />
 
-      <section className="blatt" id="werkzeuge">
-        <h2 className="h3">Werkzeuge</h2>
-        <dl className="eigenschaften">
-          <dt>Texterkennung</dt><dd>{w.tesseract ?? <span className="fehlertext">nicht installiert – nur PDFs mit Textebene bekommen einen Volltext</span>}</dd>
-          <dt>Sprachpakete</dt><dd>{w.sprachen.join(', ') || '–'}{w.ordner && <span className="leise mono klein"> · {w.ordner}</span>}</dd>
-          <dt>Lage und Schrift (osd)</dt><dd>{w.osd ? 'vorhanden – gedrehte Seiten werden richtig gelesen' : <span className="leise">fehlt – gedrehte Seiten werden schlechter erkannt</span>}</dd>
-          <dt>PDF-Text (poppler)</dt><dd>{w.pdftotext && w.pdftoppm ? 'vorhanden' : <span className="fehlertext">fehlt</span>}</dd>
-        </dl>
-        <FehlendeSprachen s={s} />
-        <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => void t.laden(true)}>Erneut prüfen</button></div>
-      </section>
-
-      <Einstellungen key={JSON.stringify(s.einstellungen)} t={t} />
+      <HerkunftBlock s={s} />
 
       <ErkannteSprachen s={s} />
 
@@ -120,7 +109,15 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
         <h2 className="h3">Warteschlange</h2>
         <p><strong>{zahl(s.zaehler.wartet + s.zaehler.laeuft)} offen</strong> · {zahl(s.zaehler.fehler)} mit Fehler{!s.einstellungen.aktiv ? ' · ausgeschaltet' : wartungAn ? ' · pausiert (Wartungsmodus)' : ''}</p>
         <Warteschlange s={s} />
-        <p className="leise klein">Dokumente ohne Volltext aus der Zeit vor der Texterkennung holst du unter „Wartungsoperationen“ nach.</p>
+        <p className="leise klein">{tx('volltext.werkbank.neu')} <Link to="/werkbank/wartung" className="verweis">{tx('volltext.werkbank.neu.link')}</Link></p>
+      </section>
+
+      <section className="blatt" id="werkzeuge">
+        <h2 className="h3">Werkzeuge</h2>
+        <dl className="eigenschaften">
+          <dt>{tx('volltext.werkbank.poppler')}</dt><dd>{w.pdftotext && w.pdftoppm ? tx('volltext.werkbank.poppler.da') : <span className="fehlertext">{tx('volltext.werkbank.poppler.fehlt')}</span>}</dd>
+        </dl>
+        <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => void t.laden(true)}>Erneut prüfen</button></div>
       </section>
 
       <Auftraege t={t} />
@@ -128,68 +125,10 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
   );
 }
 
-function Einstellungen({ t }: { t: TexterkennungZustand }) {
-  const s = t.stand!;
-  const [e, setE] = useState<OcrEinstellungen>(s.einstellungen);
-  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
-  const [sendet, setSendet] = useState(false);
-  const ent = useEntwurf(s.einstellungen, e, { zuruecksetzen: () => { setE(s.einstellungen); setMeldung(undefined); } });
-  const setze = (p: Partial<OcrEinstellungen>) => { setE((x) => ({ ...x, ...p })); setMeldung(undefined); };
-  // Eingestellte, aber nicht installierte Sprachen überspringt die Texterkennung (#366).
-  const fehlt = s.werkzeuge.tesseract && s.werkzeuge.sprachen.length ? e.sprachen.split('+').map((x) => x.trim()).filter((x) => x && !s.werkzeuge.sprachen.includes(x)) : [];
-  async function speichern() {
-    setSendet(true);
-    try { t.setStand(await api.texterkennungSpeichern(e)); setMeldung({ art: 'gut', text: 'Gespeichert – gilt ab sofort.' }); }
-    catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
-  }
-  return (
-    <form className="blatt" id="einstellungen" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-      <h2 className="h3">Einstellungen</h2>
-      <label className="haken"><input type="checkbox" checked={e.aktiv} onChange={(ev) => setze({ aktiv: ev.target.checked })} /><span>Volltext erzeugen<small className="hilfe">Ausgeschaltet bleiben neue Dokumente in der Warteschlange, bis es wieder an ist.</small></span></label>
-      <div className="raster">
-        <label className="eigenschaft"><span>Gleichzeitige Aufträge <small>1–4</small></span>
-          <input type="number" min={1} max={4} value={e.auftraege} onChange={(ev) => setze({ auftraege: Number(ev.target.value) })} /></label>
-        <label className="eigenschaft"><span>Höchstens Seiten <small>je Dokument</small></span>
-          <input type="number" min={1} max={1000} value={e.maxSeiten} onChange={(ev) => setze({ maxSeiten: Number(ev.target.value) })} /></label>
-        <label className="eigenschaft"><span>Größere Dateien auslassen <small>ab MB</small></span>
-          <input type="number" min={1} max={100} value={e.maxMB} onChange={(ev) => setze({ maxMB: Number(ev.target.value) })} /></label>
-      </div>
-      <p className="leise klein">Mehr gleichzeitige Aufträge sind schneller, brauchen aber mehr Prozessor und Speicher – auf einem NAS reicht meist einer. Seiten über der Höchstzahl werden nicht gelesen.</p>
-      <fieldset className="eigenschaft">
-        <legend>Sprache</legend>
-        <label className="haken"><input type="radio" name="ocr-sprache" checked={e.automatisch} onChange={() => setze({ automatisch: true })} /><span>Automatisch<small className="hilfe">Das DMS liest zuerst mit den Sprachen unten, erkennt dann die Sprache des Texts und liest unsichere Seiten in einer anderen Sprache ein zweites Mal – wenn das Sprachpaket installiert ist. Das bessere Ergebnis gilt.</small></span></label>
-        <label className="haken"><input type="radio" name="ocr-sprache" checked={!e.automatisch} onChange={() => setze({ automatisch: false })} /><span>Fest<small className="hilfe">Immer genau die Sprachen unten, kein zweiter Durchlauf.</small></span></label>
-      </fieldset>
-      <div className="raster">
-        <label className="eigenschaft"><span>{e.automatisch ? 'Sprachen des ersten Durchlaufs' : 'Sprachen'} <small>z. B. deu+eng; installiert: {s.werkzeuge.sprachen.join(', ') || '–'}</small></span>
-          <input className="mono" value={e.sprachen} aria-describedby={fehlt.length ? 'ocr-sprachen-fehlt' : undefined} onChange={(ev) => setze({ sprachen: ev.target.value })} /></label>
-      </div>
-      {/* Unter dem Raster, damit die Felder einer Zeile bündig bleiben. */}
-      {fehlt.length > 0 && <p id="ocr-sprachen-fehlt" className="fehlertext klein">Sprachen: {fehlt.join(', ')} {fehlt.length === 1 ? 'ist' : 'sind'} nicht installiert – {fehlt.length === 1 ? 'wird' : 'werden'} übersprungen.</p>}
-      <h3 className="zwischen">Je Dateityp</h3>
-      <div className="trefferliste">
-        <table>
-          <thead><tr><th>Dateityp</th><th>Verfahren</th></tr></thead>
-          <tbody>
-            {Object.entries(s.dateitypen).map(([mime, name]) => (
-              <tr key={mime}>
-                <td>{name} <span className="leise mono klein">{mime}</span></td>
-                <td><select aria-label={`Verfahren für ${name}`} value={e.typen[mime] ?? 'tesseract'} onChange={(ev) => setze({ typen: { ...e.typen, [mime]: ev.target.value as 'tesseract' | 'aus' } })}>
-                  {Object.entries(s.verfahren).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="leise klein">Andere Dateitypen (z. B. Office-Dokumente) bekommen vorerst keinen Volltext. Externe Dienste für die Texterkennung kommen später dazu.</p>
-      {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-      <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={sendet} />
-    </form>
-  );
-}
-
-/** Wer Scans und Bilder erkennt (#458): das Paket (mit Link zu seinen Einstellungen) oder die eingebaute Texterkennung. */
+/**
+ * Wer Scans und Bilder erkennt (#458, #459): das Paket (mit Link zu seinen Einstellungen) – oder der deutliche
+ * Hinweis, dass es fehlt, mit dem direkten Weg zur Installation.
+ */
 function PaketBlock({ s }: { s: OcrStatus }) {
   const p = s.paket;
   const wartet = s.zaehler.paket ?? 0;
@@ -200,45 +139,63 @@ function PaketBlock({ s }: { s: OcrStatus }) {
         <p>{tx('volltext.werkbank.paket.da', { paket: `${p.name} ${p.version}` })}</p>
         {wartet > 0 && <p className="leise">{tx('volltext.werkbank.paket.wartet', { anzahl: wartet })}</p>}
         <div className="knoepfe"><Link to={`/werkbank/pakete/${p.id}`} className="knopf klein">{tx('volltext.werkbank.paket.einstellungen')}</Link></div>
-      </> : <>
-        <p className="leise">{tx('volltext.werkbank.paket.eingebaut')}</p>
-        <div className="knoepfe"><Link to="/werkbank/pakete" className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link></div>
-      </>}
+      </> : (
+        <div className="hinweis warn hinweiszeile" role="status">
+          <p><strong>{tx('volltext.werkbank.paket.fehlt')}</strong> {tx('volltext.werkbank.paket.fehlt.text')}{wartet > 0 ? ` ${tx('volltext.werkbank.paket.ohne', { anzahl: wartet })}` : ''}</p>
+          <Link to={`/werkbank/pakete/${TEXTERKENNUNG_PAKET}`} className="knopf primaer klein">{tx('volltext.werkbank.paket.installieren')}</Link>
+        </div>
+      )}
     </section>
   );
 }
 
-/** Eingestellte Sprachen ohne Sprachpaket (#395) – deutlich, mit Weg zum Nachinstallieren. */
-function FehlendeSprachen({ s }: { s: OcrStatus }) {
-  const fehlen = s.fehlendeSprachen ?? [];
-  if (!fehlen.length) return null;
+/** Woher der Volltext der Dokumente kommt (#459): aus dem PDF, vom Paket, ohne Text, mit Fehler. */
+function HerkunftBlock({ s }: { s: OcrStatus }) {
+  const h = s.herkunft;
+  if (!h) return null;
+  const zeilen: Array<[string, number]> = [
+    [tx('volltext.herkunft.pdf'), h.pdf],
+    [tx('volltext.werkbank.herkunft.paket'), h.paket],
+    ...(h.eingebaut ? [[tx('volltext.werkbank.herkunft.eingebaut'), h.eingebaut] as [string, number]] : []),
+    ...(h.api ? [[tx('volltext.herkunft.api'), h.api] as [string, number]] : []),
+    ...(h.sonst ? [[tx('volltext.werkbank.herkunft.sonst'), h.sonst] as [string, number]] : []),
+    [OCR_STAENDE.paket, s.zaehler.paket ?? 0],
+    [tx('volltext.werkbank.herkunft.ohne'), h.ohneText + s.zaehler.keiner],
+    [OCR_STAENDE.fehler, s.zaehler.fehler],
+  ];
   return (
-    <div className="hinweis schlecht stapel" role="alert">
-      <p><strong>Eingestellt, aber nicht installiert:</strong> {fehlen.map((x) => `${x} (${sprachname(x)})`).join(', ')}. Die Texterkennung liest diese {fehlen.length === 1 ? 'Sprache' : 'Sprachen'} nicht – Umlaute und Sonderzeichen werden falsch erkannt, die Suche findet weniger.</p>
-      <p className="klein">Entweder das Sprachpaket nachinstallieren ({fehlen.map((x, i) => <span key={x}>{i > 0 && ', '}<code>{TEXTSPRACHEN[x]?.paket ?? `tesseract-ocr-data-${x}`}</code></span>)}) oder die Sprache in den Einstellungen streichen. <Hilfe ort="werkbank.texterkennung.sprachpakete" /></p>
-    </div>
+    <section className="blatt" id="herkunft">
+      <h2 className="h3">{tx('volltext.werkbank.herkunft.titel')}</h2>
+      <dl className="eigenschaften">
+        {zeilen.map(([k, n]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{zahl(n)}</dd></div>)}
+      </dl>
+    </section>
   );
 }
 
-/** Statistik der erkannten Sprachen mit Vorschlägen für fehlende Sprachpakete (#395). */
+/** Statistik der erkannten Sprachen mit Vorschlägen für fehlende Sprach-Zusatzpakete (#395, #459). */
 function ErkannteSprachen({ s }: { s: OcrStatus }) {
   const erkannt = s.erkannteSprachen ?? {};
   const liste = Object.entries(erkannt).sort((a, b) => b[1] - a[1]);
-  const vorschlaege = s.werkzeuge.tesseract ? sprachvorschlaege(erkannt, s.werkzeuge.sprachen) : [];
+  const da = s.paket?.sprachen;
+  const vorschlaege = da ? sprachvorschlaege(erkannt, da) : [];
   return (
     <section className="blatt" id="sprachen">
       <h2 className="h3">Erkannte Sprachen</h2>
-      {!liste.length ? <p className="leise">Noch keine – die Sprache steht an jedem Dokument, das nach diesem Update einen Volltext bekommt.</p> : (
+      {!liste.length ? <p className="leise">Noch keine – die Sprache steht an jedem Dokument, sobald es einen Volltext hat.</p> : (
         <table className="tabelle klein">
-          <thead><tr><th>Sprache</th><th className="zahlzelle">Dokumente</th><th>Sprachpaket</th></tr></thead>
+          <thead><tr><th>Sprache</th><th className="zahlzelle">Dokumente</th>{da && <th>{tx('volltext.werkbank.sprachdaten')}</th>}</tr></thead>
           <tbody>{liste.map(([k, n]) => (
             <tr key={k}><td>{sprachname(k)} <span className="leise mono">{k}</span></td><td className="zahlzelle">{zahl(n)}</td>
-              <td>{s.werkzeuge.sprachen.includes(k) ? 'installiert' : <span className="fehlertext">fehlt</span>}</td></tr>
+              {da && <td>{da.includes(k) ? tx('volltext.werkbank.sprachdaten.da') : <span className="fehlertext">{tx('volltext.werkbank.sprachdaten.fehlt')}</span>}</td>}</tr>
           ))}</tbody>
         </table>
       )}
       {vorschlaege.map((v) => (
-        <div key={v.sprache} className="hinweis info stapel"><p>{zahl(v.anzahl)} {v.anzahl === 1 ? 'Dokument' : 'Dokumente'} auf {sprachname(v.sprache)} – Sprachpaket <code>{v.sprache}</code> installieren?</p><p className="leise klein">Paket <code>{v.paket}</code>; danach diese Dokumente unter „Aufträge → fertig“ neu starten. <Hilfe ort="werkbank.texterkennung.sprachpakete" /></p></div>
+        <div key={v.sprache} className="hinweis info hinweiszeile">
+          <p>{tx('volltext.werkbank.sprachdaten.vorschlag', { anzahl: v.anzahl, sprache: sprachname(v.sprache), paket: v.paket })} <Hilfe ort="werkbank.texterkennung.sprachpakete" /></p>
+          <Link to={`/werkbank/pakete/${v.paket}`} className="knopf klein">{tx('volltext.werkbank.sprachdaten.paket')}</Link>
+        </div>
       ))}
     </section>
   );
@@ -302,7 +259,7 @@ function VolltextNeu({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: bo
       {s?.paket ? <p className="leise klein">{tx('volltext.neu.dauer')}</p> : s && (
         <div className="hinweis warn hinweiszeile" role="status">
           <p>{tx('volltext.werkbank.paket.fehlt')}</p>
-          <Link to="/werkbank/pakete" className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link>
+          <Link to={`/werkbank/pakete/${TEXTERKENNUNG_PAKET}`} className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link>
         </div>
       )}
       {s && <PauseHinweis t={t} wartungAn={wartungAn} />}

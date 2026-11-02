@@ -1,3 +1,4 @@
+import { volltextHerkunft } from '../../shared/src/volltext';
 import { randomUUID } from 'node:crypto';
 import { lesbar, werte } from '../../shared/src/rechte';
 import type { Erinnerung } from '../../shared/src/fristen';
@@ -525,6 +526,16 @@ export function speicherRepo(): Repo {
       return [...dokumente.values()].filter((d) => mappen.has(d.mappeId) && !['wartet', 'laeuft'].includes(d.ocr?.stand ?? 'keiner') && (umfang === 'alle' || !(texte.get(d.id) ?? '').trim()))
         .sort((a, b) => a.erstellt.localeCompare(b.erstellt))
         .map((d) => ({ id: d.id, typId: mappen.get(d.mappeId)!.typId, registerKey: d.registerKey }));
+    },
+    async volltextHerkunft() {
+      const z = { pdf: 0, paket: 0, api: 0, eingebaut: 0, sonst: 0, ohneText: 0 };
+      for (const d of dokumente.values()) {
+        if (d.ocr?.stand !== 'fertig') continue;
+        if (!(texte.get(d.id) ?? '').trim()) { z.ohneText++; continue; }
+        const h = volltextHerkunft(d.ocr);
+        z[h?.art === 'pdf' || h?.art === 'paket' || h?.art === 'api' || h?.art === 'eingebaut' ? h.art : 'sonst']++;
+      }
+      return z;
     },
     async ocrSprachen() {
       const z: Record<string, number> = {};

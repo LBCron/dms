@@ -62,8 +62,9 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Texterkennung installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils qpdf >/dev/null
+      # poppler und qpdf wie im Image (#459: ohne Texterkennung – die ist ein Paket).
+      - name: poppler und qpdf installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null
 
       - name: DMS bauen
         run: |
