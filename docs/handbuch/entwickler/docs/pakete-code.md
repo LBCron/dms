@@ -1,6 +1,6 @@
 # Pakete mit Code
 
-Ein Paket kann neben Mappentypen und Ansichten **Code** mitbringen: ein WebAssembly-Modul, das auf Ereignisse im DMS reagiert (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Das DMS führt es im **Paket-Läufer** aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.
+Ein Paket kann neben Mappentypen und Ansichten **Code** mitbringen: ein WebAssembly-Modul, das auf Ereignisse im DMS reagiert (neue Post, hochgeladenes Dokument, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Das DMS führt es im **Paket-Läufer** aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.
 
 Diese Seite beschreibt die Schnittstelle („DMS-Paket-ABI 1“). Wie ein Paket aufgebaut ist und wie es in den Katalog kommt, steht unter [Pakete entwickeln](pakete.md).
 
@@ -18,7 +18,7 @@ dms: ">=0.88.0"
 code:
   sprache: c                 # rust, go, c, assemblyscript oder javascript (nur zur Information)
   quelle: code/
-  ereignisse: [post.angelegt, texterkennung.fertig]
+  ereignisse: [post.angelegt, volltext.fertig]
   rechte:
     lesen: [rechnung, "basis:organisation"]   # Mappen lesen
     schreiben: [rechnung]                      # Mappen anlegen und ändern (schließt Lesen ein)
@@ -40,7 +40,7 @@ code:
   ```
 
 - **Dokumente:** `lesen` erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), `schreiben` zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.
-- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt. Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – und `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort).
+- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt. Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) – und `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung).
 - **Netzwerk/Internet (`netz`):** nur `https://`, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).
 - **Dienst-Adresse als Einstellung** (seit 0.124.0): Statt einer festen Adresse in `netz` kann ein Paket eine Einstellung vom Typ `adresse` verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit `http://` (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, **ohne** `standard` – höchstens mit `beispiel`, das im leeren Feld steht:
 
@@ -61,9 +61,44 @@ code:
 |---|---|---|
 | `post.angelegt` | Neue Post: in der Oberfläche, über die API, aus Eingangsordner und Postfach, beim **Post teilen** je neuer Post | `mappe`, `kanal` |
 | `dokument.hochgeladen` | Jedes neue Dokument: Hochladen (Oberfläche, API, Eingangskanäle) und die neuen Dokumente beim **PDF teilen**, **Zusammenfügen** und **Post teilen**. Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument. | `dokument`, `mappe`, `name`, `mime`, `groesse`, `volltextGeplant` (ob die Texterkennung des DMS noch läuft) |
-| `texterkennung.fertig` | Die Texterkennung des DMS ist mit einem Dokument fertig | `dokument`, `mappe`, `seiten` |
-| `volltext.fertig` | Der Volltext eines Dokuments steht fest – egal woher: eingebaute Texterkennung, Textebene des PDFs, ein Paket, die API (seit 0.120.0). Für Pakete mit `dms:vektoren` schickt das DMS es auch für den Bestand nach (`nachberechnung: true`). | `dokument`, `mappe`, ggf. `nachberechnung` |
+| `volltext.fertig` | **Volltext fertig.** Der Volltext eines Dokuments steht fest – nach dem Schritt des Kerns (Textebene des PDFs, bis 0.133 auch die eingebaute Texterkennung), von einem Paket, über die API oder übernommen (seit 0.120.0). Seit 0.133.0 für **jedes** gelesene Dokument, **auch ohne Text** (`text: false`) – siehe unten. Für Pakete mit `dms:vektoren` schickt das DMS es auch für den Bestand nach (`nachberechnung: true`). | `dokument`, `mappe`, `quelle`, `text`, `mime`, `seiten`, ggf. `seitenOhneText`, `neu`, `paket`, `nachberechnung` |
+| `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit `volltext.fertig` (`quelle: kern`) und mit denselben Daten. Neue Pakete nehmen `volltext.fertig`. | wie `volltext.fertig`, `seiten` |
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
+
+### Volltext fertig (`volltext.fertig`) { #volltext-fertig }
+
+Seit 0.133.0 (#458) liest der Kern bei PDFs nur die **Textebene** (poppler); die Texterkennung von Scans und Bildern übernimmt ein Paket. Deshalb meldet der Kern **jedes** Dokument, das er gelesen hat – auch ohne Text:
+
+| Feld | Bedeutung |
+|---|---|
+| `quelle` | `kern` (Textebene; bis 0.133 auch die eingebaute Texterkennung), `paket` (ein Paket hat den Volltext geschrieben – welches, steht in `paket`), `api` (über `PUT /dokumente/{id}/volltext` von einem Benutzer), `kopie` (übernommen, z. B. beim Verkleinern) |
+| `text` | `true`, wenn es nennenswerten Text gibt (mindestens 20 Zeichen ohne Leerraum), sonst `false` |
+| `mime`, `seiten` | Dateityp und Seitenzahl (soweit bekannt) |
+| `seitenOhneText` | nur bei gemischten PDFs (Textseiten und gescannte Seiten, `text: true`): die Seiten ohne Textebene (ab 1). Eine Texterkennung erkennt nur diese und hängt ihren Text an den vorhandenen an. |
+| `neu` | `true`, wenn jemand den Volltext **ausdrücklich neu** erzeugen lässt (Werkbank → Wartungsoperationen → *Volltext neu erzeugen → Für alle Dokumente*, *Neu erzeugen* am Dokument, *Neu starten* in den Aufträgen). Eine Texterkennung erkennt dann auch Dokumente mit Text neu. |
+
+**Wer es ohne Text bekommt:** Pakete mit der Schnittstelle `dms:texterkennung` und Pakete, deren Manifest mindestens `dms: ">=0.133.0"` verlangt. Ältere Pakete (z. B. für Vektoren) bekommen es weiter nur mit Text. Ein Paket bekommt nie das Ereignis zu einem Volltext, den es selbst geschrieben hat. Nicht gemeldet wird ein Dokument, wenn der Kern es nicht lesen konnte (Fehler, ausgelassen, z. B. Passwort oder Dateityp) oder ein Administrator abgebrochen hat.
+
+**Wiederholung:** wie jedes Ereignis (1, 5, 30, 120, 360 Minuten). Bei einem Paket mit `dms:texterkennung` steht das Dokument so lange auf „wartet auf Texterkennung“; gibt der Läufer auf, steht es auf *Fehler* mit der Meldung des Pakets und lässt sich in der Werkbank neu starten.
+
+### Texterkennung übernehmen (`dms:texterkennung`) { #texterkennung }
+
+Ein Paket mit `code.rechte.schnittstellen: [dms:texterkennung]` (und `dokumente: schreiben`) ist **die** Texterkennung des DMS. Dann gilt:
+
+1. Der Kern liest die Textebene. Hat ein Dokument keinen Text (Scan, Bild), gescannte Seiten neben Textseiten (`seitenOhneText`) – oder kommt `neu` –, steht es auf **wartet auf Texterkennung (Paket *Name*)** (Stand `paket`); vorhandener Text bleibt so lange für die Suche stehen.
+2. Das Paket bekommt `volltext.fertig` und entscheidet selbst: erkennen und `PUT /dokumente/{id}/volltext` – oder nichts tun.
+3. Schreibt es den Volltext, steht am Dokument „Texterkennung durch Paket *Name Version*“. Endet der Aufruf ohne Volltext, wartet das Dokument nicht länger; das `ergebnis` des Pakets (z. B. „Mappentyp nicht gewählt“) steht im Hinweis am Dokument.
+4. Seiten holt es mit `GET /dokumente/{id}/seiten/{nr}/scan` – seit 0.133.0 auch für **JPEG und PNG** (eine Seite, in Originalgröße; `dpi` zählt dort nicht). TIFF und andere Bildformate liefert der Kern nicht.
+
+Sind mehrere solche Pakete installiert, gilt das erste nach Id.
+
+### Zusatzdaten aus anderen Paketen { #zusatzdaten }
+
+Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu.
+
+### Fortsetzung bei langen Aufgaben { #fortsetzung }
+
+Ein Aufruf darf höchstens so lange laufen wie die Zeitgrenze des Läufers (Standard 120 s). Für längere Arbeit – etwa ein Scan mit 60 Seiten – antwortet das Paket mit `ergebnis` = `{"weiter": { … }}` und Code `0`: Der Läufer ruft es **gleich wieder** mit demselben Ereignis auf, `daten` enthält dann zusätzlich `weiter` (genau das Objekt von eben) und `abschnitt` (1, 2, …). Der Stand wird im Ausgangskorb gespeichert; scheitert eine Fortsetzung, setzt die Wiederholung dort an. Höchstens 500 Fortsetzungen je Ereignis und 4 MB je `weiter`. Steht in `weiter` ein kurzer Text `fortschritt` (z. B. „Seite 20 von 64“), zeigt das DMS ihn am wartenden Dokument.
 
 Das Ereignis entsteht in **derselben Datenbank-Transaktion** wie die Änderung: Entweder ist beides gespeichert oder nichts. Fällt das DMS genau dazwischen aus, fehlt also kein Ereignis.
 
@@ -289,7 +324,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 
 ## Nützliche Endpunkte der API v1
 
-- `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi).
+- `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße).
 - `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt die Texterkennung des DMS ihn nicht mehr. Ab DMS 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
 - `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu.
 - `POST /dokumente/{id}/seiten`, `POST /dokumente/zusammenfuegen`, `PUT /dokumente/{id}/archivnummer` – Seiten teilen und zusammenfügen, Archivnummer setzen.

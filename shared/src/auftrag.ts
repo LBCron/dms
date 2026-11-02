@@ -36,6 +36,9 @@ export interface Auftrag {
   beendet?: string;
   ergebnis?: unknown;
   fehler?: string;
+  /** Lässt sich abbrechen (#458); `abgebrochen`: jemand hat es getan, die Arbeit hört nach dem laufenden Schritt auf. */
+  abbrechbar?: boolean;
+  abgebrochen?: boolean;
 }
 
 /** Rückmeldung der Arbeit: Stand einer Phase (ohne `phase`: die laufende bzw. erste). */

@@ -6,6 +6,8 @@ import { useMappenZiel } from './NeuePost';
 import { useEffect, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
 import { HERKUNFT, MAX_DATEIGROESSE, OCR_STAENDE, type Mappentyp, type Mappe, type Dokument, type DokumentVersion, type Herkunft, type OcrStand, type Register } from '../../../shared/src/model';
 import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
+import { herkunftText } from '../volltext';
+import { t } from '../sprache';
 import { api, dokumentUrl, versionUrl, type Fundstelle } from '../api';
 import { useDaten } from '../daten';
 import { Person } from '../Person';
@@ -148,7 +150,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const [ocr, setOcr] = useState<Record<string, OcrStand | undefined>>({});
   const [text, setText] = useState<{ id: string; text: string | null } | null>(null);
   const standVon = (x: Dokument) => ocr[x.id] ?? x.ocr;
-  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; return s === 'wartet' || s === 'laeuft'; });
+  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; return s === 'wartet' || s === 'laeuft' || s === 'paket'; });
   useEffect(() => {
     if (!offen || !dokumente.length) return;
     const t = setTimeout(() => {
@@ -324,7 +326,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                               {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
-                        {!weg && <OcrAnzeige s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
+                        {!weg && <OcrAnzeige s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
@@ -464,18 +466,23 @@ function DokTeilen({ d }: { d: Dokument }) {
   );
 }
 
-/** Stand der Texterkennung an einem Dokument (#45). */
-function OcrAnzeige({ s, sprache: feld, erneut, text, textOffen }: { s?: OcrStand; sprache?: string | null; erneut(): void; text(): void; textOffen: boolean }) {
+/** Stand der Texterkennung an einem Dokument (#45) mit Herkunft des Texts (#458). */
+function OcrAnzeige({ s, sprache: feld, erneut, neu, text, textOffen }: { s?: OcrStand; sprache?: string | null; erneut(): void; /** „Neu erzeugen“ (#458), nur mit Recht Bearbeiten. */ neu?: () => void; text(): void; textOffen: boolean }) {
   if (!s || s.stand === 'keiner') return null;
   // Sprache des Volltexts (#400) als eigenes Feld; bei älteren Dokumenten aus dem Hinweis der Texterkennung (#395).
   const sprache = s.stand !== 'fertig' ? null : feld ? { sprache: feld } : spracheAusInfo(s.info);
   const klasse = s.stand === 'fertig' ? 'gut' : s.stand === 'fehler' ? 'schlecht' : s.stand === 'ausgelassen' ? '' : 'warn';
+  // Woher der Text kommt (#458): aus dem PDF, vom Paket – oder es wartet auf das Paket (mit Fortschritt des Pakets).
+  const herkunft = herkunftText(s);
+  const fortschritt = s.stand === 'paket' ? /\(Paket .+?\) – (.+)$/.exec(s.info ?? '')?.[1] : undefined;
   return (
     <span className="ocrstand klein">
       <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {OCR_STAENDE[s.stand]}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachname(sprache.sprache)}` : ''}</span>
+      {herkunft && <span className="leise">{herkunft}{fortschritt ? ` · ${fortschritt}` : ''}</span>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && s.info && <span className="leise">{s.info}</span>}
       {s.stand === 'fertig' && <button type="button" className="textknopf" onClick={text}>{textOffen ? 'Text ausblenden' : 'Text anzeigen'}</button>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && <button type="button" className="textknopf" onClick={erneut}>Erneut versuchen</button>}
+      {neu && (s.stand === 'fertig' || s.stand === 'paket') && <button type="button" className="textknopf" title={t('volltext.dokument.neu.titel')} onClick={neu}>{t('volltext.dokument.neu')}</button>}
     </span>
   );
 }

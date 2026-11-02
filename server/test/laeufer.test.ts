@@ -10,7 +10,7 @@ import { speicherEinstellungen } from '../src/einstellungen';
 import { Konten } from '../src/konten';
 import { speicherKontoRepo, type KontoRepo } from '../src/konto-repo';
 import type { Repo } from '../src/repo';
-import { Paketlaeufer, type ApiAufruf } from '../src/laeufer/verwaltung';
+import { liesWeiter, Paketlaeufer, type ApiAufruf } from '../src/laeufer/verwaltung';
 import { ladeArgumente, pruefeModul } from '../src/laeufer/modul';
 import { netzErlaubt } from '../src/laeufer/prozess';
 import { liesPaket, liesZip, Paketverwaltung } from '../src/pakete';
@@ -56,6 +56,12 @@ const ECHO = modul({
   daten: [[64, anfrage], [512, 'Aktion ok']],
 });
 const SCHLEIFE = modul({ ereignis: [0x03, 0x40, 0x0c, 0x00, 0x0b, 0x41, 0] });
+/** Schreibt die Eingabe ins Protokoll und will immer weiter (#458): Ergebnis {"weiter":{"fortschritt":"Seite 1"}}. */
+const WEITER_TEXT = '{"weiter":{"fortschritt":"Seite 1"}}';
+const WEITER = modul({
+  ereignis: [0x41, 1, 0x20, 0, 0x20, 1, 0x10, LOG, 0x1a, 0x41, ...s(64), 0x41, ...s(WEITER_TEXT.length), 0x10, ERGEBNIS, 0x1a, 0x41, 0],
+  daten: [[64, WEITER_TEXT]],
+});
 const GIERIG = modul({ ereignis: [0x41, ...s(20000), 0x40, 0x00, 0x41, ...s(-1), 0x46, 0x04, 0x40, 0x00, 0x0b, 0x41, 0] });
 
 /** PDF mit leeren Seiten (für das Teilen von Post). */
@@ -218,7 +224,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
   const laeufer: Paketlaeufer[] = [];
   after(async () => { for (const l of laeufer) await l.stop(); });
 
-  async function aufbau(grenzen = {}, db?: { repo: Repo; konto: KontoRepo }) {
+  async function aufbau(grenzen = {}, db?: { repo: Repo; konto: KontoRepo }, extra: { weiterMax?: number } = {}) {
     const d = new Dienst(db?.repo ?? speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     const konten = new Konten(db?.konto ?? speicherKontoRepo(), () => null, () => 'http://localhost', d.benutzerspiegel());
     const schluessel = new ApiSchluesselDienst(speicherApiSchluesselRepo());
@@ -238,7 +244,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
       } catch (e) { return { status: (e as { status?: number }).status ?? 500, kopf: {}, body: Buffer.from((e as Error).message) }; }
     };
     const speicher = new Map<string, Record<string, string>>();
-    const l = new Paketlaeufer({ dienst: d, konten, schluessel, api, einstellungen: async () => ({ a: 1 }), speicher: { lies: async (p) => speicher.get(p) ?? {}, schreibe: async (p, w) => { speicher.set(p, w); } }, grenzen: { sekunden: 3, speicherMB: 16, ...grenzen }, abrufMs: 100 });
+    const l = new Paketlaeufer({ dienst: d, konten, schluessel, api, einstellungen: async () => ({ a: 1 }), speicher: { lies: async (p) => speicher.get(p) ?? {}, schreibe: async (p, w) => { speicher.set(p, w); } }, grenzen: { sekunden: 3, speicherMB: 16, ...grenzen }, abrufMs: 100, ...extra });
     laeufer.push(l);
     return { d, konten, l, schluessel };
   }
@@ -267,6 +273,41 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     assert.equal(echo.letzte[0].ok, true, JSON.stringify(echo.letzte));
     assert.match(echo.protokoll[0].text, /"art":"dokument.hochgeladen".*"dokument":"d1".*"einstellungen":\{"a":1\}/);
     assert.equal(await l.aktion('echo', 'test', {}), 'Aktion ok');
+  });
+
+  it('Fortsetzung (#458): {"weiter": …} ruft das Paket gleich wieder auf, mit weiter und abschnitt; höchstens weiterMax-mal', async () => {
+    const { d, l } = await aufbau({}, undefined, { weiterMax: 3 });
+    await installiere(d, 'weiter', WEITER);
+    await l.start();
+    await warte(async () => (await l.uebersicht()).laeuft);
+    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
+    await warte(async () => (await d.ereignisStand()).weiter?.zugestellt === 1);
+    const p = (await l.uebersicht()).pakete[0];
+    assert.equal(p.aufrufe, 4, 'erster Aufruf und drei Fortsetzungen');
+    assert.ok(p.protokoll.some((x) => /nach 3 Fortsetzungen beendet/.test(x.text)), JSON.stringify(p.protokoll));
+    // Die Fortsetzung bekam weiter und abschnitt mit (das Modul schreibt seine Eingabe ins Protokoll).
+    assert.ok(p.protokoll.some((x) => /"abschnitt":2/.test(x.text) && /"weiter":\{"fortschritt":"Seite 1"\}/.test(x.text)), JSON.stringify(p.protokoll.map((x) => x.text.slice(0, 200))));
+    assert.deepEqual(liesWeiter('{"weiter":{"seite":3}}'), { seite: 3 });
+    assert.equal(liesWeiter('fertig'), null);
+    assert.equal(liesWeiter('{"weiter":[1]}'), null);
+    assert.equal(liesWeiter('{"weiter":'), null);
+  });
+
+  it('Zusatzdaten (#458): Daten von Paketen, die von einem Paket abhängen, liest es unter „<paket>/<datei>“', async () => {
+    const { d, l } = await aufbau();
+    await installiere(d, 'basis', ECHO);
+    const z = liesPaket(new Map([...archiv('zusatz', ECHO), ['code/daten/fra.traineddata', Buffer.from('FRA')]]));
+    await d.speicherePaketCode('zusatz', z.code!.dateien);
+    const datensatz = (await d.listePakete()).find((p) => p.id === 'basis')!;
+    await d.speicherePaket({ ...datensatz, id: 'zusatz', name: 'Zusatz', abhaengigkeiten: { basis: '>=1.0.0' }, laeufer: { ...datensatz.laeufer!, daten: ['daten/fra.traineddata'] } });
+    const gesendet: Array<{ art: string; pakete?: Array<{ id: string; daten: Array<{ name: string }> }> }> = [];
+    const x = l as unknown as { sende(m: unknown): void; pakete: unknown; sendePakete(): Promise<void> };
+    x.sende = (m) => { gesendet.push(m as never); };
+    x.pakete = await d.listePakete();
+    await x.sendePakete();
+    const basis = gesendet[0].pakete!.find((p) => p.id === 'basis')!;
+    assert.deepEqual(basis.daten.map((x) => x.name), ['zusatz/fra.traineddata']);
+    assert.deepEqual(gesendet[0].pakete!.find((p) => p.id === 'zusatz')!.daten.map((x) => x.name), ['fra.traineddata']);
   });
 
   it('Rechte aus dem Manifest: nur bestätigte Typen, Dokumente nur mit Recht, nie Administrator', async () => {
@@ -521,7 +562,7 @@ describe('Vektoren (#442): Recht dms:vektoren im Manifest', () => {
     const p = punkte.find((x) => x.text.includes('dms:vektoren'))!;
     assert.equal(p.text, 'Vektoren zu Dokumenten speichern und ähnliche Dokumente finden (dms:vektoren)');
     assert.ok(HILFE[p.hilfe], 'Handbuch-Stelle');
-    assert.ok(punkte.some((x) => x.unter?.some((u) => u.text === 'Der Volltext eines Dokuments ist da' && HILFE[u.hilfe])));
+    assert.ok(punkte.some((x) => x.unter?.some((u) => u.text === 'Der Volltext eines Dokuments ist fertig (auch ohne Text)' && HILFE[u.hilfe])));
     const ohne = liesCode({ sprache: 'c', ereignisse: ['volltext.fertig'], rechte: { lesen: ['*'], dokumente: 'lesen' } }).code!;
     assert.equal(gleicheRechte(c.code!, ohne), false, 'neues Recht → beim Update neu bestätigen');
     assert.equal(gleicheRechte(ohne, liesCode({ sprache: 'c', ereignisse: ['volltext.fertig'], rechte: { lesen: ['*'], dokumente: 'lesen' } }).code!), true);
