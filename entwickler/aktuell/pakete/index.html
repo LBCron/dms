@@ -1229,7 +1229,7 @@ python3<span class="w"> </span>werkzeuge/katalog.py<span class="w"> </span>--pro
 <li><strong>Verfahren:</strong> Ed25519 über die <strong>exakten Bytes</strong> von <code>katalog.json</code>. Das DMS prüft mit <code>crypto.verify</code> aus Node, ohne weitere Abhängigkeit (<code>server/src/katalogsignatur.ts</code>).</li>
 <li>
 <p><strong><code>katalog.sig</code></strong> liegt neben <code>katalog.json</code>, getrennt, damit ältere DMS-Versionen den Katalog unverändert lesen:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"verfahren"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ed25519"</span><span class="p">,</span><span class="w"> </span><span class="nt">"schluessel"</span><span class="p">:</span><span class="w"> </span><span class="s2">"da31d65f4a429768"</span><span class="p">,</span><span class="w"> </span><span class="nt">"signatur"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;64 Bytes, Base64&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"erstellt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02T10:00:00Z"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"verfahren"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ed25519"</span><span class="p">,</span><span class="w"> </span><span class="nt">"schluessel"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6d868387314e64df"</span><span class="p">,</span><span class="w"> </span><span class="nt">"signatur"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;64 Bytes, Base64&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"erstellt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02T10:00:00Z"</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 </li>
 <li>
@@ -1241,13 +1241,35 @@ python3<span class="w"> </span>werkzeuge/katalog.py<span class="w"> </span>--pro
 <li><strong>Weiterleitungen:</strong> Beim Holen von Katalog, Signatur, Schlüssel und Archiven folgt das DMS Weiterleitungen nur auf <code>https://</code>-Adressen (höchstens fünf).</li>
 </ul>
 <h3 id="projektschluessel-austauschen">Projektschlüssel austauschen<a class="headerlink" href="#projektschluessel-austauschen" title="Permanent link">&para;</a></h3>
-<p>Die öffentlichen Schlüssel stehen an <strong>einer</strong> Stelle: <code>server/src/projektschluessel.ts</code>. Bis der Maintainer seine Schlüssel veröffentlicht hat, stehen dort <strong>Testschlüssel</strong> (<code>test: true</code>); ihre privaten Gegenstücke liegen offen in <code>server/test/katalogschluessel.ts</code>, damit die Tests Kataloge signieren können. Ein DMS mit Testschlüsseln zeigt in der Vorschau „prüft noch mit Testschlüsseln“.</p>
-<p>So kommen die echten Schlüssel hinein:</p>
+<p>Die öffentlichen Schlüssel stehen an <strong>einer</strong> Stelle: <code>server/src/projektschluessel.ts</code>. Dort stehen die echten Schlüssel des Maintainers (<code>signier.pub</code> und <code>reserve.pub</code> aus motom001/dms-registry#74, <code>test: false</code>); ihre Fingerabdrücke stehen in <code>SECURITY.md</code>. DMS 0.141.0 bis 0.144.1 hatten an dieser Stelle noch Testschlüssel.</p>
+<table>
+<thead>
+<tr>
+<th>Schlüssel</th>
+<th>Kennung</th>
+<th>Fingerabdruck</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signierschlüssel</td>
+<td><code>6d868387314e64df</code></td>
+<td><code>6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728</code></td>
+</tr>
+<tr>
+<td>Reserveschlüssel</td>
+<td><code>4543c81b5ccf522d</code></td>
+<td><code>4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954</code></td>
+</tr>
+</tbody>
+</table>
+<p>Der Fingerabdruck ist SHA-256 über die <strong>32 Bytes</strong> des Schlüssels, nicht über die ganze DER-Datei (die 44 Bytes, die <code>openssl pkey -pubin -outform der</code> ausgibt). Wer <code>sha256sum</code> über die DER-Datei rechnet, bekommt einen anderen Wert.</p>
+<p><strong>Tests</strong> signieren nie mit den eingebauten Schlüsseln. Sie geben eigene Testschlüssel mit: <code>TEST_PROJEKT</code> aus <code>server/test/katalogschluessel.ts</code> als Option <code>projektSchluessel</code> an die <code>Paketverwaltung</code> bzw. an <code>projektSchluessel(TEST_PROJEKT)</code>. Diese Option setzt nur Code; im Betrieb gibt es dafür <strong>keine</strong> Umgebungsvariable und keine Einstellung – sonst ließe sich ein fremder Schlüssel als „DMS-Projekt“ einschmuggeln. Mit Testschlüsseln zeigt die Vorschau „prüft noch mit Testschlüsseln“ (<code>test: true</code>). Der Test „Projektschlüssel“ prüft, dass die eingebauten Schlüssel keine Testschlüssel sind, dass ihre Fingerabdrücke genau so in <code>SECURITY.md</code> und <code>SECURITY.en.md</code> stehen und dass ein mit Testschlüsseln signierter Katalog im Betrieb als ungültig gilt.</p>
+<p>So werden die Schlüssel ausgetauscht (neues Paar, z. B. nach Verlust des Signierschlüssels):</p>
 <ol>
-<li>Der Maintainer erzeugt beide Schlüsselpaare auf seinem eigenen Rechner (Anleitung in der README der Registry, Abschnitt „Katalog signieren“) und veröffentlicht <code>signier.pub</code> und <code>reserve.pub</code>.</li>
-<li>In <code>server/src/projektschluessel.ts</code> die beiden PEM-Texte ersetzen und <code>test</code> auf <code>false</code> setzen.</li>
-<li>Fingerabdrücke ausrechnen (<code>python3 werkzeuge/signieren.py fingerabdruck signier.pub</code> in der Registry) und in <code>SECURITY.md</code> und <code>SECURITY.en.md</code> eintragen; ebenso in README und REGELN der Registry.</li>
-<li>Tests brauchen nichts weiter: Sie geben ihre eigenen Testschlüssel mit (<code>TEST_PROJEKT</code> in <code>server/test/katalogschluessel.ts</code>). Der Test „Projektschlüssel“ prüft nur, dass zwei verschiedene Ed25519-Schlüssel drinstehen und dass <code>test</code> genau bei den Testschlüsseln gesetzt ist.</li>
+<li>Der Maintainer erzeugt das Schlüsselpaar auf seinem eigenen Rechner (Anleitung in der README der Registry, Abschnitt „Katalog signieren“) und veröffentlicht den öffentlichen Schlüssel.</li>
+<li>In <code>server/src/projektschluessel.ts</code> den PEM-Text ersetzen (<code>test</code> bleibt <code>false</code>).</li>
+<li>Fingerabdrücke ausrechnen (<code>python3 werkzeuge/signieren.py fingerabdruck signier.pub</code> in der Registry) und in <code>SECURITY.md</code>, <code>SECURITY.en.md</code>, im Test „Projektschlüssel“ und in der Tabelle oben eintragen; in der Registry den öffentlichen Schlüssel unter <code>schluessel/</code> ablegen und die Fingerabdrücke in <code>README.md</code> und <code>README.en.md</code> eintragen.</li>
 </ol>
 <p>Fällt der Signierschlüssel aus (verloren oder bekannt geworden), signiert die Registry mit dem Reserveschlüssel weiter; das DMS nimmt das ohne Update an. Danach kommt ein neues Paar (neuer Reserveschlüssel) mit einem DMS-Release.</p>
 <h2 id="eigener-katalog-mit-eigenem-schluessel">Eigener Katalog mit eigenem Schlüssel<a class="headerlink" href="#eigener-katalog-mit-eigenem-schluessel" title="Permanent link">&para;</a></h2>
