@@ -46,7 +46,49 @@ export type ArbeiterStand =
     groesse: number; arbeiter: number; beschaeftigt: number; wartend: number;
     erledigt: number; fehler: number; zeitueberschreitungen: number; abgewiesen: number;
     mittlereDauerMs: number | null; mittleresWartenMs: number | null; laengstesWartenMs: number; zeitMs: number; warteschlangeMax: number;
+    zuletztAbgewiesen?: string | null;
   };
+
+/**
+ * Einstellungen für viele gleichzeitige Anfragen (#544): nur per Umgebungsvariable, im Systemzustand zum Ansehen –
+ * mit ihrem Wert und ob er aus der Umgebung oder der Vorgabe stammt.
+ */
+export const VARIABLE = { arbeiter: 'DMS_ARBEITER', verbindungen: 'DMS_DB_VERBINDUNGEN', anfragen: 'DMS_MAX_ANFRAGEN' } as const;
+export type Einstellbar = keyof typeof VARIABLE;
+export interface Grenzwert { wert: number; quelle: 'vorgabe' | 'umgebung'; variable: (typeof VARIABLE)[Einstellbar]; min: number; max: number }
+export type Grenzwerte = Partial<Record<Einstellbar, Grenzwert>>;
+
+/**
+ * Engpässe (#544), je mit der Variable, die man ändern müsste:
+ * - schleife: Wartezeit des Servers dauerhaft hoch (siehe SCHLEIFE_GRENZE_MS) → DMS_ARBEITER (Arbeit aus dem Hauptfaden)
+ * - verbindungen: Abfragen warten in der letzten Minute üblich länger als VERBINDUNG_WARTEN_MS → DMS_DB_VERBINDUNGEN
+ * - arbeiter: Warteschlange der Arbeiter war voll (Aufträge abgewiesen) → DMS_ARBEITER
+ * - ueberlast: Überlastschutz hat abgewiesen (503) → DMS_MAX_ANFRAGEN
+ * Abgewiesenes zählt ENGPASS_MINUTEN lang.
+ */
+export type Engpass = 'schleife' | 'verbindungen' | 'arbeiter' | 'ueberlast';
+export const ENGPASS_VARIABLE: Record<Engpass, (typeof VARIABLE)[Einstellbar]> = {
+  schleife: VARIABLE.arbeiter, verbindungen: VARIABLE.verbindungen, arbeiter: VARIABLE.arbeiter, ueberlast: VARIABLE.anfragen,
+};
+export const VERBINDUNG_WARTEN_MS = 50;
+export const ENGPASS_MINUTEN = 15;
+
+export function engpaesseAus(o: {
+  schleife: boolean;
+  verbindungen?: { median: number | null; messungen: number } | null;
+  arbeiterAbgewiesen?: string | null;
+  ueberlastAbgewiesen?: string | null;
+  jetzt?: number;
+}): Engpass[] {
+  const jetzt = o.jetzt ?? Date.now();
+  const kuerzlich = (iso?: string | null) => !!iso && jetzt - Date.parse(iso) <= ENGPASS_MINUTEN * 60_000;
+  const e: Engpass[] = [];
+  if (o.schleife) e.push('schleife');
+  if (o.verbindungen && o.verbindungen.messungen >= 6 && o.verbindungen.median !== null && o.verbindungen.median > VERBINDUNG_WARTEN_MS) e.push('verbindungen');
+  if (kuerzlich(o.arbeiterAbgewiesen)) e.push('arbeiter');
+  if (kuerzlich(o.ueberlastAbgewiesen)) e.push('ueberlast');
+  return e;
+}
 
 /** Warnung, wenn ein Wert so lange über der Schwelle liegt (#409: „RAM > 90 % länger als 5 Minuten“). */
 export const SCHWELLE_PROZENT = 90;

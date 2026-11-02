@@ -65,7 +65,59 @@ describe('Überlastschutz (#544)', () => {
       loslassen();
       assert.equal((await a).status, 200);
       for (let i = 0; i < 50 && schutz.laufend > 0; i++) await new Promise((r) => setTimeout(r, 20));
-      assert.deepEqual({ ...schutz.stand(), hoechstens: undefined }, { max: 2, quelle: 'vorgabe', laufend: 0, hoechstens: undefined, abgewiesen: 1 });
+      assert.deepEqual({ ...schutz.stand(), hoechstens: undefined, zuletztAbgewiesen: undefined }, { max: 2, quelle: 'vorgabe', laufend: 0, hoechstens: undefined, abgewiesen: 1, zuletztAbgewiesen: undefined });
     } finally { loslassen(); await app.close(); }
+  });
+});
+
+describe('Systemzustand: Werte und Engpässe nennen die Variable (#544)', () => {
+  it('Engpässe aus Wartezeit, Verbindungen, Arbeiter-Warteschlange und Überlastschutz', async () => {
+    const { engpaesseAus, ENGPASS_VARIABLE, ENGPASS_MINUTEN } = await import('../../shared/src/systemlast');
+    const jetzt = Date.parse('2026-11-02T12:00:00Z');
+    assert.deepEqual(engpaesseAus({ schleife: false, jetzt }), []);
+    assert.deepEqual(engpaesseAus({ schleife: true, jetzt }), ['schleife']);
+    // Verbindungen: erst ab 6 Messungen und üblich über 50 ms.
+    assert.deepEqual(engpaesseAus({ schleife: false, verbindungen: { median: 80, messungen: 3 }, jetzt }), []);
+    assert.deepEqual(engpaesseAus({ schleife: false, verbindungen: { median: 40, messungen: 12 }, jetzt }), []);
+    assert.deepEqual(engpaesseAus({ schleife: false, verbindungen: { median: 80, messungen: 12 }, jetzt }), ['verbindungen']);
+    // Abgewiesenes zählt ENGPASS_MINUTEN lang.
+    const vor = (min: number) => new Date(jetzt - min * 60_000).toISOString();
+    assert.deepEqual(engpaesseAus({ schleife: false, arbeiterAbgewiesen: vor(2), ueberlastAbgewiesen: vor(ENGPASS_MINUTEN + 1), jetzt }), ['arbeiter']);
+    assert.deepEqual(engpaesseAus({ schleife: false, ueberlastAbgewiesen: vor(1), jetzt }), ['ueberlast']);
+    assert.deepEqual(ENGPASS_VARIABLE, { schleife: 'DMS_ARBEITER', verbindungen: 'DMS_DB_VERBINDUNGEN', arbeiter: 'DMS_ARBEITER', ueberlast: 'DMS_MAX_ANFRAGEN' });
+  });
+
+  it('Überlastschutz merkt sich, wann er zuletzt abgewiesen hat; Herkunft der Grenze im Stand', () => {
+    let uhr = Date.parse('2026-11-02T12:00:00Z');
+    const u = new Ueberlastschutz(1, 'umgebung', () => uhr);
+    assert.equal(u.stand().zuletztAbgewiesen, null);
+    assert.equal(u.herein(), true);
+    uhr += 1000;
+    assert.equal(u.herein(), false);
+    assert.deepEqual({ ...u.stand() }, { max: 1, quelle: 'umgebung', laufend: 1, hoechstens: 1, abgewiesen: 1, zuletztAbgewiesen: '2026-11-02T12:00:01.000Z' });
+  });
+
+  it('Werte für den Systemzustand über GET /api/werkbank/systemlast', async () => {
+    const { speicherRepo } = await import('../src/repo-speicher');
+    const { speicherDateien } = await import('../src/dateispeicher');
+    const { Dienst } = await import('../src/dienst');
+    const { Konten } = await import('../src/konten');
+    const { speicherKontoRepo } = await import('../src/konto-repo');
+    const { Systemlast } = await import('../src/systemlast');
+    const { baueApp } = await import('../src/http');
+    const dienst = new Dienst(speicherRepo(), speicherDateien());
+    const konten = new Konten(speicherKontoRepo(), null, 'http://nas', dienst.benutzerspiegel());
+    const ueberlast = new Ueberlastschutz(300, 'umgebung');
+    const app = await baueApp(dienst, konten, { systemlast: new Systemlast({ lies: () => null }), ueberlast });
+    try {
+      const e = await app.inject({ method: 'POST', url: '/api/konto/einrichten', headers: { 'x-dms': '1' }, payload: { email: 'lena@example.org', name: 'Lena', passwort: 'ein-langes-passwort' } });
+      const cookie = String(e.headers['set-cookie']).split(';')[0];
+      const r = await app.inject({ method: 'GET', url: '/api/werkbank/systemlast', headers: { cookie, 'x-dms': '1' } });
+      assert.equal(r.statusCode, 200, r.body);
+      const s = r.json();
+      assert.deepEqual(s.grenzen.anfragen, { wert: 300, quelle: 'umgebung', variable: 'DMS_MAX_ANFRAGEN', min: 20, max: 10000 });
+      assert.equal(s.grenzen.arbeiter.variable, 'DMS_ARBEITER');
+      assert.deepEqual(s.engpaesse, []);
+    } finally { await app.close(); }
   });
 });

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { Messpunkt } from '../../../shared/src/systemlast';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { ENGPASS_MINUTEN, ENGPASS_VARIABLE, VERBINDUNG_WARTEN_MS, type Einstellbar, type Messpunkt } from '../../../shared/src/systemlast';
 import { api, type ErweiterungStand, type Schleifenverzoegerung, type SystemlastAntwort } from '../api';
 import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
@@ -117,6 +117,48 @@ export function ErweiterungenHinweis({ liste }: { liste?: ErweiterungStand[] | n
   );
 }
 
+/** Arbeiter, Verbindungen, Überlastgrenze (#544): Wert und Herkunft, nur zum Ansehen. */
+function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
+  const zeilen = (['arbeiter', 'verbindungen', 'anfragen'] as Einstellbar[]).filter((k) => g[k]);
+  if (!zeilen.length) return null;
+  return (
+    <div className="az-grenzen" id="grenzen">
+      <h3 className="az-titel">{t('systemzustand.grenzen.titel')} <Hilfe ort="werkbank.grenzen" /></h3>
+      <dl className="eigenschaften klein">
+        {zeilen.map((k) => {
+          const w = g[k]!;
+          return (<Fragment key={k}>
+            <dt>{t.frei(`systemzustand.grenzen.${k}`)}</dt>
+            <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString('de-DE') })}
+              {' '}<span className="leise">· <span className="mono">{t('systemzustand.grenzen.bereich', { variable: w.variable, min: w.min.toLocaleString('de-DE'), max: w.max.toLocaleString('de-DE') })}</span></span></dd>
+          </Fragment>);
+        })}
+      </dl>
+      <p className="leise klein">{t('systemzustand.grenzen.text')}</p>
+    </div>
+  );
+}
+
+/** Engpässe (#544): was knapp war und welche Variable man ändern müsste. */
+function Engpaesse({ s }: { s: SystemlastAntwort }) {
+  const e = s.engpaesse ?? [];
+  if (!e.length) return null;
+  const wert = (k: Einstellbar) => (s.grenzen?.[k]?.wert ?? 0).toLocaleString('de-DE');
+  const text = (x: (typeof e)[number]) => {
+    const variable = ENGPASS_VARIABLE[x];
+    if (x === 'verbindungen') return t('systemzustand.engpass.verbindungen', { variable, wert: wert('verbindungen'), ms: ms(VERBINDUNG_WARTEN_MS) });
+    if (x === 'ueberlast') return t('systemzustand.engpass.ueberlast', { variable, wert: wert('anfragen'), minuten: ENGPASS_MINUTEN });
+    if (x === 'arbeiter') return t('systemzustand.engpass.arbeiter', { variable, wert: wert('arbeiter'), minuten: ENGPASS_MINUTEN });
+    return t('systemzustand.engpass.schleife', { variable, wert: wert('arbeiter') });
+  };
+  return (
+    <div className="hinweis warn" id="engpass">
+      <p><strong>{t('systemzustand.engpass.titel')}</strong></p>
+      <ul>{e.map((x) => <li key={x}>{text(x)}</li>)}</ul>
+    </div>
+  );
+}
+
 export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
   const s = z.stand;
   return (
@@ -128,6 +170,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
         {s.warnung.length > 0 && (
           <div className="hinweis warn"><p>{s.warnung.map((w) => <strong key={w}>{t.frei(`systemzustand.warnung.${w}`)} </strong>)}{t('systemzustand.warnung.text')}</p></div>
         )}
+        <Engpaesse s={s} />
         <div className="az-raster">
           <div className="az-wert">
             <h3 className="az-titel">{t('systemzustand.cpu.titel')} <span className="az-jetzt">{s.jetzt.cpu === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(s.jetzt.cpu) })}</span></h3>
@@ -156,6 +199,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
           <Schleife s={s.schleife} />
           <Arbeiter a={s.arbeiter} />
         </div>
+        {s.grenzen && <Grenzen g={s.grenzen} />}
       </>}
     </section>
   );

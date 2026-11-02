@@ -896,6 +896,10 @@ export type SystemlastAntwort = import('../../shared/src/systemlast').Systemlast
   arbeiter?: import('../../shared/src/systemlast').ArbeiterStand;
   /** Erweiterungen der Suche (#562); null = nicht lesbar. */
   erweiterungen?: ErweiterungStand[] | null;
+  /** Arbeiter, Verbindungen, Überlastgrenze mit Herkunft (#544). */
+  grenzen?: import('../../shared/src/systemlast').Grenzwerte;
+  /** Engpässe, je mit der Variable (#544). */
+  engpaesse?: import('../../shared/src/systemlast').Engpass[];
 };
 /** Datenbank-Erweiterung der Suche (#562): ok, fehlt oder in einem Schema, das eine Wiederherstellung löscht. */
 export interface ErweiterungStand { name: 'pg_trgm' | 'unaccent'; schema: string | null; zustand: 'ok' | 'fehlt' | 'gefaehrdet' }
@@ -924,6 +928,8 @@ export interface WerkbankUebersicht {
   speicherplatz?: SpeicherplatzStand | null;
   /** Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %. */
   auslastung?: Array<'cpu' | 'speicher'>;
+  /** Engpässe im Server, je mit der Variable (#544). */
+  engpaesse?: import('../../shared/src/systemlast').Engpass[];
   /** Erweiterungen der Suche, die fehlen oder gefährdet liegen (#562). */
   erweiterungen?: ErweiterungStand[];
   /** Frühere Variablen, die aus der Compose-Datei entfernt werden können (#115), je mit Grund (#478). */
