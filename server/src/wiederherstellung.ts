@@ -7,6 +7,7 @@ import { dirname, join, normalize, sep } from 'node:path';
 import postgres from 'postgres';
 import { migriere, verbinde } from './db';
 import { bezeichner, OHNE_INHALT, type Tabelle } from './datenbankabzug';
+import { beschreibe, liesErweiterungen, problemeAus, TRIGRAMM_INDEXNAMEN, trigrammIndizes } from './erweiterungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { ortszeit, type Metadaten, type Sicherung } from './sicherung';
@@ -30,6 +31,8 @@ const ALT = 'dms_alt_';
 /** Altes Schema, wenn vorher keine Sicherung möglich war: bleibt 7 Tage. */
 const BEHALTEN = 'dms_alt_behalten_';
 const BEHALTEN_TAGE = 7;
+/** Prüfschritt (#562): Erweiterungen der Suche vorhanden und sicher vor dem Aufräumen, Trigramm-Indizes eingespielt. */
+const ERWEITERUNGEN_SCHRITT = 'Erweiterungen der Datenbank';
 
 export type Schrittstatus = 'offen' | 'laeuft' | 'ok' | 'fehler' | 'hinweis' | 'ausgelassen';
 export interface Schritt { name: string; status: Schrittstatus; info?: string }
@@ -205,7 +208,7 @@ export class Wiederherstellung {
     const von = admin?.email ?? 'Einrichtung (frisches System)';
     const lauf = this.neuerLauf('wiederherstellung', name, von, [
       ...(art === 'laufend' ? ['Sicherung des jetzigen Stands'] : []),
-      'Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', 'Dateien übernehmen', 'Schlüsseldatei', 'Umschalten', 'Neustart',
+      'Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', ERWEITERUNGEN_SCHRITT, 'Dateien übernehmen', 'Schlüsseldatei', 'Umschalten', 'Neustart',
     ]);
     log.warn('Wiederherstellung begonnen', { sicherung: name, von, art });
     void this.fuehreAus(lauf, a, k, art).catch(() => {}).finally(() => { this.belegt = false; });
@@ -224,7 +227,7 @@ export class Wiederherstellung {
     if (!ziel) throw new Fachfehler(404, name ? 'Diese Sicherung gibt es nicht (mehr).' : 'Es gibt noch keine Sicherung zum Prüfen.');
     const m = ziel.meta!;
     const k = this.q.tresor.fingerabdruck === m.verschluesselung.fingerabdruck ? schluesselAusText(this.q.tresor.alsText() ?? '') : null;
-    const lauf = this.neuerLauf('probe', ziel.name, von, ['Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', 'Aufräumen']);
+    const lauf = this.neuerLauf('probe', ziel.name, von, ['Prüfsumme der Datei', 'Entschlüsseln und Einspielen', 'Prüfwort', 'Anzahl Mappen, Dokumente, Benutzer', 'Auf den heutigen Stand bringen', ERWEITERUNGEN_SCHRITT, 'Aufräumen']);
     log.info('Probe-Wiederherstellung begonnen', { sicherung: ziel.name, von });
     const fertig = (async () => {
       if (!k) {
@@ -397,6 +400,23 @@ export class Wiederherstellung {
       await migriere(neu, this.q.migrationen, () => {});
       const nachher = Number((await neu`SELECT count(*)::int AS n FROM schema_migrationen`)[0].n);
       ok(nachher > vorher ? `${nachher - vorher} Änderungen ausgeführt` : 'schon aktuell');
+
+      // Erweiterungen (#562): Fehlt pg_trgm oder unaccent, läuft die Suche nach dem Umschalten schlechter – das soll
+      // vorher sichtbar sein, nicht still passieren. Die Daten sind trotzdem vollständig, daher nur ein Hinweis.
+      schritt(ERWEITERUNGEN_SCHRITT);
+      const erweiterungen = await liesErweiterungen(this.q.sql);
+      const mitTrgm = erweiterungen.some((e) => e.name === 'pg_trgm' && e.zustand !== 'fehlt');
+      const indizes = mitTrgm ? await trigrammIndizes(neu, schema) : [];
+      const fehlt = [
+        ...problemeAus(erweiterungen).map(beschreibe),
+        ...(mitTrgm ? TRIGRAMM_INDEXNAMEN.filter((n) => !indizes.includes(n)).map((n) => `Trigramm-Index ${n} fehlt`) : []),
+      ];
+      if (fehlt.length) {
+        const text = `${fehlt.join('; ')}. Die Daten sind vollständig; Abhilfe steht unter Werkbank → Systemzustand.`;
+        this.schritt(lauf, ERWEITERUNGEN_SCHRITT, 'hinweis', text);
+        a.hinweise.push(`Erweiterungen der Datenbank: ${text}`);
+        log.warn('Erweiterungen der Datenbank unvollständig', { probe, fehlt: fehlt.join('; ') });
+      } else ok('pg_trgm und unaccent vorhanden, Trigramm-Indizes angelegt');
 
       if (probe) {
         schritt('Aufräumen');

@@ -39,7 +39,7 @@ import { WiederherstellungPanel } from './Wiederherstellung';
 import { FehlermeldungDetail, FehlermeldungenListe, useFehlermeldungen } from './Fehlermeldungen';
 import { AnbindungPanel, useAnbindung } from './Anbindung';
 import { SpeicherplatzPanel, useSpeicherplatz } from './Speicherplatz';
-import { AuslastungAbschnitt, useSystemlast } from './Auslastung';
+import { AuslastungAbschnitt, ErweiterungenHinweis, useSystemlast } from './Auslastung';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from '../ablage/Papierkorb';
 import { filterAusAdresse } from '../../../shared/src/aufgabenfilter';
 import { useBeiWiederErreichbar } from '../erreichbar';
@@ -216,7 +216,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   } else if (bereich === 'webdav') {
     rechts = <WebdavPanel z={webdav} />;
   } else if (bereich === 'systemzustand') {
-    rechts = <SpeicherplatzPanel z={speicherplatz} nachAenderung={() => { void uebersicht.laden(); void wartungsmodus.laden(); }} auslastung={<AuslastungAbschnitt z={systemlast} />} />;
+    rechts = <SpeicherplatzPanel z={speicherplatz} nachAenderung={() => { void uebersicht.laden(); void wartungsmodus.laden(); }} auslastung={<><ErweiterungenHinweis liste={systemlast.stand?.erweiterungen} /><AuslastungAbschnitt z={systemlast} /></>} />;
   } else if (bereich === 'wartungsmodus') {
     rechts = <WartungsmodusPanel w={wartungsmodus} />;
   } else if (bereich === 'papierkorb') {

@@ -145,6 +145,19 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const { Wiederherstellung } = await import('../src/wiederherstellung');
     await new Wiederherstellung({ ...(ziel.w as unknown as { q: ConstructorParameters<typeof Wiederherstellung>[0] }).q, sql: neu }).raeumeAuf();
     assert.equal((await neu`SELECT nspname FROM pg_namespace WHERE nspname LIKE 'dms_%'`).length, 0);
+
+    // #562: Nach Wiederherstellung und Aufräumen sind pg_trgm und unaccent noch da (eigenes Schema), die
+    // Trigramm-Indizes stehen im neuen public, und die Tippfehler-Suche liefert weiter Vorschläge.
+    assert.equal(lauf.schritte.find((x) => x.name === 'Erweiterungen der Datenbank')?.status, 'ok', JSON.stringify(lauf.schritte));
+    const { liesErweiterungen, trigrammIndizes } = await import('../src/erweiterungen');
+    assert.deepEqual((await liesErweiterungen(neu)).map((e: { name: string; schema: string | null; zustand: string }) => [e.name, e.schema, e.zustand]),
+      [['pg_trgm', 'erweiterungen_dms', 'ok'], ['unaccent', 'erweiterungen_dms', 'ok']]);
+    assert.deepEqual((await trigrammIndizes(neu, 'public')).sort(), ['dokumente_volltext_trgm_idx', 'suchwoerter_trgm']);
+    const [{ wort }] = await neu`SELECT wort FROM suchwoerter WHERE length(wort) >= 8 AND wort ~ '^[a-z]+$' ORDER BY wort LIMIT 1`;
+    const tippfehler = `${wort.slice(0, 3)}${wort.slice(4)}`;
+    const { pgRepo } = await import('../src/repo-pg');
+    const vorschlaege = await pgRepo(neu, HAUSHALT).aehnlicheWoerter([tippfehler], 3);
+    assert.ok(vorschlaege[tippfehler]?.includes(wort), `Tippfehler „${tippfehler}“ schlägt „${wort}“ vor: ${JSON.stringify(vorschlaege)}`);
   });
 
   it('auf dem laufenden System nur im Wartungsmodus; vorher wird der jetzige Stand gesichert', async () => {
@@ -258,6 +271,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     assert.equal(await fertig, true, JSON.stringify(q.w.aktuellerLauf(), null, 1));
     assert.deepEqual(await zaehle(q.sql), vorher, 'das laufende System bleibt unberührt');
     assert.equal((await q.sql`SELECT nspname FROM pg_namespace WHERE nspname LIKE 'dms_wh_%'`).length, 0, 'aufgeräumt');
+    assert.equal(q.w.aktuellerLauf()!.schritte.find((x) => x.name === 'Erweiterungen der Datenbank')?.status, 'ok', 'Erweiterungen geprüft (#562)');
     const e = (await q.sicherung.liste()).find((x) => x.name === sicherungsName)!;
     assert.equal(e.probe?.ok, true);
     const ampel = await q.sicherung.probeAmpel(true);

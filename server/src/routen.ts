@@ -172,6 +172,8 @@ export interface RoutenExtras {
   ueberlast?: import('./ueberlast').Ueberlastschutz;
   /** Warten auf eine freie Verbindung zur Datenbank (#544). */
   verbindungen?: import('./db').Verbindungswarten;
+  /** Erweiterungen der Suche, pg_trgm und unaccent (#562). */
+  erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Datenbankangaben für die Versionsübersicht. */
   system?: SystemQuelle;
   /** E-Mail-Versand und Adresse des DMS (#37). */
@@ -1239,6 +1241,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         speicherplatz: x.speicherplatz ? await sicher(() => x.speicherplatz!.stand()) : null,
         // Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %.
         auslastung: x.systemlast?.warnung() ?? [],
+        // Erweiterungen der Suche (#562): fehlend oder in einem Schema, das eine Wiederherstellung löscht.
+        erweiterungen: x.erweiterungen ? (await sicher(() => x.erweiterungen!()))?.filter((e) => e.zustand !== 'ok') ?? [] : [],
         // #128: Schlüssel, die Administratoren gehören (aus der Zeit vor 0.26), durch die eines normalen Benutzers ersetzen.
         adminSchluessel: x.apiSchluessel ? await sicher(async () => {
           let n = 0;
@@ -1374,7 +1378,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk des Containers; dazu die Wartezeit der Ereignisschleife (#477).
     { methode: 'GET', pfad: '/api/werkbank/systemlast', zugang: 'admin', handler: async () => {
       if (!x.systemlast) throw new Fachfehler(404, 'Die Messung der Auslastung ist nicht eingerichtet.');
-      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand() });
+      const erweiterungen = x.erweiterungen ? await x.erweiterungen().catch(() => null) : null;
+      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen });
     } },
     { methode: 'POST', pfad: '/api/werkbank/system/abgleich', zugang: 'admin', handler: async (a) => {
       const browser = Object.fromEntries(Object.entries((b(a).browser ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]));

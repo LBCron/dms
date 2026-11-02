@@ -28,6 +28,26 @@ Gruppen gelten für einfache Suchen. Wer Anführungszeichen oder ein Minus benut
 
 ## Technik
 
-- **PostgreSQL:** Umlaute faltet die Erweiterung `unaccent`. Sie ist ab PostgreSQL 13 „vertrauenswürdig“: Der Eigentümer der Datenbank legt sie ohne Superuser-Rechte an – auch bei einer [eigenen Datenbank](installation.md#datenbank-anbindung). `postgres:17` und `dms-komplett` bringen sie mit. Das DMS legt sie im eigenen Schema `erweiterungen_dms` an (sonst im Schema der Tabellen), damit sie das [Wiederherstellen](wiederherstellen.md) übersteht. Fehlt sie, faltet das DMS selbst (nur die häufigen Buchstaben); das steht beim Start als Hinweis im Protokoll der Migration.
+- **PostgreSQL:** Umlaute faltet die Erweiterung `unaccent`, Tippfehler und Wortteile findet `pg_trgm` – mehr dazu unter [Erweiterungen der Datenbank](#erweiterungen-der-datenbank).
 - **Suchindex:** Das Update auf 0.127.0 baut den Suchindex der Dokumente einmal neu auf (Sprache des Dokuments, Umlaute, Bindestriche) und füllt das Wörterverzeichnis. Das dauert je nach Ablage einige Sekunden bis Minuten; in der Zeit startet das DMS noch nicht. Messwerte stehen in den Release-Notizen.
 - **Sicherung:** Das Wörterverzeichnis gehört nicht in die Sicherung; beim Wiederherstellen entsteht es aus Mappen und Dokumenten neu. Die gleichbedeutenden Wörter sind in Sicherung und [Vollexport](export.md) (`struktur/synonyme.json`).
+
+## Erweiterungen der Datenbank
+
+Die Suche nutzt zwei Erweiterungen von PostgreSQL:
+
+| Erweiterung | wofür | fehlt sie |
+| --- | --- | --- |
+| `pg_trgm` | Tippfehler und „Meintest du …?“, schnelle Suche nach Wortteilen („Ofen“ findet „Backofen“) | keine ähnlichen Schreibweisen, Wortteile ohne Index (langsamer) |
+| `unaccent` | Umlaute, Akzente und ß („Muller“ findet „Müller“) | das DMS faltet selbst, nur die häufigen Buchstaben |
+
+Beide sind ab PostgreSQL 13 „vertrauenswürdig“: Der Eigentümer der Datenbank legt sie ohne Superuser-Rechte an – auch bei einer [eigenen Datenbank](installation.md#datenbank-anbindung). `postgres:17` und `dms-komplett` bringen sie mit. Das DMS legt sie im eigenen Schema **`erweiterungen_dms`** an. Das ist wichtig fürs [Wiederherstellen](wiederherstellen.md): Es tauscht das Schema `public` aus und löscht das alte samt Inhalt – eine Erweiterung dort verschwände mit. Bis 0.131.0 lag `pg_trgm` noch in `public`; nach einer Wiederherstellung war die Tippfehler-Suche dann still aus. Das Update auf 0.131.1 zieht sie um und legt sie neu an, wenn sie schon fehlt.
+
+**Prüfung:** Bei jedem Start legt das DMS eine fehlende `pg_trgm` neu an und zieht Erweiterungen aus `public` nach `erweiterungen_dms` um (die Indizes dazu entstehen danach im Hintergrund). Klappt das nicht, steht unter **Werkbank → Systemzustand** ein Hinweis mit Abhilfe, dazu ein Hinweis in der Übersicht und im [Protokoll](fehlersuche.md#protokoll) (Modul *datenbank*). Auch die [Probe-Wiederherstellung](wiederherstellen.md#probe-wiederherstellung) meldet fehlende Erweiterungen.
+
+**Abhilfe**, wenn der Hinweis bleibt:
+
+- **Recht fehlt:** Der Datenbank-Benutzer des DMS braucht das Recht `CREATE` auf seiner Datenbank (als Eigentümer der Datenbank hat er es). Danach das DMS neu starten.
+- **Erweiterung nicht installiert:** Bei einer eigenen PostgreSQL-Installation gehören beide zum Paket `postgresql-contrib` (bei Debian/Ubuntu im Server-Paket enthalten).
+- **Gehört einem anderen Benutzer:** Hat die Verwaltung der Datenbank die Erweiterung selbst in `public` angelegt, kann das DMS sie nicht umziehen. Dann zieht sie die Verwaltung um: `ALTER EXTENSION pg_trgm SET SCHEMA erweiterungen_dms;` – bei `unaccent` danach das DMS neu starten, es passt seine Suchfunktion beim Start an.
+- Fehlt `unaccent` von Anfang an, funktioniert die Suche trotzdem; das DMS nimmt die Erweiterung nicht nachträglich auf.

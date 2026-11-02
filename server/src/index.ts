@@ -41,6 +41,7 @@ import { Paketlaeufer } from './laeufer/verwaltung';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
 import { maxAnfragenAus, Ueberlastschutz } from './ueberlast';
 import { Systemlast } from './systemlast';
+import { liesErweiterungen, sichereErweiterungen } from './erweiterungen';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
@@ -211,6 +212,8 @@ const wiederherstellung = new Wiederherstellung({
 });
 sicherung.sperre = () => wiederherstellung.laeuft();
 await wiederherstellung.raeumeAuf();
+// Erweiterungen der Suche (#562): pg_trgm anlegen bzw. umziehen, wenn sie fehlt; sonst Hinweis im Protokoll.
+await sichereErweiterungen(sql, protokoll.modul('datenbank')).catch((e) => log.warn('Erweiterungen der Datenbank nicht geprüft', { fehler: (e as Error).message }));
 const abschluss = await pgEinstellungen(sql, cfg.haushalt).lies('wiederherstellung_abschluss') as { sicherung?: string } | null;
 if (abschluss) log.warn('Gestartet nach einer Wiederherstellung', { sicherung: abschluss.sicherung });
 const texterkennung = new Texterkennung(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'texterkennung'), ordnerSpeicher(ordner.dateien, cfg.haushalt), pgBetriebSpeicher(sql, cfg.haushalt));
@@ -343,6 +346,7 @@ const app = await baueApp(dienst, konten, {
   systemlast,
   ueberlast,
   verbindungen: verbindungswarten,
+  erweiterungen: () => liesErweiterungen(sql),
   eingangsordner,
   postfaecher,
   postfachOAuth,

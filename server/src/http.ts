@@ -93,6 +93,8 @@ interface Optionen {
   ueberlast?: import('./ueberlast').Ueberlastschutz;
   /** Warten auf eine freie Verbindung zur Datenbank (#544). */
   verbindungen?: import('./db').Verbindungswarten;
+  /** Erweiterungen der Suche (#562). */
+  erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
 }
 
 export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}) {
