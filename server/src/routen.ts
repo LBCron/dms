@@ -45,7 +45,10 @@ import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import type { Speicherplatz } from './speicherplatz';
 import type { Systemlast } from './systemlast';
-import { arbeiterStand } from './arbeit';
+import { ARBEITER_MAX, arbeiterStand } from './arbeit';
+import { VERBINDUNGEN_MAX, VERBINDUNGEN_MIN } from './db';
+import { MAX_ANFRAGEN_MAX, MAX_ANFRAGEN_MIN } from './ueberlast';
+import { engpaesseAus, VARIABLE, type Grenzwerte } from '../../shared/src/systemlast';
 import type { Eingangsordner } from './eingangsordner';
 import type { Webdav } from './webdav';
 import type { Postfaecher } from './postfach';
@@ -161,6 +164,28 @@ const ich = (a: Anfrage) => {
   if (!a.benutzer) throw new Fachfehler(401, t('anmeldung.fehler.bitte-anmelden'));
   return a.benutzer;
 };
+
+/**
+ * Systemzustand (#544): Arbeiter, Verbindungen zur Datenbank und Grenze des Überlastschutzes – nur zum Ansehen,
+ * eingestellt per Umgebungsvariable – und die Engpässe, je mit der Variable, die man ändern müsste.
+ */
+function grenzenUndEngpaesse(x: RoutenExtras) {
+  const a = arbeiterStand();
+  const v = x.verbindungen?.stand();
+  const u = x.ueberlast?.stand();
+  const grenzen: Grenzwerte = {
+    arbeiter: { wert: a.aus ? 0 : a.groesse, quelle: a.quelle, variable: VARIABLE.arbeiter, min: 0, max: ARBEITER_MAX },
+    ...(v ? { verbindungen: { wert: v.max, quelle: v.quelle, variable: VARIABLE.verbindungen, min: VERBINDUNGEN_MIN, max: VERBINDUNGEN_MAX } } : {}),
+    ...(u ? { anfragen: { wert: u.max, quelle: u.quelle, variable: VARIABLE.anfragen, min: MAX_ANFRAGEN_MIN, max: MAX_ANFRAGEN_MAX } } : {}),
+  };
+  const engpaesse = engpaesseAus({
+    schleife: !!x.messung?.auslastung.warnung(),
+    verbindungen: v ? { median: v.median, messungen: v.messungen } : null,
+    arbeiterAbgewiesen: a.aus ? null : a.zuletztAbgewiesen,
+    ueberlastAbgewiesen: u?.zuletztAbgewiesen ?? null,
+  });
+  return { grenzen, engpaesse };
+}
 
 export interface RoutenExtras {
   /** Fotos vom Handy bis „Fertig“ (#490); Standard: Arbeitsordner im Temp-Verzeichnis. */
@@ -1241,6 +1266,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         speicherplatz: x.speicherplatz ? await sicher(() => x.speicherplatz!.stand()) : null,
         // Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %.
         auslastung: x.systemlast?.warnung() ?? [],
+        // Engpässe (#544): Wartezeit, Verbindungen, Arbeiter, Überlast – je mit der Variable.
+        engpaesse: grenzenUndEngpaesse(x).engpaesse,
         // Erweiterungen der Suche (#562): fehlend oder in einem Schema, das eine Wiederherstellung löscht.
         erweiterungen: x.erweiterungen ? (await sicher(() => x.erweiterungen!()))?.filter((e) => e.zustand !== 'ok') ?? [] : [],
         // #128: Schlüssel, die Administratoren gehören (aus der Zeit vor 0.26), durch die eines normalen Benutzers ersetzen.
@@ -1379,7 +1406,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/systemlast', zugang: 'admin', handler: async () => {
       if (!x.systemlast) throw new Fachfehler(404, 'Die Messung der Auslastung ist nicht eingerichtet.');
       const erweiterungen = x.erweiterungen ? await x.erweiterungen().catch(() => null) : null;
-      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen });
+      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x) });
     } },
     { methode: 'POST', pfad: '/api/werkbank/system/abgleich', zugang: 'admin', handler: async (a) => {
       const browser = Object.fromEntries(Object.entries((b(a).browser ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]));

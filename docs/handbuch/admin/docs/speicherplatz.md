@@ -56,6 +56,27 @@ Das DMS beantwortet alle Anfragen in **einem** Faden. Rechnet er an etwas Große
 
 Mehr Arbeiter helfen nur, wenn genug Kerne frei sind: Bei 2 Kernen bleibt es bei einem Arbeiter, damit Anfragen und Datenbank nicht leer ausgehen.
 
+### Einstellungen und Engpässe { #einstellungen-und-engpasse }
+
+Unter den Werten steht **Einstellungen für viele gleichzeitige Anfragen** – nur zum Ansehen, mit dem aktuellen Wert und woher er stammt (*Vorgabe* oder *aus der Umgebung*):
+
+| Zeile | Variable | erlaubt | Vorgabe |
+| --- | --- | --- | --- |
+| Arbeiter für PDF und Exporte | `DMS_ARBEITER` | 0–16 | Hälfte der Kerne, 1 bis 4 |
+| Verbindungen zur Datenbank | `DMS_DB_VERBINDUNGEN` | 2–100 | 10 |
+| Gleichzeitige Anfragen höchstens | `DMS_MAX_ANFRAGEN` | 20–10.000 | 250 |
+
+Ändern lassen sie sich nur als Umgebungsvariable in der Compose-Datei (siehe [Installation](installation.md#einstellungen)); sie gelten, sobald der Container neu erstellt ist. Ein ungültiger Wert wird beim Start ignoriert (Hinweis im Protokoll), dann steht hier die Vorgabe. Warum die Vorgaben so sind, steht unter [Technik → Viele gleichzeitige Anfragen](technik.md#last).
+
+Wird etwas knapp, steht über den Werten ein **Engpass**-Hinweis mit der Variable, die helfen kann (auch als Hinweis in der Übersicht):
+
+| Engpass | wann | Variable |
+| --- | --- | --- |
+| Wartezeit des Servers | seit 5 Minuten oft über 100 ms (siehe oben) | `DMS_ARBEITER` – die Arbeiter nehmen dem Hauptfaden PDF-Arbeiten und Exporte ab. Ist die CPU ohnehin voll, hilft nur mehr Rechenzeit für den Container. |
+| Warten auf eine Verbindung zur Datenbank | in der letzten Minute üblich über 50 ms | `DMS_DB_VERBINDUNGEN` – nur sinnvoll, wenn CPU und Datenbank nicht ausgelastet sind |
+| Warteschlange der Arbeiter voll | in den letzten 15 Minuten wurde ein Auftrag abgewiesen | `DMS_ARBEITER` – nur sinnvoll mit freien Kernen |
+| Überlastschutz | in den letzten 15 Minuten „gerade sehr beschäftigt“ (503) | `DMS_MAX_ANFRAGEN` – prüfe zuerst, ob ein Programm (z. B. über WebDAV) ungewöhnlich viele Anfragen schickt; eine höhere Grenze macht das DMS nicht schneller |
+
 **Nicht verfügbar** steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS **ihre** Auslastung nicht; das steht unter dem Arbeitsspeicher.
 
 ## Was gemessen wird

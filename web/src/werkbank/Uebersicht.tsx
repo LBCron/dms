@@ -6,6 +6,7 @@ import { Hilfe, useHandbuch } from '../Hilfe';
 import { sicherungsHinweise } from './Sicherung';
 import { GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
 import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
+import { ENGPASS_VARIABLE } from '../../../shared/src/systemlast';
 
 /** Werkbank → Übersicht (#68): was zu tun ist, auf einen Blick; Gruppen der Leiste. */
 
@@ -34,6 +35,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   else if (sp?.zustand === 'warnung') h.push({ art: 'warn', text: <><strong>Der Speicherplatz wird knapp.</strong> Noch {platzText(sp.ordner)} frei – unter der Grenze wird das Hochladen gesperrt.</>, ziel: '/werkbank/systemzustand', knopf: 'Zum Systemzustand' });
   // Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %.
   if (u.auslastung?.length) h.push({ art: 'warn', text: <><strong>{t('systemzustand.warnung.uebersicht')}</strong> {u.auslastung.map((w) => t.frei(`systemzustand.warnung.${w}`)).join(' ')}</>, ziel: '/werkbank/systemzustand#auslastung', knopf: t('systemzustand.warnung.knopf') });
+  // Engpässe (#544): je mit der Umgebungsvariable, die man ändern müsste.
+  if (u.engpaesse?.length) h.push({ art: 'warn', text: <><strong>{t('systemzustand.engpass.uebersicht')}</strong> {[...new Set(u.engpaesse.map((e) => ENGPASS_VARIABLE[e]))].join(', ')}</>, ziel: '/werkbank/systemzustand#engpass', knopf: t('systemzustand.warnung.knopf') });
   // Erweiterungen der Suche (#562): fehlen oder lägen im Schema, das eine Wiederherstellung löscht.
   if (u.erweiterungen?.length) h.push({ art: 'warn', text: <><strong>{t('systemzustand.erweiterung.uebersicht')}</strong> {u.erweiterungen.map((e) => e.name).join(', ')}</>, ziel: '/werkbank/systemzustand#erweiterungen', knopf: t('systemzustand.warnung.knopf') });
   if (sp?.wartungBeenden) h.push({ art: 'warn', text: <><strong>Wieder {platzText(sp.ordner)} frei.</strong> Der Wartungsmodus wegen des Speicherplatzes endet nicht von selbst – Wartung beenden?</>, ziel: '/werkbank/systemzustand', knopf: 'Wartung beenden' });
