@@ -2857,7 +2857,7 @@ export class Dienst {
     }
     if ('eigene' in body) {
       const e = liesEigene(body.eigene);
-      await this.einstellungen.schreibe(`werkbank_ansicht:${wer.id ?? wer.email}`, e.ein.length ? e : null);
+      await this.einstellungen.schreibe(`werkbank_ansicht:${wer.id ?? wer.email}`, e.ein.length || e.experte ? e : null);
     }
     return this.werkbankAnsicht(wer);
   }
