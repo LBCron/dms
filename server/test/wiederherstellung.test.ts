@@ -153,9 +153,12 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     assert.deepEqual((await liesErweiterungen(neu)).map((e: { name: string; schema: string | null; zustand: string }) => [e.name, e.schema, e.zustand]),
       [['pg_trgm', 'erweiterungen_dms', 'ok'], ['unaccent', 'erweiterungen_dms', 'ok']]);
     assert.deepEqual((await trigrammIndizes(neu, 'public')).sort(), ['dokumente_volltext_trgm_idx', 'suchwoerter_trgm']);
+    // Die Trigger füllen beim Einspielen den Eingang des Wörterverzeichnisses (#575); im Betrieb übernimmt ihn das DMS
+    // nach dem Neustart im Hintergrund.
+    const { pgRepo } = await import('../src/repo-pg');
+    assert.ok(await pgRepo(neu, HAUSHALT).woerterEinarbeiten() > 0);
     const [{ wort }] = await neu`SELECT wort FROM suchwoerter WHERE length(wort) >= 8 AND wort ~ '^[a-z]+$' ORDER BY wort LIMIT 1`;
     const tippfehler = `${wort.slice(0, 3)}${wort.slice(4)}`;
-    const { pgRepo } = await import('../src/repo-pg');
     const vorschlaege = await pgRepo(neu, HAUSHALT).aehnlicheWoerter([tippfehler], 3);
     assert.ok(vorschlaege[tippfehler]?.includes(wort), `Tippfehler „${tippfehler}“ schlägt „${wort}“ vor: ${JSON.stringify(vorschlaege)}`);
   });

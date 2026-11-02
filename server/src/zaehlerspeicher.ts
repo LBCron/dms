@@ -50,7 +50,7 @@ export const OHNE_FOLGEN = new Set<string>([
   'merkeGesehen', 'ocrEinreihen', 'ocrSetze', 'ocrZurueckstellen', 'legeErinnerungAn', 'aendereErinnerung', 'loescheErinnerung',
   'legeNotizAn', 'aendereNotiz', 'loescheNotiz', 'historieSchreibe', 'historieAufraeumen', 'kuerzeVersionen',
   // Unscharfe Suche (#356): Wörterverzeichnis und gleichbedeutende Wörter ändern keine Zahlen.
-  'aehnlicheWoerter', 'woerterAnzahl', 'woerterNeu', 'synonyme', 'legeSynonymAn', 'aendereSynonym', 'loescheSynonym', 'setzeSynonyme',
+  'aehnlicheWoerter', 'woerterAnzahl', 'woerterNeu', 'woerterEinarbeiten', 'synonyme', 'legeSynonymAn', 'aendereSynonym', 'loescheSynonym', 'setzeSynonyme',
   // Sprache eines Dokuments (#400): nur für die Volltextsuche.
   'setzeDokumentSprache',
 ]);

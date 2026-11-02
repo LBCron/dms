@@ -9,6 +9,7 @@ import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
+import { istVerklemmung } from './db';
 import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_ANSTEHEND, Zaehlerspeicher } from './zaehlerspeicher';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
@@ -20,7 +21,7 @@ import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
 import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
-import { istUuid, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
+import { istUuid, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
@@ -56,7 +57,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
-import { INFO_TEXTEBENE, infoWartet } from '../../shared/src/volltext';
+import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
@@ -568,8 +569,23 @@ export class Dienst {
   async unscharfAn(): Promise<boolean> {
     return ((await this.einstellungen?.lies('suche')) as { unscharf?: boolean } | null)?.unscharf !== false;
   }
+  /**
+   * Neue Wörter ins Wörterverzeichnis übernehmen (#575): Die Trigger legen sie nur in einen Eingang (keine
+   * Verklemmung mit Mappen und Texterkennung); das DMS arbeitet ihn alle paar Sekunden ab – in Teilen, damit ein
+   * großer Import die Datenbank nicht lange am Stück beschäftigt. Liefert die Zahl der übernommenen Einträge.
+   */
+  async woerterEinarbeiten(): Promise<number> {
+    let n = 0;
+    for (;;) {
+      const r = await this.repo.woerterEinarbeiten(WOERTER_JE_LAUF);
+      if (r > 0) n += r;
+      if (r < WOERTER_JE_LAUF) return n;
+    }
+  }
   /** Werkbank → Suche: Einstellung, Gruppen (Pakete mit Namen), Größe des Wörterverzeichnisses. */
   async sucheStand() {
+    // Die Zahl der Wörter mit allem, was schon im Eingang steht (#575).
+    await this.woerterEinarbeiten().catch(() => 0);
     const pakete = new Map((await this.repo.listePakete()).map((p) => [p.id, p.name] as const));
     return {
       unscharf: await this.unscharfAn(), woerter: await this.repo.woerterAnzahl(),
@@ -1049,7 +1065,15 @@ export class Dienst {
     const angegeben = istTextsprache(e.sprache) ? e.sprache : null;
     const sprache = angegeben ? { sprache: angegeben, konfidenz: 1 } : erkenneSprache(text);
     const vermerk = angegeben ? `${SPRACHE_MARKE}${angegeben}` : sprache ? spracheZuInfo(sprache) : '';
-    await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null });
+    try {
+      await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null });
+    } catch (f) {
+      if (!istVerklemmung(f)) throw f;
+      // Auch nach den Wiederholungen nicht gespeichert (#575): sichtbar am Dokument, und der Absender erfährt es (503).
+      protokoll.modul('ablage').error('Volltext nicht gespeichert', { dokument: id, herkunft: von.herkunft, fehler: (f as Error).message });
+      await this.repo.ocrSetze(id, { stand: 'fehler', info: `${NICHT_GESPEICHERT} (${(f as Error).message})`.slice(0, 500), seiten: d.ocr?.seiten ?? null }).catch(() => {});
+      throw new Fachfehler(503, 'Die Datenbank war ausgelastet, der Volltext ist nicht gespeichert. Bitte gleich noch einmal senden.');
+    }
     await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: info });
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
     // Das schreibende Paket bekommt sein eigenes Ergebnis nicht zurück (#458: sonst erkennte es endlos neu).

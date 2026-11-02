@@ -12,9 +12,9 @@ export interface Zaehler { mappen: number; dokumente: number; benutzer: number }
 
 /**
  * Tabellen, deren Inhalt nicht in die Sicherung gehört. Das Wörterverzeichnis der Suche (#356) füllen beim
- * Wiederherstellen die Trigger aus Mappen und Dokumenten neu.
+ * Wiederherstellen die Trigger aus Mappen und Dokumenten neu (über den Eingang, #575).
  */
-export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter']);
+export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter', 'suchwoerter_eingang']);
 /** Abgeleitete Spalten ohne Sicherung: den Suchindex (#356) berechnet beim Einspielen ein Trigger aus dem Volltext. */
 export const OHNE_SPALTEN: Record<string, string[]> = { dokumente: ['suchindex'] };
 

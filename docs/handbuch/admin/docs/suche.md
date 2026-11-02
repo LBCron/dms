@@ -14,7 +14,7 @@ Ohne Einstellung gleicht die Suche aus:
 
 Findet die Suche **nichts**, sucht sie mit ähnlichen Wörtern aus deiner Ablage weiter (Ähnlichkeit über Buchstabengruppen, pg_trgm) und sagt das über den Treffern: „Keine genauen Treffer für ‚Waschmaschiene‘. Gezeigt werden ähnliche Schreibweisen.“ Dazu schlägt sie **„Meintest du ‚waschmaschine‘?“** vor; ein Klick sucht genau dieses Wort. Gibt es genaue Treffer, bleibt es bei ihnen – genaue Treffer gehen immer vor.
 
-Die ähnlichen Wörter kommen aus dem **Wörterverzeichnis**: allen Wörtern ab vier Buchstaben aus Titeln, Angaben und Volltexten. Es wächst von selbst mit; Wörter gelöschter Mappen bleiben stehen, bis du es mit **Neu aufbauen** frisch zählst (das dauert bei großen Ablagen einige Sekunden). Mit dem Haken **Bei keinem Treffer ähnliche Schreibweisen zeigen …** schaltest du die Tippfehler-Suche ab.
+Die ähnlichen Wörter kommen aus dem **Wörterverzeichnis**: allen Wörtern ab vier Buchstaben aus Titeln, Angaben und Volltexten. Es wächst von selbst mit – neue Wörter kommen im Hintergrund alle paar Sekunden dazu, damit gleichzeitiges Speichern sich nicht gegenseitig blockiert; Wörter gelöschter Mappen bleiben stehen, bis du es mit **Neu aufbauen** frisch zählst (das dauert bei großen Ablagen einige Sekunden). Mit dem Haken **Bei keinem Treffer ähnliche Schreibweisen zeigen …** schaltest du die Tippfehler-Suche ab.
 
 Ähnlich klingende Namen (Meier, Mayer, Maier) findet die Suche nur, wenn sie sich auch ähnlich schreiben.
 
