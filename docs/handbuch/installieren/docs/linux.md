@@ -13,13 +13,50 @@ Ein schlankes Server-System ohne Desktop genügt, z. B. **[Debian](https://www.d
 
 ## 2. Docker installieren
 
-Am verlässlichsten ist Docker aus dem offiziellen Paketarchiv von Docker. Die Befehle stehen in der Docker-Dokumentation für [Debian](https://docs.docker.com/engine/install/debian/) bzw. [Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Kurzform mit dem Installationsskript von Docker:
+Docker empfiehlt für einen Rechner, der dauerhaft läuft, die **eigene Paketquelle von Docker**: Dann kommt Docker über die Programmverwaltung `apt` und wird mit dem System zusammen aktualisiert. Die Befehle unten stammen unverändert aus der offiziellen Anleitung von Docker für [Debian](https://docs.docker.com/engine/install/debian/) bzw. [Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Kopiere die Kästen einzeln und warte jeweils, bis die Eingabezeile wieder erscheint. Die Raspberry-Pi-Anleitung [erklärt jede Zeile](raspberry-pi.md#52-docker-installieren).
+
+**Erstens: Werkzeuge bereitlegen** (Debian und Ubuntu gleich):
 
 ```sh
-curl -fsSL https://get.docker.com | sudo sh
+--8<-- "docker-apt-1-werkzeuge.txt"
+```
+
+**Zweitens: die Paketquelle von Docker eintragen** – für **Debian**:
+
+```sh
+--8<-- "docker-apt-2-debian.txt"
+```
+
+… oder für **Ubuntu**:
+
+```sh
+--8<-- "docker-apt-2-ubuntu.txt"
+```
+
+**Drittens: Docker installieren** (Debian und Ubuntu gleich) und deinem Benutzer erlauben, Docker ohne `sudo` zu benutzen:
+
+```sh
+--8<-- "docker-apt-3-pakete.txt"
+```
+
+```sh
 sudo usermod -aG docker $USER   # danach einmal ab- und wieder anmelden
 docker compose version          # prüft, ob Compose dabei ist
 ```
+
+Andere Distributionen (Fedora, RHEL, …) haben eigene Anleitungen in der [Docker-Dokumentation](https://docs.docker.com/engine/install/).
+
+??? note "Für Fortgeschrittene: das Installationsskript von Docker"
+    Docker bietet auch ein Skript an, das alles oben in einem Rutsch erledigt:
+
+    ```sh
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
+
+    Docker selbst empfiehlt das Skript aber **nur für Test- und Entwicklungsumgebungen**, nicht für einen Rechner, der dauerhaft läuft. Für deinen Rechner mit echten Unterlagen nimm deshalb den Weg oben. Das Skript richtet dieselbe Paketquelle ein; Updates kommen danach ebenfalls über `apt`.
+
+**Offizielle Anleitung:** [Docker Engine installieren](https://docs.docker.com/engine/install/) · [Docker ohne sudo benutzen](https://docs.docker.com/engine/install/linux-postinstall/)
 
 ## 3. DMS starten
 
