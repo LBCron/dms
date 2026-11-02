@@ -2538,9 +2538,9 @@
 <td>Einladungen, Passwort-Links, Hinweise, Mappen versenden; Mails aus <a href="../postfaecher/">Postfächern</a> als Post abholen</td>
 </tr>
 <tr>
-<td>Texterkennung</td>
-<td>Tesseract (deu, eng) und poppler (pdftotext, pdftoppm) im Image; deutsche Volltextsuche von PostgreSQL</td>
-<td>Volltext von PDFs, Scans und Bildern (#45)</td>
+<td>Volltext und Texterkennung</td>
+<td>poppler (pdftotext, pdftoppm) im Image für die Textebene von PDFs; Texterkennung von Scans und Bildern als Paket <strong>Texterkennung</strong> (Tesseract als WebAssembly im Paket-Läufer, #459); Volltextsuche von PostgreSQL</td>
+<td>Volltext von PDFs, Scans und Bildern (#45, #458)</td>
 </tr>
 <tr>
 <td>PDF verkleinern</td>
@@ -2549,7 +2549,7 @@
 </tr>
 <tr>
 <td>Schwärzen</td>
-<td>pdftoppm und pdftotext (poppler) zum Rendern und für die Wortpositionen, Tesseract für Seiten ohne Text, pdf-lib zum Neuaufbau; kein MuPDF, kein Ghostscript (beide AGPL)</td>
+<td>pdftoppm und pdftotext (poppler) zum Rendern und für die Wortpositionen (nur Textebene, #459), pdf-lib zum Neuaufbau; kein MuPDF, kein Ghostscript (beide AGPL)</td>
 <td>Stellen endgültig entfernen, Original bleibt (#392)</td>
 </tr>
 <tr>
