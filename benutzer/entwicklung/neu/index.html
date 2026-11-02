@@ -419,6 +419,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01421" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.142.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.142.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01420" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -453,7 +492,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -1160,6 +1199,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01421" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.142.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.142.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01420" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1194,7 +1272,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -1245,6 +1323,18 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
+<h2 id="01421">0.142.1<a class="headerlink" href="#01421" title="Permanent link">&para;</a></h2>
+<h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Hilfe-Symbol direkt hinter der Überschrift</strong> (#601): Hatte ein Listenkopf keine Beschreibung – etwa bei der <strong>Erweiterten Suche</strong> oder bei Ansichten ohne Beschreibung –, stand das <strong>?</strong> allein in einer Zeile unter der Überschrift. Jetzt steht es in allen Listenköpfen der Ablage und der Werkbank direkt hinter der Überschrift, mit und ohne Beschreibung. Die Beschreibung bleibt darunter. Der Kopf wird ohne Beschreibung dadurch eine Zeile niedriger.</li>
+<li><strong>Auch am Handy:</strong> Dort blendet das DMS die Beschreibung im Listenkopf aus. Das <strong>?</strong> verschwand bisher mit ihr; jetzt bleibt es hinter der Überschrift sichtbar, mit einem Tippziel von 44 px.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Neue Komponente <code>Listenkopf</code> (<code>web/src/Listenkopf.tsx</code>) für alle Listenköpfe: Mappenliste und Ansichten, Erweiterte Suche, Start, Anstehend, Papierkorb und die Werkbank-Bereiche mit Liste.</li>
+<li>Der Oberflächentest der Erweiterten Suche (<code>suche-pruefen.mjs</code>) prüft das <strong>?</strong> in der Überschrift, am Rechner und am Handy.</li>
+<li>Keine Migration, keine neue Abhängigkeit.</li>
+</ul>
 <h2 id="01420">0.142.0<a class="headerlink" href="#01420" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1263,7 +1353,7 @@
 <li>Administratorhandbuch: neue Seite <strong>Sicherung außer Haus</strong> – wann die NAS-App reicht, wann ein Paket sinnvoll ist, Netzfreigaben (SMB/NFS) als Docker-Volume, Anzeige und Hinweise, Einrichten, <strong>Löschschutz gegen Erpressersoftware</strong> (Nextcloud-Dateiablage, Zugang nur mit Schreibrecht, Versionierung bzw. Schnappschüsse am Ziel, S3 mit <code>PutObject</code> ohne <code>DeleteObject</code> und Object Lock). Sicherung (Lokal nur die neueste, Hinweise, Notfallblatt), Wiederherstellen (aus einer Kopie außer Haus), Pakete (Recht <strong>Sicherung lesen</strong>, Ereignis <strong>Sicherung fertig</strong>).</li>
 <li>Entwicklerhandbuch, <strong>Pakete mit Code:</strong> neuer Abschnitt <strong>Sicherung außer Haus</strong> – Manifest, Ablauf, Ereignis, Lesen in Stücken (nie die ganze Sicherung in den Speicher), Fortsetzung, Rückmeldung, Löschschutz.</li>
 </ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h3 id="technik_1">Technik<a class="headerlink" href="#technik_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Stand der Kopien außer Haus in der Einstellung <code>sicherung_extern</code> (je Sicherung und Paket); er verschwindet mit der Sicherung. Plan der Sicherung: neues Feld <code>nurNeueste</code>.</li>
 <li>Sicherungsformat unverändert; im Format-Kommentar steht jetzt die Grenze von AES-GCM mit einer Nonce je Datei (rund 64 GB je Sicherung).</li>
