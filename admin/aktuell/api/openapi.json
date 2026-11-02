@@ -5165,7 +5165,7 @@
           "Dokumente"
         ],
         "summary": "Seite als Graustufenbild (PGM)",
-        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen oder zu große Seiten.",
+        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). Seit 0.133.0 (#458) auch JPEG und PNG: Seite 1 in Originalgröße (dpi zählt dort nicht). 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen oder zu große Seiten.",
         "operationId": "getDokumenteMitidSeitenMitnrScan",
         "parameters": [
           {
@@ -8534,8 +8534,10 @@
                   "laeuft",
                   "fertig",
                   "fehler",
-                  "ausgelassen"
-                ]
+                  "ausgelassen",
+                  "paket"
+                ],
+                "description": "paket (#458): Textebene gelesen, wartet auf das Paket für die Texterkennung"
               },
               "info": {
                 "type": "string",

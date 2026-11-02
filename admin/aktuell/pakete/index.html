@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.132/pakete/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.133/pakete/">
       
       
         <link rel="prev" href="../stempel/">
@@ -1084,6 +1084,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1171,7 +1182,7 @@
   <a href="#ereignis-volltext-fertig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Der Volltext eines Dokuments ist da
+        Der Volltext eines Dokuments ist fertig
       
     </span>
   </a>
@@ -2901,6 +2912,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2988,7 +3010,7 @@
   <a href="#ereignis-volltext-fertig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Der Volltext eines Dokuments ist da
+        Der Volltext eines Dokuments ist fertig
       
     </span>
   </a>
@@ -3291,6 +3313,8 @@
 <p><strong>„Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die das DMS mitgibt (dms:antworten)“</strong> – Mit diesem Recht erscheint in der Ablage das Feld <a href="#frag-deine-ablage">Frag deine Ablage</a>. Das Paket bekommt je Frage nur die Frage, den bisherigen Chat und wenige Ausschnitte, die das DMS selbst herausgesucht hat – <strong>mit den Rechten des Fragenden</strong>. Es liest dabei nichts selbst aus der Ablage (dafür bräuchte es die Rechte oben) und kann nichts ändern: Das DMS zeigt nur seinen Text und prüft die Quellen.</p>
 <h4 id="recht-erkennen">Felder aus Dokumenten vorschlagen<a class="headerlink" href="#recht-erkennen" title="Permanent link">&para;</a></h4>
 <p><strong>„Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt (dms:erkennen)“</strong> – Das Paket kann statt der eingebauten Erkennung die Felder beim Knopf <strong>Aus Dokument ausfüllen</strong> vorschlagen, wenn du es wählst (siehe <a href="#erkennung-durch-ein-paket">Erkennung durch ein Paket</a>). Es bekommt dabei nur den Text des Dokuments und die Beschreibung der Felder – keine Rechte an Mappen oder Dokumenten. Was es liefert, prüft das DMS und zeigt es nur als Vorschlag.</p>
+<h4 id="recht-texterkennung">Texterkennung übernehmen<a class="headerlink" href="#recht-texterkennung" title="Permanent link">&para;</a></h4>
+<p><strong>„Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“</strong> – Das Paket ist dann die <a href="../texterkennung/">Texterkennung</a> des DMS: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit <a href="#recht-dokumente">Dokumente lesen und Volltext schreiben</a>.</p>
 <h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
 <p>Ein Paket wie <strong>KI-Assistent</strong> rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. <strong>Ollama</strong> auf deinem Heimserver. Die Adresse dieses Dienstes trägst du in den <strong>Einstellungen</strong> des Pakets ein (Werkbank → Pakete → <em>Paket</em> → Reiter „Einstellungen“):</p>
 <ul>
@@ -3351,11 +3375,11 @@
 <p><strong>Wann:</strong> Bei jedem neuen Dokument – Hochladen in der Oberfläche oder über die API, aus Eingangsordner und Postfach, und für die neuen Dokumente beim <strong>PDF teilen</strong>, <strong>Zusammenfügen</strong>, <strong>Post teilen</strong> und <strong>Schwärzen</strong> (als Kopie). Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument.</p>
 <p><strong>Typisch:</strong> Das Dokument ansehen und etwas daraus machen – das Paket <strong>Trennblatt</strong> teilt Post an Trennblättern, <strong>Texterkennung</strong> erkennt Text in Scans.</p>
 <h4 id="ereignis-texterkennung-fertig">Die Texterkennung eines Dokuments ist fertig<a class="headerlink" href="#ereignis-texterkennung-fertig" title="Permanent link">&para;</a></h4>
-<p><strong>Wann:</strong> Wenn die eingebaute <a href="../texterkennung/">Texterkennung</a> des DMS mit einem Dokument fertig ist – also der Volltext feststeht.</p>
-<p><strong>Typisch:</strong> Mit dem Volltext arbeiten, z. B. Felder vorschlagen oder Post anhand von Wörtern zuordnen.</p>
-<h4 id="ereignis-volltext-fertig">Der Volltext eines Dokuments ist da<a class="headerlink" href="#ereignis-volltext-fertig" title="Permanent link">&para;</a></h4>
-<p><strong>Wann:</strong> Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: von der eingebauten Texterkennung, aus der Textebene eines PDFs, von einem Paket wie <strong>Texterkennung</strong> oder über die API. Für ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> schickt das DMS dieses Ereignis außerdem für den <strong>Bestand</strong> nach (siehe <a href="#aehnlichkeit">Ähnlichkeit</a>).</p>
-<p><strong>Typisch:</strong> Aus dem Volltext etwas berechnen – das Paket <strong>KI lokal – Ähnlichkeit</strong> rechnet daraus den Vektor des Dokuments.</p>
+<p><strong>Veraltet</strong> – gibt es weiter für Pakete, die vor Version 0.133 entstanden sind. <strong>Wann:</strong> Gleichzeitig mit <a href="#ereignis-volltext-fertig">Volltext fertig</a>, wenn das DMS ein Dokument selbst gelesen hat (Textebene).</p>
+<p><strong>Typisch:</strong> Ältere Fassungen des Pakets <strong>Texterkennung</strong> (1.x) erkennen damit Scans ohne Text.</p>
+<h4 id="ereignis-volltext-fertig">Der Volltext eines Dokuments ist fertig<a class="headerlink" href="#ereignis-volltext-fertig" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: aus der Textebene eines PDFs, von einem Paket wie <strong>Texterkennung</strong> oder über die API. Seit Version 0.133 auch dann, wenn das DMS <strong>keinen Text</strong> gefunden hat (z. B. bei einem Scan) – genau das braucht ein Paket, das die <a href="#recht-texterkennung">Texterkennung übernimmt</a>. Pakete von vor 0.133 bekommen es weiter nur mit Text. Für ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> schickt das DMS dieses Ereignis außerdem für den <strong>Bestand</strong> nach (siehe <a href="#aehnlichkeit">Ähnlichkeit</a>).</p>
+<p><strong>Typisch:</strong> Scans erkennen – das Paket <strong>Texterkennung</strong> (ab 2.0); aus dem Volltext etwas berechnen – das Paket <strong>KI lokal – Ähnlichkeit</strong> rechnet daraus den Vektor des Dokuments.</p>
 <h4 id="ereignis-einstellungen-geandert">Die Einstellungen des Pakets wurden geändert<a class="headerlink" href="#ereignis-einstellungen-geandert" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Wenn ein Administrator die <a href="#einstellungen">Einstellungen des Pakets</a> speichert. Nur das Paket selbst bekommt dieses Ereignis.</p>
 <p><strong>Typisch:</strong> Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.</p>
