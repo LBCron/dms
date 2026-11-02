@@ -29,6 +29,10 @@ Du brauchst: die beiden Sicherungsdateien (`.dms-sicherung` und `.json`) und das
 
 Dieser Weg ist nur offen, solange es noch keinen Benutzer gibt, und nur mit dem Einrichtungscode – genau wie die Einrichtung.
 
+### Aus einer Kopie außer Haus { #aus-einer-kopie-ausser-haus }
+
+Ist das Gerät weg, holst du beide Dateien vom [Ziel außer Haus](sicherung-ausser-haus.md) – die `.dms-sicherung` und die `.json` daneben – und legst sie in den Ordner `sicherung`. Die `.json` dort ist die **schlanke** Fassung (ohne Versionen, Zähler und Haushalts-Id). Die Liste zeigt die Sicherung als *Kopie außer Haus*; sobald du den **Schlüssel vom Notfallblatt** eingibst, liest das DMS Datenbank-Stand, Haushalts-Id und Anzahl Mappen, Dokumente und Benutzer aus der Sicherung selbst. Die DMS-Version, mit der sie entstand, steht dann als „unbekannt“ im Abgleich – maßgeblich ist der Datenbank-Stand. Beim Einspielen prüft das DMS jede Datei gegen ihren Prüfwert und am Ende die ganze Sicherung (GCM-Prüfwert); erst dann wird umgeschaltet.
+
 ## Auf dem laufenden System
 
 ![Wiederherstellen in der Werkbank](bilder/werkbank-wiederherstellen.png)

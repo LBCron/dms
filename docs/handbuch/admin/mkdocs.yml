@@ -97,6 +97,7 @@ nav:
           - Texterkennung und Wartung: texterkennung.md
       - Daten sichern:
           - Sicherung: sicherung.md
+          - Sicherung außer Haus: sicherung-ausser-haus.md
           - Wiederherstellen: wiederherstellen.md
           - Daten exportieren: export.md
           - Papierkorb: papierkorb.md

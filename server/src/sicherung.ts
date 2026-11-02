@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { OHNE_INHALT, type Datenquelle, type Zaehler } from './datenbankabzug';
 import type { Einstellungen } from './einstellungen';
@@ -56,8 +56,62 @@ export interface Plan {
   mindestFreiGB: number;
   /** Seit wann der Zeitplan an ist (für „noch nie gesichert“). */
   aktivSeit: string | null;
+  /**
+   * Lokal nur die neueste automatische Sicherung behalten (#585) – für knappen Platz, wenn eine Kopie außer Haus
+   * entsteht. „Lokal keine“ gibt es bewusst nicht: Jede Wiederherstellung hinge sonst am externen Speicher.
+   */
+  nurNeueste: boolean;
 }
-export const PLAN_STANDARD: Plan = { aktiv: false, uhrzeit: '02:00', haeufigkeit: 'taeglich', wochentag: 7, aufbewahrung: { taeglich: 7, woechentlich: 4, monatlich: 12 }, mindestFreiGB: 1, aktivSeit: null };
+export const PLAN_STANDARD: Plan = { aktiv: false, uhrzeit: '02:00', haeufigkeit: 'taeglich', wochentag: 7, aufbewahrung: { taeglich: 7, woechentlich: 4, monatlich: 12 }, mindestFreiGB: 1, aktivSeit: null, nurNeueste: false };
+
+/* ---------- Sicherung außer Haus (#585) ---------- */
+
+/**
+ * Was ein Paket mit `dms:sicherung-lesen` über eine Sicherung erfährt – und was es neben die Datei auf das Ziel legt
+ * (`<name>.json`). Bewusst ohne Person (ausgeloestVon), Umgebung (Versionen, System), Zähler und Haushalts-Id.
+ * Die Wiederherstellung kommt damit aus: Was fehlt, steht verschlüsselt im Kopf der Sicherung (#585).
+ */
+export interface SchlankeMetadaten {
+  format: number; schlank: true; datei: string; groesse: number; sha256: string; beginn: string;
+  verschluesselung: { verfahren: string; fingerabdruck: string };
+}
+export const schlankeMetadaten = (m: Metadaten): SchlankeMetadaten => ({
+  format: m.format, schlank: true, datei: m.datei, groesse: m.groessen.sicherungBytes, sha256: m.sha256, beginn: m.beginn,
+  verschluesselung: { verfahren: m.verschluesselung.verfahren, fingerabdruck: m.verschluesselung.fingerabdruck },
+});
+export const istSchlank = (x: unknown): x is SchlankeMetadaten => !!x && typeof x === 'object' && (x as { schlank?: unknown }).schlank === true;
+
+/** Stand der Kopie außer Haus je Sicherung und Paket: Rückmeldung des Pakets (#585). */
+export type ExternStatus = 'offen' | 'laeuft' | 'hochgeladen' | 'geprueft' | 'fehlgeschlagen';
+/**
+ * Wie das Paket die Kopie am Ziel geprüft hat: pruefsumme (SHA-256 vom Ziel bestätigt oder vollständig zurückgelesen),
+ * stichprobe (Größe und Stichproben zurückgelesen), groesse (nur die Größe – z. B. Ziel ohne Lesezugriff), keine.
+ */
+export type ExternPruefung = 'pruefsumme' | 'stichprobe' | 'groesse' | 'keine';
+export interface ExternStand {
+  status: ExternStatus; pruefung?: ExternPruefung; grund?: string;
+  /** Hilft eine Wiederholung nicht (Prüfsumme falsch, Anmeldung abgelehnt, aufgegeben)? Dann E-Mail. */
+  endgueltig?: boolean;
+  /** Ziel in Worten, vom Paket (ohne Zugangsdaten), z. B. „WebDAV https://cloud.example.org/…/DMS“. */
+  ziel?: string;
+  bytes?: number; gesamt?: number;
+  /** Ereignis angelegt; letzte Rückmeldung. */
+  seit: string; am: string;
+}
+/** Ein Paket, das Sicherungen außer Haus kopiert, mit der bestätigten Adresse aus seinen Einstellungen. */
+export interface Sicherungsziel { id: string; name: string; adresse: string | null; ziel?: string | null }
+/** Verbindung zu den Paketen (index.ts): Pakete mit dms:sicherung-lesen und das Ereignis sicherung.fertig. */
+export interface ExternAnbindung {
+  pakete(): Promise<Array<{ id: string; name: string; adresse: string | null }>>;
+  melde(daten: SchlankeMetadaten & { name: string }): Promise<void>;
+}
+/** So viele Bytes liest ein Paket höchstens auf einmal (GET /sicherungen/{name}/datei). */
+export const STUECK_MAX = 8 * 1024 * 1024;
+const EXTERN_STATUS: ExternStatus[] = ['laeuft', 'hochgeladen', 'geprueft', 'fehlgeschlagen'];
+const EXTERN_PRUEFUNG: ExternPruefung[] = ['pruefsumme', 'stichprobe', 'groesse', 'keine'];
+const erfolgreich = (s: ExternStand) => s.status === 'hochgeladen' || s.status === 'geprueft';
+/** Zugangsdaten aus einer Adresse im Text entfernen (https://benutzer:passwort@host → https://host). */
+export const ohneZugangsdaten = (t: string) => t.replace(/(\w+:\/\/)[^/@\s]*@/g, '$1');
 
 export interface Lauf {
   art: 'sicherung' | 'pruefsumme';
@@ -73,7 +127,12 @@ export interface Lauf {
 }
 
 export interface Probeergebnis { am: string; ok: boolean; info: string }
-export interface Eintragsliste { name: string; meta: Metadaten | null; bytes: number; pruefung?: { am: string; ok: boolean }; probe?: Probeergebnis }
+/**
+ * schlank (#585): Statt der vollständigen Metadaten liegt nur die schlanke Fassung daneben (z. B. vom externen Ziel
+ * zurückgeholt); die Wiederherstellung liest den Rest mit dem Schlüssel aus der Sicherung selbst.
+ * extern: Stand der Kopie außer Haus je Paket.
+ */
+export interface Eintragsliste { name: string; meta: Metadaten | null; schlank?: SchlankeMetadaten; bytes: number; pruefung?: { am: string; ok: boolean }; probe?: Probeergebnis; extern?: Record<string, ExternStand> }
 
 /** Zeitplan der Probe-Wiederherstellung (#109), Standard sonntags 04:00. */
 export interface ProbePlan { aktiv: boolean; wochentag: number; uhrzeit: string }
@@ -162,6 +221,7 @@ export function bereinigePlan(e: unknown, alt: Plan = PLAN_STANDARD): Plan {
     },
     mindestFreiGB: zahl(x.mindestFreiGB, alt.mindestFreiGB, 0, 100_000),
     aktivSeit: typeof x.aktivSeit === 'string' ? x.aktivSeit : alt.aktivSeit ?? null,
+    nurNeueste: x.nurNeueste === undefined ? alt.nurNeueste ?? false : x.nurNeueste === true,
   };
 }
 
@@ -187,6 +247,8 @@ export class Sicherung {
   private jetzt: () => Date;
   /** Läuft gerade eine Wiederherstellung (#107)? Dann keine Sicherung (außer der davor). */
   sperre: () => boolean = () => false;
+  /** Pakete, die jede Sicherung außer Haus kopieren (#585); null = keine Pakete eingerichtet (Tests, frühe Startphase). */
+  extern: ExternAnbindung | null = null;
 
   constructor(
     /** Ordner der Sicherungen (eigenes Volume). */
@@ -275,16 +337,22 @@ export class Sicherung {
     }
     const pruefungen = ((await this.q.einstellungen.lies('sicherung_pruefungen')) as Record<string, { am: string; ok: boolean }> | null) ?? {};
     const proben = ((await this.q.einstellungen.lies('sicherung_proben')) as Record<string, Probeergebnis> | null) ?? {};
+    const extern = await this.externStaende();
     const erg: Eintragsliste[] = [];
     for (const n of namen.filter((x) => x.endsWith(ENDUNG) && !x.startsWith('.'))) {
       const name = n.slice(0, -ENDUNG.length);
       const s = await stat(join(this.ordner, n)).catch(() => null);
       if (!s) continue;
       let meta: Metadaten | null = null;
-      try { meta = JSON.parse(await readFile(join(this.ordner, `${name}.json`), 'utf8')) as Metadaten; } catch { /* fehlt oder unlesbar */ }
-      erg.push({ name, meta, bytes: s.size, ...(pruefungen[name] ? { pruefung: pruefungen[name] } : {}), ...(proben[name] ? { probe: proben[name] } : {}) });
+      let schlank: SchlankeMetadaten | undefined;
+      try {
+        const j = JSON.parse(await readFile(join(this.ordner, `${name}.json`), 'utf8')) as unknown;
+        if (istSchlank(j)) schlank = j; else meta = j as Metadaten;
+      } catch { /* fehlt oder unlesbar */ }
+      erg.push({ name, meta, ...(schlank ? { schlank } : {}), bytes: s.size, ...(pruefungen[name] ? { pruefung: pruefungen[name] } : {}), ...(proben[name] ? { probe: proben[name] } : {}), ...(extern[name] ? { extern: extern[name] } : {}) });
     }
-    return erg.sort((a, b) => (b.meta?.beginn ?? b.name).localeCompare(a.meta?.beginn ?? a.name));
+    const beginn = (x: Eintragsliste) => x.meta?.beginn ?? x.schlank?.beginn ?? x.name;
+    return erg.sort((a, b) => beginn(b).localeCompare(beginn(a)));
   }
 
   private pfad(name: string) {
@@ -297,6 +365,7 @@ export class Sicherung {
     if (!(await stat(p).catch(() => null))) throw new Fachfehler(404, 'Diese Sicherung gibt es nicht (mehr).');
     await rm(p, { force: true });
     await rm(join(this.ordner, `${name}.json`), { force: true });
+    await this.vergissExtern([name]);
     log.warn('Sicherung gelöscht', { name, von });
   }
 
@@ -308,9 +377,9 @@ export class Sicherung {
       try {
         const metaText = await readFile(join(this.ordner, `${name}.json`), 'utf8').catch(() => null);
         if (!metaText) throw new Error('Die Metadaten-Datei (.json) fehlt – ohne sie lässt sich die Prüfsumme nicht vergleichen.');
-        const meta = JSON.parse(metaText) as Metadaten;
-        lauf.gesamt = (await stat(p)).size;
+        const meta = JSON.parse(metaText) as { sha256: string };
         lauf.schritt = 'Prüfsumme berechnen';
+        lauf.gesamt = (await stat(p)).size;
         const sha = await sha256Von(p, (n) => { lauf.bytes = n; });
         const ok = sha === meta.sha256;
         const alle = ((await this.q.einstellungen.lies('sicherung_pruefungen')) as Record<string, unknown> | null) ?? {};
@@ -342,7 +411,7 @@ export class Sicherung {
     const plan = await this.plan();
     const a = plan.aufbewahrung;
     // Jede Sicherung ist vollständig; Zahl der höchstens aufbewahrten Sicherungen.
-    const stueck = (plan.haeufigkeit === 'taeglich' ? a.taeglich : 0) + a.woechentlich + a.monatlich;
+    const stueck = plan.nurNeueste ? 1 : (plan.haeufigkeit === 'taeglich' ? a.taeglich : 0) + a.woechentlich + a.monatlich;
     const letzte = liste.find((x) => x.meta)?.bytes ?? dateienBytes + datenbankBytes;
     const mindest = plan.mindestFreiGB * 1024 ** 3;
     return {
@@ -452,6 +521,8 @@ export class Sicherung {
       await rename(join(this.ordner, `.${name}.json.teil`), join(this.ordner, `${name}.json`));
       lauf.status = 'fertig'; lauf.ergebnis = meta; lauf.schritt = 'Fertig';
       log.info('Sicherung fertig', { name, art, mappen: meta.anzahl.mappen, dokumente: meta.anzahl.dokumente, dateien, mb: Math.round(ergebnis.g.bytes / 1024 / 1024), sekunden: meta.dauerSekunden });
+      // Danach im Hintergrund außer Haus (#585): Die lokale Sicherung ist fertig, egal was dort geschieht.
+      await this.kuendigeAn(name, meta);
       if (art === 'automatisch') await this.raeumeAuf();
       return meta;
     } catch (e) {
@@ -465,24 +536,172 @@ export class Sicherung {
     }
   }
 
-  /** Aufbewahrung (#104): ältere automatische Sicherungen entfernen. */
+  /**
+   * Aufbewahrung (#104): ältere automatische Sicherungen entfernen – bzw. alle außer der neuesten (#585, „lokal nur
+   * die neueste“). Eine Sicherung, deren Kopie außer Haus noch läuft, bleibt bis zu 2 Tage stehen (#585).
+   */
   async raeumeAuf(): Promise<string[]> {
     const plan = await this.plan();
-    const auto = (await this.liste()).filter((x) => x.meta?.art === 'automatisch').map((x) => ({ name: x.name, beginn: x.meta!.beginn }));
-    const bleibt = behalten(auto, plan.aufbewahrung);
-    const weg = auto.filter((x) => !bleibt.has(x.name)).map((x) => x.name);
+    const liste = await this.liste();
+    const auto = liste.filter((x) => x.meta?.art === 'automatisch').map((x) => ({ name: x.name, beginn: x.meta!.beginn }));
+    const bleibt = plan.nurNeueste ? new Set([...auto].sort((x, y) => y.beginn.localeCompare(x.beginn)).slice(0, 1).map((x) => x.name)) : behalten(auto, plan.aufbewahrung);
+    const jetzt = this.jetzt().getTime();
+    const unterwegs = (n: string) => Object.values(liste.find((x) => x.name === n)?.extern ?? {})
+      .some((s) => (s.status === 'offen' || s.status === 'laeuft') && jetzt - Date.parse(s.seit) < ZU_ALT_TAGE * TAG_MS);
+    const weg = auto.filter((x) => !bleibt.has(x.name) && !unterwegs(x.name)).map((x) => x.name);
     for (const n of weg) {
       await rm(join(this.ordner, `${n}${ENDUNG}`), { force: true });
       await rm(join(this.ordner, `${n}.json`), { force: true });
     }
+    await this.vergissExtern(weg);
     if (weg.length) log.info('Ältere automatische Sicherungen entfernt (Aufbewahrung)', { anzahl: weg.length, namen: weg });
     return weg;
+  }
+
+  /* ---------- Sicherung außer Haus (#585) ---------- */
+
+  private async externStaende(): Promise<Record<string, Record<string, ExternStand>>> {
+    const v = await this.q.einstellungen.lies('sicherung_extern');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, Record<string, ExternStand>> : {};
+  }
+
+  /** Änderungen am Stand außer Haus nacheinander – Rückmeldung, neue Sicherung und Aufbewahrung können sich überschneiden. */
+  private externKette: Promise<unknown> = Promise.resolve();
+  private aendereExtern(f: (alle: Record<string, Record<string, ExternStand>>) => boolean): Promise<void> {
+    const weiter = this.externKette.then(async () => {
+      const alle = await this.externStaende();
+      if (f(alle)) await this.q.einstellungen.schreibe('sicherung_extern', Object.keys(alle).length ? alle : null);
+    });
+    this.externKette = weiter.catch(() => {});
+    return weiter;
+  }
+
+  private setzeExtern(name: string, paket: string, stand: ExternStand) {
+    return this.aendereExtern((alle) => { alle[name] = { ...(alle[name] ?? {}), [paket]: stand }; return true; });
+  }
+
+  private vergissExtern(namen: string[]) {
+    return this.aendereExtern((alle) => { const da = namen.filter((n) => n in alle); for (const n of da) delete alle[n]; return da.length > 0; });
+  }
+
+  /** Ziele außer Haus: Pakete mit dms:sicherung-lesen, mit Adresse und dem zuletzt gemeldeten Ziel. */
+  async externZiele(): Promise<Sicherungsziel[]> {
+    const pakete = await this.extern?.pakete().catch(() => []) ?? [];
+    if (!pakete.length) return [];
+    const alle = await this.externStaende();
+    const zuletzt = (id: string) => Object.values(alle).map((x) => x[id]).filter((s): s is ExternStand => !!s?.ziel).sort((a, b) => b.am.localeCompare(a.am))[0]?.ziel ?? null;
+    return pakete.map((p) => ({ ...p, ziel: zuletzt(p.id) }));
+  }
+
+  /** Nach einer Sicherung: Ereignis an die Pakete, Stand „offen“ je Paket. Fehler hier stören die Sicherung nicht. */
+  private async kuendigeAn(name: string, meta: Metadaten) {
+    try {
+      const pakete = await this.extern?.pakete() ?? [];
+      if (!pakete.length) return;
+      const am = this.jetzt().toISOString();
+      await this.aendereExtern((alle) => { alle[name] = Object.fromEntries(pakete.map((p) => [p.id, { status: 'offen', seit: am, am } satisfies ExternStand])); return true; });
+      await this.extern!.melde({ name, ...schlankeMetadaten(meta) });
+    } catch (e) { log.error('Kopie außer Haus nicht angestoßen', { name, fehler: (e as Error).message }); }
+  }
+
+  /** Darf das Paket diese Sicherung lesen? Nur die, die ihm mit sicherung.fertig gemeldet wurde – sonst 403/404. */
+  private async externZugang(paket: string, name: string): Promise<{ pfad: string; groesse: number; stand: ExternStand }> {
+    const pfad = this.pfad(name);
+    const s = await stat(pfad).catch(() => null);
+    if (!s?.isFile()) throw new Fachfehler(404, 'Diese Sicherung gibt es nicht (mehr) – sie wurde vermutlich von der Aufbewahrung entfernt.');
+    const stand = (await this.externStaende())[name]?.[paket];
+    if (!stand) throw new Fachfehler(403, 'Diese Sicherung wurde dem Paket nicht gemeldet (Ereignis sicherung.fertig) – lesen darf es nur diese.');
+    return { pfad, groesse: s.size, stand };
+  }
+
+  /** Schlanke Metadaten einer gemeldeten Sicherung (GET /sicherungen/{name}). */
+  async externMeta(paket: string, name: string): Promise<SchlankeMetadaten & { name: string }> {
+    await this.externZugang(paket, name);
+    const j = JSON.parse(await readFile(join(this.ordner, `${name}.json`), 'utf8').catch(() => 'null')) as unknown;
+    if (!j) throw new Fachfehler(404, 'Zu dieser Sicherung fehlen die Metadaten.');
+    return { name, ...(istSchlank(j) ? j : schlankeMetadaten(j as Metadaten)) };
+  }
+
+  /** Ein Stück der verschlüsselten Datei (GET /sicherungen/{name}/datei): ab versatz höchstens laenge Bytes. */
+  async externStueck(paket: string, name: string, versatz: unknown, laenge: unknown): Promise<{ inhalt: Buffer; groesse: number }> {
+    const { pfad, groesse } = await this.externZugang(paket, name);
+    const zahl = (v: unknown, std: number) => (v === undefined || v === '' ? std : Number(v));
+    const ab = zahl(versatz, 0), n = zahl(laenge, STUECK_MAX);
+    if (!Number.isSafeInteger(ab) || ab < 0 || ab > groesse) throw new Fachfehler(422, `versatz: 0 bis ${groesse} (Größe der Datei).`);
+    if (!Number.isSafeInteger(n) || n < 1 || n > STUECK_MAX) throw new Fachfehler(422, `laenge: 1 bis ${STUECK_MAX} Bytes (8 MB).`);
+    const inhalt = Buffer.alloc(Math.min(n, groesse - ab));
+    const f = await open(pfad, 'r');
+    try { const { bytesRead } = await f.read(inhalt, 0, inhalt.length, ab); return { inhalt: inhalt.subarray(0, bytesRead), groesse }; }
+    finally { await f.close(); }
+  }
+
+  /** Rückmeldung des Pakets je Sicherung (PUT /sicherungen/{name}/extern). */
+  async externRueckmeldung(paket: string, name: string, e: unknown): Promise<ExternStand> {
+    const { stand } = await this.externZugang(paket, name);
+    const x = (e ?? {}) as Record<string, unknown>;
+    const status = x.status as ExternStatus;
+    if (!EXTERN_STATUS.includes(status)) throw new Fachfehler(422, `status: ${EXTERN_STATUS.join(', ')}.`);
+    const pruefung = x.pruefung === undefined || x.pruefung === null ? undefined : x.pruefung as ExternPruefung;
+    if (pruefung !== undefined && !EXTERN_PRUEFUNG.includes(pruefung)) throw new Fachfehler(422, `pruefung: ${EXTERN_PRUEFUNG.join(', ')}.`);
+    if (status === 'geprueft' && pruefung !== 'pruefsumme' && pruefung !== 'stichprobe') throw new Fachfehler(422, '„geprueft“ braucht pruefung: pruefsumme oder stichprobe. Nur die Größe bestätigt heißt „hochgeladen“ mit pruefung: groesse.');
+    if (status === 'hochgeladen' && (pruefung === 'pruefsumme' || pruefung === 'stichprobe')) throw new Fachfehler(422, 'Mit Prüfsumme oder Stichprobe geprüft heißt status: geprueft.');
+    const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? ohneZugangsdaten(v.trim().replace(/\s+/g, ' ')).slice(0, max) : undefined);
+    const grund = text(x.grund, 500);
+    if (status === 'fehlgeschlagen' && !grund) throw new Fachfehler(422, 'Bei „fehlgeschlagen“ bitte einen Grund angeben (grund).');
+    const zahl = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : undefined);
+    const neu: ExternStand = {
+      status, ...(pruefung ? { pruefung } : {}), ...(grund ? { grund } : {}), ...(status === 'fehlgeschlagen' && x.endgueltig === true ? { endgueltig: true } : {}),
+      ...(text(x.ziel, 200) ?? stand.ziel ? { ziel: text(x.ziel, 200) ?? stand.ziel } : {}),
+      ...(zahl(x.bytes) !== undefined ? { bytes: zahl(x.bytes) } : {}), ...(zahl(x.gesamt) !== undefined ? { gesamt: zahl(x.gesamt) } : {}),
+      seit: stand.seit, am: this.jetzt().toISOString(),
+    };
+    await this.setzeExtern(name, paket, neu);
+    if (status === 'fehlgeschlagen') log.warn('Kopie außer Haus fehlgeschlagen', { name, paket, grund, endgueltig: !!neu.endgueltig });
+    else if (status !== 'laeuft') log.info(status === 'geprueft' ? 'Kopie außer Haus geprüft' : 'Kopie außer Haus hochgeladen', { name, paket, pruefung: pruefung ?? null, ziel: neu.ziel ?? null });
+    if (status === 'fehlgeschlagen' && neu.endgueltig) void this.melde().catch(() => {});
+    return neu;
+  }
+
+  /** Das Paket hat das Ereignis aufgegeben (alle Wiederholungen fehlgeschlagen): „fehlgeschlagen“, endgültig. */
+  async externAufgegeben(paket: string, name: string, fehler: string | null | undefined) {
+    const stand = (await this.externStaende())[name]?.[paket];
+    if (!stand || erfolgreich(stand)) return;
+    await this.setzeExtern(name, paket, { ...stand, status: 'fehlgeschlagen', endgueltig: true, grund: `Nach mehreren Versuchen aufgegeben: ${ohneZugangsdaten(stand.status === 'fehlgeschlagen' && stand.grund ? stand.grund : fehler ?? 'unbekannter Fehler').slice(0, 450)}`, am: this.jetzt().toISOString() });
+    log.error('Kopie außer Haus aufgegeben', { name, paket, fehler });
+    void this.melde().catch(() => {});
+  }
+
+  /**
+   * Zustand außer Haus: letzte erfolgreiche Kopie, aktueller Fehler, „hinkt mehr als 2 Tage hinterher“. Es zählen nur
+   * Pakete, die noch installiert sind. zuAlt: Eine Sicherung, die älter als 2 Tage ist und neuer als die letzte
+   * erfolgreiche Kopie, ist noch nicht außer Haus.
+   */
+  async externZustand(liste?: Eintragsliste[]) {
+    const ziele = await this.externZiele();
+    if (!ziele.length) return null;
+    const ids = new Set(ziele.map((z) => z.id));
+    const jetzt = this.jetzt().getTime();
+    let letzte: { name: string; paket: string; beginn: string; stand: ExternStand } | null = null;
+    let fehler: { name: string; paket: string; beginn: string; stand: ExternStand } | null = null;
+    let aeltesteOffen: string | null = null;
+    for (const e of liste ?? await this.liste()) {
+      const st = Object.entries(e.extern ?? {}).filter(([p]) => ids.has(p));
+      if (!st.length) continue;
+      const beginn = e.meta?.beginn ?? e.schlank?.beginn ?? st[0][1].seit;
+      const ok = st.find(([, s]) => erfolgreich(s));
+      if (ok) { letzte = { name: e.name, paket: ok[0], beginn, stand: ok[1] }; break; }
+      const f = st.find(([, s]) => s.status === 'fehlgeschlagen');
+      if (f && !fehler) fehler = { name: e.name, paket: f[0], beginn, stand: f[1] };
+      aeltesteOffen = e.meta?.ende ?? st[0][1].seit;
+    }
+    return { ziele, letzte, fehler, zuAlt: !!aeltesteOffen && jetzt - Date.parse(aeltesteOffen) > ZU_ALT_TAGE * TAG_MS };
   }
 
   /* ---------- Zustand und Hinweise (#105) ---------- */
 
   async zustand() {
     const liste = await this.liste();
+    const extern = await this.externZustand(liste).catch(() => null);
     const letzte = liste.find((x) => x.meta)?.meta ?? null;
     const fehler = (await this.q.einstellungen.lies('sicherung_fehler')) as Fehlerstand | null;
     const jetzt = this.jetzt().getTime();
@@ -500,6 +719,7 @@ export class Sicherung {
       fingerabdruck: this.q.tresor.fingerabdruck,
       ort: this.ort(),
       probe: await this.probeAmpel(letzte !== null),
+      extern,
     };
   }
 
@@ -525,9 +745,29 @@ export class Sicherung {
       betreff = 'DMS: Die letzte Sicherung ist zu alt';
       text = z.letzte ? `Die letzte erfolgreiche Sicherung ist vom ${new Date(z.letzte.ende).toLocaleString('de-DE', { timeZone: ZONE })} – älter als ${ZU_ALT_TAGE} Tage.\n\n` : 'Es gibt noch keine erfolgreiche Sicherung, obwohl die automatische Sicherung eingeschaltet ist.\n\n';
     }
-    if (!vorfall) return null;
-    if ((await this.q.einstellungen.lies('sicherung_gemeldet')) === vorfall) return null;
-    await this.q.einstellungen.schreibe('sicherung_gemeldet', vorfall);
+    if (vorfall) return this.meldeVorfall('sicherung_gemeldet', vorfall, betreff, text);
+    return this.meldeExtern(z.extern);
+  }
+
+  /** Kopie außer Haus (#585): endgültig fehlgeschlagen oder mehr als 2 Tage im Rückstand – einmal je Vorfall. Nennt nur das Ziel. */
+  private async meldeExtern(x: Awaited<ReturnType<Sicherung['externZustand']>>): Promise<string | null> {
+    if (!x) return null;
+    const zielText = (id: string) => { const z = x.ziele.find((y) => y.id === id); return z ? `${z.name}${z.adresse ? ` (${ohneZugangsdaten(z.adresse)})` : z.ziel ? ` (${z.ziel})` : ''}` : id; };
+    const wann = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: ZONE });
+    if (x.fehler?.stand.endgueltig) {
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, 'DMS: Kopie außer Haus fehlgeschlagen',
+        `Die Sicherung vom ${wann(x.fehler.beginn)} ließ sich nicht außer Haus kopieren.\n\nZiel: ${zielText(x.fehler.paket)}\nGrund: ${x.fehler.stand.grund ?? 'unbekannt'}\n\nDie lokale Sicherung ist davon nicht betroffen.\n\n`);
+    }
+    if (x.zuAlt) {
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-alt:${x.letzte?.name ?? 'nie'}`, 'DMS: Die letzte Kopie außer Haus ist zu alt',
+        `${x.letzte ? `Die letzte Kopie außer Haus ist von der Sicherung vom ${wann(x.letzte.beginn)}` : 'Es gibt noch keine Kopie außer Haus'} – neuere Sicherungen sind seit mehr als ${ZU_ALT_TAGE} Tagen nicht dort angekommen.\n\nZiel: ${x.ziele.map((z) => zielText(z.id)).join(', ')}\n${x.fehler?.stand.grund ? `Letzter Fehler: ${x.fehler.stand.grund}\n` : ''}\n`);
+    }
+    return null;
+  }
+
+  private async meldeVorfall(schluessel: string, vorfall: string, betreff: string, text: string): Promise<string | null> {
+    if ((await this.q.einstellungen.lies(schluessel)) === vorfall) return null;
+    await this.q.einstellungen.schreibe(schluessel, vorfall);
     log.warn(betreff.replace('DMS: ', ''), { vorfall });
     try { await this.q.anAdmins?.(betreff, `${text}Details stehen in der Werkbank unter „Sicherung“ und im Protokoll (Modul sicherung).`); }
     catch (e) { log.warn('Mail zur Sicherung nicht verschickt', { fehler: (e as Error).message }); }

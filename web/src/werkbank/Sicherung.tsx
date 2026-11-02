@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
-import { api, type ProbeStand, type SicherungsPlan, type SicherungStand, type SicherungsZustand, type WhLauf } from '../api';
+import { api, type ExternStand, type ExternZustand, type ProbeStand, type SicherungEintrag, type SicherungsPlan, type SicherungStand, type SicherungsZustand, type WhLauf } from '../api';
+import { t } from '../sprache';
 import { Schritte } from '../wiederherstellen';
 import { Hilfe, useHandbuch } from '../Hilfe';
 import { Link } from '../ort';
@@ -74,7 +75,70 @@ export function sicherungsHinweise(z: SicherungsZustand): Array<{ art: 'schlecht
   else if (z.probe?.ampel === 'gelb' && z.letzte) h.push({ art: 'info', text: <><strong>{z.probe.letzte ? `Die letzte Probe-Wiederherstellung ist vom ${zeit(z.probe.letzte.am)}.` : 'Noch keine Sicherung wurde probeweise wiederhergestellt.'}</strong> Erst eine Probe zeigt, dass sich eine Sicherung im Ernstfall einspielen lässt.</> });
   if (z.ort.volume === false) h.push({ art: 'warn', text: <><strong>Der Sicherungsordner ist kein eigenes Volume.</strong> Die Sicherungen liegen im Container und sind beim nächsten Update weg.</> });
   else if (z.ort.gleichePlatte) h.push({ art: 'info', text: <><strong>Die Sicherungen liegen auf derselben Platte wie die Dokumente.</strong> Fällt sie aus, sind beide weg – kopiere den Sicherungsordner auf eine andere Platte oder außer Haus.</> });
+  // Sicherung außer Haus (#585): fehlgeschlagen bzw. mehr als 2 Tage im Rückstand.
+  const x = z.extern;
+  if (x?.fehler) h.push({ art: 'schlecht', text: <><strong>{t('werkbank.sicherung.extern.hinweis.fehler', { datum: zeit(x.fehler.beginn) })}</strong> {zielName(x, x.fehler.paket)}: {x.fehler.stand.grund ?? '–'}</> });
+  else if (x?.zuAlt) h.push({ art: 'warn', text: <><strong>{t('werkbank.sicherung.extern.hinweis.alt')}</strong> {x.letzte ? t('werkbank.sicherung.extern.hinweis.letzte', { datum: zeit(x.letzte.beginn) }) : t('werkbank.sicherung.extern.hinweis.nie')}</> });
   return h;
+}
+
+/* ---------- Sicherung außer Haus (#585) ---------- */
+
+const zielName = (x: ExternZustand, id: string) => x.ziele.find((z) => z.id === id)?.name ?? id;
+
+/** Stand der Kopie außer Haus in Worten ohne „extern“: „geprüft“, „hochgeladen, Größe bestätigt“, „fehlgeschlagen“ … */
+function externStatus(s: ExternStand): string {
+  if (s.status === 'geprueft') return t(s.pruefung === 'stichprobe' ? 'werkbank.sicherung.extern.stichprobe' : 'werkbank.sicherung.extern.geprueft');
+  if (s.status === 'hochgeladen') return t(s.pruefung === 'groesse' ? 'werkbank.sicherung.extern.groesse' : 'werkbank.sicherung.extern.hochgeladen');
+  if (s.status === 'laeuft') return s.gesamt ? t('werkbank.sicherung.extern.laeuft.prozent', { prozent: Math.min(99, Math.floor(((s.bytes ?? 0) / s.gesamt) * 100)) }) : t('werkbank.sicherung.extern.laeuft');
+  if (s.status === 'fehlgeschlagen') return t('werkbank.sicherung.extern.fehlgeschlagen');
+  return t('werkbank.sicherung.extern.offen');
+}
+/** „extern geprüft“ usw. */
+export const externText = (s: ExternStand) => `${t('werkbank.sicherung.extern.extern')} ${externStatus(s)}`;
+
+/** Zelle „Wo“: „lokal ✓ · extern ✓ geprüft“ – je Paket ein Teil, Einzelheiten im Titel. */
+function OrtZelle({ e, extern }: { e: SicherungEintrag; extern: ExternZustand | null | undefined }) {
+  const staende = Object.entries(e.extern ?? {});
+  const mehrere = staende.length > 1;
+  return (
+    <span className="ort-zelle">
+      <span className="gutertext">{t('werkbank.sicherung.extern.lokal')} <Symbol name="haken" /></span>
+      {staende.map(([id, s]) => {
+        const ok = s.status === 'geprueft' || s.status === 'hochgeladen';
+        const name = extern ? zielName(extern, id) : id;
+        const titel = [name, s.ziel, s.grund, t('werkbank.sicherung.extern.stand', { datum: zeit(s.am) })].filter(Boolean).join(' – ');
+        return (
+          <span key={id} title={titel}>{' · '}
+            <span className={s.status === 'fehlgeschlagen' ? 'fehlertext' : s.status === 'geprueft' ? 'gutertext' : ok ? '' : 'leise'}>
+              {mehrere ? `${name}: ` : ''}{t('werkbank.sicherung.extern.extern')} {s.status === 'fehlgeschlagen' ? <Symbol name="warnung" /> : s.status === 'geprueft' ? <Symbol name="haken" /> : s.status === 'offen' || s.status === 'laeuft' ? <Symbol name="stoppuhr" /> : null} {externStatus(s)}
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** Abschnitt „Außer Haus“: Ziele (Pakete), letzte Kopie; ohne Paket ein Hinweis auf die Möglichkeiten. */
+function AusserHaus({ x, handbuch }: { x: ExternZustand | null | undefined; handbuch: string }) {
+  return (
+    <section className="blatt" id="ausser-haus">
+      <h2 className="h3">{t('werkbank.sicherung.extern.titel')} <Hilfe ort="sicherung.extern" /></h2>
+      {!x?.ziele.length ? (
+        <p className="leise">{t('werkbank.sicherung.extern.ohne')} <Link to="/werkbank/pakete" className="verweis">{t('werkbank.sicherung.extern.pakete')}</Link> · <a href={handbuch} target="_blank" rel="noreferrer" className="verweis">{t('werkbank.sicherung.extern.handbuch')}</a></p>
+      ) : (
+        <>
+          <dl className="eigenschaften">
+            {x.ziele.flatMap((z) => [<dt key={`n${z.id}`}>{z.name}</dt>, <dd key={`a${z.id}`} className="mono">{z.adresse ?? z.ziel ?? '–'}</dd>])}
+            <dt>{t('werkbank.sicherung.extern.letzte')}</dt>
+            <dd>{x.letzte ? <>{t('werkbank.sicherung.extern.letzte.wert', { datum: zeit(x.letzte.beginn) })} · {externText(x.letzte.stand)}</> : <span className="leise">{t('werkbank.sicherung.extern.letzte.keine')}</span>}</dd>
+          </dl>
+          <p className="leise klein">{t('werkbank.sicherung.extern.erklaerung')}</p>
+        </>
+      )}
+    </section>
+  );
 }
 
 /** Stand in einer Zeile (#366: früher die mittlere Spalte). */
@@ -86,6 +150,7 @@ function StandZeile({ s }: { s: SicherungStand }) {
     s.plan.aktiv ? `nächste ${s.plan.haeufigkeit === 'taeglich' ? 'täglich' : TAGE[s.plan.wochentag]} ${s.plan.uhrzeit} Uhr` : 'Zeitplan aus',
     <>{s.speicher.frei === null ? 'Platz nicht feststellbar' : `${bytes(s.speicher.frei)} frei`}{s.speicher.knapp && <span className="fehlertext"> (knapp)</span>}</>,
     z.notfallblatt.aktuell && z.notfallblatt.am ? `Notfallblatt heruntergeladen ${zeit(z.notfallblatt.am)}` : <span className="fehlertext">Notfallblatt fehlt</span>,
+    ...(z.extern?.ziele.length ? [<>{z.extern.letzte ? t('werkbank.sicherung.extern.zeile', { datum: zeit(z.extern.letzte.stand.am) }) : t('werkbank.sicherung.extern.zeile.keine')}{(z.extern.fehler || z.extern.zuAlt) && <span className="fehlertext"> ({z.extern.fehler ? t('werkbank.sicherung.extern.kurz.fehler') : t('werkbank.sicherung.extern.kurz.alt')})</span>}</>] : []),
   ];
   return <p className="klein standzeile">{teile.map((x, i) => <span key={i}>{i > 0 && ' · '}{x}</span>)}</p>;
 }
@@ -101,6 +166,8 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
   const hinweise = sicherungsHinweise(s.zustand);
   // Sicherungen mit einem früheren Schlüssel (#47).
   const alte = s.liste.filter((x) => x.meta && s.zustand.fingerabdruck && x.meta.verschluesselung.fingerabdruck !== s.zustand.fingerabdruck);
+  // Spalte „Wo“ (#585), sobald es ein Ziel außer Haus gibt oder eine Sicherung schon einen Stand hat.
+  const ortSpalte = !!s.zustand.extern?.ziele.length || s.liste.some((x) => x.extern);
 
   async function tu(f: () => Promise<unknown>, gut?: string) {
     setMeldung(undefined);
@@ -150,18 +217,19 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
         )}
         {!s.liste.length ? <p className="leise">Noch keine Sicherung im Ordner <span className="mono">{s.zustand.ort.ordner}</span>.</p> : (
           <div className="trefferliste"><table>
-            <thead><tr><th>Zeitpunkt</th><th>Art</th><th className="rechts">Größe</th><th>Inhalt</th><th>Prüfsumme</th><th>Probe</th><th><span className="sr">Aktionen</span></th></tr></thead>
+            <thead><tr><th>Zeitpunkt</th><th>Art</th><th className="rechts">Größe</th><th>Inhalt</th>{ortSpalte && <th>{t('werkbank.sicherung.extern.spalte')}</th>}<th>Prüfsumme</th><th>Probe</th><th><span className="sr">Aktionen</span></th></tr></thead>
             <tbody>{s.liste.map((x) => (
               <tr key={x.name}>
-                <td className="kurz" title={x.name}>{x.meta ? zeit(x.meta.beginn) : x.name}</td>
-                <td>{x.meta ? ART[x.meta.art] ?? x.meta.art : <span className="fehlertext">Metadaten fehlen</span>}
+                <td className="kurz" title={x.name}>{x.meta ? zeit(x.meta.beginn) : x.schlank ? zeit(x.schlank.beginn) : x.name}</td>
+                <td>{x.meta ? ART[x.meta.art] ?? x.meta.art : x.schlank ? <span className="leise">{t('werkbank.sicherung.extern.zurueck')}</span> : <span className="fehlertext">Metadaten fehlen</span>}
                   {x.meta && s.zustand.fingerabdruck && x.meta.verschluesselung.fingerabdruck !== s.zustand.fingerabdruck && <> <span className="chip warn" title={`Schlüssel ${x.meta.verschluesselung.fingerabdruck} – braucht das Notfallblatt zu diesem Schlüssel`}>früherer Schlüssel</span></>}</td>
                 <td className="rechts kurz">{bytes(x.bytes)}</td>
                 <td>{x.meta ? `${x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen, ${x.meta.anzahl.dateien.toLocaleString('de-DE')} Dateien` : '–'}{x.meta && <span className="leise klein"> · DMS {x.meta.umgebung.dms}</span>}</td>
+                {ortSpalte && <td><OrtZelle e={x} extern={s.zustand.extern} /></td>}
                 <td>{x.pruefung ? <span className={`chip ${x.pruefung.ok ? 'gut' : 'schlecht'}`} title={`geprüft ${zeit(x.pruefung.am)}`}>{x.pruefung.ok ? 'unverändert' : 'weicht ab'}</span> : <span className="leise">–</span>}</td>
                 <td>{x.probe ? <span className={`chip ${x.probe.ok ? 'gut' : 'schlecht'}`} title={`${zeit(x.probe.am)}: ${x.probe.info}`}>{x.probe.ok ? 'in Ordnung' : 'Fehler'}</span> : <span className="leise">–</span>}</td>
                 <td className="kurz">
-                  <button type="button" className="textknopf" disabled={laeuft || !x.meta} onClick={() => void tu(() => api.sicherungPruefen(x.name))}>Prüfen</button>{' · '}
+                  <button type="button" className="textknopf" disabled={laeuft || (!x.meta && !x.schlank)} onClick={() => void tu(() => api.sicherungPruefen(x.name))}>Prüfen</button>{' · '}
                   <button type="button" className="textknopf" disabled={laeuft} onClick={async () => { if (await rueckfrage({ titel: `Sicherung vom ${x.meta ? zeit(x.meta.beginn) : x.name} löschen?`, text: 'Sie ist danach endgültig weg.', ja: 'Endgültig löschen', gefahr: true })) void tu(() => api.sicherungLoeschen(x.name), 'Sicherung gelöscht.'); }}>Löschen</button>
                 </td>
               </tr>
@@ -197,6 +265,8 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
         <p className="leise klein">Faustregel 3-2-1: drei Kopien, auf zwei verschiedenen Medien, eine davon außer Haus. Lass das NAS den Sicherungsordner weiterkopieren, z. B. auf eine USB-Platte oder in die Cloud – siehe <a href={`${handbuch('admin', 'sicherung/')}#speicherort`} target="_blank" rel="noreferrer" className="verweis">Handbuch ↗</a>.</p>
       </section>
 
+      <AusserHaus x={s.zustand.extern} handbuch={handbuch('admin', 'sicherung-ausser-haus/')} />
+
       <Notfallblatt stand={s.zustand.notfallblatt} schluessel={s.zustand.schluessel} geladen={() => void z.laden()} />
     </div>
   );
@@ -229,10 +299,11 @@ function Zeitplan({ plan, notfallblatt, gespeichert }: { plan: SicherungsPlan; n
         <label className="eigenschaft"><span>Uhrzeit</span><input type="time" value={p.uhrzeit} onChange={(e) => setP({ ...p, uhrzeit: e.target.value })} /></label>
       </div>
       <p className="leise klein">Aufbewahrt werden die neuesten automatischen Sicherungen: je Tag, je Woche und je Monat die jeweils letzte. Von Hand angelegte bleiben, bis du sie löschst.</p>
+      <label className="haken"><input type="checkbox" checked={!!p.nurNeueste} onChange={(e) => setP({ ...p, nurNeueste: e.target.checked })} /><span>{t('werkbank.sicherung.extern.nurneueste')} <small className="leise">{t('werkbank.sicherung.extern.nurneueste.hilfe')}</small></span></label>
       <div className="raster">
-        {p.haeufigkeit === 'taeglich' && <label className="eigenschaft"><span>Tägliche</span><input type="number" min={0} max={366} value={a.taeglich} onChange={(e) => setA('taeglich', e.target.value)} /></label>}
-        <label className="eigenschaft"><span>Wöchentliche</span><input type="number" min={0} max={260} value={a.woechentlich} onChange={(e) => setA('woechentlich', e.target.value)} /></label>
-        <label className="eigenschaft"><span>Monatliche</span><input type="number" min={0} max={240} value={a.monatlich} onChange={(e) => setA('monatlich', e.target.value)} /></label>
+        {p.haeufigkeit === 'taeglich' && <label className="eigenschaft"><span>Tägliche</span><input type="number" min={0} max={366} value={a.taeglich} disabled={!!p.nurNeueste} onChange={(e) => setA('taeglich', e.target.value)} /></label>}
+        <label className="eigenschaft"><span>Wöchentliche</span><input type="number" min={0} max={260} value={a.woechentlich} disabled={!!p.nurNeueste} onChange={(e) => setA('woechentlich', e.target.value)} /></label>
+        <label className="eigenschaft"><span>Monatliche</span><input type="number" min={0} max={240} value={a.monatlich} disabled={!!p.nurNeueste} onChange={(e) => setA('monatlich', e.target.value)} /></label>
         <label className="eigenschaft"><span>Mindest-Speicherplatz in GB <small>darunter beginnt keine Sicherung</small></span><input type="number" min={0} value={p.mindestFreiGB} onChange={(e) => setP({ ...p, mindestFreiGB: Math.max(0, Math.trunc(Number(e.target.value) || 0)) })} /></label>
       </div>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}

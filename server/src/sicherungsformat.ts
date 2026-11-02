@@ -17,6 +17,9 @@ import { createGunzip, createGzip } from 'node:zlib';
  *   u8 Art + u32 Länge + Kopf (JSON) + Stücke (u32 Länge + Bytes)… + u32 0
  *   Art M = Inhaltsangabe, T = Tabelle (COPY-Text), D = Datei, E = Ende
  * So lassen sich beliebig große Tabellen und Dateien streamen, ohne vorher ihre Größe zu kennen.
+ *
+ * Grenze: AES-GCM mit einer einzigen Nonce je Datei verschlüsselt höchstens rund 64 GB (2^32 Blöcke zu 16 Byte) –
+ * für einen Haushalt kein Thema, eine größere Sicherung bräuchte ein neues Format (Hinweis der Sicherheit, #585).
  */
 
 export const MAGIE = Buffer.from('DMS-SICHERUNG 1\n', 'latin1');
@@ -194,6 +197,10 @@ export async function* liesSicherung(pfad: string, schluessel: Buffer, fortschri
     const z = e as NodeJS.ErrnoException;
     if (typeof z.code === 'string' && z.code.startsWith('Z_')) throw new Error('Die Sicherung ließ sich nicht entschlüsseln: falscher Schlüssel oder die Datei wurde verändert.');
     throw e;
+  } finally {
+    // Auch wenn nur der Anfang gelesen wird (Inhaltsangabe, #585): Datei schließen.
+    if (!geheim.destroyed) geheim.destroy();
+    if (!gunzip.destroyed) gunzip.destroy();
   }
 }
 

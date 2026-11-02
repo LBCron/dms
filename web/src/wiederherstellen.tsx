@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, type SicherungsMeta, type WhAbgleich, type WhAbschluss, type WhLauf, type WhSchritt } from './api';
+import { api, type SicherungSchlank, type SicherungsMeta, type WhAbgleich, type WhAbschluss, type WhLauf, type WhSchritt } from './api';
+import { t } from './sprache';
 import { rueckfrage } from './rueckfrage';
 
 /**
@@ -76,7 +77,7 @@ export function Wiederherstellungsbildschirm({ fertig }: { fertig: () => void })
 
 /** Sicherung wählen, Abgleich, Schlüssel, Start – auf dem frischen System und in der Werkbank. */
 export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { frisch: boolean; gestartet: () => void; abbrechen?: () => void }) {
-  const [liste, setListe] = useState<Array<{ name: string; bytes: number; meta: SicherungsMeta | null }> | null>(null);
+  const [liste, setListe] = useState<Array<{ name: string; bytes: number; meta: SicherungsMeta | null; schlank?: SicherungSchlank }> | null>(null);
   const [ordner, setOrdner] = useState('');
   const [fehler, setFehler] = useState<string>();
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
@@ -118,7 +119,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
             <li key={x.name}>
               <label className="haken">
                 <input type="radio" name="sicherung" checked={gewaehlt === x.name} onChange={() => { setSchluessel(''); void waehle(x.name); }} />
-                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> · {ART[x.meta.art] ?? x.meta.art} · DMS {x.meta.umgebung.dms} · {x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen · {groesse(x.bytes)}</span>}{!x.meta && <span className="fehlertext klein"> – Metadaten (.json) fehlen</span>}</span>
+                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> · {ART[x.meta.art] ?? x.meta.art} · DMS {x.meta.umgebung.dms} · {x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen · {groesse(x.bytes)}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> – Metadaten (.json) fehlen</span>}</span>
               </label>
             </li>
           ))}
@@ -128,13 +129,13 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
       {abgleich && (
         <>
           <h3 className="h3">Abgleich: damals ↔ heute</h3>
-          <div className="trefferliste"><table>
+          {abgleich.vergleich.length > 0 && <div className="trefferliste"><table>
             <thead><tr><th /><th>In der Sicherung</th><th>Dieses DMS</th><th /></tr></thead>
             <tbody>{abgleich.vergleich.map((v) => (
               <tr key={v.was}><th>{v.was}</th><td className="mono">{v.damals}</td><td className="mono">{v.heute}</td>
                 <td><span className={`chip ${v.urteil === 'fehler' ? 'schlecht' : v.urteil === 'hinweis' ? 'warn' : 'gut'}`}>{v.urteil === 'gleich' ? 'gleich' : v.urteil === 'ok' ? 'passt' : v.urteil === 'hinweis' ? 'Hinweis' : 'geht nicht'}</span>{v.info && <span className="leise klein"> {v.info}</span>}</td></tr>
             ))}</tbody>
-          </table></div>
+          </table></div>}
           {abgleich.probleme.map((p) => <div key={p} className="hinweis schlecht"><p>{p}</p></div>)}
           {abgleich.hinweise.filter((h) => !/Notfallblatt ein/.test(h) || brauchtSchluessel).map((h) => <div key={h} className="hinweis warn"><p>{h}</p></div>)}
           {(brauchtSchluessel || schluessel) && (

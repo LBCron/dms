@@ -21,7 +21,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
   type Sql = any;
   let haupt: Sql;
   const offen: Sql[] = [];
-  const dbs = [`dms_wh_quelle_${process.pid}`, `dms_wh_ziel_${process.pid}`, `dms_wh_wechsel_${process.pid}`, `dms_wh_fassq_${process.pid}`, `dms_wh_fassz_${process.pid}`];
+  const dbs = [`dms_wh_quelle_${process.pid}`, `dms_wh_ziel_${process.pid}`, `dms_wh_wechsel_${process.pid}`, `dms_wh_fassq_${process.pid}`, `dms_wh_fassz_${process.pid}`, `dms_wh_aussen_${process.pid}`];
   const urlVon = (db: string) => { const u = new URL(url!); u.pathname = `/${db}`; return u.toString(); };
 
   before(async () => {
@@ -161,6 +161,35 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const tippfehler = `${wort.slice(0, 3)}${wort.slice(4)}`;
     const vorschlaege = await pgRepo(neu, HAUSHALT).aehnlicheWoerter([tippfehler], 3);
     assert.ok(vorschlaege[tippfehler]?.includes(wort), `Tippfehler „${tippfehler}“ schlägt „${wort}“ vor: ${JSON.stringify(vorschlaege)}`);
+  });
+
+  it('stellt eine Kopie außer Haus mit nur der schlanken Metadaten-Datei wieder her (#585)', async () => {
+    const meta = JSON.parse(await readFile(join(quelle.sicherung.ordner, `${sicherungsName}.json`), 'utf8'));
+    const { schlankeMetadaten } = await import('../src/sicherung');
+    const ziel = await system(dbs[5]);
+    const { cp } = await import('node:fs/promises');
+    await cp(join(quelle.sicherung.ordner, `${sicherungsName}.dms-sicherung`), join(ziel.sicherung.ordner, `${sicherungsName}.dms-sicherung`));
+    await writeFile(join(ziel.sicherung.ordner, `${sicherungsName}.json`), JSON.stringify(schlankeMetadaten(meta)));
+    const ohne = await ziel.w.abgleich(sicherungsName);
+    assert.equal(ohne.schluesselNoetig, true);
+    assert.deepEqual(ohne.probleme, []);
+    assert.deepEqual(ohne.vergleich, [], 'ohne Schlüssel nichts zu vergleichen');
+    assert.match(ohne.hinweise.join(' '), /schlanke Metadaten-Datei/);
+    const falsch = await ziel.w.abgleich(sicherungsName, 'A'.repeat(43));
+    assert.match(falsch.probleme.join(' '), /Fingerabdruck/);
+    const schluessel = quelle.tresor.alsText()!;
+    const mit = await ziel.w.abgleich(sicherungsName, schluessel);
+    assert.equal(mit.schluesselNoetig, false);
+    assert.deepEqual(mit.probleme, []);
+    assert.equal(mit.meta.haushaltId, HAUSHALT, 'aus der Inhaltsangabe der Sicherung');
+    assert.ok(mit.vergleich.some((v) => v.was === 'Datenbank-Stand' && v.urteil === 'gleich'));
+    assert.ok(mit.vergleich.some((v) => v.was === 'DMS' && v.damals === 'unbekannt'));
+    await ziel.w.starte({ name: sicherungsName, schluessel }, null);
+    const lauf = await warte(ziel.w);
+    assert.equal(lauf.status, 'neustart', JSON.stringify(lauf, null, 1));
+    await new Promise((r) => setTimeout(r, 1700));
+    const neu = await frisch(dbs[5]);
+    assert.deepEqual(await zaehle(neu), await zaehle(quelle.sql), 'wie in der Quelle');
   });
 
   it('auf dem laufenden System nur im Wartungsmodus; vorher wird der jetzige Stand gesichert', async () => {

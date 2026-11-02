@@ -69,6 +69,7 @@ export const HILFE = {
   'pakete.recht.erkennen': admin('pakete/', 'dem Recht „Felder aus Dokumenten vorschlagen“', 'recht-erkennen'),
   'pakete.recht.texterkennung': admin('pakete/', 'dem Recht „Texterkennung übernehmen“', 'recht-texterkennung'),
   'pakete.recht.umwandeln': admin('pakete/', 'dem Recht „Dateien umwandeln“', 'recht-umwandeln'),
+  'pakete.recht.sicherung': admin('pakete/', 'dem Recht „Sicherung lesen“', 'recht-sicherung-lesen'),
   'pakete.erkennung': admin('pakete/', 'der Erkennung durch ein Paket', 'erkennung-durch-ein-paket'),
   'pakete.recht.adresse': admin('pakete/', 'der Dienst-Adresse eines Pakets', 'dienst-adresse'),
   'pakete.fragen': admin('pakete/', '„Frag deine Ablage“ (Höchstmenge je Frage)', 'frag-deine-ablage'),
@@ -79,6 +80,7 @@ export const HILFE = {
   'pakete.ereignis.volltext_fertig': admin('pakete/', 'dem Ereignis „Volltext fertig“', 'ereignis-volltext-fertig'),
   'pakete.ereignis.einstellungen_geaendert': admin('pakete/', 'dem Ereignis „Einstellungen geändert“', 'ereignis-einstellungen-geandert'),
   'pakete.ereignis.datei_umwandeln': admin('pakete/', 'dem Ereignis „Datei umwandeln“', 'ereignis-datei-umwandeln'),
+  'pakete.ereignis.sicherung_fertig': admin('pakete/', 'dem Ereignis „Sicherung fertig“', 'ereignis-sicherung-fertig'),
   'mappentyp.archiv': admin('archiv/', 'Archivmodus und Aufbewahrung'),
   'werkbank.stempel': admin('stempel/', 'Stempel-Vorlagen'),
   'werkbank.suche': admin('suche/', 'Suche: Tippfehler und gleichbedeutende Wörter'),
@@ -135,6 +137,7 @@ export const HILFE = {
   'sicherung.speicher': admin('sicherung/', 'Speicherplatz', 'speicherplatz'),
   'sicherung.ort': admin('sicherung/', 'Speicherort', 'speicherort'),
   'sicherung.notfallblatt': admin('sicherung/', 'Notfallblatt', 'notfallblatt'),
+  'sicherung.extern': admin('sicherung-ausser-haus/', 'Sicherung außer Haus'),
   'sicherung.probe': admin('wiederherstellen/', 'Probe-Wiederherstellung', 'probe-wiederherstellung'),
   // Ablage und Profil: Benutzerhandbuch
   'ablage.eingang': benutzer('eingang/', 'Zu erledigen und Aufgaben'),

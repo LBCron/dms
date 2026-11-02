@@ -1,4 +1,5 @@
 import { pdfAus, type Absatz } from './pdf';
+import { ohneZugangsdaten } from './sicherung';
 
 /**
  * Notfallblatt (#106): alles, um das DMS samt Sicherung auf einem neuen System wiederherzustellen.
@@ -18,6 +19,8 @@ export interface Notfalldaten {
   sicherungsordner: string;
   /** Ordner der Schlüsseldatei im Container. */
   schluesselordner: string;
+  /** Kopie außer Haus (#585): Paket und Adresse des Ziels – nie Zugangsdaten. */
+  aussenziele?: Array<{ name: string; adresse: string | null; ziel?: string | null }>;
 }
 
 /** In Vierergruppen, gut abschreibbar; Leerzeichen zählen bei der Eingabe nicht. */
@@ -42,11 +45,17 @@ export function notfallblatt(d: Notfalldaten): Buffer {
     zeile(`Sicherungen: Ordner ${d.sicherungsordner} im Container (in der Vorlage /volume1/docker/dms/sicherung auf dem NAS)`),
     zeile(`Schlüsseldatei: Ordner ${d.schluesselordner} im Container (in der Vorlage /volume1/docker/dms/geheim)`),
     zeile('Das Passwort der Datenbank steht in der Datei .env bzw. direkt in der docker-compose.yml (je nach Vorlage) – bewusst nicht auf diesem Blatt; bei dms-komplett gibt es keins. Für ein neues System genügt ein neues Passwort.'),
+    ...(d.aussenziele?.length ? [
+      zeile('Kopie außer Haus', { schrift: 'fett', groesse: 13, abstand: 16 }),
+      ...d.aussenziele.map((z, i) => zeile(`${z.name}: ${z.adresse ? ohneZugangsdaten(z.adresse) : z.ziel ?? 'Adresse in den Einstellungen des Pakets'}${z.ziel && z.adresse && z.ziel !== z.adresse ? ` – ${z.ziel}` : ''}`, i === 0 ? { abstand: 4 } : {})),
+      zeile('Benutzer und Passwort für das Ziel stehen bewusst nicht auf diesem Blatt – du findest sie im Passwortsafe bzw. beim Anbieter.'),
+      zeile('Der Schlüssel der Werkbank liegt nicht auf dem Ziel – ohne ihn ist die Kopie wertlos. Lege ihn nie „zur Sicherheit“ dazu.', { schrift: 'fett' }),
+    ] : []),
 
     zeile('Wiederherstellen auf einem neuen System', { schrift: 'fett', groesse: 13, abstand: 16 }),
     zeile('1. Auf dem neuen NAS die Ordner postgres, files, geheim und sicherung anlegen.', { abstand: 4 }),
     zeile('2. Die Vorlage deploy/nas/docker-compose.yml von github.com/motom001/dms als Compose-Projekt anlegen, Pfade anpassen und daneben eine .env mit DB_PASSWORD=<neues langes Passwort> ablegen.', { einzug: 0 }),
-    zeile(`3. Die Sicherung – beide Dateien, .dms-sicherung und .json – in den Ordner sicherung kopieren.`),
+    zeile(`3. Die Sicherung – beide Dateien, .dms-sicherung und .json – in den Ordner sicherung kopieren${d.aussenziele?.length ? ' (fehlt das Gerät: beide vom Ziel außer Haus holen)' : ''}.`),
     zeile('4. Das DMS starten und im Browser öffnen. Der Einrichtungsassistent fragt nach dem Einrichtungscode (steht im Protokoll des Containers und in der Datei geheim/EINRICHTUNGSCODE). Dann „Aus einer Sicherung wiederherstellen“ wählen, die Sicherung auswählen und den Schlüssel von diesem Blatt eingeben.'),
     zeile('5. Nach der Wiederherstellung startet das DMS neu; danach meldest du dich mit deinen bisherigen Zugangsdaten an.'),
     zeile('Die Haushalts-Id übernimmt das DMS beim Wiederherstellen aus der Sicherung.', { abstand: 6 }),

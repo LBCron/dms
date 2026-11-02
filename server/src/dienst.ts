@@ -1149,6 +1149,9 @@ export class Dienst {
     await this.repo.ocrSetze(d.id, { stand: 'paket', info: `${infoWartet(p)} – ${weiter.fortschritt.replace(/\s+/g, ' ').slice(0, 80)}`, seiten: d.ocr.seiten ?? null });
   }
 
+  /** Sicherung außer Haus (#585): ein Paket hat das Ereignis sicherung.fertig aufgegeben (index.ts verbindet mit der Sicherung). */
+  sicherungAufgegeben?: (paket: string, name: string, fehler: string | null | undefined) => Promise<void>;
+
   /**
    * Ergebnis eines Ereignisses „Volltext fertig“ beim Paket für die Texterkennung (#458, aus dem Paket-Läufer):
    * Hat das Paket zugestellt bekommen, aber keinen Volltext geschrieben (z. B. Mappentyp nicht gewählt, Text aus dem
@@ -1156,6 +1159,8 @@ export class Dienst {
    */
   async nachTexterkennungsEreignis(paket: string, e: { art: string; daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }): Promise<void> {
     if (e.art === 'datei.umwandeln') return this.nachUmwandlungsEreignis(paket, e, r);
+    // Sicherung außer Haus (#585): Aufgegeben heißt „fehlgeschlagen“ (endgültig) – auch wenn das Paket es nicht mehr melden konnte.
+    if (e.art === 'sicherung.fertig') { if (r.aufgegeben && typeof e.daten.name === 'string') await this.sicherungAufgegeben?.(paket, e.daten.name, r.fehler); return; }
     if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string') return;
     const p = await this.texterkennungPaket();
     if (!p || p.id !== paket) return;

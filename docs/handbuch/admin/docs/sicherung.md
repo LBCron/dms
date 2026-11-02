@@ -41,6 +41,7 @@ Im Container geht das auch ohne Browser mit dem [Befehl `dms`](konsole.md#betrie
 - **Automatisch sichern** täglich oder wöchentlich zu einer Uhrzeit (z. B. täglich 02:00). War das DMS zu der Zeit aus, sichert es, sobald es wieder läuft – aber nur am selben Tag. Eine verpasste Sicherung vom Vortag holt es nicht nach; es sichert erst wieder zum nächsten geplanten Termin. Mehr als eine automatische Sicherung am Tag gibt es nie.
 - Einschalten lässt sich der Zeitplan erst, wenn das **Notfallblatt** heruntergeladen ist – ohne den Schlüssel darauf wäre jede Sicherung wertlos.
 - **Aufbewahrung** (Standard **7 tägliche / 4 wöchentliche / 12 monatliche**): Von den automatischen Sicherungen bleibt je Tag, je Woche und je Monat die neueste, so viele wie eingestellt; ältere entfernt das DMS nach jeder automatischen Sicherung. Von Hand angelegte Sicherungen bleiben, bis du sie löschst.
+- **Lokal nur die neueste behalten** (seit 0.142): Statt der Aufbewahrung bleibt nur die neueste automatische Sicherung im Ordner – für knappen Platz, wenn eine [Kopie außer Haus](sicherung-ausser-haus.md) entsteht. Eine Sicherung, deren Kopie gerade läuft, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage). „Lokal keine“ gibt es nicht.
 - **Mindest-Speicherplatz** (Standard 1 GB): Ist im Sicherungsordner weniger frei, beginnt keine Sicherung; das steht als Hinweis in der Werkbank und im Protokoll.
 - Im aktiven [Wartungsmodus](wartungsmodus.md) pausiert die automatische Sicherung.
 
@@ -58,7 +59,8 @@ Die Übersicht der Werkbank zeigt einen Hinweis, wenn
 - die letzte Sicherung **fehlgeschlagen** ist,
 - die letzte erfolgreiche **älter als 2 Tage** ist (oder es noch keine gibt),
 - das Notfallblatt fehlt oder zu einem früheren Schlüssel gehört,
-- der Sicherungsordner kein eigenes Volume ist oder auf derselben Platte liegt wie die Dokumente.
+- der Sicherungsordner kein eigenes Volume ist oder auf derselben Platte liegt wie die Dokumente,
+- die [Kopie außer Haus](sicherung-ausser-haus.md#anzeige-und-hinweise) fehlgeschlagen ist oder seit mehr als 2 Tagen keine neuere Sicherung dort ankam.
 
 Schlägt eine Sicherung fehl, bekommen alle Administratoren eine E-Mail – auch ohne Zeitplan, etwa bei **Jetzt sichern**. Ist die letzte erfolgreiche Sicherung zu alt, kommt die E-Mail nur, wenn der Zeitplan an ist. Es kommt **eine** E-Mail je Vorfall (nicht stündlich) – sofern der [E-Mail-Versand](installation.md#e-mail-und-adresse) eingerichtet ist. Alles steht auch im [Protokoll](fehlersuche.md#protokoll), Modul *sicherung*.
 
@@ -83,6 +85,8 @@ Das DMS schreibt nur in den Sicherungsordner. Weiterkopieren lässt du ihn vom N
 - **UGREEN, QNAP und andere:** die Sicherungs-App des NAS (z. B. *Hybrid Backup Sync*) oder eine Synchronisation auf eine USB-Platte.
 - Alternativ den Sicherungsordner gleich auf eine zweite Platte des NAS legen (`/volume2/…`) und diese weiterkopieren.
 
+Ohne Sicherungs-App – etwa auf einem Raspberry Pi oder einem gemieteten Server – bringt ein Paket wie **Sicherungsziel WebDAV** jede Sicherung selbst außer Haus und prüft sie dort, siehe [Sicherung außer Haus](sicherung-ausser-haus.md).
+
 Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das [Notfallblatt](#notfallblatt) mit dem Schlüssel gehört **nicht** dorthin.
 
 ## Notfallblatt
@@ -93,7 +97,8 @@ Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das [Not
 - den **Schlüssel** in Vierergruppen zum Abschreiben und seinen **Fingerabdruck**,
 - wo die Sicherungen und die Schlüsseldatei liegen,
 - die Schritte zur Wiederherstellung auf einem neuen System – auch: „Startet das DMS nicht mehr, ein älteres Image ziehen“,
-- den Hinweis auf das Datenbank-Passwort (ohne den Wert).
+- den Hinweis auf das Datenbank-Passwort (ohne den Wert),
+- seit 0.142 das Ziel der [Kopie außer Haus](sicherung-ausser-haus.md) (Paket und Adresse, ohne Passwort).
 
 ![Notfallblatt](bilder/notfallblatt.png)
 
