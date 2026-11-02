@@ -737,7 +737,7 @@
           "Ablage"
         ],
         "summary": "Mappe ändern",
-        "description": "Übergebene Werte ersetzen die bisherigen; Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern.",
+        "description": "Übergebene Werte ersetzen die bisherigen; nicht übergebene Felder bleiben, wie sie gerade gespeichert sind – schicke nur, was du ändern willst. Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern. Gleichzeitig bearbeiten (#609): Mit stand (der Wert geaendert der Mappe, so wie du sie gelesen hast) prüft das DMS, ob seitdem jemand eines der übergebenen Felder geändert hat. Dann kommt 409 mit details: Mappenkonflikt (betroffene Felder, wer, wann, aktueller Wert) und nichts wird gespeichert; andere Felder werden ohne Rückfrage zusammengeführt. Den eigenen Wert trotzdem übernehmen: noch einmal mit stand aus der 409-Antwort senden; den anderen behalten: das Feld weglassen. Ohne stand keine Prüfung (wie bis 0.143): Die übergebenen Felder gelten.",
         "operationId": "putMappenMitid",
         "parameters": [
           {
@@ -793,6 +793,16 @@
           },
           "404": {
             "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mit stand: Seitdem hat jemand dasselbe Feld anders geändert (details: Mappenkonflikt); nichts gespeichert",
             "content": {
               "application/json": {
                 "schema": {
@@ -8748,7 +8758,67 @@
         ],
         "properties": {
           "werte": {
-            "$ref": "#/components/schemas/Werte"
+            "$ref": "#/components/schemas/Werte",
+            "description": "Nur die Felder, die sich ändern sollen; fehlende Felder bleiben unverändert (#609)"
+          },
+          "stand": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional (#609): „geaendert“ der Mappe beim Lesen. Hat sich seitdem ein übergebenes Feld geändert und soll es anders lauten, kommt 409 statt Überschreiben."
+          }
+        }
+      },
+      "Mappenkonflikt": {
+        "type": "object",
+        "description": "Gleichzeitig bearbeiten (#609): details der 409-Antwort von PUT /mappen/{id}",
+        "properties": {
+          "stand": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Aktueller Stand der Mappe – mit ihm noch einmal senden, um die eigenen Werte zu übernehmen"
+          },
+          "konflikte": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "feld": {
+                  "type": "string",
+                  "description": "Kennung des Felds"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "deins": {
+                  "type": "string",
+                  "description": "Dein Wert, lesbar (leer bei Passwortfeldern)"
+                },
+                "aktuell": {
+                  "type": "string",
+                  "description": "Jetziger Wert, lesbar (leer bei Passwortfeldern)"
+                },
+                "wert": {
+                  "description": "Jetziger Wert wie in werte; fehlt bei Passwortfeldern"
+                },
+                "geheim": {
+                  "type": "boolean",
+                  "description": "Passwortfeld"
+                },
+                "von": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true,
+                  "description": "Wer zuletzt geändert hat; null = das DMS selbst"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "zeit": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
           }
         }
       },
