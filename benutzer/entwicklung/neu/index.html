@@ -419,6 +419,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01362" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.136.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.136.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fur-mitwirkende" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Mitwirkende
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01361" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -431,7 +470,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -1221,6 +1260,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01362" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.136.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.136.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fur-mitwirkende" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Mitwirkende
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01361" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1233,7 +1311,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -1367,8 +1445,18 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01361">0.136.1<a class="headerlink" href="#01361" title="Permanent link">&para;</a></h2>
+<h2 id="01362">0.136.2<a class="headerlink" href="#01362" title="Permanent link">&para;</a></h2>
 <h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Englische README mit englischen Bildern</strong> (#574): <code>README.en.md</code> zeigte die deutsche Zielgruppen-Grafik und das Bildschirmfoto der deutschen Oberfläche ohne Hinweis. Die Grafik „Who we build the DMS for“ gibt es jetzt auf Englisch (<code>personas-skala.en.svg</code>, mit englischem Alternativtext). Eine englische Oberfläche gibt es noch nicht (#357) – das Bildschirmfoto bleibt deshalb deutsch und trägt in der englischen README den Hinweis, dass die Oberfläche derzeit nur auf Deutsch verfügbar ist. Die Tabelle der Installationswege sagt dort, dass die Anleitungen deutsch sind.</li>
+</ul>
+<h3 id="fur-mitwirkende">Für Mitwirkende<a class="headerlink" href="#fur-mitwirkende" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Grafiken je Sprache:</strong> Grafiken mit Text gibt es als <code>name.svg</code> (Deutsch) und <code>name.en.svg</code> (Englisch); <code>README.en.md</code> bindet nur die englischen ein, Bildschirmfotos der Oberfläche bis zur englischen Oberfläche mit Hinweis. Die Regel steht in <code>CONTRIBUTING.md</code> und <code>CONTRIBUTING.en.md</code>; ein Test prüft sie (auch: keine deutschen Beschriftungen auf den Abzeichen der englischen README).</li>
+<li>Das Werkzeug <code>docs/handbuch/werkzeuge/personas_grafiken.py</code> zeichnet die Skala in beiden Sprachen.</li>
+</ul>
+<h2 id="01361">0.136.1<a class="headerlink" href="#01361" title="Permanent link">&para;</a></h2>
+<h3 id="behoben_1">Behoben<a class="headerlink" href="#behoben_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Volltext ging unter Last verloren</strong> (#575): Legte das DMS viele Mappen auf einmal an (Demo-Daten, Import, Eingangsordner mit vielen Dateien) und speicherte gleichzeitig die Texterkennung ein Ergebnis, konnten sich beide in der Datenbank gegenseitig blockieren. PostgreSQL brach dann einen der beiden Vorgänge ab („deadlock detected“). Traf es die Texterkennung, blieb das Dokument ohne Volltext, ohne dass es jemand merkte. Ursache war das Wörterverzeichnis für „Meintest du …?“ (#356, seit 0.127.0), in das alle diese Vorgänge gleichzeitig und in unterschiedlicher Reihenfolge schrieben.</li>
 <li>Jetzt landen neue Wörter zuerst in einem Eingang, den das DMS im Hintergrund alle paar Sekunden ins Wörterverzeichnis übernimmt – in fester Reihenfolge und immer nur ein Lauf zugleich. Mappen und Texterkennung blockieren sich dabei nicht mehr. „Meintest du …?“ kennt neue Wörter damit wenige Sekunden später; die Suche selbst findet neue Texte wie bisher sofort.</li>
