@@ -1,6 +1,6 @@
 /**
  * Dokumente endgültig schwärzen (#392) – ohne MuPDF/Ghostscript (AGPL), nur mit poppler (pdftoppm,
- * pdftotext), tesseract und pdf-lib.
+ * pdftotext) und pdf-lib.
  *
  * Ein schwarzer Kasten über dem Text reicht nicht: Text, Bilder und Textebene darunter blieben im PDF.
  * Darum entsteht das Ergebnis neu:
@@ -11,8 +11,9 @@
  * 2. In den Bildpunkten werden die Bereiche schwarz gefüllt – die Bildpunkte darunter sind danach weg.
  * 3. Die bearbeiteten Bilder werden als JPEG kodiert (wie beim Verkleinern über pdftoppm: jedes Bild allein
  *    auf einer Seite in Zielgröße) und mit pdf-lib zu einem neuen PDF ohne Metadaten zusammengesetzt.
- * 4. Die Textebene entsteht neu aus den Wörtern mit Koordinaten (pdftotext -bbox bzw. tesseract für Seiten
- *    ohne Text): als unsichtbarer Text, aber nur die Wörter, die keinen schwarzen Bereich berühren.
+ * 4. Die Textebene entsteht neu aus den Wörtern mit Koordinaten (pdftotext -bbox): als unsichtbarer Text, aber
+ *    nur die Wörter, die keinen schwarzen Bereich berühren. Gescannte Seiten bekommen keine eigene Textebene (#459);
+ *    ihren Text erkennt das Paket für die Texterkennung an der geschwärzten Fassung.
  *
  * Bilder (JPEG, PNG) werden genauso behandelt (Ausrichtung laut EXIF beachtet) und bleiben Bilder desselben
  * Typs – ohne EXIF-Daten.
@@ -126,21 +127,6 @@ export function liesBbox(html: string, drehungen: number[]): SchwaerzSeite[] {
   return seiten;
 }
 
-/** Wörter aus der TSV-Ausgabe von tesseract (Ebene 5), relativ zur Bildgröße. */
-export function liesTsv(tsv: string, breite: number, hoehe: number): Wort[] {
-  const r: Wort[] = [];
-  for (const z of tsv.split('\n').slice(1)) {
-    const s = z.split('\t');
-    if (s.length < 12 || s[0] !== '5') continue;
-    const t = s.slice(11).join('\t').trim();
-    const [l, o, b, h] = [s[6], s[7], s[8], s[9]].map(Number);
-    if (!t || !(b > 0) || !(h > 0)) continue;
-    r.push([t, r5(l / breite), r5(o / hoehe), r5(b / breite), r5(h / hoehe)]);
-  }
-  return r;
-}
-
-/** Kopf eines PPM/PGM (P6/P5, 8 Bit): Maße und wo die Bildpunkte beginnen. */
 export function pnmKopf(b: Buffer): { breite: number; hoehe: number; kanaele: number; start: number } {
   const felder: string[] = [];
   let i = 0;
@@ -159,20 +145,22 @@ export function pnmKopf(b: Buffer): { breite: number; hoehe: number; kanaele: nu
 
 export interface Analyse {
   seiten: SchwaerzSeite[];
-  /** Woher die Wörter kommen. */
-  quelle: 'textebene' | 'texterkennung' | 'gemischt' | 'keine';
-  /** Seiten, die per Texterkennung gelesen wurden. */
-  erkannt: number;
+  /**
+   * Woher die Wörter kommen (#459: nur noch aus der Textebene): alle Seiten mit Text, nur manche (gemischt – die
+   * übrigen sind gescannt) oder keine (Scan, Foto). Seiten ohne Wörter schwärzt man mit aufgezogenen Bereichen.
+   */
+  quelle: 'textebene' | 'gemischt' | 'keine';
 }
 
 /** Seite ganz ohne Textebene (vermutlich gescannt). */
 const ohneText = (s: SchwaerzSeite) => !s.woerter.length;
 
 /**
- * Wörter mit Lage für alle Seiten: aus der Textebene; Seiten ohne Text liest tesseract (wenn da und
- * `sprachen` gesetzt), höchstens `maxErkennung` Seiten.
+ * Wörter mit Lage für alle Seiten aus der Textebene (pdftotext -bbox). Seit #459 ohne Texterkennung: Gescannte
+ * Seiten und Bilder haben keine Wörter – dort zieht man Bereiche auf. Ihren Volltext bekommt die geschwärzte
+ * Fassung danach wie jedes neue Dokument vom Paket für die Texterkennung.
  */
-export async function analysiere(inhalt: Buffer, mime: string, o: { sprachen?: string | null; maxErkennung?: number } = {}): Promise<Analyse> {
+export async function analysiere(inhalt: Buffer, mime: string): Promise<Analyse> {
   const pdf = await arbeitsPdf(inhalt, mime);
   const drehungen = await seitenlage(pdf);
   const dir = await mkdtemp(join(tmpdir(), 'dms-schwarz-'));
@@ -183,29 +171,9 @@ export async function analysiere(inhalt: Buffer, mime: string, o: { sprachen?: s
     try { html = await starte('pdftotext', ['-bbox', '-cropbox', '-enc', 'UTF-8', ein, '-']); } catch (e) { popplerFehler(e, 'Der Text ließ sich nicht lesen'); }
     const seiten = liesBbox(html, drehungen);
     if (seiten.length !== drehungen.length) throw new Fachfehler(422, 'Die Seiten des PDFs ließen sich nicht lesen.');
-    // Bilder haben nie eine Textebene; für sie wird immer erkannt.
-    let erkannt = 0;
     const mitText = seiten.filter((s) => !ohneText(s)).length;
-    if (o.sprachen) {
-      const max = o.maxErkennung ?? 50;
-      for (const [i, s] of seiten.entries()) {
-        if (!ohneText(s) || erkannt >= max) continue;
-        try {
-          // PDF-Seiten mit 300 dpi; Bilder (1 pt = 1 px) in Originalgröße, höchstens 4000 px.
-          const groesse = mime === 'application/pdf' ? ['-r', '300'] : Math.max(s.breite, s.hoehe) > 4000 ? ['-scale-to', '4000'] : ['-r', '72'];
-          await starte('pdftoppm', ['-cropbox', '-f', String(i + 1), '-l', String(i + 1), ...groesse, '-gray', ein, join(dir, `o${i}`)]);
-          const datei = (await readdir(dir)).find((n) => n.startsWith(`o${i}-`) && n.endsWith('.pgm'));
-          if (!datei) continue;
-          const k = pnmKopf(await readFile(join(dir, datei)));
-          const tsv = await starte('tesseract', [join(dir, datei), 'stdout', '-l', o.sprachen, 'tsv'], 180_000);
-          await rm(join(dir, datei), { force: true });
-          s.woerter = liesTsv(tsv, k.breite, k.hoehe);
-          erkannt++;
-        } catch { break; /* ohne tesseract bleibt die Seite ohne Wörter */ }
-      }
-    }
-    const quelle = erkannt && mitText ? 'gemischt' : erkannt ? 'texterkennung' : seiten.some((s) => s.woerter.length) ? 'textebene' : 'keine';
-    return { seiten, quelle, erkannt };
+    const quelle = !mitText ? 'keine' : mitText < seiten.length ? 'gemischt' : 'textebene';
+    return { seiten, quelle };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

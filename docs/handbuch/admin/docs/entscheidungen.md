@@ -137,7 +137,8 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 ## Texterkennung (#45)
 
 - **Im eigenen Prozess, Warteschlange in der Datenbank** (`dokumente.ocr_stand`): kein zusätzlicher Container; nach einem Neustart geht es weiter. Gleichzeitige Aufträge sind einstellbar (Standard 1, für kleine NAS).
-- **Textebene zuerst**: `pdftotext` je Seite; nur Seiten mit kaum Text gehen durch `pdftoppm` und `tesseract` (deu+eng). So bleibt die Texterkennung schnell, wo sie nicht nötig ist.
+- **Textebene zuerst**: `pdftotext` je Seite; nur Seiten mit kaum Text gehen durch die Texterkennung. So bleibt sie schnell, wo sie nicht nötig ist.
+- **Texterkennung als Paket (#458, #459, seit 0.134):** Tesseract steckt nicht mehr im Image. Der Kern liest nur die Textebene und meldet jedes Dokument mit dem Ereignis „Volltext fertig“; Scans und Fotos erkennt das Paket **Texterkennung** (Tesseract als WebAssembly im Paket-Läufer). Gründe: ein schlankeres Image für alle, die keine Scans haben, Updates von Tesseract und Sprachdaten unabhängig vom DMS, weitere Sprachen als Zusatzpakete statt eigener Images. Der Preis: Das Paket ist etwa ein Drittel langsamer als Tesseract nativ (ein Thread) (siehe [Texterkennung](texterkennung.md#texterkennung-als-paket)). Schwärzen findet Wörter nur noch in der Textebene; gescannte Seiten schwärzt man mit Bereichen.
 - **Gleicher Inhalt, gleicher Text**: Dateien sind über ihren Prüfwert bekannt; ein schon erkannter Text wird übernommen.
 - **Deutsche Volltextsuche von PostgreSQL** (`to_tsvector('german', …)`, GIN-Index, `websearch_to_tsquery`): findet Wortformen; die Fundstelle kommt aus `ts_headline` mit Steuerzeichen als Markierung – nie als HTML.
 - Office-Dokumente und externe Dienste kommen später.
@@ -145,8 +146,8 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 ## Sprache automatisch erkennen (#395)
 
 - **Eigene, kleine Spracherkennung statt Bibliothek:** Neue npm-Abhängigkeiten (franc, CLD) sollten nicht ins Image. Für Briefe, Rechnungen und Belege reicht das Zählen typischer Funktionswörter und Sonderzeichen je Sprache (selbst zusammengestellte Listen, `shared/src/textsprache.ts`), offline und ohne messbaren Rechenaufwand. Bei sehr wenig Text bleibt die Sprache bewusst offen.
-- **Zweiter Durchlauf nur im Zweifel:** nur bei anderer, eindeutig erkannter Sprache mit installiertem Sprachpaket und unsicherem ersten Durchlauf (mittlere Tesseract-Konfidenz unter 85 %); entschieden wird nach der ersten gelesenen Seite, das bessere Ergebnis gilt für das ganze Dokument.
-- **Lage über Tesseract OSD:** gescannte PDF-Seiten werden als Graustufenbild (PGM) gerendert und bei Bedarf im DMS selbst gedreht – ohne zusätzliches Bildwerkzeug im Image. Bilder dreht Tesseract mit `--psm 1` selbst (quer liegend).
+- **Zweiter Durchlauf nur im Zweifel:** nur bei anderer, eindeutig erkannter Sprache mit installiertem Sprachpaket und unsicherem ersten Durchlauf (mittlere Tesseract-Konfidenz unter 85 %); entschieden wird nach der ersten gelesenen Seite, das bessere Ergebnis gilt für das ganze Dokument. Seit 0.134 macht das das Paket Texterkennung – dort auch bei sicherem ersten Durchlauf, weil es zuerst nur Deutsch liest.
+- **Lage über Tesseract OSD:** gescannte Seiten werden als Graustufenbild (PGM) gerendert und bei Bedarf gedreht – ohne zusätzliches Bildwerkzeug im Image. Seit 0.134 im Paket Texterkennung (Leptonica dreht im Paket).
 - **Sprache im Hinweis der Texterkennung** (`ocr_info`, „· Sprache: fra (87 %)“) statt einer neuen Spalte: keine Migration nötig; eine spätere Spalte kann den Wert von dort übernehmen. Die Volltextsuche nutzt deshalb noch für alle Dokumente die deutsche Wortstamm-Konfiguration.
 
 ## Image je Architektur nativ bauen (#88)
