@@ -363,6 +363,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01312" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.131.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.131.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01311" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -408,7 +447,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -469,7 +508,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2398,6 +2437,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01312" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.131.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.131.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01311" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2443,7 +2521,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2504,7 +2582,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2555,6 +2633,15 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
+<h2 id="01312">0.131.2<a class="headerlink" href="#01312" title="Permanent link">&para;</a></h2>
+<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Werkbank → Suche im Haushalt über den Expertenmodus</strong> (#356, Nachtrag): Der Bereich <em>Suche</em> (Tippfehler-Suche, gleichbedeutende Wörter) war in der Vorlage <em>Haushalt</em> ganz ausgeblendet. Jetzt gibt es unter <strong>Werkbank anpassen</strong> den Haken <strong>Expertenmodus – nur für mich</strong>: Er zeigt zusätzlich die Bereiche, die eine Vorlage nur für Fortgeschrittene vorsieht – im Haushalt derzeit die <em>Suche</em>. Der Expertenmodus gilt je Administrator und ist kein Recht, nur die Leiste. In <em>Betrieb</em> und <em>Alles</em> steht die Suche wie bisher immer in der Leiste.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch: Übersicht → Werkbank anpassen (Expertenmodus, Tabelle „Welchen Bereich brauche ich wofür?“), Suche.</li>
+</ul>
 <h2 id="01311">0.131.1<a class="headerlink" href="#01311" title="Permanent link">&para;</a></h2>
 <h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2571,7 +2658,7 @@
 <li>Trigramm-Indizes entstehen mit dem Schema der Operatorklasse: Beim Wiederherstellen laufen die Migrationen mit dem neuen Schema als einzigem Suchpfad und fanden <code>gin_trgm_ops</code> bisher nicht – auch deshalb fehlten die Indizes nach einer Wiederherstellung.</li>
 <li>Test: Sicherung → Wiederherstellung → Aufräumen des alten Schemas, danach liefert die Tippfehler-Suche weiter Vorschläge; Datenbank im alten Stand (beide Erweiterungen in <code>public</code>) wird beim Update umgezogen; fehlende <code>pg_trgm</code> wird beim Start neu angelegt.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch: Suche → Erweiterungen der Datenbank (wofür, Prüfung, Abhilfe); Wiederherstellen → neuer Prüfschritt.</li>
 </ul>
@@ -2651,7 +2738,7 @@
 <li>Unter Überlast antwortet das DMS jetzt schnell – angenommene Anfragen nach höchstens etwa 7 s statt 25 s (p95), die übrigen sofort mit 503 und <code>Retry-After</code>. Erholung nach der Last: unter einer Sekunde. Der Anmeldeschutz sperrt auch unter Last nach 5 Fehlversuchen, das richtige Passwort eingeschlossen.</li>
 <li>Verbindungen zur Datenbank (100 gleichzeitig, ohne Export, zwei Runden): 5 Verbindungen 3.894–4.117 Anfragen je Minute, 10 Verbindungen 3.516–3.726, 20 Verbindungen 3.512–3.517 – kein Grund, die Vorgabe zu ändern.</li>
 </ul>
-<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_2">Handbuch<a class="headerlink" href="#handbuch_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch: Technik → Viele gleichzeitige Anfragen (Überlastschutz, Verbindungen zur Datenbank); Installation → <code>DMS_MAX_ANFRAGEN</code>, <code>DMS_DB_VERBINDUNGEN</code>.</li>
 <li>Entwicklerhandbuch: Leistung → Lasttest (Anleitung, Profil, Stufen, Grenzen mit Begründung, Workflow).</li>
