@@ -363,22 +363,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01360" class="md-nav__link">
+  <a href="#01361" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.136.0
+        0.136.1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.136.0">
+    <nav class="md-nav" aria-label="0.136.1">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -396,8 +418,47 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01360" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.136.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.136.0">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#neu_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -2410,22 +2471,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01360" class="md-nav__link">
+  <a href="#01361" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.136.0
+        0.136.1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.136.0">
+    <nav class="md-nav" aria-label="0.136.1">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -2443,8 +2526,47 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01360" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.136.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.136.0">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#neu_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -2495,19 +2617,40 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01360">0.136.0<a class="headerlink" href="#01360" title="Permanent link">&para;</a></h2>
+<h2 id="01361">0.136.1<a class="headerlink" href="#01361" title="Permanent link">&para;</a></h2>
+<h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Volltext ging unter Last verloren</strong> (#575): Legte das DMS viele Mappen auf einmal an (Demo-Daten, Import, Eingangsordner mit vielen Dateien) und speicherte gleichzeitig die Texterkennung ein Ergebnis, konnten sich beide in der Datenbank gegenseitig blockieren. PostgreSQL brach dann einen der beiden Vorgänge ab („deadlock detected“). Traf es die Texterkennung, blieb das Dokument ohne Volltext, ohne dass es jemand merkte. Ursache war das Wörterverzeichnis für „Meintest du …?“ (#356, seit 0.127.0), in das alle diese Vorgänge gleichzeitig und in unterschiedlicher Reihenfolge schrieben.</li>
+<li>Jetzt landen neue Wörter zuerst in einem Eingang, den das DMS im Hintergrund alle paar Sekunden ins Wörterverzeichnis übernimmt – in fester Reihenfolge und immer nur ein Lauf zugleich. Mappen und Texterkennung blockieren sich dabei nicht mehr. „Meintest du …?“ kennt neue Wörter damit wenige Sekunden später; die Suche selbst findet neue Texte wie bisher sofort.</li>
+</ul>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Automatische Wiederholung:</strong> Bricht die Datenbank das Speichern eines Volltexts trotzdem einmal ab (Verklemmung oder Serialisierungsfehler), versucht das DMS es bis zu fünfmal mit kurzer, wachsender Pause; jeder neue Versuch steht im Protokoll (Modul <code>texterkennung</code>).</li>
+<li><strong>Nie still ohne Volltext:</strong> Scheitert es auch dann, steht das Dokument auf <em>Fehler</em> mit dem Grund „Text erkannt, aber nicht gespeichert – die Datenbank war ausgelastet“ und einem Eintrag im Protokoll. <strong>Werkbank → Texterkennung → Alle Fehler neu starten</strong> holt es nach. Schreibt ein Paket den Text, bekommt es die Antwort 503 und sendet erneut.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Migration 052: Tabelle <code>suchwoerter_eingang</code>, die Trigger aus Migration 048 schreiben dorthin; <code>dms_woerter_einarbeiten</code> übernimmt den Eingang in Teilen von 20.000 Einträgen; der Neuaufbau unter Werkbank → Suche wartet auf einen laufenden Lauf. Der Eingang gehört nicht in Sicherung und Vollexport (abgeleitet).</li>
+<li>Test: viele gleichzeitige Mappen-Anlagen (auch viele in einer Transaktion) und Ergebnisse der Texterkennung – ohne die Migration rot („deadlock detected“), jetzt ohne einen einzigen Abbruch; Wiederholung mit erzwungenem Abbruch (auch innerhalb einer Transaktion); endgültiges Scheitern mit Stand <em>Fehler</em> und Neustart.</li>
+<li>Lasttest: Die Umgehung beim Anlegen der Demo-Mappen (bei „deadlock detected“ neu zählen und weitermachen) ist entfernt.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch: Texterkennung → Wenn die Datenbank ausgelastet ist; Suche → Wörterverzeichnis. Entwicklerhandbuch: Aufbau → Gemeinsam beschriebene Zeilen und Verklemmungen.</li>
+</ul>
+<h2 id="01360">0.136.0<a class="headerlink" href="#01360" title="Permanent link">&para;</a></h2>
+<h3 id="neu_1">Neu<a class="headerlink" href="#neu_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Beispiel: lokaler KI-Dienst neben dem DMS</strong> (#564): Unter <code>deploy/beispiele/ki-ollama/</code> liegt eine fertige Compose-Datei für <strong>Ollama</strong> – damit beantwortet das Paket <strong>KI-Assistent</strong> Fragen an die Ablage und füllt Felder aus Dokumenten, ohne Cloud. <code>docker compose up -d</code> startet den Dienst und lädt das Modell beim ersten Start selbst (kein eigenes Image, kein Modell im Repository).</li>
 <li><strong>Kein Port nach außen:</strong> Das DMS erreicht Ollama über das gemeinsame Docker-Netz <code>dms-ki</code> unter <code>http://ollama:11434/v1</code>; das Netz führt nicht nach draußen. Die Ergänzung <code>dms-anbinden.yml</code> hängt das DMS hinein. Die Cloud-Funktionen von Ollama sind ausgeschaltet.</li>
 <li><strong>Für ein NAS eingestellt:</strong> Speichergrenze 6 GB, Vorrang für das DMS beim Prozessor, Kontext 8 192 Token (sonst lässt Ollama ohne Grafikkarte bei langen Anfragen die Ausschnitte still weg).</li>
 <li><strong>Varianten:</strong> nur Prozessor (Standard), NVIDIA, AMD und – ausdrücklich als <strong>Versuch</strong> – Intel-Grafik im Prozessor über Vulkan (<code>/dev/dri</code>, mit Mesa-Treiber, den das offizielle Image nicht mitbringt).</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch, neue Seite <strong>KI lokal betreiben</strong>: was an den Dienst geht, Einrichtung Schritt für Schritt, Einstellungen für ein NAS ohne Grafikkarte, Modell-Empfehlung mit Lizenz und Speicherbedarf (<code>ministral-3:3b</code>, Apache-2.0), warum kein Embedding-Modell nötig ist, eine ehrlich als Schätzung gekennzeichnete Erwartung an die Geschwindigkeit, eine Tabelle für Messwerte mit Messblock zum Melden, Hinweise je NAS, „Hilft mein Coral-Stick oder meine NPU?“, „Wenn das NAS zu langsam ist“ und Fehlersuche. Pakete → Dienst-Adresse verweist darauf.</li>
 </ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h3 id="technik_1">Technik<a class="headerlink" href="#technik_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Neuer Workflow <strong>KI-Beispiel</strong>: prüft die Dateien (eine Ollama-Version, gültiges Compose, kein Port nach außen, <code>dms-anbinden.yml</code> passt zu den Vorlagen), startet die Variante „nur Prozessor“ mit einem winzigen Modell, fragt Ollama aus dem Netz <code>dms-ki</code> – auch mit strukturierter Ausgabe nach JSON Schema wie bei „Aus Dokument ausfüllen“ – und baut die Intel-Variante. Läuft, wenn sich das Beispiel ändert, und jede Woche. Keine Migration, keine neue Abhängigkeit.</li>
 </ul>
