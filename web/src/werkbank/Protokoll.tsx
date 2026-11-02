@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, type DebugStand, type Protokolleintrag, type Stufe } from '../api';
 import { Link } from '../ort';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { istWeg } from '../erreichbar';
 
 /**
@@ -60,9 +60,7 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
   const benutzer = useMemo(() => [...new Set(p.eintraege.map((e) => e.benutzer).filter(Boolean) as string[])].sort(), [p.eintraege]);
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Protokoll</h1><p className="leise klein">Letzte 24 Stunden, höchstens 10.000 Einträge ({p.gespeichert.toLocaleString('de-DE')} gespeichert). Neueste oben. <Hilfe ort="werkbank.protokoll" /></p></div>
-      </div>
+      <Listenkopf titel="Protokoll" hilfe="werkbank.protokoll" beschreibung={<>Letzte 24 Stunden, höchstens 10.000 Einträge ({p.gespeichert.toLocaleString('de-DE')} gespeichert). Neueste oben.</>} />
       <div className="protokollfilter">
         <label><span className="sr">Stufe</span>
           <select value={f.stufe} onChange={(e) => setze({ stufe: e.target.value as Stufe })}>{STUFEN.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}</select></label>

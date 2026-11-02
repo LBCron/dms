@@ -5,7 +5,7 @@ import { useDaten } from '../daten';
 import { geheZu, Link } from '../ort';
 import { titelOder } from '../seiten';
 import { Person } from '../Person';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { hinweis, rueckfrage } from '../rueckfrage';
 
@@ -98,13 +98,10 @@ export function PapierkorbListe({ z, werkbank, offen }: { z: PapierkorbZustand; 
   return (
     <>
       <div ref={mess} className="breitenmesser" aria-hidden="true" />
-      <div className="listenkopf">
-        <div>
-          <h1>Papierkorb</h1>
-          <p className="leise klein">{werkbank ? 'Was alle Benutzer gelöscht haben. ' : 'Was du gelöscht hast. '}{aufbewahrung(tage)} <Hilfe ort={werkbank ? 'werkbank.papierkorb' : 'ablage.papierkorb'} /></p>
-        </div>
+      <Listenkopf titel="Papierkorb" hilfe={werkbank ? 'werkbank.papierkorb' : 'ablage.papierkorb'}
+        beschreibung={<>{werkbank ? 'Was alle Benutzer gelöscht haben. ' : 'Was du gelöscht hast. '}{aufbewahrung(tage)}</>}>
         {!werkbank && leerenKnopf}
-      </div>
+      </Listenkopf>
       {/* Werkbank (#366): Aufbewahrung und Leeren gehören zusammen, oben in der Mitte. */}
       {werkbank && <PapierkorbEinstellungen z={z} leeren={leerenKnopf} />}
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}

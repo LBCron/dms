@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Anstehend } from '../../../shared/src/fristen';
 import { api } from '../api';
 import { useDaten } from '../daten';
-import { useHandbuch, Hilfe } from '../Hilfe';
+import { useHandbuch } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { useKonto } from '../konto';
 import { Link } from '../ort';
 import { titelOder } from '../seiten';
@@ -61,12 +62,7 @@ export function Startseite({ anstehend, offen, breit = false }: { anstehend: { l
 
   return (
     <>
-      <div className="listenkopf">
-        <div>
-          <h1>Start</h1>
-          <p className="leise klein">Hallo {ich.name?.split(/\s+/)[0] || ich.email}! Hier fängst du an. <Hilfe ort="ablage.start" /></p>
-        </div>
-      </div>
+      <Listenkopf titel="Start" hilfe="ablage.start" beschreibung={<>Hallo {ich.name?.split(/\s+/)[0] || ich.email}! Hier fängst du an.</>} />
       <div className={`listenrumpf startseite${breit ? ' start-breit' : ''}`}>
         {/* Schnell finden (#497) ganz oben; darunter (ohne Suchbegriff) die Kamera, Kacheln und „zuletzt geöffnet“. */}
         <StartSuche ohneSuche={!!daten?.leer} sonst={<>

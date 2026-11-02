@@ -4,6 +4,7 @@ import { useDaten } from '../daten';
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 
 /**
@@ -74,8 +75,9 @@ export function PostfaecherListe({ z, offen }: { z: PostfachZustand; offen?: str
   const rueckkehr = useRueckkehr();
   return (
     <>
-      <div className="listenkopf"><div><h1>Postfächer</h1><p className="leise klein">Mails abholen – jede Mail wird neue Post. <Hilfe ort="werkbank.postfaecher" /></p></div>
-        <Link to="/werkbank/postfaecher/neu" className="knopf gruen klein">+ Neu</Link></div>
+      <Listenkopf titel="Postfächer" hilfe="werkbank.postfaecher" beschreibung="Mails abholen – jede Mail wird neue Post.">
+        <Link to="/werkbank/postfaecher/neu" className="knopf gruen klein">+ Neu</Link>
+      </Listenkopf>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       {!offen && rueckkehr && <div className={`hinweis ${rueckkehr.art}`} role="status"><p>{rueckkehr.text}</p></div>}
       {!z.liste ? <p className="leise">Lade …</p> : !z.liste.length ? <p className="leise leerliste">Noch kein Postfach.</p> : (

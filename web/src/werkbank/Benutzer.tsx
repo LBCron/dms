@@ -9,6 +9,7 @@ import { useKonto } from '../konto';
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 
 const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'noch nie');
@@ -59,10 +60,9 @@ export function BenutzerListe({ liste: alle, offen }: { liste: Benutzer[]; offen
   const heute = heuteIn();
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Benutzer</h1><p className="leise klein">Wer sich anmelden darf und mit welcher Systemrolle. {aktiv} gerade aktiv (in den letzten {AKTIV_MINUTEN} Minuten). <Hilfe ort="werkbank.benutzer" /></p></div>
+      <Listenkopf titel="Benutzer" hilfe="werkbank.benutzer" beschreibung={<>Wer sich anmelden darf und mit welcher Systemrolle. {aktiv} gerade aktiv (in den letzten {AKTIV_MINUTEN} Minuten).</>}>
         <Link to="/werkbank/benutzer/neu" className="knopf primaer klein">+ Neu</Link>
-      </div>
+      </Listenkopf>
       {deaktiviert.length > 0 && (
         <label className="haken klein"><input type="checkbox" checked={zeigeDeaktivierte} onChange={(e) => d.setzeEinstellung('benutzer_deaktivierte', e.target.checked || null)} />
           <span>Deaktivierte zeigen ({deaktiviert.length})</span></label>

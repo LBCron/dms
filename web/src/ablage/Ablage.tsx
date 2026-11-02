@@ -19,7 +19,7 @@ import { Symbol, type SymbolName } from '../Symbol';
 import { AnsichtFilter, AnsichtWahl } from './AnsichtWahl';
 import { Stern } from './Stern';
 import { spaltenName, zelle } from './spalten';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { ExportDialog } from './Export';
 import { EmailMehrere } from './EmailMehrere';
 import { PostKnopf } from './Post';
@@ -138,7 +138,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
           ? link.ok
             ? <LinkListe key={`${link.link.typ.id}:${JSON.stringify(link.link.bedingungen)}`} link={link.link} suche={suche} offen={dritt} />
             : <>
-                <div className="listenkopf"><div><h1>Link</h1></div></div>
+                <Listenkopf titel="Link" />
                 <div className="hinweis schlecht stapel" role="alert">
                   <p>Dieser Link lässt sich nicht auflösen:</p>
                   <ul>{link.fehler.map((f) => <li key={f}>{f}</li>)}</ul>
@@ -247,7 +247,7 @@ function SuchListe({ suche, offen, formular, setFormular }: { suche: URLSearchPa
   const kopf = <Suchkopf suche={suche} offen={offen} formular={formular} setFormular={setFormular} />;
   if (fehler.length) return (
     <>
-      <div className="listenkopf"><div><h1>{t('suche.titel')}</h1></div></div>
+      <Listenkopf titel={t('suche.titel')} hilfe="ablage.erweitertesuche" />
       {kopf}
       <div className="hinweis schlecht stapel" role="alert"><p>Diese Suche lässt sich nicht ausführen:</p><ul>{fehler.map((f) => <li key={f}>{f}</li>)}</ul></div>
     </>
@@ -400,14 +400,10 @@ function Liste(p: {
   return (
     <>
       <div ref={mess} className="breitenmesser" aria-hidden="true" />
-      <div className="listenkopf">
-        <div>
-          <h1>{p.titel}</h1>
-          {(p.beschreibung || p.hilfe) && <p className="leise klein">{p.beschreibung}{p.hilfe && <> <Hilfe ort={p.hilfe} /></>}</p>}
-        </div>
+      <Listenkopf titel={p.titel} hilfe={p.hilfe} beschreibung={p.beschreibung}>
         {p.neu && <Link to={`/ablage/${p.sicht}/neu`} className="knopf gruen klein">+ Neu</Link>}
         {p.post && p.typ && <div className="postknopf"><PostKnopf /></div>}
-      </div>
+      </Listenkopf>
       {p.kopf}
       {zeigeSuche && (
         <div className={`suchzeile${filter ? '' : ' lk-zu'}`}>

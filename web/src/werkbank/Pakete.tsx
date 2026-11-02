@@ -4,6 +4,7 @@ import { hatSchnittstelle, herkunftText, laeuferZustandText, vergleicheVersion, 
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { darfVerlassen, geheZu, Link } from '../ort';
 import { PaketEinstellungen } from './PaketEinstellungen';
 import { VektorStandBlock } from '../ablage/Aehnlich';
@@ -102,9 +103,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
   }
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Pakete</h1><p className="leise klein">Fertige Mappentypen und Ansichten aus dem offiziellen Katalog. <Hilfe ort="werkbank.pakete" /></p></div>
-      </div>
+      <Listenkopf titel="Pakete" hilfe="werkbank.pakete" beschreibung="Fertige Mappentypen und Ansichten aus dem offiziellen Katalog." />
       <div className="knoepfe">
         <button type="button" className="knopf klein" disabled={z.laedt} onClick={() => void z.abrufen()}>{z.laedt ? 'Frage ab …' : 'Katalog abrufen'}</button>
         {installiert.length > 0 && <button type="button" className="knopf klein" disabled={z.laedt} onClick={() => void z.pruefen()}>Auf neue Versionen prüfen</button>}

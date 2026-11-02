@@ -24,6 +24,8 @@ const browser = await chromium.launch();
 let s;
 const pruefe = (bedingung, text) => { if (!bedingung) throw new Error(text); };
 const zahl = async () => Number(((await s.locator('.listenzahl').first().textContent()) ?? '').match(/^\s*([\d.]+)\s+Treffer/)?.[1]?.replace(/\./g, '') ?? NaN);
+// #601: Das „?“ steht direkt hinter der Überschrift, nicht allein in einer Zeile darunter.
+const hilfeImKopf = async () => pruefe(await s.locator('.listenkopf h1 .hilfesymbol').isVisible(), 'Das Hilfe-Symbol sollte direkt hinter der Überschrift „Erweiterte Suche“ stehen');
 const warteZahl = async (soll) => {
   for (let i = 0; i < 40; i++) { if (await soll(await zahl().catch(() => NaN))) return; await s.waitForTimeout(150); }
   throw new Error(`Trefferzahl passt nicht: ${await zahl().catch(() => '–')}`);
@@ -39,6 +41,7 @@ try {
   await s.waitForURL(/\/ablage\/suche/);
   const form = s.getByRole('form', { name: 'Erweiterte Suche' });
   await form.waitFor();
+  await hilfeImKopf();
   // #426: Formular oben in der Mitte; ohne geöffnete Mappe reicht die Mitte bis rechts, links bleibt die Navigation.
   pruefe(!(await s.locator('.spalte.mappe').isVisible()), 'Ohne geöffnete Mappe sollte es rechts keine Spalte geben');
   pruefe(await s.locator('.spalte.sichten .sichtliste').isVisible(), 'Links sollte die Navigation bleiben');
@@ -97,6 +100,7 @@ try {
   await s.goto(`${BASIS}/ablage/suche`);
   const hform = s.getByRole('form', { name: 'Erweiterte Suche' });
   await hform.waitFor();
+  await hilfeImKopf();
   pruefe(!(await s.locator('.listenrumpf').isVisible()), 'Am Handy sollte erst nur das Formular stehen');
   await hform.getByLabel('Mappentyp suchen …').fill('Rechnung');
   await hform.getByRole('option', { name: 'Rechnung', exact: true }).click();

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type Fehlermeldung } from '../api';
 import { geheZu, Link } from '../ort';
 import { Person } from '../Person';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 
 /** Werkbank → Wartung und Fehlersuche → Fehlermeldungen (#70). */
@@ -24,10 +24,9 @@ export type FehlermeldungenZustand = ReturnType<typeof useFehlermeldungen>;
 export function FehlermeldungenListe({ z, offen }: { z: FehlermeldungenZustand; offen?: string }) {
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Gemeldete Fehler</h1><p className="leise klein">{z.erledigt ? 'Erledigte Meldungen der Benutzer.' : 'Was Benutzer gemeldet haben, mit technischen Angaben.'} <Hilfe ort="werkbank.fehlermeldungen" /></p></div>
+      <Listenkopf titel="Gemeldete Fehler" hilfe="werkbank.fehlermeldungen" beschreibung={z.erledigt ? 'Erledigte Meldungen der Benutzer.' : 'Was Benutzer gemeldet haben, mit technischen Angaben.'}>
         <button type="button" className="knopf klein" onClick={() => z.setErledigt(!z.erledigt)}>{z.erledigt ? 'Offene zeigen' : 'Erledigte zeigen'}</button>
-      </div>
+      </Listenkopf>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       {z.liste === null ? <p className="leise">Lade …</p> : !z.liste.length ? <p className="leise leerliste">{z.erledigt ? 'Keine erledigten Meldungen.' : 'Keine offenen Meldungen.'}</p> : (
         <ul className="mappenliste">
