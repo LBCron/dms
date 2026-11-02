@@ -115,3 +115,11 @@ Jede Anmeldung, Ablehnung und angelegter Benutzer steht im [Protokoll](fehlersuc
 
 !!! tip "Im eigenen Netz"
     Läuft der Anbieter im Heimnetz (z. B. Keycloak auf dem NAS), geht auch `http://` – aber nur für Adressen im eigenen Netz. Das DMS muss den Anbieter selbst erreichen können.
+
+    Als eigenes Netz gelten:
+
+    - `localhost` und Namen ohne Punkt (z. B. `http://keycloak:8080`),
+    - private IP-Adressen: `10.x.x.x`, `172.16–31.x.x`, `192.168.x.x`, `127.x.x.x` sowie private und lokale IPv6-Adressen (`::1`, `fc…`/`fd…`, `fe80…`),
+    - Namen mit den Endungen `.local`, `.lan`, `.internal` und `.home.arpa` – die offizielle Endung für Heimnetze (z. B. `http://auth.home.arpa`).
+
+    Nur die echte Endung zählt: `auth.home.arpa.example.org` ist eine Adresse im Internet und braucht `https://`. Andere Namen wie `.fritz.box` oder `.home` brauchen ebenfalls `https://` – oder du gibst dem Anbieter einen Namen unter `.home.arpa` bzw. nimmst seine IP-Adresse. Dasselbe gilt für die Endpunkte bei [Postfächern](postfaecher.md#anderer-anbieter) mit „anderem Anbieter“.

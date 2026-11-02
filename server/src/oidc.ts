@@ -2,6 +2,7 @@ import { createHash, createPublicKey, randomBytes, verify, constants, type KeyOb
 
 /** Öffentlicher Schlüssel im JWK-Format (RFC 7517). */
 export interface JsonWebKey { kty?: string; kid?: string; use?: string; alg?: string; [k: string]: unknown }
+import { imHeimnetz } from '../../shared/src/heimnetz';
 import type { Rolle } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
@@ -57,13 +58,15 @@ export interface AnbieterIdentitaet { sub: string; email: string; name: string; 
 const b64url = (b: Buffer) => b.toString('base64url');
 const ohneSchraegstrich = (s: string) => s.replace(/\/+$/, '');
 
-/** Aussteller-Adresse prüfen: https; http nur für localhost und private Netze (Heimnetz, Keycloak im LAN). */
+/**
+ * Aussteller-Adresse prüfen: https; http nur für localhost und private Netze (Heimnetz, Keycloak im LAN) –
+ * die Liste steht in shared/src/heimnetz.ts (#595), z. B. `.lan` und `.home.arpa`.
+ */
 export function pruefeAussteller(x: unknown): string {
   const s = ohneSchraegstrich(String(x ?? '').trim());
   let u: URL;
   try { u = new URL(s); } catch { throw new Fachfehler(422, 'Die Adresse des Anbieters ist keine gültige URL.'); }
-  const privat = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)/.test(u.hostname) || !u.hostname.includes('.') || u.hostname.endsWith('.local') || u.hostname.endsWith('.lan') || u.hostname.endsWith('.internal');
-  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && privat)) throw new Fachfehler(422, 'Der Anbieter muss über https erreichbar sein (http nur im eigenen Netz).');
+  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && imHeimnetz(u))) throw new Fachfehler(422, 'Der Anbieter muss über https erreichbar sein (http nur im eigenen Netz).');
   if (u.search || u.hash) throw new Fachfehler(422, 'Die Adresse des Anbieters darf keine ?- oder #-Teile haben.');
   return s;
 }

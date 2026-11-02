@@ -99,7 +99,7 @@ Google bietet für Gmail keinen Gerätecode an; das DMS braucht dafür eine Adre
 
 ### Anderer Anbieter
 
-Für andere Anbieter mit IMAP und OAuth 2.0 trägst du *Autorisierungs-Endpunkt*, *Token-Endpunkt*, wahlweise den *Gerätecode-Endpunkt* und den *Bereich* (Scope, meist mit `offline_access`) selbst ein – sie stehen in der Dokumentation des Anbieters. Je DMS gibt es eine solche Einstellung.
+Für andere Anbieter mit IMAP und OAuth 2.0 trägst du *Autorisierungs-Endpunkt*, *Token-Endpunkt*, wahlweise den *Gerätecode-Endpunkt* und den *Bereich* (Scope, meist mit `offline_access`) selbst ein – sie stehen in der Dokumentation des Anbieters. Je DMS gibt es eine solche Einstellung. Die Endpunkte brauchen `https://`; `http://` geht nur im eigenen Netz – welche Adressen dazu zählen (z. B. `.lan` oder `.home.arpa`), steht unter [Anmeldung über einen Anbieter](anmeldeschutz.md#anmeldung-uber-einen-anbieter-openid-connect).
 
 ## Was beim Übernehmen passiert
 

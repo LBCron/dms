@@ -72,6 +72,13 @@ describe('Anmeldung über OpenID Connect (#241)', () => {
     assert.equal(pruefeAussteller('https://login.example.org/x/v2.0/'), 'https://login.example.org/x/v2.0');
     assert.equal(pruefeAussteller('http://keycloak.lan:8080/realms/dms'), 'http://keycloak.lan:8080/realms/dms');
     assert.equal(pruefeAussteller('http://192.168.1.5/application/o/dms'), 'http://192.168.1.5/application/o/dms');
+    // Offizielle Heimnetz-Endung (RFC 8375, #595) – nur als echte Endung.
+    assert.equal(pruefeAussteller('http://auth.home.arpa/application/o/dms/'), 'http://auth.home.arpa/application/o/dms');
+    assert.throws(() => pruefeAussteller('http://home.arpa.example.org'), status(422));
+    assert.throws(() => pruefeAussteller('http://auth.home.arpa.example.org'), status(422));
+    // Nichts sonst gelockert: Router-Namen und Namen, die nur wie private Adressen beginnen, brauchen https.
+    for (const a of ['http://dms.fritz.box', 'http://nas.home', 'http://localhost.example.org', 'http://10.example.org', 'http://100.64.1.2', 'http://[2001:db8::1]'])
+      assert.throws(() => pruefeAussteller(a), status(422), a);
     assert.throws(() => pruefeAussteller('http://login.example.org'), status(422));
     assert.throws(() => pruefeAussteller('kein url'), status(422));
     assert.throws(() => pruefeAussteller('https://x.example.org/?a=1'), status(422));
