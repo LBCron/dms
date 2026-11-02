@@ -184,8 +184,8 @@ Das DMS läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen
 **Erstens: Werkzeuge bereitlegen.**
 
 ```sh
-sudo apt-get update
-sudo apt-get install ca-certificates curl
+sudo apt update
+sudo apt install ca-certificates curl
 ```
 
 Der erste Befehl holt die aktuelle Liste der Programme, der zweite installiert zwei kleine Helfer: `ca-certificates` prüft, ob eine Internetseite echt ist, `curl` lädt Dateien herunter. Meist sind beide schon da; dann meldet der Pi nur `is already the newest version` (auf Deutsch `ist schon die neueste Version`).
@@ -196,11 +196,15 @@ Der erste Befehl holt die aktuelle Liste der Programme, der zweite installiert z
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+sudo apt update
 ```
 
 Was die Zeilen tun:
@@ -208,13 +212,13 @@ Was die Zeilen tun:
 - `sudo install -m 0755 -d /etc/apt/keyrings` legt den Ordner für die Schlüssel an.
 - `sudo curl … -o /etc/apt/keyrings/docker.asc` lädt den **Schlüssel** von Docker. Mit ihm prüft der Pi später bei jedem Download, dass die Programme wirklich von Docker kommen und unterwegs niemand etwas verändert hat.
 - `sudo chmod a+r …` erlaubt der Programmverwaltung, den Schlüssel zu lesen.
-- `echo … | sudo tee /etc/apt/sources.list.d/docker.list` trägt die Paketquelle in eine kleine Datei ein. Die Teile in `$(…)` setzt der Pi selbst ein: seine Bauart (`arm64`) und den Namen seiner Debian-Version (z. B. `trixie` oder `bookworm`). Du musst daran nichts ändern.
-- `sudo apt-get update` liest die Liste neu ein – jetzt mit den Programmen von Docker.
+- `sudo tee /etc/apt/sources.list.d/docker.sources <<EOF` … `EOF` schreibt die Paketquelle in eine kleine Datei: woher die Programme kommen (`URIs`), für welche Debian-Version (`Suites`), für welche Bauart (`Architectures`) und mit welchem Schlüssel sie geprüft werden (`Signed-By`). Die Teile in `$(…)` setzt der Pi selbst ein: seine Bauart (`arm64`) und den Namen seiner Debian-Version (z. B. `trixie` oder `bookworm`). Du musst daran nichts ändern. Der Pi zeigt die Datei danach einmal an.
+- `sudo apt update` liest die Liste neu ein – jetzt mit den Programmen von Docker.
 
 **Drittens: Docker installieren.**
 
 ```sh
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
 Das installiert Docker selbst (`docker-ce`), den Befehl `docker` (`docker-ce-cli`), den Teil, der die Container tatsächlich laufen lässt (`containerd.io`), und zwei Erweiterungen, darunter **Docker Compose** (`docker-compose-plugin`) – damit startet das DMS seine zwei Container gemeinsam. Der Pi zeigt, wie viel er herunterladen will, und fragt `Do you want to continue? [Y/n]` (auf Deutsch `Möchten Sie fortfahren? [J/n]`): einfach ++enter++ drücken. Das dauert einige Minuten. Docker startet danach von selbst, auch nach jedem Neustart.
