@@ -417,6 +417,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#abhaengigkeiten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abhängigkeiten
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -807,6 +818,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#abhaengigkeiten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abhängigkeiten
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -895,6 +917,121 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 <li><strong>Hilfe:</strong> Jedes ?-Symbol in der Oberfläche zeigt auf eine Stelle im Handbuch. Die Tabelle dazu steht in <code>shared/src/hilfe.ts</code>, und die CI prüft, dass jeder Anker existiert.</li>
 <li><strong>Sicherung und Wiederherstellung</strong> sichern alle Tabellen außer dem Inhalt von <code>sitzungen</code> und <code>schema_migrationen</code> (<code>OHNE_INHALT</code> in <code>server/src/datenbankabzug.ts</code>). Eine neue Tabelle ist automatisch dabei. Daten außerhalb der Datenbank brauchen einen Gedanken: Wo liegen sie, und kommen sie mit?</li>
 </ul>
+<h2 id="abhaengigkeiten">Abhängigkeiten<a class="headerlink" href="#abhaengigkeiten" title="Permanent link">&para;</a></h2>
+<p>Das DMS kommt mit <strong>wenig fremdem Code</strong> aus: 8 npm-Pakete im Server, 3 in der Oberfläche, dazu eine Handvoll Alpine-Pakete im Image. Das ist der beste Schutz gegen Angriffe über die Lieferkette und hält Sicherheitsupdates selten und überschaubar – und einer der Hauptgründe, warum Node.js hier gut passt. So soll es bleiben.</p>
+<p><strong>Regel (#543):</strong> Eine neue <strong>Laufzeit-Abhängigkeit</strong> – npm unter <code>dependencies</code> oder ein Alpine-Paket per <code>apk add</code> im <code>Dockerfile</code> – kommt nur mit Begründung im Pull Request (Abschnitt „Neue Abhängigkeiten“ der Vorlage):</p>
+<ul>
+<li><strong>Wozu</strong> wird sie gebraucht?</li>
+<li><strong>Warum nicht</strong> mit Node.js-Bordmitteln oder den vorhandenen Abhängigkeiten und Werkzeugen? Oft reicht eine kleine eigene Umsetzung, wie bei den <a href="#texte-und-sprachdateien">Sprachdateien</a> statt i18next.</li>
+<li><strong>Lizenz:</strong> verträglich mit Apache-2.0? Bewusst nicht im Image sind z. B. Ghostscript und MuPDF (AGPL).</li>
+<li><strong>Pflegezustand:</strong> letzte Version, Zahl der Betreuer.</li>
+<li><strong>Eigene Abhängigkeiten:</strong> was sie mit ins Image bringt.</li>
+</ul>
+<p>Die Prüfung <strong>Abhängigkeiten</strong> (<code>.github/workflows/abhaengigkeiten.yml</code>) meldet im PR neue Laufzeit-Abhängigkeiten als Warnung, entfernte und neue Werkzeuge für Bau und Tests als Notiz und geänderte Versionen in der Zusammenfassung des Laufs – gesperrt wird nichts. Das erledigt das Skript <code>.github/werkzeuge/abhaengigkeiten-hinweis.py</code> (nur Python und git); lokal: <code>python3 .github/werkzeuge/abhaengigkeiten-hinweis.py main HEAD</code>. Bekannte Sicherheitslücken und unverträgliche Lizenzen prüft im selben Lauf die Dependency Review von GitHub.</p>
+<p><strong>Heute im Image</strong> (Stand 0.122):</p>
+<table>
+<thead>
+<tr>
+<th>Paket</th>
+<th>Wo</th>
+<th>Lizenz</th>
+<th>Wozu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fastify</code></td>
+<td>Server</td>
+<td>MIT</td>
+<td>HTTP-Server, Routen, Prüfung der Anfragen</td>
+</tr>
+<tr>
+<td><code>@fastify/static</code></td>
+<td>Server</td>
+<td>MIT</td>
+<td>die Oberfläche als Dateien ausliefern</td>
+</tr>
+<tr>
+<td><code>postgres</code> (postgres.js)</td>
+<td>Server</td>
+<td>Unlicense</td>
+<td>Zugriff auf PostgreSQL</td>
+</tr>
+<tr>
+<td><code>nodemailer</code></td>
+<td>Server</td>
+<td>MIT-0</td>
+<td>E-Mails über SMTP senden (Einladungen, Hinweise, Mappen versenden)</td>
+</tr>
+<tr>
+<td><code>imapflow</code></td>
+<td>Server</td>
+<td>MIT</td>
+<td>Post aus Postfächern über IMAP abholen</td>
+</tr>
+<tr>
+<td><code>mailparser</code></td>
+<td>Server</td>
+<td>MIT</td>
+<td>abgeholte E-Mails in Text und Anhänge zerlegen</td>
+</tr>
+<tr>
+<td><code>pdf-lib</code></td>
+<td>Server</td>
+<td>MIT</td>
+<td>PDFs zusammenstellen, verkleinern, schwärzen, stempeln</td>
+</tr>
+<tr>
+<td><code>yaml</code></td>
+<td>Server</td>
+<td>ISC</td>
+<td>Pakete im YAML-Format lesen und schreiben</td>
+</tr>
+<tr>
+<td><code>react</code>, <code>react-dom</code></td>
+<td>Oberfläche</td>
+<td>MIT</td>
+<td>Oberfläche</td>
+</tr>
+<tr>
+<td><code>qrcode</code></td>
+<td>Oberfläche</td>
+<td>MIT</td>
+<td>QR-Code für die Zwei-Faktor-Anmeldung</td>
+</tr>
+<tr>
+<td><code>tesseract-ocr</code> mit <code>-data-deu</code>, <code>-data-eng</code>, <code>-data-osd</code></td>
+<td>Image (Alpine)</td>
+<td>Apache-2.0</td>
+<td>Texterkennung</td>
+</tr>
+<tr>
+<td><code>poppler-utils</code></td>
+<td>Image (Alpine)</td>
+<td>GPL-2.0-or-later, als eigenes Programm aufgerufen</td>
+<td><code>pdftotext</code>, <code>pdftoppm</code>: Text und Bilder aus PDFs</td>
+</tr>
+<tr>
+<td><code>qpdf</code></td>
+<td>Image (Alpine)</td>
+<td>Apache-2.0</td>
+<td>Struktur von PDFs beim Verkleinern optimieren</td>
+</tr>
+<tr>
+<td><code>postgresql17</code>, <code>postgresql17-contrib</code></td>
+<td>nur <code>dms-komplett</code></td>
+<td>PostgreSQL</td>
+<td>Datenbank im selben Container; <code>contrib</code> für <code>pg_trgm</code></td>
+</tr>
+<tr>
+<td><code>tini</code>, <code>su-exec</code></td>
+<td>nur <code>dms-komplett</code></td>
+<td>MIT</td>
+<td>Prozesse starten und sauber beenden, PostgreSQL ohne root</td>
+</tr>
+</tbody>
+</table>
+<p>Nur für Bau und Tests (nicht im Image): <code>typescript</code>, <code>tsx</code>, <code>esbuild</code>, <code>vite</code> mit <code>@vitejs/plugin-react</code> und die Typen unter <code>@types/…</code>. Auch hier gilt: lieber Bordmittel – die Tests laufen mit dem Testläufer von Node.js (<code>node --test</code>), ohne eigenes Test-Framework.</p>
 <h2 id="texte-und-sprachdateien">Texte und Sprachdateien<a class="headerlink" href="#texte-und-sprachdateien" title="Permanent link">&para;</a></h2>
 <p>Texte für Benutzer stehen nicht im Code, sondern in <strong>Sprachdateien</strong> (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit <strong>du</strong>; die Technik für weitere Sprachen ist da.</p>
 <p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang), die Texte für Dritte und die Leiste der Werkbank (Gruppen, Bereiche, Vorlagen; <code>werkbank.json</code>, auch für <code>werkbank_bereiche.py</code>).</p>
