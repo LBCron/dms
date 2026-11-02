@@ -7,11 +7,13 @@ Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Pr
 
 ## Die drei Stufen
 
-| Stufe | bildet ab | Last | Daten | Zusage |
+| Stufe | bildet ab | Last | Daten | Ziel |
 | --- | --- | --- | --- | --- |
 | `klein` | Haushalt (2–5 Personen) | 25 gleichzeitige Anfragen, gemischt wie im Alltag | 5.000 Mappen | 95 % der Antworten schneller als 0,3 s, keine Fehler |
 | `mittel` | Kleinbetrieb (10–15 Personen) | 100 gleichzeitig, dazu ein großer Export nach dem anderen | 50.000 Mappen | 95 % schneller als 1 s, weniger als 0,1 % Fehler |
 | `gross` | Belastungsgrenze | alle 2 Minuten 25 gleichzeitige Anfragen mehr, bis 95 % nicht mehr unter 3 s bleiben, mehr als 1 % fehlschlagen oder der [Überlastschutz](technik.md#last) greift; danach kurz 1000 gleichzeitig | 200.000 Mappen | kein fester Wert – gemessen wird, **wo die Grenze liegt**; Pflicht: kein Absturz, Erholung von selbst |
+
+**Ziel und CI-Grenze:** Das **Ziel** ist, was das Projekt zusagen möchte. Die wöchentliche Messung auf den Rechnern von GitHub prüft daneben eine **CI-Grenze**: den ersten Lauf dort plus 20 % – für `klein` 0,3 s (wie das Ziel), für `mittel` 2,86 s. Nur wenn sie verfehlt ist, wird der Lauf rot; sie wird mit der Zeit nur strenger, bis sie das Ziel erreicht. Ein verfehltes Ziel heißt: Das Projekt muss das DMS dort schneller machen. Was die Rechner von GitHub und gemeldete Geräte schaffen, steht unter [Was das DMS verkraftet](verkraftet.md).
 
 „Gemischt wie im Alltag“ heißt: Startseite, Listen, Mappen öffnen, Suchen, Vorschaubilder und Dokumente herunterladen, als Administrator und als Mitglied. 25 gleichzeitige Anfragen entsprechen etwa 2–5 Personen, die gerade klicken – ein Klick löst mehrere Anfragen aus.
 
@@ -56,7 +58,7 @@ Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speic
 
 - **p50, p95, p99:** Die Hälfte, 95 % bzw. 99 % der Antworten kamen schneller als dieser Wert. p95 ist der wichtigste: Er zeigt, wie es sich anfühlt, wenn es gerade hakt.
 - **Fehlerquote:** Anteil der Anfragen mit Serverfehler oder ganz ohne Antwort. Abgewiesene Anfragen („gerade sehr beschäftigt“, 503) zählen extra.
-- **Zusage eingehalten / verfehlt** (`klein`, `mittel`): ob dein Gerät die Werte der Tabelle oben schafft. Verfehlt heißt nicht kaputt – das DMS ist dann bei so vielen gleichzeitigen Anfragen langsamer, als das Projekt es sich vornimmt.
+- **Ziel eingehalten / verfehlt** (`klein`, `mittel`): ob dein Gerät die Ziele der Tabelle oben schafft. Verfehlt heißt nicht kaputt – das DMS ist dann bei so vielen gleichzeitigen Anfragen langsamer, als das Projekt es sich vornimmt. Der Bericht nennt dazu die **CI-Grenze** des Projekts (z. B. „Ziel p95 < 1000 ms, CI-Grenze 2860 ms“); sie gilt für die Messung auf den Rechnern von GitHub, nicht für dein Gerät. Gerade wenn dein Gerät das Ziel verfehlt, hilft deine Meldung im Sammel-Issue [#576](https://github.com/motom001/dms/issues/576).
 - **Grenze** (`gross`): so viele gleichzeitige Anfragen schafft das Gerät noch mit 95 % der Antworten unter 3 s, dazu die Anfragen je Sekunde. Darunter steht, warum der nächste Schritt zu viel war, und wie schnell sich das DMS nach 1000 gleichzeitigen Anfragen erholt hat.
 - **Arbeitsspeicher** und **Ereignisschleife p99** (wie lange Anfragen höchstens warten mussten, weil der Server rechnete) zeigen, wo es eng wird. Hinweise zu den Einstellungen dafür stehen unter [Systemzustand → Einstellungen und Engpässe](speicherplatz.md#einstellungen-und-engpasse).
 

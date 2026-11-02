@@ -1,8 +1,9 @@
 name: Lasttest
 
 # Lasttest in drei Stufen (#544, #563): klein (25 gleichzeitig, 5.000 Mappen), mittel (100 gleichzeitig mit Export,
-# 50.000 Mappen), groß (Last steigern bis zur Grenze, 200.000 Mappen). klein und mittel sind eine Qualitätszusage –
-# verfehlt, wird der Lauf rot. groß ist eine Messung: Die Grenze steht im Bericht; liegt sie mehr als 20 % unter der
+# 50.000 Mappen), groß (Last steigern bis zur Grenze, 200.000 Mappen). klein und mittel sind eine Qualitätszusage:
+# über der CI-Grenze (erster GitHub-Lauf + 20 %, nur strenger) wird der Lauf rot; ein verfehltes Ziel (p95 < 0,3 s
+# bzw. < 1 s) steht als Hinweis im Bericht. groß ist eine Messung: Die Grenze steht im Bericht; liegt sie mehr als 20 % unter der
 # des letzten Laufs (aus dem Cache), gibt es eine Warnung. Nicht bei jedem Pull Request – die Rechner von GitHub
 # schwanken, und ein Lauf dauert gut eine Stunde. Wöchentlich und von Hand vor größeren Releases.
 # Grenzen und Begründung: Entwicklerhandbuch → Leistung → Lasttest.
