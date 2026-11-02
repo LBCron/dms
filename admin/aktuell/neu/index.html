@@ -363,6 +363,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01402" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.140.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.140.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01401" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -397,7 +436,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -447,7 +486,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2471,6 +2510,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01402" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.140.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.140.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01401" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2505,7 +2583,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2555,7 +2633,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2613,6 +2691,20 @@
 
 
 <h1 id="neu-in-version-0140">Neu in Version 0.140<a class="headerlink" href="#neu-in-version-0140" title="Permanent link">&para;</a></h1>
+<h2 id="01402">0.140.2<a class="headerlink" href="#01402" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Abrufseite der Auskunft (#455) gehärtet</strong> (Nachprüfung durch den Chat Sicherheit):</li>
+<li>Die Code-Prüfung (scrypt) läuft nur noch für bekannte Links und höchstens zweimal gleichzeitig; je Link nur eine Prüfung zur selben Zeit. Parallele Anfragen kommen damit nicht mehr an der Sperre nach 10 falschen Codes vorbei und können den Server nicht mehr auslasten.</li>
+<li>Eigene Bremse je IP-Adresse (IPv6 je /64) statt des Anmeldeschutzes der Konten: Fehlversuche auf der Abrufseite sperren nie die Anmeldung – auch nicht hinter einem Reverse Proxy, der alle Anfragen mit derselben Adresse weiterreicht. Die volle IP-Adresse landet dafür nicht mehr im Anmeldeschutz.</li>
+<li>Download der Auskunft (Abrufseite und Werkbank) mit <code>Cache-Control: no-store</code>; die Download-Adresse hat keine HEAD-Variante mehr, die das Einmal-Ticket verbrauchen könnte.</li>
+<li>Die Abrufseite entfernt den Schlüssel nach dem Lesen aus der Adresszeile und dem Verlauf; ein kaputtes Fragment führt nicht mehr zu einer leeren Seite.</li>
+<li><strong>Abruf-Links ab dem 501.:</strong> Zurückziehen und Download fanden ältere Links nicht mehr (Suche über die ersten 500); jetzt direkt per Kennung.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch, Datenschutz → Auskunft zustellen: Bremse der Abrufseite.</li>
+</ul>
 <h2 id="01401">0.140.1<a class="headerlink" href="#01401" title="Permanent link">&para;</a></h2>
 <h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2625,7 +2717,7 @@
 <li>Vorhandene Fassungen (bisher <code>/data/files/fassungen/&lt;Haushalts-Id&gt;</code>) zieht das DMS beim ersten Start von selbst in den Haushaltsordner um; ab der nächsten Sicherung sind sie dabei. Die Sicherung wird um die Größe der Fassungen größer (Werkbank → Sicherung zeigt die Dateigröße wie bisher).</li>
 <li>Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen. Dann gilt wie bisher: <strong>Werkbank → Wartungsoperationen → Vorschaubilder nachholen</strong> fordert die Fassungen beim Paket neu an, sofern es installiert ist; der Volltext ist in jeder Sicherung enthalten.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Admin: Sicherung (was eine Sicherung enthält, Grundsatz „im Zweifel in die Sicherung“), Andere Dateitypen, Wiederherstellen (Probe), Vollexport. Entwickler: Dateien umwandeln (Speicher).</li>
 </ul>
@@ -2641,7 +2733,7 @@
 <li><strong>Ein Befehl zum Installieren:</strong> <code>deploy/raspberry-pi/einrichten.sh</code> prüft 64-Bit-System, Arbeitsspeicher, freien Platz und Docker, bricht mit einer verständlichen Meldung ab, bevor es etwas anlegt, legt <code>~/dms</code> mit der neuen Vorlage <code>deploy/raspberry-pi/docker-compose.yml</code> (zwei Container) und einer <code>.env</code> mit zufälligem Datenbank-Passwort an, startet das DMS und zeigt Adresse und Einrichtungscode. Es installiert nichts am System – fehlt Docker, nennt es die offizielle Anleitung – und lässt sich beliebig oft starten, ohne Daten, Vorlage oder Passwort anzufassen.</li>
 <li><strong>Wie schnell ist mein Pi?</strong> Messanleitung mit Lasttest (Stufe klein) und einer Probe der Texterkennung in einer Test-Installation, Rückmeldung über das Formular „Messergebnis Lasttest“ bzw. Issue #576; dazu eine Tabelle für die Messwerte.</li>
 </ul>
-<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_2">Handbuch<a class="headerlink" href="#handbuch_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Installationshandbuch: Raspberry Pi neu geschrieben (Kurzfassung für Fortgeschrittene eingeklappt), Übersicht „Was hast du?“ und PC mit Linux verweisen darauf. Eigene Grafik: Geräteliste eines Routers mit erfundenen Werten.</li>
 </ul>
@@ -2652,7 +2744,7 @@
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.139.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.139.0...v0.140.1">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.139.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.139.0...v0.140.2">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
