@@ -119,39 +119,38 @@ Nicht umgesetzt: **nur zählen, was zu sehen ist** (eingeklappte Gruppen, geschl
 
 ## Lasttest { #lasttest }
 
-`server/test/lasttest.mjs` (#544) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js.
+`server/test/lasttest.mjs` (#544, #563) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js. Im Image steckt es als Befehl `dms-lasttest` (Betreiber: Administratorhandbuch → [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/)).
 
 ```bash
-# einmal: frisches DMS einrichten – Administrator, Beispiele, 50.000 Demo-Mappen (2 % mit einem Brief als PDF),
-# zwei Mitglieder mit und ohne Rolle, Regeln wie in einem Haushalt, ein Konto für die Probe des Anmeldeschutzes
-DMS_URL=http://127.0.0.1:3100 node server/test/lasttest.mjs --einrichten --mappen 50000
-# messen
-DMS_URL=http://127.0.0.1:3100 node server/test/lasttest.mjs --stufe alle --dauer 120 --bericht bericht.md --grenzen
+# DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein
+# und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000; 2 % mit einem Brief als PDF)
+node server/test/lasttest.mjs klein --ziel http://127.0.0.1:3100 --grenzen
+node server/test/lasttest.mjs alle --ziel http://127.0.0.1:3100 --dauer 120 --bericht bericht.md --json lasttest.json --grenzen
 ```
 
 Ein passendes DMS startet man aus `server/` mit eigener, leerer Datenbank (z. B. `dmslast`): `NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js` nach `npm run build -w server`. Die Datenbank danach wieder löschen.
 
+**Schutz der echten Ablage:** Ist das DMS frisch, richtet der Test es ein (Haushalt „Lasttest“, Konten mit Persona-Namen unter `example.org`, Beispiele, eine Rolle, Regeln wie in einem Haushalt). Ist es schon eingerichtet, misst er nur, wenn er sich mit seinem Administrator-Konto anmelden kann und höchstens 200 Mappen keine Demo-Mappen sind – sonst Abbruch mit Exit-Code 2, ohne etwas anzulegen. Nach neuen Demo-Mappen wartet er, bis die Arbeit im Hintergrund (Texterkennung, Vorschaubilder) vorbei ist.
+
 **Profil:** Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (`/api/startseite`, `/api/sichten`, `/api/anstehend`, `/api/typen`) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie `Retry-After` sagt.
 
-**Stufen**
+**Stufen** (#563; die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf, `--stufe normal` bzw. `ueberlast` laufen als `mittel` bzw. `gross`)
 
-| Durchgang | Was | Geprüft (`--grenzen`) |
-| --- | --- | --- |
-| normal | 100 gleichzeitig, `--dauer` Sekunden | p95 ≤ 5 s, Fehlerquote ≤ 1 %, keine 503 |
-| normal mit Export | dasselbe, nebenher ein großer Export nach dem anderen: PDF von 500 Mappen mit Übersicht, PDF der Mappen mit Dokumenten, ZIP der größten Ansicht (über 20.000 Mappen) | p95 ≤ 6 s, Fehlerquote ≤ 1 %, keine 503, jeder Export gelingt |
-| Überlast 500 / 1000 | 500 bzw. 1000 gleichzeitig, je höchstens 60 s | keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar |
-| danach | Erholung: 20 Anfragen in Folge mit p95 ≤ 1 s | innerhalb von 30 s |
-| während Überlast 500 | Anmeldeschutz: 6 falsche Passwörter von einer eigenen Adresse (`X-Forwarded-For`), dann das richtige | das richtige wird gesperrt (429) |
+| Stufe | Was | Daten | Geprüft (`--grenzen`) |
+| --- | --- | --- | --- |
+| klein | 25 gleichzeitig, `--dauer` Sekunden | 5.000 Mappen | **Zusage:** p95 < 300 ms, keine Fehler (kein 5xx, keine Anfrage ohne Antwort), keine 503 |
+| mittel | 100 gleichzeitig, nebenher ein großer Export nach dem anderen: PDF von bis zu 1000 Mappen mit Übersicht, PDF der Mappen mit Dokumenten, ZIP der größten Ansicht | 50.000 Mappen | **Zusage:** p95 < 1 s, Fehlerquote < 0,1 %, keine 503, jeder Export gelingt |
+| groß | ab 25 gleichzeitig alle `--schritt-dauer` (120) Sekunden 25 mehr, bis p95 > 3 s, Fehlerquote > 1 % oder der Überlastschutz greift (503); danach 1000 gleichzeitig (höchstens 60 s) mit Anmeldeschutz-Probe, dann Erholung | 200.000 Mappen | **Messung:** Grenze = höchste Stufe ohne Abbruch; mit `--vorher` Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt. **Pflicht:** keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar, Erholung (20 Anfragen in Folge mit p95 ≤ 1 s) innerhalb von 30 s, Anmeldeschutz sperrt nach falschen Passwörtern auch das richtige (429) |
 
-Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit `Retry-After`), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über `GET /api/werkbank/last` (nur Administrator, vom Überlastschutz nie abgewiesen). Mit `--json` alles als Datei, mit `--gleichzeitig <n>` (und `--ohne-export`) ein einzelner Durchgang.
+Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit `Retry-After`), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über `GET /api/werkbank/last`. Am Ende steht der **Ergebnisblock** zum Kopieren – ohne Adresse des Ziels, ohne Namen; das CPU-Modell nur, wenn der Test auf demselben Rechner läuft. Mit `--json` alles als Datei (auch Eingabe für `--vorher`), mit `--gleichzeitig <n>` (und `--ohne-export`) ein einzelner Durchgang.
 
-**Warum diese Grenzen:** Sie sollen nur **echte Verschlechterungen** melden, nicht das Schwanken der Rechner von GitHub. Auf einem Rechner mit 2 Kernen, auf dem auch PostgreSQL, der Lasttest selbst und andere Prozesse liefen, lag p95 bei 100 gleichzeitig um 2,8 s (mit Export 3,1 s); die Grenzen lassen fast das Doppelte Luft. Bei 100 gleichzeitigen Anfragen ist ein solcher Rechner ausgelastet – die Antwortzeit wächst dann mit der Zahl der Anfragen, nicht wegen eines Fehlers. Die Fehlerquote ist dagegen streng: Bei normaler Last darf praktisch nichts schiefgehen. Für die Überlast zählt nicht die Geschwindigkeit, sondern dass jede Anfrage eine Antwort bekommt, der Speicher begrenzt bleibt und das DMS sich erholt.
+**Warum diese Grenzen:** klein und mittel sind eine **Qualitätszusage** (Thomas, #563): Ein Haushalt soll das DMS flüssig erleben, ein Kleinbetrieb auch mit Export nebenher. Sie sind deutlich strenger als die großzügigen Grenzen aus #544 (p95 ≤ 5 s bzw. 6 s, Fehlerquote ≤ 1 %) und werden nach den ersten Läufen nur strenger, nie lockerer. Groß ist dagegen eine **Messung**: Wo die Grenze liegt, hängt an der Hardware; der Lauf meldet sie und warnt bei deutlicher Verschlechterung, statt rot zu werden. Lokal, auf einem belasteten Rechner mit 2 Kernen, lagen klein bei p95 525 ms und mittel bei p95 4,7 s – nicht aussagekräftig, aber ein Hinweis, dass ein Rechner mit 2 Kernen die Zusage für mittel nicht schafft.
 
 **Überlastschutz** (`server/src/ueberlast.ts`): Mehr als `DMS_MAX_ANFRAGEN` (250) gleichzeitige Anfragen an `/api/` und `/webdav` beantwortet ein Hook vor allem anderen sofort mit 503 und `Retry-After: 5`. Gezählt wird vom Eingang bis die Antwort fertig oder die Verbindung zu ist (`close`). Ausgenommen: `/api/gesundheit` und `/api/werkbank/last`. Dazu nimmt der Server neue Verbindungen mit einer längeren Warteschlange an (`backlog: 2048` statt 511). Programme, die `Retry-After` nicht beachten und sofort wieder fragen, bekommen ebenfalls sofort ihre 503; auf dem Testrechner mit 2 Kernen blieben dann bei 1000 gleichzeitig rund 1–2 % der Anfragen nach 60 s ohne Antwort, obwohl der Server keine Anfrage länger als 15 s bearbeitete – der Lasttest selbst (im selben Rechner) kam mit dem Verbindungsaufbau nicht mehr hinterher.
 
 **Verbindungen zur Datenbank** (`server/src/db.ts`): Vorgabe 10, einstellbar mit `DMS_DB_VERBINDUNGEN` (2–100). Gemessen bei 100 gleichzeitig ohne Export, je zwei Runden: 5 Verbindungen 3.894–4.117 Anfragen je Minute (p95 2,7–2,9 s), 10 Verbindungen 3.516–3.726 (p95 2,9–3,1 s), 20 Verbindungen 3.512–3.517 (p95 2,9 s) – gleichauf im Rahmen der Schwankung. `Verbindungswarten` misst alle 5 Sekunden mit `SELECT 1`, wie lange eine Abfrage auf eine freie Verbindung wartet (einschließlich Hin- und Rückweg und Wartezeit der Ereignisschleife); Werkbank → Datenbank-Anbindung zeigt Median und Höchstwert der letzten Minute.
 
-**Workflow** `.github/workflows/lasttest.yml`: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf rund eine halbe Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, richtet das DMS mit 50.000 Demo-Mappen ein, misst alle Stufen mit `--grenzen` und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Vor einem größeren Release von Hand starten und den Bericht mit dem letzten vergleichen.
+**Workflow** `.github/workflows/lasttest.yml`: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf gut eine Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, misst alle drei Stufen mit `--grenzen` (klein oder mittel verfehlt → Lauf rot) und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Die Grenze von groß merkt er sich im Cache (`lasttest-gross-…`) für die Warnung beim nächsten Lauf. Vor einem größeren Release von Hand starten.
 
 **Messung zu #542** (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.
 
