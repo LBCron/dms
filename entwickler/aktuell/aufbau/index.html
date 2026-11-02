@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.116/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.117/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -897,7 +897,7 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 </ul>
 <h2 id="texte-und-sprachdateien">Texte und Sprachdateien<a class="headerlink" href="#texte-und-sprachdateien" title="Permanent link">&para;</a></h2>
 <p>Texte für Benutzer stehen nicht im Code, sondern in <strong>Sprachdateien</strong> (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit <strong>du</strong>; die Technik für weitere Sprachen ist da.</p>
-<p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang) und die Texte für Dritte.</p>
+<p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang), die Texte für Dritte und die Leiste der Werkbank (Gruppen, Bereiche, Vorlagen; <code>werkbank.json</code>, auch für <code>werkbank_bereiche.py</code>).</p>
 <div class="highlight"><pre><span></span><code>shared/src/sprachen/de/&lt;bereich&gt;.json         Ausgangssprache Deutsch (du), immer vollständig
 shared/src/sprachen/de-formal/dritte.json     Texte für Dritte mit „Sie“ (siehe unten)
 shared/src/sprache.ts                         uebersetzer(), Platzhalter, Mehrzahl
