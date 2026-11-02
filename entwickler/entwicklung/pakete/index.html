@@ -581,6 +581,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signierter-katalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signierter Katalog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signierter Katalog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#projektschluessel-austauschen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projektschlüssel austauschen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eigener-katalog-mit-eigenem-schluessel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eigener Katalog mit eigenem Schlüssel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#eigenes-paket-testen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -945,6 +984,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#signierter-katalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signierter Katalog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Signierter Katalog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#projektschluessel-austauschen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projektschlüssel austauschen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eigener-katalog-mit-eigenem-schluessel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eigener Katalog mit eigenem Schlüssel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#eigenes-paket-testen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1143,8 +1221,69 @@ python3<span class="w"> </span>werkzeuge/katalog.py<span class="w"> </span>--pro
 <h2 id="pull-request-und-katalog">Pull Request und Katalog<a class="headerlink" href="#pull-request-und-katalog" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Pull Request mit <code>Closes #…</code>; jeder Commit trägt ein <code>Signed-off-by:</code> (<code>git commit -s</code>).</li>
-<li>Nach dem Merge baut die CI je Paketversion ein Archiv <code>&lt;id&gt;-&lt;version&gt;.zip</code> und den Katalog <code>katalog.json</code> mit SHA-256 und legt beides auf den Branch <code>gh-pages</code>. Das DMS findet das Paket beim nächsten <strong>Katalog abrufen</strong>.</li>
+<li>Nach dem Merge baut die CI je Paketversion ein Archiv <code>&lt;id&gt;-&lt;version&gt;.zip</code> und den Katalog <code>katalog.json</code> mit SHA-256, signiert den Katalog (<code>katalog.sig</code>, siehe unten) und legt alles auf den Branch <code>gh-pages</code>. Das DMS findet das Paket beim nächsten <strong>Katalog abrufen</strong>.</li>
 </ol>
+<h2 id="signierter-katalog">Signierter Katalog<a class="headerlink" href="#signierter-katalog" title="Permanent link">&para;</a></h2>
+<p>Ab DMS 0.141.0 prüft das DMS, <strong>woher</strong> ein Katalog stammt (#594, Registry: motom001/dms-registry#74). Die Prüfsumme je Archiv belegt nur, dass ein Paket unterwegs nicht kaputtging; die Signatur über <code>katalog.json</code> belegt, dass der ganze Katalog – und damit jede Prüfsumme darin – vom DMS-Projekt kommt.</p>
+<ul>
+<li><strong>Verfahren:</strong> Ed25519 über die <strong>exakten Bytes</strong> von <code>katalog.json</code>. Das DMS prüft mit <code>crypto.verify</code> aus Node, ohne weitere Abhängigkeit (<code>server/src/katalogsignatur.ts</code>).</li>
+<li>
+<p><strong><code>katalog.sig</code></strong> liegt neben <code>katalog.json</code>, getrennt, damit ältere DMS-Versionen den Katalog unverändert lesen:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"verfahren"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ed25519"</span><span class="p">,</span><span class="w"> </span><span class="nt">"schluessel"</span><span class="p">:</span><span class="w"> </span><span class="s2">"da31d65f4a429768"</span><span class="p">,</span><span class="w"> </span><span class="nt">"signatur"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;64 Bytes, Base64&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"erstellt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02T10:00:00Z"</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+</li>
+<li>
+<p><strong>Kennung und Fingerabdruck</strong> eines Schlüssels: SHA-256 über die 32 Bytes des öffentlichen Schlüssels, hexadezimal. Die Kennung sind die ersten 16 Zeichen, der Fingerabdruck alle 64 in Vierergruppen. <code>werkzeuge/signieren.py fingerabdruck &lt;datei.pub&gt;</code> in der Registry rechnet genauso.</p>
+</li>
+<li><strong>Zwei Projektschlüssel:</strong> Signierschlüssel (Secret in der CI der Registry) und Reserveschlüssel (offline beim Maintainer). Beide öffentlichen Schlüssel stehen fest im DMS; gültig ist eine Signatur mit einem der beiden.</li>
+<li><strong><code>erstellt</code>:</strong> Das DMS merkt sich je Katalog den neuesten gültig signierten Stand (Einstellung <code>paket_katalog_staende</code>, Teil der Sicherung) und lehnt online einen älteren ab – so lässt sich kein alter Katalog mit einer inzwischen behobenen Paketversion unterschieben. Eine Sammeldatei (ohne Internet) zeigt nur „Stand vom …“ und warnt ab 90 Tagen.</li>
+<li><strong>Übergang:</strong> In 0.141.0 gibt es beim offiziellen Katalog ohne Signatur nur eine Warnung. Eine Minor-Version später <strong>muss</strong> er signiert sein (eigenes Issue). Eine <strong>ungültige</strong> Signatur zählt schon jetzt wie eine fremde Quelle: Die Herkunft muss bestätigt werden, und das Protokoll vermerkt es.</li>
+<li><strong>Weiterleitungen:</strong> Beim Holen von Katalog, Signatur, Schlüssel und Archiven folgt das DMS Weiterleitungen nur auf <code>https://</code>-Adressen (höchstens fünf).</li>
+</ul>
+<h3 id="projektschluessel-austauschen">Projektschlüssel austauschen<a class="headerlink" href="#projektschluessel-austauschen" title="Permanent link">&para;</a></h3>
+<p>Die öffentlichen Schlüssel stehen an <strong>einer</strong> Stelle: <code>server/src/projektschluessel.ts</code>. Bis der Maintainer seine Schlüssel veröffentlicht hat, stehen dort <strong>Testschlüssel</strong> (<code>test: true</code>); ihre privaten Gegenstücke liegen offen in <code>server/test/katalogschluessel.ts</code>, damit die Tests Kataloge signieren können. Ein DMS mit Testschlüsseln zeigt in der Vorschau „prüft noch mit Testschlüsseln“.</p>
+<p>So kommen die echten Schlüssel hinein:</p>
+<ol>
+<li>Der Maintainer erzeugt beide Schlüsselpaare auf seinem eigenen Rechner (Anleitung in der README der Registry, Abschnitt „Katalog signieren“) und veröffentlicht <code>signier.pub</code> und <code>reserve.pub</code>.</li>
+<li>In <code>server/src/projektschluessel.ts</code> die beiden PEM-Texte ersetzen und <code>test</code> auf <code>false</code> setzen.</li>
+<li>Fingerabdrücke ausrechnen (<code>python3 werkzeuge/signieren.py fingerabdruck signier.pub</code> in der Registry) und in <code>SECURITY.md</code> und <code>SECURITY.en.md</code> eintragen; ebenso in README und REGELN der Registry.</li>
+<li>Tests brauchen nichts weiter: Sie geben ihre eigenen Testschlüssel mit (<code>TEST_PROJEKT</code> in <code>server/test/katalogschluessel.ts</code>). Der Test „Projektschlüssel“ prüft nur, dass zwei verschiedene Ed25519-Schlüssel drinstehen und dass <code>test</code> genau bei den Testschlüsseln gesetzt ist.</li>
+</ol>
+<p>Fällt der Signierschlüssel aus (verloren oder bekannt geworden), signiert die Registry mit dem Reserveschlüssel weiter; das DMS nimmt das ohne Update an. Danach kommt ein neues Paar (neuer Reserveschlüssel) mit einem DMS-Release.</p>
+<h2 id="eigener-katalog-mit-eigenem-schluessel">Eigener Katalog mit eigenem Schlüssel<a class="headerlink" href="#eigener-katalog-mit-eigenem-schluessel" title="Permanent link">&para;</a></h2>
+<p>Wer selbst einen Katalog betreibt (siehe unten, „Eigenes Paket testen“), kann ihn ebenfalls signieren. Das DMS behandelt den Schlüssel wie SSH beim ersten Kontakt:</p>
+<ol>
+<li>
+<p><strong>Schlüsselpaar erzeugen</strong> – auf deinem Rechner, nicht auf dem Webserver:</p>
+<div class="highlight"><pre><span></span><code>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>ed25519<span class="w"> </span>-out<span class="w"> </span>katalog.pem
+openssl<span class="w"> </span>pkey<span class="w"> </span>-in<span class="w"> </span>katalog.pem<span class="w"> </span>-pubout<span class="w"> </span>-out<span class="w"> </span>katalog.schluessel
+</code></pre></div>
+</li>
+<li>
+<p><strong>Signieren</strong> nach jedem Bau des Katalogs, mit dem Werkzeug der Registry:</p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>werkzeuge/katalog.py<span class="w"> </span>&lt;ordner&gt;
+python3<span class="w"> </span>werkzeuge/signieren.py<span class="w"> </span>signieren<span class="w"> </span>&lt;ordner&gt;<span class="w"> </span>--schluessel<span class="w"> </span>katalog.pem<span class="w"> </span>--oeffentlich<span class="w"> </span>katalog.schluessel
+</code></pre></div>
+<p>Es schreibt <code>&lt;ordner&gt;/katalog.sig</code> und prüft sie gleich mit dem öffentlichen Schlüssel.
+3. <strong>Veröffentlichen:</strong> <code>katalog.json</code>, <code>katalog.sig</code> und <code>katalog.schluessel</code> liegen im selben Ordner auf einem HTTPS-Server. <code>katalog.pem</code> bleibt bei dir.
+4. <strong>Fingerabdruck nennen:</strong> <code>python3 werkzeuge/signieren.py fingerabdruck katalog.schluessel</code> – schreib ihn auf deine Webseite. Wer deinen Katalog im DMS hinzufügt, sieht den Fingerabdruck und soll ihn damit vergleichen. Das DMS übernimmt den Schlüssel erst nach dieser Bestätigung.</p>
+</li>
+</ol>
+<p>Danach verlangt das DMS für diesen Katalog eine <strong>gültige Signatur</strong>: Fehlt sie oder passt sie nicht, nimmt es den Katalog nicht (und vermerkt das im Protokoll). Dafür muss beim Installieren niemand mehr die Herkunft bestätigen. Auch hier gilt: Ein älterer <code>erstellt</code> als zuletzt gesehen wird abgelehnt.</p>
+<p><strong>Schlüssel wechseln:</strong></p>
+<ul>
+<li>
+<p><strong>Geordnet:</strong> Signiere den neuen öffentlichen Schlüssel mit dem bisherigen und leg die Signatur als <code>katalog.schluessel.sig</code> daneben (Format wie <code>katalog.sig</code>):</p>
+<div class="highlight"><pre><span></span><code>openssl<span class="w"> </span>genpkey<span class="w"> </span>-algorithm<span class="w"> </span>ed25519<span class="w"> </span>-out<span class="w"> </span>neu.pem
+openssl<span class="w"> </span>pkey<span class="w"> </span>-in<span class="w"> </span>neu.pem<span class="w"> </span>-pubout<span class="w"> </span>-out<span class="w"> </span>neu.schluessel
+python3<span class="w"> </span>werkzeuge/signieren.py<span class="w"> </span>signieren-datei<span class="w"> </span>neu.schluessel<span class="w"> </span>--schluessel<span class="w"> </span>katalog.pem<span class="w"> </span>--ziel<span class="w"> </span>katalog.schluessel.sig
+mv<span class="w"> </span>neu.schluessel<span class="w"> </span>katalog.schluessel<span class="w">   </span><span class="c1"># danach den Katalog mit neu.pem signieren</span>
+</code></pre></div>
+<p>Das DMS übernimmt den neuen Schlüssel ohne Rückfrage, zeigt einen Hinweis und vermerkt den Wechsel im Protokoll. Lass <code>katalog.schluessel.sig</code> eine Weile liegen (etwa ein halbes Jahr): Ein DMS, das den Katalog erst später wieder abruft, braucht den Nachweis auch noch.
+- <strong>Ohne den alten Schlüssel</strong> (verloren): Das DMS <strong>sperrt</strong> den Katalog mit deutlicher Warnung, bis ein Admin den neuen Fingerabdruck bestätigt. Sag deinen Nutzern Bescheid und nenne den neuen Fingerabdruck auf deiner Webseite.</p>
+</li>
+</ul>
+<p>Ein Katalog <strong>ohne</strong> <code>katalog.schluessel</code> bleibt wie bisher: Er geht, aber jede Installation daraus verlangt die Bestätigung der Herkunft.</p>
 <h2 id="eigenes-paket-testen">Eigenes Paket testen<a class="headerlink" href="#eigenes-paket-testen" title="Permanent link">&para;</a></h2>
 <p>Bevor dein Paket in den Katalog kommt, probierst du es im eigenen DMS aus – am besten in einem Test-DMS (z. B. mit <a href="https://motom001.github.io/dms/admin/aktuell/demo/">Demo-Daten</a>):</p>
 <ol>
