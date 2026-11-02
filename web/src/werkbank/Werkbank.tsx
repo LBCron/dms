@@ -1,4 +1,5 @@
 import type { InstalliertesPaket } from '../../../shared/src/pakete';
+import { SuchePanel } from './SucheEinstellungen';
 import { Symbol } from '../Symbol';
 import { AnmeldeschutzPanel, useAnmeldeschutz } from './Anmeldeschutz';
 import { NummernkreisEditor, NummernkreiseListe, useNummernkreise } from './Nummernkreise';
@@ -205,6 +206,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>Wähle links einen Nummernkreis oder lege mit „+ Neu“ einen an.</p></div>;
   } else if (bereich === 'stempel') {
     rechts = <StempelPanel z={stempel} />;
+  } else if (bereich === 'suche') {
+    rechts = <SuchePanel />;
   } else if (bereich === 'postfaecher') {
     liste = <PostfaecherListe z={postfaecher} offen={id} />;
     rechts = id ? <PostfachEditor key={`${id}-${postfaecher.liste ? 1 : 0}`} z={postfaecher} id={id} /> : <div className="platzhalter"><p>Wähle links ein Postfach oder lege mit „+ Neu“ eines an.</p></div>;
@@ -238,6 +241,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     { pfad: 'nummernkreise', name: n('nummernkreise'), gruppe: 'ablage', zahl: zahl(nummernkreise.liste?.length, uz?.nummernkreise) },
     { pfad: 'stempel', name: n('stempel'), gruppe: 'ablage', zahl: stempel.liste?.length || undefined },
     { pfad: 'pakete', name: n('pakete'), gruppe: 'ablage', zahl: zahl(pakete.stand?.installiert.length, uz?.pakete) },
+    { pfad: 'suche', name: n('suche'), gruppe: 'ablage' },
     ...(d.typen.some((x) => x.archiv) ? [{ pfad: 'darfweg', name: n('darfweg'), gruppe: 'ablage' as const, zahl: zahl(darfWeg.liste?.length, uz?.darfWeg) }] : []),
     // Benutzer und Sicherheit
     { pfad: 'benutzer', name: n('benutzer'), gruppe: 'benutzer', zahl: zahl(benutzer.geladen ? benutzer.liste.filter((b) => b.aktiv).length : undefined, uz?.benutzer) },

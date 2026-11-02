@@ -34,6 +34,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   nummernkreise: 'struktur/nummernkreise.json',
   pakete: 'struktur/pakete.json',
   designs: 'struktur/designs.json',
+  synonyme: 'struktur/synonyme.json (#356, gleichbedeutende Wörter der Suche)',
   benutzer: 'struktur/benutzer.json (ohne Passwort-Hashes)',
   benutzer_einstellungen: 'struktur/benutzer.json (einstellungen)',
   mappen: 'daten/<typ>.csv, .jsonl, .xlsx und ablage/',
@@ -59,6 +60,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   auskunft_links: 'nicht enthalten: Abruf-Links von Auskünften (#455, Hashes; der Nachweis steht in daten/historie.jsonl)',
   sitzungen: 'nicht enthalten: Anmeldungen',
   erkennungen: 'nicht enthalten: Ergebnis der Erkennung je Post (#336, wird aus dem Volltext neu berechnet)',
+  suchwoerter: 'nicht enthalten: Wörterverzeichnis der Suche (#356, abgeleitet aus Titeln, Werten und Volltexten)',
   vektoren: 'nicht enthalten: Vektoren zu Dokumenten (#442, abgeleitet – das Paket mit dms:vektoren rechnet sie neu)',
   gesehen: 'nicht enthalten: wann ein Benutzer eine Mappe zuletzt geöffnet hat (#422, nur für die Hervorhebung geänderter Mappen)',
   schema_migrationen: 'nicht enthalten: Stand der Datenbank (steht als Version im Manifest)',
@@ -87,6 +89,8 @@ export interface ExportQuelle {
   /** Installierte Pakete (#188). */
   pakete(): Promise<unknown[]>;
   designs(): Promise<unknown[]>;
+  /** Gleichbedeutende Wörter der Suche (#356); fehlt bei Auskunft und persönlichem Export. */
+  synonyme?(): Promise<unknown[]>;
   mappen(typId: string): Promise<Mappe[]>;
   papierkorb(): Promise<PapierkorbEintrag[]>;
   /** Einzeln gelöschte Dokumente (#344); fehlt bei älteren Quellen. */
@@ -236,6 +240,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   await w.schreibe('struktur/nummernkreise.json', json(await q.nummernkreise()));
   await w.schreibe('struktur/pakete.json', json(await q.pakete()));
   await w.schreibe('struktur/designs.json', json(await q.designs()));
+  if (q.synonyme) await w.schreibe('struktur/synonyme.json', json(await q.synonyme()));
   await w.schreibe('struktur/benutzer.json', json(b.benutzer));
 
   // Daten je Mappentyp

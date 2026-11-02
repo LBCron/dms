@@ -136,7 +136,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
   it('#354: sechs Gruppen nach Aufgaben, je höchstens 7 Bereiche, Kennungen unverändert', () => {
     assert.deepEqual(Object.values(GRUPPEN), ['Ablage aufbauen', 'Benutzer und Sicherheit', 'Post und Eingänge', 'Daten sichern', 'Einstellungen', 'Wartung und Fehlersuche']);
     const je = (g: string) => BEREICHE.filter((x) => x.gruppe === g).map((x) => x.pfad);
-    assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'pakete', 'darfweg']);
+    assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'pakete', 'suche', 'darfweg']);
     assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'wiederherstellung', 'vollexport', 'papierkorb']);

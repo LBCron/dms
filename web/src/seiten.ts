@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Ausschnitt, Mappe, Sortierung } from '../../shared/src/model';
-import { api, type Bezuege } from './api';
+import { api, type Bezuege, type Unscharf } from './api';
 
 export const SEITE = 100;
 
@@ -26,6 +26,8 @@ export function useSeiten(sicht: string | undefined, suche: string, stand: numbe
   const [geaendert, setGeaendert] = useState<Set<string>>(new Set());
   const [stumm, setStumm] = useState<Set<string>>(new Set());
   const [gesamt, setGesamt] = useState<number | null>(null);
+  /** Unscharfe Suche (#356): ohne genaue Treffer mit ähnlichen Schreibweisen gesucht. */
+  const [unscharf, setUnscharf] = useState<Unscharf | null>(null);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string>();
   const lauf = useRef(0);
@@ -39,6 +41,7 @@ export function useSeiten(sicht: string | undefined, suche: string, stand: numbe
       const s = await api.seite(sicht, von, anzahl, suche, sortierung, volltext, notizen, link);
       if (nr !== lauf.current) return; // überholt
       setGesamt(s.gesamt);
+      if (ersetzen) setUnscharf(s.unscharf ?? null);
       setMappen((alt) => (ersetzen ? s.mappen : [...alt, ...s.mappen]));
       setBezuege((alt) => (ersetzen ? s.bezuege : { ...alt, ...s.bezuege }));
       setAusschnitte((alt) => (ersetzen ? s.ausschnitte ?? {} : { ...alt, ...s.ausschnitte }));
@@ -72,5 +75,5 @@ export function useSeiten(sicht: string | undefined, suche: string, stand: numbe
   /** Gesehen (geöffnet oder „Alle als gesehen markieren“): Hervorhebung sofort weg. */
   const gesehen = useCallback((ids: string[]) => setGeaendert((alt) => { if (!ids.some((id) => alt.has(id))) return alt; const n = new Set(alt); for (const id of ids) n.delete(id); return n; }), []);
   const setzeStumm = useCallback((id: string, an: boolean) => setStumm((alt) => { const n = new Set(alt); if (an) n.add(id); else n.delete(id); return n; }), []);
-  return { mappen, bezuege, ausschnitte, aufgaben, favoriten, geaendert, gesehen, stumm, setzeStumm, gesamt, laedt, fehler, mehr, alle: gesamt !== null && mappen.length >= gesamt };
+  return { mappen, bezuege, ausschnitte, aufgaben, favoriten, geaendert, gesehen, stumm, setzeStumm, gesamt, unscharf, laedt, fehler, mehr, alle: gesamt !== null && mappen.length >= gesamt };
 }

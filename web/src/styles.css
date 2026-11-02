@@ -1712,3 +1712,10 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .frag-ausschnitte li { min-width: 0; overflow-wrap: anywhere; }
 .frag-zitat { margin: 0.25rem 0 0; padding: 0.35rem 0.6rem; border-left: 3px solid var(--linie); white-space: pre-wrap; max-height: 14rem; overflow: auto; }
 .frag-grenzen { display: grid; gap: 0.6rem; max-width: 28rem; }
+/* Werkbank → Suche (#356): Gruppen gleichbedeutender Wörter. */
+.synonymliste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.synonymliste > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding: 6px 10px; border: 1px solid var(--linie); border-radius: 6px; background: var(--flaeche); }
+.synonymwoerter { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere; }
+.synonymliste form, .synonymneu { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; align-items: center; }
+.synonymliste form input, .synonymneu input { flex: 1 1 14em; min-width: 0; }
+.hinweis.unscharf { margin: 4px 0; }

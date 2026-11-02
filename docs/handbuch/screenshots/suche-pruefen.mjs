@@ -77,7 +77,7 @@ try {
   await warteZahl((n) => n >= 1);
   await s.getByRole('button', { name: 'Bezahlt: nein', exact: true }).click();
   await form.waitFor();
-  pruefe(await form.getByRole('list', { name: 'Mappentypen' }).getByText('Rechnung', { exact: true }).isVisible(), 'Typ aus dem Link nicht gewählt');
+  pruefe(await form.getByRole('list', { name: 'Mappentypen' }).getByText('Rechnung', { exact: true }).waitFor({ timeout: 10000 }).then(() => true, () => false), 'Typ aus dem Link nicht gewählt');
   pruefe(await form.getByRole('radiogroup', { name: 'Bezahlt' }).getByLabel('nein').isChecked(), 'Ja/Nein aus dem Link fehlt');
   console.log('ok  Link öffnen, Zusammenfassung anklicken');
 

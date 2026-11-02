@@ -74,6 +74,7 @@ export const HILFE = {
   'pakete.ereignis.einstellungen_geaendert': admin('pakete/', 'dem Ereignis „Einstellungen geändert“', 'ereignis-einstellungen-geandert'),
   'mappentyp.archiv': admin('archiv/', 'Archivmodus und Aufbewahrung'),
   'werkbank.stempel': admin('stempel/', 'Stempel-Vorlagen'),
+  'werkbank.suche': admin('suche/', 'Suche: Tippfehler und gleichbedeutende Wörter'),
   'mappentyp.stempel': admin('stempel/', 'Stempel je Mappentyp', 'stempel-je-mappentyp'),
   'werkbank.vollexport': admin('export/', 'Daten exportieren'),
   'werkbank.vollexport.kontakte': admin('export/', 'Kontakte als vCard', 'kontakte-als-vcard'),

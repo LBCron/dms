@@ -26,6 +26,7 @@ import { EmailMehrere } from './EmailMehrere';
 import { PostKnopf } from './Post';
 import type { Hilfeort } from '../../../shared/src/hilfe';
 import { Suchkopf, suchFehler, suchTypen } from './Suche';
+import { UnscharfHinweis } from './Unscharf';
 import { mitGrund } from './Loeschgrund';
 import { rueckfrage } from '../rueckfrage';
 import { ZahlWarte } from './ZahlWarte';
@@ -483,6 +484,12 @@ function Liste(p: {
         <EmailMehrere ids={[...wahl.gewaehlt]} fertig={(meldung) => { setEmailOffen(false); if (meldung) setErgebnis({ text: meldung, liste: [] }); }} />
       )}
       {s.fehler && <div className="hinweis schlecht"><p>{s.fehler}</p></div>}
+      {/* Unscharfe Suche (#356): ohne genauen Treffer ähnliche Schreibweisen, „Meintest du …?“ sucht genau das Wort. */}
+      {s.unscharf && <UnscharfHinweis u={s.unscharf} suchen={(x) => {
+        if (suche || !p.link) { setEingabe(x); return; }
+        const q = new URLSearchParams(p.link); q.set('volltext', x);
+        geheZu(`/ablage/${p.sicht}${p.offen ? `/${p.offen}` : ''}?${q.toString()}`);
+      }} />}
       {wahl && wahl.gewaehlt.size > 0 && (
         <div className="aktionsleiste" role="region" aria-label="Auswahl">
           <span className="klein"><strong>{zahl(wahl.gewaehlt.size)}</strong> von {zahl(s.gesamt ?? 0)} ausgewählt</span>

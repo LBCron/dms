@@ -146,7 +146,11 @@ async function anfrage<T>(methode: string, url: string, body?: unknown): Promise
 
 export interface Rueckverweis { quelleId: string; quelleTypId: string; feldKey: string; titel: string; /** Nicht lesbar (#126): ohne Link. */ verborgen?: boolean }
 export type Bezuege = Record<string, MappenBezug>;
-export interface Seite { gesamt: number; von: number; mappen: Mappe[]; bezuege: Bezuege; ausschnitte?: Record<string, Ausschnitt>; aufgaben?: Record<string, string>; /** Favoriten des Benutzers unter den Mappen dieser Seite (#62). */ favoriten?: string[]; /** Von anderen geändert seit dem letzten Sehen (#422). */ geaendert?: string[]; /** Favoriten ohne Benachrichtigung (#422, nur Favoritenliste). */ stumm?: string[]; /** Ähnliche Treffer (#442): nur in der Suche über alle Mappen mit Volltext. */ aehnlich?: AehnlicheMappe[] }
+export interface Seite { gesamt: number; von: number; mappen: Mappe[]; bezuege: Bezuege; ausschnitte?: Record<string, Ausschnitt>; aufgaben?: Record<string, string>; /** Favoriten des Benutzers unter den Mappen dieser Seite (#62). */ favoriten?: string[]; /** Von anderen geändert seit dem letzten Sehen (#422). */ geaendert?: string[]; /** Favoriten ohne Benachrichtigung (#422, nur Favoritenliste). */ stumm?: string[]; /** Ähnliche Treffer (#442): nur in der Suche über alle Mappen mit Volltext. */ aehnlich?: AehnlicheMappe[]; /** Unscharfe Suche (#356): ohne genaue Treffer mit ähnlichen Schreibweisen gesucht. */ unscharf?: Unscharf }
+/** Unscharfe Suche (#356): statt = gesuchter Text, vorschlag = „Meintest du …?“ (null, wenn nichts Besseres da ist). */
+export interface Unscharf { statt: string; vorschlag: string | null; begriffe: Record<string, string[]> }
+/** Werkbank → Suche (#356). */
+export interface SucheStand { unscharf: boolean; woerter: number; synonyme: Array<{ id: string; woerter: string[]; quelle: string; paketName?: string }> }
 /** Eine Mappe mit einem ähnlichen Dokument (#442); aehnlichkeit = Kosinus (0 bis 1). */
 export interface AehnlicheMappe { id: string; titel: string; typId: string; dokument: { id: string; name: string }; aehnlichkeit: number }
 /** „Frag deine Ablage“ (#444): Werkbank (Höchstmenge) und Frage stellen (Antwort als NDJSON-Strom). */
@@ -590,6 +594,13 @@ export const api = {
   vektorStand: () => anfrage<VektorStand>('GET', '/api/werkbank/vektoren'),
   vektorSuche: (suche: boolean) => anfrage<VektorStand>('PUT', '/api/werkbank/vektoren', { suche }),
   vektorenNeu: () => anfrage<{ entfernt: number }>('POST', '/api/werkbank/vektoren/neu'),
+  /* Suche (#356) */
+  sucheStand: () => anfrage<SucheStand>('GET', '/api/werkbank/suche'),
+  sucheSetze: (e: { unscharf: boolean }) => anfrage<SucheStand>('PUT', '/api/werkbank/suche', e),
+  synonymNeu: (woerter: string) => anfrage<SucheStand>('POST', '/api/werkbank/suche/synonyme', { woerter }),
+  synonymAendern: (id: string, woerter: string) => anfrage<SucheStand>('PUT', `/api/werkbank/suche/synonyme/${encodeURIComponent(id)}`, { woerter }),
+  synonymLoeschen: (id: string) => anfrage<SucheStand>('DELETE', `/api/werkbank/suche/synonyme/${encodeURIComponent(id)}`),
+  woerterNeu: () => anfrage<SucheStand>('POST', '/api/werkbank/suche/woerter'),
   /* Erkennung per Paket (#511) */
   erkennungStand: () => anfrage<ErkennungStand>('GET', '/api/werkbank/erkennung'),
   erkennungStandard: (paket: string | null, abfluss = false) => anfrage<ErkennungStand>('PUT', '/api/werkbank/erkennung', { paket, ...(abfluss ? { abfluss: true } : {}) }),

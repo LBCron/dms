@@ -65,8 +65,10 @@ describe('Leistung mit PostgreSQL (#367)', { skip: url ? false : 'TEST_DATABASE_
   it('Listen lesen keinen Volltext: Dokument-Spalten ohne „volltext“', async () => {
     const { DOKUMENT_SPALTEN } = await import('../src/repo-pg');
     assert.ok(!(DOKUMENT_SPALTEN as readonly string[]).includes('volltext'));
-    // Jede andere Spalte der Tabelle steht in der Liste – neue Spalten fallen hier auf.
-    const spalten = (await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'dokumente' AND column_name <> 'volltext'`).map((z) => z.column_name as string);
+    // Jede andere Spalte der Tabelle steht in der Liste – neue Spalten fallen hier auf. Auch den Suchindex (#356)
+    // lesen Listen nie.
+    assert.ok(!(DOKUMENT_SPALTEN as readonly string[]).includes('suchindex'));
+    const spalten = (await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'dokumente' AND column_name NOT IN ('volltext', 'suchindex')`).map((z) => z.column_name as string);
     assert.deepEqual([...spalten].sort(), [...DOKUMENT_SPALTEN].sort());
   });
 
