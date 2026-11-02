@@ -165,7 +165,7 @@ Der Pi hat keinen Bildschirm. Du steuerst ihn vom PC aus über ein **Terminal** 
 
 ## 5. DMS installieren { #dms-installieren }
 
-Drei Befehle, jeder in einem eigenen Kasten. Warte jeweils, bis wieder `lena@dms:~ $` erscheint.
+Drei Schritte, die Befehle stehen in Kästen zum Kopieren. Warte nach jedem Kasten, bis wieder `lena@dms:~ $` erscheint.
 
 ### 5.1 System auf den neuesten Stand bringen
 
@@ -179,15 +179,53 @@ sudo apt update && sudo apt full-upgrade -y
 
 ### 5.2 Docker installieren
 
-Das DMS läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen („Container“) startet, ohne am System etwas zu verbiegen. Raspberry Pi OS (64 Bit) beruht auf Debian, darum gilt die **offizielle Anleitung von Docker für Debian**. Am einfachsten ist das Installationsskript von Docker selbst:
+Das DMS läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen („Container“) startet, ohne am System etwas zu verbiegen. Raspberry Pi OS (64 Bit) beruht auf Debian, darum gilt die **offizielle Anleitung von Docker für Debian**. Docker empfiehlt dort für den Dauerbetrieb, Docker aus seiner eigenen **Paketquelle** zu installieren: Das ist ein Verzeichnis im Internet, aus dem `apt` (die Programmverwaltung des Pi) Programme lädt – genau wie die Programme von Raspberry Pi OS selbst. Die Befehle unten stammen unverändert aus dieser Anleitung. Es sind drei Kästen; kopiere sie einzeln und warte jeweils, bis wieder `lena@dms:~ $` erscheint.
+
+**Erstens: Werkzeuge bereitlegen.**
 
 ```sh
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+```
+
+Der erste Befehl holt die aktuelle Liste der Programme, der zweite installiert zwei kleine Helfer: `ca-certificates` prüft, ob eine Internetseite echt ist, `curl` lädt Dateien herunter. Meist sind beide schon da; dann meldet der Pi nur `is already the newest version` (auf Deutsch `ist schon die neueste Version`).
+
+**Zweitens: die Paketquelle von Docker eintragen.**
+
+```sh
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+```
+
+Was die Zeilen tun:
+
+- `sudo install -m 0755 -d /etc/apt/keyrings` legt den Ordner für die Schlüssel an.
+- `sudo curl … -o /etc/apt/keyrings/docker.asc` lädt den **Schlüssel** von Docker. Mit ihm prüft der Pi später bei jedem Download, dass die Programme wirklich von Docker kommen und unterwegs niemand etwas verändert hat.
+- `sudo chmod a+r …` erlaubt der Programmverwaltung, den Schlüssel zu lesen.
+- `echo … | sudo tee /etc/apt/sources.list.d/docker.list` trägt die Paketquelle in eine kleine Datei ein. Die Teile in `$(…)` setzt der Pi selbst ein: seine Bauart (`arm64`) und den Namen seiner Debian-Version (z. B. `trixie` oder `bookworm`). Du musst daran nichts ändern.
+- `sudo apt-get update` liest die Liste neu ein – jetzt mit den Programmen von Docker.
+
+**Drittens: Docker installieren.**
+
+```sh
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Das installiert Docker selbst (`docker-ce`), den Befehl `docker` (`docker-ce-cli`), den Teil, der die Container tatsächlich laufen lässt (`containerd.io`), und zwei Erweiterungen, darunter **Docker Compose** (`docker-compose-plugin`) – damit startet das DMS seine zwei Container gemeinsam. Der Pi zeigt, wie viel er herunterladen will, und fragt `Do you want to continue? [Y/n]` (auf Deutsch `Möchten Sie fortfahren? [J/n]`): einfach ++enter++ drücken. Das dauert einige Minuten. Docker startet danach von selbst, auch nach jedem Neustart.
+
+Zum Schluss erlaubst du deinem Benutzer, Docker ohne `sudo` zu benutzen:
+
+```sh
 sudo usermod -aG docker $USER
 ```
 
-Der erste Befehl lädt das Skript von Docker (ansehen kannst du es mit `less get-docker.sh`), der zweite führt es aus (einige Minuten), der dritte erlaubt deinem Benutzer, Docker ohne `sudo` zu benutzen. **Danach einmal abmelden und neu verbinden**, sonst gilt das Letzte noch nicht:
+Der Befehl nimmt dich in die Gruppe `docker` auf. **Danach einmal abmelden und neu verbinden**, sonst gilt das noch nicht:
 
 ```sh
 exit
@@ -201,7 +239,19 @@ docker compose version
 
 Kommt `Docker Compose version v2…` (oder höher), ist Docker bereit.
 
-**Offizielle Anleitung:** [Docker Engine auf Debian installieren](https://docs.docker.com/engine/install/debian/) (dort auch das Installationsskript) · [Docker ohne sudo benutzen](https://docs.docker.com/engine/install/linux-postinstall/)
+**Updates:** Weil Docker jetzt aus einer Paketquelle kommt, wird es mit dem System zusammen aktualisiert – mit demselben Befehl wie in Schritt 5.1: `sudo apt update && sudo apt full-upgrade -y`. Das DMS selbst aktualisierst du getrennt davon, siehe [Gut zu wissen](#gut-zu-wissen) und [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+
+??? note "Für Fortgeschrittene: das Installationsskript von Docker"
+    Docker bietet auch ein Skript an, das alles oben in einem Rutsch erledigt:
+
+    ```sh
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
+
+    Docker selbst empfiehlt das Skript aber **nur für Test- und Entwicklungsumgebungen**, nicht für einen Rechner, der dauerhaft läuft. Für deinen Pi mit echten Unterlagen nimm deshalb den Weg oben. Das Skript richtet übrigens dieselbe Paketquelle ein; Updates kommen danach ebenfalls über `apt`.
+
+**Offizielle Anleitung:** [Docker Engine auf Debian installieren](https://docs.docker.com/engine/install/debian/) · [Docker ohne sudo benutzen](https://docs.docker.com/engine/install/linux-postinstall/)
 
 ### 5.3 Das DMS – mit einem Befehl
 
@@ -309,7 +359,7 @@ Fertig – dein DMS läuft. Wie es weitergeht (Sicherung einschalten, loslegen),
 
 - **Sicherung auf ein anderes Gerät:** Schalte unter **Werkbank → Sicherung** den Zeitplan ein und druck das **Notfallblatt** aus. Die Sicherungen landen in `~/dms/sicherung` – also auf derselben SSD. Geht die kaputt, sind sie mit weg. Kopiere sie deshalb regelmäßig woandershin, z. B. auf ein NAS oder eine USB-Platte. Mehr unter [Sicherung](https://motom001.github.io/dms/admin/aktuell/sicherung/).
 - **DMS aktualisieren:** **Werkbank → Technik** zeigt, ob es eine neue Version gibt. Aktualisieren: `cd ~/dms && docker compose pull && docker compose up -d` – oder einfach `bash einrichten.sh` noch einmal. Mehr unter [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
-- **System aktualisieren:** etwa einmal im Monat `sudo apt update && sudo apt full-upgrade -y` (Schritt 5.1). Wer das nicht vergessen will, lässt Sicherheitsupdates automatisch einspielen, siehe [PC mit Linux](linux.md#4-den-rechner-zum-server-machen).
+- **System aktualisieren:** etwa einmal im Monat `sudo apt update && sudo apt full-upgrade -y` (Schritt 5.1) – das bringt auch Docker auf den neuesten Stand. Wer das nicht vergessen will, lässt Sicherheitsupdates automatisch einspielen, siehe [PC mit Linux](linux.md#4-den-rechner-zum-server-machen).
 - **Wärme:** Mit `vcgencmd measure_temp` zeigt der Pi seine Temperatur. Bis etwa 70 °C ist alles gut; ab 80 °C bremst er sich aus. Dann hilft ein Lüfter oder ein luftigerer Platz (nicht in den geschlossenen Schrank).
 - **Ausschalten:** Nie einfach den Stecker ziehen, solange er läuft – die Datenbank könnte Schaden nehmen. Sauber herunterfahren mit `sudo shutdown -h now`, warten, bis die grüne Leuchte aus ist, dann Stecker ziehen.
 - **Nach einem Stromausfall** startet der Pi von selbst, und das DMS startet mit.
