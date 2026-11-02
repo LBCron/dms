@@ -659,6 +659,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       ereignisseAufgeraeumt = Date.now();
       await sql`DELETE FROM paket_ereignisse WHERE haushalt_id = ${haushaltId} AND (zugestellt < now() - interval '7 days' OR (zugestellt IS NULL AND faellig = 'infinity' AND erstellt < now() - interval '30 days'))`;
     },
+    async ereignisDaten(id, daten) {
+      await sql`UPDATE paket_ereignisse SET daten = ${json(sql, daten)} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    },
     async ereignisFehlgeschlagen(id, fehler, naechster) {
       await sql`UPDATE paket_ereignisse SET versuche = versuche + 1, fehler = ${fehler.slice(0, 1000)},
         faellig = ${naechster ? sql`${naechster}` : sql`'infinity'::timestamptz`} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
@@ -673,6 +676,11 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return erg;
     },
     async loescheEreignisse(id) { await sql`DELETE FROM paket_ereignisse WHERE haushalt_id = ${haushaltId} AND paket_id = ${id}`; },
+    async loescheOffeneEreignisse(art, dokumente) {
+      if (!dokumente.length) return 0;
+      const r = await sql`DELETE FROM paket_ereignisse WHERE haushalt_id = ${haushaltId} AND art = ${art} AND zugestellt IS NULL AND daten->>'dokument' = ANY(${dokumente}::text[])`;
+      return r.count;
+    },
     async listeNummernkreise() {
       return (await sql`SELECT * FROM nummernkreise WHERE haushalt_id = ${haushaltId} ORDER BY name`).map(alsKreis);
     },
@@ -1430,7 +1438,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return r.count;
     },
     async ocrZaehler() {
-      const z = { keiner: 0, wartet: 0, laeuft: 0, fertig: 0, fehler: 0, ausgelassen: 0 };
+      const z = { keiner: 0, wartet: 0, laeuft: 0, fertig: 0, fehler: 0, ausgelassen: 0, paket: 0 };
       for (const r of await sql`SELECT coalesce(ocr_stand, 'keiner') AS s, count(*)::int AS n FROM dokumente WHERE haushalt_id = ${haushaltId} GROUP BY 1`) {
         z[r.s as OcrStandArt] = r.n as number;
       }
@@ -1449,6 +1457,14 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return (await sql`
         SELECT d.id, m.typ_id, d.register_key FROM dokumente d JOIN mappen m ON m.id = d.mappe_id
         WHERE d.haushalt_id = ${haushaltId} AND coalesce(d.ocr_stand, 'keiner') = 'keiner'`)
+        .map((r: Zeile) => ({ id: r.id as string, typId: r.typ_id as string, registerKey: r.register_key as string }));
+    },
+    async volltextKandidaten(umfang) {
+      const ohne = umfang === 'ohne' ? sql`AND coalesce(btrim(d.volltext), '') = ''` : sql``;
+      return (await sql`
+        SELECT d.id, m.typ_id, d.register_key FROM dokumente d JOIN mappen m ON m.id = d.mappe_id
+        WHERE d.haushalt_id = ${haushaltId} AND coalesce(d.ocr_stand, 'keiner') NOT IN ('wartet', 'laeuft') ${ohne}
+        ORDER BY d.erstellt, d.id`)
         .map((r: Zeile) => ({ id: r.id as string, typId: r.typ_id as string, registerKey: r.register_key as string }));
     },
     async ocrSprachen() {

@@ -735,6 +735,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'DELETE', pfad: '/api/werkbank/demo', zugang: 'admin', handler: async () =>
       ok(dienst.auftraege.starte('demo-entfernen', 'Demo-Mappen entfernen', (f) => dienst.entferneDemo(f), [{ key: 'mappen', name: 'Demo-Mappen entfernen', einheit: 'Mappen' }]), 202) },
     { methode: 'GET', pfad: '/api/werkbank/auftrag', zugang: 'admin', handler: async () => ok(dienst.auftraege.aktuell()) },
+    // Abbrechen (#458) – nur Aufträge, die das erlauben (z. B. „Volltext neu erzeugen“).
+    { methode: 'POST', pfad: '/api/werkbank/auftrag/abbrechen', zugang: 'admin', handler: async (a) => ok(dienst.auftraege.abbrechen((b(a) as { id?: unknown }).id)) },
 
     /* ---------- Protokoll und Debug-Modus ---------- */
     { methode: 'GET', pfad: '/api/werkbank/protokoll', zugang: 'admin', handler: async (a) => {
@@ -1124,6 +1126,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/werkbank/wartung/absender', zugang: 'admin', handler: async (a) =>
       ok(await dienst.absenderBereinigen((a.body as { ids?: unknown })?.ids, { id: ich(a).id, email: ich(a).email })) },
     { methode: 'POST', pfad: '/api/werkbank/wartung/volltext', zugang: 'admin', handler: async () => ok({ eingereiht: await dienst.volltextNachholen() }) },
+    // „Volltext neu erzeugen“ (#458): erst die Anzahl für die Rückfrage, dann als Auftrag mit Fortschritt (abbrechbar).
+    { methode: 'GET', pfad: '/api/werkbank/wartung/volltext-neu', zugang: 'admin', handler: async (a) => ok({ ...(await dienst.volltextNeuAnzahl(a.query.umfang)), paket: await dienst.texterkennungPaket() }) },
+    { methode: 'POST', pfad: '/api/werkbank/wartung/volltext-neu', zugang: 'admin', handler: async (a) => ok(dienst.volltextNeu((b(a) as { umfang?: unknown }).umfang, ich(a).email), 202) },
     { methode: 'POST', pfad: '/api/werkbank/wartung/vorschau', zugang: 'admin', handler: async () => ok({ eingereiht: await dienst.vorschauNachholen() }) },
 
     /* ---------- Verschlüsselung (#39) ---------- */

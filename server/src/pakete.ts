@@ -1044,6 +1044,8 @@ export class Paketverwaltung {
       const datensatz: InstalliertesPaket = {
         id: m.id, name: m.name, version: m.version, beschreibung: m.beschreibung, lizenz: m.lizenz, autor: m.autor,
         herkunft,
+        // Nötige DMS-Version (#458): bestimmt u. a., ob das Paket „Volltext fertig“ auch ohne Text bekommt.
+        ...(m.dms ? { dms: m.dms } : {}),
         installiert: alt?.installiert ?? jetzt, installiertVon: alt ? alt.installiertVon : von.email,
         aktualisiert: alt ? jetzt : null, aktualisiertVon: alt ? von.email : null,
         typen: typMap, sichten: sichtMap, abhaengigkeiten: m.abhaengigkeiten,

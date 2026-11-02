@@ -14,6 +14,7 @@ import { rechteMessen } from './messung';
 import { graubild } from './graubild';
 import { Fachfehler } from './fehler';
 import { bilderZuPdf, fuegeZusammen, pruefeAuswahl, pruefeTeile, SEITENBILDER_MAX, Seitenbilder, seitenInfo, teile, teilName } from './pdfseiten';
+import { bildSeitePdf } from './pdf';
 import { aufkleberPdf, ETIKETTEN, type Etikett } from './aufkleber';
 import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
@@ -55,7 +56,8 @@ import { geltenderStempel, liesStempelTyp, liesVorlagen, pruefeVorlage, stempelA
 import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestlauf, type SichtRegelwerk } from '../../shared/src/sichtrechte';
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
-import { ALLE_TYPEN, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { INFO_TEXTEBENE, infoWartet } from '../../shared/src/volltext';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
@@ -431,6 +433,31 @@ const keinSchluessel = (): never => {
 
 /* ---------- Fachlogik ---------- */
 
+/** Was der Dienst von der Texterkennung braucht (#45, #458). */
+export interface TexterkennungAnbindung {
+  anstossen(): void;
+  erkenneSofort?(inhalt: Buffer, mime: string): Promise<{ text: string; info: string }>;
+  /** Ausdrücklich neu erkennen (#458): Warteschlange, das Paket bekommt `neu`. */
+  neuErkennen?(id: string): Promise<void>;
+  /** Sofort, ohne Warteschlange (#458, „Volltext neu erzeugen“). */
+  jetzt?(id: string, opt: { neu: boolean; signal?: AbortSignal }): Promise<void>;
+}
+
+/** Ereignis „Volltext fertig“ (#458): wer den Volltext geliefert hat und ob es Text gibt. */
+export interface VolltextMeldung {
+  /** kern: Textebene bzw. eingebaute Texterkennung; paket: ein Paket; api: über die Schnittstelle; kopie: von einem anderen Dokument übernommen. */
+  quelle: 'kern' | 'paket' | 'api' | 'kopie';
+  /** Nennenswerter Text vorhanden? */
+  text: boolean;
+  mime?: string; seiten?: number | null;
+  /** Ausdrücklich neu erzeugen (Werkbank „für alle“, „erneut“ am Dokument): das Paket erkennt auch Dokumente mit Text neu. */
+  neu?: boolean;
+  /** Bei quelle paket: welches. */
+  paket?: string;
+  /** Gemischte PDFs (#458): Seiten (ab 1) ohne Textebene – eine Texterkennung erkennt nur diese und hängt sie an. */
+  seitenOhneText?: number[];
+}
+
 export class Dienst {
   /** Hintergrundaufträge, z. B. Demo-Daten erzeugen. */
   readonly auftraege = new Auftraege((m) => protokoll.modul('werkbank').info(m));
@@ -466,13 +493,19 @@ export class Dienst {
   /** Internes Ereignis „Volltext fertig“ abonnieren (#336). */
   beiVolltextFertig(f: (e: { dokument: string; mappe: string }) => Promise<void>) { this.volltextHoerer.push(f); }
   /**
-   * Internes Ereignis „Volltext fertig“ (#336): Der Volltext eines Dokuments ist da – aus der eingebauten
-   * Texterkennung, von einem Paket (#338, #458) oder über die API. Nicht für Pakete (die haben
-   * texterkennung.fertig); Fehler eines Hörers landen nur im Protokoll.
+   * Ereignis „Volltext fertig“ (#336, #442, #458): Der Volltext eines Dokuments steht fest – aus der Textebene bzw.
+   * der eingebauten Texterkennung (quelle kern), von einem Paket, über die API oder übernommen. Für Pakete
+   * `volltext.fertig` – auch ohne Text (`text: false`), dann aber nur für Pakete, die das kennen
+   * (kenntVolltextOhneText). Wer den Text geschrieben hat (`von`), bekommt es nicht zurück. Die internen Hörer
+   * (Erkennung #336) laufen nur mit Text; ihre Fehler landen nur im Protokoll.
    */
-  async volltextFertig(e: { dokument: string; mappe: string }): Promise<void> {
-    // Für Pakete (#442): z. B. „KI lokal – Ähnlichkeit“ rechnet dann den Vektor des Dokuments.
-    await this.melde('volltext.fertig', { dokument: e.dokument, mappe: e.mappe });
+  async volltextFertig(e: { dokument: string; mappe: string }, m: VolltextMeldung = { quelle: 'kern', text: true }, von?: string | null): Promise<void> {
+    const daten = { dokument: e.dokument, mappe: e.mappe, quelle: m.quelle, text: m.text, ...(m.mime ? { mime: m.mime } : {}), ...(m.seiten !== undefined ? { seiten: m.seiten } : {}), ...(m.neu ? { neu: true } : {}), ...(m.paket ? { paket: m.paket } : {}), ...(m.seitenOhneText?.length ? { seitenOhneText: m.seitenOhneText } : {}) };
+    // Für Pakete (#442, #458): z. B. „KI lokal – Ähnlichkeit“ rechnet den Vektor, das Paket Texterkennung erkennt Scans.
+    await this.melde('volltext.fertig', daten, undefined, von, m.text ? undefined : kenntVolltextOhneText);
+    // Gleichlaut für Pakete von vor 0.133.0 (#458): texterkennung.fertig nach dem Schritt des Kerns, wie bisher.
+    if (m.quelle === 'kern') await this.melde('texterkennung.fertig', { ...daten, seiten: m.seiten ?? null });
+    if (!m.text) return;
     for (const h of this.volltextHoerer) {
       try { await h(e); } catch (x) { protokoll.modul('ablage').warn('Nach dem Volltext gestört', { dokument: e.dokument, fehler: (x as Error).message }); }
     }
@@ -826,8 +859,8 @@ export class Dienst {
   verbindeKonten(h: KontenHaken) { this.konten = h; }
 
   /** Texterkennung anbinden (#45): neue Dokumente stoßen sie an. */
-  private ocr?: { anstossen(): void; erkenneSofort?(inhalt: Buffer, mime: string): Promise<{ text: string; info: string }> };
-  verbindeTexterkennung(t: { anstossen(): void; erkenneSofort?(inhalt: Buffer, mime: string): Promise<{ text: string; info: string }> }) { this.ocr = t; }
+  private ocr?: TexterkennungAnbindung;
+  verbindeTexterkennung(t: TexterkennungAnbindung) { this.ocr = t; }
 
   /**
    * Text einer Datei sofort, ohne Warteschlange (#391, „Aus Dokument ausfüllen“): vCard und Text direkt, PDFs
@@ -874,13 +907,88 @@ export class Dienst {
     return ids.length;
   }
 
-  /** Texterkennung für ein Dokument erneut versuchen. */
+  /** Texterkennung für ein Dokument erneut versuchen – ausdrücklich neu (#458): auch ein Paket erkennt dann neu. */
   async texterkennungErneut(id: string) {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    await this.repo.ocrEinreihen([id]);
-    this.ocr?.anstossen();
+    if (this.ocr?.neuErkennen) await this.ocr.neuErkennen(id);
+    else { await this.repo.ocrEinreihen([id]); this.ocr?.anstossen(); }
     return (await this.repo.holeDokument(id))!;
+  }
+
+  /** Das installierte Paket, das die Texterkennung übernimmt (#458, dms:texterkennung); bei mehreren das erste nach Id. */
+  async texterkennungPaket(): Promise<{ id: string; name: string; version: string } | null> {
+    const p = (await this.repo.listePakete()).filter((x) => hatSchnittstelle(x.laeufer, 'dms:texterkennung')).sort((a, b) => a.id.localeCompare(b.id))[0];
+    return p ? { id: p.id, name: p.name, version: p.version } : null;
+  }
+
+  /** Wie viele Dokumente „Volltext neu erzeugen“ beträfe (#458) – für die Rückfrage. */
+  async volltextNeuAnzahl(umfang: unknown): Promise<{ umfang: 'ohne' | 'alle'; anzahl: number }> {
+    const u = umfang === 'alle' ? 'alle' : 'ohne';
+    return { umfang: u, anzahl: (await this.volltextNeuIds(u)).length };
+  }
+  private async volltextNeuIds(umfang: 'ohne' | 'alle'): Promise<string[]> {
+    const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t]));
+    return (await this.repo.volltextKandidaten(umfang)).filter((d) => Dienst.volltextAn(typen.get(d.typId), d.registerKey)).map((d) => d.id);
+  }
+
+  /**
+   * „Volltext neu erzeugen“ (#458, Werkbank → Wartungsoperationen): für Dokumente ohne Text bzw. für alle – wie bei
+   * einem neuen Dokument: Textebene neu lesen, dann Ereignis an die Pakete. „alle“ ist ein ausdrückliches Neu
+   * (`neu: true`): das Paket erkennt dann auch Dokumente mit Text neu. Läuft als Auftrag mit Fortschritt, abbrechbar.
+   */
+  volltextNeu(umfang: unknown, von: string) {
+    const u = umfang === 'alle' ? 'alle' : 'ohne';
+    const jetzt = this.ocr?.jetzt?.bind(this.ocr);
+    if (!jetzt) throw new Fachfehler(404, 'Die Texterkennung ist nicht eingerichtet.');
+    const titel = u === 'alle' ? 'Volltext neu erzeugen (alle Dokumente)' : 'Volltext neu erzeugen (Dokumente ohne Text)';
+    return this.auftraege.starte('volltext-neu', titel, async (fortschritt, signal) => {
+      const ids = await this.volltextNeuIds(u);
+      protokoll.modul('werkbank').info('Volltext neu erzeugen', { umfang: u, dokumente: ids.length, von });
+      let fertig = 0;
+      fortschritt(0, ids.length);
+      for (const id of ids) {
+        if (signal?.aborted) break;
+        try { await jetzt(id, { neu: u === 'alle', signal }); } catch (e) { protokoll.modul('texterkennung').warn('Volltext neu erzeugen: Dokument übersprungen', { id, fehler: (e as Error).message }); }
+        fortschritt(++fertig, ids.length);
+      }
+      const paket = await this.texterkennungPaket();
+      return { umfang: u, dokumente: ids.length, erledigt: fertig, abgebrochen: !!signal?.aborted, paket: paket?.name ?? null };
+    }, [{ key: 'dokumente', name: 'Textebene lesen und an die Texterkennung geben', einheit: 'Dokumente' }], { abbrechbar: true });
+  }
+
+  /**
+   * Fortschritt einer Fortsetzung (#458): Gibt das Paket in `weiter` einen kurzen Text `fortschritt` mit (z. B.
+   * „Seite 20 von 64“), steht er am wartenden Dokument.
+   */
+  async texterkennungFortschritt(paket: string, e: { art: string; daten: Record<string, unknown> }, weiter: Record<string, unknown>): Promise<void> {
+    if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string' || typeof weiter.fortschritt !== 'string') return;
+    const p = await this.texterkennungPaket();
+    if (!p || p.id !== paket) return;
+    const d = await this.repo.holeDokument(e.daten.dokument);
+    if (!d || d.ocr?.stand !== 'paket') return;
+    await this.repo.ocrSetze(d.id, { stand: 'paket', info: `${infoWartet(p)} – ${weiter.fortschritt.replace(/\s+/g, ' ').slice(0, 80)}`, seiten: d.ocr.seiten ?? null });
+  }
+
+  /**
+   * Ergebnis eines Ereignisses „Volltext fertig“ beim Paket für die Texterkennung (#458, aus dem Paket-Läufer):
+   * Hat das Paket zugestellt bekommen, aber keinen Volltext geschrieben (z. B. Mappentyp nicht gewählt, Text aus dem
+   * PDF reicht), wartet das Dokument nicht länger – es behält den Text aus dem PDF. Hat es aufgegeben: Fehler.
+   */
+  async nachTexterkennungsEreignis(paket: string, e: { art: string; daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }): Promise<void> {
+    if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string') return;
+    const p = await this.texterkennungPaket();
+    if (!p || p.id !== paket) return;
+    const d = await this.repo.holeDokument(e.daten.dokument);
+    if (!d || d.ocr?.stand !== 'paket') return;
+    if (!r.ok && !r.aufgegeben) return;
+    const grund = (r.ok ? r.text : r.fehler ?? '').trim().replace(/\s+/g, ' ').slice(0, 200);
+    const text = await this.repo.volltext(d.id);
+    const mitText = !!text && text.replace(/\s/g, '').length >= 20;
+    const info = r.ok
+      ? `${mitText ? INFO_TEXTEBENE : 'ohne Text'} – Paket ${p.name}${grund ? `: ${grund}` : ': nichts zu tun'}`
+      : `Texterkennung durch Paket ${p.name} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+    await this.repo.ocrSetze(d.id, { stand: r.ok ? 'fertig' : 'fehler', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
   }
 
   async volltext(id: string) {
@@ -914,7 +1022,9 @@ export class Dienst {
     await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null });
     await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: info });
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
-    await this.volltextFertig({ dokument: id, mappe: d.mappeId });
+    // Das schreibende Paket bekommt sein eigenes Ergebnis nicht zurück (#458: sonst erkennte es endlos neu).
+    const paketId = von.paket ? this.paketKonten.get(von.id) : undefined;
+    await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: d.mime, seiten: seiten ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -2872,6 +2982,7 @@ export class Dienst {
   /** Ereignisse für Pakete (#338). */
   faelligeEreignisse(n: number) { return this.repo.faelligeEreignisse(n); }
   ereignisZugestellt(id: string) { return this.repo.ereignisZugestellt(id); }
+  ereignisDaten(id: string, daten: Record<string, unknown>) { return this.repo.ereignisDaten(id, daten); }
   ereignisFehlgeschlagen(id: string, fehler: string, naechster: Date | null) { return this.repo.ereignisFehlgeschlagen(id, fehler, naechster); }
   ereignisStand() { return this.repo.ereignisStand(); }
   /** Wird beim Anlegen eines Ereignisses aufgerufen (der Läufer stellt dann gleich zu). */
@@ -2885,11 +2996,11 @@ export class Dienst {
    * nur im Protokoll. `von`: wer es ausgelöst hat – ein Paket bekommt seine eigenen Änderungen nicht
    * gemeldet (sonst Schleifen).
    */
-  async melde(art: EreignisArt, daten: Record<string, unknown>, nurPaket?: string, von?: string | null): Promise<void> {
+  async melde(art: EreignisArt, daten: Record<string, unknown>, nurPaket?: string, von?: string | null, nurFuer?: (p: InstalliertesPaket) => boolean): Promise<void> {
     const inTx = transaktionen.getStore()?.dienst === this;
     try {
       const selbst = von ? this.paketKonten.get(von) : undefined;
-      const pakete = (await this.repo.listePakete()).filter((p) => p.laeufer?.ereignisse.includes(art) && (!nurPaket || p.id === nurPaket) && p.id !== selbst);
+      const pakete = (await this.repo.listePakete()).filter((p) => p.laeufer?.ereignisse.includes(art) && (!nurPaket || p.id === nurPaket) && p.id !== selbst && (!nurFuer || nurFuer(p)));
       if (!pakete.length) return;
       await this.repo.legeEreignisseAn(pakete.map((p) => ({ id: randomUUID(), paketId: p.id, art, daten })));
       this.danach(() => this.ereignisWecker?.());
@@ -4705,7 +4816,7 @@ export class Dienst {
         // Verkleinert ohne Versionierung (#393): Der Volltext des bisherigen bleibt, keine neue Texterkennung.
         await this.repo.ocrSetze(dokument.id, { stand: 'fertig', ...e.volltext });
         neu = (await this.repo.holeDokument(dokument.id)) ?? dokument;
-        this.danach(() => void this.volltextFertig({ dokument: dokument.id, mappe: mappeId }));
+        this.danach(() => void this.volltextFertig({ dokument: dokument.id, mappe: mappeId }, { quelle: 'kopie', text: !!e.volltext?.text?.trim(), mime: dokument.mime, seiten: e.volltext?.seiten ?? null }));
       } else if (Dienst.volltextAn(typ, reg.key)) {
         await this.repo.ocrEinreihen([dokument.id]);
         neu = (await this.repo.holeDokument(dokument.id)) ?? dokument;
@@ -4900,8 +5011,22 @@ export class Dienst {
     return { d, inhalt: Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]) };
   }
 
-  /** Eine Seite als Graustufenbild (PGM) für eine Texterkennung im Paket (#338). */
+  /**
+   * Eine Seite als Graustufenbild (PGM) für eine Texterkennung im Paket (#338). JPEG und PNG (#458) haben genau eine
+   * Seite: Das Bild wird ohne Neuberechnung in ein einseitiges PDF gelegt (wie bei den Vorschaubildern) und genauso
+   * gerastert – kein zusätzliches Bildwerkzeug im Image. Bilder kommen in Originalgröße, dpi zählt dort nicht.
+   */
   async seiteAlsGraubild(id: string, nr: number, dpi: number): Promise<Buffer> {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (d.mime === 'image/jpeg' || d.mime === 'image/png') {
+      if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
+      const s = await this.dateien.lies(d.sha256);
+      const bild = Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]);
+      // Das Bild liegt in Originalgröße (1 Bildpunkt = 1 pt): bei 72 dpi kommen genau seine Bildpunkte.
+      return graubild(await bildSeitePdf(bild, d.mime), 1, 72);
+    }
+    if (d.mime !== 'application/pdf') throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG – davon gibt es kein Seitenbild.`);
     const { inhalt } = await this.pdfVon(id);
     return graubild(inhalt, nr, dpi);
   }
