@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.127/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.128/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0127" class="md-skip">
+        <a href="#neu-in-version-0128" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01270" class="md-nav__link">
+  <a href="#01280" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.127.0
+        0.128.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.127.0">
+    <nav class="md-nav" aria-label="0.128.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,17 +379,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schneller" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schneller
       
     </span>
   </a>
@@ -2337,15 +2326,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01270" class="md-nav__link">
+  <a href="#01280" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.127.0
+        0.128.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.127.0">
+    <nav class="md-nav" aria-label="0.128.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2353,17 +2342,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schneller" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schneller
       
     </span>
   </a>
@@ -2428,81 +2406,72 @@
   
 
 
-<h1 id="neu-in-version-0127">Neu in Version 0.127<a class="headerlink" href="#neu-in-version-0127" title="Permanent link">&para;</a></h1>
-<h2 id="01270">0.127.0<a class="headerlink" href="#01270" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0128">Neu in Version 0.128<a class="headerlink" href="#neu-in-version-0128" title="Permanent link">&para;</a></h1>
+<h2 id="01280">0.128.0<a class="headerlink" href="#01280" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Unscharfe Suche</strong> (#356): Die Suche findet auch, was du nicht mehr genau weißt.</li>
-<li><strong>Umlaute, ß und Akzente</strong> zählen nicht mehr: „Gebuhr“ findet „Gebühr“, „Strasse“ findet „Straße“, „Ozdemir“ findet „Özdemir“ – in Titeln, Angaben, Notizen und im Volltext.</li>
-<li><strong>Bindestriche</strong> auch nicht: „Kfzversicherung“ findet „Kfz-Versicherung“ und umgekehrt.</li>
-<li><strong>Tippfehler:</strong> Findet die Suche nichts, sucht sie mit ähnlich geschriebenen Wörtern aus deiner Ablage weiter und sagt das über den Treffern – mit <strong>„Meintest du …?“</strong>, das mit einem Klick genau das vorgeschlagene Wort sucht. Genaue Treffer gehen immer vor. Vorgeschlagen wird nur, was du auch lesen darfst.</li>
-<li><strong>Gleichbedeutende Wörter:</strong> Unter <strong>Werkbank → Suche</strong> (neu, Gruppe <em>Ablage aufbauen</em>) legst du Gruppen an, z. B. <em>Kfz, Auto, PKW</em> – wer eines sucht, findet auch die anderen. Pakete können solche <strong>Wortlisten</strong> mitbringen (neuer Abschnitt <code>inhalt.wortlisten</code> im Paketformat); ohne Paket bleibt die Liste leer. In der Registry bringen <em>Fahrzeuge</em> 1.1.0 und <em>Vermietung</em> 1.1.0 die ersten Wortlisten mit.</li>
-<li>Mit Anführungszeichen oder Minus suchst du weiter genau das Eingegebene.</li>
-<li>In der Werkbank lässt sich die Tippfehler-Suche abschalten und das Wörterverzeichnis neu aufbauen.</li>
-<li>Schnittstelle: Die Liste der Mappen (<code>GET /mappen</code>) liefert bei einer unscharfen Suche zusätzlich <code>unscharf</code> (gesuchter Text, Vorschlag, ähnliche Wörter).</li>
-<li>Vollexport: gleichbedeutende Wörter in <code>struktur/synonyme.json</code>.</li>
+<li><strong>Volltextsuche je Dokumentsprache</strong> (#400): Die Suche nimmt die Wortstämme der Sprache, in der ein Dokument geschrieben ist – im englischen Brief findet „invoice“ auch „invoices“, im französischen „cheval“ auch „chevaux“, im deutschen „Rechnung“ weiter „Rechnungen“. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Portugiesisch, Russisch und Arabisch (Polnisch und Ukrainisch ohne Wortstämme). Ohne erkannte Sprache gilt Deutsch.</li>
+<li>Die <strong>Sprache ist ein eigenes Feld am Dokument</strong>: Die Texterkennung setzt sie (wie bisher erkannt, #395), Pakete und andere Programme geben sie über die Schnittstelle an – mit dem Volltext (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder einzeln (<code>PUT /dokumente/{id}/sprache</code>). Ab Etappe 07 liefert das Paket Texterkennung 2.0 Volltext und Sprache so. Die Änderung steht in der Historie.</li>
+<li>Schnittstelle: <code>sprache</code> an Dokumenten und am Volltext; neuer Endpunkt <code>PUT /dokumente/{id}/sprache</code>.</li>
 </ul>
-<h3 id="schneller">Schneller<a class="headerlink" href="#schneller" title="Permanent link">&para;</a></h3>
-<p>Der Suchindex der Dokumente ist jetzt eine gespeicherte Spalte statt eines Ausdrucks, und die Suche nimmt die Dokumente einmal über die Indizes statt Mappe für Mappe. Gemessen mit Demo-Daten (50 000 Mappen, 74 958 Dokumente mit zusammen 354 MB Volltext, <code>server/test/suche-messen.ts</code>, Median aus 3 Läufen):</p>
+<h3 id="beim-update">Beim Update<a class="headerlink" href="#beim-update" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Den Suchindex hat schon Version 0.127.0 dafür neu gebaut (#356). Dieses Update übernimmt die Sprache vorhandener Dokumente aus dem Hinweis der Texterkennung und baut <strong>nur den Suchindex der Dokumente in anderen Sprachen als Deutsch</strong> neu. Gemessen: <strong>21 Sekunden</strong> für 7 477 englische und französische unter 74 958 Dokumenten (Demo-Daten, 354 MB Volltext).</li>
+<li>Kommen mehrere Sprachen in der Ablage vor, sucht das DMS den Begriff in jeder davon; gleiche Anfragen fallen weg. Gemessen mit denselben Demo-Daten (50 000 Mappen, <code>server/test/suche-messen.ts</code>, Median aus 3 Läufen, nacheinander auf demselben Rechner – er war durch parallele Arbeit unterschiedlich belastet, die Werte schwanken bis etwa Faktor 2):</li>
+</ul>
 <table>
 <thead>
 <tr>
 <th>Suche</th>
-<th style="text-align: right;">vorher</th>
-<th style="text-align: right;">nachher</th>
+<th style="text-align: right;">nur Deutsch</th>
+<th style="text-align: right;">Deutsch, Englisch, Französisch</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Liste „Rechnung“, Titel und Angaben, kein Treffer</td>
+<td>Liste „Rechnung“, Titel und Angaben</td>
 <td style="text-align: right;">0,9 s</td>
-<td style="text-align: right;">1,1 s</td>
+<td style="text-align: right;">0,6 s</td>
 </tr>
 <tr>
-<td>Alle Mappen mit Volltext, seltenes Wort (855 Treffer)</td>
-<td style="text-align: right;">17,0 s</td>
-<td style="text-align: right;">3,3 s</td>
+<td>Alle Mappen mit Volltext, seltenes Wort (862 Treffer)</td>
+<td style="text-align: right;">3,0 s</td>
+<td style="text-align: right;">2,0 s</td>
 </tr>
 <tr>
 <td>Alle Mappen mit Volltext, häufiges Wort (49 941 Treffer)</td>
-<td style="text-align: right;">103,7 s</td>
-<td style="text-align: right;">5,3 s</td>
+<td style="text-align: right;">4,0 s</td>
+<td style="text-align: right;">3,2 s</td>
 </tr>
 <tr>
-<td>dasselbe ohne Umlaut („Kundigung“)</td>
-<td style="text-align: right;">86,2 s</td>
-<td style="text-align: right;">4,0 s</td>
+<td>dasselbe ohne Umlaut</td>
+<td style="text-align: right;">4,9 s</td>
+<td style="text-align: right;">3,3 s</td>
 </tr>
 <tr>
 <td>Tippfehler „Lastschrfit“</td>
-<td style="text-align: right;">1,8 s (nichts gefunden)</td>
-<td style="text-align: right;">4,6 s (findet „Lastschrift“)</td>
+<td style="text-align: right;">3,1 s</td>
+<td style="text-align: right;">5,7 s</td>
 </tr>
 <tr>
 <td>Erweiterte Suche: Rechnung + Volltext, seltenes Wort</td>
-<td style="text-align: right;">8,6 s</td>
-<td style="text-align: right;">0,7 s</td>
+<td style="text-align: right;">0,4 s</td>
+<td style="text-align: right;">0,4 s</td>
 </tr>
 </tbody>
 </table>
-<p>Titel und Angaben vergleicht die Suche jetzt ohne Umlaute und Bindestriche; das kostet bei 50 000 Mappen rund ein Fünftel mehr Zeit.</p>
-<h3 id="beim-update">Beim Update<a class="headerlink" href="#beim-update" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Der Suchindex wird einmal neu aufgebaut</strong>, dazu entsteht das Wörterverzeichnis. Das DMS startet erst danach. Gemessen: <strong>323 Sekunden</strong> für die Demo-Daten oben (74 958 Dokumente, 354 MB Volltext) – grob 1 Minute je 15 000 Dokumente mittlerer Größe. Die Tabelle der Dokumente wächst um den gespeicherten Index (dort von 342 auf 696 MB vor dem nächsten automatischen Aufräumen der Datenbank).</li>
-<li>Die Migration legt die PostgreSQL-Erweiterung <code>unaccent</code> an. Sie ist ab PostgreSQL 13 „vertrauenswürdig“ – der Eigentümer der Datenbank darf das ohne Superuser, auch bei einer eigenen, externen Datenbank. Fehlt sie, faltet das DMS Umlaute selbst (Hinweis im Protokoll der Migration).</li>
-<li>Mit dem Index ist schon vorbereitet, dass die Volltextsuche je Dokument die passende Sprache nimmt (#400, nächste Version) – ohne zweiten Neuaufbau.</li>
-<li>Zurückgestellt: ähnlich klingende Namen (Meier/Mayer, #510). „Ähnliche Dokumente“ bringt das Paket „KI lokal – Ähnlichkeit“ (#442).</li>
-</ul>
+<p>Die Suche ist damit nicht langsamer als vor 0.127.0 (dort 17 s bzw. 104 s für die beiden Volltextsuchen, siehe Release-Notizen 0.127.0); nur die Tippfehler-Suche kostet mit mehreren Sprachen mehr.
+- Tippfehler-Suche: Ähnliche Schreibweisen gelten nur für ganze Wörter, nicht mehr für Wortteile im Volltext – das sparte bei häufigen Wörtern das Lesen aller Texte. Ohne Lesefilter (Administrator) prüft das DMS den Vorschlag „Meintest du …?“ nicht noch einmal eigens.</p>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: neue Seite <strong>Suche</strong> (Tippfehler, gleichbedeutende Wörter, Technik); Pakete → Wortlisten in Vorschau und beim Entfernen.</li>
-<li>Benutzerhandbuch: Ablage → Suchen (Umlaute, Bindestriche, Tippfehler und „Meintest du …?“, gleichbedeutende Wörter).</li>
-<li>Entwicklerhandbuch: Pakete entwickeln → Paketformat, Abschnitt Wortlisten.</li>
-<li>API: <code>unscharf</code> an der Liste der Mappen.</li>
+<li>Benutzerhandbuch: Ablage → Im Text der Dokumente suchen (Wortformen in der Sprache des Dokuments).</li>
+<li>Administratorhandbuch: Texterkennung → Sprache automatisch erkennen (Sprache als Feld, Suche, Schnittstelle).</li>
+<li>Entwicklerhandbuch: Pakete mit Code → Volltext und Sprache setzen.</li>
+<li>API: <code>sprache</code> an Dokument und Volltext, <code>PUT /dokumente/{id}/sprache</code>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.126.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.126.0...v0.127.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.127.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.127.0...v0.128.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

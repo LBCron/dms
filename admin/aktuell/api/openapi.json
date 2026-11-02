@@ -535,7 +535,7 @@
             "name": "volltext",
             "in": "query",
             "required": false,
-            "description": "true = auch im Volltext der Dokumente suchen (deutsche Volltextsuche, z. B. „Rechnungen“ findet „Rechnung“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).",
+            "description": "true = auch im Volltext der Dokumente suchen (Wortstämme in der Sprache jedes Dokuments, #400, z. B. „Rechnungen“ findet „Rechnung“, „invoices“ findet „invoice“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).",
             "schema": {
               "type": "boolean"
             }
@@ -4684,7 +4684,7 @@
           "Dokumente"
         ],
         "summary": "Volltext schreiben",
-        "description": "Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst.",
+        "description": "Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt das DMS sie.",
         "operationId": "putDokumenteMitidVolltext",
         "parameters": [
           {
@@ -4714,6 +4714,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Volltext"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dokumente/{id}/sprache": {
+      "put": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Sprache des Volltexts setzen",
+        "description": "Sprache des Dokuments (#400) als Kennung wie bei Tesseract (deu, eng, fra, spa, ita, nld, tur, pol, por, rus, ukr, ara) oder null (keine Angabe = Deutsch). Die Volltextsuche nimmt die Wortstämme dieser Sprache; der Suchindex des Dokuments entsteht dabei neu. Rechte wie beim Volltext schreiben; steht in der Historie.",
+        "operationId": "putDokumenteMitidSprache",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpracheSetzen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DokumentSprache"
                 }
               }
             }
@@ -8434,6 +8517,11 @@
             "format": "uuid",
             "nullable": true
           },
+          "sprache": {
+            "type": "string",
+            "nullable": true,
+            "description": "Sprache des Volltexts (#400), Kennung wie fra; null = keine Angabe (Deutsch)"
+          },
           "ocr": {
             "type": "object",
             "description": "Stand der Texterkennung",
@@ -9726,6 +9814,11 @@
           },
           "ocr": {
             "type": "object"
+          },
+          "sprache": {
+            "type": "string",
+            "nullable": true,
+            "description": "Sprache des Texts (#400), z. B. fra; null = keine Angabe (Deutsch)"
           },
           "text": {
             "type": "string",
@@ -11311,6 +11404,72 @@
           "seiten": {
             "type": "integer",
             "minimum": 1
+          },
+          "sprache": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "deu",
+              "eng",
+              "fra",
+              "spa",
+              "ita",
+              "nld",
+              "tur",
+              "pol",
+              "por",
+              "rus",
+              "ukr",
+              "ara",
+              null
+            ],
+            "description": "Sprache des Texts (#400); fehlt oder null: das DMS erkennt sie"
+          }
+        }
+      },
+      "SpracheSetzen": {
+        "type": "object",
+        "required": [
+          "sprache"
+        ],
+        "properties": {
+          "sprache": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "deu",
+              "eng",
+              "fra",
+              "spa",
+              "ita",
+              "nld",
+              "tur",
+              "pol",
+              "por",
+              "rus",
+              "ukr",
+              "ara",
+              null
+            ]
+          }
+        }
+      },
+      "DokumentSprache": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sprache": {
+            "type": "string",
+            "nullable": true
+          },
+          "ocr": {
+            "type": "object"
           }
         }
       },

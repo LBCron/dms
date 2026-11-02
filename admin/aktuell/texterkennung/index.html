@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.127/texterkennung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.128/texterkennung/">
       
       
         <link rel="prev" href="../webdav/">
@@ -2518,7 +2518,8 @@
 <li>Aus dem erkannten Text bestimmt das DMS die <strong>Sprache</strong>. Das geschieht offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.</li>
 <li><strong>Zweiter Durchlauf</strong> – nur, wenn alles zusammenkommt: Die erkannte Sprache ist eindeutig, sie war im ersten Durchlauf nicht dabei, ihr Sprachpaket ist installiert und Tesseract war sich beim ersten Durchlauf unsicher (mittlere Konfidenz unter 85 %). Dann liest das DMS die Seite noch einmal mit dieser Sprache; <strong>das bessere Ergebnis gilt</strong> und auch die weiteren Seiten des Dokuments werden damit gelesen. So bleibt der Rechenaufwand klein: Die meisten Dokumente brauchen nur einen Durchlauf.</li>
 </ol>
-<p>Die erkannte Sprache steht <strong>am Dokument</strong> neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene.</p>
+<p>Die erkannte Sprache steht <strong>am Dokument</strong> neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Seit 0.128.0 ist sie ein eigenes Feld des Dokuments, und die <strong>Volltextsuche nimmt die Wortstämme dieser Sprache</strong>: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch. Die Sprache gilt auch bei <em>Sprache: Fest</em>.</p>
+<p>Pakete (z. B. eine eigene Texterkennung) und die <a href="../api/">Schnittstelle</a> geben die Sprache mit dem Volltext an (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder setzen sie einzeln (<code>PUT /dokumente/{id}/sprache</code>, z. B. <code>{ "sprache": "fra" }</code>, <code>null</code> = keine Angabe). Das steht in der Historie der Mappe.</p>
 <p>Mit <strong>Sprache: Fest</strong> liest das DMS immer genau mit den eingestellten Sprachen, ohne zweiten Durchlauf. Die erkannte Sprache wird trotzdem angezeigt und gezählt.</p>
 <div class="admonition note">
 <p class="admonition-title">Nach einem Update</p>
