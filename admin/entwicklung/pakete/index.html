@@ -988,6 +988,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pakete-ohne-internet-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete ohne Internet installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete ohne Internet installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wie-das-dms-einer-sammeldatei-traut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wie das DMS einer Sammeldatei traut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#paket-aus-deinem-dms-erstellen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2444,6 +2472,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pakete-ohne-internet-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete ohne Internet installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete ohne Internet installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wie-das-dms-einer-sammeldatei-traut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wie das DMS einer Sammeldatei traut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#paket-aus-deinem-dms-erstellen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2656,7 +2712,7 @@
 <p>Im Expertenmodus kannst du:</p>
 <ul>
 <li><strong>Weitere Quellen</strong> – Katalogadressen hinzufügen, abschalten und entfernen, höchstens 20. Erlaubt ist nur HTTPS, das Format ist dasselbe wie beim offiziellen Katalog (<code>katalog.json</code> der Registry). <strong>Katalog abrufen</strong> fragt neben dem offiziellen Katalog alle <strong>eingeschalteten</strong> weiteren Kataloge ab – egal, ob der Abschnitt gerade auf- oder zugeklappt ist; ihre Pakete tragen die Adresse als Kennzeichen. Willst du eine Quelle nicht mehr nutzen, schalte sie ab oder entferne sie. Ohne weitere Quellen gibt es nur den offiziellen Katalog.</li>
-<li>Ein <strong>Paket als Datei hochladen</strong> (<code>.zip</code> im Format der Registry, z. B. der Paketordner gepackt, höchstens 10 MB). Das DMS prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau.</li>
+<li>Ein <strong>Paket als Datei hochladen</strong> (<code>.zip</code> im Format der Registry, z. B. der Paketordner gepackt, höchstens 10 MB). Das DMS prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau. Eine <a href="#pakete-ohne-internet-installieren">Sammeldatei</a> erkennt es selbst.</li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Nicht vom DMS-Projekt geprüft</p>
@@ -2664,6 +2720,24 @@
 </div>
 <p>Die Liste der installierten Pakete zeigt bei jedem die <strong>Herkunft</strong>: „offizieller Katalog“, die Katalogadresse oder „hochgeladen von … am …“. <strong>Updates sucht das DMS nur in der Quelle, aus der das Paket stammt.</strong> Ein hochgeladenes Paket aktualisierst du, indem du eine höhere Version hochlädst; dann gelten dieselben Regeln wie bei jedem Update (nur ergänzen). Ist die Quelle eines Pakets abgeschaltet oder entfernt, gibt es dafür keine Updates.</p>
 <p>Das Protokoll vermerkt, wer welche Quelle hinzugefügt, abgeschaltet oder entfernt und wer welches Paket hochgeladen hat.</p>
+<h2 id="pakete-ohne-internet-installieren">Pakete ohne Internet installieren<a class="headerlink" href="#pakete-ohne-internet-installieren" title="Permanent link">&para;</a></h2>
+<p>Kommt dein DMS nicht ins Internet, holst du mehrere Pakete auf einmal als <strong>Sammeldatei</strong>:</p>
+<ol>
+<li>Öffne an einem Gerät mit Internet die Seite <strong><a href="https://motom001.github.io/dms-registry/sammeldatei.html">Pakete ohne Internet</a></strong> des Katalogs. Am schnellsten über <strong>Werkbank → Pakete → Ohne Internet …</strong> und den Link dort – dann ist die Version deines DMS schon eingetragen.</li>
+<li>Kreuze die Pakete an. Die <strong>DMS-Version</strong> bestimmt, welche Paketversionen passen (Vorgabe: die neueste). <strong>Abhängigkeiten</strong> wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.</li>
+<li><strong>Sammeldatei herunterladen.</strong> Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen. Sie zeigt den <strong>SHA-256</strong> der fertigen Datei.</li>
+<li>Bring die Datei zum DMS (USB-Stick, Netzlaufwerk) und lade sie unter <strong>Werkbank → Pakete → Ohne Internet …</strong> hoch – oder im <a href="../installation/#pakete-dazuholen">Einrichtungsassistenten</a>, wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch <strong>Paket hochladen</strong> im Expertenmodus an.</li>
+<li>Das DMS zeigt den Inhalt: je Paket die Version und ob es <strong>neu</strong>, ein <strong>Update</strong>, <strong>schon installiert</strong> oder <strong>älter als installiert</strong> ist und ob es zur DMS-Version passt. Bestätige einmal, dass du weißt, woher die Datei stammt, dann installierst du <strong>Paket für Paket</strong>, Abhängigkeiten zuerst. Jedes zeigt seine Vorschau; Pakete mit Code installierst du erst, wenn du <strong>ihre</strong> Rechte bestätigt hast. Mit <strong>Auslassen</strong> überspringst du ein Paket.</li>
+</ol>
+<h3 id="wie-das-dms-einer-sammeldatei-traut">Wie das DMS einer Sammeldatei traut<a class="headerlink" href="#wie-das-dms-einer-sammeldatei-traut" title="Permanent link">&para;</a></h3>
+<p>Die Sammeldatei ist ein ZIP mit dem Verzeichnis <code>sammeldatei.json</code> (je Paket Id, Version, Größe und SHA-256), einer kurzen <code>LIESMICH.txt</code> und den Paket-Archiven aus dem Katalog, Byte für Byte unverändert. Das DMS nimmt sie <strong>nur ganz oder gar nicht</strong> an:</p>
+<ul>
+<li>Jedes Archiv muss genau die <strong>Größe und Prüfsumme (SHA-256)</strong> aus dem Verzeichnis haben. Hat das DMS den offiziellen Katalog in dieser Sitzung schon abgerufen, muss die Prüfsumme <strong>auch zum Katalog</strong> passen – sonst lehnt es die Datei ab.</li>
+<li>Es dürfen <strong>keine anderen Dateien</strong> darin liegen; Dateinamen mit <code>..</code> oder <code>/</code> am Anfang, verschlüsselte Einträge und doppelte Namen lehnt es ab.</li>
+<li><strong>Grenzen gegen ZIP-Bomben:</strong> höchstens 64 MB je Datei, 50 Pakete, 10 MB je Paket-Archiv, entpackt 20 MB je Paket (plus 32 MB für Code) und 256 MB für alle Pakete zusammen. Das DMS entpackt nie mehr, als im Archiv angegeben ist.</li>
+<li>Jedes Paket durchläuft <strong>dieselben Prüfungen wie ein einzeln hochgeladenes</strong>; Id und Version im Paket müssen zum Verzeichnis passen. Ist eins ungültig, wird nichts übernommen.</li>
+</ul>
+<p>Die Prüfsummen beweisen, dass die Datei vollständig und seit dem Zusammenstellen <strong>unverändert</strong> ist – nicht, <strong>wer</strong> sie zusammengestellt hat. Deshalb gilt sie wie ein hochgeladenes Paket als „nicht vom DMS-Projekt geprüft“: Du bestätigst die Herkunft, und die installierten Pakete tragen als Herkunft „hochgeladen von … am …“. Vergleiche bei Zweifel den SHA-256, den das DMS nach dem Hochladen zeigt, mit dem auf der Katalog-Seite. Updates dieser Pakete holst du mit einer neuen Sammeldatei; Pakete, die aus dem Katalog installiert sind, aktualisiert eine Sammeldatei nicht.</p>
 <h2 id="paket-aus-deinem-dms-erstellen">Paket aus deinem DMS erstellen<a class="headerlink" href="#paket-aus-deinem-dms-erstellen" title="Permanent link">&para;</a></h2>
 <p>Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket zu einer anderen Familie mit, ohne YAML von Hand zu schreiben. Unter <strong>Werkbank → Pakete → Paket erstellen</strong> führt dich ein Assistent in vier Schritten; unten stehen <strong>Zurück</strong>, <strong>Weiter</strong> und am Ende <strong>Als .zip exportieren</strong>.</p>
 <ol>
