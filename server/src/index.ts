@@ -14,7 +14,7 @@ import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { migriere, verbinde } from './db';
+import { migriere, verbinde, verbindungenAus, Verbindungswarten } from './db';
 import { Dienst } from './dienst';
 import { mitPruefung, ordnerSpeicher } from './dateispeicher';
 import { Speicherplatz, type SpeicherplatzDeps } from './speicherplatz';
@@ -39,6 +39,7 @@ import { ordnerAblage, Vorschaubilder } from './vorschau';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
+import { maxAnfragenAus, Ueberlastschutz } from './ueberlast';
 import { Systemlast } from './systemlast';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
@@ -130,10 +131,19 @@ if (!verbunden) {
 }
 const db = anbindung!;
 const datenbankUrl = alsUrl(db);
-const sql = verbinde(datenbankUrl);
+// Verbindungen zur Datenbank (#544): Vorgabe 10, für größere Installationen DMS_DB_VERBINDUNGEN.
+const verbindungsZahl = verbindungenAus(env);
+if (verbindungsZahl.fehler) log.warn(verbindungsZahl.fehler);
+const sql = verbinde(datenbankUrl, verbindungsZahl.max);
 await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m));
 const [{ server_version: pgVersion }] = await sql`SHOW server_version`;
-protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank });
+protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank, verbindungen: `${verbindungsZahl.max}${verbindungsZahl.quelle === 'umgebung' ? ' (DMS_DB_VERBINDUNGEN)' : ''}` });
+const verbindungswarten = new Verbindungswarten(sql, verbindungsZahl.max, verbindungsZahl.quelle);
+verbindungswarten.start();
+// Überlastschutz (#544): mehr als DMS_MAX_ANFRAGEN gleichzeitig (Vorgabe 250) → sofort 503 mit Retry-After.
+const ueberlastZahl = maxAnfragenAus(env);
+if (ueberlastZahl.fehler) log.warn(ueberlastZahl.fehler);
+const ueberlast = new Ueberlastschutz(ueberlastZahl.max, ueberlastZahl.quelle);
 const mandant = await bestimmeMandant(sql, db, env, (a) => schreibeAnbindung(ordner.geheim, a));
 cfg.haushalt = mandant.id;
 if (mandant.hinweis) log.warn(mandant.hinweis);
@@ -331,6 +341,8 @@ const app = await baueApp(dienst, konten, {
   wiederherstellung,
   speicherplatz,
   systemlast,
+  ueberlast,
+  verbindungen: verbindungswarten,
   eingangsordner,
   postfaecher,
   postfachOAuth,
@@ -401,12 +413,15 @@ const beenden = async () => {
   await konsole.entferne();
   await app.close();
   await beendeArbeiter();
+  verbindungswarten.stop();
   await sql.end({ timeout: 5 });
   process.exit(0);
 };
 process.on('SIGTERM', beenden);
 process.on('SIGINT', beenden);
 
-await app.listen({ port: cfg.port, host: cfg.host });
+// Warteschlange für neue Verbindungen (#544): Bei Überlast nimmt der Server sie verzögert an; mit 511 (Vorgabe von Node)
+// bekamen einzelne Programme gar keine Verbindung mehr.
+await app.listen({ port: cfg.port, host: cfg.host, backlog: 2048 });
 await konsole.schreibe(lokaleUrl(cfg.port, cfg.host))
   .catch((e) => log.warn('Konsolenzugang nicht angelegt – der Befehl dms geht nicht', { datei: konsole.datei, fehler: (e as Error).message }));

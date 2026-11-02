@@ -143,9 +143,25 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
             </dl>
           </>}
       <p className="leise klein">Verzögerung der Ereignisschleife in der letzten Minute: So lange musste eine Anfrage höchstens warten, weil der Server gerade etwas anderes rechnete. Werte unter 50 ms sind unauffällig. In der Zeitmessung (Entwicklermodus) erscheint dieses Warten bei den anderen Anfragen als „Leitung“.</p>
+      <Verbindungen z={z} />
       {/* #409: CPU, Arbeitsspeicher und Netzwerk stehen im Systemzustand. */}
       <p className="leise klein">{t('systemzustand.verweis.systemzustand')} <Link to="/werkbank/systemzustand#auslastung" className="verweis">{t('systemzustand.verweis.systemzustand.ziel')}</Link>.</p>
     </div>
+  );
+}
+
+/** Verbindungen zur Datenbank (#544): Zahl und wie lange Abfragen auf eine freie warten. */
+function Verbindungen({ z }: { z: DatenbankZustand }) {
+  const v = z.stand?.verbindungen;
+  if (!v) return null;
+  const zahl = (x: number) => `${x.toLocaleString('de-DE', { maximumFractionDigits: 1 })} ms`;
+  return (
+    <>
+      <h3 className="h4">{t('systemzustand.verbindungen.titel')}</h3>
+      <p>{t(v.quelle === 'umgebung' ? 'systemzustand.verbindungen.umgebung' : 'systemzustand.verbindungen.vorgabe', { max: v.max })}</p>
+      <p>{v.median === null || v.hoechstens === null ? t('systemzustand.verbindungen.keine') : t('systemzustand.verbindungen.warten', { median: zahl(v.median), max: zahl(v.hoechstens) })}</p>
+      <p className="leise klein">{t('systemzustand.verbindungen.hilfe')}</p>
+    </>
   );
 }
 

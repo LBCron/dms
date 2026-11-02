@@ -27,6 +27,15 @@ Browser ── HTTP ──▶ DMS-Container (Node.js) ──▶ PostgreSQL-Conta
 | dms-komplett | Dasselbe Image mit PostgreSQL 17 (Alpine-Paket) im selben Container; Datenbank im Ordner `/data/postgres` | DMS und Datenbank in einem Container |
 | Prüfungen | GitHub Actions: Typprüfung, Tests gegen PostgreSQL, Image-Bau | Jeder Push auf `main`, jeder Pull Request, jedes Versions-Tag und einmal pro Woche |
 
+## Viele gleichzeitige Anfragen { #last }
+
+Ein Haushalt hat 2–6 Benutzer, ein Kleinbetrieb 10–20. Ein Benutzer löst selbst schon mehrere Anfragen gleichzeitig aus (die Ablage öffnen sind 6–10), dazu kommen WebDAV-Programme, Pakete und Skripte. **100 gleichzeitige Anfragen** – etwa 10–15 Personen, die im selben Moment klicken – sind die realistische Obergrenze; dafür ist das DMS ausgelegt und wird regelmäßig gemessen (Lasttest, #544). Mehr kommt im Betrieb kaum vor, etwa bei einem falsch eingestellten WebDAV-Programm.
+
+- **Überlastschutz:** Laufen schon **250** Anfragen gleichzeitig (`DMS_MAX_ANFRAGEN`), bekommt jede weitere sofort die Antwort „Das DMS ist gerade sehr beschäftigt. Bitte versuche es in ein paar Sekunden noch einmal.“ (HTTP 503 mit `Retry-After: 5`) – statt in einer immer längeren Warteschlange zu hängen, bis Browser und Programme aufgeben. So bleiben Antwortzeiten und Arbeitsspeicher begrenzt, und das DMS erholt sich von selbst, sobald die Last nachlässt. Die Gesundheitsprüfung des Containers wird nie abgewiesen. Greift der Schutz, steht höchstens einmal je Minute „Überlast: …“ im [Protokoll](fehlersuche.md#protokoll).
+- **Verbindungen zur Datenbank:** höchstens **10** gleichzeitig. Im Lasttest mit 100 gleichzeitigen Anfragen lagen 5, 10 und 20 Verbindungen gleichauf: Der Engpass ist die Rechenzeit, die sich Server und PostgreSQL teilen, nicht die Zahl der Verbindungen. Jede Verbindung kostet PostgreSQL etwa 5–10 MB Arbeitsspeicher. Erst mit deutlich mehr Kernen (oder PostgreSQL auf einem eigenen Rechner) können mehr helfen: `DMS_DB_VERBINDUNGEN` (2–100; PostgreSQL erlaubt in der Vorgabe 100 Verbindungen insgesamt). Wie lange Abfragen auf eine freie Verbindung warten, zeigt **Werkbank → Datenbank-Anbindung** unter *Auslastung des Servers*.
+- **Schwere Arbeit** wie PDF-Bearbeitung und große Exporte läuft in eigenen [Arbeitern](speicherplatz.md#arbeiter-fur-pdf-und-exporte), damit andere Benutzer nicht warten.
+- Der **Anmeldeschutz** zählt auch unter Last jeden Fehlversuch; eine abgewiesene Anmeldung (503) prüft kein Passwort und zählt darum nicht.
+
 ## Schnittstelle
 
 `/api/v1` für andere Programme (API-Schlüssel), Beschreibung unter `/api/openapi.json`. Die Oberfläche selbst nutzt interne Adressen unter `/api/…`, die sich ändern dürfen.
