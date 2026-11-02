@@ -107,11 +107,15 @@ jobs:
           docker run --rm --entrypoint node dms:probe -e "console.log('Node.js', process.version, process.arch)"
           groesse=$(docker image inspect dms:probe --format '{{.Size}}')
           echo "::notice title=Image ${{ matrix.plattform }}::$((groesse / 1048576)) MB"
-      # Vorlagen für Synology, UGREEN, QNAP, TrueNAS, Unraid (#179): starten, DMS antwortet,
+      # Vorlagen für Synology, UGREEN, QNAP, TrueNAS, Unraid (#179) und den Raspberry Pi (#578): starten, DMS antwortet,
       # Assistent beginnt ohne Datenbankschritt.
       - name: Vorlagen probehalber installieren
         if: matrix.plattform == 'linux/amd64'
         run: deploy/vorlagen-probe.sh dms:probe
+      # Einrichtungsskript für den Raspberry Pi (#578); shellcheck ist auf den GitHub-Rechnern vorinstalliert.
+      - name: Einrichtungsskript prüfen
+        if: matrix.plattform == 'linux/amd64'
+        run: shellcheck deploy/raspberry-pi/einrichten.sh
       # dms-komplett (#208): DMS und PostgreSQL in einem Container – auf beiden Architekturen.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

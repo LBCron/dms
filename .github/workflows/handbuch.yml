@@ -157,6 +157,11 @@ jobs:
           for h in benutzer admin; do
             cp -r docs/handbuch/bilder "docs/handbuch/$h/docs/bilder"
           done
+          # Die Anleitung für den Raspberry Pi (#578) zeigt ein paar Bilder des Einrichtungsassistenten selbst.
+          mkdir -p docs/handbuch/installieren/docs/bilder
+          for b in einrichtung-code einrichtung-pakete anmelden werkbank-demo; do
+            cp "docs/handbuch/bilder/$b.png" docs/handbuch/installieren/docs/bilder/
+          done
           mkdir -p docs/handbuch/admin/docs/api
           mv docs/handbuch/admin/docs/bilder/openapi.json docs/handbuch/admin/docs/api/openapi.json
           rm -f docs/handbuch/benutzer/docs/bilder/openapi.json

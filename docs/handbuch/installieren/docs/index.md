@@ -21,7 +21,7 @@ Das DMS läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder je
 | **TrueNAS** | [Apps → Custom App](truenas.md) | ☆☆ gering: Datensatz anlegen, Vorlage einfügen |
 | **Unraid** | [Compose Manager](unraid.md) | ☆☆ gering: Plugin installieren, Vorlage einfügen |
 | **PC oder Mini-PC** (Intel, AMD) | [Linux mit Docker](linux.md) | ☆☆☆ mittel: Linux installieren, ein paar Befehle |
-| **Raspberry Pi** 4 oder 5 | [Raspberry Pi OS mit Docker](raspberry-pi.md) | ☆☆☆ mittel: wie beim PC, plus SSD |
+| **Raspberry Pi** 4 oder 5 | [Schritt für Schritt für Einsteiger](raspberry-pi.md): Raspberry Pi OS, Docker, DMS mit einem Befehl | ☆☆ gering bis ☆☆☆ mittel: jeder Klick erklärt, ein paar Befehle zum Kopieren |
 | **Windows-PC oder Windows Server** | [Docker Desktop oder Hyper-V](windows.md) | ☆☆☆ mittel: Docker Desktop installieren oder Linux-VM anlegen |
 | **Proxmox**, XCP-ng, ESXi … | [Linux-VM mit Docker](proxmox.md) | ☆☆☆ mittel: VM anlegen, dann wie beim PC |
 | **Alternative: ein Container** (Ausprobieren, nur ein Container möglich) | [dms-komplett](komplett.md) | ☆☆ gering: ein Image, vier Ordner, kein Passwort – siehe [Ein oder zwei Container?](#ein-oder-zwei-container) |

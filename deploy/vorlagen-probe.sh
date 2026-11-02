@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Probe-Installation der NAS-Vorlagen (#184, #185, #179): startet jede Vorlage unter deploy/*/
-# mit dem gerade gebauten Image, wartet, bis das DMS antwortet, und prüft, dass der
-# Einrichtungsassistent ohne Datenbankschritt beginnt. Läuft in der CI (image.yml).
+# Probe-Installation der NAS-Vorlagen (#184, #185, #179) und der Vorlage für den Raspberry Pi (#578):
+# startet jede Vorlage unter deploy/*/ mit dem gerade gebauten Image, wartet, bis das DMS antwortet,
+# und prüft, dass der Einrichtungsassistent ohne Datenbankschritt beginnt. Läuft in der CI (image.yml).
 #
 #   deploy/vorlagen-probe.sh <image> [vorlage …]      z. B. deploy/vorlagen-probe.sh dms:probe
 set -euo pipefail
 IMAGE="${1:?Image angeben, z. B. dms:probe}"; shift || true
 cd "$(dirname "$0")"
-VORLAGEN=("$@"); [ ${#VORLAGEN[@]} -gt 0 ] || VORLAGEN=(synology ugreen qnap truenas unraid)
+VORLAGEN=("$@"); [ ${#VORLAGEN[@]} -gt 0 ] || VORLAGEN=(synology ugreen qnap truenas unraid raspberry-pi)
 fehler=0
 
 for v in "${VORLAGEN[@]}"; do
@@ -19,6 +19,8 @@ for v in "${VORLAGEN[@]}"; do
       -e "s#ghcr.io/motom001/dms:main#$IMAGE#" \
       -e 's#"8080:3000"#"18080:3000"#' \
       "$v/docker-compose.yml" > "$arbeit/docker-compose.yml"
+  # Vorlagen mit Passwort in der .env (raspberry-pi; das Einrichtungsskript schreibt sie dort).
+  echo "DB_PASSWORD=probe-passwort-123" > "$arbeit/.env"
   grep -q 'HIER-' "$arbeit/docker-compose.yml" && { echo "::error::$v: Platzhalter nicht ersetzt"; fehler=1; }
   projekt="probe-$v"
   docker compose -p "$projekt" -f "$arbeit/docker-compose.yml" up -d --quiet-pull
