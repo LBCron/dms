@@ -71,3 +71,13 @@ export function feiertagAm(datum: string, land: Bundesland | null | undefined): 
   if (!land) return null;
   return feiertage(Number(datum.slice(0, 4)), land).get(datum) ?? null;
 }
+
+/** Feiertage von … bis (je einschließlich, JJJJ-MM-TT) als Datum → Name, z. B. für den Kalender in „Anstehend“ (#528). */
+export function feiertageZwischen(von: string, bis: string, land: Bundesland | null | undefined): Record<string, string> {
+  const erg: Record<string, string> = {};
+  if (!land) return erg;
+  for (let j = Number(von.slice(0, 4)); j <= Number(bis.slice(0, 4)); j++) {
+    for (const [d, n] of feiertage(j, land)) if (d >= von && d <= bis) erg[d] = n;
+  }
+  return erg;
+}

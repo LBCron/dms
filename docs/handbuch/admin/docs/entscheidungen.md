@@ -171,6 +171,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 - **Angelegt erst ab „Datum − Vorlauf“**, je Mappe, Feld und Datum einmal (eindeutiger Index). Was davor liegt, berechnet die Ansicht *Anstehend* aus den Datumsfeldern; so bleibt „Zu erledigen“ die Liste dessen, was jetzt zu tun ist.
 - **Das Datum ändert sich nie von selbst**: Wiederkehrende Termine schlagen den nächsten nur vor.
 - **Freie Erinnerungen** liegen bis zu ihrem Tag in einer eigenen Tabelle und werden dann zu Aufgaben; im Papierkorb ziehen sie mit um.
+- **Anstehend als Kalender** (#528): kein eigener Eintrag „Kalender“, sondern ein Umschalter Liste · Monat · Jahr in *Anstehend*. Nur lesen (kein Ziehen, keine freien Termine ohne Mappe, nur eigene Einträge) – wer Routinen planen will, legt einen Mappentyp mit wiederkehrender Frist an. Künftige Termine wiederkehrender Fristen werden berechnet (Datum + k · Abstand) und nie gespeichert; die Liste zeigt sie bewusst nicht, damit ihre Zahl nur echte Termine zählt. Ein Monat oder Jahr kommt in einer Anfrage und liegt wie die Zahlen der Ansichten (#512) im Zwischenspeicher. Ein Kalender-Abo (ICS, #529) ist ein eigenes Thema.
 
 ## Schlüsselwechsel (#47)
 

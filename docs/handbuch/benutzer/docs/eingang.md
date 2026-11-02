@@ -39,9 +39,43 @@ Steht bei dir unter „Zu erledigen“ eine **nicht sichtbare Mappe**, hast du e
 
 ## Anstehend
 
-Direkt unter „Zu erledigen“ zeigt **Anstehend** deine Fristen und Erinnerungen der nächsten 30 Tage nach Datum – auch die, die noch nicht unter „Zu erledigen“ stehen. So siehst du, was auf dich zukommt. Den Zeitraum stellst du im [Profil unter Darstellung](profil.md#anstehend) ein. Ein Klick öffnet die Mappe.
+**Anstehend** zeigt, was auf dich zukommt: deine Fristen, Erinnerungen und Aufgaben mit Datum – auch die, die noch nicht unter „Zu erledigen“ stehen. Du siehst nur deine eigenen Einträge und nur aus Mappen, die du lesen darfst. Ein Klick auf einen Eintrag öffnet die Mappe; erledigt wird wie gewohnt in der Mappe oder unter „Zu erledigen“. Anstehend zeigt nur an – Termine verschieben oder freie Termine ohne Mappe gibt es hier bewusst nicht.
 
-![Anstehend](bilder/anstehend.png)
+Oben schaltest du um zwischen **Liste**, **Monat** und **Jahr** – wie im Kalender am Handy. Das DMS merkt sich deine Wahl. **Heute** springt zurück zum heutigen Tag.
+
+### Liste
+
+Die Liste zeigt die nächsten 30 Tage, gruppiert nach **Überfällig**, **Heute**, **Diese Woche** (bis Sonntag) und **Später**. Überfälliges steht oben, rot markiert und mit Text, z. B. „überfällig seit 12 Tagen“. Den Zeitraum stellst du im [Profil unter Darstellung](profil.md#anstehend) ein.
+
+![Anstehend als Liste](bilder/anstehend.png)
+
+### Monat
+
+Der Monat zeigt die Wochen von Montag bis Sonntag, heute ist hervorgehoben. Gesetzliche Feiertage stehen klein beim Tag – dieselben wie bei der [Täglichen Zusammenfassung](#tagliche-zusammenfassung) (das Bundesland wählt ein Administrator). Jeder Eintrag ist eine kurze Zeile mit Symbol und Mappentitel; fährst du mit der Maus darüber, siehst du den ganzen Text. Stehen an einem Tag mehr als drei Einträge, zeigt **+2 weitere** die ganze Tagesliste darunter; ein Klick auf die Zahl des Tags tut dasselbe. Mit den Pfeilen neben dem Monat oder den Pfeiltasten blätterst du.
+
+Überfällige Einträge stehen rot an ihrem Tag und zusätzlich oben als **„1 überfällig“** – so gehen sie nicht verloren, wenn ihr Tag in einem früheren Monat liegt. Ein Klick darauf zeigt sie als Liste.
+
+**Wiederkehrende Fristen** (z. B. jährlich kündbare Verträge) erscheinen auch mit ihren nächsten Terminen, etwas heller und gestrichelt: Sie sind berechnet und noch nicht in der Mappe eingetragen.
+
+![Anstehend als Monat](bilder/anstehend-monat.png)
+
+Monat und Jahr nutzen die ganze Breite neben den Ansichten. Öffnest du einen Eintrag, steht die Mappe rechts und der Monat rückt kompakt in die Mitte: Tage mit Einträgen tragen einen Punkt, darunter stehen die Einträge des gewählten Tags.
+
+![Monat mit geöffneter Mappe](bilder/anstehend-monat-mappe.png)
+
+### Jahr
+
+Das Jahr zeigt zwölf kleine Monate. Tage mit Einträgen sind fett und tragen einen Punkt (heller, wenn dort nur berechnete Termine wiederkehrender Fristen stehen, rot bei Überfälligem); die Anzahl erscheint, wenn du mit der Maus darüberfährst. Ein Klick auf einen Tag oder einen Monat öffnet die Monatsansicht.
+
+![Anstehend als Jahr](bilder/anstehend-jahr.png)
+
+### Am Handy
+
+Am Handy beginnt Anstehend mit der **Liste**. Daneben gibt es den **Monat** in kompakter Form wie im Kalender des Handys: ein Punkt je Eintrag, darunter die Einträge des angetippten Tags. Wischen nach links oder rechts blättert den Monat. Die Jahresansicht gibt es nur am größeren Bildschirm.
+
+![Anstehend am Handy](bilder/anstehend-handy.png)
+
+Ein Abo für deinen Kalender (z. B. am Handy) gibt es noch nicht.
 
 ## Weitergeben
 

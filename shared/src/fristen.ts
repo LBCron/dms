@@ -65,6 +65,22 @@ export const fristAb = (datum: string, f: FristEinstellung) => verschiebe(datum,
 /** Der nächste Termin bei wiederkehrenden Fristen; Monatsende wird gekappt (31.01. + 1 Monat = 28./29.02.). */
 export const naechsterTermin = (datum: string, monate: number) => verschiebe(datum, monate, 'monate');
 
+/**
+ * Künftige Termine einer wiederkehrenden Frist (#528) im Zeitraum von … bis (je einschließlich), ohne das
+ * Datum selbst. Jeder Termin wird vom Datum aus gerechnet (Datum + k · Abstand), damit ein 31. nicht nach
+ * einem kurzen Monat auf dem 28. hängen bleibt.
+ */
+export function folgetermine(datum: string, monate: number, von: string, bis: string): string[] {
+  const erg: string[] = [];
+  if (!(monate >= 1) || datum > bis) return erg;
+  for (let k = 1; k <= 1200; k++) {
+    const x = verschiebe(datum, k * monate, 'monate');
+    if (x > bis) break;
+    if (x >= von) erg.push(x);
+  }
+  return erg;
+}
+
 export const datumDe = (iso: string) => { const [j, m, t] = iso.slice(0, 10).split('-'); return `${t}.${m}.${j}`; };
 
 /** Text der Aufgabe, z. B. „Kündigung bis 30.09.2027“. */
@@ -81,10 +97,11 @@ export function fristEmpfaenger(f: FristEinstellung, m: Pick<Mappe, 'werte' | 'e
 /** Gültiges Datum JJJJ-MM-TT? */
 export const istDatum = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-/** Ein Eintrag der Sicht „Anstehend“ (#132). */
+/** Ein Eintrag der Sicht „Anstehend“ (#132): Frist, Erinnerung oder eine andere Aufgabe mit Datum (#528). */
+export type AnstehendArt = 'frist' | 'erinnerung' | 'aufgabe';
 export interface Anstehend {
-  art: 'frist' | 'erinnerung';
-  /** Frist- bzw. Erinnerungsdatum. */
+  art: AnstehendArt;
+  /** Frist- bzw. Erinnerungsdatum, bei einer Aufgabe ihr Datum. */
   datum: string;
   /** Ab wann im Eingang (Frist: Datum − Vorlauf). */
   ab: string;
@@ -94,6 +111,19 @@ export interface Anstehend {
   faellig: boolean;
   feldKey?: string | null;
   erinnerungId?: string;
+  /** Künftiger Termin einer wiederkehrenden Frist (#528) – berechnet, noch nicht im Feld eingetragen. */
+  folgetermin?: boolean;
+}
+
+/** Antwort von „Anstehend“: Zeitraum in Tagen ab heute (Liste) oder von … bis (Kalender, #528). */
+export interface AnstehendAntwort {
+  tage: number;
+  heute: string;
+  von: string;
+  bis: string;
+  eintraege: Anstehend[];
+  /** Nur mit Zeitraum: gesetzliche Feiertage darin (Bundesland der Werkbank), Datum → Name. */
+  feiertage?: Record<string, string>;
 }
 
 /** Freie Erinnerung an einer Mappe (#131), solange sie noch nicht fällig ist. */

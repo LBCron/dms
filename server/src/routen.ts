@@ -1560,7 +1560,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     }) },
     // Fristen (#129–#132)
     { methode: 'POST', pfad: '/api/aufgaben/:id/folgetermin', zugang: 'angemeldet', handler: async (a) => ok(await dienst.setzeFolgetermin(a.params.id, ich(a), await zg(a))) },
-    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async (a) => ok(await dienst.anstehend(await zg(a), a.query.tage)) },
+    // Liste (?tage=) oder Kalender (?von=&bis=, #528) – mit den Feiertagen des Bundeslands der Täglichen Zusammenfassung (#94).
+    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async (a) => ok(await dienst.anstehend(await zg(a), { tage: a.query.tage, von: a.query.von, bis: a.query.bis },
+      a.query.von !== undefined && x.aufgabenmail ? (await x.aufgabenmail.einstellung()).bundesland : null)) },
     { methode: 'POST', pfad: '/api/mappen/:id/erinnerungen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, a.params.id, 'R');
       await empfaengerSichtbar(a, b(a).empfaengerId);

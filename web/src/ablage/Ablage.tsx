@@ -1,7 +1,6 @@
 import { aufbewahrenBis, datumText, inFrist } from '../../../shared/src/archiv';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { beschreibeBedingung, heuteIn, kinderVon, mitNachkommen, spaltenDerSicht, wirksameTypen, type Sicht } from '../../../shared/src/sichten';
-import { ANSTEHEND_TAGE, datumDe, type Anstehend } from '../../../shared/src/fristen';
+import { beschreibeBedingung, kinderVon, mitNachkommen, spaltenDerSicht, wirksameTypen, type Sicht } from '../../../shared/src/sichten';
 import { liesDirektlink, type Direktlink } from '../../../shared/src/direktlink';
 import { auswahlText, darfErstellen, POST_RICHTUNG, darfPostAnlegen, formatiere, GEMISCHTE_SPALTEN, sortierbar, standardliste, TREFFER_ANFANG, TREFFER_ENDE, vorlageFelder, wirksameVorlage, type Ausschnitt, type Mappe, type Mappentyp, type Sortierung, type Wert } from '../../../shared/src/model';
 import { api, verborgeneAufgaben, type Bezuege, type MappeDetails } from '../api';
@@ -30,6 +29,7 @@ import { UnscharfHinweis } from './Unscharf';
 import { mitGrund } from './Loeschgrund';
 import { rueckfrage } from '../rueckfrage';
 import { ZahlWarte } from './ZahlWarte';
+import { AnstehendSicht, useAnstehend, useAnstehendAnsicht } from './Anstehend';
 
 /**
  * Ablage in drei Spalten, von groß nach klein:
@@ -68,6 +68,9 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   const wahl = verwaltet ? spaltenDerSicht(sichtTypen, verwaltet.trefferliste) : typ ? { key: 'standard', spalten: standardliste(typ).spalten } : { key: null, spalten: GEMISCHTE_SPALTEN };
   const papierkorb = usePapierkorb(false, sicht === 'papierkorb');
   const anstehend = useAnstehend();
+  // Anstehend als Kalender (#528): Monat und Jahr nutzen Mitte und rechts, bis eine Mappe offen ist.
+  const ansicht = useAnstehendAnsicht();
+  const kalender = sicht === 'anstehend' && ansicht.ansicht !== 'liste';
   // Sprechender Link (#98): die Adresse ist der Link; beim Öffnen einer Mappe bleibt sie erhalten.
   const istLink = sicht === 'link';
   const anhang = istLink || istSuche ? `?${suche.toString()}` : '';
@@ -99,7 +102,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     ...(mitStart ? [{ pfad: '/ablage/start', name: 'Start', symbol: 'haus' as const, an: sicht === 'start' }] : []),
     { pfad: '/ablage/eingang', name: 'Zu erledigen', symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
     ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: neuePost.name, symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
-    { pfad: '/ablage/anstehend', name: 'Anstehend', symbol: 'kalender', titel: 'Fristen und Erinnerungen der nächsten Tage', zahl: anstehend.liste?.eintraege.length, an: sicht === 'anstehend' },
+    { pfad: '/ablage/anstehend', name: 'Anstehend', symbol: 'kalender', titel: t('anstehend.navi'), zahl: anstehend.liste?.eintraege.length, an: sicht === 'anstehend' },
     { pfad: '/ablage/favoriten', name: 'Favoriten', symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
     // Papierkorb (#43): sichtbar, solange er an ist oder noch etwas darin liegt.
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: 'Papierkorb', symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
@@ -107,8 +110,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
 
   return (
     // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
-    // Suche (#426): Formular und Treffer nutzen Mitte und rechts, bis ein Treffer geöffnet wird.
-    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche) && !dritt)}>
+    // Suche (#426) und der Kalender in „Anstehend“ (#528): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
+    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
       <aside className="spalte sichten" aria-label="Ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
         <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : istSuche ? 'Erweiterte Suche' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'anstehend' ? 'Anstehend' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
@@ -128,7 +131,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
         {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">Noch keine Ansichten. {ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">Ansichten einrichten</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
       </aside>
 
-      <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}`} aria-label="Mappen">
+      <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}${kalender ? ' ka-mitte' : ''}`} aria-label="Mappen">
         {istSuche
           ? <SuchListe suche={suche} offen={dritt} formular={formular} setFormular={setFormular} />
           : link
@@ -150,7 +153,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
               beschreibung="Mappen, an denen du etwas tun sollst: Sie passen nicht mehr zur Definition, jemand hat dich erwähnt oder dir eine Aufgabe gegeben."
               leerText="Nichts zu tun." />
           : sicht === 'anstehend'
-          ? <AnstehendListe z={anstehend} offen={dritt} />
+          ? <AnstehendSicht z={anstehend} offen={dritt} {...ansicht} />
           : sicht === 'favoriten'
           ? <Liste key="favoriten" sicht="favoriten" titel="Favoriten" offen={dritt} hilfe="ablage.favoriten"
               beschreibung="Mappen, die du mit einem Stern markiert hast."
@@ -176,49 +179,6 @@ function zuordnenAus(q: URLSearchParams) {
   let vorschlag: Record<string, Wert> = {};
   try { const v = JSON.parse(q.get('vorschlag') ?? '{}'); if (v && typeof v === 'object') vorschlag = v; } catch { /* ohne Vorschlag */ }
   return { post, register: q.get('register') ?? undefined, dokumente: (q.get('dokumente') ?? '').split(',').filter(Boolean), kopieren: q.get('kopieren') === '1', vorschlag };
-}
-
-/** Sicht „Anstehend“ (#132): eigene Fristen und Erinnerungen der nächsten Tage (Zeitraum im Profil). */
-function useAnstehend() {
-  const d = useDaten();
-  const tage = Number(d.einstellungen.anstehend_tage ?? ANSTEHEND_TAGE);
-  const [liste, setListe] = useState<{ tage: number; eintraege: Anstehend[] }>();
-  const [fehler, setFehler] = useState<string>();
-  useEffect(() => {
-    let aktuell = true;
-    api.anstehend(tage).then((x) => { if (aktuell) { setListe(x); setFehler(undefined); } }).catch((x) => aktuell && setFehler((x as Error).message));
-    return () => { aktuell = false; };
-  }, [tage, d.stand]);
-  return { liste, fehler };
-}
-
-const WOCHENTAG = new Intl.DateTimeFormat('de-DE', { weekday: 'short', timeZone: 'UTC' });
-const tagText = (iso: string) => `${WOCHENTAG.format(new Date(`${iso}T00:00:00Z`))} ${datumDe(iso)}`;
-
-function AnstehendListe({ z, offen }: { z: ReturnType<typeof useAnstehend>; offen?: string }) {
-  const l = z.liste;
-  return (
-    <>
-      <div className="listenkopf">
-        <div><h1>Anstehend</h1>
-          <p className="leise klein">Deine Fristen und Erinnerungen der nächsten {l?.tage ?? ANSTEHEND_TAGE} Tage – auch die, die noch nicht unter „Zu erledigen“ stehen. Den Zeitraum stellst du im <Link to="/profil/darstellung" className="verweis">Profil unter Darstellung</Link> ein. <Hilfe ort="ablage.anstehend" /></p></div>
-      </div>
-      {z.fehler && <p className="fehlertext">{z.fehler}</p>}
-      {!l ? <p className="leise leerliste">Lade …</p> : !l.eintraege.length ? <p className="leise leerliste">Nichts in Ansicht.</p> : (
-        <ul className="mappenliste">
-          {l.eintraege.map((x, i) => (
-            <li key={`${x.mappeId}-${x.feldKey ?? x.erinnerungId ?? i}-${x.datum}`}>
-              <Link to={`/ablage/anstehend/${x.mappeId}`} className={`eintrag ${offen === x.mappeId ? 'an' : ''}`}>
-                <span className="titel">{tagText(x.datum)} · {titelOder(x.mappeTitel)}</span>
-                <span className="unter">{x.art === 'frist' ? 'Frist' : 'Erinnerung'}: {x.text}</span>
-                {x.faellig ? <span className="problem">steht unter „Zu erledigen“</span> : x.art === 'frist' && x.ab > heuteIn() ? <span className="unter leise">unter „Zu erledigen“ ab {datumDe(x.ab)}</span> : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
 }
 
 /** Lädt eine Mappe mit Rückverweisen, Dokumenten und Bezügen und zeigt sie an. */

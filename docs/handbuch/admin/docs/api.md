@@ -62,6 +62,7 @@ Die API-Dokumentation beschreibt alle Endpunkte mit ihren Parametern. Ein Überb
 | --- | --- |
 | **Erweiterte Suche** | `GET /api/v1/mappen?sicht=suche&link=…` mit den Parametern der erweiterten Suche als ein kodierter Wert, z. B. `typ%3Drechnung%26volltext%3DBackofen` |
 | **Aufgaben** | `GET /api/v1/aufgaben` (eigene offene), `POST /api/v1/mappen/{id}/aufgaben` (vergeben), `POST /api/v1/aufgaben/{id}/erledigt` und `…/delegieren`, mehrere auf einmal mit `POST /api/v1/aufgaben/weitergeben` bzw. `…/aufgaben/erledigt` (#415); Fristen und Erinnerungen über `GET /api/v1/anstehend` und `…/erinnerungen` |
+| **Anstehend als Kalender** (#528) | `GET /api/v1/anstehend?von=2027-01-01&bis=2027-12-31` liefert Fristen, Erinnerungen und Aufgaben mit Datum des Schlüssel-Benutzers für einen Zeitraum (höchstens 400 Tage) in einer Anfrage – mit den berechneten künftigen Terminen wiederkehrender Fristen (`folgetermin: true`), allem Überfälligen (`faellig` und `datum` vor `heute`) und den Feiertagen (`feiertage`). Ohne `von`/`bis` wie die Liste: `?tage=30` ab heute |
 | **Notizen** | `GET`/`POST /api/v1/mappen/{id}/notizen`, `PUT`/`DELETE /api/v1/notizen/{id}` |
 | **Historie** einer Mappe | `GET /api/v1/mappen/{id}/historie` |
 | **E-Mail** | `POST /api/v1/mappen/{id}/email` versendet eine Mappe mit Dokumenten (zusammen höchstens 50 MB) |

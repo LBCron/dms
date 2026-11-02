@@ -147,7 +147,7 @@ Ein Zeitraum, in dem ein Benutzer nicht da ist – mit einem Vertreter, der sein
 Das Menü „Mappe ▾“ neben dem Titel einer Mappe – Aufgabe vergeben, Erinnern, Versenden, Exportieren und mehr. Hieß früher selbst „Aktionen“.
 
 <a id="anstehend"></a>**Anstehend** · ✓ Alltagswort · alle  
-Die Ansicht mit meinen Fristen und Erinnerungen der nächsten Tage (Standard 30) – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen.
+Die Ansicht mit meinen Fristen, Erinnerungen und Aufgaben mit Datum – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen. Als Liste (nächste Tage, Standard 30), Monat oder Jahr; bewusst kein eigener Eintrag „Kalender“ (#528).
 
 <a id="aufgabe"></a>**Aufgabe** · ✓ Alltagswort · alle  
 Etwas, das ein Mensch an einer Mappe tun soll. Arten sind Passt nicht, Erwähnung, Zugewiesen (von Hand vergeben), Post für dich, Frist, Erinnerung, Vertretung und Auskunft.  

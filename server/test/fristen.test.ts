@@ -174,6 +174,67 @@ function faelle(pg: boolean) {
     });
   });
 
+  describe(`Anstehend als Kalender (#528)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
+    type Antwort = { tage: number; heute: string; von: string; bis: string; feiertage?: Record<string, string>; eintraege: Array<{ art: string; datum: string; faellig: boolean; folgetermin?: boolean; mappeId: string }> };
+    it('Zeitraum mit künftigen Terminen wiederkehrender Fristen, Überfälligem und Aufgaben mit Datum; nur eigene', async () => {
+      const { d, admin, anna, ben, vertrag, rufe } = await aufbauFristen(pg);
+      // Jährlich (wiederholung 12), Anna verantwortlich, erstellt von Ben.
+      const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendigung: in_(20), verantwortlich: anna.id } }, ben.id);
+      // Wiederkehrend mit Datum weit vorn im Zeitraum davor: die Folgetermine stehen trotzdem im Kalender.
+      const basis = verschiebe(in_(5), -24, 'monate');
+      const alt = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Gas', kuendigung: basis, verantwortlich: anna.id } }, ben.id);
+      // Überfällig: Erinnerung mit vergangenem Datum wird gleich Aufgabe.
+      await rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: in_(-12), text: 'Zählerstand melden' } });
+      const bis = in_(399);
+      const k = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort;
+      assert.equal(k.von, heute); assert.equal(k.bis, bis); assert.equal(k.heute, heute);
+      assert.deepEqual(k.feiertage, {}, 'ohne Bundesland keine Feiertage');
+      const zeile = (x: Antwort['eintraege'][number]) => [x.mappeId === m.id ? 'Strom' : 'Gas', x.art, x.datum, !!x.faellig, !!x.folgetermin];
+      assert.deepEqual(k.eintraege.map(zeile), [
+        ['Strom', 'erinnerung', in_(-12), true, false],
+        ['Gas', 'frist', verschiebe(basis, 24, 'monate'), false, true],
+        ['Strom', 'frist', in_(20), false, false],
+        ['Gas', 'frist', verschiebe(basis, 36, 'monate'), false, true],
+        ['Strom', 'frist', verschiebe(in_(20), 12, 'monate'), false, true],
+      ].sort((a, b) => String(a[2]).localeCompare(String(b[2]))));
+      // Später Zeitraum: Überfälliges bleibt dabei (für „n überfällig“), sonst nur, was hineinfällt.
+      const spaeter = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: in_(100), bis: in_(399) } })).body as Antwort;
+      assert.deepEqual(spaeter.eintraege.map((x) => [x.datum, !!x.folgetermin]).sort(), [[in_(-12), false], [verschiebe(basis, 36, 'monate'), true], [verschiebe(in_(20), 12, 'monate'), true]].sort());
+      // Liste wie bisher: keine berechneten Termine, Überfälliges ja.
+      const liste = (await rufe(anna, 'GET', '/api/anstehend', { query: { tage: '60' } })).body as Antwort;
+      assert.deepEqual(liste.eintraege.map((x) => [x.art, x.datum]), [['erinnerung', in_(-12)], ['frist', in_(20)]]);
+      assert.equal(liste.von, heute); assert.equal(liste.bis, in_(60)); assert.equal(liste.feiertage, undefined);
+      // Nur eigene: Ben (Ersteller, aber nicht verantwortlich) sieht nichts.
+      assert.equal(((await rufe(ben, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort).eintraege.length, 0);
+      // Aufgabe mit Datum (z. B. Auskunft bis …) erscheint als „aufgabe“ beim Empfänger.
+      await rufe(admin, 'POST', '/api/werkbank/auskunft/frist', { body: { mappeId: alt.id } });
+      const a = (await rufe(admin, 'GET', '/api/anstehend', { query: { von: heute, bis: in_(40) } })).body as Antwort;
+      assert.deepEqual(a.eintraege.map((x) => [x.art, x.faellig, x.mappeId]), [['aufgabe', true, alt.id]]);
+      // Zwischenspeicher: eine geänderte Erinnerung, ein geändertes Datum zeigen sich sofort.
+      await rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: in_(30), text: 'Angebote vergleichen' } });
+      await d.aendereMappe(alt.id, { werte: { kuendigung: null } }, ben.id);
+      const neu = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort;
+      assert.ok(neu.eintraege.some((x) => x.art === 'erinnerung' && x.datum === in_(30)));
+      assert.ok(!neu.eintraege.some((x) => x.mappeId === alt.id));
+    });
+
+    it('prüft den Zeitraum und liefert die Feiertage des Bundeslands', async () => {
+      const { anna, rufe } = await aufbauFristen(pg);
+      for (const query of [{ von: heute }, { von: '2027-02-30', bis: '2027-03-01' }, { von: '2027-03-01', bis: '2027-02-01' }, { von: '2027-01-01', bis: '2028-02-05' }]) {
+        await assert.rejects(rufe(anna, 'GET', '/api/anstehend', { query }), status(422), JSON.stringify(query));
+      }
+      const { routen: r } = await import('../src/routen');
+      const { d, konten } = await aufbauFristen(pg);
+      const mail = { einstellung: async () => ({ aktiv: true, uhrzeit: '07:00', bundesland: 'SN' as const }) };
+      const route = r(d, konten, { aufgabenmail: mail as never }).find((x) => x.methode === 'GET' && x.pfad === '/api/anstehend')!;
+      const ich = (await konten.listeBenutzer())[0];
+      const j = (await route.handler({ body: {}, params: {}, query: { von: '2027-01-01', bis: '2027-12-31' }, ip: '1', benutzer: ich })).body as Antwort;
+      assert.equal(j.feiertage?.['2027-11-17'], 'Buß- und Bettag');
+      assert.equal(j.feiertage?.['2027-12-25'], '1. Weihnachtstag');
+      assert.equal(Object.keys(j.feiertage ?? {}).length, 11);
+    });
+  });
+
   describe(`Sichtbedingung „hat Frist in den nächsten n Tagen“ (#133)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
     it('prüft, beschreibt und filtert (alle Felder mit Erinnerung, ein Feld, nur meine)', async () => {
       const { d, anna, ben, vertrag } = await aufbauFristen(pg);
