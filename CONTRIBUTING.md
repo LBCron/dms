@@ -21,6 +21,10 @@ Das DMS kommt mit sehr wenig fremdem Code aus – das schützt vor Angriffen üb
 
 Die Vorlage für Pull Requests fragt danach; die Prüfung „Abhängigkeiten“ weist im PR auf neue Abhängigkeiten hin. Die heutige Liste mit Zweck steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#abhaengigkeiten).
 
+## Grafiken und Bilder je Sprache
+
+Grafiken mit Text gibt es je Sprache: `name.svg` auf Deutsch, `name.en.svg` auf Englisch (z. B. `personas-skala.svg` und `personas-skala.en.svg`, erzeugt von `docs/handbuch/werkzeuge/personas_grafiken.py`). `README.md` bindet die deutschen ein, `README.en.md` nur die `.en`-Fassungen. Einzige Ausnahme sind Bildschirmfotos der Oberfläche: Solange es sie nur auf Deutsch gibt (#357), zeigt `README.en.md` das deutsche Bild mit dem Hinweis, dass die Oberfläche derzeit nur Deutsch kann. Ein Test (`server/test/readme-sprachen.test.ts`) prüft das.
+
 Mit einem Beitrag stellst du ihn unter die [Apache-2.0](LICENSE). Bitte keine echten Dokumente oder persönlichen Daten committen.
 
 Für den Umgang miteinander gilt unser [Verhaltenskodex](CODE_OF_CONDUCT.md).

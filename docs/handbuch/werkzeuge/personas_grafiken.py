@@ -6,7 +6,7 @@ die sie braucht, und eine Übersicht der Skala vom Haushalt bis zum Konzern.
     python3 docs/handbuch/werkzeuge/personas_grafiken.py
 
 Schreibt nach docs/handbuch/entwickler/docs/grafiken/ (alle) und die Übersicht zusätzlich nach
-docs/handbuch/benutzer/docs/grafiken/. Stil wie die übrigen Grafiken der Handbücher: helle Karte mit
+docs/handbuch/benutzer/docs/grafiken/ – dort auch auf Englisch für README.en.md (personas-skala.en.svg, #574). Stil wie die übrigen Grafiken der Handbücher: helle Karte mit
 Rand, gut lesbar im hellen und im dunklen Design. Gezeichnete Figuren, keine Fotos echter Menschen.
 """
 from pathlib import Path
@@ -219,20 +219,45 @@ def alle_karten():
 
 # ---------- Übersicht der Skala ----------
 
-STUFEN = [
-    (1, 'Einsteiger-', 'Familie', 'kern'), (2, 'Familien-', 'mitglied', 'kern'), (3, 'Haushalts-', 'Admin', 'kern'),
-    (4, 'Für die', 'Eltern sorgen', 'fokus'), (5, 'Vermieter', '', 'fokus'), (6, 'Selbständige', '', 'unterstuetzt'),
-    (7, 'Kleinbetrieb', '', 'unterstuetzt'), (8, 'Mittelstand', '', 'nicht'), (9, 'Groß-', 'unternehmen', 'nicht'),
-]
+# Je Sprache eine Datei (#574): personas-skala.svg (Deutsch, Handbücher und README.md) und personas-skala.en.svg
+# (Englisch, README.en.md). Grafiken mit Text gibt es je Sprache – siehe CONTRIBUTING.
+TEXTE = {
+    'de': {
+        'datei': 'personas-skala.svg',
+        'ueberschrift': 'Für wen wir das DMS bauen – Stand 31.10.2026',
+        'links': 'privat', 'rechts': 'Unternehmen',
+        'stufen': [('Einsteiger-', 'Familie'), ('Familien-', 'mitglied'), ('Haushalts-', 'Admin'), ('Für die', 'Eltern sorgen'),
+                   ('Vermieter', ''), ('Selbständige', ''), ('Kleinbetrieb', ''), ('Mittelstand', ''), ('Groß-', 'unternehmen')],
+        'baender': {'kern': 'Kernfokus', 'fokus': 'Fokus', 'unterstuetzt': 'unterstützt', 'nicht': 'nicht im Fokus'},
+        'fuss': 'Im Zweifel gewinnt die Einfachheit für Stufe 1–3. Den Fokus verschieben wir nur bewusst.',
+        'titel': ('Skala vom Haushalt bis zum Konzern: Kernfokus Stufe 1–3 (Einsteiger-Familie, Familienmitglied, Haushalts-Admin), '
+                  'Fokus 4–5 (Für die Eltern sorgen, Vermieter), unterstützt 6–7 (Selbständige, Kleinbetrieb), nicht im Fokus 8–9 (Mittelstand, Großunternehmen).'),
+        'ziele': [ZIEL, ZIEL_BENUTZER],
+    },
+    'en': {
+        'datei': 'personas-skala.en.svg',
+        'ueberschrift': 'Who we build the DMS for – as of 31 Oct 2026',
+        'links': 'private', 'rechts': 'business',
+        'stufen': [('Beginner', 'family'), ('Family', 'member'), ('Household', 'admin'), ('Looking after', 'parents'),
+                   ('Landlord', ''), ('Self-', 'employed'), ('Small', 'business'), ('Mid-sized', 'company'), ('Large', 'enterprise')],
+        'baender': {'kern': 'core focus', 'fokus': 'focus', 'unterstuetzt': 'supported', 'nicht': 'not in focus'},
+        'fuss': 'When in doubt, simplicity for levels 1–3 wins. We only shift the focus deliberately.',
+        'titel': ('Scale from household to large enterprise: core focus levels 1–3 (beginner family, family member, household admin), '
+                  'focus 4–5 (looking after parents, landlord), supported 6–7 (self-employed, small business), not in focus 8–9 (mid-sized company, large enterprise).'),
+        'ziele': [ZIEL_BENUTZER],
+    },
+}
+FOKUS_JE_STUFE = ['kern', 'kern', 'kern', 'fokus', 'fokus', 'unterstuetzt', 'unterstuetzt', 'nicht', 'nicht']
 
 
-def uebersicht():
+def uebersicht(sprache='de'):
+    tx = TEXTE[sprache]
     w, h = 860, 300
     x0, dx = 60, 92
-    inhalt = t(w / 2, 40, 'Für wen wir das DMS bauen – Stand 31.10.2026', 17, TINTE, 700, 'middle')
-    inhalt += t(40, 74, 'privat', 13, LEISE, 600) + t(w - 40, 74, 'Unternehmen', 13, LEISE, 600, 'end')
+    inhalt = t(w / 2, 40, tx['ueberschrift'], 17, TINTE, 700, 'middle')
+    inhalt += t(40, 74, tx['links'], 13, LEISE, 600) + t(w - 40, 74, tx['rechts'], 13, LEISE, 600, 'end')
     inhalt += f'<path d="M40 84H{w - 40}" stroke="{LINIE}" stroke-width="2"/><path d="M{w - 48} 79l8 5-8 5" fill="none" stroke="{LINIE}" stroke-width="2"/>'
-    for nr, a, b, f in STUFEN:
+    for nr, ((a, b), f) in enumerate(zip(tx['stufen'], FOKUS_JE_STUFE), start=1):
         cx = x0 + (nr - 1) * dx + 6
         farbe, hell, _ = FOKUS[f]
         inhalt += f'<circle cx="{cx}" cy="136" r="30" fill="{hell}" stroke="{farbe}" stroke-width="3"/>'
@@ -244,21 +269,19 @@ def uebersicht():
             r = 5 if koepfe > 1 else 9
             inhalt += f'<circle cx="{px}" cy="{py - (6 if koepfe > 3 else 0)}" r="{r}" fill="{farbe}"/>'
         inhalt += t(cx, 186, f'{nr}', 13, farbe, 700, 'middle') + t(cx, 204, a, 12.5, TINTE, 600, 'middle') + t(cx, 220, b, 12.5, TINTE, 600, 'middle')
-    baender = [(1, 3, 'kern', 'Kernfokus'), (4, 5, 'fokus', 'Fokus'), (6, 7, 'unterstuetzt', 'unterstützt'), (8, 9, 'nicht', 'nicht im Fokus')]
-    for von, bis, f, text in baender:
+    for von, bis, f in [(1, 3, 'kern'), (4, 5, 'fokus'), (6, 7, 'unterstuetzt'), (8, 9, 'nicht')]:
         farbe, hell, _ = FOKUS[f]
         xa, xb = x0 + (von - 1) * dx - 34, x0 + (bis - 1) * dx + 46
-        inhalt += f'<rect x="{xa}" y="238" width="{xb - xa}" height="28" rx="14" fill="{hell}" stroke="{farbe}"/>' + t((xa + xb) / 2, 257, text, 13, farbe, 700, 'middle')
-    inhalt += t(w / 2, 288, 'Im Zweifel gewinnt die Einfachheit für Stufe 1–3. Den Fokus verschieben wir nur bewusst.', 12.5, LEISE, 400, 'middle')
-    titel = ('Skala vom Haushalt bis zum Konzern: Kernfokus Stufe 1–3 (Einsteiger-Familie, Familienmitglied, Haushalts-Admin), '
-             'Fokus 4–5 (Für die Eltern sorgen, Vermieter), unterstützt 6–7 (Selbständige, Kleinbetrieb), nicht im Fokus 8–9 (Mittelstand, Großunternehmen).')
-    inhalt_svg = svg(w, h + 10, titel, inhalt)
-    (ZIEL / 'personas-skala.svg').write_text(inhalt_svg, encoding='utf-8')
-    (ZIEL_BENUTZER / 'personas-skala.svg').write_text(inhalt_svg, encoding='utf-8')
+        inhalt += f'<rect x="{xa}" y="238" width="{xb - xa}" height="28" rx="14" fill="{hell}" stroke="{farbe}"/>' + t((xa + xb) / 2, 257, tx['baender'][f], 13, farbe, 700, 'middle')
+    inhalt += t(w / 2, 288, tx['fuss'], 12.5, LEISE, 400, 'middle')
+    inhalt_svg = svg(w, h + 10, tx['titel'], inhalt)
+    for ziel in tx['ziele']:
+        (ziel / tx['datei']).write_text(inhalt_svg, encoding='utf-8')
 
 
 if __name__ == '__main__':
     ZIEL.mkdir(parents=True, exist_ok=True)
     alle_karten()
-    uebersicht()
+    for sprache in TEXTE:
+        uebersicht(sprache)
     print(f'Grafiken geschrieben nach {ZIEL}')
