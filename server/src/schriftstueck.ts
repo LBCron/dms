@@ -1,6 +1,5 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import type { Abschnitt, Block } from '../../shared/src/loeschkonzept';
-import { PdfSchreiber, pdfSicher } from './export';
+import { textdokumentPdf, type Anweisung, type Textdokument } from './pdf';
 import { zipPuffer } from './zip';
 
 /**
@@ -24,63 +23,36 @@ const RAND = 50;
 /** Pfeile kennt WinAnsi nicht. */
 const p = (t: string) => t.replace(/→/g, '›');
 
-export async function schriftstueckPdf(s: Schriftstueck): Promise<Buffer> {
-  const doc = await PDFDocument.create();
-  doc.setTitle(pdfSicher(s.titel)); doc.setProducer('DMS'); doc.setCreator('DMS');
-  const f = { normal: await doc.embedFont(StandardFonts.Helvetica), fett: await doc.embedFont(StandardFonts.HelveticaBold) };
-  const w = new PdfSchreiber(doc, f, !!s.quer);
-  w.neueSeite();
-  if (s.untertitel) w.text(p(s.untertitel), { groesse: 9, farbe: 0.35 });
-  w.text(p(s.titel), { groesse: 16, fett: true, abstand: 6 });
-  if (s.stand) w.text(p(s.stand), { groesse: 9, farbe: 0.4, abstand: 2 });
-  if (s.vorbemerkung) { w.y -= 6; w.text(p(s.vorbemerkung), { groesse: 9, farbe: 0.25 }); }
-  w.linie();
-  for (const a of s.abschnitte) {
-    w.platz(60);
-    w.text(p(a.titel), { groesse: 12, fett: true, abstand: 10 });
-    for (const b of a.bloecke) pdfBlock(w, f, b);
+/** Der Plan des PDFs (#541): gezeichnet wird in der PDF-Stelle. */
+export function schriftstueckPlan(s: Schriftstueck): Textdokument {
+  const a: Anweisung[] = [{ art: 'seite' }];
+  if (s.untertitel) a.push({ art: 'text', text: p(s.untertitel), groesse: 9, farbe: 0.35 });
+  a.push({ art: 'text', text: p(s.titel), groesse: 16, fett: true, abstand: 6 });
+  if (s.stand) a.push({ art: 'text', text: p(s.stand), groesse: 9, farbe: 0.4, abstand: 2 });
+  if (s.vorbemerkung) a.push({ art: 'abstand', hoehe: 6 }, { art: 'text', text: p(s.vorbemerkung), groesse: 9, farbe: 0.25 });
+  a.push({ art: 'linie' });
+  for (const ab of s.abschnitte) {
+    a.push({ art: 'platz', hoehe: 60 }, { art: 'text', text: p(ab.titel), groesse: 12, fett: true, abstand: 10 });
+    for (const b of ab.bloecke) a.push(...pdfBlock(b));
   }
-  return Buffer.from(await doc.save());
+  return { titel: s.titel, quer: !!s.quer, anweisungen: a };
 }
 
-function pdfBlock(w: PdfSchreiber, f: { normal: PDFFont; fett: PDFFont }, b: Block) {
-  if (b.art === 'absatz') { w.text(p(b.text), { groesse: 9.5, abstand: 4 }); return; }
-  if (b.art === 'punkte') { for (const x of b.punkte) w.text(p(`• ${x}`), { groesse: 9.5, abstand: 3, x: RAND + 8 }); return; }
+export async function schriftstueckPdf(s: Schriftstueck): Promise<Buffer> {
+  return textdokumentPdf(schriftstueckPlan(s));
+}
+
+function pdfBlock(b: Block): Anweisung[] {
+  if (b.art === 'absatz') return [{ art: 'text', text: p(b.text), groesse: 9.5, abstand: 4 }];
+  if (b.art === 'punkte') return b.punkte.map((x) => ({ art: 'text', text: p(`• ${x}`), groesse: 9.5, abstand: 3, x: RAND + 8 }));
   if (b.art === 'hinweis') {
-    w.text(p(b.titel), { groesse: 9.5, fett: true, abstand: 8, farbe: 0.45 });
-    for (const x of b.punkte) w.text(p(`– ${x}`), { groesse: 9, abstand: 2, x: RAND + 8, farbe: 0.3 });
-    return;
+    return [
+      { art: 'text', text: p(b.titel), groesse: 9.5, fett: true, abstand: 8, farbe: 0.45 },
+      ...b.punkte.map((x): Anweisung => ({ art: 'text', text: p(`– ${x}`), groesse: 9, abstand: 2, x: RAND + 8, farbe: 0.3 })),
+    ];
   }
   // Tabelle: Spalten nach Gewicht, Zeilen umbrochen, Kopf bei jedem Seitenwechsel wiederholt.
-  const groesse = b.kopf.length > 5 ? 7.5 : 8.5;
-  const zh = groesse * 1.3;
-  const nutzbar = w.breite - 2 * RAND;
-  const summe = b.breiten.reduce((x, y) => x + y, 0);
-  const breiten = b.breiten.map((x) => (x / summe) * nutzbar);
-  const mitKopf = b.kopf.some((k) => k);
-  const reihe = (werte: string[], fett: boolean) => {
-    const z = werte.map((t, i) => w.zeilen(p(t), groesse, breiten[i] - 6, fett || (!mitKopf && i === 0)));
-    const h = Math.max(1, ...z.map((x) => x.length)) * zh + 5;
-    return { z, h };
-  };
-  const zeichne = (r: { z: string[][]; h: number }, fett: boolean) => {
-    if (fett) w.seite.drawRectangle({ x: RAND, y: w.y - r.h, width: nutzbar, height: r.h, color: rgb(0.93, 0.94, 0.96) });
-    let x = RAND;
-    r.z.forEach((zeilen, i) => {
-      zeilen.forEach((t, j) => w.seite.drawText(t, { x: x + 3, y: w.y - 3 - (j + 1) * zh + groesse * 0.3, size: groesse, font: fett || (!mitKopf && i === 0) ? f.fett : f.normal, color: rgb(0.1, 0.12, 0.16) }));
-      x += breiten[i];
-    });
-    w.y -= r.h;
-    w.seite.drawLine({ start: { x: RAND, y: w.y }, end: { x: RAND + nutzbar, y: w.y }, thickness: 0.4, color: rgb(0.78, 0.8, 0.84) });
-  };
-  w.y -= 6;
-  const kopf = mitKopf ? reihe(b.kopf, true) : null;
-  if (kopf) { w.platz(kopf.h + 3 * zh); zeichne(kopf, true); }
-  for (const werte of b.zeilen) {
-    const r = reihe(werte, false);
-    if (w.y - r.h < RAND) { w.neueSeite(); if (kopf) zeichne(kopf, true); }
-    zeichne(r, false);
-  }
+  return [{ art: 'tabelle', kopf: b.kopf.map(p), zeilen: b.zeilen.map((z) => z.map(p)), gewichte: b.breiten }];
 }
 
 /* ---------- Word (.docx) ---------- */

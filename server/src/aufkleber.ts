@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { aufkleberbogenPdf } from './pdf';
 
 /**
  * Archivnummern (#345): Aufkleberbogen als PDF mit Barcode (Code 128, Zeichensatz B) und Klartext.
@@ -44,47 +44,12 @@ export const ETIKETTEN = {
 } as const;
 export type Etikett = keyof typeof ETIKETTEN;
 
-const MM = 72 / 25.4;
-const A4 = { breite: 210, hoehe: 297 };
-
 /**
  * Aufkleberbogen: `nummern` ab Feld `start` (1 = oben links, zeilenweise) – so lässt sich ein
  * angebrochener Bogen weiterverwenden. Je Aufkleber Barcode mit `praefix + nummer` und die Nummer lesbar.
+ * Gezeichnet wird in der PDF-Stelle (#541).
  */
 export async function aufkleberPdf(nummern: string[], etikett: Etikett, start: number, praefix: string): Promise<Buffer> {
-  const e = ETIKETTEN[etikett];
-  const doc = await PDFDocument.create();
-  doc.setTitle('Archivnummern'); doc.setProducer('DMS'); doc.setCreator('DMS');
-  const schrift = await doc.embedFont(StandardFonts.Helvetica);
-  const fett = await doc.embedFont(StandardFonts.HelveticaBold);
-  const jeBogen = e.spalten * e.zeilen;
-  const randX = (A4.breite - e.spalten * e.breite) / 2;
-  const randY = (A4.hoehe - e.zeilen * e.hoehe) / 2;
-  let seite = doc.addPage([A4.breite * MM, A4.hoehe * MM]);
-  let feld = Math.max(0, Math.min(jeBogen - 1, start - 1));
-  for (const nr of nummern) {
-    if (feld >= jeBogen) { seite = doc.addPage([A4.breite * MM, A4.hoehe * MM]); feld = 0; }
-    const sp = feld % e.spalten, ze = Math.floor(feld / e.spalten);
-    const x0 = (randX + sp * e.breite) * MM;
-    const y0 = (A4.hoehe - randY - (ze + 1) * e.hoehe) * MM;
-    const w = e.breite * MM, h = e.hoehe * MM;
-    // Barcode: Ruhezone 10 Module je Seite, Modulbreite so groß, wie es passt (mind. 0,19 mm).
-    const breiten = code128Breiten(`${praefix}${nr}`);
-    const module = breiten.reduce((a, b) => a + b, 0) + 20;
-    const modul = Math.min((w - 4 * MM) / module, 0.5 * MM);
-    const textGroesse = Math.min(11, h * 0.22);
-    const barH = h - textGroesse - 5 * MM;
-    let x = x0 + (w - module * modul) / 2 + 10 * modul;
-    const yBar = y0 + textGroesse + 3 * MM;
-    breiten.forEach((b, i) => {
-      if (i % 2 === 0) seite.drawRectangle({ x, y: yBar, width: b * modul, height: barH, color: rgb(0, 0, 0) });
-      x += b * modul;
-    });
-    const tw = fett.widthOfTextAtSize(nr, textGroesse);
-    seite.drawText(nr, { x: x0 + (w - tw) / 2, y: y0 + 2 * MM, size: textGroesse, font: fett, color: rgb(0, 0, 0) });
-    feld++;
-  }
-  // Hinweis klein am Rand der ersten Seite: Drucker auf 100 % (nicht „an Seite anpassen“).
-  if (randY >= 6) doc.getPages()[0].drawText('Drucken mit 100 % (nicht „an Seite anpassen“).', { x: 6 * MM, y: 3 * MM, size: 6, font: schrift, color: rgb(0.5, 0.5, 0.5) });
-  return Buffer.from(await doc.save());
+  const { breite, hoehe, spalten, zeilen } = ETIKETTEN[etikett];
+  return aufkleberbogenPdf({ etikett: { breite, hoehe, spalten, zeilen }, start, aufkleber: nummern.map((nummer) => ({ nummer, striche: code128Breiten(`${praefix}${nummer}`) })) });
 }
