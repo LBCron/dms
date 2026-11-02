@@ -1,0 +1,37 @@
+name: KI-Beispiel
+
+# Beispiel „lokaler KI-Dienst (Ollama) neben dem DMS“ (#564): deploy/beispiele/ki-ollama/probe.sh prüft die
+# Dateien (eine Ollama-Version, gültiges Compose, kein Port nach außen), startet die Variante „nur Prozessor“
+# mit einem winzigen Modell und fragt Ollama aus dem Netz dms-ki – so, wie es das DMS tut. Die Grafik-Varianten
+# lassen sich auf den Rechnern von GitHub nicht starten; die Intel-Variante wird nur gebaut.
+# Nicht bei jedem Pull Request – nur, wenn sich das Beispiel ändert, und jede Woche (neue Ollama-Images).
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/beispiele/ki-ollama/**'
+      - 'deploy/*/docker-compose.yml'
+      - '.github/workflows/ki-beispiel.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/beispiele/ki-ollama/**'
+      - '.github/workflows/ki-beispiel.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '29 4 * * 2'
+
+# Grundsätzlich nur lesen (#221).
+permissions:
+  contents: read
+
+jobs:
+  ki-ollama:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Beispiel probehalber starten
+        run: deploy/beispiele/ki-ollama/probe.sh

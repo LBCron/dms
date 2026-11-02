@@ -197,7 +197,7 @@ Will ein Update andere Adressen, fragt das DMS erneut.
 
 ### Dienst-Adresse { #dienst-adresse }
 
-Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. **Ollama** auf deinem Heimserver. Die Adresse dieses Dienstes trägst du in den **Einstellungen** des Pakets ein (Werkbank → Pakete → *Paket* → Reiter „Einstellungen“):
+Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. **Ollama** auf deinem Heimserver (fertiges Beispiel und Anleitung: [KI lokal betreiben](ki-lokal.md)). Die Adresse dieses Dienstes trägst du in den **Einstellungen** des Pakets ein (Werkbank → Pakete → *Paket* → Reiter „Einstellungen“):
 
 - **Nie voreingestellt.** Im leeren Feld steht höchstens ein Beispiel wie `http://ollama:11434/v1` – gespeichert ist nichts, bis du eine Adresse einträgst.
 - **Bestätigen.** Beim Speichern einer neuen oder geänderten Adresse fragt das DMS **„Daten an diese Adresse schicken?“** und nennt sie. Erst mit **Adresse bestätigen und speichern** gilt sie; das Protokoll vermerkt „Dienst-Adresse von Paket … bestätigt“ mit der Adresse.

@@ -1,0 +1,15 @@
+# NVIDIA-Grafikkarte (#564) – offiziell von Ollama unterstützt. Auf dem Host nötig: NVIDIA-Treiber und das
+# NVIDIA Container Toolkit (bei Unraid das Plugin „Nvidia Driver“, bei TrueNAS in den Apps eingebaut).
+#
+#   docker compose -f docker-compose.yml -f nvidia.yml up -d
+#
+# Die Speichergrenze (mem_limit) gilt nur für den Arbeitsspeicher; das Modell liegt dann im Speicher der Karte.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
