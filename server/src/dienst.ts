@@ -49,7 +49,6 @@ import { eindeutig, exportSpalten, mappenPdf, sichererName, spaltenKopf, zeile }
 import { zipGroesse, zipStrom, ZIP_MAX, type ZipEintrag } from './zip';
 import { fuerAusgabe, kannStempeln, weitergabeWas, type Ausgabe } from './ausgabe';
 import { analysiere as schwaerzAnalyse, schwaerze, seitenbild as schwaerzSeitenbild, type Analyse as SchwaerzAnalyse } from './schwaerzen';
-import { ocrAusGespeichert, pruefeWerkzeuge } from './texterkennung';
 import { bereicheVon, findeBegriff, findeMuster, geschwaerztName, istMuster, kannSchwaerzen, MUSTER, pruefeBegriffe, pruefeBereiche, SCHWAERZEN_MAX_SEITEN, stellenText, type Bereich } from '../../shared/src/schwaerzen';
 import { analysiere, ergebnisText, istStufe, MIN_ERSPARNIS, STANDARD_STUFE, stufeAus, STUFEN, verkleinere, type Analyse, type Stufe } from './verkleinern';
 import { geltenderStempel, liesStempelTyp, liesVorlagen, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
@@ -917,9 +916,32 @@ export class Dienst {
   }
 
   /** Das installierte Paket, das die Texterkennung übernimmt (#458, dms:texterkennung); bei mehreren das erste nach Id. */
-  async texterkennungPaket(): Promise<{ id: string; name: string; version: string } | null> {
-    const p = (await this.repo.listePakete()).filter((x) => hatSchnittstelle(x.laeufer, 'dms:texterkennung')).sort((a, b) => a.id.localeCompare(b.id))[0];
-    return p ? { id: p.id, name: p.name, version: p.version } : null;
+  async texterkennungPaket(): Promise<{ id: string; name: string; version: string; sprachen: string[] } | null> {
+    const alle = await this.repo.listePakete();
+    const p = alle.filter((x) => hatSchnittstelle(x.laeufer, 'dms:texterkennung')).sort((a, b) => a.id.localeCompare(b.id))[0];
+    if (!p) return null;
+    // Sprachen (#459): Deutsch und Englisch im Paket, weitere aus Zusatzpaketen „<paket>_<kennung>“, die von ihm abhängen.
+    const zusatz = alle.filter((x) => p.id in (x.abhaengigkeiten ?? {})).map((x) => new RegExp(`^${p.id}_([a-z]{3})$`).exec(x.id)?.[1]).filter((x): x is string => !!x);
+    return { id: p.id, name: p.name, version: p.version, sprachen: [...new Set(['deu', 'eng', ...zusatz])] };
+  }
+
+  /**
+   * Ein Paket für die Texterkennung ist neu installiert (#459): Dokumente, die darauf warteten (Stand paket, „kein
+   * Paket installiert“), gehen wie neue Dokumente durch Textebene und Paket.
+   */
+  async texterkennungPaketDa(): Promise<number> {
+    const ids: string[] = [];
+    for (let von = 0; ; von += 200) {
+      const r = await this.repo.ocrAuftraege({ stand: 'paket', von, anzahl: 200 });
+      ids.push(...r.eintraege.map((e) => e.dokument.id));
+      if (r.eintraege.length < 200) break;
+    }
+    if (!ids.length) return 0;
+    await this.repo.loescheOffeneEreignisse('volltext.fertig', ids).catch(() => 0);
+    await this.repo.ocrEinreihen(ids);
+    this.ocr?.anstossen();
+    protokoll.modul('texterkennung').info('Paket für die Texterkennung installiert – wartende Dokumente gehen an das Paket', { dokumente: ids.length });
+    return ids.length;
   }
 
   /** Wie viele Dokumente „Volltext neu erzeugen“ beträfe (#458) – für die Rückfrage. */
@@ -5453,18 +5475,8 @@ export class Dienst {
 
   /* ---------- Schwärzen (#392) ---------- */
 
-  /** Wörter mit Lage je Prüfwert (die Analyse kann Texterkennung brauchen – der Dialog fragt Seite für Seite). */
+  /** Wörter mit Lage je Prüfwert (aus der Textebene; der Dialog fragt Seite für Seite). */
   private readonly schwaerzAnalysen = new Map<string, Promise<SchwaerzAnalyse>>();
-  private ocrWerkzeuge?: Promise<string[]>;
-
-  /** Sprachen für die Texterkennung beim Schwärzen: wie eingestellt, soweit installiert; null ohne tesseract. */
-  private async schwaerzSprachen(): Promise<string | null> {
-    this.ocrWerkzeuge ??= pruefeWerkzeuge().then((w) => (w.tesseract && w.pdftoppm ? w.sprachen : []), () => []);
-    const da = await this.ocrWerkzeuge;
-    if (!da.length) return null;
-    const e = ocrAusGespeichert(await this.einstellungen?.lies('ocr') ?? null);
-    return e.sprachen.split('+').filter((x) => da.includes(x)).join('+') || da[0];
-  }
 
   private async schwaerzbar(id: string): Promise<{ d: Dokument; inhalt: Buffer }> {
     const d = await this.repo.holeDokument(id);
@@ -5476,7 +5488,7 @@ export class Dienst {
   private schwaerzAnalyseVon(d: Dokument, inhalt: () => Promise<Buffer>): Promise<SchwaerzAnalyse> {
     let p = this.schwaerzAnalysen.get(d.sha256);
     if (!p) {
-      p = (async () => schwaerzAnalyse(await inhalt(), d.mime, { sprachen: await this.schwaerzSprachen(), maxErkennung: SCHWAERZEN_MAX_SEITEN }))();
+      p = (async () => schwaerzAnalyse(await inhalt(), d.mime))();
       this.schwaerzAnalysen.set(d.sha256, p);
       p.catch(() => this.schwaerzAnalysen.delete(d.sha256));
       while (this.schwaerzAnalysen.size > 20) this.schwaerzAnalysen.delete(this.schwaerzAnalysen.keys().next().value!);
@@ -5541,7 +5553,10 @@ export class Dienst {
         : 'Nichts zu schwärzen: Bitte Bereiche, Suchbegriffe oder Muster angeben.');
     }
     const r = await schwaerze(inhalt, d.mime, a, bereiche);
-    const volltext = r.text !== null ? { text: r.text, seiten: r.seiten, info: 'Textebene nach dem Schwärzen (ohne die geschwärzten Stellen)' } : null;
+    // Volltext der geschwärzten Fassung (#459): Hat jede Seite eine Textebene, gilt der Text ohne die geschwärzten
+    // Wörter gleich. Sonst (Scan, Foto, gemischt) läuft sie wie ein neues Dokument durch Textebene und Paket – das
+    // Paket sieht nur die geschwärzte Fassung, nie das Original.
+    const volltext = r.text !== null && !a.seiten.some((s) => !s.woerter.length) ? { text: r.text, seiten: r.seiten, info: 'Textebene nach dem Schwärzen (ohne die geschwärzten Stellen)' } : null;
     const stellen = stellenText(bereiche);
     let neu: Dokument;
     if (ziel === 'version') {

@@ -16,7 +16,7 @@ import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
-import { analysiere, exifAusrichtung, liesBbox, liesTsv, maleSchwarz, pnmKopf, schwaerze, textAus, verbleibende } from '../src/schwaerzen';
+import { analysiere, exifAusrichtung, liesBbox, maleSchwarz, pnmKopf, schwaerze, textAus, verbleibende } from '../src/schwaerzen';
 import {
   bereicheVon, findeBegriff, findeMuster, geschwaerztName, ibanGueltig, pruefeBegriffe, pruefeBereiche, steuerIdGueltig, stellenText, type SchwaerzSeite, type Wort,
 } from '../../shared/src/schwaerzen';
@@ -100,14 +100,12 @@ describe('Bausteine (#392)', () => {
     assert.equal(geschwaerztName('ohne'), 'ohne (geschwärzt)');
   });
 
-  it('pdftotext -bbox und tesseract-TSV lesen; gedrehte Seiten', () => {
+  it('pdftotext -bbox lesen; gedrehte Seiten', () => {
     const html = '<doc><page width="595.000000" height="842.000000"><word xMin="59.5" yMin="84.2" xMax="119" yMax="168.4">A&amp;B</word></page>'
       + '<page width="595.000000" height="842.000000"><word xMin="84.2" yMin="59.5" xMax="168.4" yMax="119">quer</word></page></doc>';
     const s = liesBbox(html, [0, 90]);
     assert.deepEqual(s[0], { breite: 595, hoehe: 842, woerter: [['A&B', 0.1, 0.1, 0.1, 0.1]] });
     assert.deepEqual(s[1], { breite: 842, hoehe: 595, woerter: [['quer', 0.1, 0.1, 0.1, 0.1]] });
-    const tsv = 'level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n1\t1\t0\t0\t0\t0\t0\t0\t1000\t500\t-1\t\n5\t1\t1\t1\t1\t1\t100\t50\t200\t25\t96\tHallo\n';
-    assert.deepEqual(liesTsv(tsv, 1000, 500), [['Hallo', 0.1, 0.1, 0.2, 0.05]]);
   });
 
   it('Bildpunkte schwarz füllen, Volltext aus den verbleibenden Wörtern', () => {
@@ -205,14 +203,13 @@ async function bildMitText(format: 'png' | 'jpeg'): Promise<Buffer> {
     return readFile(join(dir, `b.${format === 'png' ? 'png' : 'jpg'}`));
   });
 }
-const hatTesseract = await lauf('tesseract', ['--version']).then(() => true, () => false);
 
 describe('Bilder schwärzen (#392)', () => {
   it('PNG bleibt PNG, gleiche Größe, Bereich schwarz', async () => {
     const png = await bildMitText('png');
     const a = await analysiere(png, 'image/png');
     assert.equal(a.seiten.length, 1);
-    assert.equal(a.quelle, 'keine', 'ohne Sprachen keine Texterkennung');
+    assert.equal(a.quelle, 'keine', 'Bilder haben keine Textebene (#459: keine Texterkennung im DMS)');
     const r = await schwaerze(png, 'image/png', a, [{ seite: 1, x: 0, y: 0, b: 0.5, h: 0.2 }]);
     assert.equal(r.mime, 'image/png');
     assert.equal(r.inhalt.subarray(1, 4).toString(), 'PNG');
@@ -234,18 +231,6 @@ describe('Bilder schwärzen (#392)', () => {
     assert.ok(!r.inhalt.includes(Buffer.from('Exif\0\0', 'latin1')));
   });
 
-  it('Texterkennung findet Wörter im Bild; der Begriff fehlt danach im Volltext', { skip: hatTesseract ? false : 'tesseract fehlt' }, async () => {
-    const png = await bildMitText('png');
-    const a = await analysiere(png, 'image/png', { sprachen: 'eng' });
-    assert.equal(a.quelle, 'texterkennung');
-    const f = findeBegriff(a.seiten, '4711');
-    assert.equal(f.length, 1);
-    const r = await schwaerze(png, 'image/png', a, bereicheVon(a.seiten, f));
-    assert.ok(r.text && /PUBLIC/.test(r.text) && !r.text.includes('4711'));
-    // Gegenprobe: Die Texterkennung liest im Ergebnis „4711“ nicht mehr.
-    const neu = await mitDatei(r.inhalt, async (_p, dir) => { await writeFile(join(dir, 'n.png'), r.inhalt); return lauf('tesseract', [join(dir, 'n.png'), 'stdout', '-l', 'eng']); });
-    assert.ok(/PUBLIC/.test(neu) && !neu.includes('4711'), neu);
-  });
 });
 
 async function aufbau(repo: Repo, versionierung = true) {
@@ -320,6 +305,21 @@ describe('Schwärzen am Dokument (#392)', () => {
     const txt = (await o.d.ladeHoch(o.m.id, { register: 'dokumente', name: 'a.txt', typ: 'text/plain' }, Buffer.from('Mustermann'), null)).dokument;
     await assert.rejects(o.d.schwaerzenVorschau(txt.id), status(422, /PDFs und Bildern/));
     await assert.rejects(o.d.schwaerzeDokument(txt.id, { begriffe: ['Mustermann'] }, ich), status(422, /PDFs und Bildern/));
+  });
+
+  it('Scan (#459): keine Wörter, nur Bereiche; die Kopie bekommt ihren Volltext wie ein neues Dokument – nie den des Originals', async () => {
+    const { d, m } = await aufbau(speicherRepo());
+    const png = await bildMitText('png');
+    const scan = (await d.ladeHoch(m.id, { register: 'dokumente', name: 'scan.png', typ: 'image/png' }, png, null)).dokument;
+    // Der Volltext des Originals (wie vom Paket Texterkennung erkannt).
+    await d.schreibeVolltext(scan.id, { text: 'SECRET 4711 CODE PUBLIC WORDS HERE' }, { id: 'p', herkunft: 'Texterkennung 2.0.0', paket: true });
+    const v = await d.schwaerzenVorschau(scan.id);
+    assert.equal(v.quelle, 'keine');
+    assert.deepEqual(v.seiten[0].woerter, []);
+    await assert.rejects(d.schwaerzeDokument(scan.id, { begriffe: ['4711'] }, ich), status(422, /keinen lesbaren Text/));
+    const r = await d.schwaerzeDokument(scan.id, { bereiche: [{ seite: 1, x: 0, y: 0, b: 1, h: 0.5 }] }, ich);
+    assert.notEqual(r.dokument.ocr?.stand, 'fertig', 'kein Volltext übernommen – die Kopie geht durch Textebene und Paket');
+    assert.equal((await d.volltext(r.dokument.id)).text ?? '', '', 'nichts vom Text des Originals');
   });
 
   it('Seitenbild für den Dialog', async () => {

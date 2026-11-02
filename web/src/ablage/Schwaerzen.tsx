@@ -15,9 +15,9 @@ import { rueckfrage } from '../rueckfrage';
  */
 const QUELLE: Record<SchwaerzenVorschau['quelle'], string> = {
   textebene: 'Text aus der Textebene des PDFs',
-  texterkennung: 'Text per Texterkennung gelesen',
-  gemischt: 'Text aus Textebene und Texterkennung',
-  keine: 'kein lesbarer Text – Suchbegriffe und Vorschläge gehen hier nicht, nur Bereiche aufziehen',
+  // #459: ohne Texterkennung im DMS – gescannte Seiten haben keine Wörter, dort Bereiche aufziehen.
+  gemischt: 'Text nur auf Seiten mit Textebene – gescannte Seiten: Bereiche aufziehen',
+  keine: 'Scan ohne Textebene – Suchbegriffe und Vorschläge gehen hier nicht, nur Bereiche aufziehen',
 };
 const schluessel = (f: Fund) => `${f.seite}:${f.woerter.join(',')}`;
 /** Ab dieser Bewegung (relativ) ist es Ziehen statt Antippen. */
@@ -48,7 +48,7 @@ export function Schwaerzen({ d, schliessen, fertig }: { d: Dokument; schliessen(
   const alle = [...eigene, ...vorschlagBereiche, ...begriffBereiche];
 
   if (fehler && !v) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>;
-  if (!v) return <p className="leise pdfseiten" role="status">Lese den Text im Dokument … (bei Scans mit Texterkennung, das dauert etwas)</p>;
+  if (!v) return <p className="leise pdfseiten" role="status">Lese den Text im Dokument …</p>;
   const mitText = v.quelle !== 'keine';
 
   function begriffDazu() {

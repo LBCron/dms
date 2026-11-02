@@ -49,7 +49,6 @@ Die Prüfung **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) melde
 | `yaml` | Server | ISC | Pakete im YAML-Format lesen und schreiben |
 | `react`, `react-dom` | Oberfläche | MIT | Oberfläche |
 | `qrcode` | Oberfläche | MIT | QR-Code für die Zwei-Faktor-Anmeldung |
-| `tesseract-ocr` mit `-data-deu`, `-data-eng`, `-data-osd` | Image (Alpine) | Apache-2.0 | Texterkennung |
 | `poppler-utils` | Image (Alpine) | GPL-2.0-or-later, als eigenes Programm aufgerufen | `pdftotext`, `pdftoppm`: Text und Bilder aus PDFs |
 | `qpdf` | Image (Alpine) | Apache-2.0 | Struktur von PDFs beim Verkleinern optimieren |
 | `postgresql17`, `postgresql17-contrib` | nur `dms-komplett` | PostgreSQL | Datenbank im selben Container; `contrib` für `pg_trgm` |

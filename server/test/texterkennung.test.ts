@@ -1,6 +1,7 @@
 /**
- * Texterkennung und Volltextsuche (#45). Die echten Werkzeuge (tesseract, poppler) laufen nur,
- * wenn sie installiert sind (in GitHub Actions: ja); sonst prüft ein Ersatz die Warteschlange.
+ * Volltext und Volltextsuche (#45, #459). Der Kern liest nur die Textebene (poppler); die echten Werkzeuge laufen
+ * nur, wenn sie installiert sind (in GitHub Actions: ja); sonst prüft ein Ersatz die Warteschlange. Die
+ * Texterkennung von Scans übernimmt ein Paket (volltext-paket.test.ts).
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -10,7 +11,7 @@ import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { speicherRepo } from '../src/repo-speicher';
-import { bereinigeOcr, pruefeWerkzeuge, tesseractEngine, Texterkennung, type Engine } from '../src/texterkennung';
+import { bereinigeOcr, ocrAusGespeichert, pruefeWerkzeuge, textebeneEngine, Texterkennung, type Engine } from '../src/texterkennung';
 import { pdfMitText } from './hilfen';
 
 const warte = async (bis: () => Promise<boolean>, ms = 60_000) => {
@@ -26,7 +27,7 @@ async function aufbau(engine: Engine, opt: { volltext?: boolean } = {}) {
   const dateien = speicherDateien();
   const einstellungen = speicherEinstellungen();
   const d = new Dienst(repo, dateien, { einstellungen });
-  const t = new Texterkennung(repo, dateien, einstellungen, engine, async () => ({ tesseract: 'tesseract 5', sprachen: ['deu', 'eng'], pdftotext: true, pdftoppm: true }));
+  const t = new Texterkennung(repo, dateien, einstellungen, engine, async () => ({ pdftotext: true, pdftoppm: true }));
   d.verbindeTexterkennung(t);
   const typ = await d.legeTypAn({ name: 'Rechnung', felder: [{ key: 'nr', label: 'Nr', typ: 'text', pflicht: true }], register: [
     { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['nr'] },
@@ -61,9 +62,9 @@ describe('Texterkennung (#45)', () => {
     assert.equal((await t.status()).zaehler.fertig, 2);
   });
 
-  it('beachtet Register, Dateityp, Größe, Ausschalten, Fehler und „erneut versuchen“', async () => {
+  it('beachtet Register, Dateityp, Ausschalten, Fehler und „erneut versuchen“', async () => {
     let fehler = true;
-    const { d, t, repo, typ } = await aufbau(async () => { if (fehler) throw new Error('kaputt'); return { text: 'ok', seiten: 1, info: 'Ersatz' }; });
+    const { d, t, repo, typ } = await aufbau(async () => { if (fehler) throw new Error('kaputt'); return { text: 'Stromrechnung der Stadtwerke Musterstadt', seiten: 1, info: 'Ersatz' }; });
     const m = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'R-1' } });
     const hoch = async (name: string, typ2: string, inhalt: Buffer) => (await d.ladeHoch(m.id, { register: 'dokumente', name, typ: typ2 }, inhalt, null)).dokument.id;
     const pdf = await hoch('a.pdf', 'application/pdf', pdfMitText(['a']));
@@ -75,13 +76,9 @@ describe('Texterkennung (#45)', () => {
 
     const txt = await hoch('n.txt', 'text/plain', Buffer.from('hallo'));
     await warte(async () => (await repo.holeDokument(txt))?.ocr?.stand === 'ausgelassen');
-    await t.speichere({ typen: { 'application/pdf': 'aus' } });
-    const aus = await hoch('b.pdf', 'application/pdf', pdfMitText(['b']));
-    await warte(async () => (await repo.holeDokument(aus))?.ocr?.stand === 'ausgelassen');
-    assert.match((await repo.holeDokument(aus))!.ocr!.info!, /ausgeschaltet/);
-    await t.speichere({ typen: { 'application/pdf': 'tesseract' }, maxMB: 1 });
-    const gross = await hoch('c.pdf', 'application/pdf', Buffer.concat([pdfMitText(['c']), Buffer.alloc(1024 * 1024 + 1)]));
-    await warte(async () => (await repo.holeDokument(gross))?.ocr?.stand === 'ausgelassen');
+    // TIFF liefert der Kern dem Paket nicht als Seitenbild (#459): kein Volltext.
+    const tiff = await hoch('t.tif', 'image/tiff', Buffer.from('II*\0'));
+    await warte(async () => (await repo.holeDokument(tiff))?.ocr?.stand === 'ausgelassen');
     await t.speichere({ aktiv: false });
     const spaeter = await hoch('d.pdf', 'application/pdf', pdfMitText(['d']));
     await new Promise((r) => setTimeout(r, 100));
@@ -90,11 +87,13 @@ describe('Texterkennung (#45)', () => {
     await warte(async () => (await repo.holeDokument(spaeter))?.ocr?.stand === 'fertig');
 
     assert.throws(() => bereinigeOcr({ auftraege: 9 }), /Aufträge/);
-    assert.throws(() => bereinigeOcr({ sprachen: 'deu; rm -rf' }), /Sprachen/);
+    // Gespeicherte Einstellungen der früheren eingebauten Texterkennung (#459): übrig bleiben aktiv und Aufträge.
+    assert.deepEqual(ocrAusGespeichert({ aktiv: false, auftraege: 2, maxSeiten: 50, sprachen: 'deu+eng', automatisch: true, typen: { 'image/png': 'aus' } }), { aktiv: false, auftraege: 2 });
+    assert.deepEqual(ocrAusGespeichert({ auftraege: 99 }), { aktiv: true, auftraege: 1 });
   });
 
   it('holt Volltext für vorhandene Dokumente nach – nur in Registern mit Volltext', async () => {
-    const { d, repo, typ } = await aufbau(async () => ({ text: 'x', seiten: 1, info: 'Ersatz' }), { volltext: false });
+    const { d, repo, typ } = await aufbau(async () => ({ text: 'Stromrechnung der Stadtwerke Musterstadt', seiten: 1, info: 'Ersatz' }), { volltext: false });
     const m = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'R-1' } });
     const { dokument } = await d.ladeHoch(m.id, { register: 'dokumente', name: 'a.pdf', typ: 'application/pdf' }, pdfMitText(['a']), null);
     assert.equal(dokument.ocr?.stand, 'keiner', 'Register ohne Volltext');
@@ -104,31 +103,33 @@ describe('Texterkennung (#45)', () => {
     await warte(async () => (await repo.holeDokument(dokument.id))?.ocr?.stand === 'fertig');
   });
 
-  it('liest die Textebene eines PDFs und erkennt Text auf Bildern (mit tesseract und poppler)', async (k) => {
+  it('liest die Textebene eines PDFs (poppler); Seiten ohne Text und Bilder meldet es für das Paket', async (k) => {
     const w = await pruefeWerkzeuge();
-    if (!w.tesseract || !w.pdftotext || !w.pdftoppm) { k.skip('tesseract oder poppler nicht installiert'); return; }
+    if (!w.pdftotext || !w.pdftoppm) { k.skip('poppler nicht installiert'); return; }
     const { mkdtemp, writeFile, readFile } = await import('node:fs/promises');
     const { join } = await import('node:path');
     const { tmpdir } = await import('node:os');
     const dir = await mkdtemp(join(tmpdir(), 'dms-ocr-test-'));
-    const o = { maxSeiten: 50, sprachen: 'deu+eng', werkzeuge: w };
+    const o = { maxSeiten: 50, werkzeuge: w };
 
     const mitText = join(dir, 'text.pdf');
     await writeFile(mitText, pdfMitText(['Rechnung Nummer 4711', 'Stadtwerke Musterstadt GmbH']));
-    const a = await tesseractEngine(mitText, 'application/pdf', o);
+    const a = await textebeneEngine(mitText, 'application/pdf', o);
     assert.match(a.text, /Rechnung Nummer 4711/);
     assert.equal(a.info, 'Textebene des PDFs');
+    assert.deepEqual(a.ohneText, []);
 
-    // Kaum Text auf der Seite: gilt als gescannt und geht durch die Texterkennung.
+    // Kaum Text auf der Seite: gilt als gescannt – das Paket erkennt sie (ohneText).
     const kurz = join(dir, 'kurz.pdf');
     await writeFile(kurz, pdfMitText(['INVOICE 2026'], 48));
-    const b = await tesseractEngine(kurz, 'application/pdf', o);
-    assert.match(b.text, /INVOICE/i);
-    assert.match(b.info, /Texterkennung/);
+    const b = await textebeneEngine(kurz, 'application/pdf', o);
+    assert.deepEqual(b.ohneText, [1]);
 
+    // Bilder haben keine Textebene: kein Text im Kern (#459: keine Texterkennung im Image).
     execFileSync('pdftoppm', ['-r', '150', '-png', '-singlefile', mitText, join(dir, 'bild')]);
-    const c = await tesseractEngine(join(dir, 'bild.png'), 'image/png', o);
-    assert.match(c.text, /Stadtwerke/);
+    const c = await textebeneEngine(join(dir, 'bild.png'), 'image/png', o);
+    assert.equal(c.text, '');
+    assert.deepEqual(c.ohneText, [1]);
     assert.ok((await readFile(join(dir, 'bild.png'))).length > 0);
   });
 });
@@ -140,7 +141,7 @@ describe('Aufträge der Texterkennung in der Werkbank (#61)', () => {
       if (modus === 'fehler') throw new Error('kaputt');
       if (modus === 'passwort') throw new Error('Command Line Error: Incorrect password');
       if (modus === 'haengt') await new Promise((_r, nein) => o.signal?.addEventListener('abort', () => nein(new Error('abgebrochen'))));
-      return { text: 'ok', seiten: 1, info: 'Ersatz' };
+      return { text: 'Stromrechnung der Stadtwerke Musterstadt', seiten: 1, info: 'Ersatz' };
     });
     const m = await d.legeMappeAn({ typId: typ.id, werte: { nr: 'R-1' } });
     const hoch = async (name: string, i: string) => (await d.ladeHoch(m.id, { register: 'dokumente', name, typ: 'application/pdf' }, pdfMitText([i]), null)).dokument.id;

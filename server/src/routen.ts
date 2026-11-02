@@ -1229,6 +1229,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         mail: !!x.betrieb?.mailer(),
         adresse: x.betrieb ? !!x.betrieb.ansicht().adresse : true,
         texterkennung: x.texterkennung ? await sicher(() => x.texterkennung!.zaehler()) : null,
+        // #459: Ist ein Paket für die Texterkennung installiert? Sonst Hinweis „Texterkennung ist jetzt ein Paket“.
+        texterkennungPaket: !!(await sicher(() => dienst.texterkennungPaket())),
         aufgaben: { offen: aufgaben.length, ohneEmpfaenger: aufgaben.filter((y) => !y.empfaengerId).length },
         unpassend: Object.values(z.typen).reduce((s, t) => s + (t.unpassend ?? 0), 0),
         papierkorb: { anzahl: korb.length, aeltester: korb.reduce<string | null>((m, e) => (!m || e.geloescht < m ? e.geloescht : m), null), tage: await dienst.papierkorbTage() },

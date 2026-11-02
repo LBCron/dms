@@ -192,16 +192,18 @@ export async function frageStellen(frage: string, verlauf: VerlaufEintrag[], zei
 
 /** Vektoren in der Werkbank (#442). */
 export interface VektorStand { paket: string | null; modell: string | null; mitVektor: number; mitVolltext: number; modelle: Array<{ paket: string; modell: string; anzahl: number }>; suche: boolean; zwischenspeicherMB: number | null }
-/** Texterkennung (#45): Stand, Werkzeuge und Einstellungen für die Werkbank. */
-export interface OcrEinstellungen { aktiv: boolean; auftraege: number; maxSeiten: number; maxMB: number; sprachen: string; automatisch: boolean; typen: Record<string, 'tesseract' | 'aus'> }
+/** Volltext und Texterkennung (#45, #459): Stand, Werkzeuge und Einstellungen für die Werkbank. */
+export interface OcrEinstellungen { aktiv: boolean; auftraege: number }
 export interface OcrStatus {
   zaehler: Record<OcrStandArt, number>; laufend: number;
-  werkzeuge: { tesseract: string | null; sprachen: string[]; osd?: boolean; ordner?: string | null; pdftotext: boolean; pdftoppm: boolean };
-  einstellungen: OcrEinstellungen; verfahren: Record<string, string>; dateitypen: Record<string, string>;
-  /** #395: eingestellt, aber nicht installiert; erkannte Sprachen (Kennung → Anzahl Dokumente). */
-  fehlendeSprachen?: string[]; erkannteSprachen?: Record<string, number>;
-  /** #458: Paket, das die Texterkennung übernimmt (null = keins). */
-  paket?: { id: string; name: string; version: string } | null;
+  werkzeuge: { pdftotext: boolean; pdftoppm: boolean };
+  einstellungen: OcrEinstellungen; dateitypen: Record<string, string>;
+  /** #395: erkannte Sprachen (Kennung → Anzahl Dokumente). */
+  erkannteSprachen?: Record<string, number>;
+  /** #458: Paket, das die Texterkennung übernimmt (null = keins), mit seinen Sprachen (#459). */
+  paket?: { id: string; name: string; version: string; sprachen?: string[] } | null;
+  /** #459: woher der Volltext fertiger Dokumente kommt. */
+  herkunft?: { pdf: number; paket: number; api: number; eingebaut: number; sonst: number; ohneText: number };
 }
 export interface Zaehler {
   typen: Record<string, { anzahl: number; unpassend: number; demo: number }>; eingang: number; sichten?: Record<string, number>;
@@ -833,7 +835,7 @@ export interface Hochgeladen { dokument: Dokument; gleicherInhalt: Array<{ mappe
 /** Vorschaubild der ersten Seite (#332); der Prüfwert in der Adresse sorgt für ein neues Bild nach einer neuen Version. */
 export interface SchwaerzenVorschau {
   id: string; name: string; mime: string; sha256: string; seiten: SchwaerzSeite[];
-  quelle: 'textebene' | 'texterkennung' | 'gemischt' | 'keine'; erkannt: number; versioniert: boolean; kopieName: string;
+  quelle: 'textebene' | 'gemischt' | 'keine'; versioniert: boolean; kopieName: string;
 }
 export const schwaerzBildUrl = (d: { id: string; sha256: string }, nr: number) => `/api/dokumente/${d.id}/schwaerzen/seiten/${nr}?v=${d.sha256.slice(0, 12)}`;
 export interface VerkleinernVorschau {
@@ -909,7 +911,9 @@ export interface DatenbankStand {
 export interface WerkbankUebersicht {
   tresor: { zustand: string; eingebunden: boolean | null; betroffen: number } | null;
   mail: boolean; adresse: boolean;
-  texterkennung: Record<'keiner' | 'wartet' | 'laeuft' | 'fertig' | 'fehler' | 'ausgelassen', number> | null;
+  texterkennung: Record<'keiner' | 'wartet' | 'laeuft' | 'fertig' | 'fehler' | 'ausgelassen' | 'paket', number> | null;
+  /** #459: Ein Paket übernimmt die Texterkennung. */
+  texterkennungPaket?: boolean;
   aufgaben: { offen: number; ohneEmpfaenger: number };
   unpassend: number;
   papierkorb: { anzahl: number; aeltester: string | null; tage: number };

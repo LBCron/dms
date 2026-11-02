@@ -6,7 +6,7 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
-  # Jede Woche neu bauen (#214): neue Alpine-Pakete (Tesseract, PostgreSQL in dms-komplett) auch ohne neues Release.
+  # Jede Woche neu bauen (#214): neue Alpine-Pakete (poppler, PostgreSQL in dms-komplett) auch ohne neues Release.
   # Ergibt nur das Tag main (und den Kurz-Hash); Versionsnummern bleiben unverändert.
   schedule:
     - cron: '17 3 * * 1'
@@ -46,9 +46,9 @@ jobs:
             echo
             exit 1
           }
-      # Texterkennung (#45): dieselben Werkzeuge wie im Image.
-      - name: Texterkennung installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu poppler-utils qpdf >/dev/null
+      # poppler und qpdf (#45, #459): dieselben Werkzeuge wie im Image – ohne Texterkennung (die ist ein Paket).
+      - name: poppler und qpdf installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null
       # IMAP-Testserver für die Postfächer (#196); fehlt das Image, laufen die übrigen Tests trotzdem.
       - name: IMAP-Testserver (GreenMail) starten
         run: |
@@ -75,7 +75,7 @@ jobs:
         run: npm run build
 
   # Pull Requests: Image für beide Architekturen bauen (ohne Veröffentlichung), jeweils auf
-  # einem passenden Rechner (#88), und prüfen, ob die Texterkennung im Image läuft – so fallen
+  # einem passenden Rechner (#88), und prüfen, ob die Werkzeuge im Image laufen – so fallen
   # falsche Paketnamen und Probleme mit arm64 vor dem Merge auf.
   image-probe:
     if: github.event_name == 'pull_request'
@@ -99,11 +99,14 @@ jobs:
           push: false
           tags: dms:probe
           cache-from: type=gha,scope=${{ matrix.plattform }}
-      - name: Texterkennung im Image
+      # Werkzeuge im Image (#459): poppler ja, Texterkennung nein (die ist ein Paket); Größe für die Versionshinweise.
+      - name: Werkzeuge und Größe des Images
         run: |
-          docker run --rm --entrypoint sh dms:probe -c 'uname -m && tesseract --version | head -1 && tesseract --list-langs && pdftotext -v 2>&1 | head -1'
-          docker run --rm --entrypoint sh dms:probe -c 'tesseract --list-langs' | grep -qx deu
+          docker run --rm --entrypoint sh dms:probe -c 'uname -m && pdftotext -v 2>&1 | head -1 && qpdf --version | head -1'
+          if docker run --rm --entrypoint sh dms:probe -c 'command -v tesseract'; then echo "::error::tesseract steckt wieder im Image (#459)"; exit 1; fi
           docker run --rm --entrypoint node dms:probe -e "console.log('Node.js', process.version, process.arch)"
+          groesse=$(docker image inspect dms:probe --format '{{.Size}}')
+          echo "::notice title=Image ${{ matrix.plattform }}::$((groesse / 1048576)) MB"
       # Vorlagen für Synology, UGREEN, QNAP, TrueNAS, Unraid (#179): starten, DMS antwortet,
       # Assistent beginnt ohne Datenbankschritt.
       - name: Vorlagen probehalber installieren

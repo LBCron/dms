@@ -6,6 +6,7 @@ import { Hilfe, useHandbuch } from '../Hilfe';
 import { sicherungsHinweise } from './Sicherung';
 import { GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
 import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
+import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 
 /** Werkbank → Übersicht (#68): was zu tun ist, auf einen Blick; Gruppen der Leiste. */
 
@@ -66,6 +67,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
     : <><strong>{vh.titel}</strong>{vh.zeilen.map((z) => <span key={z.name} style={{ display: 'block' }}>· <span className="mono">{z.name}</span> – {z.grund}</span>)}{vh.schluss}</>, ziel: vh.ziel, knopf: vh.knopf });
   if (!u.mail) h.push({ art: 'warn', text: <><strong>Der E-Mail-Versand ist nicht eingerichtet.</strong> Einladungen, die tägliche Zusammenfassung der Aufgaben und „Per E-Mail versenden“ gehen erst danach.</>, ziel: '/werkbank/betrieb', knopf: 'E-Mail einrichten' });
   if (u.fehlermeldungen) h.push({ art: 'warn', text: <><strong>{u.fehlermeldungen === 1 ? 'Ein gemeldeter Fehler' : `${zahl(u.fehlermeldungen)} gemeldete Fehler`}</strong> von Benutzern.</>, ziel: '/werkbank/fehlermeldungen', knopf: 'Ansehen' });
+  // Texterkennung ist seit #459 ein Paket: ohne Paket deutlich, sobald Scans darauf warten, sonst als Hinweis.
+  if (u.texterkennungPaket === false) h.push({ art: u.texterkennung?.paket ? 'warn' : 'info', text: <><strong>{t('volltext.uebersicht.fehlt')}</strong> {t('volltext.uebersicht.fehlt.text')}{u.texterkennung?.paket ? ` ${t('volltext.werkbank.paket.ohne', { anzahl: u.texterkennung.paket })}` : ''}</>, ziel: `/werkbank/pakete/${TEXTERKENNUNG_PAKET}`, knopf: t('volltext.uebersicht.fehlt.knopf') });
   if (u.texterkennung?.fehler) h.push({ art: 'warn', text: <><strong>{u.texterkennung.fehler === 1 ? 'Ein Dokument' : `${zahl(u.texterkennung.fehler)} Dokumente`}</strong> mit Fehler in der Texterkennung.</>, ziel: '/werkbank/texterkennung', knopf: 'Zur Texterkennung' });
   if (u.aufgaben.ohneEmpfaenger) h.push({ art: 'info', text: <><strong>{u.aufgaben.ohneEmpfaenger === 1 ? 'Eine Aufgabe' : `${zahl(u.aufgaben.ohneEmpfaenger)} Aufgaben`}</strong> für die Administratoren (ohne einzelnen Empfänger).</>, ziel: '/ablage/eingang', knopf: 'Zu erledigen öffnen' });
   if (u.unpassend) h.push({ art: 'info', text: <><strong>{u.unpassend === 1 ? 'Eine Mappe passt' : `${zahl(u.unpassend)} Mappen passen`}</strong> nicht zur aktuellen Definition ihres Mappentyps.</>, ziel: '/werkbank/typen', knopf: 'Zu den Mappentypen' });

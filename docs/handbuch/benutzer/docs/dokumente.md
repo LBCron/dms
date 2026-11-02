@@ -81,7 +81,7 @@ Was beim Übernehmen passiert:
 | Teilen in einer Mappe | Teil 1 wird die neue Version („Scan (Teil 1).pdf“), die weiteren Teile werden eigene Dokumente im selben Register („Scan (Teil 2).pdf“ …) | ebenso, Teil 1 nach Rückfrage |
 | Teilen bei [Post](post.md#sammelscan-teilen) | je Teil eine **neue Post** – die Ausgangspost bleibt unverändert und wird erledigt | ebenso |
 
-Im **Archivmodus** ist die Versionierung immer an – das Original bleibt also auch dort erhalten. Für das Ergebnis läuft die [Texterkennung](#volltext) neu, das Vorschaubild entsteht neu. In der Historie der Mappe steht „PDF bearbeitet“ mit dem, was sich geändert hat.
+Im **Archivmodus** ist die Versionierung immer an – das Original bleibt also auch dort erhalten. Für das Ergebnis entsteht der [Volltext](#volltext) neu, das Vorschaubild entsteht neu. In der Historie der Mappe steht „PDF bearbeitet“ mit dem, was sich geändert hat.
 
 **Zusammenfügen:** Wähle mit den Kästchen zwei oder mehr PDFs und klicke auf **Zusammenfügen**. Das DMS hängt sie in der Reihenfolge der Liste aneinander (sortiere vorher, wenn nötig) und legt das Ergebnis als **neues Dokument** in dieses Register; den Namen kannst du ändern. Die Ausgangsdokumente bleiben, außer du hakst **Ausgangsdokumente in den Papierkorb legen** an.
 
@@ -133,24 +133,25 @@ Was dabei passiert:
 
 - **Alle Seiten** werden neu als Bild aufgebaut (150 dpi), die Bereiche in den Bildpunkten schwarz gefüllt. Aus dem Original kommt nichts mit: keine Textebene darunter, keine Anmerkungen, Formularfelder, Lesezeichen, eingebetteten Dateien, Autor, Titel oder andere Metadaten. Bilder bleiben Bilder desselben Typs, ohne EXIF-Daten (z. B. Aufnahmeort).
 - Die **Textebene** entsteht neu – ohne die geschwärzten Wörter. Die Kopie bleibt also durchsuchbar und kopierbar, nur die Stellen nicht; der [Volltext](#volltext) der Kopie enthält sie nicht, die Suche findet sie dort nicht.
+- Gescannte Seiten bekommen keine eigene Textebene. Die geschwärzte Kopie bekommt ihren Volltext wie jedes neue Dokument von der Texterkennung – die sieht nur die geschwärzte Kopie, nicht das Original.
 - Ein Wort, das ein Bereich auch nur teilweise berührt, fehlt in der Textebene ganz.
 - Die Historie der Mappe vermerkt „geschwärzte Fassung erstellt“ mit der Zahl der Stellen – nie die Suchbegriffe oder den geschwärzten Text.
 
 Gut zu wissen:
 
-- Bei **Scans ohne Textebene** liest die Texterkennung die Seiten zuerst; das dauert etwas. Ohne Texterkennung gehen nur Bereiche, keine Suchbegriffe und Vorschläge.
+- Bei **Scans und Fotos ohne Textebene** kennt das DMS die Lage der Wörter nicht: Dort gehen nur **Bereiche aufziehen**, keine Suchbegriffe und Vorschläge. Bei PDFs mit Text und gescannten Seiten gilt das für die gescannten Seiten.
 - Vektortext wird dabei zu einem Bild – die Kopie ist meist etwas größer und nicht ganz so scharf wie ein PDF direkt aus einem Programm.
 - Schwärzen geht mit dem Recht „Bearbeiten“ an der Mappe, für höchstens 300 Seiten auf einmal (längere PDFs vorher [teilen](#pdf-bearbeiten)), nicht bei PDFs mit Passwortschutz.
 - Das **Original** enthält weiterhin alles. Gib die geschwärzte Kopie weiter – per [E-Mail, Export oder Link](versenden.md).
 
 ## Volltext
 
-Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest das DMS nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos per Texterkennung (meist ein Paket). Neben dem Dokument steht, wie weit es ist:
+Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest das DMS nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos erkennt ihn das Paket **Texterkennung**. Neben dem Dokument steht, wie weit es ist:
 
 | Anzeige | Bedeutung |
 | --- | --- |
 | *Volltext: wartet* / *läuft* | Der Text wird gerade gelesen; meist dauert das Sekunden. |
-| *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. |
+| *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. Steht dort „kein Paket installiert“, bitte deinen Administrator, das Paket Texterkennung zu installieren. |
 | *Volltext: fertig* | Das Dokument ist durchsuchbar. **Text anzeigen** zeigt, was erkannt wurde. |
 | *Volltext: Fehler* | Etwas ging schief, z. B. eine beschädigte Datei. **Erneut versuchen** stellt es noch einmal an. |
 | *Volltext: ausgelassen* | Für diesen Dateityp (z. B. Word, Excel) oder diese Größe gibt es keinen Volltext. |

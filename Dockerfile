@@ -33,12 +33,12 @@ LABEL org.opencontainers.image.source="https://github.com/motom001/dms" \
 # Alpine-Pakete aktuell halten (#214): Die Kalenderwoche gehört zur Cache-Kennung dieser Schicht,
 # also holt jeder Bau in einer neuen Woche die neuesten Pakete (sonst nähme der Build-Cache ewig die alten).
 ARG APK_WOCHE=""
-# Texterkennung (#45): tesseract mit Deutsch und Englisch und poppler für PDFs. Englisch ist ein eigenes
-# Paket (#395: vorher fehlte es still). osd: Lage und Schrift erkennen, gedrehte Seiten richtig lesen.
-# Weitere Sprachen: eigenes Image mit „apk add tesseract-ocr-data-fra“ o. Ä. (Admin-Handbuch → Texterkennung).
+# poppler (#45): Textebene von PDFs (pdftotext), Vorschau- und Seitenbilder, Schwärzen, Verkleinern (pdftoppm).
+# Keine Texterkennung im Image (#459): Scans und Fotos erkennt das Paket „Texterkennung“ aus dem Katalog
+# (Tesseract als WebAssembly im Paket-Läufer); weitere Sprachen kommen als Zusatzpakete dazu.
 # PDF verkleinern (#393): qpdf (Apache-2.0, Alpine „community“) optimiert die Struktur; die Bilder rechnet
 # pdftoppm aus poppler-utils. Bewusst kein Ghostscript (AGPL). Fehlt qpdf, geht es auch ohne.
-RUN echo "Alpine-Pakete Stand ${APK_WOCHE}" && apk upgrade --no-cache && apk add --no-cache tesseract-ocr tesseract-ocr-data-deu tesseract-ocr-data-eng tesseract-ocr-data-osd poppler-utils qpdf
+RUN echo "Alpine-Pakete Stand ${APK_WOCHE}" && apk upgrade --no-cache && apk add --no-cache poppler-utils qpdf
 # Stand des Images für die Versionsübersicht in der Werkbank (setzt GitHub Actions).
 ARG DMS_COMMIT=""
 ARG DMS_GEBAUT=""
