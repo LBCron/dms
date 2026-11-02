@@ -27,12 +27,22 @@ trap 'echo "::error::ki-ollama: Zeile $LINENO: $BASH_COMMAND (Code $?)"; compose
 fehler() { echo "::error::ki-ollama: $*"; compose logs --tail 60 2>&1 || true; exit 1; }
 
 echo "::group::Dateien prüfen"
-# Eine Version in allen Dateien (amd.yml mit -rocm, intel-grafik.yml als FROM und als eigener Tag).
-versionen=$(grep -ho 'ollama/ollama:[0-9][0-9.]*[0-9]' ./*.yml | sort -u)
-[ "$(printf '%s\n' "$versionen" | wc -l)" = 1 ] || fehler "verschiedene Ollama-Versionen: $(echo $versionen)"
-VERSION=${versionen#ollama/ollama:}
-grep -q "image: dms-beispiel/ollama-intel:$VERSION\$" intel-grafik.yml || fehler "intel-grafik.yml: Tag passt nicht zu $VERSION"
-grep -q "image: ollama/ollama:$VERSION-rocm\$" amd.yml || fehler "amd.yml: Tag passt nicht zu $VERSION"
+# Eine Version in allen Dateien. Maßgeblich ist docker-compose.yml (beide Dienste): Dort schlägt Dependabot neue
+# Versionen vor (.github/dependabot.yml, Ökosystem docker-compose). amd.yml (Tag mit -rocm) und intel-grafik.yml
+# (FROM und eigener Tag) erkennt Dependabot nicht – im Pull Request von Dependabot meldet diese Probe, was fehlt.
+versionen=$(grep -o '^ *image: ollama/ollama:[0-9][0-9.]*[0-9]$' docker-compose.yml | sed 's/.*://' | sort -u || true)
+[ "$(printf '%s\n' "$versionen" | grep -c .)" = 1 ] \
+  || fehler "docker-compose.yml: ollama und modell-laden brauchen dasselbe Image ollama/ollama:<Version> (gefunden: $(echo $versionen))"
+VERSION=$versionen
+fehlt=()
+grep -q "^    image: ollama/ollama:$VERSION-rocm\$" amd.yml || fehlt+=(amd.yml)
+{ grep -q "^    image: dms-beispiel/ollama-intel:$VERSION\$" intel-grafik.yml \
+  && grep -q "^        FROM ollama/ollama:$VERSION\$" intel-grafik.yml; } || fehlt+=(intel-grafik.yml)
+if [ ${#fehlt[@]} -gt 0 ]; then
+  fehler "docker-compose.yml nennt Ollama $VERSION, ${fehlt[*]} nicht (nach einem Update von Dependabot von Hand nachziehen). Im Ordner deploy/beispiele/ki-ollama: sed -i -E 's#(ollama/ollama|dms-beispiel/ollama-intel):[0-9][0-9.]*[0-9]#\\1:$VERSION#' amd.yml intel-grafik.yml"
+fi
+andere=$(grep -ho 'ollama/ollama:[0-9][0-9.]*[0-9]' ./*.yml | sort -u | grep -vx "ollama/ollama:$VERSION" || true)
+[ -z "$andere" ] || fehler "andere Ollama-Version in diesem Ordner: $(echo $andere) (erwartet $VERSION wie in docker-compose.yml)"
 echo "Ollama $VERSION"
 for zusatz in "" intel-grafik.yml nvidia.yml amd.yml; do
   dateien=(-f docker-compose.yml); [ -z "$zusatz" ] || dateien+=(-f "$zusatz")

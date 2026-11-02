@@ -15,7 +15,7 @@ export function einbettenAus(wert: string | undefined): Einbetten {
   const teile = (wert ?? '').split(/[\s,]+/).map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
   const gut = teile.filter((t) => URSPRUNG.test(t));
   const schlecht = teile.filter((t) => !URSPRUNG.test(t));
-  return { urspruenge: gut, fehler: schlecht.length ? `DMS_EINBETTEN: ${schlecht.join(', ')} ist kein Ursprung wie https://beispiel.de oder http://nas:8123 – ignoriert.` : null };
+  return { urspruenge: gut, fehler: schlecht.length ? `DMS_EINBETTEN: ${schlecht.join(', ')} ist kein Ursprung wie https://example.org oder http://nas:8123 – ignoriert.` : null };
 }
 
 /** Strenge Richtlinie für die Oberfläche: nur eigene Skripte; Inline-Styles erlaubt (Designs, React). */

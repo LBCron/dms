@@ -8,12 +8,11 @@
 # einmal heruntergeladen (rund 2–3 GB) und liegt danach im Ordner ./ollama.
 x-modell: &modell "ministral-3:3b"
 
-# Ollama in einer festen Version. Beim Aktualisieren die Nummer in allen Dateien dieses Ordners ändern.
-x-image: &image ollama/ollama:0.40.13
-
 services:
   ollama:
-    image: *image
+    # Ollama in einer festen Version. Beim Aktualisieren die Nummer in allen Dateien dieses Ordners ändern
+    # (hier zweimal, dazu amd.yml und intel-grafik.yml) – Dependabot schlägt neue Versionen hier vor.
+    image: ollama/ollama:0.40.13
     restart: unless-stopped
     environment:
       # Keine Cloud-Funktionen von Ollama (Rechnen bei Ollama im Internet, Websuche) – alles bleibt im Haus.
@@ -50,7 +49,7 @@ services:
   # Lädt das Modell beim ersten Start und beendet sich dann („Beendet“ ist hier also richtig).
   # Ist das Modell schon da, lädt es nichts.
   modell-laden:
-    image: *image
+    image: ollama/ollama:0.40.13
     restart: "no"
     depends_on:
       ollama:

@@ -548,7 +548,7 @@ export class Paketverwaltung {
 
   async quelleHinzufuegen(e: { url?: unknown }, von: Handelnder): Promise<Quelle[]> {
     let u: URL;
-    try { u = new URL(String(e.url ?? '').trim()); } catch { throw new Fachfehler(422, 'Bitte eine vollständige Adresse eingeben, z. B. https://beispiel.de/katalog.json.'); }
+    try { u = new URL(String(e.url ?? '').trim()); } catch { throw new Fachfehler(422, 'Bitte eine vollständige Adresse eingeben, z. B. https://example.org/katalog.json.'); }
     if (u.protocol !== 'https:') throw new Fachfehler(422, 'Kataloge gehen nur über HTTPS.');
     const url = u.toString();
     const liste = await this.d.paketQuellen();

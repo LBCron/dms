@@ -17,9 +17,9 @@ const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const N = Number(process.env.N ?? 5);
 const arg = (n) => { const i = process.argv.indexOf(n); return i < 0 ? undefined : process.argv[i + 1]; };
 const BENUTZER = {
-  admin: ['anna@beispiel.de', 'mess-passwort-1'],
-  'Mitglied mit Rolle': ['ben@beispiel.de', 'mess-passwort-2'],
-  'Mitglied ohne Rolle': ['clara@beispiel.de', 'mess-passwort-3'],
+  admin: ['anna@example.org', 'mess-passwort-1'],
+  'Mitglied mit Rolle': ['ben@example.org', 'mess-passwort-2'],
+  'Mitglied ohne Rolle': ['clara@example.org', 'mess-passwort-3'],
 };
 
 let cookie = '';

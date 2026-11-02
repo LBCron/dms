@@ -43,12 +43,12 @@
       typ: text
       maxLen: 200
       muster: "[^@\\s]+@[^@\\s]+\\.[^@\\s]+"
-      hilfe: z. B. kontakt@beispiel.de
+      hilfe: z. B. kontakt@example.org
     - key: internet
       label: Internetseite
       typ: text
       maxLen: 200
-      hilfe: z. B. https://www.beispiel.de
+      hilfe: z. B. https://www.example.org
     # Anschrift
     - key: strasse
       label: Straße

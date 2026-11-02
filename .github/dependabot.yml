@@ -37,6 +37,14 @@ updates:
       # Nur LTS-Versionen von Node (gerade Hauptversionen); der Wechsel kommt gezielt (#236).
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
+  # Beispiel „lokaler KI-Dienst“ (#564): neue Ollama-Versionen in deploy/beispiele/ki-ollama/docker-compose.yml.
+  # Dependabot liest nur Dateien mit „compose“ im Namen – amd.yml (Tag mit -rocm) und intel-grafik.yml (FROM im
+  # eingebetteten Dockerfile) zieht man im selben PR von Hand nach; die Probe im Workflow KI-Beispiel meldet
+  # sie mit dem passenden Befehl, solange sie fehlen.
+  - package-ecosystem: docker-compose
+    directory: "/deploy/beispiele/ki-ollama"
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Berlin }
+    commit-message: { prefix: "KI-Beispiel" }
   # Werkzeuge der Handbücher mit Hashes (#289): docs/handbuch/requirements.txt (pip-compile).
   - package-ecosystem: pip
     directory: "/docs/handbuch"
