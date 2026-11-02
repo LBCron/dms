@@ -1861,6 +1861,15 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     async dokumenteMitSha(sha256) {
       return (await sql`SELECT ${DOK} FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.sha256 = ${sha256}`).map(alsDokument);
     },
+    async dokumenteMitTyp(mimes) {
+      if (!mimes.length) return [];
+      return (await sql`SELECT ${DOK} FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.mime = ANY(${mimes}::text[]) ORDER BY d.erstellt, d.id`).map(alsDokument);
+    },
+    async dokumentTypen() {
+      const z: Record<string, number> = {};
+      for (const r of await sql`SELECT mime, count(*)::int AS n FROM dokumente WHERE haushalt_id = ${haushaltId} GROUP BY mime`) z[r.mime as string] = r.n as number;
+      return z;
+    },
     async grossePdfs(ab, max) {
       return (await sql`
         SELECT ${DOK}, (SELECT count(*) FROM dokument_versionen v WHERE v.dokument_id = d.id) AS aeltere FROM dokumente d

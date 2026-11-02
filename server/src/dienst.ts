@@ -58,6 +58,8 @@ import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
+import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
+import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
@@ -458,6 +460,8 @@ export interface VolltextMeldung {
   paket?: string;
   /** Gemischte PDFs (#458): Seiten (ab 1) ohne Textebene – eine Texterkennung erkennt nur diese und hängt sie an. */
   seitenOhneText?: number[];
+  /** Umgewandelte Datei (#577): Typ des Originals; `mime` ist dann der Typ der Fassung. */
+  original?: string;
 }
 
 export class Dienst {
@@ -508,7 +512,7 @@ export class Dienst {
    * (Erkennung #336) laufen nur mit Text; ihre Fehler landen nur im Protokoll.
    */
   async volltextFertig(e: { dokument: string; mappe: string }, m: VolltextMeldung = { quelle: 'kern', text: true }, von?: string | null): Promise<void> {
-    const daten = { dokument: e.dokument, mappe: e.mappe, quelle: m.quelle, text: m.text, ...(m.mime ? { mime: m.mime } : {}), ...(m.seiten !== undefined ? { seiten: m.seiten } : {}), ...(m.neu ? { neu: true } : {}), ...(m.paket ? { paket: m.paket } : {}), ...(m.seitenOhneText?.length ? { seitenOhneText: m.seitenOhneText } : {}) };
+    const daten = { dokument: e.dokument, mappe: e.mappe, quelle: m.quelle, text: m.text, ...(m.mime ? { mime: m.mime } : {}), ...(m.seiten !== undefined ? { seiten: m.seiten } : {}), ...(m.neu ? { neu: true } : {}), ...(m.paket ? { paket: m.paket } : {}), ...(m.seitenOhneText?.length ? { seitenOhneText: m.seitenOhneText } : {}), ...(m.original ? { original: m.original, fassung: true } : {}) };
     // Für Pakete (#442, #458): z. B. „KI lokal – Ähnlichkeit“ rechnet den Vektor, das Paket Texterkennung erkennt Scans.
     await this.melde('volltext.fertig', daten, undefined, von, m.text ? undefined : kenntVolltextOhneText);
     // Gleichlaut für Pakete von vor 0.133.0 (#458): texterkennung.fertig nach dem Schritt des Kerns, wie bisher.
@@ -909,7 +913,129 @@ export class Dienst {
     const ids = [...new Set((await this.repo.alleDateien()).map((f) => f.dokumentId))];
     const docs: Dokument[] = [];
     for (const id of ids) { const d = await this.repo.holeDokument(id); if (d) docs.push(d); }
-    return this.vorschau.nachholen(docs);
+    // Andere Dateitypen (#577): Dateien ohne Fassung gehen an das zuständige Paket; ihr Bild entsteht mit der Fassung.
+    const gemeldet = await this.umwandlung?.anfordern(docs.filter((d) => !kernTyp(d.mime))).catch((e: Error) => { protokoll.modul('umwandlung').warn('Dateien nicht zum Umwandeln gemeldet', { fehler: e.message }); return 0; }) ?? 0;
+    return (await this.vorschau.nachholen(docs)) + gemeldet;
+  }
+
+  /** Neue Dateien (#332, #577): Vorschaubild einreihen, andere Dateitypen an das Paket zum Umwandeln melden. */
+  private neueDateien(docs: Dokument[]) {
+    this.vorschau?.einreihen(docs);
+    const andere = docs.filter((d) => d && !kernTyp(d.mime));
+    if (andere.length && this.umwandlung) void this.umwandlung.anfordern(andere).catch((e: Error) => protokoll.modul('umwandlung').warn('Datei nicht zum Umwandeln gemeldet', { fehler: e.message }));
+  }
+
+  /* ---------- Dateien umwandeln (#577) ---------- */
+
+  /** Dateien umwandeln anbinden (#577, dateiumwandlung.ts). */
+  private umwandlung?: Dateiumwandlung;
+  private vorschauFassung?: { ausFassung(d: Dokument[]): unknown; setze(sha: string, bild: Buffer, mime: string): Promise<void> };
+  verbindeUmwandlung(u: Dateiumwandlung, vorschau?: { ausFassung(d: Dokument[]): unknown; setze(sha: string, bild: Buffer, mime: string): Promise<void> }) {
+    this.umwandlung = u;
+    this.vorschauFassung = vorschau;
+  }
+  get dateiumwandlung() { return this.umwandlung; }
+
+  /** Was Dateiumwandlung vom Dienst braucht (#577) – für index.ts und Tests. */
+  umwandlungAnbindung(ablage: FassungsAblage, vorschau?: { setze(sha: string, bild: Buffer, mime: string): Promise<void> }): UmwandlungsAnbindung {
+    return {
+      ablage,
+      pakete: () => this.repo.listePakete(),
+      melde: (paket, daten) => this.melde('datei.umwandeln', daten, paket),
+      dokumenteMitSha: (sha) => this.repo.dokumenteMitSha(sha),
+      nachFassung: (docs, info) => this.nachFassung(docs, info),
+      ...(vorschau ? { vorschaubild: (sha: string, bild: Buffer, mime: string) => vorschau.setze(sha, bild, mime) } : {}),
+    };
+  }
+
+  /**
+   * Eine neue Fassung ist da (#577): Vorschaubild daraus, Volltext neu (für Dokumente, die darauf warteten oder bisher
+   * ohne Text ausgelassen waren) und ein Eintrag in der Historie jeder betroffenen Mappe.
+   */
+  async nachFassung(docs: Dokument[], info: FassungInfo) {
+    this.vorschauFassung?.ausFassung(docs);
+    const neu = docs.filter((d) => d.ocr && (d.ocr.stand === 'ausgelassen' || d.ocr.stand === 'fehler' || (d.ocr.stand === 'paket' && (d.ocr.info ?? '').startsWith(INFO_UMWANDLUNG)))).map((d) => d.id);
+    if (neu.length) { await this.repo.ocrEinreihen(neu); this.ocr?.anstossen(); }
+    const konto = [...this.paketKonten.entries()].find(([, p]) => p === info.paket.id)?.[0] ?? null;
+    for (const d of docs) {
+      await this.notiere(d.mappeId, konto, 'umgewandelt', { dokument: d.name, text: `${dateitypName(d.mime)} → ${dateitypName(info.mime)} (${info.paket.name} ${info.paket.version})`, fassung: info.mime, groesse: info.groesse, paket: `${info.paket.name} ${info.paket.version}` })
+        .catch((e: Error) => protokoll.modul('umwandlung').warn('Historie zur Fassung nicht geschrieben', { dokument: d.id, fehler: e.message }));
+    }
+  }
+
+  /**
+   * Ein Paket zum Umwandeln ist neu installiert (oder kann neue Dateitypen): Alle Dokumente dieser Typen ohne Fassung
+   * gehen an das Paket; wer auf ein Paket wartete (ausgelassen, „mit dem Paket …“), bekommt so Vorschau und Volltext.
+   */
+  async umwandelPaketDa(typen: string[]): Promise<number> {
+    if (!this.umwandlung || !typen.length) return 0;
+    const docs = await this.repo.dokumenteMitTyp(typen);
+    const n = await this.umwandlung.anfordern(docs);
+    // Was bisher ohne Paket ausgelassen war, wartet jetzt sichtbar auf die Fassung.
+    for (const d of docs) {
+      if (d.ocr?.stand !== 'ausgelassen' || (await this.umwandlung.info(d.sha256))) continue;
+      const p = await this.umwandlung.paketFuer(d.mime);
+      if (p && d.groesse <= UMWANDELN_MAX_BYTES) await this.repo.ocrSetze(d.id, { stand: 'paket', info: infoUmwandlung(p), seiten: d.ocr.seiten ?? null });
+    }
+    protokoll.modul('umwandlung').info('Paket zum Umwandeln installiert – vorhandene Dateien gemeldet', { typen, dateien: n });
+    return n;
+  }
+
+  /** Fassung eines Pakets übernehmen (#577, PUT /dokumente/{id}/fassung); Lesen des Dokuments prüft die Route. */
+  async setzeFassung(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
+    if (!this.umwandlung) throw new Fachfehler(404, t('pakete.vorschaubild.aus'));
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    const f = await this.umwandlung.setzeFassung(z?.paket, d, sha, inhalt);
+    return { dokument: d.id, fassung: f };
+  }
+
+  /** Vorschaubild eines Pakets übernehmen (#577, PUT /dokumente/{id}/vorschaubild). */
+  async setzeVorschaubild(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
+    if (!this.umwandlung) throw new Fachfehler(404, t('pakete.vorschaubild.aus'));
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    return this.umwandlung.setzeVorschaubild(z?.paket, d, sha, inhalt);
+  }
+
+  /** Die umgewandelte Fassung eines Dokuments (#577) zum Ansehen; 404, wenn es keine gibt. */
+  async fassungVon(id: string): Promise<{ d: Dokument; info: FassungInfo; inhalt: Buffer }> {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    const f = kernTyp(d.mime) ? null : await this.umwandlung?.lies(d.sha256);
+    if (!f) throw new Fachfehler(404, t('pakete.fassung.keine'));
+    return { d, ...f };
+  }
+
+  /**
+   * Für die Werkbank (#577): Pakete zum Umwandeln und je Dateityp, den der Kern nicht selbst liest, wie viele
+   * Dokumente es gibt, welches Paket zuständig ist – oder welches aus dem Katalog es wäre.
+   */
+  async umwandlungStand() {
+    const pakete = this.umwandlung ? await this.umwandlung.pakete() : [];
+    const typen = await this.repo.dokumentTypen();
+    const liste = await Promise.all(Object.entries(typen).filter(([m]) => !kernTyp(m) && m !== 'application/octet-stream').map(async ([mime, anzahl]) => {
+      const p = this.umwandlung ? await this.umwandlung.paketFuer(mime, pakete) : null;
+      const k = katalogUmwandlung(mime);
+      return { mime, name: dateitypName(mime), anzahl, paket: p ? { id: p.id, name: p.name } : null, katalog: k ? { id: k.id, name: k.name } : null };
+    }));
+    return { pakete, typen: liste.sort((a, b) => b.anzahl - a.anzahl || a.name.localeCompare(b.name)) };
+  }
+
+  /** Nach dem Ereignis „Datei umwandeln“ (#577): Wartet ein Dokument noch, aber es gibt keine Fassung, steht der Grund daran. */
+  private async nachUmwandlungsEreignis(paket: string, e: { daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }) {
+    const sha = typeof e.daten.sha256 === 'string' ? e.daten.sha256 : '';
+    if (!this.umwandlung || !sha) return;
+    if (!r.ok && !r.aufgegeben) return;
+    this.umwandlung.erledigt(sha);
+    if (await this.umwandlung.info(sha)) return;
+    const p = (await this.repo.listePakete()).find((x) => x.id === paket);
+    const grund = (r.ok ? r.text : r.fehler ?? '').trim().replace(/\s+/g, ' ').slice(0, 300);
+    for (const d of await this.repo.dokumenteMitSha(sha)) {
+      if (d.ocr?.stand !== 'paket' || !(d.ocr.info ?? '').startsWith(INFO_UMWANDLUNG)) continue;
+      const info = r.ok ? `Umwandlung durch Paket ${p?.name ?? paket}: ${grund || 'keine Fassung geliefert'}` : `Umwandlung durch Paket ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+      await this.repo.ocrSetze(d.id, { stand: r.ok ? 'ausgelassen' : 'fehler', info: info.slice(0, 500), text: null });
+    }
   }
 
   /* ---------- Volltext (#45) ---------- */
@@ -1022,6 +1148,7 @@ export class Dienst {
    * PDF reicht), wartet das Dokument nicht länger – es behält den Text aus dem PDF. Hat es aufgegeben: Fehler.
    */
   async nachTexterkennungsEreignis(paket: string, e: { art: string; daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }): Promise<void> {
+    if (e.art === 'datei.umwandeln') return this.nachUmwandlungsEreignis(paket, e, r);
     if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string') return;
     const p = await this.texterkennungPaket();
     if (!p || p.id !== paket) return;
@@ -1058,7 +1185,9 @@ export class Dienst {
     // Nur Text eines Pakets schützt vor der eingebauten Texterkennung (PAKET_TEXT); über die API gesetzter nicht.
     // Die Herkunft darf die Sprachmarke nicht vortäuschen (#395); die erkannte Sprache hängt am Ende an.
     const herkunft = von.herkunft.split(SPRACHE_MARKE.trim()).join('Sprache:');
-    const info = (von.paket ? `${PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200);
+    // Aus der umgewandelten Fassung (#577): Das Paket hat die Fassung gelesen, nicht das Original.
+    const fassung = !kernTyp(d.mime) ? await this.umwandlung?.info(d.sha256) : null;
+    const info = ((von.paket ? `${PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200) + (fassung ? ` – ${infoFassung(fassung.paket)}` : '')).slice(0, 300);
     const text = e.text.replace(/\u0000/g, '');
     // Sprache (#400): angegeben (z. B. vom Paket Texterkennung) oder erkannt; sie bestimmt die Wortstämme der Suche.
     if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
@@ -1078,7 +1207,7 @@ export class Dienst {
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
     // Das schreibende Paket bekommt sein eigenes Ergebnis nicht zurück (#458: sonst erkennte es endlos neu).
     const paketId = von.paket ? this.paketKonten.get(von.id) : undefined;
-    await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: d.mime, seiten: seiten ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);
+    await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: fassung?.mime ?? d.mime, ...(fassung ? { original: d.mime } : {}), seiten: seiten ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -1794,7 +1923,7 @@ export class Dienst {
         const sha256 = createHash('sha256').update(x.pdf).digest('hex');
         await this.dateien.schreibe(sha256, x.pdf);
         const neu = await this.repo.legeDokumentAn({ id: randomUUID(), mappeId: id, registerKey: reg.key, name: namen[i++], mime: 'application/pdf', groesse: x.pdf.length, sha256, anzeigbar: true, erstellt: new Date().toISOString(), erstelltVon: ich.id, herkunft: 'hochgeladen' });
-        this.vorschau?.einreihen([neu]);
+        this.neueDateien([neu]);
       }
       for (const [j, d] of x.dokumente.entries()) await this.legeVersandkopieAn(d, x.ausgaben?.[j], id, reg.key, ich.id, namen[i++]);
     }
@@ -1821,7 +1950,7 @@ export class Dienst {
     const sha256 = createHash('sha256').update(a.inhalt).digest('hex');
     await this.dateien.schreibe(sha256, a.inhalt);
     const neu = await this.repo.legeDokumentAn({ id: randomUUID(), mappeId: postId, registerKey, name: name ?? a.name, mime: a.mime, groesse: a.inhalt.length, sha256, anzeigbar: true, erstellt: jetzt, erstelltVon: von, herkunft: 'hochgeladen' });
-    this.vorschau?.einreihen([neu]);
+    this.neueDateien([neu]);
   }
 
   async versendeMappe(mappeId: string, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null) {
@@ -4460,7 +4589,7 @@ export class Dienst {
     if (inhalt) await this.protokolliere(this.dokEintraege(inhalt.dokumente.slice(0, 1), { ...(await this.mappenInfo([e.mappeId], new Map()))(e.mappeId, id), schritt: 'wiederhergestellt', weg: 'dokument' }),
       await this.loeschKontext(ich.id, { ausloeser: quelle }));
     await this.beruehre(e.mappeId, typ, ich.id);
-    this.vorschau?.einreihen([(await this.repo.holeDokument(id))!]);
+    this.neueDateien([(await this.repo.holeDokument(id))!]);
     protokoll.modul('ablage').info('Dokument wiederhergestellt', { dokument: e.name, id, mappe: e.mappeId });
     return { dokument: (await this.repo.holeDokument(id))!, typId: x.typId };
   }
@@ -4771,7 +4900,7 @@ export class Dienst {
     const erkannt = erkenneAnzeigbar(inhalt);
     await this.dateien.schreibe(sha256, inhalt);
     const d = await this.repo.legeDokumentAn({
-      id: randomUUID(), mappeId, registerKey, name: dateiname(name), mime: erkannt ?? mime,
+      id: randomUUID(), mappeId, registerKey, name: dateiname(name), mime: erkannt ?? erkenneBildtyp(inhalt) ?? mime,
       groesse: inhalt.length, sha256, anzeigbar: !!erkannt, erstellt: new Date().toISOString(), erstelltVon: benutzerId,
     });
     return { id: d.id, volltext: Dienst.volltextAn(typ, registerKey) };
@@ -4845,6 +4974,7 @@ export class Dienst {
     if (!(await this.repo.dateiBenutzt(sha256))) {
       await this.dateien.loesche(sha256);
       await this.vorschau?.entferne(sha256);
+      await this.umwandlung?.entferne(sha256);
     }
   }
 
@@ -4890,7 +5020,8 @@ export class Dienst {
 
     const sha256 = createHash('sha256').update(inhalt).digest('hex');
     const erkannt = erkenneAnzeigbar(inhalt);
-    const angegeben = /^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream';
+    // TIFF, BMP, HEIC … am Inhalt (#577): Browser schicken sie oft ohne oder mit falschem Typ.
+    const angegeben = erkenneBildtyp(inhalt) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
     const gleicherInhalt = await this.repo.dokumenteMitSha(sha256);
     await this.dateien.schreibe(sha256, inhalt);
     // Dokument, Historie und Ereignis in einer Transaktion (#404); die Datei liegt schon (bleibt sie übrig, räumt die Wartung auf).
@@ -4902,7 +5033,7 @@ export class Dienst {
         id: randomUUID(), mappeId, registerKey: reg.key, name, mime: erkannt ?? angegeben,
         groesse: inhalt.length, sha256, anzeigbar: !!erkannt, erstellt: new Date().toISOString(), erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
       });
-      this.danach(() => this.vorschau?.einreihen([dokument]));
+      this.danach(() => this.neueDateien([dokument]));
       // Volltext (#45): neues Dokument in die Warteschlange, wenn das Register das will.
       let neu = dokument;
       if (e.volltext) {
@@ -5112,6 +5243,14 @@ export class Dienst {
   async seiteAlsGraubild(id: string, nr: number, dpi: number): Promise<Buffer> {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    // Andere Dateitypen (#577): die Seiten der umgewandelten Fassung (PDF, PNG oder JPEG) eines Pakets.
+    if (!kernTyp(d.mime)) {
+      const f = await this.umwandlung?.lies(d.sha256);
+      if (!f) throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG, und es gibt keine umgewandelte Fassung – davon gibt es kein Seitenbild.`);
+      if (f.info.mime === 'application/pdf') return graubild(f.inhalt, nr, dpi);
+      if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
+      return graubild(await bildSeitePdf(f.inhalt, f.info.mime), 1, 72);
+    }
     if (d.mime === 'image/jpeg' || d.mime === 'image/png') {
       if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
       const s = await this.dateien.lies(d.sha256);
@@ -5428,7 +5567,7 @@ export class Dienst {
         erstelltVon: von, herkunft: 'bearbeitet', ...(ocr ? { volltext: ocr.text } : {}),
       });
       if (ocr) await this.repo.ocrSetze(v.id, { stand: 'fertig', ...ocr });
-      this.vorschau?.einreihen([v]);
+      this.neueDateien([v]);
       neu = await this.nachNeuerVersion(d, v, typ, reg, von);
       if (e.ohneOriginal === true && (await this.archivErlaubt(d.mappeId))) {
         const alt = (await this.repo.versionenVon(d.id)).find((x) => x.nummer === v.version! - 1);
@@ -5638,7 +5777,7 @@ export class Dienst {
           ...(volltext ? { volltext: volltext.text } : {}),
         });
         if (volltext) await this.repo.ocrSetze(v.id, { stand: 'fertig', ...volltext });
-        this.danach(() => this.vorschau?.einreihen([v]));
+        this.danach(() => this.neueDateien([v]));
         const x = await this.nachNeuerVersion(d, { ...v, ocr: volltext ? { stand: 'fertig' } as Dokument['ocr'] : v.ocr }, typ, reg, von);
         await this.notiere(d.mappeId, von, 'geschwaerzt', { dokument: d.name, text: `geschwärzte Fassung als Version ${x.version ?? ''} von „${d.name}“ erstellt (${stellen})`, version: x.version, stellen: r.bereiche, seiten: r.betroffen });
         return x;
@@ -6398,13 +6537,13 @@ export class Dienst {
     if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
     const sha256 = createHash('sha256').update(inhalt).digest('hex');
     const erkannt = erkenneAnzeigbar(inhalt);
-    const angegeben = /^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream';
+    const angegeben = erkenneBildtyp(inhalt) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
     await this.dateien.schreibe(sha256, inhalt);
     const neu = await this.repo.ersetzeDokument(id, {
       name: e.name ? dateiname(e.name) : d.name, mime: erkannt ?? angegeben, groesse: inhalt.length, sha256, anzeigbar: !!erkannt,
       erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
     });
-    this.vorschau?.einreihen([neu]);
+    this.neueDateien([neu]);
     return this.nachNeuerVersion(d, neu, typ, reg, benutzerId);
   }
 

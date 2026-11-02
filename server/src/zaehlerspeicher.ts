@@ -38,7 +38,7 @@ export const OHNE_FOLGEN = new Set<string>([
   'favoritenVon', 'favoritenDerMappe', 'stummeFavoriten', 'geaendertVonAnderen', 'zaehleKlauseln', 'lesbare', 'inKlauseln',
   'zaehleAusdruck', 'listeSichten', 'unpassende', 'typenOhnePassung', 'belegung', 'ohneTitel', 'typenVon', 'findeDoppelt',
   'rueckverweise', 'kantenVon', 'listeDokumente', 'dokumenteVon', 'zaehleDokumente', 'holeDokument', 'versionenVon',
-  'versionenVonDokumenten', 'holeVersion', 'alleDateien', 'dokumenteMitSha', 'grossePdfs', 'dokumenteJeRegister', 'zaehleDemo',
+  'versionenVonDokumenten', 'holeVersion', 'alleDateien', 'dokumenteMitSha', 'dokumenteMitTyp', 'dokumentTypen', 'grossePdfs', 'dokumenteJeRegister', 'zaehleDemo',
   'echteVerweiseAufDemo', 'papierkorb', 'zaehlePapierkorb', 'dateiBenutzt', 'papierkorbDokumente', 'holeAusPapierkorb', 'holeDokumentAusPapierkorb',
   'ocrNaechster', 'ocrVonSha', 'ocrZaehler', 'ocrAuftraege', 'ocrOhneVolltext', 'volltextKandidaten', 'volltextHerkunft', 'ocrSprachen', 'volltext', 'volltexte',
   'aufgabenZurPassung', 'holeAufgabe', 'aufgabenVon', 'aufgabenVonMappen', 'offeneAufgaben', 'erledigteAufgaben', 'fristAufgaben',

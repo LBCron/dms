@@ -7,7 +7,7 @@ import { fork, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { Benutzer } from '../../../shared/src/model';
-import { hatNetz, hatSchnittstelle, type InstalliertesPaket, type LaeuferZustand, type Schnittstelle } from '../../../shared/src/pakete';
+import { hatNetz, hatSchnittstelle, type InstalliertesPaket, type LaeuferZustand, type PaketCode, type Schnittstelle } from '../../../shared/src/pakete';
 import { adressfelder, pruefeAdresse } from '../../../shared/src/paketeinstellungen';
 import { liesModell, liesVektor, SCHWELLE_STANDARD } from '../vektoren';
 import type { ApiSchluesselDienst } from '../apischluessel';
@@ -54,6 +54,13 @@ const NACHLAUF_PAUSE_MS = 6 * 3600_000;
 
 /** Anfrage an die eigene API (im Betrieb über fastify.inject, ohne Netz). */
 export type ApiAufruf = (a: { methode: string; pfad: string; kopf: Record<string, string>; body?: Buffer }) => Promise<{ status: number; kopf: Record<string, string>; body: Buffer }>;
+
+/**
+ * Recht des API-Schlüssels eines Dienstkontos: „lesen und schreiben“, sobald das Paket irgendetwas schreiben darf –
+ * Mappen, Dokumente, Vektoren (#442) oder Fassungen (#577, dms:umwandeln). Was es genau darf, prüft die Route je Recht.
+ */
+export const schluesselRecht = (c: PaketCode): 'lesen' | 'schreiben' =>
+  c.rechte.schreiben.length || c.rechte.dokumente === 'schreiben' || hatSchnittstelle(c, 'dms:vektoren') || hatSchnittstelle(c, 'dms:umwandeln') ? 'schreiben' : 'lesen';
 
 export interface LaeuferOptionen {
   dienst: Dienst;
@@ -192,8 +199,7 @@ export class Paketlaeufer implements PaketLaeufer {
     for (const p of this.pakete) {
       const b = await this.o.konten.dienstkonto(p.id, p.name);
       this.konto.set(p.id, b);
-      // Vektoren schreiben (#442) braucht einen Schlüssel „lesen und schreiben“; was er darf, prüft die Route je Recht.
-      const recht = p.laeufer!.rechte.schreiben.length || p.laeufer!.rechte.dokumente === 'schreiben' || hatSchnittstelle(p.laeufer, 'dms:vektoren') ? 'schreiben' : 'lesen';
+      const recht = schluesselRecht(p.laeufer!);
       // Neuen Schlüssel nur für neue Pakete oder geänderte Rechte – laufende Aufrufe der anderen behalten ihren.
       if (!this.schluessel.has(p.id) || this.schluesselRecht.get(p.id) !== `${b.id}:${recht}`) {
         this.schluessel.set(p.id, await this.o.schluessel.fuerDienstkonto(b, recht));

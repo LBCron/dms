@@ -15,7 +15,9 @@ import { bildSeitePdf } from './pdf';
  * - PDFs: erste Seite mit pdftoppm (poppler, schon für die Texterkennung im Image).
  * - JPEG und PNG: in ein einseitiges PDF gelegt (pdf-lib, ohne Neuberechnung der Pixel) und
  *   ebenso mit pdftoppm verkleinert – kein zusätzliches Werkzeug im Image.
- * - Andere Dateitypen (HEIC, TIFF, Office …): kein Vorschaubild, die Oberfläche zeigt das Dateisymbol.
+ * - Andere Dateitypen (TIFF, WebP, HEIC, Office …): aus der umgewandelten Fassung eines Pakets (#577, PDF, PNG oder
+ *   JPEG – wie oben) oder aus dem Vorschaubild, das das Paket selbst liefert; ohne Paket zeigt die Oberfläche das
+ *   Dateisymbol.
  * - Einmal erzeugt im Hintergrund, abgelegt nach Prüfwert und VERSION – nicht bei jedem Aufruf.
  *   Ein fehlgeschlagener Versuch wird gemerkt und erst mit einer neuen VERSION wiederholt.
  * - Ablage außerhalb des Haushaltsordners: Vorschaubilder werden nicht gesichert (lassen sich neu erzeugen).
@@ -128,7 +130,9 @@ const alsBuffer = async (x: Readable | Buffer): Promise<Buffer> => {
   return Buffer.concat(teile);
 };
 
-type Auftrag = Pick<Dokument, 'sha256' | 'mime' | 'groesse' | 'name'>;
+type Auftrag = Pick<Dokument, 'sha256' | 'mime' | 'groesse' | 'name'> & { fassung?: boolean };
+/** Umgewandelte Fassung einer Datei (#577), aus der das Vorschaubild entsteht. */
+export type FassungsQuelle = (sha: string) => Promise<{ info: { mime: string }; inhalt: Buffer } | null>;
 
 export class Vorschaubilder {
   private warteschlange = new Map<string, Auftrag>();
@@ -139,15 +143,48 @@ export class Vorschaubilder {
   /** Für Tests: wartet, bis die Warteschlange leer ist. */
   private leer: Array<() => void> = [];
 
+  /** Fassungen aus Paketen (#577) für Dateitypen, die der Kern nicht selbst liest. */
+  fassung: FassungsQuelle = async () => null;
+
   constructor(private ablage: VorschauAblage, private dateien: Dateispeicher, private erzeuger: Erzeuger = popplerErzeuger) {}
 
   /** Vorschaubild eines Dokuments; null = (noch) keins. Fehlt es, wird es eingereiht. */
   async bild(d: Auftrag): Promise<Buffer | null> {
-    if (!hatVorschau(d.mime) || d.groesse > VORSCHAU_MAX_BYTES) return null;
+    if (!hatVorschau(d.mime)) {
+      // Andere Dateitypen (#577): aus der Fassung eines Pakets bzw. das Vorschaubild des Pakets.
+      const b = await this.ablage.lies(d.sha256);
+      if (b) return b;
+      if (!(await this.ablage.istFehlgeschlagen(d.sha256)) && (await this.fassung(d.sha256).catch(() => null))) this.ausFassung([d]);
+      return null;
+    }
+    if (d.groesse > VORSCHAU_MAX_BYTES) return null;
     const b = await this.ablage.lies(d.sha256);
     if (b) return b;
     if (!(await this.ablage.istFehlgeschlagen(d.sha256))) this.einreihen([d]);
     return null;
+  }
+
+  /**
+   * Vorschaubild aus der umgewandelten Fassung (#577): einreihen, auch wenn ein früherer Versuch fehlschlug (die
+   * Fassung ist neu). Ein vorhandenes Bild bleibt.
+   */
+  ausFassung(docs: Auftrag[]) {
+    let neu = 0;
+    for (const d of docs) {
+      if (hatVorschau(d.mime) || this.warteschlange.has(d.sha256)) continue;
+      this.warteschlange.set(d.sha256, { sha256: d.sha256, mime: d.mime, groesse: d.groesse, name: d.name, fassung: true });
+      neu++;
+    }
+    if (neu) this.anstossen();
+    return neu;
+  }
+
+  /** Vorschaubild, das ein Paket liefert (#577): auf die Größe des Kerns verkleinert, ersetzt ein vorhandenes. */
+  async setze(sha: string, bild: Buffer, mime: string) {
+    const klein = await this.erzeuger(bild, mime);
+    if (!klein) throw new Error('kein Vorschaubild');
+    await this.ablage.loesche(sha);
+    await this.ablage.schreibe(sha, klein);
   }
 
   /** Dokumente in die Warteschlange (z. B. nach dem Hochladen); Unpassendes wird übergangen. */
@@ -169,13 +206,22 @@ export class Vorschaubilder {
   async nachholen(docs: Auftrag[]) {
     const fehlt: Auftrag[] = [];
     const gesehen = new Set<string>();
+    const ausFassung: Auftrag[] = [];
     for (const d of docs) {
-      if (!hatVorschau(d.mime) || d.groesse > VORSCHAU_MAX_BYTES || gesehen.has(d.sha256)) continue;
+      if (gesehen.has(d.sha256)) continue;
       gesehen.add(d.sha256);
+      // Andere Dateitypen (#577): nur mit Fassung eines Pakets.
+      if (!hatVorschau(d.mime)) {
+        if (!(await this.ablage.lies(d.sha256)) && (await this.fassung(d.sha256).catch(() => null))) ausFassung.push(d);
+        continue;
+      }
+      if (d.groesse > VORSCHAU_MAX_BYTES) continue;
       if (await this.ablage.lies(d.sha256)) continue;
       fehlt.push(d);
     }
     this.einreihen(fehlt);
+    this.ausFassung(ausFassung);
+    fehlt.push(...ausFassung);
     if (fehlt.length) log.info('Vorschaubilder nachholen', { dokumente: fehlt.length });
     return fehlt.length;
   }
@@ -212,7 +258,11 @@ export class Vorschaubilder {
       if (!sha || !d) return;
       try {
         if (!(await this.ablage.lies(sha))) {
-          const bild = await this.erzeuger(await alsBuffer(await this.dateien.lies(sha)), d.mime);
+          // Andere Dateitypen (#577): aus der Fassung (PDF, PNG oder JPEG) des Pakets.
+          const f = d.fassung ? await this.fassung(sha) : null;
+          if (d.fassung && !f) continue;
+          if (f) await this.ablage.loesche(sha);
+          const bild = f ? await this.erzeuger(f.inhalt, f.info.mime) : await this.erzeuger(await alsBuffer(await this.dateien.lies(sha)), d.mime);
           if (bild) await this.ablage.schreibe(sha, bild); else await this.ablage.merkeFehler(sha);
         }
       } catch (e) {

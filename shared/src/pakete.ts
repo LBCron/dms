@@ -2,6 +2,7 @@
  * Paketverwaltung (#188): Katalog der Registry, Versionen und installierte Pakete.
  * Format von Katalog und Paket: motom001/dms-registry (README, schema/). Server und Oberfläche teilen diese Datei.
  */
+import { dateitypName, DMS_UMWANDELN_AB, kernTyp, MIME, UMWANDELN_TYPEN_MAX } from './dateiumwandlung';
 import type { Hilfeort } from './hilfe';
 
 /** Der offizielle Katalog (Branch gh-pages der Registry). */
@@ -231,6 +232,7 @@ export const EREIGNISSE = {
   'texterkennung.fertig': 'Die Texterkennung eines Dokuments ist fertig (veraltet, wie „Volltext fertig“)',
   'volltext.fertig': 'Der Volltext eines Dokuments ist fertig (auch ohne Text)',
   'paket.einstellungen_geaendert': 'Die Einstellungen des Pakets wurden geändert',
+  'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die das DMS nicht selbst liest)',
 } as const;
 export type EreignisArt = keyof typeof EREIGNISSE;
 /**
@@ -242,6 +244,7 @@ export const SCHNITTSTELLEN = {
   'dms:antworten': 'Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die das DMS mitgibt',
   'dms:erkennen': 'Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt',
   'dms:texterkennung': 'Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt',
+  'dms:umwandeln': 'Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
 /** Ab dieser Version kennt das DMS `code.rechte.schnittstellen` und das Ereignis `volltext.fertig` (#442). */
@@ -253,7 +256,7 @@ export const DMS_VEKTOREN_AB = '0.120.0';
  */
 export const DMS_ANTWORTEN_AB = '0.124.0';
 /** Hilfe-Ort je Schnittstelle (Administratorhandbuch, Pakete mit Code). */
-export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung' };
+export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln' };
 /** Ab dieser Version kennt das DMS die Schnittstelle `dms:erkennen` (#511): Erkennung für „Aus Dokument ausfüllen“. */
 export const DMS_ERKENNEN_AB = '0.125.0';
 /**
@@ -296,6 +299,11 @@ export interface PaketCode {
    * Administrator einträgt und bestätigt. Steht hier, damit die Rückfrage bei der Installation sie nennt.
    */
   adressen?: Array<{ schluessel: string; name: string }>;
+  /**
+   * Dateitypen, die das Paket umwandelt (#577, `code.umwandeln`, nur mit `dms:umwandeln`): Dafür bekommt es das
+   * Ereignis `datei.umwandeln` und darf eine Fassung (PDF, PNG, JPEG) und ein Vorschaubild zurückgeben.
+   */
+  umwandeln?: string[];
   /** Das WebAssembly-Modul (code/modul.wasm) und Daten (code/daten/…), nur im installierten Paket. */
   modul?: { sha256: string; groesse: number };
   daten?: string[];
@@ -349,6 +357,19 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   const schnittstellen = liste(r.schnittstellen, 'code.rechte.schnittstellen');
   for (const s of schnittstellen) if (!(s in SCHNITTSTELLEN)) fehler.push(`code.rechte.schnittstellen: „${s}“ gibt es nicht. Möglich: ${Object.keys(SCHNITTSTELLEN).join(', ')}.`);
   if (schnittstellen.includes('dms:vektoren') && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:vektoren braucht auch code.rechte.dokumente: lesen – Vektoren gehören zu Dokumenten.');
+  // Dateien umwandeln (#577): zuständige Dateitypen, nur mit dms:umwandeln, Lesen von Dokumenten und dem Ereignis.
+  const umwandeln = liste(x.umwandeln, 'code.umwandeln').map((m) => m.toLowerCase());
+  const willUmwandeln = schnittstellen.includes('dms:umwandeln');
+  for (const m of umwandeln) {
+    if (!MIME.test(m)) fehler.push(`code.umwandeln: „${m}“ ist kein Dateityp (z. B. image/tiff).`);
+    else if (kernTyp(m)) fehler.push(`code.umwandeln: ${dateitypName(m)} (${m}) liest das DMS selbst – umwandeln lassen sich nur andere Dateitypen.`);
+  }
+  if (umwandeln.length > UMWANDELN_TYPEN_MAX) fehler.push(`code.umwandeln: höchstens ${UMWANDELN_TYPEN_MAX} Dateitypen.`);
+  if (willUmwandeln && !umwandeln.length) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht code.umwandeln – die Dateitypen, die das Paket umwandelt.');
+  if (!willUmwandeln && umwandeln.length) fehler.push('code.umwandeln: braucht code.rechte.schnittstellen: [dms:umwandeln].');
+  if (willUmwandeln && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht auch code.rechte.dokumente: lesen – das Paket liest die Originaldatei.');
+  if (willUmwandeln && !ereignisse.includes('datei.umwandeln')) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht das Ereignis datei.umwandeln in code.ereignisse.');
+  if (!willUmwandeln && ereignisse.includes('datei.umwandeln')) fehler.push('code.ereignisse: datei.umwandeln gibt es nur mit code.rechte.schnittstellen: [dms:umwandeln].');
   const netz = liste(x.netz, 'code.netz');
   for (const n of netz) {
     let ok = false;
@@ -362,7 +383,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
     : []));
   // Schreiben setzt Lesen voraus.
   const lesenAlle = [...new Set([...lesen, ...schreiben])];
-  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}) }, fehler };
+  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}) }, fehler };
 }
 
 /** Zustand des Paket-Läufers (#403): aus (kein Paket mit Code), startet, bereit, neustart (nach Absturz), pausiert (Wartung). */
@@ -401,6 +422,7 @@ export const EREIGNIS_HILFE: Record<EreignisArt, Hilfeort> = {
   'texterkennung.fertig': 'pakete.ereignis.texterkennung_fertig',
   'volltext.fertig': 'pakete.ereignis.volltext_fertig',
   'paket.einstellungen_geaendert': 'pakete.ereignis.einstellungen_geaendert',
+  'datei.umwandeln': 'pakete.ereignis.datei_umwandeln',
 };
 
 /** Ein Punkt der Rechte-Liste in der Vorschau (#449): Text, Handbuch-Stelle, ggf. Unterliste (Ereignisse). */
@@ -413,7 +435,8 @@ export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string)
   if (c.rechte.lesen.length) z.push({ text: `Mappen lesen: ${t(c.rechte.lesen)}`, hilfe: 'pakete.recht.lesen' });
   if (c.rechte.schreiben.length) z.push({ text: `Mappen anlegen und ändern: ${t(c.rechte.schreiben)}`, hilfe: 'pakete.recht.schreiben' });
   if (c.rechte.dokumente !== 'keine') z.push({ text: DOKUMENT_RECHTE[c.rechte.dokumente], hilfe: 'pakete.recht.dokumente' });
-  for (const s of c.rechte.schnittstellen ?? []) z.push({ text: `${SCHNITTSTELLEN[s]} (${s})`, hilfe: SCHNITTSTELLE_HILFE[s] });
+  // Dateien umwandeln (#577): mit den Dateitypen, für die das Paket zuständig sein will.
+  for (const s of c.rechte.schnittstellen ?? []) z.push({ text: `${SCHNITTSTELLEN[s]} (${s})${s === 'dms:umwandeln' && c.umwandeln?.length ? `: ${[...new Set(c.umwandeln.map(dateitypName))].join(', ')}` : ''}`, hilfe: SCHNITTSTELLE_HILFE[s] });
   z.push({ text: netzText(c.netz, (c.adressen ?? []).map((a) => a.name)), hilfe: c.adressen?.length ? 'pakete.recht.adresse' : 'pakete.recht.netz' });
   if (c.ereignisse.length) z.push({ text: 'Reagiert auf diese Ereignisse:', hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: EREIGNISSE[e], hilfe: EREIGNIS_HILFE[e] })) });
   return z;
@@ -428,6 +451,8 @@ export const rechteText = (c: PaketCode, typName: (verweis: string) => string): 
 export const gleicheRechte = (a: PaketCode | undefined, b: PaketCode | undefined) =>
   JSON.stringify(rechteSchluessel(a)) === JSON.stringify(rechteSchluessel(b));
 const rechteSchluessel = (c: PaketCode | undefined) => c ? [[...c.rechte.lesen].sort(), [...c.rechte.schreiben].sort(), c.rechte.dokumente, [...c.netz].sort(), ...(c.rechte.schnittstellen?.length ? [[...c.rechte.schnittstellen].sort()] : []), ...(c.adressen?.length ? [c.adressen.map((a) => a.schluessel).sort()] : [])] : null;
+/** Ab dieser Version (#577) kennt das DMS Dateien umwandeln; siehe shared/src/dateiumwandlung.ts. */
+export { DMS_UMWANDELN_AB };
 /** Darf das Paket diese Schnittstelle des Kerns nutzen (#442)? */
 export const hatSchnittstelle = (c: PaketCode | undefined, s: Schnittstelle) => !!c?.rechte.schnittstellen?.includes(s);
 

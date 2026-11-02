@@ -6,6 +6,7 @@
  * `paket`). Die Herkunft steht im Hinweis `ocr.info`; diese Datei liest sie daraus zurück.
  */
 import type { OcrStand } from './model';
+import { INFO_UMWANDLUNG } from './dateiumwandlung';
 import { PAKET_TEXT } from './pakete';
 
 /** Id des Pakets Texterkennung im offiziellen Katalog (#459: für „jetzt installieren“). */
@@ -23,12 +24,15 @@ export type VolltextHerkunft =
   | { art: 'pdf' }
   | { art: 'paket'; paket: string }
   | { art: 'wartet'; paket: string | null }
+  /** Andere Dateitypen (#577): wartet auf die Fassung eines Pakets zum Umwandeln. */
+  | { art: 'umwandlung'; paket: string }
   | { art: 'eingebaut' }
   | { art: 'api' };
 
 /** Herkunft aus dem Stand; null, wenn es (noch) keine gibt oder sie unbekannt ist. */
 export function volltextHerkunft(o: OcrStand | null | undefined): VolltextHerkunft | null {
   if (!o) return null;
+  if (o.stand === 'paket' && (o.info ?? '').startsWith(INFO_UMWANDLUNG)) return { art: 'umwandlung', paket: /\(Paket (.+?)\)/.exec(o.info ?? '')?.[1] ?? '' };
   if (o.stand === 'paket') return { art: 'wartet', paket: /\(Paket (.+?)\)/.exec(o.info ?? '')?.[1] ?? null };
   if (o.stand !== 'fertig' || !o.info) return null;
   // „übernommen (gleicher Inhalt): …“ – die Herkunft des übernommenen Texts zählt.

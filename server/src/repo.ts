@@ -301,6 +301,10 @@ export interface Repo {
   verschiebeDokument(id: string, mappeId: string, registerKey: string): Promise<void>;
   /** Andere Dokumente mit derselben Datei (gleicher Inhalt). */
   dokumenteMitSha(sha256: string): Promise<Dokument[]>;
+  /** Dateien umwandeln (#577): lebende Dokumente dieser Dateitypen, ältere zuerst. */
+  dokumenteMitTyp(mimes: string[]): Promise<Dokument[]>;
+  /** Dateien umwandeln (#577): Anzahl lebender Dokumente je Dateityp. */
+  dokumentTypen(): Promise<Record<string, number>>;
   /** PDF verkleinern (#393): lebende PDF-Dokumente ab `ab` Bytes, größte zuerst, höchstens `max`. */
   grossePdfs(ab: number, max: number): Promise<Dokument[]>;
   /** Eine ältere Version entfernen (Verkleinern ohne Original); liefert ihre Datei (sha256) oder null. */

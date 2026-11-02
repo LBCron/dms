@@ -201,6 +201,10 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinw
       // Texterkennung als Paket (#338): welches Paket den Volltext geschrieben hat.
       return { hinweis: str(d.dokument) ?? 'Volltext', inhalt: <dl className="eigenschaften einzeln"><dt>Datei</dt><dd>{str(d.dokument)}</dd>{str(d.text) && <><dt>Von</dt><dd>{str(d.text)}</dd></>}</dl> };
     }
+    case 'umgewandelt': {
+      // Dateien umwandeln (#577): welches Paket aus welcher Datei welche Fassung gemacht hat; das Original bleibt.
+      return { hinweis: str(d.dokument) ?? 'Fassung', inhalt: <dl className="eigenschaften einzeln"><dt>Datei</dt><dd>{str(d.dokument)}</dd>{str(d.text) && <><dt>Fassung</dt><dd>{str(d.text)}</dd></>}</dl> };
+    }
     case 'post_geteilt': {
       const typ = str(d.postTyp);
       const posten = Array.isArray(d.posten) ? (d.posten as string[]) : [];

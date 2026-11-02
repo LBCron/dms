@@ -39,6 +39,7 @@ import { MODULE, protokoll, STUFEN, type Stufe } from './protokoll';
 import type { Betrieb } from './betrieb';
 import { maskiere, type Tresor } from './tresor';
 import type { Texterkennung } from './texterkennung';
+import { FASSUNG_MAX_BYTES, VORSCHAUBILD_MAX_BYTES } from '../../shared/src/dateiumwandlung';
 import type { Wartung } from './wartung';
 import type { Notfallzugang } from './notfall';
 import type { Sicherung } from './sicherung';
@@ -797,13 +798,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     /* ---------- Technik und Versionen ---------- */
     /* ---------- E-Mail-Versand und Adresse (#37) ---------- */
     /* ---------- Texterkennung und Wartungsoperationen (#45) ---------- */
-    { methode: 'GET', pfad: '/api/werkbank/texterkennung', zugang: 'admin', handler: async (a) => ok(await ocr().status(a.query.neu !== undefined)) },
+    // Mit den Dateitypen, die Pakete umwandeln bzw. umwandeln könnten (#577).
+    { methode: 'GET', pfad: '/api/werkbank/texterkennung', zugang: 'admin', handler: async (a) => ok({ ...(await ocr().status(a.query.neu !== undefined)), umwandlung: await dienst.umwandlungStand() }) },
     // Aufträge der Texterkennung einsehen, neu starten, abbrechen (#61)
     { methode: 'GET', pfad: '/api/werkbank/texterkennung/auftraege', zugang: 'admin', handler: async (a) => ok(await ocr().auftraege(a.query)) },
     { methode: 'POST', pfad: '/api/werkbank/texterkennung/auftraege/neu', zugang: 'admin', handler: async (a) => ok(await ocr().neuStarten(b(a).ids, ich(a).email)) },
     { methode: 'POST', pfad: '/api/werkbank/texterkennung/auftraege/fehler-neu', zugang: 'admin', handler: async (a) => ok(await ocr().fehlerNeuStarten(ich(a).email)) },
     { methode: 'POST', pfad: '/api/werkbank/texterkennung/auftraege/abbrechen', zugang: 'admin', handler: async (a) => ok(await ocr().abbrechen(b(a).ids, ich(a).email)) },
-    { methode: 'PUT', pfad: '/api/werkbank/texterkennung', zugang: 'admin', handler: async (a) => { await ocr().speichere(a.body); return ok(await ocr().status()); } },
+    { methode: 'PUT', pfad: '/api/werkbank/texterkennung', zugang: 'admin', handler: async (a) => { await ocr().speichere(a.body); return ok({ ...(await ocr().status()), umwandlung: await dienst.umwandlungStand() }); } },
     /* ---------- Vollexport (#254) ---------- */
     { methode: 'GET', pfad: '/api/werkbank/export', zugang: 'admin', handler: async () => {
       const ziel = exportZiel();
@@ -1780,6 +1782,25 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Die Adresse trägt den Prüfwert (?v=…): ein neues Bild hat eine neue Adresse, das Bild darf im Browser bleiben.
       return { datei: { inhalt: bild, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=604800' } } };
     } },
+    // Dateien umwandeln (#577): Fassung und Vorschaubild schreiben nur Pakete mit dms:umwandeln, die das Dokument lesen
+    // dürfen (das Original bleibt unverändert, deshalb genügt Lesen); ansehen darf die Fassung, wer das Dokument liest.
+    { methode: 'PUT', pfad: '/api/dokumente/:id/fassung', zugang: 'angemeldet', roh: FASSUNG_MAX_BYTES + 1024, handler: async (a) => {
+      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      return ok(await dienst.setzeFassung(await zg(a), a.params.id, a.query.sha256, a.body));
+    } },
+    { methode: 'PUT', pfad: '/api/dokumente/:id/vorschaubild', zugang: 'angemeldet', roh: VORSCHAUBILD_MAX_BYTES + 1024, handler: async (a) => {
+      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      return ok(await dienst.setzeVorschaubild(await zg(a), a.params.id, a.query.sha256, a.body));
+    } },
+    { methode: 'GET', pfad: '/api/dokumente/:id/fassung', zugang: 'angemeldet', handler: async (a) => {
+      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const f = await dienst.fassungVon(a.params.id);
+      const punkt = f.d.name.lastIndexOf('.');
+      const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
+      const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (umgewandelt).${endung}`;
+      return { datei: { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
+        koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': 'private, max-age=60' } } };
+    } },
     // Volltext und Texterkennung (#45)
     { methode: 'GET', pfad: '/api/dokumente/:id/volltext', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
@@ -1951,7 +1972,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const dokumentRoute = (r: Route) => /\/dokumente\b|\/archivnummern\b|\/vektoren\b/.test(r.pfad);
   const nieFuerPakete = (r: Route) => /\/email\b/.test(r.pfad);
   // Vektoren (#442) ändern das Dokument nicht: Lesen reicht, das Recht dms:vektoren prüft der Dienst.
-  const lesendePost = (r: Route) => /\/dokumente\/gleiche$|\/dokumente\/:id\/vektor$|\/vektoren\/aehnliche$/.test(r.pfad);
+  // Fassung und Vorschaubild (#577) ändern das Dokument auch nicht: Lesen reicht, dms:umwandeln prüft der Dienst.
+  const lesendePost = (r: Route) => /\/dokumente\/gleiche$|\/dokumente\/:id\/vektor$|\/vektoren\/aehnliche$|\/dokumente\/:id\/(fassung|vorschaubild)$/.test(r.pfad);
   const dokumentRecht = async (r: Route, a: Anfrage): Promise<'keine' | 'lesen' | 'schreiben' | null> => {
     if (a.benutzer?.art !== 'dienst') return null;
     if (nieFuerPakete(r)) throw new Fachfehler(403, 'Pakete dürfen keine E-Mails versenden.');

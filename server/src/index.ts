@@ -36,6 +36,7 @@ import { einrichtungsmodus } from './einrichtungsmodus';
 import { Einrichtung } from './einrichtung';
 import { bestimmeMandant, mandantNamen } from './mandant';
 import { ordnerAblage, Vorschaubilder } from './vorschau';
+import { Dateiumwandlung, ordnerFassungen } from './dateiumwandlung';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
@@ -225,6 +226,12 @@ const vorschau = new Vorschaubilder(ordnerAblage(join(ordner.dateien, 'vorschau'
 dienst.verbindeVorschau(vorschau);
 vorschau.pause = () => wartung.aktiv;
 wartung.beimAusschalten(() => vorschau.anstossen());
+// Dateien umwandeln (#577): Fassungen aus Paketen mit dms:umwandeln – wie die Vorschaubilder außerhalb des
+// Haushaltsordners (nicht in der Sicherung, lassen sich neu erzeugen). Daraus Vorschaubild und Volltext.
+const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassungen(join(ordner.dateien, 'fassungen', cfg.haushalt)), vorschau));
+dienst.verbindeUmwandlung(umwandlung, vorschau);
+vorschau.fassung = (sha) => umwandlung.lies(sha);
+texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
 // Tägliche Zusammenfassung der offenen Aufgaben (#54).
 const typName = async (id: string | undefined) => (await dienst.listeTypen()).find((t) => t.id === id)?.name ?? '';
 const aufgabenmail = new Aufgabenmail({
@@ -305,7 +312,8 @@ const pakete: Paketverwaltung = new Paketverwaltung(dienst, {
 // Texterkennung übernehmen kann; nicht bei Fehler, ausgelassen oder abgebrochen.
 texterkennung.nachher = (d, e, k) => {
   if (e.stand !== 'fertig' && e.stand !== 'paket') return;
-  void dienst.volltextFertig({ dokument: d.id, mappe: d.mappeId }, { quelle: 'kern', text: k.text, mime: d.mime, seiten: e.seiten ?? null, neu: k.neu, seitenOhneText: k.seitenOhneText });
+  // Umgewandelte Datei (#577): mime ist der Typ der Fassung, original der des Dokuments.
+  void dienst.volltextFertig({ dokument: d.id, mappe: d.mappeId }, { quelle: 'kern', text: k.text, mime: k.mime ?? d.mime, ...(k.original ? { original: k.original } : {}), seiten: e.seiten ?? null, neu: k.neu, seitenOhneText: k.seitenOhneText });
 };
 // Texterkennung als Paket (#458): das installierte Paket mit dms:texterkennung.
 texterkennung.paket = () => dienst.texterkennungPaket();
