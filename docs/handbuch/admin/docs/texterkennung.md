@@ -37,7 +37,9 @@ Das DMS liest selbst nur **PDF, JPEG und PNG**. Für andere Dateitypen gibt es V
 | PDF, JPEG, PNG | dem DMS selbst (Scans und Fotos: Paket **Texterkennung**) | – |
 | TIFF (auch mehrseitig, z. B. vom Scanner), WebP, GIF (erstes Bild), BMP | Paket **Bildformate** (dazu für den Text: Paket **Texterkennung**) | TIFF → PDF, WebP → JPEG, GIF und BMP → PNG |
 | HEIC/HEIF (Fotos vom iPhone) | noch keinem Paket – siehe unten | – |
-| Word, Excel, PowerPoint, OpenDocument, E-Mails | noch keinem Paket (geplant, dms-registry #30) | – |
+| Word, Excel, PowerPoint, OpenDocument, RTF, Text, E-Mails (`.eml`, `.msg`) | Volltext: Paket **Office und E-Mail** (Vorschau noch nicht, dms-registry #72) | – (das Paket liest das Original) |
+
+Für Office-Dateien und E-Mails macht das Paket keine Fassung, sondern liefert **nur den Volltext** (Recht [Volltext liefern](pakete.md#recht-volltext), seit Version 0.145). Es liest dabei die Originaldatei. Bis es den Text schreibt, steht am Dokument „Volltext: wartet auf Paket · wartet auf Volltext (Paket Office und E-Mail)“. Das DMS gibt ihm jede solche Datei – beim Hochladen, bei einer neuen Version, bei **Volltext neu erzeugen**, bei **Erneut versuchen** und **Neu erzeugen** am Dokument und beim Installieren für alle vorhandenen Dateien ohne Text. Kann das Paket eine Datei nicht lesen, steht sein Grund am Dokument, z. B. „Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. Bis 5 Millionen Zeichen je Dokument kommen in den Volltext (wie bei allen Dokumenten).
 
 So sieht es aus:
 
@@ -46,7 +48,7 @@ So sieht es aus:
 3. Mit der Fassung entsteht das Vorschaubild (Hinweis beim Darüberfahren: „Vorschau aus der umgewandelten Fassung eines Pakets“) und der Volltext. Am Dokument steht dann z. B. „Text aus dem PDF · aus der umgewandelten Fassung (Bildformate 1.0.0)“ mit dem Link **Fassung ansehen**; in der Historie der Mappe „umgewandelte Fassung erstellt“.
 4. Kann das Paket eine Datei nicht lesen (z. B. beschädigt), steht sein Grund am Dokument („Umwandlung durch Paket Bildformate: …“). **Erneut versuchen** gibt die Datei noch einmal an das Paket.
 
-**Werkbank → Texterkennung → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
+**Werkbank → Texterkennung → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt bzw. ihren Volltext liefert – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
 
 **Sicherung:** Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (`/data/files/<Haushalts-Id>/fassungen`) und gehen mit in die [Sicherung](sicherung.md#was-eine-sicherung-enthalt) und den [Vollexport](export.md) (dort als `<Datei>.fassung.pdf` neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch **ohne** das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (`/data/files/fassungen`, Versionen 0.137 bis 0.140.0) zieht das DMS beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt **Werkbank → Wartungsoperationen → Vorschaubilder nachholen** die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).
 
@@ -58,7 +60,7 @@ Die Seite ist eine **Übersicht**; Einstellungen der Erkennung gibt es hier nich
 
 - **Texterkennung für Scans und Bilder:** welches Paket die Texterkennung übernimmt, mit Link zu seinen Einstellungen, und wie viele Dokumente gerade darauf warten. Fehlt das Paket, steht hier der Hinweis mit **Jetzt installieren**.
 - **Woher der Text kommt:** wie viele Dokumente ihren Text aus dem PDF haben, vom Paket, von der früheren eingebauten Texterkennung (bis 0.133), ohne Text sind, auf die Texterkennung warten oder einen Fehler hatten.
-- **Andere Dateitypen:** TIFF, WebP und Co. – wie viele es gibt und welches Paket sie umwandelt (siehe [Andere Dateitypen](#andere-dateitypen)).
+- **Andere Dateitypen:** TIFF, WebP, Word, E-Mails und Co. – wie viele es gibt und welches Paket sie umwandelt oder ihren Volltext liefert (siehe [Andere Dateitypen](#andere-dateitypen)).
 - **Erkannte Sprachen** mit dem Hinweis, wenn dem Paket Sprachdaten fehlen (siehe [Weitere Sprachen](#weitere-sprachen)).
 - **Warteschlange**, **Werkzeuge** (poppler) und **Aufträge** (siehe unten).
 

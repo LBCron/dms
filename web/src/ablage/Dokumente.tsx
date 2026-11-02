@@ -162,7 +162,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const [text, setText] = useState<{ id: string; text: string | null } | null>(null);
   const standVon = (x: Dokument) => ocr[x.id] ?? x.ocr;
   // Wartet es auf das Paket, nur solange eins installiert ist (#459: ohne Paket wartet es, bis eins kommt).
-  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket) || h?.art === 'umwandlung'; });
+  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket) || h?.art === 'umwandlung' || h?.art === 'volltext'; });
   useEffect(() => {
     if (!offen || !dokumente.length) return;
     const t = setTimeout(() => {
@@ -505,9 +505,12 @@ function OcrAnzeige({ id, s, sprache: feld, weitere, erneut, neu, text, textOffe
   const fortschritt = s.stand === 'paket' ? /\(Paket .+?\) – (.+)$/.exec(s.info ?? '')?.[1] : undefined;
   // Aus der umgewandelten Fassung eines Pakets (#577): gekennzeichnet, mit Link zur Fassung.
   const fassung = s.stand === 'fertig' ? fassungAusInfo(s.info) : null;
+  // Wartet es auf ein Paket, das umwandelt oder den Volltext liefert (#577, #614): nicht „wartet auf Texterkennung“.
+  const art = volltextHerkunft(s)?.art;
+  const standText = s.stand === 'paket' && (art === 'umwandlung' || art === 'volltext') ? t('volltext.stand.paket') : OCR_STAENDE[s.stand];
   return (
     <span className="ocrstand klein">
-      <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {OCR_STAENDE[s.stand]}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachenAnzeige(sprache.sprache, weitere)}` : ''}</span>
+      <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {standText}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachenAnzeige(sprache.sprache, weitere)}` : ''}</span>
       {herkunft && <span className="leise">{herkunft}{fortschritt ? ` · ${fortschritt}` : ''}</span>}
       {fassung && <span className="leise">{t('volltext.herkunft.fassung', { paket: fassung })} <a className="textknopf" href={fassungUrl(id)} target="_blank" rel="noreferrer" title={t('volltext.herkunft.fassung.titel')}>{t('volltext.herkunft.fassung.ansehen')}</a></span>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && s.info && <span className="leise">{s.info}</span>}
