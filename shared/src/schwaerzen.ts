@@ -45,7 +45,12 @@ export interface Fund { seite: number; text: string; woerter: number[]; art: Mus
 
 /* ---------- Text einer Seite mit Zuordnung Zeichen → Wort ---------- */
 
-const norm = (s: string) => s.normalize('NFKC').toLocaleLowerCase('de-DE');
+/**
+ * Vergleichsform: unsichtbare Zeichen (weiches Trennzeichen, Null-Breite) weg, freistehendes Trema als
+ * kombinierendes, NFKC, klein, ß wie ss (Versalien „GROSSMANN“), geschützte Bindestriche wie „-“.
+ */
+const norm = (s: string) => s.replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\u00A8/g, '\u0308')
+  .normalize('NFKC').toLocaleLowerCase('de-DE').replace(/ß/g, 'ss').replace(/[\u2010\u2011]/g, '-');
 
 interface Seitentext { text: string; wortVon: Int32Array }
 /** Wörter mit Leerzeichen verbunden (`kompakt`: ohne Leerraum), dazu je Zeichen das Wort. */
@@ -54,7 +59,8 @@ function seitentext(woerter: Wort[], kompakt: boolean): Seitentext {
   const idx: number[] = [];
   woerter.forEach((w, i) => {
     let t = norm(w[0]);
-    if (kompakt) t = t.replace(/\s+/g, '');
+    // Ohne Leerraum und Bindestriche, also auch über Silbentrennung hinweg: „Mül-“ + „ler“ ergibt „müller“.
+    if (kompakt) t = t.replace(/[\s-]+/g, '');
     if (!t) return;
     if (!kompakt && text) { text += ' '; idx.push(-1); }
     text += t;
@@ -74,13 +80,14 @@ const schluessel = (f: Fund) => `${f.seite}:${f.woerter.join(',')}`;
 
 /**
  * Alle Stellen eines Suchbegriffs (ohne Groß-/Kleinschreibung, auch über mehrere Wörter). Ist der Begriff
- * mindestens 4 Zeichen lang, zählt er auch ohne Leerraum – „DE89 3704“ findet „DE893704“ und umgekehrt.
+ * mindestens 4 Zeichen lang, zählt er auch ohne Leerraum und Bindestriche – „DE89 3704“ findet „DE893704“ und
+ * umgekehrt, „Müller“ auch als „Mül-“ am Zeilenende und „ler“ in der nächsten Zeile.
  * Getroffen wird immer das ganze Wort (sicherer als ein halbes).
  */
 export function findeBegriff(seiten: SchwaerzSeite[], begriff: string): Fund[] {
   const b = norm(begriff).replace(/\s+/g, ' ').trim();
   if (!b) return [];
-  const bKompakt = b.replace(/\s+/g, '');
+  const bKompakt = b.replace(/[\s-]+/g, '');
   const funde = new Map<string, Fund>();
   seiten.forEach((seite, i) => {
     const varianten: Array<[Seitentext, string]> = [[seitentext(seite.woerter, false), b]];
