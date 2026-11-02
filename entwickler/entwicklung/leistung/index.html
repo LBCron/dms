@@ -591,6 +591,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#anstehend-als-kalender-528" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anstehend als Kalender (#528)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#lasttest" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -904,6 +915,17 @@
     <span class="md-ellipsis">
       
         Zahlen der Ansichten (#512)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anstehend-als-kalender-528" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anstehend als Kalender (#528)
       
     </span>
   </a>
@@ -1283,6 +1305,80 @@
 </table>
 <p><em>Sichtbar</em> = bis Kacheln, erste Zeile der Liste bzw. Kopf der Mappe zu sehen sind; <em>Zahlen da</em> = bis die Antwort von <code>/api/sichten</code> im Browser ist; <code>/api/sichten</code> = Server-Zeit dieser Anfrage (unter Last der Seite; allein 6–9 ms bei einem Treffer); <em>Laden</em> = bis keine Anfrage mehr läuft. Alle Werte in ms, lokaler Rechner. „Sichtbar“ schwankt bei „Mappe öffnen“ stark (einzelne Läufe um 870 ms in beiden Fassungen).</p>
 <p>Nicht umgesetzt: <strong>nur zählen, was zu sehen ist</strong> (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein <strong>Index</strong> für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.</p>
+<h2 id="anstehend-als-kalender-528">Anstehend als Kalender (#528)<a class="headerlink" href="#anstehend-als-kalender-528" title="Permanent link">&para;</a></h2>
+<p>Monat und Jahr in „Anstehend“ laden ihren Zeitraum mit <strong>einer</strong> Anfrage: <code>GET /api/anstehend?von=…&amp;bis=…</code> (höchstens 400 Tage, <code>zeitraumProblem</code> in <code>shared/src/kalender.ts</code>). Der Server holt wie die Liste nur Mappen mit einem Datum im Zeitraum (<code>mappenMitDatum</code>, #477); für Felder mit <strong>wiederkehrender</strong> Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (<code>folgetermine</code> in <code>shared/src/fristen.ts</code>, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (<code>Zaehlerspeicher</code>), je Benutzer, Rechte und Zeitraum; ein eigener <code>Haushaltsstand</code> (<code>fristenstand</code>) zählt zusätzlich bei geänderten Erinnerungen (<code>ZAEHLT_FUER_ANSTEHEND</code>), weil die sonst in <code>OHNE_FOLGEN</code> stehen.</p>
+<p><strong>Messung zu #528</strong> (dieselben Daten wie #477: 50.000 Demo-Mappen, lokaler Rechner; Median aus 5 Anfragen; <em>kalt</em> = je Anfrage ein neuer Zeitraum, <em>Treffer</em> = derselbe Zeitraum aus dem Zwischenspeicher; Zeit bis zur vollständigen Antwort):</p>
+<table>
+<thead>
+<tr>
+<th>Abfrage</th>
+<th>Wer</th>
+<th style="text-align: right;">Einträge</th>
+<th style="text-align: right;">davon Folgetermine</th>
+<th style="text-align: right;">kalt ms</th>
+<th style="text-align: right;">Treffer ms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Liste 30 Tage</td>
+<td>Administrator</td>
+<td style="text-align: right;">545</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">9</td>
+</tr>
+<tr>
+<td>Monat</td>
+<td>Administrator</td>
+<td style="text-align: right;">934</td>
+<td style="text-align: right;">377</td>
+<td style="text-align: right;">160</td>
+<td style="text-align: right;">9</td>
+</tr>
+<tr>
+<td>Jahr</td>
+<td>Administrator</td>
+<td style="text-align: right;">11.863</td>
+<td style="text-align: right;">11.863</td>
+<td style="text-align: right;">381</td>
+<td style="text-align: right;">81</td>
+</tr>
+<tr>
+<td>Monat</td>
+<td>Mitglied mit Rolle</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">74</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>Jahr</td>
+<td>Mitglied mit Rolle</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">141</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>Monat</td>
+<td>Mitglied ohne Rolle</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">81</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>Jahr</td>
+<td>Mitglied ohne Rolle</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">120</td>
+<td style="text-align: right;">7</td>
+</tr>
+</tbody>
+</table>
+<p>Der Administrator ist der ungünstigste Fall: Ihm gehören alle Fristen ohne Empfänger, bei den Demo-Daten fast alle Verträge mit jährlicher Kündigungsfrist. Das Jahr ist dann 3,2 MB JSON (ohne Kompression); im Browser steht die Jahresansicht trotzdem nach etwa 0,1–0,2 s, der Monat nach 0,1–0,3 s. Die Mitglieder haben in den Demo-Daten keine eigenen Fristen; ihre Zeit ist das Suchen der Kandidaten. In einem Haushalt mit einigen Dutzend Fristen liegt alles im Bereich der Liste.</p>
 <h2 id="lasttest">Lasttest<a class="headerlink" href="#lasttest" title="Permanent link">&para;</a></h2>
 <p><code>server/test/lasttest.mjs</code> (#544, #563) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js. Im Image steckt es als Befehl <code>dms-lasttest</code> (Betreiber: Administratorhandbuch → <a href="https://motom001.github.io/dms/admin/aktuell/lasttest/">Lasttest selbst durchführen</a>).</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein</span>

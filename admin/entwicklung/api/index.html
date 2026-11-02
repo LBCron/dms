@@ -2541,6 +2541,10 @@
 <td><code>GET /api/v1/aufgaben</code> (eigene offene), <code>POST /api/v1/mappen/{id}/aufgaben</code> (vergeben), <code>POST /api/v1/aufgaben/{id}/erledigt</code> und <code>…/delegieren</code>, mehrere auf einmal mit <code>POST /api/v1/aufgaben/weitergeben</code> bzw. <code>…/aufgaben/erledigt</code> (#415); Fristen und Erinnerungen über <code>GET /api/v1/anstehend</code> und <code>…/erinnerungen</code></td>
 </tr>
 <tr>
+<td><strong>Anstehend als Kalender</strong> (#528)</td>
+<td><code>GET /api/v1/anstehend?von=2027-01-01&amp;bis=2027-12-31</code> liefert Fristen, Erinnerungen und Aufgaben mit Datum des Schlüssel-Benutzers für einen Zeitraum (höchstens 400 Tage) in einer Anfrage – mit den berechneten künftigen Terminen wiederkehrender Fristen (<code>folgetermin: true</code>), allem Überfälligen (<code>faellig</code> und <code>datum</code> vor <code>heute</code>) und den Feiertagen (<code>feiertage</code>). Ohne <code>von</code>/<code>bis</code> wie die Liste: <code>?tage=30</code> ab heute</td>
+</tr>
+<tr>
 <td><strong>Notizen</strong></td>
 <td><code>GET</code>/<code>POST /api/v1/mappen/{id}/notizen</code>, <code>PUT</code>/<code>DELETE /api/v1/notizen/{id}</code></td>
 </tr>

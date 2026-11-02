@@ -2228,17 +2228,35 @@
         "tags": [
           "Ablage"
         ],
-        "summary": "Anstehende Fristen und Erinnerungen",
-        "description": "Fristen und Erinnerungen des Benutzers dieses Schlüssels bis heute + tage (Standard 30), fällige und kommende, nach Datum.",
+        "summary": "Anstehende Fristen, Erinnerungen und Aufgaben mit Datum",
+        "description": "Fristen, Erinnerungen und Aufgaben mit Datum des Benutzers dieses Schlüssels, fällige und kommende, nach Datum – nur an Mappen, die er lesen darf. Entweder bis heute + tage (Standard 30, wie die Liste) oder für einen Zeitraum von … bis (höchstens 400 Tage, wie der Kalender, #528): dann auch die künftigen Termine wiederkehrender Fristen (folgetermin), Überfälliges auch vor „von“ und die Feiertage des Bundeslands. Überfällig ist ein Eintrag mit faellig und datum vor heute.",
         "operationId": "getAnstehend",
         "parameters": [
           {
             "name": "tage",
             "in": "query",
             "required": false,
-            "description": "Zeitraum in Tagen ab heute (0–366)",
+            "description": "Zeitraum in Tagen ab heute (0–366); ohne von/bis",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "von",
+            "in": "query",
+            "required": false,
+            "description": "Beginn des Zeitraums (JJJJ-MM-TT), nur zusammen mit bis",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bis",
+            "in": "query",
+            "required": false,
+            "description": "Ende des Zeitraums (JJJJ-MM-TT), höchstens 400 Tage nach von",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -9676,7 +9694,27 @@
         "type": "object",
         "properties": {
           "tage": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Tage von heute bis „bis“"
+          },
+          "heute": {
+            "type": "string",
+            "format": "date"
+          },
+          "von": {
+            "type": "string",
+            "format": "date"
+          },
+          "bis": {
+            "type": "string",
+            "format": "date"
+          },
+          "feiertage": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Nur mit von/bis: gesetzliche Feiertage im Zeitraum (Datum → Name), Bundesland aus der Werkbank"
           },
           "eintraege": {
             "type": "array",
@@ -9687,7 +9725,8 @@
                   "type": "string",
                   "enum": [
                     "frist",
-                    "erinnerung"
+                    "erinnerung",
+                    "aufgabe"
                   ]
                 },
                 "datum": {
@@ -9724,6 +9763,10 @@
                 "erinnerungId": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "folgetermin": {
+                  "type": "boolean",
+                  "description": "Künftiger Termin einer wiederkehrenden Frist, berechnet (nur mit von/bis)"
                 }
               }
             }
