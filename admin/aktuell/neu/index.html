@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.118/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.119/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0118" class="md-skip">
+        <a href="#neu-in-version-0119" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01180" class="md-nav__link">
+  <a href="#01190" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.118.0
+        0.119.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.118.0">
+    <nav class="md-nav" aria-label="0.119.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2276,15 +2276,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01180" class="md-nav__link">
+  <a href="#01190" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.118.0
+        0.119.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.118.0">
+    <nav class="md-nav" aria-label="0.119.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2334,19 +2334,20 @@
   
 
 
-<h1 id="neu-in-version-0118">Neu in Version 0.118<a class="headerlink" href="#neu-in-version-0118" title="Permanent link">&para;</a></h1>
-<h2 id="01180">0.118.0<a class="headerlink" href="#01180" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0119">Neu in Version 0.119<a class="headerlink" href="#neu-in-version-0119" title="Permanent link">&para;</a></h1>
+<h2 id="01190">0.119.0<a class="headerlink" href="#01190" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Favoriten benachrichtigen für alle, je Rolle oder gar nicht</strong> (#506): Werkbank → Einstellungen → <strong>Benachrichtigungen und Aufgaben</strong> → <em>Favoriten benachrichtigen</em>.</li>
-<li><em>Nur für bestimmte Rollen</em>: die Systemrollen Administrator und Mitglied und darunter deine weiteren Rollen.</li>
-<li>Wer nicht freigegeben ist, sieht den Schalter an seinen Favoriten und im Profil nicht; seine eigene Einstellung bleibt gespeichert und gilt wieder, sobald du die Benachrichtigung erlaubst.</li>
-<li><strong>Vorgabe für neue Benutzer</strong> (Standard: an); bestehende Benutzer bleiben unverändert. Mit <strong>Vorgabe auf alle anwenden</strong> (mit Rückfrage) setzt du sie für alle.</li>
-<li>Schnittstelle: <code>GET</code>/<code>PUT /api/werkbank/favoriten-freigabe</code>, <code>POST /api/werkbank/favoriten-freigabe/anwenden</code>.</li>
+<li><strong>Auslastung im Systemzustand</strong> (#409): Werkbank → Wartung und Fehlersuche → <strong>Systemzustand</strong> zeigt zwischen Schwellen und Ordnern, wie stark der Container arbeitet – <strong>CPU</strong> (Anteil an den erlaubten Kernen, dazu die Systemlast des Rechners), <strong>Arbeitsspeicher</strong> (belegt von der Grenze des Containers, mit den Anteilen von DMS, Paket-Läufer und bei dms-komplett PostgreSQL) und <strong>Netzwerk</strong> (empfangen und gesendet je Sekunde).</li>
+<li>Kleine Kurven der letzten Stunde, gemessen jede Minute, nur im Arbeitsspeicher.</li>
+<li>Liegt CPU oder Arbeitsspeicher 5 Minuten lang über 90 %, erscheint ein Hinweis in der Übersicht und <strong>hoch</strong> neben <em>Systemzustand</em> in der Leiste.</li>
+<li>Dazu die <strong>Wartezeit des Servers</strong> mit Verweis auf <em>Einstellungen → Datenbank-Anbindung</em>, dort umgekehrt ein Verweis hierher.</li>
+<li>Ohne zusätzliche Rechte: Was der Container nicht lesen kann, steht als „nicht verfügbar“ da.</li>
+<li>Schnittstelle: <code>GET /api/werkbank/systemlast</code>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.117.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.117.0...v0.118.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.118.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.118.0...v0.119.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.118/speicherplatz/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.119/speicherplatz/">
       
       
         <link rel="prev" href="../designs/">
@@ -1634,6 +1634,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#auslastung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auslastung
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#was-gemessen-wird" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2313,6 +2324,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#auslastung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auslastung
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#was-gemessen-wird" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2383,8 +2405,8 @@
 
 
 <h1 id="systemzustand">Systemzustand<a class="headerlink" href="#systemzustand" title="Permanent link">&para;</a></h1>
-<p>Wie geht es dem Server gerade? Das zeigt <strong>Werkbank → Wartung und Fehlersuche → Systemzustand</strong> – bisher vor allem den <strong>Speicherplatz</strong>. (Früher hieß der Bereich <em>Speicherplatz</em> und stand unter <em>Einstellungen</em>; alte Links und Lesezeichen führen hierher.)</p>
-<p>Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Das DMS misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die <strong>Schwellen</strong>, darunter die <strong>Ordner</strong> mit ihrer Belegung, ganz unten <strong>Große PDFs verkleinern</strong>.</p>
+<p>Wie geht es dem Server gerade? Das zeigt <strong>Werkbank → Wartung und Fehlersuche → Systemzustand</strong>: den <strong>Speicherplatz</strong> und die <strong>Auslastung</strong> von CPU, Arbeitsspeicher und Netzwerk. (Früher hieß der Bereich <em>Speicherplatz</em> und stand unter <em>Einstellungen</em>; alte Links und Lesezeichen führen hierher.)</p>
+<p>Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Das DMS misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die <strong>Schwellen</strong>, darunter die <a href="#auslastung">Auslastung</a>, dann die <strong>Ordner</strong> mit ihrer Belegung, ganz unten <strong>Große PDFs verkleinern</strong>.</p>
 <div class="admonition tip">
 <p class="admonition-title">Einen Bereich nicht in der Leiste gefunden?</p>
 <p>Manche Bereiche der Werkbank, zum Beispiel <em>Wartungsmodus</em>, <em>Datenbank-Anbindung</em> oder <em>Wartungsoperationen</em>, sind in der Vorlage <em>Haushalt</em> ausgeblendet. Unten in der Leiste steht, wie viele Bereiche ausgeblendet sind; ein Klick zeigt sie. Dauerhaft einblenden kannst du sie unter <a href="https://motom001.github.io/dms/admin/aktuell/uebersicht/#werkbank-anpassen">Werkbank anpassen</a>. <strong>Ausgeblendet heißt nicht abgeschaltet.</strong></p>
@@ -2414,6 +2436,45 @@
 </tbody>
 </table>
 <p>Die Warnschwelle muss mehr freien Platz verlangen als die Grenze – sonst käme die Warnung erst danach.</p>
+<h2 id="auslastung">Auslastung<a class="headerlink" href="#auslastung" title="Permanent link">&para;</a></h2>
+<p>Ist das DMS langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Das DMS misst <strong>jede Minute</strong> die Auslastung <strong>seines Containers</strong>; die kleinen Kurven zeigen die letzte Stunde, daneben steht der Wert <strong>jetzt</strong>. Die Werte stehen nur im Arbeitsspeicher, nach einem Neustart beginnen die Kurven neu.</p>
+<p><img alt="Werkbank → Systemzustand → Auslastung" src="../bilder/werkbank-auslastung.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Wert</th>
+<th>Was er bedeutet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CPU</strong></td>
+<td>Anteil der Rechenzeit an den Kernen, die der Container nutzen darf (Grenze aus <code>cpus:</code> in der Compose-Datei). Ohne Grenze bezieht sich der Anteil auf alle Kerne. Darunter die <strong>Systemlast</strong> des ganzen Rechners (1, 5, 15 Minuten) – liegt sie dauerhaft über der Zahl der Kerne, ist das NAS insgesamt ausgelastet, nicht nur das DMS.</td>
+</tr>
+<tr>
+<td><strong>Arbeitsspeicher</strong></td>
+<td>Belegt von der Grenze des Containers (<code>mem_limit:</code>); ohne Grenze verglichen mit dem ganzen Rechner. Darunter die Anteile von <strong>DMS</strong>, <strong>Paket-Läufer</strong> (läuft nur mit installierten Paketen mit Code) und – bei dms-komplett – <strong>PostgreSQL</strong>.</td>
+</tr>
+<tr>
+<td><strong>Netzwerk</strong></td>
+<td>Empfangen und gesendet je Sekunde, über alle Netzwerkschnittstellen des Containers.</td>
+</tr>
+<tr>
+<td><strong>Wartezeit des Servers</strong></td>
+<td>Wie lange eine Anfrage warten musste, weil das DMS gerade etwas anderes rechnete (Ereignisschleife). Die Einzelheiten stehen unter <strong>Einstellungen → <a href="../installation/#lange-datenbankzugriffe">Datenbank-Anbindung</a></strong>, zusammen mit den langen Datenbankzugriffen.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Warnung:</strong> Liegt CPU oder Arbeitsspeicher <strong>5 Minuten lang über 90 %</strong>, steht ein Hinweis hier, in der <a href="../uebersicht/">Übersicht</a> und als <strong>hoch</strong> neben <em>Systemzustand</em> in der Leiste – auch wenn der Bereich ausgeblendet ist.</p>
+<p><strong>Typische Ursachen und was hilft:</strong></p>
+<ul>
+<li><strong>Texterkennung</strong> arbeitet viele neue Scans ab – das geht vorbei; die Warteschlange steht unter <a href="../texterkennung/">Texterkennung</a>.</li>
+<li><strong>Demo-Daten</strong> werden angelegt oder entfernt – ebenfalls vorübergehend.</li>
+<li>Ein <strong>Paket mit Code</strong> rechnet viel – der Anteil <em>Paket-Läufer</em> zeigt das; die Auslastung je Paket folgt in einer späteren Version.</li>
+<li>Der Arbeitsspeicher ist dauerhaft knapp – erhöhe <code>mem_limit</code> in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.</li>
+<li>Die Systemlast des Rechners ist hoch, die CPU des DMS aber nicht – dann bremst ein anderer Dienst auf dem NAS.</li>
+</ul>
+<p><strong>Nicht verfügbar</strong> steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS <strong>ihre</strong> Auslastung nicht; das steht unter dem Arbeitsspeicher.</p>
 <h2 id="was-gemessen-wird">Was gemessen wird<a class="headerlink" href="#was-gemessen-wird" title="Permanent link">&para;</a></h2>
 <p>Gemessen werden die drei festen Ordner im Container (siehe <a href="../installation/#ordner-und-volumes">Ordner und Volumes</a>) – jede Minute und zusätzlich vor jedem Hochladen:</p>
 <table>
