@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.114/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.115/neu/">
       
       
         <link rel="prev" href="../original/">
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0114" class="md-skip">
+        <a href="#neu-in-version-0115" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01140" class="md-nav__link">
+  <a href="#01150" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.114.0
+        0.115.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.114.0">
+    <nav class="md-nav" aria-label="0.115.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -435,6 +435,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -1138,15 +1149,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01140" class="md-nav__link">
+  <a href="#01150" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.114.0
+        0.115.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.114.0">
+    <nav class="md-nav" aria-label="0.115.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1154,6 +1165,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -1196,23 +1218,25 @@
   
 
 
-<h1 id="neu-in-version-0114">Neu in Version 0.114<a class="headerlink" href="#neu-in-version-0114" title="Permanent link">&para;</a></h1>
-<h2 id="01140">0.114.0<a class="headerlink" href="#01140" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0115">Neu in Version 0.115<a class="headerlink" href="#neu-in-version-0115" title="Permanent link">&para;</a></h1>
+<h2 id="01150">0.115.0<a class="headerlink" href="#01150" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Aus Dokument ausfüllen</strong> (#391, Stufe 1): Oben in jeder Mappe (neu und bestehend) – Foto machen oder Datei wählen (Foto, PDF, vCard; Vorder- und Rückseite zusammen) bzw. ein Dokument der Mappe nehmen, und das DMS trägt die erkannten Angaben als <strong>Vorschlag</strong> in die Felder ein. Beispiel: <strong>Visitenkarte scannen</strong> bei einer Person – Name, Funktion, Telefon, Mobil, E-Mail, Anschrift und Organisation.</li>
-<li>Dieselbe eingebaute Erkennung wie beim Zuordnen von Post (#336): offline, ohne KI. Fotos und PDFs liest die Texterkennung sofort, vCards direkt.</li>
-<li>Am Feld steht, wie sicher der Wert ist und wo er stand; <strong>Zurücknehmen</strong> einzeln oder alle. Ausgefüllte Felder bleiben, der Wert aus dem Dokument steht als <strong>Alternative</strong> mit <strong>Übernehmen</strong> daneben.</li>
-<li>Verweisfelder: eine vorhandene Mappe, die im Text steht (z. B. die Firma an Name oder E-Mail-Domain); sonst <strong>„Organisation“ mit diesen Angaben anlegen</strong> nach einer Rückfrage.</li>
-<li>Gespeichert wird erst mit <strong>Mappe speichern</strong>; das Foto liegt dann im Dokumentenregister (abwählbar).</li>
-<li>Nie für Passwortfelder und feste Felder; nur mit dem Recht, die Mappe zu bearbeiten bzw. anzulegen.</li>
-<li>Werkbank → Mappentyp → <strong>Erkennung</strong>: eigene <strong>Beschriftung</strong> des Knopfs (z. B. „Visitenkarte scannen“) oder ausblenden; gefüllt werden die Felder, die „für die Erkennung“ markiert sind (ohne Markierung alle mit erkennbarer Art).</li>
-<li>Schnittstelle: <code>POST /typen/{id}/vorschlaege</code> (Text oder Dokumente), <code>POST /typen/{id}/vorschlaege/datei</code> (Foto, PDF, vCard), <code>GET /typen/{id}/erkennungsschema</code> (Feldbeschreibung als JSON Schema; jede Antwort wird dagegen geprüft); <code>ausDokument</code> am Mappentyp.</li>
-<li>Benutzerhandbuch <em>Mappen</em> → <strong>Aus Dokument ausfüllen</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Erkennung</strong>, Entwicklerhandbuch <em>Pakete mit Code</em> → <strong>Erkennung: Feldbeschreibung und Antwort</strong>.</li>
+<li><strong>Erkannte Post automatisch zuordnen</strong> (#337): Werkbank → Mappentyp → <strong>Erkennung</strong> → <em>Post automatisch zuordnen, wenn die Erkennung sicher ist</em> (Standard: aus).</li>
+<li>Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) <strong>und</strong> genau eine passende Mappe dieses Typs – oder genau eine, deren Nummer im Brief steht.</li>
+<li>Der Empfänger (<em>Für</em>, sonst wer die Post ins DMS gebracht hat) bekommt die Aufgabe <strong>Automatisch zugeordnet zu „…“ – bitte prüfen</strong> mit <strong>Passt</strong> und <strong>Rückgängig</strong> (Dokumente zurück, Stand wieder <em>Neu</em>). Keine eigene Ansicht.</li>
+<li>Die Begründung steht in der Historie von Post und Mappe und im Kasten <em>Erkannt</em>.</li>
+<li>Nie automatisch: neue Mappen anlegen, Post zuordnen, deren Empfänger die Mappe nicht lesen darf, Mappentypen im Archivmodus. Je Post höchstens einmal; nach <em>Rückgängig</em> nie wieder.</li>
+<li>Schnittstelle: <code>POST /aufgaben/{id}/rueckgaengig</code>; <code>autoZuordnen</code> am Mappentyp; Aufgabenart <code>zugeordnet</code>.</li>
+<li>Benutzerhandbuch <em>Post</em> → <strong>Automatisch zugeordnet</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Erkennung</strong>.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Migration <code>046_automatisch_zugeordnet.sql</code>: Aufgabenart <code>zugeordnet</code>. Die Zuordnung läuft im Kern direkt nach der Erkennung (internes Ereignis „Volltext fertig“).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.113.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.113.0...v0.114.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.114.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.114.0...v0.115.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 

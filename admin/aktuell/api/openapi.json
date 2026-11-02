@@ -1954,6 +1954,69 @@
         }
       }
     },
+    "/aufgaben/{id}/rueckgaengig": {
+      "post": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Automatische Zuordnung rückgängig machen",
+        "description": "Nur für Aufgaben der Art „zugeordnet“ (#337, „Automatisch zugeordnet – bitte prüfen“): Die Dokumente kommen zurück in die Post, der Verweis auf die Zielmappe fällt weg, der Stand ist wieder „Neu“ (wenn die Post sonst nirgends zugeordnet ist), die Aufgabe ist erledigt; beides steht in der Historie. Diese Post ordnet die Erkennung danach nie wieder von selbst zu. Braucht Bearbeiten an der Post; 409, wenn schon zurückgenommen.",
+        "operationId": "postAufgabenMitidRueckgaengig",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id der Aufgabe (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rueckgaengig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/aufgaben/{id}/delegieren": {
       "post": {
         "tags": [
@@ -7430,6 +7493,10 @@
           "felder"
         ],
         "properties": {
+          "autoZuordnen": {
+            "type": "boolean",
+            "description": "Post automatisch zuordnen, wenn die Erkennung sicher ist (#337): Absender eindeutig (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Standard false; bei Archivmodus wirkungslos. Der Empfänger bekommt eine Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig."
+          },
           "ausDokument": {
             "type": "object",
             "nullable": true,
@@ -8704,6 +8771,18 @@
         "type": "object",
         "description": "JSON Schema 2020-12",
         "additionalProperties": true
+      },
+      "Rueckgaengig": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "$ref": "#/components/schemas/Mappe"
+          },
+          "dokumente": {
+            "type": "integer",
+            "description": "Dokumente, die zurück in die Post kamen"
+          }
+        }
       },
       "Erkennung": {
         "type": "object",

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.114/mappentypen/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.115/mappentypen/">
       
       
         <link rel="prev" href="../uebersicht/">
@@ -2851,6 +2851,7 @@
 <ul>
 <li><strong>Knopf zeigen</strong> (Standard: an) – abwählen blendet ihn aus, z. B. bei Mappentypen ohne Papier.</li>
 <li><strong>Beschriftung</strong> – z. B. „Visitenkarte scannen“ beim Mappentyp <em>Person</em> oder „Kassenbon fotografieren“; leer heißt er „Aus Dokument ausfüllen“.</li>
+<li><strong>Post automatisch zuordnen, wenn die Erkennung sicher ist</strong> (Standard: aus) – für Mappentypen, zu denen Post gehört, z. B. <em>Vertrag</em>. Sicher heißt: Absender eindeutig an einem starken Merkmal erkannt (Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail, Internetseite, Telefon) <strong>und</strong> genau eine passende Mappe dieses Typs (sie verweist auf den Absender, frühere Post ging dorthin oder ihre Nummer steht im Brief; steht genau eine Nummer im Brief, gewinnt diese Mappe). Das DMS legt dabei nie neue Mappen an, ordnet nie zu, wenn der Empfänger die Mappe nicht lesen darf, und nie bei Mappentypen im <a href="../archiv/">Archivmodus</a> (dort ist der Haken gesperrt). Der Empfänger (<em>Für</em>, sonst wer die Post gebracht hat) bekommt die Aufgabe <strong>Automatisch zugeordnet – bitte prüfen</strong> mit <strong>Passt</strong> und <strong>Rückgängig</strong>; die Begründung steht in der Historie von Post und Mappe. Je Post höchstens einmal, und nur nach neuem Volltext – vorhandene Post bleibt, wie sie ist.</li>
 </ul>
 <p>Darunter steht, welche Felder für die Erkennung markiert sind; markieren lässt sich jedes Feld unter <a href="#fur-die-erkennung-nutzen">Für die Erkennung nutzen</a>. Die Erkennung ist eingebaut und arbeitet ohne KI: Muster für E-Mail, Telefon, Internetseite, IBAN, Datum, Betrag, PLZ/Ort, Briefkopf und Visitenkarte sowie vCards (<code>.vcf</code>); Fotos und PDFs liest die <a href="../texterkennung/">Texterkennung</a> sofort (höchstens 5 Seiten, mit den Sprachen ihrer Einstellungen). Jeder Wert wird gegen die Feldart geprüft, bevor er erscheint; gespeichert wird erst mit <em>Mappe speichern</em>. QR-Codes (z. B. vCard-QR auf Visitenkarten) liest sie noch nicht. Eine Erkennung über Pakete, etwa mit KI auf dem eigenen Rechner, kommt später.</p>
 <h2 id="archivmodus">Archivmodus<a class="headerlink" href="#archivmodus" title="Permanent link">&para;</a></h2>
