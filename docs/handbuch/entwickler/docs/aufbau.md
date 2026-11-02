@@ -45,7 +45,7 @@ Die Prüfung **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) melde
 | `nodemailer` | Server | MIT-0 | E-Mails über SMTP senden (Einladungen, Hinweise, Mappen versenden) |
 | `imapflow` | Server | MIT | Post aus Postfächern über IMAP abholen |
 | `mailparser` | Server | MIT | abgeholte E-Mails in Text und Anhänge zerlegen |
-| `pdf-lib` | Server | MIT | PDFs zusammenstellen, verkleinern, schwärzen, stempeln |
+| `pdf-lib` | Server | MIT | PDFs zusammenstellen, verkleinern, schwärzen, stempeln – nur über die [PDF-Stelle](#pdf-stelle) |
 | `yaml` | Server | ISC | Pakete im YAML-Format lesen und schreiben |
 | `react`, `react-dom` | Oberfläche | MIT | Oberfläche |
 | `qrcode` | Oberfläche | MIT | QR-Code für die Zwei-Faktor-Anmeldung |
@@ -56,6 +56,46 @@ Die Prüfung **Abhängigkeiten** (`.github/workflows/abhaengigkeiten.yml`) melde
 | `tini`, `su-exec` | nur `dms-komplett` | MIT | Prozesse starten und sauber beenden, PostgreSQL ohne root |
 
 Nur für Bau und Tests (nicht im Image): `typescript`, `tsx`, `esbuild`, `vite` mit `@vitejs/plugin-react` und die Typen unter `@types/…`. Auch hier gilt: lieber Bordmittel – die Tests laufen mit dem Testläufer von Node.js (`node --test`), ohne eigenes Test-Framework.
+
+## PDF-Stelle { #pdf-stelle }
+
+Alle Arbeiten an PDFs mit **pdf-lib** liegen in einem Ordner: `server/src/pdf/` (#541). Nur dort wird pdf-lib eingebunden; die Prüfung `server/test/pdf-stelle.test.ts` (läuft mit `npm test` in der CI) schlägt fehl, sobald Server, Oberfläche oder `shared` pdf-lib anderswo importieren – auch per `import()` oder `require()`. Tests dürfen pdf-lib weiter nutzen, um erzeugte PDFs zu untersuchen.
+
+```
+server/src/pdf/index.ts          öffentliche Schnittstelle – alle Module importieren von './pdf'
+server/src/pdf/seiten.ts         Seiten zählen, drehen, löschen, umsortieren, teilen, zusammenfügen, Fotos als Seiten
+server/src/pdf/stempel.ts        Stempel und Fußzeile beim Weitergeben, Bild als A4-Seite
+server/src/pdf/verkleinern.ts    Bilder herunterrechnen (über pdftoppm), Struktur aufräumen (qpdf)
+server/src/pdf/schwaerzen.ts     Seiten neu aufbauen, schwärzen, Textebene ohne geschwärzte Wörter
+server/src/pdf/schreiber.ts      Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
+server/src/pdf/export.ts         PDF mehrerer Mappen
+server/src/pdf/aufkleber.ts      Aufkleberbogen mit Barcode
+server/src/pdf/demo-dokumente.ts Demo-Dokumente
+server/src/pdf/einfach.ts        kleiner Schreiber für Textseiten ganz ohne Bibliothek (Notfallblatt)
+server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung #456; WinAnsi
+```
+
+**Regeln für neuen Code**
+
+- Fachliches bleibt draußen: Was auf ein PDF kommt (Texte, Felder ohne Passwörter, Rechte, Platzhalter), entscheidet das jeweilige Modul (`export.ts`, `auskunft.ts`, `ausgabe.ts` …). In die PDF-Stelle geht nur, **wie** gezeichnet oder umgebaut wird.
+- Die Vorgänge nehmen und liefern **einfache Daten** – Bytes (`Buffer`/`Uint8Array`), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (`Anweisung[]`: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit `textdokumentPdf()` zeichnen. So lassen sich alle Vorgänge auch in einem Arbeiter-Faden ausführen (#542).
+- Bilder gehen nur über `eigenerPuffer()` an pdf-lib (#456: pdf-lib übersieht den Versatz eines Buffers im gemeinsamen Speicher und meldet bei JPEGs „SOI not found“).
+- Die PDF-Stelle schreibt nichts ins Protokoll und liest keine Einstellungen. Was der Aufrufer wissen soll, steht im Ergebnis (z. B. `hinweise` beim Verkleinern).
+- Fachfehler mit verständlicher Meldung (`Fachfehler(422, …)`) dürfen aus der PDF-Stelle kommen, etwa für verschlüsselte oder kaputte PDFs.
+
+### Bewertung der Alternativen zu pdf-lib
+
+pdf-lib (MIT) ist die einzige verbreitete PDF-Bibliothek in reinem JavaScript. Die letzte Version 1.17.1 stammt von Ende 2021; seitdem gibt es keine Weiterentwicklung. Einen Fehler darin umgehen wir schon (#456). Ein Austausch ist **nicht** Teil von #541 – die Kapselung macht ihn aber überschaubar. Stand November 2026:
+
+| Weg | Was dafür spricht | Was dagegen spricht |
+| --- | --- | --- |
+| **pdf-lib bleibt** (heute) | Läuft stabil, alle Funktionen und Tests bauen darauf; MIT; vier kleine eigene Abhängigkeiten (`pako`, `tslib`, Standardschriften, `upng`) | Keine Fehlerbehebungen und keine Sicherheitsupdates mehr; Umgehungen wie #456 bleiben unsere Sache |
+| **`@cantoo/pdf-lib`** (gepflegte Abspaltung) | Gleiche Schnittstelle, regelmäßige Versionen (2.x, zuletzt 2026), mehrere Betreuer, MIT; kann zusätzlich verschlüsselte PDFs | Bringt mehr eigene Abhängigkeiten mit (u. a. einen HTML-Parser, den wir nicht brauchen); Unterschiede zur 1.17 wären mit allen Tests zu prüfen |
+| **`@pdfme/pdf-lib`** (Abspaltung des Projekts pdfme) | Gleiche Schnittstelle, gepflegt (6.x, zuletzt 2026), MIT | Ein einzelner Betreuer; ebenfalls zusätzliche Abhängigkeiten (HTML-Parser, Farben) |
+| **Mehr über qpdf** (schon im Image, Apache-2.0) | Robust und gepflegt (C++); kann Seiten drehen, auswählen, umsortieren, teilen, zusammenfügen, Seiten überlagern und Strukturen optimieren – ohne neue Abhängigkeit; läuft als eigener Prozess und belastet den Server-Faden nicht | Zeichnet keine Texte und bettet keine Bilder ein: Stempel, Export-Seiten, Aufkleber, Textdokumente und der Neuaufbau beim Schwärzen bräuchten einen eigenen Schreiber (Ansatz in `einfach.ts`) und qpdf zum Überlagern; jeder Aufruf schreibt Dateien |
+| **Anderes Werkzeug** (MuPDF, Ghostscript, PDFium …) | Sehr leistungsfähig | MuPDF und Ghostscript sind AGPL und bewusst nicht im Image; native Module widersprechen der schlanken Abhängigkeitsliste |
+
+**Empfehlung:** pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist `@cantoo/pdf-lib` (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus [Abhängigkeiten](#abhaengigkeiten)) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (`seiten.ts`) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.
 
 ## Texte und Sprachdateien { #texte-und-sprachdateien }
 

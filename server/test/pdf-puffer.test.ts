@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { PDFDocument } from 'pdf-lib';
-import { eigenerPuffer } from '../src/pdf-puffer';
+import { eigenerPuffer } from '../src/pdf';
 
 // Kleinstes JPEG, das pdf-lib einbettet: SOI, SOF0 (8 Bit, 1×1, 3 Kanäle), EOI.
 const JPEG = Buffer.from('ffd8ffc00011080001000103011100021100031100ffd9', 'hex');

@@ -2,38 +2,17 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { degrees, PDFDocument } from 'pdf-lib';
 import { Fachfehler } from './fehler';
-import { eigenerPuffer } from './pdf-puffer';
-import { exifAusrichtung } from './schwaerzen';
+import type { SeitenWahl } from './pdf';
 
 /**
- * PDF bearbeiten (#335): Seiten drehen, löschen, umsortieren, teilen, zusammenfügen.
- * Alles mit pdf-lib im Server – keine externen Dienste. Seiten werden kopiert, nicht neu gerendert:
- * Text, Bilder und Schriften bleiben, wie sie sind.
+ * PDF bearbeiten (#335): Seiten drehen, löschen, umsortieren, teilen, zusammenfügen – im Server, ohne
+ * externe Dienste. Hier liegen die Prüfung der Eingaben und die Seitenbilder; die PDF-Vorgänge selbst
+ * liegen in der PDF-Stelle (`pdf/seiten.ts`, #541).
  */
-
-/** Eine Seite im Ergebnis: Nummer im Original (ab 1) und zusätzliche Drehung im Uhrzeigersinn. */
-export interface SeitenWahl { nr: number; drehung?: number }
+export { baueSeiten as baue, bildArt, bilderZuPdf, fuegeZusammen, seitenInfo, teileSeiten as teile, type SeitenWahl } from './pdf';
 
 const DREHUNGEN = [0, 90, 180, 270];
-
-async function lade(inhalt: Buffer): Promise<PDFDocument> {
-  try {
-    return await PDFDocument.load(inhalt, { updateMetadata: false });
-  } catch (e) {
-    const m = (e as Error).message;
-    if (/encrypt/i.test(m)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht bearbeiten.');
-    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
-  }
-}
-
-/** Seitenzahl und aktuelle Drehung je Seite. */
-export async function seitenInfo(inhalt: Buffer): Promise<{ anzahl: number; drehungen: number[] }> {
-  const doc = await lade(inhalt);
-  const seiten = doc.getPages();
-  return { anzahl: seiten.length, drehungen: seiten.map((s) => ((s.getRotation().angle % 360) + 360) % 360) };
-}
 
 /** Eingabe prüfen: Seiten des Originals, Drehung in 90°-Schritten, Teile als Startpositionen. */
 export function pruefeAuswahl(roh: unknown, anzahl: number): SeitenWahl[] {
@@ -57,70 +36,6 @@ export function pruefeTeile(roh: unknown, laenge: number): number[] {
   if (t.some((x) => !Number.isInteger(x) || x < 0 || x >= laenge)) throw new Fachfehler(422, 'teile: Jede Position muss eine Seite der Auswahl sein.');
   if (t.length > 200) throw new Fachfehler(422, 'Höchstens 200 Teile.');
   return t;
-}
-
-/** Neues PDF aus Seiten des Originals (Reihenfolge, Drehung, ohne die weggelassenen). */
-export async function baue(inhalt: Buffer, seiten: SeitenWahl[]): Promise<Buffer> {
-  const quelle = await lade(inhalt);
-  const ziel = await PDFDocument.create();
-  const kopien = await ziel.copyPages(quelle, seiten.map((s) => s.nr - 1));
-  kopien.forEach((p, i) => {
-    const d = seiten[i].drehung ?? 0;
-    if (d) p.setRotation(degrees((((p.getRotation().angle + d) % 360) + 360) % 360));
-    ziel.addPage(p);
-  });
-  return Buffer.from(await ziel.save());
-}
-
-/** In Teile zerlegen: je Teil ein PDF. */
-export async function teile(inhalt: Buffer, seiten: SeitenWahl[], starts: number[]): Promise<Buffer[]> {
-  const erg: Buffer[] = [];
-  for (const [i, s] of starts.entries()) erg.push(await baue(inhalt, seiten.slice(s, starts[i + 1] ?? seiten.length)));
-  return erg;
-}
-
-/** Mehrere PDFs hintereinander zu einem. */
-export async function fuegeZusammen(inhalte: Buffer[]): Promise<Buffer> {
-  const ziel = await PDFDocument.create();
-  for (const b of inhalte) {
-    const q = await lade(b);
-    for (const p of await ziel.copyPages(q, q.getPageIndices())) ziel.addPage(p);
-  }
-  return Buffer.from(await ziel.save());
-}
-
-/** Art eines Fotos am Inhalt (nicht am Namen – das iPhone nennt alles „image.jpg“). */
-export function bildArt(b: Buffer): 'image/jpeg' | 'image/png' | null {
-  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
-  if (b.length > 8 && b.readUInt32BE(0) === 0x89504e47 && b.readUInt32BE(4) === 0x0d0a1a0a) return 'image/png';
-  return null;
-}
-
-/** Längste Seite einer Fotoseite in Punkten (A4-Höhe). */
-const FOTOSEITE_PT = 842;
-const DREHUNG_EXIF: Record<number, number> = { 3: 180, 6: 90, 8: 270 };
-
-/**
- * Fotos als PDF (#490, „Post fotografieren“): je Foto eine Seite, das Bild unverändert eingebettet
- * (JPEG ohne neu zu packen), längste Seite so groß wie A4, Lage laut EXIF. Bilder nur über
- * eigenerPuffer() an pdf-lib (sonst übersieht es den Versatz des Buffers).
- */
-export async function bilderZuPdf(bilder: Buffer[]): Promise<Buffer> {
-  if (!bilder.length) throw new Fachfehler(422, 'Keine Fotos.');
-  const doc = await PDFDocument.create();
-  for (const [i, b] of bilder.entries()) {
-    const art = bildArt(b);
-    if (!art) throw new Fachfehler(422, `Foto ${i + 1}: nur JPEG und PNG lassen sich als Seite übernehmen.`);
-    let bild;
-    try { bild = art === 'image/png' ? await doc.embedPng(eigenerPuffer(b)) : await doc.embedJpg(eigenerPuffer(b)); } catch { throw new Fachfehler(422, `Foto ${i + 1} lässt sich nicht lesen.`); }
-    const f = FOTOSEITE_PT / Math.max(bild.width, bild.height);
-    const w = bild.width * f, h = bild.height * f;
-    const seite = doc.addPage([w, h]);
-    seite.drawImage(bild, { x: 0, y: 0, width: w, height: h });
-    const d = art === 'image/jpeg' ? DREHUNG_EXIF[exifAusrichtung(b)] : undefined;
-    if (d) seite.setRotation(degrees(d));
-  }
-  return Buffer.from(await doc.save());
 }
 
 /** „Rechnung.pdf“ → „Rechnung (Teil 2).pdf“ */

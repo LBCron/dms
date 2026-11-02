@@ -131,7 +131,7 @@ describe('PDF mit Stempel (#394)', () => {
     assert.equal(a.name, 'ausweis.pdf'); assert.equal(a.mime, 'application/pdf');
     assert.equal((await PDFDocument.load(a.inhalt)).getPageCount(), 1);
     assert.ok((await seiteninhalt(a.inhalt)).text.includes(hex('Kopie für Bank')));
-    const quer = await bildAlsPdf(b, true);
+    const quer = await PDFDocument.load(await bildAlsPdf(b, true));
     assert.ok(quer.getPage(0).getWidth() > quer.getPage(0).getHeight());
     const txt = { name: 'x.txt', mime: 'text/plain', inhalt: Buffer.from('hallo') };
     const frei = await fuerAusgabe(txt, { stempel: plan }, { benutzer: 'A', mappe: 'M' });

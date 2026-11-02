@@ -18,13 +18,12 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { textDritte } from '../../shared/src/anrede';
 import { datumText } from '../../shared/src/archiv';
 import { AUSKUNFT_TAGE, auskunftDateiname, erwaehnungText, type AuskunftErwaehnung, type AuskunftStand, type Datenschutz } from '../../shared/src/auskunft';
 import { formatiere, istLeer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { Fachfehler } from './fehler';
-import { PdfSchreiber, pdfSicher } from './export';
+import { planer, textdokumentPdf } from './pdf';
 import { istUuid } from './repo';
 import { csv, exportDateien, vollexport, type ExportQuelle } from './vollexport';
 import { ZIP_MAX, zipGroesse, zipStrom, type ZipEintrag } from './zip';
@@ -77,10 +76,8 @@ function felderVon(m: Mappe, t: Mappentyp | undefined, titel: Record<string, str
 /* ---------- Deckblatt ---------- */
 
 export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date; mandant: string }): Promise<Buffer> {
-  const doc = await PDFDocument.create();
-  doc.setTitle(pdfSicher(`Auskunft nach Art. 15 DSGVO – ${d.start.titel}`)); doc.setProducer('DMS'); doc.setCreator('DMS');
-  const f = { normal: await doc.embedFont(StandardFonts.Helvetica), fett: await doc.embedFont(StandardFonts.HelveticaBold) };
-  const s = new PdfSchreiber(doc, f);
+  // Plan des Textdokuments; gezeichnet wird in der PDF-Stelle (#541).
+  const s = planer();
   // Anrede der Person (#474): alle Sätze an sie aus anrede.ts.
   const t = (k: Parameters<typeof textDritte>[1], w?: Record<string, string | number>) => textDritte(d.datenschutz.anrede, k, w);
   s.neueSeite();
@@ -139,7 +136,7 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
   punkt('Uebersicht.csv – dasselbe als Tabelle');
   punkt('ablage/ – je Eintrag ein Ordner mit den Dokumenten im Original und einer PDF-Zusammenfassung');
   punkt('daten/, struktur/, manifest.json – maschinenlesbar (CSV, JSON) zur Übernahme in andere Systeme (Art. 20 DSGVO)');
-  return Buffer.from(await doc.save());
+  return textdokumentPdf({ titel: `Auskunft nach Art. 15 DSGVO – ${d.start.titel}`, anweisungen: s.anweisungen });
 }
 
 /* ---------- Übersicht ---------- */

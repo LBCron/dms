@@ -3,11 +3,10 @@ import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Readable } from 'node:stream';
-import { PDFDocument } from 'pdf-lib';
 import type { Dokument } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
 import { protokoll } from './protokoll';
-import { eigenerPuffer } from './pdf-puffer';
+import { bildSeitePdf } from './pdf';
 
 /**
  * Vorschaubilder der ersten Seite (#332).
@@ -110,22 +109,13 @@ function starte(cmd: string, args: string[], ms: number): Promise<void> {
   });
 }
 
-/** Bild in ein einseitiges PDF in Bildgröße legen (pdftoppm liest nur PDFs). */
-async function bildAlsPdf(inhalt: Buffer, mime: string): Promise<Buffer> {
-  const doc = await PDFDocument.create();
-  const bild = mime === 'image/png' ? await doc.embedPng(eigenerPuffer(inhalt)) : await doc.embedJpg(eigenerPuffer(inhalt));
-  const seite = doc.addPage([bild.width, bild.height]);
-  seite.drawImage(bild, { x: 0, y: 0, width: bild.width, height: bild.height });
-  return Buffer.from(await doc.save());
-}
-
 /** Erste Seite mit pdftoppm als JPEG, längste Seite VORSCHAU_PX. */
 export const popplerErzeuger: Erzeuger = async (inhalt, mime) => {
   if (!hatVorschau(mime)) return null;
   const dir = await mkdtemp(join(tmpdir(), 'dms-vorschau-'));
   try {
     const pdf = join(dir, 'datei.pdf');
-    await writeFile(pdf, mime === 'application/pdf' ? inhalt : await bildAlsPdf(inhalt, mime));
+    await writeFile(pdf, mime === 'application/pdf' ? inhalt : await bildSeitePdf(inhalt, mime));
     await starte('pdftoppm', ['-f', '1', '-l', '1', '-singlefile', '-scale-to', String(VORSCHAU_PX), '-jpeg', '-jpegopt', 'quality=80', pdf, join(dir, 'bild')], 60_000);
     return await readFile(join(dir, 'bild.jpg'));
   } finally { await rm(dir, { recursive: true, force: true }); }
