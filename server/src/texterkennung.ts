@@ -12,6 +12,7 @@ import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import type { OcrErgebnis, Repo } from './repo';
+import { INFO_TEXTEBENE, infoWartet } from '../../shared/src/volltext';
 
 /**
  * Texterkennung und Volltext (#45).
@@ -22,6 +23,10 @@ import type { OcrErgebnis, Repo } from './repo';
  * - Eine Warteschlange in der Datenbank (ocr_stand); die Arbeit läuft im Hintergrund mit
  *   einstellbar vielen gleichzeitigen Aufträgen. Nach einem Neustart geht es weiter.
  * - Gleiche Datei schon erkannt? Dann wird der Text übernommen.
+ * - Texterkennung als Paket (#458): Ist ein Paket mit der Schnittstelle dms:texterkennung installiert, liest der
+ *   Kern nur die Textebene (poppler). Dokumente ohne Text (und bei „neu“ alle) stehen dann auf „wartet auf
+ *   Texterkennung“ (Stand paket), bis das Paket den Volltext schreibt. Jedes Ergebnis geht über `nachher` an die
+ *   Pakete (Ereignis volltext.fertig, auch ohne Text).
  * - Sprache (#395): Die erkannte Sprache steht am Ende des Hinweises (ocr_info). Bei „Automatisch“
  *   liest das DMS eine Seite in einer anderen Sprache ein zweites Mal, wenn das Sprachpaket da ist
  *   und das erste Ergebnis unsicher war; das bessere Ergebnis gilt. Mit osd.traineddata dreht
@@ -195,11 +200,12 @@ export async function pruefeWerkzeuge(): Promise<Werkzeuge> {
 }
 
 /** Text eines Dokuments (Datei liegt unter pfad). */
-export type Engine = (pfad: string, mime: string, o: { maxSeiten: number; sprachen: string; automatisch?: boolean; werkzeuge: Werkzeuge; signal?: AbortSignal }) => Promise<{ text: string; seiten: number; info: string }>;
+/** ohneText (#458): Seiten (ab 1), die ohne Text blieben – bei gemischten PDFs erkennt das Paket nur diese. */
+export type Engine = (pfad: string, mime: string, o: { maxSeiten: number; sprachen: string; automatisch?: boolean; werkzeuge: Werkzeuge; signal?: AbortSignal }) => Promise<{ text: string; seiten: number; info: string; ohneText?: number[] }>;
 
 const sauber = (t: string) => t.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 /** Seite mit nennenswertem Text (sonst: gescannt). */
-const hatText = (t: string) => t.replace(/\s/g, '').length >= 20;
+export const hatText = (t: string) => t.replace(/\s/g, '').length >= 20;
 
 /** Ein Durchlauf von tesseract: Text und mittlere Konfidenz. */
 async function lies(bild: string, sprachen: string, osd: boolean, signal?: AbortSignal): Promise<{ text: string; konfidenz: number | null }> {
@@ -284,8 +290,10 @@ export const tesseractEngine: Engine = async (pfad, mime, o) => {
   const ebene = (await starte('pdftotext', ['-f', '1', '-l', String(seiten), '-layout', '-enc', 'UTF-8', pfad, '-'], 120_000, o.signal)).stdout.split('\f');
   let erkannt = 0;
   const texte: string[] = [];
+  const ohneText: number[] = [];
   for (let i = 0; i < seiten; i++) {
     const t = ebene[i] ?? '';
+    if (!hatText(t) && (!o.werkzeuge.tesseract || !o.werkzeuge.pdftoppm)) ohneText.push(i + 1);
     if (hatText(t) || !o.werkzeuge.tesseract || !o.werkzeuge.pdftoppm) { texte.push(t); bisher.push(t); continue; }
     const dir = await mkdtemp(join(tmpdir(), 'dms-seite-'));
     try {
@@ -296,9 +304,9 @@ export const tesseractEngine: Engine = async (pfad, mime, o) => {
       erkannt++;
     } finally { await rm(dir, { recursive: true, force: true }); }
   }
-  const woher = erkannt === 0 ? 'Textebene des PDFs' : erkannt === seiten ? `Texterkennung (${sprachen})` : `Textebene und Texterkennung für ${erkannt} von ${seiten} Seiten (${sprachen})`;
+  const woher = erkannt === 0 ? INFO_TEXTEBENE : erkannt === seiten ? `Texterkennung (${sprachen})` : `Textebene und Texterkennung für ${erkannt} von ${seiten} Seiten (${sprachen})`;
   const gekuerzt = gesamt > seiten ? ` – nur die ersten ${seiten} von ${gesamt} Seiten` : '';
-  return { text: sauber(texte.join('\n\n')), seiten, info: woher + gekuerzt + (erkannt ? zusatz() : '') };
+  return { text: sauber(texte.join('\n\n')), seiten, info: woher + gekuerzt + (erkannt ? zusatz() : ''), ohneText };
 };
 
 /* ---------- Warteschlange ---------- */
@@ -310,16 +318,33 @@ const alsBuffer = async (x: Readable | Buffer): Promise<Buffer> => {
   return Buffer.concat(teile);
 };
 
+/** Das Paket, das die Texterkennung übernimmt (#458, Schnittstelle dms:texterkennung). */
+export interface TexterkennungPaket { id: string; name: string; version: string }
+
+/** Was der Kern nach seinem Schritt an die Pakete meldet (#458). */
+export interface KernErgebnis {
+  /** Nennenswerter Text gefunden (Textebene bzw. eingebaute Texterkennung)? */
+  text: boolean;
+  /** „Volltext neu erzeugen“ bzw. „erneut“ am Dokument: das Paket soll auch dann neu erkennen, wenn es Text gibt. */
+  neu: boolean;
+  /** Gemischte PDFs (#458): Seiten ohne Textebene (ab 1) – das Paket erkennt nur diese und hängt sie an. */
+  seitenOhneText?: number[];
+}
+
 export class Texterkennung {
   private laufend = 0;
   /** Laufende Aufträge je Dokument, damit Administratoren sie abbrechen können (#61). */
   private laeufe = new Map<string, AbortController>();
   private werkzeuge?: Promise<Werkzeuge>;
   private aus = false;
-  /** Nach jedem fertigen Ergebnis (#338: Ereignis für Pakete). */
-  nachher: ((d: Dokument, e: OcrErgebnis) => void) | null = null;
+  /** Dokumente in der Warteschlange, die ausdrücklich neu erkannt werden sollen (#458; nur im Speicher). */
+  private neuMarken = new Set<string>();
+  /** Nach jedem Ergebnis (#338, #458: Ereignis für Pakete – auch ohne Text). */
+  nachher: ((d: Dokument, e: OcrErgebnis, k: KernErgebnis) => void) | null = null;
   /** Im aktiven Wartungsmodus (#102) keine neuen Aufträge; danach anstossen(). */
   pause: () => boolean = () => false;
+  /** Das installierte Paket für die Texterkennung (#458); null = keins. */
+  paket: () => Promise<TexterkennungPaket | null> = async () => null;
 
   constructor(
     private repo: Repo,
@@ -380,14 +405,28 @@ export class Texterkennung {
     }
   }
 
+  /**
+   * Sofort statt über die Warteschlange (#458, Auftrag „Volltext neu erzeugen“): dieselbe Arbeit wie für ein neues
+   * Dokument, danach das Ereignis an die Pakete. Wartet, bis der Kern fertig ist (nicht auf das Paket).
+   */
+  async jetzt(id: string, opt: { neu: boolean; signal?: AbortSignal }): Promise<void> {
+    const d = await this.repo.holeDokument(id);
+    if (!d || d.ocr?.stand === 'laeuft') return;
+    await this.repo.ocrSetze(id, { stand: 'laeuft', info: d.ocr?.info ?? null, seiten: d.ocr?.seiten ?? null });
+    const abbruch = () => this.laeufe.get(id)?.abort();
+    opt.signal?.addEventListener('abort', abbruch, { once: true });
+    try { await this.verarbeite(d, await this.optionen(), opt.neu); } finally { opt.signal?.removeEventListener('abort', abbruch); }
+  }
+
   /** Ein Dokument: auslassen, Text übernehmen oder erkennen. */
-  private async verarbeite(d: Dokument, o: OcrEinstellungen) {
+  private async verarbeite(d: Dokument, o: OcrEinstellungen, neu = false) {
     const start = Date.now();
     let e: OcrErgebnis;
     const abbruch = new AbortController();
     this.laeufe.set(d.id, abbruch);
+    if (this.neuMarken.delete(d.id)) neu = true;
     try {
-      e = await this.ergebnis(d, o, abbruch.signal);
+      e = await this.ergebnis(d, o, abbruch.signal, neu);
     } catch (f) {
       const m = (f as Error).message;
       e = abbruch.signal.aborted ? { stand: 'ausgelassen', info: 'Vom Administrator abgebrochen.', text: null }
@@ -395,33 +434,67 @@ export class Texterkennung {
         : /password|passwort|encrypt/i.test(m) ? { stand: 'ausgelassen', info: 'Das PDF ist mit einem Passwort geschützt.', text: null }
         : { stand: 'fehler', info: m.slice(0, 500) };
     } finally { this.laeufe.delete(d.id); }
-    // Hat inzwischen ein Paket den Volltext geschrieben (#338), bleibt der stehen.
+    // Hat inzwischen ein Paket den Volltext geschrieben (#338), bleibt der stehen – außer bei „neu“ (#458).
     const jetzt = await this.repo.holeDokument(d.id).catch(() => undefined);
-    if (jetzt?.ocr?.stand === 'fertig' && jetzt.ocr.info?.startsWith(PAKET_TEXT)) { log.info('Texterkennung verworfen: Volltext kam schon von einem Paket', { dokument: d.name, id: d.id }); return; }
+    if (!jetzt) return;
+    if (!neu && jetzt.ocr?.stand === 'fertig' && jetzt.ocr.info?.startsWith(PAKET_TEXT)) { log.info('Texterkennung verworfen: Volltext kam schon von einem Paket', { dokument: d.name, id: d.id }); return; }
+    // Seiten ohne Text (#458) gehören nicht ins Repo, nur ins Ereignis.
+    const ohneText = (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
+    delete (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
     try { await this.repo.ocrSetze(d.id, e); } catch (f) { log.error('Ergebnis der Texterkennung nicht gespeichert', { dokument: d.name, fehler: (f as Error).message }); return; }
     const daten = { dokument: d.name, id: d.id, stand: e.stand, seiten: e.seiten ?? undefined, ms: Date.now() - start, info: e.info ?? undefined };
-    if (e.stand === 'fehler') log.warn('Texterkennung fehlgeschlagen', daten); else if (e.stand === 'ausgelassen') log.info('Texterkennung ausgelassen', daten); else log.info('Texterkennung abgeschlossen', daten);
-    try { this.nachher?.(d, e); } catch { /* nur Benachrichtigung */ }
+    if (e.stand === 'fehler') log.warn('Texterkennung fehlgeschlagen', daten); else if (e.stand === 'ausgelassen') log.info('Texterkennung ausgelassen', daten);
+    else if (e.stand === 'paket') log.info('Textebene gelesen, Texterkennung durch Paket folgt', daten); else log.info('Texterkennung abgeschlossen', daten);
+    // Vom Administrator abgebrochen: kein Ereignis (sonst finge das Paket gleich wieder an).
+    if (abbruch.signal.aborted) return;
+    // Gemischt nur, wenn es auch Text gibt; bei text: false erkennt das Paket ohnehin alle Seiten.
+    const gemischt = e.stand === 'paket' && !!e.text && hatText(e.text) && ohneText?.length ? { seitenOhneText: ohneText } : {};
+    try { this.nachher?.(jetzt, e, { text: !!e.text && hatText(e.text), neu, ...gemischt }); } catch { /* nur Benachrichtigung */ }
   }
 
-  private async ergebnis(d: Dokument, o: OcrEinstellungen, signal?: AbortSignal): Promise<OcrErgebnis> {
+  private async ergebnis(d: Dokument, o: OcrEinstellungen, signal?: AbortSignal, neu = false): Promise<OcrErgebnis> {
     const verfahren = o.typen[d.mime];
     if (!verfahren) return { stand: 'ausgelassen', info: `Dateityp ${d.mime} wird nicht erkannt.`, text: null };
     if (verfahren === 'aus') return { stand: 'ausgelassen', info: `Für ${DATEITYPEN[d.mime] ?? d.mime} ist die Texterkennung ausgeschaltet.`, text: null };
     if (d.groesse > o.maxMB * 1024 * 1024) return { stand: 'ausgelassen', info: `Größer als ${o.maxMB} MB.`, text: null };
-    const vorhanden = await this.repo.ocrVonSha(d.sha256, d.id);
+    // Texterkennung als Paket (#458): Der Kern liest nur die Textebene, Scans und Bilder erkennt das Paket.
+    const paket = await this.paket().catch(() => null);
+    if (paket) return this.nurTextebene(d, o, paket, neu, signal);
+    const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
     if (vorhanden) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null };
+    return this.lese(d, o, await this.werkzeugeLaden(), signal);
+  }
+
+  /** Datei lesen: Textebene (poppler) und – wenn die Werkzeuge es können – Texterkennung. */
+  private async lese(d: Dokument, o: OcrEinstellungen, werkzeuge: Werkzeuge, signal?: AbortSignal): Promise<OcrErgebnis & { ohneText?: number[] }> {
     const dir = await mkdtemp(join(tmpdir(), 'dms-ocr-'));
     try {
       const pfad = join(dir, 'datei');
       await writeFile(pfad, await alsBuffer(await this.dateien.lies(d.sha256)));
       if (signal?.aborted) throw new Error('abgebrochen');
-      const r = await this.engine(pfad, d.mime, { maxSeiten: o.maxSeiten, sprachen: o.sprachen, automatisch: o.automatisch, werkzeuge: await this.werkzeugeLaden(), signal });
+      const r = await this.engine(pfad, d.mime, { maxSeiten: o.maxSeiten, sprachen: o.sprachen, automatisch: o.automatisch, werkzeuge, signal });
       // Erkannte Sprache am Ende des Hinweises (#395) – für Anzeige und Statistik.
       const sprache = erkenneSprache(r.text);
       // Sprache als eigenes Feld (#400): Die Volltextsuche nimmt die Wortstämme dieser Sprache.
-      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null };
+      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ohneText: r.ohneText ?? [] };
     } finally { await rm(dir, { recursive: true, force: true }); }
+  }
+
+  /**
+   * Mit Paket für die Texterkennung (#458): PDFs nur über die Textebene. Ohne Text – oder bei „neu“ – wartet das
+   * Dokument auf das Paket (Stand paket); vorhandener Text bleibt so lange stehen, damit die Suche ihn findet.
+   * Bilder haben keine Textebene: Sie warten gleich auf das Paket.
+   */
+  private async nurTextebene(d: Dokument, o: OcrEinstellungen, paket: TexterkennungPaket, neu: boolean, signal?: AbortSignal): Promise<OcrErgebnis> {
+    const wartet: OcrErgebnis = { stand: 'paket', info: infoWartet(paket), seiten: d.ocr?.seiten ?? null };
+    if (d.mime !== 'application/pdf') return wartet;
+    const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
+    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null };
+    const r = await this.lese(d, o, { ...(await this.werkzeugeLaden()), tesseract: null }, signal);
+    // Gemischt (Text und gescannte Seiten): wartet auch auf das Paket – es erkennt nur die Seiten ohne Text.
+    const ohne = (r as OcrErgebnis & { ohneText?: number[] }).ohneText ?? [];
+    if (r.text && hatText(r.text) && !neu && !ohne.length) return r;
+    return { ...wartet, seiten: r.seiten ?? null, ...(r.text && hatText(r.text) ? { text: r.text, sprache: r.sprache, ohneText: ohne } : {}) } as OcrErgebnis;
   }
 
   /**
@@ -451,11 +524,22 @@ export class Texterkennung {
     return this.repo.ocrAuftraege({ stand, von, anzahl });
   }
 
-  /** Neu starten: zurück in die Warteschlange (#61). */
+  /** Ein Dokument ausdrücklich neu erkennen lassen (#458): in die Warteschlange, das Paket bekommt `neu`. */
+  async neuErkennen(id: string) {
+    this.laeufe.get(id)?.abort();
+    this.neuMarken.add(id);
+    await this.repo.ocrEinreihen([id]);
+    this.anstossen();
+  }
+
+  /** Neu starten: zurück in die Warteschlange (#61); bei „fertig“ ausdrücklich neu (#458). */
   async neuStarten(ids: unknown, von: string) {
     const liste = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
     if (!liste.length) throw new Fachfehler(422, 'Keine Dokumente gewählt.');
     for (const id of liste) this.laeufe.get(id)?.abort();
+    for (const id of liste) this.neuMarken.add(id);
+    // Wartet ein Dokument auf das Paket, kommt sein Ereignis gleich neu – das alte fällt weg.
+    await this.repo.loescheOffeneEreignisse('volltext.fertig', liste).catch(() => 0);
     await this.repo.ocrEinreihen(liste);
     log.info('Texterkennung neu gestartet', { dokumente: liste.length, von });
     this.anstossen();
@@ -484,6 +568,12 @@ export class Texterkennung {
       if (lauf) { lauf.abort(); n++; continue; }
       const d = await this.repo.holeDokument(id);
       if (d?.ocr?.stand === 'wartet') { await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: 'Vom Administrator abgebrochen.', text: null }); n++; }
+      // Wartet es auf das Paket (#458): Ereignis verwerfen, Text aus dem PDF bleibt.
+      if (d?.ocr?.stand === 'paket') {
+        await this.repo.loescheOffeneEreignisse('volltext.fertig', [id]);
+        await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: 'Texterkennung durch Paket vom Administrator abgebrochen.', seiten: d.ocr.seiten ?? null });
+        n++;
+      }
     }
     log.info('Texterkennung abgebrochen', { dokumente: n, von });
     return { abgebrochen: n };
@@ -497,6 +587,8 @@ export class Texterkennung {
     const einstellungen = await this.optionen();
     return {
       zaehler: await this.repo.ocrZaehler(), laufend: this.laufend, werkzeuge, einstellungen, verfahren: VERFAHREN, dateitypen: DATEITYPEN,
+      // #458: Paket, das die Texterkennung übernimmt (null = eingebaute Texterkennung).
+      paket: await this.paket().catch(() => null),
       // #395: eingestellt, aber nicht installiert; erkannte Sprachen der fertigen Dokumente.
       fehlendeSprachen: werkzeuge.tesseract ? fehlendeSprachen(einstellungen.sprachen, werkzeuge.sprachen) : [],
       erkannteSprachen: await this.repo.ocrSprachen(),

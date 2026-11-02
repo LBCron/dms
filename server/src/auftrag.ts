@@ -12,19 +12,26 @@ export type { Auftrag, AuftragPhase, Fortschritt, PhasenPlan } from '../../share
  */
 export class Auftraege {
   private letzter?: Auftrag;
+  private abbruch?: AbortController;
 
   constructor(private log: (m: string) => void = () => {}) {}
 
   aktuell(): Auftrag | null { return this.letzter ?? null; }
 
-  starte(art: string, titel: string, arbeit: (fortschritt: Fortschritt) => Promise<unknown>, phasen: PhasenPlan[] = []): Auftrag {
+  /**
+   * Mit `abbrechbar` (#458) bekommt die Arbeit ein Signal; abbrechen() setzt es, die Arbeit hört dann von selbst auf
+   * und gibt ihr Ergebnis bis dahin zurück.
+   */
+  starte(art: string, titel: string, arbeit: (fortschritt: Fortschritt, signal?: AbortSignal) => Promise<unknown>, phasen: PhasenPlan[] = [], opt: { abbrechbar?: boolean } = {}): Auftrag {
     if (this.letzter?.status === 'laeuft') throw new Fachfehler(409, `Es läuft bereits: ${this.letzter.titel}. Bitte warten, bis das fertig ist.`);
-    const a: Auftrag = { id: randomUUID(), art, titel, status: 'laeuft', ...neuerStand(phasen), gestartet: new Date().toISOString() };
+    const a: Auftrag = { id: randomUUID(), art, titel, status: 'laeuft', ...neuerStand(phasen), gestartet: new Date().toISOString(), ...(opt.abbrechbar ? { abbrechbar: true } : {}) };
     this.letzter = a;
+    const signal = opt.abbrechbar ? (this.abbruch = new AbortController()).signal : undefined;
+    if (!opt.abbrechbar) this.abbruch = undefined;
     const beginn = Date.now();
     void (async () => {
       try {
-        a.ergebnis = await arbeit((fertig, gesamt, phase) => meldeFortschritt(a, fertig, gesamt, phase));
+        a.ergebnis = await arbeit((fertig, gesamt, phase) => meldeFortschritt(a, fertig, gesamt, phase), signal);
         a.status = 'fertig';
         schliessePhasen(a);
         this.log(`${titel}: fertig nach ${Date.now() - beginn} ms`);
@@ -36,6 +43,17 @@ export class Auftraege {
         a.beendet = new Date().toISOString();
       }
     })();
+    return a;
+  }
+
+  /** Den laufenden Auftrag abbrechen (#458) – nur, wenn er sich abbrechen lässt (und es dieser ist). */
+  abbrechen(id?: unknown): Auftrag {
+    const a = this.letzter;
+    if (!a || a.status !== 'laeuft' || (id !== undefined && id !== a.id)) throw new Fachfehler(409, 'Es läuft gerade kein Auftrag (mehr).');
+    if (!a.abbrechbar || !this.abbruch) throw new Fachfehler(409, `„${a.titel}“ lässt sich nicht abbrechen.`);
+    a.abgebrochen = true;
+    this.abbruch.abort();
+    this.log(`${a.titel}: abgebrochen`);
     return a;
   }
 

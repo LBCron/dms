@@ -817,6 +817,8 @@ export const TREFFER_ANFANG = '\u0002';
 export const TREFFER_ENDE = '\u0003';
 export const OCR_STAENDE = {
   keiner: 'ohne Volltext', wartet: 'wartet', laeuft: 'läuft', fertig: 'fertig', fehler: 'Fehler', ausgelassen: 'ausgelassen',
+  /** #458: Textebene gelesen, das Paket für die Texterkennung ist dran (bzw. noch nicht installiert). */
+  paket: 'wartet auf Texterkennung',
 } as const;
 export type OcrStandArt = keyof typeof OCR_STAENDE;
 export interface OcrStand {

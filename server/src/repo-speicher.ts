@@ -226,7 +226,13 @@ export function speicherRepo(): Repo {
       }
       return erg;
     },
+    async ereignisDaten(id, daten) { const e = ereignisse.get(id); if (e) e.daten = kopie(daten); },
     async loescheEreignisse(id) { for (const [k, e] of ereignisse) if (e.paketId === id) ereignisse.delete(k); },
+    async loescheOffeneEreignisse(art, dokumente) {
+      let n = 0;
+      for (const [k, e] of ereignisse) if (e.art === art && !e.zugestellt && dokumente.includes(String(e.daten.dokument))) { ereignisse.delete(k); n++; }
+      return n;
+    },
     async listeNummernkreise() { return [...kreise.values()].map(kopie).sort((a, b) => a.name.localeCompare(b.name, 'de')); },
     async speichereNummernkreis(k) {
       const alt = kreise.get(k.schluessel);
@@ -502,7 +508,7 @@ export function speicherRepo(): Repo {
       return n;
     },
     async ocrZaehler() {
-      const z = { keiner: 0, wartet: 0, laeuft: 0, fertig: 0, fehler: 0, ausgelassen: 0 };
+      const z = { keiner: 0, wartet: 0, laeuft: 0, fertig: 0, fehler: 0, ausgelassen: 0, paket: 0 };
       for (const d of dokumente.values()) z[d.ocr?.stand ?? 'keiner']++;
       return z;
     },
@@ -513,6 +519,11 @@ export function speicherRepo(): Repo {
     },
     async ocrOhneVolltext() {
       return [...dokumente.values()].filter((d) => (d.ocr?.stand ?? 'keiner') === 'keiner' && mappen.has(d.mappeId))
+        .map((d) => ({ id: d.id, typId: mappen.get(d.mappeId)!.typId, registerKey: d.registerKey }));
+    },
+    async volltextKandidaten(umfang) {
+      return [...dokumente.values()].filter((d) => mappen.has(d.mappeId) && !['wartet', 'laeuft'].includes(d.ocr?.stand ?? 'keiner') && (umfang === 'alle' || !(texte.get(d.id) ?? '').trim()))
+        .sort((a, b) => a.erstellt.localeCompare(b.erstellt))
         .map((d) => ({ id: d.id, typId: mappen.get(d.mappeId)!.typId, registerKey: d.registerKey }));
     },
     async ocrSprachen() {

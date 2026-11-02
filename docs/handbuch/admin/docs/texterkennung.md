@@ -10,7 +10,18 @@ Damit die Suche auch den Text von Dokumenten findet, erzeugt das DMS zu jedem ne
 - **Bilder** (JPEG, PNG, TIFF, WebP, GIF, BMP) gehen direkt durch die Texterkennung.
 - **Andere Dateien** (z. B. Word, Excel) bekommen vorerst keinen Volltext.
 
-Die Texterkennung (Tesseract mit den Sprachpaketen Deutsch und Englisch und der Lageerkennung `osd`) ist im Image enthalten. Für Deutsch und Englisch muss nichts zusätzlich installiert werden; weitere Sprachen lädst du bei Bedarf nach (siehe [Sprachpakete nachinstallieren](#sprachpakete-nachinstallieren)).
+Die Texterkennung (Tesseract mit den Sprachpaketen Deutsch und Englisch und der Lageerkennung `osd`) ist im Image enthalten. Für Deutsch und Englisch muss nichts zusätzlich installiert werden; weitere Sprachen lädst du bei Bedarf nach (siehe [Sprachpakete nachinstallieren](#sprachpakete-nachinstallieren)). Ist ein Paket für die Texterkennung installiert, übernimmt es Scans und Bilder (siehe [Texterkennung als Paket](#texterkennung-als-paket)).
+
+## Texterkennung als Paket
+
+Seit Version 0.133 kann ein **Paket** die Texterkennung übernehmen – etwa **Texterkennung** (ab 2.0) aus dem [Katalog](pakete.md). Es braucht dafür das Recht [Texterkennung übernehmen](pakete.md#recht-texterkennung). Dann:
+
+1. Das DMS liest bei PDFs nur noch die **Textebene** (poppler) – sofort, ohne Wartezeit. Hat ein PDF Text, ist es gleich durchsuchbar.
+2. Jedes Dokument meldet das DMS dem Paket (Ereignis [Volltext fertig](pakete.md#ereignis-volltext-fertig)) – auch, wenn es keinen Text gefunden hat.
+3. Dokumente **ohne Text** (Scans, Fotos) – und PDFs, in denen neben Textseiten gescannte Seiten stecken – stehen auf **„wartet auf Texterkennung (Paket …)“**, bis das Paket den Volltext schreibt. Danach steht am Dokument „Texterkennung durch Paket …“. Bei langen Dokumenten zeigt das Paket dort, wie weit es ist (z. B. „Seite 20 von 64“).
+4. Was das Paket erkennt (Sprache, Seiten drehen, ob es auch PDFs mit Text neu erkennt), stellst du **beim Paket** ein.
+
+**Werkbank → Texterkennung** zeigt oben, welches Paket die Texterkennung übernimmt (mit Link zu seinen Einstellungen) und wie viele Dokumente auf das Paket warten. Ohne Paket erkennt die eingebaute Texterkennung wie bisher.
 
 ![Werkbank → Texterkennung](bilder/werkbank-texterkennung.png)
 
@@ -78,27 +89,28 @@ Hänge nur einzelne Dateien ein, nicht den ganzen Ordner – sonst verdeckst du 
 
 Danach unter *Werkzeuge* **Erneut prüfen**. Dokumente, die vorher ohne das Sprachpaket gelesen wurden, startest du unter **Aufträge → fertig** neu.
 
-Steht die Warteschlange, sagt ein Hinweis oben auf der Seite und bei *Volltext nachholen* warum: **ausgeschaltet** (mit **Einschalten**) oder **pausiert, solange der Wartungsmodus an ist** (mit **Wartungsmodus beenden**). Ein nur angekündigter Wartungsmodus hält die Texterkennung nicht an.
+Steht die Warteschlange, sagt ein Hinweis oben auf der Seite und bei *Volltext neu erzeugen* warum: **ausgeschaltet** (mit **Einschalten**) oder **pausiert, solange der Wartungsmodus an ist** (mit **Wartungsmodus beenden**). Ein nur angekündigter Wartungsmodus hält die Texterkennung nicht an.
 
 ## Aufträge
 
-Unter **Aufträge** siehst du in einer Liste mit fester Höhe die Dokumente je Stand (*Fehler*, *wartet*, *läuft*, *ausgelassen*, *fertig*) – mit Mappe (als Link), Größe, Zeitpunkt und dem **Grund** bei Fehlern oder ausgelassenen Dokumenten.
+Unter **Aufträge** siehst du in einer Liste mit fester Höhe die Dokumente je Stand (*Fehler*, *wartet*, *läuft*, *wartet auf Texterkennung*, *ausgelassen*, *fertig*) – mit Mappe (als Link), Größe, Zeitpunkt und dem **Grund** bei Fehlern oder ausgelassenen Dokumenten.
 
 - Dokumente auswählen und **Neu starten**: Sie kommen wieder in die Warteschlange.
-- Wartende **aus der Warteschlange nehmen** bzw. laufende **abbrechen**: Sie gelten dann als *ausgelassen* („Vom Administrator abgebrochen“); ein laufender Vorgang (tesseract, pdftoppm) wird beendet.
+- Wartende **aus der Warteschlange nehmen** bzw. laufende **abbrechen**: Sie gelten dann als *ausgelassen* („Vom Administrator abgebrochen“); ein laufender Vorgang (tesseract, pdftoppm) wird beendet. Bei *wartet auf Texterkennung* verwirft das DMS die noch nicht zugestellte Meldung an das Paket; Text aus dem PDF bleibt.
+- **Neu starten** lässt den Volltext ausdrücklich neu erzeugen: Auch ein Paket erkennt dann Dokumente neu, die schon Text haben.
 - **Alle Fehler neu starten** reiht alle Dokumente mit Fehler wieder ein.
 
 **Passwortgeschützte PDFs** erkennt das DMS und lässt sie mit dem Grund „Das PDF ist mit einem Passwort geschützt“ aus, statt einen Fehler zu melden – ein neuer Versuch würde nichts ändern.
 
 Alle Meldungen der Texterkennung stehen im [Protokoll](fehlersuche.md) unter dem Modul `texterkennung`.
 
-Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *fertig*, *Fehler*, *ausgelassen*); bei einem Fehler lässt sich die Texterkennung dort **erneut versuchen**, und ein fertiger Text lässt sich anzeigen. Liegt dieselbe Datei schon mit Volltext in einer anderen Mappe, übernimmt das DMS diesen Text.
+Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texterkennung*, *fertig*, *Fehler*, *ausgelassen*) und woher der Text kommt („Text aus dem PDF“, „Texterkennung durch Paket …“); bei einem Fehler lässt sich die Texterkennung dort **erneut versuchen**, und ein fertiger Text lässt sich anzeigen. Wer die Mappe bearbeiten darf, kann den Volltext eines Dokuments mit **Neu erzeugen** ausdrücklich neu erzeugen lassen. Liegt dieselbe Datei schon mit Volltext in einer anderen Mappe, übernimmt das DMS diesen Text.
 
 ## Wartungsoperationen
 
 **Werkbank → Wartungsoperationen** sammelt Arbeiten am ganzen Bestand, die du bei Bedarf anstößt:
 
-- **Volltext nachholen** stellt alle Dokumente in die Warteschlange, die noch keinen Volltext haben – etwa alles, was vor Version 0.11 hochgeladen wurde. Je nach Menge und Seitenzahl kann das Stunden dauern; das DMS bleibt dabei benutzbar.
+- **Volltext neu erzeugen** – für Dokumente ohne Text oder für alle, siehe unten.
 - **Vorschaubilder nachholen** erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit `pdftoppm` (poppler, im Image enthalten).
 - **Alle Dateien prüfen** liest jede gespeicherte Datei, auch ältere Versionen, und vergleicht sie mit ihrem Prüfwert. So fällt auf, wenn eine Datei auf dem Speicher verändert wurde oder fehlt. Mehr dazu unter [Alle Dateien prüfen](archiv.md#alle-dateien-prufen).
 - **Nummern nachträglich vergeben** gibt Mappen eine Nummer, die angelegt wurden, bevor ihr Feld einen Nummernkreis bekam. Mehr dazu unter [Nummern nachträglich vergeben](nummernkreise.md#nummern-nachtraglich-vergeben).
@@ -106,6 +118,17 @@ Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *fertig*, *Fehler
 - **Angaben, die nicht zum Format passen** listet gespeicherte Werte auf, die nicht zu einem Format oder zu Datumsgrenzen passen, siehe unten.
 
 Alle laufen im Hintergrund; das DMS bleibt dabei benutzbar.
+
+### Volltext neu erzeugen
+
+Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an die Texterkennung (das Paket bzw. die eingebaute).
+
+- **Für Dokumente ohne Text** – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Ersetzt das frühere „Volltext nachholen“.
+- **Für alle Dokumente** – nach einer Rückfrage mit der Anzahl. Das ist ein **ausdrückliches Neu**: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.
+
+Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 14 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund 25 Minuten. Wie weit es ist, siehst du unter **Werkbank → Texterkennung** („wartet auf Texterkennung“).
+
+Ist kein Paket für die Texterkennung installiert, sagt die Seite das mit dem Weg zu **Werkbank → Pakete**.
 
 ### Absender bereinigen
 

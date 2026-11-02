@@ -52,7 +52,7 @@ Die Ordner im Container sind jetzt fest: `/data/files`, `/data/geheim` und `/dat
   ```
   Danach unter **Werkbank → Verschlüsselung** den Schlüssel erzeugen. Ein schon gespeichertes SMTP-Passwort wird dabei verschlüsselt; bis dahin funktioniert der Versand wie bisher.
 - Das Image enthält jetzt die Texterkennung und ist dadurch etwa 50 MB größer.
-- Vorhandene Dokumente bekommen ihren Volltext erst, wenn du unter **Werkbank → [Wartungsoperationen](texterkennung.md#wartungsoperationen)** „Volltext nachholen“ anstößt.
+- Vorhandene Dokumente bekommen ihren Volltext erst, wenn du unter **Werkbank → [Wartungsoperationen](texterkennung.md#wartungsoperationen)** „Volltext neu erzeugen → Für Dokumente ohne Text“ anstößt.
 
 ### PostgreSQL
 
