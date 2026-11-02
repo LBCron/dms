@@ -42,6 +42,11 @@ export interface SeitenAnfrage {
    * ohne Bindestrich, bei keinem genauen Treffer ähnliche Wörter. Gilt für `suche` und `textfilter`.
    */
   varianten?: Varianten;
+  /**
+   * Ähnliche Schreibweisen aus dem Wörterverzeichnis (#356, Tippfehler) – wie `varianten`, aber nur für ganze Wörter,
+   * nicht für die Suche nach Wortteilen im Volltext (die müsste dafür alle Texte lesen).
+   */
+  aehnlich?: Varianten;
   /** Reihenfolge; ohne: nach Titel. */
   sortierung?: SortierungIntern;
   /** Berechtigungen (#124): nur lesbare Mappen; fehlt/null = alle. */
@@ -56,7 +61,11 @@ export interface NeueMappe {
 }
 
 /** Ergebnis der Texterkennung für ein Dokument. */
-export interface OcrErgebnis { stand: OcrStandArt; text?: string | null; info?: string | null; seiten?: number | null }
+export interface OcrErgebnis {
+  stand: OcrStandArt; text?: string | null; info?: string | null; seiten?: number | null;
+  /** Sprache des Texts (#400, Tesseract-Kennung); undefined = unverändert lassen, null = keine (Deutsch). */
+  sprache?: string | null;
+}
 export type OcrZaehler = Record<OcrStandArt, number>;
 
 /** Ein Dokument in der Liste der Texterkennung (#61). */
@@ -388,7 +397,9 @@ export interface Repo {
   ocrNaechster(): Promise<Dokument | undefined>;
   ocrSetze(id: string, e: OcrErgebnis): Promise<void>;
   /** Fertiger Volltext eines anderen Dokuments mit derselben Datei. */
-  ocrVonSha(sha256: string, ausser: string): Promise<{ text: string; seiten: number | null; info: string | null } | undefined>;
+  ocrVonSha(sha256: string, ausser: string): Promise<{ text: string; seiten: number | null; info: string | null; sprache?: string | null } | undefined>;
+  /** Sprache eines Dokuments setzen (#400); false, wenn es das Dokument nicht gibt. */
+  setzeDokumentSprache(id: string, sprache: string | null): Promise<boolean>;
   /** Nach einem Neustart: „läuft“ → „wartet“. */
   ocrZurueckstellen(): Promise<number>;
   ocrZaehler(): Promise<OcrZaehler>;

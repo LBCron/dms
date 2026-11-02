@@ -754,6 +754,11 @@ export interface Dokument {
   aeltere?: number;
   /** Archivnummer des Papieroriginals (#345), eindeutig je Haushalt. */
   archivnummer?: string | null;
+  /**
+   * Sprache des Volltexts (#400), Tesseract-Kennung wie „fra“: erkannt oder über die API gesetzt; ohne Angabe
+   * Deutsch. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
+   */
+  sprache?: string | null;
 }
 
 /** Herkunft einer Dokumentversion (#194). */

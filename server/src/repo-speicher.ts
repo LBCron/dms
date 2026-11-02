@@ -6,7 +6,7 @@ import { datumIn, ziehe, type Nummernkreis } from '../../shared/src/nummernkreis
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type Werte } from '../../shared/src/model';
 import { alsText } from '../../shared/src/markdown';
-import { spracheAusInfo } from '../../shared/src/textsprache';
+import { SPRACHE_MARKE, spracheAusInfo } from '../../shared/src/textsprache';
 import { ausschnittAus } from './repo-pg';
 import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, woerterIn, type Varianten } from '../../shared/src/suche';
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
@@ -300,7 +300,8 @@ export function speicherRepo(): Repo {
       // Fundstellen: zur Suche oder zum Volltextfilter.
       const fund = o.suche && (o.volltext || o.notizen) ? { volltext: !!o.volltext, notizen: !!o.notizen } : tf ? { volltext: tf.dokumente, notizen: tf.notizen } : null;
       const q = o.suche;
-      const vv = o.varianten ?? {};
+      const vv: Varianten = { ...(o.varianten ?? {}) };
+      for (const [k, w] of Object.entries(o.aehnlich ?? {})) vv[k] = [...(vv[k] ?? []), ...w];
       const wertText = (v: unknown) => (typeof v === 'object' ? JSON.stringify(v) : String(v));
       const alle = [...mappen.values()]
         .filter((m) => !o.typId || m.typId === o.typId)
@@ -482,10 +483,18 @@ export function speicherRepo(): Repo {
       if (!d) return;
       d.ocr = { stand: e.stand, info: e.info ?? null, seiten: e.seiten ?? null, zeit: jetzt() };
       if (e.text !== undefined) texte.set(id, e.text);
+      if (e.sprache !== undefined) d.sprache = e.sprache;
+    },
+    async setzeDokumentSprache(id, sprache) {
+      const d = dokumente.get(id);
+      if (!d) return false;
+      d.sprache = sprache;
+      if (d.ocr?.info) d.ocr = { ...d.ocr, info: d.ocr.info.replace(/ · Sprache: [a-z_]{3,10}( \(\d{1,3} %\))?/, '') + (sprache ? `${SPRACHE_MARKE}${sprache}` : '') };
+      return true;
     },
     async ocrVonSha(sha, ausser) {
       const d = [...dokumente.values()].find((x) => x.sha256 === sha && x.id !== ausser && x.ocr?.stand === 'fertig' && texte.get(x.id) != null);
-      return d ? { text: texte.get(d.id)!, seiten: d.ocr?.seiten ?? null, info: d.ocr?.info ?? null } : undefined;
+      return d ? { text: texte.get(d.id)!, seiten: d.ocr?.seiten ?? null, info: d.ocr?.info ?? null, sprache: d.sprache ?? null } : undefined;
     },
     async ocrZurueckstellen() {
       let n = 0;

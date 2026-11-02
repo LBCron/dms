@@ -39,6 +39,11 @@ export const TEXTSPRACHEN: Record<string, SpracheInfo> = {
   ara: info('Arabisch', 'ara', 'arabic'),
 };
 
+/** Suchkonfiguration des DMS zu einer Sprache (#400, wie dms_konfig in Migration 048); unbekannt oder leer: Deutsch. */
+export const suchkonfig = (sprache: string | null | undefined) => `dms_${(sprache && TEXTSPRACHEN[sprache]?.pg) || 'german'}`;
+/** Ist das eine Sprache, die das DMS kennt (Kennung aus TEXTSPRACHEN)? */
+export const istTextsprache = (s: unknown): s is string => typeof s === 'string' && Object.hasOwn(TEXTSPRACHEN, s);
+
 /** Name einer Sprache für die Anzeige („fra“ → „Französisch“, Unbekanntes bleibt die Kennung). */
 export const sprachname = (code: string) => TEXTSPRACHEN[code]?.name ?? code;
 

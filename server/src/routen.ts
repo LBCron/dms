@@ -1721,7 +1721,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/dokumente/:id/volltext', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
       const r = await dienst.volltext(a.params.id);
-      return ok({ id: r.dokument.id, name: r.dokument.name, ocr: r.dokument.ocr, text: r.text });
+      return ok({ id: r.dokument.id, name: r.dokument.name, ocr: r.dokument.ocr, sprache: r.dokument.sprache ?? null, text: r.text });
     } },
     // Volltext schreiben (#338): für Pakete wie die Texterkennung – Dienstkonto mit „Dokumente schreiben“ oder Recht Bearbeiten.
     { methode: 'PUT', pfad: '/api/dokumente/:id/volltext', zugang: 'angemeldet', handler: async (a) => {
@@ -1729,7 +1729,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
       const herkunft = p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})`;
       const d = await dienst.schreibeVolltext(a.params.id, a.body, { id: ich(a).id, herkunft, paket: !!p });
-      return ok({ id: d.id, name: d.name, ocr: d.ocr });
+      return ok({ id: d.id, name: d.name, ocr: d.ocr, sprache: d.sprache ?? null });
+    } },
+    // Sprache des Volltexts (#400): bestimmt die Wortstämme der Suche – Rechte wie beim Volltext schreiben.
+    { methode: 'PUT', pfad: '/api/dokumente/:id/sprache', zugang: 'angemeldet', handler: async (a) => {
+      await darf(a, await dienst.mappeVon('dokument', a.params.id), a.benutzer?.art === 'dienst' ? 'R' : 'U');
+      const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
+      const d = await dienst.setzeDokumentSprache(a.params.id, a.body, { id: ich(a).id, wer: p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})` });
+      return ok({ id: d.id, name: d.name, sprache: d.sprache ?? null, ocr: d.ocr });
     } },
     // Vektoren zu Dokumenten (#442): schreiben nur Pakete mit dms:vektoren, die das Dokument lesen dürfen.
     { methode: 'PUT', pfad: '/api/dokumente/:id/vektor', zugang: 'angemeldet', handler: async (a) => {

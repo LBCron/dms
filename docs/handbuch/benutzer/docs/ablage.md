@@ -72,7 +72,7 @@ Setzt du neben dem Suchfeld den Haken **Volltext durchsuchen**, sucht das DMS au
 
 ![Volltextsuche: Treffer in einem Dokument](bilder/volltext-suche.png)
 
-Die Volltextsuche versteht Deutsch: „Rechnungen“ findet auch „Rechnung“, und mehrere Wörter müssen alle vorkommen. Sie findet einen Begriff auch **als Teil eines Wortes**: „Ofen“ findet „Backofen“, „Ofenrohr“ und „Kachelofen“ – ohne dass du ein Sternchen o. Ä. eingeben musst. Das gilt für Begriffe ab drei Buchstaben.
+Die Volltextsuche versteht Wortformen in der Sprache des Dokuments: „Rechnungen“ findet auch „Rechnung“, in einem englischen Brief „invoices“ auch „invoice“ – die Sprache erkennt das DMS mit der Texterkennung selbst. Mehrere Wörter müssen alle vorkommen. Sie findet einen Begriff auch **als Teil eines Wortes**: „Ofen“ findet „Backofen“, „Ofenrohr“ und „Kachelofen“ – ohne dass du ein Sternchen o. Ä. eingeben musst. Das gilt für Begriffe ab drei Buchstaben.
 
 Mit Anführungszeichen suchst du nur **ganze Wörter** bzw. eine genaue Wortfolge, z. B. `"Ofen"` oder `"Stadtwerke Musterstadt"`; ein Minus schließt ein Wort aus, z. B. `Strom -Gas`.
 
@@ -122,7 +122,7 @@ So funktioniert das Formular:
 
 ### Volltext in Dokumenten und Notizen
 
-Unter **Volltext** gibst du einen Begriff ein, der in den Dokumenten oder Notizen der Mappe stehen soll. Mit den Haken **in Dokumenten** und **in Notizen** (beide vorausgewählt) legst du fest, wo: Steht der Begriff an einem der beiden Orte, zählt die Mappe als Treffer. Die Suche im Text versteht Deutsch und findet Teilwörter wie die [Volltextsuche](#im-text-der-dokumente-suchen). Unter jedem Treffer steht die Fundstelle.
+Unter **Volltext** gibst du einen Begriff ein, der in den Dokumenten oder Notizen der Mappe stehen soll. Mit den Haken **in Dokumenten** und **in Notizen** (beide vorausgewählt) legst du fest, wo: Steht der Begriff an einem der beiden Orte, zählt die Mappe als Treffer. Die Suche im Text versteht Wortformen in der Sprache des Dokuments und findet Teilwörter wie die [Volltextsuche](#im-text-der-dokumente-suchen). Unter jedem Treffer steht die Fundstelle.
 
 ### Das Ergebnis
 

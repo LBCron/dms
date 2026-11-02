@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { OCR_STAENDE, type Dokument, type OcrStandArt } from '../../shared/src/model';
 import { PAKET_TEXT } from '../../shared/src/pakete';
-import { erkenneSprache, spracheZuInfo, type ErkannteSprache } from '../../shared/src/textsprache';
+import { erkenneSprache, istTextsprache, spracheZuInfo, type ErkannteSprache } from '../../shared/src/textsprache';
 import type { Dateispeicher } from './dateispeicher';
 import { dreheGraubild, lesePgm, schreibePgm } from './graubild';
 import type { Einstellungen } from './einstellungen';
@@ -410,7 +410,7 @@ export class Texterkennung {
     if (verfahren === 'aus') return { stand: 'ausgelassen', info: `Für ${DATEITYPEN[d.mime] ?? d.mime} ist die Texterkennung ausgeschaltet.`, text: null };
     if (d.groesse > o.maxMB * 1024 * 1024) return { stand: 'ausgelassen', info: `Größer als ${o.maxMB} MB.`, text: null };
     const vorhanden = await this.repo.ocrVonSha(d.sha256, d.id);
-    if (vorhanden) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim() };
+    if (vorhanden) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null };
     const dir = await mkdtemp(join(tmpdir(), 'dms-ocr-'));
     try {
       const pfad = join(dir, 'datei');
@@ -419,7 +419,8 @@ export class Texterkennung {
       const r = await this.engine(pfad, d.mime, { maxSeiten: o.maxSeiten, sprachen: o.sprachen, automatisch: o.automatisch, werkzeuge: await this.werkzeugeLaden(), signal });
       // Erkannte Sprache am Ende des Hinweises (#395) – für Anzeige und Statistik.
       const sprache = erkenneSprache(r.text);
-      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + (sprache ? spracheZuInfo(sprache) : '') };
+      // Sprache als eigenes Feld (#400): Die Volltextsuche nimmt die Wortstämme dieser Sprache.
+      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null };
     } finally { await rm(dir, { recursive: true, force: true }); }
   }
 

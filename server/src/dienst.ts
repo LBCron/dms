@@ -53,7 +53,7 @@ import { analysiere, ergebnisText, istStufe, MIN_ERSPARNIS, STANDARD_STUFE, stuf
 import { geltenderStempel, liesStempelTyp, liesVorlagen, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
 import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestlauf, type SichtRegelwerk } from '../../shared/src/sichtrechte';
 import { liesDirektlink } from '../../shared/src/direktlink';
-import { erkenneSprache, SPRACHE_MARKE, spracheZuInfo } from '../../shared/src/textsprache';
+import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { ALLE_TYPEN, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
@@ -899,11 +899,30 @@ export class Dienst {
     const herkunft = von.herkunft.split(SPRACHE_MARKE.trim()).join('Sprache:');
     const info = (von.paket ? `${PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200);
     const text = e.text.replace(/\u0000/g, '');
-    const sprache = erkenneSprache(text);
-    await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + (sprache ? spracheZuInfo(sprache) : '') });
+    // Sprache (#400): angegeben (z. B. vom Paket Texterkennung) oder erkannt; sie bestimmt die Wortstämme der Suche.
+    if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
+    const angegeben = istTextsprache(e.sprache) ? e.sprache : null;
+    const sprache = angegeben ? { sprache: angegeben, konfidenz: 1 } : erkenneSprache(text);
+    const vermerk = angegeben ? `${SPRACHE_MARKE}${angegeben}` : sprache ? spracheZuInfo(sprache) : '';
+    await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null });
     await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: info });
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
     await this.volltextFertig({ dokument: id, mappe: d.mappeId });
+    return (await this.repo.holeDokument(id))!;
+  }
+
+  /**
+   * Sprache eines Dokuments setzen (#400, API v1): bestimmt die Wortstämme der Volltextsuche. null = keine Angabe
+   * (Deutsch). Der Suchindex des Dokuments entsteht dabei neu.
+   */
+  async setzeDokumentSprache(id: string, eingabe: unknown, von: { id: string; wer: string }) {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    const s = ((eingabe ?? {}) as { sprache?: unknown }).sprache;
+    if (s !== null && !istTextsprache(s)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
+    await this.repo.setzeDokumentSprache(id, s);
+    await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: `Sprache ${s ? sprachname(s) : 'ohne Angabe'} (${von.wer})` });
+    protokoll.modul('ablage').info('Sprache eines Dokuments gesetzt', { dokument: id, sprache: s });
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -2133,15 +2152,13 @@ export class Dienst {
       const begriffe = suchbegriffe(gesucht);
       const aehnlich = begriffe ? await this.repo.aehnlicheWoerter(begriffe, 5) : {};
       if (Object.keys(aehnlich).length) {
-        const mit: Varianten = { ...varianten };
-        for (const [k, w] of Object.entries(aehnlich)) mit[k] = [...(mit[k] ?? []), ...w];
-        const r2 = await this.repo.seite({ ...anfrage, varianten: mit });
+        const r2 = await this.repo.seite({ ...anfrage, varianten, aehnlich });
         if (r2.gesamt > 0) {
           r = r2;
           // „Meintest du …?“ nur, wenn der Vorschlag selbst etwas findet, das der Benutzer lesen darf – das
-          // Wörterverzeichnis kennt auch Wörter aus Mappen, die er nicht sehen darf.
+          // Wörterverzeichnis kennt auch Wörter aus Mappen, die er nicht sehen darf (ohne Lesefilter: alles lesbar).
           let vorschlag = vorschlagAus(begriffe!, aehnlich);
-          if (vorschlag) {
+          if (vorschlag && anfrage.lesen) {
             const probe: SeitenAnfrage = suche ? { ...anfrage, suche: vorschlag } : { ...anfrage, textfilter: { ...textfilter!, text: vorschlag } };
             if ((await this.repo.seite({ ...probe, von: 0, anzahl: 1 })).gesamt === 0) vorschlag = null;
           }
@@ -3861,7 +3878,7 @@ export class Dienst {
       if (kopieren) {
         const neu = await this.repo.legeDokumentAn({ ...d, id: randomUUID(), mappeId: ziel.id, registerKey: reg!.key, erstellt: new Date().toISOString(), erstelltVon: von });
         const fertig = await this.repo.ocrVonSha(d.sha256, neu.id);
-        if (fertig) await this.repo.ocrSetze(neu.id, { stand: 'fertig', text: fertig.text, seiten: fertig.seiten, info: fertig.info });
+        if (fertig) await this.repo.ocrSetze(neu.id, { stand: 'fertig', text: fertig.text, seiten: fertig.seiten, info: fertig.info, sprache: fertig.sprache ?? null });
         else if (Dienst.volltextAn(zielTyp, reg!.key)) { await this.repo.ocrEinreihen([neu.id]); this.ocr?.anstossen(); }
       } else {
         await this.repo.verschiebeDokument(d.id, ziel.id, reg!.key);
