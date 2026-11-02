@@ -1684,6 +1684,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#einstellungen-und-engpasse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einstellungen und Engpässe
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2391,6 +2402,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#einstellungen-und-engpasse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einstellungen und Engpässe
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2551,6 +2573,71 @@
 <li>Ein Arbeiter entsteht bei Bedarf und beendet sich nach zwei Minuten ohne Arbeit wieder; einer läuft ab dem Start bereit.</li>
 </ul>
 <p>Mehr Arbeiter helfen nur, wenn genug Kerne frei sind: Bei 2 Kernen bleibt es bei einem Arbeiter, damit Anfragen und Datenbank nicht leer ausgehen.</p>
+<h3 id="einstellungen-und-engpasse">Einstellungen und Engpässe<a class="headerlink" href="#einstellungen-und-engpasse" title="Permanent link">&para;</a></h3>
+<p>Unter den Werten steht <strong>Einstellungen für viele gleichzeitige Anfragen</strong> – nur zum Ansehen, mit dem aktuellen Wert und woher er stammt (<em>Vorgabe</em> oder <em>aus der Umgebung</em>):</p>
+<table>
+<thead>
+<tr>
+<th>Zeile</th>
+<th>Variable</th>
+<th>erlaubt</th>
+<th>Vorgabe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arbeiter für PDF und Exporte</td>
+<td><code>DMS_ARBEITER</code></td>
+<td>0–16</td>
+<td>Hälfte der Kerne, 1 bis 4</td>
+</tr>
+<tr>
+<td>Verbindungen zur Datenbank</td>
+<td><code>DMS_DB_VERBINDUNGEN</code></td>
+<td>2–100</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Gleichzeitige Anfragen höchstens</td>
+<td><code>DMS_MAX_ANFRAGEN</code></td>
+<td>20–10.000</td>
+<td>250</td>
+</tr>
+</tbody>
+</table>
+<p>Ändern lassen sie sich nur als Umgebungsvariable in der Compose-Datei (siehe <a href="../installation/#einstellungen">Installation</a>); sie gelten, sobald der Container neu erstellt ist. Ein ungültiger Wert wird beim Start ignoriert (Hinweis im Protokoll), dann steht hier die Vorgabe. Warum die Vorgaben so sind, steht unter <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a>.</p>
+<p>Wird etwas knapp, steht über den Werten ein <strong>Engpass</strong>-Hinweis mit der Variable, die helfen kann (auch als Hinweis in der Übersicht):</p>
+<table>
+<thead>
+<tr>
+<th>Engpass</th>
+<th>wann</th>
+<th>Variable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wartezeit des Servers</td>
+<td>seit 5 Minuten oft über 100 ms (siehe oben)</td>
+<td><code>DMS_ARBEITER</code> – die Arbeiter nehmen dem Hauptfaden PDF-Arbeiten und Exporte ab. Ist die CPU ohnehin voll, hilft nur mehr Rechenzeit für den Container.</td>
+</tr>
+<tr>
+<td>Warten auf eine Verbindung zur Datenbank</td>
+<td>in der letzten Minute üblich über 50 ms</td>
+<td><code>DMS_DB_VERBINDUNGEN</code> – nur sinnvoll, wenn CPU und Datenbank nicht ausgelastet sind</td>
+</tr>
+<tr>
+<td>Warteschlange der Arbeiter voll</td>
+<td>in den letzten 15 Minuten wurde ein Auftrag abgewiesen</td>
+<td><code>DMS_ARBEITER</code> – nur sinnvoll mit freien Kernen</td>
+</tr>
+<tr>
+<td>Überlastschutz</td>
+<td>in den letzten 15 Minuten „gerade sehr beschäftigt“ (503)</td>
+<td><code>DMS_MAX_ANFRAGEN</code> – prüfe zuerst, ob ein Programm (z. B. über WebDAV) ungewöhnlich viele Anfragen schickt; eine höhere Grenze macht das DMS nicht schneller</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Nicht verfügbar</strong> steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS <strong>ihre</strong> Auslastung nicht; das steht unter dem Arbeitsspeicher.</p>
 <h2 id="was-gemessen-wird">Was gemessen wird<a class="headerlink" href="#was-gemessen-wird" title="Permanent link">&para;</a></h2>
 <p>Gemessen werden die drei festen Ordner im Container (siehe <a href="../installation/#ordner-und-volumes">Ordner und Volumes</a>) – jede Minute und zusätzlich vor jedem Hochladen:</p>
