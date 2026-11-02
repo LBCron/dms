@@ -78,6 +78,8 @@ Danach kannst du je Bereich abweichen:
 - **für alle**: Der Bereich steht bei jedem Administrator in der Leiste.
 - **nur für mich**: Der Bereich steht zusätzlich nur bei dir, zum Beispiel *Protokoll*, wenn du gern nachschaust, die anderen aber nicht.
 
+**Expertenmodus:** Manche Bereiche braucht ein Haushalt selten, sie sind aber nützlich, wenn man tiefer einsteigen will – derzeit die [Suche](suche.md) mit Tippfehlern und gleichbedeutenden Wörtern. Die Vorlage **Haushalt** blendet sie aus; mit dem Haken **Expertenmodus – nur für mich** erscheinen sie in deiner Leiste. Das gilt nur für dich und ist kein Recht – die anderen Administratoren sehen ihre eigene Leiste. In der Liste der Bereiche stehen sie mit „im Expertenmodus“. Bei **Betrieb** und **Alles** sind sie ohnehin zu sehen.
+
 Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldung über einen Anbieter, steht dabei „eingerichtet, aber ausgeblendet“. Unten in der Leiste steht, wie viele Bereiche ausgeblendet sind. Ein Klick darauf zeigt sie vorübergehend alle.
 
 ![Werkbank → Werkbank anpassen](bilder/werkbank-anpassen.png)
@@ -92,7 +94,7 @@ Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldun
 | [Nummernkreise](nummernkreise.md) | Fortlaufende Nummern, z. B. für Rechnungen | Betrieb |
 | [Stempel](stempel.md) | Vorlagen für Stempel und Wasserzeichen beim Weitergeben | Haushalt, Betrieb |
 | [Pakete](pakete.md) | Fertige Mappentypen und Ansichten installieren | Haushalt, Betrieb |
-| [Suche](suche.md) | Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche | Betrieb |
+| [Suche](suche.md) | Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche | Betrieb, Haushalt im Expertenmodus |
 | [Darf weg](archiv.md#nach-der-frist-darf-weg) | Mappen mit abgelaufener Aufbewahrungsfrist (nur mit Archivmodus) | Betrieb |
 | [Benutzer](benutzer.md) | Benutzer und Rollen anlegen | Haushalt, Betrieb |
 | [Verschlüsselung](verschluesselung.md) | Den Schlüssel für Passwörter und Sicherungen | Haushalt, Betrieb |

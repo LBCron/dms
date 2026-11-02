@@ -4,8 +4,9 @@ import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import {
-  ansichtAus, BEREICHE, fuerAlle, GRUPPEN, inVorlage, OHNE_EINSTELLUNG, sichtbar, VORLAGEN, type Gruppe, type Vorlage,
+  ansichtAus, BEREICHE, expertenBereiche, fuerAlle, GRUPPEN, inVorlage, nurImExpertenmodus, OHNE_EINSTELLUNG, sichtbar, VORLAGEN, type Gruppe, type Vorlage,
 } from '../../../shared/src/werkbankansicht';
+import { t } from '../sprache';
 
 /**
  * Werkbank anpassen (#281): welche Bereiche in der Leiste stehen.
@@ -33,6 +34,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
   const [vorlage, setVorlage] = useState<Vorlage>('haushalt');
   const [alle, setAlle] = useState<Set<string>>(new Set());
   const [ich, setIch] = useState<Set<string>>(new Set());
+  const [experte, setExperte] = useState(false);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   const [laeuft, setLaeuft] = useState(false);
 
@@ -41,6 +43,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
     setVorlage(a.vorlage);
     setAlle(new Set(BEREICHE.filter((b) => fuerAlle(a, b.pfad)).map((b) => b.pfad)));
     setIch(new Set(s?.eigene.ein ?? []));
+    setExperte(!!s?.eigene.experte);
   }, [s]);
   useEffect(() => { zuruecksetzen(); }, [zuruecksetzen]);
 
@@ -49,8 +52,9 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
     const a = ansichtAus(vorlage, alle);
     const b = s.installation;
     const gleich = (x: string[], y: string[]) => x.length === y.length && x.every((v) => y.includes(v));
-    return a.vorlage !== b.vorlage || !gleich(a.ein, b.ein) || !gleich(a.aus, b.aus) || !gleich([...ich].filter((p) => !alle.has(p)), s.eigene.ein);
-  }, [s, vorlage, alle, ich]);
+    return a.vorlage !== b.vorlage || !gleich(a.ein, b.ein) || !gleich(a.aus, b.aus) || !gleich([...ich].filter((p) => !alle.has(p)), s.eigene.ein)
+      || experte !== !!s.eigene.experte;
+  }, [s, vorlage, alle, ich, experte]);
   // Noch nie eingestellt: Speichern geht auch ohne Änderung (übernimmt die Vorlage).
   const ent = useEntwurf(false, geaendert, { zuruecksetzen: () => { zuruecksetzen(); setMeldung(undefined); } });
 
@@ -69,7 +73,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
   async function speichern() {
     setLaeuft(true); setMeldung(undefined);
     try {
-      const neu = await api.setzeWerkbankAnsicht({ installation: ansichtAus(vorlage, alle), eigene: { ein: [...ich].filter((p) => !alle.has(p)) } });
+      const neu = await api.setzeWerkbankAnsicht({ installation: ansichtAus(vorlage, alle), eigene: { ein: [...ich].filter((p) => !alle.has(p)), experte } });
       z.setStand({ ...neu, benutzt: s?.benutzt });
       setMeldung({ art: 'gut', text: 'Gespeichert. Die Leiste links zeigt jetzt diese Bereiche.' });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setLaeuft(false); }
@@ -91,6 +95,14 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
               <span><strong>{VORLAGEN[v].name}</strong> <span className="leise">– {VORLAGEN[v].text}</span></span></label>
           ))}
         </fieldset>
+        {/* Expertenmodus (#356): Bereiche, die die Vorlage nur für Fortgeschrittene vorsieht – je Administrator. */}
+        <fieldset className="wahl">
+          <legend className="h3">{t('werkbank.experte.titel')}</legend>
+          <label className="haken"><input type="checkbox" checked={experte} onChange={(x) => setExperte(x.target.checked)} />
+            <span><strong>{t('werkbank.experte.haken')}</strong> <span className="leise">– {expertenBereiche(vorlage).length
+              ? t('werkbank.experte.text', { bereiche: expertenBereiche(vorlage).map((b) => b.name).join(', ') })
+              : t('werkbank.experte.keine', { vorlage: VORLAGEN[vorlage].name })}</span></span></label>
+        </fieldset>
         <h2 className="h3">Bereiche</h2>
         <p className="leise klein">„Für alle“ gilt für jeden Administrator. „Nur für mich“ blendet einen Bereich zusätzlich bei dir ein.</p>
         {(Object.keys(GRUPPEN) as Gruppe[]).map((g) => (
@@ -104,6 +116,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
                 return (
                   <li key={b.pfad} className="ansichtzeile">
                     <span className="ansichtname"><strong>{b.name}</strong> <span className="leise klein">{b.wann}</span>
+                      {!fuerAlleAn && nurImExpertenmodus(vorlage, b.pfad) ? <span className="chip" title={t('werkbank.experte.chip.titel')}>{t('werkbank.experte.chip')}</span> : null}
                       {benutzt ? <span className="chip warn" title="Bleibt aktiv – nur die Leiste zeigt ihn nicht.">{zst.warn ? 'mit Hinweis' : 'eingerichtet'}, aber ausgeblendet</span> : null}</span>
                     <span className="ansichtwahl">
                       <label className="haken"><input type="checkbox" checked={fuerAlleAn} aria-label={`${b.name} für alle zeigen`} onChange={(x) => schalte(alle, setAlle, b.pfad, x.target.checked)} /><span>für alle</span></label>

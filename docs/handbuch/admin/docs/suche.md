@@ -1,6 +1,6 @@
 # Suche
 
-Die Suche der Ablage verzeiht Tippfehler und andere Schreibweisen. Was sie dabei tut, stellst du unter **Werkbank → Suche** ein (Gruppe *Ablage aufbauen*; in der schlanken Werkbank für Haushalte ausgeblendet, siehe [Werkbank-Ansicht](uebersicht.md)). Wie Benutzer suchen, steht im [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/ablage/#suchen).
+Die Suche der Ablage verzeiht Tippfehler und andere Schreibweisen. Was sie dabei tut, stellst du unter **Werkbank → Suche** ein (Gruppe *Ablage aufbauen*; in der Vorlage *Haushalt* nur im [Expertenmodus](uebersicht.md#werkbank-anpassen), in *Betrieb* und *Alles* immer). Wie Benutzer suchen, steht im [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/ablage/#suchen).
 
 ## Was immer gilt
 

@@ -34,13 +34,18 @@ export interface Bereich {
   name: string;
   /** In welchen Vorlagen der Bereich zu sehen ist („alles“ enthält jeden). */
   in: Array<Exclude<Vorlage, 'alles'>>;
+  /**
+   * In welchen Vorlagen er nur im Expertenmodus erscheint (#356): Wer ihn eingeschaltet hat, sieht diese Bereiche
+   * zusätzlich – sonst bleiben sie für Einsteiger aus der Leiste.
+   */
+  experte: Array<Exclude<Vorlage, 'alles'>>;
   /** Für das Handbuch und den Dialog: wann man ihn braucht. */
   wann: string;
 }
 
 const H = ['haushalt', 'organisation'] as const;
 const O = ['organisation'] as const;
-type Eintrag = { pfad: string; gruppe: Gruppe; in: readonly Exclude<Vorlage, 'alles'>[] };
+type Eintrag = { pfad: string; gruppe: Gruppe; in: readonly Exclude<Vorlage, 'alles'>[]; experte?: readonly Exclude<Vorlage, 'alles'>[] };
 
 /**
  * Alle Bereiche außer der Übersicht (die ist immer da), in der Reihenfolge der Leiste (#354).
@@ -53,7 +58,8 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'nummernkreise', gruppe: 'ablage', in: O },
   { pfad: 'stempel', gruppe: 'ablage', in: H },
   { pfad: 'pakete', gruppe: 'ablage', in: H },
-  { pfad: 'suche', gruppe: 'ablage', in: O },
+  // Gleichbedeutende Wörter (#356): für Betriebe sichtbar, im Haushalt nur im Expertenmodus.
+  { pfad: 'suche', gruppe: 'ablage', in: O, experte: ['haushalt'] },
   { pfad: 'darfweg', gruppe: 'ablage', in: O },
   { pfad: 'benutzer', gruppe: 'benutzer', in: H },
   { pfad: 'verschluesselung', gruppe: 'benutzer', in: H },
@@ -81,7 +87,7 @@ const EINTRAEGE: Eintrag[] = [
 ];
 
 export const BEREICHE: Bereich[] = EINTRAEGE.map((e) => ({
-  ...e, in: [...e.in], name: t.frei(`werkbank.bereich.${e.pfad}.name`), wann: t.frei(`werkbank.bereich.${e.pfad}.wann`),
+  ...e, in: [...e.in], experte: [...(e.experte ?? [])], name: t.frei(`werkbank.bereich.${e.pfad}.name`), wann: t.frei(`werkbank.bereich.${e.pfad}.wann`),
 }));
 
 /** Name eines Bereichs (auch der Übersicht) für Leiste, Überschriften und Verweise. */
@@ -98,8 +104,11 @@ export const UMGEZOGEN: Readonly<Record<string, string>> = { datenbank: 'anbindu
 
 /** Für die ganze Installation: Vorlage plus Abweichungen. */
 export interface WerkbankAnsicht { vorlage: Vorlage; ein: string[]; aus: string[] }
-/** Je Administrator: zusätzlich eingeblendete Bereiche. */
-export interface EigeneAnsicht { ein: string[] }
+/**
+ * Je Administrator: zusätzlich eingeblendete Bereiche und der Expertenmodus (#356) – er zeigt die Bereiche, die die
+ * Vorlage nur für Fortgeschrittene vorsieht (`Bereich.experte`). Kein Recht, nur die Leiste.
+ */
+export interface EigeneAnsicht { ein: string[]; experte?: boolean }
 
 /** Ohne Einstellung bleibt alles sichtbar – so ändert sich für bestehende Installationen nichts. */
 export const OHNE_EINSTELLUNG: WerkbankAnsicht = { vorlage: 'alles', ein: [], aus: [] };
@@ -116,7 +125,8 @@ export function liesAnsicht(v: unknown): WerkbankAnsicht | null {
   return { vorlage, ein: liste(o.ein), aus: liste(o.aus) };
 }
 export function liesEigene(v: unknown): EigeneAnsicht {
-  return { ein: v && typeof v === 'object' ? liste((v as Record<string, unknown>).ein) : [] };
+  const o = v && typeof v === 'object' ? v as Record<string, unknown> : {};
+  return { ein: liste(o.ein), ...(o.experte === true ? { experte: true } : {}) };
 }
 
 export const inVorlage = (vorlage: Vorlage, pfad: string) =>
@@ -129,8 +139,19 @@ export function fuerAlle(a: WerkbankAnsicht, pfad: string): boolean {
   return a.ein.includes(pfad) || inVorlage(a.vorlage, pfad);
 }
 
-/** Für diesen Administrator sichtbar: Installation plus eigene Ergänzungen. */
-export const sichtbar = (a: WerkbankAnsicht, eigene: EigeneAnsicht, pfad: string) => fuerAlle(a, pfad) || eigene.ein.includes(pfad);
+/** Erscheint der Bereich in dieser Vorlage nur im Expertenmodus? */
+export const nurImExpertenmodus = (vorlage: Vorlage, pfad: string) =>
+  vorlage !== 'alles' && !!BEREICHE.find((b) => b.pfad === pfad)?.experte.includes(vorlage);
+
+/** Bereiche, die der Expertenmodus in dieser Vorlage zusätzlich zeigt. */
+export const expertenBereiche = (vorlage: Vorlage) => BEREICHE.filter((b) => nurImExpertenmodus(vorlage, b.pfad));
+
+/**
+ * Für diesen Administrator sichtbar: Installation plus eigene Ergänzungen, im Expertenmodus dazu die Bereiche, die
+ * die Vorlage dafür vorsieht – außer sie sind für alle ausdrücklich ausgeblendet.
+ */
+export const sichtbar = (a: WerkbankAnsicht, eigene: EigeneAnsicht, pfad: string) =>
+  fuerAlle(a, pfad) || eigene.ein.includes(pfad) || (!!eigene.experte && !a.aus.includes(pfad) && nurImExpertenmodus(a.vorlage, pfad));
 
 /** Speichert nur Abweichungen von der Vorlage. */
 export function ansichtAus(vorlage: Vorlage, sichtbareBereiche: Iterable<string>): WerkbankAnsicht {
