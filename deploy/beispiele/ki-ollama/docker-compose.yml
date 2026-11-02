@@ -1,0 +1,70 @@
+# Lokaler KI-Dienst (Ollama) neben dem DMS – Beispiel aus https://github.com/motom001/dms (deploy/beispiele/ki-ollama)
+# Anleitung: https://motom001.github.io/dms/admin/aktuell/ki-lokal/
+#
+# Variante „nur Prozessor“: läuft auf jedem Gerät mit Docker, ohne Grafikkarte. Für Grafik gibt es
+# Ergänzungen in diesem Ordner (intel-grafik.yml als Versuch, nvidia.yml, amd.yml) – siehe README.md.
+#
+# Nur eine Stelle ändern, wenn du willst: das Modell in der nächsten Zeile. Es wird beim ersten Start
+# einmal heruntergeladen (rund 2–3 GB) und liegt danach im Ordner ./ollama.
+x-modell: &modell "ministral-3:3b"
+
+# Ollama in einer festen Version. Beim Aktualisieren die Nummer in allen Dateien dieses Ordners ändern.
+x-image: &image ollama/ollama:0.40.13
+
+services:
+  ollama:
+    image: *image
+    restart: unless-stopped
+    environment:
+      # Keine Cloud-Funktionen von Ollama (Rechnen bei Ollama im Internet, Websuche) – alles bleibt im Haus.
+      OLLAMA_NO_CLOUD: "1"
+      # Wie viel Text das Modell auf einmal liest (Token). Ohne Grafikkarte nimmt Ollama sonst nur 4096 –
+      # dann fallen bei längeren Fragen die Ausschnitte aus der Ablage still weg.
+      OLLAMA_CONTEXT_LENGTH: "8192"
+      # Modell 30 Minuten nach der letzten Frage im Speicher halten (sonst 5 Minuten); danach ist der Speicher frei.
+      OLLAMA_KEEP_ALIVE: "30m"
+      # Eine Anfrage und ein Modell zur Zeit – hält den Speicherbedarf klein und berechenbar.
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      # Nur Prozessor: keine Grafik suchen (intel-grafik.yml schaltet Vulkan ein).
+      OLLAMA_VULKAN: "0"
+    volumes:
+      # Modelle (einige GB). Auf einem NAS z. B. /volume1/docker/dms-ki/ollama statt ./ollama.
+      - ./ollama:/root/.ollama
+    # Speichergrenze: Das Modell teilt sich den Arbeitsspeicher mit DMS, Datenbank und anderen Containern.
+    # 6 GB reichen für Modelle mit 3–4 Mrd. Parametern; für 7–8 Mrd. auf 9g erhöhen (siehe README).
+    mem_limit: 6g
+    memswap_limit: 6g
+    # Wenn beide rechnen, bekommt das DMS den Vorrang (Standard ist 1024).
+    cpu_shares: 256
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - default
+      - dms-ki
+    # Absichtlich kein „ports:“ – der Dienst ist von außen nicht erreichbar, nur für das DMS im Netz dms-ki.
+
+  # Lädt das Modell beim ersten Start und beendet sich dann („Beendet“ ist hier also richtig).
+  # Ist das Modell schon da, lädt es nichts.
+  modell-laden:
+    image: *image
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: ollama:11434
+      MODELL: *modell
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'if ollama show "$$MODELL" >/dev/null 2>&1; then echo "Modell $$MODELL ist schon da."; else ollama pull "$$MODELL"; fi'
+
+networks:
+  # Gemeinsames Netz für DMS und KI-Dienst. „internal“: kein Weg nach draußen über dieses Netz.
+  # Das DMS hängt sich mit dms-anbinden.yml dazu und erreicht Ollama dann unter http://ollama:11434/v1.
+  dms-ki:
+    name: dms-ki
+    internal: true

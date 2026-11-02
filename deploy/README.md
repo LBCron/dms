@@ -17,3 +17,11 @@ Welche Datei wofür – Anleitungen unter **[Wie komme ich an ein DMS?](https://
 Die App-Stores (umbrelOS, ZimaOS, CasaOS, TrueNAS-Katalog, Unraid Community Applications) liegen im Repository [motom001/dms-appstore](https://github.com/motom001/dms-appstore).
 
 Die CI installiert jede Vorlage bei jedem Pull Request probehalber (`vorlagen-probe.sh`, `komplett-probe.sh`).
+
+## Beispiele für Dienste neben dem DMS
+
+| Ordner | Was | Anleitung |
+| --- | --- | --- |
+| [`beispiele/ki-ollama/`](beispiele/ki-ollama/) | lokaler KI-Dienst (Ollama) für das Paket „KI-Assistent“ – nur Prozessor, mit Ergänzungen für Grafik; kein Port nach außen | [KI lokal betreiben](https://motom001.github.io/dms/admin/aktuell/ki-lokal/) |
+
+Die CI startet das KI-Beispiel probehalber, wenn es sich ändert, und jede Woche (`beispiele/ki-ollama/probe.sh`).

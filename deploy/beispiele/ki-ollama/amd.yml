@@ -1,0 +1,12 @@
+# AMD-Grafikkarte mit ROCm (#564) – offiziell von Ollama unterstützt (Liste der Karten in der Ollama-Doku
+# „GPU“). Auf dem Host nötig: der amdgpu-Treiber mit ROCm 7.
+#
+#   docker compose -f docker-compose.yml -f amd.yml up -d
+#
+# Für AMD-Karten, die ROCm nicht kennt, statt dieser Datei intel-grafik.yml probieren (Vulkan, Versuch).
+services:
+  ollama:
+    image: ollama/ollama:0.40.13-rocm
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri

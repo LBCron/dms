@@ -1,0 +1,26 @@
+# VERSUCH: Intel-Grafik im Prozessor über Vulkan (#564) – z. B. Intel UHD in Pentium, Celeron, N100, Core.
+# Nicht gemessen; im Handbuch nur empfohlen, was gemessen funktioniert. Ergebnisse bitte zurückmelden.
+#
+#   docker compose -f docker-compose.yml -f intel-grafik.yml up -d --build
+#
+# Ollama bringt Vulkan im offiziellen Image mit, aber nur den Vulkan-Lader – keinen Treiber für Intel-Grafik.
+# Deshalb baut diese Ergänzung beim ersten Start auf deinem Gerät ein kleines Image: das offizielle Ollama in
+# derselben Version plus den Mesa-Treiber aus Ubuntu. Es enthält kein Modell und wird vom Projekt nicht gepflegt.
+#
+# Ob Ollama die Grafik nutzt, steht im Log von ollama („inference compute … library=Vulkan“).
+# Geht etwas schief: ohne diese Datei starten – dann rechnet wieder nur der Prozessor.
+services:
+  ollama:
+    image: dms-beispiel/ollama-intel:0.40.13
+    pull_policy: build
+    build:
+      dockerfile_inline: |
+        FROM ollama/ollama:0.40.13
+        RUN apt-get update \
+         && apt-get install -y --no-install-recommends mesa-vulkan-drivers \
+         && rm -rf /var/lib/apt/lists/*
+    devices:
+      # Grafik des Hosts in den Container (der Container läuft als root und darf sie damit nutzen).
+      - /dev/dri:/dev/dri
+    environment:
+      OLLAMA_VULKAN: "1"
