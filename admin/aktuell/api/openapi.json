@@ -4761,6 +4761,321 @@
         }
       }
     },
+    "/dokumente/{id}/vektor": {
+      "put": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Vektor eines Dokuments setzen",
+        "description": "Für Pakete mit dem Recht „dms:vektoren“ (#442), z. B. „KI lokal – Ähnlichkeit“: legt je Dokument und Modell einen Vektor ab (ersetzt einen vorhandenen). Der Kern normiert ihn auf Länge 1 und vergleicht mit dem Kosinus. Alle Vektoren eines Modells haben dieselbe Länge (8 bis 4096). Ein neues Modell desselben Pakets macht dessen alte Vektoren ungültig (sie werden entfernt und im Hintergrund neu berechnet). Das Paket muss das Dokument lesen dürfen; andere Aufrufer bekommen 403.",
+        "operationId": "putDokumenteMitidVektor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VektorSetzen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VektorGesetzt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Vektor eines Dokuments löschen",
+        "description": "Für Pakete mit dem Recht „dms:vektoren“ (#442). Mit dem Dokument verschwinden seine Vektoren ohnehin.",
+        "operationId": "deleteDokumenteMitidVektor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "modell",
+            "in": "query",
+            "required": true,
+            "description": "Kennung des Modells",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VektorGeloescht"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kann (noch) nicht gelöscht werden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dokumente/{id}/aehnliche": {
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Ähnliche Dokumente zu einem Dokument",
+        "description": "Die ähnlichsten Dokumente (Kosinus der Vektoren, #442) – nur in Mappen, die der Aufrufer lesen darf, absteigend. 404, wenn das Dokument keinen Vektor dieses Modells hat. Leere Liste ohne Paket mit „dms:vektoren“.",
+        "operationId": "getDokumenteMitidAehnliche",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "modell",
+            "in": "query",
+            "required": false,
+            "description": "Kennung des Modells; ohne Angabe das aktuelle Modell des Pakets",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "anzahl",
+            "in": "query",
+            "required": false,
+            "description": "1–100, Standard 10",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "schwelle",
+            "in": "query",
+            "required": false,
+            "description": "Zahl: nur ab dieser Ähnlichkeit (-1 bis 1)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Aehnliche"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vektoren/aehnliche": {
+      "post": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Ähnliche Dokumente zu einem Vektor",
+        "description": "Wie GET /dokumente/{id}/aehnliche, aber zu einem mitgeschickten Vektor (z. B. dem eines Suchbegriffs, #442). Ändert nichts.",
+        "operationId": "postVektorenAehnliche",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AehnlicheAnfrage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Aehnliche"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dokumente/{id}/seiten/{nr}/scan": {
       "get": {
         "tags": [
@@ -8384,6 +8699,41 @@
                 }
               }
             }
+          },
+          "aehnlich": {
+            "type": "array",
+            "description": "Ähnliche Treffer (#442), nur mit sicht=suche ohne Feldbedingungen, volltext=true, von=0 und einem Paket mit „dms:vektoren“: Mappen, die nicht in mappen stehen, deren Dokument dem Suchbegriff ähnlich ist (Kosinus). Fehlt, wenn es keine gibt.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "titel": {
+                  "type": "string"
+                },
+                "typId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "dokument": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "aehnlichkeit": {
+                  "type": "number"
+                }
+              }
+            }
           }
         }
       },
@@ -10799,6 +11149,107 @@
           },
           "titel": {
             "type": "string"
+          }
+        }
+      },
+      "VektorSetzen": {
+        "type": "object",
+        "required": [
+          "modell",
+          "vektor"
+        ],
+        "properties": {
+          "modell": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,99}$",
+            "description": "Kennung des Modells, z. B. „static-similarity-mrl-multilingual-v1/256“"
+          },
+          "vektor": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 8,
+            "maxItems": 4096
+          }
+        }
+      },
+      "VektorGesetzt": {
+        "type": "object",
+        "properties": {
+          "dokument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modell": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "integer"
+          }
+        }
+      },
+      "VektorGeloescht": {
+        "type": "object",
+        "properties": {
+          "entfernt": {
+            "type": "integer"
+          }
+        }
+      },
+      "AehnlicheAnfrage": {
+        "type": "object",
+        "required": [
+          "vektor"
+        ],
+        "properties": {
+          "modell": {
+            "type": "string",
+            "description": "ohne Angabe das aktuelle Modell"
+          },
+          "vektor": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "anzahl": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "schwelle": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          }
+        }
+      },
+      "Aehnliche": {
+        "type": "object",
+        "properties": {
+          "modell": {
+            "type": "string"
+          },
+          "treffer": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dokumentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mappeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "aehnlichkeit": {
+                  "type": "number",
+                  "description": "Kosinus, -1 bis 1"
+                }
+              }
+            }
           }
         }
       },

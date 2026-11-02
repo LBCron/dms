@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.121/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.122/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0121" class="md-skip">
+        <a href="#neu-in-version-0122" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01210" class="md-nav__link">
+  <a href="#01220" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.121.0
+        0.122.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.121.0">
+    <nav class="md-nav" aria-label="0.122.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2276,15 +2276,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01210" class="md-nav__link">
+  <a href="#01220" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.121.0
+        0.122.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.121.0">
+    <nav class="md-nav" aria-label="0.122.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2334,20 +2334,17 @@
   
 
 
-<h1 id="neu-in-version-0121">Neu in Version 0.121<a class="headerlink" href="#neu-in-version-0121" title="Permanent link">&para;</a></h1>
-<h2 id="01210">0.121.0<a class="headerlink" href="#01210" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0122">Neu in Version 0.122<a class="headerlink" href="#neu-in-version-0122" title="Permanent link">&para;</a></h1>
+<h2 id="01220">0.122.0<a class="headerlink" href="#01220" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Formate für Textfelder und Grenzen für Datumsfelder</strong> (#535): Ein Textfeld kann im Mappentyp das Format <strong>E-Mail</strong>, <strong>Telefon</strong>, <strong>Internetseite</strong>, <strong>IBAN</strong> oder <strong>PLZ</strong> bekommen, ein Datumsfeld <strong>Frühestens</strong> und <strong>Spätestens</strong> – fest oder „heute“, z. B. kein Geburtstag in der Zukunft. Klarer Unsinn wie eine PLZ „01357asda“ oder eine Telefonnummer mit Buchstaben lässt sich nicht mehr speichern; die Meldung sagt, was zu tun ist.</li>
-<li>Am Handy erscheint die passende Tastatur. E-Mail und Telefon tippst du direkt an (<code>mailto:</code>, <code>tel:</code>), die Internetseite öffnet sich in einem neuen Tab; fehlt <code>https://</code>, ergänzt das DMS es. Eine IBAN steht in Vierergruppen, geprüft werden Länge und Prüfziffer.</li>
-<li>Die PLZ ist nur in Deutschland streng (genau 5 Ziffern). Welches Feld das Land enthält, legt der Mappentyp fest.</li>
-<li><strong>Gespeicherte Angaben bleiben gültig</strong> und unverändert. Erst wer das Feld ändert, muss eine passende Angabe eintragen. Werkbank → Wartungsoperationen listet die Angaben, die nicht passen, je Mappentyp und Feld mit Sprung zur Mappe.</li>
-<li>Schnittstelle, Pakete und ihre Beispiele prüfen genauso; die Fehlermeldung nennt die Felder. Ein Paket-Update übernimmt Formate an Feldern, an denen nichts eingestellt ist. Die Erkennung nutzt die Formate und schlägt nur passende Werte vor.</li>
-<li>Schnittstelle: Feld-Eigenschaften <code>format</code> und <code>landFeld</code>, <code>min</code>/<code>max</code> bei Datumsfeldern; <code>GET /api/werkbank/wartung/formate</code>.</li>
+<li>Schnittstelle für Pakete: Ein Paket mit dem neuen Recht „Vektoren zu Dokumenten (dms:vektoren)“ legt zu jedem Dokument einen Vektor ab; das DMS vergleicht sie und zeigt <strong>ähnliche Dokumente</strong> an der Mappe und in der Suche der Startseite mit „auch in Dokumenten“ zusätzlich <strong>ähnliche Treffer</strong> (Kennzeichen „ähnlich“). Der Kern rechnet dabei nichts selbst – das macht ein Paket wie „KI lokal – Ähnlichkeit“. Antwortet es nicht innerhalb von 1,5 Sekunden, sucht die Suche wie bisher. (#442)</li>
+<li>Neues Ereignis für Pakete „Der Volltext eines Dokuments ist da“ (<code>volltext.fertig</code>), egal woher der Text kommt. (#442)</li>
+<li>Werkbank → Pakete → <em>Paket mit dms:vektoren</em>: Abschnitt <strong>Ähnlichkeit</strong> mit Fortschritt, Einstellung „Ähnliche Treffer in der Suche zeigen“ und <strong>Neu berechnen</strong>. Den Bestand und ein neues Modell rechnet das Paket gedrosselt im Hintergrund nach. (#442)</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.120.1 im Detail: <a href="https://github.com/motom001/dms/compare/v0.120.1...v0.121.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.121.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.121.0...v0.122.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
