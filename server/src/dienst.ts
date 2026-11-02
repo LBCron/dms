@@ -9,7 +9,7 @@ import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
-import { fingerabdruck, Haushaltsstand, zeitabhaengig, Zaehlerspeicher } from './zaehlerspeicher';
+import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_ANSTEHEND, Zaehlerspeicher } from './zaehlerspeicher';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
 import { Fachfehler } from './fehler';
@@ -67,7 +67,9 @@ import { FragenAnDieAblage } from './fragen';
 import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
-import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, istDatum, naechsterTermin, type Anstehend, type Erinnerung } from '../../shared/src/fristen';
+import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
+import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
+import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
 import { ALLES, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
 
 /** Mappen in der Reihenfolge der Ids (#542: mit Index statt `indexOf` je Vergleich – bei 20.000 Mappen Sekunden). */
@@ -469,9 +471,15 @@ export class Dienst {
   readonly stand = new Haushaltsstand();
   /** Zahlen der Ansichten je Benutzer und Rechte (#512). */
   private readonly zahlen = new Zaehlerspeicher<Awaited<ReturnType<Dienst['zaehle']>>>(this.stand);
+  /**
+   * „Anstehend“ (#528): eigener Stand, der zusätzlich bei Erinnerungen hochzählt – die ändern keine Zahl
+   * der Ansichten, aber den Kalender. Zwischenspeicher je Benutzer, Rechte und Zeitraum.
+   */
+  readonly fristenstand = new Haushaltsstand(ZAEHLT_FUER_ANSTEHEND);
+  private readonly anstehendSpeicher = new Zaehlerspeicher<Anstehend[]>(this.fristenstand);
 
   constructor(private grundRepo: Repo, private dateien: Dateispeicher, opt: DienstOptionen = {}) {
-    this.grundRepo = this.stand.umhuelle(grundRepo);
+    this.grundRepo = this.stand.umhuelle(this.fristenstand.umhuelle(grundRepo));
     this.tresor = opt.tresor;
     this.einstellungen = opt.einstellungen;
     this.tresor?.registriere(() => this.unlesbarePasswoerter());
@@ -1539,52 +1547,91 @@ export class Dienst {
   }
 
   /**
-   * Sicht „Anstehend“ (#132): eigene Fristen und Erinnerungen bis heute + tage – fällige (schon im Eingang)
-   * und kommende –, nur an Mappen, die man lesen darf; nach Datum.
+   * Sicht „Anstehend“ (#132): eigene Fristen, Erinnerungen und Aufgaben mit Datum – fällige (schon im
+   * Eingang) und kommende –, nur an Mappen, die man lesen darf; nach Datum.
+   *
+   * - Liste: `tage` ab heute (Standard 30); Überfälliges steht immer dabei.
+   * - Kalender (#528): `von` und `bis` (höchstens ein Jahr). Dazu die künftigen Termine wiederkehrender
+   *   Fristen (`folgetermin`), Überfälliges auch außerhalb des Zeitraums (für „3 überfällig“) und die
+   *   Feiertage des Bundeslands der Werkbank.
+   *
+   * Zwischengespeichert wie die Zahlen der Ansichten (#512): je Benutzer, Rechte und Zeitraum, solange sich
+   * am Haushalt nichts ändert (auch Erinnerungen zählen hier), höchstens 5 Minuten, nie über Mitternacht.
    */
-  async anstehend(z: Zugriff, tageEingabe?: unknown): Promise<{ tage: number; eintraege: Anstehend[] }> {
-    const t = Math.trunc(Number(tageEingabe));
-    const tage = Number.isFinite(t) && t >= 0 ? Math.min(ANSTEHEND_MAX, t) : ANSTEHEND_TAGE;
+  async anstehend(z: Zugriff, q: { tage?: unknown; von?: unknown; bis?: unknown } = {}, land?: Bundesland | null): Promise<AnstehendAntwort> {
     const heute = heuteIn();
-    const bis = verschiebe(heute, tage);
+    let von = heute; let bis: string; let tage: number; let kalender = false;
+    if (q.von !== undefined || q.bis !== undefined) {
+      const problem = zeitraumProblem(q.von, q.bis);
+      if (problem) throw new Fachfehler(422, problem);
+      von = q.von as string; bis = q.bis as string; kalender = true;
+      tage = Math.max(0, tageZwischen(heute, bis));
+    } else {
+      const t = Math.trunc(Number(q.tage));
+      tage = Number.isFinite(t) && t >= 0 ? Math.min(ANSTEHEND_MAX, t) : ANSTEHEND_TAGE;
+      bis = verschiebe(heute, tage);
+    }
+    const schluessel = `${z.ich.id}|${z.ich.rolle}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${kalender ? 'k' : 'l'}`;
+    const beginn = performance.now();
+    const r = await this.anstehendSpeicher.hole(schluessel, async () => ({ wert: await this.sammleAnstehend(z, heute, von, bis, kalender), zeitabhaengig: true }));
+    const k = kontext.getStore();
+    if (k) k.zwischenspeicher = { art: r.art, ms: performance.now() - beginn };
+    return { tage, heute, von, bis, eintraege: r.wert, ...(kalender ? { feiertage: feiertageZwischen(von, bis, land) } : {}) };
+  }
+
+  private async sammleAnstehend(z: Zugriff, heute: string, von: string, bis: string, kalender: boolean): Promise<Anstehend[]> {
     const ich = z.ich.id;
     const meins = (empf: string | null) => empf === ich || (!empf && z.admin);
+    const ab = von > heute ? von : heute;
     const erg: Anstehend[] = [];
-    // Schon fällig: offene Aufgaben der Arten Frist und Erinnerung.
-    const offen = (await this.repo.offeneAufgaben({ benutzerId: ich, admin: z.admin })).filter((a) => (a.art === 'frist' || a.art === 'erinnerung') && a.datum);
+    // Schon fällig: offene Aufgaben mit Datum – Fristen, Erinnerungen und andere (z. B. Auskunft bis …).
+    // Überfälliges immer, sonst nur im Zeitraum.
+    const offen = (await this.repo.offeneAufgaben({ benutzerId: ich, admin: z.admin })).filter((a) => istDatum(a.datum) && a.datum <= bis && (a.datum < heute || a.datum >= von));
     const lesbar = await this.lesbare(z, offen.map((a) => a.mappeId));
     for (const a of offen) {
-      if (!lesbar.has(a.mappeId) || a.datum! > bis) continue;
-      erg.push({ art: a.art as 'frist' | 'erinnerung', datum: a.datum!, ab: a.erstellt.slice(0, 10), text: a.text, mappeId: a.mappeId, mappeTitel: a.mappeTitel ?? '', typId: a.typId ?? '', faellig: true, feldKey: a.feldKey ?? null });
+      if (!lesbar.has(a.mappeId)) continue;
+      const art = a.art === 'frist' || a.art === 'erinnerung' ? a.art : 'aufgabe';
+      erg.push({ art, datum: a.datum!, ab: a.erstellt.slice(0, 10), text: a.text, mappeId: a.mappeId, mappeTitel: a.mappeTitel ?? '', typId: a.typId ?? '', faellig: true, feldKey: a.feldKey ?? null });
     }
-    // Kommende Fristen: Datumsfelder mit Erinnerung, die noch keine Aufgabe sind.
+    // Kommende Fristen: Datumsfelder mit Erinnerung, die noch keine Aufgabe sind – im Kalender auch die
+    // künftigen Termine wiederkehrender Fristen (#528), gerechnet vom eingetragenen Datum.
     for (const typ of [...z.typen.values()].filter((x) => fristFelder(x).length)) {
-      // Nur Mappen mit einem Datum im Zeitraum aus der Datenbank holen (#477), nicht alle des Typs.
-      const kandidaten = (await this.repo.mappenMitDatum(typ.id, fristFelder(typ).map((f) => f.key), heute, bis)).filter((m) => fristFelder(typ).some((f) => {
+      const felder = fristFelder(typ);
+      const wiederkehrend = kalender ? felder.filter((f) => f.frist!.wiederholung) : [];
+      const termine = (m: Mappe, f: Feld): Array<{ datum: string; folge: boolean }> => {
         const w = m.werte[f.key];
-        return istDatum(w) && w >= heute && w <= bis && meins(fristEmpfaenger(f.frist!, m));
-      }));
-      if (!kandidaten.length) continue;
-      const ok = await this.lesbare(z, kandidaten.map((m) => m.id));
-      const schon = new Set((await this.repo.fristAufgaben(kandidaten.map((m) => m.id))).map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
-      for (const m of kandidaten) {
+        if (!istDatum(w) || !meins(fristEmpfaenger(f.frist!, m))) return [];
+        const x = w >= ab && w <= bis ? [{ datum: w, folge: false }] : [];
+        return wiederkehrend.includes(f) ? [...x, ...folgetermine(w, f.frist!.wiederholung!, ab, bis).map((d) => ({ datum: d, folge: true }))] : x;
+      };
+      // Nur Mappen mit einem Datum im Zeitraum aus der Datenbank holen (#477), nicht alle des Typs; bei
+      // wiederkehrenden Fristen jedes Datum bis zum Ende des Zeitraums.
+      const kandidaten = new Map<string, Mappe>();
+      for (const m of await this.repo.mappenMitDatum(typ.id, felder.map((f) => f.key), ab, bis)) kandidaten.set(m.id, m);
+      if (wiederkehrend.length) for (const m of await this.repo.mappenMitDatum(typ.id, wiederkehrend.map((f) => f.key), '0001-01-01', bis)) kandidaten.set(m.id, m);
+      const passend = [...kandidaten.values()].filter((m) => felder.some((f) => termine(m, f).length));
+      if (!passend.length) continue;
+      const ok = await this.lesbare(z, passend.map((m) => m.id));
+      const schon = new Set((await this.repo.fristAufgaben(passend.map((m) => m.id))).map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
+      for (const m of passend) {
         if (!ok.has(m.id)) continue;
-        for (const f of fristFelder(typ)) {
-          const w = m.werte[f.key];
-          if (!istDatum(w) || w < heute || w > bis || !meins(fristEmpfaenger(f.frist!, m)) || schon.has(`${m.id}|${f.key}|${w}`)) continue;
-          erg.push({ art: 'frist', datum: w, ab: fristAb(w, f.frist!), text: fristText(f.frist!, f, w, m.titel ?? ''), mappeId: m.id, mappeTitel: m.titel ?? '', typId: m.typId, faellig: false, feldKey: f.key });
+        for (const f of felder) {
+          for (const t of termine(m, f)) {
+            if (schon.has(`${m.id}|${f.key}|${t.datum}`)) continue;
+            erg.push({ art: 'frist', datum: t.datum, ab: fristAb(t.datum, f.frist!), text: fristText(f.frist!, f, t.datum, m.titel ?? ''), mappeId: m.id, mappeTitel: m.titel ?? '', typId: m.typId, faellig: false, feldKey: f.key, ...(t.folge ? { folgetermin: true } : {}) });
+          }
         }
       }
     }
     // Kommende freie Erinnerungen.
-    const erinnerungen = await this.repo.erinnerungen({ empfaengerId: ich, bis });
+    const erinnerungen = (await this.repo.erinnerungen({ empfaengerId: ich, bis })).filter((e) => e.datum >= von);
     const ok = await this.lesbare(z, erinnerungen.map((e) => e.mappeId));
     for (const e of erinnerungen) {
       if (!ok.has(e.mappeId)) continue;
       erg.push({ art: 'erinnerung', datum: e.datum, ab: e.datum, text: e.text, mappeId: e.mappeId, mappeTitel: e.mappeTitel ?? '', typId: e.typId ?? '', faellig: false, erinnerungId: e.id });
     }
     erg.sort((a, b) => a.datum.localeCompare(b.datum) || a.mappeTitel.localeCompare(b.mappeTitel, 'de'));
-    return { tage, eintraege: erg };
+    return erg;
   }
 
   /** Wiederkehrende Frist (#130): Vorschlag für den nächsten Termin, solange das Datum noch das der Frist ist. */
