@@ -2379,16 +2379,17 @@
 <td>16 GB</td>
 <td>SSD</td>
 <td>ohne Container, PostgreSQL 17 daneben</td>
-<td>0.132.0</td>
-<td style="text-align: right;">folgt</td>
-<td style="text-align: right;">folgt</td>
-<td style="text-align: right;">folgt</td>
-<td>erster wöchentlicher Lauf steht aus</td>
+<td>0.139.0</td>
+<td style="text-align: right;">95 ms</td>
+<td style="text-align: right;">2.384 ms</td>
+<td style="text-align: right;">unter 25 (p95 3,2 s bei 25)</td>
+<td>02.11.2026, erster Lauf</td>
 </tr>
 </tbody>
 </table>
 <p>Du hast selbst gemessen? <a href="../lasttest/">Lasttest selbst durchführen</a> beschreibt, wie es geht. Den Ergebnisblock fügst du als Kommentar in das Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a> ein – oder du legst mit der Vorlage <a href="https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml">Messergebnis Lasttest</a> ein eigenes Issue an. Das Projekt trägt die Meldungen hier ein.</p>
-<p><strong>So liest du die Tabelle:</strong> Liegt <em>klein</em> unter 0,3 s, fühlt sich das DMS für einen Haushalt flüssig an. Liegt <em>mittel</em> unter 1 s, reicht das Gerät auch für einen kleinen Betrieb mit großen Exporten nebenher. Die <em>Grenze</em> von groß ist kein Ziel für den Alltag – 100 gleichzeitige Anfragen sind schon 10–15 Personen, die im selben Moment klicken (siehe <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a>).</p>
+<p><strong>So liest du die Tabelle:</strong> Liegt <em>klein</em> unter 0,3 s, fühlt sich das DMS für einen Haushalt flüssig an. Liegt <em>mittel</em> unter 1 s, reicht das Gerät auch für einen kleinen Betrieb mit großen Exporten nebenher. Diese Werte sind das <strong>Ziel</strong> des Projekts. Die <em>Grenze</em> von groß ist kein Ziel für den Alltag – 100 gleichzeitige Anfragen sind schon 10–15 Personen, die im selben Moment klicken (siehe <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a>).</p>
+<p><strong>Ziel und CI-Grenze:</strong> Bei <em>klein</em> und <em>mittel</em> wird die wöchentliche Messung auf den Rechnern von GitHub erst rot, wenn sie die <strong>CI-Grenze</strong> verfehlt – den ersten Lauf dort plus 20 %: für <em>klein</em> 0,3 s (das Ziel hält sie schon), für <em>mittel</em> 2,86 s (gemessen 2,38 s, Ziel 1 s). Die CI-Grenze wird nur strenger, bis sie das Ziel erreicht; dass <em>mittel</em> das Ziel noch verfehlt, ist eine Aufgabe für die Entwicklung: das DMS dort schneller machen. Messwerte von anderen Geräten helfen dabei – melde sie im Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a>.</p>
 
 
 

@@ -419,6 +419,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.142.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.142.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01421" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -442,7 +492,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -481,7 +531,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -492,7 +542,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik_1" class="md-nav__link">
+  <a href="#technik_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -1199,6 +1249,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.142.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.142.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01421" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1222,7 +1322,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#technik_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -1261,7 +1361,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -1272,7 +1372,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#technik_1" class="md-nav__link">
+  <a href="#technik_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Technik
@@ -1323,13 +1423,31 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
+<h2 id="01422">0.142.2<a class="headerlink" href="#01422" title="Permanent link">&para;</a></h2>
+<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Lasttest: Ziel und CI-Grenze getrennt</strong> (#563): Für die Stufen <code>klein</code> und <code>mittel</code> nennt der Bericht jetzt zwei Werte, z. B. „Ziel p95 &lt; 1000 ms, CI-Grenze 2860 ms“. Das <strong>Ziel</strong> bleibt, was das Projekt zusagen möchte: <code>klein</code> p95 &lt; 0,3 s, <code>mittel</code> p95 &lt; 1 s. Die <strong>CI-Grenze</strong> stammt aus dem ersten Lauf auf den Rechnern von GitHub plus 20 % und wird nur strenger: <code>klein</code> bleibt bei 300 ms (gemessen 95 ms), <code>mittel</code> 2860 ms (gemessen 2384 ms, DMS 0.139.0).</li>
+<li>Mit <code>--grenzen</code> richtet sich der Exit-Code nach der <strong>CI-Grenze</strong> (dazu wie bisher Fehlerquote, 503, Export und die Pflichten von <code>gross</code>). Ein verfehltes Ziel steht im Bericht unter „Ziel verfehlt“ und im Workflow als Hinweis; daraus wird ein Folge-Issue „Beschleunigen“.</li>
+<li>Der Ergebnisblock zum Kopieren sagt je Stufe „Ziel eingehalten“, „Ziel verfehlt, CI-Grenze eingehalten“ oder „CI-Grenze verfehlt“, mit beiden Werten.</li>
+<li>Unverändert: die Pflicht zum Arbeitsspeicher von <code>gross</code> (1536 MB).</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administrationshandbuch: Lasttest selbst durchführen (Ziel und CI-Grenze, Ergebnis lesen), Was das DMS verkraftet (erste Zeile mit dem Lauf auf den Rechnern von GitHub, Ziel und CI-Grenze, Verweis auf das Sammel-Issue #576).</li>
+<li>Entwicklerhandbuch: Leistung → Lasttest.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>server/test/lasttest.mjs</code>: <code>STUFEN.klein/mittel</code> mit <code>ziel</code> und <code>ciGrenze</code>; das Skript startet nur noch, wenn es selbst aufgerufen wird (auch als <code>dms-lasttest</code>), damit der neue Test <code>server/test/lasttest-grenzen.test.ts</code> die Grenzen prüfen kann.</li>
+<li>Keine Migration, keine neue Abhängigkeit.</li>
+</ul>
 <h2 id="01421">0.142.1<a class="headerlink" href="#01421" title="Permanent link">&para;</a></h2>
 <h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Hilfe-Symbol direkt hinter der Überschrift</strong> (#601): Hatte ein Listenkopf keine Beschreibung – etwa bei der <strong>Erweiterten Suche</strong> oder bei Ansichten ohne Beschreibung –, stand das <strong>?</strong> allein in einer Zeile unter der Überschrift. Jetzt steht es in allen Listenköpfen der Ablage und der Werkbank direkt hinter der Überschrift, mit und ohne Beschreibung. Die Beschreibung bleibt darunter. Der Kopf wird ohne Beschreibung dadurch eine Zeile niedriger.</li>
 <li><strong>Auch am Handy:</strong> Dort blendet das DMS die Beschreibung im Listenkopf aus. Das <strong>?</strong> verschwand bisher mit ihr; jetzt bleibt es hinter der Überschrift sichtbar, mit einem Tippziel von 44 px.</li>
 </ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h3 id="technik_1">Technik<a class="headerlink" href="#technik_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Neue Komponente <code>Listenkopf</code> (<code>web/src/Listenkopf.tsx</code>) für alle Listenköpfe: Mappenliste und Ansichten, Erweiterte Suche, Start, Anstehend, Papierkorb und die Werkbank-Bereiche mit Liste.</li>
 <li>Der Oberflächentest der Erweiterten Suche (<code>suche-pruefen.mjs</code>) prüft das <strong>?</strong> in der Überschrift, am Rechner und am Handy.</li>
@@ -1348,12 +1466,12 @@
 <li><strong>Neue Schnittstelle für Pakete</strong> <code>dms:sicherung-lesen</code> mit dem Ereignis <code>sicherung.fertig</code> (Recht in der Installations-Vorschau: „Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)“). API: <code>GET /sicherungen/{name}</code> (schlanke Metadaten), <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> (die verschlüsselte Datei in Stücken bis 8 MB), <code>PUT /sicherungen/{name}/extern</code> (Rückmeldung: läuft, hochgeladen, geprüft, fehlgeschlagen). Ein Paket liest nur die Sicherung aus seinem Ereignis – nie den Schlüssel, nie andere Dateien des Sicherungsordners. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, meldet der Kern selbst „fehlgeschlagen“.</li>
 <li>Paket-Läufer: Eine Netzanfrage eines Pakets mit mehr als 1 MB Körper (Hochladen in Teilen) darf so lange dauern wie der Aufruf statt 30 Sekunden.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch: neue Seite <strong>Sicherung außer Haus</strong> – wann die NAS-App reicht, wann ein Paket sinnvoll ist, Netzfreigaben (SMB/NFS) als Docker-Volume, Anzeige und Hinweise, Einrichten, <strong>Löschschutz gegen Erpressersoftware</strong> (Nextcloud-Dateiablage, Zugang nur mit Schreibrecht, Versionierung bzw. Schnappschüsse am Ziel, S3 mit <code>PutObject</code> ohne <code>DeleteObject</code> und Object Lock). Sicherung (Lokal nur die neueste, Hinweise, Notfallblatt), Wiederherstellen (aus einer Kopie außer Haus), Pakete (Recht <strong>Sicherung lesen</strong>, Ereignis <strong>Sicherung fertig</strong>).</li>
 <li>Entwicklerhandbuch, <strong>Pakete mit Code:</strong> neuer Abschnitt <strong>Sicherung außer Haus</strong> – Manifest, Ablauf, Ereignis, Lesen in Stücken (nie die ganze Sicherung in den Speicher), Fortsetzung, Rückmeldung, Löschschutz.</li>
 </ul>
-<h3 id="technik_1">Technik<a class="headerlink" href="#technik_1" title="Permanent link">&para;</a></h3>
+<h3 id="technik_2">Technik<a class="headerlink" href="#technik_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Stand der Kopien außer Haus in der Einstellung <code>sicherung_extern</code> (je Sicherung und Paket); er verschwindet mit der Sicherung. Plan der Sicherung: neues Feld <code>nurNeueste</code>.</li>
 <li>Sicherungsformat unverändert; im Format-Kommentar steht jetzt die Grenze von AES-GCM mit einer Nonce je Datei (rund 64 GB je Sicherung).</li>
