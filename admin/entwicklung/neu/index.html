@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0115" class="md-skip">
+        <a href="#neu-in-version-0116" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,27 +363,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01150" class="md-nav__link">
+  <a href="#01160" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.115.0
+        0.116.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.115.0">
+    <nav class="md-nav" aria-label="0.116.0">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Neu
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#technik" class="md-nav__link">
@@ -2004,27 +1993,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01150" class="md-nav__link">
+  <a href="#01160" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.115.0
+        0.116.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.115.0">
+    <nav class="md-nav" aria-label="0.116.0">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Neu
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#technik" class="md-nav__link">
@@ -2073,29 +2051,22 @@
   
 
 
-<h1 id="neu-in-version-0115">Neu in Version 0.115<a class="headerlink" href="#neu-in-version-0115" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0116">Neu in Version 0.116<a class="headerlink" href="#neu-in-version-0116" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01150">0.115.0<a class="headerlink" href="#01150" title="Permanent link">&para;</a></h2>
-<h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Erkannte Post automatisch zuordnen</strong> (#337): Werkbank → Mappentyp → <strong>Erkennung</strong> → <em>Post automatisch zuordnen, wenn die Erkennung sicher ist</em> (Standard: aus).</li>
-<li>Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) <strong>und</strong> genau eine passende Mappe dieses Typs – oder genau eine, deren Nummer im Brief steht.</li>
-<li>Der Empfänger (<em>Für</em>, sonst wer die Post ins DMS gebracht hat) bekommt die Aufgabe <strong>Automatisch zugeordnet zu „…“ – bitte prüfen</strong> mit <strong>Passt</strong> und <strong>Rückgängig</strong> (Dokumente zurück, Stand wieder <em>Neu</em>). Keine eigene Ansicht.</li>
-<li>Die Begründung steht in der Historie von Post und Mappe und im Kasten <em>Erkannt</em>.</li>
-<li>Nie automatisch: neue Mappen anlegen, Post zuordnen, deren Empfänger die Mappe nicht lesen darf, Mappentypen im Archivmodus. Je Post höchstens einmal; nach <em>Rückgängig</em> nie wieder.</li>
-<li>Schnittstelle: <code>POST /aufgaben/{id}/rueckgaengig</code>; <code>autoZuordnen</code> am Mappentyp; Aufgabenart <code>zugeordnet</code>.</li>
-<li>Benutzerhandbuch <em>Post</em> → <strong>Automatisch zugeordnet</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Erkennung</strong>.</li>
-</ul>
+<h2 id="01160">0.116.0<a class="headerlink" href="#01160" title="Permanent link">&para;</a></h2>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Migration <code>046_automatisch_zugeordnet.sql</code>: Aufgabenart <code>zugeordnet</code>. Die Zuordnung läuft im Kern direkt nach der Erkennung (internes Ereignis „Volltext fertig“).</li>
+<li><strong>Sprachdateien für Oberfläche und Server</strong> (#473, Mehrsprachigkeit Stufe 1): Texte stehen jetzt in <code>shared/src/sprachen/de/&lt;bereich&gt;.json</code> statt im Code, mit Platzhaltern und Mehrzahl („1 Stunde“ / „2 Stunden“). Sichtbar ändert sich nichts – du siehst weiter Deutsch mit „du“.</li>
+<li>Umgestellt sind die Anmeldung (Anmelden, Passwort vergessen, Bestätigungscode, Passwort festlegen), ihre Fehlermeldungen, die E-Mails zum Zugang und die Texte für Dritte (Auskunft, Abrufseite, E-Mails an Mieter und Kunden).</li>
+<li>Neue Prüfung in der CI: fehlende und ungenutzte Schlüssel, abweichende Platzhalter zwischen den Sprachen.</li>
+<li>Ab jetzt gilt: Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab. Anleitung im Entwicklerhandbuch unter <em>Aufbau → Texte und Sprachdateien</em>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.114.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.114.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.115.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.115.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

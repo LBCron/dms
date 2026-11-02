@@ -417,6 +417,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#texte-und-sprachdateien" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texte und Sprachdateien
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#unterlagen-fur-dritte" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -796,6 +807,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#texte-und-sprachdateien" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texte und Sprachdateien
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#unterlagen-fur-dritte" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -873,9 +895,34 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 <li><strong>Hilfe:</strong> Jedes ?-Symbol in der Oberfläche zeigt auf eine Stelle im Handbuch. Die Tabelle dazu steht in <code>shared/src/hilfe.ts</code>, und die CI prüft, dass jeder Anker existiert.</li>
 <li><strong>Sicherung und Wiederherstellung</strong> sichern alle Tabellen außer dem Inhalt von <code>sitzungen</code> und <code>schema_migrationen</code> (<code>OHNE_INHALT</code> in <code>server/src/datenbankabzug.ts</code>). Eine neue Tabelle ist automatisch dabei. Daten außerhalb der Datenbank brauchen einen Gedanken: Wo liegen sie, und kommen sie mit?</li>
 </ul>
+<h2 id="texte-und-sprachdateien">Texte und Sprachdateien<a class="headerlink" href="#texte-und-sprachdateien" title="Permanent link">&para;</a></h2>
+<p>Texte für Benutzer stehen nicht im Code, sondern in <strong>Sprachdateien</strong> (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit <strong>du</strong>; die Technik für weitere Sprachen ist da.</p>
+<p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang) und die Texte für Dritte.</p>
+<div class="highlight"><pre><span></span><code>shared/src/sprachen/de/&lt;bereich&gt;.json         Ausgangssprache Deutsch (du), immer vollständig
+shared/src/sprachen/de-formal/dritte.json     Texte für Dritte mit „Sie“ (siehe unten)
+shared/src/sprache.ts                         uebersetzer(), Platzhalter, Mehrzahl
+web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfläche bzw. Server brauchen
+</code></pre></div>
+<p><strong>Text anlegen</strong></p>
+<ol>
+<li>Passenden Bereich wählen oder einen neuen anlegen (<code>anmeldung</code>, <code>mail</code>, <code>werkbank</code> …; Dateiname = Bereich, klein, ohne Punkt). Ein neuer Bereich wird in <code>web/src/sprache.ts</code> bzw. <code>server/src/sprache.ts</code> eingetragen.</li>
+<li>Schlüssel in die JSON-Datei schreiben – flach, Teile mit Punkt, klein beginnend: <code>"vergessen.knopf": "Link anfordern"</code>.</li>
+<li>Im Code abrufen: <code>t('anmeldung.vergessen.knopf')</code>. Die Typprüfung kennt alle Schlüssel und meldet Tippfehler.</li>
+</ol>
+<p><strong>Benennung:</strong> vom Allgemeinen zum Besonderen, nach Ort und Zweck statt nach Wortlaut – <code>vergessen.titel</code>, <code>vergessen.knopf</code>, <code>fehler.link.abgelaufen</code>. Fehlermeldungen unter <code>fehler.*</code>, Rückfragen als <code>….frage</code>, <code>….frage.text</code>, <code>….frage.ja</code>. Wiederkehrende Wörter („Speichern“, „Abbrechen“) bekommen keinen gemeinsamen Schlüssel, solange der Bereich sie nicht braucht – so bleibt jede Übersetzung im Zusammenhang.</p>
+<p><strong>Platzhalter</strong> stehen in einfachen geschweiften Klammern: <code>"passwort.zugang": "Für den Zugang {email}"</code> → <code>t('anmeldung.passwort.zugang', { email })</code>. Namen nur aus Buchstaben, Ziffern und <code>_</code>. Fehlt ein Wert, bleibt <code>{email}</code> stehen und fällt auf.</p>
+<p><strong>Mehrzahl</strong> über zwei Schlüssel mit <code>_one</code> und <code>_other</code> und den Wert <code>anzahl</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"dauer.stunden_one"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{anzahl} Stunde"</span><span class="p">,</span>
+<span class="nt">"dauer.stunden_other"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{anzahl} Stunden"</span>
+</code></pre></div>
+<p><code>t('mail.dauer.stunden', { anzahl: 2 })</code> ergibt „2 Stunden“. Die Formen richten sich nach <code>Intl.PluralRules</code>; fehlt eine, gilt <code>_other</code>.</p>
+<p><strong>Zusammengesetzte Schlüssel</strong> (<code>werkbank.gruppe.${g}</code>) gehen mit <code>t.frei(…)</code> statt <code>t(…)</code>. Sie entgehen der Typprüfung; die Prüfung in der CI zählt alle Schlüssel mit dem festen Anfang (<code>werkbank.gruppe.</code>) als benutzt. Wo es geht, ganze Schlüssel ausschreiben.</p>
+<p><strong>Prüfung in der CI</strong> (<code>server/test/sprachdateien.test.ts</code>, läuft mit <code>npm test</code>): Sie schlägt fehl, wenn der Code einen Schlüssel abruft, den es nicht gibt, wenn ein Schlüssel nirgends benutzt wird, wenn eine andere Sprache Schlüssel auslässt oder zusätzliche hat, wenn die Platzhalter zwischen den Sprachen abweichen, bei Mehrzahl ohne <code>_other</code> und bei leeren Texten. Die Symbol-Prüfung (keine bunten Emoji, keine Textzeichen als Symbol) gilt auch für die Sprachdateien. Lokal: <code>node --import tsx --test test/sprachdateien.test.ts</code> im Ordner <code>server</code>.</p>
+<p><strong>Bibliothek:</strong> eine eigene, kleine Umsetzung in <code>shared/src/sprache.ts</code> statt i18next – keine neue Abhängigkeit, offline, dieselben Regeln in Oberfläche und Server. Das Format (flaches JSON, <code>_one</code>/<code>_other</code>) entspricht i18next; ein späterer Wechsel bleibt möglich.</p>
+<p>Nicht Teil von Stufe 1: weitere Sprachen, „Sie“ in der Oberfläche, Sprachwahl im Profil (#357, spätere Stufen).</p>
 <h2 id="unterlagen-fur-dritte">Unterlagen für Dritte: Anrede du oder Sie<a class="headerlink" href="#unterlagen-fur-dritte" title="Permanent link">&para;</a></h2>
-<p>Die Oberfläche duzt immer. Texte, die an Personen <strong>außerhalb</strong> des DMS gehen, folgen dagegen der Einstellung <strong>Anrede in Unterlagen für Dritte</strong> (#474, Werkbank → Datenschutz, <code>Datenschutz.anrede</code>, Vorgabe <code>du</code>). Alle diese Texte stehen gebündelt in <code>shared/src/anrede.ts</code>: je Anrede dieselben Schlüssel (<code>TEXTE_DRITTE.du</code> / <code>.sie</code>), Platzhalter als <code>{name}</code>, abgerufen mit <code>textDritte(anrede, schluessel, werte)</code>. Ein Test prüft, dass beide Fassungen dieselben Schlüssel und Platzhalter haben und die Sie-Fassung kein „du“ enthält. Mit den Sprachdateien (#357) wandern sie dorthin: <code>du</code> → „Deutsch“, <code>sie</code> → „Deutsch (förmlich)“.</p>
-<p>Neue Texte für Dritte kommen als Schlüssel in <code>anrede.ts</code> – keine <code>anrede === 'sie' ? … : …</code> im Code – und in diese Liste:</p>
+<p>Die Oberfläche duzt immer. Texte, die an Personen <strong>außerhalb</strong> des DMS gehen, folgen dagegen der Einstellung <strong>Anrede in Unterlagen für Dritte</strong> (#474, Werkbank → Datenschutz, <code>Datenschutz.anrede</code>, Vorgabe <code>du</code>). Alle diese Texte stehen im Bereich <code>dritte</code> der <a href="#texte-und-sprachdateien">Sprachdateien</a>: die du-Fassung in <code>shared/src/sprachen/de/dritte.json</code>, die Sie-Fassung in <code>shared/src/sprachen/de-formal/dritte.json</code>, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit <code>textDritte(anrede, schluessel, werte)</code> aus <code>shared/src/anrede.ts</code>. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.</p>
+<p>Neue Texte für Dritte kommen als Schlüssel in beide <code>dritte.json</code> – keine <code>anrede === 'sie' ? … : …</code> im Code – und in diese Liste:</p>
 <table>
 <thead>
 <tr>
