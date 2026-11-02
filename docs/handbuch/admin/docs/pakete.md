@@ -23,6 +23,7 @@ Das DMS lädt den Katalog von `https://raw.githubusercontent.com/motom001/dms-re
     - die Ansichten, mit Elternansicht
     - die Abhängigkeiten und ob sie installiert sind
     - wie viele Beispiel-Mappen es gibt
+    - ob es **gleichbedeutende Wörter** für die Suche mitbringt (Wortlisten, siehe [Suche](suche.md#gleichbedeutende-worter))
     - bei Paketen mit Code: **was der Code darf** – als Liste, Ereignisse als Unterliste, mit **?** zur Erklärung (siehe [Rechte eines Pakets](#rechte-eines-pakets)). Darunter bestätigst du es mit einem Haken, sonst bleibt **Installieren** grau
 3. **Namen:** Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, sagt die Vorschau das und schlägt einen anderen vor, z. B. „Organisation (Basis)“. Du kannst jeden Namen ändern.
 4. **Beispiel-Mappen** legt das DMS nur an, wenn du den Haken setzt.
@@ -92,7 +93,7 @@ Für Paket-Autoren steht das Format (`aus_text`) in den [Regeln der Registry](ht
 
 ## Entfernen
 
-**Entfernen** löscht die Mappentypen und Ansichten des Pakets und seinen Eintrag. Das geht nur,
+**Entfernen** löscht die Mappentypen, Ansichten und Wortlisten des Pakets und seinen Eintrag. Das geht nur,
 
 - solange es **keine Mappen** dieser Mappentypen gibt (auch nicht im Papierkorb) und
 - **kein anderes Paket** davon abhängt.

@@ -48,6 +48,7 @@ const SEITEN = [
   '/werkbank/sicherung',
   '/werkbank/wartungsmodus',
   '/werkbank/sichten',
+  '/werkbank/suche',
 ];
 const GROESSEN = [
   { name: 'iPhone SE', breite: 375, hoehe: 667 },

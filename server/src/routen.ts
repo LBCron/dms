@@ -1022,6 +1022,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Paket-Läufer (#338): Stand je Paket mit Code – geladen, Aufrufe, Fehler, Ereignisse.
     { methode: 'GET', pfad: '/api/werkbank/pakete/laeufer', zugang: 'admin', handler: async () => ok(x.paketlaeufer ? await x.paketlaeufer.uebersicht() : null) },
     // Vektoren (#442): Stand der Berechnung, Einstellung „Ähnliche Treffer in der Suche“, neu berechnen.
+    // Suche (#356): Tippfehler an/aus, gleichbedeutende Wörter, Wörterverzeichnis.
+    { methode: 'GET', pfad: '/api/werkbank/suche', zugang: 'admin', handler: async () => ok(await dienst.sucheStand()) },
+    { methode: 'PUT', pfad: '/api/werkbank/suche', zugang: 'admin', handler: async (a) => ok(await dienst.setzeSuche(a.body, ich(a).email)) },
+    { methode: 'POST', pfad: '/api/werkbank/suche/synonyme', zugang: 'admin', handler: async (a) => ok(await dienst.legeSynonymAn(a.body, ich(a).email)) },
+    { methode: 'PUT', pfad: '/api/werkbank/suche/synonyme/:id', zugang: 'admin', handler: async (a) => ok(await dienst.aendereSynonym(a.params.id, a.body, ich(a).email)) },
+    { methode: 'DELETE', pfad: '/api/werkbank/suche/synonyme/:id', zugang: 'admin', handler: async (a) => ok(await dienst.loescheSynonym(a.params.id, ich(a).email)) },
+    { methode: 'POST', pfad: '/api/werkbank/suche/woerter', zugang: 'admin', handler: async (a) => ok(await dienst.woerterNeu(ich(a).email)) },
     { methode: 'GET', pfad: '/api/werkbank/vektoren', zugang: 'admin', handler: async () => ok(await dienst.vektorStand()) },
     // „Aus Dokument ausfüllen“ per Paket (#511): Standard-Erkennung (eingebaut oder Paket mit dms:erkennen).
     { methode: 'GET', pfad: '/api/werkbank/erkennung', zugang: 'admin', handler: async () => ok(await dienst.erkennung.engineStand()) },

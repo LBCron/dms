@@ -1,5 +1,5 @@
 import type postgres from 'postgres';
-import { teilwoerter } from '../../shared/src/suche';
+import { AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, type Varianten } from '../../shared/src/suche';
 import { alsText } from '../../shared/src/markdown';
 import { SPRACHE_SQL_MUSTER } from '../../shared/src/textsprache';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
@@ -96,7 +96,7 @@ const alsDokument = (r: Zeile): Dokument => ({
  * sein und wird nur über `volltext()`/`volltexte()` gelesen, nie in Listen.
  */
 export const DOKUMENT_SPALTEN = ['id', 'haushalt_id', 'mappe_id', 'register_key', 'name', 'mime', 'groesse', 'sha256', 'anzeigbar', 'erstellt', 'erstellt_von',
-  'ocr_stand', 'ocr_info', 'ocr_seiten', 'ocr_zeit', 'version', 'herkunft', 'archivnummer'] as const;
+  'ocr_stand', 'ocr_info', 'ocr_seiten', 'ocr_zeit', 'version', 'herkunft', 'archivnummer', 'sprache'] as const;
 /**
  * ANALYZE (#367) für Tabellen mit Volltext nur über diese Spalten: Ohne Spaltenliste rechnet PostgreSQL
  * auch die Statistik des Index `to_tsvector('german', volltext)` – über eine Minute bei 20.000 Dokumenten.
@@ -107,6 +107,22 @@ export const STATISTIK_SPALTEN: Record<string, string> = {
 };
 /** Spalten einer älteren Version ohne `volltext`. */
 const VERSION_SPALTEN = 'dokument_id, haushalt_id, nummer, name, mime, groesse, sha256, anzeigbar, erstellt, erstellt_von, herkunft';
+/**
+ * Suchindex der Dokumente (#356, #400, Migration 048): gespeicherter tsvector mit Wortstämmen in der Sprache des
+ * Dokuments, Umlauten gefaltet und Wörtern mit Bindestrich auch zusammengeschrieben; ein Trigger hält ihn aktuell.
+ */
+const SUCHINDEX_TEXT = 'd.suchindex';
+type SqlTeil = postgres.PendingQuery<postgres.Row[]> | postgres.Fragment;
+/**
+ * Suchanfrage für den Volltext: Bei einer einfachen Suche je Begriff seine Varianten (ODER), die Begriffe mit UND;
+ * mit Suchsyntax (Anführungszeichen, Minus, „or“) genau wie eingegeben.
+ */
+function suchanfrage(sql: Sql, t: string, v: Varianten, konfig = 'dms_german'): SqlTeil {
+  const eins = (x: string) => sql`websearch_to_tsquery(${konfig}::regconfig, dms_falte(${x}::text))`;
+  const b = suchbegriffe(t);
+  if (!b) return eins(t);
+  return b.map((w) => [w, ...(v[falte(w)] ?? [])].map(eins).reduce((x, y) => sql`(${x} || ${y})`)).reduce((x, y) => sql`(${x} && ${y})`);
+}
 /** Ausschnitte aus dem Volltext: höchstens zwei Stellen, Treffer markiert (#45). */
 const AUSSCHNITT = `StartSel=${TREFFER_ANFANG}, StopSel=${TREFFER_ENDE}, MaxFragments=2, MaxWords=18, MinWords=6, FragmentDelimiter=" … "`;
 const alsAufgabe = (r: Zeile): Aufgabe => ({
@@ -369,6 +385,11 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
   // Dokumente immer mit ausdrücklichen Spalten, nie `d.*` (#367): sonst kommt der Volltext mit.
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
+  const SUCHINDEX = sql.unsafe(SUCHINDEX_TEXT);
+  /** Schema von pg_trgm (#356), einmal nachgesehen; null ohne Erweiterung. */
+  let trgmSchema: Promise<string | null> | null = null;
+  const trigrammSchema = () => (trgmSchema ??= sql`SELECT n.nspname FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace WHERE e.extname = 'pg_trgm'`
+    .then((r) => (r[0] ? `"${String(r[0].nspname).replace(/"/g, '""')}"` : null), () => null));
   const VERS = sql.unsafe(VERSION_SPALTEN);
   let ereignisseAufgeraeumt = 0;
   /** Nummer ziehen (#171) – nur innerhalb einer Transaktion; die Zeile bleibt bis zu deren Ende gesperrt. */
@@ -735,18 +756,26 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         ? sql`AND EXISTS (SELECT 1 FROM favoriten fav WHERE fav.mappe_id = mappen.id AND fav.benutzer_id = ${istUuid(o.favoriten.benutzerId) ? o.favoriten.benutzerId : null}::uuid)`
         : sql``;
       const musterAus = (t: string) => `%${t.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
-      const muster = o.suche ? musterAus(o.suche) : null;
-      // Teilwörter im Volltext (#161): „Ofen“ findet „Backofen“ – zusätzlich zu den Wortformen.
-      const teilSql = (spalte: string, teil: string[]) => teil.map((w) => sql`${sql.unsafe(spalte)} ILIKE ${musterAus(w)}`)
-        .reduce((a, b) => sql`${a} AND ${b}`);
-      const inNotizen = (t: string) => sql`EXISTS (SELECT 1 FROM notizen n WHERE n.mappe_id = mappen.id AND n.text ILIKE ${musterAus(t)})`;
+      // Unscharfe Suche (#356): Titel, Werte und Notizen ohne Umlaute, Groß-/Kleinschreibung und Bindestriche
+      // verglichen; ein einzelner Begriff auch in seinen Varianten (gleichbedeutende Wörter, ähnliche Schreibweisen).
+      const v = o.varianten ?? {};
+      const schreibweisen = (t: string) => { const b = suchbegriffe(t); return b?.length === 1 ? [t, ...(v[falte(b[0])] ?? [])] : [t]; };
+      const enthaelt = (spalte: Teil, t: string) => schreibweisen(t)
+        .map((x) => sql`replace(lower(dms_falte(${spalte})), '-', '') LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`);
+      // Teilwörter im Volltext (#161): „Ofen“ findet „Backofen“ – zusätzlich zu den Wortformen; je Wort auch die Varianten.
+      const teilSql = (spalte: string, teil: string[]) => teil.map((w) => [w, ...(v[falte(w)] ?? []).map((x) => x.toLowerCase()).filter((x) => x.length >= 3)]
+        .map((x) => sql`${sql.unsafe(spalte)} ILIKE ${musterAus(x)}`).reduce((a, b) => sql`${a} OR ${b}`))
+        .reduce((a, b) => sql`(${a}) AND (${b})`);
+      // Als Teilmenge (IN) statt je Mappe (EXISTS): PostgreSQL sucht die Dokumente einmal über die Indizes (#356) –
+      // je Mappe hieße bei häufigen Wörtern, die Volltexte immer wieder zu lesen.
+      const inNotizen = (t: string) => sql`mappen.id IN (SELECT n.mappe_id FROM notizen n WHERE n.haushalt_id = ${haushaltId} AND (${enthaelt(sql`n.text`, t)}))`;
       const inDokumenten = (t: string) => {
         const teil = teilwoerter(t);
-        return sql`EXISTS (SELECT 1 FROM dokumente d WHERE d.mappe_id = mappen.id
-          AND (to_tsvector('german', coalesce(d.volltext, '')) @@ websearch_to_tsquery('german', ${t}::text)${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
+        return sql`mappen.id IN (SELECT d.mappe_id FROM dokumente d WHERE d.haushalt_id = ${haushaltId}
+          AND (${SUCHINDEX} @@ ${suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
       };
-      const suche = muster
-        ? sql`AND (titel ILIKE ${muster} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value ILIKE ${muster} AND e.value NOT LIKE 'dms1$%')
+      const suche = o.suche
+        ? sql`AND (${enthaelt(sql`titel`, o.suche)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, o.suche)}))
             ${o.notizen ? sql`OR ${inNotizen(o.suche!)}` : sql``}
             ${o.volltext ? sql`OR ${inDokumenten(o.suche!)}` : sql``})`
         : sql``;
@@ -780,20 +809,21 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       if (!fund || !mappen.length) return { gesamt: n as number, mappen };
       const ausschnitte: Record<string, Ausschnitt> = {};
       if (fund.notizen) {
-        const nz = await sql`SELECT mappe_id, text FROM notizen WHERE haushalt_id = ${haushaltId} AND mappe_id = ANY(${mappen.map((m) => m.id)}::uuid[]) AND text ILIKE ${musterAus(fund.text)} ORDER BY erstellt`;
+        const nz = await sql`SELECT mappe_id, text FROM notizen n WHERE haushalt_id = ${haushaltId} AND mappe_id = ANY(${mappen.map((m) => m.id)}::uuid[]) AND (${enthaelt(sql`n.text`, fund.text)}) ORDER BY erstellt`;
         for (const z of nz) {
-          const t = ausschnittAus(alsText(z.text as string), fund.text);
+          const klar = alsText(z.text as string);
+          const t = schreibweisen(fund.text).map((x) => ausschnittAus(klar, x)).find(Boolean);
           if (t && !ausschnitte[z.mappe_id as string]) ausschnitte[z.mappe_id as string] = { dokument: 'Notiz', text: t };
         }
       }
       if (!fund.volltext) return { gesamt: n as number, mappen, ausschnitte };
-      // Fundstellen im Volltext: je Mappe das Dokument mit dem besten Treffer.
+      // Fundstellen im Volltext: je Mappe das Dokument mit dem besten Treffer, Wortstämme in der Sprache des Dokuments.
       const a = await sql`
-        SELECT DISTINCT ON (d.mappe_id) d.mappe_id, d.name, ts_headline('german', d.volltext, q, ${AUSSCHNITT}::text) AS text
-        FROM dokumente d, websearch_to_tsquery('german', ${fund.text}::text) q
+        SELECT DISTINCT ON (d.mappe_id) d.mappe_id, d.name, ts_headline(dms_konfig(d.sprache), d.volltext, x.q, ${AUSSCHNITT}::text) AS text
+        FROM dokumente d CROSS JOIN LATERAL (SELECT ${suchanfrage(sql, fund.text, v)} AS q) x
         WHERE d.haushalt_id = ${haushaltId} AND d.mappe_id = ANY(${mappen.map((m) => m.id)}::uuid[])
-          AND to_tsvector('german', coalesce(d.volltext, '')) @@ q
-        ORDER BY d.mappe_id, ts_rank(to_tsvector('german', coalesce(d.volltext, '')), q) DESC`;
+          AND ${SUCHINDEX} @@ x.q
+        ORDER BY d.mappe_id, ts_rank(${SUCHINDEX}, x.q) DESC`;
       for (const z of a) ausschnitte[z.mappe_id as string] ??= { dokument: z.name as string, text: z.text as string };
       // Nur als Teilwort gefunden: Ausschnitt um die erste Fundstelle.
       const teil = teilwoerter(fund.text);
@@ -1127,7 +1157,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           INSERT INTO papierkorb (id, haushalt_id, typ_id, mappe, verweise, dokumente, versionen, geloescht_von, notizen, aufgaben, favoriten, erinnerungen)
           SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m),
             (SELECT coalesce(jsonb_agg(to_jsonb(v)), '[]'::jsonb) FROM verweise v WHERE v.quelle_id = m.id),
-            (SELECT coalesce(jsonb_agg(to_jsonb(d)), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
+            (SELECT coalesce(jsonb_agg(to_jsonb(d) - 'suchindex'), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) FROM dokument_versionen x JOIN dokumente d ON d.id = x.dokument_id WHERE d.mappe_id = m.id),
             ${istUuid(benutzerId) ? benutzerId : null}::uuid,
             (SELECT coalesce(jsonb_agg(to_jsonb(n)), '[]'::jsonb) FROM notizen n WHERE n.mappe_id = m.id),
@@ -1147,7 +1177,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           INSERT INTO papierkorb (id, haushalt_id, typ_id, mappe, verweise, dokumente, versionen, geloescht_von, notizen, aufgaben, favoriten, erinnerungen, vorgang, entkoppelt)
           SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m),
             (SELECT coalesce(jsonb_agg(to_jsonb(v)), '[]'::jsonb) FROM verweise v WHERE v.quelle_id = m.id),
-            (SELECT coalesce(jsonb_agg(to_jsonb(d)), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
+            (SELECT coalesce(jsonb_agg(to_jsonb(d) - 'suchindex'), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) FROM dokument_versionen x JOIN dokumente d ON d.id = x.dokument_id WHERE d.mappe_id = m.id),
             ${istUuid(benutzerId) ? benutzerId : null}::uuid,
             (SELECT coalesce(jsonb_agg(to_jsonb(n)), '[]'::jsonb) FROM notizen n WHERE n.mappe_id = m.id),
@@ -1201,7 +1231,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       await sql.begin(async (tx) => {
         const r = await tx`
           INSERT INTO papierkorb_dokumente (id, haushalt_id, mappe_id, dokument, versionen, geloescht_von)
-          SELECT d.id, d.haushalt_id, d.mappe_id, to_jsonb(d),
+          SELECT d.id, d.haushalt_id, d.mappe_id, to_jsonb(d) - 'suchindex',
             (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.nummer), '[]'::jsonb) FROM dokument_versionen x WHERE x.dokument_id = d.id),
             ${istUuid(benutzerId) ? benutzerId : null}::uuid
           FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.id = ${id}`;
@@ -1462,11 +1492,11 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const q = woerter.join(' | ');
       const dokumente = o.dokumente < 1 ? [] : await sql`
         WITH beste AS (
-          SELECT d.id, d.mappe_id, d.name, ts_rank_cd(to_tsvector('german', coalesce(d.volltext, '')), q) AS rang
-          FROM dokumente d JOIN mappen ON mappen.id = d.mappe_id AND mappen.haushalt_id = ${haushaltId}, to_tsquery('german', ${q}::text) q
-          WHERE d.haushalt_id = ${haushaltId} AND to_tsvector('german', coalesce(d.volltext, '')) @@ q ${lesen}
+          SELECT d.id, d.mappe_id, d.name, ts_rank_cd(${SUCHINDEX}, q) AS rang
+          FROM dokumente d JOIN mappen ON mappen.id = d.mappe_id AND mappen.haushalt_id = ${haushaltId}, to_tsquery('dms_german', dms_falte(${q}::text)) q
+          WHERE d.haushalt_id = ${haushaltId} AND ${SUCHINDEX} @@ q ${lesen}
           ORDER BY rang DESC, d.id LIMIT ${o.dokumente})
-        SELECT b.id, b.mappe_id, b.name, b.rang, ts_headline('german', d.volltext, to_tsquery('german', ${q}::text),
+        SELECT b.id, b.mappe_id, b.name, b.rang, ts_headline(dms_konfig(d.sprache), d.volltext, to_tsquery('dms_german', dms_falte(${q}::text)),
           'MaxFragments=3, MaxWords=40, MinWords=15, ShortWord=2, StartSel="", StopSel="", FragmentDelimiter=" … "') AS text
         FROM beste b JOIN dokumente d ON d.id = b.id ORDER BY b.rang DESC, b.id`;
       const muster = woerter.map((w) => `%${w}%`);
@@ -1480,6 +1510,55 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         dokumente: dokumente.map((z) => ({ id: z.id as string, mappeId: z.mappe_id as string, name: z.name as string, text: String(z.text ?? '') })),
         mappen: mappen.map(alsMappe),
       };
+    },
+
+    /* ---------- Unscharfe Suche (#356) ---------- */
+    async aehnlicheWoerter(woerter, max) {
+      const r: Record<string, string[]> = {};
+      const liste = [...new Set(woerter.map(falte).filter((w) => w.length >= TIPPFEHLER_MIN && w.length <= 40))];
+      if (!liste.length) return r;
+      // pg_trgm kann fehlen (keine Rechte) oder in einem anderen Schema liegen: Funktion und Operator mit Schema.
+      const trgm = await trigrammSchema();
+      if (!trgm) return r;
+      const aehnl = sql.unsafe(`${trgm}.similarity`);
+      const op = sql.unsafe(`OPERATOR(${trgm}.%)`);
+      for (const w of liste) {
+        const z = await sql`
+          SELECT wort FROM suchwoerter
+          WHERE haushalt_id = ${haushaltId} AND wort ${op} ${w}::text AND wort <> ${w} AND ${aehnl}(wort, ${w}::text) >= ${AEHNLICH_AB}
+          ORDER BY ${aehnl}(wort, ${w}::text) DESC, anzahl DESC, wort LIMIT ${max}`;
+        if (z.length) r[w] = z.map((x) => x.wort as string);
+      }
+      return r;
+    },
+    async woerterAnzahl() {
+      const [r] = await sql`SELECT count(*)::int AS n FROM suchwoerter WHERE haushalt_id = ${haushaltId}`;
+      return r.n as number;
+    },
+    async woerterNeu() {
+      const [r] = await sql`SELECT dms_woerter_neu(${haushaltId}::uuid) AS n`;
+      return Number(r.n);
+    },
+    async synonyme() {
+      return (await sql`SELECT id, woerter, quelle FROM synonyme WHERE haushalt_id = ${haushaltId} ORDER BY quelle <> 'werkbank', quelle, erstellt, id`)
+        .map((z) => ({ id: z.id as string, woerter: z.woerter as string[], quelle: z.quelle as string }));
+    },
+    async legeSynonymAn(g) {
+      await sql`INSERT INTO synonyme (id, haushalt_id, woerter, quelle) VALUES (${g.id}, ${haushaltId}, ${g.woerter}::text[], ${g.quelle})`;
+    },
+    async aendereSynonym(id, woerter) {
+      if (!istUuid(id)) return false;
+      return (await sql`UPDATE synonyme SET woerter = ${woerter}::text[] WHERE haushalt_id = ${haushaltId} AND id = ${id} AND quelle = 'werkbank'`).count > 0;
+    },
+    async loescheSynonym(id) {
+      if (!istUuid(id)) return false;
+      return (await sql`DELETE FROM synonyme WHERE haushalt_id = ${haushaltId} AND id = ${id} AND quelle = 'werkbank'`).count > 0;
+    },
+    async setzeSynonyme(quelle, gruppen) {
+      await sql.begin(async (tx) => {
+        await tx`DELETE FROM synonyme WHERE haushalt_id = ${haushaltId} AND quelle = ${quelle}`;
+        for (const g of gruppen) await tx`INSERT INTO synonyme (id, haushalt_id, woerter, quelle) VALUES (gen_random_uuid(), ${haushaltId}, ${g}::text[], ${quelle})`;
+      });
     },
 
     /* ---------- Aufgaben (#54) ---------- */

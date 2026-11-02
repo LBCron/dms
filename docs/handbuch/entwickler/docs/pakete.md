@@ -21,6 +21,7 @@ Dann ausfüllen:
 | `inhalt/mappentypen.yaml` | Mappentypen mit Feldern, Registern, Titel und Trefferliste |
 | `inhalt/sichten.yaml` | Ansichten mit Elternansicht, Mappentypen und Bedingungen |
 | `inhalt/beispiele.yaml` | optional: Beispiel-Mappen mit erfundenen Daten |
+| `inhalt/wortlisten.yaml` | optional (ab DMS 0.127.0): Gruppen gleichbedeutender Wörter für die Suche |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | Beschreibung, Lizenztext, Änderungen je Version |
 | `tests/erwartung.yaml` | was nach der Installation da sein muss |
 
@@ -44,7 +45,7 @@ So bildet der Export das DMS auf das Paketformat ab:
 
 Das Format beschreiben die JSON-Schemas in der Registry: [`schema/manifest.schema.json`](https://github.com/motom001/dms-registry/blob/main/schema/manifest.schema.json) und [`schema/inhalt.schema.json`](https://github.com/motom001/dms-registry/blob/main/schema/inhalt.schema.json). Die Vorlage zeigt jede Angabe mit Kommentar. Das DMS liest genau dieses Format:
 
-- **Manifest:** `schema: 1` ist Pflicht; ein anderer Wert wird abgelehnt. `inhalt` nennt die Dateien mit `mappentypen`, `sichten` und `beispiele` (Pfade relativ zum Paketordner). Das Schema kennt außerdem `inhalt.rollen`; das DMS liest es nicht.
+- **Manifest:** `schema: 1` ist Pflicht; ein anderer Wert wird abgelehnt. `inhalt` nennt die Dateien mit `mappentypen`, `sichten`, `beispiele` und `wortlisten` (Pfade relativ zum Paketordner). Das Schema kennt außerdem `inhalt.rollen`; das DMS liest es nicht.
 - **Kennungen** (`schluessel` bei Mappentypen und Ansichten, `key` bei Feldern und Registern) sind im Paket lokal. Das DMS legt Mappentypen als `<paket>_<schluessel>` an.
 - **Felder** wie in der Werkbank: `key`, `label`, `typ` (text, langtext, formatiert, zahl, betrag, datum, janein, auswahl, referenz, passwort) und die üblichen Eigenschaften (`pflicht`, `eindeutig`, `hilfe`, `standard`, `minLen`, `maxLen`, `muster`, `min`, `max`, `nachkomma`, `waehrung`, `optionen`, `mehrfach`, `verweisart`, `frist`, `erkennung`, `format`, `landFeld`).
 - **Formate und Datumsgrenzen** (DMS #535): Textfelder bekommen mit `format` eine Prüfung – `email`, `telefon`, `internetseite`, `iban` oder `plz`. Bei `plz` nennt `landFeld` die Kennung des Felds mit dem Land (Text oder Auswahl im selben Mappentyp); steht dort Deutschland oder nichts, sind genau 5 Ziffern Pflicht, sonst ist die PLZ frei. Datumsfelder bekommen mit `min` und `max` Grenzen: ein Datum (`2000-01-01`) oder `heute`, z. B. `max: heute` für einen Geburtstag. Beispiel: `- { key: plz, label: PLZ, typ: text, maxLen: 10, format: plz, landFeld: land }`. Neue und geänderte Werte müssen passen – auch die Beispiele des Pakets –, gespeicherte bleiben gültig. Bei einem Update übernimmt das DMS Format bzw. Grenzen an vorhandenen Feldern, an denen der Administrator weder Format noch Grenzen eingestellt hat; die Vorschau nennt sie. Ältere DMS ignorieren die Angaben.
@@ -59,6 +60,14 @@ Das Format beschreiben die JSON-Schemas in der Registry: [`schema/manifest.schem
     - Werden die Beispiele installiert, kommen auch die der Abhängigkeiten mit, die dabei neu installiert werden. Ist eine Abhängigkeit schon **ohne** Beispiele installiert, bleiben Verweise darauf leer; die Vorschau sagt das. Das DMS merkt sich die Mappen der Beispiele mit Schlüssel am installierten Paket (`beispiele`).
     - Beim Update entstehen keine Beispiele – wie bisher.
     - Pakete, die das nutzen, verlangen im Manifest `dms: ">=0.79.0"`.
+- **Wortlisten** (DMS #356, ab 0.127.0): `inhalt.wortlisten` nennt eine Datei mit Gruppen gleichbedeutender Wörter für die Suche – wer eines sucht, findet auch die anderen. Jede Gruppe ist `{ woerter: [Kfz, Auto, PKW] }` mit 2 bis 20 verschiedenen Wörtern (je 2 bis 60 Zeichen; Groß-/Kleinschreibung und Umlaute zählen beim Vergleich nicht); höchstens 1000 Gruppen je Paket. Das DMS legt sie beim Installieren an, ersetzt sie beim Update durch die des Pakets und entfernt sie mit dem Paket; in der Werkbank unter **Suche** stehen sie zum Ansehen. Pakete mit Wortlisten verlangen `dms: ">=0.127.0"` – ältere DMS übergehen den Abschnitt stillschweigend. Beispiel:
+
+    ```yaml
+    # inhalt/wortlisten.yaml
+    - woerter: [Kfz, Auto, PKW, Fahrzeug]
+    - woerter: [Nebenkosten, Betriebskosten]
+    ```
+
 - **Versionen:** `dms` und `abhaengigkeiten` nehmen Bereiche: `>=1.2.0`, `>1.2.0`, `1.2.0` bzw. `=1.2.0`, `^1.2.0` (gleiche Hauptversion), `~1.2.0` (gleiche Nebenversion), optional mit Obergrenze ` <2.0.0`. Bei `0.x` heißt `^` gleiche Nebenversion: `^0.63.0` passt nur zu 0.63.x. Für die DMS-Version deshalb `>=0.63.0` (bzw. die eigene Mindestversion) schreiben.
 
 Bei einem **Update** ergänzt das DMS nur: neue Mappentypen, Felder, Register und Ansichten. Felder, Register oder Ansichten zu entfernen oder umzubenennen hat auf installierte DMS keine Wirkung – plane das Format deshalb vorher. Mappentypen und Ansichten, die ein Administrator gelöscht hat, legt ein Update nicht neu an.

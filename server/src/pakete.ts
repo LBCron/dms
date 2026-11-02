@@ -11,10 +11,11 @@
 import { liesFeldErkennung, type FeldErkennung } from '../../shared/src/erkennung';
 import { istDatumsgrenze, istFeldformat } from '../../shared/src/feldformate';
 import { createHash, randomUUID } from 'node:crypto';
+import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
-import { BEREICH, CODE_MAX, DMS_RECHTE_TYPEN, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../shared/src/pakete';
+import { BEREICH, CODE_MAX, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand } from '../../shared/src/paketeinstellungen';
 import type { Dienst } from './dienst';
@@ -137,7 +138,7 @@ export function ordneBeispiele(beispiele: PaketBeispiel[]): PaketBeispiel[] | nu
 }
 /** Code eines Pakets (#338): Angaben aus dem Manifest und die Dateien unter code/ (modul.wasm, daten/…). */
 export interface PaketCodeTeil { info: PaketCode; dateien: Array<{ name: string; inhalt: Buffer }> }
-export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null }
+export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; /** Gleichbedeutende Wörter für die Suche (#356). */ wortlisten: string[][]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null }
 /** WebAssembly-Magie und Version 1. */
 const WASM_KOPF = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
 const CODE_DATEI = /^code\/(modul\.wasm|daten\/[A-Za-z0-9._-]{1,80})$/;
@@ -252,6 +253,14 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       fehler.push('beispiele: Die Verweise zwischen den Beispielen bilden einen Kreis (A zeigt auf B, B auf A). Ein Verweis muss weg.');
     }
   }
+  // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche, z. B. - woerter: [Kfz, Auto, PKW].
+  const wortlisten = liste('wortlisten').map((w, i): string[] => {
+    const g = liesWortgruppe(Array.isArray(w.woerter) ? w.woerter : null);
+    if (!Array.isArray(w.woerter)) fehler.push(`wortlisten[${i + 1}]: erwartet woerter: [Wort, Wort, …].`);
+    else if (g.fehler) fehler.push(`wortlisten[${i + 1}]: ${g.fehler}`);
+    return g.woerter;
+  }).filter((g) => g.length);
+  if (wortlisten.length > WORTLISTEN_MAX) fehler.push(`wortlisten: höchstens ${WORTLISTEN_MAX} Gruppen.`);
   const doppelt = (l: string[]) => l.filter((x, i) => l.indexOf(x) !== i);
   for (const s of doppelt(typen.map((t) => t.schluessel))) fehler.push(`mappentypen: Kennung „${s}“ doppelt.`);
   for (const s of doppelt(sichten.map((t) => t.schluessel))) fehler.push(`sichten: Kennung „${s}“ doppelt.`);
@@ -281,7 +290,7 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       lizenz: str(m.lizenz), dms: str(m.dms), abhaengigkeiten: Object.fromEntries(Object.entries(abh).map(([k, v]) => [k, str(v)])),
       ...(m.code !== undefined ? { code: m.code } : {}),
     },
-    typen, sichten, beispiele, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
+    typen, sichten, beispiele, wortlisten, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
   };
 }
 
@@ -747,6 +756,8 @@ export class Paketverwaltung {
     for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(`Das Paket verweist auf den Mappentyp „${DMS_TYPEN[k] ?? k}“ des DMS, den es hier nicht gibt. Bitte das DMS aktualisieren (ab ${DMS_VERWEISE_AB}).`);
     const da = genutzt.filter((k) => dmsTypen.has(k));
     if (da.length) hinweise.push(`Nutzt Mappentypen aus dem DMS: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus dem DMS)`).join(', ')}.`);
+    // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
+    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche).`);
     // Beispiele, die auf Beispiele einer Abhängigkeit zeigen (#347): ohne diese bleiben die Verweise leer.
     for (const p of new Set(paket.beispiele.flatMap((b) => beispielVerweise(b.werte)).filter((z) => z.includes(':') && !z.startsWith(`${m.id}:`)).map((z) => z.split(':')[0]))) {
       const da = installierte.find((x) => x.id === p);
@@ -930,6 +941,9 @@ export class Paketverwaltung {
     };
     const alteEinstellungen = await this.d.paketEinstellungen(m.id);
     let einstellungenGeschrieben = false;
+    // Wortlisten (#356): ersetzen die des Pakets; bei einem Fehler kommen die alten zurück.
+    const alteWortlisten = alt ? await this.d.paketSynonyme(m.id) : [];
+    let wortlistenGeschrieben = false;
     // Code (#403): Der alte Code kommt bei einem Fehler zurück – sonst liefe das alte Paket mit dem neuen Modul.
     const alterCode = alt?.laeufer ? await this.d.paketCode(m.id) : [];
     let codeGeschrieben = false;
@@ -1025,6 +1039,7 @@ export class Paketverwaltung {
         await this.d.setzePaketEinstellungen(m.id, { ...vorher, werte });
         einstellungenGeschrieben = true;
       } else if (alteEinstellungen && alt) { await this.d.setzePaketEinstellungen(m.id, null); einstellungenGeschrieben = true; }
+      if (paket.wortlisten.length || alteWortlisten.length) { wortlistenGeschrieben = true; await this.d.setzePaketSynonyme(m.id, paket.wortlisten); }
       const jetzt = new Date().toISOString();
       const datensatz: InstalliertesPaket = {
         id: m.id, name: m.name, version: m.version, beschreibung: m.beschreibung, lizenz: m.lizenz, autor: m.autor,
@@ -1049,6 +1064,7 @@ export class Paketverwaltung {
       await zurueck();
       if (codeGeschrieben) await (alterCode.length ? this.d.speicherePaketCode(m.id, alterCode) : this.d.loeschePaketCode(m.id)).catch((e) => log.error('Paket: alten Code nicht wiederhergestellt', { paket: m.id, fehler: (e as Error).message }));
       if (einstellungenGeschrieben) await this.d.setzePaketEinstellungen(m.id, alteEinstellungen).catch(() => {});
+      if (wortlistenGeschrieben) await this.d.setzePaketSynonyme(m.id, alteWortlisten).catch(() => {});
       throw f;
     }
   }
@@ -1250,6 +1266,7 @@ export class Paketverwaltung {
       }
     }
     await this.d.loeschePaket(id);
+    await this.d.setzePaketSynonyme(id, []);
     if (p.laeufer) { await this.d.loeschePaketCode(id); await this.d.loescheEreignisse(id); await this.d.setzePaketSpeicher(id, null).catch(() => {}); await this.o.laeufer?.codeGeaendert?.(); }
     // Einstellungen (#197): nur auf ausdrücklichen Wunsch für eine spätere Neuinstallation behalten.
     if (!behalten) await this.d.setzePaketEinstellungen(id, null);

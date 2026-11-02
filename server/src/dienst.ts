@@ -19,7 +19,10 @@ import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
 import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
-import { istUuid, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SortierungIntern } from './repo';
+import { istUuid, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
+import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
+/** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
+const SYNONYM_GRUPPEN_MAX = 2000;
 import {
   auswahlKlausel, auswahlProbleme, bereinigeAuswahlfilter, setzeEigeneWerte, erfuellt, bereinigeBedingungen, filterFuer, heuteIn, kinderVon, klauselnFuer, verschiebe, waereKreis, wirksameTypen,
   type Aufloesung, type Sicht, type SichtDaten,
@@ -499,6 +502,81 @@ export class Dienst {
   }
   /** Modelle, deren Zwischenspeicher fertig geladen ist (die Suche wartet nicht auf das Laden). */
   private vektorGeladen = new Set<string>();
+
+  /* ---------- Unscharfe Suche (#356) ---------- */
+
+  /** Gruppen gleichbedeutender Wörter, eine Minute gemerkt (jede Suche braucht sie). */
+  private synonymZwischen: { zeit: number; gruppen: string[][] } | null = null;
+  private async synonymGruppen(): Promise<string[][]> {
+    if (!this.synonymZwischen || Date.now() - this.synonymZwischen.zeit > 60_000) this.synonymZwischen = { zeit: Date.now(), gruppen: (await this.repo.synonyme()).map((g) => g.woerter) };
+    return this.synonymZwischen.gruppen;
+  }
+  /** Varianten der Begriffe einer einfachen Suche: gleichbedeutende Wörter und die Schreibweise ohne Bindestrich. */
+  async suchVarianten(texte: Array<string | undefined>): Promise<Varianten> {
+    const begriffe = texte.flatMap((t) => (t ? suchbegriffe(t) ?? [] : []));
+    if (!begriffe.length) return {};
+    return variantenVon(begriffe, await this.synonymGruppen());
+  }
+  /** Tippfehler-Suche an (Werkbank → Suche)? Standard: an. */
+  async unscharfAn(): Promise<boolean> {
+    return ((await this.einstellungen?.lies('suche')) as { unscharf?: boolean } | null)?.unscharf !== false;
+  }
+  /** Werkbank → Suche: Einstellung, Gruppen (Pakete mit Namen), Größe des Wörterverzeichnisses. */
+  async sucheStand() {
+    const pakete = new Map((await this.repo.listePakete()).map((p) => [p.id, p.name] as const));
+    return {
+      unscharf: await this.unscharfAn(), woerter: await this.repo.woerterAnzahl(),
+      synonyme: (await this.repo.synonyme()).map((g) => ({ ...g, ...(g.quelle !== 'werkbank' ? { paketName: pakete.get(g.quelle) ?? g.quelle } : {}) })),
+    };
+  }
+  async setzeSuche(e: unknown, von: string) {
+    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    const x = (e ?? {}) as { unscharf?: unknown };
+    if (typeof x.unscharf !== 'boolean') throw new Fachfehler(422, 'unscharf: true oder false.');
+    await this.einstellungen.schreibe('suche', x.unscharf ? null : { unscharf: false });
+    protokoll.modul('werkbank').info('Suche: Tippfehler', { von, an: x.unscharf });
+    return this.sucheStand();
+  }
+  private wortgruppe(roh: unknown): string[] {
+    const g = liesWortgruppe(roh);
+    if (g.fehler) throw new Fachfehler(422, g.fehler);
+    return g.woerter;
+  }
+  async legeSynonymAn(e: unknown, von: string) {
+    const woerter = this.wortgruppe((e as { woerter?: unknown } | null)?.woerter);
+    if ((await this.repo.synonyme()).filter((g) => g.quelle === 'werkbank').length >= SYNONYM_GRUPPEN_MAX) throw new Fachfehler(422, `Höchstens ${SYNONYM_GRUPPEN_MAX} eigene Gruppen.`);
+    await this.repo.legeSynonymAn({ id: randomUUID(), woerter, quelle: 'werkbank' });
+    this.synonymZwischen = null;
+    protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter angelegt', { von, woerter: woerter.length });
+    return this.sucheStand();
+  }
+  async aendereSynonym(id: string, e: unknown, von: string) {
+    const woerter = this.wortgruppe((e as { woerter?: unknown } | null)?.woerter);
+    if (!(await this.repo.aendereSynonym(id, woerter))) throw new Fachfehler(404, 'Diese Gruppe gibt es nicht (oder sie gehört zu einem Paket).');
+    this.synonymZwischen = null;
+    protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter geändert', { von, woerter: woerter.length });
+    return this.sucheStand();
+  }
+  async loescheSynonym(id: string, von: string) {
+    if (!(await this.repo.loescheSynonym(id))) throw new Fachfehler(404, 'Diese Gruppe gibt es nicht (oder sie gehört zu einem Paket).');
+    this.synonymZwischen = null;
+    protokoll.modul('werkbank').info('Suche: gleichbedeutende Wörter entfernt', { von });
+    return this.sucheStand();
+  }
+  /** Wortlisten eines Pakets (#356): ersetzen alle Gruppen dieses Pakets; leer = entfernen. */
+  async setzePaketSynonyme(paket: string, gruppen: string[][]) {
+    await this.repo.setzeSynonyme(paket, gruppen);
+    this.synonymZwischen = null;
+  }
+  async paketSynonyme(paket: string): Promise<string[][]> {
+    return (await this.repo.synonyme()).filter((g) => g.quelle === paket).map((g) => g.woerter);
+  }
+  async woerterNeu(von: string) {
+    const t0 = Date.now();
+    const n = await this.repo.woerterNeu();
+    protokoll.modul('werkbank').info('Suche: Wörterverzeichnis neu aufgebaut', { von, woerter: n, ms: Date.now() - t0 });
+    return this.sucheStand();
+  }
 
   /** Suche mit Ähnlichkeit an (Werkbank → Pakete, Einstellung des Kerns)? Standard: an. */
   async vektorEinstellung(): Promise<{ suche: boolean }> {
@@ -2028,21 +2106,49 @@ export class Dienst {
     const sortierung = link && !text(q.sortierung)
       ? (link.sortierung ? sortierungAus(link.sortierung.spalte, link.sortierung.absteigend, einTyp) : undefined)
       : sortierungAus(text(q.sortierung), q.absteigend === 'true' || q.absteigend === true, einTyp);
-    const r = q.sicht === 'eingang'
-      ? await this.repo.seite({ eingang: { benutzerId: ich.id, admin: ich.rolle === 'admin' }, suche, volltext, notizen, von, anzahl, sortierung, lesen: suche ? lesen : null })
+    // Unscharfe Suche (#356): Varianten (gleichbedeutende Wörter, ohne Bindestrich) für Suche und Volltextfilter.
+    const textfilter = erweitert?.volltext ?? undefined;
+    const varianten = await this.suchVarianten([suche, textfilter?.text]);
+    const anfrage: SeitenAnfrage = q.sicht === 'eingang'
+      ? { eingang: { benutzerId: ich.id, admin: ich.rolle === 'admin' }, suche, volltext, notizen, von, anzahl, sortierung, lesen: suche ? lesen : null }
       : q.sicht === 'favoriten'
-        ? await this.repo.seite({ favoriten: { benutzerId: ich.id }, suche, volltext, notizen, von, anzahl, sortierung, lesen })
+        ? { favoriten: { benutzerId: ich.id }, suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : erweitert
-        ? await this.repo.seite({
+        ? {
             klauseln: [{ typen: (erweitert.typen.length ? erweitert.typen : [...typen.values()]).map((t) => t.id), filter: filterFuer(erweitert, erweitert.typen, await this.aufloesung(ich.id)) }],
-            textfilter: erweitert.volltext ?? undefined, suche, volltext, notizen, von, anzahl, sortierung, lesen })
+            textfilter, suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : link
-        ? await this.repo.seite({ klauseln: [{ typen: [link.typ.id], filter: filterFuer(link, [link.typ], await this.aufloesung(ich.id)) }], suche, volltext, notizen, von, anzahl, sortierung, lesen })
+        ? { klauseln: [{ typen: [link.typ.id], filter: filterFuer(link, [link.typ], await this.aufloesung(ich.id)) }], suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : auswahl
-        ? await this.repo.seite({ klauseln: [auswahlKlausel(setzeEigeneWerte(auswahl.f.auswahlFilter ?? [], auswahl.eigene), auswahl.ziel, await this.aufloesung(ich.id))], suche, volltext, notizen, von, anzahl, sortierung, lesen })
+        ? { klauseln: [auswahlKlausel(setzeEigeneWerte(auswahl.f.auswahlFilter ?? [], auswahl.eigene), auswahl.ziel, await this.aufloesung(ich.id))], suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : sicht
-        ? await this.repo.seite({ klauseln: klauselnFuer(sichten, sicht.id, typen, await this.aufloesung(ich.id), verborgen), suche, volltext, notizen, von, anzahl, sortierung, lesen })
-        : await this.repo.seite({ typId: nurTyp ?? q.sicht, suche, volltext, notizen, von, anzahl, sortierung, lesen });
+        ? { klauseln: klauselnFuer(sichten, sicht.id, typen, await this.aufloesung(ich.id), verborgen), suche, volltext, notizen, von, anzahl, sortierung, lesen }
+        : { typId: nurTyp ?? q.sicht, suche, volltext, notizen, von, anzahl, sortierung, lesen };
+    let r = await this.repo.seite({ ...anfrage, varianten });
+    // Ohne genauen Treffer (#356): mit ähnlichen Wörtern aus dem Wörterverzeichnis noch einmal – genaue Treffer gehen so
+    // immer vor; „Meintest du …?“ schlägt die Suche mit dem besten ähnlichen Wort vor.
+    let unscharf: { statt: string; vorschlag: string | null; begriffe: Record<string, string[]> } | null = null;
+    const gesucht = suche ?? textfilter?.text;
+    if (r.gesamt === 0 && gesucht && await this.unscharfAn()) {
+      const begriffe = suchbegriffe(gesucht);
+      const aehnlich = begriffe ? await this.repo.aehnlicheWoerter(begriffe, 5) : {};
+      if (Object.keys(aehnlich).length) {
+        const mit: Varianten = { ...varianten };
+        for (const [k, w] of Object.entries(aehnlich)) mit[k] = [...(mit[k] ?? []), ...w];
+        const r2 = await this.repo.seite({ ...anfrage, varianten: mit });
+        if (r2.gesamt > 0) {
+          r = r2;
+          // „Meintest du …?“ nur, wenn der Vorschlag selbst etwas findet, das der Benutzer lesen darf – das
+          // Wörterverzeichnis kennt auch Wörter aus Mappen, die er nicht sehen darf.
+          let vorschlag = vorschlagAus(begriffe!, aehnlich);
+          if (vorschlag) {
+            const probe: SeitenAnfrage = suche ? { ...anfrage, suche: vorschlag } : { ...anfrage, textfilter: { ...textfilter!, text: vorschlag } };
+            if ((await this.repo.seite({ ...probe, von: 0, anzahl: 1 })).gesamt === 0) vorschlag = null;
+          }
+          unscharf = { statt: gesucht, vorschlag, begriffe: aehnlich };
+        }
+      }
+    }
     if (q.sicht === 'eingang' && lesen) {
       const ok = await this.repo.lesbare(r.mappen.map((m) => m.id), lesen);
       r.mappen = r.mappen.map((m) => (ok.has(m.id) ? m : { id: m.id, typId: m.typId, werte: {}, titel: NICHT_SICHTBAR, erstellt: m.erstellt, erstelltVon: null, geaendert: m.geaendert, geaendertVon: null, verborgen: true }));
@@ -2064,6 +2170,7 @@ export class Dienst {
       gesamt: r.gesamt, von, mappen: r.mappen, bezuege: await this.maskiereBezuege(z, await this.repo.bezuege(ziele)),
       ...(r.ausschnitte ? { ausschnitte: r.ausschnitte } : {}), ...(q.sicht === 'eingang' ? { aufgaben } : {}),
       ...(aehnlich.length ? { aehnlich } : {}),
+      ...(unscharf ? { unscharf } : {}),
       /** Welche Mappen dieser Seite Favoriten des Benutzers sind (#62). */
       favoriten: [...await this.repo.favoritenVon(ich.id, r.mappen.map((m) => m.id))],
       /** Favorit = Abo (#422): Favoriten und eigene Mappen, die andere seit dem letzten Sehen geändert haben. */
@@ -5378,6 +5485,7 @@ export class Dienst {
       papierkorb: () => r.papierkorb(),
       papierkorbDokumente: () => r.papierkorbDokumente(),
       loeschprotokoll: () => this.loeschprotokollAlle(),
+      synonyme: () => r.synonyme(),
       // Gebündelt (#367): ein Zugriff je Paket, nicht je Mappe oder Dokument.
       dokumente: (ids) => r.dokumenteVon(ids),
       versionen: (ids) => r.versionenVonDokumenten(ids),

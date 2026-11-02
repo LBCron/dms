@@ -8,9 +8,9 @@ import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Auf
 import { alsText } from '../../shared/src/markdown';
 import { spracheAusInfo } from '../../shared/src/textsprache';
 import { ausschnittAus } from './repo-pg';
-import { teilwoerter, woerterIn } from '../../shared/src/suche';
+import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, woerterIn, type Varianten } from '../../shared/src/suche';
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
-import type { AuskunftLinkIntern, PapierkorbEintrag, Repo, Rueckverweis, SortierungIntern, Verweis } from './repo';
+import type { AuskunftLinkIntern, PapierkorbEintrag, Repo, Rueckverweis, SortierungIntern, Synonymgruppe, Verweis } from './repo';
 import { passt as passtLoesch, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 
 /** Trefferlisten (#75) immer in beiden Formen: Liste der Trefferlisten und Spalten der Standardliste. */
@@ -67,12 +67,33 @@ export function speicherRepo(): Repo {
   /** Grob wie die deutsche Volltextsuche: alle Wörter kommen vor (ohne Groß-/Kleinschreibung). */
   const woerter = (q: string) => q.toLowerCase().replace(/["„“”]/g, ' ').split(/\s+/).filter(Boolean);
   // Teilwörter (#161): „Ofen“ findet „Backofen“; in Anführungszeichen nur ganze Wörter.
-  const findet = (text: string | null | undefined, q: string) => {
+  // Unscharfe Suche (#356): gefaltet (Umlaute, ß), Bindestriche egal, je Begriff auch seine Varianten.
+  const findet = (text: string | null | undefined, q: string, v: Varianten = {}) => {
     if (!text) return false;
     const teil = teilwoerter(q);
+    const b = suchbegriffe(q);
+    if (b) {
+      const flach = normal(text);
+      const im = new Set([...woerterIn(falte(text))].concat([...woerterIn(flach)]));
+      return b.every((w) => [w, ...(v[falte(w)] ?? [])].some((x) => (teil ? flach.includes(normal(x)) : normal(x).split(/[^\p{L}\p{N}]+/u).filter(Boolean).every((y) => im.has(y)))));
+    }
     if (teil) return teil.every((w) => text.toLowerCase().includes(w));
     const im = woerterIn(text);
     return woerter(q).every((w) => im.has(w));
+  };
+  /** Kommt der Text (bzw. bei einem Begriff eine seiner Varianten) vor – ohne Umlaute, Groß-/Kleinschreibung, Bindestriche? */
+  const enthaelt = (wert: string, q: string, v: Varianten = {}) => {
+    const b = suchbegriffe(q);
+    return (b?.length === 1 ? [q, ...(v[falte(b[0])] ?? [])] : [q]).some((x) => normal(wert).includes(normal(x)));
+  };
+  const synonymListe: Synonymgruppe[] = [];
+  /** Wörter aus Titeln, Werten, Notizen und Volltexten mit ihrer Häufigkeit (wie dms_woerter in PostgreSQL). */
+  const alleWoerter = () => {
+    const n = new Map<string, number>();
+    const dazu = (t: string) => { for (const w of falte(t).split(/[^0-9a-zа-яёіїєґ]+/)) if (w.length >= 4 && w.length <= 40 && !/^\d+$/.test(w)) n.set(w, (n.get(w) ?? 0) + 1); };
+    for (const m of mappen.values()) { dazu(m.titel ?? ''); for (const v of Object.values(m.werte)) if (!(typeof v === 'string' && v.startsWith('dms1$'))) dazu(typeof v === 'object' ? JSON.stringify(v) : String(v)); }
+    for (const t of texte.values()) if (t) dazu(t);
+    return n;
   };
   /** Löschprotokoll (#470): nur anfügen. */
   const loeschprotokoll: LoeschEintrag[] = [];
@@ -278,24 +299,26 @@ export function speicherRepo(): Repo {
       const tf = o.textfilter?.text.trim() && (o.textfilter.dokumente || o.textfilter.notizen) ? { ...o.textfilter, text: o.textfilter.text.trim().toLowerCase() } : null;
       // Fundstellen: zur Suche oder zum Volltextfilter.
       const fund = o.suche && (o.volltext || o.notizen) ? { volltext: !!o.volltext, notizen: !!o.notizen } : tf ? { volltext: tf.dokumente, notizen: tf.notizen } : null;
-      const q = o.suche?.toLowerCase();
+      const q = o.suche;
+      const vv = o.varianten ?? {};
+      const wertText = (v: unknown) => (typeof v === 'object' ? JSON.stringify(v) : String(v));
       const alle = [...mappen.values()]
         .filter((m) => !o.typId || m.typId === o.typId)
         .filter((m) => !o.klauseln || inSicht(m, o.klauseln, zaehl))
         .filter((m) => !o.eingang || offenFuer(m, o.eingang.benutzerId, o.eingang.admin))
         .filter((m) => !o.favoriten || istFavorit(m.id, o.favoriten.benutzerId))
         .filter((m) => lesbar(o.lesen ?? null, m, zaehl))
-        .filter((m) => !q || (m.titel ?? '').toLowerCase().includes(q) || Object.values(m.werte).some((v) => !(typeof v === 'string' && v.startsWith('dms1$')) && (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase().includes(q))
-          || (!!o.volltext && [...dokumente.values()].some((d) => d.mappeId === m.id && findet(texte.get(d.id), q)))
-          || (!!o.notizen && [...notizen.values()].some((n) => n.mappeId === m.id && n.text.toLowerCase().includes(q))))
+        .filter((m) => !q || enthaelt(m.titel ?? '', q, vv) || Object.values(m.werte).some((v) => !(typeof v === 'string' && v.startsWith('dms1$')) && enthaelt(wertText(v), q, vv))
+          || (!!o.volltext && [...dokumente.values()].some((d) => d.mappeId === m.id && findet(texte.get(d.id), q, vv)))
+          || (!!o.notizen && [...notizen.values()].some((n) => n.mappeId === m.id && enthaelt(n.text, q, vv))))
         // Erweiterte Suche (#199): Begriff in Dokumenten oder Notizen – UND mit allem anderen.
-        .filter((m) => !tf || (tf.dokumente && [...dokumente.values()].some((d) => d.mappeId === m.id && findet(texte.get(d.id), tf.text)))
-          || (tf.notizen && [...notizen.values()].some((n) => n.mappeId === m.id && n.text.toLowerCase().includes(tf.text))))
+        .filter((m) => !tf || (tf.dokumente && [...dokumente.values()].some((d) => d.mappeId === m.id && findet(texte.get(d.id), tf.text, vv)))
+          || (tf.notizen && [...notizen.values()].some((n) => n.mappeId === m.id && enthaelt(n.text, tf.text, vv))))
         .sort((a, b) => vergleiche(a, b, o.sortierung) || (a.titel ?? '').toLowerCase().localeCompare((b.titel ?? '').toLowerCase()) || a.id.localeCompare(b.id));
       const seite = alle.slice(o.von, o.von + o.anzahl).map(kopie);
       if (!fund) return { gesamt: alle.length, mappen: seite };
       const ausschnitte: Record<string, Ausschnitt> = {};
-      const q2 = o.suche && (o.volltext || o.notizen) ? q! : tf!.text;
+      const q2 = (o.suche && (o.volltext || o.notizen) ? q! : tf!.text).toLowerCase();
       if (fund.notizen) {
         for (const m of seite) {
           const n = [...notizen.values()].find((x) => x.mappeId === m.id && x.text.toLowerCase().includes(q2));
@@ -305,14 +328,37 @@ export function speicherRepo(): Repo {
       }
       if (fund.volltext) for (const m of seite) {
         if (ausschnitte[m.id]) continue;
-        const d = [...dokumente.values()].find((x) => x.mappeId === m.id && findet(texte.get(x.id), q2));
+        const d = [...dokumente.values()].find((x) => x.mappeId === m.id && findet(texte.get(x.id), q2, vv));
         if (!d) continue;
         const text = texte.get(d.id)!;
-        const w = woerter(q2)[0];
-        const i = text.toLowerCase().indexOf(w);
+        const w = [woerter(q2)[0], ...(vv[falte(woerter(q2)[0])] ?? []).map((x) => x.toLowerCase())].find((x) => text.toLowerCase().includes(x)) ?? woerter(q2)[0];
+        const i = Math.max(0, text.toLowerCase().indexOf(w));
         ausschnitte[m.id] = { dokument: d.name, text: `${text.slice(Math.max(0, i - 40), i)}${TREFFER_ANFANG}${text.slice(i, i + w.length)}${TREFFER_ENDE}${text.slice(i + w.length, i + w.length + 40)}` };
       }
       return { gesamt: alle.length, mappen: seite, ausschnitte };
+    },
+    /* Unscharfe Suche (#356): Wörterverzeichnis aus dem Bestand, jedes Mal neu gezählt. */
+    async aehnlicheWoerter(liste, max) {
+      const r: Record<string, string[]> = {};
+      const ws = [...new Set(liste.map(falte).filter((w) => w.length >= TIPPFEHLER_MIN && w.length <= 40))];
+      if (!ws.length) return r;
+      const anzahl = alleWoerter();
+      for (const w of ws) {
+        const a = [...anzahl.keys()].filter((x) => x !== w).map((x) => ({ x, s: aehnlichkeit(x, w) })).filter((y) => y.s >= AEHNLICH_AB)
+          .sort((p, q) => q.s - p.s || anzahl.get(q.x)! - anzahl.get(p.x)! || p.x.localeCompare(q.x)).slice(0, max).map((y) => y.x);
+        if (a.length) r[w] = a;
+      }
+      return r;
+    },
+    async woerterAnzahl() { return alleWoerter().size; },
+    async woerterNeu() { return alleWoerter().size; },
+    async synonyme() { return synonymListe.map(kopie); },
+    async legeSynonymAn(g) { synonymListe.push(kopie(g)); },
+    async aendereSynonym(id, woerter) { const g = synonymListe.find((x) => x.id === id && x.quelle === 'werkbank'); if (!g) return false; g.woerter = [...woerter]; return true; },
+    async loescheSynonym(id) { const i = synonymListe.findIndex((x) => x.id === id && x.quelle === 'werkbank'); if (i < 0) return false; synonymListe.splice(i, 1); return true; },
+    async setzeSynonyme(quelle, gruppen) {
+      for (let i = synonymListe.length - 1; i >= 0; i--) if (synonymListe[i].quelle === quelle) synonymListe.splice(i, 1);
+      for (const g of gruppen) synonymListe.push({ id: randomUUID(), woerter: [...g], quelle });
     },
     async zaehler(benutzerId, admin, lesen) {
       const typen = new Map<string, { anzahl: number; unpassend: number; demo: number }>();

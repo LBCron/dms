@@ -253,6 +253,13 @@ export const DMS_ANTWORTEN_AB = '0.124.0';
 export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen' };
 /** Ab dieser Version kennt das DMS die Schnittstelle `dms:erkennen` (#511): Erkennung für „Aus Dokument ausfüllen“. */
 export const DMS_ERKENNEN_AB = '0.125.0';
+/**
+ * Ab dieser Version kennt das DMS den Abschnitt `inhalt.wortlisten` (#356): Gruppen gleichbedeutender Wörter für die
+ * Suche. Ältere Versionen übergehen ihn stillschweigend – Pakete damit geben `dms: ">=0.127.0"` an.
+ */
+export const DMS_WORTLISTEN_AB = '0.127.0';
+/** Höchstens so viele Gruppen gleichbedeutender Wörter je Paket (#356). */
+export const WORTLISTEN_MAX = 1000;
 /** Darf ein Paket mit Code ins Netz (feste Adressen oder Dienst-Adresse)? Dann verlassen Daten das DMS. */
 export const hatNetz = (c: PaketCode | undefined) => !!c && (c.netz.length > 0 || (c.adressen?.length ?? 0) > 0);
 /** Alle Mappentypen (außer Benutzer) – für Pakete wie die Texterkennung, die an jedes Dokument müssen. */

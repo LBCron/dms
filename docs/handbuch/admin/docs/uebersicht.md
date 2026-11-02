@@ -5,7 +5,7 @@ Die **Werkbank** sehen nur Administratoren. Links stehen ihre Bereiche in sechs 
 <!-- bereiche:gruppen -->
 | Gruppe | Bereiche |
 | --- | --- |
-| **Ablage aufbauen** | [Mappentypen](mappentypen.md), [Ansichten](sichten.md), [Nummernkreise](nummernkreise.md), [Stempel](stempel.md), [Pakete](pakete.md), [Darf weg](archiv.md#nach-der-frist-darf-weg) (nur mit Archivmodus) |
+| **Ablage aufbauen** | [Mappentypen](mappentypen.md), [Ansichten](sichten.md), [Nummernkreise](nummernkreise.md), [Stempel](stempel.md), [Pakete](pakete.md), [Suche](suche.md), [Darf weg](archiv.md#nach-der-frist-darf-weg) (nur mit Archivmodus) |
 | **Benutzer und Sicherheit** | [Benutzer](benutzer.md), [Verschlüsselung](verschluesselung.md), [Datenschutz](datenschutz.md) |
 | **Post und Eingänge** | [Postfächer](postfaecher.md), [Eingangsordner](eingangsordner.md) (nur wenn der Ordner eingebunden ist), [WebDAV-Laufwerk](webdav.md), [Texterkennung](texterkennung.md) |
 | **Daten sichern** | [Sicherung](sicherung.md), [Wiederherstellen](wiederherstellen.md), [Vollexport](export.md), [Papierkorb](papierkorb.md) |
@@ -69,7 +69,7 @@ Nicht jeder braucht jeden Bereich. Ein Haushalt fasst Nummernkreise, Postfächer
 
 - **Haushalt**: schlank, nur was ein Haushalt zum Einrichten und Sichern braucht. Neue Installationen beginnen damit.
 <!-- bereiche:organisation -->
-- **Betrieb**: zusätzlich Nummernkreise, Darf weg, Datenschutz, Postfächer, Eingangsordner, Texterkennung, Anmeldeschutz, Designs, Protokoll, Gemeldete Fehler, Wartungsmodus.
+- **Betrieb**: zusätzlich Nummernkreise, Suche, Darf weg, Datenschutz, Postfächer, Eingangsordner, Texterkennung, Anmeldeschutz, Designs, Protokoll, Gemeldete Fehler, Wartungsmodus.
 <!-- /bereiche:organisation -->
 - **Alles**: jeder Bereich. So bleibt es bei Installationen, die vor Version 0.70 eingerichtet wurden, bis du etwas anderes wählst.
 
@@ -92,6 +92,7 @@ Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldun
 | [Nummernkreise](nummernkreise.md) | Fortlaufende Nummern, z. B. für Rechnungen | Betrieb |
 | [Stempel](stempel.md) | Vorlagen für Stempel und Wasserzeichen beim Weitergeben | Haushalt, Betrieb |
 | [Pakete](pakete.md) | Fertige Mappentypen und Ansichten installieren | Haushalt, Betrieb |
+| [Suche](suche.md) | Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche | Betrieb |
 | [Darf weg](archiv.md#nach-der-frist-darf-weg) | Mappen mit abgelaufener Aufbewahrungsfrist (nur mit Archivmodus) | Betrieb |
 | [Benutzer](benutzer.md) | Benutzer und Rollen anlegen | Haushalt, Betrieb |
 | [Verschlüsselung](verschluesselung.md) | Den Schlüssel für Passwörter und Sicherungen | Haushalt, Betrieb |

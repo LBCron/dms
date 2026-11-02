@@ -7,6 +7,7 @@ import type { InstalliertesPaket } from '../../shared/src/pakete';
 import type { AuskunftLink } from '../../shared/src/auskunft';
 import type { Fundstelle } from './geheimnisse';
 import type { LoeschDokument, LoeschEintrag, LoeschFilter } from '../../shared/src/loeschprotokoll';
+import type { Varianten } from '../../shared/src/suche';
 
 export interface Verweis { feldKey: string; zielId: string }
 /** Abruf-Link (#455) mit den Hashes von Schlüssel und Abrufcode – verlässt den Server nie. */
@@ -36,6 +37,11 @@ export interface SeitenAnfrage {
   notizen?: boolean;
   /** Erweiterte Suche (#199): der Begriff muss in Dokumenten und/oder Notizen stehen – UND mit allem anderen. */
   textfilter?: { text: string; dokumente: boolean; notizen: boolean };
+  /**
+   * Unscharfe Suche (#356): weitere Schreibweisen je Begriff (Schlüssel `falte(begriff)`) – gleichbedeutende Wörter,
+   * ohne Bindestrich, bei keinem genauen Treffer ähnliche Wörter. Gilt für `suche` und `textfilter`.
+   */
+  varianten?: Varianten;
   /** Reihenfolge; ohne: nach Titel. */
   sortierung?: SortierungIntern;
   /** Berechtigungen (#124): nur lesbare Mappen; fehlt/null = alle. */
@@ -43,6 +49,8 @@ export interface SeitenAnfrage {
   von: number;
   anzahl: number;
 }
+/** Gruppe gleichbedeutender Wörter (#356); quelle „werkbank“ oder die Id eines Pakets. */
+export interface Synonymgruppe { id: string; woerter: string[]; quelle: string }
 export interface NeueMappe {
   id: string; typId: string; werte: Werte; verweise: Verweis[]; titel: string; benutzerId: string | null; demo: boolean;
 }
@@ -339,6 +347,21 @@ export interface Repo {
   erkennungSchreibe(mappeId: string, ergebnis: unknown, absenderId: string | null): Promise<void>;
   /** Post mit diesem eindeutig erkannten Absender, neueste zuerst. */
   erkennungenMitAbsender(absenderId: string, max: number): Promise<string[]>;
+
+  /* ---------- Unscharfe Suche (#356) ---------- */
+  /** Ähnliche Wörter aus dem Wörterverzeichnis je Begriff (gefaltet), beste zuerst; ohne pg_trgm leer. */
+  aehnlicheWoerter(woerter: string[], max: number): Promise<Record<string, string[]>>;
+  /** Anzahl der Wörter im Wörterverzeichnis. */
+  woerterAnzahl(): Promise<number>;
+  /** Wörterverzeichnis aus dem Bestand neu aufbauen; liefert die Anzahl. */
+  woerterNeu(): Promise<number>;
+  /** Gruppen gleichbedeutender Wörter (Werkbank und Pakete). */
+  synonyme(): Promise<Synonymgruppe[]>;
+  legeSynonymAn(g: { id: string; woerter: string[]; quelle: string }): Promise<void>;
+  aendereSynonym(id: string, woerter: string[]): Promise<boolean>;
+  loescheSynonym(id: string): Promise<boolean>;
+  /** Alle Gruppen einer Quelle (Paket-Id) ersetzen – leer = entfernen. */
+  setzeSynonyme(quelle: string, gruppen: string[][]): Promise<void>;
 
   /* ---------- Vektoren zu Dokumenten (#442) ---------- */
   /** Vektor eines Dokuments für ein Modell setzen bzw. ersetzen. Gibt es das Dokument nicht (mehr): false. */

@@ -10,8 +10,13 @@ import type postgres from 'postgres';
 export interface Tabelle { name: string; spalten: string[] }
 export interface Zaehler { mappen: number; dokumente: number; benutzer: number }
 
-/** Tabellen, deren Inhalt nicht in die Sicherung gehört. */
-export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen']);
+/**
+ * Tabellen, deren Inhalt nicht in die Sicherung gehört. Das Wörterverzeichnis der Suche (#356) füllen beim
+ * Wiederherstellen die Trigger aus Mappen und Dokumenten neu.
+ */
+export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter']);
+/** Abgeleitete Spalten ohne Sicherung: den Suchindex (#356) berechnet beim Einspielen ein Trigger aus dem Volltext. */
+export const OHNE_SPALTEN: Record<string, string[]> = { dokumente: ['suchindex'] };
 
 export interface Schnappschuss {
   postgres: string;
@@ -54,6 +59,7 @@ export async function tabellenIn(sql: Abfrage, schema = 'public'): Promise<Tabel
   for (const r of spalten) {
     const t = r.tabelle as string;
     if (!je.has(t)) je.set(t, []);
+    if (OHNE_SPALTEN[t]?.includes(r.spalte as string)) continue;
     je.get(t)!.push(r.spalte as string);
   }
   const eltern = new Map<string, Set<string>>([...je.keys()].map((t) => [t, new Set<string>()]));

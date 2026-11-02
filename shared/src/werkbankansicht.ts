@@ -53,6 +53,7 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'nummernkreise', gruppe: 'ablage', in: O },
   { pfad: 'stempel', gruppe: 'ablage', in: H },
   { pfad: 'pakete', gruppe: 'ablage', in: H },
+  { pfad: 'suche', gruppe: 'ablage', in: O },
   { pfad: 'darfweg', gruppe: 'ablage', in: O },
   { pfad: 'benutzer', gruppe: 'benutzer', in: H },
   { pfad: 'verschluesselung', gruppe: 'benutzer', in: H },

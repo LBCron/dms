@@ -60,7 +60,7 @@ Nach Verweisen und langen Texten lässt sich nicht sortieren; diese Spalten habe
 
 ## Suchen
 
-Über der Liste jeder Ansicht mit Mappen steht ein Suchfeld. Die Suche findet Mappen, deren **Titel oder Angaben** den eingegebenen Text enthalten – Groß- und Kleinschreibung spielt keine Rolle.
+Über der Liste jeder Ansicht mit Mappen steht ein Suchfeld. Die Suche findet Mappen, deren **Titel oder Angaben** den eingegebenen Text enthalten – Groß- und Kleinschreibung spielt keine Rolle, Umlaute und Bindestriche auch nicht: „Gebuhr“ findet „Gebühr“, „Strasse“ findet „Straße“, „Kfzversicherung“ findet „Kfz-Versicherung“.
 
 ![Suche in den Verträgen](bilder/suche.png)
 
@@ -75,6 +75,12 @@ Setzt du neben dem Suchfeld den Haken **Volltext durchsuchen**, sucht das DMS au
 Die Volltextsuche versteht Deutsch: „Rechnungen“ findet auch „Rechnung“, und mehrere Wörter müssen alle vorkommen. Sie findet einen Begriff auch **als Teil eines Wortes**: „Ofen“ findet „Backofen“, „Ofenrohr“ und „Kachelofen“ – ohne dass du ein Sternchen o. Ä. eingeben musst. Das gilt für Begriffe ab drei Buchstaben.
 
 Mit Anführungszeichen suchst du nur **ganze Wörter** bzw. eine genaue Wortfolge, z. B. `"Ofen"` oder `"Stadtwerke Musterstadt"`; ein Minus schließt ein Wort aus, z. B. `Strom -Gas`.
+
+### Tippfehler und andere Wörter
+
+Findet die Suche **nichts**, sucht sie mit ähnlich geschriebenen Wörtern aus deiner Ablage weiter – „Waschmaschiene“ findet dann die Waschmaschine. Über den Treffern steht das als Hinweis, dazu **Meintest du „waschmaschine“?** – ein Klick sucht genau dieses Wort. Gibt es genaue Treffer, siehst du nur diese.
+
+Hat ein Administrator **gleichbedeutende Wörter** eingerichtet (z. B. *Kfz, Auto, PKW* – manche Pakete bringen solche Listen mit), findet die Suche nach einem Wort auch die anderen. Mit Anführungszeichen oder Minus suchst du dagegen genau das Eingegebene.
 
 ### In Notizen suchen
 

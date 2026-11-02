@@ -68,6 +68,8 @@
   "bereich.stempel.wann": "Vorlagen für Stempel und Wasserzeichen beim Weitergeben",
   "bereich.pakete.name": "Pakete",
   "bereich.pakete.wann": "fertige Mappentypen und Ansichten installieren",
+  "bereich.suche.name": "Suche",
+  "bereich.suche.wann": "Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche",
   "bereich.darfweg.name": "Darf weg",
   "bereich.darfweg.wann": "Mappen mit abgelaufener Aufbewahrungsfrist (nur mit Archivmodus)",
   "bereich.datenschutz.name": "Datenschutz",
