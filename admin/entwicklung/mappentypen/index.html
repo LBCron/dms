@@ -756,6 +756,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#formate-und-datumsgrenzen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Formate und Datumsgrenzen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fur-die-erkennung-nutzen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2557,6 +2568,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#formate-und-datumsgrenzen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Formate und Datumsgrenzen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fur-die-erkennung-nutzen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2859,7 +2881,7 @@
 <tbody>
 <tr>
 <td>Text</td>
-<td>Mindest- und Höchstlänge, Muster (regulärer Ausdruck, muss den ganzen Text treffen), eindeutig</td>
+<td>Mindest- und Höchstlänge, Muster (regulärer Ausdruck, muss den ganzen Text treffen), eindeutig, <a href="#formate-und-datumsgrenzen">Format</a></td>
 </tr>
 <tr>
 <td>Langtext</td>
@@ -2879,7 +2901,7 @@
 </tr>
 <tr>
 <td>Datum</td>
-<td>–</td>
+<td><a href="#formate-und-datumsgrenzen">Frühestens, Spätestens</a> (fest oder „heute“), Erinnern</td>
 </tr>
 <tr>
 <td>Ja/Nein</td>
@@ -2901,6 +2923,49 @@
 </table>
 <p>Für alle gilt: <strong>Pflichtfeld</strong> und ein <strong>Hilfetext</strong>, der beim Ausfüllen unter dem Feld steht (im Feld-Editor gleich neben der Bezeichnung); die meisten Mappentypen haben außerdem einen <strong>Standardwert</strong> für neue Mappen. <strong>Eindeutig</strong> heißt: Den Wert darf es in diesem Mappentyp nur einmal geben – Groß- und Kleinschreibung zählen dabei nicht.</p>
 <p>Steht im Standardwert eines Textfelds <code>{nummernkreis:&lt;kennung&gt;}</code>, bekommt jede neue Mappe eine fortlaufende Nummer aus diesem <a href="../nummernkreise/">Nummernkreis</a>; das Feld ist dann schreibgeschützt.</p>
+<h3 id="formate-und-datumsgrenzen">Formate und Datumsgrenzen<a class="headerlink" href="#formate-und-datumsgrenzen" title="Permanent link">&para;</a></h3>
+<p>Ein <strong>Textfeld</strong> kann ein <strong>Format</strong> haben. Dann prüft das DMS die Angabe, und am Handy erscheint die passende Tastatur:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Was passt</th>
+<th>Anzeige</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E-Mail</td>
+<td><code>name@beispiel.de</code> – mit @ und einer Endung wie .de</td>
+<td>daneben ein Knopf zum Schreiben (<code>mailto:</code>)</td>
+</tr>
+<tr>
+<td>Telefon</td>
+<td>Ziffern, + am Anfang, Leerzeichen, <code>/</code>, <code>-</code> und Klammern – keine Buchstaben, z. B. <code>+49 30 123456</code></td>
+<td>daneben ein Knopf zum Anrufen (<code>tel:</code>)</td>
+</tr>
+<tr>
+<td>Internetseite</td>
+<td><code>www.beispiel.de</code> oder <code>https://www.beispiel.de</code>; ohne <code>https://</code> ergänzt das DMS es</td>
+<td>daneben ein Knopf, der die Seite in einem neuen Tab öffnet</td>
+</tr>
+<tr>
+<td>IBAN</td>
+<td>Länge des Landes und Prüfziffer stimmen, z. B. <code>DE89 3704 0044 0532 0130 00</code></td>
+<td>in Vierergruppen</td>
+</tr>
+<tr>
+<td>PLZ</td>
+<td>in Deutschland genau 5 Ziffern, sonst frei (bis zur Höchstlänge)</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<p>Bei <strong>PLZ</strong> wählst du das <strong>Feld mit dem Land</strong> (ein Text- oder Auswahlfeld desselben Mappentyps). Steht dort Deutschland (auch „DE“) oder nichts und ist die Vorgabe des Felds Deutschland, gilt die deutsche Regel. Bei jedem anderen Land ist die PLZ frei. Ohne Land-Feld gilt immer Deutschland.</p>
+<p>Ein <strong>Datumsfeld</strong> kann <strong>Frühestens</strong> und <strong>Spätestens</strong> haben – ein festes Datum oder <strong>heute</strong>. Typisch ist <em>Spätestens: heute</em> für einen Geburtstag oder eine Erstzulassung.</p>
+<p>Die Fehlermeldungen sagen, was zu tun ist, z. B. „Eine Telefonnummer enthält nur Ziffern, + am Anfang, Leerzeichen, /, - und Klammern.“ Dieselben Prüfungen gelten für die <a href="../api/">Schnittstelle</a>, für Pakete und ihre Beispiele; die Meldung nennt die Felder.</p>
+<p><strong>Gespeicherte Angaben bleiben gültig.</strong> Bekommt ein Feld nachträglich ein Format oder Grenzen, ändert das DMS keine Werte, und die Mappen landen nicht unter <em>Zu erledigen</em>. Erst wer das Feld ändert, muss eine passende Angabe eintragen; andere Felder der Mappe lassen sich wie bisher speichern. Welche Angaben nicht passen, zeigt <a href="../texterkennung/#angaben-die-nicht-zum-format-passen">Werkbank → Wartungsoperationen</a>.</p>
+<p>Die Erkennung nutzt das Format: Ein Feld mit Format Telefon gilt als Telefon, auch wenn es anders heißt, und sie schlägt nur Werte vor, die passen.</p>
 <h3 id="fur-die-erkennung-nutzen">Für die Erkennung nutzen<a class="headerlink" href="#fur-die-erkennung-nutzen" title="Permanent link">&para;</a></h3>
 <p>Mit dem Haken <strong>Für die Erkennung nutzen</strong> an einem Feld sagst du der Erkennung im DMS, dass sich der Wert zum Wiedererkennen eignet bzw. dass sie das Feld füllen darf. Die Erkennung läuft im DMS selbst, ohne KI und ohne Internet:</p>
 <ul>
@@ -2983,6 +3048,7 @@
 <p>Du kannst Mappentypen jederzeit ändern, auch wenn es schon Mappen gibt:</p>
 <ul>
 <li><strong>Felder entfernen</strong> löscht keine Werte. Sie bleiben an der Mappe und erscheinen dort als „Werte ohne Felddefinition“. Fügst du das Feld mit derselben Kennung wieder hinzu, sind sie wieder da.</li>
+<li><strong>Formate und Datumsgrenzen</strong> machen gespeicherte Angaben nicht ungültig (siehe <a href="#formate-und-datumsgrenzen">oben</a>).</li>
 <li><strong>Neue Pflichtfelder, strengere Regeln, entfernte Auswahlwerte:</strong> Mappen, die nicht mehr passen, werden markiert und bekommen eine <a href="../aufgaben/">Aufgabe</a> „Passt nicht“ für ihren Ersteller; so landen sie bei ihm unter <a href="https://motom001.github.io/dms/benutzer/eingang/">Zu erledigen</a>. Die Aufgabe erledigt sich, sobald die Mappe wieder passt. Nichts wird stillschweigend geändert. Über dem Mappentyp steht, wie viele Mappen betroffen sind.</li>
 </ul>
 <p><img alt="Zu erledigen in der Ablage" src="../bilder/eingang.png" /></p>
