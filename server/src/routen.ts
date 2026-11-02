@@ -168,6 +168,10 @@ export interface RoutenExtras {
   messung?: Messung;
   /** Systemzustand → Auslastung (#409). */
   systemlast?: Systemlast;
+  /** Überlastschutz (#544). */
+  ueberlast?: import('./ueberlast').Ueberlastschutz;
+  /** Warten auf eine freie Verbindung zur Datenbank (#544). */
+  verbindungen?: import('./db').Verbindungswarten;
   /** Datenbankangaben für die Versionsübersicht. */
   system?: SystemQuelle;
   /** E-Mail-Versand und Adresse des DMS (#37). */
@@ -1382,10 +1386,27 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
 
     /* ---------- Datenbank: lange Zugriffe ---------- */
     { methode: 'GET', pfad: '/api/werkbank/datenbank', zugang: 'admin', handler: async () => {
-      if (!messung) return ok({ einstellungen: null, langlaeufer: [], laufend: [], auslastung: null });
+      const verbindungen = x.verbindungen?.stand() ?? null;
+      if (!messung) return ok({ einstellungen: null, langlaeufer: [], laufend: [], auslastung: null, verbindungen });
       const [langlaeufer, laufend] = await Promise.all([messung.speicher.liste(500), messung.speicher.laufende()]);
       // Verzögerung der Ereignisschleife (#477): wie lange Anfragen auf den Server warten.
-      return ok({ einstellungen: messung.einstellungen, langlaeufer, laufend, auslastung: messung.auslastung.stand() });
+      return ok({ einstellungen: messung.einstellungen, langlaeufer, laufend, auslastung: messung.auslastung.stand(), verbindungen });
+    } },
+    // Messwerte für den Lasttest (#544): Ereignisschleife, Arbeitsspeicher, Warten auf Verbindungen, Überlastschutz,
+    // Arbeiter. Wird vom Überlastschutz nie abgewiesen.
+    { methode: 'GET', pfad: '/api/werkbank/last', zugang: 'admin', lesend: true, handler: async () => {
+      const s = messung?.auslastung.stand();
+      const w = s ? (s.aktuell && (s.aktuell.seitSekunden >= 5 || !s.vorher) ? s.aktuell : s.vorher ?? s.aktuell) : null;
+      const m = process.memoryUsage();
+      const jetzt = x.verbindungen ? await x.verbindungen.probe() : null;
+      const v = x.verbindungen?.stand();
+      return ok({
+        schleife: w ? { median: w.median, p99: w.p99, max: w.max } : null, schleifeWarnung: s?.warnungSeit ?? null,
+        speicherMb: Math.round(m.rss / 1024 ** 2), heapMb: Math.round(m.heapUsed / 1024 ** 2),
+        datenbank: v ? { verbindungen: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
+        anfragen: x.ueberlast?.stand() ?? null,
+        arbeiter: arbeiterStand(),
+      });
     } },
     { methode: 'PUT', pfad: '/api/werkbank/datenbank', zugang: 'admin', handler: async (a) => {
       if (!messung) throw new Fachfehler(404, 'Messung ist nicht aktiv.');

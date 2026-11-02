@@ -61,6 +61,13 @@
   "arbeiter.meldung.uebergabe": "Der Auftrag ließ sich nicht an den Arbeiter geben: {fehler}",
   "arbeiter.meldung.speicher": "Die Bearbeitung brauchte mehr Arbeitsspeicher als erlaubt und wurde abgebrochen. Ist die Datei sehr groß?",
   "arbeiter.meldung.absturz": "Die Bearbeitung ist unerwartet abgebrochen: {fehler}",
+  "verbindungen.titel": "Verbindungen zur Datenbank",
+  "verbindungen.vorgabe": "Höchstens {max} gleichzeitig (Vorgabe).",
+  "verbindungen.umgebung": "Höchstens {max} gleichzeitig (eingestellt mit DMS_DB_VERBINDUNGEN).",
+  "verbindungen.warten": "Warten auf eine freie Verbindung in der letzten Minute: üblich {median}, höchstens {max}.",
+  "verbindungen.keine": "Noch keine Messwerte zum Warten auf eine Verbindung.",
+  "verbindungen.hilfe": "Alle 5 Sekunden misst das DMS, wie lange eine kleine Abfrage auf eine freie Verbindung wartet. Liegt das oft über 50 ms, obwohl CPU und Datenbank nicht ausgelastet sind, helfen mehr Verbindungen (DMS_DB_VERBINDUNGEN, siehe Handbuch).",
+  "ueberlast.meldung": "Das DMS ist gerade sehr beschäftigt. Bitte versuche es in ein paar Sekunden noch einmal.",
   "verweis.systemzustand": "CPU, Arbeitsspeicher und Netzwerk des Containers stehen unter",
   "verweis.systemzustand.ziel": "Wartung und Fehlersuche → Systemzustand"
 }

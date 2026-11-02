@@ -89,6 +89,10 @@ interface Optionen {
   einbetten?: Einbetten;
   /** WebDAV-Laufwerk (#346) unter /webdav. */
   webdav?: Webdav;
+  /** Überlastschutz (#544): höchstens so viele Anfragen gleichzeitig, sonst 503. */
+  ueberlast?: import('./ueberlast').Ueberlastschutz;
+  /** Warten auf eine freie Verbindung zur Datenbank (#544). */
+  verbindungen?: import('./db').Verbindungswarten;
 }
 
 export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}) {
@@ -101,8 +105,14 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     trustProxy: opt.proxy ?? false,
   });
 
+  // Überlastschutz (#544): vor allem anderen – eine abgewiesene Anfrage kostet so fast nichts.
+  opt.ueberlast?.haengeEin(app);
+
   app.setErrorHandler((fehler: unknown, req, reply) => {
     if (fehler instanceof WartungFehler) reply.header('retry-after', String(fehler.retryAfter));
+    // 503 mit Wartezeit (#542, #544): z. B. volle Warteschlange der Arbeiter.
+    const nochmal = fehler instanceof Fachfehler && fehler.status === 503 ? (fehler.details as { retryAfter?: unknown } | undefined)?.retryAfter : undefined;
+    if (typeof nochmal === 'number') reply.header('retry-after', String(nochmal));
     if (fehler instanceof Fachfehler) return reply.code(fehler.status).send({ fehler: fehler.message, details: fehler.details });
     const err = fehler as Error & { statusCode?: number };
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ fehler: err.message });

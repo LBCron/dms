@@ -895,7 +895,11 @@ export type SystemlastAntwort = import('../../shared/src/systemlast').Systemlast
   /** Arbeiter für PDF und große Exporte (#542). */
   arbeiter?: import('../../shared/src/systemlast').ArbeiterStand;
 };
-export interface DatenbankStand { einstellungen: MessEinstellungen | null; langlaeufer: Langlaeufer[]; laufend: LaufendeAbfrage[]; auslastung?: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null }
+export interface DatenbankStand {
+  einstellungen: MessEinstellungen | null; langlaeufer: Langlaeufer[]; laufend: LaufendeAbfrage[]; auslastung?: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null;
+  /** Verbindungen zur Datenbank und Warten auf eine freie (#544). */
+  verbindungen?: { max: number; quelle: 'vorgabe' | 'umgebung'; messungen: number; median: number | null; p95: number | null; hoechstens: number | null } | null;
+}
 export interface WerkbankUebersicht {
   tresor: { zustand: string; eingebunden: boolean | null; betroffen: number } | null;
   mail: boolean; adresse: boolean;

@@ -117,6 +117,44 @@ Die Zahlen neben den Ansichten (`GET /api/sichten` → `Dienst.zaehler`) zählen
 
 Nicht umgesetzt: **nur zählen, was zu sehen ist** (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein **Index** für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.
 
+## Lasttest { #lasttest }
+
+`server/test/lasttest.mjs` (#544) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js.
+
+```bash
+# einmal: frisches DMS einrichten – Administrator, Beispiele, 50.000 Demo-Mappen (2 % mit einem Brief als PDF),
+# zwei Mitglieder mit und ohne Rolle, Regeln wie in einem Haushalt, ein Konto für die Probe des Anmeldeschutzes
+DMS_URL=http://127.0.0.1:3100 node server/test/lasttest.mjs --einrichten --mappen 50000
+# messen
+DMS_URL=http://127.0.0.1:3100 node server/test/lasttest.mjs --stufe alle --dauer 120 --bericht bericht.md --grenzen
+```
+
+Ein passendes DMS startet man aus `server/` mit eigener, leerer Datenbank (z. B. `dmslast`): `NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js` nach `npm run build -w server`. Die Datenbank danach wieder löschen.
+
+**Profil:** Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (`/api/startseite`, `/api/sichten`, `/api/anstehend`, `/api/typen`) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie `Retry-After` sagt.
+
+**Stufen**
+
+| Durchgang | Was | Geprüft (`--grenzen`) |
+| --- | --- | --- |
+| normal | 100 gleichzeitig, `--dauer` Sekunden | p95 ≤ 5 s, Fehlerquote ≤ 1 %, keine 503 |
+| normal mit Export | dasselbe, nebenher ein großer Export nach dem anderen: PDF von 500 Mappen mit Übersicht, PDF der Mappen mit Dokumenten, ZIP der größten Ansicht (über 20.000 Mappen) | p95 ≤ 6 s, Fehlerquote ≤ 1 %, keine 503, jeder Export gelingt |
+| Überlast 500 / 1000 | 500 bzw. 1000 gleichzeitig, je höchstens 60 s | keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar |
+| danach | Erholung: 20 Anfragen in Folge mit p95 ≤ 1 s | innerhalb von 30 s |
+| während Überlast 500 | Anmeldeschutz: 6 falsche Passwörter von einer eigenen Adresse (`X-Forwarded-For`), dann das richtige | das richtige wird gesperrt (429) |
+
+Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit `Retry-After`), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über `GET /api/werkbank/last` (nur Administrator, vom Überlastschutz nie abgewiesen). Mit `--json` alles als Datei, mit `--gleichzeitig <n>` (und `--ohne-export`) ein einzelner Durchgang.
+
+**Warum diese Grenzen:** Sie sollen nur **echte Verschlechterungen** melden, nicht das Schwanken der Rechner von GitHub. Auf einem Rechner mit 2 Kernen, auf dem auch PostgreSQL, der Lasttest selbst und andere Prozesse liefen, lag p95 bei 100 gleichzeitig um 2,8 s (mit Export 3,1 s); die Grenzen lassen fast das Doppelte Luft. Bei 100 gleichzeitigen Anfragen ist ein solcher Rechner ausgelastet – die Antwortzeit wächst dann mit der Zahl der Anfragen, nicht wegen eines Fehlers. Die Fehlerquote ist dagegen streng: Bei normaler Last darf praktisch nichts schiefgehen. Für die Überlast zählt nicht die Geschwindigkeit, sondern dass jede Anfrage eine Antwort bekommt, der Speicher begrenzt bleibt und das DMS sich erholt.
+
+**Überlastschutz** (`server/src/ueberlast.ts`): Mehr als `DMS_MAX_ANFRAGEN` (250) gleichzeitige Anfragen an `/api/` und `/webdav` beantwortet ein Hook vor allem anderen sofort mit 503 und `Retry-After: 5`. Gezählt wird vom Eingang bis die Antwort fertig oder die Verbindung zu ist (`close`). Ausgenommen: `/api/gesundheit` und `/api/werkbank/last`. Dazu nimmt der Server neue Verbindungen mit einer längeren Warteschlange an (`backlog: 2048` statt 511). Programme, die `Retry-After` nicht beachten und sofort wieder fragen, bekommen ebenfalls sofort ihre 503; auf dem Testrechner mit 2 Kernen blieben dann bei 1000 gleichzeitig rund 1–2 % der Anfragen nach 60 s ohne Antwort, obwohl der Server keine Anfrage länger als 15 s bearbeitete – der Lasttest selbst (im selben Rechner) kam mit dem Verbindungsaufbau nicht mehr hinterher.
+
+**Verbindungen zur Datenbank** (`server/src/db.ts`): Vorgabe 10, einstellbar mit `DMS_DB_VERBINDUNGEN` (2–100). Gemessen bei 100 gleichzeitig ohne Export, je zwei Runden: 5 Verbindungen 3.894–4.117 Anfragen je Minute (p95 2,7–2,9 s), 10 Verbindungen 3.516–3.726 (p95 2,9–3,1 s), 20 Verbindungen 3.512–3.517 (p95 2,9 s) – gleichauf im Rahmen der Schwankung. `Verbindungswarten` misst alle 5 Sekunden mit `SELECT 1`, wie lange eine Abfrage auf eine freie Verbindung wartet (einschließlich Hin- und Rückweg und Wartezeit der Ereignisschleife); Werkbank → Datenbank-Anbindung zeigt Median und Höchstwert der letzten Minute.
+
+**Workflow** `.github/workflows/lasttest.yml`: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf rund eine halbe Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, richtet das DMS mit 50.000 Demo-Mappen ein, misst alle Stufen mit `--grenzen` und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Vor einem größeren Release von Hand starten und den Bericht mit dem letzten vergleichen.
+
+**Messung zu #542** (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.
+
 ## Regeln
 
 - **Kein `SELECT *` auf Tabellen mit großen Spalten.** Dokumente immer mit `DOKUMENT_SPALTEN`; den Volltext nur über `volltext(id)` oder gebündelt über `volltexte(ids)` lesen. EXPLAIN zeigt das nicht: Der Volltext liegt ausgelagert (TOAST) und wird erst beim Senden an den Server entpackt.
