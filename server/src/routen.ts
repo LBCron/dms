@@ -45,6 +45,7 @@ import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import type { Speicherplatz } from './speicherplatz';
 import type { Systemlast } from './systemlast';
+import { arbeiterStand } from './arbeit';
 import type { Eingangsordner } from './eingangsordner';
 import type { Webdav } from './webdav';
 import type { Postfaecher } from './postfach';
@@ -1369,7 +1370,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk des Containers; dazu die Wartezeit der Ereignisschleife (#477).
     { methode: 'GET', pfad: '/api/werkbank/systemlast', zugang: 'admin', handler: async () => {
       if (!x.systemlast) throw new Fachfehler(404, 'Die Messung der Auslastung ist nicht eingerichtet.');
-      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null });
+      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand() });
     } },
     { methode: 'POST', pfad: '/api/werkbank/system/abgleich', zugang: 'admin', handler: async (a) => {
       const browser = Object.fromEntries(Object.entries((b(a).browser ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]));

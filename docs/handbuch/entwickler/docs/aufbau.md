@@ -78,7 +78,7 @@ server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung
 **Regeln für neuen Code**
 
 - Fachliches bleibt draußen: Was auf ein PDF kommt (Texte, Felder ohne Passwörter, Rechte, Platzhalter), entscheidet das jeweilige Modul (`export.ts`, `auskunft.ts`, `ausgabe.ts` …). In die PDF-Stelle geht nur, **wie** gezeichnet oder umgebaut wird.
-- Die Vorgänge nehmen und liefern **einfache Daten** – Bytes (`Buffer`/`Uint8Array`), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (`Anweisung[]`: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit `textdokumentPdf()` zeichnen. So lassen sich alle Vorgänge auch in einem Arbeiter-Faden ausführen (#542).
+- Die Vorgänge nehmen und liefern **einfache Daten** – Bytes (`Buffer`/`Uint8Array`), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (`Anweisung[]`: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit `textdokumentPdf()` zeichnen. So laufen alle Vorgänge im [Arbeiter-Pool](#arbeiter-pool) (#542): `pdf/index.ts` gibt sie dorthin; ein neuer Vorgang kommt zusätzlich in `arbeit/vorgaenge.ts`.
 - Bilder gehen nur über `eigenerPuffer()` an pdf-lib (#456: pdf-lib übersieht den Versatz eines Buffers im gemeinsamen Speicher und meldet bei JPEGs „SOI not found“).
 - Die PDF-Stelle schreibt nichts ins Protokoll und liest keine Einstellungen. Was der Aufrufer wissen soll, steht im Ergebnis (z. B. `hinweise` beim Verkleinern).
 - Fachfehler mit verständlicher Meldung (`Fachfehler(422, …)`) dürfen aus der PDF-Stelle kommen, etwa für verschlüsselte oder kaputte PDFs.
@@ -96,6 +96,27 @@ pdf-lib (MIT) ist die einzige verbreitete PDF-Bibliothek in reinem JavaScript. D
 | **Anderes Werkzeug** (MuPDF, Ghostscript, PDFium …) | Sehr leistungsfähig | MuPDF und Ghostscript sind AGPL und bewusst nicht im Image; native Module widersprechen der schlanken Abhängigkeitsliste |
 
 **Empfehlung:** pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist `@cantoo/pdf-lib` (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus [Abhängigkeiten](#abhaengigkeiten)) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (`seiten.ts`) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.
+
+## Arbeiter-Pool { #arbeiter-pool }
+
+Der Server beantwortet alle Anfragen in **einem** Faden. Schwere Rechenarbeit läuft darum in einem kleinen Pool von Arbeiter-Fäden (`node:worker_threads`, #542), ohne neue Abhängigkeit:
+
+```
+server/src/arbeit/index.ts        arbeite(vorgang, ...args), Einstellung (DMS_ARBEITER), Stand für den Systemzustand
+server/src/arbeit/pool.ts         Arbeiterpool: Warteschlange, Zeitgrenze, Speichergrenze, Absturz, Leerlauf
+server/src/arbeit/vorgaenge.ts    was ein Arbeiter kann: alle Vorgänge der PDF-Stelle, Tabellen großer Exporte, Demo-Dokumente
+server/src/arbeit/arbeitsfaden.ts Einstieg des Arbeiters (gebaut als dist/arbeitsfaden.mjs)
+server/src/arbeit/nachricht.ts    Nachrichten, Buffer und Fehler über die Grenze
+```
+
+- **Aufrufen:** Die PDF-Stelle gibt ihre Vorgänge selbst an den Pool (`pdf/index.ts`); für alles andere `await arbeite('exportTabellen', …)`. Die Typen der Parameter und Ergebnisse kommen aus `VORGAENGE`.
+- **Neuer Vorgang:** Funktion mit einfachen Daten als Parameter und Ergebnis (Bytes, Zahlen, Texte, Listen, einfache Objekte, `Map` – keine Klassen, keine Funktionen, kein Repo, keine Datenbank) in `vorgaenge.ts` eintragen. Ein `Buffer` kommt im Arbeiter als `Uint8Array` an und wird von `alsBuffer` wieder zum `Buffer` – auch in Listen und einfachen Objekten. `Fachfehler` kommen mit Status und Details beim Aufrufer an. Der Arbeiter schreibt nichts ins Protokoll; Hinweise stehen im Ergebnis.
+- **Was nicht hineingehört:** kleine Anfragen (die Übergabe kostet selbst etwas: Daten werden kopiert, bei 20.000 Tabellenzeilen etwa 0,1–0,3 s) und alles, was Datenbank oder Dateien braucht – die Daten holt der Hauptfaden vorher.
+- **Einstellung:** `DMS_ARBEITER` (0–16; 0 = aus, alles im Hauptfaden), Vorgabe die Hälfte der Kerne aus `cpu.max` der cgroup bzw. `availableParallelism()`, 1 bis 4. Zeitgrenze 10 Minuten, Warteschlange höchstens 50 (darüber 503), Heap je Arbeiter 1,5 GB, Leerlauf 2 Minuten. Ohne Aufruf von `richteArbeiterEin()` (Tests, Befehl `dms`) entsteht der Pool beim ersten Auftrag.
+- **Tests:** `server/test/arbeiter.test.ts` prüft Pool (Ergebnis, Fehler, Zeitgrenze, volle Warteschlange, Absturz), Einstellung, die Warnung bei hoher Wartezeit und dass die Ablage während eines großen PDF-Exports schnell lädt (Werte ohne und mit Pool stehen in der Ausgabe). In Tests läuft der Arbeiter mit `tsx` (Lade-Argumente aus `ladeArgumente`).
+- Der **Paket-Läufer** (`laeufer/`) ist ein eigener Prozess mit Berechtigungsmodell und bleibt davon getrennt.
+
+**Warnung bei hoher Wartezeit:** `Auslastung` (`messung.ts`) merkt das p99 der Verzögerung der Ereignisschleife je Minutenfenster. Liegt es in 5 Fenstern hintereinander über 100 ms (`SCHLEIFE_GRENZE_MS`, `SCHLEIFE_MINUTEN` in `shared/src/systemlast.ts`), schreibt sie eine Warnung ins Protokoll, und `Systemlast.warnung()` meldet `schleife` an Systemzustand, Übersicht und Leiste der Werkbank.
 
 ## Texte und Sprachdateien { #texte-und-sprachdateien }
 

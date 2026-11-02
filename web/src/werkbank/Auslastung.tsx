@@ -9,7 +9,8 @@ import { platz } from './Speicherplatz';
 /**
  * Werkbank → Wartung und Fehlersuche → Systemzustand → Auslastung (#409, Stufe 1): CPU, Arbeitsspeicher und
  * Netzwerk des Containers mit Kurven der letzten Stunde, dazu die Wartezeit der Ereignisschleife (#477), deren
- * Einzelheiten unter Einstellungen → Datenbank-Anbindung stehen. Nicht Messbares heißt „nicht verfügbar“.
+ * Einzelheiten unter Einstellungen → Datenbank-Anbindung stehen, und die Arbeiter für PDF und Exporte (#542).
+ * Nicht Messbares heißt „nicht verfügbar“.
  */
 export function useSystemlast(offen: boolean) {
   const [stand, setStand] = useState<SystemlastAntwort | null>(null);
@@ -65,6 +66,26 @@ function Kurve({ titel, punkte, wert, format, max }: { titel: string; punkte: Me
   );
 }
 
+/** Arbeiter für PDF und große Exporte (#542): wie viele es gibt, was sie gerade tun, was schiefging. */
+function Arbeiter({ a }: { a: SystemlastAntwort['arbeiter'] }) {
+  if (!a) return null;
+  return (
+    <div className="az-wert">
+      <h3 className="az-titel">{t('systemzustand.arbeiter.titel')} <span className="az-jetzt">{a.aus ? t('systemzustand.arbeiter.aus.kurz') : t('systemzustand.arbeiter.jetzt', { beschaeftigt: a.beschaeftigt, groesse: a.groesse })}</span></h3>
+      {a.aus ? <p className="leise klein">{t('systemzustand.arbeiter.aus')}</p> : <>
+        <p>{a.wartend ? t('systemzustand.arbeiter.wartend', { anzahl: a.wartend }) : t('systemzustand.arbeiter.keine-warten')}</p>
+        <dl className="eigenschaften klein az-anteile">
+          <dt>{t('systemzustand.arbeiter.erledigt')}</dt><dd>{a.erledigt.toLocaleString('de-DE')}</dd>
+          <dt>{t('systemzustand.arbeiter.dauer')}</dt><dd>{a.mittlereDauerMs === null ? '–' : ms(a.mittlereDauerMs)}</dd>
+          <dt>{t('systemzustand.arbeiter.warten')}</dt><dd>{a.mittleresWartenMs === null ? '–' : t('systemzustand.arbeiter.warten.wert', { mittel: ms(a.mittleresWartenMs), max: ms(a.laengstesWartenMs) })}</dd>
+          <dt>{t('systemzustand.arbeiter.fehler')}</dt><dd>{t('systemzustand.arbeiter.fehler.wert', { fehler: a.fehler, zeit: a.zeitueberschreitungen, abgewiesen: a.abgewiesen })}</dd>
+        </dl>
+        <p className="leise klein">{t(a.quelle === 'umgebung' ? 'systemzustand.arbeiter.hilfe.umgebung' : 'systemzustand.arbeiter.hilfe.vorgabe', { groesse: a.groesse, kerne: a.kerne.toLocaleString('de-DE'), minuten: Math.round(a.zeitMs / 60_000) })}</p>
+      </>}
+    </div>
+  );
+}
+
 function Schleife({ s }: { s: SystemlastAntwort['schleife'] }) {
   const w: Schleifenverzoegerung | null = s ? (s.aktuell && (s.aktuell.seitSekunden >= 10 || !s.vorher) ? s.aktuell : s.vorher ?? s.aktuell) : null;
   return (
@@ -113,6 +134,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
             {s.jetzt.rx !== null && s.jetzt.tx !== null && <p className="leise klein">{t('systemzustand.netz.wert', { rx: rate(s.jetzt.rx), tx: rate(s.jetzt.tx) })}</p>}
           </div>
           <Schleife s={s.schleife} />
+          <Arbeiter a={s.arbeiter} />
         </div>
       </>}
     </section>

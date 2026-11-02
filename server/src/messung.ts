@@ -1,5 +1,6 @@
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import type postgres from 'postgres';
+import { SCHLEIFE_GRENZE_MS, SCHLEIFE_MINUTEN } from '../../shared/src/systemlast';
 import { kontext, protokoll, type Kontext } from './protokoll';
 
 /**
@@ -181,15 +182,38 @@ export class Auslastung {
   private vorher: Schleifenverzoegerung | null = null;
   private seit = Date.now();
   private zeitgeber?: NodeJS.Timeout;
+  /** p99 der letzten Minutenfenster (#542), neuestes zuletzt; null = Fenster ohne Messwerte. */
+  private fenster: Array<number | null> = [];
+  private warnungSeit: string | null = null;
 
   start(fensterMs = 60_000) {
     if (this.h) return;
     this.h = monitorEventLoopDelay({ resolution: AUFLOESUNG_MS });
     this.h.enable();
     this.seit = Date.now();
-    this.zeitgeber = setInterval(() => { this.vorher = this.jetzt(); this.h?.reset(); this.seit = Date.now(); }, fensterMs);
+    this.zeitgeber = setInterval(() => this.fensterZu(), fensterMs);
     this.zeitgeber.unref();
   }
+
+  /** Ende eines Minutenfensters: merken, zurücksetzen, Warnung prüfen. Öffentlich für Tests. */
+  fensterZu(w: Schleifenverzoegerung | null = this.jetzt()) {
+    this.vorher = w;
+    this.h?.reset();
+    this.seit = Date.now();
+    this.fenster.push(w ? w.p99 : null);
+    if (this.fenster.length > SCHLEIFE_MINUTEN) this.fenster.splice(0, this.fenster.length - SCHLEIFE_MINUTEN);
+    const hoch = this.fenster.length >= SCHLEIFE_MINUTEN && this.fenster.every((p) => p !== null && p > SCHLEIFE_GRENZE_MS);
+    if (hoch && !this.warnungSeit) {
+      this.warnungSeit = new Date().toISOString();
+      log.warn(`Hohe Wartezeit des Servers: Die Ereignisschleife war seit ${SCHLEIFE_MINUTEN} Minuten bei 99 % der Messungen über ${SCHLEIFE_GRENZE_MS} ms verzögert`, { p99: this.fenster.map((p) => Math.round(p ?? 0)).join(' ') });
+    } else if (!hoch && this.warnungSeit) {
+      log.info('Wartezeit des Servers wieder normal', { seit: this.warnungSeit });
+      this.warnungSeit = null;
+    }
+  }
+
+  /** Seit wann die Wartezeit dauerhaft hoch ist (#542); null = keine Warnung. */
+  warnung(): string | null { return this.warnungSeit; }
 
   stop() { this.h?.disable(); this.h = null; if (this.zeitgeber) clearInterval(this.zeitgeber); }
 
@@ -201,8 +225,8 @@ export class Auslastung {
   }
 
   /** Aktuelles Fenster, solange es noch kaum Werte hat das vorherige. */
-  stand(): { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } {
-    return { aktuell: this.jetzt(), vorher: this.vorher };
+  stand(): { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null; warnungSeit: string | null; grenzeMs: number; minuten: number } {
+    return { aktuell: this.jetzt(), vorher: this.vorher, warnungSeit: this.warnungSeit, grenzeMs: SCHLEIFE_GRENZE_MS, minuten: SCHLEIFE_MINUTEN };
   }
 }
 

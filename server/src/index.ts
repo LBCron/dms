@@ -38,6 +38,7 @@ import { bestimmeMandant, mandantNamen } from './mandant';
 import { ordnerAblage, Vorschaubilder } from './vorschau';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
+import { beendeArbeiter, richteArbeiterEin } from './arbeit';
 import { Systemlast } from './systemlast';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
@@ -150,6 +151,10 @@ await betrieb.uebernimmAlteVariablen(env);
 const messung = new Messung(pgMessSpeicher(sql, cfg.haushalt));
 await messung.start();
 messung.auslastung.start();
+// Arbeiter für PDF und große Exporte (#542): ein kleiner Pool von Fäden neben dem Hauptfaden.
+const arbeiter = richteArbeiterEin(env, { vorwaermen: true });
+if (arbeiter.fehler) log.warn(arbeiter.fehler);
+log.info(arbeiter.groesse ? `Arbeiter für PDF und Exporte: ${arbeiter.groesse}${arbeiter.quelle === 'umgebung' ? ' (DMS_ARBEITER)' : ` (Vorgabe bei ${arbeiter.kerne} Kernen)`}` : 'Arbeiter für PDF und Exporte ausgeschaltet (DMS_ARBEITER=0): PDF-Arbeiten laufen im Hauptfaden');
 // Speicherplatz (#116): an der Grenze ist das Hochladen gesperrt; Wartung und Mail kommen unten dazu.
 const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt) };
 const speicherplatz = new Speicherplatz(ordner, spDeps);
@@ -291,7 +296,7 @@ texterkennung.nachher = (d, e) => {
 };
 wartung.beimAusschalten(() => void paketlaeufer.stelleZu());
 // Systemzustand → Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk jede Minute, nur im Arbeitsspeicher.
-const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett' });
+const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett', schleife: () => !!messung.auslastung.warnung() });
 systemlast.start();
 
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
@@ -395,6 +400,7 @@ const beenden = async () => {
   speicherplatz.stop();
   await konsole.entferne();
   await app.close();
+  await beendeArbeiter();
   await sql.end({ timeout: 5 });
   process.exit(0);
 };

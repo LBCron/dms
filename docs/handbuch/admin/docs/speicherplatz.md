@@ -31,8 +31,9 @@ Ist das DMS langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Da
 | **Arbeitsspeicher** | Belegt von der Grenze des Containers (`mem_limit:`); ohne Grenze verglichen mit dem ganzen Rechner. Darunter die Anteile von **DMS**, **Paket-Läufer** (läuft nur mit installierten Paketen mit Code) und – bei dms-komplett – **PostgreSQL**. |
 | **Netzwerk** | Empfangen und gesendet je Sekunde, über alle Netzwerkschnittstellen des Containers. |
 | **Wartezeit des Servers** | Wie lange eine Anfrage warten musste, weil das DMS gerade etwas anderes rechnete (Ereignisschleife). Die Einzelheiten stehen unter **Einstellungen → [Datenbank-Anbindung](installation.md#lange-datenbankzugriffe)**, zusammen mit den langen Datenbankzugriffen. |
+| **Arbeiter für PDF und Exporte** | Wie viele [Arbeiter](#arbeiter-fur-pdf-und-exporte) gerade beschäftigt sind, wie viele Aufträge warten, wie lange ein Auftrag im Mittel dauert und wartet, was fehlschlug. |
 
-**Warnung:** Liegt CPU oder Arbeitsspeicher **5 Minuten lang über 90 %**, steht ein Hinweis hier, in der [Übersicht](uebersicht.md) und als **hoch** neben *Systemzustand* in der Leiste – auch wenn der Bereich ausgeblendet ist.
+**Warnung:** Liegt CPU oder Arbeitsspeicher **5 Minuten lang über 90 %**, steht ein Hinweis hier, in der [Übersicht](uebersicht.md) und als **hoch** neben *Systemzustand* in der Leiste – auch wenn der Bereich ausgeblendet ist. Genauso warnt das DMS, wenn die **Wartezeit des Servers** in **5 Minutenfenstern hintereinander** bei 99 % der Messungen (p99) **über 100 ms** liegt; dann steht zusätzlich ein Eintrag im [Protokoll](fehlersuche.md#protokoll) (Modul `datenbank`, „Hohe Wartezeit des Servers“) und einer, sobald es wieder normal ist. 100 ms merkt man beim Klicken gerade eben; liegt fast jede Anfrage so lange in der Warteschlange, ist das DMS spürbar zäh.
 
 **Typische Ursachen und was hilft:**
 
@@ -41,6 +42,19 @@ Ist das DMS langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Da
 - Ein **Paket mit Code** rechnet viel – der Anteil *Paket-Läufer* zeigt das; die Auslastung je Paket folgt in einer späteren Version.
 - Der Arbeitsspeicher ist dauerhaft knapp – erhöhe `mem_limit` in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.
 - Die Systemlast des Rechners ist hoch, die CPU des DMS aber nicht – dann bremst ein anderer Dienst auf dem NAS.
+- Die **Wartezeit des Servers** ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet das DMS etwas Großes im Hauptfaden. Melde das bitte als [Issue](https://github.com/motom001/dms/issues) mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen [Arbeiter](#arbeiter-fur-pdf-und-exporte).
+
+### Arbeiter für PDF und Exporte { #arbeiter-fur-pdf-und-exporte }
+
+Das DMS beantwortet alle Anfragen in **einem** Faden. Rechnet er an etwas Großem, warten alle anderen. Darum laufen die schweren Arbeiten in eigenen **Arbeitern** neben dem Hauptfaden: Stempeln und Wasserzeichen beim Weitergeben, Seiten bearbeiten und zusammenfügen, Schwärzen, Verkleinern, Vorschaubilder von Fotos, PDF-Exporte, Auskunft, Aufkleber, Löschkonzept und -protokoll als PDF, Demo-Dokumente sowie Excel- und CSV-Tabellen großer Exporte. Texterkennung und Vorschaubilder von PDFs liefen schon immer als eigene Programme; der [Paket-Läufer](pakete.md) ist ein eigener Prozess und hat mit den Arbeitern nichts zu tun.
+
+- **Zahl der Arbeiter:** Vorgabe ist die Hälfte der Kerne, die der Container nutzen darf (Grenze `cpus:` in der Compose-Datei, sonst alle Kerne des Rechners) – mindestens 1, höchstens 4. Der Hauptfaden und PostgreSQL brauchen die übrigen Kerne. Ändern lässt sie sich mit der Umgebungsvariable `DMS_ARBEITER` (1–16, siehe [Installation](installation.md#einstellungen)); `DMS_ARBEITER=0` schaltet die Arbeiter aus – dann läuft alles wie früher im Hauptfaden (nur zur Fehlersuche).
+- **Warteschlange:** Sind alle Arbeiter beschäftigt, wartet ein Auftrag. Warten schon 50, antwortet das DMS sofort mit „Gerade laufen sehr viele PDF-Arbeiten und Exporte. Bitte versuche es in einer Minute noch einmal.“ (HTTP 503) statt endlos.
+- **Zeitgrenze:** Ein Auftrag darf höchstens **10 Minuten** dauern. Danach wird der Arbeiter beendet, und der Benutzer liest „Die Bearbeitung dauerte länger als 10 Minuten und wurde abgebrochen.“
+- **Arbeitsspeicher:** Ein Arbeiter darf höchstens 1,5 GB belegen. Braucht ein riesiges PDF mehr, scheitert nur dieser Auftrag („… mehr Arbeitsspeicher als erlaubt …“), nicht das DMS.
+- Ein Arbeiter entsteht bei Bedarf und beendet sich nach zwei Minuten ohne Arbeit wieder; einer läuft ab dem Start bereit.
+
+Mehr Arbeiter helfen nur, wenn genug Kerne frei sind: Bei 2 Kernen bleibt es bei einem Arbeiter, damit Anfragen und Datenbank nicht leer ausgehen.
 
 **Nicht verfügbar** steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS **ihre** Auslastung nicht; das steht unter dem Arbeitsspeicher.
 

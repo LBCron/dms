@@ -84,6 +84,12 @@ Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 ??? question "E-Mails kommen nicht an."
     Unter **Werkbank → E-Mail und Adresse** zuerst **Verbindung prüfen**, dann **Testmail senden** – darunter steht die Meldung des Mailservers. Typisch: falsches Passwort (bei vielen Anbietern braucht es ein App-Passwort), Verbindungsart passt nicht zum Port (STARTTLS ↔ 587, SSL/TLS ↔ 465), Port vom Netz gesperrt. Im Protokoll (Modul `mail`) steht jeder Versand mit Fehler. Auch im Spam-Ordner nachsehen.
 
+??? question "Das DMS ist zäh, während jemand exportiert oder viele PDFs bearbeitet."
+    Schwere Arbeiten laufen in eigenen [Arbeitern](speicherplatz.md#arbeiter-fur-pdf-und-exporte) (#542); andere Benutzer sollten davon kaum etwas merken. Unter **Werkbank → Systemzustand → Auslastung** siehst du, ob die Arbeiter beschäftigt sind, wie viele Aufträge warten und wie hoch die **Wartezeit des Servers** ist. Ist die CPU des Containers dauerhaft am Anschlag, fehlen Kerne – gib dem Container mehr (`cpus:`) oder setze `DMS_ARBEITER` niedriger, damit Anfragen und Datenbank mehr Rechenzeit bekommen. Steht im Protokoll „Hohe Wartezeit des Servers“, obwohl die Arbeiter nichts tun, rechnet etwas im Hauptfaden: Bitte als Issue melden, mit dem Protokolleintrag.
+
+??? question "Eine PDF-Bearbeitung oder ein Export bricht mit „dauerte länger als 10 Minuten“ oder „mehr Arbeitsspeicher als erlaubt“ ab."
+    Ein Auftrag im Arbeiter darf höchstens 10 Minuten dauern und 1,5 GB Arbeitsspeicher belegen – damit ein einzelnes riesiges PDF das DMS nicht lahmlegt. Exportiere weniger Mappen auf einmal oder teile ein großes PDF vorher („Seiten“). Läuft der Arbeiter an der Grenze des Containers (`mem_limit`), hilft mehr Arbeitsspeicher für den Container.
+
 ??? question "Links in E-Mails zeigen auf localhost."
     Unter **Werkbank → E-Mail und Adresse** die Adresse eintragen, unter der Benutzer das DMS aufrufen.
 

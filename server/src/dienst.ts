@@ -41,7 +41,8 @@ import { hashePasswort, hasheSchluessel, neuerSchluessel, pruefePasswort } from 
 import type { AuskunftLinkIntern } from './repo';
 import type { AuskunftDaten } from './auskunft';
 import { datumIn, KREIS_SCHLUESSEL, kreisVon, naechste, neubeginn, pruefeMuster, type Nummernkreis } from '../../shared/src/nummernkreis';
-import { csvAus, xlsxAus } from './xlsx';
+import { csvAus, type Zelle } from './xlsx';
+import { arbeite } from './arbeit';
 import { schriftstueckPdf } from './schriftstueck';
 import { eindeutig, exportSpalten, mappenPdf, sichererName, spaltenKopf, zeile } from './export';
 import { zipGroesse, zipStrom, ZIP_MAX, type ZipEintrag } from './zip';
@@ -67,6 +68,12 @@ import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type Fav
 import { t } from './sprache';
 import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, istDatum, naechsterTermin, type Anstehend, type Erinnerung } from '../../shared/src/fristen';
 import { ALLES, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
+
+/** Mappen in der Reihenfolge der Ids (#542: mit Index statt `indexOf` je Vergleich – bei 20.000 Mappen Sekunden). */
+function inReihenfolge<T extends { id: string }>(liste: T[], ids: string[]): T[] {
+  const pos = new Map(ids.map((id, i) => [id, i]));
+  return liste.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
+}
 
 /* ---------- Eingaben bereinigen: nur bekannte Eigenschaften übernehmen ---------- */
 
@@ -1524,7 +1531,7 @@ export class Dienst {
     const nicht = ids.filter((id) => !versendbar.has(id));
     if (nicht.length) throw new Fachfehler(403, `${nicht.length === 1 ? 'Eine Mappe darfst' : `${nicht.length} Mappen darfst`} du nicht versenden. Versenden ist wie Exportieren nur aus Ansichten erlaubt, für die du das Recht dazu hast.`, { nicht });
     if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
-    const mappen = (await this.repo.holeMappen(ids)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
     if (mappen.length !== ids.length) throw new Fachfehler(404, 'Eine ausgewählte Mappe gibt es nicht (mehr).');
     const angaben = e.angaben !== false;
     const gewaehlt = e.dokumente === 'alle' ? null : new Set((Array.isArray(e.dokumente) ? e.dokumente : []).map(String));
@@ -3400,7 +3407,7 @@ export class Dienst {
       ids = ids.filter((id) => erlaubt.has(id));
       if (!ids.length) throw new Fachfehler(403, 'Du darfst keine dieser Mappen exportieren. Exportieren ist nur aus Ansichten erlaubt, für die du das Recht dazu hast.');
     }
-    const mappen = (await this.repo.holeMappen(ids)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
     const typen = [...new Set(mappen.map((m) => m.typId))].map((t) => z.typen.get(t)).filter((t): t is Mappentyp => !!t);
     const spalten = exportSpalten(typen, x.spalten === 'alle' ? 'alle' : 'liste', sicht?.trefferliste ?? null);
     const verweise = mappen.flatMap((m) => { const t = z.typen.get(m.typId); return [...(t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v); });
@@ -3408,13 +3415,20 @@ export class Dienst {
     const quelle = { typen: z.typen, titel: (id: string | null | undefined) => (id ? bezuege[id]?.titel || NICHT_SICHTBAR : '') };
     const titel = sicht?.name ?? (q.sicht === 'suche' ? 'Suche' : typen[0]?.name) ?? 'Export';
     const datei = `${sichererName(titel, 60)} ${new Date().toISOString().slice(0, 10)}`;
-    const tabelle = () => {
+    // Große Exporte (#542): Zeilen mit Pausen aufbereiten, Excel und CSV im Arbeiter schreiben.
+    const tabelle = async (art: { xlsx?: boolean; csv?: boolean }) => {
       const kopf = spalten.map((k) => spaltenKopf(k, typen));
-      const zeilen = mappen.map((m) => zeile(m, spalten, quelle));
-      return { kopf, text: zeilen.map((r) => r.text), werte: zeilen.map((r) => r.werte) };
+      const text: string[][] = []; const werte: Zelle[][] = [];
+      for (const [i, m] of mappen.entries()) {
+        const z = zeile(m, spalten, quelle);
+        text.push(z.text); werte.push(z.werte);
+        if (i % 1000 === 999) await new Promise<void>((r) => setImmediate(r));
+      }
+      const r = await arbeite('exportTabellen', { titel, kopf, ...(art.csv ? { text } : {}), ...(art.xlsx ? { werte } : {}) });
+      return { xlsx: r.xlsx!, csv: r.csv! };
     };
-    if (format === 'csv') { const t = tabelle(); const b = csvAus(t.kopf, t.text); return { name: `${datei}.csv`, mime: 'text/csv; charset=utf-8', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
-    if (format === 'xlsx') { const t = tabelle(); const b = xlsxAus(titel, t.kopf, t.werte); return { name: `${datei}.xlsx`, mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
+    if (format === 'csv') { const b = (await tabelle({ csv: true })).csv; return { name: `${datei}.csv`, mime: 'text/csv; charset=utf-8', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
+    if (format === 'xlsx') { const b = (await tabelle({ xlsx: true })).xlsx; return { name: `${datei}.xlsx`, mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
     // Dokumente aller Mappen in einem Zugriff (#367).
     const dokJe = (format === 'pdf' || format === 'zip') ? await this.dokumenteJeMappe(mappen.map((m) => m.id)) : new Map<string, Dokument[]>();
     // Stempel (#394): je Mappe, weil die Pflicht am Mappentyp hängt. Nur PDFs und Bilder werden gestempelt.
@@ -3458,9 +3472,9 @@ export class Dienst {
       return { name: `${datei}.pdf`, mime: 'application/pdf', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen };
     }
     // ZIP: Tabelle als Excel und CSV, je Mappe ein Ordner mit ihren Dokumenten.
-    const t = tabelle();
+    const t = await tabelle({ xlsx: true, csv: true });
     const eintraege: ZipEintrag[] = [
-      { name: 'Mappen.xlsx', daten: xlsxAus(titel, t.kopf, t.werte) }, { name: 'Mappen.csv', daten: csvAus(t.kopf, t.text) },
+      { name: 'Mappen.xlsx', daten: t.xlsx }, { name: 'Mappen.csv', daten: t.csv },
     ].map((d) => ({ name: d.name, groesse: d.daten.length, inhalt: async () => d.daten }));
     const ordner = eindeutig(mappen.map((m) => sichererName(m.titel || 'Ohne Titel')));
     for (const [i, m] of mappen.entries()) {

@@ -6,6 +6,7 @@
  */
 import { createCipheriv, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
+import * as zlib from 'node:zlib';
 import { deflateRawSync } from 'node:zlib';
 
 const TABELLE = (() => {
@@ -13,7 +14,11 @@ const TABELLE = (() => {
   for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
   return t;
 })();
+/** CRC-32 von zlib (Node ≥ 22.2, in C++) – im Hauptfaden viel schneller als in JavaScript (#542). */
+const nativ = (zlib as { crc32?: (d: Uint8Array, v?: number) => number }).crc32;
+/** Fortlaufende Prüfsumme: Zustand ohne Abschluss (Start 0xffffffff, Ende mit `crcEnde`). */
 export function crc32(b: Buffer, start = 0xffffffff): number {
+  if (nativ) return (~nativ(b, (~start) >>> 0)) >>> 0;
   let c = start;
   for (let i = 0; i < b.length; i++) c = TABELLE[(c ^ b[i]) & 0xff] ^ (c >>> 8);
   return c >>> 0;
