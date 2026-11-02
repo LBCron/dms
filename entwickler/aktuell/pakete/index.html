@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.123/pakete/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.124/pakete/">
       
       
         <link rel="prev" href="../release/">
@@ -1113,7 +1113,7 @@ werkzeuge/neues-paket.sh<span class="w"> </span>mein_paket<span class="w"> </spa
 </code></pre></div>
 <ul>
 <li>Höchstens <strong>zwei Ebenen</strong>: Abschnitte (<code>abschnitt</code>, <code>hilfe</code>, <code>felder</code>) und Listen (<code>liste</code>, <code>name</code>, <code>eintrag</code>, <code>hilfe</code>, <code>sortierbar</code>, <code>felder</code>).</li>
-<li><strong>Typen:</strong> <code>text</code>, <code>mehrzeilig</code>, <code>zahl</code> (<code>min</code>/<code>max</code>), <code>janein</code>, <code>datum</code>, <code>auswahl</code> und <code>mehrfachauswahl</code> (<code>optionen</code>), <code>geheim</code>, Verweise <code>mappentyp</code>, <code>feld</code> (mit <code>mappentyp:</code>), <code>benutzer</code>, <code>rolle</code>, <code>sicht</code>.</li>
+<li><strong>Typen:</strong> <code>text</code>, <code>mehrzeilig</code>, <code>zahl</code> (<code>min</code>/<code>max</code>), <code>janein</code>, <code>datum</code>, <code>auswahl</code> und <code>mehrfachauswahl</code> (<code>optionen</code>), <code>geheim</code>, Verweise <code>mappentyp</code>, <code>feld</code> (mit <code>mappentyp:</code>), <code>benutzer</code>, <code>rolle</code>, <code>sicht</code>, und seit DMS 0.124.0 <code>adresse</code> – die Dienst-Adresse, zu der allein das Paket ins Netz darf (ohne <code>standard</code>, höchstens mit <code>beispiel</code>; siehe <a href="../pakete-code/#im-manifest">Pakete mit Code</a>).</li>
 <li><strong>Werte</strong>, wie das Paket sie bekommt: Abschnittsfelder unter ihrer Kennung, Listen als Liste von Objekten (mit <code>_id</code> je Eintrag). Verweise sind Ids (bei <code>feld</code>: <code>{ typ, feld }</code>), Geheimnisse im Klartext – nur für das eigene Paket.</li>
 <li>Zu <code>code</code> gehören außerdem <code>sprache</code>, <code>quelle</code>, <code>ereignisse</code>, <code>rechte</code> und <code>netz</code> (siehe <a href="../pakete-code/#im-manifest">Pakete mit Code</a>); das Beispiel oben zeigt nur Einstellungen und Aktionen.</li>
 <li><strong>Zugangsdaten nur als <code>geheim</code></strong>, nie als <code>text</code> und nie mit <code>standard</code>.</li>
