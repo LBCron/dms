@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0138" class="md-skip">
+        <a href="#neu-in-version-0139" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,22 +419,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01380" class="md-nav__link">
+  <a href="#01390" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.138.0
+        0.139.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.138.0">
+    <nav class="md-nav" aria-label="0.139.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#verbessert" class="md-nav__link">
+  <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verbessert
+        Neu
       
     </span>
   </a>
@@ -1160,22 +1160,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01380" class="md-nav__link">
+  <a href="#01390" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.138.0
+        0.139.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.138.0">
+    <nav class="md-nav" aria-label="0.139.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#verbessert" class="md-nav__link">
+  <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verbessert
+        Neu
       
     </span>
   </a>
@@ -1240,32 +1240,37 @@
   
 
 
-<h1 id="neu-in-version-0138">Neu in Version 0.138<a class="headerlink" href="#neu-in-version-0138" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0139">Neu in Version 0.139<a class="headerlink" href="#neu-in-version-0139" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01380">0.138.0<a class="headerlink" href="#01380" title="Permanent link">&para;</a></h2>
-<h3 id="verbessert">Verbessert<a class="headerlink" href="#verbessert" title="Permanent link">&para;</a></h3>
+<h2 id="01390">0.139.0<a class="headerlink" href="#01390" title="Permanent link">&para;</a></h2>
+<h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Kürzen ist sichtbar</strong> (#564): Kürzt ein Paket die Anfrage für seinen KI-Dienst – der KI-Assistent ab 1.2.0 tut das nach seiner neuen Einstellung <em>Kontextlänge</em>, damit Ollama nicht still vorne abschneidet –, sagt das DMS es dem Benutzer:</li>
-<li><strong>Frag deine Ablage:</strong> „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“; aufgeklappt stehen nur die Stellen, die wirklich hingingen, und Quellen gibt es nur aus diesen. Hat das Paket ältere Einträge eines langen Chats weggelassen, steht das unter der Antwort.</li>
-<li><strong>Aus Dokument ausfüllen:</strong> „Dokumenttext gekürzt“ unter dem Ergebnis – auch wenn der Kern selbst kürzt (Text über 50 000 Zeichen, bisher still).</li>
-<li><strong>Aus Dokument ausfüllen:</strong> Antwortet das gewählte Paket, liefert aber keinen Wert, der die Prüfung besteht, heißt der Hinweis jetzt „<em>Paket</em> hat nichts Brauchbares geliefert“ statt „hat nicht geantwortet“; die eingebaute Erkennung übernimmt wie bisher – jetzt auch, wenn das Paket ein leeres Ergebnis meldet.</li>
+<li><strong>Dokumente in mehreren Sprachen</strong> (#579): Ein deutscher Begleitbrief, dahinter das französische Schreiben der Botschaft – das DMS kennt jetzt die <strong>Sprache jeder Seite</strong>, auf einer Mischseite auch zwei.</li>
+<li><strong>Am Dokument:</strong> „Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch“ – die Sprache mit dem meisten Text zuerst.</li>
+<li><strong>Suche in allen Sprachen:</strong> Der Suchindex nimmt je Seite die Wortstämme ihrer Sprache. „Beglaubigung“ findet die deutsche Seite, „ambassades“ oder „consulaires“ die französische – auch gebeugt. Die Fundstelle in der Trefferliste ist in der Sprache markiert, in der das Wort gefunden wurde.</li>
+<li><strong>Hinweis „Post teilen?“:</strong> Wechselt die Sprache zwischen zwei Seiten ganz, steht an der Post „Ab Seite 2 beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt) – Post teilen?“. <strong>Post teilen …</strong> öffnet die Seitenansicht mit „Teilen ab hier“ an dieser Seite; geteilt wird erst mit <em>Übernehmen</em>, <strong>nie von selbst</strong>. <strong>Hinweis ausblenden</strong> gilt für alle. Eine Seite mit beiden Sprachen gilt nicht als Wechsel.</li>
+<li><strong>PDFs mit Textebene:</strong> Die Sprache je Seite erkennt das DMS selbst (Absatz für Absatz).</li>
+<li><strong>Scans:</strong> Das Paket <strong>Texterkennung 2.1.0</strong> (Katalog) liest jede Seite in ihrer Sprache, Mischseiten mit beiden Sprachen zugleich, und meldet die Sprachen je Seite. Mit 2.0.0 bleibt es bei einer Sprache je Dokument.</li>
+<li><strong>Für Pakete und die API:</strong> <code>PUT /dokumente/{id}/volltext</code> nimmt Seiten (getrennt durch Seitenvorschub <code>\f</code>) mit <code>seitensprachen</code> (je Seite eine oder zwei Sprachen, <code>null</code> = DMS erkennt sie) und <code>weitere</code>; <code>PUT /dokumente/{id}/sprache</code> nimmt <code>weitere</code>; <code>GET /dokumente/{id}/volltext</code> liefert <code>weitereSprachen</code> und, wenn bekannt, <code>seiten</code> (Text und Sprachen je Seite – auch bei gemischten PDFs, damit eine Texterkennung die Seiten in der richtigen Reihenfolge zusammensetzt); Dokumente haben <code>weitereSprachen</code> und <code>teilenAb</code>; neu <code>DELETE /dokumente/{id}/teilen-hinweis</code>.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Benutzerhandbuch, Startseite: „(gekürzt)“ bei <em>Frag deine Ablage</em>.</li>
-<li>Administratorhandbuch: Pakete → Erkennung durch ein Paket (gekürzter Text, „nichts Brauchbares“); KI lokal betreiben → Kontextlänge im Paket passend zu <code>OLLAMA_CONTEXT_LENGTH</code>, zwei neue Zeilen in der Fehlersuche.</li>
-<li>Entwicklerhandbuch, Pakete mit Code: Feld <code>gekuerzt</code> in den Antworten von <code>dms:antworten</code> (<code>{ geschickt, verlauf }</code>) und <code>dms:erkennen</code> (<code>{ vorschlaege, gekuerzt: true }</code>). API: <code>gekuerzt</code> in den Vorschlägen von <code>POST /api/v1/typen/{id}/vorschlaege</code>.</li>
+<li>Benutzerhandbuch, Dokumente: <strong>Dokumente in mehreren Sprachen</strong> (Anzeige, Suche, Hinweis „Post teilen?“).</li>
+<li>Administratorhandbuch: Texterkennung → <strong>Dokumente in mehreren Sprachen</strong> (PDFs, Scans, Bestand); Suche → Wortformen je Seite.</li>
+<li>Entwicklerhandbuch, Pakete mit Code: <strong>Sprachen je Seite</strong> – Schnittstelle Paket → Kern (<code>seitensprachen</code>, Seitenvorschub, Hauptsprache, Mischseite, <code>seiten</code> beim Lesen, gemischte PDFs, <code>dms: "&gt;=0.139.0"</code>).</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Keine Migration, keine neue Abhängigkeit. Ältere Pakete ohne das Feld verhalten sich wie bisher.</li>
+<li><strong>Migration 053:</strong> drei leere Spalten an <code>dokumente</code> (<code>weitere_sprachen</code>, <code>seitensprachen</code>, <code>teilen_hinweis_aus</code>), neue Funktion für den Suchindex, ein Teilindex. <strong>Kein Neuaufbau des Suchindex:</strong> Vorhandene Dokumente behalten ihre eine Sprache und ihren Index. Gemessen mit 50.000 Demo-Mappen (74.958 Dokumente, 354 MB Volltext, PostgreSQL 16, 2 Kerne): Migration 0,1 s plus 0,1 s Statistik der neuen Spalte; ein Neuaufbau des Suchindex hätte 155 s gedauert.</li>
+<li>Der Suchindex mehrsprachiger Dokumente entsteht je Sprache einmal über den Text ihrer Seiten (nicht je Seite) – auch 1000 Seiten bleiben schnell. Einsprachige Dokumente rechnen wie bisher.</li>
+<li>Keine neue Abhängigkeit.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.137.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.137.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.138.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.138.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 

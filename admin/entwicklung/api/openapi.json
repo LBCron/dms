@@ -4702,7 +4702,7 @@
           "Dokumente"
         ],
         "summary": "Volltext schreiben",
-        "description": "Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt das DMS sie.",
+        "description": "Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt das DMS sie. Mehrere Sprachen (#579): Seiten im Text durch Seitenvorschub (\\f) trennen und in seitensprachen je Seite ihre Sprache(n) nennen (Mischseite: zwei, null: das DMS erkennt sie) – der Suchindex nimmt dann je Seite die Wortstämme ihrer Sprache, das Dokument bekommt Hauptsprache und weitere Sprachen. Gespeichert wird der Text mit Leerzeilen zwischen den Seiten.",
         "operationId": "putDokumenteMitidVolltext",
         "parameters": [
           {
@@ -4785,7 +4785,7 @@
           "Dokumente"
         ],
         "summary": "Sprache des Volltexts setzen",
-        "description": "Sprache des Dokuments (#400) als Kennung wie bei Tesseract (deu, eng, fra, spa, ita, nld, tur, pol, por, rus, ukr, ara) oder null (keine Angabe = Deutsch). Die Volltextsuche nimmt die Wortstämme dieser Sprache; der Suchindex des Dokuments entsteht dabei neu. Rechte wie beim Volltext schreiben; steht in der Historie.",
+        "description": "Sprache des Dokuments (#400) als Kennung wie bei Tesseract (deu, eng, fra, spa, ita, nld, tur, pol, por, rus, ukr, ara) oder null (keine Angabe = Deutsch). Die Volltextsuche nimmt die Wortstämme dieser Sprache; der Suchindex des Dokuments entsteht dabei neu. Mit weitere (#579) auch die weiteren Sprachen fürs ganze Dokument (der Suchindex nimmt den Text dann zusätzlich mit deren Wortstämmen; Seitensprachen entfallen); ohne weitere bleiben sie. Rechte wie beim Volltext schreiben; steht in der Historie.",
         "operationId": "putDokumenteMitidSprache",
         "parameters": [
           {
@@ -4851,6 +4851,79 @@
           },
           "422": {
             "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dokumente/{id}/teilen-hinweis": {
+      "delete": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Hinweis „Post teilen?“ ausblenden",
+        "description": "Der Hinweis „Ab Seite N beginnt vermutlich ein eigenes Schreiben – Post teilen?“ (#579, teilenAb am Dokument) erscheint nicht mehr – für alle, bis das Dokument einen neuen Volltext bekommt. Geteilt wird nie von selbst. Braucht Bearbeiten an der Mappe.",
+        "operationId": "deleteDokumenteMitidTeilen-hinweis",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeilenHinweis"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kann (noch) nicht gelöscht werden",
             "content": {
               "application/json": {
                 "schema": {
@@ -8775,7 +8848,19 @@
           "sprache": {
             "type": "string",
             "nullable": true,
-            "description": "Sprache des Volltexts (#400), Kennung wie fra; null = keine Angabe (Deutsch)"
+            "description": "Sprache des Volltexts (#400), Kennung wie fra; null = keine Angabe (Deutsch). Bei mehrsprachigen Dokumenten die Hauptsprache (#579)."
+          },
+          "weitereSprachen": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Weitere Sprachen im Dokument (#579, „enthält auch“), nach Textmenge"
+          },
+          "teilenAb": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Hinweis „Post teilen?“ (#579): ab dieser Seite beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt ganz); null ohne Wechsel oder weggeklickt"
           },
           "ocr": {
             "type": "object",
@@ -10107,11 +10192,39 @@
           "sprache": {
             "type": "string",
             "nullable": true,
-            "description": "Sprache des Texts (#400), z. B. fra; null = keine Angabe (Deutsch)"
+            "description": "Sprache des Texts (#400), z. B. fra; null = keine Angabe (Deutsch). Bei mehrsprachigen Dokumenten die Hauptsprache (#579)."
+          },
+          "weitereSprachen": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Weitere Sprachen im Dokument (#579, „enthält auch“)"
           },
           "text": {
             "type": "string",
             "nullable": true
+          },
+          "seiten": {
+            "type": "array",
+            "description": "Nur wenn das DMS die Seiten kennt (#579: mehrsprachig oder gemischtes PDF): Text und Sprache(n) je Seite",
+            "items": {
+              "type": "object",
+              "properties": {
+                "seite": {
+                  "type": "integer"
+                },
+                "sprachen": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },
@@ -11755,7 +11868,7 @@
         "properties": {
           "text": {
             "type": "string",
-            "description": "höchstens 5 000 000 Zeichen"
+            "description": "höchstens 5 000 000 Zeichen; Seiten dürfen durch Seitenvorschub (\\f) getrennt sein (#579)"
           },
           "seiten": {
             "type": "integer",
@@ -11779,7 +11892,55 @@
               "ara",
               null
             ],
-            "description": "Sprache des Texts (#400); fehlt oder null: das DMS erkennt sie"
+            "description": "Sprache des Texts (#400) bzw. Hauptsprache; fehlt oder null: das DMS erkennt sie (bei Seiten: die mit dem meisten Text)"
+          },
+          "seitensprachen": {
+            "type": "array",
+            "maxItems": 1000,
+            "description": "Sprache je Seite (#579), ein Eintrag je durch \\f getrennter Seite: ein bis zwei Kennungen (Mischseite) oder null (das DMS erkennt sie). Beispiel: [[\"deu\"], [\"fra\"], [\"deu\", \"fra\"]]",
+            "items": {
+              "type": "array",
+              "nullable": true,
+              "maxItems": 2,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "deu",
+                  "eng",
+                  "fra",
+                  "spa",
+                  "ita",
+                  "nld",
+                  "tur",
+                  "pol",
+                  "por",
+                  "rus",
+                  "ukr",
+                  "ara"
+                ]
+              }
+            }
+          },
+          "weitere": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "deu",
+                "eng",
+                "fra",
+                "spa",
+                "ita",
+                "nld",
+                "tur",
+                "pol",
+                "por",
+                "rus",
+                "ukr",
+                "ara"
+              ]
+            },
+            "description": "Weitere Sprachen fürs ganze Dokument (#579), wenn das Paket die Seiten nicht kennt"
           }
         }
       },
@@ -11807,6 +11968,41 @@
               "ara",
               null
             ]
+          },
+          "weitere": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "deu",
+                "eng",
+                "fra",
+                "spa",
+                "ita",
+                "nld",
+                "tur",
+                "pol",
+                "por",
+                "rus",
+                "ukr",
+                "ara"
+              ]
+            },
+            "description": "Weitere Sprachen (#579); fehlt: bleiben, [] oder null: keine"
+          }
+        }
+      },
+      "TeilenHinweis": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teilenAb": {
+            "type": "integer",
+            "nullable": true
           }
         }
       },
@@ -11823,6 +12019,12 @@
           "sprache": {
             "type": "string",
             "nullable": true
+          },
+          "weitereSprachen": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "ocr": {
             "type": "object"

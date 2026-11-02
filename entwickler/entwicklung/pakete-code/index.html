@@ -617,6 +617,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#seitensprachen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sprachen je Seite (seitensprachen)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#zusatzdaten" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1143,6 +1154,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#seitensprachen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sprachen je Seite (seitensprachen)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#zusatzdaten" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1598,6 +1620,52 @@
 <li>Seiten holt es mit <code>GET /dokumente/{id}/seiten/{nr}/scan</code> – seit 0.133.0 auch für <strong>JPEG und PNG</strong> (eine Seite, in Originalgröße; <code>dpi</code> zählt dort nicht), seit 0.137.0 auch für andere Dateitypen (z. B. TIFF), sobald ein Paket sie <a href="#dateien-umwandeln">umgewandelt</a> hat – dann aus der Fassung. Ohne Fassung liefert der Kern dafür nichts.</li>
 </ol>
 <p>Sind mehrere solche Pakete installiert, gilt das erste nach Id.</p>
+<h3 id="seitensprachen">Sprachen je Seite (<code>seitensprachen</code>)<a class="headerlink" href="#seitensprachen" title="Permanent link">&para;</a></h3>
+<p>Seit 0.139.0 (#579) kann ein Dokument mehrere Sprachen haben – etwa ein deutscher Begleitbrief und dahinter das französische Schreiben einer Botschaft. Eine Texterkennung meldet dafür die <strong>Sprache jeder Seite</strong>; das DMS durchsucht jede Seite mit den Wortstämmen ihrer Sprache, zeigt am Dokument „Deutsch, enthält auch Französisch“ und schlägt bei einem vollständigen Sprachwechsel zwischen zwei Seiten an der Post „Post teilen?“ vor (geteilt wird nie von selbst).</p>
+<p><strong>Schreiben:</strong> <code>PUT /dokumente/{id}/volltext</code> mit den Seiten im Text, getrennt durch einen <strong>Seitenvorschub</strong> (<code>\f</code>, wie bei <code>pdftotext</code>), und je Seite ihren Sprachen:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Sehr geehrte Frau Muster, anbei …\fMadame, nous avons bien reçu …\fÜbersetzung … Traduction …"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"seiten"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"seitensprachen"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">"deu"</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="s2">"fra"</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="s2">"deu"</span><span class="p">,</span><span class="w"> </span><span class="s2">"fra"</span><span class="p">]]</span>
+<span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seitensprachen</code></td>
+<td>ein Eintrag <strong>je Seite</strong> im Text (Anzahl = Seitenvorschübe + 1, sonst 422), höchstens 1000. Je Seite eine oder zwei Kennungen (<code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>): zwei für eine <strong>Mischseite</strong>, die erste ist die mit mehr Text. <code>null</code> oder <code>[]</code>: das DMS erkennt die Sprache der Seite selbst (z. B. für Seiten mit Text aus dem PDF). Leere Seiten sind erlaubt.</td>
+</tr>
+<tr>
+<td><code>sprache</code></td>
+<td>optional die <strong>Hauptsprache</strong>; ohne Angabe die Sprache mit dem meisten Text (eine Mischseite zählt je zur Hälfte).</td>
+</tr>
+<tr>
+<td><code>weitere</code></td>
+<td>optional, wenn das Paket die Seiten nicht kennt: weitere Sprachen fürs ganze Dokument. Der Suchindex nimmt dann den ganzen Text zusätzlich mit deren Wortstämmen.</td>
+</tr>
+<tr>
+<td><code>seiten</code></td>
+<td>Seitenzahl; ohne Angabe die Zahl der Seiten im Text.</td>
+</tr>
+</tbody>
+</table>
+<p>Was das DMS daraus macht:</p>
+<ul>
+<li><strong>Text:</strong> gespeichert wie bisher, Seiten durch eine Leerzeile getrennt (ohne <code>\f</code>). Wo jede Seite beginnt, merkt es sich getrennt.</li>
+<li><strong>Hauptsprache und weitere Sprachen</strong> am Dokument (<code>sprache</code>, <code>weitereSprachen</code>). Steht alles in einer Sprache, speichert es keine Seiten – das Dokument ist dann einsprachig wie bisher.</li>
+<li><strong>Suchindex:</strong> je Sprache die Seiten in ihren Wortstämmen (eine Mischseite in beiden).</li>
+<li><strong>Hinweis „Post teilen?“</strong> (<code>teilenAb</code> am Dokument): die erste Seite, deren Sprachen mit denen der Seite davor (mit Text) nichts gemeinsam haben. Eine Mischseite verbindet beide Seiten – kein Hinweis.</li>
+</ul>
+<p>Ohne <code>\f</code> und ohne <code>seitensprachen</code> gilt alles wie vor 0.139.0 (eine Sprache je Dokument). Ein Text mit <code>\f</code>, aber ohne <code>seitensprachen</code>, bekommt die Sprachen je Seite vom DMS (Erkennung aus dem Text wie bei PDFs mit Textebene).</p>
+<p><strong>Lesen:</strong> <code>GET /dokumente/{id}/volltext</code> liefert dazu <code>weitereSprachen</code> und – wenn das DMS die Seiten kennt – <code>seiten: [{ "seite": 1, "sprachen": ["deu"], "text": "…" }, …]</code>. Das gilt bei mehrsprachigen Dokumenten und bei <strong>gemischten PDFs</strong> (<code>seitenOhneText</code>): Dort speichert der Kern die Seiten der Textebene schon vor der Texterkennung. Eine Texterkennung, die nur die Seiten ohne Text liest, setzt damit den ganzen Text in der richtigen Reihenfolge zusammen (Textseiten mit <code>null</code>, ihre erkannten Seiten an ihrer Stelle).</p>
+<p><strong>Sprache setzen:</strong> <code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "deu", "weitere": ["fra"] }</code> setzt Haupt- und weitere Sprachen fürs ganze Dokument (die Seitensprachen entfallen); ohne <code>weitere</code> bleiben die weiteren Sprachen. <code>DELETE /dokumente/{id}/teilen-hinweis</code> blendet den Hinweis „Post teilen?“ aus (Recht Bearbeiten an der Mappe).</p>
+<p>Ein Paket, das <code>seitensprachen</code> schickt, gibt <code>dms: "&gt;=0.139.0"</code> an – ältere DMS-Versionen speichern den Seitenvorschub sonst im Text. Das Paket <a href="https://github.com/motom001/dms-registry/tree/main/pakete/texterkennung">Texterkennung</a> ab 2.1.0 macht es so.</p>
 <h3 id="zusatzdaten">Zusatzdaten aus anderen Paketen<a class="headerlink" href="#zusatzdaten" title="Permanent link">&para;</a></h3>
 <p>Seit 0.133.0 liest ein Paket mit <code>dms_datei</code> auch die Daten (<code>code/daten/…</code>) von Paketen, die <strong>von ihm abhängen</strong> – unter dem Namen <code>&lt;paket&gt;/&lt;datei&gt;</code>, z. B. <code>texterkennung_fra/fra.traineddata</code>. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu.</p>
 <h3 id="fortsetzung">Fortsetzung bei langen Aufgaben<a class="headerlink" href="#fortsetzung" title="Permanent link">&para;</a></h3>
@@ -2112,7 +2180,8 @@
 <li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.</li>
 <li><code>PUT /dokumente/{id}/fassung</code> und <code>PUT /dokumente/{id}/vorschaubild</code> – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> (Recht <code>dms:umwandeln</code>).</li>
 <li><code>PUT /dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> – Volltext setzen (Recht <code>dokumente: schreiben</code>). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab DMS 0.128.0 optional mit <code>"sprache": "fra"</code> (Kennung wie bei Tesseract: <code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.</li>
-<li><code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "fra" }</code> bzw. <code>null</code> – nur die Sprache setzen (ab 0.128.0, Recht <code>dokumente: schreiben</code>); der Suchindex des Dokuments entsteht neu.</li>
+<li><code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "fra" }</code> bzw. <code>null</code> – nur die Sprache setzen (ab 0.128.0, Recht <code>dokumente: schreiben</code>); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch <code>weitere</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>
+<li>Ab 0.139.0: <code>PUT /dokumente/{id}/volltext</code> mit Seiten (<code>\f</code>) und <code>seitensprachen</code>, <code>GET /dokumente/{id}/volltext</code> mit <code>seiten</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>
 <li><code>POST /dokumente/{id}/seiten</code>, <code>POST /dokumente/zusammenfuegen</code>, <code>PUT /dokumente/{id}/archivnummer</code> – Seiten teilen und zusammenfügen, Archivnummer setzen.</li>
 <li><code>GET /dokumente/{id}/schwaerzen</code> und <code>POST /dokumente/{id}/schwaerzen</code> mit <code>{ "bereiche": [{ "seite": 1, "x": 0.1, "y": 0.2, "b": 0.3, "h": 0.05 }], "begriffe": ["Mustermann"], "muster": ["iban"], "ziel": "kopie" }</code> – Stellen endgültig schwärzen (#392). Koordinaten relativ zur angezeigten Seite (0 bis 1, Ursprung oben links); <code>GET</code> liefert die Wörter mit Lage zum Selbst-Suchen. Ergebnis ist ein neues Dokument „… (geschwärzt)“ (Ereignis <code>dokument.hochgeladen</code>) oder mit <code>"ziel": "version"</code> eine neue Version.</li>
 </ul>
