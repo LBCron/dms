@@ -11,6 +11,30 @@ import type { Varianten } from '../../shared/src/suche';
 import type { Seitensprache } from '../../shared/src/seitensprachen';
 
 export interface Verweis { feldKey: string; zielId: string }
+
+/**
+ * Gleichzeitig bearbeiten (#609): Mappe feldweise schreiben. `basis` sind die Werte, auf denen die neuen
+ * beruhen (so wie sie gelesen wurden). Geschrieben wird nur, was sich gegenüber `basis` ändert; alle anderen
+ * Felder bleiben, wie sie gerade in der Datenbank stehen – auch wenn sie inzwischen jemand anderes geändert hat.
+ * `verweise` berechnet die Verweise aus dem Ergebnis. Mit `stand` (Zeitpunkt „zuletzt geändert“ als ISO-Text)
+ * schreibt die Datenbank nur, wenn die Mappe noch genau diesen Stand hat, sonst kommt `StandVeraltet`.
+ */
+export interface FeldweiseSchreiben { basis: Werte; verweise: (werte: Werte) => Verweis[]; stand?: string }
+
+/** Die Mappe hat sich zwischen Lesen und Schreiben geändert (#609) – neu lesen und noch einmal versuchen. */
+export class StandVeraltet extends Error {
+  constructor() { super('Die Mappe hat sich inzwischen geändert.'); }
+}
+
+/** Neue Werte feldweise auf den aktuellen Stand legen (#609): nur Felder, die sich gegenüber `basis` ändern. */
+export function feldweise(aktuell: Werte, basis: Werte, werte: Werte): Werte {
+  const r: Werte = { ...aktuell };
+  for (const k of new Set([...Object.keys(basis), ...Object.keys(werte)])) {
+    if (JSON.stringify(basis[k] ?? null) === JSON.stringify(werte[k] ?? null)) continue;
+    if (k in werte) r[k] = werte[k]; else delete r[k];
+  }
+  return r;
+}
 /** Abruf-Link (#455) mit den Hashes von Schlüssel und Abrufcode – verlässt den Server nie. */
 export interface AuskunftLinkIntern extends AuskunftLink { schluessel: string; code: string }
 /** Ein gespeicherter Verweis mit beiden Enden (#396). */
@@ -191,7 +215,12 @@ export interface Repo {
   findeArchivnummer(nummer: string): Promise<Dokument | undefined>;
   /** Die Mappe mit dieser Systemkennung (z. B. rolle:admin). */
   holeSystemMappe(kennung: string): Promise<Mappe | undefined>;
-  aendereMappe(id: string, werte: Werte, verweise: Verweis[], benutzerId: string | null): Promise<Mappe>;
+  /**
+   * Werte ersetzen. Mit `feldweise` (#609) nur die Felder, die sich gegenüber dessen `basis` ändern – so
+   * setzt ein Schreiber, der einen älteren Stand gelesen hat, keine Felder anderer zurück. „Zuletzt geändert“
+   * steigt bei jedem Schreiben um mindestens eine Millisekunde, damit der Stand eindeutig bleibt.
+   */
+  aendereMappe(id: string, werte: Werte, verweise: Verweis[], benutzerId: string | null, feldweise?: FeldweiseSchreiben): Promise<Mappe>;
   /** Setzt nur „zuletzt geändert“ (z. B. nach Dokumenten, #76); Werte, Verweise und Passung bleiben. */
   beruehreMappe(id: string, benutzerId: string | null): Promise<void>;
   /** Viele neue Mappen auf einmal (Demo-Daten): eine Transaktion, Titel schon berechnet. */

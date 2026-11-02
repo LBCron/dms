@@ -107,6 +107,20 @@ Neben dem Titel stehen der Stern für die [Favoriten](ablage.md#favoriten) und d
 
 Manche Angaben sind nur zum Lesen da und haben einen gestrichelten Rahmen – zum Beispiel Name und E-Mail-Adresse in der Mappe eines Benutzers. Daneben steht, wo man sie ändert.
 
+### Gleichzeitig bearbeiten
+
+Dieselbe Mappe darf an mehreren Stellen gleichzeitig offen sein – am Laptop und am Handy, in zwei Fenstern oder bei zwei Personen im Haushalt. Beim Speichern schickt das DMS nur die Felder, die du **in diesem Fenster geändert** hast. Alles andere bleibt so, wie es gerade gespeichert ist.
+
+**Beispiel:** Lena hat die Mappe „Kfz-Versicherung“ am Laptop offen. Am Handy ändert sie den **Beitrag** und speichert. Danach ändert sie am Laptop nur die **Notiz** und speichert. Beides bleibt erhalten – der Laptop setzt den Beitrag nicht auf den alten Wert zurück, und es kommt keine Frage.
+
+Habt ihr **dasselbe Feld** geändert, fragt das DMS, bevor es etwas überschreibt:
+
+> Jonas hat „Beitrag“ um 17:04 auf „412,00 €“ geändert. Du wolltest „398,00 €“ eintragen.
+
+Wähle je Feld **Meins übernehmen** oder **Wert von Jonas behalten** und klicke auf **So speichern**. Warst du es selbst an einem anderen Gerät, heißt es **Den Wert von hier übernehmen** bzw. **Den anderen Wert behalten**. Deine übrigen Änderungen und die der anderen werden dabei ohne Frage zusammengeführt. **Zurück zum Bearbeiten** speichert noch nichts – deine Eingaben bleiben stehen. Was gegolten hat, steht wie jede Änderung in der [Historie](zusammenarbeit.md#historie).
+
+Das gilt für alle Felder, auch für Verweise und Mehrfachauswahl (dort zählt das ganze Feld) und für die Felder, aus denen der Titel entsteht. Eine Sperre („wird gerade bearbeitet“) gibt es nicht; das DMS fragt nur, wenn zwei Änderungen wirklich dasselbe Feld betreffen. Auch Automatiken wie das automatische Zuordnen von Post oder Pakete setzen keine Felder zurück, die du inzwischen geändert hast.
+
 ## Verknüpfungen
 
 Das Register **Verknüpfungen** zeigt alle Mappen, die auf diese Mappe verweisen. Beim Vertragspartner siehst du so seine Verträge und Rechnungen, beim Vertrag seine Rechnungen – ohne dass du sie dort eintragen musst.

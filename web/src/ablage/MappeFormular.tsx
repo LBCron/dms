@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
 import { Stern } from './Stern';
 import { spaltenName, zelle } from './spalten';
 import { eigeneFelderIm, vorbelegungAus } from '../../../shared/src/sichten';
 import { datumText, inFrist } from '../../../shared/src/archiv';
 import { deutschePlz, eingabemodus, formatFehler, mitSchema, pruefeFormate, telefonLink } from '../../../shared/src/feldformate';
-import { darfErstellen, darfLoeschen, formatiere, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
+import { darfErstellen, darfLoeschen, formatiere, trefferlistenVon, geschuetzteFelder, istLeer, istOk,  standardRegister, VERWEISARTEN, verweisAusText, type Dokument, type Feld, type Mappe, type Mappenkonflikt, type Mappentyp, type Pruefergebnis, type Register, type Wert, type Werte } from '../../../shared/src/model';
 import { api, ApiFehler, type Bezuege, type MappeDetails, type Rueckverweis } from '../api';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
@@ -262,6 +262,10 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   const [aktiv, setAktiv] = useState(() => startRegister(register, new URLSearchParams(location.search).get('register'), details?.aufgaben, ich.id));
   useEffect(() => { if (registerWunsch) setAktiv(registerWunsch.key); }, [registerWunsch]);
   const [basis, setBasis] = useState(() => JSON.stringify(start));
+  const basisRoh = useMemo(() => JSON.parse(basis) as RohWerte, [basis]);
+  // Gleichzeitig bearbeiten (#609): Stand der Mappe, auf dem `basis` beruht – geht beim Speichern mit.
+  const [stand, setStand] = useState(mappe?.geaendert);
+  const [konflikt, setKonflikt] = useState<Mappenkonflikt & { wahl: Record<string, 'meins' | 'seins'> }>();
   const [roh, setRoh] = useState<RohWerte>(start);
   const [neueDateien, setNeueDateien] = useState<NeueDatei[]>([]);
   const [entfernt, setEntfernt] = useState<string[]>([]);
@@ -284,7 +288,9 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   const startJson = JSON.stringify(start);
   useEffect(() => {
     if (mappe && !werteGeaendert && startJson !== basis) { setBasis(startJson); setRoh(JSON.parse(startJson)); }
-  }, [startJson]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Mit den Werten auch ihren Stand übernehmen (#609) – solange hier nichts ungespeichert ist.
+    if (mappe && !werteGeaendert) setStand(mappe.geaendert);
+  }, [startJson, mappe?.geaendert]); // eslint-disable-line react-hooks/exhaustive-deps
   const dokumenteGeaendert = neueDateien.length > 0 || entfernt.length > 0;
   const geaendert = werteGeaendert || dokumenteGeaendert || !mappe;
   useUngespeichert(werteGeaendert || dokumenteGeaendert);
@@ -296,7 +302,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     if (r.art === 'verknuepfungen') return verknuepfungsGruppen(d, mappe, typ.id, r, details).reduce((a, g) => a + g.treffer.length, 0);
     return undefined;
   };
-  const verwerfen = () => { setRoh(JSON.parse(basis)); setNeueDateien([]); setEntfernt([]); setFehler(null); setMeldung(undefined); setHinweise([]); setVorschlaege({}); setAdNeu({}); setAdMeldung(undefined); };
+  const verwerfen = () => { setKonflikt(undefined); setRoh(JSON.parse(basis)); setNeueDateien([]); setEntfernt([]); setFehler(null); setMeldung(undefined); setHinweise([]); setVorschlaege({}); setAdNeu({}); setAdMeldung(undefined); };
 
   const reg = register.find((r) => r.key === aktiv) ?? register[0];
   const felderAuf = (r: Register) => typ.felder.filter((f) => r.felder?.includes(f.key));
@@ -400,9 +406,20 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     if (ziel) setAktiv(ziel.key);
   }
 
-  async function speichern() {
+  /**
+   * Speichern. Gleichzeitig bearbeiten (#609): An den Server gehen nur die Felder, die hier geändert wurden,
+   * dazu der Stand, auf dem sie beruhen. Hat jemand anderes dasselbe Feld inzwischen geändert, antwortet er
+   * mit 409 – dann fragt das Formular je Feld (`konflikt`). `nochmal`: nach der Antwort, mit dem neuen Stand;
+   * Felder in `seins` bleiben, wie sie auf dem Server stehen.
+   */
+  async function speichern(nochmal?: { stand: string; seins: Record<string, Roh> }) {
     setMeldung(undefined);
-    const werte = werteAusRoh(typ, roh);
+    setKonflikt(undefined);
+    const rohJetzt: RohWerte = nochmal ? { ...roh, ...nochmal.seins } : roh;
+    if (nochmal) setRoh(rohJetzt);
+    const werte = werteAusRoh(typ, rohJetzt);
+    const geaenderteFelder = typ.felder.map((f) => f.key).filter((k) => JSON.stringify(rohJetzt[k] ?? null) !== JSON.stringify(basisRoh[k] ?? null) && !(nochmal && k in nochmal.seins));
+    const zuSenden = Object.fromEntries(geaenderteFelder.map((k) => [k, werte[k] ?? null]));
     const p = d.pruefe(typ, werte, (id) => bekannt[id]?.typId);
     // Formate und Datumsgrenzen (#535): neue Mappe ganz, sonst nur, was sich ändert.
     for (const [k, m] of Object.entries(pruefeFormate(typ, werte, mappe?.werte))) p.felder[k] ??= m;
@@ -416,12 +433,21 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     setSendet(true); setHinweise([]);
     let gespeichert: (Mappe & { hinweis?: string }) | undefined = mappe;
     try {
-      if (!mappe || werteGeaendert) gespeichert = mappe ? await api.mappeAendern(mappe.id, { werte }) : await api.mappeAnlegen({ typId: typ.id, werte });
-      setFehler(null); setBasis(JSON.stringify(roh));
+      if (!mappe) gespeichert = await api.mappeAnlegen({ typId: typ.id, werte });
+      else if (geaenderteFelder.length) gespeichert = await api.mappeAendern(mappe.id, { werte: zuSenden, stand: nochmal?.stand ?? stand });
+      setFehler(null); setBasis(JSON.stringify(rohJetzt));
+      if (gespeichert) setStand(gespeichert.geaendert);
     } catch (e) {
       const f = e as ApiFehler;
-      if (f.pruefung) zeigeFehler(f.pruefung);
-      setMeldung(f.message);
+      const k = f.status === 409 ? f.details as Mappenkonflikt | undefined : undefined;
+      if (k && Array.isArray(k.konflikte) && k.konflikte.length) {
+        setKonflikt({ ...k, wahl: {} });
+        setMeldung(t('mappen.konflikt.status'));
+        window.setTimeout(() => document.querySelector('.mappenkonflikt')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 50);
+      } else {
+        if (f.pruefung) zeigeFehler(f.pruefung);
+        setMeldung(f.message);
+      }
       setSendet(false);
       return;
     }
@@ -461,6 +487,18 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     setSendet(false);
     if (!mappe) geheZu(`/ablage/${sicht}/${gespeichert!.id}`);
     else setMeldung(gespeichert?.hinweis ?? (offen.length || nichtEntfernt.length ? 'Teilweise gespeichert.' : 'Gespeichert.'));
+  }
+
+  /** Rückfrage beantwortet (#609): „meins“ geht mit dem neuen Stand noch einmal mit, „seins“ wird übernommen. */
+  function konfliktEntscheiden() {
+    if (!konflikt) return;
+    const seins: Record<string, Roh> = {};
+    for (const k of konflikt.konflikte) {
+      if (konflikt.wahl[k.feld] !== 'seins') continue;
+      const f = typ.felder.find((x) => x.key === k.feld);
+      if (f) seins[k.feld] = k.geheim ? basisRoh[k.feld] ?? zuRoh(f, null) : zuRoh(f, k.wert ?? null);
+    }
+    void speichern({ stand: konflikt.stand, seins });
   }
 
   async function loeschen() {
@@ -560,6 +598,9 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
       {fehler?.allgemein.length ? <div className="hinweis schlecht"><p>{fehler.allgemein.join(' ')}</p></div> : null}
       {hinweise.map((h, i) => <div key={i} className={`hinweis ${h.art}`}><p>{h.text}</p></div>)}
       <div className="registerinhalt" role="tabpanel">{inhalt}</div>
+      {konflikt && <Konfliktfrage konflikt={konflikt} ich={ich.id} sendet={sendet}
+        waehle={(feld, w) => setKonflikt((k) => k && { ...k, wahl: { ...k.wahl, [feld]: w } })}
+        speichern={konfliktEntscheiden} abbrechen={() => { setKonflikt(undefined); setMeldung(undefined); }} />}
       {nurLesen ? <div className="speicherleiste">
         <span className="hy-nur-breit">{loeschKnopf}</span>
         <span className="status" role="status">{meldung ?? 'Nur lesen – bearbeiten darfst du diese Mappe nach den Berechtigungen nicht.'}</span>
@@ -576,6 +617,57 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
       </div>}
     </form>
     </>
+  );
+}
+
+/** „um 17:04“ (heute) bzw. „am 01.11.2026 um 17:04“. */
+function wann(iso: string): string {
+  const d = new Date(iso);
+  const uhrzeit = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString()
+    ? t('mappen.konflikt.heute', { uhrzeit })
+    : t('mappen.konflikt.am', { datum: d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }), uhrzeit });
+}
+
+/**
+ * Rückfrage beim gleichzeitigen Bearbeiten (#609): je Feld, wer es wann worauf geändert hat und was du
+ * eintragen wolltest – mit „Meins übernehmen“ und „Wert von … behalten“. Alles andere ist schon zusammengeführt.
+ */
+function Konfliktfrage({ konflikt, ich, sendet, waehle, speichern, abbrechen }: {
+  konflikt: Mappenkonflikt & { wahl: Record<string, 'meins' | 'seins'> }; ich: string; sendet: boolean;
+  waehle: (feld: string, w: 'meins' | 'seins') => void; speichern: () => void; abbrechen: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  const alle = konflikt.konflikte.every((k) => konflikt.wahl[k.feld]);
+  const text = (v: string) => (v ? `„${v}“` : t('mappen.konflikt.leer'));
+  return (
+    <div className="hinweis warn mappenkonflikt" role="group" aria-labelledby="mappenkonflikt-titel" tabIndex={-1} ref={ref}>
+      <h2 className="h3" id="mappenkonflikt-titel"><Symbol name="warnung" /> {t('mappen.konflikt.titel')}</h2>
+      <p>{t('mappen.konflikt.einleitung')}</p>
+      {konflikt.konflikte.map((k) => {
+        const selbst = k.von === ich;
+        const werte = { name: k.name, feld: k.label, wann: wann(k.zeit), aktuell: text(k.aktuell), deins: text(k.deins) };
+        const satz = k.geheim ? t(selbst ? 'mappen.konflikt.selbstGeheim' : 'mappen.konflikt.andererGeheim', werte) : t(selbst ? 'mappen.konflikt.selbst' : 'mappen.konflikt.anderer', werte);
+        return (
+          <fieldset key={k.feld} className="mk-feld">
+            <legend>{t('mappen.konflikt.frage', { feld: k.label })}</legend>
+            <p>{satz}</p>
+            <div className="mk-wahl">
+              <label className="haken"><input type="radio" name={`mk-${k.feld}`} checked={konflikt.wahl[k.feld] === 'meins'} onChange={() => waehle(k.feld, 'meins')} />
+                <span>{selbst ? t('mappen.konflikt.hier') : t('mappen.konflikt.meins')}{!k.geheim && <span className="leise"> – {text(k.deins)}</span>}</span></label>
+              <label className="haken"><input type="radio" name={`mk-${k.feld}`} checked={konflikt.wahl[k.feld] === 'seins'} onChange={() => waehle(k.feld, 'seins')} />
+                <span>{selbst ? t('mappen.konflikt.dort') : t('mappen.konflikt.seins', { name: k.name })}{!k.geheim && <span className="leise"> – {text(k.aktuell)}</span>}</span></label>
+            </div>
+          </fieldset>
+        );
+      })}
+      {!alle && <p className="leise klein">{t('mappen.konflikt.fehlt')}</p>}
+      <div className="knoepfe">
+        <button type="button" className="knopf" onClick={abbrechen} disabled={sendet}>{t('mappen.konflikt.abbrechen')}</button>
+        <button type="button" className="knopf gruen" onClick={speichern} disabled={!alle || sendet}>{t('mappen.konflikt.speichern')}</button>
+      </div>
+    </div>
   );
 }
 

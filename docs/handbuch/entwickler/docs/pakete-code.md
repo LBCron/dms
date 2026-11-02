@@ -212,6 +212,8 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 
 Ein Paket, das die Grenzen reißt, beeinträchtigt das DMS nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.
 
+**Mappen ändern:** Schicke mit `PUT /mappen/{id}` nur die Felder, die das Paket ändert – nicht die ganze gelesene Mappe; nicht übergebene Felder bleiben. Mit `"stand"` (Wert `geaendert` der gelesenen Mappe) antwortet der Kern mit 409, wenn ein Mensch dasselbe Feld inzwischen anders gesetzt hat (#609); ein Paket lässt das Feld dann am besten so, wie es ist. Siehe [API → Mappe ändern](https://motom001.github.io/dms/admin/aktuell/api/#mappe-aendern).
+
 Ein Modul, das `netz_strom`, `netz_weiter` oder `teil` importiert, lädt erst ab DMS 0.124.0 – ältere lehnen es ab („Das Modul verlangt Unbekanntes“). Gib dann `dms: ">=0.124.0"` an.
 
 ## Bauen mit C (wasi-sdk)

@@ -1,0 +1,23 @@
+{
+  "konflikt.fehler": "Diese Mappe hat inzwischen jemand anderes geändert – auch {felder}. Entscheide je Feld, was gelten soll, und speichere noch einmal.",
+  "konflikt.system": "Das DMS",
+  "konflikt.standUngueltig": "„stand“ muss ein Zeitpunkt sein – am besten der Wert „geaendert“ der Mappe, so wie du sie gelesen hast.",
+  "konflikt.titel": "Gleichzeitig geändert – was soll gelten?",
+  "konflikt.einleitung": "Während du hier bearbeitet hast, wurde diese Mappe auch woanders geändert. Alle anderen Änderungen – deine und die anderen – werden zusammengeführt. Nur hier haben beide dasselbe Feld geändert:",
+  "konflikt.frage": "Was soll bei „{feld}“ gelten?",
+  "konflikt.anderer": "{name} hat „{feld}“ {wann} auf {aktuell} geändert. Du wolltest {deins} eintragen.",
+  "konflikt.selbst": "Du hast „{feld}“ {wann} an einem anderen Gerät oder in einem anderen Fenster auf {aktuell} geändert. Hier wolltest du {deins} eintragen.",
+  "konflikt.andererGeheim": "{name} hat das Passwort „{feld}“ {wann} geändert. Du hast hier ein anderes eingegeben.",
+  "konflikt.selbstGeheim": "Du hast das Passwort „{feld}“ {wann} an einem anderen Gerät oder in einem anderen Fenster geändert. Hier hast du ein anderes eingegeben.",
+  "konflikt.meins": "Meins übernehmen",
+  "konflikt.seins": "Wert von {name} behalten",
+  "konflikt.hier": "Den Wert von hier übernehmen",
+  "konflikt.dort": "Den anderen Wert behalten",
+  "konflikt.heute": "um {uhrzeit}",
+  "konflikt.am": "am {datum} um {uhrzeit}",
+  "konflikt.leer": "nichts (leer)",
+  "konflikt.fehlt": "Wähle bei jedem Feld, was gelten soll.",
+  "konflikt.speichern": "So speichern",
+  "konflikt.abbrechen": "Zurück zum Bearbeiten",
+  "konflikt.status": "Noch nicht gespeichert – entscheide oben, was gelten soll."
+}

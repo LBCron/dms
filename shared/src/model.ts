@@ -814,6 +814,25 @@ export const HISTORIENARTEN = {
 export type Historienart = keyof typeof HISTORIENARTEN;
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */
 export interface Feldaenderung { feld: string; label: string; alt?: string; neu?: string; geheim?: boolean }
+/**
+ * Gleichzeitig bearbeiten (#609): ein Feld, das seit dem Stand des Schreibers jemand anderes geändert hat und
+ * das der Schreiber jetzt anders setzen will. Kommt mit 409 als `details` von `PUT /mappen/{id}`.
+ */
+export interface Feldkonflikt {
+  feld: string; label: string;
+  /** Was der Schreiber eintragen wollte und was jetzt gilt – lesbar; bei Passwortfeldern leer. */
+  deins: string; aktuell: string;
+  /** Der Wert, der jetzt gilt; fehlt bei Passwortfeldern (`geheim`). */
+  wert?: Wert | null; geheim?: boolean;
+  /** Wer das Feld zuletzt geändert hat (null = das DMS selbst) und wann. */
+  von: string | null; name: string; zeit: string;
+}
+export interface Mappenkonflikt {
+  /** Aktueller Stand der Mappe – damit noch einmal senden, um die eigenen Werte zu übernehmen. */
+  stand: string;
+  konflikte: Feldkonflikt[];
+}
+
 export interface Historieneintrag {
   id: number; mappeId: string; zeit: string; benutzerId: string | null; art: Historienart;
   daten: { aenderungen?: Feldaenderung[]; dokument?: string; feld?: string; text?: string; [k: string]: unknown };

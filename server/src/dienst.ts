@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
   REGISTERARTEN, ROLLEN, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
-  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
+  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
@@ -21,7 +21,7 @@ import { alsText, erwaehnungen } from '../../shared/src/markdown';
 import { liesAnsicht, liesEigene, OHNE_EINSTELLUNG } from '../../shared/src/werkbankansicht';
 import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
-import { istUuid, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
+import { istUuid, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
@@ -419,6 +419,14 @@ function passwortWert(eingabe: unknown, hatEingabe: boolean, bisher: unknown, ve
     return (eingabe.gesetzt ? bisher ?? null : null) as Werte[string];
   }
   throw new Fachfehler(422, 'Ungültiger Wert für ein Passwortfeld.');
+}
+
+/** Stand einer Änderung (#609): „zuletzt geändert“ als ISO-Zeitpunkt; fehlt = ohne Prüfung. */
+function liesStand(v: unknown): string | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  const ms = typeof v === 'string' ? Date.parse(v) : NaN;
+  if (!Number.isFinite(ms)) throw new Fachfehler(422, t('mappen.konflikt.standUngueltig'));
+  return new Date(ms).toISOString();
 }
 
 function bereinigeWerte(typ: Mappentyp, eingabe: unknown, bisher: Werte = {}, verschluessele: (k: string) => string = keinSchluessel): Werte {
@@ -3514,8 +3522,9 @@ export class Dienst {
       if (!m) continue;
       const werte = { ...m.werte, absender: null };
       await this.inTransaktion(async () => {
-        await this.repo.aendereMappe(m.id, werte, verweiseVon(typ, werte), von.id);
+        const neu = await this.repo.aendereMappe(m.id, werte, [], von.id, { basis: m.werte, verweise: (w) => verweiseVon(typ, w) });
         await this.notiere(m.id, von.id, 'geaendert', {
+          stand: neu.geaendert,
           aenderungen: await this.aenderungen(typ, m.werte, werte),
           text: 'Absender bereinigt (Wartung): Er war der Name dessen, der die Post angelegt hat.',
         });
@@ -3705,13 +3714,67 @@ export class Dienst {
     return this.rechteAn(z, { ...m, werte });
   }
 
-  /** `anlass`: steht zusätzlich im Eintrag der Historie, z. B. die Umwandlung nach einem Paket-Update (#534). */
+  /**
+   * Gleichzeitig bearbeiten (#609): übergebene Felder, die seit `stand` geändert wurden (laut Historie, Einträge
+   * mit `stand`) und die die Eingabe jetzt anders setzen will. Gleicher Wert ist kein Konflikt.
+   */
+  private async feldkonflikte(typ: Mappentyp, m: Mappe, werte: Werte, gesendet: string[], stand: string): Promise<Feldkonflikt[]> {
+    const seit = new Map<string, Historieneintrag>();
+    // Neueste zuerst: je Feld zählt die letzte Änderung.
+    for (const h of await this.repo.historie(m.id)) {
+      if (h.art !== 'geaendert' || typeof h.daten.stand !== 'string' || h.daten.stand <= stand) continue;
+      for (const a of h.daten.aenderungen ?? []) if (!seit.has(a.feld)) seit.set(a.feld, h);
+    }
+    const gleich = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null) || (istLeer(a as Werte[string]) && istLeer(b as Werte[string]));
+    const felder = typ.felder.filter((f) => gesendet.includes(f.key) && seit.has(f.key) && !gleich(werte[f.key], m.werte[f.key]));
+    if (!felder.length) return [];
+    const ids = felder.filter((f) => f.typ === 'referenz').flatMap((f) => [werte[f.key], m.werte[f.key]].flatMap((v) => (Array.isArray(v) ? v : v ? [v] : []))).map(String).filter(istUuid);
+    const titel = await this.repo.titelVon(ids);
+    const lesbar = (f: Feld, v: Werte[string] | undefined) => (f.typ === 'passwort' ? '' : formatiere(f, v, (x) => titel.get(x) || 'Ohne Titel').slice(0, 500));
+    const liste: Feldkonflikt[] = [];
+    for (const f of felder) {
+      const h = seit.get(f.key)!;
+      liste.push({
+        feld: f.key, label: f.label, deins: lesbar(f, werte[f.key]), aktuell: lesbar(f, m.werte[f.key]),
+        ...(f.typ === 'passwort' ? { geheim: true } : { wert: m.werte[f.key] ?? null }),
+        von: h.benutzerId, name: h.benutzerId ? await this.name(h.benutzerId) : t('mappen.konflikt.system'), zeit: h.zeit,
+      });
+    }
+    return liste;
+  }
+
+  /**
+   * Mappe ändern. Übergebene Felder ersetzen die bisherigen, nicht übergebene bleiben (#609: auch wenn sie
+   * inzwischen jemand anderes geändert hat – geschrieben wird feldweise auf den aktuellen Stand).
+   * `eingabe.stand` (optional, „zuletzt geändert“ beim Lesen): Hat seitdem jemand ein übergebenes Feld
+   * geändert und soll es jetzt anders lauten, kommt 409 mit den Feldern (`Mappenkonflikt`) statt Überschreiben.
+   * `anlass`: steht zusätzlich im Eintrag der Historie, z. B. die Umwandlung nach einem Paket-Update (#534).
+   */
   async aendereMappe(id: string, eingabe: unknown, benutzerId: string | null = null, z?: Zugriff, anlass?: Record<string, unknown>): Promise<Mappe & { hinweis?: string }> {
+    // Schreibt zwischen Lesen und Schreiben jemand anderes, noch einmal von vorn (#609).
+    for (let versuch = 1; ; versuch++) {
+      try { return await this.aendereMappeEinmal(id, eingabe, benutzerId, z, anlass); }
+      catch (e) { if (!(e instanceof StandVeraltet) || versuch >= 5) throw e; }
+    }
+  }
+
+  private async aendereMappeEinmal(id: string, eingabe: unknown, benutzerId: string | null, z: Zugriff | undefined, anlass: Record<string, unknown> | undefined): Promise<Mappe & { hinweis?: string }> {
     const m = z ? await this.pruefeRecht(z, id, 'U') : await this.repo.holeMappe(id);
     if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
     const typ = await this.repo.holeTyp(m.typId);
     if (!typ) throw new Fachfehler(500, 'Der Mappentyp dieser Mappe fehlt.');
-    const werte = bereinigeWerte(typ, (eingabe as { werte?: unknown })?.werte, m.werte, this.verschluessele);
+    const e = (eingabe && typeof eingabe === 'object' ? eingabe : {}) as { werte?: unknown; stand?: unknown };
+    const stand = liesStand(e.stand);
+    const werte = bereinigeWerte(typ, e.werte, m.werte, this.verschluessele);
+    // Stand (#609): Hat sich seitdem ein Feld geändert, das diese Eingabe anders setzen will? Dann fragen.
+    if (stand && stand !== m.geaendert) {
+      const gesendet = e.werte && typeof e.werte === 'object' ? Object.keys(e.werte) : [];
+      const konflikte = await this.feldkonflikte(typ, m, werte, gesendet, stand);
+      if (konflikte.length) {
+        const k: Mappenkonflikt = { stand: m.geaendert, konflikte };
+        throw new Fachfehler(409, t('mappen.konflikt.fehler', { felder: konflikte.map((x) => `„${x.label}“`).join(', ') }), k);
+      }
+    }
     // Geschützte Felder (Benutzer, Name einer Systemrolle) ändert nur das System.
     for (const [k, grund] of Object.entries(geschuetzteFelder(typ, m))) {
       if (JSON.stringify(werte[k] ?? null) !== JSON.stringify(m.werte[k] ?? null)) {
@@ -3725,8 +3788,9 @@ export class Dienst {
     // Archivmodus (#212): eine neue Frist steht in der Historie.
     const bisAlt = aufbewahrenBis(typ.archiv, m), bisNeu = aufbewahrenBis(typ.archiv, { ...m, werte });
     if (bisAlt !== bisNeu) aenderungen.push({ feld: '_aufbewahrenBis', label: 'Aufbewahren bis', alt: bisAlt ? datumText(bisAlt) : '', neu: bisNeu ? datumText(bisNeu) : '' });
-    const neu = await this.repo.aendereMappe(id, werte, verweiseVon(typ, werte), benutzerId);
-    if (aenderungen.length) await this.notiere(id, benutzerId, 'geaendert', { ...anlass, aenderungen });
+    // Feldweise (#609); mit Stand nur, wenn sich die Mappe seit dem Lesen oben nicht geändert hat.
+    const neu = await this.repo.aendereMappe(id, werte, [], benutzerId, { basis: m.werte, verweise: (w) => verweiseVon(typ, w), ...(stand ? { stand: m.geaendert } : {}) });
+    if (aenderungen.length) await this.notiere(id, benutzerId, 'geaendert', { ...anlass, aenderungen, stand: neu.geaendert });
     // Gespeichert heißt: passt wieder – eine „passt nicht“-Aufgabe ist damit erledigt.
     await this.passungsAufgaben([{ id, problem: null }]);
     await this.pruefeErwaehnungen(typ, id, m.werte, werte, benutzerId);
@@ -3974,11 +4038,11 @@ export class Dienst {
     const vorher = await this.lebendInhalt([m]);
     for (const z of zuordnungen) {
       const b = await this.repo.holeMappe(z.quelleId);
-      if (b) await this.schreibeSystemMappe(benutzerTyp!, b.id, { ...b.werte, rollen: alsListe(b.werte.rollen).filter((r) => r !== id) }, benutzerId);
+      if (b) await this.schreibeSystemMappe(benutzerTyp!, b.id, { rollen: alsListe(b.werte.rollen).filter((r) => r !== id) }, benutzerId);
     }
     for (const e of emails) {
       const x = await this.repo.holeMappe(e.quelleId);
-      if (x) await this.schreibeSystemMappe(emailTyp!, x.id, { ...x.werte, bezug: alsListe(x.werte.bezug).filter((b) => b !== id) }, benutzerId);
+      if (x) await this.schreibeSystemMappe(emailTyp!, x.id, { bezug: alsListe(x.werte.bezug).filter((b) => b !== id) }, benutzerId);
     }
     const korb = await this.papierkorbTage() > 0;
     if (korb) await this.legeInPapierkorb(id, typ, benutzerId);
@@ -4301,7 +4365,7 @@ export class Dienst {
     const n = dokumente.length;
     const doks = n ? ` mit ${n} ${n === 1 ? 'Dokument' : 'Dokumenten'}${kopieren ? ' (kopiert)' : ''} ins Register „${reg!.name}“` : '';
     const bezug = [...new Set([...alsListe(post.werte.bezug), ziel.id])];
-    await this.schreibeSystemMappe(typ, post.id, { ...post.werte, bezug, stand: POST_STAND.zugeordnet }, von);
+    await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.zugeordnet }, von);
     // Automatisch (#337): Begründung in der Historie beider Mappen.
     const wie = auto ? { automatisch: true, grund: auto.grund, system: 'Erkennung' } : {};
     const warum = auto ? ` – automatisch: ${auto.grund}` : '';
@@ -4390,7 +4454,7 @@ export class Dienst {
         zurueck++;
       }
       const bezug = alsListe(post.werte.bezug).filter((id) => id !== auto.ziel);
-      await this.schreibeSystemMappe(typ, post.id, { ...post.werte, bezug, stand: bezug.length ? post.werte.stand : POST_STAND.neu }, ich.id);
+      await this.schreibeSystemMappe(typ, post.id, { bezug, stand: bezug.length ? post.werte.stand : POST_STAND.neu }, ich.id);
       const zielTitel = ziel ? await this.titel(ziel) : 'eine gelöschte Mappe';
       const doks = zurueck ? ` – ${zurueck} ${zurueck === 1 ? 'Dokument' : 'Dokumente'} zurück in der Post` : '';
       await this.notiere(post.id, ich.id, 'zugeordnet', { text: `automatische Zuordnung zu „${zielTitel}“ rückgängig gemacht${doks}`, ziel: auto.ziel, rueckgaengig: true, dokumente: zurueck });
@@ -4458,7 +4522,7 @@ export class Dienst {
       for (const m of await this.repo.listeMappen(t.id)) {
         const werte = { ...m.werte };
         for (const [alt, neu] of umbenannt) if (alt in werte) { werte[neu] = werte[alt]; delete werte[alt]; }
-        await this.repo.aendereMappe(m.id, werte, verweiseVon(neuTyp, werte), null);
+        await this.repo.aendereMappe(m.id, werte, [], null, { basis: m.werte, verweise: (w) => verweiseVon(neuTyp, w) });
       }
       protokoll.modul('werkbank').warn('Eigene Felder wegen neuer Systemfelder umbenannt', { typ: t.name, felder: umbenannt.map(([a, b]) => `${a} → ${b}`).join(', ') });
     }
@@ -4472,9 +4536,10 @@ export class Dienst {
     const werte = bereinigeWerte(typ, eingabe, alt?.werte);
     if (alt && JSON.stringify(alt.werte) === JSON.stringify(werte)) return alt;
     const aenderungen = await this.aenderungen(typ, alt?.werte ?? {}, werte);
-    if (alt) await this.repo.aendereMappe(id, werte, verweiseVon(typ, werte), von);
-    else await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), von, false, kennung);
-    if (aenderungen.length) await this.notiere(id, von, alt ? 'geaendert' : 'angelegt', { aenderungen });
+    // Feldweise (#609): Felder, die inzwischen ein Mensch geändert hat, bleiben.
+    const neu = alt ? await this.repo.aendereMappe(id, werte, [], von, { basis: alt.werte, verweise: (w) => verweiseVon(typ, w) }) : undefined;
+    if (!alt) await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), von, false, kennung);
+    if (aenderungen.length) await this.notiere(id, von, alt ? 'geaendert' : 'angelegt', { aenderungen, ...(neu ? { stand: neu.geaendert } : {}) });
     if (alt) await this.passungsAufgaben([{ id, problem: null }]);
     await this.aktualisiereTitel([id]);
     // Hat der Administrator den Typ um Pflichtfelder erweitert, landet die Mappe im Eingang.
@@ -4529,7 +4594,7 @@ export class Dienst {
     if (!m || m.typId !== typ.id) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
     const system = new Set(systemrollen.values());
     const behalten = alsListe(m.werte.rollen).filter((r) => system.has(r));
-    await this.schreibeSystemMappe(typ, benutzerId, { ...m.werte, rollen: [...behalten, ...ids] }, von);
+    await this.schreibeSystemMappe(typ, benutzerId, { rollen: [...behalten, ...ids] }, von);
   }
 
   /** Alle Rollen für die Auswahl in der Benutzerverwaltung; Systemrollen zuerst. */
@@ -5406,7 +5471,7 @@ export class Dienst {
       });
     }
     const bezug = [...new Set([...alsListe(post.werte.bezug), ...posten.map((p) => p.id)])];
-    await this.schreibeSystemMappe(typ, post.id, { ...post.werte, bezug, stand: POST_STAND.erledigt }, von);
+    await this.schreibeSystemMappe(typ, post.id, { bezug, stand: POST_STAND.erledigt }, von);
     await this.notiere(post.id, von, 'post_geteilt', { ...was, text: `„${d.name}“ in ${posten.length} Posts geteilt`, posten: posten.map((p) => p.id), postTyp: typ.id });
     await this.postAufgaben(post.id, von);
     protokoll.modul('ablage').info('Post geteilt', { post: post.id, teile: posten.length });
@@ -5462,7 +5527,7 @@ export class Dienst {
         const p = await this.repo.holeMappe(mid);
         const t = p ? await this.repo.holeTyp(p.typId) : undefined;
         if (!p || t?.system !== 'post' || (await this.repo.listeDokumente(mid)).length) continue;
-        await this.schreibeSystemMappe(t, p.id, { ...p.werte, bezug: [...new Set([...alsListe(p.werte.bezug), ziel.id])], stand: POST_STAND.erledigt }, von);
+        await this.schreibeSystemMappe(t, p.id, { bezug: [...new Set([...alsListe(p.werte.bezug), ziel.id])], stand: POST_STAND.erledigt }, von);
         await this.notiere(p.id, von, 'zugeordnet', { text: `Dokumente zusammengefügt in „${zielTitel}“`, ziel: ziel.id, zielTyp: ziel.typId });
         await this.postAufgaben(p.id, von);
         erledigt.push(p.id);
@@ -6154,8 +6219,8 @@ export class Dienst {
   /** Verweisfelder einer Mappe neu schreiben (#424) – mit Historie, Titel und Passung wie beim Speichern. */
   private async schreibeVerweisWerte(typ: Mappentyp, m: Mappe, werte: Werte, von: string | null) {
     const aenderungen = await this.aenderungen(typ, m.werte, werte);
-    await this.repo.aendereMappe(m.id, werte, verweiseVon(typ, werte), von);
-    if (aenderungen.length) await this.notiere(m.id, von, 'geaendert', { aenderungen });
+    const neu = await this.repo.aendereMappe(m.id, werte, [], von, { basis: m.werte, verweise: (w) => verweiseVon(typ, w) });
+    if (aenderungen.length) await this.notiere(m.id, von, 'geaendert', { aenderungen, stand: neu.geaendert });
     await this.aktualisiereTitel([m.id]);
     await this.passungFuer(typ, [m.id]);
   }

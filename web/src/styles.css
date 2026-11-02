@@ -1169,6 +1169,16 @@ h2 .hilfesymbol, h3 .hilfesymbol { font-size: .6em; vertical-align: .25em; }
 .ad-dateien li span { overflow-wrap: anywhere; min-width: 0; }
 .ad-ergebnis .knoepfe { margin-top: 6px; flex-wrap: wrap; }
 .ad-hinweis { margin: 4px 0 0; font-size: calc(12.5px * var(--skala, 1)); overflow-wrap: anywhere; }
+/* Gleichzeitig bearbeiten (#609): Rückfrage je Feld, unter dem Registerinhalt; eigenes Präfix mk- */
+.mappenkonflikt { flex-direction: column; align-items: stretch; margin: 12px 0; border: 1px solid var(--warn); }
+.mappenkonflikt:focus { outline: 2px solid var(--warn); outline-offset: 2px; }
+.mappenkonflikt h2 { margin: 0; display: flex; gap: 6px; align-items: center; color: var(--warn); }
+.mappenkonflikt p { margin: 0; overflow-wrap: anywhere; }
+.mk-feld { border: 0; border-top: 1px solid var(--linie); padding: 8px 0 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mk-feld legend { font-weight: 600; padding: 0; float: left; width: 100%; margin-bottom: 4px; }
+.mk-wahl { display: flex; flex-direction: column; gap: 4px; clear: both; }
+.mk-wahl .haken span { overflow-wrap: anywhere; }
+.mappenkonflikt .knoepfe { justify-content: flex-end; flex-wrap: wrap; }
 fieldset.eigenschaft { border: 0; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
 fieldset.eigenschaft legend { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; color: var(--leise); margin-bottom: 4px; }
 
