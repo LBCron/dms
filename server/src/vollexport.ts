@@ -5,6 +5,7 @@ import { dirname, join, relative, sep } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { aufbewahrenBis } from '../../shared/src/archiv';
+import { kernTyp } from '../../shared/src/dateiumwandlung';
 import { auswahlText, istLeer, verweiseVon, type Aufgabe, type Dokument, type DokumentVersion, type Mappe, type Mappentyp, type Notiz, type Vertretung, type Werte } from '../../shared/src/model';
 import type { Erinnerung } from '../../shared/src/fristen';
 import type { Nummernkreis } from '../../shared/src/nummernkreis';
@@ -108,6 +109,8 @@ export interface ExportQuelle {
   /** Volltexte; Dokumente ohne fehlen. */
   volltexte(dokumentIds: string[]): Promise<Map<string, string>>;
   datei(sha256: string): Promise<Readable | Buffer>;
+  /** Umgewandelte Fassung eines Pakets (#577) für Dateitypen, die das DMS nicht selbst liest; fehlt bei älteren Quellen. */
+  fassung?(sha256: string): Promise<{ mime: string; inhalt: Buffer } | null>;
   notizen(mappeIds: string[]): Promise<Notiz[]>;
   aufgaben(mappeIds: string[]): Promise<Aufgabe[]>;
   erinnerungen(): Promise<Erinnerung[]>;
@@ -252,6 +255,15 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   const passwoerter: string[][] = [];
   const pfade: ExportErgebnis['pfade'] = { mappen: new Map(), dokumente: new Map() };
   let dokumente = 0;
+  /** Umgewandelte Fassung (#577) neben das Original: `<Datei>.fassung.pdf` (bzw. .png, .jpg); liefert ihren Pfad. */
+  const fassung = async (d: { mime: string; sha256: string }, rel: string): Promise<string> => {
+    if (!q.fassung || kernTyp(d.mime)) return '';
+    const f = await q.fassung(d.sha256).catch(() => null);
+    if (!f) return '';
+    const frel = `${rel}.fassung.${f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : 'jpg'}`;
+    await w.schreibe(frel, f.inhalt);
+    return frel;
+  };
   for (const t of typen) {
     const ms = jeTyp.get(t.id) ?? [];
     const dateiname = sichererName(t.schluessel || t.name, 60);
@@ -305,13 +317,13 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
           pfade.dokumente.set(d.id, rel);
           const text = texte.get(d.id);
           if (text) await w.schreibe(`${rel}.txt`, Buffer.from(text, 'utf8'));
-          dokZeilen.push([d.id, m.id, d.registerKey, d.name, d.mime, String(d.groesse), d.sha256, d.erstellt, d.erstelltVon ?? '', String(d.version ?? 1), 'aktuell', rel]);
+          dokZeilen.push([d.id, m.id, d.registerKey, d.name, d.mime, String(d.groesse), d.sha256, d.erstellt, d.erstelltVon ?? '', String(d.version ?? 1), 'aktuell', rel, await fassung(d, rel)]);
           dokumente++;
           const vn = namen();
           for (const v of versionJe.get(d.id) ?? []) {
             const vrel = `${pfad}/${regName}/Versionen/${vn(`v${v.nummer} ${v.name}`)}`;
             await w.schreibe(vrel, () => q.datei(v.sha256));
-            dokZeilen.push([d.id, m.id, d.registerKey, v.name, v.mime, String(v.groesse), v.sha256, v.erstellt, v.erstelltVon ?? '', String(v.nummer), 'aelter', vrel]);
+            dokZeilen.push([d.id, m.id, d.registerKey, v.name, v.mime, String(v.groesse), v.sha256, v.erstellt, v.erstelltVon ?? '', String(v.nummer), 'aelter', vrel, await fassung(v, vrel)]);
           }
         }
         notizen.push(...notizJe.get(m.id) ?? []);
@@ -347,7 +359,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   }
 
   await w.schreibe('daten/verweise.csv', csv(['quelle_id', 'feld', 'feld_schluessel', 'ziel_id', 'ziel_titel'], verweise));
-  await w.schreibe('daten/dokumente.csv', csv(['dokument_id', 'mappe_id', 'register', 'dateiname', 'typ', 'groesse', 'sha256', 'erstellt', 'erstellt_von', 'version', 'stand', 'pfad'], dokZeilen));
+  await w.schreibe('daten/dokumente.csv', csv(['dokument_id', 'mappe_id', 'register', 'dateiname', 'typ', 'groesse', 'sha256', 'erstellt', 'erstellt_von', 'version', 'stand', 'pfad', 'fassung'], dokZeilen));
   await w.schreibe('daten/notizen.jsonl', jsonl(notizen));
   await w.schreibe('daten/aufgaben.jsonl', jsonl(aufgaben));
   const erinnerungen = await q.erinnerungen();
@@ -406,7 +418,7 @@ Alles hier lässt sich ohne das DMS lesen. **Der Export ist unverschlüsselt** �
 | \`daten/verweise.csv\` | Mappe → Feld → Mappe |
 | \`daten/dokumente.csv\` | alle Dokumente und ihre älteren Versionen mit Pfad im Export |
 | \`daten/*.jsonl\` | Notizen, Aufgaben (mit Fristen), Erinnerungen, Historie, Papierkorb, Vertretungen; \`favoriten.csv\` |
-| \`ablage/<Typ>/<Titel> [Id]/\` | je Mappe \`mappe.json\`, \`mappe.pdf\` und die Dokumente im Original je Register; \`.txt\` = erkannter Text; \`Versionen/\` = ältere Versionen |
+| \`ablage/<Typ>/<Titel> [Id]/\` | je Mappe \`mappe.json\`, \`mappe.pdf\` und die Dokumente im Original je Register; \`.txt\` = erkannter Text; \`.fassung.pdf\` (bzw. \`.png\`, \`.jpg\`) = umgewandelte Fassung eines Pakets für Dateitypen wie TIFF; \`Versionen/\` = ältere Versionen |
 | \`uebersicht/<typ>.pdf\` | Übersicht je Mappentyp mit allen Mappen |
 | \`kalender/fristen.ics\` | offene Fristen, Aufgaben mit Datum und Erinnerungen (iCalendar) |
 | \`kontakte/<typ>.vcf\` | Kontakte als vCard 4.0 (nur, wenn beim Export zugeordnet) |

@@ -43,7 +43,7 @@ Gehört zur Sicherung ein anderer Schlüssel als der jetzige, legt das DMS die b
 
 ## Probe-Wiederherstellung
 
-Eine Sicherung ist erst dann gut, wenn sie sich einspielen lässt. Deshalb spielt das DMS **sonntags um 04:00** (einstellbar unter *Sicherung → Probe-Wiederherstellung*) die neueste Sicherung probeweise ein – in einen vorübergehenden Bereich, das laufende DMS bleibt unberührt – und prüft sie wie oben, dazu die Prüfwerte von bis zu 20 Dateien. **Jetzt probeweise wiederherstellen** startet sie sofort.
+Eine Sicherung ist erst dann gut, wenn sie sich einspielen lässt. Deshalb spielt das DMS **sonntags um 04:00** (einstellbar unter *Sicherung → Probe-Wiederherstellung*) die neueste Sicherung probeweise ein – in einen vorübergehenden Bereich, das laufende DMS bleibt unberührt – und prüft sie wie oben, dazu die Prüfwerte von bis zu 20 Dateien und jede [umgewandelte Fassung](texterkennung.md#andere-dateitypen) gegen den Prüfwert in ihren Angaben. Der Schritt *Entschlüsseln und Einspielen* nennt, wie viele Fassungen dabei sind. Passt eine nicht (etwa weil das Paket sie genau während der Sicherung neu erzeugt hat), übernimmt das DMS sie nicht – das Paket wandelt die Datei dann neu um, wie bei einer älteren Sicherung ohne Fassungen. **Jetzt probeweise wiederherstellen** startet sie sofort.
 
 ![Probe-Wiederherstellung](bilder/werkbank-sicherung-probe.png)
 

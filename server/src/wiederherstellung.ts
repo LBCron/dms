@@ -5,6 +5,7 @@ import { mkdir, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'n
 import type { Writable } from 'node:stream';
 import { dirname, join, normalize, sep } from 'node:path';
 import postgres from 'postgres';
+import { FASSUNG_PFAD } from './dateiumwandlung';
 import { migriere, verbinde } from './db';
 import { bezeichner, OHNE_INHALT, type Tabelle } from './datenbankabzug';
 import { beschreibe, liesErweiterungen, problemeAus, TRIGRAMM_INDEXNAMEN, trigrammIndizes } from './erweiterungen';
@@ -321,6 +322,8 @@ export class Wiederherstellung {
       let tabellen = 0; let dateien = 0; let stichprobe = 0; let iDatei = 0; let endeTabellen: number | null = null;
       const jede = Math.max(1, Math.ceil(m.anzahl.dateien / 20));
       let zaehlerSicherung: Record<string, number> | null = null;
+      // Umgewandelte Fassungen (#577, seit 0.140.1 in der Sicherung): Prüfwert des Inhalts und der in den Angaben.
+      const fassungIst = new Map<string, string>(); const fassungSoll = new Map<string, string>();
       lauf.bytes = 0;
       for await (const e of liesSicherung(pfad, leiteAb(k, ZWECK), (n) => { lauf.bytes = n; })) {
         if (e.art === 'M') {
@@ -341,7 +344,11 @@ export class Wiederherstellung {
           if (!istSicherer(rel)) throw new Error(`Ungültiger Dateipfad in der Sicherung: ${rel}`);
           const pruefen = iDatei++ % jede === 0;
           const name = rel.split('/').pop()!;
+          const fassung = FASSUNG_PFAD.exec(rel);
           const h = pruefen && /^[0-9a-f]{64}$/.test(name) ? createHash('sha256') : null;
+          // Fassungen immer ganz prüfen: Inhalt gegen den Prüfwert in ihren Angaben (.json).
+          const hf = fassung?.[2] === 'fassung' ? createHash('sha256') : null;
+          const angaben: Buffer[] | null = fassung?.[2] === 'json' ? [] : null;
           // Streamen statt puffern: auch große Dokumente brauchen kaum Arbeitsspeicher.
           let ausgabe: Writable | null = null;
           if (!probe) {
@@ -351,13 +358,20 @@ export class Wiederherstellung {
             w = ausgabe;
           }
           for await (const c of e.daten) {
-            h?.update(c);
+            h?.update(c); hf?.update(c);
+            if (angaben && angaben.length < 64) angaben.push(c);
             if (ausgabe && !ausgabe.write(c)) await once(ausgabe, 'drain');
           }
           if (ausgabe) { ausgabe.end(); await once(ausgabe, 'close'); w = null; }
           if (h) {
             if (h.digest('hex') !== name) throw new Error(`Die Datei ${rel} in der Sicherung ist beschädigt (Prüfwert stimmt nicht).`);
             stichprobe++;
+          }
+          if (hf) fassungIst.set(fassung![1], hf.digest('hex'));
+          if (angaben) {
+            let soll = '';
+            try { soll = String((JSON.parse(Buffer.concat(angaben).toString('utf8')) as { sha256?: unknown }).sha256 ?? ''); } catch { /* unlesbar */ }
+            fassungSoll.set(fassung![1], soll);
           }
           dateien++;
         } else if (e.art === 'E') {
@@ -366,7 +380,16 @@ export class Wiederherstellung {
       }
       // Erst hier ist der GCM-Prüfwert geprüft: Die Datei ist echt und vollständig.
       if (endeTabellen === null || tabellen !== endeTabellen || tabellen !== m.anzahl.tabellen) throw new Error(`Die Sicherung ist unvollständig: ${tabellen} Tabellen eingespielt, erwartet ${m.anzahl.tabellen}.`);
-      ok(`${tabellen} Tabellen, ${dateien} Dateien${stichprobe ? `, Prüfwerte von ${stichprobe} Dateien nachgerechnet` : ''}`);
+      // Fassung und Angaben gehören zusammen. Passt ein Paar nicht (z. B. während der Sicherung neu umgewandelt), kommt
+      // es nicht mit: Das Paket wandelt die Datei dann neu um (wie bei einer Sicherung ohne Fassungen).
+      let fassungen = 0; let fassungenOhne = 0;
+      for (const sha of new Set([...fassungIst.keys(), ...fassungSoll.keys()])) {
+        if (fassungIst.has(sha) && fassungIst.get(sha) === fassungSoll.get(sha)) { fassungen++; continue; }
+        fassungenOhne++;
+        log.warn('Umgewandelte Fassung in der Sicherung unvollständig – nicht übernommen', { datei: sha });
+        if (!probe) for (const endung of ['json', 'fassung']) await rm(join(staging, m.haushaltId, 'fassungen', sha.slice(0, 2), `${sha}.${endung}`), { force: true });
+      }
+      ok(`${tabellen} Tabellen, ${dateien} Dateien${fassungen ? `, ${fassungen === 1 ? 'eine umgewandelte Fassung' : `${fassungen} umgewandelte Fassungen`}` : ''}${fassungenOhne ? ` (${fassungenOhne} unvollständig, nicht übernommen)` : ''}${stichprobe ? `, Prüfwerte von ${stichprobe} Dateien nachgerechnet` : ''}`);
       // Zähler der Sequenzen nachziehen.
       for (const r of await neu`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = ${schema} AND column_default LIKE 'nextval(%'`) {
         const t = `${bezeichner(schema)}.${bezeichner(r.table_name as string)}`;
@@ -439,18 +462,22 @@ export class Wiederherstellung {
       await neu`DELETE FROM einstellungen WHERE schluessel = 'wartung'`;
 
       schritt('Dateien übernehmen');
-      let uebernommen = 0;
+      let uebernommen = 0; let schonDa = 0;
       for (const d of await readdir(staging, { recursive: true, withFileTypes: true })) {
         if (!d.isFile()) continue;
         const quelle = join(d.parentPath ?? (d as unknown as { path: string }).path, d.name);
-        const ziel = join(this.q.dateiWurzel, quelle.slice(staging.length + 1));
-        if (await stat(ziel).then(() => true, () => false)) continue; // gleicher Prüfwert = gleicher Inhalt
+        const rel = quelle.slice(staging.length + 1);
+        const ziel = join(this.q.dateiWurzel, rel);
+        // Gleicher Prüfwert = gleicher Inhalt. Nicht bei Fassungen (#577): Ihr Name ist der Prüfwert des Originals – die
+        // aus der Sicherung ersetzt eine inzwischen anders umgewandelte, damit alles so dasteht wie damals.
+        const istFassung = FASSUNG_PFAD.test(rel.split(sep).slice(1).join('/'));
+        if (!istFassung && await stat(ziel).then(() => true, () => false)) { schonDa++; continue; }
         await mkdir(dirname(ziel), { recursive: true });
         await rename(quelle, ziel);
         uebernommen++;
       }
       await rm(staging, { recursive: true, force: true });
-      ok(`${uebernommen} neu, ${dateien - uebernommen} schon vorhanden`);
+      ok(`${uebernommen} neu, ${schonDa} schon vorhanden`);
 
       // Die Schlüsseldatei erst ganz zum Schluss – und bei jedem späteren Fehler wieder zurück.
       schritt('Schlüsseldatei');
