@@ -9,7 +9,8 @@
  * und kostet praktisch keine Rechenzeit; für einzelne Wörter oder Zahlenkolonnen gibt es bewusst
  * kein Ergebnis (null).
  *
- * Sprachkennungen sind die von Tesseract (deu, eng, fra …), damit sie direkt als Sprachpaket taugen.
+ * Sprachkennungen sind die von Tesseract (deu, eng, fra …), wie sie das Paket Texterkennung und seine
+ * Sprach-Zusatzpakete (texterkennung_<kennung>, #459) verwenden.
  */
 
 export interface SpracheInfo {
@@ -17,11 +18,11 @@ export interface SpracheInfo {
   name: string;
   /** Konfiguration der PostgreSQL-Volltextsuche (Wortstämme); „simple“, wenn es keine gibt. */
   pg: string;
-  /** Alpine-Paket mit dem Sprachpaket für Tesseract. */
+  /** Zusatzpaket des Pakets Texterkennung mit dieser Sprache (#459; Deutsch und Englisch stecken im Paket selbst). */
   paket: string;
 }
 
-const info = (name: string, code: string, pg: string): SpracheInfo => ({ name, pg, paket: `tesseract-ocr-data-${code}` });
+const info = (name: string, code: string, pg: string): SpracheInfo => ({ name, pg, paket: `texterkennung_${code}` });
 
 /** Sprachen, die die Erkennung unterscheidet (Tesseract-Kennung → Angaben). */
 export const TEXTSPRACHEN: Record<string, SpracheInfo> = {
@@ -153,8 +154,9 @@ export function spracheAusInfo(info: string | null | undefined): { sprache: stri
 export const SPRACHE_SQL_MUSTER = '· Sprache: ([a-z_]{3,10})';
 
 /**
- * Vorschläge für die Werkbank (#395): erkannte Sprachen, deren Sprachpaket fehlt – häufigste zuerst.
- * Die Erkennung arbeitet auf dem Text, also auch dann, wenn das Sprachpaket (noch) fehlt.
+ * Vorschläge für die Werkbank (#395, #459): erkannte Sprachen, deren Sprachdaten dem Paket Texterkennung fehlen
+ * (Zusatzpaket nicht installiert) – häufigste zuerst. Die Erkennung arbeitet auf dem Text, also auch dann, wenn die
+ * Sprachdaten (noch) fehlen.
  */
 export function sprachvorschlaege(erkannt: Record<string, number>, installiert: string[]): Array<{ sprache: string; anzahl: number; paket: string }> {
   return Object.entries(erkannt)

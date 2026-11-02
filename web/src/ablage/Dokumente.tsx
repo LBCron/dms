@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type DragEvent, type MouseEvent, type Reac
 import { HERKUNFT, MAX_DATEIGROESSE, OCR_STAENDE, type Mappentyp, type Mappe, type Dokument, type DokumentVersion, type Herkunft, type OcrStand, type Register } from '../../../shared/src/model';
 import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
 import { herkunftText } from '../volltext';
+import { volltextHerkunft } from '../../../shared/src/volltext';
 import { t } from '../sprache';
 import { api, dokumentUrl, versionUrl, type Fundstelle } from '../api';
 import { useDaten } from '../daten';
@@ -150,7 +151,8 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const [ocr, setOcr] = useState<Record<string, OcrStand | undefined>>({});
   const [text, setText] = useState<{ id: string; text: string | null } | null>(null);
   const standVon = (x: Dokument) => ocr[x.id] ?? x.ocr;
-  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; return s === 'wartet' || s === 'laeuft' || s === 'paket'; });
+  // Wartet es auf das Paket, nur solange eins installiert ist (#459: ohne Paket wartet es, bis eins kommt).
+  const offen = dokumente.some((x) => { const s = standVon(x)?.stand; const h = volltextHerkunft(standVon(x)); return s === 'wartet' || s === 'laeuft' || (h?.art === 'wartet' && !!h.paket); });
   useEffect(() => {
     if (!offen || !dokumente.length) return;
     const t = setTimeout(() => {

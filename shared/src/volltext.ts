@@ -8,6 +8,9 @@
 import type { OcrStand } from './model';
 import { PAKET_TEXT } from './pakete';
 
+/** Id des Pakets Texterkennung im offiziellen Katalog (#459: für „jetzt installieren“). */
+export const TEXTERKENNUNG_PAKET = 'texterkennung';
+
 /** Hinweis bei Text aus der Textebene eines PDFs. */
 export const INFO_TEXTEBENE = 'Textebene des PDFs';
 /** So beginnt der Hinweis, solange ein Dokument auf das Paket wartet. */

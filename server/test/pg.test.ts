@@ -817,7 +817,7 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     const { pdfMitText } = await import('./hilfen');
     const st = (await anfrage('GET', '/api/werkbank/texterkennung')).body;
     assert.equal(st.einstellungen.auftraege, 1);
-    assert.equal(st.einstellungen.maxSeiten, 50);
+    assert.equal(st.einstellungen.maxSeiten, undefined, 'Seitengrenze steht seit #459 beim Paket');
     const typ = (await anfrage('POST', '/api/typen', { name: 'Beleg', felder: [{ key: 'nr', label: 'Nr', typ: 'text', pflicht: true }] })).body;
     const m = (await anfrage('POST', '/api/mappen', { typId: typ.id, werte: { nr: 'B-1' } })).body;
     const hoch = await app.inject({ method: 'POST', url: `/api/mappen/${m.id}/dokumente?register=dokumente&name=beleg.pdf&typ=application/pdf`,

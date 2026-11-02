@@ -109,6 +109,9 @@ export interface PapierkorbFilter {
 /** Ein Ereignis für ein Paket (#338). */
 export interface PaketEreignis { id: string; paketId: string; art: string; daten: Record<string, unknown>; erstellt: string; versuche: number }
 
+/** Anzahl fertiger Dokumente je Herkunft des Volltexts (#459). */
+export interface VolltextHerkunftZahlen { pdf: number; paket: number; api: number; eingebaut: number; sonst: number; ohneText: number }
+
 export interface Repo {
   /**
    * Mehrere Änderungen ganz oder gar nicht (#404), z. B. eine Änderung samt Ereignis im Ausgangskorb:
@@ -416,6 +419,12 @@ export interface Repo {
    * bzw. alle Dokumente, mit Typ und Register ihrer Mappe, ältere zuerst.
    */
   volltextKandidaten(umfang: 'ohne' | 'alle'): Promise<Array<{ id: string; typId: string; registerKey: string }>>;
+  /**
+   * Woher der Volltext fertiger Dokumente kommt (#459, Werkbank → Texterkennung): Textebene des PDFs, Paket, API,
+   * frühere eingebaute Texterkennung, sonst (z. B. nach dem Schwärzen) – und fertige ohne Text. Wie volltextHerkunft
+   * (shared/src/volltext.ts) aus dem Hinweis gelesen.
+   */
+  volltextHerkunft(): Promise<VolltextHerkunftZahlen>;
   /** Erkannte Sprachen (#395): Anzahl fertiger Dokumente je Sprachkennung (aus dem Hinweis der Texterkennung). */
   ocrSprachen(): Promise<Record<string, number>>;
   volltext(id: string): Promise<string | null>;

@@ -48,7 +48,7 @@ Die Vorlagen **leicht**, **realistisch** und **schwer** sind fertige Mischungen;
 Vor dem Start steht eine **Abschätzung** auf der Seite und ändert sich beim Schieben sofort: Mappen, Dokumente, Seiten, Größe, Seiten für die Texterkennung und der freie Platz – z. B. „≈ 1.000 Mappen, ≈ 600 Dokumente mit ≈ 4.224 Seiten, zusammen ≈ 559 MB; ≈ 348 Seiten für die Texterkennung“. Bei sehr großen Mengen (ab etwa 20.000 Dokumenten oder 20 GB) warnt sie deutlich, denn das dauert auf einem NAS Stunden. Mehr als 250.000 Dokumente je Lauf sind nicht möglich – dann lieber mehrere Läufe. Reicht der Platz nicht – frei bleiben müssen der *Mindest-Speicherplatz* der [Sicherung](sicherung.md) und die Grenze unter [Systemzustand](speicherplatz.md) –, lässt sich der Lauf nicht starten. Wird der Platz während des Laufs knapp, hört er sauber auf und sagt das im Ergebnis.
 
 !!! warning "Texterkennung braucht Zeit"
-    Die Texterkennung vieler „gescannter“ PDFs und Bilder dauert auf einem NAS eher Tage als Stunden; sie läuft nach dem Erzeugen im Hintergrund weiter. Sicherungen werden entsprechend größer.
+    Die Texterkennung vieler „gescannter“ PDFs und Bilder dauert auf einem NAS eher Tage als Stunden; sie läuft nach dem Erzeugen im Hintergrund weiter. Sicherungen werden entsprechend größer. Die Texterkennung übernimmt das Paket **Texterkennung** – ohne das Paket bleiben die „Scans“ ohne Text (siehe [Texterkennung](texterkennung.md)).
 
 ### Beobachten
 

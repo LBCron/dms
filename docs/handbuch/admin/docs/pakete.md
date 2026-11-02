@@ -147,7 +147,7 @@ Schlägt ein **Update** fehl, bleibt die alte Version mit ihrem alten Code insta
 **Entfernen** beendet den Code, löscht seine offenen Ereignisse und seinen Speicher und schaltet das Dienstkonto ab.
 
 !!! note "Volltext aus einem Paket"
-    Setzt ein Paket den Volltext eines Dokuments (z. B. das Paket **Texterkennung**), vermerkt die Historie „Volltext gesetzt“ mit dem Namen des Pakets, und die Texterkennung des DMS überschreibt diesen Text nicht.
+    Setzt ein Paket den Volltext eines Dokuments (z. B. das Paket **Texterkennung**), vermerkt die Historie „Volltext gesetzt“ mit dem Namen des Pakets, und das DMS überschreibt diesen Text nicht.
 
 ### Rechte eines Pakets { #rechte-eines-pakets }
 
@@ -259,7 +259,7 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 
 **Veraltet** – gibt es weiter für Pakete, die vor Version 0.133 entstanden sind. **Wann:** Gleichzeitig mit [Volltext fertig](#ereignis-volltext-fertig), wenn das DMS ein Dokument selbst gelesen hat (Textebene).
 
-**Typisch:** Ältere Fassungen des Pakets **Texterkennung** (1.x) erkennen damit Scans ohne Text.
+**Typisch:** Ältere Fassungen des Pakets **Texterkennung** (1.x) erkennen damit Scans ohne Text. Seit Version 0.134 gibt es keine eingebaute Texterkennung mehr – aktualisiere das Paket auf 2.0, damit das DMS es als Texterkennung kennt.
 
 #### Der Volltext eines Dokuments ist fertig { #ereignis-volltext-fertig }
 
