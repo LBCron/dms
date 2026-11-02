@@ -108,7 +108,7 @@ Das Suchformular steht **oben in der Mitte**, die Treffer darunter; links bleibe
 
 So funktioniert das Formular:
 
-- **Mappentypen**: Du suchst sie wie bei einem Verweisfeld – tippen, Vorschlag wählen. Gewählte Mappentypen stehen als Chips darüber; das Kreuz entfernt einen. Angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht das DMS in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
+- **Mappentypen**: Du wählst sie genauso wie mehrere Mappen in einem [Verweisfeld](mappen.md#auf-andere-mappen-verweisen) – tippen, Vorschlag wählen (oder **Enter** für den ersten). Die gewählten Mappentypen stehen **unter** dem Suchfeld, jeder mit **Entfernen**; das Suchfeld bleibt dabei auf einer Höhe mit *Volltext* daneben. Angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht das DMS in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
 - **Bedingungen**: Anfangs steht kein Feld da. Mit **+ Bedingung** wählst du ein Feld; angeboten werden die Felder, die **alle gewählten Mappentypen gemeinsam** haben. Das Kreuz rechts entfernt die Bedingung wieder. Jedes Feld bekommt die passende Eingabe:
     - **Datum**: von–bis in einer Zeile; eins von beiden darf leer bleiben. Unter **Zeitraum …** gibt es „dieses Jahr“, „letztes Jahr“, „letzte 12 Monate“, „dieser Monat“ und „letzter Monat“.
     - **Zahl, Betrag**: von–bis.

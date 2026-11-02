@@ -12,6 +12,7 @@ import { useKonto } from '../konto';
 import { geheZu, Link, loeseWache, useUngespeichert } from '../ort';
 import { ausRoh, leeresPasswort, rohAusWerten, standardRoh, werteAusRoh, zuRoh, type Roh, type RohBetrag, type RohPasswort, type RohWerte } from '../werte';
 import { titelOder } from '../seiten';
+import { Mehrfachauswahl } from './Mehrfachauswahl';
 import { Formatiert, FormatiertEingabe } from './Formatiert';
 import { Historie } from './Historie';
 import { mitNotizen, NOTIZEN_REGISTER, startRegister, type AnsichtsRegister } from '../../../shared/src/mappenansicht';
@@ -960,43 +961,20 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
   const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">+ {ziel.name} anlegen</Link> : null;
 
   return (
-    <div className="refbox">
-      {gewaehlt.length > 0 && (
-        <ul className="gewaehlt">
-          {gewaehlt.map((x) => (
-            <li key={x}>
-              {bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis">{titelOder(bekannt[x].titel)}</Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : 'leise'}>{bekannt[x]?.titel ?? 'Lade …'}</span>}
-              {unpassend.includes(x) && <span className="chip warn" title="Bleibt gültig; neu wählen lässt sich nur, was zur Auswahl passt.">passt nicht mehr zum Filter</span>}
-              <span className="verweisaktionen">
-                {!mehrfach && !aendern && <button type="button" className="textknopf klein" onClick={() => { setAendern(true); setOffen(true); }}>Ändern</button>}
-                <button type="button" className="textknopf klein gefahr" aria-label="Verweis entfernen" onClick={() => setze(mehrfach ? gewaehlt.filter((y) => y !== x) : '')}>Entfernen</button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {zeigeSuche && (
-        <div className="wahl" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) { setOffen(false); setAendern(false); } }}>
-          <input id={id} type="search" role="combobox" aria-expanded={offen} aria-autocomplete="list" autoComplete="off"
-            placeholder={`${ziel.name} suchen …`} value={eingabe}
-            onFocus={() => setOffen(true)} onChange={(e) => { setEingabe(e.target.value); setOffen(true); }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') { setOffen(false); setAendern(false); }
-              if (e.key === 'Enter') { e.preventDefault(); if (auswahl[0]) waehle(auswahl[0]); }
-            }} />
-          {offen && (
-            <div className="wahlliste" role="listbox">
-              {treffer === null ? <p className="leise klein">Lade …</p>
-                : !auswahl.length ? <p className="leise klein">{eingabe ? 'Nichts gefunden.' : `Noch keine Mappe in „${ziel.name}“.`}</p>
-                : <>
-                    {auswahl.map((m) => <button key={m.id} type="button" role="option" aria-selected={false} onClick={() => waehle(m)}>{titelOder(m.titel)}</button>)}
-                    {gesamt > (treffer?.length ?? 0) && <p className="leise klein">{gesamt.toLocaleString('de-DE')} insgesamt – tippe, um einzugrenzen.</p>}
-                  </>}
-            </div>
-          )}
-        </div>
-      )}
-      {anlegen && <div className="zeile">{anlegen}</div>}
-    </div>
+    <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={t('felder.verweis.suchen', { typ: ziel.name })}
+      eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen} schliessen={() => setAendern(false)} ohneSuche={!zeigeSuche}
+      vorschlaege={treffer === null ? null : auswahl.map((m) => ({ id: m.id, text: titelOder(m.titel) }))}
+      leerText={eingabe ? t('felder.verweis.nichts') : t('felder.verweis.leer', { typ: ziel.name })}
+      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('felder.verweis.mehr', { zahl: gesamt.toLocaleString('de-DE') })}</p>}
+      waehle={(mid) => { const m = auswahl.find((x) => x.id === mid); if (m) waehle(m); }}
+      gewaehlt={gewaehlt.map((x) => ({
+        id: x,
+        inhalt: bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis">{titelOder(bekannt[x].titel)}</Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : 'leise'}>{bekannt[x]?.titel ?? t('felder.auswahl.lade')}</span>,
+        zusatz: unpassend.includes(x) && <span className="chip warn" title={t('felder.verweis.unpassend.titel')}>{t('felder.verweis.unpassend')}</span>,
+        aktionen: !mehrfach && !aendern && <button type="button" className="textknopf klein" onClick={() => { setAendern(true); setOffen(true); }}>{t('felder.verweis.aendern')}</button>,
+        entfernenText: bekannt[x] ? t('felder.verweis.entfernen', { titel: titelOder(bekannt[x].titel) }) : t('felder.verweis.entfernen.ohne'),
+      }))}
+      entferne={(x) => setze(mehrfach ? gewaehlt.filter((y) => y !== x) : '')}
+      darunter={anlegen && <div className="zeile">{anlegen}</div>} />
   );
 }

@@ -45,10 +45,13 @@ try {
   // #426: Formular oben in der Mitte; ohne geöffnete Mappe reicht die Mitte bis rechts, links bleibt die Navigation.
   pruefe(!(await s.locator('.spalte.mappe').isVisible()), 'Ohne geöffnete Mappe sollte es rechts keine Spalte geben');
   pruefe(await s.locator('.spalte.sichten .sichtliste').isVisible(), 'Links sollte die Navigation bleiben');
-  // Mappentyp wie beim Referenzfeld: Suchfeld, Vorschlag, Chip.
+  // Mappentyp wie beim Verweisfeld (#602): Suchfeld, Vorschlag, gewählter Typ darunter.
   await form.getByLabel('Mappentyp suchen …').fill('Rechn');
   await form.getByRole('option', { name: 'Rechnung', exact: true }).click();
   await form.getByRole('list', { name: 'Mappentypen' }).getByText('Rechnung', { exact: true }).waitFor();
+  // #602: Die gewählten Typen stehen unter dem Suchfeld – es bleibt auf einer Höhe mit „Volltext“.
+  const hoehe = async (l) => (await form.getByLabel(l).boundingBox())?.y ?? NaN;
+  pruefe(Math.abs(await hoehe('Mappentyp suchen …') - await hoehe('Suchbegriff im Volltext')) < 1, 'Das Feld „Mappentypen“ sollte auf einer Höhe mit „Volltext“ bleiben');
   // Felder nur bei Bedarf: „+ Bedingung“ → Rechnungsdatum.
   pruefe(!(await form.getByLabel('Rechnungsdatum von').count()), 'Felder sollten erst mit „+ Bedingung“ erscheinen');
   await form.getByLabel('Feld für eine neue Bedingung').selectOption({ label: 'Rechnungsdatum' });
