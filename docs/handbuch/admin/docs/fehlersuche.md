@@ -33,7 +33,7 @@ Schaltet für **eine Stunde** zusätzliche, ausführliche Meldungen ein – etwa
 Jede Meldung steht als lesbare Zeile in den Logs des Containers:
 
 ```text
-2026-10-28T09:12:33.120Z INFO  [ablage] Mappe angelegt benutzer=anna@example.org typ=Rechnung titel="R-17 vom 01.10.2026"
+2026-10-28T09:12:33.120Z INFO  [ablage] Mappe angelegt benutzer=lena@example.org typ=Rechnung titel="R-17 vom 01.10.2026"
 ```
 
 ```sh

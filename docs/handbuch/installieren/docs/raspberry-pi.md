@@ -46,6 +46,9 @@ Danach kannst du freiwillig messen, [wie schnell dein Pi ist](#wie-schnell-ist-m
 
 Das „System“ ist **Raspberry Pi OS** – so etwas wie Windows, nur für den Pi. Du schreibst es mit dem Programm **Raspberry Pi Imager** auf die SSD.
 
+!!! tip "Bildschirmfotos gesucht"
+    Wo unten „Bildschirmfoto folgt“ steht, fehlt noch ein Bild. Wenn du den Imager gerade vor dir hast und helfen möchtest: In [Issue #591](https://github.com/motom001/dms/issues/591) steht, welche Bilder fehlen und worauf du achten musst (keine echten Daten, kein echtes WLAN oder Passwort).
+
 1. **Imager installieren:** Lade den [Raspberry Pi Imager](https://www.raspberrypi.com/software/) für dein System (Windows, macOS oder Linux) und installiere ihn wie jedes andere Programm.
 2. **SSD anschließen:** Steck die SSD per USB an deinen PC oder Mac.
 3. **Imager starten** und **Gerät wählen**: dein Modell, also *Raspberry Pi 5* oder *Raspberry Pi 4*.

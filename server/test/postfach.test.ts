@@ -66,23 +66,23 @@ async function aufbau(o: Record<string, unknown> = {}) {
   return { d, pf, p, server, posten, einstellungen, anna, meldungen };
 }
 
-const RECHNUNG: TestMail = { messageId: '<r1@example.org>', betreff: 'Ihre Rechnung 4711', datum: '2026-10-30T09:15:00Z', absenderName: 'Stadtwerke', absenderAdresse: 'rechnung@stadtwerke.de', text: 'Anbei Ihre Rechnung.', anhaenge: [{ name: 'Rechnung 4711.pdf', mime: 'application/pdf', text: '%PDF-1.4 x' }, { name: 'logo.png', mime: 'image/png', text: 'png', eingebettet: true }] };
+const RECHNUNG: TestMail = { messageId: '<r1@example.org>', betreff: 'Ihre Rechnung 4711', datum: '2026-10-30T09:15:00Z', absenderName: 'Stadtwerke', absenderAdresse: 'rechnung@stadtwerke.example', text: 'Anbei Ihre Rechnung.', anhaenge: [{ name: 'Rechnung 4711.pdf', mime: 'application/pdf', text: '%PDF-1.4 x' }, { name: 'logo.png', mime: 'image/png', text: 'png', eingebettet: true }] };
 
 describe('Postfächer (#196)', () => {
   it('prüft Eingaben; Passwort verschlüsselt und nie in der Ansicht', async () => {
     const v = (k: string) => `enc:${k}`;
-    assert.throws(() => pruefePostfach({ name: 'X', server: 'imap.x.de', benutzer: 'a' }, null, v), (e) => e instanceof Fachfehler && /Passwort/.test(e.message));
-    assert.throws(() => pruefePostfach({ name: 'X', server: 'imap.x.de', benutzer: 'a', passwort: 'p', verschluesselung: 'keine' }, null, v), /ausdrücklich/);
-    const p = pruefePostfach({ name: 'X', server: 'imap.x.de', benutzer: 'a', passwort: 'p', absender: 'chef@firma.de, bank.de' }, null, v);
+    assert.throws(() => pruefePostfach({ name: 'X', server: 'imap.x.example', benutzer: 'a' }, null, v), (e) => e instanceof Fachfehler && /Passwort/.test(e.message));
+    assert.throws(() => pruefePostfach({ name: 'X', server: 'imap.x.example', benutzer: 'a', passwort: 'p', verschluesselung: 'keine' }, null, v), /ausdrücklich/);
+    const p = pruefePostfach({ name: 'X', server: 'imap.x.example', benutzer: 'a', passwort: 'p', absender: 'chef@firma.example, bank.example' }, null, v);
     assert.equal(p.passwort, 'enc:p');
-    assert.deepEqual(p.absender, ['chef@firma.de', 'bank.de']);
+    assert.deepEqual(p.absender, ['chef@firma.example', 'bank.example']);
     assert.equal(pruefePostfach({ name: 'Y' }, p, v).passwort, 'enc:p', 'leeres Passwort behält das alte');
     const { pf } = await aufbau();
     const [a] = await pf.ansicht();
     assert.equal((a as unknown as { passwort?: string }).passwort, undefined);
     assert.equal(a.passwortGesetzt, true);
-    assert.ok(absenderPasst('x@mail.bank.de', ['bank.de']));
-    assert.ok(!absenderPasst('x@andere.de', ['bank.de', 'chef@firma.de']));
+    assert.ok(absenderPasst('x@mail.bank.example', ['bank.example']));
+    assert.ok(!absenderPasst('x@andere.example', ['bank.example', 'chef@firma.example']));
   });
 
   it('macht aus jeder Mail eine Post mit Anhängen, Text und Original; verschiebt danach', async () => {
@@ -92,7 +92,7 @@ describe('Postfächer (#196)', () => {
     const [{ m, x }] = await posten();
     assert.equal(m.werte.kanal, POST_KANAL.email);
     assert.equal(m.werte.betreff, 'Ihre Rechnung 4711');
-    assert.equal(m.werte.absender, 'Stadtwerke <rechnung@stadtwerke.de>');
+    assert.equal(m.werte.absender, 'Stadtwerke <rechnung@stadtwerke.example>');
     assert.equal(m.werte.datum, '2026-10-30');
     assert.equal(m.werte.nachricht, 'Anbei Ihre Rechnung.');
     assert.deepEqual(x.dokumente.map((dok) => dok.name).sort(), ['Ihre Rechnung 4711.eml', 'Rechnung 4711.pdf'], 'Logo übersprungen, Original dabei');
@@ -102,8 +102,8 @@ describe('Postfächer (#196)', () => {
   });
 
   it('Absenderfilter und „nur mit Anhang“ lassen Mails unverändert liegen; Markieren und Löschen', async () => {
-    const { pf, p, server, posten } = await aufbau({ absender: 'stadtwerke.de', nurMitAnhang: true, nachher: 'gelesen', fuer: undefined });
-    server.lege({ ...RECHNUNG, messageId: '<a>', absenderAdresse: 'spam@werbung.de' });
+    const { pf, p, server, posten } = await aufbau({ absender: 'stadtwerke.example', nurMitAnhang: true, nachher: 'gelesen', fuer: undefined });
+    server.lege({ ...RECHNUNG, messageId: '<a>', absenderAdresse: 'spam@werbung.example' });
     server.lege({ ...RECHNUNG, messageId: '<b>', anhaenge: [] });
     server.lege({ ...RECHNUNG, messageId: '<c>' });
     assert.equal(await pf.abrufen(p.id), 1);

@@ -30,9 +30,9 @@ const fehler = (k: string, v: string, werte = {}) => formatFehler(f(k), v, { fel
 describe('Feldformate (#535): einzelne Formate', () => {
   it('E-Mail: name@domain.tld', () => {
     assert.ok(istEmail('lena@example.org'));
-    assert.ok(istEmail('jonas.weber+dms@mail.beispiel.co.uk'));
-    assert.ok(istEmail('markus@müller.de'));
-    for (const x of ['lena', 'lena@beispiel', '@example.org', 'lena@@example.org', 'lena beispiel@x.de']) assert.ok(!istEmail(x), x);
+    assert.ok(istEmail('jonas.weber+dms@mail.beispiel.co.example'));
+    assert.ok(istEmail('markus@müller.example'));
+    for (const x of ['lena', 'lena@beispiel', '@example.org', 'lena@@example.org', 'lena beispiel@x.example']) assert.ok(!istEmail(x), x);
     assert.match(fehler('email', 'lena@beispiel')!, /name@example\.org/);
   });
 

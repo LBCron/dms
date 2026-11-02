@@ -488,7 +488,7 @@ static int32_t umwandeln(const char *dok, const char *sha) {
 Die eingebaute Erkennung (DMS #391) arbeitet gegen eine **Feldbeschreibung des Mappentyps**: `GET /api/v1/typen/{id}/erkennungsschema` liefert sie als JSON Schema 2020-12. Je Feld gibt es ein Objekt mit `wert` (Schema nach Feldart: Datum `JJJJ-MM-TT`, Betrag `{ betrag, waehrung }`, Auswahl nur aus der Liste, Verweis als Mappen-Id), `sicherheit` (`hoch`, `mittel`, `niedrig`) und `fundstelle` (Textstelle). Dazu `title` (Bezeichnung), `description` (Hilfetext und Erkennungshinweis), `x-dms-feldtyp`, `x-dms-erkennung` (Art, z. B. `email`) und `x-dms-markiert`. Passwortfelder und feste Felder stehen nie darin.
 
 ```json
-{ "email": { "wert": "anna.beispiel@elektro-muster.de", "sicherheit": "hoch", "fundstelle": "anna.beispiel@elektro-muster.de" },
+{ "email": { "wert": "anna.beispiel@elektro-muster.example", "sicherheit": "hoch", "fundstelle": "anna.beispiel@elektro-muster.example" },
   "plz":   { "wert": "01234", "sicherheit": "mittel", "fundstelle": "Elektro Muster GmbH · Musterweg 12 · 01234 Musterstadt" } }
 ```
 

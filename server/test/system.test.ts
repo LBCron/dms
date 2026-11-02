@@ -163,7 +163,7 @@ describe('Mappentyp Benutzer (#26)', () => {
 
   it('löscht eine nie angenommene Einladung samt Mappe', async () => {
     const { dienst, konten, admin } = await aufbau();
-    const r = await konten.legeBenutzerAn({ email: 'vertippt@exmaple.org', rolle: 'mitglied' }, admin.id);
+    const r = await konten.legeBenutzerAn({ email: 'vertippt@exmaple.test', rolle: 'mitglied' }, admin.id);
     await konten.loescheBenutzer(admin, r.benutzer.id);
     await wirft(dienst.holeMappe(r.benutzer.id), 404);
   });

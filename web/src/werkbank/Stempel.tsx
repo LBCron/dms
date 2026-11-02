@@ -30,7 +30,7 @@ export function useStempelVorlagenWerkbank(offen: boolean) {
 }
 export type StempelZustand = ReturnType<typeof useStempelVorlagenWerkbank>;
 
-const beispiel = (text: string) => ersetzePlatzhalter(text, { empfaenger: 'Hausverwaltung Müller', benutzer: 'Anna Beispiel', mappe: 'Personalausweis' });
+const beispiel = (text: string) => ersetzePlatzhalter(text, { empfaenger: 'Hausverwaltung Müller', benutzer: 'Lena Beispiel', mappe: 'Personalausweis' });
 
 export function StempelPanel({ z }: { z: StempelZustand }) {
   const d = useDaten();

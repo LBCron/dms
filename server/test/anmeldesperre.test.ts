@@ -12,12 +12,12 @@ describe('Anmeldeschutz (#240)', () => {
     let t = 0;
     const s = new Anmeldesperre(speicherEinstellungen(), undefined, () => t);
     await s.speichere({ konto: { versuche: 3, minuten: 10 } }, 'test');
-    for (let i = 0; i < 3; i++) await s.fehlschlag('a@x.de', '1.2.3.4');
-    await gesperrt(s.pruefe('a@x.de', '1.2.3.4'));
-    await s.pruefe('b@x.de', '1.2.3.4');
-    await s.pruefe('a@x.de', '5.6.7.8');
+    for (let i = 0; i < 3; i++) await s.fehlschlag('a@x.example', '1.2.3.4');
+    await gesperrt(s.pruefe('a@x.example', '1.2.3.4'));
+    await s.pruefe('b@x.example', '1.2.3.4');
+    await s.pruefe('a@x.example', '5.6.7.8');
     t += 11 * 60_000;
-    await s.pruefe('a@x.de', '1.2.3.4');
+    await s.pruefe('a@x.example', '1.2.3.4');
   });
 
   it('sperrt eine IP über alle Adressen, auch dauerhaft; Entsperren; übersteht einen Neustart', async () => {
@@ -25,23 +25,23 @@ describe('Anmeldeschutz (#240)', () => {
     const mails: string[] = [];
     const s = new Anmeldesperre(speicher, async (b) => { mails.push(b); });
     await s.speichere({ ip: { versuche: 4, minuten: 0 } }, 'test');
-    for (let i = 0; i < 4; i++) await s.fehlschlag(`n${i}@x.de`, '::ffff:9.9.9.9');
-    await gesperrt(s.pruefe('neu@x.de', '9.9.9.9'));
+    for (let i = 0; i < 4; i++) await s.fehlschlag(`n${i}@x.example`, '::ffff:9.9.9.9');
+    await gesperrt(s.pruefe('neu@x.example', '9.9.9.9'));
     const [g] = await s.gesperrt();
     assert.equal(g.ip, '9.9.9.9');
     assert.equal(g.bis, null, 'dauerhaft');
     assert.equal(mails.length, 0, 'im Standard keine Mail (#368)');
     const nachNeustart = new Anmeldesperre(speicher);
-    await gesperrt(nachNeustart.pruefe('neu@x.de', '9.9.9.9'));
+    await gesperrt(nachNeustart.pruefe('neu@x.example', '9.9.9.9'));
     assert.equal(await nachNeustart.entsperre('9.9.9.9', 'admin'), true);
-    await nachNeustart.pruefe('neu@x.de', '9.9.9.9');
+    await nachNeustart.pruefe('neu@x.example', '9.9.9.9');
   });
 
   it('Ausnahmen werden nie gesperrt; Einstellungen werden geprüft', async () => {
     const s = new Anmeldesperre();
     await s.speichere({ ip: { versuche: 2, minuten: 5 }, konto: { versuche: 2, minuten: 5 }, ausnahmen: '192.168.0.0/16, 10.0.0.7' }, 'test');
-    for (let i = 0; i < 5; i++) await s.fehlschlag('a@x.de', '192.168.1.20');
-    await s.pruefe('a@x.de', '192.168.1.20');
+    for (let i = 0; i < 5; i++) await s.fehlschlag('a@x.example', '192.168.1.20');
+    await s.pruefe('a@x.example', '192.168.1.20');
     assert.deepEqual(await s.gesperrt(), []);
     assert.throws(() => pruefeSperrEinstellung({ ausnahmen: 'kein-netz' }, SPERRE_STANDARD), (e) => e instanceof Fachfehler && e.status === 422);
     assert.throws(() => pruefeSperrEinstellung({ konto: { minuten: 0 } }, SPERRE_STANDARD), (e) => e instanceof Fachfehler);
@@ -51,10 +51,10 @@ describe('Anmeldeschutz (#240)', () => {
   it('erfolgreiche Anmeldung setzt die Zähler zurück', async () => {
     const s = new Anmeldesperre();
     await s.speichere({ konto: { versuche: 2, minuten: 5 } }, 'test');
-    await s.fehlschlag('a@x.de', '1.1.1.1');
-    await s.erfolg('a@x.de', '1.1.1.1');
-    await s.fehlschlag('a@x.de', '1.1.1.1');
-    await s.pruefe('a@x.de', '1.1.1.1');
+    await s.fehlschlag('a@x.example', '1.1.1.1');
+    await s.erfolg('a@x.example', '1.1.1.1');
+    await s.fehlschlag('a@x.example', '1.1.1.1');
+    await s.pruefe('a@x.example', '1.1.1.1');
   });
 });
 
@@ -87,7 +87,7 @@ describe('Anmeldeschutz: Mails (#368)', () => {
     const mails: { betreff: string; text: string }[] = [];
     const s = new Anmeldesperre(speicher, async (betreff, text) => { mails.push({ betreff, text }); }, () => t);
     await s.speichere({ ip: { versuche: 2, minuten: 60 }, mail: true }, 'admin');
-    for (let i = 1; i <= 7; i++) for (let k = 0; k < 2; k++) await s.fehlschlag(`x${k}@x.de`, `203.0.113.${i}`);
+    for (let i = 1; i <= 7; i++) for (let k = 0; k < 2; k++) await s.fehlschlag(`x${k}@x.example`, `203.0.113.${i}`);
     assert.equal((await s.gesperrt()).length, 7);
     assert.equal(mails.length, 0, 'keine Mail je Sperre');
     assert.equal(await s.meldeTaeglich(), false, 'am selben Tag noch nichts');
@@ -99,7 +99,7 @@ describe('Anmeldeschutz: Mails (#368)', () => {
     assert.match(mails[0].text, /Die fünf mit den meisten Fehlversuchen/);
     assert.equal(mails[0].text.split('\n').filter((z) => z.startsWith('- 203.0.113.')).length, 5);
     // Neue Sperren am selben Tag warten bis morgen.
-    for (let k = 0; k < 2; k++) await s.fehlschlag('y@x.de', '198.51.100.1');
+    for (let k = 0; k < 2; k++) await s.fehlschlag('y@x.example', '198.51.100.1');
     assert.equal(await s.meldeTaeglich(), false);
     t = start + 2 * TAG;
     assert.equal(await s.meldeTaeglich(), true);
@@ -114,7 +114,7 @@ describe('Anmeldeschutz: Mails (#368)', () => {
     const mails: string[] = [];
     const s = new Anmeldesperre(speicherEinstellungen(), async (b) => { mails.push(b); }, () => t);
     await s.speichere({ ip: { versuche: 1, minuten: 60 }, konto: { versuche: 1, minuten: 5 } }, 'admin');
-    await s.fehlschlag('a@x.de', '203.0.113.9', true);
+    await s.fehlschlag('a@x.example', '203.0.113.9', true);
     t += 2 * TAG;
     assert.equal(await s.meldeTaeglich(), false);
     assert.deepEqual(mails, []);
@@ -125,27 +125,27 @@ describe('Anmeldeschutz: Mails (#368)', () => {
     const mails: string[] = [];
     const s = new Anmeldesperre(speicherEinstellungen(), async (b) => { mails.push(b); }, () => t);
     await s.speichere({ konto: { versuche: 2, minuten: 1 }, mailKonto: true }, 'admin');
-    for (let k = 0; k < 2; k++) await s.fehlschlag('fremd@x.de', '203.0.113.1', false);
+    for (let k = 0; k < 2; k++) await s.fehlschlag('fremd@x.example', '203.0.113.1', false);
     assert.equal(mails.length, 0, 'unbekannte Adresse: keine Mail');
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.de', '203.0.113.1', true);
+    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.1', true);
     assert.equal(mails.length, 1);
     assert.match(mails[0], /Benutzerkonto/);
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.de', '203.0.113.2', true);
+    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.2', true);
     assert.equal(mails.length, 1, 'am selben Tag nicht noch einmal');
     t += TAG;
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.de', '203.0.113.3', true);
+    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.3', true);
     assert.equal(mails.length, 2);
   });
 
   it('Sammeltext nennt Zeitraum, Konten und den Weg zum Entsperren', () => {
     const { betreff, text } = sammelText([
       { tag: '2026-11-01', art: 'ip', wer: '203.0.113.1', versuche: 30 },
-      { tag: '2026-11-02', art: 'konto', wer: 'anna@x.de', versuche: 5 },
-      { tag: '2026-11-02', art: 'konto', wer: 'anna@x.de', versuche: 5 },
+      { tag: '2026-11-02', art: 'konto', wer: 'anna@x.example', versuche: 5 },
+      { tag: '2026-11-02', art: 'konto', wer: 'anna@x.example', versuche: 5 },
     ]);
     assert.match(betreff, /eine IP-Adresse und ein Benutzerkonto/);
     assert.match(text, /Vom 01\.11\.2026 bis 02\.11\.2026/);
-    assert.match(text, /anna@x\.de \(2×\)/);
+    assert.match(text, /anna@x\.example \(2×\)/);
     assert.match(text, /Werkbank → Anmeldeschutz/);
   });
 });

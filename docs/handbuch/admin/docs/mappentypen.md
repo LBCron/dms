@@ -58,7 +58,7 @@ Ein **Textfeld** kann ein **Format** haben. Dann prüft das DMS die Angabe, und 
 
 | Format | Was passt | Anzeige |
 | --- | --- | --- |
-| E-Mail | `name@example.org` – mit @ und einer Endung wie .org oder .de | daneben ein Knopf zum Schreiben (`mailto:`) |
+| E-Mail | `name@example.org` – mit @ und einer Endung wie .de oder .org | daneben ein Knopf zum Schreiben (`mailto:`) |
 | Telefon | Ziffern, + am Anfang, Leerzeichen, `/`, `-` und Klammern – keine Buchstaben, z. B. `+49 30 123456` | daneben ein Knopf zum Anrufen (`tel:`) |
 | Internetseite | `www.example.org` oder `https://www.example.org`; ohne `https://` ergänzt das DMS es | daneben ein Knopf, der die Seite in einem neuen Tab öffnet |
 | IBAN | Länge des Landes und Prüfziffer stimmen, z. B. `DE89 3704 0044 0532 0130 00` | in Vierergruppen |

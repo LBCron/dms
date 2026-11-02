@@ -21,7 +21,7 @@ Das DMS kann ein oder mehrere **E-Mail-Postfächer per IMAP abholen** und **jede
 | Ordner | Standard `INBOX` |
 | Abrufabstand | in Minuten, 1 bis 1440 (ein Tag), Standard 5 |
 | Für | optional: dieser Benutzer steht an jeder Post und hat sie unter „Zu erledigen“ |
-| Nur von diesen Absendern | optional: Adressen (`rechnung@stadtwerke.de`) oder Domains (`bank.de`, auch Unterdomains) |
+| Nur von diesen Absendern | optional: Adressen (`rechnung@stadtwerke.example`) oder Domains (`bank.example`, auch Unterdomains) |
 | Nach dem Übernehmen | **in einen Ordner verschieben** (Standard `DMS`, wird angelegt), **nur als gelesen markieren** oder **löschen** |
 | Nur Mails mit Anhang | andere bleiben unverändert im Postfach |
 | Original-Mail als .eml | Standard ein: die ganze Mail liegt zusätzlich als Dokument an der Post |

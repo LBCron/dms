@@ -24,16 +24,16 @@ describe('Postfächer mit GreenMail (#196)', { skip: HOST ? false : 'IMAP_TEST_H
     const { Postfaecher } = await import('../src/postfach');
     const nodemailer = (await import('nodemailer')).default;
     const smtp = nodemailer.createTransport({ host: HOST, port: 3025, secure: false, ignoreTLS: true });
-    await smtp.sendMail({ from: 'Stadtwerke <rechnung@stadtwerke.de>', to: 'dms@dms.test', subject: 'Rechnung Oktober', text: 'Anbei die Rechnung.',
+    await smtp.sendMail({ from: 'Stadtwerke <rechnung@stadtwerke.example>', to: 'dms@dms.test', subject: 'Rechnung Oktober', text: 'Anbei die Rechnung.',
       attachments: [{ filename: 'Rechnung.pdf', content: Buffer.from('%PDF-1.4 Rechnung'), contentType: 'application/pdf' }] });
-    await smtp.sendMail({ from: 'werbung@shop.de', to: 'dms@dms.test', subject: 'Angebot', html: '<p>Nur <b>heute</b></p>' });
+    await smtp.sendMail({ from: 'werbung@shop.example', to: 'dms@dms.test', subject: 'Angebot', html: '<p>Nur <b>heute</b></p>' });
 
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
     await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     const pf = new Postfaecher({ dienst: d, einstellungen: speicherEinstellungen(), verbinde: verbindeImap, lies: liesMail, verschluessele: (k) => k, entschluessele: (w) => w });
-    const zugang = { name: 'Test', server: HOST, port: 3143, verschluesselung: 'keine', unverschluesseltBestaetigt: true, benutzer: 'dms', passwort: 'geheim', absender: 'stadtwerke.de' };
+    const zugang = { name: 'Test', server: HOST, port: 3143, verschluesselung: 'keine', unverschluesseltBestaetigt: true, benutzer: 'dms', passwort: 'geheim', absender: 'stadtwerke.example' };
     assert.match((await pf.teste(zugang, null)).text, /Verbunden/);
     assert.match((await pf.teste({ ...zugang, passwort: 'falsch' }, null)).text, /Anmeldung abgelehnt/);
     assert.match((await pf.teste({ ...zugang, port: 1 }, null)).text, /nicht erreichbar/);
@@ -44,13 +44,13 @@ describe('Postfächer mit GreenMail (#196)', { skip: HOST ? false : 'IMAP_TEST_H
     const [m] = await d.listeMappen(post.id);
     assert.equal(m.werte.kanal, POST_KANAL.email);
     assert.equal(m.werte.betreff, 'Rechnung Oktober');
-    assert.match(String(m.werte.absender), /rechnung@stadtwerke\.de/);
+    assert.match(String(m.werte.absender), /rechnung@stadtwerke\.example/);
     assert.deepEqual((await d.holeMappe(m.id)).dokumente.map((x) => x.name).sort(), ['Rechnung Oktober.eml', 'Rechnung.pdf']);
     assert.equal(await pf.abrufen(p.id), 0, 'keine Doppelten');
 
     const s = await verbindeImap({ server: HOST!, port: 3143, verschluesselung: 'keine', benutzer: 'dms', passwort: 'geheim' }, 'DMS');
     try { assert.equal(s.anzahl, 1, 'in den Ordner DMS verschoben'); } finally { await s.schliessen(); }
-    const html = await liesMail(Buffer.from('From: a@b.de\r\nSubject: X\r\nContent-Type: text/html\r\n\r\n<p>Nur <b>heute</b><img src="https://tracker.example/x.gif"></p>'));
+    const html = await liesMail(Buffer.from('From: a@b.example\r\nSubject: X\r\nContent-Type: text/html\r\n\r\n<p>Nur <b>heute</b><img src="https://tracker.example/x.gif"></p>'));
     assert.match(html.text, /Nur heute/);
     assert.doesNotMatch(html.text, /tracker/);
   });
