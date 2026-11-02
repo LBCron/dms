@@ -3214,7 +3214,7 @@
           "Ablage"
         ],
         "summary": "Vorschläge für Mappentyp aus Dokument",
-        "description": "Aus Dokument ausfüllen (#391, eingebaute Erkennung ohne KI): Vorschläge für die Felder des Mappentyps aus text und/oder den Volltexten der Dokumente dokumente (Ids, Lesen nötig; ohne Volltext 409). Mit mappe (Id einer Mappe dieses Typs) braucht es Bearbeiten, sonst das Recht, Mappen des Typs anzulegen. Gefüllt werden die Felder, die „für die Erkennung“ markiert sind (hat der Typ keine, alle mit erkennbarer Art); Passwortfelder und feste Felder nie. Jeder Wert ist gegen die Feldart geprüft: Datum JJJJ-MM-TT, Betrag {betrag, waehrung}, Auswahl nur aus der Liste, Verweis als Mappen-Id einer lesbaren Mappe. Nichts wird gespeichert.",
+        "description": "Aus Dokument ausfüllen (#391; Erkennung eingebaut ohne KI oder – #511, in der Werkbank bzw. am Mappentyp gewählt – ein Paket mit dms:erkennen, dessen Antwort genauso geprüft wird; engine sagt, womit): Vorschläge für die Felder des Mappentyps aus text und/oder den Volltexten der Dokumente dokumente (Ids, Lesen nötig; ohne Volltext 409). Mit mappe (Id einer Mappe dieses Typs) braucht es Bearbeiten, sonst das Recht, Mappen des Typs anzulegen. Gefüllt werden die Felder, die „für die Erkennung“ markiert sind (hat der Typ keine, alle mit erkennbarer Art); Passwortfelder und feste Felder nie. Jeder Wert ist gegen die Feldart geprüft: Datum JJJJ-MM-TT, Betrag {betrag, waehrung}, Auswahl nur aus der Liste, Verweis als Mappen-Id einer lesbaren Mappe. Nichts wird gespeichert.",
         "operationId": "postTypenMitidVorschlaege",
         "parameters": [
           {
@@ -9071,6 +9071,29 @@
       "TypVorschlaege": {
         "type": "object",
         "properties": {
+          "engine": {
+            "type": "object",
+            "description": "Womit erkannt wurde (#511): { art: eingebaut } oder { art: paket, id, name } – ein Paket mit dms:erkennen, gewählt in der Werkbank oder am Mappentyp",
+            "properties": {
+              "art": {
+                "type": "string",
+                "enum": [
+                  "eingebaut",
+                  "paket"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "hinweis": {
+            "type": "string",
+            "description": "z. B. wenn das gewählte Paket nicht antwortete und die eingebaute Erkennung übernahm"
+          },
           "vorschlaege": {
             "type": "object",
             "additionalProperties": {
