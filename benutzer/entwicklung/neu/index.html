@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0124" class="md-skip">
+        <a href="#neu-in-version-0125" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01240" class="md-nav__link">
+  <a href="#01250" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.124.0
+        0.125.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.124.0">
+    <nav class="md-nav" aria-label="0.125.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1149,15 +1149,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01240" class="md-nav__link">
+  <a href="#01250" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.124.0
+        0.125.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.124.0">
+    <nav class="md-nav" aria-label="0.125.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1218,32 +1218,30 @@
   
 
 
-<h1 id="neu-in-version-0124">Neu in Version 0.124<a class="headerlink" href="#neu-in-version-0124" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0125">Neu in Version 0.125<a class="headerlink" href="#neu-in-version-0125" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01240">0.124.0<a class="headerlink" href="#01240" title="Permanent link">&para;</a></h2>
+<h2 id="01250">0.125.0<a class="headerlink" href="#01250" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Frag deine Ablage</strong> (#444): Auf der Startseite steht – wenn ein Paket mit dem neuen Recht „Fragen an die Ablage beantworten (<code>dms:antworten</code>)“ installiert ist, etwa <strong>KI-Assistent</strong> – ein eigenes Feld neben der Suche. Du fragst in eigenen Worten („Wann läuft die Kfz-Versicherung aus?“) und bekommst eine Antwort, die beim Schreiben entsteht, mit <strong>Quellen</strong> als Links zu den Mappen.</li>
-<li>Das DMS sucht die passenden Stellen selbst – im Volltext, in Titeln und Feldern und, mit einem Paket wie „KI lokal – Ähnlichkeit“, nach Ähnlichkeit – und <strong>nur in Mappen, die du lesen darfst</strong>. Passwortfelder und Benutzer sind nie dabei.</li>
-<li>Unter jeder Antwort steht aufklappbar <strong>„An die KI geschickt: n Ausschnitte aus m Mappen“</strong> mit genau diesen Stellen – nie die ganze Ablage.</li>
-<li>Der Chat bleibt nur im Browser; das DMS speichert weder Fragen noch Antworten. Im Protokoll steht nur, <em>dass</em> gefragt wurde.</li>
-<li>Die Antwort ist nur Text und kann nichts ändern. Die Ausschnitte gehen als Daten gekennzeichnet an den KI-Dienst; Quellen prüft das DMS.</li>
-<li>Werkbank → Pakete → <em>Paket mit dms:antworten</em>: <strong>Höchstmenge je Frage</strong> (Standard 8 Ausschnitte, 6 000 Zeichen).</li>
-<li><strong>Dienst-Adresse für Pakete</strong>: Ein Paket kann statt einer festen Adresse eine Adresse als <strong>Einstellung</strong> verlangen (z. B. die deines Ollama). Sie ist nie voreingestellt; beim Speichern bestätigst du, dass Daten dorthin gehen – mit dem Hinweis, dass Betrieb und Hosting des Dienstes außerhalb des DMS liegen und ein fremder Anbieter eine Vertrauensbeziehung ist. Nur zu dieser Adresse lässt der Paket-Läufer das Paket ins Netz, im Heimnetz auch mit <code>http://</code>.</li>
-<li>Paket-Schnittstelle: <code>dms:antworten</code>, Einstellung <code>adresse</code>, Läufer-Funktionen <code>netz_strom</code>, <code>netz_weiter</code> und <code>teil</code> (Antworten Stück für Stück). Pakete dafür geben <code>dms: "&gt;=0.124.0"</code> an.</li>
+<li><strong>Aus Dokument ausfüllen per Paket</strong> (#511): Statt der eingebauten Erkennung kann ein Paket mit dem neuen Recht „Felder aus Dokumenten vorschlagen (<code>dms:erkennen</code>)“ die Felder vorschlagen – etwa ein KI-Assistent, der auch Freitext, Briefköpfe und schwierige Belege versteht. Die eingebaute Erkennung bleibt der Standard.</li>
+<li>Wahl in der Werkbank am Paket (<strong>als Standard für alle Mappentypen</strong>) und je Mappentyp unter <strong>Erkennung</strong> (Standard, eingebaut oder ein Paket).</li>
+<li>Ein Paket, das ins Netz darf, nur mit ausdrücklicher Bestätigung des Datenabflusses.</li>
+<li>Das Paket bekommt den Text und die Beschreibung der Felder (JSON Schema) – nie Passwortfelder, nie Felder, die du nicht bearbeiten darfst, keine Verweise. Jede Antwort prüft das DMS gegen die Feldarten; Verworfenes steht im Protokoll. Alles bleibt Vorschlag.</li>
+<li>Antwortet das Paket nicht (60 Sekunden) oder unbrauchbar, übernimmt die eingebaute Erkennung, mit Hinweis. Unter dem Ergebnis steht, womit erkannt wurde.</li>
+<li>Schnittstelle: <code>POST /typen/{id}/vorschlaege</code> liefert zusätzlich <code>engine</code> und ggf. <code>hinweis</code>; <code>GET</code>/<code>PUT /api/werkbank/erkennung</code>.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Benutzerhandbuch: Startseite → Frag deine Ablage.</li>
-<li>Administratorhandbuch: Pakete → Recht „Fragen an die Ablage beantworten“, Dienst-Adresse, Frag deine Ablage.</li>
-<li>Entwicklerhandbuch: Pakete mit Code → Dienst-Adresse, <code>netz_strom</code>/<code>netz_weiter</code>/<code>teil</code>, Fragen beantworten.</li>
+<li>Administratorhandbuch: Pakete → Recht „Felder aus Dokumenten vorschlagen“, Erkennung durch ein Paket; Mappentypen → Erkennung.</li>
+<li>Benutzerhandbuch: Mappen → Aus Dokument ausfüllen.</li>
+<li>Entwicklerhandbuch: Pakete mit Code → Erkennung als Paket (<code>dms:erkennen</code>).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.123.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.123.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.124.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.124.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
