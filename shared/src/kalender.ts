@@ -1,0 +1,89 @@
+/**
+ * „Anstehend“ als Kalender (#528): Rechnen mit Tagen, Wochen und Monaten für Liste, Monat und Jahr.
+ * Server und Oberfläche teilen diese Datei – der Server prüft damit den Zeitraum einer Abfrage, die
+ * Oberfläche baut daraus Gruppen und Raster. Alle Daten als Text JJJJ-MM-TT, gerechnet in UTC.
+ */
+import { verschiebe } from './sichten';
+
+/** Ansichten von „Anstehend“; die Wahl merkt sich das DMS je Benutzer. */
+export const ANSTEHEND_ANSICHTEN = ['liste', 'monat', 'jahr'] as const;
+export type AnstehendAnsicht = (typeof ANSTEHEND_ANSICHTEN)[number];
+export const istAnsicht = (v: unknown): v is AnstehendAnsicht => typeof v === 'string' && (ANSTEHEND_ANSICHTEN as readonly string[]).includes(v);
+
+/** Längster Zeitraum einer Abfrage in Tagen: ein ganzes Jahr samt angeschnittener Wochen. */
+export const ZEITRAUM_MAX_TAGE = 400;
+
+const utc = (iso: string) => { const [j, m, t] = iso.split('-').map(Number); return Date.UTC(j, m - 1, t); };
+
+/** Gültiges Kalenderdatum JJJJ-MM-TT (auch 31.02. fällt durch)? */
+export function istTag(v: unknown): v is string {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  return new Date(utc(v)).toISOString().slice(0, 10) === v;
+}
+
+/** Tage von a bis b (b − a); negativ, wenn b vor a liegt. */
+export const tageZwischen = (a: string, b: string) => Math.round((utc(b) - utc(a)) / 86_400_000);
+
+/** Wochentag 1 = Montag … 7 = Sonntag. */
+export const wochentag = (iso: string) => ((new Date(utc(iso)).getUTCDay() + 6) % 7) + 1;
+
+/** Montag der Woche, in der der Tag liegt. */
+export const montag = (iso: string) => verschiebe(iso, 1 - wochentag(iso));
+
+/** Monat als JJJJ-MM. */
+export const monatVon = (iso: string) => iso.slice(0, 7);
+export const istMonat = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+/** Monat ± n. */
+export const blaettere = (monat: string, n: number) => verschiebe(`${monat}-01`, n, 'monate').slice(0, 7);
+/** Letzter Tag des Monats. */
+export const monatsende = (monat: string) => verschiebe(verschiebe(`${monat}-01`, 1, 'monate'), -1);
+
+/**
+ * Raster eines Monats wie im Kalender: Wochen von Montag bis Sonntag, vom Montag vor dem Ersten bis zum
+ * Sonntag nach dem Letzten (4–6 Wochen). Tage außerhalb des Monats gehören zum Raster, damit jede Woche voll ist.
+ */
+export function monatsraster(monat: string): string[][] {
+  const wochen: string[][] = [];
+  const ende = monatsende(monat);
+  for (let tag = montag(`${monat}-01`); tag <= ende; tag = verschiebe(tag, 7)) {
+    wochen.push(Array.from({ length: 7 }, (_, i) => verschiebe(tag, i)));
+  }
+  return wochen;
+}
+
+/** Zeitraum, den die Monatsansicht lädt: das ganze Raster. */
+export function monatsZeitraum(monat: string): { von: string; bis: string } {
+  const r = monatsraster(monat);
+  return { von: r[0][0], bis: r[r.length - 1][6] };
+}
+
+/** Zeitraum, den die Jahresansicht lädt: 01.01. bis 31.12. */
+export const jahresZeitraum = (jahr: number) => ({ von: `${String(jahr).padStart(4, '0')}-01-01`, bis: `${String(jahr).padStart(4, '0')}-12-31` });
+
+/**
+ * Zeitraum einer Abfrage prüfen: beide Tage gültig, von ≤ bis, höchstens `ZEITRAUM_MAX_TAGE`.
+ * Gibt den Grund zurück, wenn etwas nicht stimmt, sonst null.
+ */
+export function zeitraumProblem(von: unknown, bis: unknown): string | null {
+  if (!istTag(von) || !istTag(bis)) return 'Der Zeitraum braucht „von“ und „bis“ als Datum JJJJ-MM-TT.';
+  if (bis < von) return '„bis“ liegt vor „von“.';
+  if (tageZwischen(von, bis) + 1 > ZEITRAUM_MAX_TAGE) return `Der Zeitraum darf höchstens ${ZEITRAUM_MAX_TAGE} Tage lang sein.`;
+  return null;
+}
+
+/** Gruppen der Liste: Überfällig · Heute · Diese Woche (bis Sonntag) · Später. */
+export const ANSTEHEND_GRUPPEN = ['ueberfaellig', 'heute', 'woche', 'spaeter'] as const;
+export type AnstehendGruppe = (typeof ANSTEHEND_GRUPPEN)[number];
+
+/**
+ * Gruppe eines Eintrags. Überfällig ist nur, was schon unter „Zu erledigen“ steht und dessen Datum vorbei
+ * ist – eine Frist ohne Aufgabe mit vergangenem Datum zeigt „Anstehend“ gar nicht.
+ */
+export function gruppeVon(datum: string, heute: string): AnstehendGruppe {
+  if (datum < heute) return 'ueberfaellig';
+  if (datum === heute) return 'heute';
+  return datum <= verschiebe(montag(heute), 6) ? 'woche' : 'spaeter';
+}
+
+/** Überfällig seit … Tagen (0, wenn nicht überfällig). */
+export const ueberfaelligSeit = (datum: string, heute: string) => Math.max(0, tageZwischen(datum, heute));

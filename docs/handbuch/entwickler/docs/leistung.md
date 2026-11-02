@@ -117,6 +117,24 @@ Die Zahlen neben den Ansichten (`GET /api/sichten` → `Dienst.zaehler`) zählen
 
 Nicht umgesetzt: **nur zählen, was zu sehen ist** (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein **Index** für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.
 
+## Anstehend als Kalender (#528)
+
+Monat und Jahr in „Anstehend“ laden ihren Zeitraum mit **einer** Anfrage: `GET /api/anstehend?von=…&bis=…` (höchstens 400 Tage, `zeitraumProblem` in `shared/src/kalender.ts`). Der Server holt wie die Liste nur Mappen mit einem Datum im Zeitraum (`mappenMitDatum`, #477); für Felder mit **wiederkehrender** Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (`folgetermine` in `shared/src/fristen.ts`, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (`Zaehlerspeicher`), je Benutzer, Rechte und Zeitraum; ein eigener `Haushaltsstand` (`fristenstand`) zählt zusätzlich bei geänderten Erinnerungen (`ZAEHLT_FUER_ANSTEHEND`), weil die sonst in `OHNE_FOLGEN` stehen.
+
+**Messung zu #528** (dieselben Daten wie #477: 50.000 Demo-Mappen, lokaler Rechner; Median aus 5 Anfragen; *kalt* = je Anfrage ein neuer Zeitraum, *Treffer* = derselbe Zeitraum aus dem Zwischenspeicher; Zeit bis zur vollständigen Antwort):
+
+| Abfrage | Wer | Einträge | davon Folgetermine | kalt ms | Treffer ms |
+|---|---|---:|---:|---:|---:|
+| Liste 30 Tage | Administrator | 545 | – | 32 | 9 |
+| Monat | Administrator | 934 | 377 | 160 | 9 |
+| Jahr | Administrator | 11.863 | 11.863 | 381 | 81 |
+| Monat | Mitglied mit Rolle | 0 | 0 | 74 | 6 |
+| Jahr | Mitglied mit Rolle | 0 | 0 | 141 | 6 |
+| Monat | Mitglied ohne Rolle | 0 | 0 | 81 | 6 |
+| Jahr | Mitglied ohne Rolle | 0 | 0 | 120 | 7 |
+
+Der Administrator ist der ungünstigste Fall: Ihm gehören alle Fristen ohne Empfänger, bei den Demo-Daten fast alle Verträge mit jährlicher Kündigungsfrist. Das Jahr ist dann 3,2 MB JSON (ohne Kompression); im Browser steht die Jahresansicht trotzdem nach etwa 0,1–0,2 s, der Monat nach 0,1–0,3 s. Die Mitglieder haben in den Demo-Daten keine eigenen Fristen; ihre Zeit ist das Suchen der Kandidaten. In einem Haushalt mit einigen Dutzend Fristen liegt alles im Bereich der Liste.
+
 ## Lasttest { #lasttest }
 
 `server/test/lasttest.mjs` (#544, #563) schickt viele **gleichzeitige HTTP-Anfragen** an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit `fetch` von Node.js. Im Image steckt es als Befehl `dms-lasttest` (Betreiber: Administratorhandbuch → [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/)).

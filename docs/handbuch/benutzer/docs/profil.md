@@ -90,7 +90,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 - **Design** – wie das DMS für dich aussieht. **Standard** folgt dem Design, das der Administrator festgelegt hat. Gilt für dein Konto auf allen Geräten.
 - **Schriftgröße auf diesem Gerät** – klein, normal oder groß. Gilt nur für das Gerät, an dem du gerade sitzt; am Smartphone kannst du eine andere Größe wählen als am PC.
 - <span id="startseite"></span>**Startseite** – **Mit der Startseite beginnen** schaltet die [Startseite](startseite.md) ein oder aus; ohne sie geht es nach der Anmeldung direkt zu *Zu erledigen*. **Vierte Kachel** wählt, was neben Zu erledigen, Neue Post und Anstehend steht: deine Favoriten oder eine Ansicht.
-- <span id="anstehend"></span>**Anstehend** – wie viele Tage im Voraus die Ansicht [Anstehend](eingang.md#anstehend) deine Fristen und Erinnerungen zeigt (Standard: 30).
+- <span id="anstehend"></span>**Anstehend** – wie viele Tage im Voraus die [Liste in Anstehend](eingang.md#liste) deine Fristen, Erinnerungen und Aufgaben mit Datum zeigt (Standard: 30). Monat und Jahr zeigen immer den ganzen Monat bzw. das ganze Jahr.
 - **Darstellung auf diesem Gerät** – die Breite der Spalten und eingeklappte Bereiche merkt sich jedes Gerät. Ist etwas nicht mehr zu finden, stellt **Standard-Darstellung wiederherstellen** die ursprüngliche Aufteilung her.
 - **Entwicklermodus** – zeigt unten rechts, wie lange ein Seitenaufruf gedauert hat.
 

@@ -15,7 +15,8 @@
  *    - Suchfeld der Startseite (#497) liefert Treffer, ohne dass etwas zu breit wird;
  *    - „Ansicht ▾“ (#498) öffnet ein Blatt im Bildschirm mit Tippzielen von mindestens 44 px;
  *    - Dokumente einer Post (#505): kein eingebetteter PDF-Rahmen, Tippziele mindestens 44 px;
- *    - erweiterte Suche (#426): Formular mit Datums-, Auswahl- und Verweisbedingung, danach die Treffer.
+ *    - erweiterte Suche (#426): Formular mit Datums-, Auswahl- und Verweisbedingung, danach die Treffer;
+ *    - Anstehend (#528): Liste als Vorgabe, Monat kompakt mit Tippzielen von mindestens 44 px, Wischen blättert.
  *    Von jeder Seite und jedem Menü entsteht ein Bild im Bilderordner (<breite>/<name>.png).
  *
  * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator).
@@ -114,6 +115,8 @@ const HANDY = [
   // Erweiterte Suche (#426): Formular als eigener Schritt (mit Bedingungen), danach die Treffer.
   { name: 'erweiterte-suche', pfad: '/ablage/suche', suchformular: true },
   ...(rechnung ? [{ name: 'erweiterte-suche-treffer', pfad: '/ablage/suche?typ=Rechnung&bezahlt=nein' }] : []),
+  // Anstehend (#528): am Handy erst die Liste, dann der Monat kompakt mit Punkten.
+  { name: 'anstehend', pfad: '/ablage/anstehend', kalender: true },
   { name: 'werkbank', pfad: '/werkbank/uebersicht' },
 ];
 
@@ -243,6 +246,27 @@ for (const g of GROESSEN) {
       const raus = await s.evaluate(zuBreiteElemente);
       await s.screenshot({ path: join(ordner, 'erweiterte-suche-bedingungen.png'), fullPage: true });
       if (raus.length) fehler.push(`${ort} Bedingungen:\n  ${raus.slice(0, 10).join('\n  ')}`);
+    }
+    if (seite.kalender) {
+      if ((await s.getByRole('radio', { name: 'Liste' }).getAttribute('aria-checked').catch(() => null)) !== 'true') fehler.push(`${ort}: Vorgabe ist nicht die Liste`);
+      if (await s.getByRole('radio', { name: 'Jahr' }).count()) fehler.push(`${ort}: Jahresansicht am Handy angeboten`);
+      await s.getByRole('radio', { name: 'Monat' }).click();
+      await s.locator('.ka-kompakt .ka-raster[aria-busy="false"]').waitFor({ timeout: 5000 }).catch(() => fehler.push(`${ort}: Monat nicht kompakt`));
+      const titel = await s.locator('.ka-zeitraum').textContent();
+      const probleme = await s.evaluate(() => [...document.querySelectorAll('.ka a, .ka button')]
+        .filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.height < 43.5; })
+        .map((e) => `Tippziel ${(e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 30)} ${Math.round(e.getBoundingClientRect().height)} px`));
+      const raus = await s.evaluate(zuBreiteElemente);
+      await s.screenshot({ path: join(ordner, 'anstehend-monat.png') });
+      // Wischen nach links: nächster Monat.
+      const r = await s.locator('.ka-raster').boundingBox();
+      const y = r.y + r.height / 2;
+      await s.locator('.ka-raster').dispatchEvent('touchstart', { touches: [{ identifier: 1, clientX: r.x + r.width - 20, clientY: y }], changedTouches: [{ identifier: 1, clientX: r.x + r.width - 20, clientY: y }] });
+      await s.locator('.ka-raster').dispatchEvent('touchend', { touches: [], changedTouches: [{ identifier: 1, clientX: r.x + 20, clientY: y + 5 }] });
+      await s.waitForTimeout(200);
+      if ((await s.locator('.ka-zeitraum').textContent()) === titel) fehler.push(`${ort}: Wischen blättert nicht`);
+      if (probleme.length || raus.length) fehler.push(`${ort} Monat:\n  ${[...probleme, ...raus].slice(0, 10).join('\n  ')}`);
+      await s.getByRole('radio', { name: 'Liste' }).click();
     }
     if (seite.mappenmenue) await pruefeMenue(s, `${ort} „Mappe ▾“`, '.aktionsmenue > button', '.aktionsmenue .menue', join(ordner, 'menue-mappe.png'));
   }

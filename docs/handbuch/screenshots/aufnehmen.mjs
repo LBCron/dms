@@ -491,9 +491,49 @@ async function main() {
   await erinnern.getByRole('button', { name: 'Erinnern' }).click();
   await s.locator('.erinnerungen').waitFor();
   await bild(s, 'erinnerung');
+  // Anstehend als Kalender (#528): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
+  // (steht schon unter „Zu erledigen“); die Kündigungsfristen der Verträge wiederholen sich jährlich.
+  const tagIn = (n) => new Date(Date.now() + n * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
+  const vertraege = (await api('GET', '/api/mappen')).filter((m) => m.typId === vertrag.id);
+  const wartung = vertraege.find((m) => m.werte.bezeichnung === 'Wartungsvertrag Heizung') ?? d.strom;
+  for (const [n, text, m] of [[-12, 'Zählerstand ablesen und melden', d.strom], [3, 'Termin für die Wartung vereinbaren', wartung], [3, 'Rechnung der Wartung prüfen', wartung],
+    [10, 'Abschlag anpassen lassen', d.strom], [17, 'Unterlagen für die Steuererklärung zusammenstellen', vertraege[2] ?? d.strom], [24, 'Neue Tarife vergleichen', vertraege[3] ?? d.strom]]) {
+    await api('POST', `/api/mappen/${m.id}/erinnerungen`, { datum: tagIn(n), text });
+  }
   await geheZu(s, '/ablage/anstehend');
   await s.locator('.spalte.liste .mappenliste .eintrag').first().waitFor();
   await bild(s, 'anstehend');
+  // Anstehend als Kalender (#528): Monat über Mitte und rechts, mit offener Mappe in der Mitte, Jahr.
+  await s.getByRole('radio', { name: 'Monat' }).click();
+  await s.locator('.ka-raster[aria-busy="false"] .ka-zeile').first().waitFor();
+  await bild(s, 'anstehend-monat');
+  await s.locator('.ka-raster .ka-zeile:not(.ka-ueber)').first().click();
+  await s.locator('.spalte.mappe h1').first().waitFor();
+  await s.locator('.ka-kompakt').waitFor();
+  await bild(s, 'anstehend-monat-mappe');
+  await geheZu(s, '/ablage/anstehend');
+  await s.getByRole('radio', { name: 'Jahr' }).click();
+  // Ab Herbst zeigt das nächste Jahr mehr: dort stehen die Folgetermine der jährlichen Fristen.
+  if (new Date().getMonth() >= 8) await s.getByRole('button', { name: 'Nächstes Jahr' }).click();
+  await s.locator('.ka-jahr[aria-busy="false"] .ka-mt-knopf').first().waitFor();
+  await bild(s, 'anstehend-jahr');
+  await api('PUT', '/api/konto/einstellungen/anstehend_ansicht', { wert: null });
+  // Am Handy: Monat kompakt mit Punkten, darunter die Einträge des gewählten Tags.
+  {
+    const kh = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
+    const [name, wert] = d.adminCookie.split('=');
+    await kh.addCookies([{ name, value: wert, url: BASIS }]);
+    await kh.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.adminbanner{display:none!important}'; document.head.append(st); }));
+    const sh = await kh.newPage();
+    await geheZu(sh, '/ablage/anstehend');
+    await sh.getByRole('radio', { name: 'Monat' }).click();
+    await sh.locator('.ka-kompakt .ka-raster[aria-busy="false"]').waitFor();
+    const mitEintrag = sh.locator('td:not(.ka-fremd) > .ka-tagknopf:has(.ka-punkt)').first();
+    if (await mitEintrag.count()) await mitEintrag.click();
+    await bild(sh, 'anstehend-handy');
+    await api('PUT', '/api/konto/einstellungen/anstehend_ansicht_handy', { wert: null });
+    await kh.close();
+  }
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
   await s.getByRole('tab', { name: 'Historie' }).click();
   await s.locator('.historie details').first().click();

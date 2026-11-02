@@ -55,8 +55,16 @@ export const OHNE_FOLGEN = new Set<string>([
   'setzeDokumentSprache',
 ]);
 
+/**
+ * „Anstehend“ (#528) hängt zusätzlich an den freien Erinnerungen und an den Datumsfeldern: Diese Methoden
+ * zählen für dessen Stand mit, obwohl sie keine Zahl einer Ansicht ändern.
+ */
+export const ZAEHLT_FUER_ANSTEHEND: ReadonlySet<string> = new Set(['legeErinnerungAn', 'aendereErinnerung', 'loescheErinnerung']);
+
 /** Stand des Haushalts: zählt nach jeder Änderung hoch, die Zahlen der Ansichten ändern kann. */
 export class Haushaltsstand {
+  /** `auch`: Methoden aus `OHNE_FOLGEN`, die für diesen Stand trotzdem zählen. */
+  constructor(private readonly auch: ReadonlySet<string> = new Set()) {}
   private n = 0;
   get stand() { return this.n; }
   erhoehe() { this.n++; }
@@ -71,7 +79,7 @@ export class Haushaltsstand {
     return new Proxy(repo, {
       get(ziel, prop, empfaenger) {
         const wert = Reflect.get(ziel, prop, empfaenger);
-        if (typeof wert !== 'function' || typeof prop !== 'string' || OHNE_FOLGEN.has(prop)) return wert;
+        if (typeof wert !== 'function' || typeof prop !== 'string' || (OHNE_FOLGEN.has(prop) && !self.auch.has(prop))) return wert;
         return function (this: unknown, ...args: unknown[]) {
           let ergebnis: unknown;
           try { ergebnis = wert.apply(ziel, args); } catch (e) { self.erhoehe(); throw e; }
