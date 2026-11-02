@@ -2327,7 +2327,7 @@
 
 <h1 id="was-das-dms-verkraftet">Was das DMS verkraftet<a class="headerlink" href="#was-das-dms-verkraftet" title="Permanent link">&para;</a></h1>
 <p>Gemessen mit dem <a href="../lasttest/">Lasttest</a> in drei Stufen: <strong>klein</strong> (Haushalt, 25 gleichzeitige Anfragen, 5.000 Mappen), <strong>mittel</strong> (Kleinbetrieb, 100 gleichzeitig mit Export nebenher, 50.000 Mappen) und <strong>groß</strong> (Last steigern bis zur Grenze, 200.000 Mappen). Die Spalten zeigen p95 – 95 % der Antworten waren schneller – und bei groß die Grenze in gleichzeitigen Anfragen, bei der 95 % der Antworten noch unter 3 s blieben.</p>
-<p>Die erste Zeile misst das Projekt jede Woche auf den Rechnern von GitHub (Workflow <em>Lasttest</em>); dort laufen DMS, PostgreSQL und der Lasttest auf demselben Rechner. Die übrigen Zeilen sind <a href="https://github.com/motom001/dms/issues?q=label%3Amessergebnis-lasttest">Meldungen von Betreibern</a> – jede mit Version und Datum, denn neue Versionen können schneller oder langsamer sein.</p>
+<p>Die erste Zeile misst das Projekt jede Woche auf den Rechnern von GitHub (Workflow <em>Lasttest</em>); dort laufen DMS, PostgreSQL und der Lasttest auf demselben Rechner. Die übrigen Zeilen sind Meldungen von Betreibern – gesammelt im Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a> und in <a href="https://github.com/motom001/dms/issues?q=label%3Amessergebnis-lasttest">eigenen Meldungen</a>, jede mit Version und Datum, denn neue Versionen können schneller oder langsamer sein.</p>
 <table>
 <thead>
 <tr>
@@ -2358,7 +2358,7 @@
 </tr>
 </tbody>
 </table>
-<p>Du hast selbst gemessen? <a href="../lasttest/">Lasttest selbst durchführen</a> beschreibt, wie es geht und wie du das Ergebnis meldest. Das Projekt trägt die Meldungen hier ein.</p>
+<p>Du hast selbst gemessen? <a href="../lasttest/">Lasttest selbst durchführen</a> beschreibt, wie es geht. Den Ergebnisblock fügst du als Kommentar in das Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a> ein – oder du legst mit der Vorlage <a href="https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml">Messergebnis Lasttest</a> ein eigenes Issue an. Das Projekt trägt die Meldungen hier ein.</p>
 <p><strong>So liest du die Tabelle:</strong> Liegt <em>klein</em> unter 0,3 s, fühlt sich das DMS für einen Haushalt flüssig an. Liegt <em>mittel</em> unter 1 s, reicht das Gerät auch für einen kleinen Betrieb mit großen Exporten nebenher. Die <em>Grenze</em> von groß ist kein Ziel für den Alltag – 100 gleichzeitige Anfragen sind schon 10–15 Personen, die im selben Moment klicken (siehe <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a>).</p>
 
 
