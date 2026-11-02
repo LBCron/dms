@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.131/leistung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.132/leistung/">
       
       
         <link rel="prev" href="../pakete/">
@@ -1284,57 +1284,51 @@
 <p><em>Sichtbar</em> = bis Kacheln, erste Zeile der Liste bzw. Kopf der Mappe zu sehen sind; <em>Zahlen da</em> = bis die Antwort von <code>/api/sichten</code> im Browser ist; <code>/api/sichten</code> = Server-Zeit dieser Anfrage (unter Last der Seite; allein 6–9 ms bei einem Treffer); <em>Laden</em> = bis keine Anfrage mehr läuft. Alle Werte in ms, lokaler Rechner. „Sichtbar“ schwankt bei „Mappe öffnen“ stark (einzelne Läufe um 870 ms in beiden Fassungen).</p>
 <p>Nicht umgesetzt: <strong>nur zählen, was zu sehen ist</strong> (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein <strong>Index</strong> für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.</p>
 <h2 id="lasttest">Lasttest<a class="headerlink" href="#lasttest" title="Permanent link">&para;</a></h2>
-<p><code>server/test/lasttest.mjs</code> (#544) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js.</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># einmal: frisches DMS einrichten – Administrator, Beispiele, 50.000 Demo-Mappen (2 % mit einem Brief als PDF),</span>
-<span class="c1"># zwei Mitglieder mit und ohne Rolle, Regeln wie in einem Haushalt, ein Konto für die Probe des Anmeldeschutzes</span>
-<span class="nv">DMS_URL</span><span class="o">=</span>http://127.0.0.1:3100<span class="w"> </span>node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>--einrichten<span class="w"> </span>--mappen<span class="w"> </span><span class="m">50000</span>
-<span class="c1"># messen</span>
-<span class="nv">DMS_URL</span><span class="o">=</span>http://127.0.0.1:3100<span class="w"> </span>node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>--stufe<span class="w"> </span>alle<span class="w"> </span>--dauer<span class="w"> </span><span class="m">120</span><span class="w"> </span>--bericht<span class="w"> </span>bericht.md<span class="w"> </span>--grenzen
+<p><code>server/test/lasttest.mjs</code> (#544, #563) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js. Im Image steckt es als Befehl <code>dms-lasttest</code> (Betreiber: Administratorhandbuch → <a href="https://motom001.github.io/dms/admin/aktuell/lasttest/">Lasttest selbst durchführen</a>).</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein</span>
+<span class="c1"># und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000; 2 % mit einem Brief als PDF)</span>
+node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>klein<span class="w"> </span>--ziel<span class="w"> </span>http://127.0.0.1:3100<span class="w"> </span>--grenzen
+node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>alle<span class="w"> </span>--ziel<span class="w"> </span>http://127.0.0.1:3100<span class="w"> </span>--dauer<span class="w"> </span><span class="m">120</span><span class="w"> </span>--bericht<span class="w"> </span>bericht.md<span class="w"> </span>--json<span class="w"> </span>lasttest.json<span class="w"> </span>--grenzen
 </code></pre></div>
 <p>Ein passendes DMS startet man aus <code>server/</code> mit eigener, leerer Datenbank (z. B. <code>dmslast</code>): <code>NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js</code> nach <code>npm run build -w server</code>. Die Datenbank danach wieder löschen.</p>
+<p><strong>Schutz der echten Ablage:</strong> Ist das DMS frisch, richtet der Test es ein (Haushalt „Lasttest“, Konten mit Persona-Namen unter <code>example.org</code>, Beispiele, eine Rolle, Regeln wie in einem Haushalt). Ist es schon eingerichtet, misst er nur, wenn er sich mit seinem Administrator-Konto anmelden kann und höchstens 200 Mappen keine Demo-Mappen sind – sonst Abbruch mit Exit-Code 2, ohne etwas anzulegen. Nach neuen Demo-Mappen wartet er, bis die Arbeit im Hintergrund (Texterkennung, Vorschaubilder) vorbei ist.</p>
 <p><strong>Profil:</strong> Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (<code>/api/startseite</code>, <code>/api/sichten</code>, <code>/api/anstehend</code>, <code>/api/typen</code>) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie <code>Retry-After</code> sagt.</p>
-<p><strong>Stufen</strong></p>
+<p><strong>Stufen</strong> (#563; die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf, <code>--stufe normal</code> bzw. <code>ueberlast</code> laufen als <code>mittel</code> bzw. <code>gross</code>)</p>
 <table>
 <thead>
 <tr>
-<th>Durchgang</th>
+<th>Stufe</th>
 <th>Was</th>
+<th>Daten</th>
 <th>Geprüft (<code>--grenzen</code>)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>normal</td>
-<td>100 gleichzeitig, <code>--dauer</code> Sekunden</td>
-<td>p95 ≤ 5 s, Fehlerquote ≤ 1 %, keine 503</td>
+<td>klein</td>
+<td>25 gleichzeitig, <code>--dauer</code> Sekunden</td>
+<td>5.000 Mappen</td>
+<td><strong>Zusage:</strong> p95 &lt; 300 ms, keine Fehler (kein 5xx, keine Anfrage ohne Antwort), keine 503</td>
 </tr>
 <tr>
-<td>normal mit Export</td>
-<td>dasselbe, nebenher ein großer Export nach dem anderen: PDF von 500 Mappen mit Übersicht, PDF der Mappen mit Dokumenten, ZIP der größten Ansicht (über 20.000 Mappen)</td>
-<td>p95 ≤ 6 s, Fehlerquote ≤ 1 %, keine 503, jeder Export gelingt</td>
+<td>mittel</td>
+<td>100 gleichzeitig, nebenher ein großer Export nach dem anderen: PDF von bis zu 1000 Mappen mit Übersicht, PDF der Mappen mit Dokumenten, ZIP der größten Ansicht</td>
+<td>50.000 Mappen</td>
+<td><strong>Zusage:</strong> p95 &lt; 1 s, Fehlerquote &lt; 0,1 %, keine 503, jeder Export gelingt</td>
 </tr>
 <tr>
-<td>Überlast 500 / 1000</td>
-<td>500 bzw. 1000 gleichzeitig, je höchstens 60 s</td>
-<td>keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar</td>
-</tr>
-<tr>
-<td>danach</td>
-<td>Erholung: 20 Anfragen in Folge mit p95 ≤ 1 s</td>
-<td>innerhalb von 30 s</td>
-</tr>
-<tr>
-<td>während Überlast 500</td>
-<td>Anmeldeschutz: 6 falsche Passwörter von einer eigenen Adresse (<code>X-Forwarded-For</code>), dann das richtige</td>
-<td>das richtige wird gesperrt (429)</td>
+<td>groß</td>
+<td>ab 25 gleichzeitig alle <code>--schritt-dauer</code> (120) Sekunden 25 mehr, bis p95 &gt; 3 s, Fehlerquote &gt; 1 % oder der Überlastschutz greift (503); danach 1000 gleichzeitig (höchstens 60 s) mit Anmeldeschutz-Probe, dann Erholung</td>
+<td>200.000 Mappen</td>
+<td><strong>Messung:</strong> Grenze = höchste Stufe ohne Abbruch; mit <code>--vorher</code> Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt. <strong>Pflicht:</strong> keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar, Erholung (20 Anfragen in Folge mit p95 ≤ 1 s) innerhalb von 30 s, Anmeldeschutz sperrt nach falschen Passwörtern auch das richtige (429)</td>
 </tr>
 </tbody>
 </table>
-<p>Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit <code>Retry-After</code>), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über <code>GET /api/werkbank/last</code> (nur Administrator, vom Überlastschutz nie abgewiesen). Mit <code>--json</code> alles als Datei, mit <code>--gleichzeitig &lt;n&gt;</code> (und <code>--ohne-export</code>) ein einzelner Durchgang.</p>
-<p><strong>Warum diese Grenzen:</strong> Sie sollen nur <strong>echte Verschlechterungen</strong> melden, nicht das Schwanken der Rechner von GitHub. Auf einem Rechner mit 2 Kernen, auf dem auch PostgreSQL, der Lasttest selbst und andere Prozesse liefen, lag p95 bei 100 gleichzeitig um 2,8 s (mit Export 3,1 s); die Grenzen lassen fast das Doppelte Luft. Bei 100 gleichzeitigen Anfragen ist ein solcher Rechner ausgelastet – die Antwortzeit wächst dann mit der Zahl der Anfragen, nicht wegen eines Fehlers. Die Fehlerquote ist dagegen streng: Bei normaler Last darf praktisch nichts schiefgehen. Für die Überlast zählt nicht die Geschwindigkeit, sondern dass jede Anfrage eine Antwort bekommt, der Speicher begrenzt bleibt und das DMS sich erholt.</p>
+<p>Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit <code>Retry-After</code>), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über <code>GET /api/werkbank/last</code>. Am Ende steht der <strong>Ergebnisblock</strong> zum Kopieren – ohne Adresse des Ziels, ohne Namen; das CPU-Modell nur, wenn der Test auf demselben Rechner läuft. Mit <code>--json</code> alles als Datei (auch Eingabe für <code>--vorher</code>), mit <code>--gleichzeitig &lt;n&gt;</code> (und <code>--ohne-export</code>) ein einzelner Durchgang.</p>
+<p><strong>Warum diese Grenzen:</strong> klein und mittel sind eine <strong>Qualitätszusage</strong> (Thomas, #563): Ein Haushalt soll das DMS flüssig erleben, ein Kleinbetrieb auch mit Export nebenher. Sie sind deutlich strenger als die großzügigen Grenzen aus #544 (p95 ≤ 5 s bzw. 6 s, Fehlerquote ≤ 1 %) und werden nach den ersten Läufen nur strenger, nie lockerer. Groß ist dagegen eine <strong>Messung</strong>: Wo die Grenze liegt, hängt an der Hardware; der Lauf meldet sie und warnt bei deutlicher Verschlechterung, statt rot zu werden. Lokal, auf einem belasteten Rechner mit 2 Kernen, lagen klein bei p95 525 ms und mittel bei p95 4,7 s – nicht aussagekräftig, aber ein Hinweis, dass ein Rechner mit 2 Kernen die Zusage für mittel nicht schafft.</p>
 <p><strong>Überlastschutz</strong> (<code>server/src/ueberlast.ts</code>): Mehr als <code>DMS_MAX_ANFRAGEN</code> (250) gleichzeitige Anfragen an <code>/api/</code> und <code>/webdav</code> beantwortet ein Hook vor allem anderen sofort mit 503 und <code>Retry-After: 5</code>. Gezählt wird vom Eingang bis die Antwort fertig oder die Verbindung zu ist (<code>close</code>). Ausgenommen: <code>/api/gesundheit</code> und <code>/api/werkbank/last</code>. Dazu nimmt der Server neue Verbindungen mit einer längeren Warteschlange an (<code>backlog: 2048</code> statt 511). Programme, die <code>Retry-After</code> nicht beachten und sofort wieder fragen, bekommen ebenfalls sofort ihre 503; auf dem Testrechner mit 2 Kernen blieben dann bei 1000 gleichzeitig rund 1–2 % der Anfragen nach 60 s ohne Antwort, obwohl der Server keine Anfrage länger als 15 s bearbeitete – der Lasttest selbst (im selben Rechner) kam mit dem Verbindungsaufbau nicht mehr hinterher.</p>
 <p><strong>Verbindungen zur Datenbank</strong> (<code>server/src/db.ts</code>): Vorgabe 10, einstellbar mit <code>DMS_DB_VERBINDUNGEN</code> (2–100). Gemessen bei 100 gleichzeitig ohne Export, je zwei Runden: 5 Verbindungen 3.894–4.117 Anfragen je Minute (p95 2,7–2,9 s), 10 Verbindungen 3.516–3.726 (p95 2,9–3,1 s), 20 Verbindungen 3.512–3.517 (p95 2,9 s) – gleichauf im Rahmen der Schwankung. <code>Verbindungswarten</code> misst alle 5 Sekunden mit <code>SELECT 1</code>, wie lange eine Abfrage auf eine freie Verbindung wartet (einschließlich Hin- und Rückweg und Wartezeit der Ereignisschleife); Werkbank → Datenbank-Anbindung zeigt Median und Höchstwert der letzten Minute.</p>
-<p><strong>Workflow</strong> <code>.github/workflows/lasttest.yml</code>: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf rund eine halbe Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, richtet das DMS mit 50.000 Demo-Mappen ein, misst alle Stufen mit <code>--grenzen</code> und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Vor einem größeren Release von Hand starten und den Bericht mit dem letzten vergleichen.</p>
+<p><strong>Workflow</strong> <code>.github/workflows/lasttest.yml</code>: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf gut eine Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, misst alle drei Stufen mit <code>--grenzen</code> (klein oder mittel verfehlt → Lauf rot) und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Die Grenze von groß merkt er sich im Cache (<code>lasttest-gross-…</code>) für die Warnung beim nächsten Lauf. Vor einem größeren Release von Hand starten.</p>
 <p><strong>Messung zu #542</strong> (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.</p>
 <h2 id="regeln">Regeln<a class="headerlink" href="#regeln" title="Permanent link">&para;</a></h2>
 <ul>
