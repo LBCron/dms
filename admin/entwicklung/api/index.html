@@ -2063,6 +2063,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#mappe-aendern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappe ändern, auch gleichzeitig mit anderen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#weitere-endpunkte" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2483,6 +2494,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#mappe-aendern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappe ändern, auch gleichzeitig mit anderen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#weitere-endpunkte" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2571,6 +2593,19 @@
 <span class="w">  </span>http://&lt;NAS&gt;:8080/api/v1/mappen
 </code></pre></div>
 <p>Die Ids der Mappentypen und die Kennungen ihrer Felder (<code>key</code>) liefert <code>GET /api/v1/typen</code>.</p>
+<h3 id="mappe-aendern">Mappe ändern, auch gleichzeitig mit anderen<a class="headerlink" href="#mappe-aendern" title="Permanent link">&para;</a></h3>
+<p><code>PUT /api/v1/mappen/{id}</code> ändert nur die Felder, die in <code>werte</code> stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb <strong>nur, was du ändern willst</strong> – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.</p>
+<p>Mit <code>stand</code> prüft das DMS zusätzlich, ob seit deinem Lesen jemand <strong>dasselbe Feld</strong> geändert hat (#609). <code>stand</code> ist der Wert <code>geaendert</code> der Mappe aus <code>GET /api/v1/mappen/{id}</code>:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"werte": {"betrag": {"betrag": 398, "waehrung": "EUR"}}, "stand": "2026-11-02T16:58:12.345Z"}'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://&lt;NAS&gt;:8080/api/v1/mappen/&lt;Id&gt;
+</code></pre></div>
+<ul>
+<li>Hat seitdem niemand eines der übergebenen Felder anders geändert, speichert das DMS – auch wenn andere Felder inzwischen geändert wurden; die bleiben.</li>
+<li>Sonst kommt <strong>409</strong> und nichts wird gespeichert. In <code>details</code> stehen <code>stand</code> (der aktuelle) und <code>konflikte</code>: je Feld <code>feld</code>, <code>label</code>, <code>deins</code>, <code>aktuell</code> (lesbar), <code>wert</code> (der jetzige Wert wie in <code>werte</code>; nicht bei Passwörtern), <code>von</code>, <code>name</code> und <code>zeit</code> der letzten Änderung.</li>
+<li>Deinen Wert trotzdem übernehmen: dieselbe Anfrage mit <code>stand</code> aus der 409-Antwort. Den anderen Wert behalten: das Feld weglassen.</li>
+</ul>
+<p>Ohne <code>stand</code> prüft das DMS nichts – wie bis 0.143.0 gilt, was du schickst. Bestehende Skripte laufen unverändert weiter; nicht übergebene Felder setzt das DMS nie zurück. „Zuletzt geändert“ (<code>geaendert</code>) ist auf die Millisekunde genau und wird bei jedem Speichern größer – vergleiche es als Text, rechne nicht damit.</p>
 <div class="admonition note">
 <p class="admonition-title">Namen in der API</p>
 <p>Die Schnittstelle behält ihre Namen, auch wo die Oberfläche seit 0.73 andere Wörter verwendet: <code>sicht</code> ist die <strong>Ansicht</strong>, <code>sicht=eingang</code> die Liste <strong>Zu erledigen</strong>, <code>key</code> die <strong>Kennung</strong> eines Felds, Registers oder Mappentyps, die Feldart <code>referenz</code> der <strong>Verweis</strong>, das Register der Art <code>protokoll</code> die <strong>Historie</strong> und <code>mandant</code> bzw. <code>haushalt_id</code> der <strong>Haushalt</strong>.</p>

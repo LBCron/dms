@@ -1918,6 +1918,7 @@
 </tbody>
 </table>
 <p>Ein Paket, das die Grenzen reißt, beeinträchtigt das DMS nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.</p>
+<p><strong>Mappen ändern:</strong> Schicke mit <code>PUT /mappen/{id}</code> nur die Felder, die das Paket ändert – nicht die ganze gelesene Mappe; nicht übergebene Felder bleiben. Mit <code>"stand"</code> (Wert <code>geaendert</code> der gelesenen Mappe) antwortet der Kern mit 409, wenn ein Mensch dasselbe Feld inzwischen anders gesetzt hat (#609); ein Paket lässt das Feld dann am besten so, wie es ist. Siehe <a href="https://motom001.github.io/dms/admin/aktuell/api/#mappe-aendern">API → Mappe ändern</a>.</p>
 <p>Ein Modul, das <code>netz_strom</code>, <code>netz_weiter</code> oder <code>teil</code> importiert, lädt erst ab DMS 0.124.0 – ältere lehnen es ab („Das Modul verlangt Unbekanntes“). Gib dann <code>dms: "&gt;=0.124.0"</code> an.</p>
 <h2 id="bauen-mit-c-wasi-sdk">Bauen mit C (wasi-sdk)<a class="headerlink" href="#bauen-mit-c-wasi-sdk" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>

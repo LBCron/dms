@@ -516,6 +516,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#mappen-schreiben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen schreiben, auch gleichzeitig (#609)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -956,6 +967,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#mappen-schreiben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen schreiben, auch gleichzeitig (#609)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1259,6 +1281,15 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li><strong>Plan:</strong> <code>planeLoeschung(vorschau, auswahl)</code> – Auswahl je Id <code>loeschen | entkoppeln | behalten</code> (fehlende Ids bleiben). Fixpunkt: Eine Mappe bleibt, wenn <code>wirdAnderswoGebraucht(k)</code> oder eine bleibende Mappe im Baum ohne <code>entkoppeln</code> auf sie verweist. Gesperrte Mappen werden nie entkoppelt.</li>
 <li><strong>Ausführen:</strong> <code>Dienst.loescheMitVerknuepften</code> sammelt neu, plant, prüft jede Mappe wie beim einzelnen Löschen (<code>loeschPruefung</code> mit allen Rückverweisen), kappt die Verweise (<code>entkoppeln</code>, Recht U) und legt alles mit <code>Repo.legeVorgangInPapierkorb</code> in <strong>einer</strong> Transaktion in den Papierkorb (Verweise untereinander zuerst – so gehen auch Kreise). Spalten <code>papierkorb.vorgang</code> und <code>papierkorb.entkoppelt</code> (Migration 042). <code>stelleVorgangWiederHer</code> bzw. <code>Repo.stelleMehrereWiederHer</code> legen erst alle Mappen, dann die Verweise an und setzen die entkoppelten Verweise wieder. Tests: <code>server/test/loeschbaum.test.ts</code>.</li>
 </ul>
+<h2 id="mappen-schreiben">Mappen schreiben, auch gleichzeitig (#609)<a class="headerlink" href="#mappen-schreiben" title="Permanent link">&para;</a></h2>
+<p>Wer zuletzt speichert, darf keine Felder zurücksetzen, die er nicht angefasst hat. Deshalb gilt für <strong>jeden</strong> Schreiber von Mappenwerten:</p>
+<ul>
+<li><strong>Nur Geändertes schreiben.</strong> <code>Repo.aendereMappe(id, werte, [], von, { basis, verweise })</code> legt nur die Felder auf den aktuellen Stand, die sich gegenüber <code>basis</code> (den gelesenen Werten) ändern – unter Sperre der Zeile (<code>SELECT … FOR UPDATE</code>) bzw. im Arbeitsspeicher genauso (<code>feldweise</code> in <code>server/src/repo.ts</code>). <code>verweise(w)</code> berechnet die Verweise aus dem Ergebnis. Interne Schreiber (<code>schreibeSystemMappe</code>, <code>schreibeVerweisWerte</code>, <code>absenderBereinigen</code>, Umbenennen von Feldern) nutzen das; <code>schreibeSystemMappe</code> bekommt außerdem nur die zu ändernden Felder, nie <code>{ ...mappe.werte, … }</code> aus einem älteren Lesen.</li>
+<li><strong>Stand.</strong> <code>mappen.geaendert</code> ist auf die Millisekunde genau und steigt bei jedem Schreiben (<code>greatest(clock_timestamp(), geaendert + 1 ms)</code>), damit er als Versionszähler taugt; keine Migration nötig. Mit <code>stand</code> schreibt das Repo nur, wenn die Zeile noch diesen Stand hat, sonst <code>StandVeraltet</code> – <code>Dienst.aendereMappe</code> liest dann neu und versucht es bis zu fünfmal.</li>
+<li><strong>Konflikt.</strong> <code>Dienst.aendereMappe(id, { werte, stand })</code>: Weicht <code>stand</code> vom aktuellen ab, sucht <code>feldkonflikte</code> in der Historie die Einträge <code>geaendert</code> mit <code>daten.stand</code> &gt; <code>stand</code> (jeder Eintrag merkt sich den Stand, den sein Schreiben erzeugt hat). Ein übergebenes Feld, das dort vorkommt und jetzt anders lauten soll, ergibt 409 mit <code>Mappenkonflikt</code> (<code>shared/src/model.ts</code>). Ohne <code>stand</code> keine Prüfung, nur feldweises Schreiben – so bleiben alte API-Aufrufe gültig.</li>
+<li><strong>Formular.</strong> <code>MappeFormular</code> schickt nur die Felder, deren Rohwert von <code>basis</code> abweicht, und <code>stand</code> = <code>mappe.geaendert</code> beim Laden von <code>basis</code>. Bei 409 zeigt <code>Konfliktfrage</code> je Feld die Wahl; „Meins“ geht mit dem neuen Stand aus der Antwort noch einmal mit, „Seins“ übernimmt den Wert und bleibt weg.</li>
+</ul>
+<p>Tests: <code>server/test/gleichzeitig.test.ts</code> (Arbeitsspeicher und PostgreSQL), im Browser <code>docs/handbuch/screenshots/gleichzeitig-pruefen.mjs</code> (zwei Fenster, Workflow „Handbuch“).</p>
 <p>Mehr Hintergrund im Administratorhandbuch: <a href="https://motom001.github.io/dms/admin/aktuell/technik/">Technik</a> und <a href="https://motom001.github.io/dms/admin/aktuell/entscheidungen/">Entscheidungen</a>.</p>
 
 
