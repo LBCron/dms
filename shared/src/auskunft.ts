@@ -5,6 +5,7 @@
  */
 import { liesAnrede, TEXTE_DRITTE, textDritte, type Anrede } from './anrede';
 import type { Baum, BaumRichtung } from './baum';
+import { imHeimnetz, rechnername } from './heimnetz';
 
 /** Je Mappentyp: betrifft eine Person? Zweck der Verarbeitung (für das Deckblatt). */
 export interface DatenschutzTyp { person: boolean; zweck: string }
@@ -274,21 +275,11 @@ export function liesLinkEingabe(v: unknown): { tage: number; abrufe: number; cod
 
 /**
  * Ist das DMS unter dieser Adresse wahrscheinlich aus dem Internet erreichbar? Nein bei localhost,
- * privaten und lokalen Adressen (10.x, 192.168.x, 172.16–31.x, fe80::, fc/fd…, *.local, *.lan,
- * *.home, *.internal, *.fritz.box) und Namen ohne Punkt. Nur ein Vorschlag für die Wahl des Weges.
+ * privaten und lokalen Adressen und Namen im Heimnetz (Liste in heimnetz.ts, Art „hinweis“, #595).
+ * Nur ein Vorschlag für die Wahl des Weges.
  */
 export function oeffentlichErreichbar(adresse: string): boolean {
-  let host: string;
-  try { host = new URL(adresse).hostname.toLowerCase().replace(/^\[|\]$/g, ''); } catch { return false; }
-  if (!host || host === 'localhost' || !host.includes('.') && !host.includes(':')) return false;
-  if (/\.(local|lan|home|internal|intranet|localdomain|fritz\.box|home\.arpa)$/.test(host) || host.endsWith('.localhost')) return false;
-  const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host);
-  if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])];
-    return !(a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127));
-  }
-  if (host.includes(':')) return !(host === '::1' || /^f[cd]/.test(host) || /^fe[89ab]/.test(host));
-  return true;
+  return rechnername(adresse) !== null && !imHeimnetz(adresse, 'hinweis');
 }
 
 /** Texte der E-Mails an die Person – in der eingestellten Anrede (#474; Texte in anrede.ts). */

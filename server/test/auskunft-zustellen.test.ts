@@ -91,9 +91,9 @@ describe('Auskunft zustellen: reine Funktionen (#455)', () => {
   });
 
   it('Erreichbarkeit: Heimnetz und localhost nicht, echte Namen und Adressen schon', () => {
-    for (const a of ['http://localhost:3000', 'http://192.168.1.20:8080', 'http://10.0.0.5', 'http://172.20.1.1', 'http://nas:3000', 'http://nas.local', 'https://dms.fritz.box', 'http://[::1]:3000', 'http://[fd00::1]', 'http://100.64.1.2', 'kaputt'])
+    for (const a of ['http://localhost:3000', 'http://192.168.1.20:8080', 'http://10.0.0.5', 'http://172.20.1.1', 'http://nas:3000', 'http://nas.local', 'https://dms.fritz.box', 'http://[::1]:3000', 'http://[fd00::1]', 'http://100.64.1.2', 'http://dms.home.arpa', 'kaputt'])
       assert.equal(oeffentlichErreichbar(a), false, a);
-    for (const a of ['https://dms.example.org', 'https://203.0.113.7', 'https://[2001:db8::1]', 'https://172.32.0.1'])
+    for (const a of ['https://dms.example.org', 'https://203.0.113.7', 'https://[2001:db8::1]', 'https://172.32.0.1', 'https://home.arpa.example.org'])
       assert.equal(oeffentlichErreichbar(a), true, a);
   });
 
