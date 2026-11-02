@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.120/begriffe/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.121/begriffe/">
       
       
         <link rel="prev" href="../fragen/">
@@ -1314,6 +1314,9 @@ Welche Art von Angabe ein Feld aufnimmt, z. B. Datum oder Betrag. Die Oberfläch
 <p><a id="filter-titel"></a><strong>Filter (Titel)</strong> · ~ mit Erklärung · Administratoren<br />
 Formatiert einen Platzhalter in der Titel-Vorlage, z. B. nur das Jahr eines Datums oder gekürzter Text. Steht hinter einem senkrechten Strich, z. B. {datum|jahr}.<br />
 Siehe auch: <a href="#titel">Titel</a>.</p>
+<p><a id="format"></a><strong>Format</strong> · ✓ Alltagswort · Administratoren<br />
+Was in einem Textfeld stehen darf – E-Mail, Telefon, Internetseite, IBAN oder PLZ. Neue und geänderte Angaben müssen passen, am Handy erscheint die passende Tastatur, E-Mail und Telefon lassen sich antippen. Gespeicherte Angaben bleiben gültig. Datumsfelder haben stattdessen Grenzen (frühestens, spätestens, auch „heute“).<br />
+Siehe auch: <a href="#feld">Feld</a>, <a href="#feldart">Feldart</a>.</p>
 <p><a id="kennung"></a><strong>Kennung</strong> · ✗ Fachwort · Administratoren<br />
 Der feste, technische Name eines Felds, Registers, Mappentyps oder Nummernkreises, z. B. vertragsnummer. Nach dem Speichern bleibt er gleich, damit gespeicherte Werte, Links und Pakete passen.</p>
 <p><a id="mappe"></a><strong>Mappe</strong> · ✓ Alltagswort · alle<br />
@@ -1726,6 +1729,11 @@ Die Aufgabenart heißt „Post für dich“; die Ansicht „Neue Post“ bleibt.
 <td>Feldart</td>
 <td>Feldtyp, Datentyp, Art (allein)</td>
 <td><code>Feldtyp, FELDTYPEN, Feld.typ</code></td>
+</tr>
+<tr>
+<td>Format</td>
+<td>Validierung, Datentyp</td>
+<td><code>Feld.format, Feld.landFeld, FELDFORMATE, shared/src/feldformate.ts</code></td>
 </tr>
 <tr>
 <td>Gemeldete Fehler</td>

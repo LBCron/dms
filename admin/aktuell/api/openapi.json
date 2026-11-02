@@ -606,7 +606,7 @@
           "Ablage"
         ],
         "summary": "Mappe anlegen",
-        "description": "Die Werte werden wie in der Oberfläche geprüft (Pflichtfelder, Längen, eindeutige Werte, Verweise). Bei Fehlern: 422 mit `details` je Feld.",
+        "description": "Die Werte werden wie in der Oberfläche geprüft (Pflichtfelder, Längen, eindeutige Werte, Verweise, Formate und Datumsgrenzen). Bei Fehlern: 422 mit den Feldnamen in der Meldung und `details` je Feld.",
         "operationId": "postMappen",
         "requestBody": {
           "required": true,
@@ -737,7 +737,7 @@
           "Ablage"
         ],
         "summary": "Mappe ändern",
-        "description": "Übergebene Werte ersetzen die bisherigen; Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten.",
+        "description": "Übergebene Werte ersetzen die bisherigen; Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern.",
         "operationId": "putMappenMitid",
         "parameters": [
           {
@@ -7358,10 +7358,26 @@
             "type": "integer"
           },
           "min": {
-            "type": "number"
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Zahl und Betrag: Zahl. Datum (#535): „heute“ oder JJJJ-MM-TT – frühestes erlaubtes Datum"
           },
           "max": {
-            "type": "number"
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Zahl und Betrag: Zahl. Datum (#535): „heute“ oder JJJJ-MM-TT – spätestes erlaubtes Datum, z. B. heute für einen Geburtstag"
           },
           "nachkomma": {
             "type": "integer"
@@ -7433,6 +7449,23 @@
                 "maxLength": 300
               }
             }
+          },
+          "format": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "email",
+              "telefon",
+              "internetseite",
+              "iban",
+              "plz"
+            ],
+            "description": "Nur bei typ=text (#535): Format der Angabe. Neue und geänderte Werte müssen passen, gespeicherte bleiben gültig."
+          },
+          "landFeld": {
+            "type": "string",
+            "nullable": true,
+            "description": "Bei format=plz (#535): Kennung des Felds mit dem Land. Steht dort Deutschland (oder nichts), hat die PLZ genau 5 Ziffern."
           }
         }
       },
