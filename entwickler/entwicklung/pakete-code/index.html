@@ -580,6 +580,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Ereignisse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext fertig (volltext.fertig)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen (dms:texterkennung)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zusatzdaten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zusatzdaten aus anderen Paketen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fortsetzung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fortsetzung bei langen Aufgaben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -951,6 +1001,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Ereignisse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext fertig (volltext.fertig)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen (dms:texterkennung)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#zusatzdaten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zusatzdaten aus anderen Paketen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fortsetzung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fortsetzung bei langen Aufgaben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1107,7 +1207,7 @@
 
 
 <h1 id="pakete-mit-code">Pakete mit Code<a class="headerlink" href="#pakete-mit-code" title="Permanent link">&para;</a></h1>
-<p>Ein Paket kann neben Mappentypen und Ansichten <strong>Code</strong> mitbringen: ein WebAssembly-Modul, das auf Ereignisse im DMS reagiert (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Das DMS führt es im <strong>Paket-Läufer</strong> aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.</p>
+<p>Ein Paket kann neben Mappentypen und Ansichten <strong>Code</strong> mitbringen: ein WebAssembly-Modul, das auf Ereignisse im DMS reagiert (neue Post, hochgeladenes Dokument, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Das DMS führt es im <strong>Paket-Läufer</strong> aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.</p>
 <p>Diese Seite beschreibt die Schnittstelle („DMS-Paket-ABI 1“). Wie ein Paket aufgebaut ist und wie es in den Katalog kommt, steht unter <a href="../pakete/">Pakete entwickeln</a>.</p>
 <h2 id="so-lauft-code-im-dms">So läuft Code im DMS<a class="headerlink" href="#so-lauft-code-im-dms" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1121,7 +1221,7 @@
 <span class="nt">code</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">sprache</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">c</span><span class="w">                 </span><span class="c1"># rust, go, c, assemblyscript oder javascript (nur zur Information)</span>
 <span class="w">  </span><span class="nt">quelle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code/</span>
-<span class="w">  </span><span class="nt">ereignisse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">post.angelegt</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">texterkennung.fertig</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">ereignisse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">post.angelegt</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">volltext.fertig</span><span class="p p-Indicator">]</span>
 <span class="w">  </span><span class="nt">rechte</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">lesen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">rechnung</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"basis:organisation"</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># Mappen lesen</span>
 <span class="w">    </span><span class="nt">schreiben</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">rechnung</span><span class="p p-Indicator">]</span><span class="w">                      </span><span class="c1"># Mappen anlegen und ändern (schließt Lesen ein)</span>
@@ -1142,7 +1242,7 @@
 </code></pre></div>
 <ul>
 <li><strong>Dokumente:</strong> <code>lesen</code> erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), <code>schreiben</code> zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.</li>
-<li><strong>Schnittstellen des Kerns (<code>schnittstellen</code>):</strong> zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt. Es gibt <code>dms:vektoren</code> (seit 0.120.0, braucht <code>dokumente: lesen</code>) – siehe <a href="#vektoren-und-ahnlichkeit">Vektoren und Ähnlichkeit</a> –, <code>dms:antworten</code> (seit 0.124.0) – siehe <a href="#fragen-beantworten">Fragen beantworten</a> – und <code>dms:erkennen</code> (seit 0.125.0) – siehe <a href="#erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort</a>.</li>
+<li><strong>Schnittstellen des Kerns (<code>schnittstellen</code>):</strong> zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt. Es gibt <code>dms:vektoren</code> (seit 0.120.0, braucht <code>dokumente: lesen</code>) – siehe <a href="#vektoren-und-ahnlichkeit">Vektoren und Ähnlichkeit</a> –, <code>dms:antworten</code> (seit 0.124.0) – siehe <a href="#fragen-beantworten">Fragen beantworten</a> – <code>dms:erkennen</code> (seit 0.125.0) – siehe <a href="#erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort</a> – und <code>dms:texterkennung</code> (seit 0.133.0, braucht <code>dokumente: schreiben</code>) – siehe <a href="#texterkennung">Texterkennung übernehmen</a>.</li>
 <li><strong>Netzwerk/Internet (<code>netz</code>):</strong> nur <code>https://</code>, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).</li>
 <li><strong>Dienst-Adresse als Einstellung</strong> (seit 0.124.0): Statt einer festen Adresse in <code>netz</code> kann ein Paket eine Einstellung vom Typ <code>adresse</code> verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit <code>http://</code> (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, <strong>ohne</strong> <code>standard</code> – höchstens mit <code>beispiel</code>, das im leeren Feld steht:</li>
 </ul>
@@ -1175,14 +1275,14 @@
 <td><code>dokument</code>, <code>mappe</code>, <code>name</code>, <code>mime</code>, <code>groesse</code>, <code>volltextGeplant</code> (ob die Texterkennung des DMS noch läuft)</td>
 </tr>
 <tr>
-<td><code>texterkennung.fertig</code></td>
-<td>Die Texterkennung des DMS ist mit einem Dokument fertig</td>
-<td><code>dokument</code>, <code>mappe</code>, <code>seiten</code></td>
+<td><code>volltext.fertig</code></td>
+<td><strong>Volltext fertig.</strong> Der Volltext eines Dokuments steht fest – nach dem Schritt des Kerns (Textebene des PDFs, bis 0.133 auch die eingebaute Texterkennung), von einem Paket, über die API oder übernommen (seit 0.120.0). Seit 0.133.0 für <strong>jedes</strong> gelesene Dokument, <strong>auch ohne Text</strong> (<code>text: false</code>) – siehe unten. Für Pakete mit <code>dms:vektoren</code> schickt das DMS es auch für den Bestand nach (<code>nachberechnung: true</code>).</td>
+<td><code>dokument</code>, <code>mappe</code>, <code>quelle</code>, <code>text</code>, <code>mime</code>, <code>seiten</code>, ggf. <code>seitenOhneText</code>, <code>neu</code>, <code>paket</code>, <code>nachberechnung</code></td>
 </tr>
 <tr>
-<td><code>volltext.fertig</code></td>
-<td>Der Volltext eines Dokuments steht fest – egal woher: eingebaute Texterkennung, Textebene des PDFs, ein Paket, die API (seit 0.120.0). Für Pakete mit <code>dms:vektoren</code> schickt das DMS es auch für den Bestand nach (<code>nachberechnung: true</code>).</td>
-<td><code>dokument</code>, <code>mappe</code>, ggf. <code>nachberechnung</code></td>
+<td><code>texterkennung.fertig</code></td>
+<td><strong>Veraltet</strong> (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit <code>volltext.fertig</code> (<code>quelle: kern</code>) und mit denselben Daten. Neue Pakete nehmen <code>volltext.fertig</code>.</td>
+<td>wie <code>volltext.fertig</code>, <code>seiten</code></td>
 </tr>
 <tr>
 <td><code>paket.einstellungen_geaendert</code></td>
@@ -1191,6 +1291,53 @@
 </tr>
 </tbody>
 </table>
+<h3 id="volltext-fertig">Volltext fertig (<code>volltext.fertig</code>)<a class="headerlink" href="#volltext-fertig" title="Permanent link">&para;</a></h3>
+<p>Seit 0.133.0 (#458) liest der Kern bei PDFs nur die <strong>Textebene</strong> (poppler); die Texterkennung von Scans und Bildern übernimmt ein Paket. Deshalb meldet der Kern <strong>jedes</strong> Dokument, das er gelesen hat – auch ohne Text:</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quelle</code></td>
+<td><code>kern</code> (Textebene; bis 0.133 auch die eingebaute Texterkennung), <code>paket</code> (ein Paket hat den Volltext geschrieben – welches, steht in <code>paket</code>), <code>api</code> (über <code>PUT /dokumente/{id}/volltext</code> von einem Benutzer), <code>kopie</code> (übernommen, z. B. beim Verkleinern)</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>true</code>, wenn es nennenswerten Text gibt (mindestens 20 Zeichen ohne Leerraum), sonst <code>false</code></td>
+</tr>
+<tr>
+<td><code>mime</code>, <code>seiten</code></td>
+<td>Dateityp und Seitenzahl (soweit bekannt)</td>
+</tr>
+<tr>
+<td><code>seitenOhneText</code></td>
+<td>nur bei gemischten PDFs (Textseiten und gescannte Seiten, <code>text: true</code>): die Seiten ohne Textebene (ab 1). Eine Texterkennung erkennt nur diese und hängt ihren Text an den vorhandenen an.</td>
+</tr>
+<tr>
+<td><code>neu</code></td>
+<td><code>true</code>, wenn jemand den Volltext <strong>ausdrücklich neu</strong> erzeugen lässt (Werkbank → Wartungsoperationen → <em>Volltext neu erzeugen → Für alle Dokumente</em>, <em>Neu erzeugen</em> am Dokument, <em>Neu starten</em> in den Aufträgen). Eine Texterkennung erkennt dann auch Dokumente mit Text neu.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Wer es ohne Text bekommt:</strong> Pakete mit der Schnittstelle <code>dms:texterkennung</code> und Pakete, deren Manifest mindestens <code>dms: "&gt;=0.133.0"</code> verlangt. Ältere Pakete (z. B. für Vektoren) bekommen es weiter nur mit Text. Ein Paket bekommt nie das Ereignis zu einem Volltext, den es selbst geschrieben hat. Nicht gemeldet wird ein Dokument, wenn der Kern es nicht lesen konnte (Fehler, ausgelassen, z. B. Passwort oder Dateityp) oder ein Administrator abgebrochen hat.</p>
+<p><strong>Wiederholung:</strong> wie jedes Ereignis (1, 5, 30, 120, 360 Minuten). Bei einem Paket mit <code>dms:texterkennung</code> steht das Dokument so lange auf „wartet auf Texterkennung“; gibt der Läufer auf, steht es auf <em>Fehler</em> mit der Meldung des Pakets und lässt sich in der Werkbank neu starten.</p>
+<h3 id="texterkennung">Texterkennung übernehmen (<code>dms:texterkennung</code>)<a class="headerlink" href="#texterkennung" title="Permanent link">&para;</a></h3>
+<p>Ein Paket mit <code>code.rechte.schnittstellen: [dms:texterkennung]</code> (und <code>dokumente: schreiben</code>) ist <strong>die</strong> Texterkennung des DMS. Dann gilt:</p>
+<ol>
+<li>Der Kern liest die Textebene. Hat ein Dokument keinen Text (Scan, Bild), gescannte Seiten neben Textseiten (<code>seitenOhneText</code>) – oder kommt <code>neu</code> –, steht es auf <strong>wartet auf Texterkennung (Paket <em>Name</em>)</strong> (Stand <code>paket</code>); vorhandener Text bleibt so lange für die Suche stehen.</li>
+<li>Das Paket bekommt <code>volltext.fertig</code> und entscheidet selbst: erkennen und <code>PUT /dokumente/{id}/volltext</code> – oder nichts tun.</li>
+<li>Schreibt es den Volltext, steht am Dokument „Texterkennung durch Paket <em>Name Version</em>“. Endet der Aufruf ohne Volltext, wartet das Dokument nicht länger; das <code>ergebnis</code> des Pakets (z. B. „Mappentyp nicht gewählt“) steht im Hinweis am Dokument.</li>
+<li>Seiten holt es mit <code>GET /dokumente/{id}/seiten/{nr}/scan</code> – seit 0.133.0 auch für <strong>JPEG und PNG</strong> (eine Seite, in Originalgröße; <code>dpi</code> zählt dort nicht). TIFF und andere Bildformate liefert der Kern nicht.</li>
+</ol>
+<p>Sind mehrere solche Pakete installiert, gilt das erste nach Id.</p>
+<h3 id="zusatzdaten">Zusatzdaten aus anderen Paketen<a class="headerlink" href="#zusatzdaten" title="Permanent link">&para;</a></h3>
+<p>Seit 0.133.0 liest ein Paket mit <code>dms_datei</code> auch die Daten (<code>code/daten/…</code>) von Paketen, die <strong>von ihm abhängen</strong> – unter dem Namen <code>&lt;paket&gt;/&lt;datei&gt;</code>, z. B. <code>texterkennung_fra/fra.traineddata</code>. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu.</p>
+<h3 id="fortsetzung">Fortsetzung bei langen Aufgaben<a class="headerlink" href="#fortsetzung" title="Permanent link">&para;</a></h3>
+<p>Ein Aufruf darf höchstens so lange laufen wie die Zeitgrenze des Läufers (Standard 120 s). Für längere Arbeit – etwa ein Scan mit 60 Seiten – antwortet das Paket mit <code>ergebnis</code> = <code>{"weiter": { … }}</code> und Code <code>0</code>: Der Läufer ruft es <strong>gleich wieder</strong> mit demselben Ereignis auf, <code>daten</code> enthält dann zusätzlich <code>weiter</code> (genau das Objekt von eben) und <code>abschnitt</code> (1, 2, …). Der Stand wird im Ausgangskorb gespeichert; scheitert eine Fortsetzung, setzt die Wiederholung dort an. Höchstens 500 Fortsetzungen je Ereignis und 4 MB je <code>weiter</code>. Steht in <code>weiter</code> ein kurzer Text <code>fortschritt</code> (z. B. „Seite 20 von 64“), zeigt das DMS ihn am wartenden Dokument.</p>
 <p>Das Ereignis entsteht in <strong>derselben Datenbank-Transaktion</strong> wie die Änderung: Entweder ist beides gespeichert oder nichts. Fällt das DMS genau dazwischen aus, fehlt also kein Ereignis.</p>
 <p>Ereignisse stehen im DMS in einem <strong>Ausgangskorb</strong>: Je Paket stellt der Läufer sie der Reihe nach zu; ein langsames Paket hält die anderen nicht auf. Schlägt ein Aufruf fehl (Fehlercode, Absturz, Zeitgrenze), versucht er es nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf – so lange warten die späteren Ereignisse desselben Pakets. Was ein Paket selbst ändert (z. B. eine Post, die es anlegt), meldet das DMS ihm nicht zurück; andere Pakete bekommen es. Code muss deshalb <strong>wiederholbar</strong> sein: dasselbe Ereignis kann zweimal kommen (<code>id</code> bleibt gleich, <code>versuch</code> zählt hoch). Während einer Wartung stellt der Läufer nichts zu.</p>
 <h2 id="schnittstelle-abi-1">Schnittstelle (ABI 1)<a class="headerlink" href="#schnittstelle-abi-1" title="Permanent link">&para;</a></h2>
@@ -1479,7 +1626,7 @@
 <p>Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann einen Volltext setzen – die Erkennung startet danach von selbst (internes Ereignis „Volltext fertig“).</p>
 <h2 id="nutzliche-endpunkte-der-api-v1">Nützliche Endpunkte der API v1<a class="headerlink" href="#nutzliche-endpunkte-der-api-v1" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi).</li>
+<li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße).</li>
 <li><code>PUT /dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> – Volltext setzen (Recht <code>dokumente: schreiben</code>). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt die Texterkennung des DMS ihn nicht mehr. Ab DMS 0.128.0 optional mit <code>"sprache": "fra"</code> (Kennung wie bei Tesseract: <code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.</li>
 <li><code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "fra" }</code> bzw. <code>null</code> – nur die Sprache setzen (ab 0.128.0, Recht <code>dokumente: schreiben</code>); der Suchindex des Dokuments entsteht neu.</li>
 <li><code>POST /dokumente/{id}/seiten</code>, <code>POST /dokumente/zusammenfuegen</code>, <code>PUT /dokumente/{id}/archivnummer</code> – Seiten teilen und zusammenfügen, Archivnummer setzen.</li>

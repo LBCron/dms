@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0132" class="md-skip">
+        <a href="#neu-in-version-0133" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01320" class="md-nav__link">
+  <a href="#01330" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.132.0
+        0.133.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.132.0">
+    <nav class="md-nav" aria-label="0.133.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -435,6 +435,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fur-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Pakete
       
     </span>
   </a>
@@ -1160,15 +1171,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01320" class="md-nav__link">
+  <a href="#01330" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.132.0
+        0.133.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.132.0">
+    <nav class="md-nav" aria-label="0.133.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1176,6 +1187,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fur-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Pakete
       
     </span>
   </a>
@@ -1240,32 +1262,42 @@
   
 
 
-<h1 id="neu-in-version-0132">Neu in Version 0.132<a class="headerlink" href="#neu-in-version-0132" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0133">Neu in Version 0.133<a class="headerlink" href="#neu-in-version-0133" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01320">0.132.0<a class="headerlink" href="#01320" title="Permanent link">&para;</a></h2>
+<h2 id="01330">0.133.0<a class="headerlink" href="#01330" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Lasttest in drei Stufen</strong> (#563): <strong>klein</strong> (Haushalt: 25 gleichzeitige Anfragen, 5.000 Mappen; Zusage p95 &lt; 0,3 s, keine Fehler), <strong>mittel</strong> (Kleinbetrieb: 100 gleichzeitig mit großem Export nebenher, 50.000 Mappen; Zusage p95 &lt; 1 s, Fehler &lt; 0,1 %) und <strong>groß</strong> (Belastungsgrenze: Last alle 2 Minuten um 25 steigern, bis p95 &gt; 3 s, Fehler &gt; 1 % oder der Überlastschutz greift; 200.000 Mappen). klein und mittel sind eine Qualitätszusage – verfehlt, wird der wöchentliche Lauf rot. Groß ist eine Messung: Die Grenze steht im Bericht, mit Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt; Pflicht bleiben kein Absturz, keine Anfrage ohne Antwort, begrenzter Arbeitsspeicher, Erholung von selbst und ein wirksamer Anmeldeschutz. Die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf.</li>
-<li><strong>Lasttest selbst durchführen:</strong> Im Image steckt der Befehl <code>dms-lasttest</code> – <code>docker exec -it dms-test dms-lasttest klein</code> misst gegen eine eigene Test-Installation, ohne Entwicklungsumgebung und ohne neue Abhängigkeit. Ist das DMS frisch, richtet der Lasttest es selbst ein und legt die Demo-Mappen je Stufe an. <strong>Schutz der echten Ablage:</strong> Gegen ein schon eingerichtetes DMS, das nicht vom Lasttest stammt oder mehr als 200 echte Mappen hat, bricht er ab, bevor er etwas anlegt.</li>
-<li><strong>Ergebnis zum Kopieren</strong> ohne personenbezogene Daten und ohne Netzadressen oder Rechnernamen (DMS-Version, Image, Datenbank, Gerät, CPU, Kerne, RAM, Speicher, Bestand, je Stufe p50/p95/p99 und Fehlerquote, Grenze, Arbeitsspeicher, Ereignisschleife) – zum Melden über die neue Issue-Vorlage <strong>Messergebnis Lasttest</strong> (zweisprachig).</li>
+<li><strong>Texterkennung als Paket</strong> (#458): Ein Paket mit dem neuen Recht <strong>„Texterkennung übernehmen“</strong> (<code>dms:texterkennung</code>) – etwa <strong>Texterkennung 2.0</strong> aus dem Katalog – erkennt Scans und Bilder. Das DMS liest bei PDFs dann selbst nur die <strong>Textebene</strong> (poppler) – sofort, PDFs mit Text sind ohne Wartezeit durchsuchbar. Scans und Fotos stehen auf <strong>„wartet auf Texterkennung (Paket …)“</strong>, bis das Paket den Volltext schreibt; bei langen Dokumenten steht dort, wie weit es ist. Ohne ein solches Paket arbeitet die eingebaute Texterkennung wie bisher.</li>
+<li><strong>Woher der Text kommt</strong> steht am Dokument: „Text aus dem PDF“, „Texterkennung durch Paket …“ oder „wartet auf Texterkennung“. Mit <strong>Neu erzeugen</strong> lässt sich der Volltext eines Dokuments ausdrücklich neu erzeugen.</li>
+<li><strong>Volltext neu erzeugen</strong> (Werkbank → Wartungsoperationen) ersetzt „Volltext nachholen“: <strong>für Dokumente ohne Text</strong> oder <strong>für alle Dokumente</strong> (mit Rückfrage und Anzahl). „Für alle“ lässt auch Dokumente mit Text neu erkennen – z. B. nach einem neuen Sprachpaket. Läuft als Auftrag mit Fortschritt und lässt sich abbrechen.</li>
+<li><strong>Werkbank → Texterkennung</strong> zeigt oben, welches Paket die Texterkennung übernimmt (mit Link zu seinen Einstellungen) und wie viele Dokumente darauf warten; Aufträge gibt es auch für den Stand „wartet auf Texterkennung“ (neu starten, abbrechen).</li>
+</ul>
+<h3 id="fur-pakete">Für Pakete<a class="headerlink" href="#fur-pakete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ereignis <code>volltext.fertig</code></strong> kommt seit 0.133.0 für <strong>jedes</strong> Dokument, das der Kern gelesen hat – auch ohne Text – mit <code>quelle</code> (kern, paket, api, kopie), <code>text</code> (ja/nein), <code>mime</code>, <code>seiten</code>, <code>neu</code> (ausdrücklich neu erzeugen) und bei gemischten PDFs <code>seitenOhneText</code> (gescannte Seiten neben Textseiten – die erkennt das Paket dazu). Ohne Text bekommen es nur Pakete mit <code>dms:texterkennung</code> oder mit <code>dms: "&gt;=0.133.0"</code> im Manifest; ältere Pakete (z. B. für Vektoren) merken nichts davon. Wer den Volltext geschrieben hat, bekommt das Ereignis nicht zurück.</li>
+<li><strong><code>texterkennung.fertig</code></strong> bleibt als veralteter Gleichlaut für Pakete von vor 0.133.0 – gleichzeitig mit <code>volltext.fertig</code> nach dem Schritt des Kerns. Das Paket Texterkennung 1.x läuft damit weiter.</li>
+<li><strong>Fortsetzung:</strong> Antwortet ein Paket auf ein Ereignis mit <code>{"weiter": {…}}</code>, ruft der Läufer es gleich wieder auf (mit <code>weiter</code> und <code>abschnitt</code>) – so passen lange Dokumente in die Zeitgrenze von 2 Minuten je Aufruf. Ein Text <code>fortschritt</code> darin steht am wartenden Dokument.</li>
+<li><strong>Zusatzdaten:</strong> Ein Paket liest mit <code>dms_datei</code> auch die Daten von Paketen, die von ihm abhängen (<code>&lt;paket&gt;/&lt;datei&gt;</code>) – z. B. weitere Sprachen der Texterkennung als eigene Pakete.</li>
+<li><strong><code>GET /dokumente/{id}/seiten/1/scan</code></strong> liefert auch für <strong>JPEG und PNG</strong> ein Graustufenbild (Originalgröße), ohne zusätzliches Bildwerkzeug im Image.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Workflow <em>Lasttest</em>: alle drei Stufen nacheinander (Daten wachsen von 5.000 auf 200.000 Mappen), Grenze von groß im Cache für den Vergleich mit dem nächsten Lauf, Zeitgrenze 3 Stunden.</li>
-<li>Konten des Lasttests mit Persona-Namen unter <code>example.org</code>; der Bericht nennt die Adresse des Ziels nicht mehr.</li>
-<li>Erste Messung, <strong>lokal und nicht aussagekräftig</strong> (Testrechner mit 2 Kernen, auf dem PostgreSQL, der Lasttest und Arbeiten anderer Prozesse liefen, Systemlast 4–10): klein p95 525 ms (Zusage verfehlt), mittel p95 4,7 s (verfehlt), groß – kurz angefahren mit 5er-Schritten zu 20 s – Grenze bei 5 gleichzeitigen Anfragen. Aussagekräftig werden erst die Läufe auf GitHub und die Meldungen von Betreibern.</li>
+<li>Migration 051: neuer Stand <code>paket</code> der Texterkennung („wartet auf Texterkennung“).</li>
+<li>Installierte Pakete merken sich ihre nötige DMS-Version (<code>dms</code> aus dem Manifest).</li>
+<li>Aufträge im Hintergrund lassen sich abbrechen, wenn sie das erlauben (<code>POST /api/werkbank/auftrag/abbrechen</code>).</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: neue Seiten <strong>Lasttest selbst durchführen</strong> und <strong>Was das DMS verkraftet</strong> (GitHub-Rechner als erste Zeile, Meldungen von Betreibern); Technik → Viele gleichzeitige Anfragen verweist darauf.</li>
-<li>Entwicklerhandbuch: Leistung → Lasttest (Stufen, Zusagen, Begründung, Schutz, Workflow).</li>
+<li>Administratorhandbuch: Texterkennung → Texterkennung als Paket, Volltext neu erzeugen; Pakete → Recht „Texterkennung übernehmen“, Ereignisse „Volltext fertig“ und „Texterkennung fertig“ (veraltet).</li>
+<li>Benutzerhandbuch: Dokumente → Volltext (wartet auf Texterkennung, woher der Text kommt, Neu erzeugen).</li>
+<li>Entwicklerhandbuch: Pakete mit Code → Volltext fertig (Nutzdaten, Empfänger, Wiederholung), Texterkennung übernehmen, Fortsetzung bei langen Aufgaben, Zusatzdaten aus anderen Paketen.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.131.3 im Detail: <a href="https://github.com/motom001/dms/compare/v0.131.3...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.132.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.132.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
