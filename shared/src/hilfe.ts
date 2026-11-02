@@ -55,6 +55,9 @@ export const HILFE = {
   'werkbank.pakete.sammeldatei': admin('pakete/', 'Pakete ohne Internet installieren', 'pakete-ohne-internet-installieren'),
   'werkbank.pakete.erstellen': admin('pakete/', 'Paket aus deinem DMS erstellen', 'paket-aus-deinem-dms-erstellen'),
   'werkbank.pakete.umwandeln': admin('pakete/', 'Text in Verweise umwandeln', 'text-in-verweise-umwandeln'),
+  // Herkunft eines Pakets (#594): signierter Katalog, eigener Katalog mit Schlüssel.
+  'werkbank.pakete.herkunft': admin('pakete/', 'Herkunft: signiert oder nicht', 'herkunft-signiert-oder-nicht'),
+  'werkbank.pakete.schluessel': admin('pakete/', 'Katalog mit eigenem Schlüssel', 'katalog-mit-eigenem-schlussel'),
   // Rechte-Vorschau eines Pakets mit Code (#449): je Recht und je Ereignis ein Abschnitt.
   'pakete.recht.lesen': admin('pakete/', 'dem Recht „Mappen lesen“', 'recht-mappen-lesen'),
   'pakete.recht.schreiben': admin('pakete/', 'dem Recht „Mappen anlegen und ändern“', 'recht-mappen-anlegen-und-andern'),

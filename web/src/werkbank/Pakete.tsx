@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { hatSchnittstelle, herkunftText, laeuferZustandText, vergleicheVersion, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { hatSchnittstelle, herkunftText, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -15,6 +15,7 @@ import { useKonto } from '../konto';
 import { sammelSeite, SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
+import { HerkunftZeile } from './Herkunft';
 
 /**
  * Werkbank → Pakete (#188): Konfigurationspakete aus dem offiziellen Katalog.
@@ -48,7 +49,7 @@ function useExperteOffen(): [boolean, (offen: boolean) => void] {
   return [offen, setzen];
 }
 
-type Abruf = { url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null };
+type Abruf = { url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null; pruefung?: HerkunftPruefung | null };
 
 export function usePakete(offen: boolean) {
   const [stand, setStand] = useState<{ installiert: InstalliertesPaket[]; katalogUrl: string; quellen: PaketQuelle[]; dms: string } | null>(null);
@@ -154,11 +155,23 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
           </ul>
         )}
       {z.kataloge && <p className="leise klein">Abgerufen {datum(z.kataloge.abgerufen)}.</p>}
+      {/* Herkunft des offiziellen Katalogs (#594): signiert, nicht signiert (Stufe 1: nur Warnung) oder ungültig. */}
+      <HerkunftZeile p={z.kataloge?.liste.find((k) => k.offiziell)?.pruefung} />
     </>
   );
 }
 
-/** Weitere Katalogadressen (#189): hinzufügen, abschalten, entfernen. */
+/** Fingerabdruck aus einer Rückfrage des Servers (409, #594): Katalog mit eigenem Schlüssel. */
+const fingerabdruckAus = (e: unknown): string | null => {
+  const d = e instanceof ApiFehler && e.status === 409 ? e.details as { schluessel?: boolean; fingerabdruck?: string } | undefined : undefined;
+  return d?.schluessel && d.fingerabdruck ? d.fingerabdruck : null;
+};
+
+/**
+ * Weitere Katalogadressen (#189): hinzufügen, abschalten, entfernen. Hat ein Katalog einen eigenen Schlüssel
+ * (#594), zeigt das DMS beim Hinzufügen den Fingerabdruck und übernimmt ihn erst nach Bestätigung – wie beim
+ * ersten Kontakt mit SSH. Nach einem Schlüsselwechsel ist die Quelle gesperrt, bis du den neuen bestätigst.
+ */
 function Quellen({ z }: { z: PaketeZustand }) {
   const [url, setUrl] = useState('');
   const [fehler, setFehler] = useState<string>();
@@ -167,8 +180,22 @@ function Quellen({ z }: { z: PaketeZustand }) {
     setFehler(undefined);
     try { const quellen = await f(); z.setStand((s) => (s ? { ...s, quellen } : s)); } catch (e) { setFehler((e as Error).message); }
   }
+  /** Erst ohne Fingerabdruck fragen; meldet der Server einen Schlüssel, zeigen und nach Bestätigung erneut senden. */
+  const mitSchluessel = (adresse: string, senden: (fp?: string) => Promise<PaketQuelle[]>) => tu(async () => {
+    try { return await senden(); } catch (e) {
+      const fp = fingerabdruckAus(e);
+      if (!fp) throw e;
+      const ja = await rueckfrage({
+        titel: tx('pakete.quelle.bestaetigen.titel'), ja: tx('pakete.quelle.bestaetigen.ja'),
+        text: <><span className="umbrechen">{adresse}</span><br /><code className="fingerabdruck">{fp}</code><br />{tx('pakete.quelle.bestaetigen.text')}</>,
+      });
+      if (!ja) return z.stand?.quellen ?? [];
+      return senden(fp);
+    }
+  });
   return (
     <div className="stapel klein">
+      <p className="leise">{tx('pakete.quelle.erklaerung')} <Hilfe ort="werkbank.pakete.schluessel" /></p>
       {!weitere.length ? <p className="leise">Keine weiteren Kataloge.</p> : (
         <ul className="stapel">
           {weitere.map((q) => (
@@ -176,11 +203,22 @@ function Quellen({ z }: { z: PaketeZustand }) {
               <label className="haken"><input type="checkbox" checked={q.aktiv} onChange={(e) => void tu(() => api.paketQuelleSchalten(q.url, e.target.checked))} /><span className="umbrechen">{q.url}</span></label>
               <span className="leise"> {q.von ? `von ${q.von}` : ''}{q.am ? ` am ${datum(q.am)}` : ''} · </span>
               <button type="button" className="textknopf gefahr" onClick={async () => { if (await rueckfrage({ titel: 'Paketquelle entfernen?', text: q.url, ja: 'Entfernen', gefahr: true })) void tu(() => api.paketQuelleEntfernen(q.url)); }}>Entfernen</button>
+              {q.gesperrt ? (
+                <div className="hinweis warn" role="alert">
+                  <p><Symbol name="warnung" className="sym-warn" /> {tx('pakete.quelle.gesperrt', { seit: datum(q.gesperrt.seit) })} <code className="fingerabdruck">{q.gesperrt.fingerabdruck}</code></p>
+                  <button type="button" className="knopf klein" onClick={() => void mitSchluessel(q.url, (fp) => api.paketQuelleSchluessel(q.url, fp))}>{tx('pakete.quelle.pruefen')}</button>
+                </div>
+              ) : (
+                <p className="leise">
+                  {q.fingerabdruck ? <><Symbol name="schloss" /> {tx('pakete.quelle.schluessel')} <code className="fingerabdruck">{q.fingerabdruck}</code></> : tx('pakete.quelle.ohne')}
+                  {' · '}<button type="button" className="textknopf" onClick={() => void mitSchluessel(q.url, (fp) => api.paketQuelleSchluessel(q.url, fp))}>{tx('pakete.quelle.pruefen')}</button>
+                </p>
+              )}
             </li>
           ))}
         </ul>
       )}
-      <form className="zeile" onSubmit={(e) => { e.preventDefault(); void tu(async () => { const r = await api.paketQuelleHinzu(url.trim()); setUrl(''); return r; }); }}>
+      <form className="zeile" onSubmit={(e) => { e.preventDefault(); const adresse = url.trim(); void mitSchluessel(adresse, async (fp) => { const r = await api.paketQuelleHinzu(adresse, fp); setUrl(''); return r; }); }}>
         <input type="url" placeholder="https://…/katalog.json" aria-label="Adresse eines weiteren Katalogs" value={url} onChange={(e) => setUrl(e.target.value)} />
         <button type="submit" className="knopf klein" disabled={!url.trim()}>Hinzufügen</button>
       </form>
@@ -252,7 +290,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
         <VorschauBlock v={vorschau} warnung={null} abbrechen={() => geheZu('/werkbank/pakete')}
           los={async (x) => {
             try {
-              const r = vorschau.update ? await api.paketAktualisieren(id, vorschau.paket.version, undefined, x.rechteBestaetigt) : await api.paketInstallieren({ id, version: vorschau.paket.version, ...x });
+              const r = vorschau.update ? await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt) : await api.paketInstallieren({ id, version: vorschau.paket.version, ...x });
               await z.laden(); await d.neuLaden(); await z.abrufen(false);
               geheZu(`/werkbank/pakete/${r.id}`);
             } catch (e) { setMeldung(alsMeldung(e)); }
@@ -434,10 +472,10 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
       {inst && <PaketUmwandeln key={`${inst.id}|${inst.version}`} paket={inst.id} />}
 
       {vorschau && (
-        <VorschauBlock v={vorschau} warnung={offiziell ? null : `Aus dem Katalog ${inst?.herkunft.art === 'katalog' ? inst.herkunft.url : quelle}`} abbrechen={() => setVorschau(null)}
+        <VorschauBlock v={vorschau} warnung={offiziell || vorschau.pruefung?.bestaetigen === false ? null : `Aus dem Katalog ${inst?.herkunft.art === 'katalog' ? inst.herkunft.url : quelle}`} abbrechen={() => setVorschau(null)}
           los={(x) => tu(async () => {
-            if (vorschau.update) { const r = await api.paketAktualisieren(id, vorschau.paket.version, !offiziell, x.rechteBestaetigt); return `${r.name} ist jetzt auf Version ${r.version}.`; }
-            const r = await api.paketInstallieren({ id, version: vorschau.paket.version, quelle, bestaetigt: !offiziell || undefined, ...x });
+            if (vorschau.update) { const r = await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt); return `${r.name} ist jetzt auf Version ${r.version}.`; }
+            const r = await api.paketInstallieren({ id, version: vorschau.paket.version, quelle, ...x });
             return `${r.name} ${r.version} ist installiert.`;
           })} />
       )}
@@ -487,9 +525,11 @@ function LaeuferStand({ paket }: { paket: string }) {
  * Auch im Einrichtungsassistenten und für Sammeldateien (#460, #461): je Paket ein Block, eigene Überschrift
  * und „Auslassen“ statt „Abbrechen“.
  */
-export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText = 'Abbrechen' }: {
+export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText = 'Abbrechen', herkunftBestaetigt = false }: {
   v: PaketVorschau; warnung: string | null; abbrechen(): void; titel?: string; abbrechenText?: string;
-  los(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean }): Promise<void>;
+  /** Herkunft schon vorher bestätigt (Sammeldatei): kein zweiter Haken. */
+  herkunftBestaetigt?: boolean;
+  los(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean; bestaetigt?: boolean }): Promise<void>;
 }) {
   const [namen, setNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.typen.filter((t) => !t.vorhanden).map((t) => [t.schluessel, t.vorschlag ?? t.name])));
   const [sichtNamen, setSichtNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.sichten.filter((s) => !s.vorhanden).map((s) => [s.schluessel, s.vorschlag ?? s.name])));
@@ -503,12 +543,16 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
   const konflikt = v.typen.some((t) => !t.vorhanden && t.konflikt && (namen[t.schluessel] ?? '').trim().toLowerCase() === t.name.toLowerCase())
     || v.sichten.some((s) => !s.vorhanden && s.konflikt && (sichtNamen[s.schluessel] ?? '').trim().toLowerCase() === s.name.toLowerCase());
   const leer = Object.values(namen).some((n) => !n.trim()) || Object.values(sichtNamen).some((n) => !n.trim());
+  // Herkunft bestätigen (#189, #594): außerhalb des offiziellen Katalogs bzw. ohne gültige Signatur.
+  const pruefWarnung = warnung ?? (v.pruefung?.bestaetigen ? (v.pruefung.art === 'ungueltig' ? tx('pakete.herkunft.warnung.ungueltig') : '') : null);
+  const bestaetigen = pruefWarnung !== null && !herkunftBestaetigt;
   return (
     <section className="blatt" aria-label="Vorschau">
       <h2 className="h3">{titel ?? (v.update ? `Update auf ${v.paket.version}` : `Vorschau: ${v.paket.name} ${v.paket.version}`)}</h2>
-      {warnung && (
+      <HerkunftZeile p={v.pruefung} />
+      {bestaetigen && (
         <div className="hinweis warn" role="alert">
-          <p><strong>Nicht vom DMS-Projekt geprüft.</strong> {warnung}. Installiere nur Pakete, deren Herkunft du kennst und der du vertraust.</p>
+          <p><strong>Nicht vom DMS-Projekt geprüft.</strong> {pruefWarnung ? `${pruefWarnung.replace(/\.$/, '')}. ` : ''}Installiere nur Pakete, deren Herkunft du kennst und der du vertraust.</p>
           <label className="haken"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} /><span>Ich weiß, woher das Paket stammt, und installiere es auf eigene Verantwortung.</span></label>
         </div>
       )}
@@ -576,8 +620,8 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       )}
       {!v.update && v.beispiele > 0 && <label className="haken"><input type="checkbox" checked={beispiele} onChange={(e) => setBeispiele(e.target.checked)} /><span>{v.beispiele} Beispiel-Mappen anlegen</span></label>}
       <div className="knoepfe">
-        <button type="button" className="knopf primaer" disabled={laeuft || v.probleme.length > 0 || konflikt || leer || (!!warnung && !ok) || rechteFehlen}
-          onClick={() => { setLaeuft(true); void los({ namen, sichtNamen, beispiele, mitAbhaengigkeiten: mit, ...(rechteOk ? { rechteBestaetigt: true } : {}) }).finally(() => setLaeuft(false)); }}>
+        <button type="button" className="knopf primaer" disabled={laeuft || v.probleme.length > 0 || konflikt || leer || (bestaetigen && !ok) || rechteFehlen}
+          onClick={() => { setLaeuft(true); void los({ namen, sichtNamen, beispiele, mitAbhaengigkeiten: mit, ...(rechteOk ? { rechteBestaetigt: true } : {}), ...(bestaetigen && ok ? { bestaetigt: true } : {}) }).finally(() => setLaeuft(false)); }}>
           {laeuft ? (v.update ? 'Aktualisiere …' : 'Installiere …') : v.update ? 'Aktualisieren' : 'Installieren'}
         </button>
         <button type="button" className="textknopf" onClick={abbrechen}>{abbrechenText}</button>

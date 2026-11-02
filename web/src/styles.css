@@ -1257,6 +1257,11 @@ a.knopf.breit { display: flex; justify-content: center; text-decoration: none; }
 .pd-datei input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 .pd-datei:focus-within .knopf { outline: 2px solid var(--akzent); outline-offset: 2px; }
 .pd-pruefwert { overflow-wrap: anywhere; word-break: break-all; }
+/* Herkunft eines Pakets (#594): Zeile in der Vorschau, Fingerabdrücke umbrechen statt die Seite zu verbreitern */
+.herkunft { margin: 0 0 12px; overflow-wrap: anywhere; }
+.herkunft p { margin: 2px 0; }
+.herkunft.gut .sym { color: var(--gruen); }
+.fingerabdruck { font-family: var(--mono, ui-monospace, monospace); overflow-wrap: anywhere; word-break: break-all; }
 .umbrechen { overflow-wrap: anywhere; }
 
 /* Einrichtungsassistent (#278): Hilfe je Schritt, gut sichtbar oben rechts */

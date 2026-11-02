@@ -13,7 +13,7 @@ Das DMS fragt den Katalog **nur auf Knopfdruck** ab, nie im Hintergrund: Klicke 
 
 Ein Klick auf ein Paket zeigt Name, Beschreibung, Version, Lizenz, Autor, die nötige DMS-Version, Abhängigkeiten, die enthaltenen Mappentypen und Ansichten sowie Links zum README und zu den Änderungen.
 
-Das DMS lädt den Katalog von `https://raw.githubusercontent.com/motom001/dms-registry/gh-pages/katalog.json`. Dafür muss das DMS selbst ins Internet kommen. Einen Proxy für ausgehende Abrufe kann das DMS nicht einstellen. Ohne Internetzugang lädst du ein Paket als Datei hoch (siehe [Expertenmodus](#expertenmodus-weitere-kataloge-und-hochladen)).
+Das DMS lädt den Katalog von `https://raw.githubusercontent.com/motom001/dms-registry/gh-pages/katalog.json` und prüft seine **Signatur** (siehe [Herkunft](#herkunft-signiert-oder-nicht)). Weiterleitungen folgt es dabei nur auf `https://`-Adressen. Dafür muss das DMS selbst ins Internet kommen. Einen Proxy für ausgehende Abrufe kann das DMS nicht einstellen. Ohne Internetzugang lädst du ein Paket als Datei hoch (siehe [Expertenmodus](#expertenmodus-weitere-kataloge-und-hochladen)).
 
 ## Installieren
 
@@ -49,6 +49,23 @@ Den Katalog gibt es auch als Webseite: [Paketkatalog](https://motom001.github.io
 3. Dein DMS öffnet **Werkbank → Pakete** mit der **Vorschau** genau dieses Pakets (Adresse `…/werkbank/pakete?installieren=<paket>@<version>`). Bist du nicht angemeldet, meldest du dich zuerst an und landest danach wieder dort. Andere Benutzer sehen einen Hinweis, dass nur Administratoren Pakete installieren.
 4. Das DMS holt Paket und Prüfsumme **selbst aus dem offiziellen Katalog** – Angaben im Link, die auf andere Quellen zeigen, zählen nicht. Gibt es das Paket oder die Version dort nicht, sagt das DMS es.
 5. Installiert wird **erst, wenn du auf „Installieren“ klickst**. Der Link allein ändert nichts. Ist das Paket schon installiert, zeigt die Vorschau das; ein Update bietet sie an, wenn der Link eine neuere Version nennt.
+
+## Herkunft: signiert oder nicht { #herkunft-signiert-oder-nicht }
+
+Das DMS-Projekt **signiert** den offiziellen Katalog (ab DMS 0.141.0). Weil der Katalog die Prüfsumme jedes Pakets enthält, belegt eine einzige Signatur, dass alle Pakete darin vom DMS-Projekt stammen. Die **Vorschau** zeigt deshalb vor jeder Installation eine Zeile **Herkunft**:
+
+| Herkunft | Bedeutung | Was du tust |
+| --- | --- | --- |
+| **signiert vom DMS-Projekt** (Katalog vom …) | Katalog und Paket sind nachweislich vom DMS-Projekt und unverändert. | Nichts – installieren. |
+| **signiert vom Anbieter dieses Katalogs** | Ein [weiterer Katalog](#expertenmodus-weitere-kataloge-und-hochladen) mit eigenem Schlüssel, dessen Fingerabdruck du bestätigt hast. | Nichts – du hast dem Anbieter beim Hinzufügen vertraut. |
+| **nicht signiert** | Niemand belegt, woher das Paket kommt. | Nur installieren, wenn du die Quelle kennst; du bestätigst die Herkunft mit einem Haken. |
+| **Signatur ungültig** | Der Katalog ist verändert oder nicht vom DMS-Projekt. Das DMS vermerkt das im Protokoll. | Im Zweifel nicht installieren und später erneut abrufen. Installieren geht nur mit ausdrücklicher Bestätigung. |
+
+**Übergang:** In dieser Version gibt es beim offiziellen Katalog **ohne** Signatur nur einen Hinweis. Eine Minor-Version später verlangt das DMS die Signatur; Pakete aus weiteren Quellen, hochgeladene Pakete und Sammeldateien ohne Signatur gehen dann weiter mit Bestätigung.
+
+**Älterer Katalog:** Das DMS merkt sich, welchen Stand des Katalogs es zuletzt signiert gesehen hat. Bekommt es danach online einen **älteren** signierten Katalog, nimmt es ihn nicht – so kann niemand einen alten Katalog mit einer inzwischen korrigierten Paketversion unterschieben. Die Meldung nennt beide Zeitpunkte. Meist hilft es, später noch einmal abzurufen; bleibt es so, melde es dem DMS-Projekt.
+
+**Testschlüssel:** Steht in der Vorschau „prüft noch mit Testschlüsseln“, hat dieses DMS noch nicht die echten Schlüssel des Projekts. Dann beweist die Signatur nichts. Die Fingerabdrücke der echten Schlüssel stehen in der [Sicherheitsrichtlinie](https://github.com/motom001/dms/blob/main/SECURITY.md).
 
 ## Installierte Pakete
 
@@ -325,7 +342,7 @@ Für Paketentwickler und für ein DMS ohne Internetzugang gibt es unter **Werkba
 
 Im Expertenmodus kannst du:
 
-- **Weitere Quellen** – Katalogadressen hinzufügen, abschalten und entfernen, höchstens 20. Erlaubt ist nur HTTPS, das Format ist dasselbe wie beim offiziellen Katalog (`katalog.json` der Registry). **Katalog abrufen** fragt neben dem offiziellen Katalog alle **eingeschalteten** weiteren Kataloge ab – egal, ob der Abschnitt gerade auf- oder zugeklappt ist; ihre Pakete tragen die Adresse als Kennzeichen. Willst du eine Quelle nicht mehr nutzen, schalte sie ab oder entferne sie. Ohne weitere Quellen gibt es nur den offiziellen Katalog.
+- **Weitere Quellen** – Katalogadressen hinzufügen, abschalten und entfernen, höchstens 20. Erlaubt ist nur HTTPS, das Format ist dasselbe wie beim offiziellen Katalog (`katalog.json` der Registry). Wie ein Katalog mit **eigenem Schlüssel** behandelt wird, steht [unten](#katalog-mit-eigenem-schlussel). **Katalog abrufen** fragt neben dem offiziellen Katalog alle **eingeschalteten** weiteren Kataloge ab – egal, ob der Abschnitt gerade auf- oder zugeklappt ist; ihre Pakete tragen die Adresse als Kennzeichen. Willst du eine Quelle nicht mehr nutzen, schalte sie ab oder entferne sie. Ohne weitere Quellen gibt es nur den offiziellen Katalog.
 - Ein **Paket als Datei hochladen** (`.zip` im Format der Registry, z. B. der Paketordner gepackt, höchstens 10 MB). Das DMS prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau. Eine [Sammeldatei](#pakete-ohne-internet-installieren) erkennt es selbst.
 
 !!! warning "Nicht vom DMS-Projekt geprüft"
@@ -333,7 +350,26 @@ Im Expertenmodus kannst du:
 
 Die Liste der installierten Pakete zeigt bei jedem die **Herkunft**: „offizieller Katalog“, die Katalogadresse oder „hochgeladen von … am …“. **Updates sucht das DMS nur in der Quelle, aus der das Paket stammt.** Ein hochgeladenes Paket aktualisierst du, indem du eine höhere Version hochlädst; dann gelten dieselben Regeln wie bei jedem Update (nur ergänzen). Ist die Quelle eines Pakets abgeschaltet oder entfernt, gibt es dafür keine Updates.
 
+Lädst du ein einzelnes Paket hoch, dessen Prüfsumme genau so im (schon abgerufenen) offiziellen Katalog steht, zeigt die Vorschau „entspricht Katalogversion …“. Die Herkunft bestätigst du trotzdem, wie bei jedem hochgeladenen Paket.
+
 Das Protokoll vermerkt, wer welche Quelle hinzugefügt, abgeschaltet oder entfernt und wer welches Paket hochgeladen hat.
+
+### Katalog mit eigenem Schlüssel { #katalog-mit-eigenem-schlussel }
+
+Ein weiterer Katalog kann einen **eigenen Schlüssel** haben (Datei `katalog.schluessel` neben `katalog.json`; wie ein Anbieter das einrichtet, steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/pakete/#eigener-katalog-mit-eigenem-schluessel)). Das DMS geht damit um wie SSH beim ersten Kontakt:
+
+1. **Hinzufügen:** Hat der Katalog einen Schlüssel, zeigt das DMS dessen **Fingerabdruck** – 64 Zeichen in Vierergruppen, z. B. `3f9a 0c12 …`. Vergleiche ihn mit dem, den der Anbieter auf seiner Webseite nennt. Erst wenn du **Fingerabdruck stimmt** klickst, merkt sich das DMS den Schlüssel. Stimmt auch nur ein Zeichen nicht, klicke **Abbrechen**.
+2. **Danach** muss jeder Abruf dieses Katalogs gültig signiert sein; dafür fragt das DMS beim Installieren nicht mehr nach der Herkunft. Fehlt die Signatur oder passt sie nicht, nimmt das DMS den Katalog nicht und vermerkt es im Protokoll.
+3. **Geordneter Schlüsselwechsel:** Hat der Anbieter seinen neuen Schlüssel mit dem alten signiert, übernimmt das DMS ihn selbst. Die Vorschau zeigt einen Hinweis, das Protokoll den Wechsel.
+4. **Schlüssel geändert ohne diesen Nachweis:** Das DMS **sperrt** den Katalog. In der Liste der Quellen steht „Gesperrt seit …“ mit dem neuen Fingerabdruck, und das Protokoll vermerkt es. Pakete daraus lassen sich nicht installieren oder aktualisieren.
+
+**Was tun bei einem gesperrten Katalog?**
+
+- Frag beim Anbieter nach (nicht über einen Link aus dem Katalog selbst), ob er den Schlüssel wirklich gewechselt hat, und vergleiche den neuen Fingerabdruck mit seiner Webseite.
+- Stimmt er, klicke bei der Quelle **Schlüssel prüfen …** und bestätige den Fingerabdruck. Die Sperre ist dann aufgehoben.
+- Stimmt er nicht oder erreichst du den Anbieter nicht: Schalte die Quelle ab oder entferne sie. Schon installierte Pakete bleiben, bekommen aber keine Updates mehr.
+
+Ein Katalog **ohne** Schlüssel funktioniert wie bisher: Bei jeder Installation bestätigst du die Herkunft. Veröffentlicht der Anbieter später einen Schlüssel, übernimmst du ihn mit **Schlüssel prüfen …**.
 
 ## Pakete ohne Internet installieren
 
@@ -341,20 +377,23 @@ Kommt dein DMS nicht ins Internet, holst du mehrere Pakete auf einmal als **Samm
 
 1. Öffne an einem Gerät mit Internet die Seite **[Pakete ohne Internet](https://motom001.github.io/dms-registry/sammeldatei.html)** des Katalogs. Am schnellsten über **Werkbank → Pakete → Ohne Internet …** und den Link dort – dann ist die Version deines DMS schon eingetragen.
 2. Kreuze die Pakete an. Die **DMS-Version** bestimmt, welche Paketversionen passen (Vorgabe: die neueste). **Abhängigkeiten** wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.
-3. **Sammeldatei herunterladen.** Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen. Sie zeigt den **SHA-256** der fertigen Datei.
+3. **Sammeldatei herunterladen.** Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen – mit einer Kopie des signierten Katalogs. Sie zeigt den **SHA-256** der fertigen Datei.
 4. Bring die Datei zum DMS (USB-Stick, Netzlaufwerk) und lade sie unter **Werkbank → Pakete → Ohne Internet …** hoch – oder im [Einrichtungsassistenten](installation.md#pakete-dazuholen), wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch **Paket hochladen** im Expertenmodus an.
-5. Das DMS zeigt den Inhalt: je Paket die Version und ob es **neu**, ein **Update**, **schon installiert** oder **älter als installiert** ist und ob es zur DMS-Version passt. Bestätige einmal, dass du weißt, woher die Datei stammt, dann installierst du **Paket für Paket**, Abhängigkeiten zuerst. Jedes zeigt seine Vorschau; Pakete mit Code installierst du erst, wenn du **ihre** Rechte bestätigt hast. Mit **Auslassen** überspringst du ein Paket.
+5. Das DMS zeigt den Inhalt: je Paket die Version und ob es **neu**, ein **Update**, **schon installiert** oder **älter als installiert** ist und ob es zur DMS-Version passt. Enthält die Datei den signierten Katalog, steht dort **Herkunft: aus dem offiziellen Katalog vom …**; sonst bestätigst du einmal, dass du weißt, woher die Datei stammt. Dann installierst du **Paket für Paket**, Abhängigkeiten zuerst. Jedes zeigt seine Vorschau; Pakete mit Code installierst du erst, wenn du **ihre** Rechte bestätigt hast. Mit **Auslassen** überspringst du ein Paket.
 
 ### Wie das DMS einer Sammeldatei traut
 
-Die Sammeldatei ist ein ZIP mit dem Verzeichnis `sammeldatei.json` (je Paket Id, Version, Größe und SHA-256), einer kurzen `LIESMICH.txt` und den Paket-Archiven aus dem Katalog, Byte für Byte unverändert. Das DMS nimmt sie **nur ganz oder gar nicht** an:
+Die Sammeldatei ist ein ZIP mit dem Verzeichnis `sammeldatei.json` (je Paket Id, Version, Größe und SHA-256), einer kurzen `LIESMICH.txt`, den Paket-Archiven aus dem Katalog, Byte für Byte unverändert, und – bei Sammeldateien aus dem signierten Katalog – einer Kopie von `katalog.json` mit `katalog.sig`. Das DMS nimmt sie **nur ganz oder gar nicht** an:
 
 - Jedes Archiv muss genau die **Größe und Prüfsumme (SHA-256)** aus dem Verzeichnis haben. Hat das DMS den offiziellen Katalog in dieser Sitzung schon abgerufen, muss die Prüfsumme **auch zum Katalog** passen – sonst lehnt es die Datei ab.
 - Es dürfen **keine anderen Dateien** darin liegen; Dateinamen mit `..` oder `/` am Anfang, verschlüsselte Einträge und doppelte Namen lehnt es ab.
 - **Grenzen gegen ZIP-Bomben:** höchstens 64 MB je Datei, 50 Pakete, 10 MB je Paket-Archiv, entpackt 20 MB je Paket (plus 32 MB für Code) und 256 MB für alle Pakete zusammen. Das DMS entpackt nie mehr, als im Archiv angegeben ist.
 - Jedes Paket durchläuft **dieselben Prüfungen wie ein einzeln hochgeladenes**; Id und Version im Paket müssen zum Verzeichnis passen. Ist eins ungültig, wird nichts übernommen.
+- Enthält die Datei den **signierten Katalog**, prüft das DMS die Signatur – ohne Internet – und vergleicht jedes Archiv mit der Prüfsumme darin. Passt eines nicht dazu, lehnt es die ganze Datei ab.
 
-Die Prüfsummen beweisen, dass die Datei vollständig und seit dem Zusammenstellen **unverändert** ist – nicht, **wer** sie zusammengestellt hat. Deshalb gilt sie wie ein hochgeladenes Paket als „nicht vom DMS-Projekt geprüft“: Du bestätigst die Herkunft, und die installierten Pakete tragen als Herkunft „hochgeladen von … am …“. Vergleiche bei Zweifel den SHA-256, den das DMS nach dem Hochladen zeigt, mit dem auf der Katalog-Seite. Updates dieser Pakete holst du mit einer neuen Sammeldatei; Pakete, die aus dem Katalog installiert sind, aktualisiert eine Sammeldatei nicht.
+**Mit gültig signiertem Katalog**, in dem jedes Archiv mit seiner Prüfsumme steht, zeigt das DMS „aus dem offiziellen Katalog vom …, signiert vom DMS-Projekt“, und du musst die Herkunft **nicht bestätigen**. Ist der Katalogstand älter als **90 Tage**, weist das DMS darauf hin: Neuere Paketversionen fehlen darin vielleicht – stell bei Gelegenheit eine neue Sammeldatei zusammen. Steht ein Paket nicht im signierten Katalog, nennt das DMS es; für dieses bestätigst du die Herkunft wie bisher.
+
+**Ohne Signatur** (ältere Sammeldateien) oder mit **ungültiger Signatur** beweisen die Prüfsummen nur, dass die Datei vollständig und seit dem Zusammenstellen **unverändert** ist – nicht, **wer** sie zusammengestellt hat. Dann gilt sie wie ein hochgeladenes Paket als „nicht vom DMS-Projekt geprüft“: Du bestätigst die Herkunft. Eine ungültige Signatur steht außerdem im Protokoll. In jedem Fall tragen die installierten Pakete als Herkunft „hochgeladen von … am …“. Vergleiche bei Zweifel den SHA-256, den das DMS nach dem Hochladen zeigt, mit dem auf der Katalog-Seite. Updates dieser Pakete holst du mit einer neuen Sammeldatei; Pakete, die aus dem Katalog installiert sind, aktualisiert eine Sammeldatei nicht.
 
 ## Paket aus deinem DMS erstellen
 

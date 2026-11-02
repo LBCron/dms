@@ -34,3 +34,16 @@ gh attestation verify oci://ghcr.io/motom001/dms-komplett:<version> -R motom001/
 ```
 
 Wie das im Einzelnen gebaut ist, steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates).
+
+## Herkunft der Pakete prüfen
+
+Das DMS-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://github.com/motom001/dms-registry)) mit Ed25519. Das DMS prüft die Signatur ab Version 0.141.0 mit diesen beiden öffentlichen Schlüsseln (fest im Code, `server/src/projektschluessel.ts`); gültig ist eine Signatur mit einem der beiden:
+
+| Schlüssel | Kennung | Fingerabdruck (SHA-256 des öffentlichen Schlüssels) |
+| --- | --- | --- |
+| Signierschlüssel (CI der Registry) | `da31d65f4a429768` | `da31 d65f 4a42 9768 db27 8f76 e67a ce99 7024 9d25 9352 e7da 5a0b 931b d85d 5ac0` |
+| Reserveschlüssel (offline beim Maintainer) | `e8e8f4f53d4eca0e` | `e8e8 f4f5 3d4e ca0e 3e51 ac12 bbe8 807e 9c3c 00af 19a7 27cc 2d1e 1b92 172b fe15` |
+
+> **Achtung: Das sind noch Testschlüssel.** Ihre privaten Gegenstücke stehen offen in den Tests; eine damit erzeugte Signatur beweist nichts. Sobald der Maintainer die echten Schlüssel erzeugt hat, stehen hier deren Fingerabdrücke. Wie das geht, steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/pakete/#projektschluessel-austauschen).
+
+Was „signiert“ und „nicht signiert“ in der Vorschau bedeutet, steht im [Administrationshandbuch](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht).

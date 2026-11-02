@@ -45,6 +45,38 @@ export type Herkunft =
   | { art: 'katalog'; url: string }
   | { art: 'hochgeladen'; von: string | null; am: string };
 
+/**
+ * Herkunftsprüfung (#594): Was die Signatur über einen Katalog, eine Sammeldatei oder ein hochgeladenes Paket
+ * sagt. Die Vorschau zeigt sie als Zeile „Herkunft“.
+ */
+export interface HerkunftPruefung {
+  /**
+   * projekt: gültig signiert vom DMS-Projekt (offizieller Katalog bzw. Sammeldatei daraus);
+   * anbieter: gültig signiert mit dem bestätigten Schlüssel eines eigenen Katalogs;
+   * unsigniert: keine Signatur; ungueltig: Signatur da, aber ungültig (steht im Protokoll);
+   * datei: hochgeladenes Paket ohne signierten Katalog.
+   */
+  art: 'projekt' | 'anbieter' | 'unsigniert' | 'ungueltig' | 'datei';
+  /** Aus dem offiziellen Katalog bzw. einer Sammeldatei mit dem offiziellen Katalog. */
+  offiziell: boolean;
+  /** Stand (`erstellt`) des signierten Katalogs. */
+  stand?: string;
+  /** Älter als KATALOG_ALT_TAGE (nur ohne Internet, Sammeldatei). */
+  alt?: boolean;
+  /** Fingerabdruck des Anbieter-Schlüssels (eigener Katalog). */
+  fingerabdruck?: string;
+  /** Der Anbieter hat seinen Schlüssel geordnet gewechselt (neuer mit dem alten signiert). */
+  wechsel?: boolean;
+  /** Hochgeladenes Paket: Prüfsumme steht so im offiziellen Katalog, in dieser Version. */
+  katalogversion?: string;
+  /** Das DMS hat noch Testschlüssel statt der echten Schlüssel des Projekts. */
+  test?: boolean;
+  /** Vor der Installation muss die Herkunft bestätigt werden. */
+  bestaetigen: boolean;
+}
+/** Ab so vielen Tagen warnt das DMS vor einem alten Katalogstand (Sammeldatei ohne Internet, #594). */
+export const KATALOG_ALT_TAGE = 90;
+
 export interface InstalliertesPaket {
   id: string; name: string; version: string; beschreibung: string; lizenz: string;
   autor: { name: string; github: string };
