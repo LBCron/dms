@@ -428,6 +428,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pdf-stelle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PDF-Stelle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PDF-Stelle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bewertung-der-alternativen-zu-pdf-lib" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bewertung der Alternativen zu pdf-lib
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -829,6 +857,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pdf-stelle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PDF-Stelle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PDF-Stelle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bewertung-der-alternativen-zu-pdf-lib" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bewertung der Alternativen zu pdf-lib
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -979,7 +1035,7 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 <td><code>pdf-lib</code></td>
 <td>Server</td>
 <td>MIT</td>
-<td>PDFs zusammenstellen, verkleinern, schwärzen, stempeln</td>
+<td>PDFs zusammenstellen, verkleinern, schwärzen, stempeln – nur über die <a href="#pdf-stelle">PDF-Stelle</a></td>
 </tr>
 <tr>
 <td><code>yaml</code></td>
@@ -1032,6 +1088,67 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 </tbody>
 </table>
 <p>Nur für Bau und Tests (nicht im Image): <code>typescript</code>, <code>tsx</code>, <code>esbuild</code>, <code>vite</code> mit <code>@vitejs/plugin-react</code> und die Typen unter <code>@types/…</code>. Auch hier gilt: lieber Bordmittel – die Tests laufen mit dem Testläufer von Node.js (<code>node --test</code>), ohne eigenes Test-Framework.</p>
+<h2 id="pdf-stelle">PDF-Stelle<a class="headerlink" href="#pdf-stelle" title="Permanent link">&para;</a></h2>
+<p>Alle Arbeiten an PDFs mit <strong>pdf-lib</strong> liegen in einem Ordner: <code>server/src/pdf/</code> (#541). Nur dort wird pdf-lib eingebunden; die Prüfung <code>server/test/pdf-stelle.test.ts</code> (läuft mit <code>npm test</code> in der CI) schlägt fehl, sobald Server, Oberfläche oder <code>shared</code> pdf-lib anderswo importieren – auch per <code>import()</code> oder <code>require()</code>. Tests dürfen pdf-lib weiter nutzen, um erzeugte PDFs zu untersuchen.</p>
+<div class="highlight"><pre><span></span><code>server/src/pdf/index.ts          öffentliche Schnittstelle – alle Module importieren von './pdf'
+server/src/pdf/seiten.ts         Seiten zählen, drehen, löschen, umsortieren, teilen, zusammenfügen, Fotos als Seiten
+server/src/pdf/stempel.ts        Stempel und Fußzeile beim Weitergeben, Bild als A4-Seite
+server/src/pdf/verkleinern.ts    Bilder herunterrechnen (über pdftoppm), Struktur aufräumen (qpdf)
+server/src/pdf/schwaerzen.ts     Seiten neu aufbauen, schwärzen, Textebene ohne geschwärzte Wörter
+server/src/pdf/schreiber.ts      Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
+server/src/pdf/export.ts         PDF mehrerer Mappen
+server/src/pdf/aufkleber.ts      Aufkleberbogen mit Barcode
+server/src/pdf/demo-dokumente.ts Demo-Dokumente
+server/src/pdf/einfach.ts        kleiner Schreiber für Textseiten ganz ohne Bibliothek (Notfallblatt)
+server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung #456; WinAnsi
+</code></pre></div>
+<p><strong>Regeln für neuen Code</strong></p>
+<ul>
+<li>Fachliches bleibt draußen: Was auf ein PDF kommt (Texte, Felder ohne Passwörter, Rechte, Platzhalter), entscheidet das jeweilige Modul (<code>export.ts</code>, <code>auskunft.ts</code>, <code>ausgabe.ts</code> …). In die PDF-Stelle geht nur, <strong>wie</strong> gezeichnet oder umgebaut wird.</li>
+<li>Die Vorgänge nehmen und liefern <strong>einfache Daten</strong> – Bytes (<code>Buffer</code>/<code>Uint8Array</code>), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (<code>Anweisung[]</code>: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit <code>textdokumentPdf()</code> zeichnen. So lassen sich alle Vorgänge auch in einem Arbeiter-Faden ausführen (#542).</li>
+<li>Bilder gehen nur über <code>eigenerPuffer()</code> an pdf-lib (#456: pdf-lib übersieht den Versatz eines Buffers im gemeinsamen Speicher und meldet bei JPEGs „SOI not found“).</li>
+<li>Die PDF-Stelle schreibt nichts ins Protokoll und liest keine Einstellungen. Was der Aufrufer wissen soll, steht im Ergebnis (z. B. <code>hinweise</code> beim Verkleinern).</li>
+<li>Fachfehler mit verständlicher Meldung (<code>Fachfehler(422, …)</code>) dürfen aus der PDF-Stelle kommen, etwa für verschlüsselte oder kaputte PDFs.</li>
+</ul>
+<h3 id="bewertung-der-alternativen-zu-pdf-lib">Bewertung der Alternativen zu pdf-lib<a class="headerlink" href="#bewertung-der-alternativen-zu-pdf-lib" title="Permanent link">&para;</a></h3>
+<p>pdf-lib (MIT) ist die einzige verbreitete PDF-Bibliothek in reinem JavaScript. Die letzte Version 1.17.1 stammt von Ende 2021; seitdem gibt es keine Weiterentwicklung. Einen Fehler darin umgehen wir schon (#456). Ein Austausch ist <strong>nicht</strong> Teil von #541 – die Kapselung macht ihn aber überschaubar. Stand November 2026:</p>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Was dafür spricht</th>
+<th>Was dagegen spricht</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pdf-lib bleibt</strong> (heute)</td>
+<td>Läuft stabil, alle Funktionen und Tests bauen darauf; MIT; vier kleine eigene Abhängigkeiten (<code>pako</code>, <code>tslib</code>, Standardschriften, <code>upng</code>)</td>
+<td>Keine Fehlerbehebungen und keine Sicherheitsupdates mehr; Umgehungen wie #456 bleiben unsere Sache</td>
+</tr>
+<tr>
+<td><strong><code>@cantoo/pdf-lib</code></strong> (gepflegte Abspaltung)</td>
+<td>Gleiche Schnittstelle, regelmäßige Versionen (2.x, zuletzt 2026), mehrere Betreuer, MIT; kann zusätzlich verschlüsselte PDFs</td>
+<td>Bringt mehr eigene Abhängigkeiten mit (u. a. einen HTML-Parser, den wir nicht brauchen); Unterschiede zur 1.17 wären mit allen Tests zu prüfen</td>
+</tr>
+<tr>
+<td><strong><code>@pdfme/pdf-lib</code></strong> (Abspaltung des Projekts pdfme)</td>
+<td>Gleiche Schnittstelle, gepflegt (6.x, zuletzt 2026), MIT</td>
+<td>Ein einzelner Betreuer; ebenfalls zusätzliche Abhängigkeiten (HTML-Parser, Farben)</td>
+</tr>
+<tr>
+<td><strong>Mehr über qpdf</strong> (schon im Image, Apache-2.0)</td>
+<td>Robust und gepflegt (C++); kann Seiten drehen, auswählen, umsortieren, teilen, zusammenfügen, Seiten überlagern und Strukturen optimieren – ohne neue Abhängigkeit; läuft als eigener Prozess und belastet den Server-Faden nicht</td>
+<td>Zeichnet keine Texte und bettet keine Bilder ein: Stempel, Export-Seiten, Aufkleber, Textdokumente und der Neuaufbau beim Schwärzen bräuchten einen eigenen Schreiber (Ansatz in <code>einfach.ts</code>) und qpdf zum Überlagern; jeder Aufruf schreibt Dateien</td>
+</tr>
+<tr>
+<td><strong>Anderes Werkzeug</strong> (MuPDF, Ghostscript, PDFium …)</td>
+<td>Sehr leistungsfähig</td>
+<td>MuPDF und Ghostscript sind AGPL und bewusst nicht im Image; native Module widersprechen der schlanken Abhängigkeitsliste</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Empfehlung:</strong> pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist <code>@cantoo/pdf-lib</code> (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus <a href="#abhaengigkeiten">Abhängigkeiten</a>) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (<code>seiten.ts</code>) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.</p>
 <h2 id="texte-und-sprachdateien">Texte und Sprachdateien<a class="headerlink" href="#texte-und-sprachdateien" title="Permanent link">&para;</a></h2>
 <p>Texte für Benutzer stehen nicht im Code, sondern in <strong>Sprachdateien</strong> (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit <strong>du</strong>; die Technik für weitere Sprachen ist da.</p>
 <p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang), die Texte für Dritte und die Leiste der Werkbank (Gruppen, Bereiche, Vorlagen; <code>werkbank.json</code>, auch für <code>werkbank_bereiche.py</code>).</p>
