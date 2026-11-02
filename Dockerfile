@@ -60,6 +60,10 @@ COPY --from=bau /app/web/dist web/dist
 COPY --from=hilfe /hilfe web/dist/hilfe
 # Befehl dms in der Konsole des Containers (#244): docker exec -it <container> dms hilfe
 RUN printf '#!/bin/sh\nexec node /app/server/dist/dms.js "$@"\n' > /usr/local/bin/dms && chmod 755 /usr/local/bin/dms
+# Lasttest selbst durchführen (#563): docker exec -it <Test-Container> dms-lasttest klein – nur gegen eine eigene
+# Test-Installation; das Skript prüft das selbst. Ohne Abhängigkeiten, nur node.
+COPY server/test/lasttest.mjs /app/lasttest/lasttest.mjs
+RUN printf '#!/bin/sh\nexec node /app/lasttest/lasttest.mjs "$@"\n' > /usr/local/bin/dms-lasttest && chmod 755 /usr/local/bin/dms-lasttest
 
 # Feste Ordner (#115): /data/files, /data/geheim, /data/sicherung – zugeordnet nur über Volumes.
 ENV PORT=3000

@@ -70,6 +70,8 @@ nav:
       - "Wie komme ich an ein DMS?": https://motom001.github.io/dms/installieren/aktuell/
       - Aktualisieren und Sichern: aktualisieren.md
       - Wachsen und umziehen: wachsen.md
+      - Was das DMS verkraftet: verkraftet.md
+      - Lasttest selbst durchführen: lasttest.md
       - Verschlüsselung: verschluesselung.md
   - Werkbank:
       - Werkbank und Übersicht: uebersicht.md

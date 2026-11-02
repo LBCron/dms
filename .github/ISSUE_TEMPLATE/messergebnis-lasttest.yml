@@ -1,0 +1,84 @@
+# Messergebnis Lasttest (#563): Betreiber melden freiwillig, was das DMS auf ihrer Hardware verkraftet.
+# Daraus pflegt das Projekt die Tabelle „Was das DMS verkraftet“ im Administratorhandbuch.
+# Das DMS selbst meldet nichts (keine Telemetrie, #389) – Rückmeldung gibt es nur auf diesem Weg.
+name: Messergebnis Lasttest · Load test result
+description: Melde freiwillig, was das DMS auf deinem Gerät verkraftet – mit dem Ergebnisblock des Lasttests. · Voluntarily report what the DMS handles on your device – with the result block of the load test.
+title: "Messergebnis Lasttest: "
+labels: ["messergebnis-lasttest"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke, dass du den Lasttest auf deinem Gerät hast laufen lassen! Wie das geht, steht im Administratorhandbuch unter [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/). Aus den Meldungen entsteht die Tabelle [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/).
+
+        Der Lasttest läuft **nur gegen eine eigene Test-Installation**, nie gegen deine echte Ablage.
+
+        > **Dieser Beitrag ist öffentlich sichtbar.** Der Ergebnisblock enthält keine Namen, Adressen oder Rechnernamen – trage auch sonst keine ein: keine Namen, Domains, IP-Adressen, Seriennummern oder Bildschirmfotos mit echten Unterlagen.
+
+        ---
+
+        **English:** Thank you for running the load test on your device! How to run it is described in the administrator manual (in German) under [Lasttest selbst durchführen](https://motom001.github.io/dms/admin/aktuell/lasttest/). The reports are collected in the table [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/). Only run the load test **against a separate test installation**, never against your real documents.
+
+        > **This post is publicly visible.** The result block contains no names, addresses or host names – do not add any elsewhere either: no names, domains, IP addresses, serial numbers or screenshots of real documents.
+  - type: input
+    id: geraet
+    attributes:
+      label: Gerät/Modell · Device/model
+      description: z. B. „UGREEN DXP2800“, „Synology DS224+“, „Raspberry Pi 5 (8 GB)“, „Mini-PC mit Intel N100“. · e.g. "UGREEN DXP2800", "Synology DS224+", "Raspberry Pi 5 (8 GB)", "mini PC with Intel N100".
+    validations:
+      required: true
+  - type: dropdown
+    id: image
+    attributes:
+      label: Image · Image
+      options:
+        - dms (Datenbank getrennt · separate database)
+        - dms-komplett (Datenbank im Container · database in the container)
+        - Etwas anderes · Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: speicher
+    attributes:
+      label: Speicher der Daten · Storage of the data
+      options:
+        - HDD
+        - SSD (SATA)
+        - NVMe
+        - Gemischt (z. B. Datenbank auf SSD, Dateien auf HDD) · Mixed (e.g. database on SSD, files on HDD)
+        - Weiß ich nicht · Don't know
+    validations:
+      required: true
+  - type: dropdown
+    id: stufen
+    attributes:
+      label: Gemessene Stufen · Measured levels
+      multiple: true
+      options:
+        - klein (25 gleichzeitig, 5.000 Mappen) · small
+        - mittel (100 gleichzeitig mit Export, 50.000 Mappen) · medium
+        - groß (Belastungsgrenze, 200.000 Mappen) · large
+    validations:
+      required: true
+  - type: textarea
+    id: ergebnis
+    attributes:
+      label: Ergebnisblock · Result block
+      description: Der Block „Messergebnis Lasttest“ aus der Ausgabe des Lasttests, unverändert. · The block "Messergebnis Lasttest" from the output of the load test, unchanged.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: nebenher
+    attributes:
+      label: Lief nebenher etwas? · Was anything else running?
+      description: z. B. andere Container, Medienserver, Sicherung des NAS. Hilft beim Einordnen. · e.g. other containers, media server, NAS backup. Helps to put the numbers into context.
+    validations:
+      required: false
+  - type: textarea
+    id: bemerkung
+    attributes:
+      label: Bemerkungen · Remarks
+      description: Was ist dir aufgefallen? Größere Probleme gern zusätzlich als eigenes Issue mit der Vorlage „Fehler“. · What did you notice? Larger problems are welcome as a separate issue with the template "Fehler / Bug".
+    validations:
+      required: false
