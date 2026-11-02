@@ -456,6 +456,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#arbeiter-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arbeiter-Pool
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -885,6 +896,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#arbeiter-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arbeiter-Pool
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#texte-und-sprachdateien" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1105,7 +1127,7 @@ server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung
 <p><strong>Regeln für neuen Code</strong></p>
 <ul>
 <li>Fachliches bleibt draußen: Was auf ein PDF kommt (Texte, Felder ohne Passwörter, Rechte, Platzhalter), entscheidet das jeweilige Modul (<code>export.ts</code>, <code>auskunft.ts</code>, <code>ausgabe.ts</code> …). In die PDF-Stelle geht nur, <strong>wie</strong> gezeichnet oder umgebaut wird.</li>
-<li>Die Vorgänge nehmen und liefern <strong>einfache Daten</strong> – Bytes (<code>Buffer</code>/<code>Uint8Array</code>), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (<code>Anweisung[]</code>: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit <code>textdokumentPdf()</code> zeichnen. So lassen sich alle Vorgänge auch in einem Arbeiter-Faden ausführen (#542).</li>
+<li>Die Vorgänge nehmen und liefern <strong>einfache Daten</strong> – Bytes (<code>Buffer</code>/<code>Uint8Array</code>), Zahlen, Texte, Listen –, nie Objekte von pdf-lib. Textdokumente beschreibt der Aufrufer als Plan (<code>Anweisung[]</code>: Text, Linie, Abstand, Tabelle, neue Seite) und lässt ihn mit <code>textdokumentPdf()</code> zeichnen. So laufen alle Vorgänge im <a href="#arbeiter-pool">Arbeiter-Pool</a> (#542): <code>pdf/index.ts</code> gibt sie dorthin; ein neuer Vorgang kommt zusätzlich in <code>arbeit/vorgaenge.ts</code>.</li>
 <li>Bilder gehen nur über <code>eigenerPuffer()</code> an pdf-lib (#456: pdf-lib übersieht den Versatz eines Buffers im gemeinsamen Speicher und meldet bei JPEGs „SOI not found“).</li>
 <li>Die PDF-Stelle schreibt nichts ins Protokoll und liest keine Einstellungen. Was der Aufrufer wissen soll, steht im Ergebnis (z. B. <code>hinweise</code> beim Verkleinern).</li>
 <li>Fachfehler mit verständlicher Meldung (<code>Fachfehler(422, …)</code>) dürfen aus der PDF-Stelle kommen, etwa für verschlüsselte oder kaputte PDFs.</li>
@@ -1149,6 +1171,23 @@ server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung
 </tbody>
 </table>
 <p><strong>Empfehlung:</strong> pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist <code>@cantoo/pdf-lib</code> (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus <a href="#abhaengigkeiten">Abhängigkeiten</a>) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (<code>seiten.ts</code>) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.</p>
+<h2 id="arbeiter-pool">Arbeiter-Pool<a class="headerlink" href="#arbeiter-pool" title="Permanent link">&para;</a></h2>
+<p>Der Server beantwortet alle Anfragen in <strong>einem</strong> Faden. Schwere Rechenarbeit läuft darum in einem kleinen Pool von Arbeiter-Fäden (<code>node:worker_threads</code>, #542), ohne neue Abhängigkeit:</p>
+<div class="highlight"><pre><span></span><code>server/src/arbeit/index.ts        arbeite(vorgang, ...args), Einstellung (DMS_ARBEITER), Stand für den Systemzustand
+server/src/arbeit/pool.ts         Arbeiterpool: Warteschlange, Zeitgrenze, Speichergrenze, Absturz, Leerlauf
+server/src/arbeit/vorgaenge.ts    was ein Arbeiter kann: alle Vorgänge der PDF-Stelle, Tabellen großer Exporte, Demo-Dokumente
+server/src/arbeit/arbeitsfaden.ts Einstieg des Arbeiters (gebaut als dist/arbeitsfaden.mjs)
+server/src/arbeit/nachricht.ts    Nachrichten, Buffer und Fehler über die Grenze
+</code></pre></div>
+<ul>
+<li><strong>Aufrufen:</strong> Die PDF-Stelle gibt ihre Vorgänge selbst an den Pool (<code>pdf/index.ts</code>); für alles andere <code>await arbeite('exportTabellen', …)</code>. Die Typen der Parameter und Ergebnisse kommen aus <code>VORGAENGE</code>.</li>
+<li><strong>Neuer Vorgang:</strong> Funktion mit einfachen Daten als Parameter und Ergebnis (Bytes, Zahlen, Texte, Listen, einfache Objekte, <code>Map</code> – keine Klassen, keine Funktionen, kein Repo, keine Datenbank) in <code>vorgaenge.ts</code> eintragen. Ein <code>Buffer</code> kommt im Arbeiter als <code>Uint8Array</code> an und wird von <code>alsBuffer</code> wieder zum <code>Buffer</code> – auch in Listen und einfachen Objekten. <code>Fachfehler</code> kommen mit Status und Details beim Aufrufer an. Der Arbeiter schreibt nichts ins Protokoll; Hinweise stehen im Ergebnis.</li>
+<li><strong>Was nicht hineingehört:</strong> kleine Anfragen (die Übergabe kostet selbst etwas: Daten werden kopiert, bei 20.000 Tabellenzeilen etwa 0,1–0,3 s) und alles, was Datenbank oder Dateien braucht – die Daten holt der Hauptfaden vorher.</li>
+<li><strong>Einstellung:</strong> <code>DMS_ARBEITER</code> (0–16; 0 = aus, alles im Hauptfaden), Vorgabe die Hälfte der Kerne aus <code>cpu.max</code> der cgroup bzw. <code>availableParallelism()</code>, 1 bis 4. Zeitgrenze 10 Minuten, Warteschlange höchstens 50 (darüber 503), Heap je Arbeiter 1,5 GB, Leerlauf 2 Minuten. Ohne Aufruf von <code>richteArbeiterEin()</code> (Tests, Befehl <code>dms</code>) entsteht der Pool beim ersten Auftrag.</li>
+<li><strong>Tests:</strong> <code>server/test/arbeiter.test.ts</code> prüft Pool (Ergebnis, Fehler, Zeitgrenze, volle Warteschlange, Absturz), Einstellung, die Warnung bei hoher Wartezeit und dass die Ablage während eines großen PDF-Exports schnell lädt (Werte ohne und mit Pool stehen in der Ausgabe). In Tests läuft der Arbeiter mit <code>tsx</code> (Lade-Argumente aus <code>ladeArgumente</code>).</li>
+<li>Der <strong>Paket-Läufer</strong> (<code>laeufer/</code>) ist ein eigener Prozess mit Berechtigungsmodell und bleibt davon getrennt.</li>
+</ul>
+<p><strong>Warnung bei hoher Wartezeit:</strong> <code>Auslastung</code> (<code>messung.ts</code>) merkt das p99 der Verzögerung der Ereignisschleife je Minutenfenster. Liegt es in 5 Fenstern hintereinander über 100 ms (<code>SCHLEIFE_GRENZE_MS</code>, <code>SCHLEIFE_MINUTEN</code> in <code>shared/src/systemlast.ts</code>), schreibt sie eine Warnung ins Protokoll, und <code>Systemlast.warnung()</code> meldet <code>schleife</code> an Systemzustand, Übersicht und Leiste der Werkbank.</p>
 <h2 id="texte-und-sprachdateien">Texte und Sprachdateien<a class="headerlink" href="#texte-und-sprachdateien" title="Permanent link">&para;</a></h2>
 <p>Texte für Benutzer stehen nicht im Code, sondern in <strong>Sprachdateien</strong> (#473, Teil von #357). Sichtbar ist bisher nur Deutsch mit <strong>du</strong>; die Technik für weitere Sprachen ist da.</p>
 <p><strong>Regel:</strong> Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab – auch wenn der Rest der Datei noch Texte im Code hat. Ganze Bereiche ziehen nach und nach in eigenen Issues um. Umgestellt sind bisher die Anmeldung (Weboberfläche, Fehlermeldungen der API, E-Mails zum Zugang), die Texte für Dritte und die Leiste der Werkbank (Gruppen, Bereiche, Vorlagen; <code>werkbank.json</code>, auch für <code>werkbank_bereiche.py</code>).</p>

@@ -1670,6 +1670,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Auslastung">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arbeiter-fur-pdf-und-exporte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arbeiter für PDF und Exporte
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2360,6 +2377,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Auslastung">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arbeiter-fur-pdf-und-exporte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arbeiter für PDF und Exporte
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2491,9 +2525,13 @@
 <td><strong>Wartezeit des Servers</strong></td>
 <td>Wie lange eine Anfrage warten musste, weil das DMS gerade etwas anderes rechnete (Ereignisschleife). Die Einzelheiten stehen unter <strong>Einstellungen → <a href="../installation/#lange-datenbankzugriffe">Datenbank-Anbindung</a></strong>, zusammen mit den langen Datenbankzugriffen.</td>
 </tr>
+<tr>
+<td><strong>Arbeiter für PDF und Exporte</strong></td>
+<td>Wie viele <a href="#arbeiter-fur-pdf-und-exporte">Arbeiter</a> gerade beschäftigt sind, wie viele Aufträge warten, wie lange ein Auftrag im Mittel dauert und wartet, was fehlschlug.</td>
+</tr>
 </tbody>
 </table>
-<p><strong>Warnung:</strong> Liegt CPU oder Arbeitsspeicher <strong>5 Minuten lang über 90 %</strong>, steht ein Hinweis hier, in der <a href="../uebersicht/">Übersicht</a> und als <strong>hoch</strong> neben <em>Systemzustand</em> in der Leiste – auch wenn der Bereich ausgeblendet ist.</p>
+<p><strong>Warnung:</strong> Liegt CPU oder Arbeitsspeicher <strong>5 Minuten lang über 90 %</strong>, steht ein Hinweis hier, in der <a href="../uebersicht/">Übersicht</a> und als <strong>hoch</strong> neben <em>Systemzustand</em> in der Leiste – auch wenn der Bereich ausgeblendet ist. Genauso warnt das DMS, wenn die <strong>Wartezeit des Servers</strong> in <strong>5 Minutenfenstern hintereinander</strong> bei 99 % der Messungen (p99) <strong>über 100 ms</strong> liegt; dann steht zusätzlich ein Eintrag im <a href="../fehlersuche/#protokoll">Protokoll</a> (Modul <code>datenbank</code>, „Hohe Wartezeit des Servers“) und einer, sobald es wieder normal ist. 100 ms merkt man beim Klicken gerade eben; liegt fast jede Anfrage so lange in der Warteschlange, ist das DMS spürbar zäh.</p>
 <p><strong>Typische Ursachen und was hilft:</strong></p>
 <ul>
 <li><strong>Texterkennung</strong> arbeitet viele neue Scans ab – das geht vorbei; die Warteschlange steht unter <a href="../texterkennung/">Texterkennung</a>.</li>
@@ -2501,7 +2539,18 @@
 <li>Ein <strong>Paket mit Code</strong> rechnet viel – der Anteil <em>Paket-Läufer</em> zeigt das; die Auslastung je Paket folgt in einer späteren Version.</li>
 <li>Der Arbeitsspeicher ist dauerhaft knapp – erhöhe <code>mem_limit</code> in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.</li>
 <li>Die Systemlast des Rechners ist hoch, die CPU des DMS aber nicht – dann bremst ein anderer Dienst auf dem NAS.</li>
+<li>Die <strong>Wartezeit des Servers</strong> ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet das DMS etwas Großes im Hauptfaden. Melde das bitte als <a href="https://github.com/motom001/dms/issues">Issue</a> mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen <a href="#arbeiter-fur-pdf-und-exporte">Arbeiter</a>.</li>
 </ul>
+<h3 id="arbeiter-fur-pdf-und-exporte">Arbeiter für PDF und Exporte<a class="headerlink" href="#arbeiter-fur-pdf-und-exporte" title="Permanent link">&para;</a></h3>
+<p>Das DMS beantwortet alle Anfragen in <strong>einem</strong> Faden. Rechnet er an etwas Großem, warten alle anderen. Darum laufen die schweren Arbeiten in eigenen <strong>Arbeitern</strong> neben dem Hauptfaden: Stempeln und Wasserzeichen beim Weitergeben, Seiten bearbeiten und zusammenfügen, Schwärzen, Verkleinern, Vorschaubilder von Fotos, PDF-Exporte, Auskunft, Aufkleber, Löschkonzept und -protokoll als PDF, Demo-Dokumente sowie Excel- und CSV-Tabellen großer Exporte. Texterkennung und Vorschaubilder von PDFs liefen schon immer als eigene Programme; der <a href="../pakete/">Paket-Läufer</a> ist ein eigener Prozess und hat mit den Arbeitern nichts zu tun.</p>
+<ul>
+<li><strong>Zahl der Arbeiter:</strong> Vorgabe ist die Hälfte der Kerne, die der Container nutzen darf (Grenze <code>cpus:</code> in der Compose-Datei, sonst alle Kerne des Rechners) – mindestens 1, höchstens 4. Der Hauptfaden und PostgreSQL brauchen die übrigen Kerne. Ändern lässt sie sich mit der Umgebungsvariable <code>DMS_ARBEITER</code> (1–16, siehe <a href="../installation/#einstellungen">Installation</a>); <code>DMS_ARBEITER=0</code> schaltet die Arbeiter aus – dann läuft alles wie früher im Hauptfaden (nur zur Fehlersuche).</li>
+<li><strong>Warteschlange:</strong> Sind alle Arbeiter beschäftigt, wartet ein Auftrag. Warten schon 50, antwortet das DMS sofort mit „Gerade laufen sehr viele PDF-Arbeiten und Exporte. Bitte versuche es in einer Minute noch einmal.“ (HTTP 503) statt endlos.</li>
+<li><strong>Zeitgrenze:</strong> Ein Auftrag darf höchstens <strong>10 Minuten</strong> dauern. Danach wird der Arbeiter beendet, und der Benutzer liest „Die Bearbeitung dauerte länger als 10 Minuten und wurde abgebrochen.“</li>
+<li><strong>Arbeitsspeicher:</strong> Ein Arbeiter darf höchstens 1,5 GB belegen. Braucht ein riesiges PDF mehr, scheitert nur dieser Auftrag („… mehr Arbeitsspeicher als erlaubt …“), nicht das DMS.</li>
+<li>Ein Arbeiter entsteht bei Bedarf und beendet sich nach zwei Minuten ohne Arbeit wieder; einer läuft ab dem Start bereit.</li>
+</ul>
+<p>Mehr Arbeiter helfen nur, wenn genug Kerne frei sind: Bei 2 Kernen bleibt es bei einem Arbeiter, damit Anfragen und Datenbank nicht leer ausgehen.</p>
 <p><strong>Nicht verfügbar</strong> steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS <strong>ihre</strong> Auslastung nicht; das steht unter dem Arbeitsspeicher.</p>
 <h2 id="was-gemessen-wird">Was gemessen wird<a class="headerlink" href="#was-gemessen-wird" title="Permanent link">&para;</a></h2>
 <p>Gemessen werden die drei festen Ordner im Container (siehe <a href="../installation/#ordner-und-volumes">Ordner und Volumes</a>) – jede Minute und zusätzlich vor jedem Hochladen:</p>

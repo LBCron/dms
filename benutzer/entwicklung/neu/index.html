@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0129" class="md-skip">
+        <a href="#neu-in-version-0130" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,22 +419,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01290" class="md-nav__link">
+  <a href="#01300" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.129.0
+        0.130.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.129.0">
+    <nav class="md-nav" aria-label="0.130.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technik
+        Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verbessert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verbessert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messwerte-vorhernachher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Messwerte vorher/nachher
       
     </span>
   </a>
@@ -1149,22 +1171,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01290" class="md-nav__link">
+  <a href="#01300" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.129.0
+        0.130.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.129.0">
+    <nav class="md-nav" aria-label="0.130.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#neu" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technik
+        Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verbessert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verbessert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messwerte-vorhernachher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Messwerte vorher/nachher
       
     </span>
   </a>
@@ -1218,27 +1262,97 @@
   
 
 
-<h1 id="neu-in-version-0129">Neu in Version 0.129<a class="headerlink" href="#neu-in-version-0129" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0130">Neu in Version 0.130<a class="headerlink" href="#neu-in-version-0130" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01290">0.129.0<a class="headerlink" href="#01290" title="Permanent link">&para;</a></h2>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h2 id="01300">0.130.0<a class="headerlink" href="#01300" title="Permanent link">&para;</a></h2>
+<h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>PDF-Arbeiten über eine gemeinsame Stelle</strong> (#541): Alles, was das DMS mit der Bibliothek pdf-lib an PDFs macht – Stempel, Export, Seiten bearbeiten, Schwärzen, Verkleinern, Vorschaubilder, Auskunft, Aufkleber und Demo-Daten –, liegt jetzt in einem Ordner (<code>server/src/pdf/</code>). Für dich ändert sich nichts; die PDFs sehen aus wie bisher.</li>
-<li>Ein späterer Wechsel der Bibliothek (pdf-lib wird seit 2021 nicht mehr weiterentwickelt) trifft damit nur noch diese eine Stelle. Eine Prüfung in der CI verhindert, dass pdf-lib anderswo neu eingebunden wird.</li>
-<li>Die Umgehung des pdf-lib-Fehlers bei JPEG-Bildern (#456) gehört mit zur gemeinsamen Stelle.</li>
-<li>Keine neue Abhängigkeit.</li>
+<li><strong>Arbeiter für PDF und große Exporte</strong> (#542): Das DMS beantwortet alle Anfragen in einem Faden – rechnet es an einem großen PDF, warten alle anderen. Jetzt laufen die schweren Arbeiten in eigenen Arbeitern daneben: Stempeln beim Weitergeben, Seiten bearbeiten und zusammenfügen, Schwärzen, Verkleinern, PDF-Exporte, Auskunft, Aufkleber, Löschkonzept und -protokoll, Demo-Dokumente sowie die Excel- und CSV-Tabellen großer Exporte. Wer gerade in der Ablage arbeitet, merkt kaum noch, dass jemand anderes exportiert.</li>
+<li>Zahl der Arbeiter: Vorgabe ist die Hälfte der Kerne des Containers (mindestens 1, höchstens 4), einstellbar mit der Umgebungsvariable <code>DMS_ARBEITER</code>.</li>
+<li>Ein Auftrag darf höchstens 10 Minuten dauern und 1,5 GB Arbeitsspeicher belegen; warten schon 50 Aufträge, kommt sofort „Bitte versuche es in einer Minute noch einmal“ statt endloser Wartezeit. Die Meldungen sind verständlich, und ein abgestürzter Arbeiter reißt das DMS nicht mit.</li>
+<li><strong>Werkbank → Systemzustand → Auslastung</strong> zeigt die Arbeiter: beschäftigt, wartende Aufträge, Dauer und Warten im Mittel, Fehlschläge.</li>
+<li><strong>Warnung bei hoher Wartezeit:</strong> Musste der Server 5 Minuten lang bei 99 % der Messungen länger als 100 ms warten, warnt der Systemzustand (auch in Übersicht und Leiste der Werkbank), und das Protokoll bekommt einen Eintrag – ebenso, sobald es wieder normal ist.</li>
 </ul>
+<h3 id="verbessert">Verbessert<a class="headerlink" href="#verbessert" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Große Exporte (ZIP, Excel, CSV) halten den Server nicht mehr auf: Die Reihenfolge der Mappen wird mit einem Index statt quadratisch sortiert (bei 20.000 Mappen bisher mehrere Sekunden), die Prüfsummen im ZIP rechnet zlib, und die Tabellen entstehen im Arbeiter.</li>
+</ul>
+<h3 id="messwerte-vorhernachher">Messwerte vorher/nachher<a class="headerlink" href="#messwerte-vorhernachher" title="Permanent link">&para;</a></h3>
+<p>Lasttest (<code>server/test/lasttest.mjs</code>, siehe #544) gegen 50.000 Demo-Mappen, gemischtes Profil (Startseite, Listen, Mappe öffnen, Suche, Vorschaubild, Herunterladen), nebenher ein großer Export nach dem anderen (PDF von 500 Mappen mit Übersicht, PDF von 112 Mappen mit ihren Dokumenten, ZIP von 20.590 Mappen). Testrechner mit 2 Kernen, auf dem auch PostgreSQL, der Lasttest selbst und andere Prozesse liefen; vorher (0.129.0) und nachher abwechselnd gemessen, Median aus 3 bzw. Mittel aus 2 Runden zu je 60 Sekunden.</p>
+<table>
+<thead>
+<tr>
+<th>10 gleichzeitig, mit Export</th>
+<th style="text-align: right;">vorher</th>
+<th style="text-align: right;">nachher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Antwortzeit p95</td>
+<td style="text-align: right;">2.172 ms</td>
+<td style="text-align: right;">786 ms</td>
+</tr>
+<tr>
+<td>Verzögerung der Ereignisschleife p99</td>
+<td style="text-align: right;">1.373 ms</td>
+<td style="text-align: right;">135 ms</td>
+</tr>
+<tr>
+<td>Verzögerung der Ereignisschleife höchstens</td>
+<td style="text-align: right;">2.344 ms</td>
+<td style="text-align: right;">840 ms</td>
+</tr>
+<tr>
+<td>Anfragen je Minute</td>
+<td style="text-align: right;">977</td>
+<td style="text-align: right;">2.030</td>
+</tr>
+<tr>
+<td>Export PDF (500 Mappen) / PDF mit Dokumenten / ZIP, Median</td>
+<td style="text-align: right;">3,2 s / 1,5 s / 4,0 s</td>
+<td style="text-align: right;">4,7 s / 1,6 s / 2,6 s</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>100 gleichzeitig, mit Export</th>
+<th style="text-align: right;">vorher</th>
+<th style="text-align: right;">nachher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Antwortzeit p95</td>
+<td style="text-align: right;">3.306 ms</td>
+<td style="text-align: right;">3.125 ms</td>
+</tr>
+<tr>
+<td>Verzögerung der Ereignisschleife höchstens</td>
+<td style="text-align: right;">1.255 ms</td>
+<td style="text-align: right;">468 ms</td>
+</tr>
+<tr>
+<td>Anfragen je Minute</td>
+<td style="text-align: right;">3.239</td>
+<td style="text-align: right;">3.455</td>
+</tr>
+</tbody>
+</table>
+<p>Befund: Die Ablage bleibt während eines Exports flüssig; die Wartezeit des Servers sinkt auf ein Zehntel. Ein PDF-Export selbst kann bei wenigen Kernen etwas länger dauern, weil er sich die Rechenzeit mit den Anfragen teilt. Bei 100 gleichzeitigen Anfragen ist der Testrechner mit 2 Kernen ohnehin ausgelastet; dort bleibt vor allem die längste Wartezeit kürzer. Der Test in der CI (<code>server/test/arbeiter.test.ts</code>, 1.032 Mappen als PDF) misst ohne Arbeiter eine Verzögerung der Ereignisschleife bis 387 ms, mit Arbeiter bis 50 ms.</p>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Entwicklerhandbuch: Aufbau → PDF-Stelle, mit Regeln für neuen Code und einer Bewertung der Alternativen zu pdf-lib (gepflegte Abspaltungen, mehr über qpdf) samt Empfehlung.</li>
-<li>Administratorhandbuch: Technik → Bausteine (PDF bearbeiten).</li>
+<li>Administratorhandbuch: Systemzustand → Arbeiter für PDF und Exporte, Warnung bei hoher Wartezeit; Installation → <code>DMS_ARBEITER</code>; Fehlersuche → zwei neue typische Probleme; Technik → Bausteine.</li>
+<li>Entwicklerhandbuch: Aufbau → Arbeiter-Pool (neue Vorgänge, Regeln, Tests); Leistung → Regeln.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.128.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.128.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.129.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.129.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
