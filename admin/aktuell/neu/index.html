@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.125/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.127/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0125" class="md-skip">
+        <a href="#neu-in-version-0127" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01250" class="md-nav__link">
+  <a href="#01270" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.125.0
+        0.127.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.125.0">
+    <nav class="md-nav" aria-label="0.127.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,6 +379,28 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schneller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schneller
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beim-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beim Update
       
     </span>
   </a>
@@ -875,6 +897,34 @@
     
   
     Pakete
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../suche/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Suche
   
 
     
@@ -2287,15 +2337,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01250" class="md-nav__link">
+  <a href="#01270" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.125.0
+        0.127.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.125.0">
+    <nav class="md-nav" aria-label="0.127.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2303,6 +2353,28 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schneller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schneller
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#beim-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beim Update
       
     </span>
   </a>
@@ -2356,26 +2428,81 @@
   
 
 
-<h1 id="neu-in-version-0125">Neu in Version 0.125<a class="headerlink" href="#neu-in-version-0125" title="Permanent link">&para;</a></h1>
-<h2 id="01250">0.125.0<a class="headerlink" href="#01250" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0127">Neu in Version 0.127<a class="headerlink" href="#neu-in-version-0127" title="Permanent link">&para;</a></h1>
+<h2 id="01270">0.127.0<a class="headerlink" href="#01270" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Aus Dokument ausfüllen per Paket</strong> (#511): Statt der eingebauten Erkennung kann ein Paket mit dem neuen Recht „Felder aus Dokumenten vorschlagen (<code>dms:erkennen</code>)“ die Felder vorschlagen – etwa ein KI-Assistent, der auch Freitext, Briefköpfe und schwierige Belege versteht. Die eingebaute Erkennung bleibt der Standard.</li>
-<li>Wahl in der Werkbank am Paket (<strong>als Standard für alle Mappentypen</strong>) und je Mappentyp unter <strong>Erkennung</strong> (Standard, eingebaut oder ein Paket).</li>
-<li>Ein Paket, das ins Netz darf, nur mit ausdrücklicher Bestätigung des Datenabflusses.</li>
-<li>Das Paket bekommt den Text und die Beschreibung der Felder (JSON Schema) – nie Passwortfelder, nie Felder, die du nicht bearbeiten darfst, keine Verweise. Jede Antwort prüft das DMS gegen die Feldarten; Verworfenes steht im Protokoll. Alles bleibt Vorschlag.</li>
-<li>Antwortet das Paket nicht (60 Sekunden) oder unbrauchbar, übernimmt die eingebaute Erkennung, mit Hinweis. Unter dem Ergebnis steht, womit erkannt wurde.</li>
-<li>Schnittstelle: <code>POST /typen/{id}/vorschlaege</code> liefert zusätzlich <code>engine</code> und ggf. <code>hinweis</code>; <code>GET</code>/<code>PUT /api/werkbank/erkennung</code>.</li>
+<li><strong>Unscharfe Suche</strong> (#356): Die Suche findet auch, was du nicht mehr genau weißt.</li>
+<li><strong>Umlaute, ß und Akzente</strong> zählen nicht mehr: „Gebuhr“ findet „Gebühr“, „Strasse“ findet „Straße“, „Ozdemir“ findet „Özdemir“ – in Titeln, Angaben, Notizen und im Volltext.</li>
+<li><strong>Bindestriche</strong> auch nicht: „Kfzversicherung“ findet „Kfz-Versicherung“ und umgekehrt.</li>
+<li><strong>Tippfehler:</strong> Findet die Suche nichts, sucht sie mit ähnlich geschriebenen Wörtern aus deiner Ablage weiter und sagt das über den Treffern – mit <strong>„Meintest du …?“</strong>, das mit einem Klick genau das vorgeschlagene Wort sucht. Genaue Treffer gehen immer vor. Vorgeschlagen wird nur, was du auch lesen darfst.</li>
+<li><strong>Gleichbedeutende Wörter:</strong> Unter <strong>Werkbank → Suche</strong> (neu, Gruppe <em>Ablage aufbauen</em>) legst du Gruppen an, z. B. <em>Kfz, Auto, PKW</em> – wer eines sucht, findet auch die anderen. Pakete können solche <strong>Wortlisten</strong> mitbringen (neuer Abschnitt <code>inhalt.wortlisten</code> im Paketformat); ohne Paket bleibt die Liste leer. In der Registry bringen <em>Fahrzeuge</em> 1.1.0 und <em>Vermietung</em> 1.1.0 die ersten Wortlisten mit.</li>
+<li>Mit Anführungszeichen oder Minus suchst du weiter genau das Eingegebene.</li>
+<li>In der Werkbank lässt sich die Tippfehler-Suche abschalten und das Wörterverzeichnis neu aufbauen.</li>
+<li>Schnittstelle: Die Liste der Mappen (<code>GET /mappen</code>) liefert bei einer unscharfen Suche zusätzlich <code>unscharf</code> (gesuchter Text, Vorschlag, ähnliche Wörter).</li>
+<li>Vollexport: gleichbedeutende Wörter in <code>struktur/synonyme.json</code>.</li>
+</ul>
+<h3 id="schneller">Schneller<a class="headerlink" href="#schneller" title="Permanent link">&para;</a></h3>
+<p>Der Suchindex der Dokumente ist jetzt eine gespeicherte Spalte statt eines Ausdrucks, und die Suche nimmt die Dokumente einmal über die Indizes statt Mappe für Mappe. Gemessen mit Demo-Daten (50 000 Mappen, 74 958 Dokumente mit zusammen 354 MB Volltext, <code>server/test/suche-messen.ts</code>, Median aus 3 Läufen):</p>
+<table>
+<thead>
+<tr>
+<th>Suche</th>
+<th style="text-align: right;">vorher</th>
+<th style="text-align: right;">nachher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Liste „Rechnung“, Titel und Angaben, kein Treffer</td>
+<td style="text-align: right;">0,9 s</td>
+<td style="text-align: right;">1,1 s</td>
+</tr>
+<tr>
+<td>Alle Mappen mit Volltext, seltenes Wort (855 Treffer)</td>
+<td style="text-align: right;">17,0 s</td>
+<td style="text-align: right;">3,3 s</td>
+</tr>
+<tr>
+<td>Alle Mappen mit Volltext, häufiges Wort (49 941 Treffer)</td>
+<td style="text-align: right;">103,7 s</td>
+<td style="text-align: right;">5,3 s</td>
+</tr>
+<tr>
+<td>dasselbe ohne Umlaut („Kundigung“)</td>
+<td style="text-align: right;">86,2 s</td>
+<td style="text-align: right;">4,0 s</td>
+</tr>
+<tr>
+<td>Tippfehler „Lastschrfit“</td>
+<td style="text-align: right;">1,8 s (nichts gefunden)</td>
+<td style="text-align: right;">4,6 s (findet „Lastschrift“)</td>
+</tr>
+<tr>
+<td>Erweiterte Suche: Rechnung + Volltext, seltenes Wort</td>
+<td style="text-align: right;">8,6 s</td>
+<td style="text-align: right;">0,7 s</td>
+</tr>
+</tbody>
+</table>
+<p>Titel und Angaben vergleicht die Suche jetzt ohne Umlaute und Bindestriche; das kostet bei 50 000 Mappen rund ein Fünftel mehr Zeit.</p>
+<h3 id="beim-update">Beim Update<a class="headerlink" href="#beim-update" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Der Suchindex wird einmal neu aufgebaut</strong>, dazu entsteht das Wörterverzeichnis. Das DMS startet erst danach. Gemessen: <strong>323 Sekunden</strong> für die Demo-Daten oben (74 958 Dokumente, 354 MB Volltext) – grob 1 Minute je 15 000 Dokumente mittlerer Größe. Die Tabelle der Dokumente wächst um den gespeicherten Index (dort von 342 auf 696 MB vor dem nächsten automatischen Aufräumen der Datenbank).</li>
+<li>Die Migration legt die PostgreSQL-Erweiterung <code>unaccent</code> an. Sie ist ab PostgreSQL 13 „vertrauenswürdig“ – der Eigentümer der Datenbank darf das ohne Superuser, auch bei einer eigenen, externen Datenbank. Fehlt sie, faltet das DMS Umlaute selbst (Hinweis im Protokoll der Migration).</li>
+<li>Mit dem Index ist schon vorbereitet, dass die Volltextsuche je Dokument die passende Sprache nimmt (#400, nächste Version) – ohne zweiten Neuaufbau.</li>
+<li>Zurückgestellt: ähnlich klingende Namen (Meier/Mayer, #510). „Ähnliche Dokumente“ bringt das Paket „KI lokal – Ähnlichkeit“ (#442).</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: Pakete → Recht „Felder aus Dokumenten vorschlagen“, Erkennung durch ein Paket; Mappentypen → Erkennung.</li>
-<li>Benutzerhandbuch: Mappen → Aus Dokument ausfüllen.</li>
-<li>Entwicklerhandbuch: Pakete mit Code → Erkennung als Paket (<code>dms:erkennen</code>).</li>
+<li>Administratorhandbuch: neue Seite <strong>Suche</strong> (Tippfehler, gleichbedeutende Wörter, Technik); Pakete → Wortlisten in Vorschau und beim Entfernen.</li>
+<li>Benutzerhandbuch: Ablage → Suchen (Umlaute, Bindestriche, Tippfehler und „Meintest du …?“, gleichbedeutende Wörter).</li>
+<li>Entwicklerhandbuch: Pakete entwickeln → Paketformat, Abschnitt Wortlisten.</li>
+<li>API: <code>unscharf</code> an der Liste der Mappen.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.124.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.124.0...v0.125.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.126.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.126.0...v0.127.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
