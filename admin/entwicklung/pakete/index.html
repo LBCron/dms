@@ -1146,6 +1146,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext liefern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-sicherung-lesen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1255,6 +1266,17 @@
     <span class="md-ellipsis">
       
         Eine Datei soll umgewandelt werden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei braucht ihren Volltext
       
     </span>
   </a>
@@ -3074,6 +3096,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext liefern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-sicherung-lesen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3183,6 +3216,17 @@
     <span class="md-ellipsis">
       
         Eine Datei soll umgewandelt werden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei braucht ihren Volltext
       
     </span>
   </a>
@@ -3533,6 +3577,7 @@
 <li><strong>„Dokumente lesen“</strong> – Der Code darf die Dokumente in den Mappen lesen, die er lesen darf: die Datei, den Volltext und die Seiten als Bild.</li>
 <li><strong>„Dokumente lesen und Volltext schreiben“</strong> – zusätzlich darf er dort Dokumente hochladen und ersetzen und den Volltext setzen, etwa für eine eigene Texterkennung.</li>
 </ul>
+<p>Braucht ein Paket nur den Volltext bestimmter Dateitypen (z. B. Word oder E-Mails), genügt seit Version 0.145 <strong>„Dokumente lesen“</strong> zusammen mit dem Recht <a href="#recht-volltext">Volltext liefern</a> – ohne Schreibrecht auf Dokumente.</p>
 <p>Steht keins von beiden in der Liste, sieht der Code keine Dokumente.</p>
 <h4 id="recht-vektoren">Vektoren zu Dokumenten<a class="headerlink" href="#recht-vektoren" title="Permanent link">&para;</a></h4>
 <p><strong>„Vektoren zu Dokumenten speichern und ähnliche Dokumente finden (dms:vektoren)“</strong> – Der Code darf zu Dokumenten, die er lesen darf, einen <strong>Vektor</strong> ablegen: eine Liste von Zahlen, die den Inhalt des Volltexts beschreibt. Das DMS vergleicht diese Vektoren und zeigt damit <a href="#aehnlichkeit">ähnliche Dokumente</a> an der Mappe und in der Suche. Außerdem fragt die Suche das Paket nach dem Vektor des Suchbegriffs. Das DMS selbst rechnet dabei nichts – es speichert und vergleicht nur, was das Paket liefert. Dokumente, Mappen und Volltext ändern darf der Code mit diesem Recht nicht; ähnliche Dokumente sieht jeder nur aus Mappen, die er lesen darf.</p>
@@ -3553,6 +3598,8 @@
 <p><strong>„Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“</strong> – Das Paket ist dann die <a href="../texterkennung/">Texterkennung</a> des DMS: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit <a href="#recht-dokumente">Dokumente lesen und Volltext schreiben</a>.</p>
 <h4 id="recht-umwandeln">Dateien umwandeln<a class="headerlink" href="#recht-umwandeln" title="Permanent link">&para;</a></h4>
 <p><strong>„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“</strong> – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis <a href="#ereignis-datei-umwandeln">Datei umwandeln</a>) und gibt eine <strong>umgewandelte Fassung</strong> zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe <a href="../texterkennung/#andere-dateitypen">Andere Dateitypen</a>). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a> (die Originaldatei).</p>
+<h4 id="recht-volltext">Volltext liefern<a class="headerlink" href="#recht-volltext" title="Permanent link">&para;</a></h4>
+<p><strong>„Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht (dms:volltext): Word, Excel, E-Mail, …“</strong> – Seit Version 0.145. Hinter dem Recht stehen die Dateitypen, für die das Paket den Volltext liefert. Für jede solche Datei bekommt es das Ereignis <a href="#ereignis-datei-volltext">Datei braucht Volltext</a>, liest die Datei und schreibt ihren Text – für <strong>genau diese Dateitypen</strong>, für andere Dokumente nicht. Am Dokument steht so lange <strong>„wartet auf Volltext (Paket …)“</strong>; kann das Paket eine Datei nicht lesen (z. B. weil sie mit einem Passwort verschlüsselt ist), steht sein Grund am Dokument. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a>; Schreibrecht auf Dokumente braucht es nicht. Das Paket <strong>Office und E-Mail</strong> nutzt dieses Recht (ab 1.1.0). PDF, JPEG und PNG liest das DMS selbst; Scans erkennt das Recht <a href="#recht-texterkennung">Texterkennung übernehmen</a>.</p>
 <h4 id="recht-sicherung-lesen">Sicherung lesen<a class="headerlink" href="#recht-sicherung-lesen" title="Permanent link">&para;</a></h4>
 <p><strong>„Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte) (dms:sicherung-lesen)“</strong> – Seit Version 0.142. Nach jeder Sicherung bekommt das Paket das Ereignis <a href="#ereignis-sicherung-fertig">Sicherung fertig</a> und darf <strong>genau diese</strong> Sicherungsdatei in Stücken lesen – verschlüsselt, so wie sie im Sicherungsordner liegt – und ihre schlanken Metadaten (Größe, Prüfsumme, Zeitpunkt, Fingerabdruck des Schlüssels). Den Schlüssel, die Inhalte und andere Dateien des Sicherungsordners bekommt es nie. Es meldet je Sicherung zurück, ob die Kopie angekommen und geprüft ist; das zeigt <strong>Werkbank → Sicherung</strong>. Mappen und Dokumente sieht es mit diesem Recht nicht. Siehe <a href="../sicherung-ausser-haus/">Sicherung außer Haus</a>.</p>
 <h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
@@ -3624,6 +3671,9 @@
 <h4 id="ereignis-datei-umwandeln">Eine Datei soll umgewandelt werden<a class="headerlink" href="#ereignis-datei-umwandeln" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Seit Version 0.137 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-umwandeln">Dateien umwandeln</a> zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei <strong>Vorschaubilder nachholen</strong> und bei <strong>Volltext neu erzeugen</strong> (für Dateien ohne Fassung). Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).</p>
 <p><strong>Typisch:</strong> Das Paket <strong>Bildformate</strong> macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.</p>
+<h4 id="ereignis-datei-volltext">Eine Datei braucht ihren Volltext<a class="headerlink" href="#ereignis-datei-volltext" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.145 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-volltext">Volltext liefern</a> zuständig ist – beim <strong>Hochladen</strong>, bei einer <strong>neuen Version</strong>, wenn das Paket <strong>neu installiert</strong> wird (für die vorhandenen Dateien ohne Text), bei <strong>Volltext neu erzeugen</strong> und bei <strong>Erneut versuchen</strong> bzw. <strong>Neu erzeugen</strong> am Dokument. Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id). Bis das Paket schreibt, bleibt ein vorhandener Text für die Suche stehen.</p>
+<p><strong>Typisch:</strong> Das Paket <strong>Office und E-Mail</strong> liest den Text aus Word-, Excel- und PowerPoint-Dateien, OpenDocument, RTF, Textdateien und E-Mails.</p>
 <h4 id="ereignis-sicherung-fertig">Eine Sicherung ist fertig<a class="headerlink" href="#ereignis-sicherung-fertig" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Seit Version 0.142 nach jeder erfolgreichen Sicherung – von Hand, automatisch oder vor einer Wiederherstellung –, sobald sie vollständig im Sicherungsordner liegt. Nur Pakete mit dem Recht <a href="#recht-sicherung-lesen">Sicherung lesen</a> bekommen es. Schlägt die Kopie fehl, wiederholt das DMS das Ereignis (nach 1, 5, 30 Minuten, 2 und 6 Stunden); danach gilt sie als fehlgeschlagen und die Administratoren bekommen eine E-Mail.</p>
 <p><strong>Typisch:</strong> Das Paket <strong>Sicherungsziel WebDAV</strong> lädt die verschlüsselte Sicherung auf Nextcloud, ein NAS oder zum Hoster und prüft sie dort.</p>

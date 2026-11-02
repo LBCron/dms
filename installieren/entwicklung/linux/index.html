@@ -1303,11 +1303,55 @@
 <h2 id="1-linux-installieren">1. Linux installieren<a class="headerlink" href="#1-linux-installieren" title="Permanent link">&para;</a></h2>
 <p>Ein schlankes Server-System ohne Desktop genügt, z. B. <strong><a href="https://www.debian.org/distrib/">Debian</a></strong> oder <strong><a href="https://ubuntu.com/download/server">Ubuntu Server</a></strong> (LTS). Beim Installieren den <strong>SSH-Server</strong> mit auswählen, dann kannst du den Rechner später ohne Bildschirm vom eigenen PC aus bedienen.</p>
 <h2 id="2-docker-installieren">2. Docker installieren<a class="headerlink" href="#2-docker-installieren" title="Permanent link">&para;</a></h2>
-<p>Am verlässlichsten ist Docker aus dem offiziellen Paketarchiv von Docker. Die Befehle stehen in der Docker-Dokumentation für <a href="https://docs.docker.com/engine/install/debian/">Debian</a> bzw. <a href="https://docs.docker.com/engine/install/ubuntu/">Ubuntu</a>. Kurzform mit dem Installationsskript von Docker:</p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://get.docker.com<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>sh
-sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span><span class="w">   </span><span class="c1"># danach einmal ab- und wieder anmelden</span>
+<p>Docker empfiehlt für einen Rechner, der dauerhaft läuft, die <strong>eigene Paketquelle von Docker</strong>: Dann kommt Docker über die Programmverwaltung <code>apt</code> und wird mit dem System zusammen aktualisiert. Die Befehle unten stammen unverändert aus der offiziellen Anleitung von Docker für <a href="https://docs.docker.com/engine/install/debian/">Debian</a> bzw. <a href="https://docs.docker.com/engine/install/ubuntu/">Ubuntu</a>. Kopiere die Kästen einzeln und warte jeweils, bis die Eingabezeile wieder erscheint. Die Raspberry-Pi-Anleitung <a href="../raspberry-pi/#52-docker-installieren">erklärt jede Zeile</a>.</p>
+<p><strong>Erstens: Werkzeuge bereitlegen</strong> (Debian und Ubuntu gleich):</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ca-certificates<span class="w"> </span>curl
+</code></pre></div>
+<p><strong>Zweitens: die Paketquelle von Docker eintragen</strong> – für <strong>Debian</strong>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">0755</span><span class="w"> </span>-d<span class="w"> </span>/etc/apt/keyrings
+sudo<span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://download.docker.com/linux/debian/gpg<span class="w"> </span>-o<span class="w"> </span>/etc/apt/keyrings/docker.asc
+sudo<span class="w"> </span>chmod<span class="w"> </span>a+r<span class="w"> </span>/etc/apt/keyrings/docker.asc
+sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/docker.sources<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<span class="s">Types: deb</span>
+<span class="s">URIs: https://download.docker.com/linux/debian</span>
+<span class="s">Suites: $(. /etc/os-release &amp;&amp; echo "$VERSION_CODENAME")</span>
+<span class="s">Components: stable</span>
+<span class="s">Architectures: $(dpkg --print-architecture)</span>
+<span class="s">Signed-By: /etc/apt/keyrings/docker.asc</span>
+<span class="s">EOF</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>update
+</code></pre></div>
+<p>… oder für <strong>Ubuntu</strong>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>install<span class="w"> </span>-m<span class="w"> </span><span class="m">0755</span><span class="w"> </span>-d<span class="w"> </span>/etc/apt/keyrings
+sudo<span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://download.docker.com/linux/ubuntu/gpg<span class="w"> </span>-o<span class="w"> </span>/etc/apt/keyrings/docker.asc
+sudo<span class="w"> </span>chmod<span class="w"> </span>a+r<span class="w"> </span>/etc/apt/keyrings/docker.asc
+sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/docker.sources<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<span class="s">Types: deb</span>
+<span class="s">URIs: https://download.docker.com/linux/ubuntu</span>
+<span class="s">Suites: $(. /etc/os-release &amp;&amp; echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")</span>
+<span class="s">Components: stable</span>
+<span class="s">Architectures: $(dpkg --print-architecture)</span>
+<span class="s">Signed-By: /etc/apt/keyrings/docker.asc</span>
+<span class="s">EOF</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>update
+</code></pre></div>
+<p><strong>Drittens: Docker installieren</strong> (Debian und Ubuntu gleich) und deinem Benutzer erlauben, Docker ohne <code>sudo</code> zu benutzen:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>docker-ce<span class="w"> </span>docker-ce-cli<span class="w"> </span>containerd.io<span class="w"> </span>docker-buildx-plugin<span class="w"> </span>docker-compose-plugin
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>docker<span class="w"> </span><span class="nv">$USER</span><span class="w">   </span><span class="c1"># danach einmal ab- und wieder anmelden</span>
 docker<span class="w"> </span>compose<span class="w"> </span>version<span class="w">          </span><span class="c1"># prüft, ob Compose dabei ist</span>
 </code></pre></div>
+<p>Andere Distributionen (Fedora, RHEL, …) haben eigene Anleitungen in der <a href="https://docs.docker.com/engine/install/">Docker-Dokumentation</a>.</p>
+<details class="note">
+<summary>Für Fortgeschrittene: das Installationsskript von Docker</summary>
+<p>Docker bietet auch ein Skript an, das alles oben in einem Rutsch erledigt:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://get.docker.com<span class="w"> </span>-o<span class="w"> </span>get-docker.sh
+sudo<span class="w"> </span>sh<span class="w"> </span>get-docker.sh
+</code></pre></div>
+<p>Docker selbst empfiehlt das Skript aber <strong>nur für Test- und Entwicklungsumgebungen</strong>, nicht für einen Rechner, der dauerhaft läuft. Für deinen Rechner mit echten Unterlagen nimm deshalb den Weg oben. Das Skript richtet dieselbe Paketquelle ein; Updates kommen danach ebenfalls über <code>apt</code>.</p>
+</details>
+<p><strong>Offizielle Anleitung:</strong> <a href="https://docs.docker.com/engine/install/">Docker Engine installieren</a> · <a href="https://docs.docker.com/engine/install/linux-postinstall/">Docker ohne sudo benutzen</a></p>
 <h2 id="3-dms-starten">3. DMS starten<a class="headerlink" href="#3-dms-starten" title="Permanent link">&para;</a></h2>
 <p><strong>Empfohlen: zwei Container</strong> (DMS und PostgreSQL, siehe <a href="../#ein-oder-zwei-container">Ein oder zwei Container?</a>):</p>
 <div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>~/dms<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/dms

@@ -2720,12 +2720,13 @@
 <td>–</td>
 </tr>
 <tr>
-<td>Word, Excel, PowerPoint, OpenDocument, E-Mails</td>
-<td>noch keinem Paket (geplant, dms-registry #30)</td>
-<td>–</td>
+<td>Word, Excel, PowerPoint, OpenDocument, RTF, Text, E-Mails (<code>.eml</code>, <code>.msg</code>)</td>
+<td>Volltext: Paket <strong>Office und E-Mail</strong> (Vorschau noch nicht, dms-registry #72)</td>
+<td>– (das Paket liest das Original)</td>
 </tr>
 </tbody>
 </table>
+<p>Für Office-Dateien und E-Mails macht das Paket keine Fassung, sondern liefert <strong>nur den Volltext</strong> (Recht <a href="../pakete/#recht-volltext">Volltext liefern</a>, seit Version 0.145). Es liest dabei die Originaldatei. Bis es den Text schreibt, steht am Dokument „Volltext: wartet auf Paket · wartet auf Volltext (Paket Office und E-Mail)“. Das DMS gibt ihm jede solche Datei – beim Hochladen, bei einer neuen Version, bei <strong>Volltext neu erzeugen</strong>, bei <strong>Erneut versuchen</strong> und <strong>Neu erzeugen</strong> am Dokument und beim Installieren für alle vorhandenen Dateien ohne Text. Kann das Paket eine Datei nicht lesen, steht sein Grund am Dokument, z. B. „Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. Bis 5 Millionen Zeichen je Dokument kommen in den Volltext (wie bei allen Dokumenten).</p>
 <p>So sieht es aus:</p>
 <ol>
 <li>Ohne passendes Paket steht am Dokument „Volltext: ausgelassen“ mit dem Hinweis, welches Paket hilft (z. B. „TIFF-Dateien bekommen Vorschau und Volltext mit dem Paket „Bildformate““); neben dem Dokument steht das Dateisymbol.</li>
@@ -2733,7 +2734,7 @@
 <li>Mit der Fassung entsteht das Vorschaubild (Hinweis beim Darüberfahren: „Vorschau aus der umgewandelten Fassung eines Pakets“) und der Volltext. Am Dokument steht dann z. B. „Text aus dem PDF · aus der umgewandelten Fassung (Bildformate 1.0.0)“ mit dem Link <strong>Fassung ansehen</strong>; in der Historie der Mappe „umgewandelte Fassung erstellt“.</li>
 <li>Kann das Paket eine Datei nicht lesen (z. B. beschädigt), steht sein Grund am Dokument („Umwandlung durch Paket Bildformate: …“). <strong>Erneut versuchen</strong> gibt die Datei noch einmal an das Paket.</li>
 </ol>
-<p><strong>Werkbank → Texterkennung → Andere Dateitypen</strong> zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt – oder welches Paket aus dem Katalog es könnte, mit <strong>Paket installieren</strong>.</p>
+<p><strong>Werkbank → Texterkennung → Andere Dateitypen</strong> zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt bzw. ihren Volltext liefert – oder welches Paket aus dem Katalog es könnte, mit <strong>Paket installieren</strong>.</p>
 <p><strong>Sicherung:</strong> Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (<code>/data/files/&lt;Haushalts-Id&gt;/fassungen</code>) und gehen mit in die <a href="../sicherung/#was-eine-sicherung-enthalt">Sicherung</a> und den <a href="../export/">Vollexport</a> (dort als <code>&lt;Datei&gt;.fassung.pdf</code> neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch <strong>ohne</strong> das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (<code>/data/files/fassungen</code>, Versionen 0.137 bis 0.140.0) zieht das DMS beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt <strong>Werkbank → Wartungsoperationen → Vorschaubilder nachholen</strong> die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).</p>
 <p><strong>Warum noch kein Paket für HEIC?</strong> HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter <em>Einstellungen → Kamera → Formate</em> „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.</p>
 <h2 id="werkbank-texterkennung">Werkbank → Texterkennung<a class="headerlink" href="#werkbank-texterkennung" title="Permanent link">&para;</a></h2>
@@ -2741,7 +2742,7 @@
 <ul>
 <li><strong>Texterkennung für Scans und Bilder:</strong> welches Paket die Texterkennung übernimmt, mit Link zu seinen Einstellungen, und wie viele Dokumente gerade darauf warten. Fehlt das Paket, steht hier der Hinweis mit <strong>Jetzt installieren</strong>.</li>
 <li><strong>Woher der Text kommt:</strong> wie viele Dokumente ihren Text aus dem PDF haben, vom Paket, von der früheren eingebauten Texterkennung (bis 0.133), ohne Text sind, auf die Texterkennung warten oder einen Fehler hatten.</li>
-<li><strong>Andere Dateitypen:</strong> TIFF, WebP und Co. – wie viele es gibt und welches Paket sie umwandelt (siehe <a href="#andere-dateitypen">Andere Dateitypen</a>).</li>
+<li><strong>Andere Dateitypen:</strong> TIFF, WebP, Word, E-Mails und Co. – wie viele es gibt und welches Paket sie umwandelt oder ihren Volltext liefert (siehe <a href="#andere-dateitypen">Andere Dateitypen</a>).</li>
 <li><strong>Erkannte Sprachen</strong> mit dem Hinweis, wenn dem Paket Sprachdaten fehlen (siehe <a href="#weitere-sprachen">Weitere Sprachen</a>).</li>
 <li><strong>Warteschlange</strong>, <strong>Werkzeuge</strong> (poppler) und <strong>Aufträge</strong> (siehe unten).</li>
 </ul>
