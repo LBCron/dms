@@ -223,7 +223,7 @@ export interface Repo {
   /** Über den Hash des Schlüssels (öffentliche Abrufseite). */
   auskunftLinkPerSchluessel(schluesselHash: string): Promise<AuskunftLinkIntern | undefined>;
   /** Neueste zuerst; ohne Angabe alle (höchstens `max`). */
-  auskunftLinks(f?: { mappeId?: string; auskunftId?: string; max?: number }): Promise<AuskunftLinkIntern[]>;
+  auskunftLinks(f?: { id?: string; mappeId?: string; auskunftId?: string; max?: number }): Promise<AuskunftLinkIntern[]>;
   /** Fehlversuch zählen (atomar); ab `max` gesperrt. Liefert den neuen Stand. */
   auskunftLinkFehlversuch(id: string, max: number): Promise<{ fehlversuche: number; gesperrt: boolean } | undefined>;
   /** Einen Abruf zählen – nur, solange der Link gilt (atomar). Liefert die neue Anzahl oder null. */

@@ -13,7 +13,7 @@ import { liesAnrede, TEXTE_DRITTE, textDritte } from '../../shared/src/anrede';
 import {
   auskunftMail, CODE_ZEICHEN, liesDatenschutz, RECHTE_STANDARD, rechteStandard, LINK_FEHLVERSUCHE_MAX, liesLinkEingabe, linkStatus, normiereCode, oeffentlichErreichbar, zeigeCode,
 } from '../../shared/src/auskunft';
-import { AbrufTickets, kuerzeIp, neuerAbrufcode, TICKET_MS } from '../src/abruf';
+import { AbrufBremse, AbrufTickets, ipBereich, kuerzeIp, neuerAbrufcode, TICKET_MS } from '../src/abruf';
 import { auskuenfteIn } from '../src/auskunft';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
@@ -39,6 +39,29 @@ const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.statu
 const H = '00000000-0000-4000-8000-000000000001';
 
 describe('Auskunft zustellen: reine Funktionen (#455)', () => {
+  it('Bremse der Abrufseite: eigener Zähler je IP-Bereich (IPv6 je /64), begrenzt gleichzeitige Prüfungen', () => {
+    assert.equal(ipBereich('203.0.113.7'), '203.0.113.7');
+    assert.equal(ipBereich('::ffff:203.0.113.7'), '203.0.113.7');
+    assert.equal(ipBereich('2001:db8:1:2:aaaa::1'), '2001:db8:1:2::/64');
+    assert.equal(ipBereich('2001:db8:1:2:bbbb:cccc:dddd:eeee'), '2001:db8:1:2::/64', 'gleiches /64 → gleicher Zähler');
+    assert.equal(ipBereich('2001:db8::1'), '2001:db8:0:0::/64');
+    assert.equal(ipBereich('kaputt'), '–');
+    let jetzt = 1_000_000;
+    const b = new AbrufBremse({ fehlerMax: 3, sperreMs: 60_000, gleichzeitig: 2, jetzt: () => jetzt });
+    for (let i = 0; i < 3; i++) { assert.equal(b.gesperrt('x'), false); b.fehlschlag('x'); }
+    assert.equal(b.gesperrt('x'), true);
+    assert.equal(b.gesperrt('y'), false, 'andere Bereiche bleiben frei');
+    jetzt += 60_001;
+    assert.equal(b.gesperrt('x'), false, 'Sperre läuft ab');
+    const p1 = b.belege(), p2 = b.belege();
+    assert.ok(p1 && p2);
+    assert.equal(b.belege(), null, 'höchstens zwei gleichzeitig');
+    p1!(); p1!();
+    const p3 = b.belege();
+    assert.ok(p3, 'Freigeben wirkt genau einmal');
+    assert.equal(b.belege(), null);
+  });
+
   it('Abrufcode: 8 Zeichen aus dem Alphabet ohne Verwechsler, zufällig; Eingabe tolerant', () => {
     const codes = new Set(Array.from({ length: 200 }, () => neuerAbrufcode()));
     assert.equal(codes.size, 200);
@@ -199,7 +222,7 @@ async function aufbau(pg: boolean, o: { mail?: boolean; adresse?: string } = {})
     return f!.ergebnis as { id: string; bytes: number; verschluesselt: boolean; bis: string; name: string };
   }
   const zip = async (inhalt: unknown) => { const t: Buffer[] = []; for await (const c of inhalt as AsyncIterable<Buffer>) t.push(c); return Buffer.concat(t); };
-  return { d, r, konten, admin, anna, max, gesendet, ordner, rufe, auskunft, zip };
+  return { d, r, konten, admin, anna, max, gesendet, ordner, rufe, auskunft, zip, route };
 }
 
 for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
@@ -358,6 +381,34 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       const n2 = (await rufe(admin, 'POST', '/api/werkbank/auskunft/:id/link', { params: { id: a.id }, body: { code: 'MV-2024-17' } })).body as { url: string; code: string };
       assert.equal(n2.code, 'MV202417');
       assert.ok((await rufe(null, 'POST', '/api/abruf', { body: { schluessel: n2.url.split('#')[1], code: 'mv 2024 17' }, ip: '192.0.2.201' })).body);
+    });
+
+    it('Härtung: parallele Versuche kommen nicht an den Zählern vorbei, unbekannte Schlüssel kosten kein scrypt, Anmeldung bleibt frei, Download ohne Cache und ohne HEAD', async () => {
+      const { r, konten, admin, rufe, auskunft, route } = await aufbau(pg);
+      const a = await auskunft();
+      const { url } = (await rufe(admin, 'POST', '/api/werkbank/auskunft/:id/link', { params: { id: a.id }, body: {} })).body as { url: string; code: string };
+      const schluessel = url.split('#')[1];
+      // Unbekannter (gut geformter) Schlüssel: schnell abgewiesen, ohne scrypt – 100 Stück deutlich unter einer Sekunde.
+      const t0 = Date.now();
+      const fremd = await Promise.allSettled(Array.from({ length: 100 }, (_, i) => rufe(null, 'POST', '/api/abruf', { body: { schluessel: neuerSchluessel(), code: 'AAAAAAAA' }, ip: `198.51.100.${i}` })));
+      assert.ok(fremd.every((x) => x.status === 'rejected' && status(403)(x.reason)));
+      assert.ok(Date.now() - t0 < 2000, `unbekannte Schlüssel ohne scrypt (${Date.now() - t0} ms)`);
+      // 30 parallele falsche Codes an einen Link von verschiedenen Adressen: höchstens LINK_FEHLVERSUCHE_MAX werden geprüft.
+      const schwall = await Promise.allSettled(Array.from({ length: 30 }, (_, i) => rufe(null, 'POST', '/api/abruf', { body: { schluessel, code: `FALSCH${i}X` }, ip: `192.0.2.${i + 1}` })));
+      assert.ok(schwall.every((x) => x.status === 'rejected'));
+      assert.ok(schwall.some((x) => x.status === 'rejected' && status(429)(x.reason)), 'parallele Versuche werden abgewiesen statt geprüft');
+      const [l] = await r.repo.auskunftLinks({ auskunftId: a.id });
+      assert.ok(l.fehlversuche <= LINK_FEHLVERSUCHE_MAX, `höchstens ${LINK_FEHLVERSUCHE_MAX} geprüft, waren ${l.fehlversuche}`);
+      // Fehlversuche am Abruf sperren nie die Anmeldung derselben IP.
+      for (let i = 0; i < 6; i++) await assert.rejects(rufe(null, 'POST', '/api/abruf', { body: { schluessel: neuerSchluessel(), code: 'AAAAAAAA' }, ip: '192.0.2.250' }));
+      await konten.sperre.pruefe('anna@example.org', '192.0.2.250');
+      // Neuer Link: Download ohne Browser-Cache, die Route hat keine HEAD-Variante (würde das Ticket verbrauchen).
+      const n = (await rufe(admin, 'POST', '/api/werkbank/auskunft/:id/link', { params: { id: a.id }, body: {} })).body as { url: string; code: string };
+      const ok = (await rufe(null, 'POST', '/api/abruf', { body: { schluessel: n.url.split('#')[1], code: n.code }, ip: '192.0.2.251' })).body as { ticket: string };
+      const dl = await rufe(null, 'GET', '/api/abruf/datei', { query: { ticket: ok.ticket } }) as { datei: { koepfe?: Record<string, string>; inhalt: NodeJS.ReadableStream } };
+      assert.equal(dl.datei.koepfe?.['cache-control'], 'no-store');
+      (dl.datei.inhalt as unknown as { destroy(): void }).destroy();
+      assert.equal(route('GET', '/api/abruf/datei').ohneHead, true);
     });
 
     it('Ablauf und Zurückziehen: mit richtigem Code „gilt nicht mehr“, ohne Zählen; die ZIP fällt aufs ursprüngliche Ende zurück', async () => {

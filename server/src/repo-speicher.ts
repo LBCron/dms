@@ -784,7 +784,7 @@ export function speicherRepo(): Repo {
     async legeAuskunftLinkAn(l) { links.set(l.id, { ...kopie(l), erstellt: l.erstellt || jetzt(), abrufe: 0, fehlversuche: 0, gesperrt: null, widerrufen: null, abgerufen: null }); },
     async auskunftLinkPerSchluessel(hash) { const l = [...links.values()].find((x) => x.schluessel === hash && mappen.has(x.mappeId)); return l ? kopie(l) : undefined; },
     async auskunftLinks(f = {}) {
-      return [...links.values()].filter((l) => mappen.has(l.mappeId) && (!f.mappeId || l.mappeId === f.mappeId) && (!f.auskunftId || l.auskunftId === f.auskunftId))
+      return [...links.values()].filter((l) => mappen.has(l.mappeId) && (!f.id || l.id === f.id) && (!f.mappeId || l.mappeId === f.mappeId) && (!f.auskunftId || l.auskunftId === f.auskunftId))
         .sort((a, b) => b.erstellt.localeCompare(a.erstellt)).slice(0, f.max ?? 500).map(kopie);
     },
     async auskunftLinkFehlversuch(id, max) {

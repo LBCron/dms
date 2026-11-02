@@ -23,7 +23,7 @@ import { t } from './sprache';
 import { loeschkonzept, luecken, type LoeschkonzeptQuelle } from '../../shared/src/loeschkonzept';
 import { DOCX_MIME, schriftstueckDocx, schriftstueckPdf } from './schriftstueck';
 import { liesAnlass, type Ausloeser } from '../../shared/src/loeschprotokoll';
-import { AbrufTickets, kuerzeIp } from './abruf';
+import { AbrufBremse, AbrufTickets, ipBereich, kuerzeIp } from './abruf';
 import { zipGroesse, zipStrom, ZIP_MAX, type ZipEintrag } from './zip';
 import { join } from 'node:path';
 import { ALS_KOPF, KONSOLE_KOPF, istLoopback, konsolenBenutzer, type Konsolenzugang } from './konsole';
@@ -136,6 +136,8 @@ export interface Route {
    * dann nur auf Stufe „debug“ im Protokoll, wie bei GET (#373).
    */
   lesend?: boolean;
+  /** Keine automatische HEAD-Route (z. B. Einmal-Download: ein HEAD würde das Ticket verbrauchen). */
+  ohneHead?: boolean;
   handler(a: Anfrage): Promise<Antwort>;
 }
 
@@ -344,8 +346,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   });
   /** Auskunft zustellen (#455): Einmal-Tickets der öffentlichen Abrufseite. */
   const abrufTickets = new AbrufTickets();
-  /** Gemeinsamer Schlüssel im Anmeldeschutz: Fehlversuche je IP über alle Abruf-Links. */
-  const ABRUF_SPERRE = 'auskunft-abruf';
+  /** Fehlversuche je IP-Bereich über alle Abruf-Links und gleichzeitige Code-Prüfungen – getrennt vom Anmeldeschutz. */
+  const abrufBremse = new AbrufBremse();
   /** Meldungen der Abrufseite in der Anrede für Dritte (#474). */
   const abrufText = async (k: TextDritte) => textDritte((await dienst.datenschutz()).anrede, k);
   const exportZiel = () => { if (!x.sicherung) throw new Fachfehler(404, 'Ohne Sicherungsordner gibt es keinen Vollexport.'); return join(x.sicherung.ordner, 'export'); };
@@ -946,7 +948,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const strom = createReadStream(pfad);
       strom.on('end', () => (halten ? L.datenschutz.info('Auskunft heruntergeladen (bleibt für den Abruf-Link)', { mappeId: stand.mappeId, von: ich(a).email })
         : void loescheAuskunft(ziel, stand.id).then(() => L.datenschutz.info('Auskunft heruntergeladen und gelöscht', { mappeId: stand.mappeId, von: ich(a).email }))));
-      return { datei: { inhalt: strom, name: `${stand.name}.zip`, mime: 'application/zip', anzeigen: false, groesse } };
+      // Personenbezogene Daten: nicht im Cache des Browsers ablegen (fremder oder gemeinsam genutzter Rechner).
+      return { datei: { inhalt: strom, name: `${stand.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
     } },
     { methode: 'DELETE', pfad: '/api/werkbank/auskunft/:id', zugang: 'admin', handler: async (a) => {
       await loescheAuskunft(auskunftZiel(), a.params.id);
@@ -986,17 +989,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/abruf/anrede', zugang: 'offen', handler: async () => ok({ anrede: (await dienst.datenschutz()).anrede }) },
     { methode: 'POST', pfad: '/api/abruf', zugang: 'offen', handler: async (a) => {
       const o = (a.body ?? {}) as Record<string, unknown>;
-      try { await konten.sperre.pruefe(ABRUF_SPERRE, a.ip); } catch (e) {
-        if (e instanceof Fachfehler && e.status === 429) throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
-        throw e;
-      }
-      const r = await dienst.auskunftAbrufPruefen(o.schluessel, o.code);
+      const bereich = ipBereich(a.ip);
+      if (abrufBremse.gesperrt(bereich)) throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
+      // Code-Prüfungen (scrypt) nur mit freiem Platz der Bremse: Parallele Anfragen kommen so weder an den
+      // Zählern vorbei noch lasten sie den Server aus.
+      const r = await dienst.auskunftAbrufPruefen(o.schluessel, o.code, () => abrufBremse.belege());
+      if (r.art === 'beschaeftigt') throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
       if (r.art === 'falsch') {
-        await konten.sperre.fehlschlag(ABRUF_SPERRE, a.ip);
+        abrufBremse.fehlschlag(bereich);
         L.datenschutz.warn('Abruf einer Auskunft fehlgeschlagen', { ip: kuerzeIp(a.ip), ...(r.link ? { link: r.link.id } : {}) });
         throw new Fachfehler(403, await abrufText('abruf.fehler.falsch'));
       }
-      await konten.sperre.erfolg(ABRUF_SPERRE, a.ip);
       if (r.art === 'ungueltig') throw new Fachfehler(410, await abrufText('abruf.fehler.ungueltig'));
       const link = r.link!;
       const datei = await auskunftDatei(auskunftZiel(), link.auskunftId).catch(() => null);
@@ -1004,7 +1007,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.datenschutz.info('Abrufcode einer Auskunft bestätigt', { link: link.id, ip: kuerzeIp(a.ip) });
       return ok({ ticket: abrufTickets.stelleAus(link.id), groesse: datei.groesse, verschluesselt: datei.stand.verschluesselt, bis: link.ablauf, abrufe: link.abrufe, maxAbrufe: link.maxAbrufe });
     } },
-    { methode: 'GET', pfad: '/api/abruf/datei', zugang: 'offen', handler: async (a) => {
+    { methode: 'GET', pfad: '/api/abruf/datei', zugang: 'offen', ohneHead: true, handler: async (a) => {
       const id = abrufTickets.loese(a.query.ticket);
       const link = id ? await dienst.auskunftLinkMitId(id) : undefined;
       if (!link) throw new Fachfehler(410, await abrufText('abruf.fehler.ticket'));
@@ -1026,7 +1029,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         })().catch((e) => L.datenschutz.error('Abruf nicht vermerkt', { fehler: (e as Error).message }));
       });
       strom.on('close', () => { if (!fertig) void dienst.auskunftAbgerufen(link, nr, false).catch(() => {}); });
-      return { datei: { inhalt: strom, name: `${stand.name}.zip`, mime: 'application/zip', anzeigen: false, groesse } };
+      // Personenbezogene Daten: nicht im Cache des Browsers ablegen (fremder oder gemeinsam genutzter Rechner).
+      return { datei: { inhalt: strom, name: `${stand.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
     } },
     /* ---------- Archivmodus (#212) ---------- */
     { methode: 'POST', pfad: '/api/werkbank/archiv/vorschau', zugang: 'admin', lesend: true, handler: async (a) => ok(await dienst.archivVorschau(String((a.body as { typId?: unknown })?.typId ?? ''), (a.body as { archiv?: unknown })?.archiv)) },

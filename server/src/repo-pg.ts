@@ -1147,7 +1147,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return r ? alsLink(r) : undefined;
     },
     async auskunftLinks(f = {}) {
+      if (f.id !== undefined && !istUuid(f.id)) return [];
       const r = await sql`SELECT * FROM auskunft_links WHERE haushalt_id = ${haushaltId}
+        ${f.id ? sql`AND id = ${f.id}::uuid` : sql``}
         ${f.mappeId ? sql`AND mappe_id = ${istUuid(f.mappeId) ? f.mappeId : null}::uuid` : sql``}
         ${f.auskunftId ? sql`AND auskunft_id = ${istUuid(f.auskunftId) ? f.auskunftId : null}::uuid` : sql``}
         ORDER BY erstellt DESC, id LIMIT ${f.max ?? 500}`;
