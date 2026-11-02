@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.136/texterkennung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.138/texterkennung/">
       
       
         <link rel="prev" href="../webdav/">
@@ -1351,6 +1351,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#andere-dateitypen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Andere Dateitypen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#werkbank-texterkennung" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2469,6 +2480,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#andere-dateitypen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Andere Dateitypen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#werkbank-texterkennung" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2609,11 +2631,55 @@
 <p>Ohne Paket bleiben Scans und Fotos ohne Text („wartet auf Texterkennung – kein Paket installiert“); PDFs mit Text sind trotzdem durchsuchbar.</p>
 <p><strong>Wie schnell?</strong> Das Paket ist etwas langsamer als die frühere eingebaute Texterkennung, weil es als WebAssembly abgeschottet läuft: Auf einem Rechner mit 2 Kernen (amd64) brauchte es für 10 gescannte Seiten etwa 31–35 Sekunden, die eingebaute dort 25–26 Sekunden; eine einzelne Seite dauert vom Hochladen bis zum Text etwa 4–6 Sekunden. Erkannt hat es dabei genauso gut. Lange Dokumente erkennt es abschnittsweise, die Zeitgrenze des Paket-Läufers greift nicht. Mehr Messwerte stehen im README des Pakets.</p>
 <p><img alt="Werkbank → Texterkennung" src="../bilder/werkbank-texterkennung.png" /></p>
+<h2 id="andere-dateitypen">Andere Dateitypen<a class="headerlink" href="#andere-dateitypen" title="Permanent link">&para;</a></h2>
+<p>Das DMS liest selbst nur <strong>PDF, JPEG und PNG</strong>. Für andere Dateitypen gibt es Vorschaubild und Volltext, wenn ein <strong>Paket zum Umwandeln</strong> installiert ist (Recht <a href="../pakete/#recht-umwandeln">Dateien umwandeln</a>, seit Version 0.137): Das Paket macht aus der Datei eine <strong>umgewandelte Fassung</strong> (PDF, PNG oder JPEG), daraus entstehen das Vorschaubild und der Volltext – bei einem Scan über das Paket Texterkennung. Das Dokument bleibt die Originaldatei; Herunterladen, Weitergeben und Versionen betreffen immer das Original.</p>
+<table>
+<thead>
+<tr>
+<th>Dateityp</th>
+<th>Vorschau und Volltext mit</th>
+<th>Fassung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PDF, JPEG, PNG</td>
+<td>dem DMS selbst (Scans und Fotos: Paket <strong>Texterkennung</strong>)</td>
+<td>–</td>
+</tr>
+<tr>
+<td>TIFF (auch mehrseitig, z. B. vom Scanner), WebP, GIF (erstes Bild), BMP</td>
+<td>Paket <strong>Bildformate</strong> (dazu für den Text: Paket <strong>Texterkennung</strong>)</td>
+<td>TIFF → PDF, WebP → JPEG, GIF und BMP → PNG</td>
+</tr>
+<tr>
+<td>HEIC/HEIF (Fotos vom iPhone)</td>
+<td>noch keinem Paket – siehe unten</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Word, Excel, PowerPoint, OpenDocument, E-Mails</td>
+<td>noch keinem Paket (geplant, dms-registry #30)</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<p>So sieht es aus:</p>
+<ol>
+<li>Ohne passendes Paket steht am Dokument „Volltext: ausgelassen“ mit dem Hinweis, welches Paket hilft (z. B. „TIFF-Dateien bekommen Vorschau und Volltext mit dem Paket „Bildformate““); neben dem Dokument steht das Dateisymbol.</li>
+<li>Installierst du das Paket, gehen <strong>alle vorhandenen Dateien</strong> dieser Typen an das Paket – neue gleich beim Hochladen. Bis die Fassung da ist, steht am Dokument „wartet auf Umwandlung (Paket …)“.</li>
+<li>Mit der Fassung entsteht das Vorschaubild (Hinweis beim Darüberfahren: „Vorschau aus der umgewandelten Fassung eines Pakets“) und der Volltext. Am Dokument steht dann z. B. „Text aus dem PDF · aus der umgewandelten Fassung (Bildformate 1.0.0)“ mit dem Link <strong>Fassung ansehen</strong>; in der Historie der Mappe „umgewandelte Fassung erstellt“.</li>
+<li>Kann das Paket eine Datei nicht lesen (z. B. beschädigt), steht sein Grund am Dokument („Umwandlung durch Paket Bildformate: …“). <strong>Erneut versuchen</strong> gibt die Datei noch einmal an das Paket.</li>
+</ol>
+<p><strong>Werkbank → Texterkennung → Andere Dateitypen</strong> zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt – oder welches Paket aus dem Katalog es könnte, mit <strong>Paket installieren</strong>.</p>
+<p><strong>Sicherung:</strong> Die Fassungen liegen wie die Vorschaubilder neben den Dateien, aber <strong>nicht in der Sicherung</strong> – sie lassen sich jederzeit neu erzeugen. Nach einer Wiederherstellung holt <strong>Werkbank → Wartungsoperationen → Vorschaubilder nachholen</strong> sie nach (der Volltext ist Teil der Sicherung und bleibt).</p>
+<p><strong>Warum noch kein Paket für HEIC?</strong> HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter <em>Einstellungen → Kamera → Formate</em> „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.</p>
 <h2 id="werkbank-texterkennung">Werkbank → Texterkennung<a class="headerlink" href="#werkbank-texterkennung" title="Permanent link">&para;</a></h2>
 <p>Die Seite ist eine <strong>Übersicht</strong>; Einstellungen der Erkennung gibt es hier nicht mehr (sie stehen beim Paket):</p>
 <ul>
 <li><strong>Texterkennung für Scans und Bilder:</strong> welches Paket die Texterkennung übernimmt, mit Link zu seinen Einstellungen, und wie viele Dokumente gerade darauf warten. Fehlt das Paket, steht hier der Hinweis mit <strong>Jetzt installieren</strong>.</li>
 <li><strong>Woher der Text kommt:</strong> wie viele Dokumente ihren Text aus dem PDF haben, vom Paket, von der früheren eingebauten Texterkennung (bis 0.133), ohne Text sind, auf die Texterkennung warten oder einen Fehler hatten.</li>
+<li><strong>Andere Dateitypen:</strong> TIFF, WebP und Co. – wie viele es gibt und welches Paket sie umwandelt (siehe <a href="#andere-dateitypen">Andere Dateitypen</a>).</li>
 <li><strong>Erkannte Sprachen</strong> mit dem Hinweis, wenn dem Paket Sprachdaten fehlen (siehe <a href="#weitere-sprachen">Weitere Sprachen</a>).</li>
 <li><strong>Warteschlange</strong>, <strong>Werkzeuge</strong> (poppler) und <strong>Aufträge</strong> (siehe unten).</li>
 </ul>
@@ -2644,7 +2710,7 @@
 <p><strong>Werkbank → Wartungsoperationen</strong> sammelt Arbeiten am ganzen Bestand, die du bei Bedarf anstößt:</p>
 <ul>
 <li><strong>Volltext neu erzeugen</strong> – für Dokumente ohne Text oder für alle, siehe unten.</li>
-<li><strong>Vorschaubilder nachholen</strong> erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit <code>pdftoppm</code> (poppler, im Image enthalten).</li>
+<li><strong>Vorschaubilder nachholen</strong> erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit <code>pdftoppm</code> (poppler, im Image enthalten). Dateien anderer Typen ohne Fassung (z. B. TIFF) gibt es dabei an das <a href="#andere-dateitypen">Paket zum Umwandeln</a>, falls eins installiert ist.</li>
 <li><strong>Alle Dateien prüfen</strong> liest jede gespeicherte Datei, auch ältere Versionen, und vergleicht sie mit ihrem Prüfwert. So fällt auf, wenn eine Datei auf dem Speicher verändert wurde oder fehlt. Mehr dazu unter <a href="../archiv/#alle-dateien-prufen">Alle Dateien prüfen</a>.</li>
 <li><strong>Nummern nachträglich vergeben</strong> gibt Mappen eine Nummer, die angelegt wurden, bevor ihr Feld einen Nummernkreis bekam. Mehr dazu unter <a href="../nummernkreise/#nummern-nachtraglich-vergeben">Nummern nachträglich vergeben</a>.</li>
 <li><strong>Absender bereinigen</strong> leert falsche Absender bei älterer Post, siehe unten.</li>
@@ -2654,7 +2720,7 @@
 <h3 id="volltext-neu-erzeugen">Volltext neu erzeugen<a class="headerlink" href="#volltext-neu-erzeugen" title="Permanent link">&para;</a></h3>
 <p>Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an das Paket für die Texterkennung.</p>
 <ul>
-<li><strong>Für Dokumente ohne Text</strong> – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Ersetzt das frühere „Volltext nachholen“.</li>
+<li><strong>Für Dokumente ohne Text</strong> – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Dazu gehören auch <a href="#andere-dateitypen">andere Dateitypen</a> wie TIFF: Ohne Fassung gehen sie an das Paket zum Umwandeln, mit Fassung wird diese gelesen. Ersetzt das frühere „Volltext nachholen“.</li>
 <li><strong>Für alle Dokumente</strong> – nach einer Rückfrage mit der Anzahl. Das ist ein <strong>ausdrückliches Neu</strong>: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.</li>
 </ul>
 <p>Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als <strong>Auftrag mit Fortschritt</strong> („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich <strong>abbrechen</strong>; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket <strong>Texterkennung</strong> schafft etwa <strong>10 Seiten in 35 Sekunden</strong> (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter <strong>Werkbank → Texterkennung</strong> („wartet auf Texterkennung“).</p>

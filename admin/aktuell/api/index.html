@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.136/api/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.138/api/">
       
       
         <link rel="prev" href="../verfahrensdokumentation/">
@@ -2595,6 +2595,10 @@
 <tr>
 <td><strong>Volltext setzen</strong></td>
 <td><code>PUT /api/v1/dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> (Recht U auf die Mappe) ersetzt den Volltext, z. B. aus einer eigenen Texterkennung; <code>GET /api/v1/dokumente/{id}/seiten/{nr}/scan?dpi=300</code> liefert eine Seite als Graustufenbild (PGM)</td>
+</tr>
+<tr>
+<td><strong>Umgewandelte Fassung</strong></td>
+<td><code>GET /api/v1/dokumente/{id}/fassung</code> liefert die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die das DMS nicht selbst liest (z. B. TIFF); setzen dürfen sie nur Pakete mit dem Recht <a href="../pakete/#recht-umwandeln">Dateien umwandeln</a></td>
 </tr>
 </tbody>
 </table>
