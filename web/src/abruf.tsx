@@ -10,10 +10,16 @@ import { CODE_LAENGE } from '../../shared/src/auskunft';
  * Kontostatus, keine Diagnose. Alle Texte stehen in shared/src/anrede.ts.
  */
 
-const schluesselAus = () => decodeURIComponent(location.hash.replace(/^#/, '')).trim();
+const schluesselAus = () => {
+  let s = location.hash.replace(/^#/, '');
+  try { s = decodeURIComponent(s); } catch { /* kaputtes Fragment: so lassen, der Server lehnt es ab */ }
+  return s.trim();
+};
 
 export function Abrufseite() {
   const [schluessel] = useState(schluesselAus);
+  // Den Schlüssel nicht im Verlauf des Browsers stehen lassen – er bleibt nur im Speicher dieser Seite.
+  useEffect(() => { try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch { /* egal */ } }, []);
   const [code, setCode] = useState('');
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string>();

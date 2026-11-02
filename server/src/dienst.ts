@@ -466,6 +466,8 @@ export interface VolltextMeldung {
 }
 
 export class Dienst {
+  /** Abruf-Links, deren Code gerade geprüft wird (#455): je Link nur eine Prüfung gleichzeitig. */
+  private abrufLaufend = new Set<string>();
   /** Hintergrundaufträge, z. B. Demo-Daten erzeugen. */
   readonly auftraege = new Auftraege((m) => protokoll.modul('werkbank').info(m));
 
@@ -6414,7 +6416,7 @@ export class Dienst {
 
   /** Zurückziehen (#455): Der Link gilt sofort nicht mehr; die Zeile bleibt als Nachweis. */
   async auskunftLinkWiderrufen(id: string, ich: { id: string; email: string }): Promise<AuskunftLink> {
-    const l = (await this.repo.auskunftLinks()).find((x) => x.id === id);
+    const [l] = await this.repo.auskunftLinks({ id, max: 1 });
     if (!l) throw new Fachfehler(404, 'Diesen Abruf-Link gibt es nicht.');
     if (await this.repo.widerrufeAuskunftLink(id)) {
       await this.notiere(l.mappeId, ich.id, 'auskunft', { text: 'Abruf-Link zurückgezogen', zustellung: 'link', link: id, auskunft: l.auskunftId });
@@ -6430,11 +6432,24 @@ export class Dienst {
    * dass der Link abgelaufen, verbraucht oder zurückgezogen ist. Jeder Versuch an einem bekannten Link
    * steht in der Historie (ohne IP, ohne Code).
    */
-  async auskunftAbrufPruefen(schluessel: unknown, code: unknown): Promise<{ art: 'ok' | 'falsch' | 'ungueltig'; link?: AuskunftLinkIntern }> {
+  async auskunftAbrufPruefen(schluessel: unknown, code: unknown, platz: () => (() => void) | null = () => () => {}): Promise<{ art: 'ok' | 'falsch' | 'ungueltig' | 'beschaeftigt'; link?: AuskunftLinkIntern }> {
     const s = typeof schluessel === 'string' && SCHLUESSEL_MUSTER.test(schluessel) ? schluessel : null;
     const c = normiereCode(code);
     const link = s ? await this.repo.auskunftLinkPerSchluessel(hasheSchluessel(s)) : undefined;
-    if (!link || link.gesperrt) { await pruefePasswort(c || '-', null); return { art: 'falsch' }; }
+    // Ohne gültigen Link kein scrypt: Den 256-Bit-Schlüssel kann niemand erraten, ein gleicher Zeitaufwand
+    // schützt hier nichts – er würde nur die Abrufseite zum Hebel für Last machen.
+    if (!link || link.gesperrt || link.fehlversuche >= LINK_FEHLVERSUCHE_MAX) return { art: 'falsch' };
+    // Je Link nur eine Prüfung gleichzeitig: Parallele Versuche könnten sonst alle vor dem Hochzählen
+    // lesen und so mehr als LINK_FEHLVERSUCHE_MAX Codes ausprobieren.
+    if (this.abrufLaufend.has(link.id)) return { art: 'beschaeftigt' };
+    // Und insgesamt nur wenige scrypt-Prüfungen gleichzeitig (Platz vergibt die Bremse der Route).
+    const frei = platz();
+    if (!frei) return { art: 'beschaeftigt' };
+    this.abrufLaufend.add(link.id);
+    try { return await this.auskunftAbrufCode(link, c); } finally { this.abrufLaufend.delete(link.id); frei(); }
+  }
+
+  private async auskunftAbrufCode(link: AuskunftLinkIntern, c: string): Promise<{ art: 'ok' | 'falsch' | 'ungueltig'; link?: AuskunftLinkIntern }> {
     if (!c || !(await pruefePasswort(c, link.code))) {
       const f = await this.repo.auskunftLinkFehlversuch(link.id, LINK_FEHLVERSUCHE_MAX);
       const gesperrt = !!f?.gesperrt;
@@ -6453,7 +6468,7 @@ export class Dienst {
     return { art: 'ok', link };
   }
 
-  async auskunftLinkMitId(id: string): Promise<AuskunftLinkIntern | undefined> { return (await this.repo.auskunftLinks()).find((l) => l.id === id); }
+  async auskunftLinkMitId(id: string): Promise<AuskunftLinkIntern | undefined> { return (await this.repo.auskunftLinks({ id, max: 1 }))[0]; }
 
   /** Einen Abruf zählen, solange der Link gilt (atomar); null = gilt nicht mehr. */
   auskunftAbrufZaehlen(id: string): Promise<number | null> { return this.repo.auskunftLinkAbruf(id); }

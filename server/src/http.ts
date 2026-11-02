@@ -167,6 +167,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
       method: r.methode,
       url: r.pfad,
       ...(r.roh ? { bodyLimit: r.roh } : {}),
+      ...(r.ohneHead ? { exposeHeadRoute: false } : {}),
       handler: async (req, reply) => {
         const a: Anfrage = {
           body: req.body,
