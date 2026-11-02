@@ -2962,6 +2962,14 @@
 <td>Port (Standard <code>3000</code>) und Adresse (Standard <code>0.0.0.0</code>, alle), auf denen das DMS im Container lauscht. Normalerweise änderst du <strong>nicht</strong> <code>PORT</code>, sondern den Port nach außen in der Compose-Datei (in der Vorlage <code>8080:3000</code>, z. B. <code>8090:3000</code>). Die eingebaute Gesundheitsprüfung des Images folgt <code>PORT</code>; setzt du <code>HOST</code> auf eine einzelne Adresse, muss sie <code>127.0.0.1</code> mit einschließen, sonst gilt der Container als <em>unhealthy</em></td>
 </tr>
 <tr>
+<td><code>DMS_DB_VERBINDUNGEN</code></td>
+<td>Höchstzahl der Verbindungen zur Datenbank, 2–100 (Vorgabe 10). Nur für größere Installationen mit mehr Kernen, siehe <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a></td>
+</tr>
+<tr>
+<td><code>DMS_MAX_ANFRAGEN</code></td>
+<td>Ab so vielen gleichzeitigen Anfragen antwortet das DMS sofort mit „gerade sehr beschäftigt“ (HTTP 503), 20–10.000 (Vorgabe 250), siehe <a href="../technik/#last">Technik</a></td>
+</tr>
+<tr>
 <td><code>DMS_ARBEITER</code></td>
 <td>Zahl der <a href="../speicherplatz/#arbeiter-fur-pdf-und-exporte">Arbeiter für PDF und Exporte</a>, 1–16. Nicht gesetzt: die Hälfte der Kerne des Containers, mindestens 1, höchstens 4. <code>0</code> schaltet sie aus (nur zur Fehlersuche)</td>
 </tr>
