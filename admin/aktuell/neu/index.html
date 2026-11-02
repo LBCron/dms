@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.141/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.142/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0141" class="md-skip">
+        <a href="#neu-in-version-0142" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01410" class="md-nav__link">
+  <a href="#01420" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.141.0
+        0.142.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.141.0">
+    <nav class="md-nav" aria-label="0.142.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,28 +379,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ubergang-in-zwei-schritten" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Übergang in zwei Schritten
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sicherheit
       
     </span>
   </a>
@@ -1519,6 +1497,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../sicherung-ausser-haus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sicherung außer Haus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../wiederherstellen/" class="md-nav__link">
         
   
@@ -2432,15 +2438,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01410" class="md-nav__link">
+  <a href="#01420" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.141.0
+        0.142.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.141.0">
+    <nav class="md-nav" aria-label="0.142.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2448,28 +2454,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ubergang-in-zwei-schritten" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Übergang in zwei Schritten
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sicherheit
       
     </span>
   </a>
@@ -2534,42 +2518,34 @@
   
 
 
-<h1 id="neu-in-version-0141">Neu in Version 0.141<a class="headerlink" href="#neu-in-version-0141" title="Permanent link">&para;</a></h1>
-<h2 id="01410">0.141.0<a class="headerlink" href="#01410" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0142">Neu in Version 0.142<a class="headerlink" href="#neu-in-version-0142" title="Permanent link">&para;</a></h1>
+<h2 id="01420">0.142.0<a class="headerlink" href="#01420" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Herkunft von Paketen prüfen</strong> (#594): Das DMS prüft die <strong>Signatur des Paketkatalogs</strong> (Ed25519, motom001/dms-registry#74) und zeigt in jeder Installations-Vorschau eine Zeile <strong>Herkunft</strong> – „signiert vom DMS-Projekt (Katalog vom …)“, „signiert vom Anbieter dieses Katalogs“, „nicht signiert – bitte nur aus vertrauenswürdiger Quelle“ oder „Signatur ungültig“. Weil der Katalog die Prüfsumme jedes Pakets enthält, belegt eine Signatur alle Pakete darin. Jede ungültige Signatur steht im Protokoll.</li>
-<li><strong>Sammeldatei ohne Rückfrage:</strong> Enthält eine Sammeldatei den signierten offiziellen Katalog und hat jedes Paket genau die Prüfsumme daraus, zeigt das DMS „aus dem offiziellen Katalog vom …“ – die Herkunft musst du dann nicht mehr bestätigen, auch ohne Internet. Ist der Stand älter als 90 Tage, weist es darauf hin. Ältere Sammeldateien ohne Signatur gehen weiter wie bisher mit Bestätigung.</li>
-<li><strong>Kein Zurückdrehen:</strong> Das DMS merkt sich den neuesten signierten Stand je Katalog und nimmt online keinen älteren mehr an.</li>
-<li><strong>Eigene Kataloge mit eigenem Schlüssel</strong> (wie SSH beim ersten Kontakt): Beim Hinzufügen zeigt das DMS den Fingerabdruck des Schlüssels und übernimmt ihn erst nach deiner Bestätigung. Danach braucht es keine Bestätigung je Installation mehr. Wechselt der Schlüssel ohne Nachweis durch den alten, ist der Katalog gesperrt, bis du den neuen Fingerabdruck unter <strong>Schlüssel prüfen …</strong> bestätigst; einen geordneten Wechsel (neuer Schlüssel mit dem alten signiert) übernimmt das DMS mit einem Hinweis.</li>
-<li><strong>Hochgeladenes Paket:</strong> Steht seine Prüfsumme im offiziellen Katalog, zeigt die Vorschau „entspricht Katalogversion …“.</li>
-</ul>
-<h3 id="ubergang-in-zwei-schritten">Übergang in zwei Schritten<a class="headerlink" href="#ubergang-in-zwei-schritten" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Jetzt (0.141.0):</strong> Das DMS prüft die Signatur, wenn sie da ist. Fehlt sie beim offiziellen Katalog, gibt es nur einen Hinweis. Eine ungültige Signatur verlangt schon jetzt die Bestätigung der Herkunft.</li>
-<li><strong>Eine Minor-Version später:</strong> Der offizielle Katalog <strong>muss</strong> signiert sein. Weitere Quellen, hochgeladene Pakete und unsignierte Sammeldateien bleiben mit Bestätigung möglich – eigene Pakete und Betrieb ohne Internet gehen also weiter.</li>
-</ul>
-<p><strong>Noch Testschlüssel:</strong> Diese Version enthält noch <strong>Testschlüssel</strong> des Projekts; die Vorschau sagt das dazu („prüft noch mit Testschlüsseln“). Die echten Schlüssel und ihre Fingerabdrücke kommen mit einem folgenden Release und stehen dann in SECURITY.md.</p>
-<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Beim Laden von Katalog, Signatur und Paketen folgt das DMS Weiterleitungen nur noch auf <code>https://</code>-Adressen (höchstens fünf).</li>
+<li><strong>Sicherung außer Haus</strong> (#585): Das DMS bringt jede Sicherung auf Wunsch <strong>selbst</strong> auf ein Netzlaufwerk oder in die Cloud und <strong>prüft</strong>, dass sie dort heil angekommen ist – für alle ohne Sicherungs-App des NAS, etwa auf einem Raspberry Pi, einem gemieteten Server oder bei einem Anbieter. Dafür gibt es das neue Paket <strong>Sicherungsziel WebDAV</strong> (Nextcloud, viele NAS, viele Hoster); ein Paket für S3-kompatible Speicher folgt.</li>
+<li><strong>Zuerst lokal, dann außer Haus:</strong> Die Sicherung entsteht wie bisher im Sicherungsordner – schnell und unabhängig vom Netz. Danach lädt das Paket sie im Hintergrund in Teilen hoch; bricht das Netz ab, macht die Wiederholung an der letzten Stelle weiter. <strong>Lokal wird nichts gelöscht</strong>, weil die Kopie angekommen ist: Lokal ist die schnelle Wiederherstellung, außer Haus der Schutz bei Brand, Diebstahl oder Plattenausfall.</li>
+<li><strong>Werkbank → Sicherung</strong> zeigt je Sicherung in der neuen Spalte <strong>Wo</strong>: „lokal ✓ · extern ✓ geprüft“, „extern hochgeladen, Größe bestätigt“, „extern läuft (… %)“ oder „extern fehlgeschlagen“ mit Grund. Der neue Abschnitt <strong>Außer Haus</strong> nennt Ziel und letzte Kopie – oder, ohne Paket, die Möglichkeiten.</li>
+<li><strong>Hinweis und E-Mail an die Administratoren</strong> (einmal je Vorfall), wenn eine Kopie endgültig fehlschlägt (z. B. Prüfsumme am Ziel falsch, Anmeldung abgelehnt, nach allen Wiederholungen aufgegeben) oder seit mehr als 2 Tagen keine neuere Sicherung außer Haus ankam. Die E-Mail nennt nur das Ziel, nie Zugangsdaten.</li>
+<li><strong>Lokal nur die neueste behalten</strong> (Zeitplan und Aufbewahrung): für knappen Platz, wenn eine Kopie außer Haus entsteht. „Lokal keine“ gibt es bewusst nicht. Eine Sicherung, deren Kopie gerade läuft, entfernt die Aufbewahrung erst, wenn sie angekommen ist (höchstens nach 2 Tagen).</li>
+<li><strong>Notfallblatt</strong> nennt das Ziel (Paket und Adresse) <strong>ohne Passwort</strong>, mit dem Satz „Der Schlüssel der Werkbank liegt nicht auf dem Ziel – ohne ihn ist die Kopie wertlos“.</li>
+<li><strong>Wiederherstellen aus einer Kopie außer Haus:</strong> Neben der Sicherung liegt am Ziel nur eine <strong>schlanke Metadaten-Datei</strong> (Größe, Prüfsumme, Zeitpunkt, Fingerabdruck – ohne Person, Versionen, Zähler, Haushalts-Id). Damit lässt sie sich einspielen: Mit dem Schlüssel vom Notfallblatt liest das DMS Datenbank-Stand und Umfang aus der Sicherung selbst. Auch <strong>Prüfen</strong> (Prüfsumme) geht damit.</li>
+<li><strong>Neue Schnittstelle für Pakete</strong> <code>dms:sicherung-lesen</code> mit dem Ereignis <code>sicherung.fertig</code> (Recht in der Installations-Vorschau: „Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)“). API: <code>GET /sicherungen/{name}</code> (schlanke Metadaten), <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> (die verschlüsselte Datei in Stücken bis 8 MB), <code>PUT /sicherungen/{name}/extern</code> (Rückmeldung: läuft, hochgeladen, geprüft, fehlgeschlagen). Ein Paket liest nur die Sicherung aus seinem Ereignis – nie den Schlüssel, nie andere Dateien des Sicherungsordners. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, meldet der Kern selbst „fehlgeschlagen“.</li>
+<li>Paket-Läufer: Eine Netzanfrage eines Pakets mit mehr als 1 MB Körper (Hochladen in Teilen) darf so lange dauern wie der Aufruf statt 30 Sekunden.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administrationshandbuch, Pakete: neuer Abschnitt „Herkunft: signiert oder nicht“, „Katalog mit eigenem Schlüssel“ (Fingerabdruck, was bei einem gesperrten Katalog zu tun ist), Sammeldatei mit signiertem Katalog.</li>
-<li>Entwicklerhandbuch, Pakete: „Signierter Katalog“, „Projektschlüssel austauschen“, „Eigener Katalog mit eigenem Schlüssel“.</li>
-<li>SECURITY.md (de/en) nennt die öffentlichen Schlüssel und Fingerabdrücke.</li>
+<li>Administratorhandbuch: neue Seite <strong>Sicherung außer Haus</strong> – wann die NAS-App reicht, wann ein Paket sinnvoll ist, Netzfreigaben (SMB/NFS) als Docker-Volume, Anzeige und Hinweise, Einrichten, <strong>Löschschutz gegen Erpressersoftware</strong> (Nextcloud-Dateiablage, Zugang nur mit Schreibrecht, Versionierung bzw. Schnappschüsse am Ziel, S3 mit <code>PutObject</code> ohne <code>DeleteObject</code> und Object Lock). Sicherung (Lokal nur die neueste, Hinweise, Notfallblatt), Wiederherstellen (aus einer Kopie außer Haus), Pakete (Recht <strong>Sicherung lesen</strong>, Ereignis <strong>Sicherung fertig</strong>).</li>
+<li>Entwicklerhandbuch, <strong>Pakete mit Code:</strong> neuer Abschnitt <strong>Sicherung außer Haus</strong> – Manifest, Ablauf, Ereignis, Lesen in Stücken (nie die ganze Sicherung in den Speicher), Fortsetzung, Rückmeldung, Löschschutz.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Prüfung mit <code>crypto.verify</code> aus Node (<code>server/src/katalogsignatur.ts</code>), keine neue Abhängigkeit. Die beiden öffentlichen Projektschlüssel stehen an einer Stelle: <code>server/src/projektschluessel.ts</code>.</li>
-<li>Neue Einstellung <code>paket_katalog_staende</code> (neuester signierter Stand je Katalog); bestätigte Schlüssel eigener Kataloge stehen bei der Quelle in <code>paket_kataloge</code>. Beides ist Teil der Sicherung.</li>
-<li>Neuer Endpunkt <code>POST /api/werkbank/pakete/quellen/schluessel</code> (Schlüssel eines eigenen Katalogs bestätigen); <code>POST /api/werkbank/pakete/quellen</code> antwortet bei einem Katalog mit Schlüssel mit 409 und dem Fingerabdruck, bis er mitgeschickt wird.</li>
-<li>Keine Migration, keine neue Abhängigkeit.</li>
+<li>Stand der Kopien außer Haus in der Einstellung <code>sicherung_extern</code> (je Sicherung und Paket); er verschwindet mit der Sicherung. Plan der Sicherung: neues Feld <code>nurNeueste</code>.</li>
+<li>Sicherungsformat unverändert; im Format-Kommentar steht jetzt die Grenze von AES-GCM mit einer Nonce je Datei (rund 64 GB je Sicherung).</li>
+<li>Keine Migration, keine neue Abhängigkeit. Pakete mit <code>dms:sicherung-lesen</code> brauchen <code>dms: "&gt;=0.142.0"</code>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.140.4 im Detail: <a href="https://github.com/motom001/dms/compare/v0.140.4...v0.141.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.141.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.141.0...v0.142.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

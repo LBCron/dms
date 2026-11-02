@@ -7949,6 +7949,234 @@
         }
       }
     },
+    "/sicherungen/{name}": {
+      "get": {
+        "tags": [
+          "Werkbank"
+        ],
+        "summary": "Schlanke Metadaten einer Sicherung (Pakete)",
+        "description": "Für Pakete mit dem Recht „dms:sicherung-lesen“ (#585), z. B. „Sicherungsziel WebDAV“: Dateiname, Größe, SHA-256, Beginn und Fingerabdruck des Schlüssels der Sicherung aus dem Ereignis sicherung.fertig – ohne Person, Umgebung, Zähler und Haushalts-Id. Genau diese Angaben legt das Paket als <name>.json neben die Datei auf das Ziel; die Wiederherstellung kommt damit aus. 403 ohne das Recht oder für eine Sicherung, die dem Paket nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung).",
+        "operationId": "getSicherungenMitname",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name der Sicherung aus dem Ereignis (ohne Endung)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SicherungSchlank"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nur für Administratoren; oder Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sicherungen/{name}/datei": {
+      "get": {
+        "tags": [
+          "Werkbank"
+        ],
+        "summary": "Ein Stück der verschlüsselten Sicherung (Pakete)",
+        "description": "Für Pakete mit dem Recht „dms:sicherung-lesen“ (#585): ab versatz höchstens laenge Bytes (bis 8 MB) der verschlüsselten Sicherungsdatei, roh. Der Kopf X-DMS-Groesse nennt die Größe der ganzen Datei; am Ende kommt ein leerer Körper. Lies die Datei in Stücken und lade sie in Teilen hoch – eine Sicherung hat schnell mehrere GB. Das Paket bekommt nie den Schlüssel und nie andere Dateien des Sicherungsordners. Fehler wie bei GET /sicherungen/{name}, 422 bei ungültigem versatz oder laenge.",
+        "operationId": "getSicherungenMitnameDatei",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name der Sicherung aus dem Ereignis",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versatz",
+            "in": "query",
+            "required": false,
+            "description": "Ab diesem Byte (Standard 0)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "laenge",
+            "in": "query",
+            "required": false,
+            "description": "Höchstens so viele Bytes, 1 bis 8388608 (Standard)",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nur für Administratoren; oder Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sicherungen/{name}/extern": {
+      "put": {
+        "tags": [
+          "Werkbank"
+        ],
+        "summary": "Stand der Kopie außer Haus melden (Pakete)",
+        "description": "Rückmeldung des Pakets je Sicherung (#585): laeuft (mit bytes/gesamt), hochgeladen (pruefung groesse oder keine), geprueft (pruefung pruefsumme oder stichprobe), fehlgeschlagen (grund Pflicht; endgueltig=true, wenn eine Wiederholung nicht hilft – dann bekommen die Administratoren eine E-Mail). ziel nennt das Ziel in Worten, ohne Zugangsdaten (Adressen werden davon befreit). Werkbank → Sicherung zeigt den Stand je Sicherung. Gibt das DMS das Ereignis nach allen Wiederholungen auf, setzt es selbst „fehlgeschlagen“.",
+        "operationId": "putSicherungenMitnameExtern",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Name der Sicherung aus dem Ereignis",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SicherungRueckmeldung"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SicherungExtern"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nur für Administratoren; oder Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Eingaben ungültig (details: Prüfergebnis)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rollen": {
       "get": {
         "tags": [
@@ -11726,6 +11954,143 @@
           },
           "dimension": {
             "type": "integer"
+          }
+        }
+      },
+      "SicherungSchlank": {
+        "type": "object",
+        "description": "Schlanke Metadaten einer Sicherung (#585) – so auch als <name>.json auf dem Ziel außer Haus.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name der Sicherung (ohne Endung)"
+          },
+          "format": {
+            "type": "integer"
+          },
+          "schlank": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "datei": {
+            "type": "string",
+            "description": "<name>.dms-sicherung"
+          },
+          "groesse": {
+            "type": "integer",
+            "description": "Bytes"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "SHA-256 der Datei (hex)"
+          },
+          "beginn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "verschluesselung": {
+            "type": "object",
+            "properties": {
+              "verfahren": {
+                "type": "string"
+              },
+              "fingerabdruck": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "SicherungRueckmeldung": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "laeuft",
+              "hochgeladen",
+              "geprueft",
+              "fehlgeschlagen"
+            ]
+          },
+          "pruefung": {
+            "type": "string",
+            "enum": [
+              "pruefsumme",
+              "stichprobe",
+              "groesse",
+              "keine"
+            ],
+            "description": "pruefsumme: SHA-256 vom Ziel bestätigt oder vollständig zurückgelesen; stichprobe: Größe und Stichproben; groesse: nur die Größe; keine: Ziel ohne Lesezugriff (z. B. Dateiablage)"
+          },
+          "grund": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Verständlicher Grund, Pflicht bei fehlgeschlagen"
+          },
+          "endgueltig": {
+            "type": "boolean",
+            "description": "Nur bei fehlgeschlagen: Eine Wiederholung hilft nicht (z. B. Prüfsumme falsch, Anmeldung abgelehnt) – E-Mail an die Administratoren"
+          },
+          "ziel": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Ziel in Worten, ohne Zugangsdaten"
+          },
+          "bytes": {
+            "type": "integer",
+            "description": "Schon übertragen"
+          },
+          "gesamt": {
+            "type": "integer",
+            "description": "Größe der Datei"
+          }
+        }
+      },
+      "SicherungExtern": {
+        "type": "object",
+        "description": "Stand der Kopie außer Haus einer Sicherung für ein Paket (#585)",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "offen",
+              "laeuft",
+              "hochgeladen",
+              "geprueft",
+              "fehlgeschlagen"
+            ]
+          },
+          "pruefung": {
+            "type": "string"
+          },
+          "grund": {
+            "type": "string"
+          },
+          "endgueltig": {
+            "type": "boolean"
+          },
+          "ziel": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "gesamt": {
+            "type": "integer"
+          },
+          "seit": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "am": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
