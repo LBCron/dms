@@ -16,17 +16,20 @@
 
 Instead of loose files in folders, you create **folders with structure** ("Mappen"): for the contract, the invoice, the heating system, the tradesperson. Mappen link to each other. From the heating system you find the maintenance contract, from there every invoice and the tradesperson who issued it. And the DMS reminds you of the notice period in good time.
 
-> The DMS itself, its user interface and its manuals are in **German**. An English user interface is planned (#357). Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
+> The DMS itself, its user interface and its manuals are in **German**. An English user interface is planned ([#357](https://github.com/motom001/dms/issues/357)). Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
-<!-- Screenshot from the manual workflow (#290): retaken with every release, sample data only. -->
+<!-- Screenshot from the manual workflow (#290): retaken with every release, sample data only. The user interface
+     exists in German only, so the screenshot is German and marked as such (#574); readme.en.png follows with #357. -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://motom001.github.io/dms/benutzer/aktuell/bilder/readme-dunkel.png">
-  <img alt="The DMS filing view: views on the left, the list in the middle, an open Mappe with its details and documents on the right" src="https://motom001.github.io/dms/benutzer/aktuell/bilder/readme.png">
+  <img alt="The DMS filing view with its German user interface: views on the left, the list in the middle, an open Mappe with its details and documents on the right" src="https://motom001.github.io/dms/benutzer/aktuell/bilder/readme.png">
 </picture>
+
+*Screenshot of the German user interface. The interface is currently available in German only; English is planned ([#357](https://github.com/motom001/dms/issues/357)).*
 
 ## Who is it for?
 
-<img alt="Who the DMS is built for: from the household to the enterprise" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.svg" width="100%">
+<img alt="Who we build the DMS for, on a scale from private to business: core focus on beginner families, family members and household admins; focus on looking after parents and landlords; supported for the self-employed and small businesses; not in focus for mid-sized companies and large enterprises" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.en.svg" width="100%">
 
 The DMS is built for **families and households**. It fits particularly well if you **look after your parents** or **rent out a few flats**. **Self-employed people and small businesses** can use it well too; it is deliberately not made for larger companies.
 
@@ -55,7 +58,7 @@ Software alone does not make data protection – your processes are part of it. 
 
 ## How to get a DMS
 
-| You have … | This is how |
+| You have … | This is how (guides in German) |
 | --- | --- |
 | a home server with **umbrelOS, ZimaOS or CasaOS** | from the [DMS App Store](https://github.com/motom001/dms-appstore) with one click: [umbrelOS](https://motom001.github.io/dms/installieren/aktuell/umbrel/), [ZimaOS](https://motom001.github.io/dms/installieren/aktuell/zimaos/), [CasaOS](https://motom001.github.io/dms/installieren/aktuell/casaos/) |
 | a **NAS** from Synology, UGREEN, QNAP, TrueNAS or Unraid | paste a ready-made template into the Docker interface: [guides](https://motom001.github.io/dms/installieren/aktuell/) |
