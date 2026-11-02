@@ -1,5 +1,8 @@
 # Windows
 
+!!! info "Geprüft: Image automatisch, Gerät noch nicht"
+    Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Läuft bei dir ohnehin ein Windows-Rechner rund um die Uhr, kann er das DMS mit übernehmen. Das DMS ist ein Linux-Container. Unter Windows braucht es deshalb eine kleine Linux-Umgebung, die Windows selbst mitbringt: **WSL 2** oder **Hyper-V**.
 
 | Rechner | Empfohlener Weg |

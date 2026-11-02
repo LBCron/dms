@@ -1,5 +1,8 @@
 # Jeder Server mit Docker
 
+!!! info "Geprüft: Image automatisch, Gerät noch nicht"
+    Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Diese Seite gilt für jedes Gerät ohne eigene Anleitung; eigene Seiten gibt es für einen [PC mit Linux](linux.md), den [Raspberry Pi](raspberry-pi.md), [Windows](windows.md) und [Proxmox und Co.](proxmox.md). Das DMS braucht **Docker mit Docker Compose**. Die Images sind öffentlich (amd64 und arm64), eine Anmeldung bei der Registry ist nicht nötig.
 
 Empfohlen sind **zwei Container** (DMS und PostgreSQL); die Gegenüberstellung steht unter [Ein oder zwei Container?](index.md#ein-oder-zwei-container). Wer nur ausprobieren will oder nur einen Container betreiben kann, nimmt [dms-komplett](komplett.md).

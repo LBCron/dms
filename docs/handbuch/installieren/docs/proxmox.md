@@ -1,5 +1,8 @@
 # Proxmox und andere Virtualisierung
 
+!!! info "Geprüft: Image automatisch, Gerät noch nicht"
+    Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 Hast du zu Hause schon einen Server mit **Proxmox VE** oder einer anderen Virtualisierung, bekommt das DMS am besten eine eigene kleine **Linux-VM** mit Docker.
 
 ## Proxmox VE

@@ -1,5 +1,8 @@
 # Synology-NAS (Container Manager)
 
+!!! info "Geprüft: Vorlage automatisch, Gerät noch nicht"
+    Die Vorlage auf dieser Seite startet bei jeder Änderung probehalber auf den Rechnern von GitHub (Linux mit Docker, amd64). Von einem echten Gerät gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
+
 So richtest du das DMS auf einem Synology-NAS mit DSM 7.2 oder neuer ein, ganz ohne Kommandozeile. Du brauchst ein Modell mit **Container Manager**, also die meisten Plus-Modelle mit Intel- oder AMD-Prozessor. Ob dein Modell dazu gehört, zeigt das Paket-Zentrum: Gibt es dort den Container Manager, passt es.
 
 --8<-- "ausgeblendet-schritt.md"
