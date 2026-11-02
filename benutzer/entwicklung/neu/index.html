@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0125" class="md-skip">
+        <a href="#neu-in-version-0126" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01250" class="md-nav__link">
+  <a href="#01260" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.125.0
+        0.126.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.125.0">
+    <nav class="md-nav" aria-label="0.126.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1149,15 +1149,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01250" class="md-nav__link">
+  <a href="#01260" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.125.0
+        0.126.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.125.0">
+    <nav class="md-nav" aria-label="0.126.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1218,30 +1218,28 @@
   
 
 
-<h1 id="neu-in-version-0125">Neu in Version 0.125<a class="headerlink" href="#neu-in-version-0125" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0126">Neu in Version 0.126<a class="headerlink" href="#neu-in-version-0126" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01250">0.125.0<a class="headerlink" href="#01250" title="Permanent link">&para;</a></h2>
+<h2 id="01260">0.126.0<a class="headerlink" href="#01260" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Aus Dokument ausfüllen per Paket</strong> (#511): Statt der eingebauten Erkennung kann ein Paket mit dem neuen Recht „Felder aus Dokumenten vorschlagen (<code>dms:erkennen</code>)“ die Felder vorschlagen – etwa ein KI-Assistent, der auch Freitext, Briefköpfe und schwierige Belege versteht. Die eingebaute Erkennung bleibt der Standard.</li>
-<li>Wahl in der Werkbank am Paket (<strong>als Standard für alle Mappentypen</strong>) und je Mappentyp unter <strong>Erkennung</strong> (Standard, eingebaut oder ein Paket).</li>
-<li>Ein Paket, das ins Netz darf, nur mit ausdrücklicher Bestätigung des Datenabflusses.</li>
-<li>Das Paket bekommt den Text und die Beschreibung der Felder (JSON Schema) – nie Passwortfelder, nie Felder, die du nicht bearbeiten darfst, keine Verweise. Jede Antwort prüft das DMS gegen die Feldarten; Verworfenes steht im Protokoll. Alles bleibt Vorschlag.</li>
-<li>Antwortet das Paket nicht (60 Sekunden) oder unbrauchbar, übernimmt die eingebaute Erkennung, mit Hinweis. Unter dem Ergebnis steht, womit erkannt wurde.</li>
-<li>Schnittstelle: <code>POST /typen/{id}/vorschlaege</code> liefert zusätzlich <code>engine</code> und ggf. <code>hinweis</code>; <code>GET</code>/<code>PUT /api/werkbank/erkennung</code>.</li>
+<li><strong>Erweiterte Suche aufgeräumt</strong> (#426): Das Suchformular steht jetzt <strong>oben in der Mitte</strong>, die Treffer darunter; links bleibt die normale Navigation. Solange keine Mappe geöffnet ist, nutzt die Suche die Breite bis zum rechten Rand – erst ein geöffneter Treffer macht sie schmaler.</li>
+<li><strong>Mappentypen</strong> wählst du wie beim Verweisfeld: tippen, Vorschlag wählen, gewählte stehen als Chips mit Kreuz darüber. Ohne Auswahl gelten wie bisher alle Mappentypen, die du lesen darfst.</li>
+<li><strong>Bedingungen nur bei Bedarf:</strong> Statt aller Felder auf einmal fügst du mit <strong>+ Bedingung</strong> genau die Felder hinzu, die du brauchst; das Kreuz entfernt sie. Datum steht in einer Zeile (von – bis, dazu „Zeitraum …“).</li>
+<li>Nach <strong>Suchen</strong> klappt das Formular zu. Über den Treffern steht die <strong>Zusammenfassung</strong> der Bedingungen; ein Klick auf eine Bedingung öffnet das Formular genau dort.</li>
+<li><strong>Am Handy</strong> ist das Formular ein eigener Schritt: Bedingungen einstellen, <strong>Suchen</strong>, Treffer – mit <strong>Filter</strong> zurück zum Formular.</li>
+<li>Die Adresse mit allen Bedingungen bleibt wie bisher teilbar.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: Pakete → Recht „Felder aus Dokumenten vorschlagen“, Erkennung durch ein Paket; Mappentypen → Erkennung.</li>
-<li>Benutzerhandbuch: Mappen → Aus Dokument ausfüllen.</li>
-<li>Entwicklerhandbuch: Pakete mit Code → Erkennung als Paket (<code>dms:erkennen</code>).</li>
+<li>Benutzerhandbuch: Ablage → Erweiterte Suche mit neuen Bildschirmfotos (Formular, Zusammenfassung und Treffer, Ablauf am Handy).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.124.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.124.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.125.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.125.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
