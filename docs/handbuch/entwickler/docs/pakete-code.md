@@ -107,6 +107,42 @@ Ein Paket mit `code.rechte.schnittstellen: [dms:texterkennung]` (und `dokumente:
 
 Sind mehrere solche Pakete installiert, gilt das erste nach Id.
 
+### Sprachen je Seite (`seitensprachen`) { #seitensprachen }
+
+Seit 0.139.0 (#579) kann ein Dokument mehrere Sprachen haben – etwa ein deutscher Begleitbrief und dahinter das französische Schreiben einer Botschaft. Eine Texterkennung meldet dafür die **Sprache jeder Seite**; das DMS durchsucht jede Seite mit den Wortstämmen ihrer Sprache, zeigt am Dokument „Deutsch, enthält auch Französisch“ und schlägt bei einem vollständigen Sprachwechsel zwischen zwei Seiten an der Post „Post teilen?“ vor (geteilt wird nie von selbst).
+
+**Schreiben:** `PUT /dokumente/{id}/volltext` mit den Seiten im Text, getrennt durch einen **Seitenvorschub** (`\f`, wie bei `pdftotext`), und je Seite ihren Sprachen:
+
+```json
+{
+  "text": "Sehr geehrte Frau Muster, anbei …\fMadame, nous avons bien reçu …\fÜbersetzung … Traduction …",
+  "seiten": 3,
+  "seitensprachen": [["deu"], ["fra"], ["deu", "fra"]]
+}
+```
+
+| Feld | Bedeutung |
+| --- | --- |
+| `seitensprachen` | ein Eintrag **je Seite** im Text (Anzahl = Seitenvorschübe + 1, sonst 422), höchstens 1000. Je Seite eine oder zwei Kennungen (`deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`): zwei für eine **Mischseite**, die erste ist die mit mehr Text. `null` oder `[]`: das DMS erkennt die Sprache der Seite selbst (z. B. für Seiten mit Text aus dem PDF). Leere Seiten sind erlaubt. |
+| `sprache` | optional die **Hauptsprache**; ohne Angabe die Sprache mit dem meisten Text (eine Mischseite zählt je zur Hälfte). |
+| `weitere` | optional, wenn das Paket die Seiten nicht kennt: weitere Sprachen fürs ganze Dokument. Der Suchindex nimmt dann den ganzen Text zusätzlich mit deren Wortstämmen. |
+| `seiten` | Seitenzahl; ohne Angabe die Zahl der Seiten im Text. |
+
+Was das DMS daraus macht:
+
+- **Text:** gespeichert wie bisher, Seiten durch eine Leerzeile getrennt (ohne `\f`). Wo jede Seite beginnt, merkt es sich getrennt.
+- **Hauptsprache und weitere Sprachen** am Dokument (`sprache`, `weitereSprachen`). Steht alles in einer Sprache, speichert es keine Seiten – das Dokument ist dann einsprachig wie bisher.
+- **Suchindex:** je Sprache die Seiten in ihren Wortstämmen (eine Mischseite in beiden).
+- **Hinweis „Post teilen?“** (`teilenAb` am Dokument): die erste Seite, deren Sprachen mit denen der Seite davor (mit Text) nichts gemeinsam haben. Eine Mischseite verbindet beide Seiten – kein Hinweis.
+
+Ohne `\f` und ohne `seitensprachen` gilt alles wie vor 0.139.0 (eine Sprache je Dokument). Ein Text mit `\f`, aber ohne `seitensprachen`, bekommt die Sprachen je Seite vom DMS (Erkennung aus dem Text wie bei PDFs mit Textebene).
+
+**Lesen:** `GET /dokumente/{id}/volltext` liefert dazu `weitereSprachen` und – wenn das DMS die Seiten kennt – `seiten: [{ "seite": 1, "sprachen": ["deu"], "text": "…" }, …]`. Das gilt bei mehrsprachigen Dokumenten und bei **gemischten PDFs** (`seitenOhneText`): Dort speichert der Kern die Seiten der Textebene schon vor der Texterkennung. Eine Texterkennung, die nur die Seiten ohne Text liest, setzt damit den ganzen Text in der richtigen Reihenfolge zusammen (Textseiten mit `null`, ihre erkannten Seiten an ihrer Stelle).
+
+**Sprache setzen:** `PUT /dokumente/{id}/sprache` mit `{ "sprache": "deu", "weitere": ["fra"] }` setzt Haupt- und weitere Sprachen fürs ganze Dokument (die Seitensprachen entfallen); ohne `weitere` bleiben die weiteren Sprachen. `DELETE /dokumente/{id}/teilen-hinweis` blendet den Hinweis „Post teilen?“ aus (Recht Bearbeiten an der Mappe).
+
+Ein Paket, das `seitensprachen` schickt, gibt `dms: ">=0.139.0"` an – ältere DMS-Versionen speichern den Seitenvorschub sonst im Text. Das Paket [Texterkennung](https://github.com/motom001/dms-registry/tree/main/pakete/texterkennung) ab 2.1.0 macht es so.
+
 ### Zusatzdaten aus anderen Paketen { #zusatzdaten }
 
 Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu.
@@ -496,6 +532,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 - `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.
 - `PUT /dokumente/{id}/fassung` und `PUT /dokumente/{id}/vorschaubild` – siehe [Dateien umwandeln](#dateien-umwandeln) (Recht `dms:umwandeln`).
 - `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab DMS 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
-- `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu.
+- `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch `weitere` – siehe [Sprachen je Seite](#seitensprachen).
+- Ab 0.139.0: `PUT /dokumente/{id}/volltext` mit Seiten (`\f`) und `seitensprachen`, `GET /dokumente/{id}/volltext` mit `seiten` – siehe [Sprachen je Seite](#seitensprachen).
 - `POST /dokumente/{id}/seiten`, `POST /dokumente/zusammenfuegen`, `PUT /dokumente/{id}/archivnummer` – Seiten teilen und zusammenfügen, Archivnummer setzen.
 - `GET /dokumente/{id}/schwaerzen` und `POST /dokumente/{id}/schwaerzen` mit `{ "bereiche": [{ "seite": 1, "x": 0.1, "y": 0.2, "b": 0.3, "h": 0.05 }], "begriffe": ["Mustermann"], "muster": ["iban"], "ziel": "kopie" }` – Stellen endgültig schwärzen (#392). Koordinaten relativ zur angezeigten Seite (0 bis 1, Ursprung oben links); `GET` liefert die Wörter mit Lage zum Selbst-Suchen. Ergebnis ist ein neues Dokument „… (geschwärzt)“ (Ereignis `dokument.hochgeladen`) oder mit `"ziel": "version"` eine neue Version.

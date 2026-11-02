@@ -161,6 +161,21 @@ Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, 
 
 Erkannter Text aus Scans ist nicht immer fehlerfrei – je besser die Vorlage, desto besser das Ergebnis.
 
+### Dokumente in mehreren Sprachen { #mehrere-sprachen }
+
+Nicht jedes Dokument ist einsprachig – etwa ein deutscher Brief der Gemeinde, dahinter das französische Schreiben einer Botschaft, oder ein Beipackzettel auf Deutsch und Englisch. Das DMS liest deshalb **jede Seite in ihrer Sprache**; eine Seite, auf der beides steht, liest die Texterkennung mit beiden Sprachen zugleich.
+
+Neben dem Volltext steht dann die Sprache mit dem meisten Text und die übrigen, zum Beispiel *Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch*. Die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) findet so beide Teile, auch gebeugte Wörter: „Botschaft“ ebenso wie „ambassade“ oder „ambassades“.
+
+Wechselt die Sprache mitten im Dokument ganz – Seite 1 Deutsch, ab Seite 2 nur Französisch –, ist das oft ein beigelegtes zweites Schreiben. An einer [Post](post.md) steht dann der Hinweis **„Ab Seite 2 beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt) – Post teilen?“**:
+
+- **Post teilen …** öffnet die [Seitenansicht](#pdf-bearbeiten) mit „Teilen ab hier“ an dieser Seite. Prüfe die Seiten und klicke **Übernehmen** – erst dann entstehen die neuen Posts. Du kannst den Vorschlag dort auch ändern oder **Abbrechen**.
+- **Hinweis ausblenden** – der Hinweis verschwindet, für alle und auf allen Geräten. Bekommt das Dokument später einen neuen Volltext (z. B. „Neu erzeugen“), prüft das DMS den Wechsel neu.
+
+Das DMS **teilt nie von selbst**. Den Hinweis gibt es nur bei PDFs und nur, wenn du die Post bearbeiten darfst. Eine Seite mit beiden Sprachen (etwa ein deutscher Brief mit einem französischen Absatz) gilt nicht als Wechsel.
+
+Wie gut die Sprachen erkannt werden, hängt am Paket Texterkennung und seinen Sprachen: Deutsch und Englisch sind immer dabei, für weitere Sprachen installiert dein Administrator Zusatzpakete (etwa „Texterkennung – Französisch“). Bei PDFs mit Textebene erkennt das DMS die Sprache je Seite selbst.
+
 ## Ähnliche Dokumente { #aehnliche-dokumente }
 
 Hat dein Administrator ein Paket wie **KI lokal – Ähnlichkeit** installiert, steht unter den Dokumenten einer Mappe **„Ähnliche Dokumente“**: bis zu fünf andere Mappen, deren Dokumente inhaltlich ähnlich sind – zum Beispiel zur Rechnung des Heizungsbauers die Mappe mit dem Wartungsvertrag der Gastherme. Hinter jeder Mappe stehen das ähnliche Dokument und wie ähnlich es ist (in Prozent). Du siehst nur Mappen, die du lesen darfst.

@@ -8,6 +8,7 @@ import type { AuskunftLink } from '../../shared/src/auskunft';
 import type { Fundstelle } from './geheimnisse';
 import type { LoeschDokument, LoeschEintrag, LoeschFilter } from '../../shared/src/loeschprotokoll';
 import type { Varianten } from '../../shared/src/suche';
+import type { Seitensprache } from '../../shared/src/seitensprachen';
 
 export interface Verweis { feldKey: string; zielId: string }
 /** Abruf-Link (#455) mit den Hashes von Schlüssel und Abrufcode – verlässt den Server nie. */
@@ -68,6 +69,12 @@ export interface OcrErgebnis {
   stand: OcrStandArt; text?: string | null; info?: string | null; seiten?: number | null;
   /** Sprache des Texts (#400, Tesseract-Kennung); undefined = unverändert lassen, null = keine (Deutsch). */
   sprache?: string | null;
+  /**
+   * Mehrere Sprachen (#579). Mit `text` gilt: fehlt es, sind weitere Sprachen und Seitensprachen danach leer (ein
+   * neuer Text hat neue Seiten); ohne `text` bleiben sie unverändert.
+   */
+  weitere?: string[] | null;
+  seitensprachen?: Seitensprache[] | null;
 }
 export type OcrZaehler = Record<OcrStandArt, number>;
 
@@ -416,9 +423,16 @@ export interface Repo {
   ocrNaechster(): Promise<Dokument | undefined>;
   ocrSetze(id: string, e: OcrErgebnis): Promise<void>;
   /** Fertiger Volltext eines anderen Dokuments mit derselben Datei. */
-  ocrVonSha(sha256: string, ausser: string): Promise<{ text: string; seiten: number | null; info: string | null; sprache?: string | null } | undefined>;
-  /** Sprache eines Dokuments setzen (#400); false, wenn es das Dokument nicht gibt. */
-  setzeDokumentSprache(id: string, sprache: string | null): Promise<boolean>;
+  ocrVonSha(sha256: string, ausser: string): Promise<{ text: string; seiten: number | null; info: string | null; sprache?: string | null; weitere?: string[] | null; seitensprachen?: Seitensprache[] | null } | undefined>;
+  /**
+   * Sprache eines Dokuments setzen (#400); false, wenn es das Dokument nicht gibt. Mit `weitere` (#579) auch die
+   * weiteren Sprachen – die Seitensprachen entfallen dann (die Angabe gilt fürs ganze Dokument).
+   */
+  setzeDokumentSprache(id: string, sprache: string | null, weitere?: string[]): Promise<boolean>;
+  /** Seitensprachen eines Dokuments (#579), null ohne. */
+  seitensprachen(id: string): Promise<Seitensprache[] | null>;
+  /** Hinweis „Post teilen?“ an einem Dokument wegklicken (#579); false, wenn es das Dokument nicht gibt. */
+  teilenHinweisAus(id: string): Promise<boolean>;
   /** Nach einem Neustart: „läuft“ → „wartet“. */
   ocrZurueckstellen(): Promise<number>;
   ocrZaehler(): Promise<OcrZaehler>;

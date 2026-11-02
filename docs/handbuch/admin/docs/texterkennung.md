@@ -72,9 +72,18 @@ Das DMS erkennt aus dem Text selbst, in welcher Sprache ein Dokument geschrieben
 
 Die erkannte Sprache steht **am Dokument** neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Sie ist ein eigenes Feld des Dokuments, und die **Volltextsuche nimmt die Wortstämme dieser Sprache**: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch.
 
-Das Paket **Texterkennung** nutzt dieselbe Erkennung bei *Sprache: Automatisch*: Es liest zuerst Deutsch, erkennt die Sprache und liest die Seite in der erkannten Sprache ein zweites Mal, wenn es eine andere ist und das Paket ihre Sprachdaten hat – das bessere Ergebnis gilt. Quer liegende oder auf dem Kopf stehende Seiten richtet es vorher auf.
+Das Paket **Texterkennung** nutzt dieselbe Erkennung bei *Sprache: Automatisch* – seit 2.1.0 für jede Seite einzeln: Es liest eine Seite zuerst in der Sprache der Seite davor (am Anfang Deutsch), erkennt die Sprache und liest die Seite in der erkannten Sprache ein zweites Mal, wenn es eine andere ist und das Paket ihre Sprachdaten hat – das bessere Ergebnis gilt. Quer liegende oder auf dem Kopf stehende Seiten richtet es vorher auf.
 
-Pakete und die [Schnittstelle](api.md) geben die Sprache mit dem Volltext an (`PUT /dokumente/{id}/volltext` mit `sprache`) oder setzen sie einzeln (`PUT /dokumente/{id}/sprache`, z. B. `{ "sprache": "fra" }`, `null` = keine Angabe). Das steht in der Historie der Mappe.
+### Dokumente in mehreren Sprachen { #mehrere-sprachen }
+
+Seit 0.139.0 hat ein Dokument nicht nur eine Sprache: Die Sprache steht **je Seite** fest, auf einer Mischseite auch zwei (etwa ein deutscher Brief mit beigelegtem französischem Schreiben, oder eine zweisprachige Bestätigung). Am Dokument steht dann die Sprache mit dem meisten Text und die übrigen: „Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch“. Die Suche nimmt **je Seite die Wortstämme ihrer Sprache** – „Beglaubigung“ findet die deutsche Seite, „ambassades“ die französische.
+
+- Bei **PDFs mit Textebene** erkennt das DMS die Sprache jeder Seite selbst (Absatz für Absatz; eine zweite Sprache zählt ab etwa einem Fünftel des Texts der Seite).
+- Bei **Scans** meldet das Paket **Texterkennung** ab 2.1.0 die Sprachen je Seite: Es liest jede Seite in ihrer Sprache (zweiter Durchgang, wenn die Sprache wechselt) und eine Mischseite mit beiden Sprachen zugleich, wenn das deutlich sicherer ist. Dafür braucht es die Sprachdaten (z. B. Zusatzpaket Französisch); ohne sie liest es die Seite auf Deutsch, die Suche nimmt trotzdem die Wortstämme der erkannten Sprache.
+- Wechselt die Sprache zwischen zwei Seiten ganz, zeigt die **Post** den Hinweis „Ab Seite 2 beginnt vermutlich ein eigenes Schreiben – Post teilen?“. Geteilt wird **nie von selbst**: Der Knopf öffnet nur die Seitenansicht mit dem Vorschlag; der Hinweis lässt sich für alle ausblenden.
+- **Bestand:** Vorhandene Dokumente behalten ihre eine Sprache und ihren Suchindex; das Update baut nichts neu auf (Migration 053 in Sekundenbruchteilen). Wer auch ältere Scans je Seite lesen lassen will, startet **Volltext neu erzeugen → Für alle Dokumente** (siehe unten; das dauert, je nach Menge, Stunden). PDFs mit Textebene bekommen ihre Seitensprachen damit in Sekunden.
+
+Pakete und die [Schnittstelle](api.md) geben die Sprache mit dem Volltext an (`PUT /dokumente/{id}/volltext` mit `sprache`) oder setzen sie einzeln (`PUT /dokumente/{id}/sprache`, z. B. `{ "sprache": "fra" }`, `null` = keine Angabe; seit 0.139.0 mit `weitere` auch die weiteren Sprachen). Das steht in der Historie der Mappe. Wie Pakete Sprachen je Seite melden, beschreibt das Entwicklerhandbuch (Pakete mit Code → Sprachen je Seite).
 
 ## Weitere Sprachen
 

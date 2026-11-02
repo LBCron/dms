@@ -56,6 +56,7 @@ import { geltenderStempel, liesStempelTyp, liesVorlagen, pruefeVorlage, stempelA
 import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestlauf, type SichtRegelwerk } from '../../shared/src/sichtrechte';
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
+import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
 import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
@@ -1167,7 +1168,11 @@ export class Dienst {
   async volltext(id: string) {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    return { dokument: d, text: await this.repo.volltext(id) };
+    const text = await this.repo.volltext(id);
+    // Seiten mit ihrer Sprache (#579), wenn das DMS sie kennt (mehrsprachig oder gemischtes PDF).
+    const s = text ? await this.repo.seitensprachen(id) : null;
+    const seiten = s && text ? seitentexte(text, s).map((t, i) => ({ seite: i + 1, sprachen: s[i].sprachen, text: t })) : null;
+    return { dokument: d, text, seiten };
   }
 
   /**
@@ -1188,14 +1193,35 @@ export class Dienst {
     // Aus der umgewandelten Fassung (#577): Das Paket hat die Fassung gelesen, nicht das Original.
     const fassung = !kernTyp(d.mime) ? await this.umwandlung?.info(d.sha256) : null;
     const info = ((von.paket ? `${PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200) + (fassung ? ` – ${infoFassung(fassung.paket)}` : '')).slice(0, 300);
-    const text = e.text.replace(/\u0000/g, '');
+    let text = e.text.replace(/\u0000/g, '');
     // Sprache (#400): angegeben (z. B. vom Paket Texterkennung) oder erkannt; sie bestimmt die Wortstämme der Suche.
     if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
     const angegeben = istTextsprache(e.sprache) ? e.sprache : null;
-    const sprache = angegeben ? { sprache: angegeben, konfidenz: 1 } : erkenneSprache(text);
-    const vermerk = angegeben ? `${SPRACHE_MARKE}${angegeben}` : sprache ? spracheZuInfo(sprache) : '';
+    // Sprache je Seite (#579): Seiten im Text durch Seitenvorschub (\f) getrennt, dazu je Seite ihre Sprache(n) –
+    // oder ohne Angabe erkennt das DMS sie. Gespeichert wird der Text wie bisher (Seiten mit Leerzeile getrennt).
+    const seitenAngabe = sprachlisten(e.seitensprachen);
+    const weitereAngabe = e.weitere === undefined || e.weitere === null ? undefined : sprachliste(e.weitere, 'weitere');
+    let mehr: { weitere?: string[]; seitensprachen?: Seitensprache[] } = {};
+    let haupt: string | null = null;
+    let seitenzahl = seiten;
+    if (seitenAngabe || text.includes(SEITENVORSCHUB)) {
+      const teile = text.split(SEITENVORSCHUB);
+      if (seitenAngabe && seitenAngabe.length !== teile.length) throw new Fachfehler(422, `seitensprachen: ${seitenAngabe.length} Einträge, der Text hat ${teile.length} Seiten (getrennt durch Seitenvorschub \\f).`);
+      if (teile.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, `Höchstens ${MAX_SEITENSPRACHEN} Seiten.`);
+      const z = seitenZusammensetzen(teile.map((t, i) => ({ text: t, sprachen: seitenAngabe?.[i] ?? null })));
+      text = z.text;
+      seitenzahl ??= teile.length;
+      const ds = dokumentsprachen(z.seiten, zeichenzahl(z.text));
+      haupt = angegeben ?? ds.sprache;
+      const alle = [ds.sprache, ...ds.weitere].filter((k): k is string => !!k && k !== haupt);
+      if (alle.length) mehr = { weitere: alle, seitensprachen: z.seiten };
+    } else if (weitereAngabe?.length) mehr = { weitere: weitereAngabe };
+    if (mehr.weitere && weitereAngabe) mehr.weitere = [...new Set([...mehr.weitere, ...weitereAngabe])];
+    const sprache = angegeben ? { sprache: angegeben, konfidenz: 1 } : haupt ? { sprache: haupt, konfidenz: 1 } : erkenneSprache(text);
+    if (mehr.weitere) mehr.weitere = mehr.weitere.filter((k) => k !== sprache?.sprache);
+    const vermerk = angegeben || haupt ? `${SPRACHE_MARKE}${sprache!.sprache}` : sprache ? spracheZuInfo(sprache) : '';
     try {
-      await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seiten ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null });
+      await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seitenzahl ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ...mehr });
     } catch (f) {
       if (!istVerklemmung(f)) throw f;
       // Auch nach den Wiederholungen nicht gespeichert (#575): sichtbar am Dokument, und der Absender erfährt es (503).
@@ -1207,7 +1233,7 @@ export class Dienst {
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
     // Das schreibende Paket bekommt sein eigenes Ergebnis nicht zurück (#458: sonst erkennte es endlos neu).
     const paketId = von.paket ? this.paketKonten.get(von.id) : undefined;
-    await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: fassung?.mime ?? d.mime, ...(fassung ? { original: d.mime } : {}), seiten: seiten ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);
+    await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: fassung?.mime ?? d.mime, ...(fassung ? { original: d.mime } : {}), seiten: seitenzahl ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -1218,11 +1244,21 @@ export class Dienst {
   async setzeDokumentSprache(id: string, eingabe: unknown, von: { id: string; wer: string }) {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    const s = ((eingabe ?? {}) as { sprache?: unknown }).sprache;
+    const x = (eingabe ?? {}) as { sprache?: unknown; weitere?: unknown };
+    const s = x.sprache;
     if (s !== null && !istTextsprache(s)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);
-    await this.repo.setzeDokumentSprache(id, s);
-    await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: `Sprache ${s ? sprachname(s) : 'ohne Angabe'} (${von.wer})` });
-    protokoll.modul('ablage').info('Sprache eines Dokuments gesetzt', { dokument: id, sprache: s });
+    // Weitere Sprachen (#579): ohne Angabe bleiben sie; mit Angabe gelten sie fürs ganze Dokument.
+    const weitere = x.weitere === undefined ? undefined : x.weitere === null ? [] : sprachliste(x.weitere, 'weitere').filter((k) => k !== s);
+    await this.repo.setzeDokumentSprache(id, s, weitere);
+    const auch = weitere?.length ? `, enthält auch ${weitere.map(sprachname).join(', ')}` : '';
+    await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: `Sprache ${s ? sprachname(s) : 'ohne Angabe'}${auch} (${von.wer})` });
+    protokoll.modul('ablage').info('Sprache eines Dokuments gesetzt', { dokument: id, sprache: s, ...(weitere ? { weitere } : {}) });
+    return (await this.repo.holeDokument(id))!;
+  }
+
+  /** Hinweis „Post teilen?“ wegklicken (#579): gilt für alle, bis das Dokument einen neuen Volltext bekommt. */
+  async teilenHinweisAus(id: string) {
+    if (!(await this.repo.teilenHinweisAus(id))) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     return (await this.repo.holeDokument(id))!;
   }
 
@@ -6602,4 +6638,16 @@ export class Dienst {
     await this.repo.beruehreMappe(mappeId, benutzerId);
     if (typ && /\{geaendert\}/.test(typ.titelVorlage ?? '')) await this.aktualisiereTitel([mappeId]);
   }
+}
+
+/** Liste von Sprachkennungen prüfen (#579): nur bekannte, ohne doppelte, höchstens alle Sprachen des DMS. */
+function sprachliste(x: unknown, feld: string, max = Object.keys(TEXTSPRACHEN).length): string[] {
+  if (!Array.isArray(x) || x.length > max || !x.every(istTextsprache)) throw new Fachfehler(422, `${feld}: Liste bekannter Sprachen erwartet (${Object.keys(TEXTSPRACHEN).join(', ')}), höchstens ${max}.`);
+  return [...new Set(x as string[])];
+}
+/** Seitensprachen eines Pakets (#579): je Seite null (das DMS erkennt sie) oder ein bis zwei Sprachen. */
+function sprachlisten(x: unknown): Array<string[] | null> | undefined {
+  if (x === undefined || x === null) return undefined;
+  if (!Array.isArray(x) || !x.length || x.length > MAX_SEITENSPRACHEN) throw new Fachfehler(422, `seitensprachen: Liste mit einem Eintrag je Seite erwartet (höchstens ${MAX_SEITENSPRACHEN}).`);
+  return x.map((e, i) => (e === null ? null : sprachliste(e, `seitensprachen[${i}]`, SPRACHEN_JE_SEITE)));
 }

@@ -2,6 +2,7 @@ import type postgres from 'postgres';
 import { AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, type Varianten } from '../../shared/src/suche';
 import { alsText } from '../../shared/src/markdown';
 import { SPRACHE_MARKE, SPRACHE_SQL_MUSTER, spracheAusInfo, suchkonfig } from '../../shared/src/textsprache';
+import { alsSeitensprachen, teilenAb } from '../../shared/src/seitensprachen';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
 import type { Filter, Klausel, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ausdruck, Lesefilter } from '../../shared/src/rechte';
@@ -87,6 +88,9 @@ const alsDokument = (r: Zeile): Dokument => ({
   archivnummer: (r.archivnummer as string | null) ?? null,
   // Sprache (#400): eigenes Feld; ältere Dokumente nennen sie nur im Hinweis der Texterkennung (#395).
   sprache: (r.sprache as string | null | undefined) ?? (r.ocr_stand === 'fertig' ? spracheAusInfo(r.ocr_info as string | null)?.sprache ?? null : null),
+  // Mehrere Sprachen (#579): weitere Sprachen und der Hinweis „Post teilen?“ aus den Seitensprachen.
+  weitereSprachen: (r.weitere_sprachen as string[] | null | undefined) ?? [],
+  teilenAb: r.teilen_hinweis_aus ? null : teilenAb(alsSeitensprachen(r.seitensprachen)),
   ocr: {
     stand: ((r.ocr_stand as OcrStandArt | null) ?? 'keiner'),
     info: (r.ocr_info as string | null) ?? null,
@@ -103,13 +107,13 @@ const alsDokument = (r: Zeile): Dokument => ({
  * sein und wird nur über `volltext()`/`volltexte()` gelesen, nie in Listen.
  */
 export const DOKUMENT_SPALTEN = ['id', 'haushalt_id', 'mappe_id', 'register_key', 'name', 'mime', 'groesse', 'sha256', 'anzeigbar', 'erstellt', 'erstellt_von',
-  'ocr_stand', 'ocr_info', 'ocr_seiten', 'ocr_zeit', 'version', 'herkunft', 'archivnummer', 'sprache'] as const;
+  'ocr_stand', 'ocr_info', 'ocr_seiten', 'ocr_zeit', 'version', 'herkunft', 'archivnummer', 'sprache', 'weitere_sprachen', 'seitensprachen', 'teilen_hinweis_aus'] as const;
 /**
  * ANALYZE (#367) für Tabellen mit Volltext nur über diese Spalten: Ohne Spaltenliste rechnet PostgreSQL
  * auch die Statistik des Index `to_tsvector('german', volltext)` – über eine Minute bei 20.000 Dokumenten.
  */
 export const STATISTIK_SPALTEN: Record<string, string> = {
-  dokumente: 'id, haushalt_id, mappe_id, register_key, sha256, erstellt, erstellt_von, ocr_stand, archivnummer',
+  dokumente: 'id, haushalt_id, mappe_id, register_key, sha256, erstellt, erstellt_von, ocr_stand, archivnummer, weitere_sprachen',
   dokument_versionen: 'dokument_id, haushalt_id, sha256',
 };
 /** Spalten einer älteren Version ohne `volltext`. */
@@ -398,7 +402,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
   const SUCHINDEX = sql.unsafe(SUCHINDEX_TEXT);
   /**
    * Suchkonfigurationen der Sprachen, die in der Ablage vorkommen (#400): Deutsch immer, dazu die der Dokumente.
-   * Eine Minute gemerkt; neu, sobald eine Sprache gesetzt wird. Lockerer Indexlauf über (haushalt_id, sprache).
+   * Eine Minute gemerkt; neu, sobald eine Sprache gesetzt wird. Lockerer Indexlauf über (haushalt_id, sprache), dazu
+   * die weiteren Sprachen mehrsprachiger Dokumente (#579, Teilindex – nur diese wenigen Zeilen).
    */
   let sprachenZwischen: { zeit: number; konfigs: Promise<string[]> } | null = null;
   const sprachKonfigs = () => {
@@ -408,7 +413,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           (SELECT sprache FROM dokumente WHERE haushalt_id = ${haushaltId} AND sprache IS NOT NULL ORDER BY sprache LIMIT 1)
           UNION ALL
           SELECT (SELECT d.sprache FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.sprache > s.sprache ORDER BY d.sprache LIMIT 1) FROM s WHERE s.sprache IS NOT NULL)
-        SELECT sprache FROM s WHERE sprache IS NOT NULL`
+        SELECT sprache FROM s WHERE sprache IS NOT NULL
+        UNION
+        SELECT DISTINCT unnest(weitere_sprachen) FROM dokumente WHERE haushalt_id = ${haushaltId} AND weitere_sprachen IS NOT NULL`
         .then((r) => [...new Set(['dms_german', ...r.map((z) => suchkonfig(z.sprache as string))])], () => ['dms_german']) };
     }
     return sprachenZwischen.konfigs;
@@ -871,9 +878,10 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         }
       }
       if (!fund.volltext) return { gesamt: n as number, mappen, ausschnitte };
-      // Fundstellen im Volltext: je Mappe das Dokument mit dem besten Treffer, Wortstämme in der Sprache des Dokuments.
+      // Fundstellen im Volltext: je Mappe das Dokument mit dem besten Treffer, Wortstämme in der Sprache des Dokuments
+      // (bei mehrsprachigen in der Sprache, in der die Anfrage trifft, #579).
       const a = await sql`
-        SELECT DISTINCT ON (d.mappe_id) d.mappe_id, d.name, ts_headline(dms_konfig(d.sprache), d.volltext, x.q, ${AUSSCHNITT}::text) AS text
+        SELECT DISTINCT ON (d.mappe_id) d.mappe_id, d.name, dms_ausschnitt(d.sprache, d.weitere_sprachen, d.volltext, x.q, ${AUSSCHNITT}::text) AS text
         FROM dokumente d CROSS JOIN LATERAL (SELECT ${anfragen.get(fund.text) ?? (await tsAnfrage(fund.text, v)).q} AS q) x
         WHERE d.haushalt_id = ${haushaltId} AND d.mappe_id = ANY(${mappen.map((m) => m.id)}::uuid[])
           AND ${SUCHINDEX} @@ x.q
@@ -1095,7 +1103,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           UPDATE dokumente SET name = ${neu.name}, mime = ${neu.mime}, groesse = ${neu.groesse}, sha256 = ${neu.sha256}, anzeigbar = ${neu.anzeigbar},
             erstellt = now(), erstellt_von = ${neu.erstelltVon}, herkunft = ${neu.herkunft}, version = ${nummer + 1},
             volltext = ${uebernehmen ? neu.volltext ?? null : null}, ocr_stand = ${uebernehmen && neu.volltext != null ? 'fertig' : 'keiner'},
-            ocr_info = NULL, ocr_seiten = NULL, ocr_zeit = ${uebernehmen && neu.volltext != null ? sql`now()` : null}
+            ocr_info = NULL, ocr_seiten = NULL, ocr_zeit = ${uebernehmen && neu.volltext != null ? sql`now()` : null},
+            weitere_sprachen = NULL, seitensprachen = NULL, teilen_hinweis_aus = NULL
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING ${DOK_RUECK}, (SELECT count(*) FROM dokument_versionen v WHERE v.dokument_id = ${id}) AS aeltere`;
         return alsDokument(r);
@@ -1419,25 +1428,43 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       await beiVerklemmungWiederholen(() => sql.begin((tx) => tx`
         UPDATE dokumente SET ocr_stand = ${e.stand}, ocr_info = ${e.info ?? null}, ocr_seiten = ${e.seiten ?? null}, ocr_zeit = now()
           ${e.text !== undefined ? tx`, volltext = ${e.text}` : tx``}${e.sprache !== undefined ? tx`, sprache = ${e.sprache}` : tx``}
+          ${e.text !== undefined || e.weitere !== undefined ? tx`, weitere_sprachen = ${e.weitere?.length ? e.weitere : null}` : tx``}
+          ${e.text !== undefined || e.seitensprachen !== undefined ? tx`, seitensprachen = ${e.seitensprachen?.length ? tx.json(e.seitensprachen as unknown as postgres.JSONValue) : null}, teilen_hinweis_aus = NULL` : tx``}
         WHERE haushalt_id = ${haushaltId} AND id = ${id}`), {
         nochmal: (versuch, f) => log.warn('Volltext speichern: Datenbank hat abgebrochen, neuer Versuch', { dokument: id, versuch, fehler: (f as Error).message }),
       });
-      if (e.sprache) sprachenZwischen = null;
+      if (e.sprache || e.weitere?.length) sprachenZwischen = null;
     },
     async ocrVonSha(sha256, ausser) {
       const [r] = await sql`
-        SELECT volltext, ocr_seiten, ocr_info, sprache FROM dokumente
+        SELECT volltext, ocr_seiten, ocr_info, sprache, weitere_sprachen, seitensprachen FROM dokumente
         WHERE haushalt_id = ${haushaltId} AND sha256 = ${sha256} AND id IS DISTINCT FROM ${istUuid(ausser) ? ausser : null}::uuid AND ocr_stand = 'fertig' AND volltext IS NOT NULL
         LIMIT 1`;
-      return r ? { text: r.volltext as string, seiten: (r.ocr_seiten as number | null) ?? null, info: (r.ocr_info as string | null) ?? null, sprache: (r.sprache as string | null) ?? null } : undefined;
+      return r ? { text: r.volltext as string, seiten: (r.ocr_seiten as number | null) ?? null, info: (r.ocr_info as string | null) ?? null, sprache: (r.sprache as string | null) ?? null,
+        weitere: (r.weitere_sprachen as string[] | null) ?? null, seitensprachen: alsSeitensprachen(r.seitensprachen) } : undefined;
     },
-    async setzeDokumentSprache(id, sprache) {
+    async setzeDokumentSprache(id, sprache, weitere) {
       if (!istUuid(id)) return false;
       // Der Hinweis der Texterkennung nennt danach dieselbe Sprache (ältere Dokumente lesen sie nur von dort).
+      // Weitere Sprachen (#579): ohne Angabe bleiben sie (ohne die neue Hauptsprache); mit Angabe gelten sie fürs
+      // ganze Dokument, die Seitensprachen entfallen.
       const r = await sql`UPDATE dokumente SET sprache = ${sprache},
-          ocr_info = CASE WHEN ocr_info IS NULL THEN NULL ELSE regexp_replace(ocr_info, ${SPRACHE_INFO_SQL}, '') || coalesce(${SPRACHE_MARKE} || ${sprache}::text, '') END
+          ocr_info = CASE WHEN ocr_info IS NULL THEN NULL ELSE regexp_replace(ocr_info, ${SPRACHE_INFO_SQL}, '') || coalesce(${SPRACHE_MARKE} || ${sprache}::text, '') END,
+          ${weitere !== undefined
+            ? sql`weitere_sprachen = ${weitere.length ? weitere : null}, seitensprachen = NULL, teilen_hinweis_aus = NULL`
+            : sql`weitere_sprachen = nullif(array_remove(weitere_sprachen, ${sprache}::text), '{}')`}
         WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
       if (r.count) sprachenZwischen = null;
+      return r.count > 0;
+    },
+    async seitensprachen(id) {
+      if (!istUuid(id)) return null;
+      const [r] = await sql`SELECT seitensprachen FROM dokumente WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      return r ? alsSeitensprachen(r.seitensprachen) : null;
+    },
+    async teilenHinweisAus(id) {
+      if (!istUuid(id)) return false;
+      const r = await sql`UPDATE dokumente SET teilen_hinweis_aus = true WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
       return r.count > 0;
     },
     async ocrZurueckstellen() {
@@ -1586,7 +1613,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
           FROM dokumente d JOIN mappen ON mappen.id = d.mappe_id AND mappen.haushalt_id = ${haushaltId} CROSS JOIN LATERAL (SELECT ${anfrage} AS q) x
           WHERE d.haushalt_id = ${haushaltId} AND ${SUCHINDEX} @@ x.q ${lesen}
           ORDER BY rang DESC, d.id LIMIT ${o.dokumente})
-        SELECT b.id, b.mappe_id, b.name, b.rang, ts_headline(dms_konfig(d.sprache), d.volltext, ${anfrage},
+        SELECT b.id, b.mappe_id, b.name, b.rang, dms_ausschnitt(d.sprache, d.weitere_sprachen, d.volltext, ${anfrage},
           'MaxFragments=3, MaxWords=40, MinWords=15, ShortWord=2, StartSel="", StopSel="", FragmentDelimiter=" … "') AS text
         FROM beste b JOIN dokumente d ON d.id = b.id ORDER BY b.rang DESC, b.id`;
       const muster = woerter.map((w) => `%${w}%`);

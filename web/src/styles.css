@@ -667,6 +667,9 @@ input.kurz { width: 7em; }
 .fundstelle mark { background: var(--warn-zart); color: var(--tinte); border-radius: 2px; padding: 0 1px; }
 /* Stand der Texterkennung am Dokument */
 .ocrstand { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* Mehrere Sprachen (#579) machen den Stand länger: am Handy umbrechen statt abschneiden. */
+.ocrstand > .chip { white-space: normal; }
+.teilenhinweis p { flex: 1 1 16em; }
 .volltext { white-space: pre-wrap; max-height: 260px; overflow: auto; font-size: calc(12px * var(--skala, 1)); background: var(--senke); border: 1px solid var(--linie); border-radius: 6px; padding: 8px 10px; margin: 6px 0 0; }
 
 /* Fester Listenkopf (#50): Kopf, Suche und Trefferzahl stehen, nur der Listenrumpf rollt. */

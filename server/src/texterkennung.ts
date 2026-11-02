@@ -6,6 +6,7 @@ import type { Readable } from 'node:stream';
 import { OCR_STAENDE, type Dokument, type OcrStandArt } from '../../shared/src/model';
 import { PAKET_TEXT } from '../../shared/src/pakete';
 import { erkenneSprache, istTextsprache, spracheZuInfo } from '../../shared/src/textsprache';
+import { dokumentsprachen, seitenZusammensetzen, zeichenzahl } from '../../shared/src/seitensprachen';
 import type { Dateispeicher } from './dateispeicher';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
@@ -108,7 +109,7 @@ export async function pruefeWerkzeuge(): Promise<Werkzeuge> {
  * Text eines Dokuments (Datei liegt unter pfad): bei PDFs die Textebene. `ohneText` (#458): Seiten (ab 1) ohne
  * nennenswerten Text – die erkennt das Paket. Bilder haben keine Textebene: alle Seiten ohne Text.
  */
-export type Engine = (pfad: string, mime: string, o: { maxSeiten: number; werkzeuge: Werkzeuge; signal?: AbortSignal }) => Promise<{ text: string; seiten: number; info: string; ohneText?: number[] }>;
+export type Engine = (pfad: string, mime: string, o: { maxSeiten: number; werkzeuge: Werkzeuge; signal?: AbortSignal }) => Promise<{ text: string; seiten: number; info: string; ohneText?: number[]; /** Text je Seite (#579), wie `text` ihn zusammensetzt. */ seitenTexte?: string[] }>;
 
 const sauber = (t: string) => t.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 /** Seite mit nennenswertem Text (sonst: gescannt). */
@@ -131,7 +132,9 @@ export const textebeneEngine: Engine = async (pfad, mime, o) => {
     texte.push(t);
   }
   const gekuerzt = gesamt > seiten ? ` – nur die ersten ${seiten} von ${gesamt} Seiten` : '';
-  return { text: sauber(texte.join('\n\n')), seiten, info: INFO_TEXTEBENE + gekuerzt, ohneText };
+  // Je Seite bereinigt und mit Leerzeile verbunden; die Seiten braucht die Sprache je Seite (#579).
+  const seitenTexte = texte.map(sauber);
+  return { text: seitenZusammensetzen(seitenTexte.map((text) => ({ text })), false).text, seiten, info: INFO_TEXTEBENE + gekuerzt, ohneText, seitenTexte };
 };
 
 /* ---------- Warteschlange ---------- */
@@ -341,11 +344,24 @@ export class Texterkennung {
       if (signal?.aborted) throw new Error('abgebrochen');
       const r = await this.engine(pfad, d.mime, { maxSeiten: MAX_SEITEN, werkzeuge: await this.werkzeugeLaden(), signal });
       // Erkannte Sprache am Ende des Hinweises (#395) – für Anzeige und Statistik.
-      const sprache = erkenneSprache(r.text);
+      let sprache = erkenneSprache(r.text);
       // Aus der umgewandelten Fassung (#577): steht vor der Sprache im Hinweis.
       const herkunft = fassung ? ` – ${infoFassung(fassung.info.paket)}` : '';
+      // Sprache je Seite (#579): Wechselt sie zwischen den Seiten (oder steht eine Seite in zwei Sprachen), gilt die
+      // mit dem meisten Text als Hauptsprache, die anderen als „enthält auch“; der Suchindex nimmt je Seite ihre
+      // Wortstämme. Bei gemischten PDFs (gescannte Seiten erkennt das Paket) bleiben die Seiten auch einsprachig
+      // gespeichert – das Paket setzt den Text damit in der richtigen Reihenfolge zusammen.
+      let mehr: Pick<OcrErgebnis, 'weitere' | 'seitensprachen'> = {};
+      if (r.seitenTexte && r.seitenTexte.length > 1) {
+        const z = seitenZusammensetzen(r.seitenTexte.map((text) => ({ text })));
+        const ds = dokumentsprachen(z.seiten, zeichenzahl(z.text));
+        if (z.text === r.text && (ds.mehrsprachig || (r.ohneText?.length && hatText(r.text)))) {
+          mehr = { weitere: ds.weitere, seitensprachen: z.seiten };
+          if (ds.mehrsprachig && ds.sprache) sprache = { sprache: ds.sprache, konfidenz: sprache?.sprache === ds.sprache ? sprache.konfidenz : 1, schrift: sprache?.schrift ?? 'latein' };
+        }
+      }
       // Sprache als eigenes Feld (#400): Die Volltextsuche nimmt die Wortstämme dieser Sprache.
-      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + herkunft + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ohneText: r.ohneText ?? [] };
+      return { stand: 'fertig', text: r.text, seiten: r.seiten, info: r.info + herkunft + (sprache ? spracheZuInfo(sprache) : ''), sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ...mehr, ohneText: r.ohneText ?? [] };
     } finally { await rm(dir, { recursive: true, force: true }); }
   }
 
@@ -358,14 +374,14 @@ export class Texterkennung {
     const wartet: OcrErgebnis = { stand: 'paket', info: infoWartet(paket), seiten: d.ocr?.seiten ?? null };
     // Gleiche Datei schon mit Text (auch von der früheren eingebauten Texterkennung oder einem Paket): übernehmen.
     const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
-    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null };
+    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
     if (d.mime !== 'application/pdf') return wartet;
     const r = await this.lese(d, signal, fassung);
     // Gemischt (Text und gescannte Seiten): wartet auch auf das Paket – es erkennt nur die Seiten ohne Text. „Neu“ ohne
     // Paket ändert nichts: Der Text aus dem PDF gilt.
     const ohne = (r as OcrErgebnis & { ohneText?: number[] }).ohneText ?? [];
     if (r.text && hatText(r.text) && !ohne.length && (!neu || !paket)) return r;
-    return { ...wartet, seiten: r.seiten ?? null, ...(r.text && hatText(r.text) ? { text: r.text, sprache: r.sprache, ohneText: ohne } : {}) } as OcrErgebnis;
+    return { ...wartet, seiten: r.seiten ?? null, ...(r.text && hatText(r.text) ? { text: r.text, sprache: r.sprache, weitere: r.weitere, seitensprachen: r.seitensprachen, ohneText: ohne } : {}) } as OcrErgebnis;
   }
 
   /**

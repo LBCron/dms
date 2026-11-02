@@ -756,9 +756,17 @@ export interface Dokument {
   archivnummer?: string | null;
   /**
    * Sprache des Volltexts (#400), Tesseract-Kennung wie „fra“: erkannt oder über die API gesetzt; ohne Angabe
-   * Deutsch. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
+   * Deutsch. Die Volltextsuche nimmt die Wortstämme dieser Sprache. Bei mehrsprachigen Dokumenten (#579) die
+   * Hauptsprache – die mit dem meisten Text.
    */
   sprache?: string | null;
+  /** Weitere Sprachen im Dokument (#579, „enthält auch“), nach Textmenge; leer bei einsprachigen. */
+  weitereSprachen?: string[];
+  /**
+   * Hinweis „Post teilen?“ (#579): ab dieser Seite beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt
+   * zwischen zwei Seiten ganz). null: kein Wechsel oder Hinweis weggeklickt.
+   */
+  teilenAb?: number | null;
 }
 
 /** Herkunft einer Dokumentversion (#194). */

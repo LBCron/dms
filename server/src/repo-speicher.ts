@@ -8,6 +8,7 @@ import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type Werte } from '../../shared/src/model';
 import { alsText } from '../../shared/src/markdown';
 import { SPRACHE_MARKE, spracheAusInfo } from '../../shared/src/textsprache';
+import { teilenAb, type Seitensprache } from '../../shared/src/seitensprachen';
 import { ausschnittAus } from './repo-pg';
 import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, woerterIn, type Varianten } from '../../shared/src/suche';
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
@@ -36,6 +37,8 @@ export function speicherRepo(): Repo {
   };
   const verweise = new Map<string, Verweis[]>();
   const dokumente = new Map<string, Dokument>();
+  /** Seitensprachen je Dokument (#579). */
+  const seitenSpr = new Map<string, Seitensprache[]>();
   /** Ältere Versionen (#194) je Dokument, aufsteigend. */
   type V = DokumentVersion & { volltext: string | null };
   const versionen = new Map<string, V[]>();
@@ -463,7 +466,8 @@ export function speicherRepo(): Repo {
       }]);
       const uebernehmen = neu.volltext !== undefined && neu.volltext !== null;
       texte.set(id, uebernehmen ? neu.volltext! : null);
-      const d: Dokument = { ...alt, name: neu.name, mime: neu.mime, groesse: neu.groesse, sha256: neu.sha256, anzeigbar: neu.anzeigbar, erstellt: jetzt(), erstelltVon: neu.erstelltVon, herkunft: neu.herkunft, version: nummer + 1, ocr: { stand: uebernehmen ? 'fertig' : 'keiner' } };
+      const d: Dokument = { ...alt, name: neu.name, mime: neu.mime, groesse: neu.groesse, sha256: neu.sha256, anzeigbar: neu.anzeigbar, erstellt: jetzt(), erstelltVon: neu.erstelltVon, herkunft: neu.herkunft, version: nummer + 1, ocr: { stand: uebernehmen ? 'fertig' : 'keiner' }, weitereSprachen: [], teilenAb: null };
+      seitenSpr.delete(id);
       dokumente.set(id, d);
       return { ...kopie(d), aeltere: versionen.get(id)!.length };
     },
@@ -493,17 +497,31 @@ export function speicherRepo(): Repo {
       d.ocr = { stand: e.stand, info: e.info ?? null, seiten: e.seiten ?? null, zeit: jetzt() };
       if (e.text !== undefined) texte.set(id, e.text);
       if (e.sprache !== undefined) d.sprache = e.sprache;
+      if (e.text !== undefined || e.weitere !== undefined) d.weitereSprachen = e.weitere ?? [];
+      if (e.text !== undefined || e.seitensprachen !== undefined) {
+        if (e.seitensprachen?.length) seitenSpr.set(id, e.seitensprachen); else seitenSpr.delete(id);
+        d.teilenAb = teilenAb(e.seitensprachen);
+      }
     },
-    async setzeDokumentSprache(id, sprache) {
+    async setzeDokumentSprache(id, sprache, weitere) {
       const d = dokumente.get(id);
       if (!d) return false;
       d.sprache = sprache;
+      if (weitere !== undefined) { d.weitereSprachen = weitere; seitenSpr.delete(id); d.teilenAb = null; }
+      else d.weitereSprachen = (d.weitereSprachen ?? []).filter((k) => k !== sprache);
       if (d.ocr?.info) d.ocr = { ...d.ocr, info: d.ocr.info.replace(/ · Sprache: [a-z_]{3,10}( \(\d{1,3} %\))?/, '') + (sprache ? `${SPRACHE_MARKE}${sprache}` : '') };
       return true;
     },
     async ocrVonSha(sha, ausser) {
       const d = [...dokumente.values()].find((x) => x.sha256 === sha && x.id !== ausser && x.ocr?.stand === 'fertig' && texte.get(x.id) != null);
-      return d ? { text: texte.get(d.id)!, seiten: d.ocr?.seiten ?? null, info: d.ocr?.info ?? null, sprache: d.sprache ?? null } : undefined;
+      return d ? { text: texte.get(d.id)!, seiten: d.ocr?.seiten ?? null, info: d.ocr?.info ?? null, sprache: d.sprache ?? null, weitere: d.weitereSprachen ?? null, seitensprachen: seitenSpr.get(d.id) ?? null } : undefined;
+    },
+    async seitensprachen(id) { return seitenSpr.get(id) ?? null; },
+    async teilenHinweisAus(id) {
+      const d = dokumente.get(id);
+      if (!d) return false;
+      d.teilenAb = null;
+      return true;
     },
     async ocrZurueckstellen() {
       let n = 0;
