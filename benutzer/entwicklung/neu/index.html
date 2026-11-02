@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0116" class="md-skip">
+        <a href="#neu-in-version-0117" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,22 +419,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01160" class="md-nav__link">
+  <a href="#01170" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.116.0
+        0.117.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.116.0">
+    <nav class="md-nav" aria-label="0.117.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technik
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
       
     </span>
   </a>
@@ -1138,22 +1160,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01160" class="md-nav__link">
+  <a href="#01170" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.116.0
+        0.117.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.116.0">
+    <nav class="md-nav" aria-label="0.117.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Technik
+        Geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
       
     </span>
   </a>
@@ -1196,22 +1240,30 @@
   
 
 
-<h1 id="neu-in-version-0116">Neu in Version 0.116<a class="headerlink" href="#neu-in-version-0116" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0117">Neu in Version 0.117<a class="headerlink" href="#neu-in-version-0117" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01160">0.116.0<a class="headerlink" href="#01160" title="Permanent link">&para;</a></h2>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<h2 id="01170">0.117.0<a class="headerlink" href="#01170" title="Permanent link">&para;</a></h2>
+<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Sprachdateien für Oberfläche und Server</strong> (#473, Mehrsprachigkeit Stufe 1): Texte stehen jetzt in <code>shared/src/sprachen/de/&lt;bereich&gt;.json</code> statt im Code, mit Platzhaltern und Mehrzahl („1 Stunde“ / „2 Stunden“). Sichtbar ändert sich nichts – du siehst weiter Deutsch mit „du“.</li>
-<li>Umgestellt sind die Anmeldung (Anmelden, Passwort vergessen, Bestätigungscode, Passwort festlegen), ihre Fehlermeldungen, die E-Mails zum Zugang und die Texte für Dritte (Auskunft, Abrufseite, E-Mails an Mieter und Kunden).</li>
-<li>Neue Prüfung in der CI: fehlende und ungenutzte Schlüssel, abweichende Platzhalter zwischen den Sprachen.</li>
-<li>Ab jetzt gilt: Wer einen Text neu schreibt oder ändert, legt ihn in der Sprachdatei ab. Anleitung im Entwicklerhandbuch unter <em>Aufbau → Texte und Sprachdateien</em>.</li>
+<li><strong>Werkbank nach Aufgaben geordnet</strong> (#354): Links stehen jetzt sechs Gruppen – <strong>Ablage aufbauen</strong>, <strong>Benutzer und Sicherheit</strong>, <strong>Post und Eingänge</strong>, <strong>Daten sichern</strong>, <strong>Einstellungen</strong> und <strong>Wartung und Fehlersuche</strong>. Jede Einstellung hat genau einen Ort.</li>
+<li><strong>Benachrichtigungen und Aufgaben</strong> unter <em>Einstellungen</em> fasst die Tägliche Zusammenfassung und alle offenen Aufgaben zusammen (früher <em>Benutzer und Zusammenarbeit → Aufgaben</em>).</li>
+<li><em>Verschlüsselung</em> steht unter <em>Benutzer und Sicherheit</em>, <em>Papierkorb</em> unter <em>Daten sichern</em>, <em>Postfächer</em>, <em>Eingangsordner</em>, <em>WebDAV-Laufwerk</em> und <em>Texterkennung</em> unter <em>Post und Eingänge</em>, <em>Technik</em> unter <em>Einstellungen</em>.</li>
+<li>Adressen, Lesezeichen und deine Auswahl unter <em>Werkbank anpassen</em> gelten unverändert weiter; die Vorlagen <em>Haushalt</em>, <em>Betrieb</em> und <em>Alles</em> zeigen dieselben Bereiche wie bisher.</li>
+</ul>
+<h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Am Handy fehlten in der Werkbank unter der gewählten Gruppe die Bereiche – jetzt gehst du wieder in Schritten: Gruppe, Bereich, Eintrag, mit Zurück.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch: Navigation folgt den Gruppen der Werkbank; Glossar-Frage Nr. 10 entschieden (die Gruppe heißt weiter <em>Wartung und Fehlersuche</em>).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.115.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.115.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.116.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.116.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
