@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.138/texterkennung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.139/texterkennung/">
       
       
         <link rel="prev" href="../webdav/">
@@ -1381,6 +1381,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sprache automatisch erkennen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mehrere-sprachen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dokumente in mehreren Sprachen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2510,6 +2527,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Sprache automatisch erkennen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mehrere-sprachen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dokumente in mehreren Sprachen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2688,8 +2722,16 @@
 <h2 id="sprache-automatisch-erkennen">Sprache automatisch erkennen<a class="headerlink" href="#sprache-automatisch-erkennen" title="Permanent link">&para;</a></h2>
 <p>Das DMS erkennt aus dem Text selbst, in welcher Sprache ein Dokument geschrieben ist – offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.</p>
 <p>Die erkannte Sprache steht <strong>am Dokument</strong> neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Sie ist ein eigenes Feld des Dokuments, und die <strong>Volltextsuche nimmt die Wortstämme dieser Sprache</strong>: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch.</p>
-<p>Das Paket <strong>Texterkennung</strong> nutzt dieselbe Erkennung bei <em>Sprache: Automatisch</em>: Es liest zuerst Deutsch, erkennt die Sprache und liest die Seite in der erkannten Sprache ein zweites Mal, wenn es eine andere ist und das Paket ihre Sprachdaten hat – das bessere Ergebnis gilt. Quer liegende oder auf dem Kopf stehende Seiten richtet es vorher auf.</p>
-<p>Pakete und die <a href="../api/">Schnittstelle</a> geben die Sprache mit dem Volltext an (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder setzen sie einzeln (<code>PUT /dokumente/{id}/sprache</code>, z. B. <code>{ "sprache": "fra" }</code>, <code>null</code> = keine Angabe). Das steht in der Historie der Mappe.</p>
+<p>Das Paket <strong>Texterkennung</strong> nutzt dieselbe Erkennung bei <em>Sprache: Automatisch</em> – seit 2.1.0 für jede Seite einzeln: Es liest eine Seite zuerst in der Sprache der Seite davor (am Anfang Deutsch), erkennt die Sprache und liest die Seite in der erkannten Sprache ein zweites Mal, wenn es eine andere ist und das Paket ihre Sprachdaten hat – das bessere Ergebnis gilt. Quer liegende oder auf dem Kopf stehende Seiten richtet es vorher auf.</p>
+<h3 id="mehrere-sprachen">Dokumente in mehreren Sprachen<a class="headerlink" href="#mehrere-sprachen" title="Permanent link">&para;</a></h3>
+<p>Seit 0.139.0 hat ein Dokument nicht nur eine Sprache: Die Sprache steht <strong>je Seite</strong> fest, auf einer Mischseite auch zwei (etwa ein deutscher Brief mit beigelegtem französischem Schreiben, oder eine zweisprachige Bestätigung). Am Dokument steht dann die Sprache mit dem meisten Text und die übrigen: „Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch“. Die Suche nimmt <strong>je Seite die Wortstämme ihrer Sprache</strong> – „Beglaubigung“ findet die deutsche Seite, „ambassades“ die französische.</p>
+<ul>
+<li>Bei <strong>PDFs mit Textebene</strong> erkennt das DMS die Sprache jeder Seite selbst (Absatz für Absatz; eine zweite Sprache zählt ab etwa einem Fünftel des Texts der Seite).</li>
+<li>Bei <strong>Scans</strong> meldet das Paket <strong>Texterkennung</strong> ab 2.1.0 die Sprachen je Seite: Es liest jede Seite in ihrer Sprache (zweiter Durchgang, wenn die Sprache wechselt) und eine Mischseite mit beiden Sprachen zugleich, wenn das deutlich sicherer ist. Dafür braucht es die Sprachdaten (z. B. Zusatzpaket Französisch); ohne sie liest es die Seite auf Deutsch, die Suche nimmt trotzdem die Wortstämme der erkannten Sprache.</li>
+<li>Wechselt die Sprache zwischen zwei Seiten ganz, zeigt die <strong>Post</strong> den Hinweis „Ab Seite 2 beginnt vermutlich ein eigenes Schreiben – Post teilen?“. Geteilt wird <strong>nie von selbst</strong>: Der Knopf öffnet nur die Seitenansicht mit dem Vorschlag; der Hinweis lässt sich für alle ausblenden.</li>
+<li><strong>Bestand:</strong> Vorhandene Dokumente behalten ihre eine Sprache und ihren Suchindex; das Update baut nichts neu auf (Migration 053 in Sekundenbruchteilen). Wer auch ältere Scans je Seite lesen lassen will, startet <strong>Volltext neu erzeugen → Für alle Dokumente</strong> (siehe unten; das dauert, je nach Menge, Stunden). PDFs mit Textebene bekommen ihre Seitensprachen damit in Sekunden.</li>
+</ul>
+<p>Pakete und die <a href="../api/">Schnittstelle</a> geben die Sprache mit dem Volltext an (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder setzen sie einzeln (<code>PUT /dokumente/{id}/sprache</code>, z. B. <code>{ "sprache": "fra" }</code>, <code>null</code> = keine Angabe; seit 0.139.0 mit <code>weitere</code> auch die weiteren Sprachen). Das steht in der Historie der Mappe. Wie Pakete Sprachen je Seite melden, beschreibt das Entwicklerhandbuch (Pakete mit Code → Sprachen je Seite).</p>
 <h2 id="weitere-sprachen">Weitere Sprachen<a class="headerlink" href="#weitere-sprachen" title="Permanent link">&para;</a></h2>
 <p>Im Paket <strong>Texterkennung</strong> stecken Deutsch, Englisch und die Lageerkennung. Weitere Sprachen kommen als <strong>Zusatzpakete</strong> aus dem Katalog dazu, z. B. <strong>Texterkennung – Französisch</strong> (<code>texterkennung_fra</code>). Ein eigenes Image oder eingehängte Sprachdateien braucht es nicht mehr.</p>
 <p>Unter <strong>Werkbank → Texterkennung → Erkannte Sprachen</strong> siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit dem Zusatzpaket texterkennung_fra“, mit Link zum Zusatzpaket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).</p>
