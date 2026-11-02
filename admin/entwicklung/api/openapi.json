@@ -9459,7 +9459,14 @@
           },
           "hinweis": {
             "type": "string",
-            "description": "z. B. wenn das gewählte Paket nicht antwortete und die eingebaute Erkennung übernahm"
+            "description": "z. B. wenn das gewählte Paket nicht antwortete oder nichts Brauchbares lieferte und die eingebaute Erkennung übernahm"
+          },
+          "gekuerzt": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Nur vorhanden, wenn das Paket nur einen Teil des Texts gelesen hat (#564; ab 0.138.0) – der Kern schickt höchstens 50.000 Zeichen, ein Paket kann für seinen Dienst weiter kürzen"
           },
           "vorschlaege": {
             "type": "object",

@@ -3059,7 +3059,7 @@
 <tr>
 <td><code>OLLAMA_CONTEXT_LENGTH</code></td>
 <td><code>8192</code></td>
-<td>So viel Text liest das Modell auf einmal (etwa 20 000 Zeichen Deutsch). Ohne Grafikkarte nimmt Ollama sonst <strong>4 096</strong> – dann <strong>lässt Ollama ältere Nachrichten still weg</strong>, wenn eine Anfrage zu lang ist: bei langen Chats die Ausschnitte, bei langen Dokumenten den Text. Die Antwort hat dann keine Grundlage.</td>
+<td>So viel Text liest das Modell auf einmal (etwa 20 000 Zeichen Deutsch). Ohne Grafikkarte nimmt Ollama sonst <strong>4 096</strong> – dann <strong>lässt Ollama ältere Nachrichten still weg</strong>, wenn eine Anfrage zu lang ist: bei langen Chats die Ausschnitte, bei langen Dokumenten den Text. Die Antwort hat dann keine Grundlage. Trag denselben Wert im Paket unter <strong>Kontextlänge</strong> ein (siehe unten).</td>
 </tr>
 <tr>
 <td><code>mem_limit</code></td>
@@ -3083,6 +3083,7 @@
 </tr>
 </tbody>
 </table>
+<p><strong>Kontextlänge im Paket:</strong> Der KI-Assistent (ab 1.2.0) hat die Einstellung <strong>Kontextlänge</strong> (Standard 8 192 Token, passend zum Beispiel). Ist eine Anfrage länger, kürzt <strong>das Paket</strong> selbst, bevor Ollama still abschneidet – und sagt es: bei <em>Frag deine Ablage</em> „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“ (bei langen Chats fallen zuerst ältere Fragen und Antworten weg), bei <em>Aus Dokument ausfüllen</em> „Dokumenttext gekürzt“. Stell die Kontextlänge <strong>nie größer</strong> ein als <code>OLLAMA_CONTEXT_LENGTH</code> – sonst schneidet Ollama wieder still ab. Größer heißt: mehr Text auf einmal, aber mehr Speicher und langsameres Lesen. Die Anzeige braucht DMS ab 0.138.0.</p>
 <p>Für <em>Aus Dokument ausfüllen</em> mit <strong>langen Dokumenten</strong> reicht 8 192 nicht ganz (das DMS gibt bis zu 50 000 Zeichen mit). Mit <code>16384</code> braucht der Container etwa 0,5–1 GB mehr; ohne Grafikkarte überschreiten so lange Texte aber ohnehin die Zeitgrenze, und die eingebaute Erkennung übernimmt.</p>
 <h2 id="geschwindigkeit">Wie schnell ist das?<a class="headerlink" href="#geschwindigkeit" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
@@ -3274,7 +3275,15 @@ Speicher KI-Container:       … GB (Spitze)
 </tr>
 <tr>
 <td>Antwort passt nicht zu den Ausschnitten oder ist „aus der Luft gegriffen“</td>
-<td>Zu wenig Kontext – <code>OLLAMA_CONTEXT_LENGTH</code> prüfen (siehe <a href="#kontext-speicher">Kontext</a>); bei langen Chats die Seite neu laden.</td>
+<td>Zu wenig Kontext – <code>OLLAMA_CONTEXT_LENGTH</code> prüfen und die <strong>Kontextlänge</strong> im Paket nicht größer einstellen (siehe <a href="#kontext-speicher">Kontext</a>); bei langen Chats <strong>Neuer Chat</strong>.</td>
+</tr>
+<tr>
+<td>„(gekürzt)“ bei <em>Frag deine Ablage</em> oder „Dokumenttext gekürzt“</td>
+<td>Die Anfrage war länger als die <strong>Kontextlänge</strong> des Pakets. Weniger Zeichen je Frage einstellen oder – mit genug Speicher – <code>OLLAMA_CONTEXT_LENGTH</code> und die Kontextlänge im Paket gemeinsam erhöhen.</td>
+</tr>
+<tr>
+<td><em>Aus Dokument ausfüllen</em>: „hat nichts Brauchbares geliefert“</td>
+<td>Der Dienst hat geantwortet, aber keinen Wert, der zu den Feldern passt – die eingebaute Erkennung hat übernommen. Bei kleinen Modellen kommt das vor; ein größeres Modell oder klarere Feldbezeichnungen helfen.</td>
 </tr>
 <tr>
 <td>Antwort bricht ab oder <em>Aus Dokument ausfüllen</em> nimmt immer die eingebaute Erkennung</td>
