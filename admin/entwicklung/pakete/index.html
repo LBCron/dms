@@ -1123,6 +1123,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dateien umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1211,6 +1222,17 @@
     <span class="md-ellipsis">
       
         Der Volltext eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei soll umgewandelt werden
       
     </span>
   </a>
@@ -2951,6 +2973,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#recht-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dateien umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3039,6 +3072,17 @@
     <span class="md-ellipsis">
       
         Der Volltext eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei soll umgewandelt werden
       
     </span>
   </a>
@@ -3343,6 +3387,8 @@
 <p><strong>„Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt (dms:erkennen)“</strong> – Das Paket kann statt der eingebauten Erkennung die Felder beim Knopf <strong>Aus Dokument ausfüllen</strong> vorschlagen, wenn du es wählst (siehe <a href="#erkennung-durch-ein-paket">Erkennung durch ein Paket</a>). Es bekommt dabei nur den Text des Dokuments und die Beschreibung der Felder – keine Rechte an Mappen oder Dokumenten. Was es liefert, prüft das DMS und zeigt es nur als Vorschlag.</p>
 <h4 id="recht-texterkennung">Texterkennung übernehmen<a class="headerlink" href="#recht-texterkennung" title="Permanent link">&para;</a></h4>
 <p><strong>„Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“</strong> – Das Paket ist dann die <a href="../texterkennung/">Texterkennung</a> des DMS: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit <a href="#recht-dokumente">Dokumente lesen und Volltext schreiben</a>.</p>
+<h4 id="recht-umwandeln">Dateien umwandeln<a class="headerlink" href="#recht-umwandeln" title="Permanent link">&para;</a></h4>
+<p><strong>„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“</strong> – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis <a href="#ereignis-datei-umwandeln">Datei umwandeln</a>) und gibt eine <strong>umgewandelte Fassung</strong> zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe <a href="../texterkennung/#andere-dateitypen">Andere Dateitypen</a>). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a> (die Originaldatei).</p>
 <h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
 <p>Ein Paket wie <strong>KI-Assistent</strong> rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. <strong>Ollama</strong> auf deinem Heimserver (fertiges Beispiel und Anleitung: <a href="../ki-lokal/">KI lokal betreiben</a>). Die Adresse dieses Dienstes trägst du in den <strong>Einstellungen</strong> des Pakets ein (Werkbank → Pakete → <em>Paket</em> → Reiter „Einstellungen“):</p>
 <ul>
@@ -3408,6 +3454,9 @@
 <h4 id="ereignis-volltext-fertig">Der Volltext eines Dokuments ist fertig<a class="headerlink" href="#ereignis-volltext-fertig" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: aus der Textebene eines PDFs, von einem Paket wie <strong>Texterkennung</strong> oder über die API. Seit Version 0.133 auch dann, wenn das DMS <strong>keinen Text</strong> gefunden hat (z. B. bei einem Scan) – genau das braucht ein Paket, das die <a href="#recht-texterkennung">Texterkennung übernimmt</a>. Pakete von vor 0.133 bekommen es weiter nur mit Text. Für ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> schickt das DMS dieses Ereignis außerdem für den <strong>Bestand</strong> nach (siehe <a href="#aehnlichkeit">Ähnlichkeit</a>).</p>
 <p><strong>Typisch:</strong> Scans erkennen – das Paket <strong>Texterkennung</strong> (ab 2.0); aus dem Volltext etwas berechnen – das Paket <strong>KI lokal – Ähnlichkeit</strong> rechnet daraus den Vektor des Dokuments.</p>
+<h4 id="ereignis-datei-umwandeln">Eine Datei soll umgewandelt werden<a class="headerlink" href="#ereignis-datei-umwandeln" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.137 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-umwandeln">Dateien umwandeln</a> zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei <strong>Vorschaubilder nachholen</strong> und bei <strong>Volltext neu erzeugen</strong> (für Dateien ohne Fassung). Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).</p>
+<p><strong>Typisch:</strong> Das Paket <strong>Bildformate</strong> macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.</p>
 <h4 id="ereignis-einstellungen-geandert">Die Einstellungen des Pakets wurden geändert<a class="headerlink" href="#ereignis-einstellungen-geandert" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Wenn ein Administrator die <a href="#einstellungen">Einstellungen des Pakets</a> speichert. Nur das Paket selbst bekommt dieses Ereignis.</p>
 <p><strong>Typisch:</strong> Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.</p>

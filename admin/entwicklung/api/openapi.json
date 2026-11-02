@@ -5177,13 +5177,250 @@
         }
       }
     },
+    "/dokumente/{id}/fassung": {
+      "put": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Umgewandelte Fassung setzen (Pakete)",
+        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577), z. B. „Bildformate“: die Fassung einer Datei, die das DMS nicht selbst liest (Ereignis datei.umwandeln), als PDF, PNG oder JPEG – roh im Körper (application/octet-stream), erkannt am Inhalt, höchstens 50 MB, Bilder höchstens 36 Millionen Bildpunkte, PDFs höchstens 1000 Seiten. Daraus entstehen Vorschaubild und Volltext (Textebene bzw. Paket Texterkennung). Die Fassung gehört zur Datei (Prüfwert), nicht zum Dokument, und ersetzt eine vorhandene. 403 ohne das Recht oder wenn das Paket für den Dateityp nicht zuständig ist (code.umwandeln), 409, wenn sha256 nicht mehr die Datei des Dokuments ist (neue Version), 413 zu groß, 415 kein PDF, PNG oder JPEG, 422 nicht lesbar.",
+        "operationId": "putDokumenteMitidFassung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": true,
+            "description": "Prüfwert der Datei aus dem Ereignis datei.umwandeln",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FassungGesetzt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Umgewandelte Fassung herunterladen",
+        "description": "Die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die das DMS nicht selbst liest (#577); Dateiname „… (umgewandelt)“, der Kopf x-dms-fassung-paket nennt Paket und Version. Das Dokument selbst bleibt das Original. 404, wenn es keine gibt. Braucht Lesen.",
+        "operationId": "getDokumenteMitidFassung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "herunterladen",
+            "in": "query",
+            "required": false,
+            "description": "Herunterladen statt anzeigen",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dokumente/{id}/vorschaubild": {
+      "put": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Vorschaubild setzen (Pakete)",
+        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577): ein eigenes Vorschaubild der Datei (JPEG oder PNG, roh im Körper, höchstens 5 MB). Das DMS verkleinert es auf seine Größe (längste Seite 104 px, JPEG) und ersetzt ein vorhandenes – auch eins aus der Fassung; schicke es deshalb nach der Fassung. Fehler wie bei der Fassung.",
+        "operationId": "putDokumenteMitidVorschaubild",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": true,
+            "description": "Prüfwert der Datei aus dem Ereignis datei.umwandeln",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VorschaubildGesetzt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dokumente/{id}/seiten/{nr}/scan": {
       "get": {
         "tags": [
           "Dokumente"
         ],
         "summary": "Seite als Graustufenbild (PGM)",
-        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). Seit 0.133.0 (#458) auch JPEG und PNG: Seite 1 in Originalgröße (dpi zählt dort nicht). 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen oder zu große Seiten.",
+        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). Seit 0.133.0 (#458) auch JPEG und PNG: Seite 1 in Originalgröße (dpi zählt dort nicht). Seit 0.137.0 (#577) für andere Dateitypen die Seiten ihrer umgewandelten Fassung. 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen ohne Fassung oder zu große Seiten.",
         "operationId": "getDokumenteMitidSeitenMitnrScan",
         "parameters": [
           {
@@ -11368,6 +11605,73 @@
             "type": "string"
           },
           "dimension": {
+            "type": "integer"
+          }
+        }
+      },
+      "FassungGesetzt": {
+        "type": "object",
+        "properties": {
+          "dokument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fassung": {
+            "type": "object",
+            "properties": {
+              "mime": {
+                "type": "string",
+                "enum": [
+                  "application/pdf",
+                  "image/png",
+                  "image/jpeg"
+                ]
+              },
+              "groesse": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "seiten": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "paket": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                }
+              },
+              "erstellt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "VorschaubildGesetzt": {
+        "type": "object",
+        "properties": {
+          "dokument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "groesse": {
             "type": "integer"
           }
         }
