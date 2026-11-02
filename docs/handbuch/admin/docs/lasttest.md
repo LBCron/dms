@@ -2,8 +2,8 @@
 
 Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Projekt jede Woche misst, sind kein NAS. Mit dem Lasttest misst du selbst – etwa vor dem Kauf eines neuen Geräts, vor einem Umzug oder wenn das DMS dir langsam vorkommt. Das Ergebnis kannst du freiwillig zurückmelden; daraus entsteht die Tabelle [Was das DMS verkraftet](verkraftet.md).
 
-!!! warning "Nur gegen eine Test-Installation – nie gegen deine echte Ablage"
-    Der Lasttest legt einen eigenen Haushalt mit Lasttest-Konten und bis zu 200.000 Demo-Mappen an, probiert falsche Passwörter aus (um den [Anmeldeschutz](anmeldeschutz.md) zu prüfen) und belastet das Gerät minutenlang bis an seine Grenze. Starte dafür eine **eigene, frische Test-Installation** und lösche sie danach wieder. Das Skript prüft das selbst: Ist das DMS schon eingerichtet und nicht vom Lasttest, oder liegen dort mehr als 200 Mappen, die keine Demo-Mappen sind, bricht es ab, **bevor** es etwas anlegt.
+!!! warning "Nur in einem eigenen Test-Container – nie in deiner echten Installation"
+    Der Lasttest legt einen eigenen Haushalt mit Lasttest-Konten und bis zu 200.000 Demo-Mappen an, probiert falsche Passwörter aus (um den [Anmeldeschutz](anmeldeschutz.md) zu prüfen) und belastet das Gerät minutenlang bis an seine Grenze. Starte dafür einen **eigenen, neuen Container** und lösche ihn danach wieder. Der Lasttest prüft das selbst: Ist das DMS schon eingerichtet und nicht vom Lasttest, oder liegen dort mehr als 200 Mappen, die keine Demo-Mappen sind, bricht er ab, **bevor** er etwas anlegt. Steht die Variable `DMS_LASTTEST` versehentlich in deiner echten Installation, läuft das DMS deshalb ganz normal weiter; die [Übersicht der Werkbank](uebersicht.md) meldet dann, dass der Lasttest nicht gestartet ist und du die Variable entfernen sollst.
 
 ## Die drei Stufen
 
@@ -19,13 +19,76 @@ Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Pr
 
 ## Voraussetzungen
 
-- Das DMS ab Version 0.132.0 – der Lasttest steckt als Befehl `dms-lasttest` im Image.
-- Platz für die Test-Installation: etwa 1 GB für `klein` und `mittel`, 3–5 GB für `gross`.
-- Ruhe auf dem Gerät: Laufen nebenher eine Sicherung des NAS, ein Medienserver oder Downloads, misst du die mit.
+- Das DMS ab Version 0.144.0 für den Weg im Browser (ab 0.132.0 geht der [Weg für Fortgeschrittene](#fur-fortgeschrittene)).
+- Platz für den Test-Container: etwa 1 GB für `klein` und `mittel`, 3–5 GB für `gross`.
+- Ruhe auf dem Gerät: Laufen nebenher eine Sicherung des NAS, ein Medienserver oder Downloads, misst du die mit. Halte auch dein eigenes DMS solange an, wenn gerade niemand damit arbeitet.
 
-## Schritt für Schritt
+## Schritt für Schritt – in der Docker-Oberfläche und im Browser
 
-1. **Test-Installation starten** – am einfachsten mit `dms-komplett` (DMS und Datenbank in einem Container), mit eigenem Namen, eigenem Port und eigenen, leeren Ordnern, z. B.:
+Du brauchst **keine Konsole, keine Ordner und keine Befehle** – nur einen neuen Container mit **einer** Umgebungsvariable.
+
+1. **Container anlegen** – in der Docker-Oberfläche deines NAS (z. B. *Docker* bei UGREEN, *Container Manager* bei Synology, *Container Station* bei QNAP) einen neuen Container aus dem Image anlegen:
+
+    | Einstellung | Wert |
+    | --- | --- |
+    | Image | `ghcr.io/motom001/dms-komplett:main` (DMS und Datenbank in einem Container) |
+    | Name | z. B. `dms-lasttest` |
+    | Port | ein freier Port des NAS, z. B. `8099`, auf Port `3000` im Container |
+    | Umgebungsvariable | `DMS_LASTTEST` = `klein` (oder `mittel`, `gross`, `alle` – siehe [Die drei Stufen](#die-drei-stufen)) |
+    | Ordner (Volumes) | **keine** |
+    | Neustart-Regel | aus bzw. „nie“ |
+
+    Ohne verbundene Ordner läuft alles im Container und verschwindet mit ihm – deine Ordner auf dem NAS bleiben unberührt.
+
+2. **Seite öffnen** – im Browser `http://<Adresse des NAS>:8099`, z. B. `http://nas.local:8099`. Statt der Anmeldung siehst du die Seite **Lasttest**: welche Stufe läuft, was gerade passiert (Test-DMS einrichten, Demo-Mappen anlegen, messen) und die **geschätzte Restdauer**. Die Seite geht auch am Handy.
+
+    ![Seite Lasttest im Browser](bilder/lasttest-seite.png)
+
+3. **Gerät beschreiben** – in **Beschreibe dein Gerät** Modell und Ausstattung eintragen, z. B. `UGREEN DXP4800 Plus, 16 GB RAM`. **Keine Namen, Adressen oder Rechnernamen** – der Text steht im Ergebnis, das du veröffentlichst. Was du tippst, steht sofort im Ergebnisblock. Darunter die **Speicherart** (HDD, SSD oder NVMe): Der Test erkennt sie, soweit das aus dem Container geht; sonst wählst du sie – „weiß nicht“ geht auch. CPU-Modell, Kerne und Arbeitsspeicher trägt der Test selbst ein.
+
+4. **Warten** – `klein` dauert etwa 5 Minuten, `mittel` 15–30 Minuten (50.000 Mappen anlegen), `gross` 30–60 Minuten (200.000 Mappen anlegen, dann je Schritt 2 Minuten), `alle` entsprechend länger. Du kannst die Seite schließen und später wieder öffnen.
+
+5. **Ergebnis kopieren** – am Ende stehen der Block **Messergebnis Lasttest** mit **Kopieren** und **Als Datei herunterladen**, die Links zum Formular und zum Sammel-Issue [#576](https://github.com/motom001/dms/issues/576) und – aufklappbar – der ganze Bericht. Wie du das Ergebnis liest und zurückmeldest, steht [unten](#ergebnis-lesen).
+
+    ![Seite Lasttest mit dem Ergebnis zum Kopieren](bilder/lasttest-ergebnis.png)
+
+6. **Test beenden** – **Test beenden und Container herunterfahren** und die Rückfrage („Hast du das Ergebnis kopiert? Danach ist es weg.“) bestätigen. Der Container stoppt. Lösche ihn danach in der Docker-Oberfläche und bei Bedarf auch das Image.
+
+??? note "So sieht die Seite dunkel und am Handy aus"
+    ![Seite Lasttest, dunkle Darstellung](bilder/lasttest-seite-dunkel.png)
+
+    ![Seite Lasttest am Handy](bilder/lasttest-handy.png)
+
+### Mit einem Befehl in der Konsole
+
+Dasselbe in einer Zeile – `--rm` löscht den Container, sobald du den Test auf der Seite beendest:
+
+```sh
+docker run -d --rm --name dms-lasttest -p 8099:3000 -e DMS_LASTTEST=klein ghcr.io/motom001/dms-komplett:main
+```
+
+Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit `docker image rm ghcr.io/motom001/dms-komplett:main`.
+
+### Einen bestimmten Datenträger messen
+
+Ohne Ordner liegt alles dort, wo Docker seine Container ablegt – auf vielen NAS die System-SSD oder das erste Speicher-Volume. Willst du gezielt einen anderen Datenträger messen (z. B. die Festplatten statt der System-SSD), verbinde **einen leeren Ordner** auf diesem Datenträger mit `/data` im Container – das ist der einzige Grund für einen Ordner:
+
+```sh
+docker run -d --rm --name dms-lasttest -p 8099:3000 -e DMS_LASTTEST=klein \
+  -v /volume1/dms-lasttest:/data ghcr.io/motom001/dms-komplett:main
+```
+
+Der Test erkennt dann die Speicherart dieses Datenträgers, und das Ergebnis liegt zusätzlich als Datei in diesem Ordner unter `ergebnis/`. Lösche den Ordner nach dem Test.
+
+### Wo das Ergebnis sonst noch steht
+
+Hast du die Seite geschlossen, bevor du das Ergebnis kopiert hast: Es steht auch in den **Logs** des Containers (in der Docker-Oberfläche unter *Protokoll* bzw. *Logs*) und als Datei im Container unter `/data/ergebnis/lasttest-<stufe>.md` – mit Gerät und Speicher, sobald du sie auf der Seite eingetragen hast. Startet der Container nach dem Beenden neu (Neustart-Regel), misst er nicht noch einmal, sondern zeigt das Ergebnis wieder an.
+
+## Für Fortgeschrittene
+
+Der Lasttest steckt als Befehl `dms-lasttest` im Image. So misst du ohne die Seite im Browser – etwa die Variante mit getrennter Datenbank, mit eigenen Optionen oder von einem anderen Rechner aus.
+
+1. **Test-Installation starten** – mit eigenem Namen, eigenem Port und eigenen, leeren Ordnern, z. B.:
 
     ```sh
     docker run -d --name dms-test -p 8099:3000 \
@@ -36,7 +99,7 @@ Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Pr
       ghcr.io/motom001/dms-komplett:main
     ```
 
-    Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. `dms-test`, mit anderen Ordnern und anderem Port. Nicht einrichten – das macht der Lasttest.
+    Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. `dms-test`, mit anderen Ordnern und anderem Port – dort geht auch der Weg im Browser mit `DMS_LASTTEST`. Nicht einrichten – das macht der Lasttest.
 
 2. **Stufe starten** – im Test-Container, also auf demselben Gerät:
 
@@ -44,15 +107,15 @@ Wie viel verkraftet das DMS **auf deinem Gerät**? Die Rechner, auf denen das Pr
     docker exec -it dms-test dms-lasttest klein --geraet "Modell deines Geräts" --speicher SSD
     ```
 
-    Statt `klein` geht `mittel`, `gross` oder `alle` (alle drei nacheinander). Beim ersten Start richtet der Lasttest das frische DMS selbst ein; den Einrichtungscode liest er aus dem Ordner `geheim`. Fehlen für eine größere Stufe Mappen, legt er die Demo-Mappen dazu und wartet, bis das DMS mit der Arbeit im Hintergrund fertig ist. In der Oberfläche einer NAS geht das ebenso über die Konsole des Containers (Befehl `dms-lasttest klein`).
+    Statt `klein` geht `mittel`, `gross` oder `alle` (alle drei nacheinander). Beim ersten Start richtet der Lasttest das frische DMS selbst ein; den Einrichtungscode liest er aus dem Ordner `geheim`. Fehlen für eine größere Stufe Mappen, legt er die Demo-Mappen dazu und wartet, bis das DMS mit der Arbeit im Hintergrund fertig ist. `dms-lasttest --pruefen` prüft nur, ob der Lasttest hier laufen dürfte, und legt nichts an.
 
-3. **Ergebnis lesen** – am Ende steht ein Bericht und darunter der Block **Messergebnis Lasttest** (siehe unten).
+3. **Ergebnis lesen** – am Ende stehen ein Bericht und darunter der Block **Messergebnis Lasttest**.
 
 4. **Aufräumen:** Test-Container stoppen und löschen (`docker rm -f dms-test`), die Ordner der Test-Installation löschen.
 
-Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). `--dauer <Sekunden>` ändert die Messdauer von `klein` und `mittel` (Vorgabe 120). `--start`, `--schritt` und `--schritt-dauer` ändern die Steigerung von `gross` (Vorgabe 25, 25, 120 Sekunden), `--bis <n>` begrenzt sie. `--bericht <Datei>` speichert den Bericht.
+Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). `--dauer <Sekunden>` ändert die Messdauer von `klein` und `mittel` (Vorgabe 120; im Weg über den Browser mit der Variable `DMS_LASTTEST_DAUER`). `--start`, `--schritt` und `--schritt-dauer` ändern die Steigerung von `gross` (Vorgabe 25, 25, 120 Sekunden), `--bis <n>` begrenzt sie. `--bericht <Datei>` speichert den Bericht.
 
-**Dauer** (je nach Gerät): `klein` etwa 5 Minuten, `mittel` 15–30 Minuten (50.000 Mappen anlegen), `gross` 30–60 Minuten (200.000 Mappen anlegen, dann je Schritt 2 Minuten). Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (`--ziel http://…:8099`); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.
+Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (`--ziel http://…:8099`); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.
 
 ## Ergebnis lesen
 
@@ -64,4 +127,4 @@ Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speic
 
 ## Ergebnis zurückmelden
 
-Der Block **Messergebnis Lasttest** enthält **keine personenbezogenen Daten** und **keine Adressen, Rechner- oder Haushaltsnamen** – nur DMS-Version, Image, wo die Datenbank läuft, Gerät, CPU, Kerne, Arbeitsspeicher, Art des Speichers, Zahl der Mappen und Dokumente, je Stufe p50/p95/p99 und Fehlerquote, die Grenze, die Spitze des Arbeitsspeichers und die Ereignisschleife. Kopiere ihn unverändert in das Formular [Messergebnis Lasttest](https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml) auf GitHub oder als Kommentar in das Sammel-Issue [#576](https://github.com/motom001/dms/issues/576), wo alle Messergebnisse zusammenkommen. Der Beitrag ist öffentlich; alles ist freiwillig – das DMS selbst meldet nichts.
+Der Block **Messergebnis Lasttest** enthält **keine personenbezogenen Daten** und **keine Adressen, Rechner- oder Haushaltsnamen** – nur DMS-Version, Image, wo die Datenbank läuft, Gerät (was du ins Gerätefeld schreibst), CPU, Kerne, Arbeitsspeicher, Art des Speichers, Zahl der Mappen und Dokumente, je Stufe p50/p95/p99 und Fehlerquote, die Grenze, die Spitze des Arbeitsspeichers und die Ereignisschleife. Kopiere ihn unverändert (auf der Seite mit **Kopieren**) in das Formular [Messergebnis Lasttest](https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml) auf GitHub oder als Kommentar in das Sammel-Issue [#576](https://github.com/motom001/dms/issues/576), wo alle Messergebnisse zusammenkommen. Der Beitrag ist öffentlich; alles ist freiwillig – das DMS selbst meldet nichts.

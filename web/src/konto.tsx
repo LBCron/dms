@@ -10,6 +10,7 @@ import { Marke } from './Marke';
 import { ZweifaktorEinrichten } from './profil/Zweifaktor';
 import { rueckfrage } from './rueckfrage';
 import { t } from './sprache';
+import { LasttestSeite } from './lasttest';
 
 /** Logo und Schriftzug des Standard-Designs für Anmeldung und Passwortseiten (#72). */
 let MARKE: { schriftzug: string | null; logo: string | null } = { schriftzug: null, logo: null };
@@ -90,6 +91,8 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   if (pfad.startsWith('/passwort/')) return <PasswortSetzen schluessel={decodeURIComponent(pfad.slice('/passwort/'.length))} fertig={laden} />;
   if (fehler) return <Karte titel={t('anmeldung.verbindung.titel')}><p className="hinweis schlecht">{fehler}</p><button className="knopf" onClick={() => void laden()}>{t('anmeldung.verbindung.erneut')}</button></Karte>;
   if (!status) return <p className="leise mittig">{t('anmeldung.lade')}</p>;
+  // Lasttest-Modus (#612): nur die Seite mit Fortschritt und Ergebnis – keine Anmeldung, keine Ablage.
+  if (status.lasttest) return <LasttestSeite />;
   // Wiederherstellung (#107): eigener Bildschirm, auch nach Neuladen und Neustart.
   if (status.wiederherstellung?.laeuft || status.wiederherstellung?.abschluss) return <Wiederherstellungsbildschirm fertig={() => void laden()} />;
   // Einrichtungsassistent (#119): ohne Datenbank, mit Code, Mandant und Administrator …

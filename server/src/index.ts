@@ -59,6 +59,9 @@ import { eigeneVersion } from './system';
 import { Wiederherstellung } from './wiederherstellung';
 import { heuteIn } from '../../shared/src/sichten';
 import { VARIABLEN_GRUND } from '../../shared/src/umgebungsvariablen';
+import { createServer, type Server } from 'node:http';
+import { Lasttestmodus, lasttestAus, lasttestSkript, pruefeZiel } from './lasttestmodus';
+import { erkenneSpeicherart } from './speicherart';
 
 const pfad = (rel: string) => fileURLToPath(new URL(rel, import.meta.url));
 const env = process.env;
@@ -83,6 +86,11 @@ const version = env.DMS_VERSION ?? 'Entwicklung';
 log.info(`DMS startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text });
 if (cfg.proxy.fehler) log.warn(cfg.proxy.fehler);
 if (cfg.einbetten.fehler) log.warn(cfg.einbetten.fehler);
+// Lasttest-Modus (#612): DMS_LASTTEST=klein|mittel|gross|alle – nur in einer eigenen Test-Installation (unten geprüft).
+const lasttest = lasttestAus(env);
+if (lasttest.fehler) log.warn(lasttest.fehler);
+/** Grund, warum der Lasttest trotz DMS_LASTTEST nicht läuft (echte Ablage) – für die Werkbank-Übersicht. */
+let lasttestAbbruch: string | null = null;
 
 // Unerwartete Fehler außerhalb von Anfragen nicht verschlucken.
 process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', 'Unbehandelter Fehler', { fehler: e instanceof Error ? e.stack : String(e) }));
@@ -375,6 +383,7 @@ const app = await baueApp(dienst, konten, {
   postfaecher,
   postfachOAuth,
   ordner: ordnerPruefung,
+  lasttestAbbruch: () => lasttestAbbruch,
   fehlermeldungen: new Fehlermeldungen(pgFehlerRepo(sql, cfg.haushalt), ordnerSpeicher(ordner.dateien, `${cfg.haushalt}/fehlermeldungen`)),
 });
 
@@ -439,8 +448,45 @@ setInterval(() => {
 }, 5000).unref();
 setInterval(() => void wiederherstellung.tick().catch((e) => log.error('Zeitplan der Probe gestört', { fehler: (e as Error).message })), 60_000).unref();
 
+// Lasttest-Modus (#612): Das DMS läuft nur intern (127.0.0.1, freier Port) – dorthin misst das Skript. Unter dem Port des
+// Containers steht nur die Seite mit Fortschritt und Ergebnis. Vorher prüft das Skript ohne etwas anzulegen, ob dies eine
+// frische oder eine eigene Test-Installation ist; sonst läuft das DMS normal weiter und meldet den Abbruch.
+let lasttestSeite: Lasttestmodus | null = null;
+let intern: Server | null = null;
+if (lasttest.wahl) {
+  const skript = lasttestSkript(env, [pfad('../../lasttest/lasttest.mjs'), pfad('../test/lasttest.mjs')]);
+  if (!skript) lasttestAbbruch = 'Das Skript des Lasttests (dms-lasttest) fehlt in diesem Image.';
+  else {
+    await app.ready();
+    const s = createServer(app.routing);
+    // Wie der Server des DMS (Fastify): dieselben Wartezeiten für Verbindungen.
+    s.keepAliveTimeout = app.server.keepAliveTimeout; s.requestTimeout = app.server.requestTimeout; s.headersTimeout = app.server.headersTimeout;
+    await new Promise<void>((r) => s.listen({ port: 0, host: '127.0.0.1', backlog: 2048 }, () => r()));
+    intern = s;
+    const adresse = s.address();
+    const ziel = `http://127.0.0.1:${typeof adresse === 'object' && adresse ? adresse.port : 0}`;
+    const skriptEnv = { ...env, DMS_GEHEIM: ordner.geheim };
+    const p = await pruefeZiel(skript, ziel, skriptEnv);
+    if (p.ok) {
+      const daten = dirname(ordner.geheim);
+      lasttestSeite = new Lasttestmodus({
+        wahl: lasttest.wahl, dauer: lasttest.dauer, skript, ziel, ergebnisOrdner: join(daten, 'ergebnis'), env: skriptEnv,
+        speicherart: erkenneSpeicherart(daten), port: cfg.port, host: cfg.host, webDir: cfg.web, proxy: cfg.proxy.trust, einbetten: cfg.einbetten,
+        beenden: () => beenden(),
+      });
+    } else {
+      lasttestAbbruch = p.grund;
+      await new Promise<void>((r) => { s.closeAllConnections(); s.close(() => r()); });
+      intern = null;
+    }
+  }
+  if (lasttestAbbruch) log.error(`DMS_LASTTEST ist gesetzt, der Lasttest startet aber nicht: ${lasttestAbbruch} Das DMS läuft normal weiter – entferne die Variable.`);
+}
+
 const beenden = async () => {
   log.info('DMS wird beendet');
+  await lasttestSeite?.stop();
+  if (intern) { const s = intern; await new Promise<void>((r) => { s.closeAllConnections(); s.close(() => r()); }); }
   texterkennung.stop();
   await paketlaeufer.stop();
   vorschau.stop();
@@ -460,6 +506,8 @@ process.on('SIGINT', beenden);
 
 // Warteschlange für neue Verbindungen (#544): Bei Überlast nimmt der Server sie verzögert an; mit 511 (Vorgabe von Node)
 // bekamen einzelne Programme gar keine Verbindung mehr.
-await app.listen({ port: cfg.port, host: cfg.host, backlog: 2048 });
-await konsole.schreibe(lokaleUrl(cfg.port, cfg.host))
+if (lasttestSeite) await lasttestSeite.start();
+else await app.listen({ port: cfg.port, host: cfg.host, backlog: 2048 });
+const konsolenAdresse = lasttestSeite && intern ? (() => { const a = intern.address(); return `http://127.0.0.1:${typeof a === 'object' && a ? a.port : cfg.port}`; })() : lokaleUrl(cfg.port, cfg.host);
+await konsole.schreibe(konsolenAdresse)
   .catch((e) => log.warn('Konsolenzugang nicht angelegt – der Befehl dms geht nicht', { datei: konsole.datei, fehler: (e as Error).message }));

@@ -62,6 +62,8 @@ COPY --from=hilfe /hilfe web/dist/hilfe
 RUN printf '#!/bin/sh\nexec node /app/server/dist/dms.js "$@"\n' > /usr/local/bin/dms && chmod 755 /usr/local/bin/dms
 # Lasttest selbst durchführen (#563): docker exec -it <Test-Container> dms-lasttest klein – nur gegen eine eigene
 # Test-Installation; das Skript prüft das selbst. Ohne Abhängigkeiten, nur node.
+# Ohne Konsole (#612): DMS_LASTTEST=klein|mittel|gross|alle – das DMS startet dieses Skript selbst und zeigt
+# Fortschritt und Ergebnis unter seinem Port (server/src/lasttestmodus.ts).
 COPY server/test/lasttest.mjs /app/lasttest/lasttest.mjs
 RUN printf '#!/bin/sh\nexec node /app/lasttest/lasttest.mjs "$@"\n' > /usr/local/bin/dms-lasttest && chmod 755 /usr/local/bin/dms-lasttest
 

@@ -5,6 +5,8 @@
 #   3. docker stop → PostgreSQL sauber heruntergefahren, Exit-Code 0
 #   4. Prozess abschießen → Container endet
 #   5. Ordner einer anderen PostgreSQL-Hauptversion → Container startet nicht
+#   6. Eigener PORT → Healthcheck gesund
+#   7. Lasttest-Modus ohne Ordner (#612) → Seite, Ergebnis, „Test beenden“ → Container weg
 #
 #   deploy/komplett-probe.sh <image>      z. B. deploy/komplett-probe.sh dms-komplett:probe
 set -euo pipefail
@@ -127,4 +129,26 @@ for _ in $(seq 1 60); do
 done
 [ "$zustand" = healthy ] || fehler "Healthcheck mit PORT=4000: $zustand"
 echo "::endgroup::"; echo "::notice::dms-komplett: Healthcheck mit eigenem PORT gesund"
-echo "dms-komplett: Einrichten, Neustart, Stopp, Absturz, Versionsprüfung und Healthcheck in Ordnung."
+echo "::group::7. Lasttest ohne Ordner und ohne Konsole (#612)"
+# Nur DMS_LASTTEST und Port (DMS_LASTTEST_DAUER kürzt die Messung): Seite statt Ablage, Lauf bis zum Ergebnis,
+# „Test beenden“ fährt den Container herunter, mit --rm ist er danach weg.
+docker rm -f "$NAME" >/dev/null 2>&1 || true
+docker run -d --rm --name "$NAME" -p "$PORT:3000" -e DMS_LASTTEST=klein -e DMS_LASTTEST_DAUER=5 "$IMAGE" >/dev/null
+warte
+[ "$(curl -fsS "http://127.0.0.1:$PORT/api/konto/status" | jq -r '.lasttest')" = true ] || fehler "Lasttest-Modus: keine Lasttest-Seite"
+[ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/api/mappen")" = 503 ] || fehler "Lasttest-Modus: Ablage erreichbar"
+zustand=""
+for _ in $(seq 1 450); do
+  zustand=$(curl -fsS "http://127.0.0.1:$PORT/api/lasttest" | jq -r '.zustand')
+  [ "$zustand" != laeuft ] && break
+  sleep 2
+done
+stand=$(curl -fsS "http://127.0.0.1:$PORT/api/lasttest")
+[ "$zustand" = fertig ] || fehler "Lasttest: $zustand – $(jq -r '.meldung' <<< "$stand")"
+jq -r '.ergebnis.vorlage' <<< "$stand" | grep -q "Image: dms-komplett" || fehler "Lasttest: Ergebnisblock ohne Image"
+echo "::notice::Lasttest-Modus: $(jq -r '"p95 \(.durchgaenge[0].p95) ms, Speicher \(.speicherErkannt // "nicht erkannt")"' <<< "$stand")"
+curl -fsS -X POST "http://127.0.0.1:$PORT/api/lasttest/beenden" -H 'x-dms: 1' -H 'content-type: application/json' -d '{}' >/dev/null || fehler "Lasttest beenden"
+for _ in $(seq 1 60); do docker inspect "$NAME" >/dev/null 2>&1 || break; sleep 1; done
+docker inspect "$NAME" >/dev/null 2>&1 && fehler "Container nach „Test beenden“ noch da (--rm)"
+echo "::endgroup::"; echo "::notice::dms-komplett: Lasttest ohne Ordner in Ordnung"
+echo "dms-komplett: Einrichten, Neustart, Stopp, Absturz, Versionsprüfung, Healthcheck und Lasttest-Modus in Ordnung."

@@ -290,6 +290,50 @@ async function einrichtenImBrowser(browser, bild) {
   await k.close();
 }
 
+/** Stand der Lasttest-Seite (#612) wie von GET /api/lasttest – erfundene, typische Werte für ein NAS. */
+function lasttestStand(fertig) {
+  const jetzt = Date.now();
+  const vorlage = [
+    '```text', 'Messergebnis Lasttest (#563)', 'DMS-Version: 0.144.0 · Image: dms-komplett · Datenbank: im Container', 'Gerät/Modell: {{geraet}}',
+    'CPU: Intel(R) N100 · 4 Kerne für das DMS, Rechner 4 · x64', 'RAM: 15,5 GB · Speicher: {{speicher}}', 'Bestand: 5013 Mappen, 110 Dokumente (PDF)',
+    'Einstellungen: DMS_ARBEITER=2, DMS_DB_VERBINDUNGEN=10, DMS_MAX_ANFRAGEN=250',
+    'klein    25 gleichzeitig: p50 48 ms, p95 131 ms, p99 212 ms, Fehler 0,00 % – Ziel eingehalten (Ziel < 300 ms, CI-Grenze 300 ms)',
+    'Arbeitsspeicher DMS höchstens: 342 MB · Ereignisschleife p99 höchstens: 21 ms', 'Gemessen: 2026-11-02', '```',
+  ].join('\n');
+  return {
+    wahl: 'klein', zustand: fertig ? 'fertig' : 'laeuft', stufe: 'klein', nr: 1, von: 1, schritt: fertig ? 'auswerten' : 'demo',
+    demo: fertig ? null : { fertig: 3150, gesamt: 5000 }, durchgang: null,
+    durchgaenge: fertig ? [{ name: 'klein', n: 25, p95: 131, fehlerquote: 0 }] : [],
+    begonnen: jetzt - 90_000, stufeBegonnen: jetzt - 90_000, jetzt, fertigeStufen: fertig ? ['klein'] : [],
+    ergebnis: fertig ? { bericht: '## Lasttest (2026-11-02 10:15 UTC)\n\nBestand: 5013 Mappen (5000 Demo-Mappen) …', vorlage, verfehlt: false } : null,
+    meldung: null, angaben: { geraet: '', speicher: 'SSD' }, speicherErkannt: 'SSD', datei: fertig ? '/data/ergebnis/lasttest-klein.md' : null,
+  };
+}
+
+/** Lasttest-Seite (#612) mit nachgestellten Antworten des Lasttest-Modus fotografieren. */
+async function lasttestSeite(browser, bild) {
+  const aufnahmen = [
+    ['lasttest-seite', false, 'light', { width: 1100, height: 900 }],
+    ['lasttest-ergebnis', true, 'light', { width: 1100, height: 900 }],
+    ['lasttest-seite-dunkel', true, 'dark', { width: 1100, height: 900 }],
+    ['lasttest-handy', false, 'light', { width: 393, height: 852 }],
+  ];
+  for (const [name, fertig, schema, viewport] of aufnahmen) {
+    const handy = viewport.width < 500;
+    const k = await browser.newContext({ viewport, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
+    const stand = lasttestStand(fertig);
+    await k.route('**/api/konto/status', (r) => r.fulfill({ json: { einrichtungNoetig: false, mail: false, benutzer: null, marke: null, wartung: null, lasttest: true } }));
+    await k.route('**/api/lasttest', (r) => r.fulfill({ json: { ...stand, jetzt: Date.now() } }));
+    await k.route('**/api/lasttest/angaben', (r) => r.fulfill({ json: stand }));
+    const s = await k.newPage();
+    await s.goto(BASIS + '/');
+    await s.getByRole('heading', { name: /^Lasttest/ }).waitFor();
+    await s.getByLabel('Beschreibe dein Gerät').fill('Beispiel-NAS mit Intel N100, 16 GB RAM');
+    await bild(s, name, { fullPage: fertig || handy });
+    await k.close();
+  }
+}
+
 async function main() {
   await mkdir(ZIEL, { recursive: true });
   // Deutsche Oberfläche auch für Datumsfelder (Chromium richtet sich dafür nach --lang).
@@ -1042,6 +1086,10 @@ async function main() {
   await s.locator('#wechseln .hinweis.gut').waitFor();
   await s.locator('#wechseln').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-schluesselwechsel');
+
+  // Lasttest-Modus (#612): Die Seite gibt es nur mit DMS_LASTTEST – hier mit nachgestellten Antworten (laufend und
+  // fertig), hell, dunkel und am Handy. Werte erfunden, Gerät ohne Namen.
+  await lasttestSeite(browser, bild);
 
   // Die API-Beschreibung dieser Version für das Administratorhandbuch
   await writeFile(join(ZIEL, 'openapi.json'), JSON.stringify(await (await fetch(`${BASIS}/api/openapi.json`)).json(), null, 2));

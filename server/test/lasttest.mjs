@@ -23,6 +23,11 @@
  * höchstens ECHTE_MAPPEN_MAX Mappen keine Demo-Mappen sind – sonst bricht er ab, bevor er etwas anlegt. Fehlen
  * Demo-Mappen für die Stufe, legt er sie dazu (je Lauf höchstens 50.000).
  *
+ * Lasttest-Modus (#612): Startet das DMS mit DMS_LASTTEST=klein|mittel|gross|alle, startet es dieses Skript selbst
+ * (als Kindprozess) und zeigt Fortschritt und Ergebnis im Browser. Dafür meldet das Skript seine Schritte über den
+ * IPC-Kanal (`process.send`), wenn es einen gibt – auf der Konsole ändert sich nichts. `--pruefen` prüft nur, ob das
+ * Ziel eine frische oder eine eigene Test-Installation ist (Exit-Code 0) oder nicht (2), und legt nichts an.
+ *
  * Optionen: --ziel <URL> (sonst DMS_URL, sonst http://127.0.0.1:$PORT), --dauer <s je Durchgang> (120),
  * --schritt-dauer <s je Schritt von groß> (120), --bis <n> (groß: höchstens so viele gleichzeitig),
  * --code <Einrichtungscode> (sonst aus /data/geheim/EINRICHTUNGSCODE), --geraet <Text>, --speicher <HDD|SSD|NVMe>,
@@ -110,6 +115,15 @@ async function anmelden([email, passwort]) {
 
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Schritt an den Lasttest-Modus melden (#612): nur mit IPC-Kanal (Kindprozess des DMS), sonst nichts. Nie mit
+ * Zugangsdaten oder Adressen – die Seite im Browser zeigt, was hier ankommt.
+ */
+const melde = (e) => new Promise((fertig) => {
+  if (!process.send || !process.connected) return fertig();
+  process.send({ ...e, zeit: Date.now() }, () => fertig());
+});
+
 /* ---------- Einrichten und Schutz der echten Ablage ---------- */
 
 async function code() {
@@ -126,6 +140,7 @@ async function demo(c, anzahl, nr) {
   await json('POST', '/api/werkbank/demo', { ...c, body: { anzahl, startwert: `lasttest-563-${nr}`, dokumente: DOKUMENTE_ANTEIL > 0 ? { anteil: DOKUMENTE_ANTEIL, von: 1, bis: 1, mischung: { brief: 100, mehrseitig: 0, scan: 0, bild: 0, gross: 0 } } : null } });
   for (;;) {
     const { daten: a } = await json('GET', '/api/werkbank/auftrag', c);
+    if (a && typeof a.fertig === 'number') melde({ art: 'demo', fertig: a.fertig, gesamt: a.gesamt ?? anzahl });
     if (!a || a.status === 'fertig') break;
     if (a.status === 'fehler') throw new Error(a.fehler);
     await warte(2000);
@@ -135,6 +150,7 @@ async function demo(c, anzahl, nr) {
 
 /** Frisches DMS: Konten, Beispiele, Rolle, Mitglieder, Regeln wie in einem Haushalt (wie ladezeiten.mjs, #477). */
 async function einrichten() {
+  melde({ art: 'schritt', schritt: 'einrichten' });
   const [email, passwort] = BENUTZER.admin;
   const c0 = await code();
   const { cookie: admin } = await json('POST', '/api/konto/einrichten', { body: { mandant: HAUSHALT, email, name: 'Lena (Lasttest)', passwort }, koepfe: c0 ? { 'x-einrichtungscode': c0 } : {} });
@@ -161,35 +177,48 @@ async function einrichten() {
   return admin;
 }
 
+const zaehle = async (c) => {
+  const { daten } = await json('GET', '/api/werkbank/demo', c);
+  return { demo: daten.reduce((a, t) => a + t.demo, 0), gesamt: daten.reduce((a, t) => a + t.gesamt, 0) };
+};
+
+/**
+ * Schutz der echten Ablage, ohne etwas anzulegen: frisch (noch nicht eingerichtet) → `{ frisch: true }`; eingerichtet
+ * vom Lasttest (eigene Konten) mit höchstens ECHTE_MAPPEN_MAX Mappen, die keine Demo-Mappen sind → Sitzung und
+ * Bestand; sonst Abbruch. Dieselbe Prüfung vor jeder Messung und im Lasttest-Modus vor dem Start (#612).
+ */
+export async function pruefen() {
+  const { daten: status } = await json('GET', '/api/konto/status');
+  if (status.einrichtungNoetig) return { frisch: true };
+  let admin;
+  try { admin = await anmelden(BENUTZER.admin); } catch {
+    throw new Abbruch('Dieses DMS ist schon eingerichtet, aber nicht vom Lasttest. Der Lasttest läuft nur gegen eine eigene, frische Test-Installation – nie gegen deine echte Ablage (Handbuch: Lasttest selbst durchführen).');
+  }
+  const z = await zaehle({ cookie: admin });
+  if (z.gesamt - z.demo > ECHTE_MAPPEN_MAX) {
+    throw new Abbruch(`Hier liegen ${z.gesamt - z.demo} Mappen, die keine Demo-Mappen sind – das sieht nach einer echten Ablage aus. Der Lasttest bricht ab und legt nichts an.`);
+  }
+  return { frisch: false, admin, bestand: z };
+}
+
 /**
  * Vor jeder Messung: frisch → einrichten; sonst nur mit den Konten des Tests und fast nur Demo-Mappen – sonst
  * Abbruch, ohne etwas anzulegen. Danach fehlende Demo-Mappen für die Stufe dazulegen.
  */
 async function sicherstellen(mappen) {
-  const { daten: status } = await json('GET', '/api/konto/status');
-  let admin;
-  if (status.einrichtungNoetig) admin = await einrichten();
-  else {
-    try { admin = await anmelden(BENUTZER.admin); } catch {
-      throw new Abbruch('Dieses DMS ist schon eingerichtet, aber nicht vom Lasttest. Der Lasttest läuft nur gegen eine eigene, frische Test-Installation – nie gegen deine echte Ablage (Handbuch: Lasttest selbst durchführen).');
-    }
-  }
+  melde({ art: 'schritt', schritt: 'pruefen' });
+  const p = await pruefen();
+  const admin = p.frisch ? await einrichten() : p.admin;
   const c = { cookie: admin };
-  const zaehle = async () => {
-    const { daten } = await json('GET', '/api/werkbank/demo', c);
-    return { demo: daten.reduce((a, t) => a + t.demo, 0), gesamt: daten.reduce((a, t) => a + t.gesamt, 0) };
-  };
-  let z = await zaehle();
-  if (z.gesamt - z.demo > ECHTE_MAPPEN_MAX) {
-    throw new Abbruch(`Hier liegen ${z.gesamt - z.demo} Mappen, die keine Demo-Mappen sind – das sieht nach einer echten Ablage aus. Der Lasttest bricht ab und legt nichts an.`);
-  }
+  let z = p.frisch ? await zaehle(c) : p.bestand;
   let neu = false;
   for (let nr = 1; z.demo < mappen; nr++) {
     const n = Math.min(DEMO_JE_LAUF, mappen - z.demo);
     console.log(`Lege ${n} Demo-Mappen an (für ${mappen} insgesamt) …`);
+    melde({ art: 'schritt', schritt: 'demo', anzahl: n, mappen });
     const vorher = z.demo; neu = true;
     await demo(c, n, `${mappen}-${nr}`);
-    z = await zaehle();
+    z = await zaehle(c);
     if (z.demo <= vorher) throw new Error('Es sind keine Demo-Mappen dazugekommen – Werkbank → Demo-Daten prüfen.');
   }
   if (neu) await ruhe(c);
@@ -201,6 +230,7 @@ async function sicherstellen(mappen) {
  * Gemessen wird erst, wenn das vorbei ist – höchstens 15 Minuten warten.
  */
 async function ruhe(c) {
+  melde({ art: 'schritt', schritt: 'hintergrund' });
   const t0 = Date.now();
   for (;;) {
     const { daten: u } = await json('GET', '/api/werkbank/uebersicht', c).catch(() => ({ daten: null }));
@@ -220,6 +250,7 @@ class Abbruch extends Error {}
 const zufall = (a) => a[Math.floor(Math.random() * a.length)];
 
 async function vorbereiten() {
+  melde({ art: 'schritt', schritt: 'vorbereiten' });
   const sitzungen = {};
   for (const [k, z] of Object.entries(BENUTZER)) sitzungen[k] = await anmelden(z);
   const admin = { cookie: sitzungen.admin };
@@ -585,16 +616,23 @@ async function umgebung(cookie) {
 }
 
 /**
- * Ergebnis zum Kopieren (#563): ohne personenbezogene Daten, ohne Adressen, Rechner- oder Haushaltsnamen. Gerät
- * und Speicher trägt man mit --geraet und --speicher ein (oder im Formular „Messergebnis Lasttest“).
+ * Platzhalter für Gerät und Speicher im Ergebnisblock des Lasttest-Modus (#612): Die Seite im Browser setzt dort ein,
+ * was man ins Feld „Beschreibe dein Gerät“ tippt bzw. welche Speicherart erkannt oder gewählt ist.
  */
-function ergebnisblock(ergebnisse, x, u) {
+export const PLATZHALTER = { geraet: '{{geraet}}', speicher: '{{speicher}}' };
+
+/**
+ * Ergebnis zum Kopieren (#563): ohne personenbezogene Daten, ohne Adressen, Rechner- oder Haushaltsnamen. Gerät
+ * und Speicher trägt man mit --geraet und --speicher ein (oder im Formular „Messergebnis Lasttest“); im
+ * Lasttest-Modus stehen dort die PLATZHALTER.
+ */
+export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--geraet'), speicher: arg('--speicher') }) {
   const kz = ['```text', 'Messergebnis Lasttest (#563)'];
   const nv = 'bitte ergänzen';
   kz.push(`DMS-Version: ${f(u.version)} · Image: ${u.image} · Datenbank: ${f(u.datenbank)}`);
-  kz.push(`Gerät/Modell: ${arg('--geraet') ?? nv}`);
+  kz.push(`Gerät/Modell: ${angaben.geraet ?? nv}`);
   kz.push(`CPU: ${u.cpu ?? nv} · ${f(u.kerne)} Kerne für das DMS${u.kerneBegrenzt ? ' (Grenze des Containers)' : ''}, Rechner ${f(u.rechnerKerne)} · ${f(u.architektur)}`);
-  kz.push(`RAM: ${u.ramGb === null ? nv : `${String(u.ramGb).replace('.', ',')} GB${u.ramBegrenzt ? ' (Grenze des Containers)' : ''}`} · Speicher: ${arg('--speicher') ?? `${nv} (HDD/SSD/NVMe)`}`);
+  kz.push(`RAM: ${u.ramGb === null ? nv : `${String(u.ramGb).replace('.', ',')} GB${u.ramBegrenzt ? ' (Grenze des Containers)' : ''}`} · Speicher: ${angaben.speicher ?? `${nv} (HDD/SSD/NVMe)`}`);
   kz.push(`Bestand: ${x.bestand.gesamt} Mappen, ${x.dokumente} Dokumente (PDF)`);
   if (u.grenzen) kz.push(`Einstellungen: ${Object.entries(u.grenzen).map(([k, w]) => `${k}=${w}`).join(', ')}`);
   for (const e of ergebnisse) {
@@ -620,13 +658,16 @@ async function messen(stufen) {
   const laeufe = [];
   const lauf = async (o) => {
     console.log(`Durchgang „${o.name}“: ${o.n} gleichzeitig, ${o.dauer} s …`);
+    melde({ art: 'durchgang', name: o.name, n: o.n, dauer: o.dauer });
     const e = await durchgang(v, o);
     console.log(`  p95 ${e.p95} ms, Fehlerquote ${prozent(e.fehlerquote)}, abgewiesen ${e.abgewiesen}, ohne Antwort ${e.ohneAntwort}`);
+    melde({ art: 'durchgang-fertig', name: o.name, n: o.n, p95: e.p95, fehlerquote: e.fehlerquote });
     laeufe.push(e); await warte(5000); return e;
   };
   const ergebnisse = [];
   let v = null; let bestand = null; let x = null;
   for (const s of stufen) {
+    melde({ art: 'stufe', stufe: s, nr: stufen.indexOf(s) + 1, von: stufen.length });
     bestand = await sicherstellen(STUFEN[s].mappen);
     v = await vorbereiten();
     console.log(`Stufe ${s}: ${bestand.gesamt} Mappen; vorbereitet: ${v.mappen.length} Mappen, ${v.dokumente.length} Dokumente, ${v.ansichten.length} Ansichten.`);
@@ -638,6 +679,7 @@ async function messen(stufen) {
   const u = await umgebung(v.sitzungen.admin);
   const text = `${bericht(ergebnisse, x)}\n\n### Ergebnis zum Kopieren\n\nOhne Namen und Adressen – zum Einfügen in das Formular „Messergebnis Lasttest“.\n\n${ergebnisblock(ergebnisse, x, u)}`;
   console.log(`\n${text}`);
+  await melde({ art: 'ergebnis', bericht: bericht(ergebnisse, x), vorlage: ergebnisblock(ergebnisse, x, u, PLATZHALTER), verfehlt: ergebnisse.some((e) => e.verfehlt.length) });
   if (x.vergleich?.warnung) {
     const w = `Belastungsgrenze ${Math.round(x.vergleich.schlechter * 100)} % schlechter als beim letzten Lauf (${x.vergleich.vorher} → ${x.vergleich.jetzt} gleichzeitig).`;
     console.log(process.env.GITHUB_ACTIONS ? `::warning title=Lasttest groß::${w}` : `WARNUNG: ${w}`);
@@ -662,7 +704,10 @@ const direkt = (() => { try { return !!process.argv[1] && realpathSync(process.a
 if (direkt) {
   const wahl = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : arg('--stufe', hat('--einrichten') ? 'einrichten' : 'alle');
   try {
-    if (wahl === 'einrichten' || hat('--einrichten')) console.log(await sicherstellen(Number(arg('--mappen', STUFEN.mittel.mappen))));
+    if (hat('--pruefen')) {
+      const p = await pruefen();
+      console.log(p.frisch ? 'Frische Installation – der Lasttest richtet sie selbst ein.' : `Test-Installation des Lasttests (${p.bestand.demo} Demo-Mappen).`);
+    } else if (wahl === 'einrichten' || hat('--einrichten')) console.log(await sicherstellen(Number(arg('--mappen', STUFEN.mittel.mappen))));
     else if (arg('--gleichzeitig')) await einzeln(Number(arg('--gleichzeitig')));
     else {
       const stufe = ALT[wahl] ?? wahl;
@@ -671,7 +716,8 @@ if (direkt) {
       await messen(stufen);
     }
   } catch (e) {
-    if (!(e instanceof Abbruch)) throw e;
+    if (!(e instanceof Abbruch)) { await melde({ art: 'fehler', text: e instanceof Error ? e.message : String(e) }); throw e; }
+    await melde({ art: 'abbruch', text: e.message });
     console.error(`Abbruch: ${e.message}`);
     process.exitCode = 2;
   }
