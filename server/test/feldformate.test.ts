@@ -29,11 +29,11 @@ const fehler = (k: string, v: string, werte = {}) => formatFehler(f(k), v, { fel
 
 describe('Feldformate (#535): einzelne Formate', () => {
   it('E-Mail: name@domain.tld', () => {
-    assert.ok(istEmail('lena@beispiel.de'));
+    assert.ok(istEmail('lena@example.org'));
     assert.ok(istEmail('jonas.weber+dms@mail.beispiel.co.uk'));
     assert.ok(istEmail('markus@müller.de'));
-    for (const x of ['lena', 'lena@beispiel', '@beispiel.de', 'lena@@beispiel.de', 'lena beispiel@x.de']) assert.ok(!istEmail(x), x);
-    assert.match(fehler('email', 'lena@beispiel')!, /name@beispiel\.de/);
+    for (const x of ['lena', 'lena@beispiel', '@example.org', 'lena@@example.org', 'lena beispiel@x.de']) assert.ok(!istEmail(x), x);
+    assert.match(fehler('email', 'lena@beispiel')!, /name@example\.org/);
   });
 
   it('Telefon: Ziffern, + am Anfang, Leerzeichen, /, -, Klammern – keine Buchstaben', () => {
@@ -44,8 +44,8 @@ describe('Feldformate (#535): einzelne Formate', () => {
   });
 
   it('Internetseite: mit oder ohne Schema, ohne Leerzeichen', () => {
-    for (const x of ['www.beispiel.de', 'https://beispiel.de/kontakt', 'http://www.beispiel.de']) assert.ok(istInternetseite(x), x);
-    for (const x of ['beispiel', 'www beispiel.de', 'ftp://beispiel.de', 'https://']) assert.ok(!istInternetseite(x), x);
+    for (const x of ['www.example.org', 'https://example.org/kontakt', 'http://www.example.org']) assert.ok(istInternetseite(x), x);
+    for (const x of ['beispiel', 'www example.org', 'ftp://example.org', 'https://']) assert.ok(!istInternetseite(x), x);
   });
 
   it('IBAN: Länge je Land und Prüfziffer, Anzeige in Vierergruppen', () => {
@@ -101,12 +101,12 @@ describe('Feldformate (#535): Speichern und Bestand', () => {
   });
 
   it('gleicheFormateAn: https:// ergänzen, IBAN in Gruppen – nur geänderte Werte', () => {
-    const w = gleicheFormateAn({ felder }, { internetseite: 'www.beispiel.de', iban: 'de89370400440532013000', email: ' lena@beispiel.de ' });
-    assert.equal(w.internetseite, 'https://www.beispiel.de');
+    const w = gleicheFormateAn({ felder }, { internetseite: 'www.example.org', iban: 'de89370400440532013000', email: ' lena@example.org ' });
+    assert.equal(w.internetseite, 'https://www.example.org');
     assert.equal(w.iban, 'DE89 3704 0044 0532 0130 00');
-    assert.equal(w.email, 'lena@beispiel.de');
-    const alt = { internetseite: 'www.beispiel.de' };
-    assert.equal(gleicheFormateAn({ felder }, { ...alt }, alt).internetseite, 'www.beispiel.de');
+    assert.equal(w.email, 'lena@example.org');
+    const alt = { internetseite: 'www.example.org' };
+    assert.equal(gleicheFormateAn({ felder }, { ...alt }, alt).internetseite, 'www.example.org');
   });
 
   it('unpassendeAngaben: je Mappe und Feld mit Grund', () => {
@@ -157,8 +157,8 @@ describe('Feldformate (#535): im Dienst', () => {
     await assert.rejects(d.legeMappeAn({ typId: typ.id, werte: { name: 'Lena', plz: '01357asda', telefon: '0351 abc' } }),
       (e) => e instanceof Fachfehler && e.status === 422 && /Telefon, PLZ/.test(e.message) && !!(e.details as { felder: Record<string, string[]> }).felder.plz);
     await assert.rejects(d.legeMappeAn({ typId: typ.id, werte: { name: 'Lena', geburtstag: '2999-01-01' } }), (e) => e instanceof Fachfehler && /Geburtstag/.test(e.message));
-    const m = await d.legeMappeAn({ typId: typ.id, werte: { name: 'Lena', plz: '01357', internetseite: 'www.beispiel.de', iban: 'DE89370400440532013000' } });
-    assert.equal(m.werte.internetseite, 'https://www.beispiel.de');
+    const m = await d.legeMappeAn({ typId: typ.id, werte: { name: 'Lena', plz: '01357', internetseite: 'www.example.org', iban: 'DE89370400440532013000' } });
+    assert.equal(m.werte.internetseite, 'https://www.example.org');
     assert.equal(m.werte.iban, 'DE89 3704 0044 0532 0130 00');
     const wien = await d.legeMappeAn({ typId: typ.id, werte: { name: 'Jonas', plz: '1010', land: 'Österreich' } });
     assert.equal(wien.werte.plz, '1010');

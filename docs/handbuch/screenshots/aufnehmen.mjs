@@ -18,8 +18,8 @@ import { chromium } from 'playwright';
 
 const BASIS = process.env.DMS_URL ?? 'http://localhost:3000';
 const ZIEL = process.argv[2] ?? 'bilder';
-const ADMIN = { email: 'anna@beispiel.de', name: 'Anna Beispiel', passwort: 'handbuch-passwort-1' };
-const MITGLIED = { email: 'ben@beispiel.de', name: 'Ben Beispiel', passwort: 'handbuch-passwort-2' };
+const ADMIN = { email: 'anna@example.org', name: 'Anna Beispiel', passwort: 'handbuch-passwort-1' };
+const MITGLIED = { email: 'ben@example.org', name: 'Ben Beispiel', passwort: 'handbuch-passwort-2' };
 
 /* ---------- Daten über die Schnittstelle vorbereiten ---------- */
 
