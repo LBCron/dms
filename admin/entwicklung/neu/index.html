@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01402" class="md-nav__link">
+  <a href="#01403" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.140.2
+        0.140.3
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.140.2">
+    <nav class="md-nav" aria-label="0.140.3">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -387,6 +387,45 @@
         
           <li class="md-nav__item">
   <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01402" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.140.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.140.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -436,7 +475,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -486,7 +525,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_2" class="md-nav__link">
+  <a href="#handbuch_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2510,15 +2549,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01402" class="md-nav__link">
+  <a href="#01403" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.140.2
+        0.140.3
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.140.2">
+    <nav class="md-nav" aria-label="0.140.3">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2534,6 +2573,45 @@
         
           <li class="md-nav__item">
   <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01402" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.140.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.140.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2583,7 +2661,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_1" class="md-nav__link">
+  <a href="#handbuch_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2633,7 +2711,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch_2" class="md-nav__link">
+  <a href="#handbuch_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -2695,8 +2773,20 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01402">0.140.2<a class="headerlink" href="#01402" title="Permanent link">&para;</a></h2>
+<h2 id="01403">0.140.3<a class="headerlink" href="#01403" title="Permanent link">&para;</a></h2>
 <h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Schwärzen gehärtet</strong> (#392/#459, Nachprüfung durch den Chat Sicherheit):</li>
+<li><strong>Drehung der Seite wie poppler:</strong> Die Lage jeder Seite kommt jetzt aus <code>pdfinfo</code>, also genau so, wie poppler die Seite zeichnet. Bei ungültigen Angaben wie <code>/Rotate 90.0</code> lasen pdf-lib und poppler die Seite bisher unterschiedlich; die Kästen lagen dann neben den Wörtern, und das Wort blieb im Bild sichtbar (Textebene und Volltext waren schon richtig). Zusätzlich prüft das Schwärzen je Seite, ob das gerenderte Bild hoch bzw. quer liegt wie erwartet, und bricht sonst mit einer Meldung ab.</li>
+<li><strong>Suchbegriffe finden mehr Schreibweisen:</strong> Silbentrennung am Zeilenende („Mül-“ / „ler“), weiches Trennzeichen und Null-Breite-Zeichen im Wort, „SS“ statt „ß“ (Versalien), freistehendes Trema und geschützte Bindestriche.</li>
+<li><strong>Vektor aus dem ungeschwärzten Text:</strong> Bei „Neue Version“ wird der gespeicherte Vektor (Ähnlichkeit, #442) gelöscht und „Volltext fertig“ gemeldet, damit Pakete ihn aus dem geschwärzten Text neu berechnen.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Benutzerhandbuch, Dokumente → Schwärzen: Schwärzen schützt beim Hinausgeben, nicht innerhalb des DMS; welche Schreibweisen Suchbegriffe finden; Abbruch bei unklarer Drehung.</li>
+</ul>
+<h2 id="01402">0.140.2<a class="headerlink" href="#01402" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit_1">Sicherheit<a class="headerlink" href="#sicherheit_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Abrufseite der Auskunft (#455) gehärtet</strong> (Nachprüfung durch den Chat Sicherheit):</li>
 <li>Die Code-Prüfung (scrypt) läuft nur noch für bekannte Links und höchstens zweimal gleichzeitig; je Link nur eine Prüfung zur selben Zeit. Parallele Anfragen kommen damit nicht mehr an der Sperre nach 10 falschen Codes vorbei und können den Server nicht mehr auslasten.</li>
@@ -2705,7 +2795,7 @@
 <li>Die Abrufseite entfernt den Schlüssel nach dem Lesen aus der Adresszeile und dem Verlauf; ein kaputtes Fragment führt nicht mehr zu einer leeren Seite.</li>
 <li><strong>Abruf-Links ab dem 501.:</strong> Zurückziehen und Download fanden ältere Links nicht mehr (Suche über die ersten 500); jetzt direkt per Kennung.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Administratorhandbuch, Datenschutz → Auskunft zustellen: Bremse der Abrufseite.</li>
 </ul>
@@ -2721,7 +2811,7 @@
 <li>Vorhandene Fassungen (bisher <code>/data/files/fassungen/&lt;Haushalts-Id&gt;</code>) zieht das DMS beim ersten Start von selbst in den Haushaltsordner um; ab der nächsten Sicherung sind sie dabei. Die Sicherung wird um die Größe der Fassungen größer (Werkbank → Sicherung zeigt die Dateigröße wie bisher).</li>
 <li>Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen. Dann gilt wie bisher: <strong>Werkbank → Wartungsoperationen → Vorschaubilder nachholen</strong> fordert die Fassungen beim Paket neu an, sofern es installiert ist; der Volltext ist in jeder Sicherung enthalten.</li>
 </ul>
-<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_2">Handbuch<a class="headerlink" href="#handbuch_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Admin: Sicherung (was eine Sicherung enthält, Grundsatz „im Zweifel in die Sicherung“), Andere Dateitypen, Wiederherstellen (Probe), Vollexport. Entwickler: Dateien umwandeln (Speicher).</li>
 </ul>
@@ -2737,7 +2827,7 @@
 <li><strong>Ein Befehl zum Installieren:</strong> <code>deploy/raspberry-pi/einrichten.sh</code> prüft 64-Bit-System, Arbeitsspeicher, freien Platz und Docker, bricht mit einer verständlichen Meldung ab, bevor es etwas anlegt, legt <code>~/dms</code> mit der neuen Vorlage <code>deploy/raspberry-pi/docker-compose.yml</code> (zwei Container) und einer <code>.env</code> mit zufälligem Datenbank-Passwort an, startet das DMS und zeigt Adresse und Einrichtungscode. Es installiert nichts am System – fehlt Docker, nennt es die offizielle Anleitung – und lässt sich beliebig oft starten, ohne Daten, Vorlage oder Passwort anzufassen.</li>
 <li><strong>Wie schnell ist mein Pi?</strong> Messanleitung mit Lasttest (Stufe klein) und einer Probe der Texterkennung in einer Test-Installation, Rückmeldung über das Formular „Messergebnis Lasttest“ bzw. Issue #576; dazu eine Tabelle für die Messwerte.</li>
 </ul>
-<h3 id="handbuch_2">Handbuch<a class="headerlink" href="#handbuch_2" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_3">Handbuch<a class="headerlink" href="#handbuch_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Installationshandbuch: Raspberry Pi neu geschrieben (Kurzfassung für Fortgeschrittene eingeklappt), Übersicht „Was hast du?“ und PC mit Linux verweisen darauf. Eigene Grafik: Geräteliste eines Routers mit erfundenen Werten.</li>
 </ul>
