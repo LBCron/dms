@@ -76,6 +76,8 @@ function faelle(pg: boolean) {
         return m;
       };
       const suche = async (s: string, volltext = true, sicht = `typ:${typ.id}`) => {
+        // Neue Wörter kommen über den Eingang ins Wörterverzeichnis (#575); im Betrieb alle paar Sekunden.
+        await d.woerterEinarbeiten();
         const x = await d.seite(ICH, { sicht, suche: s, volltext: volltext ? 'true' : undefined }) as Awaited<ReturnType<Dienst['seite']>> & { unscharf?: { statt: string; vorschlag: string | null } };
         return { titel: x.mappen.map((m) => m.titel).sort(), unscharf: x.unscharf ?? null };
       };
@@ -183,6 +185,10 @@ function faelle(pg: boolean) {
       const m = await mappe('Zettel', 'Wärmepumpe gewartet');
       const [dok] = await sql!`SELECT id, suchindex IS NOT NULL AS da FROM dokumente WHERE mappe_id = ${m.id}`;
       assert.equal(dok.da, true);
+      // Erst im Eingang (#575), nach dem Einarbeiten im Verzeichnis.
+      assert.equal((await sql!`SELECT 1 FROM suchwoerter WHERE wort = 'warmepumpe'`).length, 0);
+      assert.ok((await sql!`SELECT 1 FROM suchwoerter_eingang WHERE wort = 'warmepumpe'`).length > 0);
+      assert.ok(await r.woerterEinarbeiten() > 0);
       const [w] = await sql!`SELECT anzahl FROM suchwoerter WHERE wort = 'warmepumpe'`;
       assert.ok(w, 'Wort aus dem Volltext im Verzeichnis');
       assert.ok(await r.woerterNeu() > 0);

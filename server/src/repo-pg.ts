@@ -10,9 +10,12 @@ import { umschluesseleTief } from './tresor';
 import { datumIn, ziehe, type Nummernkreis } from '../../shared/src/nummernkreis';
 import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
-import { istUuid, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
+import { beiVerklemmungWiederholen } from './db';
+import { protokoll } from './protokoll';
+import { istUuid, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 /** Sprachmarke im Hinweis der Texterkennung (#395) samt Konfidenz, zum Ersetzen (#400). */
+const log = protokoll.modul('texterkennung');
 const SPRACHE_INFO_SQL = ' · Sprache: [a-z_]{3,10}( \\(\\d{1,3} %\\))?';
 
 type Sql = postgres.Sql;
@@ -1411,10 +1414,14 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return r ? alsDokument(r) : undefined;
     },
     async ocrSetze(id, e) {
-      await sql`
+      // Bricht PostgreSQL das Speichern wegen einer Verklemmung ab (#575), noch einmal versuchen – in einer eigenen
+      // Transaktion bzw. innerhalb einer Transaktion in einem Sicherungspunkt, damit der Versuch wiederholbar ist.
+      await beiVerklemmungWiederholen(() => sql.begin((tx) => tx`
         UPDATE dokumente SET ocr_stand = ${e.stand}, ocr_info = ${e.info ?? null}, ocr_seiten = ${e.seiten ?? null}, ocr_zeit = now()
-          ${e.text !== undefined ? sql`, volltext = ${e.text}` : sql``}${e.sprache !== undefined ? sql`, sprache = ${e.sprache}` : sql``}
-        WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+          ${e.text !== undefined ? tx`, volltext = ${e.text}` : tx``}${e.sprache !== undefined ? tx`, sprache = ${e.sprache}` : tx``}
+        WHERE haushalt_id = ${haushaltId} AND id = ${id}`), {
+        nochmal: (versuch, f) => log.warn('Volltext speichern: Datenbank hat abgebrochen, neuer Versuch', { dokument: id, versuch, fehler: (f as Error).message }),
+      });
       if (e.sprache) sprachenZwischen = null;
     },
     async ocrVonSha(sha256, ausser) {
@@ -1620,6 +1627,10 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
     async woerterNeu() {
       const [r] = await sql`SELECT dms_woerter_neu(${haushaltId}::uuid) AS n`;
+      return Number(r.n);
+    },
+    async woerterEinarbeiten(grenze = WOERTER_JE_LAUF) {
+      const [r] = await sql`SELECT dms_woerter_einarbeiten(${grenze}::int) AS n`;
       return Number(r.n);
     },
     async synonyme() {

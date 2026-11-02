@@ -11,7 +11,7 @@ import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import type { OcrErgebnis, Repo } from './repo';
-import { INFO_TEXTEBENE, infoWartet } from '../../shared/src/volltext';
+import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 
 /**
  * Volltext (#45, #458, #459).
@@ -262,7 +262,14 @@ export class Texterkennung {
     // Seiten ohne Text (#458) gehören nicht ins Repo, nur ins Ereignis.
     const ohneText = (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
     delete (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
-    try { await this.repo.ocrSetze(d.id, e); } catch (f) { log.error('Ergebnis der Texterkennung nicht gespeichert', { dokument: d.name, fehler: (f as Error).message }); return; }
+    try { await this.repo.ocrSetze(d.id, e); } catch (f) {
+      // Auch nach den Wiederholungen nicht gespeichert (#575): nie still ohne Volltext – Stand „Fehler“ mit Hinweis,
+      // damit es in Werkbank → Volltext auffällt und „Fehlgeschlagene erneut“ es wieder einreiht.
+      log.error('Ergebnis der Texterkennung nicht gespeichert', { dokument: d.name, id: d.id, fehler: (f as Error).message });
+      await this.repo.ocrSetze(d.id, { stand: 'fehler', info: `${NICHT_GESPEICHERT} (${(f as Error).message})`.slice(0, 500), seiten: e.seiten ?? null })
+        .catch((g) => log.error('Stand der Texterkennung nicht gesetzt – das Dokument wird beim nächsten Start neu eingereiht', { dokument: d.name, id: d.id, fehler: (g as Error).message }));
+      return;
+    }
     const daten = { dokument: d.name, id: d.id, stand: e.stand, seiten: e.seiten ?? undefined, ms: Date.now() - start, info: e.info ?? undefined };
     if (e.stand === 'fehler') log.warn('Texterkennung fehlgeschlagen', daten); else if (e.stand === 'ausgelassen') log.info('Texterkennung ausgelassen', daten);
     else if (e.stand === 'paket') log.info('Textebene gelesen, Texterkennung durch Paket folgt', daten); else log.info('Texterkennung abgeschlossen', daten);

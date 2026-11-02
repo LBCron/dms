@@ -360,6 +360,8 @@ export function speicherRepo(): Repo {
     },
     async woerterAnzahl() { return alleWoerter().size; },
     async woerterNeu() { return alleWoerter().size; },
+    // Im Arbeitsspeicher wird das Verzeichnis jedes Mal neu gezählt – es gibt keinen Eingang.
+    async woerterEinarbeiten() { return 0; },
     async synonyme() { return synonymListe.map(kopie); },
     async legeSynonymAn(g) { synonymListe.push(kopie(g)); },
     async aendereSynonym(id, woerter) { const g = synonymListe.find((x) => x.id === id && x.quelle === 'werkbank'); if (!g) return false; g.woerter = [...woerter]; return true; },

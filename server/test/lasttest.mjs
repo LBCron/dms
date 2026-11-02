@@ -172,20 +172,16 @@ async function sicherstellen(mappen) {
   if (z.gesamt - z.demo > ECHTE_MAPPEN_MAX) {
     throw new Abbruch(`Hier liegen ${z.gesamt - z.demo} Mappen, die keine Demo-Mappen sind – das sieht nach einer echten Ablage aus. Der Lasttest bricht ab und legt nichts an.`);
   }
-  let wiederholt = 0; let neu = false;
+  let neu = false;
   for (let nr = 1; z.demo < mappen; nr++) {
     const n = Math.min(DEMO_JE_LAUF, mappen - z.demo);
     console.log(`Lege ${n} Demo-Mappen an (für ${mappen} insgesamt) …`);
     const vorher = z.demo; neu = true;
-    try { await demo(c, n, `${mappen}-${nr}`); } catch (e) {
-      // Verklemmung mit Hintergrundarbeit (Vorschaubilder, Wörterverzeichnis): neu zählen und weitermachen.
-      if (!/deadlock|Verklemmung/i.test(e.message) || ++wiederholt > 3) throw e;
-      console.log(`  abgebrochen (${e.message}) – neuer Versuch`);
-    }
+    await demo(c, n, `${mappen}-${nr}`);
     z = await zaehle();
-    if (z.demo <= vorher && !wiederholt) throw new Error('Es sind keine Demo-Mappen dazugekommen – Werkbank → Demo-Daten prüfen.');
+    if (z.demo <= vorher) throw new Error('Es sind keine Demo-Mappen dazugekommen – Werkbank → Demo-Daten prüfen.');
   }
-  if (wiederholt || neu) await ruhe(c);
+  if (neu) await ruhe(c);
   return z;
 }
 

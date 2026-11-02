@@ -72,6 +72,36 @@ export class Verbindungswarten {
 }
 
 /**
+ * Verklemmung (Deadlock, 40P01) und Serialisierungsfehler (40001) (#575): PostgreSQL bricht einen von zwei
+ * Vorgängen ab, die aufeinander warten. Ein erneuter Versuch kurz danach gelingt in aller Regel.
+ */
+export function istVerklemmung(e: unknown): boolean {
+  const code = (e as { code?: unknown } | null)?.code;
+  return code === '40P01' || code === '40001';
+}
+
+/** Wie oft und wie lange zwischen den Versuchen (#575): 5 Versuche, Wartezeit wächst (50, 100, 200, 400 ms, ±50 %). */
+export const VERKLEMMUNG_VERSUCHE = 5;
+const VERKLEMMUNG_WARTEN_MS = 50;
+
+/**
+ * `f` ausführen; bricht PostgreSQL es wegen einer Verklemmung oder eines Serialisierungsfehlers ab, nach kurzer,
+ * zufällig gestreuter Wartezeit noch einmal – höchstens `versuche`-mal. Andere Fehler und der letzte Abbruch gehen
+ * an den Aufrufer. `f` muss eine abgeschlossene Einheit sein (eigene Transaktion bzw. Sicherungspunkt).
+ */
+export async function beiVerklemmungWiederholen<T>(f: () => Promise<T>, o: { versuche?: number; wartenMs?: number; nochmal?: (versuch: number, e: unknown) => void } = {}): Promise<T> {
+  const versuche = o.versuche ?? VERKLEMMUNG_VERSUCHE;
+  for (let versuch = 1; ; versuch++) {
+    try { return await f(); } catch (e) {
+      if (!istVerklemmung(e) || versuch >= versuche) throw e;
+      o.nochmal?.(versuch, e);
+      const ms = (o.wartenMs ?? VERKLEMMUNG_WARTEN_MS) * 2 ** (versuch - 1) * (0.5 + Math.random());
+      await new Promise((r) => setTimeout(r, ms));
+    }
+  }
+}
+
+/**
  * Führt alle noch nicht ausgeführten SQL-Dateien aus `verzeichnis` in
  * Namensreihenfolge aus. Alles läuft in einer Transaktion: scheitert eine
  * Migration, bleibt die Datenbank unverändert. Die Transaktionssperre

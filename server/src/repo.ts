@@ -61,6 +61,9 @@ export interface NeueMappe {
 }
 
 /** Ergebnis der Texterkennung für ein Dokument. */
+/** Einträge je Lauf beim Einarbeiten ins Wörterverzeichnis (#575). */
+export const WOERTER_JE_LAUF = 20_000;
+
 export interface OcrErgebnis {
   stand: OcrStandArt; text?: string | null; info?: string | null; seiten?: number | null;
   /** Sprache des Texts (#400, Tesseract-Kennung); undefined = unverändert lassen, null = keine (Deutsch). */
@@ -371,6 +374,11 @@ export interface Repo {
   woerterAnzahl(): Promise<number>;
   /** Wörterverzeichnis aus dem Bestand neu aufbauen; liefert die Anzahl. */
   woerterNeu(): Promise<number>;
+  /**
+   * Neue Wörter aus dem Eingang ins Wörterverzeichnis übernehmen (#575, höchstens `grenze` Einträge); liefert deren
+   * Zahl, -1 wenn gerade ein anderer Lauf arbeitet.
+   */
+  woerterEinarbeiten(grenze?: number): Promise<number>;
   /** Gruppen gleichbedeutender Wörter (Werkbank und Pakete). */
   synonyme(): Promise<Synonymgruppe[]>;
   legeSynonymAn(g: { id: string; woerter: string[]; quelle: string }): Promise<void>;

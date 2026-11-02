@@ -39,3 +39,6 @@ export function volltextHerkunft(o: OcrStand | null | undefined): VolltextHerkun
   if (/Texterkennung/.test(info)) return { art: 'eingebaut' };
   return null;
 }
+
+/** Hinweis am Dokument, wenn die Datenbank ein Ergebnis auch nach mehreren Versuchen nicht annahm (#575). */
+export const NICHT_GESPEICHERT = 'Text erkannt, aber nicht gespeichert – die Datenbank war ausgelastet. Bitte erneut versuchen';

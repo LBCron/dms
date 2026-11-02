@@ -405,6 +405,16 @@ sicherung.start();
 speicherplatz.start();
 await eingangsordner.start();
 postfaecher.start();
+// Wörterverzeichnis der Suche (#575): neue Wörter aus dem Eingang übernehmen – entkoppelt von Mappen und Texterkennung.
+let woerterFehler = '';
+setInterval(() => {
+  if (wiederherstellung.laeuft()) return;
+  void dienst.woerterEinarbeiten().then(() => { woerterFehler = ''; }, (e) => {
+    // Nur einmal je Fehlerbild melden, nicht alle fünf Sekunden.
+    if ((e as Error).message !== woerterFehler) log.warn('Wörterverzeichnis: neue Wörter nicht übernommen', { fehler: (e as Error).message });
+    woerterFehler = (e as Error).message;
+  });
+}, 5000).unref();
 setInterval(() => void wiederherstellung.tick().catch((e) => log.error('Zeitplan der Probe gestört', { fehler: (e as Error).message })), 60_000).unref();
 
 const beenden = async () => {
