@@ -371,8 +371,30 @@ a.textknopf { text-decoration: none; }
 .registertab .anzahl { min-width: 18px; text-align: center; }
 .gruppe header .anzahl { margin-left: 4px; }
 
-.suchformular { gap: 12px; }
+/* Erweiterte Suche (#199, #426): Formular oben in der Mitte, Treffer darunter. Präfix sm-, sz-. */
+.spalte.liste.suchmitte { container: suchmitte / inline-size; }
+.spalte.liste.suchmitte.sm-formular { overflow-y: auto; padding-bottom: 32px; }
+.spalte.liste.suchmitte.sm-formular > .listenrumpf { flex: none; min-height: auto; overflow: visible; padding-bottom: 0; }
+.suchformular { gap: 14px; }
 .suchformular fieldset.suchgruppe { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@container suchmitte (min-width: 760px) {
+  .suchformular { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .suchformular > .sg-bedingungen, .suchformular > .knoepfe { grid-column: 1 / -1; }
+  .suchformular > .sg-volltext { grid-column: 2; grid-row: 1; }
+  .sg-bedingungen .feldsuche { display: grid; grid-template-columns: minmax(12em, 18em) minmax(0, 1fr); column-gap: 14px; align-items: center; }
+  .sg-bedingungen .feldsuche > .feldsuchkopf { grid-column: 1; }
+  .sg-bedingungen .feldsuche > :not(.feldsuchkopf) { grid-column: 2; grid-row: 1; }
+}
+.bedingungneu { align-self: flex-start; }
+.suchformular .bedingungneu select { width: auto; max-width: 100%; font-weight: 600; color: var(--akzent); }
+.typwahl-ref .suchchips { margin-bottom: 2px; }
+.suchzusammenfassung { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.suchzusammenfassung > .suchchips, .suchzusammenfassung > p { flex: 1 1 16em; min-width: 0; }
+.chiptext { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.chiptext:hover, .chiptext:focus-visible { color: var(--akzent); text-decoration: underline; }
+.chipweg .sym { width: 1em; height: 1em; vertical-align: middle; }
+.feldsuchkopf .chipweg { margin-left: auto; }
+.nur-breit-inline { display: inline; }
 .suchformular legend { font-weight: 600; font-size: calc(12px * var(--skala, 1)); text-transform: uppercase; letter-spacing: .04em; color: var(--leise); margin-bottom: 4px; }
 .suchformular input[type="text"], .suchformular input[type="search"], .suchformular input[type="date"], .suchformular select { width: 100%; min-width: 0; }
 .typwahl { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
@@ -380,6 +402,9 @@ a.textknopf { text-decoration: none; }
 .feldsuche.gesetzt > .feldsuchkopf label { font-weight: 600; color: var(--tinte); }
 .feldsuchkopf { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .feldsuchkopf select { width: auto !important; max-width: 50%; }
+.feldsuchkopf label { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
+.suchformular .vonbis input { flex: 1 1 9em; }
+.suchformular .vonbis select { width: auto; flex: 0 1 12em; }
 .vonbis { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .vonbis input { flex: 1 1 110px; }
 .zeile.umbruch { flex-wrap: wrap; }
@@ -398,9 +423,12 @@ a.textknopf { text-decoration: none; }
   .kopf { gap: 12px; }
   .drei { grid-template-columns: minmax(0, 1fr); }
   .drei[data-ebene="liste"] .spalte.mappe, .drei[data-ebene="mappe"] .spalte.sichten, .drei[data-ebene="mappe"] .spalte.liste { display: none; }
-  /* Erweiterte Suche (#199): erst das Formular, dann die Treffer. */
-  .drei[data-ebene="formular"] .spalte.liste, .drei[data-ebene="formular"] .spalte.mappe, .drei[data-ebene="suchliste"] .spalte.sichten, .drei[data-ebene="suchliste"] .spalte.mappe { display: none; }
-  .drei[data-ebene="formular"] .spalte.sichten { border-bottom: 0; }
+  /* Erweiterte Suche (#199, #426): erst das Formular als eigener Schritt („Filter“), dann die Treffer. */
+  .drei[data-ebene="formular"] .spalte.mappe, .drei[data-ebene="suchliste"] .spalte.mappe { display: none; }
+  .drei[data-ebene="formular"], .drei[data-ebene="suchliste"] { grid-template-rows: auto minmax(0, 1fr); }
+  .spalte.liste.sm-formular > :not(.listenkopf):not(.suchkopf):not(.breitenmesser) { display: none; }
+  .nur-breit-inline { display: none; }
+  .feldsuchkopf select.klein { font-size: 16px; }
   .spalte.sichten { border-right: 0; border-bottom: 1px solid var(--linie); overflow: visible; padding-bottom: 12px; }
   .sichtliste { flex-direction: row; overflow-x: auto; min-width: 0; max-width: 100%; }
   .spalte.sichten { overflow-x: clip; }

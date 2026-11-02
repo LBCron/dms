@@ -15,6 +15,7 @@ import { titelOder, useSeiten } from '../seiten';
 import { MappeAnsicht, NeueMappe } from './MappeFormular';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from './Papierkorb';
 import { Startseite } from './Startseite';
+import { t } from '../sprache';
 import { Symbol, type SymbolName } from '../Symbol';
 import { AnsichtFilter, AnsichtWahl } from './AnsichtWahl';
 import { Stern } from './Stern';
@@ -24,7 +25,7 @@ import { ExportDialog } from './Export';
 import { EmailMehrere } from './EmailMehrere';
 import { PostKnopf } from './Post';
 import type { Hilfeort } from '../../../shared/src/hilfe';
-import { Suchchips, Suchformular, suchFehler, suchTypen } from './Suche';
+import { Suchkopf, suchFehler, suchTypen } from './Suche';
 import { mitGrund } from './Loeschgrund';
 import { rueckfrage } from '../rueckfrage';
 import { ZahlWarte } from './ZahlWarte';
@@ -37,7 +38,7 @@ import { ZahlWarte } from './ZahlWarte';
  * /ablage/:sicht/:mappeId           Mappe rechts geöffnet
  * /ablage/:typId/neu?verweis=k:id   neue Mappe, optional mit vorbelegtem Verweis
  * /ablage/link?typ=…&feld=…         sprechender Link (#98); geöffnet: /ablage/link/:mappeId?typ=…
- * /ablage/suche?typ=…&feld.von=…    erweiterte Suche (#199): links das Formular; geöffnet: /ablage/suche/:mappeId?…
+ * /ablage/suche?typ=…&feld.von=…    erweiterte Suche (#199, #426): Formular oben in der Mitte; geöffnet: /ablage/suche/:mappeId?…
  *
  * Die Liste lädt je 100 Mappen nach Titel sortiert und beim Scrollen die nächsten.
  */
@@ -93,7 +94,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   // Zahlen kommen nach (#512): bis dahin ein Platzhalter (warte) bei den Einträgen, die aus dem Zähler kommen.
   const warte = !d.zahlenDa;
   const feste: Array<{ pfad: string; name: string; symbol: SymbolName; titel?: string; zahl?: number; warte?: boolean; hervor?: boolean; an: boolean }> = [
-    { pfad: '/ablage/suche', name: 'Erweiterte Suche', symbol: 'suche', titel: 'Mappentypen wählen, in Feldern und im Volltext suchen', an: false },
+    { pfad: '/ablage/suche', name: 'Erweiterte Suche', symbol: 'suche', titel: 'Mappentypen wählen, in Feldern und im Volltext suchen', an: istSuche },
     ...(mitStart ? [{ pfad: '/ablage/start', name: 'Start', symbol: 'haus' as const, an: sicht === 'start' }] : []),
     { pfad: '/ablage/eingang', name: 'Zu erledigen', symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
     ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: neuePost.name, symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
@@ -104,16 +105,12 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   ];
 
   return (
-    // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts.
-    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!(sicht === 'start' && !dritt)}>
-      {istSuche ? (
-        <aside className="spalte sichten suchspalte" aria-label="Erweiterte Suche">
-          <Suchformular suche={suche} zeigeTreffer={() => setFormular(false)} />
-        </aside>
-      ) : (
+    // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
+    // Suche (#426): Formular und Treffer nutzen Mitte und rechts, bis ein Treffer geöffnet wird.
+    <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche) && !dritt)}>
       <aside className="spalte sichten" aria-label="Ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
-        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'anstehend' ? 'Anstehend' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
+        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : istSuche ? 'Erweiterte Suche' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'anstehend' ? 'Anstehend' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
           feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={neuePost ? [neuePost.id] : []} />
         <h2 className="ueber aw-breit">Ansichten</h2>
         <nav className="sichtliste">
@@ -129,11 +126,10 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
         {!d.typen.length && <p className="leise klein">Noch keine Mappentypen. {ich.rolle === 'admin' ? <Link to="/werkbank/typen" className="verweis">Zur Werkbank</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
         {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">Noch keine Ansichten. {ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">Ansichten einrichten</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
       </aside>
-      )}
 
-      <section className="spalte liste" aria-label="Mappen">
+      <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}`} aria-label="Mappen">
         {istSuche
-          ? <SuchListe suche={suche} offen={dritt} aendern={() => setFormular(true)} />
+          ? <SuchListe suche={suche} offen={dritt} formular={formular} setFormular={setFormular} />
           : link
           ? link.ok
             ? <LinkListe key={`${link.link.typ.id}:${JSON.stringify(link.link.bedingungen)}`} link={link.link} suche={suche} offen={dritt} />
@@ -279,15 +275,19 @@ function LinkListe({ link, suche, offen }: { link: Direktlink; suche: URLSearchP
 const exportOhneSicht = (admin: boolean, sichten: Array<{ rechte?: { R?: boolean; E?: boolean } }>) =>
   admin || sichten.some((s) => s.rechte?.R !== false && s.rechte?.E !== false);
 
-/** Treffer der erweiterten Suche (#199): wie eine Sicht, mit den Bedingungen als Chips. */
-function SuchListe({ suche, offen, aendern }: { suche: URLSearchParams; offen?: string; aendern(): void }) {
+/**
+ * Erweiterte Suche (#199, #426): oben das Formular (zuklappbar), darunter die Treffer mit der Zusammenfassung
+ * der Bedingungen. Am Handy erst das Formular, nach „Suchen“ die Treffer.
+ */
+function SuchListe({ suche, offen, formular, setFormular }: { suche: URLSearchParams; offen?: string; formular: boolean; setFormular(an: boolean): void }) {
   const d = useDaten();
   const { ich } = useKonto();
   const fehler = suchFehler(suche, d.typen);
-  const kopf = <button type="button" className="textknopf klein nur-schmal" onClick={aendern}>← Suche ändern</button>;
+  const kopf = <Suchkopf suche={suche} offen={offen} formular={formular} setFormular={setFormular} />;
   if (fehler.length) return (
     <>
-      <div className="listenkopf"><div><h1>Suche</h1>{kopf}</div></div>
+      <div className="listenkopf"><div><h1>{t('suche.titel')}</h1></div></div>
+      {kopf}
       <div className="hinweis schlecht stapel" role="alert"><p>Diese Suche lässt sich nicht ausführen:</p><ul>{fehler.map((f) => <li key={f}>{f}</li>)}</ul></div>
     </>
   );
@@ -297,9 +297,9 @@ function SuchListe({ suche, offen, aendern }: { suche: URLSearchParams; offen?: 
   const q = suche.toString();
   return (
     <Liste key={q} sicht="suche" link={q} anhang={`?${q}`} typ={typ} spaltenTyp={typ ?? typen[0]} spalten={wahl.spalten} listenSpalten={wahl.key ? wahl.spalten : []}
-      titel="Suchergebnis" offen={offen} hilfe="ablage.erweitertesuche" auswahl export={exportOhneSicht(ich.rolle === 'admin', d.sichten)} immerSuche
-      kopf={<div className="suchkopf">{kopf}<Suchchips suche={suche} offen={offen} /></div>}
-      leerText="Keine Treffer. Entferne eine Bedingung (×), um mehr zu finden." />
+      titel={t('suche.titel')} offen={offen} hilfe="ablage.erweitertesuche" auswahl export={exportOhneSicht(ich.rolle === 'admin', d.sichten)} immerSuche
+      kopf={<div className="suchkopf">{kopf}</div>}
+      leerText={t('suche.keine')} />
   );
 }
 
@@ -462,7 +462,8 @@ function Liste(p: {
           </label>
           {p.sicht !== 'suche' && <Link to={`/ablage/suche${p.typ ? `?typ=${encodeURIComponent(p.typ.schluessel ?? p.typ.id)}` : ''}`} className="verweis klein" title="Mappentypen wählen, in Feldern und im Volltext suchen">Erweiterte Suche</Link>}
           {p.export && !wahl?.gewaehlt.size && !!s.gesamt && <button type="button" className="textknopf klein lk-nur-schmal" onClick={() => setExportOffen(true)}>Exportieren …</button>}
-          <button type="button" className={`knopf klein lk-filterknopf ${filter ? 'an' : ''}`} aria-expanded={filter} onClick={() => setFilter(!filter)}>Filter <span aria-hidden="true">▾</span>{(volltext || inNotizen) && <span className="lk-punkt" aria-label="(aktiv)" />}</button>
+          {/* In der erweiterten Suche (#426) heißt „Filter“ das Suchformular; die Haken stehen dort unter „Volltext“. */}
+          {p.sicht !== 'suche' && <button type="button" className={`knopf klein lk-filterknopf ${filter ? 'an' : ''}`} aria-expanded={filter} onClick={() => setFilter(!filter)}>Filter <span aria-hidden="true">▾</span>{(volltext || inNotizen) && <span className="lk-punkt" aria-label="(aktiv)" />}</button>}
         </div>
       )}
       {anzahlText && (

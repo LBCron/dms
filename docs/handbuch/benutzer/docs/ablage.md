@@ -88,30 +88,30 @@ Mit dem Haken **Notizen** sucht das DMS auch in den [Notizen](zusammenarbeit.md#
 
 Wenn du eine Mappe nur ungefähr beschreiben kannst, hilft die **erweiterte Suche**. Du findest sie ganz oben bei den Ansichten und als Link **Erweiterte Suche** neben dem Suchfeld einer Liste (dann ist der Mappentyp der Liste schon gewählt).
 
-Links steht dann statt der Ansichten das Suchformular, in der Mitte stehen die Treffer, rechts die geöffnete Mappe. Mit **← zurück zu den Ansichten** kommst du wieder zu den Ansichten.
+Das Suchformular steht **oben in der Mitte**, die Treffer darunter; links bleiben die Ansichten. Solange du keine Mappe geöffnet hast, nutzt die Suche die ganze Breite bis zum rechten Rand. Öffnest du einen Treffer, erscheint er rechts und die Mitte wird schmaler.
 
-![Erweiterte Suche: Formular, Chips und Treffer](bilder/erweiterte-suche.png)
+![Erweiterte Suche: Formular oben in der Mitte](bilder/erweiterte-suche.png)
 
 **Ein Beispiel:** Du suchst eine Rechnung über einen Backofen. Sie ist zwischen März und November letzten Jahres gekommen, wahrscheinlich von MediaMarkt, Saturn oder Otto.
 
-1. Wähle unter **Mappentypen** „Rechnung“.
-2. Trage beim **Rechnungsdatum** 01.03. bis 30.11. des letzten Jahres ein.
-3. Wähle beim **Vertragspartner** (bzw. Aussteller) MediaMarkt, Saturn und Otto.
+1. Tippe unter **Mappentypen** „Rech“ und wähle „Rechnung“.
+2. Wähle **+ Bedingung** → „Rechnungsdatum“ und trage 01.03. bis 30.11. des letzten Jahres ein.
+3. Wähle **+ Bedingung** → „Vertragspartner“ (bzw. Aussteller) und dort MediaMarkt, Saturn und Otto.
 4. Gib unter **Volltext** „Backofen“ ein.
 5. Klicke **Suchen**.
 
 So funktioniert das Formular:
 
-- **Mappentypen**: Du kannst mehrere wählen; angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht das DMS in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
-- **Felder**: Angeboten werden die Felder, die **alle gewählten Mappentypen gemeinsam** haben. Jedes Feld bekommt die passende Eingabe:
-    - **Datum**: von–bis; eins von beiden darf leer bleiben. Unter **Zeitraum …** gibt es „dieses Jahr“, „letztes Jahr“, „letzte 12 Monate“, „dieser Monat“ und „letzter Monat“.
+- **Mappentypen**: Du suchst sie wie bei einem Verweisfeld – tippen, Vorschlag wählen. Gewählte Mappentypen stehen als Chips darüber; das Kreuz entfernt einen. Angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht das DMS in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
+- **Bedingungen**: Anfangs steht kein Feld da. Mit **+ Bedingung** wählst du ein Feld; angeboten werden die Felder, die **alle gewählten Mappentypen gemeinsam** haben. Das Kreuz rechts entfernt die Bedingung wieder. Jedes Feld bekommt die passende Eingabe:
+    - **Datum**: von–bis in einer Zeile; eins von beiden darf leer bleiben. Unter **Zeitraum …** gibt es „dieses Jahr“, „letztes Jahr“, „letzte 12 Monate“, „dieser Monat“ und „letzter Monat“.
     - **Zahl, Betrag**: von–bis.
     - **Verweis** (z. B. Vertragspartner): mehrere Mappen – die Mappe muss auf **eine davon** zeigen.
     - **Auswahlliste**: mehrere Werte – einer davon muss passen.
     - **Ja/Nein**: ja, nein oder egal.
     - **Text**: der Wert enthält den eingegebenen Text.
-    - Rechts neben dem Feldnamen kannst du statt eines Werts **ist leer** oder **ist nicht leer** wählen.
-- Felder ohne Eingabe gelten nicht. **Zwischen den Feldern gilt UND, innerhalb eines Feldes ODER.**
+    - Neben dem Feldnamen kannst du statt eines Werts **ist leer** oder **ist nicht leer** wählen.
+- Bedingungen ohne Eingabe gelten nicht. **Zwischen den Feldern gilt UND, innerhalb eines Feldes ODER.**
 - Änderst du die Mappentypen, bleiben Werte in Feldern erhalten, die es weiter gibt. Bei den anderen steht ein Hinweis, dass sie entfallen.
 
 ### Volltext in Dokumenten und Notizen
@@ -120,7 +120,11 @@ Unter **Volltext** gibst du einen Begriff ein, der in den Dokumenten oder Notize
 
 ### Das Ergebnis
 
-Über den Treffern stehen die Bedingungen als **Chips**, z. B. „Rechnungsdatum 01.03.2025–30.11.2025“, dazu die Zahl der Treffer. Ein Klick auf **×** entfernt eine Bedingung und sucht sofort neu – praktisch, wenn es keinen Treffer gibt. Sortieren, mehrere Mappen auswählen und [Exportieren](#exportieren) gehen wie in einer Ansicht.
+Nach **Suchen** klappt das Formular zu. Über den Treffern steht dann die **Zusammenfassung** der Bedingungen als Chips, z. B. „Rechnung · Rechnungsdatum 01.03.2025–30.11.2025 · „Backofen“ in Dokumenten oder Notizen“, dazu die Zahl der Treffer. Ein Klick auf einen Chip öffnet das Formular genau an dieser Bedingung; **Suche ändern** öffnet es ganz. Das **Kreuz** an einem Chip entfernt die Bedingung und sucht sofort neu – praktisch, wenn es keinen Treffer gibt. Sortieren, mehrere Mappen auswählen und [Exportieren](#exportieren) gehen wie in einer Ansicht.
+
+![Erweiterte Suche: Zusammenfassung und Treffer](bilder/erweiterte-suche-treffer.png)
+
+**Am Handy** ist das Formular ein eigener Schritt: Erst stellst du die Bedingungen ein, nach **Suchen** siehst du die Treffer. Mit **Filter** kommst du zurück zum Formular – deine Eingaben bleiben erhalten.
 
 Die Suche steht in der **Adresse** des Browsers: Zurück und Vor funktionieren, du kannst sie als Lesezeichen speichern oder den Link weitergeben. Wer den Link öffnet, sieht nur die Mappen, die er lesen darf.
 

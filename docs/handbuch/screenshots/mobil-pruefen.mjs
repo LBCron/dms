@@ -14,7 +14,8 @@
  *    - geöffnete Menüs („+ Neu“, Benutzermenü, „Mappe ▾“) liegen vollständig im Bildschirm;
  *    - Suchfeld der Startseite (#497) liefert Treffer, ohne dass etwas zu breit wird;
  *    - „Ansicht ▾“ (#498) öffnet ein Blatt im Bildschirm mit Tippzielen von mindestens 44 px;
- *    - Dokumente einer Post (#505): kein eingebetteter PDF-Rahmen, Tippziele mindestens 44 px.
+ *    - Dokumente einer Post (#505): kein eingebetteter PDF-Rahmen, Tippziele mindestens 44 px;
+ *    - erweiterte Suche (#426): Formular mit Datums-, Auswahl- und Verweisbedingung, danach die Treffer.
  *    Von jeder Seite und jedem Menü entsteht ein Bild im Bilderordner (<breite>/<name>.png).
  *
  * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator).
@@ -109,6 +110,9 @@ const HANDY = [
   ...(rechnung ? [{ name: 'ablage', pfad: `/ablage/${rechnung.id}` }] : []),
   ...(eineMappe ? [{ name: 'mappe', pfad: `/ablage/${eineMappe.typId}/${eineMappe.id}`, mappenmenue: true }] : []),
   ...(einePost ? [{ name: 'post', pfad: `/ablage/${einePost.typId}/${einePost.id}` }] : []),
+  // Erweiterte Suche (#426): Formular als eigener Schritt (mit Bedingungen), danach die Treffer.
+  { name: 'erweiterte-suche', pfad: '/ablage/suche', suchformular: true },
+  ...(rechnung ? [{ name: 'erweiterte-suche-treffer', pfad: '/ablage/suche?typ=Rechnung&bezahlt=nein' }] : []),
   { name: 'werkbank', pfad: '/werkbank/uebersicht' },
 ];
 
@@ -226,6 +230,18 @@ for (const g of GROESSEN) {
       ]);
       await s.screenshot({ path: join(ordner, 'post-dokumente.png') });
       if (karten && probleme.length) fehler.push(`${ort} Dokumente:\n  ${probleme.slice(0, 10).join('\n  ')}`);
+    }
+    // Erweiterte Suche (#426): Mappentyp und Bedingungen dazu – auch dann ragt nichts über den Rand.
+    if (seite.suchformular) {
+      const form = s.getByRole('form', { name: 'Erweiterte Suche' });
+      await form.getByLabel('Mappentyp suchen …').fill('Rechnung');
+      await form.getByRole('option', { name: 'Rechnung', exact: true }).click().catch(() => {});
+      const wahl = form.getByLabel('Feld für eine neue Bedingung');
+      for (const feld of ['Rechnungsdatum', 'Bezahlt', 'Angelegt']) await wahl.selectOption({ label: feld }).catch(() => {});
+      await s.waitForTimeout(300);
+      const raus = await s.evaluate(zuBreiteElemente);
+      await s.screenshot({ path: join(ordner, 'erweiterte-suche-bedingungen.png'), fullPage: true });
+      if (raus.length) fehler.push(`${ort} Bedingungen:\n  ${raus.slice(0, 10).join('\n  ')}`);
     }
     if (seite.mappenmenue) await pruefeMenue(s, `${ort} „Mappe ▾“`, '.aktionsmenue > button', '.aktionsmenue .menue', join(ordner, 'menue-mappe.png'));
   }
