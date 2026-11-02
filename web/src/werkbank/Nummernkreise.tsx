@@ -4,6 +4,7 @@ import { useDaten } from '../daten';
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { NEUBEGINN_TEXT, pruefeMuster, formatiereNummer, datumIn, kreisVon, neubeginn as neubeginnVon } from '../../../shared/src/nummernkreis';
 import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
@@ -27,8 +28,9 @@ export type NummernkreisZustand = ReturnType<typeof useNummernkreise>;
 export function NummernkreiseListe({ z, offen }: { z: NummernkreisZustand; offen?: string }) {
   return (
     <>
-      <div className="listenkopf"><div><h1>Nummernkreise</h1><p className="leise klein">Fortlaufende Nummern für Felder. <Hilfe ort="werkbank.nummernkreise" /></p></div>
-        <Link to="/werkbank/nummernkreise/neu" className="knopf gruen klein">+ Neu</Link></div>
+      <Listenkopf titel="Nummernkreise" hilfe="werkbank.nummernkreise" beschreibung="Fortlaufende Nummern für Felder.">
+        <Link to="/werkbank/nummernkreise/neu" className="knopf gruen klein">+ Neu</Link>
+      </Listenkopf>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       {!z.liste ? <p className="leise">Lade …</p> : !z.liste.length ? <p className="leise leerliste">Noch kein Nummernkreis.</p> : (
         <ul className="mappenliste">

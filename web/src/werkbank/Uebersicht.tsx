@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, type WerkbankUebersicht } from '../api';
 import { Link } from '../ort';
 import { t } from '../sprache';
-import { Hilfe, useHandbuch } from '../Hilfe';
+import { useHandbuch } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { sicherungsHinweise } from './Sicherung';
 import { GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
 import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
@@ -96,8 +97,9 @@ export function UebersichtListe({ u }: { u: UebersichtZustand }) {
   const h = u.stand ? hinweiseAus(u.stand) : [];
   return (
     <>
-      <div className="listenkopf"><div><h1>Übersicht</h1><p className="leise klein">Was in diesem DMS gerade zu tun ist. <Hilfe ort="werkbank.uebersicht" /></p></div>
-        <button type="button" className="knopf klein" onClick={() => void u.laden()}>Neu laden</button></div>
+      <Listenkopf titel="Übersicht" hilfe="werkbank.uebersicht" beschreibung="Was in diesem DMS gerade zu tun ist.">
+        <button type="button" className="knopf klein" onClick={() => void u.laden()}>Neu laden</button>
+      </Listenkopf>
       {u.fehler && <div className="hinweis schlecht"><p>{u.fehler}</p></div>}
       {!u.stand ? <p className="leise">Lade …</p> : !h.length ? <p className="leise leerliste">Alles eingerichtet – nichts zu tun.</p> : (
         <ul className="mappenliste">

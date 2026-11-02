@@ -30,7 +30,8 @@ import { TresorPanel, useTresor } from './Verschluesselung';
 import { AufgabenListe, AufgabenPanel, useAufgaben } from './Aufgaben';
 import { useFavoritenFreigabe } from './Benachrichtigungen';
 import { TexterkennungPanel, useTexterkennung, WartungPanel } from './Texterkennung';
-import { Hilfe, useHandbuch } from '../Hilfe';
+import { useHandbuch } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { AnsichtPanel, useWerkbankAnsicht, type BereichZustand } from './Ansicht';
 import { UebersichtListe, UebersichtPanel, useUebersicht, WerkbankNavigation, type WerkbankEintrag } from './Uebersicht';
 import { useWartungsmodus, WartungsmodusPanel } from './Wartungsmodus';
@@ -304,10 +305,9 @@ function TypenListe({ offen, pakete }: { offen?: string; pakete: InstalliertesPa
   const d = useDaten();
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Mappentypen</h1><p className="leise klein">Welche Arten von Mappen es gibt, mit Feldern, Registern und Titel. <Hilfe ort="werkbank.typen" /></p></div>
+      <Listenkopf titel="Mappentypen" hilfe="werkbank.typen" beschreibung="Welche Arten von Mappen es gibt, mit Feldern, Registern und Titel.">
         <Link to="/werkbank/typen/neu" className="knopf primaer klein">+ Neu</Link>
-      </div>
+      </Listenkopf>
       {!d.typen.length
         ? <p className="leise leerliste">Noch keine Mappentypen.</p>
         : <ul className="mappenliste">

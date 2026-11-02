@@ -11,6 +11,7 @@ import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { titelOder } from '../seiten';
 import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { Bereich, SICHT_BEREICHE, useBereiche, type Klappe, type SichtBereich } from '../einrichtung/Bereich';
 import { elternkette, SichtBerechtigungen, SichtTestlauf } from './SichtRechte';
 import { sichtRegelProblem, sichtRegelwerkVon } from '../../../shared/src/sichtrechte';
@@ -87,10 +88,9 @@ export function SichtenListe({ offen }: { offen?: string }) {
   };
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Ansichten</h1><p className="leise klein">Was die Ablage links anbietet: Mappentypen, Bedingungen und die Ordnung als Baum. <Hilfe ort="werkbank.sichten" /></p></div>
+      <Listenkopf titel="Ansichten" hilfe="werkbank.sichten" beschreibung="Was die Ablage links anbietet: Mappentypen, Bedingungen und die Ordnung als Baum.">
         <Link to="/werkbank/sichten/neu" className="knopf primaer klein">+ Neu</Link>
-      </div>
+      </Listenkopf>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
       {hinweis && <div className="hinweis info"><p>{hinweis}</p><button type="button" className="textknopf klein" onClick={() => setHinweis(undefined)}>Ausblenden</button></div>}
       <Ansage text={ansage} />

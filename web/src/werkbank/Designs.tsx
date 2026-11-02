@@ -5,7 +5,7 @@ import { designCss, GRUNDLAGEN, palette, rettungsweg, wendeAn, type Design, type
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { logoUrl, Marke } from '../Marke';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 
 /**
@@ -17,10 +17,9 @@ export function DesignListe({ offen }: { offen?: string }) {
   const d = useDaten();
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>Designs</h1><p className="leise klein">Farben und eigenes CSS der Oberfläche. Jeder Benutzer wählt sein Design im Profil. <Hilfe ort="werkbank.designs" /></p></div>
+      <Listenkopf titel="Designs" hilfe="werkbank.designs" beschreibung="Farben und eigenes CSS der Oberfläche. Jeder Benutzer wählt sein Design im Profil.">
         <Link to="/werkbank/designs/neu" className="knopf primaer klein">+ Neu</Link>
-      </div>
+      </Listenkopf>
       <ul className="mappenliste">
         {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neues Design</span><span className="unter">noch nicht gespeichert</span></span></li>}
         {d.designs.map((x) => (

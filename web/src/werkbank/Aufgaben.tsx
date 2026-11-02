@@ -8,7 +8,7 @@ import { useDaten } from '../daten';
 import { geheZu, Link } from '../ort';
 import { titelOder } from '../seiten';
 import { Person } from '../Person';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { SammelHaken, SammelKopf, SammelLeiste, useSammelauswahl } from '../ablage/Sammelweitergabe';
 import { t } from '../sprache';
@@ -62,9 +62,7 @@ export function AufgabenListe({ z, filter, offen, mailAn, favoriten }: { z: Aufg
   }
   return (
     <>
-      <div className="listenkopf">
-        <div><h1>{t('werkbank.bereich.aufgaben.name')}</h1><p className="leise klein">{t('werkbank.aufgaben.unter')} <Hilfe ort="werkbank.aufgaben" /></p></div>
-      </div>
+      <Listenkopf titel={t('werkbank.bereich.aufgaben.name')} hilfe="werkbank.aufgaben" beschreibung={t('werkbank.aufgaben.unter')} />
       <Zusammenfassung z={z} mailAn={mailAn} />
       {favoriten && <FavoritenFreigabeBlock z={favoriten} />}
       <section className="aufgabenfilter stapel" aria-label="Filter">

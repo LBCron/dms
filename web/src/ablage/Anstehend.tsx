@@ -4,7 +4,7 @@ import { ANSTEHEND_GRUPPEN, blaettere, gruppeVon, istAnsicht, jahresZeitraum, mo
 import { heuteIn } from '../../../shared/src/sichten';
 import { api } from '../api';
 import { useDaten } from '../daten';
-import { Hilfe } from '../Hilfe';
+import { Listenkopf } from '../Listenkopf';
 import { Link } from '../ort';
 import { titelOder } from '../seiten';
 import { t } from '../sprache';
@@ -152,16 +152,10 @@ export function AnstehendSicht({ z, offen, ansicht, setze, schmal }: { z: ListeD
 
   return (
     <div className={`ka ka-ansicht-${ansicht}`} onKeyDown={taste}>
-      <div className="listenkopf ka-kopf">
-        <div>
-          <h1>{t('anstehend.titel')}</h1>
-          <p className="leise klein">
-            {ansicht === 'liste' ? t('anstehend.beschreibung.liste', { tage: z.liste?.tage ?? ANSTEHEND_TAGE }) : t('anstehend.beschreibung.kalender')}
-            {ansicht === 'liste' && <> {t('anstehend.zeitraum')} <Link to="/profil/darstellung" className="verweis">{t('anstehend.zeitraum.link')}</Link> {t('anstehend.zeitraum.ende')}</>}
-            {' '}<Hilfe ort="ablage.anstehend" />
-          </p>
-        </div>
-      </div>
+      <Listenkopf className="ka-kopf" titel={t('anstehend.titel')} hilfe="ablage.anstehend" beschreibung={<>
+        {ansicht === 'liste' ? t('anstehend.beschreibung.liste', { tage: z.liste?.tage ?? ANSTEHEND_TAGE }) : t('anstehend.beschreibung.kalender')}
+        {ansicht === 'liste' && <> {t('anstehend.zeitraum')} <Link to="/profil/darstellung" className="verweis">{t('anstehend.zeitraum.link')}</Link> {t('anstehend.zeitraum.ende')}</>}
+      </>} />
       <div className="ka-leiste">
         <div className="segmente ka-umschalter" role="radiogroup" aria-label={t('anstehend.ansicht')}>
           {ansichten.map((a) => (

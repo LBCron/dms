@@ -974,6 +974,14 @@ body:has(.gezogen) { cursor: grabbing; user-select: none; -webkit-user-select: n
 .hilfesymbol { display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-left: .35em; border: 1px solid var(--linie-stark); border-radius: 50%; font-size: .8em; font-weight: 700; line-height: 1; color: var(--leise); text-decoration: none; vertical-align: .1em; }
 .hilfesymbol:hover, .hilfesymbol:focus-visible { color: var(--akzent); border-color: var(--akzent); }
 h2 .hilfesymbol, h3 .hilfesymbol { font-size: .6em; vertical-align: .25em; }
+/* Listenkopf (#601): das „?“ steht immer in der Überschrift, mit und ohne Beschreibung. */
+.listenkopf h1 .hilfesymbol { font-size: .65em; vertical-align: .2em; }
+/* Am Handy (#601): Tippziel 44 px, sichtbar bleibt der kleine Kreis; die negativen Ränder halten die Zeile niedrig. */
+@media (pointer: coarse) {
+  .listenkopf h1 .hilfesymbol { width: 44px; height: 44px; margin: -11px -11px -11px -5px; border: 0; font-size: 13px; vertical-align: middle; }
+  .listenkopf h1 .hilfesymbol > span { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--linie-stark); border-radius: 50%; }
+  .listenkopf h1 .hilfesymbol:hover > span, .listenkopf h1 .hilfesymbol:focus-visible > span { border-color: var(--akzent); }
+}
 @media (pointer: coarse) { .hilfesymbol { width: 1.6em; height: 1.6em; } }
 
 /* Speicherplatz (#116): belegt je Ordner mit Marken für Warnschwelle und Grenze */
