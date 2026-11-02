@@ -6,12 +6,14 @@
  *
  *   node server/test/lasttest.mjs klein|mittel|gross|alle [--ziel http://127.0.0.1:3000] [Optionen]
  *
- * | Stufe  | bildet ab                     | Last                                         | Daten          | Zusage                     |
- * | klein  | Haushalt (2–5 Personen)       | 25 gleichzeitig                              | 5.000 Mappen   | p95 < 0,3 s, keine Fehler  |
- * | mittel | Kleinbetrieb (10–15 Personen) | 100 gleichzeitig, großer Export nebenher     | 50.000 Mappen  | p95 < 1 s, Fehler < 0,1 %  |
+ * | Stufe  | bildet ab                     | Last                                         | Daten          | Ziel (CI-Grenze)                    |
+ * | klein  | Haushalt (2–5 Personen)       | 25 gleichzeitig                              | 5.000 Mappen   | p95 < 0,3 s (0,3 s), keine Fehler   |
+ * | mittel | Kleinbetrieb (10–15 Personen) | 100 gleichzeitig, großer Export nebenher     | 50.000 Mappen  | p95 < 1 s (2,86 s), Fehler < 0,1 %  |
  * | gross  | Belastungsgrenze              | +25 alle 2 Minuten bis p95 > 3 s, Fehler > 1 % oder Überlastschutz greift; danach 1000 gleichzeitig | 200.000 Mappen | gemessen wird die Grenze; Pflicht: kein Absturz, Erholung |
  *
- * klein und mittel sind eine Qualitätszusage (`--grenzen`: verfehlt → Exit-Code 1), groß ist eine Messung: Die
+ * klein und mittel sind eine Qualitätszusage mit Ziel und CI-Grenze: Das Ziel (p95) steht im Bericht; verfehlt heißt
+ * „beschleunigen“ (Folge-Issue), nicht rot. Mit `--grenzen` richtet sich der Exit-Code (1) nach der CI-Grenze, die
+ * aus dem ersten Lauf auf den Rechnern von GitHub stammt (+ 20 %) und nur strenger wird. groß ist eine Messung: Die
  * Grenze steht im Bericht; mit `--vorher <json>` warnt der Test, wenn sie mehr als 20 % unter der des letzten
  * Laufs liegt. Pflichten von groß (keine Anfrage ohne Antwort, Arbeitsspeicher begrenzt, Erholung, Anmeldeschutz)
  * zählen wie bisher als Grenzen.
@@ -35,7 +37,9 @@
  */
 import { randomInt } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { cpus } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 const arg = (n, std) => { const i = process.argv.indexOf(n); return i < 0 ? std : process.argv[i + 1]; };
 const hat = (n) => process.argv.includes(n);
@@ -59,12 +63,19 @@ const ECHTE_MAPPEN_MAX = 200;
 const DEMO_JE_LAUF = 50_000;
 
 /**
- * Stufen (#563). Startwerte des Maintainers; nachgeschärft wird nur strenger. Die Zusagen von klein und mittel
+ * Stufen (#563). Startwerte des Maintainers; nachgeschärft wird nur strenger. Die Ziele von klein und mittel
  * sind deutlich strenger als die Grenzen von #544 (p95 ≤ 5 s bzw. 6 s, Fehler ≤ 1 %).
+ *
+ * `ziel`: was das Projekt zusagen möchte (p95 und Fehlerquote). Ein verfehltes p95-Ziel steht im Bericht und führt
+ * zu einem Folge-Issue „Beschleunigen“, macht den Lauf aber nicht rot.
+ * `ciGrenze`: p95, ab dem `--grenzen` mit Exit-Code 1 endet (Entscheidung Thomas, #563): erster Lauf auf den
+ * Rechnern von GitHub + 20 %, danach nur strenger, höchstens bis zum Ziel. Erster Lauf (Run 41448183378,
+ * DMS 0.139.0): klein p95 95 ms → bleibt beim Ziel 300 ms; mittel p95 2384 ms → 2860 ms.
+ * Fehlerquote, 503 und Export gelten unverändert als Grenze.
  */
 export const STUFEN = {
-  klein: { bildet: 'Haushalt (2–5 Personen)', gleichzeitig: 25, mappen: 5_000, export: false, zusage: { p95Ms: 300, fehlerquote: 0 } },
-  mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, zusage: { p95Ms: 1000, fehlerquote: 0.001 } },
+  klein: { bildet: 'Haushalt (2–5 Personen)', gleichzeitig: 25, mappen: 5_000, export: false, ziel: { p95Ms: 300, fehlerquote: 0 }, ciGrenze: { p95Ms: 300 } },
+  mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, ziel: { p95Ms: 1000, fehlerquote: 0.001 }, ciGrenze: { p95Ms: 2860 } },
   gross: { bildet: 'Belastungsgrenze', mappen: 200_000, start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
 };
 /** Pflichten der großen Stufe (wie „Überlast“ in #544): kein Absturz, begrenzter Speicher, Erholung, Anmeldeschutz. */
@@ -427,19 +438,37 @@ const f = (x) => (x === null || x === undefined ? '–' : String(x));
 const sek = (ms) => (ms / 1000).toFixed(1).replace('.', ',');
 const prozent = (q) => `${(q * 100).toFixed(2).replace('.', ',')} %`;
 
-/** klein oder mittel: ein Durchgang mit fester Last, geprüft gegen die Zusage. */
-async function festeStufe(v, name, dauer, lauf) {
+/**
+ * klein oder mittel: ein Durchgang mit fester Last. `verfehlt` (CI-Grenze, Fehler, 503, Export) bestimmt den
+ * Exit-Code, `zielVerfehlt` (p95 über dem Ziel, aber unter der CI-Grenze) steht nur im Bericht.
+ */
+export function pruefeFesteStufe(name, e) {
   const s = STUFEN[name];
-  const e = await lauf({ name, n: s.gleichzeitig, dauer, mitExport: s.export && !hat('--ohne-export') });
   const verfehlt = [];
-  if (e.p95 !== null && e.p95 >= s.zusage.p95Ms) verfehlt.push(`${name}: p95 ${e.p95} ms ≥ ${s.zusage.p95Ms} ms`);
-  if (s.zusage.fehlerquote === 0 ? e.fehler + e.ohneAntwort > 0 : e.fehlerquote >= s.zusage.fehlerquote) {
-    verfehlt.push(`${name}: Fehlerquote ${prozent(e.fehlerquote)} (${e.fehler} Fehler, ${e.ohneAntwort} ohne Antwort) – erlaubt ${s.zusage.fehlerquote === 0 ? 'keine' : `< ${prozent(s.zusage.fehlerquote)}`}`);
+  const zielVerfehlt = [];
+  if (e.p95 !== null && e.p95 >= s.ciGrenze.p95Ms) verfehlt.push(`${name}: p95 ${e.p95} ms ≥ CI-Grenze ${s.ciGrenze.p95Ms} ms (Ziel < ${s.ziel.p95Ms} ms)`);
+  else if (e.p95 !== null && e.p95 >= s.ziel.p95Ms) zielVerfehlt.push(`${name}: p95 ${e.p95} ms ≥ Ziel ${s.ziel.p95Ms} ms (CI-Grenze ${s.ciGrenze.p95Ms} ms eingehalten)`);
+  if (s.ziel.fehlerquote === 0 ? e.fehler + e.ohneAntwort > 0 : e.fehlerquote >= s.ziel.fehlerquote) {
+    verfehlt.push(`${name}: Fehlerquote ${prozent(e.fehlerquote)} (${e.fehler} Fehler, ${e.ohneAntwort} ohne Antwort) – erlaubt ${s.ziel.fehlerquote === 0 ? 'keine' : `< ${prozent(s.ziel.fehlerquote)}`}`);
   }
   if (e.abgewiesen) verfehlt.push(`${name}: ${e.abgewiesen} Anfragen abgewiesen (503) – bei ${s.gleichzeitig} gleichzeitig darf der Überlastschutz nicht greifen`);
   if (e.exporte.some((x) => x.status !== 200)) verfehlt.push(`${name}: Export fehlgeschlagen (${e.exporte.filter((x) => x.status !== 200).map((x) => x.status).join(', ')})`);
-  return { stufe: name, art: 'zusage', durchgang: e, verfehlt };
+  return { stufe: name, art: 'zusage', durchgang: e, verfehlt, zielVerfehlt };
 }
+
+async function festeStufe(v, name, dauer, lauf) {
+  const s = STUFEN[name];
+  return pruefeFesteStufe(name, await lauf({ name, n: s.gleichzeitig, dauer, mitExport: s.export && !hat('--ohne-export') }));
+}
+
+/** Ziel und CI-Grenze in einem Satz, z. B. „Ziel p95 < 1000 ms, CI-Grenze 2860 ms, Fehler < 0,10 %“. */
+export function zielText(name) {
+  const s = STUFEN[name];
+  return `Ziel p95 < ${s.ziel.p95Ms} ms, CI-Grenze ${s.ciGrenze.p95Ms} ms, ${s.ziel.fehlerquote === 0 ? 'keine Fehler' : `Fehler < ${prozent(s.ziel.fehlerquote)}`}`;
+}
+
+/** Kurzurteil einer festen Stufe. */
+const urteil = (e) => (e.verfehlt.length ? 'CI-Grenze verfehlt' : e.zielVerfehlt.length ? 'Ziel verfehlt, CI-Grenze eingehalten' : 'Ziel eingehalten');
 
 /**
  * groß: Last stufenweise steigern, bis p95 > 3 s, Fehler > 1 % oder der Überlastschutz greift. Die Grenze ist die
@@ -516,7 +545,7 @@ function bericht(ergebnisse, x) {
   for (const e of ergebnisse) {
     if (e.art === 'zusage') {
       const s = STUFEN[e.stufe];
-      z.push('', `**${e.stufe}** (${s.bildet}, ${s.gleichzeitig} gleichzeitig${s.export ? ', Export nebenher' : ''}): Zusage p95 < ${s.zusage.p95Ms} ms, ${s.zusage.fehlerquote === 0 ? 'keine Fehler' : `Fehler < ${prozent(s.zusage.fehlerquote)}`} – ${e.verfehlt.length ? 'VERFEHLT' : 'eingehalten'}.`);
+      z.push('', `**${e.stufe}** (${s.bildet}, ${s.gleichzeitig} gleichzeitig${s.export ? ', Export nebenher' : ''}): ${zielText(e.stufe)} – p95 ${f(e.durchgang.p95)} ms: ${e.verfehlt.length ? 'CI-Grenze VERFEHLT' : urteil(e)}.`);
       z.push('', `Median und p95 je Art (${e.stufe}):`, '', ...Object.entries(e.durchgang.jeArt).map(([k, w]) => `- ${k}: ${w.anzahl} Anfragen, Median ${w.median} ms, p95 ${w.p95} ms`));
     } else {
       z.push('', e.grenze.unter
@@ -529,8 +558,10 @@ function bericht(ergebnisse, x) {
     }
   }
   const verfehlt = ergebnisse.flatMap((e) => e.verfehlt);
-  if (verfehlt.length) z.push('', '**Zusage oder Pflicht verfehlt:**', '', ...verfehlt.map((v) => `- ${v}`));
-  else if (x.geprueft) z.push('', 'Alle Zusagen und Pflichten eingehalten.');
+  const ziel = ergebnisse.flatMap((e) => e.zielVerfehlt ?? []);
+  if (verfehlt.length) z.push('', '**CI-Grenze oder Pflicht verfehlt:**', '', ...verfehlt.map((v) => `- ${v}`));
+  else if (x.geprueft) z.push('', 'Alle CI-Grenzen und Pflichten eingehalten.');
+  if (ziel.length) z.push('', '**Ziel verfehlt** (der Lauf wird deshalb nicht rot; Folge-Issue „Beschleunigen“, #563):', '', ...ziel.map((v) => `- ${v}`));
   return z.join('\n');
 }
 
@@ -569,7 +600,7 @@ function ergebnisblock(ergebnisse, x, u) {
   for (const e of ergebnisse) {
     if (e.art === 'zusage') {
       const d = e.durchgang;
-      kz.push(`${e.stufe.padEnd(6)} ${String(d.n).padStart(4)} gleichzeitig: p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehler ${prozent(d.fehlerquote)} – ${e.verfehlt.length ? 'Zusage verfehlt' : 'Zusage eingehalten'}`);
+      kz.push(`${e.stufe.padEnd(6)} ${String(d.n).padStart(4)} gleichzeitig: p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehler ${prozent(d.fehlerquote)} – ${urteil(e)} (Ziel < ${STUFEN[e.stufe].ziel.p95Ms} ms, CI-Grenze ${STUFEN[e.stufe].ciGrenze.p95Ms} ms)`);
     } else {
       kz.push(`groß   Grenze: ${e.grenze.unter ? `unter ${e.grenze.unter}` : e.grenze.gleichzeitig} gleichzeitig (${e.grenze.jeSekunde}/s, p95 ${f(e.grenze.p95)} ms), Abbruch: ${e.grund}; Erholung ${e.erholung.ms === null ? 'keine' : `${sek(e.erholung.ms)} s`}`);
     }
@@ -611,6 +642,7 @@ async function messen(stufen) {
     const w = `Belastungsgrenze ${Math.round(x.vergleich.schlechter * 100)} % schlechter als beim letzten Lauf (${x.vergleich.vorher} → ${x.vergleich.jetzt} gleichzeitig).`;
     console.log(process.env.GITHUB_ACTIONS ? `::warning title=Lasttest groß::${w}` : `WARNUNG: ${w}`);
   }
+  for (const z of ergebnisse.flatMap((e) => e.zielVerfehlt ?? [])) console.log(process.env.GITHUB_ACTIONS ? `::notice title=Lasttest Ziel verfehlt::${z}` : `HINWEIS: Ziel verfehlt – ${z}`);
   if (arg('--bericht')) await writeFile(arg('--bericht'), `${text}\n`);
   if (arg('--json')) await writeFile(arg('--json'), JSON.stringify({ stufen: ergebnisse.map(({ durchgang: _d, schritte: _s, ueberlast: _u, ...r }) => r), laeufe, umgebung: u, bestand, vergleich: x.vergleich }, null, 2));
   if (x.geprueft && ergebnisse.some((e) => e.verfehlt.length)) process.exitCode = 1;
@@ -625,18 +657,22 @@ async function einzeln(n) {
 }
 
 const ALT = { normal: 'mittel', ueberlast: 'gross' };
-const wahl = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : arg('--stufe', hat('--einrichten') ? 'einrichten' : 'alle');
-try {
-  if (wahl === 'einrichten' || hat('--einrichten')) console.log(await sicherstellen(Number(arg('--mappen', STUFEN.mittel.mappen))));
-  else if (arg('--gleichzeitig')) await einzeln(Number(arg('--gleichzeitig')));
-  else {
-    const stufe = ALT[wahl] ?? wahl;
-    const stufen = stufe === 'alle' ? ['klein', 'mittel', 'gross'] : [stufe];
-    if (!stufen.every((s) => s in STUFEN)) throw new Abbruch(`Unbekannte Stufe „${wahl}“. Möglich: klein, mittel, gross, alle.`);
-    await messen(stufen);
+// Nur als Programm starten, nicht beim Import (Test der Grenzen: lasttest-grenzen.test.ts).
+const direkt = (() => { try { return !!process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
+if (direkt) {
+  const wahl = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : arg('--stufe', hat('--einrichten') ? 'einrichten' : 'alle');
+  try {
+    if (wahl === 'einrichten' || hat('--einrichten')) console.log(await sicherstellen(Number(arg('--mappen', STUFEN.mittel.mappen))));
+    else if (arg('--gleichzeitig')) await einzeln(Number(arg('--gleichzeitig')));
+    else {
+      const stufe = ALT[wahl] ?? wahl;
+      const stufen = stufe === 'alle' ? ['klein', 'mittel', 'gross'] : [stufe];
+      if (!stufen.every((s) => s in STUFEN)) throw new Abbruch(`Unbekannte Stufe „${wahl}“. Möglich: klein, mittel, gross, alle.`);
+      await messen(stufen);
+    }
+  } catch (e) {
+    if (!(e instanceof Abbruch)) throw e;
+    console.error(`Abbruch: ${e.message}`);
+    process.exitCode = 2;
   }
-} catch (e) {
-  if (!(e instanceof Abbruch)) throw e;
-  console.error(`Abbruch: ${e.message}`);
-  process.exitCode = 2;
 }
