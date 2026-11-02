@@ -41,7 +41,9 @@ Mit **Sprache: Automatisch** erkennt das DMS selbst, in welcher Sprache ein Doku
 3. Aus dem erkannten Text bestimmt das DMS die **Sprache**. Das geschieht offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.
 4. **Zweiter Durchlauf** – nur, wenn alles zusammenkommt: Die erkannte Sprache ist eindeutig, sie war im ersten Durchlauf nicht dabei, ihr Sprachpaket ist installiert und Tesseract war sich beim ersten Durchlauf unsicher (mittlere Konfidenz unter 85 %). Dann liest das DMS die Seite noch einmal mit dieser Sprache; **das bessere Ergebnis gilt** und auch die weiteren Seiten des Dokuments werden damit gelesen. So bleibt der Rechenaufwand klein: Die meisten Dokumente brauchen nur einen Durchlauf.
 
-Die erkannte Sprache steht **am Dokument** neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene.
+Die erkannte Sprache steht **am Dokument** neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Seit 0.128.0 ist sie ein eigenes Feld des Dokuments, und die **Volltextsuche nimmt die Wortstämme dieser Sprache**: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch. Die Sprache gilt auch bei *Sprache: Fest*.
+
+Pakete (z. B. eine eigene Texterkennung) und die [Schnittstelle](api.md) geben die Sprache mit dem Volltext an (`PUT /dokumente/{id}/volltext` mit `sprache`) oder setzen sie einzeln (`PUT /dokumente/{id}/sprache`, z. B. `{ "sprache": "fra" }`, `null` = keine Angabe). Das steht in der Historie der Mappe.
 
 Mit **Sprache: Fest** liest das DMS immer genau mit den eingestellten Sprachen, ohne zweiten Durchlauf. Die erkannte Sprache wird trotzdem angezeigt und gezählt.
 

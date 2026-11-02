@@ -1,7 +1,7 @@
 import type postgres from 'postgres';
 import { AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, type Varianten } from '../../shared/src/suche';
 import { alsText } from '../../shared/src/markdown';
-import { SPRACHE_SQL_MUSTER } from '../../shared/src/textsprache';
+import { SPRACHE_MARKE, SPRACHE_SQL_MUSTER, spracheAusInfo, suchkonfig } from '../../shared/src/textsprache';
 import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
 import type { Filter, Klausel, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ausdruck, Lesefilter } from '../../shared/src/rechte';
@@ -12,6 +12,8 @@ import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { istUuid, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
+/** Sprachmarke im Hinweis der Texterkennung (#395) samt Konfidenz, zum Ersetzen (#400). */
+const SPRACHE_INFO_SQL = ' · Sprache: [a-z_]{3,10}( \\(\\d{1,3} %\\))?';
 
 type Sql = postgres.Sql;
 type Zeile = Record<string, unknown>;
@@ -80,6 +82,8 @@ const alsDokument = (r: Zeile): Dokument => ({
   erstellt: iso(r.erstellt),
   erstelltVon: (r.erstellt_von as string | null) ?? null,
   archivnummer: (r.archivnummer as string | null) ?? null,
+  // Sprache (#400): eigenes Feld; ältere Dokumente nennen sie nur im Hinweis der Texterkennung (#395).
+  sprache: (r.sprache as string | null | undefined) ?? (r.ocr_stand === 'fertig' ? spracheAusInfo(r.ocr_info as string | null)?.sprache ?? null : null),
   ocr: {
     stand: ((r.ocr_stand as OcrStandArt | null) ?? 'keiner'),
     info: (r.ocr_info as string | null) ?? null,
@@ -117,11 +121,14 @@ type SqlTeil = postgres.PendingQuery<postgres.Row[]> | postgres.Fragment;
  * Suchanfrage für den Volltext: Bei einer einfachen Suche je Begriff seine Varianten (ODER), die Begriffe mit UND;
  * mit Suchsyntax (Anführungszeichen, Minus, „or“) genau wie eingegeben.
  */
-function suchanfrage(sql: Sql, t: string, v: Varianten, konfig = 'dms_german'): SqlTeil {
-  const eins = (x: string) => sql`websearch_to_tsquery(${konfig}::regconfig, dms_falte(${x}::text))`;
-  const b = suchbegriffe(t);
-  if (!b) return eins(t);
-  return b.map((w) => [w, ...(v[falte(w)] ?? [])].map(eins).reduce((x, y) => sql`(${x} || ${y})`)).reduce((x, y) => sql`(${x} && ${y})`);
+function suchanfrage(sql: Sql, t: string, v: Varianten, konfigs: string[] = ['dms_german']): SqlTeil {
+  // Je Sprache der Ablage (#400) die Anfrage mit deren Wortstämmen; ein Dokument passt, wenn eine davon passt.
+  return konfigs.map((konfig) => {
+    const eins = (x: string) => sql`websearch_to_tsquery(${konfig}::regconfig, dms_falte(${x}::text))`;
+    const b = suchbegriffe(t);
+    if (!b) return eins(t);
+    return b.map((w) => [w, ...(v[falte(w)] ?? [])].map(eins).reduce((x, y) => sql`(${x} || ${y})`)).reduce((x, y) => sql`(${x} && ${y})`);
+  }).reduce((x, y) => sql`(${x} || ${y})`);
 }
 /** Ausschnitte aus dem Volltext: höchstens zwei Stellen, Treffer markiert (#45). */
 const AUSSCHNITT = `StartSel=${TREFFER_ANFANG}, StopSel=${TREFFER_ENDE}, MaxFragments=2, MaxWords=18, MinWords=6, FragmentDelimiter=" … "`;
@@ -386,6 +393,34 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
   const SUCHINDEX = sql.unsafe(SUCHINDEX_TEXT);
+  /**
+   * Suchkonfigurationen der Sprachen, die in der Ablage vorkommen (#400): Deutsch immer, dazu die der Dokumente.
+   * Eine Minute gemerkt; neu, sobald eine Sprache gesetzt wird. Lockerer Indexlauf über (haushalt_id, sprache).
+   */
+  let sprachenZwischen: { zeit: number; konfigs: Promise<string[]> } | null = null;
+  const sprachKonfigs = () => {
+    if (!sprachenZwischen || Date.now() - sprachenZwischen.zeit > 60_000) {
+      sprachenZwischen = { zeit: Date.now(), konfigs: sql`
+        WITH RECURSIVE s AS (
+          (SELECT sprache FROM dokumente WHERE haushalt_id = ${haushaltId} AND sprache IS NOT NULL ORDER BY sprache LIMIT 1)
+          UNION ALL
+          SELECT (SELECT d.sprache FROM dokumente d WHERE d.haushalt_id = ${haushaltId} AND d.sprache > s.sprache ORDER BY d.sprache LIMIT 1) FROM s WHERE s.sprache IS NOT NULL)
+        SELECT sprache FROM s WHERE sprache IS NOT NULL`
+        .then((r) => [...new Set(['dms_german', ...r.map((z) => suchkonfig(z.sprache as string))])], () => ['dms_german']) };
+    }
+    return sprachenZwischen.konfigs;
+  };
+  /**
+   * Suchanfrage über alle Sprachen der Ablage (#400) als feste tsquery: Die Anfragen je Sprache rechnet PostgreSQL
+   * vorab aus, gleiche fallen weg – sonst läse der Index bei häufigen Wörtern dieselben Listen mehrfach.
+   */
+  // Ergebnis in einem Objekt: Ein sql-Fragment ist „thenable“ – aus einer async-Funktion zurückgegeben, liefe es los.
+  const tsAnfrage = async (t: string, v: Varianten): Promise<{ q: SqlTeil }> => {
+    const konfigs = await sprachKonfigs();
+    if (konfigs.length === 1) return { q: suchanfrage(sql, t, v, konfigs) };
+    const [z] = await sql`SELECT ARRAY[${konfigs.map((k) => sql`${suchanfrage(sql, t, v, [k])}::text`).reduce((a, b) => sql`${a}, ${b}`)}] AS q`;
+    return { q: [...new Set(z.q as string[])].map((q) => sql`${q}::tsquery`).reduce((a, b) => sql`(${a} || ${b})`) };
+  };
   /** Schema von pg_trgm (#356), einmal nachgesehen; null ohne Erweiterung. */
   let trgmSchema: Promise<string | null> | null = null;
   const trigrammSchema = () => (trgmSchema ??= sql`SELECT n.nspname FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace WHERE e.extname = 'pg_trgm'`
@@ -758,12 +793,20 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const musterAus = (t: string) => `%${t.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
       // Unscharfe Suche (#356): Titel, Werte und Notizen ohne Umlaute, Groß-/Kleinschreibung und Bindestriche
       // verglichen; ein einzelner Begriff auch in seinen Varianten (gleichbedeutende Wörter, ähnliche Schreibweisen).
-      const v = o.varianten ?? {};
+      const nurV = o.varianten ?? {};
+      // Ähnliche Schreibweisen (Tippfehler) gelten wie Varianten – nur nicht für Wortteile im Volltext.
+      const v: Varianten = { ...nurV };
+      for (const [k, w] of Object.entries(o.aehnlich ?? {})) v[k] = [...(v[k] ?? []), ...w];
+      // Volltext (#400): je Sprache der Ablage eine Anfrage; gleiche Anfragen (dieselben Wortstämme) nur einmal.
+      const anfragen = new Map<string, SqlTeil>();
+      for (const t of [o.volltext ? o.suche : undefined, o.textfilter?.dokumente ? o.textfilter.text.trim() : undefined]) {
+        if (t && !anfragen.has(t)) anfragen.set(t, (await tsAnfrage(t, v)).q);
+      }
       const schreibweisen = (t: string) => { const b = suchbegriffe(t); return b?.length === 1 ? [t, ...(v[falte(b[0])] ?? [])] : [t]; };
       const enthaelt = (spalte: Teil, t: string) => schreibweisen(t)
         .map((x) => sql`replace(lower(dms_falte(${spalte})), '-', '') LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`);
       // Teilwörter im Volltext (#161): „Ofen“ findet „Backofen“ – zusätzlich zu den Wortformen; je Wort auch die Varianten.
-      const teilSql = (spalte: string, teil: string[]) => teil.map((w) => [w, ...(v[falte(w)] ?? []).map((x) => x.toLowerCase()).filter((x) => x.length >= 3)]
+      const teilSql = (spalte: string, teil: string[]) => teil.map((w) => [w, ...(nurV[falte(w)] ?? []).map((x) => x.toLowerCase()).filter((x) => x.length >= 3)]
         .map((x) => sql`${sql.unsafe(spalte)} ILIKE ${musterAus(x)}`).reduce((a, b) => sql`${a} OR ${b}`))
         .reduce((a, b) => sql`(${a}) AND (${b})`);
       // Als Teilmenge (IN) statt je Mappe (EXISTS): PostgreSQL sucht die Dokumente einmal über die Indizes (#356) –
@@ -772,7 +815,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const inDokumenten = (t: string) => {
         const teil = teilwoerter(t);
         return sql`mappen.id IN (SELECT d.mappe_id FROM dokumente d WHERE d.haushalt_id = ${haushaltId}
-          AND (${SUCHINDEX} @@ ${suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
+          AND (${SUCHINDEX} @@ ${anfragen.get(t) ?? suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
       };
       const suche = o.suche
         ? sql`AND (${enthaelt(sql`titel`, o.suche)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, o.suche)}))
@@ -820,7 +863,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       // Fundstellen im Volltext: je Mappe das Dokument mit dem besten Treffer, Wortstämme in der Sprache des Dokuments.
       const a = await sql`
         SELECT DISTINCT ON (d.mappe_id) d.mappe_id, d.name, ts_headline(dms_konfig(d.sprache), d.volltext, x.q, ${AUSSCHNITT}::text) AS text
-        FROM dokumente d CROSS JOIN LATERAL (SELECT ${suchanfrage(sql, fund.text, v)} AS q) x
+        FROM dokumente d CROSS JOIN LATERAL (SELECT ${anfragen.get(fund.text) ?? (await tsAnfrage(fund.text, v)).q} AS q) x
         WHERE d.haushalt_id = ${haushaltId} AND d.mappe_id = ANY(${mappen.map((m) => m.id)}::uuid[])
           AND ${SUCHINDEX} @@ x.q
         ORDER BY d.mappe_id, ts_rank(${SUCHINDEX}, x.q) DESC`;
@@ -1362,15 +1405,25 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     async ocrSetze(id, e) {
       await sql`
         UPDATE dokumente SET ocr_stand = ${e.stand}, ocr_info = ${e.info ?? null}, ocr_seiten = ${e.seiten ?? null}, ocr_zeit = now()
-          ${e.text !== undefined ? sql`, volltext = ${e.text}` : sql``}
+          ${e.text !== undefined ? sql`, volltext = ${e.text}` : sql``}${e.sprache !== undefined ? sql`, sprache = ${e.sprache}` : sql``}
         WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      if (e.sprache) sprachenZwischen = null;
     },
     async ocrVonSha(sha256, ausser) {
       const [r] = await sql`
-        SELECT volltext, ocr_seiten, ocr_info FROM dokumente
+        SELECT volltext, ocr_seiten, ocr_info, sprache FROM dokumente
         WHERE haushalt_id = ${haushaltId} AND sha256 = ${sha256} AND id IS DISTINCT FROM ${istUuid(ausser) ? ausser : null}::uuid AND ocr_stand = 'fertig' AND volltext IS NOT NULL
         LIMIT 1`;
-      return r ? { text: r.volltext as string, seiten: (r.ocr_seiten as number | null) ?? null, info: (r.ocr_info as string | null) ?? null } : undefined;
+      return r ? { text: r.volltext as string, seiten: (r.ocr_seiten as number | null) ?? null, info: (r.ocr_info as string | null) ?? null, sprache: (r.sprache as string | null) ?? null } : undefined;
+    },
+    async setzeDokumentSprache(id, sprache) {
+      if (!istUuid(id)) return false;
+      // Der Hinweis der Texterkennung nennt danach dieselbe Sprache (ältere Dokumente lesen sie nur von dort).
+      const r = await sql`UPDATE dokumente SET sprache = ${sprache},
+          ocr_info = CASE WHEN ocr_info IS NULL THEN NULL ELSE regexp_replace(ocr_info, ${SPRACHE_INFO_SQL}, '') || coalesce(${SPRACHE_MARKE} || ${sprache}::text, '') END
+        WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      if (r.count) sprachenZwischen = null;
+      return r.count > 0;
     },
     async ocrZurueckstellen() {
       const r = await sql`UPDATE dokumente SET ocr_stand = 'wartet' WHERE haushalt_id = ${haushaltId} AND ocr_stand = 'laeuft'`;
@@ -1490,13 +1543,15 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       // Ein Wort genügt (ODER); Füllwörter entfernt die deutsche Konfiguration. Erst die besten Dokumente, dann
       // nur für sie die Ausschnitte (ts_headline ist teuer).
       const q = woerter.join(' | ');
+      // Je Sprache der Ablage (#400) die Wortstämme dieser Sprache.
+      const anfrage = (await sprachKonfigs()).map((k) => sql`to_tsquery(${k}::regconfig, dms_falte(${q}::text))`).reduce((x, y) => sql`(${x} || ${y})`);
       const dokumente = o.dokumente < 1 ? [] : await sql`
         WITH beste AS (
-          SELECT d.id, d.mappe_id, d.name, ts_rank_cd(${SUCHINDEX}, q) AS rang
-          FROM dokumente d JOIN mappen ON mappen.id = d.mappe_id AND mappen.haushalt_id = ${haushaltId}, to_tsquery('dms_german', dms_falte(${q}::text)) q
-          WHERE d.haushalt_id = ${haushaltId} AND ${SUCHINDEX} @@ q ${lesen}
+          SELECT d.id, d.mappe_id, d.name, ts_rank_cd(${SUCHINDEX}, x.q) AS rang
+          FROM dokumente d JOIN mappen ON mappen.id = d.mappe_id AND mappen.haushalt_id = ${haushaltId} CROSS JOIN LATERAL (SELECT ${anfrage} AS q) x
+          WHERE d.haushalt_id = ${haushaltId} AND ${SUCHINDEX} @@ x.q ${lesen}
           ORDER BY rang DESC, d.id LIMIT ${o.dokumente})
-        SELECT b.id, b.mappe_id, b.name, b.rang, ts_headline(dms_konfig(d.sprache), d.volltext, to_tsquery('dms_german', dms_falte(${q}::text)),
+        SELECT b.id, b.mappe_id, b.name, b.rang, ts_headline(dms_konfig(d.sprache), d.volltext, ${anfrage},
           'MaxFragments=3, MaxWords=40, MinWords=15, ShortWord=2, StartSel="", StopSel="", FragmentDelimiter=" … "') AS text
         FROM beste b JOIN dokumente d ON d.id = b.id ORDER BY b.rang DESC, b.id`;
       const muster = woerter.map((w) => `%${w}%`);

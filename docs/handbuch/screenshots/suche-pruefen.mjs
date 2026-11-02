@@ -83,6 +83,8 @@ try {
 
   // Treffer öffnen: rechts die Mappe, die Mitte wird schmaler.
   await form.getByRole('button', { name: 'Formular einklappen' }).click();
+  await form.waitFor({ state: 'hidden' });
+  await warteZahl((n) => n >= 1);
   await s.locator('.spalte.liste .eintrag, .spalte.liste tbody a').first().click();
   await s.locator('.spalte.mappe').waitFor();
   console.log('ok  Treffer öffnen');

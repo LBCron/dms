@@ -1,8 +1,12 @@
 import { ERKENNUNGSARTEN } from '../../shared/src/erkennung';
 import { FELDFORMATE } from '../../shared/src/feldformate';
 import { FELDTYPEN, HERKUNFT, REGISTERARTEN, type Benutzer } from '../../shared/src/model';
+import { TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { Fachfehler } from './fehler';
 import type { Anfrage, Antwort, Route } from './routen';
+
+/** Sprachkennungen für Dokumente (#400). */
+const SPRACHKENNUNGEN = Object.keys(TEXTSPRACHEN);
 
 /**
  * Öffentliche, stabile Schnittstelle /api/v1 (#20).
@@ -72,7 +76,7 @@ export const V1_TABELLE: V1[] = [
       { name: 'anzahl', wo: 'query', typ: 'integer', beschreibung: 'Anzahl, 1–500, Standard 100' },
       { name: 'suche', wo: 'query', typ: 'string', beschreibung: 'Text in Titel oder Werten' },
       { name: 'notizen', wo: 'query', typ: 'boolean', beschreibung: 'true = auch in Notizen suchen; Fundstellen stehen in ausschnitte (dokument: „Notiz“)' },
-      { name: 'volltext', wo: 'query', typ: 'boolean', beschreibung: 'true = auch im Volltext der Dokumente suchen (deutsche Volltextsuche, z. B. „Rechnungen“ findet „Rechnung“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).' },
+      { name: 'volltext', wo: 'query', typ: 'boolean', beschreibung: 'true = auch im Volltext der Dokumente suchen (Wortstämme in der Sprache jedes Dokuments, #400, z. B. „Rechnungen“ findet „Rechnung“, „invoices“ findet „invoice“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).' },
       { name: 'sortierung', wo: 'query', typ: 'string', beschreibung: 'Feldschlüssel oder _titel, _typ, _erstellt, _erstelltVon, _geaendert, _geaendertVon; Standard _titel' },
       { name: 'absteigend', wo: 'query', typ: 'boolean', beschreibung: 'true = absteigend' },
       passwoerter,
@@ -183,7 +187,8 @@ export const V1_TABELLE: V1[] = [
   { methode: 'GET', pfad: '/dokumente/{id}/inhalt', gruppe: 'Dokumente', zusammenfassung: 'Inhalt eines Dokuments herunterladen', beschreibung: `Ohne Parameter die gespeicherte Datei.${STEMPEL_BESCHREIBUNG}${VERKLEINERN_BESCHREIBUNG} Beispiel: ?vorlage=kopie&empfaenger=Hausverwaltung%20M%C3%BCller oder ?stempel=ENTWURF&lage=diagonal&deckkraft=0.2&seitenzahlen=true oder ?verkleinern=standard.`, intern: { methode: 'GET', pfad: '/api/dokumente/:id/inhalt' }, parameter: [id('des Dokuments'), ...stempelParameter, verkleinernParameter], antwort: 'binaer' },
   { methode: 'GET', pfad: '/stempel/vorlagen', gruppe: 'Dokumente', zusammenfassung: 'Stempel-Vorlagen', beschreibung: 'Vorlagen für Stempel beim Weitergeben (#394): id, name, text mit Platzhaltern, lage, deckkraft, seiten, seitenzahlen, archivnummer. Ob ein Mappentyp einen Stempel vorschlägt oder verlangt, steht an GET /typen unter stempel ({ modus: vorschlag|pflicht, vorlage }).', intern: { methode: 'GET', pfad: '/api/stempel/vorlagen' }, antwort: 'StempelVorlagen' },
   { methode: 'GET', pfad: '/dokumente/{id}/volltext', gruppe: 'Dokumente', zusammenfassung: 'Volltext eines Dokuments', beschreibung: 'Textebene des PDFs oder Ergebnis der Texterkennung; text ist null, solange es keinen gibt (siehe ocr.stand).', intern: { methode: 'GET', pfad: '/api/dokumente/:id/volltext' }, parameter: [id('des Dokuments')], antwort: 'Volltext' },
-  { methode: 'PUT', pfad: '/dokumente/{id}/volltext', gruppe: 'Dokumente', zusammenfassung: 'Volltext schreiben', beschreibung: 'Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst.', intern: { methode: 'PUT', pfad: '/api/dokumente/:id/volltext' }, parameter: [id('des Dokuments')], body: 'VolltextSchreiben', antwort: 'Volltext' },
+  { methode: 'PUT', pfad: '/dokumente/{id}/volltext', gruppe: 'Dokumente', zusammenfassung: 'Volltext schreiben', beschreibung: 'Für Pakete mit eigener Texterkennung (#338): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest, Benutzer das Recht Bearbeiten an der Mappe. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt das DMS sie.', intern: { methode: 'PUT', pfad: '/api/dokumente/:id/volltext' }, parameter: [id('des Dokuments')], body: 'VolltextSchreiben', antwort: 'Volltext' },
+  { methode: 'PUT', pfad: '/dokumente/{id}/sprache', gruppe: 'Dokumente', zusammenfassung: 'Sprache des Volltexts setzen', beschreibung: 'Sprache des Dokuments (#400) als Kennung wie bei Tesseract (deu, eng, fra, spa, ita, nld, tur, pol, por, rus, ukr, ara) oder null (keine Angabe = Deutsch). Die Volltextsuche nimmt die Wortstämme dieser Sprache; der Suchindex des Dokuments entsteht dabei neu. Rechte wie beim Volltext schreiben; steht in der Historie.', intern: { methode: 'PUT', pfad: '/api/dokumente/:id/sprache' }, parameter: [id('des Dokuments')], body: 'SpracheSetzen', antwort: 'DokumentSprache' },
   // Vektoren zu Dokumenten (#442): Schnittstelle für Pakete mit dem Recht dms:vektoren; der Kern rechnet keine Vektoren.
   { methode: 'PUT', pfad: '/dokumente/{id}/vektor', gruppe: 'Dokumente', zusammenfassung: 'Vektor eines Dokuments setzen', beschreibung: 'Für Pakete mit dem Recht „dms:vektoren“ (#442), z. B. „KI lokal – Ähnlichkeit“: legt je Dokument und Modell einen Vektor ab (ersetzt einen vorhandenen). Der Kern normiert ihn auf Länge 1 und vergleicht mit dem Kosinus. Alle Vektoren eines Modells haben dieselbe Länge (8 bis 4096). Ein neues Modell desselben Pakets macht dessen alte Vektoren ungültig (sie werden entfernt und im Hintergrund neu berechnet). Das Paket muss das Dokument lesen dürfen; andere Aufrufer bekommen 403.', intern: { methode: 'PUT', pfad: '/api/dokumente/:id/vektor' }, parameter: [id('des Dokuments')], body: 'VektorSetzen', antwort: 'VektorGesetzt' },
   { methode: 'DELETE', pfad: '/dokumente/{id}/vektor', gruppe: 'Dokumente', zusammenfassung: 'Vektor eines Dokuments löschen', beschreibung: 'Für Pakete mit dem Recht „dms:vektoren“ (#442). Mit dem Dokument verschwinden seine Vektoren ohnehin.', intern: { methode: 'DELETE', pfad: '/api/dokumente/:id/vektor' }, parameter: [id('des Dokuments'), { name: 'modell', wo: 'query', typ: 'string', pflicht: true, beschreibung: 'Kennung des Modells' }], antwort: 'VektorGeloescht' },
@@ -355,6 +360,7 @@ const SCHEMAS: Record<string, Schema> = {
     type: 'object',
     properties: {
       id: uuid, mappeId: uuid, registerKey: { type: 'string' }, name: { type: 'string' }, mime: { type: 'string' }, groesse: { type: 'integer' }, sha256: { type: 'string' }, anzeigbar: { type: 'boolean' }, erstellt: zeit, erstelltVon: { ...uuid, nullable: true },
+      sprache: { type: 'string', nullable: true, description: 'Sprache des Volltexts (#400), Kennung wie fra; null = keine Angabe (Deutsch)' },
       ocr: { type: 'object', description: 'Stand der Texterkennung', properties: { stand: { type: 'string', enum: ['keiner', 'wartet', 'laeuft', 'fertig', 'fehler', 'ausgelassen'] }, info: { type: 'string', nullable: true }, seiten: { type: 'integer', nullable: true }, zeit: { ...zeit, nullable: true } } },
       version: { type: 'integer', description: 'Nummer der aktuellen Version (ohne Versionierung 1)' },
       herkunft: { type: 'string', nullable: true, enum: [...Object.keys(HERKUNFT), null], description: 'Woher die aktuelle Version kam' },
@@ -455,7 +461,7 @@ const SCHEMAS: Record<string, Schema> = {
   } } } } },
   Historie: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, mappeId: uuid, zeit: zeit, benutzerId: { ...uuid, nullable: true }, art: { type: 'string' }, daten: { type: 'object', additionalProperties: true, description: 'Je nach Art, z. B. aenderungen: [{feld, label, alt, neu}] oder dokument' } } } },
   StempelVorlagen: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, text: { type: 'string' }, lage: { type: 'string', enum: ['diagonal', 'kopf', 'fuss', 'ecke'] }, deckkraft: { type: 'number' }, seiten: { type: 'string', enum: ['alle', 'erste'] }, seitenzahlen: { type: 'boolean' }, archivnummer: { type: 'boolean' } } } },
-  Volltext: { type: 'object', properties: { id: uuid, name: { type: 'string' }, ocr: { type: 'object' }, text: { type: 'string', nullable: true } } },
+  Volltext: { type: 'object', properties: { id: uuid, name: { type: 'string' }, ocr: { type: 'object' }, sprache: { type: 'string', nullable: true, description: 'Sprache des Texts (#400), z. B. fra; null = keine Angabe (Deutsch)' }, text: { type: 'string', nullable: true } } },
   Sicht: {
     type: 'object',
     properties: {
@@ -553,7 +559,9 @@ const SCHEMAS: Record<string, Schema> = {
   VektorGeloescht: { type: 'object', properties: { entfernt: { type: 'integer' } } },
   AehnlicheAnfrage: { type: 'object', required: ['vektor'], properties: { modell: { type: 'string', description: 'ohne Angabe das aktuelle Modell' }, vektor: { type: 'array', items: { type: 'number' } }, anzahl: { type: 'integer', minimum: 1, maximum: 100 }, schwelle: { type: 'number', minimum: -1, maximum: 1 } } },
   Aehnliche: { type: 'object', properties: { modell: { type: 'string' }, treffer: { type: 'array', items: { type: 'object', properties: { dokumentId: uuid, mappeId: uuid, aehnlichkeit: { type: 'number', description: 'Kosinus, -1 bis 1' } } } } } },
-  VolltextSchreiben: { type: 'object', required: ['text'], properties: { text: { type: 'string', description: 'höchstens 5 000 000 Zeichen' }, seiten: { type: 'integer', minimum: 1 } } },
+  VolltextSchreiben: { type: 'object', required: ['text'], properties: { text: { type: 'string', description: 'höchstens 5 000 000 Zeichen' }, seiten: { type: 'integer', minimum: 1 }, sprache: { type: 'string', nullable: true, enum: [...SPRACHKENNUNGEN, null], description: 'Sprache des Texts (#400); fehlt oder null: das DMS erkennt sie' } } },
+  SpracheSetzen: { type: 'object', required: ['sprache'], properties: { sprache: { type: 'string', nullable: true, enum: [...SPRACHKENNUNGEN, null] } } },
+  DokumentSprache: { type: 'object', properties: { id: uuid, name: { type: 'string' }, sprache: { type: 'string', nullable: true }, ocr: { type: 'object' } } },
   Gleiche: { type: 'object', required: ['pruefwerte'], properties: { pruefwerte: { type: 'array', maxItems: 100, items: { type: 'string', pattern: '^[0-9a-f]{64}$' } }, ohneMappe: uuid } },
   Fundstellen: { type: 'object', properties: { fundstellen: { type: 'object', description: 'Je Prüfwert höchstens 5 Fundstellen', additionalProperties: { type: 'array', items: { type: 'object', properties: { mappeId: uuid, typId: uuid, titel: { type: 'string' }, typ: { type: 'string' }, register: { type: 'string' }, name: { type: 'string' }, erstellt: { type: 'string', format: 'date-time' } } } } } } },
   PapierkorbDokumente: { type: 'array', items: { type: 'object', properties: { id: uuid, art: { type: 'string', enum: ['dokument'] }, mappeId: uuid, typId: uuid, mappeTitel: { type: 'string' }, registerKey: { type: 'string' }, register: { type: 'string' }, name: { type: 'string' }, mime: { type: 'string' }, groesse: { type: 'integer' }, sha256: { type: 'string' }, versionen: { type: 'integer', description: 'ältere Versionen, die mitgegangen sind' }, erstellt: { type: 'string', format: 'date-time' }, erstelltVon: { type: 'string', nullable: true }, geloescht: { type: 'string', format: 'date-time' }, geloeschtVon: { type: 'string', nullable: true }, mappe: { type: 'string', enum: ['da', 'papierkorb', 'weg'] } } } },

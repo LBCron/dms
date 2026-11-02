@@ -324,7 +324,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                               {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
-                        {!weg && <OcrAnzeige s={standVon(x)} erneut={() => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
+                        {!weg && <OcrAnzeige s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
@@ -465,10 +465,10 @@ function DokTeilen({ d }: { d: Dokument }) {
 }
 
 /** Stand der Texterkennung an einem Dokument (#45). */
-function OcrAnzeige({ s, erneut, text, textOffen }: { s?: OcrStand; erneut(): void; text(): void; textOffen: boolean }) {
+function OcrAnzeige({ s, sprache: feld, erneut, text, textOffen }: { s?: OcrStand; sprache?: string | null; erneut(): void; text(): void; textOffen: boolean }) {
   if (!s || s.stand === 'keiner') return null;
-  // Erkannte Sprache (#395) aus dem Hinweis der Texterkennung.
-  const sprache = s.stand === 'fertig' ? spracheAusInfo(s.info) : null;
+  // Sprache des Volltexts (#400) als eigenes Feld; bei älteren Dokumenten aus dem Hinweis der Texterkennung (#395).
+  const sprache = s.stand !== 'fertig' ? null : feld ? { sprache: feld } : spracheAusInfo(s.info);
   const klasse = s.stand === 'fertig' ? 'gut' : s.stand === 'fehler' ? 'schlecht' : s.stand === 'ausgelassen' ? '' : 'warn';
   return (
     <span className="ocrstand klein">
