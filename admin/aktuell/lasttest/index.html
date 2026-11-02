@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.143/lasttest/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.144/lasttest/">
       
       
         <link rel="prev" href="../verkraftet/">
@@ -606,10 +606,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#schritt-fur-schritt" class="md-nav__link">
+  <a href="#schritt-fur-schritt-in-der-docker-oberflache-und-im-browser" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Schritt für Schritt
+        Schritt für Schritt – in der Docker-Oberfläche und im Browser
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schritt für Schritt – in der Docker-Oberfläche und im Browser">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mit-einem-befehl-in-der-konsole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mit einem Befehl in der Konsole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#einen-bestimmten-datentrager-messen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einen bestimmten Datenträger messen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wo-das-ergebnis-sonst-noch-steht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wo das Ergebnis sonst noch steht
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fur-fortgeschrittene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Fortgeschrittene
       
     </span>
   </a>
@@ -2456,10 +2506,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#schritt-fur-schritt" class="md-nav__link">
+  <a href="#schritt-fur-schritt-in-der-docker-oberflache-und-im-browser" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Schritt für Schritt
+        Schritt für Schritt – in der Docker-Oberfläche und im Browser
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schritt für Schritt – in der Docker-Oberfläche und im Browser">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mit-einem-befehl-in-der-konsole" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mit einem Befehl in der Konsole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#einen-bestimmten-datentrager-messen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einen bestimmten Datenträger messen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wo-das-ergebnis-sonst-noch-steht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wo das Ergebnis sonst noch steht
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fur-fortgeschrittene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Für Fortgeschrittene
       
     </span>
   </a>
@@ -2511,8 +2611,8 @@
 <h1 id="lasttest-selbst-durchfuhren">Lasttest selbst durchführen<a class="headerlink" href="#lasttest-selbst-durchfuhren" title="Permanent link">&para;</a></h1>
 <p>Wie viel verkraftet das DMS <strong>auf deinem Gerät</strong>? Die Rechner, auf denen das Projekt jede Woche misst, sind kein NAS. Mit dem Lasttest misst du selbst – etwa vor dem Kauf eines neuen Geräts, vor einem Umzug oder wenn das DMS dir langsam vorkommt. Das Ergebnis kannst du freiwillig zurückmelden; daraus entsteht die Tabelle <a href="../verkraftet/">Was das DMS verkraftet</a>.</p>
 <div class="admonition warning">
-<p class="admonition-title">Nur gegen eine Test-Installation – nie gegen deine echte Ablage</p>
-<p>Der Lasttest legt einen eigenen Haushalt mit Lasttest-Konten und bis zu 200.000 Demo-Mappen an, probiert falsche Passwörter aus (um den <a href="../anmeldeschutz/">Anmeldeschutz</a> zu prüfen) und belastet das Gerät minutenlang bis an seine Grenze. Starte dafür eine <strong>eigene, frische Test-Installation</strong> und lösche sie danach wieder. Das Skript prüft das selbst: Ist das DMS schon eingerichtet und nicht vom Lasttest, oder liegen dort mehr als 200 Mappen, die keine Demo-Mappen sind, bricht es ab, <strong>bevor</strong> es etwas anlegt.</p>
+<p class="admonition-title">Nur in einem eigenen Test-Container – nie in deiner echten Installation</p>
+<p>Der Lasttest legt einen eigenen Haushalt mit Lasttest-Konten und bis zu 200.000 Demo-Mappen an, probiert falsche Passwörter aus (um den <a href="../anmeldeschutz/">Anmeldeschutz</a> zu prüfen) und belastet das Gerät minutenlang bis an seine Grenze. Starte dafür einen <strong>eigenen, neuen Container</strong> und lösche ihn danach wieder. Der Lasttest prüft das selbst: Ist das DMS schon eingerichtet und nicht vom Lasttest, oder liegen dort mehr als 200 Mappen, die keine Demo-Mappen sind, bricht er ab, <strong>bevor</strong> er etwas anlegt. Steht die Variable <code>DMS_LASTTEST</code> versehentlich in deiner echten Installation, läuft das DMS deshalb ganz normal weiter; die <a href="../uebersicht/">Übersicht der Werkbank</a> meldet dann, dass der Lasttest nicht gestartet ist und du die Variable entfernen sollst.</p>
 </div>
 <h2 id="die-drei-stufen">Die drei Stufen<a class="headerlink" href="#die-drei-stufen" title="Permanent link">&para;</a></h2>
 <table>
@@ -2553,14 +2653,92 @@
 <p>„Gemischt wie im Alltag“ heißt: Startseite, Listen, Mappen öffnen, Suchen, Vorschaubilder und Dokumente herunterladen, als Administrator und als Mitglied. 25 gleichzeitige Anfragen entsprechen etwa 2–5 Personen, die gerade klicken – ein Klick löst mehrere Anfragen aus.</p>
 <h2 id="voraussetzungen">Voraussetzungen<a class="headerlink" href="#voraussetzungen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Das DMS ab Version 0.132.0 – der Lasttest steckt als Befehl <code>dms-lasttest</code> im Image.</li>
-<li>Platz für die Test-Installation: etwa 1 GB für <code>klein</code> und <code>mittel</code>, 3–5 GB für <code>gross</code>.</li>
-<li>Ruhe auf dem Gerät: Laufen nebenher eine Sicherung des NAS, ein Medienserver oder Downloads, misst du die mit.</li>
+<li>Das DMS ab Version 0.144.0 für den Weg im Browser (ab 0.132.0 geht der <a href="#fur-fortgeschrittene">Weg für Fortgeschrittene</a>).</li>
+<li>Platz für den Test-Container: etwa 1 GB für <code>klein</code> und <code>mittel</code>, 3–5 GB für <code>gross</code>.</li>
+<li>Ruhe auf dem Gerät: Laufen nebenher eine Sicherung des NAS, ein Medienserver oder Downloads, misst du die mit. Halte auch dein eigenes DMS solange an, wenn gerade niemand damit arbeitet.</li>
 </ul>
-<h2 id="schritt-fur-schritt">Schritt für Schritt<a class="headerlink" href="#schritt-fur-schritt" title="Permanent link">&para;</a></h2>
+<h2 id="schritt-fur-schritt-in-der-docker-oberflache-und-im-browser">Schritt für Schritt – in der Docker-Oberfläche und im Browser<a class="headerlink" href="#schritt-fur-schritt-in-der-docker-oberflache-und-im-browser" title="Permanent link">&para;</a></h2>
+<p>Du brauchst <strong>keine Konsole, keine Ordner und keine Befehle</strong> – nur einen neuen Container mit <strong>einer</strong> Umgebungsvariable.</p>
 <ol>
 <li>
-<p><strong>Test-Installation starten</strong> – am einfachsten mit <code>dms-komplett</code> (DMS und Datenbank in einem Container), mit eigenem Namen, eigenem Port und eigenen, leeren Ordnern, z. B.:</p>
+<p><strong>Container anlegen</strong> – in der Docker-Oberfläche deines NAS (z. B. <em>Docker</em> bei UGREEN, <em>Container Manager</em> bei Synology, <em>Container Station</em> bei QNAP) einen neuen Container aus dem Image anlegen:</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image</td>
+<td><code>ghcr.io/motom001/dms-komplett:main</code> (DMS und Datenbank in einem Container)</td>
+</tr>
+<tr>
+<td>Name</td>
+<td>z. B. <code>dms-lasttest</code></td>
+</tr>
+<tr>
+<td>Port</td>
+<td>ein freier Port des NAS, z. B. <code>8099</code>, auf Port <code>3000</code> im Container</td>
+</tr>
+<tr>
+<td>Umgebungsvariable</td>
+<td><code>DMS_LASTTEST</code> = <code>klein</code> (oder <code>mittel</code>, <code>gross</code>, <code>alle</code> – siehe <a href="#die-drei-stufen">Die drei Stufen</a>)</td>
+</tr>
+<tr>
+<td>Ordner (Volumes)</td>
+<td><strong>keine</strong></td>
+</tr>
+<tr>
+<td>Neustart-Regel</td>
+<td>aus bzw. „nie“</td>
+</tr>
+</tbody>
+</table>
+<p>Ohne verbundene Ordner läuft alles im Container und verschwindet mit ihm – deine Ordner auf dem NAS bleiben unberührt.</p>
+</li>
+<li>
+<p><strong>Seite öffnen</strong> – im Browser <code>http://&lt;Adresse des NAS&gt;:8099</code>, z. B. <code>http://nas.local:8099</code>. Statt der Anmeldung siehst du die Seite <strong>Lasttest</strong>: welche Stufe läuft, was gerade passiert (Test-DMS einrichten, Demo-Mappen anlegen, messen) und die <strong>geschätzte Restdauer</strong>. Die Seite geht auch am Handy.</p>
+<p><img alt="Seite Lasttest im Browser" src="../bilder/lasttest-seite.png" /></p>
+</li>
+<li>
+<p><strong>Gerät beschreiben</strong> – in <strong>Beschreibe dein Gerät</strong> Modell und Ausstattung eintragen, z. B. <code>UGREEN DXP4800 Plus, 16 GB RAM</code>. <strong>Keine Namen, Adressen oder Rechnernamen</strong> – der Text steht im Ergebnis, das du veröffentlichst. Was du tippst, steht sofort im Ergebnisblock. Darunter die <strong>Speicherart</strong> (HDD, SSD oder NVMe): Der Test erkennt sie, soweit das aus dem Container geht; sonst wählst du sie – „weiß nicht“ geht auch. CPU-Modell, Kerne und Arbeitsspeicher trägt der Test selbst ein.</p>
+</li>
+<li>
+<p><strong>Warten</strong> – <code>klein</code> dauert etwa 5 Minuten, <code>mittel</code> 15–30 Minuten (50.000 Mappen anlegen), <code>gross</code> 30–60 Minuten (200.000 Mappen anlegen, dann je Schritt 2 Minuten), <code>alle</code> entsprechend länger. Du kannst die Seite schließen und später wieder öffnen.</p>
+</li>
+<li>
+<p><strong>Ergebnis kopieren</strong> – am Ende stehen der Block <strong>Messergebnis Lasttest</strong> mit <strong>Kopieren</strong> und <strong>Als Datei herunterladen</strong>, die Links zum Formular und zum Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">#576</a> und – aufklappbar – der ganze Bericht. Wie du das Ergebnis liest und zurückmeldest, steht <a href="#ergebnis-lesen">unten</a>.</p>
+<p><img alt="Seite Lasttest mit dem Ergebnis zum Kopieren" src="../bilder/lasttest-ergebnis.png" /></p>
+</li>
+<li>
+<p><strong>Test beenden</strong> – <strong>Test beenden und Container herunterfahren</strong> und die Rückfrage („Hast du das Ergebnis kopiert? Danach ist es weg.“) bestätigen. Der Container stoppt. Lösche ihn danach in der Docker-Oberfläche und bei Bedarf auch das Image.</p>
+</li>
+</ol>
+<details class="note">
+<summary>So sieht die Seite dunkel und am Handy aus</summary>
+<p><img alt="Seite Lasttest, dunkle Darstellung" src="../bilder/lasttest-seite-dunkel.png" /></p>
+<p><img alt="Seite Lasttest am Handy" src="../bilder/lasttest-handy.png" /></p>
+</details>
+<h3 id="mit-einem-befehl-in-der-konsole">Mit einem Befehl in der Konsole<a class="headerlink" href="#mit-einem-befehl-in-der-konsole" title="Permanent link">&para;</a></h3>
+<p>Dasselbe in einer Zeile – <code>--rm</code> löscht den Container, sobald du den Test auf der Seite beendest:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>dms-lasttest<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span>-e<span class="w"> </span><span class="nv">DMS_LASTTEST</span><span class="o">=</span>klein<span class="w"> </span>ghcr.io/motom001/dms-komplett:main
+</code></pre></div>
+<p>Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit <code>docker image rm ghcr.io/motom001/dms-komplett:main</code>.</p>
+<h3 id="einen-bestimmten-datentrager-messen">Einen bestimmten Datenträger messen<a class="headerlink" href="#einen-bestimmten-datentrager-messen" title="Permanent link">&para;</a></h3>
+<p>Ohne Ordner liegt alles dort, wo Docker seine Container ablegt – auf vielen NAS die System-SSD oder das erste Speicher-Volume. Willst du gezielt einen anderen Datenträger messen (z. B. die Festplatten statt der System-SSD), verbinde <strong>einen leeren Ordner</strong> auf diesem Datenträger mit <code>/data</code> im Container – das ist der einzige Grund für einen Ordner:</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>dms-lasttest<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span>-e<span class="w"> </span><span class="nv">DMS_LASTTEST</span><span class="o">=</span>klein<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-v<span class="w"> </span>/volume1/dms-lasttest:/data<span class="w"> </span>ghcr.io/motom001/dms-komplett:main
+</code></pre></div>
+<p>Der Test erkennt dann die Speicherart dieses Datenträgers, und das Ergebnis liegt zusätzlich als Datei in diesem Ordner unter <code>ergebnis/</code>. Lösche den Ordner nach dem Test.</p>
+<h3 id="wo-das-ergebnis-sonst-noch-steht">Wo das Ergebnis sonst noch steht<a class="headerlink" href="#wo-das-ergebnis-sonst-noch-steht" title="Permanent link">&para;</a></h3>
+<p>Hast du die Seite geschlossen, bevor du das Ergebnis kopiert hast: Es steht auch in den <strong>Logs</strong> des Containers (in der Docker-Oberfläche unter <em>Protokoll</em> bzw. <em>Logs</em>) und als Datei im Container unter <code>/data/ergebnis/lasttest-&lt;stufe&gt;.md</code> – mit Gerät und Speicher, sobald du sie auf der Seite eingetragen hast. Startet der Container nach dem Beenden neu (Neustart-Regel), misst er nicht noch einmal, sondern zeigt das Ergebnis wieder an.</p>
+<h2 id="fur-fortgeschrittene">Für Fortgeschrittene<a class="headerlink" href="#fur-fortgeschrittene" title="Permanent link">&para;</a></h2>
+<p>Der Lasttest steckt als Befehl <code>dms-lasttest</code> im Image. So misst du ohne die Seite im Browser – etwa die Variante mit getrennter Datenbank, mit eigenen Optionen oder von einem anderen Rechner aus.</p>
+<ol>
+<li>
+<p><strong>Test-Installation starten</strong> – mit eigenem Namen, eigenem Port und eigenen, leeren Ordnern, z. B.:</p>
 <div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>dms-test<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/files:/data/files<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/geheim:/data/geheim<span class="w"> </span><span class="se">\</span>
@@ -2568,23 +2746,23 @@
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/postgres:/data/postgres<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>ghcr.io/motom001/dms-komplett:main
 </code></pre></div>
-<p>Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. <code>dms-test</code>, mit anderen Ordnern und anderem Port. Nicht einrichten – das macht der Lasttest.</p>
+<p>Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. <code>dms-test</code>, mit anderen Ordnern und anderem Port – dort geht auch der Weg im Browser mit <code>DMS_LASTTEST</code>. Nicht einrichten – das macht der Lasttest.</p>
 </li>
 <li>
 <p><strong>Stufe starten</strong> – im Test-Container, also auf demselben Gerät:</p>
 <div class="highlight"><pre><span></span><code>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-it<span class="w"> </span>dms-test<span class="w"> </span>dms-lasttest<span class="w"> </span>klein<span class="w"> </span>--geraet<span class="w"> </span><span class="s2">"Modell deines Geräts"</span><span class="w"> </span>--speicher<span class="w"> </span>SSD
 </code></pre></div>
-<p>Statt <code>klein</code> geht <code>mittel</code>, <code>gross</code> oder <code>alle</code> (alle drei nacheinander). Beim ersten Start richtet der Lasttest das frische DMS selbst ein; den Einrichtungscode liest er aus dem Ordner <code>geheim</code>. Fehlen für eine größere Stufe Mappen, legt er die Demo-Mappen dazu und wartet, bis das DMS mit der Arbeit im Hintergrund fertig ist. In der Oberfläche einer NAS geht das ebenso über die Konsole des Containers (Befehl <code>dms-lasttest klein</code>).</p>
+<p>Statt <code>klein</code> geht <code>mittel</code>, <code>gross</code> oder <code>alle</code> (alle drei nacheinander). Beim ersten Start richtet der Lasttest das frische DMS selbst ein; den Einrichtungscode liest er aus dem Ordner <code>geheim</code>. Fehlen für eine größere Stufe Mappen, legt er die Demo-Mappen dazu und wartet, bis das DMS mit der Arbeit im Hintergrund fertig ist. <code>dms-lasttest --pruefen</code> prüft nur, ob der Lasttest hier laufen dürfte, und legt nichts an.</p>
 </li>
 <li>
-<p><strong>Ergebnis lesen</strong> – am Ende steht ein Bericht und darunter der Block <strong>Messergebnis Lasttest</strong> (siehe unten).</p>
+<p><strong>Ergebnis lesen</strong> – am Ende stehen ein Bericht und darunter der Block <strong>Messergebnis Lasttest</strong>.</p>
 </li>
 <li>
 <p><strong>Aufräumen:</strong> Test-Container stoppen und löschen (<code>docker rm -f dms-test</code>), die Ordner der Test-Installation löschen.</p>
 </li>
 </ol>
-<p>Optionen: <code>--geraet "…"</code> und <code>--speicher HDD|SSD|NVMe</code> tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). <code>--dauer &lt;Sekunden&gt;</code> ändert die Messdauer von <code>klein</code> und <code>mittel</code> (Vorgabe 120). <code>--start</code>, <code>--schritt</code> und <code>--schritt-dauer</code> ändern die Steigerung von <code>gross</code> (Vorgabe 25, 25, 120 Sekunden), <code>--bis &lt;n&gt;</code> begrenzt sie. <code>--bericht &lt;Datei&gt;</code> speichert den Bericht.</p>
-<p><strong>Dauer</strong> (je nach Gerät): <code>klein</code> etwa 5 Minuten, <code>mittel</code> 15–30 Minuten (50.000 Mappen anlegen), <code>gross</code> 30–60 Minuten (200.000 Mappen anlegen, dann je Schritt 2 Minuten). Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (<code>--ziel http://…:8099</code>); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.</p>
+<p>Optionen: <code>--geraet "…"</code> und <code>--speicher HDD|SSD|NVMe</code> tragen Gerät und Speicher in den Ergebnisblock ein (sonst steht dort „bitte ergänzen“). <code>--dauer &lt;Sekunden&gt;</code> ändert die Messdauer von <code>klein</code> und <code>mittel</code> (Vorgabe 120; im Weg über den Browser mit der Variable <code>DMS_LASTTEST_DAUER</code>). <code>--start</code>, <code>--schritt</code> und <code>--schritt-dauer</code> ändern die Steigerung von <code>gross</code> (Vorgabe 25, 25, 120 Sekunden), <code>--bis &lt;n&gt;</code> begrenzt sie. <code>--bericht &lt;Datei&gt;</code> speichert den Bericht.</p>
+<p>Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (<code>--ziel http://…:8099</code>); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.</p>
 <h2 id="ergebnis-lesen">Ergebnis lesen<a class="headerlink" href="#ergebnis-lesen" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>p50, p95, p99:</strong> Die Hälfte, 95 % bzw. 99 % der Antworten kamen schneller als dieser Wert. p95 ist der wichtigste: Er zeigt, wie es sich anfühlt, wenn es gerade hakt.</li>
@@ -2594,7 +2772,7 @@
 <li><strong>Arbeitsspeicher</strong> und <strong>Ereignisschleife p99</strong> (wie lange Anfragen höchstens warten mussten, weil der Server rechnete) zeigen, wo es eng wird. Hinweise zu den Einstellungen dafür stehen unter <a href="../speicherplatz/#einstellungen-und-engpasse">Systemzustand → Einstellungen und Engpässe</a>.</li>
 </ul>
 <h2 id="ergebnis-zuruckmelden">Ergebnis zurückmelden<a class="headerlink" href="#ergebnis-zuruckmelden" title="Permanent link">&para;</a></h2>
-<p>Der Block <strong>Messergebnis Lasttest</strong> enthält <strong>keine personenbezogenen Daten</strong> und <strong>keine Adressen, Rechner- oder Haushaltsnamen</strong> – nur DMS-Version, Image, wo die Datenbank läuft, Gerät, CPU, Kerne, Arbeitsspeicher, Art des Speichers, Zahl der Mappen und Dokumente, je Stufe p50/p95/p99 und Fehlerquote, die Grenze, die Spitze des Arbeitsspeichers und die Ereignisschleife. Kopiere ihn unverändert in das Formular <a href="https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml">Messergebnis Lasttest</a> auf GitHub oder als Kommentar in das Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">#576</a>, wo alle Messergebnisse zusammenkommen. Der Beitrag ist öffentlich; alles ist freiwillig – das DMS selbst meldet nichts.</p>
+<p>Der Block <strong>Messergebnis Lasttest</strong> enthält <strong>keine personenbezogenen Daten</strong> und <strong>keine Adressen, Rechner- oder Haushaltsnamen</strong> – nur DMS-Version, Image, wo die Datenbank läuft, Gerät (was du ins Gerätefeld schreibst), CPU, Kerne, Arbeitsspeicher, Art des Speichers, Zahl der Mappen und Dokumente, je Stufe p50/p95/p99 und Fehlerquote, die Grenze, die Spitze des Arbeitsspeichers und die Ereignisschleife. Kopiere ihn unverändert (auf der Seite mit <strong>Kopieren</strong>) in das Formular <a href="https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml">Messergebnis Lasttest</a> auf GitHub oder als Kommentar in das Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">#576</a>, wo alle Messergebnisse zusammenkommen. Der Beitrag ist öffentlich; alles ist freiwillig – das DMS selbst meldet nichts.</p>
 
 
 

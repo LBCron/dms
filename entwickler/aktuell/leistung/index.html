@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.143/leistung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.144/leistung/">
       
       
         <link rel="prev" href="../pakete/">
@@ -1381,6 +1381,7 @@
 <p>Der Administrator ist der ungünstigste Fall: Ihm gehören alle Fristen ohne Empfänger, bei den Demo-Daten fast alle Verträge mit jährlicher Kündigungsfrist. Das Jahr ist dann 3,2 MB JSON (ohne Kompression); im Browser steht die Jahresansicht trotzdem nach etwa 0,1–0,2 s, der Monat nach 0,1–0,3 s. Die Mitglieder haben in den Demo-Daten keine eigenen Fristen; ihre Zeit ist das Suchen der Kandidaten. In einem Haushalt mit einigen Dutzend Fristen liegt alles im Bereich der Liste.</p>
 <h2 id="lasttest">Lasttest<a class="headerlink" href="#lasttest" title="Permanent link">&para;</a></h2>
 <p><code>server/test/lasttest.mjs</code> (#544, #563) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js. Im Image steckt es als Befehl <code>dms-lasttest</code> (Betreiber: Administratorhandbuch → <a href="https://motom001.github.io/dms/admin/aktuell/lasttest/">Lasttest selbst durchführen</a>).</p>
+<p><strong>Lasttest-Modus</strong> (#612): Mit <code>DMS_LASTTEST=klein|mittel|gross|alle</code> lauscht das DMS nur auf 127.0.0.1 (freier Port) und startet das Skript als Kindprozess (<code>fork</code>, IPC) gegen diese Adresse; unter dem eigentlichen Port gibt es nur die Seite mit Fortschritt und Ergebnis (<code>server/src/lasttestmodus.ts</code>, <code>web/src/lasttest.tsx</code>, gemeinsame Typen in <code>shared/src/lasttest.ts</code>). Das Skript meldet seine Schritte mit <code>process.send</code> (nur mit IPC-Kanal, auf der Konsole ändert sich nichts) und schickt am Ende Bericht und Ergebnisblock mit den Platzhaltern <code>{{geraet}}</code> und <code>{{speicher}}</code>, die die Seite füllt. Vorher prüft <code>lasttest.mjs --pruefen</code> die Sperre der echten Ablage, ohne etwas anzulegen; schlägt sie an, startet das DMS normal und meldet den Grund in der Werkbank-Übersicht (<code>lasttestAbbruch</code>). <code>DMS_LASTTEST_DAUER</code> entspricht <code>--dauer</code>. Tests: <code>lasttestmodus.test.ts</code>, mit PostgreSQL <code>lasttestmodus-e2e.test.ts</code> (Stufe klein mit 3 s Messdauer, etwa eine Minute).</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein</span>
 <span class="c1"># und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000; 2 % mit einem Brief als PDF)</span>
 node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>klein<span class="w"> </span>--ziel<span class="w"> </span>http://127.0.0.1:3100<span class="w"> </span>--grenzen
