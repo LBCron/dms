@@ -535,7 +535,7 @@
             "name": "volltext",
             "in": "query",
             "required": false,
-            "description": "true = auch im Volltext der Dokumente suchen (deutsche Volltextsuche, z. B. „Rechnungen“ findet „Rechnung“); Fundstellen stehen in ausschnitte",
+            "description": "true = auch im Volltext der Dokumente suchen (deutsche Volltextsuche, z. B. „Rechnungen“ findet „Rechnung“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).",
             "schema": {
               "type": "boolean"
             }
@@ -8696,6 +8696,28 @@
                 },
                 "text": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "unscharf": {
+            "type": "object",
+            "description": "Unscharfe Suche (#356): Gab es keinen genauen Treffer, sucht das DMS mit ähnlich geschriebenen Wörtern aus dem Wörterverzeichnis weiter (Werkbank → Suche); dann stehen hier der gesuchte Text (statt), „Meintest du …?“ (vorschlag, oder null) und die ähnlichen Wörter je Begriff. Fehlt bei genauen Treffern.",
+            "properties": {
+              "statt": {
+                "type": "string"
+              },
+              "vorschlag": {
+                "type": "string",
+                "nullable": true
+              },
+              "begriffe": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
