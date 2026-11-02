@@ -3145,6 +3145,130 @@
         }
       }
     },
+    "/post/{id}/erkennung": {
+      "get": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Vorschläge beim Zuordnen",
+        "description": "Erkennung (#336), ohne KI: Absender (Mappen, deren für die Erkennung markierte Felder wie Kundennummer, IBAN, E-Mail oder Internetseite im Text stehen – mit Begründung), Datum, Gesamtbetrag und Nummern aus dem Text sowie Vorschläge für die Zielmappe (direkte Treffer, Mappen, die auf den Absender verweisen, frühere Post dieses Absenders). Gerechnet einmal nach dem Volltext; nur Mappen, die der Benutzer des Schlüssels lesen darf. neuerAbsender: Vorschlag „neue Organisation anlegen“, wenn kein Absender passt und der Briefkopf sicher erkennbar ist.",
+        "operationId": "getPostMitidErkennung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id der Post (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erkennung"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ablage"
+        ],
+        "summary": "Erkennung neu rechnen",
+        "description": "Rechnet die Vorschläge beim Zuordnen (#336) jetzt neu, z. B. nachdem eine Organisation angelegt wurde. Braucht Lesen.",
+        "operationId": "postPostMitidErkennung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id der Post (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erkennung"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/fotostapel": {
       "post": {
         "tags": [
@@ -6963,6 +7087,42 @@
           },
           "waehrung": {
             "type": "string"
+          },
+          "erkennung": {
+            "type": "object",
+            "nullable": true,
+            "description": "Für die Erkennung nutzen (#336, #391); vorhanden = an. Nur bei Text, Langtext, Zahl, Betrag, Datum, Auswahl und Verweis. art: was im Feld steht (fehlt = aus Feldart und Bezeichnung), hinweis: Erkennungshinweis, z. B. „Muster 100-####“ (# = Ziffer).",
+            "properties": {
+              "art": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "vorname",
+                  "nachname",
+                  "funktion",
+                  "nummer",
+                  "iban",
+                  "ustid",
+                  "email",
+                  "internet",
+                  "telefon",
+                  "mobil",
+                  "fax",
+                  "strasse",
+                  "hausnummer",
+                  "plz",
+                  "ort",
+                  "datum",
+                  "betrag",
+                  "verweis",
+                  "auswahl"
+                ]
+              },
+              "hinweis": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
           }
         }
       },
@@ -8172,6 +8332,171 @@
           },
           "ziel": {
             "$ref": "#/components/schemas/Mappe"
+          }
+        }
+      },
+      "Erkennung": {
+        "type": "object",
+        "properties": {
+          "zeit": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dokumente": {
+            "type": "integer",
+            "description": "Dokumente der Post mit Volltext"
+          },
+          "absender": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mappeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "typId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "titel": {
+                  "type": "string"
+                },
+                "stark": {
+                  "type": "boolean",
+                  "description": "an einem eindeutigen Merkmal erkannt (Kundennummer, IBAN, E-Mail …)"
+                },
+                "punkte": {
+                  "type": "number"
+                },
+                "gruende": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "z. B. „Kundennummer 100-4711“"
+                }
+              }
+            }
+          },
+          "eindeutig": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Eindeutig erkannter Absender"
+          },
+          "angaben": {
+            "type": "object",
+            "properties": {
+              "datum": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "wert": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "sicherheit": {
+                    "type": "string",
+                    "enum": [
+                      "hoch",
+                      "mittel",
+                      "niedrig"
+                    ]
+                  },
+                  "fundstelle": {
+                    "type": "string"
+                  }
+                }
+              },
+              "betrag": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "wert": {
+                    "type": "object",
+                    "properties": {
+                      "betrag": {
+                        "type": "number"
+                      },
+                      "waehrung": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "sicherheit": {
+                    "type": "string"
+                  },
+                  "fundstelle": {
+                    "type": "string"
+                  }
+                }
+              },
+              "nummern": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "wert": {
+                      "type": "string"
+                    },
+                    "fundstelle": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "neuerAbsender": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "typId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "werte": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "fundstelle": {
+                "type": "string"
+              }
+            }
+          },
+          "ziele": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mappeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "typId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "titel": {
+                  "type": "string"
+                },
+                "punkte": {
+                  "type": "number"
+                },
+                "gruende": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           }
         }
       },

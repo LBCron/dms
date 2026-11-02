@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0112" class="md-skip">
+        <a href="#neu-in-version-0113" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01120" class="md-nav__link">
+  <a href="#01130" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.112.0
+        0.113.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.112.0">
+    <nav class="md-nav" aria-label="0.113.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,6 +379,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -1993,15 +2004,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01120" class="md-nav__link">
+  <a href="#01130" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.112.0
+        0.113.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.112.0">
+    <nav class="md-nav" aria-label="0.113.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2009,6 +2020,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -2051,19 +2073,31 @@
   
 
 
-<h1 id="neu-in-version-0112">Neu in Version 0.112<a class="headerlink" href="#neu-in-version-0112" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0113">Neu in Version 0.113<a class="headerlink" href="#neu-in-version-0113" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01120">0.112.0<a class="headerlink" href="#01120" title="Permanent link">&para;</a></h2>
+<h2 id="01130">0.113.0<a class="headerlink" href="#01130" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Pakete ohne Internet: Sammeldatei</strong> (#461): Auf der Katalog-Webseite wählst du mehrere Pakete und deine DMS-Version, Abhängigkeiten kommen automatisch mit, und du lädst alles als eine Datei herunter. Im DMS lädst du sie unter <strong>Werkbank → Pakete → Ohne Internet …</strong> oder im Einrichtungsassistenten hoch. Das DMS prüft jedes Paket gegen seine Prüfsumme (und gegen den offiziellen Katalog, wenn es ihn kennt), zeigt den Inhalt mit „neu“, „Update“ oder „schon installiert“ und installiert Paket für Paket – Rechte bestätigst du je Paket.</li>
+<li><strong>Vorschläge beim Zuordnen von Post</strong> (#336): Sobald der Text einer Post da ist, sucht das DMS darin – offline, ohne KI, nur mit Mustern und dem Abgleich mit deinen Mappen.</li>
+<li>Kasten <strong>Erkannt</strong> an der Post: <strong>Absender</strong> mit Begründung („gefunden: Kundennummer 100-4711“), <strong>Datum</strong> des Schreibens, <strong>Gesamtbetrag</strong> und Nummern (Kunden-, Rechnungs-, Vertragsnummer). Ein Klick trägt Absender bzw. Datum an der Post ein.</li>
+<li>Unbekannter Absender: <strong>Als neue Organisation anlegen</strong> mit Name und Anschrift aus dem Briefkopf, wenn er sicher erkennbar ist.</li>
+<li>Unter <strong>Zuordnen …</strong> stehen <strong>Vorschläge</strong> für die Zielmappe – Treffer über eine Vertragsnummer, Mappen, die auf den Absender verweisen, frühere Post dieses Absenders –, der beste ist vorausgewählt und als Vorschlag markiert. Bei „neue Mappe“ sind Datum, Betrag, Nummern und der Verweis auf den Absender vorbelegt.</li>
+<li>Nur Mappen, die du lesen darfst. <strong>Neu erkennen</strong> rechnet nach einer neuen Organisation noch einmal.</li>
+<li><strong>Feld-Eigenschaft „Für die Erkennung nutzen“</strong> im Mappentyp (#336): mit optionaler Art (Nummer, IBAN, E-Mail …) und Erkennungshinweis. Pakete markieren ihre Felder selbst; ein Update übernimmt die Markierung an Feldern, an denen du nichts eingestellt hast.</li>
+<li>Schnittstelle: <code>GET /post/{id}/erkennung</code> und <code>POST /post/{id}/erkennung</code> (neu rechnen); <code>erkennung</code> am Feld eines Mappentyps.</li>
+<li>Benutzerhandbuch <em>Post</em> → <strong>Vorschläge beim Zuordnen</strong>, Administratorhandbuch <em>Mappentypen</em> → <strong>Für die Erkennung nutzen</strong>, Entwicklerhandbuch <em>Pakete</em> (Feld <code>erkennung</code>).</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Die Erkennung startet auf das neue interne Ereignis <strong>„Volltext fertig“</strong> (eingebaute Texterkennung, Pakete, Schnittstelle), nicht auf das Ende der eingebauten Texterkennung – so läuft sie auch mit der Texterkennung als Paket weiter.</li>
+<li>Migration <code>045_erkennung.sql</code>: Tabelle <code>erkennungen</code> (Ergebnis je Post, ohne Titel; fällt mit der Post weg).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.111.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.111.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.112.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.112.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
