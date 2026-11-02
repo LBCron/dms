@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.122/beitrag/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.123/beitrag/">
       
       
         <link rel="prev" href="../aufbau/">
@@ -871,6 +871,7 @@
 <li>Ein eigener Branch, z. B. <code>abwesenheit-vertreter</code>, von aktuellem <code>main</code>.</li>
 <li><strong>Tests</strong> für das Neue, im Arbeitsspeicher und, wo Daten gespeichert werden, auch gegen PostgreSQL.</li>
 <li><code>npm test</code> und <code>npm run typecheck</code> laufen lokal durch.</li>
+<li><strong>Keine neue Abhängigkeit ohne Begründung:</strong> Wer ein npm-Paket unter <code>dependencies</code> oder ein Alpine-Paket im <code>Dockerfile</code> ergänzt, beantwortet in der PR-Beschreibung die Fragen unter <a href="../aufbau/#abhaengigkeiten">Aufbau → Abhängigkeiten</a>. Die Prüfung im PR weist darauf hin.</li>
 <li><strong>Handbuch</strong> angepasst, wo sich etwas Sichtbares ändert: Benutzer-, Administrator- oder Installationshandbuch. Neue ?-Symbole brauchen einen Eintrag in <code>shared/src/hilfe.ts</code>.</li>
 <li><strong>Release-Notizen:</strong> Für eine neue Version die Nummer in den drei <code>package.json</code> erhöhen und <code>docs/releases/v&lt;version&gt;.md</code> schreiben, aus dem Blick der Nutzer. Kleine Korrekturen ohne neue Nummer landen nur im Image <code>main</code>. Mit dem Maintainer im Issue klären, welche Nummer passt.</li>
 </ul>
