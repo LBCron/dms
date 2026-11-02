@@ -95,6 +95,8 @@ export interface TypVorschlaege {
   engine: { art: 'eingebaut' } | { art: 'paket'; id: string; name: string };
   /** Hinweis, z. B. wenn das gewählte Paket nicht antwortete und die eingebaute Erkennung übernahm. */
   hinweis?: string;
+  /** Das Paket hat nur einen Teil des Dokumenttexts gelesen (#564) – gekürzt vom Kern oder vom Paket. */
+  gekuerzt?: true;
 }
 export const TEXT_MAX = 200_000;
 
@@ -177,11 +179,12 @@ export class Erkennung {
 
   /**
    * Das Paket fragen: Typname, JSON Schema der erlaubten Felder (ohne Verweise – die gleicht der Kern selbst ab),
-   * Text und Dokument-Ids; Antwort ein Objekt { feld: { wert, sicherheit, fundstelle } } (auch unter „vorschlaege“).
+   * Text und Dokument-Ids; Antwort ein Objekt { feld: { wert, sicherheit, fundstelle } } (auch unter „vorschlaege“,
+   * dann daneben optional `gekuerzt: true`, wenn das Paket den Text für den Dienst gekürzt hat, #564).
    */
-  private async perPaket(p: { id: string; name: string }, typ: Mappentyp, text: string, dokumente: string[], erlaubt: (f: Feld) => boolean): Promise<Record<string, unknown>> {
+  private async perPaket(p: { id: string; name: string }, typ: Mappentyp, text: string, dokumente: string[], erlaubt: (f: Feld) => boolean): Promise<{ vorschlaege: Record<string, unknown>; gekuerzt: boolean; ohneFelder?: true }> {
     const schema = schemaFuer(typ, (f) => erlaubt(f) && f.typ !== 'referenz');
-    if (!Object.keys(schema.properties as object).length) return {};
+    if (!Object.keys(schema.properties as object).length) return { vorschlaege: {}, gekuerzt: false, ohneFelder: true };
     const r = await this.anbieter!.erkenne(p.id, { typ: typ.name, schema, text: text.slice(0, PAKET_TEXT_MAX), dokumente, hinweis: ERKENNEN_HINWEIS, sprache: 'de' }, ERKENNEN_MS);
     const roh = r.text.trim();
     const a = roh.indexOf('{'), b = roh.lastIndexOf('}');
@@ -189,9 +192,11 @@ export class Erkennung {
     try { j = a >= 0 && b > a ? JSON.parse(roh.slice(a, b + 1)) : null; } catch { j = null; }
     if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('Die Antwort ist kein JSON-Objekt.');
     const o = j as Record<string, unknown>;
-    const v = o.vorschlaege && typeof o.vorschlaege === 'object' && !Array.isArray(o.vorschlaege) ? o.vorschlaege as Record<string, unknown> : o;
+    const huelle = !!o.vorschlaege && typeof o.vorschlaege === 'object' && !Array.isArray(o.vorschlaege);
+    const v = huelle ? o.vorschlaege as Record<string, unknown> : o;
     // Verweise nie vom Paket: Es kennt keine Mappen; eine Id daraus wäre ungeprüft.
-    return Object.fromEntries(Object.entries(v).filter(([k]) => typ.felder.find((f) => f.key === k)?.typ !== 'referenz'));
+    const vorschlaege = Object.fromEntries(Object.entries(v).filter(([k]) => typ.felder.find((f) => f.key === k)?.typ !== 'referenz'));
+    return { vorschlaege, gekuerzt: text.length > PAKET_TEXT_MAX || (huelle && o.gekuerzt === true) };
   }
 
   /** Hörer auf „Volltext fertig“: Gehört das Dokument zu Post, die Erkennung dieser Post neu rechnen. */
@@ -377,14 +382,22 @@ export class Erkennung {
     let engine: TypVorschlaege['engine'] = { art: 'eingebaut' };
     let hinweis: string | undefined;
     let ausPaket: Record<string, unknown> | null = null;
+    let gekuerzt = false;
     const wahl = text.trim() ? await this.wahlFuer(typ.id) : { engine: ENGINE_EINGEBAUT, abfluss: false };
     if (wahl.engine !== ENGINE_EINGEBAUT) {
       const p = this.anbieter?.pakete().find((x) => x.id === wahl.engine);
       if (!p) hinweis = `Das Paket „${wahl.engine}“ für die Erkennung läuft gerade nicht – die eingebaute Erkennung hat übernommen.`;
       else if (p.netz && !wahl.abfluss) hinweis = `Für „${p.name}“ ist der Datenabfluss nicht bestätigt – die eingebaute Erkennung hat übernommen.`;
       else {
-        try { ausPaket = await this.perPaket(p, typ, text, dokIds, erlaubt); engine = { art: 'paket', id: p.id, name: p.name }; }
-        catch (x) {
+        try {
+          const r = await this.perPaket(p, typ, text, dokIds, erlaubt);
+          // Geantwortet, aber nichts, was die Prüfung übersteht (#564): wie bei einem Fehler die eingebaute Erkennung.
+          if (r.ohneFelder || Object.keys(pruefeVorschlaege(typ, r.vorschlaege, erlaubt).vorschlaege).length) { ausPaket = r.vorschlaege; gekuerzt = r.gekuerzt; engine = { art: 'paket', id: p.id, name: p.name }; }
+          else {
+            hinweis = `„${p.name}“ hat nichts Brauchbares geliefert – die eingebaute Erkennung hat übernommen.`;
+            log.info('Erkennung per Paket ohne brauchbare Vorschläge', { typ: typ.name, paket: p.id, felder: Object.keys(r.vorschlaege).length });
+          }
+        } catch (x) {
           hinweis = `„${p.name}“ hat nicht geantwortet (${(x as Error).message}) – die eingebaute Erkennung hat übernommen.`;
           log.warn('Erkennung per Paket fehlgeschlagen', { typ: typ.name, paket: p.id, fehler: (x as Error).message.slice(0, 300) });
         }
@@ -403,7 +416,7 @@ export class Erkennung {
     const { vorschlaege, verworfen } = pruefeVorschlaege(typ, roh, erlaubt);
     if (verworfen.length) log.warn('Vorschläge der Erkennung verworfen', { typ: typ.name, engine: engine.art === 'paket' ? engine.id : ENGINE_EINGEBAUT, felder: verworfen.map((x) => `${x.feld}: ${x.grund}`).join('; ') });
     log.info('Aus Dokument ausfüllen', { typ: typ.name, engine: engine.art === 'paket' ? engine.id : ENGINE_EINGEBAUT, zeichen: text.length, vorschlaege: Object.keys(vorschlaege).length, neu: Object.keys(neu).length });
-    return { vorschlaege, bezuege, neu, verworfen: verworfen.length, zeichen: text.length, engine, ...(hinweis ? { hinweis } : {}) };
+    return { vorschlaege, bezuege, neu, verworfen: verworfen.length, zeichen: text.length, engine, ...(hinweis ? { hinweis } : {}), ...(gekuerzt ? { gekuerzt: true as const } : {}) };
   }
 
   /** Verweisfeld: Mappe des Zieltyps, die im Text steht (markierte Felder, sonst der Titel); sonst „neu anlegen“. */

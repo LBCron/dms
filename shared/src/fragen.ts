@@ -115,28 +115,44 @@ export function ausschnitteAlsText(a: FrageAusschnitt[]): string {
  * Ergebnis des Pakets lesen: JSON `{ text, quellen: [nr …] }` oder reiner Text. Quellen nur aus den gegebenen
  * Nummern; fehlen sie, zählen die „[n]“ im Text. Antwort gekürzt, nur Text – die Antwort kann nichts ändern.
  * `{ fehler }` ohne Text: Das Paket meldet verständlich, warum es keine Antwort gibt (z. B. Dienst nicht erreichbar).
+ * `gekuerzt` (ab 0.138.0): Das Paket hat die Anfrage für den Dienst gekürzt – nur die Ausschnitte in `geschickt`
+ * gingen hin (fehlt die Liste: alle), `verlauf` frühere Einträge des Chats fielen weg. Quellen dann nur aus `geschickt`.
  */
-export function liesAntwort(ergebnis: string, nummern: number[]): { text: string; quellen: number[]; fehler?: string } {
+export function liesAntwort(ergebnis: string, nummern: number[]): { text: string; quellen: number[]; fehler?: string; gekuerzt?: FrageGekuerzt } {
   let text = ergebnis;
   let quellen: number[] = [];
+  let gekuerzt: FrageGekuerzt | undefined;
   const roh = ergebnis.trim();
   if (roh.startsWith('{')) {
     try {
-      const j = JSON.parse(roh) as { text?: unknown; quellen?: unknown; fehler?: unknown };
+      const j = JSON.parse(roh) as { text?: unknown; quellen?: unknown; fehler?: unknown; gekuerzt?: unknown };
       if (typeof j.fehler === 'string' && j.fehler.trim() && typeof j.text !== 'string') return { text: '', quellen: [], fehler: saeubere(j.fehler).slice(0, 500) };
       if (typeof j.text === 'string') text = j.text;
       if (Array.isArray(j.quellen)) quellen = j.quellen.map(Number).filter((n) => Number.isInteger(n));
+      gekuerzt = liesGekuerzt(j.gekuerzt, nummern);
     } catch { /* reiner Text */ }
   }
   text = saeubere(text).slice(0, ANTWORT_MAX);
   if (!quellen.length) for (const m of text.matchAll(/\[(\d{1,3})(?:\s*,\s*(\d{1,3}))*\]/g)) for (const n of m[0].match(/\d+/g) ?? []) quellen.push(Number(n));
+  const gueltig = new Set(gekuerzt?.geschickt ?? nummern);
+  return { text, quellen: [...new Set(quellen)].filter((n) => gueltig.has(n)), ...(gekuerzt ? { gekuerzt } : {}) };
+}
+
+/** Was das Paket gekürzt hat (#564): Nummern der geschickten Ausschnitte und wie viele Einträge des Chats wegfielen. */
+export interface FrageGekuerzt { geschickt: number[]; verlauf: number }
+
+function liesGekuerzt(g: unknown, nummern: number[]): FrageGekuerzt | undefined {
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return undefined;
+  const x = g as { geschickt?: unknown; verlauf?: unknown };
   const gueltig = new Set(nummern);
-  return { text, quellen: [...new Set(quellen)].filter((n) => gueltig.has(n)) };
+  const geschickt = Array.isArray(x.geschickt) ? [...new Set(x.geschickt.map(Number))].filter((n) => gueltig.has(n)).sort((a, b) => a - b) : [...nummern];
+  const verlauf = Number.isInteger(x.verlauf) && (x.verlauf as number) > 0 ? Math.min(x.verlauf as number, VERLAUF_MAX) : 0;
+  return { geschickt, verlauf };
 }
 
 /** Zeilen der Antwort an den Browser (NDJSON, eine Zeile je Ereignis). */
 export type FrageZeile =
   | { art: 'ausschnitte'; ausschnitte: FrageAusschnitt[]; mappen: number }
   | { art: 'teil'; text: string }
-  | { art: 'fertig'; text: string; quellen: Array<{ id: string; typId: string; titel: string; nr: number[] }>; ms: number }
+  | { art: 'fertig'; text: string; quellen: Array<{ id: string; typId: string; titel: string; nr: number[] }>; ms: number; gekuerzt?: FrageGekuerzt }
   | { art: 'fehler'; text: string };

@@ -333,7 +333,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const alt = Object.values(neu).filter((v) => v.art === 'alternative').length;
     const teile = [n ? `${n === 1 ? '1 Feld' : `${n} Felder`} als Vorschlag eingetragen` : '', alt ? `${alt === 1 ? '1 Alternative' : `${alt} Alternativen`} zu ausgefüllten Feldern` : ''].filter(Boolean);
     // Erkennung per Paket (#511): womit erkannt wurde bzw. warum die eingebaute übernahm.
-    const herkunft = [r.engine?.art === 'paket' ? t('erkennung.ergebnis.paket', { name: r.engine.name }) : '', r.hinweis ?? ''].filter(Boolean).join(' ');
+    // Gekürzt (#564): Der KI-Dienst hat nur einen Teil des Texts gelesen – das sagen, nie still abschneiden.
+    const herkunft = [r.engine?.art === 'paket' ? t('erkennung.ergebnis.paket', { name: r.engine.name }) : '', r.gekuerzt ? t('erkennung.ergebnis.gekuerzt') : '', r.hinweis ?? ''].filter(Boolean).join(' ');
     setAdMeldung(`${teile.length ? `Verstanden – ${teile.join(', ')}. Bitte prüfen und speichern.` : 'Gelesen, aber keine passenden Angaben für diese Felder gefunden.'}${herkunft ? ` ${herkunft}` : ''}`);
     setAdOffen(false);
     // Zum ersten Feldregister mit einem Vorschlag.

@@ -169,8 +169,9 @@ export class FragenAnDieAblage {
       for (const n of a.quellen) { const x = ausschnitte.find((y) => y.nr === n)!; jeMappe.set(x.mappe.id, [...(jeMappe.get(x.mappe.id) ?? []), n]); }
       const ok = await this.d.lesbare(z, [...jeMappe.keys()]);
       const quellen = [...jeMappe].filter(([id]) => ok.has(id)).map(([id, nr]) => { const m = ausschnitte.find((y) => y.mappe.id === id)!.mappe; return { id, typId: m.typId, titel: m.titel, nr }; });
-      schreibe({ art: 'fertig', text: a.text || 'Das Paket hat keine Antwort geliefert.', quellen, ms: Date.now() - start });
-      log.info('Frage an die Ablage gestellt', { von: z.ich.id, paket: paket.id, ausschnitte: ausschnitte.length, mappen, quellen: quellen.length, ms: Date.now() - start });
+      // Hat das Paket für den Dienst gekürzt (#564), sieht der Fragende das: welche Ausschnitte hingingen, ob Chat wegfiel.
+      schreibe({ art: 'fertig', text: a.text || 'Das Paket hat keine Antwort geliefert.', quellen, ms: Date.now() - start, ...(a.gekuerzt ? { gekuerzt: a.gekuerzt } : {}) });
+      log.info('Frage an die Ablage gestellt', { von: z.ich.id, paket: paket.id, ausschnitte: ausschnitte.length, mappen, quellen: quellen.length, ms: Date.now() - start, ...(a.gekuerzt ? { geschickt: a.gekuerzt.geschickt.length, verlaufWeg: a.gekuerzt.verlauf } : {}) });
     } catch (x) {
       if (!geschrieben) throw x;
       log.warn('Frage an die Ablage nicht beantwortet', { von: z.ich.id, paket: paket.id, ausschnitte: ausschnitte.length, ms: Date.now() - start, fehler: (x as Error).message.slice(0, 300) });

@@ -14,5 +14,6 @@
   "typ.engine.paket": "Paket „{name}“",
   "typ.engine.netz": "Paket „{name}“ – schickt Text über das Netz",
   "typ.engine.hilfe": "Die eingebaute Erkennung findet E-Mail, Telefon, Datum, Betrag und Ähnliches über Muster. Ein Paket wie ein KI-Assistent erkennt auch Freitext und schwierige Belege.",
-  "ergebnis.paket": "Erkannt mit „{name}“."
+  "ergebnis.paket": "Erkannt mit „{name}“.",
+  "ergebnis.gekuerzt": "Dokumenttext gekürzt – der KI-Dienst hat nur den Anfang gelesen, Angaben weiter hinten fehlen vielleicht."
 }

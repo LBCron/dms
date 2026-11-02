@@ -23,6 +23,7 @@ Hat dein Administrator ein Paket wie **KI-Assistent** eingerichtet, steht unter 
 - **Fragen:** Frage eintippen, dann **Fragen** oder Enter (neue Zeile mit Umschalt + Enter). Die Antwort entsteht beim Schreiben; mit **Abbrechen** hörst du auf.
 - **Quellen:** Unter der Antwort stehen die Mappen, aus denen sie stammt, als Links. Die Nummern in eckigen Klammern, z. B. „[2]“, zeigen auf die Stellen darunter.
 - **„An die KI geschickt: n Ausschnitte aus m Mappen“:** Aufgeklappt siehst du genau die Stellen, die an den KI-Dienst gingen – nie mehr als das, nie deine ganze Ablage. Gesucht wird nur in Mappen, die **du** lesen darfst; Passwörter sind nie dabei.
+- **„… 6 von 9 Ausschnitten (gekürzt)“:** Der KI-Dienst kann nur eine bestimmte Menge Text auf einmal lesen. War es zu viel, hat das Paket gekürzt – aufgeklappt siehst du dann nur die Stellen, die wirklich hingingen. Bei langen Chats kann es auch ältere Fragen und Antworten weglassen; das steht dann unter der Antwort. Fehlt etwas in der Antwort, hilft oft ein **Neuer Chat**.
 - **Nachfragen:** Du kannst im selben Chat weiterfragen („Und wann ist die Kündigungsfrist?“). Für jede Frage sucht das DMS neue Stellen. **Neuer Chat** fängt von vorn an.
 - **Nichts wird gespeichert.** Der Chat bleibt nur in diesem Browser-Fenster und ist beim Neuladen weg. Im Protokoll des DMS steht nur, *dass* gefragt wurde – nicht was.
 
