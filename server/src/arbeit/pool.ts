@@ -47,6 +47,8 @@ export interface PoolStand {
   laengstesWartenMs: number;
   zeitMs: number;
   warteschlangeMax: number;
+  /** Wann zuletzt ein Auftrag abgewiesen wurde (volle Warteschlange); null = noch nie. */
+  zuletztAbgewiesen: string | null;
 }
 
 interface Offen {
@@ -64,6 +66,7 @@ export class Arbeiterpool {
   readonly zeitMs: number;
   readonly warteschlangeMax: number;
   private zu = false;
+  private zuletztAbgewiesen: number | null = null;
 
   constructor(private o: PoolOptionen) {
     this.groesse = Math.max(1, Math.floor(o.groesse));
@@ -76,6 +79,7 @@ export class Arbeiterpool {
     if (this.zu) return Promise.reject(new Fachfehler(503, t('systemzustand.arbeiter.meldung.herunter')));
     if (this.schlange.length >= this.warteschlangeMax) {
       this.z.abgewiesen++;
+      this.zuletztAbgewiesen = Date.now();
       return Promise.reject(new Fachfehler(503, t('systemzustand.arbeiter.meldung.voll'), { retryAfter: 60 }));
     }
     return new Promise<T>((ok, fehler) => {
@@ -94,6 +98,7 @@ export class Arbeiterpool {
       erledigt: this.z.erledigt, fehler: this.z.fehler, zeitueberschreitungen: this.z.zeitueberschreitungen, abgewiesen: this.z.abgewiesen,
       mittlereDauerMs: n ? Math.round(this.z.dauer / n) : null, mittleresWartenMs: n ? Math.round(this.z.warten / n) : null,
       laengstesWartenMs: Math.round(this.z.laengstesWarten), zeitMs: this.zeitMs, warteschlangeMax: this.warteschlangeMax,
+      zuletztAbgewiesen: this.zuletztAbgewiesen === null ? null : new Date(this.zuletztAbgewiesen).toISOString(),
     };
   }
 

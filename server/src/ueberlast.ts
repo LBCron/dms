@@ -44,6 +44,8 @@ export class Ueberlastschutz {
   abgewiesen = 0;
   hoechstens = 0;
   private gemeldet = 0;
+  /** Wann zuletzt abgewiesen wurde (für den Engpass-Hinweis im Systemzustand). */
+  zuletztAbgewiesen: number | null = null;
   private seitMeldung = 0;
 
   constructor(readonly max: number, readonly quelle: UeberlastEinstellung['quelle'] = 'vorgabe', private uhr: () => number = Date.now) {}
@@ -52,6 +54,7 @@ export class Ueberlastschutz {
   herein(): boolean {
     if (this.laufend >= this.max) {
       this.abgewiesen++;
+      this.zuletztAbgewiesen = this.uhr();
       this.melde();
       return false;
     }
@@ -71,7 +74,12 @@ export class Ueberlastschutz {
     this.seitMeldung = 0;
   }
 
-  stand() { return { max: this.max, quelle: this.quelle, laufend: this.laufend, hoechstens: this.hoechstens, abgewiesen: this.abgewiesen }; }
+  stand() {
+    return {
+      max: this.max, quelle: this.quelle, laufend: this.laufend, hoechstens: this.hoechstens, abgewiesen: this.abgewiesen,
+      zuletztAbgewiesen: this.zuletztAbgewiesen === null ? null : new Date(this.zuletztAbgewiesen).toISOString(),
+    };
+  }
 
   /** Als erster Hook in Fastify einhängen. */
   haengeEin(app: FastifyInstance) {
