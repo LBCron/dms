@@ -246,7 +246,29 @@ export function speicherMessSpeicher(): MessSpeicher {
   };
 }
 
+/** Höchstens so viele Langläufer je Schreibvorgang (#615); mehr in einer Sekunde stehen nur im Protokoll. */
+const LANGLAEUFER_JE_SCHREIBEN = 2000;
+
 export function pgMessSpeicher(sql: postgres.Sql, haushaltId: string): MessSpeicher {
+  // Langläufer gesammelt schreiben (#615): Unter Last dauern viele Zugriffe länger als die Schwelle – je Langläufer
+  // ein eigenes INSERT (mit eigenem Commit) bremste die Datenbank gerade dann zusätzlich. Jetzt höchstens einmal je
+  // Sekunde alle seither gemerkten in einem INSERT. Die Liste schreibt vorher, was noch offen ist; ein Absturz
+  // verliert höchstens die Langläufer der letzten Sekunde (die auch im Protokoll stehen).
+  let offen: Langlaeufer[] = [];
+  let verworfen = 0;
+  let zeitgeber: ReturnType<typeof setTimeout> | null = null;
+  let schreiben: Promise<void> = Promise.resolve();
+  const schreibeOffene = () => {
+    if (zeitgeber) { clearTimeout(zeitgeber); zeitgeber = null; }
+    const teil = offen;
+    offen = [];
+    if (verworfen) { log.warn('Langläufer nicht gespeichert (zu viele in einer Sekunde, stehen nur im Protokoll)', { anzahl: verworfen }); verworfen = 0; }
+    if (!teil.length) return schreiben;
+    schreiben = schreiben.then(async () => {
+      await sql`INSERT INTO langlaeufer ${sql(teil.map((l) => ({ zeit: l.zeit, dauer_ms: l.dauerMs, zugriff: l.zugriff, anfrage: l.anfrage.slice(0, 300), benutzer: l.benutzer })))}`;
+    }).catch((e) => log.error('Langläufer nicht gespeichert', { fehler: (e as Error).message, anzahl: teil.length }));
+    return schreiben;
+  };
   return {
     async ladeEinstellungen() {
       const [r] = await sql`SELECT wert FROM einstellungen WHERE haushalt_id = ${haushaltId} AND schluessel = 'messung'`;
@@ -258,9 +280,12 @@ export function pgMessSpeicher(sql: postgres.Sql, haushaltId: string): MessSpeic
         ON CONFLICT (haushalt_id, schluessel) DO UPDATE SET wert = EXCLUDED.wert`;
     },
     async merke(l) {
-      await sql`INSERT INTO langlaeufer (zeit, dauer_ms, zugriff, anfrage, benutzer) VALUES (${l.zeit}, ${l.dauerMs}, ${l.zugriff}, ${l.anfrage.slice(0, 300)}, ${l.benutzer})`;
+      if (offen.length >= LANGLAEUFER_JE_SCHREIBEN) { verworfen++; return; }
+      offen.push(l);
+      if (!zeitgeber) { zeitgeber = setTimeout(() => { void schreibeOffene(); }, 1000); zeitgeber.unref?.(); }
     },
     async liste(max) {
+      await schreibeOffene();
       const r = await sql`SELECT * FROM langlaeufer ORDER BY zeit DESC LIMIT ${max}`;
       return r.map((z) => ({
         id: Number(z.id), zeit: (z.zeit as Date).toISOString(), dauerMs: z.dauer_ms as number,

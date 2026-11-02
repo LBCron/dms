@@ -15,8 +15,11 @@ export interface Zaehler { mappen: number; dokumente: number; benutzer: number }
  * Wiederherstellen die Trigger aus Mappen und Dokumenten neu (über den Eingang, #575).
  */
 export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter', 'suchwoerter_eingang']);
-/** Abgeleitete Spalten ohne Sicherung: den Suchindex (#356) berechnet beim Einspielen ein Trigger aus dem Volltext. */
-export const OHNE_SPALTEN: Record<string, string[]> = { dokumente: ['suchindex'] };
+/**
+ * Abgeleitete Spalten ohne Sicherung: den Suchindex (#356) berechnet beim Einspielen ein Trigger aus dem Volltext,
+ * den gefalteten Suchtext der Mappen (#615) einer aus Titel und Werten.
+ */
+export const OHNE_SPALTEN: Record<string, string[]> = { dokumente: ['suchindex'], mappen: ['suchtext'] };
 
 export interface Schnappschuss {
   postgres: string;

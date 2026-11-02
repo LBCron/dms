@@ -120,6 +120,17 @@ export interface Zugriff {
   paket?: { id: string; schreiben: Set<string>; dokumente: PaketCode['rechte']['dokumente']; schnittstellen?: Schnittstelle[] };
 }
 export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
+
+/** Titel nicht lesbarer Mappen ausblenden (#124); `ok`: die lesbaren. */
+function maskiert(b: Map<string, MappenBezug>, ok: Set<string>): Record<string, MappenBezug> {
+  return Object.fromEntries([...b].map(([id, x]) => [id, ok.has(id) ? x : { titel: NICHT_SICHTBAR, typId: x.typId, verborgen: true }]));
+}
+
+/** Für die Rechte im Arbeitsspeicher (Regel „mit Aufgabe“): offene Aufgaben des Benutzers aus einer Liste. */
+function quelleAus(benutzerId: string, aufgaben: Aufgabe[]): Mappenquelle {
+  const mit = new Set(aufgaben.filter((x) => !x.erledigt && x.empfaengerId === benutzerId).map((x) => x.mappeId));
+  return { dokumente: () => 0, verknuepfungen: () => 0, aufgabe: (id, b) => b === benutzerId && mit.has(id) };
+}
 /** So lange wartet die Suche höchstens auf den Vektor des Suchbegriffs (#442); danach ohne Ähnlichkeit. */
 export const SUCHE_VEKTOR_MS = 1500;
 const liesModellOder422 = (x: unknown) => { try { return liesModell(x); } catch (e) { throw new Fachfehler(422, (e as Error).message); } };
@@ -2262,11 +2273,13 @@ export class Dienst {
    * Mappen gesehen (#422): geöffnet oder „Alle als gesehen markieren“. Die Hervorhebung verschwindet, und eine
    * offene Benachrichtigung „Geändert“ erledigt sich – die nächste Änderung bringt wieder eine.
    */
-  async gesehen(ich: { id: string }, mappeIds: unknown) {
+  /** `aufgaben`: alle Aufgaben dieser Mappen, wenn sie schon gelesen sind (#615, „Mappe öffnen“). */
+  async gesehen(ich: { id: string }, mappeIds: unknown, aufgaben?: Aufgabe[]) {
     const ids = (Array.isArray(mappeIds) ? mappeIds : [mappeIds]).filter((x): x is string => istUuid(x)).slice(0, 1000);
     if (!ids.length) return;
     await this.repo.merkeGesehen(ich.id, ids);
-    for (const a of (await this.repo.offeneAufgaben({ mappeIds: ids })).filter((x) => x.art === 'aenderung' && x.empfaengerId === ich.id)) {
+    const offen = aufgaben ? aufgaben.filter((x) => !x.erledigt && ids.includes(x.mappeId)) : await this.repo.offeneAufgaben({ mappeIds: ids });
+    for (const a of offen.filter((x) => x.art === 'aenderung' && x.empfaengerId === ich.id)) {
       await this.repo.erledigeAufgabe(a.id, ich.id);
     }
   }
@@ -2516,18 +2529,24 @@ export class Dienst {
   async holeMappe(id: string, z?: Zugriff) {
     const mappe = await this.repo.holeMappe(id);
     if (!mappe) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    // Aufgaben der Mappe nur einmal lesen (#615): für die Regel „mit Aufgabe“, für die Antwort und fürs Gesehen.
+    const aufgaben = await this.repo.aufgabenVon(id);
     // Berechtigungen (#124): ohne Lesen nur die eigenen offenen Aufgaben – zum Erledigen oder Weitergeben.
-    const rechte = z ? await this.rechteAn(z, mappe) : null;
+    const rechte = z ? await this.rechteAn(z, mappe, false, aufgaben) : null;
     if (z && rechte && !rechte.R) {
-      const meine = (await this.repo.aufgabenVon(id)).filter((x) => !x.erledigt && x.empfaengerId === z.ich.id);
+      const meine = aufgaben.filter((x) => !x.erledigt && x.empfaengerId === z.ich.id);
       throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true, aufgaben: meine });
     }
-    const typ = await this.repo.holeTyp(mappe.typId);
+    // Mappentypen hat der Zugriff schon gelesen (#615); ein Dienstkonto kennt nur seine – dann wie bisher.
+    const alleTypen = z?.typen && !z.paket ? [...z.typen.values()] : undefined;
+    const typ = (alleTypen ? z!.typen.get(mappe.typId) : undefined) ?? await this.repo.holeTyp(mappe.typId);
     const ziele = typ ? verweiseVon(typ, mappe.werte).map((v) => v.zielId) : [];
     const alleRueck = await this.repo.rueckverweise(id);
-    const sichtbar = await this.lesbare(z, alleRueck.map((r) => r.quelleId));
+    const roheBezuege = await this.repo.bezuege(ziele);
+    // Lesbar (#124, #126): verweisende und verwiesene Mappen in einem Zugriff.
+    const sichtbar = await this.lesbare(z, [...alleRueck.map((r) => r.quelleId), ...roheBezuege.keys()]);
     const rueckverweise = alleRueck.filter((r) => sichtbar.has(r.quelleId));
-    const p = await this.loeschPruefung(mappe, typ, alleRueck);
+    const p = await this.loeschPruefung(mappe, typ, alleRueck, alleTypen);
     // Verweisende Mappen, die man nicht sehen darf: nur ihre Anzahl (#126).
     const fremd = p.fremd.map((r) => (sichtbar.has(r.quelleId) ? r : { ...r, titel: NICHT_SICHTBAR, verborgen: true }));
     return {
@@ -2541,13 +2560,13 @@ export class Dienst {
       /** Notizen an der Mappe (#55). */
       notizen: await this.repo.notizen(id),
       /** Aufgaben an der Mappe, offene zuerst (#54). */
-      aufgaben: await this.repo.aufgabenVon(id),
+      aufgaben,
       /** Noch nicht fällige Erinnerungen (#131). */
       erinnerungen: await this.repo.erinnerungen({ mappeId: id }),
       /** Titel und Typ der Mappen, auf die diese verweist (nicht lesbare ohne Titel). */
-      bezuege: await this.maskiereBezuege(z, await this.repo.bezuege(ziele)),
+      bezuege: maskiert(roheBezuege, sichtbar),
       /** Verweise, die nicht (mehr) zum Auswahlfilter ihres Felds passen (#172). */
-      unpassend: await this.unpassendeVerweise(typ, mappe.werte, z?.ich.id ?? ''),
+      unpassend: await this.unpassendeVerweise(typ, mappe.werte, z?.ich.id ?? '', alleTypen && z?.a ? { typen: alleTypen, a: z.a } : undefined),
       /** Archivmodus (#212): aufbewahren bis (JJJJ-12-31) oder null. */
       aufbewahrenBis: aufbewahrenBis(typ?.archiv, mappe),
       /** Auskunft nach Art. 15 DSGVO (#396): Administratoren, Mappentyp „betrifft eine Person“. */
@@ -2570,7 +2589,9 @@ export class Dienst {
     // Auch im Volltext der Dokumente (#45) und in Notizen (#55) suchen.
     const volltext = q.volltext === true || q.volltext === 'true' || undefined;
     const notizen = q.notizen === true || q.notizen === 'true' || undefined;
-    const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    // Mappentypen und Auflösung (Rollen, heute) hat der Zugriff schon gelesen (#615); ein Dienstkonto kennt nur seine Typen.
+    const typen = z?.typen && !z.paket ? z.typen : new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    const aufloesung = () => (z?.a && z.ich?.id === ich.id ? Promise.resolve(z.a) : this.aufloesung(ich.id));
     const sichten = await this.repo.listeSichten();
     // „typ:<id>“: alle Mappen eines Typs, ohne Bedingungen einer Sicht (z. B. Auswahl eines Verweises).
     const nurTyp = String(q.sicht ?? '').startsWith('typ:') ? String(q.sicht).slice(4) : null;
@@ -2610,14 +2631,14 @@ export class Dienst {
         ? { favoriten: { benutzerId: ich.id }, suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : erweitert
         ? {
-            klauseln: [{ typen: (erweitert.typen.length ? erweitert.typen : [...typen.values()]).map((t) => t.id), filter: filterFuer(erweitert, erweitert.typen, await this.aufloesung(ich.id)) }],
+            klauseln: [{ typen: (erweitert.typen.length ? erweitert.typen : [...typen.values()]).map((t) => t.id), filter: filterFuer(erweitert, erweitert.typen, await aufloesung()) }],
             textfilter, suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : link
-        ? { klauseln: [{ typen: [link.typ.id], filter: filterFuer(link, [link.typ], await this.aufloesung(ich.id)) }], suche, volltext, notizen, von, anzahl, sortierung, lesen }
+        ? { klauseln: [{ typen: [link.typ.id], filter: filterFuer(link, [link.typ], await aufloesung()) }], suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : auswahl
-        ? { klauseln: [auswahlKlausel(setzeEigeneWerte(auswahl.f.auswahlFilter ?? [], auswahl.eigene), auswahl.ziel, await this.aufloesung(ich.id))], suche, volltext, notizen, von, anzahl, sortierung, lesen }
+        ? { klauseln: [auswahlKlausel(setzeEigeneWerte(auswahl.f.auswahlFilter ?? [], auswahl.eigene), auswahl.ziel, await aufloesung())], suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : sicht
-        ? { klauseln: klauselnFuer(sichten, sicht.id, typen, await this.aufloesung(ich.id), verborgen), suche, volltext, notizen, von, anzahl, sortierung, lesen }
+        ? { klauseln: klauselnFuer(sichten, sicht.id, typen, await aufloesung(), verborgen), suche, volltext, notizen, von, anzahl, sortierung, lesen }
         : { typId: nurTyp ?? q.sicht, suche, volltext, notizen, von, anzahl, sortierung, lesen };
     let r = await this.repo.seite({ ...anfrage, varianten });
     // Ohne genauen Treffer (#356): mit ähnlichen Wörtern aus dem Wörterverzeichnis noch einmal – genaue Treffer gehen so
@@ -2777,17 +2798,22 @@ export class Dienst {
   }
 
   /** Wirksame Rechte an einer Mappe (Administrator: alles im Rahmen der Haken am Mappentyp). */
-  async rechteAn(z: Zugriff, m: Mappe, neu = false): Promise<Rechte> {
-    return rechteMessen(() => this.rechteAnEine(z, m, neu));
+  /**
+   * `aufgaben`: alle Aufgaben dieser Mappe, wenn sie schon gelesen sind (#615, „Mappe öffnen“) – dann fragt die
+   * Regel „mit Aufgabe“ nicht noch einmal nach.
+   */
+  async rechteAn(z: Zugriff, m: Mappe, neu = false, aufgaben?: Aufgabe[]): Promise<Rechte> {
+    return rechteMessen(() => this.rechteAnEine(z, m, neu, aufgaben));
   }
 
-  private async rechteAnEine(z: Zugriff, m: Mappe, neu: boolean): Promise<Rechte> {
+  private async rechteAnEine(z: Zugriff, m: Mappe, neu: boolean, aufgaben?: Aufgabe[]): Promise<Rechte> {
     const typ = z.typen.get(m.typId);
     if (!typ) return { ...NICHTS };
     if (z.admin) return wirksamVon(ALLES, typ);
     // Dienstkonto (#338): lesen, was bestätigt ist; anlegen/bearbeiten nur die Typen unter „schreiben“; nie löschen, nie Passwörter.
     if (z.paket) { const w = wirksamVon(ALLES, typ); const s = z.paket.schreiben.has(typ.id); return { C: w.C && s, R: w.R, U: w.U && s, D: false, P: false }; }
-    return rechteAnMappe(typ, m, z.wer, z.a, await this.mappenquelle(z.wer.id, neu ? [] : [m.id]), neu).wirksam;
+    const quelle = aufgaben && !neu ? quelleAus(z.wer.id, aufgaben.filter((x) => x.mappeId === m.id)) : await this.mappenquelle(z.wer.id, neu ? [] : [m.id]);
+    return rechteAnMappe(typ, m, z.wer, z.a, quelle, neu).wirksam;
   }
 
   /** Wie `rechteAn` für viele Mappen mit einem Zugriff (#367). */
@@ -2807,8 +2833,7 @@ export class Dienst {
 
   /** Für die Auswertung im Arbeitsspeicher: nur Aufgaben werden nachgeschlagen. */
   private async mappenquelle(benutzerId: string, mappeIds: string[]): Promise<Mappenquelle> {
-    const mit = new Set(mappeIds.length ? (await this.repo.offeneAufgaben({ benutzerId, mappeIds })).filter((x) => x.empfaengerId === benutzerId).map((x) => x.mappeId) : []);
-    return { dokumente: () => 0, verknuepfungen: () => 0, aufgabe: (id, b) => b === benutzerId && mit.has(id) };
+    return quelleAus(benutzerId, mappeIds.length ? await this.repo.offeneAufgaben({ benutzerId, mappeIds }) : []);
   }
 
   /** Mappe holen und ein Recht verlangen. Ohne Lesen: 404 (wer nichts sehen darf, erfährt nicht, dass es sie gibt). */
@@ -2830,8 +2855,7 @@ export class Dienst {
 
   /** Titel nicht lesbarer Mappen ausblenden (#124). */
   private async maskiereBezuege(z: Zugriff | undefined, b: Map<string, MappenBezug>): Promise<Record<string, MappenBezug>> {
-    const ok = await this.lesbare(z, [...b.keys()]);
-    return Object.fromEntries([...b].map(([id, x]) => [id, ok.has(id) ? x : { titel: NICHT_SICHTBAR, typId: x.typId, verborgen: true }]));
+    return maskiert(b, await this.lesbare(z, [...b.keys()]));
   }
 
   /** Welche dieser Mappen sieht ein (anderer) Benutzer? Unbekannte Benutzer (System): alle. */
@@ -3722,11 +3746,11 @@ export class Dienst {
   }
 
   /** Auswahlfilter (#172): bestehende Verweise, die nicht (mehr) zum Filter passen – für einen Hinweis am Feld. */
-  private async unpassendeVerweise(typ: Mappentyp | undefined, werte: Werte, benutzerId: string): Promise<Record<string, string[]>> {
+  private async unpassendeVerweise(typ: Mappentyp | undefined, werte: Werte, benutzerId: string, schon?: { typen: Mappentyp[]; a: Aufloesung }): Promise<Record<string, string[]>> {
     const mitFilter = typ?.felder.filter((f) => f.typ === 'referenz' && f.auswahlFilter?.length) ?? [];
     if (!mitFilter.length) return {};
-    const typen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
-    const a = await this.aufloesung(benutzerId);
+    const typen = new Map((schon?.typen ?? await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    const a = schon?.a ?? await this.aufloesung(benutzerId);
     const erg: Record<string, string[]> = {};
     for (const f of mitFilter) {
       const ziel = typen.get(f.zielTyp ?? '');
@@ -3899,13 +3923,13 @@ export class Dienst {
    * Ob und warum nicht eine Mappe gelöscht werden kann (#79). Dieselbe Prüfung nutzt das Löschen,
    * damit Anzeige und Löschen nie auseinanderlaufen.
    */
-  private async loeschPruefung(m: Mappe, typ: Mappentyp | undefined, rueck: Rueckverweis[]) {
+  private async loeschPruefung(m: Mappe, typ: Mappentyp | undefined, rueck: Rueckverweis[], alleTypen?: Mappentyp[]) {
     if (m.systemKennung) return { ok: false as const, status: 409, grund: 'Systemrollen lassen sich nicht löschen.', fremd: [], zuordnungen: [], emails: [] };
     if (typ && !darfLoeschen(typ)) return { ok: false as const, status: 403, grund: `Mappen vom Typ „${typ.name}“ lassen sich in der Ablage nicht löschen.${typ.system === 'benutzer' ? ' Benutzer werden in der Benutzerverwaltung deaktiviert.' : ''}`, fremd: [], zuordnungen: [], emails: [] };
     // Archivmodus (#212): vor Fristende nicht löschen – auch nicht als Administrator.
     const bis = aufbewahrenBis(typ?.archiv, m);
     if (inFrist(bis)) return { ok: false as const, status: 409, grund: `Aufbewahrungspflicht bis ${datumText(bis!)} – vorher lässt sich die Mappe nicht löschen.`, fremd: [], zuordnungen: [], emails: [], aufbewahrenBis: bis };
-    const typen = rueck.length ? await this.repo.listeTypen() : [];
+    const typen = rueck.length ? alleTypen ?? await this.repo.listeTypen() : [];
     // Eine Rolle darf weg, auch wenn Benutzer sie haben: deren Zuordnung fällt weg.
     const benutzerTyp = typ?.system === 'rolle' ? typen.find((t) => t.system === 'benutzer') : undefined;
     const zuordnungen = benutzerTyp ? rueck.filter((r) => r.quelleTypId === benutzerTyp.id && r.feldKey === 'rollen') : [];
@@ -4053,7 +4077,8 @@ export class Dienst {
     const alle = await this.repo.listeSichten();
     const rechte = alleSichtRechte(alle, z.wer, false);
     const verborgen = this.verborgeneSichten(alle, z);
-    const a = await this.aufloesung(ich.id);
+    // Die Auflösung (Rollen, heute) hat der Zugriff desselben Benutzers schon (#615).
+    const a = z.a && z.ich?.id === ich.id ? z.a : await this.aufloesung(ich.id);
     const klauseln = alle.filter((s) => rechte.get(s.id)?.R && rechte.get(s.id)?.E)
       .flatMap((s) => klauselnFuer(alle, s.id, z.typen, a, verborgen));
     return klauseln.length ? this.repo.inKlauseln(ids, klauseln) : new Set();
@@ -5270,8 +5295,8 @@ export class Dienst {
   async ohneEigeneMappen(): Promise<boolean> {
     const ablageort = await this.ablageortId();
     const typen = (await this.repo.listeTypen()).filter((t) => !t.system && t.id !== ablageort);
-    const z = (await this.repo.zaehler('', false)).typen;
-    return !typen.some((t) => (z.get(t.id)?.anzahl ?? 0) > 0);
+    // Nur ob es eine gibt (#615): früher zählte das bei jedem Laden der Startseite alle Mappen je Typ.
+    return !(await this.repo.gibtMappen(typen.map((t) => t.id)));
   }
 
   async holeDokument(id: string) {

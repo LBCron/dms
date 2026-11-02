@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type postgres from 'postgres';
 import { KEINE_ABWESENHEIT, type Abwesenheit, type Benutzer, type Rolle, type Sitzung, type Vertretung } from '../../shared/src/model';
 import { istUuid } from './repo';
+import { ohneWarten } from './repo-pg';
 
 /** Adresse eines Dienstkontos: nie zustellbar (.invalid, RFC 2606). */
 /** Adresse eines Dienstkontos – mit Haushalt, weil die Adresse über alle Haushalte eindeutig ist (benutzer_email_uq). */
@@ -54,6 +55,11 @@ export interface KontoRepo {
   einstellungen(benutzerId: string): Promise<Record<string, unknown>>;
   /** wert null löscht die Einstellung. */
   setzeEinstellung(benutzerId: string, schluessel: string, wert: unknown): Promise<void>;
+  /**
+   * „Zuletzt geöffnet“ (#334): die Mappe vorn in die Liste unter `schluessel` (Texte, höchstens `max`, ohne
+   * Doppelte); steht sie schon vorn, bleibt alles. In einem Zugriff (#615) und ohne auf die Platte zu warten.
+   */
+  merkeVorn(benutzerId: string, schluessel: string, mappeId: string, max: number): Promise<void>;
 
   legeLinkAn(hash: string, benutzerId: string, zweck: Zweck, ablauf: Date): Promise<void>;
   holeLink(hash: string): Promise<Link | undefined>;
@@ -140,6 +146,13 @@ export function speicherKontoRepo(): KontoRepo {
     async setzeEinstellung(id, k, w) {
       const e = einstellungen.get(id) ?? {};
       if (w === null) delete e[k]; else e[k] = structuredClone(w);
+      einstellungen.set(id, e);
+    },
+    async merkeVorn(id, k, mappeId, max) {
+      const e = einstellungen.get(id) ?? {};
+      const liste = Array.isArray(e[k]) ? (e[k] as unknown[]).filter((x): x is string => typeof x === 'string') : [];
+      if (liste[0] === mappeId) return;
+      e[k] = [mappeId, ...liste.filter((x) => x !== mappeId)].slice(0, max);
       einstellungen.set(id, e);
     },
     async loescheSitzungenVon(id) { for (const [k, s] of sitzungen) if (s.benutzerId === id) sitzungen.delete(k); },
@@ -301,6 +314,22 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
       await sql`
         INSERT INTO benutzer_einstellungen (benutzer_id, schluessel, wert) VALUES (${id}, ${k}, ${sql.json(w as postgres.JSONValue)})
         ON CONFLICT (benutzer_id, schluessel) DO UPDATE SET wert = EXCLUDED.wert`;
+    },
+    async merkeVorn(id, k, mappeId, max) {
+      if (!istUuid(id)) return;
+      // Ein Merkposten: Geht er bei einem Absturz verloren, fehlt nur ein Eintrag unter „Zuletzt geöffnet“. Ohne
+      // Warten auf die Platte (ohneWarten) hält das Schreiben die Zeile kürzer – unter Last (#615) warteten sonst alle
+      // Anfragen desselben Benutzers auf die Sperre.
+      await sql`
+        INSERT INTO benutzer_einstellungen AS b (benutzer_id, schluessel, wert)
+        SELECT ${id}::uuid, ${k}::text, jsonb_build_array(${mappeId}::text) FROM ${ohneWarten(sql)}
+        ON CONFLICT (benutzer_id, schluessel) DO UPDATE SET wert = (
+          SELECT jsonb_agg(x.e ORDER BY x.n) FROM (
+            SELECT to_jsonb(${mappeId}::text) AS e, 0::bigint AS n
+            UNION ALL
+            (SELECT e, n FROM jsonb_array_elements(CASE WHEN jsonb_typeof(b.wert) = 'array' THEN b.wert ELSE '[]'::jsonb END) WITH ORDINALITY AS t(e, n)
+              WHERE jsonb_typeof(e) = 'string' AND e <> to_jsonb(${mappeId}::text) ORDER BY n LIMIT ${max - 1})) x)
+        WHERE b.wert -> 0 IS DISTINCT FROM to_jsonb(${mappeId}::text)`;
     },
     async loescheSitzungenVon(id) { await sql`DELETE FROM sitzungen WHERE benutzer_id = ${id}`; },
 
