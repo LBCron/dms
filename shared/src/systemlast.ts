@@ -25,8 +25,28 @@ export interface SystemlastStand {
   netz: boolean;
   /** PostgreSQL läuft im selben Container (dms-komplett)? Sonst sieht das DMS dessen Auslastung nicht. */
   datenbankImContainer: boolean;
-  warnung: Array<'cpu' | 'speicher'>;
+  warnung: Warnung[];
 }
+
+/** Woran der Systemzustand warnt: CPU, Arbeitsspeicher (#409) und Wartezeit der Ereignisschleife (#542). */
+export type Warnung = 'cpu' | 'speicher' | 'schleife';
+
+/**
+ * Warnung bei hoher Wartezeit des Servers (#542): Liegt die Verzögerung der Ereignisschleife bei 99 % der
+ * Messungen (p99) über `SCHLEIFE_GRENZE_MS`, und das in jedem der letzten `SCHLEIFE_MINUTEN` Minutenfenster.
+ */
+export const SCHLEIFE_GRENZE_MS = 100;
+export const SCHLEIFE_MINUTEN = 5;
+
+/** Arbeiter für PDF und große Exporte (#542), wie Werkbank → Systemzustand sie zeigt. */
+export type ArbeiterStand =
+  | { aus: true; quelle: 'vorgabe' | 'umgebung'; kerne: number }
+  | {
+    aus: false; quelle: 'vorgabe' | 'umgebung'; kerne: number;
+    groesse: number; arbeiter: number; beschaeftigt: number; wartend: number;
+    erledigt: number; fehler: number; zeitueberschreitungen: number; abgewiesen: number;
+    mittlereDauerMs: number | null; mittleresWartenMs: number | null; laengstesWartenMs: number; zeitMs: number; warteschlangeMax: number;
+  };
 
 /** Warnung, wenn ein Wert so lange über der Schwelle liegt (#409: „RAM > 90 % länger als 5 Minuten“). */
 export const SCHWELLE_PROZENT = 90;

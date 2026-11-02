@@ -13,6 +13,12 @@ export class Zufall {
     this.s = createHash('sha256').update(this.startwert).digest().readUInt32LE(0);
   }
 
+  /** Stand zum Weitergeben an einen Arbeiter (#542): dort geht dieselbe Folge weiter. */
+  zustand(): { startwert: string; s: number } { return { startwert: this.startwert, s: this.s }; }
+  static aus(z: { startwert: string; s: number }): Zufall { const x = new Zufall(z.startwert); x.s = z.s; return x; }
+  /** Stand nach der Arbeit im Arbeiter übernehmen. */
+  uebernimm(z: { startwert: string; s: number }) { if (z.startwert === this.startwert) this.s = z.s; }
+
   /** Gleichverteilt in [0, 1) (mulberry32). */
   zahl(): number {
     this.s = (this.s + 0x6d2b79f5) | 0;

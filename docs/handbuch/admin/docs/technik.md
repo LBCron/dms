@@ -21,6 +21,7 @@ Browser ── HTTP ──▶ DMS-Container (Node.js) ──▶ PostgreSQL-Conta
 | PDF verkleinern | pdf-lib, pdftoppm (poppler) für die Bilder und qpdf (Apache-2.0) für die Struktur, beides im Image; kein Ghostscript | Große Scans kleiner machen (#393) |
 | Schwärzen | pdftoppm und pdftotext (poppler) zum Rendern und für die Wortpositionen, Tesseract für Seiten ohne Text, pdf-lib zum Neuaufbau; kein MuPDF, kein Ghostscript (beide AGPL) | Stellen endgültig entfernen, Original bleibt (#392) |
 | PDF bearbeiten | pdf-lib (MIT), nur über eine gemeinsame Stelle im Server gekapselt (#541); Bewertung der Alternativen im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#pdf-stelle) | Stempel, Export, Seiten bearbeiten, Schwärzen, Verkleinern, Vorschau, Auskunft, Aufkleber |
+| Arbeiter | `node:worker_threads`, ohne zusätzliche Bibliothek: ein kleiner Pool neben dem Hauptfaden (#542), siehe [Systemzustand](speicherplatz.md#arbeiter-fur-pdf-und-exporte) | PDF-Arbeiten und große Exporte, ohne dass andere Benutzer warten |
 | Verschlüsselung | AES-256-GCM (Node.js crypto), Schlüssel als Datei unter `/data/geheim` | Gespeicherte Passwörter (#39, #46) |
 | Image | `node:24-alpine`, mehrstufig gebaut, für amd64 und arm64 – jede Architektur auf einem eigenen, passenden Rechner von GitHub (ohne Emulation), danach zu einem Image zusammengeführt | Läuft auf dem NAS neben dem PostgreSQL-Image |
 | dms-komplett | Dasselbe Image mit PostgreSQL 17 (Alpine-Paket) im selben Container; Datenbank im Ordner `/data/postgres` | DMS und Datenbank in einem Container |

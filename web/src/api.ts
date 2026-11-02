@@ -890,7 +890,11 @@ export interface Langlaeufer { id: number; zeit: string; dauerMs: number; zugrif
 export interface LaufendeAbfrage { pid: number; seitMs: number; zustand: string; abfrage: string; anwendung: string }
 /** Verzögerung der Ereignisschleife in ms (#477). */
 export interface Schleifenverzoegerung { median: number; p99: number; max: number; seitSekunden: number }
-export type SystemlastAntwort = import('../../shared/src/systemlast').SystemlastStand & { schleife: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null };
+export type SystemlastAntwort = import('../../shared/src/systemlast').SystemlastStand & {
+  schleife: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null; warnungSeit?: string | null; grenzeMs?: number; minuten?: number } | null;
+  /** Arbeiter für PDF und große Exporte (#542). */
+  arbeiter?: import('../../shared/src/systemlast').ArbeiterStand;
+};
 export interface DatenbankStand { einstellungen: MessEinstellungen | null; langlaeufer: Langlaeufer[]; laufend: LaufendeAbfrage[]; auslastung?: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null }
 export interface WerkbankUebersicht {
   tresor: { zustand: string; eingebunden: boolean | null; betroffen: number } | null;

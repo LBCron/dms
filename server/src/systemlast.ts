@@ -12,7 +12,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism, cpus, loadavg, totalmem } from 'node:os';
-import { dauerhaftHoch, VERLAUF_MINUTEN, type Anteile, type Messpunkt, type SystemlastStand } from '../../shared/src/systemlast';
+import { dauerhaftHoch, VERLAUF_MINUTEN, type Anteile, type Messpunkt, type SystemlastStand, type Warnung } from '../../shared/src/systemlast';
 
 export { dauerhaftHoch, type Messpunkt, type SystemlastStand } from '../../shared/src/systemlast';
 
@@ -115,6 +115,8 @@ export interface SystemlastOptionen {
   laeufer?: () => number | null;
   postgres?: boolean;
   jetzt?: () => number;
+  /** Wartezeit der Ereignisschleife dauerhaft hoch? (#542, `Auslastung.warnung`) */
+  schleife?: () => boolean;
 }
 
 export class Systemlast {
@@ -166,8 +168,8 @@ export class Systemlast {
     return p;
   }
 
-  /** Warnung für Übersicht und Navigation: Werte, die seit 5 Minuten über 90 % liegen. */
-  warnung() { return dauerhaftHoch(this.verlauf); }
+  /** Warnung für Übersicht und Navigation: Werte, die seit 5 Minuten über 90 % liegen; Wartezeit des Servers (#542). */
+  warnung(): Warnung[] { return [...dauerhaftHoch(this.verlauf), ...(this.o.schleife?.() ? ['schleife' as const] : [])]; }
 
   stand(): SystemlastStand {
     const c = liesCgroup(this.lies);
