@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  ansichtAus, BEREICHE, bereichName, fuerAlle, GRUPPEN, hatMitte, inVorlage, liesAnsicht, liesEigene, OHNE_EINSTELLUNG, sichtbar, wartungsPlakette,
+  ansichtAus, BEREICHE, bereichName, expertenBereiche, fuerAlle, nurImExpertenmodus, GRUPPEN, hatMitte, inVorlage, liesAnsicht, liesEigene, OHNE_EINSTELLUNG, sichtbar, wartungsPlakette,
   werkbankEbene, werkbankUmleitung, werkbankZurueck, einDatentraeger,
 } from '../../shared/src/werkbankansicht';
 import { speicherDateien } from '../src/dateispeicher';
@@ -44,6 +44,37 @@ describe('Werkbank-Ansicht: Regeln', () => {
     assert.deepEqual(liesAnsicht({ vorlage: 'quatsch', ein: ['demo', 'gibtsnicht', 'demo', 3], aus: 'x' }), { vorlage: 'alles', ein: ['demo'], aus: [] });
     assert.deepEqual(liesEigene({ ein: ['technik', '../x'] }), { ein: ['technik'] });
     assert.deepEqual(liesEigene(undefined), { ein: [] });
+  });
+});
+
+describe('Werkbank-Ansicht: Expertenmodus (#356)', () => {
+  it('Suche: im Haushalt nur im Expertenmodus, für Betriebe immer', () => {
+    const haushalt = { vorlage: 'haushalt' as const, ein: [], aus: [] };
+    assert.equal(fuerAlle(haushalt, 'suche'), false);
+    assert.equal(sichtbar(haushalt, { ein: [] }, 'suche'), false, 'ohne Expertenmodus ausgeblendet');
+    assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'suche'), true, 'im Expertenmodus sichtbar');
+    assert.equal(nurImExpertenmodus('haushalt', 'suche'), true);
+    assert.equal(nurImExpertenmodus('organisation', 'suche'), false);
+    assert.equal(fuerAlle({ vorlage: 'organisation', ein: [], aus: [] }, 'suche'), true);
+    assert.deepEqual(expertenBereiche('haushalt').map((b) => b.pfad), ['suche']);
+    assert.deepEqual(expertenBereiche('alles'), []);
+    // Der Expertenmodus zeigt nur, was die Vorlage dafür vorsieht – nicht alles.
+    assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'protokoll'), false);
+    // Für alle ausdrücklich ausgeblendet bleibt ausgeblendet.
+    assert.equal(sichtbar({ ...haushalt, aus: ['suche'] }, { ein: [], experte: true }, 'suche'), false);
+  });
+
+  it('liesEigene nimmt den Expertenmodus nur als true; der Dienst speichert ihn je Administrator', async () => {
+    assert.deepEqual(liesEigene({ ein: [], experte: true }), { ein: [], experte: true });
+    assert.deepEqual(liesEigene({ ein: [], experte: 'ja' }), { ein: [] });
+    const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
+    await d.setzeWerkbankAnsicht(ICH, { installation: { vorlage: 'haushalt', ein: [], aus: [] }, eigene: { ein: [], experte: true } });
+    const ich = await d.werkbankAnsicht(ICH);
+    assert.equal(sichtbar(ich.installation, ich.eigene, 'suche'), true);
+    const du = await d.werkbankAnsicht(DU);
+    assert.equal(sichtbar(du.installation, du.eigene, 'suche'), false, 'gilt nur für mich');
+    await d.setzeWerkbankAnsicht(ICH, { eigene: { ein: [] } });
+    assert.deepEqual((await d.werkbankAnsicht(ICH)).eigene, { ein: [] });
   });
 });
 

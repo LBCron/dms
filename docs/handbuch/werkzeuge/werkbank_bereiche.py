@@ -43,9 +43,12 @@ def lies():
     folge = re.findall(r"'(\w+)'", re.search(r'const GRUPPENFOLGE = \[([^\]]*)\]', ts).group(1))
     gruppen = {g: texte[f'gruppe.{g}'] for g in folge}
     bereiche = []
-    for pfad, gruppe, inn in re.findall(r"\{ pfad: '(\w+)', gruppe: '(\w+)', in: (H|O|\[\]) \}", ts):
+    namen = {'haushalt': 'Haushalt', 'organisation': 'Betrieb'}
+    for pfad, gruppe, inn, experte in re.findall(r"\{ pfad: '(\w+)', gruppe: '(\w+)', in: (H|O|\[\])(?:, experte: \[([^\]]*)\])? \}", ts):
         vorlagen = ['Haushalt', 'Betrieb'] if inn == 'H' else ['Betrieb'] if inn == 'O' else []
-        bereiche.append({'pfad': pfad, 'gruppe': gruppe, 'name': texte[f'bereich.{pfad}.name'], 'vorlagen': vorlagen, 'wann': texte[f'bereich.{pfad}.wann']})
+        # Expertenmodus (#356): in diesen Vorlagen nur, wenn ein Administrator ihn eingeschaltet hat.
+        nur_experte = [namen[v] for v in re.findall(r"'(\w+)'", experte)]
+        bereiche.append({'pfad': pfad, 'gruppe': gruppe, 'name': texte[f'bereich.{pfad}.name'], 'vorlagen': vorlagen, 'experte': nur_experte, 'wann': texte[f'bereich.{pfad}.wann']})
     if not bereiche or any(b['pfad'] not in SEITE for b in bereiche) or any(b['gruppe'] not in gruppen for b in bereiche):
         fehlt = [b['pfad'] for b in bereiche if b['pfad'] not in SEITE or b['gruppe'] not in gruppen]
         sys.exit(f'werkbank_bereiche.py: Bereiche nicht gelesen, ohne Handbuchseite oder ohne Gruppe: {fehlt}')
@@ -67,7 +70,8 @@ def bloecke(gruppen, bereiche):
     z = ['| Bereich | Wofür | In der Vorlage |', '| --- | --- | --- |']
     for b in bereiche:
         wann = b['wann'][0].upper() + b['wann'][1:]
-        z.append(f'| [{b["name"]}]({SEITE[b["pfad"]]}) | {wann} | {", ".join(b["vorlagen"]) or "nur Alles"} |')
+        vorlagen = b['vorlagen'] + [f'{v} im Expertenmodus' for v in b['experte']]
+        z.append(f'| [{b["name"]}]({SEITE[b["pfad"]]}) | {wann} | {", ".join(vorlagen) or "nur Alles"} |')
     return {'gruppen': gr, 'organisation': org, 'wofuer': '\n'.join(z)}
 
 
