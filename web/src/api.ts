@@ -210,7 +210,11 @@ export interface OcrStatus {
   /** #577: Pakete zum Umwandeln und je anderem Dateityp, wer zuständig ist (oder welches Paket im Katalog es wäre). */
   umwandlung?: {
     pakete: Array<{ id: string; name: string; version: string; typen: string[] }>;
-    typen: Array<{ mime: string; name: string; anzahl: number; paket: { id: string; name: string } | null; katalog: { id: string; name: string } | null }>;
+    /** #614: Pakete mit dms:volltext. */
+    volltextPakete?: Array<{ id: string; name: string; version: string; typen: string[] }>;
+    typen: Array<{ mime: string; name: string; anzahl: number; paket: { id: string; name: string } | null; katalog: { id: string; name: string } | null;
+      /** #614: Paket, das den Volltext liefert (bzw. das aus dem Katalog). */
+      volltext?: { id: string; name: string } | null; volltextKatalog?: { id: string; name: string } | null }>;
   };
 }
 export interface Zaehler {

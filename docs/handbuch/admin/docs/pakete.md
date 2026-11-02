@@ -185,6 +185,8 @@ Was nicht in der Liste steht, darf der Code nicht. Benutzer und Passwörter sieh
 - **„Dokumente lesen“** – Der Code darf die Dokumente in den Mappen lesen, die er lesen darf: die Datei, den Volltext und die Seiten als Bild.
 - **„Dokumente lesen und Volltext schreiben“** – zusätzlich darf er dort Dokumente hochladen und ersetzen und den Volltext setzen, etwa für eine eigene Texterkennung.
 
+Braucht ein Paket nur den Volltext bestimmter Dateitypen (z. B. Word oder E-Mails), genügt seit Version 0.145 **„Dokumente lesen“** zusammen mit dem Recht [Volltext liefern](#recht-volltext) – ohne Schreibrecht auf Dokumente.
+
 Steht keins von beiden in der Liste, sieht der Code keine Dokumente.
 
 #### Vektoren zu Dokumenten { #recht-vektoren }
@@ -215,6 +217,10 @@ Will ein Update andere Adressen, fragt das DMS erneut.
 #### Dateien umwandeln { #recht-umwandeln }
 
 **„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“** – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis [Datei umwandeln](#ereignis-datei-umwandeln)) und gibt eine **umgewandelte Fassung** zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe [Andere Dateitypen](texterkennung.md#andere-dateitypen)). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem [Dokumente lesen](#recht-dokumente) (die Originaldatei).
+
+#### Volltext liefern { #recht-volltext }
+
+**„Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht (dms:volltext): Word, Excel, E-Mail, …“** – Seit Version 0.145. Hinter dem Recht stehen die Dateitypen, für die das Paket den Volltext liefert. Für jede solche Datei bekommt es das Ereignis [Datei braucht Volltext](#ereignis-datei-volltext), liest die Datei und schreibt ihren Text – für **genau diese Dateitypen**, für andere Dokumente nicht. Am Dokument steht so lange **„wartet auf Volltext (Paket …)“**; kann das Paket eine Datei nicht lesen (z. B. weil sie mit einem Passwort verschlüsselt ist), steht sein Grund am Dokument. Dafür braucht es außerdem [Dokumente lesen](#recht-dokumente); Schreibrecht auf Dokumente braucht es nicht. Das Paket **Office und E-Mail** nutzt dieses Recht (ab 1.1.0). PDF, JPEG und PNG liest das DMS selbst; Scans erkennt das Recht [Texterkennung übernehmen](#recht-texterkennung).
 
 #### Sicherung lesen { #recht-sicherung-lesen }
 
@@ -299,6 +305,12 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 **Wann:** Seit Version 0.137 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht [Dateien umwandeln](#recht-umwandeln) zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei **Vorschaubilder nachholen** und bei **Volltext neu erzeugen** (für Dateien ohne Fassung). Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).
 
 **Typisch:** Das Paket **Bildformate** macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.
+
+#### Eine Datei braucht ihren Volltext { #ereignis-datei-volltext }
+
+**Wann:** Seit Version 0.145 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht [Volltext liefern](#recht-volltext) zuständig ist – beim **Hochladen**, bei einer **neuen Version**, wenn das Paket **neu installiert** wird (für die vorhandenen Dateien ohne Text), bei **Volltext neu erzeugen** und bei **Erneut versuchen** bzw. **Neu erzeugen** am Dokument. Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id). Bis das Paket schreibt, bleibt ein vorhandener Text für die Suche stehen.
+
+**Typisch:** Das Paket **Office und E-Mail** liest den Text aus Word-, Excel- und PowerPoint-Dateien, OpenDocument, RTF, Textdateien und E-Mails.
 
 #### Eine Sicherung ist fertig { #ereignis-sicherung-fertig }
 

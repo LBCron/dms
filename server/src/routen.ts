@@ -4,6 +4,7 @@ import { type Recht } from '../../shared/src/rechte';
 import { ladeBeispiele } from './beispiele';
 import { demoPhasen, erzeugeDemo, pruefeDemoOptionen, schaetzeDemo, type DemoPlatz } from './demo';
 import type { Dienst } from './dienst';
+import { VOLLTEXT_KOERPER_MAX } from '../../shared/src/paketvolltext';
 import { Fachfehler } from './fehler';
 import { SITZUNG_TAGE, type Konten } from './konten';
 import type { SitzungIntern } from './konto-repo';
@@ -1833,9 +1834,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const r = await dienst.volltext(a.params.id);
       return ok({ id: r.dokument.id, name: r.dokument.name, ocr: r.dokument.ocr, sprache: r.dokument.sprache ?? null, weitereSprachen: r.dokument.weitereSprachen ?? [], text: r.text, ...(r.seiten ? { seiten: r.seiten } : {}) });
     } },
-    // Volltext schreiben (#338): für Pakete wie die Texterkennung – Dienstkonto mit „Dokumente schreiben“ oder Recht Bearbeiten.
-    { methode: 'PUT', pfad: '/api/dokumente/:id/volltext', zugang: 'angemeldet', handler: async (a) => {
+    // Volltext schreiben (#338): für Pakete wie die Texterkennung – Dienstkonto mit „Dokumente schreiben“ oder Recht Bearbeiten;
+    // mit dms:volltext (#614) nur für die Dateitypen des Pakets. Bis zur Grenze des Kerns (5 Mio. Zeichen) in einer Anfrage.
+    { methode: 'PUT', pfad: '/api/dokumente/:id/volltext', zugang: 'angemeldet', roh: VOLLTEXT_KOERPER_MAX, handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), a.benutzer?.art === 'dienst' ? 'R' : 'U');
+      if (a.benutzer?.art === 'dienst') await dienst.pruefeVolltextRecht(await zg(a), a.params.id);
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
       const herkunft = p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})`;
       const d = await dienst.schreibeVolltext(a.params.id, a.body, { id: ich(a).id, herkunft, paket: !!p });
@@ -1844,6 +1847,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Sprache des Volltexts (#400): bestimmt die Wortstämme der Suche – Rechte wie beim Volltext schreiben.
     { methode: 'PUT', pfad: '/api/dokumente/:id/sprache', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), a.benutzer?.art === 'dienst' ? 'R' : 'U');
+      if (a.benutzer?.art === 'dienst') await dienst.pruefeVolltextRecht(await zg(a), a.params.id);
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
       const d = await dienst.setzeDokumentSprache(a.params.id, a.body, { id: ich(a).id, wer: p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})` });
       return ok({ id: d.id, name: d.name, sprache: d.sprache ?? null, weitereSprachen: d.weitereSprachen ?? [], ocr: d.ocr });
@@ -2006,12 +2010,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   // Vektoren (#442) ändern das Dokument nicht: Lesen reicht, das Recht dms:vektoren prüft der Dienst.
   // Fassung und Vorschaubild (#577) ändern das Dokument auch nicht: Lesen reicht, dms:umwandeln prüft der Dienst.
   const lesendePost = (r: Route) => /\/dokumente\/gleiche$|\/dokumente\/:id\/vektor$|\/vektoren\/aehnliche$|\/dokumente\/:id\/(fassung|vorschaubild)$/.test(r.pfad);
+  // Volltext und Sprache (#614): mit dms:volltext reicht Lesen – für welche Dokumente, prüft der Dienst (Dateitypen des Pakets).
+  const nurVolltext = (r: Route, s: readonly string[] | undefined) => r.methode === 'PUT' && /\/dokumente\/:id\/(volltext|sprache)$/.test(r.pfad) && !!s?.includes('dms:volltext');
   const dokumentRecht = async (r: Route, a: Anfrage): Promise<'keine' | 'lesen' | 'schreiben' | null> => {
     if (a.benutzer?.art !== 'dienst') return null;
     if (nieFuerPakete(r)) throw new Fachfehler(403, 'Pakete dürfen keine E-Mails versenden.');
-    const recht = (await zg(a)).paket?.dokumente ?? 'keine';
+    const paket = (await zg(a)).paket;
+    const recht = paket?.dokumente ?? 'keine';
     if (!dokumentRoute(r)) return recht;
-    const schreibt = r.methode !== 'GET' && !lesendePost(r);
+    const schreibt = r.methode !== 'GET' && !lesendePost(r) && !nurVolltext(r, paket?.schnittstellen);
     if (recht === 'keine' || (schreibt && recht !== 'schreiben')) throw new Fachfehler(403, 'Dieses Paket darf das mit Dokumenten nicht (Rechte aus dem Manifest).');
     return recht;
   };

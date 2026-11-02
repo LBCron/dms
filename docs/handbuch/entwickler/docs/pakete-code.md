@@ -15,6 +15,7 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:erkennen` | 0.125.0 | Felder für „Aus Dokument ausfüllen“ vorschlagen | [Erkennung als Paket](#erkennung-als-paket-dmserkennen) |
 | `dms:texterkennung` | 0.133.0 | Texterkennung für Scans und Bilder übernehmen | [Texterkennung übernehmen](#texterkennung) |
 | `dms:umwandeln` | 0.137.0 | Dateien, die der Kern nicht liest (TIFF, WebP …), in PDF, PNG oder JPEG umwandeln – für Vorschaubild und Volltext | **[Dateien umwandeln](#dateien-umwandeln)** – mit den Formaten, die ein Paket zurückgeben darf |
+| `dms:volltext` | 0.145.0 | Volltext für Dateien liefern, die der Kern nicht liest (Word, Excel, E-Mails …) – nur mit „Dokumente lesen“ | **[Volltext liefern](#volltext-liefern)** – Ereignis, Schreiben, Grenzen |
 | `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
 
 ## So läuft Code im DMS
@@ -53,8 +54,9 @@ code:
   ```
 
 - **Dokumente:** `lesen` erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), `schreiben` zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.
-- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – und `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus).
+- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) – und `dms:volltext` (seit 0.145.0, braucht `dokumente: lesen`, `code.volltext` und das Ereignis `datei.volltext`) – siehe [Volltext liefern](#volltext-liefern).
 - **Dateitypen zum Umwandeln (`code.umwandeln`, seit 0.137.0):** nur mit `dms:umwandeln` – die MIME-Typen, für die das Paket zuständig ist, z. B. `[image/tiff, image/webp]`. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.
+- **Dateitypen für den Volltext (`code.volltext`, seit 0.145.0):** nur mit `dms:volltext` – die MIME-Typen, für die das Paket den Volltext liefert, z. B. `[message/rfc822, text/plain]`. PDF, JPEG und PNG sind nicht erlaubt. Höchstens 40.
 - **Netzwerk/Internet (`netz`):** nur `https://`, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).
 - **Dienst-Adresse als Einstellung** (seit 0.124.0): Statt einer festen Adresse in `netz` kann ein Paket eine Einstellung vom Typ `adresse` verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit `http://` (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, **ohne** `standard` – höchstens mit `beispiel`, das im leeren Feld steht:
 
@@ -79,6 +81,7 @@ code:
 | `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit `volltext.fertig` (`quelle: kern`) und mit denselben Daten. Neue Pakete nehmen `volltext.fertig`. | wie `volltext.fertig`, `seiten` |
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
+| `datei.volltext` | Seit 0.145.0, nur mit `dms:volltext`: Eine Datei eines Typs aus `code.volltext` braucht ihren Volltext – siehe [Volltext liefern](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, ggf. `neu` |
 | `sicherung.fertig` | Seit 0.142.0, nur mit `dms:sicherung-lesen`: Eine Sicherung liegt fertig im Sicherungsordner – siehe [Sicherung außer Haus](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
 
 ### Volltext fertig (`volltext.fertig`) { #volltext-fertig }
@@ -209,6 +212,7 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 | gleichzeitige Aufrufe | 2 (alle Pakete zusammen) |
 | Speicher des Pakets | 64 KB |
 | Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 32 MB je Paket zusammen; größere Pakete lehnen das DMS und `pruefen.py` ab |
+| Körper einer Anfrage an die API | 2 MB (JSON); `PUT /dokumente/{id}/volltext` seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt |
 
 Ein Paket, das die Grenzen reißt, beeinträchtigt das DMS nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.
 
@@ -480,6 +484,92 @@ static int32_t umwandeln(const char *dok, const char *sha) {
   return s >= 500 ? 1 : 0;                         /* 409, 413, 415, 422 …: nicht wiederholen */
 }
 ```
+
+## Volltext liefern { #volltext-liefern }
+
+Seit 0.145.0 (#614) liefert ein Paket mit dem Recht `dms:volltext` den **Volltext** für Dateitypen, die der Kern nicht selbst liest – etwa Word, Excel, PowerPoint, OpenDocument, RTF, Text und E-Mails (Paket **Office und E-Mail** in der Registry). Anders als [Dateien umwandeln](#dateien-umwandeln) macht es keine Fassung, sondern schreibt nur den Text; anders als mit `dokumente: schreiben` darf es **nichts an Dokumenten ändern** – nur den Volltext (und seine Sprache) von Dokumenten seiner Dateitypen.
+
+### Im Manifest { #volltext-manifest }
+
+```yaml
+dms: ">=0.145.0"
+code:
+  sprache: c
+  quelle: code/
+  ereignisse: [datei.volltext]
+  volltext:                    # zuständige Dateitypen (MIME), höchstens 40
+    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    - message/rfc822
+    - text/plain
+  rechte:
+    lesen: ["*"]               # Dokumente liegen in Mappen beliebiger Typen
+    dokumente: lesen           # die Datei lesen; Schreibrecht braucht es nicht
+    schnittstellen: ["dms:volltext"]
+  netz: []
+```
+
+- `code.volltext` nennt die Dateitypen, `dms:volltext` erlaubt, deren Volltext zu schreiben, `datei.volltext` muss in `ereignisse` stehen. Fehlt eins davon, lehnen DMS und `pruefen.py` das Paket ab. PDF, JPEG und PNG sind nicht erlaubt (die liest der Kern; Scans erkennt [`dms:texterkennung`](#texterkennung)). `application/octet-stream` ist erlaubt – dann bekommt das Paket auch Dateien ohne bekannten Typ (z. B. `.msg` aus manchen Browsern) und entscheidet am Inhalt.
+- Die Rückfrage bei der Installation zeigt „Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – … (dms:volltext): Word, E-Mail, Text“. Ändern sich die Dateitypen mit einem Update, fragt das DMS neu.
+- **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id. Für einen Dateityp mit einem solchen Paket geht der Volltext vor einer umgewandelten Fassung: Das Paket liest das Original, eine Fassung (`dms:umwandeln`) gibt dann nur das Vorschaubild.
+- Pakete mit `dokumente: schreiben` (z. B. **Texterkennung**) schreiben den Volltext weiter für jedes Dokument, das sie lesen dürfen – daran ändert `dms:volltext` nichts.
+
+### Ablauf { #volltext-ablauf }
+
+```mermaid
+sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:volltext)
+  K->>P: datei.volltext (dokument, mime, sha256, neu)
+  P->>K: GET /dokumente/{id}/inhalt
+  K-->>P: Datei
+  P->>K: PUT /dokumente/{id}/volltext { "text": … }
+  Note over K: Stand fertig, Suchindex, Historie
+  K->>K: volltext.fertig an die anderen Pakete
+```
+
+1. **Melden:** Der Kern schickt `datei.volltext` an das zuständige Paket – aus der Warteschlange des Volltexts, also beim **Hochladen**, bei einer **neuen Version**, bei *Volltext neu erzeugen* (`neu: true` bei „alle Dokumente“), bei *Erneut versuchen* und *Neu erzeugen* am Dokument (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (für alle vorhandenen Dateien dieser Typen **ohne Text**). Dateien über **50 MB** meldet er nicht (am Dokument: ausgelassen). Hat eine Datei mit gleichem Inhalt schon Text, übernimmt der Kern ihn ohne Ereignis (außer bei `neu`). Ein Dokument, das gerade unterwegs ist, meldet er höchstens alle 30 Minuten einmal (außer bei `neu`).
+2. **Warten:** Bis das Paket schreibt, steht das Dokument auf **„wartet auf Volltext (Paket *Name*)“** (Stand `paket`). Ein Text von vorher bleibt so lange für die Suche stehen. Mit der [Fortsetzung](#fortsetzung) steht `fortschritt` daneben.
+3. **Schreiben:** Das Paket liest die Datei (`GET /dokumente/{id}/inhalt`), erkennt den Typ am besten am Inhalt und schreibt `PUT /dokumente/{id}/volltext` mit `{ "text": … }` (optional `sprache`, `seitensprachen` wie bei der [Texterkennung](#seitensprachen)). Danach ist der Stand *fertig*; die anderen Pakete bekommen [`volltext.fertig`](#volltext-fertig) mit `quelle: "paket"` – das schreibende Paket nicht.
+4. **Ohne Text:** Endet der Aufruf mit Code `0`, ohne dass das Paket geschrieben hat (z. B. verschlüsselte oder beschädigte Datei), steht sein `ergebnis` am Dokument: „Volltext durch Paket *Name*: …“ – Stand *ausgelassen*, oder *fertig*, wenn es noch Text von vorher gibt. Gibt der Läufer nach den Wiederholungen auf, steht es auf *Fehler*. Schreibe deshalb als `ergebnis` einen kurzen Satz für Menschen, z. B. „Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“.
+
+Ist kein Paket für einen Dateityp installiert, steht am Dokument *ausgelassen* – mit dem Hinweis auf ein passendes Paket aus dem offiziellen Katalog, wenn es eins gibt („Word-Dateien bekommen Volltext mit dem Paket „Office und E-Mail““).
+
+### Ereignis `datei.volltext` { #ereignis-datei-volltext }
+
+```json
+{ "art": "datei.volltext", "id": "…", "versuch": 1, "erstellt": "2026-11-03T10:00:00Z",
+  "daten": { "dokument": "…", "mappe": "…", "name": "Angebot Küche.docx",
+             "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+             "groesse": 48211, "sha256": "9f2c…", "neu": true },
+  "paket": { "id": "office_email", "version": "1.1.0" }, "einstellungen": { … } }
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `dokument`, `mappe` | Ids von Dokument und Mappe |
+| `name` | Dateiname (nur als Hinweis – den Typ am Inhalt erkennen) |
+| `mime` | Dateityp, wie das DMS ihn kennt – einer aus `code.volltext` |
+| `groesse` | Größe in Bytes (höchstens 50 MB) |
+| `sha256` | Prüfwert der Datei. Hat das Dokument inzwischen eine neue Version, kommt dafür ein eigenes Ereignis. |
+| `neu` | nur bei „ausdrücklich neu“ (Volltext neu erzeugen für alle, Neu erzeugen am Dokument): auch dann lesen, wenn es schon Text gibt |
+
+### Antworten beim Schreiben { #volltext-antworten }
+
+| Status | Bedeutung | Was das Paket tut |
+|---|---|---|
+| 200 | geschrieben; Antwort mit `ocr` (Stand, Hinweis), `sprache` | fertig – `ergebnis` z. B. „Word, 12.345 Zeichen“ |
+| 403 | ohne `dms:volltext` (und ohne `dokumente: schreiben`), oder das Dokument hat einen Dateityp, für den das Paket nicht zuständig ist | Code `0` |
+| 404 | das Dokument gibt es nicht (mehr), oder das Paket darf es nicht lesen | Code `0` |
+| 413 | mehr als **5 Millionen Zeichen**, oder der Körper ist größer als 32 MB | kürzen, noch einmal schreiben; sonst Code `0` mit Meldung |
+| 422 | `text` fehlt, `sprache` oder `seitensprachen` ungültig | Code `0` mit Meldung |
+| 503 | Datenbank ausgelastet | Fehlercode (`≠ 0`): Der Läufer wiederholt das Ereignis |
+
+### Grenzen { #volltext-grenzen }
+
+- **Text:** höchstens 5 Millionen Zeichen je Dokument – wie für jeden Volltext im Kern. Der Körper von `PUT /dokumente/{id}/volltext` darf dafür bis **32 MB** groß sein (sonst gilt 2 MB je Anfrage); ein Paket schreibt den ganzen Text also in **einer** Anfrage. Längere Texte kürzt du selbst und sagst es im `ergebnis` („gekürzt“).
+- **Datei:** höchstens 50 MB (größere meldet der Kern nicht).
+- **Läufer:** 256 MB Speicher und 120 s je Aufruf. Plane den Speicher: die Datei, entpackte Teile und der Text (als JSON) liegen gleichzeitig im Modul.
+- Ältere DMS-Versionen kennen `dms:volltext` nicht und lehnen das Manifest ab – gib `dms: ">=0.145.0"` an.
 
 ## Sicherung außer Haus { #sicherung-ausser-haus }
 

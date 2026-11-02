@@ -61,6 +61,8 @@ import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type E
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
+import { PaketVolltext } from './paketvolltext';
+import { INFO_VOLLTEXT_DURCH, INFO_VOLLTEXT_PAKET, infoVolltextPaket, katalogVolltext, VOLLTEXT_ZEICHEN_MAX } from '../../shared/src/paketvolltext';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
@@ -122,7 +124,7 @@ export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
 export const SUCHE_VEKTOR_MS = 1500;
 const liesModellOder422 = (x: unknown) => { try { return liesModell(x); } catch (e) { throw new Fachfehler(422, (e as Error).message); } };
 /** Obergrenze für geschriebenen Volltext (Zeichen). */
-export const VOLLTEXT_MAX = 5_000_000;
+export const VOLLTEXT_MAX = VOLLTEXT_ZEICHEN_MAX;
 /** Auswahlfilter (#172) zählen nichts – nur Bedingungen auf Felder. */
 /** Laufende Transaktion je Aufruf (#404): Repo der Transaktion und was erst nach dem Speichern geschehen soll. */
 const transaktionen = new AsyncLocalStorage<{ dienst: object; repo: Repo; nachher: Array<() => void> }>();
@@ -510,7 +512,11 @@ export class Dienst {
     this.erkennung = new Erkennung(this, () => this.repo, () => this.einstellungen);
     this.fragen = new FragenAnDieAblage(this, () => this.repo, () => this.einstellungen);
     this.beiVolltextFertig(async (e) => { await this.erkennung.nachVolltext(e); });
+    // Volltext aus Paketen (#614): zuständige Pakete mit dms:volltext, Ereignis datei.volltext an genau dieses.
+    this.paketVolltext = new PaketVolltext({ pakete: () => this.repo.listePakete(), melde: (paket, daten) => this.melde('datei.volltext', daten, paket) });
   }
+  /** Volltext aus Paketen (#614, paketvolltext.ts); die Texterkennung meldet darüber (index.ts). */
+  readonly paketVolltext: PaketVolltext;
 
   /** Erkennung im Kern (#336, #391): Vorschläge aus dem Volltext. */
   readonly erkennung: Erkennung;
@@ -969,7 +975,9 @@ export class Dienst {
    */
   async nachFassung(docs: Dokument[], info: FassungInfo) {
     this.vorschauFassung?.ausFassung(docs);
-    const neu = docs.filter((d) => d.ocr && (d.ocr.stand === 'ausgelassen' || d.ocr.stand === 'fehler' || (d.ocr.stand === 'paket' && (d.ocr.info ?? '').startsWith(INFO_UMWANDLUNG)))).map((d) => d.id);
+    // Liefert ein Paket mit dms:volltext den Text (#614), bleibt es dabei: Die Fassung gibt nur das Vorschaubild.
+    const vp = await this.paketVolltext.pakete().catch(() => []);
+    const neu = docs.filter((d) => !vp.some((p) => p.typen.includes(d.mime.toLowerCase())) && d.ocr && (d.ocr.stand === 'ausgelassen' || d.ocr.stand === 'fehler' || (d.ocr.stand === 'paket' && (d.ocr.info ?? '').startsWith(INFO_UMWANDLUNG)))).map((d) => d.id);
     if (neu.length) { await this.repo.ocrEinreihen(neu); this.ocr?.anstossen(); }
     const konto = [...this.paketKonten.entries()].find(([, p]) => p === info.paket.id)?.[0] ?? null;
     for (const d of docs) {
@@ -1028,13 +1036,18 @@ export class Dienst {
    */
   async umwandlungStand() {
     const pakete = this.umwandlung ? await this.umwandlung.pakete() : [];
+    const volltextPakete = await this.paketVolltext.pakete();
     const typen = await this.repo.dokumentTypen();
-    const liste = await Promise.all(Object.entries(typen).filter(([m]) => !kernTyp(m) && m !== 'application/octet-stream').map(async ([mime, anzahl]) => {
+    const liste = await Promise.all(Object.entries(typen).filter(([m]) => !kernTyp(m) && (m !== 'application/octet-stream' || volltextPakete.some((p) => p.typen.includes(m)))).map(async ([mime, anzahl]) => {
       const p = this.umwandlung ? await this.umwandlung.paketFuer(mime, pakete) : null;
       const k = katalogUmwandlung(mime);
-      return { mime, name: dateitypName(mime), anzahl, paket: p ? { id: p.id, name: p.name } : null, katalog: k ? { id: k.id, name: k.name } : null };
+      // Volltext aus Paketen (#614): zuständiges Paket bzw. das aus dem Katalog.
+      const v = await this.paketVolltext.paketFuer(mime, volltextPakete);
+      const kv = katalogVolltext(mime);
+      return { mime, name: dateitypName(mime), anzahl, paket: p ? { id: p.id, name: p.name } : null, katalog: k ? { id: k.id, name: k.name } : null,
+        volltext: v ? { id: v.id, name: v.name } : null, volltextKatalog: kv ? { id: kv.id, name: kv.name } : null };
     }));
-    return { pakete, typen: liste.sort((a, b) => b.anzahl - a.anzahl || a.name.localeCompare(b.name)) };
+    return { pakete, volltextPakete, typen: liste.sort((a, b) => b.anzahl - a.anzahl || a.name.localeCompare(b.name)) };
   }
 
   /** Nach dem Ereignis „Datei umwandeln“ (#577): Wartet ein Dokument noch, aber es gibt keine Fassung, steht der Grund daran. */
@@ -1051,6 +1064,63 @@ export class Dienst {
       const info = r.ok ? `Umwandlung durch Paket ${p?.name ?? paket}: ${grund || 'keine Fassung geliefert'}` : `Umwandlung durch Paket ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
       await this.repo.ocrSetze(d.id, { stand: r.ok ? 'ausgelassen' : 'fehler', info: info.slice(0, 500), text: null });
     }
+  }
+
+  /* ---------- Volltext aus Paketen (#614) ---------- */
+
+  /**
+   * Ein Paket mit dms:volltext ist neu installiert (oder kann neue Dateitypen): Alle Dokumente dieser Typen ohne Text
+   * gehen durch die Warteschlange des Volltexts – und damit an das Paket. Dokumente mit Text bleiben, wie sie sind
+   * (z. B. Text einer früheren Version des Pakets).
+   */
+  async volltextPaketDa(typen: string[]): Promise<number> {
+    if (!typen.length) return 0;
+    // Dateitypen so, wie sie an den Dokumenten stehen (Groß- und Kleinschreibung wie vom Browser).
+    const klein = new Set(typen.map((m) => m.toLowerCase()));
+    const vorhanden = Object.keys(await this.repo.dokumentTypen()).filter((m) => klein.has(m.toLowerCase()));
+    const docs = new Set((await this.repo.dokumenteMitTyp(vorhanden)).map((d) => d.id));
+    if (!docs.size) return 0;
+    const mtypen = new Map((await this.repo.listeTypen()).map((t) => [t.id, t]));
+    const ids = (await this.repo.volltextKandidaten('ohne')).filter((d) => docs.has(d.id) && Dienst.volltextAn(mtypen.get(d.typId), d.registerKey)).map((d) => d.id);
+    if (!ids.length) return 0;
+    await this.repo.ocrEinreihen(ids);
+    this.ocr?.anstossen();
+    protokoll.modul('texterkennung').info('Paket für Volltext installiert – vorhandene Dateien ohne Text gehen an das Paket', { typen, dokumente: ids.length });
+    return ids.length;
+  }
+
+  /**
+   * Darf dieses Dienstkonto den Volltext (bzw. die Sprache) des Dokuments schreiben (#614)? Mit „Dokumente schreiben“
+   * immer (wie bisher, z. B. Paket Texterkennung); mit nur „lesen“ und dms:volltext nur für Dateitypen, für die das
+   * Paket zuständig ist. Sonst 403.
+   */
+  async pruefeVolltextRecht(z: Zugriff, id: string): Promise<void> {
+    if (!z.paket || z.paket.dokumente === 'schreiben') return;
+    if (!z.paket.schnittstellen?.includes('dms:volltext')) throw new Fachfehler(403, 'Dieses Paket darf das mit Dokumenten nicht (Rechte aus dem Manifest).');
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (!(await this.paketVolltext.darfSchreiben(z.paket.id, d))) throw new Fachfehler(403, t('pakete.volltext.typ-fremd', { typ: d.mime }));
+  }
+
+  /**
+   * Nach dem Ereignis „Datei braucht Volltext“ (#614): Hat das Paket keinen Volltext geschrieben (z. B. verschlüsselte
+   * Datei), wartet das Dokument nicht länger – sein Grund steht daran. Vorhandener Text (etwa von vorher) bleibt; gibt
+   * der Läufer auf: Fehler.
+   */
+  private async nachVolltextEreignis(paket: string, e: { daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }) {
+    const id = typeof e.daten.dokument === 'string' ? e.daten.dokument : '';
+    if (!id || (!r.ok && !r.aufgegeben)) return;
+    this.paketVolltext.erledigt(id);
+    const d = await this.repo.holeDokument(id);
+    if (!d || d.ocr?.stand !== 'paket' || !(d.ocr.info ?? '').startsWith(INFO_VOLLTEXT_PAKET)) return;
+    // Inzwischen eine neue Version: Für die gibt es ein eigenes Ereignis.
+    if (typeof e.daten.sha256 === 'string' && e.daten.sha256 !== d.sha256) return;
+    const p = (await this.repo.listePakete()).find((x) => x.id === paket);
+    const grund = (r.ok ? r.text : r.fehler ?? '').trim().replace(/\s+/g, ' ').slice(0, 300);
+    const text = await this.repo.volltext(d.id);
+    const mitText = !!text && text.replace(/\s/g, '').length >= 20;
+    const info = r.ok ? `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket}: ${grund || 'kein Volltext geliefert'}` : `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
+    await this.repo.ocrSetze(d.id, { stand: !r.ok ? 'fehler' : mitText ? 'fertig' : 'ausgelassen', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
   }
 
   /* ---------- Volltext (#45) ---------- */
@@ -1098,7 +1168,8 @@ export class Dienst {
     const ids: string[] = [];
     for (let von = 0; ; von += 200) {
       const r = await this.repo.ocrAuftraege({ stand: 'paket', von, anzahl: 200 });
-      ids.push(...r.eintraege.map((e) => e.dokument.id));
+      // Wer auf den Volltext eines Pakets mit dms:volltext wartet (#614), wartet weiter auf dieses.
+      ids.push(...r.eintraege.filter((e) => !(e.dokument.ocr?.info ?? '').startsWith(INFO_VOLLTEXT_PAKET)).map((e) => e.dokument.id));
       if (r.eintraege.length < 200) break;
     }
     if (!ids.length) return 0;
@@ -1149,6 +1220,14 @@ export class Dienst {
    * „Seite 20 von 64“), steht er am wartenden Dokument.
    */
   async texterkennungFortschritt(paket: string, e: { art: string; daten: Record<string, unknown> }, weiter: Record<string, unknown>): Promise<void> {
+    if (e.art === 'datei.volltext' && typeof e.daten.dokument === 'string' && typeof weiter.fortschritt === 'string') {
+      // Volltext aus Paketen (#614): Fortschritt am wartenden Dokument, wie bei der Texterkennung.
+      const d = await this.repo.holeDokument(e.daten.dokument);
+      const vp = d ? await this.paketVolltext.paketFuer(d.mime) : null;
+      if (!d || !vp || vp.id !== paket || d.ocr?.stand !== 'paket' || !(d.ocr.info ?? '').startsWith(INFO_VOLLTEXT_PAKET)) return;
+      await this.repo.ocrSetze(d.id, { stand: 'paket', info: `${infoVolltextPaket(vp)} – ${weiter.fortschritt.replace(/\s+/g, ' ').slice(0, 80)}`, seiten: d.ocr.seiten ?? null });
+      return;
+    }
     if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string' || typeof weiter.fortschritt !== 'string') return;
     const p = await this.texterkennungPaket();
     if (!p || p.id !== paket) return;
@@ -1167,6 +1246,7 @@ export class Dienst {
    */
   async nachTexterkennungsEreignis(paket: string, e: { art: string; daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }): Promise<void> {
     if (e.art === 'datei.umwandeln') return this.nachUmwandlungsEreignis(paket, e, r);
+    if (e.art === 'datei.volltext') return this.nachVolltextEreignis(paket, e, r);
     // Sicherung außer Haus (#585): Aufgegeben heißt „fehlgeschlagen“ (endgültig) – auch wenn das Paket es nicht mehr melden konnte.
     if (e.art === 'sicherung.fertig') { if (r.aufgegeben && typeof e.daten.name === 'string') await this.sicherungAufgegeben?.(paket, e.daten.name, r.fehler); return; }
     if (e.art !== 'volltext.fertig' || typeof e.daten.dokument !== 'string') return;
@@ -1250,6 +1330,8 @@ export class Dienst {
     }
     await this.notiere(d.mappeId, von.id, 'volltext', { dokument: d.name, text: info });
     protokoll.modul('ablage').info('Volltext geschrieben', { dokument: id, zeichen: e.text.length, herkunft: von.herkunft });
+    // Volltext aus einem Paket (#614): Das Dokument darf danach wieder gemeldet werden.
+    this.paketVolltext.erledigt(id);
     // Das schreibende Paket bekommt sein eigenes Ergebnis nicht zurück (#458: sonst erkennte es endlos neu).
     const paketId = von.paket ? this.paketKonten.get(von.id) : undefined;
     await this.volltextFertig({ dokument: id, mappe: d.mappeId }, { quelle: von.paket ? 'paket' : 'api', text: text.replace(/\s/g, '').length > 0, mime: fassung?.mime ?? d.mime, ...(fassung ? { original: d.mime } : {}), seiten: seitenzahl ?? d.ocr?.seiten ?? null, ...(paketId ? { paket: paketId } : {}) }, von.id);

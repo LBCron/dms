@@ -41,7 +41,11 @@ export const DATEITYP_NAMEN: Record<string, string> = {
   'application/vnd.ms-excel': 'Excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
   'application/vnd.ms-powerpoint': 'PowerPoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint',
   'application/vnd.oasis.opendocument.text': 'OpenDocument-Text', 'application/vnd.oasis.opendocument.spreadsheet': 'OpenDocument-Tabelle',
-  'message/rfc822': 'E-Mail',
+  'application/vnd.oasis.opendocument.presentation': 'OpenDocument-Präsentation',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template': 'Word', 'application/vnd.ms-word.document.macroenabled.12': 'Word',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.template': 'Excel', 'application/vnd.ms-excel.sheet.macroenabled.12': 'Excel',
+  'application/vnd.openxmlformats-officedocument.presentationml.slideshow': 'PowerPoint', 'application/vnd.ms-powerpoint.presentation.macroenabled.12': 'PowerPoint',
+  'message/rfc822': 'E-Mail', 'application/vnd.ms-outlook': 'Outlook-E-Mail', 'application/rtf': 'RTF', 'text/rtf': 'RTF', 'text/plain': 'Text',
 };
 export const dateitypName = (mime: string) => DATEITYP_NAMEN[mime] ?? mime;
 

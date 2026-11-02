@@ -195,12 +195,16 @@ function UmwandlungBlock({ s }: { s: OcrStatus }) {
               <td className="zahlzelle">{zahl(x.anzahl)}</td>
               <td>{x.paket ? <Link to={`/werkbank/pakete/${x.paket.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.durch', { paket: x.paket.name })}</Link>
                 : x.katalog ? <>{tx('volltext.werkbank.umwandlung.katalog', { paket: x.katalog.name })} <Link to={`/werkbank/pakete/${x.katalog.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.installieren')}</Link></>
-                : <span className="leise">{tx('volltext.werkbank.umwandlung.keins')}</span>}</td>
+                : x.volltext || x.volltextKatalog ? null
+                : <span className="leise">{tx('volltext.werkbank.umwandlung.keins')}</span>}
+                {/* Volltext aus Paketen (#614): eigenes Paket für den Text, z. B. Office und E-Mail. */}
+                {x.volltext && x.volltext.id !== x.paket?.id && <>{x.paket || x.katalog ? <br /> : null}<Link to={`/werkbank/pakete/${x.volltext.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.volltext', { paket: x.volltext.name })}</Link></>}
+                {!x.volltext && !x.paket && x.volltextKatalog && <>{x.katalog ? <br /> : null}{tx('volltext.werkbank.umwandlung.volltext-katalog', { paket: x.volltextKatalog.name })} <Link to={`/werkbank/pakete/${x.volltextKatalog.id}`} className="verweis">{tx('volltext.werkbank.umwandlung.installieren')}</Link></>}</td>
             </tr>
           ))}</tbody>
         </table>
       )}
-      {u.typen.some((x) => !x.paket && x.katalog) && <p className="leise klein">{tx('volltext.werkbank.umwandlung.nachholen')}</p>}
+      {u.typen.some((x) => (!x.paket && x.katalog) || (!x.volltext && x.volltextKatalog)) && <p className="leise klein">{tx('volltext.werkbank.umwandlung.nachholen')}</p>}
     </section>
   );
 }

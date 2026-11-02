@@ -14,6 +14,7 @@ import { protokoll } from './protokoll';
 import type { OcrErgebnis, Repo } from './repo';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, infoFassung, infoUmwandlung, katalogUmwandlung, UMWANDELN_MAX_BYTES } from '../../shared/src/dateiumwandlung';
+import { infoVolltextPaket, katalogVolltext, VOLLTEXT_PAKET_MAX_BYTES } from '../../shared/src/paketvolltext';
 import { t } from './sprache';
 
 /**
@@ -31,6 +32,9 @@ import { t } from './sprache';
  * - Andere Dateitypen (#577, z. B. TIFF): Gibt es ein Paket mit `dms:umwandeln` dafür, wartet das Dokument auf seine
  *   Fassung („wartet auf Umwandlung“); mit der Fassung (PDF, PNG oder JPEG) geht es weiter wie oben – das Ereignis
  *   nennt dann den Typ der Fassung (`mime`) und den des Originals (`original`). Ohne Paket: ausgelassen mit Hinweis.
+ * - Volltext aus Paketen (#614): Gibt es für den Dateityp ein Paket mit `dms:volltext`, geht die Datei an dieses
+ *   (Ereignis `datei.volltext`, erst nachdem der Stand gespeichert ist) und das Dokument wartet auf dessen Volltext
+ *   („wartet auf Volltext“). Das gilt vor einer umgewandelten Fassung: Das Paket liest das Original.
  */
 
 const log = protokoll.modul('texterkennung');
@@ -162,6 +166,12 @@ export interface KernErgebnis {
   original?: string;
 }
 
+/** Volltext aus Paketen (#614): das zuständige Paket für einen Dateityp und die Meldung an es (paketvolltext.ts). */
+export interface TexterkennungVolltextPaket {
+  paketFuer(mime: string): Promise<{ id: string; name: string; version: string; typen: string[] } | null>;
+  anfordern(d: Dokument, p: { id: string; name: string; version: string; typen: string[] }, o: { neu?: boolean }): Promise<boolean>;
+}
+
 /** Dateien umwandeln (#577): die Fassung einer Datei und das zuständige Paket (dateiumwandlung.ts). */
 export interface TexterkennungUmwandlung {
   lies(sha: string): Promise<{ info: { mime: string; paket: { name: string; version: string } }; inhalt: Buffer } | null>;
@@ -185,6 +195,8 @@ export class Texterkennung {
   paket: () => Promise<TexterkennungPaket | null> = async () => null;
   /** Dateien umwandeln (#577); ohne: andere Dateitypen bleiben ausgelassen. */
   umwandlung: TexterkennungUmwandlung | null = null;
+  /** Volltext aus Paketen (#614); ohne: andere Dateitypen wie bisher (Umwandlung oder ausgelassen). */
+  volltextPaket: TexterkennungVolltextPaket | null = null;
 
   constructor(
     private repo: Repo,
@@ -284,6 +296,10 @@ export class Texterkennung {
     delete (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
     const fassung = (e as OcrErgebnis & { fassung?: string }).fassung;
     delete (e as OcrErgebnis & { fassung?: string }).fassung;
+    // Volltext aus einem Paket (#614): Die Meldung geht erst hinaus, wenn der Stand gespeichert ist – sonst könnte ein
+    // schnelles Paket schreiben, bevor „wartet auf Volltext“ seinen Text überdeckt.
+    const ausPaket = (e as OcrErgebnis & { ausPaket?: { id: string; name: string; version: string; typen: string[] } }).ausPaket;
+    delete (e as OcrErgebnis & { ausPaket?: unknown }).ausPaket;
     try { await this.repo.ocrSetze(d.id, e); } catch (f) {
       // Auch nach den Wiederholungen nicht gespeichert (#575): nie still ohne Volltext – Stand „Fehler“ mit Hinweis,
       // damit es in Werkbank → Volltext auffällt und „Fehlgeschlagene erneut“ es wieder einreiht.
@@ -301,6 +317,11 @@ export class Texterkennung {
     const gemischt = e.stand === 'paket' && !!e.text && hatText(e.text) && ohneText?.length ? { seitenOhneText: ohneText } : {};
     // Wartet es auf die Umwandlung (#577), gibt es noch nichts zu melden – das Ereignis kommt mit der Fassung.
     if (fassung === 'wartet') return;
+    // Wartet es auf den Volltext eines Pakets (#614): Datei an das Paket; „Volltext fertig“ kommt, wenn es schreibt.
+    if (ausPaket) {
+      await this.volltextPaket?.anfordern(jetzt, ausPaket, { neu }).catch((f) => log.warn('Datei nicht zum Volltext an das Paket gemeldet', { dokument: d.id, paket: ausPaket.id, fehler: (f as Error).message }));
+      return;
+    }
     const umgewandelt = fassung ? { mime: fassung, original: jetzt.mime } : {};
     try { this.nachher?.(jetzt, e, { text: !!e.text && hatText(e.text), neu, ...gemischt, ...umgewandelt }); } catch { /* nur Benachrichtigung */ }
   }
@@ -319,6 +340,9 @@ export class Texterkennung {
    * mit Hinweis auf ein passendes Paket.
    */
   private async umgewandelt(d: Dokument, signal: AbortSignal | undefined, neu: boolean): Promise<OcrErgebnis> {
+    // Volltext aus einem Paket (#614) geht vor: Es liest das Original, nicht die Fassung.
+    const vp = await this.volltextPaket?.paketFuer(d.mime).catch(() => null);
+    if (vp) return this.volltextAusPaket(d, vp, neu);
     const f = await this.umwandlung?.lies(d.sha256).catch(() => null);
     if (f && DATEITYPEN[f.info.mime]) {
       const r = await this.nurTextebene({ ...d, mime: f.info.mime }, await this.paket().catch(() => null), neu, signal, f);
@@ -332,7 +356,22 @@ export class Texterkennung {
     }
     if (p) return { stand: 'ausgelassen', info: t('pakete.fassung.zu-gross', { typ: name, mb: UMWANDELN_MAX_BYTES / 1048576 }), text: null };
     const k = katalogUmwandlung(d.mime);
-    return { stand: 'ausgelassen', info: k ? t('pakete.fassung.ohne-paket', { typ: name, paket: k.name }) : t('pakete.fassung.ohne-paket-typ', { typ: name }), text: null };
+    if (k) return { stand: 'ausgelassen', info: t('pakete.fassung.ohne-paket', { typ: name, paket: k.name }), text: null };
+    // Ein Paket aus dem Katalog liefert den Volltext (#614, z. B. Office und E-Mail): Hinweis darauf.
+    const kv = katalogVolltext(d.mime);
+    return { stand: 'ausgelassen', info: kv ? t('pakete.volltext.ohne-paket', { typ: name, paket: kv.name }) : t('pakete.fassung.ohne-paket-typ', { typ: name }), text: null };
+  }
+
+  /**
+   * Volltext aus einem Paket (#614): gleiche Datei schon mit Text → übernehmen (außer bei „neu“); zu groß →
+   * ausgelassen; sonst wartet das Dokument auf das Paket (vorhandener Text bleibt so lange stehen) und die Datei geht
+   * an das Paket (in verarbeite, nach dem Speichern des Stands).
+   */
+  private async volltextAusPaket(d: Dokument, p: { id: string; name: string; version: string; typen: string[] }, neu: boolean): Promise<OcrErgebnis> {
+    if (d.groesse > VOLLTEXT_PAKET_MAX_BYTES) return { stand: 'ausgelassen', info: t('pakete.volltext.zu-gross', { typ: dateitypName(d.mime), mb: VOLLTEXT_PAKET_MAX_BYTES / 1048576 }), text: null };
+    const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);
+    if (vorhanden && hatText(vorhanden.text)) return { stand: 'fertig', text: vorhanden.text, seiten: vorhanden.seiten, info: `übernommen (gleicher Inhalt): ${vorhanden.info ?? ''}`.trim(), sprache: vorhanden.sprache ?? null, weitere: vorhanden.weitere ?? null, seitensprachen: vorhanden.seitensprachen ?? null };
+    return { stand: 'paket', info: infoVolltextPaket(p), seiten: d.ocr?.seiten ?? null, ausPaket: p } as OcrErgebnis;
   }
 
   /** Datei lesen: Textebene (poppler). Mit `fassung` (#577) deren Inhalt statt der Datei des Dokuments. */
@@ -425,6 +464,7 @@ export class Texterkennung {
     for (const id of liste) this.neuMarken.add(id);
     // Wartet ein Dokument auf das Paket, kommt sein Ereignis gleich neu – das alte fällt weg.
     await this.repo.loescheOffeneEreignisse('volltext.fertig', liste).catch(() => 0);
+    await this.repo.loescheOffeneEreignisse('datei.volltext', liste).catch(() => 0);
     await this.repo.ocrEinreihen(liste);
     log.info('Texterkennung neu gestartet', { dokumente: liste.length, von });
     this.anstossen();
@@ -456,6 +496,7 @@ export class Texterkennung {
       // Wartet es auf das Paket (#458): Ereignis verwerfen, Text aus dem PDF bleibt.
       if (d?.ocr?.stand === 'paket') {
         await this.repo.loescheOffeneEreignisse('volltext.fertig', [id]);
+        await this.repo.loescheOffeneEreignisse('datei.volltext', [id]);
         await this.repo.ocrSetze(id, { stand: 'ausgelassen', info: 'Texterkennung durch Paket vom Administrator abgebrochen.', seiten: d.ocr.seiten ?? null });
         n++;
       }

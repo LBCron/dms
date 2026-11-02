@@ -243,6 +243,8 @@ const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassunge
 dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
 texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
+// Volltext aus Paketen (#614): Dateitypen, für die ein Paket mit dms:volltext den Text liefert.
+texterkennung.volltextPaket = dienst.paketVolltext;
 // Tägliche Zusammenfassung der offenen Aufgaben (#54).
 const typName = async (id: string | undefined) => (await dienst.listeTypen()).find((t) => t.id === id)?.name ?? '';
 const aufgabenmail = new Aufgabenmail({
