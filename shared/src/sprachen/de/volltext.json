@@ -66,5 +66,9 @@
   "werkbank.umwandlung.keins": "kein Paket – nur das Dateisymbol",
   "werkbank.umwandlung.installieren": "Paket installieren",
   "werkbank.umwandlung.keine": "Es gibt keine Dokumente anderer Dateitypen.",
-  "werkbank.umwandlung.nachholen": "Vorhandene Dateien gehen beim Installieren an das Paket; später auch über „Vorschaubilder nachholen“ in den Wartungsoperationen."
+  "werkbank.umwandlung.nachholen": "Vorhandene Dateien gehen beim Installieren an das Paket; später auch über „Vorschaubilder nachholen“ in den Wartungsoperationen.",
+  "sprachen.auch": "{sprache}, enthält auch {weitere}",
+  "teilen.hinweis": "Ab Seite {seite} beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt) – Post teilen?",
+  "teilen.knopf": "Post teilen …",
+  "teilen.weg": "Hinweis ausblenden"
 }

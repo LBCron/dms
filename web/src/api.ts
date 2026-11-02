@@ -767,6 +767,8 @@ export const api = {
   /** Archivnummer (#345). */
   archivnummer: (nr: string) => anfrage<{ dokument: Dokument; mappeId: string; typId: string; titel: string }>('GET', `/api/archivnummern/${encodeURIComponent(nr)}`),
   setzeArchivnummer: (id: string, archivnummer: string) => anfrage<Dokument>('PUT', `/api/dokumente/${id}/archivnummer`, { archivnummer }),
+  /** Hinweis „Post teilen?“ wegklicken (#579). */
+  teilenHinweisAus: (id: string) => anfrage<{ id: string; teilenAb: number | null }>('DELETE', `/api/dokumente/${id}/teilen-hinweis`),
   /** gleicherName (#194): zaehler (Standard), version oder ersetzen. */
   /** Doppelte Dateien (#333): Prüfwerte → Fundstellen in Mappen, die man lesen darf. */
   gleicheDateien: (pruefwerte: string[], ohneMappe?: string) => anfrage<{ fundstellen: Record<string, Fundstelle[]> }>('POST', '/api/dokumente/gleiche', { pruefwerte, ...(ohneMappe ? { ohneMappe } : {}) }),

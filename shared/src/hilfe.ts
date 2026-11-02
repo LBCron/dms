@@ -165,6 +165,7 @@ export const HILFE = {
   'dokumente.schwaerzen': benutzer('dokumente/', 'Schwärzen', 'schwaerzen'),
   'versenden.verkleinert': benutzer('versenden/', 'Verkleinert weitergeben', 'verkleinert-weitergeben'),
   'dokumente.archivnummer': benutzer('dokumente/', 'Archivnummer', 'archivnummer'),
+  'dokumente.sprachen': benutzer('dokumente/', 'Dokumente in mehreren Sprachen', 'mehrere-sprachen'),
   'profil.rechte': benutzer('profil/', 'deinen Rechten', 'meine-rechte'),
   'profil.abwesenheit': benutzer('profil/', 'Abwesenheit', 'abwesenheit'),
   'profil.export': benutzer('profil/', 'Meine Daten exportieren', 'meine-daten-exportieren'),

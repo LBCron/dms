@@ -11,8 +11,10 @@ import { rueckfrage } from '../rueckfrage';
  */
 interface Seite { nr: number; drehung: number; weg: boolean; teilAb: boolean }
 
-export function PdfSeiten({ d, post, versioniert, papierkorb, schliessen, fertig }: {
+export function PdfSeiten({ d, post, versioniert, papierkorb, teilAb, schliessen, fertig }: {
   d: Dokument; post: boolean; versioniert: boolean; papierkorb: boolean;
+  /** Vorschlag aus dem Hinweis „Post teilen?“ (#579): „Teilen ab hier“ an dieser Seite schon gesetzt – übernommen wird erst mit „Übernehmen“. */
+  teilAb?: number;
   schliessen(): void; fertig(r: { dokumente: Dokument[]; posten: Mappe[] }): void;
 }) {
   const [info, setInfo] = useState<Info>();
@@ -26,9 +28,11 @@ export function PdfSeiten({ d, post, versioniert, papierkorb, schliessen, fertig
   useEffect(() => {
     api.pdfSeiten(d.id).then((i) => {
       setInfo(i);
-      setSeiten(Array.from({ length: i.anzahl }, (_, k) => ({ nr: k + 1, drehung: 0, weg: false, teilAb: false })));
+      setSeiten(Array.from({ length: i.anzahl }, (_, k) => ({ nr: k + 1, drehung: 0, weg: false, teilAb: !!teilAb && k + 1 === teilAb && k > 0 })));
     }, (e: Error) => setFehler(e.message));
-  }, [d.id, d.sha256]);
+  }, [d.id, d.sha256]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Mit Vorschlag (#579) die Kachel der Seite gleich ins Bild holen.
+  useEffect(() => { if (teilAb && seiten.length >= teilAb) kacheln.current[teilAb - 1]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [teilAb, seiten.length]);
   useEffect(() => { if (fokus !== undefined) kacheln.current[fokus]?.focus(); }, [fokus, seiten]);
 
   if (fehler && !info) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>;

@@ -150,6 +150,15 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
 
   // Texterkennung (#45): Stand nachladen, solange etwas wartet oder läuft.
   const [ocr, setOcr] = useState<Record<string, OcrStand | undefined>>({});
+  // Sprachen und Hinweis „Post teilen?“ (#579) kommen mit dem Ergebnis des Pakets – mit dem Stand nachgeladen.
+  const [frisch, setFrisch] = useState<Record<string, Pick<Dokument, 'sprache' | 'weitereSprachen' | 'teilenAb'>>>({});
+  const [teilenWeg, setTeilenWeg] = useState<Set<string>>(new Set());
+  const [teilVorschlag, setTeilVorschlag] = useState<{ id: string; ab: number }>();
+  const mitFrisch = (x: Dokument): Dokument => (frisch[x.id] ? { ...x, ...frisch[x.id] } : x);
+  async function teilenAusblenden(id: string) {
+    setTeilenWeg((w) => new Set(w).add(id));
+    try { await api.teilenHinweisAus(id); } catch { /* bleibt ausgeblendet bis zum Neuladen */ }
+  }
   const [text, setText] = useState<{ id: string; text: string | null } | null>(null);
   const standVon = (x: Dokument) => ocr[x.id] ?? x.ocr;
   // Wartet es auf das Paket, nur solange eins installiert ist (#459: ohne Paket wartet es, bis eins kommt).
@@ -157,7 +166,10 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   useEffect(() => {
     if (!offen || !dokumente.length) return;
     const t = setTimeout(() => {
-      void api.mappe(dokumente[0].mappeId).then((m) => setOcr(Object.fromEntries(m.dokumente.map((x) => [x.id, x.ocr]))), () => {});
+      void api.mappe(dokumente[0].mappeId).then((m) => {
+        setOcr(Object.fromEntries(m.dokumente.map((x) => [x.id, x.ocr])));
+        setFrisch(Object.fromEntries(m.dokumente.map((x) => [x.id, { sprache: x.sprache, weitereSprachen: x.weitereSprachen, teilenAb: x.teilenAb }])));
+      }, () => {});
     }, 3000);
     return () => clearTimeout(t);
   }, [offen, ocr, dokumente.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -299,8 +311,11 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                   </div>
                 </li>
               ))}
-              {dokumente.map((x) => {
+              {dokumente.map((roh) => {
+                const x = mitFrisch(roh);
                 const weg = entfernt.includes(x.id);
+                // Hinweis „Post teilen?“ (#579): nur an der Post, nur für PDFs, nur wer teilen darf – nie von selbst.
+                const teilenHinweis = post && bearbeitbar && !weg && x.mime === 'application/pdf' && !!x.teilenAb && !teilenWeg.has(x.id) && seitenOffen !== x.id;
                 const auf = x.id === ansicht && !weg;
                 const klickbar = x.anzeigbar && !weg;
                 return (
@@ -329,7 +344,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                               {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
-                        {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
+                        {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
@@ -398,9 +413,19 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                       <Schwaerzen d={x} schliessen={() => setSchwarzOffen(undefined)}
                         fertig={(m) => { setSchwarzOffen(undefined); setPdfMeldung(m); void neuLaden?.(); }} />
                     )}
+                    {teilenHinweis && (
+                      <div className="hinweis info teilenhinweis" role="status">
+                        <p>{t('volltext.teilen.hinweis', { seite: x.teilenAb! })}</p>
+                        <span className="zeilenaktionen">
+                          <button type="button" className="knopf klein primaer" onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setTeilVorschlag({ id: x.id, ab: x.teilenAb! }); setSeitenOffen(x.id); }}>{t('volltext.teilen.knopf')}</button>
+                          <button type="button" className="textknopf klein" onClick={() => void teilenAusblenden(x.id)}>{t('volltext.teilen.weg')}</button>
+                          <Hilfe ort="dokumente.sprachen" />
+                        </span>
+                      </div>
+                    )}
                     {seitenOffen === x.id && !weg && (
-                      <PdfSeiten d={x} post={!!post} versioniert={versioniert} papierkorb={!!d.zaehler.papierkorbTage}
-                        schliessen={() => setSeitenOffen(undefined)} fertig={(r) => void pdfFertig(r)} />
+                      <PdfSeiten d={x} post={!!post} versioniert={versioniert} papierkorb={!!d.zaehler.papierkorbTage} teilAb={teilVorschlag?.id === x.id ? teilVorschlag.ab : undefined}
+                        schliessen={() => { setSeitenOffen(undefined); setTeilVorschlag(undefined); }} fertig={(r) => { setTeilVorschlag(undefined); void pdfFertig(r); }} />
                     )}
                     {auf && (
                       <div className="dokansicht">
@@ -470,7 +495,7 @@ function DokTeilen({ d }: { d: Dokument }) {
 }
 
 /** Stand der Texterkennung an einem Dokument (#45) mit Herkunft des Texts (#458). */
-function OcrAnzeige({ id, s, sprache: feld, erneut, neu, text, textOffen }: { id: string; s?: OcrStand; sprache?: string | null; erneut(): void; /** „Neu erzeugen“ (#458), nur mit Recht Bearbeiten. */ neu?: () => void; text(): void; textOffen: boolean }) {
+function OcrAnzeige({ id, s, sprache: feld, weitere, erneut, neu, text, textOffen }: { id: string; s?: OcrStand; sprache?: string | null; /** Weitere Sprachen (#579). */ weitere?: string[]; erneut(): void; /** „Neu erzeugen“ (#458), nur mit Recht Bearbeiten. */ neu?: () => void; text(): void; textOffen: boolean }) {
   if (!s || s.stand === 'keiner') return null;
   // Sprache des Volltexts (#400) als eigenes Feld; bei älteren Dokumenten aus dem Hinweis der Texterkennung (#395).
   const sprache = s.stand !== 'fertig' ? null : feld ? { sprache: feld } : spracheAusInfo(s.info);
@@ -482,7 +507,7 @@ function OcrAnzeige({ id, s, sprache: feld, erneut, neu, text, textOffen }: { id
   const fassung = s.stand === 'fertig' ? fassungAusInfo(s.info) : null;
   return (
     <span className="ocrstand klein">
-      <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {OCR_STAENDE[s.stand]}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachname(sprache.sprache)}` : ''}</span>
+      <span className={`chip ${klasse}`} title={s.info ?? undefined}>Volltext: {OCR_STAENDE[s.stand]}{s.stand === 'fertig' && s.seiten ? ` · ${s.seiten} ${s.seiten === 1 ? 'Seite' : 'Seiten'}` : ''}{sprache ? ` · ${sprachenAnzeige(sprache.sprache, weitere)}` : ''}</span>
       {herkunft && <span className="leise">{herkunft}{fortschritt ? ` · ${fortschritt}` : ''}</span>}
       {fassung && <span className="leise">{t('volltext.herkunft.fassung', { paket: fassung })} <a className="textknopf" href={fassungUrl(id)} target="_blank" rel="noreferrer" title={t('volltext.herkunft.fassung.titel')}>{t('volltext.herkunft.fassung.ansehen')}</a></span>}
       {(s.stand === 'fehler' || s.stand === 'ausgelassen') && s.info && <span className="leise">{s.info}</span>}
@@ -491,6 +516,13 @@ function OcrAnzeige({ id, s, sprache: feld, erneut, neu, text, textOffen }: { id
       {neu && (s.stand === 'fertig' || s.stand === 'paket') && <button type="button" className="textknopf" title={t('volltext.dokument.neu.titel')} onClick={neu}>{t('volltext.dokument.neu')}</button>}
     </span>
   );
+}
+
+/** „Deutsch, enthält auch Französisch“ (#579); einsprachig nur der Name. */
+export function sprachenAnzeige(sprache: string, weitere?: string[] | null) {
+  const w = (weitere ?? []).filter((k) => k !== sprache).map(sprachname);
+  if (!w.length) return sprachname(sprache);
+  return t('volltext.sprachen.auch', { sprache: sprachname(sprache), weitere: new Intl.ListFormat('de', { type: 'conjunction' }).format(w) });
 }
 
 /** „Rechnung.pdf“ → „Rechnung (2).pdf“ (wie der Server bei gleichem Namen). */

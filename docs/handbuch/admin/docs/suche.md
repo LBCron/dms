@@ -8,7 +8,7 @@ Ohne Einstellung gleicht die Suche aus:
 
 - **Umlaute, Akzente und ß:** „Gebuhr“ findet „Gebühr“, „Strasse“ findet „Straße“, „Ozdemir“ findet „Özdemir“ – in Titeln, Angaben, Notizen und im Volltext.
 - **Bindestriche:** „Kfzversicherung“ findet „Kfz-Versicherung“ und umgekehrt.
-- **Wortformen** im Volltext: „Rechnungen“ findet „Rechnung“ – in der Sprache des Dokuments (Deutsch, wenn keine erkannt ist).
+- **Wortformen** im Volltext: „Rechnungen“ findet „Rechnung“ – in der Sprache des Dokuments (Deutsch, wenn keine erkannt ist). Bei Dokumenten in mehreren Sprachen (seit 0.139.0) je Seite in ihrer Sprache; gesucht wird über alle Sprachen des Dokuments (siehe [Texterkennung → Dokumente in mehreren Sprachen](texterkennung.md#mehrere-sprachen)).
 
 ## Tippfehler und „Meintest du …?“
 
