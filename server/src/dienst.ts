@@ -99,6 +99,10 @@ const versionInfo = (v: DokumentVersion): LoeschDokument => ({ dokumentId: v.dok
 /** Dokument im Papierkorb mit Mappe und Register (#344). */
 export interface DokumentImKorb extends DokumentImPapierkorb { art: 'dokument'; typId: string; mappeTitel: string; register: string; mappe: 'da' | 'papierkorb' | 'weg' }
 /** Wo eine gleiche Datei schon liegt (#333) – nur lesbare Mappen. */
+/** Bestätigter bzw. neuer (gesperrter) Schlüssel eines eigenen Katalogs (#594). */
+export interface KatalogSchluessel { pem: string; fingerabdruck: string; von: string | null; am: string }
+/** Eine weitere Katalogquelle (#189) mit Schlüssel des Anbieters (#594). */
+export interface PaketQuelleEintrag { url: string; aktiv: boolean; von: string | null; am: string; schluessel?: KatalogSchluessel | null; gesperrt?: KatalogSchluessel | null }
 export interface Fundstelle { mappeId: string; typId: string; titel: string; typ: string; register: string; name: string; erstellt: string }
 export interface Zugriff {
   ich: { id: string; rolle: string };
@@ -3272,14 +3276,30 @@ export class Dienst {
   speicherePaket(p: InstalliertesPaket) { return this.repo.speicherePaket(p); }
   loeschePaket(id: string) { return this.repo.loeschePaket(id); }
 
-  /** Weitere Katalogadressen (#189), global; der offizielle Katalog steht nicht darin. */
-  async paketQuellen(): Promise<Array<{ url: string; aktiv: boolean; von: string | null; am: string }>> {
+  /**
+   * Weitere Katalogadressen (#189), global; der offizielle Katalog steht nicht darin. Mit bestätigtem
+   * Schlüssel des Anbieters bzw. Sperre nach einem Schlüsselwechsel (#594).
+   */
+  async paketQuellen(): Promise<PaketQuelleEintrag[]> {
     const v = await this.einstellungen?.lies('paket_kataloge');
-    return Array.isArray(v) ? v.filter((q) => q && typeof q.url === 'string').map((q) => ({ url: q.url, aktiv: q.aktiv !== false, von: q.von ?? null, am: String(q.am ?? '') })) : [];
+    const schluessel = (x: unknown) => (x && typeof x === 'object' && typeof (x as { fingerabdruck?: unknown }).fingerabdruck === 'string' ? x as never : null);
+    return Array.isArray(v) ? v.filter((q) => q && typeof q.url === 'string').map((q) => ({
+      url: q.url, aktiv: q.aktiv !== false, von: q.von ?? null, am: String(q.am ?? ''),
+      schluessel: schluessel(q.schluessel), gesperrt: schluessel(q.gesperrt),
+    })) : [];
   }
-  async setzePaketQuellen(liste: Array<{ url: string; aktiv: boolean; von: string | null; am: string }>) {
+  async setzePaketQuellen(liste: PaketQuelleEintrag[]) {
     if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
     await this.einstellungen.schreibe('paket_kataloge', liste.length ? liste : null);
+  }
+  /** Neuester gesehener Stand (`erstellt`) je signiertem Katalog (#594) – gegen das Zurückdrehen auf ältere Kataloge. */
+  async paketKatalogStaende(): Promise<Record<string, string>> {
+    const v = await this.einstellungen?.lies('paket_katalog_staende');
+    return v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([, x]) => typeof x === 'string')) as Record<string, string> : {};
+  }
+  async setzePaketKatalogStand(url: string, stand: string) {
+    if (!this.einstellungen) return;
+    await this.einstellungen.schreibe('paket_katalog_staende', { ...(await this.paketKatalogStaende()), [url]: stand });
   }
 
   /** Umwandlungen Text → Verweis nach Paket-Updates (#534): die letzten Vorgänge zum Rückgängigmachen (Einstellung, Teil der Sicherung). */

@@ -34,3 +34,16 @@ gh attestation verify oci://ghcr.io/motom001/dms-komplett:<version> -R motom001/
 ```
 
 How this is built in detail is described in the [developer manual](https://motom001.github.io/dms/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates) (German).
+
+## Verifying where packages come from
+
+The DMS project signs the official package catalog ([dms-registry](https://github.com/motom001/dms-registry)) with Ed25519. From version 0.141.0 on, the DMS verifies the signature with these two public keys (built into the code, `server/src/projektschluessel.ts`); a signature made with either of them is valid:
+
+| Key | Key ID | Fingerprint (SHA-256 of the public key) |
+| --- | --- | --- |
+| Signing key (registry CI) | `da31d65f4a429768` | `da31 d65f 4a42 9768 db27 8f76 e67a ce99 7024 9d25 9352 e7da 5a0b 931b d85d 5ac0` |
+| Backup key (kept offline by the maintainer) | `e8e8f4f53d4eca0e` | `e8e8 f4f5 3d4e ca0e 3e51 ac12 bbe8 807e 9c3c 00af 19a7 27cc 2d1e 1b92 172b fe15` |
+
+> **Note: these are still test keys.** Their private counterparts are public in the tests, so a signature made with them proves nothing. As soon as the maintainer has generated the real keys, their fingerprints will be listed here. How to replace them is described in the [developer handbook](https://motom001.github.io/dms/entwickler/aktuell/pakete/#projektschluessel-austauschen) (German).
+
+What "signed" and "not signed" mean in the install preview is explained in the [administration handbook](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht) (German).

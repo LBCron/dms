@@ -15,12 +15,15 @@ import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
-import { BEREICH, CODE_MAX, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../shared/src/pakete';
+import { BEREICH, CODE_MAX, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand } from '../../shared/src/paketeinstellungen';
-import type { Dienst } from './dienst';
+import type { Dienst, PaketQuelleEintrag } from './dienst';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { liesSchluessel, nurTestschluessel, projektSchluessel, pruefeSignatur, SCHLUESSEL_DATEI, SIGNATUR_DATEI, SIGNATUR_MAX, WECHSEL_DATEI, zeitVon, type Schluessel } from './katalogsignatur';
+import type { Projektschluessel } from './projektschluessel';
+import { t } from './sprache';
 import { crc32 } from './zip';
 
 const log = protokoll.modul('werkbank');
@@ -348,6 +351,8 @@ export interface Vorschau {
   installiert: string | null; update: boolean;
   /** Herkunft des installierten Pakets (bei einem Update). */
   herkunft: InstalliertesPaket['herkunft'] | null;
+  /** Was die Signatur über die Herkunft dieses Pakets sagt (#594); Zeile „Herkunft“ in der Vorschau. */
+  pruefung: HerkunftPruefung | null;
   abhaengigkeiten: AbhaengigkeitPlan[];
   typen: TypPlan[]; sichten: SichtPlan[]; beispiele: number;
   /** Was die Installation verhindert. */
@@ -419,6 +424,8 @@ export interface PaketOptionen {
   abruf?: (url: string) => Promise<Buffer>;
   /** Offizieller Katalog (Tests: eine andere Adresse). */
   katalogUrl?: string;
+  /** Öffentliche Schlüssel des Projekts (#594); Tests: eigene, sonst server/src/projektschluessel.ts. */
+  projektSchluessel?: readonly Projektschluessel[];
   /** Benutzer zur Auswahl in Paket-Einstellungen (#197). */
   benutzer?: () => Promise<Array<{ id: string; name: string }>>;
   /** Paket-Läufer (Pakete mit Code): Aktionen ausführen, Ereignisse zustellen. Fehlt noch im Betrieb. */
@@ -435,27 +442,54 @@ export interface PaketLaeufer {
 /** Zeitgrenze für Aktionen, damit ein Knopf nicht hängt. */
 export const AKTION_MS = 30_000;
 
-/** Holt eine Adresse mit Zeitlimit und Größengrenze; nur HTTPS (bzw. HTTP für localhost). */
+/** Höchstens so viele Weiterleitungen folgt holeDaten. */
+const WEITERLEITUNGEN_MAX = 5;
+
+/**
+ * Holt eine Adresse mit Zeitlimit und Größengrenze; nur HTTPS (bzw. HTTP für localhost).
+ * Weiterleitungen folgt es selbst und nur auf `https://`-Adressen (#594) – auch von localhost aus.
+ */
 export async function holeDaten(url: string, max = ARCHIV_MAX): Promise<Buffer> {
-  const u = new URL(url);
+  let u = new URL(url);
   if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) throw new Fachfehler(422, 'Pakete gibt es nur über HTTPS.');
-  const r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } });
-  if (!r.ok) throw new Fachfehler(502, `${url}: ${r.status} ${r.statusText}`.trim());
-  const b = Buffer.from(await r.arrayBuffer());
-  if (b.length > max) throw new Fachfehler(422, 'Die Datei ist zu groß.');
-  return b;
+  const signal = AbortSignal.timeout(20000);
+  for (let n = 0; ; n++) {
+    const r = await fetch(u, { signal, redirect: 'manual', headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } });
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
+      await r.body?.cancel().catch(() => {});
+      if (n >= WEITERLEITUNGEN_MAX) throw new Fachfehler(502, t('pakete.herkunft.fehler.weiterleitungen', { url }));
+      const ziel = new URL(r.headers.get('location')!, u);
+      if (ziel.protocol !== 'https:') throw new Fachfehler(502, t('pakete.herkunft.fehler.weiterleitung', { url, ziel: ziel.href }));
+      u = ziel;
+      continue;
+    }
+    if (!r.ok) throw new Fachfehler(502, `${url}: ${r.status} ${r.statusText}`.trim());
+    const b = Buffer.from(await r.arrayBuffer());
+    if (b.length > max) throw new Fachfehler(422, 'Die Datei ist zu groß.');
+    return b;
+  }
 }
 
 /** Wer handelt: Id für „angelegt von“, E-Mail fürs Protokoll. */
 export interface Handelnder { id: string | null; email: string | null }
 
 /** Eine Katalogquelle: der offizielle Katalog oder eine weitere Adresse (erweiterte Ansicht, #189). */
-export interface Quelle { url: string; offiziell: boolean; aktiv: boolean; von?: string | null; am?: string }
+export interface Quelle {
+  url: string; offiziell: boolean; aktiv: boolean; von?: string | null; am?: string;
+  /** Bestätigter Schlüssel des Anbieters (#594); null: Katalog ohne Schlüssel. */
+  fingerabdruck?: string | null;
+  /** Gesperrt, weil sich der Schlüssel geändert hat – bis ein Admin den neuen bestätigt (#594). */
+  gesperrt?: { fingerabdruck: string; seit: string } | null;
+}
 /** Ergebnis je Quelle beim Abrufen. */
-export interface Abruf { url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null }
+export interface Abruf { url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null; pruefung?: HerkunftPruefung | null }
 
 /** Ein hochgeladenes, geprüftes Paket, bis es installiert wird (höchstens 30 Minuten). */
-interface Hochgeladen { paket: Paket; von: Handelnder; am: string; zeit: number }
+interface Hochgeladen { paket: Paket; von: Handelnder; am: string; zeit: number; pruefung: HerkunftPruefung }
+
+const TAG_MS = 86_400_000;
+/** Datei neben einem Katalog, z. B. katalog.sig neben katalog.json. */
+const daneben = (url: string, datei: string) => new URL(datei, url).href;
 const UPLOAD_GUELTIG = 30 * 60_000;
 
 /* ---------- Sammeldatei (#461) ---------- */
@@ -509,7 +543,7 @@ export function liesSammelVerzeichnis(roh: Buffer | undefined): SammelVerzeichni
 /** Ein Paket der Sammeldatei, geprüft und zum Installieren bereit (Upload-Kennung wie beim einzelnen Hochladen). */
 export interface SammelPaket {
   upload: string; id: string; name: string; version: string; gewaehlt: boolean; abhaengigkeiten: Record<string, string>;
-  /** Prüfsumme gegen den offiziellen Katalog: gleich, oder unbekannt (Katalog nicht abgerufen bzw. Version nicht darin). */
+  /** Prüfsumme gegen den offiziellen Katalog (abgerufen oder signiert in der Sammeldatei): gleich, oder unbekannt. */
   katalog: 'gleich' | 'unbekannt';
   /** Gegenüber dem installierten Paket. */
   stand: 'neu' | 'neuer' | 'gleich' | 'aelter';
@@ -517,13 +551,28 @@ export interface SammelPaket {
   vorschau: Vorschau;
 }
 export interface Sammeldatei {
-  datei: { sha256: string; groesse: number; erstellt: string; quelle: string; katalog: string; dms: string | null };
+  datei: {
+    sha256: string; groesse: number; erstellt: string; quelle: string; katalog: string; dms: string | null;
+    /** Herkunft (#594): mit gültig signiertem offiziellem Katalog in der Datei keine Bestätigung nötig. */
+    pruefung: HerkunftPruefung;
+    /** Pakete, die nicht im signierten Katalog der Sammeldatei stehen (für sie bleibt die Bestätigung). */
+    nichtImKatalog: string[];
+  };
   /** In der Reihenfolge zum Installieren: Abhängigkeiten zuerst. */
   pakete: SammelPaket[];
 }
+/** Der Katalog mit Signatur in einer Sammeldatei (motom001/dms-registry#74). */
+const SAMMEL_KATALOG = 'katalog.json';
+
+const mitPruefung = (v: Vorschau, pruefung: HerkunftPruefung): Vorschau => ({ ...v, pruefung });
+const zeitText = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
+/** Herkunft nicht bestätigt (#189, #594). */
+const herkunftFehler = (p: HerkunftPruefung) => new Fachfehler(409, p.art === 'ungueltig'
+  ? t('pakete.herkunft.fehler.ungueltig')
+  : 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom DMS-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
 
 export class Paketverwaltung {
-  private kataloge = new Map<string, { katalog: Katalog; zeit: number }>();
+  private kataloge = new Map<string, { katalog: Katalog; pruefung: HerkunftPruefung; zeit: number }>();
   private uploads = new Map<string, Hochgeladen>();
 
   constructor(private d: Dienst, private o: PaketOptionen) {}
@@ -543,10 +592,28 @@ export class Paketverwaltung {
   /** Offizieller Katalog und weitere Adressen aus den Einstellungen. */
   async quellen(): Promise<Quelle[]> {
     const weitere = (await this.d.paketQuellen()).filter((q) => q.url !== this.katalogUrl);
-    return [{ url: this.katalogUrl, offiziell: true, aktiv: true }, ...weitere.map((q) => ({ ...q, offiziell: false }))];
+    return [{ url: this.katalogUrl, offiziell: true, aktiv: true }, ...weitere.map(({ schluessel, gesperrt, ...q }) => ({
+      ...q, offiziell: false, fingerabdruck: schluessel?.fingerabdruck ?? null, gesperrt: gesperrt ? { fingerabdruck: gesperrt.fingerabdruck, seit: gesperrt.am } : null,
+    }))];
   }
 
-  async quelleHinzufuegen(e: { url?: unknown }, von: Handelnder): Promise<Quelle[]> {
+  /** Öffentlicher Schlüssel neben einem Katalog (katalog.schluessel, #594); null, wenn keiner abrufbar ist. */
+  private async schluesselVon(url: string): Promise<{ s: Schluessel; roh: Buffer } | null> {
+    let roh: Buffer;
+    try { roh = await this.abruf(daneben(url, SCHLUESSEL_DATEI)); } catch { return null; }
+    try {
+      if (roh.length > SIGNATUR_MAX) throw new Error(`größer als ${SIGNATUR_MAX} Bytes`);
+      return { s: liesSchluessel(roh.toString('utf8')), roh };
+    } catch (e) { throw new Fachfehler(422, t('pakete.herkunft.fehler.schluesseldatei', { url, grund: (e as Error).message })); }
+  }
+
+  /** Fingerabdruck muss genau der sein, den der Admin gesehen und bestätigt hat (wie beim ersten Kontakt mit SSH). */
+  private static fingerabdruckBestaetigt(k: Schluessel, e: { fingerabdruck?: unknown }) {
+    if (String(e.fingerabdruck ?? '') === k.fingerabdruck) return;
+    throw new Fachfehler(409, t(e.fingerabdruck ? 'pakete.herkunft.fehler.schluessel.anders' : 'pakete.herkunft.fehler.schluessel.bestaetigen'), { schluessel: true, fingerabdruck: k.fingerabdruck });
+  }
+
+  async quelleHinzufuegen(e: { url?: unknown; fingerabdruck?: unknown }, von: Handelnder): Promise<Quelle[]> {
     let u: URL;
     try { u = new URL(String(e.url ?? '').trim()); } catch { throw new Fachfehler(422, 'Bitte eine vollständige Adresse eingeben, z. B. https://example.org/katalog.json.'); }
     if (u.protocol !== 'https:') throw new Fachfehler(422, 'Kataloge gehen nur über HTTPS.');
@@ -554,9 +621,35 @@ export class Paketverwaltung {
     const liste = await this.d.paketQuellen();
     if (url === this.katalogUrl || liste.some((q) => q.url === url)) throw new Fachfehler(409, 'Diese Adresse ist schon eingetragen.');
     if (liste.length >= 20) throw new Fachfehler(422, 'Höchstens 20 weitere Kataloge.');
-    await this.d.setzePaketQuellen([...liste, { url, aktiv: true, von: von.email, am: new Date().toISOString() }]);
-    log.warn('Paketquelle hinzugefügt', { von: von.email, url });
+    // Eigener Schlüssel (#594): nur nach Bestätigung des Fingerabdrucks, nie stillschweigend.
+    const k = await this.schluesselVon(url);
+    if (k) Paketverwaltung.fingerabdruckBestaetigt(k.s, e);
+    const am = new Date().toISOString();
+    await this.d.setzePaketQuellen([...liste, { url, aktiv: true, von: von.email, am, ...(k ? { schluessel: { pem: k.s.pem, fingerabdruck: k.s.fingerabdruck, von: von.email, am } } : {}) }]);
+    log.warn('Paketquelle hinzugefügt', { von: von.email, url, schluessel: k ? k.s.fingerabdruck : 'ohne Schlüssel' });
     return this.quellen();
+  }
+
+  /**
+   * Schlüssel eines eigenen Katalogs bestätigen (#594): nach einer Sperre (Schlüssel geändert) oder wenn der
+   * Anbieter erst später einen Schlüssel veröffentlicht. Ohne passenden Fingerabdruck: 409 mit dem Fingerabdruck.
+   */
+  async quelleSchluessel(e: { url?: unknown; fingerabdruck?: unknown }, von: Handelnder): Promise<Quelle[]> {
+    const url = String(e.url ?? '');
+    const q = (await this.d.paketQuellen()).find((x) => x.url === url);
+    if (!q) throw new Fachfehler(404, 'Diese Quelle gibt es nicht.');
+    const k = await this.schluesselVon(url);
+    if (!k) throw new Fachfehler(404, t('pakete.herkunft.fehler.keinschluessel', { url }));
+    Paketverwaltung.fingerabdruckBestaetigt(k.s, e);
+    await this.aendereQuelle(url, { schluessel: { pem: k.s.pem, fingerabdruck: k.s.fingerabdruck, von: von.email, am: new Date().toISOString() }, gesperrt: null });
+    this.kataloge.delete(url);
+    log.warn('Katalogschlüssel bestätigt', { von: von.email, url, schluessel: k.s.fingerabdruck, vorher: q.schluessel?.fingerabdruck ?? 'ohne Schlüssel' });
+    return this.quellen();
+  }
+
+  private async aendereQuelle(url: string, aenderung: Partial<PaketQuelleEintrag>) {
+    const liste = await this.d.paketQuellen();
+    await this.d.setzePaketQuellen(liste.map((q) => (q.url === url ? { ...q, ...aenderung } : q)));
   }
 
   async quelleSchalten(e: { url?: unknown; aktiv?: unknown }, von: Handelnder): Promise<Quelle[]> {
@@ -589,21 +682,92 @@ export class Paketverwaltung {
   /* ---------- Katalog ---------- */
 
   /** Einen Katalog abrufen – nur auf Knopfdruck (bzw. für Vorschau und Installation). */
-  async katalog(url?: string): Promise<{ url: string; katalog: Katalog; abgerufen: string }> {
+  async katalog(url?: string): Promise<{ url: string; katalog: Katalog; pruefung: HerkunftPruefung; abgerufen: string }> {
     const u = await this.erlaubt(url);
-    let katalog: Katalog;
-    try { katalog = liesKatalog(JSON.parse((await this.abruf(u)).toString('utf8'))); }
+    let daten: Buffer, katalog: Katalog;
+    try { daten = await this.abruf(u); katalog = liesKatalog(JSON.parse(daten.toString('utf8'))); }
     catch (e) { throw new Fachfehler(502, `Der Katalog lässt sich nicht abrufen: ${(e as Error).message}`); }
-    this.kataloge.set(u, { katalog, zeit: Date.now() });
-    return { url: u, katalog, abgerufen: new Date().toISOString() };
+    const pruefung = await this.pruefeKatalog(u, daten, katalog);
+    this.kataloge.set(u, { katalog, pruefung, zeit: Date.now() });
+    return { url: u, katalog, pruefung, abgerufen: new Date().toISOString() };
+  }
+
+  /**
+   * Signatur eines abgerufenen Katalogs (#594). Offizieller Katalog: mit einem der beiden Projektschlüssel;
+   * fehlt die Signatur, nur Warnung (Stufe 1), ist sie ungültig, Bestätigung wie bei fremden Quellen.
+   * Eigener Katalog mit bestätigtem Schlüssel: gültige Signatur Pflicht; neuer Schlüssel nur, wenn er mit dem
+   * alten signiert ist – sonst ist der Katalog gesperrt, bis ein Admin den neuen bestätigt.
+   */
+  private async pruefeKatalog(url: string, daten: Buffer, katalog: Katalog): Promise<HerkunftPruefung> {
+    const sig = await this.abruf(daneben(url, SIGNATUR_DATEI)).catch(() => null);
+    if (url === this.katalogUrl) {
+      if (!sig) { log.info('Offizieller Katalog ohne Signatur', { url }); return { art: 'unsigniert', offiziell: true, bestaetigen: false }; }
+      const r = pruefeSignatur(daten, sig, projektSchluessel(this.o.projektSchluessel));
+      const stand = r.ok ? await this.stand(url, katalog, true) : null;
+      if (!r.ok || !stand) {
+        log.warn('Katalogsignatur ungültig', { url, grund: r.ok ? 'ohne Zeitpunkt (erstellt)' : r.grund });
+        return { art: 'ungueltig', offiziell: true, bestaetigen: true };
+      }
+      return { art: 'projekt', offiziell: true, stand, ...(nurTestschluessel(this.o.projektSchluessel) ? { test: true } : {}), bestaetigen: false };
+    }
+    const q = (await this.d.paketQuellen()).find((x) => x.url === url);
+    if (!q?.schluessel) return { art: 'unsigniert', offiziell: false, bestaetigen: true };
+    if (q.gesperrt) throw new Fachfehler(409, t('pakete.herkunft.fehler.gesperrt', { url, fingerabdruck: q.gesperrt.fingerabdruck }), { gesperrt: true });
+    let schluessel = liesSchluessel(q.schluessel.pem);
+    let wechsel = false;
+    let r: ReturnType<typeof pruefeSignatur> = sig ? pruefeSignatur(daten, sig, [schluessel]) : { ok: false, grund: `${SIGNATUR_DATEI} fehlt` };
+    if (!r.ok) {
+      // Passt die Signatur nicht, hat der Anbieter vielleicht den Schlüssel gewechselt.
+      const neu = await this.schluesselVon(url).catch(() => null);
+      if (neu && neu.s.fingerabdruck !== schluessel.fingerabdruck) {
+        const eintrag = { pem: neu.s.pem, fingerabdruck: neu.s.fingerabdruck, von: null, am: new Date().toISOString() };
+        const w = await this.abruf(daneben(url, WECHSEL_DATEI)).catch(() => null);
+        if (!w || !pruefeSignatur(neu.roh, w, [schluessel]).ok) {
+          await this.aendereQuelle(url, { gesperrt: eintrag });
+          this.kataloge.delete(url);
+          log.warn('Katalogschlüssel geändert – Katalog gesperrt, bis ein Admin den neuen Schlüssel bestätigt', { url, bisher: schluessel.fingerabdruck, neu: neu.s.fingerabdruck });
+          throw new Fachfehler(409, t('pakete.herkunft.fehler.gesperrt', { url, fingerabdruck: neu.s.fingerabdruck }), { gesperrt: true });
+        }
+        // Geordneter Wechsel: Der neue Schlüssel ist mit dem alten signiert.
+        await this.aendereQuelle(url, { schluessel: eintrag, gesperrt: null });
+        log.warn('Katalogschlüssel geordnet gewechselt (neuer Schlüssel mit dem bisherigen signiert)', { url, bisher: schluessel.fingerabdruck, neu: neu.s.fingerabdruck });
+        schluessel = neu.s;
+        wechsel = true;
+        if (sig) r = pruefeSignatur(daten, sig, [schluessel]);
+      }
+    }
+    const stand = r.ok ? await this.stand(url, katalog, true) : null;
+    if (!r.ok || !stand) {
+      const grund = r.ok ? 'ohne Zeitpunkt (erstellt)' : r.grund;
+      log.warn('Katalogsignatur ungültig', { url, grund });
+      throw new Fachfehler(502, t('pakete.herkunft.fehler.signatur', { url, grund }));
+    }
+    return { art: 'anbieter', offiziell: false, stand, fingerabdruck: schluessel.fingerabdruck, ...(wechsel ? { wechsel: true } : {}), bestaetigen: false };
+  }
+
+  /**
+   * Stand (`erstellt`) eines gültig signierten Katalogs gegen den neuesten bisher gesehenen (#594). Online lehnt
+   * das DMS ältere ab – sie könnten untergeschoben sein; offline (Sammeldatei) zeigt es nur den Stand.
+   */
+  private async stand(url: string, katalog: Katalog, online: boolean): Promise<string | null> {
+    const zeit = zeitVon(katalog.erstellt);
+    if (Number.isNaN(zeit)) return null;
+    const gesehen = (await this.d.paketKatalogStaende())[url];
+    if (gesehen && zeit < zeitVon(gesehen)) {
+      if (!online) return katalog.erstellt;
+      log.warn('Älterer signierter Katalog abgelehnt', { url, stand: katalog.erstellt, gesehen });
+      throw new Fachfehler(502, t('pakete.herkunft.fehler.zurueck', { url, stand: zeitText(katalog.erstellt), gesehen: zeitText(gesehen) }));
+    }
+    if (!gesehen || zeit > zeitVon(gesehen)) await this.d.setzePaketKatalogStand(url, katalog.erstellt);
+    return katalog.erstellt;
   }
 
   /** Normale Ansicht: nur der offizielle Katalog; erweiterte Ansicht: auch die eingeschalteten weiteren. */
   async abrufen(alle: boolean): Promise<{ kataloge: Abruf[]; abgerufen: string }> {
     const quellen = (await this.quellen()).filter((q) => q.offiziell || (alle && q.aktiv));
     const kataloge = await Promise.all(quellen.map(async (q): Promise<Abruf> => {
-      try { return { url: q.url, offiziell: q.offiziell, katalog: (await this.katalog(q.url)).katalog, fehler: null }; }
-      catch (e) { return { url: q.url, offiziell: q.offiziell, katalog: null, fehler: (e as Error).message }; }
+      try { const k = await this.katalog(q.url); return { url: q.url, offiziell: q.offiziell, katalog: k.katalog, pruefung: k.pruefung, fehler: null }; }
+      catch (e) { return { url: q.url, offiziell: q.offiziell, katalog: null, pruefung: null, fehler: (e as Error).message }; }
     }));
     return { kataloge, abgerufen: new Date().toISOString() };
   }
@@ -612,9 +776,9 @@ export class Paketverwaltung {
   private async aktuellerKatalog(url?: string) {
     const u = await this.erlaubt(url);
     const k = this.kataloge.get(u);
-    if (k && Date.now() - k.zeit < 15 * 60_000) return { url: u, katalog: k.katalog };
+    if (k && Date.now() - k.zeit < 15 * 60_000) return { url: u, katalog: k.katalog, pruefung: k.pruefung };
     const neu = await this.katalog(u);
-    return { url: neu.url, katalog: neu.katalog };
+    return { url: neu.url, katalog: neu.katalog, pruefung: neu.pruefung };
   }
 
   /** Installierte Pakete; mit „Einstellungen nötig“, wenn Pflichtfelder fehlen (#197). */
@@ -625,8 +789,8 @@ export class Paketverwaltung {
   }
 
   /** Paket einer Version aus einem Katalog holen und gegen die Prüfsumme prüfen. */
-  async lade(id: string, version?: string, quelle?: string): Promise<{ paket: Paket; kp: KatalogPaket; v: KatalogVersion; url: string; katalog: Katalog }> {
-    const { katalog, url } = await this.aktuellerKatalog(quelle);
+  async lade(id: string, version?: string, quelle?: string): Promise<{ paket: Paket; kp: KatalogPaket; v: KatalogVersion; url: string; katalog: Katalog; pruefung: HerkunftPruefung }> {
+    const { katalog, url, pruefung } = await this.aktuellerKatalog(quelle);
     const kp = katalog.pakete.find((p) => p.id === id);
     if (!kp) throw new Fachfehler(404, `Das Paket „${id}“ gibt es im Katalog nicht.`);
     const v = version ? kp.versionen.find((x) => x.version === version) : kp.versionen.find((x) => x.version === kp.aktuell) ?? kp.versionen[0];
@@ -637,21 +801,27 @@ export class Paketverwaltung {
     if (createHash('sha256').update(daten).digest('hex') !== v.sha256) throw new Fachfehler(422, `Die Prüfsumme von „${kp.name}“ ${v.version} passt nicht zum Katalog. Das Paket wird nicht installiert.`);
     const paket = liesPaket(liesZip(daten));
     if (paket.manifest.id !== id || paket.manifest.version !== v.version) throw new Fachfehler(422, `Das Archiv enthält ${paket.manifest.id} ${paket.manifest.version} statt ${id} ${v.version}.`);
-    return { paket, kp, v, url, katalog };
+    return { paket, kp, v, url, katalog, pruefung };
   }
 
   /* ---------- Hochladen (#189) ---------- */
 
-  /** Paket als Datei: dieselbe Prüfung wie bei Katalogpaketen, nur ohne Prüfsumme aus dem Katalog. */
+  /**
+   * Paket als Datei: dieselbe Prüfung wie bei Katalogpaketen, nur ohne Prüfsumme aus dem Katalog. Steht die
+   * Prüfsumme im (schon abgerufenen) offiziellen Katalog, zeigt die Vorschau die Katalogversion (#594).
+   */
   async hochladen(daten: unknown, von: Handelnder): Promise<{ upload: string; vorschau: Vorschau }> {
     if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte eine .zip-Datei hochladen.');
     if (daten.length > ARCHIV_MAX) throw new Fachfehler(422, 'Die Datei ist zu groß (höchstens 10 MB).');
     const paket = liesPaket(liesZip(daten));
+    const sha256 = createHash('sha256').update(daten).digest('hex');
+    const kv = this.kataloge.get(this.katalogUrl)?.katalog.pakete.find((p) => p.id === paket.manifest.id)?.versionen.find((v) => v.sha256 === sha256);
+    const pruefung: HerkunftPruefung = { art: 'datei', offiziell: false, ...(kv ? { katalogversion: kv.version } : {}), bestaetigen: true };
     for (const [k, u] of this.uploads) if (Date.now() - u.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
     const upload = randomUUID();
-    this.uploads.set(upload, { paket, von, am: new Date().toISOString(), zeit: Date.now() });
-    log.warn('Paket hochgeladen', { von: von.email, paket: paket.manifest.id, version: paket.manifest.version, bytes: daten.length });
-    return { upload, vorschau: await this.plane(paket, undefined, await this.offiziell().catch(() => undefined)) };
+    this.uploads.set(upload, { paket, von, am: new Date().toISOString(), zeit: Date.now(), pruefung });
+    log.warn('Paket hochgeladen', { von: von.email, paket: paket.manifest.id, version: paket.manifest.version, bytes: daten.length, sha256, katalog: kv ? `entspricht ${kv.version}` : 'nicht abgeglichen' });
+    return { upload, vorschau: mitPruefung(await this.plane(paket, undefined, await this.offiziell().catch(() => undefined)), pruefung) };
   }
 
   /** Hochgeladene Datei (#461): eine Sammeldatei erkennt das DMS an sammeldatei.json, sonst ein einzelnes Paket. */
@@ -663,19 +833,41 @@ export class Paketverwaltung {
   }
 
   /**
+   * Der offizielle Katalog in einer Sammeldatei (#594): katalog.json mit katalog.sig, gültig signiert mit einem
+   * Projektschlüssel. Ohne beides: unsigniert; mit ungültiger Signatur: ungültig (steht im Protokoll).
+   */
+  private eingebettet(dateien: Map<string, Buffer>): { katalog: Katalog | null; pruefung: HerkunftPruefung } {
+    const kj = dateien.get(SAMMEL_KATALOG), ks = dateien.get(SIGNATUR_DATEI);
+    if (!kj || !ks) return { katalog: null, pruefung: { art: 'unsigniert', offiziell: false, bestaetigen: true } };
+    const r = pruefeSignatur(kj, ks, projektSchluessel(this.o.projektSchluessel));
+    let katalog: Katalog | null = null;
+    if (r.ok) { try { katalog = liesKatalog(JSON.parse(kj.toString('utf8'))); } catch { katalog = null; } }
+    const zeit = katalog ? zeitVon(katalog.erstellt) : NaN;
+    if (!r.ok || !katalog || Number.isNaN(zeit)) {
+      log.warn('Katalogsignatur in einer Sammeldatei ungültig', { grund: r.ok ? 'Katalog nicht lesbar oder ohne Zeitpunkt (erstellt)' : r.grund });
+      return { katalog: null, pruefung: { art: 'ungueltig', offiziell: false, bestaetigen: true } };
+    }
+    const alt = Date.now() - zeit > KATALOG_ALT_TAGE * TAG_MS;
+    return { katalog, pruefung: { art: 'projekt', offiziell: true, stand: katalog.erstellt, ...(alt ? { alt: true } : {}), ...(nurTestschluessel(this.o.projektSchluessel) ? { test: true } : {}), bestaetigen: false } };
+  }
+
+  /**
    * Sammeldatei prüfen (#461) – alles oder nichts: Verzeichnis, nur erwartete Dateien, je Archiv Größe und
-   * SHA-256 wie im Verzeichnis, und gegen den offiziellen Katalog, falls er schon abgerufen ist (keine neue
-   * Verbindung). Danach jedes Paket mit denselben Prüfungen wie ein einzeln hochgeladenes (liesPaket).
-   * Installiert wird nichts; jedes Paket bekommt eine Upload-Kennung und wird einzeln installiert.
+   * SHA-256 wie im Verzeichnis, gegen den signierten Katalog in der Datei (#594) und gegen den offiziellen
+   * Katalog, falls er schon abgerufen ist (keine neue Verbindung). Danach jedes Paket mit denselben Prüfungen
+   * wie ein einzeln hochgeladenes (liesPaket). Installiert wird nichts; jedes Paket bekommt eine
+   * Upload-Kennung und wird einzeln installiert.
    */
   async sammeldatei(daten: Buffer, von: Handelnder): Promise<Sammeldatei> {
-    const dateien = liesZip(daten, { dateien: SAMMEL_PAKETE_MAX + 2, entpackt: SAMMEL_MAX });
+    const dateien = liesZip(daten, { dateien: SAMMEL_PAKETE_MAX + 4, entpackt: SAMMEL_MAX });
     const vz = liesSammelVerzeichnis(dateien.get(SAMMEL_VERZEICHNIS));
     const gruende: string[] = [];
-    const erwartet = new Set([SAMMEL_VERZEICHNIS, SAMMEL_LIESMICH, ...vz.pakete.map((p) => p.archiv)]);
+    const erwartet = new Set([SAMMEL_VERZEICHNIS, SAMMEL_LIESMICH, SAMMEL_KATALOG, SIGNATUR_DATEI, ...vz.pakete.map((p) => p.archiv)]);
     for (const n of dateien.keys()) if (!erwartet.has(n)) gruende.push(`${n}: steht nicht im Verzeichnis der Sammeldatei.`);
     const katalog = await this.offiziell();
-    const imKatalog = (e: SammelEintrag) => katalog?.pakete.find((p) => p.id === e.id)?.versionen.find((v) => v.version === e.version);
+    const signiert = this.eingebettet(dateien);
+    const version = (k: Katalog | null | undefined, e: SammelEintrag) => k?.pakete.find((p) => p.id === e.id)?.versionen.find((v) => v.version === e.version);
+    const imKatalog = (e: SammelEintrag) => version(katalog, e);
     for (const e of vz.pakete) {
       const a = dateien.get(e.archiv);
       if (!a) { gruende.push(`${e.archiv} fehlt.`); continue; }
@@ -683,6 +875,8 @@ export class Paketverwaltung {
       else if (createHash('sha256').update(a).digest('hex') !== e.sha256) gruende.push(`${e.name} ${e.version}: Die Prüfsumme passt nicht zum Verzeichnis.`);
       const kv = imKatalog(e);
       if (kv && kv.sha256 !== e.sha256) gruende.push(`${e.name} ${e.version}: Die Prüfsumme passt nicht zum offiziellen Katalog.`);
+      const sv = version(signiert.katalog, e);
+      if (sv && sv.sha256 !== e.sha256) gruende.push(t('pakete.herkunft.fehler.sammel', { name: e.name, version: e.version }));
     }
     if (gruende.length) throw new Fachfehler(422, 'Die Sammeldatei ist beschädigt oder verändert. Es wird nichts installiert.', { gruende });
     const budget = { rest: SAMMEL_ENTPACKT_MAX };
@@ -698,24 +892,36 @@ export class Paketverwaltung {
     });
     const reihenfolge = nachAbhaengigkeiten(gelesen);
     if (!reihenfolge) throw new Fachfehler(422, 'Die Abhängigkeiten der Pakete in der Sammeldatei bilden einen Kreis. Es wird nichts installiert.');
+    // Gültig signierter Stand: merken, wenn er neuer ist (ohne Internet wird nichts abgelehnt, nur angezeigt).
+    if (signiert.katalog) await this.stand(this.katalogUrl, signiert.katalog, false);
     for (const [k, u] of this.uploads) if (Date.now() - u.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
     const am = new Date().toISOString();
     const installierte = await this.d.listePakete();
     const pakete: SammelPaket[] = [];
+    const nichtImKatalog: string[] = [];
     for (const { e, paket } of reihenfolge) {
       const upload = randomUUID();
-      this.uploads.set(upload, { paket, von, am, zeit: Date.now() });
+      // Herkunft je Paket: aus dem signierten Katalog nur, wenn es mit genau dieser Prüfsumme darin steht.
+      const drin = !!version(signiert.katalog, e);
+      if (signiert.katalog && !drin) nichtImKatalog.push(`${paket.manifest.name} ${e.version}`);
+      const pruefung: HerkunftPruefung = drin ? signiert.pruefung : signiert.katalog ? { art: 'datei', offiziell: false, bestaetigen: true } : signiert.pruefung;
+      this.uploads.set(upload, { paket, von, am, zeit: Date.now(), pruefung });
       const da = installierte.find((p) => p.id === e.id)?.version ?? null;
       const c = da ? vergleicheVersion(e.version, da) : 1;
       pakete.push({
         upload, id: e.id, name: paket.manifest.name, version: e.version, gewaehlt: e.gewaehlt, abhaengigkeiten: paket.manifest.abhaengigkeiten,
-        katalog: imKatalog(e) ? 'gleich' : 'unbekannt', installiert: da, stand: !da ? 'neu' : c > 0 ? 'neuer' : c === 0 ? 'gleich' : 'aelter',
-        vorschau: await this.plane(paket, undefined, katalog),
+        katalog: imKatalog(e) || drin ? 'gleich' : 'unbekannt', installiert: da, stand: !da ? 'neu' : c > 0 ? 'neuer' : c === 0 ? 'gleich' : 'aelter',
+        vorschau: mitPruefung(await this.plane(paket, undefined, katalog ?? signiert.katalog ?? undefined), pruefung),
       });
     }
     const sha256 = createHash('sha256').update(daten).digest('hex');
-    log.warn('Sammeldatei hochgeladen', { von: von.email, sha256, bytes: daten.length, pakete: pakete.map((p) => `${p.id}@${p.version}`).join(', '), katalog: pakete.every((p) => p.katalog === 'gleich') ? 'abgeglichen' : 'nicht abgeglichen' });
-    return { datei: { sha256, groesse: daten.length, erstellt: vz.erstellt, quelle: vz.quelle, katalog: vz.katalog, dms: vz.dms }, pakete };
+    const pruefung: HerkunftPruefung = { ...signiert.pruefung, bestaetigen: pakete.some((p) => p.vorschau.pruefung?.bestaetigen) };
+    log.warn('Sammeldatei hochgeladen', {
+      von: von.email, sha256, bytes: daten.length, pakete: pakete.map((p) => `${p.id}@${p.version}`).join(', '),
+      katalog: pakete.every((p) => p.katalog === 'gleich') ? 'abgeglichen' : 'nicht abgeglichen',
+      signatur: signiert.katalog ? `offizieller Katalog vom ${signiert.katalog.erstellt}${nichtImKatalog.length ? `, nicht darin: ${nichtImKatalog.join(', ')}` : ''}` : signiert.pruefung.art,
+    });
+    return { datei: { sha256, groesse: daten.length, erstellt: vz.erstellt, quelle: vz.quelle, katalog: vz.katalog, dms: vz.dms, pruefung, nichtImKatalog }, pakete };
   }
 
   private hochgeladen(token: unknown): Hochgeladen {
@@ -729,11 +935,11 @@ export class Paketverwaltung {
 
   /* ---------- Vorschau und Installation ---------- */
 
-  /** Vorschau: was angelegt bzw. ergänzt wird, Namenskonflikte, Version und Abhängigkeiten. */
+  /** Vorschau: was angelegt bzw. ergänzt wird, Namenskonflikte, Version und Abhängigkeiten, Herkunft (#594). */
   async vorschau(e: { id?: string; version?: string; quelle?: string; upload?: string }): Promise<Vorschau> {
-    if (e.upload) return this.plane(this.hochgeladen(e.upload).paket, undefined, await this.offiziell());
-    const { paket, v, katalog } = await this.lade(String(e.id), e.version ? String(e.version) : undefined, e.quelle ? String(e.quelle) : undefined);
-    return this.plane(paket, v, katalog);
+    if (e.upload) { const u = this.hochgeladen(e.upload); return mitPruefung(await this.plane(u.paket, undefined, await this.offiziell()), u.pruefung); }
+    const { paket, v, katalog, pruefung } = await this.lade(String(e.id), e.version ? String(e.version) : undefined, e.quelle ? String(e.quelle) : undefined);
+    return mitPruefung(await this.plane(paket, v, katalog), pruefung);
   }
 
   private async plane(paket: Paket, v?: KatalogVersion, katalog?: Katalog, namen: Record<string, string> = {}, sichtNamen: Record<string, string> = {}): Promise<Vorschau> {
@@ -821,6 +1027,7 @@ export class Paketverwaltung {
       paket: { id: m.id, name: m.name, version: m.version, beschreibung: m.beschreibung, lizenz: m.lizenz, autor: m.autor, dms: m.dms, abhaengigkeiten: m.abhaengigkeiten, readme: v?.readme ?? null, changelog: v?.changelog ?? null, quelle: v?.quelle ?? null },
       dmsVersion, dmsOk, installiert: ich?.version ?? null, update: !!ich,
       herkunft: ich?.herkunft ?? null,
+      pruefung: null,
       abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, probleme, hinweise,
       einstellungen: paket.einstellungen || ich?.einstellungen ? einstellungsAenderung(ich?.einstellungen ?? null, paket.einstellungen) : null,
       laeufer: paket.code ? { rechte: rechtePunkte(paket.code.info, (vw) => this.typName(vw, paket, installierte, typen)), bestaetigen: !ich || !gleicheRechte(ich.laeufer, paket.code.info) } : null,
@@ -850,10 +1057,9 @@ export class Paketverwaltung {
   async installiere(e: InstallierenEingabe, von: Handelnder): Promise<InstalliertesPaket> {
     const hoch = e.upload ? this.hochgeladen(e.upload) : null;
     const quelle = hoch ? null : await this.erlaubt(e.quelle ? String(e.quelle) : undefined);
-    if ((hoch || quelle !== this.katalogUrl) && e.bestaetigt !== true) {
-      throw new Fachfehler(409, 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom DMS-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
-    }
-    const geladen = hoch ? { paket: hoch.paket, v: undefined, katalog: await this.offiziell() } : await this.lade(String(e.id ?? ''), e.version ? String(e.version) : undefined, quelle!);
+    const geladen = hoch ? { paket: hoch.paket, v: undefined, katalog: await this.offiziell(), pruefung: hoch.pruefung } : await this.lade(String(e.id ?? ''), e.version ? String(e.version) : undefined, quelle!);
+    // Herkunft (#189, #594): bestätigen, wenn keine gültige Signatur sie belegt.
+    if (geladen.pruefung.bestaetigen && e.bestaetigt !== true) throw herkunftFehler(geladen.pruefung);
     const { paket, v } = geladen;
     const id = paket.manifest.id;
     const alt = (await this.d.listePakete()).find((p) => p.id === id) ?? null;
@@ -886,7 +1092,7 @@ export class Paketverwaltung {
     if (konflikte.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: konflikte.map((x) => `${x.konflikt} Vorschlag: „${x.vorschlag}“.`), konflikte: true });
     const datensatz = await this.lege(paket, herkunft, v, vorschau, e.beispiele === true && !alt, von, alt);
     if (hoch) this.uploads.delete(String(e.upload));
-    log.info(alt ? 'Paket aktualisiert (hochgeladen)' : 'Paket installiert', { von: von.email, paket: id, version: paket.manifest.version, ...(alt ? { vorher: alt.version } : {}), herkunft: hoch ? 'hochgeladen' : quelle, typen: Object.keys(datensatz.typen).length, sichten: Object.keys(datensatz.sichten).length });
+    log.info(alt ? 'Paket aktualisiert (hochgeladen)' : 'Paket installiert', { von: von.email, paket: id, version: paket.manifest.version, ...(alt ? { vorher: alt.version } : {}), herkunft: hoch ? 'hochgeladen' : quelle, pruefung: geladen.pruefung.art + (geladen.pruefung.stand ? ` (Katalog vom ${geladen.pruefung.stand})` : ''), typen: Object.keys(datensatz.typen).length, sichten: Object.keys(datensatz.sichten).length });
     return datensatz;
   }
 
@@ -1103,15 +1309,15 @@ export class Paketverwaltung {
     if (!alt) throw new Fachfehler(404, `„${id}“ ist nicht installiert.`);
     if (alt.herkunft.art !== 'katalog') throw new Fachfehler(409, 'Ein hochgeladenes Paket aktualisierst du durch erneutes Hochladen einer höheren Version.');
     const quelle = await this.erlaubt(alt.herkunft.url);
-    if (quelle !== this.katalogUrl && e.bestaetigt !== true) throw new Fachfehler(409, 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom DMS-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
-    const { paket, v, katalog } = await this.lade(id, e.version ? String(e.version) : undefined, quelle);
+    const { paket, v, katalog, pruefung } = await this.lade(id, e.version ? String(e.version) : undefined, quelle);
+    if (pruefung.bestaetigen && e.bestaetigt !== true) throw herkunftFehler(pruefung);
     const plan = await this.plane(paket, v, katalog);
     const fehlen = plan.abhaengigkeiten.filter((a) => !a.installiert);
     if (fehlen.length) plan.probleme.push(`Es fehlen Pakete: ${fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ')}.`);
     if (plan.probleme.length) throw new Fachfehler(409, plan.probleme[0], { gruende: plan.probleme });
     Paketverwaltung.rechteBestaetigen(plan, e);
     const neu = await this.lege(paket, alt.herkunft, v, plan, false, von, alt);
-    log.info('Paket aktualisiert', { von: von.email, paket: id, vorher: alt.version, version: neu.version, neueTypen: plan.typen.filter((t) => !t.vorhanden && !t.geloescht).length, neueSichten: plan.sichten.filter((s) => !s.vorhanden).length });
+    log.info('Paket aktualisiert', { von: von.email, paket: id, vorher: alt.version, version: neu.version, pruefung: pruefung.art, neueTypen: plan.typen.filter((t) => !t.vorhanden && !t.geloescht).length, neueSichten: plan.sichten.filter((s) => !s.vorhanden).length });
     return neu;
   }
 

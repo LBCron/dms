@@ -3,6 +3,8 @@ import { auswahlMitAbhaengigkeiten, dmsPasst, herkunftText, KATALOG_SEITE, vergl
 import { api, ApiFehler, type PaketVorschau, type Sammeldatei, type SammelPaket } from '../api';
 import { Hilfe } from '../Hilfe';
 import { alsMeldung, MeldungBox, VorschauBlock, type Meldung } from './Pakete';
+import { HerkunftZeile } from './Herkunft';
+import { t } from '../sprache';
 
 /**
  * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog mit Abhängigkeiten, danach Paket für Paket
@@ -16,7 +18,7 @@ export interface Schritt {
   /** Kommt als Abhängigkeit mit (für die Überschrift). */
   fuer?: string[];
   vorschau(): Promise<PaketVorschau>;
-  installieren(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean }): Promise<InstalliertesPaket>;
+  installieren(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean; bestaetigt?: boolean }): Promise<InstalliertesPaket>;
 }
 export type Ergebnis = { schluessel: string; name: string; version: string; art: 'installiert' | 'ausgelassen' };
 
@@ -24,7 +26,7 @@ export type Ergebnis = { schluessel: string; name: string; version: string; art:
 export const VORAUSWAHL = ['texterkennung'];
 
 /** Paket für Paket installieren; danach fertig(ergebnisse). */
-export function Nacheinander({ schritte, warnung, fertig }: { schritte: Schritt[]; warnung?: string | null; fertig(e: Ergebnis[]): void }) {
+export function Nacheinander({ schritte, warnung, fertig, herkunftBestaetigt }: { schritte: Schritt[]; warnung?: string | null; fertig(e: Ergebnis[]): void; herkunftBestaetigt?: boolean }) {
   const [i, setI] = useState(0);
   const [ergebnisse, setErgebnisse] = useState<Ergebnis[]>([]);
   const [vorschau, setVorschau] = useState<PaketVorschau | null>(null);
@@ -60,7 +62,7 @@ export function Nacheinander({ schritte, warnung, fertig }: { schritte: Schritt[
         <div className="knoepfe"><button type="button" className="knopf" onClick={() => setLaden((n) => n + 1)}>Nochmal versuchen</button><button type="button" className="textknopf" onClick={auslassen}>Auslassen</button></div>
       )}
       {vorschau && (
-        <VorschauBlock key={s.schluessel} v={vorschau} warnung={warnung ?? null} abbrechenText="Auslassen" abbrechen={auslassen}
+        <VorschauBlock key={s.schluessel} v={vorschau} warnung={warnung ?? null} abbrechenText="Auslassen" abbrechen={auslassen} herkunftBestaetigt={herkunftBestaetigt}
           titel={`Paket ${i + 1} von ${schritte.length}: ${vorschau.paket.name} ${vorschau.paket.version}${s.fuer?.length ? ` (gebraucht von ${s.fuer.join(', ')})` : ''}`}
           los={async (x) => {
             setMeldung(undefined);
@@ -288,15 +290,18 @@ export function SammeldateiAnsicht({ s, datei, dms, fertig, abbrechen, geaendert
   const [ergebnisse, setErgebnisse] = useState<Ergebnis[]>([]);
   const zuInstallieren = s.pakete.filter((p) => sammelStand(p).installierbar);
   const abgeglichen = s.pakete.every((p) => p.katalog === 'gleich');
+  // Herkunft (#594): Mit gültig signiertem Katalog in der Datei muss sie nur für Pakete bestätigt werden, die nicht darin stehen.
+  const herkunftNoetig = zuInstallieren.some((p) => p.vorschau.pruefung?.bestaetigen !== false);
   const name = (id: string) => s.pakete.find((p) => p.id === id)?.name ?? id;
   const datum = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso || '–' : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
 
   if (phase === 'installieren') return (
     <Nacheinander
+      herkunftBestaetigt={herkunftOk}
       schritte={zuInstallieren.map((p): Schritt => ({
         schluessel: p.upload, name: p.name, version: p.version, fuer: p.gewaehlt ? undefined : s.pakete.filter((x) => p.id in x.abhaengigkeiten).map((x) => x.name),
         vorschau: () => api.paketVorschau({ upload: p.upload }),
-        installieren: async (x) => { const r = await api.paketInstallieren({ upload: p.upload, bestaetigt: true, ...x, mitAbhaengigkeiten: false }); geaendert?.(); return r; },
+        installieren: async (x) => { const r = await api.paketInstallieren({ upload: p.upload, ...x, ...(herkunftOk ? { bestaetigt: true } : {}), mitAbhaengigkeiten: false }); geaendert?.(); return r; },
       }))}
       fertig={(e) => { setErgebnisse(e); setPhase('fertig'); }} />
   );
@@ -313,6 +318,7 @@ export function SammeldateiAnsicht({ s, datei, dms, fertig, abbrechen, geaendert
         <dt>Zusammengestellt</dt><dd>{datum(s.datei.erstellt)}{s.datei.dms ? ` für DMS ${s.datei.dms}` : ''} (dieses DMS: {dms})</dd>
         <dt>Prüfwert der Datei</dt><dd><code className="pd-pruefwert" title={s.datei.sha256}>SHA-256 {s.datei.sha256}</code></dd>
       </dl>
+      <HerkunftZeile p={s.datei.pruefung} sammel />
       <div className="hinweis gut klein"><p><strong>Geprüft:</strong> Jedes Archiv hat genau die Größe und Prüfsumme aus dem Verzeichnis der Sammeldatei, jedes Paket ist gültig, und es liegt nichts anderes darin.
         {abgeglichen ? ' Alle Prüfsummen stimmen außerdem mit dem offiziellen Katalog überein.' : ' Mit dem offiziellen Katalog konnte das DMS sie nicht abgleichen (nicht abgerufen oder ohne Internet).'}</p></div>
       <ul className="pd-liste" aria-label="Pakete in der Sammeldatei">
@@ -331,15 +337,17 @@ export function SammeldateiAnsicht({ s, datei, dms, fertig, abbrechen, geaendert
           );
         })}
       </ul>
-      {zuInstallieren.length > 0 ? (
+      {zuInstallieren.length > 0 && !herkunftNoetig && <div className="hinweis gut klein"><p>{t('pakete.herkunft.sammel.ok')}</p></div>}
+      {zuInstallieren.length > 0 && herkunftNoetig && s.datei.nichtImKatalog.length > 0 && <div className="hinweis info klein"><p>{t('pakete.herkunft.sammel.fehlen', { namen: s.datei.nichtImKatalog.join(', ') })}</p></div>}
+      {zuInstallieren.length > 0 && herkunftNoetig ? (
         <div className="hinweis warn" role="alert">
           <p><strong>Nicht über das Internet vom DMS-Projekt bestätigt.</strong> Die Prüfsummen zeigen, dass die Datei vollständig und seit dem Zusammenstellen unverändert ist – nicht, wer sie zusammengestellt hat. Installiere nur eine Sammeldatei, die du selbst aus dem offiziellen Paketkatalog geladen hast oder deren Herkunft du kennst.</p>
           <label className="haken"><input type="checkbox" checked={herkunftOk} onChange={(e) => setHerkunftOk(e.target.checked)} /><span>Ich weiß, woher die Sammeldatei stammt, und installiere auf eigene Verantwortung.</span></label>
         </div>
-      ) : <p className="leise">In dieser Sammeldatei ist nichts zu installieren.</p>}
+      ) : !zuInstallieren.length ? <p className="leise">In dieser Sammeldatei ist nichts zu installieren.</p> : null}
       <p className="leise klein">Installiert wird Paket für Paket, Abhängigkeiten zuerst. Jedes zeigt vorher, was es anlegt; Pakete mit Code fragen einzeln nach ihren Rechten. Als Herkunft steht danach „hochgeladen von … am …“.</p>
       <div className="knoepfe">
-        <button type="button" className="knopf primaer" disabled={!zuInstallieren.length || !herkunftOk} onClick={() => setPhase('installieren')}>
+        <button type="button" className="knopf primaer" disabled={!zuInstallieren.length || (herkunftNoetig && !herkunftOk)} onClick={() => setPhase('installieren')}>
           {zuInstallieren.length ? `${zuInstallieren.length} ${zuInstallieren.length === 1 ? 'Paket' : 'Pakete'} nacheinander installieren …` : 'Installieren'}
         </button>
         <button type="button" className="textknopf" onClick={abbrechen}>Abbrechen</button>

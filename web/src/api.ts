@@ -9,7 +9,7 @@ import type { UeberfluessigeVariable } from '../../shared/src/umgebungsvariablen
 import type { Abwesenheit, Aufgabe, Ausschnitt, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
-import type { InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
+import type { HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
 import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung } from '../../shared/src/paketerstellung';
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
@@ -596,8 +596,10 @@ export const api = {
   werkbankAnsicht: () => anfrage<WerkbankAnsichtStand>('GET', '/api/werkbank/ansicht'),
   setzeWerkbankAnsicht: (e: { installation?: WerkbankAnsicht; eigene?: EigeneAnsicht }) => anfrage<WerkbankAnsichtStand>('PUT', '/api/werkbank/ansicht', e),
   pakete: () => anfrage<{ installiert: Array<InstalliertesPaket & { einstellungenNoetig?: boolean }>; katalogUrl: string; quellen: PaketQuelle[]; dms: string }>('GET', '/api/werkbank/pakete'),
-  paketKatalog: (alle: boolean) => anfrage<{ kataloge: Array<{ url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null }>; abgerufen: string }>('POST', '/api/werkbank/pakete/katalog', { alle }),
-  paketQuelleHinzu: (url: string) => anfrage<PaketQuelle[]>('POST', '/api/werkbank/pakete/quellen', { url }),
+  paketKatalog: (alle: boolean) => anfrage<{ kataloge: Array<{ url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null; pruefung?: HerkunftPruefung | null }>; abgerufen: string }>('POST', '/api/werkbank/pakete/katalog', { alle }),
+  /** Mit Schlüssel (#594): ohne passenden Fingerabdruck 409 mit details.fingerabdruck zum Bestätigen. */
+  paketQuelleHinzu: (url: string, fingerabdruck?: string) => anfrage<PaketQuelle[]>('POST', '/api/werkbank/pakete/quellen', { url, fingerabdruck }),
+  paketQuelleSchluessel: (url: string, fingerabdruck?: string) => anfrage<PaketQuelle[]>('POST', '/api/werkbank/pakete/quellen/schluessel', { url, fingerabdruck }),
   paketQuelleSchalten: (url: string, aktiv: boolean) => anfrage<PaketQuelle[]>('PUT', '/api/werkbank/pakete/quellen', { url, aktiv }),
   paketQuelleEntfernen: (url: string) => anfrage<PaketQuelle[]>('DELETE', `/api/werkbank/pakete/quellen?${new URLSearchParams({ url })}`),
   /** Ein Paket oder eine Sammeldatei mit mehreren Paketen (#461) – das DMS erkennt es am Inhalt. */
@@ -806,11 +808,19 @@ export interface PaketEinstellungenStand {
 }
 /** Katalogquelle (#189): der offizielle Katalog oder eine weitere Adresse. */
 export interface WerkbankAnsichtStand { installation: WerkbankAnsicht; eingestellt: boolean; eigene: EigeneAnsicht; /** Eingerichtete Bereiche (nur GET). */ benutzt?: string[] }
-export interface PaketQuelle { url: string; offiziell: boolean; aktiv: boolean; von?: string | null; am?: string }
+export interface PaketQuelle {
+  url: string; offiziell: boolean; aktiv: boolean; von?: string | null; am?: string;
+  /** Bestätigter Schlüssel des Anbieters (#594); null: ohne Schlüssel. */
+  fingerabdruck?: string | null;
+  /** Gesperrt nach einem Schlüsselwechsel, bis der neue bestätigt ist (#594). */
+  gesperrt?: { fingerabdruck: string; seit: string } | null;
+}
 /** Vorschau einer Paketinstallation bzw. eines Updates (#188). */
 export interface PaketVorschau {
   paket: { id: string; name: string; version: string; beschreibung: string; lizenz: string; autor: { name: string; github: string }; dms: string; abhaengigkeiten: Record<string, string>; readme: string | null; changelog: string | null; quelle: string | null };
   dmsVersion: string; dmsOk: boolean; installiert: string | null; update: boolean; herkunft: InstalliertesPaket['herkunft'] | null;
+  /** Was die Signatur über die Herkunft sagt (#594). */
+  pruefung?: HerkunftPruefung | null;
   abhaengigkeiten: Array<{ id: string; bereich: string; installiert: string | null; ok: boolean; verfuegbar: string | null }>;
   typen: Array<{ schluessel: string; dmsSchluessel: string; name: string; felder: number; vorhanden: boolean; neueFelder: string[]; neueRegister: string[]; erkennung?: string[]; formate?: string[]; umwandeln?: Array<{ feld: string; aus: string; anzahl: number }>; konflikt: string | null; vorschlag: string | null; geloescht?: boolean }>;
   sichten: Array<{ schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null }>;
@@ -823,7 +833,10 @@ export interface SammelPaket {
   upload: string; id: string; name: string; version: string; gewaehlt: boolean; abhaengigkeiten: Record<string, string>;
   katalog: 'gleich' | 'unbekannt'; stand: 'neu' | 'neuer' | 'gleich' | 'aelter'; installiert: string | null; vorschau: PaketVorschau;
 }
-export interface Sammeldatei { datei: { sha256: string; groesse: number; erstellt: string; quelle: string; katalog: string; dms: string | null }; pakete: SammelPaket[] }
+export interface Sammeldatei {
+  datei: { sha256: string; groesse: number; erstellt: string; quelle: string; katalog: string; dms: string | null; pruefung: HerkunftPruefung; nichtImKatalog: string[] };
+  pakete: SammelPaket[];
+}
 /** Paket-Läufer (#338): Stand je Paket mit Code. */
 export interface PaketlaeuferStand {
   laeuft: boolean; pausiert: boolean; grenzen: { speicherMB: number; sekunden: number; parallel: number };

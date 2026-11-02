@@ -1043,7 +1043,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Paketverwaltung (#188, #189): Kataloge nur auf Knopfdruck; weitere Quellen und Hochladen in der erweiterten Ansicht.
     { methode: 'GET', pfad: '/api/werkbank/pakete', zugang: 'admin', handler: async () => ok({ installiert: await pakete.installierte(), katalogUrl: pakete.katalogUrl, quellen: await pakete.quellen(), dms: eigeneVersion() }) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/katalog', zugang: 'admin', handler: async (a) => ok(await pakete.abrufen((a.body as { alle?: unknown } | null)?.alle === true)) },
-    { methode: 'POST', pfad: '/api/werkbank/pakete/quellen', zugang: 'admin', handler: async (a) => ok(await pakete.quelleHinzufuegen((a.body ?? {}) as { url?: unknown }, wer(a))) },
+    // Eigener Katalog mit Schlüssel (#594): ohne passenden Fingerabdruck 409 mit dem Fingerabdruck zum Bestätigen.
+    { methode: 'POST', pfad: '/api/werkbank/pakete/quellen', zugang: 'admin', handler: async (a) => ok(await pakete.quelleHinzufuegen((a.body ?? {}) as { url?: unknown; fingerabdruck?: unknown }, wer(a))) },
+    { methode: 'POST', pfad: '/api/werkbank/pakete/quellen/schluessel', zugang: 'admin', handler: async (a) => ok(await pakete.quelleSchluessel((a.body ?? {}) as { url?: unknown; fingerabdruck?: unknown }, wer(a))) },
     { methode: 'PUT', pfad: '/api/werkbank/pakete/quellen', zugang: 'admin', handler: async (a) => ok(await pakete.quelleSchalten((a.body ?? {}) as { url?: unknown; aktiv?: unknown }, wer(a))) },
     { methode: 'DELETE', pfad: '/api/werkbank/pakete/quellen', zugang: 'admin', handler: async (a) => ok(await pakete.quelleEntfernen(String(a.query.url ?? ''), wer(a))) },
     // Paket selbst erstellen (#374): Auswahl, Prüfung, Export als .zip im Format der Registry.
