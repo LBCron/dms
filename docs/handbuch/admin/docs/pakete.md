@@ -65,7 +65,7 @@ Das DMS-Projekt **signiert** den offiziellen Katalog (ab DMS 0.141.0). Weil der 
 
 **Älterer Katalog:** Das DMS merkt sich, welchen Stand des Katalogs es zuletzt signiert gesehen hat. Bekommt es danach online einen **älteren** signierten Katalog, nimmt es ihn nicht – so kann niemand einen alten Katalog mit einer inzwischen korrigierten Paketversion unterschieben. Die Meldung nennt beide Zeitpunkte. Meist hilft es, später noch einmal abzurufen; bleibt es so, melde es dem DMS-Projekt.
 
-**Testschlüssel:** Steht in der Vorschau „prüft noch mit Testschlüsseln“, hat dieses DMS noch nicht die echten Schlüssel des Projekts. Dann beweist die Signatur nichts. Die Fingerabdrücke der echten Schlüssel stehen in der [Sicherheitsrichtlinie](https://github.com/motom001/dms/blob/main/SECURITY.md).
+**Ältere Versionen:** DMS 0.141.0 bis 0.144.1 kennen nur Testschlüssel. Sobald das DMS-Projekt den Katalog mit seinen echten Schlüsseln signiert, zeigen sie beim offiziellen Katalog „Signatur ungültig“ – aktualisiere dann das DMS. Die Fingerabdrücke der echten Schlüssel stehen in der [Sicherheitsrichtlinie](https://github.com/motom001/dms/blob/main/SECURITY.md).
 
 ## Installierte Pakete
 

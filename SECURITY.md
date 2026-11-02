@@ -37,13 +37,13 @@ Wie das im Einzelnen gebaut ist, steht im [Entwicklerhandbuch](https://motom001.
 
 ## Herkunft der Pakete prüfen
 
-Das DMS-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://github.com/motom001/dms-registry)) mit Ed25519. Das DMS prüft die Signatur ab Version 0.141.0 mit diesen beiden öffentlichen Schlüsseln (fest im Code, `server/src/projektschluessel.ts`); gültig ist eine Signatur mit einem der beiden:
+Das DMS-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://github.com/motom001/dms-registry)) mit Ed25519. Das DMS prüft die Signatur mit diesen beiden öffentlichen Schlüsseln des Maintainers (fest im Code, `server/src/projektschluessel.ts`); gültig ist eine Signatur mit einem der beiden:
 
 | Schlüssel | Kennung | Fingerabdruck (SHA-256 des öffentlichen Schlüssels) |
 | --- | --- | --- |
-| Signierschlüssel (CI der Registry) | `da31d65f4a429768` | `da31 d65f 4a42 9768 db27 8f76 e67a ce99 7024 9d25 9352 e7da 5a0b 931b d85d 5ac0` |
-| Reserveschlüssel (offline beim Maintainer) | `e8e8f4f53d4eca0e` | `e8e8 f4f5 3d4e ca0e 3e51 ac12 bbe8 807e 9c3c 00af 19a7 27cc 2d1e 1b92 172b fe15` |
+| Signierschlüssel (CI der Registry) | `6d868387314e64df` | `6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728` |
+| Reserveschlüssel (offline beim Maintainer) | `4543c81b5ccf522d` | `4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954` |
 
-> **Achtung: Das sind noch Testschlüssel.** Ihre privaten Gegenstücke stehen offen in den Tests; eine damit erzeugte Signatur beweist nichts. Sobald der Maintainer die echten Schlüssel erzeugt hat, stehen hier deren Fingerabdrücke. Wie das geht, steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/pakete/#projektschluessel-austauschen).
+> **Versionen 0.141.0 bis 0.144.1** kennen nur Testschlüssel, deren private Gegenstücke offen in den Tests stehen. Sobald die Registry mit den Schlüsseln oben signiert, melden sie beim offiziellen Katalog „Signatur ungültig“. Aktualisiere auf eine neuere Version. Die Fingerabdrücke prüfst du in der Registry mit `python3 werkzeuge/signieren.py fingerabdruck signier.pub`; die öffentlichen Schlüssel stehen in [motom001/dms-registry#74](https://github.com/motom001/dms-registry/issues/74).
 
 Was „signiert“ und „nicht signiert“ in der Vorschau bedeutet, steht im [Administrationshandbuch](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht).

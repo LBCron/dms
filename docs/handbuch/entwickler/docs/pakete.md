@@ -128,7 +128,7 @@ Ab DMS 0.141.0 prüft das DMS, **woher** ein Katalog stammt (#594, Registry: mot
 - **`katalog.sig`** liegt neben `katalog.json`, getrennt, damit ältere DMS-Versionen den Katalog unverändert lesen:
 
     ```json
-    { "format": 1, "verfahren": "ed25519", "schluessel": "da31d65f4a429768", "signatur": "<64 Bytes, Base64>", "erstellt": "2026-11-02T10:00:00Z" }
+    { "format": 1, "verfahren": "ed25519", "schluessel": "6d868387314e64df", "signatur": "<64 Bytes, Base64>", "erstellt": "2026-11-02T10:00:00Z" }
     ```
 
 - **Kennung und Fingerabdruck** eines Schlüssels: SHA-256 über die 32 Bytes des öffentlichen Schlüssels, hexadezimal. Die Kennung sind die ersten 16 Zeichen, der Fingerabdruck alle 64 in Vierergruppen. `werkzeuge/signieren.py fingerabdruck <datei.pub>` in der Registry rechnet genauso.
@@ -139,14 +139,22 @@ Ab DMS 0.141.0 prüft das DMS, **woher** ein Katalog stammt (#594, Registry: mot
 
 ### Projektschlüssel austauschen { #projektschluessel-austauschen }
 
-Die öffentlichen Schlüssel stehen an **einer** Stelle: `server/src/projektschluessel.ts`. Bis der Maintainer seine Schlüssel veröffentlicht hat, stehen dort **Testschlüssel** (`test: true`); ihre privaten Gegenstücke liegen offen in `server/test/katalogschluessel.ts`, damit die Tests Kataloge signieren können. Ein DMS mit Testschlüsseln zeigt in der Vorschau „prüft noch mit Testschlüsseln“.
+Die öffentlichen Schlüssel stehen an **einer** Stelle: `server/src/projektschluessel.ts`. Dort stehen die echten Schlüssel des Maintainers (`signier.pub` und `reserve.pub` aus motom001/dms-registry#74, `test: false`); ihre Fingerabdrücke stehen in `SECURITY.md`. DMS 0.141.0 bis 0.144.1 hatten an dieser Stelle noch Testschlüssel.
 
-So kommen die echten Schlüssel hinein:
+| Schlüssel | Kennung | Fingerabdruck |
+| --- | --- | --- |
+| Signierschlüssel | `6d868387314e64df` | `6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728` |
+| Reserveschlüssel | `4543c81b5ccf522d` | `4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954` |
 
-1. Der Maintainer erzeugt beide Schlüsselpaare auf seinem eigenen Rechner (Anleitung in der README der Registry, Abschnitt „Katalog signieren“) und veröffentlicht `signier.pub` und `reserve.pub`.
-2. In `server/src/projektschluessel.ts` die beiden PEM-Texte ersetzen und `test` auf `false` setzen.
-3. Fingerabdrücke ausrechnen (`python3 werkzeuge/signieren.py fingerabdruck signier.pub` in der Registry) und in `SECURITY.md` und `SECURITY.en.md` eintragen; ebenso in README und REGELN der Registry.
-4. Tests brauchen nichts weiter: Sie geben ihre eigenen Testschlüssel mit (`TEST_PROJEKT` in `server/test/katalogschluessel.ts`). Der Test „Projektschlüssel“ prüft nur, dass zwei verschiedene Ed25519-Schlüssel drinstehen und dass `test` genau bei den Testschlüsseln gesetzt ist.
+Der Fingerabdruck ist SHA-256 über die **32 Bytes** des Schlüssels, nicht über die ganze DER-Datei (die 44 Bytes, die `openssl pkey -pubin -outform der` ausgibt). Wer `sha256sum` über die DER-Datei rechnet, bekommt einen anderen Wert.
+
+**Tests** signieren nie mit den eingebauten Schlüsseln. Sie geben eigene Testschlüssel mit: `TEST_PROJEKT` aus `server/test/katalogschluessel.ts` als Option `projektSchluessel` an die `Paketverwaltung` bzw. an `projektSchluessel(TEST_PROJEKT)`. Diese Option setzt nur Code; im Betrieb gibt es dafür **keine** Umgebungsvariable und keine Einstellung – sonst ließe sich ein fremder Schlüssel als „DMS-Projekt“ einschmuggeln. Mit Testschlüsseln zeigt die Vorschau „prüft noch mit Testschlüsseln“ (`test: true`). Der Test „Projektschlüssel“ prüft, dass die eingebauten Schlüssel keine Testschlüssel sind, dass ihre Fingerabdrücke genau so in `SECURITY.md` und `SECURITY.en.md` stehen und dass ein mit Testschlüsseln signierter Katalog im Betrieb als ungültig gilt.
+
+So werden die Schlüssel ausgetauscht (neues Paar, z. B. nach Verlust des Signierschlüssels):
+
+1. Der Maintainer erzeugt das Schlüsselpaar auf seinem eigenen Rechner (Anleitung in der README der Registry, Abschnitt „Katalog signieren“) und veröffentlicht den öffentlichen Schlüssel.
+2. In `server/src/projektschluessel.ts` den PEM-Text ersetzen (`test` bleibt `false`).
+3. Fingerabdrücke ausrechnen (`python3 werkzeuge/signieren.py fingerabdruck signier.pub` in der Registry) und in `SECURITY.md`, `SECURITY.en.md`, im Test „Projektschlüssel“ und in der Tabelle oben eintragen; in der Registry den öffentlichen Schlüssel unter `schluessel/` ablegen und die Fingerabdrücke in `README.md` und `README.en.md` eintragen.
 
 Fällt der Signierschlüssel aus (verloren oder bekannt geworden), signiert die Registry mit dem Reserveschlüssel weiter; das DMS nimmt das ohne Update an. Danach kommt ein neues Paar (neuer Reserveschlüssel) mit einem DMS-Release.
 

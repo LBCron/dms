@@ -1,8 +1,8 @@
 /**
- * NUR FÜR TESTS: private Gegenstücke der Testschlüssel in server/src/projektschluessel.ts (#594) und ein
- * Schlüssel für einen „eigenen Katalog“. Wer diese Werte kennt, kann für ein DMS mit Testschlüsseln
- * gültige Signaturen erzeugen – deshalb gehören sie nie in den Produktcode, und vor Stufe 2 kommen die
- * echten Schlüssel des Maintainers in projektschluessel.ts.
+ * NUR FÜR TESTS: private Testschlüssel für den offiziellen Katalog (#594) und für einen „eigenen Katalog“.
+ * Die echten Projektschlüssel in server/src/projektschluessel.ts gehören nicht dazu; Tests geben stattdessen
+ * TEST_PROJEKT als `projektSchluessel` an die Paketverwaltung bzw. an projektSchluessel() mit. Ein DMS im
+ * Betrieb kennt diese Schlüssel nicht – der Test „Projektschlüssel“ prüft das.
  *
  * Gespeichert ist nur der 32-Byte-Kern (Seed) als Hex, kein PEM.
  */

@@ -62,11 +62,12 @@ function katalogDaten(url: string, pakete: Array<Record<string, string>>, erstel
 }
 const neben = (url: string, datei: string) => new URL(datei, url).href;
 
-async function aufbau() {
+/** testschluessel: false baut die Paketverwaltung wie im Betrieb, mit den eingebauten Projektschlüsseln. */
+async function aufbau(testschluessel = true) {
   const dateien = new Map<string, Buffer>();
   const abruf = async (url: string) => { const b = dateien.get(url); if (!b) throw new Error(`404 ${url}`); return b; };
   const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
-  const p = new Paketverwaltung(d, { version: () => '0.141.0', abruf, katalogUrl: OFFIZIELL, projektSchluessel: TEST_PROJEKT });
+  const p = new Paketverwaltung(d, { version: () => '0.141.0', abruf, katalogUrl: OFFIZIELL, ...(testschluessel ? { projektSchluessel: TEST_PROJEKT } : {}) });
   /** Offiziellen Katalog veröffentlichen; seed: signieren mit diesem Schlüssel, null: ohne Signatur. */
   const offiziell = (pakete: Array<Record<string, string>>, erstellt: string, seed: string | null = TEST_SEED.signier) => {
     const k = katalogDaten(OFFIZIELL, pakete, erstellt, dateien);
@@ -94,14 +95,35 @@ function sammeldatei(pakete: Array<Record<string, string>>, mit?: { katalog: Buf
 const alsSammel = (r: unknown): Sammeldatei => { assert.ok(r && typeof r === 'object' && 'sammeldatei' in r); return (r as { sammeldatei: Sammeldatei }).sammeldatei; };
 
 describe('Projektschlüssel (#594)', () => {
-  it('zwei verschiedene Ed25519-Schlüssel im DMS; Testschlüssel sind als solche markiert', () => {
+  it('die echten Schlüssel des Maintainers sind eingebaut, keine Testschlüssel', () => {
     assert.deepEqual(PROJEKT_SCHLUESSEL.map((s) => s.rolle), ['signier', 'reserve']);
     const echt = projektSchluessel();
     assert.notEqual(echt[0].fingerabdruck, echt[1].fingerabdruck);
-    // Solange die Testschlüssel drinstehen, müssen sie als Test markiert sein (Anzeige „Testschlüssel“).
-    const sindTest = echt.map((k) => k.pem === oeffentlichPem(TEST_SEED.signier) || k.pem === oeffentlichPem(TEST_SEED.reserve));
-    assert.deepEqual(PROJEKT_SCHLUESSEL.map((x) => x.test), sindTest);
-    assert.equal(nurTestschluessel(), sindTest.some(Boolean));
+    // Kein eingebauter Schlüssel darf einer sein, dessen privates Gegenstück in den Tests steht.
+    const bekannt = Object.values(TEST_SEED).map((seed) => liesSchluessel(oeffentlichPem(seed)).fingerabdruck);
+    for (const k of echt) assert.ok(!bekannt.includes(k.fingerabdruck), `Testschlüssel ${k.kennung} als Projektschlüssel`);
+    assert.deepEqual(PROJEKT_SCHLUESSEL.map((x) => x.test), [false, false]);
+    assert.equal(nurTestschluessel(), false);
+    // motom001/dms-registry#74 (signier.pub, reserve.pub); SHA-256 über DER wäre f185b2c3…/7eb674da…
+    assert.deepEqual(echt.map((k) => k.fingerabdruck), [
+      '6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728',
+      '4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954',
+    ]);
+  });
+
+  it('SECURITY.md und SECURITY.en.md nennen genau die eingebauten Fingerabdrücke', () => {
+    for (const datei of ['SECURITY.md', 'SECURITY.en.md']) {
+      const text = readFileSync(fileURLToPath(new URL(`../../${datei}`, import.meta.url)), 'utf8');
+      for (const k of projektSchluessel()) {
+        assert.ok(text.includes(`\`${k.kennung}\``), `${datei}: Kennung ${k.kennung} fehlt`);
+        assert.ok(text.includes(`\`${k.fingerabdruck}\``), `${datei}: Fingerabdruck ${k.fingerabdruck} fehlt`);
+      }
+    }
+  });
+
+  it('ohne mitgegebene Schlüssel gilt ein mit Testschlüsseln signierter Katalog nicht', () => {
+    const daten = Buffer.from('{"format":1}\n');
+    for (const seed of [TEST_SEED.signier, TEST_SEED.reserve]) assert.ok(!pruefeSignatur(daten, signatur(daten, seed), projektSchluessel()).ok);
   });
 
   it('Fingerabdruck und Kennung wie in der Registry (werkzeuge/signieren.py)', () => {
@@ -114,14 +136,14 @@ describe('Projektschlüssel (#594)', () => {
 
   it('Signatur: gültig mit beiden Schlüsseln, ungültig bei verändertem Inhalt oder fremdem Schlüssel', () => {
     const daten = Buffer.from('{"format":1}\n');
-    assert.ok(pruefeSignatur(daten, signatur(daten, TEST_SEED.signier), projektSchluessel()).ok);
-    assert.ok(pruefeSignatur(daten, signatur(daten, TEST_SEED.reserve), projektSchluessel()).ok);
-    const r = pruefeSignatur(Buffer.from('{"format":1} \n'), signatur(daten, TEST_SEED.signier), projektSchluessel());
+    assert.ok(pruefeSignatur(daten, signatur(daten, TEST_SEED.signier), projektSchluessel(TEST_PROJEKT)).ok);
+    assert.ok(pruefeSignatur(daten, signatur(daten, TEST_SEED.reserve), projektSchluessel(TEST_PROJEKT)).ok);
+    const r = pruefeSignatur(Buffer.from('{"format":1} \n'), signatur(daten, TEST_SEED.signier), projektSchluessel(TEST_PROJEKT));
     assert.ok(!r.ok && /passt nicht/.test(r.grund));
-    const f = pruefeSignatur(daten, signatur(daten, TEST_SEED.fremd), projektSchluessel());
+    const f = pruefeSignatur(daten, signatur(daten, TEST_SEED.fremd), projektSchluessel(TEST_PROJEKT));
     assert.ok(!f.ok && /unbekannter Schlüssel/.test(f.grund));
-    assert.ok(!pruefeSignatur(daten, Buffer.from('kein json'), projektSchluessel()).ok);
-    assert.ok(!pruefeSignatur(daten, Buffer.from('{"signatur":"AAAA"}'), projektSchluessel()).ok);
+    assert.ok(!pruefeSignatur(daten, Buffer.from('kein json'), projektSchluessel(TEST_PROJEKT)).ok);
+    assert.ok(!pruefeSignatur(daten, Buffer.from('{"signatur":"AAAA"}'), projektSchluessel(TEST_PROJEKT)).ok);
   });
 });
 
@@ -149,6 +171,14 @@ describe('Offizieller Katalog mit Signatur (#594)', () => {
     offiziell([basis], iso(1), null);
     assert.deepEqual((await p.katalog()).pruefung, { art: 'unsigniert', offiziell: true, bestaetigen: false });
     assert.equal((await p.installiere({ id: 'basis' }, ICH)).version, '1.0.0');
+  });
+
+  it('wie im Betrieb (eingebaute Schlüssel): mit Testschlüssel signiert gilt als ungültig, ohne Testhinweis', async () => {
+    const { p, offiziell } = await aufbau(false);
+    offiziell([basis], iso(1), TEST_SEED.signier);
+    assert.deepEqual((await p.katalog()).pruefung, { art: 'ungueltig', offiziell: true, bestaetigen: true });
+    offiziell([basis], iso(1), null);
+    assert.deepEqual((await p.katalog()).pruefung, { art: 'unsigniert', offiziell: true, bestaetigen: false });
   });
 
   it('ungültige Signatur (Katalog verändert oder fremder Schlüssel): Bestätigung nötig', async () => {

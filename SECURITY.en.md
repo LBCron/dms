@@ -37,13 +37,13 @@ How this is built in detail is described in the [developer manual](https://motom
 
 ## Verifying where packages come from
 
-The DMS project signs the official package catalog ([dms-registry](https://github.com/motom001/dms-registry)) with Ed25519. From version 0.141.0 on, the DMS verifies the signature with these two public keys (built into the code, `server/src/projektschluessel.ts`); a signature made with either of them is valid:
+The DMS project signs the official package catalog ([dms-registry](https://github.com/motom001/dms-registry)) with Ed25519. The DMS verifies the signature with these two public keys of the maintainer (built into the code, `server/src/projektschluessel.ts`); a signature made with either of them is valid:
 
 | Key | Key ID | Fingerprint (SHA-256 of the public key) |
 | --- | --- | --- |
-| Signing key (registry CI) | `da31d65f4a429768` | `da31 d65f 4a42 9768 db27 8f76 e67a ce99 7024 9d25 9352 e7da 5a0b 931b d85d 5ac0` |
-| Backup key (kept offline by the maintainer) | `e8e8f4f53d4eca0e` | `e8e8 f4f5 3d4e ca0e 3e51 ac12 bbe8 807e 9c3c 00af 19a7 27cc 2d1e 1b92 172b fe15` |
+| Signing key (registry CI) | `6d868387314e64df` | `6d86 8387 314e 64df 715c a3bd 9856 58d5 f888 c0ea 7cab ac91 a43f 9b99 6052 e728` |
+| Backup key (kept offline by the maintainer) | `4543c81b5ccf522d` | `4543 c81b 5ccf 522d f5a3 5e76 6660 8774 5f6c ae42 4722 3b6d 91c9 63cc 34b0 3954` |
 
-> **Note: these are still test keys.** Their private counterparts are public in the tests, so a signature made with them proves nothing. As soon as the maintainer has generated the real keys, their fingerprints will be listed here. How to replace them is described in the [developer handbook](https://motom001.github.io/dms/entwickler/aktuell/pakete/#projektschluessel-austauschen) (German).
+> **Versions 0.141.0 to 0.144.1** only know test keys whose private counterparts are public in the tests. As soon as the registry signs with the keys above, they report "signature invalid" for the official catalog. Update to a newer version. You can check the fingerprints in the registry with `python3 werkzeuge/signieren.py fingerabdruck signier.pub`; the public keys are posted in [motom001/dms-registry#74](https://github.com/motom001/dms-registry/issues/74).
 
 What "signed" and "not signed" mean in the install preview is explained in the [administration handbook](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht) (German).
