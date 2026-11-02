@@ -19,11 +19,11 @@ Jede Zeile nennt die **DMS-Version und das Datum** der letzten Prüfung bzw. Mel
 | --- | --- | --- | --- | --- | --- |
 | GitHub-Rechner (Ubuntu, x64) | amd64 | automatisch geprüft | laufend: jede Änderung und jede Version | – | – |
 | GitHub-Rechner (Ubuntu, arm64) | arm64 | automatisch geprüft | laufend: jede Änderung und jede Version | – | – |
-| UGREEN DXP4800 Plus | amd64 (Intel) | vom Projekt getestet | läuft dort im Alltag ([Beispiel](beispiel.md)); erste Prüfung mit Messwerten steht noch aus | wird noch festgelegt | – |
+| UGREEN DXP4800 Plus | amd64 (Intel) | vom Projekt getestet | DMS 0.143.0, 02.11.2026: Lasttest `alle` ([Messwerte](https://github.com/motom001/dms/issues/576#issuecomment-6588590651)); läuft dort im Alltag ([Beispiel](beispiel.md)) | 31.12.2028 | Gerät ist noch im Handel; laufendes Jahr plus 2 Jahre Herstellergarantie decken die Supportzeit ab |
 
 **Was die GitHub-Rechner prüfen:**
 
-- **x64:** alle automatischen Tests mit PostgreSQL 17, das Image `dms` und `dms-komplett`, die Vorlagen für Synology, UGREEN, QNAP, TrueNAS, Unraid und den Raspberry Pi (starten, DMS antwortet, Einrichtungsassistent beginnt richtig). Dazu kommt ein wöchentlicher [Lasttest](https://motom001.github.io/dms/admin/aktuell/verkraftet/); seine ersten Messwerte stehen noch aus.
+- **x64:** alle automatischen Tests mit PostgreSQL 17, das Image `dms` und `dms-komplett`, die Vorlagen für Synology, UGREEN, QNAP, TrueNAS, Unraid und den Raspberry Pi (starten, DMS antwortet, Einrichtungsassistent beginnt richtig). Dazu kommt ein wöchentlicher [Lasttest](https://motom001.github.io/dms/admin/aktuell/verkraftet/); die Messwerte stehen in [#576](https://github.com/motom001/dms/issues/576).
 - **arm64:** auf einem echten ARM-Rechner (nicht nachgebildet) die Images `dms` und `dms-komplett` bauen und probehalber starten, die Werkzeuge im Image.
 
 Die Vorlagen laufen dabei auf einem gewöhnlichen Linux mit Docker, nicht auf dem NAS selbst. Ob die Oberfläche eines NAS (Container Manager, App Center …) mitspielt, zeigt erst ein echtes Gerät.
