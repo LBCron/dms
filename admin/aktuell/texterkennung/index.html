@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.133/texterkennung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.134/texterkennung/">
       
       
         <link rel="prev" href="../webdav/">
@@ -1323,10 +1323,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#einstellungen" class="md-nav__link">
+  <a href="#werkbank-texterkennung" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Einstellungen
+        Werkbank → Texterkennung
       
     </span>
   </a>
@@ -1345,10 +1345,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sprachpakete-nachinstallieren" class="md-nav__link">
+  <a href="#weitere-sprachen" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprachpakete nachinstallieren
+        Weitere Sprachen
       
     </span>
   </a>
@@ -2441,10 +2441,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#einstellungen" class="md-nav__link">
+  <a href="#werkbank-texterkennung" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Einstellungen
+        Werkbank → Texterkennung
       
     </span>
   </a>
@@ -2463,10 +2463,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sprachpakete-nachinstallieren" class="md-nav__link">
+  <a href="#weitere-sprachen" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprachpakete nachinstallieren
+        Weitere Sprachen
       
     </span>
   </a>
@@ -2562,99 +2562,49 @@
 <p>Manche Bereiche der Werkbank, zum Beispiel <em>Wartungsmodus</em>, <em>Datenbank-Anbindung</em> oder <em>Wartungsoperationen</em>, sind in der Vorlage <em>Haushalt</em> ausgeblendet. Unten in der Leiste steht, wie viele Bereiche ausgeblendet sind; ein Klick zeigt sie. Dauerhaft einblenden kannst du sie unter <a href="https://motom001.github.io/dms/admin/aktuell/uebersicht/#werkbank-anpassen">Werkbank anpassen</a>. <strong>Ausgeblendet heißt nicht abgeschaltet.</strong></p>
 </div>
 <ul>
-<li><strong>PDFs:</strong> Zuerst liest das DMS die vorhandene Textebene. Nur Seiten ohne Text (gescannte Seiten) gehen durch die Texterkennung.</li>
-<li><strong>Bilder</strong> (JPEG, PNG, TIFF, WebP, GIF, BMP) gehen direkt durch die Texterkennung.</li>
-<li><strong>Andere Dateien</strong> (z. B. Word, Excel) bekommen vorerst keinen Volltext.</li>
+<li><strong>PDFs:</strong> Das DMS liest die vorhandene <strong>Textebene</strong> selbst (poppler) – sofort. PDFs, die ein Programm oder ein Scanner mit Text erzeugt hat, sind damit gleich durchsuchbar.</li>
+<li><strong>Scans und Fotos</strong> (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket <strong>Texterkennung</strong> aus dem <a href="../pakete/">Katalog</a>.</li>
+<li><strong>Andere Dateien</strong> (z. B. Word, Excel, TIFF) bekommen vorerst keinen Volltext.</li>
 </ul>
-<p>Die Texterkennung (Tesseract mit den Sprachpaketen Deutsch und Englisch und der Lageerkennung <code>osd</code>) ist im Image enthalten. Für Deutsch und Englisch muss nichts zusätzlich installiert werden; weitere Sprachen lädst du bei Bedarf nach (siehe <a href="#sprachpakete-nachinstallieren">Sprachpakete nachinstallieren</a>). Ist ein Paket für die Texterkennung installiert, übernimmt es Scans und Bilder (siehe <a href="#texterkennung-als-paket">Texterkennung als Paket</a>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Seit Version 0.134: Texterkennung ist ein Paket</p>
+<p>Bis Version 0.133 steckte die Texterkennung (Tesseract) im Image. Seit 0.134 ist das Image schlanker, und Scans bekommen ihren Text nur noch mit dem Paket <strong>Texterkennung</strong>. Nach dem Update zeigt die <a href="../uebersicht/">Übersicht der Werkbank</a> den Hinweis <strong>„Texterkennung ist jetzt ein Paket“</strong> mit <strong>Jetzt installieren</strong> – das führt direkt zum Paket unter <strong>Werkbank → Pakete</strong>. Vorhandener Volltext bleibt unverändert. Dokumente, die noch auf ihre Texterkennung warteten, stehen auf „wartet auf Texterkennung – kein Paket installiert“; sobald das Paket installiert ist, gehen sie von selbst an das Paket. Ohne Internet installierst du es aus einer <a href="../pakete/">Sammeldatei</a>.</p>
+</div>
 <h2 id="texterkennung-als-paket">Texterkennung als Paket<a class="headerlink" href="#texterkennung-als-paket" title="Permanent link">&para;</a></h2>
-<p>Seit Version 0.133 kann ein <strong>Paket</strong> die Texterkennung übernehmen – etwa <strong>Texterkennung</strong> (ab 2.0) aus dem <a href="../pakete/">Katalog</a>. Es braucht dafür das Recht <a href="../pakete/#recht-texterkennung">Texterkennung übernehmen</a>. Dann:</p>
+<p>Das Paket <strong>Texterkennung</strong> (ab 2.0, Tesseract als WebAssembly im <a href="../pakete/">Paket-Läufer</a>) übernimmt die Texterkennung. Es braucht dafür das Recht <a href="../pakete/#recht-texterkennung">Texterkennung übernehmen</a>. So läuft es:</p>
 <ol>
-<li>Das DMS liest bei PDFs nur noch die <strong>Textebene</strong> (poppler) – sofort, ohne Wartezeit. Hat ein PDF Text, ist es gleich durchsuchbar.</li>
+<li>Das DMS liest bei PDFs die <strong>Textebene</strong> – sofort, ohne Wartezeit. Hat ein PDF Text, ist es gleich durchsuchbar.</li>
 <li>Jedes Dokument meldet das DMS dem Paket (Ereignis <a href="../pakete/#ereignis-volltext-fertig">Volltext fertig</a>) – auch, wenn es keinen Text gefunden hat.</li>
 <li>Dokumente <strong>ohne Text</strong> (Scans, Fotos) – und PDFs, in denen neben Textseiten gescannte Seiten stecken – stehen auf <strong>„wartet auf Texterkennung (Paket …)“</strong>, bis das Paket den Volltext schreibt. Danach steht am Dokument „Texterkennung durch Paket …“. Bei langen Dokumenten zeigt das Paket dort, wie weit es ist (z. B. „Seite 20 von 64“).</li>
-<li>Was das Paket erkennt (Sprache, Seiten drehen, ob es auch PDFs mit Text neu erkennt), stellst du <strong>beim Paket</strong> ein.</li>
+<li>Was das Paket erkennt (Sprache, Seiten aufrichten, ob es auch PDFs mit Text neu erkennt, Auflösung), stellst du <strong>beim Paket</strong> ein: <strong>Werkbank → Pakete → Texterkennung → Einstellungen</strong>.</li>
 </ol>
-<p><strong>Werkbank → Texterkennung</strong> zeigt oben, welches Paket die Texterkennung übernimmt (mit Link zu seinen Einstellungen) und wie viele Dokumente auf das Paket warten. Ohne Paket erkennt die eingebaute Texterkennung wie bisher.</p>
+<p>Ohne Paket bleiben Scans und Fotos ohne Text („wartet auf Texterkennung – kein Paket installiert“); PDFs mit Text sind trotzdem durchsuchbar.</p>
+<p><strong>Wie schnell?</strong> Das Paket ist etwas langsamer als die frühere eingebaute Texterkennung, weil es als WebAssembly abgeschottet läuft: Auf einem Rechner mit 2 Kernen (amd64) brauchte es für 10 gescannte Seiten etwa 31–35 Sekunden, die eingebaute dort 25–26 Sekunden; eine einzelne Seite dauert vom Hochladen bis zum Text etwa 4–6 Sekunden. Erkannt hat es dabei genauso gut. Lange Dokumente erkennt es abschnittsweise, die Zeitgrenze des Paket-Läufers greift nicht. Mehr Messwerte stehen im README des Pakets.</p>
 <p><img alt="Werkbank → Texterkennung" src="../bilder/werkbank-texterkennung.png" /></p>
-<h2 id="einstellungen">Einstellungen<a class="headerlink" href="#einstellungen" title="Permanent link">&para;</a></h2>
-<p>Unter <strong>Werkbank → Texterkennung</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>Einstellung</th>
-<th>Bedeutung</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Volltext erzeugen</strong></td>
-<td>Ausgeschaltet bleiben neue Dokumente in der Warteschlange, bis es wieder an ist.</td>
-</tr>
-<tr>
-<td><strong>Gleichzeitige Aufträge</strong></td>
-<td>1–4 (Standard 1). Mehr ist schneller, braucht aber mehr Prozessor und Speicher – auf einem NAS reicht meist einer.</td>
-</tr>
-<tr>
-<td><strong>Höchstens Seiten</strong></td>
-<td>je Dokument (Standard 50); weitere Seiten werden nicht gelesen.</td>
-</tr>
-<tr>
-<td><strong>Größere Dateien auslassen</strong></td>
-<td>ab dieser Größe in MB (Standard 50).</td>
-</tr>
-<tr>
-<td><strong>Sprache</strong></td>
-<td><strong>Automatisch</strong> (Standard für neue Installationen) oder <strong>Fest</strong>. Siehe <a href="#sprache-automatisch-erkennen">Sprache automatisch erkennen</a>.</td>
-</tr>
-<tr>
-<td><strong>Sprachen</strong></td>
-<td>Tesseract-Kennungen, z. B. <code>deu+eng</code>. Bei <em>Automatisch</em> die Sprachen des ersten Durchlaufs, bei <em>Fest</em> immer genau diese. Ist eine eingestellte Sprache nicht installiert, steht das am Feld; die Texterkennung überspringt sie (siehe <a href="#sprachpakete-nachinstallieren">Sprachpakete nachinstallieren</a>).</td>
-</tr>
-<tr>
-<td><strong>Je Dateityp</strong></td>
-<td>welches Verfahren – oder <em>keine Texterkennung</em>, um einen Dateityp auszuschließen. Externe Dienste kommen später dazu.</td>
-</tr>
-</tbody>
-</table>
+<h2 id="werkbank-texterkennung">Werkbank → Texterkennung<a class="headerlink" href="#werkbank-texterkennung" title="Permanent link">&para;</a></h2>
+<p>Die Seite ist eine <strong>Übersicht</strong>; Einstellungen der Erkennung gibt es hier nicht mehr (sie stehen beim Paket):</p>
+<ul>
+<li><strong>Texterkennung für Scans und Bilder:</strong> welches Paket die Texterkennung übernimmt, mit Link zu seinen Einstellungen, und wie viele Dokumente gerade darauf warten. Fehlt das Paket, steht hier der Hinweis mit <strong>Jetzt installieren</strong>.</li>
+<li><strong>Woher der Text kommt:</strong> wie viele Dokumente ihren Text aus dem PDF haben, vom Paket, von der früheren eingebauten Texterkennung (bis 0.133), ohne Text sind, auf die Texterkennung warten oder einen Fehler hatten.</li>
+<li><strong>Erkannte Sprachen</strong> mit dem Hinweis, wenn dem Paket Sprachdaten fehlen (siehe <a href="#weitere-sprachen">Weitere Sprachen</a>).</li>
+<li><strong>Warteschlange</strong>, <strong>Werkzeuge</strong> (poppler) und <strong>Aufträge</strong> (siehe unten).</li>
+</ul>
 <p>Ob ein Dokumentenregister überhaupt einen Volltext erzeugt, stellst du am <a href="../mappentypen/#register">Mappentyp</a> ein (<em>Volltext erzeugen</em>, Standard: an).</p>
-<p>Darunter zeigt die Seite, welche Werkzeuge und Sprachpakete installiert sind, die <strong>erkannten Sprachen</strong> und die <strong>Warteschlange</strong>: wie viele Dokumente warten, gerade laufen, fertig sind, einen Fehler hatten oder ausgelassen wurden.</p>
+<p>Steht die Warteschlange, sagt ein Hinweis oben auf der Seite und bei <em>Volltext neu erzeugen</em> warum: <strong>ausgeschaltet</strong> (mit <strong>Einschalten</strong>) oder <strong>pausiert, solange der Wartungsmodus an ist</strong> (mit <strong>Wartungsmodus beenden</strong>). Ein nur angekündigter Wartungsmodus hält die Warteschlange nicht an.</p>
 <h2 id="sprache-automatisch-erkennen">Sprache automatisch erkennen<a class="headerlink" href="#sprache-automatisch-erkennen" title="Permanent link">&para;</a></h2>
-<p>Mit <strong>Sprache: Automatisch</strong> erkennt das DMS selbst, in welcher Sprache ein Dokument geschrieben ist – die englische Rechnung, der französische Hotelbeleg oder der türkische Brief werden so richtig gelesen, ohne dass du Sprachen von Hand umstellst:</p>
-<ol>
-<li><strong>Lage und Schrift:</strong> Ist die Lageerkennung (<code>osd</code>) installiert, prüft Tesseract jede gescannte Seite. Quer liegende oder auf dem Kopf stehende Seiten werden vor dem Lesen aufgerichtet (am Dokument steht dann z. B. „1 Seite gedreht“). Erkennt Tesseract eine andere Schrift (z. B. Kyrillisch) und ist ein passendes Sprachpaket (z. B. <code>rus</code>) installiert, nimmt es dieses gleich dazu.</li>
-<li><strong>Erster Durchlauf</strong> mit den eingestellten <em>Sprachen</em> (Standard <code>deu+eng</code>).</li>
-<li>Aus dem erkannten Text bestimmt das DMS die <strong>Sprache</strong>. Das geschieht offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.</li>
-<li><strong>Zweiter Durchlauf</strong> – nur, wenn alles zusammenkommt: Die erkannte Sprache ist eindeutig, sie war im ersten Durchlauf nicht dabei, ihr Sprachpaket ist installiert und Tesseract war sich beim ersten Durchlauf unsicher (mittlere Konfidenz unter 85 %). Dann liest das DMS die Seite noch einmal mit dieser Sprache; <strong>das bessere Ergebnis gilt</strong> und auch die weiteren Seiten des Dokuments werden damit gelesen. So bleibt der Rechenaufwand klein: Die meisten Dokumente brauchen nur einen Durchlauf.</li>
-</ol>
-<p>Die erkannte Sprache steht <strong>am Dokument</strong> neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Seit 0.128.0 ist sie ein eigenes Feld des Dokuments, und die <strong>Volltextsuche nimmt die Wortstämme dieser Sprache</strong>: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch. Die Sprache gilt auch bei <em>Sprache: Fest</em>.</p>
-<p>Pakete (z. B. eine eigene Texterkennung) und die <a href="../api/">Schnittstelle</a> geben die Sprache mit dem Volltext an (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder setzen sie einzeln (<code>PUT /dokumente/{id}/sprache</code>, z. B. <code>{ "sprache": "fra" }</code>, <code>null</code> = keine Angabe). Das steht in der Historie der Mappe.</p>
-<p>Mit <strong>Sprache: Fest</strong> liest das DMS immer genau mit den eingestellten Sprachen, ohne zweiten Durchlauf. Die erkannte Sprache wird trotzdem angezeigt und gezählt.</p>
-<div class="admonition note">
-<p class="admonition-title">Nach einem Update</p>
-<p>Hattest du die Sprachen vor Version 0.90 selbst geändert (also nicht mehr <code>deu+eng</code>), bleibt es bei deiner festen Auswahl. Sonst ist <em>Automatisch</em> eingeschaltet.</p>
-</div>
-<h2 id="sprachpakete-nachinstallieren">Sprachpakete nachinstallieren<a class="headerlink" href="#sprachpakete-nachinstallieren" title="Permanent link">&para;</a></h2>
-<p>Steht in den Einstellungen eine Sprache, deren Sprachpaket fehlt, zeigt <strong>Werkbank → Texterkennung</strong> unter <em>Werkzeuge</em> deutlich „<strong>Eingestellt, aber nicht installiert</strong>“, und am Feld <em>Sprachen</em> steht, welche Sprache übersprungen wird. Die Texterkennung läuft dann mit den übrigen Sprachen weiter, schreibt aber an jedes betroffene Dokument „Sprachpaket fehlt: …“ und ins <a href="../fehlersuche/">Protokoll</a> beim Start eine Warnung – nichts läuft still schlechter.</p>
-<p>Unter <strong>Erkannte Sprachen</strong> siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Sprachpaket installiert ist. Fehlt eins, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – Sprachpaket <code>fra</code> installieren?“.</p>
-<p>Das DMS lädt Sprachpakete nicht selbst aus dem Internet. Zwei Wege:</p>
-<p><strong>Eigenes Image</strong> (dauerhaft, empfohlen): Eine kleine <code>Dockerfile</code> neben deiner Compose-Datei, die das Paket aus Alpine Linux dazunimmt:</p>
-<div class="highlight"><pre><span></span><code><span class="k">FROM</span><span class="w"> </span><span class="s">ghcr.io/motom001/dms:main</span>
-<span class="k">RUN</span><span class="w"> </span>apk<span class="w"> </span>add<span class="w"> </span>--no-cache<span class="w"> </span>tesseract-ocr-data-fra<span class="w"> </span>tesseract-ocr-data-tur
-</code></pre></div>
-<p>In der Compose-Datei statt der Zeile <code>image: ghcr.io/motom001/dms:…</code> dann <code>build: .</code> eintragen und mit <code>docker compose up -d --build</code> starten. Bei jedem Update baust du neu; das Basis-Image wird dabei frisch geholt (<code>docker compose build --pull</code>). Die Paketnamen lauten <code>tesseract-ocr-data-</code> plus Kennung (<code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code> …).</p>
-<p><strong>Einzelne Datei über ein Volume:</strong> Die Datei <code>&lt;kennung&gt;.traineddata</code> (z. B. <code>fra.traineddata</code> aus dem Projekt <em>tessdata</em> von Tesseract – dieselbe Fassung, die Alpine verwendet) auf das NAS legen und in den Ordner der Sprachpakete einhängen – den Ordner zeigt die Werkbank unter <em>Sprachpakete</em> (im Image <code>/usr/share/tessdata/</code>):</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./tessdata/fra.traineddata:/usr/share/tessdata/fra.traineddata:ro</span>
-</code></pre></div>
-<p>Hänge nur einzelne Dateien ein, nicht den ganzen Ordner – sonst verdeckst du die mitgelieferten Pakete <code>deu</code>, <code>eng</code> und <code>osd</code>.</p>
-<p>Danach unter <em>Werkzeuge</em> <strong>Erneut prüfen</strong>. Dokumente, die vorher ohne das Sprachpaket gelesen wurden, startest du unter <strong>Aufträge → fertig</strong> neu.</p>
-<p>Steht die Warteschlange, sagt ein Hinweis oben auf der Seite und bei <em>Volltext neu erzeugen</em> warum: <strong>ausgeschaltet</strong> (mit <strong>Einschalten</strong>) oder <strong>pausiert, solange der Wartungsmodus an ist</strong> (mit <strong>Wartungsmodus beenden</strong>). Ein nur angekündigter Wartungsmodus hält die Texterkennung nicht an.</p>
+<p>Das DMS erkennt aus dem Text selbst, in welcher Sprache ein Dokument geschrieben ist – offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.</p>
+<p>Die erkannte Sprache steht <strong>am Dokument</strong> neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Sie ist ein eigenes Feld des Dokuments, und die <strong>Volltextsuche nimmt die Wortstämme dieser Sprache</strong>: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch.</p>
+<p>Das Paket <strong>Texterkennung</strong> nutzt dieselbe Erkennung bei <em>Sprache: Automatisch</em>: Es liest zuerst Deutsch, erkennt die Sprache und liest die Seite in der erkannten Sprache ein zweites Mal, wenn es eine andere ist und das Paket ihre Sprachdaten hat – das bessere Ergebnis gilt. Quer liegende oder auf dem Kopf stehende Seiten richtet es vorher auf.</p>
+<p>Pakete und die <a href="../api/">Schnittstelle</a> geben die Sprache mit dem Volltext an (<code>PUT /dokumente/{id}/volltext</code> mit <code>sprache</code>) oder setzen sie einzeln (<code>PUT /dokumente/{id}/sprache</code>, z. B. <code>{ "sprache": "fra" }</code>, <code>null</code> = keine Angabe). Das steht in der Historie der Mappe.</p>
+<h2 id="weitere-sprachen">Weitere Sprachen<a class="headerlink" href="#weitere-sprachen" title="Permanent link">&para;</a></h2>
+<p>Im Paket <strong>Texterkennung</strong> stecken Deutsch, Englisch und die Lageerkennung. Weitere Sprachen kommen als <strong>Zusatzpakete</strong> aus dem Katalog dazu, z. B. <strong>Texterkennung – Französisch</strong> (<code>texterkennung_fra</code>). Ein eigenes Image oder eingehängte Sprachdateien braucht es nicht mehr.</p>
+<p>Unter <strong>Werkbank → Texterkennung → Erkannte Sprachen</strong> siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit dem Zusatzpaket texterkennung_fra“, mit Link zum Zusatzpaket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).</p>
+<p>Nach dem Installieren eines Zusatzpakets erkennt <strong>Volltext neu erzeugen → Für alle Dokumente</strong> (siehe unten) die vorhandenen Dokumente neu – oder du startest einzelne unter <strong>Aufträge → fertig</strong> neu.</p>
 <h2 id="auftrage">Aufträge<a class="headerlink" href="#auftrage" title="Permanent link">&para;</a></h2>
 <p>Unter <strong>Aufträge</strong> siehst du in einer Liste mit fester Höhe die Dokumente je Stand (<em>Fehler</em>, <em>wartet</em>, <em>läuft</em>, <em>wartet auf Texterkennung</em>, <em>ausgelassen</em>, <em>fertig</em>) – mit Mappe (als Link), Größe, Zeitpunkt und dem <strong>Grund</strong> bei Fehlern oder ausgelassenen Dokumenten.</p>
 <ul>
 <li>Dokumente auswählen und <strong>Neu starten</strong>: Sie kommen wieder in die Warteschlange.</li>
-<li>Wartende <strong>aus der Warteschlange nehmen</strong> bzw. laufende <strong>abbrechen</strong>: Sie gelten dann als <em>ausgelassen</em> („Vom Administrator abgebrochen“); ein laufender Vorgang (tesseract, pdftoppm) wird beendet. Bei <em>wartet auf Texterkennung</em> verwirft das DMS die noch nicht zugestellte Meldung an das Paket; Text aus dem PDF bleibt.</li>
+<li>Wartende <strong>aus der Warteschlange nehmen</strong> bzw. laufende <strong>abbrechen</strong>: Sie gelten dann als <em>ausgelassen</em> („Vom Administrator abgebrochen“); ein laufender Vorgang (pdftotext) wird beendet. Bei <em>wartet auf Texterkennung</em> verwirft das DMS die noch nicht zugestellte Meldung an das Paket; Text aus dem PDF bleibt.</li>
 <li><strong>Neu starten</strong> lässt den Volltext ausdrücklich neu erzeugen: Auch ein Paket erkennt dann Dokumente neu, die schon Text haben.</li>
 <li><strong>Alle Fehler neu starten</strong> reiht alle Dokumente mit Fehler wieder ein.</li>
 </ul>
@@ -2673,12 +2623,12 @@
 </ul>
 <p>Alle laufen im Hintergrund; das DMS bleibt dabei benutzbar.</p>
 <h3 id="volltext-neu-erzeugen">Volltext neu erzeugen<a class="headerlink" href="#volltext-neu-erzeugen" title="Permanent link">&para;</a></h3>
-<p>Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an die Texterkennung (das Paket bzw. die eingebaute).</p>
+<p>Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an das Paket für die Texterkennung.</p>
 <ul>
 <li><strong>Für Dokumente ohne Text</strong> – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Ersetzt das frühere „Volltext nachholen“.</li>
 <li><strong>Für alle Dokumente</strong> – nach einer Rückfrage mit der Anzahl. Das ist ein <strong>ausdrückliches Neu</strong>: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.</li>
 </ul>
-<p>Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als <strong>Auftrag mit Fortschritt</strong> („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich <strong>abbrechen</strong>; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket <strong>Texterkennung</strong> schafft etwa <strong>10 Seiten in 14 Sekunden</strong> (amd64, 2 Kerne), 1.000 Seiten also in rund 25 Minuten. Wie weit es ist, siehst du unter <strong>Werkbank → Texterkennung</strong> („wartet auf Texterkennung“).</p>
+<p>Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als <strong>Auftrag mit Fortschritt</strong> („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich <strong>abbrechen</strong>; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket <strong>Texterkennung</strong> schafft etwa <strong>10 Seiten in 35 Sekunden</strong> (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter <strong>Werkbank → Texterkennung</strong> („wartet auf Texterkennung“).</p>
 <p>Ist kein Paket für die Texterkennung installiert, sagt die Seite das mit dem Weg zu <strong>Werkbank → Pakete</strong>.</p>
 <h3 id="absender-bereinigen">Absender bereinigen<a class="headerlink" href="#absender-bereinigen" title="Permanent link">&para;</a></h3>
 <p>Bis Version 0.99 trug das DMS bei hochgeladener Post ohne Absender den <strong>Namen dessen ein, der sie angelegt hat</strong> – bei Post aus dem Eingangsordner „Eingangsordner“. Absender ist aber, wer den Brief geschickt hat. Neue Post bekommt seitdem keinen Absender mehr, solange niemand ihn einträgt.</p>

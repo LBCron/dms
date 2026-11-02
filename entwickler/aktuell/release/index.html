@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.133/release/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.134/release/">
       
       
         <link rel="prev" href="../beitrag/">
@@ -1016,7 +1016,7 @@
 </ul>
 <h3 id="images-prufen-herkunftsnachweis-und-stuckliste">Images prüfen, Herkunftsnachweis und Stückliste<a class="headerlink" href="#images-prufen-herkunftsnachweis-und-stuckliste" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Trivy</strong> prüft beide Images auf bekannte Lücken in den Systempaketen (Alpine, Tesseract, PostgreSQL in <code>dms-komplett</code>) und in den Node-Bibliotheken im Image.<ul>
+<li><strong>Trivy</strong> prüft beide Images auf bekannte Lücken in den Systempaketen (Alpine, poppler, PostgreSQL in <code>dms-komplett</code>) und in den Node-Bibliotheken im Image.<ul>
 <li><strong>Im Pull Request</strong> (Job <code>image-probe</code>, amd64): Lücken der Stufe <em>kritisch</em>, für die es eine Korrektur gibt, lassen die Prüfung fehlschlagen; <em>hoch</em> mit Korrektur erscheint als Warnung. Funde ohne Korrektur blockieren nicht.</li>
 <li><strong>Auf <code>main</code>, bei Tags und beim wöchentlichen Neubau</strong> (Job <code>image-zusammen</code>): Das fertige Image wird geprüft und die Funde landen unter <strong>Security → Code scanning</strong> (Kategorie <code>image-dms</code> bzw. <code>image-dms-komplett</code>). Hier wird nur gemeldet, das Image ist ja schon veröffentlicht.</li>
 <li>Bewusst hingenommene Funde stehen mit Begründung und Prüfdatum in <code>.trivyignore</code>.</li>

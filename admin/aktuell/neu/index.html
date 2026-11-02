@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.133/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.134/neu/">
       
       
         <link rel="prev" href="..">
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0133" class="md-skip">
+        <a href="#neu-in-version-0134" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,16 +363,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01330" class="md-nav__link">
+  <a href="#01340" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.133.0
+        0.134.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.133.0">
+    <nav class="md-nav" aria-label="0.134.0">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beim-aktualisieren-beachten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beim Aktualisieren beachten
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#neu" class="md-nav__link">
@@ -386,10 +397,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fur-pakete" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Für Pakete
+        Geändert
       
     </span>
   </a>
@@ -401,6 +412,17 @@
     <span class="md-ellipsis">
       
         Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messwerte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Messwerte
       
     </span>
   </a>
@@ -2393,16 +2415,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01330" class="md-nav__link">
+  <a href="#01340" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.133.0
+        0.134.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.133.0">
+    <nav class="md-nav" aria-label="0.134.0">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beim-aktualisieren-beachten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beim Aktualisieren beachten
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#neu" class="md-nav__link">
@@ -2416,10 +2449,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fur-pakete" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Für Pakete
+        Geändert
       
     </span>
   </a>
@@ -2431,6 +2464,17 @@
     <span class="md-ellipsis">
       
         Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messwerte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Messwerte
       
     </span>
   </a>
@@ -2484,38 +2528,44 @@
   
 
 
-<h1 id="neu-in-version-0133">Neu in Version 0.133<a class="headerlink" href="#neu-in-version-0133" title="Permanent link">&para;</a></h1>
-<h2 id="01330">0.133.0<a class="headerlink" href="#01330" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0134">Neu in Version 0.134<a class="headerlink" href="#neu-in-version-0134" title="Permanent link">&para;</a></h1>
+<h2 id="01340">0.134.0<a class="headerlink" href="#01340" title="Permanent link">&para;</a></h2>
+<h3 id="beim-aktualisieren-beachten">Beim Aktualisieren beachten<a class="headerlink" href="#beim-aktualisieren-beachten" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Die Texterkennung ist jetzt ein Paket</strong> (#459). Tesseract steckt nicht mehr im Image; das Image wird dadurch kleiner (beim Einbau in 0.11 kamen rund 50 MB dazu – die genaue Größe vorher/nachher meldet der Bau des Images je Architektur). PDFs mit Text liest das DMS weiter selbst und sofort. <strong>Scans und Fotos bekommen ihren Text nur noch mit dem Paket „Texterkennung“</strong> (2.0) aus dem Katalog.</li>
+<li><strong>Was du tun musst:</strong> Nach dem Update steht in der Übersicht der Werkbank <strong>„Texterkennung ist jetzt ein Paket“</strong> – <strong>Jetzt installieren</strong> führt direkt zum Paket. Ohne Internet: Paket als Sammeldatei mitbringen (Werkbank → Pakete → Ohne Internet …).</li>
+<li><strong>Kein Volltext geht verloren:</strong> Vorhandener Volltext bleibt unverändert, auch der von der eingebauten Texterkennung. Dokumente, die noch auf ihre Texterkennung warteten, stehen bis zur Installation auf „wartet auf Texterkennung – kein Paket installiert“ und gehen danach von selbst an das Paket.</li>
+<li><strong>Weitere Sprachen</strong> kommen als Zusatzpakete (z. B. „Texterkennung – Französisch“) statt über ein eigenes Image mit <code>tesseract-ocr-data-…</code> oder eingehängte Sprachdateien. Ein eigenes Image nur dafür kannst du durch das offizielle ersetzen.</li>
+<li>Die Einstellungen der Texterkennung (Sprachen, Höchstzahl Seiten, Dateitypen) entfallen; Sprache, Seiten aufrichten und Auflösung stellst du beim Paket ein. TIFF-, WebP-, GIF- und BMP-Bilder bekommen keinen Volltext mehr (das Paket kann JPEG und PNG).</li>
+</ul>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Texterkennung als Paket</strong> (#458): Ein Paket mit dem neuen Recht <strong>„Texterkennung übernehmen“</strong> (<code>dms:texterkennung</code>) – etwa <strong>Texterkennung 2.0</strong> aus dem Katalog – erkennt Scans und Bilder. Das DMS liest bei PDFs dann selbst nur die <strong>Textebene</strong> (poppler) – sofort, PDFs mit Text sind ohne Wartezeit durchsuchbar. Scans und Fotos stehen auf <strong>„wartet auf Texterkennung (Paket …)“</strong>, bis das Paket den Volltext schreibt; bei langen Dokumenten steht dort, wie weit es ist. Ohne ein solches Paket arbeitet die eingebaute Texterkennung wie bisher.</li>
-<li><strong>Woher der Text kommt</strong> steht am Dokument: „Text aus dem PDF“, „Texterkennung durch Paket …“ oder „wartet auf Texterkennung“. Mit <strong>Neu erzeugen</strong> lässt sich der Volltext eines Dokuments ausdrücklich neu erzeugen.</li>
-<li><strong>Volltext neu erzeugen</strong> (Werkbank → Wartungsoperationen) ersetzt „Volltext nachholen“: <strong>für Dokumente ohne Text</strong> oder <strong>für alle Dokumente</strong> (mit Rückfrage und Anzahl). „Für alle“ lässt auch Dokumente mit Text neu erkennen – z. B. nach einem neuen Sprachpaket. Läuft als Auftrag mit Fortschritt und lässt sich abbrechen.</li>
-<li><strong>Werkbank → Texterkennung</strong> zeigt oben, welches Paket die Texterkennung übernimmt (mit Link zu seinen Einstellungen) und wie viele Dokumente darauf warten; Aufträge gibt es auch für den Stand „wartet auf Texterkennung“ (neu starten, abbrechen).</li>
+<li><strong>Werkbank → Texterkennung</strong> ist eine Übersicht: welches Paket die Texterkennung übernimmt (oder <strong>Jetzt installieren</strong>), <strong>woher der Text der Dokumente kommt</strong> (aus dem PDF, vom Paket, von der früheren eingebauten Texterkennung, ohne Text, wartend, Fehler), erkannte Sprachen mit Hinweis auf fehlende Sprach-Zusatzpakete, Warteschlange und Aufträge.</li>
+<li>Hinweis in der <strong>Übersicht der Werkbank</strong>, solange kein Paket für die Texterkennung installiert ist – deutlich, sobald Scans darauf warten.</li>
+<li>Wird ein Paket für die Texterkennung installiert, gehen alle Dokumente, die darauf warteten, an das Paket.</li>
 </ul>
-<h3 id="fur-pakete">Für Pakete<a class="headerlink" href="#fur-pakete" title="Permanent link">&para;</a></h3>
+<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Ereignis <code>volltext.fertig</code></strong> kommt seit 0.133.0 für <strong>jedes</strong> Dokument, das der Kern gelesen hat – auch ohne Text – mit <code>quelle</code> (kern, paket, api, kopie), <code>text</code> (ja/nein), <code>mime</code>, <code>seiten</code>, <code>neu</code> (ausdrücklich neu erzeugen) und bei gemischten PDFs <code>seitenOhneText</code> (gescannte Seiten neben Textseiten – die erkennt das Paket dazu). Ohne Text bekommen es nur Pakete mit <code>dms:texterkennung</code> oder mit <code>dms: "&gt;=0.133.0"</code> im Manifest; ältere Pakete (z. B. für Vektoren) merken nichts davon. Wer den Volltext geschrieben hat, bekommt das Ereignis nicht zurück.</li>
-<li><strong><code>texterkennung.fertig</code></strong> bleibt als veralteter Gleichlaut für Pakete von vor 0.133.0 – gleichzeitig mit <code>volltext.fertig</code> nach dem Schritt des Kerns. Das Paket Texterkennung 1.x läuft damit weiter.</li>
-<li><strong>Fortsetzung:</strong> Antwortet ein Paket auf ein Ereignis mit <code>{"weiter": {…}}</code>, ruft der Läufer es gleich wieder auf (mit <code>weiter</code> und <code>abschnitt</code>) – so passen lange Dokumente in die Zeitgrenze von 2 Minuten je Aufruf. Ein Text <code>fortschritt</code> darin steht am wartenden Dokument.</li>
-<li><strong>Zusatzdaten:</strong> Ein Paket liest mit <code>dms_datei</code> auch die Daten von Paketen, die von ihm abhängen (<code>&lt;paket&gt;/&lt;datei&gt;</code>) – z. B. weitere Sprachen der Texterkennung als eigene Pakete.</li>
-<li><strong><code>GET /dokumente/{id}/seiten/1/scan</code></strong> liefert auch für <strong>JPEG und PNG</strong> ein Graustufenbild (Originalgröße), ohne zusätzliches Bildwerkzeug im Image.</li>
+<li><strong>Schwärzen ohne Tesseract:</strong> Wörter mit ihrer Lage kommen nur noch aus der Textebene (pdftotext). Auf gescannten Seiten und Fotos zieht man Bereiche auf; Suchbegriffe und Vorschläge gehen dort nicht. Die geschwärzte Fassung eines Scans (auch eines gemischten PDFs) bekommt ihren Volltext wie jedes neue Dokument vom Paket – das sieht nur die geschwärzte Fassung, nie das Original. Hat jede Seite eine Textebene, gilt wie bisher sofort der Text ohne die geschwärzten Wörter.</li>
+<li>„Aus Dokument ausfüllen“ liest nur noch PDFs mit Textebene; bei Fotos sagt es, dass der Text nach dem Speichern vom Paket kommt.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Migration 051: neuer Stand <code>paket</code> der Texterkennung („wartet auf Texterkennung“).</li>
-<li>Installierte Pakete merken sich ihre nötige DMS-Version (<code>dms</code> aus dem Manifest).</li>
-<li>Aufträge im Hintergrund lassen sich abbrechen, wenn sie das erlauben (<code>POST /api/werkbank/auftrag/abbrechen</code>).</li>
+<li>Dockerfile: nur noch <code>poppler-utils</code> und <code>qpdf</code>; die Image-Probe in der CI prüft, dass kein <code>tesseract</code> im Image steckt, und meldet die Größe je Architektur.</li>
+<li>Keine Migration: Der Übergang braucht keine Änderung an der Datenbank.</li>
+<li>Werkzeuge der Texterkennung im Server entfernt (Engine, Sprachwahl, Lageerkennung); der Kern liest die Textebene, Seiten ohne Text meldet er dem Paket.</li>
 </ul>
+<h3 id="messwerte">Messwerte<a class="headerlink" href="#messwerte" title="Permanent link">&para;</a></h3>
+<p>Paket Texterkennung 2.0 gegen die bisherige eingebaute Texterkennung (Tesseract nativ, ein Thread), amd64 mit 2 Kernen, erfundene Briefe als Graustufen-Scans: Erkennung gleich gut (Deutsch, Englisch, gedrehte Seiten, Fotos: alle Wörter; Französisch mit Zusatzpaket 99,7 % der Zeichen statt 99,4 %). Zeit: 10 Seiten 31–35 s statt 26 s, 60 Seiten 184–242 s statt 160–188 s (in Abschnitten von etwa einer Minute), eine Seite 4–6 s vom Hochladen bis zum Text. Einzelheiten im README des Pakets.</p>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: Texterkennung → Texterkennung als Paket, Volltext neu erzeugen; Pakete → Recht „Texterkennung übernehmen“, Ereignisse „Volltext fertig“ und „Texterkennung fertig“ (veraltet).</li>
-<li>Benutzerhandbuch: Dokumente → Volltext (wartet auf Texterkennung, woher der Text kommt, Neu erzeugen).</li>
-<li>Entwicklerhandbuch: Pakete mit Code → Volltext fertig (Nutzdaten, Empfänger, Wiederholung), Texterkennung übernehmen, Fortsetzung bei langen Aufgaben, Zusatzdaten aus anderen Paketen.</li>
+<li>Administratorhandbuch: Texterkennung (Texterkennung als Paket, Übersicht, Weitere Sprachen), Aktualisieren (ab 0.134), Übersicht, Technik, Entscheidungen, Pakete, Demo-Daten.</li>
+<li>Benutzerhandbuch: Dokumente → Volltext (woher der Text kommt, kein Paket installiert), Schwärzen bei Scans.</li>
+<li>Entwicklerhandbuch: Aufbau (Abhängigkeiten im Image), Loslegen, Release.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.132.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.132.0...v0.133.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.133.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.133.0...v0.134.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
