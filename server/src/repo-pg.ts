@@ -109,6 +109,11 @@ const alsDokument = (r: Zeile): Dokument => ({
 export const DOKUMENT_SPALTEN = ['id', 'haushalt_id', 'mappe_id', 'register_key', 'name', 'mime', 'groesse', 'sha256', 'anzeigbar', 'erstellt', 'erstellt_von',
   'ocr_stand', 'ocr_info', 'ocr_seiten', 'ocr_zeit', 'version', 'herkunft', 'archivnummer', 'sprache', 'weitere_sprachen', 'seitensprachen', 'teilen_hinweis_aus'] as const;
 /**
+ * Spalten einer Mappe ohne `suchtext` (#615): Der gefaltete Suchtext (Migration 055) ist nur für die Suche da und
+ * etwa so groß wie Titel und Werte zusammen – Listen und „Mappe öffnen“ lesen ihn nie.
+ */
+export const MAPPEN_SPALTEN = ['id', 'haushalt_id', 'typ_id', 'werte', 'erstellt', 'geaendert', 'erstellt_von', 'geaendert_von', 'demo', 'titel', 'passt', 'problem', 'system_kennung'] as const;
+/**
  * ANALYZE (#367) für Tabellen mit Volltext nur über diese Spalten: Ohne Spaltenliste rechnet PostgreSQL
  * auch die Statistik des Index `to_tsvector('german', volltext)` – über eine Minute bei 20.000 Dokumenten.
  */
@@ -333,11 +338,20 @@ function filterSql(sql: Sql, f: Filter): Teil {
   return zaehle(f.quellen);
 }
 
+/**
+ * Typ der Mappe aus einer Liste. Ein einzelner Typ als Gleichheit (#615): Mit `= ANY(…)` nutzt PostgreSQL 16 den
+ * Index (haushalt_id, typ_id, lower(titel)) nicht für die Reihenfolge und sortiert jede Seite einer Ansicht über
+ * alle ihre Mappen (bei 20 000 Mappen rund 45 ms statt 1 ms).
+ */
+function typIn(sql: Sql, typen: string[]): Teil {
+  return typen.length === 1 ? sql`mappen.typ_id = ${typen[0]}::uuid` : sql`mappen.typ_id = ANY(${typen}::uuid[])`;
+}
+
 /** ODER der Klauseln; jede Klausel: Typ passt UND alle Filter. Ohne Klauseln: nichts. */
 export function klauselnSql(sql: Sql, klauseln: Klausel[]): Teil {
   const teile = klauseln.filter((k) => k.typen.some(istUuid)).map((k) => {
     const typen = k.typen.filter(istUuid);
-    const und = k.filter.reduce<Teil>((acc, f) => sql`${acc} AND ${filterSql(sql, f)}`, sql`mappen.typ_id = ANY(${typen}::uuid[])`);
+    const und = k.filter.reduce<Teil>((acc, f) => sql`${acc} AND ${filterSql(sql, f)}`, typIn(sql, typen));
     return sql`(${und})`;
   });
   if (!teile.length) return sql`false`;
@@ -362,7 +376,7 @@ export function lesefilterSql(sql: Sql, f: Lesefilter | null | undefined): Teil 
   if (!f) return sql`true`;
   const teile: Teil[] = [];
   const offen = f.offen.filter(istUuid);
-  if (offen.length) teile.push(sql`mappen.typ_id = ANY(${offen}::uuid[])`);
+  if (offen.length) teile.push(typIn(sql, offen));
   for (const j of f.je) if (istUuid(j.typId)) teile.push(sql`(mappen.typ_id = ${j.typId}::uuid AND ${ausdruckSql(sql, j.ausdruck)})`);
   if (!teile.length) return sql`false`;
   return sql`(${teile.slice(1).reduce<Teil>((acc, t) => sql`${acc} OR ${t}`, teile[0])})`;
@@ -373,6 +387,17 @@ export function lesefilterSql(sql: Sql, f: Lesefilter | null | undefined): Teil 
  * Verbindung einer laufenden Transaktion, die sich wie `sql` benutzen lässt (#404): `begin` wird dort
  * zum Sicherungspunkt, damit die Methoden des Repos unverändert auch in einer Transaktion laufen.
  */
+/**
+ * Schreiben, ohne auf die Platte zu warten (#615): als Tabelle in FROM setzt das `synchronous_commit = off` nur für
+ * die Transaktion dieser einen Anweisung (set_config mit is_local) – ohne eigene Transaktion und ohne weitere
+ * Rundreise. Nur für Merkposten, deren Verlust bei einem Absturz (höchstens die letzten Millisekunden) nichts kaputt
+ * macht; die Datenbank bleibt dabei in sich stimmig. Unter Last hält so ein Schreiben seine Zeilen nicht mehr bis zum
+ * Schreiben auf die Platte gesperrt. In einer laufenden Transaktion: nichts (sonst gälte es für die ganze).
+ */
+export function ohneWarten(sql: Sql): Teil {
+  return 'savepoint' in sql ? sql`(SELECT 1) AS ohne_warten` : sql`(SELECT set_config('synchronous_commit', 'off', true)) AS ohne_warten`;
+}
+
 function inTransaktion(tx: postgres.TransactionSql): Sql {
   return new Proxy(tx, {
     get(ziel, prop, empfaenger) {
@@ -399,6 +424,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
   // Dokumente immer mit ausdrücklichen Spalten, nie `d.*` (#367): sonst kommt der Volltext mit.
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
+  // Mappen ebenso ohne `suchtext` (#615).
+  const MAP = sql.unsafe(MAPPEN_SPALTEN.join(', '));
   const SUCHINDEX = sql.unsafe(SUCHINDEX_TEXT);
   // „Zuletzt geändert“ (#609): auf Millisekunden genau (wie in der API) und bei jedem Schreiben größer als vorher.
   const STAND_WEITER = sql.unsafe(`greatest(date_trunc('milliseconds', clock_timestamp()), date_trunc('milliseconds', geaendert) + interval '1 millisecond')`);
@@ -573,14 +600,14 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
 
     async listeMappen(typId) {
       const r = typId
-        ? (istUuid(typId) ? await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId} ORDER BY erstellt` : [])
-        : await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} ORDER BY erstellt`;
+        ? (istUuid(typId) ? await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId} ORDER BY erstellt` : [])
+        : await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ORDER BY erstellt`;
       return r.map(alsMappe);
     },
     async mappenMitDatum(typId, felder, von, bis) {
       if (!istUuid(typId) || !felder.length) return [];
       // Datumswerte stehen als Text JJJJ-MM-TT in werte; der Textvergleich ordnet sie richtig.
-      const r = await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId}
+      const r = await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId}
         AND EXISTS (SELECT 1 FROM unnest(${felder}::text[]) AS f(k) WHERE werte->>f.k BETWEEN ${von} AND ${bis})
         ORDER BY erstellt`;
       return r.map(alsMappe);
@@ -596,7 +623,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
     async holeMappe(id) {
       if (!istUuid(id)) return undefined;
-      const [r] = await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      const [r] = await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
       return r ? alsMappe(r) : undefined;
     },
     async legeMappeAn(id, typId, werte, vs, benutzerId, demo = false, systemKennung = null, nummern) {
@@ -610,7 +637,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         const [r] = await tx`
           INSERT INTO mappen (id, haushalt_id, typ_id, werte, erstellt_von, geaendert_von, demo, system_kennung)
           VALUES (${id}, ${haushaltId}, ${typId}, ${json(sql, werte)}, ${benutzerId}, ${benutzerId}, ${demo}, ${systemKennung})
-          RETURNING *`;
+          RETURNING ${MAP}`;
         await schreibeVerweise(tx, id, vs);
         return alsMappe(r);
       });
@@ -755,7 +782,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         const [r] = await tx`
           UPDATE mappen SET werte = ${json(sql, neu)}, geaendert = ${STAND_WEITER}, geaendert_von = ${benutzerId}, passt = true, problem = NULL
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
-          RETURNING *`;
+          RETURNING ${MAP}`;
         await schreibeVerweise(tx, id, verweise);
         return alsMappe(r);
       });
@@ -764,7 +791,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       await sql`UPDATE mappen SET geaendert = ${STAND_WEITER}, geaendert_von = ${benutzerId} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
     },
     async holeSystemMappe(kennung) {
-      const [r] = await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND system_kennung = ${kennung}`;
+      const [r] = await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND system_kennung = ${kennung}`;
       return r ? alsMappe(r) : undefined;
     },
     async loescheMappe(id) {
@@ -774,7 +801,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     async holeMappen(ids) {
       const gueltig = [...new Set(ids.filter(istUuid))];
       if (!gueltig.length) return [];
-      return (await sql`SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ANY(${gueltig}::uuid[])`).map(alsMappe);
+      return (await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ANY(${gueltig}::uuid[])`).map(alsMappe);
     },
     async titelVon(ids) {
       const r = new Map<string, string>();
@@ -845,8 +872,14 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         return sql`mappen.id IN (SELECT d.mappe_id FROM dokumente d WHERE d.haushalt_id = ${haushaltId}
           AND (${SUCHINDEX} @@ ${anfragen.get(t) ?? suchanfrage(sql, t, v)}${teil ? sql` OR (${teilSql('d.volltext', teil)})` : sql``}))`;
       };
+      // Vorfilter (#615): Titel und Werte stehen gefaltet in suchtext (Migration 055) – was in einem davon vorkommt,
+      // kommt auch dort vor. Erst danach wird je Titel und Wert genau verglichen (dieselben Treffer wie vorher), aber
+      // nur noch für die wenigen Mappen, die den Begriff überhaupt enthalten. Ohne suchtext (NULL) wie bisher.
+      const vorfilter = (t: string) => sql`(mappen.suchtext IS NULL OR ${schreibweisen(t)
+        .map((x) => sql`mappen.suchtext LIKE ${musterAus(normal(x))}`).reduce((a, b) => sql`${a} OR ${b}`)})`;
+      const inMappe = (t: string) => sql`(${vorfilter(t)} AND (${enthaelt(sql`titel`, t)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, t)}))))`;
       const suche = o.suche
-        ? sql`AND (${enthaelt(sql`titel`, o.suche)} OR EXISTS (SELECT 1 FROM jsonb_each_text(werte) e WHERE e.value NOT LIKE 'dms1$%' AND (${enthaelt(sql`e.value`, o.suche)}))
+        ? sql`AND (${inMappe(o.suche)}
             ${o.notizen ? sql`OR ${inNotizen(o.suche!)}` : sql``}
             ${o.volltext ? sql`OR ${inDokumenten(o.suche!)}` : sql``})`
         : sql``;
@@ -870,9 +903,17 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         : so.art === 'datum' ? sql`(werte ->> ${k}::text)`
         : sql`lower(werte ->> ${k}::text)`;
       const richtung = so?.absteigend ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`;
-      const r = await sql`
-        SELECT * FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen}
-        ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`;
+      // Mit Suche erst alle Treffer, dann sortieren (#615): Sonst geht PostgreSQL bei einem seltenen Begriff den
+      // Titel-Index einer großen Ansicht der Reihe nach durch und prüft jede Mappe (bei 20 000 Mappen über 100 ms
+      // statt 15 ms). Ohne Suche liefert der Index die Seite direkt in der richtigen Reihenfolge. OFFSET 0 hält die
+      // Teilabfrage zusammen.
+      const r = o.suche || tf
+        ? await sql`
+          SELECT * FROM (SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen} OFFSET 0) AS mappen
+          ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`
+        : await sql`
+          SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} ${typ} ${eingang} ${suche} ${textfilter} ${lesen}
+          ORDER BY ${ausdruck} ${richtung}, lower(titel), id OFFSET ${o.von} LIMIT ${o.anzahl}`;
       const mappen = r.map(alsMappe);
       // Fundstellen: zur Suche oder – in der erweiterten Suche – zum Volltextfilter.
       const fund = o.suche && (o.volltext || o.notizen) ? { text: o.suche, volltext: !!o.volltext, notizen: !!o.notizen }
@@ -912,6 +953,12 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         }
       }
       return { gesamt: n as number, mappen, ausschnitte };
+    },
+    async gibtMappen(typIds) {
+      const t = typIds.filter(istUuid);
+      if (!t.length) return false;
+      const [r] = await sql`SELECT EXISTS (SELECT 1 FROM mappen WHERE haushalt_id = ${haushaltId} AND typ_id = ANY(${t}::uuid[])) AS da`;
+      return r.da as boolean;
     },
     async zaehler(benutzerId, admin, lesefilter) {
       const lesen = lesefilter ? sql`AND ${lesefilterSql(sql, lesefilter)}` : sql``;
@@ -1002,7 +1049,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
     async findeDoppelt(typId, feldKey, wert, ausser) {
       const [r] = await sql`
-        SELECT * FROM mappen
+        SELECT ${MAP} FROM mappen
         WHERE haushalt_id = ${haushaltId} AND typ_id = ${typId}
           AND id <> ${istUuid(ausser) ? ausser : '00000000-0000-0000-0000-000000000000'}
           AND lower(trim(werte ->> ${feldKey})) = lower(trim(${wert}))
@@ -1200,8 +1247,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     async merkeGesehen(benutzerId, mappeIds) {
       const ids = [...new Set(mappeIds.filter(istUuid))];
       if (!istUuid(benutzerId) || !ids.length) return;
+      // Ein Merkposten (Hervorhebung „geändert“, #422): ohne Warten auf die Platte (#615, wie „Zuletzt geöffnet“).
       await sql`INSERT INTO gesehen (benutzer_id, mappe_id, haushalt_id)
-        SELECT ${benutzerId}::uuid, m.id, m.haushalt_id FROM mappen m WHERE m.haushalt_id = ${haushaltId} AND m.id = ANY(${ids}::uuid[])
+        SELECT ${benutzerId}::uuid, m.id, m.haushalt_id FROM mappen m, ${ohneWarten(sql)} WHERE m.haushalt_id = ${haushaltId} AND m.id = ANY(${ids}::uuid[])
         ON CONFLICT (benutzer_id, mappe_id) DO UPDATE SET zeit = now()`;
     },
     async geaendertVonAnderen(benutzerId, mappeIds, arten) {
@@ -1230,7 +1278,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       await sql.begin(async (tx) => {
         const r = await tx`
           INSERT INTO papierkorb (id, haushalt_id, typ_id, mappe, verweise, dokumente, versionen, geloescht_von, notizen, aufgaben, favoriten, erinnerungen)
-          SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m),
+          SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m) - 'suchtext',
             (SELECT coalesce(jsonb_agg(to_jsonb(v)), '[]'::jsonb) FROM verweise v WHERE v.quelle_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(d) - 'suchindex'), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) FROM dokument_versionen x JOIN dokumente d ON d.id = x.dokument_id WHERE d.mappe_id = m.id),
@@ -1250,7 +1298,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       await sql.begin(async (tx) => {
         await tx`
           INSERT INTO papierkorb (id, haushalt_id, typ_id, mappe, verweise, dokumente, versionen, geloescht_von, notizen, aufgaben, favoriten, erinnerungen, vorgang, entkoppelt)
-          SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m),
+          SELECT m.id, m.haushalt_id, m.typ_id, to_jsonb(m) - 'suchtext',
             (SELECT coalesce(jsonb_agg(to_jsonb(v)), '[]'::jsonb) FROM verweise v WHERE v.quelle_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(d) - 'suchindex'), '[]'::jsonb) FROM dokumente d WHERE d.mappe_id = m.id),
             (SELECT coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) FROM dokument_versionen x JOIN dokumente d ON d.id = x.dokument_id WHERE d.mappe_id = m.id),
@@ -1631,7 +1679,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const muster = woerter.map((w) => `%${w}%`);
       const mappen = o.mappen < 1 ? [] : await sql`
         SELECT * FROM (
-          SELECT mappen.*, (SELECT count(*) FROM unnest(${muster}::text[]) w
+          SELECT ${sql.unsafe(MAPPEN_SPALTEN.map((x) => `mappen.${x}`).join(', '))}, (SELECT count(*) FROM unnest(${muster}::text[]) w
             WHERE mappen.titel ILIKE w OR EXISTS (SELECT 1 FROM jsonb_each_text(mappen.werte) e WHERE e.value ILIKE w AND e.value NOT LIKE 'dms1$%')) AS punkte
           FROM mappen WHERE haushalt_id = ${haushaltId} ${lesen}) x
         WHERE punkte > 0 ORDER BY punkte DESC, geaendert DESC, id LIMIT ${o.mappen}`;

@@ -241,6 +241,8 @@ export interface Repo {
   /** Eine Seite einer Sicht, sortiert nach Titel. */
   seite(o: SeitenAnfrage): Promise<{ gesamt: number; mappen: Mappe[]; ausschnitte?: Record<string, Ausschnitt> }>;
   /** Zähler für die Sichten. `lesen` gilt für typen und favoriten; eingang zählt immer ohne Lesefilter (#127: auch Aufgaben zu nicht lesbaren Mappen, #477: eigene schnelle Abfrage). */
+  /** Gibt es mindestens eine Mappe dieser Typen? (Startseite, #334 – ohne alle zu zählen, #615) */
+  gibtMappen(typIds: string[]): Promise<boolean>;
   zaehler(benutzerId: string, admin: boolean, lesen?: Lesefilter | null): Promise<{ typen: Map<string, { anzahl: number; unpassend: number; demo: number }>; eingang: number; favoriten: number }>;
   /** Favoriten (#62): setzen/entfernen; welche der Mappen Favoriten des Benutzers sind. */
   setzeFavorit(benutzerId: string, mappeId: string, an: boolean): Promise<void>;

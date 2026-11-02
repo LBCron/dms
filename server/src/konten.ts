@@ -349,10 +349,7 @@ export class Konten {
 
   /** Startseite (#334): zuletzt geöffnete Mappen merken – höchstens 10, neueste zuerst. */
   async merkeGeoeffnet(ich: Benutzer, mappeId: string) {
-    const alt = (await this.repo.einstellungen(ich.id)).zuletzt_geoeffnet;
-    const liste = Array.isArray(alt) ? alt.filter((x): x is string => typeof x === 'string') : [];
-    if (liste[0] === mappeId) return;
-    await this.repo.setzeEinstellung(ich.id, 'zuletzt_geoeffnet', [mappeId, ...liste.filter((x) => x !== mappeId)].slice(0, 10));
+    await this.repo.merkeVorn(ich.id, 'zuletzt_geoeffnet', mappeId, 10);
   }
 
   async setzeEinstellung(ich: Benutzer, schluessel: string, wert: unknown) {

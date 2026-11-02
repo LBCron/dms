@@ -1546,7 +1546,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Startseite (#334): „Zuletzt geöffnet“ – nur in der Oberfläche, nicht über API-Schlüssel.
       if (!a.apiSchluessel && a.benutzer) await konten.merkeGeoeffnet(a.benutzer, a.params.id).catch(() => {});
       // Favorit = Abo (#422): geöffnet = gesehen – Hervorhebung weg, offene „Geändert“-Benachrichtigung erledigt.
-      if (!a.apiSchluessel && a.benutzer && !a.sitzungsDaten?.vertretungId) await dienst.gesehen(a.benutzer, a.params.id).catch(() => {});
+      if (!a.apiSchluessel && a.benutzer && !a.sitzungsDaten?.vertretungId) await dienst.gesehen(a.benutzer, a.params.id, d.aufgaben).catch(() => {});
       return ok(klartext ? { ...d, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : d);
     } },
     // Startseite (#334): zuletzt geöffnete Mappen (nur lesbare, höchstens 5) und ob es schon eigene Mappen gibt.

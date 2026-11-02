@@ -243,7 +243,10 @@ export type Filter =
 /** Eine Klausel: Mappen dieser Typen, die alle Filter erfüllen. Eine Sicht = ODER ihrer Klauseln. */
 export interface Klausel { typen: string[]; filter: Filter[] }
 
-export const heuteIn = (jetzt = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE }).format(jetzt);
+// Einmal angelegt (#615): Ein neues Intl.DateTimeFormat kostet spürbar Rechenzeit, und „heute“ braucht jede Anfrage
+// mit Rechten oder Ansichten mehrmals.
+const HEUTE_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE });
+export const heuteIn = (jetzt = new Date()) => HEUTE_FORMAT.format(jetzt);
 
 /** Datum (JJJJ-MM-TT) ± n Einheiten; Monatsende wird gekappt (31.01. + 1 Monat = 28./29.02.). */
 export function verschiebe(datum: string, n: number, einheit: Einheit = 'tage'): string {

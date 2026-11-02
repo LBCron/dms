@@ -35,7 +35,7 @@ export const OHNE_FOLGEN = new Set<string>([
   'listeTypen', 'holeTyp', 'zaehleMappen', 'listeMappen', 'mappenMitDatum', 'mappenKurz', 'feldwerte', 'holeMappe',
   'listePakete', 'paketCode', 'faelligeEreignisse', 'ereignisStand', 'listeNummernkreise', 'findeArchivnummer', 'holeSystemMappe',
   'holeMappen', 'titelVon', 'quellenVon', 'bezuege', 'seite', 'zaehler', 'alleFavoriten', 'auskunftLinkPerSchluessel', 'auskunftLinks',
-  'favoritenVon', 'favoritenDerMappe', 'stummeFavoriten', 'geaendertVonAnderen', 'zaehleKlauseln', 'lesbare', 'inKlauseln',
+  'favoritenVon', 'favoritenDerMappe', 'gibtMappen', 'stummeFavoriten', 'geaendertVonAnderen', 'zaehleKlauseln', 'lesbare', 'inKlauseln',
   'zaehleAusdruck', 'listeSichten', 'unpassende', 'typenOhnePassung', 'belegung', 'ohneTitel', 'typenVon', 'findeDoppelt',
   'rueckverweise', 'kantenVon', 'listeDokumente', 'dokumenteVon', 'zaehleDokumente', 'holeDokument', 'versionenVon',
   'versionenVonDokumenten', 'holeVersion', 'alleDateien', 'dokumenteMitSha', 'dokumenteMitTyp', 'dokumentTypen', 'grossePdfs', 'dokumenteJeRegister', 'zaehleDemo',
