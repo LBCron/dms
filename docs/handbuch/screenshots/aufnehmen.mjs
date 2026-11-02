@@ -451,10 +451,14 @@ async function main() {
   await bild(s, 'volltext-suche');
   await api('PUT', '/api/konto/einstellungen/suche_volltext', { wert: null });
 
-  // Erweiterte Suche (#199): Formular links, Treffer mit Chips in der Mitte
+  // Erweiterte Suche (#199, #426): Formular oben in der Mitte, Treffer darunter; zugeklappt die Zusammenfassung.
   await geheZu(s, '/ablage/suche?typ=Rechnung&rechnungsdatum.von=2026-01-01&rechnungsdatum.bis=2026-12-31&bezahlt=ja');
   await s.locator('.suchchip').first().waitFor();
   await s.waitForTimeout(600);
+  await bild(s, 'erweiterte-suche-treffer');
+  await s.getByRole('button', { name: 'Suche ändern' }).click();
+  await s.getByRole('form', { name: 'Erweiterte Suche' }).waitFor();
+  await s.waitForTimeout(300);
   await bild(s, 'erweiterte-suche');
 
   // Passwortfeld (#46)

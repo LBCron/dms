@@ -1,5 +1,6 @@
 /**
- * Oberflächentest der erweiterten Suche (#199): Formular, Chips, Link in der Adresse, Handy-Ablauf.
+ * Oberflächentest der erweiterten Suche (#199, #426): Formular oben in der Mitte, Bedingungen bei Bedarf,
+ * Zusammenfassung, Link in der Adresse, Handy-Ablauf.
  *
  * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator).
  *
@@ -37,17 +38,28 @@ try {
   await s.getByRole('link', { name: /Erweiterte Suche/ }).first().click();
   await s.waitForURL(/\/ablage\/suche/);
   const form = s.getByRole('form', { name: 'Erweiterte Suche' });
-  await form.getByLabel('Rechnung', { exact: true }).check();
+  await form.waitFor();
+  // #426: Formular oben in der Mitte; ohne geöffnete Mappe reicht die Mitte bis rechts, links bleibt die Navigation.
+  pruefe(!(await s.locator('.spalte.mappe').isVisible()), 'Ohne geöffnete Mappe sollte es rechts keine Spalte geben');
+  pruefe(await s.locator('.spalte.sichten .sichtliste').isVisible(), 'Links sollte die Navigation bleiben');
+  // Mappentyp wie beim Referenzfeld: Suchfeld, Vorschlag, Chip.
+  await form.getByLabel('Mappentyp suchen …').fill('Rechn');
+  await form.getByRole('option', { name: 'Rechnung', exact: true }).click();
+  await form.getByRole('list', { name: 'Mappentypen' }).getByText('Rechnung', { exact: true }).waitFor();
+  // Felder nur bei Bedarf: „+ Bedingung“ → Rechnungsdatum.
+  pruefe(!(await form.getByLabel('Rechnungsdatum von').count()), 'Felder sollten erst mit „+ Bedingung“ erscheinen');
+  await form.getByLabel('Feld für eine neue Bedingung').selectOption({ label: 'Rechnungsdatum' });
   await form.getByLabel('Rechnungsdatum von').fill('2026-01-15');
   await form.getByLabel('Rechnungsdatum bis').fill('2026-01-15');
   await form.getByRole('button', { name: 'Suchen' }).click();
   await s.waitForURL(/rechnungsdatum\.von=2026-01-15/);
   await s.getByText('Rechnungsdatum 15.01.2026–15.01.2026').waitFor();
+  pruefe(!(await form.isVisible()), 'Nach „Suchen“ sollte das Formular zugeklappt sein');
   // Beispieldaten und Demo-Daten: JA-2025-0815 ist am 15.01.2026, R-2026-117 nicht.
   await warteZahl((n) => n >= 1);
   const n1 = await zahl();
   await s.locator('.spalte.liste').getByText(/JA-2025-0815/).first().waitFor();
-  console.log('ok  Formular → Treffer und Chips');
+  console.log('ok  Formular → Treffer und Zusammenfassung');
 
   // × am Chip entfernt die Bedingung und sucht sofort neu.
   await s.getByRole('button', { name: /Bedingung „Rechnungsdatum .*“ entfernen/ }).click();
@@ -60,13 +72,20 @@ try {
   await warteZahl((n) => n === n1);
   console.log('ok  Zurück im Browser');
 
-  // Link öffnen: Formular aus der Adresse, erste Bedingung wirkt.
+  // Link öffnen: Bedingungen aus der Adresse; ein Klick auf die Zusammenfassung öffnet das Formular.
   await s.goto(`${BASIS}/ablage/suche?typ=Rechnung&bezahlt=nein`);
   await warteZahl((n) => n >= 1);
-  pruefe(await s.getByLabel('Rechnung', { exact: true }).isChecked(), 'Typ aus dem Link nicht gewählt');
-  pruefe(await s.getByRole('radiogroup', { name: 'Bezahlt' }).getByLabel('nein').isChecked(), 'Ja/Nein aus dem Link fehlt');
-  await s.getByText('Bezahlt: nein').waitFor();
-  console.log('ok  Link öffnen');
+  await s.getByRole('button', { name: 'Bezahlt: nein', exact: true }).click();
+  await form.waitFor();
+  pruefe(await form.getByRole('list', { name: 'Mappentypen' }).getByText('Rechnung', { exact: true }).isVisible(), 'Typ aus dem Link nicht gewählt');
+  pruefe(await form.getByRole('radiogroup', { name: 'Bezahlt' }).getByLabel('nein').isChecked(), 'Ja/Nein aus dem Link fehlt');
+  console.log('ok  Link öffnen, Zusammenfassung anklicken');
+
+  // Treffer öffnen: rechts die Mappe, die Mitte wird schmaler.
+  await form.getByRole('button', { name: 'Formular einklappen' }).click();
+  await s.locator('.spalte.liste .eintrag, .spalte.liste tbody a').first().click();
+  await s.locator('.spalte.mappe').waitFor();
+  console.log('ok  Treffer öffnen');
   await k.close();
 
   /* ---------- Handy ---------- */
@@ -76,16 +95,17 @@ try {
   await s.goto(`${BASIS}/ablage/suche`);
   const hform = s.getByRole('form', { name: 'Erweiterte Suche' });
   await hform.waitFor();
-  pruefe(!(await s.locator('.spalte.liste').isVisible()), 'Am Handy sollte erst nur das Formular stehen');
-  await hform.getByLabel('Rechnung', { exact: true }).check();
+  pruefe(!(await s.locator('.listenrumpf').isVisible()), 'Am Handy sollte erst nur das Formular stehen');
+  await hform.getByLabel('Mappentyp suchen …').fill('Rechnung');
+  await hform.getByRole('option', { name: 'Rechnung', exact: true }).click();
   await hform.getByLabel('Suchbegriff im Volltext').fill('Rechnung');
   await hform.getByRole('button', { name: 'Suchen' }).click();
-  await s.locator('.spalte.liste').waitFor();
+  await s.locator('.listenrumpf').waitFor();
   pruefe(!(await hform.isVisible()), 'Nach „Suchen“ sollte die Trefferliste stehen');
-  await s.getByRole('button', { name: /Suche ändern/ }).click();
+  await s.getByRole('button', { name: 'Filter', exact: true }).click();
   await hform.waitFor();
   pruefe(await hform.getByLabel('Suchbegriff im Volltext').inputValue() === 'Rechnung', 'Eingaben gingen verloren');
-  console.log('ok  Handy: Formular, Treffer, Suche ändern');
+  console.log('ok  Handy: Filter, Treffer, wieder Filter');
   await h.close();
 } catch (e) {
   await mkdir(ZIEL, { recursive: true });

@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { abfrageAus, alsParameter, chipsVon, eingabeart, istGesetzt, kannLeer, liesSuche, ohneChip, suchfelder, SUCHE_PFAD, zeitraumVon, ZEITRAEUME, type Feldeingabe, type Suchformular, type Zeitraum } from '../../../shared/src/erweitertesuche';
 import { heuteIn, type Bedingungsfeld } from '../../../shared/src/sichten';
 import type { Mappentyp } from '../../../shared/src/model';
 import { api, type Bezuege } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
-import { geheZu, Link } from '../ort';
+import { geheZu } from '../ort';
+import { t } from '../sprache';
+import { Symbol } from '../Symbol';
 import { titelOder } from '../seiten';
 import { MappenWahl } from './MappeFormular';
 
 /**
- * Erweiterte Suche (#199): links das Formular statt der Sichten, in der Mitte die Treffer mit den
- * Bedingungen als Chips. Die Suche steht in der Adresse (/ablage/suche?…).
+ * Erweiterte Suche (#199, #426): oben in der Mitte das Formular, darunter die Treffer mit den Bedingungen als
+ * Chips; links bleibt die Navigation. Solange keine Mappe offen ist, reicht die Mitte bis an den rechten Rand.
+ * Die Suche steht in der Adresse (/ablage/suche?…).
  */
 
 /** Titel verwiesener Mappen für Formular und Chips – über Suchen hinweg gemerkt. */
@@ -31,29 +34,56 @@ function useLesbareTypen(): Mappentyp[] | null {
 
 const typSchluessel = (t: Mappentyp) => t.schluessel ?? t.id;
 
-export function Suchformular({ suche, zeigeTreffer }: { suche: URLSearchParams; zeigeTreffer(): void }) {
+/**
+ * Kopf der erweiterten Suche (#426): oben in der Mitte, über den Treffern. Offen das Formular, zugeklappt die
+ * Zusammenfassung der Bedingungen – ein Klick darauf öffnet das Formular an dieser Stelle. Am Handy ist das
+ * offene Formular ein eigener Schritt („Filter“), die Treffer stehen erst danach.
+ */
+export function Suchkopf({ suche, offen, formular, setFormular }: { suche: URLSearchParams; offen?: string; formular: boolean; setFormular(an: boolean): void }) {
+  const [fokus, setFokus] = useState<string>();
+  const hatSuche = !!suche.toString();
+  if (formular) return <Suchformular suche={suche} fokus={fokus} zeigeTreffer={() => setFormular(false)} einklappen={hatSuche ? () => setFormular(false) : undefined} />;
+  return (
+    <div className="suchzusammenfassung">
+      <Suchchips suche={suche} offen={offen} aendern={(k) => { setFokus(k); setFormular(true); }} />
+      <button type="button" className="knopf klein sz-aendern" onClick={() => { setFokus(undefined); setFormular(true); }}>
+        <span className="nur-breit-inline">{t('suche.aendern')}</span><span className="nur-schmal">{t('suche.filter')}</span>
+      </button>
+    </div>
+  );
+}
+
+export function Suchformular({ suche, fokus, zeigeTreffer, einklappen }: { suche: URLSearchParams; fokus?: string; zeigeTreffer(): void; einklappen?: () => void }) {
   const d = useDaten();
   const lesbar = useLesbareTypen();
   const adresse = suche.toString();
   const [f, setF] = useState<Suchformular>(() => liesSuche(suche));
+  // Bedingungen nur bei Bedarf (#426): sichtbar sind die Felder, die man mit „+ Bedingung“ gewählt hat.
+  const [aktiv, setAktiv] = useState<string[]>(() => Object.keys(liesSuche(suche).felder));
   // Zurück/Vor oder ein entfernter Chip: Formular folgt der Adresse.
-  useEffect(() => { setF(liesSuche(new URLSearchParams(adresse))); }, [adresse]);
+  useEffect(() => { const n = liesSuche(new URLSearchParams(adresse)); setF(n); setAktiv(Object.keys(n.felder)); }, [adresse]);
   const [, neu] = useState(0);
   const merke = (id: string, b: { titel: string; typId: string }) => { titelCache[id] = b; neu((n) => n + 1); };
+  const formRef = useRef<HTMLFormElement>(null);
+  const [springe, setSpringe] = useState<string | undefined>(fokus);
+  useEffect(() => {
+    if (!springe) return;
+    const el = formRef.current?.querySelector<HTMLElement>(springe === 'typ' ? '#such-typen' : springe === 'volltext' ? '#such-volltext' : `[data-feld="${CSS.escape(springe)}"] input, [data-feld="${CSS.escape(springe)}"] select`);
+    if (el) { el.focus(); el.scrollIntoView?.({ block: 'nearest' }); setSpringe(undefined); }
+  });
 
   const gewaehlt = useMemo(() => abfrageAus(f, d.typen).typen, [f, d.typen]);
   const felder = useMemo(() => suchfelder(gewaehlt), [gewaehlt]);
+  const sichtbar = aktiv.map((k) => felder.find((x) => x.key === k)).filter((x): x is Bedingungsfeld => !!x);
+  const frei = felder.filter((x) => !aktiv.includes(x.key));
   const entfallen = Object.entries(f.felder).filter(([k, e]) => istGesetzt(e) && !felder.some((x) => x.key === k)).map(([k]) => k);
   const setzeFeld = (key: string, e: Feldeingabe | undefined) => setF((x) => {
     const n = { ...x.felder };
     if (e && istGesetzt(e)) n[key] = e; else delete n[key];
     return { ...x, felder: n };
   });
-  const umschalten = (t: Mappentyp) => setF((x) => {
-    const k = typSchluessel(t);
-    const an = gewaehlt.some((y) => y.id === t.id);
-    return { ...x, typen: an ? x.typen.filter((y) => y !== k && y !== t.name && y !== t.id) : [...x.typen, k] };
-  });
+  const dazu = (key: string) => { if (!key) return; setAktiv((a) => (a.includes(key) ? a : [...a, key])); setSpringe(key); };
+  const weg = (key: string) => { setAktiv((a) => a.filter((k) => k !== key)); setzeFeld(key, undefined); };
 
   function suchen(e?: React.FormEvent) {
     e?.preventDefault();
@@ -64,49 +94,94 @@ export function Suchformular({ suche, zeigeTreffer }: { suche: URLSearchParams; 
   }
 
   return (
-    <form className="suchformular stapel" onSubmit={suchen} aria-label="Erweiterte Suche">
-      <Link to="/ablage/eingang" className="verweis klein">← zurück zu den Ansichten</Link>
-      <h2 className="h3">Erweiterte Suche <Hilfe ort="ablage.erweitertesuche" /></h2>
-
+    <form ref={formRef} className="suchformular blatt" onSubmit={suchen} aria-label={t('suche.titel')}>
       <fieldset className="suchgruppe">
-        <legend>Mappentypen</legend>
-        {!lesbar ? <p className="leise klein">Lade …</p> : (
-          <div className="typwahl">
-            {lesbar.map((t) => (
-              <label key={t.id} className="haken klein"><input type="checkbox" checked={gewaehlt.some((y) => y.id === t.id)} onChange={() => umschalten(t)} /><span>{t.name}</span></label>
-            ))}
-          </div>
-        )}
-        <p className="leise klein">{gewaehlt.length ? (gewaehlt.length > 1 ? 'Angeboten werden die Felder, die alle gewählten Mappentypen haben.' : '') : 'Ohne Auswahl: alle Mappentypen, die du lesen darfst – dann nur mit den allgemeinen Feldern.'}</p>
+        <legend>{t('suche.typen')}</legend>
+        {!lesbar ? <p className="leise klein">{t('suche.lade')}</p>
+          : <TypWahl lesbar={lesbar} gewaehlt={gewaehlt} setze={(l) => setF((x) => ({ ...x, typen: l.map(typSchluessel) }))} />}
+        <p className="leise klein">{gewaehlt.length ? (gewaehlt.length > 1 ? t('suche.typen.gemeinsam') : '') : t('suche.typen.alle')}</p>
       </fieldset>
 
-      <fieldset className="suchgruppe">
-        <legend>Felder</legend>
-        {felder.map((x) => <Feldsuche key={x.key} feld={x} e={f.felder[x.key] ?? {}} setze={(e) => setzeFeld(x.key, e)} merke={merke} />)}
+      <fieldset className="suchgruppe sg-bedingungen">
+        <legend>{t('suche.bedingungen')}</legend>
+        {!sichtbar.length && <p className="leise klein">{t('suche.bedingungen.leer')}</p>}
+        {sichtbar.map((x) => <Feldsuche key={x.key} feld={x} e={f.felder[x.key] ?? {}} setze={(e) => setzeFeld(x.key, e)} merke={merke} weg={() => weg(x.key)} />)}
+        {frei.length > 0
+          ? (
+            <label className="bedingungneu"><span className="sr">{t('suche.bedingung.feld')}</span>
+              <select value="" onChange={(e) => dazu(e.target.value)} aria-label={t('suche.bedingung.feld')}>
+                <option value="">{t('suche.bedingung.neu')}</option>
+                {frei.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+              </select>
+            </label>
+          )
+          : <p className="leise klein">{t('suche.bedingung.keine')}</p>}
         {entfallen.length > 0 && (
-          <div className="hinweis warn klein" role="status"><p>Entfallen bei dieser Auswahl: {entfallen.join(', ')}. Die Werte bleiben gemerkt, falls du die Auswahl zurückänderst.</p></div>
+          <div className="hinweis warn klein" role="status"><p>{t('suche.entfallen', { felder: entfallen.join(', ') })}</p></div>
         )}
       </fieldset>
 
-      <fieldset className="suchgruppe">
-        <legend>Volltext <Hilfe ort="ablage.suchvolltext" /></legend>
-        <input type="search" aria-label="Suchbegriff im Volltext" placeholder="z. B. Backofen" value={f.volltext} onChange={(e) => setF({ ...f, volltext: e.target.value })} />
+      <fieldset className="suchgruppe sg-volltext">
+        <legend>{t('suche.volltext')} <Hilfe ort="ablage.suchvolltext" /></legend>
+        <input id="such-volltext" type="search" aria-label={t('suche.volltext.feld')} placeholder={t('suche.volltext.beispiel')} value={f.volltext} onChange={(e) => setF({ ...f, volltext: e.target.value })} />
         <div className="zeile">
-          <label className="haken klein"><input type="checkbox" checked={f.inDokumenten} onChange={(e) => setF({ ...f, inDokumenten: e.target.checked })} /><span>in Dokumenten</span></label>
-          <label className="haken klein"><input type="checkbox" checked={f.inNotizen} onChange={(e) => setF({ ...f, inNotizen: e.target.checked })} /><span>in Notizen</span></label>
+          <label className="haken klein"><input type="checkbox" checked={f.inDokumenten} onChange={(e) => setF({ ...f, inDokumenten: e.target.checked })} /><span>{t('suche.volltext.dokumente')}</span></label>
+          <label className="haken klein"><input type="checkbox" checked={f.inNotizen} onChange={(e) => setF({ ...f, inNotizen: e.target.checked })} /><span>{t('suche.volltext.notizen')}</span></label>
         </div>
       </fieldset>
 
       <div className="knoepfe">
-        <button type="submit" className="knopf primaer">Suchen</button>
-        <button type="button" className="textknopf" onClick={() => setF({ ...f, felder: {}, volltext: '' })}>Leeren</button>
+        <button type="submit" className="knopf primaer">{t('suche.suchen')}</button>
+        <button type="button" className="textknopf" onClick={() => { setF({ ...f, felder: {}, volltext: '' }); setAktiv([]); }}>{t('suche.leeren')}</button>
+        {einklappen && <button type="button" className="textknopf" onClick={einklappen}>{t('suche.einklappen')}</button>}
       </div>
     </form>
   );
 }
 
+/**
+ * Mappentypen wählen (#426) wie beim Referenzfeld: Suchfeld mit Vorschlägen, gewählte als Chips mit Entfernen.
+ * Ohne Auswahl gelten alle lesbaren Mappentypen.
+ */
+function TypWahl({ lesbar, gewaehlt, setze }: { lesbar: Mappentyp[]; gewaehlt: Mappentyp[]; setze(l: Mappentyp[]): void }) {
+  const [eingabe, setEingabe] = useState('');
+  const [offen, setOffen] = useState(false);
+  const q = eingabe.trim().toLowerCase();
+  const auswahl = lesbar.filter((x) => !gewaehlt.some((y) => y.id === x.id) && (!q || x.name.toLowerCase().includes(q)));
+  const waehle = (x: Mappentyp) => { setze([...gewaehlt, x]); setEingabe(''); setOffen(false); };
+  return (
+    <div className="refbox typwahl-ref">
+      {gewaehlt.length > 0 && (
+        <ul className="suchchips" aria-label={t('suche.typen')}>
+          {gewaehlt.map((x) => (
+            <li key={x.id} className="chip suchchip">{x.name}
+              <button type="button" className="chipweg" aria-label={t('suche.typen.entfernen', { name: x.name })} title={t('suche.typen.entfernen', { name: x.name })}
+                onClick={() => setze(gewaehlt.filter((y) => y.id !== x.id))}><Symbol name="schliessen" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="wahl" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOffen(false); }}>
+        <input id="such-typen" type="search" role="combobox" aria-expanded={offen} aria-autocomplete="list" autoComplete="off" aria-label={t('suche.typen.suchen')}
+          placeholder={t('suche.typen.suchen')} value={eingabe}
+          onFocus={() => setOffen(true)} onChange={(e) => { setEingabe(e.target.value); setOffen(true); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setOffen(false);
+            if (e.key === 'Enter') { e.preventDefault(); if (auswahl[0]) waehle(auswahl[0]); }
+          }} />
+        {offen && (
+          <div className="wahlliste" role="listbox" aria-label={t('suche.typen')}>
+            {!auswahl.length ? <p className="leise klein">{t('suche.typen.keine')}</p>
+              : auswahl.map((x) => <button key={x.id} type="button" role="option" aria-selected={false} onClick={() => waehle(x)}>{x.name}</button>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Eine Zeile je Feld: die passende Eingabe, dazu „leer“ bzw. „nicht leer“, wo es das gibt. */
-function Feldsuche({ feld, e, setze, merke }: { feld: Bedingungsfeld; e: Feldeingabe; setze(e: Feldeingabe | undefined): void; merke(id: string, b: { titel: string; typId: string }): void }) {
+function Feldsuche({ feld, e, setze, merke, weg }: { feld: Bedingungsfeld; e: Feldeingabe; setze(e: Feldeingabe | undefined): void; merke(id: string, b: { titel: string; typId: string }): void; weg(): void }) {
   const d = useDaten();
   const art = eingabeart(feld);
   const id = `such-${feld.key}`;
@@ -159,7 +234,7 @@ function Feldsuche({ feld, e, setze, merke }: { feld: Bedingungsfeld; e: Feldein
     eingabe = <input id={id} type="text" placeholder="enthält …" value={werte[0] ?? ''} onChange={(x) => setze({ ...e, werte: x.target.value ? [x.target.value] : [] })} />;
   }
   return (
-    <div className={`feldsuche${istGesetzt(e) ? ' gesetzt' : ''}`}>
+    <div className={`feldsuche${istGesetzt(e) ? ' gesetzt' : ''}`} data-feld={feld.key}>
       <div className="feldsuchkopf">
         <label htmlFor={id} className="klein">{feld.label}</label>
         {leerArten.length > 0 && (
@@ -168,14 +243,18 @@ function Feldsuche({ feld, e, setze, merke }: { feld: Bedingungsfeld; e: Feldein
             {leerArten.map((o) => <option key={o} value={o}>{o === 'leer' ? 'ist leer' : 'ist nicht leer'}</option>)}
           </select>
         )}
+        <button type="button" className="chipweg" aria-label={t('suche.bedingung.entfernen', { feld: feld.label })} title={t('suche.bedingung.entfernen', { feld: feld.label })} onClick={weg}><Symbol name="schliessen" /></button>
       </div>
       {!e.leer && eingabe}
     </div>
   );
 }
 
-/** Chips über der Trefferliste; × entfernt eine Bedingung und sucht sofort neu. */
-export function Suchchips({ suche, offen }: { suche: URLSearchParams; offen?: string }) {
+/**
+ * Zusammenfassung über der Trefferliste (#199, #426): je Bedingung ein Chip. Ein Klick auf den Text öffnet das
+ * Formular an dieser Stelle, das Kreuz entfernt die Bedingung und sucht sofort neu.
+ */
+export function Suchchips({ suche, offen, aendern }: { suche: URLSearchParams; offen?: string; aendern?: (key: string) => void }) {
   const d = useDaten();
   const f = liesSuche(suche);
   const [, neu] = useState(0);
@@ -190,13 +269,16 @@ export function Suchchips({ suche, offen }: { suche: URLSearchParams; offen?: st
     return () => { aktuell = false; };
   }, [fehlend]);
   const chips = chipsVon(f, d.typen, (id) => titelOder(titelCache[id]?.titel ?? '…'), d.person);
-  if (!chips.length) return <p className="leise klein">Noch keine Bedingung – es werden alle Mappen gezeigt, die du lesen darfst.</p>;
+  if (!chips.length) return <p className="leise klein">{t('suche.zusammenfassung.leer')}</p>;
   return (
-    <ul className="suchchips" aria-label="Bedingungen der Suche">
+    <ul className="suchchips" aria-label={t('suche.zusammenfassung')}>
       {chips.map((c) => (
-        <li key={c.key} className="chip suchchip">{c.text}
-          <button type="button" className="chipweg" aria-label={`Bedingung „${c.text}“ entfernen`} title="Bedingung entfernen"
-            onClick={() => geheZu(`${SUCHE_PFAD}${offen ? `/${offen}` : ''}?${alsParameter(ohneChip(f, c.key)).toString()}`)}>×</button>
+        <li key={c.key} className="chip suchchip">
+          {aendern
+            ? <button type="button" className="chiptext" title={t('suche.zusammenfassung.aendern', { text: c.text })} onClick={() => aendern(c.key)}>{c.text}</button>
+            : c.text}
+          <button type="button" className="chipweg" aria-label={t('suche.chip.entfernen', { text: c.text })} title={t('suche.chip.entfernen', { text: c.text })}
+            onClick={() => geheZu(`${SUCHE_PFAD}${offen ? `/${offen}` : ''}?${alsParameter(ohneChip(f, c.key)).toString()}`)}><Symbol name="schliessen" /></button>
         </li>
       ))}
     </ul>

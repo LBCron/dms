@@ -12,7 +12,8 @@ import felder from '../../shared/src/sprachen/de/felder.json';
 import fragen from '../../shared/src/sprachen/de/fragen.json';
 import profil from '../../shared/src/sprachen/de/profil.json';
 import spalten from '../../shared/src/sprachen/de/spalten.json';
+import suche from '../../shared/src/sprachen/de/suche.json';
 import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, anmeldung, erkennung, felder, fragen, pakete, profil, spalten, systemzustand, werkbank });
+export const t = uebersetzer({ aehnlich, anmeldung, erkennung, felder, fragen, pakete, profil, spalten, suche, systemzustand, werkbank });
