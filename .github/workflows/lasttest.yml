@@ -1,20 +1,22 @@
 name: Lasttest
 
-# Lasttest (#544): viele gleichzeitige Anfragen gegen ein laufendes DMS mit 50.000 Demo-Mappen.
-# Nicht bei jedem Pull Request – die Rechner von GitHub schwanken, und ein Lauf dauert rund eine halbe Stunde.
-# Wöchentlich und von Hand vor größeren Releases. Ergebnis als Bericht am Lauf (Zusammenfassung und Artefakt).
-# Die Grenzen sind großzügig und melden nur echte Verschlechterungen (Entwicklerhandbuch → Leistung → Lasttest).
+# Lasttest in drei Stufen (#544, #563): klein (25 gleichzeitig, 5.000 Mappen), mittel (100 gleichzeitig mit Export,
+# 50.000 Mappen), groß (Last steigern bis zur Grenze, 200.000 Mappen). klein und mittel sind eine Qualitätszusage –
+# verfehlt, wird der Lauf rot. groß ist eine Messung: Die Grenze steht im Bericht; liegt sie mehr als 20 % unter der
+# des letzten Laufs (aus dem Cache), gibt es eine Warnung. Nicht bei jedem Pull Request – die Rechner von GitHub
+# schwanken, und ein Lauf dauert gut eine Stunde. Wöchentlich und von Hand vor größeren Releases.
+# Grenzen und Begründung: Entwicklerhandbuch → Leistung → Lasttest.
 
 on:
   workflow_dispatch:
     inputs:
       dauer:
-        description: 'Sekunden je Durchgang (Stufe „normal“; Überlast höchstens 60)'
+        description: 'Sekunden je Durchgang von klein und mittel (groß: 2 Minuten je Schritt)'
         required: false
         default: '120'
         type: string
       stufe:
-        description: 'normal, ueberlast oder alle'
+        description: 'klein, mittel, gross oder alle'
         required: false
         default: 'alle'
         type: string
@@ -32,7 +34,7 @@ concurrency:
 jobs:
   lasttest:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 180
     services:
       postgres:
         image: postgres:17
@@ -65,18 +67,34 @@ jobs:
             DATABASE_URL=postgres://dms:dms@127.0.0.1:5432/dmslast PORT=3100 HOST=127.0.0.1 LOG_LEVEL=warn \
             nohup node --enable-source-maps dist/index.js > "$RUNNER_TEMP/dms.log" 2>&1 &
           timeout 120 bash -c 'until curl -sf http://127.0.0.1:3100/api/gesundheit >/dev/null; do sleep 1; done'
-      - name: Einrichten (50.000 Demo-Mappen)
-        run: node server/test/lasttest.mjs --einrichten --mappen 50000 --dokumente 2
+      # Grenze der Stufe groß vom letzten Lauf (für die Warnung bei mehr als 20 % Verschlechterung).
+      - name: Letzten Lauf holen
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ runner.temp }}/vorher
+          key: lasttest-gross-${{ github.run_id }}
+          restore-keys: lasttest-gross-
       - name: Lasttest
-        # Eingaben nur über Umgebungsvariablen, nie direkt ins Skript (Schutz vor Einschleusen).
+        # Eingaben nur über Umgebungsvariablen, nie direkt ins Skript (Schutz vor Einschleusen). Das Skript richtet
+        # das frische DMS selbst ein und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000).
         env:
           STUFE: ${{ inputs.stufe || 'alle' }}
           DAUER: ${{ inputs.dauer || '120' }}
         run: |
-          case "$STUFE" in normal|ueberlast|alle) ;; *) echo "::error::Unbekannte Stufe: $STUFE"; exit 1 ;; esac
+          case "$STUFE" in klein|mittel|gross|alle) ;; *) echo "::error::Unbekannte Stufe: $STUFE"; exit 1 ;; esac
           [[ "$DAUER" =~ ^[0-9]+$ ]] || { echo "::error::Dauer muss eine Zahl sein"; exit 1; }
-          node server/test/lasttest.mjs --stufe "$STUFE" --dauer "$DAUER" \
+          node server/test/lasttest.mjs "$STUFE" --dauer "$DAUER" --geraet "GitHub-Rechner (ubuntu-latest)" --speicher SSD \
+            --vorher "$RUNNER_TEMP/vorher/lasttest.json" \
             --bericht "$RUNNER_TEMP/bericht.md" --json "$RUNNER_TEMP/lasttest.json" --grenzen
+      - name: Grenze für den nächsten Lauf merken
+        if: success() && (inputs.stufe == '' || inputs.stufe == 'alle' || inputs.stufe == 'gross')
+        run: mkdir -p "$RUNNER_TEMP/vorher" && cp "$RUNNER_TEMP/lasttest.json" "$RUNNER_TEMP/vorher/lasttest.json"
+      - name: Grenze speichern
+        if: success() && (inputs.stufe == '' || inputs.stufe == 'alle' || inputs.stufe == 'gross')
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ runner.temp }}/vorher
+          key: lasttest-gross-${{ github.run_id }}
       - name: Bericht am Lauf
         if: always()
         run: |
