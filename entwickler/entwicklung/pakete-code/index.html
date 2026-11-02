@@ -832,6 +832,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sicherung-ausser-haus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherung außer Haus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sicherung außer Haus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-ablauf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-loeschschutz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Löschschutz
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ausprobieren" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1369,6 +1419,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#sicherung-ausser-haus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherung außer Haus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sicherung außer Haus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-ablauf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sicherung-loeschschutz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Löschschutz
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ausprobieren" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1483,6 +1583,12 @@
 <td>Dateien, die der Kern nicht liest (TIFF, WebP …), in PDF, PNG oder JPEG umwandeln – für Vorschaubild und Volltext</td>
 <td><strong><a href="#dateien-umwandeln">Dateien umwandeln</a></strong> – mit den Formaten, die ein Paket zurückgeben darf</td>
 </tr>
+<tr>
+<td><code>dms:sicherung-lesen</code></td>
+<td>0.142.0</td>
+<td>Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden</td>
+<td><strong><a href="#sicherung-ausser-haus">Sicherung außer Haus</a></strong> – Ereignis, Lesen in Stücken, Rückmeldung</td>
+</tr>
 </tbody>
 </table>
 <h2 id="so-lauft-code-im-dms">So läuft Code im DMS<a class="headerlink" href="#so-lauft-code-im-dms" title="Permanent link">&para;</a></h2>
@@ -1518,7 +1624,7 @@
 </code></pre></div>
 <ul>
 <li><strong>Dokumente:</strong> <code>lesen</code> erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), <code>schreiben</code> zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.</li>
-<li><strong>Schnittstellen des Kerns (<code>schnittstellen</code>):</strong> zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: <a href="#schnittstellen">Schnittstellen des Kerns</a>). Es gibt <code>dms:vektoren</code> (seit 0.120.0, braucht <code>dokumente: lesen</code>) – siehe <a href="#vektoren-und-ahnlichkeit">Vektoren und Ähnlichkeit</a> –, <code>dms:antworten</code> (seit 0.124.0) – siehe <a href="#fragen-beantworten">Fragen beantworten</a> – <code>dms:erkennen</code> (seit 0.125.0) – siehe <a href="#erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort</a> –, <code>dms:texterkennung</code> (seit 0.133.0, braucht <code>dokumente: schreiben</code>) – siehe <a href="#texterkennung">Texterkennung übernehmen</a> – und <code>dms:umwandeln</code> (seit 0.137.0, braucht <code>dokumente: lesen</code>, <code>code.umwandeln</code> und das Ereignis <code>datei.umwandeln</code>) – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a>.</li>
+<li><strong>Schnittstellen des Kerns (<code>schnittstellen</code>):</strong> zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: <a href="#schnittstellen">Schnittstellen des Kerns</a>). Es gibt <code>dms:vektoren</code> (seit 0.120.0, braucht <code>dokumente: lesen</code>) – siehe <a href="#vektoren-und-ahnlichkeit">Vektoren und Ähnlichkeit</a> –, <code>dms:antworten</code> (seit 0.124.0) – siehe <a href="#fragen-beantworten">Fragen beantworten</a> – <code>dms:erkennen</code> (seit 0.125.0) – siehe <a href="#erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort</a> –, <code>dms:texterkennung</code> (seit 0.133.0, braucht <code>dokumente: schreiben</code>) – siehe <a href="#texterkennung">Texterkennung übernehmen</a> – <code>dms:umwandeln</code> (seit 0.137.0, braucht <code>dokumente: lesen</code>, <code>code.umwandeln</code> und das Ereignis <code>datei.umwandeln</code>) – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> – und <code>dms:sicherung-lesen</code> (seit 0.142.0, braucht das Ereignis <code>sicherung.fertig</code>) – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a>.</li>
 <li><strong>Dateitypen zum Umwandeln (<code>code.umwandeln</code>, seit 0.137.0):</strong> nur mit <code>dms:umwandeln</code> – die MIME-Typen, für die das Paket zuständig ist, z. B. <code>[image/tiff, image/webp]</code>. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.</li>
 <li><strong>Netzwerk/Internet (<code>netz</code>):</strong> nur <code>https://</code>, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).</li>
 <li><strong>Dienst-Adresse als Einstellung</strong> (seit 0.124.0): Statt einer festen Adresse in <code>netz</code> kann ein Paket eine Einstellung vom Typ <code>adresse</code> verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit <code>http://</code> (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, <strong>ohne</strong> <code>standard</code> – höchstens mit <code>beispiel</code>, das im leeren Feld steht:</li>
@@ -1570,6 +1676,11 @@
 <td><code>datei.umwandeln</code></td>
 <td>Seit 0.137.0, nur mit <code>dms:umwandeln</code>: Eine Datei eines Typs aus <code>code.umwandeln</code> braucht eine Fassung – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a></td>
 <td><code>dokument</code>, <code>mappe</code>, <code>name</code>, <code>mime</code>, <code>groesse</code>, <code>sha256</code></td>
+</tr>
+<tr>
+<td><code>sicherung.fertig</code></td>
+<td>Seit 0.142.0, nur mit <code>dms:sicherung-lesen</code>: Eine Sicherung liegt fertig im Sicherungsordner – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a></td>
+<td><code>name</code>, <code>datei</code>, <code>groesse</code>, <code>sha256</code>, <code>beginn</code>, <code>format</code>, <code>schlank</code>, <code>verschluesselung</code></td>
 </tr>
 </tbody>
 </table>
@@ -1731,7 +1842,7 @@
 </tr>
 <tr>
 <td><code>netz(json, len, body, blen)</code></td>
-<td>HTTP-Status oder negativ bei Fehler. <code>json</code>: <code>{"methode":"POST","url":"https://…","kopf":{…}}</code>. Nur Adressen aus <code>code.netz</code> und die bestätigte Dienst-Adresse; 30 s, höchstens 10 MB Antwort.</td>
+<td>HTTP-Status oder negativ bei Fehler. <code>json</code>: <code>{"methode":"POST","url":"https://…","kopf":{…}}</code>. Nur Adressen aus <code>code.netz</code> und die bestätigte Dienst-Adresse; 30 s (seit 0.142.0 mit mehr als 1 MB Körper so lange wie der Aufruf – zum Hochladen in Teilen), höchstens 10 MB Antwort. Weiterleitungen folgt der Läufer nicht.</td>
 </tr>
 <tr>
 <td><code>netz_strom(json, len, body, blen)</code></td>
@@ -2139,6 +2250,88 @@
 <span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">500</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">                         </span><span class="cm">/* 409, 413, 415, 422 …: nicht wiederholen */</span>
 <span class="p">}</span>
 </code></pre></div>
+<h2 id="sicherung-ausser-haus">Sicherung außer Haus<a class="headerlink" href="#sicherung-ausser-haus" title="Permanent link">&para;</a></h2>
+<p>Seit 0.142.0 (#585) bringt ein Paket mit dem Recht <code>dms:sicherung-lesen</code> jede Sicherung auf einen externen Speicher und prüft sie dort – z. B. <strong>Sicherungsziel WebDAV</strong> in der Registry. Der Kern sichert wie immer <strong>zuerst lokal</strong>; danach meldet er die fertige Sicherung, das Paket liest die <strong>verschlüsselte</strong> Datei in Stücken, lädt sie hoch und meldet je Sicherung zurück. Den Schlüssel und Inhalte bekommt es nie, und es liest nur die Sicherung aus seinem Ereignis – nie den ganzen Sicherungsordner.</p>
+<h3 id="sicherung-manifest">Im Manifest<a class="headerlink" href="#sicherung-manifest" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">dms</span><span class="p">:</span><span class="w"> </span><span class="s">"&gt;=0.142.0"</span>
+<span class="nt">code</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">sprache</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">c</span>
+<span class="w">  </span><span class="nt">quelle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code/</span>
+<span class="w">  </span><span class="nt">ereignisse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">sicherung.fertig</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">rechte</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">schnittstellen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"dms:sicherung-lesen"</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">netz</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">                      </span><span class="c1"># Ziel als Einstellung vom Typ adresse</span>
+<span class="w">  </span><span class="nt">einstellungen</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">abschnitt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Ziel</span>
+<span class="w">      </span><span class="nt">felder</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> schluessel</span><span class="p">:</span><span class="w"> </span><span class="nv">adresse</span><span class="p p-Indicator">,</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">Adresse</span><span class="p p-Indicator">,</span><span class="nt"> typ</span><span class="p">:</span><span class="w"> </span><span class="nv">adresse</span><span class="p p-Indicator">,</span><span class="nt"> pflicht</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> schluessel</span><span class="p">:</span><span class="w"> </span><span class="nv">benutzer</span><span class="p p-Indicator">,</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">Benutzer</span><span class="p p-Indicator">,</span><span class="nt"> typ</span><span class="p">:</span><span class="w"> </span><span class="nv">text</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> schluessel</span><span class="p">:</span><span class="w"> </span><span class="nv">passwort</span><span class="p p-Indicator">,</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">Passwort</span><span class="p p-Indicator">,</span><span class="nt"> typ</span><span class="p">:</span><span class="w"> </span><span class="nv">geheim</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p><code>dms:sicherung-lesen</code> und <code>sicherung.fertig</code> gibt es nur zusammen. Zugangsdaten sind Einstellungen vom Typ <code>geheim</code> (verschlüsselt gespeichert, nie angezeigt); ins Netz darf das Paket nur zur bestätigten Adresse. Mappen und Dokumente braucht es nicht.</p>
+<h3 id="sicherung-ablauf">Ablauf<a class="headerlink" href="#sicherung-ablauf" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:sicherung-lesen)
+  participant Z as Ziel (WebDAV, S3 …)
+  K-&gt;&gt;K: Sicherung lokal fertig
+  K-&gt;&gt;P: sicherung.fertig (name, groesse, sha256 …)
+  loop Stück für Stück, über mehrere Aufrufe
+    P-&gt;&gt;K: GET /sicherungen/{name}/datei?versatz=…&amp;laenge=…
+    P-&gt;&gt;Z: Teil hochladen
+    P--&gt;&gt;K: {"weiter": {…}} (Fortsetzung)
+  end
+  P-&gt;&gt;Z: zusammensetzen, Metadaten daneben, prüfen
+  P-&gt;&gt;K: PUT /sicherungen/{name}/extern (geprueft)</code></pre>
+<ol>
+<li>
+<p><strong>Ereignis <code>sicherung.fertig</code></strong> nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). <code>daten</code> sind die <strong>schlanken Metadaten</strong> und der Name:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02_0300-automatisch"</span><span class="p">,</span><span class="w"> </span><span class="nt">"datei"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02_0300-automatisch.dms-sicherung"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"groesse"</span><span class="p">:</span><span class="w"> </span><span class="mi">1834567890</span><span class="p">,</span><span class="w"> </span><span class="nt">"sha256"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"beginn"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02T02:00:00.000Z"</span><span class="p">,</span><span class="w"> </span><span class="nt">"format"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"schlank"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"verschluesselung"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"verfahren"</span><span class="p">:</span><span class="w"> </span><span class="s2">"AES-256-GCM, …"</span><span class="p">,</span><span class="w"> </span><span class="nt">"fingerabdruck"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Keine Person, keine Versionen, keine Zähler, keine Haushalts-Id. Genau diese Angaben (ohne <code>name</code>) legt das Paket als <code>&lt;name&gt;.json</code> neben die Datei aufs Ziel – damit lässt sich die Kopie <a href="https://motom001.github.io/dms/admin/aktuell/wiederherstellen/#aus-einer-kopie-ausser-haus">wiederherstellen</a>. <code>GET /sicherungen/{name}</code> liefert sie ebenfalls. Dateinamen am Ziel: <code>&lt;name&gt;.dms-sicherung</code> und <code>&lt;name&gt;.json</code> – ohne Haushalts- oder Personennamen.
+2. <strong>Lesen in Stücken:</strong> <code>GET /sicherungen/{name}/datei?versatz=…&amp;laenge=…</code> (über <code>dms.api</code>) liefert höchstens <strong>8 MB</strong> roh; der Kopf <code>X-DMS-Groesse</code> nennt die Größe der Datei, am Ende kommt ein leerer Körper. <strong>Lade nie die ganze Sicherung in den Speicher</strong> – sie hat schnell mehrere GB, ein Aufruf hat 256 MB.
+3. <strong>Hochladen in Teilen:</strong> Je Stück eine Anfrage mit <code>dms.netz</code> (Körper = Stück), z. B. Nextcloud-Chunking (<code>/remote.php/dav/uploads/…</code>, Teile ab 5 MB), <code>Content-Range</code> bei WebDAV-Servern, die es können, oder S3 Multipart. Eine Anfrage mit mehr als 1 MB Körper darf so lange dauern wie der Aufruf.
+4. <strong>Fortsetzung:</strong> Nach etwa der halben Zeitgrenze antwortet das Paket mit <code>{"weiter": {"versatz": …, …}}</code> (siehe <a href="#fortsetzung">Fortsetzung</a>); der Läufer ruft es gleich wieder auf und speichert den Stand. Schlägt ein Aufruf fehl (Netz weg), setzt die Wiederholung (1, 5, 30 Minuten, 2, 6 Stunden) an der letzten gespeicherten Stelle an – nicht von vorn. Für Stände, die über das Ereignis hinaus gelten (z. B. „zuletzt vollständig geprüft“), gibt es den <a href="#importe-aus-dms">Speicher des Pakets</a>. Die Zeit je Sicherung insgesamt begrenzen die 500 Fortsetzungen je Ereignis.
+5. <strong>Prüfen:</strong> am besten mit der Prüfsumme des Ziels (S3 <code>x-amz-checksum-sha256</code>), sonst Größe und Zurücklesen (SHA-256 über die ganze Datei mit <code>Range</code>-Anfragen bis 10 MB; bei großen Dateien Stichproben, regelmäßig vollständig). Kann das Ziel nicht lesen (Nextcloud-Dateiablage), sag das ehrlich: <code>hochgeladen</code> statt <code>geprueft</code>.
+6. <strong>Rückmeldung:</strong> <code>PUT /sicherungen/{name}/extern</code> mit</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td><code>laeuft</code> (gern mit <code>bytes</code>, <code>gesamt</code>), <code>hochgeladen</code>, <code>geprueft</code>, <code>fehlgeschlagen</code></td>
+</tr>
+<tr>
+<td><code>pruefung</code></td>
+<td>bei <code>geprueft</code>: <code>pruefsumme</code> oder <code>stichprobe</code>; bei <code>hochgeladen</code>: <code>groesse</code> oder <code>keine</code></td>
+</tr>
+<tr>
+<td><code>grund</code></td>
+<td>verständlich, Pflicht bei <code>fehlgeschlagen</code> („Passwort falsch“, „Speicher voll“, „Prüfsumme am Ziel weicht ab“)</td>
+</tr>
+<tr>
+<td><code>endgueltig</code></td>
+<td>bei <code>fehlgeschlagen</code>: Eine Wiederholung hilft nicht – die Administratoren bekommen eine E-Mail. Vorübergehendes (Netz weg) meldest du besser als <code>laeuft</code> mit <code>grund</code>.</td>
+</tr>
+<tr>
+<td><code>ziel</code></td>
+<td>Ziel in Worten, ohne Zugangsdaten (der Kern entfernt <code>benutzer:passwort@</code> aus Adressen)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Werkbank → Sicherung</strong> zeigt den Stand je Sicherung („lokal ✓ · extern ✓ geprüft“), die Übersicht einen Hinweis bei Fehlern oder wenn seit mehr als 2 Tagen keine neuere Kopie ankam. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, setzt der Kern selbst <code>fehlgeschlagen</code> (endgültig).</p>
+</li>
+</ol>
+<p>Antworten der drei Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.</p>
+<h3 id="sicherung-loeschschutz">Löschschutz<a class="headerlink" href="#sicherung-loeschschutz" title="Permanent link">&para;</a></h3>
+<p>Wer das DMS übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit <strong>so wenig Rechten wie möglich</strong> auskommen: nur hochladen (S3: <code>PutObject</code> ohne <code>DeleteObject</code>, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe <strong>aus</strong> und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im <a href="https://motom001.github.io/dms/admin/aktuell/sicherung-ausser-haus/#loschschutz">Administratorhandbuch</a>.</p>
 <h2 id="ausprobieren">Ausprobieren<a class="headerlink" href="#ausprobieren" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Paket als ZIP im <strong>Expertenmodus</strong> hochladen (siehe <a href="../pakete/#eigenes-paket-testen">Eigenes Paket testen</a>) und die Rechte bestätigen.</li>
@@ -2179,6 +2372,7 @@
 <ul>
 <li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.</li>
 <li><code>PUT /dokumente/{id}/fassung</code> und <code>PUT /dokumente/{id}/vorschaubild</code> – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> (Recht <code>dms:umwandeln</code>).</li>
+<li><code>GET /sicherungen/{name}</code>, <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> und <code>PUT /sicherungen/{name}/extern</code> – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a> (Recht <code>dms:sicherung-lesen</code>, seit 0.142.0).</li>
 <li><code>PUT /dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> – Volltext setzen (Recht <code>dokumente: schreiben</code>). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab DMS 0.128.0 optional mit <code>"sprache": "fra"</code> (Kennung wie bei Tesseract: <code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.</li>
 <li><code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "fra" }</code> bzw. <code>null</code> – nur die Sprache setzen (ab 0.128.0, Recht <code>dokumente: schreiben</code>); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch <code>weitere</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>
 <li>Ab 0.139.0: <code>PUT /dokumente/{id}/volltext</code> mit Seiten (<code>\f</code>) und <code>seitensprachen</code>, <code>GET /dokumente/{id}/volltext</code> mit <code>seiten</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>

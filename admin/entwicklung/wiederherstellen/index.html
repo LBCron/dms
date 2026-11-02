@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://motom001.github.io/dms/admin/entwicklung/wiederherstellen/">
       
       
-        <link rel="prev" href="../sicherung/">
+        <link rel="prev" href="../sicherung-ausser-haus/">
       
       
         <link rel="next" href="../export/">
@@ -1390,6 +1390,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../sicherung-ausser-haus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sicherung außer Haus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1471,6 +1499,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Neues NAS, alte Sicherung">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aus-einer-kopie-ausser-haus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aus einer Kopie außer Haus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2427,6 +2472,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Neues NAS, alte Sicherung">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aus-einer-kopie-ausser-haus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aus einer Kopie außer Haus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2511,6 +2573,8 @@
 <li><strong>Weiter zur Anmeldung</strong> und mit den bisherigen Zugangsdaten anmelden. Die Schlüsseldatei hat das DMS dabei selbst angelegt.</li>
 </ol>
 <p>Dieser Weg ist nur offen, solange es noch keinen Benutzer gibt, und nur mit dem Einrichtungscode – genau wie die Einrichtung.</p>
+<h3 id="aus-einer-kopie-ausser-haus">Aus einer Kopie außer Haus<a class="headerlink" href="#aus-einer-kopie-ausser-haus" title="Permanent link">&para;</a></h3>
+<p>Ist das Gerät weg, holst du beide Dateien vom <a href="../sicherung-ausser-haus/">Ziel außer Haus</a> – die <code>.dms-sicherung</code> und die <code>.json</code> daneben – und legst sie in den Ordner <code>sicherung</code>. Die <code>.json</code> dort ist die <strong>schlanke</strong> Fassung (ohne Versionen, Zähler und Haushalts-Id). Die Liste zeigt die Sicherung als <em>Kopie außer Haus</em>; sobald du den <strong>Schlüssel vom Notfallblatt</strong> eingibst, liest das DMS Datenbank-Stand, Haushalts-Id und Anzahl Mappen, Dokumente und Benutzer aus der Sicherung selbst. Die DMS-Version, mit der sie entstand, steht dann als „unbekannt“ im Abgleich – maßgeblich ist der Datenbank-Stand. Beim Einspielen prüft das DMS jede Datei gegen ihren Prüfwert und am Ende die ganze Sicherung (GCM-Prüfwert); erst dann wird umgeschaltet.</p>
 <h2 id="auf-dem-laufenden-system">Auf dem laufenden System<a class="headerlink" href="#auf-dem-laufenden-system" title="Permanent link">&para;</a></h2>
 <p><img alt="Wiederherstellen in der Werkbank" src="../bilder/werkbank-wiederherstellen.png" /></p>
 <ol>
@@ -2563,7 +2627,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Fußzeile" >
         
           
-          <a href="../sicherung/" class="md-footer__link md-footer__link--prev" aria-label="Zurück: Sicherung">
+          <a href="../sicherung-ausser-haus/" class="md-footer__link md-footer__link--prev" aria-label="Zurück: Sicherung außer Haus">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2573,7 +2637,7 @@
                 Zurück
               </span>
               <div class="md-ellipsis">
-                Sicherung
+                Sicherung außer Haus
               </div>
             </div>
           </a>

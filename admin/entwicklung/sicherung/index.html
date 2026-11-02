@@ -16,7 +16,7 @@
         <link rel="prev" href="../texterkennung/">
       
       
-        <link rel="next" href="../wiederherstellen/">
+        <link rel="next" href="../sicherung-ausser-haus/">
       
       
         
@@ -1517,6 +1517,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../sicherung-ausser-haus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sicherung außer Haus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../wiederherstellen/" class="md-nav__link">
         
   
@@ -2570,6 +2598,7 @@
 <li><strong>Automatisch sichern</strong> täglich oder wöchentlich zu einer Uhrzeit (z. B. täglich 02:00). War das DMS zu der Zeit aus, sichert es, sobald es wieder läuft – aber nur am selben Tag. Eine verpasste Sicherung vom Vortag holt es nicht nach; es sichert erst wieder zum nächsten geplanten Termin. Mehr als eine automatische Sicherung am Tag gibt es nie.</li>
 <li>Einschalten lässt sich der Zeitplan erst, wenn das <strong>Notfallblatt</strong> heruntergeladen ist – ohne den Schlüssel darauf wäre jede Sicherung wertlos.</li>
 <li><strong>Aufbewahrung</strong> (Standard <strong>7 tägliche / 4 wöchentliche / 12 monatliche</strong>): Von den automatischen Sicherungen bleibt je Tag, je Woche und je Monat die neueste, so viele wie eingestellt; ältere entfernt das DMS nach jeder automatischen Sicherung. Von Hand angelegte Sicherungen bleiben, bis du sie löschst.</li>
+<li><strong>Lokal nur die neueste behalten</strong> (seit 0.142): Statt der Aufbewahrung bleibt nur die neueste automatische Sicherung im Ordner – für knappen Platz, wenn eine <a href="../sicherung-ausser-haus/">Kopie außer Haus</a> entsteht. Eine Sicherung, deren Kopie gerade läuft, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage). „Lokal keine“ gibt es nicht.</li>
 <li><strong>Mindest-Speicherplatz</strong> (Standard 1 GB): Ist im Sicherungsordner weniger frei, beginnt keine Sicherung; das steht als Hinweis in der Werkbank und im Protokoll.</li>
 <li>Im aktiven <a href="../wartungsmodus/">Wartungsmodus</a> pausiert die automatische Sicherung.</li>
 </ul>
@@ -2585,7 +2614,8 @@
 <li>die letzte Sicherung <strong>fehlgeschlagen</strong> ist,</li>
 <li>die letzte erfolgreiche <strong>älter als 2 Tage</strong> ist (oder es noch keine gibt),</li>
 <li>das Notfallblatt fehlt oder zu einem früheren Schlüssel gehört,</li>
-<li>der Sicherungsordner kein eigenes Volume ist oder auf derselben Platte liegt wie die Dokumente.</li>
+<li>der Sicherungsordner kein eigenes Volume ist oder auf derselben Platte liegt wie die Dokumente,</li>
+<li>die <a href="../sicherung-ausser-haus/#anzeige-und-hinweise">Kopie außer Haus</a> fehlgeschlagen ist oder seit mehr als 2 Tagen keine neuere Sicherung dort ankam.</li>
 </ul>
 <p>Schlägt eine Sicherung fehl, bekommen alle Administratoren eine E-Mail – auch ohne Zeitplan, etwa bei <strong>Jetzt sichern</strong>. Ist die letzte erfolgreiche Sicherung zu alt, kommt die E-Mail nur, wenn der Zeitplan an ist. Es kommt <strong>eine</strong> E-Mail je Vorfall (nicht stündlich) – sofern der <a href="../installation/#e-mail-und-adresse">E-Mail-Versand</a> eingerichtet ist. Alles steht auch im <a href="../fehlersuche/#protokoll">Protokoll</a>, Modul <em>sicherung</em>.</p>
 <h2 id="speicherort">Speicherort<a class="headerlink" href="#speicherort" title="Permanent link">&para;</a></h2>
@@ -2605,6 +2635,7 @@
 <li><strong>UGREEN, QNAP und andere:</strong> die Sicherungs-App des NAS (z. B. <em>Hybrid Backup Sync</em>) oder eine Synchronisation auf eine USB-Platte.</li>
 <li>Alternativ den Sicherungsordner gleich auf eine zweite Platte des NAS legen (<code>/volume2/…</code>) und diese weiterkopieren.</li>
 </ul>
+<p>Ohne Sicherungs-App – etwa auf einem Raspberry Pi oder einem gemieteten Server – bringt ein Paket wie <strong>Sicherungsziel WebDAV</strong> jede Sicherung selbst außer Haus und prüft sie dort, siehe <a href="../sicherung-ausser-haus/">Sicherung außer Haus</a>.</p>
 <p>Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das <a href="#notfallblatt">Notfallblatt</a> mit dem Schlüssel gehört <strong>nicht</strong> dorthin.</p>
 <h2 id="notfallblatt">Notfallblatt<a class="headerlink" href="#notfallblatt" title="Permanent link">&para;</a></h2>
 <p><strong>Notfallblatt herunterladen</strong> (hier und unter <em>Verschlüsselung</em>) erzeugt ein PDF mit allem, was du nach einem Ausfall brauchst:</p>
@@ -2613,7 +2644,8 @@
 <li>den <strong>Schlüssel</strong> in Vierergruppen zum Abschreiben und seinen <strong>Fingerabdruck</strong>,</li>
 <li>wo die Sicherungen und die Schlüsseldatei liegen,</li>
 <li>die Schritte zur Wiederherstellung auf einem neuen System – auch: „Startet das DMS nicht mehr, ein älteres Image ziehen“,</li>
-<li>den Hinweis auf das Datenbank-Passwort (ohne den Wert).</li>
+<li>den Hinweis auf das Datenbank-Passwort (ohne den Wert),</li>
+<li>seit 0.142 das Ziel der <a href="../sicherung-ausser-haus/">Kopie außer Haus</a> (Paket und Adresse, ohne Passwort).</li>
 </ul>
 <p><img alt="Notfallblatt" src="../bilder/notfallblatt.png" /></p>
 <p>Wo das Datenbank-Passwort steht, hängt von der Vorlage ab:</p>
@@ -2698,13 +2730,13 @@
         
         
           
-          <a href="../wiederherstellen/" class="md-footer__link md-footer__link--next" aria-label="Weiter: Wiederherstellen">
+          <a href="../sicherung-ausser-haus/" class="md-footer__link md-footer__link--next" aria-label="Weiter: Sicherung außer Haus">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Weiter
               </span>
               <div class="md-ellipsis">
-                Wiederherstellen
+                Sicherung außer Haus
               </div>
             </div>
             <div class="md-footer__button md-icon">
