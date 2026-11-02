@@ -11,10 +11,13 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { rueckfrage } from '../rueckfrage';
 import { WARTUNG_GEAENDERT } from '../wartung';
 import { sprachname, sprachvorschlaege, TEXTSPRACHEN } from '../../../shared/src/textsprache';
+import { fortschrittText } from '../../../shared/src/auftrag';
+import type { Auftrag as HintergrundAuftrag } from '../api';
+import { t as tx } from '../sprache';
 
 /**
  * Werkbank → Texterkennung (#45): Werkzeuge, Einstellungen, Warteschlange.
- * Werkbank → Wartungsoperationen: Volltext nachholen, alle Dateien prüfen (#212),
+ * Werkbank → Wartungsoperationen: Volltext neu erzeugen (#458), alle Dateien prüfen (#212),
  * Nummern nachträglich vergeben. Sicherung, Wiederherstellung und Export sind eigene Bereiche.
  */
 
@@ -25,7 +28,7 @@ export function useTexterkennung(aktiv: boolean) {
     try { setStand(await api.texterkennung(werkzeugeNeu)); setFehler(undefined); } catch (e) { setFehler((e as Error).message); }
   }, []);
   // Solange etwas wartet oder läuft, alle paar Sekunden auffrischen.
-  const offen = !!stand && (stand.zaehler.wartet > 0 || stand.zaehler.laeuft > 0);
+  const offen = !!stand && (stand.zaehler.wartet > 0 || stand.zaehler.laeuft > 0 || (stand.zaehler.paket ?? 0) > 0);
   useEffect(() => {
     if (!aktiv) return;
     void laden();
@@ -40,7 +43,7 @@ export function useTexterkennung(aktiv: boolean) {
 export type TexterkennungZustand = ReturnType<typeof useTexterkennung>;
 
 const zahl = (n: number) => n.toLocaleString('de-DE');
-const REIHENFOLGE: OcrStandArt[] = ['wartet', 'laeuft', 'fertig', 'fehler', 'ausgelassen', 'keiner'];
+const REIHENFOLGE: OcrStandArt[] = ['wartet', 'laeuft', 'paket', 'fertig', 'fehler', 'ausgelassen', 'keiner'];
 
 function Warteschlange({ s }: { s: OcrStatus }) {
   return (
@@ -52,7 +55,7 @@ function Warteschlange({ s }: { s: OcrStatus }) {
 
 /**
  * Warum die Warteschlange steht (#366): ausgeschaltet oder Wartungsmodus – mit dem Knopf, der es behebt.
- * Steht bei der Texterkennung und bei „Volltext nachholen“.
+ * Steht bei der Texterkennung und bei „Volltext neu erzeugen“.
  */
 function PauseHinweis({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
   const s = t.stand!;
@@ -94,6 +97,8 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
         <p className="leise">Volltext für die Suche: Textebene von PDFs und Texterkennung für Scans und Bilder. Neue Dokumente bekommen im Hintergrund einen Volltext: Bei PDFs liest das DMS zuerst die vorhandene Textebene, nur Seiten ohne Text gehen durch die Texterkennung. Ob ein Dokumentenregister einen Volltext erzeugt, stellst du am Mappentyp ein. <Hilfe ort="werkbank.texterkennung" /></p>
       </div>
       <PauseHinweis t={t} wartungAn={wartungAn} />
+
+      <PaketBlock s={s} />
 
       <section className="blatt" id="werkzeuge">
         <h2 className="h3">Werkzeuge</h2>
@@ -184,6 +189,25 @@ function Einstellungen({ t }: { t: TexterkennungZustand }) {
   );
 }
 
+/** Wer Scans und Bilder erkennt (#458): das Paket (mit Link zu seinen Einstellungen) oder die eingebaute Texterkennung. */
+function PaketBlock({ s }: { s: OcrStatus }) {
+  const p = s.paket;
+  const wartet = s.zaehler.paket ?? 0;
+  return (
+    <section className="blatt" id="paket">
+      <h2 className="h3">{tx('volltext.werkbank.paket.titel')}</h2>
+      {p ? <>
+        <p>{tx('volltext.werkbank.paket.da', { paket: `${p.name} ${p.version}` })}</p>
+        {wartet > 0 && <p className="leise">{tx('volltext.werkbank.paket.wartet', { anzahl: wartet })}</p>}
+        <div className="knoepfe"><Link to={`/werkbank/pakete/${p.id}`} className="knopf klein">{tx('volltext.werkbank.paket.einstellungen')}</Link></div>
+      </> : <>
+        <p className="leise">{tx('volltext.werkbank.paket.eingebaut')}</p>
+        <div className="knoepfe"><Link to="/werkbank/pakete" className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link></div>
+      </>}
+    </section>
+  );
+}
+
 /** Eingestellte Sprachen ohne Sprachpaket (#395) – deutlich, mit Weg zum Nachinstallieren. */
 function FehlendeSprachen({ s }: { s: OcrStatus }) {
   const fehlen = s.fehlendeSprachen ?? [];
@@ -223,18 +247,6 @@ function ErkannteSprachen({ s }: { s: OcrStatus }) {
 /* ---------- Wartungsoperationen ---------- */
 
 export function WartungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
-  const [laeuft, setLaeuft] = useState(false);
-  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
-  const s = t.stand;
-  async function nachholen() {
-    setLaeuft(true); setMeldung(undefined);
-    try {
-      const r = await api.volltextNachholen();
-      setMeldung({ art: 'gut', text: r.eingereiht ? `${zahl(r.eingereiht)} ${r.eingereiht === 1 ? 'Dokument steht' : 'Dokumente stehen'} jetzt in der Warteschlange der Texterkennung.` : 'Nichts nachzuholen – alle Dokumente haben einen Volltext oder liegen in Registern ohne Volltext.' });
-      await t.laden();
-    } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
-    finally { setLaeuft(false); }
-  }
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
@@ -242,14 +254,7 @@ export function WartungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartun
         <h1>Wartungsoperationen</h1>
         <p className="leise">Arbeiten am ganzen Bestand, die du bei Bedarf anstößt. Sie laufen im Hintergrund; das DMS bleibt benutzbar. <Hilfe ort="werkbank.wartung" /></p>
       </div>
-      <section className="blatt" id="volltext">
-        <h2 className="h3">Volltext für vorhandene Dokumente nachholen</h2>
-        <p className="leise">Dokumente, die vor der Texterkennung hochgeladen wurden, haben noch keinen Volltext. Das hier stellt alle in die Warteschlange, deren Dokumentenregister einen Volltext erzeugt. Je nach Menge und Seitenzahl kann das Stunden dauern.</p>
-        {s && <PauseHinweis t={t} wartungAn={wartungAn} />}
-        {s && <Warteschlange s={s} />}
-        {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-        <div className="knoepfe"><button type="button" className="knopf primaer" disabled={laeuft || !s?.zaehler.keiner} onClick={() => void nachholen()}>{laeuft ? 'Stelle ein …' : 'Volltext nachholen'}</button></div>
-      </section>
+      <VolltextNeu t={t} wartungAn={wartungAn} />
       <VorschauNachholen />
       <DateienPruefen />
       <NummernNachtragen />
@@ -259,8 +264,64 @@ export function WartungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartun
   );
 }
 
+/**
+ * „Volltext neu erzeugen“ (#458): für Dokumente ohne Text oder für alle (mit Rückfrage und Anzahl), als Auftrag mit
+ * Fortschritt, abbrechbar. Ersetzt „Volltext nachholen“ (das sind die Dokumente ohne Text).
+ */
+function VolltextNeu({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
+  const s = t.stand;
+  const laden = t.laden;
+  const [auftrag, setAuftrag] = useState<HintergrundAuftrag | null>(null);
+  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
+  // Läuft schon einer (z. B. nach dem Neuladen der Seite)? Dann seinen Stand zeigen.
+  useEffect(() => { void api.auftrag().then((a) => { if (a?.art === 'volltext-neu') setAuftrag(a); }, () => {}); }, []);
+  useEffect(() => {
+    if (auftrag?.status !== 'laeuft') return;
+    const x = setInterval(() => void api.auftrag().then((a) => { setAuftrag(a); if (a?.status !== 'laeuft') void laden(); }), 1000);
+    return () => clearInterval(x);
+  }, [auftrag?.status, laden]);
+  async function starte(umfang: 'ohne' | 'alle') {
+    setMeldung(undefined);
+    try {
+      const { anzahl } = await api.volltextNeuAnzahl(umfang);
+      if (!anzahl) { setMeldung({ art: 'gut', text: tx('volltext.neu.nichts') }); return; }
+      if (umfang === 'alle' && !(await rueckfrage({ titel: tx('volltext.neu.rueckfrage.titel'), text: tx('volltext.neu.rueckfrage.text', { anzahl }), ja: tx('volltext.neu.rueckfrage.ja') }))) return;
+      setAuftrag(await api.volltextNeu(umfang));
+    } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+  }
+  async function abbrechen() {
+    if (!auftrag) return;
+    try { setAuftrag(await api.auftragAbbrechen(auftrag.id)); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+  }
+  const e = auftrag?.status === 'fertig' ? auftrag.ergebnis as { dokumente: number; erledigt: number; abgebrochen: boolean } : null;
+  const laeuft = auftrag?.status === 'laeuft';
+  return (
+    <section className="blatt" id="volltext">
+      <h2 className="h3">{tx('volltext.neu.titel')} <Hilfe ort="werkbank.wartung.volltext" /></h2>
+      <p className="leise">{tx('volltext.neu.text')}</p>
+      {s?.paket ? <p className="leise klein">{tx('volltext.neu.dauer')}</p> : s && (
+        <div className="hinweis warn hinweiszeile" role="status">
+          <p>{tx('volltext.werkbank.paket.fehlt')}</p>
+          <Link to="/werkbank/pakete" className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link>
+        </div>
+      )}
+      {s && <PauseHinweis t={t} wartungAn={wartungAn} />}
+      {s && <Warteschlange s={s} />}
+      {laeuft && <p className="leise" role="status">{fortschrittText(auftrag, 'Dokumente')}{auftrag.abgebrochen ? ` · ${tx('volltext.neu.abgebrochen', { erledigt: auftrag.fertig, dokumente: auftrag.gesamt })}` : ''}</p>}
+      {e && <p className="gutertext" role="status">{e.abgebrochen ? tx('volltext.neu.abgebrochen', { erledigt: e.erledigt, dokumente: e.dokumente }) : tx('volltext.neu.fertig', { erledigt: e.erledigt, dokumente: e.dokumente })}</p>}
+      {auftrag?.status === 'fehler' && <p className="fehlertext">{auftrag.fehler}</p>}
+      {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
+      <div className="knoepfe">
+        <button type="button" className="knopf primaer" disabled={laeuft} onClick={() => void starte('ohne')}>{tx('volltext.neu.ohne')}</button>
+        <button type="button" className="knopf" disabled={laeuft} onClick={() => void starte('alle')}>{tx('volltext.neu.alle')}</button>
+        {laeuft && <button type="button" className="knopf gefahr-rand" disabled={auftrag.abgebrochen} onClick={() => void abbrechen()}>{auftrag.abgebrochen ? tx('volltext.neu.laeuft') : tx('volltext.neu.abbrechen')}</button>}
+      </div>
+    </section>
+  );
+}
+
 /** Aufträge der Texterkennung (#61): je Stand die Dokumente mit Mappe, neu starten, abbrechen. */
-const STAENDE_LISTE: OcrStandArt[] = ['fehler', 'wartet', 'laeuft', 'ausgelassen', 'fertig'];
+const STAENDE_LISTE: OcrStandArt[] = ['fehler', 'wartet', 'laeuft', 'paket', 'ausgelassen', 'fertig'];
 type Auftrag = Awaited<ReturnType<typeof api.ocrAuftraege>>['eintraege'][number];
 
 function Auftraege({ t }: { t: TexterkennungZustand }) {
@@ -281,7 +342,7 @@ function Auftraege({ t }: { t: TexterkennungZustand }) {
   }
   const umschalten = (id: string) => setAuswahl((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const alle = liste?.eintraege ?? [];
-  const abbrechbar = stand === 'wartet' || stand === 'laeuft';
+  const abbrechbar = stand === 'wartet' || stand === 'laeuft' || stand === 'paket';
   return (
     <section className="blatt" id="auftraege">
       <div className="blattkopf zeile-zwischen"><h2 className="h3">Aufträge</h2>

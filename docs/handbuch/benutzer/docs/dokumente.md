@@ -145,14 +145,17 @@ Gut zu wissen:
 
 ## Volltext
 
-Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest das DMS nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos per Texterkennung. Neben dem Dokument steht, wie weit es ist:
+Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest das DMS nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos per Texterkennung (meist ein Paket). Neben dem Dokument steht, wie weit es ist:
 
 | Anzeige | Bedeutung |
 | --- | --- |
-| *Volltext: wartet* / *läuft* | Der Text wird gerade gelesen; meist dauert das Sekunden, bei langen Scans einige Minuten. |
+| *Volltext: wartet* / *läuft* | Der Text wird gerade gelesen; meist dauert das Sekunden. |
+| *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. |
 | *Volltext: fertig* | Das Dokument ist durchsuchbar. **Text anzeigen** zeigt, was erkannt wurde. |
 | *Volltext: Fehler* | Etwas ging schief, z. B. eine beschädigte Datei. **Erneut versuchen** stellt es noch einmal an. |
 | *Volltext: ausgelassen* | Für diesen Dateityp (z. B. Word, Excel) oder diese Größe gibt es keinen Volltext. |
+
+Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, die z. B. ein Programm oder der Scanner mitgeliefert hat) oder „Texterkennung durch Paket …“ (aus dem Bild erkannt). Mit **Neu erzeugen** lässt du den Text eines Dokuments noch einmal lesen und erkennen – etwa, wenn die Erkennung schlecht war.
 
 Erkannter Text aus Scans ist nicht immer fehlerfrei – je besser die Vorlage, desto besser das Ergebnis.
 

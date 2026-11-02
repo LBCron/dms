@@ -25,6 +25,24 @@ const log = protokoll.modul('werkbank');
 export const STANDARD_GRENZEN: Grenzen = { speicherMB: 256, sekunden: 120, parallel: 2 };
 /** Wiederholungen nach Fehlschlag: 1, 5, 30 Minuten, 2, 6 Stunden – danach aufgegeben. */
 const WARTEN_MIN = [1, 5, 30, 120, 360];
+/** Höchstens so viele Fortsetzungen je Ereignis (#458) – danach gilt es als zugestellt. */
+export const WEITER_MAX = 500;
+/** Größe der Daten einer Fortsetzung (JSON) höchstens – sie stehen im Ausgangskorb der Datenbank. */
+export const WEITER_MAX_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Fortsetzung eines Ereignisses (#458): Antwortet ein Paket mit `{"weiter": {…}}` (Ergebnis als JSON, Code 0), ist es
+ * noch nicht fertig – z. B. ein langes Dokument, das nicht in die Zeitgrenze eines Aufrufs passt. Der Läufer ruft es
+ * gleich wieder auf, mit denselben Daten und zusätzlich `weiter` (was das Paket mitgegeben hat) und `abschnitt`.
+ * null: keine Fortsetzung (auch bei zu großen Daten).
+ */
+export function liesWeiter(text: string): Record<string, unknown> | null {
+  if (!text.startsWith('{') || !text.includes('"weiter"') || text.length > WEITER_MAX_BYTES) return null;
+  try {
+    const j = JSON.parse(text) as { weiter?: unknown };
+    return j.weiter && typeof j.weiter === 'object' && !Array.isArray(j.weiter) ? j.weiter as Record<string, unknown> : null;
+  } catch { return null; }
+}
 
 const SPEICHER_MAX = 64 * 1024;
 const LETZTE = 20;
@@ -51,6 +69,8 @@ export interface LaeuferOptionen {
   grenzen?: Partial<Grenzen>;
   /** Tests: kürzere Abstände. */
   abrufMs?: number;
+  /** Tests: weniger Fortsetzungen je Ereignis (#458, Standard WEITER_MAX). */
+  weiterMax?: number;
   nachlaufMs?: number;
 }
 
@@ -197,12 +217,18 @@ export class Paketlaeufer implements PaketLaeufer {
     const gesendet = new Map<string, string>();
     for (const p of this.pakete) {
       const adressen = await this.adressen(p);
-      const stand = JSON.stringify([p.version, p.laeufer!.modul, p.laeufer!.daten ?? [], p.laeufer!.netz, adressen, p.aktualisiert ?? p.installiert]);
+      // Zusatzdaten (#458, z. B. Sprachen der Texterkennung): Daten von Paketen, die von diesem abhängen, unter „<paket>/<datei>“.
+      const zusaetze = this.pakete.filter((q) => q.id !== p.id && p.id in (q.abhaengigkeiten ?? {}) && q.laeufer?.daten?.length);
+      const stand = JSON.stringify([p.version, p.laeufer!.modul, p.laeufer!.daten ?? [], p.laeufer!.netz, adressen, p.aktualisiert ?? p.installiert, zusaetze.map((q) => [q.id, q.version, q.laeufer!.daten, q.aktualisiert ?? q.installiert])]);
       if (this.gesendet.get(p.id) === stand) { behalten.push(p.id); gesendet.set(p.id, stand); continue; }
       const code = await this.o.dienst.paketCode(p.id);
       const modul = code.find((d) => d.name === 'modul.wasm');
       if (!modul) { this.ladefehler.set(p.id, 'Der Code fehlt (nach einer Wiederherstellung bitte das Paket neu installieren).'); continue; }
-      liste.push({ id: p.id, version: p.version, modul: new Uint8Array(modul.inhalt), daten: code.filter((d) => d.name.startsWith('daten/')).map((d) => ({ name: d.name.slice('daten/'.length), inhalt: new Uint8Array(d.inhalt) })), netz: p.laeufer!.netz, adressen });
+      const daten = code.filter((d) => d.name.startsWith('daten/')).map((d) => ({ name: d.name.slice('daten/'.length), inhalt: new Uint8Array(d.inhalt) }));
+      for (const q of zusaetze) {
+        for (const d of await this.o.dienst.paketCode(q.id)) if (d.name.startsWith('daten/')) daten.push({ name: `${q.id}/${d.name.slice('daten/'.length)}`, inhalt: new Uint8Array(d.inhalt) });
+      }
+      liste.push({ id: p.id, version: p.version, modul: new Uint8Array(modul.inhalt), daten, netz: p.laeufer!.netz, adressen });
       gesendet.set(p.id, stand);
     }
     this.gesendet = gesendet;
@@ -470,12 +496,26 @@ export class Paketlaeufer implements PaketLaeufer {
     for (const e of es) {
       if (!this.laeuft()) return; // Wartung oder Läufer weg: später, ohne Versuch
       if (!this.pakete.some((p) => p.id === paket)) { await this.o.dienst.ereignisFehlgeschlagen(e.id, 'Das Paket hat keinen Code mehr.', null); continue; }
-      const r = await this.rufe(paket, 'ereignis', { art: e.art, id: e.id, erstellt: e.erstellt, versuch: e.versuche + 1, daten: e.daten });
-      if (r.ok) { await this.o.dienst.ereignisZugestellt(e.id); continue; }
+      let r = await this.rufe(paket, 'ereignis', { art: e.art, id: e.id, erstellt: e.erstellt, versuch: e.versuche + 1, daten: e.daten });
+      // Fortsetzung (#458): gleich noch einmal, mit dem Stand des Pakets; der Stand bleibt für eine Wiederholung gespeichert.
+      for (let weiter = r.ok ? liesWeiter(r.text) : null; weiter; weiter = r.ok ? liesWeiter(r.text) : null) {
+        const abschnitt = (Number(e.daten.abschnitt) || 0) + 1;
+        const max = this.o.weiterMax ?? WEITER_MAX;
+        if (abschnitt > max) { this.notiere(paket, { stufe: 2, text: `Ereignis nach ${max} Fortsetzungen beendet.` }); break; }
+        e.daten = { ...e.daten, weiter, abschnitt };
+        await this.o.dienst.ereignisDaten(e.id, e.daten);
+        await this.o.dienst.texterkennungFortschritt(paket, e, weiter).catch(() => {});
+        if (!this.laeuft()) return;
+        r = await this.rufe(paket, 'ereignis', { art: e.art, id: e.id, erstellt: e.erstellt, versuch: e.versuche + 1, daten: e.daten });
+      }
+      // Texterkennung als Paket (#458): Dokument wartet nicht länger, wenn das Paket fertig ist oder aufgibt.
+      const nachher = (x: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }) =>
+        this.o.dienst.nachTexterkennungsEreignis(paket, e, x).catch((f) => log.warn('Paket-Läufer: Stand der Texterkennung nicht nachgetragen', { paket, fehler: (f as Error).message }));
+      if (r.ok) { await this.o.dienst.ereignisZugestellt(e.id); await nachher({ ok: true, text: r.text }); continue; }
       if (r.ohneVersuch) return;
       const w = WARTEN_MIN[e.versuche];
       await this.o.dienst.ereignisFehlgeschlagen(e.id, r.fehler ?? 'Fehler', w === undefined ? null : new Date(Date.now() + w * 60_000));
-      if (w === undefined) { log.error(`Paket ${paket}: Ereignis aufgegeben`, { paket, art: e.art, fehler: r.fehler }); continue; }
+      if (w === undefined) { log.error(`Paket ${paket}: Ereignis aufgegeben`, { paket, art: e.art, fehler: r.fehler }); await nachher({ ok: false, text: '', fehler: r.fehler, aufgegeben: true }); continue; }
       return; // spätere Ereignisse dieses Pakets warten auf die Wiederholung (Reihenfolge)
     }
   }

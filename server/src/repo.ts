@@ -151,12 +151,16 @@ export interface Repo {
   /** Fällige, noch nicht zugestellte Ereignisse, älteste zuerst. */
   faelligeEreignisse(anzahl: number): Promise<PaketEreignis[]>;
   ereignisZugestellt(id: string): Promise<void>;
+  /** Daten eines Ereignisses ersetzen (#458, Fortsetzung „weiter“): eine spätere Wiederholung setzt dort an. */
+  ereignisDaten(id: string, daten: Record<string, unknown>): Promise<void>;
   /** Fehlschlag merken; naechster null = aufgeben. */
   ereignisFehlgeschlagen(id: string, fehler: string, naechster: Date | null): Promise<void>;
   /** Je Paket: offen, aufgegeben, zuletzt zugestellt. */
   ereignisStand(): Promise<Record<string, { offen: number; aufgegeben: number; zugestellt: number }>>;
   /** Alle Ereignisse eines entfernten Pakets verwerfen. */
   loescheEreignisse(paketId: string): Promise<void>;
+  /** Noch nicht zugestellte Ereignisse einer Art zu diesen Dokumenten verwerfen (#458, Texterkennung abbrechen); liefert die Anzahl. */
+  loescheOffeneEreignisse(art: string, dokumente: string[]): Promise<number>;
   /* ---------- Nummernkreise (#171) ---------- */
   listeNummernkreise(): Promise<Nummernkreis[]>;
   /** Anlegen oder Name, Muster und Start ändern; Zählerstände bleiben. */
@@ -407,6 +411,11 @@ export interface Repo {
   ocrAuftraege(f: { stand: OcrStandArt; von: number; anzahl: number }): Promise<{ gesamt: number; eintraege: OcrAuftrag[] }>;
   /** Dokumente ohne Volltext (noch nie erkannt) mit Typ und Register ihrer Mappe. */
   ocrOhneVolltext(): Promise<Array<{ id: string; typId: string; registerKey: string }>>;
+  /**
+   * „Volltext neu erzeugen“ (#458): Dokumente ohne Text (Volltext leer, gleich welcher Stand außer wartet/läuft)
+   * bzw. alle Dokumente, mit Typ und Register ihrer Mappe, ältere zuerst.
+   */
+  volltextKandidaten(umfang: 'ohne' | 'alle'): Promise<Array<{ id: string; typId: string; registerKey: string }>>;
   /** Erkannte Sprachen (#395): Anzahl fertiger Dokumente je Sprachkennung (aus dem Hinweis der Texterkennung). */
   ocrSprachen(): Promise<Record<string, number>>;
   volltext(id: string): Promise<string | null>;

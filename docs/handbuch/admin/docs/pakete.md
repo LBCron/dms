@@ -191,6 +191,10 @@ Will ein Update andere Adressen, fragt das DMS erneut.
 
 **„Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt (dms:erkennen)“** – Das Paket kann statt der eingebauten Erkennung die Felder beim Knopf **Aus Dokument ausfüllen** vorschlagen, wenn du es wählst (siehe [Erkennung durch ein Paket](#erkennung-durch-ein-paket)). Es bekommt dabei nur den Text des Dokuments und die Beschreibung der Felder – keine Rechte an Mappen oder Dokumenten. Was es liefert, prüft das DMS und zeigt es nur als Vorschlag.
 
+#### Texterkennung übernehmen { #recht-texterkennung }
+
+**„Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“** – Das Paket ist dann die [Texterkennung](texterkennung.md) des DMS: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit [Dokumente lesen und Volltext schreiben](#recht-dokumente).
+
 ### Dienst-Adresse { #dienst-adresse }
 
 Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. **Ollama** auf deinem Heimserver. Die Adresse dieses Dienstes trägst du in den **Einstellungen** des Pakets ein (Werkbank → Pakete → *Paket* → Reiter „Einstellungen“):
@@ -253,15 +257,15 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 
 #### Die Texterkennung eines Dokuments ist fertig { #ereignis-texterkennung-fertig }
 
-**Wann:** Wenn die eingebaute [Texterkennung](texterkennung.md) des DMS mit einem Dokument fertig ist – also der Volltext feststeht.
+**Veraltet** – gibt es weiter für Pakete, die vor Version 0.133 entstanden sind. **Wann:** Gleichzeitig mit [Volltext fertig](#ereignis-volltext-fertig), wenn das DMS ein Dokument selbst gelesen hat (Textebene).
 
-**Typisch:** Mit dem Volltext arbeiten, z. B. Felder vorschlagen oder Post anhand von Wörtern zuordnen.
+**Typisch:** Ältere Fassungen des Pakets **Texterkennung** (1.x) erkennen damit Scans ohne Text.
 
-#### Der Volltext eines Dokuments ist da { #ereignis-volltext-fertig }
+#### Der Volltext eines Dokuments ist fertig { #ereignis-volltext-fertig }
 
-**Wann:** Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: von der eingebauten Texterkennung, aus der Textebene eines PDFs, von einem Paket wie **Texterkennung** oder über die API. Für ein Paket mit dem Recht [Vektoren zu Dokumenten](#recht-vektoren) schickt das DMS dieses Ereignis außerdem für den **Bestand** nach (siehe [Ähnlichkeit](#aehnlichkeit)).
+**Wann:** Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: aus der Textebene eines PDFs, von einem Paket wie **Texterkennung** oder über die API. Seit Version 0.133 auch dann, wenn das DMS **keinen Text** gefunden hat (z. B. bei einem Scan) – genau das braucht ein Paket, das die [Texterkennung übernimmt](#recht-texterkennung). Pakete von vor 0.133 bekommen es weiter nur mit Text. Für ein Paket mit dem Recht [Vektoren zu Dokumenten](#recht-vektoren) schickt das DMS dieses Ereignis außerdem für den **Bestand** nach (siehe [Ähnlichkeit](#aehnlichkeit)).
 
-**Typisch:** Aus dem Volltext etwas berechnen – das Paket **KI lokal – Ähnlichkeit** rechnet daraus den Vektor des Dokuments.
+**Typisch:** Scans erkennen – das Paket **Texterkennung** (ab 2.0); aus dem Volltext etwas berechnen – das Paket **KI lokal – Ähnlichkeit** rechnet daraus den Vektor des Dokuments.
 
 #### Die Einstellungen des Pakets wurden geändert { #ereignis-einstellungen-geandert }
 

@@ -301,12 +301,14 @@ const pakete: Paketverwaltung = new Paketverwaltung(dienst, {
   benutzer: async () => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false).map((b) => ({ id: b.id, name: b.name || b.email })),
   laeufer: paketlaeufer,
 });
-texterkennung.nachher = (d, e) => {
-  if (e.stand !== 'fertig') return;
-  void dienst.melde('texterkennung.fertig', { dokument: d.id, mappe: d.mappeId, seiten: e.seiten ?? null });
-  // Internes Ereignis „Volltext fertig“ (#336): z. B. die Erkennung an Post.
-  void dienst.volltextFertig({ dokument: d.id, mappe: d.mappeId });
+// Ereignis „Volltext fertig“ (#336, #458) nach dem Schritt des Kerns – auch ohne Text, damit ein Paket für die
+// Texterkennung übernehmen kann; nicht bei Fehler, ausgelassen oder abgebrochen.
+texterkennung.nachher = (d, e, k) => {
+  if (e.stand !== 'fertig' && e.stand !== 'paket') return;
+  void dienst.volltextFertig({ dokument: d.id, mappe: d.mappeId }, { quelle: 'kern', text: k.text, mime: d.mime, seiten: e.seiten ?? null, neu: k.neu, seitenOhneText: k.seitenOhneText });
 };
+// Texterkennung als Paket (#458): das installierte Paket mit dms:texterkennung.
+texterkennung.paket = () => dienst.texterkennungPaket();
 wartung.beimAusschalten(() => void paketlaeufer.stelleZu());
 // Systemzustand → Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk jede Minute, nur im Arbeitsspeicher.
 const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett', schleife: () => !!messung.auslastung.warnung() });

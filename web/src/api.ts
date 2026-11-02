@@ -200,6 +200,8 @@ export interface OcrStatus {
   einstellungen: OcrEinstellungen; verfahren: Record<string, string>; dateitypen: Record<string, string>;
   /** #395: eingestellt, aber nicht installiert; erkannte Sprachen (Kennung → Anzahl Dokumente). */
   fehlendeSprachen?: string[]; erkannteSprachen?: Record<string, number>;
+  /** #458: Paket, das die Texterkennung übernimmt (null = keins). */
+  paket?: { id: string; name: string; version: string } | null;
 }
 export interface Zaehler {
   typen: Record<string, { anzahl: number; unpassend: number; demo: number }>; eingang: number; sichten?: Record<string, number>;
@@ -493,6 +495,10 @@ export const api = {
   texterkennung: (werkzeugeNeu = false) => anfrage<OcrStatus>('GET', `/api/werkbank/texterkennung${werkzeugeNeu ? '?neu' : ''}`),
   texterkennungSpeichern: (e: Partial<OcrEinstellungen>) => anfrage<OcrStatus>('PUT', '/api/werkbank/texterkennung', e),
   volltextNachholen: () => anfrage<{ eingereiht: number }>('POST', '/api/werkbank/wartung/volltext'),
+  /** „Volltext neu erzeugen“ (#458): Anzahl für die Rückfrage, dann Auftrag. */
+  volltextNeuAnzahl: (umfang: 'ohne' | 'alle') => anfrage<{ umfang: 'ohne' | 'alle'; anzahl: number; paket: { id: string; name: string; version: string } | null }>('GET', `/api/werkbank/wartung/volltext-neu?umfang=${umfang}`),
+  volltextNeu: (umfang: 'ohne' | 'alle') => anfrage<Auftrag>('POST', '/api/werkbank/wartung/volltext-neu', { umfang }),
+  auftragAbbrechen: (id: string) => anfrage<Auftrag>('POST', '/api/werkbank/auftrag/abbrechen', { id }),
   vorschauNachholen: () => anfrage<{ eingereiht: number }>('POST', '/api/werkbank/wartung/vorschau'),
   /* Papierkorb (#43): Ablage = eigener, Werkbank = alle */
   papierkorb: () => anfrage<PapierkorbEintrag[]>('GET', '/api/papierkorb'),
