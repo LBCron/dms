@@ -12,11 +12,12 @@ Welche Datei wofür – Anleitungen unter **[Wie komme ich an ein DMS?](https://
 | [`qnap/`](qnap/docker-compose.yml) | zwei Container | QNAP Container Station | Passwort oben, ggf. Pfade |
 | [`truenas/`](truenas/docker-compose.yml) | zwei Container | TrueNAS Apps → Custom App | Passwort oben, Datensatz-Pfade |
 | [`unraid/`](unraid/docker-compose.yml) | zwei Container | Unraid Compose Manager | Passwort oben, ggf. Pfade |
+| [`raspberry-pi/`](raspberry-pi/docker-compose.yml) | zwei Container | Raspberry Pi 4/5 und jeder Linux-Rechner; dazu das Einrichtungsskript [`einrichten.sh`](raspberry-pi/einrichten.sh) (prüft, legt an, startet) | nichts – das Skript schreibt das Passwort in eine `.env` ([Anleitung](https://motom001.github.io/dms/installieren/aktuell/raspberry-pi/)) |
 | [`komplett/`](komplett/docker-compose.yml) | **ein Container** (`dms-komplett`) | Ausprobieren, nur ein Container möglich | nichts – höchstens die Pfade |
 
 Die App-Stores (umbrelOS, ZimaOS, CasaOS, TrueNAS-Katalog, Unraid Community Applications) liegen im Repository [motom001/dms-appstore](https://github.com/motom001/dms-appstore).
 
-Die CI installiert jede Vorlage bei jedem Pull Request probehalber (`vorlagen-probe.sh`, `komplett-probe.sh`).
+Die CI installiert jede Vorlage bei jedem Pull Request probehalber (`vorlagen-probe.sh`, `komplett-probe.sh`) und prüft das Einrichtungsskript mit shellcheck.
 
 ## Beispiele für Dienste neben dem DMS
 

@@ -77,7 +77,7 @@ nav:
   - "Ein Container: dms-komplett": komplett.md
   - Eigener Rechner:
       - PC oder Mini-PC mit Linux: linux.md
-      - Raspberry Pi: raspberry-pi.md
+      - "Raspberry Pi – Schritt für Schritt": raspberry-pi.md
       - Windows: windows.md
       - Proxmox und Co.: proxmox.md
       - Jeder Server mit Docker: docker.md

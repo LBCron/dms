@@ -1,6 +1,6 @@
 # PC oder Mini-PC mit Linux
 
-Ein alter Bürorechner, ein ausgedienter Laptop oder ein kleiner Mini-PC mit Intel- oder AMD-Prozessor reicht für das DMS gut aus. Diese Seite ist auch die Grundlage für den [Raspberry Pi](raspberry-pi.md) und für [virtuelle Maschinen](proxmox.md).
+Ein alter Bürorechner, ein ausgedienter Laptop oder ein kleiner Mini-PC mit Intel- oder AMD-Prozessor reicht für das DMS gut aus. Diese Seite ist auch die Grundlage für [virtuelle Maschinen](proxmox.md). Für den Raspberry Pi gibt es eine eigene [Anleitung Schritt für Schritt](raspberry-pi.md) mit Einrichtungsskript.
 
 **Du brauchst:** 2 GB Arbeitsspeicher oder mehr, etwa 20 GB für System und Programme, dazu Platz für deine Dokumente und Sicherungen. Eine SSD macht das DMS spürbar schneller.
 
