@@ -985,6 +985,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-vektoren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vektoren zu Dokumenten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-netzwerk-und-internet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1046,6 +1057,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#ereignis-volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Der Volltext eines Dokuments ist da
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ereignis-einstellungen-geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1058,6 +1080,17 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aehnlichkeit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ähnlichkeit
+      
+    </span>
+  </a>
   
 </li>
         
@@ -2686,6 +2719,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-vektoren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vektoren zu Dokumenten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-netzwerk-und-internet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2747,6 +2791,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#ereignis-volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Der Volltext eines Dokuments ist da
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ereignis-einstellungen-geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2759,6 +2814,17 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aehnlichkeit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ähnlichkeit
+      
+    </span>
+  </a>
   
 </li>
         
@@ -2948,7 +3014,7 @@
 </ul>
 <p>Die Einstellungen sind <strong>Teil der Sicherung</strong>; Geheimnisse bleiben dabei verschlüsselt und werden beim Schlüsselwechsel mit umgeschlüsselt. Über die API v1 sind sie nicht lesbar; das Paket selbst bekommt sie über den Paket-Läufer. Das Protokoll vermerkt „Einstellungen von Paket … geändert (Felder …)“ – nie die Werte von Geheimnissen. Nur Administratoren sehen und ändern Einstellungen.</p>
 <h2 id="pakete-mit-code">Pakete mit Code<a class="headerlink" href="#pakete-mit-code" title="Permanent link">&para;</a></h2>
-<p>Manche Pakete bringen <strong>Code</strong> mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, geänderte Einstellungen) und auf die <strong>Aktionen</strong> im Reiter „Einstellungen“. Das DMS führt ihn im <strong>Paket-Läufer</strong> aus:</p>
+<p>Manche Pakete bringen <strong>Code</strong> mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und auf die <strong>Aktionen</strong> im Reiter „Einstellungen“. Das DMS führt ihn im <strong>Paket-Läufer</strong> aus:</p>
 <ul>
 <li><strong>Abgeschottet:</strong> Der Code ist WebAssembly und läuft in einem eigenen Prozess des DMS, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt – meist gar nicht.</li>
 <li><strong>Nur bestätigte Rechte:</strong> Vor der Installation zeigt die Vorschau, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a> und <a href="#ereignisse">Ereignisse</a>). Erst wenn du das bestätigst, installiert das DMS. Will ein <strong>Update</strong> mehr Rechte oder andere Adressen, fragt das DMS erneut.</li>
@@ -3014,6 +3080,8 @@
 <li><strong>„Dokumente lesen und Volltext schreiben“</strong> – zusätzlich darf er dort Dokumente hochladen und ersetzen und den Volltext setzen, etwa für eine eigene Texterkennung.</li>
 </ul>
 <p>Steht keins von beiden in der Liste, sieht der Code keine Dokumente.</p>
+<h4 id="recht-vektoren">Vektoren zu Dokumenten<a class="headerlink" href="#recht-vektoren" title="Permanent link">&para;</a></h4>
+<p><strong>„Vektoren zu Dokumenten speichern und ähnliche Dokumente finden (dms:vektoren)“</strong> – Der Code darf zu Dokumenten, die er lesen darf, einen <strong>Vektor</strong> ablegen: eine Liste von Zahlen, die den Inhalt des Volltexts beschreibt. Das DMS vergleicht diese Vektoren und zeigt damit <a href="#aehnlichkeit">ähnliche Dokumente</a> an der Mappe und in der Suche. Außerdem fragt die Suche das Paket nach dem Vektor des Suchbegriffs. Das DMS selbst rechnet dabei nichts – es speichert und vergleicht nur, was das Paket liefert. Dokumente, Mappen und Volltext ändern darf der Code mit diesem Recht nicht; ähnliche Dokumente sieht jeder nur aus Mappen, die er lesen darf.</p>
 <h4 id="recht-netzwerk-und-internet">Zugriff auf Netzwerk und Internet<a class="headerlink" href="#recht-netzwerk-und-internet" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>„kein Zugriff auf Netzwerk und Internet“</strong> – Der Code erreicht weder Geräte in deinem Heimnetz noch das Internet. Das ist der Normalfall: Die Daten bleiben im DMS.</li>
@@ -3031,9 +3099,84 @@
 <h4 id="ereignis-texterkennung-fertig">Die Texterkennung eines Dokuments ist fertig<a class="headerlink" href="#ereignis-texterkennung-fertig" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Wenn die eingebaute <a href="../texterkennung/">Texterkennung</a> des DMS mit einem Dokument fertig ist – also der Volltext feststeht.</p>
 <p><strong>Typisch:</strong> Mit dem Volltext arbeiten, z. B. Felder vorschlagen oder Post anhand von Wörtern zuordnen.</p>
+<h4 id="ereignis-volltext-fertig">Der Volltext eines Dokuments ist da<a class="headerlink" href="#ereignis-volltext-fertig" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: von der eingebauten Texterkennung, aus der Textebene eines PDFs, von einem Paket wie <strong>Texterkennung</strong> oder über die API. Für ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> schickt das DMS dieses Ereignis außerdem für den <strong>Bestand</strong> nach (siehe <a href="#aehnlichkeit">Ähnlichkeit</a>).</p>
+<p><strong>Typisch:</strong> Aus dem Volltext etwas berechnen – das Paket <strong>KI lokal – Ähnlichkeit</strong> rechnet daraus den Vektor des Dokuments.</p>
 <h4 id="ereignis-einstellungen-geandert">Die Einstellungen des Pakets wurden geändert<a class="headerlink" href="#ereignis-einstellungen-geandert" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Wenn ein Administrator die <a href="#einstellungen">Einstellungen des Pakets</a> speichert. Nur das Paket selbst bekommt dieses Ereignis.</p>
 <p><strong>Typisch:</strong> Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.</p>
+<h3 id="aehnlichkeit">Ähnlichkeit<a class="headerlink" href="#aehnlichkeit" title="Permanent link">&para;</a></h3>
+<p>Ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> – etwa <strong>KI lokal – Ähnlichkeit</strong> – rechnet zu jedem Dokument mit Volltext einen Vektor. Damit zeigt das DMS:</p>
+<ul>
+<li>an der Mappe unter den Dokumenten <strong>„Ähnliche Dokumente“</strong> aus anderen Mappen,</li>
+<li>in der Suche der <a href="https://motom001.github.io/dms/benutzer/aktuell/startseite/#schnell-finden">Startseite</a> mit <strong>„auch in Dokumenten“</strong> zusätzlich <strong>ähnliche Treffer</strong> – Mappen ohne passendes Wort, deren Dokument dem Suchbegriff ähnlich ist, gekennzeichnet mit <strong>„ähnlich“</strong>.</li>
+</ul>
+<p>Jeder sieht dabei nur Mappen, die er lesen darf. Den Vektor des Suchbegriffs liefert das Paket; antwortet es nicht innerhalb von 1,5 Sekunden, sucht das DMS wie bisher ohne Ähnlichkeit.</p>
+<p><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt im Abschnitt <strong>Ähnlichkeit</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Angabe</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Modell</strong></td>
+<td>womit das Paket rechnet (meldet das Paket selbst)</td>
+</tr>
+<tr>
+<td><strong>Stand</strong></td>
+<td>für wie viele Dokumente mit Volltext es schon einen Vektor gibt</td>
+</tr>
+<tr>
+<td><strong>Zwischenspeicher</strong></td>
+<td>wie viel Arbeitsspeicher die Vektoren im DMS belegen</td>
+</tr>
+<tr>
+<td><strong>Ähnliche Treffer in der Suche zeigen</strong></td>
+<td>Einstellung, Standard: an. Aus: Die Suche fragt das Paket nicht mehr; „Ähnliche Dokumente“ an der Mappe bleiben.</td>
+</tr>
+<tr>
+<td><strong>Neu berechnen</strong></td>
+<td>löscht alle Vektoren; das Paket rechnet sie im Hintergrund neu</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bestand und Modellwechsel:</strong> Nach der Installation rechnet das Paket zuerst nur neue Dokumente. Den Bestand holt das DMS gedrosselt nach: Hat das Paket nichts mehr offen, bekommt es alle 30 Sekunden bis zu 50 Dokumente ohne Vektor (Ereignis <a href="#ereignis-volltext-fertig">Volltext ist da</a>). Meldet das Paket nach einem Update ein <strong>anderes Modell</strong>, sind die alten Vektoren ungültig: Das DMS löscht sie und lässt sie auf dieselbe Weise neu berechnen. Bis dahin fehlen ähnliche Dokumente für die noch offenen Dokumente.</p>
+<p><strong>Daten:</strong> Vektoren sind abgeleitet. Sie stehen in der Datenbank (Tabelle <code>vektoren</code>), nicht im <a href="../export/">Vollexport</a>, und verschwinden mit ihrem Dokument. Nach einer Wiederherstellung rechnet das Paket sie neu.</p>
+<p><strong>Speicher und Antwortzeit</strong> (256 Zahlen je Vektor, gemessen auf einem Rechner mit 2 Kernen, PostgreSQL 16):</p>
+<table>
+<thead>
+<tr>
+<th>Dokumente</th>
+<th>Datenbank</th>
+<th>Zwischenspeicher</th>
+<th>erstes Laden</th>
+<th>Ähnliche Dokumente</th>
+<th>zum Vergleich: Kosinus in SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10 000</td>
+<td>12 MB</td>
+<td>4 MB</td>
+<td>0,4 s</td>
+<td>4 ms</td>
+<td>0,3 s</td>
+</tr>
+<tr>
+<td>100 000</td>
+<td>118 MB</td>
+<td>33 MB</td>
+<td>3,2 s</td>
+<td>37 ms</td>
+<td>3,0 s</td>
+</tr>
+</tbody>
+</table>
+<p>Das DMS braucht dafür keine Datenbank-Erweiterung (wie pgvector, die im Image <code>postgres:17</code> fehlt). Es vergleicht im eigenen Arbeitsspeicher mit 8 Bit je Zahl; den Zwischenspeicher lädt es nach dem Start im Hintergrund – bis er da ist, sucht die Suche ohne Ähnlichkeit. Gemessen mit <code>server/test/vektoren-messen.ts</code>.</p>
 <h2 id="expertenmodus-weitere-kataloge-und-hochladen">Expertenmodus: weitere Kataloge und Hochladen<a class="headerlink" href="#expertenmodus-weitere-kataloge-und-hochladen" title="Permanent link">&para;</a></h2>
 <p>Für Paketentwickler und für ein DMS ohne Internetzugang gibt es unter <strong>Werkbank → Pakete</strong> direkt unter den Knöpfen den Abschnitt <strong>Expertenmodus</strong>. Er ist zugeklappt; ein Klick auf <strong>▸ Expertenmodus</strong> (oder Enter bzw. Leertaste) klappt ihn an Ort und Stelle auf. Ob er auf- oder zugeklappt ist, merkt sich dein Browser für dich – das ist nur Bequemlichkeit, kein Recht: Was dort steht, dürfen alle Administratoren.</p>
 <p><img alt="Werkbank → Pakete mit aufgeklapptem Expertenmodus" src="../bilder/werkbank-pakete.png" /></p>
