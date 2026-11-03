@@ -25,9 +25,16 @@ export const VERSION = /^\d+\.\d+\.\d+$/;
  * Angabe (z. B. „unbekannt“) lässt das Fragment weg; eine ungültige Paket-Id die Paketseite.
  */
 export function katalogSeiteMitVersion(dms: string, paket?: string): string {
-  const seite = paket && PAKET_ID.test(paket) ? `${KATALOG_SEITE}paket/${paket}/` : KATALOG_SEITE;
-  return VERSION.test(dms) ? `${seite}#dms=${dms}` : seite;
+  return mitVersion(paket && PAKET_ID.test(paket) ? `${KATALOG_SEITE}paket/${paket}/` : KATALOG_SEITE, dms);
 }
+/** Seite „Pakete herunterladen“ der Katalog-Webseite: Sammeldatei für ein DMS ohne Internet (#461). */
+export const SAMMEL_SEITE = `${KATALOG_SEITE}sammeldatei.html`;
+/**
+ * Link auf die Sammeldatei-Seite – wie {@link katalogSeiteMitVersion} mit der Version nur im Fragment
+ * `#dms=<Version>` (dms.js liest es dort ebenso), nie als Query `?dms=` (das stünde im Zugriffsprotokoll).
+ */
+export const sammelSeiteMitVersion = (dms: string): string => mitVersion(SAMMEL_SEITE, dms);
+const mitVersion = (seite: string, dms: string) => (VERSION.test(dms) ? `${seite}#dms=${dms}` : seite);
 /** Links auf die Katalog-Webseite: neuer Tab ohne Zugriff aufs DMS und ohne Herkunftsadresse (#622). */
 export const KATALOG_LINK_REL = 'noopener noreferrer';
 export const BEREICH = /^(>=|>|=|\^|~)?(\d+\.\d+\.\d+)( <(\d+\.\d+\.\d+))?$/;

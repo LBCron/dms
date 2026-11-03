@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -13,7 +13,7 @@ import { ErkennungPaketBlock } from './ErkennungPaket';
 import { PaketErstellen } from './PaketErstellen';
 import { rueckfrage } from '../rueckfrage';
 import { useKonto } from '../konto';
-import { sammelSeite, SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
+import { SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
@@ -334,7 +334,8 @@ function SammelDetail({ z }: { z: PaketeZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf"><p className="ueber">Pakete ohne Internet</p><h1>Sammeldatei hochladen</h1>
-        <p className="leise">Kommt dein DMS nicht ins Internet, stellst du die Pakete an einem anderen Gerät auf der <a className="verweis" href={sammelSeite(dms)} target="_blank" rel="noreferrer">Katalog-Webseite ↗</a> zusammen – Abhängigkeiten kommen automatisch mit – und lädst die eine Datei hier hoch. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise">Kommt dein DMS nicht ins Internet, stellst du die Pakete an einem anderen Gerät auf der <a className="verweis" href={sammelSeiteMitVersion(dms)} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen – Abhängigkeiten kommen automatisch mit – und lädst die eine Datei hier hoch. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise klein">{tx('pakete.katalog.hinweis')}</p>
       </div>
       {!s ? <SammeldateiWahl geladen={(x, datei) => z.setSammel({ sammeldatei: x, datei })} einzeln={(r, datei) => { z.setUpload({ ...r, datei }); geheZu(`/werkbank/pakete/${UPLOAD}`); }} />
         : <SammeldateiAnsicht key={s.sammeldatei.datei.sha256} s={s.sammeldatei} datei={s.datei} dms={dms}
