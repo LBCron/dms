@@ -51,7 +51,7 @@ describe('Tägliche Zusammenfassung je Benutzer (#92, #94)', () => {
     assert.equal(await mail.pruefe(berlin('2026-10-29', '07:05')), 1);
     assert.deepEqual(an, ['anna@example.org']);
     assert.equal(await mail.pruefe(berlin('2026-10-29', '12:00')), 0, 'Anna nur einmal');
-    assert.equal(await mail.pruefe(berlin('2026-10-29', '21:30')), 1, 'Ben: DMS war um 18 Uhr aus, kommt noch am selben Tag');
+    assert.equal(await mail.pruefe(berlin('2026-10-29', '21:30')), 1, 'Ben: Ablago war um 18 Uhr aus, kommt noch am selben Tag');
     assert.deepEqual(an, ['anna@example.org', 'ben@example.org']);
     // Samstag: Anna (Mo–Fr) nicht, Ben (Mo–Sa) schon
     assert.equal(await mail.pruefe(berlin('2026-10-31', '19:00')), 1);

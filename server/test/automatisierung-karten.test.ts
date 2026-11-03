@@ -128,7 +128,7 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
 });
 
 describe('Beispiele (#675)', () => {
-  it('legt drei ausgeschaltete Beispiele vom DMS an – einmal, auch bei mehrfachem Start', async () => {
+  it('legt drei ausgeschaltete Beispiele von Ablago an – einmal, auch bei mehrfachem Start', async () => {
     const { vertrag, motor } = await aufbau();
     assert.equal(await motor.legeBeispiele(), 3);
     assert.equal(await motor.legeBeispiele(), 0, 'feste Ids: kein zweites Mal');

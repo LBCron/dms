@@ -51,7 +51,7 @@ describe('Auslastung lesen (#409)', () => {
     assert.deepEqual(liesNetz(NETZ), { rx: 1_002_000, tx: 501_000 });
   });
 
-  it('Anteile am Arbeitsspeicher: DMS, Paket-Läufer, PostgreSQL (nur lesbar zählt)', () => {
+  it('Anteile am Arbeitsspeicher: Ablago, Paket-Läufer, PostgreSQL (nur lesbar zählt)', () => {
     const pss = (kb: number) => `Rss: 1 kB\nPss:  ${kb} kB\n`;
     const lies = dateien({
       '/proc/10/smaps_rollup': pss(100), '/proc/20/smaps_rollup': pss(50),

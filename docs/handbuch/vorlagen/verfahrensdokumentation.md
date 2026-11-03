@@ -1,6 +1,6 @@
-# Verfahrensdokumentation: Belegablage mit dem DMS
+# Verfahrensdokumentation: Belegablage mit Ablago
 
-> **Vorlage.** Alles in [eckigen Klammern] ersetzt du durch deine Angaben oder streichst es. Die übrigen Texte beschreiben, was das DMS tut, und passen, solange du es so einsetzt wie beschrieben. Die Vorlage ist ein Ausgangspunkt, **keine Steuer- oder Rechtsberatung** – stimme sie mit deiner Steuerberatung ab. Bewahre diese Dokumentation selbst auf (z. B. als Mappe im DMS) und halte die Änderungstabelle am Ende aktuell.
+> **Vorlage.** Alles in [eckigen Klammern] ersetzt du durch deine Angaben oder streichst es. Die übrigen Texte beschreiben, was Ablago tut, und passen, solange du es so einsetzt wie beschrieben. Die Vorlage ist ein Ausgangspunkt, **keine Steuer- oder Rechtsberatung** – stimme sie mit deiner Steuerberatung ab. Bewahre diese Dokumentation selbst auf (z. B. als Mappe in Ablago) und halte die Änderungstabelle am Ende aktuell.
 
 ## 1. Allgemeines
 
@@ -11,21 +11,21 @@
 | Verantwortlich für die Belegablage | [Name] |
 | Vertretung | [Name] |
 | Steuerberatung | [Name, Kanzlei – oder „keine“] |
-| Eingesetzte Software | DMS (Open Source, https://github.com/motom001/dms), Version [z. B. 0.43.0] (Werkbank → Technik) |
+| Eingesetzte Software | Ablago (Open Source, https://github.com/motom001/dms), Version [z. B. 0.43.0] (Werkbank → Technik) |
 | Betrieb | [Gerät, z. B. Synology DS224+], Variante [zwei Container (dms + postgres:17) / dms-komplett], Standort [z. B. Arbeitszimmer] |
 | Geltungsbereich | [Welche Unterlagen: z. B. Eingangs- und Ausgangsrechnungen, Kontoauszüge, Verträge der Tätigkeit …] |
 | Gültig ab | [Datum] |
 
 ## 2. Belegeingang
 
-Belege kommen auf diesen Wegen ins DMS:
+Belege kommen auf diesen Wegen in Ablago:
 
-- **Papier:** [Wer] scannt eingehende Belege [täglich / wöchentlich] mit [Scanner, Modell]. Die Datei kommt als **Post** ins DMS – [über **„+ Post“** (Kanal „Hochgeladen“) / direkt vom Scanner in den **Eingangsordner** (Werkbank → Eingangsordner, Kanal „Ordner“)]. Das DMS hält dabei fest, **wer** bzw. welcher Weg sie **wann** angelegt hat.
-- **Elektronisch erhaltene Belege** (PDF, E-Rechnung): [Wer] legt die Datei **unverändert im empfangenen Format** über „+ Post“ ab. [Oder: Das DMS holt E-Mails aus dem Postfach [Adresse] ab (Werkbank → Postfächer, Kanal „E-Mail“); die Anhänge liegen **im Original** an der Post.] Bei E-Rechnungen (XRechnung, ZUGFeRD) wird die **Originaldatei** (z. B. die XML-Datei) abgelegt, nicht nur ein Ausdruck oder Bild davon.
-- **Ausgangsbelege:** [Wie Ausgangsrechnungen entstehen, z. B. Rechnungsprogramm …, und wie sie ins DMS kommen.]
+- **Papier:** [Wer] scannt eingehende Belege [täglich / wöchentlich] mit [Scanner, Modell]. Die Datei kommt als **Post** in Ablago – [über **„+ Post“** (Kanal „Hochgeladen“) / direkt vom Scanner in den **Eingangsordner** (Werkbank → Eingangsordner, Kanal „Ordner“)]. Ablago hält dabei fest, **wer** bzw. welcher Weg sie **wann** angelegt hat.
+- **Elektronisch erhaltene Belege** (PDF, E-Rechnung): [Wer] legt die Datei **unverändert im empfangenen Format** über „+ Post“ ab. [Oder: Ablago holt E-Mails aus dem Postfach [Adresse] ab (Werkbank → Postfächer, Kanal „E-Mail“); die Anhänge liegen **im Original** an der Post.] Bei E-Rechnungen (XRechnung, ZUGFeRD) wird die **Originaldatei** (z. B. die XML-Datei) abgelegt, nicht nur ein Ausdruck oder Bild davon.
+- **Ausgangsbelege:** [Wie Ausgangsrechnungen entstehen, z. B. Rechnungsprogramm …, und wie sie in Ablago kommen.]
 - [Weitere Wege, z. B. Ablage über die Schnittstelle (API) durch …]
 
-Jede Datei bekommt beim Speichern einen **Prüfwert (SHA-256)**. Dateien mit gleichem Inhalt erkennt das DMS und speichert sie nur einmal.
+Jede Datei bekommt beim Speichern einen **Prüfwert (SHA-256)**. Dateien mit gleichem Inhalt erkennt Ablago und speichert sie nur einmal.
 
 Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer passenden Mappe **zugeordnet** (z. B. einer Rechnung, einem Vertrag). Dabei wandern die Dokumente in ein Register dieser Mappe; die **Historie** beider Mappen hält fest, wer wann zugeordnet hat.
 
@@ -45,11 +45,11 @@ Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer pas
 - Ordnungsmerkmal je Beleg: [z. B. Rechnungsdatum und Rechnungsnummer; ggf. Belegnummer der Buchhaltung].
 - Aufbewahrungsfristen: [Buchungsbelege 8 Jahre, Bücher und Aufzeichnungen 10 Jahre, Geschäftsbriefe 6 Jahre – jeweils ab Ende des Kalenderjahres; mit der Steuerberatung abstimmen]. Vor Ablauf der Frist werden Belege nicht gelöscht.
 - **Archivmodus:** Für die Mappentypen [Rechnung, Kontoauszug, …] ist der Archivmodus eingeschaltet (Werkbank → Mappentypen → Abschnitt Archivmodus): Aufbewahrungsfrist [8] Jahre, Stichtag [Rechnungsdatum], gerechnet bis zum 31.12. des Stichtagsjahres plus die Jahre. Bis zum Fristende lassen sich weder die Mappen noch einzelne Dokumente löschen – **auch nicht von Administratoren**, auch nicht über Papierkorb oder Schnittstelle.
-- **Nach Fristende:** Unter **Werkbank → Darf weg** stehen die Mappen, deren Frist abgelaufen ist. [Wer] prüft die Liste [jährlich, z. B. im Januar] und löscht, was weg darf. Das DMS löscht nie von selbst.
+- **Nach Fristende:** Unter **Werkbank → Darf weg** stehen die Mappen, deren Frist abgelaufen ist. [Wer] prüft die Liste [jährlich, z. B. im Januar] und löscht, was weg darf. Ablago löscht nie von selbst.
 
 ## 5. Nachvollziehbarkeit und Unveränderbarkeit
 
-- Das DMS führt zu jeder Mappe eine **Historie**: Anlage, jede Änderung eines Feldes mit **altem und neuem Wert**, wer, wann; hochgeladene und gelöschte Dokumente, neue Versionen; Zuordnungen; versendete E-Mails. Bei Mappentypen im Archivmodus wird die Historie nie aufgeräumt.
+- Ablago führt zu jeder Mappe eine **Historie**: Anlage, jede Änderung eines Feldes mit **altem und neuem Wert**, wer, wann; hochgeladene und gelöschte Dokumente, neue Versionen; Zuordnungen; versendete E-Mails. Bei Mappentypen im Archivmodus wird die Historie nie aufgeräumt.
 - Dokumente werden **unverändert** gespeichert; der Prüfwert (SHA-256) je Datei macht nachträgliche Veränderungen erkennbar.
 - **Änderungen nur als neue Version:** Im Archivmodus ist die Versionierung für alle Dokumentenregister Pflicht. Ein geändertes Dokument wird als neue **Version** abgelegt; ältere Versionen bleiben bis zum Fristende erhalten.
 - **Ohne Archivmodus** lässt sich ein einzelnes Dokument endgültig löschen (der Papierkorb nimmt nur ganze Mappen auf). Deshalb gilt der Archivmodus für alle aufbewahrungspflichtigen Mappentypen: [Liste].
@@ -62,7 +62,7 @@ Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer pas
 - Zugang nur mit **persönlichem Konto** (E-Mail-Adresse und Passwort). Konten: [Liste der Benutzer, ihrer Systemrolle (Administrator / Mitglied) und ihrer Rollen].
 - **Zwei-Faktor-Anmeldung:** [vorgeschrieben für Administratoren / für alle / freiwillig] (Werkbank → Anmeldeschutz).
 - [**Anmeldung über einen Anbieter** (OpenID Connect), z. B. [Microsoft 365 / …] – oder: nicht genutzt.]
-- **Anmeldeschutz:** Nach wiederholten Fehlversuchen sperrt das DMS die Anmeldung bzw. die IP-Adresse vorübergehend; Sperren stehen im Protokoll. [Einstellungen, falls geändert.]
+- **Anmeldeschutz:** Nach wiederholten Fehlversuchen sperrt Ablago die Anmeldung bzw. die IP-Adresse vorübergehend; Sperren stehen im Protokoll. [Einstellungen, falls geändert.]
 - **Rollen und Berechtigungen** je Mappentyp regeln, wer anlegen, lesen, bearbeiten, löschen und Passwörter sehen darf (Werkbank → Mappentypen → Abschnitt Berechtigungen; Rollen unter Werkbank → Benutzer). Für Administratoren gelten die Regeln nicht. Für Belege gilt: [z. B. nur … darf löschen; … darf nur lesen].
 - Für eine Betriebsprüfung kann ein eigenes Konto mit **nur lesendem Zugriff** angelegt werden: [ja / nein, Vorgehen].
 - Erreichbarkeit: [nur im Heimnetz / von außen über Reverse-Proxy mit HTTPS unter …].
@@ -72,11 +72,11 @@ Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer pas
 - **Automatische Sicherung** (Werkbank → Sicherung): [Zeitplan, z. B. täglich 02:00], Aufbewahrung [z. B. 7 tägliche, 4 wöchentliche, 12 monatliche]. Eine Sicherung enthält die ganze Datenbank und alle Dateien, **verschlüsselt**.
 - **Kopie an einem anderen Ort:** [z. B. wöchentlich auf USB-Festplatte, die außer Haus liegt / Cloudspeicher …], durch [Wer].
 - **Notfallblatt** mit dem Schlüssel: liegt [Ort, getrennt von den Sicherungen].
-- **Probe-Wiederherstellung:** Das DMS spielt die neueste Sicherung [wöchentlich, sonntags] probeweise ein und prüft sie; Ergebnis unter Werkbank → Sicherung. Fehlschläge gehen per E-Mail an die Administratoren.
+- **Probe-Wiederherstellung:** Ablago spielt die neueste Sicherung [wöchentlich, sonntags] probeweise ein und prüft sie; Ergebnis unter Werkbank → Sicherung. Fehlschläge gehen per E-Mail an die Administratoren.
 
 ## 8. Betrieb
 
-- Updates des DMS: [Wer], [wie oft, z. B. monatlich], vorher Sicherung; Wartungsmodus während des Updates.
+- Updates von Ablago: [Wer], [wie oft, z. B. monatlich], vorher Sicherung; Wartungsmodus während des Updates.
 - Protokoll und Fehler: Werkbank → Protokoll und Technik.
 - [Stromausfall / USV, Festplatten-Überwachung des Geräts …]
 

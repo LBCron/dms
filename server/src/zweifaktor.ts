@@ -104,7 +104,7 @@ export class Zweifaktor {
   async fehlt(b: { id: string; rolle: Rolle }, sitzungSeit?: Date): Promise<boolean> { return (await this.lage(b, sitzungSeit)) === 'fehlt'; }
 
   /** Einrichten, Schritt 1: neues Geheimnis (noch nicht gespeichert) und Adresse für den QR-Code. */
-  beginne(b: { id: string; email: string }, aussteller = 'DMS') {
+  beginne(b: { id: string; email: string }, aussteller = 'Ablago') {
     const geheimnis = randomBytes(20);
     this.entwuerfe.set(b.id, { geheimnis, bis: this.jetzt() + 10 * 60_000 });
     const g = base32(geheimnis);
@@ -117,7 +117,7 @@ export class Zweifaktor {
     const e = this.entwuerfe.get(id);
     if (!e || e.bis < this.jetzt()) throw new Fachfehler(409, 'Bitte die Einrichtung neu beginnen (nach 10 Minuten verfällt der QR-Code).');
     const schritt = this.passt(e.geheimnis, String(code ?? ''), -1);
-    if (schritt === null) throw new Fachfehler(422, 'Der Code stimmt nicht. Uhrzeit von Handy und DMS prüfen und den aktuellen Code eingeben.');
+    if (schritt === null) throw new Fachfehler(422, 'Der Code stimmt nicht. Uhrzeit von Handy und Ablago prüfen und den aktuellen Code eingeben.');
     const codes = neueCodes();
     await this.schreibe(id, { geheimnis: this.verschluessele(base32(e.geheimnis)), seit: new Date(this.jetzt()).toISOString(), letzterSchritt: schritt, codes: codes.map(hash) });
     this.entwuerfe.delete(id);

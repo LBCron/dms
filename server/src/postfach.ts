@@ -357,7 +357,7 @@ export class Postfaecher {
       this.naechster.set(p.id, this.jetzt() + Math.min(p.abstand * 60_000 * 2 ** folge, 6 * 3600_000));
       log.warn('Postfach: Abruf fehlgeschlagen', { postfach: p.name, fehler: text, folge });
       // Abgelaufene OAuth-Anmeldung meldet postfach-oauth.ts selbst, einmal.
-      if (folge === FEHLER_MELDEN_AB && !(e instanceof AnmeldungAbgelaufen)) await this.d.anAdmins?.(`DMS: Postfach „${p.name}“ lässt sich nicht abrufen`, `Der Abruf des Postfachs „${p.name}“ (${p.benutzer} auf ${p.server}) ist ${folge}-mal hintereinander fehlgeschlagen:\n\n${text}\n\nDas DMS versucht es weiter, mit wachsendem Abstand. Einstellungen: Werkbank → Postfächer.`).catch(() => {});
+      if (folge === FEHLER_MELDEN_AB && !(e instanceof AnmeldungAbgelaufen)) await this.d.anAdmins?.(`Ablago: Postfach „${p.name}“ lässt sich nicht abrufen`, `Der Abruf des Postfachs „${p.name}“ (${p.benutzer} auf ${p.server}) ist ${folge}-mal hintereinander fehlgeschlagen:\n\n${text}\n\nDas Ablago versucht es weiter, mit wachsendem Abstand. Einstellungen: Werkbank → Postfächer.`).catch(() => {});
       throw e instanceof AnmeldungAbgelaufen ? e : new Fachfehler(502, text);
     } finally { this.laeuft.delete(id); }
   }
@@ -438,7 +438,7 @@ export class Postfaecher {
         if (r.gleicherInhalt.some((g) => g.mappeId !== postId)) doppelt.push(a.name);
       } catch (e) { abgelehnt.push(`${a.name}: ${(e as Error).message}`); }
     }
-    if (doppelt.length) await this.d.dienst.notiereSystem(postId, SYSTEMNAME, `Doppelt: ${doppelt.map((x) => `„${x}“`).join(', ')} ${doppelt.length === 1 ? 'liegt' : 'liegen'} schon im DMS – vor dem Zuordnen prüfen.`);
+    if (doppelt.length) await this.d.dienst.notiereSystem(postId, SYSTEMNAME, `Doppelt: ${doppelt.map((x) => `„${x}“`).join(', ')} ${doppelt.length === 1 ? 'liegt' : 'liegen'} schon in Ablago – vor dem Zuordnen prüfen.`);
     if (abgelehnt.length) await this.d.dienst.notiereSystem(postId, SYSTEMNAME, `Nicht übernommene Anhänge: ${abgelehnt.join('; ')}`);
     return n;
   }

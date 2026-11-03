@@ -108,8 +108,8 @@ describe('Dateien umwandeln (#577): Manifest und Rechte', () => {
     assert.deepEqual(c.fehler, []);
     assert.deepEqual(c.code!.umwandeln, ['image/tiff', 'image/webp', 'image/gif', 'image/bmp']);
     const f = (code: Record<string, unknown>) => liesCode({ ...MANIFEST_CODE, ...code }).fehler.join(' ');
-    assert.match(f({ umwandeln: ['application/pdf'] }), /PDF \(application\/pdf\) liest das DMS selbst/);
-    assert.match(f({ umwandeln: ['image/jpeg', 'image/png'] }), /JPEG .* liest das DMS selbst/);
+    assert.match(f({ umwandeln: ['application/pdf'] }), /PDF \(application\/pdf\) liest Ablago selbst/);
+    assert.match(f({ umwandeln: ['image/jpeg', 'image/png'] }), /JPEG .* liest Ablago selbst/);
     assert.match(f({ umwandeln: ['TIFF'] }), /kein Dateityp/);
     assert.match(f({ umwandeln: [] }), /dms:umwandeln braucht code.umwandeln/);
     assert.match(f({ rechte: { lesen: ['*'], schnittstellen: ['dms:umwandeln'] } }), /braucht auch code.rechte.dokumente: lesen/);
@@ -120,7 +120,7 @@ describe('Dateien umwandeln (#577): Manifest und Rechte', () => {
     // Rückfrage bei der Installation: Recht mit den Dateitypen, Ereignis, Handbuch-Stellen.
     const punkte = rechtePunkte(c.code!, (v) => v);
     const p = punkte.find((x) => x.text.includes('dms:umwandeln'))!;
-    assert.match(p.text, /^Dateien umwandeln, die das DMS nicht selbst lesen kann .*\(dms:umwandeln\): TIFF, WebP, GIF, BMP$/);
+    assert.match(p.text, /^Dateien umwandeln, die Ablago nicht selbst lesen kann .*\(dms:umwandeln\): TIFF, WebP, GIF, BMP$/);
     assert.ok(HILFE[p.hilfe], 'Handbuch-Stelle zum Recht');
     assert.ok(punkte.some((x) => x.unter?.some((u) => u.text.startsWith('Eine Datei soll umgewandelt werden') && HILFE[u.hilfe])), 'Ereignis mit Handbuch-Stelle');
   });

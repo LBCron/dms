@@ -32,8 +32,8 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     let t = 1_700_000_000_000;
     const speicher = speicherEinstellungen();
     const z = new Zweifaktor(speicher, ver, ent, () => t);
-    const { geheimnis, uri } = z.beginne({ id: 'u1', email: 'a@x.example' }, 'Mein DMS');
-    assert.match(uri, /^otpauth:\/\/totp\/Mein%20DMS%3Aa%40x\.example\?secret=[A-Z2-7]+&issuer=Mein%20DMS/);
+    const { geheimnis, uri } = z.beginne({ id: 'u1', email: 'a@x.example' }, 'Mein Ablago');
+    assert.match(uri, /^otpauth:\/\/totp\/Mein%20Ablago%3Aa%40x\.example\?secret=[A-Z2-7]+&issuer=Mein%20Ablago/);
     await assert.rejects(z.bestaetige('u1', '000000', 'a'), status(422));
     const codes = await z.bestaetige('u1', codeZu(geheimnis, t), 'a');
     assert.equal(codes.length, 10);

@@ -97,7 +97,7 @@ export async function ladeBeispiele(dienst: Dienst, benutzerId: string | null = 
   const roterOrdner = schrank && await ort('roter Ordner', schrank, 'Verträge und Rechnungen rund ums Haus');
   if (zuHause) await ort('Safe im Flur', zuHause, 'Urkunden und Ausweise');
   await ort('beim Notar', undefined, 'Originale, die der Notar verwahrt');
-  const vernichtet = await ort('vernichtet', undefined, 'Papier ist nach dem Scannen vernichtet; das Dokument im DMS ist die einzige Fassung');
+  const vernichtet = await ort('vernichtet', undefined, 'Papier ist nach dem Scannen vernichtet; das Dokument in Ablago ist die einzige Fassung');
   const im = (o?: string) => (o ? { verbleib_original: o } : {});
 
   const sw = await dienst.legeMappeAn({ typId: id.partner, werte: { name: 'Stadtwerke Musterstadt', art: 'Unternehmen', kundennummer: '100234' } }, benutzerId);

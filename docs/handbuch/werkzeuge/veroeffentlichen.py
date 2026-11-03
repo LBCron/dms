@@ -21,6 +21,9 @@ from pathlib import Path
 
 RELEASE = re.compile(r'^v(\d+)\.(\d+)$')
 HANDBUECHER = ('benutzer', 'admin', 'installieren', 'entwickler')
+# Eigene Adresse (#689): GitHub Pages liest sie aus CNAME; bei jeder Veröffentlichung neu schreiben,
+# damit sie auch bei versionierten Fassungen nicht verloren geht.
+ADRESSE = 'help.ablago.app'
 
 def titel(v: str) -> str:
     return v[1:] if RELEASE.match(v) else 'Entwicklung (main)'
@@ -43,11 +46,11 @@ UMLEITUNG = """<!doctype html>
 """
 
 NICHT_GEFUNDEN = """<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>DMS – Handbuch</title>
+<html lang="de"><head><meta charset="utf-8"><title>Ablago – Handbuch</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:15vh auto;padding:0 16px;color:#1c2328}a{color:#00796b}</style>
 <script>
-// Alte Adressen (/dms/benutzer/mappen/) und unbekannte Versionen (/dms/admin/v0.9/…) auf die
+// Alte Adressen (/benutzer/mappen/) und unbekannte Versionen (/admin/v0.9/…) auf die
 // passende Seite der neuesten Version umleiten (#111).
 (async () => {
   const m = location.pathname.match(/^(.*?\\/)(benutzer|admin|installieren|entwickler)\\/(.*)$/);
@@ -67,7 +70,7 @@ NICHT_GEFUNDEN = """<!doctype html>
   location.replace(basis + h + '/' + ziel + location.hash);
 })();
 </script></head>
-<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/dms/">allen Handbüchern</a>: <a href="/dms/installieren/">Wie komme ich an ein DMS?</a>, <a href="/dms/benutzer/">Benutzerhandbuch</a>, <a href="/dms/admin/">Administratorhandbuch</a>, <a href="/dms/entwickler/">Entwicklerhandbuch</a>.</p></body></html>
+<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/">allen Handbüchern</a>: <a href="/installieren/">Wie komme ich an ein DMS?</a>, <a href="/benutzer/">Benutzerhandbuch</a>, <a href="/admin/">Administratorhandbuch</a>, <a href="/entwickler/">Entwicklerhandbuch</a>.</p></body></html>
 """
 
 def main():
@@ -96,8 +99,12 @@ def main():
         weiter = 'aktuell/' if neueste else 'entwicklung/'
         (basis / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
     shutil.copy(start, pages / 'index.html')
+    for f in start.parent.iterdir():  # Logo und Favicon der Startseite (#689)
+        if f.is_file() and f.name != 'index.html':
+            shutil.copy(f, pages / f.name)
     (pages / '404.html').write_text(NICHT_GEFUNDEN)
     (pages / '.nojekyll').write_text('')
+    (pages / 'CNAME').write_text(ADRESSE + '\n')
     print(f'Handbuch „{ziel}“ abgelegt in {pages}')
 
 if __name__ == '__main__':

@@ -103,7 +103,7 @@ echo "::group::4. DMS-Prozess abschießen"
 # pkill -x trifft nur den Prozess „node“, nicht die Shell von docker exec.
 docker exec "$NAME" pkill -9 -x node || true
 for _ in $(seq 1 30); do [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = false ] && break; sleep 1; done
-[ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = false ] || fehler "Container läuft weiter, obwohl das DMS beendet ist"
+[ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = false ] || fehler "Container läuft weiter, obwohl Ablago beendet ist"
 echo "Container beendet mit Code $(docker inspect -f '{{.State.ExitCode}}' "$NAME")"
 echo "::endgroup::"; echo "::notice::dms-komplett: Schritt erledigt"
 

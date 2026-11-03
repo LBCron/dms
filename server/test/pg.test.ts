@@ -1005,7 +1005,7 @@ describe('PostgreSQL: Ereignis in derselben Transaktion (#404)', { skip: url ? f
     const repo: typeof basis = {
       ...basis,
       transaktion: (f) => basis.transaktion((r) => f({ ...r, legeEreignisseAn: async (l) => {
-        if (stoeren) throw new Error('DMS fällt aus');
+        if (stoeren) throw new Error('Ablago fällt aus');
         return r.legeEreignisseAn(l);
       } })),
     };
@@ -1017,12 +1017,12 @@ describe('PostgreSQL: Ereignis in derselben Transaktion (#404)', { skip: url ? f
       const reg = post.register.find((x) => x.art === 'dokumente')!.key;
       const vorher = (await d.listeMappen(post.id)).length;
       stoeren = true;
-      await assert.rejects(d.legePostAn({ betreff: 'Tx-Brief' }, { id: null, name: 'Test' }), /DMS fällt aus/);
+      await assert.rejects(d.legePostAn({ betreff: 'Tx-Brief' }, { id: null, name: 'Test' }), /Ablago fällt aus/);
       assert.equal((await d.listeMappen(post.id)).length, vorher, 'keine Post ohne Ereignis');
       stoeren = false;
       const p = await d.legePostAn({ betreff: 'Tx-Brief' }, { id: null, name: 'Test' });
       stoeren = true;
-      await assert.rejects(d.ladeHoch(p.id, { register: reg, name: 'a.pdf' }, Buffer.from('%PDF-1.4 a'), null), /DMS fällt aus/);
+      await assert.rejects(d.ladeHoch(p.id, { register: reg, name: 'a.pdf' }, Buffer.from('%PDF-1.4 a'), null), /Ablago fällt aus/);
       const m = await d.holeMappe(p.id);
       assert.equal(m.dokumente.length, 0, 'kein Dokument ohne Ereignis');
       assert.ok(!(await d.historie(p.id)).some((h) => h.art === 'dokument_hochgeladen'), 'auch keine Historie');

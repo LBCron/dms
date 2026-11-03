@@ -6,7 +6,7 @@ Eine Mappe sammelt alles zu einer Sache: die Angaben, die Dokumente und die Verb
 
 ## Aufbau einer Mappe
 
-Oben steht der **Titel** der Mappe. Ihn musst du nicht selbst schreiben: Das DMS setzt ihn aus den Angaben zusammen, zum Beispiel aus Rechnungsnummer und Datum – „R-2026-117 vom 02.03.2026“. Ändert sich eine Angabe, ändert sich der Titel mit.
+Oben steht der **Titel** der Mappe. Ihn musst du nicht selbst schreiben: Ablago setzt ihn aus den Angaben zusammen, zum Beispiel aus Rechnungsnummer und Datum – „R-2026-117 vom 02.03.2026“. Ändert sich eine Angabe, ändert sich der Titel mit.
 
 Darunter stehen die **Indexwerte**, die jede Mappe hat: wann und von wem sie angelegt und zuletzt geändert wurde. Als Änderung zählen auch hochgeladene und entfernte Dokumente, nicht aber Notizen oder Aufgaben. Ein Klick auf einen Namen öffnet die Mappe dieses Benutzers. Mit dem **Stern** rechts neben dem Titel merkst du dir die Mappe als [Favorit](ablage.md#favoriten).
 
@@ -46,7 +46,7 @@ Stimmt etwas nicht – ein Pflichtfeld ist leer, eine Zahl zu groß, eine Nummer
 Hast du eine **Visitenkarte**, einen Kassenbon oder einen Brief vor dir, musst du nicht abtippen: Oben in der Mappe (neu oder bestehend) steht **Aus Dokument ausfüllen** – bei manchen Mappentypen mit eigenem Namen, z. B. **Visitenkarte scannen**.
 
 1. Tippe auf den Knopf. Am Handy öffnet **Foto aufnehmen** direkt die Kamera; **Weiteres Foto** nimmt z. B. die Rückseite dazu. Am Rechner wählst du eine Datei – ein Foto, ein PDF oder eine vCard (`.vcf`). In einer bestehenden Mappe geht auch ein Dokument, das schon darin liegt.
-2. **Angaben erkennen.** Das DMS liest den Text (offline, ohne KI) und sucht passende Angaben: Name, Funktion, Telefon, Mobil, E-Mail, Internetseite, Anschrift, Datum, Betrag, Nummern.
+2. **Angaben erkennen.** Ablago liest den Text (offline, ohne KI) und sucht passende Angaben: Name, Funktion, Telefon, Mobil, E-Mail, Internetseite, Anschrift, Datum, Betrag, Nummern.
 3. **Verstanden – bitte prüfen und speichern.** Leere Felder sind jetzt als **Vorschlag** ausgefüllt; darunter steht, wie sicher der Wert ist und an welcher Textstelle er stand. **Zurücknehmen** leert das Feld wieder. Ist ein Feld schon ausgefüllt, bleibt dein Wert stehen – darunter steht **Im Dokument** der andere Wert mit **Übernehmen**; **Alle Alternativen übernehmen** tut das für alle.
 4. **Verweise**, z. B. *Organisation* bei einer Person: Gibt es die Firma schon (erkannt an Name, Internetseite oder E-Mail-Domain), ist sie vorgeschlagen. Gibt es sie noch nicht, legt **„Organisation“ mit diesen Angaben anlegen** sie nach einer Rückfrage an.
 5. **Mappe speichern.** Erst jetzt ist etwas gespeichert. Das Foto bzw. die Datei liegt dann im Dokumentenregister der Mappe – außer, du hast den Haken „im Register … ablegen“ abgewählt.
@@ -67,7 +67,7 @@ Welche Felder die Erkennung füllt, legt der Administrator am Mappentyp fest; Pa
 | Verweis | eine andere Mappe suchen und wählen (siehe unten) |
 | Passwort | eintippen; gespeichert wird es verschlüsselt (siehe unten) |
 
-Manche Textfelder haben ein **Format**: E-Mail, Telefon, Internetseite, IBAN oder PLZ. Am Handy erscheint dann die passende Tastatur, und offensichtlich falsche Angaben – etwa Buchstaben in einer Telefonnummer – lehnt das DMS mit einem Hinweis ab, was zu tun ist. Neben einer E-Mail-Adresse, Telefonnummer oder Internetseite steht ein Knopf, mit dem du gleich schreibst, anrufst oder die Seite öffnest. Eine IBAN steht in Vierergruppen; eine deutsche PLZ hat genau 5 Ziffern, für andere Länder trägst du das Land ein. Manche Datumsfelder haben Grenzen, ein Geburtstag darf zum Beispiel nicht in der Zukunft liegen. Was schon gespeichert ist, bleibt, bis du das Feld änderst.
+Manche Textfelder haben ein **Format**: E-Mail, Telefon, Internetseite, IBAN oder PLZ. Am Handy erscheint dann die passende Tastatur, und offensichtlich falsche Angaben – etwa Buchstaben in einer Telefonnummer – lehnt Ablago mit einem Hinweis ab, was zu tun ist. Neben einer E-Mail-Adresse, Telefonnummer oder Internetseite steht ein Knopf, mit dem du gleich schreibst, anrufst oder die Seite öffnest. Eine IBAN steht in Vierergruppen; eine deutsche PLZ hat genau 5 Ziffern, für andere Länder trägst du das Land ein. Manche Datumsfelder haben Grenzen, ein Geburtstag darf zum Beispiel nicht in der Zukunft liegen. Was schon gespeichert ist, bleibt, bis du das Feld änderst.
 
 ### Formatierter Text
 
@@ -81,7 +81,7 @@ In Listen und in der Suche erscheint der Text ohne Formatierung.
 
 ### Passwörter
 
-In einem **Passwortfeld** (z. B. das Kennwort eines Kundenportals) steht nach dem Speichern nur „••••••••“. Das **Auge** zeigt das Passwort; jedes Anzeigen hält das DMS in der Historie der Mappe fest (wer, wann, welche Mappe – nicht das Passwort). **Ändern** nimmt ein neues Passwort auf, **Passwort entfernen** löscht es beim Speichern (bis dahin geht **Rückgängig**).
+In einem **Passwortfeld** (z. B. das Kennwort eines Kundenportals) steht nach dem Speichern nur „••••••••“. Das **Auge** zeigt das Passwort; jedes Anzeigen hält Ablago in der Historie der Mappe fest (wer, wann, welche Mappe – nicht das Passwort). **Ändern** nimmt ein neues Passwort auf, **Passwort entfernen** löscht es beim Speichern (bis dahin geht **Rückgängig**).
 
 ![Passwortfeld](bilder/passwortfeld.png)
 
@@ -101,7 +101,7 @@ Ein Klick auf einen gesetzten Verweis öffnet die andere Mappe.
 
 Öffne die Mappe, ändere die Angaben und klicke auf **Mappe speichern**. Solange etwas nicht gespeichert ist, steht unten „Ungespeicherte Änderungen“. **Änderungen verwerfen** stellt den gespeicherten Stand wieder her.
 
-Willst du die Mappe mit ungespeicherten Änderungen verlassen, fragt das DMS nach.
+Willst du die Mappe mit ungespeicherten Änderungen verlassen, fragt Ablago nach.
 
 Neben dem Titel stehen der Stern für die [Favoriten](ablage.md#favoriten) und das Menü **Mappe ▾** (Aufgabe vergeben, Erinnern, per E-Mail versenden, als PDF exportieren, Link kopieren). Bei jeder Mappe gibt es außerdem die Register **Notizen** (mit Zahl) und **Historie** – siehe [Notizen, Erwähnungen, Historie](zusammenarbeit.md) und [E-Mail, PDF und Link](versenden.md). Am Handy rollt die Reihe der Register waagerecht; ein Schatten am Rand zeigt, dass weitere folgen. Menüs wie **Mappe ▾**, **+ Neu** und dein Benutzermenü öffnen am Handy als Blatt von unten mit großen Einträgen; tippst du daneben, schließt es. Dort steht am Handy auch **Mappe löschen …**. Die Leiste mit **Verwerfen** und **Speichern** erscheint am Handy erst, wenn du etwas geändert hast.
 
@@ -109,17 +109,17 @@ Manche Angaben sind nur zum Lesen da und haben einen gestrichelten Rahmen – zu
 
 ### Gleichzeitig bearbeiten
 
-Dieselbe Mappe darf an mehreren Stellen gleichzeitig offen sein – am Laptop und am Handy, in zwei Fenstern oder bei zwei Personen im Haushalt. Beim Speichern schickt das DMS nur die Felder, die du **in diesem Fenster geändert** hast. Alles andere bleibt so, wie es gerade gespeichert ist.
+Dieselbe Mappe darf an mehreren Stellen gleichzeitig offen sein – am Laptop und am Handy, in zwei Fenstern oder bei zwei Personen im Haushalt. Beim Speichern schickt Ablago nur die Felder, die du **in diesem Fenster geändert** hast. Alles andere bleibt so, wie es gerade gespeichert ist.
 
 **Beispiel:** Lena hat die Mappe „Kfz-Versicherung“ am Laptop offen. Am Handy ändert sie den **Beitrag** und speichert. Danach ändert sie am Laptop nur die **Notiz** und speichert. Beides bleibt erhalten – der Laptop setzt den Beitrag nicht auf den alten Wert zurück, und es kommt keine Frage.
 
-Habt ihr **dasselbe Feld** geändert, fragt das DMS, bevor es etwas überschreibt:
+Habt ihr **dasselbe Feld** geändert, fragt Ablago, bevor es etwas überschreibt:
 
 > Jonas hat „Beitrag“ um 17:04 auf „412,00 €“ geändert. Du wolltest „398,00 €“ eintragen.
 
 Wähle je Feld **Meins übernehmen** oder **Wert von Jonas behalten** und klicke auf **So speichern**. Warst du es selbst an einem anderen Gerät, heißt es **Den Wert von hier übernehmen** bzw. **Den anderen Wert behalten**. Deine übrigen Änderungen und die der anderen werden dabei ohne Frage zusammengeführt. **Zurück zum Bearbeiten** speichert noch nichts – deine Eingaben bleiben stehen. Was gegolten hat, steht wie jede Änderung in der [Historie](zusammenarbeit.md#historie).
 
-Das gilt für alle Felder, auch für Verweise und Mehrfachauswahl (dort zählt das ganze Feld) und für die Felder, aus denen der Titel entsteht. Eine Sperre („wird gerade bearbeitet“) gibt es nicht; das DMS fragt nur, wenn zwei Änderungen wirklich dasselbe Feld betreffen. Auch Automatiken wie das automatische Zuordnen von Post oder Pakete setzen keine Felder zurück, die du inzwischen geändert hast.
+Das gilt für alle Felder, auch für Verweise und Mehrfachauswahl (dort zählt das ganze Feld) und für die Felder, aus denen der Titel entsteht. Eine Sperre („wird gerade bearbeitet“) gibt es nicht; Ablago fragt nur, wenn zwei Änderungen wirklich dasselbe Feld betreffen. Auch Automatiken wie das automatische Zuordnen von Post oder Pakete setzen keine Felder zurück, die du inzwischen geändert hast.
 
 ## Verknüpfungen
 
@@ -160,9 +160,9 @@ Willst du eine Mappe **mit allem, was an ihr hängt**, loswerden – etwa einen 
 
 ![Vorschau als Baum: was mitgeht und was bleibt](bilder/mit-verknuepften-loeschen.png)
 
-1. **Vorschau als Baum:** Das DMS sammelt alle Mappen, die zu dieser Mappe gehören, und die Mappen, die wiederum zu diesen gehören (Vertragspartner → Verträge → Rechnungen → Lieferscheine …), mit der Zahl ihrer Dokumente. Die **Tiefe** stellst du ein (Vorgabe 5 Ebenen); Äste klappst du mit ▸/▾ auf und zu. Jede Mappe steht nur einmal da, auch bei Kreisen.
+1. **Vorschau als Baum:** Ablago sammelt alle Mappen, die zu dieser Mappe gehören, und die Mappen, die wiederum zu diesen gehören (Vertragspartner → Verträge → Rechnungen → Lieferscheine …), mit der Zahl ihrer Dokumente. Die **Tiefe** stellst du ein (Vorgabe 5 Ebenen); Äste klappst du mit ▸/▾ auf und zu. Jede Mappe steht nur einmal da, auch bei Kreisen.
     - **Nur nach unten:** Mitgelöscht wird nur, was auf die gelöschte Mappe verweist. Mappen, auf die sie selbst verweist (z. B. eine Kategorie, ein Ablageort oder beim Löschen einer Rechnung der Vertragspartner), gehören nie dazu – auch nicht über eine mitgelöschte Mappe: Der Lieferschein einer Rechnung geht mit, sein Verweis auf den Vertragspartner wird aber nicht verfolgt.
-    - **Nur über Zugehörigkeit:** Mitgelöscht wird nur über Verweise der [Verweisart](begriffe.md#verweisart) **Zugehörigkeit** (die Rechnung gehört zum Vertrag). Hängt eine Mappe nur über einen **Bezug** dran – z. B. ein Vertrag mit diesem Vertragspartner als *Ansprechpartner*, Post mit *Für* oder *Zugeordnet zu* –, bleibt sie; nur der Verweis wird entfernt. Was an ihr hängt, sammelt das DMS nicht.
+    - **Nur über Zugehörigkeit:** Mitgelöscht wird nur über Verweise der [Verweisart](begriffe.md#verweisart) **Zugehörigkeit** (die Rechnung gehört zum Vertrag). Hängt eine Mappe nur über einen **Bezug** dran – z. B. ein Vertrag mit diesem Vertragspartner als *Ansprechpartner*, Post mit *Für* oder *Zugeordnet zu* –, bleibt sie; nur der Verweis wird entfernt. Was an ihr hängt, sammelt Ablago nicht.
 2. **Kennzeichnungen** je Mappe:
     - ✅ **wird gelöscht**.
     - 📎 **nur über Bezug verbunden** – bleibt immer, nur der Verweis wird entfernt (dabei steht das Feld, z. B. „über Ansprechpartner (Bezug)“). Nimmst du den Haken weg, bleibt auch der Verweis – und damit die Mappe, auf die er zeigt.
@@ -173,7 +173,7 @@ Willst du eine Mappe **mit allem, was an ihr hängt**, loswerden – etwa einen 
 4. **Zusammenfassung:** Unten steht, was geschieht, z. B. „37 Mappen und 112 Dokumente werden in den Papierkorb gelegt; 3 bleiben wegen Aufbewahrungsfrist; 2 Verweise werden entfernt.“
 5. **Bestätigen:** Zum Bestätigen tippst du den Namen der Mappe ein.
 
-**Erinnerung zum Fristende:** Bleibt die Mappe stehen, weil Mappen darunter noch in der Aufbewahrungsfrist sind, legt das DMS dir an ihr eine [Erinnerung](begriffe.md#erinnerung) zum Tag nach dem spätesten Fristende an – „Müller GmbH kann ab 01.01.2032 gelöscht werden – „Mit verknüpften Mappen löschen“ erneut ausführen“. An dem Tag steht sie unter „Zu erledigen“; ein Klick öffnet die Mappe, und du löschst erneut.
+**Erinnerung zum Fristende:** Bleibt die Mappe stehen, weil Mappen darunter noch in der Aufbewahrungsfrist sind, legt Ablago dir an ihr eine [Erinnerung](begriffe.md#erinnerung) zum Tag nach dem spätesten Fristende an – „Müller GmbH kann ab 01.01.2032 gelöscht werden – „Mit verknüpften Mappen löschen“ erneut ausführen“. An dem Tag steht sie unter „Zu erledigen“; ein Klick öffnet die Mappe, und du löschst erneut.
 
 Alles geht als **ein Vorgang** in den [Papierkorb](ablage.md#papierkorb): Dort stellst du mit **Alle wiederherstellen** alle Mappen und Dokumente gemeinsam wieder her – auch die Verweise untereinander und die Verweise, die an bleibenden Mappen entfernt wurden. In der Historie jeder Mappe steht „in den Papierkorb gelegt – mit verknüpften Mappen gelöscht“ mit der Zahl der Mappen und Dokumente. Ist der Papierkorb ausgeschaltet, ist das Löschen sofort endgültig; die Rückfrage sagt das.
 
@@ -191,6 +191,6 @@ Das merkst du so:
 - **Ohne Bearbeiten** zeigt eine Mappe ihre Felder und Dokumente nur an; unten steht „Nur lesen“. Notizen und Aufgaben gehen trotzdem.
 - **Ohne Löschen** ist „Mappe löschen“ ausgegraut (mit „Warum nicht?“), **ohne Anlegen** fehlt „+ Neu“, **ohne Passwörter sehen** fehlt das Auge an Passwortfeldern.
 - **Ohne Exportieren** fehlen in einer Ansicht die Knöpfe zum Exportieren; Ansichten, die du nicht sehen darfst, fehlen im Baum.
-- Hängen deine Rechte von einem Feld ab (etwa „Verantwortlich“) und würdest du dir mit einer Änderung selbst das Lesen oder Bearbeiten nehmen, fragt das DMS vor dem Speichern nach.
+- Hängen deine Rechte von einem Feld ab (etwa „Verantwortlich“) und würdest du dir mit einer Änderung selbst das Lesen oder Bearbeiten nehmen, fragt Ablago vor dem Speichern nach.
 - Bei der Auswahl von Benutzern (Verantwortlich, Erwähnungen, Vertretung, Aufgaben) erscheinen nur die, die du sehen darfst.
 - Deinen **Papierkorb** siehst du immer; was du daraus wiederherstellst, siehst du danach aber nur, wenn du die Mappe lesen darfst.

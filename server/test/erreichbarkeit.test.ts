@@ -23,12 +23,12 @@ function aufbau() {
   return { e, server, warte, wieder: () => wieder, offeneTimer: () => timer.length };
 }
 
-test('istAusfall: Proxy-Antworten und keine Verbindung, nicht aber Antworten des DMS', () => {
+test('istAusfall: Proxy-Antworten und keine Verbindung, nicht aber Antworten von Ablago', () => {
   assert.equal(istAusfall(0, null), true);
   assert.equal(istAusfall(502, null), true);
   assert.equal(istAusfall(504, '<html>'), true);
   assert.equal(istAusfall(503, null), true);
-  assert.equal(istAusfall(503, { fehler: 'Wartung' }), false, 'Wartungsmodus des DMS');
+  assert.equal(istAusfall(503, { fehler: 'Wartung' }), false, 'Wartungsmodus von Ablago');
   assert.equal(istAusfall(500, null), false);
   assert.equal(istAusfall(404, null), false);
 });

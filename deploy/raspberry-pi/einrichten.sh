@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # DMS auf dem Raspberry Pi einrichten (#578) – aus https://github.com/motom001/dms (deploy/raspberry-pi)
-# Anleitung Schritt für Schritt: https://motom001.github.io/dms/installieren/aktuell/raspberry-pi/
+# Anleitung Schritt für Schritt: https://help.ablago.app/installieren/aktuell/raspberry-pi/
 #
 # Aufruf als normaler Benutzer, NICHT mit sudo:
 #   bash einrichten.sh                  DMS im Ordner ~/dms
@@ -10,22 +10,22 @@
 #   1. Es prüft: 64-Bit-System (arm64), Arbeitsspeicher, freien Platz und ob Docker mit Compose da ist.
 #   2. Es legt den Ordner an, lädt die Vorlage docker-compose.yml (zwei Container: DMS und Datenbank)
 #      und schreibt daneben eine Datei .env mit einem zufälligen Passwort für die Datenbank.
-#   3. Es lädt die Programme (Images), startet das DMS und zeigt Adresse und Einrichtungscode.
+#   3. Es lädt die Programme (Images), startet Ablago und zeigt Adresse und Einrichtungscode.
 #
 # Was es NICHT tut: Es installiert nichts am System und ändert keine Einstellungen. Fehlt Docker,
 # nennt es die offizielle Anleitung und hört auf.
 #
 # Mehrfach ausführen schadet nicht: Eine vorhandene docker-compose.yml und .env bleiben, wie sie sind,
-# und deine Daten bleiben unberührt. Gibt es neuere Images, startet es das DMS damit neu.
+# und deine Daten bleiben unberührt. Gibt es neuere Images, startet es Ablago damit neu.
 # Deutsche Anführungszeichen in den Meldungen sind gewollt.
 # shellcheck disable=SC1111
 set -euo pipefail
 
 VORLAGE_URL="${DMS_VORLAGE_URL:-https://raw.githubusercontent.com/motom001/dms/main/deploy/raspberry-pi/docker-compose.yml}"
-ANLEITUNG="https://motom001.github.io/dms/installieren/aktuell/raspberry-pi/"
+ANLEITUNG="https://help.ablago.app/installieren/aktuell/raspberry-pi/"
 DOCKER_ANLEITUNG="https://docs.docker.com/engine/install/debian/"
 PORT=8080
-MIN_RAM_MB=1500     # darunter (Pi mit 1 GB) läuft das DMS nicht verlässlich
+MIN_RAM_MB=1500     # darunter (Pi mit 1 GB) läuft Ablago nicht verlässlich
 EMPF_RAM_MB=3500    # ab 4 GB ist Luft für Texterkennung und Sicherung
 MIN_FREI_GB=5       # für Datenbank, erste Dokumente und Sicherungen
 EMPF_FREI_GB=30
@@ -63,12 +63,12 @@ arch=$(uname -m)
 case "$arch" in
   aarch64|arm64) ;;
   armv6l|armv7l|armhf)
-    abbruch "Auf dem Gerät läuft ein 32-Bit-System ($arch). Das DMS braucht 64 Bit." \
+    abbruch "Auf dem Gerät läuft ein 32-Bit-System ($arch). Ablago braucht 64 Bit." \
       "Spiel mit dem Raspberry Pi Imager „Raspberry Pi OS Lite (64-bit)“ neu auf (Schritt 2 der Anleitung)." \
-      "Ein Raspberry Pi 3, Zero oder älter reicht für das DMS nicht – du brauchst einen Pi 4 oder 5." ;;
+      "Ein Raspberry Pi 3, Zero oder älter reicht für Ablago nicht – du brauchst einen Pi 4 oder 5." ;;
   x86_64|amd64)
     abbruch "Das ist kein Raspberry Pi, sondern ein PC (x86_64)." \
-      "Für einen PC gibt es eine eigene Anleitung: https://motom001.github.io/dms/installieren/aktuell/linux/" ;;
+      "Für einen PC gibt es eine eigene Anleitung: https://help.ablago.app/installieren/aktuell/linux/" ;;
   *)
     abbruch "Unbekannte Architektur: $arch. Das Skript ist für den Raspberry Pi 4 und 5 mit 64-Bit-System." ;;
 esac
@@ -84,7 +84,7 @@ ok "64-Bit-System (arm64)"
 
 ram_mb=$(( $(awk '/^MemTotal:/ {print $2}' /proc/meminfo) / 1024 ))
 if [ "$ram_mb" -lt "$MIN_RAM_MB" ]; then
-  abbruch "Zu wenig Arbeitsspeicher: $ram_mb MB. Das DMS braucht einen Pi mit mindestens 2 GB, besser 4 GB."
+  abbruch "Zu wenig Arbeitsspeicher: $ram_mb MB. Ablago braucht einen Pi mit mindestens 2 GB, besser 4 GB."
 elif [ "$ram_mb" -lt "$EMPF_RAM_MB" ]; then
   hinweis "Arbeitsspeicher $ram_mb MB – das reicht, mit 4 GB oder mehr läuft die Texterkennung aber entspannter."
 else
@@ -123,7 +123,7 @@ if ! command -v docker >/dev/null 2>&1; then
   abbruch "Docker ist noch nicht installiert." \
     "Installiere es nach der offiziellen Anleitung von Docker für Debian (gilt auch für Raspberry Pi OS 64 Bit):" \
     "  $DOCKER_ANLEITUNG" \
-    "Die Kurzfassung steht in Schritt 5 der Anleitung zum DMS."
+    "Die Kurzfassung steht in Schritt 5 der Anleitung zu Ablago."
 fi
 DOCKER=(docker)
 mit_sudo=""
@@ -176,9 +176,9 @@ info "Beim ersten Mal lädt der Pi einige hundert MB – das dauert ein paar Min
 "${DOCKER[@]}" compose pull \
   || abbruch "Die Programme ließen sich nicht laden." "Hat der Pi Internet? Prüfe das Netzwerkkabel und versuche es noch einmal."
 "${DOCKER[@]}" compose up -d \
-  || abbruch "Das DMS ließ sich nicht starten." "Die Meldung steht direkt darüber. Häufige Ursachen stehen in der Anleitung unter „Wenn es nicht klappt“."
+  || abbruch "Ablago ließ sich nicht starten." "Die Meldung steht direkt darüber. Häufige Ursachen stehen in der Anleitung unter „Wenn es nicht klappt“."
 
-printf '\n6. Warten, bis das DMS antwortet\n'
+printf '\n6. Warten, bis Ablago antwortet\n'
 status=""
 for _ in $(seq 1 100); do
   if status=$(curl -fsS -m 5 "http://127.0.0.1:$PORT/api/konto/status" 2>/dev/null); then break; fi
@@ -188,11 +188,11 @@ for _ in $(seq 1 100); do
 done
 printf '\n'
 if [ -z "$status" ]; then
-  abbruch "Das DMS antwortet nach 5 Minuten noch nicht." \
+  abbruch "Ablago antwortet nach 5 Minuten noch nicht." \
     "Sieh ins Protokoll:  cd $ZIEL && ${DOCKER[*]} compose logs app --tail 50" \
     "Häufige Ursachen und Lösungen stehen in der Anleitung unter „Wenn es nicht klappt“."
 fi
-ok "Das DMS läuft"
+ok "Ablago läuft"
 
 name=$(hostname)
 ip=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -203,7 +203,7 @@ if printf '%s' "$status" | grep -q '"einrichtungNoetig":true'; then
   code=$("${DOCKER[@]}" compose exec -T app cat /data/geheim/EINRICHTUNGSCODE 2>/dev/null || true)
   printf '\nDer Assistent fragt zuerst nach dem Einrichtungscode:\n\n    %s\n' "${code:-(steht gleich im Protokoll: ${DOCKER[*]} compose logs app | grep -A1 Einrichtungscode)}"
 else
-  printf '\nDas DMS ist schon eingerichtet – melde dich einfach an.\n'
+  printf '\nAblago ist schon eingerichtet – melde dich einfach an.\n'
 fi
 printf '\nDeine Daten liegen in %s (Datenbank, Dokumente, Schlüssel, Sicherungen).\n' "$ZIEL"
 if [ -n "$mit_sudo" ]; then

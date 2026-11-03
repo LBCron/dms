@@ -30,7 +30,7 @@ function MeineRechte({ admin }: { admin: boolean }) {
     <section className="blatt">
       <h2 className="h3">Meine Rechte <Hilfe ort="profil.rechte" /></h2>
       {admin
-        ? <p className="leise">Als Administrator siehst und darfst du alles – für dich gelten die Berechtigungen nicht. Benutzer legst du in der Benutzerverwaltung an; versendete E-Mails legt das DMS selbst als Post ab.</p>
+        ? <p className="leise">Als Administrator siehst und darfst du alles – für dich gelten die Berechtigungen nicht. Benutzer legst du in der Benutzerverwaltung an; versendete E-Mails legt Ablago selbst als Post ab.</p>
         : <p className="leise">Was du je Mappentyp darfst. „Je nach Mappe“ heißt: Es hängt von der Mappe ab, zum Beispiel davon, ob du verantwortlich bist oder eine Aufgabe dazu hast.</p>}
       {!liste ? <p className="leise">Lade …</p> : (
         <div className="tabellenrahmen"><table>
@@ -230,7 +230,7 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
       {bereich === 'benachrichtigungen' && <>
       <div className="blatt">
         <h2 className="h3">Aufgaben <Hilfe ort="profil.benachrichtigungen" /></h2>
-        <p className="leise">Mappen mit offenen Aufgaben für dich stehen unter „Zu erledigen“. Zusätzlich schickt das DMS die <strong>Tägliche Zusammenfassung</strong> per E-Mail – zu deiner Uhrzeit und an deinen Wochentagen, solange du offene Aufgaben hast und nicht abwesend bist.</p>
+        <p className="leise">Mappen mit offenen Aufgaben für dich stehen unter „Zu erledigen“. Zusätzlich schickt Ablago die <strong>Tägliche Zusammenfassung</strong> per E-Mail – zu deiner Uhrzeit und an deinen Wochentagen, solange du offene Aufgaben hast und nicht abwesend bist.</p>
         <ZusammenfassungEinstellen />
       </div>
 

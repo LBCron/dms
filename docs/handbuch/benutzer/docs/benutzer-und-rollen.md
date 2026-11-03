@@ -1,6 +1,6 @@
 # Benutzer und Rollen
 
-Auch die Menschen, die das DMS nutzen, sind Mappen. So kann eine Mappe zeigen, **wer sich um etwas kümmert** – etwa, wer bei einem Vertrag die Kündigungsfrist im Blick hat.
+Auch die Menschen, die Ablago nutzen, sind Mappen. So kann eine Mappe zeigen, **wer sich um etwas kümmert** – etwa, wer bei einem Vertrag die Kündigungsfrist im Blick hat.
 
 ## Benutzer
 
@@ -10,7 +10,7 @@ In der Ansicht **Benutzer** hat jeder Benutzer seine Mappe. Name, E-Mail-Adresse
 
 Hat ein Administrator weitere Felder ergänzt (etwa eine Telefonnummer), kannst du sie wie in jeder anderen Mappe ausfüllen.
 
-Benutzer-Mappen legt man nicht in der Ablage an und löscht sie dort auch nicht – das geschieht über die Benutzerverwaltung. Wer das DMS nicht mehr nutzt, wird deaktiviert; seine Mappe bleibt erhalten und heißt dann „… (ehemalig)“. So bleibt erkennbar, wer früher für etwas zuständig war.
+Benutzer-Mappen legt man nicht in der Ablage an und löscht sie dort auch nicht – das geschieht über die Benutzerverwaltung. Wer Ablago nicht mehr nutzt, wird deaktiviert; seine Mappe bleibt erhalten und heißt dann „… (ehemalig)“. So bleibt erkennbar, wer früher für etwas zuständig war.
 
 ## Rollen
 

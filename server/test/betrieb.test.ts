@@ -58,9 +58,9 @@ function smtpServer(opt: { passwort?: string } = {}) {
   return { mails, server, start: () => new Promise<number>((r) => server.listen(0, '127.0.0.1', () => r((server.address() as AddressInfo).port))) };
 }
 
-const ohneAnmeldung = (port: number) => ({ aktiv: true, host: '127.0.0.1', port, verbindung: 'keine', benutzer: '', absender: 'DMS <dms@example.org>' });
+const ohneAnmeldung = (port: number) => ({ aktiv: true, host: '127.0.0.1', port, verbindung: 'keine', benutzer: '', absender: 'Ablago <dms@example.org>' });
 
-describe('Adresse des DMS', () => {
+describe('Adresse von Ablago', () => {
   it('normalisiert und prüft Adressen', () => {
     assert.equal(pruefeAdresse('nas.local:8080'), 'http://nas.local:8080');
     assert.equal(pruefeAdresse('https://dms.example.org/'), 'https://dms.example.org');
@@ -185,7 +185,7 @@ describe('E-Mail-Versand (#37)', () => {
     assert.equal((await b.pruefeVerbindung(ohneAnmeldung(port))).ok, true);
     const t = await b.sendeTestmail(ohneAnmeldung(port), 'ich@example.org');
     assert.equal(t.ok, true);
-    assert.match(smtp.mails.at(-1)!.daten, /Testmail vom DMS/);
+    assert.match(smtp.mails.at(-1)!.daten, /Testmail von Ablago/);
     assert.equal(b.mailer(), null, 'Prüfen speichert nichts');
     const weg = await b.pruefeVerbindung({ ...ohneAnmeldung(1), host: '127.0.0.1' });
     assert.equal(weg.ok, false);

@@ -203,7 +203,7 @@ Für ${d.start.titel || 'Ohne Titel'}, erstellt am ${zeit(jetzt)}. ${mehrzahl(d.
 - **daten/** – maschinenlesbar: je Art eine Tabelle (\`.csv\`, \`.jsonl\`, \`.xlsx\`), Verweise, Dokumentliste, Notizen, Änderungshistorie (\`.jsonl\`).
 - **struktur/mappentypen.json** – welche Angaben es je Art gibt. **manifest.json** – Größe und SHA-256 jeder Datei.
 
-Format: wie der Vollexport des DMS (CSV nach RFC 4180 mit BOM, JSON Lines, Datum JJJJ-MM-TT, Zeitpunkte ISO 8601 in UTC).
+Format: wie der Vollexport von Ablago (CSV nach RFC 4180 mit BOM, JSON Lines, Datum JJJJ-MM-TT, Zeitpunkte ISO 8601 in UTC).
 `;
 }
 

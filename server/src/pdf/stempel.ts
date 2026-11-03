@@ -46,7 +46,7 @@ export async function bildAlsA4Pdf(bild: Uint8Array, png: boolean): Promise<Buff
 
 async function bildDokument(bild: Uint8Array, png: boolean): Promise<PDFDocument> {
   const doc = await PDFDocument.create();
-  doc.setProducer('DMS'); doc.setCreator('DMS');
+  doc.setProducer('Ablago'); doc.setCreator('Ablago');
   const b = png ? await doc.embedPng(eigenerPuffer(bild)) : await doc.embedJpg(eigenerPuffer(bild));
   const quer = b.width > b.height;
   const [w, h] = quer ? [841.89, 595.28] : [595.28, 841.89];

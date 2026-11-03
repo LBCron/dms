@@ -1,11 +1,18 @@
-# DMS
+# Ablago
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/marke/ablago-logo-mit-schriftzug-dunkel.svg">
+  <img src="docs/marke/ablago-logo-mit-schriftzug.svg" alt="Ablago" width="240">
+</picture>
+
+*Ablago – Dokumentenablage für zu Hause und kleine Betriebe*
 
 **Deutsch** · [English](README.en.md)
 
 <!-- Abzeichen (#252): Zeile 1 Stand, Zeile 2 Sicherheit, Zeile 3 Offenheit. -->
 [![Release](https://img.shields.io/github/v/release/motom001/dms?label=Release&sort=semver)](https://github.com/motom001/dms/releases/latest)
 [![Prüfungen](https://img.shields.io/github/actions/workflow/status/motom001/dms/image.yml?branch=main&label=Pr%C3%BCfungen)](https://github.com/motom001/dms/actions/workflows/image.yml)
-[![Handbuch](https://img.shields.io/github/actions/workflow/status/motom001/dms/handbuch.yml?branch=main&label=Handbuch)](https://motom001.github.io/dms/)<br>
+[![Handbuch](https://img.shields.io/github/actions/workflow/status/motom001/dms/handbuch.yml?branch=main&label=Handbuch)](https://help.ablago.app/)<br>
 [![CodeQL](https://github.com/motom001/dms/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/motom001/dms/security/code-scanning?query=tool%3ACodeQL)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/motom001/dms/badge)](https://scorecard.dev/viewer/?uri=github.com/motom001/dms)
 [![Sicherheit](https://img.shields.io/badge/Sicherheit-SECURITY.md-2ea44f)](SECURITY.md)<br>
@@ -14,21 +21,21 @@
 
 **Die Unterlagen deines Haushalts an einem Ort – selbst gehostet, kostenlos, deine Daten bleiben bei dir.**
 
-Statt loser Dateien in Ordnern legst du **Mappen** an: für den Vertrag, die Rechnung, die Heizung, den Handwerker. Mappen verweisen aufeinander. So findest du von der Heizung den Wartungsvertrag, von dort jede Rechnung und den Handwerker, der sie gestellt hat. Und an die Kündigungsfrist erinnert dich das DMS rechtzeitig.
+Statt loser Dateien in Ordnern legst du **Mappen** an: für den Vertrag, die Rechnung, die Heizung, den Handwerker. Mappen verweisen aufeinander. So findest du von der Heizung den Wartungsvertrag, von dort jede Rechnung und den Handwerker, der sie gestellt hat. Und an die Kündigungsfrist erinnert dich Ablago rechtzeitig.
 
 <!-- Bildschirmfoto aus dem Handbuch-Workflow (#290): wird mit jedem Release neu aufgenommen, nur Beispieldaten. -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://motom001.github.io/dms/benutzer/aktuell/bilder/readme-dunkel.png">
-  <img alt="Die Ablage des DMS: links die Ansichten, in der Mitte die Liste, rechts eine geöffnete Mappe mit Angaben und Dokumenten" src="https://motom001.github.io/dms/benutzer/aktuell/bilder/readme.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://help.ablago.app/benutzer/aktuell/bilder/readme-dunkel.png">
+  <img alt="Die Ablage von Ablago: links die Ansichten, in der Mitte die Liste, rechts eine geöffnete Mappe mit Angaben und Dokumenten" src="https://help.ablago.app/benutzer/aktuell/bilder/readme.png">
 </picture>
 
 ## Für wen?
 
-<img alt="Für wen das DMS gebaut ist: vom Haushalt bis zum Unternehmen" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.svg" width="100%">
+<img alt="Für wen Ablago gebaut ist: vom Haushalt bis zum Unternehmen" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.svg" width="100%">
 
-Das DMS ist für **Familien und Haushalte** gebaut. Es passt besonders gut, wenn du dich **um deine Eltern kümmerst** oder **ein paar Wohnungen vermietest**. **Selbständige und kleine Betriebe** können es ebenfalls gut nutzen; für größere Unternehmen ist es bewusst nicht gemacht.
+Ablago ist für **Familien und Haushalte** gebaut. Es passt besonders gut, wenn du dich **um deine Eltern kümmerst** oder **ein paar Wohnungen vermietest**. **Selbständige und kleine Betriebe** können es ebenfalls gut nutzen; für größere Unternehmen ist es bewusst nicht gemacht.
 
-Ob es zu dir passt, zeigt [Ist das DMS etwas für mich?](https://motom001.github.io/dms/benutzer/aktuell/wofuer/#ist-das-dms-etwas-fur-mich) – mit dem [5-Minuten-Test](https://motom001.github.io/dms/benutzer/aktuell/wofuer/#der-5-minuten-test).
+Ob es zu dir passt, zeigt [Ist Ablago etwas für mich?](https://help.ablago.app/benutzer/aktuell/wofuer/#ist-das-dms-etwas-fur-mich) – mit dem [5-Minuten-Test](https://help.ablago.app/benutzer/aktuell/wofuer/#der-5-minuten-test).
 
 ## Was du davon hast
 
@@ -37,32 +44,32 @@ Ob es zu dir passt, zeigt [Ist das DMS etwas für mich?](https://motom001.github
 - **Post schnell ablegen:** Hochladen, am Handy fotografieren, aus einem E-Mail-Postfach oder vom Scanner über einen Eingangsordner.
 - **Gemeinsam mit der Familie:** Jeder hat ein eigenes Konto und sieht, was er sehen soll.
 - **Sicher aufgehoben:** Verschlüsselte Sicherungen, ein Notfallblatt zum Ausdrucken und eine Probe-Wiederherstellung, die zeigt, dass die Sicherung auch funktioniert.
-- **Deine Daten gehören dir:** Alles lässt sich jederzeit in offenen Formaten exportieren und ist auch ohne das DMS lesbar.
+- **Deine Daten gehören dir:** Alles lässt sich jederzeit in offenen Formaten exportieren und ist auch ohne Ablago lesbar.
 
 ## Datenschutz eingebaut
 
-Das DMS ist auf Datenschutz ausgelegt (Art. 25 DSGVO) – für die Daten deiner Familie genauso wie für Mieter und Kunden:
+Ablago ist auf Datenschutz ausgelegt (Art. 25 DSGVO) – für die Daten deiner Familie genauso wie für Mieter und Kunden:
 
-- **Keine Telemetrie:** Das DMS sendet keine Nutzungsdaten, auch keine anonymen und auch nicht regelmäßig. Von sich aus baut es keine Verbindung ins Internet auf; den Versionsabgleich mit GitHub startest du selbst per Knopfdruck.
+- **Keine Telemetrie:** Ablago sendet keine Nutzungsdaten, auch keine anonymen und auch nicht regelmäßig. Von sich aus baut es keine Verbindung ins Internet auf; den Versionsabgleich mit GitHub startest du selbst per Knopfdruck.
 - **Selbst gehostet:** Deine Unterlagen liegen auf deinem Gerät – kein Tracking, keine Werbung, keine KI im Kern. KI-Funktionen kommen als Pakete und laufen lokal; ein externer KI-Dienst wird nur angebunden, wenn du ihn ausdrücklich als Paket installierst. Wer was sieht, regeln Rechte je Mappentyp.
 - **Auskunft nach Art. 15:** Alles zu einem Mieter, Kunden oder Kontakt als ZIP mit Deckblatt – geprüft, geschwärzt, mit Nachweis.
 - **Aufbewahren, sperren, löschen:** Archivmodus mit Löschsperre bis Fristende, die Liste „Darf weg“ und ein Papierkorb – Bausteine für dein Löschkonzept, mit Vorlage.
 - **Daten mitnehmen:** Jeder Benutzer exportiert seine eigenen Daten, Administratoren alles – in offenen Formaten.
 
-Software allein macht noch keinen Datenschutz – dazu gehören deine Abläufe. Was das DMS dafür bietet und was du selbst regelst: **[Datenschutz im DMS](https://motom001.github.io/dms/admin/aktuell/datenschutz/)**.
+Software allein macht noch keinen Datenschutz – dazu gehören deine Abläufe. Was Ablago dafür bietet und was du selbst regelst: **[Datenschutz in Ablago](https://help.ablago.app/admin/aktuell/datenschutz/)**.
 
 ## So kommst du an ein DMS
 
 | Du hast … | So geht es |
 | --- | --- |
-| einen Heimserver mit **umbrelOS, ZimaOS oder CasaOS** | aus dem [DMS App Store](https://github.com/motom001/dms-appstore) mit einem Klick: [umbrelOS](https://motom001.github.io/dms/installieren/aktuell/umbrel/), [ZimaOS](https://motom001.github.io/dms/installieren/aktuell/zimaos/), [CasaOS](https://motom001.github.io/dms/installieren/aktuell/casaos/) |
-| ein **NAS** von Synology, UGREEN, QNAP, TrueNAS oder Unraid | eine fertige Vorlage in die Docker-Oberfläche einfügen: [Anleitungen](https://motom001.github.io/dms/installieren/aktuell/) |
-| einen **PC, Raspberry Pi oder Server mit Docker** | [Docker Compose](https://motom001.github.io/dms/installieren/aktuell/docker/) oder, zum Ausprobieren, [ein einziger Container](https://motom001.github.io/dms/installieren/aktuell/komplett/) |
-| **keinen eigenen Server** | [Ohne eigenen Server: das DMS bei einem Anbieter](https://motom001.github.io/dms/installieren/aktuell/anbieter/) – drei Wege und eine Checkliste, worauf du beim Anbieter achtest |
+| einen Heimserver mit **umbrelOS, ZimaOS oder CasaOS** | aus dem [Ablago App Store](https://github.com/motom001/dms-appstore) mit einem Klick: [umbrelOS](https://help.ablago.app/installieren/aktuell/umbrel/), [ZimaOS](https://help.ablago.app/installieren/aktuell/zimaos/), [CasaOS](https://help.ablago.app/installieren/aktuell/casaos/) |
+| ein **NAS** von Synology, UGREEN, QNAP, TrueNAS oder Unraid | eine fertige Vorlage in die Docker-Oberfläche einfügen: [Anleitungen](https://help.ablago.app/installieren/aktuell/) |
+| einen **PC, Raspberry Pi oder Server mit Docker** | [Docker Compose](https://help.ablago.app/installieren/aktuell/docker/) oder, zum Ausprobieren, [ein einziger Container](https://help.ablago.app/installieren/aktuell/komplett/) |
+| **keinen eigenen Server** | [Ohne eigenen Server: Ablago bei einem Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/) – drei Wege und eine Checkliste, worauf du beim Anbieter achtest |
 
-Alle Wege im Überblick: **[Wie komme ich an ein DMS?](https://motom001.github.io/dms/installieren/aktuell/)**
+Alle Wege im Überblick: **[Wie komme ich an ein DMS?](https://help.ablago.app/installieren/aktuell/)**
 
-## Was das DMS nicht ist
+## Was Ablago nicht ist
 
 - **Kein Cloud-Dienst.** Es läuft bei dir zu Hause – oder, wenn du willst, bei einem Anbieter, den du selbst wählst. Das Projekt betreibt keinen Dienst, der deine Unterlagen sieht.
 - **Keine Lizenzkosten**, kein Abo. Wer möchte, unterstützt freiwillig.
@@ -80,13 +87,13 @@ Alle Wege im Überblick: **[Wie komme ich an ein DMS?](https://motom001.github.i
 
 ## Handbücher
 
-- **[Wofür ein DMS?](https://motom001.github.io/dms/benutzer/aktuell/wofuer/)** – wann es im Alltag hilft, mit Selbstcheck.
-- **[Wie komme ich an ein DMS?](https://motom001.github.io/dms/installieren/aktuell/)** – installieren auf Heimserver, NAS oder jedem Rechner mit Docker.
-- **[Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/)** – arbeiten in der Ablage: Mappen, Dokumente, Suche, Aufgaben, Profil.
-- **[Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/)** – Einrichtung und Betrieb, Aktualisieren und Sichern, Werkbank, Fehlersuche, API.
-- **[Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/)** – mitmachen: Arbeitsweise, Aufbau, Pakete und Release.
+- **[Wofür ein DMS?](https://help.ablago.app/benutzer/aktuell/wofuer/)** – wann es im Alltag hilft, mit Selbstcheck.
+- **[Wie komme ich an ein DMS?](https://help.ablago.app/installieren/aktuell/)** – installieren auf Heimserver, NAS oder jedem Rechner mit Docker.
+- **[Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/)** – arbeiten in der Ablage: Mappen, Dokumente, Suche, Aufgaben, Profil.
+- **[Administratorhandbuch](https://help.ablago.app/admin/aktuell/)** – Einrichtung und Betrieb, Aktualisieren und Sichern, Werkbank, Fehlersuche, API.
+- **[Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/)** – mitmachen: Arbeitsweise, Aufbau, Pakete und Release.
 
-Im DMS führt **Hilfe** im Menü unter dem eigenen Namen dorthin. Was in welcher Version dazukam, steht in den **[Releases](https://github.com/motom001/dms/releases)**.
+In Ablago führt **Hilfe** im Menü unter dem eigenen Namen dorthin. Was in welcher Version dazukam, steht in den **[Releases](https://github.com/motom001/dms/releases)**.
 
 ## Schnellstart mit Docker Compose
 
@@ -96,19 +103,19 @@ Das Image `ghcr.io/motom001/dms` ist öffentlich – eine Anmeldung bei der Regi
 2. Daneben eine Datei `.env` mit `DB_PASSWORD=<langes zufälliges Passwort>` ablegen.
 3. Starten und `http://<NAS>:8080` aufrufen. Ein Assistent führt durch die Einrichtung: Einrichtungscode (steht im Protokoll des Containers und in `geheim/EINRICHTUNGSCODE`), Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name des Haushalts, Administrator, erster Benutzer, Schlüssel und Notfallblatt.
 
-`ghcr.io/motom001/dms:main` folgt jedem Stand auf `main`; mit einer Versionsnummer, also `ghcr.io/motom001/dms:<Version>` mit einer Nummer aus den [Releases](https://github.com/motom001/dms/releases), bleibt die Installation auf einem Release. Alles Weitere steht im Administratorhandbuch unter [Einrichtung und Betrieb](https://motom001.github.io/dms/admin/aktuell/installation/) und [Aktualisieren und Sichern](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+`ghcr.io/motom001/dms:main` folgt jedem Stand auf `main`; mit einer Versionsnummer, also `ghcr.io/motom001/dms:<Version>` mit einer Nummer aus den [Releases](https://github.com/motom001/dms/releases), bleibt die Installation auf einem Release. Alles Weitere steht im Administratorhandbuch unter [Einrichtung und Betrieb](https://help.ablago.app/admin/aktuell/installation/) und [Aktualisieren und Sichern](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ## Sicherheit und Offenheit
 
-Das DMS verwaltet persönliche Dokumente – deshalb ist alles offen nachprüfbar: der Quellcode, wie gebaut wird und was dabei geprüft wird. Automatisch geprüft werden unser Code (CodeQL), die Bibliotheken (Dependabot, `npm audit`), die fertigen Images (Trivy) und versehentlich eingecheckte Geheimnisse (Secret Scanning mit Push-Schutz). Jedes Image trägt einen signierten **Herkunftsnachweis** und eine **Stückliste** (SBOM); wie man das prüft und wie man eine Lücke **vertraulich meldet**, steht in [SECURITY.md](SECURITY.md). Die [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/motom001/dms) bewertet regelmäßig und öffentlich, wie das Projekt mit Sicherheit umgeht.
+Ablago verwaltet persönliche Dokumente – deshalb ist alles offen nachprüfbar: der Quellcode, wie gebaut wird und was dabei geprüft wird. Automatisch geprüft werden unser Code (CodeQL), die Bibliotheken (Dependabot, `npm audit`), die fertigen Images (Trivy) und versehentlich eingecheckte Geheimnisse (Secret Scanning mit Push-Schutz). Jedes Image trägt einen signierten **Herkunftsnachweis** und eine **Stückliste** (SBOM); wie man das prüft und wie man eine Lücke **vertraulich meldet**, steht in [SECURITY.md](SECURITY.md). Die [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/motom001/dms) bewertet regelmäßig und öffentlich, wie das Projekt mit Sicherheit umgeht.
 
 ## Wünsche und Fehler
 
-Als [Issue](https://github.com/motom001/dms/issues/new/choose) im Format einer User Story mit Akzeptanzkriterien – auf Deutsch oder Englisch. Umgesetzt wird, was der Maintainer mit dem Label `freigegeben` versieht. Was als Nächstes kommt und in welcher Reihenfolge, steht im [Fahrplan](ROADMAP.md). Wie Mitarbeit läuft, steht in [CONTRIBUTING.md](CONTRIBUTING.md) und im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/).
+Als [Issue](https://github.com/motom001/dms/issues/new/choose) im Format einer User Story mit Akzeptanzkriterien – auf Deutsch oder Englisch. Umgesetzt wird, was der Maintainer mit dem Label `freigegeben` versieht. Was als Nächstes kommt und in welcher Reihenfolge, steht im [Fahrplan](ROADMAP.md). Wie Mitarbeit läuft, steht in [CONTRIBUTING.md](CONTRIBUTING.md) und im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/).
 
 ## Mitmachen
 
-Du nutzt das DMS? **[Erzähl uns, wie](https://github.com/motom001/dms/issues/new?template=ich-nutze-das-dms.yml)** – freiwillig, mit einem kurzen Formular, alle Felder optional. Was andere erzählen, steht unter **[Wer nutzt das DMS?](https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms)**. Das DMS selbst meldet nichts: keine Telemetrie, auch nicht anonym.
+Du nutzt Ablago? **[Erzähl uns, wie](https://github.com/motom001/dms/issues/new?template=ich-nutze-das-dms.yml)** – freiwillig, mit einem kurzen Formular, alle Felder optional. Was andere erzählen, steht unter **[Wer nutzt Ablago?](https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms)**. Ablago selbst meldet nichts: keine Telemetrie, auch nicht anonym.
 
 ## Entwicklung
 
@@ -121,7 +128,7 @@ DATABASE_URL=postgres://dms:dms@localhost:5432/dms npm run dev -w server
 npm run dev -w web              # Oberfläche auf http://localhost:5173
 ```
 
-Tests: `npm test`. Aufbau, Tests gegen PostgreSQL, Pakete und der Weg zum Release stehen im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/).
+Tests: `npm test`. Aufbau, Tests gegen PostgreSQL, Pakete und der Weg zum Release stehen im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/).
 
 **Neue Version:** Versionsnummer in den drei `package.json` erhöhen und `docs/releases/v<version>.md` schreiben – Release, Image, Handbuch und das Bildschirmfoto oben entstehen nach dem Merge automatisch. Dabei kurz prüfen, ob „Was du davon hast“, „Für Bastler und Administratoren“ und der Schnellstart noch stimmen – in beiden Sprachfassungen dieser README; alles Ausführliche gehört ins Handbuch, nicht hierher.
 
@@ -129,7 +136,7 @@ Wichtig: **Keine echten Dokumente oder persönlichen Daten committen** – nur C
 
 ## Unterstützen
 
-Das DMS ist und bleibt frei nutzbar. Wer die Entwicklung freiwillig unterstützen möchte, kann das über [GitHub Sponsors](https://github.com/sponsors/motom001) tun – einmalig oder monatlich, mit frei gewähltem Betrag. Spenden von persönlichen GitHub-Konten kommen ohne Abzüge an. In der Anwendung steht der Hinweis nur in der Werkbank, nicht in der Ablage.
+Ablago ist und bleibt frei nutzbar. Wer die Entwicklung freiwillig unterstützen möchte, kann das über [GitHub Sponsors](https://github.com/sponsors/motom001) tun – einmalig oder monatlich, mit frei gewähltem Betrag. Spenden von persönlichen GitHub-Konten kommen ohne Abzüge an. In der Anwendung steht der Hinweis nur in der Werkbank, nicht in der Ablage.
 
 ### So finanziert sich das Projekt
 
@@ -143,4 +150,4 @@ Die Entwicklung kostet Zeit und Geld – für Testgeräte, Server und Werkzeuge.
 
 [Apache License 2.0](LICENSE) (Apache-2.0), Hinweise in [NOTICE](NOTICE). Versionen bis einschließlich 0.92.0 stehen unter der GNU Affero General Public License v3.0 (AGPL-3.0-only).
 
-Jeder darf das DMS nutzen, verändern und weitergeben – auch in eigenen Produkten. Wer es weitergibt, legt die Lizenz und die Hinweise aus NOTICE bei und kennzeichnet geänderte Dateien. Den Quellcode einer veränderten Fassung offenzulegen ist nicht Pflicht.
+Jeder darf Ablago nutzen, verändern und weitergeben – auch in eigenen Produkten. Wer es weitergibt, legt die Lizenz und die Hinweise aus NOTICE bei und kennzeichnet geänderte Dateien. Den Quellcode einer veränderten Fassung offenzulegen ist nicht Pflicht.

@@ -1,14 +1,14 @@
 # UGREEN-NAS (UGOS Pro)
 
 !!! success "Geprüft: vom Projekt getestet"
-    Das Projekt testet das DMS selbst auf einem **UGREEN DXP4800 Plus** (amd64); dort läuft es auch im Alltag, siehe [So läuft es beim Entwickler](beispiel.md). Die erste Prüfung mit Messwerten und das Datum, bis wann wir es voraussichtlich prüfen, stehen noch aus. Die Vorlage startet außerdem bei jeder Änderung probehalber auf den Rechnern von GitHub. Mehr unter [Geprüfte Plattformen](plattformen.md).
+    Das Projekt testet Ablago selbst auf einem **UGREEN DXP4800 Plus** (amd64); dort läuft es auch im Alltag, siehe [So läuft es beim Entwickler](beispiel.md). Die erste Prüfung mit Messwerten und das Datum, bis wann wir es voraussichtlich prüfen, stehen noch aus. Die Vorlage startet außerdem bei jeder Änderung probehalber auf den Rechnern von GitHub. Mehr unter [Geprüfte Plattformen](plattformen.md).
 
-So richtest du das DMS auf einem UGREEN-NAS mit UGOS Pro ein. Die App **Docker** von UGREEN legt das DMS als *Projekt* aus einer Vorlage an.
+So richtest du Ablago auf einem UGREEN-NAS mit UGOS Pro ein. Die App **Docker** von UGREEN legt Ablago als *Projekt* aus einer Vorlage an.
 
 !!! info "Bald im App Center?"
     Eine App für das UGREEN App Center ist in Arbeit ([#181](https://github.com/motom001/dms/issues/181)). Bis dahin geht es so, und das ist kaum aufwendiger.
 
-Wie das DMS beim Entwickler auf einem UGREEN-NAS läuft – mit Zugriff von unterwegs und Sicherung außer Haus –, zeigt das Beispiel [So läuft es beim Entwickler](beispiel.md).
+Wie Ablago beim Entwickler auf einem UGREEN-NAS läuft – mit Zugriff von unterwegs und Sicherung außer Haus –, zeigt das Beispiel [So läuft es beim Entwickler](beispiel.md).
 
 !!! note "Alternative: ein Container"
     Empfohlen ist das Projekt mit zwei Containern unten. Zum schnellen Ausprobieren geht auch **ein Container** aus dem Image `ghcr.io/motom001/dms-komplett:main` – ohne Projekt und Passwort, siehe [Ein Container: dms-komplett](komplett.md#in-der-oberflache-eines-nas) und [Ein oder zwei Container?](index.md#ein-oder-zwei-container).
@@ -22,7 +22,7 @@ Im **App Center** die App **Docker** installieren und öffnen.
 In der App **Dateien** im Ordner `docker` (legt die Docker-App an) einen Ordner `dms` anlegen. Darin vier Ordner: `postgres`, `files`, `geheim` und `sicherung`.
 
 !!! tip "Eingangsordner für den Scanner"
-    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://motom001.github.io/dms/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
+    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
 
 ## 3. Projekt anlegen
 
@@ -50,7 +50,7 @@ In der App **Dateien** im Ordner `docker` (legt die Docker-App an) einen Ordner 
 
 ## Sicherung außer Haus
 
-Die Sicherungen des DMS (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher.
+Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

@@ -6,14 +6,14 @@ Ein Link über Mappentyp und Feldwerte findet eine Mappe über ihren **Mappentyp
 http://<NAS>:8080/ablage/link?typ=rechnung&rechnungsnummer=A-2020-11380
 ```
 
-Eingerichtet wird dafür nichts: Jeder Link, der dem Aufbau unten folgt, funktioniert sofort. In jeder Mappe erzeugt **Mappe ▾ → Link kopieren** einen passenden Link (siehe [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/versenden/#link-kopieren)).
+Eingerichtet wird dafür nichts: Jeder Link, der dem Aufbau unten folgt, funktioniert sofort. In jeder Mappe erzeugt **Mappe ▾ → Link kopieren** einen passenden Link (siehe [Benutzerhandbuch](https://help.ablago.app/benutzer/versenden/#link-kopieren)).
 
 ## Was der Link zeigt
 
 - **Ein Treffer:** Die Mappe öffnet sich.
 - **Mehrere Treffer:** Die Trefferliste erscheint als vorübergehende Ansicht „Link: Rechnung“ – mit den Bedingungen darunter –, und die erste Mappe ist geöffnet. Im Ansichtenbaum erscheint diese Ansicht nicht.
 - **Kein Treffer:** Die leere Liste nennt die gesuchten Bedingungen.
-- **Fehler im Link** (unbekannter Mappentyp, Tippfehler in der Kennung eines Felds, unpassender Operator, ungültiger Wert): Das DMS zeigt, was nicht stimmt – nie stillschweigend alle Mappen.
+- **Fehler im Link** (unbekannter Mappentyp, Tippfehler in der Kennung eines Felds, unpassender Operator, ungültiger Wert): Ablago zeigt, was nicht stimmt – nie stillschweigend alle Mappen.
 
 ![Trefferliste eines Links über Mappentyp und Feldwerte](bilder/direktlink.png)
 
@@ -70,7 +70,7 @@ Groß- und Kleinschreibung der Operatoren zählt nicht (`nichtleer` geht auch).
 
 - **Zahlen und Beträge:** mit Komma oder Punkt, auch `1.234,50`.
 - **Datum:** `2026-03-31` oder `31.03.2026`.
-- **Heute:** `heute`, `heute-30tage`, `heute+2wochen`, `heute+12monate`, `heute-1jahr`. Das DMS rechnet bei jedem Öffnen neu – ein Link auf „Kündigung in den nächsten 12 Monaten“ ist also immer aktuell.
+- **Heute:** `heute`, `heute-30tage`, `heute+2wochen`, `heute+12monate`, `heute-1jahr`. Ablago rechnet bei jedem Öffnen neu – ein Link auf „Kündigung in den nächsten 12 Monaten“ ist also immer aktuell.
 - **Zeitraum** (mit `imZeitraum`): `jahr` (aktuelles), `jahr-1` (letztes), `monat`, `monat+1` (nächster).
 - **Ich:** `ich` ist der angemeldete Benutzer – für Verweise auf Benutzer und für `_erstelltVon`/`_geaendertVon`, z. B. `verantwortlich=ich`.
 

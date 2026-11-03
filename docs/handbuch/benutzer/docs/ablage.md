@@ -26,7 +26,7 @@ Auch die Liste ist am Handy kompakter: Die Kopfzeile passt in eine Zeile, das Su
 
 - **Ansichten können Unteransichten haben.** Ein Pfeil ▸ davor zeigt das; ein Klick darauf klappt sie auf oder zu. Dein Gerät merkt sich, was zugeklappt ist.
 - **Eine Ansicht mit Unteransichten zeigt alles zusammen:** *Finanzen* zeigt zum Beispiel alle offenen Rechnungen *und* die Zahlungen dieses Jahres.
-- **Manche Ansichten filtern:** *Offene Rechnungen* zeigt nur Rechnungen, die noch nicht bezahlt sind. Werte wie „heute“ oder „du selbst“ rechnet das DMS bei jedem Öffnen neu – eine Ansicht *Kündigung in den nächsten 12 Monaten* ist also immer aktuell.
+- **Manche Ansichten filtern:** *Offene Rechnungen* zeigt nur Rechnungen, die noch nicht bezahlt sind. Werte wie „heute“ oder „du selbst“ rechnet Ablago bei jedem Öffnen neu – eine Ansicht *Kündigung in den nächsten 12 Monaten* ist also immer aktuell.
 - **Zeigt eine Ansicht mehrere Mappentypen**, stehen *Titel* und *Mappentyp* vorn, und es gibt kein **+ Neu**. Neue Mappen legst du dann in der Ansicht des einzelnen Mappentyps an.
 
 Welche Ansichten es gibt, legt ein Administrator fest. Wünschst du dir eine, sag ihm Bescheid.
@@ -54,7 +54,7 @@ Welche Angaben als Spalten erscheinen, legt der Administrator fest – je Mappen
 
 In der Tabelle sortiert ein Klick auf eine Spaltenüberschrift nach dieser Spalte, ein zweiter Klick dreht die Reihenfolge um (↑ aufsteigend, ↓ absteigend). Leere Werte stehen immer am Ende.
 
-Das DMS merkt sich deine Sortierung je Ansicht – auf allen Geräten. Über der Liste steht, wonach gerade sortiert ist; **nach Titel** stellt die Grundeinstellung wieder her.
+Ablago merkt sich deine Sortierung je Ansicht – auf allen Geräten. Über der Liste steht, wonach gerade sortiert ist; **nach Titel** stellt die Grundeinstellung wieder her.
 
 Nach Verweisen und langen Texten lässt sich nicht sortieren; diese Spalten haben keinen Pfeil.
 
@@ -68,11 +68,11 @@ Nach Verweisen und langen Texten lässt sich nicht sortieren; diese Spalten habe
 
 ### Im Text der Dokumente suchen
 
-Setzt du neben dem Suchfeld den Haken **Volltext durchsuchen**, sucht das DMS auch im Text der hochgeladenen Dokumente – in PDFs und, dank Texterkennung, auch in Scans und Fotos. Unter jedem Treffer steht, in welchem Dokument die Stelle steht, mit dem gefundenen Wort hervorgehoben. Das DMS merkt sich den Haken für dich.
+Setzt du neben dem Suchfeld den Haken **Volltext durchsuchen**, sucht Ablago auch im Text der hochgeladenen Dokumente – in PDFs und, dank Texterkennung, auch in Scans und Fotos. Unter jedem Treffer steht, in welchem Dokument die Stelle steht, mit dem gefundenen Wort hervorgehoben. Ablago merkt sich den Haken für dich.
 
 ![Volltextsuche: Treffer in einem Dokument](bilder/volltext-suche.png)
 
-Die Volltextsuche versteht Wortformen in der Sprache des Dokuments: „Rechnungen“ findet auch „Rechnung“, in einem englischen Brief „invoices“ auch „invoice“ – die Sprache erkennt das DMS mit der Texterkennung selbst. Mehrere Wörter müssen alle vorkommen. Sie findet einen Begriff auch **als Teil eines Wortes**: „Ofen“ findet „Backofen“, „Ofenrohr“ und „Kachelofen“ – ohne dass du ein Sternchen o. Ä. eingeben musst. Das gilt für Begriffe ab drei Buchstaben.
+Die Volltextsuche versteht Wortformen in der Sprache des Dokuments: „Rechnungen“ findet auch „Rechnung“, in einem englischen Brief „invoices“ auch „invoice“ – die Sprache erkennt Ablago mit der Texterkennung selbst. Mehrere Wörter müssen alle vorkommen. Sie findet einen Begriff auch **als Teil eines Wortes**: „Ofen“ findet „Backofen“, „Ofenrohr“ und „Kachelofen“ – ohne dass du ein Sternchen o. Ä. eingeben musst. Das gilt für Begriffe ab drei Buchstaben.
 
 Mit Anführungszeichen suchst du nur **ganze Wörter** bzw. eine genaue Wortfolge, z. B. `"Ofen"` oder `"Stadtwerke Musterstadt"`; ein Minus schließt ein Wort aus, z. B. `Strom -Gas`.
 
@@ -84,7 +84,7 @@ Hat ein Administrator **gleichbedeutende Wörter** eingerichtet (z. B. *Kfz, Aut
 
 ### In Notizen suchen
 
-Mit dem Haken **Notizen** sucht das DMS auch in den [Notizen](zusammenarbeit.md#notizen) der Mappen. Unter einem Treffer steht dann die Stelle aus der Notiz.
+Mit dem Haken **Notizen** sucht Ablago auch in den [Notizen](zusammenarbeit.md#notizen) der Mappen. Unter einem Treffer steht dann die Stelle aus der Notiz.
 
 !!! note "Was die Suche (noch) nicht kann"
     - Frisch hochgeladene Dokumente findet sie erst, wenn ihr Text erkannt ist – meist nach Sekunden, bei langen Scans nach einigen Minuten (siehe [Dokumente](dokumente.md#volltext)).
@@ -108,7 +108,7 @@ Das Suchformular steht **oben in der Mitte**, die Treffer darunter; links bleibe
 
 So funktioniert das Formular:
 
-- **Mappentypen**: Du wählst sie genauso wie mehrere Mappen in einem [Verweisfeld](mappen.md#auf-andere-mappen-verweisen) – tippen, Vorschlag wählen (oder **Enter** für den ersten). Die gewählten Mappentypen stehen **unter** dem Suchfeld, jeder mit **Entfernen**; das Suchfeld bleibt dabei auf einer Höhe mit *Volltext* daneben. Angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht das DMS in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
+- **Mappentypen**: Du wählst sie genauso wie mehrere Mappen in einem [Verweisfeld](mappen.md#auf-andere-mappen-verweisen) – tippen, Vorschlag wählen (oder **Enter** für den ersten). Die gewählten Mappentypen stehen **unter** dem Suchfeld, jeder mit **Entfernen**; das Suchfeld bleibt dabei auf einer Höhe mit *Volltext* daneben. Angeboten werden nur Mappentypen, die du lesen darfst. Wählst du keinen, sucht Ablago in allen – dann gibt es nur die allgemeinen Felder (angelegt am/von, geändert am/von).
 - **Bedingungen**: Anfangs steht kein Feld da. Mit **+ Bedingung** wählst du ein Feld; angeboten werden die Felder, die **alle gewählten Mappentypen gemeinsam** haben. Das Kreuz rechts entfernt die Bedingung wieder. Jedes Feld bekommt die passende Eingabe:
     - **Datum**: von–bis in einer Zeile; eins von beiden darf leer bleiben. Unter **Zeitraum …** gibt es „dieses Jahr“, „letztes Jahr“, „letzte 12 Monate“, „dieser Monat“ und „letzter Monat“.
     - **Zahl, Betrag**: von–bis.
@@ -183,7 +183,7 @@ Ein Stern heißt auch: **Sag mir, wenn sich hier etwas tut.** Ändert jemand and
 - **Hervorhebung:** In allen Listen steht ein **Punkt** vor dem Titel von Favoriten und von Mappen, die du selbst angelegt hast, wenn andere sie seit deinem letzten Öffnen geändert haben – wie „ungelesen“ im E-Mail-Programm. Eigene Mappen werden nur hervorgehoben, eine Benachrichtigung gibt es für sie nur, wenn sie auch Favorit sind. Über der Liste steht dann „2 geändert · **Alle als gesehen markieren**“.
 - **Stumm schalten:** In der Ansicht *Favoriten* steht unter jedem Eintrag **Bei Änderungen benachrichtigen**. Nimm den Haken weg bei Mappen, die du oft brauchst, die sich aber ständig ändern – der Stern bleibt. Fehlt der Schalter, hat ein Administrator die Benachrichtigung für deine Rolle abgeschaltet; deine Einstellung bleibt gespeichert.
 - **Ganz abschalten:** unter Profil → [Benachrichtigungen](profil.md#benachrichtigungen) – Benachrichtigung und Hervorhebung getrennt.
-- Benachrichtigt wird nur, wer die Mappe lesen darf; die Benachrichtigung verrät nichts, was du nicht sehen darfst. Hat jemand eine [Auskunft](https://motom001.github.io/dms/admin/aktuell/datenschutz/) zu einer Person abgerufen, deren Mappe dein Favorit ist, bekommst du dazu eine eigene Benachrichtigung *Auskunft* – ebenfalls nur, solange die Benachrichtigung für diesen Favoriten an ist.
+- Benachrichtigt wird nur, wer die Mappe lesen darf; die Benachrichtigung verrät nichts, was du nicht sehen darfst. Hat jemand eine [Auskunft](https://help.ablago.app/admin/aktuell/datenschutz/) zu einer Person abgerufen, deren Mappe dein Favorit ist, bekommst du dazu eine eigene Benachrichtigung *Auskunft* – ebenfalls nur, solange die Benachrichtigung für diesen Favoriten an ist.
 
 ![Favoriten: geänderte Mappe mit Punkt, Schalter je Favorit](bilder/favoriten-geaendert.png){ loading=lazy }
 
@@ -201,7 +201,7 @@ Gelöschte Mappen und einzeln gelöschte Dokumente kommen in den **Papierkorb** 
 - **Dokumente:** *Wiederherstellen* legt ein Dokument mit allen Versionen in dasselbe Register derselben Mappe zurück – dafür musst du die Mappe bearbeiten dürfen. Liegt die Mappe selbst im Papierkorb, stellst du zuerst die Mappe wieder her. Wird eine Mappe endgültig gelöscht, gehen auch ihre einzeln gelöschten Dokumente.
 - **Mit verknüpften Mappen gelöscht** ([so geht's](mappen.md#mit-verknupften-mappen-loschen)): Diese Mappen tragen den Hinweis *mit … verknüpften* bzw. *verknüpft*. Öffnest du eine davon, holt **Alle wiederherstellen** den ganzen Vorgang zurück – samt der Verweise, die dabei an anderen Mappen entfernt wurden. **Nur diese wiederherstellen** holt nur die eine Mappe.
 - **Endgültig löschen** entfernt sie für immer, **Papierkorb leeren** alle auf einmal – Mappen und Dokumente.
-- Nach einer Frist, die der Administrator festlegt (meist 30 Tage), löscht das DMS gelöschte Mappen von selbst endgültig. Wie lange, steht über der Liste.
+- Nach einer Frist, die der Administrator festlegt (meist 30 Tage), löscht Ablago gelöschte Mappen von selbst endgültig. Wie lange, steht über der Liste.
 - Im Profil kannst du einstellen, dass dein Papierkorb **beim Abmelden geleert** wird.
 
 Ist der Papierkorb ausgeschaltet, fehlt er links, und Löschen ist sofort endgültig.

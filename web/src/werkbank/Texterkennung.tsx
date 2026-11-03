@@ -272,7 +272,7 @@ export function WartungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartun
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Wartungsoperationen</h1>
-        <p className="leise">Arbeiten am ganzen Bestand, die du bei Bedarf anstößt. Sie laufen im Hintergrund; das DMS bleibt benutzbar. <Hilfe ort="werkbank.wartung" /></p>
+        <p className="leise">Arbeiten am ganzen Bestand, die du bei Bedarf anstößt. Sie laufen im Hintergrund; Ablago bleibt benutzbar. <Hilfe ort="werkbank.wartung" /></p>
       </div>
       <VolltextNeu t={t} wartungAn={wartungAn} />
       <VorschauNachholen />

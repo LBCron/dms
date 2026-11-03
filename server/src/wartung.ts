@@ -101,7 +101,7 @@ export class Wartung {
   /** Meldung für Abgewiesene. */
   meldung(): string {
     const ende = this.s.ende ? ` Voraussichtlich bis ${new Date(this.s.ende).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })} Uhr.` : '';
-    return `Das DMS wird gerade gewartet${this.s.text ? ` (${this.s.text})` : ''}.${ende} Bitte versuche es später noch einmal.`;
+    return `Ablago wird gerade gewartet${this.s.text ? ` (${this.s.text})` : ''}.${ende} Bitte versuche es später noch einmal.`;
   }
 
   async pruefe() {
@@ -165,7 +165,7 @@ export class Wartung {
   async automatisch(ausloeser: 'speicherplatz', text: string, vorlaufMin: number): Promise<boolean> {
     if (this.s.stufe !== 'aus') return false;
     const jetzt = this.jetzt();
-    this.s = { ...AUS, stufe: 'angekuendigt', text, aktivAb: new Date(jetzt.getTime() + vorlaufMin * 60_000).toISOString(), beginn: jetzt.toISOString(), von: 'DMS (automatisch)', ausloeser };
+    this.s = { ...AUS, stufe: 'angekuendigt', text, aktivAb: new Date(jetzt.getTime() + vorlaufMin * 60_000).toISOString(), beginn: jetzt.toISOString(), von: 'Ablago (automatisch)', ausloeser };
     await this.speichere();
     log.warn('Wartungsmodus automatisch angekündigt', { ausloeser, text, aktivAb: this.s.aktivAb, vorlaufMinuten: vorlaufMin });
     if (!vorlaufMin) await this.aktiviere(ausloeser);

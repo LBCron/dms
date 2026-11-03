@@ -17,7 +17,7 @@ describe('Oberfläche ausliefern (#215)', { skip: echtesFastify ? false : 'Fasti
     const wurzel = await mkdtemp(join(tmpdir(), 'dms-statisch-'));
     const web = join(wurzel, 'web');
     await mkdir(join(web, 'assets'), { recursive: true });
-    await writeFile(join(web, 'index.html'), '<!doctype html><title>DMS</title>OBERFLAECHE');
+    await writeFile(join(web, 'index.html'), '<!doctype html><title>Ablago</title>OBERFLAECHE');
     await writeFile(join(web, 'assets', 'app.js'), 'console.log("app")');
     // Offline-Hilfe (#219)
     await mkdir(join(web, 'hilfe', 'admin', 'sicherung'), { recursive: true });

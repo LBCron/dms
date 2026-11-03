@@ -10,6 +10,7 @@ import { Erledigt } from './werkbank/Sicherung';
 import { useKonto } from './konto';
 import { PaketeDazuholen } from './werkbank/PaketeDazuholen';
 import { geheZu } from './ort';
+import { Marke } from './Marke';
 
 /**
  * Einrichtungsassistent (#119): führt beim ersten Aufruf durch die Einrichtung.
@@ -59,6 +60,7 @@ function Rahmen({ aktiv, titel, unter, children }: { aktiv: number; titel: strin
   return (
     <div className="kartenseite">
       <div className="karte breit assistent">
+        <div className="marke gross"><Marke logo={null} schriftzug="Ablago" gross /></div>
         <div className="assistent-kopf">
           <p className="ueber">Einrichtung · Schritt {aktiv + 1} von {SCHRITTE.length}</p>
           <SchrittHilfe aktiv={aktiv} />
@@ -106,7 +108,7 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
     return () => { aus = true; };
   }, [phase, fertig]);
 
-  if (phase === 'startet') return <Rahmen aktiv={1} titel="Das DMS startet …"><p className="leise">Die Datenbank ist verbunden. Jetzt legt das DMS seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
+  if (phase === 'startet') return <Rahmen aktiv={1} titel="Ablago startet …"><p className="leise">Die Datenbank ist verbunden. Jetzt legt Ablago seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
   if (e?.code && !codeOk) return <CodeSchritt ok={() => { setCodeOk(true); void fertig(); }} />;
   // Bisherige Anbindung und Fehler liefert der Server erst mit Code – dann neu vorbelegen.
   if (phase === 'datenbank') return <DatenbankSchritt key={e?.anbindung ? 'mit' : 'ohne'} status={status} weiter={fertig} />;
@@ -114,7 +116,7 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
     <Rahmen aktiv={2} titel="Neu einrichten oder wiederherstellen?" unter="Die Datenbank ist verbunden und noch leer.">
       <div className="wahlkarten">
         <button type="button" className="wahlkarte" onClick={() => setWahl('neu')}>
-          <strong>Neu einrichten</strong><span className="leise">Ein leeres DMS – du legst Haushalt, Administrator und Benutzer an.</span>
+          <strong>Neu einrichten</strong><span className="leise">Ein leeres Ablago – du legst Haushalt, Administrator und Benutzer an.</span>
         </button>
         <button type="button" className="wahlkarte" onClick={() => setWahl('sicherung')}>
           <strong>Aus einer Sicherung wiederherstellen</strong><span className="leise">Neues NAS, alte Sicherung: Lege sie in den Sicherungsordner und halte das Notfallblatt bereit. Danach meldest du dich mit den bisherigen Zugangsdaten an.</span>
@@ -128,7 +130,7 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
     </Rahmen>
   );
   if (!mandantFertig) return (
-    <Rahmen aktiv={3} titel="Willkommen" unter="Wie heißt dein DMS? Meist der Name der Familie oder der Firma.">
+    <Rahmen aktiv={3} titel="Willkommen" unter="Wie heißt dein Ablago? Meist der Name der Familie oder der Firma.">
       <form className="stapel" onSubmit={(ev) => { ev.preventDefault(); if (mandant.trim()) setMandantFertig(true); }}>
         <label className="eigenschaft"><span>Name des Haushalts <small>z. B. „Familie Mustermann“</small></span>
           <input value={mandant} onChange={(x) => setMandant(x.target.value)} maxLength={30} autoFocus required /></label>
@@ -144,9 +146,9 @@ function CodeSchritt({ ok }: { ok: () => void }) {
   const [code, setCode] = useState('');
   const s = useSenden();
   return (
-    <Rahmen aktiv={0} titel="Einrichtungscode" unter="Damit niemand sonst im Netz dein DMS einrichtet, fragt es zuerst nach einem Code. Den hat das DMS beim Start an zwei Stellen hinterlegt:">
+    <Rahmen aktiv={0} titel="Einrichtungscode" unter="Damit niemand sonst im Netz dein Ablago einrichtet, fragt es zuerst nach einem Code. Den hat Ablago beim Start an zwei Stellen hinterlegt:">
       <ol className="anleitung">
-        <li><strong>Im Protokoll des Containers.</strong> In der Docker-Oberfläche des NAS den Container <span className="mono">app</span> des Projekts öffnen (bei UGREEN: <em>Docker → Container → dms-app → Protokoll</em>, bei Synology: <em>Container Manager → Container → Details → Protokoll</em>) oder auf der Kommandozeile <span className="mono">docker compose logs app</span>. Gesucht ist die Zeile <span className="mono">Einrichtungscode für das DMS: XXXX-XXXX-XXXX</span>.</li>
+        <li><strong>Im Protokoll des Containers.</strong> In der Docker-Oberfläche des NAS den Container <span className="mono">app</span> des Projekts öffnen (bei UGREEN: <em>Docker → Container → dms-app → Protokoll</em>, bei Synology: <em>Container Manager → Container → Details → Protokoll</em>) oder auf der Kommandozeile <span className="mono">docker compose logs app</span>. Gesucht ist die Zeile <span className="mono">Einrichtungscode für Ablago: XXXX-XXXX-XXXX</span>.</li>
         <li><strong>In einer Datei</strong> namens <span className="mono">EINRICHTUNGSCODE</span> im Ordner für den Schlüssel, in der Vorlage <span className="mono">/volume1/docker/dms/geheim</span>.</li>
       </ol>
       <form className="stapel" onSubmit={(ev) => { ev.preventDefault(); void s.los(async () => {
@@ -158,7 +160,7 @@ function CodeSchritt({ ok }: { ok: () => void }) {
         <button className="knopf primaer" disabled={s.sendet || !code.trim()}>{s.sendet ? 'Prüfe …' : 'Weiter'}</button>
       </form>
       <p className="klein">Wo das bei deinem Gerät ist, zeigt die Anleitung deiner Plattform mit Bildern: <a className="verweis" href={INSTALLIEREN_URL} target="_blank" rel="noreferrer">Wie komme ich an ein DMS? ↗</a></p>
-      <p className="leise klein">Nach der Einrichtung ist der Code wertlos; das DMS löscht die Datei.</p>
+      <p className="leise klein">Nach der Einrichtung ist der Code wertlos; Ablago löscht die Datei.</p>
     </Rahmen>
   );
 }
@@ -186,7 +188,7 @@ export function AnbindungFormular({ wert, setWert, passwortGesetzt, felder }: { 
 }
 
 export function PruefungAnzeige({ p }: { p: AnbindungPruefung }) {
-  if (p.ok) return <div className="hinweis gut"><p><strong>Verbindung klappt.</strong> PostgreSQL {p.postgres.split(' ')[0]}{p.eingerichtet ? ` – darin gibt es schon ein DMS (${p.benutzer} ${p.benutzer === 1 ? 'Benutzer' : 'Benutzer'}).` : ' – die Datenbank ist leer; das DMS legt seine Tabellen selbst an.'}</p></div>;
+  if (p.ok) return <div className="hinweis gut"><p><strong>Verbindung klappt.</strong> PostgreSQL {p.postgres.split(' ')[0]}{p.eingerichtet ? ` – darin gibt es schon ein DMS (${p.benutzer} ${p.benutzer === 1 ? 'Benutzer' : 'Benutzer'}).` : ' – die Datenbank ist leer; Ablago legt seine Tabellen selbst an.'}</p></div>;
   return <div className="hinweis schlecht"><p><strong>{p.text}</strong></p><details><summary className="leise klein">Technische Meldung</summary><p className="mono klein">{p.technisch}</p></details></div>;
 }
 
@@ -202,9 +204,9 @@ function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () 
     setFelder(undefined);
     try { await f(); } catch (x) { if (x instanceof ApiFehler) setFelder((x.details as { felder?: Record<string, string> })?.felder); throw x; }
   });
-  if (startet) return <Rahmen aktiv={1} titel="Das DMS startet …"><p className="leise">Die Datenbank ist verbunden. Jetzt legt das DMS seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
+  if (startet) return <Rahmen aktiv={1} titel="Ablago startet …"><p className="leise">Die Datenbank ist verbunden. Jetzt legt Ablago seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
   return (
-    <Rahmen aktiv={1} titel="Datenbank" unter="Das DMS speichert alles außer den Dateien in PostgreSQL. In der Compose-Vorlage läuft die Datenbank als eigener Container „db“; das Passwort steht in der Datei .env daneben.">
+    <Rahmen aktiv={1} titel="Datenbank" unter="Ablago speichert alles außer den Dateien in PostgreSQL. In der Compose-Vorlage läuft die Datenbank als eigener Container „db“; das Passwort steht in der Datei .env daneben.">
       {e.fehler && <div className="hinweis warn"><p><strong>{e.quelle === 'umgebung' ? 'Mit DATABASE_URL aus der Compose-Datei' : e.quelle === 'datei' ? 'Mit der gespeicherten Anbindung' : 'Die Verbindung'} klappt es nicht:</strong> {e.fehler}</p><p className="leise klein">Korrigiere die Angaben hier – sie werden in /data/geheim gespeichert und gelten ab dann, auch wenn DATABASE_URL anders lautet.</p></div>}
       <form className="stapel" onSubmit={(ev: FormEvent) => { ev.preventDefault(); void tu(async () => setP(await api.einrichtungDbPruefen(a))); }}>
         <AnbindungFormular wert={a} setWert={(x) => { setA(x); setP(null); }} passwortGesetzt={!!v?.passwortGesetzt} felder={felder} />
@@ -228,7 +230,7 @@ function AdminSchritt({ mandant, zurueck, fertig }: { mandant: string; zurueck: 
   const [pw2, setPw2] = useState('');
   const s = useSenden();
   return (
-    <Rahmen aktiv={4} titel="Administrator" unter={<>Der Administrator richtet das DMS ein – Mappentypen, Benutzer, Sicherung. <strong>In der Ablage arbeitet er nicht</strong>; dafür legst du im nächsten Schritt einen normalen Benutzer an, z. B. dich selbst mit einer zweiten Adresse.</>}>
+    <Rahmen aktiv={4} titel="Administrator" unter={<>Der Administrator richtet Ablago ein – Mappentypen, Benutzer, Sicherung. <strong>In der Ablage arbeitet er nicht</strong>; dafür legst du im nächsten Schritt einen normalen Benutzer an, z. B. dich selbst mit einer zweiten Adresse.</>}>
       <form className="stapel" onSubmit={(ev) => { ev.preventDefault(); void s.los(async () => {
         if (pw !== pw2) throw new Error('Die beiden Passwörter stimmen nicht überein.');
         await api.einrichten({ mandant, name, email, passwort: pw });
@@ -292,7 +294,7 @@ function BenutzerSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promi
   const [kopiert, setKopiert] = useState(false);
   const s = useSenden();
   return (
-    <Rahmen aktiv={NACH.benutzer} titel="Erster Benutzer" unter="Mit diesem Konto arbeitest du in der Ablage. Der Administrator bleibt für die Werkbank – so trennt das DMS Einrichten und Arbeiten.">
+    <Rahmen aktiv={NACH.benutzer} titel="Erster Benutzer" unter="Mit diesem Konto arbeitest du in der Ablage. Der Administrator bleibt für die Werkbank – so trennt Ablago Einrichten und Arbeiten.">
       {!r ? (
         <form className="stapel" onSubmit={(ev) => { ev.preventDefault(); void s.los(async () => setR(await api.benutzerAnlegen({ name, email, rolle: 'mitglied' }))); }}>
           <label className="eigenschaft"><span>Name</span><input value={name} onChange={(x) => setName(x.target.value)} autoComplete="off" autoFocus /></label>
@@ -324,7 +326,7 @@ function SchluesselSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Pro
   useEffect(() => { void api.tresor().then(setT, () => {}); }, []);
   const da = t?.zustand === 'vorhanden';
   return (
-    <Rahmen aktiv={NACH.schluessel} titel="Schlüssel und Notfallblatt" unter="Passwörter (z. B. das des Mailservers) und alle Sicherungen verschlüsselt das DMS mit einem Schlüssel. Er liegt als Datei im Ordner geheim – nie in der Datenbank.">
+    <Rahmen aktiv={NACH.schluessel} titel="Schlüssel und Notfallblatt" unter="Passwörter (z. B. das des Mailservers) und alle Sicherungen verschlüsselt Ablago mit einem Schlüssel. Er liegt als Datei im Ordner geheim – nie in der Datenbank.">
       {!t ? <p className="leise">Lade …</p> : (
         <>
           {t.eingebunden === false && <div className="hinweis warn"><p><strong>Der Ordner /data/geheim ist kein eigenes Volume.</strong> Der Schlüssel ginge beim Neuerstellen des Containers verloren – ergänze das Volume in der Compose-Datei.</p></div>}
@@ -374,9 +376,9 @@ function OptionalSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promi
   return (
     <Rahmen aktiv={NACH.optional} titel="Optionales" unter="Alles hier lässt sich auch später in der Werkbank einstellen.">
       <section className="blatt">
-        <h2 className="h3">Adresse des DMS</h2>
-        <p className="leise klein">Unter dieser Adresse öffnen die Benutzer das DMS; sie steht in den Links der E-Mails. Vorbelegt mit der Adresse, unter der du es gerade aufrufst.</p>
-        <div className="zeile"><input value={adresse} onChange={(x) => setAdresse(x.target.value)} style={{ flex: 1 }} aria-label="Adresse des DMS" />
+        <h2 className="h3">Adresse von Ablago</h2>
+        <p className="leise klein">Unter dieser Adresse öffnen die Benutzer Ablago; sie steht in den Links der E-Mails. Vorbelegt mit der Adresse, unter der du es gerade aufrufst.</p>
+        <div className="zeile"><input value={adresse} onChange={(x) => setAdresse(x.target.value)} style={{ flex: 1 }} aria-label="Adresse von Ablago" />
           <button type="button" className="knopf" disabled={s.sendet} onClick={() => void s.los(async () => { await api.adresseSpeichern(adresse); gut('adresse', 'Gespeichert.'); await betrieb.laden(); })}>Speichern</button></div>
         {meldung.adresse && <p className="gutertext klein">{meldung.adresse}</p>}
       </section>
@@ -412,7 +414,7 @@ function FertigSchritt({ stand, weiter }: { stand: EinrichtungStand; weiter: () 
   const umgebung = `Version ${version ?? 'unbekannt'}, Browser ${navigator.userAgent}`;
   const issue = `${REPO}/issues/new?${new URLSearchParams({ title: 'Problem bei der Einrichtung', body: `**Was ist passiert?**\n\n\n**Was hätte ich erwartet?**\n\n\n---\n${umgebung}` })}`;
   return (
-    <Rahmen aktiv={NACH.fertig} titel={`${stand.mandant ?? 'Dein DMS'} ist eingerichtet`} unter="Melde dich mit dem Benutzer aus Schritt 6 an, um in der Ablage zu arbeiten. Als Administrator geht es in der Werkbank weiter – dort legst du Mappentypen und Ansichten an.">
+    <Rahmen aktiv={NACH.fertig} titel={`${stand.mandant ?? 'Dein Ablago'} ist eingerichtet`} unter="Melde dich mit dem Benutzer aus Schritt 6 an, um in der Ablage zu arbeiten. Als Administrator geht es in der Werkbank weiter – dort legst du Mappentypen und Ansichten an.">
       {stand.uebersprungen.length > 0 && <div className="hinweis info"><p>Übersprungen: {stand.uebersprungen.map((s) => SCHRITTE[NACH[s]]).join(', ')}. Das lässt sich in der Werkbank nachholen; die Übersicht erinnert daran.</p></div>}
       <ul className="linkliste">
         <li><a className="verweis" href={handbuchUrl('benutzer', version)} target="_blank" rel="noreferrer">Benutzerhandbuch ↗</a> – Ablage, Dokumente, Aufgaben.</li>

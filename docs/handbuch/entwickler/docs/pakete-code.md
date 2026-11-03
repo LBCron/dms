@@ -1,8 +1,8 @@
 # Pakete mit Code
 
-Ein Paket kann neben Mappentypen und Ansichten **Code** mitbringen: ein WebAssembly-Modul, das auf Ereignisse im DMS reagiert (neue Post, hochgeladenes Dokument, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Das DMS führt es im **Paket-Läufer** aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.
+Ein Paket kann neben Mappentypen und Ansichten **Code** mitbringen: ein WebAssembly-Modul, das auf Ereignisse in Ablago reagiert (neue Post, hochgeladenes Dokument, fertiger Volltext, geänderte Einstellungen) und Aktionen aus der Werkbank ausführt. Ablago führt es im **Paket-Läufer** aus – abgeschottet und nur mit den Rechten, die der Administrator bei der Installation bestätigt hat.
 
-Diese Seite beschreibt die Schnittstelle („DMS-Paket-ABI 1“). Wie ein Paket aufgebaut ist und wie es in den Katalog kommt, steht unter [Pakete entwickeln](pakete.md).
+Diese Seite beschreibt die Schnittstelle („Ablago-Paket-ABI 1“). Wie ein Paket aufgebaut ist und wie es in den Katalog kommt, steht unter [Pakete entwickeln](pakete.md).
 
 ## Schnittstellen des Kerns im Überblick { #schnittstellen }
 
@@ -19,12 +19,12 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:archivfassung` | 0.149.0 | Zu Dokumenten mit fertigem Volltext ein durchsuchbares PDF/A ablegen – mit Wortpositionen, nur mit „Dokumente lesen“ | **[Archivfassung ablegen](#archivfassung)** – Ereignis, Wortpositionen, Annahme, Grenzen |
 | `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
 
-## So läuft Code im DMS
+## So läuft Code in Ablago { #so-lauft-code-im-dms }
 
-- **WebAssembly, kein Node, kein Python:** Das Paket liefert ein gebautes Modul `code/modul.wasm` (WASI Preview 1, 32 Bit). Den Quelltext legst du daneben unter `code/` – das DMS liest ihn nicht, er gehört aber in den Pull Request (Lizenz, Prüfung).
+- **WebAssembly, kein Node, kein Python:** Das Paket liefert ein gebautes Modul `code/modul.wasm` (WASI Preview 1, 32 Bit). Den Quelltext legst du daneben unter `code/` – Ablago liest ihn nicht, er gehört aber in den Pull Request (Lizenz, Prüfung).
 - **Die tragende Grenze ist WebAssembly:** Das Modul kann nur seinen eigenen Speicher lesen und schreiben und nur die Funktionen aufrufen, die der Läufer ihm übergibt: eine kleine WASI-Schicht (Zeit, Zufall, Ausgabe ins Protokoll) und die Funktionen unter `dms`. Dateisystem, Netz und Programme gibt es in dieser Schicht nicht – Datei- und Netzaufrufe aus WASI enden mit einem Fehler. Dateien des eigenen Pakets liest es mit `dms.datei` (aus dem Speicher des Läufers, nicht von der Festplatte), das Netz erreicht es nur mit `dms.netz` und nur unter den Adressen aus dem Manifest. Jede Funktion prüft Zeiger und Längen gegen den Speicher des Moduls.
-- **Eigener Prozess als zweite Schicht:** Der Paket-Läufer ist ein Kindprozess des DMS ohne dessen Umgebungsvariablen (keine Datenbank-Adresse, keine Schlüssel). Jeder Aufruf läuft in einem frischen Worker mit Grenzen für Speicher, Zeit und gleichzeitige Aufrufe. Im Betrieb startet der Läufer zusätzlich unter dem Berechtigungsmodell von Node (nur den eigenen Programmordner lesen, nichts schreiben, keine Programme starten). Das Berechtigungsmodell ist laut Node ein Sicherheitsgurt und **kein Schutz gegen bösartigen Code** – es greift erst, wenn jemand aus der WebAssembly-Umgebung ausbricht, und soll den Schaden dann begrenzen.
-- **Dienstkonto:** Zu jedem Paket mit Code legt das DMS ein **Dienstkonto** an („Paket *Name*“). Es meldet sich nie an, erscheint nicht in der Benutzerverwaltung und hat einen API-Schlüssel, der das DMS nie verlässt. Alle Anfragen des Pakets an die API laufen mit diesem Konto – mit den Rechten aus dem Manifest, nicht mit Rollen oder Ansichten. Löschen darf ein Dienstkonto nie, Passwörter und Benutzer sieht es nie, E-Mails versenden kann es nicht. In der Historie steht es mit seinem Namen. Das Dienstkonto hat die Systemrolle **Paket** (#673): Ein Administrator kann mit Regeln am Mappentyp, die diese Rolle nennen, die bestätigten Rechte weiter einschränken (nie erweitern) – z. B. „Pakete lesen keine Gesundheitsmappen“. Rechne also damit, dass eine Anfrage auf einen Typ, den dein Manifest nennt, trotzdem 404 bzw. 403 bekommt.
+- **Eigener Prozess als zweite Schicht:** Der Paket-Läufer ist ein Kindprozess von Ablago ohne dessen Umgebungsvariablen (keine Datenbank-Adresse, keine Schlüssel). Jeder Aufruf läuft in einem frischen Worker mit Grenzen für Speicher, Zeit und gleichzeitige Aufrufe. Im Betrieb startet der Läufer zusätzlich unter dem Berechtigungsmodell von Node (nur den eigenen Programmordner lesen, nichts schreiben, keine Programme starten). Das Berechtigungsmodell ist laut Node ein Sicherheitsgurt und **kein Schutz gegen bösartigen Code** – es greift erst, wenn jemand aus der WebAssembly-Umgebung ausbricht, und soll den Schaden dann begrenzen.
+- **Dienstkonto:** Zu jedem Paket mit Code legt Ablago ein **Dienstkonto** an („Paket *Name*“). Es meldet sich nie an, erscheint nicht in der Benutzerverwaltung und hat einen API-Schlüssel, der Ablago nie verlässt. Alle Anfragen des Pakets an die API laufen mit diesem Konto – mit den Rechten aus dem Manifest, nicht mit Rollen oder Ansichten. Löschen darf ein Dienstkonto nie, Passwörter und Benutzer sieht es nie, E-Mails versenden kann es nicht. In der Historie steht es mit seinem Namen. Das Dienstkonto hat die Systemrolle **Paket** (#673): Ein Administrator kann mit Regeln am Mappentyp, die diese Rolle nennen, die bestätigten Rechte weiter einschränken (nie erweitern) – z. B. „Pakete lesen keine Gesundheitsmappen“. Rechne also damit, dass eine Anfrage auf einen Typ, den dein Manifest nennt, trotzdem 404 bzw. 403 bekommt.
 
 ## Im Manifest
 
@@ -44,8 +44,8 @@ code:
   aktionen: [...]
 ```
 
-- **Mappentypen** in `rechte` schreibst du wie in Verweisen: eigene mit ihrer Kennung (`rechnung`), fremde als `paket:kennung`, Typen des DMS als `dms:ablageort`, `dms:rolle` oder `dms:post`. `"*"` heißt alle Mappentypen außer Benutzern; `dms:benutzer` ist nicht erlaubt, andere `dms:`-Kennungen gibt es nicht.
-- **Nur Post** (seit 0.94.0): Braucht dein Paket nur die Post – etwa um eingehende Scans zu teilen –, gib `dms:post` statt `"*"` an. Mit `lesen`/`schreiben: ["dms:post"]` und `dokumente: schreiben` darf es Post lesen, **Post teilen** (`POST /dokumente/{id}/seiten` legt je Teil eine neue Post an), die **Archivnummer** und den **Volltext** ihrer Dokumente setzen – andere Mappen sieht es nicht. Die Vorschau bei der Installation zeigt dann „Post“. Anders als in Verweisen (`ziel`, `typen`) ist `dms:post` nur in `rechte` erlaubt. Ein Paket damit gibt `dms: ">=0.94.0"` an; ältere DMS-Versionen kennen die Kennung nicht und geben dem Paket dann gar keine Post.
+- **Mappentypen** in `rechte` schreibst du wie in Verweisen: eigene mit ihrer Kennung (`rechnung`), fremde als `paket:kennung`, Typen von Ablago als `dms:ablageort`, `dms:rolle` oder `dms:post`. `"*"` heißt alle Mappentypen außer Benutzern; `dms:benutzer` ist nicht erlaubt, andere `dms:`-Kennungen gibt es nicht.
+- **Nur Post** (seit 0.94.0): Braucht dein Paket nur die Post – etwa um eingehende Scans zu teilen –, gib `dms:post` statt `"*"` an. Mit `lesen`/`schreiben: ["dms:post"]` und `dokumente: schreiben` darf es Post lesen, **Post teilen** (`POST /dokumente/{id}/seiten` legt je Teil eine neue Post an), die **Archivnummer** und den **Volltext** ihrer Dokumente setzen – andere Mappen sieht es nicht. Die Vorschau bei der Installation zeigt dann „Post“. Anders als in Verweisen (`ziel`, `typen`) ist `dms:post` nur in `rechte` erlaubt. Ein Paket damit gibt `dms: ">=0.94.0"` an; ältere Ablago-Versionen kennen die Kennung nicht und geben dem Paket dann gar keine Post.
 
   ```yaml
   rechte:
@@ -80,15 +80,15 @@ code:
   ```
 
   Die Vorschau bei der Installation nennt die Einstellung unter „Zugriff auf Netzwerk/Internet nur zu: …“; kommt in einem Update eine Adress-Einstellung dazu oder fällt weg, muss der Administrator neu bestätigen. Das Paket liest die Adresse wie jede Einstellung aus `einstellungen`.
-- Bei der **Installation** zeigt das DMS diese Rechte und lässt sie bestätigen; die Ereignisse stehen dort als Unterliste mit Link ins Administratorhandbuch. Ändern sich Rechte oder Adressen in einem Update, muss der Administrator neu bestätigen.
+- Bei der **Installation** zeigt Ablago diese Rechte und lässt sie bestätigen; die Ereignisse stehen dort als Unterliste mit Link ins Administratorhandbuch. Ändern sich Rechte oder Adressen in einem Update, muss der Administrator neu bestätigen.
 
 ## Ereignisse
 
 | Ereignis | Auslöser | `daten` |
 |---|---|---|
 | `post.angelegt` | Neue Post: in der Oberfläche, über die API, aus Eingangsordner und Postfach, beim **Post teilen** je neuer Post | `mappe`, `kanal` |
-| `dokument.hochgeladen` | Jedes neue Dokument: Hochladen (Oberfläche, API, Eingangskanäle) und die neuen Dokumente beim **PDF teilen**, **Zusammenfügen** und **Post teilen**. Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument. | `dokument`, `mappe`, `name`, `mime`, `groesse`, `volltextGeplant` (ob die Texterkennung des DMS noch läuft) |
-| `volltext.fertig` | **Volltext fertig.** Der Volltext eines Dokuments steht fest – nach dem Schritt des Kerns (Textebene des PDFs, bis 0.133 auch die eingebaute Texterkennung), von einem Paket, über die API oder übernommen (seit 0.120.0). Seit 0.133.0 für **jedes** gelesene Dokument, **auch ohne Text** (`text: false`) – siehe unten. Für Pakete mit `dms:vektoren` schickt das DMS es auch für den Bestand nach (`nachberechnung: true`). | `dokument`, `mappe`, `quelle`, `text`, `mime`, `seiten`, ggf. `seitenOhneText`, `neu`, `paket`, `nachberechnung` |
+| `dokument.hochgeladen` | Jedes neue Dokument: Hochladen (Oberfläche, API, Eingangskanäle) und die neuen Dokumente beim **PDF teilen**, **Zusammenfügen** und **Post teilen**. Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument. | `dokument`, `mappe`, `name`, `mime`, `groesse`, `volltextGeplant` (ob die Texterkennung von Ablago noch läuft) |
+| `volltext.fertig` | **Volltext fertig.** Der Volltext eines Dokuments steht fest – nach dem Schritt des Kerns (Textebene des PDFs, bis 0.133 auch die eingebaute Texterkennung), von einem Paket, über die API oder übernommen (seit 0.120.0). Seit 0.133.0 für **jedes** gelesene Dokument, **auch ohne Text** (`text: false`) – siehe unten. Für Pakete mit `dms:vektoren` schickt Ablago es auch für den Bestand nach (`nachberechnung: true`). | `dokument`, `mappe`, `quelle`, `text`, `mime`, `seiten`, ggf. `seitenOhneText`, `neu`, `paket`, `nachberechnung` |
 | `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit `volltext.fertig` (`quelle: kern`) und mit denselben Daten. Neue Pakete nehmen `volltext.fertig`. | wie `volltext.fertig`, `seiten` |
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
@@ -119,7 +119,7 @@ Seit 0.133.0 (#458) liest der Kern bei PDFs nur die **Textebene** (poppler); die
 
 ### Texterkennung übernehmen (`dms:texterkennung`) { #texterkennung }
 
-Ein Paket mit `code.rechte.schnittstellen: [dms:texterkennung]` (und `dokumente: schreiben`) ist **die** Texterkennung des DMS. Dann gilt:
+Ein Paket mit `code.rechte.schnittstellen: [dms:texterkennung]` (und `dokumente: schreiben`) ist **die** Texterkennung von Ablago. Dann gilt:
 
 1. Der Kern liest die Textebene. Hat ein Dokument keinen Text (Scan, Bild), gescannte Seiten neben Textseiten (`seitenOhneText`) – oder kommt `neu` –, steht es auf **wartet auf Texterkennung (Paket *Name*)** (Stand `paket`); vorhandener Text bleibt so lange für die Suche stehen.
 2. Das Paket bekommt `volltext.fertig` und entscheidet selbst: erkennen und `PUT /dokumente/{id}/volltext` – oder nichts tun.
@@ -130,7 +130,7 @@ Sind mehrere solche Pakete installiert, gilt das erste nach Id.
 
 ### Sprachen je Seite (`seitensprachen`) { #seitensprachen }
 
-Seit 0.139.0 (#579) kann ein Dokument mehrere Sprachen haben – etwa ein deutscher Begleitbrief und dahinter das französische Schreiben einer Botschaft. Eine Texterkennung meldet dafür die **Sprache jeder Seite**; das DMS durchsucht jede Seite mit den Wortstämmen ihrer Sprache, zeigt am Dokument „Deutsch, enthält auch Französisch“ und schlägt bei einem vollständigen Sprachwechsel zwischen zwei Seiten an der Post „Post teilen?“ vor (geteilt wird nie von selbst).
+Seit 0.139.0 (#579) kann ein Dokument mehrere Sprachen haben – etwa ein deutscher Begleitbrief und dahinter das französische Schreiben einer Botschaft. Eine Texterkennung meldet dafür die **Sprache jeder Seite**; Ablago durchsucht jede Seite mit den Wortstämmen ihrer Sprache, zeigt am Dokument „Deutsch, enthält auch Französisch“ und schlägt bei einem vollständigen Sprachwechsel zwischen zwei Seiten an der Post „Post teilen?“ vor (geteilt wird nie von selbst).
 
 **Schreiben:** `PUT /dokumente/{id}/volltext` mit den Seiten im Text, getrennt durch einen **Seitenvorschub** (`\f`, wie bei `pdftotext`), und je Seite ihren Sprachen:
 
@@ -144,37 +144,37 @@ Seit 0.139.0 (#579) kann ein Dokument mehrere Sprachen haben – etwa ein deutsc
 
 | Feld | Bedeutung |
 | --- | --- |
-| `seitensprachen` | ein Eintrag **je Seite** im Text (Anzahl = Seitenvorschübe + 1, sonst 422), höchstens 1000. Je Seite eine oder zwei Kennungen (`deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`): zwei für eine **Mischseite**, die erste ist die mit mehr Text. `null` oder `[]`: das DMS erkennt die Sprache der Seite selbst (z. B. für Seiten mit Text aus dem PDF). Leere Seiten sind erlaubt. |
+| `seitensprachen` | ein Eintrag **je Seite** im Text (Anzahl = Seitenvorschübe + 1, sonst 422), höchstens 1000. Je Seite eine oder zwei Kennungen (`deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`): zwei für eine **Mischseite**, die erste ist die mit mehr Text. `null` oder `[]`: Ablago erkennt die Sprache der Seite selbst (z. B. für Seiten mit Text aus dem PDF). Leere Seiten sind erlaubt. |
 | `sprache` | optional die **Hauptsprache**; ohne Angabe die Sprache mit dem meisten Text (eine Mischseite zählt je zur Hälfte). |
 | `weitere` | optional, wenn das Paket die Seiten nicht kennt: weitere Sprachen fürs ganze Dokument. Der Suchindex nimmt dann den ganzen Text zusätzlich mit deren Wortstämmen. |
 | `seiten` | Seitenzahl; ohne Angabe die Zahl der Seiten im Text. |
 
-Was das DMS daraus macht:
+Was Ablago daraus macht:
 
 - **Text:** gespeichert wie bisher, Seiten durch eine Leerzeile getrennt (ohne `\f`). Wo jede Seite beginnt, merkt es sich getrennt.
 - **Hauptsprache und weitere Sprachen** am Dokument (`sprache`, `weitereSprachen`). Steht alles in einer Sprache, speichert es keine Seiten – das Dokument ist dann einsprachig wie bisher.
 - **Suchindex:** je Sprache die Seiten in ihren Wortstämmen (eine Mischseite in beiden).
 - **Hinweis „Post teilen?“** (`teilenAb` am Dokument): die erste Seite, deren Sprachen mit denen der Seite davor (mit Text) nichts gemeinsam haben. Eine Mischseite verbindet beide Seiten – kein Hinweis.
 
-Ohne `\f` und ohne `seitensprachen` gilt alles wie vor 0.139.0 (eine Sprache je Dokument). Ein Text mit `\f`, aber ohne `seitensprachen`, bekommt die Sprachen je Seite vom DMS (Erkennung aus dem Text wie bei PDFs mit Textebene).
+Ohne `\f` und ohne `seitensprachen` gilt alles wie vor 0.139.0 (eine Sprache je Dokument). Ein Text mit `\f`, aber ohne `seitensprachen`, bekommt die Sprachen je Seite von Ablago (Erkennung aus dem Text wie bei PDFs mit Textebene).
 
-**Lesen:** `GET /dokumente/{id}/volltext` liefert dazu `weitereSprachen` und – wenn das DMS die Seiten kennt – `seiten: [{ "seite": 1, "sprachen": ["deu"], "text": "…" }, …]`. Das gilt bei mehrsprachigen Dokumenten und bei **gemischten PDFs** (`seitenOhneText`): Dort speichert der Kern die Seiten der Textebene schon vor der Texterkennung. Eine Texterkennung, die nur die Seiten ohne Text liest, setzt damit den ganzen Text in der richtigen Reihenfolge zusammen (Textseiten mit `null`, ihre erkannten Seiten an ihrer Stelle).
+**Lesen:** `GET /dokumente/{id}/volltext` liefert dazu `weitereSprachen` und – wenn Ablago die Seiten kennt – `seiten: [{ "seite": 1, "sprachen": ["deu"], "text": "…" }, …]`. Das gilt bei mehrsprachigen Dokumenten und bei **gemischten PDFs** (`seitenOhneText`): Dort speichert der Kern die Seiten der Textebene schon vor der Texterkennung. Eine Texterkennung, die nur die Seiten ohne Text liest, setzt damit den ganzen Text in der richtigen Reihenfolge zusammen (Textseiten mit `null`, ihre erkannten Seiten an ihrer Stelle).
 
 **Sprache setzen:** `PUT /dokumente/{id}/sprache` mit `{ "sprache": "deu", "weitere": ["fra"] }` setzt Haupt- und weitere Sprachen fürs ganze Dokument (die Seitensprachen entfallen); ohne `weitere` bleiben die weiteren Sprachen. `DELETE /dokumente/{id}/teilen-hinweis` blendet den Hinweis „Post teilen?“ aus (Recht Bearbeiten an der Mappe).
 
-Ein Paket, das `seitensprachen` schickt, gibt `dms: ">=0.139.0"` an – ältere DMS-Versionen speichern den Seitenvorschub sonst im Text. Das Paket [Texterkennung](https://github.com/motom001/dms-registry/tree/main/pakete/texterkennung) ab 2.1.0 macht es so.
+Ein Paket, das `seitensprachen` schickt, gibt `dms: ">=0.139.0"` an – ältere Ablago-Versionen speichern den Seitenvorschub sonst im Text. Das Paket [Texterkennung](https://github.com/motom001/dms-registry/tree/main/pakete/texterkennung) ab 2.1.0 macht es so.
 
 ### Zusatzdaten aus anderen Paketen { #zusatzdaten }
 
-Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu. Mit `ergaenzt: { paket: <paket>, gruppe: … }` im Manifest erscheint das Zusatzpaket bei der Installation als Häkchen unter dem erweiterten Paket (siehe [Paketformat → Ergänzungen](pakete.md#paketformat-verbindlich), ab DMS 0.151.0).
+Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu. Mit `ergaenzt: { paket: <paket>, gruppe: … }` im Manifest erscheint das Zusatzpaket bei der Installation als Häkchen unter dem erweiterten Paket (siehe [Paketformat → Ergänzungen](pakete.md#paketformat-verbindlich), ab Ablago 0.151.0).
 
 ### Fortsetzung bei langen Aufgaben { #fortsetzung }
 
-Ein Aufruf darf höchstens so lange laufen wie die Zeitgrenze des Läufers (Standard 120 s). Für längere Arbeit – etwa ein Scan mit 60 Seiten – antwortet das Paket mit `ergebnis` = `{"weiter": { … }}` und Code `0`: Der Läufer ruft es **gleich wieder** mit demselben Ereignis auf, `daten` enthält dann zusätzlich `weiter` (genau das Objekt von eben) und `abschnitt` (1, 2, …). Der Stand wird im Ausgangskorb gespeichert; scheitert eine Fortsetzung, setzt die Wiederholung dort an. Höchstens 500 Fortsetzungen je Ereignis und 4 MB je `weiter`. Steht in `weiter` ein kurzer Text `fortschritt` (z. B. „Seite 20 von 64“), zeigt das DMS ihn am wartenden Dokument.
+Ein Aufruf darf höchstens so lange laufen wie die Zeitgrenze des Läufers (Standard 120 s). Für längere Arbeit – etwa ein Scan mit 60 Seiten – antwortet das Paket mit `ergebnis` = `{"weiter": { … }}` und Code `0`: Der Läufer ruft es **gleich wieder** mit demselben Ereignis auf, `daten` enthält dann zusätzlich `weiter` (genau das Objekt von eben) und `abschnitt` (1, 2, …). Der Stand wird im Ausgangskorb gespeichert; scheitert eine Fortsetzung, setzt die Wiederholung dort an. Höchstens 500 Fortsetzungen je Ereignis und 4 MB je `weiter`. Steht in `weiter` ein kurzer Text `fortschritt` (z. B. „Seite 20 von 64“), zeigt Ablago ihn am wartenden Dokument.
 
-Das Ereignis entsteht in **derselben Datenbank-Transaktion** wie die Änderung: Entweder ist beides gespeichert oder nichts. Fällt das DMS genau dazwischen aus, fehlt also kein Ereignis.
+Das Ereignis entsteht in **derselben Datenbank-Transaktion** wie die Änderung: Entweder ist beides gespeichert oder nichts. Fällt Ablago genau dazwischen aus, fehlt also kein Ereignis.
 
-Ereignisse stehen im DMS in einem **Ausgangskorb**: Je Paket stellt der Läufer sie der Reihe nach zu; ein langsames Paket hält die anderen nicht auf. Schlägt ein Aufruf fehl (Fehlercode, Absturz, Zeitgrenze), versucht er es nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf – so lange warten die späteren Ereignisse desselben Pakets. Was ein Paket selbst ändert (z. B. eine Post, die es anlegt), meldet das DMS ihm nicht zurück; andere Pakete bekommen es. Code muss deshalb **wiederholbar** sein: dasselbe Ereignis kann zweimal kommen (`id` bleibt gleich, `versuch` zählt hoch). Während einer Wartung stellt der Läufer nichts zu.
+Ereignisse stehen in Ablago in einem **Ausgangskorb**: Je Paket stellt der Läufer sie der Reihe nach zu; ein langsames Paket hält die anderen nicht auf. Schlägt ein Aufruf fehl (Fehlercode, Absturz, Zeitgrenze), versucht er es nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf – so lange warten die späteren Ereignisse desselben Pakets. Was ein Paket selbst ändert (z. B. eine Post, die es anlegt), meldet Ablago ihm nicht zurück; andere Pakete bekommen es. Code muss deshalb **wiederholbar** sein: dasselbe Ereignis kann zweimal kommen (`id` bleibt gleich, `versuch` zählt hoch). Während einer Wartung stellt der Läufer nichts zu.
 
 ## Schnittstelle (ABI 1)
 
@@ -205,12 +205,12 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 
 | Funktion | Rückgabe |
 |---|---|
-| `api(json, len)` | HTTP-Status. `json`: `{"methode":"GET","pfad":"/mappen/…","body":{…}}` – Pfade der [API v1](https://motom001.github.io/dms/admin/aktuell/api/) ohne `/api/v1`. Antwort mit `antwort_*` abholen. |
+| `api(json, len)` | HTTP-Status. `json`: `{"methode":"GET","pfad":"/mappen/…","body":{…}}` – Pfade der [API v1](https://help.ablago.app/admin/aktuell/api/) ohne `/api/v1`. Antwort mit `antwort_*` abholen. |
 | `api_binaer(json, len, body, blen)` | Wie `api`, mit Rohdaten als Body; den Inhaltstyp nennt `"typ"` im JSON (Standard `application/octet-stream`). |
 | `netz(json, len, body, blen)` | HTTP-Status oder negativ bei Fehler. `json`: `{"methode":"POST","url":"https://…","kopf":{…}}`. Nur Adressen aus `code.netz` und die bestätigte Dienst-Adresse; 30 s (seit 0.142.0 mit mehr als 1 MB Körper so lange wie der Aufruf – zum Hochladen in Teilen), höchstens 10 MB Antwort. Weiterleitungen folgt der Läufer nicht. |
 | `netz_strom(json, len, body, blen)` | Seit 0.124.0. Wie `netz`, liefert aber nur den HTTP-Status; den Körper liest `netz_weiter` Stück für Stück (z. B. eine Antwort mit `"stream": true`). Die ganze Antwort darf so lange dauern wie der Aufruf, jedes Stück höchstens 30 s; zusammen höchstens 10 MB. |
 | `netz_weiter()` | Seit 0.124.0. Länge des nächsten Stücks (mit `antwort_lesen` abholen), `0` am Ende, negativ bei Fehler. |
-| `teil(text, len)` | Seit 0.124.0. Ein Stück einer Antwort an das DMS, das es gleich weitergibt (z. B. an den Chat „Frag deine Ablage“). `0` oder `-1` (zu viel: je Stück 8 000, zusammen 64 000 Zeichen). Maßgeblich bleibt `ergebnis`. |
+| `teil(text, len)` | Seit 0.124.0. Ein Stück einer Antwort an Ablago, das es gleich weitergibt (z. B. an den Chat „Frag deine Ablage“). `0` oder `-1` (zu viel: je Stück 8 000, zusammen 64 000 Zeichen). Maßgeblich bleibt `ergebnis`. |
 | `datei(name, len)` | Größe oder `-1`: eine Datei des Pakets aus `code/daten/<name>` (z. B. Trainingsdaten). Inhalt mit `antwort_lesen`. |
 | `antwort_laenge()` | Länge der letzten Antwort. |
 | `antwort_lesen(ziel, max)` | Kopiert die letzte Antwort, gibt die Anzahl Bytes zurück. |
@@ -227,14 +227,14 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 | Zeit je Aufruf | 120 s (danach Abbruch, gilt als Fehler) |
 | gleichzeitige Aufrufe | 2 (alle Pakete zusammen) |
 | Speicher des Pakets | 64 KB |
-| Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 32 MB je Paket zusammen; größere Pakete lehnen das DMS und `pruefen.py` ab |
+| Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 32 MB je Paket zusammen; größere Pakete lehnen Ablago und `pruefen.py` ab |
 | Körper einer Anfrage an die API | 2 MB (JSON); `PUT /dokumente/{id}/volltext` seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt (mit Wortpositionen entsprechend weniger); `PUT /dokumente/{id}/archivfassung` seit 0.149.0 bis 100 MB (roh) |
 
-Ein Paket, das die Grenzen reißt, beeinträchtigt das DMS nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.
+Ein Paket, das die Grenzen reißt, beeinträchtigt Ablago nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.
 
-**Mappen ändern:** Schicke mit `PUT /mappen/{id}` nur die Felder, die das Paket ändert – nicht die ganze gelesene Mappe; nicht übergebene Felder bleiben. Mit `"stand"` (Wert `geaendert` der gelesenen Mappe) antwortet der Kern mit 409, wenn ein Mensch dasselbe Feld inzwischen anders gesetzt hat (#609); ein Paket lässt das Feld dann am besten so, wie es ist. Siehe [API → Mappe ändern](https://motom001.github.io/dms/admin/aktuell/api/#mappe-aendern).
+**Mappen ändern:** Schicke mit `PUT /mappen/{id}` nur die Felder, die das Paket ändert – nicht die ganze gelesene Mappe; nicht übergebene Felder bleiben. Mit `"stand"` (Wert `geaendert` der gelesenen Mappe) antwortet der Kern mit 409, wenn ein Mensch dasselbe Feld inzwischen anders gesetzt hat (#609); ein Paket lässt das Feld dann am besten so, wie es ist. Siehe [API → Mappe ändern](https://help.ablago.app/admin/aktuell/api/#mappe-aendern).
 
-Ein Modul, das `netz_strom`, `netz_weiter` oder `teil` importiert, lädt erst ab DMS 0.124.0 – ältere lehnen es ab („Das Modul verlangt Unbekanntes“). Gib dann `dms: ">=0.124.0"` an.
+Ein Modul, das `netz_strom`, `netz_weiter` oder `teil` importiert, lädt erst ab Ablago 0.124.0 – ältere lehnen es ab („Das Modul verlangt Unbekanntes“). Gib dann `dms: ">=0.124.0"` an.
 
 ## Bauen mit C (wasi-sdk)
 
@@ -272,16 +272,16 @@ $WASI_SDK/bin/clang --target=wasm32-wasip1 -O2 -mexec-model=reactor \
   -Wl,--import-memory -Wl,--strip-all -o code/modul.wasm code/hallo.c
 ```
 
-- `-mexec-model=reactor`: kein `main`, das DMS ruft die Exporte.
+- `-mexec-model=reactor`: kein `main`, Ablago ruft die Exporte.
 - `-Wl,--import-memory`: Pflicht (siehe oben).
 - Für Rust: Ziel `wasm32-wasip1`, `crate-type = ["cdylib"]`, Link-Argument `--import-memory`. Andere Sprachen gehen genauso, solange das Ergebnis nur `wasi_snapshot_preview1` und `dms` importiert.
 - Ein vollständiges Beispiel mit Speicher und API-Aufruf ist das Paket **Hallo Post** in der Registry; ein großes die **Texterkennung** (Tesseract als WebAssembly).
 
-Das DMS prüft beim Installieren, dass das Modul nur erlaubte Importe hat, Speicher importiert und `dms_puffer` und `dms_ereignis` exportiert. Fehlt `code/modul.wasm`, installiert das DMS das Paket trotzdem (Einstellungen lassen sich pflegen), im Läufer läuft dann aber nichts.
+Ablago prüft beim Installieren, dass das Modul nur erlaubte Importe hat, Speicher importiert und `dms_puffer` und `dms_ereignis` exportiert. Fehlt `code/modul.wasm`, installiert Ablago das Paket trotzdem (Einstellungen lassen sich pflegen), im Läufer läuft dann aber nichts.
 
 ## Vektoren und Ähnlichkeit { #vektoren-und-ahnlichkeit }
 
-Seit 0.120.0 (#442) kann ein Paket zu jedem Dokument einen **Vektor** ablegen; das DMS vergleicht sie (Kosinus) und zeigt damit ähnliche Dokumente an der Mappe und in der Suche. **Der Kern rechnet keine Vektoren** – das macht das Paket, etwa mit einem Embedding-Modell im Paket-Läufer (Beispiel: „KI lokal – Ähnlichkeit“ in der Registry).
+Seit 0.120.0 (#442) kann ein Paket zu jedem Dokument einen **Vektor** ablegen; Ablago vergleicht sie (Kosinus) und zeigt damit ähnliche Dokumente an der Mappe und in der Suche. **Der Kern rechnet keine Vektoren** – das macht das Paket, etwa mit einem Embedding-Modell im Paket-Läufer (Beispiel: „KI lokal – Ähnlichkeit“ in der Registry).
 
 ```yaml
 dms: ">=0.120.0"
@@ -296,10 +296,10 @@ code:
 
 **Ablauf:**
 
-1. Ereignis `volltext.fertig` → Volltext holen (`GET /dokumente/{id}/volltext`), Vektor rechnen, ablegen: `PUT /dokumente/{id}/vektor` mit `{ "modell": "mein-modell/256", "vektor": [0.01, …] }`. Das DMS normiert den Vektor; alle Vektoren eines Modells haben dieselbe Länge (8 bis 4096 Zahlen).
-2. **Suchbegriff:** Die Suche ruft `dms_aktion` mit `{ "aktion": "dms:vektor", "text": "Rechnung Heizung", … }`. Das Paket antwortet mit `ergebnis` als JSON: `{ "modell": "mein-modell/256", "vektor": [ … ], "schwelle": 0.45 }`. `schwelle` (optional, Kosinus) sagt, ab wann ein Dokument als ähnlich gilt (Standard 0,5). Mit leerem `text` genügt `{ "modell": "…" }` – so erfragt das DMS das aktuelle Modell. Die Suche wartet höchstens **1,5 s** (der Aufruf kommt vor die wartenden); antwortet das Paket nicht, sucht sie ohne Ähnlichkeit.
-3. **Bestand:** Hat das Paket keine offenen Ereignisse, schickt das DMS alle 30 s bis zu 50 Ereignisse `volltext.fertig` mit `nachberechnung: true` für Dokumente ohne Vektor des aktuellen Modells.
-4. **Modellwechsel:** Meldet das Paket ein anderes `modell` (z. B. nach einem Update), löscht das DMS dessen alte Vektoren und lässt sie wie unter 3. neu berechnen.
+1. Ereignis `volltext.fertig` → Volltext holen (`GET /dokumente/{id}/volltext`), Vektor rechnen, ablegen: `PUT /dokumente/{id}/vektor` mit `{ "modell": "mein-modell/256", "vektor": [0.01, …] }`. Ablago normiert den Vektor; alle Vektoren eines Modells haben dieselbe Länge (8 bis 4096 Zahlen).
+2. **Suchbegriff:** Die Suche ruft `dms_aktion` mit `{ "aktion": "dms:vektor", "text": "Rechnung Heizung", … }`. Das Paket antwortet mit `ergebnis` als JSON: `{ "modell": "mein-modell/256", "vektor": [ … ], "schwelle": 0.45 }`. `schwelle` (optional, Kosinus) sagt, ab wann ein Dokument als ähnlich gilt (Standard 0,5). Mit leerem `text` genügt `{ "modell": "…" }` – so erfragt Ablago das aktuelle Modell. Die Suche wartet höchstens **1,5 s** (der Aufruf kommt vor die wartenden); antwortet das Paket nicht, sucht sie ohne Ähnlichkeit.
+3. **Bestand:** Hat das Paket keine offenen Ereignisse, schickt Ablago alle 30 s bis zu 50 Ereignisse `volltext.fertig` mit `nachberechnung: true` für Dokumente ohne Vektor des aktuellen Modells.
+4. **Modellwechsel:** Meldet das Paket ein anderes `modell` (z. B. nach einem Update), löscht Ablago dessen alte Vektoren und lässt sie wie unter 3. neu berechnen.
 
 **Endpunkte** (API v1, siehe `openapi.json`):
 
@@ -345,7 +345,7 @@ code:
 - `ausschnitte_text` sind dieselben Ausschnitte, abgegrenzt mit `<ausschnitt …>…</ausschnitt>`; ein Ausschnitt kann die Abgrenzung nicht schließen (der Kern entfernt solche Marken aus dem Text). Schicke sie als eigene Nachricht, getrennt von der Frage.
 - `verlauf` kommt vom Browser (höchstens 8 Einträge); gespeichert wird er nirgends.
 
-**Antwort:** Stücke mit `teil` (sie erscheinen beim Fragenden sofort), zum Schluss `ergebnis` mit `{ "text": "…", "quellen": [1, 3] }` oder reinem Text. Gibt es keine Antwort (Dienst nicht erreichbar, Modell fehlt), gib einen Fehlercode zurück und als `ergebnis` einen verständlichen Satz (oder `0` und `{ "fehler": "…" }`) – der Fragende sieht dann „Keine Antwort: …“. Das DMS nimmt nur Quellen aus den gegebenen Nummern (fehlt `quellen`, zählen die `[n]` im Text) und zeigt den Text **nur als Text** – Links, HTML oder Befehle darin werden nicht ausgeführt. Ändern kann die Antwort nichts. Der Aufruf kommt vor die wartenden Ereignisse; die Zeitgrenze des Läufers gilt (Standard 120 s).
+**Antwort:** Stücke mit `teil` (sie erscheinen beim Fragenden sofort), zum Schluss `ergebnis` mit `{ "text": "…", "quellen": [1, 3] }` oder reinem Text. Gibt es keine Antwort (Dienst nicht erreichbar, Modell fehlt), gib einen Fehlercode zurück und als `ergebnis` einen verständlichen Satz (oder `0` und `{ "fehler": "…" }`) – der Fragende sieht dann „Keine Antwort: …“. Ablago nimmt nur Quellen aus den gegebenen Nummern (fehlt `quellen`, zählen die `[n]` im Text) und zeigt den Text **nur als Text** – Links, HTML oder Befehle darin werden nicht ausgeführt. Ändern kann die Antwort nichts. Der Aufruf kommt vor die wartenden Ereignisse; die Zeitgrenze des Läufers gilt (Standard 120 s).
 
 **Gekürzt (ab 0.138.0, #564):** Passt die Anfrage nicht in den Kontext deines Dienstes, kürze selbst – aber nie still. Melde es im Ergebnis mit `"gekuerzt"`:
 
@@ -357,9 +357,9 @@ code:
 - `geschickt`: die Nummern der Ausschnitte, die an den Dienst gingen (ganz oder angeschnitten). Fehlt die Liste, gelten alle als geschickt.
 - `verlauf`: wie viele frühere Einträge des Chats du weggelassen hast (0, wenn keine).
 
-Der Fragende sieht dann „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“, aufgeklappt nur die geschickten Stellen, und gegebenenfalls, dass ältere Einträge des Chats weggelassen wurden. Quellen nimmt das DMS dann nur aus `geschickt`. Ältere DMS-Versionen übergehen das Feld – verlangt dein Paket die Anzeige, setze `dms: ">=0.138.0"`.
+Der Fragende sieht dann „An die KI geschickt: 6 von 9 Ausschnitten (gekürzt)“, aufgeklappt nur die geschickten Stellen, und gegebenenfalls, dass ältere Einträge des Chats weggelassen wurden. Quellen nimmt Ablago dann nur aus `geschickt`. Ältere Ablago-Versionen übergehen das Feld – verlangt dein Paket die Anzeige, setze `dms: ">=0.138.0"`.
 
-**Datenschutz:** Was du bekommst, schreibst du nicht ins Protokoll (`log`) und nicht in den Speicher des Pakets – das DMS selbst protokolliert nur, *dass* gefragt wurde. Die Werkbank zeigt beim Paket nur „Frage beantwortet“ und die Länge.
+**Datenschutz:** Was du bekommst, schreibst du nicht ins Protokoll (`log`) und nicht in den Speicher des Pakets – Ablago selbst protokolliert nur, *dass* gefragt wurde. Die Werkbank zeigt beim Paket nur „Frage beantwortet“ und die Länge.
 
 ## Dateien umwandeln { #dateien-umwandeln }
 
@@ -381,8 +381,8 @@ code:
   netz: []
 ```
 
-- `code.umwandeln` nennt die Dateitypen (höchstens 20), `dms:umwandeln` erlaubt Fassung und Vorschaubild zurückzugeben, `datei.umwandeln` muss in `ereignisse` stehen. Fehlt eins davon, lehnen DMS und `pruefen.py` das Paket ab. PDF, JPEG und PNG sind in `code.umwandeln` nicht erlaubt.
-- Die Rückfrage bei der Installation zeigt „Dateien umwandeln, die das DMS nicht selbst lesen kann – … (dms:umwandeln): TIFF, WebP, GIF, BMP“.
+- `code.umwandeln` nennt die Dateitypen (höchstens 20), `dms:umwandeln` erlaubt Fassung und Vorschaubild zurückzugeben, `datei.umwandeln` muss in `ereignisse` stehen. Fehlt eins davon, lehnen Ablago und `pruefen.py` das Paket ab. PDF, JPEG und PNG sind in `code.umwandeln` nicht erlaubt.
+- Die Rückfrage bei der Installation zeigt „Dateien umwandeln, die Ablago nicht selbst lesen kann – … (dms:umwandeln): TIFF, WebP, GIF, BMP“.
 - **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id. Kommt mit einem Update ein Dateityp dazu, meldet der Kern die vorhandenen Dateien dieses Typs.
 
 ### Ablauf { #umwandeln-ablauf }
@@ -424,7 +424,7 @@ Ist kein Paket für einen Dateityp installiert, bleibt alles wie vor 0.137.0: Da
 |---|---|
 | `dokument`, `mappe` | Ids von Dokument und Mappe |
 | `name` | Dateiname (nur zur Anzeige – den Typ am Inhalt erkennen) |
-| `mime` | Dateityp, wie das DMS ihn kennt (beim Hochladen am Inhalt erkannt, sonst die Angabe des Browsers) – einer aus `code.umwandeln` |
+| `mime` | Dateityp, wie Ablago ihn kennt (beim Hochladen am Inhalt erkannt, sonst die Angabe des Browsers) – einer aus `code.umwandeln` |
 | `groesse` | Größe in Bytes (höchstens 50 MB) |
 | `sha256` | Prüfwert der Datei; gehört in `PUT …/fassung?sha256=…`. Hat das Dokument inzwischen eine neue Version, antwortet der Kern mit 409. |
 
@@ -450,7 +450,7 @@ Ist kein Paket für einen Dateityp installiert, bleibt alles wie vor 0.137.0: Da
 | 404 | das Dokument gibt es nicht (mehr), oder das Paket darf es nicht lesen | Code `0` |
 | 409 | `sha256` ist nicht mehr die Datei des Dokuments (neue Version – dafür kommt ein eigenes Ereignis) | Code `0` |
 | 413, 415, 422 | zu groß; kein PDF, PNG oder JPEG; nicht lesbar, zu viele Bildpunkte oder Seiten | Code `0` und eine verständliche Meldung als `ergebnis` – sie steht am Dokument |
-| 5xx | Störung im DMS | Fehlercode (`≠ 0`): Der Läufer wiederholt das Ereignis |
+| 5xx | Störung in Ablago | Fehlercode (`≠ 0`): Der Läufer wiederholt das Ereignis |
 
 Kann das Paket die Datei selbst nicht lesen (beschädigt, unbekannte Variante), antwortet es mit Code `0` und dem Grund als `ergebnis` – eine Wiederholung würde daran nichts ändern.
 
@@ -524,8 +524,8 @@ code:
   netz: []
 ```
 
-- `code.volltext` nennt die Dateitypen, `dms:volltext` erlaubt, deren Volltext zu schreiben, `datei.volltext` muss in `ereignisse` stehen. Fehlt eins davon, lehnen DMS und `pruefen.py` das Paket ab. PDF, JPEG und PNG sind nicht erlaubt (die liest der Kern; Scans erkennt [`dms:texterkennung`](#texterkennung)). `application/octet-stream` ist erlaubt – dann bekommt das Paket auch Dateien ohne bekannten Typ (z. B. `.msg` aus manchen Browsern) und entscheidet am Inhalt.
-- Die Rückfrage bei der Installation zeigt „Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – … (dms:volltext): Word, E-Mail, Text“. Ändern sich die Dateitypen mit einem Update, fragt das DMS neu.
+- `code.volltext` nennt die Dateitypen, `dms:volltext` erlaubt, deren Volltext zu schreiben, `datei.volltext` muss in `ereignisse` stehen. Fehlt eins davon, lehnen Ablago und `pruefen.py` das Paket ab. PDF, JPEG und PNG sind nicht erlaubt (die liest der Kern; Scans erkennt [`dms:texterkennung`](#texterkennung)). `application/octet-stream` ist erlaubt – dann bekommt das Paket auch Dateien ohne bekannten Typ (z. B. `.msg` aus manchen Browsern) und entscheidet am Inhalt.
+- Die Rückfrage bei der Installation zeigt „Volltext für Dateien liefern, die Ablago nicht selbst lesen kann – … (dms:volltext): Word, E-Mail, Text“. Ändern sich die Dateitypen mit einem Update, fragt Ablago neu.
 - **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id. Für einen Dateityp mit einem solchen Paket geht der Volltext vor einer umgewandelten Fassung: Das Paket liest das Original, eine Fassung (`dms:umwandeln`) gibt dann nur das Vorschaubild.
 - Pakete mit `dokumente: schreiben` (z. B. **Texterkennung**) schreiben den Volltext weiter für jedes Dokument, das sie lesen dürfen – daran ändert `dms:volltext` nichts.
 
@@ -564,7 +564,7 @@ Ist kein Paket für einen Dateityp installiert, steht am Dokument *ausgelassen* 
 |---|---|
 | `dokument`, `mappe` | Ids von Dokument und Mappe |
 | `name` | Dateiname (nur als Hinweis – den Typ am Inhalt erkennen) |
-| `mime` | Dateityp, wie das DMS ihn kennt – einer aus `code.volltext` |
+| `mime` | Dateityp, wie Ablago ihn kennt – einer aus `code.volltext` |
 | `groesse` | Größe in Bytes (höchstens 50 MB) |
 | `sha256` | Prüfwert der Datei. Hat das Dokument inzwischen eine neue Version, kommt dafür ein eigenes Ereignis. |
 | `neu` | nur bei „ausdrücklich neu“ (Volltext neu erzeugen für alle, Neu erzeugen am Dokument): auch dann lesen, wenn es schon Text gibt |
@@ -585,7 +585,7 @@ Ist kein Paket für einen Dateityp installiert, steht am Dokument *ausgelassen* 
 - **Text:** höchstens 5 Millionen Zeichen je Dokument – wie für jeden Volltext im Kern. Der Körper von `PUT /dokumente/{id}/volltext` darf dafür bis **32 MB** groß sein (sonst gilt 2 MB je Anfrage); ein Paket schreibt den ganzen Text also in **einer** Anfrage. Längere Texte kürzt du selbst und sagst es im `ergebnis` („gekürzt“).
 - **Datei:** höchstens 50 MB (größere meldet der Kern nicht).
 - **Läufer:** 256 MB Speicher und 120 s je Aufruf. Plane den Speicher: die Datei, entpackte Teile und der Text (als JSON) liegen gleichzeitig im Modul.
-- Ältere DMS-Versionen kennen `dms:volltext` nicht und lehnen das Manifest ab – gib `dms: ">=0.145.0"` an.
+- Ältere Ablago-Versionen kennen `dms:volltext` nicht und lehnen das Manifest ab – gib `dms: ">=0.145.0"` an.
 
 ## Archivfassung ablegen { #archivfassung }
 
@@ -614,7 +614,7 @@ code:
             hilfe: "Aus – alle PDFs bekommen eine Archivfassung (Vorgabe). An – PDFs mit vollständigem Text nicht (spart Platz)." }
 ```
 
-- `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` und `dokumente: lesen` gehören zusammen; fehlt eins, lehnen DMS und `pruefen.py` das Paket ab. **PDF, JPEG und PNG sind erlaubt** (anders als bei `dms:umwandeln`).
+- `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` und `dokumente: lesen` gehören zusammen; fehlt eins, lehnen Ablago und `pruefen.py` das Paket ab. **PDF, JPEG und PNG sind erlaubt** (anders als bei `dms:umwandeln`).
 - `nur_scans` muss eine Ja/Nein-Einstellung des Pakets nennen. Ohne die Angabe bekommt das Paket alle PDFs. Schaltet der Administrator sie aus, meldet der Kern die PDFs mit Text nach.
 - Die Rückfrage bei der Installation zeigt „Archivfassung (PDF/A) ablegen – … (dms:archivfassung): PDF, JPEG, PNG, TIFF“. Andere Dateitypen bei einem Update heißen neu bestätigen; neue Dateitypen meldet der Kern für den Bestand.
 - **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id.
@@ -664,7 +664,7 @@ sequenceDiagram
 | `textebene` | nur PDF: `voll` (jede Seite hat Text – Online-Rechnung), `teilweise` (gemischt: Textseiten und Scans), `keine` (Scan); Bilder: `keine` |
 | `wortpositionen` | `true`, wenn jede Seite ohne Textebene Wortpositionen der Texterkennung hat. `false`: ältere Texterkennung ohne Wortpositionen – lege den Text dann nicht „ungefähr“ ab, sondern melde den Grund (Code `0`, z. B. „Wortpositionen fehlen – Texterkennung aktualisieren“). |
 | `sprache` | Sprache des Volltexts (z. B. `deu`) oder null |
-| `signiert` | das Original ist digital signiert – die Archivfassung trägt die Signatur nicht; das DMS zeigt am Dokument einen Hinweis |
+| `signiert` | das Original ist digital signiert – die Archivfassung trägt die Signatur nicht; Ablago zeigt am Dokument einen Hinweis |
 | `erechnung` | E-Rechnung (ZUGFeRD/Factur-X): die XML bleibt im Original; du musst sie nicht übernehmen |
 | `formular` | Formularfelder: in der Archivfassung **einfrieren** (Werte sichtbar, nicht mehr ausfüllbar) |
 | `extern` | das Original enthält JavaScript, Aktionen oder Verweise auf externe Inhalte – **nicht übernehmen** (der Kern lehnt eine Archivfassung damit ab) |
@@ -702,7 +702,7 @@ sequenceDiagram
 | 404 | Dokument weg oder nicht lesbar | Code `0` |
 | 409 | `sha256` ist nicht mehr die Datei des Dokuments | Code `0` (eigenes Ereignis folgt) |
 | 413, 415, 422 | zu groß; kein PDF; keine/ungültige PDF/A-Kennung, verschlüsselt, JavaScript, Aktionen oder Externes – der Grund steht am Dokument und in der Werkbank | Code `0`, Meldung als `ergebnis` |
-| 5xx | Störung im DMS | Fehlercode: der Läufer wiederholt |
+| 5xx | Störung in Ablago | Fehlercode: der Läufer wiederholt |
 
 Weitere Endpunkte: `GET /dokumente/{id}/archivfassung` (ansehen; `?herunterladen` zum Speichern; Kopf `x-dms-archivfassung`: Kennung, Paket, Version, ggf. `original`), `GET /dokumente/{id}/inhalt?fassung=archiv` (Weitergeben der Archivfassung, mit Stempel-Parametern).
 
@@ -713,7 +713,7 @@ Weitere Endpunkte: `GET /dokumente/{id}/archivfassung` (ansehen; `?herunterladen
 - **Quelle** höchstens 50 MB (größere meldet der Kern nicht), Archivfassung höchstens 100 MB und 1000 Seiten.
 - **Läufer:** 256 MB Speicher und 120 s je Aufruf. Baue die Archivfassung Seite für Seite und nutze für lange Dokumente die [Fortsetzung](#fortsetzung). Das Paket hat kein Netz (`netz: []`) – Schriften und Farbprofil bringt es unter `code/daten/` mit.
 - **Werkzeug:** Die Lizenz der Bibliotheken des Pakets (z. B. zum Schreiben des PDF/A) muss zum Paket passen; der Kern bringt dafür nichts mit (kein Ghostscript, keine neue Abhängigkeit im Image).
-- Ältere DMS-Versionen kennen `dms:archivfassung` nicht und lehnen das Manifest ab – gib `dms: ">=0.149.0"` an.
+- Ältere Ablago-Versionen kennen `dms:archivfassung` nicht und lehnen das Manifest ab – gib `dms: ">=0.149.0"` an.
 
 ## Sicherung außer Haus { #sicherung-ausser-haus }
 
@@ -766,7 +766,7 @@ sequenceDiagram
       "verschluesselung": { "verfahren": "AES-256-GCM, …", "fingerabdruck": "…" } }
     ```
 
-    Keine Person, keine Versionen, keine Zähler, keine Haushalts-Id. Genau diese Angaben (ohne `name`) legt das Paket als `<name>.json` neben die Datei aufs Ziel – damit lässt sich die Kopie [wiederherstellen](https://motom001.github.io/dms/admin/aktuell/wiederherstellen/#aus-einer-kopie-ausser-haus). `GET /sicherungen/{name}` liefert sie ebenfalls. Dateinamen am Ziel: `<name>.dms-sicherung` und `<name>.json` – ohne Haushalts- oder Personennamen.
+    Keine Person, keine Versionen, keine Zähler, keine Haushalts-Id. Genau diese Angaben (ohne `name`) legt das Paket als `<name>.json` neben die Datei aufs Ziel – damit lässt sich die Kopie [wiederherstellen](https://help.ablago.app/admin/aktuell/wiederherstellen/#aus-einer-kopie-ausser-haus). `GET /sicherungen/{name}` liefert sie ebenfalls. Dateinamen am Ziel: `<name>.dms-sicherung` und `<name>.json` – ohne Haushalts- oder Personennamen.
 2. **Lesen in Stücken:** `GET /sicherungen/{name}/datei?versatz=…&laenge=…` (über `dms.api`) liefert höchstens **8 MB** roh; der Kopf `X-DMS-Groesse` nennt die Größe der Datei, am Ende kommt ein leerer Körper. **Lade nie die ganze Sicherung in den Speicher** – sie hat schnell mehrere GB, ein Aufruf hat 256 MB.
 3. **Hochladen in Teilen:** Je Stück eine Anfrage mit `dms.netz` (Körper = Stück), z. B. Nextcloud-Chunking (`/remote.php/dav/uploads/…`, Teile ab 5 MB), `Content-Range` bei WebDAV-Servern, die es können, oder S3 Multipart. Eine Anfrage mit mehr als 1 MB Körper darf so lange dauern wie der Aufruf.
 4. **Fortsetzung:** Nach etwa der halben Zeitgrenze antwortet das Paket mit `{"weiter": {"versatz": …, …}}` (siehe [Fortsetzung](#fortsetzung)); der Läufer ruft es gleich wieder auf und speichert den Stand. Schlägt ein Aufruf fehl (Netz weg), setzt die Wiederholung (1, 5, 30 Minuten, 2, 6 Stunden) an der letzten gespeicherten Stelle an – nicht von vorn. Für Stände, die über das Ereignis hinaus gelten (z. B. „zuletzt vollständig geprüft“), gibt es den [Speicher des Pakets](#importe-aus-dms). Die Zeit je Sicherung insgesamt begrenzen die 500 Fortsetzungen je Ereignis.
@@ -787,7 +787,7 @@ Antworten der drei Endpunkte: 403, wenn das Paket das Recht nicht hat oder die S
 
 ### Löschschutz { #sicherung-loeschschutz }
 
-Wer das DMS übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit **so wenig Rechten wie möglich** auskommen: nur hochladen (S3: `PutObject` ohne `DeleteObject`, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe **aus** und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/sicherung-ausser-haus/#loschschutz).
+Wer Ablago übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit **so wenig Rechten wie möglich** auskommen: nur hochladen (S3: `PutObject` ohne `DeleteObject`, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe **aus** und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im [Administratorhandbuch](https://help.ablago.app/admin/aktuell/sicherung-ausser-haus/#loschschutz).
 
 ## Ausprobieren
 
@@ -797,7 +797,7 @@ Wer das DMS übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll des
 
 ## Erkennung: Feldbeschreibung und Antwort
 
-Die eingebaute Erkennung (DMS #391) arbeitet gegen eine **Feldbeschreibung des Mappentyps**: `GET /api/v1/typen/{id}/erkennungsschema` liefert sie als JSON Schema 2020-12. Je Feld gibt es ein Objekt mit `wert` (Schema nach Feldart: Datum `JJJJ-MM-TT`, Betrag `{ betrag, waehrung }`, Auswahl nur aus der Liste, Verweis als Mappen-Id), `sicherheit` (`hoch`, `mittel`, `niedrig`) und `fundstelle` (Textstelle). Dazu `title` (Bezeichnung), `description` (Hilfetext und Erkennungshinweis), `x-dms-feldtyp`, `x-dms-erkennung` (Art, z. B. `email`) und `x-dms-markiert`. Passwortfelder und feste Felder stehen nie darin.
+Die eingebaute Erkennung (dms #391) arbeitet gegen eine **Feldbeschreibung des Mappentyps**: `GET /api/v1/typen/{id}/erkennungsschema` liefert sie als JSON Schema 2020-12. Je Feld gibt es ein Objekt mit `wert` (Schema nach Feldart: Datum `JJJJ-MM-TT`, Betrag `{ betrag, waehrung }`, Auswahl nur aus der Liste, Verweis als Mappen-Id), `sicherheit` (`hoch`, `mittel`, `niedrig`) und `fundstelle` (Textstelle). Dazu `title` (Bezeichnung), `description` (Hilfetext und Erkennungshinweis), `x-dms-feldtyp`, `x-dms-erkennung` (Art, z. B. `email`) und `x-dms-markiert`. Passwortfelder und feste Felder stehen nie darin.
 
 ```json
 { "email": { "wert": "anna.beispiel@elektro-muster.example", "sicherheit": "hoch", "fundstelle": "anna.beispiel@elektro-muster.example" },
@@ -829,11 +829,11 @@ code:
   "sprache": "de", "paket": { … }, "einstellungen": { … } }
 ```
 
-- `schema` ist die Feldbeschreibung wie oben, aber nur mit Feldern, die der Benutzer bearbeiten darf, ohne Passwortfelder und **ohne Verweise** – die gleicht das DMS selbst mit vorhandenen Mappen ab.
+- `schema` ist die Feldbeschreibung wie oben, aber nur mit Feldern, die der Benutzer bearbeiten darf, ohne Passwortfelder und **ohne Verweise** – die gleicht Ablago selbst mit vorhandenen Mappen ab.
 - `text` ist höchstens 50 000 Zeichen lang. `dokumente` nennt die Dokumente, aus denen er stammt (leer bei Fotos); lesen kann das Paket sie nur mit eigenen Rechten. Bilder bekommt es nicht.
 - `hinweis` ist die Systemnachricht des Kerns für einen KI-Dienst (nur Werte aus dem Text, Text ist Daten, Antwort nach Schema); gib sie unverändert weiter. Ollama und andere Dienste können strukturiert nach JSON Schema antworten (`response_format` bzw. `format`).
 
-**Antwort:** `ergebnis` mit dem Objekt `{ feld: { wert, sicherheit, fundstelle } }` (auch unter `vorschlaege` oder mit Text drumherum – das DMS nimmt das erste JSON-Objekt). Das DMS prüft jeden Wert gegen die Feldart und verwirft falsche Typen, unbekannte Felder, Werte außerhalb der Auswahl und Verweise; Verworfenes steht mit Grund im Protokoll. Ein Fehlercode mit Text in `ergebnis` oder keine Antwort nach **60 s**: Das DMS nimmt die eingebaute Erkennung und sagt dem Benutzer „*Paket* hat nicht geantwortet (…)“. Antwortet das Paket, aber nichts davon übersteht die Prüfung (auch `{ "vorschlaege": {} }`), nimmt das DMS ab 0.138.0 ebenfalls die eingebaute Erkennung – mit dem Hinweis „*Paket* hat nichts Brauchbares geliefert“.
+**Antwort:** `ergebnis` mit dem Objekt `{ feld: { wert, sicherheit, fundstelle } }` (auch unter `vorschlaege` oder mit Text drumherum – Ablago nimmt das erste JSON-Objekt). Ablago prüft jeden Wert gegen die Feldart und verwirft falsche Typen, unbekannte Felder, Werte außerhalb der Auswahl und Verweise; Verworfenes steht mit Grund im Protokoll. Ein Fehlercode mit Text in `ergebnis` oder keine Antwort nach **60 s**: Ablago nimmt die eingebaute Erkennung und sagt dem Benutzer „*Paket* hat nicht geantwortet (…)“. Antwortet das Paket, aber nichts davon übersteht die Prüfung (auch `{ "vorschlaege": {} }`), nimmt das Ablago ab 0.138.0 ebenfalls die eingebaute Erkennung – mit dem Hinweis „*Paket* hat nichts Brauchbares geliefert“.
 
 **Gekürzt (ab 0.138.0, #564):** Hast du den Text für deinen Dienst gekürzt, antworte in der Hülle und melde es: `{ "vorschlaege": { … }, "gekuerzt": true }`. Der Benutzer sieht dann „Dokumenttext gekürzt“; die API liefert `gekuerzt: true` in den Vorschlägen. Das gilt auch, wenn der Kern selbst kürzt (Text über 50 000 Zeichen). Die Werkbank zeigt beim Paket nur „Felder erkannt“ und die Länge.
 
@@ -844,7 +844,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 - `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.
 - `PUT /dokumente/{id}/fassung` und `PUT /dokumente/{id}/vorschaubild` – siehe [Dateien umwandeln](#dateien-umwandeln) (Recht `dms:umwandeln`).
 - `GET /sicherungen/{name}`, `GET /sicherungen/{name}/datei?versatz=&laenge=` und `PUT /sicherungen/{name}/extern` – siehe [Sicherung außer Haus](#sicherung-ausser-haus) (Recht `dms:sicherung-lesen`, seit 0.142.0).
-- `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab DMS 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt das DMS die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
+- `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab Ablago 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt Ablago die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
 - `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch `weitere` – siehe [Sprachen je Seite](#seitensprachen).
 - Ab 0.139.0: `PUT /dokumente/{id}/volltext` mit Seiten (`\f`) und `seitensprachen`, `GET /dokumente/{id}/volltext` mit `seiten` – siehe [Sprachen je Seite](#seitensprachen).
 - `POST /dokumente/{id}/seiten`, `POST /dokumente/zusammenfuegen`, `PUT /dokumente/{id}/archivnummer` – Seiten teilen und zusammenfügen, Archivnummer setzen.

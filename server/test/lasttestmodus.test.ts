@@ -240,7 +240,7 @@ describe('Lasttest-Modus (#612): Seite', () => {
     aufrufe = [];
     let m = await neu();
     try {
-      kind!.sende({ art: 'abbruch', text: 'Dieses DMS ist schon eingerichtet, aber nicht vom Lasttest.' });
+      kind!.sende({ art: 'abbruch', text: 'Diese Installation ist schon eingerichtet, aber nicht vom Lasttest.' });
       kind!.emit('exit', 2);
       const s = await stand();
       assert.equal(s.zustand, 'abbruch');

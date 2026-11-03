@@ -134,8 +134,8 @@ export class Speicherplatz {
         neu.gewarnt = true;
         log.warn('Speicherplatz knapp: Warnschwelle unterschritten', { warnschwelle: schwelleText(s.einstellung.warnung), ordner: knapp.join('; ') });
         await this.mail('Speicherplatz wird knapp',
-          `Der freie Speicherplatz des DMS liegt unter der Warnschwelle (${schwelleText(s.einstellung.warnung)}):\n\n${knapp.join('\n')}\n\n`
-          + `Unter der Grenze (${schwelleText(s.einstellung.grenze)}) sperrt das DMS das Hochladen und geht in den Wartungsmodus. `
+          `Der freie Speicherplatz von Ablago liegt unter der Warnschwelle (${schwelleText(s.einstellung.warnung)}):\n\n${knapp.join('\n')}\n\n`
+          + `Unter der Grenze (${schwelleText(s.einstellung.grenze)}) sperrt Ablago das Hochladen und geht in den Wartungsmodus. `
           + 'Schaffe rechtzeitig Platz (alte Sicherungen löschen, Papierkorb leeren) oder vergrößere den Speicher. Details: Werkbank → Wartung und Fehlersuche → Systemzustand.');
       }
     } else {
@@ -145,7 +145,7 @@ export class Speicherplatz {
         log.error('Speicherplatzlimit erreicht: Hochladen gesperrt, Wartungsmodus startet', { grenze: schwelleText(s.einstellung.grenze), ordner: knapp.join('; ') });
         const an = await this.d.wartung?.automatisch('speicherplatz', LIMIT_TEXT, VORLAUF_MIN);
         await this.mail(LIMIT_TEXT,
-          `Der freie Speicherplatz des DMS liegt unter der Grenze (${schwelleText(s.einstellung.grenze)}):\n\n${knapp.join('\n')}\n\n`
+          `Der freie Speicherplatz von Ablago liegt unter der Grenze (${schwelleText(s.einstellung.grenze)}):\n\n${knapp.join('\n')}\n\n`
           + 'Das Hochladen ist ab sofort gesperrt. '
           + (an ? `In ${VORLAUF_MIN} Minuten startet der Wartungsmodus; danach können nur Administratoren arbeiten. ` : 'Der Wartungsmodus ist bereits an. ')
           + 'Schaffe in der Werkbank Platz (alte Sicherungen löschen, Papierkorb leeren) und beende danach den Wartungsmodus selbst – er endet nicht von allein.');
@@ -178,6 +178,6 @@ export class Speicherplatz {
   stop() { if (this.zeitgeber) clearInterval(this.zeitgeber); }
 
   private async mail(betreff: string, text: string) {
-    try { await this.d.anAdmins?.(`DMS: ${betreff}`, text); } catch (e) { log.warn('Mail zum Speicherplatz nicht verschickt', { fehler: (e as Error).message }); }
+    try { await this.d.anAdmins?.(`Ablago: ${betreff}`, text); } catch (e) { log.warn('Mail zum Speicherplatz nicht verschickt', { fehler: (e as Error).message }); }
   }
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Probe des Beispiels „lokaler KI-Dienst (Ollama)“ (#564), läuft in der CI (ki-beispiel.yml):
 #   1. überall dieselbe Ollama-Version; jede Variante ist gültiges Compose und hat keinen Port nach außen;
-#      dms-anbinden.yml passt zu den Vorlagen des DMS
+#      dms-anbinden.yml passt zu den Vorlagen von Ablago
 #   2. Variante „nur Prozessor“ mit einem winzigen Modell starten → modell-laden lädt es und endet mit 0
-#   3. aus dem Netz dms-ki (wie das DMS): Modellliste, Antwort, strukturierte Ausgabe nach JSON Schema
+#   3. aus dem Netz dms-ki (wie Ablago): Modellliste, Antwort, strukturierte Ausgabe nach JSON Schema
 #      (wie „Aus Dokument ausfüllen“) – vom Host aus ist Ollama nicht erreichbar, dms-ki ist intern
 #   4. Variante Intel-Grafik lässt sich bauen und bringt den Vulkan-Treiber mit (starten geht ohne Grafik nicht)
 #
@@ -77,7 +77,7 @@ laden=$(compose ps -a -q modell-laden)
 compose logs --no-log-prefix modell-laden | grep -q "ist schon da" || fehler "modell-laden lädt beim zweiten Start erneut"
 echo "::endgroup::"
 
-echo "::group::Aus dem Netz dms-ki fragen (wie das DMS)"
+echo "::group::Aus dem Netz dms-ki fragen (wie Ablago)"
 [ "$(docker network inspect dms-ki -f '{{.Internal}}')" = true ] || fehler "Netz dms-ki ist nicht intern"
 frage() { docker run --rm --network dms-ki "$CLIENT" wget -qO- -T 300 "$@"; }
 frage http://ollama:11434/v1/models | jq -e --arg m "$MODELL" '[.data[].id] | index($m) != null' >/dev/null \

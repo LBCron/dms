@@ -81,7 +81,7 @@ function bereinige(e: unknown, alt: MailEinstellungen, verschluessele: (klartext
   const fehler: string[] = [];
   if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.push('Der Port muss zwischen 1 und 65535 liegen.');
   if (m.host && !/^[a-z0-9.-]+$|^\[[0-9a-f:]+\]$/i.test(m.host)) fehler.push('Der Server ist kein gültiger Rechnername, z. B. smtp.example.org.');
-  if (m.absender && !istEmail(m.absender.replace(/^.*<([^>]+)>\s*$/, '$1'))) fehler.push('Der Absender ist keine gültige E-Mail-Adresse, z. B. dms@example.org oder „DMS <dms@example.org>“.');
+  if (m.absender && !istEmail(m.absender.replace(/^.*<([^>]+)>\s*$/, '$1'))) fehler.push('Der Absender ist keine gültige E-Mail-Adresse, z. B. dms@example.org oder „Ablago <dms@example.org>“.');
   if (m.aktiv && !m.host) fehler.push('Zum Aktivieren braucht es einen Server.');
   if (fehler.length) throw new Fachfehler(422, fehler.join(' '));
   return m;
@@ -207,7 +207,7 @@ export class Betrieb {
       try {
         this.adresse = pruefeAdresse(env.APP_URL);
         await this.speicher.schreibe('adresse', this.adresse);
-        sys.info('Adresse des DMS aus APP_URL übernommen', { adresse: this.adresse });
+        sys.info('Adresse von Ablago aus APP_URL übernommen', { adresse: this.adresse });
       } catch { sys.warn('APP_URL ist keine gültige Adresse und wurde nicht übernommen', { APP_URL: env.APP_URL }); }
     }
     sys.warn(`Diese Umgebungsvariablen werden nicht mehr verwendet und können entfernt werden: ${alte.join(', ')}. E-Mail und Adresse stehen jetzt in der Werkbank.`);
@@ -286,7 +286,7 @@ export class Betrieb {
   async speichereAdresse(e: unknown) {
     this.adresse = pruefeAdresse(e);
     await this.speicher.schreibe('adresse', this.adresse);
-    protokoll.modul('werkbank').info('Adresse des DMS geändert', { adresse: this.adresse || '(nicht gepflegt)' });
+    protokoll.modul('werkbank').info('Adresse von Ablago geändert', { adresse: this.adresse || '(nicht gepflegt)' });
     return this.ansicht();
   }
 
@@ -320,8 +320,8 @@ export class Betrieb {
     const { m, passwort } = this.probe(e);
     try {
       await transport(m, passwort).sendMail({
-        from: absenderVon(m), to: ziel, subject: 'Testmail vom DMS',
-        text: `Hallo,\n\ndiese Testmail kommt aus der Werkbank deines DMS. Der E-Mail-Versand über ${m.host} funktioniert.\n`,
+        from: absenderVon(m), to: ziel, subject: 'Testmail von Ablago',
+        text: `Hallo,\n\ndiese Testmail kommt aus der Werkbank deines Ablago. Der E-Mail-Versand über ${m.host} funktioniert.\n`,
       });
       log.info('Testmail verschickt', { an: ziel, server: m.host });
       return { ok: true, meldung: `Testmail an ${ziel} verschickt. Sie sollte in wenigen Minuten ankommen (auch im Spam-Ordner nachsehen).` };

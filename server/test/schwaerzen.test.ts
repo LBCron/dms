@@ -209,7 +209,7 @@ describe('Bilder schwärzen (#392)', () => {
     const png = await bildMitText('png');
     const a = await analysiere(png, 'image/png');
     assert.equal(a.seiten.length, 1);
-    assert.equal(a.quelle, 'keine', 'Bilder haben keine Textebene (#459: keine Texterkennung im DMS)');
+    assert.equal(a.quelle, 'keine', 'Bilder haben keine Textebene (#459: keine Texterkennung in Ablago)');
     const r = await schwaerze(png, 'image/png', a, [{ seite: 1, x: 0, y: 0, b: 0.5, h: 0.2 }]);
     assert.equal(r.mime, 'image/png');
     assert.equal(r.inhalt.subarray(1, 4).toString(), 'PNG');

@@ -57,7 +57,7 @@ export function EingangsordnerPanel({ z }: { z: EingangZustand }) {
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       {s.pausiert && <div className="hinweis warn"><p>Ruht gerade: {s.pausiert}.</p></div>}
-      {s.andereInstanz && <div className="hinweis warn"><p>Eine andere Instanz des DMS übernimmt den Eingangsordner; diese hier wartet.</p></div>}
+      {s.andereInstanz && <div className="hinweis warn"><p>Eine andere Instanz von Ablago übernimmt den Eingangsordner; diese hier wartet.</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <h2 className="h3">Einstellungen</h2>
         <label className="haken"><input id="eingang-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Eingangsordner prüfen</span></label>
@@ -71,7 +71,7 @@ export function EingangsordnerPanel({ z }: { z: EingangZustand }) {
             </select></label>
         </div>
         <label className="haken"><input type="checkbox" checked={e.doppelteUeberspringen === true} onChange={(x) => setE({ ...e, doppelteUeberspringen: x.target.checked })} />
-          <span>Doppelte Dateien überspringen <small className="leise">– liegt genau diese Datei schon im DMS, wird keine Post angelegt; die Datei wird wie oben weggeräumt</small></span></label>
+          <span>Doppelte Dateien überspringen <small className="leise">– liegt genau diese Datei schon in Ablago, wird keine Post angelegt; die Datei wird wie oben weggeräumt</small></span></label>
         <div className="knoepfe">
           <button type="button" className="knopf" onClick={() => void jetzt()}>Jetzt prüfen</button>
         </div>

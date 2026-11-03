@@ -49,7 +49,7 @@
   "passwort.knopf": "Passwort speichern und anmelden",
   "fehler.falsch": "E-Mail-Adresse oder Passwort stimmen nicht.",
   "fehler.anbieter": "Bitte über „{knopf}“ anmelden.",
-  "fehler.anbieter.unbekannt": "Für {email} gibt es im DMS keinen Zugang. Bitte einen Administrator, dich anzulegen.",
+  "fehler.anbieter.unbekannt": "Für {email} gibt es in Ablago keinen Zugang. Bitte einen Administrator, dich anzulegen.",
   "fehler.deaktiviert": "Dieser Zugang ist deaktiviert.",
   "fehler.abgelaufen": "Die Anmeldung ist abgelaufen. Bitte noch einmal mit dem Passwort beginnen.",
   "fehler.code": "Der Code stimmt nicht.",

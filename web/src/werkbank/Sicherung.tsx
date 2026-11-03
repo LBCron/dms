@@ -192,13 +192,13 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
           <div className="stapel">
             <p><strong>{lauf!.titel}</strong> – {lauf!.schritt}</p>
             <progress max={Math.max(lauf!.gesamt, lauf!.bytes, 1)} value={lauf!.bytes} />
-            <p className="leise klein">{bytes(lauf!.bytes)}{lauf!.gesamt ? ` von etwa ${bytes(lauf!.gesamt)}` : ''} · seit {zeit(lauf!.gestartet)}. Du kannst die Seite verlassen; das DMS bleibt nutzbar.</p>
+            <p className="leise klein">{bytes(lauf!.bytes)}{lauf!.gesamt ? ` von etwa ${bytes(lauf!.gesamt)}` : ''} · seit {zeit(lauf!.gestartet)}. Du kannst die Seite verlassen; Ablago bleibt nutzbar.</p>
           </div>
         ) : (
           <>
             {lauf?.status === 'fehler' && <p className="fehlertext" role="alert">{lauf.titel} fehlgeschlagen: {lauf.fehler}</p>}
             {lauf?.status === 'fertig' && lauf.art === 'sicherung' && <p className="gutertext" role="status">{lauf.titel} fertig ({lauf.beendet ? zeit(lauf.beendet) : ''}).</p>}
-            <p className="leise">Das DMS läuft dabei weiter. Zum Sichern muss niemand abgemeldet werden.</p>
+            <p className="leise">Ablago läuft dabei weiter. Zum Sichern muss niemand abgemeldet werden.</p>
             <div className="knoepfe"><button className="knopf primaer" disabled={!s.zustand.schluessel} onClick={() => void tu(() => api.sicherungJetzt())}>Jetzt sichern</button></div>
           </>
         )}
@@ -224,7 +224,7 @@ export function SicherungPanel({ z }: { z: SicherungZustand }) {
                 <td>{x.meta ? ART[x.meta.art] ?? x.meta.art : x.schlank ? <span className="leise">{t('werkbank.sicherung.extern.zurueck')}</span> : <span className="fehlertext">Metadaten fehlen</span>}
                   {x.meta && s.zustand.fingerabdruck && x.meta.verschluesselung.fingerabdruck !== s.zustand.fingerabdruck && <> <span className="chip warn" title={`Schlüssel ${x.meta.verschluesselung.fingerabdruck} – braucht das Notfallblatt zu diesem Schlüssel`}>früherer Schlüssel</span></>}</td>
                 <td className="rechts kurz">{bytes(x.bytes)}</td>
-                <td>{x.meta ? `${x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen, ${x.meta.anzahl.dateien.toLocaleString('de-DE')} Dateien` : '–'}{x.meta && <span className="leise klein"> · DMS {x.meta.umgebung.dms}</span>}</td>
+                <td>{x.meta ? `${x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen, ${x.meta.anzahl.dateien.toLocaleString('de-DE')} Dateien` : '–'}{x.meta && <span className="leise klein"> · Ablago {x.meta.umgebung.dms}</span>}</td>
                 {ortSpalte && <td><OrtZelle e={x} extern={s.zustand.extern} /></td>}
                 <td>{x.pruefung ? <span className={`chip ${x.pruefung.ok ? 'gut' : 'schlecht'}`} title={`geprüft ${zeit(x.pruefung.am)}`}>{x.pruefung.ok ? 'unverändert' : 'weicht ab'}</span> : <span className="leise">–</span>}</td>
                 <td>{x.probe ? <span className={`chip ${x.probe.ok ? 'gut' : 'schlecht'}`} title={`${zeit(x.probe.am)}: ${x.probe.info}`}>{x.probe.ok ? 'in Ordnung' : 'Fehler'}</span> : <span className="leise">–</span>}</td>
@@ -351,7 +351,7 @@ function Probe({ stand, lauf, sicherungen, gesperrt, neuLaden }: { stand: ProbeS
     <form className="blatt" id="probe" onKeyDown={ent.tasten}
       onSubmit={(x) => { x.preventDefault(); setSendet(true); void tu(() => api.probePlan(plan), 'Gespeichert.').finally(() => setSendet(false)); }}>
       <h2 className="h3">Probe-Wiederherstellung <Hilfe ort="sicherung.probe" /></h2>
-      <p>Spielt die neueste Sicherung in einen eigenen, vorübergehenden Bereich der Datenbank ein und prüft sie: Prüfsumme, Entschlüsselung, Prüfwort, Anzahl Mappen, Dokumente und Benutzer, Prüfwerte von bis zu 20 Dateien. Das laufende DMS bleibt unberührt; der Bereich wird danach entfernt.</p>
+      <p>Spielt die neueste Sicherung in einen eigenen, vorübergehenden Bereich der Datenbank ein und prüft sie: Prüfsumme, Entschlüsselung, Prüfwort, Anzahl Mappen, Dokumente und Benutzer, Prüfwerte von bis zu 20 Dateien. Das laufende Ablago bleibt unberührt; der Bereich wird danach entfernt.</p>
       <dl className="eigenschaften">
         <dt>Ampel</dt><dd>{stand.ampel ? <span className={`chip ${AMPEL[stand.ampel][0]}`}>{AMPEL[stand.ampel][1]}</span> : <span className="leise">noch keine Sicherung</span>}</dd>
         {stand.letzte && <><dt>Letzte Probe</dt><dd>{zeit(stand.letzte.am)} · {stand.letzte.name}{!stand.letzte.ok && <div className="fehlertext klein">{stand.letzte.info}</div>}</dd></>}

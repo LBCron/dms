@@ -129,7 +129,7 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
               Zusammen {groesse(summe)}{klein && mitPdf ? ' vor dem Verkleinern' : ''}.{zuGross ? ' Das ist zu groß zum Versenden; bitte weniger auswählen.' : summe > EMAIL_WARNUNG && !(klein && mitPdf) ? ` Viele Mailserver nehmen E-Mails über 20 MB nicht an.${mitPdf ? ' Tipp: PDFs verkleinert senden.' : ''}` : ''}
             </p>}
           </fieldset>
-          <p className="leise klein">Absender ist die Adresse des DMS. Antworten gehen an dich ({ich?.email}).</p>
+          <p className="leise klein">Absender ist die Adresse von Ablago. Antworten gehen an dich ({ich?.email}).</p>
           {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
           <div className="knoepfe">{stempelProblem && <p className="leise klein">{stempelProblem}</p>}<button className="knopf primaer" disabled={laeuft || bereit === null || !an.trim() || !betreff.trim() || zuGross || !!stempelProblem}>{laeuft ? 'Wird verschickt …' : 'Senden'}</button></div>
         </form>

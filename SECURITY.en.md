@@ -10,7 +10,7 @@ Helpful details: the affected version (Werkbank → Technik), steps to reproduce
 
 ## Supported versions
 
-Fixes are provided for the **latest version**. Please update first before reporting – see [Updating](https://motom001.github.io/dms/admin/aktuell/aktualisieren/) (German).
+Fixes are provided for the **latest version**. Please update first before reporting – see [Updating](https://help.ablago.app/admin/aktuell/aktualisieren/) (German).
 
 ## What is checked automatically
 
@@ -33,11 +33,11 @@ gh attestation verify oci://ghcr.io/motom001/dms:<version> -R motom001/dms
 gh attestation verify oci://ghcr.io/motom001/dms-komplett:<version> -R motom001/dms
 ```
 
-How this is built in detail is described in the [developer manual](https://motom001.github.io/dms/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates) (German).
+How this is built in detail is described in the [developer manual](https://help.ablago.app/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates) (German).
 
 ## Verifying where packages come from
 
-The DMS project signs the official package catalog ([dms-registry](https://github.com/motom001/dms-registry)) with Ed25519. The DMS verifies the signature with these two public keys of the maintainer (built into the code, `server/src/projektschluessel.ts`); a signature made with either of them is valid:
+The Ablago project signs the official package catalog ([dms-registry](https://github.com/motom001/dms-registry)) with Ed25519. Ablago verifies the signature with these two public keys of the maintainer (built into the code, `server/src/projektschluessel.ts`); a signature made with either of them is valid:
 
 | Key | Key ID | Fingerprint (SHA-256 of the public key) |
 | --- | --- | --- |
@@ -46,4 +46,4 @@ The DMS project signs the official package catalog ([dms-registry](https://githu
 
 > **Versions 0.141.0 to 0.144.1** only know test keys whose private counterparts are public in the tests. As soon as the registry signs with the keys above, they report "signature invalid" for the official catalog. Update to a newer version. You can check the fingerprints in the registry with `python3 werkzeuge/signieren.py fingerabdruck signier.pub`; the public keys are posted in [motom001/dms-registry#74](https://github.com/motom001/dms-registry/issues/74).
 
-What "signed" and "not signed" mean in the install preview is explained in the [administration handbook](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht) (German).
+What "signed" and "not signed" mean in the install preview is explained in the [administration handbook](https://help.ablago.app/admin/aktuell/pakete/#herkunft-signiert-oder-nicht) (German).

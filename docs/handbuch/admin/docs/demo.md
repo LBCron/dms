@@ -22,7 +22,7 @@ Demo-Mappen sind gekennzeichnet. Die Systemmappentypen *Benutzer*, *Rolle* und *
 
 ### Startwert
 
-Ein **Startwert** (z. B. `messung-1`) macht einen Lauf wiederholbar: Gleicher Startwert, gleiche Mappentypen und gleicher Ausgangsstand ergeben dieselben Werte und dieselben Dokumente. So lassen sich Messungen vor und nach einem Update vergleichen. Ohne Startwert wählt das DMS einen und nennt ihn im Ergebnis.
+Ein **Startwert** (z. B. `messung-1`) macht einen Lauf wiederholbar: Gleicher Startwert, gleiche Mappentypen und gleicher Ausgangsstand ergeben dieselben Werte und dieselben Dokumente. So lassen sich Messungen vor und nach einem Update vergleichen. Ohne Startwert wählt Ablago einen und nennt ihn im Ergebnis.
 
 ### Dokumente erzeugen
 
@@ -52,7 +52,7 @@ Vor dem Start steht eine **Abschätzung** auf der Seite und ändert sich beim Sc
 
 ### Beobachten
 
-Das Ergebnis jedes Laufs nennt Dauer, Anzahl, Größe, Seiten und Startwert (auch im [Protokoll](fehlersuche.md#protokoll)), damit Läufe vergleichbar sind. Wie sich das DMS dabei verhält, zeigen die vorhandenen Werkzeuge: **Werkbank → [Datenbank-Anbindung](installation.md#lange-datenbankzugriffe)** (lange Zugriffe), **Texterkennung** (Warteschlange), **Systemzustand** (Speicherplatz) und die Zeiten im Browser unter *Server-Timing*.
+Das Ergebnis jedes Laufs nennt Dauer, Anzahl, Größe, Seiten und Startwert (auch im [Protokoll](fehlersuche.md#protokoll)), damit Läufe vergleichbar sind. Wie sich Ablago dabei verhält, zeigen die vorhandenen Werkzeuge: **Werkbank → [Datenbank-Anbindung](installation.md#lange-datenbankzugriffe)** (lange Zugriffe), **Texterkennung** (Warteschlange), **Systemzustand** (Speicherplatz) und die Zeiten im Browser unter *Server-Timing*.
 
 Damit du nebenher normal weiterarbeiten kannst, legt der Lauf nach jedem Dokument und jedem Paket Mappen eine kurze Pause ein und frischt danach die Statistik der Datenbank auf (`ANALYZE`). Er dauert dadurch etwas länger. Die Texterkennung läuft trotzdem parallel und braucht auf einem NAS viel Rechenzeit – einzelne lange Zugriffe unter **Werkbank → Datenbank-Anbindung** sind in dieser Zeit möglich.
 

@@ -3,7 +3,7 @@
 !!! info "Geprüft: Vorlage und arm64-Image automatisch, Gerät noch nicht"
     Das Image für arm64 prüfen die Rechner von GitHub bei jeder Änderung auf einem echten ARM-Rechner, die Vorlage startet dort probehalber (amd64). Von einem Raspberry Pi gibt es noch keine Meldung; für das Projekt suchen wir einen Raspberry Pi 5 ([#589](https://github.com/motom001/dms/issues/589)). Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-Mit dieser Anleitung bringst du das DMS auf einem **Raspberry Pi 4 oder 5** zum Laufen – vom Auspacken bis zur ersten Anmeldung. Du brauchst dafür keine IT-Kenntnisse. Ein paar Befehle tippst du ab oder kopierst sie, jeder ist erklärt. Rechne mit **etwa einer Stunde**, das meiste davon ist Warten.
+Mit dieser Anleitung bringst du Ablago auf einem **Raspberry Pi 4 oder 5** zum Laufen – vom Auspacken bis zur ersten Anmeldung. Du brauchst dafür keine IT-Kenntnisse. Ein paar Befehle tippst du ab oder kopierst sie, jeder ist erklärt. Rechne mit **etwa einer Stunde**, das meiste davon ist Warten.
 
 **So ist jeder Schritt aufgebaut:** was du tust · was du danach siehst · was hilft, wenn es nicht klappt · wo die **offizielle Anleitung** steht. Sieht bei dir etwas anders aus als hier – Programme bekommen neue Versionen –, findest du dort den aktuellen Stand.
 
@@ -11,7 +11,7 @@ Mit dieser Anleitung bringst du das DMS auf einem **Raspberry Pi 4 oder 5** zum 
 2. [System aufspielen](#system-aufspielen)
 3. [Pi anschließen und finden](#anschliessen)
 4. [Mit dem Pi verbinden](#verbinden)
-5. [DMS installieren – ein Befehl](#dms-installieren)
+5. [Ablago installieren – ein Befehl](#dms-installieren)
 6. [Im Browser einrichten](#im-browser-einrichten)
 7. [Gut zu wissen](#gut-zu-wissen)
 
@@ -31,7 +31,7 @@ Danach kannst du freiwillig messen, [wie schnell dein Pi ist](#wie-schnell-ist-m
 
 | Was | Empfehlung | Warum |
 | --- | --- | --- |
-| **Raspberry Pi** | **Pi 5** oder **Pi 4** mit **4 GB** oder **8 GB** Arbeitsspeicher | Mit 2 GB läuft das DMS auch, aber knapp. Mit 4 GB oder mehr bleibt Luft für Texterkennung und Sicherungen. |
+| **Raspberry Pi** | **Pi 5** oder **Pi 4** mit **4 GB** oder **8 GB** Arbeitsspeicher | Mit 2 GB läuft Ablago auch, aber knapp. Mit 4 GB oder mehr bleibt Luft für Texterkennung und Sicherungen. |
 | **Netzteil** | das **offizielle Netzteil** für dein Modell (Pi 5: 27 W, Pi 4: 15 W, beide mit USB-C) | Ein schwaches Handy-Ladegerät führt zu seltsamen Fehlern und Abstürzen, und die SSD bekommt zu wenig Strom. |
 | **Gehäuse mit Kühler** | beim Pi 5 mit Lüfter (z. B. der offizielle „Active Cooler“), beim Pi 4 mindestens Kühlkörper | Wird der Pi zu heiß, bremst er sich selbst aus. |
 | **SSD** | eine **SSD mit USB-3-Anschluss** (128 GB bis 1 TB); beim Pi 5 alternativ eine NVMe-SSD auf einem Aufsatz | Siehe unten: SSD statt SD-Karte. |
@@ -39,9 +39,9 @@ Danach kannst du freiwillig messen, [wie schnell dein Pi ist](#wie-schnell-ist-m
 | **PC oder Mac** | den hast du schon | Damit schreibst du das System auf die SSD und richtest später alles im Browser ein. |
 
 !!! tip "Warum eine SSD statt einer SD-Karte?"
-    Das DMS hat eine **Datenbank**. Sie schreibt ständig viele kleine Änderungen. **SD-Karten verschleißen** dabei und gehen oft **ohne Vorwarnung** kaputt – mit allen Dokumenten darauf. Eine SSD ist für so etwas gebaut, hält viele Jahre und ist **um ein Vielfaches schneller**: Suche, Vorschaubilder, Texterkennung und Sicherungen gehen spürbar flotter. Am einfachsten ist eine SSD mit USB-Anschluss: Du schreibst das System direkt darauf und brauchst dann gar keine SD-Karte.
+    Ablago hat eine **Datenbank**. Sie schreibt ständig viele kleine Änderungen. **SD-Karten verschleißen** dabei und gehen oft **ohne Vorwarnung** kaputt – mit allen Dokumenten darauf. Eine SSD ist für so etwas gebaut, hält viele Jahre und ist **um ein Vielfaches schneller**: Suche, Vorschaubilder, Texterkennung und Sicherungen gehen spürbar flotter. Am einfachsten ist eine SSD mit USB-Anschluss: Du schreibst das System direkt darauf und brauchst dann gar keine SD-Karte.
 
-**Was nicht geht:** Raspberry Pi 3, Pi 2, Pi 1 und Pi Zero haben zu wenig Arbeitsspeicher. Ein **32-Bit-System** geht auch auf einem Pi 4 oder 5 nicht – das DMS gibt es nur für 64 Bit.
+**Was nicht geht:** Raspberry Pi 3, Pi 2, Pi 1 und Pi Zero haben zu wenig Arbeitsspeicher. Ein **32-Bit-System** geht auch auf einem Pi 4 oder 5 nicht – Ablago gibt es nur für 64 Bit.
 
 **Offizielle Anleitung:** [Raspberry Pi – Hardware, Netzteile und Kühlung](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html)
 
@@ -59,7 +59,7 @@ Das „System“ ist **Raspberry Pi OS** – so etwas wie Windows, nur für den 
     !!! example "Bildschirmfoto folgt – Imager: Startseite"
         **Zu sehen:** die Startseite des Imagers mit den drei Knöpfen *Gerät wählen*, *OS wählen* und *SD-Karte wählen* (bzw. *Speicher wählen*). **Markiert:** *Gerät wählen*, darunter die Liste mit *Raspberry Pi 5* und *Raspberry Pi 4*.
 
-4. **OS wählen:** *Raspberry Pi OS (other)* → **Raspberry Pi OS Lite (64-bit)**. „Lite“ heißt: ohne Bildschirmoberfläche. Die braucht ein Server nicht, und so bleibt mehr Arbeitsspeicher für das DMS.
+4. **OS wählen:** *Raspberry Pi OS (other)* → **Raspberry Pi OS Lite (64-bit)**. „Lite“ heißt: ohne Bildschirmoberfläche. Die braucht ein Server nicht, und so bleibt mehr Arbeitsspeicher für Ablago.
 
     !!! example "Bildschirmfoto folgt – Imager: Betriebssystem wählen"
         **Zu sehen:** die Liste der Betriebssysteme, aufgeklappt *Raspberry Pi OS (other)*. **Markiert:** der Eintrag *Raspberry Pi OS Lite (64-bit)* – nicht der ohne „(64-bit)“.
@@ -105,11 +105,11 @@ Das „System“ ist **Raspberry Pi OS** – so etwas wie Windows, nur für den 
     Die Ansicht sieht bei jedem Router etwas anders aus; die Werte im Bild sind erfunden.
 
 !!! tip "Immer dieselbe Adresse"
-    In der Geräteliste des Routers kannst du beim Pi meist einstellen, dass er **immer dieselbe IP-Adresse** bekommt (oft „Diesem Gerät immer dieselbe IPv4-Adresse zuweisen“ oder „DHCP-Reservierung“). Dann bleibt auch die Adresse des DMS gleich.
+    In der Geräteliste des Routers kannst du beim Pi meist einstellen, dass er **immer dieselbe IP-Adresse** bekommt (oft „Diesem Gerät immer dieselbe IPv4-Adresse zuweisen“ oder „DHCP-Reservierung“). Dann bleibt auch die Adresse von Ablago gleich.
 
 **Wenn es nicht klappt**
 
-- *Die grüne Leuchte flackert nicht, der Pi taucht nicht im Router auf:* Er startet nicht von der SSD. Nimm einen anderen blauen USB-Anschluss. Ein **Pi 4** aus den ersten Baujahren kann noch nicht von USB starten – dann musst du einmal seinen Bootloader aktualisieren, wie in der offiziellen Anleitung beschrieben (Abschnitt *Boot from USB*). Notlösung: das System in Schritt 2 auf eine SD-Karte schreiben; die SSD nimmst du dann für die Daten des DMS (siehe *Ordner auf einer zusätzlichen SSD* in [Schritt 5](#dms-installieren)).
+- *Die grüne Leuchte flackert nicht, der Pi taucht nicht im Router auf:* Er startet nicht von der SSD. Nimm einen anderen blauen USB-Anschluss. Ein **Pi 4** aus den ersten Baujahren kann noch nicht von USB starten – dann musst du einmal seinen Bootloader aktualisieren, wie in der offiziellen Anleitung beschrieben (Abschnitt *Boot from USB*). Notlösung: das System in Schritt 2 auf eine SD-Karte schreiben; die SSD nimmst du dann für die Daten von Ablago (siehe *Ordner auf einer zusätzlichen SSD* in [Schritt 5](#dms-installieren)).
 - *Der Pi startet immer wieder neu:* fast immer das **Netzteil**. Nimm das offizielle.
 
 **Offizielle Anleitung:** [Raspberry Pi – Startvorgang und Boot von USB](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html) · [IP-Adresse finden](https://www.raspberrypi.com/documentation/computers/remote-access.html)
@@ -163,7 +163,7 @@ Der Pi hat keinen Bildschirm. Du steuerst ihn vom PC aus über ein **Terminal** 
 
 **Offizielle Anleitung:** [Fernzugriff mit SSH](https://www.raspberrypi.com/documentation/computers/remote-access.html)
 
-## 5. DMS installieren { #dms-installieren }
+## 5. Ablago installieren { #dms-installieren }
 
 Drei Schritte, die Befehle stehen in Kästen zum Kopieren. Warte nach jedem Kasten, bis wieder `lena@dms:~ $` erscheint.
 
@@ -179,7 +179,7 @@ sudo apt update && sudo apt full-upgrade -y
 
 ### 5.2 Docker installieren
 
-Das DMS läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen („Container“) startet, ohne am System etwas zu verbiegen. Raspberry Pi OS (64 Bit) beruht auf Debian, darum gilt die **offizielle Anleitung von Docker für Debian**. Docker empfiehlt dort für den Dauerbetrieb, Docker aus seiner eigenen **Paketquelle** zu installieren: Das ist ein Verzeichnis im Internet, aus dem `apt` (die Programmverwaltung des Pi) Programme lädt – genau wie die Programme von Raspberry Pi OS selbst. Die Befehle unten stammen unverändert aus dieser Anleitung. Es sind drei Kästen; kopiere sie einzeln und warte jeweils, bis wieder `lena@dms:~ $` erscheint.
+Ablago läuft in **Docker** – einem Programm, das fertig gepackte Anwendungen („Container“) startet, ohne am System etwas zu verbiegen. Raspberry Pi OS (64 Bit) beruht auf Debian, darum gilt die **offizielle Anleitung von Docker für Debian**. Docker empfiehlt dort für den Dauerbetrieb, Docker aus seiner eigenen **Paketquelle** zu installieren: Das ist ein Verzeichnis im Internet, aus dem `apt` (die Programmverwaltung des Pi) Programme lädt – genau wie die Programme von Raspberry Pi OS selbst. Die Befehle unten stammen unverändert aus dieser Anleitung. Es sind drei Kästen; kopiere sie einzeln und warte jeweils, bis wieder `lena@dms:~ $` erscheint.
 
 **Erstens: Werkzeuge bereitlegen.**
 
@@ -209,7 +209,7 @@ Was die Zeilen tun:
 --8<-- "docker-apt-3-pakete.txt"
 ```
 
-Das installiert Docker selbst (`docker-ce`), den Befehl `docker` (`docker-ce-cli`), den Teil, der die Container tatsächlich laufen lässt (`containerd.io`), und zwei Erweiterungen, darunter **Docker Compose** (`docker-compose-plugin`) – damit startet das DMS seine zwei Container gemeinsam. Der Pi zeigt, wie viel er herunterladen will, und fragt `Do you want to continue? [Y/n]` (auf Deutsch `Möchten Sie fortfahren? [J/n]`): einfach ++enter++ drücken. Das dauert einige Minuten. Docker startet danach von selbst, auch nach jedem Neustart.
+Das installiert Docker selbst (`docker-ce`), den Befehl `docker` (`docker-ce-cli`), den Teil, der die Container tatsächlich laufen lässt (`containerd.io`), und zwei Erweiterungen, darunter **Docker Compose** (`docker-compose-plugin`) – damit startet Ablago seine zwei Container gemeinsam. Der Pi zeigt, wie viel er herunterladen will, und fragt `Do you want to continue? [Y/n]` (auf Deutsch `Möchten Sie fortfahren? [J/n]`): einfach ++enter++ drücken. Das dauert einige Minuten. Docker startet danach von selbst, auch nach jedem Neustart.
 
 Zum Schluss erlaubst du deinem Benutzer, Docker ohne `sudo` zu benutzen:
 
@@ -231,7 +231,7 @@ docker compose version
 
 Kommt `Docker Compose version v2…` (oder höher), ist Docker bereit.
 
-**Updates:** Weil Docker jetzt aus einer Paketquelle kommt, wird es mit dem System zusammen aktualisiert – mit demselben Befehl wie in Schritt 5.1: `sudo apt update && sudo apt full-upgrade -y`. Das DMS selbst aktualisierst du getrennt davon, siehe [Gut zu wissen](#gut-zu-wissen) und [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+**Updates:** Weil Docker jetzt aus einer Paketquelle kommt, wird es mit dem System zusammen aktualisiert – mit demselben Befehl wie in Schritt 5.1: `sudo apt update && sudo apt full-upgrade -y`. Ablago selbst aktualisierst du getrennt davon, siehe [Gut zu wissen](#gut-zu-wissen) und [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ??? note "Für Fortgeschrittene: das Installationsskript von Docker"
     Docker bietet auch ein Skript an, das alles oben in einem Rutsch erledigt:
@@ -245,10 +245,10 @@ Kommt `Docker Compose version v2…` (oder höher), ist Docker bereit.
 
 **Offizielle Anleitung:** [Docker Engine auf Debian installieren](https://docs.docker.com/engine/install/debian/) · [Docker ohne sudo benutzen](https://docs.docker.com/engine/install/linux-postinstall/)
 
-### 5.3 Das DMS – mit einem Befehl
+### 5.3 Ablago – mit einem Befehl { #53-das-dms-mit-einem-befehl }
 
 !!! warning "Erst ansehen, dann starten"
-    Ein Skript aus dem Internet sollte man sich ansehen, bevor man es startet. Das Einrichtungsskript des DMS ist kurz und ausführlich auf Deutsch kommentiert: [einrichten.sh auf GitHub](https://github.com/motom001/dms/blob/main/deploy/raspberry-pi/einrichten.sh). Du kannst es auch in zwei Schritten machen – laden, auf dem Pi ansehen (Blättern mit den Pfeiltasten, Beenden mit ++q++), dann starten:
+    Ein Skript aus dem Internet sollte man sich ansehen, bevor man es startet. Das Einrichtungsskript von Ablago ist kurz und ausführlich auf Deutsch kommentiert: [einrichten.sh auf GitHub](https://github.com/motom001/dms/blob/main/deploy/raspberry-pi/einrichten.sh). Du kannst es auch in zwei Schritten machen – laden, auf dem Pi ansehen (Blättern mit den Pfeiltasten, Beenden mit ++q++), dann starten:
 
     ```sh
     curl -fsSLO https://raw.githubusercontent.com/motom001/dms/main/deploy/raspberry-pi/einrichten.sh
@@ -267,8 +267,8 @@ curl -fsSLO https://raw.githubusercontent.com/motom001/dms/main/deploy/raspberry
 **Was das Skript tut:**
 
 1. **Prüfen:** 64-Bit-System, mindestens 2 GB Arbeitsspeicher, genug freier Platz, Docker mit Compose. Fehlt etwas, sagt es auf Deutsch, was, und hört auf, **bevor** es etwas anlegt.
-2. **Anlegen:** den Ordner `~/dms` (also `/home/lena/dms`) mit der Vorlage `docker-compose.yml` – **zwei Container**, das DMS und seine Datenbank – und eine Datei `.env` mit einem **zufälligen Passwort** für die Datenbank. Das Passwort musst du dir nicht merken; der Einrichtungsassistent braucht es nicht.
-3. **Starten:** Es lädt die Programme (einige hundert MB, beim ersten Mal ein paar Minuten), startet das DMS und wartet, bis es antwortet.
+2. **Anlegen:** den Ordner `~/dms` (also `/home/lena/dms`) mit der Vorlage `docker-compose.yml` – **zwei Container**, Ablago und seine Datenbank – und eine Datei `.env` mit einem **zufälligen Passwort** für die Datenbank. Das Passwort musst du dir nicht merken; der Einrichtungsassistent braucht es nicht.
+3. **Starten:** Es lädt die Programme (einige hundert MB, beim ersten Mal ein paar Minuten), startet Ablago und wartet, bis es antwortet.
 
 **Was du am Ende siehst** (Werte erfunden):
 
@@ -298,10 +298,10 @@ Lass das Fenster offen, du brauchst den **Einrichtungscode** gleich. Das Skript 
 | *Docker ist nur mit sudo erreichbar* | Das Skript fragt nach deinem Passwort und macht weiter. Für später: abmelden und neu verbinden (Schritt 5.2) |
 | *Port 8080 ist schon belegt* | Auf dem Pi läuft schon ein anderes Programm mit dieser Adresse. In `~/dms/docker-compose.yml` `"8080:3000"` z. B. in `"8081:3000"` ändern, dann `bash einrichten.sh` |
 | *Die Vorlage ließ sich nicht laden* / *Die Programme ließen sich nicht laden* | Der Pi kommt nicht ins Internet: Netzwerkkabel prüfen, dann noch einmal |
-| *Das DMS antwortet nach 5 Minuten noch nicht* | Protokoll ansehen: `cd ~/dms && docker compose logs app --tail 50` – und mit der Meldung ein [Issue](https://github.com/motom001/dms/issues) schreiben |
+| *Ablago antwortet nach 5 Minuten noch nicht* | Protokoll ansehen: `cd ~/dms && docker compose logs app --tail 50` – und mit der Meldung ein [Issue](https://github.com/motom001/dms/issues) schreiben |
 
 ??? note "Ordner auf einer zusätzlichen SSD"
-    Startet der Pi von einer SD-Karte und hängt die SSD zusätzlich dran, gehören die Daten des DMS auf die SSD. Die SSD muss dafür fest eingebunden sein, z. B. unter `/mnt/ssd` – wie das geht, steht in der [offiziellen Anleitung zu externem Speicher](https://www.raspberrypi.com/documentation/computers/configuration.html). Danach gibst du dem Skript den Ordner mit:
+    Startet der Pi von einer SD-Karte und hängt die SSD zusätzlich dran, gehören die Daten von Ablago auf die SSD. Die SSD muss dafür fest eingebunden sein, z. B. unter `/mnt/ssd` – wie das geht, steht in der [offiziellen Anleitung zu externem Speicher](https://www.raspberrypi.com/documentation/computers/configuration.html). Danach gibst du dem Skript den Ordner mit:
 
     ```sh
     sudo mkdir -p /mnt/ssd/dms && sudo chown $USER: /mnt/ssd/dms
@@ -326,7 +326,7 @@ Lass das Fenster offen, du brauchst den **Einrichtungscode** gleich. Das Skript 
 ## 6. Im Browser einrichten { #im-browser-einrichten }
 
 1. **Öffnen:** Gib auf deinem PC im Browser die Adresse aus dem Skript ein, also `http://dms.local:8080` (oder `http://192.168.178.42:8080` mit deiner IP-Adresse). Nach einem frischen Start kann es eine Minute dauern, bis die Seite kommt.
-2. **Einrichtungscode:** Der Assistent fragt als Erstes nach dem Code, den das Skript angezeigt hat. Er sorgt dafür, dass niemand anderes im Heimnetz dein DMS vor dir einrichtet. Nach einer Datenbank fragt der Assistent **nicht** – die hat das Skript schon eingetragen.
+2. **Einrichtungscode:** Der Assistent fragt als Erstes nach dem Code, den das Skript angezeigt hat. Er sorgt dafür, dass niemand anderes im Heimnetz dein Ablago vor dir einrichtet. Nach einer Datenbank fragt der Assistent **nicht** – die hat das Skript schon eingetragen.
 
     ![Einrichtungscode](bilder/einrichtung-code.png)
 
@@ -342,45 +342,45 @@ Lass das Fenster offen, du brauchst den **Einrichtungscode** gleich. Das Skript 
 
     ![Anmeldung](bilder/anmelden.png)
 
-Fertig – dein DMS läuft. Wie es weitergeht (Sicherung einschalten, loslegen), steht unter [Nach der Installation](index.md#nach-der-installation).
+Fertig – dein Ablago läuft. Wie es weitergeht (Sicherung einschalten, loslegen), steht unter [Nach der Installation](index.md#nach-der-installation).
 
 !!! tip "Auf dem Handy"
     Manche Handys (vor allem ältere Android-Geräte) kennen Namen mit `.local` nicht. Nimm dort die IP-Adresse, also `http://192.168.178.42:8080`.
 
 ## 7. Gut zu wissen { #gut-zu-wissen }
 
-- **Sicherung auf ein anderes Gerät:** Schalte unter **Werkbank → Sicherung** den Zeitplan ein und druck das **Notfallblatt** aus. Die Sicherungen landen in `~/dms/sicherung` – also auf derselben SSD. Geht die kaputt, sind sie mit weg. Kopiere sie deshalb regelmäßig woandershin, z. B. auf ein NAS oder eine USB-Platte. Mehr unter [Sicherung](https://motom001.github.io/dms/admin/aktuell/sicherung/).
-- **DMS aktualisieren:** **Werkbank → Technik** zeigt, ob es eine neue Version gibt. Aktualisieren: `cd ~/dms && docker compose pull && docker compose up -d` – oder einfach `bash einrichten.sh` noch einmal. Mehr unter [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+- **Sicherung auf ein anderes Gerät:** Schalte unter **Werkbank → Sicherung** den Zeitplan ein und druck das **Notfallblatt** aus. Die Sicherungen landen in `~/dms/sicherung` – also auf derselben SSD. Geht die kaputt, sind sie mit weg. Kopiere sie deshalb regelmäßig woandershin, z. B. auf ein NAS oder eine USB-Platte. Mehr unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).
+- **Ablago aktualisieren:** **Werkbank → Technik** zeigt, ob es eine neue Version gibt. Aktualisieren: `cd ~/dms && docker compose pull && docker compose up -d` – oder einfach `bash einrichten.sh` noch einmal. Mehr unter [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 - **System aktualisieren:** etwa einmal im Monat `sudo apt update && sudo apt full-upgrade -y` (Schritt 5.1) – das bringt auch Docker auf den neuesten Stand. Wer das nicht vergessen will, lässt Sicherheitsupdates automatisch einspielen, siehe [PC mit Linux](linux.md#4-den-rechner-zum-server-machen).
 - **Wärme:** Mit `vcgencmd measure_temp` zeigt der Pi seine Temperatur. Bis etwa 70 °C ist alles gut; ab 80 °C bremst er sich aus. Dann hilft ein Lüfter oder ein luftigerer Platz (nicht in den geschlossenen Schrank).
 - **Ausschalten:** Nie einfach den Stecker ziehen, solange er läuft – die Datenbank könnte Schaden nehmen. Sauber herunterfahren mit `sudo shutdown -h now`, warten, bis die grüne Leuchte aus ist, dann Stecker ziehen.
-- **Nach einem Stromausfall** startet der Pi von selbst, und das DMS startet mit.
-- **Von unterwegs:** Gib das DMS erst nach außen frei, wenn die Einrichtung fertig ist, und nur mit HTTPS – siehe [Hinter einem Reverse-Proxy](https://motom001.github.io/dms/admin/aktuell/installation/#hinter-einem-reverse-proxy).
+- **Nach einem Stromausfall** startet der Pi von selbst, und Ablago startet mit.
+- **Von unterwegs:** Gib Ablago erst nach außen frei, wenn die Einrichtung fertig ist, und nur mit HTTPS – siehe [Hinter einem Reverse-Proxy](https://help.ablago.app/admin/aktuell/installation/#hinter-einem-reverse-proxy).
 
 ### Wenn die Seite nicht lädt
 
 | Was du siehst | Was es heißt | Was hilft |
 | --- | --- | --- |
-| *Diese Website ist nicht erreichbar* gleich nach dem Start | Das DMS startet noch | 1–2 Minuten warten, Seite neu laden |
+| *Diese Website ist nicht erreichbar* gleich nach dem Start | Ablago startet noch | 1–2 Minuten warten, Seite neu laden |
 | *dms.local wurde nicht gefunden* | Dein Gerät kennt `.local`-Namen nicht | IP-Adresse nehmen: `http://192.168.178.42:8080` |
-| Nichts lädt, auch nicht mit IP-Adresse | Der Pi ist aus oder das DMS läuft nicht | Mit dem Pi verbinden (Schritt 4), dann `cd ~/dms && docker compose ps`: Bei `app` und `db` muss `Up` stehen. Sonst `docker compose up -d` |
+| Nichts lädt, auch nicht mit IP-Adresse | Der Pi ist aus oder Ablago läuft nicht | Mit dem Pi verbinden (Schritt 4), dann `cd ~/dms && docker compose ps`: Bei `app` und `db` muss `Up` stehen. Sonst `docker compose up -d` |
 | `permission denied while trying to connect to the Docker daemon socket` | Du hast dich nach Schritt 5.2 nicht neu angemeldet | `exit`, neu verbinden |
 | Einrichtungscode verloren | – | `bash einrichten.sh` noch einmal starten, es zeigt ihn wieder |
 | Der Pi startet ab und zu von selbst neu, Meldung *Undervoltage* im Protokoll (`dmesg`) | Das Netzteil liefert zu wenig Strom | offizielles Netzteil nehmen |
-| Das DMS ist auf einmal sehr langsam | Der Pi ist zu heiß oder die SSD bekommt zu wenig Strom | Temperatur prüfen (siehe oben), Netzteil prüfen |
+| Ablago ist auf einmal sehr langsam | Der Pi ist zu heiß oder die SSD bekommt zu wenig Strom | Temperatur prüfen (siehe oben), Netzteil prüfen |
 
 Hilft das alles nicht, schreib ein [Issue auf GitHub](https://github.com/motom001/dms/issues) mit Modell, Arbeitsspeicher, der Meldung und – falls vorhanden – den letzten Zeilen von `docker compose logs app --tail 50` (vorher durchsehen: keine Namen oder Adressen).
 
 ## Wie schnell ist mein Pi? { #wie-schnell-ist-mein-pi }
 
-Wie gut das DMS auf einem Raspberry Pi läuft, hat das Projekt **noch nicht gemessen** – die Rechner für die Messungen haben Intel- oder AMD-Prozessoren. Mit etwa **einer halben Stunde** hilfst du dabei. Das ist **freiwillig**, und das DMS selbst meldet nichts von sich aus – du entscheidest, was du schickst.
+Wie gut Ablago auf einem Raspberry Pi läuft, hat das Projekt **noch nicht gemessen** – die Rechner für die Messungen haben Intel- oder AMD-Prozessoren. Mit etwa **einer halben Stunde** hilfst du dabei. Das ist **freiwillig**, und Ablago selbst meldet nichts von sich aus – du entscheidest, was du schickst.
 
 !!! warning "Nur mit einer Test-Installation"
-    Gemessen wird in einer **eigenen Test-Installation** neben deinem DMS, mit erfundenen Daten. Deine echte Ablage bleibt unberührt. Damit die beiden sich nicht gegenseitig bremsen, hältst du dein DMS solange an – mach das, wenn gerade niemand damit arbeitet.
+    Gemessen wird in einer **eigenen Test-Installation** neben deinem Ablago, mit erfundenen Daten. Deine echte Ablage bleibt unberührt. Damit die beiden sich nicht gegenseitig bremsen, hältst du dein Ablago solange an – mach das, wenn gerade niemand damit arbeitet.
 
 ### Vorbereiten
 
-Mit dem Pi verbinden (Schritt 4), dann dein DMS anhalten und die Test-Installation starten:
+Mit dem Pi verbinden (Schritt 4), dann dein Ablago anhalten und die Test-Installation starten:
 
 ```sh
 cd ~/dms && docker compose stop
@@ -394,11 +394,11 @@ docker run -d --name dms-test -p 8099:3000 \
 until curl -fsS http://127.0.0.1:8099/api/konto/status >/dev/null; do sleep 5; done; echo bereit
 ```
 
-Die Test-Installation ist [dms-komplett](komplett.md) (DMS und Datenbank in einem Container) unter Port 8099. Erscheint `bereit`, geht es weiter.
+Die Test-Installation ist [dms-komplett](komplett.md) (Ablago und Datenbank in einem Container) unter Port 8099. Erscheint `bereit`, geht es weiter.
 
 ### Messung 1: Lasttest, Stufe klein
 
-Der [Lasttest](https://motom001.github.io/dms/admin/aktuell/lasttest/) tut so, als würden 2 bis 5 Personen gleichzeitig mit dem DMS arbeiten, mit 5.000 erfundenen Mappen. Trag bei `--geraet` dein Modell und den Arbeitsspeicher ein, bei `--speicher` die Art des Speichers (`SSD`, `NVMe` oder `SD-Karte`):
+Der [Lasttest](https://help.ablago.app/admin/aktuell/lasttest/) tut so, als würden 2 bis 5 Personen gleichzeitig mit Ablago arbeiten, mit 5.000 erfundenen Mappen. Trag bei `--geraet` dein Modell und den Arbeitsspeicher ein, bei `--speicher` die Art des Speichers (`SSD`, `NVMe` oder `SD-Karte`):
 
 ```sh
 docker exec -it dms-test dms-lasttest klein --geraet "Raspberry Pi 5 (8 GB)" --speicher SSD
@@ -445,7 +445,7 @@ Statt des Formulars geht auch ein Kommentar in [Issue #576](https://github.com/m
 
 ### Aufräumen
 
-Test-Installation löschen und dein DMS wieder starten:
+Test-Installation löschen und dein Ablago wieder starten:
 
 ```sh
 docker rm -f dms-test
@@ -455,9 +455,9 @@ cd ~/dms && docker compose start
 
 ### Bisherige Messungen
 
-Die Tabelle füllt das Projekt aus den Rückmeldungen. Mehr Geräte stehen unter [Was das DMS verkraftet](https://motom001.github.io/dms/admin/aktuell/verkraftet/).
+Die Tabelle füllt das Projekt aus den Rückmeldungen. Mehr Geräte stehen unter [Was Ablago verkraftet](https://help.ablago.app/admin/aktuell/verkraftet/).
 
-| Modell | Arbeitsspeicher | Speicher | DMS | Lasttest klein: p95 | Fehlerquote | Texterkennung je Seite | Stand |
+| Modell | Arbeitsspeicher | Speicher | Ablago | Lasttest klein: p95 | Fehlerquote | Texterkennung je Seite | Stand |
 | --- | --- | --- | --- | ---: | ---: | ---: | --- |
 | Raspberry Pi 5 | – | – | – | folgt | folgt | folgt | erste Messung: Maintainer |
 | Raspberry Pi 4 | – | – | – | folgt | folgt | folgt | – |

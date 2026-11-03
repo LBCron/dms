@@ -10,7 +10,7 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 .github/          Workflows (Prüfen, Images, Release, Handbuch …), Dependabot, Vorlagen für Issues und PRs
 ```
 
-Das DMS ist ein **modularer Monolith**: ein Prozess, eine Datenbank. Server und Oberfläche stecken zusammen in einem Image – als `dms` oder, mit PostgreSQL im selben Container, als `dms-komplett`. Wichtige Muster:
+Ablago ist ein **modularer Monolith**: ein Prozess, eine Datenbank. Server und Oberfläche stecken zusammen in einem Image – als `dms` oder, mit PostgreSQL im selben Container, als `dms-komplett`. Wichtige Muster:
 
 - **Repos doppelt:** Jede Datenzugriffs-Schnittstelle gibt es für PostgreSQL (`repo-pg.ts`, `pg…`-Funktionen) und für den Arbeitsspeicher (`repo-speicher.ts`, `speicher…`). Die meisten Tests laufen schnell im Arbeitsspeicher, die Tests mit `TEST_DATABASE_URL` decken PostgreSQL ab. Neue Funktionen brauchen beides, und beide müssen sich gleich verhalten.
 - **Routen** stehen gesammelt in `server/src/routen.ts`, je mit `zugang: 'offen' | 'angemeldet' | 'admin'`. Zwei Merkmale kommen dazu: `api: true` macht eine Route zum Teil der öffentlichen API (Anmeldung auch mit API-Schlüssel); `konsole: true` erlaubt sie nur über den Befehl `dms` im Container. Die öffentliche API für Programme liegt unter `/api/v1` (`api-v1.ts`, OpenAPI).
@@ -25,7 +25,7 @@ Das DMS ist ein **modularer Monolith**: ein Prozess, eine Datenbank. Server und 
 
 ## Abhängigkeiten { #abhaengigkeiten }
 
-Das DMS kommt mit **wenig fremdem Code** aus: 8 npm-Pakete im Server, 3 in der Oberfläche, dazu eine Handvoll Alpine-Pakete im Image. Das ist der beste Schutz gegen Angriffe über die Lieferkette und hält Sicherheitsupdates selten und überschaubar – und einer der Hauptgründe, warum Node.js hier gut passt. So soll es bleiben.
+Ablago kommt mit **wenig fremdem Code** aus: 8 npm-Pakete im Server, 3 in der Oberfläche, dazu eine Handvoll Alpine-Pakete im Image. Das ist der beste Schutz gegen Angriffe über die Lieferkette und hält Sicherheitsupdates selten und überschaubar – und einer der Hauptgründe, warum Node.js hier gut passt. So soll es bleiben.
 
 **Regel (#543):** Eine neue **Laufzeit-Abhängigkeit** – npm unter `dependencies` oder ein Alpine-Paket per `apk add` im `Dockerfile` – kommt nur mit Begründung im Pull Request (Abschnitt „Neue Abhängigkeiten“ der Vorlage):
 
@@ -161,7 +161,7 @@ Nicht Teil von Stufe 1: weitere Sprachen, „Sie“ in der Oberfläche, Sprachwa
 
 ## Unterlagen für Dritte: Anrede du oder Sie { #unterlagen-fur-dritte }
 
-Die Oberfläche duzt immer. Texte, die an Personen **außerhalb** des DMS gehen, folgen dagegen der Einstellung **Anrede in Unterlagen für Dritte** (#474, Werkbank → Datenschutz, `Datenschutz.anrede`, Vorgabe `du`). Alle diese Texte stehen im Bereich `dritte` der [Sprachdateien](#texte-und-sprachdateien): die du-Fassung in `shared/src/sprachen/de/dritte.json`, die Sie-Fassung in `shared/src/sprachen/de-formal/dritte.json`, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit `textDritte(anrede, schluessel, werte)` aus `shared/src/anrede.ts`. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.
+Die Oberfläche duzt immer. Texte, die an Personen **außerhalb** von Ablago gehen, folgen dagegen der Einstellung **Anrede in Unterlagen für Dritte** (#474, Werkbank → Datenschutz, `Datenschutz.anrede`, Vorgabe `du`). Alle diese Texte stehen im Bereich `dritte` der [Sprachdateien](#texte-und-sprachdateien): die du-Fassung in `shared/src/sprachen/de/dritte.json`, die Sie-Fassung in `shared/src/sprachen/de-formal/dritte.json`, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit `textDritte(anrede, schluessel, werte)` aus `shared/src/anrede.ts`. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.
 
 Neue Texte für Dritte kommen als Schlüssel in beide `dritte.json` – keine `anrede === 'sie' ? … : …` im Code – und in diese Liste:
 
@@ -220,7 +220,7 @@ Neben Menschen (`benutzer.art = 'person'`) gibt es zwei Arten von Konten, die si
 
 ## Ereigniskatalog (#670) { #ereigniskatalog }
 
-Was im DMS passiert, steht an **einer** Stelle: `shared/src/ereignisse.ts` (`EREIGNISKATALOG`), die Texte in `shared/src/sprachen/de/ereignisse.json` (`name.<art>`, `text.<art>` – Unterstrich als Bindestrich –, `gruppe.<gruppe>`). Pakete (`code.ereignisse`), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter **Welche Ereignisse es gibt**.
+Was in Ablago passiert, steht an **einer** Stelle: `shared/src/ereignisse.ts` (`EREIGNISKATALOG`), die Texte in `shared/src/sprachen/de/ereignisse.json` (`name.<art>`, `text.<art>` – Unterstrich als Bindestrich –, `gruppe.<gruppe>`). Pakete (`code.ereignisse`), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter **Welche Ereignisse es gibt**.
 
 **Regeln**
 
@@ -302,7 +302,7 @@ curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ
 - **Stand in der Datenbank** (Tabelle `zaehlerstaende`, Migration 056). Je Abruf bildet der Server einen Hash der Zahlen (`fingerabdruck`), vergleicht ihn mit dem gespeicherten und zählt `stand` nur bei einer Abweichung hoch (`Repo.setzeZaehlerstand`, ein `INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …`: gleichzeitige Abrufe zählen eine Änderung einmal). Unverändert heißt: nur lesen. Der Haushaltsstand aus #512 lebt nur im Arbeitsspeicher und fängt nach jedem Neustart bei 0 an – als ETag taugt er darum nicht. Das ETag ist `"z<stand>-<hash>"`: Gleiches ETag heißt gleiche Zahlen, auch nach einem Neustart oder einer Wiederherstellung.
 - **ETag und 304.** `passtEtag` (`routen.ts`) versteht Listen, `W/…` und `*`. Eine Route setzt eigene Köpfe über `Antwort.koepfe`; Köpfe der Anfrage liest sie über `Anfrage.kopf(name)`. `Cache-Control: private, no-cache` statt `no-store`, damit Programme nachfragen dürfen.
 - **Schlüssel-Stufe „nur Zähler“** (`recht = 'zaehler'`, `NUR_ZAEHLER` und `ZAEHLER_PFAD` in `apischluessel.ts`). `pruefeZugang` lässt sie nur an `GET /api/v1/ich/zaehler` durch; jede andere Route unter `/api/v1` und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt `403` (`api.schluessel.nur-zaehler`), das Laufwerk ebenfalls (`webdav.ts`). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.
-- **Grenzen.** Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.
+- **Grenzen.** Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft Ablago auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.
 
 **Weitere Zahl aufnehmen:** Feld in `Zaehlerzahlen` (`dienst.ts`) und im OpenAPI-Schema ergänzen, im Test `ZAHLEN` – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, `v` im Hash erhöhen, damit jeder Client einmal neu liest. Der [Webhook](#webhooks) (#627) ruft `zaehlerAbruf` je Benutzer auf und meldet bei geändertem `stand`.
 
@@ -331,7 +331,7 @@ X-DMS-Webhook: 0f8a…
 - `zeit`: wann die Meldung entstand; `daten.geaendert`: wann sich die Zahlen geändert haben.
 - Der Rumpf ist kompaktes JSON (`JSON.stringify`), nur ASCII-Zeichen, Schlüssel in fester Reihenfolge – `JSON.stringify(JSON.parse(rumpf)) === rumpf`. Das erlaubt die Prüfung auch dort, wo ein Rahmenwerk nur das geparste JSON hergibt (Node-RED).
 - **Nie Inhalte.** Der Test `server/test/webhook.test.ts` prüft die Schlüssel des Rumpfs und dass keine Titel, Absender oder Namen hineinrutschen.
-- Als angekommen gilt `2xx`; Weiterleitungen (`3xx`) folgt das DMS nicht (`redirect: 'manual'`), Zeitgrenze 5 s.
+- Als angekommen gilt `2xx`; Weiterleitungen (`3xx`) folgt Ablago nicht (`redirect: 'manual'`), Zeitgrenze 5 s.
 
 ### Signatur prüfen
 
@@ -417,8 +417,8 @@ Im Server gibt es dieselbe Prüfung als `pruefeSignatur` (`webhook.ts`) für Tes
 
 ### Ziele und Geheimnis
 
-- **Ziele:** `zielProblem` (`shared/src/webhook.ts`) erlaubt `https://` und `http://` nur im Heimnetz (`imHeimnetz` aus `heimnetz.ts`), keine Anmeldedaten und kein `#`. Zusätzlich muss der Ursprung in der Einstellung `webhook_ziele` stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft das DMS erneut.
-- **Geheimnis:** `whsec_` + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel des DMS in `webhooks.geheimnis`. `umschluesseln` und `verschluesselteFundstellen` (`repo-pg.ts`) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.
+- **Ziele:** `zielProblem` (`shared/src/webhook.ts`) erlaubt `https://` und `http://` nur im Heimnetz (`imHeimnetz` aus `heimnetz.ts`), keine Anmeldedaten und kein `#`. Zusätzlich muss der Ursprung in der Einstellung `webhook_ziele` stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft Ablago erneut.
+- **Geheimnis:** `whsec_` + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel von Ablago in `webhooks.geheimnis`. `umschluesseln` und `verschluesselteFundstellen` (`repo-pg.ts`) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.
 - **Neue Art aufnehmen:** Wert in `WEBHOOK_EREIGNISSE` und, wo nötig, eigene Erkennung; der Rumpf behält `art`, `id`, `zeit`, `daten` – und nur Zahlen bzw. Ids.
 
-Mehr Hintergrund im Administratorhandbuch: [Technik](https://motom001.github.io/dms/admin/aktuell/technik/) und [Entscheidungen](https://motom001.github.io/dms/admin/aktuell/entscheidungen/).
+Mehr Hintergrund im Administratorhandbuch: [Technik](https://help.ablago.app/admin/aktuell/technik/) und [Entscheidungen](https://help.ablago.app/admin/aktuell/entscheidungen/).

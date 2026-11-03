@@ -28,7 +28,12 @@ COPY docs/handbuch docs/handbuch
 RUN python3 docs/handbuch/werkzeuge/offline.py /hilfe
 
 FROM node:24-alpine AS laufzeit
-LABEL org.opencontainers.image.source="https://github.com/motom001/dms" \
+# Name und Beschreibung (#687); die Image-Namen ghcr.io/motom001/dms und dms-komplett bleiben, damit Updates weiterlaufen.
+LABEL org.opencontainers.image.title="Ablago" \
+      org.opencontainers.image.description="Ablago – Dokumentenablage für zu Hause und kleine Betriebe" \
+      org.opencontainers.image.url="https://ablago.app" \
+      org.opencontainers.image.documentation="https://help.ablago.app" \
+      org.opencontainers.image.source="https://github.com/motom001/dms" \
       org.opencontainers.image.licenses="Apache-2.0"
 # Alpine-Pakete aktuell halten (#214): Die Kalenderwoche gehört zur Cache-Kennung dieser Schicht,
 # also holt jeder Bau in einer neuen Woche die neuesten Pakete (sonst nähme der Build-Cache ewig die alten).

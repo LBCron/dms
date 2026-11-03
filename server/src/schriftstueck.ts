@@ -114,7 +114,7 @@ export function schriftstueckDocx(s: Schriftstueck): Buffer {
   const docRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
   const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xml(s.titel)}</dc:title><dc:creator>DMS</dc:creator><dc:language>de-DE</dc:language></cp:coreProperties>`;
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xml(s.titel)}</dc:title><dc:creator>Ablago</dc:creator><dc:language>de-DE</dc:language></cp:coreProperties>`;
   return zipPuffer([
     { name: '[Content_Types].xml', daten: Buffer.from(typen) },
     { name: '_rels/.rels', daten: Buffer.from(rels) },

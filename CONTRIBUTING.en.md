@@ -2,7 +2,7 @@
 
 [Deutsch](CONTRIBUTING.md) · **English**
 
-Thank you for your interest in the DMS! **Issues and pull requests are welcome in German or English.** How contributing works here is described in detail in the **[developer manual](https://motom001.github.io/dms/entwickler/aktuell/)** (German). The essentials in brief:
+Thank you for your interest in Ablago! **Issues and pull requests are welcome in German or English.** How contributing works here is described in detail in the **[developer manual](https://help.ablago.app/entwickler/aktuell/)** (German). The essentials in brief:
 
 1. **Start with an issue**, written as a user story ("As a … I want …, so that …") with acceptance criteria. This applies to feature requests and bugs alike.
 2. **Discussion happens in the issue** until it is clear what will be built.
@@ -11,7 +11,7 @@ Thank you for your interest in the DMS! **Issues and pull requests are welcome i
 
 ## New dependencies only with a reason
 
-The DMS gets by with very little third-party code – this protects against supply-chain attacks and keeps maintenance and the image small. A **new runtime dependency** (an npm package under `dependencies`, or an Alpine package via `apk add` in the `Dockerfile`) is therefore only accepted with a reason given in the pull request:
+Ablago gets by with very little third-party code – this protects against supply-chain attacks and keeps maintenance and the image small. A **new runtime dependency** (an npm package under `dependencies`, or an Alpine package via `apk add` in the `Dockerfile`) is therefore only accepted with a reason given in the pull request:
 
 - **What for** is it needed?
 - **Why not** with what Node.js already provides, or with the dependencies and tools already in use?
@@ -19,7 +19,7 @@ The DMS gets by with very little third-party code – this protects against supp
 - **Maintenance** – latest release, number of maintainers?
 - **Its own dependencies** – what else does it bring into the image?
 
-The pull request template asks for this; the "Abhängigkeiten" (dependencies) check points out new dependencies in the PR. The current list with the purpose of each is in the [developer manual](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#abhaengigkeiten) (German).
+The pull request template asks for this; the "Abhängigkeiten" (dependencies) check points out new dependencies in the PR. The current list with the purpose of each is in the [developer manual](https://help.ablago.app/entwickler/aktuell/aufbau/#abhaengigkeiten) (German).
 
 ## Graphics and images per language
 
@@ -27,7 +27,7 @@ Graphics containing text exist per language: `name.svg` in German, `name.en.svg`
 
 By contributing, you license your contribution under the [Apache-2.0](LICENSE). Please do not commit real documents or personal data.
 
-The DMS itself, its user interface and its manuals are in German; an English user interface and manual are planned (#357). You do not need to speak German to report a bug, suggest a feature or send a pull request.
+Ablago itself, its user interface and its manuals are in German; an English user interface and manual are planned (#357). You do not need to speak German to report a bug, suggest a feature or send a pull request.
 
 ## Code of conduct
 

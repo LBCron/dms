@@ -54,7 +54,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
       if (st.marke) {
         MARKE = st.marke;
         if (!st.benutzer) {
-          document.title = st.marke.schriftzug || 'DMS';
+          document.title = st.marke.schriftzug || 'Ablago';
           const el = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
           if (el && st.marke.logo) el.href = st.marke.logo;
         }
@@ -145,7 +145,7 @@ function Karte({ titel, unter, children }: { titel: string; unter?: string; chil
     <div className="kartenseite">
       <div className="karte">
         <div className="marke gross">
-          <Marke logo={MARKE.logo} schriftzug={MARKE.schriftzug ?? 'DMS'} gross />
+          <Marke logo={MARKE.logo} schriftzug={MARKE.schriftzug ?? 'Ablago'} gross />
         </div>
         <h1>{titel}</h1>
         {unter && <p className="leise">{unter}</p>}

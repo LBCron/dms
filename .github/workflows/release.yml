@@ -65,14 +65,14 @@ jobs:
           {
             echo
             echo "---"
-            echo "Aktualisieren: Image \`ghcr.io/motom001/dms:${tag#v}\` bzw. \`ghcr.io/motom001/dms-komplett:${tag#v}\` (oder \`:main\`) neu ziehen und neu starten. Anleitung im [Administratorhandbuch](https://motom001.github.io/dms/admin/aktualisieren/)."
+            echo "Aktualisieren: Image \`ghcr.io/motom001/dms:${tag#v}\` bzw. \`ghcr.io/motom001/dms-komplett:${tag#v}\` (oder \`:main\`) neu ziehen und neu starten. Anleitung im [Administratorhandbuch](https://help.ablago.app/admin/aktualisieren/)."
           } >> notizen.md
       - name: Release anlegen oder Text setzen
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "DMS ${TAG}" --notes-file notizen.md
+            gh release edit "$TAG" --title "Ablago ${TAG}" --notes-file notizen.md
           else
-            gh release create "$TAG" --title "DMS ${TAG}" --notes-file notizen.md --target "$ZIEL"
+            gh release create "$TAG" --title "Ablago ${TAG}" --notes-file notizen.md --target "$ZIEL"
           fi
         env:
           GH_TOKEN: ${{ github.token }}

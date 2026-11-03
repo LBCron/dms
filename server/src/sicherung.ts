@@ -740,11 +740,11 @@ export class Sicherung {
     let vorfall: string | null = null; let betreff = ''; let text = '';
     if (z.fehler) {
       vorfall = `fehler:${z.fehler.am}`;
-      betreff = 'DMS: Sicherung fehlgeschlagen';
+      betreff = 'Ablago: Sicherung fehlgeschlagen';
       text = `Die ${z.fehler.art === 'automatisch' ? 'automatische ' : ''}Sicherung am ${new Date(z.fehler.am).toLocaleString('de-DE', { timeZone: ZONE })} ist fehlgeschlagen:\n\n${z.fehler.grund}\n\n`;
     } else if (z.planAktiv && z.zuAlt) {
       vorfall = `alt:${z.letzte?.ende ?? 'nie'}`;
-      betreff = 'DMS: Die letzte Sicherung ist zu alt';
+      betreff = 'Ablago: Die letzte Sicherung ist zu alt';
       text = z.letzte ? `Die letzte erfolgreiche Sicherung ist vom ${new Date(z.letzte.ende).toLocaleString('de-DE', { timeZone: ZONE })} – älter als ${ZU_ALT_TAGE} Tage.\n\n` : 'Es gibt noch keine erfolgreiche Sicherung, obwohl die automatische Sicherung eingeschaltet ist.\n\n';
     }
     if (vorfall) return this.meldeVorfall('sicherung_gemeldet', vorfall, betreff, text);
@@ -757,11 +757,11 @@ export class Sicherung {
     const zielText = (id: string) => { const z = x.ziele.find((y) => y.id === id); return z ? `${z.name}${z.adresse ? ` (${ohneZugangsdaten(z.adresse)})` : z.ziel ? ` (${z.ziel})` : ''}` : id; };
     const wann = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: ZONE });
     if (x.fehler?.stand.endgueltig) {
-      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, 'DMS: Kopie außer Haus fehlgeschlagen',
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, 'Ablago: Kopie außer Haus fehlgeschlagen',
         `Die Sicherung vom ${wann(x.fehler.beginn)} ließ sich nicht außer Haus kopieren.\n\nZiel: ${zielText(x.fehler.paket)}\nGrund: ${x.fehler.stand.grund ?? 'unbekannt'}\n\nDie lokale Sicherung ist davon nicht betroffen.\n\n`);
     }
     if (x.zuAlt) {
-      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-alt:${x.letzte?.name ?? 'nie'}`, 'DMS: Die letzte Kopie außer Haus ist zu alt',
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-alt:${x.letzte?.name ?? 'nie'}`, 'Ablago: Die letzte Kopie außer Haus ist zu alt',
         `${x.letzte ? `Die letzte Kopie außer Haus ist von der Sicherung vom ${wann(x.letzte.beginn)}` : 'Es gibt noch keine Kopie außer Haus'} – neuere Sicherungen sind seit mehr als ${ZU_ALT_TAGE} Tagen nicht dort angekommen.\n\nZiel: ${x.ziele.map((z) => zielText(z.id)).join(', ')}\n${x.fehler?.stand.grund ? `Letzter Fehler: ${x.fehler.stand.grund}\n` : ''}\n`);
     }
     return null;
@@ -770,7 +770,7 @@ export class Sicherung {
   private async meldeVorfall(schluessel: string, vorfall: string, betreff: string, text: string): Promise<string | null> {
     if ((await this.q.einstellungen.lies(schluessel)) === vorfall) return null;
     await this.q.einstellungen.schreibe(schluessel, vorfall);
-    log.warn(betreff.replace('DMS: ', ''), { vorfall });
+    log.warn(betreff.replace('Ablago: ', ''), { vorfall });
     try { await this.q.anAdmins?.(betreff, `${text}Details stehen in der Werkbank unter „Sicherung“ und im Protokoll (Modul sicherung).`); }
     catch (e) { log.warn('Mail zur Sicherung nicht verschickt', { fehler: (e as Error).message }); }
     return vorfall;

@@ -194,7 +194,7 @@ describe('Postfächer: OAuth 2.0 (#358)', () => {
     assert.equal(a.aufrufe.length, vorher);
   });
 
-  it('ohne Adresse des DMS kein Browser-Fluss; Passwort-Postfach lehnt OAuth ab', async () => {
+  it('ohne Adresse von Ablago kein Browser-Fluss; Passwort-Postfach lehnt OAuth ab', async () => {
     const { oauth, p, pf, rufe, admin } = await aufbau();
     await assert.rejects(oauth.start({ id: p.id, anbieter: 'microsoft', benutzer: 'x' }, { id: admin.id, email: admin.email }, ''), status(409));
     // Rückruf nur über https (http nur für localhost).

@@ -106,9 +106,9 @@ export function DesignEditor({ id }: { id: string }) {
         <p className="leise">Stehen oben links in der Kopfzeile, im Titel und Symbol des Browser-Tabs und – beim Standard-Design – auf der Anmeldeseite. Wähle zu jedem Design ein Logo, das auf seinem Hintergrund gut zu sehen ist. In E-Mails erscheinen sie nicht.</p>
         <div className="raster">
           <label className="eigenschaft"><span>Schriftzug <small>höchstens 30 Zeichen; leer = nur das Logo</small></span>
-            <input value={e.schriftzug ?? 'DMS'} maxLength={30} onChange={(x) => setze({ schriftzug: x.target.value === 'DMS' ? null : x.target.value })} /></label>
+            <input value={e.schriftzug ?? 'Ablago'} maxLength={30} onChange={(x) => setze({ schriftzug: x.target.value === 'Ablago' ? null : x.target.value })} /></label>
           <div className="eigenschaft"><span>Vorschau</span>
-            <div className="markenvorschau marke"><Marke logo={logoUrl(vorhanden)} schriftzug={e.schriftzug === null || e.schriftzug === undefined ? 'DMS' : e.schriftzug} /></div></div>
+            <div className="markenvorschau marke"><Marke logo={logoUrl(vorhanden)} schriftzug={e.schriftzug === null || e.schriftzug === undefined ? 'Ablago' : e.schriftzug} /></div></div>
         </div>
         {neu ? <p className="leise klein">Ein Logo lässt sich hochladen, sobald das Design gespeichert ist.</p> : (
           <div className="knoepfe links">

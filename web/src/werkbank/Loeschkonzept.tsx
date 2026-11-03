@@ -9,7 +9,7 @@ export function LoeschkonzeptBlatt({ luecken }: { luecken: Luecke[] }) {
   return (
     <section className="blatt" id="loeschkonzept">
       <h2 className="h3">Löschkonzept <Hilfe ort="werkbank.loeschkonzept" /></h2>
-      <p className="leise klein">Das DMS füllt die Vorlage aus dem Handbuch mit deinen Mappentypen, Zwecken, Aufbewahrungsfristen und Einstellungen (Papierkorb, Sicherungen). Was es nicht wissen kann – Rechtsgrundlage, Zuständige, Begründung der Fristen –, steht in [eckigen Klammern] zum Ergänzen. Aus den Mappen selbst kommt nichts hinein.</p>
+      <p className="leise klein">Ablago füllt die Vorlage aus dem Handbuch mit deinen Mappentypen, Zwecken, Aufbewahrungsfristen und Einstellungen (Papierkorb, Sicherungen). Was es nicht wissen kann – Rechtsgrundlage, Zuständige, Begründung der Fristen –, steht in [eckigen Klammern] zum Ergänzen. Aus den Mappen selbst kommt nichts hinein.</p>
       {luecken.length > 0 && (
         <div className="hinweis warn stapel">
           <p><strong>Bitte ergänzen</strong> – sonst steht es im Dokument als Lücke:</p>

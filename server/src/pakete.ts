@@ -188,12 +188,12 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   };
   const m = yaml('manifest.yaml');
   if (!istObjekt(m)) throw new Fachfehler(422, 'Das Paket ist ungültig.', { gruende: fehler.length ? fehler : ['manifest.yaml ist leer.'] });
-  if (m.schema !== 1) fehler.push(`manifest.yaml: Format ${str(m.schema) || '–'} kennt dieses DMS nicht.`);
+  if (m.schema !== 1) fehler.push(`manifest.yaml: Format ${str(m.schema) || '–'} kennt diese Ablago-Version nicht.`);
   if (!PAKET_ID.test(str(m.id))) fehler.push('manifest.yaml: ungültige Id.');
-  if (str(m.id) === 'dms') fehler.push('manifest.yaml: Die Id „dms“ ist für Verweise auf Mappentypen des DMS reserviert.');
+  if (str(m.id) === 'dms') fehler.push('manifest.yaml: Die Id „dms“ ist für Verweise auf Mappentypen von Ablago reserviert.');
   if (!VERSION.test(str(m.version))) fehler.push('manifest.yaml: ungültige Version (z. B. 1.0.0).');
   if (!str(m.name).trim()) fehler.push('manifest.yaml: Name fehlt.');
-  if (!BEREICH.test(str(m.dms))) fehler.push('manifest.yaml: ungültige DMS-Version (z. B. >=0.63.0).');
+  if (!BEREICH.test(str(m.dms))) fehler.push('manifest.yaml: ungültige Ablago-Version (z. B. >=0.63.0).');
   const abh = istObjekt(m.abhaengigkeiten) ? m.abhaengigkeiten : {};
   for (const [k, v] of Object.entries(abh)) if (!PAKET_ID.test(k) || !BEREICH.test(str(v))) fehler.push(`manifest.yaml: Abhängigkeit „${k}: ${str(v)}“ ist ungültig.`);
   // Ergänzung eines anderen Pakets (#405): steht auch unter abhaengigkeiten.
@@ -273,7 +273,7 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   for (const s of doppelt(typen.map((t) => t.schluessel))) fehler.push(`mappentypen: Kennung „${s}“ doppelt.`);
   for (const s of doppelt(sichten.map((t) => t.schluessel))) fehler.push(`sichten: Kennung „${s}“ doppelt.`);
   for (const vw of new Set(typverweise(typen, sichten).filter(istDmsVerweis))) {
-    if (!DMS_TYPEN[vw.slice(DMS_PRAEFIX.length)]) fehler.push(`Verweis „${vw}“: Diesen Mappentyp bringt das DMS nicht mit. Erlaubt sind ${Object.keys(DMS_TYPEN).map((k) => DMS_PRAEFIX + k).join(', ')}.`);
+    if (!DMS_TYPEN[vw.slice(DMS_PRAEFIX.length)]) fehler.push(`Verweis „${vw}“: Diesen Mappentyp bringt Ablago nicht mit. Erlaubt sind ${Object.keys(DMS_TYPEN).map((k) => DMS_PRAEFIX + k).join(', ')}.`);
   }
   // Einstellungen (#197): code.einstellungen und code.aktionen.
   const einst = liesBeschreibung(m.code);
@@ -532,7 +532,7 @@ export function liesSammelVerzeichnis(roh: Buffer | undefined): SammelVerzeichni
   if (!istObjekt(j)) throw ungueltig([`${SAMMEL_VERZEICHNIS} ist leer.`]);
   const fehler: string[] = [];
   if (j.art !== 'dms-sammeldatei') fehler.push(`${SAMMEL_VERZEICHNIS}: „art“ muss „dms-sammeldatei“ sein.`);
-  if (j.format !== 1) fehler.push(`Sammeldatei-Format ${str(j.format) || '–'} kennt dieses DMS nicht – bitte das DMS aktualisieren.`);
+  if (j.format !== 1) fehler.push(`Sammeldatei-Format ${str(j.format) || '–'} kennt diese Ablago-Version nicht – bitte Ablago aktualisieren.`);
   const liste = Array.isArray(j.pakete) ? j.pakete : [];
   if (!liste.length) fehler.push('Die Sammeldatei enthält keine Pakete.');
   if (liste.length > SAMMEL_PAKETE_MAX) fehler.push(`Die Sammeldatei enthält mehr als ${SAMMEL_PAKETE_MAX} Pakete.`);
@@ -584,7 +584,7 @@ const zeitText = (iso: string) => { const d = new Date(iso); return Number.isNaN
 /** Herkunft nicht bestätigt (#189, #594). */
 const herkunftFehler = (p: HerkunftPruefung) => new Fachfehler(409, p.art === 'ungueltig'
   ? t('pakete.herkunft.fehler.ungueltig')
-  : 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom DMS-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
+  : 'Dieses Paket kommt nicht aus dem offiziellen Katalog und ist nicht vom Ablago-Projekt geprüft. Bitte die Herkunft bestätigen.', { warnung: true });
 
 export class Paketverwaltung {
   private kataloge = new Map<string, { katalog: Katalog; pruefung: HerkunftPruefung; zeit: number }>();
@@ -971,7 +971,7 @@ export class Paketverwaltung {
     const probleme: string[] = [];
     const dmsVersion = this.o.version();
     const dmsOk = dmsPasst(dmsVersion, m.dms);
-    if (!dmsOk) probleme.push(`Das Paket braucht DMS ${m.dms}; dieses DMS hat Version ${dmsVersion}. Bitte zuerst das DMS aktualisieren.`);
+    if (!dmsOk) probleme.push(`Das Paket braucht Ablago ${m.dms}; diese Installation hat Version ${dmsVersion}. Bitte zuerst Ablago aktualisieren.`);
     const hinweise: string[] = [];
     // Code läuft erst mit dem Paket-Läufer; Einstellungen lassen sich schon pflegen (#197).
     if (m.code !== undefined && !paket.code) hinweise.push('Das Paket enthält Code, aber kein gebautes Modul (code/modul.wasm) – im Paket-Läufer läuft deshalb nichts; Einstellungen lassen sich schon pflegen.');
@@ -979,9 +979,9 @@ export class Paketverwaltung {
     // Verweise auf Mappentypen des DMS (#310), z. B. dms:ablageort.
     const dmsTypen = await this.dmsTypen();
     const genutzt = [...new Set(typverweise(paket.typen, paket.sichten).filter(istDmsVerweis).map((vw) => vw.slice(DMS_PRAEFIX.length)))];
-    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(`Das Paket verweist auf den Mappentyp „${DMS_TYPEN[k] ?? k}“ des DMS, den es hier nicht gibt. Bitte das DMS aktualisieren (ab ${DMS_VERWEISE_AB}).`);
+    for (const k of genutzt.filter((k) => !dmsTypen.has(k))) probleme.push(`Das Paket verweist auf den Mappentyp „${DMS_TYPEN[k] ?? k}“ von Ablago, den es hier nicht gibt. Bitte Ablago aktualisieren (ab ${DMS_VERWEISE_AB}).`);
     const da = genutzt.filter((k) => dmsTypen.has(k));
-    if (da.length) hinweise.push(`Nutzt Mappentypen aus dem DMS: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus dem DMS)`).join(', ')}.`);
+    if (da.length) hinweise.push(`Nutzt Mappentypen aus Ablago: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus Ablago)`).join(', ')}.`);
     // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
     if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche).`);
     // Beispiele, die auf Beispiele einer Abhängigkeit zeigen (#347): ohne diese bleiben die Verweise leer.
@@ -1068,7 +1068,7 @@ export class Paketverwaltung {
   /** Rechte eines Pakets mit Code verlangen eine ausdrückliche Bestätigung (#338). */
   private static rechteBestaetigen(plan: Vorschau, e: { rechteBestaetigt?: boolean }) {
     if (plan.laeufer?.bestaetigen && e.rechteBestaetigt !== true) {
-      throw new Fachfehler(409, `„${plan.paket.name}“ enthält Code, der im DMS laufen soll. Bitte die Rechte bestätigen.`, { rechte: rechteZeilen(plan.laeufer.rechte) });
+      throw new Fachfehler(409, `„${plan.paket.name}“ enthält Code, der in Ablago laufen soll. Bitte die Rechte bestätigen.`, { rechte: rechteZeilen(plan.laeufer.rechte) });
     }
   }
 
@@ -1136,7 +1136,7 @@ export class Paketverwaltung {
       const [p, s] = vw.includes(':') ? vw.split(':') : [m.id, vw];
       if (p === 'dms') {
         const t = dmsTypen.get(s);
-        if (!t) throw new Fachfehler(422, `Der Verweis „${vw}“ lässt sich nicht auflösen: Diesen Mappentyp gibt es in diesem DMS nicht (Verweise auf Mappentypen des DMS ab ${DMS_VERWEISE_AB}).`);
+        if (!t) throw new Fachfehler(422, `Der Verweis „${vw}“ lässt sich nicht auflösen: Diesen Mappentyp gibt es in dieser Installation nicht (Verweise auf Mappentypen von Ablago ab ${DMS_VERWEISE_AB}).`);
         return t.id;
       }
       if (p !== m.id) {
@@ -1669,7 +1669,7 @@ export class Paketverwaltung {
     if (!a) throw new Fachfehler(404, 'Diese Aktion gibt es nicht.');
     const fehlend = fehlendePflicht(b, (await this.d.paketEinstellungen(id))?.werte ?? {});
     if (fehlend.length) return { ok: false, text: `Einstellungen nötig: ${fehlend.join(', ')}.` };
-    if (!this.o.laeufer) return { ok: false, text: 'Pakete mit Code laufen in diesem DMS noch nicht (der Paket-Läufer fehlt). Die Aktion lässt sich deshalb noch nicht ausführen.' };
+    if (!this.o.laeufer) return { ok: false, text: 'Pakete mit Code laufen in dieser Installation noch nicht (der Paket-Läufer fehlt). Die Aktion lässt sich deshalb noch nicht ausführen.' };
     log.info(`Aktion „${a.name}“ von Paket ${p.name}`, { von: von.email, paket: id, aktion: schluessel });
     let uhr: ReturnType<typeof setTimeout> | undefined;
     try {

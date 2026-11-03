@@ -3,14 +3,14 @@
 !!! info "Geprüft: noch keine Meldung"
     Für diesen Weg gibt es noch keine Meldung von einem Gerät. Das Image selbst prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-So installierst du das DMS auf einem Rechner mit **CasaOS**, z. B. einem Raspberry Pi oder Mini-PC. Du brauchst weder Compose-Datei noch Kommandozeile. Die App bringt ihre eigene Datenbank mit: Sie läuft im selben Container und ist schon angebunden.
+So installierst du Ablago auf einem Rechner mit **CasaOS**, z. B. einem Raspberry Pi oder Mini-PC. Du brauchst weder Compose-Datei noch Kommandozeile. Die App bringt ihre eigene Datenbank mit: Sie läuft im selben Container und ist schon angebunden.
 
 !!! tip "ZimaOS statt CasaOS?"
     Die Schritte für ZimaOS stehen auf einer [eigenen Seite](zimaos.md).
 
 ## 1. DMS-Store hinzufügen
 
-Das DMS steht (noch) nicht im offiziellen CasaOS App Store. Du fügst einmal den DMS-Store als zusätzliche Quelle hinzu:
+Ablago steht (noch) nicht im offiziellen CasaOS App Store. Du fügst einmal den DMS-Store als zusätzliche Quelle hinzu:
 
 1. **App Store** öffnen.
 2. Unter der App-Liste auf **Weitere Apps** (*More apps*) gehen und das Feld für eine weitere Quelle öffnen.
@@ -19,11 +19,11 @@ Das DMS steht (noch) nicht im offiziellen CasaOS App Store. Du fügst einmal den
    https://github.com/motom001/dms-appstore/archive/refs/heads/main.zip
    ```
 
-Danach erscheint **DMS** in der App-Liste.
+Danach erscheint **Ablago** in der App-Liste.
 
 ## 2. Installieren
 
-In der App-Liste **DMS** öffnen und **Installieren** wählen. CasaOS lädt das DMS als **einen** Container (Image `dms-komplett`) und startet ihn. Die Datenbank läuft darin mit – ohne Passwort und ohne Port nach außen. Einen eigenen Container „Datenbank“ gibt es nicht.
+In der App-Liste **Ablago** öffnen und **Installieren** wählen. CasaOS lädt Ablago als **einen** Container (Image `dms-komplett`) und startet ihn. Die Datenbank läuft darin mit – ohne Passwort und ohne Port nach außen. Einen eigenen Container „Datenbank“ gibt es nicht.
 
 ## 3. Einrichten
 
@@ -43,23 +43,23 @@ Die Daten liegen unter `/DATA/AppData/dms/`:
 | --- | --- |
 | `files` | hochgeladene Dokumente |
 | `geheim` | Schlüssel für Passwörter und Sicherungen |
-| `sicherung` | Sicherungen des DMS |
+| `sicherung` | Sicherungen von Ablago |
 | `postgres` | die Datenbank |
 
 !!! note "Kein Eingangsordner"
-    Bei der Installation aus dem App Store gibt es keinen [Eingangsordner](https://motom001.github.io/dms/admin/aktuell/eingangsordner/) für Scanner. Dokumente kommen über das Hochladen in der Ablage, per E-Mail über ein [Postfach](https://motom001.github.io/dms/admin/aktuell/postfaecher/) oder über die Schnittstelle ins DMS.
+    Bei der Installation aus dem App Store gibt es keinen [Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/) für Scanner. Dokumente kommen über das Hochladen in der Ablage, per E-Mail über ein [Postfach](https://help.ablago.app/admin/aktuell/postfaecher/) oder über die Schnittstelle in Ablago.
 
 ## Sichern
 
-- Unter **Werkbank → [Sicherung](https://motom001.github.io/dms/admin/aktuell/sicherung/)** einen Zeitplan einschalten und das Notfallblatt ausdrucken.
+- Unter **Werkbank → [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/)** einen Zeitplan einschalten und das Notfallblatt ausdrucken.
 - Die Sicherungen liegen auf demselben Gerät. Kopiere den Ordner `sicherung` ab und zu an einen anderen Ort, z. B. auf eine USB-Platte oder in einen Cloudspeicher.
 
 ## Aktualisieren
 
-Gibt es eine neue Version, zeigt der App Store bei **DMS** ein Update an. Die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Technik**.
+Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Technik**.
 
 !!! warning "Noch mit zwei Containern installiert?"
-    Wer das DMS vor Version 0.73.10 aus dem Store installiert hat, hat zwei Container: DMS und Datenbank. Nach dem Update auf den einen Container startet das DMS mit einer **leeren** Datenbank. So kommst du wieder an deine Daten:
+    Wer Ablago vor Version 0.73.10 aus dem Store installiert hat, hat zwei Container: Ablago und Datenbank. Nach dem Update auf den einen Container startet Ablago mit einer **leeren** Datenbank. So kommst du wieder an deine Daten:
 
     1. **Vor** dem Update unter **Werkbank → Sicherung** eine Sicherung erstellen (oder die letzte automatische nehmen).
     2. Update im App Store einspielen.
@@ -69,4 +69,4 @@ Gibt es eine neue Version, zeigt der App Store bei **DMS** ein Update an. Die Da
 
 ## Auf ein neues Gerät umziehen
 
-DMS auf dem neuen Gerät aus dem Store installieren, die Sicherungsdateien in dessen Ordner `sicherung` legen und im Assistenten **Aus einer Sicherung wiederherstellen** wählen. Ausführlich unter [Wiederherstellen](https://motom001.github.io/dms/admin/aktuell/wiederherstellen/).
+Ablago auf dem neuen Gerät aus dem Store installieren, die Sicherungsdateien in dessen Ordner `sicherung` legen und im Assistenten **Aus einer Sicherung wiederherstellen** wählen. Ausführlich unter [Wiederherstellen](https://help.ablago.app/admin/aktuell/wiederherstellen/).

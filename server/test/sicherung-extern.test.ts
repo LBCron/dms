@@ -250,7 +250,7 @@ describe('Sicherung außer Haus (#585)', () => {
 
   it('Notfallblatt nennt das Ziel ohne Passwort und warnt, den Schlüssel dazuzulegen', async () => {
     const pdf = notfallblatt({
-      name: 'DMS', haushaltId: HAUSHALT, adresse: 'https://dms.example.org', version: '0.142.0', erstellt: new Date('2026-11-02T10:00:00Z'),
+      name: 'Ablago', haushaltId: HAUSHALT, adresse: 'https://dms.example.org', version: '0.142.0', erstellt: new Date('2026-11-02T10:00:00Z'),
       schluessel: 'A'.repeat(43), fingerabdruck: 'ab12', sicherungsordner: '/data/sicherung', schluesselordner: '/data/geheim',
       aussenziele: [{ name: 'Sicherungsziel WebDAV', adresse: 'https://lena:geheim@cloud.example.org', ziel: null }],
     });

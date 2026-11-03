@@ -94,7 +94,7 @@ export class PdfSchreiber {
 /** Neues PDF mit Titel und den beiden Standardschriften. */
 export async function neuesDokument(titel: string): Promise<{ doc: PDFDocument; f: Schriften }> {
   const doc = await PDFDocument.create();
-  doc.setTitle(pdfSicher(titel)); doc.setProducer('DMS'); doc.setCreator('DMS');
+  doc.setTitle(pdfSicher(titel)); doc.setProducer('Ablago'); doc.setCreator('Ablago');
   const f = { normal: await doc.embedFont(StandardFonts.Helvetica), fett: await doc.embedFont(StandardFonts.HelveticaBold) };
   return { doc, f };
 }

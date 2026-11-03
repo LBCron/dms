@@ -397,7 +397,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
             <label className="haken"><input type="checkbox" checked={e.autoZuordnen && !e.archiv} disabled={!!e.archiv} onChange={(ev) => setE((x) => ({ ...x, autoZuordnen: ev.target.checked }))} />
               <span>Post automatisch zuordnen, wenn die Erkennung sicher ist<small className="hilfe">{e.archiv
                 ? 'Im Archivmodus nicht möglich – Post für diesen Typ wird nur von Hand zugeordnet.'
-                : 'Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Der Empfänger bekommt die Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig. Neue Mappen legt das DMS nie selbst an.'}</small></span></label>
+                : 'Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Der Empfänger bekommt die Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig. Neue Mappen legt Ablago nie selbst an.'}</small></span></label>
           </div>
         </div>
       </Bereich>}
@@ -692,7 +692,7 @@ function FristEditor({ f, id, setze, benutzerFelder }: { f: EntwurfFeld; id: (x:
               {[1, 3, 6, 12, 24, 36, 60].map((m) => <option key={m} value={m}>{wiederholungText(m)}</option>)}
               {fr.wiederholung && ![1, 3, 6, 12, 24, 36, 60].includes(fr.wiederholung) && <option value={fr.wiederholung}>{wiederholungText(fr.wiederholung)}</option>}
             </select>
-            <small className="hilfe">Beim Erledigen schlägt das DMS den nächsten Termin vor; das Datum ändert sich nie von selbst.</small></label>
+            <small className="hilfe">Beim Erledigen schlägt Ablago den nächsten Termin vor; das Datum ändert sich nie von selbst.</small></label>
         </div>
       </>}
     </div>
@@ -1123,7 +1123,7 @@ function StempelEinstellung({ stempel, setze }: { stempel: StempelTyp | null; se
           {(vorlagen ?? []).map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text}</option>)}
         </select></label>}
       <p className="leise klein" style={{ gridColumn: "1 / -1" }}>{modus === 'pflicht'
-        ? 'Pflicht: Dokumente dieses Mappentyps verlassen das DMS nur gestempelt – beim Herunterladen, im Export (PDF, ZIP), per E-Mail und über die API. Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.'
+        ? 'Pflicht: Dokumente dieses Mappentyps verlassen Ablago nur gestempelt – beim Herunterladen, im Export (PDF, ZIP), per E-Mail und über die API. Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.'
         : modus === 'vorschlag' ? 'Vorschlag: Beim Weitergeben ist „Mit Stempel“ schon angehakt, mit dieser Vorlage; man kann ihn abwählen.'
         : 'Kein Stempel vorgegeben; Benutzer können beim Weitergeben trotzdem einen wählen.'}</p>
     </div>

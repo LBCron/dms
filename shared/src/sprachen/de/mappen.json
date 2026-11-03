@@ -1,6 +1,6 @@
 {
   "konflikt.fehler": "Diese Mappe hat inzwischen jemand anderes geändert – auch {felder}. Entscheide je Feld, was gelten soll, und speichere noch einmal.",
-  "konflikt.system": "Das DMS",
+  "konflikt.system": "Ablago",
   "konflikt.standUngueltig": "„stand“ muss ein Zeitpunkt sein – am besten der Wert „geaendert“ der Mappe, so wie du sie gelesen hast.",
   "konflikt.titel": "Gleichzeitig geändert – was soll gelten?",
   "konflikt.einleitung": "Während du hier bearbeitet hast, wurde diese Mappe auch woanders geändert. Alle anderen Änderungen – deine und die anderen – werden zusammengeführt. Nur hier haben beide dasselbe Feld geändert:",

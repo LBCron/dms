@@ -80,7 +80,7 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
       {b.aktionen.length > 0 && (
         <section className="blatt">
           <h2 className="h3">Aktionen</h2>
-          {!stand.laeufer && <p className="leise klein">Pakete mit Code laufen in diesem DMS noch nicht. Aktionen melden das, statt etwas zu tun.</p>}
+          {!stand.laeufer && <p className="leise klein">Pakete mit Code laufen in dieser Installation noch nicht. Aktionen melden das, statt etwas zu tun.</p>}
           <div className="knoepfe">
             {b.aktionen.map((a) => <button key={a.schluessel} type="button" className="knopf" disabled={laeuft} title={a.hilfe} onClick={() => void aktion(a)}>{a.name}</button>)}
           </div>

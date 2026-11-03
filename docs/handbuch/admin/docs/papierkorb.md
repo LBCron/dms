@@ -1,6 +1,6 @@
 # Papierkorb
 
-Gelöschte Mappen kommen in den Papierkorb – samt Dokumenten und Verweisen. Einzeln gelöschte **Dokumente** auch, mit allen Versionen und dem Volltext. Nach der eingestellten Aufbewahrung löscht das DMS sie endgültig.
+Gelöschte Mappen kommen in den Papierkorb – samt Dokumenten und Verweisen. Einzeln gelöschte **Dokumente** auch, mit allen Versionen und dem Volltext. Nach der eingestellten Aufbewahrung löscht Ablago sie endgültig.
 
 - In der **Ablage** sieht jeder Benutzer unter *Papierkorb* nur, was **er selbst** gelöscht hat, und kann es wiederherstellen oder endgültig löschen. Der Eintrag steht oben bei den festen Einträgen unter *Favoriten* – aber nur, solange der Papierkorb eingeschaltet ist oder noch etwas darin liegt.
 - Unter **Werkbank → Papierkorb** siehst du als Administrator alles, mit „gelöscht von“: in der Mitte oben die **Aufbewahrung** mit **Papierkorb leeren**, darunter die gelöschten Mappen und Dokumente. Wählst du eine Mappe, steht sie rechts – dort stellst du sie wieder her oder löschst sie endgültig.
@@ -9,7 +9,7 @@ Gelöschte Mappen kommen in den Papierkorb – samt Dokumenten und Verweisen. Ei
 
 ## Aufbewahrung
 
-Oben in der Mitte unter **Aufbewahrung** stellst du ein, wie viele Tage gelöschte Mappen und Dokumente bleiben (Standard: 30). Daneben leert **Papierkorb leeren** alles auf einmal. Sofort endgültig ist nur das Entfernen der [Demo-Daten](demo.md). Das DMS räumt stündlich auf.
+Oben in der Mitte unter **Aufbewahrung** stellst du ein, wie viele Tage gelöschte Mappen und Dokumente bleiben (Standard: 30). Daneben leert **Papierkorb leeren** alles auf einmal. Sofort endgültig ist nur das Entfernen der [Demo-Daten](demo.md). Ablago räumt stündlich auf.
 
 **0 Tage schaltet den Papierkorb aus:** Löschen ist dann sofort endgültig, wie vor Version 0.11. Was gerade im Papierkorb liegt, wird beim Speichern endgültig gelöscht – die Werkbank fragt vorher nach.
 
@@ -25,7 +25,7 @@ Jede Mappe hat eine **Historie** (wer wann was geändert hat). Wird eine Mappe e
 - Sie blockieren keine **eindeutigen Werte**: Eine neue Mappe darf dieselbe Rechnungsnummer bekommen.
 - Wie bisher lässt sich eine Mappe, auf die noch andere verweisen, gar nicht erst löschen.
 - **Wiederherstellen** bringt Dokumente und Verweise zurück. Verweise auf Mappen, die es inzwischen nicht mehr gibt, entfallen. Ist ein eindeutiger Wert inzwischen vergeben, landet die Mappe bei dem, der sie angelegt hat, unter **Zu erledigen**.
-- **Mit verknüpften Mappen löschen** ([Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)) legt alle Mappen als **einen Vorgang** in den Papierkorb. Sie lassen sich gemeinsam wiederherstellen (**Alle wiederherstellen**) – mit den Verweisen untereinander (auch im Kreis) und den Verweisen, die an bleibenden Mappen entfernt wurden. Einzeln geht es auch; dann kommen nur die Verweise dieser einen Mappe zurück.
+- **Mit verknüpften Mappen löschen** ([Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)) legt alle Mappen als **einen Vorgang** in den Papierkorb. Sie lassen sich gemeinsam wiederherstellen (**Alle wiederherstellen**) – mit den Verweisen untereinander (auch im Kreis) und den Verweisen, die an bleibenden Mappen entfernt wurden. Einzeln geht es auch; dann kommen nur die Verweise dieser einen Mappe zurück.
 - Ein Mappentyp lässt sich nicht löschen, solange Mappen von ihm im Papierkorb liegen.
 - Mappen eines Mappentyps im [Archivmodus](archiv.md) bleiben im Papierkorb, bis ihre Aufbewahrungsfrist endet – auch wenn die Aufbewahrung des Papierkorbs vorher abläuft. Endgültig löschen lassen sie sich vorher nicht, auch nicht als Administrator.
 - Die Dateien bleiben im Dateiordner, bis der Papierkorb geleert ist.

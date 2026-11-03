@@ -6,7 +6,7 @@
  * (docs/handbuch/werkzeuge/hilfe-pruefen.ts) – eine umbenannte Überschrift fällt sofort auf.
  */
 
-export const HANDBUCH_BASIS = 'https://motom001.github.io/dms';
+export const HANDBUCH_BASIS = 'https://help.ablago.app';
 export type Handbuch = 'admin' | 'benutzer';
 export interface Hilfeziel { handbuch: Handbuch; /** Seite mit Schrägstrich am Ende, z. B. „aufgaben/“. */ seite: string; anker?: string; /** „Hilfe zu …“ */ titel: string }
 
@@ -58,7 +58,7 @@ export const HILFE = {
   'werkbank.pakete.katalog': admin('pakete/', 'Im Katalog ansehen', 'im-katalog-ansehen'),
   'werkbank.pakete.sammeldatei': admin('pakete/', 'Pakete ohne Internet installieren', 'pakete-ohne-internet-installieren'),
   'werkbank.pakete.ablauf': admin('pakete/', 'Mehrere Pakete in einem Schritt installieren', 'mehrere-pakete-in-einem-schritt-installieren'),
-  'werkbank.pakete.erstellen': admin('pakete/', 'Paket aus deinem DMS erstellen', 'paket-aus-deinem-dms-erstellen'),
+  'werkbank.pakete.erstellen': admin('pakete/', 'Paket aus deinem Ablago erstellen', 'paket-aus-deinem-dms-erstellen'),
   'werkbank.pakete.umwandeln': admin('pakete/', 'Text in Verweise umwandeln', 'text-in-verweise-umwandeln'),
   // Herkunft eines Pakets (#594): signierter Katalog, eigener Katalog mit Schlüssel.
   'werkbank.pakete.herkunft': admin('pakete/', 'Herkunft: signiert oder nicht', 'herkunft-signiert-oder-nicht'),
@@ -100,11 +100,11 @@ export const HILFE = {
   'werkbank.vollexport': admin('export/', 'Daten exportieren'),
   'werkbank.vollexport.kontakte': admin('export/', 'Kontakte als vCard', 'kontakte-als-vcard'),
   'werkbank.darfweg': admin('archiv/', '„Darf weg“', 'nach-der-frist-darf-weg'),
-  'werkbank.datenschutz': admin('datenschutz/', 'Datenschutz im DMS'),
+  'werkbank.datenschutz': admin('datenschutz/', 'Datenschutz in Ablago'),
   'werkbank.datenschutz.anrede': admin('datenschutz/', 'Anrede in Unterlagen für Dritte', 'anrede'),
   'werkbank.auskunft': admin('datenschutz/', 'Auskunft nach Art. 15 DSGVO', 'auskunft-nach-art-15-dsgvo'),
   'werkbank.auskunft.zustellen': admin('datenschutz/', 'Auskunft zustellen', 'auskunft-zustellen'),
-  'werkbank.loeschkonzept': admin('loeschkonzept/', 'Löschkonzept aus dem DMS erzeugen', 'aus-dem-dms-erzeugen'),
+  'werkbank.loeschkonzept': admin('loeschkonzept/', 'Löschkonzept aus Ablago erzeugen', 'aus-dem-dms-erzeugen'),
   'werkbank.loeschprotokoll': admin('datenschutz/', 'Löschprotokoll', 'loschprotokoll'),
   'werkbank.dateienpruefen': admin('archiv/', 'Alle Dateien prüfen', 'alle-dateien-prufen'),
   'werkbank.auswahlfilter': admin('mappentypen/', 'Auswahlfilter am Verweisfeld', 'auswahl-einschranken'),

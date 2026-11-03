@@ -43,7 +43,7 @@ export class Einrichtungscode {
   /** Vorhandenen Code übernehmen (bleibt über Neustarts gleich) oder neu erzeugen; ins Protokoll schreiben. */
   async bereitstellen(): Promise<string> {
     if (this.abgeschaltet) {
-      log.warn('Das DMS ist noch nicht eingerichtet – ohne Einrichtungscode (DMS_EINRICHTUNGSCODE=aus). Richte es gleich im Browser ein.');
+      log.warn('Ablago ist noch nicht eingerichtet – ohne Einrichtungscode (DMS_EINRICHTUNGSCODE=aus). Richte es gleich im Browser ein.');
       return '';
     }
     if (!this.code) {
@@ -54,8 +54,8 @@ export class Einrichtungscode {
     }
     const zeile = '='.repeat(64);
     // Bewusst als eigene, auffällige Zeilen: so findet man den Code im Protokoll des Containers.
-    console.log(`\n${zeile}\n  Einrichtungscode für das DMS:  ${this.code}\n  Öffne das DMS im Browser und gib den Code dort ein.\n  (Steht auch in der Datei ${this.datei})\n${zeile}\n`);
-    log.warn('Das DMS ist noch nicht eingerichtet – Einrichtungscode siehe oben bzw. in der Datei', { datei: this.datei });
+    console.log(`\n${zeile}\n  Einrichtungscode für Ablago:  ${this.code}\n  Öffne Ablago im Browser und gib den Code dort ein.\n  (Steht auch in der Datei ${this.datei})\n${zeile}\n`);
+    log.warn('Ablago ist noch nicht eingerichtet – Einrichtungscode siehe oben bzw. in der Datei', { datei: this.datei });
     return this.code;
   }
 

@@ -59,7 +59,7 @@ export function LoeschprotokollBlatt() {
       </form>
       <label className="lp-datei" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void pruefe(e.dataTransfer.files[0]); }}>
         <input type="file" onChange={(e) => { void pruefe(e.target.files?.[0]); e.target.value = ''; }} />
-        <span><strong>Wurde dieses Dokument gelöscht?</strong> Datei hierher ziehen oder wählen – das DMS rechnet die Prüfsumme in deinem Browser und sucht sie. Die Datei selbst wird nicht hochgeladen.</span>
+        <span><strong>Wurde dieses Dokument gelöscht?</strong> Datei hierher ziehen oder wählen – Ablago rechnet die Prüfsumme in deinem Browser und sucht sie. Die Datei selbst wird nicht hochgeladen.</span>
       </label>
       {datei && <p className="leise klein lp-sha">{datei}</p>}
       {f.vorgang && <p className="klein">Nur Vorgang {kurz(f.vorgang)} · <button type="button" className="textknopf klein" onClick={() => setze('vorgang', '')}>alle Vorgänge</button></p>}

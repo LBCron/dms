@@ -1,13 +1,13 @@
 # Als Laufwerk einbinden
 
-Du arbeitest lieber mit dem Explorer, dem Finder oder der Dateien-App? Dann binde die Ablage des DMS als **Laufwerk** ein. Du blätterst durch Ansichten, Mappen und Register wie durch Ordner, öffnest Dokumente mit jedem Programm und legst neue Post einfach hinein – per Ziehen oder „Sichern unter“.
+Du arbeitest lieber mit dem Explorer, dem Finder oder der Dateien-App? Dann binde die Ablage von Ablago als **Laufwerk** ein. Du blätterst durch Ansichten, Mappen und Register wie durch Ordner, öffnest Dokumente mit jedem Programm und legst neue Post einfach hinein – per Ziehen oder „Sichern unter“.
 
 !!! note "Erst einschalten lassen"
-    Das Laufwerk ist im DMS zunächst **ausgeschaltet**. Dein Administrator schaltet es in der Werkbank ein und nennt dir die Adresse, etwa `https://dms.example.org/webdav/`.
+    Das Laufwerk ist in Ablago zunächst **ausgeschaltet**. Dein Administrator schaltet es in der Werkbank ein und nennt dir die Adresse, etwa `https://dms.example.org/webdav/`.
 
 ## Was du brauchst
 
-1. **Die Adresse:** die Adresse deines DMS mit `/webdav/` am Ende, z. B. `https://dms.example.org/webdav/`.
+1. **Die Adresse:** die Adresse deines Ablago mit `/webdav/` am Ende, z. B. `https://dms.example.org/webdav/`.
 2. **Einen API-Schlüssel:** Unter **Profil → Sicherheit → API-Schlüssel** erzeugst du einen neuen Schlüssel, z. B. „Laptop“. Wähle **lesen und schreiben**, wenn du Dateien ablegen willst. Kopiere den Schlüssel gleich – er ist nur jetzt ganz zu sehen.
 3. Beim Verbinden ist der **Benutzername deine E-Mail-Adresse** und das **Passwort der Schlüssel** (beginnt mit `dms_`). Dein normales Passwort funktioniert hier absichtlich nicht.
 
@@ -62,15 +62,15 @@ Ablage/
 
 ## Dokumente öffnen
 
-Doppelklick öffnet das Dokument mit dem passenden Programm. Das geht nur bei Mappen, die du auch **exportieren** darfst (wie beim Export und beim Versenden per E-Mail) – sonst lehnt das DMS ab, und dein Programm meldet einen Fehler. Im Browser kannst du solche Dokumente weiterhin ansehen.
+Doppelklick öffnet das Dokument mit dem passenden Programm. Das geht nur bei Mappen, die du auch **exportieren** darfst (wie beim Export und beim Versenden per E-Mail) – sonst lehnt das Ablago ab, und dein Programm meldet einen Fehler. Im Browser kannst du solche Dokumente weiterhin ansehen.
 
 ## Dateien ablegen
 
 - **In „Neue Post“** legst du alles ab, was neu ankommt – auch viele Dateien auf einmal. Jede Datei wird eine eigene Post.
-- **In einen Register-Ordner** einer Mappe legst du eine Datei, die schon zu dieser Mappe gehört. Sie wird ein Dokument im Register. Gibt es dort schon ein Dokument mit **gleichem Namen** und hat das Register [Versionen](versionen.md), entsteht eine **neue Version**. Ohne Versionen lehnt das DMS ab – gib der Datei dann einen anderen Namen.
+- **In einen Register-Ordner** einer Mappe legst du eine Datei, die schon zu dieser Mappe gehört. Sie wird ein Dokument im Register. Gibt es dort schon ein Dokument mit **gleichem Namen** und hat das Register [Versionen](versionen.md), entsteht eine **neue Version**. Ohne Versionen lehnt das Ablago ab – gib der Datei dann einen anderen Namen.
 - Direkt in eine Mappe, in eine Ansicht oder unter „Ablage“ lässt sich nichts legen, und neue Ordner gehen nicht.
 - **Löschen, Umbenennen und Verschieben** gehen über das Laufwerk (noch) nicht. Das machst du im Browser.
-- Dateien wie `desktop.ini`, `Thumbs.db` oder `.DS_Store`, die Windows und macOS selbst anlegen, nimmt das DMS still an und wirft sie weg.
+- Dateien wie `desktop.ini`, `Thumbs.db` oder `.DS_Store`, die Windows und macOS selbst anlegen, nimmt Ablago still an und wirft sie weg.
 
 ## Wenn etwas nicht klappt
 

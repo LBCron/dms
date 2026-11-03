@@ -69,7 +69,7 @@ export function sammelText(meldungen: Meldung[]): { betreff: string; text: strin
     zeilen.push('', 'Gesperrte Benutzerkonten (je E-Mail-Adresse und IP):', ...[...je].slice(0, 10).map(([wer, n]) => `- ${wer}${n > 1 ? ` (${n}×)` : ''}`));
   }
   zeilen.push('', 'Gesperrte Adressen entsperren: Werkbank → Anmeldeschutz.');
-  return { betreff: `DMS: Anmeldeschutz – ${teile.join(' und ')} gesperrt`, text: zeilen.join('\n') };
+  return { betreff: `Ablago: Anmeldeschutz – ${teile.join(' und ')} gesperrt`, text: zeilen.join('\n') };
 }
 
 export interface IpSperre { ip: string; seit: string; bis: string | null; grund: string }
@@ -278,7 +278,7 @@ export class Anmeldesperre {
     const heute = this.heute();
     if (this.sofortGemeldet.get(email) === heute) return;
     this.sofortGemeldet.set(email, heute);
-    await this.anAdmins('DMS: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Anmeldeschutz.`).catch((e) => log.warn('Meldung zur Kontosperre nicht verschickt', { fehler: (e as Error).message }));
+    await this.anAdmins('Ablago: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Anmeldeschutz.`).catch((e) => log.warn('Meldung zur Kontosperre nicht verschickt', { fehler: (e as Error).message }));
   }
 
   /** Nach erfolgreicher Anmeldung: Zähler für Konto und IP zurücksetzen. */

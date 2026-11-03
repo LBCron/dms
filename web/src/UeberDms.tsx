@@ -32,20 +32,20 @@ export function UeberDms({ schliessen }: { schliessen: () => void }) {
       // Klick auf den abgedunkelten Rand (das <dialog> selbst, nicht sein Inhalt) schließt.
       onClick={(e) => { if (e.target === ref.current) schliessen(); }}>
       <div className="ueber-dms-inhalt">
-        <h2 id={`${id}-t`} className="marke ueber-dms-marke"><Marke logo={null} schriftzug="DMS" gross /><span className="sr-only"> – Über das DMS</span></h2>
-        <p>Das DMS ist ein selbst gehostetes Dokumentenmanagementsystem für Haushalte und kleine Betriebe. Es läuft auf eurem eigenen Rechner, NAS oder Server – deine Daten bleiben bei dir und gehen an keinen Cloud-Anbieter. Nutzungsdaten sendet es keine.</p>
+        <h2 id={`${id}-t`} className="marke ueber-dms-marke"><Marke logo={null} schriftzug="Ablago" gross /><span className="sr-only"> – Über Ablago</span></h2>
+        <p>Ablago ist ein selbst gehostetes Dokumentenmanagementsystem für Haushalte und kleine Betriebe. Es läuft auf eurem eigenen Rechner, NAS oder Server – deine Daten bleiben bei dir und gehen an keinen Cloud-Anbieter. Nutzungsdaten sendet es keine.</p>
         <dl className="ueber-dms-angaben">
           <dt>Version</dt>
           <dd>{version ?? 'unbekannt'}</dd>
           <dt>Lizenz</dt>
-          <dd><a href={LIZENZ} {...extern}>Apache License 2.0</a> – freie Software: Du darfst das DMS kostenlos nutzen, verändern und weitergeben; der Quellcode ist für jeden einsehbar.</dd>
+          <dd><a href={LIZENZ} {...extern}>Apache License 2.0</a> – freie Software: Du darfst Ablago kostenlos nutzen, verändern und weitergeben; der Quellcode ist für jeden einsehbar.</dd>
           <dt>Quellcode</dt>
           <dd><a href={quellcodeUrl(version)} {...extern}>{version ? `Quellcode der Version ${version}` : 'Quellcode auf GitHub'}</a></dd>
         </dl>
         <ul className="ueber-dms-links">
           <li><a href={handbuch('benutzer')} {...extern}>Benutzerhandbuch</a></li>
           <li><a href={handbuch('benutzer', 'neu/')} {...extern}>Neu in dieser Version</a>{version && <> · <a href={`${REPOSITORY}/releases/tag/v${version}`} {...extern}>Release-Notizen</a></>}</li>
-          <li><a href={WER_NUTZT} {...extern}>Nutzt du das DMS? Erzähl uns davon</a> – freiwillig, das DMS selbst meldet nichts.</li>
+          <li><a href={WER_NUTZT} {...extern}>Nutzt du Ablago? Erzähl uns davon</a> – freiwillig, Ablago selbst meldet nichts.</li>
         </ul>
         <div className="ueber-dms-knoepfe">
           <button ref={knopf} type="button" className="knopf primaer" onClick={schliessen}>Schließen</button>

@@ -1,11 +1,11 @@
-# Beispiel: lokaler KI-Dienst (Ollama) neben dem DMS
+# Beispiel: lokaler KI-Dienst (Ollama) neben Ablago
 
-Damit beantwortet das Paket **KI-Assistent** Fragen an die Ablage („Frag deine Ablage“) und füllt Felder aus Dokumenten („Aus Dokument ausfüllen“) – **ohne Cloud**: Das Modell rechnet auf deinem eigenen Gerät. Die ganze Anleitung mit Modell-Empfehlung, Speicherbedarf und Messwerten steht im Administratorhandbuch unter **[KI lokal betreiben](https://motom001.github.io/dms/admin/aktuell/ki-lokal/)**.
+Damit beantwortet das Paket **KI-Assistent** Fragen an die Ablage („Frag deine Ablage“) und füllt Felder aus Dokumenten („Aus Dokument ausfüllen“) – **ohne Cloud**: Das Modell rechnet auf deinem eigenen Gerät. Die ganze Anleitung mit Modell-Empfehlung, Speicherbedarf und Messwerten steht im Administratorhandbuch unter **[KI lokal betreiben](https://help.ablago.app/admin/aktuell/ki-lokal/)**.
 
 | Datei | wofür |
 | --- | --- |
 | [`docker-compose.yml`](docker-compose.yml) | Ollama, **nur Prozessor** – läuft überall. Lädt das Modell beim ersten Start selbst. Kein Port nach außen, Speichergrenze 6 GB. |
-| [`dms-anbinden.yml`](dms-anbinden.yml) | Ergänzung für das Compose-Projekt des DMS: hängt es ins gemeinsame Netz `dms-ki`. |
+| [`dms-anbinden.yml`](dms-anbinden.yml) | Ergänzung für das Compose-Projekt von Ablago: hängt es ins gemeinsame Netz `dms-ki`. |
 | [`intel-grafik.yml`](intel-grafik.yml) | **Versuch:** Intel-Grafik im Prozessor über Vulkan (`/dev/dri`). Nicht gemessen. |
 | [`nvidia.yml`](nvidia.yml) | NVIDIA-Grafikkarte (NVIDIA Container Toolkit nötig). |
 | [`amd.yml`](amd.yml) | AMD-Grafikkarte mit ROCm. |
@@ -17,14 +17,14 @@ Ollama steht unter der MIT-Lizenz; das Projekt baut **kein eigenes Image** und l
 
 1. Ordner anlegen, z. B. `/volume1/docker/dms-ki/`, und `docker-compose.yml` hineinlegen. Wenn du willst, oben das Modell ändern.
 2. Starten: `docker compose up -d` (oder in der Oberfläche des NAS als Projekt). Der Dienst `modell-laden` lädt das Modell (2–3 GB) und beendet sich danach; Fortschritt mit `docker compose logs -f modell-laden`.
-3. Das DMS ins Netz `dms-ki` hängen: [`dms-anbinden.yml`](dms-anbinden.yml) – mit `-f` dazunehmen oder die paar Zeilen in die Compose-Datei des DMS übernehmen – und das DMS neu starten.
-4. Im DMS: *Werkbank → Pakete → KI-Assistent* installieren, Einstellungen **Dienst-Adresse** `http://ollama:11434/v1` und **Modell** wie oben, Adresse bestätigen, **Verbindung testen**.
+3. Ablago ins Netz `dms-ki` hängen: [`dms-anbinden.yml`](dms-anbinden.yml) – mit `-f` dazunehmen oder die paar Zeilen in die Compose-Datei von Ablago übernehmen – und Ablago neu starten.
+4. In Ablago: *Werkbank → Pakete → KI-Assistent* installieren, Einstellungen **Dienst-Adresse** `http://ollama:11434/v1` und **Modell** wie oben, Adresse bestätigen, **Verbindung testen**.
 
 Mit Grafik: `docker compose -f docker-compose.yml -f nvidia.yml up -d` (bzw. `amd.yml`, `intel-grafik.yml` mit `--build`).
 
 ## Warum kein Port nach außen?
 
-Ollama hat keine Anmeldung: Wer die Adresse erreicht, kann fragen, Modelle laden und löschen. Deshalb hat das Beispiel **kein `ports:`**. Das DMS erreicht Ollama über das gemeinsame Docker-Netz `dms-ki`; das Netz ist `internal`, führt also nicht nach draußen. Ins Internet kommt nur der Ollama-Container selbst über sein eigenes Netz – zum Laden des Modells. Die Cloud-Funktionen von Ollama sind ausgeschaltet (`OLLAMA_NO_CLOUD`).
+Ollama hat keine Anmeldung: Wer die Adresse erreicht, kann fragen, Modelle laden und löschen. Deshalb hat das Beispiel **kein `ports:`**. Ablago erreicht Ollama über das gemeinsame Docker-Netz `dms-ki`; das Netz ist `internal`, führt also nicht nach draußen. Ins Internet kommt nur der Ollama-Container selbst über sein eigenes Netz – zum Laden des Modells. Die Cloud-Funktionen von Ollama sind ausgeschaltet (`OLLAMA_NO_CLOUD`).
 
 ## Aktualisieren
 

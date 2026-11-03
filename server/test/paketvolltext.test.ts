@@ -87,7 +87,7 @@ describe('Volltext aus Paketen (#614): Manifest und Rechte', () => {
     assert.deepEqual(c.fehler, []);
     assert.deepEqual(c.code!.volltext, [WORD, EML, 'text/plain', DOCM]);
     const f = (code: Record<string, unknown>) => liesCode({ ...MANIFEST_CODE, ...code }).fehler.join(' ');
-    assert.match(f({ volltext: ['application/pdf'] }), /PDF \(application\/pdf\) liest das DMS selbst/);
+    assert.match(f({ volltext: ['application/pdf'] }), /PDF \(application\/pdf\) liest Ablago selbst/);
     assert.match(f({ volltext: ['Word'] }), /kein Dateityp/);
     assert.match(f({ volltext: [] }), /dms:volltext braucht code.volltext/);
     assert.match(f({ rechte: { lesen: ['*'], schnittstellen: ['dms:volltext'] } }), /dms:volltext braucht auch code.rechte.dokumente: lesen/);

@@ -104,7 +104,7 @@ class Blatt {
 async function neuesPdf(titel: string) {
   const doc = await PDFDocument.create();
   doc.setTitle(winAnsi(titel));
-  doc.setProducer('DMS Demo-Daten');
+  doc.setProducer('Ablago Demo-Daten');
   // Feste Zeitstempel: gleicher Startwert ergibt gleiche Dateien.
   doc.setCreationDate(new Date(Date.UTC(2026, 0, 1)));
   doc.setModificationDate(new Date(Date.UTC(2026, 0, 1)));
@@ -239,7 +239,7 @@ async function scan(z: Zufall, m: MappenInhalt, kennung: string): Promise<{ inha
   const vorlage = seiten === 1 ? await brief(z, m, kennung) : await mehrseitig(z, m, kennung, seiten);
   const bilder = await rastere(vorlage.inhalt, { format: 'jpeg', dpi: z.eins([150, 200, 200, 300]), grau: z.chance(0.7), qualitaet: z.von(60, 85) });
   const doc = await PDFDocument.create();
-  doc.setProducer('DMS Demo-Daten (Scan)');
+  doc.setProducer('Ablago Demo-Daten (Scan)');
   doc.setCreationDate(new Date(Date.UTC(2026, 0, 1)));
   doc.setModificationDate(new Date(Date.UTC(2026, 0, 1)));
   for (const bild of bilder) {

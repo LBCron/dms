@@ -35,7 +35,7 @@ export function Zustellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzS
         <label className={`auskunft-weg${weg === 'link' ? ' gewaehlt' : ''}`}>
           <input type="radio" name={`weg-${a.id}`} checked={weg === 'link'} onChange={() => setWeg('link')} />
           <span><span className="auskunft-weg-titel"><strong>Abruf-Link mit Abrufcode</strong>{s.oeffentlich && <span className="chip gut">empfohlen</span>}</span>
-            <small>Die Person lädt die Datei auf einer schlichten Seite deines DMS herunter – nachweisbar, mit Ablaufdatum. Den Code bekommt sie auf einem anderen Weg.</small></span>
+            <small>Die Person lädt die Datei auf einer schlichten Seite deines Ablago herunter – nachweisbar, mit Ablaufdatum. Den Code bekommt sie auf einem anderen Weg.</small></span>
         </label>
         <label className={`auskunft-weg${weg === 'email' ? ' gewaehlt' : ''}${a.verschluesselt ? '' : ' aus'}`}>
           <input type="radio" name={`weg-${a.id}`} checked={weg === 'email'} disabled={!a.verschluesselt} onChange={() => setWeg('email')} />
@@ -76,7 +76,7 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
 
   return (
     <div className="auskunft-weg-inhalt">
-      {!s.oeffentlich && <div className="hinweis warn"><p><strong>Ist dein DMS aus dem Internet erreichbar?</strong> Die Adresse {s.adresse ? <code>{s.adresse}</code> : 'des DMS'} sieht nach einem Heimnetz aus. Den Link kann die Person nur öffnen, wenn dein DMS von außen erreichbar ist (Reverse Proxy, Tunnel oder Hosting). Sonst nimm den Weg per E-Mail. Die Adresse stellst du unter <Link to="/werkbank/betrieb" className="verweis">E-Mail und Adresse</Link> ein.</p></div>}
+      {!s.oeffentlich && <div className="hinweis warn"><p><strong>Ist dein Ablago aus dem Internet erreichbar?</strong> Die Adresse {s.adresse ? <code>{s.adresse}</code> : 'von Ablago'} sieht nach einem Heimnetz aus. Den Link kann die Person nur öffnen, wenn dein Ablago von außen erreichbar ist (Reverse Proxy, Tunnel oder Hosting). Sonst nimm den Weg per E-Mail. Die Adresse stellst du unter <Link to="/werkbank/betrieb" className="verweis">E-Mail und Adresse</Link> ein.</p></div>}
       {neu ? (
         <div className="hinweis gut auskunft-neu" role="status"><div className="auskunft-neu-inhalt">
           <p>{neu.gesendet ? <>Der Link ist per E-Mail an <strong>{an}</strong> unterwegs – ohne Abrufcode.</> : 'Der Link ist erstellt. Schicke ihn der Person, z. B. per E-Mail.'}</p>
@@ -100,7 +100,7 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
           {s.mail && <label className="haken"><input type="checkbox" checked={senden} onChange={(e) => setSenden(e.target.checked)} /><span>Link per E-Mail an diese Adresse schicken</span></label>}
           <fieldset className="auskunft-codewahl">
             <legend>Abrufcode</legend>
-            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={!eigen} onChange={() => setEigen(false)} /><span>Vom DMS erzeugen (empfohlen) – 8 Zeichen, nur jetzt sichtbar</span></label>
+            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={!eigen} onChange={() => setEigen(false)} /><span>Von Ablago erzeugen (empfohlen) – 8 Zeichen, nur jetzt sichtbar</span></label>
             <label className="haken"><input type="radio" name={`code-${a.id}`} checked={eigen} onChange={() => setEigen(true)} /><span>Eigener Code, den nur die Person kennt – z. B. die Vertragsnummer</span></label>
             {eigen && <>
               <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} className="mono" aria-label="Eigener Abrufcode" />

@@ -269,7 +269,7 @@ export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: s
     const fest = !von ? versionen[id] : undefined;
     const v = [...kp.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((x) => (fest ? x.version === fest : !bereich || passt(x.version, bereich)) && dmsPasst(dms, x.dms));
     if (!v) {
-      probleme.push(von ? `„${name(von)}“ braucht „${kp.name}“ ${bereich}; dazu passt keine Version für DMS ${dms}.` : `„${kp.name}“: keine Version passt zu DMS ${dms}.`);
+      probleme.push(von ? `„${name(von)}“ braucht „${kp.name}“ ${bereich}; dazu passt keine Version für Ablago ${dms}.` : `„${kp.name}“: keine Version passt zu Ablago ${dms}.`);
       return;
     }
     plan.set(id, { id, name: kp.name, version: v.version, code: v.code, gewaehlt: !von, fuer: von ? [von] : [], abhaengigkeiten: v.abhaengigkeiten, ...(v.ergaenzt ? { ergaenzt: v.ergaenzt } : {}) });
@@ -293,7 +293,7 @@ const text = (v: unknown) => (typeof v === 'string' ? v : '');
 export function liesKatalog(j: unknown): Katalog {
   const k = j as Partial<Katalog> | null;
   if (!k || typeof k !== 'object' || !Array.isArray(k.pakete)) throw new Error('Das ist kein Paketkatalog (katalog.json).');
-  if (k.format !== 1) throw new Error(`Katalogformat ${String(k.format)} kennt dieses DMS nicht – bitte das DMS aktualisieren.`);
+  if (k.format !== 1) throw new Error(`Katalogformat ${String(k.format)} kennt diese Ablago-Version nicht – bitte Ablago aktualisieren.`);
   const pakete: KatalogPaket[] = [];
   for (const p of k.pakete) {
     if (!p || !PAKET_ID.test(text(p.id)) || !Array.isArray(p.versionen)) continue;
@@ -339,9 +339,9 @@ export const EREIGNISSE = {
   'texterkennung.fertig': 'Die Texterkennung eines Dokuments ist fertig (veraltet, wie „Volltext fertig“)',
   'volltext.fertig': 'Der Volltext eines Dokuments ist fertig (auch ohne Text)',
   'paket.einstellungen_geaendert': 'Die Einstellungen des Pakets wurden geändert',
-  'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die das DMS nicht selbst liest)',
+  'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die Ablago nicht selbst liest)',
   'sicherung.fertig': 'Eine Sicherung ist fertig (verschlüsselt) und kann außer Haus kopiert werden',
-  'datei.volltext': 'Eine Datei braucht ihren Volltext (Dateitypen, die das DMS nicht selbst liest)',
+  'datei.volltext': 'Eine Datei braucht ihren Volltext (Dateitypen, die Ablago nicht selbst liest)',
   'datei.archivfassung': 'Ein Dokument mit fertigem Volltext braucht seine Archivfassung (PDF/A)',
   // Mappen-Ereignisse aus dem Ereigniskatalog (#670, shared/src/ereignisse.ts): nur zu Typen unter code.mappentypen.
   'mappe.angelegt': 'Eine Mappe ist angelegt',
@@ -361,12 +361,12 @@ export type EreignisArt = keyof typeof EREIGNISSE;
  */
 export const SCHNITTSTELLEN = {
   'dms:vektoren': 'Vektoren zu Dokumenten speichern und ähnliche Dokumente finden',
-  'dms:antworten': 'Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die das DMS mitgibt',
-  'dms:erkennen': 'Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den das DMS mitgibt',
-  'dms:texterkennung': 'Texterkennung für Scans und Bilder übernehmen – das DMS meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt',
-  'dms:umwandeln': 'Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
+  'dms:antworten': 'Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die Ablago mitgibt',
+  'dms:erkennen': 'Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den Ablago mitgibt',
+  'dms:texterkennung': 'Texterkennung für Scans und Bilder übernehmen – Ablago meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt',
+  'dms:umwandeln': 'Dateien umwandeln, die Ablago nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
   'dms:sicherung-lesen': 'Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)',
-  'dms:volltext': 'Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht',
+  'dms:volltext': 'Volltext für Dateien liefern, die Ablago nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht',
   'dms:archivfassung': 'Archivfassung (PDF/A) ablegen – das Paket liest Dokumente mit ihrem Volltext und den Wortpositionen und legt daneben ein durchsuchbares PDF/A ab; das Original bleibt unverändert, ändern, ersetzen oder löschen kann es nichts',
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
@@ -500,7 +500,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   for (const t of [...lesen, ...schreiben]) if (!TYPVERWEIS_ODER_ALLE.test(t)) fehler.push(`code.rechte: „${t}“ ist kein gültiger Mappentyp-Verweis.`);
   // Benutzer sehen Pakete nie (auch nicht mit "*"), siehe Handbuch „Pakete mit Code“.
   for (const t of [...lesen, ...schreiben]) if (t === 'dms:benutzer') fehler.push('code.rechte: dms:benutzer ist für Pakete nicht erlaubt – Pakete sehen keine Benutzer.');
-  else if (t.startsWith('dms:') && !DMS_RECHTE_TYPEN[t.slice(4)]) fehler.push(`code.rechte: „${t}“ – diesen Mappentyp bringt das DMS nicht mit. Erlaubt sind ${Object.keys(DMS_RECHTE_TYPEN).map((k) => `dms:${k}`).join(', ')}.`);
+  else if (t.startsWith('dms:') && !DMS_RECHTE_TYPEN[t.slice(4)]) fehler.push(`code.rechte: „${t}“ – diesen Mappentyp bringt Ablago nicht mit. Erlaubt sind ${Object.keys(DMS_RECHTE_TYPEN).map((k) => `dms:${k}`).join(', ')}.`);
   const dokumente = (r.dokumente ?? 'keine') as DokumentRecht;
   if (!(dokumente in DOKUMENT_RECHTE)) fehler.push('code.rechte.dokumente: keine, lesen oder schreiben.');
   // Schnittstellen des Kerns (#442), z. B. dms:vektoren; Vektoren gibt es nur zu Dokumenten, die das Paket lesen darf.
@@ -512,7 +512,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   const willUmwandeln = schnittstellen.includes('dms:umwandeln');
   for (const m of umwandeln) {
     if (!MIME.test(m)) fehler.push(`code.umwandeln: „${m}“ ist kein Dateityp (z. B. image/tiff).`);
-    else if (kernTyp(m)) fehler.push(`code.umwandeln: ${dateitypName(m)} (${m}) liest das DMS selbst – umwandeln lassen sich nur andere Dateitypen.`);
+    else if (kernTyp(m)) fehler.push(`code.umwandeln: ${dateitypName(m)} (${m}) liest Ablago selbst – umwandeln lassen sich nur andere Dateitypen.`);
   }
   if (umwandeln.length > UMWANDELN_TYPEN_MAX) fehler.push(`code.umwandeln: höchstens ${UMWANDELN_TYPEN_MAX} Dateitypen.`);
   if (willUmwandeln && !umwandeln.length) fehler.push('code.rechte.schnittstellen: dms:umwandeln braucht code.umwandeln – die Dateitypen, die das Paket umwandelt.');
@@ -525,7 +525,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   const willVolltext = schnittstellen.includes('dms:volltext');
   for (const m of volltext) {
     if (!MIME.test(m)) fehler.push(`code.volltext: „${m}“ ist kein Dateityp (z. B. application/msword).`);
-    else if (kernTyp(m)) fehler.push(`code.volltext: ${dateitypName(m)} (${m}) liest das DMS selbst – Volltext aus Paketen gibt es nur für andere Dateitypen (Scans erkennt dms:texterkennung).`);
+    else if (kernTyp(m)) fehler.push(`code.volltext: ${dateitypName(m)} (${m}) liest Ablago selbst – Volltext aus Paketen gibt es nur für andere Dateitypen (Scans erkennt dms:texterkennung).`);
   }
   if (volltext.length > VOLLTEXT_TYPEN_MAX) fehler.push(`code.volltext: höchstens ${VOLLTEXT_TYPEN_MAX} Dateitypen.`);
   if (willVolltext && !volltext.length) fehler.push('code.rechte.schnittstellen: dms:volltext braucht code.volltext – die Dateitypen, für die das Paket den Volltext liefert.');

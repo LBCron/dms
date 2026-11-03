@@ -185,7 +185,7 @@ function Aufkleber({ naechste, neuLaden }: { naechste: string; neuLaden(): Promi
   return (
     <div className="blatt">
       <h2 className="h3">Aufkleber drucken <Hilfe ort="werkbank.aufkleber" /></h2>
-      <p className="leise">Ein PDF mit Aufklebern ab <code className="mono">{naechste}</code>: Barcode (Code 128) und Nummer lesbar. Auf das Papieroriginal kleben, im DMS am Dokument eintragen – oder mit einem Handscanner ins Suchfeld scannen. Mit 100 % drucken, nicht „an Seite anpassen“.</p>
+      <p className="leise">Ein PDF mit Aufklebern ab <code className="mono">{naechste}</code>: Barcode (Code 128) und Nummer lesbar. Auf das Papieroriginal kleben, in Ablago am Dokument eintragen – oder mit einem Handscanner ins Suchfeld scannen. Mit 100 % drucken, nicht „an Seite anpassen“.</p>
       <form className="raster" onSubmit={(e) => { e.preventDefault(); void los(); }}>
         <label className="eigenschaft"><span>Anzahl</span><input type="number" min={1} max={500} value={anzahl} onChange={(e) => setAnzahl(e.target.value)} /></label>
         <label className="eigenschaft breit"><span>Etikettenformat (A4)</span>

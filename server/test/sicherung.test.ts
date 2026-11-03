@@ -150,7 +150,7 @@ describe('Sicherung (#103–#105)', () => {
     await s.speicherePlan({ uhrzeit: '23:59' }, 'admin');
     jetzt = new Date('2026-11-04T10:00:00Z');
     await s.tick(); await s.tick();
-    assert.deepEqual(mails, ['DMS: Die letzte Sicherung ist zu alt']);
+    assert.deepEqual(mails, ['Ablago: Die letzte Sicherung ist zu alt']);
     const sp = await s.speicher();
     assert.equal(sp.anzahl, 2);
     assert.equal(sp.dateien, 2);
@@ -166,7 +166,7 @@ describe('Sicherung (#103–#105)', () => {
     assert.equal(s.aktuellerLauf()?.status, 'fehler');
     assert.deepEqual(await readdir(s.ordner), [], 'keine halben Dateien');
     await s.melde(); await s.melde();
-    assert.deepEqual(mails, ['DMS: Sicherung fehlgeschlagen']);
+    assert.deepEqual(mails, ['Ablago: Sicherung fehlgeschlagen']);
     assert.equal((await s.zustand()).fehler?.grund, 'Datenbank weg');
   });
 });
@@ -264,7 +264,7 @@ describe('Notfallblatt (#106)', () => {
     const vorher = protokoll.letzteNr;
     const a = await route.handler({ body: {}, params: {}, query: {}, ip: '', benutzer });
     assert.equal(a.datei?.mime, 'application/pdf');
-    assert.match(a.datei!.name, /^DMS-Notfallblatt-\d{4}-\d{2}-\d{2}\.pdf$/);
+    assert.match(a.datei!.name, /^Ablago-Notfallblatt-\d{4}-\d{2}-\d{2}\.pdf$/);
     assert.equal((await s.notfallblatt()).aktuell, true);
     const eintrag = protokoll.eintraege({ seit: vorher }).find((e) => e.text === 'Notfallblatt heruntergeladen');
     assert.ok(eintrag && !JSON.stringify(eintrag).includes(tresor.alsText()!), 'im Protokoll, ohne Schlüssel');

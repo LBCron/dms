@@ -56,14 +56,14 @@ export function AnbindungPanel({ z, nachAenderung, unten }: { z: AnbindungZustan
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Datenbank-Anbindung</h1>
-        <p className="leise">Die Anbindung steht in der Datei <span className="mono">{s.datei}</span> und ist führend – auch wenn in der Compose-Datei <span className="mono">DATABASE_URL</span> gesetzt ist. Das Passwort zeigt das DMS nie an. Darunter siehst du lange Datenbankzugriffe und was gerade in der Datenbank läuft. <Hilfe ort="werkbank.anbindung" /></p>
+        <p className="leise">Die Anbindung steht in der Datei <span className="mono">{s.datei}</span> und ist führend – auch wenn in der Compose-Datei <span className="mono">DATABASE_URL</span> gesetzt ist. Das Passwort zeigt Ablago nie an. Darunter siehst du lange Datenbankzugriffe und was gerade in der Datenbank läuft. <Hilfe ort="werkbank.anbindung" /></p>
       </div>
       {s.umgebung === 'abweichend' && <div className="hinweis warn"><p><strong>DATABASE_URL weicht von dieser Anbindung ab und wird ignoriert.</strong> Entferne die Variable aus der Compose-Datei, damit es nicht zu Verwechslungen kommt.</p></div>}
       {s.imContainer && <div className="hinweis info"><p><strong>Die Datenbank läuft in diesem Container (dms-komplett).</strong> Hier ist nichts einzustellen. Zum Umzug auf eine eigene Datenbank: Sicherung hier anlegen und dort wiederherstellen – siehe „Wachsen und umziehen“ im Administratorhandbuch.</p></div>}
       {s.umgebung === 'gleich' && !s.imContainer && <div className="hinweis info"><p><strong>DATABASE_URL ist nicht mehr nötig.</strong> Die Anbindung steht in der Datei; du kannst die Variable beim nächsten Update aus der Compose-Datei entfernen.</p></div>}
       {s.neustartNoetig && (
         <div className="hinweis warn hinweiszeile">
-          <p><strong>Die Anbindung ist geändert und gilt nach dem Neustart.</strong> Im Container startet Docker das DMS gleich wieder (restart: unless-stopped).</p>
+          <p><strong>Die Anbindung ist geändert und gilt nach dem Neustart.</strong> Im Container startet Docker Ablago gleich wieder (restart: unless-stopped).</p>
           <button type="button" className="knopf primaer klein" disabled={neustart} onClick={() => void neuStarten()}>{neustart ? 'Startet neu …' : 'Jetzt neu starten'}</button>
         </div>
       )}

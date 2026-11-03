@@ -8,7 +8,7 @@
   "chip.titel": "Kein Wort-Treffer: Das Dokument „{dokument}“ ist deiner Suche ähnlich ({prozent} %).",
   "gruppe": "Ähnliche Treffer",
   "werkbank.titel": "Ähnlichkeit",
-  "werkbank.text": "Dieses Paket rechnet zu jedem Dokument mit Volltext einen Vektor. Das DMS vergleicht sie und zeigt ähnliche Dokumente an der Mappe und in der Suche.",
+  "werkbank.text": "Dieses Paket rechnet zu jedem Dokument mit Volltext einen Vektor. Ablago vergleicht sie und zeigt ähnliche Dokumente an der Mappe und in der Suche.",
   "werkbank.stand": "{mit} von {gesamt} Dokumenten mit Volltext berechnet",
   "werkbank.stand.leer": "Noch kein Dokument mit Volltext.",
   "werkbank.modell": "Modell",

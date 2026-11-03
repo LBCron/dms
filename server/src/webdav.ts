@@ -290,9 +290,9 @@ export class Webdav {
         if (!k) return text(404, 'Nicht gefunden.');
         return xmlAntwort(207, proppatchAntwort(teile, istOrdner(k), proppatchNamen(body)));
       }
-      case 'MKCOL': verwerfe(a.koerper); return text(403, 'Ordner lassen sich über das Laufwerk nicht anlegen. Mappen legst du in der Ablage des DMS an.');
-      case 'DELETE': verwerfe(a.koerper); return text(403, 'Löschen geht über das Laufwerk (noch) nicht. Bitte lösche im DMS selbst.');
-      case 'MOVE': verwerfe(a.koerper); return text(403, 'Umbenennen und Verschieben gehen über das Laufwerk (noch) nicht. Bitte im DMS selbst.');
+      case 'MKCOL': verwerfe(a.koerper); return text(403, 'Ordner lassen sich über das Laufwerk nicht anlegen. Mappen legst du in der Ablage von Ablago an.');
+      case 'DELETE': verwerfe(a.koerper); return text(403, 'Löschen geht über das Laufwerk (noch) nicht. Bitte lösche in Ablago selbst.');
+      case 'MOVE': verwerfe(a.koerper); return text(403, 'Umbenennen und Verschieben gehen über das Laufwerk (noch) nicht. Bitte in Ablago selbst.');
       case 'COPY': verwerfe(a.koerper); return text(403, 'Kopieren innerhalb des Laufwerks geht (noch) nicht. Lade die Datei herunter und lege sie neu ab.');
       default: verwerfe(a.koerper); return text(405, 'Diese Methode unterstützt das Laufwerk nicht.', { allow: WEBDAV_METHODEN.join(', ') });
     }
@@ -418,7 +418,7 @@ export class Webdav {
     }
     const k = await this.finde(teile, ctx);
     if (!k || k.art === 'hilfsdatei') return text(404, 'Nicht gefunden.');
-    const name = teile.length ? teile[teile.length - 1] : 'DMS';
+    const name = teile.length ? teile[teile.length - 1] : 'Ablago';
     const liste = [this.eintrag(teile, name, k)];
     if (tiefe === '1' && istOrdner(k)) for (const c of await this.kinder(k, ctx)) liste.push(this.eintrag([...teile, c.name], c.name, c.k));
     return { ...xmlAntwort(207, multistatus(liste)), lesend: true };
@@ -428,7 +428,7 @@ export class Webdav {
     const k = await this.finde(teile, ctx);
     if (!k || k.art === 'hilfsdatei') return text(404, 'Nicht gefunden.');
     if (istOrdner(k)) {
-      return { ...text(200, 'Dies ist ein Ordner des DMS-Laufwerks. Binde die Adresse im Explorer, im Finder oder in der Dateien-App ein – siehe Benutzerhandbuch „Als Laufwerk einbinden“.'), lesend: true };
+      return { ...text(200, 'Dies ist ein Ordner des Ablago-Laufwerks. Binde die Adresse im Explorer, im Finder oder in der Dateien-App ein – siehe Benutzerhandbuch „Als Laufwerk einbinden“.'), lesend: true };
     }
     if (k.art !== 'dokument') return text(404, 'Diese Datei ist noch nicht fertig abgelegt.');
     // Herunterladen gibt Daten hinaus wie ein Export (#294): nur mit Exportrecht E einer Ansicht.

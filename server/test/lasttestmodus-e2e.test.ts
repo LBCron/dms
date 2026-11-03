@@ -63,7 +63,7 @@ async function starte(db: string, wurzel: string, extra: Record<string, string> 
   for (let i = 0; ; i++) {
     if (p.exitCode !== null) throw new Error(`DMS beendet (Code ${p.exitCode}):\n${log}`);
     try { if ((await fetch(`${basis}/api/konto/status`)).ok) break; } catch { /* startet noch */ }
-    if (i > 240) throw new Error(`DMS startet nicht:\n${log}`);
+    if (i > 240) throw new Error(`Ablago startet nicht:\n${log}`);
     await new Promise((r) => setTimeout(r, 500));
   }
   return { basis, prozess: p, ende, log: () => log };
@@ -104,7 +104,7 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     assert.match(d.log(), /Messergebnis Lasttest/, 'Ergebnis auch in den Logs');
 
     assert.equal((await post(d.basis, '/api/lasttest/beenden', {})).status, 200);
-    assert.equal(await d.ende, 0, 'DMS beendet sich – der Container endet mit ihm');
+    assert.equal(await d.ende, 0, 'Ablago beendet sich – der Container endet mit ihm');
     assert.ok(existsSync(join(wurzel, 'ergebnis', 'beendet')));
 
     // Neustart (z. B. Neustart-Regel der NAS): kein zweiter Lauf, das Ergebnis steht noch da.
@@ -116,7 +116,7 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     await n.ende;
   });
 
-  it('DMS_LASTTEST in einer echten Installation: nichts angelegt, DMS läuft normal, Hinweis in der Übersicht', async () => {
+  it('DMS_LASTTEST in einer echten Installation: nichts angelegt, Ablago läuft normal, Hinweis in der Übersicht', async () => {
     const db = await neueDatenbank('echt');
     const wurzel = join(tmp, 'echt');
     // Erst normal einrichten – mit einem eigenen Administrator wie in einem echten Haushalt.

@@ -120,7 +120,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
         </button>
         {experte && (
           <div id="pakete-experte" className="aufklappinhalt">
-            <div className="hinweis warn klein"><p>Pakete außerhalb des offiziellen Katalogs – nur, wenn du der Quelle vertraust. Sie hat niemand vom DMS-Projekt geprüft.</p></div>
+            <div className="hinweis warn klein"><p>Pakete außerhalb des offiziellen Katalogs – nur, wenn du der Quelle vertraust. Sie hat niemand vom Ablago-Projekt geprüft.</p></div>
             <h2 className="ueber">Weitere Quellen</h2>
             <Quellen z={z} />
             <h2 className="ueber">Paket hochladen</h2>
@@ -150,7 +150,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
           <ul className="mappenliste">
             {verfuegbar.map(({ p, url, offiziell }) => (
               <li key={`${url}|${p.id}`}><Link to={`/werkbank/pakete/${p.id}${offiziell ? '' : `?quelle=${encodeURIComponent(url)}`}`} className={`eintrag werk ${offen === p.id && (offiziell ? !quelleOffen : quelleOffen === url) ? 'an' : ''}`}>
-                <span className="titel">{p.name}{!offiziell && <> <span className="chip warn" title={`Aus ${url} – nicht vom DMS-Projekt geprüft`}>{host(url)}</span></>}</span>
+                <span className="titel">{p.name}{!offiziell && <> <span className="chip warn" title={`Aus ${url} – nicht vom Ablago-Projekt geprüft`}>{host(url)}</span></>}</span>
                 <span className="unter">{p.aktuell} · {p.beschreibung}</span>
               </Link></li>
             ))}
@@ -248,9 +248,9 @@ export function PaketePanel({ z, id }: { z: PaketeZustand; id?: string }) {
   if (!id) return (
     <div className="einspaltig">
       <div className="mappenkopf"><p className="ueber">Werkbank</p><h1>Pakete</h1>
-        <p className="leise">Ein Paket bringt fertige Mappentypen, Ansichten und auf Wunsch Beispiel-Mappen mit – etwa eine „Organisation“ mit Kontakt und Anschrift. Pakete kommen aus dem offiziellen Katalog des DMS-Projekts; das DMS fragt ihn nur ab, wenn du „Katalog abrufen“ klickst.</p>
+        <p className="leise">Ein Paket bringt fertige Mappentypen, Ansichten und auf Wunsch Beispiel-Mappen mit – etwa eine „Organisation“ mit Kontakt und Anschrift. Pakete kommen aus dem offiziellen Katalog des Ablago-Projekts; Ablago fragt ihn nur ab, wenn du „Katalog abrufen“ klickst.</p>
         <p className="leise">Ein Update ergänzt nur: neue Felder, Register und Ansichten. Was du selbst geändert hast, bleibt.</p>
-        <p className="leise">Eigene Mappentypen und Ansichten nimmst du mit „Paket erstellen“ als Paket in ein anderes DMS mit.</p>
+        <p className="leise">Eigene Mappentypen und Ansichten nimmst du mit „Paket erstellen“ als Paket in eine andere Ablago-Installation mit.</p>
       </div>
     </div>
   );
@@ -302,7 +302,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
           <dl className="eigenschaften">
             <dt>Lizenz</dt><dd>{vorschau.paket.lizenz}</dd>
             <dt>Autor</dt><dd>{vorschau.paket.autor.name}{vorschau.paket.autor.github ? ` (@${vorschau.paket.autor.github})` : ''}</dd>
-            <dt>Nötige DMS-Version</dt><dd>{vorschau.paket.dms} (dieses DMS: {vorschau.dmsVersion})</dd>
+            <dt>Nötige Ablago-Version</dt><dd>{vorschau.paket.dms} (dieser Installation: {vorschau.dmsVersion})</dd>
             {vorschau.installiert && <><dt>Installiert</dt><dd>Version {vorschau.installiert}</dd></>}
             {vorschau.paket.readme && <><dt>Mehr</dt><dd><a className="verweis" href={vorschau.paket.readme} target="_blank" rel="noreferrer">README ↗</a></dd></>}
           </dl>
@@ -350,7 +350,7 @@ function SammelDetail({ z }: { z: PaketeZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf"><p className="ueber">Pakete ohne Internet</p><h1>Sammeldatei hochladen</h1>
-        <p className="leise">Kommt dein DMS nicht ins Internet, stellst du die Pakete an einem anderen Gerät auf der <a className="verweis" href={sammelSeiteMitVersion(dms)} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen – Abhängigkeiten kommen automatisch mit – und lädst die eine Datei hier hoch. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise">Kommt dein Ablago nicht ins Internet, stellst du die Pakete an einem anderen Gerät auf der <a className="verweis" href={sammelSeiteMitVersion(dms)} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen – Abhängigkeiten kommen automatisch mit – und lädst die eine Datei hier hoch. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
         <p className="leise klein">{tx('pakete.katalog.hinweis')}</p>
       </div>
       {!s ? <SammeldateiWahl geladen={(x, datei) => z.setSammel({ sammeldatei: x, datei })} einzeln={(r, datei) => { z.setUpload({ ...r, datei }); geheZu(`/werkbank/pakete/${UPLOAD}`); }} />
@@ -377,7 +377,7 @@ function UploadDetail({ z }: { z: PaketeZustand }) {
           <dt>Datei</dt><dd>{u.datei}</dd>
           <dt>Lizenz</dt><dd>{p.lizenz}</dd>
           <dt>Autor</dt><dd>{p.autor.name}{p.autor.github ? ` (@${p.autor.github})` : ''}</dd>
-          <dt>Nötige DMS-Version</dt><dd>{p.dms} (dieses DMS: {u.vorschau.dmsVersion})</dd>
+          <dt>Nötige Ablago-Version</dt><dd>{p.dms} (dieser Installation: {u.vorschau.dmsVersion})</dd>
           {u.vorschau.installiert && <><dt>Installiert</dt><dd>Version {u.vorschau.installiert}{u.vorschau.herkunft ? ` · ${herkunftText(u.vorschau.herkunft)}` : ''}</dd></>}
         </dl>
       </section>
@@ -448,7 +448,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Paket{!offiziell && <> · <span className="chip warn">nicht vom DMS-Projekt geprüft</span></>}</p>
+        <p className="ueber">Paket{!offiziell && <> · <span className="chip warn">nicht vom Ablago-Projekt geprüft</span></>}</p>
         <h1>{inst?.name ?? kp!.name}</h1>
         <p className="leise">{inst?.beschreibung ?? kp?.beschreibung}</p>
       </div>
@@ -469,11 +469,11 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           {kp && <><dt>Im Katalog</dt><dd>Version {kp.aktuell}{neuer && <> · <strong>neuer als installiert</strong></>}</dd></>}
           <dt>Lizenz</dt><dd>{inst?.lizenz ?? kp?.lizenz}</dd>
           <dt>Autor</dt><dd>{autor?.name}{autor?.github && <> (<a className="verweis" href={`https://github.com/${autor.github}`} target="_blank" rel="noreferrer">@{autor.github}</a>)</>}</dd>
-          {v && <><dt>Nötige DMS-Version</dt><dd>{v.dms} (dieses DMS: {z.stand?.dms})</dd></>}
+          {v && <><dt>Nötige Ablago-Version</dt><dd>{v.dms} (dieser Installation: {z.stand?.dms})</dd></>}
           {v && <><dt>Abhängigkeiten</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : 'keine'}</dd></>}
           {v && <><dt>Inhalt</dt><dd>Mappentypen: {v.inhalt.mappentypen.map((t) => t.name).join(', ') || '–'}<br />Ansichten: {v.inhalt.sichten.map((s) => s.name).join(', ') || '–'}{v.inhalt.beispiele ? <><br />{v.inhalt.beispiele} Beispiel-Mappen (optional)</> : null}</dd></>}
           {(v?.readme || inst?.links?.readme || imKatalog) && <><dt>Mehr</dt><dd>{(v?.readme || inst?.links?.readme) && <a className="verweis" href={v?.readme || inst!.links!.readme} target="_blank" rel="noreferrer">README ↗</a>}{(v?.changelog || inst?.links?.changelog) && <> · <a className="verweis" href={v?.changelog || inst!.links!.changelog} target="_blank" rel="noreferrer">Änderungen ↗</a></>}
-            {/* Paketseite im offiziellen Katalog mit der DMS-Version nur im Fragment (#622). */}
+            {/* Paketseite im offiziellen Katalog mit der Ablago-Version nur im Fragment (#622). */}
             {imKatalog && <>{(v?.readme || inst?.links?.readme) && ' · '}<a className="verweis" href={katalogSeiteMitVersion(z.stand?.dms ?? '', id)} target="_blank" rel={KATALOG_LINK_REL} title={tx('pakete.katalog.hinweis')}>{tx('pakete.katalog.ansehen')} <Symbol name="extern" /></a></>}</dd></>}
         </dl>
         {inst?.laeufer && <LaeuferStand paket={inst.id} abonniert={inst.laeufer.ereignisse} />}
@@ -655,14 +655,14 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       <HerkunftZeile p={v.pruefung} />
       {bestaetigen && (
         <div className="hinweis warn" role="alert">
-          <p><strong>Nicht vom DMS-Projekt geprüft.</strong> {pruefWarnung ? `${pruefWarnung.replace(/\.$/, '')}. ` : ''}Installiere nur Pakete, deren Herkunft du kennst und der du vertraust.</p>
+          <p><strong>Nicht vom Ablago-Projekt geprüft.</strong> {pruefWarnung ? `${pruefWarnung.replace(/\.$/, '')}. ` : ''}Installiere nur Pakete, deren Herkunft du kennst und der du vertraust.</p>
           <label className="haken"><input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} /><span>Ich weiß, woher das Paket stammt, und installiere es auf eigene Verantwortung.</span></label>
         </div>
       )}
       {v.laeufer && (
         // Erst lesen, dann bestätigen (#449): Liste, darunter links der Haken – untereinander, auch am Handy.
         <div className={`hinweis stapel ${v.laeufer.bestaetigen ? 'warn' : 'info'}`} role={v.laeufer.bestaetigen ? 'alert' : undefined}>
-          <p><strong>Das Paket enthält Code.</strong> Er läuft im Paket-Läufer des DMS, abgeschottet und mit einem eigenen Dienstkonto – nur mit diesen Rechten:</p>
+          <p><strong>Das Paket enthält Code.</strong> Er läuft im Paket-Läufer von Ablago, abgeschottet und mit einem eigenen Dienstkonto – nur mit diesen Rechten:</p>
           <ul>
             {v.laeufer.rechte.map((r) => (
               <li key={r.text}>

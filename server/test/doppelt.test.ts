@@ -113,6 +113,6 @@ describe('Doppelte Dateien (#333)', () => {
     const post = await d.postTyp();
     const [m] = await d.listeMappen(post.id);
     const texte = (await d.historie(m.id)).map((h) => String((h.daten as Record<string, unknown>).text ?? ''));
-    assert.ok(texte.some((t) => t === 'Doppelt: „Rechnung.pdf“ liegt schon im DMS – vor dem Zuordnen prüfen.'), texte.join(' | '));
+    assert.ok(texte.some((t) => t === 'Doppelt: „Rechnung.pdf“ liegt schon in Ablago – vor dem Zuordnen prüfen.'), texte.join(' | '));
   });
 });

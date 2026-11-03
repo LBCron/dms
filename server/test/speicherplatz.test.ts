@@ -65,7 +65,7 @@ describe('Speicherplatz-Überwachung (#116)', () => {
     const t = aufbau(8);
     assert.equal((await t.sp.pruefe()).zustand, 'warnung');
     await t.sp.pruefe();
-    assert.deepEqual(t.mails, ['DMS: Speicherplatz wird knapp']);
+    assert.deepEqual(t.mails, ['Ablago: Speicherplatz wird knapp']);
     t.setzeFrei(20); await t.sp.pruefe();
     t.setzeFrei(9); await t.sp.pruefe();
     assert.equal(t.mails.length, 2);
@@ -76,7 +76,7 @@ describe('Speicherplatz-Überwachung (#116)', () => {
     const t = aufbau(1.5);
     const s = await t.sp.pruefe();
     assert.equal(s.zustand, 'grenze');
-    assert.ok(t.mails.includes(`DMS: ${LIMIT_TEXT}`));
+    assert.ok(t.mails.includes(`Ablago: ${LIMIT_TEXT}`));
     const w = t.wartung.stand;
     assert.equal(w.stufe, 'angekuendigt');
     assert.equal(w.text, LIMIT_TEXT);

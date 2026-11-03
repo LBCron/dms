@@ -13,7 +13,7 @@ import { geheZu } from '../ort';
 
 const SCHRITTE = ['Auswählen', 'Prüfen', 'Angaben', 'Exportieren'] as const;
 /** Probleme, die zu den Angaben gehören (Schritt 3), statt zur Auswahl. */
-const istAngabe = (p: string) => /^(Id|Name|Version|Beschreibung|Autor|GitHub|Lizenz|DMS-Version):/.test(p);
+const istAngabe = (p: string) => /^(Id|Name|Version|Beschreibung|Autor|GitHub|Lizenz|Ablago-Version):/.test(p);
 const groesse = (b: number) => (b < 1024 ? `${b} Bytes` : `${(b / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB`);
 
 export function PaketErstellen() {
@@ -61,7 +61,7 @@ export function PaketErstellen() {
     setSendet(true); setFehler(undefined); setFertig(undefined);
     try {
       const r = await api.paketExportieren(e);
-      setFertig(`Gespeichert als „${r.name}“ (${groesse(r.bytes)}). Im anderen DMS: Werkbank → Pakete → Expertenmodus → Paket hochladen.`);
+      setFertig(`Gespeichert als „${r.name}“ (${groesse(r.bytes)}). In der anderen Ablago-Installation: Werkbank → Pakete → Expertenmodus → Paket hochladen.`);
       setStand(await api.paketErstellenStand());
     } catch (x) { setFehler([(x as Error).message, ...(x instanceof ApiFehler ? x.gruende : [])].join(' ')); }
     finally { setSendet(false); }
@@ -72,7 +72,7 @@ export function PaketErstellen() {
       <div className="mappenkopf">
         <p className="ueber">Werkbank · Pakete</p>
         <h1>Paket erstellen</h1>
-        <p className="leise">Mach aus deinen eigenen Mappentypen und Ansichten ein Paket, das du in einem anderen DMS mit „Paket hochladen“ installierst. Mappen, Dokumente, Benutzer und Passwörter kommen nicht mit. <Hilfe ort="werkbank.pakete.erstellen" /></p>
+        <p className="leise">Mach aus deinen eigenen Mappentypen und Ansichten ein Paket, das du in einer anderen Ablago-Installation mit „Paket hochladen“ installierst. Mappen, Dokumente, Benutzer und Passwörter kommen nicht mit. <Hilfe ort="werkbank.pakete.erstellen" /></p>
       </div>
       <ol className="assistent-schritte" aria-label={`Schritt ${schritt + 1} von ${SCHRITTE.length}: ${SCHRITTE[schritt]}`}>
         {SCHRITTE.map((s, i) => (
@@ -114,7 +114,7 @@ export function PaketErstellen() {
                 <option value="">– Angaben übernehmen –</option>
                 {stand.entwuerfe.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.id}) · {w.version} · {new Date(w.exportiert).toLocaleDateString('de-DE')}</option>)}
               </select>
-              <small className="leise">Dieselbe Id mit höherer Version – dann aktualisiert das andere DMS das Paket.</small>
+              <small className="leise">Dieselbe Id mit höherer Version – dann aktualisiert die andere Ablago-Installation das Paket.</small>
             </label>
           )}
           <label className="eigenschaft"><span>Name</span><input value={e.name} maxLength={60} onChange={(x) => setze({ name: x.target.value, ...(idAuto ? { id: paketIdAus(x.target.value) } : {}) })} /></label>
@@ -128,8 +128,8 @@ export function PaketErstellen() {
           <label className="eigenschaft"><span>Lizenz</span>
             <select value={e.lizenz} onChange={(x) => setze({ lizenz: x.target.value })}>{LIZENZEN.map((l) => <option key={l} value={l}>{l}</option>)}</select>
             <small className="leise">Die Lizenzen der Registry; der volle Text kommt als LICENSE ins Paket. Im Zweifel MIT.</small></label>
-          <label className="eigenschaft"><span>Nötige DMS-Version</span><input value={e.dms} onChange={(x) => setze({ dms: x.target.value })} />
-            <small className="leise">Vorschlag: dieses DMS ({stand.dms}) oder neuer.</small></label>
+          <label className="eigenschaft"><span>Nötige Ablago-Version</span><input value={e.dms} onChange={(x) => setze({ dms: x.target.value })} />
+            <small className="leise">Vorschlag: dieser Installation ({stand.dms}) oder neuer.</small></label>
           <label className="eigenschaft breit"><span>Was ist neu in dieser Version?</span><textarea rows={2} value={e.aenderungen} onChange={(x) => setze({ aenderungen: x.target.value })} placeholder="z. B. Feld Kundennummer am Vertrag" />
             <small className="leise">Steht im CHANGELOG; leer: „Erste Fassung.“ bzw. „Neue Version …“.</small></label>
           </div>
@@ -141,7 +141,7 @@ export function PaketErstellen() {
         <section className="blatt" aria-label="Exportieren">
           <h2 className="h3">Exportieren</h2>
           {!p ? <p className="leise">Prüfe …</p> : p.einspielbar ? <>
-            <div className="hinweis gut"><p>Das Paket hat dieselbe Prüfung bestanden wie beim Hochladen – es lässt sich so in einem anderen DMS installieren{Object.keys(p.abhaengigkeiten).length ? ', wenn dort die Abhängigkeiten installiert sind' : ''}.</p></div>
+            <div className="hinweis gut"><p>Das Paket hat dieselbe Prüfung bestanden wie beim Hochladen – es lässt sich so in einer anderen Ablago-Installation installieren{Object.keys(p.abhaengigkeiten).length ? ', wenn dort die Abhängigkeiten installiert sind' : ''}.</p></div>
             <dl className="eigenschaften">
               <dt>Paket</dt><dd>{e.name} ({e.id}) · Version {e.version} · {e.lizenz}</dd>
               <dt>Datei</dt><dd>{p.datei?.name} · {groesse(p.datei?.bytes ?? 0)}</dd>

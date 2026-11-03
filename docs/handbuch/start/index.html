@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DMS – Handbücher</title>
-  <meta name="description" content="Handbücher zum DMS, dem selbst gehosteten Informations- und Dokumentenmanagement für Haushalte">
+  <title>Ablago – Handbücher</title>
+  <meta name="description" content="Handbücher zu Ablago – Dokumentenablage für zu Hause und kleine Betriebe">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>
     :root { --grund: #f6f7f8; --flaeche: #fff; --tinte: #1c2328; --leise: #5b6670; --linie: #dde2e6; --a: #00796b; --b: #3f51b5; --c: #2e7d32; --d: #546e7a; --e: #ef6c00; }
     @media (prefers-color-scheme: dark) { :root { --grund: #14181b; --flaeche: #1d2226; --tinte: #e8ecef; --leise: #9aa5ae; --linie: #2e353a; --a: #4db6ac; --b: #8c9eff; --c: #81c784; --d: #b0bec5; --e: #ffb74d; } }
@@ -12,6 +15,9 @@
     body { margin: 0; background: var(--grund); color: var(--tinte); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     main { max-width: 860px; margin: 0 auto; padding: 56px 16px 40px; }
     h1 { font-size: 2rem; margin: 0 0 8px; }
+    h1 img { display: block; height: 56px; width: auto; margin: 0 0 12px; }
+    h1 .dunkel { display: none; }
+    @media (prefers-color-scheme: dark) { h1 .hell { display: none; } h1 .dunkel { display: block; } }
     p.leise { color: var(--leise); margin: 0 0 16px; }
     ul.versprechen { margin: 0 0 32px; padding-left: 1.2em; }
     ul.versprechen li { margin: 4px 0; }
@@ -35,11 +41,11 @@
 </head>
 <body>
   <main>
-    <h1>DMS – Handbücher</h1>
-    <p class="leise">Ein selbst gehostetes Informations- und Dokumentenmanagement für Haushalte: Mappen statt Ordner, verbunden über Verweise.</p>
+    <h1><img class="hell" src="ablago-logo-mit-schriftzug.svg" alt="Ablago"><img class="dunkel" src="ablago-logo-mit-schriftzug-dunkel.svg" alt="Ablago">Handbücher</h1>
+    <p class="leise">Ablago – Dokumentenablage für zu Hause und kleine Betriebe. Selbst gehostet: Mappen statt Ordner, verbunden über Verweise.</p>
     <ul class="versprechen">
       <li><strong>Deine Daten bleiben bei dir:</strong> selbst gehostet, alles jederzeit in offenen Formaten exportierbar.</li>
-      <li><strong>Datenschutz eingebaut:</strong> keine Telemetrie, kein Tracking; Auskunft, Aufbewahrungsfristen und Löschen sind Teil des DMS. <a href="admin/aktuell/datenschutz/">Datenschutz im DMS</a></li>
+      <li><strong>Datenschutz eingebaut:</strong> keine Telemetrie, kein Tracking; Auskunft, Aufbewahrungsfristen und Löschen sind Teil von Ablago. <a href="admin/aktuell/datenschutz/">Datenschutz in Ablago</a></li>
       <li><strong>Frei:</strong> Open Source (Apache-2.0), ohne Lizenzkosten und ohne Abo.</li>
     </ul>
     <div class="karten">
@@ -61,17 +67,17 @@
       </a>
       <a class="karte katalog" href="https://catalog.ablago.app/">
         <h2>Paketkatalog</h2>
-        <p>Fertige Mappentypen und Sichten zum Installieren – ansehen wie im App Store und mit einem Klick ins eigene DMS übernehmen.</p>
+        <p>Fertige Mappentypen und Sichten zum Installieren – ansehen wie im App Store und mit einem Klick in dein Ablago übernehmen.</p>
       </a>
       <a class="karte entwickler" href="entwickler/">
         <h2>Entwicklerhandbuch</h2>
-        <p>Mitmachen beim DMS: wie Wünsche zu Issues werden, wie du das Projekt baust und testest und wie ein Release entsteht.</p>
+        <p>Mitmachen bei Ablago: wie Wünsche zu Issues werden, wie du das Projekt baust und testest und wie ein Release entsteht.</p>
       </a>
     </div>
     <footer>
       <a href="https://github.com/motom001/dms/releases">Was ist neu? (Changelog)</a>
       <a href="https://github.com/motom001/dms">Quellcode</a>
-      <a href="https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms">Wer nutzt das DMS? Erzähl, wie du es nutzt</a>
+      <a href="https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms">Wer nutzt Ablago? Erzähl, wie du es nutzt</a>
       <a href="https://github.com/sponsors/motom001"><img src="https://img.shields.io/badge/Projekt_unterst%C3%BCtzen-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white" alt="Projekt unterstützen (GitHub Sponsors)" height="20"></a>
     </footer>
   </main>

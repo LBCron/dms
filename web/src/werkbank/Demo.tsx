@@ -126,7 +126,7 @@ export function DemoPanel() {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Demo-Daten</h1>
-        <p className="leise">Erzeugt Mappen für die vorhandenen Mappentypen – mit passenden Werten je Feld und Verweisen auf vorhandene Mappen, wahlweise mit Dokumenten. So lässt sich beobachten, wie sich das DMS mit vielen Mappen und Dokumenten verhält. Demo-Mappen sind gekennzeichnet und lassen sich gesammelt wieder entfernen. <Hilfe ort="werkbank.demo" /></p>
+        <p className="leise">Erzeugt Mappen für die vorhandenen Mappentypen – mit passenden Werten je Feld und Verweisen auf vorhandene Mappen, wahlweise mit Dokumenten. So lässt sich beobachten, wie sich Ablago mit vielen Mappen und Dokumenten verhält. Demo-Mappen sind gekennzeichnet und lassen sich gesammelt wieder entfernen. <Hilfe ort="werkbank.demo" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art} stapel`}><p>{meldung.text}</p>{meldung.liste && <ul>{meldung.liste.map((x) => <li key={x}>{x}</li>)}</ul>}</div>}
       {laeuft && auftrag && (

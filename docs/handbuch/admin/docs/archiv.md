@@ -15,7 +15,7 @@ Im Mappentyp unter **Archivmodus**:
 - **Aufbewahrungsfrist** in Jahren: Vorschläge 2, 6, 8, 10 oder eine eigene Zahl (bis 30).
 - **Stichtag:** welches Datumsfeld zählt, z. B. *Rechnungsdatum*; ohne Feld das Anlagedatum der Mappe. Die Frist läuft bis zum **31.12.** des Stichtagsjahres plus die Jahre – eine Rechnung vom 2. März 2026 mit 8 Jahren also bis zum 31.12.2034. Ist das Datumsfeld einer Mappe leer, zählt ihr Anlagedatum.
 
-Das gilt sofort auch für vorhandene Mappen. Beim Einschalten zeigt das DMS, wie viele Mappen betroffen sind und wie viele davon schon „darf weg“ wären. Ein-, Um- und Ausschalten stehen im [Protokoll](fehlersuche.md#protokoll) – erst beim **Speichern** des Mappentyps, mit dem Zustand vorher und nachher (an/aus, Frist, Stichtag); Ausprobieren im Editor ohne Speichern hinterlässt keinen Eintrag. Das Ausschalten fragt vorher nach.
+Das gilt sofort auch für vorhandene Mappen. Beim Einschalten zeigt Ablago, wie viele Mappen betroffen sind und wie viele davon schon „darf weg“ wären. Ein-, Um- und Ausschalten stehen im [Protokoll](fehlersuche.md#protokoll) – erst beim **Speichern** des Mappentyps, mit dem Zustand vorher und nachher (an/aus, Frist, Stichtag); Ausprobieren im Editor ohne Speichern hinterlässt keinen Eintrag. Das Ausschalten fragt vorher nach.
 
 ## Während der Frist
 
@@ -26,11 +26,11 @@ Das gilt sofort auch für vorhandene Mappen. Beim Einschalten zeigt das DMS, wie
 
 ## Nach der Frist: „Darf weg“
 
-Unter **Werkbank → Darf weg** stehen alle Mappen aus Mappentypen im Archivmodus, deren Frist abgelaufen ist, mit Datum. Du wählst einzelne oder alle und löschst sie – mit Papierkorb dorthin, sonst endgültig. **Gelöscht wird nie automatisch.** Wie Archivmodus, „Darf weg“ und Papierkorb zu einem Sperr- und Löschkonzept nach der DSGVO zusammenpassen, steht unter [Datenschutz im DMS](datenschutz.md#sperr-und-loschkonzept-aufsetzen), mit einer [Vorlage Löschkonzept](loeschkonzept.md).
+Unter **Werkbank → Darf weg** stehen alle Mappen aus Mappentypen im Archivmodus, deren Frist abgelaufen ist, mit Datum. Du wählst einzelne oder alle und löschst sie – mit Papierkorb dorthin, sonst endgültig. **Gelöscht wird nie automatisch.** Wie Archivmodus, „Darf weg“ und Papierkorb zu einem Sperr- und Löschkonzept nach der DSGVO zusammenpassen, steht unter [Datenschutz in Ablago](datenschutz.md#sperr-und-loschkonzept-aufsetzen), mit einer [Vorlage Löschkonzept](loeschkonzept.md).
 
 ## Alle Dateien prüfen
 
-Unter **Werkbank → Wartungsoperationen → Alle Dateien prüfen** liest das DMS jede gespeicherte Datei – auch ältere Versionen – und vergleicht sie mit ihrem Prüfwert (SHA-256). Abweichungen („Inhalt verändert“, „Datei fehlt“) stehen mit Dokument und Mappe in der Liste und im Protokoll. Prüfe das z. B. nach einem Umzug des Speichers und vor dem Vernichten von Papier.
+Unter **Werkbank → Wartungsoperationen → Alle Dateien prüfen** liest Ablago jede gespeicherte Datei – auch ältere Versionen – und vergleicht sie mit ihrem Prüfwert (SHA-256). Abweichungen („Inhalt verändert“, „Datei fehlt“) stehen mit Dokument und Mappe in der Liste und im Protokoll. Prüfe das z. B. nach einem Umzug des Speichers und vor dem Vernichten von Papier.
 
 ## Sicherung
 

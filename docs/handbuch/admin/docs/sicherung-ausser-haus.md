@@ -1,10 +1,10 @@
 # Sicherung außer Haus
 
-Eine Sicherung im eigenen Sicherungsordner schützt vor versehentlichem Löschen und vor einem kaputten Update. Gegen **Brand, Diebstahl oder einen Plattenausfall** hilft nur eine Kopie an einem anderen Ort – die „1“ der [3-2-1-Regel](sicherung.md#speicherort). Seit Version 0.142 bringt das DMS jede Sicherung auf Wunsch **selbst** dorthin und **prüft**, dass sie heil angekommen ist.
+Eine Sicherung im eigenen Sicherungsordner schützt vor versehentlichem Löschen und vor einem kaputten Update. Gegen **Brand, Diebstahl oder einen Plattenausfall** hilft nur eine Kopie an einem anderen Ort – die „1“ der [3-2-1-Regel](sicherung.md#speicherort). Seit Version 0.142 bringt Ablago jede Sicherung auf Wunsch **selbst** dorthin und **prüft**, dass sie heil angekommen ist.
 
 ## Welcher Weg passt?
 
-| Du betreibst das DMS … | Kopie außer Haus über … |
+| Du betreibst Ablago … | Kopie außer Haus über … |
 |---|---|
 | auf einem **NAS mit Sicherungs-App** (Synology *Hyper Backup*, QNAP *Hybrid Backup Sync* …) | die App des NAS – sie kopiert den Sicherungsordner, siehe [Speicherort](sicherung.md#speicherort). Ein Paket brauchst du nicht. |
 | mit einer **Netzfreigabe** (SMB/NFS) eines anderen Geräts im Haus | ein Docker-Volume: Binde die Freigabe als Sicherungsordner ein (`/data/sicherung`). Das ist eine zweite Platte, aber noch nicht außer Haus. |
@@ -14,7 +14,7 @@ Ein Paket für S3-kompatible Speicher (Stufe 2) ist geplant; SFTP und FTPS gibt 
 
 ## So läuft es ab
 
-1. **Zuerst lokal:** Das DMS sichert wie immer in den Sicherungsordner – schnell und unabhängig vom Netz. Nie schreibt es direkt auf das Ziel; ein langsames oder fehlendes Netz verhindert keine Sicherung.
+1. **Zuerst lokal:** Ablago sichert wie immer in den Sicherungsordner – schnell und unabhängig vom Netz. Nie schreibt es direkt auf das Ziel; ein langsames oder fehlendes Netz verhindert keine Sicherung.
 2. **Danach im Hintergrund:** Das Paket bekommt das Ereignis *Sicherung fertig*, liest die **verschlüsselte** Datei in Stücken und lädt sie in Teilen hoch. Bricht das Netz ab, macht es beim nächsten Versuch an der letzten Stelle weiter (Wiederholungen nach 1, 5, 30 Minuten, 2 und 6 Stunden). Die lokale Sicherung bleibt davon unberührt.
 3. **Prüfen:** Das Paket vergleicht die Kopie mit der Prüfsumme (SHA-256) der Sicherung – je nach Ziel über die Prüfsumme des Servers oder durch Zurücklesen – und meldet das Ergebnis.
 
@@ -46,7 +46,7 @@ Das [Notfallblatt](sicherung.md#notfallblatt) nennt das Ziel (Paket und Adresse)
 ## Einrichten mit „Sicherungsziel WebDAV“
 
 1. **Werkbank → Pakete**, *Sicherungsziel WebDAV* installieren. Die Vorschau zeigt die Rechte: *Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen* und *Reagiert auf: Eine Sicherung ist fertig*.
-2. In den **Einstellungen** des Pakets Adresse, Benutzer, Passwort und Ordner eintragen und speichern; die Adresse bestätigst du – nur dorthin darf das Paket ins Netz. Das Passwort speichert das DMS verschlüsselt und zeigt es nicht mehr an.
+2. In den **Einstellungen** des Pakets Adresse, Benutzer, Passwort und Ordner eintragen und speichern; die Adresse bestätigst du – nur dorthin darf das Paket ins Netz. Das Passwort speichert Ablago verschlüsselt und zeigt es nicht mehr an.
 3. **Verbindung testen** – mit den gespeicherten Angaben, nie mit einer Adresse aus der Anfrage.
 4. **Jetzt sichern** und in der Spalte *Wo* zusehen, wie die Kopie ankommt.
 
@@ -54,7 +54,7 @@ Einzelheiten zu Nextcloud, Hostern und NAS stehen im README des Pakets.
 
 ## Löschschutz gegen Erpressersoftware { #loschschutz }
 
-Übernimmt jemand dein DMS, kennt er auch die gespeicherten Zugangsdaten des Ziels. Damit er die Kopien außer Haus **nicht löschen oder überschreiben** kann, gib dem DMS so wenig Rechte wie möglich – und räume am Ziel selbst auf:
+Übernimmt jemand dein Ablago, kennt er auch die gespeicherten Zugangsdaten des Ziels. Damit er die Kopien außer Haus **nicht löschen oder überschreiben** kann, gib Ablago so wenig Rechte wie möglich – und räume am Ziel selbst auf:
 
 - **Nextcloud – Dateiablage (empfohlen):** Lege einen Ordner an und gib ihn als **Dateiablage** frei (*Freigabe per Link → Nur Hochladen / File drop*). Eine Dateiablage kann hochladen, aber nicht auflisten, lesen oder löschen. Trage den Link als Adresse ein, das Kennwort der Freigabe (falls gesetzt) als Passwort. Nachteil: Zurücklesen geht nicht – die Anzeige sagt dann ehrlich „hochgeladen“ statt „geprüft“. Der Papierkorb und die Versionen einer normalen Nextcloud schützen dagegen **nicht**: Derselbe Zugang kann sie leeren.
 - **Normaler WebDAV-Zugang (Nextcloud-Benutzer, Hoster, NAS):** darf immer auch löschen. Nimm einen **eigenen Benutzer** nur für die Sicherungen, mit Zugriff nur auf diesen Ordner, und aktiviere am Ziel – wo vorhanden – **Versionierung oder Schnappschüsse**, die dieser Benutzer nicht löschen kann (z. B. Schnappschüsse des NAS, Snapshots beim Hoster).

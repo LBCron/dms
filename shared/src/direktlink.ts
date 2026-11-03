@@ -149,7 +149,7 @@ export function liesDirektlink(parameter: Linkparameter, typen: Mappentyp[]): Li
       continue;
     }
     const teile = schluessel.split('.');
-    if (teile.length > 2 || !teile[0]) { fehler.push(`„${schluessel}“ versteht das DMS nicht; erwartet ist feld oder feld.operator.`); continue; }
+    if (teile.length > 2 || !teile[0]) { fehler.push(`„${schluessel}“ versteht Ablago nicht; erwartet ist feld oder feld.operator.`); continue; }
     const [feldKey, opName] = teile;
     const f = felder.find((x) => x.key === feldKey);
     if (!f) { fehler.push(`Feld „${feldKey}“ gibt es bei ${typ.name} nicht.`); continue; }

@@ -17,9 +17,9 @@ Spürbar wird es erst, wenn eine dieser Bedingungen kippt:
 
 ## Was du bezahlst – und was du dafür bekommst
 
-Banking- und Vertrags-Apps sind praktisch: Sie zeigen, wohin dein Geld fließt, und erkennen laufende Verträge an den Abbuchungen. Ein DMS ersetzt sie nicht – es kümmert sich um die andere Hälfte.
+Banking- und Vertrags-Apps sind praktisch: Sie zeigen, wohin dein Geld fließt, und erkennen laufende Verträge an den Abbuchungen. Ein Ablago ersetzt sie nicht – es kümmert sich um die andere Hälfte.
 
-![Banking- und Vertrags-Apps zeigen, was du bezahlst; das DMS hält fest, was du dafür bekommst](grafiken/bezahlen-bekommen.svg){ .grafik }
+![Banking- und Vertrags-Apps zeigen, was du bezahlst; Ablago hält fest, was du dafür bekommst](grafiken/bezahlen-bekommen.svg){ .grafik }
 
 Eine App sieht einen Vertrag erst, wenn Geld fließt. Vieles, was im Alltag zählt, kostet aber gar nichts oder nur einmal:
 
@@ -32,17 +32,17 @@ Kurz: **Der Kontoauszug zeigt, was du bezahlst. Der Aktenordner zeigt, was du da
 
 ## Nicht lose Dateien, sondern Zusammenhänge
 
-Ein DMS ist mehr als ein Ordner voller PDFs. Im DMS hängen die Dinge zusammen, wie im echten Leben: Das Haus hat eine Heizung, die Heizung einen Wartungsvertrag und eine Rechnung vom Einbau, die Rechnung einen Fachbetrieb.
+Ein Ablago ist mehr als ein Ordner voller PDFs. In Ablago hängen die Dinge zusammen, wie im echten Leben: Das Haus hat eine Heizung, die Heizung einen Wartungsvertrag und eine Rechnung vom Einbau, die Rechnung einen Fachbetrieb.
 
 ![Haus, Heizung, Wartungsvertrag, Rechnung und Fachbetrieb sind miteinander verbunden](grafiken/zusammenhang.svg){ .grafik }
 
-Wenn der Fachbetrieb anruft, siehst du mit einem Klick alles, was du mit ihm zu tun hattest. Wenn die Heizung streikt, findest du Anleitung, Wartungsvertrag und Garantie an einer Stelle. Wie das im DMS heißt, steht unter [Die Idee: Mappen statt Ordner](index.md#die-idee-mappen-statt-ordner).
+Wenn der Fachbetrieb anruft, siehst du mit einem Klick alles, was du mit ihm zu tun hattest. Wenn die Heizung streikt, findest du Anleitung, Wartungsvertrag und Garantie an einer Stelle. Wie das in Ablago heißt, steht unter [Die Idee: Mappen statt Ordner](index.md#die-idee-mappen-statt-ordner).
 
 ## Was du davon hast – ganz ohne Notfall
 
 ![Kopf frei, Zeit, Rechte nutzen, Teilen statt erklären](grafiken/nutzen.svg){ .grafik }
 
-- **Kopf frei.** Fristen, Nummern und Ablageorte musst du dir nicht mehr merken. Das DMS [erinnert](eingang.md#erinnern) dich rechtzeitig an Fristen und zeigt, was ansteht.
+- **Kopf frei.** Fristen, Nummern und Ablageorte musst du dir nicht mehr merken. Ablago [erinnert](eingang.md#erinnern) dich rechtzeitig an Fristen und zeigt, was ansteht.
 - **Zeit.** Die Belege für die Steuererklärung oder die Unterlagen für die Versicherung findest du in Sekunden – auch im Text der Dokumente ([Suchen](ablage.md#suchen)).
 - **Rechte nutzen.** Du forderst die Garantie ein, weil der Kaufbeleg da ist. Du setzt Handwerkerkosten ab, weil die Rechnung auffindbar ist. Du wechselst den Stromanbieter, weil du weißt, wann es geht.
 - **Teilen statt erklären.** Deine Partnerin, die Kinder oder deine Eltern sehen selbst nach, statt dich zu fragen – jeder genau das, was er sehen soll ([Benutzer und Rollen](benutzer-und-rollen.md)).
@@ -53,7 +53,7 @@ Und deine Unterlagen liegen **bei dir**, auf deinem eigenen Gerät – nicht bei
 
 ![Familien, Eigenheim, Vermietung, Eltern, Umbruch, Kleinbetrieb](grafiken/lebenslagen.svg){ .grafik }
 
-| Lebenslage | Was das DMS dort leistet |
+| Lebenslage | Was Ablago dort leistet |
 |---|---|
 | **Paare und Familien** | Das Wissen hängt nicht an der einen Person, die „die Ablage“ ist. |
 | **Eigenheim** | Wartungen, Handwerker, Garantien und Nachweise über Jahrzehnte – am Haus und an jedem Gerät. |
@@ -63,29 +63,29 @@ Und deine Unterlagen liegen **bei dir**, auf deinem eigenen Gerät – nicht bei
 | **Kleinbetrieb** | Urlaubsvertretung, Fristen, Aufbewahrung und Belege für den Steuerberater: Das Wissen gehört der Firma, nicht einer Person. |
 
 !!! note "Ehrlich gesagt"
-    Wer allein lebt, zur Miete wohnt, wenige Verträge hat und alles im Kopf behält, braucht vielleicht wirklich kein DMS – ein Ordner im Regal reicht dann. Ein DMS lohnt sich, sobald **andere** mitwissen sollen oder **viel Zeit** zwischen Ablegen und Brauchen liegt.
+    Wer allein lebt, zur Miete wohnt, wenige Verträge hat und alles im Kopf behält, braucht vielleicht wirklich kein DMS – ein Ordner im Regal reicht dann. Ein Ablago lohnt sich, sobald **andere** mitwissen sollen oder **viel Zeit** zwischen Ablegen und Brauchen liegt.
 
 !!! tip "Und das Papier?"
     Nach dem Einscannen fragst du dich vielleicht, was weg darf. Antworten mit Faustregeln stehen unter [Original behalten oder vernichten?](original.md).
 
-## Ist das DMS etwas für mich?
+## Ist Ablago etwas für mich? { #ist-das-dms-etwas-fur-mich }
 
-![Vom kleinen Haushalt bis zum Konzern: Wofür das DMS gebaut ist](grafiken/personas-skala.svg){ .grafik }
+![Vom kleinen Haushalt bis zum Konzern: Wofür Ablago gebaut ist](grafiken/personas-skala.svg){ .grafik }
 
-Das DMS ist **für Haushalte gebaut**. Wir denken dabei an diese Menschen:
+Ablago ist **für Haushalte gebaut**. Wir denken dabei an diese Menschen:
 
 - **Lena**, die in ihrer Familie den Papierkram macht und keine Technik-Kenntnisse hat. Nach einer Stunde soll ihre erste Mappe angelegt sein und die Sicherung laufen.
 - **Jonas**, ihren Sohn, der am Handy sein Zeugnis findet, ohne zu fragen.
-- **Markus**, der gern bastelt, das DMS auf seinem NAS betreibt und es für seine Familie einrichtet.
+- **Markus**, der gern bastelt, Ablago auf seinem NAS betreibt und es für seine Familie einrichtet.
 - **Petra**, die sich mit ihren Brüdern um die Mutter kümmert. Alle sehen dieselben Unterlagen, auch aus einer anderen Stadt.
 - **Herrn Özdemir**, der zwei Mietshäuser hat und die Belege fürs Steuerjahr beisammen haben will.
 
-**Selbständige und kleine Betriebe** können das DMS gut nutzen. Es gibt zum Beispiel den Archivmodus und die Anmeldung über Microsoft 365. Wir bauen dafür aber nur, was es für Familien nicht komplizierter macht.
+**Selbständige und kleine Betriebe** können Ablago gut nutzen. Es gibt zum Beispiel den Archivmodus und die Anmeldung über Microsoft 365. Wir bauen dafür aber nur, was es für Familien nicht komplizierter macht.
 
-!!! note "Was das DMS nicht sein will"
-    Für den **Mittelstand** und für **Konzerne** ist das DMS nicht gemacht. Dort braucht man Dinge wie abgestufte Administratorrechte, Freigaben nach dem Vier-Augen-Prinzip, Hochverfügbarkeit oder Support mit festen Reaktionszeiten. Das DMS hat das nicht, und es ist auch nicht geplant.
+!!! note "Was Ablago nicht sein will"
+    Für den **Mittelstand** und für **Konzerne** ist Ablago nicht gemacht. Dort braucht man Dinge wie abgestufte Administratorrechte, Freigaben nach dem Vier-Augen-Prinzip, Hochverfügbarkeit oder Support mit festen Reaktionszeiten. Ablago hat das nicht, und es ist auch nicht geplant.
 
-Alle neun Personas mit Bildern, und warum wir uns so entschieden haben: [Für wen wir bauen](https://motom001.github.io/dms/entwickler/aktuell/personas/) im Entwicklerhandbuch.
+Alle neun Personas mit Bildern, und warum wir uns so entschieden haben: [Für wen wir bauen](https://help.ablago.app/entwickler/aktuell/personas/) im Entwicklerhandbuch.
 
 ## Der 5-Minuten-Test
 
@@ -100,23 +100,23 @@ Zehn Fragen, ehrlich beantwortet. Es gibt kein „Bestanden“ – nur Hinweise,
 <div class="selbstcheck" markdown>
 
 1. Findest du den Kaufbeleg deines teuersten Haushaltsgeräts in zwei Minuten?
-   *Im DMS liegt der Beleg an der Mappe des Geräts – mit Kaufdatum und Garantie. Ein Garantiefall ist dann eine Sache von Sekunden.*
+   *In Ablago liegt der Beleg an der Mappe des Geräts – mit Kaufdatum und Garantie. Ein Garantiefall ist dann eine Sache von Sekunden.*
 2. Weißt du, bis wann du deinen Handy- oder Stromvertrag kündigen kannst?
-   *Trägst du die Kündigungsfrist am Vertrag ein, erinnert dich das DMS rechtzeitig – nicht, um zu kündigen, sondern damit du in Ruhe vergleichen kannst.*
+   *Trägst du die Kündigungsfrist am Vertrag ein, erinnert dich Ablago rechtzeitig – nicht, um zu kündigen, sondern damit du in Ruhe vergleichen kannst.*
 3. Weiß außer dir jemand, welche Versicherungen ihr habt und wo die Policen liegen?
-   *Im DMS sehen die Menschen in deinem Haushalt selbst nach – jeder genau das, was er sehen soll.*
+   *In Ablago sehen die Menschen in deinem Haushalt selbst nach – jeder genau das, was er sehen soll.*
 4. Weißt du, was deine Hausrat- oder Haftpflichtversicherung genau abdeckt?
    *Die Police mit ihren Bedingungen liegt an der Mappe der Versicherung; die Volltextsuche findet darin z. B. „Fahrrad“ oder „Glas“.*
 5. Liegen die Belege fürs letzte Steuerjahr – Handwerker, Spenden, Arztkosten – an einem Ort?
    *Eine Ansicht wie „Steuer 2025“ sammelt alle passenden Mappen von selbst, ohne dass du sie doppelt ablegst.*
 6. Könntest du sagen, wann Heizung oder Auto zuletzt gewartet wurden – und von wem?
-   *Heizung, Wartungsvertrag, Rechnungen und Fachbetrieb hängen im DMS zusammen; die nächste Wartung steht als Frist darin.*
+   *Heizung, Wartungsvertrag, Rechnungen und Fachbetrieb hängen in Ablago zusammen; die nächste Wartung steht als Frist darin.*
 7. Findest du wichtige Nachweise wie Fahrzeugbrief, Zeugnisse, Urkunden oder Impfpass sofort?
-   *Ein Scan oder Foto im DMS ersetzt das Original nicht – aber du weißt immer, was es gibt und wo das Original liegt.*
+   *Ein Scan oder Foto in Ablago ersetzt das Original nicht – aber du weißt immer, was es gibt und wo das Original liegt.*
 8. Wissen die Beteiligten, wo Vollmachten oder wichtige Vereinbarungen in eurer Familie liegen?
-   *Das DMS kann solche Unterlagen gezielt für bestimmte Personen sichtbar machen – zum Beispiel für die Geschwister, wenn ihr euch gemeinsam um die Eltern kümmert.*
+   *Ablago kann solche Unterlagen gezielt für bestimmte Personen sichtbar machen – zum Beispiel für die Geschwister, wenn ihr euch gemeinsam um die Eltern kümmert.*
 9. Wüsstest du bei einem Umzug, wen du alles über die neue Adresse informieren musst?
-   *Alle Vertragspartner stehen im DMS als eigene Mappen – mit Kundennummer und Kontakt. Die Liste ist schon da.*
+   *Alle Vertragspartner stehen in Ablago als eigene Mappen – mit Kundennummer und Kontakt. Die Liste ist schon da.*
 10. Kannst du Kundennummer und Ansprechpartner deiner Verträge nennen, ohne im E-Mail-Postfach zu suchen?
     *Kundennummer, Ansprechpartner und der letzte Schriftwechsel stehen direkt am Vertragspartner.*
 

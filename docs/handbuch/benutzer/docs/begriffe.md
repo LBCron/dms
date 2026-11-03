@@ -2,7 +2,7 @@
 
 <!-- Erzeugt aus docs/glossar.yml mit docs/handbuch/werkzeuge/glossar.py – bitte dort ändern. -->
 
-Hier steht, was die Wörter im DMS bedeuten. Oberfläche, Handbücher und Meldungen verwenden sie genau so.
+Hier steht, was die Wörter in Ablago bedeuten. Oberfläche, Handbücher und Meldungen verwenden sie genau so.
 
 Hinter jedem Begriff steht, wie gut ihn jemand versteht, der zum ersten Mal mit einem DMS arbeitet:
 
@@ -22,23 +22,27 @@ Siehe auch: [Werkbank](#werkbank), [Ansicht](#ansicht).
 Ein Platz, an dem Papier liegt – z. B. ein Ordner, eine Kiste, ein Schließfach oder „vernichtet“. Ablageorte liegen ineinander („zu Hause › Arbeitszimmer Schrank › roter Ordner“). Jedes DMS hat diesen Mappentyp; er lässt sich erweitern, aber nicht löschen.  
 Siehe auch: [Verbleib Originaldokumente](#verbleib-originaldokumente), [Mappentyp](#mappentyp).
 
+<a id="ablago"></a>**Ablago** · ✓ Alltagswort · alle  
+Der Name des Programms – eine Dokumentenablage für zu Hause und kleine Betriebe. Ein Wort, nur das A groß. Ist die Programmart gemeint, heißt es weiter „DMS“ (Dokumentenmanagementsystem).  
+Siehe auch: [Ablage](#ablage), [Werkbank](#werkbank).
+
 <a id="ansicht"></a>**Ansicht** · ~ mit Erklärung · alle  
 Eine gespeicherte Auswahl von Mappen – welche Mappentypen, mit welchen Bedingungen. Ansichten stehen im Baum links in der Ablage. Wie etwas aussieht, heißt dagegen „Darstellung“.  
 Siehe auch: [Unteransicht](#unteransicht), [Bedingung](#bedingung), [Trefferliste](#trefferliste).
 
 <a id="archivnummer"></a>**Archivnummer** · ✓ Alltagswort · alle  
-Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument im DMS. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.  
+Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.  
 Siehe auch: [Ablageort](#ablageort), [Nummernkreis](#nummernkreis), [Dokument](#dokument).
 
 <a id="bedingung"></a>**Bedingung** · ~ mit Erklärung · Administratoren  
 Ein Filter einer Ansicht auf Feldwerte, Anzahlen, Fristen oder Persönliches, z. B. ein Feld gleich „aktueller Benutzer“ oder „ist mein Favorit“.
 
 <a id="darstellung"></a>**Darstellung** · ✓ Alltagswort · alle  
-Der Bereich im Profil, in dem jeder einstellt, wie das DMS für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).  
+Der Bereich im Profil, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).  
 Siehe auch: [Design](#design), [Profil](#profil).
 
 <a id="dokument"></a>**Dokument** · ✓ Alltagswort · alle  
-Eine Datei, die im DMS in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; im DMS ist sie ein Dokument. An einer E-Mail heißt sie Anhang.  
+Eine Datei, die in Ablago in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; in Ablago ist sie ein Dokument. An einer E-Mail heißt sie Anhang.  
 Siehe auch: [Version](#version).
 
 <a id="eindeutig"></a>**Eindeutig** · ~ mit Erklärung · Administratoren  
@@ -66,7 +70,7 @@ Siehe auch: [Feld](#feld), [Feldart](#feldart).
 Der feste, technische Name eines Felds, Registers, Mappentyps oder Nummernkreises, z. B. vertragsnummer. Nach dem Speichern bleibt er gleich, damit gespeicherte Werte, Links und Pakete passen.
 
 <a id="mappe"></a>**Mappe** · ✓ Alltagswort · alle  
-Die Grundeinheit des DMS, wie eine Pappmappe im Regal. Sie fasst Angaben, Dokumente und Verweise zu einem Ding zusammen, z. B. zu einem Vertrag, einer Rechnung oder einem Vertragspartner.  
+Die Grundeinheit von Ablago, wie eine Pappmappe im Regal. Sie fasst Angaben, Dokumente und Verweise zu einem Ding zusammen, z. B. zu einem Vertrag, einer Rechnung oder einem Vertragspartner.  
 Siehe auch: [Mappentyp](#mappentyp), [Register](#register), [Dokument](#dokument).
 
 <a id="mappentyp"></a>**Mappentyp** · ~ mit Erklärung · Administratoren  
@@ -102,7 +106,7 @@ Ein Trennblatt in einer Mappe, z. B. Allgemein (mit Feldern), Dokumente, Verknü
 Die Vorbelegung eines Feldes beim Anlegen einer Mappe, auch mit Platzhaltern wie einem Nummernkreis.
 
 <a id="systemmappentyp"></a>**Systemmappentyp** · ~ mit Erklärung · Administratoren  
-Ein Mappentyp, den das DMS selbst mitbringt – Benutzer, Rolle und Post.  
+Ein Mappentyp, den Ablago selbst mitbringt – Benutzer, Rolle und Post.  
 Siehe auch: [Mappentyp](#mappentyp).
 
 <a id="titel"></a>**Titel** · ✓ Alltagswort · alle  
@@ -123,8 +127,8 @@ Das Register, das alle Mappen zeigt, die auf diese Mappe verweisen – die Gegen
 Siehe auch: [Verweis](#verweis).
 
 <a id="version"></a>**Version** · ✓ Alltagswort · alle  
-Ein Dokument kann mehrere Versionen haben. Beim Ersetzen entsteht eine neue Version, die älteren bleiben darunter und lassen sich zurückholen. Nur in Registern mit Versionierung. Nicht zu verwechseln mit der Version des DMS.  
-Siehe auch: [Dokument](#dokument), [Archivmodus](#archivmodus), [Version des DMS](#version-des-dms).
+Ein Dokument kann mehrere Versionen haben. Beim Ersetzen entsteht eine neue Version, die älteren bleiben darunter und lassen sich zurückholen. Nur in Registern mit Versionierung. Nicht zu verwechseln mit der Version von Ablago.  
+Siehe auch: [Dokument](#dokument), [Archivmodus](#archivmodus), [Version von Ablago](#version-von-ablago).
 
 <a id="verweis"></a>**Verweis** · ~ mit Erklärung · alle  
 Ein Feld, das auf andere Mappen zeigt, z. B. von einer Rechnung auf den Vertrag.  
@@ -135,7 +139,7 @@ Ob ein Verweis eine Zugehörigkeit ist („gehört zu“, z. B. eine Rechnung zu
 Siehe auch: [Verweis](#verweis).
 
 <a id="werkbank"></a>**Werkbank** · ~ mit Erklärung · Administratoren  
-Der Arbeitsbereich der Administratoren. Hier werden Mappentypen, Ansichten, Benutzer und Einstellungen gepflegt und das DMS betrieben.  
+Der Arbeitsbereich der Administratoren. Hier werden Mappentypen, Ansichten, Benutzer und Einstellungen gepflegt und Ablago betrieben.  
 Siehe auch: [Ablage](#ablage), [Administrator](#administrator), [Werkbank anpassen](#werkbank-anpassen).
 
 ## Arbeiten in der Ablage
@@ -147,7 +151,7 @@ Ein Zeitraum, in dem ein Benutzer nicht da ist – mit einem Vertreter, der sein
 Das Menü „Mappe ▾“ neben dem Titel einer Mappe – Aufgabe vergeben, Erinnern, Versenden, Exportieren und mehr. Hieß früher selbst „Aktionen“.
 
 <a id="anstehend"></a>**Anstehend** · ✓ Alltagswort · alle  
-Die Ansicht mit meinen Fristen, Erinnerungen und Aufgaben mit Datum – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen. Als Liste (nächste Tage, Standard 30), Monat oder Jahr; bewusst kein eigener Eintrag „Kalender“ (#528).
+Die Ansicht mit meinen Fristen und Erinnerungen der nächsten Tage (Standard 30) – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen.
 
 <a id="aufgabe"></a>**Aufgabe** · ✓ Alltagswort · alle  
 Etwas, das ein Mensch an einer Mappe tun soll. Arten sind Passt nicht, Erwähnung, Zugewiesen (von Hand vergeben), Post für dich, Frist, Erinnerung, Vertretung und Auskunft.  
@@ -177,7 +181,7 @@ Siehe auch: [Erinnerung](#erinnerung), [Anstehend](#anstehend).
 Die Geschichte einer Mappe – Änderungen vorher und nachher, Dokumente, Papierkorb, Notizen, Aufgaben. Das technische Betriebsprotokoll heißt dagegen „Protokoll“.
 
 <a id="kanal"></a>**Kanal** · ✗ Fachwort · alle  
-Wie Post ins DMS kam oder hinausging. Das DMS setzt Hochgeladen, E-Mail, Ordner (Eingangsordner) und API selbst; Scan, Import und WebDAV lassen sich in der Liste von Hand wählen.
+Wie Post in Ablago kam oder hinausging. Ablago setzt Hochgeladen, E-Mail, Ordner (Eingangsordner) und API selbst; Scan, Import und WebDAV lassen sich in der Liste von Hand wählen.
 
 <a id="link"></a>**Link** · ✓ Alltagswort · alle  
 Eine Adresse auf eine Ansicht oder Mappe, z. B. über „Link kopieren“ – auch lesbar über Mappentyp und Feldwerte. „Link“ steht nur für Adressen; Felder, die auf Mappen zeigen, heißen Verweis.
@@ -189,7 +193,7 @@ Die Ansicht mit Post, die noch nicht zugeordnet oder erledigt ist. Wer Post zuge
 Ein Kommentar an einer Mappe.
 
 <a id="post"></a>**Post** · ✓ Alltagswort · alle  
-Alles, was ins DMS kommt oder hinausgeht – Scan, Upload, E-Mail. Post ist ein Systemmappentyp mit Kanal, Richtung und Stand.  
+Alles, was in Ablago kommt oder hinausgeht – Scan, Upload, E-Mail. Post ist ein Systemmappentyp mit Kanal, Richtung und Stand.  
 Siehe auch: [Neue Post](#neue-post), [Zuordnen](#zuordnen), [Kanal](#kanal), [Richtung (Post)](#richtung-post), [Stand (Post)](#stand-post).
 
 <a id="richtung-post"></a>**Richtung (Post)** · ✓ Alltagswort · alle  
@@ -236,7 +240,7 @@ Anmelden mit einem fremden Konto, z. B. Microsoft 365 (OpenID Connect).
 Eine Einstellung je Mappentyp für Aufbewahrungspflichten – mit Versionen und einer Löschsperre bis zum Fristende.
 
 <a id="benutzer"></a>**Benutzer** · ✓ Alltagswort · alle  
-Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe im DMS. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
+Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
 
 <a id="berechtigungen"></a>**Berechtigungen** · ✓ Alltagswort · Administratoren  
 Wer was darf. Am Mappentyp – Anlegen, Lesen, Bearbeiten, Löschen, Passwörter sehen – mit einem Standard plus Regeln; an der Ansicht – Sehen, Anlegen, Exportieren – mit Vererbung an die Unteransichten. Für Administratoren gelten sie nicht.
@@ -253,14 +257,14 @@ Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher K
 Siehe auch: [Darstellung](#darstellung).
 
 <a id="dienstkonto"></a>**Dienstkonto** · ~ mit Erklärung · Administratoren  
-Das Konto, mit dem ein Paket mit Code im DMS arbeitet, z. B. „Paket Texterkennung“. Es meldet sich nie an, steht nicht unter Benutzer, löscht nie und hat nur die Rechte aus dem Paket. In der Historie steht es dort, wo das Paket etwas geändert hat.  
+Das Konto, mit dem ein Paket mit Code in Ablago arbeitet, z. B. „Paket Texterkennung“. Es meldet sich nie an, steht nicht unter Benutzer, löscht nie und hat nur die Rechte aus dem Paket. In der Historie steht es dort, wo das Paket etwas geändert hat.  
 Siehe auch: [Paket-Läufer](#paket-laufer), [Benutzer](#benutzer).
 
 <a id="eingangsordner"></a>**Eingangsordner** · ~ mit Erklärung · Administratoren  
-Ein Ordner, den das DMS beobachtet, z. B. für „Scan to Folder“. Jede Datei darin wird Post.
+Ein Ordner, den Ablago beobachtet, z. B. für „Scan to Folder“. Jede Datei darin wird Post.
 
 <a id="expertenmodus"></a>**Expertenmodus** · ✗ Fachwort · Fortgeschrittene  
-Ein aufklappbarer Abschnitt unter Werkbank → Pakete, direkt unter den Knöpfen. Aufgeklappt zeigt er „Weitere Quellen“ und „Paket hochladen“ – für Paketentwickler und DMS ohne Internet. Zu Beginn zugeklappt; der Browser merkt sich je Benutzer, ob er offen ist.  
+Ein aufklappbarer Abschnitt unter Werkbank → Pakete, direkt unter den Knöpfen. Aufgeklappt zeigt er „Weitere Quellen“ und „Paket hochladen“ – für Paketentwickler und Ablago ohne Internet. Zu Beginn zugeklappt; der Browser merkt sich je Benutzer, ob er offen ist.  
 Siehe auch: [Paket](#paket), [Paketkatalog](#paketkatalog).
 
 <a id="fehler-nachstellen"></a>**Fehler nachstellen** · ~ mit Erklärung · Administratoren  
@@ -274,15 +278,15 @@ Ein installierbares Bündel aus Mappentypen, Ansichten und Beispielen aus einem 
 Siehe auch: [Paketkatalog](#paketkatalog), [Expertenmodus](#expertenmodus), [Paket-Läufer](#paket-laufer).
 
 <a id="paket-laufer"></a>**Paket-Läufer** · ✗ Fachwort · Fortgeschrittene  
-Der Teil des DMS, der den Code von Paketen ausführt – abgeschottet in einem eigenen Prozess, mit Grenzen für Speicher und Zeit und nur mit den Rechten, die ein Administrator bei der Installation bestätigt hat. Netzwerk und Internet erreicht der Code nur unter den Adressen, die das Paket nennt – die Vorschau zeigt das als „kein Zugriff auf Netzwerk und Internet“ oder „Zugriff auf Netzwerk/Internet nur zu …“. Seinen Stand zeigt Werkbank → Pakete → Paket im Abschnitt „Paket-Läufer“.  
+Der Teil von Ablago, der den Code von Paketen ausführt – abgeschottet in einem eigenen Prozess, mit Grenzen für Speicher und Zeit und nur mit den Rechten, die ein Administrator bei der Installation bestätigt hat. Netzwerk und Internet erreicht der Code nur unter den Adressen, die das Paket nennt – die Vorschau zeigt das als „kein Zugriff auf Netzwerk und Internet“ oder „Zugriff auf Netzwerk/Internet nur zu …“. Seinen Stand zeigt Werkbank → Pakete → Paket im Abschnitt „Paket-Läufer“.  
 Siehe auch: [Paket](#paket), [Dienstkonto](#dienstkonto).
 
 <a id="paketkatalog"></a>**Paketkatalog** · ~ mit Erklärung · Administratoren  
-Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Der offizielle Katalog liegt unter catalog.ablago.app; das DMS fragt ihn nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.  
+Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Ablago fragt den offiziellen Katalog nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.  
 Siehe auch: [Paket](#paket), [Expertenmodus](#expertenmodus).
 
 <a id="postfach"></a>**Postfach** · ~ mit Erklärung · Administratoren  
-Ein angebundenes E-Mail-Konto (IMAP), aus dem das DMS Post abholt.
+Ein angebundenes E-Mail-Konto (IMAP), aus dem Ablago Post abholt.
 
 <a id="regel"></a>**Regel** · ~ mit Erklärung · Administratoren  
 Ein Wenn-dann-Baustein der Berechtigungen – Bedingung, dann Recht erteilen oder entziehen, auf Wunsch mit Stopp.
@@ -313,16 +317,16 @@ Siehe auch: [Werkbank](#werkbank), [Übersicht](#ubersicht), [Betrieb](#betrieb)
 Ein zusätzlicher Code aus einer App bei der Anmeldung.
 
 <a id="ubersicht"></a>**Übersicht** · ✓ Alltagswort · Administratoren  
-Die erste Seite der Werkbank – was in diesem DMS gerade zu tun ist, mit Hinweisen, Stand und Bestand.  
+Die erste Seite der Werkbank – was in Ablago gerade zu tun ist, mit Hinweisen, Stand und Bestand.  
 Siehe auch: [Werkbank](#werkbank).
 
 ## Betrieb und Sicherheit
 
 <a id="api"></a>**API** · ✗ Fachwort · Fortgeschrittene  
-Die Schnittstelle, über die Programme mit dem DMS arbeiten. Zugang mit einem persönlichen API-Schlüssel.
+Die Schnittstelle, über die Programme mit Ablago arbeiten. Zugang mit einem persönlichen API-Schlüssel.
 
 <a id="auftrag"></a>**Auftrag** · ✗ Fachwort · Administratoren  
-Arbeit, die das DMS im Hintergrund erledigt und deren Fortschritt man sieht, z. B. Demo-Daten erzeugen, Vollexport, Nummern nachträglich vergeben. Es läuft immer nur ein Auftrag. Arbeit für Menschen heißt Aufgabe.
+Arbeit, die Ablago im Hintergrund erledigt und deren Fortschritt man sieht, z. B. Demo-Daten erzeugen, Vollexport, Nummern nachträglich vergeben. Es läuft immer nur ein Auftrag. Arbeit für Menschen heißt Aufgabe.
 
 <a id="debug-modus"></a>**Debug-Modus** · ✗ Fachwort · Fortgeschrittene  
 Ein ausführlicheres technisches Protokoll für die Fehlersuche.
@@ -331,7 +335,7 @@ Ein ausführlicheres technisches Protokoll für die Fehlersuche.
 Erzeugte Beispielmappen zum Ausprobieren und für Lasttests.
 
 <a id="einrichtungsassistent"></a>**Einrichtungsassistent** · ✓ Alltagswort · Administratoren  
-Die Schritte beim ersten Start des DMS.  
+Die Schritte beim ersten Start von Ablago.  
 Siehe auch: [Einrichtungscode](#einrichtungscode).
 
 <a id="einrichtungscode"></a>**Einrichtungscode** · ~ mit Erklärung · Administratoren  
@@ -344,7 +348,7 @@ Eine kurze Prüfkennung, an der man einen Schlüssel wiedererkennt.
 Fehler, die Benutzer über „Fehler melden“ eingereicht haben (Werkbank → Gemeldete Fehler).
 
 <a id="haushalt"></a>**Haushalt** · ✓ Alltagswort · Administratoren  
-Der Haushalt (oder die Firma), für den das DMS eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch. Geplant: Je nach Sprachprofil soll es „Haushalt“ oder „Betrieb“ heißen.
+Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch. Geplant: Je nach Sprachprofil soll es „Haushalt“ oder „Betrieb“ heißen.
 
 <a id="konsole"></a>**Konsole** · ✗ Fachwort · Fortgeschrittene  
 Der Befehl „dms“ im Container für Notfall und Betrieb.
@@ -367,7 +371,7 @@ Der geheime Schlüssel, mit dem Passwortfelder und Sicherungen verschlüsselt si
 Siehe auch: [Fingerabdruck](#fingerabdruck), [Notfallblatt](#notfallblatt).
 
 <a id="sicherung"></a>**Sicherung** · ✓ Alltagswort · Administratoren  
-Eine verschlüsselte Gesamtsicherung, die sich in ein DMS zurückspielen lässt. Kein Export – ohne DMS nicht lesbar.  
+Eine verschlüsselte Gesamtsicherung, die sich in Ablago zurückspielen lässt. Kein Export – ohne Ablago nicht lesbar.  
 Siehe auch: [Wiederherstellen](#wiederherstellen), [Probe-Wiederherstellung](#probe-wiederherstellung), [Vollexport](#vollexport).
 
 <a id="speicherplatz"></a>**Speicherplatz** · ✓ Alltagswort · Administratoren  
@@ -378,12 +382,12 @@ Siehe auch: [Systemzustand](#systemzustand).
 Wie es dem Server gerade geht – Speicherplatz mit Warnschwellen und die Auslastung von CPU, Arbeitsspeicher und Netzwerk (Werkbank → Wartung und Fehlersuche → Systemzustand). Gemeint ist der Zustand im Betrieb, nicht die Konfiguration.  
 Siehe auch: [Speicherplatz](#speicherplatz).
 
-<a id="version-des-dms"></a>**Version des DMS** · ✓ Alltagswort · alle  
-Der Stand des Programms, z. B. 0.73. Ein Update bringt eine neue Version des DMS; an Dokumenten und ihren Versionen ändert das nichts. Was neu ist, steht unter „Neu in dieser Version“.  
+<a id="version-von-ablago"></a>**Version von Ablago** · ✓ Alltagswort · alle  
+Der Stand des Programms, z. B. 0.73. Ein Update bringt eine neue Version von Ablago; an Dokumenten und ihren Versionen ändert das nichts. Was neu ist, steht unter „Neu in dieser Version“.  
 Siehe auch: [Version](#version).
 
 <a id="vollexport"></a>**Vollexport** · ~ mit Erklärung · Administratoren  
-Alle Daten in offenen Formaten, lesbar auch ohne DMS – damit niemand am DMS hängen bleibt.
+Alle Daten in offenen Formaten, lesbar auch ohne Ablago – damit niemand an Ablago hängen bleibt.
 
 <a id="wartungsmodus"></a>**Wartungsmodus** · ~ mit Erklärung · Administratoren  
 Eine vorübergehende Sperre für Benutzer mit Ankündigung, z. B. während einer Wiederherstellung.
@@ -392,7 +396,7 @@ Eine vorübergehende Sperre für Benutzer mit Ankündigung, z. B. während einer
 Einmalige Pflegearbeiten, z. B. Nummern nachträglich vergeben.
 
 <a id="wiederherstellen"></a>**Wiederherstellen** · ✓ Alltagswort · Administratoren  
-Eine Sicherung in ein DMS zurückspielen.
+Eine Sicherung in Ablago zurückspielen.
 
 ## Noch offen
 
@@ -436,7 +440,7 @@ Die Gruppe heißt weiter „Wartung und Fehlersuche“ (#354,
 Kein neues Wort. Der Mappentyp legt seine Trefferlisten fest, eine davon ist der Standard; eine Ansicht wählt eine davon, sonst gilt der Standard (siehe „Trefferliste“).
 
 <a id="offen-12"></a>**12. „Aufgabe“ und „Auftrag“ sind sehr nah** (31.10.2026)  
-Beide Wörter bleiben. „Aufgabe“ ist Arbeit für Menschen, „Auftrag“ Arbeit, die das DMS im Hintergrund erledigt.
+Beide Wörter bleiben. „Aufgabe“ ist Arbeit für Menschen, „Auftrag“ Arbeit, die Ablago im Hintergrund erledigt.
 
 <a id="offen-13"></a>**13. Mandant, Haushalt, Organisation, Firma** (31.10.2026)  
 „Haushalt“ in allem, was Benutzer sehen; „Mandant“ nur im Code und wo technisch nötig.
@@ -451,10 +455,10 @@ Drei Begriffe mit je eigener Bedeutung – „Übersicht“ (erste Seite der Wer
 Konsequent „Mappentyp“ und „Feldart“.
 
 <a id="offen-17"></a>**17. Dokument, Datei, Anhang** (31.10.2026)  
-Datei = was hochgeladen oder heruntergeladen wird, Dokument = was im DMS in einer Mappe liegt, Anhang = an einer E-Mail.
+Datei = was hochgeladen oder heruntergeladen wird, Dokument = was in Ablago in einer Mappe liegt, Anhang = an einer E-Mail.
 
-<a id="offen-18"></a>**18. Version eines Dokuments und Version des DMS** (31.10.2026)  
-Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version des DMS“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
+<a id="offen-18"></a>**18. Version eines Dokuments und Version von Ablago** (31.10.2026)  
+Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version von Ablago“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
 
 <a id="offen-19"></a>**19. Design, Darstellung, Theme** (31.10.2026)  
 „Design“ legen Administratoren in der Werkbank an (Logo, Farben, eigenes CSS); „Darstellung“ ist der Bereich im Profil, in dem jeder sein Design, die Schriftgröße und die Breiten wählt. „Theme“ nicht verwenden.
@@ -475,6 +479,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Begriff | nicht verwenden | im Code |
 |---|---|---|
 | Ablageort | – | `ablageort` |
+| Ablago | Ablago DMS, ABLAGO, „das DMS“ für das eigene Programm | – |
 | Abwesenheit | – | `Abwesenheit` |
 | Administrator | Admin (in der Oberfläche) | – |
 | Anmeldung über einen Anbieter | SSO, OIDC (in der Oberfläche) | – |
@@ -530,7 +535,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Unteransicht | Untersicht | – |
 | Verbleib Originaldokumente | Lagerort, Standort (für Papier) | `verbleib_original` |
 | Version | Revision, Stand (für Dokumente) | `DokumentVersion` |
-| Version des DMS | Release (in der Oberfläche) | – |
+| Version von Ablago | Release (in der Oberfläche) | – |
 | Vertretung | – | `Abwesenheit.vertreterId, vertretung (Aufgabenart)` |
 | Verweis | Referenz, Link, Relation | `referenz, Feld.zielTyp` |
 | Verweisart | – | `Verweisart, VERWEISARTEN` |
@@ -539,4 +544,4 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Zu erledigen | Eingang, Inbox, Posteingang | `eingang` |
 | Zwei-Faktor-Anmeldung | 2FA, MFA (in der Oberfläche) | – |
 
-*Stand: 2026-10-31*
+*Stand: 2026-11-04*

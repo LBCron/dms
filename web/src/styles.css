@@ -9,6 +9,7 @@
   --schrift: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --r: 8px;
+  --marke-hell: block; --marke-dunkel: none;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -18,6 +19,7 @@
     --akzent: #72A9D8; --akzent-tinte: #0E1620; --akzent-zart: #1D2E3F;
     --gruen: #6CC39B; --gruen-zart: #18302A;
     --schlecht: #F28B82; --schlecht-zart: #3A1F1E; --warn: #E3B655; --warn-zart: #34291A;
+    --marke-hell: none; --marke-dunkel: block;
     color-scheme: dark;
   }
 }
@@ -872,6 +874,11 @@ a.person:hover, a.person:focus-visible { text-decoration: underline; }
 
 /* Logo und Schriftzug (#72) */
 .markenlogo { display: block; width: auto; max-width: 160px; object-fit: contain; }
+/* Ablago-Zeichen und Logo (#687): hell/dunkel je nach Design, mindestens 16 px. */
+.markenzeichen { width: auto; min-height: 16px; flex: none; }
+.markenzeichen.marke-hell, .ablago-logo .marke-hell { display: var(--marke-hell, block); }
+.markenzeichen.marke-dunkel, .ablago-logo .marke-dunkel { display: var(--marke-dunkel, none); }
+.ablago-logo .markenlogo { max-width: none; }
 .markenvorschau { padding: 8px 12px; border: 1px solid var(--linie); border-radius: 6px; background: var(--flaeche); align-self: flex-start; }
 .knoepfe.links { justify-content: flex-start; align-items: center; flex-wrap: wrap; }
 .nur-schmal-block { display: none; }

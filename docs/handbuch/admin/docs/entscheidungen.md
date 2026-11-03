@@ -23,8 +23,8 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 ## Anmeldung
 
 - **Einrichtungsassistent mit Einrichtungscode** (#119, zuvor: erster Aufruf ohne Code). Der Code steht im Protokoll des Containers und in `/data/geheim/EINRICHTUNGSCODE`; er schützt die Einrichtung und den Datenbanktest (der sonst Rechner im Netz abfragen könnte). Versuchsweise – ob der Code den Einstieg zu umständlich macht, zeigt die Rückmeldung aus der Praxis.
-- **Datenbank-Anbindung als Datei unter `/data/geheim`**, führend vor `DATABASE_URL` (#119): So lässt sich das DMS ohne Bearbeiten von Umgebungsvariablen in Betrieb nehmen; ohne erreichbare Datenbank startet es im Einrichtungsmodus und danach im selben Prozess das eigentliche DMS.
-- **Mandant statt Haushalt** in Oberfläche und Handbuch (#119; seit 0.73 heißt es wieder „Haushalt“, #305), damit das DMS auch für kleine Firmen passt. Intern heißt es weiter `haushalt_id`; ein Umbau brächte keinen sichtbaren Nutzen. Frische Installationen nutzen den Mandanten, den die erste Migration anlegt (mit Designs und Einstellungen).
+- **Datenbank-Anbindung als Datei unter `/data/geheim`**, führend vor `DATABASE_URL` (#119): So lässt sich das Ablago ohne Bearbeiten von Umgebungsvariablen in Betrieb nehmen; ohne erreichbare Datenbank startet es im Einrichtungsmodus und danach im selben Prozess das eigentliche Ablago.
+- **Mandant statt Haushalt** in Oberfläche und Handbuch (#119; seit 0.73 heißt es wieder „Haushalt“, #305), damit Ablago auch für kleine Firmen passt. Intern heißt es weiter `haushalt_id`; ein Umbau brächte keinen sichtbaren Nutzen. Frische Installationen nutzen den Mandanten, den die erste Migration anlegt (mit Designs und Einstellungen).
 - **Administratoren arbeiten nicht in der Ablage:** Der Assistent legt deshalb gleich einen ersten normalen Benutzer an.
 - **Systemrollen:** Administrator (Einrichtung, Benutzer) und Mitglied (Ablage). Wer welche Mappen sieht, regeln die [Berechtigungen](berechtigungen.md) (#123).
 - **Passwörter** mit scrypt aus Node (keine native Bibliothek). **Sitzungen** als HttpOnly-Cookie, in der Datenbank nur als SHA-256-Hash. Gleiches gilt für Einladungs- und Passwort-Links (Einladung 7 Tage, Zurücksetzen 1 Stunde, jeweils nur einmal nutzbar).
@@ -95,7 +95,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 
 - **Zwei getrennte Handbücher** (MkDocs Material, je eine eigene Seite mit eigener Suche): Benutzer sollen sich auf ihre Möglichkeiten konzentrieren und nicht in Technik suchen müssen. Sie verweisen aufeinander, statt Inhalte doppelt zu pflegen. Technik und Entscheidungen gehören zum Administratorhandbuch.
 - **Deutsche Suche** über das Suchplugin von MkDocs (`lang: de`, mit Wortstammbildung); läuft im Browser, ohne Server.
-- **Screenshots werden erzeugt, nicht gepflegt:** Der Workflow *Handbuch* startet das DMS mit leerer Datenbank, legt Beispiele und Demo-Daten an und nimmt die Seiten mit Playwright auf (`docs/handbuch/screenshots/aufnehmen.mjs`). So passen die Bilder immer zur Version auf `main`. Die Bilder liegen nicht im Repository.
+- **Screenshots werden erzeugt, nicht gepflegt:** Der Workflow *Handbuch* startet Ablago mit leerer Datenbank, legt Beispiele und Demo-Daten an und nimmt die Seiten mit Playwright auf (`docs/handbuch/screenshots/aufnehmen.mjs`). So passen die Bilder immer zur Version auf `main`. Die Bilder liegen nicht im Repository.
 - **GitHub Pages** über GitHub Actions; Pull Requests bauen nur und legen die Screenshots als Artefakt ab.
 - **Changelog = GitHub Releases.** Der Text kommt aus `docs/releases/<tag>.md` oder, falls es die Datei nicht gibt, aus den Commit-Überschriften seit dem vorigen Tag.
 - **Release bei neuer Versionsnummer (#34).** Steht auf `main` eine Version in `package.json`, zu der es noch keinen Tag gibt, legt „Prüfen und Image bauen“ nach bestandenen Prüfungen das Image mit Versionsnummer und danach Tag und Release an (`release.yml` als wiederverwendbarer Workflow). Nicht bei jedem Commit: So bleibt die Versionsnummer aussagekräftig, und mehrere Wünsche lassen sich bündeln.
@@ -122,7 +122,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 
 ## Verschlüsselte Passwörter (#39, #46)
 
-- **Schlüssel als Datei, nie in der Datenbank**: 32 Byte, erzeugt auf Knopfdruck in der Werkbank (`/data/geheim/dms.schluessel`, Rechte 0600, eigenes Volume). In der Datenbank steht nur der Fingerabdruck – so erkennt das DMS einen fehlenden oder fremden Schlüssel und zeigt, welche Werte neu einzugeben sind. Eine Datenbanksicherung allein verrät damit keine Passwörter.
+- **Schlüssel als Datei, nie in der Datenbank**: 32 Byte, erzeugt auf Knopfdruck in der Werkbank (`/data/geheim/dms.schluessel`, Rechte 0600, eigenes Volume). In der Datenbank steht nur der Fingerabdruck – so erkennt Ablago einen fehlenden oder fremden Schlüssel und zeigt, welche Werte neu einzugeben sind. Eine Datenbanksicherung allein verrät damit keine Passwörter.
 - **AES-256-GCM je Wert** mit eigener Zufallszahl, gespeichert als `dms1$<nonce>:<geheimtext>`; das Präfix erlaubt später ein anderes Verfahren und den Schlüsselwechsel (#47).
 - **Kein Geheimtext verlässt den Server**: Jede Antwort läuft durch eine Maske, die verschlüsselte Werte durch `{gesetzt, lesbar}` ersetzt – unabhängig davon, welche Route sie liefert. Klartext gibt es nur einzeln (Auge, protokolliert) oder über die API mit eigenem Recht.
 - Ohne Schlüssel lässt sich kein Passwort speichern. Ein Klartext-Passwort aus älteren Ständen (SMTP) funktioniert weiter und wird verschlüsselt, sobald es einen Schlüssel gibt.
@@ -131,14 +131,14 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 
 - **Eigene Tabelle statt Löschmarke**: Gelöschte Mappen ziehen samt Verweisen und Dokumenten als JSON nach `papierkorb`. Alle Abfragen auf `mappen` bleiben unverändert; eindeutige Werte werden frei; der Papierkorb taucht nirgends sonst auf.
 - **Wiederherstellen** legt die Zeilen wieder an. Verweise auf Mappen, die es nicht mehr gibt, entfallen; passt die Mappe danach nicht (z. B. eindeutiger Wert vergeben), zeigt „Zu erledigen“ sie – nur sie, nicht die andere.
-- **Dateien bleiben**, bis der Papierkorb geleert wird; erst dann prüft das DMS, ob noch ein Dokument (auch im Papierkorb) an der Datei hängt.
+- **Dateien bleiben**, bis der Papierkorb geleert wird; erst dann prüft Ablago, ob noch ein Dokument (auch im Papierkorb) an der Datei hängt.
 - **Benutzer-Einladungen** im Papierkorb sind deaktiviert; endgültig gelöscht wird das Konto erst beim Leeren. 0 Tage Aufbewahrung schaltet den Papierkorb aus.
 
 ## Texterkennung (#45)
 
 - **Im eigenen Prozess, Warteschlange in der Datenbank** (`dokumente.ocr_stand`): kein zusätzlicher Container; nach einem Neustart geht es weiter. Gleichzeitige Aufträge sind einstellbar (Standard 1, für kleine NAS).
 - **Textebene zuerst**: `pdftotext` je Seite; nur Seiten mit kaum Text gehen durch die Texterkennung. So bleibt sie schnell, wo sie nicht nötig ist.
-- **Texterkennung als Paket (#458, #459, seit 0.134):** Tesseract steckt nicht mehr im Image. Der Kern liest nur die Textebene und meldet jedes Dokument mit dem Ereignis „Volltext fertig“; Scans und Fotos erkennt das Paket **Texterkennung** (Tesseract als WebAssembly im Paket-Läufer). Gründe: ein schlankeres Image für alle, die keine Scans haben, Updates von Tesseract und Sprachdaten unabhängig vom DMS, weitere Sprachen als Zusatzpakete statt eigener Images. Der Preis: Das Paket ist etwa ein Drittel langsamer als Tesseract nativ (ein Thread) (siehe [Texterkennung](texterkennung.md#texterkennung-als-paket)). Schwärzen findet Wörter nur noch in der Textebene; gescannte Seiten schwärzt man mit Bereichen.
+- **Texterkennung als Paket (#458, #459, seit 0.134):** Tesseract steckt nicht mehr im Image. Der Kern liest nur die Textebene und meldet jedes Dokument mit dem Ereignis „Volltext fertig“; Scans und Fotos erkennt das Paket **Texterkennung** (Tesseract als WebAssembly im Paket-Läufer). Gründe: ein schlankeres Image für alle, die keine Scans haben, Updates von Tesseract und Sprachdaten unabhängig von Ablago, weitere Sprachen als Zusatzpakete statt eigener Images. Der Preis: Das Paket ist etwa ein Drittel langsamer als Tesseract nativ (ein Thread) (siehe [Texterkennung](texterkennung.md#texterkennung-als-paket)). Schwärzen findet Wörter nur noch in der Textebene; gescannte Seiten schwärzt man mit Bereichen.
 - **Gleicher Inhalt, gleicher Text**: Dateien sind über ihren Prüfwert bekannt; ein schon erkannter Text wird übernommen.
 - **Deutsche Volltextsuche von PostgreSQL** (`to_tsvector('german', …)`, GIN-Index, `websearch_to_tsquery`): findet Wortformen; die Fundstelle kommt aus `ts_headline` mit Steuerzeichen als Markierung – nie als HTML.
 - Office-Dokumente und externe Dienste kommen später.
@@ -161,7 +161,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 - **Regeln nur am Mappentyp**, mit Standard (seit 0.32 je Recht ✓/✗, vorher erteilt/entzogen) und geordneten Regeln „wenn … dann ✓/✗/– je Recht“ mit Stopp – wie eine Firewall. Keine Rechte an einzelnen Mappen: Was eine Mappe besonders macht, steht in ihren Feldern, und darauf zielen die Bedingungen.
 - **CRUDP**: Anlegen, Lesen, Bearbeiten (Felder und Dokumente), Löschen, Passwörter sehen. Notizen, Aufgaben und E-Mail brauchen nur Lesen. Ohne Lesen wirkt nichts außer Anlegen.
 - **Ein Ausdruck, zwei Auswertungen**: Bedingungen über den Benutzer sind beim Anmelden schon entschieden; was bleibt, sind Filter über die Mappe – im Arbeitsspeicher für eine einzelne Mappe und als SQL für Listen, Suche und Zähler. So stimmen Liste und Mappe immer überein, und Seiten bleiben schnell.
-- **Administratoren** unterliegen keinen Regeln, arbeiten aber auch nicht in der Ablage (#128). Seit 0.32 (#146) gibt es keine Haken als Obergrenze mehr: Admins sollen nicht in der Ablage arbeiten, aber wenn sie es müssen, ohne unnötige Hürden. Die Haken wurden ohne Mehrrechte für Benutzer in den Standard (✗ C/D) überführt; nur die Systemregel (Benutzer: kein C/D) gilt für alle. Bei *Post* regelt C, wer neue Post anlegen darf; versendete E-Mails legt das DMS immer an. Den Testlauf gibt es direkt am Mappentyp, auch für ungespeicherte Regeln; „Was sieht ein Benutzer?“ steht am Benutzer.
+- **Administratoren** unterliegen keinen Regeln, arbeiten aber auch nicht in der Ablage (#128). Seit 0.32 (#146) gibt es keine Haken als Obergrenze mehr: Admins sollen nicht in der Ablage arbeiten, aber wenn sie es müssen, ohne unnötige Hürden. Die Haken wurden ohne Mehrrechte für Benutzer in den Standard (✗ C/D) überführt; nur die Systemregel (Benutzer: kein C/D) gilt für alle. Bei *Post* regelt C, wer neue Post anlegen darf; versendete E-Mails legt Ablago immer an. Den Testlauf gibt es direkt am Mappentyp, auch für ungespeicherte Regeln; „Was sieht ein Benutzer?“ steht am Benutzer.
 - **Benutzerauswahl nur unter sichtbaren Benutzern** (#137): So lässt sich ein Programm über die API sauber auf seinen Ausschnitt begrenzen.
 - **Feldrechte** (einzelne Felder ausblenden) kommen bei Bedarf später.
 
@@ -181,7 +181,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 ## Proxy-Angaben automatisch (#234)
 
 - **Standard „private Netze“** statt `false`: Fastify bekommt `trustProxy: ['loopback', 'linklocal', 'uniquelocal']`. Ohne Einstellung stimmten IP-Adressen und die Sperre nach Fehlversuchen (je E-Mail und IP) hinter einem Proxy nicht – und kaum jemand setzte die Variable, weil sonst alles ging.
-- **Restrisiko bewusst in Kauf genommen:** Ein Gerät im Heimnetz, das das DMS direkt erreicht, könnte eine IP vortäuschen. Wer das ausschließen will, setzt `false` oder eine Liste. Aus dem Internet geht es nicht, solange keine Portfreigabe mit verschleierter Absenderadresse (z. B. Docker-Userland-Proxy) dazwischen ist.
+- **Restrisiko bewusst in Kauf genommen:** Ein Gerät im Heimnetz, das Ablago direkt erreicht, könnte eine IP vortäuschen. Wer das ausschließen will, setzt `false` oder eine Liste. Aus dem Internet geht es nicht, solange keine Portfreigabe mit verschleierter Absenderadresse (z. B. Docker-Userland-Proxy) dazwischen ist.
 - **Falsche Werte** führen nicht zum Startabbruch: Es gilt `auto`, mit Warnung im Protokoll.
 
 ## Werkbank anpassen (#281)

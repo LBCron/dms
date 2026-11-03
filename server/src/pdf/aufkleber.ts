@@ -19,7 +19,7 @@ const A4 = { breite: 210, hoehe: 297 };
 export async function aufkleberbogenPdf(b: Aufkleberbogen): Promise<Buffer> {
   const e = b.etikett;
   const doc = await PDFDocument.create();
-  doc.setTitle('Archivnummern'); doc.setProducer('DMS'); doc.setCreator('DMS');
+  doc.setTitle('Archivnummern'); doc.setProducer('Ablago'); doc.setCreator('Ablago');
   const schrift = await doc.embedFont(StandardFonts.Helvetica);
   const fett = await doc.embedFont(StandardFonts.HelveticaBold);
   const jeBogen = e.spalten * e.zeilen;

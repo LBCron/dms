@@ -103,9 +103,9 @@ describe('Versionsübersicht', () => {
     // Ohne Release (Abfrage liefert keinen Tag): Rückfall auf main.
     const r = await versionsabgleich(u, { react: '19.1.0' }, abruf);
     const v = (k: string) => r.find((x) => x.komponente === k)!;
-    assert.equal(v('DMS').status, 'neuer');
-    assert.match(v('DMS').hinweis!, /3 neuere Änderungen/);
-    assert.match(v('DMS').aktuell!, /^main \(bbbbbbb/);
+    assert.equal(v('Ablago').status, 'neuer');
+    assert.match(v('Ablago').hinweis!, /3 neuere Änderungen/);
+    assert.match(v('Ablago').aktuell!, /^main \(bbbbbbb/);
     // Mit Releases (#206): neueste Version und Datum, Status über die Versionsnummer.
     const [ma, mi, pa] = u.dms.version.split('.').map(Number);
     const neu = `${ma}.${mi + 1}.0`;
@@ -114,17 +114,17 @@ describe('Versionsübersicht', () => {
       if (url.includes('/releases?')) return [{ tag_name: `v${neu}` }, { tag_name: `v${ma}.${mi}.${pa + 1}` }, { tag_name: `v${u.dms.version}` }, { tag_name: 'v0.1.0' }];
       return abruf(url);
     };
-    const d = (await versionsabgleich(u, {}, mitRelease)).find((x) => x.komponente === 'DMS')!;
+    const d = (await versionsabgleich(u, {}, mitRelease)).find((x) => x.komponente === 'Ablago')!;
     assert.equal(d.aktuell, `${neu} (Release vom 30.10.2026)`);
     assert.equal(d.status, 'neuer');
     assert.match(d.hinweis!, /neuere Versionen \(bis/);
     const gleich = async (url: string): Promise<unknown> => (url.endsWith('/releases/latest') ? { tag_name: `v${u.dms.version}`, published_at: '2026-10-29T10:00:00Z' } : abruf(url));
-    const g = (await versionsabgleich(u, {}, gleich)).find((x) => x.komponente === 'DMS')!;
+    const g = (await versionsabgleich(u, {}, gleich)).find((x) => x.komponente === 'Ablago')!;
     assert.equal(g.status, 'aktuell');
     assert.match(g.hinweis!, /Auf main gibt es 3 neuere Änderungen, die noch in keinem Release sind/);
     assert.equal(v('Node.js').status, 'veraltet');
     // #216: Gruppen und Bezeichnungen; PostgreSQL bei zwei Containern „selbst“, mit Hinweis aufs Image.
-    assert.equal(v('DMS').gruppe, 'selbst');
+    assert.equal(v('Ablago').gruppe, 'selbst');
     assert.equal(v('Node.js').gruppe, 'dms');
     assert.equal(v('PostgreSQL').gruppe, 'selbst');
     assert.equal(v('postgres').bezeichnung, 'postgres.js (Datenbank-Treiber)');

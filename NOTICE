@@ -1,10 +1,14 @@
-DMS
+Ablago
 Copyright 2026 Thomas Meissner
 
 Dieses Produkt steht ab Version 0.93.0 unter der Apache License, Version 2.0
 (siehe LICENSE). Versionen bis einschließlich 0.92.0 wurden unter der
 GNU Affero General Public License v3.0 (AGPL-3.0-only) veröffentlicht und
 bleiben unter dieser Lizenz.
+
+Name und Logo von Ablago (web/public/, docs/marke/ und die Handbücher, übernommen aus
+motom001/dms-website, Ordner marke/) sind von der Apache-2.0-Lizenz nicht erfasst
+(Abschnitt 6 der Lizenz). Ein Fork verwendet einen eigenen Namen und ein eigenes Logo.
 
 Die Symbole der Oberfläche (web/src/Symbol.tsx) stammen aus Lucide
 (https://lucide.dev), ISC-Lizenz:

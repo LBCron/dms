@@ -87,7 +87,7 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Verschlüsselung</h1>
-        <p className="leise">Passwörter und andere Geheimnisse – E-Mail-Versand, Postfächer, Anmeldung über einen Anbieter, Zwei-Faktor, Paket-Einstellungen, Passwortfelder in Mappen – speichert das DMS verschlüsselt; welche es gerade sind, steht unten unter „Was verschlüsselt ist“. Den Schlüssel dazu hält es in einer eigenen Datei, nie in der Datenbank. <Hilfe ort="werkbank.verschluesselung" /></p>
+        <p className="leise">Passwörter und andere Geheimnisse – E-Mail-Versand, Postfächer, Anmeldung über einen Anbieter, Zwei-Faktor, Paket-Einstellungen, Passwortfelder in Mappen – speichert Ablago verschlüsselt; welche es gerade sind, steht unten unter „Was verschlüsselt ist“. Den Schlüssel dazu hält es in einer eigenen Datei, nie in der Datenbank. <Hilfe ort="werkbank.verschluesselung" /></p>
       </div>
 
       <section className="blatt" id="schluessel">
@@ -104,12 +104,12 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
         {s.zustand === 'fehlt' && <div className="hinweis warn"><p>Noch kein Schlüssel. Solange er fehlt, lassen sich keine Passwörter speichern (E-Mail-Versand, Postfächer, Passwortfelder).</p></div>}
         {s.zustand === 'verloren' && (
           <div className="hinweis schlecht stapel">
-            <p><strong>Der Schlüssel mit dem Fingerabdruck <span className="mono">{s.erwartet}</span> fehlt.</strong> Liegt die Datei noch in einer Sicherung, lege sie wieder unter <span className="mono">{s.datei}</span> ab und starte das DMS neu – dann sind alle Passwörter wieder lesbar.</p>
+            <p><strong>Der Schlüssel mit dem Fingerabdruck <span className="mono">{s.erwartet}</span> fehlt.</strong> Liegt die Datei noch in einer Sicherung, lege sie wieder unter <span className="mono">{s.datei}</span> ab und starte Ablago neu – dann sind alle Passwörter wieder lesbar.</p>
             <p>Erzeugst du stattdessen einen neuen Schlüssel, sind die bisher gespeicherten Passwörter verloren und müssen neu eingegeben werden (Liste unten).</p>
           </div>
         )}
         {s.zustand === 'falsch' && (
-          <div className="hinweis schlecht"><p>Unter <span className="mono">{s.datei}</span> liegt ein anderer Schlüssel (<span className="mono">{s.fingerabdruck}</span>) als der, mit dem die Passwörter verschlüsselt sind (<span className="mono">{s.erwartet}</span>). Lege die richtige Datei ab und starte das DMS neu. Ist sie verloren, entferne die falsche Datei, starte neu und erzeuge hier einen neuen Schlüssel.</p></div>
+          <div className="hinweis schlecht"><p>Unter <span className="mono">{s.datei}</span> liegt ein anderer Schlüssel (<span className="mono">{s.fingerabdruck}</span>) als der, mit dem die Passwörter verschlüsselt sind (<span className="mono">{s.erwartet}</span>). Lege die richtige Datei ab und starte Ablago neu. Ist sie verloren, entferne die falsche Datei, starte neu und erzeuge hier einen neuen Schlüssel.</p></div>
         )}
         {s.eingebunden === false && (
           <div className="hinweis warn"><p>Der Ordner <span className="mono">{s.datei.replace(/\/[^/]+$/, '')}</span> ist kein eigenes Volume. Ergänze in der docker-compose.yml unter <span className="mono">volumes</span> z. B. <span className="mono">- /volume1/docker/dms/geheim:{s.datei.replace(/\/[^/]+$/, '')}</span>, sonst geht der Schlüssel beim nächsten Update verloren.</p></div>
@@ -160,7 +160,7 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
       {s.arten && s.arten.length > 0 && (
         <section className="blatt" id="arten">
           <h2 className="h3">Was verschlüsselt ist <Hilfe ort="verschluesselung.arten" /></h2>
-          <p className="leise klein">Alles hier verschlüsselt das DMS mit diesem Schlüssel und nimmt es beim Schlüsselwechsel mit. Die Sicherungen verschlüsselt es mit einem Schlüssel, der daraus abgeleitet ist.</p>
+          <p className="leise klein">Alles hier verschlüsselt Ablago mit diesem Schlüssel und nimmt es beim Schlüsselwechsel mit. Die Sicherungen verschlüsselt es mit einem Schlüssel, der daraus abgeleitet ist.</p>
           <table className="vs-arten">
             <thead><tr><th>Art</th><th className="vs-zahl">Anzahl</th></tr></thead>
             <tbody>{s.arten.map((a) => (

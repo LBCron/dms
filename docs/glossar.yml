@@ -1,4 +1,4 @@
-# Glossar des DMS (#276) – die eine Quelle für alle Begriffe.
+# Glossar von Ablago (#276) – die eine Quelle für alle Begriffe.
 #
 # Daraus entsteht die Seite „Begriffe“ im Benutzerhandbuch:
 #     python3 docs/handbuch/werkzeuge/glossar.py
@@ -22,11 +22,18 @@
 # Neue Begriffe kommen mit dem Release hierher (Qualitätskontrolle).
 # Die Personas: docs/handbuch/entwickler/docs/personas.md
 
-stand: '2026-10-31'
+stand: '2026-11-04'
 
 begriffe:
 
   # ---------- Grundbegriffe ----------
+  - begriff: Ablago
+    bereich: grundbegriffe
+    beschreibung: Der Name des Programms – eine Dokumentenablage für zu Hause und kleine Betriebe. Ein Wort, nur das A groß. Ist die Programmart gemeint, heißt es weiter „DMS“ (Dokumentenmanagementsystem).
+    einsteiger: alltag
+    begegnet: alle
+    nicht_verwenden: [Ablago DMS, ABLAGO, „das DMS“ für das eigene Programm]
+    verwandt: [Ablage, Werkbank]
   - begriff: Ablage
     bereich: grundbegriffe
     beschreibung: Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen.
@@ -35,7 +42,7 @@ begriffe:
     verwandt: [Werkbank, Ansicht]
   - begriff: Werkbank
     bereich: grundbegriffe
-    beschreibung: Der Arbeitsbereich der Administratoren. Hier werden Mappentypen, Ansichten, Benutzer und Einstellungen gepflegt und das DMS betrieben.
+    beschreibung: Der Arbeitsbereich der Administratoren. Hier werden Mappentypen, Ansichten, Benutzer und Einstellungen gepflegt und Ablago betrieben.
     einsteiger: erklaeren
     begegnet: admin
     verwandt: [Ablage, Administrator, Werkbank anpassen]
@@ -46,7 +53,7 @@ begriffe:
     begegnet: alle
   - begriff: Mappe
     bereich: grundbegriffe
-    beschreibung: Die Grundeinheit des DMS, wie eine Pappmappe im Regal. Sie fasst Angaben, Dokumente und Verweise zu einem Ding zusammen, z. B. zu einem Vertrag, einer Rechnung oder einem Vertragspartner.
+    beschreibung: Die Grundeinheit von Ablago, wie eine Pappmappe im Regal. Sie fasst Angaben, Dokumente und Verweise zu einem Ding zusammen, z. B. zu einem Vertrag, einer Rechnung oder einem Vertragspartner.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Akte, Ordner, Datensatz]
@@ -62,7 +69,7 @@ begriffe:
     code: Mappentyp
   - begriff: Systemmappentyp
     bereich: grundbegriffe
-    beschreibung: Ein Mappentyp, den das DMS selbst mitbringt – Benutzer, Rolle und Post.
+    beschreibung: Ein Mappentyp, den Ablago selbst mitbringt – Benutzer, Rolle und Post.
     einsteiger: erklaeren
     begegnet: admin
     verwandt: [Mappentyp]
@@ -122,18 +129,18 @@ begriffe:
     code: Register
   - begriff: Dokument
     bereich: grundbegriffe
-    beschreibung: Eine Datei, die im DMS in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; im DMS ist sie ein Dokument. An einer E-Mail heißt sie Anhang.
+    beschreibung: Eine Datei, die in Ablago in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; in Ablago ist sie ein Dokument. An einer E-Mail heißt sie Anhang.
     einsteiger: alltag
     begegnet: alle
     verwandt: [Version]
     code: Dokument
   - begriff: Version
     bereich: grundbegriffe
-    beschreibung: Ein Dokument kann mehrere Versionen haben. Beim Ersetzen entsteht eine neue Version, die älteren bleiben darunter und lassen sich zurückholen. Nur in Registern mit Versionierung. Nicht zu verwechseln mit der Version des DMS.
+    beschreibung: Ein Dokument kann mehrere Versionen haben. Beim Ersetzen entsteht eine neue Version, die älteren bleiben darunter und lassen sich zurückholen. Nur in Registern mit Versionierung. Nicht zu verwechseln mit der Version von Ablago.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Revision, Stand (für Dokumente)]
-    verwandt: [Dokument, Archivmodus, Version des DMS]
+    verwandt: [Dokument, Archivmodus, Version von Ablago]
     code: DokumentVersion
   - begriff: Verweis
     bereich: grundbegriffe
@@ -200,7 +207,7 @@ begriffe:
     begegnet: alle
   - begriff: Archivnummer
     bereich: grundbegriffe
-    beschreibung: Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument im DMS. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.
+    beschreibung: Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.
     einsteiger: alltag
     begegnet: alle
     verwandt: [Ablageort, Nummernkreis, Dokument]
@@ -229,7 +236,7 @@ begriffe:
   # ---------- Arbeiten in der Ablage ----------
   - begriff: Post
     bereich: ablage
-    beschreibung: Alles, was ins DMS kommt oder hinausgeht – Scan, Upload, E-Mail. Post ist ein Systemmappentyp mit Kanal, Richtung und Stand.
+    beschreibung: Alles, was in Ablago kommt oder hinausgeht – Scan, Upload, E-Mail. Post ist ein Systemmappentyp mit Kanal, Richtung und Stand.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Posteingang, Inbox]
@@ -246,7 +253,7 @@ begriffe:
     begegnet: alle
   - begriff: Kanal
     bereich: ablage
-    beschreibung: Wie Post ins DMS kam oder hinausging. Das DMS setzt Hochgeladen, E-Mail, Ordner (Eingangsordner) und API selbst; Scan, Import und WebDAV lassen sich in der Liste von Hand wählen.
+    beschreibung: Wie Post in Ablago kam oder hinausging. Ablago setzt Hochgeladen, E-Mail, Ordner (Eingangsordner) und API selbst; Scan, Import und WebDAV lassen sich in der Liste von Hand wählen.
     einsteiger: fachwort
     begegnet: alle
   - begriff: Richtung (Post)
@@ -377,7 +384,7 @@ begriffe:
   # ---------- Verwaltung (Werkbank) ----------
   - begriff: Benutzer
     bereich: werkbank
-    beschreibung: Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe im DMS. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
+    beschreibung: Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [User, Account]
@@ -460,7 +467,7 @@ begriffe:
     verwandt: [Darstellung]
   - begriff: Darstellung
     bereich: grundbegriffe
-    beschreibung: Der Bereich im Profil, in dem jeder einstellt, wie das DMS für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).
+    beschreibung: Der Bereich im Profil, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Theme, Ansicht (für das Aussehen)]
@@ -475,14 +482,14 @@ begriffe:
     code: InstalliertesPaket
   - begriff: Paketkatalog
     bereich: werkbank
-    beschreibung: Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Das DMS fragt den offiziellen Katalog nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.
+    beschreibung: Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Ablago fragt den offiziellen Katalog nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.
     einsteiger: erklaeren
     begegnet: admin
     verwandt: [Paket, Expertenmodus]
     code: Katalog, OFFIZIELLER_KATALOG
   - begriff: Expertenmodus
     bereich: werkbank
-    beschreibung: Ein aufklappbarer Abschnitt unter Werkbank → Pakete, direkt unter den Knöpfen. Aufgeklappt zeigt er „Weitere Quellen“ und „Paket hochladen“ – für Paketentwickler und DMS ohne Internet. Zu Beginn zugeklappt; der Browser merkt sich je Benutzer, ob er offen ist.
+    beschreibung: Ein aufklappbarer Abschnitt unter Werkbank → Pakete, direkt unter den Knöpfen. Aufgeklappt zeigt er „Weitere Quellen“ und „Paket hochladen“ – für Paketentwickler und Ablago ohne Internet. Zu Beginn zugeklappt; der Browser merkt sich je Benutzer, ob er offen ist.
     einsteiger: fachwort
     begegnet: fortgeschritten
     nicht_verwenden: [Erweiterte Ansicht]
@@ -490,7 +497,7 @@ begriffe:
     code: useExperteOffen
   - begriff: Paket-Läufer
     bereich: werkbank
-    beschreibung: Der Teil des DMS, der den Code von Paketen ausführt – abgeschottet in einem eigenen Prozess, mit Grenzen für Speicher und Zeit und nur mit den Rechten, die ein Administrator bei der Installation bestätigt hat. Netzwerk und Internet erreicht der Code nur unter den Adressen, die das Paket nennt – die Vorschau zeigt das als „kein Zugriff auf Netzwerk und Internet“ oder „Zugriff auf Netzwerk/Internet nur zu …“. Seinen Stand zeigt Werkbank → Pakete → Paket im Abschnitt „Paket-Läufer“.
+    beschreibung: Der Teil von Ablago, der den Code von Paketen ausführt – abgeschottet in einem eigenen Prozess, mit Grenzen für Speicher und Zeit und nur mit den Rechten, die ein Administrator bei der Installation bestätigt hat. Netzwerk und Internet erreicht der Code nur unter den Adressen, die das Paket nennt – die Vorschau zeigt das als „kein Zugriff auf Netzwerk und Internet“ oder „Zugriff auf Netzwerk/Internet nur zu …“. Seinen Stand zeigt Werkbank → Pakete → Paket im Abschnitt „Paket-Läufer“.
     einsteiger: fachwort
     begegnet: fortgeschritten
     nicht_verwenden: [Code im Paket-Läufer, Plugin-Host]
@@ -498,7 +505,7 @@ begriffe:
     code: Paketlaeufer, PaketLaeufer
   - begriff: Dienstkonto
     bereich: werkbank
-    beschreibung: Das Konto, mit dem ein Paket mit Code im DMS arbeitet, z. B. „Paket Texterkennung“. Es meldet sich nie an, steht nicht unter Benutzer, löscht nie und hat nur die Rechte aus dem Paket. In der Historie steht es dort, wo das Paket etwas geändert hat.
+    beschreibung: Das Konto, mit dem ein Paket mit Code in Ablago arbeitet, z. B. „Paket Texterkennung“. Es meldet sich nie an, steht nicht unter Benutzer, löscht nie und hat nur die Rechte aus dem Paket. In der Historie steht es dort, wo das Paket etwas geändert hat.
     einsteiger: erklaeren
     begegnet: admin
     nicht_verwenden: [Systembenutzer, Bot, technischer Benutzer]
@@ -521,7 +528,7 @@ begriffe:
     code: organisation (Vorlage)
   - begriff: Übersicht
     bereich: werkbank
-    beschreibung: Die erste Seite der Werkbank – was in diesem DMS gerade zu tun ist, mit Hinweisen, Stand und Bestand.
+    beschreibung: Die erste Seite der Werkbank – was in Ablago gerade zu tun ist, mit Hinweisen, Stand und Bestand.
     einsteiger: alltag
     begegnet: admin
     verwandt: [Werkbank]
@@ -545,12 +552,12 @@ begriffe:
     begegnet: admin
   - begriff: Postfach
     bereich: werkbank
-    beschreibung: Ein angebundenes E-Mail-Konto (IMAP), aus dem das DMS Post abholt.
+    beschreibung: Ein angebundenes E-Mail-Konto (IMAP), aus dem Ablago Post abholt.
     einsteiger: erklaeren
     begegnet: admin
   - begriff: Eingangsordner
     bereich: werkbank
-    beschreibung: Ein Ordner, den das DMS beobachtet, z. B. für „Scan to Folder“. Jede Datei darin wird Post.
+    beschreibung: Ein Ordner, den Ablago beobachtet, z. B. für „Scan to Folder“. Jede Datei darin wird Post.
     einsteiger: erklaeren
     begegnet: admin
   - begriff: Texterkennung
@@ -588,7 +595,7 @@ begriffe:
   # ---------- Betrieb und Sicherheit ----------
   - begriff: Haushalt
     bereich: betrieb
-    beschreibung: Der Haushalt (oder die Firma), für den das DMS eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch.
+    beschreibung: Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch.
     einsteiger: alltag
     begegnet: admin
     nicht_verwenden: [Mandant (in der Oberfläche)]
@@ -596,7 +603,7 @@ begriffe:
     profile: {privat: Haushalt, betrieb: Betrieb}
   - begriff: Einrichtungsassistent
     bereich: betrieb
-    beschreibung: Die Schritte beim ersten Start des DMS.
+    beschreibung: Die Schritte beim ersten Start von Ablago.
     einsteiger: alltag
     begegnet: admin
     verwandt: [Einrichtungscode]
@@ -623,7 +630,7 @@ begriffe:
     begegnet: admin
   - begriff: Sicherung
     bereich: betrieb
-    beschreibung: Eine verschlüsselte Gesamtsicherung, die sich in ein DMS zurückspielen lässt. Kein Export – ohne DMS nicht lesbar.
+    beschreibung: Eine verschlüsselte Gesamtsicherung, die sich in Ablago zurückspielen lässt. Kein Export – ohne Ablago nicht lesbar.
     einsteiger: alltag
     begegnet: admin
     nicht_verwenden: [Backup (in der Oberfläche)]
@@ -635,12 +642,12 @@ begriffe:
     begegnet: admin
   - begriff: Wiederherstellen
     bereich: betrieb
-    beschreibung: Eine Sicherung in ein DMS zurückspielen.
+    beschreibung: Eine Sicherung in Ablago zurückspielen.
     einsteiger: alltag
     begegnet: admin
   - begriff: Vollexport
     bereich: betrieb
-    beschreibung: Alle Daten in offenen Formaten, lesbar auch ohne DMS – damit niemand am DMS hängen bleibt.
+    beschreibung: Alle Daten in offenen Formaten, lesbar auch ohne Ablago – damit niemand an Ablago hängen bleibt.
     einsteiger: erklaeren
     begegnet: admin
   - begriff: Meine Daten exportieren
@@ -696,12 +703,12 @@ begriffe:
     begegnet: admin
   - begriff: API
     bereich: betrieb
-    beschreibung: Die Schnittstelle, über die Programme mit dem DMS arbeiten. Zugang mit einem persönlichen API-Schlüssel.
+    beschreibung: Die Schnittstelle, über die Programme mit Ablago arbeiten. Zugang mit einem persönlichen API-Schlüssel.
     einsteiger: fachwort
     begegnet: fortgeschritten
-  - begriff: Version des DMS
+  - begriff: Version von Ablago
     bereich: betrieb
-    beschreibung: Der Stand des Programms, z. B. 0.73. Ein Update bringt eine neue Version des DMS; an Dokumenten und ihren Versionen ändert das nichts. Was neu ist, steht unter „Neu in dieser Version“.
+    beschreibung: Der Stand des Programms, z. B. 0.73. Ein Update bringt eine neue Version von Ablago; an Dokumenten und ihren Versionen ändert das nichts. Was neu ist, steht unter „Neu in dieser Version“.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Release (in der Oberfläche)]
@@ -713,7 +720,7 @@ begriffe:
     begegnet: fortgeschritten
   - begriff: Auftrag
     bereich: betrieb
-    beschreibung: Arbeit, die das DMS im Hintergrund erledigt und deren Fortschritt man sieht, z. B. Demo-Daten erzeugen, Vollexport, Nummern nachträglich vergeben. Es läuft immer nur ein Auftrag. Arbeit für Menschen heißt Aufgabe.
+    beschreibung: Arbeit, die Ablago im Hintergrund erledigt und deren Fortschritt man sieht, z. B. Demo-Daten erzeugen, Vollexport, Nummern nachträglich vergeben. Es läuft immer nur ein Auftrag. Arbeit für Menschen heißt Aufgabe.
     einsteiger: fachwort
     begegnet: admin
     nicht_verwenden: [Job]
@@ -781,7 +788,7 @@ konflikte:
     titel: „Aufgabe“ und „Auftrag“ sind sehr nah
     vorschlag: Bei einer Umbenennung von Konflikt 1 nicht „Auftrag“ verwenden.
     entschieden: '2026-10-31'
-    entscheidung: Beide Wörter bleiben. „Aufgabe“ ist Arbeit für Menschen, „Auftrag“ Arbeit, die das DMS im Hintergrund erledigt.
+    entscheidung: Beide Wörter bleiben. „Aufgabe“ ist Arbeit für Menschen, „Auftrag“ Arbeit, die Ablago im Hintergrund erledigt.
   - nr: 13
     titel: Mandant, Haushalt, Organisation, Firma
     vorschlag: In der Oberfläche „Haushalt“ bzw. „Organisation“ je Sprachprofil, „Mandant“ nur technisch.
@@ -804,14 +811,14 @@ konflikte:
     entscheidung: Konsequent „Mappentyp“ und „Feldart“.
   - nr: 17
     titel: Dokument, Datei, Anhang
-    vorschlag: Datei = was hochgeladen wird, Dokument = was im DMS liegt, Anhang = an einer E-Mail.
+    vorschlag: Datei = was hochgeladen wird, Dokument = was in Ablago liegt, Anhang = an einer E-Mail.
     entschieden: '2026-10-31'
-    entscheidung: Datei = was hochgeladen oder heruntergeladen wird, Dokument = was im DMS in einer Mappe liegt, Anhang = an einer E-Mail.
+    entscheidung: Datei = was hochgeladen oder heruntergeladen wird, Dokument = was in Ablago in einer Mappe liegt, Anhang = an einer E-Mail.
   - nr: 18
-    titel: Version eines Dokuments und Version des DMS
+    titel: Version eines Dokuments und Version von Ablago
     vorschlag: Im Handbuch klar trennen („Neu in dieser Version“ vs. „Versionen“ eines Dokuments).
     entschieden: '2026-10-31'
-    entscheidung: Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version des DMS“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
+    entscheidung: Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version von Ablago“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
   - nr: 19
     titel: Design, Darstellung, Theme
     vorschlag: Klären, was in Werkbank und Profil jeweils gemeint ist.

@@ -133,7 +133,7 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.ok(f.probleme.some((p) => /reserviert/.test(p)));
     assert.ok(f.probleme.some((p) => /Beschreibung/.test(p)));
     assert.ok(f.probleme.some((p) => /Lizenz/.test(p)));
-    assert.ok(f.probleme.some((p) => /mindestens >=0\.75\.0/.test(p)), 'dms:… braucht DMS ab 0.75.0');
+    assert.ok(f.probleme.some((p) => /mindestens >=0\.75\.0/.test(p)), 'dms:… braucht Ablago ab 0.75.0');
     assert.ok((await q.e.pruefe(angaben({ typen: [q.vertrag.id, q.zahlung.id], id: 'basis' }))).probleme.some((p) => /installiert/.test(p)));
     // Nur Typen aus Paketen: nichts Eigenes.
     assert.ok((await q.e.pruefe(angaben({ typen: [q.org.id] }))).probleme.some((p) => /mindestens einen eigenen/.test(p)));
@@ -145,7 +145,7 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.equal((await q.e.stand()).typen.find((t) => t.id === q.org.id)?.geaendert, true);
   });
 
-  it('Export → frisches DMS: hochladen, installieren, Typen und Ansichten gleich; höhere Version aktualisiert', async () => {
+  it('Export → frisches Ablago: hochladen, installieren, Typen und Ansichten gleich; höhere Version aktualisiert', async () => {
     const q = await quelle();
     const s = q.sichten;
     const auswahl = { typen: [q.vertrag.id, q.zahlung.id, q.org.id], sichten: [s.vertraege.id, s.teuer.id, s.meine.id, s.fest.id], beispiele: [q.mappen.v.id, q.mappen.z.id] };

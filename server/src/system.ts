@@ -244,20 +244,20 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
         hinweise.push(`Auf main gibt es ${m.voraus ? `${m.voraus} ` : ''}neuere Änderung${m.voraus === 1 ? '' : 'en'}, die noch in keinem Release ${m.voraus === 1 ? 'ist' : 'sind'} (Stand ${m.c.sha.slice(0, 7)} vom ${datumDe(m.c.commit.committer.date)}).`);
       }
     } catch { /* nur Zusatzinfo */ }
-    return { komponente: 'DMS', installiert, aktuell, status: neuer ? 'neuer' : 'aktuell', ...(hinweise.length ? { hinweis: hinweise.join(' ') } : {}), quelle };
+    return { komponente: 'Ablago', installiert, aktuell, status: neuer ? 'neuer' : 'aktuell', ...(hinweise.length ? { hinweis: hinweise.join(' ') } : {}), quelle };
   }
   // Rückfall: Vergleich mit main wie bisher.
   const quelle = `https://api.github.com/repos/${REPO}/commits/main`;
   try {
     const { c, gleich, voraus } = await mainStand(abruf, u.dms.commit ?? null);
     const aktuell = `main (${c.sha.slice(0, 7)} vom ${c.commit.committer.date.slice(0, 10)})`;
-    if (!u.dms.commit) return { komponente: 'DMS', installiert, aktuell, status: 'unbekannt', hinweis: 'Ohne Commit-Kennung im Image (DMS_COMMIT) lässt sich der Stand nicht vergleichen.', quelle };
-    if (gleich) return { komponente: 'DMS', installiert, aktuell, status: 'aktuell', quelle };
+    if (!u.dms.commit) return { komponente: 'Ablago', installiert, aktuell, status: 'unbekannt', hinweis: 'Ohne Commit-Kennung im Image (DMS_COMMIT) lässt sich der Stand nicht vergleichen.', quelle };
+    if (gleich) return { komponente: 'Ablago', installiert, aktuell, status: 'aktuell', quelle };
     let hinweis = `Neuester Stand: ${c.commit.message.split('\n')[0]}`;
     if (voraus) hinweis = `${voraus} neuere Änderung${voraus === 1 ? '' : 'en'} auf main. ${hinweis}`;
-    return { komponente: 'DMS', installiert, aktuell, status: 'neuer', hinweis: `${hinweis}. Zum Aktualisieren das Image neu ziehen.`, quelle };
+    return { komponente: 'Ablago', installiert, aktuell, status: 'neuer', hinweis: `${hinweis}. Zum Aktualisieren das Image neu ziehen.`, quelle };
   } catch (e) {
-    return { komponente: 'DMS', installiert, aktuell: null, status: 'unbekannt', hinweis: `Abfrage fehlgeschlagen: ${(e as Error).message}`, quelle };
+    return { komponente: 'Ablago', installiert, aktuell: null, status: 'unbekannt', hinweis: `Abfrage fehlgeschlagen: ${(e as Error).message}`, quelle };
   }
 }
 

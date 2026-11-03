@@ -2,7 +2,7 @@
 
 Im Dateimanager auf dem PC kennst du das: Legst du eine Datei mit demselben Namen ab, ist die alte weg. Deshalb hängen viele etwas an den Namen – `_v2`, `_alt`, `_final`, ein Datum. Nach ein paar Monaten weiß niemand mehr, welche Datei die richtige ist.
 
-Im DMS musst du nichts mehr umbenennen. Ein Dokument bleibt **ein** Dokument, und jede neue Fassung wird eine neue **Version** davon. Die alten Fassungen bleiben darunter liegen.
+In Ablago musst du nichts mehr umbenennen. Ein Dokument bleibt **ein** Dokument, und jede neue Fassung wird eine neue **Version** davon. Die alten Fassungen bleiben darunter liegen.
 
 ![Früher viele Dateien mit Zusätzen im Namen, heute ein Dokument mit seinen Versionen 1 bis 4](grafiken/versionen-frueher-heute.svg){ .grafik }
 
@@ -19,7 +19,7 @@ Kommt zum Mietvertrag ein unterschriebener Nachtrag, ein neuer Scan oder eine ko
 
 Die Mappe zeigt immer die **neueste** Version. Die alte ist nicht weg, sie liegt darunter. Der neue Dateiname darf anders sein, auch der Dateityp – aus `Kassenbon.jpg` darf `Kassenbon.pdf` werden.
 
-**Lädst du eine Datei mit gleichem Namen** einfach hoch, fragt das DMS nach: Willst du sie **als neue Version** speichern (vorausgewählt) oder **als eigenes Dokument mit Zähler**, z. B. `Rechnung (2).pdf`? Ohne Versionierung lautet die Frage stattdessen: eigenes Dokument mit Zähler oder **altes Dokument löschen und neues hochladen** – dann ist das alte endgültig weg.
+**Lädst du eine Datei mit gleichem Namen** einfach hoch, fragt Ablago nach: Willst du sie **als neue Version** speichern (vorausgewählt) oder **als eigenes Dokument mit Zähler**, z. B. `Rechnung (2).pdf`? Ohne Versionierung lautet die Frage stattdessen: eigenes Dokument mit Zähler oder **altes Dokument löschen und neues hochladen** – dann ist das alte endgültig weg.
 
 ## Ältere Versionen ansehen, herunterladen, zurückholen
 
@@ -34,20 +34,20 @@ In der [Historie](zusammenarbeit.md#historie) der Mappe steht jede neue Version,
 ## Was du wissen solltest
 
 - **Die Suche** findet Text nur in der aktuellen Version.
-- **Begrenzte Zahl:** Ein Administrator kann einstellen, dass nur die letzten soundso viele Versionen bleiben. Ältere löscht das DMS dann von selbst; sie lassen sich nicht mehr zurückholen.
-- **Dokument löschen** entfernt es mit **allen** Versionen. Hat es ältere Versionen, fragt das DMS vorher nach und nennt ihre Zahl. Es kommt mit allen Versionen in den [Papierkorb](ablage.md#papierkorb) und lässt sich von dort zurückholen.
+- **Begrenzte Zahl:** Ein Administrator kann einstellen, dass nur die letzten soundso viele Versionen bleiben. Ältere löscht Ablago dann von selbst; sie lassen sich nicht mehr zurückholen.
+- **Dokument löschen** entfernt es mit **allen** Versionen. Hat es ältere Versionen, fragt Ablago vorher nach und nennt ihre Zahl. Es kommt mit allen Versionen in den [Papierkorb](ablage.md#papierkorb) und lässt sich von dort zurückholen.
 - **Im Archivmodus** (Aufbewahrungspflicht) lassen sich Dokumente vor Fristende nicht löschen; eine neue Fassung legst du dort als neue Version ab.
 
-## Version des Dokuments oder Version des DMS?
+## Version des Dokuments oder Version von Ablago? { #version-des-dokuments-oder-version-des-dms }
 
 Das Wort „Version“ begegnet dir an zwei Stellen:
 
-| | Version eines Dokuments | Version des DMS |
+| | Version eines Dokuments | Version von Ablago |
 | --- | --- | --- |
 | Was ist das? | eine Fassung einer Datei in einer Mappe | der Stand des Programms selbst, z. B. 0.73 |
 | Wo steht es? | am Dokument: **Version 3** | unter [Neu in dieser Version](neu.md) und bei der Hilfe |
 | Wer ändert es? | du, mit **Ersetzen** oder **Zurückholen** | ein Administrator, mit einem Update |
 
-Ein Update des DMS ändert nichts an deinen Dokumenten und ihren Versionen.
+Ein Update von Ablago ändert nichts an deinen Dokumenten und ihren Versionen.
 
 Mehr zu Dokumenten allgemein: [Dokumente](dokumente.md#versionen).

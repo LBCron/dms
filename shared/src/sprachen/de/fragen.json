@@ -24,15 +24,15 @@
   "hinweis": "Die Antwort schreibt der KI-Dienst des Pakets „{paket}“ – nur aus den Stellen, die du unter jeder Antwort siehst. Prüfe Wichtiges in den Quellen.",
   "verlauf": "Der Chat bleibt nur in diesem Browser-Fenster und ist beim Neuladen weg.",
   "werkbank.titel": "Frag deine Ablage",
-  "werkbank.text": "Dieses Paket beantwortet Fragen in der Ablage. Je Frage sucht das DMS selbst passende Stellen – nur in Mappen, die der Fragende lesen darf – und gibt dem Paket höchstens so viel davon mit.",
+  "werkbank.text": "Dieses Paket beantwortet Fragen in der Ablage. Je Frage sucht Ablago selbst passende Stellen – nur in Mappen, die der Fragende lesen darf – und gibt dem Paket höchstens so viel davon mit.",
   "werkbank.ausschnitte": "Höchstens Ausschnitte je Frage",
   "werkbank.zeichen": "Höchstens Zeichen je Frage (alle Ausschnitte zusammen)",
   "werkbank.bereich": "{min} bis {max}, Standard {standard}",
   "werkbank.gespeichert": "Gespeichert.",
   "werkbank.speichern": "Speichern",
   "adresse.titel": "Daten an diese Adresse schicken?",
-  "adresse.text": "Das Paket schickt Daten an {adresse} – bei „Frag deine Ablage“ zum Beispiel die Frage und wenige Ausschnitte aus Dokumenten. Betrieb und Hosting dieses Dienstes liegen außerhalb des DMS. Läuft er bei dir im eigenen Netz, verlassen die Daten das Haus nicht. Gehört er einem anderen Anbieter, ist das eine Vertrauensbeziehung zu diesem Dienstleister – wie beim Hosten des DMS selbst: Standort, Auftragsverarbeitung, Speicherung und Nutzung zum Training entscheidest du mit dieser Wahl.",
+  "adresse.text": "Das Paket schickt Daten an {adresse} – bei „Frag deine Ablage“ zum Beispiel die Frage und wenige Ausschnitte aus Dokumenten. Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago. Läuft er bei dir im eigenen Netz, verlassen die Daten das Haus nicht. Gehört er einem anderen Anbieter, ist das eine Vertrauensbeziehung zu diesem Dienstleister – wie beim Hosten von Ablago selbst: Standort, Auftragsverarbeitung, Speicherung und Nutzung zum Training entscheidest du mit dieser Wahl.",
   "adresse.ja": "Adresse bestätigen und speichern",
   "adresse.feld": "Nur zu dieser Adresse darf das Paket ins Netz. Beim Speichern bestätigst du sie.",
-  "adresse.installation": "Dieses Paket schickt Daten an eine Dienst-Adresse, die du nach der Installation in den Einstellungen einträgst. Betrieb und Hosting dieses Dienstes liegen außerhalb des DMS: im eigenen Netz verlassen die Daten das Haus nicht, bei einem anderen Anbieter ist es eine Vertrauensbeziehung zu diesem Dienstleister."
+  "adresse.installation": "Dieses Paket schickt Daten an eine Dienst-Adresse, die du nach der Installation in den Einstellungen einträgst. Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago: im eigenen Netz verlassen die Daten das Haus nicht, bei einem anderen Anbieter ist es eine Vertrauensbeziehung zu diesem Dienstleister."
 }

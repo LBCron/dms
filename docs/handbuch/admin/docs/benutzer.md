@@ -12,7 +12,7 @@ Unter **Werkbank → Benutzer** legst du fest, wer sich anmelden darf und mit we
 
 ![Neuen Benutzer anlegen](bilder/werkbank-benutzer-neu.png)
 
-Ist E-Mail-Versand eingerichtet, bekommt der Benutzer eine Einladung. Sonst zeigt das DMS den Einladungslink zum Kopieren – schick ihn auf einem sicheren Weg weiter. Der Link ist 7 Tage gültig und funktioniert einmal. **Einladung erneut senden** macht den alten Link ungültig.
+Ist E-Mail-Versand eingerichtet, bekommt der Benutzer eine Einladung. Sonst zeigt Ablago den Einladungslink zum Kopieren – schick ihn auf einem sicheren Weg weiter. Der Link ist 7 Tage gültig und funktioniert einmal. **Einladung erneut senden** macht den alten Link ungültig.
 
 ## Passwort vergessen
 
@@ -22,7 +22,7 @@ Mit E-Mail-Versand fordern Benutzer den Link selbst an. Ohne E-Mail-Versand erze
 
 - **Name** und **Systemrolle** änderst du direkt beim Benutzer. Die E-Mail-Adresse ändert jeder Benutzer selbst im Profil (mit seinem Passwort).
     - Ist unter [Anmeldung über einen Anbieter](anmeldeschutz.md#anmeldung-uber-einen-anbieter-openid-connect) eine **Gruppe für Administratoren** gesetzt, überschreibt jede Anmeldung über den Anbieter die Systemrolle: Wer in der Gruppe ist, wird Administrator, alle anderen Mitglied. Eine Änderung hier gilt dann nur bis zur nächsten Anmeldung über den Anbieter.
-- <span id="abwesenheit"></span>**Abwesenheit** – wie im Profil des Benutzers (siehe [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/profil/#abwesenheit)): an/aus, von, bis, Vertreter. Du kannst sie für andere eintragen, etwa bei Krankheit, und mit **Alle offenen Aufgaben an ‹Vertreter› geben** seine Aufgaben abgeben. Das steht in der Historie seiner Benutzer-Mappe. Willst du sie auf mehrere Personen verteilen, nimm die [Sammel-Weitergabe](aufgaben.md#mehrere-aufgaben-auf-einmal-weitergeben) unter Werkbank → Benachrichtigungen und Aufgaben (Filter *Empfänger*).
+- <span id="abwesenheit"></span>**Abwesenheit** – wie im Profil des Benutzers (siehe [Benutzerhandbuch](https://help.ablago.app/benutzer/profil/#abwesenheit)): an/aus, von, bis, Vertreter. Du kannst sie für andere eintragen, etwa bei Krankheit, und mit **Alle offenen Aufgaben an ‹Vertreter› geben** seine Aufgaben abgeben. Das steht in der Historie seiner Benutzer-Mappe. Willst du sie auf mehrere Personen verteilen, nimm die [Sammel-Weitergabe](aufgaben.md#mehrere-aufgaben-auf-einmal-weitergeben) unter Werkbank → Benachrichtigungen und Aufgaben (Filter *Empfänger*).
 - <span id="zugang-sperren"></span>**Zugang sperren** (ganz unten) – **Benutzer deaktivieren** sperrt den Zugang sofort und beendet alle Sitzungen, nach einer Rückfrage. Die Mappe bleibt erhalten und heißt „… (ehemalig)“; alle Verweise auf ihn (z. B. als Verantwortlicher) bleiben gültig.
     - Das geht nur, wenn ein **Vertreter** hinterlegt ist und der Benutzer **keine offenen Aufgaben** mehr hat. Fehlt etwas, nennt der Abschnitt den Grund; Vertreter wählen und Aufgaben abgeben geht direkt darüber unter *Abwesenheit*.
     - Der Vertreter bleibt hinterlegt und wirkt **dauerhaft**: Was noch für den Deaktivierten entsteht (z. B. „passt nicht“ an Mappen, die er angelegt hat, oder eine Erwähnung in einem alten Text), bekommt der Vertreter.
@@ -36,7 +36,7 @@ Es muss immer mindestens einen aktiven Administrator geben; du kannst dich auch 
     Ein über den [Notfallzugang](notfall.md) angelegter Administrator steht in der Liste als **„Notfall-Admin ‹Datum›“**. Die Übersicht der Werkbank zeigt einen roten Hinweis, bis du ihn umbenannt oder deaktiviert hast. Warst du das nicht, deaktiviere ihn sofort.
 
 !!! warning "Administratoren arbeiten nicht in der Ablage"
-    Ein Administrator richtet das DMS ein. Für die tägliche Arbeit nimmt jeder – auch du selbst – einen normalen Benutzer. Öffnet ein Administrator die Ablage, steht oben ein roter Hinweis; er sieht dort alle Mappen. Administratoren bekommen auch keine [API-Schlüssel](api.md#api-schlussel).
+    Ein Administrator richtet Ablago ein. Für die tägliche Arbeit nimmt jeder – auch du selbst – einen normalen Benutzer. Öffnet ein Administrator die Ablage, steht oben ein roter Hinweis; er sieht dort alle Mappen. Administratoren bekommen auch keine [API-Schlüssel](api.md#api-schlussel).
 
 ![Hinweis für Administratoren in der Ablage](bilder/admin-hinweis.png)
 
@@ -52,7 +52,7 @@ Mit **Anzeigen** unter *Was sieht ein Benutzer?* siehst du je Mappentyp, wie vie
 
 ## Fehler nachstellen
 
-Meldet ein Benutzer einen Fehler, kannst du dich mit **Als … anmelden** als dieser Benutzer anmelden und siehst das DMS genau so wie er – mit seinen Rechten. Oben steht die ganze Zeit ein gelber Warnhinweis mit **Zurück zum eigenen Konto** – auf jeder Seite, auch am Handy. Das ist der einzige Weg zurück; im Menü unter dem Namen steht dafür kein Eintrag, damit du die Vertretung nicht aus Versehen beendest. Der Menüeintrag zum Konto heißt in dieser Zeit **Konto von …** und zeigt das Konto des Benutzers, nicht deins.
+Meldet ein Benutzer einen Fehler, kannst du dich mit **Als … anmelden** als dieser Benutzer anmelden und siehst Ablago genau so wie er – mit seinen Rechten. Oben steht die ganze Zeit ein gelber Warnhinweis mit **Zurück zum eigenen Konto** – auf jeder Seite, auch am Handy. Das ist der einzige Weg zurück; im Menü unter dem Namen steht dafür kein Eintrag, damit du die Vertretung nicht aus Versehen beendest. Der Menüeintrag zum Konto heißt in dieser Zeit **Konto von …** und zeigt das Konto des Benutzers, nicht deins.
 
 ![Als Jonas angemeldet: gelber Warnhinweis oben, im Menü „Konto von Jonas Beispiel“](bilder/vertretung.png)
 
@@ -64,7 +64,7 @@ Jeder Benutzer hat eine Mappe des [Systemmappentyps](mappentypen.md#systemmappen
 
 ![Benutzer-Mappe in der Ablage](bilder/benutzer-mappe.png)
 
-- **Das Konto ist führend.** Name, E-Mail-Adresse, Rollen und „aktiv“ übernimmt die Mappe automatisch aus dem Konto – beim Anlegen, bei jeder Änderung und bei jedem Start des DMS.
+- **Das Konto ist führend.** Name, E-Mail-Adresse, Rollen und „aktiv“ übernimmt die Mappe automatisch aus dem Konto – beim Anlegen, bei jeder Änderung und bei jedem Start von Ablago.
 - **Abwesenheit** steht in den Systemfeldern *Abwesend* (wirkt gerade), *Abwesend von*, *Abwesend bis* und *Vertreter*. Damit lassen sich Ansichten wie „Abwesende Benutzer“ bauen, und ein Verknüpfungsregister mit der Quelle *Benutzer › Vertreter* zeigt, wen jemand vertritt. Hattest du schon eigene Felder mit diesen Kennungen, wurden sie beim Update umbenannt (z. B. `vertreter_alt`) – samt Werten.
 - **Diese Systemfelder sind in der Ablage nur lesbar.** Der Server lehnt Änderungen daran ab, auch über die Schnittstelle. Sonst könnte ein Mitglied die E-Mail-Adresse eines Administrators ändern und dessen Konto über „Passwort vergessen“ übernehmen – oder sich selbst zum Administrator machen.
 - **Eigene Felder** (z. B. Telefon) kannst du am Mappentyp ergänzen; die sind in der Ablage normal bearbeitbar.
@@ -87,7 +87,7 @@ Neben der **Systemrolle** (*Administrator* oder *Mitglied*) kann ein Benutzer be
 
 ## Systemkonten
 
-Unter der Liste der Benutzer stehen die **Systemkonten**: Konten, unter denen das DMS selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.
+Unter der Liste der Benutzer stehen die **Systemkonten**: Konten, unter denen Ablago selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.
 
 - **Automatisierung** (Systemrolle *Systemkonto*): Unter diesem Konto laufen Automatisierungen. In der Historie steht dann „Automatisierung“ statt des Administrators, der sie eingerichtet hat – und sie laufen weiter, wenn dieser Administrator geht oder deaktiviert wird.
 - **Paket …** (Systemrolle *Paket*): je Paket mit Code ein Dienstkonto. Es darf nur, was du bei der Installation des Pakets bestätigt hast. Wird das Paket entfernt, bleibt das Konto für die Historie stehen.

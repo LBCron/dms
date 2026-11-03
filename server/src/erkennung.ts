@@ -149,7 +149,7 @@ export class Erkennung {
     const p = (await this.erkennPakete()).find((x) => x.id === paket);
     if (!p) throw new Fachfehler(422, `„${paket}“ ist kein installiertes Paket mit dem Recht „Felder aus Dokumenten vorschlagen“.`);
     if (p.netz && abfluss !== true) {
-      throw new Fachfehler(409, `„${p.name}“ schickt den Text der Dokumente über das Netz an einen Dienst außerhalb des DMS. Bitte den Datenabfluss bestätigen.`, { abfluss: true, paket: p.name });
+      throw new Fachfehler(409, `„${p.name}“ schickt den Text der Dokumente über das Netz an einen Dienst außerhalb von Ablago. Bitte den Datenabfluss bestätigen.`, { abfluss: true, paket: p.name });
     }
   }
 
