@@ -249,6 +249,8 @@ export interface RoutenExtras {
   webdav?: Webdav;
   /** Webhooks (#627): eigene im Profil, Übersicht, Abschalten und freigegebene Ziele in der Werkbank. */
   webhooks?: import('./webhook').Webhooks;
+  /** Automatisierungen (#674). */
+  automatisierungen?: import('./automatisierung').Automatisierungen;
   /** Postfächer (#196). */
   postfaecher?: Postfaecher;
   /** Anmeldung der Postfächer per OAuth 2.0 (#358). */
@@ -312,6 +314,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const tresor = () => { if (!x.tresor) throw new Fachfehler(404, 'Die Verschlüsselung ist nicht eingerichtet.'); return x.tresor; };
   const schluessel = () => { if (!x.apiSchluessel) throw new Fachfehler(404, 'API-Schlüssel sind nicht eingerichtet.'); return x.apiSchluessel; };
   const webhooks = () => { if (!x.webhooks) throw new Fachfehler(404, t('webhook.nicht-eingerichtet')); return x.webhooks; };
+  const autos = () => { if (!x.automatisierungen) throw new Fachfehler(404, 'Automatisierungen sind nicht eingerichtet.'); return x.automatisierungen; };
   /**
    * ?passwoerter=anzeigen (#46): nur mit einem API-Schlüssel, der das Recht „Passwörter lesen“ hat.
    * Liefert den Namen des Schlüssels fürs Protokoll, sonst null.
@@ -1333,6 +1336,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         // DMS_LASTTEST in einer echten Installation (#612): nicht gestartet, das DMS läuft normal.
         lasttestAbbruch: x.lasttestAbbruch?.() ?? null,
         einrichtung: x.einrichtung ? await sicher(() => x.einrichtung!.stand()) : null,
+        // Automatisierungen (#674): fehlgeschlagene Läufe und angehaltene Automatisierungen.
+        automatisierungen: x.automatisierungen ? await sicher(() => x.automatisierungen!.warnungen()) : null,
         // Pflicht-Einstellungen eines Pakets fehlen (#405: im Ablauf „später ausfüllen“) – Aufgabe für den Administrator.
         paketeEinstellungen: (await sicher(() => pakete.installierte()))?.filter((p) => p.einstellungenNoetig).map((p) => ({ id: p.id, name: p.name })) ?? [],
         // Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist.
@@ -1436,6 +1441,25 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Eingangsordner (#195): nur sichtbar, wenn /eingang eingebunden ist.
     // WebDAV-Laufwerk (#346): an/aus (Standard aus), Adresse, Stand und letzte Zugriffe.
     // Webhooks (#627): alle im Überblick, abschalten, löschen; freigegebene Ziele.
+    // Automatisierungen (#674): nur Administratoren legen an und ändern; ausgeführt wird unter dem Systemkonto.
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen', zugang: 'admin', handler: async () => ok({ ...await autos().uebersicht(), kontext: await autos().kontext() }) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen', zugang: 'admin', handler: async (a) => ok(await autos().lege(a.body, ich(a).id), 201) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/wiederholen', zugang: 'admin', handler: async () => ok(await autos().wiederholeAlle()) },
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen/laeufe/:id', zugang: 'admin', handler: async (a) => ok(await autos().lauf(a.params.id)) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/laeufe/:id/wiederholen', zugang: 'admin', handler: async (a) => ok(await autos().wiederhole(a.params.id)) },
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen/:id', zugang: 'admin', handler: async (a) => ok(await autos().hole(a.params.id)) },
+    { methode: 'PUT', pfad: '/api/werkbank/automatisierungen/:id', zugang: 'admin', handler: async (a) => ok(await autos().aendere(a.params.id, a.body, ich(a).id)) },
+    { methode: 'DELETE', pfad: '/api/werkbank/automatisierungen/:id', zugang: 'admin', handler: async (a) => { await autos().loesche(a.params.id); return leer; } },
+    { methode: 'PUT', pfad: '/api/werkbank/automatisierungen/:id/aktiv', zugang: 'admin', handler: async (a) => ok(await autos().schalte(a.params.id, (b(a) as { aktiv?: unknown }).aktiv === true, ich(a).id)) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/:id/kopieren', zugang: 'admin', handler: async (a) => ok(await autos().kopiere(a.params.id, ich(a).id), 201) },
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen/:id/laeufe', zugang: 'admin', handler: async (a) => ok(await autos().laeufe(a.params.id, Number((a.query as { anzahl?: unknown }).anzahl) || 50)) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/:id/wiederholen', zugang: 'admin', handler: async (a) => ok(await autos().wiederholeAlle(a.params.id)) },
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen/:id/fassungen', zugang: 'admin', handler: async (a) => ok(await autos().fassungen(a.params.id)) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/:id/fassungen/:version', zugang: 'admin', handler: async (a) => ok(await autos().stelleWieder(a.params.id, Number(a.params.version), ich(a).id)) },
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/:id/wiedergeben', zugang: 'admin', handler: async (a) => {
+      const e = b(a) as { mappeId?: unknown; trocken?: unknown };
+      return ok(await autos().wiedergeben(a.params.id, e.mappeId, e.trocken !== false));
+    } },
     { methode: 'GET', pfad: '/api/werkbank/webhooks', zugang: 'admin', handler: async () => ok(await webhooks().uebersicht()) },
     { methode: 'PUT', pfad: '/api/werkbank/webhooks/ziele', zugang: 'admin', handler: async (a) => ok({ ziele: await webhooks().setzeZiele((b(a) as { ziele?: unknown }).ziele, ich(a).email) }) },
     { methode: 'PUT', pfad: '/api/werkbank/webhooks/:id', zugang: 'admin', handler: async (a) => {

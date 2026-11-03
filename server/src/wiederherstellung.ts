@@ -497,6 +497,9 @@ export class Wiederherstellung {
       await migriere(neu, this.q.migrationen, () => {});
       const nachher = Number((await neu`SELECT count(*)::int AS n FROM schema_migrationen`)[0].n);
       ok(nachher > vorher ? `${nachher - vorher} Änderungen ausgeführt` : 'schon aktuell');
+      // Automatisierungen (#674): nach einer Wiederherstellung vorhanden, aber angehalten, bis ein Admin sie einschaltet.
+      if (!probe) await neu`UPDATE automatisierungen SET angehalten = ${neu.json({ grund: 'wiederherstellung', text: 'Angehalten nach einer Wiederherstellung. Prüfe die Automatisierung und schalte sie wieder ein.', zeit: new Date().toISOString() })}
+        WHERE aktiv AND angehalten IS NULL`;
 
       // Erweiterungen (#562): Fehlt pg_trgm oder unaccent, läuft die Suche nach dem Umschalten schlechter – das soll
       // vorher sichtbar sein, nicht still passieren. Die Daten sind trotzdem vollständig, daher nur ein Hinweis.

@@ -36,6 +36,9 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   pakete: 'struktur/pakete.json',
   designs: 'struktur/designs.json',
   synonyme: 'struktur/synonyme.json (#356, gleichbedeutende Wörter der Suche)',
+  automatisierungen: 'struktur/automatisierungen.json (#674, Wenn · Und · Dann)',
+  automatisierung_fassungen: 'struktur/automatisierungen.json (#674, Änderungsverlauf je Automatisierung)',
+  automatisierung_laeufe: 'nicht enthalten: Läufe der Automatisierungen (#674, Protokoll, technisch)',
   benutzer: 'struktur/benutzer.json (ohne Passwort-Hashes)',
   benutzer_einstellungen: 'struktur/benutzer.json (einstellungen)',
   mappen: 'daten/<typ>.csv, .jsonl, .xlsx und ablage/',
@@ -98,6 +101,8 @@ export interface ExportQuelle {
   designs(): Promise<unknown[]>;
   /** Gleichbedeutende Wörter der Suche (#356); fehlt bei Auskunft und persönlichem Export. */
   synonyme?(): Promise<unknown[]>;
+  /** Automatisierungen mit Änderungsverlauf (#674); fehlt bei Auskunft und persönlichem Export. */
+  automatisierungen?(): Promise<unknown[]>;
   mappen(typId: string): Promise<Mappe[]>;
   papierkorb(): Promise<PapierkorbEintrag[]>;
   /** Einzeln gelöschte Dokumente (#344); fehlt bei älteren Quellen. */
@@ -252,6 +257,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   await w.schreibe('struktur/pakete.json', json(await q.pakete()));
   await w.schreibe('struktur/designs.json', json(await q.designs()));
   if (q.synonyme) await w.schreibe('struktur/synonyme.json', json(await q.synonyme()));
+  if (q.automatisierungen) await w.schreibe('struktur/automatisierungen.json', json(await q.automatisierungen()));
   await w.schreibe('struktur/benutzer.json', json(b.benutzer));
 
   // Daten je Mappentyp
