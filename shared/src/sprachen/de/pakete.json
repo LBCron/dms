@@ -122,5 +122,8 @@
   "quelle.bestaetigen.ja": "Fingerabdruck stimmt",
   "quelle.erklaerung": "Hat ein Katalog einen eigenen Schlüssel, zeigt das DMS beim Hinzufügen den Fingerabdruck. Vergleiche ihn mit der Webseite des Anbieters.",
   "sicherung.nur-pakete": "Sicherungen außer Haus kopieren nur Pakete mit dem Recht „dms:sicherung-lesen“.",
-  "sicherung.recht": "Dieses Paket hat das Recht „dms:sicherung-lesen“ nicht (Rechte aus dem Manifest)."
+  "sicherung.recht": "Dieses Paket hat das Recht „dms:sicherung-lesen“ nicht (Rechte aus dem Manifest).",
+  "katalog.ansehen": "Im Katalog ansehen",
+  "katalog.hinweis": "Öffnet den Paketkatalog im Internet. Deine DMS-Version wird dabei nur in deinem Browser verwendet und nicht übertragen.",
+  "katalog.ohneinternet": "Der Katalog ist gerade nicht erreichbar. Ohne Internet holst du Pakete über „Ohne Internet …“ als Sammeldatei."
 }

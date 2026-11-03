@@ -15,6 +15,21 @@ export const REGISTRY = 'https://github.com/motom001/dms-registry';
 
 export const PAKET_ID = /^[a-z][a-z0-9_]{1,19}$/;
 export const VERSION = /^\d+\.\d+\.\d+$/;
+
+/**
+ * „Im Katalog ansehen“ (#622, dms-registry #84): Adresse der Katalog-Webseite – oder mit `paket` der
+ * Seite dieses Pakets – mit der eigenen DMS-Version im **Fragment** `#dms=<Version>`. Das Fragment
+ * schickt der Browser nie an den Server (kein Zugriffsprotokoll, keine Telemetrie, #389); nur das
+ * Skript der Katalogseite (`dms.js`) liest es, merkt es sich im Browser und entfernt es wieder.
+ * Nur die Version, nie ein Parameter (`?…`). Die Katalogseite nimmt genau `X.Y.Z` an – eine andere
+ * Angabe (z. B. „unbekannt“) lässt das Fragment weg; eine ungültige Paket-Id die Paketseite.
+ */
+export function katalogSeiteMitVersion(dms: string, paket?: string): string {
+  const seite = paket && PAKET_ID.test(paket) ? `${KATALOG_SEITE}paket/${paket}/` : KATALOG_SEITE;
+  return VERSION.test(dms) ? `${seite}#dms=${dms}` : seite;
+}
+/** Links auf die Katalog-Webseite: neuer Tab ohne Zugriff aufs DMS und ohne Herkunftsadresse (#622). */
+export const KATALOG_LINK_REL = 'noopener noreferrer';
 export const BEREICH = /^(>=|>|=|\^|~)?(\d+\.\d+\.\d+)( <(\d+\.\d+\.\d+))?$/;
 
 export interface Benannt { schluessel: string; name: string }

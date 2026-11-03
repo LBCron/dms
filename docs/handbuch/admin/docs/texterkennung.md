@@ -7,7 +7,7 @@ Damit die Suche auch den Text von Dokumenten findet, erzeugt das DMS zu jedem ne
 --8<-- "ausgeblendet-schritt.md"
 
 - **PDFs:** Das DMS liest die vorhandene **Textebene** selbst (poppler) – sofort. PDFs, die ein Programm oder ein Scanner mit Text erzeugt hat, sind damit gleich durchsuchbar.
-- **Scans und Fotos** (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket **Texterkennung** aus dem [Katalog](pakete.md).
+- **Scans und Fotos** (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket **Texterkennung (Deutsch und Englisch)** (Kennung `texterkennung`) aus dem [Katalog](pakete.md).
 - **Andere Dateien** (z. B. Word, Excel, TIFF) bekommen vorerst keinen Volltext.
 
 !!! warning "Seit Version 0.134: Texterkennung ist ein Paket"
@@ -81,7 +81,7 @@ Das Paket **Texterkennung** nutzt dieselbe Erkennung bei *Sprache: Automatisch* 
 Seit 0.139.0 hat ein Dokument nicht nur eine Sprache: Die Sprache steht **je Seite** fest, auf einer Mischseite auch zwei (etwa ein deutscher Brief mit beigelegtem französischem Schreiben, oder eine zweisprachige Bestätigung). Am Dokument steht dann die Sprache mit dem meisten Text und die übrigen: „Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch“. Die Suche nimmt **je Seite die Wortstämme ihrer Sprache** – „Beglaubigung“ findet die deutsche Seite, „ambassades“ die französische.
 
 - Bei **PDFs mit Textebene** erkennt das DMS die Sprache jeder Seite selbst (Absatz für Absatz; eine zweite Sprache zählt ab etwa einem Fünftel des Texts der Seite).
-- Bei **Scans** meldet das Paket **Texterkennung** ab 2.1.0 die Sprachen je Seite: Es liest jede Seite in ihrer Sprache (zweiter Durchgang, wenn die Sprache wechselt) und eine Mischseite mit beiden Sprachen zugleich, wenn das deutlich sicherer ist. Dafür braucht es die Sprachdaten (z. B. Zusatzpaket Französisch); ohne sie liest es die Seite auf Deutsch, die Suche nimmt trotzdem die Wortstämme der erkannten Sprache.
+- Bei **Scans** meldet das Paket **Texterkennung** ab 2.1.0 die Sprachen je Seite: Es liest jede Seite in ihrer Sprache (zweiter Durchgang, wenn die Sprache wechselt) und eine Mischseite mit beiden Sprachen zugleich, wenn das deutlich sicherer ist. Dafür braucht es die Sprachdaten (z. B. die Zusatzsprache Französisch); ohne sie liest es die Seite auf Deutsch, die Suche nimmt trotzdem die Wortstämme der erkannten Sprache.
 - Wechselt die Sprache zwischen zwei Seiten ganz, zeigt die **Post** den Hinweis „Ab Seite 2 beginnt vermutlich ein eigenes Schreiben – Post teilen?“. Geteilt wird **nie von selbst**: Der Knopf öffnet nur die Seitenansicht mit dem Vorschlag; der Hinweis lässt sich für alle ausblenden.
 - **Bestand:** Vorhandene Dokumente behalten ihre eine Sprache und ihren Suchindex; das Update baut nichts neu auf (Migration 053 in Sekundenbruchteilen). Wer auch ältere Scans je Seite lesen lassen will, startet **Volltext neu erzeugen → Für alle Dokumente** (siehe unten; das dauert, je nach Menge, Stunden). PDFs mit Textebene bekommen ihre Seitensprachen damit in Sekunden.
 
@@ -89,11 +89,11 @@ Pakete und die [Schnittstelle](api.md) geben die Sprache mit dem Volltext an (`P
 
 ## Weitere Sprachen
 
-Im Paket **Texterkennung** stecken Deutsch, Englisch und die Lageerkennung. Weitere Sprachen kommen als **Zusatzpakete** aus dem Katalog dazu, z. B. **Texterkennung – Französisch** (`texterkennung_fra`). Ein eigenes Image oder eingehängte Sprachdateien braucht es nicht mehr.
+Im Paket **Texterkennung (Deutsch und Englisch)** stecken Deutsch, Englisch und die Lageerkennung. Weitere Sprachen kommen als **Zusatzsprachen** aus dem Katalog dazu, je Sprache ein eigenes Paket, z. B. **Texterkennung – Zusatzsprache Französisch** (`texterkennung_fra`). Es gibt sie für Französisch, Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Türkisch, Russisch, Ukrainisch und Arabisch (Kennung `texterkennung_` und das Sprachkürzel: `fra`, `spa`, `ita`, `nld`, `por`, `pol`, `tur`, `rus`, `ukr`, `ara`). Ein eigenes Image oder eingehängte Sprachdateien braucht es nicht mehr.
 
-Unter **Werkbank → Texterkennung → Erkannte Sprachen** siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit dem Zusatzpaket texterkennung_fra“, mit Link zum Zusatzpaket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).
+Unter **Werkbank → Texterkennung → Erkannte Sprachen** siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit ‚Texterkennung – Zusatzsprache Französisch‘ (texterkennung_fra)“, mit Link zu diesem Paket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).
 
-Nach dem Installieren eines Zusatzpakets erkennt **Volltext neu erzeugen → Für alle Dokumente** (siehe unten) die vorhandenen Dokumente neu – oder du startest einzelne unter **Aufträge → fertig** neu.
+Nach dem Installieren einer Zusatzsprache erkennt **Volltext neu erzeugen → Für alle Dokumente** (siehe unten) die vorhandenen Dokumente neu – oder du startest einzelne unter **Aufträge → fertig** neu.
 
 ## Aufträge
 
