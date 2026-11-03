@@ -46,16 +46,17 @@ describe('Geheimnisse je Art (#410)', () => {
       { quelle: 'einstellung', schluessel: 'zweifaktor_u1', wert: { geheimnis: g('kaputt-2') }, titel: 'Anna' },
       { quelle: 'einstellung', schluessel: 'paket:konten', wert: { werte: { token: g(9) } } },
       { quelle: 'einstellung', schluessel: 'pruefwort', wert: g('kaputt-3') },
+      { quelle: 'webhook', schluessel: 'w1', wert: g('kaputt-4'), titel: 'Homey' },
     ];
     const lesbar = (v: string) => !v.includes('kaputt') && !v.includes('alt');
     const b = bestandAus(funde, lesbar, new Set(['passwortfeld', 'mail']));
     const je = Object.fromEntries(b.arten.map((a) => [a.art, [a.anzahl, a.unlesbar]]));
     assert.deepEqual(je, {
       passwortfeld: [1, 0], papierkorb: [1, 1], mail: [1, 0], postfach: [1, 1], postfach_oauth_app: [1, 0],
-      postfach_oauth: [2, 0], oidc: [1, 0], zweifaktor: [1, 1], paket: [1, 0],
+      postfach_oauth: [2, 0], oidc: [1, 0], zweifaktor: [1, 1], paket: [1, 0], webhook: [1, 1],
     });
     assert.ok(!b.arten.some((a) => a.art === 'pruefwort' || a.art === 'sonstige'), 'Prüfwort intern, „Weitere“ nur mit Funden');
-    assert.deepEqual(b.betroffen.map((x) => x.was), ['Alt: pw', 'Postfach „Privat“: Passwort', 'Zwei-Faktor-Anmeldung von Anna']);
+    assert.deepEqual(b.betroffen.map((x) => x.was), ['Alt: pw', 'Postfach „Privat“: Passwort', 'Zwei-Faktor-Anmeldung von Anna', 'Webhook „Homey“: Geheimnis']);
     assert.equal(b.betroffen[1].wo, GEHEIM_ARTEN.postfach.wo);
     // Ohne Funde: alle bekannten Arten mit 0.
     assert.equal(bestandAus([], () => true).arten.length, Object.keys(GEHEIM_ARTEN).length - 2);
@@ -138,10 +139,13 @@ describe('Schlüssel wechseln mit allen Geheimnissen in PostgreSQL (#410)', { sk
     // Paket-Einstellung vom Typ Geheimnis.
     await dienst.setzePaketEinstellungen('konten', { werte: { token: dienst.verschluesselePaketGeheimnis('paket-geheim'), liste: [{ id: 'e1', pw: dienst.verschluesselePaketGeheimnis('listen-geheim') }] } });
 
+    // Webhook (#627): Geheimnis für die Signatur.
+    await sql`INSERT INTO webhooks (id, haushalt_id, benutzer_id, name, url, geheimnis) VALUES (gen_random_uuid(), ${HAUSHALT}, ${anna.id}, 'Homey', 'http://homey.home.arpa/x', ${v('whsec_geheim')})`;
+
     // (a) Bestand: jede Art mit ihrer Anzahl, nichts unbekannt, nichts unlesbar.
     const vorher = await tresor.status();
     const je = Object.fromEntries(vorher.arten.map((a) => [a.art, a.anzahl]));
-    assert.deepEqual(je, { passwortfeld: 1, papierkorb: 1, mail: 1, postfach: 1, postfach_oauth_app: 1, postfach_oauth: 2, oidc: 1, zweifaktor: 1, paket: 2 });
+    assert.deepEqual(je, { passwortfeld: 1, papierkorb: 1, mail: 1, postfach: 1, postfach_oauth_app: 1, postfach_oauth: 2, oidc: 1, zweifaktor: 1, paket: 2, webhook: 1 });
     assert.deepEqual(vorher.betroffen, []);
     const alleVorher = await alleGeheimnisse();
     const gezaehlt = vorher.arten.reduce((n, a) => n + a.anzahl, 0) + 1; // + Prüfwort

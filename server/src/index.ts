@@ -9,6 +9,7 @@ import { Konsolenzugang, lokaleUrl } from './konsole';
 import { Oidc } from './oidc';
 import { Eingangsordner } from './eingangsordner';
 import { Webdav } from './webdav';
+import { pgWebhookRepo, Webhooks } from './webhook';
 import { einbettenAus } from './koepfe';
 import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';
@@ -351,10 +352,30 @@ wartung.beimAusschalten(() => void paketlaeufer.stelleZu());
 const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett', schleife: () => !!messung.auslastung.warnung() });
 systemlast.start();
 
+// Webhooks (#627): melden geänderte Zahlen eines Benutzers (wie GET /api/v1/ich/zaehler) an freigegebene Ziele.
+// Geheimnis verschlüsselt mit dem Schlüssel des DMS; regelmäßige Läufe nur auf dem Server mit der Sperre.
+let webhookSperre: Promise<boolean> | null = null;
+const webhooks = new Webhooks({
+  repo: messung.umhuelle(pgWebhookRepo(sql, cfg.haushalt), 'webhooks'),
+  einstellungen: pgEinstellungen(sql, cfg.haushalt),
+  verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
+  zahlen: async (b) => { const r = await dienst.zaehlerAbruf(await dienst.zugriff(b)); return { ...r.zahlen, stand: r.stand, geaendert: r.geaendert }; },
+  benutzer: (id) => konten.benutzerMitId(id),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+  anAdmins,
+  sperre: () => (webhookSperre ??= (async () => {
+    const v = await sql.reserve();
+    const [r] = await v`SELECT pg_try_advisory_lock(4711197) AS ok`;
+    if (!r.ok) { v.release(); webhookSperre = null; }
+    return r.ok as boolean;
+  })()),
+});
+dienst.beiAenderung(() => webhooks.anstossen());
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
 const webdav = new Webdav({ dienst, konten, schluessel: apiSchluessel, einstellungen: pgEinstellungen(sql, cfg.haushalt), adresse: () => betrieb.adresseFuerLinks(), wartung });
 const app = await baueApp(dienst, konten, {
   webdav,
+  webhooks,
   pakete,
   paketlaeufer,
   konsole,
@@ -443,6 +464,7 @@ sicherung.start();
 speicherplatz.start();
 await eingangsordner.start();
 postfaecher.start();
+webhooks.start();
 // Wörterverzeichnis der Suche (#575): neue Wörter aus dem Eingang übernehmen – entkoppelt von Mappen und Texterkennung.
 let woerterFehler = '';
 setInterval(() => {
@@ -501,6 +523,7 @@ const beenden = async () => {
   notfall.stop();
   sicherung.stop();
   speicherplatz.stop();
+  webhooks.stop();
   await konsole.entferne();
   await app.close();
   await beendeArbeiter();

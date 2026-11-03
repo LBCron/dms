@@ -68,8 +68,11 @@ export class Haushaltsstand {
   /** `auch`: Methoden aus `OHNE_FOLGEN`, die für diesen Stand trotzdem zählen. */
   constructor(private readonly auch: ReadonlySet<string> = new Set()) {}
   private n = 0;
+  private hoerer: Array<() => void> = [];
   get stand() { return this.n; }
-  erhoehe() { this.n++; }
+  erhoehe() { this.n++; for (const f of this.hoerer) f(); }
+  /** Nach jeder Änderung benachrichtigen (Webhooks, #627). Der Hörer muss billig sein – er läuft bei jeder Änderung. */
+  beiAenderung(f: () => void) { this.hoerer.push(f); }
 
   /**
    * Umhüllt ein Repo: Ist eine ändernde Methode fertig (auch mit Fehler – sie kann halb gewirkt

@@ -223,6 +223,121 @@ curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ
 - **Schlüssel-Stufe „nur Zähler“** (`recht = 'zaehler'`, `NUR_ZAEHLER` und `ZAEHLER_PFAD` in `apischluessel.ts`). `pruefeZugang` lässt sie nur an `GET /api/v1/ich/zaehler` durch; jede andere Route unter `/api/v1` und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt `403` (`api.schluessel.nur-zaehler`), das Laufwerk ebenfalls (`webdav.ts`). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.
 - **Grenzen.** Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.
 
-**Weitere Zahl aufnehmen:** Feld in `Zaehlerzahlen` (`dienst.ts`) und im OpenAPI-Schema ergänzen, im Test `ZAHLEN` – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, `v` im Hash erhöhen, damit jeder Client einmal neu liest. Der Webhook (#627) kann `zaehlerAbruf` je Benutzer aufrufen und bei geändertem `stand` `zaehler.geaendert` mit Ereignis-Id `<benutzer>:<stand>` melden.
+**Weitere Zahl aufnehmen:** Feld in `Zaehlerzahlen` (`dienst.ts`) und im OpenAPI-Schema ergänzen, im Test `ZAHLEN` – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, `v` im Hash erhöhen, damit jeder Client einmal neu liest. Der [Webhook](#webhooks) (#627) ruft `zaehlerAbruf` je Benutzer auf und meldet bei geändertem `stand`.
+
+## Webhooks (#627) { #webhooks }
+
+Ein Webhook meldet geänderte Zahlen eines Benutzers (dieselben wie `GET /api/v1/ich/zaehler`) per `POST` an eine Adresse. Code: `server/src/webhook.ts` (Dienst `Webhooks`, `pgWebhookRepo`, `speicherWebhookRepo`), gemeinsame Typen und Regeln in `shared/src/webhook.ts`, Oberfläche in `web/src/profil/Webhooks.tsx` und `web/src/werkbank/Webhooks.tsx`, Tabellen `webhooks` und `webhook_meldungen` (Migration 058).
+
+### Format
+
+```http
+POST /dms HTTP/1.1
+Content-Type: application/json
+User-Agent: DMS-Webhook
+X-DMS-Art: zaehler.geaendert
+X-DMS-Ereignis: 7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11
+X-DMS-Zeit: 1762154102
+X-DMS-Signatur: v1=5d2f…(64 Zeichen hex)
+X-DMS-Versuch: 1
+X-DMS-Webhook: 0f8a…
+
+{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
+```
+
+- `art`: `zaehler.geaendert` oder `probe` („Probe senden“, gleiche `daten`). Weitere Arten (`post.neu` …) kämen als neue Werte dazu; ein Empfänger übergeht unbekannte.
+- `id`: Ereignis-Id. **Gleich bei einer Wiederholung** derselben Daten, neu, sobald sich die Daten einer schon versuchten Meldung ändern. Der Empfänger merkt sich die letzten Ids und übergeht Doppeltes.
+- `zeit`: wann die Meldung entstand; `daten.geaendert`: wann sich die Zahlen geändert haben.
+- Der Rumpf ist kompaktes JSON (`JSON.stringify`), nur ASCII-Zeichen, Schlüssel in fester Reihenfolge – `JSON.stringify(JSON.parse(rumpf)) === rumpf`. Das erlaubt die Prüfung auch dort, wo ein Rahmenwerk nur das geparste JSON hergibt (Node-RED).
+- **Nie Inhalte.** Der Test `server/test/webhook.test.ts` prüft die Schlüssel des Rumpfs und dass keine Titel, Absender oder Namen hineinrutschen.
+- Als angekommen gilt `2xx`; Weiterleitungen (`3xx`) folgt das DMS nicht (`redirect: 'manual'`), Zeitgrenze 5 s.
+
+### Signatur prüfen
+
+`X-DMS-Signatur` ist `v1=` und HMAC-SHA256 (hex) über `<X-DMS-Zeit>.<Rumpf>` mit dem Geheimnis des Webhooks (`whsec_…`, als UTF-8-Text, nicht dekodiert). Mehrere Signaturen (später beim Wechsel des Verfahrens) stehen durch Komma getrennt; eine passende genügt. Prüfe den **Rumpf als Bytes, wie er ankam**, vergleiche in konstanter Zeit und verwirf Zeiten, die mehr als 5 Minuten abweichen.
+
+**JavaScript (Node.js):**
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createServer } from 'node:http';
+
+const GEHEIMNIS = process.env.DMS_WEBHOOK_GEHEIMNIS; // whsec_…
+const gesehen = new Set();
+
+function echt(kopf, rumpf) {
+  const zeit = Number(kopf['x-dms-zeit']);
+  if (!Number.isInteger(zeit) || Math.abs(Date.now() / 1000 - zeit) > 300) return false;
+  const soll = Buffer.from('v1=' + createHmac('sha256', GEHEIMNIS).update(`${zeit}.${rumpf}`).digest('hex'));
+  return String(kopf['x-dms-signatur'] ?? '').split(',').some((s) => {
+    const ist = Buffer.from(s.trim());
+    return ist.length === soll.length && timingSafeEqual(ist, soll);
+  });
+}
+
+createServer((req, res) => {
+  let rumpf = '';
+  req.on('data', (c) => { rumpf += c; });
+  req.on('end', () => {
+    if (!echt(req.headers, rumpf)) return res.writeHead(401).end();
+    res.writeHead(204).end();                      // erst bestätigen, dann arbeiten
+    const m = JSON.parse(rumpf);
+    if (gesehen.has(m.id)) return;                 // Wiederholung
+    gesehen.add(m.id);
+    console.log(m.art, m.daten.neuePost, 'neue Post');
+  });
+}).listen(8080);
+```
+
+**Python:**
+
+```python
+import hashlib, hmac, json, os, time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+GEHEIMNIS = os.environ["DMS_WEBHOOK_GEHEIMNIS"].encode()  # whsec_…
+gesehen = set()
+
+def echt(kopf, rumpf: bytes) -> bool:
+    try:
+        zeit = int(kopf.get("x-dms-zeit", ""))
+    except ValueError:
+        return False
+    if abs(time.time() - zeit) > 300:
+        return False
+    soll = "v1=" + hmac.new(GEHEIMNIS, f"{zeit}.".encode() + rumpf, hashlib.sha256).hexdigest()
+    return any(hmac.compare_digest(s.strip(), soll) for s in kopf.get("x-dms-signatur", "").split(","))
+
+class Empfang(BaseHTTPRequestHandler):
+    def do_POST(self):
+        rumpf = self.rfile.read(int(self.headers.get("content-length", 0)))
+        if not echt(self.headers, rumpf):
+            self.send_response(401); self.end_headers(); return
+        self.send_response(204); self.end_headers()
+        m = json.loads(rumpf)
+        if m["id"] in gesehen:
+            return
+        gesehen.add(m["id"])
+        print(m["art"], m["daten"]["neuePost"], "neue Post")
+
+HTTPServer(("", 8080), Empfang).serve_forever()
+```
+
+Im Server gibt es dieselbe Prüfung als `pruefeSignatur` (`webhook.ts`) für Tests.
+
+### Ablauf und mehrere Server
+
+- **Anstoß:** `Haushaltsstand.beiAenderung` (`zaehlerspeicher.ts`) ruft nach jeder ändernden Repo-Methode `Webhooks.anstossen()` (über `Dienst.beiAenderung`, für Zahlen der Ansichten und „Anstehend“). Nach 3 s zählt `pruefe()` für jeden Benutzer mit eingeschaltetem Webhook einmal `zaehlerAbruf` (aus dem Zwischenspeicher, meist Millisekunden). Ohne Anlass zählt der Server mit der Sperre jede Minute (Mitternacht, Fristen, Änderungen auf einem anderen Server).
+- **Ausgangskorb in der Datenbank:** `merkeStand` setzt in einer Transaktion mit Zeilensperre `webhooks.gemeldet_stand` und legt die Meldung an – oder ersetzt die Daten der offenen (höchstens eine je Webhook, eindeutiger Teilindex). So zählt jeder Stand einmal, auch wenn zwei Server gleichzeitig prüfen. Neue Meldungen sind frühestens 30 s nach dem letzten Senden (`webhooks.gesendet`) fällig – das ist das Zusammenfassen.
+- **Zustellen:** `faellige` holt Meldungen mit `FOR UPDATE SKIP LOCKED`, zählt den Versuch hoch und schiebt `faellig` um 60 s (Lease). Stirbt der Server beim Senden, holt ein anderer die Meldung danach – sie kommt dann womöglich doppelt, mit derselben Ereignis-Id (**mindestens einmal**). Ändern sich die Daten während des Sendens, schließt `zugestellt` die Meldung nicht (Ereignis-Id passt nicht mehr) und sie geht nach dem Mindestabstand erneut.
+- **Wiederholen und Aufgeben:** Wartezeiten `WEBHOOK_WARTEN_S` (30 s bis 8 h, zusammen etwa 22 h, 12 Versuche); nach dem letzten Fehlschlag `zustand = 'aufgegeben'`, Webhook aus (`abgeschaltet.grund = 'fehler'`), Protokoll und Mail an die Administratoren.
+- **Regelmäßige Läufe** (Zählen jede Minute, Zustellen alle 5 s, Aufräumen nach 7 Tagen) nur auf dem Server mit `pg_try_advisory_lock(4711197)`; der Anstoß nach einer Änderung läuft auf dem Server, auf dem sie passiert ist. Pause im Wartungsmodus und während einer Wiederherstellung.
+- **Lücke nach der Bauregel:** Der Haushaltsstand und die Zwischenspeicher der Zahlen (#512) leben je Server im Arbeitsspeicher. Eine Änderung auf Server A bemerkt Server B erst, wenn sein Zwischenspeicher abläuft (höchstens 5 bzw. 30 Minuten). Für die Richtigkeit reicht das (der Stand in der Datenbank zählt), für „sofort“ nicht immer – ein gemeinsamer Ereigniskanal ist ein eigenes Thema.
+
+### Ziele und Geheimnis
+
+- **Ziele:** `zielProblem` (`shared/src/webhook.ts`) erlaubt `https://` und `http://` nur im Heimnetz (`imHeimnetz` aus `heimnetz.ts`), keine Anmeldedaten und kein `#`. Zusätzlich muss der Ursprung in der Einstellung `webhook_ziele` stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft das DMS erneut.
+- **Geheimnis:** `whsec_` + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel des DMS in `webhooks.geheimnis`. `umschluesseln` und `verschluesselteFundstellen` (`repo-pg.ts`) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.
+- **Neue Art aufnehmen:** Wert in `WEBHOOK_EREIGNISSE` und, wo nötig, eigene Erkennung; der Rumpf behält `art`, `id`, `zeit`, `daten` – und nur Zahlen bzw. Ids.
 
 Mehr Hintergrund im Administratorhandbuch: [Technik](https://motom001.github.io/dms/admin/aktuell/technik/) und [Entscheidungen](https://motom001.github.io/dms/admin/aktuell/entscheidungen/).

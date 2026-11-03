@@ -5,6 +5,7 @@ import { geraetText, istGeradeAktiv, PASSWORT_MINDESTLAENGE, ROLLEN, type Sitzun
 import { api } from '../api';
 import { bereicheZuruecksetzen } from '../bereiche';
 import { ApiSchluesselBlatt } from './ApiSchluessel';
+import { WebhooksBlatt } from './Webhooks';
 import { useDaten } from '../daten';
 import { GRUNDLAGEN, leseSchrift, SCHRIFTEN, setzeSchrift, type Schrift } from '../design';
 import { Link } from '../ort';
@@ -247,6 +248,9 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
           onChange={(e) => d.setzeEinstellung('geaenderte_hervorheben', e.target.checked ? null : false)} />
           <span>Geänderte Favoriten und eigene Mappen in Listen hervorheben<small className="hilfe">Mit einem Punkt vor dem Titel, bis du die Mappe öffnest – wie „ungelesen“ im E-Mail-Programm.</small></span></label>
       </div>
+
+      {/* Webhooks (#627): Hausautomatisierung sofort anstoßen. */}
+      <WebhooksBlatt />
 
       </>}
     </div>

@@ -246,6 +246,8 @@ export interface RoutenExtras {
   eingangsordner?: Eingangsordner;
   /** WebDAV-Laufwerk (#346). */
   webdav?: Webdav;
+  /** Webhooks (#627): eigene im Profil, Übersicht, Abschalten und freigegebene Ziele in der Werkbank. */
+  webhooks?: import('./webhook').Webhooks;
   /** Postfächer (#196). */
   postfaecher?: Postfaecher;
   /** Anmeldung der Postfächer per OAuth 2.0 (#358). */
@@ -308,6 +310,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const meldungen = () => { if (!x.fehlermeldungen) throw new Fachfehler(404, 'Gemeldete Fehler sind nicht eingerichtet.'); return x.fehlermeldungen; };
   const tresor = () => { if (!x.tresor) throw new Fachfehler(404, 'Die Verschlüsselung ist nicht eingerichtet.'); return x.tresor; };
   const schluessel = () => { if (!x.apiSchluessel) throw new Fachfehler(404, 'API-Schlüssel sind nicht eingerichtet.'); return x.apiSchluessel; };
+  const webhooks = () => { if (!x.webhooks) throw new Fachfehler(404, t('webhook.nicht-eingerichtet')); return x.webhooks; };
   /**
    * ?passwoerter=anzeigen (#46): nur mit einem API-Schlüssel, der das Recht „Passwörter lesen“ hat.
    * Liefert den Namen des Schlüssels fürs Protokoll, sonst null.
@@ -1422,6 +1425,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Eingangsordner (#195): nur sichtbar, wenn /eingang eingebunden ist.
     // WebDAV-Laufwerk (#346): an/aus (Standard aus), Adresse, Stand und letzte Zugriffe.
+    // Webhooks (#627): alle im Überblick, abschalten, löschen; freigegebene Ziele.
+    { methode: 'GET', pfad: '/api/werkbank/webhooks', zugang: 'admin', handler: async () => ok(await webhooks().uebersicht()) },
+    { methode: 'PUT', pfad: '/api/werkbank/webhooks/ziele', zugang: 'admin', handler: async (a) => ok({ ziele: await webhooks().setzeZiele((b(a) as { ziele?: unknown }).ziele, ich(a).email) }) },
+    { methode: 'PUT', pfad: '/api/werkbank/webhooks/:id', zugang: 'admin', handler: async (a) => {
+      await webhooks().schalteWerkbank(a.params.id, (b(a) as { aktiv?: unknown }).aktiv === true, ich(a).email);
+      return ok(await webhooks().uebersicht());
+    } },
+    { methode: 'DELETE', pfad: '/api/werkbank/webhooks/:id', zugang: 'admin', handler: async (a) => { await webhooks().loescheWerkbank(a.params.id, ich(a).email); return leer; } },
     { methode: 'GET', pfad: '/api/werkbank/webdav', zugang: 'admin', handler: async () => {
       if (!x.webdav) throw new Fachfehler(404, 'Das WebDAV-Laufwerk ist nicht eingerichtet.');
       return ok(await x.webdav.stand());
@@ -2002,6 +2013,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.dokumente.info(r.papierkorb ? 'Dokument in den Papierkorb gelegt' : 'Dokument gelöscht', { id: a.params.id });
       return leer;
     } },
+
+    /* ---------- Webhooks im eigenen Profil (#627) ---------- */
+    { methode: 'GET', pfad: '/api/konto/webhooks', zugang: 'angemeldet', handler: async (a) => ok({ webhooks: await webhooks().liste(ich(a)), ziele: await webhooks().ziele() }) },
+    { methode: 'POST', pfad: '/api/konto/webhooks', zugang: 'angemeldet', handler: async (a) => ok(await webhooks().lege(ich(a), a.body), 201) },
+    { methode: 'PUT', pfad: '/api/konto/webhooks/:id', zugang: 'angemeldet', handler: async (a) => ok(await webhooks().aendere(ich(a), a.params.id, a.body)) },
+    { methode: 'DELETE', pfad: '/api/konto/webhooks/:id', zugang: 'angemeldet', handler: async (a) => { await webhooks().loesche(ich(a), a.params.id); return leer; } },
+    { methode: 'POST', pfad: '/api/konto/webhooks/:id/probe', zugang: 'angemeldet', handler: async (a) => ok(await webhooks().probe(ich(a), a.params.id)) },
+    { methode: 'POST', pfad: '/api/konto/webhooks/:id/geheimnis', zugang: 'angemeldet', handler: async (a) => ok(await webhooks().erneuereGeheimnis(ich(a), a.params.id)) },
+    { methode: 'GET', pfad: '/api/konto/webhooks/:id/verlauf', zugang: 'angemeldet', handler: async (a) => ok(await webhooks().verlauf(ich(a), a.params.id)) },
 
     /* ---------- API-Schlüssel im eigenen Profil ---------- */
     { methode: 'GET', pfad: '/api/konto/api-schluessel', zugang: 'angemeldet', handler: async (a) => ok(await schluessel().liste(ich(a))) },

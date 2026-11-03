@@ -169,7 +169,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     const je = (g: string) => BEREICHE.filter((x) => x.gruppe === g).map((x) => x.pfad);
     assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'pakete', 'suche', 'darfweg']);
     assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz']);
-    assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'texterkennung']);
+    assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'wiederherstellung', 'vollexport', 'papierkorb']);
     assert.deepEqual(je('einstellungen'), ['betrieb', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung', 'technik']);
     assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartungsmodus', 'wartung', 'demo']);
@@ -185,7 +185,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     for (const p of ['aufgaben', 'verschluesselung', 'technik', 'papierkorb', 'webdav']) assert.equal(werkbankUmleitung(p), null, p);
     // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung.
     assert.deepEqual(BEREICHE.filter((b) => inVorlage('haushalt', b.pfad)).map((b) => b.pfad).sort(),
-      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'technik', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'wiederherstellung']);
+      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'technik', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks', 'wiederherstellung']);
   });
 
   it('#354 Nacharbeit: Datenschutz steht unter „Benutzer und Sicherheit“, Kennung bleibt', () => {

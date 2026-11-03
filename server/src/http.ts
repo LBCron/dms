@@ -91,6 +91,8 @@ interface Optionen {
   einbetten?: Einbetten;
   /** WebDAV-Laufwerk (#346) unter /webdav. */
   webdav?: Webdav;
+  /** Webhooks (#627). */
+  webhooks?: import('./webhook').Webhooks;
   /** Überlastschutz (#544): höchstens so viele Anfragen gleichzeitig, sonst 503. */
   ueberlast?: import('./ueberlast').Ueberlastschutz;
   /** Warten auf eine freie Verbindung zur Datenbank (#544). */

@@ -49,6 +49,7 @@ export const HILFE = {
   'werkbank.texterkennung.archivfassung': admin('texterkennung/', 'Archivfassung (PDF/A)', 'archivfassung-pdfa'),
   'werkbank.eingangsordner': admin('eingangsordner/', 'Eingangsordner'),
   'werkbank.webdav': admin('webdav/', 'WebDAV-Laufwerk'),
+  'werkbank.webhooks': admin('webhooks/', 'Webhooks'),
   'werkbank.postfaecher': admin('postfaecher/', 'Postfächer'),
   'werkbank.postfaecher.oauth': admin('postfaecher/', 'Anmeldung mit OAuth', 'anmeldung-mit-oauth'),
   'werkbank.nummernkreise': admin('nummernkreise/', 'Nummernkreise'),
@@ -184,6 +185,7 @@ export const HILFE = {
   'profil.export': benutzer('profil/', 'Meine Daten exportieren', 'meine-daten-exportieren'),
   'profil.zweifaktor': benutzer('profil/', 'Zwei-Faktor-Anmeldung', 'zwei-faktor-anmeldung'),
   'profil.benachrichtigungen': benutzer('profil/', 'Benachrichtigungen', 'benachrichtigungen'),
+  'profil.webhooks': benutzer('hausautomatisierung/', 'Sofort melden (Webhook)', 'sofort-melden-webhook'),
   'profil.favoriten': benutzer('ablage/', 'Favoriten als Abo', 'favoriten-als-abo'),
 } as const satisfies Record<string, Hilfeziel>;
 export type Hilfeort = keyof typeof HILFE;

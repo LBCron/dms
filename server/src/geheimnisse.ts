@@ -13,15 +13,15 @@ const istVerschluesselt = (v: unknown): v is string => typeof v === 'string' && 
 
 export type GeheimArt =
   | 'passwortfeld' | 'papierkorb' | 'mail' | 'postfach' | 'postfach_oauth_app' | 'postfach_oauth'
-  | 'oidc' | 'zweifaktor' | 'paket' | 'pruefwort' | 'sonstige';
+  | 'oidc' | 'zweifaktor' | 'paket' | 'webhook' | 'pruefwort' | 'sonstige';
 
 /** Wo ein verschlüsselter Wert liegt; `wert` ist der ganze gespeicherte JSON-Wert. */
 export interface Fundstelle {
-  quelle: 'mappe' | 'papierkorb' | 'einstellung';
-  /** Id der Mappe bzw. Schlüssel der Einstellung. */
+  quelle: 'mappe' | 'papierkorb' | 'einstellung' | 'webhook';
+  /** Id der Mappe bzw. Schlüssel der Einstellung bzw. Id des Webhooks (#627). */
   schluessel: string;
   wert: unknown;
-  /** Titel der Mappe bzw. Name des Benutzers (Zwei-Faktor), soweit bekannt. */
+  /** Titel der Mappe bzw. Name des Benutzers (Zwei-Faktor) bzw. Name des Webhooks, soweit bekannt. */
   titel?: string | null;
 }
 
@@ -38,6 +38,7 @@ export const GEHEIM_ARTEN: Record<GeheimArt, { name: string; bereich: string; wo
   oidc: { name: 'Anmeldung über einen Anbieter (OIDC: Client-Secret)', bereich: 'Anmeldeschutz', wo: 'in der Werkbank unter „Anmeldeschutz“ neu eingeben' },
   zweifaktor: { name: 'Zwei-Faktor-Anmeldung', bereich: 'Benutzer', wo: 'unter „Benutzer“ zurücksetzen; der Benutzer richtet sie neu ein' },
   paket: { name: 'Paket-Einstellungen (Geheimnisse)', bereich: 'Pakete', wo: 'in den Einstellungen des Pakets neu eingeben' },
+  webhook: { name: 'Webhooks (Geheimnis für die Signatur)', bereich: 'Webhooks', wo: 'im Profil des Benutzers unter „Webhooks“ ein neues Geheimnis erzeugen' },
   pruefwort: { name: 'Prüfwort (zeigt, ob der Schlüssel passt)', bereich: 'Verschlüsselung', wo: 'wird mit einem neuen Schlüssel neu gesetzt', intern: true },
   sonstige: { name: 'Weitere Einstellungen', bereich: 'Einstellungen', wo: 'bitte melden – diese Art kennt die Anzeige noch nicht' },
 };
@@ -46,6 +47,7 @@ export const GEHEIM_ARTEN: Record<GeheimArt, { name: string; bereich: string; wo
 export function artVon(f: Pick<Fundstelle, 'quelle' | 'schluessel'>): GeheimArt {
   if (f.quelle === 'mappe') return 'passwortfeld';
   if (f.quelle === 'papierkorb') return 'papierkorb';
+  if (f.quelle === 'webhook') return 'webhook';
   const k = f.schluessel;
   if (k === 'mail') return 'mail';
   if (k === 'postfaecher') return 'postfach';
@@ -96,6 +98,7 @@ export function bestandAus(funde: Fundstelle[], lesbar: (v: string) => boolean, 
       else if (art === 'oidc') was = 'Client-Secret des Anbieters';
       else if (art === 'zweifaktor') was = `Zwei-Faktor-Anmeldung von ${f.titel || 'einem Benutzer'}`;
       else if (art === 'paket') was = `Paket „${f.schluessel.slice('paket:'.length)}“: ${String(w.pfad.filter((x) => typeof x === 'string' && x !== 'werte').join('.') || 'Geheimnis')}`;
+      else if (art === 'webhook') was = `Webhook „${f.titel || 'ohne Namen'}“: Geheimnis`;
       else if (art === 'mail') was = 'Passwort des Mailservers';
       else if (art === 'passwortfeld') was = `${f.titel || 'Mappe ohne Titel'}: ${String(w.pfad.at(-1) ?? 'Passwort')}`;
       else was = `Einstellung „${f.schluessel}“`;

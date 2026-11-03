@@ -86,6 +86,10 @@ curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ
 - Der Stand liegt in der Datenbank: Er übersteht einen Neustart. Nach einer [Wiederherstellung](wiederherstellen.md) kann er auf den Stand der Sicherung zurückgehen – vergleiche ihn deshalb nur auf „anders“, nicht auf „größer“.
 - Andere Aufrufe mit einem Schlüssel *nur Zähler* bekommen `403` mit dem Hinweis, dass dieser Schlüssel nur die Zahlen abruft.
 
+### Sofort statt abfragen: Webhooks { #webhooks }
+
+Statt den Zähler regelmäßig abzufragen, kann sich das DMS auch selbst melden: Ein **Webhook** schickt dieselben Zahlen per `POST` an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks im Profil an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: [Webhooks](webhooks.md); Prüfen der Signatur mit Beispielcode im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#webhooks). Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.
+
 ### Mappe ändern, auch gleichzeitig mit anderen { #mappe-aendern }
 
 `PUT /api/v1/mappen/{id}` ändert nur die Felder, die in `werte` stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb **nur, was du ändern willst** – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.
