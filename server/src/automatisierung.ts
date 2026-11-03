@@ -1,0 +1,685 @@
+import { createHash, randomUUID } from 'node:crypto';
+import type postgres from 'postgres';
+import {
+  AUTOMATISIERUNG_GRENZEN, ausloeserSchluessel, automatisierungsProbleme, bereinigeAutomatisierung, kontextTyp, kurzform, REIHENFOLGE,
+  type Angehalten, type Automatisierung, type AutomatisierungAnsicht, type AutomatisierungDaten, type DannArt, type DannKarte,
+  type Empfaenger, type Fassung, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte,
+} from '../../shared/src/automatisierung';
+import { EREIGNISKATALOG, type KatalogEreignis } from '../../shared/src/ereignisse';
+import { tagVon, titelAus, ZEITZONE, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
+import { heuteIn, verschiebe, type Bedingung } from '../../shared/src/sichten';
+import { uebersetzer } from '../../shared/src/sprache';
+import texte from '../../shared/src/sprachen/de/automatisierung.json';
+import ereignisTexte from '../../shared/src/sprachen/de/ereignisse.json';
+import type { Dienst, Zugriff } from './dienst';
+import { Fachfehler } from './fehler';
+import { protokoll } from './protokoll';
+import { istUuid } from './repo';
+
+/**
+ * Motor der Automatisierungen (#674): Wenn · Und · Dann, ausgeführt unter dem Systemkonto „Automatisierung“ (#673).
+ *
+ * - **Auslösen:** über den Ereigniskatalog (#670, Abnehmer „automatisierungen“) und den Zeitplan „Datum in N Tagen“.
+ *   Je Automatisierung und Ereignis genau **ein Lauf** (eindeutig in der Datenbank): Kommt ein Ereignis noch einmal
+ *   oder prüfen zwei Server denselben Tag, läuft nichts doppelt. Verpasste Tage holt der Zeitplan nach.
+ * - **Reihenfolge:** Automatisierungen zu einem Ereignis laufen nacheinander nach `reihenfolge` (1–99, dann Name);
+ *   jede liest den aktuellen Stand. Fehler einer stoppen die folgenden nicht; die Karte „Danach keine weiteren …“
+ *   schon – nur für dieses eine Ereignis.
+ * - **Schutz:** Eine Automatisierung löst sich nie selbst aus; Ketten höchstens {@link AUTOMATISIERUNG_GRENZEN}.tiefe
+ *   tief; mehr als `laeufeJeMinute` Läufe je Minute halten sie an (Bremse). Demo-Daten, Import und Wiederherstellung
+ *   lösen nichts aus (`ohneEreignisse`), in der Wartung ruht der Verteiler; nach einer Wiederherstellung sind alle
+ *   angehalten, bis ein Admin sie wieder einschaltet.
+ * - **Bearbeiten geht vor Automatisierung:** Passt eine Automatisierung nicht mehr (Mappentyp, Feld oder Ansicht
+ *   gelöscht), wird sie rot und angehalten – sie blockiert nie das Arbeiten im DMS.
+ * - **Nachvollziehbar:** Protokoll je Lauf mit Zustand je Schritt (Live-Fortschritt), Historie der Mappe „durch
+ *   Automatisierung ‚…‘“, Trockenlauf, Wiederholen fehlgeschlagener Läufe, Änderungsverlauf je Automatisierung.
+ *
+ * Die Dann-Karten liegen in {@link DANN_AUSFUEHRER}; neue Karten melden sich dort an (`automatisierung-karten.ts`).
+ */
+
+const log = protokoll.modul('automatisierung');
+const alsListe = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' && v ? [v] : []);
+const t = uebersetzer({ automatisierung: texte, ereignisse: ereignisTexte });
+/** Zeitplan „Datum in N Tagen“ und Aufräumen. */
+const ZEITPLAN_MS = 60_000;
+/** Ein Lauf, der so lange auf „läuft“ steht, gehört einem Server, der dabei gestorben ist. */
+const HAENGT_MIN = 10;
+
+/* ---------- Speicher ---------- */
+
+export interface AutomatisierungRepo {
+  liste(): Promise<Array<Automatisierung & { letzterTag: string | null }>>;
+  hole(id: string): Promise<(Automatisierung & { letzterTag: string | null }) | undefined>;
+  /** Neu anlegen (version 1) samt erster Fassung. */
+  lege(a: Automatisierung): Promise<void>;
+  /** Neue Fassung speichern; false, wenn inzwischen jemand anderes gespeichert hat (version ≠ erwartet). */
+  speichere(id: string, d: AutomatisierungDaten & { aktiv: boolean }, von: string | null, erwartet: number): Promise<boolean>;
+  /** Zustand ohne neue Fassung (an/aus von selbst, angehalten, letzter geprüfter Tag). */
+  setze(id: string, d: { aktiv?: boolean; angehalten?: Angehalten | null; letzterTag?: string }): Promise<void>;
+  loesche(id: string): Promise<void>;
+  fassungen(id: string): Promise<Fassung[]>;
+  /** Lauf anlegen; null, wenn es zu dieser Automatisierung und diesem Ereignis schon einen gibt. */
+  beginne(l: Lauf): Promise<boolean>;
+  aktualisiere(id: string, d: Partial<Pick<Lauf, 'zustand' | 'schritte' | 'fehler' | 'beendet' | 'mappeId'>>): Promise<void>;
+  lauf(id: string): Promise<Lauf | undefined>;
+  laeufe(automatisierungId: string, anzahl: number): Promise<Lauf[]>;
+  /** Letzter Lauf je Automatisierung. */
+  letzte(): Promise<Map<string, Lauf>>;
+  /** Läufe einer Automatisierung seit diesem Zeitpunkt (Bremse). */
+  zaehleSeit(automatisierungId: string, seit: string): Promise<number>;
+  fehlgeschlagene(automatisierungId?: string): Promise<Lauf[]>;
+  /** Alte Läufe entfernen, hängende als fehlgeschlagen markieren. */
+  raeumeAuf(tage: number, jeAutomatisierung: number, haengtMin: number): Promise<number>;
+}
+
+type Gespeichert = Automatisierung & { letzterTag: string | null };
+
+export function speicherAutomatisierungRepo(uhr: () => number = Date.now): AutomatisierungRepo {
+  const autos = new Map<string, Gespeichert>();
+  const fassungen = new Map<string, Fassung[]>();
+  const laeufe: Lauf[] = [];
+  const jetzt = () => new Date(uhr()).toISOString();
+  const daten = (a: AutomatisierungDaten & { aktiv: boolean }) => structuredClone({ name: a.name, beschreibung: a.beschreibung, reihenfolge: a.reihenfolge, wenn: a.wenn, und: a.und, dann: a.dann, sonst: a.sonst, aktiv: a.aktiv });
+  return {
+    async liste() { return [...autos.values()].map((a) => structuredClone(a)).sort((a, b) => a.reihenfolge - b.reihenfolge || a.name.localeCompare(b.name, 'de')); },
+    async hole(id) { const a = autos.get(id); return a && structuredClone(a); },
+    async lege(a) {
+      autos.set(a.id, { ...structuredClone(a), letzterTag: null });
+      fassungen.set(a.id, [{ version: a.version, zeit: a.geaendert, von: a.geaendertVon, daten: daten(a) }]);
+    },
+    async speichere(id, d, von, erwartet) {
+      const a = autos.get(id);
+      if (!a || a.version !== erwartet) return false;
+      Object.assign(a, structuredClone(d), { version: a.version + 1, geaendert: jetzt(), geaendertVon: von });
+      fassungen.get(id)!.push({ version: a.version, zeit: a.geaendert, von, daten: daten(a) });
+      return true;
+    },
+    async setze(id, d) {
+      const a = autos.get(id);
+      if (!a) return;
+      if (d.aktiv !== undefined) a.aktiv = d.aktiv;
+      if (d.angehalten !== undefined) a.angehalten = structuredClone(d.angehalten);
+      if (d.letzterTag !== undefined) a.letzterTag = d.letzterTag;
+    },
+    async loesche(id) { autos.delete(id); fassungen.delete(id); for (let i = laeufe.length - 1; i >= 0; i--) if (laeufe[i].automatisierungId === id) laeufe.splice(i, 1); },
+    async fassungen(id) { return structuredClone([...(fassungen.get(id) ?? [])].reverse()); },
+    async beginne(l) {
+      if (laeufe.some((x) => x.automatisierungId === l.automatisierungId && x.ereignisId === l.ereignisId)) return false;
+      laeufe.push(structuredClone(l));
+      return true;
+    },
+    async aktualisiere(id, d) { const l = laeufe.find((x) => x.id === id); if (l) Object.assign(l, structuredClone(d)); },
+    async lauf(id) { const l = laeufe.find((x) => x.id === id); return l && structuredClone(l); },
+    async laeufe(a, n) { return structuredClone(laeufe.filter((l) => l.automatisierungId === a).sort((x, y) => y.gestartet.localeCompare(x.gestartet)).slice(0, n)); },
+    async letzte() {
+      const m = new Map<string, Lauf>();
+      for (const l of laeufe) { const x = m.get(l.automatisierungId); if (!x || x.gestartet <= l.gestartet) m.set(l.automatisierungId, structuredClone(l)); }
+      return m;
+    },
+    async zaehleSeit(a, seit) { return laeufe.filter((l) => l.automatisierungId === a && l.gestartet >= seit && !l.test).length; },
+    async fehlgeschlagene(a) { return structuredClone(laeufe.filter((l) => l.zustand === 'fehlgeschlagen' && (!a || l.automatisierungId === a))); },
+    async raeumeAuf(tage, je, haengt) {
+      const grenze = new Date(uhr() - tage * 86_400_000).toISOString();
+      const alt = new Date(uhr() - haengt * 60_000).toISOString();
+      for (const l of laeufe) if (l.zustand === 'laeuft' && l.gestartet < alt) Object.assign(l, { zustand: 'fehlgeschlagen', fehler: t('automatisierung.lauf.abgebrochen'), beendet: jetzt() });
+      const vorher = laeufe.length;
+      const zahl = new Map<string, number>();
+      const sortiert = [...laeufe].sort((x, y) => y.gestartet.localeCompare(x.gestartet));
+      const weg = new Set(sortiert.filter((l) => { const n = (zahl.get(l.automatisierungId) ?? 0) + 1; zahl.set(l.automatisierungId, n); return l.zustand !== 'laeuft' && (l.gestartet < grenze || n > je); }).map((l) => l.id));
+      for (let i = laeufe.length - 1; i >= 0; i--) if (weg.has(laeufe[i].id)) laeufe.splice(i, 1);
+      return vorher - laeufe.length;
+    },
+  };
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const iso = (d: any) => (d instanceof Date ? d.toISOString() : d == null ? null : String(d));
+const alsAuto = (r: any): Gespeichert => ({
+  ...(r.daten as AutomatisierungDaten), id: r.id, name: r.name, reihenfolge: r.reihenfolge, aktiv: r.aktiv, angehalten: r.angehalten ?? null,
+  herkunft: r.herkunft as Herkunft, paketId: r.paket_id ?? null, version: r.version, erstellt: iso(r.erstellt)!, erstelltVon: r.erstellt_von ?? null,
+  geaendert: iso(r.geaendert)!, geaendertVon: r.geaendert_von ?? null, letzterTag: r.letzter_tag ? (r.letzter_tag instanceof Date ? heuteIn(r.letzter_tag) : String(r.letzter_tag).slice(0, 10)) : null,
+});
+const alsLauf = (r: any): Lauf => ({
+  id: r.id, automatisierungId: r.automatisierung_id, ereignisId: r.ereignis_id, art: r.art, daten: r.daten ?? {}, mappeId: r.mappe_id ?? null,
+  zustand: r.zustand, trocken: r.trocken, test: r.test, schritte: r.schritte ?? [], fehler: r.fehler ?? null, wiederholtVon: r.wiederholt_von ?? null,
+  gestartet: iso(r.gestartet)!, beendet: iso(r.beendet),
+});
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export function pgAutomatisierungRepo(sql: postgres.Sql, haushaltId: string): AutomatisierungRepo {
+  const json = (w: unknown) => sql.json(w as postgres.JSONValue);
+  const nurDaten = (a: AutomatisierungDaten) => ({ beschreibung: a.beschreibung, wenn: a.wenn, und: a.und, dann: a.dann, sonst: a.sonst });
+  const fassung = (a: AutomatisierungDaten & { aktiv: boolean }) => ({ name: a.name, reihenfolge: a.reihenfolge, aktiv: a.aktiv, ...nurDaten(a) });
+  return {
+    async liste() { return (await sql`SELECT * FROM automatisierungen WHERE haushalt_id = ${haushaltId} ORDER BY reihenfolge, name, id`).map(alsAuto); },
+    async hole(id) {
+      if (!istUuid(id)) return undefined;
+      const [r] = await sql`SELECT * FROM automatisierungen WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      return r ? alsAuto(r) : undefined;
+    },
+    async lege(a) {
+      await sql.begin(async (tx) => {
+        await tx`INSERT INTO automatisierungen (id, haushalt_id, name, reihenfolge, daten, aktiv, angehalten, herkunft, paket_id, version, erstellt, erstellt_von, geaendert, geaendert_von)
+          VALUES (${a.id}, ${haushaltId}, ${a.name}, ${a.reihenfolge}, ${json(nurDaten(a))}, ${a.aktiv}, ${a.angehalten ? json(a.angehalten) : null}, ${a.herkunft}, ${a.paketId ?? null},
+            ${a.version}, ${a.erstellt}, ${a.erstelltVon}, ${a.geaendert}, ${a.geaendertVon})`;
+        await tx`INSERT INTO automatisierung_fassungen (automatisierung_id, version, daten, von, zeit) VALUES (${a.id}, ${a.version}, ${json(fassung(a))}, ${a.geaendertVon}, ${a.geaendert})`;
+      });
+    },
+    async speichere(id, d, von, erwartet) {
+      if (!istUuid(id)) return false;
+      return sql.begin(async (tx) => {
+        const [r] = await tx`UPDATE automatisierungen SET name = ${d.name}, reihenfolge = ${d.reihenfolge}, daten = ${json(nurDaten(d))}, aktiv = ${d.aktiv},
+          version = version + 1, geaendert = now(), geaendert_von = ${von}
+          WHERE haushalt_id = ${haushaltId} AND id = ${id} AND version = ${erwartet} RETURNING version`;
+        if (!r) return false;
+        await tx`INSERT INTO automatisierung_fassungen (automatisierung_id, version, daten, von) VALUES (${id}, ${r.version}, ${json(fassung(d))}, ${von})`;
+        return true;
+      });
+    },
+    async setze(id, d) {
+      if (!istUuid(id)) return;
+      await sql`UPDATE automatisierungen SET
+        aktiv = ${d.aktiv === undefined ? sql`aktiv` : d.aktiv},
+        angehalten = ${d.angehalten === undefined ? sql`angehalten` : d.angehalten === null ? null : json(d.angehalten)},
+        letzter_tag = ${d.letzterTag === undefined ? sql`letzter_tag` : d.letzterTag}
+        WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    },
+    async loesche(id) { if (istUuid(id)) await sql`DELETE FROM automatisierungen WHERE haushalt_id = ${haushaltId} AND id = ${id}`; },
+    async fassungen(id) {
+      if (!istUuid(id)) return [];
+      return (await sql`SELECT f.* FROM automatisierung_fassungen f JOIN automatisierungen a ON a.id = f.automatisierung_id
+        WHERE a.haushalt_id = ${haushaltId} AND f.automatisierung_id = ${id} ORDER BY f.version DESC LIMIT 100`)
+        .map((r) => ({ version: r.version, zeit: iso(r.zeit)!, von: r.von ?? null, daten: r.daten }));
+    },
+    async beginne(l) {
+      const r = await sql`INSERT INTO automatisierung_laeufe (id, haushalt_id, automatisierung_id, ereignis_id, art, daten, mappe_id, zustand, trocken, test, schritte, fehler, wiederholt_von, gestartet)
+        VALUES (${l.id}, ${haushaltId}, ${l.automatisierungId}, ${l.ereignisId}, ${l.art}, ${json(l.daten)}, ${istUuid(l.mappeId) ? l.mappeId : null}, ${l.zustand},
+          ${l.trocken}, ${l.test}, ${json(l.schritte)}, ${l.fehler}, ${l.wiederholtVon ?? null}, ${l.gestartet})
+        ON CONFLICT (automatisierung_id, ereignis_id) DO NOTHING RETURNING id`;
+      return r.length > 0;
+    },
+    async aktualisiere(id, d) {
+      await sql`UPDATE automatisierung_laeufe SET
+        zustand = ${d.zustand ?? sql`zustand`}, schritte = ${d.schritte ? json(d.schritte) : sql`schritte`},
+        fehler = ${d.fehler === undefined ? sql`fehler` : d.fehler}, beendet = ${d.beendet === undefined ? sql`beendet` : d.beendet},
+        mappe_id = ${d.mappeId === undefined ? sql`mappe_id` : istUuid(d.mappeId) ? d.mappeId : null}
+        WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    },
+    async lauf(id) {
+      if (!istUuid(id)) return undefined;
+      const [r] = await sql`SELECT * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+      return r ? alsLauf(r) : undefined;
+    },
+    async laeufe(a, n) {
+      if (!istUuid(a)) return [];
+      return (await sql`SELECT * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND automatisierung_id = ${a} ORDER BY gestartet DESC, id LIMIT ${n}`).map(alsLauf);
+    },
+    async letzte() {
+      const r = await sql`SELECT DISTINCT ON (automatisierung_id) * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} ORDER BY automatisierung_id, gestartet DESC`;
+      return new Map(r.map((x) => [x.automatisierung_id as string, alsLauf(x)]));
+    },
+    async zaehleSeit(a, seit) {
+      const [r] = await sql`SELECT count(*)::int AS n FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND automatisierung_id = ${a} AND gestartet >= ${seit} AND NOT test`;
+      return r.n as number;
+    },
+    async fehlgeschlagene(a) {
+      return (await sql`SELECT * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND zustand = 'fehlgeschlagen'
+        ${a && istUuid(a) ? sql`AND automatisierung_id = ${a}` : sql``} ORDER BY gestartet DESC LIMIT 500`).map(alsLauf);
+    },
+    async raeumeAuf(tage, je, haengt) {
+      await sql`UPDATE automatisierung_laeufe SET zustand = 'fehlgeschlagen', fehler = ${t('automatisierung.lauf.abgebrochen')}, beendet = now()
+        WHERE haushalt_id = ${haushaltId} AND zustand = 'laeuft' AND gestartet < now() - make_interval(mins => ${haengt})`;
+      const r = await sql`DELETE FROM automatisierung_laeufe l USING (
+          SELECT id, row_number() OVER (PARTITION BY automatisierung_id ORDER BY gestartet DESC) AS nr, gestartet FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId}
+        ) x WHERE l.id = x.id AND l.zustand <> 'laeuft' AND (x.nr > ${je} OR x.gestartet < now() - make_interval(days => ${tage}))`;
+      return r.count;
+    },
+  };
+}
+
+/* ---------- Dann-Karten ---------- */
+
+/** Was eine Dann-Karte zum Ausführen bekommt. */
+export interface KartenKontext {
+  dienst: Dienst;
+  /** Zugriff des Kontos, unter dem die Automatisierung läuft (Systemkonto „Automatisierung“). */
+  z: Zugriff;
+  konto: Benutzer;
+  automatisierung: Automatisierung;
+  mappe: Mappe | null;
+  typ: Mappentyp | null;
+  /** Angaben des Ereignisses (nur Ids, Schlüssel, Datum). */
+  daten: Record<string, unknown>;
+  /** Nur beschreiben, was passieren würde. */
+  trocken: boolean;
+  /** Text mit Platzhaltern füllen (Werte mit den Rechten des Kontos). */
+  fuelle(text: string): Promise<string>;
+  /** Personen hinter einem Empfänger (aktive Benutzer). */
+  personen(e: Empfaenger): Promise<string[]>;
+  /** Vermerk für die Historie der Mappe: „durch Automatisierung ‚…‘ (eingerichtet von …)“. */
+  anlass: Record<string, unknown>;
+}
+/** Führt eine Karte aus (bzw. beschreibt sie im Trockenlauf) und liefert eine Zeile fürs Protokoll. */
+export type DannAusfuehrer = (k: DannKarte, c: KartenKontext) => Promise<string>;
+/** Ausführende Karten; „stopp“ erledigt der Motor selbst. */
+export const DANN_AUSFUEHRER: Partial<Record<DannArt, DannAusfuehrer>> = {};
+
+/* ---------- Motor ---------- */
+
+export interface AutomatisierungDeps {
+  dienst: Dienst;
+  repo: AutomatisierungRepo;
+  /** Läuft gerade eine Wartung oder Wiederherstellung? Dann ruht der Zeitplan (der Verteiler ruht von selbst). */
+  pause?: () => string | null;
+  uhr?: () => number;
+}
+
+/** Ereignis, wie der Motor es verarbeitet (aus dem Katalog oder vom Zeitplan). */
+interface Anlass { id: string; art: string; daten: Record<string, unknown>; kette: number; ausloeser?: KatalogEreignis['ausloeser'] }
+
+const uuidAus = (s: string) => { const h = createHash('sha256').update(s).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
+const UHR_FORMAT = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+export class Automatisierungen {
+  private uhr: ReturnType<typeof setInterval> | null = null;
+  private zeitplanLauf: Promise<void> | null = null;
+  constructor(private d: AutomatisierungDeps) {
+    d.dienst.automatisierungenVon = async (kontoId) => {
+      const konto = await this.konto().catch(() => null);
+      return konto?.id === kontoId ? (await this.d.repo.liste()).filter((a) => a.herkunft !== 'paket').map((a) => ({ id: a.id, name: a.name })) : [];
+    };
+    // Vollexport: Automatisierungen mit ihrem Änderungsverlauf (die Läufe sind Protokoll und bleiben draußen).
+    d.dienst.automatisierungenExport = async () => Promise.all((await this.d.repo.liste()).map(async (a) => ({ ...a, fassungen: await this.d.repo.fassungen(a.id) })));
+  }
+  private jetzt() { return this.d.uhr?.() ?? Date.now(); }
+  private iso() { return new Date(this.jetzt()).toISOString(); }
+  private konto() {
+    if (!this.d.dienst.systemkonten) throw new Fachfehler(500, t('automatisierung.konto.fehlt'));
+    return this.d.dienst.systemkonten('automatisierung');
+  }
+
+  /** Abnehmer anmelden und den Zeitplan starten (Start des Servers). */
+  start() {
+    this.d.dienst.ereignisse.abonniere('automatisierungen', (e) => this.ereignis(e));
+    this.uhr ??= setInterval(() => { void this.zeitplan().catch((e) => log.error('Zeitplan fehlgeschlagen', { fehler: (e as Error).message })); }, ZEITPLAN_MS);
+    this.uhr.unref?.();
+  }
+  stop() { if (this.uhr) clearInterval(this.uhr); this.uhr = null; this.d.dienst.ereignisse.abbestellen('automatisierungen'); }
+
+  /* ---------- Verwalten ---------- */
+
+  async kontext(): Promise<Kontextdaten> { return this.d.dienst.automatisierungKontext(); }
+
+  private async ansicht(a: Automatisierung, k: Kontextdaten, letzte: Map<string, Lauf>): Promise<AutomatisierungAnsicht> {
+    const l = letzte.get(a.id);
+    const ohne = { ...a } as Automatisierung & { letzterTag?: unknown };
+    delete ohne.letzterTag;
+    return {
+      ...ohne, kurz: kurzform(a, k, (art) => (art === 'datum' ? t('automatisierung.wenn.datum') : t.frei(`ereignisse.name.${art.replace(/_/g, '-')}`))), probleme: automatisierungsProbleme(a, k), ausloeser: ausloeserSchluessel(a.wenn),
+      letzterLauf: l ? { id: l.id, zustand: l.zustand, gestartet: l.gestartet, fehler: l.fehler } : null,
+    };
+  }
+
+  async uebersicht(): Promise<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number }> {
+    const [liste, k, letzte, fehl] = await Promise.all([this.d.repo.liste(), this.kontext(), this.d.repo.letzte(), this.d.repo.fehlgeschlagene()]);
+    return { automatisierungen: await Promise.all(liste.map((a) => this.ansicht(a, k, letzte))), fehlgeschlagen: fehl.length };
+  }
+
+  async hole(id: string): Promise<AutomatisierungAnsicht> {
+    const a = await this.gibt(id);
+    return this.ansicht(a, await this.kontext(), await this.d.repo.letzte());
+  }
+
+  private async gibt(id: string) {
+    const a = await this.d.repo.hole(id);
+    if (!a) throw new Fachfehler(404, t('automatisierung.nicht-gefunden'));
+    return a;
+  }
+
+  /** Speichern geht nur mit gültigem Stand (Fehler mit Gründen); eine neue Automatisierung startet ausgeschaltet. */
+  private async pruefe(d: AutomatisierungDaten) {
+    const p = automatisierungsProbleme(d, await this.kontext());
+    if (p.length) throw new Fachfehler(422, p[0], { probleme: p });
+    for (const k of [...d.dann, ...d.sonst]) if (k.art !== 'stopp' && !DANN_AUSFUEHRER[k.art]) throw new Fachfehler(422, t('automatisierung.karte.unbekannt', { art: k.art }));
+  }
+
+  async lege(e: unknown, von: string | null, herkunft: Herkunft = 'eigen'): Promise<AutomatisierungAnsicht> {
+    if ((await this.d.repo.liste()).length >= AUTOMATISIERUNG_GRENZEN.automatisierungen) throw new Fachfehler(422, t('automatisierung.zuviele', { anzahl: AUTOMATISIERUNG_GRENZEN.automatisierungen }));
+    const d = bereinigeAutomatisierung(e);
+    const roh = (e ?? {}) as Record<string, unknown>;
+    if (roh.reihenfolge === undefined) d.reihenfolge = REIHENFOLGE[herkunft];
+    await this.pruefe(d);
+    const a: Automatisierung = { ...d, id: randomUUID(), aktiv: roh.aktiv === true, angehalten: null, herkunft, version: 1, erstellt: this.iso(), erstelltVon: von, geaendert: this.iso(), geaendertVon: von };
+    await this.d.repo.lege(a);
+    log.info('Automatisierung angelegt', { id: a.id, name: a.name });
+    return this.hole(a.id);
+  }
+
+  async aendere(id: string, e: unknown, von: string | null): Promise<AutomatisierungAnsicht> {
+    const alt = await this.gibt(id);
+    const roh = (e ?? {}) as Record<string, unknown>;
+    const d = bereinigeAutomatisierung({ ...alt, ...roh });
+    await this.pruefe(d);
+    const version = Number(roh.version ?? alt.version);
+    const aktiv = typeof roh.aktiv === 'boolean' ? roh.aktiv : alt.aktiv;
+    if (!(await this.d.repo.speichere(id, { ...d, aktiv }, von, version))) throw new Fachfehler(409, t('automatisierung.konflikt'));
+    // Gespeichert mit gültigem Stand: „fehlerhaft“ ist damit behoben (Bremse und Wiederherstellung hebt nur „einschalten“ auf).
+    if (alt.angehalten?.grund === 'fehlerhaft' || (aktiv && !alt.aktiv)) await this.d.repo.setze(id, { angehalten: null });
+    return this.hole(id);
+  }
+
+  /** An/aus. Einschalten hebt ein Anhalten auf (Bremse, Wiederherstellung) – aber nur mit gültigem Stand. */
+  async schalte(id: string, aktiv: boolean, von: string | null): Promise<AutomatisierungAnsicht> {
+    const a = await this.gibt(id);
+    if (aktiv) await this.pruefe(a);
+    if (a.aktiv !== aktiv && !(await this.d.repo.speichere(id, { ...a, aktiv }, von, a.version))) throw new Fachfehler(409, t('automatisierung.konflikt'));
+    if (aktiv) await this.d.repo.setze(id, { angehalten: null });
+    log.info(aktiv ? 'Automatisierung eingeschaltet' : 'Automatisierung ausgeschaltet', { id, name: a.name });
+    return this.hole(id);
+  }
+
+  async loesche(id: string): Promise<void> {
+    const a = await this.gibt(id);
+    if (a.herkunft !== 'eigen') throw new Fachfehler(409, t('automatisierung.loeschen.herkunft'));
+    await this.d.repo.loesche(id);
+    log.info('Automatisierung gelöscht', { id, name: a.name });
+  }
+
+  /** Kopie als eigene Automatisierung (ausgeschaltet) – z. B. für einen zweiten Auslöser. */
+  async kopiere(id: string, von: string | null): Promise<AutomatisierungAnsicht> {
+    const a = await this.gibt(id);
+    return this.lege({ ...a, name: t('automatisierung.kopie', { name: a.name }).slice(0, AUTOMATISIERUNG_GRENZEN.name), aktiv: false, reihenfolge: a.reihenfolge }, von, 'eigen');
+  }
+
+  async fassungen(id: string): Promise<Fassung[]> { await this.gibt(id); return this.d.repo.fassungen(id); }
+
+  /** Eine frühere Fassung wird die neueste (ausgeschaltet, wenn sie nicht mehr gültig ist). */
+  async stelleWieder(id: string, version: number, von: string | null): Promise<AutomatisierungAnsicht> {
+    const a = await this.gibt(id);
+    const f = (await this.d.repo.fassungen(id)).find((x) => x.version === version);
+    if (!f) throw new Fachfehler(404, t('automatisierung.fassung.fehlt'));
+    const d = bereinigeAutomatisierung(f.daten);
+    const gueltig = !automatisierungsProbleme(d, await this.kontext()).length;
+    if (!(await this.d.repo.speichere(id, { ...d, aktiv: gueltig && f.daten.aktiv }, von, a.version))) throw new Fachfehler(409, t('automatisierung.konflikt'));
+    return this.hole(id);
+  }
+
+  async laeufe(id: string, anzahl = 50): Promise<Lauf[]> { await this.gibt(id); return this.d.repo.laeufe(id, Math.max(1, Math.min(AUTOMATISIERUNG_GRENZEN.verlauf, anzahl))); }
+  async lauf(id: string): Promise<Lauf> { const l = await this.d.repo.lauf(id); if (!l) throw new Fachfehler(404, t('automatisierung.lauf.fehlt')); return l; }
+
+  /** Für die Werkbank-Übersicht: fehlgeschlagene Läufe und angehaltene Automatisierungen. */
+  async warnungen(): Promise<{ fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: Angehalten['grund'] }> }> {
+    const [fehl, liste] = await Promise.all([this.d.repo.fehlgeschlagene(), this.d.repo.liste()]);
+    const aktiv = liste.filter((a) => a.aktiv);
+    // Was nicht mehr passt (Feld oder Ansicht gelöscht), zählt sofort – nicht erst beim nächsten Lauf.
+    const k = aktiv.some((a) => !a.angehalten) ? await this.kontext() : null;
+    const angehalten = aktiv.flatMap((a) => (a.angehalten ? [{ id: a.id, name: a.name, grund: a.angehalten.grund }]
+      : k && automatisierungsProbleme(a, k).length ? [{ id: a.id, name: a.name, grund: 'fehlerhaft' as const }] : []));
+    return { fehlgeschlagen: new Set(fehl.map((l) => l.automatisierungId)).size, angehalten };
+  }
+
+  /** Nach einer Wiederherstellung: alle eingeschalteten anhalten, bis ein Admin sie wieder einschaltet. */
+  async nachWiederherstellung(): Promise<number> {
+    let n = 0;
+    for (const a of await this.d.repo.liste()) {
+      if (!a.aktiv || a.angehalten) continue;
+      await this.d.repo.setze(a.id, { angehalten: { grund: 'wiederherstellung', text: t('automatisierung.angehalten.wiederherstellung'), zeit: this.iso() } });
+      n++;
+    }
+    return n;
+  }
+
+  /* ---------- Testlauf und Wiederholen ---------- */
+
+  /** Mit einer gewählten Mappe ausführen – trocken (zeigt nur, was passieren würde) oder echt. */
+  async wiedergeben(id: string, mappeId: unknown, trocken: boolean): Promise<Lauf> {
+    const a = await this.gibt(id);
+    await this.pruefe(a);
+    if (!istUuid(mappeId)) throw new Fachfehler(422, t('automatisierung.test.mappe'));
+    const k = await this.kontext();
+    const typ = kontextTyp(a.wenn, k.typen);
+    const m = await this.d.dienst.pruefeRecht(await this.d.dienst.systemZugriff('automatisierung'), mappeId, 'R');
+    if (typ && m.typId !== typ.id) throw new Fachfehler(422, t('automatisierung.test.typ', { typ: typ.name }));
+    const daten: Record<string, unknown> = { mappe: m.id, typ: m.typId, ...(a.wenn.art === 'datum' ? { feld: a.wenn.feld, datum: m.werte[a.wenn.feld] ?? null, tage: a.wenn.tage } : {}) };
+    const l = await this.fuehreAus(a, { id: randomUUID(), art: a.wenn.art, daten, kette: 0 }, { trocken, test: true });
+    return l ?? this.lauf(id);
+  }
+
+  /** Einen fehlgeschlagenen Lauf noch einmal (mit den Angaben des Ereignisses, gegen den heutigen Stand). */
+  async wiederhole(laufId: string): Promise<Lauf> {
+    const alt = await this.lauf(laufId);
+    if (alt.zustand !== 'fehlgeschlagen') throw new Fachfehler(409, t('automatisierung.wiederholen.nicht'));
+    const a = await this.gibt(alt.automatisierungId);
+    await this.d.repo.aktualisiere(alt.id, { zustand: 'wiederholt' });
+    const l = await this.fuehreAus(a, { id: randomUUID(), art: alt.art, daten: alt.daten, kette: 0 }, { trocken: false, test: alt.test, wiederholtVon: alt.id });
+    return l!;
+  }
+
+  /** Alle fehlgeschlagenen Läufe (einer oder aller Automatisierungen) wiederholen. */
+  async wiederholeAlle(id?: string): Promise<{ wiederholt: number }> {
+    let n = 0;
+    for (const l of (await this.d.repo.fehlgeschlagene(id)).reverse()) { await this.wiederhole(l.id).catch(() => null); n++; }
+    return { wiederholt: n };
+  }
+
+  /* ---------- Auslösen ---------- */
+
+  /** Abnehmer des Ereigniskatalogs: passende Automatisierungen nacheinander. Wirft nur, wenn die Datenbank streikt. */
+  async ereignis(e: KatalogEreignis): Promise<void> {
+    if (!(e.art in EREIGNISKATALOG) || EREIGNISKATALOG[e.art].gruppe === 'zaehler') return;
+    const liste = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === e.art && this.passt(a, e));
+    if (!liste.length) return;
+    await this.reihe(liste, { id: e.id, art: e.art, daten: e.daten, kette: e.ausloeser?.art === 'automatisierung' ? (e.ausloeser.kette ?? 1) : 0, ausloeser: e.ausloeser });
+  }
+
+  private passt(a: Automatisierung, e: KatalogEreignis): boolean {
+    const w = a.wenn;
+    if (w.art === 'datum') return false;
+    if (EREIGNISKATALOG[w.art].gruppe !== 'benutzer' && w.typ && e.daten.typ !== w.typ) return false;
+    if (w.art === 'mappe.geaendert' && w.felder?.length) { const g = alsListe(e.daten.felder); if (!w.felder.some((f) => g.includes(f))) return false; }
+    return true;
+  }
+
+  /** Automatisierungen eines Ereignisses nacheinander; „Danach keine weiteren …“ beendet die Reihe. */
+  private async reihe(liste: Automatisierung[], anlass: Anlass) {
+    const sortiert = [...liste].sort((a, b) => a.reihenfolge - b.reihenfolge || a.name.localeCompare(b.name, 'de') || a.id.localeCompare(b.id));
+    let stopp: string | null = null;
+    for (const a of sortiert) {
+      // Keine Selbstauslösung: Änderungen einer Automatisierung lösen sie selbst nicht noch einmal aus.
+      if (anlass.ausloeser?.art === 'automatisierung' && anlass.ausloeser.id === a.id) continue;
+      if (stopp) { await this.vermerke(a, anlass, 'uebersprungen', t('automatisierung.lauf.gestoppt', { name: stopp })); continue; }
+      const l = await this.fuehreAus(a, anlass, { trocken: false, test: false });
+      if (l?.zustand === 'abgeschlossen' && l.schritte.some((s) => s.karte && s.zustand === 'ok' && a.dann.find((k) => k.id === s.karte)?.art === 'stopp')) stopp = a.name;
+    }
+  }
+
+  /** Lauf ohne Ausführen festhalten (übersprungen: Kette, Bremse, Stopp, keine Leserechte). */
+  private async vermerke(a: Automatisierung, anlass: Anlass, zustand: LaufZustand, text: string) {
+    const mappeId = typeof anlass.daten.mappe === 'string' ? anlass.daten.mappe : typeof anlass.daten.benutzer === 'string' ? anlass.daten.benutzer : null;
+    await this.d.repo.beginne({ id: randomUUID(), automatisierungId: a.id, ereignisId: anlass.id, art: anlass.art, daten: anlass.daten, mappeId, zustand, trocken: false, test: false,
+      schritte: [{ teil: 'wenn', zustand: 'uebersprungen', text }], fehler: null, gestartet: this.iso(), beendet: this.iso() });
+  }
+
+  /** Eine Automatisierung für ein Ereignis ausführen; null, wenn es dazu schon einen Lauf gibt. */
+  private async fuehreAus(a: Automatisierung, anlass: Anlass, o: { trocken: boolean; test: boolean; wiederholtVon?: string }): Promise<Lauf | null> {
+    const mappeId = typeof anlass.daten.mappe === 'string' ? anlass.daten.mappe : typeof anlass.daten.benutzer === 'string' ? anlass.daten.benutzer : null;
+    if (!o.test) {
+      if (anlass.kette >= AUTOMATISIERUNG_GRENZEN.tiefe) { await this.vermerke(a, anlass, 'uebersprungen', t('automatisierung.lauf.kette', { tiefe: AUTOMATISIERUNG_GRENZEN.tiefe })); return null; }
+      const seit = new Date(this.jetzt() - 60_000).toISOString();
+      if (await this.d.repo.zaehleSeit(a.id, seit) >= AUTOMATISIERUNG_GRENZEN.laeufeJeMinute) {
+        const text = t('automatisierung.angehalten.bremse', { anzahl: AUTOMATISIERUNG_GRENZEN.laeufeJeMinute });
+        await this.d.repo.setze(a.id, { angehalten: { grund: 'bremse', text, zeit: this.iso() } });
+        await this.vermerke(a, anlass, 'uebersprungen', text);
+        log.warn('Automatisierung angehalten (Bremse)', { id: a.id, name: a.name });
+        return null;
+      }
+    }
+    const schritte: Schritt[] = [
+      { teil: 'wenn', zustand: 'ok', text: anlass.art === 'datum' ? t('automatisierung.wenn.datum') : t.frei(`ereignisse.name.${anlass.art.replace(/_/g, '-')}`) },
+      { teil: 'und', zustand: 'offen' },
+      ...a.dann.map((k): Schritt => ({ teil: 'dann', karte: k.id, zustand: 'offen' })),
+    ];
+    const l: Lauf = { id: randomUUID(), automatisierungId: a.id, ereignisId: anlass.id, art: anlass.art, daten: anlass.daten, mappeId, zustand: 'laeuft', trocken: o.trocken, test: o.test, schritte, fehler: null, gestartet: this.iso(), beendet: null, wiederholtVon: o.wiederholtVon ?? null };
+    if (!(await this.d.repo.beginne(l))) return null;
+    const ende = async (zustand: LaufZustand, fehler: string | null = null) => {
+      Object.assign(l, { zustand, fehler, beendet: this.iso() });
+      await this.d.repo.aktualisiere(l.id, { zustand, fehler, beendet: l.beendet, schritte: l.schritte });
+      if (zustand === 'fehlgeschlagen') log.warn('Automatisierung fehlgeschlagen', { id: a.id, name: a.name, fehler });
+      return l;
+    };
+    const schritt = async (i: number, s: Partial<Schritt>) => { Object.assign(l.schritte[i], s); await this.d.repo.aktualisiere(l.id, { schritte: l.schritte }); };
+    try {
+      // Passt die Automatisierung noch (Mappentyp, Felder, Ansichten)? Sonst rot und angehalten.
+      const k = await this.kontext();
+      const probleme = automatisierungsProbleme(a, k);
+      if (probleme.length) {
+        if (!o.test) await this.d.repo.setze(a.id, { angehalten: { grund: 'fehlerhaft', text: probleme.join(' '), zeit: this.iso() } });
+        await schritt(1, { zustand: 'fehler', text: probleme[0] });
+        return await ende('fehlgeschlagen', probleme.join(' '));
+      }
+      const typ = kontextTyp(a.wenn, k.typen);
+      const konto = await this.konto();
+      const z = await this.d.dienst.systemZugriff('automatisierung');
+      // Mappe mit den Rechten des Systemkontos: Was es nicht lesen darf, sieht die Automatisierung nicht.
+      let mappe: Mappe | null = null;
+      if (mappeId) {
+        try { mappe = await this.d.dienst.pruefeRecht(z, mappeId, 'R'); }
+        catch (x) {
+          if (x instanceof Fachfehler && x.status === 403) { await schritt(1, { zustand: 'uebersprungen', text: t('automatisierung.lauf.nicht-lesbar') }); return await ende('uebersprungen'); }
+          if (!(x instanceof Fachfehler && x.status === 404)) throw x;
+        }
+      }
+      if (typ && mappe && mappe.typId !== typ.id) { await schritt(1, { zustand: 'uebersprungen', text: t('automatisierung.lauf.anderer-typ') }); return await ende('uebersprungen'); }
+      const personen = async (e: Empfaenger): Promise<string[]> => {
+        if (e.art === 'person') return [e.id];
+        if (e.art === 'rolle') return this.d.dienst.mitgliederDerRolle(e.id);
+        return mappe ? alsListe(mappe.werte[e.feld]).filter(istUuid) : [];
+      };
+      // Und
+      const und = await this.pruefeUnd(a.und.karten, a.und.modus, mappe, konto.id, personen);
+      await schritt(1, { zustand: und.ok ? 'ok' : 'nein', text: und.text });
+      if (!und.ok) {
+        for (let i = 2; i < l.schritte.length; i++) l.schritte[i].zustand = 'uebersprungen';
+        return await ende('unzutreffend');
+      }
+      // Dann
+      const kontext: KartenKontext = {
+        dienst: this.d.dienst, z, konto, automatisierung: a, mappe, typ, daten: anlass.daten, trocken: o.trocken, personen,
+        fuelle: (text) => this.fuelle(text, { a, mappe, typ, z, daten: anlass.daten }),
+        anlass: { automatisierung: { id: a.id, name: a.name, eingerichtetVon: a.erstelltVon } },
+      };
+      const begonnen = this.jetzt();
+      for (let i = 0; i < a.dann.length; i++) {
+        const karte = a.dann[i];
+        const si = i + 2;
+        if (this.jetzt() - begonnen > AUTOMATISIERUNG_GRENZEN.laufzeitS * 1000) {
+          await schritt(si, { zustand: 'fehler', text: t('automatisierung.lauf.zeit', { s: AUTOMATISIERUNG_GRENZEN.laufzeitS }) });
+          return await ende('fehlgeschlagen', t('automatisierung.lauf.zeit', { s: AUTOMATISIERUNG_GRENZEN.laufzeitS }));
+        }
+        await schritt(si, { zustand: 'laeuft' });
+        if (karte.art === 'stopp') { await schritt(si, { zustand: 'ok', text: t('automatisierung.karte.stopp.ergebnis') }); continue; }
+        try {
+          const art = (karte as DannKarte).art;
+          const ausf = DANN_AUSFUEHRER[art];
+          if (!ausf) throw new Fachfehler(422, t('automatisierung.karte.unbekannt', { art }));
+          const text = await this.d.dienst.mitAusloeser({ art: 'automatisierung', id: a.id, konto: konto.id, kette: anlass.kette + 1 }, () => ausf(karte, kontext));
+          await schritt(si, { zustand: 'ok', text });
+        } catch (x) {
+          const text = (x as Error).message;
+          await schritt(si, { zustand: 'fehler', text });
+          for (let j = si + 1; j < l.schritte.length; j++) l.schritte[j].zustand = 'uebersprungen';
+          return await ende('fehlgeschlagen', text);
+        }
+      }
+      return await ende('abgeschlossen');
+    } catch (x) {
+      return ende('fehlgeschlagen', (x as Error).message);
+    }
+  }
+
+  /** Und-Bedingungen: jede umkehrbar, „alle“ oder „eine davon“, eine Ebene Gruppen. */
+  private async pruefeUnd(karten: UndKarte[], modus: 'alle' | 'eine', mappe: Mappe | null, ich: string, personen: (e: Empfaenger) => Promise<string[]>): Promise<{ ok: boolean; text: string }> {
+    if (!karten.length) return { ok: true, text: t('automatisierung.und.keine') };
+    if (!mappe) return { ok: false, text: t('automatisierung.und.ohne-mappe') };
+    const flach: UndKarte[] = karten.flatMap((k) => (k.art === 'gruppe' ? k.karten : [k]));
+    const teile = await Promise.all(flach.map(async (k) => k.art === 'bedingung' ? { art: 'bedingungen' as const, bedingungen: [k.bedingung as Bedingung] }
+      : k.art === 'ansicht' ? { art: 'sicht' as const, sicht: k.sicht }
+        : { art: 'favorit' as const, benutzer: k.art === 'favorit' ? await personen(k.von) : [] }));
+    const erg = await this.d.dienst.trifftTeile(mappe.id, teile, ich);
+    const wert = new Map(flach.map((k, i) => [k, erg[i] !== (k.nicht === true)]));
+    const verbinde = (liste: UndKarte[], m: 'alle' | 'eine'): boolean => {
+      const w = liste.map((k) => (k.art === 'gruppe' ? verbinde(k.karten, k.modus) !== (k.nicht === true) : wert.get(k)!));
+      return m === 'alle' ? w.every(Boolean) : w.some(Boolean);
+    };
+    const ok = verbinde(karten, modus);
+    const treffer = [...wert.values()].filter(Boolean).length;
+    return { ok, text: t('automatisierung.und.ergebnis', { treffer, anzahl: flach.length }) };
+  }
+
+  /** Platzhalter wie beim Mappentitel – Feldwerte mit den Rechten des Kontos; Passwörter nie. */
+  async fuelle(text: string, c: { a: Automatisierung; mappe: Mappe | null; typ: Mappentyp | null; z: Zugriff; daten: Record<string, unknown> }): Promise<string> {
+    const { a, mappe, typ, z, daten } = c;
+    const refs = mappe && typ ? typ.felder.filter((f) => f.typ === 'referenz').flatMap((f) => alsListe(mappe.werte[f.key])).filter(istUuid) : [];
+    const titel = refs.length ? await this.d.dienst.lesbareTitel(z, refs) : new Map<string, string>();
+    const titelVon = (id: string) => titel.get(id) ?? t('automatisierung.platzhalter.nicht-sichtbar');
+    const fest: Record<string, string> = {
+      titel: mappe?.titel ?? '', mappentyp: typ?.name ?? '', heute: tagVon(new Date(this.jetzt()).toISOString()), automatisierung: a.name,
+      datum: typeof daten.datum === 'string' ? tagVon(`${daten.datum}T12:00:00Z`) : '', tage: daten.tage === undefined ? '' : String(daten.tage),
+    };
+    return text.replace(/\{([a-z][a-z0-9_]*)((?:\|[^{}|]*)*)\}/g, (ganz, key: string) => {
+      if (key in fest) return fest[key];
+      const f = typ?.felder.find((x) => x.key === key);
+      if (!f || f.typ === 'passwort' || !mappe) return ganz;
+      return titelAus({ felder: typ!.felder, titelVorlage: ganz }, mappe.werte, titelVon);
+    });
+  }
+
+  /* ---------- Zeitplan „Datum in N Tagen“ ---------- */
+
+  /** Prüft fällige Tage (auch verpasste) und räumt auf. Mehrere Server: je Mappe und Tag genau ein Lauf (eindeutig). */
+  async zeitplan(): Promise<void> {
+    if (this.zeitplanLauf) return this.zeitplanLauf;
+    this.zeitplanLauf = (async () => {
+      if (this.d.pause?.()) return;
+      const jetzt = new Date(this.jetzt());
+      const heute = heuteIn(jetzt);
+      const uhrzeit = UHR_FORMAT.format(jetzt);
+      // Bearbeiten geht vor Automatisierung: Was nicht mehr passt, wird rot und angehalten (mit Grund).
+      const k = await this.kontext();
+      for (const a of await this.d.repo.liste()) {
+        if (!a.aktiv || a.angehalten) continue;
+        const p = automatisierungsProbleme(a, k);
+        if (p.length) { await this.d.repo.setze(a.id, { angehalten: { grund: 'fehlerhaft', text: p.join(' '), zeit: this.iso() } }); log.warn('Automatisierung angehalten (passt nicht mehr)', { id: a.id, name: a.name, grund: p[0] }); }
+      }
+      const alle = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === 'datum');
+      // Gleiche Auslöser (Typ, Feld, Tage) gemeinsam: Reihenfolge und „Danach keine weiteren …“ gelten auch hier.
+      const gruppen = new Map<string, typeof alle>();
+      for (const a of alle) gruppen.set(ausloeserSchluessel(a.wenn), [...(gruppen.get(ausloeserSchluessel(a.wenn)) ?? []), a]);
+      for (const liste of gruppen.values()) {
+        for (const a of liste) {
+          const w = a.wenn as Extract<WennDatum, { art: 'datum' }>;
+          const bis = uhrzeit >= w.uhrzeit ? heute : verschiebe(heute, -1);
+          const fruehestens = verschiebe(heute, -AUTOMATISIERUNG_GRENZEN.nachholenTage);
+          // Neu eingeschaltet: ab heute (nichts rückwirkend).
+          let tag = a.letzterTag ? verschiebe(a.letzterTag, 1) : heute;
+          if (tag < fruehestens) tag = fruehestens;
+          if (!a.letzterTag && bis < heute) { await this.d.repo.setze(a.id, { letzterTag: bis }); continue; }
+          for (; tag <= bis; tag = verschiebe(tag, 1)) {
+            const ziel = verschiebe(tag, w.tage);
+            for (const mappe of await this.d.dienst.mappenMitDatum(w.typ, w.feld, ziel)) {
+              const ereignis = uuidAus(`datum|${ausloeserSchluessel(w)}|${mappe}|${ziel}`);
+              // Alle der Gruppe für diese Mappe und diesen Tag (die eigene Reihenfolge entscheidet).
+              await this.reihe(liste.filter((x) => x.id === a.id || (x.letzterTag ? x.letzterTag < tag : tag === heute)), { id: ereignis, art: 'datum', daten: { mappe, typ: w.typ, feld: w.feld, datum: ziel, tage: w.tage }, kette: 0 });
+            }
+            for (const x of liste) await this.d.repo.setze(x.id, { letzterTag: tag });
+            for (const x of liste) x.letzterTag = tag;
+          }
+        }
+      }
+      await this.d.repo.raeumeAuf(AUTOMATISIERUNG_GRENZEN.verlaufTage, AUTOMATISIERUNG_GRENZEN.verlauf, HAENGT_MIN);
+    })().finally(() => { this.zeitplanLauf = null; });
+    return this.zeitplanLauf;
+  }
+}
+
+type WennDatum = Automatisierung['wenn'];

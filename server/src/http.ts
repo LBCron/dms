@@ -93,6 +93,8 @@ interface Optionen {
   webdav?: Webdav;
   /** Webhooks (#627). */
   webhooks?: import('./webhook').Webhooks;
+  /** Automatisierungen (#674). */
+  automatisierungen?: import('./automatisierung').Automatisierungen;
   /** Überlastschutz (#544): höchstens so viele Anfragen gleichzeitig, sonst 503. */
   ueberlast?: import('./ueberlast').Ueberlastschutz;
   /** Warten auf eine freie Verbindung zur Datenbank (#544). */

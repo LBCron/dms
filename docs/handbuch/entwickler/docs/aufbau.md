@@ -251,6 +251,31 @@ Damit erkennt sie ihre eigenen Änderungen und kann Ketten begrenzen. Ein Paket 
 
 **Neues Ereignis:** Eintrag in `EREIGNISKATALOG` (Gruppe, Felder, ggf. `paket`, `mappentyp`, `webhook`, `buendelS`), Texte in `ereignisse.json`, an der Stelle der Änderung `await this.ereignis(...)` – möglichst innerhalb der Transaktion. Soll es für Pakete abonnierbar sein, zusätzlich in `EREIGNISSE` (`shared/src/pakete.ts`) und in der Registry (`schema`, `pruefen.py`).
 
+## Automatisierungen (#674) { #automatisierungen }
+
+Kleine Abläufe ohne Code: **Wenn · Und · Dann** (Sonst kommt mit Stufe 2). Modell und Prüfungen in `shared/src/automatisierung.ts`, Motor und Speicher in `server/src/automatisierung.ts` (Tabellen `automatisierungen`, `automatisierung_fassungen`, `automatisierung_laeufe`, Migration 061), Texte in `shared/src/sprachen/de/automatisierung.json`.
+
+**Modell**
+
+- **Genau eine Wenn-Karte:** ein Ereignis aus dem Katalog (alle Gruppen außer `zaehler`, optional nur ein Mappentyp, bei `mappe.geaendert` optional nur bestimmte Felder) oder `datum` – „Datumsfeld in N Tagen erreicht“ (negativ: vor N Tagen), täglich ab einer Uhrzeit in der Zeitzone des Haushalts. Die Wenn-Karte legt den **Kontext** fest: die Mappe des Ereignisses (`daten.mappe`, bei Benutzer-Ereignissen die Benutzer-Mappe) und ihren Mappentyp.
+- **Und:** Bedingungen aus dem Baukasten der Ansichten (`Bedingung` aus `sichten.ts`), dazu „Mappe ist in Ansicht …“ und „Mappe ist in den Favoriten von …“ (Person, Rolle, Feld). Jede umkehrbar (`nicht`), Gruppen `alle`/`eine` eine Ebene tief. Ausgewertet in der Datenbank (`Dienst.trifftTeile` → `repo.inKlauseln`), „ich“ ist das Systemkonto.
+- **Dann:** Karten in ihrer Reihenfolge; ausführen tun sie die Einträge in `DANN_AUSFUEHRER` (`(karte, kontext) => Promise<string>` – die Zeile fürs Protokoll; im Trockenlauf nur beschreiben). „Danach keine weiteren Automatisierungen ausführen“ (`stopp`) erledigt der Motor selbst.
+- **Platzhalter** wie beim Mappentitel (`{feld}`, `{feld|filter}`), dazu `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}`, bei `datum` auch `{datum}` und `{tage}`. Werte mit den Rechten des Systemkontos; Titel verknüpfter Mappen, die es nicht lesen darf, erscheinen als „(nicht sichtbar)“; Passwörter nie.
+
+**Ablauf**
+
+1. Der Abnehmer `automatisierungen` des Ereigniskatalogs sucht eingeschaltete, nicht angehaltene Automatisierungen mit passender Wenn-Karte und führt sie **nacheinander** nach `reihenfolge` (1–99, dann Name) aus. Jede liest den aktuellen Stand.
+2. Je Automatisierung und Ereignis entsteht **genau ein Lauf** (`UNIQUE (automatisierung_id, ereignis_id)`) – kommt ein Ereignis noch einmal oder prüfen zwei Server denselben Tag, läuft nichts doppelt. Beim Zeitplan ist die Ereignis-Id aus Automatisierungs-Auslöser, Mappe und Datum berechnet; `letzter_tag` merkt sich, bis wohin geprüft ist (verpasste Tage bis 31 zurück werden nachgeholt).
+3. Ausgeführt wird unter dem Systemkonto „Automatisierung“ (`dienst.systemZugriff('automatisierung')`) und mit `dienst.mitAusloeser({ art: 'automatisierung', id, konto, kette })` – Historie und Ereignisse zeigen, wer gehandelt hat. Darf das Systemkonto die Mappe nicht lesen, wird der Lauf übersprungen.
+4. Jeder Schritt (Wenn, Und, jede Dann-Karte) steht mit Zustand im Lauf (`schritte`) – die Oberfläche zeigt den Fortschritt live. Ein Kartenfehler beendet den Lauf als `fehlgeschlagen` (wiederholbar), die folgenden Automatisierungen laufen trotzdem.
+
+**Schutz und Grenzen** (`AUTOMATISIERUNG_GRENZEN`)
+
+- Keine Selbstauslösung (eigene Änderungen lösen dieselbe Automatisierung nicht aus), Ketten höchstens 3 tief, Bremse 30 Läufe je Minute (dann angehalten), Laufzeit 60 s, 200 Automatisierungen, je Bereich 20 Karten, Verlauf 200 Läufe bzw. 30 Tage.
+- **Bearbeiten geht vor Automatisierung:** Fehlt etwas (Mappentyp, Feld, Ansicht), blockiert das nie das Arbeiten – die Automatisierung wird rot und angehalten (`angehalten.grund = 'fehlerhaft'`), spätestens beim nächsten Lauf oder Zeitplan-Durchgang. Speichern geht nur mit gültigem Stand.
+- Demo-Daten und Beispiele lösen nichts aus (`ohneEreignisse`), in Wartung und Wiederherstellung ruht der Verteiler. Nach einer Wiederherstellung sind alle eingeschalteten Automatisierungen angehalten, bis ein Admin sie wieder einschaltet.
+- Speichern mit `version` (veralteter Stand → 409); jede Fassung steht in `automatisierung_fassungen` und lässt sich wiederherstellen. Im Vollexport: `struktur/automatisierungen.json` mit Änderungsverlauf; in der Sicherung alle Tabellen.
+
 ## Zähler-Endpunkt und Schlüssel-Stufen (#625) { #zaehler-endpunkt }
 
 Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, **ob etwas Neues da ist**. Dafür gibt es `GET /api/v1/ich/zaehler` (intern `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):

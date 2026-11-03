@@ -10,6 +10,7 @@ import { Oidc } from './oidc';
 import { Eingangsordner } from './eingangsordner';
 import { Webdav } from './webdav';
 import { pgWebhookRepo, Webhooks } from './webhook';
+import { Automatisierungen, pgAutomatisierungRepo } from './automatisierung';
 import { einbettenAus } from './koepfe';
 import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';
@@ -388,11 +389,17 @@ const webhooks = new Webhooks({
   })()),
 });
 dienst.beiAenderung(() => webhooks.anstossen());
+// Automatisierungen (#674): Wenn · Und · Dann unter dem Systemkonto „Automatisierung“; Läufe je Ereignis genau einmal.
+const automatisierungen = new Automatisierungen({
+  dienst, repo: messung.umhuelle(pgAutomatisierungRepo(sql, cfg.haushalt), 'automatisierungen'),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+});
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
 const webdav = new Webdav({ dienst, konten, schluessel: apiSchluessel, einstellungen: pgEinstellungen(sql, cfg.haushalt), adresse: () => betrieb.adresseFuerLinks(), wartung });
 const app = await baueApp(dienst, konten, {
   webdav,
   webhooks,
+  automatisierungen,
   pakete,
   paketlaeufer,
   konsole,
@@ -445,6 +452,7 @@ dienst.systemkonten = (k) => konten.systemkonto(k);
 // Ereigniskatalog (#670): verteilt aus der Datenbank; ruht in Wartung und Wiederherstellung.
 dienst.ereignisseRuhen = () => wartung.aktiv || wiederherstellung.laeuft();
 dienst.ereignisse.starte();
+automatisierungen.start();
 wartung.beimAusschalten(() => dienst.ereignisse.wecke());
 // Schlüssel für Mappentypen (#145), einmalig nach dem Update.
 await dienst.typSchluesselNachziehen();
