@@ -154,7 +154,7 @@ Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument f
 | Anzeige | Bedeutung |
 | --- | --- |
 | *Volltext: wartet* / *läuft* | Der Text wird gerade gelesen; meist dauert das Sekunden. |
-| *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. Steht dort „kein Paket installiert“, bitte deinen Administrator, das Paket Texterkennung zu installieren. |
+| *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. Steht dort „kein Paket installiert“, bitte deinen Administrator, das Paket „Texterkennung (Deutsch und Englisch)“ zu installieren. |
 | *Volltext: fertig* | Das Dokument ist durchsuchbar. **Text anzeigen** zeigt, was erkannt wurde. |
 | *Volltext: Fehler* | Etwas ging schief, z. B. eine beschädigte Datei. **Erneut versuchen** stellt es noch einmal an. |
 | *Volltext: wartet auf Paket* | Das DMS liest den Dateityp nicht selbst; ein Paket ist dran. Daneben steht, was es tut: „wartet auf Umwandlung (Paket …)“ – es macht aus der Datei (z. B. TIFF) eine Fassung, aus der Vorschau und Text entstehen –, oder „wartet auf Volltext (Paket …)“ – es liest den Text aus der Datei (z. B. Word, Excel, E-Mail). Ein Text von vorher bleibt so lange für die Suche stehen. |
@@ -177,7 +177,7 @@ Wechselt die Sprache mitten im Dokument ganz – Seite 1 Deutsch, ab Seite 2 nur
 
 Das DMS **teilt nie von selbst**. Den Hinweis gibt es nur bei PDFs und nur, wenn du die Post bearbeiten darfst. Eine Seite mit beiden Sprachen (etwa ein deutscher Brief mit einem französischen Absatz) gilt nicht als Wechsel.
 
-Wie gut die Sprachen erkannt werden, hängt am Paket Texterkennung und seinen Sprachen: Deutsch und Englisch sind immer dabei, für weitere Sprachen installiert dein Administrator Zusatzpakete (etwa „Texterkennung – Französisch“). Bei PDFs mit Textebene erkennt das DMS die Sprache je Seite selbst.
+Wie gut die Sprachen erkannt werden, hängt am Paket Texterkennung und seinen Sprachen: Deutsch und Englisch sind immer dabei, für weitere Sprachen installiert dein Administrator Zusatzsprachen (etwa „Texterkennung – Zusatzsprache Französisch“). Bei PDFs mit Textebene erkennt das DMS die Sprache je Seite selbst.
 
 ## Ähnliche Dokumente { #aehnliche-dokumente }
 

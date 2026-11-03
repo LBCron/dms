@@ -32,11 +32,11 @@ Welche Version läuft und ob es neuere gibt, zeigt **Werkbank → Technik** (sie
 
 ### Texterkennung als Paket (ab 0.134)
 
-Die Texterkennung (Tesseract) steckt nicht mehr im Image; das Image ist dadurch kleiner (beim Einbau in 0.11 kamen rund 50 MB dazu). Scans und Fotos erkennt jetzt das Paket **Texterkennung** aus dem Katalog:
+Die Texterkennung (Tesseract) steckt nicht mehr im Image; das Image ist dadurch kleiner (beim Einbau in 0.11 kamen rund 50 MB dazu). Scans und Fotos erkennt jetzt das Paket **Texterkennung (Deutsch und Englisch)** (Kennung `texterkennung`) aus dem Katalog:
 
 - **Vorhandener Volltext bleibt** unverändert – auch der, den die eingebaute Texterkennung erkannt hat. PDFs mit Text liest das DMS weiter selbst.
 - Nach dem Update steht in der [Übersicht der Werkbank](uebersicht.md) **„Texterkennung ist jetzt ein Paket“** mit **Jetzt installieren**. Bis das Paket installiert ist, bleiben neue Scans ohne Text („wartet auf Texterkennung – kein Paket installiert“); danach gehen sie von selbst an das Paket.
-- Sprachen, die du über ein eigenes Image (`tesseract-ocr-data-…`) oder eingehängte Dateien nachgerüstet hattest, kommen jetzt als **Zusatzpakete** (z. B. *Texterkennung – Französisch*); das eigene Image kannst du wieder durch das offizielle ersetzen. Siehe [Weitere Sprachen](texterkennung.md#weitere-sprachen).
+- Sprachen, die du über ein eigenes Image (`tesseract-ocr-data-…`) oder eingehängte Dateien nachgerüstet hattest, kommen jetzt als **Zusatzsprachen** (z. B. *Texterkennung – Zusatzsprache Französisch*); das eigene Image kannst du wieder durch das offizielle ersetzen. Siehe [Weitere Sprachen](texterkennung.md#weitere-sprachen).
 - Die Einstellungen der Texterkennung (Sprache, Seiten, Dateitypen) stehen jetzt beim Paket; TIFF-, WebP-, GIF- und BMP-Bilder bekommen keinen Volltext mehr.
 
 ### Datenbank-Anbindung und Haushalt (ab 0.24)

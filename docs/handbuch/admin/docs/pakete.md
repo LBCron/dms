@@ -50,6 +50,17 @@ Den Katalog gibt es auch als Webseite: [Paketkatalog](https://motom001.github.io
 4. Das DMS holt Paket und Prüfsumme **selbst aus dem offiziellen Katalog** – Angaben im Link, die auf andere Quellen zeigen, zählen nicht. Gibt es das Paket oder die Version dort nicht, sagt das DMS es.
 5. Installiert wird **erst, wenn du auf „Installieren“ klickst**. Der Link allein ändert nichts. Ist das Paket schon installiert, zeigt die Vorschau das; ein Update bietet sie an, wenn der Link eine neuere Version nennt.
 
+### Im Katalog ansehen { #im-katalog-ansehen }
+
+Unter **Werkbank → Pakete** steht über der Liste **Verfügbar** der Link **Im Katalog ansehen**; bei jedem Paket aus dem offiziellen Katalog gibt es ihn zusätzlich unter **Mehr** für die Seite genau dieses Pakets. Der Link öffnet die Katalog-Webseite in einem neuen Tab und gibt ihr die **Version deines DMS** mit. Die Webseite zeigt dann gleich, welche Pakete zu deinem DMS passen, und filtert auf Wunsch danach – du musst die Version nicht suchen und eintippen.
+
+**Was übertragen wird:** nichts außer dem Seitenaufruf selbst, wie bei jeder anderen Webseite. Die Version steht im **Fragment** der Adresse, also hinter dem `#`, z. B. `https://motom001.github.io/dms-registry/#dms=0.146.0`. Diesen Teil schickt der Browser nie an den Server; er steht in keinem Zugriffsprotokoll. Nur das Skript der Katalogseite liest ihn in deinem Browser, merkt sich die Version dort und entfernt das Fragment gleich wieder aus der Adresse, damit sie nicht mit einem geteilten Link weitergeht.
+
+- Im Fragment steht **nur die Version** – keine Adresse deines DMS, kein Haushaltsname, keine Liste deiner Pakete, keine Kennung.
+- Der Link öffnet ohne **Herkunftsadresse** (`rel="noopener noreferrer"`): Die Katalogseite erfährt nicht, von welcher Adresse du kommst, und hat keinen Zugriff auf den Tab deines DMS.
+- Ist der offizielle Katalog gerade nicht erreichbar (nach **Katalog abrufen**), steht statt des Links ein Hinweis auf [Pakete ohne Internet](#pakete-ohne-internet-installieren).
+- Weitere Kataloge aus dem [Expertenmodus](#expertenmodus-weitere-kataloge-und-hochladen) haben keine bekannte Webseite; den Link gibt es nur für den offiziellen Katalog.
+
 ## Herkunft: signiert oder nicht { #herkunft-signiert-oder-nicht }
 
 Das DMS-Projekt **signiert** den offiziellen Katalog (ab DMS 0.141.0). Weil der Katalog die Prüfsumme jedes Pakets enthält, belegt eine einzige Signatur, dass alle Pakete darin vom DMS-Projekt stammen. Die **Vorschau** zeigt deshalb vor jeder Installation eine Zeile **Herkunft**:

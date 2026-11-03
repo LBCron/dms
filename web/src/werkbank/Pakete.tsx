@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { hatSchnittstelle, herkunftText, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -141,6 +141,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
         </ul>
       )}
       <h2 className="ueber">Verfügbar</h2>
+      <KatalogAnsehen z={z} />
       {z.kataloge?.liste.filter((k) => k.fehler).map((k) => <div key={k.url} className="hinweis warn klein"><p>{k.offiziell ? 'Offizieller Katalog' : host(k.url)}: {k.fehler}</p></div>)}
       {!z.kataloge ? <p className="leise klein">Klicke „Katalog abrufen“, um die Pakete des offiziellen Katalogs zu sehen.</p>
         : !verfuegbar.length ? <p className="leise leerliste">Alle Pakete des Katalogs sind installiert.</p> : (
@@ -157,6 +158,21 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
       {/* Herkunft des offiziellen Katalogs (#594): signiert, nicht signiert (Stufe 1: nur Warnung) oder ungültig. */}
       <HerkunftZeile p={z.kataloge?.liste.find((k) => k.offiziell)?.pruefung} />
     </>
+  );
+}
+
+/**
+ * „Im Katalog ansehen“ (#622): öffnet die Katalog-Webseite mit der DMS-Version nur im Fragment
+ * (`#dms=…`, geht an keinen Server). Ist der offizielle Katalog nicht erreichbar, steht statt des
+ * Links der Hinweis auf „Ohne Internet …“. Eigene Kataloge haben keine bekannte Webseite – nur der offizielle.
+ */
+function KatalogAnsehen({ z }: { z: PaketeZustand }) {
+  if (z.kataloge?.liste.some((k) => k.offiziell && k.fehler)) return <p className="leise klein">{tx('pakete.katalog.ohneinternet')}</p>;
+  return (
+    <p className="leise klein">
+      <a className="verweis" href={katalogSeiteMitVersion(z.stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>{tx('pakete.katalog.ansehen')} <Symbol name="extern" /></a>
+      {' – '}{tx('pakete.katalog.hinweis')} <Hilfe ort="werkbank.pakete.katalog" />
+    </p>
   );
 }
 
@@ -378,6 +394,8 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
   const [behalten, setBehalten] = useState(false);
   const v = kp?.versionen.find((x) => x.version === (version || kp.aktuell)) ?? kp?.versionen[0];
   const neuer = inst && inst.herkunft.art === 'katalog' && kp && vergleicheVersion(kp.aktuell, inst.version) > 0 ? kp.aktuell : null;
+  // Paketseite im Katalog (#622): nur für Pakete aus dem offiziellen Katalog, nicht für hochgeladene.
+  const imKatalog = offiziell && (inst ? inst.herkunft.art === 'katalog' : !!kp);
 
   async function zeigeVorschau(ver?: string) {
     setMeldung(undefined); setLaeuft(true);
@@ -434,7 +452,9 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           {v && <><dt>Nötige DMS-Version</dt><dd>{v.dms} (dieses DMS: {z.stand?.dms})</dd></>}
           {v && <><dt>Abhängigkeiten</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : 'keine'}</dd></>}
           {v && <><dt>Inhalt</dt><dd>Mappentypen: {v.inhalt.mappentypen.map((t) => t.name).join(', ') || '–'}<br />Ansichten: {v.inhalt.sichten.map((s) => s.name).join(', ') || '–'}{v.inhalt.beispiele ? <><br />{v.inhalt.beispiele} Beispiel-Mappen (optional)</> : null}</dd></>}
-          {(v?.readme || inst?.links?.readme) && <><dt>Mehr</dt><dd><a className="verweis" href={v?.readme || inst!.links!.readme} target="_blank" rel="noreferrer">README ↗</a>{(v?.changelog || inst?.links?.changelog) && <> · <a className="verweis" href={v?.changelog || inst!.links!.changelog} target="_blank" rel="noreferrer">Änderungen ↗</a></>}</dd></>}
+          {(v?.readme || inst?.links?.readme || imKatalog) && <><dt>Mehr</dt><dd>{(v?.readme || inst?.links?.readme) && <a className="verweis" href={v?.readme || inst!.links!.readme} target="_blank" rel="noreferrer">README ↗</a>}{(v?.changelog || inst?.links?.changelog) && <> · <a className="verweis" href={v?.changelog || inst!.links!.changelog} target="_blank" rel="noreferrer">Änderungen ↗</a></>}
+            {/* Paketseite im offiziellen Katalog mit der DMS-Version nur im Fragment (#622). */}
+            {imKatalog && <>{(v?.readme || inst?.links?.readme) && ' · '}<a className="verweis" href={katalogSeiteMitVersion(z.stand?.dms ?? '', id)} target="_blank" rel={KATALOG_LINK_REL} title={tx('pakete.katalog.hinweis')}>{tx('pakete.katalog.ansehen')} <Symbol name="extern" /></a></>}</dd></>}
         </dl>
         {inst?.laeufer && <LaeuferStand paket={inst.id} />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:vektoren') && <VektorStandBlock />}
