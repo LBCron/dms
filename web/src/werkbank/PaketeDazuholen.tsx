@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { auswahlMitAbhaengigkeiten, dmsPasst, herkunftText, KATALOG_SEITE, vergleicheVersion, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, type RechtePunkt } from '../../../shared/src/pakete';
+import { auswahlMitAbhaengigkeiten, dmsPasst, herkunftText, KATALOG_LINK_REL, sammelSeiteMitVersion, vergleicheVersion, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, type RechtePunkt } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketVorschau, type Sammeldatei, type SammelPaket } from '../api';
 import { Hilfe } from '../Hilfe';
+import { Symbol } from '../Symbol';
 import { alsMeldung, MeldungBox, VorschauBlock, type Meldung } from './Pakete';
 import { HerkunftZeile } from './Herkunft';
 import { t } from '../sprache';
@@ -162,7 +163,8 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
       </div>
       <section className="stapel" aria-label="Ohne Internet">
         <h2 className="h3">Ohne Internet: Sammeldatei hochladen</h2>
-        <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeite(stand?.dms ?? '')} target="_blank" rel="noreferrer">Katalog-Webseite ↗</a> zusammen (die Texterkennung ist dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen (die Texterkennung ist dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise klein">{t('pakete.katalog.hinweis')}</p>
         {stand && <SammeldateiWahl geladen={(x, datei) => setSammel({ s: x, datei })} />}
       </section>
       <div className="knoepfe">
@@ -238,9 +240,6 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
 }
 
 /* ---------- Sammeldatei (#461) ---------- */
-
-/** Adresse der Katalog-Webseite zum Zusammenstellen einer Sammeldatei – mit der Version dieses DMS. */
-export const sammelSeite = (dms: string) => `${KATALOG_SEITE}sammeldatei.html${/^\d+\.\d+\.\d+$/.test(dms) ? `?dms=${encodeURIComponent(dms)}` : ''}`;
 
 /** Datei wählen und hochladen: eine Sammeldatei (oder ein einzelnes Paket, falls gewollt). */
 export function SammeldateiWahl({ geladen, einzeln }: { geladen(s: Sammeldatei, datei: string): void; einzeln?(r: { upload: string; vorschau: PaketVorschau }, datei: string): void }) {
