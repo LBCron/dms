@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0151" class="md-skip">
+        <a href="#neu-in-version-0152" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01510" class="md-nav__link">
+  <a href="#01520" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.151.0
+        0.152.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.151.0">
+    <nav class="md-nav" aria-label="0.152.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -379,17 +379,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#paketformat" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Paketformat
       
     </span>
   </a>
@@ -2477,15 +2466,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01510" class="md-nav__link">
+  <a href="#01520" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.151.0
+        0.152.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.151.0">
+    <nav class="md-nav" aria-label="0.152.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2493,17 +2482,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#paketformat" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Paketformat
       
     </span>
   </a>
@@ -2568,41 +2546,34 @@
   
 
 
-<h1 id="neu-in-version-0151">Neu in Version 0.151<a class="headerlink" href="#neu-in-version-0151" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0152">Neu in Version 0.152<a class="headerlink" href="#neu-in-version-0152" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01510">0.151.0<a class="headerlink" href="#01510" title="Permanent link">&para;</a></h2>
+<h2 id="01520">0.152.0<a class="headerlink" href="#01520" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Mehrere Pakete in einem Schritt</strong> (#405): Ob ein Paket mit seinen Abhängigkeiten, die Texterkennung mit drei Sprachen oder zehn Pakete auf einmal – das DMS installiert alles in <strong>einem Ablauf</strong> statt einer Kette von Rückfragen je Paket. Erst die <strong>Auswahl</strong> (Abhängigkeiten kommen mit und sind markiert), dann <strong>eine Seite mit allen Fragen</strong>, eine <strong>Zusammenfassung</strong> und <strong>ein</strong> Knopf.</li>
-<li><strong>Abhängigkeiten mit Code</strong> installieren sich jetzt mit: Die Rechte aller Pakete stehen untereinander, ein Haken erlaubt sie. Jedes Paket behält sein eigenes Dienstkonto und seine eigenen Rechte. Die Bestätigung gilt nur für genau die gezeigten Rechte – ändern sie sich bis zum Klick, fragt das DMS neu.</li>
-<li><strong>Ergänzungen als Häkchen:</strong> Zusatzsprachen der Texterkennung erscheinen als <strong>Weitere Sprachen?</strong> direkt unter dem Paket – beim ersten Installieren, im Einrichtungsassistenten, aus einer Sammeldatei und nachträglich unter <strong>Werkbank → Pakete → Texterkennung</strong>. Jede Sprache bleibt ein eigenes Paket mit eigener Version.</li>
-<li><strong>Jede Frage einmal, mit Ausnahme je Paket:</strong> Herkunft ein Haken für alle, Namen nur bei Konflikten (auch zwischen Paketen desselben Ablaufs), Beispiel-Mappen „für alle“ und je Paket abwählbar, <strong>Pflicht-Einstellungen aller Pakete</strong> im selben Ablauf – oder <strong>Später ausfüllen</strong>: Dann steht das Paket auf „Einstellungen nötig“, und die Übersicht der Werkbank zeigt die Aufgabe „… braucht noch Einstellungen“.</li>
-<li><strong>Kein halber Zustand:</strong> Das DMS prüft alles, bevor es das erste Paket anlegt. Scheitert ein Paket trotzdem, ist es vollständig zurückgenommen; das Ergebnis nennt genau, was installiert ist und was nicht.</li>
-<li>Derselbe Ablauf in <strong>Werkbank → Pakete</strong>, beim Link aus der Katalog-Webseite, im <strong>Einrichtungsassistenten</strong> (#460) und für die <strong>Sammeldatei</strong> (#461).</li>
-</ul>
-<h3 id="paketformat">Paketformat<a class="headerlink" href="#paketformat" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Neues optionales Manifest-Feld <strong><code>ergaenzt</code></strong> (<code>ergaenzt: texterkennung</code> oder <code>{ paket, gruppe }</code>), im Katalog je Version (motom001/dms-registry#104). Ältere DMS ignorieren es. Die zehn Zusatzsprachen der Texterkennung tragen es seit ihrer neuen Patch-Version.</li>
+<li><strong>Systemkonto „Automatisierung“</strong> (#673): Das DMS hat jetzt ein eigenes Konto, unter dem künftig Automatisierungen laufen. In der Historie steht dann „Automatisierung“ statt des Administrators, der sie eingerichtet hat – und sie laufen weiter, wenn dieser Administrator geht. Das Konto meldet sich nie an: kein Passwort, keine Sitzung, kein API-Schlüssel, kein „Als Benutzer anmelden“; es steht in keiner Auswahl und zählt nicht als Benutzer.</li>
+<li><strong>Neue Systemrollen „Systemkonto“ und „Paket“</strong> neben Administrator und Mitglied. Du vergibst sie nie an Menschen, wählst sie aber in den <strong>Regeln am Mappentyp</strong>: z. B. „Wenn Benutzer hat Rolle <em>Systemkonto</em> → alle Rechte entziehen“ am Mappentyp <em>Gesundheit</em>. Für diese Konten zählen nur Regeln, die ihre Rolle nennen – ohne solche Regeln bleibt alles wie bisher (Pakete behalten ihre bestätigten Rechte, das Systemkonto darf alles außer Passwörter sehen). Eine Regel für <em>Paket</em> kann nie mehr erlauben, als bei der Installation bestätigt wurde.</li>
+<li><strong>Werkbank → Benutzer</strong> zeigt unter den Benutzern den Abschnitt <strong>Systemkonten</strong>: „Automatisierung“ und die Dienstkonten der Pakete mit ihrer Systemrolle – sichtbar, aber nicht bearbeitbar.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: <strong>Pakete → Mehrere Pakete in einem Schritt installieren</strong>, Installieren, Einstellungen, Pakete ohne Internet, Einrichtung („Pakete dazuholen“), Texterkennung („Weitere Sprachen“, auch: Bremsen mehr Sprachen die Erkennung?), Übersicht.</li>
-<li>Entwicklerhandbuch: Paketformat → <strong>Abhängigkeiten</strong> und <strong>Ergänzungen</strong>; Pakete mit Code → Zusatzdaten.</li>
+<li>Administratorhandbuch: Benutzer und Rollen → <strong>Systemkonten</strong>, <strong>Systemrollen Systemkonto und Paket</strong>; Berechtigungen → <strong>Systemkonten und Pakete</strong> mit Beispiel.</li>
+<li>Entwicklerhandbuch: Aufbau → <strong>Systemkonten und Kontorollen</strong>; Pakete mit Code → Dienstkonto in der Rolle Paket.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>API: <code>POST /api/werkbank/pakete/ablauf/plan</code> (nichts wird gespeichert) und <code>POST /api/werkbank/pakete/ablauf/installieren</code> (rechnet den Plan neu; Rechte-Bestätigung über den Prüfwert <code>rechteStand</code>). <code>pakete</code> nimmt auch <code>id@version</code>.</li>
-<li>Installieren, Aktualisieren und Entfernen von Paketen laufen nacheinander – Sperre in PostgreSQL (<code>pg_try_advisory_lock</code>), auch über mehrere Server.</li>
-<li><code>shared/src/pakete.ts</code> (Ergänzungen, Typen des Ablaufs), <code>server/src/pakete.ts</code> (Plan und Installation), <code>web/src/werkbank/PaketAblauf.tsx</code>; der bisherige Ablauf „Paket für Paket“ ist entfallen.</li>
-<li>Tests: <code>server/test/paketablauf.test.ts</code> (Speicher und PostgreSQL).</li>
-<li>Keine Migration, keine neue Abhängigkeit.</li>
+<li>Migration <code>059_systemkonten.sql</code>: <code>benutzer.art</code> kennt <code>system</code>, neue Spalte <code>systemkonto</code>, eindeutig je Haushalt (auch beim gleichzeitigen Start zweier Server).</li>
+<li><code>shared/src/rechte.ts</code>: <code>kontoRegelwerk</code>, <code>nenntRolle</code>, <code>hatKontoRegeln</code>; <code>Dienst.zugriff</code> für Dienst- und Systemkonten, <code>Dienst.systemZugriff()</code>.</li>
+<li>API: <code>GET /api/benutzer/systemkonten</code> (nur Administratoren).</li>
+<li>Tests: <code>server/test/systemkonten.test.ts</code>, PostgreSQL in <code>server/test/pg.test.ts</code>.</li>
+<li>Keine neue Abhängigkeit.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.150.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.150.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.151.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.151.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>

@@ -528,6 +528,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#systemkonten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemkonten und Kontorollen (#673)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#zaehler-endpunkt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1051,6 +1062,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#systemkonten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemkonten und Kontorollen (#673)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#zaehler-endpunkt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1434,6 +1456,40 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li><strong>Formular.</strong> <code>MappeFormular</code> schickt nur die Felder, deren Rohwert von <code>basis</code> abweicht, und <code>stand</code> = <code>mappe.geaendert</code> beim Laden von <code>basis</code>. Bei 409 zeigt <code>Konfliktfrage</code> je Feld die Wahl; „Meins“ geht mit dem neuen Stand aus der Antwort noch einmal mit, „Seins“ übernimmt den Wert und bleibt weg.</li>
 </ul>
 <p>Tests: <code>server/test/gleichzeitig.test.ts</code> (Arbeitsspeicher und PostgreSQL), im Browser <code>docs/handbuch/screenshots/gleichzeitig-pruefen.mjs</code> (zwei Fenster, Workflow „Handbuch“).</p>
+<h2 id="systemkonten">Systemkonten und Kontorollen (#673)<a class="headerlink" href="#systemkonten" title="Permanent link">&para;</a></h2>
+<p>Neben Menschen (<code>benutzer.art = 'person'</code>) gibt es zwei Arten von Konten, die sich nie anmelden:</p>
+<table>
+<thead>
+<tr>
+<th>Art</th>
+<th>Beispiel</th>
+<th>Systemrolle</th>
+<th>Rechte an Mappen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dienst</code> (#338)</td>
+<td>„Paket Texterkennung“, je Paket mit Code eines</td>
+<td><strong>Paket</strong> (<code>rolle:paket</code>)</td>
+<td>bestätigte Rechte aus dem Manifest, eingeschränkt durch Regeln für die Rolle Paket</td>
+</tr>
+<tr>
+<td><code>system</code> (#673)</td>
+<td>„Automatisierung“ (<code>systemkonto = 'automatisierung'</code>)</td>
+<td><strong>Systemkonto</strong> (<code>rolle:systemkonto</code>)</td>
+<td>alles außer <code>P</code>, eingeschränkt durch Regeln für die Rolle Systemkonto</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Anlegen:</strong> <code>Konten.systemkonto(kennung)</code> beim Start (<code>index.ts</code>), idempotent; in PostgreSQL schützt der Index <code>benutzer_systemkonto</code> vor einem zweiten Konto, auch bei zwei Servern (Migration 059).</li>
+<li><strong>Nie benutzbar:</strong> <code>holeHash</code>, <code>listeBenutzer</code>, <code>anzahlBenutzer</code> sehen nur Menschen; <code>benutzerZu</code> (Sitzung) und <code>benutzerMitId</code> (API-Schlüssel) lehnen Systemkonten ab; Benutzerverwaltung und „Als Benutzer anmelden“ kennen sie nicht (<code>person()</code>). <code>personen()</code> liefert sie nur für Namen (<code>aktiv: false</code>, <code>art</code>).</li>
+<li><strong>Rollen:</strong> Die Rollen-Mappen <code>rolle:systemkonto</code> und <code>rolle:paket</code> legt <code>sichereSystem()</code> an (<code>kontorollen</code>). <code>listeRollen()</code> liefert sie nur mit <code>mitKonten</code>, <code>pruefeRollen()</code> lehnt sie ab.</li>
+<li><strong>Zugriff:</strong> <code>Dienst.zugriff(konto)</code> setzt <code>wer.rollen = [Kontorolle]</code> und schneidet die Mappentypen mit <code>kontoRegelwerk(typ, rolleId)</code> (<code>shared/src/rechte.ts</code>) zu: Grundeinstellung „alles“, nur Regeln, die die Rolle nennen (<code>nenntRolle</code>). So sperrt ein strenger Standard für Mitglieder keine Automatisierung aus, ein Administrator kann aber gezielt einschränken. Für Pakete wird das Ergebnis mit den bestätigten Rechten geschnitten. <code>Dienst.systemZugriff('automatisierung')</code> liefert den Zugriff des Systemkontos (für den Motor der Automatisierungen, #674).</li>
+<li><strong>Werkbank:</strong> Systemkonten sind nie <code>admin</code>; welche Werkbank-Aktionen eine Karte darf, entscheidet die Karte selbst (#677).</li>
+<li><strong>Oberfläche:</strong> Werkbank → Benutzer, Abschnitt „Systemkonten“ (<code>GET /api/benutzer/systemkonten</code>, nur Administratoren).</li>
+</ul>
 <h2 id="zaehler-endpunkt">Zähler-Endpunkt und Schlüssel-Stufen (#625)<a class="headerlink" href="#zaehler-endpunkt" title="Permanent link">&para;</a></h2>
 <p>Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, <strong>ob etwas Neues da ist</strong>. Dafür gibt es <code>GET /api/v1/ich/zaehler</code> (intern <code>/api/ich/zaehler</code>, <code>Dienst.zaehlerAbruf</code>):</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler

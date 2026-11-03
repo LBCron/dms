@@ -1175,6 +1175,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#systemkonten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemkonten
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Systemkonten">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#systemrollen-systemkonto-und-paket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemrollen Systemkonto und Paket
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verantwortliche-felder-auf-benutzer-und-rollen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2596,6 +2624,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#systemkonten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemkonten
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Systemkonten">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#systemrollen-systemkonto-und-paket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemrollen Systemkonto und Paket
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verantwortliche-felder-auf-benutzer-und-rollen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2700,6 +2756,22 @@
 <p class="admonition-title">Rollen und Rechte</p>
 <p>Rollen geben von sich aus keine Rechte – außer der Systemrolle <em>Administrator</em>, die die Werkbank freischaltet. Was eine Rolle in der Ablage darf, legst du in den <a href="../berechtigungen/">Berechtigungen</a> fest, etwa „Rolle <em>Buchhaltung</em> darf alle Rechnungen lesen und bearbeiten“.</p>
 </div>
+<h2 id="systemkonten">Systemkonten<a class="headerlink" href="#systemkonten" title="Permanent link">&para;</a></h2>
+<p>Unter der Liste der Benutzer stehen die <strong>Systemkonten</strong>: Konten, unter denen das DMS selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.</p>
+<ul>
+<li><strong>Automatisierung</strong> (Systemrolle <em>Systemkonto</em>): Unter diesem Konto laufen Automatisierungen. In der Historie steht dann „Automatisierung“ statt des Administrators, der sie eingerichtet hat – und sie laufen weiter, wenn dieser Administrator geht oder deaktiviert wird.</li>
+<li><strong>Paket …</strong> (Systemrolle <em>Paket</em>): je Paket mit Code ein Dienstkonto. Es darf nur, was du bei der Installation des Pakets bestätigt hast. Wird das Paket entfernt, bleibt das Konto für die Historie stehen.</li>
+<li><strong>Nicht benutzbar:</strong> kein Passwort, keine Anmeldung, keine Sitzung, kein API-Schlüssel, kein „Als Benutzer anmelden“. Systemkonten stehen in keiner Auswahl (Für, Vertreter, Empfänger, Verweise auf Benutzer), zählen nicht als Benutzer und lassen sich weder deaktivieren noch löschen.</li>
+<li><strong>Ohne Benutzer-Mappe:</strong> Sie erscheinen nicht in der Ablage unter <em>Benutzer</em>.</li>
+</ul>
+<h3 id="systemrollen-systemkonto-und-paket">Systemrollen <em>Systemkonto</em> und <em>Paket</em><a class="headerlink" href="#systemrollen-systemkonto-und-paket" title="Permanent link">&para;</a></h3>
+<p>Neben <em>Administrator</em> und <em>Mitglied</em> gibt es zwei weitere Systemrollen als Rollen-Mappen: <strong>Systemkonto</strong> und <strong>Paket</strong>. Du vergibst sie nie an Menschen; sie stehen nur in den <a href="../berechtigungen/#systemkonten-und-pakete">Regeln am Mappentyp</a> zur Wahl.</p>
+<ul>
+<li><strong>Ohne eigene Regeln</strong> bleibt alles wie bisher: Das Systemkonto darf an Mappen alles außer Passwörter sehen, ein Paket genau das, was bei seiner Installation bestätigt wurde.</li>
+<li><strong>Mit Regeln</strong> schränkst du das ein, z. B. „Wenn Benutzer hat Rolle <em>Systemkonto</em> → alle Rechte entziehen“ am Mappentyp <em>Gesundheit</em>: Keine Automatisierung liest oder ändert dann Gesundheitsmappen.</li>
+<li>Für diese beiden Rollen gilt nur, was eine Regel mit ihrer Rolle sagt – der <strong>Standard</strong> des Mappentyps (der für Mitglieder gilt) wirkt für sie nicht. Eine Regel kann einem Paket nie mehr geben, als bei der Installation bestätigt wurde.</li>
+<li><strong>Werkbank:</strong> Das Systemkonto ist kein Administrator. Benutzer und Rechte verwalten, Wiederherstellen, Papierkorb leeren, Notfallblatt und Angaben zur Sicherung bleiben ihm verschlossen.</li>
+</ul>
 <h2 id="verantwortliche-felder-auf-benutzer-und-rollen">Verantwortliche: Felder auf Benutzer und Rollen<a class="headerlink" href="#verantwortliche-felder-auf-benutzer-und-rollen" title="Permanent link">&para;</a></h2>
 <p>Für „wer kümmert sich?“ legst du an einem Mappentyp ein Feld der Feldart <strong>Verweis</strong> an:</p>
 <ul>
