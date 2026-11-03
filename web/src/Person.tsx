@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { abwesenheitText, useDaten } from './daten';
 import { Link } from './ort';
+import { t } from './sprache';
 
 /** In der Druckansicht stehen Namen als reiner Text (#65). */
 const OhneLinks = createContext(false);
@@ -18,6 +19,8 @@ export function Person({ id, ersatz, vor = '', className }: { id: string | null 
   if (!p) return <span className={`person weg ${className ?? ''}`} title="Diesen Benutzer gibt es nicht mehr">{vor}{ersatz ?? 'gelöschter Benutzer'}</span>;
   // Dienstkonto eines Pakets (#338): Name ohne Link, es gibt keine Benutzer-Mappe dazu.
   if (p.art === 'dienst') return <span className={`person paket ${className ?? ''}`} title="Paket mit Code (Dienstkonto)">{vor}{p.name}</span>;
+  // Systemkonto (#673), z. B. „Automatisierung“: ebenso ohne Mappe.
+  if (p.art === 'system') return <span className={`person paket ${className ?? ''}`} title={t('konten.systemkonten.rolle.systemkonto')}>{vor}{p.name}</span>;
   const typ = d.typen.find((t) => t.system === 'benutzer');
   if (!typ || ohneLinks) return <span className={className}>{vor}{p.name}</span>;
   return <Link to={`/ablage/${typ.id}/${id}`} className={`person ${className ?? ''}`} title={`Mappe von ${p.name} öffnen${p.abwesend ? ` – ${abwesenheitText(p)}` : ''}`}>{vor}{p.name}</Link>;

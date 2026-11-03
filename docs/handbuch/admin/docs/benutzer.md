@@ -85,6 +85,24 @@ Neben der **Systemrolle** (*Administrator* oder *Mitglied*) kann ein Benutzer be
 !!! info "Rollen und Rechte"
     Rollen geben von sich aus keine Rechte – außer der Systemrolle *Administrator*, die die Werkbank freischaltet. Was eine Rolle in der Ablage darf, legst du in den [Berechtigungen](berechtigungen.md) fest, etwa „Rolle *Buchhaltung* darf alle Rechnungen lesen und bearbeiten“.
 
+## Systemkonten
+
+Unter der Liste der Benutzer stehen die **Systemkonten**: Konten, unter denen das DMS selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.
+
+- **Automatisierung** (Systemrolle *Systemkonto*): Unter diesem Konto laufen Automatisierungen. In der Historie steht dann „Automatisierung“ statt des Administrators, der sie eingerichtet hat – und sie laufen weiter, wenn dieser Administrator geht oder deaktiviert wird.
+- **Paket …** (Systemrolle *Paket*): je Paket mit Code ein Dienstkonto. Es darf nur, was du bei der Installation des Pakets bestätigt hast. Wird das Paket entfernt, bleibt das Konto für die Historie stehen.
+- **Nicht benutzbar:** kein Passwort, keine Anmeldung, keine Sitzung, kein API-Schlüssel, kein „Als Benutzer anmelden“. Systemkonten stehen in keiner Auswahl (Für, Vertreter, Empfänger, Verweise auf Benutzer), zählen nicht als Benutzer und lassen sich weder deaktivieren noch löschen.
+- **Ohne Benutzer-Mappe:** Sie erscheinen nicht in der Ablage unter *Benutzer*.
+
+### Systemrollen *Systemkonto* und *Paket*
+
+Neben *Administrator* und *Mitglied* gibt es zwei weitere Systemrollen als Rollen-Mappen: **Systemkonto** und **Paket**. Du vergibst sie nie an Menschen; sie stehen nur in den [Regeln am Mappentyp](berechtigungen.md#systemkonten-und-pakete) zur Wahl.
+
+- **Ohne eigene Regeln** bleibt alles wie bisher: Das Systemkonto darf an Mappen alles außer Passwörter sehen, ein Paket genau das, was bei seiner Installation bestätigt wurde.
+- **Mit Regeln** schränkst du das ein, z. B. „Wenn Benutzer hat Rolle *Systemkonto* → alle Rechte entziehen“ am Mappentyp *Gesundheit*: Keine Automatisierung liest oder ändert dann Gesundheitsmappen.
+- Für diese beiden Rollen gilt nur, was eine Regel mit ihrer Rolle sagt – der **Standard** des Mappentyps (der für Mitglieder gilt) wirkt für sie nicht. Eine Regel kann einem Paket nie mehr geben, als bei der Installation bestätigt wurde.
+- **Werkbank:** Das Systemkonto ist kein Administrator. Benutzer und Rechte verwalten, Wiederherstellen, Papierkorb leeren, Notfallblatt und Angaben zur Sicherung bleiben ihm verschlossen.
+
 ## Verantwortliche: Felder auf Benutzer und Rollen
 
 Für „wer kümmert sich?“ legst du an einem Mappentyp ein Feld der Feldart **Verweis** an:

@@ -202,6 +202,22 @@ Wer zuletzt speichert, darf keine Felder zurücksetzen, die er nicht angefasst h
 
 Tests: `server/test/gleichzeitig.test.ts` (Arbeitsspeicher und PostgreSQL), im Browser `docs/handbuch/screenshots/gleichzeitig-pruefen.mjs` (zwei Fenster, Workflow „Handbuch“).
 
+## Systemkonten und Kontorollen (#673) { #systemkonten }
+
+Neben Menschen (`benutzer.art = 'person'`) gibt es zwei Arten von Konten, die sich nie anmelden:
+
+| Art | Beispiel | Systemrolle | Rechte an Mappen |
+|---|---|---|---|
+| `dienst` (#338) | „Paket Texterkennung“, je Paket mit Code eines | **Paket** (`rolle:paket`) | bestätigte Rechte aus dem Manifest, eingeschränkt durch Regeln für die Rolle Paket |
+| `system` (#673) | „Automatisierung“ (`systemkonto = 'automatisierung'`) | **Systemkonto** (`rolle:systemkonto`) | alles außer `P`, eingeschränkt durch Regeln für die Rolle Systemkonto |
+
+- **Anlegen:** `Konten.systemkonto(kennung)` beim Start (`index.ts`), idempotent; in PostgreSQL schützt der Index `benutzer_systemkonto` vor einem zweiten Konto, auch bei zwei Servern (Migration 059).
+- **Nie benutzbar:** `holeHash`, `listeBenutzer`, `anzahlBenutzer` sehen nur Menschen; `benutzerZu` (Sitzung) und `benutzerMitId` (API-Schlüssel) lehnen Systemkonten ab; Benutzerverwaltung und „Als Benutzer anmelden“ kennen sie nicht (`person()`). `personen()` liefert sie nur für Namen (`aktiv: false`, `art`).
+- **Rollen:** Die Rollen-Mappen `rolle:systemkonto` und `rolle:paket` legt `sichereSystem()` an (`kontorollen`). `listeRollen()` liefert sie nur mit `mitKonten`, `pruefeRollen()` lehnt sie ab.
+- **Zugriff:** `Dienst.zugriff(konto)` setzt `wer.rollen = [Kontorolle]` und schneidet die Mappentypen mit `kontoRegelwerk(typ, rolleId)` (`shared/src/rechte.ts`) zu: Grundeinstellung „alles“, nur Regeln, die die Rolle nennen (`nenntRolle`). So sperrt ein strenger Standard für Mitglieder keine Automatisierung aus, ein Administrator kann aber gezielt einschränken. Für Pakete wird das Ergebnis mit den bestätigten Rechten geschnitten. `Dienst.systemZugriff('automatisierung')` liefert den Zugriff des Systemkontos (für den Motor der Automatisierungen, #674).
+- **Werkbank:** Systemkonten sind nie `admin`; welche Werkbank-Aktionen eine Karte darf, entscheidet die Karte selbst (#677).
+- **Oberfläche:** Werkbank → Benutzer, Abschnitt „Systemkonten“ (`GET /api/benutzer/systemkonten`, nur Administratoren).
+
 ## Zähler-Endpunkt und Schlüssel-Stufen (#625) { #zaehler-endpunkt }
 
 Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, **ob etwas Neues da ist**. Dafür gibt es `GET /api/v1/ich/zaehler` (intern `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):

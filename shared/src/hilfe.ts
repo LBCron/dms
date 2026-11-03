@@ -32,6 +32,7 @@ export const HILFE = {
   'werkbank.titelfilter': admin('mappentypen/', 'Platzhalter formatieren', 'platzhalter-formatieren'),
   'werkbank.sichten': admin('sichten/', 'Ansichten'),
   'werkbank.benutzer': admin('benutzer/', 'Benutzern und Rollen'),
+  'werkbank.systemkonten': admin('benutzer/', 'Systemkonten', 'systemkonten'),
   'werkbank.berechtigungen': admin('berechtigungen/', 'Berechtigungen'),
   'benutzer.wasSieht': admin('benutzer/', 'Was sieht ein Benutzer?', 'was-sieht-ein-benutzer'),
   'berechtigungen.grund': admin('berechtigungen/', 'Standard', 'standard'),

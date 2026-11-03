@@ -70,6 +70,16 @@ Die Regeln werden mit **Mappentyp speichern** gespeichert, zusammen mit Feldern,
 
 Beim Speichern prüft das DMS außerdem, ob danach Mappen dieses Mappentyps **niemand mehr lesen** könnte (außer Administratoren), und fragt in diesem Fall nach. Jede Änderung steht im [Protokoll](fehlersuche.md) mit der vollständigen Regelliste.
 
+## Systemkonten und Pakete
+
+Automatisierungen laufen unter dem Systemkonto *Automatisierung*, Pakete mit Code unter ihrem Dienstkonto (siehe [Systemkonten](benutzer.md#systemkonten)). Für sie gibt es die Systemrollen **Systemkonto** und **Paket**, die du in der Bedingung *Benutzer hat Rolle* wählst.
+
+- Für diese Konten zählen **nur Regeln, die ihre Rolle nennen**. Der Standard oben gilt für sie nicht – sonst würde ein strenger Standard für Mitglieder auch jede Automatisierung aussperren.
+- Ohne solche Regeln darf das Systemkonto alles außer Passwörter sehen; ein Paket darf, was bei seiner Installation bestätigt wurde.
+- Eine Regel für *Paket* kann nur einschränken, nie über die bestätigten Rechte hinaus erteilen.
+
+Beispiel: Am Mappentyp *Gesundheit* eine Regel „Wenn Benutzer hat Rolle *Systemkonto* → C R U D P entziehen“. Danach liest und ändert keine Automatisierung mehr Gesundheitsmappen.
+
 ## Testlauf
 
 Unter den Regeln steht der **Testlauf**: Welche Rechte hätte ein bestimmter Benutzer an einer bestimmten Mappe? **Benutzer** und **Testmappe** wählst du genauso wie in einem Verweisfeld einer Mappe: Tippe einen Teil des Namens bzw. Titels und klicke auf einen Treffer; mit **Ändern** wählst du neu. Ist ein Administrator gewählt, steht das gleich daneben – für ihn gelten die Regeln nicht. Sobald beides gewählt ist, erscheint das Ergebnis von selbst. Die Tabelle zeigt Schritt für Schritt, welche Regel zutraf, was sie gesetzt hat und wie der Stand danach war.

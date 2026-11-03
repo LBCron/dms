@@ -360,13 +360,15 @@ export interface WhAbgleich {
 export interface ProbeStand { ampel: 'gruen' | 'gelb' | 'rot' | null; letzte: { name: string; am: string; ok: boolean; info: string } | null; plan: { aktiv: boolean; wochentag: number; uhrzeit: string } }
 export interface WartungWerkbank extends WartungOeffentlich { beginn: string | null; von: string | null; sitzungen: WartungSitzung[]; /** „Jetzt sofort gesperrt“ (#402) */ sofort?: boolean }
 /** Benutzer für Namen und Empfängerauswahl; abwesend, solange die Abwesenheit an ist (#78). */
-export interface Person { id: string; name: string; aktiv?: boolean; /** Dienstkonto eines Pakets (#338) */ art?: 'dienst'; abwesend?: { wirkt: boolean; von: string | null; bis: string | null; vertreter: string } }
+export interface Person { id: string; name: string; aktiv?: boolean; /** Dienstkonto eines Pakets (#338) bzw. Systemkonto (#673) */ art?: 'dienst' | 'system'; abwesend?: { wirkt: boolean; von: string | null; bis: string | null; vertreter: string } }
 /** Werkbank: tägliche Zusammenfassung (#54, #92, #94). */
 export interface MailEinstellung { aktiv: boolean; uhrzeit: string; bundesland: string | null }
 export interface Zusammenfassung {
   aktiv: boolean; uhrzeit: string | null; tage: number[]; feiertage: boolean;
   standard: { uhrzeit: string; tage: number[]; bundesland: string | null }; versand: boolean;
 }
+/** Ein Konto, das kein Mensch ist (#673): Systemkonto „Automatisierung“ oder Dienstkonto eines Pakets. */
+export interface Systemkonto { id: string; name: string; rolle: 'systemkonto' | 'paket'; aktiv: boolean; systemkonto?: string; paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string }> }
 export interface LinkErgebnis { benutzer: Benutzer; mailVerschickt: boolean; link?: string; mailFehler?: string }
 
 export const api = {
@@ -440,6 +442,8 @@ export const api = {
   benutzerAendern: (id: string, d: Partial<Pick<Benutzer, 'name' | 'rolle' | 'aktiv' | 'rollen'>>) => anfrage<Benutzer>('PUT', `/api/benutzer/${id}`, d),
   /** Alle Rollen (Systemrollen zuerst) für die Benutzerverwaltung. */
   rollen: () => anfrage<Array<{ id: string; name: string; system: boolean }>>('GET', '/api/rollen'),
+  /** Systemkonten und Dienstkonten der Pakete (#673). */
+  systemkonten: () => anfrage<Systemkonto[]>('GET', '/api/benutzer/systemkonten'),
   benutzerLoeschen: (id: string) => anfrage<null>('DELETE', `/api/benutzer/${id}`),
   neuerLink: (id: string) => anfrage<LinkErgebnis>('POST', `/api/benutzer/${id}/link`),
   sitzungen: (id: string) => anfrage<Sitzung[]>('GET', `/api/benutzer/${id}/sitzungen`),

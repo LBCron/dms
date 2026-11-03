@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { abwesenheitWirkt, AKTIV_MINUTEN, geraetText, istGeradeAktiv, KEINE_ABWESENHEIT, ROLLEN, type Benutzer, type Rolle, type Sitzung } from '../../../shared/src/model';
 import { heuteIn } from '../../../shared/src/sichten';
 import { AbwesenheitFormular, zeitraumText } from '../profil/Abwesenheit';
-import { api, type LinkErgebnis } from '../api';
+import { api, type LinkErgebnis, type Systemkonto } from '../api';
+import { t } from '../sprache';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -85,7 +86,56 @@ export function BenutzerListe({ liste: alle, offen }: { liste: Benutzer[]; offen
           );
         })}
       </ul>
+      <SystemkontenListe offen={offen} />
     </>
+  );
+}
+
+/** Systemkonten und Dienstkonten der Pakete (#673): sichtbar, aber nicht bearbeitbar. */
+export function useSystemkonten() {
+  const d = useDaten();
+  const [liste, setListe] = useState<Systemkonto[] | null>(null);
+  useEffect(() => { api.systemkonten().then(setListe).catch(() => setListe([])); }, [d.stand]);
+  return liste;
+}
+
+function SystemkontenListe({ offen }: { offen?: string }) {
+  const liste = useSystemkonten();
+  if (!liste) return null;
+  return (
+    <>
+      <h3 className="h4 abschnitt">{t('konten.systemkonten.titel')} <Hilfe ort="werkbank.systemkonten" /></h3>
+      {!liste.length ? <p className="leise klein">{t('konten.systemkonten.leer')}</p> : (
+        <ul className="mappenliste">
+          {liste.map((k) => (
+            <li key={k.id}>
+              <Link to={`/werkbank/benutzer/konto-${k.id}`} className={`eintrag werk ${offen === `konto-${k.id}` ? 'an' : ''} ${k.aktiv ? '' : 'grau'}`}>
+                <span className="titel">{k.name}</span>
+                <span className="unter">{t(`konten.systemkonten.rolle.${k.rolle}`)} · {t('konten.systemkonten.nichtAnmeldbar')}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+/** Rechte Spalte zu einem Systemkonto (#673): nur Angaben, nichts zu bearbeiten. */
+export function SystemkontoDetail({ id }: { id: string }) {
+  const liste = useSystemkonten();
+  if (!liste) return <p className="leise">Lade …</p>;
+  const k = liste.find((x) => x.id === id);
+  if (!k) return <div className="leer"><p>Dieses Konto gibt es nicht (mehr).</p></div>;
+  const rolle = t(`konten.systemkonten.rolle.${k.rolle}`);
+  return (
+    <div className="blatt">
+      <h2 className="h3">{k.name} <span className="chip">{rolle}</span></h2>
+      <p className="leise">{t('konten.systemkonten.beschreibung')}</p>
+      {k.rolle === 'paket' && <p>{k.paket ? t('konten.systemkonten.paket', { paket: k.paket }) : t('konten.systemkonten.paketEntfernt')}</p>}
+      <p>{t('konten.systemkonten.rechte', { rolle })}</p>
+      {k.rolle === 'systemkonto' && <p>{k.automatisierungen.length ? t('konten.systemkonten.automatisierungen', { liste: k.automatisierungen.map((a) => a.name).join(', ') }) : t('konten.systemkonten.keineAutomatisierungen')}</p>}
+    </div>
   );
 }
 
