@@ -65,6 +65,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   suchwoerter_eingang: 'nicht enthalten: neue Wörter für das Wörterverzeichnis, noch nicht übernommen (#575, abgeleitet)',
   vektoren: 'nicht enthalten: Vektoren zu Dokumenten (#442, abgeleitet – das Paket mit dms:vektoren rechnet sie neu)',
   gesehen: 'nicht enthalten: wann ein Benutzer eine Mappe zuletzt geöffnet hat (#422, nur für die Hervorhebung geänderter Mappen)',
+  zaehlerstaende: 'nicht enthalten: Stand der Zahlen je Benutzer für den Zähler-Endpunkt (#625, nur ein Hash der Zahlen, technisch)',
   schema_migrationen: 'nicht enthalten: Stand der Datenbank (steht als Version im Manifest)',
 };
 

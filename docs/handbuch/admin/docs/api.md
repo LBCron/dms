@@ -17,7 +17,10 @@ Die vollständige Beschreibung im **OpenAPI-Format** (Version 3.1):
 Jeder Benutzer erzeugt seine Schlüssel selbst unter **Profil → Sicherheit → API-Schlüssel**, höchstens 50 je Benutzer – **außer Administratoren** (ab 0.26): Über die Schnittstelle arbeitet immer ein normaler Benutzer. Lege für ein Programm am besten einen eigenen Benutzer an (z. B. „Scanner“), melde dich als dieser an und erzeuge den Schlüssel dort. Schlüssel, die Administratoren schon vorher hatten, funktionieren weiter; die Werkbank-Übersicht erinnert daran, sie so zu ersetzen.
 
 - **Name** – wofür der Schlüssel ist, z. B. „Scanner Arbeitszimmer“.
-- **Recht** – *nur lesen* oder *lesen und schreiben*.
+- **Recht** (Stufe) – eine von dreien:
+    - *nur lesen* – liest alles, was der Benutzer lesen darf (nur `GET`).
+    - *lesen und schreiben* – liest und ändert alles, was der Benutzer darf.
+    - *nur Zähler* (ab #625) – ruft **nur** die [Zahlen](#zaehler) ab (`GET /api/v1/ich/zaehler`): neue Post, Zu erledigen, anstehende und überfällige Fristen. Jeder andere Aufruf, auch das [Laufwerk](webdav.md), bekommt `403`. Gedacht für Hausautomatisierung, Wand-Tablets und Anzeigen: Geht der Schlüssel verloren, erfährt jemand höchstens, wie viel Post und Aufgaben der Benutzer hat – keine Titel, Namen oder Inhalte. „Passwörter lesen“ gibt es für diese Stufe nicht.
 - **Ablaufdatum** – optional.
 - **Passwörter lesen** – eigenes Recht für [Passwortfelder](mappentypen.md#passwortfelder): Nur damit liefert `GET /api/v1/mappen…?passwoerter=anzeigen` sie im Klartext; jeder Abruf steht im Protokoll. Ohne den Parameter steht dort immer nur `{"gesetzt": true, "lesbar": true}`.
 
@@ -44,6 +47,44 @@ curl -X POST -H "Authorization: Bearer dms_…" -H "Content-Type: application/js
 ```
 
 Die Ids der Mappentypen und die Kennungen ihrer Felder (`key`) liefert `GET /api/v1/typen`.
+
+## Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen { #zaehler }
+
+`GET /api/v1/ich/zaehler` liefert **nur Zahlen** für den Benutzer des Schlüssels, in dessen [Berechtigungen](berechtigungen.md) – ohne Titel, Namen, Absender oder Inhalte. Dafür genügt ein Schlüssel der Stufe *nur Zähler*; *nur lesen* und *lesen und schreiben* dürfen ihn ebenfalls. Ein Administrator ruft ihn mit seiner Anmeldung im Browser ab (Administratoren bekommen keine Schlüssel).
+
+```sh
+curl -i -H "Authorization: Bearer dms_…" https://dms.example.org/api/v1/ich/zaehler
+```
+
+```http
+HTTP/1.1 200 OK
+ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"
+Cache-Control: private, no-cache
+Content-Type: application/json; charset=utf-8
+
+{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
+```
+
+| Feld | Bedeutung |
+| --- | --- |
+| `neuePost` | [Post](https://motom001.github.io/dms/benutzer/post/) im Stand *Neu*, deren *Für* der Benutzer ist oder leer ist – nur Post, die er lesen darf |
+| `zuErledigen` | wie **Zu erledigen** in der Ablage: Mappen mit offenen Aufgaben für ihn |
+| `anstehend` | Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen (wie **Anstehend**) |
+| `ueberfaellig` | offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute |
+| `stand` | zählt um eins hoch, sobald sich eine der Zahlen gegenüber dem letzten Abruf geändert hat |
+| `geaendert` | wann das DMS diese Änderung bemerkt hat (beim Abruf) |
+
+**Nichts Neues kostet nichts:** Schicke das `ETag` des letzten Abrufs als `If-None-Match` mit. Hat sich nichts geändert, antwortet das DMS mit `304 Not Modified` ohne Inhalt:
+
+```sh
+curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"' \
+  https://dms.example.org/api/v1/ich/zaehler
+# HTTP/1.1 304 Not Modified
+```
+
+- Die Zahlen kommen aus demselben Zwischenspeicher wie die Zahlen der Ablage: Auch bei 50.000 Mappen ist ein Abruf meist in wenigen Millisekunden beantwortet. Alle paar Minuten abzufragen (z. B. alle 5 Minuten) ist unbedenklich.
+- Der Stand liegt in der Datenbank: Er übersteht einen Neustart. Nach einer [Wiederherstellung](wiederherstellen.md) kann er auf den Stand der Sicherung zurückgehen – vergleiche ihn deshalb nur auf „anders“, nicht auf „größer“.
+- Andere Aufrufe mit einem Schlüssel *nur Zähler* bekommen `403` mit dem Hinweis, dass dieser Schlüssel nur die Zahlen abruft.
 
 ### Mappe ändern, auch gleichzeitig mit anderen { #mappe-aendern }
 
@@ -107,7 +148,7 @@ Gelöschte Mappen liegen im [Papierkorb](papierkorb.md): `GET /api/v1/papierkorb
 
 ## Regeln
 
-- Schlüssel gelten nur unter `/api/v1`, nicht an den internen Adressen der Oberfläche.
+- Schlüssel gelten nur unter `/api/v1`, nicht an den internen Adressen der Oberfläche. Ein Schlüssel *nur Zähler* gilt nur für `GET /api/v1/ich/zaehler`.
 - Es gelten dieselben Prüfungen wie in der Oberfläche: Pflichtfelder, eindeutige Werte, geschützte Felder der Benutzer-Mappen – und die [Berechtigungen](berechtigungen.md) des Benutzers, dem der Schlüssel gehört. Mappen, die er nicht lesen darf, liefert die Schnittstelle nicht; Passwörter nur mit dem Recht „Passwörter sehen“.
 - Benutzer wählt man auch über die Schnittstelle nur aus denen, deren Benutzer-Mappe man sehen darf (Verantwortlich, Aufgaben, Vertreter). Wie man so ein Programm sauber abgrenzt, zeigt das Beispiel [Ein Programm, das nur Rechnungen sieht](berechtigungen.md#beispiel-ein-programm-das-nur-rechnungen-sieht).
 - Im aktiven [Wartungsmodus](wartungsmodus.md) antwortet die Schnittstelle mit `503` und `Retry-After` (Sekunden bis zum erwarteten Ende).

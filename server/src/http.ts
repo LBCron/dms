@@ -181,6 +181,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
           peer: req.socket.remoteAddress,
           geraet: String(req.headers['user-agent'] ?? ''),
           einrichtungscode: typeof req.headers['x-einrichtungscode'] === 'string' ? req.headers['x-einrichtungscode'] : undefined,
+          kopf: (n) => { const v = req.headers[n]; return Array.isArray(v) ? v.join(', ') : v; },
         };
         const start = performance.now();
         const zeit = ((req as MitKontext).zeit ??= { eingang: start });
@@ -220,9 +221,10 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
           return reply.code(200).send(antwort.strom);
         }
         reply.header('cache-control', 'no-store');
+        for (const [n, v] of Object.entries(antwort.koepfe ?? {})) reply.header(n, v);
         reply.code(antwort.status ?? 200);
         zeit.senden = performance.now();
-        return antwort.status === 204 || antwort.body === undefined ? reply.send() : reply.send(antwort.body);
+        return antwort.status === 204 || antwort.status === 304 || antwort.body === undefined ? reply.send() : reply.send(antwort.body);
       },
     });
   }

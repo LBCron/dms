@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { api, type ApiSchluessel, type ApiSchluesselEingabe } from '../api';
+import { api, type ApiSchluessel, type ApiSchluesselEingabe, type ApiSchluesselRecht } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
 import { useKonto } from '../konto';
 import { rueckfrage } from '../rueckfrage';
+import { t } from '../sprache';
 
 /** API-Schlüssel im eigenen Profil (#20): erzeugen, ändern, löschen; ganz sichtbar nur beim Erzeugen. */
 const datum = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
-const RECHTE = { lesen: 'nur lesen', schreiben: 'lesen und schreiben' } as const;
+/** Stufen (#625: „nur Zähler“ für Hausautomatisierung und Anzeigen). */
+const STUFEN: ApiSchluesselRecht[] = ['lesen', 'schreiben', 'zaehler'];
+const stufe = (r: ApiSchluesselRecht) => t.frei(`api.stufe.${r}`);
 const alsDatum = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
 const ausDatum = (t: string) => (t ? new Date(`${t}T23:59:59`).toISOString() : null);
 
@@ -43,7 +46,7 @@ export function ApiSchluesselBlatt() {
             : (
               <li key={s.id}>
                 <div>
-                  <strong>{s.name}</strong> <span className="mono klein">{s.praefix}</span> <span className={`chip ${s.recht === 'schreiben' ? 'warn' : ''}`}>{RECHTE[s.recht]}</span>
+                  <strong>{s.name}</strong> <span className="mono klein">{s.praefix}</span> <span className={`chip ${s.recht === 'schreiben' ? 'warn' : ''}`}>{stufe(s.recht)}</span>
                   {s.passwoerter && <> <span className="chip warn" title="Darf mit ?passwoerter=anzeigen Passwortfelder im Klartext lesen">Passwörter lesen</span></>}
                   {s.ablauf && Date.parse(s.ablauf) < Date.now() && <> <span className="chip stufe-error">abgelaufen</span></>}
                   <span className="leise klein blockzeile">Erstellt {datum(s.erstellt)} · zuletzt benutzt {datum(s.zuletztBenutzt)}{s.ablauf ? ` · gültig bis ${new Date(s.ablauf).toLocaleDateString('de-DE')}` : ' · ohne Ablauf'}</span>
@@ -71,23 +74,24 @@ export function ApiSchluesselBlatt() {
 
 function SchluesselFormular({ start, knopf, senden, abbrechen }: { start?: ApiSchluessel; knopf: string; senden: (d: ApiSchluesselEingabe) => Promise<boolean>; abbrechen?: () => void }) {
   const [name, setName] = useState(start?.name ?? '');
-  const [recht, setRecht] = useState<'lesen' | 'schreiben'>(start?.recht ?? 'lesen');
+  const [recht, setRecht] = useState<ApiSchluesselRecht>(start?.recht ?? 'lesen');
   const [ablauf, setAblauf] = useState(alsDatum(start?.ablauf ?? null));
   const [passwoerter, setPasswoerter] = useState(start?.passwoerter ?? false);
   async function los(e: FormEvent) {
     e.preventDefault();
-    if (await senden({ name, recht, passwoerter, ablauf: ausDatum(ablauf) }) && !start) { setName(''); setAblauf(''); setPasswoerter(false); }
+    if (await senden({ name, recht, passwoerter: recht !== 'zaehler' && passwoerter, ablauf: ausDatum(ablauf) }) && !start) { setName(''); setAblauf(''); setPasswoerter(false); }
   }
   return (
     <form className="raster schluesselformular" onSubmit={los}>
       <label className="eigenschaft"><span>Name <small>z. B. „Scanner Büro“</small></span><input value={name} onChange={(e) => setName(e.target.value)} required /></label>
       <label className="eigenschaft"><span>Rechte</span>
-        <select value={recht} onChange={(e) => setRecht(e.target.value as 'lesen' | 'schreiben')}>
-          <option value="lesen">nur lesen</option><option value="schreiben">lesen und schreiben</option>
+        <select value={recht} onChange={(e) => setRecht(e.target.value as ApiSchluesselRecht)} aria-describedby="schluessel-stufe-hilfe">
+          {STUFEN.map((r) => <option key={r} value={r}>{stufe(r)}</option>)}
         </select></label>
       <label className="eigenschaft"><span>Gültig bis <small>leer = ohne Ablauf</small></span><input type="date" value={ablauf} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setAblauf(e.target.value)} /></label>
-      <label className="haken breit"><input type="checkbox" checked={passwoerter} onChange={(e) => setPasswoerter(e.target.checked)} />
-        <span>Passwörter lesen<small className="hilfe">Mit <span className="mono">?passwoerter=anzeigen</span> liefert die API Passwortfelder im Klartext. Jeder Abruf steht im Protokoll. Nur einschalten, wenn das Programm die Passwörter wirklich braucht.</small></span></label>
+      <p id="schluessel-stufe-hilfe" className="eigenschaft breit hilfe">{t.frei(`api.stufe.hilfe.${recht}`)}</p>
+      {recht !== 'zaehler' && <label className="haken breit"><input type="checkbox" checked={passwoerter} onChange={(e) => setPasswoerter(e.target.checked)} />
+        <span>Passwörter lesen<small className="hilfe">Mit <span className="mono">?passwoerter=anzeigen</span> liefert die API Passwortfelder im Klartext. Jeder Abruf steht im Protokoll. Nur einschalten, wenn das Programm die Passwörter wirklich braucht.</small></span></label>}
       <div className="knoepfe">
         {abbrechen && <button type="button" className="knopf" onClick={abbrechen}>Abbrechen</button>}
         <button className="knopf primaer">{knopf}</button>

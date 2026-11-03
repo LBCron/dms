@@ -4,16 +4,24 @@ import type { Benutzer } from '../../shared/src/model';
 import { Fachfehler } from './fehler';
 import { hasheSchluessel } from './passwort';
 import { istUuid } from './repo';
+import { t } from './sprache';
 
 /**
  * API-Schlüssel (#20). Ein Schlüssel gehört einem Benutzer und hat höchstens
- * dessen Rechte; zusätzlich „nur lesen“ oder „lesen und schreiben“ und ein
+ * dessen Rechte; zusätzlich „nur lesen“, „lesen und schreiben“ oder „nur Zähler“ (#625) und ein
  * optionales Ablaufdatum. Der vollständige Schlüssel ist nur beim Erzeugen
  * sichtbar, danach nur sein Anfang. Gespeichert wird ein SHA-256-Hash.
  *
  * Verwendung: Header „Authorization: Bearer dms_…“ an /api/v1/….
  */
-export type Recht = 'lesen' | 'schreiben';
+export type Recht = 'lesen' | 'schreiben' | 'zaehler';
+/**
+ * Stufe „nur Zähler“ (#625): darf nur GET /api/v1/ich/zaehler aufrufen (Zahlen ohne Inhalte), alles andere
+ * – auch das Laufwerk und die internen Schnittstellen – beantwortet das DMS mit 403.
+ */
+export const NUR_ZAEHLER: Recht = 'zaehler';
+/** Die einzige Adresse, die ein Schlüssel „nur Zähler“ aufrufen darf. */
+export const ZAEHLER_PFAD = '/api/v1/ich/zaehler';
 export interface ApiSchluessel {
   id: string; benutzerId: string; name: string; praefix: string; recht: Recht;
   /** Eigenes Recht „Passwörter lesen“ (#46): ?passwoerter=anzeigen liefert Passwortfelder im Klartext. */
@@ -37,8 +45,8 @@ function daten(e: unknown): Pick<ApiSchluessel, 'name' | 'recht' | 'ablauf' | 'p
   const x = (e ?? {}) as Record<string, unknown>;
   const name = String(x.name ?? '').trim().slice(0, 80);
   if (!name) throw new Fachfehler(422, 'Bitte einen Namen angeben, z. B. „Scanner Büro“.');
-  const recht = x.recht === 'schreiben' ? 'schreiben' : x.recht === 'lesen' || x.recht === undefined ? 'lesen' : null;
-  if (!recht) throw new Fachfehler(422, 'Recht: „lesen“ oder „schreiben“.');
+  const recht: Recht | null = x.recht === 'schreiben' ? 'schreiben' : x.recht === NUR_ZAEHLER ? NUR_ZAEHLER : x.recht === 'lesen' || x.recht === undefined ? 'lesen' : null;
+  if (!recht) throw new Fachfehler(422, t('api.schluessel.recht-ungueltig'));
   let ablauf: string | null = null;
   if (x.ablauf) {
     const t = Date.parse(String(x.ablauf));
@@ -46,7 +54,8 @@ function daten(e: unknown): Pick<ApiSchluessel, 'name' | 'recht' | 'ablauf' | 'p
     if (t < Date.now()) throw new Fachfehler(422, 'Das Ablaufdatum liegt in der Vergangenheit.');
     ablauf = new Date(t).toISOString();
   }
-  return { name, recht, ablauf, passwoerter: x.passwoerter === true };
+  // „Nur Zähler“ liest keine Mappen, also auch keine Passwörter.
+  return { name, recht, ablauf, passwoerter: recht !== NUR_ZAEHLER && x.passwoerter === true };
 }
 
 export class ApiSchluesselDienst {

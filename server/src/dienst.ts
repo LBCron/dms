@@ -27,7 +27,7 @@ import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Variante
 const SYNONYM_GRUPPEN_MAX = 2000;
 import {
   auswahlKlausel, auswahlProbleme, bereinigeAuswahlfilter, setzeEigeneWerte, erfuellt, bereinigeBedingungen, filterFuer, heuteIn, kinderVon, klauselnFuer, verschiebe, waereKreis, wirksameTypen,
-  type Aufloesung, type Sicht, type SichtDaten,
+  type Aufloesung, type Bedingung, type Sicht, type SichtDaten,
 } from '../../shared/src/sichten';
 import type { Readable } from 'node:stream';
 import { aufbewahrenBis, datumText, inFrist, JAHRE_MAX } from '../../shared/src/archiv';
@@ -106,6 +106,11 @@ export interface KatalogSchluessel { pem: string; fingerabdruck: string; von: st
 /** Eine weitere Katalogquelle (#189) mit Schlüssel des Anbieters (#594). */
 export interface PaketQuelleEintrag { url: string; aktiv: boolean; von: string | null; am: string; schluessel?: KatalogSchluessel | null; gesperrt?: KatalogSchluessel | null }
 export interface Fundstelle { mappeId: string; typId: string; titel: string; typ: string; register: string; name: string; erstellt: string }
+/** Zähler-Endpunkt (#625): nur Zahlen, keine Inhalte. */
+export interface Zaehlerzahlen { neuePost: number; zuErledigen: number; anstehend: number; ueberfaellig: number }
+/** Zähler-Endpunkt (#625): „anstehend“ zählt Termine von heute bis in so vielen Tagen. */
+export const ZAEHLER_TAGE = 7;
+
 export interface Zugriff {
   ich: { id: string; rolle: string };
   admin: boolean;
@@ -510,6 +515,8 @@ export class Dienst {
    */
   readonly fristenstand = new Haushaltsstand(ZAEHLT_FUER_ANSTEHEND);
   private readonly anstehendSpeicher = new Zaehlerspeicher<Anstehend[]>(this.fristenstand);
+  /** Zähler-Endpunkt (#625): „neue Post für mich bzw. ohne Für“ je Benutzer und Rechte, wie die Zahlen der Ansichten. */
+  private readonly neuePostSpeicher = new Zaehlerspeicher<number>(this.stand);
 
   constructor(private grundRepo: Repo, private dateien: Dateispeicher, opt: DienstOptionen = {}) {
     this.grundRepo = this.stand.umhuelle(this.fristenstand.umhuelle(grundRepo));
@@ -2723,6 +2730,49 @@ export class Dienst {
   async zaehlerRahmen() {
     // Post (#192): Zahl der Sicht „Neue Post“ hervorheben wie im Eingang.
     return { papierkorbTage: await this.papierkorbTage(), neuePost: await this.neuePostSicht() };
+  }
+
+  /**
+   * Zähler-Endpunkt (#625, GET /api/v1/ich/zaehler): nur Zahlen, in den Rechten des Benutzers, ohne Titel,
+   * Namen oder Inhalte – für Hausautomatisierung, Anzeigen und Clients.
+   *
+   * - neuePost: Post im Stand „Neu“, deren „Für“ der Benutzer ist oder leer ist, und die er lesen darf.
+   * - zuErledigen: wie „Zu erledigen“ in der Ablage (Mappen mit offenen Aufgaben für ihn).
+   * - anstehend: Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in `ZAEHLER_TAGE` Tagen (wie „Anstehend“).
+   * - ueberfaellig: offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute.
+   *
+   * Alle Zahlen kommen aus den Zwischenspeichern von #512 und #528. Der Stand liegt in der Datenbank
+   * (`zaehlerstaende`): Er zählt hoch, sobald die Zahlen beim Abruf anders sind als beim letzten – das übersteht
+   * Neustarts und gilt für alle Server gleich. Das ETag ist Stand und Hash der Zahlen; gleiche Zahlen, gleiches ETag.
+   */
+  async zaehlerAbruf(z: Zugriff): Promise<{ zahlen: Zaehlerzahlen; stand: number; geaendert: string; etag: string }> {
+    const ansichten = await this.zaehler(z.ich, z);
+    const anstehend = await this.anstehend(z, { tage: ZAEHLER_TAGE });
+    let kommend = 0; let ueberfaellig = 0;
+    for (const e of anstehend.eintraege) if (e.faellig && e.datum < anstehend.heute) ueberfaellig++; else kommend++;
+    const zahlen: Zaehlerzahlen = { neuePost: await this.neuePostFuer(z), zuErledigen: ansichten.eingang, anstehend: kommend, ueberfaellig };
+    // Meist unverändert: dann nur lesen, nichts schreiben.
+    const abdruck = fingerabdruck({ v: 1, ich: z.ich.id, zahlen });
+    const da = await this.repo.zaehlerstand(z.ich.id);
+    const s = da?.abdruck === abdruck ? da : await this.repo.setzeZaehlerstand(z.ich.id, abdruck);
+    return { zahlen, stand: s.stand, geaendert: s.geaendert, etag: `"z${s.stand}-${s.abdruck}"` };
+  }
+
+  /** Neue Post für den Benutzer (#625): Stand „Neu“ und „Für“ ist er selbst oder leer; nur lesbare Post. */
+  private async neuePostFuer(z: Zugriff): Promise<number> {
+    const post = [...z.typen.values()].find((t) => t.system === 'post');
+    if (!post) return 0;
+    const schluessel = `${z.ich.id}|${z.ich.rolle}|${fingerabdruck({ lesen: z.lesen, rollen: z.a.meineRollen, post: post.id })}`;
+    const r = await this.neuePostSpeicher.hole(schluessel, async () => {
+      const neu = { art: 'feld' as const, feld: 'stand', op: 'einerVon' as const, wert: { art: 'fest' as const, wert: [POST_STAND.neu] } };
+      const klausel = (fuer: Bedingung) => ({ typen: [post.id], filter: filterFuer({ bedingungen: [neu, fuer] }, [post], z.a) });
+      const [n] = await this.repo.zaehleKlauseln([[
+        klausel({ art: 'feld', feld: 'fuer', op: 'zeigtAuf', wert: { art: 'ich' } }),
+        klausel({ art: 'feld', feld: 'fuer', op: 'leer' }),
+      ]], z.lesen);
+      return { wert: n, zeitabhaengig: false };
+    });
+    return r.wert;
   }
 
   private async zaehle(ich: { id: string; rolle: string }, lesen: Lesefilter | null, alleSichten: Sicht[], verborgen: Set<string>, a: Aufloesung) {

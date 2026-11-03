@@ -63,7 +63,12 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
 - **Passwort** – gib dein aktuelles und zweimal das neue Passwort ein (mindestens 10 Zeichen). Nach dem Ändern sind alle anderen Anmeldungen beendet.
 - **Zwei-Faktor-Anmeldung** – siehe [unten](#zwei-faktor-anmeldung).
 - **Meine angemeldeten Geräte** – überall, wo du gerade angemeldet bist, mit Browser, Gerät und letzter Aktivität; *dieses Gerät* ist markiert. **Abmelden** beendet eine einzelne Anmeldung, **Alle anderen abmelden** alle außer dieser – etwa wenn du ein Handy verloren hast. Ändere dann am besten auch dein Passwort.
-- **API-Schlüssel** – damit können andere Programme in deinem Namen auf das DMS zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen **Passwörter lesen** ankreuzt. Wie das funktioniert, beschreibt das [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/api/).
+- **API-Schlüssel** – damit können andere Programme in deinem Namen auf das DMS zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen **Passwörter lesen** ankreuzt. Unter **Rechte** wählst du eine von drei Stufen:
+    - **nur lesen** – das Programm liest alles, was du lesen darfst, und ändert nichts.
+    - **lesen und schreiben** – das Programm liest und ändert alles, was du darfst, z. B. ein Scanner, der Post ablegt.
+    - **nur Zähler** – für Hausautomatisierung und Anzeigen, z. B. eine Lampe bei neuer Post oder die Zahl auf dem Wand-Tablet. Der Schlüssel ruft nur deine Zahlen ab: neue Post, Zu erledigen, anstehende und überfällige Fristen. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast – keine Titel, Absender oder Inhalte. Alles andere lehnt das DMS ab.
+
+    Wie das funktioniert, beschreibt das [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/api/#zaehler).
 - <span id="papierkorb"></span>**Papierkorb** – **Beim Abmelden leeren** löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im [Papierkorb](ablage.md#papierkorb), wie der Administrator es eingestellt hat.
 
 !!! note "Anmelden mit dem Firmenkonto"

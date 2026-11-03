@@ -53,6 +53,8 @@ export const OHNE_FOLGEN = new Set<string>([
   'aehnlicheWoerter', 'woerterAnzahl', 'woerterNeu', 'woerterEinarbeiten', 'synonyme', 'legeSynonymAn', 'aendereSynonym', 'loescheSynonym', 'setzeSynonyme',
   // Sprache eines Dokuments (#400): nur für die Volltextsuche.
   'setzeDokumentSprache',
+  // Zähler-Endpunkt (#625): merkt sich nur den Stand der Zahlen.
+  'zaehlerstand', 'setzeZaehlerstand',
 ]);
 
 /**
