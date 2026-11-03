@@ -71,6 +71,9 @@ jobs:
           }
         env:
           TEST_DATABASE_URL: postgres://dms:dms@localhost:5432/dms_test
+      # Der offizielle Katalog unter seiner echten Adresse: erreichbar, nur https, Signatur gültig (#688).
+      - name: Offizieller Katalog erreichbar und signiert
+        run: node --import tsx server/werkzeuge/katalog-erreichbar.ts
       - name: Bauen
         run: npm run build
 

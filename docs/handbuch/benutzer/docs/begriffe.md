@@ -278,7 +278,7 @@ Der Teil des DMS, der den Code von Paketen ausführt – abgeschottet in einem e
 Siehe auch: [Paket](#paket), [Dienstkonto](#dienstkonto).
 
 <a id="paketkatalog"></a>**Paketkatalog** · ~ mit Erklärung · Administratoren  
-Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Das DMS fragt den offiziellen Katalog nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.  
+Die Liste der Pakete, die ein DMS installieren kann (eine Datei katalog.json im Internet). Der offizielle Katalog liegt unter catalog.ablago.app; das DMS fragt ihn nur auf Knopfdruck ab („Katalog abrufen“). Weitere Kataloge trägt man im Expertenmodus unter „Weitere Quellen“ ein.  
 Siehe auch: [Paket](#paket), [Expertenmodus](#expertenmodus).
 
 <a id="postfach"></a>**Postfach** · ~ mit Erklärung · Administratoren  
