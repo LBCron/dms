@@ -767,6 +767,11 @@ export interface Dokument {
    * zwischen zwei Seiten ganz). null: kein Wechsel oder Hinweis weggeklickt.
    */
   teilenAb?: number | null;
+  /**
+   * Archivfassung (PDF/A) eines Pakets mit `dms:archivfassung` (#631): fertig, wartet, ausgelassen oder Fehler – nur
+   * in der Mappe (GET /mappen/{id}) und nur, wenn es eine gibt oder ein Paket dran ist.
+   */
+  archivfassung?: import('./archivfassung').ArchivStand | null;
 }
 
 /** Herkunft einer Dokumentversion (#194). */
@@ -810,6 +815,7 @@ export const HISTORIENARTEN = {
   archivnummer: 'Archivnummer', volltext: 'Volltext gesetzt', weitergegeben: 'weitergegeben',
   geschwaerzt: 'geschwärzte Fassung erstellt', auskunft: 'Auskunft erteilt',
   umgewandelt: 'umgewandelte Fassung erstellt',
+  archivfassung: 'Archivfassung (PDF/A) abgelegt',
 } as const;
 export type Historienart = keyof typeof HISTORIENARTEN;
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */

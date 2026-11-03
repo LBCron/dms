@@ -5,6 +5,7 @@
  */
 import { mappenPdfZeichnen } from '../pdf/export';
 import { aufkleberbogenPdf } from '../pdf/aufkleber';
+import { liesPdfA, textebeneWoerter } from '../pdf/archiv';
 import { erzeugeDokument, type MappenInhalt } from '../pdf/demo-dokumente';
 import { textdokumentPdf } from '../pdf/schreiber';
 import { analysiere as analysiereSchwaerzen, arbeitsPdf, schwaerze, seitenbild as schwaerzSeitenbild } from '../pdf/schwaerzen';
@@ -33,6 +34,7 @@ export const VORGAENGE = {
   analysiereVerkleinern, verkleinerePdf,
   analysiereSchwaerzen, schwaerze, schwaerzSeitenbild, arbeitsPdf,
   textdokumentPdf, mappenPdfZeichnen, aufkleberbogenPdf,
+  liesPdfA, textebeneWoerter,
   demoDokument, exportTabellen,
 };
 

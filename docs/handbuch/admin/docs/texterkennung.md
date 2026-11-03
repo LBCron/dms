@@ -54,6 +54,18 @@ So sieht es aus:
 
 **Warum noch kein Paket für HEIC?** HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter *Einstellungen → Kamera → Formate* „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.
 
+## Archivfassung (PDF/A) { #archivfassung-pdfa }
+
+Mit einem Paket wie **PDF/A** (Recht [Archivfassung ablegen](pakete.md#recht-archivfassung)) bekommt jedes Dokument zusätzlich eine **Archivfassung**: ein durchsuchbares PDF/A, ein Format für die Langzeitaufbewahrung mit unsichtbarer Textebene genau auf den Wörtern. Das Original bleibt unverändert das Dokument.
+
+- **Wann:** erst, wenn der Volltext feststeht – bei Scans also nach der Texterkennung. Das DMS gibt dem Paket dafür die **Wortpositionen** aus der Textebene bzw. aus der Texterkennung. Bei TIFF und Co. nimmt das Paket die Lesefassung aus [Andere Dateitypen](#andere-dateitypen).
+- **Welche:** Standard sind **alle PDFs** (auch mit Text), Fotos und Scans. Mit der Einstellung des Pakets „nur Scans und Bilder“ bekommen PDFs mit vollständigem Text keine – das spart Platz (für PDFs verdoppelt sich der Speicherbedarf etwa). Ist ein PDF schon gültiges PDF/A, gilt es selbst als Archivfassung. **Verschlüsselte PDFs** bekommen keine, der Grund steht am Dokument. **Digital signierte PDFs** bekommen eine für die Anzeige; die Signatur prüft man am Original.
+- **Nie nachladen:** Die Archivfassung enthält nur, was in der Datei selbst steckt. Verweise auf Inhalte im Internet, JavaScript und Aktionen beim Öffnen übernimmt sie nicht – das DMS lehnt eine Archivfassung mit solchen Inhalten ab. Hatte das Original welche, steht am Dokument „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden“; die Adressen stehen nur im Protokoll (Modul *archivfassung*).
+- **Prüfung:** Das DMS nimmt nur ein PDF mit PDF/A-Kennung an (XMP-Metadaten, ungefiltert), unverschlüsselt, bis 100 MB und 1000 Seiten. Die volle Prüfung der Konformität macht das Paket selbst (z. B. mit veraPDF in seiner CI).
+- **Werkbank → Texterkennung → Archivfassung (PDF/A)** zeigt das Paket, wie viele Archivfassungen es gibt, wie viele warten, ausgelassen oder abgelehnt sind – und die Dokumente mit Grund.
+- **Sicherung und Vollexport:** Die Archivfassung gehört zur Sicherung (mit Probe-Wiederherstellung) und steht im Vollexport als `<Datei>.pdfa.pdf` neben dem Original. Die [Auskunft nach Art. 15](datenschutz.md) bleibt, wie sie ist: Dokumente wie abgelegt.
+- **Nach Änderungen am Original** (neue Version, drehen, Seiten löschen, teilen, schwärzen) gilt die alte Archivfassung nicht mehr; angezeigt wird das Original, bis das Paket neu erzeugt hat.
+
 ## Werkbank → Texterkennung
 
 Die Seite ist eine **Übersicht**; Einstellungen der Erkennung gibt es hier nicht mehr (sie stehen beim Paket):

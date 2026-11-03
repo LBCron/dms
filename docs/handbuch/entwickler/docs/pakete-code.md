@@ -16,6 +16,7 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:texterkennung` | 0.133.0 | Texterkennung für Scans und Bilder übernehmen | [Texterkennung übernehmen](#texterkennung) |
 | `dms:umwandeln` | 0.137.0 | Dateien, die der Kern nicht liest (TIFF, WebP …), in PDF, PNG oder JPEG umwandeln – für Vorschaubild und Volltext | **[Dateien umwandeln](#dateien-umwandeln)** – mit den Formaten, die ein Paket zurückgeben darf |
 | `dms:volltext` | 0.145.0 | Volltext für Dateien liefern, die der Kern nicht liest (Word, Excel, E-Mails …) – nur mit „Dokumente lesen“ | **[Volltext liefern](#volltext-liefern)** – Ereignis, Schreiben, Grenzen |
+| `dms:archivfassung` | 0.149.0 | Zu Dokumenten mit fertigem Volltext ein durchsuchbares PDF/A ablegen – mit Wortpositionen, nur mit „Dokumente lesen“ | **[Archivfassung ablegen](#archivfassung)** – Ereignis, Wortpositionen, Annahme, Grenzen |
 | `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
 
 ## So läuft Code im DMS
@@ -82,6 +83,7 @@ code:
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
 | `datei.volltext` | Seit 0.145.0, nur mit `dms:volltext`: Eine Datei eines Typs aus `code.volltext` braucht ihren Volltext – siehe [Volltext liefern](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, ggf. `neu` |
+| `datei.archivfassung` | Seit 0.149.0, nur mit `dms:archivfassung`: Ein Dokument eines Typs aus `code.archivfassung.typen` hat einen feststehenden Volltext und braucht seine Archivfassung – siehe [Archivfassung ablegen](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, ggf. `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, ggf. `neu` |
 | `sicherung.fertig` | Seit 0.142.0, nur mit `dms:sicherung-lesen`: Eine Sicherung liegt fertig im Sicherungsordner – siehe [Sicherung außer Haus](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
 
 ### Volltext fertig (`volltext.fertig`) { #volltext-fertig }
@@ -212,7 +214,7 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 | gleichzeitige Aufrufe | 2 (alle Pakete zusammen) |
 | Speicher des Pakets | 64 KB |
 | Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 32 MB je Paket zusammen; größere Pakete lehnen das DMS und `pruefen.py` ab |
-| Körper einer Anfrage an die API | 2 MB (JSON); `PUT /dokumente/{id}/volltext` seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt |
+| Körper einer Anfrage an die API | 2 MB (JSON); `PUT /dokumente/{id}/volltext` seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt (mit Wortpositionen entsprechend weniger); `PUT /dokumente/{id}/archivfassung` seit 0.149.0 bis 100 MB (roh) |
 
 Ein Paket, das die Grenzen reißt, beeinträchtigt das DMS nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.
 
@@ -570,6 +572,134 @@ Ist kein Paket für einen Dateityp installiert, steht am Dokument *ausgelassen* 
 - **Datei:** höchstens 50 MB (größere meldet der Kern nicht).
 - **Läufer:** 256 MB Speicher und 120 s je Aufruf. Plane den Speicher: die Datei, entpackte Teile und der Text (als JSON) liegen gleichzeitig im Modul.
 - Ältere DMS-Versionen kennen `dms:volltext` nicht und lehnen das Manifest ab – gib `dms: ">=0.145.0"` an.
+
+## Archivfassung ablegen { #archivfassung }
+
+Seit 0.149.0 (#631) legt ein Paket mit dem Recht `dms:archivfassung` zu einem Dokument eine **Archivfassung** ab: ein durchsuchbares **PDF/A** mit unsichtbarer Textebene **genau auf den Wörtern**. Anders als die [Lesefassung](#dateien-umwandeln) (`dms:umwandeln`) entsteht sie **nach** dem Volltext und für PDF, JPEG und PNG ebenso wie für andere Typen. Das Original bleibt das Dokument; die Archivfassung kommt dazu – Anzeige (Vorgabe, mit „Original anzeigen“), Herunterladen und Weitergeben mit Wahl, Sicherung, Probe-Wiederherstellung, Vollexport (`<Datei>.pdfa.pdf`). Die Auskunft nach Art. 15 enthält sie nicht. Ein Beispiel ist das Paket **PDF/A** in der Registry.
+
+### Im Manifest { #archivfassung-manifest }
+
+```yaml
+dms: ">=0.149.0"
+code:
+  sprache: c
+  quelle: code/
+  ereignisse: [datei.archivfassung]
+  archivfassung:
+    typen: [application/pdf, image/jpeg, image/png, image/tiff]   # zuständige Dateitypen (MIME), höchstens 40
+    nur_scans: nur_scans        # optional: Schlüssel einer Einstellung vom Typ janein – an = keine PDFs mit Text
+  rechte:
+    lesen: ["*"]                # Dokumente liegen in Mappen beliebiger Typen
+    dokumente: lesen            # Datei, Volltext und Wortpositionen lesen; Schreibrecht braucht es nicht
+    schnittstellen: ["dms:archivfassung"]
+  netz: []
+  einstellungen:
+    - abschnitt: Archivfassung
+      felder:
+        - { schluessel: nur_scans, name: "Nur Scans und Bilder", typ: janein, standard: false,
+            hilfe: "Aus – alle PDFs bekommen eine Archivfassung (Vorgabe). An – PDFs mit vollständigem Text nicht (spart Platz)." }
+```
+
+- `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` und `dokumente: lesen` gehören zusammen; fehlt eins, lehnen DMS und `pruefen.py` das Paket ab. **PDF, JPEG und PNG sind erlaubt** (anders als bei `dms:umwandeln`).
+- `nur_scans` muss eine Ja/Nein-Einstellung des Pakets nennen. Ohne die Angabe bekommt das Paket alle PDFs. Schaltet der Administrator sie aus, meldet der Kern die PDFs mit Text nach.
+- Die Rückfrage bei der Installation zeigt „Archivfassung (PDF/A) ablegen – … (dms:archivfassung): PDF, JPEG, PNG, TIFF“. Andere Dateitypen bei einem Update heißen neu bestätigen; neue Dateitypen meldet der Kern für den Bestand.
+- **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id.
+
+### Ablauf { #archivfassung-ablauf }
+
+```mermaid
+sequenceDiagram
+  participant K as Kern
+  participant T as Paket Texterkennung
+  participant P as Paket (dms:archivfassung)
+  T->>K: PUT /dokumente/{id}/volltext { text, woerter }
+  Note over K: Volltext steht fest (Stand fertig)
+  K->>P: datei.archivfassung (dokument, sha256, quelle, textebene, wortpositionen …)
+  P->>K: GET /dokumente/{id}/inhalt (bzw. …/fassung bei quelle lesefassung)
+  P->>K: GET /dokumente/{id}/wortpositionen
+  P->>K: GET /dokumente/{id}/volltext (optional)
+  P->>K: PUT /dokumente/{id}/archivfassung?sha256=… (PDF/A, roh)
+  Note over K: Prüfung, Ablage, Historie, Anzeige
+```
+
+1. **Melden – erst mit feststehendem Volltext:** Der Kern schickt `datei.archivfassung`, sobald der Volltext eines Dokuments *fertig* ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit `dms:volltext`, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer **neuen Version** und jeder Änderung am PDF (neuer Prüfwert), bei *Volltext neu erzeugen* (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (**Bestand**: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls `neu: true` – die alte Archivfassung passt dann nicht mehr zum Text.
+2. **Nicht gemeldet:** Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer `neu`), **verschlüsselte PDFs** (Stand *keine* mit Grund am Dokument), PDFs, die **schon gültiges PDF/A** sind (das Original gilt als Archivfassung, keine zweite Datei) und mit `nur_scans` PDFs mit vollständiger Textebene. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer `neu`).
+3. **Warten:** Bevor das Ereignis hinausgeht, steht der Stand „wartet“ in der Ablage – am Dokument „Archivfassung wird erstellt“. Die Anzeige zeigt bis dahin das Original.
+4. **Ablegen:** Das Paket liest die Quelle, die Wortpositionen und ggf. den Volltext und gibt das PDF/A mit `PUT /dokumente/{id}/archivfassung?sha256=…` zurück (Rohdaten mit `api_binaer`). Danach: Stand *fertig*, Eintrag in der Historie („PNG → PDF/A-2b (PDF/A 1.0.0)“), Anzeige der Archivfassung.
+5. **Ohne Archivfassung:** Endet der Aufruf mit Code `0` ohne Archivfassung, steht das `ergebnis` am Dokument („Archivfassung durch Paket *Name*: …“, *keine*); hat der Kern das PDF/A abgelehnt, steht der Grund der Ablehnung dort (*Fehler*), auch in Werkbank → Texterkennung → Archivfassung. Gibt der Läufer auf: *Fehler*.
+
+**Mehrere Server, mindestens einmal:** Das Ereignis liegt im Ausgangskorb der Datenbank und kommt **mindestens einmal** – nach Fehlern, Neustarts oder Bestand und neuer Meldung auch zweimal. Erkenne eine Wiederholung am **`sha256`**: Gibt es für diese Datei schon deine Archivfassung (z. B. `GET /dokumente/{id}/archivfassung` → 200 mit deinem Paket und deiner Version im Kopf `x-dms-archivfassung`) und ist `neu` nicht gesetzt, antworte mit Code `0` („schon vorhanden“). Ein zweites `PUT` mit demselben Ergebnis schadet nicht – es ersetzt die vorhandene. Antwortet der Kern mit 409, hat das Dokument inzwischen eine andere Datei; dafür kommt ein eigenes Ereignis.
+
+### Ereignis `datei.archivfassung` { #ereignis-datei-archivfassung }
+
+```json
+{ "art": "datei.archivfassung", "id": "…", "versuch": 1, "erstellt": "2026-11-03T10:00:00Z",
+  "daten": { "dokument": "…", "mappe": "…", "name": "Scan 2026-11-03.pdf", "mime": "application/pdf",
+             "groesse": 482113, "sha256": "9f2c…", "quelle": "original", "seiten": 3,
+             "textebene": "teilweise", "wortpositionen": true, "sprache": "deu",
+             "signiert": false, "erechnung": false, "formular": false, "extern": true },
+  "paket": { "id": "pdfa", "version": "1.0.0" }, "einstellungen": { … } }
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `dokument`, `mappe`, `name`, `mime`, `groesse` | wie bei den anderen Datei-Ereignissen; `mime` ist ein Typ aus `code.archivfassung.typen` |
+| `sha256` | Prüfwert der Datei – gehört in `PUT …/archivfassung?sha256=…`; daran erkennst du Wiederholungen |
+| `quelle` | `original`: PDF, JPEG oder PNG – lies `GET /dokumente/{id}/inhalt`. `lesefassung`: anderer Typ (TIFF …) – lies die Lesefassung mit `GET /dokumente/{id}/fassung`; `lesefassung` nennt dann `{ mime, sha256 }`. Ein zweiter Bildleser ist nicht nötig. |
+| `seiten` | Seiten der Quelle (Bild: 1) |
+| `textebene` | nur PDF: `voll` (jede Seite hat Text – Online-Rechnung), `teilweise` (gemischt: Textseiten und Scans), `keine` (Scan); Bilder: `keine` |
+| `wortpositionen` | `true`, wenn jede Seite ohne Textebene Wortpositionen der Texterkennung hat. `false`: ältere Texterkennung ohne Wortpositionen – lege den Text dann nicht „ungefähr“ ab, sondern melde den Grund (Code `0`, z. B. „Wortpositionen fehlen – Texterkennung aktualisieren“). |
+| `sprache` | Sprache des Volltexts (z. B. `deu`) oder null |
+| `signiert` | das Original ist digital signiert – die Archivfassung trägt die Signatur nicht; das DMS zeigt am Dokument einen Hinweis |
+| `erechnung` | E-Rechnung (ZUGFeRD/Factur-X): die XML bleibt im Original; du musst sie nicht übernehmen |
+| `formular` | Formularfelder: in der Archivfassung **einfrieren** (Werte sichtbar, nicht mehr ausfüllbar) |
+| `extern` | das Original enthält JavaScript, Aktionen oder Verweise auf externe Inhalte – **nicht übernehmen** (der Kern lehnt eine Archivfassung damit ab) |
+| `neu` | ausdrücklich neu erzeugen, auch wenn es schon eine Archivfassung gibt |
+
+### Wortpositionen { #wortpositionen }
+
+`GET /dokumente/{id}/wortpositionen` (Recht: Lesen des Dokuments – mehr braucht es nicht):
+
+```json
+{ "dokument": "…", "sha256": "9f2c…", "quelle": "original", "mime": "application/pdf", "vollstaendig": true,
+  "seiten": [
+    { "seite": 1, "quelle": "textebene",     "breite": 595.28, "hoehe": 841.89, "woerter": [["Rechnung", 0.0812, 0.0631, 0.1504, 0.0167], …] },
+    { "seite": 2, "quelle": "texterkennung", "breite": 595.28, "hoehe": 841.89, "woerter": [["Kundennummer", 0.1, 0.2, 0.18, 0.015], …] },
+    { "seite": 3, "quelle": "keine",         "breite": 595.28, "hoehe": 841.89, "woerter": [] } ] }
+```
+
+- Ein Wort ist `[Text, x, y, b, h]`: Lage **relativ zur angezeigten Seite** (0…1, Ursprung **oben links**, `b`/`h` Breite und Höhe) – unabhängig von der Auflösung. Für die Textebene im PDF: x<sub>pt</sub> = x · breite, y<sub>pt</sub> = (1 − y − h) · hoehe.
+- `breite`/`hoehe`: Seite in pt (PDF, gedreht wie angezeigt) bzw. in Bildpunkten (Bild).
+- `quelle` je Seite: `textebene` (Text im PDF – die Seite braucht keine neue Textebene), `texterkennung` (Wörter der Texterkennung), `keine`. `vollstaendig`: jede Seite hat Wörter.
+- **Für Texterkennungen:** Die Wortpositionen schickt das Paket mit `dms:texterkennung` zusammen mit dem Text: `PUT /dokumente/{id}/volltext` mit `woerter` – je durch `\f` getrennter Seite eine Liste von Wörtern im selben Format (relativ zur Seite, **wie `GET …/seiten/{nr}/scan` sie liefert** – hat das Paket die Seite zum Lesen gedreht, rechnet es die Lage zurück) oder `null` (Seite ohne Angabe, z. B. eine Textseite eines gemischten PDFs). Höchstens 1,5 Millionen Wörter, Text höchstens 200 Zeichen je Wort. Schreibt ein Paket den Volltext **ohne** `woerter`, fallen die alten weg (sie gehörten zu einem anderen Text). Der Kern speichert sie zur Datei (`<haushalt>/wortpositionen/`, gzip, in der Sicherung).
+
+### Was der Kern annimmt { #archivfassung-annahme }
+
+`PUT /dokumente/{id}/archivfassung?sha256=…` mit dem PDF roh im Körper (`application/octet-stream`). Der Kern macht eine **Grundprüfung** (ohne veraPDF – die volle Prüfung gehört in die CI des Pakets):
+
+- PDF am Inhalt (`%PDF-`), höchstens **100 MB** und **1000 Seiten**, lesbar, **nicht verschlüsselt**;
+- XMP-Metadaten im Katalog (`/Metadata`), **ungefiltert**, mit `pdfaid:part` (1–4) und `pdfaid:conformance` (Teil 1: A, B; 2 und 3: A, B, U; Teil 4: ohne oder E, F) im Namensraum `http://www.aiim.org/pdfa/ns/id/`;
+- **nie nachladen:** kein JavaScript (auch nicht im Namensbaum), keine Aktionen, die etwas starten, senden oder nachladen (`Launch`, `URI`, `SubmitForm`, `ImportData`, `GoToR`, `GoToE`, `ResetForm`, `Sound`, `Movie`, `Rendition` …), keine Aktionen beim Öffnen (`OpenAction` außer Sprung) oder bei Ereignissen (`AA`), keine Verweise auf externe Dateien oder Adressen. Interne Sprünge (`GoTo`) sind erlaubt.
+
+| Status | Bedeutung | Was das Paket tut |
+|---|---|---|
+| 200 | `{ "dokument": "…", "archivfassung": { "mime", "groesse", "sha256", "seiten", "pdfa": { "teil", "stufe" }, "paket", "erstellt", "signiert"?, "erechnung"?, "weggelassen"? } }` | fertig – `ergebnis` z. B. „PDF/A-2b, 3 Seiten, 1,2 MB“ |
+| 403 | ohne `dms:archivfassung`, oder das Paket ist für den Dateityp nicht zuständig | Code `0` |
+| 404 | Dokument weg oder nicht lesbar | Code `0` |
+| 409 | `sha256` ist nicht mehr die Datei des Dokuments | Code `0` (eigenes Ereignis folgt) |
+| 413, 415, 422 | zu groß; kein PDF; keine/ungültige PDF/A-Kennung, verschlüsselt, JavaScript, Aktionen oder Externes – der Grund steht am Dokument und in der Werkbank | Code `0`, Meldung als `ergebnis` |
+| 5xx | Störung im DMS | Fehlercode: der Läufer wiederholt |
+
+Weitere Endpunkte: `GET /dokumente/{id}/archivfassung` (ansehen; `?herunterladen` zum Speichern; Kopf `x-dms-archivfassung`: Kennung, Paket, Version, ggf. `original`), `GET /dokumente/{id}/inhalt?fassung=archiv` (Weitergeben der Archivfassung, mit Stempel-Parametern).
+
+**Speicher:** `<haushalt>/archivfassungen/<ab>/<sha256 des Originals>.fassung` und `.json` (Angaben), `.stand` (wartet, keine, Fehler mit Grund). Die Archivfassung gehört zur **Datei**: Dokumente mit derselben Datei teilen sie, eine Änderung am Original braucht eine neue. Löschen der Datei nimmt sie mit; im Papierkorb bleibt sie wie das Dokument.
+
+### Grenzen { #archivfassung-grenzen }
+
+- **Quelle** höchstens 50 MB (größere meldet der Kern nicht), Archivfassung höchstens 100 MB und 1000 Seiten.
+- **Läufer:** 256 MB Speicher und 120 s je Aufruf. Baue die Archivfassung Seite für Seite und nutze für lange Dokumente die [Fortsetzung](#fortsetzung). Das Paket hat kein Netz (`netz: []`) – Schriften und Farbprofil bringt es unter `code/daten/` mit.
+- **Werkzeug:** Die Lizenz der Bibliotheken des Pakets (z. B. zum Schreiben des PDF/A) muss zum Paket passen; der Kern bringt dafür nichts mit (kein Ghostscript, keine neue Abhängigkeit im Image).
+- Ältere DMS-Versionen kennen `dms:archivfassung` nicht und lehnen das Manifest ab – gib `dms: ">=0.149.0"` an.
 
 ## Sicherung außer Haus { #sicherung-ausser-haus }
 

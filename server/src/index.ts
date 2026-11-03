@@ -37,6 +37,7 @@ import { Einrichtung } from './einrichtung';
 import { bestimmeMandant, mandantNamen } from './mandant';
 import { ordnerAblage, Vorschaubilder } from './vorschau';
 import { Dateiumwandlung, fassungsOrdner, ordnerFassungen, zieheFassungenUm } from './dateiumwandlung';
+import { Archivfassung, archivOrdner, ordnerArchiv, woerterOrdner } from './archivfassung';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
 import { hatSchnittstelle } from '../../shared/src/pakete';
@@ -245,6 +246,10 @@ vorschau.fassung = (sha) => umwandlung.lies(sha);
 texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
 // Volltext aus Paketen (#614): Dateitypen, für die ein Paket mit dms:volltext den Text liefert.
 texterkennung.volltextPaket = dienst.paketVolltext;
+// Archivfassung (PDF/A, #631): Pakete mit dms:archivfassung legen sie im Haushaltsordner ab (Sicherung, Vollexport);
+// Wortpositionen der Texterkennung daneben. Der Kern meldet Dokumente erst mit feststehendem Volltext.
+const archivfassung = new Archivfassung(dienst.archivAnbindung(ordnerArchiv(archivOrdner(ordner.dateien, cfg.haushalt), woerterOrdner(ordner.dateien, cfg.haushalt))));
+dienst.verbindeArchivfassung(archivfassung);
 // Tägliche Zusammenfassung der offenen Aufgaben (#54).
 const typName = async (id: string | undefined) => (await dienst.listeTypen()).find((t) => t.id === id)?.name ?? '';
 const aufgabenmail = new Aufgabenmail({

@@ -31,6 +31,7 @@ import type * as Sw from './schwaerzen';
 import type * as Sch from './schreiber';
 import type * as E from './export';
 import type * as Au from './aufkleber';
+import type * as Ar from './archiv';
 
 export { pdfAus, type Absatz, type Schrift } from './einfach';
 export { bildArt, exifAusrichtung, jpegMasse } from './bild';
@@ -70,6 +71,10 @@ export const arbeitsPdf = (...a: A<typeof Sw.arbeitsPdf>) => arbeite('arbeitsPdf
 export const textdokumentPdf = (...a: A<typeof Sch.textdokumentPdf>) => arbeite('textdokumentPdf', ...a);
 export const mappenPdfZeichnen = (...a: A<typeof E.mappenPdfZeichnen>) => arbeite('mappenPdfZeichnen', ...a);
 export const aufkleberbogenPdf = (...a: A<typeof Au.aufkleberbogenPdf>) => arbeite('aufkleberbogenPdf', ...a);
+/** Archivfassung (#631): PDF/A-Kennung nachsehen, Wörter mit Lage aus der Textebene. */
+export const liesPdfA = (...a: A<typeof Ar.liesPdfA>) => arbeite('liesPdfA', ...a);
+export const textebeneWoerter = (...a: A<typeof Ar.textebeneWoerter>) => arbeite('textebeneWoerter', ...a);
+export type { PdfaBefund } from './archiv';
 
 /** Demo-Dokument (#248) im Arbeiter; der Zufall geht danach mit dem Stand aus dem Arbeiter weiter. */
 export async function erzeugeDokument(z: Zufall, art: Dokumentart, m: MappenInhalt, kennung: string, rastern: boolean) {
