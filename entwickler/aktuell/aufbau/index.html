@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.147/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.148/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -527,6 +527,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#zaehler-endpunkt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zähler-Endpunkt und Schlüssel-Stufen (#625)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -978,6 +989,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#zaehler-endpunkt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zähler-Endpunkt und Schlüssel-Stufen (#625)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1290,6 +1312,25 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li><strong>Formular.</strong> <code>MappeFormular</code> schickt nur die Felder, deren Rohwert von <code>basis</code> abweicht, und <code>stand</code> = <code>mappe.geaendert</code> beim Laden von <code>basis</code>. Bei 409 zeigt <code>Konfliktfrage</code> je Feld die Wahl; „Meins“ geht mit dem neuen Stand aus der Antwort noch einmal mit, „Seins“ übernimmt den Wert und bleibt weg.</li>
 </ul>
 <p>Tests: <code>server/test/gleichzeitig.test.ts</code> (Arbeitsspeicher und PostgreSQL), im Browser <code>docs/handbuch/screenshots/gleichzeitig-pruefen.mjs</code> (zwei Fenster, Workflow „Handbuch“).</p>
+<h2 id="zaehler-endpunkt">Zähler-Endpunkt und Schlüssel-Stufen (#625)<a class="headerlink" href="#zaehler-endpunkt" title="Permanent link">&para;</a></h2>
+<p>Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, <strong>ob etwas Neues da ist</strong>. Dafür gibt es <code>GET /api/v1/ich/zaehler</code> (intern <code>/api/ich/zaehler</code>, <code>Dienst.zaehlerAbruf</code>):</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler
+<span class="c1"># HTTP/1.1 200 OK</span>
+<span class="c1"># ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"</span>
+<span class="c1"># {"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}</span>
+
+curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"'</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler
+<span class="c1"># HTTP/1.1 304 Not Modified   (ohne Inhalt)</span>
+</code></pre></div>
+<ul>
+<li><strong>Nur Zahlen.</strong> Die Antwort enthält nie Titel, Namen, Absender oder Inhalte – auch künftige Felder nicht. Das OpenAPI-Schema <code>Zaehlerstand</code> hat <code>additionalProperties: false</code>, der Test <code>server/test/zaehler-api.test.ts</code> prüft die Schlüssel und dass keine Texte durchrutschen.</li>
+<li><strong>Woher die Zahlen kommen.</strong> <code>zuErledigen</code> ist <code>eingang</code> aus <code>Dienst.zaehler</code> (#512), <code>anstehend</code> und <code>ueberfaellig</code> zählen die Einträge von <code>Dienst.anstehend</code> mit <code>tage = ZAEHLER_TAGE</code> (7, #528), <code>neuePost</code> zählt Post im Stand „Neu“ mit „Für“ = ich oder leer über <code>zaehleKlauseln</code> – mit eigenem <code>Zaehlerspeicher</code> am Haushaltsstand. Alles in den Rechten des Benutzers (Lesefilter); nichts wird für den Endpunkt neu gerechnet, solange sich am Haushalt nichts ändert.</li>
+<li><strong>Stand in der Datenbank</strong> (Tabelle <code>zaehlerstaende</code>, Migration 056). Je Abruf bildet der Server einen Hash der Zahlen (<code>fingerabdruck</code>), vergleicht ihn mit dem gespeicherten und zählt <code>stand</code> nur bei einer Abweichung hoch (<code>Repo.setzeZaehlerstand</code>, ein <code>INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …</code>: gleichzeitige Abrufe zählen eine Änderung einmal). Unverändert heißt: nur lesen. Der Haushaltsstand aus #512 lebt nur im Arbeitsspeicher und fängt nach jedem Neustart bei 0 an – als ETag taugt er darum nicht. Das ETag ist <code>"z&lt;stand&gt;-&lt;hash&gt;"</code>: Gleiches ETag heißt gleiche Zahlen, auch nach einem Neustart oder einer Wiederherstellung.</li>
+<li><strong>ETag und 304.</strong> <code>passtEtag</code> (<code>routen.ts</code>) versteht Listen, <code>W/…</code> und <code>*</code>. Eine Route setzt eigene Köpfe über <code>Antwort.koepfe</code>; Köpfe der Anfrage liest sie über <code>Anfrage.kopf(name)</code>. <code>Cache-Control: private, no-cache</code> statt <code>no-store</code>, damit Programme nachfragen dürfen.</li>
+<li><strong>Schlüssel-Stufe „nur Zähler“</strong> (<code>recht = 'zaehler'</code>, <code>NUR_ZAEHLER</code> und <code>ZAEHLER_PFAD</code> in <code>apischluessel.ts</code>). <code>pruefeZugang</code> lässt sie nur an <code>GET /api/v1/ich/zaehler</code> durch; jede andere Route unter <code>/api/v1</code> und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt <code>403</code> (<code>api.schluessel.nur-zaehler</code>), das Laufwerk ebenfalls (<code>webdav.ts</code>). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.</li>
+<li><strong>Grenzen.</strong> Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.</li>
+</ul>
+<p><strong>Weitere Zahl aufnehmen:</strong> Feld in <code>Zaehlerzahlen</code> (<code>dienst.ts</code>) und im OpenAPI-Schema ergänzen, im Test <code>ZAHLEN</code> – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, <code>v</code> im Hash erhöhen, damit jeder Client einmal neu liest. Der Webhook (#627) kann <code>zaehlerAbruf</code> je Benutzer aufrufen und bei geändertem <code>stand</code> <code>zaehler.geaendert</code> mit Ereignis-Id <code>&lt;benutzer&gt;:&lt;stand&gt;</code> melden.</p>
 <p>Mehr Hintergrund im Administratorhandbuch: <a href="https://motom001.github.io/dms/admin/aktuell/technik/">Technik</a> und <a href="https://motom001.github.io/dms/admin/aktuell/entscheidungen/">Entscheidungen</a>.</p>
 
 

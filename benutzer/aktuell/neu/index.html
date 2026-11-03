@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.147/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.148/neu/">
       
       
         <link rel="prev" href="../original/">
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0147" class="md-skip">
+        <a href="#neu-in-version-0148" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01470" class="md-nav__link">
+  <a href="#01480" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.147.0
+        0.148.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.147.0">
+    <nav class="md-nav" aria-label="0.148.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -435,17 +435,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#geandert" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Geändert
       
     </span>
   </a>
@@ -1160,15 +1149,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01470" class="md-nav__link">
+  <a href="#01480" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.147.0
+        0.148.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.147.0">
+    <nav class="md-nav" aria-label="0.148.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1176,17 +1165,6 @@
     <span class="md-ellipsis">
       
         Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#geandert" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Geändert
       
     </span>
   </a>
@@ -1240,25 +1218,32 @@
   
 
 
-<h1 id="neu-in-version-0147">Neu in Version 0.147<a class="headerlink" href="#neu-in-version-0147" title="Permanent link">&para;</a></h1>
-<h2 id="01470">0.147.0<a class="headerlink" href="#01470" title="Permanent link">&para;</a></h2>
+<h1 id="neu-in-version-0148">Neu in Version 0.148<a class="headerlink" href="#neu-in-version-0148" title="Permanent link">&para;</a></h1>
+<h2 id="01480">0.148.0<a class="headerlink" href="#01480" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>„Im Katalog ansehen“ mit deiner DMS-Version</strong> (#622): Unter <strong>Werkbank → Pakete</strong> öffnet der Link <strong>Im Katalog ansehen</strong> die Katalog-Webseite in einem neuen Tab; bei jedem Paket aus dem offiziellen Katalog führt er unter <strong>Mehr</strong> direkt auf die Seite dieses Pakets. Die Webseite zeigt dann gleich, welche Pakete zu deinem DMS passen – ohne dass du die Version suchen und eintippen musst.</li>
-<li><strong>Es wird nichts übertragen:</strong> Die Version steht nur im Fragment der Adresse (<code>…/dms-registry/#dms=0.146.0</code>). Diesen Teil hinter dem <code>#</code> schickt der Browser nie an den Server; nur das Skript der Katalogseite liest ihn in deinem Browser. Im Fragment steht nur die Version – keine Adresse, kein Haushaltsname, keine Paketliste. Der Link öffnet ohne Herkunftsadresse (<code>rel="noopener noreferrer"</code>). Ist der Katalog nicht erreichbar, steht statt des Links ein Hinweis auf <strong>Ohne Internet …</strong>.</li>
+<li><strong>Zähler für Hausautomatisierung, Anzeigen und Clients</strong> (#625): <code>GET /api/v1/ich/zaehler</code> liefert nur Zahlen für den Benutzer des Schlüssels, in dessen Rechten – neue Post (Stand „Neu“, für ihn oder ohne „Für“), Zu erledigen, Fristen und Erinnerungen in den nächsten 7 Tagen und Überfälliges –, dazu einen <strong>Stand</strong> und den Zeitpunkt der letzten Änderung. Keine Titel, Namen, Absender oder Inhalte.</li>
 </ul>
-<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"neuePost"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"zuErledigen"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="nt">"anstehend"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"ueberfaellig"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"stand"</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="nt">"geaendert"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-03T07:15:00.000Z"</span><span class="p">}</span>
+</code></pre></div>
+<p><strong>Nichts Neues kostet nichts:</strong> Die Antwort trägt ein <code>ETag</code>. Wer es als <code>If-None-Match</code> mitschickt, bekommt bei unveränderten Zahlen <code>304 Not Modified</code> ohne Inhalt. Die Zahlen kommen aus dem Zwischenspeicher der Ablage; ein Abruf dauert meist nur wenige Millisekunden. Der Stand liegt in der Datenbank und übersteht einen Neustart.</p>
 <ul>
-<li><strong>Neue Namen der Texterkennung:</strong> Im Katalog heißt das Grundpaket jetzt <strong>Texterkennung (Deutsch und Englisch)</strong> (Kennung <code>texterkennung</code>, unverändert), die Sprachen dazu <strong>Texterkennung – Zusatzsprache …</strong>, z. B. <strong>Texterkennung – Zusatzsprache Französisch</strong> (<code>texterkennung_fra</code>). Neu im Katalog sind Zusatzsprachen für Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Türkisch, Russisch, Ukrainisch und Arabisch. Der Vorschlag unter <strong>Werkbank → Texterkennung → Erkannte Sprachen</strong> nennt das Paket mit dem neuen Namen.</li>
+<li>
+<p><strong>Neue Schlüssel-Stufe „nur Zähler“</strong> (#625): Unter <strong>Profil → Sicherheit → API-Schlüssel</strong> gibt es neben <em>nur lesen</em> und <em>lesen und schreiben</em> eine dritte Stufe. Ein solcher Schlüssel darf <strong>nur</strong> die Zahlen abrufen; jeder andere Aufruf – auch das Laufwerk und die internen Adressen der Oberfläche – bekommt <code>403</code> mit einer verständlichen Meldung. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast. Ablaufdatum und „zuletzt benutzt“ wie bei den anderen Schlüsseln. Grundlage für die Homey-App (#626) und den Webhook (#627).</p>
+</li>
+<li>
+<p><strong>Update:</strong> Migration 056 erlaubt die neue Stufe und legt die Tabelle für den Stand der Zahlen an (je Benutzer eine Zeile, nur ein Hash der Zahlen). Bestehende Schlüssel bleiben unverändert.</p>
+</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch, Pakete: neuer Abschnitt „Im Katalog ansehen“ – was der Link mitgibt und was nicht.</li>
-<li>Administratorhandbuch (Texterkennung, Aktualisieren) und Benutzerhandbuch (Dokumente): neue Paketnamen, Liste der Zusatzsprachen.</li>
+<li>Administratorhandbuch, Schnittstelle: Schlüssel-Stufen und neuer Abschnitt „Zähler“ mit Beispiel für <code>curl</code>, <code>ETag</code> und <code>304</code>.</li>
+<li>Benutzerhandbuch, Profil: die drei Stufen eines API-Schlüssels.</li>
+<li>Entwicklerhandbuch, Aufbau: Zähler-Endpunkt, Stand in der Datenbank, Schlüssel-Stufe „nur Zähler“.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.146.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.146.0...v0.147.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.147.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.147.0...v0.148.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 

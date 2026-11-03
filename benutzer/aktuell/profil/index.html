@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.147/profil/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.148/profil/">
       
       
         <link rel="prev" href="../benutzer-und-rollen/">
@@ -1556,8 +1556,16 @@
 <li><strong>Passwort</strong> – gib dein aktuelles und zweimal das neue Passwort ein (mindestens 10 Zeichen). Nach dem Ändern sind alle anderen Anmeldungen beendet.</li>
 <li><strong>Zwei-Faktor-Anmeldung</strong> – siehe <a href="#zwei-faktor-anmeldung">unten</a>.</li>
 <li><strong>Meine angemeldeten Geräte</strong> – überall, wo du gerade angemeldet bist, mit Browser, Gerät und letzter Aktivität; <em>dieses Gerät</em> ist markiert. <strong>Abmelden</strong> beendet eine einzelne Anmeldung, <strong>Alle anderen abmelden</strong> alle außer dieser – etwa wenn du ein Handy verloren hast. Ändere dann am besten auch dein Passwort.</li>
-<li><strong>API-Schlüssel</strong> – damit können andere Programme in deinem Namen auf das DMS zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen <strong>Passwörter lesen</strong> ankreuzt. Wie das funktioniert, beschreibt das <a href="https://motom001.github.io/dms/admin/aktuell/api/">Administratorhandbuch</a>.</li>
-<li><span id="papierkorb"></span><strong>Papierkorb</strong> – <strong>Beim Abmelden leeren</strong> löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im <a href="../ablage/#papierkorb">Papierkorb</a>, wie der Administrator es eingestellt hat.</li>
+<li>
+<p><strong>API-Schlüssel</strong> – damit können andere Programme in deinem Namen auf das DMS zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen <strong>Passwörter lesen</strong> ankreuzt. Unter <strong>Rechte</strong> wählst du eine von drei Stufen:</p>
+<ul>
+<li><strong>nur lesen</strong> – das Programm liest alles, was du lesen darfst, und ändert nichts.</li>
+<li><strong>lesen und schreiben</strong> – das Programm liest und ändert alles, was du darfst, z. B. ein Scanner, der Post ablegt.</li>
+<li><strong>nur Zähler</strong> – für Hausautomatisierung und Anzeigen, z. B. eine Lampe bei neuer Post oder die Zahl auf dem Wand-Tablet. Der Schlüssel ruft nur deine Zahlen ab: neue Post, Zu erledigen, anstehende und überfällige Fristen. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast – keine Titel, Absender oder Inhalte. Alles andere lehnt das DMS ab.</li>
+</ul>
+<p>Wie das funktioniert, beschreibt das <a href="https://motom001.github.io/dms/admin/aktuell/api/#zaehler">Administratorhandbuch</a>.
+- <span id="papierkorb"></span><strong>Papierkorb</strong> – <strong>Beim Abmelden leeren</strong> löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im <a href="../ablage/#papierkorb">Papierkorb</a>, wie der Administrator es eingestellt hat.</p>
+</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Anmelden mit dem Firmenkonto</p>
