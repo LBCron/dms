@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.149/hausautomatisierung/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.150/hausautomatisierung/">
       
       
         <link rel="prev" href="../laufwerk/">
@@ -839,6 +839,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#sofort-melden-webhook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sofort melden (Webhook)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sofort melden (Webhook)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beispiel-node-red" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beispiel: Node-RED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1194,6 +1222,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#sofort-melden-webhook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sofort melden (Webhook)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Sofort melden (Webhook)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beispiel-node-red" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beispiel: Node-RED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1236,7 +1292,7 @@
 </tr>
 <tr>
 <td>Andere (Node-RED, ioBroker, eigene Skripte)</td>
-<td>über die <a href="https://motom001.github.io/dms/admin/aktuell/api/#zaehler">Zähler-Schnittstelle</a> mit demselben Schlüssel</td>
+<td>über die <a href="https://motom001.github.io/dms/admin/aktuell/api/#zaehler">Zähler-Schnittstelle</a> mit demselben Schlüssel, sofort per <a href="#sofort-melden-webhook">Webhook</a></td>
 </tr>
 </tbody>
 </table>
@@ -1261,7 +1317,58 @@
 <p>Brauchst du den Schlüssel nicht mehr, löschst du ihn unter <strong>Profil → Sicherheit → API-Schlüssel</strong>; die Hausautomatisierung meldet dann „Schlüssel ungültig“.</p>
 <h2 id="wie-schnell-die-hausautomatisierung-neues-bemerkt">Wie schnell die Hausautomatisierung Neues bemerkt<a class="headerlink" href="#wie-schnell-die-hausautomatisierung-neues-bemerkt" title="Permanent link">&para;</a></h2>
 <p>Die Homey-App fragt das DMS in einem festen Abstand ab, Vorgabe alle <strong>5 Minuten</strong>. Hat sich nichts geändert, antwortet das DMS nur mit „nichts Neues“ – das kostet praktisch nichts. Neue Post bemerkt die Hausautomatisierung also spätestens nach einem Abfrage-Abstand.</p>
-<p><strong>Später</strong> soll das DMS Neues auch sofort melden können (Webhook, <a href="https://github.com/motom001/dms/issues/627">motom001/dms#627</a>); dann löst die Hausautomatisierung ohne Warten aus.</p>
+<p>Soll es <strong>sofort</strong> gehen, richtest du zusätzlich einen <strong>Webhook</strong> ein (nächster Abschnitt): Dann meldet sich das DMS selbst, wenige Sekunden nachdem neue Post da ist, und die Abfrage darf seltener laufen.</p>
+<h2 id="sofort-melden-webhook">Sofort melden (Webhook)<a class="headerlink" href="#sofort-melden-webhook" title="Permanent link">&para;</a></h2>
+<p>Mit einem <strong>Webhook</strong> meldet sich das DMS bei deiner Hausautomatisierung, sobald sich deine Zahlen ändern. Die Meldung enthält <strong>nur die Zahlen</strong> – dieselben wie beim Schlüssel <em>nur Zähler</em> –, nie Titel, Absender oder Inhalte.</p>
+<p><strong>Einmal vorab (Administrator):</strong> Unter <strong>Werkbank → Webhooks</strong> gibt ein Administrator die Adresse der Hausautomatisierung als <strong>Ziel</strong> frei, z. B. <code>http://homey.home.arpa</code> oder <code>http://192.168.178.20:1880</code>. Nur an freigegebene Ziele meldet das DMS. Ohne TLS (<code>http://</code>) geht das nur im Heimnetz; sonst braucht es <code>https://</code>.</p>
+<p><strong>Dann du:</strong></p>
+<ol>
+<li>Öffne <strong>Profil → Benachrichtigungen → Sofort melden (Webhooks)</strong> und wähle <strong>Neuen Webhook anlegen</strong>.</li>
+<li>Gib einen <strong>Namen</strong> (z. B. „Node-RED“) und die <strong>Adresse des Empfängers</strong> ein, z. B. <code>http://192.168.178.20:1880/dms</code>.</li>
+<li>Kopiere das <strong>Geheimnis</strong> (es beginnt mit <code>whsec_</code>) und trag es beim Empfänger ein – es ist nur jetzt ganz zu sehen. Damit prüft der Empfänger, dass die Meldung wirklich vom DMS kommt.</li>
+<li>Gleich danach kommt eine erste Meldung mit deinen aktuellen Zahlen. Mit <strong>Probe senden</strong> schickst du jederzeit eine weitere; darunter siehst du, ob sie angekommen ist.</li>
+</ol>
+<p>Was dabei geschieht:</p>
+<ul>
+<li><strong>Mehrere Änderungen auf einmal</strong> – etwa 20 Briefe aus dem Scanner – kommen als <strong>wenige Meldungen</strong>: höchstens eine je 30 Sekunden, und die letzte hat immer den neuesten Stand.</li>
+<li><strong>Ist die Hausautomatisierung aus</strong>, versucht es das DMS mit wachsenden Abständen erneut, etwa einen Tag lang. Den Fehler siehst du am Webhook. Klappt es so lange nicht, schaltet das DMS den Webhook ab und sagt dir das im Profil; die Administratoren bekommen eine E-Mail. Mit <strong>Einschalten</strong> geht es weiter.</li>
+<li><strong>Doppelt angekommen?</strong> Jede Meldung hat eine <strong>Ereignis-Id</strong>. Kommt dieselbe Id noch einmal (etwa nach einem Neustart des DMS), ist es eine Wiederholung und kann übergangen werden.</li>
+</ul>
+<p>Eine Meldung sieht so aus:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"art"</span><span class="p">:</span><span class="s2">"zaehler.geaendert"</span><span class="p">,</span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11"</span><span class="p">,</span><span class="nt">"zeit"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:02.000Z"</span><span class="p">,</span><span class="nt">"daten"</span><span class="p">:{</span><span class="nt">"neuePost"</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="nt">"zuErledigen"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="nt">"anstehend"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">"ueberfaellig"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="nt">"stand"</span><span class="p">:</span><span class="mi">42</span><span class="p">,</span><span class="nt">"geaendert"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:00.000Z"</span><span class="p">}}</span>
+</code></pre></div>
+<p>Bei <strong>Probe senden</strong> steht unter <code>art</code> der Wert <code>probe</code>.</p>
+<h3 id="beispiel-node-red">Beispiel: Node-RED<a class="headerlink" href="#beispiel-node-red" title="Permanent link">&para;</a></h3>
+<p>Ein kleiner Flow: Ein <strong>http in</strong>-Knoten nimmt die Meldung an, ein <strong>function</strong>-Knoten prüft die Signatur, danach kannst du verzweigen (Lampe an, Mitteilung …).</p>
+<ol>
+<li>Knoten <strong>http in</strong>: Methode <code>POST</code>, Adresse <code>/dms</code>. Dahinter einen Knoten <strong>http response</strong> mit Status <code>204</code>, damit das DMS weiß, dass die Meldung angekommen ist.</li>
+<li>
+<p>Knoten <strong>function</strong> zwischen beide, unter <strong>Setup → Module</strong> das Modul <code>crypto</code> mit dem Namen <code>crypto</code> eintragen, und im Reiter <strong>Nachricht empfangen</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Geheimnis des Webhooks, z. B. als Umgebungsvariable des Flows.</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">geheimnis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">env</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'DMS_WEBHOOK_GEHEIMNIS'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">zeit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">msg</span><span class="p">.</span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="s1">'x-dms-zeit'</span><span class="p">];</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">signatur</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">msg</span><span class="p">.</span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">[</span><span class="s1">'x-dms-signatur'</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="c1">// Das DMS schickt kompaktes JSON; JSON.stringify ergibt wieder denselben Text.</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">rumpf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">msg</span><span class="p">.</span><span class="nx">payload</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">soll</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'v1='</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">createHmac</span><span class="p">(</span><span class="s1">'sha256'</span><span class="p">,</span><span class="w"> </span><span class="nx">geheimnis</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="nx">zeit</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">'.'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">rumpf</span><span class="p">).</span><span class="nx">digest</span><span class="p">(</span><span class="s1">'hex'</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">frisch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">abs</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1000</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">Number</span><span class="p">(</span><span class="nx">zeit</span><span class="p">))</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">300</span><span class="p">;</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">frisch</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">signatur</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="nx">soll</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="nx">crypto</span><span class="p">.</span><span class="nx">timingSafeEqual</span><span class="p">(</span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">signatur</span><span class="p">),</span><span class="w"> </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">soll</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">msg</span><span class="p">.</span><span class="nx">statusCode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">401</span><span class="p">;</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">[</span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nx">msg</span><span class="p">];</span><span class="w">          </span><span class="c1">// Ausgang 2: ablehnen</span>
+<span class="p">}</span>
+<span class="c1">// Wiederholungen übergehen</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">gesehen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">flow</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'dms_ids'</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[];</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">gesehen</span><span class="p">.</span><span class="nx">includes</span><span class="p">(</span><span class="nx">msg</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">id</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="p">[</span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nx">msg</span><span class="p">];</span>
+<span class="nx">flow</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'dms_ids'</span><span class="p">,</span><span class="w"> </span><span class="p">[...</span><span class="nx">gesehen</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="o">-</span><span class="mf">50</span><span class="p">),</span><span class="w"> </span><span class="nx">msg</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">id</span><span class="p">]);</span>
+<span class="nx">msg</span><span class="p">.</span><span class="nx">payload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">msg</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">daten</span><span class="p">;</span><span class="w">  </span><span class="c1">// { neuePost, zuErledigen, anstehend, ueberfaellig, stand, geaendert }</span>
+<span class="k">return</span><span class="w"> </span><span class="p">[</span><span class="nx">msg</span><span class="p">,</span><span class="w"> </span><span class="nx">msg</span><span class="p">];</span><span class="w">               </span><span class="c1">// Ausgang 1: weiter im Flow, Ausgang 2: Antwort</span>
+</code></pre></div>
+</li>
+<li>
+<p>Den function-Knoten auf <strong>2 Ausgänge</strong> stellen: Ausgang 2 an <strong>http response</strong>, Ausgang 1 an deine Logik, z. B. einen <strong>switch</strong> auf <code>msg.payload.neuePost &gt; 0</code>.</p>
+</li>
+</ol>
+<p>In der Homey-App kommt das sofortige Melden mit einer späteren Version; bis dahin fragt sie im festen Abstand ab. Format, Köpfe und die Prüfung der Signatur in anderen Sprachen stehen im <a href="https://motom001.github.io/dms/entwickler/aktuell/aufbau/#webhooks">Entwicklerhandbuch</a>.</p>
 <p>Technische Einzelheiten zur Schnittstelle stehen im <a href="https://motom001.github.io/dms/admin/aktuell/api/#zaehler">Administratorhandbuch</a>.</p>
 
 

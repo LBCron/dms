@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.149/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.150/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -538,6 +538,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhooks (#627)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Webhooks (#627)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signatur-prufen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signatur prüfen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ablauf-und-mehrere-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf und mehrere Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ziele-und-geheimnis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ziele und Geheimnis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1000,6 +1061,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhooks (#627)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Webhooks (#627)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signatur-prufen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signatur prüfen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ablauf-und-mehrere-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf und mehrere Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ziele-und-geheimnis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ziele und Geheimnis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1330,7 +1452,109 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
 <li><strong>Schlüssel-Stufe „nur Zähler“</strong> (<code>recht = 'zaehler'</code>, <code>NUR_ZAEHLER</code> und <code>ZAEHLER_PFAD</code> in <code>apischluessel.ts</code>). <code>pruefeZugang</code> lässt sie nur an <code>GET /api/v1/ich/zaehler</code> durch; jede andere Route unter <code>/api/v1</code> und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt <code>403</code> (<code>api.schluessel.nur-zaehler</code>), das Laufwerk ebenfalls (<code>webdav.ts</code>). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.</li>
 <li><strong>Grenzen.</strong> Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.</li>
 </ul>
-<p><strong>Weitere Zahl aufnehmen:</strong> Feld in <code>Zaehlerzahlen</code> (<code>dienst.ts</code>) und im OpenAPI-Schema ergänzen, im Test <code>ZAHLEN</code> – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, <code>v</code> im Hash erhöhen, damit jeder Client einmal neu liest. Der Webhook (#627) kann <code>zaehlerAbruf</code> je Benutzer aufrufen und bei geändertem <code>stand</code> <code>zaehler.geaendert</code> mit Ereignis-Id <code>&lt;benutzer&gt;:&lt;stand&gt;</code> melden.</p>
+<p><strong>Weitere Zahl aufnehmen:</strong> Feld in <code>Zaehlerzahlen</code> (<code>dienst.ts</code>) und im OpenAPI-Schema ergänzen, im Test <code>ZAHLEN</code> – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, <code>v</code> im Hash erhöhen, damit jeder Client einmal neu liest. Der <a href="#webhooks">Webhook</a> (#627) ruft <code>zaehlerAbruf</code> je Benutzer auf und meldet bei geändertem <code>stand</code>.</p>
+<h2 id="webhooks">Webhooks (#627)<a class="headerlink" href="#webhooks" title="Permanent link">&para;</a></h2>
+<p>Ein Webhook meldet geänderte Zahlen eines Benutzers (dieselben wie <code>GET /api/v1/ich/zaehler</code>) per <code>POST</code> an eine Adresse. Code: <code>server/src/webhook.ts</code> (Dienst <code>Webhooks</code>, <code>pgWebhookRepo</code>, <code>speicherWebhookRepo</code>), gemeinsame Typen und Regeln in <code>shared/src/webhook.ts</code>, Oberfläche in <code>web/src/profil/Webhooks.tsx</code> und <code>web/src/werkbank/Webhooks.tsx</code>, Tabellen <code>webhooks</code> und <code>webhook_meldungen</code> (Migration 058).</p>
+<h3 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nf">POST</span> <span class="nn">/dms</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">User-Agent</span><span class="o">:</span> <span class="l">DMS-Webhook</span>
+<span class="na">X-DMS-Art</span><span class="o">:</span> <span class="l">zaehler.geaendert</span>
+<span class="na">X-DMS-Ereignis</span><span class="o">:</span> <span class="l">7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11</span>
+<span class="na">X-DMS-Zeit</span><span class="o">:</span> <span class="l">1762154102</span>
+<span class="na">X-DMS-Signatur</span><span class="o">:</span> <span class="l">v1=5d2f…(64 Zeichen hex)</span>
+<span class="na">X-DMS-Versuch</span><span class="o">:</span> <span class="l">1</span>
+<span class="na">X-DMS-Webhook</span><span class="o">:</span> <span class="l">0f8a…</span>
+
+<span class="p">{</span><span class="nt">"art"</span><span class="p">:</span><span class="s2">"zaehler.geaendert"</span><span class="p">,</span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11"</span><span class="p">,</span><span class="nt">"zeit"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:02.000Z"</span><span class="p">,</span><span class="nt">"daten"</span><span class="p">:{</span><span class="nt">"neuePost"</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="nt">"zuErledigen"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="nt">"anstehend"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">"ueberfaellig"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="nt">"stand"</span><span class="p">:</span><span class="mi">42</span><span class="p">,</span><span class="nt">"geaendert"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:00.000Z"</span><span class="p">}}</span>
+</code></pre></div>
+<ul>
+<li><code>art</code>: <code>zaehler.geaendert</code> oder <code>probe</code> („Probe senden“, gleiche <code>daten</code>). Weitere Arten (<code>post.neu</code> …) kämen als neue Werte dazu; ein Empfänger übergeht unbekannte.</li>
+<li><code>id</code>: Ereignis-Id. <strong>Gleich bei einer Wiederholung</strong> derselben Daten, neu, sobald sich die Daten einer schon versuchten Meldung ändern. Der Empfänger merkt sich die letzten Ids und übergeht Doppeltes.</li>
+<li><code>zeit</code>: wann die Meldung entstand; <code>daten.geaendert</code>: wann sich die Zahlen geändert haben.</li>
+<li>Der Rumpf ist kompaktes JSON (<code>JSON.stringify</code>), nur ASCII-Zeichen, Schlüssel in fester Reihenfolge – <code>JSON.stringify(JSON.parse(rumpf)) === rumpf</code>. Das erlaubt die Prüfung auch dort, wo ein Rahmenwerk nur das geparste JSON hergibt (Node-RED).</li>
+<li><strong>Nie Inhalte.</strong> Der Test <code>server/test/webhook.test.ts</code> prüft die Schlüssel des Rumpfs und dass keine Titel, Absender oder Namen hineinrutschen.</li>
+<li>Als angekommen gilt <code>2xx</code>; Weiterleitungen (<code>3xx</code>) folgt das DMS nicht (<code>redirect: 'manual'</code>), Zeitgrenze 5 s.</li>
+</ul>
+<h3 id="signatur-prufen">Signatur prüfen<a class="headerlink" href="#signatur-prufen" title="Permanent link">&para;</a></h3>
+<p><code>X-DMS-Signatur</code> ist <code>v1=</code> und HMAC-SHA256 (hex) über <code>&lt;X-DMS-Zeit&gt;.&lt;Rumpf&gt;</code> mit dem Geheimnis des Webhooks (<code>whsec_…</code>, als UTF-8-Text, nicht dekodiert). Mehrere Signaturen (später beim Wechsel des Verfahrens) stehen durch Komma getrennt; eine passende genügt. Prüfe den <strong>Rumpf als Bytes, wie er ankam</strong>, vergleiche in konstanter Zeit und verwirf Zeiten, die mehr als 5 Minuten abweichen.</p>
+<p><strong>JavaScript (Node.js):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createHmac</span><span class="p">,</span><span class="w"> </span><span class="nx">timingSafeEqual</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:crypto'</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createServer</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:http'</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">GEHEIMNIS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">DMS_WEBHOOK_GEHEIMNIS</span><span class="p">;</span><span class="w"> </span><span class="c1">// whsec_…</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">gesehen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Set</span><span class="p">();</span>
+
+<span class="kd">function</span><span class="w"> </span><span class="nx">echt</span><span class="p">(</span><span class="nx">kopf</span><span class="p">,</span><span class="w"> </span><span class="nx">rumpf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">zeit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Number</span><span class="p">(</span><span class="nx">kopf</span><span class="p">[</span><span class="s1">'x-dms-zeit'</span><span class="p">]);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nb">Number</span><span class="p">.</span><span class="nx">isInteger</span><span class="p">(</span><span class="nx">zeit</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">abs</span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1000</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">zeit</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">300</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">soll</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="s1">'v1='</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">createHmac</span><span class="p">(</span><span class="s1">'sha256'</span><span class="p">,</span><span class="w"> </span><span class="nx">GEHEIMNIS</span><span class="p">).</span><span class="nx">update</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">zeit</span><span class="si">}</span><span class="sb">.</span><span class="si">${</span><span class="nx">rumpf</span><span class="si">}</span><span class="sb">`</span><span class="p">).</span><span class="nx">digest</span><span class="p">(</span><span class="s1">'hex'</span><span class="p">));</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="nx">kopf</span><span class="p">[</span><span class="s1">'x-dms-signatur'</span><span class="p">]</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="s1">''</span><span class="p">).</span><span class="nx">split</span><span class="p">(</span><span class="s1">','</span><span class="p">).</span><span class="nx">some</span><span class="p">((</span><span class="nx">s</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">ist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">Buffer</span><span class="p">.</span><span class="kr">from</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">trim</span><span class="p">());</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">ist</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">soll</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">timingSafeEqual</span><span class="p">(</span><span class="nx">ist</span><span class="p">,</span><span class="w"> </span><span class="nx">soll</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="p">}</span>
+
+<span class="nx">createServer</span><span class="p">((</span><span class="nx">req</span><span class="p">,</span><span class="w"> </span><span class="nx">res</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">rumpf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">''</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">req</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'data'</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">rumpf</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">c</span><span class="p">;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="nx">req</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'end'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">echt</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">,</span><span class="w"> </span><span class="nx">rumpf</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">writeHead</span><span class="p">(</span><span class="mf">401</span><span class="p">).</span><span class="nx">end</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">res</span><span class="p">.</span><span class="nx">writeHead</span><span class="p">(</span><span class="mf">204</span><span class="p">).</span><span class="nx">end</span><span class="p">();</span><span class="w">                      </span><span class="c1">// erst bestätigen, dann arbeiten</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">rumpf</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">gesehen</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">id</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="p">;</span><span class="w">                 </span><span class="c1">// Wiederholung</span>
+<span class="w">    </span><span class="nx">gesehen</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">art</span><span class="p">,</span><span class="w"> </span><span class="nx">m</span><span class="p">.</span><span class="nx">daten</span><span class="p">.</span><span class="nx">neuePost</span><span class="p">,</span><span class="w"> </span><span class="s1">'neue Post'</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="p">}).</span><span class="nx">listen</span><span class="p">(</span><span class="mf">8080</span><span class="p">);</span>
+</code></pre></div>
+<p><strong>Python:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span><span class="o">,</span><span class="w"> </span><span class="nn">hmac</span><span class="o">,</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">http.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseHTTPRequestHandler</span><span class="p">,</span> <span class="n">HTTPServer</span>
+
+<span class="n">GEHEIMNIS</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"DMS_WEBHOOK_GEHEIMNIS"</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>  <span class="c1"># whsec_…</span>
+<span class="n">gesehen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">echt</span><span class="p">(</span><span class="n">kopf</span><span class="p">,</span> <span class="n">rumpf</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">zeit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">kopf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"x-dms-zeit"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">zeit</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">300</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">soll</span> <span class="o">=</span> <span class="s2">"v1="</span> <span class="o">+</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">GEHEIMNIS</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">zeit</span><span class="si">}</span><span class="s2">."</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> <span class="o">+</span> <span class="n">rumpf</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">hmac</span><span class="o">.</span><span class="n">compare_digest</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">soll</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">kopf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"x-dms-signatur"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">))</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Empfang</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">rumpf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content-length"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">echt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">rumpf</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">401</span><span class="p">);</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">();</span> <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">204</span><span class="p">);</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">rumpf</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">gesehen</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">gesehen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"art"</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="s2">"daten"</span><span class="p">][</span><span class="s2">"neuePost"</span><span class="p">],</span> <span class="s2">"neue Post"</span><span class="p">)</span>
+
+<span class="n">HTTPServer</span><span class="p">((</span><span class="s2">""</span><span class="p">,</span> <span class="mi">8080</span><span class="p">),</span> <span class="n">Empfang</span><span class="p">)</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</code></pre></div>
+<p>Im Server gibt es dieselbe Prüfung als <code>pruefeSignatur</code> (<code>webhook.ts</code>) für Tests.</p>
+<h3 id="ablauf-und-mehrere-server">Ablauf und mehrere Server<a class="headerlink" href="#ablauf-und-mehrere-server" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Anstoß:</strong> <code>Haushaltsstand.beiAenderung</code> (<code>zaehlerspeicher.ts</code>) ruft nach jeder ändernden Repo-Methode <code>Webhooks.anstossen()</code> (über <code>Dienst.beiAenderung</code>, für Zahlen der Ansichten und „Anstehend“). Nach 3 s zählt <code>pruefe()</code> für jeden Benutzer mit eingeschaltetem Webhook einmal <code>zaehlerAbruf</code> (aus dem Zwischenspeicher, meist Millisekunden). Ohne Anlass zählt der Server mit der Sperre jede Minute (Mitternacht, Fristen, Änderungen auf einem anderen Server).</li>
+<li><strong>Ausgangskorb in der Datenbank:</strong> <code>merkeStand</code> setzt in einer Transaktion mit Zeilensperre <code>webhooks.gemeldet_stand</code> und legt die Meldung an – oder ersetzt die Daten der offenen (höchstens eine je Webhook, eindeutiger Teilindex). So zählt jeder Stand einmal, auch wenn zwei Server gleichzeitig prüfen. Neue Meldungen sind frühestens 30 s nach dem letzten Senden (<code>webhooks.gesendet</code>) fällig – das ist das Zusammenfassen.</li>
+<li><strong>Zustellen:</strong> <code>faellige</code> holt Meldungen mit <code>FOR UPDATE SKIP LOCKED</code>, zählt den Versuch hoch und schiebt <code>faellig</code> um 60 s (Lease). Stirbt der Server beim Senden, holt ein anderer die Meldung danach – sie kommt dann womöglich doppelt, mit derselben Ereignis-Id (<strong>mindestens einmal</strong>). Ändern sich die Daten während des Sendens, schließt <code>zugestellt</code> die Meldung nicht (Ereignis-Id passt nicht mehr) und sie geht nach dem Mindestabstand erneut.</li>
+<li><strong>Wiederholen und Aufgeben:</strong> Wartezeiten <code>WEBHOOK_WARTEN_S</code> (30 s bis 8 h, zusammen etwa 22 h, 12 Versuche); nach dem letzten Fehlschlag <code>zustand = 'aufgegeben'</code>, Webhook aus (<code>abgeschaltet.grund = 'fehler'</code>), Protokoll und Mail an die Administratoren.</li>
+<li><strong>Regelmäßige Läufe</strong> (Zählen jede Minute, Zustellen alle 5 s, Aufräumen nach 7 Tagen) nur auf dem Server mit <code>pg_try_advisory_lock(4711197)</code>; der Anstoß nach einer Änderung läuft auf dem Server, auf dem sie passiert ist. Pause im Wartungsmodus und während einer Wiederherstellung.</li>
+<li><strong>Lücke nach der Bauregel:</strong> Der Haushaltsstand und die Zwischenspeicher der Zahlen (#512) leben je Server im Arbeitsspeicher. Eine Änderung auf Server A bemerkt Server B erst, wenn sein Zwischenspeicher abläuft (höchstens 5 bzw. 30 Minuten). Für die Richtigkeit reicht das (der Stand in der Datenbank zählt), für „sofort“ nicht immer – ein gemeinsamer Ereigniskanal ist ein eigenes Thema.</li>
+</ul>
+<h3 id="ziele-und-geheimnis">Ziele und Geheimnis<a class="headerlink" href="#ziele-und-geheimnis" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ziele:</strong> <code>zielProblem</code> (<code>shared/src/webhook.ts</code>) erlaubt <code>https://</code> und <code>http://</code> nur im Heimnetz (<code>imHeimnetz</code> aus <code>heimnetz.ts</code>), keine Anmeldedaten und kein <code>#</code>. Zusätzlich muss der Ursprung in der Einstellung <code>webhook_ziele</code> stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft das DMS erneut.</li>
+<li><strong>Geheimnis:</strong> <code>whsec_</code> + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel des DMS in <code>webhooks.geheimnis</code>. <code>umschluesseln</code> und <code>verschluesselteFundstellen</code> (<code>repo-pg.ts</code>) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.</li>
+<li><strong>Neue Art aufnehmen:</strong> Wert in <code>WEBHOOK_EREIGNISSE</code> und, wo nötig, eigene Erkennung; der Rumpf behält <code>art</code>, <code>id</code>, <code>zeit</code>, <code>daten</code> – und nur Zahlen bzw. Ids.</li>
+</ul>
 <p>Mehr Hintergrund im Administratorhandbuch: <a href="https://motom001.github.io/dms/admin/aktuell/technik/">Technik</a> und <a href="https://motom001.github.io/dms/admin/aktuell/entscheidungen/">Entscheidungen</a>.</p>
 
 

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.149/api/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.150/api/">
       
       
         <link rel="prev" href="../verfahrensdokumentation/">
@@ -1276,6 +1276,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../texterkennung/" class="md-nav__link">
         
   
@@ -2074,6 +2102,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sofort statt abfragen: Webhooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mappe-aendern" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2516,6 +2555,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sofort statt abfragen: Webhooks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mappe-aendern" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2675,6 +2725,8 @@
 <li>Der Stand liegt in der Datenbank: Er übersteht einen Neustart. Nach einer <a href="../wiederherstellen/">Wiederherstellung</a> kann er auf den Stand der Sicherung zurückgehen – vergleiche ihn deshalb nur auf „anders“, nicht auf „größer“.</li>
 <li>Andere Aufrufe mit einem Schlüssel <em>nur Zähler</em> bekommen <code>403</code> mit dem Hinweis, dass dieser Schlüssel nur die Zahlen abruft.</li>
 </ul>
+<h3 id="webhooks">Sofort statt abfragen: Webhooks<a class="headerlink" href="#webhooks" title="Permanent link">&para;</a></h3>
+<p>Statt den Zähler regelmäßig abzufragen, kann sich das DMS auch selbst melden: Ein <strong>Webhook</strong> schickt dieselben Zahlen per <code>POST</code> an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks im Profil an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: <a href="../webhooks/">Webhooks</a>; Prüfen der Signatur mit Beispielcode im <a href="https://motom001.github.io/dms/entwickler/aktuell/aufbau/#webhooks">Entwicklerhandbuch</a>. Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.</p>
 <h3 id="mappe-aendern">Mappe ändern, auch gleichzeitig mit anderen<a class="headerlink" href="#mappe-aendern" title="Permanent link">&para;</a></h3>
 <p><code>PUT /api/v1/mappen/{id}</code> ändert nur die Felder, die in <code>werte</code> stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb <strong>nur, was du ändern willst</strong> – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.</p>
 <p>Mit <code>stand</code> prüft das DMS zusätzlich, ob seit deinem Lesen jemand <strong>dasselbe Feld</strong> geändert hat (#609). <code>stand</code> ist der Wert <code>geaendert</code> der Mappe aus <code>GET /api/v1/mappen/{id}</code>:</p>
