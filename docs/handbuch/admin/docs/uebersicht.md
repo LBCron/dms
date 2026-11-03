@@ -49,6 +49,7 @@ Die Werkbank beginnt mit der **Übersicht**. Sie zeigt oben, was zu tun ist – 
 - Umgebungsvariablen, die nicht mehr nötig sind – je Variable mit Grund (feste Ordner, Datenbank-Anbindung in einer Datei, gespeicherte Kennung des Haushalts),
 - E-Mail-Versand nicht eingerichtet,
 - offene gemeldete Fehler,
+- ein Paket, dem Pflicht-Einstellungen fehlen („… braucht noch Einstellungen“, mit **Einstellungen ausfüllen**) – etwa nach **Später ausfüllen** beim [Installieren mehrerer Pakete](pakete.md#mehrere-pakete-in-einem-schritt-installieren),
 - kein Paket für die Texterkennung installiert („Texterkennung ist jetzt ein Paket“, mit **Jetzt installieren**; deutlich, sobald Scans darauf warten),
 - Dokumente mit Fehler in der Texterkennung,
 - Aufgaben für die Administratoren und Mappen, die nicht zur Definition passen.

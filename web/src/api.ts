@@ -11,7 +11,7 @@ import type { LasttestStand } from '../../shared/src/lasttest';
 import type { Abwesenheit, Aufgabe, Ausschnitt, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
-import type { HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
+import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
 import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung } from '../../shared/src/paketerstellung';
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
@@ -644,6 +644,9 @@ export const api = {
   /** Ein Paket oder eine Sammeldatei mit mehreren Paketen (#461) – das DMS erkennt es am Inhalt. */
   paketHochladen: (datei: File) => sendeDatei('/api/werkbank/pakete/hochladen', datei) as Promise<{ upload: string; vorschau: PaketVorschau } | { sammeldatei: Sammeldatei }>,
   paketVorschau: (e: { id?: string; version?: string; quelle?: string; upload?: string }) => anfrage<PaketVorschau>('POST', '/api/werkbank/pakete/vorschau', e),
+  /** Mehrere Pakete in einem Ablauf (#405): Plan ohne zu speichern, dann alles mit einem Knopf. */
+  paketAblaufPlan: (e: AblaufEingabe) => anfrage<AblaufPlan<PaketVorschau>>('POST', '/api/werkbank/pakete/ablauf/plan', e),
+  paketAblaufInstallieren: (e: AblaufInstallation) => anfrage<AblaufErgebnis>('POST', '/api/werkbank/pakete/ablauf/installieren', e),
   paketInstallieren: (e: { id?: string; version?: string; quelle?: string; upload?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean; namen?: Record<string, string>; sichtNamen?: Record<string, string>; beispiele?: boolean; mitAbhaengigkeiten?: boolean }) => anfrage<InstalliertesPaket>('POST', '/api/werkbank/pakete/installieren', e),
   paketUpdates: () => anfrage<Array<{ id: string; installiert: string; neu: string; changelog: string | null; quelle: string }>>('POST', '/api/werkbank/pakete/updates'),
   paketAktualisieren: (id: string, version?: string, bestaetigt?: boolean, rechteBestaetigt?: boolean) => anfrage<InstalliertesPaket>('POST', `/api/werkbank/pakete/${encodeURIComponent(id)}/aktualisieren`, { version, bestaetigt, rechteBestaetigt }),
@@ -874,6 +877,8 @@ export interface PaketVorschau {
 /** Sammeldatei (#461): geprüft, Pakete in der Reihenfolge zum Installieren (Abhängigkeiten zuerst). */
 export interface SammelPaket {
   upload: string; id: string; name: string; version: string; gewaehlt: boolean; abhaengigkeiten: Record<string, string>;
+  /** Ergänzt ein anderes Paket (#405). */
+  ergaenzt?: Ergaenzung;
   katalog: 'gleich' | 'unbekannt'; stand: 'neu' | 'neuer' | 'gleich' | 'aelter'; installiert: string | null; vorschau: PaketVorschau;
 }
 export interface Sammeldatei {
@@ -1023,6 +1028,8 @@ export interface WerkbankUebersicht {
   lasttestAbbruch?: string | null;
   /** Einrichtungsassistent (#119): übersprungene Schritte. */
   einrichtung?: EinrichtungStand | null;
+  /** Pakete, deren Pflicht-Einstellungen fehlen (#405) – Aufgabe für den Administrator. */
+  paketeEinstellungen?: Array<{ id: string; name: string }>;
   /** Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist; null = unbekannt. */
   zahlen?: { nummernkreise: number | null; pakete: number | null; benutzer: number | null; postfaecher: number | null; darfWeg: number | null };
   /** Postfächer mit abgelaufener oder fehlender OAuth-Anmeldung (#358). */

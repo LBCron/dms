@@ -66,11 +66,11 @@ Der Schlüssel verschlüsselt gespeicherte Passwörter und alle Sicherungen (sie
 
 ![Pakete dazuholen](bilder/einrichtung-pakete.png)
 
-Erst in diesem Schritt fragt das DMS den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Liste zeigt je Paket Name, Beschreibung und was es darf: Pakete ohne Code legen nur Mappentypen und Ansichten an; bei Paketen mit Code zeigt **Was darf das Paket?** die [Rechte](pakete.md#rechte-eines-pakets).
+Erst in diesem Schritt fragt das DMS den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
 
-- **Texterkennung ist vorausgewählt** – ohne sie werden gescannte Dokumente nicht durchsuchbar. Alles andere kreuzt du an.
+- **Texterkennung ist vorausgewählt** – ohne sie werden gescannte Dokumente nicht durchsuchbar. Darunter fragt **Weitere Sprachen?** nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.
 - **Abhängigkeiten kommen mit**, z. B. „Basis“ für „Haushalt“; sie sind mit „kommt mit – gebraucht von …“ markiert.
-- Danach installiert das DMS die Pakete **nacheinander**, Abhängigkeiten zuerst. Jedes zeigt seine eigene Vorschau; ein Paket mit Code installierst du erst, wenn du **seine** Rechte bestätigt hast – eine Sammelbestätigung gibt es nicht. Mit **Auslassen** überspringst du ein einzelnes Paket.
+- **Weiter** führt zu **einer** Seite mit allen Fragen: die [Rechte](pakete.md#rechte-eines-pakets) aller Pakete mit Code (ein Haken für alle), Namen nur bei Konflikten, Beispiel-Mappen und Pflicht-Einstellungen – dann **ein** Knopf. Siehe [Mehrere Pakete in einem Schritt installieren](pakete.md#mehrere-pakete-in-einem-schritt-installieren).
 - **Überspringen** geht jederzeit; Pakete holst du später unter **Werkbank → [Pakete](pakete.md)**.
 
 Ist der Katalog nicht erreichbar (kein Internet), sagt der Schritt das deutlich: Es fehlen dann die Pakete, etwa die Texterkennung. Dann lädst du hier eine **Sammeldatei** hoch, die du an einem anderen Gerät auf der Katalog-Webseite zusammengestellt hast (siehe [Pakete ohne Internet installieren](pakete.md#pakete-ohne-internet-installieren)) – oder du überspringst den Schritt und holst die Pakete später nach.

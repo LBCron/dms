@@ -50,6 +50,8 @@ import { liesErweiterungen, sichereErweiterungen } from './erweiterungen';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
+import { Fachfehler } from './fehler';
+import { t } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
 import { anAlleAdmins } from './mail';
@@ -326,6 +328,15 @@ const pakete: Paketverwaltung = new Paketverwaltung(dienst, {
   version: eigeneVersion,
   benutzer: async () => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false).map((b) => ({ id: b.id, name: b.name || b.email })),
   laeufer: paketlaeufer,
+  // Installieren, Aktualisieren, Entfernen (#405): nacheinander über alle Instanzen – Sperre in PostgreSQL, solange es läuft.
+  sperre: async (f) => {
+    const v = await sql.reserve();
+    try {
+      const [r] = await v`SELECT pg_try_advisory_lock(4711405) AS ok`;
+      if (!r.ok) throw new Fachfehler(409, t('pakete.ablauf.fehler.belegt'));
+      try { return await f(); } finally { await v`SELECT pg_advisory_unlock(4711405)`.catch(() => {}); }
+    } finally { v.release(); }
+  },
 });
 // Ereignis „Volltext fertig“ (#336, #458) nach dem Schritt des Kerns – auch ohne Text, damit ein Paket für die
 // Texterkennung übernehmen kann; nicht bei Fehler, ausgelassen oder abgebrochen.

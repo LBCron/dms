@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { ergaenzungenVon, hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -14,6 +14,7 @@ import { PaketErstellen } from './PaketErstellen';
 import { rueckfrage } from '../rueckfrage';
 import { useKonto } from '../konto';
 import { SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
+import { PaketAblauf } from './PaketAblauf';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
@@ -270,12 +271,20 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
   const gueltig = /^[a-z][a-z0-9_]{1,19}$/.test(id ?? '') && (!version || /^\d+\.\d+\.\d+$/.test(version));
   const [vorschau, setVorschau] = useState<PaketVorschau | null>(null);
   const [meldung, setMeldung] = useState<Meldung>();
+  // Neu installieren (#405): im gemeinsamen Ablauf – dafür der offizielle Katalog (Abhängigkeiten, Ergänzungen).
+  const [katalog, setKatalog] = useState<Katalog | null>(null);
   useEffect(() => {
     if (!gueltig) return;
     let aktuell = true;
     api.paketVorschau({ id, version: version || undefined }).then((v) => aktuell && setVorschau(v), (e) => aktuell && setMeldung(alsMeldung(e)));
     return () => { aktuell = false; };
   }, [id, version, gueltig]);
+  useEffect(() => {
+    if (!vorschau || vorschau.installiert) return;
+    let aktuell = true;
+    api.paketKatalog(false).then((k) => { const o = k.kataloge.find((x) => x.offiziell); if (aktuell && o?.katalog) setKatalog(o.katalog); else if (aktuell) setMeldung({ art: 'schlecht', text: o?.fehler ?? 'Der Katalog lässt sich nicht abrufen.' }); }, (e) => aktuell && setMeldung(alsMeldung(e)));
+    return () => { aktuell = false; };
+  }, [vorschau]);
   if (!gueltig) return <div className="leer"><p>Dieser Link ist ungültig. Erwartet ist <code>?installieren=paket@1.0.0</code>.</p></div>;
   const schon = !!vorschau?.installiert && vorschau.probleme.some((p) => p.includes('schon installiert'));
   return (
@@ -301,7 +310,13 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
       {schon && (
         <div className="hinweis info"><p>„{vorschau!.paket.name}“ ist schon installiert (Version {vorschau!.installiert}). <button type="button" className="textknopf" onClick={() => { void z.abrufen(false); geheZu(`/werkbank/pakete/${id}`); }}>Zum Paket</button> – dort gibt es ggf. das Update.</p></div>
       )}
-      {vorschau && !schon && (
+      {vorschau && !schon && !vorschau.update && katalog && z.stand && (
+        <PaketAblauf quelle={{ art: 'katalog', katalog, dms: z.stand.dms, installiert: z.stand.installiert }} start={[id]} nur={[id]} versionen={version ? { [id]: version } : {}}
+          aktionen={<button type="button" className="textknopf" onClick={() => geheZu('/werkbank/pakete')}>Abbrechen</button>}
+          geaendert={() => { void z.laden(); void d.neuLaden(); }}
+          fertig={(e) => { void z.abrufen(false); geheZu(e.installiert.some((x) => x.id === id) ? `/werkbank/pakete/${id}` : '/werkbank/pakete'); }} />
+      )}
+      {vorschau && !schon && vorschau.update && (
         <VorschauBlock v={vorschau} warnung={null} abbrechen={() => geheZu('/werkbank/pakete')}
           los={async (x) => {
             try {
@@ -338,7 +353,7 @@ function SammelDetail({ z }: { z: PaketeZustand }) {
         <p className="leise klein">{tx('pakete.katalog.hinweis')}</p>
       </div>
       {!s ? <SammeldateiWahl geladen={(x, datei) => z.setSammel({ sammeldatei: x, datei })} einzeln={(r, datei) => { z.setUpload({ ...r, datei }); geheZu(`/werkbank/pakete/${UPLOAD}`); }} />
-        : <SammeldateiAnsicht key={s.sammeldatei.datei.sha256} s={s.sammeldatei} datei={s.datei} dms={dms}
+        : <SammeldateiAnsicht key={s.sammeldatei.datei.sha256} s={s.sammeldatei} datei={s.datei} dms={dms} installiert={z.stand?.installiert ?? []}
             geaendert={() => { void z.laden(); void d.neuLaden(); }}
             abbrechen={() => z.setSammel(null)}
             fertig={() => { z.setSammel(null); void z.laden(); geheZu('/werkbank/pakete'); }} />}
@@ -393,6 +408,9 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
   const [reiter, setReiter] = useState<'uebersicht' | 'einstellungen'>(() => (new URLSearchParams(location.search).get('reiter') === 'einstellungen' ? 'einstellungen' : 'uebersicht'));
   const [entfernenOffen, setEntfernenOffen] = useState(false);
   const [behalten, setBehalten] = useState(false);
+  // Installieren im gemeinsamen Ablauf (#405): mit Abhängigkeiten (auch mit Code) und Ergänzungen in einem Schritt.
+  const [ablauf, setAblauf] = useState(false);
+  const katalog = aus ? z.kataloge?.liste.find((k) => k.url === aus.url)?.katalog ?? null : null;
   const v = kp?.versionen.find((x) => x.version === (version || kp.aktuell)) ?? kp?.versionen[0];
   const neuer = inst && inst.herkunft.art === 'katalog' && kp && vergleicheVersion(kp.aktuell, inst.version) > 0 ? kp.aktuell : null;
   // Paketseite im Katalog (#622): nur für Pakete aus dem offiziellen Katalog, nicht für hochgeladene.
@@ -475,7 +493,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           {kp && kp.versionen.length > 1 && !inst && (
             <label className="klein">Version <select value={version || kp.aktuell} onChange={(e) => { setVersion(e.target.value); setVorschau(null); }}>{kp.versionen.map((x) => <option key={x.version} value={x.version}>{x.version}</option>)}</select></label>
           )}
-          {!inst && kp && <button type="button" className="knopf primaer" disabled={laeuft} onClick={() => void zeigeVorschau(version || undefined)}>Installieren …</button>}
+          {!inst && kp && <button type="button" className="knopf primaer" disabled={laeuft || ablauf || !katalog} onClick={() => setAblauf(true)}>Installieren …</button>}
           {inst && neuer && <button type="button" className="knopf primaer" disabled={laeuft} onClick={() => void zeigeVorschau(neuer)}>Auf {neuer} aktualisieren …</button>}
           {inst && <button type="button" className="knopf gefahr-rand" disabled={laeuft} onClick={entfernen}>Entfernen</button>}
           {inst?.herkunft.art === 'hochgeladen' && <span className="leise klein">Ein hochgeladenes Paket aktualisierst du durch erneutes Hochladen einer höheren Version.</span>}
@@ -491,6 +509,18 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
 
       {inst && <PaketUmwandeln key={`${inst.id}|${inst.version}`} paket={inst.id} />}
 
+      {/* Auch nach der Installation sichtbar, bis „Weiter“ – sonst verschwände das Ergebnis mit dem Neuladen. */}
+      {kp && ablauf && katalog && z.stand && (
+        <section className="blatt stapel" aria-label={tx('pakete.ablauf.zusammenfassung')}>
+          <h2 className="h3">{tx('pakete.ablauf.titel', { name: kp.name })} <Hilfe ort="werkbank.pakete.ablauf" /></h2>
+          <PaketAblauf quelle={{ art: 'katalog', katalog, quelle: aus?.offiziell ? undefined : aus?.url, dms: z.stand.dms, installiert: z.stand.installiert }} start={[id]} nur={[id]} versionen={version ? { [id]: version } : {}}
+            aktionen={<button type="button" className="textknopf" onClick={() => setAblauf(false)}>Abbrechen</button>}
+            geaendert={() => { void z.laden(); void d.neuLaden(); }}
+            fertig={(e) => { setAblauf(false); if (e.installiert.some((x) => x.id === id)) setMeldung({ art: 'gut', text: tx('pakete.ablauf.fertig', { namen: e.installiert.map((x) => `${x.name} ${x.version}`).join(', ') }) }); }} />
+        </section>
+      )}
+      {inst && katalog && z.stand && <ErgaenzungenBlock z={z} inst={inst} katalog={katalog} quelle={aus?.offiziell ? undefined : aus?.url} />}
+
       {vorschau && (
         <VorschauBlock v={vorschau} warnung={offiziell || vorschau.pruefung?.bestaetigen === false ? null : `Aus dem Katalog ${inst?.herkunft.art === 'katalog' ? inst.herkunft.url : quelle}`} abbrechen={() => setVorschau(null)}
           los={(x) => tu(async () => {
@@ -501,6 +531,37 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
       )}
       </>}
     </div>
+  );
+}
+
+/**
+ * Ergänzungen eines installierten Pakets nachträglich (#405), z. B. weitere Sprachen der Texterkennung: Häkchen, dann
+ * derselbe Ablauf wie beim Installieren.
+ */
+function ErgaenzungenBlock({ z, inst, katalog, quelle }: { z: PaketeZustand; inst: InstalliertesPaket; katalog: Katalog; quelle?: string }) {
+  const d = useDaten();
+  const [offen, setOffen] = useState(false);
+  const [meldung, setMeldung] = useState<Meldung>();
+  const stand = z.stand!;
+  const erg = ergaenzungenVon(katalog, inst.id, stand.dms, stand.installiert);
+  if (!erg.length && !meldung && !offen) return null;
+  const gruppen = [...new Set(erg.map((x) => x.gruppe ?? tx('pakete.ablauf.ergaenzungen')))];
+  return (
+    <section className="blatt stapel" aria-label={tx('pakete.ablauf.ergaenzungen')}>
+      <h2 className="h3">{gruppen.join(', ')} <Hilfe ort="werkbank.pakete.ablauf" /></h2>
+      <MeldungBox m={meldung} />
+      {!offen ? (
+        <>
+          {erg.length > 0 && <p className="leise">{tx('pakete.ablauf.nachtraeglich', { anzahl: erg.length, namen: erg.slice(0, 4).map((x) => x.name.includes(' – ') ? x.name.slice(x.name.lastIndexOf(' – ') + 3) : x.name).join(', ') })}</p>}
+          {erg.length > 0 && <div className="knoepfe"><button type="button" className="knopf" onClick={() => { setMeldung(undefined); setOffen(true); }}>{tx('pakete.ablauf.nachtraeglich.knopf')}</button></div>}
+        </>
+      ) : (
+        <PaketAblauf quelle={{ art: 'katalog', katalog, quelle, dms: stand.dms, installiert: stand.installiert }} start={[]} nur={[inst.id]}
+          aktionen={<button type="button" className="textknopf" onClick={() => setOffen(false)}>Abbrechen</button>}
+          geaendert={() => { void z.laden(); void d.neuLaden(); }}
+          fertig={(e) => { setOffen(false); if (e.installiert.length) setMeldung({ art: 'gut', text: tx('pakete.ablauf.fertig', { namen: e.installiert.map((x) => `${x.name} ${x.version}`).join(', ') }) }); }} />
+      )}
+    </section>
   );
 }
 
