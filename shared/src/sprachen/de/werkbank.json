@@ -90,6 +90,8 @@
   "bereich.eingangsordner.wann": "Scans aus einem Ordner übernehmen",
   "bereich.webdav.name": "WebDAV-Laufwerk",
   "bereich.webdav.wann": "die Ablage im Explorer, Finder oder in der Dateien-App einbinden und Dateien hineinlegen",
+  "bereich.automatisierungen.name": "Automatisierungen",
+  "bereich.automatisierungen.wann": "Abläufe nach dem Muster Wenn – Und – Dann einrichten: bei einem Ereignis oder Datum Felder setzen oder jemandem eine Aufgabe geben",
   "bereich.webhooks.name": "Webhooks",
   "bereich.webhooks.wann": "sehen und abschalten, wohin das DMS neue Post, Aufgaben und Fristen meldet (Hausautomatisierung), und Ziele freigeben",
   "bereich.texterkennung.name": "Texterkennung",

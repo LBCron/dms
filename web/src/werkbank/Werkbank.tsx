@@ -12,6 +12,7 @@ import { PostfachEditor, PostfaecherListe, usePostfaecher } from './Postfaecher'
 import { EingangsordnerPanel, useEingangsordner } from './Eingangsordner';
 import { useWebdav, WebdavPanel } from './Webdav';
 import { useWebhooks, webhookWarnungen, WebhooksPanel } from './Webhooks';
+import { AutomatisierungEditor, AutomatisierungenListe, automatisierungWarnungen, useAutomatisierungen } from './Automatisierungen';
 import { useEffect, type ReactNode } from 'react';
 import { Dreiteilung } from '../bereiche';
 import { useDaten } from '../daten';
@@ -74,6 +75,7 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  *                                 (#115, #116; #408, früher /werkbank/speicherplatz, leitet weiter)
  * /werkbank/webdav                WebDAV-Laufwerk an/aus, Stand, letzte Zugriffe (#346, rechts seit #366)
  * /werkbank/webhooks              Webhooks: freigegebene Ziele, alle Webhooks, abschalten (#627)
+ * /werkbank/automatisierungen[/:id|/neu]  Automatisierungen Wenn – Und – Dann (#675), dreiteilig
  * /werkbank/stempel                Vorlagen für Stempel beim Weitergeben (#394), zweiteilig
  * /werkbank/datenschutz[?mappe=]    Auskunft nach Art. 15 DSGVO als ZIP (#396), zweiteilig
  *
@@ -106,6 +108,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const eingang = useEingangsordner(bereich === 'eingangsordner');
   const webdav = useWebdav(bereich === 'webdav');
   const webhooks = useWebhooks(bereich === 'webhooks' || bereich === 'uebersicht');
+  const automatisierungen = useAutomatisierungen(bereich === 'automatisierungen');
   const postfaecher = usePostfaecher(bereich === 'postfaecher');
   const nummernkreise = useNummernkreise(bereich === 'nummernkreise');
   const stempel = useStempelVorlagenWerkbank(bereich === 'stempel');
@@ -126,7 +129,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
       protokoll: protokoll.neu, technik: technik.laden, betrieb: betrieb.laden,
       verschluesselung: tresor.laden, papierkorb: papierkorb.laden, aufgaben: aufgaben.laden, texterkennung: ocr.laden,
       wartung: ocr.laden, fehlermeldungen: meldungen.laden, wartungsmodus: wartungsmodus.laden, sicherung: sicherung.laden,
-      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); }, anbindung: async () => { await anbindung.laden(); await datenbank.laden(); }, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden,
+      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); }, anbindung: async () => { await anbindung.laden(); await datenbank.laden(); }, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden, automatisierungen: automatisierungen.laden,
       datenschutz: datenschutz.laden,
     };
     void offen[bereich]?.();
@@ -209,6 +212,9 @@ export function Werkbank({ teile }: { teile: string[] }) {
   } else if (bereich === 'nummernkreise') {
     liste = <NummernkreiseListe z={nummernkreise} offen={id} />;
     rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>Wähle links einen Nummernkreis oder lege mit „+ Neu“ einen an.</p></div>;
+  } else if (bereich === 'automatisierungen') {
+    liste = <AutomatisierungenListe z={automatisierungen} offen={id} />;
+    rechts = id ? <AutomatisierungEditor key={`${id}-${automatisierungen.stand ? 1 : 0}`} z={automatisierungen} id={id} /> : <div className="platzhalter"><p>{t('automatisierung.ui.waehlen')}</p></div>;
   } else if (bereich === 'stempel') {
     rechts = <StempelPanel z={stempel} />;
   } else if (bereich === 'suche') {
@@ -247,6 +253,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
     { pfad: 'sichten', name: n('sichten'), gruppe: 'ablage', zahl: d.sichten.length || undefined },
     { pfad: 'nummernkreise', name: n('nummernkreise'), gruppe: 'ablage', zahl: zahl(nummernkreise.liste?.length, uz?.nummernkreise) },
     { pfad: 'stempel', name: n('stempel'), gruppe: 'ablage', zahl: stempel.liste?.length || undefined },
+    { pfad: 'automatisierungen', name: n('automatisierungen'), gruppe: 'ablage', zahl: automatisierungen.stand?.automatisierungen.length || undefined,
+      warn: automatisierungWarnungen(automatisierungen.stand) || uebersicht.stand?.automatisierungen?.angehalten.length ? '!' : undefined, warnTitel: t('automatisierung.ui.leiste') },
     { pfad: 'pakete', name: n('pakete'), gruppe: 'ablage', zahl: zahl(pakete.stand?.installiert.length, uz?.pakete) },
     { pfad: 'suche', name: n('suche'), gruppe: 'ablage' },
     ...(d.typen.some((x) => x.archiv) ? [{ pfad: 'darfweg', name: n('darfweg'), gruppe: 'ablage' as const, zahl: zahl(darfWeg.liste?.length, uz?.darfWeg) }] : []),

@@ -126,3 +126,19 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
     if (!lesbar) assert.match(l.schritte[2].text!, /ohne Link/);
   });
 });
+
+describe('Beispiele (#675)', () => {
+  it('legt drei ausgeschaltete Beispiele vom DMS an – einmal, auch bei mehrfachem Start', async () => {
+    const { vertrag, motor } = await aufbau();
+    assert.equal(await motor.legeBeispiele(), 3);
+    assert.equal(await motor.legeBeispiele(), 0, 'feste Ids: kein zweites Mal');
+    const { automatisierungen } = await motor.uebersicht();
+    assert.equal(automatisierungen.length, 3);
+    assert.ok(automatisierungen.every((a) => !a.aktiv && a.herkunft === 'dms'));
+    const kuendigung = automatisierungen.find((a) => a.wenn.art === 'datum')!;
+    assert.deepEqual([kuendigung.wenn.art === 'datum' && kuendigung.wenn.typ, kuendigung.wenn.art === 'datum' && kuendigung.wenn.feld], [vertrag.id, 'kuendbar_bis'], 'passender Mappentyp gefunden');
+    assert.deepEqual(kuendigung.dann[0].art === 'aufgabe' && kuendigung.dann[0].empfaenger, [{ art: 'feld', feld: 'verantwortlich' }]);
+    assert.deepEqual(kuendigung.probleme, []);
+    await assert.rejects(motor.loesche(kuendigung.id), /nur ausschalten/);
+  });
+});

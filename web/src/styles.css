@@ -1861,3 +1861,32 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .karte.lasttest .lasttest-ergebnis .knopf.primaer { width: auto; padding: 7px 13px; }
 /* Archivfassung (#631): über der Anzeige, was man sieht. */
 .dokansicht-kopf { margin: 0; padding: 6px 10px; border-bottom: 1px solid var(--linie); background: var(--flaeche, transparent); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+
+/* Automatisierungen (#675): Wenn · Und · Dann untereinander, Karten auf- und zuklappbar, Schritte leuchten im Lauf auf. */
+.automatisierung-bereich { border: 1px solid var(--linie); border-radius: var(--r); background: var(--senke); padding: 10px 12px; margin: 4px 0; }
+.automatisierung-bereich > .zeile { justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.automatisierung-bereich .h3 { margin: 0; }
+.automatisierung-pfeil { text-align: center; color: var(--leise); font-size: 1.2rem; line-height: 1; }
+.automatisierung-karten { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; }
+.automatisierung-karten > li, .automatisierung .karte { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 6px 8px; }
+.automatisierung .karte.offen { border-color: var(--linie-stark); }
+.automatisierung .karte-kopf { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.automatisierung .karte-kopf > .textknopf:not(.gefahr) { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.automatisierung .bedingungen { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 6px; }
+.automatisierung .bedingungszeile { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.automatisierung .einzug { margin-left: 18px; padding-left: 8px; border-left: 2px solid var(--linie); }
+.automatisierung-vorrat { border: 1px dashed var(--linie-stark); border-radius: var(--r); padding: 8px 10px; margin: 6px 0; }
+.automatisierung-vorrat .stapel { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 8px; }
+.automatisierung-vorrat .vorratkarte { display: flex; align-items: center; gap: 2px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 999px; padding: 2px 8px 2px 2px; }
+.platzhalterleiste { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.platzhalterleiste .chip { cursor: pointer; font-family: var(--mono); }
+.automatisierung-schritte { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 4px; }
+.automatisierung-schritte .schritt { border-left: 3px solid var(--linie-stark); padding: 2px 8px; transition: background .3s, border-color .3s; }
+.automatisierung-schritte .schritt.ok { border-color: var(--gruen); }
+.automatisierung-schritte .schritt.nein, .automatisierung-schritte .schritt.uebersprungen { border-color: var(--leise); }
+.automatisierung-schritte .schritt.fehler { border-color: var(--schlecht); background: var(--schlecht-zart); }
+.automatisierung-schritte .schritt.laeuft { border-color: var(--akzent); background: var(--akzent-zart); }
+.mappenliste .eintrag .problem { display: block; color: var(--schlecht); font-size: .85em; }
+.automatisierung-gruppe .h3 { margin: 10px 0 4px; }
+@media (prefers-reduced-motion: reduce) { .automatisierung-schritte .schritt { transition: none; } }
+@media (max-width: 600px) { .automatisierung .einzug { margin-left: 6px; } }

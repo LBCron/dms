@@ -1,3 +1,4 @@
+import type { AutomatisierungAnsicht, AutomatisierungDaten, Fassung, Kontextdaten, Lauf } from '../../shared/src/automatisierung';
 import type { Design } from './design';
 import { messung } from './messung';
 import type { Nummernkreis } from '../../shared/src/nummernkreis';
@@ -711,6 +712,19 @@ export const api = {
   werkbankWebhookSchalten: (id: string, aktiv: boolean) => anfrage<{ webhooks: WebhookWerkbank[]; ziele: string[] }>('PUT', `/api/werkbank/webhooks/${id}`, { aktiv }),
   werkbankWebhookLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/webhooks/${id}`),
   werkbankWebhookZiele: (ziele: string[]) => anfrage<{ ziele: string[] }>('PUT', '/api/werkbank/webhooks/ziele', { ziele }),
+  // Automatisierungen (#675)
+  automatisierungen: () => anfrage<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; kontext: Kontextdaten }>('GET', '/api/werkbank/automatisierungen'),
+  automatisierungAnlegen: (d: Partial<AutomatisierungDaten> & { aktiv?: boolean }) => anfrage<AutomatisierungAnsicht>('POST', '/api/werkbank/automatisierungen', d),
+  automatisierungAendern: (id: string, d: Partial<AutomatisierungDaten> & { aktiv?: boolean; version: number }) => anfrage<AutomatisierungAnsicht>('PUT', `/api/werkbank/automatisierungen/${id}`, d),
+  automatisierungLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/automatisierungen/${id}`),
+  automatisierungSchalten: (id: string, aktiv: boolean) => anfrage<AutomatisierungAnsicht>('PUT', `/api/werkbank/automatisierungen/${id}/aktiv`, { aktiv }),
+  automatisierungKopieren: (id: string) => anfrage<AutomatisierungAnsicht>('POST', `/api/werkbank/automatisierungen/${id}/kopieren`),
+  automatisierungLaeufe: (id: string) => anfrage<Lauf[]>('GET', `/api/werkbank/automatisierungen/${id}/laeufe?anzahl=30`),
+  automatisierungLaufWiederholen: (laufId: string) => anfrage<Lauf>('POST', `/api/werkbank/automatisierungen/laeufe/${laufId}/wiederholen`),
+  automatisierungenWiederholen: (id?: string) => anfrage<unknown>('POST', id ? `/api/werkbank/automatisierungen/${id}/wiederholen` : '/api/werkbank/automatisierungen/wiederholen'),
+  automatisierungFassungen: (id: string) => anfrage<Fassung[]>('GET', `/api/werkbank/automatisierungen/${id}/fassungen`),
+  automatisierungFassungWiederherstellen: (id: string, version: number) => anfrage<AutomatisierungAnsicht>('POST', `/api/werkbank/automatisierungen/${id}/fassungen/${version}`),
+  automatisierungWiedergeben: (id: string, mappeId: string, trocken: boolean) => anfrage<Lauf>('POST', `/api/werkbank/automatisierungen/${id}/wiedergeben`, { mappeId, trocken }),
   webdav: () => anfrage<WebdavStand>('GET', '/api/werkbank/webdav'),
   webdavSetzen: (e: WebdavEinstellung) => anfrage<WebdavStand>('PUT', '/api/werkbank/webdav', e),
   postfaecher: () => anfrage<PostfachAnsicht[]>('GET', '/api/werkbank/postfaecher'),
@@ -1008,6 +1022,8 @@ export interface WerkbankUebersicht {
   version: { version: string; commit: string | null; gebaut: string | null };
   bestand: { version: string; groesseBytes: number; mappen: number; typen: number; benutzer: number; dokumente: number; dokumenteBytes: number } | null;
   fehlermeldungen: number | null;
+  /** Automatisierungen (#675): mit fehlgeschlagenen Läufen bzw. angehalten oder fehlerhaft. */
+  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }> };
   /** Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind. */
   notfallzugaenge?: Array<{ id: string; name: string; erstellt: string }>;
   /** Wartungsmodus (#102). */
