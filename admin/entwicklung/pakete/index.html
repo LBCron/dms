@@ -1168,6 +1168,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-sicherung-lesen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1288,6 +1299,17 @@
     <span class="md-ellipsis">
       
         Eine Datei braucht ihren Volltext
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung erstellen
       
     </span>
   </a>
@@ -3129,6 +3151,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#recht-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recht-sicherung-lesen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3249,6 +3282,17 @@
     <span class="md-ellipsis">
       
         Eine Datei braucht ihren Volltext
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung erstellen
       
     </span>
   </a>
@@ -3631,6 +3675,8 @@
 <p><strong>„Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“</strong> – Seit Version 0.137 liest das DMS selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis <a href="#ereignis-datei-umwandeln">Datei umwandeln</a>) und gibt eine <strong>umgewandelte Fassung</strong> zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht das DMS das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe <a href="../texterkennung/#andere-dateitypen">Andere Dateitypen</a>). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a> (die Originaldatei).</p>
 <h4 id="recht-volltext">Volltext liefern<a class="headerlink" href="#recht-volltext" title="Permanent link">&para;</a></h4>
 <p><strong>„Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht (dms:volltext): Word, Excel, E-Mail, …“</strong> – Seit Version 0.145. Hinter dem Recht stehen die Dateitypen, für die das Paket den Volltext liefert. Für jede solche Datei bekommt es das Ereignis <a href="#ereignis-datei-volltext">Datei braucht Volltext</a>, liest die Datei und schreibt ihren Text – für <strong>genau diese Dateitypen</strong>, für andere Dokumente nicht. Am Dokument steht so lange <strong>„wartet auf Volltext (Paket …)“</strong>; kann das Paket eine Datei nicht lesen (z. B. weil sie mit einem Passwort verschlüsselt ist), steht sein Grund am Dokument. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a>; Schreibrecht auf Dokumente braucht es nicht. Das Paket <strong>Office und E-Mail</strong> nutzt dieses Recht (ab 1.1.0). PDF, JPEG und PNG liest das DMS selbst; Scans erkennt das Recht <a href="#recht-texterkennung">Texterkennung übernehmen</a>.</p>
+<h4 id="recht-archivfassung">Archivfassung ablegen<a class="headerlink" href="#recht-archivfassung" title="Permanent link">&para;</a></h4>
+<p><strong>„Archivfassung (PDF/A) ablegen – das Paket liest Dokumente mit ihrem Volltext und den Wortpositionen und legt daneben ein durchsuchbares PDF/A ab; das Original bleibt unverändert, ändern, ersetzen oder löschen kann es nichts (dms:archivfassung): PDF, JPEG, PNG, TIFF, …“</strong> – Seit Version 0.149. Hinter dem Recht stehen die Dateitypen, zu denen das Paket eine Archivfassung macht. Für jedes solche Dokument bekommt es das Ereignis <a href="#ereignis-datei-archivfassung">Archivfassung erstellen</a> – <strong>erst, wenn der Volltext feststeht</strong> –, liest die Datei (bei TIFF und Co. die Lesefassung aus <a href="#recht-umwandeln">Dateien umwandeln</a>), den Volltext und die <strong>Wortpositionen</strong> (wo jedes Wort auf der Seite steht) und legt ein PDF/A ab. Das DMS nimmt nur ein PDF mit PDF/A-Kennung an, das nichts aus dem Netz nachlädt (kein JavaScript, keine Aktionen, keine externen Verweise); sonst steht der Grund am Dokument und unter <a href="../texterkennung/#archivfassung-pdfa">Werkbank → Texterkennung → Archivfassung</a>. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a>. Die Archivfassung kommt mit in Sicherung und Vollexport (siehe <a href="../sicherung/">Sicherung</a>).</p>
 <h4 id="recht-sicherung-lesen">Sicherung lesen<a class="headerlink" href="#recht-sicherung-lesen" title="Permanent link">&para;</a></h4>
 <p><strong>„Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte) (dms:sicherung-lesen)“</strong> – Seit Version 0.142. Nach jeder Sicherung bekommt das Paket das Ereignis <a href="#ereignis-sicherung-fertig">Sicherung fertig</a> und darf <strong>genau diese</strong> Sicherungsdatei in Stücken lesen – verschlüsselt, so wie sie im Sicherungsordner liegt – und ihre schlanken Metadaten (Größe, Prüfsumme, Zeitpunkt, Fingerabdruck des Schlüssels). Den Schlüssel, die Inhalte und andere Dateien des Sicherungsordners bekommt es nie. Es meldet je Sicherung zurück, ob die Kopie angekommen und geprüft ist; das zeigt <strong>Werkbank → Sicherung</strong>. Mappen und Dokumente sieht es mit diesem Recht nicht. Siehe <a href="../sicherung-ausser-haus/">Sicherung außer Haus</a>.</p>
 <h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
@@ -3705,6 +3751,9 @@
 <h4 id="ereignis-datei-volltext">Eine Datei braucht ihren Volltext<a class="headerlink" href="#ereignis-datei-volltext" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Seit Version 0.145 für jede Datei eines Typs, den das DMS nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-volltext">Volltext liefern</a> zuständig ist – beim <strong>Hochladen</strong>, bei einer <strong>neuen Version</strong>, wenn das Paket <strong>neu installiert</strong> wird (für die vorhandenen Dateien ohne Text), bei <strong>Volltext neu erzeugen</strong> und bei <strong>Erneut versuchen</strong> bzw. <strong>Neu erzeugen</strong> am Dokument. Dateien über 50 MB meldet das DMS nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id). Bis das Paket schreibt, bleibt ein vorhandener Text für die Suche stehen.</p>
 <p><strong>Typisch:</strong> Das Paket <strong>Office und E-Mail</strong> liest den Text aus Word-, Excel- und PowerPoint-Dateien, OpenDocument, RTF, Textdateien und E-Mails.</p>
+<h4 id="ereignis-datei-archivfassung">Archivfassung erstellen<a class="headerlink" href="#ereignis-datei-archivfassung" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.149 für jedes Dokument eines Typs, für den das Paket mit dem Recht <a href="#recht-archivfassung">Archivfassung ablegen</a> zuständig ist – <strong>sobald sein Volltext feststeht</strong>: nach dem Hochladen (bei Scans also erst nach der Texterkennung), bei einer <strong>neuen Version</strong> oder einer Änderung am PDF (drehen, Seiten löschen, teilen, schwärzen), bei <strong>Volltext neu erzeugen</strong> und wenn das Paket <strong>neu installiert</strong> wird (für alle vorhandenen Dokumente mit fertigem Volltext). Standard sind <strong>alle PDFs</strong>, auch solche mit Text (Online-Rechnungen, Kontoauszüge); mit der Einstellung des Pakets „nur Scans und Bilder“ bekommen PDFs mit vollständigem Text keine. Nicht gemeldet werden: verschlüsselte PDFs (Grund am Dokument), PDFs, die schon gültiges PDF/A sind (das Original gilt dann als Archivfassung), und Dateien über 50 MB. Nur das zuständige Paket bekommt es (bei mehreren das erste nach Id).</p>
+<p><strong>Typisch:</strong> Das Paket <strong>PDF/A</strong> legt zu jedem Scan, Foto und PDF ein durchsuchbares PDF/A-2b ab.</p>
 <h4 id="ereignis-sicherung-fertig">Eine Sicherung ist fertig<a class="headerlink" href="#ereignis-sicherung-fertig" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Seit Version 0.142 nach jeder erfolgreichen Sicherung – von Hand, automatisch oder vor einer Wiederherstellung –, sobald sie vollständig im Sicherungsordner liegt. Nur Pakete mit dem Recht <a href="#recht-sicherung-lesen">Sicherung lesen</a> bekommen es. Schlägt die Kopie fehl, wiederholt das DMS das Ereignis (nach 1, 5, 30 Minuten, 2 und 6 Stunden); danach gilt sie als fehlgeschlagen und die Administratoren bekommen eine E-Mail.</p>
 <p><strong>Typisch:</strong> Das Paket <strong>Sicherungsziel WebDAV</strong> lädt die verschlüsselte Sicherung auf Nextcloud, ein NAS oder zum Hoster und prüft sie dort.</p>

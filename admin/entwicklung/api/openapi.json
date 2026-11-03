@@ -5561,6 +5561,223 @@
         }
       }
     },
+    "/dokumente/{id}/archivfassung": {
+      "put": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Archivfassung (PDF/A) ablegen (Pakete)",
+        "description": "Für Pakete mit dem Recht „dms:archivfassung“ (#631), z. B. „PDF/A“: das durchsuchbare PDF/A zu einem Dokument (Ereignis datei.archivfassung) – roh im Körper (application/octet-stream), höchstens 100 MB und 1000 Seiten. Der Kern nimmt nur ein PDF mit PDF/A-Kennung in den XMP-Metadaten (pdfaid:part 1–4 und pdfaid:conformance, Metadaten ungefiltert) und ohne JavaScript, Aktionen oder Verweise auf externe Inhalte; sonst 422 mit Grund, der auch am Dokument steht. Die Archivfassung gehört zur Datei (Prüfwert) und ersetzt eine vorhandene; ein Eintrag in der Historie. 403 ohne das Recht oder wenn das Paket für den Dateityp nicht zuständig ist (code.archivfassung), 409, wenn sha256 nicht mehr die Datei des Dokuments ist, 413 zu groß, 415 kein PDF.",
+        "operationId": "putDokumenteMitidArchivfassung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": true,
+            "description": "Prüfwert der Datei aus dem Ereignis datei.archivfassung",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchivfassungGesetzt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen oder nur Zähler",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Archivfassung (PDF/A) herunterladen",
+        "description": "Die Archivfassung zur aktuellen Datei des Dokuments (#631); Dateiname „… (PDF-A).pdf“, der Kopf x-dms-archivfassung nennt Kennung, Paket und Version („original“: das Original ist schon PDF/A). Nach einer Änderung am Original (neue Version, Seiten, Schwärzen) gibt es sie erst wieder, wenn das Paket neu erzeugt hat. 404 ohne. Braucht Lesen.",
+        "operationId": "getDokumenteMitidArchivfassung",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "herunterladen",
+            "in": "query",
+            "required": false,
+            "description": "Herunterladen statt anzeigen",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen oder nur Zähler",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dokumente/{id}/wortpositionen": {
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Wortpositionen (für die Archivfassung)",
+        "description": "Je Seite der Quelle (Original bzw. bei TIFF und Co. die Lesefassung) die Wörter mit Lage [Text, x, y, b, h], relativ zur angezeigten Seite (0…1, Ursprung oben links) – aus der Textebene des PDFs, sonst aus der Texterkennung (die sie mit PUT …/volltext als woerter schickt), sonst keine (quelle „keine“). breite/hoehe: Seite in pt (PDF) bzw. Bildpunkten (Bild). vollstaendig: jede Seite hat Wörter. Braucht Lesen (#631).",
+        "operationId": "getDokumenteMitidWortpositionen",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Id des Dokuments (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erfolg",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wortpositionen"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Schlüssel ungültig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Schlüssel nur zum Lesen oder nur Zähler",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fehler"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dokumente/{id}/seiten/{nr}/scan": {
       "get": {
         "tags": [
@@ -12228,6 +12445,119 @@
           }
         }
       },
+      "ArchivfassungGesetzt": {
+        "type": "object",
+        "properties": {
+          "dokument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "archivfassung": {
+            "type": "object",
+            "properties": {
+              "mime": {
+                "type": "string"
+              },
+              "groesse": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "seiten": {
+                "type": "integer"
+              },
+              "pdfa": {
+                "type": "object",
+                "properties": {
+                  "teil": {
+                    "type": "integer"
+                  },
+                  "stufe": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "paket": {
+                "type": "object"
+              },
+              "erstellt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "signiert": {
+                "type": "boolean"
+              },
+              "erechnung": {
+                "type": "boolean"
+              },
+              "weggelassen": {
+                "type": "boolean",
+                "description": "Das Original enthielt externe Inhalte, JavaScript oder Aktionen, die nicht übernommen wurden"
+              }
+            }
+          }
+        }
+      },
+      "Wortpositionen": {
+        "type": "object",
+        "properties": {
+          "dokument": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "quelle": {
+            "type": "string",
+            "enum": [
+              "original",
+              "lesefassung"
+            ]
+          },
+          "mime": {
+            "type": "string"
+          },
+          "vollstaendig": {
+            "type": "boolean"
+          },
+          "seiten": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "seite": {
+                  "type": "integer"
+                },
+                "quelle": {
+                  "type": "string",
+                  "enum": [
+                    "textebene",
+                    "texterkennung",
+                    "keine"
+                  ]
+                },
+                "breite": {
+                  "type": "number"
+                },
+                "hoehe": {
+                  "type": "number"
+                },
+                "woerter": {
+                  "type": "array",
+                  "description": "[Text, x, y, b, h], relativ zur Seite",
+                  "items": {
+                    "type": "array",
+                    "items": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "FassungGesetzt": {
         "type": "object",
         "properties": {
@@ -12440,6 +12770,22 @@
               ]
             },
             "description": "Weitere Sprachen fürs ganze Dokument (#579), wenn das Paket die Seiten nicht kennt"
+          },
+          "woerter": {
+            "type": "array",
+            "nullable": true,
+            "maxItems": 1000,
+            "description": "Wortpositionen (#631) für die Archivfassung: je durch \\f getrennter Seite eine Liste [Text, x, y, b, h] (relativ zur Seite, wie GET …/seiten/{nr}/scan sie liefert, 0…1, Ursprung oben links) oder null (Seite ohne Angabe, z. B. Textebene). Höchstens 1,5 Millionen Wörter. Ohne Angabe nimmt ein Paket die bisherigen mit weg; null: entfernen.",
+            "items": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "array",
+                "minItems": 5,
+                "maxItems": 5,
+                "items": {}
+              }
+            }
           }
         }
       },
