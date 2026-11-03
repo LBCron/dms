@@ -106,7 +106,7 @@ describe('Paket-Läufer (#338): Modul und Manifest', () => {
   it('liest code: im Manifest und verlangt das gebaute Modul', () => {
     assert.deepEqual(liesCode({ sprache: 'c', quelle: 'code/', rechte: { schreiben: ['notiz'], dokumente: 'schreiben' }, netz: ['https://api.example.org/v1'], ereignisse: ['post.angelegt'] }).code?.rechte, { lesen: ['notiz'], schreiben: ['notiz'], dokumente: 'schreiben' });
     assert.match(liesCode({ sprache: 'c', rechte: {}, netz: ['http://x.example'] }).fehler.join(), /nur https/);
-    assert.match(liesCode({ sprache: 'c', rechte: {}, ereignisse: ['mappe.geloescht'] }).fehler.join(), /gibt es nicht/);
+    assert.match(liesCode({ sprache: 'c', rechte: {}, ereignisse: ['mappe.gibtsnicht'] }).fehler.join(), /gibt es nicht/);
     const ohne = new Map(archiv('ohne', ECHO)); ohne.delete('code/modul.wasm');
     assert.equal(liesPaket(ohne).code, null, 'ohne gebautes Modul: installierbar, aber ohne Code');
     const kaputt = new Map(archiv('kaputt', Buffer.from('kein wasm')));

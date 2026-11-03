@@ -969,7 +969,9 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     await repo.ereignisFehlgeschlagen(id(2), 'kaputt', new Date(Date.now() + 60_000));
     await repo.ereignisFehlgeschlagen(id(3), 'aufgegeben', null);
     assert.deepEqual(await repo.faelligeEreignisse(10), [], 'zugestellt, später fällig oder aufgegeben');
-    assert.deepEqual((await repo.ereignisStand()).probe, { offen: 1, aufgegeben: 1, zugestellt: 1 });
+    const { zuletzt, ...st } = (await repo.ereignisStand()).probe;
+    assert.deepEqual(st, { offen: 1, aufgegeben: 1, zugestellt: 1 });
+    assert.ok(zuletzt, 'Zeitpunkt der letzten Zustellung (#670)');
     await repo.loescheEreignisse('probe');
     await repo.loeschePaketCode('probe');
     assert.deepEqual(await repo.paketCode('probe'), []);
@@ -1030,5 +1032,53 @@ describe('PostgreSQL: Ereignis in derselben Transaktion (#404)', { skip: url ? f
     } finally {
       await repo.loeschePaket('tx404');
     }
+  });
+});
+
+describe('PostgreSQL: Ereigniskatalog (#670)', { skip: url ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sql: any;
+  after(async () => { await sql?.unsafe(`DELETE FROM ereignisse WHERE art LIKE 'mappe.%' AND daten->>'probe' = '670'`); await sql?.end(); });
+
+  it('Bündeln, Sperre für zwei Server, Wiederholung, Aufräumen und Frist genau einmal', async () => {
+    const { verbinde, migriere } = await import('../src/db');
+    const { pgRepo } = await import('../src/repo-pg');
+    const { mischeFelder } = await import('../../shared/src/ereignisse');
+    sql = verbinde(url!);
+    await migriere(sql, fileURLToPath(new URL('../migrations', import.meta.url)), () => {});
+    const r = pgRepo(sql, HAUSHALT);
+    await sql`DELETE FROM ereignisse WHERE haushalt_id = ${HAUSHALT}`;
+    const mappe = '00000000-0000-4000-8000-000000000670';
+    const neu = (id: string, felder: string[]) => r.legeKatalogEreignisAn({ id, art: 'mappe.geaendert', daten: { mappe, felder, probe: '670' }, ausloeser: { art: 'system' }, buendel: `mappe.geaendert|${mappe}`, buendelS: 5 }, (alt) => mischeFelder(alt, { felder }));
+    await neu('00000000-0000-4000-8000-000000006701', ['name']);
+    await neu('00000000-0000-4000-8000-000000006702', ['betrag']);
+    const [{ n }] = await sql`SELECT count(*)::int AS n FROM ereignisse WHERE haushalt_id = ${HAUSHALT}`;
+    assert.equal(n, 1, 'gebündelt');
+    assert.equal((await r.holeKatalogEreignisse(10, 60)).length, 0, 'erst nach der Bündelzeit fällig');
+    await sql`UPDATE ereignisse SET faellig = now() - interval '1 second' WHERE haushalt_id = ${HAUSHALT}`;
+    // Zwei Server holen gleichzeitig: nur einer bekommt das Ereignis.
+    const [a, b] = await Promise.all([r.holeKatalogEreignisse(10, 60), r.holeKatalogEreignisse(10, 60)]);
+    assert.equal(a.length + b.length, 1, 'gesperrt für den anderen Server');
+    const e = [...a, ...b][0];
+    assert.deepEqual([...(e.daten.felder as string[])].sort(), ['betrag', 'name']);
+    await r.katalogEreignisFehlgeschlagen(e.id, 'kurz weg', new Date(Date.now() - 1000));
+    const wieder = await r.holeKatalogEreignisse(10, 60);
+    assert.equal(wieder[0]?.id, e.id, 'Wiederholung mit derselben Id');
+    assert.equal(wieder[0].versuche, 1);
+    // Ein fehlgeschlagenes Ereignis wird nicht mehr gebündelt – die nächste Änderung ist ein neues.
+    await neu('00000000-0000-4000-8000-000000006703', ['notiz']);
+    await r.katalogEreignisVerteilt(e.id);
+    const stand = await r.katalogEreignisStand();
+    assert.equal(stand.offen, 1);
+    assert.equal(stand.verteilt, 1);
+    await sql`UPDATE ereignisse SET verteilt = now() - interval '8 days' WHERE id = ${e.id}`;
+    assert.equal(await r.raeumeKatalogEreignisseAuf(7), 1);
+    // Frist erreicht: je Mappe, Feld, Datum und Zeitpunkt genau einmal, auch gleichzeitig.
+    const f = { mappeId: mappe, feld: 'kuendigung', datum: '2031-06-30', zeitpunkt: 'vorlauf' as const };
+    await sql`DELETE FROM frist_meldungen WHERE haushalt_id = ${HAUSHALT} AND mappe_id = ${mappe}`;
+    const erst = await Promise.all([r.merkeFristMeldung(f), r.merkeFristMeldung(f)]);
+    assert.deepEqual(erst.sort(), [false, true]);
+    assert.equal(await r.merkeFristMeldung({ ...f, zeitpunkt: 'faellig' }), true);
+    await sql`DELETE FROM frist_meldungen WHERE haushalt_id = ${HAUSHALT} AND mappe_id = ${mappe}`;
   });
 });

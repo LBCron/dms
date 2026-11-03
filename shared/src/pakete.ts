@@ -343,7 +343,17 @@ export const EREIGNISSE = {
   'sicherung.fertig': 'Eine Sicherung ist fertig (verschlüsselt) und kann außer Haus kopiert werden',
   'datei.volltext': 'Eine Datei braucht ihren Volltext (Dateitypen, die das DMS nicht selbst liest)',
   'datei.archivfassung': 'Ein Dokument mit fertigem Volltext braucht seine Archivfassung (PDF/A)',
+  // Mappen-Ereignisse aus dem Ereigniskatalog (#670, shared/src/ereignisse.ts): nur zu Typen unter code.mappentypen.
+  'mappe.angelegt': 'Eine Mappe ist angelegt',
+  'mappe.geaendert': 'Eine Mappe ist geändert (mit den Schlüsseln der geänderten Felder)',
+  'mappe.geloescht': 'Eine Mappe ist gelöscht (Papierkorb)',
+  'mappe.wiederhergestellt': 'Eine Mappe ist aus dem Papierkorb zurück',
+  'frist.erreicht': 'Eine Frist ist erreicht (zur Erinnerung und am Tag selbst)',
 } as const;
+/** Ereignisse zu Mappen (#670): brauchen code.mappentypen, gelten nur für diese Typen. */
+export const MAPPEN_EREIGNISSE: readonly EreignisArt[] = ['mappe.angelegt', 'mappe.geaendert', 'mappe.geloescht', 'mappe.wiederhergestellt', 'frist.erreicht'];
+/** Ab dieser Version kennt das DMS Mappen-Ereignisse für Pakete (#670); ältere lehnen die Ereignisse beim Installieren ab. */
+export const DMS_MAPPEN_EREIGNISSE_AB = '0.153.0';
 export type EreignisArt = keyof typeof EREIGNISSE;
 /**
  * Schnittstellen des Kerns, die ein Paket zusätzlich nutzen darf (`code.rechte.schnittstellen`, #442).
@@ -433,6 +443,11 @@ export interface PaketCode {
    * Bilder“: an = PDFs mit vollständiger Textebene bekommen keine Archivfassung (Vorgabe: alle PDFs).
    */
   archivfassung?: { typen: string[]; nur_scans?: string };
+  /**
+   * Mappentypen, zu denen das Paket Mappen-Ereignisse bekommt (#670, `code.mappentypen`): Schlüssel aus dem eigenen
+   * `inhalt` (Stufe 1 – fremde Typen später). Nötig für mappe.* und frist.erreicht; das Paket muss sie lesen dürfen.
+   */
+  mappentypen?: string[];
   /** Das WebAssembly-Modul (code/modul.wasm) und Daten (code/daten/…), nur im installierten Paket. */
   modul?: { sha256: string; groesse: number };
   daten?: string[];
@@ -473,6 +488,12 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   };
   const ereignisse = liste(x.ereignisse, 'code.ereignisse');
   for (const e of ereignisse) if (!(e in EREIGNISSE)) fehler.push(`code.ereignisse: „${e}“ gibt es nicht. Möglich: ${Object.keys(EREIGNISSE).join(', ')}.`);
+  // Mappen-Ereignisse (#670): nur zu den Typen unter code.mappentypen (eigene Typen des Pakets, ohne Präfix).
+  const mappentypen = liste(x.mappentypen, 'code.mappentypen');
+  const mitMappen = ereignisse.filter((e) => MAPPEN_EREIGNISSE.includes(e as EreignisArt));
+  for (const k of mappentypen) if (!/^[a-z][a-z0-9_]{0,39}$/.test(k)) fehler.push(`code.mappentypen: „${k}“ – nur Schlüssel eigener Mappentypen (ohne Präfix); Ereignisse zu fremden Mappentypen gibt es noch nicht.`);
+  if (mitMappen.length && !mappentypen.length) fehler.push(`code.ereignisse: ${mitMappen.join(', ')} braucht code.mappentypen – die eigenen Mappentypen, zu denen das Paket die Ereignisse bekommt.`);
+  if (!mitMappen.length && mappentypen.length) fehler.push('code.mappentypen: nur mit Mappen-Ereignissen in code.ereignisse (mappe.angelegt, mappe.geaendert, mappe.geloescht, mappe.wiederhergestellt, frist.erreicht).');
   const r = (x.rechte ?? {}) as Record<string, unknown>;
   if (typeof r !== 'object' || Array.isArray(r)) fehler.push('code.rechte: muss ein Objekt sein.');
   const lesen = liste(r.lesen, 'code.rechte.lesen'), schreiben = liste(r.schreiben, 'code.rechte.schreiben');
@@ -557,7 +578,9 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
     : []));
   // Schreiben setzt Lesen voraus.
   const lesenAlle = [...new Set([...lesen, ...schreiben])];
-  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}), ...(volltext.length ? { volltext: [...new Set(volltext)] } : {}), ...(archivfassung && willArchiv ? { archivfassung } : {}) }, fehler };
+  // Ereignisse zu Mappen nur zu Typen, die das Paket lesen darf (#670) – sonst wüsste es von Mappen, die es nie sehen darf.
+  for (const k of mappentypen) if (!lesenAlle.includes(k) && !lesenAlle.includes(ALLE_TYPEN)) fehler.push(`code.mappentypen: „${k}“ – das Paket muss diesen Mappentyp auch lesen dürfen (code.rechte.lesen).`);
+  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}), ...(volltext.length ? { volltext: [...new Set(volltext)] } : {}), ...(archivfassung && willArchiv ? { archivfassung } : {}), ...(mappentypen.length ? { mappentypen } : {}) }, fehler };
 }
 
 /** Zustand des Paket-Läufers (#403): aus (kein Paket mit Code), startet, bereit, neustart (nach Absturz), pausiert (Wartung). */
@@ -600,6 +623,11 @@ export const EREIGNIS_HILFE: Record<EreignisArt, Hilfeort> = {
   'sicherung.fertig': 'pakete.ereignis.sicherung_fertig',
   'datei.volltext': 'pakete.ereignis.datei_volltext',
   'datei.archivfassung': 'pakete.ereignis.datei_archivfassung',
+  'mappe.angelegt': 'pakete.ereignis.mappe',
+  'mappe.geaendert': 'pakete.ereignis.mappe',
+  'mappe.geloescht': 'pakete.ereignis.mappe',
+  'mappe.wiederhergestellt': 'pakete.ereignis.mappe',
+  'frist.erreicht': 'pakete.ereignis.frist_erreicht',
 };
 
 /** Ein Punkt der Rechte-Liste in der Vorschau (#449): Text, Handbuch-Stelle, ggf. Unterliste (Ereignisse). */
@@ -617,7 +645,9 @@ export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string)
   const typen = (s: Schnittstelle) => (s === 'dms:umwandeln' ? c.umwandeln : s === 'dms:volltext' ? c.volltext : s === 'dms:archivfassung' ? c.archivfassung?.typen : undefined);
   for (const s of c.rechte.schnittstellen ?? []) z.push({ text: `${SCHNITTSTELLEN[s]} (${s})${typen(s)?.length ? `: ${[...new Set(typen(s)!.map(dateitypName))].join(', ')}` : ''}`, hilfe: SCHNITTSTELLE_HILFE[s] });
   z.push({ text: netzText(c.netz, (c.adressen ?? []).map((a) => a.name)), hilfe: c.adressen?.length ? 'pakete.recht.adresse' : 'pakete.recht.netz' });
-  if (c.ereignisse.length) z.push({ text: 'Reagiert auf diese Ereignisse:', hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: EREIGNISSE[e], hilfe: EREIGNIS_HILFE[e] })) });
+  // Mappen-Ereignisse (#670) mit den Mappentypen, zu denen das Paket sie bekommt.
+  const zuTypen = c.mappentypen?.length ? ` – zu: ${t(c.mappentypen)}` : '';
+  if (c.ereignisse.length) z.push({ text: 'Reagiert auf diese Ereignisse:', hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: `${EREIGNISSE[e]}${MAPPEN_EREIGNISSE.includes(e) ? zuTypen : ''}`, hilfe: EREIGNIS_HILFE[e] })) });
   return z;
 }
 

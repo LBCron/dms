@@ -27,6 +27,10 @@ export function speicherRepo(): Repo {
   const pakete = new Map<string, InstalliertesPaket>();
   const paketCode = new Map<string, Array<{ name: string; inhalt: Buffer }>>();
   const ereignisse = new Map<string, { id: string; paketId: string; art: string; daten: Record<string, unknown>; erstellt: string; faellig: number; versuche: number; zugestellt: string | null; fehler: string | null }>();
+  // Ereigniskatalog (#670)
+  const katalog = new Map<string, { id: string; nr: number; art: string; daten: Record<string, unknown>; ausloeser: Record<string, unknown>; buendel: string | null; erstellt: string; faellig: number; gesperrtBis: number; versuche: number; fehler: string | null; verteilt: string | null }>();
+  let katalogNr = 0;
+  const fristMeldungen = new Set<string>();
   /** Nummer ziehen (#171); synchron, damit gleichzeitiges Anlegen keine doppelten Nummern ergibt. */
   const zieheSync = (schluessel: string, mappeId: string | null, j: Date) => {
     const k = kreise.get(schluessel);
@@ -207,7 +211,8 @@ export function speicherRepo(): Repo {
     async paketCode(id) { return (paketCode.get(id) ?? []).map((d) => ({ name: d.name, inhalt: Buffer.from(d.inhalt) })); },
     async loeschePaketCode(id) { paketCode.delete(id); },
     async legeEreignisseAn(liste) {
-      for (const e of liste) ereignisse.set(e.id, { ...e, daten: kopie(e.daten), erstellt: jetzt(), faellig: Date.now(), versuche: 0, zugestellt: null, fehler: null });
+      // Gleiche Id = schon angelegt (#670: Ereignisse aus dem Katalog kommen mindestens einmal).
+      for (const e of liste) if (!ereignisse.has(e.id)) ereignisse.set(e.id, { ...e, daten: kopie(e.daten), erstellt: jetzt(), faellig: Date.now(), versuche: 0, zugestellt: null, fehler: null });
     },
     async faelligeEreignisse(anzahl) {
       const t = Date.now();
@@ -227,12 +232,51 @@ export function speicherRepo(): Repo {
       e.versuche++; e.fehler = fehler; e.faellig = naechster ? naechster.getTime() : Number.POSITIVE_INFINITY;
     },
     async ereignisStand() {
-      const erg: Record<string, { offen: number; aufgegeben: number; zugestellt: number }> = {};
+      const erg: Record<string, { offen: number; aufgegeben: number; zugestellt: number; zuletzt: string | null }> = {};
       for (const e of ereignisse.values()) {
-        const x = (erg[e.paketId] ??= { offen: 0, aufgegeben: 0, zugestellt: 0 });
-        if (e.zugestellt) x.zugestellt++; else if (e.faellig === Number.POSITIVE_INFINITY) x.aufgegeben++; else x.offen++;
+        const x = (erg[e.paketId] ??= { offen: 0, aufgegeben: 0, zugestellt: 0, zuletzt: null });
+        if (e.zugestellt) { x.zugestellt++; if (!x.zuletzt || e.zugestellt > x.zuletzt) x.zuletzt = e.zugestellt; } else if (e.faellig === Number.POSITIVE_INFINITY) x.aufgegeben++; else x.offen++;
       }
       return erg;
+    },
+    async legeKatalogEreignisAn(e, mische) {
+      const t = Date.now();
+      if (e.buendel && mische) {
+        const da = [...katalog.values()].find((x) => x.buendel === e.buendel && !x.verteilt && !x.versuche && x.gesperrtBis < t && x.faellig > t);
+        if (da) { da.daten = kopie(mische(kopie(da.daten))); return da.id; }
+      }
+      katalog.set(e.id, { id: e.id, nr: ++katalogNr, art: e.art, daten: kopie(e.daten), ausloeser: kopie(e.ausloeser), buendel: e.buendel ?? null, erstellt: jetzt(), faellig: t + (e.buendel ? (e.buendelS ?? 0) * 1000 : 0), gesperrtBis: 0, versuche: 0, fehler: null, verteilt: null });
+      return e.id;
+    },
+    async holeKatalogEreignisse(anzahl, sperreS) {
+      const t = Date.now();
+      const liste = [...katalog.values()].filter((x) => !x.verteilt && x.faellig <= t && x.gesperrtBis < t).sort((a, b) => a.nr - b.nr).slice(0, anzahl);
+      for (const x of liste) x.gesperrtBis = t + sperreS * 1000;
+      return liste.map((x) => ({ id: x.id, nr: x.nr, art: x.art, daten: kopie(x.daten), ausloeser: kopie(x.ausloeser), erstellt: x.erstellt, versuche: x.versuche }));
+    },
+    async katalogEreignisVerteilt(id) { const x = katalog.get(id); if (x) { x.verteilt = jetzt(); x.fehler = null; } },
+    async katalogEreignisFehlgeschlagen(id, fehler, naechster) {
+      const x = katalog.get(id); if (!x) return;
+      x.versuche++; x.fehler = fehler.slice(0, 1000); x.gesperrtBis = 0;
+      if (naechster) x.faellig = naechster.getTime(); else x.verteilt = jetzt();
+    },
+    async raeumeKatalogEreignisseAuf(tage) {
+      const grenze = Date.now() - tage * 864e5; let n = 0;
+      for (const [k, x] of katalog) if (x.verteilt && Date.parse(x.verteilt) < grenze) { katalog.delete(k); n++; }
+      const jahr = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+      for (const k of fristMeldungen) if (k.split('|')[2] < jahr) fristMeldungen.delete(k);
+      return n;
+    },
+    async katalogEreignisStand() {
+      const alle = [...katalog.values()];
+      const offen = alle.filter((x) => !x.verteilt);
+      return { offen: offen.length, aufgegeben: alle.filter((x) => x.verteilt && x.fehler).length, verteilt: alle.filter((x) => x.verteilt && !x.fehler).length,
+        aeltestesOffen: offen.map((x) => x.erstellt).sort()[0] ?? null };
+    },
+    async merkeFristMeldung(f) {
+      const k = `${f.mappeId}|${f.feld}|${f.datum}|${f.zeitpunkt}`;
+      if (fristMeldungen.has(k)) return false;
+      fristMeldungen.add(k); return true;
     },
     async ereignisDaten(id, daten) { const e = ereignisse.get(id); if (e) e.daten = kopie(daten); },
     async loescheEreignisse(id) { for (const [k, e] of ereignisse) if (e.paketId === id) ereignisse.delete(k); },

@@ -68,6 +68,8 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   zaehlerstaende: 'nicht enthalten: Stand der Zahlen je Benutzer für den Zähler-Endpunkt (#625, nur ein Hash der Zahlen, technisch)',
   webhooks: 'nicht enthalten: Webhooks der Benutzer (#627, Adresse und verschlüsseltes Geheimnis – Zugangsdaten)',
   webhook_meldungen: 'nicht enthalten: Ausgangskorb der Webhooks (#627, nur Zahlen, technisch)',
+  ereignisse: 'nicht enthalten: Ausgangskorb des Ereigniskatalogs (#670, nur Ids und Feldschlüssel, technisch)',
+  frist_meldungen: 'nicht enthalten: welche Fristen schon als „Frist erreicht“ gemeldet sind (#670, technisch)',
   schema_migrationen: 'nicht enthalten: Stand der Datenbank (steht als Version im Manifest)',
 };
 

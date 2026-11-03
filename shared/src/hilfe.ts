@@ -90,6 +90,8 @@ export const HILFE = {
   'pakete.ereignis.datei_volltext': admin('pakete/', 'dem Ereignis „Datei braucht Volltext“', 'ereignis-datei-volltext'),
   'pakete.ereignis.datei_archivfassung': admin('pakete/', 'dem Ereignis „Archivfassung erstellen“', 'ereignis-datei-archivfassung'),
   'pakete.ereignis.sicherung_fertig': admin('pakete/', 'dem Ereignis „Sicherung fertig“', 'ereignis-sicherung-fertig'),
+  'pakete.ereignis.mappe': admin('pakete/', 'den Ereignissen zu Mappen', 'ereignis-mappe'),
+  'pakete.ereignis.frist_erreicht': admin('pakete/', 'dem Ereignis „Frist erreicht“', 'ereignis-frist-erreicht'),
   'mappentyp.archiv': admin('archiv/', 'Archivmodus und Aufbewahrung'),
   'werkbank.stempel': admin('stempel/', 'Stempel-Vorlagen'),
   'werkbank.suche': admin('suche/', 'Suche: Tippfehler und gleichbedeutende Wörter'),

@@ -149,6 +149,10 @@ export interface VolltextHerkunftZahlen { pdf: number; paket: number; api: numbe
 /** Stand der Zahlen eines Benutzers (#625), in der Datenbank. */
 export interface Zaehlerstand { stand: number; abdruck: string; geaendert: string }
 
+/** Ein Ereignis des Katalogs (#670), wie es geschrieben wird. */
+export interface NeuesKatalogEreignis { id: string; art: string; daten: Record<string, unknown>; ausloeser: Record<string, unknown>; buendel?: string; buendelS?: number }
+export interface GespeichertesKatalogEreignis { id: string; nr: number; art: string; daten: Record<string, unknown>; ausloeser: Record<string, unknown>; erstellt: string; versuche: number }
+
 export interface Repo {
   /**
    * Mehrere Änderungen ganz oder gar nicht (#404), z. B. eine Änderung samt Ereignis im Ausgangskorb:
@@ -195,12 +199,30 @@ export interface Repo {
   ereignisDaten(id: string, daten: Record<string, unknown>): Promise<void>;
   /** Fehlschlag merken; naechster null = aufgeben. */
   ereignisFehlgeschlagen(id: string, fehler: string, naechster: Date | null): Promise<void>;
-  /** Je Paket: offen, aufgegeben, zuletzt zugestellt. */
-  ereignisStand(): Promise<Record<string, { offen: number; aufgegeben: number; zugestellt: number }>>;
+  /** Je Paket: offen, aufgegeben, zugestellt und wann zuletzt (#670). */
+  ereignisStand(): Promise<Record<string, { offen: number; aufgegeben: number; zugestellt: number; zuletzt?: string | null }>>;
   /** Alle Ereignisse eines entfernten Pakets verwerfen. */
   loescheEreignisse(paketId: string): Promise<void>;
   /** Noch nicht zugestellte Ereignisse einer Art zu diesen Dokumenten verwerfen (#458, Texterkennung abbrechen); liefert die Anzahl. */
   loescheOffeneEreignisse(art: string, dokumente: string[]): Promise<number>;
+  /* ---------- Ereigniskatalog (#670) ---------- */
+  /**
+   * Ereignis in den Ausgangskorb (in der Transaktion der Änderung). Mit `buendel`: Gibt es dazu noch ein offenes,
+   * nicht geholtes Ereignis, dessen Frist (`buendelS`) noch läuft, bekommt es die mit `mische` zusammengeführten Daten
+   * statt eines neuen Eintrags; liefert die Id des Ereignisses, das es aufnimmt.
+   */
+  legeKatalogEreignisAn(e: NeuesKatalogEreignis, mische?: (alt: Record<string, unknown>) => Record<string, unknown>): Promise<string>;
+  /** Fällige Ereignisse holen und für `sperreS` Sekunden für diesen Server sperren (mehrere Server); älteste zuerst. */
+  holeKatalogEreignisse(anzahl: number, sperreS: number): Promise<GespeichertesKatalogEreignis[]>;
+  katalogEreignisVerteilt(id: string): Promise<void>;
+  /** Fehlschlag merken; naechster null = aufgeben (gilt als verteilt, Fehler bleibt stehen). */
+  katalogEreignisFehlgeschlagen(id: string, fehler: string, naechster: Date | null): Promise<void>;
+  /** Verteiltes nach `tage` Tagen löschen, alte Fristmeldungen nach einem Jahr. */
+  raeumeKatalogEreignisseAuf(tage: number): Promise<number>;
+  /** Stand des Ausgangskorbs (Werkbank, Tests). */
+  katalogEreignisStand(): Promise<{ offen: number; aufgegeben: number; verteilt: number; aeltestesOffen: string | null }>;
+  /** „Frist erreicht“ (#670) je Mappe, Feld, Datum und Zeitpunkt genau einmal: true, wenn diese Meldung neu ist. */
+  merkeFristMeldung(f: { mappeId: string; feld: string; datum: string; zeitpunkt: 'vorlauf' | 'faellig' }): Promise<boolean>;
   /* ---------- Nummernkreise (#171) ---------- */
   listeNummernkreise(): Promise<Nummernkreis[]>;
   /** Anlegen oder Name, Muster und Start ändern; Zählerstände bleiben. */

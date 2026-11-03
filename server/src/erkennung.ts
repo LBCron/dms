@@ -208,6 +208,8 @@ export class Erkennung {
     const ergebnis = await this.fuerPost(m.id);
     // Automatisch zuordnen (#337): nur nach neuem Volltext, nie beim bloßen Lesen.
     if (ergebnis) await this.d.automatischZuordnen(m.id, ergebnis);
+    // Ereigniskatalog (#670): eigene Schritte lassen sich hinten an die Erkennung hängen.
+    if (ergebnis) await this.d.ereignis('erkennung.fertig', { mappe: m.id, typ: m.typId, dokument: e.dokument });
     return ergebnis;
   }
 

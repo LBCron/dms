@@ -12,6 +12,7 @@ import pakete from '../../shared/src/sprachen/de/pakete.json';
 import erkennung from '../../shared/src/sprachen/de/erkennung.json';
 import felder from '../../shared/src/sprachen/de/felder.json';
 import fragen from '../../shared/src/sprachen/de/fragen.json';
+import ereignisse from '../../shared/src/sprachen/de/ereignisse.json';
 import konten from '../../shared/src/sprachen/de/konten.json';
 import lasttest from '../../shared/src/sprachen/de/lasttest.json';
 import mappen from '../../shared/src/sprachen/de/mappen.json';
@@ -23,4 +24,4 @@ import volltext from '../../shared/src/sprachen/de/volltext.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, api, anmeldung, anstehend, erkennung, felder, fragen, konten, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, volltext, webhook, werkbank });
+export const t = uebersetzer({ aehnlich, api, anmeldung, anstehend, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, volltext, webhook, werkbank });

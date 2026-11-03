@@ -252,6 +252,9 @@ export class Konten {
     return istPerson(b) ? b : undefined;
   }
 
+  /** Mensch zur E-Mail-Adresse (#670: Ereignis „Benutzerkonto gesperrt“ nennt die Id, nicht die Adresse). */
+  async personMitEmail(email: string): Promise<Benutzer | undefined> { return (await this.repo.holeHash(email))?.benutzer; }
+
   /** Aktiver Benutzer zur Id (für API-Schlüssel). */
   async benutzerMitId(id: string): Promise<Benutzer | undefined> {
     const b = await this.repo.holeBenutzer(id);

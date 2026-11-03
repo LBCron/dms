@@ -534,6 +534,9 @@ export class Wiederherstellung {
           ON CONFLICT (haushalt_id, schluessel) DO UPDATE SET wert = EXCLUDED.wert`;
       };
       await neu`DELETE FROM einstellungen WHERE schluessel = 'wartung'`;
+      // Ereignisse (#670) aus der Zeit vor der Sicherung nicht noch einmal verteilen.
+      const [{ da }] = await neu<{ da: string | null }[]>`SELECT to_regclass('ereignisse')::text AS da`;
+      if (da) await neu`UPDATE ereignisse SET verteilt = now() WHERE verteilt IS NULL`;
 
       schritt('Dateien übernehmen');
       let uebernommen = 0; let schonDa = 0;

@@ -77,6 +77,8 @@ import { FragenAnDieAblage } from './fragen';
 import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
+import { Ereignisverteiler } from './ereignisse';
+import { EREIGNISKATALOG, MAPPENTYP_EREIGNISSE, mischeFelder, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
 import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
 import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
@@ -157,6 +159,13 @@ export const VOLLTEXT_MAX = VOLLTEXT_ZEICHEN_MAX;
 /** Auswahlfilter (#172) zählen nichts – nur Bedingungen auf Felder. */
 /** Laufende Transaktion je Aufruf (#404): Repo der Transaktion und was erst nach dem Speichern geschehen soll. */
 const transaktionen = new AsyncLocalStorage<{ dienst: object; repo: Repo; nachher: Array<() => void> }>();
+/** Historie → Ereignis des Katalogs (#670); Löschen meldet die Stelle selbst (die Mappe ist danach weg). */
+const NOTIERT_ALS: Partial<Record<Historienart, KatalogArt>> = { angelegt: 'mappe.angelegt', geaendert: 'mappe.geaendert', wiederhergestellt: 'mappe.wiederhergestellt' };
+/**
+ * Ereigniskatalog (#670): Wer gerade handelt (z. B. eine Automatisierung, #674) bzw. ob gerade gar nichts ausgelöst
+ * werden soll (Import, Beispiel-Mappen, Wiederherstellung).
+ */
+const ereignisKontext = new AsyncLocalStorage<{ ausloeser?: EreignisAusloeser; still?: boolean }>();
 
 const KEINE_ZAEHLUNG = { dokumente: () => 0, verknuepfungen: () => 0 };
 const VERBOTEN: Record<Recht, string> = {
@@ -543,6 +552,8 @@ export class Dienst {
     this.erkennung = new Erkennung(this, () => this.repo, () => this.einstellungen);
     this.fragen = new FragenAnDieAblage(this, () => this.repo, () => this.einstellungen);
     this.beiVolltextFertig(async (e) => { await this.erkennung.nachVolltext(e); });
+    // Ereigniskatalog (#670): Mappen-Ereignisse und Fristen an die Pakete, die diese Mappentypen abonniert haben.
+    this.ereignisse.abonniere('pakete', (e) => this.mappenEreignisAnPakete(e));
     // Volltext aus Paketen (#614): zuständige Pakete mit dms:volltext, Ereignis datei.volltext an genau dieses.
     this.paketVolltext = new PaketVolltext({ pakete: () => this.repo.listePakete(), melde: (paket, daten) => this.melde('datei.volltext', daten, paket) });
   }
@@ -567,6 +578,7 @@ export class Dienst {
     const daten = { dokument: e.dokument, mappe: e.mappe, quelle: m.quelle, text: m.text, ...(m.mime ? { mime: m.mime } : {}), ...(m.seiten !== undefined ? { seiten: m.seiten } : {}), ...(m.neu ? { neu: true } : {}), ...(m.paket ? { paket: m.paket } : {}), ...(m.seitenOhneText?.length ? { seitenOhneText: m.seitenOhneText } : {}), ...(m.original ? { original: m.original, fassung: true } : {}) };
     // Für Pakete (#442, #458): z. B. „KI lokal – Ähnlichkeit“ rechnet den Vektor, das Paket Texterkennung erkennt Scans.
     await this.melde('volltext.fertig', daten, undefined, von, m.text ? undefined : kenntVolltextOhneText);
+    await this.ereignis('volltext.fertig', { dokument: e.dokument, mappe: e.mappe, typ: await this.typVon(e.mappe), quelle: m.quelle }, von);
     // Gleichlaut für Pakete von vor 0.133.0 (#458): texterkennung.fertig nach dem Schritt des Kerns, wie bisher.
     if (m.quelle === 'kern') await this.melde('texterkennung.fertig', { ...daten, seiten: m.seiten ?? null });
     // Archivfassung (#631): erst jetzt, wenn der Volltext feststeht. Neuer Text (Paket, API, neu erzeugen) heißt neu.
@@ -1014,6 +1026,7 @@ export class Dienst {
     if (neu.length) { await this.repo.ocrEinreihen(neu); this.ocr?.anstossen(); }
     const konto = [...this.paketKonten.entries()].find(([, p]) => p === info.paket.id)?.[0] ?? null;
     for (const d of docs) {
+      await this.ereignis('datei.umgewandelt', { dokument: d.id, mappe: d.mappeId, typ: await this.typVon(d.mappeId), paket: info.paket.id }, konto);
       await this.notiere(d.mappeId, konto, 'umgewandelt', { dokument: d.name, text: `${dateitypName(d.mime)} → ${dateitypName(info.mime)} (${info.paket.name} ${info.paket.version})`, fassung: info.mime, groesse: info.groesse, paket: `${info.paket.name} ${info.paket.version}` })
         .catch((e: Error) => protokoll.modul('umwandlung').warn('Historie zur Fassung nicht geschrieben', { dokument: d.id, fehler: e.message }));
     }
@@ -1126,6 +1139,7 @@ export class Dienst {
       notiere: async (d, paket, daten) => {
         const konto = [...this.paketKonten.entries()].find(([, p]) => p === paket)?.[0] ?? null;
         await this.notiere(d.mappeId, konto, 'archivfassung', daten);
+        await this.ereignis('archivfassung.erstellt', { dokument: d.id, mappe: d.mappeId, typ: await this.typVon(d.mappeId), paket }, konto);
       },
     };
   }
@@ -1596,7 +1610,7 @@ export class Dienst {
       if (!m || m.typId !== benutzer.id) continue;
       // Deaktivierte nur, wenn ihr Vertreter übernimmt (#78).
       if (m.werte.aktiv === false && (await this.empfaengerAufloesen(id)).ziel === id) continue;
-      const a = await this.repo.legeAufgabeAn({
+      const a = await this.neueAufgabe({
         id: randomUUID(), mappeId, empfaengerId: id, art: 'erwaehnung', feldKey: quelle.key,
         text: `Erwähnt von ${await this.name(von)} ${quelle.ort}${quelle.auszug ? `: ${quelle.auszug}` : ''}`.slice(0, AUFGABE_MAX),
         erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null,
@@ -1694,13 +1708,16 @@ export class Dienst {
       : neu.an ? `Abwesenheit ${alt.an ? 'geändert' : 'eingetragen'}: ${zeitraum(neu)}, Vertreter ${await this.name(neu.vertreterId)}${durch}`
       : `Vertreter ${neu.vertreterId ? `hinterlegt: ${await this.name(neu.vertreterId)}` : 'entfernt'}${durch}`;
     await this.notiere(b.id, von, 'abwesenheit', { text });
+    // Ereigniskatalog (#670): Abwesenheit gesetzt (auch geändert) bzw. beendet.
+    if (endet) await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id }, von);
+    else if (neu.an) await this.ereignis('benutzer.abwesenheit_gesetzt', { benutzer: b.id, von: neu.von, bis: neu.bis, vertreter: neu.vertreterId }, von);
     // Vertretungs-Aufgaben: alte erledigen sich, solange sich Vertreter oder Zeitraum ändert oder die Abwesenheit endet.
     for (const a of (await this.repo.offeneAufgaben({ mappeIds: [b.id] })).filter((x) => x.art === 'vertretung')) {
       await this.repo.erledigeAufgabe(a.id, null);
       await this.notiere(b.id, null, 'aufgabe', { text: `erledigt (${endet ? 'Abwesenheit beendet' : 'Vertretung geändert'}): ${a.text}`, aufgabe: a.id, aufgabenart: 'vertretung', fuer: a.empfaengerId, aufgabentext: a.text });
     }
     if (neu.an && neu.vertreterId && (!neu.bis || neu.bis >= heuteIn())) {
-      const a = await this.repo.legeAufgabeAn({
+      const a = await this.neueAufgabe({
         id: randomUUID(), mappeId: b.id, empfaengerId: neu.vertreterId, art: 'vertretung',
         text: `Du wurdest für ${name} als Vertreter hinterlegt – ${zeitraum(neu)}.`.slice(0, AUFGABE_MAX),
         erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null,
@@ -1717,7 +1734,7 @@ export class Dienst {
     if (!text) throw new Fachfehler(422, 'Bitte beschreiben, was zu tun ist.');
     if (text.length > AUFGABE_MAX) throw new Fachfehler(422, `Höchstens ${AUFGABE_MAX} Zeichen.`);
     const an = await this.pruefeEmpfaenger(x.empfaengerId);
-    const a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
+    const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
     await this.notiere(mappeId, von, 'aufgabe', { text: `für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
     protokoll.modul('ablage').info('Aufgabe vergeben', { mappeId, an: await this.name(an) });
     return this.leiteUm(a);
@@ -1812,7 +1829,7 @@ export class Dienst {
     const offen = (await this.repo.offeneAufgaben({ mappeIds: [e.mappeId] })).find((a) => a.art === e.art && a.feldKey === e.schluessel && a.empfaengerId === e.empfaengerId);
     const text = (await e.text(offen)).slice(0, AUFGABE_MAX);
     if (offen) { if (offen.text !== text) await this.repo.aendereAufgabeText(offen.id, text); return offen.id; }
-    const a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId: e.mappeId, empfaengerId: e.empfaengerId, art: e.art, feldKey: e.schluessel, text, erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null });
+    const a = await this.neueAufgabe({ id: randomUUID(), mappeId: e.mappeId, empfaengerId: e.empfaengerId, art: e.art, feldKey: e.schluessel, text, erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null });
     return a.id;
   }
 
@@ -1877,12 +1894,18 @@ export class Dienst {
       for (const feld of fristFelder(typ)) {
         const wert = m.werte[feld.key];
         const fr = feld.frist!;
+        // Ereigniskatalog (#670): „Frist erreicht“ zum Erinnerungszeitpunkt und am Tag selbst – je Zeitpunkt genau einmal.
+        if (istDatum(wert) && !m.demo && wert >= heute && fristAb(wert, fr) <= heute) {
+          const an = fristEmpfaenger(fr, m);
+          await this.fristErreicht(m, feld.key, wert, 'vorlauf', an);
+          if (wert === heute) await this.fristErreicht(m, feld.key, wert, 'faellig', an);
+        }
         if (!istDatum(wert) || wert < heute || fristAb(wert, fr) > heute || schon.has(`${m.id}|${feld.key}|${wert}`)) continue;
         const text = fristText(fr, feld, wert, m.titel ?? '');
         const an = fristEmpfaenger(fr, m);
         let a: Aufgabe;
         try {
-          a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId: m.id, empfaengerId: an, art: 'frist', text, feldKey: feld.key, datum: wert, erstellt: '', erstelltVon: null, erledigt: null, erledigtVon: null });
+          a = await this.neueAufgabe({ id: randomUUID(), mappeId: m.id, empfaengerId: an, art: 'frist', text, feldKey: feld.key, datum: wert, erstellt: '', erstelltVon: null, erledigt: null, erledigtVon: null });
         } catch { continue; } // gleichzeitiger Lauf hat sie schon angelegt (eindeutiger Index)
         schon.add(`${m.id}|${feld.key}|${wert}`);
         await this.notiere(m.id, null, 'aufgabe', { text: `Frist für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'frist', fuer: an, aufgabentext: text });
@@ -1892,6 +1915,19 @@ export class Dienst {
     }
     if (angelegt || erledigt) protokoll.modul('ablage').info('Fristen abgeglichen', { angelegt, erledigt });
     return { angelegt, erledigt };
+  }
+
+  /**
+   * „Frist erreicht“ (#670): Merken und Ereignis in einer Transaktion – auch wenn zwei Server den Fristen-Lauf zugleich
+   * machen oder er nach einem Neustart wiederholt wird, kommt es je Mappe, Feld, Datum und Zeitpunkt genau einmal.
+   */
+  private async fristErreicht(m: Mappe, feld: string, datum: string, zeitpunkt: 'vorlauf' | 'faellig', empfaenger: string | null) {
+    try {
+      await this.inTransaktion(async () => {
+        if (!(await this.repo.merkeFristMeldung({ mappeId: m.id, feld, datum, zeitpunkt }))) return;
+        await this.ereignis('frist.erreicht', { mappe: m.id, typ: m.typId, feld, datum, zeitpunkt, empfaenger });
+      });
+    } catch (e) { protokoll.modul('ablage').warn('„Frist erreicht“ nicht gemeldet', { mappe: m.id, feld, fehler: (e as Error).message }); }
   }
 
   /** Offene Fristen und Erinnerungen, deren Empfänger die Mappe nicht lesen darf – Hinweis in der Werkbank. */
@@ -1907,7 +1943,7 @@ export class Dienst {
   async erinnerungenFaellig(heute = heuteIn()): Promise<number> {
     let n = 0;
     for (const e of await this.repo.erinnerungen({ bis: heute })) {
-      const a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId: e.mappeId, empfaengerId: e.empfaengerId, art: 'erinnerung', text: e.text, datum: e.datum, erstellt: '', erstelltVon: e.erstelltVon, erledigt: null, erledigtVon: null });
+      const a = await this.neueAufgabe({ id: randomUUID(), mappeId: e.mappeId, empfaengerId: e.empfaengerId, art: 'erinnerung', text: e.text, datum: e.datum, erstellt: '', erstelltVon: e.erstelltVon, erledigt: null, erledigtVon: null });
       await this.repo.loescheErinnerung(e.id);
       await this.notiere(e.mappeId, null, 'aufgabe', { text: `Erinnerung fällig für ${await this.name(e.empfaengerId)}: ${e.text}`, aufgabe: a.id, aufgabenart: 'erinnerung', fuer: e.empfaengerId, aufgabentext: e.text });
       await this.leiteUm(a);
@@ -2273,6 +2309,7 @@ export class Dienst {
     const t = Dienst.notiztext(text);
     const n = await this.repo.legeNotizAn({ id: randomUUID(), mappeId, text: t, erstellt: '', erstelltVon: von, geaendert: '', geaendertVon: von });
     await this.notiere(mappeId, von, 'notiz', { text: `angelegt: ${Dienst.vorschau(t)}`, voll: t });
+    await this.ereignis('mappe.notiz', { mappe: mappeId, typ: await this.typVon(mappeId), notiz: n.id }, von);
     await this.erwaehnungenAbgleichen(mappeId, { key: `notiz:${n.id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(t) }, '', t, von);
     return n;
   }
@@ -2301,6 +2338,12 @@ export class Dienst {
   /** Ein Eintrag in die Historie einer Mappe – und bei Favoriten anderer die gebündelte Benachrichtigung (#422). */
   private async notiere(mappeId: string, benutzerId: string | null, art: Historienart, daten?: Historieneintrag['daten']) {
     await this.repo.historieSchreibe([{ mappeId, benutzerId, art, daten }]);
+    // Ereigniskatalog (#670): was in der Historie steht, ist auch ein Ereignis – nur mit Ids und Feldschlüsseln.
+    const katalog = NOTIERT_ALS[art];
+    if (katalog) {
+      const felder = art === 'geaendert' ? [...new Set(((daten?.aenderungen ?? []) as Feldaenderung[]).map((a) => a.feld).filter((f) => !f.startsWith('_')))].sort() : undefined;
+      if (art !== 'geaendert' || felder?.length) await this.ereignis(katalog, { mappe: mappeId, typ: await this.typVon(mappeId), ...(felder ? { felder } : {}) }, benutzerId);
+    }
     if (benutzerId && (ABO_ARTEN as readonly string[]).includes(art) && daten?.aufgabenart !== 'aenderung') {
       try { await this.aboMelden(mappeId, benutzerId); }
       catch (e) { protokoll.modul('ablage').warn('Benachrichtigung zu Favoriten nicht angelegt', { mappeId, fehler: (e as Error).message }); }
@@ -2911,8 +2954,11 @@ export class Dienst {
 
   /** Persönlich: ändert weder „zuletzt geändert“ noch das Protokoll der Mappe. */
   async setzeFavorit(ich: { id: string }, mappeId: string, an: boolean) {
-    if (!(await this.repo.holeMappe(mappeId))) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    const m = await this.repo.holeMappe(mappeId);
+    if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
+    const schon = an && (await this.repo.favoritenVon(ich.id, [mappeId])).has(mappeId);
     await this.repo.setzeFavorit(ich.id, mappeId, an);
+    if (an && !schon) await this.ereignis('favorit.neu', { benutzer: ich.id, mappe: mappeId, typ: m.typId }, ich.id);
     return { favorit: an };
   }
 
@@ -3562,6 +3608,84 @@ export class Dienst {
   /** Dienstkonten der Pakete (Benutzer-Id → Paket-Id), vom Paket-Läufer gepflegt. */
   paketKonten = new Map<string, string>();
 
+  /* ---------- Ereigniskatalog (#670) ---------- */
+
+  /** Verteiler des Katalogs; Abnehmer (Pakete hier, Automatisierungen #674, Webhooks #671) melden sich mit `abonniere` an. */
+  readonly ereignisse = new Ereignisverteiler({ repo: () => this.grundRepo, ruht: () => this.ereignisseRuhen?.() ?? false });
+  /** Wartung, Wiederherstellung (vom Start gesetzt): dann verteilt der Katalog nichts. */
+  ereignisseRuhen?: () => boolean | Promise<boolean>;
+
+  /** `f` im Namen eines bestimmten Auslösers ausführen (#674: eine Automatisierung handelt; Ketten zählen mit). */
+  mitAusloeser<T>(a: EreignisAusloeser, f: () => Promise<T>): Promise<T> { return ereignisKontext.run({ ...ereignisKontext.getStore(), ausloeser: a }, f); }
+  /** `f` ohne Ereignisse ausführen (Import, Beispiel-Mappen, Wiederherstellung – „lösen nichts aus“). */
+  ohneEreignisse<T>(f: () => Promise<T>): Promise<T> { return ereignisKontext.run({ ...ereignisKontext.getStore(), still: true }, f); }
+  /** Wer gerade handelt – aus dem Kontext oder aus dem Konto `von`. */
+  private ausloeser(von: string | null | undefined): EreignisAusloeser {
+    const k = ereignisKontext.getStore()?.ausloeser;
+    if (k) return k;
+    if (!von) return { art: 'system', id: null, konto: null };
+    const paket = this.paketKonten.get(von);
+    return paket ? { art: 'paket', id: paket, konto: von } : { art: 'benutzer', id: von, konto: von };
+  }
+
+  /**
+   * Ein Ereignis des Katalogs (#670) in den Ausgangskorb – in der Transaktion der Änderung, sofern es eine gibt
+   * (dann scheitert beides zusammen), sonst gleich danach; Fehler außerhalb einer Transaktion landen nur im Protokoll.
+   * Nur Ids, Typ, Feldschlüssel und Datum. Demo-Mappen und alles in `ohneEreignisse` lösen nichts aus.
+   */
+  async ereignis(art: KatalogArt, daten: Record<string, unknown>, von?: string | null): Promise<void> {
+    if (ereignisKontext.getStore()?.still) return;
+    const inTx = transaktionen.getStore()?.dienst === this;
+    const k = EREIGNISKATALOG[art] as Katalogeintrag;
+    try {
+      const mappe = typeof daten.mappe === 'string' ? daten.mappe : null;
+      await this.repo.legeKatalogEreignisAn({
+        id: randomUUID(), art, daten, ausloeser: { ...this.ausloeser(von) },
+        ...(k.buendelS && mappe ? { buendel: `${art}|${mappe}`, buendelS: k.buendelS } : {}),
+      }, k.buendelS ? (alt) => mischeFelder(alt, daten) : undefined);
+      this.danach(() => this.ereignisse.wecke());
+    } catch (e) {
+      if (inTx) throw e;
+      protokoll.modul('ereignisse').error('Ereignis nicht gespeichert', { art, fehler: (e as Error).message });
+    }
+  }
+
+  /** Aufgabe anlegen und als „etwas ist zu erledigen“ melden (#670). */
+  private async neueAufgabe(a: Aufgabe): Promise<Aufgabe> {
+    const x = await this.repo.legeAufgabeAn(a);
+    await this.ereignis('aufgabe.neu', { aufgabe: x.id, mappe: x.mappeId, typ: await this.typVon(x.mappeId), empfaenger: x.empfaengerId ?? null, aufgabenart: x.art }, a.erstelltVon ?? null);
+    return x;
+  }
+
+  /** Typ einer Mappe für ein Ereignis (null, wenn es sie nicht mehr gibt). */
+  private async typVon(mappeId: string): Promise<string | null> { return (await this.repo.holeMappe(mappeId))?.typId ?? null; }
+
+  /** Neue Verweise auf andere Mappen (#670: „zu dieser Mappe hin verknüpft“) – je neu verknüpfter Mappe ein Ereignis. */
+  private async meldeVerknuepft(typ: Mappentyp, mappeId: string, alt: Werte, neu: Werte, von: string | null) {
+    const vorher = new Set(verweiseVon(typ, alt).map((v) => `${v.feldKey}|${v.zielId}`));
+    const ziele = verweiseVon(typ, neu).filter((v) => !vorher.has(`${v.feldKey}|${v.zielId}`) && v.zielId !== mappeId);
+    if (!ziele.length) return;
+    const typen = await this.repo.typenVon([...new Set(ziele.map((v) => v.zielId))]);
+    for (const v of ziele) await this.ereignis('mappe.verknuepft', { mappe: v.zielId, typ: typen.get(v.zielId) ?? null, von: mappeId, vonTyp: typ.id, feld: v.feldKey }, von);
+  }
+
+  /**
+   * Abnehmer „pakete“ (#670): Mappen-Ereignisse und `frist.erreicht` an Pakete, die sie abonniert haben und den Typ der
+   * Mappe unter `code.mappentypen` nennen. Die Id je Paket ist fest (aus Ereignis und Paket) – kommt das Ereignis
+   * noch einmal, legt das DMS es nicht doppelt an. Ein Paket bekommt seine eigenen Änderungen nicht gemeldet.
+   */
+  private async mappenEreignisAnPakete(e: KatalogEreignis) {
+    if (!MAPPENTYP_EREIGNISSE.includes(e.art)) return;
+    const typ = e.daten.typ;
+    if (typeof typ !== 'string') return;
+    const pakete = (await this.grundRepo.listePakete()).filter((p) => p.laeufer?.ereignisse.includes(e.art as EreignisArt)
+      && (p.laeufer.mappentypen ?? []).some((k) => p.typen[k] === typ) && !(e.ausloeser.art === 'paket' && e.ausloeser.id === p.id));
+    if (!pakete.length) return;
+    const feste = (paket: string) => { const h = createHash('sha256').update(`${e.id}|${paket}`).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
+    await this.grundRepo.legeEreignisseAn(pakete.map((p) => ({ id: feste(p.id), paketId: p.id, art: e.art, daten: { ...e.daten, ereignis: e.id } })));
+    this.ereignisWecker?.();
+  }
+
   /**
    * Ereignis für alle Pakete mit Code, die es abonniert haben (#338). In einer Transaktion (#404) gehört
    * es zur Änderung: scheitert es, wird beides nicht gespeichert. Sonst nicht blockierend – Fehler landen
@@ -3901,6 +4025,7 @@ export class Dienst {
     const m = await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), benutzerId, demo, null, nummern.length ? { felder: nummern, jetzt: new Date() } : undefined);
     if (!demo) {
       await this.notiere(m.id, benutzerId, 'angelegt', { aenderungen: await this.aenderungen(typ, {}, m.werte) });
+      await this.meldeVerknuepft(typ, m.id, {}, m.werte, benutzerId);
       await this.pruefeErwaehnungen(typ, m.id, {}, werte, benutzerId);
     }
     const titel = (await this.aktualisiereTitel([m.id])).get(m.id);
@@ -4086,6 +4211,7 @@ export class Dienst {
     // Feldweise (#609); mit Stand nur, wenn sich die Mappe seit dem Lesen oben nicht geändert hat.
     const neu = await this.repo.aendereMappe(id, werte, [], benutzerId, { basis: m.werte, verweise: (w) => verweiseVon(typ, w), ...(stand ? { stand: m.geaendert } : {}) });
     if (aenderungen.length) await this.notiere(id, benutzerId, 'geaendert', { ...anlass, aenderungen, stand: neu.geaendert });
+    await this.meldeVerknuepft(typ, id, m.werte, neu.werte, benutzerId);
     // Gespeichert heißt: passt wieder – eine „passt nicht“-Aufgabe ist damit erledigt.
     await this.passungsAufgaben([{ id, problem: null }]);
     await this.pruefeErwaehnungen(typ, id, m.werte, werte, benutzerId);
@@ -4351,6 +4477,7 @@ export class Dienst {
   private async legeInPapierkorb(id: string, typ: Mappentyp | undefined, von: string | null) {
     await this.repo.legeInPapierkorb(id, von);
     await this.notiere(id, von, 'papierkorb');
+    await this.ereignis('mappe.geloescht', { mappe: id, typ: typ?.id ?? null }, von);
     if (typ?.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
   }
 
@@ -4358,6 +4485,7 @@ export class Dienst {
     const dokumente = await this.repo.listeDokumente(id);
     await this.repo.loescheMappe(id);
     await this.notiere(id, von, 'endgueltig');
+    await this.ereignis('mappe.endgueltig_geloescht', { mappe: id, typ: typ?.id ?? null }, von);
     if (typ?.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
     for (const sha of new Set(dokumente.map((d) => d.sha256))) await this.raeumeAuf(sha);
   }
@@ -4624,6 +4752,8 @@ export class Dienst {
       const titel = (await this.aktualisiereTitel([m.id])).get(m.id);
       await this.postAufgaben(m.id, ich.id);
       await this.melde('post.angelegt', { mappe: m.id, kanal: werte.kanal }, undefined, ich.id);
+      await this.ereignis('post.angelegt', { mappe: m.id, kanal: werte.kanal, fuer: typeof werte.fuer === 'string' ? werte.fuer : null }, ich.id);
+      await this.meldeVerknuepft(typ, m.id, alt, werte, ich.id);
       return { m, titel };
     });
     protokoll.modul('ablage').info('Post angelegt', { mappe: m.id, kanal: werte.kanal });
@@ -4726,7 +4856,7 @@ export class Dienst {
     let aufgabe: Aufgabe | null = null;
     await this.inTransaktion(async () => {
       await this.ordneZu(post.id, { ziel: ziel.id }, null, undefined, { grund });
-      aufgabe = await this.repo.legeAufgabeAn({
+      aufgabe = await this.neueAufgabe({
         id: randomUUID(), mappeId: post.id, empfaengerId: empfaenger, art: 'zugeordnet', text: `Automatisch zugeordnet zu „${zielTitel}“ – bitte prüfen`, feldKey: `auto:${ziel.id}`,
         erstellt: new Date().toISOString(), erstelltVon: null, erledigt: null, erledigtVon: null,
       });
@@ -4788,7 +4918,7 @@ export class Dienst {
     if (!fuer || offen.some((a) => a.feldKey === schluessel)) return;
     // Aufgaben gehen an Konten; ohne Kontenverwaltung (Tests) genügt der Verweis.
     if (this.konten?.benutzer && !(await this.konten.benutzer()).some((b) => b.id === fuer)) return;
-    const a = await this.repo.legeAufgabeAn({
+    const a = await this.neueAufgabe({
       id: randomUUID(), mappeId, empfaengerId: fuer, art: 'post', text: 'Post für dich', feldKey: schluessel,
       erstellt: new Date().toISOString(), erstelltVon: von, erledigt: null, erledigtVon: null,
     });
@@ -4848,6 +4978,7 @@ export class Dienst {
     const neu = alt ? await this.repo.aendereMappe(id, werte, [], von, { basis: alt.werte, verweise: (w) => verweiseVon(typ, w) }) : undefined;
     if (!alt) await this.repo.legeMappeAn(id, typ.id, werte, verweiseVon(typ, werte), von, false, kennung);
     if (aenderungen.length) await this.notiere(id, von, alt ? 'geaendert' : 'angelegt', { aenderungen, ...(neu ? { stand: neu.geaendert } : {}) });
+    await this.meldeVerknuepft(typ, id, alt?.werte ?? {}, werte, von);
     if (alt) await this.passungsAufgaben([{ id, problem: null }]);
     await this.aktualisiereTitel([id]);
     // Hat der Administrator den Typ um Pflichtfelder erweitert, landet die Mappe im Eingang.
@@ -4866,6 +4997,8 @@ export class Dienst {
     const system = new Set(systemrollen.values());
     const weitere = alt ? alsListe(alt.werte.rollen).filter((r) => !system.has(r)) : [];
     const ab = b.abwesenheit;
+    // Ereigniskatalog (#670): Benutzer deaktiviert bzw. wieder aktiviert (die Mappe folgt dem Konto).
+    if (alt && alt.werte.aktiv !== b.aktiv) await this.ereignis(b.aktiv ? 'benutzer.aktiviert' : 'benutzer.deaktiviert', { benutzer: b.id }, von);
     // Abwesenheit (#78): „abwesend“ = wirkt heute; Zeitraum nur, solange sie an ist; der Vertreter auch nach dem Deaktivieren.
     await this.schreibeSystemMappe(typ, b.id, {
       ...(alt?.werte ?? {}),
@@ -5122,6 +5255,10 @@ export class Dienst {
     }
     if (!ids.length) return 0;
     await this.repo.historieSchreibe(ids.map((mappeId) => ({ mappeId, benutzerId: von, art: 'endgueltig' as const })));
+    {
+      const typVon = new Map((await this.repo.papierkorb()).filter((e) => ids.includes(e.id)).map((e) => [e.id, e.typId] as const));
+      for (const id of ids) await this.ereignis('mappe.endgueltig_geloescht', { mappe: id, typ: typVon.get(id) ?? null }, von);
+    }
     const benutzerTyp = (await this.repo.listeTypen()).find((t) => t.system === 'benutzer');
     const benutzer = benutzerTyp ? (await this.repo.papierkorb({ typId: benutzerTyp.id })).filter((e) => ids.includes(e.id)).map((e) => e.id) : [];
     // Löschprotokoll (#470): Inhalt vor dem Leeren; Grund vom Schritt „in den Papierkorb“.
@@ -5512,6 +5649,7 @@ export class Dienst {
         this.danach(() => this.ocr?.anstossen());
       }
       await this.melde('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, name, mime: dokument.mime, groesse: inhalt.length, volltextGeplant: neu.ocr?.stand === 'wartet' }, undefined, benutzerId);
+      await this.ereignis('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, typ: await this.typVon(mappeId), mime: dokument.mime, groesse: inhalt.length }, benutzerId);
       return neu;
     });
     const bezuege = await this.repo.bezuege(gleicherInhalt.map((d) => d.mappeId));
@@ -6539,6 +6677,12 @@ export class Dienst {
     await this.repo.historieSchreibe(plan.loeschen.map((mappeId) => ({ mappeId, benutzerId, art: 'papierkorb' as const, daten: {
       vorgang, text, ...(mappeId === start.id ? { zahlen: z_ } : { start: start.id }),
     } })));
+    // Ereigniskatalog (#670): je Mappe „gelöscht“ und „mit verknüpften Mappen gelöscht“ (gleicher Vorgang).
+    for (const mappeId of plan.loeschen) {
+      const typ = mappen.get(mappeId)?.typId ?? null;
+      await this.ereignis('mappe.geloescht', { mappe: mappeId, typ }, benutzerId);
+      await this.ereignis('mappe.geloescht_verknuepft', { mappe: mappeId, typ, vorgang, start: start.id }, benutzerId);
+    }
     for (const typId of new Set([...mappen.values()].map((m) => m.typId))) {
       const typ = z.typen.get(typId);
       if (typ?.felder.some((f) => f.eindeutig)) await this.pruefeUnpassende(typ);
@@ -6616,6 +6760,7 @@ export class Dienst {
     const ids = eintraege.map((e) => e.id);
     const { verweiseEntfallen } = await this.repo.stelleMehrereWiederHer(ids);
     await this.repo.historieSchreibe(ids.map((mappeId) => ({ mappeId, benutzerId: ich.id, art: 'wiederhergestellt' as const, daten: { vorgang } })));
+    for (const e of eintraege) await this.ereignis('mappe.wiederhergestellt', { mappe: e.id, typ: e.typId }, ich.id);
     await this.protokolliere(eintraege.map((e) => this.wiederEintrag(e, typen.get(e.typId), vorgang)), await this.loeschKontext(ich.id, { ausloeser: quelle }));
     await this.aktualisiereTitel(ids);
     let wieder = 0; let entfallen = verweiseEntfallen;
@@ -6781,7 +6926,7 @@ export class Dienst {
     const eingang = typeof o.eingang === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.eingang) ? o.eingang : heuteIn();
     const bis = fristBis(eingang);
     const text = `Auskunft nach Art. 15 DSGVO an ${m.titel || 'Ohne Titel'} bis ${datumText(bis)} (Anfrage vom ${datumText(eingang)})`;
-    const a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId: m.id, empfaengerId: von, art: 'manuell', text, datum: bis, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
+    const a = await this.neueAufgabe({ id: randomUUID(), mappeId: m.id, empfaengerId: von, art: 'manuell', text, datum: bis, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
     await this.notiere(m.id, von, 'aufgabe', { text: `für ${await this.name(von)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: von, aufgabentext: text });
     return this.leiteUm(a);
   }
@@ -6948,7 +7093,7 @@ export class Dienst {
     const offen = (await this.repo.offeneAufgaben({ mappeIds: [link.mappeId] })).filter((a) => a.art === 'auskunft' && a.feldKey === key);
     for (const id of an) {
       if (offen.some((a) => a.empfaengerId === id)) continue;
-      const a = await this.repo.legeAufgabeAn({ id: randomUUID(), mappeId: link.mappeId, empfaengerId: id, art: 'auskunft', feldKey: key, text: text.slice(0, AUFGABE_MAX), erstellt: '', erstelltVon: null, erledigt: null, erledigtVon: null });
+      const a = await this.neueAufgabe({ id: randomUUID(), mappeId: link.mappeId, empfaengerId: id, art: 'auskunft', feldKey: key, text: text.slice(0, AUFGABE_MAX), erstellt: '', erstelltVon: null, erledigt: null, erledigtVon: null });
       await this.leiteUm(a);
     }
   }
