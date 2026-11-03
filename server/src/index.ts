@@ -11,6 +11,8 @@ import { Eingangsordner } from './eingangsordner';
 import { Webdav } from './webdav';
 import { pgWebhookRepo, Webhooks } from './webhook';
 import { Automatisierungen, pgAutomatisierungRepo } from './automatisierung';
+// Dann-Karten „Feld ändern“ und „Aufgabe / Benachrichtigung“ (#676) melden sich beim Motor an.
+import './automatisierung-karten';
 import { einbettenAus } from './koepfe';
 import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';

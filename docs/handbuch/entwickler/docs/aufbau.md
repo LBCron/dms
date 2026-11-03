@@ -269,6 +269,11 @@ Kleine Abläufe ohne Code: **Wenn · Und · Dann** (Sonst kommt mit Stufe 2). Mo
 3. Ausgeführt wird unter dem Systemkonto „Automatisierung“ (`dienst.systemZugriff('automatisierung')`) und mit `dienst.mitAusloeser({ art: 'automatisierung', id, konto, kette })` – Historie und Ereignisse zeigen, wer gehandelt hat. Darf das Systemkonto die Mappe nicht lesen, wird der Lauf übersprungen.
 4. Jeder Schritt (Wenn, Und, jede Dann-Karte) steht mit Zustand im Lauf (`schritte`) – die Oberfläche zeigt den Fortschritt live. Ein Kartenfehler beendet den Lauf als `fehlgeschlagen` (wiederholbar), die folgenden Automatisierungen laufen trotzdem.
 
+**Dann-Karten** (`server/src/automatisierung-karten.ts`, #676)
+
+- **Feld ändern** (`feld`): `werte` je Feldschlüssel – fest, Text mit Platzhaltern (Text, Langtext, formatierter Text), bei Datumsfeldern auch `heute`, `heute+7`, `heute-3`. Geschrieben wird über `Dienst.aendereMappe` mit dem Zugriff des Systemkontos und nur den gewählten Feldern (#609): Feldformate, Pflicht, Auswahllisten und Verweisziele werden geprüft wie im Formular, Archivmodus und Fristsperre nie umgangen. Die Historie trägt `automatisierung: { id, name, eingerichtetVon }`.
+- **Aufgabe / Benachrichtigung** (`aufgabe`): Empfänger Person, Rolle (alle aktiven Mitglieder) oder Feld der Mappe (Verweis auf Benutzer); `als: 'aufgabe'` legt jedes Mal eine Aufgabe an (Fälligkeit `faellig` Tage ab heute → erscheint unter „Anstehend“), `als: 'benachrichtigung'` bündelt je Automatisierung, Mappe und Empfänger (eine offene, der Text wird aktualisiert). Wer die Mappe nicht lesen darf, bekommt sie an seiner eigenen Benutzer-Mappe – ohne Link. Platzhalter füllt Stufe 1 mit den Rechten des Systemkontos (Empfänger-Rechte: #683).
+
 **Schutz und Grenzen** (`AUTOMATISIERUNG_GRENZEN`)
 
 - Keine Selbstauslösung (eigene Änderungen lösen dieselbe Automatisierung nicht aus), Ketten höchstens 3 tief, Bremse 30 Läufe je Minute (dann angehalten), Laufzeit 60 s, 200 Automatisierungen, je Bereich 20 Karten, Verlauf 200 Läufe bzw. 30 Tage.
