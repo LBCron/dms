@@ -5124,6 +5124,25 @@ export class Dienst {
     return new Map([...t].filter(([k]) => ok.has(k)));
   }
 
+  /**
+   * Aufgabe oder Benachrichtigung aus einer Automatisierung (#676). Darf der Empfänger die Mappe nicht lesen, hängt sie
+   * an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe. Benachrichtigungen bündeln je Automatisierung, Mappe
+   * und Empfänger (eine offene, der Text wird aktualisiert); Aufgaben entstehen jedes Mal neu, mit Fälligkeit.
+   */
+  async aufgabeAusAutomatisierung(e: { mappeId: string; empfaengerId: string; text: string; datum: string | null; von: string; buendeln: string | null; anlass: Record<string, unknown> }): Promise<{ id: string; ohneLink: boolean }> {
+    const an = await this.pruefeEmpfaenger(e.empfaengerId);
+    const ohneLink = !(await this.sichtbarFuer(an, [e.mappeId])).has(e.mappeId);
+    const mappeId = ohneLink ? an : e.mappeId;
+    const text = e.text.slice(0, AUFGABE_MAX);
+    if (e.buendeln) {
+      const id = await this.benachrichtigeGebuendelt({ empfaengerId: an, mappeId, art: 'manuell', schluessel: `auto:${e.buendeln}:${e.mappeId}`.slice(0, 120), von: e.von, text: () => text });
+      return { id, ohneLink };
+    }
+    const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, datum: e.datum, erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null });
+    await this.notiere(mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
+    return { id: a.id, ohneLink };
+  }
+
   /** Mappen eines Typs, deren Datumsfeld genau dieses Datum hat („Datum in N Tagen“, #674). Nur Ids. */
   async mappenMitDatum(typId: string, feld: string, datum: string): Promise<string[]> {
     return (await this.repo.listeMappen(typId)).filter((m) => m.werte[feld] === datum && !m.demo).map((m) => m.id);

@@ -65,9 +65,13 @@ export interface UndBereich { modus: 'alle' | 'eine'; karten: UndKarte[] }
 /** Dann-Karten; die Liste wächst mit #676 (Feld, Aufgabe) und Stufe 2 (#677, #671). */
 export type DannKarte =
   /** „Danach keine weiteren Automatisierungen ausführen“ – nur für dieses eine Ereignis. */
-  | { id: string; art: 'stopp' };
+  | { id: string; art: 'stopp' }
+  /** Felder der Mappe setzen: je Feld ein fester Wert oder Text mit Platzhaltern (#676). */
+  | { id: string; art: 'feld'; werte: Record<string, unknown> }
+  /** Aufgabe (mit Fälligkeit in Tagen) oder Benachrichtigung an Personen, Rollen oder ein Feld (#676). */
+  | { id: string; art: 'aufgabe'; empfaenger: Empfaenger[]; text: string; als: 'aufgabe' | 'benachrichtigung'; faellig?: number | null };
 export type DannArt = DannKarte['art'];
-export const DANN_ARTEN: DannArt[] = ['stopp'];
+export const DANN_ARTEN: DannArt[] = ['feld', 'aufgabe', 'stopp'];
 
 export type Herkunft = 'eigen' | 'dms' | 'paket';
 
@@ -196,6 +200,15 @@ function bereinigeDann(e: unknown, i: number): DannKarte | null {
   const x = (e ?? {}) as Record<string, unknown>;
   const kid = id(x.id) || `k${i + 1}`;
   if (x.art === 'stopp') return { id: kid, art: 'stopp' };
+  if (x.art === 'feld') {
+    const w = x.werte && typeof x.werte === 'object' && !Array.isArray(x.werte) ? (x.werte as Record<string, unknown>) : {};
+    return { id: kid, art: 'feld', werte: Object.fromEntries(Object.entries(w).slice(0, 50).map(([k, v]) => [id(k), typeof v === 'string' ? v.slice(0, AUTOMATISIERUNG_GRENZEN.text) : v]).filter(([k]) => k)) };
+  }
+  if (x.art === 'aufgabe') {
+    const empfaenger = (Array.isArray(x.empfaenger) ? x.empfaenger : []).slice(0, 20).map(bereinigeEmpfaenger).filter((v): v is Empfaenger => !!v);
+    const faellig = x.faellig === null || x.faellig === undefined || x.faellig === '' ? null : Math.max(0, Math.min(3650, Math.trunc(Number(x.faellig) || 0)));
+    return { id: kid, art: 'aufgabe', empfaenger, text: text(x.text, AUTOMATISIERUNG_GRENZEN.text), als: x.als === 'benachrichtigung' ? 'benachrichtigung' : 'aufgabe', faellig: x.als === 'benachrichtigung' ? null : faellig };
+  }
   return null;
 }
 
@@ -253,6 +266,22 @@ export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdate
   else if (w.felder?.length && typ) for (const f of w.felder) if (!feldIn(typ, f)) p.push(`Das Feld „${f}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
   for (const u of a.und.karten) p.push(...undProbleme(u, typ, k));
   if (!a.dann.length) p.push('Bitte mindestens eine Dann-Karte hinzufügen.');
+  for (const d of [...a.dann, ...a.sonst]) {
+    if (d.art === 'feld') {
+      if (!typ) p.push('„Feld ändern“ braucht einen Mappentyp in der Wenn-Karte.');
+      else if (!Object.keys(d.werte).length) p.push('„Feld ändern“: bitte mindestens ein Feld wählen.');
+      else for (const key of Object.keys(d.werte)) {
+        const f = feldIn(typ, key);
+        if (!f) p.push(`„Feld ändern“: Das Feld „${key}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
+        else if (f.typ === 'passwort') p.push(`„Feld ändern“: Passwortfelder („${f.label}“) setzt keine Automatisierung.`);
+      }
+    }
+    if (d.art === 'aufgabe') {
+      if (!d.text) p.push('„Aufgabe“: bitte beschreiben, was zu tun ist.');
+      if (!d.empfaenger.length) p.push('„Aufgabe“: bitte mindestens einen Empfänger wählen.');
+      for (const e of d.empfaenger) { const x = empfaengerProblem(e, typ, k); if (x) p.push(`„Aufgabe“: ${x}`); }
+    }
+  }
   return [...new Set(p)];
 }
 
@@ -271,6 +300,9 @@ export function kurzform(a: AutomatisierungDaten, k: Pick<Kontextdaten, 'typen' 
   const wenn = w.art === 'datum'
     ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? w.feld} ${w.tage === 0 ? 'heute' : w.tage > 0 ? `in ${w.tage} ${w.tage === 1 ? 'Tag' : 'Tagen'}` : `vor ${-w.tage} ${w.tage === -1 ? 'Tag' : 'Tagen'}`}`
     : `${typ && EREIGNISKATALOG[w.art].gruppe !== 'benutzer' ? `${typ.name} ` : ''}${ereignisName(w.art)}`;
-  const dann = a.dann.map((d) => (d.art === 'stopp' ? 'danach keine weiteren' : d.art)).join(', ');
+  const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : feldIn(typ, e.feld)?.label ?? e.feld;
+  const dann = a.dann.map((d) => d.art === 'stopp' ? 'danach keine weiteren'
+    : d.art === 'feld' ? `${Object.keys(d.werte).map((x) => feldIn(typ, x)?.label ?? x).join(', ')} setzen`
+      : `${d.als === 'aufgabe' ? 'Aufgabe' : 'Benachrichtigung'} an ${d.empfaenger.map(wer).join(', ') || '?'}`).join(', ');
   return `Wenn ${wenn}${a.und.karten.length ? ` und ${a.und.karten.length === 1 ? '1 Bedingung' : `${a.und.karten.length} Bedingungen`}` : ''} → ${dann || '…'}`;
 }
