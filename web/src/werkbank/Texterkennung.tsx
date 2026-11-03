@@ -105,6 +105,8 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
 
       <UmwandlungBlock s={s} />
 
+      <ArchivBlock s={s} />
+
       <ErkannteSprachen s={s} />
 
       <section className="blatt" id="warteschlange">
@@ -210,6 +212,31 @@ function UmwandlungBlock({ s }: { s: OcrStatus }) {
 }
 
 /** Statistik der erkannten Sprachen mit Vorschlägen für fehlende Sprach-Zusatzpakete (#395, #459). */
+/** Archivfassung (PDF/A, #631): Paket, Anzahl je Stand und Dokumente mit Fehler oder ausgelassen (mit Grund). */
+function ArchivBlock({ s }: { s: OcrStatus }) {
+  const a = s.archivfassung;
+  if (!a) return null;
+  return (
+    <section className="blatt" id="archivfassung">
+      <h2 className="h3">{tx('volltext.werkbank.archiv.titel')} <Hilfe ort="werkbank.texterkennung.archivfassung" /></h2>
+      <p className="leise">{tx('volltext.werkbank.archiv.einleitung')}</p>
+      {!a.pakete.length ? <p className="leise">{tx('volltext.werkbank.archiv.keins')}</p> : <>
+        <p>{a.pakete.map((p) => <Link key={p.id} to={`/werkbank/pakete/${p.id}`} className="verweis">{tx('volltext.werkbank.archiv.paket', { paket: `${p.name} ${p.version}` })}</Link>)}</p>
+        <p className="klein">{tx('volltext.werkbank.archiv.zaehler', { fertig: a.zaehler.fertig, wartet: a.zaehler.wartet, ausgelassen: a.zaehler.ausgelassen, fehler: a.zaehler.fehler })}</p>
+      </>}
+      {a.pakete.length > 0 && (!a.liste.length ? <p className="leise klein">{tx('volltext.werkbank.archiv.keine')}</p> : (
+        <table className="tabelle klein">
+          <thead><tr><th>{tx('volltext.werkbank.archiv.dokument')}</th><th>{tx('volltext.werkbank.archiv.grund')}</th></tr></thead>
+          <tbody>{a.liste.map((x) => (
+            <tr key={`${x.dokument}-${x.zeit}`}><td><Link to={`/ablage/eingang/${x.mappeId}?dokument=${x.dokument}`} className="verweis">{x.name}</Link></td>
+              <td className={x.stand === 'fehler' ? 'fehlertext' : 'leise'}>{x.info}</td></tr>
+          ))}</tbody>
+        </table>
+      ))}
+    </section>
+  );
+}
+
 function ErkannteSprachen({ s }: { s: OcrStatus }) {
   const erkannt = s.erkannteSprachen ?? {};
   const liste = Object.entries(erkannt).sort((a, b) => b[1] - a[1]);

@@ -1852,3 +1852,5 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
   .lasttest-ergebnis .knoepfe .knopf, .lasttest-ende .knopf { width: 100%; white-space: normal; }
 }
 .karte.lasttest .lasttest-ergebnis .knopf.primaer { width: auto; padding: 7px 13px; }
+/* Archivfassung (#631): über der Anzeige, was man sieht. */
+.dokansicht-kopf { margin: 0; padding: 6px 10px; border-bottom: 1px solid var(--linie); background: var(--flaeche, transparent); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }

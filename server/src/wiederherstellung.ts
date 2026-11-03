@@ -6,6 +6,7 @@ import type { Writable } from 'node:stream';
 import { dirname, join, normalize, sep } from 'node:path';
 import postgres from 'postgres';
 import { FASSUNG_PFAD } from './dateiumwandlung';
+import { ARCHIV_PFAD, WOERTER_PFAD } from './archivfassung';
 import { migriere, verbinde } from './db';
 import { bezeichner, OHNE_INHALT, type Tabelle } from './datenbankabzug';
 import { beschreibe, liesErweiterungen, problemeAus, TRIGRAMM_INDEXNAMEN, trigrammIndizes } from './erweiterungen';
@@ -381,6 +382,8 @@ export class Wiederherstellung {
       let zaehlerSicherung: Record<string, number> | null = null;
       // Umgewandelte Fassungen (#577, seit 0.140.1 in der Sicherung): Prüfwert des Inhalts und der in den Angaben.
       const fassungIst = new Map<string, string>(); const fassungSoll = new Map<string, string>();
+      // Archivfassungen (#631): ebenso; Angaben „imOriginal“ (das Original ist schon PDF/A) haben keinen eigenen Inhalt.
+      const archivIst = new Map<string, string>(); const archivSoll = new Map<string, string>(); const archivOriginal = new Set<string>();
       lauf.bytes = 0;
       for await (const e of liesSicherung(pfad, leiteAb(k, ZWECK), (n) => { lauf.bytes = n; })) {
         if (e.art === 'M') {
@@ -401,9 +404,10 @@ export class Wiederherstellung {
           if (!istSicherer(rel)) throw new Error(`Ungültiger Dateipfad in der Sicherung: ${rel}`);
           const pruefen = iDatei++ % jede === 0;
           const name = rel.split('/').pop()!;
-          const fassung = FASSUNG_PFAD.exec(rel);
+          const fassung = FASSUNG_PFAD.exec(rel) ?? ARCHIV_PFAD.exec(rel);
+          const istArchiv = !!fassung && rel.startsWith('archivfassungen/');
           const h = pruefen && /^[0-9a-f]{64}$/.test(name) ? createHash('sha256') : null;
-          // Fassungen immer ganz prüfen: Inhalt gegen den Prüfwert in ihren Angaben (.json).
+          // Fassungen und Archivfassungen immer ganz prüfen: Inhalt gegen den Prüfwert in ihren Angaben (.json).
           const hf = fassung?.[2] === 'fassung' ? createHash('sha256') : null;
           const angaben: Buffer[] | null = fassung?.[2] === 'json' ? [] : null;
           // Streamen statt puffern: auch große Dokumente brauchen kaum Arbeitsspeicher.
@@ -424,11 +428,12 @@ export class Wiederherstellung {
             if (h.digest('hex') !== name) throw new Error(`Die Datei ${rel} in der Sicherung ist beschädigt (Prüfwert stimmt nicht).`);
             stichprobe++;
           }
-          if (hf) fassungIst.set(fassung![1], hf.digest('hex'));
+          if (hf) (istArchiv ? archivIst : fassungIst).set(fassung![1], hf.digest('hex'));
           if (angaben) {
-            let soll = '';
-            try { soll = String((JSON.parse(Buffer.concat(angaben).toString('utf8')) as { sha256?: unknown }).sha256 ?? ''); } catch { /* unlesbar */ }
-            fassungSoll.set(fassung![1], soll);
+            let soll = ''; let imOriginal = false;
+            try { const j = JSON.parse(Buffer.concat(angaben).toString('utf8')) as { sha256?: unknown; imOriginal?: unknown }; soll = String(j.sha256 ?? ''); imOriginal = j.imOriginal === true; } catch { /* unlesbar */ }
+            (istArchiv ? archivSoll : fassungSoll).set(fassung![1], soll);
+            if (istArchiv && imOriginal) archivOriginal.add(fassung![1]);
           }
           dateien++;
         } else if (e.art === 'E') {
@@ -447,7 +452,16 @@ export class Wiederherstellung {
         log.warn('Umgewandelte Fassung in der Sicherung unvollständig – nicht übernommen', { datei: sha });
         if (!probe) for (const endung of ['json', 'fassung']) await rm(join(staging, m.haushaltId, 'fassungen', sha.slice(0, 2), `${sha}.${endung}`), { force: true });
       }
-      ok(`${tabellen} Tabellen, ${dateien} Dateien${fassungen ? `, ${fassungen === 1 ? 'eine umgewandelte Fassung' : `${fassungen} umgewandelte Fassungen`}` : ''}${fassungenOhne ? ` (${fassungenOhne} unvollständig, nicht übernommen)` : ''}${stichprobe ? `, Prüfwerte von ${stichprobe} Dateien nachgerechnet` : ''}`);
+      let archiv = 0; let archivOhne = 0;
+      for (const sha of new Set([...archivIst.keys(), ...archivSoll.keys()])) {
+        // „Original ist schon PDF/A“: nur Angaben, ihr Prüfwert ist der des Originals.
+        if (archivOriginal.has(sha) && !archivIst.has(sha) && archivSoll.get(sha) === sha) { archiv++; continue; }
+        if (archivIst.has(sha) && archivIst.get(sha) === archivSoll.get(sha)) { archiv++; continue; }
+        archivOhne++;
+        log.warn('Archivfassung in der Sicherung unvollständig – nicht übernommen', { datei: sha });
+        if (!probe) for (const endung of ['json', 'fassung']) await rm(join(staging, m.haushaltId, 'archivfassungen', sha.slice(0, 2), `${sha}.${endung}`), { force: true });
+      }
+      ok(`${tabellen} Tabellen, ${dateien} Dateien${fassungen ? `, ${fassungen === 1 ? 'eine umgewandelte Fassung' : `${fassungen} umgewandelte Fassungen`}` : ''}${fassungenOhne ? ` (${fassungenOhne} unvollständig, nicht übernommen)` : ''}${archiv ? `, ${archiv === 1 ? 'eine Archivfassung (PDF/A)' : `${archiv} Archivfassungen (PDF/A)`}` : ''}${archivOhne ? ` (${archivOhne} unvollständig, nicht übernommen)` : ''}${stichprobe ? `, Prüfwerte von ${stichprobe} Dateien nachgerechnet` : ''}`);
       // Zähler der Sequenzen nachziehen.
       for (const r of await neu`SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = ${schema} AND column_default LIKE 'nextval(%'`) {
         const t = `${bezeichner(schema)}.${bezeichner(r.table_name as string)}`;
@@ -530,7 +544,9 @@ export class Wiederherstellung {
         const ziel = join(this.q.dateiWurzel, rel);
         // Gleicher Prüfwert = gleicher Inhalt. Nicht bei Fassungen (#577): Ihr Name ist der Prüfwert des Originals – die
         // aus der Sicherung ersetzt eine inzwischen anders umgewandelte, damit alles so dasteht wie damals.
-        const istFassung = FASSUNG_PFAD.test(rel.split(sep).slice(1).join('/'));
+        // Archivfassungen, ihr Stand und die Wortpositionen (#631) ebenso.
+        const innen = rel.split(sep).slice(1).join('/');
+        const istFassung = FASSUNG_PFAD.test(innen) || ARCHIV_PFAD.test(innen) || WOERTER_PFAD.test(innen);
         if (!istFassung && await stat(ziel).then(() => true, () => false)) { schonDa++; continue; }
         await mkdir(dirname(ziel), { recursive: true });
         await rename(quelle, ziel);

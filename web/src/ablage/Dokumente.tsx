@@ -10,7 +10,8 @@ import { herkunftText } from '../volltext';
 import { volltextHerkunft } from '../../../shared/src/volltext';
 import { fassungAusInfo } from '../../../shared/src/dateiumwandlung';
 import { t } from '../sprache';
-import { api, dokumentUrl, fassungUrl, versionUrl, type Fundstelle } from '../api';
+import { api, archivfassungUrl, dokumentUrl, fassungUrl, versionUrl, type Fundstelle } from '../api';
+import { pdfaName, type ArchivStand } from '../../../shared/src/archivfassung';
 import { useDaten } from '../daten';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
@@ -116,7 +117,9 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const [ziehen, setZiehen] = useState(false);
   const [zuGross, setZuGross] = useState<string[]>([]);
   // ?dokument=… (#345: Sprung über die Archivnummer) zeigt dieses Dokument gleich an.
-  const [ansicht, setAnsicht] = useState<string | undefined>(() => { const w = new URLSearchParams(location.search).get('dokument'); return roh.some((x) => x.id === w && x.anzeigbar) ? w! : undefined; });
+  const [ansicht, setAnsicht] = useState<string | undefined>(() => { const w = new URLSearchParams(location.search).get('dokument'); return roh.some((x) => x.id === w && ansichtVon(x, false)) ? w! : undefined; });
+  // Archivfassung (#631): Dokumente, bei denen jemand „Original anzeigen“ gewählt hat.
+  const [original, setOriginal] = useState<Set<string>>(new Set());
   const offenRef = useRef<HTMLLIElement>(null);
   const sortierung = (d.einstellungen.dokumente_sortierung as Dokumentsortierung | undefined) ?? 'name';
   const dokumente = sortiereDokumente(roh, sortierung in DOKUMENT_SORTIERUNGEN ? sortierung : 'name');
@@ -189,8 +192,9 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   const handy = useHandy();
   const [menue, setMenue] = useState<string>();
   const umschalten = (x: Dokument) => {
-    if (!x.anzeigbar || entfernt.includes(x.id)) return;
-    if (handy) { location.assign(dokumentUrl(x.id)); return; }
+    const v = ansichtVon(x, original.has(x.id));
+    if (!v || entfernt.includes(x.id)) return;
+    if (handy) { location.assign(v.url); return; }
     setAnsicht(x.id === ansicht ? undefined : x.id);
   };
   const zeilenKlick = (x: Dokument, e: MouseEvent) => {
@@ -317,7 +321,9 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                 // Hinweis „Post teilen?“ (#579): nur an der Post, nur für PDFs, nur wer teilen darf – nie von selbst.
                 const teilenHinweis = post && bearbeitbar && !weg && x.mime === 'application/pdf' && !!x.teilenAb && !teilenWeg.has(x.id) && seitenOffen !== x.id;
                 const auf = x.id === ansicht && !weg;
-                const klickbar = x.anzeigbar && !weg;
+                // Anzeige (#631): Archivfassung → Lesefassung → Original.
+                const sicht = ansichtVon(x, original.has(x.id));
+                const klickbar = !!sicht && !weg;
                 return (
                   <li key={x.id} ref={auf ? offenRef : undefined} className={`${auf ? 'an' : ''} ${weg ? 'weg' : ''} ${klickbar ? 'klickbar' : ''} ${gewaehlt.has(x.id) && !weg ? 'gewaehlt' : ''}`}
                     onClick={(e) => zeilenKlick(x, e)}>
@@ -345,18 +351,19 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                         {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
                         {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
+                        {!weg && <ArchivAnzeige s={x.archivfassung} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
                         <div className="zeilenaktionen dk-handy">
-                          {klickbar && <a className="knopf primaer dk-gross" href={dokumentUrl(x.id)} aria-label={`${x.name} öffnen`}>Öffnen</a>}
+                          {klickbar && <a className="knopf primaer dk-gross" href={sicht!.url} aria-label={`${x.name} öffnen`}>Öffnen</a>}
                           {!weg && !stempelPflicht && <DokTeilen d={x} />}
                           <button type="button" className="knopf dk-gross dk-mehr" aria-haspopup="menu" aria-expanded={menue === x.id} aria-label={`Weitere Aktionen für ${x.name}`} onClick={() => setMenue(x.id)}>⋯</button>
                           {menue === x.id && <>
                             <div className="hy-schleier" aria-hidden="true" onClick={() => setMenue(undefined)} />
                             <div className="dk-blatt" role="menu" aria-label={`Aktionen für ${x.name}`} onClick={(e) => { if ((e.target as HTMLElement).closest('a, button')) setMenue(undefined); }}>
                               <p className="dk-titel">{x.name}</p>
-                        {!weg && !stempelPflicht && <a className="textknopf" href={dokumentUrl(x.id, true)}>Herunterladen</a>}
+                        {!weg && !stempelPflicht && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
                         {!weg && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
                           title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
                           onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
@@ -380,8 +387,8 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                         </div>
                       ) : (
                       <div className="zeilenaktionen">
-                        {klickbar && <a className="symbolverweis" href={dokumentUrl(x.id)} target="_blank" rel="noreferrer" title="In neuem Tab öffnen" aria-label={`${x.name} in neuem Tab öffnen`}>↗</a>}
-                        {!weg && !stempelPflicht && <a className="textknopf" href={dokumentUrl(x.id, true)}>Herunterladen</a>}
+                        {klickbar && <a className="symbolverweis" href={sicht!.url} target="_blank" rel="noreferrer" title="In neuem Tab öffnen" aria-label={`${x.name} in neuem Tab öffnen`}>↗</a>}
+                        {!weg && !stempelPflicht && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
                         {!weg && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
                           title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
                           onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
@@ -429,9 +436,10 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                     )}
                     {auf && (
                       <div className="dokansicht">
-                        {x.mime === 'application/pdf'
-                          ? <iframe src={dokumentUrl(x.id)} title={x.name} />
-                          : <img src={dokumentUrl(x.id)} alt={x.name} />}
+                        {sicht && <AnsichtKopf x={x} art={sicht.art} umschalten={() => { const n = new Set(original); if (n.has(x.id)) n.delete(x.id); else n.add(x.id); setOriginal(n); }} />}
+                        {sicht?.pdf
+                          ? <iframe src={sicht.url} title={x.name} />
+                          : <img src={sicht?.url ?? dokumentUrl(x.id)} alt={x.name} />}
                       </div>
                     )}
                   </li>
@@ -491,6 +499,63 @@ function DokTeilen({ d }: { d: Dokument }) {
       <button type="button" className="knopf dk-gross" disabled={laeuft} onClick={() => void teile()}>{laeuft ? 'Lade …' : datei ? 'Jetzt teilen' : 'Teilen'}</button>
       {fehler && <span className="fehlertext klein">{fehler}</span>}
     </>
+  );
+}
+
+/**
+ * Was die Anzeige zeigt (#631): die Archivfassung (PDF/A), wenn es eine zur aktuellen Datei gibt – sonst die Lesefassung
+ * (#577) für Dateitypen, die der Browser nicht zeigt – sonst das Original. Mit `original` immer das Original. null:
+ * nichts anzuzeigen.
+ */
+export function ansichtVon(x: Dokument, original: boolean): { art: 'archiv' | 'lesefassung' | 'original'; url: string; pdf: boolean } | null {
+  if (!original && x.archivfassung?.stand === 'fertig') return { art: 'archiv', url: archivfassungUrl(x.id), pdf: true };
+  if (!x.anzeigbar && x.ocr?.stand === 'fertig' && fassungAusInfo(x.ocr.info)) return { art: 'lesefassung', url: fassungUrl(x.id), pdf: true };
+  if (!x.anzeigbar) return null;
+  return { art: 'original', url: dokumentUrl(x.id), pdf: x.mime === 'application/pdf' };
+}
+
+/** Über der Anzeige (#631): was man sieht, und der Wechsel zwischen Archivfassung und Original. */
+function AnsichtKopf({ x, art, umschalten }: { x: Dokument; art: 'archiv' | 'lesefassung' | 'original'; umschalten(): void }) {
+  const a = x.archivfassung;
+  const mitArchiv = a?.stand === 'fertig';
+  return (
+    <p className="dokansicht-kopf klein">
+      <strong>{t.frei(`volltext.archiv.ansicht.${art}`)}</strong>
+      {mitArchiv && x.anzeigbar && <> · <button type="button" className="textknopf" onClick={umschalten}>{art === 'archiv' ? t('volltext.archiv.original-anzeigen') : t('volltext.archiv.archiv-anzeigen')}</button></>}
+      {!mitArchiv && a?.stand === 'wartet' && <span className="leise"> · {t('volltext.archiv.wird-erstellt')}</span>}
+      <Hilfe ort="dokumente.archivfassung" />
+    </p>
+  );
+}
+
+/**
+ * Herunterladen (#631): mit Archivfassung die Wahl – vorausgewählt (vorn) ist, was man gerade sieht, bei E-Rechnungen
+ * immer das Original.
+ */
+function Herunterladen({ x, archiv }: { x: Dokument; archiv: boolean }) {
+  const a = x.archivfassung?.stand === 'fertig' ? x.archivfassung.fassung : undefined;
+  if (!a || a.imOriginal) return <a className="textknopf" href={dokumentUrl(x.id, true)}>Herunterladen</a>;
+  const zuerstArchiv = archiv && !a.erechnung;
+  const orig = <a key="o" className="textknopf" href={dokumentUrl(x.id, true)} title={t('volltext.archiv.laden.original.titel')}>{zuerstArchiv ? t('volltext.archiv.laden.original') : 'Herunterladen'}</a>;
+  const arch = <a key="a" className="textknopf" href={archivfassungUrl(x.id, true)} title={t('volltext.archiv.laden.archiv.titel')}>{zuerstArchiv ? 'Herunterladen' : t('volltext.archiv.laden.archiv')}</a>;
+  return <>{zuerstArchiv ? [arch, orig] : [orig, arch]}</>;
+}
+
+/** Stand der Archivfassung am Dokument (#631) mit Hinweisen (signiert, externe Inhalte, Grund). */
+function ArchivAnzeige({ s }: { s?: ArchivStand | null }) {
+  if (!s) return null;
+  const f = s.fassung;
+  const klasse = s.stand === 'fertig' ? 'gut' : s.stand === 'fehler' ? 'schlecht' : s.stand === 'ausgelassen' ? '' : 'warn';
+  return (
+    <span className="ocrstand klein">
+      <span className={`chip ${klasse}`} title={s.info ?? undefined}>{s.stand === 'fertig' && f ? t('volltext.archiv.chip.fertig', { pdfa: pdfaName(f.pdfa) }) : t.frei(`volltext.archiv.chip.${s.stand}`)}</span>
+      {s.stand === 'fertig' && f?.imOriginal && <span className="leise">{t('volltext.archiv.im-original')}</span>}
+      {s.stand === 'wartet' && s.paket && <span className="leise">{t('volltext.archiv.wartet', { paket: s.paket.name })}</span>}
+      {s.stand !== 'wartet' && s.info && <span className="leise">{s.info}</span>}
+      {f?.signiert && <span className="leise">{t('volltext.archiv.signiert')}</span>}
+      {f?.weggelassen && <span className="leise">{t('volltext.archiv.weggelassen')}</span>}
+      {f?.erechnung && <span className="leise">{t('volltext.archiv.erechnung')}</span>}
+    </span>
   );
 }
 

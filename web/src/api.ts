@@ -216,6 +216,12 @@ export interface OcrStatus {
       /** #614: Paket, das den Volltext liefert (bzw. das aus dem Katalog). */
       volltext?: { id: string; name: string } | null; volltextKatalog?: { id: string; name: string } | null }>;
   };
+  /** #631: Archivfassung (PDF/A) – Pakete, Anzahl je Stand, Dokumente mit Fehler oder ausgelassen; null ohne. */
+  archivfassung?: {
+    pakete: Array<{ id: string; name: string; version: string; typen: string[] }>;
+    zaehler: { fertig: number; bytes: number; wartet: number; ausgelassen: number; fehler: number };
+    liste: Array<{ dokument: string; name: string; mappeId: string; stand: 'wartet' | 'ausgelassen' | 'fehler' | 'fertig'; info: string | null; zeit: string; paket: string | null }>;
+  } | null;
 }
 export interface Zaehler {
   typen: Record<string, { anzahl: number; unpassend: number; demo: number }>; eingang: number; sichten?: Record<string, number>;
@@ -900,6 +906,8 @@ export interface PdfSeiten { id: string; name: string; version: number; sha256: 
 export const seitenbildUrl = (d: { id: string; sha256: string }, nr: number) => `/api/dokumente/${d.id}/seiten/${nr}/bild?v=${d.sha256.slice(0, 12)}`;
 /** Umgewandelte Fassung eines Dokuments (#577): PDF, PNG oder JPEG aus einem Paket. */
 export const fassungUrl = (id: string) => `/api/dokumente/${id}/fassung`;
+/** Archivfassung (PDF/A) eines Dokuments (#631) – zur aktuellen Datei; 404 ohne. */
+export const archivfassungUrl = (id: string, herunterladen = false) => `/api/dokumente/${id}/archivfassung${herunterladen ? '?herunterladen=1' : ''}`;
 export const vorschauUrl = (d: { id: string; sha256: string }, versuch = 0) => `/api/dokumente/${d.id}/vorschau?v=${d.sha256.slice(0, 12)}${versuch ? `&n=${versuch}` : ''}`;
 /** Wo eine gleiche Datei schon liegt (#333) – nur lesbare Mappen. */
 export interface Fundstelle { mappeId: string; typId: string; titel: string; typ: string; register: string; name: string; erstellt: string }

@@ -310,7 +310,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     assert.equal(ampel.ampel, 'gruen');
   });
 
-  it('umgewandelte Fassungen (#577) kommen mit: nach der Wiederherstellung ohne Paket sind Fassung, Volltext und Vorschau da', async () => {
+  it('umgewandelte Fassungen (#577) und Archivfassungen (#631) kommen mit: nach der Wiederherstellung ohne Paket sind Fassung, Archivfassung, Volltext und Vorschau da', async () => {
     const { Dateiumwandlung, fassungsOrdner, ordnerFassungen } = await import('../src/dateiumwandlung');
     const { Dienst } = await import('../src/dienst');
     const { pgRepo } = await import('../src/repo-pg');
@@ -348,16 +348,25 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     await mkdir(join(q.wurzel, 'files', HAUSHALT, 'fassungen', 'ee'), { recursive: true });
     await writeFile(join(q.wurzel, 'files', HAUSHALT, 'fassungen', 'ee', `${'e'.repeat(64)}.fassung`), 'halb');
     assert.equal((await quelleU.u.pakete()).length, 0, 'kein Paket installiert');
+    // Archivfassung (PDF/A, #631) zu einem PDF, wie das Paket PDF/A sie abgelegt hätte, mit Stand und Wortpositionen.
+    const { archivOrdner, ordnerArchiv, woerterOrdner } = await import('../src/archivfassung');
+    const archivAblage = (w: string) => ordnerArchiv(archivOrdner(join(w, 'files'), HAUSHALT), woerterOrdner(join(w, 'files'), HAUSHALT));
+    const brief = (await q.dienst.ladeHoch(m.id, { register: 'dokumente', name: 'brief.pdf', typ: 'application/pdf' }, pdfMitText(['Brief von Petra']), null)).dokument;
+    const pdfa = pdfMitText(['Brief von Petra als PDF/A']);
+    const archivInfo = { mime: 'application/pdf' as const, groesse: pdfa.length, sha256: createHash('sha256').update(pdfa).digest('hex'), seiten: 1, pdfa: { teil: 2, stufe: 'B' }, paket: { id: 'pdfa', name: 'PDF/A', version: '1.0.0' }, erstellt: new Date().toISOString() };
+    await archivAblage(q.wurzel).schreibe(brief.sha256, archivInfo, pdfa);
+    await archivAblage(q.wurzel).setzeWoerter(brief.sha256, { seiten: [[['Brief', 0.1, 0.1, 0.1, 0.02]]], von: 'Texterkennung', erstellt: '' });
 
     const meta = (await (await q.sicherung.starte('manuell', 'lena@example.org')).fertig)!;
     assert.ok(meta, JSON.stringify(q.sicherung.aktuellerLauf()));
     assert.equal(meta.anzahl.fassungen, 2, 'Fassungen in den Metadaten (die halbe zählt beim Sichern mit)');
+    assert.equal(meta.anzahl.archivfassungen, 1, 'Archivfassungen in den Metadaten');
     const name = meta.datei.replace('.dms-sicherung', '');
 
     // Probe: prüft Fassung gegen Angaben, nennt sie und die unvollständige.
     const p = await q.w.starteProbe(name, 'test');
     assert.equal(await p.fertig, true, JSON.stringify(q.w.aktuellerLauf(), null, 1));
-    assert.match(q.w.aktuellerLauf()!.schritte.find((x) => x.name === 'Entschlüsseln und Einspielen')!.info!, /eine umgewandelte Fassung \(1 unvollständig, nicht übernommen\)/);
+    assert.match(q.w.aktuellerLauf()!.schritte.find((x) => x.name === 'Entschlüsseln und Einspielen')!.info!, /eine umgewandelte Fassung \(1 unvollständig, nicht übernommen\), eine Archivfassung \(PDF\/A\)/);
 
     // Frisches System ohne Paket; dort liegt schon eine andere Fassung derselben Datei (anderes Paket) – die aus der
     // Sicherung ersetzt sie.
@@ -374,6 +383,12 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const neu = await frisch(dbs[4]);
     const zielU = verbinde(neu, z.wurzel);
     assert.equal((await zielU.u.pakete()).length, 0, 'auch hier kein Paket');
+    // Archivfassung und Wortpositionen sind da – ohne Paket.
+    const { Archivfassung } = await import('../src/archivfassung');
+    const za = new Archivfassung(zielU.d.archivAnbindung(archivAblage(z.wurzel)));
+    zielU.d.verbindeArchivfassung(za);
+    assert.deepEqual((await zielU.d.archivfassungVon(brief.id)).inhalt, pdfa, 'Archivfassung ansehen');
+    assert.equal((await archivAblage(z.wurzel).woerter(brief.sha256))?.seiten[0]?.[0][0], 'Brief');
     const f = await zielU.d.fassungVon(dok.id);
     assert.deepEqual(f.inhalt, pdf, 'Fassung ansehen: dieselbe Fassung wie vorher');
     assert.deepEqual(f.info.paket, info.paket);
@@ -393,7 +408,9 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const rel = ex.pfade.dokumente.get(dok.id)!;
     assert.deepEqual(await readFile(join(ex.ordner, ...`${rel}.fassung.pdf`.split('/'))), pdf);
     const csvText = await readFile(join(ex.ordner, 'daten', 'dokumente.csv'), 'utf8');
-    assert.ok(csvText.split('\r\n')[0].endsWith(',pfad,fassung'));
+    assert.ok(csvText.split('\r\n')[0].endsWith(',pfad,fassung,archivfassung'));
+    const briefRel = ex.pfade.dokumente.get(brief.id)!;
+    assert.deepEqual(await readFile(join(ex.ordner, ...`${briefRel}.pdfa.pdf`.split('/'))), pdfa, 'Archivfassung im Vollexport');
     assert.ok(csvText.includes(`${rel}.fassung.pdf`));
   });
 

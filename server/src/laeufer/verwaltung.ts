@@ -57,11 +57,11 @@ export type ApiAufruf = (a: { methode: string; pfad: string; kopf: Record<string
 
 /**
  * Recht des API-Schlüssels eines Dienstkontos: „lesen und schreiben“, sobald das Paket irgendetwas schreiben darf –
- * Mappen, Dokumente, Vektoren (#442), Fassungen (#577, dms:umwandeln), Volltext (#614, dms:volltext) oder die Rückmeldung zur Kopie außer Haus
+ * Mappen, Dokumente, Vektoren (#442), Fassungen (#577, dms:umwandeln), Volltext (#614, dms:volltext), Archivfassungen (#631) oder die Rückmeldung zur Kopie außer Haus
  * (#585, dms:sicherung-lesen). Was es genau darf, prüft die Route je Recht.
  */
 export const schluesselRecht = (c: PaketCode): 'lesen' | 'schreiben' =>
-  c.rechte.schreiben.length || c.rechte.dokumente === 'schreiben' || hatSchnittstelle(c, 'dms:vektoren') || hatSchnittstelle(c, 'dms:umwandeln') || hatSchnittstelle(c, 'dms:sicherung-lesen') || hatSchnittstelle(c, 'dms:volltext') ? 'schreiben' : 'lesen';
+  c.rechte.schreiben.length || c.rechte.dokumente === 'schreiben' || hatSchnittstelle(c, 'dms:vektoren') || hatSchnittstelle(c, 'dms:umwandeln') || hatSchnittstelle(c, 'dms:sicherung-lesen') || hatSchnittstelle(c, 'dms:volltext') || hatSchnittstelle(c, 'dms:archivfassung') ? 'schreiben' : 'lesen';
 
 export interface LaeuferOptionen {
   dienst: Dienst;

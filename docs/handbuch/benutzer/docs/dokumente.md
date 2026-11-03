@@ -34,6 +34,18 @@ Neben jedem PDF und Bild (JPEG, PNG) steht ein **kleines Vorschaubild der ersten
 
 ![Dokument direkt unter seiner Zeile](bilder/dokumente.png)
 
+### Archivfassung (PDF/A) { #archivfassung-pdfa }
+
+Ist ein Paket wie **PDF/A** installiert (das macht ein Administrator), bekommt jedes Dokument zusätzlich eine **Archivfassung**: ein durchsuchbares PDF/A, das sich auch in vielen Jahren und ohne das DMS noch öffnen und durchsuchen lässt – praktisch, wenn du Unterlagen an Steuerberater oder Behörde weitergibst. Das Original bleibt unverändert.
+
+- **Anzeige:** Gibt es eine Archivfassung, zeigt das DMS sie an. Über der Anzeige steht **„Ansicht: Archivfassung (PDF/A)“**, daneben **Original anzeigen** (und zurück **Archivfassung anzeigen**). Ohne Archivfassung siehst du die Lesefassung (bei TIFF und Co.) oder das Original; solange das Paket noch arbeitet, steht dort „Archivfassung wird erstellt“.
+- **Herunterladen:** Mit Archivfassung hast du die Wahl – vorn steht, was du gerade siehst (**Herunterladen**), daneben **Original herunterladen** bzw. **Als PDF/A herunterladen**. Bei **E-Rechnungen** (ZUGFeRD, Factur-X) steht immer das Original vorn – nur dort steckt die Rechnung als XML.
+- **Am Dokument** steht der Stand: *Archivfassung: PDF/A-2b* (fertig), *wird erstellt*, *keine* (mit Grund, z. B. bei verschlüsselten PDFs) oder *Fehler*. Dazu Hinweise:
+  - „Original ist digital signiert – zum Prüfen der Signatur das Original öffnen.“ Die Archivfassung trägt die Signatur nicht.
+  - „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden.“ Die Archivfassung enthält nur, was in der Datei steckt – nichts wird aus dem Internet nachgeladen (das würde dem Absender verraten, wann du das Dokument öffnest).
+  - „Das Original ist schon PDF/A und gilt selbst als Archivfassung.“
+- **Nach Änderungen** am Original (neue Version, Seiten drehen oder löschen, teilen, schwärzen) zeigt das DMS das Original, bis die neue Archivfassung da ist. Die Historie der Mappe vermerkt jede neue Archivfassung.
+
 ### Am Handy: Dokument vorzeigen
 
 Am Handy zeigt das DMS Dokumente **nicht eingebettet** in der Mappe – so bleibt die Seite beim Wischen nicht im Dokument hängen. Jede Karte hat stattdessen große Knöpfe:

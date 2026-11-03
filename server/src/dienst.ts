@@ -62,6 +62,10 @@ import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
 import { PaketVolltext } from './paketvolltext';
+import type { ArchivAblage, ArchivAnbindung, Archivfassung } from './archivfassung';
+import { archivfassungName, pruefeWoerter } from '../../shared/src/archivfassung';
+import { vorgaben } from '../../shared/src/paketeinstellungen';
+import { liesPdfA, textebeneWoerter } from './pdf';
 import { INFO_VOLLTEXT_DURCH, INFO_VOLLTEXT_PAKET, infoVolltextPaket, katalogVolltext, VOLLTEXT_ZEICHEN_MAX } from '../../shared/src/paketvolltext';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
@@ -556,6 +560,8 @@ export class Dienst {
     await this.melde('volltext.fertig', daten, undefined, von, m.text ? undefined : kenntVolltextOhneText);
     // Gleichlaut für Pakete von vor 0.133.0 (#458): texterkennung.fertig nach dem Schritt des Kerns, wie bisher.
     if (m.quelle === 'kern') await this.melde('texterkennung.fertig', { ...daten, seiten: m.seiten ?? null });
+    // Archivfassung (#631): erst jetzt, wenn der Volltext feststeht. Neuer Text (Paket, API, neu erzeugen) heißt neu.
+    void this.archivNachVolltext(e.dokument, !!m.neu || m.quelle === 'paket' || m.quelle === 'api');
     if (!m.text) return;
     for (const h of this.volltextHoerer) {
       try { await h(e); } catch (x) { protokoll.modul('ablage').warn('Nach dem Volltext gestört', { dokument: e.dokument, fehler: (x as Error).message }); }
@@ -1084,6 +1090,91 @@ export class Dienst {
     }
   }
 
+  /* ---------- Archivfassung (PDF/A, #631) ---------- */
+
+  private archiv?: Archivfassung;
+  verbindeArchivfassung(a: Archivfassung) { this.archiv = a; }
+  get archivfassung() { return this.archiv; }
+
+  /** Was Archivfassung vom Dienst braucht (#631) – für index.ts und Tests. */
+  archivAnbindung(ablage: ArchivAblage): ArchivAnbindung {
+    return {
+      ablage,
+      pakete: () => this.repo.listePakete(),
+      einstellung: async (paket, k) => {
+        const w = (await this.paketEinstellungen(paket))?.werte ?? {};
+        if (k in w) return w[k];
+        const p = (await this.repo.listePakete()).find((x) => x.id === paket);
+        return p?.einstellungen ? vorgaben(p.einstellungen)[k] : undefined;
+      },
+      melde: (paket, daten) => this.melde('datei.archivfassung', daten, paket),
+      dokumenteMitSha: (sha) => this.repo.dokumenteMitSha(sha),
+      dokumenteMitTyp: (m) => this.repo.dokumenteMitTyp(m),
+      lesefassung: async (sha) => (await this.umwandlung?.lies(sha)) ?? null,
+      datei: (sha) => this.liesGanz(sha),
+      textebene: (pdf) => textebeneWoerter(pdf),
+      liesPdfA: (pdf) => liesPdfA(pdf),
+      notiere: async (d, paket, daten) => {
+        const konto = [...this.paketKonten.entries()].find(([, p]) => p === paket)?.[0] ?? null;
+        await this.notiere(d.mappeId, konto, 'archivfassung', daten);
+      },
+    };
+  }
+
+  /** Der Volltext steht fest (#631): Dokument an das Paket für die Archivfassung melden – im Hintergrund. */
+  private async archivNachVolltext(id: string, neu?: boolean) {
+    if (!this.archiv) return;
+    try {
+      const d = await this.repo.holeDokument(id);
+      if (d?.ocr?.stand === 'fertig') await this.archiv.anfordern(d, { neu });
+    } catch (e) { protokoll.modul('archivfassung').warn('Dokument nicht zur Archivfassung gemeldet', { dokument: id, fehler: (e as Error).message }); }
+  }
+
+  /** Paket für die Archivfassung installiert, neue Dateitypen oder „nur Scans“ aus: Bestand melden (#631). */
+  async archivPaketDa(typen: string[]): Promise<number> {
+    if (!this.archiv || !typen.length) return 0;
+    const klein = new Set(typen.map((m) => m.toLowerCase()));
+    const vorhanden = Object.keys(await this.repo.dokumentTypen()).filter((m) => klein.has(m.toLowerCase()));
+    return this.archiv.bestand(vorhanden);
+  }
+
+  /** Archivfassung annehmen (PUT /dokumente/{id}/archivfassung?sha256=…); Lesen prüft die Route. */
+  async setzeArchivfassung(z: Zugriff | undefined, id: string, sha: unknown, inhalt: unknown) {
+    if (!this.archiv) throw new Fachfehler(404, t('pakete.archiv.aus'));
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    return { dokument: d.id, archivfassung: await this.archiv.setze(z?.paket, d, sha, inhalt) };
+  }
+
+  /** Die Archivfassung eines Dokuments zum Ansehen (nur die aktuelle – zur Datei des Dokuments); 404 ohne. */
+  async archivfassungVon(id: string) {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    const f = await this.archiv?.lies(d.sha256);
+    if (!f) throw new Fachfehler(404, t('pakete.archiv.keine'));
+    return { d, ...f };
+  }
+
+  /** Wortpositionen eines Dokuments (#631, GET /dokumente/{id}/wortpositionen). */
+  async wortpositionen(id: string) {
+    if (!this.archiv) throw new Fachfehler(404, t('pakete.archiv.aus'));
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    return this.archiv.wortpositionen(d);
+  }
+
+  /** Werkbank → Texterkennung → Archivfassung (#631). */
+  async archivStand() { return this.archiv ? this.archiv.uebersicht() : null; }
+
+  /** Stand der Archivfassung je Dokument (#631), nur wenn es eine gibt oder ein Paket dran ist. */
+  private async mitArchivStand(docs: Dokument[]): Promise<Dokument[]> {
+    if (!this.archiv || !docs.length) return docs;
+    return Promise.all(docs.map(async (d) => {
+      const s = await this.archiv!.stand(d).catch(() => null);
+      return s ? { ...d, archivfassung: s } : d;
+    }));
+  }
+
   /* ---------- Volltext aus Paketen (#614) ---------- */
 
   /**
@@ -1139,6 +1230,7 @@ export class Dienst {
     const mitText = !!text && text.replace(/\s/g, '').length >= 20;
     const info = r.ok ? `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket}: ${grund || 'kein Volltext geliefert'}` : `${INFO_VOLLTEXT_DURCH} ${p?.name ?? paket} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
     await this.repo.ocrSetze(d.id, { stand: !r.ok ? 'fehler' : mitText ? 'fertig' : 'ausgelassen', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
+    if (r.ok && mitText) void this.archivNachVolltext(d.id, e.daten.neu === true);
   }
 
   /* ---------- Volltext (#45) ---------- */
@@ -1264,6 +1356,7 @@ export class Dienst {
    */
   async nachTexterkennungsEreignis(paket: string, e: { art: string; daten: Record<string, unknown> }, r: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }): Promise<void> {
     if (e.art === 'datei.umwandeln') return this.nachUmwandlungsEreignis(paket, e, r);
+    if (e.art === 'datei.archivfassung') return this.archiv?.nachEreignis(paket, e, r);
     if (e.art === 'datei.volltext') return this.nachVolltextEreignis(paket, e, r);
     // Sicherung außer Haus (#585): Aufgegeben heißt „fehlgeschlagen“ (endgültig) – auch wenn das Paket es nicht mehr melden konnte.
     if (e.art === 'sicherung.fertig') { if (r.aufgegeben && typeof e.daten.name === 'string') await this.sicherungAufgegeben?.(paket, e.daten.name, r.fehler); return; }
@@ -1280,6 +1373,8 @@ export class Dienst {
       ? `${mitText ? INFO_TEXTEBENE : 'ohne Text'} – Paket ${p.name}${grund ? `: ${grund}` : ': nichts zu tun'}`
       : `Texterkennung durch Paket ${p.name} fehlgeschlagen${grund ? `: ${grund}` : ''}`;
     await this.repo.ocrSetze(d.id, { stand: r.ok ? 'fertig' : 'fehler', info: info.slice(0, 500), seiten: d.ocr.seiten ?? null });
+    // Der Text aus dem PDF bleibt – jetzt steht der Volltext fest (#631).
+    if (r.ok) void this.archivNachVolltext(d.id, e.daten.neu === true);
   }
 
   async volltext(id: string) {
@@ -1334,9 +1429,17 @@ export class Dienst {
       if (alle.length) mehr = { weitere: alle, seitensprachen: z.seiten };
     } else if (weitereAngabe?.length) mehr = { weitere: weitereAngabe };
     if (mehr.weitere && weitereAngabe) mehr.weitere = [...new Set([...mehr.weitere, ...weitereAngabe])];
+    // Wortpositionen (#631): je Seite (wie im Text durch \f getrennt) die Wörter mit Lage – für die Archivfassung.
+    let woerter: ReturnType<typeof pruefeWoerter> | null | undefined;
+    if (e.woerter !== undefined && e.woerter !== null) {
+      try { woerter = pruefeWoerter(e.woerter, e.text.split(SEITENVORSCHUB).length); } catch (f) { throw new Fachfehler(422, t('pakete.archiv.woerter', { grund: (f as Error).message })); }
+    } else if (e.woerter === null || (von.paket && (kernTyp(d.mime) || !!fassung))) woerter = null;
     const sprache = angegeben ? { sprache: angegeben, konfidenz: 1 } : haupt ? { sprache: haupt, konfidenz: 1 } : erkenneSprache(text);
     if (mehr.weitere) mehr.weitere = mehr.weitere.filter((k) => k !== sprache?.sprache);
     const vermerk = angegeben || haupt ? `${SPRACHE_MARKE}${sprache!.sprache}` : sprache ? spracheZuInfo(sprache) : '';
+    // Vor dem Stand: Wer den fertigen Volltext sieht (Archivfassung), findet die passenden Wortpositionen. Ein Paket
+    // ohne Wortpositionen (ältere Texterkennung) nimmt die alten mit weg – sie gehörten zu einem anderen Text.
+    if (woerter !== undefined && this.archiv) await this.archiv.speichereWoerter(d.sha256, woerter, von.herkunft).catch((f: Error) => protokoll.modul('archivfassung').warn('Wortpositionen nicht gespeichert', { dokument: id, fehler: f.message }));
     try {
       await this.repo.ocrSetze(id, { stand: 'fertig', text, seiten: seitenzahl ?? d.ocr?.seiten ?? null, info: info + vermerk, sprache: sprache && istTextsprache(sprache.sprache) ? sprache.sprache : null, ...mehr });
     } catch (f) {
@@ -2121,12 +2224,15 @@ export class Dienst {
     // Stempel (#394): gewünscht oder vom Mappentyp verlangt; {empfänger} sind ohne Angabe die Adressen.
     const plan = dokumente.length ? await this.stempelPlan(m.typId, wunschAus(e.stempel), an.join(', ')) : null;
     const klein = stufeAus(e.verkleinern);
-    const ausgaben = plan || (klein && dokumente.length) ? await Promise.all(dokumente.map(async (d) => fuerAusgabe({ name: d!.name, mime: d!.mime, inhalt: await this.liesGanz(d!.sha256) }, { stempel: plan, verkleinern: klein },
-      { benutzer: ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d!.archivnummer }))) : null;
-    const groesse = ausgaben ? ausgaben.reduce((a, x) => a + x.inhalt.length, 0) : dokumente.reduce((a, d) => a + d!.groesse, 0);
+    // Archivfassung oder Original (#631): je Dokument (fassungen: { id: archiv|original }) oder für alle (fassung).
+    const wahl = (e.fassungen && typeof e.fassungen === 'object' ? e.fassungen : {}) as Record<string, unknown>;
+    const quellen = await Promise.all(dokumente.map((d) => this.ausgabeQuelle(d!, wahl[d!.id] ?? e.fassung, wahl[d!.id] === undefined)));
+    const ausgaben = plan || (klein && dokumente.length) ? await Promise.all(quellen.map(async (d, i) => fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await d.inhalt() }, { stempel: plan, verkleinern: klein },
+      { benutzer: ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: dokumente[i]!.archivnummer }))) : null;
+    const groesse = ausgaben ? ausgaben.reduce((a, x) => a + x.inhalt.length, 0) : quellen.reduce((a, d) => a + d.groesse, 0);
     if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB.`);
     const anhaenge = ausgaben ? ausgaben.map((x) => ({ name: x.name, mime: x.mime, inhalt: x.inhalt as Buffer | Readable }))
-      : await Promise.all(dokumente.map(async (d) => ({ name: d!.name, mime: d!.mime, inhalt: await this.dateien.lies(d!.sha256) })));
+      : await Promise.all(quellen.map(async (d) => ({ name: d.name, mime: d.mime, inhalt: d.archiv ? await d.inhalt() : await this.dateien.lies(d.sha256) })));
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge });
@@ -2563,7 +2669,7 @@ export class Dienst {
       rechte: rechte ?? { C: true, R: true, U: true, D: true, P: true },
       /** Ob „Mappe löschen“ geht, sonst warum nicht (#79). */
       loeschbar: p.ok ? { ok: true } : { ok: false, grund: p.grund, rueckverweise: fremd },
-      dokumente: await this.repo.listeDokumente(id),
+      dokumente: await this.mitArchivStand(await this.repo.listeDokumente(id)),
       /** Notizen an der Mappe (#55). */
       notizen: await this.repo.notizen(id),
       /** Aufgaben an der Mappe, offene zuerst (#54). */
@@ -5260,6 +5366,7 @@ export class Dienst {
       await this.dateien.loesche(sha256);
       await this.vorschau?.entferne(sha256);
       await this.umwandlung?.entferne(sha256);
+      await this.archiv?.entferne(sha256);
     }
   }
 
@@ -5467,19 +5574,34 @@ export class Dienst {
    * Ein Dokument oder eine ältere Version herunterladen (#394): mit Stempel, wenn gewünscht (`stempel`,
    * aus Anfragekörper oder Abfrageparametern) oder vom Mappentyp verlangt. Ohne Stempel unverändert als Strom.
    */
-  async dokumentFuerAusgabe(id: string, o: { version?: number; stempel?: unknown; verkleinern?: unknown; ich: { id: string | null; name: string } }) {
+  /**
+   * Archivfassung statt Original weitergeben (#631): `fassung` = „archiv“ nimmt die aktuelle Archivfassung des
+   * Dokuments (gibt es keine, 404), sonst das Original. `nurWo` (mehrere Dokumente): ohne Archivfassung und bei
+   * E-Rechnungen das Original, ohne Fehler.
+   */
+  private async ausgabeQuelle(d: Pick<Dokument, 'name' | 'mime' | 'sha256' | 'groesse' | 'anzeigbar'>, fassung: unknown, nurWo = false): Promise<{ name: string; mime: string; sha256: string; groesse: number; anzeigbar: boolean; inhalt: () => Promise<Buffer>; archiv: boolean }> {
+    const original = { name: d.name, mime: d.mime, sha256: d.sha256, groesse: d.groesse, anzeigbar: d.anzeigbar, inhalt: () => this.liesGanz(d.sha256), archiv: false };
+    if (fassung === undefined || fassung === null || fassung === 'original') return original;
+    if (fassung !== 'archiv') throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+    const f = await this.archiv?.lies(d.sha256);
+    if (!f || (nurWo && f.info.erechnung)) { if (nurWo) return original; throw new Fachfehler(404, t('pakete.archiv.keine')); }
+    return { name: archivfassungName(d.name), mime: 'application/pdf', sha256: f.info.sha256, groesse: f.inhalt.length, anzeigbar: true, inhalt: async () => f.inhalt, archiv: true };
+  }
+
+  async dokumentFuerAusgabe(id: string, o: { version?: number; stempel?: unknown; verkleinern?: unknown; fassung?: unknown; ich: { id: string | null; name: string } }) {
     const dokument = await this.repo.holeDokument(id);
     if (!dokument) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    const datei = o.version != null ? (await this.versionInhalt(id, o.version)).version : dokument;
+    const datei = o.version != null ? (await this.versionInhalt(id, o.version)).version : await this.ausgabeQuelle(dokument, o.fassung);
     const m = await this.repo.holeMappe(dokument.mappeId);
     const plan = m ? await this.stempelPlan(m.typId, wunschAus(o.stempel)) : null;
     // Verkleinert herunterladen (#393): nur PDFs; das gespeicherte Dokument bleibt, wie es ist.
     const klein = stufeAus(o.verkleinern);
     if (klein && datei.mime !== 'application/pdf' && !plan) throw new Fachfehler(422, `„${datei.name}“ ist kein PDF – verkleinern lassen sich nur PDFs.`);
-    if (!plan && !klein) return { name: datei.name, mime: datei.mime, anzeigbar: datei.anzeigbar, groesse: datei.groesse, inhalt: await this.dateien.lies(datei.sha256) as Buffer | Readable, gestempelt: false };
-    const a = await fuerAusgabe({ name: datei.name, mime: datei.mime, inhalt: await this.liesGanz(datei.sha256) }, { stempel: plan, verkleinern: klein },
+    const lies = async () => ('archiv' in datei && datei.archiv ? datei.inhalt() : this.liesGanz(datei.sha256));
+    if (!plan && !klein) return { name: datei.name, mime: datei.mime, anzeigbar: datei.anzeigbar, groesse: datei.groesse, inhalt: ('archiv' in datei && datei.archiv ? await datei.inhalt() : await this.dateien.lies(datei.sha256)) as Buffer | Readable, gestempelt: false };
+    const a = await fuerAusgabe({ name: datei.name, mime: datei.mime, inhalt: await lies() }, { stempel: plan, verkleinern: klein },
       { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: dokument.archivnummer }, true);
-    await this.notiereWeitergabe(m!.id, o.ich.id, o.version != null ? `heruntergeladen, Version ${o.version}` : 'heruntergeladen', plan, [a]);
+    await this.notiereWeitergabe(m!.id, o.ich.id, o.version != null ? `heruntergeladen, Version ${o.version}` : 'archiv' in datei && datei.archiv ? 'heruntergeladen (Archivfassung)' : 'heruntergeladen', plan, [a]);
     if (plan) protokoll.modul('dokumente').info('Dokument mit Stempel heruntergeladen', { id, mappe: m!.id, pflicht: plan.pflicht });
     if (a.verkleinert) protokoll.modul('dokumente').info('Dokument verkleinert heruntergeladen', { id, mappe: m!.id, vorher: a.verkleinert.vorher, nachher: a.verkleinert.nachher });
     return { name: a.name, mime: a.mime, anzeigbar: true, groesse: a.inhalt.length, inhalt: a.inhalt as Buffer | Readable, gestempelt: !!a.gestempelt, verkleinert: a.verkleinert ?? null };
@@ -6163,6 +6285,8 @@ export class Dienst {
       datei: (sha) => this.dateien.lies(sha),
       // Umgewandelte Fassungen (#577) neben dem Original – wie in der Sicherung.
       fassung: async (sha) => { const f = await this.umwandlung?.lies(sha); return f ? { mime: f.info.mime, inhalt: f.inhalt } : null; },
+      // Archivfassung (#631) neben dem Original: <Datei>.pdfa.pdf; ist das Original schon PDF/A, keine zweite Datei.
+      archivfassung: async (sha) => { const i = await this.archiv?.info(sha); if (!i) return null; return i.imOriginal ? { imOriginal: true } : { inhalt: (await this.archiv!.lies(sha))?.inhalt ?? null }; },
       notizen: (ids) => r.notizenVon(ids),
       aufgaben: (ids) => r.aufgabenVonMappen(ids),
       erinnerungen: () => r.erinnerungen(),
@@ -6535,6 +6659,7 @@ export class Dienst {
       versionen: async () => [],
       // Die Auskunft enthält die Dokumente, wie sie abgelegt sind – ohne Fassungen von Paketen (#577).
       fassung: undefined,
+      archivfassung: undefined,
       notizen: async (ids) => (await this.repo.notizenVon(ids)).filter((n) => not.has(n.id)),
       aufgaben: async () => [], erinnerungen: async () => [], favoriten: async () => [],
       // Historie: ohne frühere Auskünfte (deren Begründungen sind intern); Mappen mit zurückgehaltenen

@@ -1281,6 +1281,11 @@ export class Paketverwaltung {
       if (hatSchnittstelle(datensatz.laeufer, 'dms:volltext') && neueVolltextTypen.length) {
         void this.d.volltextPaketDa(neueVolltextTypen).catch((e: Error) => log.warn('Vorhandene Dateien nicht zum Volltext an das Paket gegeben', { paket: m.id, fehler: e.message }));
       }
+      // Archivfassung (#631): Bestand der (neuen) Dateitypen mit fertigem Volltext geht an das Paket.
+      const neueArchivTypen = (datensatz.laeufer?.archivfassung?.typen ?? []).filter((x) => !(hatSchnittstelle(alt?.laeufer, 'dms:archivfassung') && alt?.laeufer?.archivfassung?.typen.includes(x)));
+      if (hatSchnittstelle(datensatz.laeufer, 'dms:archivfassung') && neueArchivTypen.length) {
+        void this.d.archivPaketDa(neueArchivTypen).catch((e: Error) => log.warn('Vorhandene Dokumente nicht zur Archivfassung gemeldet', { paket: m.id, fehler: e.message }));
+      }
       return datensatz;
     } catch (f) {
       await zurueck();
@@ -1412,6 +1417,9 @@ export class Paketverwaltung {
       // Der Läufer bekommt die erlaubten Adressen neu (Netz nur zur bestätigten Adresse).
       if (adressfelder(b).some((x) => geaendert.includes(x.schluessel))) await this.o.laeufer?.codeGeaendert?.();
       try { this.o.laeufer?.ereignis?.(id, 'paket.einstellungen_geaendert', geaendert); } catch { /* das Paket entscheidet selbst */ }
+      // Archivfassung (#631): „nur Scans und Bilder“ aus – jetzt bekommen auch PDFs mit Textebene eine.
+      const nur = p.laeufer?.archivfassung?.nur_scans;
+      if (nur && geaendert.includes(nur) && r.werte[nur] !== true) void this.d.archivPaketDa(p.laeufer!.archivfassung!.typen).catch(() => 0);
     }
     return this.einstellungen(id);
   }

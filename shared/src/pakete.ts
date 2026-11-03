@@ -4,6 +4,7 @@
  */
 import { dateitypName, DMS_UMWANDELN_AB, kernTyp, MIME, UMWANDELN_TYPEN_MAX } from './dateiumwandlung';
 import { DMS_PAKET_VOLLTEXT_AB, VOLLTEXT_TYPEN_MAX } from './paketvolltext';
+import { ARCHIV_TYPEN_MAX, DMS_ARCHIVFASSUNG_AB } from './archivfassung';
 import type { Hilfeort } from './hilfe';
 
 /** Der offizielle Katalog (Branch gh-pages der Registry). */
@@ -290,6 +291,7 @@ export const EREIGNISSE = {
   'datei.umwandeln': 'Eine Datei soll umgewandelt werden (Dateitypen, die das DMS nicht selbst liest)',
   'sicherung.fertig': 'Eine Sicherung ist fertig (verschlüsselt) und kann außer Haus kopiert werden',
   'datei.volltext': 'Eine Datei braucht ihren Volltext (Dateitypen, die das DMS nicht selbst liest)',
+  'datei.archivfassung': 'Ein Dokument mit fertigem Volltext braucht seine Archivfassung (PDF/A)',
 } as const;
 export type EreignisArt = keyof typeof EREIGNISSE;
 /**
@@ -304,6 +306,7 @@ export const SCHNITTSTELLEN = {
   'dms:umwandeln': 'Dateien umwandeln, die das DMS nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert',
   'dms:sicherung-lesen': 'Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte)',
   'dms:volltext': 'Volltext für Dateien liefern, die das DMS nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht',
+  'dms:archivfassung': 'Archivfassung (PDF/A) ablegen – das Paket liest Dokumente mit ihrem Volltext und den Wortpositionen und legt daneben ein durchsuchbares PDF/A ab; das Original bleibt unverändert, ändern, ersetzen oder löschen kann es nichts',
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
 /** Ab dieser Version kennt das DMS `code.rechte.schnittstellen` und das Ereignis `volltext.fertig` (#442). */
@@ -315,7 +318,7 @@ export const DMS_VEKTOREN_AB = '0.120.0';
  */
 export const DMS_ANTWORTEN_AB = '0.124.0';
 /** Hilfe-Ort je Schnittstelle (Administratorhandbuch, Pakete mit Code). */
-export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln', 'dms:sicherung-lesen': 'pakete.recht.sicherung', 'dms:volltext': 'pakete.recht.volltext' };
+export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln', 'dms:sicherung-lesen': 'pakete.recht.sicherung', 'dms:volltext': 'pakete.recht.volltext', 'dms:archivfassung': 'pakete.recht.archivfassung' };
 /**
  * Ab dieser Version (#585) kennt das DMS das Ereignis `sicherung.fertig` und die Schnittstelle `dms:sicherung-lesen`:
  * Ein Paket liest die verschlüsselte Sicherung in Stücken, kopiert sie außer Haus und meldet je Sicherung zurück.
@@ -373,6 +376,12 @@ export interface PaketCode {
    * es das Ereignis `datei.volltext` und darf den Volltext dieser Dokumente schreiben – sonst nichts an Dokumenten.
    */
   volltext?: string[];
+  /**
+   * Archivfassung (#631, `code.archivfassung`, nur mit `dms:archivfassung`): Dateitypen, zu denen das Paket ein PDF/A
+   * ablegt (PDF, JPEG und PNG erlaubt), und optional der Schlüssel einer Ja/Nein-Einstellung des Pakets „nur Scans und
+   * Bilder“: an = PDFs mit vollständiger Textebene bekommen keine Archivfassung (Vorgabe: alle PDFs).
+   */
+  archivfassung?: { typen: string[]; nur_scans?: string };
   /** Das WebAssembly-Modul (code/modul.wasm) und Daten (code/daten/…), nur im installierten Paket. */
   modul?: { sha256: string; groesse: number };
   daten?: string[];
@@ -452,6 +461,34 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   if (willVolltext && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:volltext braucht auch code.rechte.dokumente: lesen – das Paket liest die Datei.');
   if (willVolltext && !ereignisse.includes('datei.volltext')) fehler.push('code.rechte.schnittstellen: dms:volltext braucht das Ereignis datei.volltext in code.ereignisse.');
   if (!willVolltext && ereignisse.includes('datei.volltext')) fehler.push('code.ereignisse: datei.volltext gibt es nur mit code.rechte.schnittstellen: [dms:volltext].');
+  // Archivfassung (#631): Dateitypen (auch PDF, JPEG, PNG), nur mit dms:archivfassung, Lesen und dem Ereignis.
+  const willArchiv = schnittstellen.includes('dms:archivfassung');
+  let archivfassung: PaketCode['archivfassung'];
+  if (x.archivfassung !== undefined) {
+    const a = x.archivfassung as Record<string, unknown>;
+    if (!a || typeof a !== 'object' || Array.isArray(a)) fehler.push('code.archivfassung: ein Objekt mit typen (Dateitypen) und optional nur_scans erwartet.');
+    else {
+      const typen = liste(a.typen, 'code.archivfassung.typen').map((m) => m.toLowerCase());
+      for (const m of typen) if (!MIME.test(m)) fehler.push(`code.archivfassung.typen: „${m}“ ist kein Dateityp (z. B. image/jpeg).`);
+      if (!typen.length) fehler.push('code.archivfassung.typen: mindestens ein Dateityp, z. B. [application/pdf, image/jpeg, image/png].');
+      if (typen.length > ARCHIV_TYPEN_MAX) fehler.push(`code.archivfassung.typen: höchstens ${ARCHIV_TYPEN_MAX} Dateitypen.`);
+      for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'nur_scans') fehler.push(`code.archivfassung: „${k}“ gibt es nicht (nur typen und nur_scans).`);
+      let nurScans: string | undefined;
+      if (a.nur_scans !== undefined) {
+        // Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = nur Scans und Bilder, keine PDFs mit Text.
+        const felder = (Array.isArray(x.einstellungen) ? x.einstellungen : []).flatMap((b) => (b && typeof b === 'object' && !Array.isArray(b) && Array.isArray((b as Record<string, unknown>).felder) && (b as Record<string, unknown>).liste === undefined ? (b as Record<string, unknown>).felder as unknown[] : []));
+        const f = felder.find((y): y is Record<string, unknown> => !!y && typeof y === 'object' && (y as Record<string, unknown>).schluessel === a.nur_scans);
+        if (typeof a.nur_scans !== 'string' || !f || f.typ !== 'janein') fehler.push('code.archivfassung.nur_scans: der Schlüssel einer Einstellung vom Typ janein (Abschnitt, keine Liste) – an: nur Scans und Bilder, keine PDFs mit Text.');
+        else nurScans = a.nur_scans;
+      }
+      archivfassung = { typen: [...new Set(typen)], ...(nurScans ? { nur_scans: nurScans } : {}) };
+    }
+  }
+  if (willArchiv && !archivfassung?.typen.length) fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht code.archivfassung.typen – die Dateitypen, zu denen das Paket ein PDF/A ablegt.');
+  if (!willArchiv && x.archivfassung !== undefined) fehler.push('code.archivfassung: braucht code.rechte.schnittstellen: [dms:archivfassung].');
+  if (willArchiv && dokumente === 'keine') fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht auch code.rechte.dokumente: lesen – das Paket liest die Datei und ihren Volltext.');
+  if (willArchiv && !ereignisse.includes('datei.archivfassung')) fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht das Ereignis datei.archivfassung in code.ereignisse.');
+  if (!willArchiv && ereignisse.includes('datei.archivfassung')) fehler.push('code.ereignisse: datei.archivfassung gibt es nur mit code.rechte.schnittstellen: [dms:archivfassung].');
   // Sicherung außer Haus (#585): Lesen der verschlüsselten Sicherung nur zusammen mit dem Ereignis – und umgekehrt.
   const willSichern = schnittstellen.includes('dms:sicherung-lesen');
   if (willSichern && !ereignisse.includes('sicherung.fertig')) fehler.push('code.rechte.schnittstellen: dms:sicherung-lesen braucht das Ereignis sicherung.fertig in code.ereignisse.');
@@ -469,7 +506,7 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
     : []));
   // Schreiben setzt Lesen voraus.
   const lesenAlle = [...new Set([...lesen, ...schreiben])];
-  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}), ...(volltext.length ? { volltext: [...new Set(volltext)] } : {}) }, fehler };
+  return { code: fehler.length ? null : { sprache, ereignisse: ereignisse as EreignisArt[], rechte: { lesen: lesenAlle, schreiben, dokumente, ...(schnittstellen.length ? { schnittstellen: schnittstellen as Schnittstelle[] } : {}) }, netz, ...(adressen.length ? { adressen } : {}), ...(umwandeln.length ? { umwandeln: [...new Set(umwandeln)] } : {}), ...(volltext.length ? { volltext: [...new Set(volltext)] } : {}), ...(archivfassung && willArchiv ? { archivfassung } : {}) }, fehler };
 }
 
 /** Zustand des Paket-Läufers (#403): aus (kein Paket mit Code), startet, bereit, neustart (nach Absturz), pausiert (Wartung). */
@@ -511,6 +548,7 @@ export const EREIGNIS_HILFE: Record<EreignisArt, Hilfeort> = {
   'datei.umwandeln': 'pakete.ereignis.datei_umwandeln',
   'sicherung.fertig': 'pakete.ereignis.sicherung_fertig',
   'datei.volltext': 'pakete.ereignis.datei_volltext',
+  'datei.archivfassung': 'pakete.ereignis.datei_archivfassung',
 };
 
 /** Ein Punkt der Rechte-Liste in der Vorschau (#449): Text, Handbuch-Stelle, ggf. Unterliste (Ereignisse). */
@@ -524,7 +562,8 @@ export function rechtePunkte(c: PaketCode, typName: (verweis: string) => string)
   if (c.rechte.schreiben.length) z.push({ text: `Mappen anlegen und ändern: ${t(c.rechte.schreiben)}`, hilfe: 'pakete.recht.schreiben' });
   if (c.rechte.dokumente !== 'keine') z.push({ text: DOKUMENT_RECHTE[c.rechte.dokumente], hilfe: 'pakete.recht.dokumente' });
   // Dateien umwandeln (#577) und Volltext aus Paketen (#614): mit den Dateitypen, für die das Paket zuständig sein will.
-  const typen = (s: Schnittstelle) => (s === 'dms:umwandeln' ? c.umwandeln : s === 'dms:volltext' ? c.volltext : undefined);
+  // Archivfassung (#631) ebenso.
+  const typen = (s: Schnittstelle) => (s === 'dms:umwandeln' ? c.umwandeln : s === 'dms:volltext' ? c.volltext : s === 'dms:archivfassung' ? c.archivfassung?.typen : undefined);
   for (const s of c.rechte.schnittstellen ?? []) z.push({ text: `${SCHNITTSTELLEN[s]} (${s})${typen(s)?.length ? `: ${[...new Set(typen(s)!.map(dateitypName))].join(', ')}` : ''}`, hilfe: SCHNITTSTELLE_HILFE[s] });
   z.push({ text: netzText(c.netz, (c.adressen ?? []).map((a) => a.name)), hilfe: c.adressen?.length ? 'pakete.recht.adresse' : 'pakete.recht.netz' });
   if (c.ereignisse.length) z.push({ text: 'Reagiert auf diese Ereignisse:', hilfe: 'pakete.ereignisse', unter: c.ereignisse.map((e) => ({ text: EREIGNISSE[e], hilfe: EREIGNIS_HILFE[e] })) });
@@ -539,11 +578,13 @@ export const rechteText = (c: PaketCode, typName: (verweis: string) => string): 
 /** Gleiche Rechte und gleicher Netzwerkzugriff? (Sonst muss ein Update neu bestätigt werden.) */
 export const gleicheRechte = (a: PaketCode | undefined, b: PaketCode | undefined) =>
   JSON.stringify(rechteSchluessel(a)) === JSON.stringify(rechteSchluessel(b));
-const rechteSchluessel = (c: PaketCode | undefined) => c ? [[...c.rechte.lesen].sort(), [...c.rechte.schreiben].sort(), c.rechte.dokumente, [...c.netz].sort(), ...(c.rechte.schnittstellen?.length ? [[...c.rechte.schnittstellen].sort()] : []), ...(c.adressen?.length ? [c.adressen.map((a) => a.schluessel).sort()] : []), ...(c.volltext?.length ? [['volltext', ...[...c.volltext].sort()]] : [])] : null;
+const rechteSchluessel = (c: PaketCode | undefined) => c ? [[...c.rechte.lesen].sort(), [...c.rechte.schreiben].sort(), c.rechte.dokumente, [...c.netz].sort(), ...(c.rechte.schnittstellen?.length ? [[...c.rechte.schnittstellen].sort()] : []), ...(c.adressen?.length ? [c.adressen.map((a) => a.schluessel).sort()] : []), ...(c.volltext?.length ? [['volltext', ...[...c.volltext].sort()]] : []), ...(c.archivfassung?.typen.length ? [['archivfassung', ...[...c.archivfassung.typen].sort()]] : [])] : null;
 /** Ab dieser Version (#577) kennt das DMS Dateien umwandeln; siehe shared/src/dateiumwandlung.ts. */
 export { DMS_UMWANDELN_AB };
 /** Ab dieser Version (#614) kennt das DMS Volltext aus Paketen; siehe shared/src/paketvolltext.ts. */
 export { DMS_PAKET_VOLLTEXT_AB };
+/** Ab dieser Version (#631) kennt das DMS die Archivfassung; siehe shared/src/archivfassung.ts. */
+export { DMS_ARCHIVFASSUNG_AB };
 /** Darf das Paket diese Schnittstelle des Kerns nutzen (#442)? */
 export const hatSchnittstelle = (c: PaketCode | undefined, s: Schnittstelle) => !!c?.rechte.schnittstellen?.includes(s);
 
