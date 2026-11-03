@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.153/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.154/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -543,6 +543,17 @@
     <span class="md-ellipsis">
       
         Ereigniskatalog (#670)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automatisierungen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatisierungen (#674)
       
     </span>
   </a>
@@ -1095,6 +1106,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#automatisierungen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatisierungen (#674)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#zaehler-endpunkt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1534,6 +1556,29 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 </code></pre></div>
 <p>Damit erkennt sie ihre eigenen Änderungen und kann Ketten begrenzen. Ein Paket bekommt seine eigenen Änderungen nicht gemeldet.</p>
 <p><strong>Neues Ereignis:</strong> Eintrag in <code>EREIGNISKATALOG</code> (Gruppe, Felder, ggf. <code>paket</code>, <code>mappentyp</code>, <code>webhook</code>, <code>buendelS</code>), Texte in <code>ereignisse.json</code>, an der Stelle der Änderung <code>await this.ereignis(...)</code> – möglichst innerhalb der Transaktion. Soll es für Pakete abonnierbar sein, zusätzlich in <code>EREIGNISSE</code> (<code>shared/src/pakete.ts</code>) und in der Registry (<code>schema</code>, <code>pruefen.py</code>).</p>
+<h2 id="automatisierungen">Automatisierungen (#674)<a class="headerlink" href="#automatisierungen" title="Permanent link">&para;</a></h2>
+<p>Kleine Abläufe ohne Code: <strong>Wenn · Und · Dann</strong> (Sonst kommt mit Stufe 2). Modell und Prüfungen in <code>shared/src/automatisierung.ts</code>, Motor und Speicher in <code>server/src/automatisierung.ts</code> (Tabellen <code>automatisierungen</code>, <code>automatisierung_fassungen</code>, <code>automatisierung_laeufe</code>, Migration 061), Texte in <code>shared/src/sprachen/de/automatisierung.json</code>.</p>
+<p><strong>Modell</strong></p>
+<ul>
+<li><strong>Genau eine Wenn-Karte:</strong> ein Ereignis aus dem Katalog (alle Gruppen außer <code>zaehler</code>, optional nur ein Mappentyp, bei <code>mappe.geaendert</code> optional nur bestimmte Felder) oder <code>datum</code> – „Datumsfeld in N Tagen erreicht“ (negativ: vor N Tagen), täglich ab einer Uhrzeit in der Zeitzone des Haushalts. Die Wenn-Karte legt den <strong>Kontext</strong> fest: die Mappe des Ereignisses (<code>daten.mappe</code>, bei Benutzer-Ereignissen die Benutzer-Mappe) und ihren Mappentyp.</li>
+<li><strong>Und:</strong> Bedingungen aus dem Baukasten der Ansichten (<code>Bedingung</code> aus <code>sichten.ts</code>), dazu „Mappe ist in Ansicht …“ und „Mappe ist in den Favoriten von …“ (Person, Rolle, Feld). Jede umkehrbar (<code>nicht</code>), Gruppen <code>alle</code>/<code>eine</code> eine Ebene tief. Ausgewertet in der Datenbank (<code>Dienst.trifftTeile</code> → <code>repo.inKlauseln</code>), „ich“ ist das Systemkonto.</li>
+<li><strong>Dann:</strong> Karten in ihrer Reihenfolge; ausführen tun sie die Einträge in <code>DANN_AUSFUEHRER</code> (<code>(karte, kontext) =&gt; Promise&lt;string&gt;</code> – die Zeile fürs Protokoll; im Trockenlauf nur beschreiben). „Danach keine weiteren Automatisierungen ausführen“ (<code>stopp</code>) erledigt der Motor selbst.</li>
+<li><strong>Platzhalter</strong> wie beim Mappentitel (<code>{feld}</code>, <code>{feld|filter}</code>), dazu <code>{titel}</code>, <code>{mappentyp}</code>, <code>{heute}</code>, <code>{automatisierung}</code>, bei <code>datum</code> auch <code>{datum}</code> und <code>{tage}</code>. Werte mit den Rechten des Systemkontos; Titel verknüpfter Mappen, die es nicht lesen darf, erscheinen als „(nicht sichtbar)“; Passwörter nie.</li>
+</ul>
+<p><strong>Ablauf</strong></p>
+<ol>
+<li>Der Abnehmer <code>automatisierungen</code> des Ereigniskatalogs sucht eingeschaltete, nicht angehaltene Automatisierungen mit passender Wenn-Karte und führt sie <strong>nacheinander</strong> nach <code>reihenfolge</code> (1–99, dann Name) aus. Jede liest den aktuellen Stand.</li>
+<li>Je Automatisierung und Ereignis entsteht <strong>genau ein Lauf</strong> (<code>UNIQUE (automatisierung_id, ereignis_id)</code>) – kommt ein Ereignis noch einmal oder prüfen zwei Server denselben Tag, läuft nichts doppelt. Beim Zeitplan ist die Ereignis-Id aus Automatisierungs-Auslöser, Mappe und Datum berechnet; <code>letzter_tag</code> merkt sich, bis wohin geprüft ist (verpasste Tage bis 31 zurück werden nachgeholt).</li>
+<li>Ausgeführt wird unter dem Systemkonto „Automatisierung“ (<code>dienst.systemZugriff('automatisierung')</code>) und mit <code>dienst.mitAusloeser({ art: 'automatisierung', id, konto, kette })</code> – Historie und Ereignisse zeigen, wer gehandelt hat. Darf das Systemkonto die Mappe nicht lesen, wird der Lauf übersprungen.</li>
+<li>Jeder Schritt (Wenn, Und, jede Dann-Karte) steht mit Zustand im Lauf (<code>schritte</code>) – die Oberfläche zeigt den Fortschritt live. Ein Kartenfehler beendet den Lauf als <code>fehlgeschlagen</code> (wiederholbar), die folgenden Automatisierungen laufen trotzdem.</li>
+</ol>
+<p><strong>Schutz und Grenzen</strong> (<code>AUTOMATISIERUNG_GRENZEN</code>)</p>
+<ul>
+<li>Keine Selbstauslösung (eigene Änderungen lösen dieselbe Automatisierung nicht aus), Ketten höchstens 3 tief, Bremse 30 Läufe je Minute (dann angehalten), Laufzeit 60 s, 200 Automatisierungen, je Bereich 20 Karten, Verlauf 200 Läufe bzw. 30 Tage.</li>
+<li><strong>Bearbeiten geht vor Automatisierung:</strong> Fehlt etwas (Mappentyp, Feld, Ansicht), blockiert das nie das Arbeiten – die Automatisierung wird rot und angehalten (<code>angehalten.grund = 'fehlerhaft'</code>), spätestens beim nächsten Lauf oder Zeitplan-Durchgang. Speichern geht nur mit gültigem Stand.</li>
+<li>Demo-Daten und Beispiele lösen nichts aus (<code>ohneEreignisse</code>), in Wartung und Wiederherstellung ruht der Verteiler. Nach einer Wiederherstellung sind alle eingeschalteten Automatisierungen angehalten, bis ein Admin sie wieder einschaltet.</li>
+<li>Speichern mit <code>version</code> (veralteter Stand → 409); jede Fassung steht in <code>automatisierung_fassungen</code> und lässt sich wiederherstellen. Im Vollexport: <code>struktur/automatisierungen.json</code> mit Änderungsverlauf; in der Sicherung alle Tabellen.</li>
+</ul>
 <h2 id="zaehler-endpunkt">Zähler-Endpunkt und Schlüssel-Stufen (#625)<a class="headerlink" href="#zaehler-endpunkt" title="Permanent link">&para;</a></h2>
 <p>Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, <strong>ob etwas Neues da ist</strong>. Dafür gibt es <code>GET /api/v1/ich/zaehler</code> (intern <code>/api/ich/zaehler</code>, <code>Dienst.zaehlerAbruf</code>):</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler
