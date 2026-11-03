@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0153" class="md-skip">
+        <a href="#neu-in-version-0154" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,15 +419,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01530" class="md-nav__link">
+  <a href="#01540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.153.0
+        0.154.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.153.0">
+    <nav class="md-nav" aria-label="0.154.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1188,15 +1188,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01530" class="md-nav__link">
+  <a href="#01540" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.153.0
+        0.154.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.153.0">
+    <nav class="md-nav" aria-label="0.154.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1268,36 +1268,35 @@
   
 
 
-<h1 id="neu-in-version-0153">Neu in Version 0.153<a class="headerlink" href="#neu-in-version-0153" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0154">Neu in Version 0.154<a class="headerlink" href="#neu-in-version-0154" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01530">0.153.0<a class="headerlink" href="#01530" title="Permanent link">&para;</a></h2>
+<h2 id="01540">0.154.0<a class="headerlink" href="#01540" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Ereigniskatalog</strong> (#670): Was im DMS passiert, steht jetzt an einer Stelle – Mappen (angelegt, gespeichert, verknüpft, Notiz, Dokument hochgeladen, gelöscht, endgültig gelöscht, wiederhergestellt), <strong>Frist erreicht</strong>, für Personen (neue Aufgabe, neue Post, neuer Favorit), Benutzer (Abwesenheit, gesperrt, deaktiviert, aktiviert) und Verarbeitung (Volltext fertig, Datei umgewandelt, Archivfassung erstellt, Erkennung fertig). Pakete, Webhooks und die kommenden Automatisierungen nehmen ihre Ereignisse aus diesem Katalog. Ein Ereignis enthält nur Kennungen, Feldschlüssel und Datum – nie Inhalte.</li>
-<li><strong>Pakete mit Code</strong> können jetzt auf Mappen reagieren: <code>mappe.angelegt</code>, <code>mappe.geaendert</code>, <code>mappe.geloescht</code>, <code>mappe.wiederhergestellt</code> und <code>frist.erreicht</code>, jeweils für die eigenen Mappentypen, die das Paket im Manifest unter <code>code.mappentypen</code> nennt. Die Vorschau bei der Installation zeigt sie mit „– zu: <em>Typen</em>“. Schnelle Folgen von Änderungen an derselben Mappe kommen als ein Ereignis.</li>
-<li><strong>Frist erreicht</strong> kommt je Mappe, Feld, Datum und Zeitpunkt (Erinnerung, Tag selbst) genau einmal – auch mit mehreren Servern und nach einem Neustart.</li>
-<li><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt beim Paket-Läufer, wann zuletzt ein Ereignis zugestellt wurde, welche Ereignisse das Paket abonniert hat, und unter <strong>Welche Ereignisse es gibt</strong> den ganzen Katalog.</li>
-<li>Beispiel-Mappen, Demo-Daten und eine Wiederherstellung lösen keine Ereignisse aus.</li>
+<li><strong>Automatisierungen – der Motor</strong> (#674): Das DMS kann jetzt Abläufe nach dem Muster <strong>Wenn · Und · Dann</strong> ausführen. <em>Wenn</em> ist ein Ereignis aus dem Ereigniskatalog oder <strong>Datum in N Tagen erreicht</strong> (einmal am Tag zur gewählten Uhrzeit, ausgefallene Tage werden bis zu 31 Tage nachgeholt), <em>Und</em> sind Bedingungen wie bei den Ansichten (umkehrbar, Gruppen „alle“/„eine“, „Mappe ist in Ansicht …“, „Mappe ist Favorit von …“). Als erste Dann-Karte gibt es <strong>Danach keine weiteren Automatisierungen</strong>; die Oberfläche folgt mit #675.</li>
+<li>Jeder Lauf kommt je Automatisierung und Ereignis <strong>genau einmal</strong> – auch mit mehreren Servern und nach einem Neustart – und steht mit seinen Schritten im <strong>Verlauf</strong>. Fehlgeschlagene Läufe lassen sich wiederholen.</li>
+<li><strong>Reihenfolge 1–99</strong> je Auslöser; Automatisierungen, die einander auslösen, laufen höchstens drei Ebenen tief; eine Automatisierung löst sich nie selbst aus.</li>
+<li><strong>Bearbeiten geht vor:</strong> Fehlt einer Automatisierung etwas (Mappentyp, Feld, Ansicht gelöscht), blockiert das nie die Arbeit – sie gilt als fehlerhaft und wird beim nächsten Lauf angehalten, mit Grund.</li>
+<li><strong>Bremse:</strong> mehr als 30 Läufe in einer Minute halten eine Automatisierung an. Nach einer Wiederherstellung sind alle eingeschalteten angehalten, bis du sie wieder einschaltest.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: Pakete → Ereignisse → <strong>Ereignisse zu Mappen</strong>, <strong>Frist erreicht</strong>.</li>
-<li>Entwicklerhandbuch: Aufbau → <strong>Ereigniskatalog</strong> (Regeln, Abnehmer, Auslöser); Pakete mit Code → <code>code.mappentypen</code> und die neuen Ereignisse.</li>
+<li>Entwicklerhandbuch: Aufbau → <strong>Automatisierungen</strong> (Modell, Ablauf, Schutz und Grenzen, Schnittstelle der Werkbank).</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Migration <code>060_ereignisse.sql</code>: Ausgangskorb <code>ereignisse</code> (mindestens einmal, feste Ereignis-Id, Sperre für mehrere Server, Bündelung) und <code>frist_meldungen</code>.</li>
-<li><code>shared/src/ereignisse.ts</code> (Katalog), <code>server/src/ereignisse.ts</code> (Verteiler); <code>Dienst.ereignis</code>, <code>Dienst.mitAusloeser</code>, <code>Dienst.ohneEreignisse</code>.</li>
-<li>Ereignisse an Pakete werden beim Wiederholen nicht doppelt angelegt.</li>
-<li>Tests: <code>server/test/ereignisse.test.ts</code>, PostgreSQL in <code>server/test/pg.test.ts</code>.</li>
+<li>Migration <code>061_automatisierungen.sql</code>: <code>automatisierungen</code>, <code>automatisierung_fassungen</code> (jede gespeicherte Fassung), <code>automatisierung_laeufe</code> (eindeutig je Automatisierung und Ereignis).</li>
+<li><code>shared/src/automatisierung.ts</code> (Modell, Prüfung, Kurzform), <code>server/src/automatisierung.ts</code> (Motor, Speicher, Zeitplan); läuft mit dem Systemkonto „Automatisierung“ (#673).</li>
+<li>Schnittstelle unter <code>/api/werkbank/automatisierungen</code> (nur Administratoren); Automatisierungen sind im Vollexport enthalten; die Übersicht der Werkbank liefert fehlgeschlagene und angehaltene mit (angezeigt ab #675).</li>
+<li>Tests: <code>server/test/automatisierung.test.ts</code> (auch PostgreSQL).</li>
 <li>Keine neue Abhängigkeit.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.152.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.152.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.153.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.153.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
