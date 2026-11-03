@@ -951,6 +951,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#im-katalog-ansehen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Katalog ansehen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2901,6 +2912,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#im-katalog-ansehen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Katalog ansehen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3419,6 +3441,15 @@
 <li>Das DMS holt Paket und Prüfsumme <strong>selbst aus dem offiziellen Katalog</strong> – Angaben im Link, die auf andere Quellen zeigen, zählen nicht. Gibt es das Paket oder die Version dort nicht, sagt das DMS es.</li>
 <li>Installiert wird <strong>erst, wenn du auf „Installieren“ klickst</strong>. Der Link allein ändert nichts. Ist das Paket schon installiert, zeigt die Vorschau das; ein Update bietet sie an, wenn der Link eine neuere Version nennt.</li>
 </ol>
+<h3 id="im-katalog-ansehen">Im Katalog ansehen<a class="headerlink" href="#im-katalog-ansehen" title="Permanent link">&para;</a></h3>
+<p>Unter <strong>Werkbank → Pakete</strong> steht über der Liste <strong>Verfügbar</strong> der Link <strong>Im Katalog ansehen</strong>; bei jedem Paket aus dem offiziellen Katalog gibt es ihn zusätzlich unter <strong>Mehr</strong> für die Seite genau dieses Pakets. Der Link öffnet die Katalog-Webseite in einem neuen Tab und gibt ihr die <strong>Version deines DMS</strong> mit. Die Webseite zeigt dann gleich, welche Pakete zu deinem DMS passen, und filtert auf Wunsch danach – du musst die Version nicht suchen und eintippen.</p>
+<p><strong>Was übertragen wird:</strong> nichts außer dem Seitenaufruf selbst, wie bei jeder anderen Webseite. Die Version steht im <strong>Fragment</strong> der Adresse, also hinter dem <code>#</code>, z. B. <code>https://motom001.github.io/dms-registry/#dms=0.146.0</code>. Diesen Teil schickt der Browser nie an den Server; er steht in keinem Zugriffsprotokoll. Nur das Skript der Katalogseite liest ihn in deinem Browser, merkt sich die Version dort und entfernt das Fragment gleich wieder aus der Adresse, damit sie nicht mit einem geteilten Link weitergeht.</p>
+<ul>
+<li>Im Fragment steht <strong>nur die Version</strong> – keine Adresse deines DMS, kein Haushaltsname, keine Liste deiner Pakete, keine Kennung.</li>
+<li>Der Link öffnet ohne <strong>Herkunftsadresse</strong> (<code>rel="noopener noreferrer"</code>): Die Katalogseite erfährt nicht, von welcher Adresse du kommst, und hat keinen Zugriff auf den Tab deines DMS.</li>
+<li>Ist der offizielle Katalog gerade nicht erreichbar (nach <strong>Katalog abrufen</strong>), steht statt des Links ein Hinweis auf <a href="#pakete-ohne-internet-installieren">Pakete ohne Internet</a>.</li>
+<li>Weitere Kataloge aus dem <a href="#expertenmodus-weitere-kataloge-und-hochladen">Expertenmodus</a> haben keine bekannte Webseite; den Link gibt es nur für den offiziellen Katalog.</li>
+</ul>
 <h2 id="herkunft-signiert-oder-nicht">Herkunft: signiert oder nicht<a class="headerlink" href="#herkunft-signiert-oder-nicht" title="Permanent link">&para;</a></h2>
 <p>Das DMS-Projekt <strong>signiert</strong> den offiziellen Katalog (ab DMS 0.141.0). Weil der Katalog die Prüfsumme jedes Pakets enthält, belegt eine einzige Signatur, dass alle Pakete darin vom DMS-Projekt stammen. Die <strong>Vorschau</strong> zeigt deshalb vor jeder Installation eine Zeile <strong>Herkunft</strong>:</p>
 <table>

@@ -2650,11 +2650,11 @@
 <p>Vor jeder Veröffentlichung prüft die CI die Images außerdem auf bekannte Sicherheitslücken. Mehr dazu in der <a href="https://github.com/motom001/dms/blob/main/SECURITY.md">Sicherheitsrichtlinie</a>.</p>
 </div>
 <h3 id="texterkennung-als-paket-ab-0134">Texterkennung als Paket (ab 0.134)<a class="headerlink" href="#texterkennung-als-paket-ab-0134" title="Permanent link">&para;</a></h3>
-<p>Die Texterkennung (Tesseract) steckt nicht mehr im Image; das Image ist dadurch kleiner (beim Einbau in 0.11 kamen rund 50 MB dazu). Scans und Fotos erkennt jetzt das Paket <strong>Texterkennung</strong> aus dem Katalog:</p>
+<p>Die Texterkennung (Tesseract) steckt nicht mehr im Image; das Image ist dadurch kleiner (beim Einbau in 0.11 kamen rund 50 MB dazu). Scans und Fotos erkennt jetzt das Paket <strong>Texterkennung (Deutsch und Englisch)</strong> (Kennung <code>texterkennung</code>) aus dem Katalog:</p>
 <ul>
 <li><strong>Vorhandener Volltext bleibt</strong> unverändert – auch der, den die eingebaute Texterkennung erkannt hat. PDFs mit Text liest das DMS weiter selbst.</li>
 <li>Nach dem Update steht in der <a href="../uebersicht/">Übersicht der Werkbank</a> <strong>„Texterkennung ist jetzt ein Paket“</strong> mit <strong>Jetzt installieren</strong>. Bis das Paket installiert ist, bleiben neue Scans ohne Text („wartet auf Texterkennung – kein Paket installiert“); danach gehen sie von selbst an das Paket.</li>
-<li>Sprachen, die du über ein eigenes Image (<code>tesseract-ocr-data-…</code>) oder eingehängte Dateien nachgerüstet hattest, kommen jetzt als <strong>Zusatzpakete</strong> (z. B. <em>Texterkennung – Französisch</em>); das eigene Image kannst du wieder durch das offizielle ersetzen. Siehe <a href="../texterkennung/#weitere-sprachen">Weitere Sprachen</a>.</li>
+<li>Sprachen, die du über ein eigenes Image (<code>tesseract-ocr-data-…</code>) oder eingehängte Dateien nachgerüstet hattest, kommen jetzt als <strong>Zusatzsprachen</strong> (z. B. <em>Texterkennung – Zusatzsprache Französisch</em>); das eigene Image kannst du wieder durch das offizielle ersetzen. Siehe <a href="../texterkennung/#weitere-sprachen">Weitere Sprachen</a>.</li>
 <li>Die Einstellungen der Texterkennung (Sprache, Seiten, Dateitypen) stehen jetzt beim Paket; TIFF-, WebP-, GIF- und BMP-Bilder bekommen keinen Volltext mehr.</li>
 </ul>
 <h3 id="datenbank-anbindung-und-haushalt-ab-024">Datenbank-Anbindung und Haushalt (ab 0.24)<a class="headerlink" href="#datenbank-anbindung-und-haushalt-ab-024" title="Permanent link">&para;</a></h3>
