@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.148/export/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.149/export/">
       
       
         <link rel="prev" href="../wiederherstellen/">
@@ -2606,7 +2606,7 @@
     papierkorb.jsonl, papierkorb-dokumente.jsonl, vertretungen.jsonl, favoriten.csv,
     loeschprotokoll.csv  (Löschprotokoll, ohne Inhalte)
   ablage/&lt;Typ&gt;/&lt;Titel&gt; [Id]/
-    mappe.json  mappe.pdf  &lt;Register&gt;/&lt;Datei&gt;  &lt;Datei&gt;.txt  &lt;Datei&gt;.fassung.pdf  &lt;Register&gt;/Versionen/
+    mappe.json  mappe.pdf  &lt;Register&gt;/&lt;Datei&gt;  &lt;Datei&gt;.txt  &lt;Datei&gt;.fassung.pdf  &lt;Datei&gt;.pdfa.pdf  &lt;Register&gt;/Versionen/
   uebersicht/&lt;typ&gt;.pdf   alle Mappen eines Typs
   kalender/fristen.ics   offene Fristen, Aufgaben mit Datum, Erinnerungen
   kontakte/&lt;typ&gt;.vcf     Kontakte (vCard 4.0)
@@ -2620,6 +2620,7 @@
 <li><strong>Ids</strong> als UUID; <strong>Verweise</strong> doppelt: als Id (<code>&lt;feld&gt;</code>) und als Titel (<code>&lt;feld&gt;_titel</code>).</li>
 <li><strong>JSON Lines</strong>: eine Mappe bzw. ein Eintrag je Zeile, verlustfrei.</li>
 <li><strong>Dokumente im Original</strong>, nicht umgewandelt; ältere Versionen unter <code>Versionen/</code> (<code>v1 Rechnung.pdf</code>). Hat ein Paket eine Datei <a href="../texterkennung/#andere-dateitypen">umgewandelt</a> (z. B. einen TIFF-Scan in ein PDF), liegt die Fassung daneben als <code>&lt;Datei&gt;.fassung.pdf</code> (bzw. <code>.png</code>, <code>.jpg</code>); <code>dokumente.csv</code> nennt sie in der Spalte <code>fassung</code> (seit 0.140.1).</li>
+<li><strong>Archivfassung (PDF/A)</strong> (seit 0.149): Hat ein Paket zu einem Dokument eine <a href="../texterkennung/#archivfassung-pdfa">Archivfassung</a> abgelegt, liegt sie als <code>&lt;Datei&gt;.pdfa.pdf</code> daneben; in <code>daten/dokumente.csv</code> steht ihr Pfad in der letzten Spalte <code>archivfassung</code> (<code>original</code>, wenn das Original schon PDF/A ist). Die Auskunft nach Art. 15 enthält keine Archivfassungen.</li>
 <li><strong>Formatversion</strong> steht im Manifest; Änderungen am Format stehen in den Release Notes.</li>
 </ul>
 <p><code>manifest.json</code> nennt unter <code>tabellen</code> für jede Tabelle der Datenbank, wo sie im Export steht – oder warum nicht (z. B. Sitzungen, API-Schlüssel, Zugangsdaten für Mail und Postfächer). Ein Test sorgt dafür, dass keine neue Tabelle unbemerkt fehlt.</p>

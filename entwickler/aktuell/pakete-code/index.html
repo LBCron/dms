@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.148/pakete-code/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.149/pakete-code/">
       
       
         <link rel="prev" href="../leistung/">
@@ -904,6 +904,89 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Archivfassung ablegen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-ablauf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignis datei.archivfassung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wortpositionen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wortpositionen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-annahme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Was der Kern annimmt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-grenzen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grenzen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sicherung-ausser-haus" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1563,6 +1646,89 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Archivfassung ablegen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-ablauf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ablauf
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignis datei.archivfassung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wortpositionen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wortpositionen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-annahme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Was der Kern annimmt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-grenzen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grenzen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#sicherung-ausser-haus" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1734,6 +1900,12 @@
 <td><strong><a href="#volltext-liefern">Volltext liefern</a></strong> – Ereignis, Schreiben, Grenzen</td>
 </tr>
 <tr>
+<td><code>dms:archivfassung</code></td>
+<td>0.149.0</td>
+<td>Zu Dokumenten mit fertigem Volltext ein durchsuchbares PDF/A ablegen – mit Wortpositionen, nur mit „Dokumente lesen“</td>
+<td><strong><a href="#archivfassung">Archivfassung ablegen</a></strong> – Ereignis, Wortpositionen, Annahme, Grenzen</td>
+</tr>
+<tr>
 <td><code>dms:sicherung-lesen</code></td>
 <td>0.142.0</td>
 <td>Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden</td>
@@ -1832,6 +2004,11 @@
 <td><code>datei.volltext</code></td>
 <td>Seit 0.145.0, nur mit <code>dms:volltext</code>: Eine Datei eines Typs aus <code>code.volltext</code> braucht ihren Volltext – siehe <a href="#volltext-liefern">Volltext liefern</a></td>
 <td><code>dokument</code>, <code>mappe</code>, <code>name</code>, <code>mime</code>, <code>groesse</code>, <code>sha256</code>, ggf. <code>neu</code></td>
+</tr>
+<tr>
+<td><code>datei.archivfassung</code></td>
+<td>Seit 0.149.0, nur mit <code>dms:archivfassung</code>: Ein Dokument eines Typs aus <code>code.archivfassung.typen</code> hat einen feststehenden Volltext und braucht seine Archivfassung – siehe <a href="#archivfassung">Archivfassung ablegen</a></td>
+<td><code>dokument</code>, <code>mappe</code>, <code>name</code>, <code>mime</code>, <code>groesse</code>, <code>sha256</code>, <code>quelle</code>, ggf. <code>lesefassung</code>, <code>seiten</code>, <code>textebene</code>, <code>wortpositionen</code>, <code>sprache</code>, <code>signiert</code>, <code>erechnung</code>, <code>formular</code>, <code>extern</code>, ggf. <code>neu</code></td>
 </tr>
 <tr>
 <td><code>sicherung.fertig</code></td>
@@ -2073,7 +2250,7 @@
 </tr>
 <tr>
 <td>Körper einer Anfrage an die API</td>
-<td>2 MB (JSON); <code>PUT /dokumente/{id}/volltext</code> seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt</td>
+<td>2 MB (JSON); <code>PUT /dokumente/{id}/volltext</code> seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt (mit Wortpositionen entsprechend weniger); <code>PUT /dokumente/{id}/archivfassung</code> seit 0.149.0 bis 100 MB (roh)</td>
 </tr>
 </tbody>
 </table>
@@ -2541,6 +2718,192 @@
 <li><strong>Datei:</strong> höchstens 50 MB (größere meldet der Kern nicht).</li>
 <li><strong>Läufer:</strong> 256 MB Speicher und 120 s je Aufruf. Plane den Speicher: die Datei, entpackte Teile und der Text (als JSON) liegen gleichzeitig im Modul.</li>
 <li>Ältere DMS-Versionen kennen <code>dms:volltext</code> nicht und lehnen das Manifest ab – gib <code>dms: "&gt;=0.145.0"</code> an.</li>
+</ul>
+<h2 id="archivfassung">Archivfassung ablegen<a class="headerlink" href="#archivfassung" title="Permanent link">&para;</a></h2>
+<p>Seit 0.149.0 (#631) legt ein Paket mit dem Recht <code>dms:archivfassung</code> zu einem Dokument eine <strong>Archivfassung</strong> ab: ein durchsuchbares <strong>PDF/A</strong> mit unsichtbarer Textebene <strong>genau auf den Wörtern</strong>. Anders als die <a href="#dateien-umwandeln">Lesefassung</a> (<code>dms:umwandeln</code>) entsteht sie <strong>nach</strong> dem Volltext und für PDF, JPEG und PNG ebenso wie für andere Typen. Das Original bleibt das Dokument; die Archivfassung kommt dazu – Anzeige (Vorgabe, mit „Original anzeigen“), Herunterladen und Weitergeben mit Wahl, Sicherung, Probe-Wiederherstellung, Vollexport (<code>&lt;Datei&gt;.pdfa.pdf</code>). Die Auskunft nach Art. 15 enthält sie nicht. Ein Beispiel ist das Paket <strong>PDF/A</strong> in der Registry.</p>
+<h3 id="archivfassung-manifest">Im Manifest<a class="headerlink" href="#archivfassung-manifest" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">dms</span><span class="p">:</span><span class="w"> </span><span class="s">"&gt;=0.149.0"</span>
+<span class="nt">code</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">sprache</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">c</span>
+<span class="w">  </span><span class="nt">quelle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code/</span>
+<span class="w">  </span><span class="nt">ereignisse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">datei.archivfassung</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">archivfassung</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">typen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">application/pdf</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">image/jpeg</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">image/png</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">image/tiff</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># zuständige Dateitypen (MIME), höchstens 40</span>
+<span class="w">    </span><span class="nt">nur_scans</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nur_scans</span><span class="w">        </span><span class="c1"># optional: Schlüssel einer Einstellung vom Typ janein – an = keine PDFs mit Text</span>
+<span class="w">  </span><span class="nt">rechte</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">lesen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"*"</span><span class="p p-Indicator">]</span><span class="w">                </span><span class="c1"># Dokumente liegen in Mappen beliebiger Typen</span>
+<span class="w">    </span><span class="nt">dokumente</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lesen</span><span class="w">            </span><span class="c1"># Datei, Volltext und Wortpositionen lesen; Schreibrecht braucht es nicht</span>
+<span class="w">    </span><span class="nt">schnittstellen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"dms:archivfassung"</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">netz</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+<span class="w">  </span><span class="nt">einstellungen</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">abschnitt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Archivfassung</span>
+<span class="w">      </span><span class="nt">felder</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> schluessel</span><span class="p">:</span><span class="w"> </span><span class="nv">nur_scans</span><span class="p p-Indicator">,</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="s">"Nur</span><span class="nv"> </span><span class="s">Scans</span><span class="nv"> </span><span class="s">und</span><span class="nv"> </span><span class="s">Bilder"</span><span class="p p-Indicator">,</span><span class="nt"> typ</span><span class="p">:</span><span class="w"> </span><span class="nv">janein</span><span class="p p-Indicator">,</span><span class="nt"> standard</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span>
+<span class="nt">            hilfe</span><span class="p">:</span><span class="w"> </span><span class="s">"Aus</span><span class="nv"> </span><span class="s">–</span><span class="nv"> </span><span class="s">alle</span><span class="nv"> </span><span class="s">PDFs</span><span class="nv"> </span><span class="s">bekommen</span><span class="nv"> </span><span class="s">eine</span><span class="nv"> </span><span class="s">Archivfassung</span><span class="nv"> </span><span class="s">(Vorgabe).</span><span class="nv"> </span><span class="s">An</span><span class="nv"> </span><span class="s">–</span><span class="nv"> </span><span class="s">PDFs</span><span class="nv"> </span><span class="s">mit</span><span class="nv"> </span><span class="s">vollständigem</span><span class="nv"> </span><span class="s">Text</span><span class="nv"> </span><span class="s">nicht</span><span class="nv"> </span><span class="s">(spart</span><span class="nv"> </span><span class="s">Platz)."</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<ul>
+<li><code>code.archivfassung.typen</code>, <code>dms:archivfassung</code>, <code>datei.archivfassung</code> und <code>dokumente: lesen</code> gehören zusammen; fehlt eins, lehnen DMS und <code>pruefen.py</code> das Paket ab. <strong>PDF, JPEG und PNG sind erlaubt</strong> (anders als bei <code>dms:umwandeln</code>).</li>
+<li><code>nur_scans</code> muss eine Ja/Nein-Einstellung des Pakets nennen. Ohne die Angabe bekommt das Paket alle PDFs. Schaltet der Administrator sie aus, meldet der Kern die PDFs mit Text nach.</li>
+<li>Die Rückfrage bei der Installation zeigt „Archivfassung (PDF/A) ablegen – … (dms:archivfassung): PDF, JPEG, PNG, TIFF“. Andere Dateitypen bei einem Update heißen neu bestätigen; neue Dateitypen meldet der Kern für den Bestand.</li>
+<li><strong>Zuständig</strong> ist je Dateityp ein Paket – bei mehreren das erste nach Id.</li>
+</ul>
+<h3 id="archivfassung-ablauf">Ablauf<a class="headerlink" href="#archivfassung-ablauf" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>sequenceDiagram
+  participant K as Kern
+  participant T as Paket Texterkennung
+  participant P as Paket (dms:archivfassung)
+  T-&gt;&gt;K: PUT /dokumente/{id}/volltext { text, woerter }
+  Note over K: Volltext steht fest (Stand fertig)
+  K-&gt;&gt;P: datei.archivfassung (dokument, sha256, quelle, textebene, wortpositionen …)
+  P-&gt;&gt;K: GET /dokumente/{id}/inhalt (bzw. …/fassung bei quelle lesefassung)
+  P-&gt;&gt;K: GET /dokumente/{id}/wortpositionen
+  P-&gt;&gt;K: GET /dokumente/{id}/volltext (optional)
+  P-&gt;&gt;K: PUT /dokumente/{id}/archivfassung?sha256=… (PDF/A, roh)
+  Note over K: Prüfung, Ablage, Historie, Anzeige</code></pre>
+<ol>
+<li><strong>Melden – erst mit feststehendem Volltext:</strong> Der Kern schickt <code>datei.archivfassung</code>, sobald der Volltext eines Dokuments <em>fertig</em> ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit <code>dms:volltext</code>, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer <strong>neuen Version</strong> und jeder Änderung am PDF (neuer Prüfwert), bei <em>Volltext neu erzeugen</em> (<code>neu: true</code>) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (<strong>Bestand</strong>: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls <code>neu: true</code> – die alte Archivfassung passt dann nicht mehr zum Text.</li>
+<li><strong>Nicht gemeldet:</strong> Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer <code>neu</code>), <strong>verschlüsselte PDFs</strong> (Stand <em>keine</em> mit Grund am Dokument), PDFs, die <strong>schon gültiges PDF/A</strong> sind (das Original gilt als Archivfassung, keine zweite Datei) und mit <code>nur_scans</code> PDFs mit vollständiger Textebene. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer <code>neu</code>).</li>
+<li><strong>Warten:</strong> Bevor das Ereignis hinausgeht, steht der Stand „wartet“ in der Ablage – am Dokument „Archivfassung wird erstellt“. Die Anzeige zeigt bis dahin das Original.</li>
+<li><strong>Ablegen:</strong> Das Paket liest die Quelle, die Wortpositionen und ggf. den Volltext und gibt das PDF/A mit <code>PUT /dokumente/{id}/archivfassung?sha256=…</code> zurück (Rohdaten mit <code>api_binaer</code>). Danach: Stand <em>fertig</em>, Eintrag in der Historie („PNG → PDF/A-2b (PDF/A 1.0.0)“), Anzeige der Archivfassung.</li>
+<li><strong>Ohne Archivfassung:</strong> Endet der Aufruf mit Code <code>0</code> ohne Archivfassung, steht das <code>ergebnis</code> am Dokument („Archivfassung durch Paket <em>Name</em>: …“, <em>keine</em>); hat der Kern das PDF/A abgelehnt, steht der Grund der Ablehnung dort (<em>Fehler</em>), auch in Werkbank → Texterkennung → Archivfassung. Gibt der Läufer auf: <em>Fehler</em>.</li>
+</ol>
+<p><strong>Mehrere Server, mindestens einmal:</strong> Das Ereignis liegt im Ausgangskorb der Datenbank und kommt <strong>mindestens einmal</strong> – nach Fehlern, Neustarts oder Bestand und neuer Meldung auch zweimal. Erkenne eine Wiederholung am <strong><code>sha256</code></strong>: Gibt es für diese Datei schon deine Archivfassung (z. B. <code>GET /dokumente/{id}/archivfassung</code> → 200 mit deinem Paket und deiner Version im Kopf <code>x-dms-archivfassung</code>) und ist <code>neu</code> nicht gesetzt, antworte mit Code <code>0</code> („schon vorhanden“). Ein zweites <code>PUT</code> mit demselben Ergebnis schadet nicht – es ersetzt die vorhandene. Antwortet der Kern mit 409, hat das Dokument inzwischen eine andere Datei; dafür kommt ein eigenes Ereignis.</p>
+<h3 id="ereignis-datei-archivfassung">Ereignis <code>datei.archivfassung</code><a class="headerlink" href="#ereignis-datei-archivfassung" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"art"</span><span class="p">:</span><span class="w"> </span><span class="s2">"datei.archivfassung"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"versuch"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"erstellt"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-03T10:00:00Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"daten"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"dokument"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"mappe"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Scan 2026-11-03.pdf"</span><span class="p">,</span><span class="w"> </span><span class="nt">"mime"</span><span class="p">:</span><span class="w"> </span><span class="s2">"application/pdf"</span><span class="p">,</span>
+<span class="w">             </span><span class="nt">"groesse"</span><span class="p">:</span><span class="w"> </span><span class="mi">482113</span><span class="p">,</span><span class="w"> </span><span class="nt">"sha256"</span><span class="p">:</span><span class="w"> </span><span class="s2">"9f2c…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"quelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"original"</span><span class="p">,</span><span class="w"> </span><span class="nt">"seiten"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">             </span><span class="nt">"textebene"</span><span class="p">:</span><span class="w"> </span><span class="s2">"teilweise"</span><span class="p">,</span><span class="w"> </span><span class="nt">"wortpositionen"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"sprache"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deu"</span><span class="p">,</span>
+<span class="w">             </span><span class="nt">"signiert"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"erechnung"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"formular"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"extern"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"paket"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pdfa"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">"einstellungen"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">…</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dokument</code>, <code>mappe</code>, <code>name</code>, <code>mime</code>, <code>groesse</code></td>
+<td>wie bei den anderen Datei-Ereignissen; <code>mime</code> ist ein Typ aus <code>code.archivfassung.typen</code></td>
+</tr>
+<tr>
+<td><code>sha256</code></td>
+<td>Prüfwert der Datei – gehört in <code>PUT …/archivfassung?sha256=…</code>; daran erkennst du Wiederholungen</td>
+</tr>
+<tr>
+<td><code>quelle</code></td>
+<td><code>original</code>: PDF, JPEG oder PNG – lies <code>GET /dokumente/{id}/inhalt</code>. <code>lesefassung</code>: anderer Typ (TIFF …) – lies die Lesefassung mit <code>GET /dokumente/{id}/fassung</code>; <code>lesefassung</code> nennt dann <code>{ mime, sha256 }</code>. Ein zweiter Bildleser ist nicht nötig.</td>
+</tr>
+<tr>
+<td><code>seiten</code></td>
+<td>Seiten der Quelle (Bild: 1)</td>
+</tr>
+<tr>
+<td><code>textebene</code></td>
+<td>nur PDF: <code>voll</code> (jede Seite hat Text – Online-Rechnung), <code>teilweise</code> (gemischt: Textseiten und Scans), <code>keine</code> (Scan); Bilder: <code>keine</code></td>
+</tr>
+<tr>
+<td><code>wortpositionen</code></td>
+<td><code>true</code>, wenn jede Seite ohne Textebene Wortpositionen der Texterkennung hat. <code>false</code>: ältere Texterkennung ohne Wortpositionen – lege den Text dann nicht „ungefähr“ ab, sondern melde den Grund (Code <code>0</code>, z. B. „Wortpositionen fehlen – Texterkennung aktualisieren“).</td>
+</tr>
+<tr>
+<td><code>sprache</code></td>
+<td>Sprache des Volltexts (z. B. <code>deu</code>) oder null</td>
+</tr>
+<tr>
+<td><code>signiert</code></td>
+<td>das Original ist digital signiert – die Archivfassung trägt die Signatur nicht; das DMS zeigt am Dokument einen Hinweis</td>
+</tr>
+<tr>
+<td><code>erechnung</code></td>
+<td>E-Rechnung (ZUGFeRD/Factur-X): die XML bleibt im Original; du musst sie nicht übernehmen</td>
+</tr>
+<tr>
+<td><code>formular</code></td>
+<td>Formularfelder: in der Archivfassung <strong>einfrieren</strong> (Werte sichtbar, nicht mehr ausfüllbar)</td>
+</tr>
+<tr>
+<td><code>extern</code></td>
+<td>das Original enthält JavaScript, Aktionen oder Verweise auf externe Inhalte – <strong>nicht übernehmen</strong> (der Kern lehnt eine Archivfassung damit ab)</td>
+</tr>
+<tr>
+<td><code>neu</code></td>
+<td>ausdrücklich neu erzeugen, auch wenn es schon eine Archivfassung gibt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="wortpositionen">Wortpositionen<a class="headerlink" href="#wortpositionen" title="Permanent link">&para;</a></h3>
+<p><code>GET /dokumente/{id}/wortpositionen</code> (Recht: Lesen des Dokuments – mehr braucht es nicht):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"dokument"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"sha256"</span><span class="p">:</span><span class="w"> </span><span class="s2">"9f2c…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"quelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"original"</span><span class="p">,</span><span class="w"> </span><span class="nt">"mime"</span><span class="p">:</span><span class="w"> </span><span class="s2">"application/pdf"</span><span class="p">,</span><span class="w"> </span><span class="nt">"vollstaendig"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"seiten"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"seite"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"quelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"textebene"</span><span class="p">,</span><span class="w">     </span><span class="nt">"breite"</span><span class="p">:</span><span class="w"> </span><span class="mf">595.28</span><span class="p">,</span><span class="w"> </span><span class="nt">"hoehe"</span><span class="p">:</span><span class="w"> </span><span class="mf">841.89</span><span class="p">,</span><span class="w"> </span><span class="nt">"woerter"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">"Rechnung"</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0812</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0631</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1504</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0167</span><span class="p">],</span><span class="w"> </span><span class="err">…</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"seite"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"quelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"texterkennung"</span><span class="p">,</span><span class="w"> </span><span class="nt">"breite"</span><span class="p">:</span><span class="w"> </span><span class="mf">595.28</span><span class="p">,</span><span class="w"> </span><span class="nt">"hoehe"</span><span class="p">:</span><span class="w"> </span><span class="mf">841.89</span><span class="p">,</span><span class="w"> </span><span class="nt">"woerter"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="s2">"Kundennummer"</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.18</span><span class="p">,</span><span class="w"> </span><span class="mf">0.015</span><span class="p">],</span><span class="w"> </span><span class="err">…</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"seite"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"quelle"</span><span class="p">:</span><span class="w"> </span><span class="s2">"keine"</span><span class="p">,</span><span class="w">         </span><span class="nt">"breite"</span><span class="p">:</span><span class="w"> </span><span class="mf">595.28</span><span class="p">,</span><span class="w"> </span><span class="nt">"hoehe"</span><span class="p">:</span><span class="w"> </span><span class="mf">841.89</span><span class="p">,</span><span class="w"> </span><span class="nt">"woerter"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Ein Wort ist <code>[Text, x, y, b, h]</code>: Lage <strong>relativ zur angezeigten Seite</strong> (0…1, Ursprung <strong>oben links</strong>, <code>b</code>/<code>h</code> Breite und Höhe) – unabhängig von der Auflösung. Für die Textebene im PDF: x<sub>pt</sub> = x · breite, y<sub>pt</sub> = (1 − y − h) · hoehe.</li>
+<li><code>breite</code>/<code>hoehe</code>: Seite in pt (PDF, gedreht wie angezeigt) bzw. in Bildpunkten (Bild).</li>
+<li><code>quelle</code> je Seite: <code>textebene</code> (Text im PDF – die Seite braucht keine neue Textebene), <code>texterkennung</code> (Wörter der Texterkennung), <code>keine</code>. <code>vollstaendig</code>: jede Seite hat Wörter.</li>
+<li><strong>Für Texterkennungen:</strong> Die Wortpositionen schickt das Paket mit <code>dms:texterkennung</code> zusammen mit dem Text: <code>PUT /dokumente/{id}/volltext</code> mit <code>woerter</code> – je durch <code>\f</code> getrennter Seite eine Liste von Wörtern im selben Format (relativ zur Seite, <strong>wie <code>GET …/seiten/{nr}/scan</code> sie liefert</strong> – hat das Paket die Seite zum Lesen gedreht, rechnet es die Lage zurück) oder <code>null</code> (Seite ohne Angabe, z. B. eine Textseite eines gemischten PDFs). Höchstens 1,5 Millionen Wörter, Text höchstens 200 Zeichen je Wort. Schreibt ein Paket den Volltext <strong>ohne</strong> <code>woerter</code>, fallen die alten weg (sie gehörten zu einem anderen Text). Der Kern speichert sie zur Datei (<code>&lt;haushalt&gt;/wortpositionen/</code>, gzip, in der Sicherung).</li>
+</ul>
+<h3 id="archivfassung-annahme">Was der Kern annimmt<a class="headerlink" href="#archivfassung-annahme" title="Permanent link">&para;</a></h3>
+<p><code>PUT /dokumente/{id}/archivfassung?sha256=…</code> mit dem PDF roh im Körper (<code>application/octet-stream</code>). Der Kern macht eine <strong>Grundprüfung</strong> (ohne veraPDF – die volle Prüfung gehört in die CI des Pakets):</p>
+<ul>
+<li>PDF am Inhalt (<code>%PDF-</code>), höchstens <strong>100 MB</strong> und <strong>1000 Seiten</strong>, lesbar, <strong>nicht verschlüsselt</strong>;</li>
+<li>XMP-Metadaten im Katalog (<code>/Metadata</code>), <strong>ungefiltert</strong>, mit <code>pdfaid:part</code> (1–4) und <code>pdfaid:conformance</code> (Teil 1: A, B; 2 und 3: A, B, U; Teil 4: ohne oder E, F) im Namensraum <code>http://www.aiim.org/pdfa/ns/id/</code>;</li>
+<li><strong>nie nachladen:</strong> kein JavaScript (auch nicht im Namensbaum), keine Aktionen, die etwas starten, senden oder nachladen (<code>Launch</code>, <code>URI</code>, <code>SubmitForm</code>, <code>ImportData</code>, <code>GoToR</code>, <code>GoToE</code>, <code>ResetForm</code>, <code>Sound</code>, <code>Movie</code>, <code>Rendition</code> …), keine Aktionen beim Öffnen (<code>OpenAction</code> außer Sprung) oder bei Ereignissen (<code>AA</code>), keine Verweise auf externe Dateien oder Adressen. Interne Sprünge (<code>GoTo</code>) sind erlaubt.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Bedeutung</th>
+<th>Was das Paket tut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td><code>{ "dokument": "…", "archivfassung": { "mime", "groesse", "sha256", "seiten", "pdfa": { "teil", "stufe" }, "paket", "erstellt", "signiert"?, "erechnung"?, "weggelassen"? } }</code></td>
+<td>fertig – <code>ergebnis</code> z. B. „PDF/A-2b, 3 Seiten, 1,2 MB“</td>
+</tr>
+<tr>
+<td>403</td>
+<td>ohne <code>dms:archivfassung</code>, oder das Paket ist für den Dateityp nicht zuständig</td>
+<td>Code <code>0</code></td>
+</tr>
+<tr>
+<td>404</td>
+<td>Dokument weg oder nicht lesbar</td>
+<td>Code <code>0</code></td>
+</tr>
+<tr>
+<td>409</td>
+<td><code>sha256</code> ist nicht mehr die Datei des Dokuments</td>
+<td>Code <code>0</code> (eigenes Ereignis folgt)</td>
+</tr>
+<tr>
+<td>413, 415, 422</td>
+<td>zu groß; kein PDF; keine/ungültige PDF/A-Kennung, verschlüsselt, JavaScript, Aktionen oder Externes – der Grund steht am Dokument und in der Werkbank</td>
+<td>Code <code>0</code>, Meldung als <code>ergebnis</code></td>
+</tr>
+<tr>
+<td>5xx</td>
+<td>Störung im DMS</td>
+<td>Fehlercode: der Läufer wiederholt</td>
+</tr>
+</tbody>
+</table>
+<p>Weitere Endpunkte: <code>GET /dokumente/{id}/archivfassung</code> (ansehen; <code>?herunterladen</code> zum Speichern; Kopf <code>x-dms-archivfassung</code>: Kennung, Paket, Version, ggf. <code>original</code>), <code>GET /dokumente/{id}/inhalt?fassung=archiv</code> (Weitergeben der Archivfassung, mit Stempel-Parametern).</p>
+<p><strong>Speicher:</strong> <code>&lt;haushalt&gt;/archivfassungen/&lt;ab&gt;/&lt;sha256 des Originals&gt;.fassung</code> und <code>.json</code> (Angaben), <code>.stand</code> (wartet, keine, Fehler mit Grund). Die Archivfassung gehört zur <strong>Datei</strong>: Dokumente mit derselben Datei teilen sie, eine Änderung am Original braucht eine neue. Löschen der Datei nimmt sie mit; im Papierkorb bleibt sie wie das Dokument.</p>
+<h3 id="archivfassung-grenzen">Grenzen<a class="headerlink" href="#archivfassung-grenzen" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Quelle</strong> höchstens 50 MB (größere meldet der Kern nicht), Archivfassung höchstens 100 MB und 1000 Seiten.</li>
+<li><strong>Läufer:</strong> 256 MB Speicher und 120 s je Aufruf. Baue die Archivfassung Seite für Seite und nutze für lange Dokumente die <a href="#fortsetzung">Fortsetzung</a>. Das Paket hat kein Netz (<code>netz: []</code>) – Schriften und Farbprofil bringt es unter <code>code/daten/</code> mit.</li>
+<li><strong>Werkzeug:</strong> Die Lizenz der Bibliotheken des Pakets (z. B. zum Schreiben des PDF/A) muss zum Paket passen; der Kern bringt dafür nichts mit (kein Ghostscript, keine neue Abhängigkeit im Image).</li>
+<li>Ältere DMS-Versionen kennen <code>dms:archivfassung</code> nicht und lehnen das Manifest ab – gib <code>dms: "&gt;=0.149.0"</code> an.</li>
 </ul>
 <h2 id="sicherung-ausser-haus">Sicherung außer Haus<a class="headerlink" href="#sicherung-ausser-haus" title="Permanent link">&para;</a></h2>
 <p>Seit 0.142.0 (#585) bringt ein Paket mit dem Recht <code>dms:sicherung-lesen</code> jede Sicherung auf einen externen Speicher und prüft sie dort – z. B. <strong>Sicherungsziel WebDAV</strong> in der Registry. Der Kern sichert wie immer <strong>zuerst lokal</strong>; danach meldet er die fertige Sicherung, das Paket liest die <strong>verschlüsselte</strong> Datei in Stücken, lädt sie hoch und meldet je Sicherung zurück. Den Schlüssel und Inhalte bekommt es nie, und es liest nur die Sicherung aus seinem Ereignis – nie den ganzen Sicherungsordner.</p>
