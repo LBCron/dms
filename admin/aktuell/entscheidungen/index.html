@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.145/entscheidungen/">
+        <link rel="canonical" href="https://motom001.github.io/dms/admin/v0.146/entscheidungen/">
       
       
         <link rel="prev" href="../technik/">
@@ -2978,7 +2978,7 @@
 <li><strong>Eigenes Protokoll</strong> (<code>server/src/protokoll.ts</code>) statt Fastify/pino direkt: jede Meldung mit Modul, Benutzer und Anfrage-Kennung (über AsyncLocalStorage), lesbar in den Container-Logs, zusätzlich ein Ringpuffer (24 h, 10.000 Einträge) für die Werkbank. Fastify schreibt über einen pino-kompatiblen Adapter hinein.</li>
 <li><strong>Live-Anzeige per Abfrage alle zwei Sekunden</strong> statt Server-Sent Events: funktioniert hinter jedem Reverse-Proxy ohne Sonderkonfiguration (nginx puffert SSE sonst).</li>
 <li><strong>Messung je Datenbankzugriff:</strong> Jede Methode der Repos wird über einen Proxy gezählt und gestoppt (ein Zugriff kann mehrere SQL-Anweisungen umfassen). Die Summe je Anfrage geht im Header <code>Server-Timing</code> an die Oberfläche; die übrigen Schritte misst der Browser (Resource Timing). „Netzwerk“ ist dabei eine Näherung.</li>
-<li><strong>Langläufer</strong> stehen in der Datenbank (Tabelle <code>langlaeufer</code>), Schwelle und Aufbewahrung in <code>einstellungen</code>.</li>
+<li><strong>Langläufer</strong> stehen in der Datenbank (Tabelle <code>langlaeufer</code>), Schwelle und Aufbewahrung in <code>einstellungen</code>. Geschrieben wird gesammelt, höchstens einmal je Sekunde (#615): Unter Last dauern viele Zugriffe länger als die Schwelle, und ein eigenes Schreiben je Langläufer bremste dann zusätzlich. Ein Absturz verliert höchstens die Langläufer der letzten Sekunde; im Protokoll stehen sie trotzdem.</li>
 <li><strong>Debug-Modus</strong> nur im Arbeitsspeicher und höchstens eine Stunde; nach einem Neustart ist er aus.</li>
 <li><strong>Als anderer Benutzer anmelden:</strong> eigene Sitzung des Benutzers mit Verweis auf die Vertretung; der Benutzer sieht beim nächsten Mal, wer wann als er agiert hat. Ein manipulationssicheres Protokoll ist bewusst nicht Teil davon (#16).</li>
 </ul>

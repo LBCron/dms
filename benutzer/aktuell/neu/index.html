@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.145/neu/">
+        <link rel="canonical" href="https://motom001.github.io/dms/benutzer/v0.146/neu/">
       
       
         <link rel="prev" href="../original/">
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0145" class="md-skip">
+        <a href="#neu-in-version-0146" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -419,22 +419,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01450" class="md-nav__link">
+  <a href="#01460" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.145.0
+        0.146.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.145.0">
+    <nav class="md-nav" aria-label="0.146.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Neu
+        Geändert
       
     </span>
   </a>
@@ -1160,22 +1160,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01450" class="md-nav__link">
+  <a href="#01460" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.145.0
+        0.146.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.145.0">
+    <nav class="md-nav" aria-label="0.146.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
+  <a href="#geandert" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Neu
+        Geändert
       
     </span>
   </a>
@@ -1240,31 +1240,104 @@
   
 
 
-<h1 id="neu-in-version-0145">Neu in Version 0.145<a class="headerlink" href="#neu-in-version-0145" title="Permanent link">&para;</a></h1>
-<h2 id="01450">0.145.0<a class="headerlink" href="#01450" title="Permanent link">&para;</a></h2>
-<h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
+<h1 id="neu-in-version-0146">Neu in Version 0.146<a class="headerlink" href="#neu-in-version-0146" title="Permanent link">&para;</a></h1>
+<h2 id="01460">0.146.0<a class="headerlink" href="#01460" title="Permanent link">&para;</a></h2>
+<h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Volltext aus Paketen mit eigenem Recht</strong> (#614): Pakete, die den Volltext für Dateien liefern, die das DMS nicht selbst liest (Word, Excel, PowerPoint, OpenDocument, RTF, Text, E-Mails), brauchen dafür kein Schreibrecht auf Dokumente mehr. Das neue Recht <strong>„Volltext liefern“</strong> (<code>dms:volltext</code>) erlaubt nur, den Volltext der Dateitypen zu schreiben, die das Paket bei der Installation nennt – Dokumente ändern, ersetzen oder löschen kann es damit nicht. Das Paket <strong>Office und E-Mail</strong> nutzt es ab Version 1.1.0.</li>
-<li><strong>Alle passenden Dokumente bekommen ihren Text:</strong> Das DMS gibt solche Dateien jetzt dem zuständigen Paket beim Hochladen, bei einer <strong>neuen Version</strong>, bei <strong>Volltext neu erzeugen</strong>, bei <strong>Erneut versuchen</strong> und <strong>Neu erzeugen</strong> am Dokument – und beim Installieren des Pakets für alle <strong>vorhandenen</strong> Dateien ohne Text. „Volltext neu erzeugen“ löscht den Text dieser Dateien nicht mehr, sondern fragt das Paket neu; bis es schreibt, bleibt der bisherige Text für die Suche stehen.</li>
-<li><strong>Stand am Dokument:</strong> „Volltext: wartet auf Paket · wartet auf Volltext (Paket Office und E-Mail)“, solange das Paket dran ist. Kann es eine Datei nicht lesen, steht sein Grund am Dokument, z. B. „Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. Ohne Paket steht dort, welches Paket aus dem Katalog hilft („Word-Dateien bekommen Volltext mit dem Paket „Office und E-Mail““).</li>
-<li><strong>Lange Texte:</strong> Pakete schreiben jetzt bis zur Grenze des DMS – 5 Millionen Zeichen je Dokument – in einer Anfrage (bisher passten wegen 2 MB je Anfrage nur etwa 1,8 Millionen Zeichen).</li>
-<li><strong>Werkbank → Texterkennung → Andere Dateitypen</strong> zeigt je Dateityp auch, welches Paket den Volltext liefert, oder welches aus dem Katalog es könnte.</li>
+<li><strong>Suche und „Mappe öffnen“ unter Last deutlich schneller</strong> (#615): Im Lasttest <strong>mittel</strong> (100 gleichzeitige Anfragen, großer Export nebenher, 50.000 Mappen) sinkt p95 auf dem Testrechner des Projekts von <strong>3,9 s auf 0,75 s</strong> – das Ziel von unter 1 s ist dort eingehalten. Für dich ändert sich nichts an der Bedienung oder an den Treffern; das DMS rechnet je Anfrage nur viel weniger.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Lasttest mittel (2 Kerne, 120 s)</th>
+<th style="text-align: right;">vorher (0.144.2)</th>
+<th style="text-align: right;">nachher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>alle Anfragen p95 (Median)</td>
+<td style="text-align: right;">3.928 ms (1.806 ms)</td>
+<td style="text-align: right;">747 ms (440 ms)</td>
+</tr>
+<tr>
+<td>Suche p95</td>
+<td style="text-align: right;">5.827 ms</td>
+<td style="text-align: right;">769 ms</td>
+</tr>
+<tr>
+<td>Mappe öffnen p95</td>
+<td style="text-align: right;">4.528 ms</td>
+<td style="text-align: right;">847 ms</td>
+</tr>
+<tr>
+<td>Liste p95</td>
+<td style="text-align: right;">3.219 ms</td>
+<td style="text-align: right;">679 ms</td>
+</tr>
+<tr>
+<td>Startseite p95</td>
+<td style="text-align: right;">2.481 ms</td>
+<td style="text-align: right;">544 ms</td>
+</tr>
+<tr>
+<td>Vorschaubild / Herunterladen p95</td>
+<td style="text-align: right;">2.366 / 2.353 ms</td>
+<td style="text-align: right;">636 / 567 ms</td>
+</tr>
+<tr>
+<td>Anfragen je Sekunde</td>
+<td style="text-align: right;">49</td>
+<td style="text-align: right;">215</td>
+</tr>
+<tr>
+<td>Export nebenher (PDF von 500 Mappen / ZIP der größten Ansicht, Mittel)</td>
+<td style="text-align: right;">10,1 s / 7,2 s</td>
+<td style="text-align: right;">3,9 s / 3,2 s</td>
+</tr>
+<tr>
+<td>Warten auf eine Datenbank-Verbindung p95</td>
+<td style="text-align: right;">434 ms</td>
+<td style="text-align: right;">73 ms</td>
+</tr>
+<tr>
+<td>Arbeitsspeicher höchstens</td>
+<td style="text-align: right;">1.061 MB</td>
+<td style="text-align: right;">1.019 MB</td>
+</tr>
+</tbody>
+</table>
+<p>Stufe <strong>klein</strong> (25 gleichzeitig, 5.000 Mappen): p95 219 ms → 134 ms. Fehler in allen Läufen 0 %. Gemessen auf einem Rechner mit 2 Kernen, auf dem auch der Lasttest selbst lief, mit PostgreSQL 16 – die Werte des GitHub-Rechners und anderer Geräte folgen mit dem nächsten Lauf des Workflows „Lasttest“.</p>
+<ul>
+<li><strong>Was die Zeit kostete und was sich geändert hat:</strong></li>
+<li><strong>Suche:</strong> Bisher faltete die Datenbank bei jeder Suche Titel und Werte jeder Mappe der Ansicht neu (Umlaute, Groß-/Kleinschreibung, Bindestriche) – bei 20.000 Mappen rund 200 ms je Abfrage, und eine Suche braucht mehrere. Jetzt steht der gefaltete Text gespeichert an der Mappe; gesucht wird erst darin und dann wie bisher genau. Eine Suche in der größten Ansicht braucht so 10–15 ms je Abfrage statt rund 200 ms.</li>
+<li><strong>Schreiben unter Last:</strong> Lange Datenbankzugriffe (Werkbank → Datenbank → Langläufer) schreibt das DMS gesammelt, höchstens einmal je Sekunde, statt einzeln. „Zuletzt geöffnet“ und „gesehen“ beim Öffnen einer Mappe schreibt es in je einem Schritt und ohne auf die Platte zu warten – geht das bei einem Absturz verloren, fehlt nur dieser Merkposten der letzten Augenblicke.</li>
+<li><strong>Listen:</strong> Eine Seite einer großen Ansicht kommt direkt in der richtigen Reihenfolge aus dem Index (1 ms statt 45 ms).</li>
+<li>
+<p><strong>Weniger Zugriffe je Anfrage:</strong> „Mappe öffnen“ 15 statt 19 (als Mitglied 18 statt 24), eine Liste 10 statt 12. Die Startseite zählt nicht mehr alle Mappen, nur um zu wissen, ob es schon eigene gibt.</p>
+</li>
+<li>
+<p><strong>Update:</strong> Beim ersten Start nach dem Update füllt das DMS den gespeicherten Suchtext für alle Mappen (Migration 055) – bei 50.000 Mappen wenige Sekunden, bei 200.000 rund eine halbe Minute. Die Sicherung enthält ihn nicht; beim Wiederherstellen entsteht er neu.</p>
+</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Entwicklerhandbuch (Pakete mit Code): neuer Abschnitt <strong>Volltext liefern</strong> – Manifest (<code>code.volltext</code>, <code>dms:volltext</code>, Ereignis <code>datei.volltext</code>), Ablauf, Ereignis, Antworten beim Schreiben und Grenzen; Schnittstellen des Kerns und Grenzen der API ergänzt.</li>
-<li>Administratorhandbuch: Recht <strong>Volltext liefern</strong> und Ereignis <strong>Datei braucht Volltext</strong> in der Rechte-Vorschau, Andere Dateitypen (Office und E-Mails); Benutzerhandbuch: Stand „wartet auf Paket“ am Dokument.</li>
+<li>Entwicklerhandbuch, Leistung: Ursachen und Maßnahmen von #615 beim Lasttest; neue Regeln (Mappen mit <code>MAPPEN_SPALTEN</code>, was der Zugriff schon weiß nicht noch einmal lesen, Merkposten ohne Warten auf die Platte).</li>
+<li>Administratorhandbuch, Entscheidungen: Langläufer werden gesammelt geschrieben.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>shared/src/paketvolltext.ts</code> und <code>server/src/paketvolltext.ts</code> nach dem Muster von <code>dms:umwandeln</code> (#577): zuständig ist je Dateityp das erste Paket nach Id; die Warteschlange des Volltexts meldet die Datei erst, nachdem der Stand „wartet auf Volltext“ gespeichert ist. Ein Paket mit <code>dms:volltext</code> geht für seine Dateitypen vor einer umgewandelten Fassung (die gibt dann nur das Vorschaubild).</li>
-<li><code>PUT /dokumente/{id}/volltext</code> und <code>PUT /dokumente/{id}/sprache</code>: Dienstkonten mit <code>dokumente: lesen</code> und <code>dms:volltext</code> dürfen das für Dokumente ihrer Dateitypen (sonst 403); Pakete mit <code>dokumente: schreiben</code> (z. B. Texterkennung) wie bisher. Der Körper von <code>PUT …/volltext</code> darf bis 32 MB groß sein.</li>
-<li>Tests: <code>server/test/paketvolltext.test.ts</code> (Manifest und Rechte, Ablauf bei Hochladen, neuer Version, Volltext neu erzeugen, Installation, Meldung des Pakets, API mit Dienstkonto-Schlüssel, 5 Millionen Zeichen über HTTP).</li>
-<li>Keine Migration, keine neue Abhängigkeit.</li>
+<li>Migration 055: Spalte <code>mappen.suchtext</code> (gefaltete Texte von Titel und Werten ohne Passwörter, je Zeile einer), Funktion <code>dms_mappe_suchtext</code>, Trigger <code>mappen_suchtext</code>. Die Suche nutzt sie nur als Vorfilter (eine notwendige Bedingung) und prüft danach wie bisher je Titel und Wert; ist die Spalte leer, sucht sie wie bisher. Kein neuer Index. Mappen werden mit <code>MAPPEN_SPALTEN</code> gelesen (ohne <code>suchtext</code>); Papierkorb und Sicherung (<code>OHNE_SPALTEN</code>) lassen die Spalte weg.</li>
+<li>Mit Suche sortiert die Seitenabfrage erst nach dem Filtern (Teilabfrage mit <code>OFFSET 0</code>); ohne Suche ein einzelner Typ als <code>typ_id = …</code> statt <code>= ANY(…)</code> (<code>typIn</code>), damit PostgreSQL 16 den Titel-Index für die Reihenfolge nutzt.</li>
+<li><code>ohneWarten(sql)</code> in <code>repo-pg.ts</code>: <code>set_config('synchronous_commit', 'off', true)</code> als Tabelle in <code>FROM</code> einer einzelnen Anweisung, nur außerhalb von Transaktionen; genutzt für <code>merkeGesehen</code> und das neue <code>KontoRepo.merkeVorn</code> („Zuletzt geöffnet“ in einer Anweisung statt Lesen und Schreiben).</li>
+<li><code>pgMessSpeicher</code> sammelt Langläufer und schreibt sie höchstens einmal je Sekunde in einem INSERT (höchstens 2.000 je Sekunde, darüber nur im Protokoll); <code>liste()</code> schreibt vorher, was offen ist.</li>
+<li><code>holeMappe</code>, <code>seite</code>, <code>exportierbar</code> nutzen Mappentypen und Auflösung aus dem Zugriff; <code>rechteAn</code> nimmt die schon gelesenen Aufgaben der Mappe; <code>gesehen</code> ebenso. Neue Repo-Methode <code>gibtMappen</code> für die Startseite. <code>heuteIn</code> legt sein <code>Intl.DateTimeFormat</code> einmal an.</li>
+<li>Neue Tests: <code>server/test/suchtext.test.ts</code> (Trigger, dieselben Treffer mit und ohne Suchtext, Passwörter nie im Suchtext, Spalten, Papierkorb, <code>ohneWarten</code>, „Zuletzt geöffnet“ in Arbeitsspeicher und PostgreSQL, Startseite).</li>
+<li>Keine neue Abhängigkeit. CI-Grenze von mittel (2.860 ms) unverändert.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.144.2 im Detail: <a href="https://github.com/motom001/dms/compare/v0.144.2...v0.145.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.145.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.145.0...v0.146.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
