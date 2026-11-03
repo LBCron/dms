@@ -68,7 +68,7 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
     - **lesen und schreiben** – das Programm liest und ändert alles, was du darfst, z. B. ein Scanner, der Post ablegt.
     - **nur Zähler** – für Hausautomatisierung und Anzeigen, z. B. eine Lampe bei neuer Post oder die Zahl auf dem Wand-Tablet. Der Schlüssel ruft nur deine Zahlen ab: neue Post, Zu erledigen, anstehende und überfällige Fristen. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast – keine Titel, Absender oder Inhalte. Alles andere lehnt das DMS ab.
 
-    Wie das funktioniert, beschreibt das [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/api/#zaehler).
+    Wie du damit zum Beispiel einen Homey Pro einbindest, steht unter [DMS in die Hausautomatisierung einbinden](hausautomatisierung.md); die Technik beschreibt das [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/api/#zaehler).
 - <span id="papierkorb"></span>**Papierkorb** – **Beim Abmelden leeren** löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im [Papierkorb](ablage.md#papierkorb), wie der Administrator es eingestellt hat.
 
 !!! note "Anmelden mit dem Firmenkonto"
