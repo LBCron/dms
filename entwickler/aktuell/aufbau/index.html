@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.152/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.153/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -532,6 +532,17 @@
     <span class="md-ellipsis">
       
         Systemkonten und Kontorollen (#673)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ereigniskatalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereigniskatalog (#670)
       
     </span>
   </a>
@@ -1073,6 +1084,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ereigniskatalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereigniskatalog (#670)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#zaehler-endpunkt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1490,6 +1512,28 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li><strong>Werkbank:</strong> Systemkonten sind nie <code>admin</code>; welche Werkbank-Aktionen eine Karte darf, entscheidet die Karte selbst (#677).</li>
 <li><strong>Oberfläche:</strong> Werkbank → Benutzer, Abschnitt „Systemkonten“ (<code>GET /api/benutzer/systemkonten</code>, nur Administratoren).</li>
 </ul>
+<h2 id="ereigniskatalog">Ereigniskatalog (#670)<a class="headerlink" href="#ereigniskatalog" title="Permanent link">&para;</a></h2>
+<p>Was im DMS passiert, steht an <strong>einer</strong> Stelle: <code>shared/src/ereignisse.ts</code> (<code>EREIGNISKATALOG</code>), die Texte in <code>shared/src/sprachen/de/ereignisse.json</code> (<code>name.&lt;art&gt;</code>, <code>text.&lt;art&gt;</code> – Unterstrich als Bindestrich –, <code>gruppe.&lt;gruppe&gt;</code>). Pakete (<code>code.ereignisse</code>), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter <strong>Welche Ereignisse es gibt</strong>.</p>
+<p><strong>Regeln</strong></p>
+<ul>
+<li><strong>Nur Ids, Art, Feldschlüssel und Datum</strong> in <code>daten</code> – nie Werte, Titel oder Namen. Wer mehr wissen will, liest mit eigenen Rechten nach.</li>
+<li><strong>Mindestens einmal, in derselben Transaktion:</strong> <code>dienst.ereignis(art, daten, von)</code> schreibt in den Ausgangskorb (Tabelle <code>ereignisse</code>, Migration 060). Läuft gerade eine Transaktion (<code>inTransaktion</code>), gehört das Ereignis zur Änderung – scheitert eines, wird beides nicht gespeichert. Jedes Ereignis hat eine feste Id; ein Abnehmer erkennt daran eine Wiederholung.</li>
+<li><strong>Mehrere Server:</strong> Der <code>Ereignisverteiler</code> (<code>server/src/ereignisse.ts</code>) holt offene Ereignisse mit <code>FOR UPDATE SKIP LOCKED</code> und einer Sperre (<code>gesperrt_bis</code>, 120 s). Erst wenn <strong>alle</strong> Abnehmer es angenommen haben, gilt ein Ereignis als verteilt; sonst Wiederholung nach 1, 5, 30, 120 und 360 Minuten, danach aufgegeben (Protokoll). Verteilte Ereignisse bleiben 7 Tage.</li>
+<li><strong>Bündeln:</strong> Einträge mit <code>buendelS</code> (heute <code>mappe.geaendert</code>, 5 s) fassen schnelle Folgen zur selben Mappe zusammen, solange das Ereignis noch nicht verteilt ist; die Feldschlüssel werden vereinigt (<code>mischeFelder</code>).</li>
+<li><strong>Frist erreicht</strong> genau einmal: <code>frist_meldungen</code> (Mappe, Feld, Datum, Zeitpunkt) als Primärschlüssel; Merken und Ereignis in einer Transaktion.</li>
+<li><strong>Still:</strong> <code>dienst.ohneEreignisse(f)</code> – Beispiele, Demo-Daten (Erzeugen und Entfernen). Eine Wiederherstellung markiert alle offenen Ereignisse als verteilt; in Wartung und während einer Wiederherstellung ruht der Verteiler.</li>
+</ul>
+<p><strong>Abnehmer</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nx">dienst</span><span class="p">.</span><span class="nx">ereignisse</span><span class="p">.</span><span class="nx">abonniere</span><span class="p">(</span><span class="s1">'mein-abnehmer'</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="o">:</span><span class="w"> </span><span class="kt">KatalogEreignis</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// e.id, e.art, e.daten, e.ausloeser, e.erstellt – Fehler werfen heißt: später noch einmal</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>Der Abnehmer <code>pakete</code> gibt Mappen-Ereignisse und <code>frist.erreicht</code> an Pakete weiter, die sie abonniert haben und den Typ unter <code>code.mappentypen</code> nennen – mit einer aus Ereignis- und Paket-Id berechneten Id, damit eine Wiederholung beim Paket nicht doppelt ankommt.</p>
+<p><strong>Auslöser</strong> (<code>e.ausloeser</code>): <code>{ art: 'benutzer' | 'paket' | 'automatisierung' | 'system', id, konto, kette }</code>. Den Auslöser nimmt <code>dienst.ereignis</code> aus dem Konto (<code>von</code>: Benutzer bzw. Dienstkonto eines Pakets) oder aus <code>dienst.mitAusloeser(a, f)</code>. Eine Automatisierung (#674) führt ihre Aktionen so aus:</p>
+<div class="highlight"><pre><span></span><code><span class="k">await</span><span class="w"> </span><span class="nx">dienst</span><span class="p">.</span><span class="nx">mitAusloeser</span><span class="p">({</span><span class="w"> </span><span class="nx">art</span><span class="o">:</span><span class="w"> </span><span class="s1">'automatisierung'</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">regel.id</span><span class="p">,</span><span class="w"> </span><span class="nx">konto</span><span class="o">:</span><span class="w"> </span><span class="kt">systemkonto.id</span><span class="p">,</span><span class="w"> </span><span class="nx">kette</span><span class="o">:</span><span class="w"> </span><span class="kt">e.ausloeser.kette</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">e</span><span class="p">.</span><span class="nx">ausloeser</span><span class="p">.</span><span class="nx">kette</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">1</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">aktion</span><span class="p">());</span>
+</code></pre></div>
+<p>Damit erkennt sie ihre eigenen Änderungen und kann Ketten begrenzen. Ein Paket bekommt seine eigenen Änderungen nicht gemeldet.</p>
+<p><strong>Neues Ereignis:</strong> Eintrag in <code>EREIGNISKATALOG</code> (Gruppe, Felder, ggf. <code>paket</code>, <code>mappentyp</code>, <code>webhook</code>, <code>buendelS</code>), Texte in <code>ereignisse.json</code>, an der Stelle der Änderung <code>await this.ereignis(...)</code> – möglichst innerhalb der Transaktion. Soll es für Pakete abonnierbar sein, zusätzlich in <code>EREIGNISSE</code> (<code>shared/src/pakete.ts</code>) und in der Registry (<code>schema</code>, <code>pruefen.py</code>).</p>
 <h2 id="zaehler-endpunkt">Zähler-Endpunkt und Schlüssel-Stufen (#625)<a class="headerlink" href="#zaehler-endpunkt" title="Permanent link">&para;</a></h2>
 <p>Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, <strong>ob etwas Neues da ist</strong>. Dafür gibt es <code>GET /api/v1/ich/zaehler</code> (intern <code>/api/ich/zaehler</code>, <code>Dienst.zaehlerAbruf</code>):</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler

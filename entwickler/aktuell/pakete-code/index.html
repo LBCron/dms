@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.152/pakete-code/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.153/pakete-code/">
       
       
         <link rel="prev" href="../leistung/">
@@ -1949,6 +1949,15 @@
 <li><strong>Schnittstellen des Kerns (<code>schnittstellen</code>):</strong> zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: <a href="#schnittstellen">Schnittstellen des Kerns</a>). Es gibt <code>dms:vektoren</code> (seit 0.120.0, braucht <code>dokumente: lesen</code>) – siehe <a href="#vektoren-und-ahnlichkeit">Vektoren und Ähnlichkeit</a> –, <code>dms:antworten</code> (seit 0.124.0) – siehe <a href="#fragen-beantworten">Fragen beantworten</a> – <code>dms:erkennen</code> (seit 0.125.0) – siehe <a href="#erkennung-feldbeschreibung-und-antwort">Erkennung: Feldbeschreibung und Antwort</a> –, <code>dms:texterkennung</code> (seit 0.133.0, braucht <code>dokumente: schreiben</code>) – siehe <a href="#texterkennung">Texterkennung übernehmen</a> – <code>dms:umwandeln</code> (seit 0.137.0, braucht <code>dokumente: lesen</code>, <code>code.umwandeln</code> und das Ereignis <code>datei.umwandeln</code>) – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> – <code>dms:sicherung-lesen</code> (seit 0.142.0, braucht das Ereignis <code>sicherung.fertig</code>) – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a> – und <code>dms:volltext</code> (seit 0.145.0, braucht <code>dokumente: lesen</code>, <code>code.volltext</code> und das Ereignis <code>datei.volltext</code>) – siehe <a href="#volltext-liefern">Volltext liefern</a>.</li>
 <li><strong>Dateitypen zum Umwandeln (<code>code.umwandeln</code>, seit 0.137.0):</strong> nur mit <code>dms:umwandeln</code> – die MIME-Typen, für die das Paket zuständig ist, z. B. <code>[image/tiff, image/webp]</code>. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.</li>
 <li><strong>Dateitypen für den Volltext (<code>code.volltext</code>, seit 0.145.0):</strong> nur mit <code>dms:volltext</code> – die MIME-Typen, für die das Paket den Volltext liefert, z. B. <code>[message/rfc822, text/plain]</code>. PDF, JPEG und PNG sind nicht erlaubt. Höchstens 40.</li>
+<li><strong>Mappentypen für Ereignisse (<code>code.mappentypen</code>, seit 0.153.0):</strong> Pflicht, sobald das Paket eines der Mappen-Ereignisse <code>mappe.angelegt</code>, <code>mappe.geaendert</code>, <code>mappe.geloescht</code>, <code>mappe.wiederhergestellt</code> oder <code>frist.erreicht</code> abonniert – und nur dann erlaubt. Darin stehen die Kennungen <strong>eigener</strong> Mappentypen (ohne Präfix, z. B. <code>[vertrag]</code>); das Paket muss sie lesen dürfen. Fremde Typen folgen später. Ein Paket damit gibt <code>dms: "&gt;=0.153.0"</code> an.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">code</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ereignisse</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mappe.geaendert</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">frist.erreicht</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">mappentypen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">vertrag</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">rechte</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">lesen</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">vertrag</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<ul>
 <li><strong>Netzwerk/Internet (<code>netz</code>):</strong> nur <code>https://</code>, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).</li>
 <li><strong>Dienst-Adresse als Einstellung</strong> (seit 0.124.0): Statt einer festen Adresse in <code>netz</code> kann ein Paket eine Einstellung vom Typ <code>adresse</code> verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit <code>http://</code> (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, <strong>ohne</strong> <code>standard</code> – höchstens mit <code>beispiel</code>, das im leeren Feld steht:</li>
 </ul>
@@ -2015,8 +2024,19 @@
 <td>Seit 0.142.0, nur mit <code>dms:sicherung-lesen</code>: Eine Sicherung liegt fertig im Sicherungsordner – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a></td>
 <td><code>name</code>, <code>datei</code>, <code>groesse</code>, <code>sha256</code>, <code>beginn</code>, <code>format</code>, <code>schlank</code>, <code>verschluesselung</code></td>
 </tr>
+<tr>
+<td><code>mappe.angelegt</code>, <code>mappe.geaendert</code>, <code>mappe.geloescht</code>, <code>mappe.wiederhergestellt</code></td>
+<td>Seit 0.153.0, nur zu Typen aus <code>code.mappentypen</code>: Mappe angelegt, gespeichert und dabei geändert, in den Papierkorb gelegt, wiederhergestellt. <code>mappe.geaendert</code> bündelt schnelle Folgen (etwa 5 s) zu einem Ereignis. Beispiele, Demo-Daten und Wiederherstellungen lösen nichts aus.</td>
+<td><code>mappe</code>, <code>typ</code>, bei <code>mappe.geaendert</code> <code>felder</code> (Schlüssel, nie Werte), <code>ereignis</code></td>
+</tr>
+<tr>
+<td><code>frist.erreicht</code></td>
+<td>Seit 0.153.0, nur zu Typen aus <code>code.mappentypen</code>: Ein Datumsfeld mit Frist erreicht den Erinnerungszeitpunkt (<code>zeitpunkt: vorlauf</code>) bzw. den Tag selbst (<code>faellig</code>) – je Mappe, Feld, Datum und Zeitpunkt genau einmal</td>
+<td><code>mappe</code>, <code>typ</code>, <code>feld</code>, <code>datum</code>, <code>zeitpunkt</code>, <code>empfaenger</code>, <code>ereignis</code></td>
+</tr>
 </tbody>
 </table>
+<p><strong>Ereignis-Id (seit 0.153.0):</strong> Die Ereignisse zu Mappen und Fristen kommen aus dem <a href="../aufbau/#ereigniskatalog">Ereigniskatalog</a>. Sie werden <strong>mindestens einmal</strong> zugestellt; <code>daten.ereignis</code> ist die Id im Katalog – kommt dieselbe Id noch einmal, war es eine Wiederholung. Was das Paket selbst ändert, bekommt es nicht gemeldet.</p>
 <h3 id="volltext-fertig">Volltext fertig (<code>volltext.fertig</code>)<a class="headerlink" href="#volltext-fertig" title="Permanent link">&para;</a></h3>
 <p>Seit 0.133.0 (#458) liest der Kern bei PDFs nur die <strong>Textebene</strong> (poppler); die Texterkennung von Scans und Bildern übernimmt ein Paket. Deshalb meldet der Kern <strong>jedes</strong> Dokument, das er gelesen hat – auch ohne Text:</p>
 <table>
