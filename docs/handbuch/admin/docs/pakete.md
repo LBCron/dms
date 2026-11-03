@@ -13,7 +13,7 @@ Das DMS fragt den Katalog **nur auf Knopfdruck** ab, nie im Hintergrund: Klicke 
 
 Ein Klick auf ein Paket zeigt Name, Beschreibung, Version, Lizenz, Autor, die nötige DMS-Version, Abhängigkeiten, die enthaltenen Mappentypen und Ansichten sowie Links zum README und zu den Änderungen.
 
-Das DMS lädt den Katalog von `https://raw.githubusercontent.com/motom001/dms-registry/gh-pages/katalog.json` und prüft seine **Signatur** (siehe [Herkunft](#herkunft-signiert-oder-nicht)). Weiterleitungen folgt es dabei nur auf `https://`-Adressen. Dafür muss das DMS selbst ins Internet kommen. Einen Proxy für ausgehende Abrufe kann das DMS nicht einstellen. Ohne Internetzugang lädst du ein Paket als Datei hoch (siehe [Expertenmodus](#expertenmodus-weitere-kataloge-und-hochladen)).
+Das DMS lädt den Katalog von `https://catalog.ablago.app/katalog.json` und prüft seine **Signatur** (siehe [Herkunft](#herkunft-signiert-oder-nicht)). Weiterleitungen folgt es dabei nur auf `https://`-Adressen. Dafür muss das DMS selbst ins Internet kommen. Einen Proxy für ausgehende Abrufe kann das DMS nicht einstellen. Ohne Internetzugang lädst du ein Paket als Datei hoch (siehe [Expertenmodus](#expertenmodus-weitere-kataloge-und-hochladen)).
 
 ## Installieren
 
@@ -58,7 +58,7 @@ Mappentypen aus Paketen tragen in **Werkbank → Mappentypen** den Hinweis **Pak
 
 ### Über die Katalog-Webseite
 
-Den Katalog gibt es auch als Webseite: [Paketkatalog](https://motom001.github.io/dms-registry/) (auch auf der Startseite der Handbücher). Dort siehst du je Paket die Beschreibung, was angelegt wird, Rechte, Änderungen und ältere Versionen.
+Den Katalog gibt es auch als Webseite: [Paketkatalog](https://catalog.ablago.app/) (auch auf der Startseite der Handbücher). Dort siehst du je Paket die Beschreibung, was angelegt wird, Rechte, Änderungen und ältere Versionen.
 
 1. Klicke beim Paket **In meinem DMS installieren**.
 2. Beim ersten Mal fragt die Seite nach der **Adresse deines DMS**, z. B. `https://dms.example.org`. Sie merkt sie sich nur in deinem Browser; über **DMS-Adresse** oben änderst du sie. Die Webseite sendet nichts an dein DMS und speichert keine Zugangsdaten.
@@ -70,7 +70,7 @@ Den Katalog gibt es auch als Webseite: [Paketkatalog](https://motom001.github.io
 
 Unter **Werkbank → Pakete** steht über der Liste **Verfügbar** der Link **Im Katalog ansehen**; bei jedem Paket aus dem offiziellen Katalog gibt es ihn zusätzlich unter **Mehr** für die Seite genau dieses Pakets. Der Link öffnet die Katalog-Webseite in einem neuen Tab und gibt ihr die **Version deines DMS** mit. Die Webseite zeigt dann gleich, welche Pakete zu deinem DMS passen, und filtert auf Wunsch danach – du musst die Version nicht suchen und eintippen.
 
-**Was übertragen wird:** nichts außer dem Seitenaufruf selbst, wie bei jeder anderen Webseite. Die Version steht im **Fragment** der Adresse, also hinter dem `#`, z. B. `https://motom001.github.io/dms-registry/#dms=0.146.0`. Diesen Teil schickt der Browser nie an den Server; er steht in keinem Zugriffsprotokoll. Nur das Skript der Katalogseite liest ihn in deinem Browser, merkt sich die Version dort und entfernt das Fragment gleich wieder aus der Adresse, damit sie nicht mit einem geteilten Link weitergeht.
+**Was übertragen wird:** nichts außer dem Seitenaufruf selbst, wie bei jeder anderen Webseite. Die Version steht im **Fragment** der Adresse, also hinter dem `#`, z. B. `https://catalog.ablago.app/#dms=0.146.0`. Diesen Teil schickt der Browser nie an den Server; er steht in keinem Zugriffsprotokoll. Nur das Skript der Katalogseite liest ihn in deinem Browser, merkt sich die Version dort und entfernt das Fragment gleich wieder aus der Adresse, damit sie nicht mit einem geteilten Link weitergeht.
 
 - Im Fragment steht **nur die Version** – keine Adresse deines DMS, kein Haushaltsname, keine Liste deiner Pakete, keine Kennung.
 - Der Link öffnet ohne **Herkunftsadresse** (`rel="noopener noreferrer"`): Die Katalogseite erfährt nicht, von welcher Adresse du kommst, und hat keinen Zugriff auf den Tab deines DMS.
@@ -446,7 +446,7 @@ Ein Katalog **ohne** Schlüssel funktioniert wie bisher: Bei jeder Installation 
 
 Kommt dein DMS nicht ins Internet, holst du mehrere Pakete auf einmal als **Sammeldatei**:
 
-1. Öffne an einem Gerät mit Internet die Seite **[Pakete ohne Internet](https://motom001.github.io/dms-registry/sammeldatei.html)** des Katalogs. Am schnellsten über **Werkbank → Pakete → Ohne Internet …** und den Link dort – dann ist die Version deines DMS schon eingetragen. Wie bei [Im Katalog ansehen](#im-katalog-ansehen) steht sie nur im **Fragment** der Adresse (`…/sammeldatei.html#dms=0.147.0`): Der Browser schickt sie an keinen Server, die Seite merkt sie sich nur in deinem Browser und entfernt das Fragment gleich wieder aus der Adresse.
+1. Öffne an einem Gerät mit Internet die Seite **[Pakete ohne Internet](https://catalog.ablago.app/sammeldatei.html)** des Katalogs. Am schnellsten über **Werkbank → Pakete → Ohne Internet …** und den Link dort – dann ist die Version deines DMS schon eingetragen. Wie bei [Im Katalog ansehen](#im-katalog-ansehen) steht sie nur im **Fragment** der Adresse (`…/sammeldatei.html#dms=0.147.0`): Der Browser schickt sie an keinen Server, die Seite merkt sie sich nur in deinem Browser und entfernt das Fragment gleich wieder aus der Adresse.
 2. Kreuze die Pakete an. Die **DMS-Version** bestimmt, welche Paketversionen passen (Vorgabe: die Version, die sich dein Browser gemerkt hat, sonst die neueste). **Abhängigkeiten** wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.
 3. **Sammeldatei herunterladen.** Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen – mit einer Kopie des signierten Katalogs. Sie zeigt den **SHA-256** der fertigen Datei.
 4. Bring die Datei zum DMS (USB-Stick, Netzlaufwerk) und lade sie unter **Werkbank → Pakete → Ohne Internet …** hoch – oder im [Einrichtungsassistenten](installation.md#pakete-dazuholen), wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch **Paket hochladen** im Expertenmodus an.

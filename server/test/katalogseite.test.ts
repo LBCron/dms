@@ -16,7 +16,7 @@ const KATALOG_LIEST = /(?:^#|&)dms=(\d+\.\d+\.\d+)(?:&|$)/;
 describe('Im Katalog ansehen (#622)', () => {
   it('setzt die Version ins Fragment, nie in einen Parameter', () => {
     const url = new URL(katalogSeiteMitVersion('0.146.0'));
-    assert.equal(url.href, 'https://motom001.github.io/dms-registry/#dms=0.146.0');
+    assert.equal(url.href, 'https://catalog.ablago.app/#dms=0.146.0');
     assert.equal(url.search, '', 'kein Query – der ginge an den Server');
     assert.equal(KATALOG_LIEST.exec(url.hash)?.[1], '0.146.0');
     assert.ok(url.href.startsWith(KATALOG_SEITE));
@@ -28,7 +28,7 @@ describe('Im Katalog ansehen (#622)', () => {
 
   it('Paketseite mit Fragment', () => {
     const url = new URL(katalogSeiteMitVersion('0.146.0', 'texterkennung_fra'));
-    assert.equal(url.href, 'https://motom001.github.io/dms-registry/paket/texterkennung_fra/#dms=0.146.0');
+    assert.equal(url.href, 'https://catalog.ablago.app/paket/texterkennung_fra/#dms=0.146.0');
     assert.equal(url.search, '');
     assert.equal(KATALOG_LIEST.exec(url.hash)?.[1], '0.146.0');
   });
@@ -42,7 +42,7 @@ describe('Im Katalog ansehen (#622)', () => {
 
   it('Sammeldatei-Seite: Version im Fragment, sonst ohne', () => {
     const url = new URL(sammelSeiteMitVersion('0.147.0'));
-    assert.equal(url.href, 'https://motom001.github.io/dms-registry/sammeldatei.html#dms=0.147.0');
+    assert.equal(url.href, 'https://catalog.ablago.app/sammeldatei.html#dms=0.147.0');
     assert.equal(url.search, '', 'kein Query – der ginge an den Server');
     assert.equal(KATALOG_LIEST.exec(url.hash)?.[1], '0.147.0');
     for (const v of ['unbekannt', '', '0.147', '0.147.0-beta.1', '0.147.0&x=1', '1.2.3#a', '1.2.3?dms=1.2.3'])
