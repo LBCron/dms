@@ -1,0 +1,11 @@
+{
+  "schluessel.recht-ungueltig": "Recht: „lesen“, „schreiben“ oder „zaehler“ (nur Zähler).",
+  "schluessel.nur-zaehler": "Dieser API-Schlüssel darf nur die Zahlen abrufen (GET /api/v1/ich/zaehler). Für alles andere brauchst du einen Schlüssel „nur lesen“ oder „lesen und schreiben“.",
+  "schluessel.nur-zaehler-laufwerk": "Dieser API-Schlüssel darf nur die Zahlen abrufen und öffnet das Laufwerk nicht. Nimm dafür einen Schlüssel „nur lesen“ oder „lesen und schreiben“.",
+  "stufe.lesen": "nur lesen",
+  "stufe.schreiben": "lesen und schreiben",
+  "stufe.zaehler": "nur Zähler",
+  "stufe.hilfe.lesen": "Liest alles, was du lesen darfst, ändert nichts.",
+  "stufe.hilfe.schreiben": "Liest und ändert alles, was du darfst.",
+  "stufe.hilfe.zaehler": "Für Hausautomatisierung und Anzeigen: Der Schlüssel ruft nur die Zahlen ab (neue Post, Zu erledigen, anstehende und überfällige Fristen). Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast."
+}

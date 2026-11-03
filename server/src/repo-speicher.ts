@@ -52,6 +52,8 @@ export function speicherRepo(): Repo {
   const favoritSeit = new Map<string, string>();
   const favoritStumm = new Set<string>();
   const gesehen = new Map<string, string>();
+  // Zähler-Endpunkt (#625): Stand der Zahlen je Benutzer.
+  const zaehlerstaende = new Map<string, { stand: number; abdruck: string; geaendert: string }>();
   // Erkennung (#336): Ergebnis je Post.
   const erkennungen = new Map<string, { ergebnis: unknown; absenderId: string | null; zeit: string }>();
   const offenFuer = (m: Mappe, benutzerId: string, admin: boolean) =>
@@ -777,6 +779,14 @@ export function speicherRepo(): Repo {
       if (an) favoritStumm.delete(`${benutzerId}|${mappeId}`); else favoritStumm.add(`${benutzerId}|${mappeId}`);
     },
     async stummeFavoriten(benutzerId, mappeIds) { return new Set(mappeIds.filter((id) => istFavorit(id, benutzerId) && favoritStumm.has(`${benutzerId}|${id}`))); },
+    async zaehlerstand(benutzerId) { const z = zaehlerstaende.get(benutzerId); return z && { ...z }; },
+    async setzeZaehlerstand(benutzerId, abdruck) {
+      const z = zaehlerstaende.get(benutzerId);
+      if (z?.abdruck === abdruck) return { ...z };
+      const neu = { stand: (z?.stand ?? 0) + 1, abdruck, geaendert: jetzt() };
+      zaehlerstaende.set(benutzerId, neu);
+      return { ...neu };
+    },
     async merkeGesehen(benutzerId, mappeIds) { for (const id of mappeIds) if (mappen.has(id)) gesehen.set(`${benutzerId}|${id}`, jetzt()); },
     async geaendertVonAnderen(benutzerId, mappeIds, arten) {
       const erg = new Set<string>();

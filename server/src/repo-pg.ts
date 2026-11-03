@@ -1244,6 +1244,21 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       if (!istUuid(benutzerId) || !ids.length) return new Set();
       return new Set((await sql`SELECT mappe_id FROM favoriten WHERE benutzer_id = ${benutzerId} AND mappe_id = ANY(${ids}::uuid[]) AND benachrichtigen = false`).map((r) => r.mappe_id as string));
     },
+    async zaehlerstand(benutzerId) {
+      if (!istUuid(benutzerId)) return undefined;
+      const [r] = await sql`SELECT stand, abdruck, geaendert FROM zaehlerstaende WHERE benutzer_id = ${benutzerId}`;
+      return r ? { stand: Number(r.stand), abdruck: r.abdruck as string, geaendert: (r.geaendert as Date).toISOString() } : undefined;
+    },
+    async setzeZaehlerstand(benutzerId, abdruck) {
+      // Ein Befehl: gleichzeitige Abrufe zählen je echter Änderung höchstens einmal hoch (Zeilensperre im UPSERT).
+      const [r] = await sql`INSERT INTO zaehlerstaende (benutzer_id, haushalt_id, stand, abdruck) VALUES (${benutzerId}, ${haushaltId}, 1, ${abdruck})
+        ON CONFLICT (benutzer_id) DO UPDATE SET stand = zaehlerstaende.stand + 1, abdruck = EXCLUDED.abdruck, geaendert = now()
+          WHERE zaehlerstaende.abdruck IS DISTINCT FROM EXCLUDED.abdruck
+        RETURNING stand, abdruck, geaendert`;
+      if (r) return { stand: Number(r.stand), abdruck: r.abdruck as string, geaendert: (r.geaendert as Date).toISOString() };
+      const [d] = await sql`SELECT stand, abdruck, geaendert FROM zaehlerstaende WHERE benutzer_id = ${benutzerId}`;
+      return { stand: Number(d.stand), abdruck: d.abdruck as string, geaendert: (d.geaendert as Date).toISOString() };
+    },
     async merkeGesehen(benutzerId, mappeIds) {
       const ids = [...new Set(mappeIds.filter(istUuid))];
       if (!istUuid(benutzerId) || !ids.length) return;

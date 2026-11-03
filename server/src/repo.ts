@@ -146,6 +146,9 @@ export interface PaketEreignis { id: string; paketId: string; art: string; daten
 /** Anzahl fertiger Dokumente je Herkunft des Volltexts (#459). */
 export interface VolltextHerkunftZahlen { pdf: number; paket: number; api: number; eingebaut: number; sonst: number; ohneText: number }
 
+/** Stand der Zahlen eines Benutzers (#625), in der Datenbank. */
+export interface Zaehlerstand { stand: number; abdruck: string; geaendert: string }
+
 export interface Repo {
   /**
    * Mehrere Änderungen ganz oder gar nicht (#404), z. B. eine Änderung samt Ereignis im Ausgangskorb:
@@ -268,6 +271,13 @@ export interface Repo {
   setzeFavoritBenachrichtigen(benutzerId: string, mappeId: string, an: boolean): Promise<void>;
   /** Welche dieser Mappen sind Favoriten des Benutzers mit ausgeschalteter Benachrichtigung? */
   stummeFavoriten(benutzerId: string, mappeIds: string[]): Promise<Set<string>>;
+  /** Zähler-Endpunkt (#625): letzter Stand der Zahlen eines Benutzers (nur ein Hash der Zahlen, keine Inhalte). */
+  zaehlerstand(benutzerId: string): Promise<Zaehlerstand | undefined>;
+  /**
+   * Zähler-Endpunkt (#625): Hash der aktuellen Zahlen merken. Weicht er vom gespeicherten ab (oder gibt es noch
+   * keinen), zählt der Stand um eins hoch und `geaendert` wird jetzt; sonst bleibt alles, wie es ist.
+   */
+  setzeZaehlerstand(benutzerId: string, abdruck: string): Promise<Zaehlerstand>;
   /** Mappen als gesehen merken (geöffnet oder „als gesehen markiert“, #422). */
   merkeGesehen(benutzerId: string, mappeIds: string[]): Promise<void>;
   /**

@@ -202,4 +202,27 @@ Wer zuletzt speichert, darf keine Felder zurücksetzen, die er nicht angefasst h
 
 Tests: `server/test/gleichzeitig.test.ts` (Arbeitsspeicher und PostgreSQL), im Browser `docs/handbuch/screenshots/gleichzeitig-pruefen.mjs` (zwei Fenster, Workflow „Handbuch“).
 
+## Zähler-Endpunkt und Schlüssel-Stufen (#625) { #zaehler-endpunkt }
+
+Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, **ob etwas Neues da ist**. Dafür gibt es `GET /api/v1/ich/zaehler` (intern `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):
+
+```sh
+curl -i -H "Authorization: Bearer dms_…" https://dms.example.org/api/v1/ich/zaehler
+# HTTP/1.1 200 OK
+# ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"
+# {"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
+
+curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"' https://dms.example.org/api/v1/ich/zaehler
+# HTTP/1.1 304 Not Modified   (ohne Inhalt)
+```
+
+- **Nur Zahlen.** Die Antwort enthält nie Titel, Namen, Absender oder Inhalte – auch künftige Felder nicht. Das OpenAPI-Schema `Zaehlerstand` hat `additionalProperties: false`, der Test `server/test/zaehler-api.test.ts` prüft die Schlüssel und dass keine Texte durchrutschen.
+- **Woher die Zahlen kommen.** `zuErledigen` ist `eingang` aus `Dienst.zaehler` (#512), `anstehend` und `ueberfaellig` zählen die Einträge von `Dienst.anstehend` mit `tage = ZAEHLER_TAGE` (7, #528), `neuePost` zählt Post im Stand „Neu“ mit „Für“ = ich oder leer über `zaehleKlauseln` – mit eigenem `Zaehlerspeicher` am Haushaltsstand. Alles in den Rechten des Benutzers (Lesefilter); nichts wird für den Endpunkt neu gerechnet, solange sich am Haushalt nichts ändert.
+- **Stand in der Datenbank** (Tabelle `zaehlerstaende`, Migration 056). Je Abruf bildet der Server einen Hash der Zahlen (`fingerabdruck`), vergleicht ihn mit dem gespeicherten und zählt `stand` nur bei einer Abweichung hoch (`Repo.setzeZaehlerstand`, ein `INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …`: gleichzeitige Abrufe zählen eine Änderung einmal). Unverändert heißt: nur lesen. Der Haushaltsstand aus #512 lebt nur im Arbeitsspeicher und fängt nach jedem Neustart bei 0 an – als ETag taugt er darum nicht. Das ETag ist `"z<stand>-<hash>"`: Gleiches ETag heißt gleiche Zahlen, auch nach einem Neustart oder einer Wiederherstellung.
+- **ETag und 304.** `passtEtag` (`routen.ts`) versteht Listen, `W/…` und `*`. Eine Route setzt eigene Köpfe über `Antwort.koepfe`; Köpfe der Anfrage liest sie über `Anfrage.kopf(name)`. `Cache-Control: private, no-cache` statt `no-store`, damit Programme nachfragen dürfen.
+- **Schlüssel-Stufe „nur Zähler“** (`recht = 'zaehler'`, `NUR_ZAEHLER` und `ZAEHLER_PFAD` in `apischluessel.ts`). `pruefeZugang` lässt sie nur an `GET /api/v1/ich/zaehler` durch; jede andere Route unter `/api/v1` und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt `403` (`api.schluessel.nur-zaehler`), das Laufwerk ebenfalls (`webdav.ts`). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.
+- **Grenzen.** Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.
+
+**Weitere Zahl aufnehmen:** Feld in `Zaehlerzahlen` (`dienst.ts`) und im OpenAPI-Schema ergänzen, im Test `ZAHLEN` – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, `v` im Hash erhöhen, damit jeder Client einmal neu liest. Der Webhook (#627) kann `zaehlerAbruf` je Benutzer aufrufen und bei geändertem `stand` `zaehler.geaendert` mit Ereignis-Id `<benutzer>:<stand>` melden.
+
 Mehr Hintergrund im Administratorhandbuch: [Technik](https://motom001.github.io/dms/admin/aktuell/technik/) und [Entscheidungen](https://motom001.github.io/dms/admin/aktuell/entscheidungen/).

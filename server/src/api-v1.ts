@@ -36,6 +36,8 @@ interface V1 {
   status?: number;
   /** Beschreibung der Antwort 409 (z. B. gleichzeitig geändert, #609). */
   konflikt?: string;
+  /** ETag und 304 bei If-None-Match (#625). */
+  nichtGeaendert?: boolean;
 }
 
 const passwoerter: Parameter = { name: 'passwoerter', wo: 'query', typ: 'string', beschreibung: '„anzeigen“: Passwortfelder im Klartext statt nur {gesetzt, lesbar}. Nur mit einem API-Schlüssel mit dem Recht „Passwörter lesen“ (sonst 403); jeder Abruf steht im Protokoll.' };
@@ -61,6 +63,9 @@ export const V1_TABELLE: V1[] = [
   { methode: 'GET', pfad: '/ich', gruppe: 'Konto', zusammenfassung: 'Wer bin ich?', beschreibung: 'Benutzer und Rechte des verwendeten Schlüssels.', antwort: 'Ich',
     handler: async (a) => ({ body: { benutzer: a.benutzer, schluessel: a.apiSchluessel ? { name: a.apiSchluessel.name, recht: a.apiSchluessel.recht, passwoerter: a.apiSchluessel.passwoerter, ablauf: a.apiSchluessel.ablauf } : null } }) },
 
+  { methode: 'GET', pfad: '/ich/zaehler', gruppe: 'Konto', zusammenfassung: 'Zähler: neue Post, Zu erledigen, Fristen (nur Zahlen)',
+    beschreibung: 'Nur Zahlen für den Benutzer des Schlüssels, in dessen Rechten – keine Titel, Namen, Absender oder Inhalte (#625). neuePost: Post im Stand „Neu“, deren „Für“ du bist oder leer ist; zuErledigen: wie „Zu erledigen“; anstehend: Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen; ueberfaellig: offene mit Datum vor heute. stand zählt hoch, sobald sich eine Zahl gegenüber dem letzten Abruf ändert; geaendert ist der Zeitpunkt dieser Änderung. Die Antwort trägt ein ETag: Mit If-None-Match und gleichem ETag kommt 304 ohne Inhalt. Dafür genügt ein Schlüssel der Stufe „nur Zähler“, der sonst nichts darf; „lesen“ und „lesen und schreiben“ dürfen ebenfalls.',
+    intern: { methode: 'GET', pfad: '/api/ich/zaehler' }, antwort: 'Zaehlerstand', nichtGeaendert: true },
   { methode: 'GET', pfad: '/konto/abwesenheit', gruppe: 'Konto', zusammenfassung: 'Eigene Abwesenheit', beschreibung: 'Abwesenheit mit Vertreter und Anzahl eigener offener Aufgaben.', intern: { methode: 'GET', pfad: '/api/konto/abwesenheit' }, antwort: 'AbwesenheitStand' },
   { methode: 'PUT', pfad: '/konto/abwesenheit', gruppe: 'Konto', zusammenfassung: 'Eigene Abwesenheit setzen', beschreibung: 'Solange sie wirkt (an, und heute im Zeitraum von–bis, beides optional), gehen neue Aufgaben an den Vertreter. Vertreter ist Pflicht, sobald an=true.', intern: { methode: 'PUT', pfad: '/api/konto/abwesenheit' }, body: 'Abwesenheit', antwort: 'Benutzer' },
   { methode: 'GET', pfad: '/konto/zusammenfassung', gruppe: 'Konto', zusammenfassung: 'Tägliche Zusammenfassung: eigene Einstellung', beschreibung: 'Ob, um wie viel Uhr und an welchen Wochentagen die tägliche Zusammenfassung der Aufgaben kommt; uhrzeit null = Standard der Werkbank.', intern: { methode: 'GET', pfad: '/api/konto/zusammenfassung' }, antwort: 'Zusammenfassung' },
@@ -665,7 +670,15 @@ const SCHEMAS: Record<string, Schema> = {
     standard: { type: 'object', properties: { uhrzeit: { type: 'string' }, tage: { type: 'array', items: { type: 'integer' } }, bundesland: { type: 'string', nullable: true } } }, versand: { type: 'boolean' } } },
   Abwesenheit: { type: 'object', required: ['an'], properties: { an: { type: 'boolean' }, von: { type: 'string', format: 'date', nullable: true }, bis: { type: 'string', format: 'date', nullable: true }, vertreterId: { ...uuid, nullable: true } } },
   AbwesenheitStand: { type: 'object', properties: { abwesenheit: { ...ref('Abwesenheit'), nullable: true }, offeneAufgaben: { type: 'integer' } } },
-  Ich: { type: 'object', properties: { benutzer: ref('Benutzer'), schluessel: { type: 'object', nullable: true, properties: { name: { type: 'string' }, recht: { type: 'string', enum: ['lesen', 'schreiben'] }, passwoerter: { type: 'boolean', description: 'Recht „Passwörter lesen“' }, ablauf: { ...zeit, nullable: true } } } } },
+  Zaehlerstand: { type: 'object', required: ['neuePost', 'zuErledigen', 'anstehend', 'ueberfaellig', 'stand', 'geaendert'], additionalProperties: false, properties: {
+    neuePost: { type: 'integer', minimum: 0, description: 'Post im Stand „Neu“ für dich oder ohne „Für“' },
+    zuErledigen: { type: 'integer', minimum: 0, description: 'Mappen unter „Zu erledigen“' },
+    anstehend: { type: 'integer', minimum: 0, description: 'Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen' },
+    ueberfaellig: { type: 'integer', minimum: 0, description: 'Offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute' },
+    stand: { type: 'integer', minimum: 1, description: 'Zählt hoch, sobald sich eine Zahl ändert' },
+    geaendert: { ...zeit, description: 'Wann sich die Zahlen zuletzt geändert haben (beim Abruf bemerkt)' },
+  }, example: { neuePost: 2, zuErledigen: 5, anstehend: 3, ueberfaellig: 1, stand: 42, geaendert: '2026-11-03T07:15:00.000Z' } },
+  Ich: { type: 'object', properties: { benutzer: ref('Benutzer'), schluessel: { type: 'object', nullable: true, properties: { name: { type: 'string' }, recht: { type: 'string', enum: ['lesen', 'schreiben', 'zaehler'], description: 'zaehler = „nur Zähler“ (#625): nur GET /ich/zaehler' }, passwoerter: { type: 'boolean', description: 'Recht „Passwörter lesen“' }, ablauf: { ...zeit, nullable: true } } } } },
 };
 
 const inhalt = (s: string | 'binaer') => (s === 'binaer'
@@ -677,8 +690,9 @@ export function openapi(version: string, serverUrl?: string): Schema {
   for (const e of V1_TABELLE) {
     const fehler: Record<string, Schema> = {
       401: { description: 'Nicht angemeldet oder Schlüssel ungültig', content: inhalt('Fehler') },
-      403: { description: e.gruppe === 'Werkbank' ? 'Nur für Administratoren; oder Schlüssel nur zum Lesen' : 'Schlüssel nur zum Lesen', content: inhalt('Fehler') },
+      403: { description: e.nichtGeaendert ? 'Nur bei Anmeldung mit Sitzung: Zwei-Faktor-Anmeldung ist vorgeschrieben, aber noch nicht eingerichtet' : `${e.gruppe === 'Werkbank' ? 'Nur für Administratoren; oder ' : ''}Schlüssel nur zum Lesen oder nur Zähler`, content: inhalt('Fehler') },
     };
+    if (e.nichtGeaendert) fehler[304] = { description: 'Nichts geändert: If-None-Match passt zum aktuellen ETag; ohne Inhalt' };
     if (e.parameter?.some((p) => p.wo === 'path')) fehler[404] = { description: 'Nicht gefunden', content: inhalt('Fehler') };
     if (e.body && e.body !== 'binaer') fehler[422] = { description: 'Eingaben ungültig (details: Prüfergebnis)', content: inhalt('Fehler') };
     if (e.methode === 'DELETE') fehler[409] = { description: 'Kann (noch) nicht gelöscht werden', content: inhalt('Fehler') };
@@ -689,10 +703,14 @@ export function openapi(version: string, serverUrl?: string): Schema {
       summary: e.zusammenfassung,
       ...(e.beschreibung ? { description: e.beschreibung } : {}),
       operationId: `${e.methode.toLowerCase()}${e.pfad.replace(/\{(\w+)\}/g, 'Mit$1').replace(/(^|\/)(\w)/g, (_, _s, c: string) => c.toUpperCase())}`,
-      ...(e.parameter ? { parameters: e.parameter.map((p) => ({ name: p.name, in: p.wo, required: !!p.pflicht, description: p.beschreibung, schema: { type: p.typ } })) } : {}),
+      ...(e.parameter || e.nichtGeaendert ? { parameters: [
+        ...(e.parameter ?? []).map((p) => ({ name: p.name, in: p.wo, required: !!p.pflicht, description: p.beschreibung, schema: { type: p.typ } })),
+        ...(e.nichtGeaendert ? [{ name: 'If-None-Match', in: 'header', required: false, description: 'ETag des letzten Abrufs; passt es, kommt 304 ohne Inhalt', schema: { type: 'string' } }] : []),
+      ] } : {}),
       ...(e.body ? { requestBody: { required: true, content: inhalt(e.body) } } : {}),
       responses: {
-        [status]: e.antwort === null ? { description: 'Erledigt' } : { description: 'Erfolg', ...(e.antwort ? { content: inhalt(e.antwort) } : {}) },
+        [status]: e.antwort === null ? { description: 'Erledigt' } : { description: 'Erfolg', ...(e.antwort ? { content: inhalt(e.antwort) } : {}),
+          ...(e.nichtGeaendert ? { headers: { ETag: { description: 'Stand der Zahlen; mit If-None-Match zurückschicken', schema: { type: 'string' } } } } : {}) },
         ...fehler,
       },
     };
@@ -702,7 +720,7 @@ export function openapi(version: string, serverUrl?: string): Schema {
     info: {
       title: 'DMS API',
       version,
-      description: 'Schnittstelle des selbst gehosteten DMS. Anmeldung mit einem API-Schlüssel aus dem Profil: `Authorization: Bearer dms_…`. Ein Schlüssel hat höchstens die Rechte seines Benutzers; Schlüssel „nur lesen“ erlauben nur GET. Diese Beschreibung entsteht aus der installierten Version.',
+      description: 'Schnittstelle des selbst gehosteten DMS. Anmeldung mit einem API-Schlüssel aus dem Profil: `Authorization: Bearer dms_…`. Ein Schlüssel hat höchstens die Rechte seines Benutzers; Schlüssel „nur lesen“ erlauben nur GET, Schlüssel „nur Zähler“ nur GET /ich/zaehler (alles andere 403). Diese Beschreibung entsteht aus der installierten Version.',
       license: { name: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0' },
     },
     servers: [{ url: `${serverUrl?.replace(/\/$/, '') ?? ''}/api/v1` }],

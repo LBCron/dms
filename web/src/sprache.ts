@@ -5,6 +5,7 @@
  */
 import { uebersetzer } from '../../shared/src/sprache';
 import aehnlich from '../../shared/src/sprachen/de/aehnlich.json';
+import api from '../../shared/src/sprachen/de/api.json';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import anstehend from '../../shared/src/sprachen/de/anstehend.json';
 import pakete from '../../shared/src/sprachen/de/pakete.json';
@@ -20,4 +21,4 @@ import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
 import volltext from '../../shared/src/sprachen/de/volltext.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, anmeldung, anstehend, erkennung, felder, fragen, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, volltext, werkbank });
+export const t = uebersetzer({ aehnlich, api, anmeldung, anstehend, erkennung, felder, fragen, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, volltext, werkbank });

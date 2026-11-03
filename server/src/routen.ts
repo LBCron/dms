@@ -11,7 +11,7 @@ import type { SitzungIntern } from './konto-repo';
 import type { Zweifaktor } from './zweifaktor';
 import { openapi, v1Routen } from './api-v1';
 import { wunschAus } from '../../shared/src/stempel';
-import type { ApiSchluessel, ApiSchluesselDienst } from './apischluessel';
+import { NUR_ZAEHLER, ZAEHLER_PFAD, type ApiSchluessel, type ApiSchluesselDienst } from './apischluessel';
 import type { Designs } from './designs';
 import type { Oidc } from './oidc';
 import { exportDateien, exporteIn, exportOrdner, freierPlatz, loescheExport, pruefeExport, vollexport, VOLLEXPORT_PHASEN, type ExportOptionen, type KontaktZuordnung } from './vollexport';
@@ -102,6 +102,8 @@ export interface Anfrage {
   konsole?: boolean;
   /** Kopf X-Einrichtungscode (#119), solange das DMS nicht eingerichtet ist. */
   einrichtungscode?: string;
+  /** Weitere Köpfe der Anfrage (klein geschrieben), z. B. If-None-Match beim Zähler-Endpunkt (#625). */
+  kopf?: (name: string) => string | undefined;
 }
 export interface Datei {
   inhalt: Readable | Buffer;
@@ -121,6 +123,8 @@ export interface Antwort {
   cookies?: string[];
   /** Antwort Stück für Stück (#444): NDJSON, eine Zeile je Ereignis, ohne Zwischenspeicher im Proxy. */
   strom?: Readable;
+  /** Zusätzliche Köpfe einer JSON-Antwort, z. B. ETag (#625); gehen den Standardköpfen vor. */
+  koepfe?: Record<string, string>;
 }
 export interface Route {
   methode: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -1510,6 +1514,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/sichten', zugang: 'angemeldet', handler: async (a) => ok(await dienst.zaehler(ich(a), await zg(a))) },
     // Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – die Ablage erscheint damit sofort, die Zahlen kommen danach.
     { methode: 'GET', pfad: '/api/sichten/rahmen', zugang: 'angemeldet', handler: async () => ok(await dienst.zaehlerRahmen()) },
+    // Zähler-Endpunkt (#625): nur Zahlen; ETag und 304, damit häufiges Nachfragen nichts kostet.
+    { methode: 'GET', pfad: '/api/ich/zaehler', zugang: 'angemeldet', handler: async (a) => {
+      const r = await dienst.zaehlerAbruf(await zg(a));
+      const koepfe = { etag: r.etag, 'cache-control': 'private, no-cache' };
+      if (passtEtag(a.kopf?.('if-none-match'), r.etag)) return { status: 304, koepfe };
+      return { status: 200, body: { ...r.zahlen, stand: r.stand, geaendert: r.geaendert }, koepfe };
+    } },
 
     /* ---------- Sichten verwalten (#38, #40, #41) ---------- */
     { methode: 'GET', pfad: '/api/sichten/definitionen', zugang: 'angemeldet', handler: async (a) => ok(await dienst.listeSichten(await zg(a))) },
@@ -2125,6 +2136,12 @@ export function pflichtZuruecknehmen(r: Pick<Route, 'methode' | 'pfad'>, a: Pick
   return Object.values(a.body as Record<string, unknown>).every((w) => w === false);
 }
 
+/** If-None-Match (RFC 9110): Liste von ETags, auch schwach (W/…) oder „*“. */
+export function passtEtag(kopf: string | undefined, etag: string): boolean {
+  if (!kopf) return false;
+  return kopf.split(',').map((x) => x.trim().replace(/^W\//, '')).some((x) => x === '*' || x === etag);
+}
+
 /**
  * Prüft Zugang und Schutz vor fremden Seiten (CSRF): Ändernde Anfragen
  * müssen den Header X-DMS tragen, den nur die eigene Oberfläche setzt.
@@ -2149,9 +2166,17 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     const b = s ? await konten.benutzerMitId(s.benutzerId) : undefined;
     if (!s || !b) throw new Fachfehler(401, 'Der Benutzer dieses Schlüssels ist deaktiviert oder gelöscht.');
     a.benutzer = b; a.apiSchluessel = s;
+    // „Nur Zähler“ (#625): genau eine Adresse, alles andere 403.
+    if (s.recht === NUR_ZAEHLER && !(r.methode === 'GET' && r.pfad === ZAEHLER_PFAD)) throw new Fachfehler(403, t('api.schluessel.nur-zaehler'));
     if (r.methode !== 'GET' && s.recht === 'lesen') throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen.');
     if (r.zugang === 'admin' && b.rolle !== 'admin') throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
     return;
+  }
+  // Interne Schnittstellen nehmen keine API-Schlüssel. Ein Schlüssel „nur Zähler“ bekommt hier trotzdem eine klare
+  // Antwort (#625) statt „bitte anmelden“ – etwa wenn eine Hausautomatisierung die falsche Adresse nutzt.
+  if (auth && schluessel && /^Bearer\s+dms_/i.test(auth)) {
+    const s = await schluessel.pruefe(auth).catch(() => undefined);
+    if (s?.recht === NUR_ZAEHLER) throw new Fachfehler(403, t('api.schluessel.nur-zaehler'));
   }
   const anmeldung = await konten.anmeldungZu(a.sitzung);
   a.benutzer = anmeldung?.benutzer;

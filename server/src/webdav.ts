@@ -3,7 +3,8 @@ import { extname } from 'node:path';
 import type { Readable } from 'node:stream';
 import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Dokument, type Mappe, type Register } from '../../shared/src/model';
 import { kinderVon, type Sicht } from '../../shared/src/sichten';
-import { PRAEFIX, type ApiSchluessel, type ApiSchluesselDienst } from './apischluessel';
+import { NUR_ZAEHLER, PRAEFIX, type ApiSchluessel, type ApiSchluesselDienst } from './apischluessel';
+import { t } from './sprache';
 import type { Dienst, Zugriff } from './dienst';
 import { MIME } from './eingangsordner';
 import type { Einstellungen } from './einstellungen';
@@ -268,6 +269,11 @@ export class Webdav {
       return { status: true, wer: kurz, antwort: nein('E-Mail-Adresse oder API-Schlüssel stimmen nicht. Das Laufwerk braucht einen API-Schlüssel (Mein Konto → API-Schlüssel), nicht dein Passwort.') };
     }
     await this.d.konten.sperre.erfolg(kurz, a.ip);
+    // „Nur Zähler“ (#625): Schlüssel stimmt, öffnet aber das Laufwerk nicht.
+    if (s.recht === NUR_ZAEHLER) {
+      logKonto.info('WebDAV: Anmeldung abgelehnt', { email: kurz, ip: a.ip, grund: 'Schlüssel nur Zähler' });
+      return { status: true, wer: kurz, antwort: text(403, t('api.schluessel.nur-zaehler-laufwerk')) };
+    }
     return { b, s, z: await this.d.dienst.zugriff(b), mappen: new Map() };
   }
 
