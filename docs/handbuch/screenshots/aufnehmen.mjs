@@ -902,6 +902,36 @@ async function main() {
   await geheZu(s, '/werkbank/stempel?offen=kopie');
   await s.locator('.stempeleditor').waitFor();
   await bild(s, 'werkbank-stempel');
+  // Automatisierungen (#675): Beispiel aus dem Handbuch – Vertrag „Kündigung bis“ in 30 Tagen → Aufgabe an Verantwortlich.
+  // Ein Trockenlauf füllt den Verlauf. Bilder: Liste und Editor, aufgeklappte Dann-Karte, dunkel und am Handy.
+  {
+    const vt = d.typ('Vertrag');
+    const auto = await api('POST', '/api/werkbank/automatisierungen', { name: 'Kündigung prüfen', aktiv: true,
+      wenn: { art: 'datum', typ: vt.id, feld: 'kuendigung_bis', tage: 30, uhrzeit: '07:00' },
+      und: { modus: 'alle', karten: [{ art: 'bedingung', bedingung: { art: 'feld', feld: 'verantwortlich', op: 'nichtLeer' } }] },
+      dann: [{ art: 'aufgabe', als: 'aufgabe', faellig: 7, empfaenger: [{ art: 'feld', feld: 'verantwortlich' }], text: 'Bitte {titel} prüfen – kündbar bis {kuendigung_bis}.' }] });
+    await api('POST', `/api/werkbank/automatisierungen/${auto.id}/wiedergeben`, { mappeId: d.strom.id, trocken: true });
+    await geheZu(s, `/werkbank/automatisierungen/${auto.id}`);
+    await s.locator('.automatisierung-bereich').first().waitFor();
+    await bild(s, 'werkbank-automatisierungen');
+    await s.locator('.automatisierung-karten .karte-kopf button[aria-expanded]').first().click();
+    await s.locator('.automatisierung-karten .karte.offen').scrollIntoViewIfNeeded();
+    await bild(s, 'werkbank-automatisierung-karte');
+    await s.getByRole('heading', { name: 'Verlauf', exact: true }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+    await s.locator('.automatisierung-schritte').first().waitFor({ state: 'attached' }).catch(() => null);
+    await bild(s, 'werkbank-automatisierung-verlauf');
+    for (const [name, schema, viewport] of [['werkbank-automatisierung-dunkel', 'dark', { width: 1440, height: 860 }], ['werkbank-automatisierung-handy', 'light', { width: 393, height: 852 }]]) {
+      const handy = viewport.width < 500;
+      const ka = await browser.newContext({ viewport, colorScheme: schema, locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1, ...(handy ? { isMobile: true, hasTouch: true } : {}) });
+      const [cn, cw] = d.adminCookie.split('=');
+      await ka.addCookies([{ name: cn, value: cw, url: BASIS }]);
+      const sa = await ka.newPage();
+      await geheZu(sa, `/werkbank/automatisierungen/${auto.id}`);
+      await sa.locator('.automatisierung-bereich').first().waitFor();
+      await bild(sa, name);
+      await ka.close();
+    }
+  }
   // Datenschutz (#396): Vertragspartner „betrifft eine Person“, Auskunft für die Stadtwerke gesammelt – Prüfliste.
   await api('PUT', '/api/werkbank/datenschutz', { verantwortlicher: 'Familie Beispiel\nMusterweg 1, 01234 Musterstadt', empfaenger: '', typen: { [d.typ('Vertragspartner').id]: { person: true, zweck: 'Verträge und Rechnungen des Haushalts' } } });
   await geheZu(s, `/werkbank/datenschutz?mappe=${d.stadtwerke.id}`);

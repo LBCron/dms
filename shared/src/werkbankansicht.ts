@@ -57,6 +57,8 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'sichten', gruppe: 'ablage', in: H },
   { pfad: 'nummernkreise', gruppe: 'ablage', in: O },
   { pfad: 'stempel', gruppe: 'ablage', in: H },
+  // Automatisierungen (#675): für Betriebe sichtbar, im Haushalt nur im Expertenmodus.
+  { pfad: 'automatisierungen', gruppe: 'ablage', in: O, experte: ['haushalt'] },
   { pfad: 'pakete', gruppe: 'ablage', in: H },
   // Gleichbedeutende Wörter (#356): für Betriebe sichtbar, im Haushalt nur im Expertenmodus.
   { pfad: 'suche', gruppe: 'ablage', in: O, experte: ['haushalt'] },
@@ -175,7 +177,7 @@ export function ansichtAus(vorlage: Vorlage, sichtbareBereiche: Iterable<string>
  */
 export const MIT_MITTE: ReadonlySet<string> = new Set([
   'uebersicht', 'typen', 'sichten', 'nummernkreise', 'pakete', 'benutzer', 'aufgaben',
-  'designs', 'papierkorb', 'postfaecher', 'protokoll', 'fehlermeldungen',
+  'designs', 'papierkorb', 'automatisierungen', 'postfaecher', 'protokoll', 'fehlermeldungen',
 ]);
 
 export const hatMitte = (bereich: string) => MIT_MITTE.has(bereich);

@@ -94,6 +94,7 @@ export const HILFE = {
   'pakete.ereignis.frist_erreicht': admin('pakete/', 'dem Ereignis „Frist erreicht“', 'ereignis-frist-erreicht'),
   'mappentyp.archiv': admin('archiv/', 'Archivmodus und Aufbewahrung'),
   'werkbank.stempel': admin('stempel/', 'Stempel-Vorlagen'),
+  'werkbank.automatisierungen': admin('automatisierungen/', 'Automatisierungen'),
   'werkbank.suche': admin('suche/', 'Suche: Tippfehler und gleichbedeutende Wörter'),
   'mappentyp.stempel': admin('stempel/', 'Stempel je Mappentyp', 'stempel-je-mappentyp'),
   'werkbank.vollexport': admin('export/', 'Daten exportieren'),

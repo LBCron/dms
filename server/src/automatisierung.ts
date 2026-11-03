@@ -301,10 +301,51 @@ export class Automatisierungen {
   /** Abnehmer anmelden und den Zeitplan starten (Start des Servers). */
   start() {
     this.d.dienst.ereignisse.abonniere('automatisierungen', (e) => this.ereignis(e));
+    void this.legeBeispiele().catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
     this.uhr ??= setInterval(() => { void this.zeitplan().catch((e) => log.error('Zeitplan fehlgeschlagen', { fehler: (e as Error).message })); }, ZEITPLAN_MS);
     this.uhr.unref?.();
   }
   stop() { if (this.uhr) clearInterval(this.uhr); this.uhr = null; this.d.dienst.ereignisse.abbestellen('automatisierungen'); }
+
+  /**
+   * Einige ausgeschaltete Beispiele (#675) statt Vorlagen: Herkunft „DMS“, also nur kopieren oder einschalten, nicht
+   * löschen. Feste Ids – mehrere Server legen sie nicht doppelt an; einmal angelegt, bleiben Änderungen erhalten.
+   */
+  async legeBeispiele(): Promise<number> {
+    const k = await this.kontext();
+    const admins = k.rollen.filter((r) => /administrator/i.test(r.name)).slice(0, 1).map((r) => ({ art: 'rolle' as const, id: r.id }));
+    // Kündigungsfrist: ein Mappentyp mit einem Datumsfeld „kündbar …“ / „Frist“, wenn es schon einen gibt.
+    const frist = k.typen.flatMap((typ) => typ.felder.filter((f) => f.typ === 'datum' && /k(ü|ue)nd|frist/i.test(`${f.key} ${f.label}`)).map((f) => ({ typ, f })))[0];
+    const benutzerTyp = k.typen.find((x) => x.system === 'benutzer');
+    const zustaendig = frist?.typ.felder.find((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
+    const beispiele: Array<{ key: string; e: Record<string, unknown> }> = [
+      { key: 'kuendigung', e: {
+        name: t('automatisierung.beispiel.kuendigung.name'), beschreibung: t('automatisierung.beispiel.kuendigung.text'),
+        wenn: { art: 'datum', typ: frist?.typ.id ?? '', feld: frist?.f.key ?? '', tage: 30, uhrzeit: '07:00' },
+        dann: [{ id: 'k1', art: 'aufgabe', als: 'aufgabe', faellig: 7, empfaenger: zustaendig ? [{ art: 'feld', feld: zustaendig.key }] : admins, text: t('automatisierung.beispiel.kuendigung.aufgabe') }],
+      } },
+      { key: 'kontosperre', e: {
+        name: t('automatisierung.beispiel.kontosperre.name'), beschreibung: t('automatisierung.beispiel.kontosperre.text'),
+        wenn: { art: 'benutzer.gesperrt', typ: null },
+        dann: [{ id: 'k1', art: 'aufgabe', als: 'benachrichtigung', empfaenger: admins, text: t('automatisierung.beispiel.kontosperre.aufgabe') }],
+      } },
+      { key: 'dokument', e: {
+        name: t('automatisierung.beispiel.dokument.name'), beschreibung: t('automatisierung.beispiel.dokument.text'),
+        wenn: { art: 'dokument.hochgeladen', typ: null },
+        dann: [{ id: 'k1', art: 'aufgabe', als: 'benachrichtigung', empfaenger: admins, text: t('automatisierung.beispiel.dokument.aufgabe') }],
+      } },
+    ];
+    let neu = 0;
+    for (const b of beispiele) {
+      const id = uuidAus(`beispiel|${b.key}`);
+      if (await this.d.repo.hole(id)) continue;
+      const d = bereinigeAutomatisierung(b.e);
+      d.reihenfolge = REIHENFOLGE.dms;
+      const a: Automatisierung = { ...d, id, aktiv: false, angehalten: null, herkunft: 'dms', version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
+      try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
+    }
+    return neu;
+  }
 
   /* ---------- Verwalten ---------- */
 

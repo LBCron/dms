@@ -56,7 +56,7 @@ describe('Werkbank-Ansicht: Expertenmodus (#356)', () => {
     assert.equal(nurImExpertenmodus('haushalt', 'suche'), true);
     assert.equal(nurImExpertenmodus('organisation', 'suche'), false);
     assert.equal(fuerAlle({ vorlage: 'organisation', ein: [], aus: [] }, 'suche'), true);
-    assert.deepEqual(expertenBereiche('haushalt').map((b) => b.pfad), ['suche']);
+    assert.deepEqual(expertenBereiche('haushalt').map((b) => b.pfad), ['automatisierungen', 'suche']);
     assert.deepEqual(expertenBereiche('alles'), []);
     // Der Expertenmodus zeigt nur, was die Vorlage dafür vorsieht – nicht alles.
     assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'protokoll'), false);
@@ -120,7 +120,7 @@ describe('Werkbank-Ansicht: Dienst', () => {
 
 describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
   it('Sammlungen behalten die Mitte, Seiten sind zweiteilig', () => {
-    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll']) assert.ok(hatMitte(b), b);
+    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll', 'automatisierungen']) assert.ok(hatMitte(b), b);
     for (const b of ['demo', 'technik', 'betrieb', 'verschluesselung', 'texterkennung', 'wartung', 'wartungsmodus', 'sicherung', 'wiederherstellung',
       'systemzustand', 'anbindung', 'eingangsordner', 'anmeldeschutz', 'darfweg', 'vollexport', 'ansicht', 'webdav', 'stempel']) assert.ok(!hatMitte(b), b);
     // Jeder Bereich der Leiste ist eingeordnet; neue Bereiche sind ohne Zutun zweiteilig.
@@ -167,13 +167,14 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
   it('#354: sechs Gruppen nach Aufgaben, je höchstens 7 Bereiche, Kennungen unverändert', () => {
     assert.deepEqual(Object.values(GRUPPEN), ['Ablage aufbauen', 'Benutzer und Sicherheit', 'Post und Eingänge', 'Daten sichern', 'Einstellungen', 'Wartung und Fehlersuche']);
     const je = (g: string) => BEREICHE.filter((x) => x.gruppe === g).map((x) => x.pfad);
-    assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'pakete', 'suche', 'darfweg']);
+    assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'automatisierungen', 'pakete', 'suche', 'darfweg']);
     assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'wiederherstellung', 'vollexport', 'papierkorb']);
     assert.deepEqual(je('einstellungen'), ['betrieb', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung', 'technik']);
     assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartungsmodus', 'wartung', 'demo']);
-    for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= 7, g);
+    // Ablage aufbauen hat seit den Automatisierungen (#675) acht Bereiche, alle anderen höchstens sieben.
+    for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= (g === 'ablage' ? 8 : 7), g);
     // Aufgaben und Tägliche Zusammenfassung: ein Eintrag unter Einstellungen, Kennung bleibt „aufgaben“.
     assert.equal(bereichName('aufgaben'), 'Benachrichtigungen und Aufgaben');
     assert.equal(bereichName('uebersicht'), 'Übersicht');
