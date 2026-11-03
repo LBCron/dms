@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0155" class="md-skip">
+        <a href="#neu-in-version-0156" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01550" class="md-nav__link">
+  <a href="#01560" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.155.0
+        0.156.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.155.0">
+    <nav class="md-nav" aria-label="0.156.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -942,6 +942,34 @@
     
   
     Stempel beim Weitergeben
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../automatisierungen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatisierungen
   
 
     
@@ -2466,15 +2494,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01550" class="md-nav__link">
+  <a href="#01560" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.155.0
+        0.156.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.155.0">
+    <nav class="md-nav" aria-label="0.156.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2546,31 +2574,38 @@
   
 
 
-<h1 id="neu-in-version-0155">Neu in Version 0.155<a class="headerlink" href="#neu-in-version-0155" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0156">Neu in Version 0.156<a class="headerlink" href="#neu-in-version-0156" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01550">0.155.0<a class="headerlink" href="#01550" title="Permanent link">&para;</a></h2>
+<h2 id="01560">0.156.0<a class="headerlink" href="#01560" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Dann-Karte „Feld ändern“</strong> (#676): setzt nur die gewählten Felder einer Mappe – fester Wert, Text mit Platzhaltern wie beim Titel, bei Datumsfeldern auch <code>heute</code>, <code>heute+7</code> oder <code>heute-3</code>. Geprüft wird wie im Formular (Pflichtfelder, Auswahllisten, Verweise, Archivmodus); die Historie zeigt „durch Automatisierung ‚…‘“.</li>
-<li><strong>Dann-Karte „Aufgabe / Benachrichtigung“</strong> (#676): an Personen, an alle aktiven Mitglieder einer Rolle oder an die Person in einem Feld der Mappe; Aufgaben mit Fälligkeit in N Tagen, Benachrichtigungen gebündelt. Wer die Mappe nicht sehen darf, bekommt die Aufgabe ohne Link an seiner eigenen Benutzer-Mappe.</li>
-<li>Im <strong>Trockenlauf</strong> zeigen beide Karten nur, was sie tun würden („Würde setzen: …“, „Würde Aufgabe an 2 Personen senden: …“).</li>
+<li><strong>Werkbank → Ablage aufbauen → Automatisierungen</strong> (#675): Liste in der Mitte (Name, Kurzform, an/aus, Nummer, letzter Lauf, Herkunft, Suche, <strong>nach Auslöser</strong>), rechts der Editor mit <strong>Wenn · Und · Dann</strong> untereinander. Karten aus dem <strong>Kartenvorrat</strong> ziehen oder mit <strong>+ Karte</strong> per Tastatur hinzufügen; aufklappen zum Einstellen, zuklappen zur Kurzzeile; Dann-Karten per Ziehen oder Alt+↑/↓ umsortieren. Der Vorrat zeigt nur Karten, die zur Wenn-Karte passen; Platzhalter zum Anklicken.</li>
+<li>Fehlerhafte Automatisierungen sind rot mit Grund, Speichern ist dann gesperrt. <strong>Ausprobieren</strong> mit einer Mappe, auch als Trockenlauf.</li>
+<li><strong>Verlauf</strong> unter dem Editor mit den Schritten jedes Laufs – läuft die Automatisierung gerade, erscheinen sie <strong>live</strong> nacheinander. Fehlgeschlagene Läufe einzeln oder alle wiederholen; die Werkbank-Übersicht meldet fehlgeschlagene und angehaltene Automatisierungen.</li>
+<li><strong>Reihenfolge</strong> 1–99 im Editor („läuft als 2. von 3 beim selben Auslöser“), in der Liste „nach Auslöser“ per Ziehen oder Tastatur umsortieren.</li>
+<li><strong>Änderungsverlauf</strong> mit Wiederherstellen; <strong>Kopieren</strong> einer Automatisierung.</li>
+<li>Drei <strong>ausgeschaltete Beispiele</strong> vom DMS: an die Kündigungsfrist erinnern, Kontosperre melden, neue Dokumente melden.</li>
+<li>Im Haushalt erscheint der Bereich im Expertenmodus, in Betrieben immer.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Entwicklerhandbuch: Aufbau → Automatisierungen → <strong>Dann-Karten</strong>.</li>
+<li>Administratorhandbuch: <strong>Automatisierungen</strong> (neue Seite mit Beispiel und Bildschirmfotos, auch dunkel und am Handy); Übersicht der Werkbank-Bereiche ergänzt.</li>
+<li>Entwicklerhandbuch: Aufbau → Automatisierungen → <strong>Oberfläche</strong> (Live-Fortschritt per Abfrage, mehrere Server).</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>server/src/automatisierung-karten.ts</code>; <code>Dienst.aufgabeAusAutomatisierung</code>.</li>
-<li>Tests: <code>server/test/automatisierung-karten.test.ts</code>, darunter das Beispiel „Vertrag – Kündbar bis in 7 Tagen → Aufgabe an Verantwortlich“.</li>
+<li><code>web/src/werkbank/Automatisierungen.tsx</code>; Texte in <code>shared/src/sprachen/de/automatisierung.json</code>.</li>
+<li>Live-Fortschritt per Abfrage alle 2 s aus der Datenbank – mit mehreren Servern verträglich, ohne Server-Sent Events.</li>
+<li><code>Automatisierungen.legeBeispiele()</code> mit festen Ids (kein doppeltes Anlegen bei mehreren Servern).</li>
+<li>„Ablage aufbauen“ hat jetzt acht Bereiche (Test angepasst).</li>
 <li>Keine Migration, keine neue Abhängigkeit.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.154.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.154.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.155.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.155.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
