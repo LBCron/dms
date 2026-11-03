@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.154/aufbau/">
+        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.155/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -1572,6 +1572,11 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li>Ausgeführt wird unter dem Systemkonto „Automatisierung“ (<code>dienst.systemZugriff('automatisierung')</code>) und mit <code>dienst.mitAusloeser({ art: 'automatisierung', id, konto, kette })</code> – Historie und Ereignisse zeigen, wer gehandelt hat. Darf das Systemkonto die Mappe nicht lesen, wird der Lauf übersprungen.</li>
 <li>Jeder Schritt (Wenn, Und, jede Dann-Karte) steht mit Zustand im Lauf (<code>schritte</code>) – die Oberfläche zeigt den Fortschritt live. Ein Kartenfehler beendet den Lauf als <code>fehlgeschlagen</code> (wiederholbar), die folgenden Automatisierungen laufen trotzdem.</li>
 </ol>
+<p><strong>Dann-Karten</strong> (<code>server/src/automatisierung-karten.ts</code>, #676)</p>
+<ul>
+<li><strong>Feld ändern</strong> (<code>feld</code>): <code>werte</code> je Feldschlüssel – fest, Text mit Platzhaltern (Text, Langtext, formatierter Text), bei Datumsfeldern auch <code>heute</code>, <code>heute+7</code>, <code>heute-3</code>. Geschrieben wird über <code>Dienst.aendereMappe</code> mit dem Zugriff des Systemkontos und nur den gewählten Feldern (#609): Feldformate, Pflicht, Auswahllisten und Verweisziele werden geprüft wie im Formular, Archivmodus und Fristsperre nie umgangen. Die Historie trägt <code>automatisierung: { id, name, eingerichtetVon }</code>.</li>
+<li><strong>Aufgabe / Benachrichtigung</strong> (<code>aufgabe</code>): Empfänger Person, Rolle (alle aktiven Mitglieder) oder Feld der Mappe (Verweis auf Benutzer); <code>als: 'aufgabe'</code> legt jedes Mal eine Aufgabe an (Fälligkeit <code>faellig</code> Tage ab heute → erscheint unter „Anstehend“), <code>als: 'benachrichtigung'</code> bündelt je Automatisierung, Mappe und Empfänger (eine offene, der Text wird aktualisiert). Wer die Mappe nicht lesen darf, bekommt sie an seiner eigenen Benutzer-Mappe – ohne Link. Platzhalter füllt Stufe 1 mit den Rechten des Systemkontos (Empfänger-Rechte: #683).</li>
+</ul>
 <p><strong>Schutz und Grenzen</strong> (<code>AUTOMATISIERUNG_GRENZEN</code>)</p>
 <ul>
 <li>Keine Selbstauslösung (eigene Änderungen lösen dieselbe Automatisierung nicht aus), Ketten höchstens 3 tief, Bremse 30 Läufe je Minute (dann angehalten), Laufzeit 60 s, 200 Automatisierungen, je Bereich 20 Karten, Verlauf 200 Läufe bzw. 30 Tage.</li>
