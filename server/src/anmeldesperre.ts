@@ -131,6 +131,9 @@ export class Anmeldesperre {
   /** Sofortmeldungen je Konto: E-Mail-Adresse → Tag der letzten Mail. */
   private sofortGemeldet = new Map<string, string>();
 
+  /** Wird ein bestehendes Konto gesperrt, meldet der Start das als Ereignis (#670). */
+  beiKontosperre?: (e: { email: string; ip: string; versuche: number; bis: string }) => Promise<void>;
+
   constructor(private speicher: Einstellungen = speicherEinstellungen(), private anAdmins?: (betreff: string, text: string) => Promise<void>, private jetzt: () => number = Date.now) {}
 
   private async lade() {
@@ -268,6 +271,9 @@ export class Anmeldesperre {
   /** Ein bestehendes Konto wurde gesperrt: vormerken und – falls gewünscht – sofort melden, je Konto höchstens einmal am Tag. */
   private async kontoGesperrt(email: string, ip: string, versuche: number) {
     await this.vormerken({ art: 'konto', wer: email, versuche });
+    // Ereigniskatalog (#670): „Benutzerkonto gesperrt“ – jede Sperre, unabhängig von der Sofortmeldung.
+    try { await this.beiKontosperre?.({ email, ip, versuche, bis: new Date(this.jetzt() + this.e.konto.minuten * MIN).toISOString() }); }
+    catch (e) { log.warn('Ereignis zur Kontosperre nicht gespeichert', { fehler: (e as Error).message }); }
     if (!this.e.mailKonto || !this.anAdmins) return;
     const heute = this.heute();
     if (this.sofortGemeldet.get(email) === heute) return;

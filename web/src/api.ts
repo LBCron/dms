@@ -894,7 +894,7 @@ export interface PaketlaeuferStand {
   laeuft: boolean; pausiert: boolean; grenzen: { speicherMB: number; sekunden: number; parallel: number };
   /** Was der Läufer gerade tut (#403); absturz: Zeit des letzten Absturzes. */
   zustand: LaeuferZustand; absturz: string | null;
-  pakete: Array<{ id: string; name: string; version: string; dienstkonto: string | null; geladen: boolean; fehler: string | null; aufrufe: number; fehlgeschlagen: number; letzterAufruf: string | null; dauerMs: number | null; speicherMB: number | null; ereignisse: { offen: number; aufgegeben: number; zugestellt: number }; letzte: Array<{ zeit: string; art: string; ok: boolean; text: string }>; protokoll: Array<{ zeit: string; stufe: number; text: string }> }>;
+  pakete: Array<{ id: string; name: string; version: string; dienstkonto: string | null; geladen: boolean; fehler: string | null; aufrufe: number; fehlgeschlagen: number; letzterAufruf: string | null; dauerMs: number | null; speicherMB: number | null; ereignisse: { offen: number; aufgegeben: number; zugestellt: number; zuletzt?: string | null }; letzte: Array<{ zeit: string; art: string; ok: boolean; text: string }>; protokoll: Array<{ zeit: string; stufe: number; text: string }> }>;
 }
 export type RechtStufe = 'immer' | 'nie' | 'teils';
 export interface BerechtigungEintrag { typId: string; name: string; system: string | null; berechtigungen: Regelwerk }

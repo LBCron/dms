@@ -281,6 +281,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   // Code (#338): Manifest-Angaben, gebautes Modul und Daten.
   const cl = liesCode(m.code, [...dateien].map(([name, inhalt]) => ({ name, groesse: inhalt.length })));
   fehler.push(...cl.fehler.map((f) => (f.startsWith('code/:') ? f.slice('code/: '.length) : `manifest.yaml: ${f}`)));
+  // Mappen-Ereignisse (#670), Stufe 1: nur zu eigenen Mappentypen dieses Pakets.
+  for (const k of cl.code?.mappentypen ?? []) if (!typen.some((t) => t.schluessel === k)) fehler.push(`manifest.yaml: code.mappentypen: „${k}“ ist kein Mappentyp dieses Pakets (inhalt). Ereignisse zu Mappentypen anderer Pakete gibt es noch nicht.`);
   let code: PaketCodeTeil | null = null;
   if (cl.code) {
     const modul = dateien.get('code/modul.wasm');
@@ -1252,7 +1254,7 @@ export class Paketverwaltung {
             else werte[k] = w;
           }
           let mappeId: string;
-          try { mappeId = (await this.d.legeMappeAn({ typId, werte }, von.id)).id; } catch (f) { throw new Fachfehler(422, `Beispiel: ${meldungen(f)}`); }
+          try { mappeId = (await this.d.ohneEreignisse(() => this.d.legeMappeAn({ typId, werte }, von.id))).id; } catch (f) { throw new Fachfehler(422, `Beispiel: ${meldungen(f)}`); }
           mappen.push(mappeId);
           if (b.schluessel) beispielIds.set(b.schluessel, mappeId);
         }

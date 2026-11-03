@@ -21,6 +21,7 @@ import { mitPruefung, ordnerSpeicher } from './dateispeicher';
 import { Speicherplatz, type SpeicherplatzDeps } from './speicherplatz';
 import { baueApp } from './http';
 import { Konten } from './konten';
+import { kuerzeIp } from './abruf';
 import { pgKontoRepo } from './konto-repo';
 import { Messung, pgMessSpeicher } from './messung';
 import { protokoll } from './protokoll';
@@ -203,6 +204,11 @@ spDeps.anAdmins = anAdmins;
 // Anmeldeschutz (#240): Sperren in der Datenbank, einstellbar in der Werkbank.
 const anmeldesperre = new Anmeldesperre(pgEinstellungen(sql, cfg.haushalt), anAdmins);
 konten.verbindeSperre(anmeldesperre);
+// Ereigniskatalog (#670): Kontosperre als Ereignis (Id des Benutzers, Zeitpunkt, Fehlversuche, IP gekürzt).
+anmeldesperre.beiKontosperre = async (x) => {
+  const b = await konten.personMitEmail(x.email);
+  if (b) await dienst.ereignis('benutzer.gesperrt', { benutzer: b.id, zeitpunkt: new Date().toISOString(), fehlversuche: x.versuche, bis: x.bis, ip: kuerzeIp(x.ip) });
+};
 // Zwei-Faktor-Anmeldung (#242): Geheimnis verschlüsselt mit dem Schlüssel des DMS.
 konten.verbindeZweifaktor(new Zweifaktor(pgEinstellungen(sql, cfg.haushalt), (k) => tresor.verschluessele(k), (w) => tresor.entschluessele(w)));
 const notfall = new Notfallzugang(join(dirname(tresor.datei), 'RESCUE'), konten, pgBetriebSpeicher(sql, cfg.haushalt), anAdmins);
@@ -436,6 +442,10 @@ await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
 // Systemkonto „Automatisierung“ (#673): sichtbar, nie anmeldbar; Automatisierungen (#674) laufen darunter.
 await konten.systemkonto('automatisierung');
 dienst.systemkonten = (k) => konten.systemkonto(k);
+// Ereigniskatalog (#670): verteilt aus der Datenbank; ruht in Wartung und Wiederherstellung.
+dienst.ereignisseRuhen = () => wartung.aktiv || wiederherstellung.laeuft();
+dienst.ereignisse.starte();
+wartung.beimAusschalten(() => dienst.ereignisse.wecke());
 // Schlüssel für Mappentypen (#145), einmalig nach dem Update.
 await dienst.typSchluesselNachziehen();
 // Haken „Neue Mappen/Löschen erlauben“ → Berechtigungen (#146), einmalig nach dem Update.
@@ -532,6 +542,7 @@ const beenden = async () => {
   if (intern) { const s = intern; await new Promise<void>((r) => { s.closeAllConnections(); s.close(() => r()); }); }
   texterkennung.stop();
   await paketlaeufer.stop();
+  dienst.ereignisse.stoppe();
   vorschau.stop();
   wartung.stop();
   notfall.stop();

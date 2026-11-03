@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
 import { ergaenzungenVon, hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
@@ -18,6 +18,7 @@ import { PaketAblauf } from './PaketAblauf';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
+import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } from '../../../shared/src/ereignisse';
 
 /**
  * Werkbank → Pakete (#188): Konfigurationspakete aus dem offiziellen Katalog.
@@ -475,7 +476,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
             {/* Paketseite im offiziellen Katalog mit der DMS-Version nur im Fragment (#622). */}
             {imKatalog && <>{(v?.readme || inst?.links?.readme) && ' · '}<a className="verweis" href={katalogSeiteMitVersion(z.stand?.dms ?? '', id)} target="_blank" rel={KATALOG_LINK_REL} title={tx('pakete.katalog.hinweis')}>{tx('pakete.katalog.ansehen')} <Symbol name="extern" /></a></>}</dd></>}
         </dl>
-        {inst?.laeufer && <LaeuferStand paket={inst.id} />}
+        {inst?.laeufer && <LaeuferStand paket={inst.id} abonniert={inst.laeufer.ereignisse} />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:vektoren') && <VektorStandBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:antworten') && <FragenGrenzenBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:erkennen') && <ErkennungPaketBlock paket={inst.id} />}
@@ -565,8 +566,27 @@ function ErgaenzungenBlock({ z, inst, katalog, quelle }: { z: PaketeZustand; ins
   );
 }
 
+/** Name eines Ereignisses aus dem Katalog (#670); Pakete-eigene Arten (z. B. `volltext.fertig` alt) bleiben, wie sie sind. */
+function ereignisName(art: string) { return istKatalogArt(art) ? tx(`ereignisse.name.${ereignisSchluessel(art)}`) : art; }
+
+/** Der Ereigniskatalog (#670) zum Nachschlagen: Gruppe, Name, Beschreibung. */
+export function EreignisKatalogListe() {
+  const gruppen = [...new Set(KATALOG_ARTEN.map((a) => EREIGNISKATALOG[a].gruppe))];
+  return (
+    <details className="klein">
+      <summary><Symbol name="info" /> {tx('ereignisse.katalog.titel')}</summary>
+      {gruppen.map((g) => (
+        <div key={g}>
+          <h3 className="h4">{tx(`ereignisse.gruppe.${g}`)}</h3>
+          <dl className="eigenschaften">{KATALOG_ARTEN.filter((a) => EREIGNISKATALOG[a].gruppe === g).map((a) => <Fragment key={a}><dt>{tx(`ereignisse.name.${ereignisSchluessel(a)}`)}</dt><dd>{tx(`ereignisse.text.${ereignisSchluessel(a)}`)} <code>{a}</code></dd></Fragment>)}</dl>
+        </div>
+      ))}
+    </details>
+  );
+}
+
 /** Paket mit Code (#338): läuft es, was ist zuletzt passiert, offene und aufgegebene Ereignisse. */
-function LaeuferStand({ paket }: { paket: string }) {
+function LaeuferStand({ paket, abonniert = [] }: { paket: string; abonniert?: readonly string[] }) {
   const [s, setS] = useState<PaketlaeuferStand | null | undefined>(undefined);
   const laden = useCallback(() => { api.paketLaeufer().then(setS, () => setS(null)); }, []);
   useEffect(() => { laden(); }, [laden]);
@@ -588,14 +608,16 @@ function LaeuferStand({ paket }: { paket: string }) {
             <dt>Stand</dt><dd>{stand.fehler ? <span className="fehlertext">{stand.text}</span> : stand.text}</dd>
             <dt>Dienstkonto</dt><dd>{p.dienstkonto ?? '–'}</dd>
             <dt>Aufrufe</dt><dd>{p.aufrufe}{p.fehlgeschlagen ? `, davon ${p.fehlgeschlagen} fehlgeschlagen` : ''}{p.dauerMs !== null ? ` · zuletzt ${Math.round(p.dauerMs / 100) / 10} s, ${p.speicherMB} MB` : ''}</dd>
-            <dt>Ereignisse</dt><dd>{p.ereignisse.zugestellt} zugestellt · {p.ereignisse.offen} offen{p.ereignisse.aufgegeben ? <> · <strong>{p.ereignisse.aufgegeben} aufgegeben</strong></> : ''}</dd>
+            <dt>Ereignisse</dt><dd>{p.ereignisse.zugestellt} zugestellt · {p.ereignisse.offen} offen{p.ereignisse.aufgegeben ? <> · <strong>{p.ereignisse.aufgegeben} aufgegeben</strong></> : ''} · {p.ereignisse.zuletzt ? tx('ereignisse.pakete.zuletzt', { zeit: datum(p.ereignisse.zuletzt) }) : tx('ereignisse.pakete.nie')}</dd>
+            {abonniert.length > 0 && <><dt>Abonniert</dt><dd>{abonniert.map(ereignisName).join(', ')}</dd></>}
             <dt>Grenzen</dt><dd>{s.grenzen.speicherMB} MB Speicher, {s.grenzen.sekunden} s je Aufruf, {s.grenzen.parallel} gleichzeitig</dd>
           </dl>
-          {p.letzte.length > 0 && <ul className="klein">{p.letzte.slice(0, 10).map((x) => <li key={x.zeit + x.art}>{datum(x.zeit)} · {x.art} · {x.ok ? 'ok' : <span className="fehlertext">{x.text}</span>}{x.ok && x.text ? ` – ${x.text}` : ''}</li>)}</ul>}
+          {p.letzte.length > 0 && <ul className="klein">{p.letzte.slice(0, 10).map((x) => <li key={x.zeit + x.art}>{datum(x.zeit)} · {ereignisName(x.art)} · {x.ok ? 'ok' : <span className="fehlertext">{x.text}</span>}{x.ok && x.text ? ` – ${x.text}` : ''}</li>)}</ul>}
           {p.protokoll.length > 0 && <details className="klein"><summary>Ausgaben des Pakets</summary><ul>{p.protokoll.slice(0, 30).map((x, i) => <li key={i} className={x.stufe >= 2 ? 'fehlertext' : undefined}>{datum(x.zeit)} · {x.text}</li>)}</ul></details>}
           <button type="button" className="textknopf" onClick={laden}>Aktualisieren</button>
         </>
       )}
+      <EreignisKatalogListe />
     </>
   );
 }

@@ -218,6 +218,39 @@ Neben Menschen (`benutzer.art = 'person'`) gibt es zwei Arten von Konten, die si
 - **Werkbank:** Systemkonten sind nie `admin`; welche Werkbank-Aktionen eine Karte darf, entscheidet die Karte selbst (#677).
 - **Oberfläche:** Werkbank → Benutzer, Abschnitt „Systemkonten“ (`GET /api/benutzer/systemkonten`, nur Administratoren).
 
+## Ereigniskatalog (#670) { #ereigniskatalog }
+
+Was im DMS passiert, steht an **einer** Stelle: `shared/src/ereignisse.ts` (`EREIGNISKATALOG`), die Texte in `shared/src/sprachen/de/ereignisse.json` (`name.<art>`, `text.<art>` – Unterstrich als Bindestrich –, `gruppe.<gruppe>`). Pakete (`code.ereignisse`), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter **Welche Ereignisse es gibt**.
+
+**Regeln**
+
+- **Nur Ids, Art, Feldschlüssel und Datum** in `daten` – nie Werte, Titel oder Namen. Wer mehr wissen will, liest mit eigenen Rechten nach.
+- **Mindestens einmal, in derselben Transaktion:** `dienst.ereignis(art, daten, von)` schreibt in den Ausgangskorb (Tabelle `ereignisse`, Migration 060). Läuft gerade eine Transaktion (`inTransaktion`), gehört das Ereignis zur Änderung – scheitert eines, wird beides nicht gespeichert. Jedes Ereignis hat eine feste Id; ein Abnehmer erkennt daran eine Wiederholung.
+- **Mehrere Server:** Der `Ereignisverteiler` (`server/src/ereignisse.ts`) holt offene Ereignisse mit `FOR UPDATE SKIP LOCKED` und einer Sperre (`gesperrt_bis`, 120 s). Erst wenn **alle** Abnehmer es angenommen haben, gilt ein Ereignis als verteilt; sonst Wiederholung nach 1, 5, 30, 120 und 360 Minuten, danach aufgegeben (Protokoll). Verteilte Ereignisse bleiben 7 Tage.
+- **Bündeln:** Einträge mit `buendelS` (heute `mappe.geaendert`, 5 s) fassen schnelle Folgen zur selben Mappe zusammen, solange das Ereignis noch nicht verteilt ist; die Feldschlüssel werden vereinigt (`mischeFelder`).
+- **Frist erreicht** genau einmal: `frist_meldungen` (Mappe, Feld, Datum, Zeitpunkt) als Primärschlüssel; Merken und Ereignis in einer Transaktion.
+- **Still:** `dienst.ohneEreignisse(f)` – Beispiele, Demo-Daten (Erzeugen und Entfernen). Eine Wiederherstellung markiert alle offenen Ereignisse als verteilt; in Wartung und während einer Wiederherstellung ruht der Verteiler.
+
+**Abnehmer**
+
+```ts
+dienst.ereignisse.abonniere('mein-abnehmer', async (e: KatalogEreignis) => {
+  // e.id, e.art, e.daten, e.ausloeser, e.erstellt – Fehler werfen heißt: später noch einmal
+});
+```
+
+Der Abnehmer `pakete` gibt Mappen-Ereignisse und `frist.erreicht` an Pakete weiter, die sie abonniert haben und den Typ unter `code.mappentypen` nennen – mit einer aus Ereignis- und Paket-Id berechneten Id, damit eine Wiederholung beim Paket nicht doppelt ankommt.
+
+**Auslöser** (`e.ausloeser`): `{ art: 'benutzer' | 'paket' | 'automatisierung' | 'system', id, konto, kette }`. Den Auslöser nimmt `dienst.ereignis` aus dem Konto (`von`: Benutzer bzw. Dienstkonto eines Pakets) oder aus `dienst.mitAusloeser(a, f)`. Eine Automatisierung (#674) führt ihre Aktionen so aus:
+
+```ts
+await dienst.mitAusloeser({ art: 'automatisierung', id: regel.id, konto: systemkonto.id, kette: e.ausloeser.kette ? e.ausloeser.kette + 1 : 1 }, () => aktion());
+```
+
+Damit erkennt sie ihre eigenen Änderungen und kann Ketten begrenzen. Ein Paket bekommt seine eigenen Änderungen nicht gemeldet.
+
+**Neues Ereignis:** Eintrag in `EREIGNISKATALOG` (Gruppe, Felder, ggf. `paket`, `mappentyp`, `webhook`, `buendelS`), Texte in `ereignisse.json`, an der Stelle der Änderung `await this.ereignis(...)` – möglichst innerhalb der Transaktion. Soll es für Pakete abonnierbar sein, zusätzlich in `EREIGNISSE` (`shared/src/pakete.ts`) und in der Registry (`schema`, `pruefen.py`).
+
 ## Zähler-Endpunkt und Schlüssel-Stufen (#625) { #zaehler-endpunkt }
 
 Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, **ob etwas Neues da ist**. Dafür gibt es `GET /api/v1/ich/zaehler` (intern `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):

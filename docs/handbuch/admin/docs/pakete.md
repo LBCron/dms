@@ -361,6 +361,18 @@ Unter **„Reagiert auf diese Ereignisse:“** nennt die Vorschau, wann der Code
 
 **Typisch:** Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.
 
+#### Ereignisse zu Mappen { #ereignis-mappe }
+
+**Wann:** Seit Version 0.153 – eine Mappe ist **angelegt**, **gespeichert** (und dabei geändert), **gelöscht** (in den Papierkorb) oder **wiederhergestellt**. Ein Paket bekommt diese Ereignisse nur für die Mappentypen, die es im Manifest nennt (bisher nur seine eigenen); die Vorschau zeigt sie als „– zu: *Typen*“. Viele schnelle Änderungen an derselben Mappe kommen als **ein** Ereignis (binnen etwa 5 Sekunden), mit den Schlüsseln aller geänderten Felder. Das Paket erfährt nur Kennung, Typ und Feldschlüssel – nie Werte –, und liest mit seinen Rechten nach. Beispiel-Mappen, Demo-Daten und eine Wiederherstellung lösen nichts aus.
+
+**Typisch:** Aus einer geänderten Mappe etwas nachrechnen oder einen Stand an einen anderen Dienst geben.
+
+#### Frist erreicht { #ereignis-frist-erreicht }
+
+**Wann:** Seit Version 0.153 für jedes Datumsfeld mit einer [Frist](mappentypen.md#fristen-erinnerungen-an-datumsfeldern) – zum **Erinnerungszeitpunkt** (so viele Tage vorher, wie die Frist vorsieht) und **am Tag selbst**, je Mappe, Feld, Datum und Zeitpunkt **genau einmal**, auch mit mehreren Servern und nach einem Neustart. Wie bei den Mappen-Ereignissen nur für die Mappentypen aus dem Manifest. Ändert jemand das Datum, gilt der neue Tag wieder als offen.
+
+**Typisch:** Zu einer Kündigungsfrist etwas vorbereiten, eine Erinnerung an einen anderen Dienst schicken.
+
 ### Ähnlichkeit { #aehnlichkeit }
 
 Ein Paket mit dem Recht [Vektoren zu Dokumenten](#recht-vektoren) – etwa **KI lokal – Ähnlichkeit** – rechnet zu jedem Dokument mit Volltext einen Vektor. Damit zeigt das DMS:

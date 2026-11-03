@@ -58,6 +58,16 @@ code:
 - **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) – und `dms:volltext` (seit 0.145.0, braucht `dokumente: lesen`, `code.volltext` und das Ereignis `datei.volltext`) – siehe [Volltext liefern](#volltext-liefern).
 - **Dateitypen zum Umwandeln (`code.umwandeln`, seit 0.137.0):** nur mit `dms:umwandeln` – die MIME-Typen, für die das Paket zuständig ist, z. B. `[image/tiff, image/webp]`. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.
 - **Dateitypen für den Volltext (`code.volltext`, seit 0.145.0):** nur mit `dms:volltext` – die MIME-Typen, für die das Paket den Volltext liefert, z. B. `[message/rfc822, text/plain]`. PDF, JPEG und PNG sind nicht erlaubt. Höchstens 40.
+- **Mappentypen für Ereignisse (`code.mappentypen`, seit 0.153.0):** Pflicht, sobald das Paket eines der Mappen-Ereignisse `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` oder `frist.erreicht` abonniert – und nur dann erlaubt. Darin stehen die Kennungen **eigener** Mappentypen (ohne Präfix, z. B. `[vertrag]`); das Paket muss sie lesen dürfen. Fremde Typen folgen später. Ein Paket damit gibt `dms: ">=0.153.0"` an.
+
+  ```yaml
+  code:
+    ereignisse: [mappe.geaendert, frist.erreicht]
+    mappentypen: [vertrag]
+    rechte:
+      lesen: [vertrag]
+  ```
+
 - **Netzwerk/Internet (`netz`):** nur `https://`, ohne Zugangsdaten. Weiterleitungen folgt der Läufer nicht. Die Vorschau zeigt „kein Zugriff auf Netzwerk und Internet“ bzw. „Zugriff auf Netzwerk/Internet nur zu: …“ (#449).
 - **Dienst-Adresse als Einstellung** (seit 0.124.0): Statt einer festen Adresse in `netz` kann ein Paket eine Einstellung vom Typ `adresse` verlangen – etwa für einen KI-Dienst, den jeder Haushalt woanders betreibt. Der Administrator trägt sie ein und bestätigt beim Speichern einen Hinweis; erst dann erlaubt der Läufer Netz dorthin (und zu Pfaden darunter), auch mit `http://` (Dienste im Heimnetz). Höchstens eine je Paket, nur in einem Abschnitt, **ohne** `standard` – höchstens mit `beispiel`, das im leeren Feld steht:
 
@@ -85,6 +95,10 @@ code:
 | `datei.volltext` | Seit 0.145.0, nur mit `dms:volltext`: Eine Datei eines Typs aus `code.volltext` braucht ihren Volltext – siehe [Volltext liefern](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, ggf. `neu` |
 | `datei.archivfassung` | Seit 0.149.0, nur mit `dms:archivfassung`: Ein Dokument eines Typs aus `code.archivfassung.typen` hat einen feststehenden Volltext und braucht seine Archivfassung – siehe [Archivfassung ablegen](#archivfassung) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, `quelle`, ggf. `lesefassung`, `seiten`, `textebene`, `wortpositionen`, `sprache`, `signiert`, `erechnung`, `formular`, `extern`, ggf. `neu` |
 | `sicherung.fertig` | Seit 0.142.0, nur mit `dms:sicherung-lesen`: Eine Sicherung liegt fertig im Sicherungsordner – siehe [Sicherung außer Haus](#sicherung-ausser-haus) | `name`, `datei`, `groesse`, `sha256`, `beginn`, `format`, `schlank`, `verschluesselung` |
+| `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` | Seit 0.153.0, nur zu Typen aus `code.mappentypen`: Mappe angelegt, gespeichert und dabei geändert, in den Papierkorb gelegt, wiederhergestellt. `mappe.geaendert` bündelt schnelle Folgen (etwa 5 s) zu einem Ereignis. Beispiele, Demo-Daten und Wiederherstellungen lösen nichts aus. | `mappe`, `typ`, bei `mappe.geaendert` `felder` (Schlüssel, nie Werte), `ereignis` |
+| `frist.erreicht` | Seit 0.153.0, nur zu Typen aus `code.mappentypen`: Ein Datumsfeld mit Frist erreicht den Erinnerungszeitpunkt (`zeitpunkt: vorlauf`) bzw. den Tag selbst (`faellig`) – je Mappe, Feld, Datum und Zeitpunkt genau einmal | `mappe`, `typ`, `feld`, `datum`, `zeitpunkt`, `empfaenger`, `ereignis` |
+
+**Ereignis-Id (seit 0.153.0):** Die Ereignisse zu Mappen und Fristen kommen aus dem [Ereigniskatalog](aufbau.md#ereigniskatalog). Sie werden **mindestens einmal** zugestellt; `daten.ereignis` ist die Id im Katalog – kommt dieselbe Id noch einmal, war es eine Wiederholung. Was das Paket selbst ändert, bekommt es nicht gemeldet.
 
 ### Volltext fertig (`volltext.fertig`) { #volltext-fertig }
 
