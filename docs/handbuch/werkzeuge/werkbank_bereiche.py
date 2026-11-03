@@ -26,7 +26,7 @@ SEITE = {
     'darfweg': 'archiv.md#nach-der-frist-darf-weg', 'datenschutz': 'datenschutz.md', 'benutzer': 'benutzer.md', 'anmeldeschutz': 'anmeldeschutz.md',
     'aufgaben': 'aufgaben.md', 'betrieb': 'installation.md#e-mail-und-adresse', 'verschluesselung': 'verschluesselung.md',
     'designs': 'designs.md', 'papierkorb': 'papierkorb.md', 'anbindung': 'installation.md#datenbank-anbindung',
-    'systemzustand': 'speicherplatz.md', 'postfaecher': 'postfaecher.md', 'eingangsordner': 'eingangsordner.md', 'webdav': 'webdav.md',
+    'systemzustand': 'speicherplatz.md', 'postfaecher': 'postfaecher.md', 'eingangsordner': 'eingangsordner.md', 'webdav': 'webdav.md', 'webhooks': 'webhooks.md',
     'texterkennung': 'texterkennung.md', 'protokoll': 'fehlersuche.md#protokoll',
     'fehlermeldungen': 'fehlersuche.md#gemeldete-fehler', 'sicherung': 'sicherung.md',
     'wiederherstellung': 'wiederherstellen.md', 'vollexport': 'export.md', 'wartungsmodus': 'wartungsmodus.md',

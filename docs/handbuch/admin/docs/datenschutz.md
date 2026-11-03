@@ -29,6 +29,7 @@ Das DMS sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst je
 | **Paketkatalog** | auf Knopfdruck unter **Werkbank → Pakete** (Katalog abrufen, auf neue Versionen prüfen) und wenn du einen Installationslink aus dem Katalog öffnest | GitHub ([Pakete](pakete.md)); weitere Kataloge nur, wenn du sie einträgst |
 | **E-Mail** | wenn du den E-Mail-Versand oder [Postfächer](postfaecher.md) einrichtest | dein Mailserver |
 | **Anmeldung über einen Anbieter** | wenn du sie [einrichtest](anmeldeschutz.md#anmeldung-uber-einen-anbieter-openid-connect) | dein Anbieter (OpenID Connect) |
+| **Webhooks** | wenn du unter **Werkbank → Webhooks** ein Ziel freigibst und ein Benutzer dorthin einen Webhook anlegt | nur die freigegebenen Ziele, nur Zahlen (neue Post, Zu erledigen, Fristen) ohne Titel oder Inhalte ([Webhooks](webhooks.md)) |
 | **Pakete mit Code** | nur, wenn ein Paket es braucht und du es bei der Installation bestätigst | nur die Adressen, die das Paket angibt ([Rechte eines Pakets](pakete.md#recht-netzwerk-und-internet)) |
 | **Handbuch** | wenn du auf **Hilfe** oder ein **?** klickst | Das mitgelieferte Handbuch unter `/hilfe/` kommt ohne Internet aus ([Hilfe ohne Internet](technik.md#hilfe-ohne-internet)); Links auf das Online-Handbuch öffnet dein Browser. |
 

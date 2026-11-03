@@ -2864,6 +2864,9 @@ export class Dienst {
     return { zahlen, stand: s.stand, geaendert: s.geaendert, etag: `"z${s.stand}-${s.abdruck}"` };
   }
 
+  /** Webhooks (#627): nach jeder Änderung, die Zahlen der Ansichten oder „Anstehend“ ändern kann. */
+  beiAenderung(f: () => void) { this.stand.beiAenderung(f); this.fristenstand.beiAenderung(f); }
+
   /** Neue Post für den Benutzer (#625): Stand „Neu“ und „Für“ ist er selbst oder leer; nur lesbare Post. */
   private async neuePostFuer(z: Zugriff): Promise<number> {
     const post = [...z.typen.values()].find((t) => t.system === 'post');

@@ -11,6 +11,7 @@ import { useVollexport, VollexportPanel } from './Vollexport';
 import { PostfachEditor, PostfaecherListe, usePostfaecher } from './Postfaecher';
 import { EingangsordnerPanel, useEingangsordner } from './Eingangsordner';
 import { useWebdav, WebdavPanel } from './Webdav';
+import { useWebhooks, webhookWarnungen, WebhooksPanel } from './Webhooks';
 import { useEffect, type ReactNode } from 'react';
 import { Dreiteilung } from '../bereiche';
 import { useDaten } from '../daten';
@@ -72,6 +73,7 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/systemzustand         Systemzustand: Warnschwelle und Grenze, darunter Speicherplatz je Ordner
  *                                 (#115, #116; #408, früher /werkbank/speicherplatz, leitet weiter)
  * /werkbank/webdav                WebDAV-Laufwerk an/aus, Stand, letzte Zugriffe (#346, rechts seit #366)
+ * /werkbank/webhooks              Webhooks: freigegebene Ziele, alle Webhooks, abschalten (#627)
  * /werkbank/stempel                Vorlagen für Stempel beim Weitergeben (#394), zweiteilig
  * /werkbank/datenschutz[?mappe=]    Auskunft nach Art. 15 DSGVO als ZIP (#396), zweiteilig
  *
@@ -103,6 +105,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const systemlast = useSystemlast(bereich === 'systemzustand');
   const eingang = useEingangsordner(bereich === 'eingangsordner');
   const webdav = useWebdav(bereich === 'webdav');
+  const webhooks = useWebhooks(bereich === 'webhooks' || bereich === 'uebersicht');
   const postfaecher = usePostfaecher(bereich === 'postfaecher');
   const nummernkreise = useNummernkreise(bereich === 'nummernkreise');
   const stempel = useStempelVorlagenWerkbank(bereich === 'stempel');
@@ -123,7 +126,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
       protokoll: protokoll.neu, technik: technik.laden, betrieb: betrieb.laden,
       verschluesselung: tresor.laden, papierkorb: papierkorb.laden, aufgaben: aufgaben.laden, texterkennung: ocr.laden,
       wartung: ocr.laden, fehlermeldungen: meldungen.laden, wartungsmodus: wartungsmodus.laden, sicherung: sicherung.laden,
-      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); }, anbindung: async () => { await anbindung.laden(); await datenbank.laden(); }, benutzer: benutzer.laden, webdav: webdav.laden,
+      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); }, anbindung: async () => { await anbindung.laden(); await datenbank.laden(); }, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden,
       datenschutz: datenschutz.laden,
     };
     void offen[bereich]?.();
@@ -216,6 +219,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = <EingangsordnerPanel z={eingang} />;
   } else if (bereich === 'webdav') {
     rechts = <WebdavPanel z={webdav} />;
+  } else if (bereich === 'webhooks') {
+    rechts = <WebhooksPanel z={webhooks} />;
   } else if (bereich === 'systemzustand') {
     rechts = <SpeicherplatzPanel z={speicherplatz} nachAenderung={() => { void uebersicht.laden(); void wartungsmodus.laden(); }} auslastung={<><ErweiterungenHinweis liste={systemlast.stand?.erweiterungen} /><AuslastungAbschnitt z={systemlast} /></>} />;
   } else if (bereich === 'wartungsmodus') {
@@ -252,6 +257,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     { pfad: 'postfaecher', name: n('postfaecher'), gruppe: 'post', zahl: zahl(postfaecher.liste?.length, uz?.postfaecher), warn: uebersicht.stand?.postfachAnmeldung?.length || postfaecher.liste?.some((p) => p.stand.fehlerFolge > 0 || (p.oauth && p.oauth.zustand !== 'ok')) ? '!' : undefined, warnTitel: uebersicht.stand?.postfachAnmeldung?.length ? t('werkbank.leiste.postfach.anmeldung') : t('werkbank.leiste.postfach.abruf') },
     ...(eingang.stand?.vorhanden ? [{ pfad: 'eingangsordner', name: n('eingangsordner'), gruppe: 'post' as const, warn: eingang.stand.fehler?.length ? String(eingang.stand.fehler.length) : undefined, warnTitel: t('werkbank.leiste.eingangsordner') }] : []),
     { pfad: 'webdav', name: n('webdav'), gruppe: 'post', warn: webdav.stand?.einstellung.aktiv ? t('werkbank.leiste.an') : undefined, warnTitel: t('werkbank.leiste.webdav') },
+    { pfad: 'webhooks', name: n('webhooks'), gruppe: 'post', zahl: webhooks.stand?.webhooks.length || undefined, warn: webhookWarnungen(webhooks.stand) ? '!' : undefined, warnTitel: t('webhook.werkbank.leiste') },
     { pfad: 'texterkennung', name: n('texterkennung'), gruppe: 'post', warn: uebersicht.stand?.texterkennung?.fehler ? String(uebersicht.stand.texterkennung.fehler) : undefined, warnTitel: t('werkbank.leiste.texterkennung') },
     // Daten sichern
     { pfad: 'sicherung', name: n('sicherung'), gruppe: 'sichern', warn: uebersicht.stand?.sicherung && (uebersicht.stand.sicherung.fehler || (uebersicht.stand.sicherung.schluessel && uebersicht.stand.sicherung.zuAlt)) ? '!' : undefined, warnTitel: t('werkbank.leiste.sicherung') },

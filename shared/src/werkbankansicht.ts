@@ -67,6 +67,8 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'postfaecher', gruppe: 'post', in: O },
   { pfad: 'eingangsordner', gruppe: 'post', in: O },
   { pfad: 'webdav', gruppe: 'post', in: H },
+  // Webhooks (#627): bei den anderen Anbindungen für Programme (Laufwerk); meldet neue Post nach außen.
+  { pfad: 'webhooks', gruppe: 'post', in: H },
   { pfad: 'texterkennung', gruppe: 'post', in: O },
   { pfad: 'sicherung', gruppe: 'sichern', in: H },
   { pfad: 'wiederherstellung', gruppe: 'sichern', in: H },

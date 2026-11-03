@@ -11,5 +11,6 @@ import pakete from '../../shared/src/sprachen/de/pakete.json';
 import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 import api from '../../shared/src/sprachen/de/api.json';
+import webhook from '../../shared/src/sprachen/de/webhook.json';
 
-export const t = uebersetzer({ api, anmeldung, mail, mappen, pakete, systemzustand, werkbank });
+export const t = uebersetzer({ api, anmeldung, mail, mappen, pakete, systemzustand, webhook, werkbank });
