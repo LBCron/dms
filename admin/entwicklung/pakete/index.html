@@ -941,6 +941,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#mehrere-pakete-in-einem-schritt-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mehrere Pakete in einem Schritt installieren
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#uber-die-katalog-webseite" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2952,6 +2963,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#mehrere-pakete-in-einem-schritt-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mehrere Pakete in einem Schritt installieren
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#uber-die-katalog-webseite" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3482,18 +3504,15 @@
 <h2 id="installieren">Installieren<a class="headerlink" href="#installieren" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Wähle ein Paket unter <strong>Verfügbar</strong> und ggf. eine ältere Version.</li>
-<li>Klicke <strong>Installieren …</strong>. Die <strong>Vorschau</strong> zeigt, was angelegt wird:<ul>
-<li>je Mappentyp die Zahl der Felder und die Kennung, z. B. <code>basis_organisation</code></li>
-<li>die Ansichten, mit Elternansicht</li>
-<li>die Abhängigkeiten und ob sie installiert sind</li>
-<li>wie viele Beispiel-Mappen es gibt</li>
-<li>ob es <strong>gleichbedeutende Wörter</strong> für die Suche mitbringt (Wortlisten, siehe <a href="../suche/#gleichbedeutende-worter">Suche</a>)</li>
-<li>bei Paketen mit Code: <strong>was der Code darf</strong> – als Liste, Ereignisse als Unterliste, mit <strong>?</strong> zur Erklärung (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a>). Darunter bestätigst du es mit einem Haken, sonst bleibt <strong>Installieren</strong> grau</li>
+<li>Klicke <strong>Installieren …</strong>. Es öffnet sich der <a href="#mehrere-pakete-in-einem-schritt-installieren">gemeinsame Ablauf</a>: oben das Paket, darunter, was es braucht („Braucht: …“), und seine <strong>Ergänzungen</strong> als Häkchen – bei der Texterkennung etwa <strong>Weitere Sprachen?</strong> mit Französisch, Spanisch, Türkisch …</li>
+<li>Klicke <strong>Weiter mit … Paketen</strong>. Auf <strong>einer Seite</strong> fragt das DMS jetzt alles, was nötig ist, und nur das:<ul>
+<li>bei Paketen mit Code <strong>was der Code darf</strong> – je Paket als Liste, Ereignisse als Unterliste, mit <strong>?</strong> zur Erklärung (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a>). Darunter <strong>ein</strong> Haken für alle, sonst bleibt <strong>Installieren</strong> grau</li>
+<li><strong>Namen</strong>, die es schon gibt: Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, schlägt das DMS einen anderen vor, z. B. „Organisation (Basis)“. Alles andere bekommt den Namen aus dem Paket, ohne Rückfrage</li>
+<li><strong>Beispiel-Mappen</strong> – nur, wenn du den Haken setzt</li>
+<li><strong>Einstellungen</strong>, ohne die ein Paket nicht läuft – oder <strong>Später ausfüllen</strong> (siehe <a href="#einstellungen">Einstellungen</a>)</li>
 </ul>
 </li>
-<li><strong>Namen:</strong> Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, sagt die Vorschau das und schlägt einen anderen vor, z. B. „Organisation (Basis)“. Du kannst jeden Namen ändern.</li>
-<li><strong>Beispiel-Mappen</strong> legt das DMS nur an, wenn du den Haken setzt.</li>
-<li><strong>Fehlende Pakete mitinstallieren:</strong> Braucht das Paket ein anderes, das noch fehlt, installiert das DMS es auf Wunsch vorher mit (die neueste passende Version aus dem Katalog).</li>
+<li>Unten steht die <strong>Zusammenfassung</strong>: welche Pakete in welcher Reihenfolge, wie viele Mappentypen und Ansichten, Beispiele, Pakete mit Code. Darunter die Hinweise des Pakets, z. B. ob es <strong>gleichbedeutende Wörter</strong> für die Suche mitbringt (Wortlisten, siehe <a href="../suche/#gleichbedeutende-worter">Suche</a>) oder Mappentypen aus dem DMS nutzt.</li>
 <li>Klicke <strong>Installieren</strong>.</li>
 </ol>
 <p>Vor dem Anlegen prüft das DMS:</p>
@@ -3503,6 +3522,23 @@
 <li>ob das heruntergeladene Archiv zur <strong>Prüfsumme (SHA-256)</strong> im Katalog passt. Passt sie nicht, installiert das DMS nichts.</li>
 </ul>
 <p>Angelegt wird über dieselben Funktionen wie in der Werkbank, mit allen Prüfregeln. Die Kennungen bekommen das Paket-Präfix (<code>&lt;paket&gt;_&lt;schluessel&gt;</code>), damit sich Pakete nicht in die Quere kommen; Verweise auf Mappentypen anderer Pakete löst das DMS auf. <strong>Scheitert etwas, nimmt das DMS alles zurück</strong> – es bleibt nichts halb angelegt.</p>
+<h3 id="mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt installieren<a class="headerlink" href="#mehrere-pakete-in-einem-schritt-installieren" title="Permanent link">&para;</a></h3>
+<p>Ob ein Paket mit seinen Abhängigkeiten, die Texterkennung mit drei Sprachen oder zehn Pakete im <a href="../installation/#pakete-dazuholen">Einrichtungsassistenten</a> oder aus einer <a href="#pakete-ohne-internet-installieren">Sammeldatei</a>: Das DMS installiert alles in <strong>einem Ablauf</strong> – ohne Kette von Rückfragen je Paket.</p>
+<ol>
+<li><strong>Auswahl:</strong> Die Pakete als Liste. Was ein Paket braucht, kommt automatisch mit und ist mit „kommt mit – gebraucht von …“ markiert – <strong>auch Pakete mit Code</strong>. <strong>Ergänzungen</strong> eines Pakets (Pakete, die es erweitern, z. B. die Zusatzsprachen der Texterkennung) stehen als Häkchen direkt darunter, sobald du das Paket wählst; jede Ergänzung bleibt ein eigenes Paket mit eigener Version und eigenem Update.</li>
+<li><strong>Jede Frage einmal, mit Ausnahme je Paket:</strong><ul>
+<li><strong>Herkunft</strong> (nur außerhalb des offiziellen Katalogs bzw. ohne gültige Signatur): ein Haken für alle.</li>
+<li><strong>Rechte:</strong> alle Pakete mit Code untereinander, je Paket mit seinen Rechten, und <strong>ein</strong> Haken „Ich erlaube diesen Paketen jeweils diese Rechte“. Jedes Paket bekommt trotzdem nur seine <strong>eigenen</strong> Rechte und sein eigenes Dienstkonto.</li>
+<li><strong>Namen:</strong> nur Mappentypen und Ansichten, deren Name schon vergeben ist.</li>
+<li><strong>Beispiel-Mappen:</strong> ein Haken für alle Pakete mit Beispielen; unter <strong>Je Paket abwählen</strong> nimmst du einzelne heraus.</li>
+<li><strong>Einstellungen:</strong> die Pflichtfelder aller Pakete, je Paket ein Kasten. Eine Dienst-Adresse ist nie voreingestellt – <strong>Beispiel übernehmen</strong> trägt das Beispiel des Pakets ein, und du bestätigst die Adressen mit einem Haken. Mit <strong>Später ausfüllen</strong> wird das Paket trotzdem installiert, steht aber auf <strong>Einstellungen nötig</strong>, und die <a href="../uebersicht/">Übersicht der Werkbank</a> zeigt dir die Aufgabe „… braucht noch Einstellungen“, bis du sie ausgefüllt hast.</li>
+</ul>
+</li>
+<li><strong>Zusammenfassung</strong> und <strong>ein</strong> Knopf „… Pakete installieren“.</li>
+</ol>
+<p>Das DMS prüft <strong>vor dem ersten Paket</strong> alles: Herkunft, Rechte, Namen, Einstellungen und Dienst-Adressen. Fehlt etwas, installiert es <strong>nichts</strong>. Dann geht es Paket für Paket vor, Abhängigkeiten zuerst. Scheitert ein Paket trotzdem (z. B. ein ungültiges Beispiel), ist <strong>dieses Paket vollständig zurückgenommen</strong>; die davor bleiben installiert, die danach kommen nicht mehr dran – das Ergebnis nennt genau, was installiert ist und was nicht.</p>
+<p>Deine Bestätigung gilt nur für <strong>genau die Rechte, die du gesehen hast</strong>. Ändern sie sich bis zum Klick (z. B. weil der Katalog inzwischen eine neue Version mit mehr Rechten hat), zeigt das DMS die neuen Rechte und fragt noch einmal. Während eine Installation läuft, warten andere Installationen, Updates und das Entfernen von Paketen – auch auf einem zweiten Server mit derselben Datenbank.</p>
+<p><strong>Nachträglich:</strong> Unter <strong>Werkbank → Pakete → <em>Paket</em></strong> stehen die Ergänzungen, die es dazu im Katalog gibt (z. B. <strong>Weitere Sprachen</strong> bei der Texterkennung), mit <strong>Auswählen …</strong> – danach derselbe Ablauf. Die Seite der <a href="../texterkennung/#weitere-sprachen">Texterkennung</a> schlägt Sprachen vor, die in deinen Dokumenten vorkommen.</p>
 <p>Mappentypen aus Paketen tragen in <strong>Werkbank → Mappentypen</strong> den Hinweis <strong>Paket …</strong>. Du kannst sie danach wie jeden anderen Mappentyp anpassen.</p>
 <h3 id="uber-die-katalog-webseite">Über die Katalog-Webseite<a class="headerlink" href="#uber-die-katalog-webseite" title="Permanent link">&para;</a></h3>
 <p>Den Katalog gibt es auch als Webseite: <a href="https://motom001.github.io/dms-registry/">Paketkatalog</a> (auch auf der Startseite der Handbücher). Dort siehst du je Paket die Beschreibung, was angelegt wird, Rechte, Änderungen und ältere Versionen.</p>
@@ -3609,7 +3645,7 @@
 </ul>
 <p><strong>Lebenszyklus:</strong></p>
 <ul>
-<li><strong>Installieren</strong> setzt die Vorgaben. Fehlen Pflichtfelder, steht das Paket auf <strong>Einstellungen nötig</strong> und läuft erst danach.</li>
+<li><strong>Installieren</strong> setzt die Vorgaben. Pflichtfelder ohne Vorgabe fragt der <a href="#mehrere-pakete-in-einem-schritt-installieren">Ablauf</a> gleich mit ab; wählst du <strong>Später ausfüllen</strong>, steht das Paket auf <strong>Einstellungen nötig</strong>, die Übersicht der Werkbank nennt es als Aufgabe, und es läuft erst danach.</li>
 <li><strong>Aktualisieren:</strong> Neue Felder bekommen ihre Vorgabe, vorhandene Werte bleiben. Felder, die die neue Version nicht mehr kennt, werden entfernt – die Vorschau vor dem Update nennt sie.</li>
 <li><strong>Entfernen</strong> fragt, ob die Einstellungen für eine spätere Neuinstallation <strong>bleiben</strong> sollen (Standard: nein).</li>
 </ul>
@@ -3618,7 +3654,7 @@
 <p>Manche Pakete bringen <strong>Code</strong> mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und auf die <strong>Aktionen</strong> im Reiter „Einstellungen“. Das DMS führt ihn im <strong>Paket-Läufer</strong> aus:</p>
 <ul>
 <li><strong>Abgeschottet:</strong> Der Code ist WebAssembly und läuft in einem eigenen Prozess des DMS, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt, und unter der <a href="#dienst-adresse">Dienst-Adresse</a>, die du in seinen Einstellungen einträgst – meist gar nicht.</li>
-<li><strong>Nur bestätigte Rechte:</strong> Vor der Installation zeigt die Vorschau, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a> und <a href="#ereignisse">Ereignisse</a>). Erst wenn du das bestätigst, installiert das DMS. Will ein <strong>Update</strong> mehr Rechte oder andere Adressen, fragt das DMS erneut.</li>
+<li><strong>Nur bestätigte Rechte:</strong> Vor der Installation zeigt das DMS, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a> und <a href="#ereignisse">Ereignisse</a>). Erst wenn du das bestätigst, installiert das DMS. Kommen mehrere Pakete mit Code zusammen (etwa eine Zusatzsprache samt Texterkennung), stehen alle Rechte aller Pakete auf einer Seite und du bestätigst sie <strong>einmal</strong> (siehe <a href="#mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt</a>). Will ein <strong>Update</strong> mehr Rechte oder andere Adressen, fragt das DMS erneut.</li>
 <li><strong>Dienstkonto:</strong> Für jedes Paket mit Code legt das DMS ein Dienstkonto „Paket <em>Name</em>“ an. Mit ihm arbeitet der Code über die API; die Historie zeigt deshalb, was ein Paket geändert hat. Dienstkonten erscheinen nicht unter <strong>Benutzer</strong>, melden sich nie an und können <strong>nie löschen</strong> – auch nicht mit Rechten auf alle Mappentypen. Benutzer und Passwörter sehen sie nicht.</li>
 <li><strong>Grenzen:</strong> Jeder Aufruf hat höchstens 256 MB Speicher und 2 Minuten Zeit; es laufen höchstens zwei Aufrufe gleichzeitig. Was die Grenzen reißt, bricht ab, ohne das DMS zu stören.</li>
 <li><strong>Wiederholen:</strong> Ereignisse merkt sich das DMS. Scheitert ein Aufruf, versucht es der Läufer nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf. Während einer Wartung (z. B. beim Wiederherstellen) ruht der Läufer.</li>
@@ -3897,7 +3933,7 @@
 <li>Kreuze die Pakete an. Die <strong>DMS-Version</strong> bestimmt, welche Paketversionen passen (Vorgabe: die Version, die sich dein Browser gemerkt hat, sonst die neueste). <strong>Abhängigkeiten</strong> wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.</li>
 <li><strong>Sammeldatei herunterladen.</strong> Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen – mit einer Kopie des signierten Katalogs. Sie zeigt den <strong>SHA-256</strong> der fertigen Datei.</li>
 <li>Bring die Datei zum DMS (USB-Stick, Netzlaufwerk) und lade sie unter <strong>Werkbank → Pakete → Ohne Internet …</strong> hoch – oder im <a href="../installation/#pakete-dazuholen">Einrichtungsassistenten</a>, wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch <strong>Paket hochladen</strong> im Expertenmodus an.</li>
-<li>Das DMS zeigt den Inhalt: je Paket die Version und ob es <strong>neu</strong>, ein <strong>Update</strong>, <strong>schon installiert</strong> oder <strong>älter als installiert</strong> ist und ob es zur DMS-Version passt. Enthält die Datei den signierten Katalog, steht dort <strong>Herkunft: aus dem offiziellen Katalog vom …</strong>; sonst bestätigst du einmal, dass du weißt, woher die Datei stammt. Dann installierst du <strong>Paket für Paket</strong>, Abhängigkeiten zuerst. Jedes zeigt seine Vorschau; Pakete mit Code installierst du erst, wenn du <strong>ihre</strong> Rechte bestätigt hast. Mit <strong>Auslassen</strong> überspringst du ein Paket.</li>
+<li>Das DMS zeigt den Inhalt: je Paket die Version und ob es <strong>neu</strong>, ein <strong>Update</strong>, <strong>schon installiert</strong> oder <strong>älter als installiert</strong> ist und ob es zur DMS-Version passt. Ergänzungen (z. B. Zusatzsprachen) stehen unter ihrem Paket. Enthält die Datei den signierten Katalog, steht dort <strong>Herkunft: aus dem offiziellen Katalog vom …</strong>; sonst bestätigst du im Ablauf einmal, dass du weißt, woher die Datei stammt. Abwählen kannst du jedes Paket, das kein anderes gewähltes braucht. Danach geht es weiter wie unter <a href="#mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt</a>: eine Rechte-Bestätigung, Namen nur bei Konflikten, Beispiele, Einstellungen, ein Knopf.</li>
 </ol>
 <h3 id="wie-das-dms-einer-sammeldatei-traut">Wie das DMS einer Sammeldatei traut<a class="headerlink" href="#wie-das-dms-einer-sammeldatei-traut" title="Permanent link">&para;</a></h3>
 <p>Die Sammeldatei ist ein ZIP mit dem Verzeichnis <code>sammeldatei.json</code> (je Paket Id, Version, Größe und SHA-256), einer kurzen <code>LIESMICH.txt</code>, den Paket-Archiven aus dem Katalog, Byte für Byte unverändert, und – bei Sammeldateien aus dem signierten Katalog – einer Kopie von <code>katalog.json</code> mit <code>katalog.sig</code>. Das DMS nimmt sie <strong>nur ganz oder gar nicht</strong> an:</p>

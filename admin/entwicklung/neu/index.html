@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0150" class="md-skip">
+        <a href="#neu-in-version-0151" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -363,15 +363,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01500" class="md-nav__link">
+  <a href="#01510" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.150.0
+        0.151.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.150.0">
+    <nav class="md-nav" aria-label="0.151.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -386,10 +386,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#paketformat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paketformat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#handbuch" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -2455,15 +2477,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01500" class="md-nav__link">
+  <a href="#01510" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.150.0
+        0.151.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.150.0">
+    <nav class="md-nav" aria-label="0.151.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2478,10 +2500,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#paketformat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paketformat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#handbuch" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
       
     </span>
   </a>
@@ -2524,43 +2568,41 @@
   
 
 
-<h1 id="neu-in-version-0150">Neu in Version 0.150<a class="headerlink" href="#neu-in-version-0150" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0151">Neu in Version 0.151<a class="headerlink" href="#neu-in-version-0151" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01500">0.150.0<a class="headerlink" href="#01500" title="Permanent link">&para;</a></h2>
+<h2 id="01510">0.151.0<a class="headerlink" href="#01510" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Webhooks: das DMS meldet neue Post, Aufgaben und Fristen sofort</strong> (#627): Unter <strong>Profil → Benachrichtigungen → Sofort melden</strong> legt jeder Benutzer Webhooks an. Sobald sich seine Zahlen ändern – dieselben wie beim Zähler-Endpunkt (#625): neue Post, Zu erledigen, anstehend, überfällig –, schickt das DMS wenige Sekunden später einen <code>POST</code> an die Adresse. Hausautomatisierung (Homey, Node-RED, ioBroker, openHAB) und Skripte reagieren sofort, die regelmäßige Abfrage darf seltener laufen.</li>
+<li><strong>Mehrere Pakete in einem Schritt</strong> (#405): Ob ein Paket mit seinen Abhängigkeiten, die Texterkennung mit drei Sprachen oder zehn Pakete auf einmal – das DMS installiert alles in <strong>einem Ablauf</strong> statt einer Kette von Rückfragen je Paket. Erst die <strong>Auswahl</strong> (Abhängigkeiten kommen mit und sind markiert), dann <strong>eine Seite mit allen Fragen</strong>, eine <strong>Zusammenfassung</strong> und <strong>ein</strong> Knopf.</li>
+<li><strong>Abhängigkeiten mit Code</strong> installieren sich jetzt mit: Die Rechte aller Pakete stehen untereinander, ein Haken erlaubt sie. Jedes Paket behält sein eigenes Dienstkonto und seine eigenen Rechte. Die Bestätigung gilt nur für genau die gezeigten Rechte – ändern sie sich bis zum Klick, fragt das DMS neu.</li>
+<li><strong>Ergänzungen als Häkchen:</strong> Zusatzsprachen der Texterkennung erscheinen als <strong>Weitere Sprachen?</strong> direkt unter dem Paket – beim ersten Installieren, im Einrichtungsassistenten, aus einer Sammeldatei und nachträglich unter <strong>Werkbank → Pakete → Texterkennung</strong>. Jede Sprache bleibt ein eigenes Paket mit eigener Version.</li>
+<li><strong>Jede Frage einmal, mit Ausnahme je Paket:</strong> Herkunft ein Haken für alle, Namen nur bei Konflikten (auch zwischen Paketen desselben Ablaufs), Beispiel-Mappen „für alle“ und je Paket abwählbar, <strong>Pflicht-Einstellungen aller Pakete</strong> im selben Ablauf – oder <strong>Später ausfüllen</strong>: Dann steht das Paket auf „Einstellungen nötig“, und die Übersicht der Werkbank zeigt die Aufgabe „… braucht noch Einstellungen“.</li>
+<li><strong>Kein halber Zustand:</strong> Das DMS prüft alles, bevor es das erste Paket anlegt. Scheitert ein Paket trotzdem, ist es vollständig zurückgenommen; das Ergebnis nennt genau, was installiert ist und was nicht.</li>
+<li>Derselbe Ablauf in <strong>Werkbank → Pakete</strong>, beim Link aus der Katalog-Webseite, im <strong>Einrichtungsassistenten</strong> (#460) und für die <strong>Sammeldatei</strong> (#461).</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"art"</span><span class="p">:</span><span class="s2">"zaehler.geaendert"</span><span class="p">,</span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11"</span><span class="p">,</span><span class="nt">"zeit"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:02.000Z"</span><span class="p">,</span><span class="nt">"daten"</span><span class="p">:{</span><span class="nt">"neuePost"</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="nt">"zuErledigen"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="nt">"anstehend"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">"ueberfaellig"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="nt">"stand"</span><span class="p">:</span><span class="mi">42</span><span class="p">,</span><span class="nt">"geaendert"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:00.000Z"</span><span class="p">}}</span>
-</code></pre></div>
+<h3 id="paketformat">Paketformat<a class="headerlink" href="#paketformat" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Nur Zahlen</strong>, nie Titel, Absender, Namen oder Inhalte – und nur an Ziele, die ein Administrator freigegeben hat (kein Kontakt zum Projekt oder zu anderen Servern).</li>
-<li><strong>Signiert:</strong> <code>X-DMS-Signatur: v1=&lt;HMAC-SHA256&gt;</code> über <code>&lt;X-DMS-Zeit&gt;.&lt;Rumpf&gt;</code> mit einem Geheimnis je Webhook (<code>whsec_…</code>, nur beim Anlegen sichtbar, verschlüsselt gespeichert und beim Schlüsselwechsel mit umgeschlüsselt). Dazu <code>X-DMS-Ereignis</code> (Ereignis-Id), <code>X-DMS-Art</code>, <code>X-DMS-Versuch</code>.</li>
-<li><strong>Zusammengefasst:</strong> höchstens eine Meldung je 30 Sekunden und Webhook, immer mit dem neuesten Stand – 20 Briefe aus dem Scanner ergeben wenige Meldungen.</li>
-<li><strong>Mindestens einmal:</strong> Die Meldungen warten in der Datenbank. Bei Fehlern wiederholt das DMS mit wachsenden Abständen etwa einen Tag lang (12 Versuche) und schaltet den Webhook danach ab, mit Hinweis im Profil, in der Werkbank und per E-Mail an die Administratoren. Eine Wiederholung trägt dieselbe Ereignis-Id.</li>
-<li><strong>Probe senden</strong>, Ein-/Ausschalten, <strong>Neues Geheimnis</strong> und die letzten Meldungen an jedem Webhook.</li>
-<li>
-<p>Nur <code>https://</code>, im Heimnetz auch <code>http://</code>; Weiterleitungen folgt das DMS nicht; Zeitgrenze 5 Sekunden.</p>
-</li>
-<li>
-<p><strong>Werkbank → Webhooks</strong> (Gruppe <em>Post und Eingänge</em>, auch in der Vorlage <em>Haushalt</em>): <strong>freigegebene Ziele</strong> eintragen, alle Webhooks mit letzter Zustellung und Fehlern sehen, abschalten (dann schaltet nur ein Administrator wieder ein) und löschen. Ein <strong>!</strong> in der Leiste zeigt Webhooks mit Fehlern.</p>
-</li>
-<li>
-<p><strong>Update:</strong> Migration 058 legt die Tabellen <code>webhooks</code> und <code>webhook_meldungen</code> an. Bis ein Administrator ein Ziel freigibt, ändert sich nichts. Keine neue Abhängigkeit.</p>
-</li>
+<li>Neues optionales Manifest-Feld <strong><code>ergaenzt</code></strong> (<code>ergaenzt: texterkennung</code> oder <code>{ paket, gruppe }</code>), im Katalog je Version (motom001/dms-registry#104). Ältere DMS ignorieren es. Die zehn Zusatzsprachen der Texterkennung tragen es seit ihrer neuen Patch-Version.</li>
 </ul>
 <h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Administratorhandbuch: neue Seite <strong>Webhooks</strong> (Ziele freigeben, Übersicht, Zustellung, Köpfe, Signatur); Schnittstelle mit Verweis vom Zähler.</li>
-<li>Benutzerhandbuch, In die Hausautomatisierung einbinden: Abschnitt <strong>Sofort melden (Webhook)</strong> mit Beispiel für <strong>Node-RED</strong>; Profil → Benachrichtigungen.</li>
-<li>Entwicklerhandbuch, Aufbau: <strong>Webhooks</strong> – Format, Signatur prüfen mit Beispiel in JavaScript und Python, Ablauf auf mehreren Servern.</li>
+<li>Administratorhandbuch: <strong>Pakete → Mehrere Pakete in einem Schritt installieren</strong>, Installieren, Einstellungen, Pakete ohne Internet, Einrichtung („Pakete dazuholen“), Texterkennung („Weitere Sprachen“, auch: Bremsen mehr Sprachen die Erkennung?), Übersicht.</li>
+<li>Entwicklerhandbuch: Paketformat → <strong>Abhängigkeiten</strong> und <strong>Ergänzungen</strong>; Pakete mit Code → Zusatzdaten.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>API: <code>POST /api/werkbank/pakete/ablauf/plan</code> (nichts wird gespeichert) und <code>POST /api/werkbank/pakete/ablauf/installieren</code> (rechnet den Plan neu; Rechte-Bestätigung über den Prüfwert <code>rechteStand</code>). <code>pakete</code> nimmt auch <code>id@version</code>.</li>
+<li>Installieren, Aktualisieren und Entfernen von Paketen laufen nacheinander – Sperre in PostgreSQL (<code>pg_try_advisory_lock</code>), auch über mehrere Server.</li>
+<li><code>shared/src/pakete.ts</code> (Ergänzungen, Typen des Ablaufs), <code>server/src/pakete.ts</code> (Plan und Installation), <code>web/src/werkbank/PaketAblauf.tsx</code>; der bisherige Ablauf „Paket für Paket“ ist entfallen.</li>
+<li>Tests: <code>server/test/paketablauf.test.ts</code> (Speicher und PostgreSQL).</li>
+<li>Keine Migration, keine neue Abhängigkeit.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.149.1 im Detail: <a href="https://github.com/motom001/dms/compare/v0.149.1...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.150.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.150.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
