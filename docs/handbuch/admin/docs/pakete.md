@@ -18,17 +18,14 @@ Das DMS lädt den Katalog von `https://raw.githubusercontent.com/motom001/dms-re
 ## Installieren
 
 1. Wähle ein Paket unter **Verfügbar** und ggf. eine ältere Version.
-2. Klicke **Installieren …**. Die **Vorschau** zeigt, was angelegt wird:
-    - je Mappentyp die Zahl der Felder und die Kennung, z. B. `basis_organisation`
-    - die Ansichten, mit Elternansicht
-    - die Abhängigkeiten und ob sie installiert sind
-    - wie viele Beispiel-Mappen es gibt
-    - ob es **gleichbedeutende Wörter** für die Suche mitbringt (Wortlisten, siehe [Suche](suche.md#gleichbedeutende-worter))
-    - bei Paketen mit Code: **was der Code darf** – als Liste, Ereignisse als Unterliste, mit **?** zur Erklärung (siehe [Rechte eines Pakets](#rechte-eines-pakets)). Darunter bestätigst du es mit einem Haken, sonst bleibt **Installieren** grau
-3. **Namen:** Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, sagt die Vorschau das und schlägt einen anderen vor, z. B. „Organisation (Basis)“. Du kannst jeden Namen ändern.
-4. **Beispiel-Mappen** legt das DMS nur an, wenn du den Haken setzt.
-5. **Fehlende Pakete mitinstallieren:** Braucht das Paket ein anderes, das noch fehlt, installiert das DMS es auf Wunsch vorher mit (die neueste passende Version aus dem Katalog).
-6. Klicke **Installieren**.
+2. Klicke **Installieren …**. Es öffnet sich der [gemeinsame Ablauf](#mehrere-pakete-in-einem-schritt-installieren): oben das Paket, darunter, was es braucht („Braucht: …“), und seine **Ergänzungen** als Häkchen – bei der Texterkennung etwa **Weitere Sprachen?** mit Französisch, Spanisch, Türkisch …
+3. Klicke **Weiter mit … Paketen**. Auf **einer Seite** fragt das DMS jetzt alles, was nötig ist, und nur das:
+    - bei Paketen mit Code **was der Code darf** – je Paket als Liste, Ereignisse als Unterliste, mit **?** zur Erklärung (siehe [Rechte eines Pakets](#rechte-eines-pakets)). Darunter **ein** Haken für alle, sonst bleibt **Installieren** grau
+    - **Namen**, die es schon gibt: Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, schlägt das DMS einen anderen vor, z. B. „Organisation (Basis)“. Alles andere bekommt den Namen aus dem Paket, ohne Rückfrage
+    - **Beispiel-Mappen** – nur, wenn du den Haken setzt
+    - **Einstellungen**, ohne die ein Paket nicht läuft – oder **Später ausfüllen** (siehe [Einstellungen](#einstellungen))
+4. Unten steht die **Zusammenfassung**: welche Pakete in welcher Reihenfolge, wie viele Mappentypen und Ansichten, Beispiele, Pakete mit Code. Darunter die Hinweise des Pakets, z. B. ob es **gleichbedeutende Wörter** für die Suche mitbringt (Wortlisten, siehe [Suche](suche.md#gleichbedeutende-worter)) oder Mappentypen aus dem DMS nutzt.
+5. Klicke **Installieren**.
 
 Vor dem Anlegen prüft das DMS:
 
@@ -37,6 +34,25 @@ Vor dem Anlegen prüft das DMS:
 - ob das heruntergeladene Archiv zur **Prüfsumme (SHA-256)** im Katalog passt. Passt sie nicht, installiert das DMS nichts.
 
 Angelegt wird über dieselben Funktionen wie in der Werkbank, mit allen Prüfregeln. Die Kennungen bekommen das Paket-Präfix (`<paket>_<schluessel>`), damit sich Pakete nicht in die Quere kommen; Verweise auf Mappentypen anderer Pakete löst das DMS auf. **Scheitert etwas, nimmt das DMS alles zurück** – es bleibt nichts halb angelegt.
+
+### Mehrere Pakete in einem Schritt installieren { #mehrere-pakete-in-einem-schritt-installieren }
+
+Ob ein Paket mit seinen Abhängigkeiten, die Texterkennung mit drei Sprachen oder zehn Pakete im [Einrichtungsassistenten](installation.md#pakete-dazuholen) oder aus einer [Sammeldatei](#pakete-ohne-internet-installieren): Das DMS installiert alles in **einem Ablauf** – ohne Kette von Rückfragen je Paket.
+
+1. **Auswahl:** Die Pakete als Liste. Was ein Paket braucht, kommt automatisch mit und ist mit „kommt mit – gebraucht von …“ markiert – **auch Pakete mit Code**. **Ergänzungen** eines Pakets (Pakete, die es erweitern, z. B. die Zusatzsprachen der Texterkennung) stehen als Häkchen direkt darunter, sobald du das Paket wählst; jede Ergänzung bleibt ein eigenes Paket mit eigener Version und eigenem Update.
+2. **Jede Frage einmal, mit Ausnahme je Paket:**
+    - **Herkunft** (nur außerhalb des offiziellen Katalogs bzw. ohne gültige Signatur): ein Haken für alle.
+    - **Rechte:** alle Pakete mit Code untereinander, je Paket mit seinen Rechten, und **ein** Haken „Ich erlaube diesen Paketen jeweils diese Rechte“. Jedes Paket bekommt trotzdem nur seine **eigenen** Rechte und sein eigenes Dienstkonto.
+    - **Namen:** nur Mappentypen und Ansichten, deren Name schon vergeben ist.
+    - **Beispiel-Mappen:** ein Haken für alle Pakete mit Beispielen; unter **Je Paket abwählen** nimmst du einzelne heraus.
+    - **Einstellungen:** die Pflichtfelder aller Pakete, je Paket ein Kasten. Eine Dienst-Adresse ist nie voreingestellt – **Beispiel übernehmen** trägt das Beispiel des Pakets ein, und du bestätigst die Adressen mit einem Haken. Mit **Später ausfüllen** wird das Paket trotzdem installiert, steht aber auf **Einstellungen nötig**, und die [Übersicht der Werkbank](uebersicht.md) zeigt dir die Aufgabe „… braucht noch Einstellungen“, bis du sie ausgefüllt hast.
+3. **Zusammenfassung** und **ein** Knopf „… Pakete installieren“.
+
+Das DMS prüft **vor dem ersten Paket** alles: Herkunft, Rechte, Namen, Einstellungen und Dienst-Adressen. Fehlt etwas, installiert es **nichts**. Dann geht es Paket für Paket vor, Abhängigkeiten zuerst. Scheitert ein Paket trotzdem (z. B. ein ungültiges Beispiel), ist **dieses Paket vollständig zurückgenommen**; die davor bleiben installiert, die danach kommen nicht mehr dran – das Ergebnis nennt genau, was installiert ist und was nicht.
+
+Deine Bestätigung gilt nur für **genau die Rechte, die du gesehen hast**. Ändern sie sich bis zum Klick (z. B. weil der Katalog inzwischen eine neue Version mit mehr Rechten hat), zeigt das DMS die neuen Rechte und fragt noch einmal. Während eine Installation läuft, warten andere Installationen, Updates und das Entfernen von Paketen – auch auf einem zweiten Server mit derselben Datenbank.
+
+**Nachträglich:** Unter **Werkbank → Pakete → *Paket*** stehen die Ergänzungen, die es dazu im Katalog gibt (z. B. **Weitere Sprachen** bei der Texterkennung), mit **Auswählen …** – danach derselbe Ablauf. Die Seite der [Texterkennung](texterkennung.md#weitere-sprachen) schlägt Sprachen vor, die in deinen Dokumenten vorkommen.
 
 Mappentypen aus Paketen tragen in **Werkbank → Mappentypen** den Hinweis **Paket …**. Du kannst sie danach wie jeden anderen Mappentyp anpassen.
 
@@ -142,7 +158,7 @@ Manche Pakete brauchen Einstellungen – etwa Regeln, nach denen sie Post zuordn
 
 **Lebenszyklus:**
 
-- **Installieren** setzt die Vorgaben. Fehlen Pflichtfelder, steht das Paket auf **Einstellungen nötig** und läuft erst danach.
+- **Installieren** setzt die Vorgaben. Pflichtfelder ohne Vorgabe fragt der [Ablauf](#mehrere-pakete-in-einem-schritt-installieren) gleich mit ab; wählst du **Später ausfüllen**, steht das Paket auf **Einstellungen nötig**, die Übersicht der Werkbank nennt es als Aufgabe, und es läuft erst danach.
 - **Aktualisieren:** Neue Felder bekommen ihre Vorgabe, vorhandene Werte bleiben. Felder, die die neue Version nicht mehr kennt, werden entfernt – die Vorschau vor dem Update nennt sie.
 - **Entfernen** fragt, ob die Einstellungen für eine spätere Neuinstallation **bleiben** sollen (Standard: nein).
 
@@ -153,7 +169,7 @@ Die Einstellungen sind **Teil der Sicherung**; Geheimnisse bleiben dabei verschl
 Manche Pakete bringen **Code** mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und auf die **Aktionen** im Reiter „Einstellungen“. Das DMS führt ihn im **Paket-Läufer** aus:
 
 - **Abgeschottet:** Der Code ist WebAssembly und läuft in einem eigenen Prozess des DMS, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt, und unter der [Dienst-Adresse](#dienst-adresse), die du in seinen Einstellungen einträgst – meist gar nicht.
-- **Nur bestätigte Rechte:** Vor der Installation zeigt die Vorschau, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe [Rechte eines Pakets](#rechte-eines-pakets) und [Ereignisse](#ereignisse)). Erst wenn du das bestätigst, installiert das DMS. Will ein **Update** mehr Rechte oder andere Adressen, fragt das DMS erneut.
+- **Nur bestätigte Rechte:** Vor der Installation zeigt das DMS, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe [Rechte eines Pakets](#rechte-eines-pakets) und [Ereignisse](#ereignisse)). Erst wenn du das bestätigst, installiert das DMS. Kommen mehrere Pakete mit Code zusammen (etwa eine Zusatzsprache samt Texterkennung), stehen alle Rechte aller Pakete auf einer Seite und du bestätigst sie **einmal** (siehe [Mehrere Pakete in einem Schritt](#mehrere-pakete-in-einem-schritt-installieren)). Will ein **Update** mehr Rechte oder andere Adressen, fragt das DMS erneut.
 - **Dienstkonto:** Für jedes Paket mit Code legt das DMS ein Dienstkonto „Paket *Name*“ an. Mit ihm arbeitet der Code über die API; die Historie zeigt deshalb, was ein Paket geändert hat. Dienstkonten erscheinen nicht unter **Benutzer**, melden sich nie an und können **nie löschen** – auch nicht mit Rechten auf alle Mappentypen. Benutzer und Passwörter sehen sie nicht.
 - **Grenzen:** Jeder Aufruf hat höchstens 256 MB Speicher und 2 Minuten Zeit; es laufen höchstens zwei Aufrufe gleichzeitig. Was die Grenzen reißt, bricht ab, ohne das DMS zu stören.
 - **Wiederholen:** Ereignisse merkt sich das DMS. Scheitert ein Aufruf, versucht es der Läufer nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf. Während einer Wartung (z. B. beim Wiederherstellen) ruht der Läufer.
@@ -422,7 +438,7 @@ Kommt dein DMS nicht ins Internet, holst du mehrere Pakete auf einmal als **Samm
 2. Kreuze die Pakete an. Die **DMS-Version** bestimmt, welche Paketversionen passen (Vorgabe: die Version, die sich dein Browser gemerkt hat, sonst die neueste). **Abhängigkeiten** wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.
 3. **Sammeldatei herunterladen.** Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen – mit einer Kopie des signierten Katalogs. Sie zeigt den **SHA-256** der fertigen Datei.
 4. Bring die Datei zum DMS (USB-Stick, Netzlaufwerk) und lade sie unter **Werkbank → Pakete → Ohne Internet …** hoch – oder im [Einrichtungsassistenten](installation.md#pakete-dazuholen), wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch **Paket hochladen** im Expertenmodus an.
-5. Das DMS zeigt den Inhalt: je Paket die Version und ob es **neu**, ein **Update**, **schon installiert** oder **älter als installiert** ist und ob es zur DMS-Version passt. Enthält die Datei den signierten Katalog, steht dort **Herkunft: aus dem offiziellen Katalog vom …**; sonst bestätigst du einmal, dass du weißt, woher die Datei stammt. Dann installierst du **Paket für Paket**, Abhängigkeiten zuerst. Jedes zeigt seine Vorschau; Pakete mit Code installierst du erst, wenn du **ihre** Rechte bestätigt hast. Mit **Auslassen** überspringst du ein Paket.
+5. Das DMS zeigt den Inhalt: je Paket die Version und ob es **neu**, ein **Update**, **schon installiert** oder **älter als installiert** ist und ob es zur DMS-Version passt. Ergänzungen (z. B. Zusatzsprachen) stehen unter ihrem Paket. Enthält die Datei den signierten Katalog, steht dort **Herkunft: aus dem offiziellen Katalog vom …**; sonst bestätigst du im Ablauf einmal, dass du weißt, woher die Datei stammt. Abwählen kannst du jedes Paket, das kein anderes gewähltes braucht. Danach geht es weiter wie unter [Mehrere Pakete in einem Schritt](#mehrere-pakete-in-einem-schritt-installieren): eine Rechte-Bestätigung, Namen nur bei Konflikten, Beispiele, Einstellungen, ein Knopf.
 
 ### Wie das DMS einer Sammeldatei traut
 

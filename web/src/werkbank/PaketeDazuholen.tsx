@@ -1,131 +1,34 @@
 import { useEffect, useState } from 'react';
-import { auswahlMitAbhaengigkeiten, dmsPasst, herkunftText, KATALOG_LINK_REL, sammelSeiteMitVersion, vergleicheVersion, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, type RechtePunkt } from '../../../shared/src/pakete';
-import { api, ApiFehler, type PaketVorschau, type Sammeldatei, type SammelPaket } from '../api';
+import { KATALOG_LINK_REL, sammelSeiteMitVersion, type AblaufErgebnis, type InstalliertesPaket, type Katalog } from '../../../shared/src/pakete';
+import { api, ApiFehler, type PaketVorschau, type Sammeldatei } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Symbol } from '../Symbol';
-import { alsMeldung, MeldungBox, VorschauBlock, type Meldung } from './Pakete';
 import { HerkunftZeile } from './Herkunft';
+import { PaketAblauf, sammelStand } from './PaketAblauf';
 import { t } from '../sprache';
 
 /**
- * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog mit Abhängigkeiten, danach Paket für Paket
- * installieren – jedes mit seiner eigenen Vorschau und, bei Code, seiner eigenen Rechte-Bestätigung (#449).
- * Keine Sammelbestätigung. Der Katalog wird erst abgefragt, wenn diese Ansicht erscheint.
+ * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog mit Abhängigkeiten und Ergänzungen (#405, z. B. weitere
+ * Sprachen der Texterkennung), dann ein gemeinsamer Ablauf mit einer Rechte-Bestätigung für alle Pakete und einem Knopf.
+ * Der Katalog wird erst abgefragt, wenn diese Ansicht erscheint.
  */
-
-/** Ein Paket, das nacheinander installiert wird: Vorschau holen, installieren. */
-export interface Schritt {
-  schluessel: string; name: string; version: string;
-  /** Kommt als Abhängigkeit mit (für die Überschrift). */
-  fuer?: string[];
-  vorschau(): Promise<PaketVorschau>;
-  installieren(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean; bestaetigt?: boolean }): Promise<InstalliertesPaket>;
-}
-export type Ergebnis = { schluessel: string; name: string; version: string; art: 'installiert' | 'ausgelassen' };
 
 /** Vorgewählt (#460): ohne Texterkennung werden gescannte Dokumente nicht durchsuchbar (#458). */
 export const VORAUSWAHL = ['texterkennung'];
-
-/** Paket für Paket installieren; danach fertig(ergebnisse). */
-export function Nacheinander({ schritte, warnung, fertig, herkunftBestaetigt }: { schritte: Schritt[]; warnung?: string | null; fertig(e: Ergebnis[]): void; herkunftBestaetigt?: boolean }) {
-  const [i, setI] = useState(0);
-  const [ergebnisse, setErgebnisse] = useState<Ergebnis[]>([]);
-  const [vorschau, setVorschau] = useState<PaketVorschau | null>(null);
-  const [meldung, setMeldung] = useState<Meldung>();
-  const [laden, setLaden] = useState(0);
-  const s = schritte[i];
-  useEffect(() => {
-    if (!s) return;
-    let aktuell = true;
-    setVorschau(null); setMeldung(undefined);
-    s.vorschau().then((v) => aktuell && setVorschau(v), (e) => aktuell && setMeldung(alsMeldung(e)));
-    return () => { aktuell = false; };
-    // Je Paket (i) bzw. nach „Nochmal versuchen“ neu – nicht bei jedem Neuzeichnen der Liste.
-  }, [i, laden]);
-  const naechster = (e: Ergebnis) => {
-    const alle = [...ergebnisse, e];
-    setErgebnisse(alle);
-    if (i + 1 >= schritte.length) fertig(alle); else setI(i + 1);
-  };
-  if (!s) return null;
-  const auslassen = () => naechster({ schluessel: s.schluessel, name: s.name, version: s.version, art: 'ausgelassen' });
-  return (
-    <div className="stapel">
-      <ol className="pd-fortschritt" aria-label="Pakete">
-        {schritte.map((x, j) => {
-          const e = ergebnisse[j];
-          return <li key={x.schluessel} className={j === i ? 'aktiv' : e ? e.art : ''} aria-current={j === i ? 'step' : undefined}>{x.name} {x.version}{e && <span className="leise"> – {e.art}</span>}</li>;
-        })}
-      </ol>
-      <MeldungBox m={meldung} />
-      {!vorschau && !meldung && <p className="leise">Prüfe „{s.name}“ {s.version} …</p>}
-      {!vorschau && meldung && (
-        <div className="knoepfe"><button type="button" className="knopf" onClick={() => setLaden((n) => n + 1)}>Nochmal versuchen</button><button type="button" className="textknopf" onClick={auslassen}>Auslassen</button></div>
-      )}
-      {vorschau && (
-        <VorschauBlock key={s.schluessel} v={vorschau} warnung={warnung ?? null} abbrechenText="Auslassen" abbrechen={auslassen} herkunftBestaetigt={herkunftBestaetigt}
-          titel={`Paket ${i + 1} von ${schritte.length}: ${vorschau.paket.name} ${vorschau.paket.version}${s.fuer?.length ? ` (gebraucht von ${s.fuer.join(', ')})` : ''}`}
-          los={async (x) => {
-            setMeldung(undefined);
-            try { const r = await s.installieren(x); naechster({ schluessel: s.schluessel, name: r.name, version: r.version, art: 'installiert' }); }
-            catch (e) { setMeldung(alsMeldung(e)); }
-          }} />
-      )}
-    </div>
-  );
-}
-
-/** Ergebnis lesbar: „Installiert: … · Ausgelassen: …“. */
-export function ErgebnisListe({ e }: { e: Ergebnis[] }) {
-  const inst = e.filter((x) => x.art === 'installiert'), aus = e.filter((x) => x.art === 'ausgelassen');
-  return (
-    <div className={`hinweis ${inst.length ? 'gut' : 'info'}`} role="status">
-      {inst.length > 0 && <p><strong>Installiert:</strong> {inst.map((x) => `${x.name} ${x.version}`).join(', ')}.</p>}
-      {aus.length > 0 && <p>Ausgelassen: {aus.map((x) => x.name).join(', ')}. Das holst du jederzeit unter Werkbank → Pakete nach.</p>}
-      {!e.length && <p>Keine Pakete installiert.</p>}
-    </div>
-  );
-}
-
-/** Neueste Version eines Katalogpakets, die zu dieser DMS-Version passt. */
-const passende = (p: KatalogPaket, dms: string): KatalogVersion | undefined =>
-  [...p.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((v) => dmsPasst(dms, v.dms));
-
-/** Rechte eines Pakets mit Code – erst auf Wunsch geladen (dafür holt das DMS das Paket aus dem Katalog). */
-function RechteAufWunsch({ id, version }: { id: string; version: string }) {
-  const [rechte, setRechte] = useState<RechtePunkt[] | null>(null);
-  const [fehler, setFehler] = useState<string>();
-  const [offen, setOffen] = useState(false);
-  useEffect(() => {
-    if (!offen || rechte || fehler) return;
-    api.paketVorschau({ id, version }).then((v) => setRechte(v.laeufer?.rechte ?? []), (e) => setFehler((e as Error).message));
-  }, [offen, id, version, rechte, fehler]);
-  return (
-    <details className="pd-rechte" onToggle={(e) => setOffen((e.target as HTMLDetailsElement).open)}>
-      <summary className="klein">Was darf das Paket?</summary>
-      {fehler ? <p className="fehlertext klein">{fehler}</p> : !rechte ? <p className="leise klein">Lade …</p> : (
-        <ul className="klein">{rechte.map((r) => <li key={r.text}>{r.text} <Hilfe ort={r.hilfe} />{r.unter && <ul>{r.unter.map((u) => <li key={u.text}>{u.text}</li>)}</ul>}</li>)}</ul>
-      )}
-    </details>
-  );
-}
 
 /**
  * Auswahl aus dem offiziellen Katalog und Installation, z. B. im Einrichtungsassistenten (#460).
  * Ist der Katalog nicht erreichbar: Sammeldatei hochladen (#461) oder überspringen.
  */
 export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
-  weiter(e: Ergebnis[]): void; ueberspringen(): void;
-  /** Nach jeder Installation (z. B. Daten neu laden). */
+  weiter(e: AblaufErgebnis): void; ueberspringen(): void;
+  /** Nach der Installation (z. B. Daten neu laden). */
   geaendert?(): void;
 }) {
   const [stand, setStand] = useState<{ dms: string; installiert: InstalliertesPaket[] } | null>(null);
   const [katalog, setKatalog] = useState<Katalog | null>(null);
   const [fehler, setFehler] = useState<string>();
   const [versuch, setVersuch] = useState(0);
-  const [gewaehlt, setGewaehlt] = useState<string[] | null>(null);
-  const [phase, setPhase] = useState<'auswahl' | 'installieren' | 'fertig'>('auswahl');
-  const [ergebnisse, setErgebnisse] = useState<Ergebnis[]>([]);
   const [sammel, setSammel] = useState<{ s: Sammeldatei; datei: string } | null>(null);
   useEffect(() => {
     let aktuell = true;
@@ -145,15 +48,8 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
     return () => { aktuell = false; };
   }, [versuch]);
 
-  if (phase === 'fertig') return (
-    <>
-      <ErgebnisListe e={ergebnisse} />
-      <div className="knoepfe"><button type="button" className="knopf primaer" onClick={() => weiter(ergebnisse)}>Weiter</button></div>
-    </>
-  );
   if (sammel && stand) return (
-    // Die Ansicht zeigt das Ergebnis schon selbst – „Weiter“ dort führt direkt zum nächsten Schritt.
-    <SammeldateiAnsicht s={sammel.s} datei={sammel.datei} dms={stand.dms} geaendert={geaendert} abbrechen={() => setSammel(null)} fertig={weiter} />
+    <SammeldateiAnsicht s={sammel.s} datei={sammel.datei} dms={stand.dms} installiert={stand.installiert} geaendert={geaendert} abbrechen={() => setSammel(null)} fertig={weiter} />
   );
   if (fehler) return (
     <>
@@ -174,68 +70,12 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
     </>
   );
   if (!katalog || !stand) return <p className="leise">Frage den offiziellen Paketkatalog ab …</p>;
-
-  const dms = stand.dms;
-  const da = (id: string) => stand.installiert.some((p) => p.id === id);
-  // Empfohlene (Texterkennung) oben, sonst wie im Katalog nach Namen.
-  const angebot = katalog.pakete.filter((p) => !da(p.id)).sort((a, b) => Number(VORAUSWAHL.includes(b.id)) - Number(VORAUSWAHL.includes(a.id)));
-  // Vorauswahl: Texterkennung, wenn sie hier passt und noch fehlt.
-  const wahl = gewaehlt ?? VORAUSWAHL.filter((id) => { const p = angebot.find((x) => x.id === id); return p && passende(p, dms); });
-  const plan = auswahlMitAbhaengigkeiten(katalog, wahl, dms, stand.installiert);
-  const schalten = (id: string, an: boolean) => setGewaehlt(an ? [...wahl, id] : wahl.filter((x) => x !== id));
-  const name = (id: string) => katalog.pakete.find((p) => p.id === id)?.name ?? id;
-
-  if (phase === 'installieren') return (
-    <Nacheinander
-      schritte={plan.pakete.map((p): Schritt => ({
-        schluessel: p.id, name: p.name, version: p.version, fuer: p.gewaehlt ? undefined : p.fuer.map(name),
-        vorschau: () => api.paketVorschau({ id: p.id, version: p.version }),
-        installieren: async (x) => { const r = await api.paketInstallieren({ id: p.id, version: p.version, ...x }); geaendert?.(); return r; },
-      }))}
-      fertig={(e) => { setErgebnisse(e); setPhase('fertig'); }} />
-  );
+  // Vorauswahl: Texterkennung, wenn sie hier passt und noch fehlt; empfohlene oben, sonst wie im Katalog nach Namen.
+  const sortiert: Katalog = { ...katalog, pakete: [...katalog.pakete].sort((a, b) => Number(VORAUSWAHL.includes(b.id)) - Number(VORAUSWAHL.includes(a.id))) };
   return (
-    <>
-      {!angebot.length ? <p className="leise">Alle Pakete des Katalogs sind schon installiert.</p> : (
-        <ul className="pd-liste" aria-label="Pakete im Katalog">
-          {angebot.map((p) => {
-            const v = passende(p, dms);
-            const imPlan = plan.pakete.find((x) => x.id === p.id);
-            const mit = !!imPlan && !imPlan.gewaehlt;
-            const an = wahl.includes(p.id) || mit;
-            const zeigen = v ?? p.versionen[0];
-            return (
-              <li key={p.id} className={an ? 'an' : undefined}>
-                <label className="haken">
-                  <input type="checkbox" checked={an} disabled={!v || mit} onChange={(e) => schalten(p.id, e.target.checked)} aria-describedby={`pd-${p.id}`} />
-                  <span>
-                    <span><strong>{p.name}</strong> <span className="leise klein">{zeigen.version}</span>
-                      {VORAUSWAHL.includes(p.id) && v && <> <span className="chip gut">empfohlen</span></>}
-                      {mit && <> <span className="chip">kommt mit – gebraucht von {imPlan!.fuer.map(name).join(', ')}</span></>}</span>
-                    <span className="klein">{p.beschreibung}</span>
-                  </span>
-                </label>
-                <div className="pd-darf klein leise" id={`pd-${p.id}`}>
-                  {!v ? <span className="fehlertext">Braucht DMS {p.versionen[0].dms} – dieses DMS hat {dms}.</span>
-                    : zeigen.code ? <>Enthält Code: läuft abgeschottet im Paket-Läufer mit eigenen Rechten. Die zeigt dir die Installation, und du bestätigst sie für dieses Paket einzeln.</>
-                    : <>Kein Code – legt nur an: {[zeigen.inhalt.mappentypen.length ? `Mappentypen ${zeigen.inhalt.mappentypen.map((t) => t.name).join(', ')}` : '', zeigen.inhalt.sichten.length ? `Ansichten ${zeigen.inhalt.sichten.map((t) => t.name).join(', ')}` : ''].filter(Boolean).join(' · ') || 'Einstellungen'}.</>}
-                  {VORAUSWAHL.includes(p.id) && v && <> Vorausgewählt, weil gescannte Dokumente sonst nicht durchsuchbar sind.</>}
-                </div>
-                {v?.code && <RechteAufWunsch id={p.id} version={v.version} />}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {plan.probleme.length > 0 && <div className="hinweis warn"><ul>{plan.probleme.map((p) => <li key={p}>{p}</li>)}</ul></div>}
-      <p className="leise klein">Abhängigkeiten kommen automatisch mit. Jedes Paket zeigt vor der Installation, was es anlegt; Pakete mit Code fragen einzeln nach ihren Rechten.</p>
-      <div className="knoepfe">
-        <button type="button" className="knopf" onClick={ueberspringen}>Überspringen</button>
-        <button type="button" className="knopf primaer" disabled={!plan.pakete.length} onClick={() => setPhase('installieren')}>
-          {plan.pakete.length ? `${plan.pakete.length} ${plan.pakete.length === 1 ? 'Paket' : 'Pakete'} installieren …` : 'Pakete installieren …'}
-        </button>
-      </div>
-    </>
+    <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={VORAUSWAHL} empfohlen={VORAUSWAHL}
+      aktionen={<button type="button" className="knopf" onClick={ueberspringen}>Überspringen</button>}
+      geaendert={geaendert} fertig={weiter} />
   );
 }
 
@@ -267,49 +107,16 @@ export function SammeldateiWahl({ geladen, einzeln }: { geladen(s: Sammeldatei, 
   );
 }
 
-/** Was mit einem Paket der Sammeldatei passiert. */
-function sammelStand(p: SammelPaket): { text: string; chip: 'gut' | 'warn' | '' ; installierbar: boolean } {
-  if (p.stand === 'gleich') return { text: `schon installiert (${p.installiert})`, chip: '', installierbar: false };
-  if (p.stand === 'aelter') return { text: `älter als installiert (${p.installiert})`, chip: '', installierbar: false };
-  if (!p.vorschau.dmsOk) return { text: `braucht DMS ${p.vorschau.paket.dms}`, chip: 'warn', installierbar: false };
-  if (p.stand === 'neuer' && p.vorschau.herkunft?.art === 'katalog') return { text: `Update von ${p.installiert} – stammt aus dem Katalog, Updates nur von dort`, chip: 'warn', installierbar: false };
-  if (p.stand === 'neuer') return { text: `Update von ${p.installiert}`, chip: 'gut', installierbar: true };
-  return { text: 'neu', chip: 'gut', installierbar: true };
-}
-
 /**
- * Inhalt einer Sammeldatei zeigen und nacheinander installieren (#461). Die Prüfsummen hat der Server schon
- * geprüft; die Herkunft bestätigst du einmal für die Datei, die Rechte je Paket mit Code.
+ * Inhalt einer Sammeldatei zeigen und im gemeinsamen Ablauf installieren (#461, #405). Die Prüfsummen hat der Server
+ * schon geprüft; die Herkunft bestätigst du einmal für alle Pakete, die Rechte ebenso.
  */
-export function SammeldateiAnsicht({ s, datei, dms, fertig, abbrechen, geaendert }: {
-  s: Sammeldatei; datei: string; dms: string; fertig(e: Ergebnis[]): void; abbrechen(): void; geaendert?(): void;
+export function SammeldateiAnsicht({ s, datei, dms, installiert, fertig, abbrechen, geaendert }: {
+  s: Sammeldatei; datei: string; dms: string; installiert: InstalliertesPaket[]; fertig(e: AblaufErgebnis): void; abbrechen(): void; geaendert?(): void;
 }) {
-  const [herkunftOk, setHerkunftOk] = useState(false);
-  const [phase, setPhase] = useState<'inhalt' | 'installieren' | 'fertig'>('inhalt');
-  const [ergebnisse, setErgebnisse] = useState<Ergebnis[]>([]);
-  const zuInstallieren = s.pakete.filter((p) => sammelStand(p).installierbar);
   const abgeglichen = s.pakete.every((p) => p.katalog === 'gleich');
-  // Herkunft (#594): Mit gültig signiertem Katalog in der Datei muss sie nur für Pakete bestätigt werden, die nicht darin stehen.
-  const herkunftNoetig = zuInstallieren.some((p) => p.vorschau.pruefung?.bestaetigen !== false);
-  const name = (id: string) => s.pakete.find((p) => p.id === id)?.name ?? id;
   const datum = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso || '–' : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
-
-  if (phase === 'installieren') return (
-    <Nacheinander
-      herkunftBestaetigt={herkunftOk}
-      schritte={zuInstallieren.map((p): Schritt => ({
-        schluessel: p.upload, name: p.name, version: p.version, fuer: p.gewaehlt ? undefined : s.pakete.filter((x) => p.id in x.abhaengigkeiten).map((x) => x.name),
-        vorschau: () => api.paketVorschau({ upload: p.upload }),
-        installieren: async (x) => { const r = await api.paketInstallieren({ upload: p.upload, ...x, ...(herkunftOk ? { bestaetigt: true } : {}), mitAbhaengigkeiten: false }); geaendert?.(); return r; },
-      }))}
-      fertig={(e) => { setErgebnisse(e); setPhase('fertig'); }} />
-  );
-  if (phase === 'fertig') return (
-    <>
-      <ErgebnisListe e={ergebnisse} />
-      <div className="knoepfe"><button type="button" className="knopf primaer" onClick={() => fertig(ergebnisse)}>Weiter</button></div>
-    </>
-  );
+  const herkunftNoetig = s.pakete.some((p) => sammelStand(p).installierbar && p.vorschau.pruefung?.bestaetigen !== false);
   return (
     <section className="blatt stapel" aria-label="Sammeldatei">
       <h2 className="h3">Sammeldatei „{datei}“</h2>
@@ -320,37 +127,11 @@ export function SammeldateiAnsicht({ s, datei, dms, fertig, abbrechen, geaendert
       <HerkunftZeile p={s.datei.pruefung} sammel />
       <div className="hinweis gut klein"><p><strong>Geprüft:</strong> Jedes Archiv hat genau die Größe und Prüfsumme aus dem Verzeichnis der Sammeldatei, jedes Paket ist gültig, und es liegt nichts anderes darin.
         {abgeglichen ? ' Alle Prüfsummen stimmen außerdem mit dem offiziellen Katalog überein.' : ' Mit dem offiziellen Katalog konnte das DMS sie nicht abgleichen (nicht abgerufen oder ohne Internet).'}</p></div>
-      <ul className="pd-liste" aria-label="Pakete in der Sammeldatei">
-        {s.pakete.map((p) => {
-          const st = sammelStand(p);
-          const fuer = s.pakete.filter((x) => p.id in x.abhaengigkeiten).map((x) => x.name);
-          return (
-            <li key={p.upload} className={st.installierbar ? 'an' : undefined}>
-              <span><strong>{p.name}</strong> <span className="leise klein">{p.version}</span> <span className={`chip ${st.chip}`}>{st.text}</span>
-                {p.vorschau.laeufer && <> <span className="chip">mit Code</span></>}</span>
-              <div className="klein leise">{p.vorschau.paket.beschreibung}</div>
-              {(!p.gewaehlt || fuer.length > 0) && <div className="klein leise">{!p.gewaehlt ? 'Als Abhängigkeit dabei' : 'Gebraucht'}{fuer.length ? ` – gebraucht von ${fuer.join(', ')}` : ''}.</div>}
-              {Object.keys(p.abhaengigkeiten).length > 0 && <div className="klein leise">Braucht: {Object.entries(p.abhaengigkeiten).map(([k, b]) => `${name(k)} ${b}`).join(', ')}</div>}
-              {p.vorschau.herkunft && p.stand !== 'neu' && <div className="klein leise">Installiert: {herkunftText(p.vorschau.herkunft)}</div>}
-            </li>
-          );
-        })}
-      </ul>
-      {zuInstallieren.length > 0 && !herkunftNoetig && <div className="hinweis gut klein"><p>{t('pakete.herkunft.sammel.ok')}</p></div>}
-      {zuInstallieren.length > 0 && herkunftNoetig && s.datei.nichtImKatalog.length > 0 && <div className="hinweis info klein"><p>{t('pakete.herkunft.sammel.fehlen', { namen: s.datei.nichtImKatalog.join(', ') })}</p></div>}
-      {zuInstallieren.length > 0 && herkunftNoetig ? (
-        <div className="hinweis warn" role="alert">
-          <p><strong>Nicht über das Internet vom DMS-Projekt bestätigt.</strong> Die Prüfsummen zeigen, dass die Datei vollständig und seit dem Zusammenstellen unverändert ist – nicht, wer sie zusammengestellt hat. Installiere nur eine Sammeldatei, die du selbst aus dem offiziellen Paketkatalog geladen hast oder deren Herkunft du kennst.</p>
-          <label className="haken"><input type="checkbox" checked={herkunftOk} onChange={(e) => setHerkunftOk(e.target.checked)} /><span>Ich weiß, woher die Sammeldatei stammt, und installiere auf eigene Verantwortung.</span></label>
-        </div>
-      ) : !zuInstallieren.length ? <p className="leise">In dieser Sammeldatei ist nichts zu installieren.</p> : null}
-      <p className="leise klein">Installiert wird Paket für Paket, Abhängigkeiten zuerst. Jedes zeigt vorher, was es anlegt; Pakete mit Code fragen einzeln nach ihren Rechten. Als Herkunft steht danach „hochgeladen von … am …“.</p>
-      <div className="knoepfe">
-        <button type="button" className="knopf primaer" disabled={!zuInstallieren.length || (herkunftNoetig && !herkunftOk)} onClick={() => setPhase('installieren')}>
-          {zuInstallieren.length ? `${zuInstallieren.length} ${zuInstallieren.length === 1 ? 'Paket' : 'Pakete'} nacheinander installieren …` : 'Installieren'}
-        </button>
-        <button type="button" className="textknopf" onClick={abbrechen}>Abbrechen</button>
-      </div>
+      {!herkunftNoetig && <div className="hinweis gut klein"><p>{t('pakete.herkunft.sammel.ok')}</p></div>}
+      {herkunftNoetig && s.datei.nichtImKatalog.length > 0 && <div className="hinweis info klein"><p>{t('pakete.herkunft.sammel.fehlen', { namen: s.datei.nichtImKatalog.join(', ') })}</p></div>}
+      <PaketAblauf quelle={{ art: 'sammel', sammeldatei: s, dms, installiert }} start={s.pakete.filter((p) => p.gewaehlt).map((p) => p.upload)}
+        aktionen={<button type="button" className="textknopf" onClick={abbrechen}>Abbrechen</button>}
+        geaendert={geaendert} fertig={fertig} />
     </section>
   );
 }

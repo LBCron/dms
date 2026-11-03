@@ -32,6 +32,7 @@ import { ALS_KOPF, KONSOLE_KOPF, istLoopback, konsolenBenutzer, type Konsolenzug
 import type { Messung } from './messung';
 import type { Vorschaubilder } from './vorschau';
 import { Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } from './pakete';
+import type { AblaufEingabe, AblaufInstallation } from '../../shared/src/pakete';
 import { Paketerstellung } from './paketerstellung';
 import { Umwandlung } from './umwandlung';
 import type { Paketlaeufer } from './laeufer/verwaltung';
@@ -1076,9 +1077,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Ein Paket (höchstens 10 MB) oder eine Sammeldatei mit mehreren Paketen (#461, höchstens SAMMEL_MAX).
     { methode: 'POST', pfad: '/api/werkbank/pakete/hochladen', zugang: 'admin', roh: SAMMEL_MAX + 1024, handler: async (a) => ok(await pakete.hochladenDatei(a.body, wer(a))) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/vorschau', zugang: 'admin', lesend: true, handler: async (a) => ok(await pakete.vorschau((a.body ?? {}) as { id?: string; version?: string; quelle?: string; upload?: string })) },
-    { methode: 'POST', pfad: '/api/werkbank/pakete/installieren', zugang: 'admin', handler: async (a) => ok(await pakete.installiere((a.body ?? {}) as InstallierenEingabe, wer(a))) },
+    { methode: 'POST', pfad: '/api/werkbank/pakete/installieren', zugang: 'admin', handler: async (a) => ok(await pakete.mitSperre(() => pakete.installiere((a.body ?? {}) as InstallierenEingabe, wer(a)))) },
+    // Mehrere Pakete in einem Ablauf (#405): Plan (nichts wird gespeichert) und Installation mit allen Antworten.
+    { methode: 'POST', pfad: '/api/werkbank/pakete/ablauf/plan', zugang: 'admin', lesend: true, handler: async (a) => ok(await pakete.ablaufPlan((a.body ?? {}) as AblaufEingabe)) },
+    { methode: 'POST', pfad: '/api/werkbank/pakete/ablauf/installieren', zugang: 'admin', handler: async (a) => ok(await pakete.mitSperre(() => pakete.ablaufInstallieren((a.body ?? {}) as AblaufInstallation, wer(a)))) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/updates', zugang: 'admin', handler: async () => ok(await pakete.updates()) },
-    { methode: 'POST', pfad: '/api/werkbank/pakete/:id/aktualisieren', zugang: 'admin', handler: async (a) => ok(await pakete.aktualisiere(a.params.id, (a.body ?? {}) as { version?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean }, wer(a))) },
+    { methode: 'POST', pfad: '/api/werkbank/pakete/:id/aktualisieren', zugang: 'admin', handler: async (a) => ok(await pakete.mitSperre(() => pakete.aktualisiere(a.params.id, (a.body ?? {}) as { version?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean }, wer(a)))) },
     // Paket-Läufer (#338): Stand je Paket mit Code – geladen, Aufrufe, Fehler, Ereignisse.
     { methode: 'GET', pfad: '/api/werkbank/pakete/laeufer', zugang: 'admin', handler: async () => ok(x.paketlaeufer ? await x.paketlaeufer.uebersicht() : null) },
     // Vektoren (#442): Stand der Berechnung, Einstellung „Ähnliche Treffer in der Suche“, neu berechnen.
@@ -1115,7 +1119,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!x.paketlaeufer) throw new Fachfehler(404, 'Pakete mit Code laufen in diesem DMS nicht.');
       try { return ok(await x.paketlaeufer.vektorenNeu()); } catch (e) { throw e instanceof Fachfehler ? e : new Fachfehler(409, (e as Error).message); }
     } },
-    { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1'); return leer; } },
+    { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.mitSperre(() => pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1')); return leer; } },
     // Paket-Einstellungen (#197): nur Administratoren, nicht über die API v1.
     // Paket-Update: Text in Verweis umwandeln (#534) – Vorschau, Umwandeln, Rückgängig.
     { methode: 'GET', pfad: '/api/werkbank/pakete/:id/umwandlungen', zugang: 'admin', handler: async (a) => ok(await umwandlung.liste(a.params.id)) },
@@ -1325,6 +1329,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         // DMS_LASTTEST in einer echten Installation (#612): nicht gestartet, das DMS läuft normal.
         lasttestAbbruch: x.lasttestAbbruch?.() ?? null,
         einrichtung: x.einrichtung ? await sicher(() => x.einrichtung!.stand()) : null,
+        // Pflicht-Einstellungen eines Pakets fehlen (#405: im Ablauf „später ausfüllen“) – Aufgabe für den Administrator.
+        paketeEinstellungen: (await sicher(() => pakete.installierte()))?.filter((p) => p.einstellungenNoetig).map((p) => ({ id: p.id, name: p.name })) ?? [],
         // Zahlen für die linke Spalte (#375), bis der Bereich selbst geladen ist.
         zahlen: await werkbankZahlen({
           nummernkreise: () => dienst.listeNummernkreise(),

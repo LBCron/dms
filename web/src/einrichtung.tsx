@@ -348,13 +348,14 @@ function SchluesselSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Pro
 
 /**
  * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog, Texterkennung vorausgewählt. Der Katalog wird
- * erst abgefragt, wenn dieser Schritt erscheint. Rechte bestätigst du je Paket.
+ * erst abgefragt, wenn dieser Schritt erscheint. Ergänzungen wie weitere Sprachen der Texterkennung per Häkchen;
+ * Rechte, Beispiele und Einstellungen aller Pakete in einem Ablauf (#405).
  */
 function PaketeSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promise<void> }) {
   const s = useSenden();
   return (
     <Rahmen aktiv={NACH.pakete} titel="Pakete dazuholen" unter="Pakete bringen fertige Mappentypen, Ansichten und Funktionen wie die Texterkennung mit. Wähle, was du gleich brauchst – alles andere holst du später unter Werkbank → Pakete.">
-      <PaketeDazuholen ueberspringen={() => void s.los(() => weiter(true))} weiter={(e) => void s.los(() => weiter(!e.some((x) => x.art === 'installiert')))} />
+      <PaketeDazuholen ueberspringen={() => void s.los(() => weiter(true))} weiter={(e) => void s.los(() => weiter(!e.installiert.length))} />
       {s.fehler && <p className="fehlertext">{s.fehler}</p>}
     </Rahmen>
   );

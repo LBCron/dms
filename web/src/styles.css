@@ -1265,15 +1265,22 @@ a.knopf.breit { display: flex; justify-content: center; text-decoration: none; }
 .pd-liste > li.an { border-color: var(--akzent); }
 .pd-liste .chip { white-space: normal; }
 .pd-darf { margin: 4px 0 0 26px; overflow-wrap: anywhere; }
-.pd-rechte { margin: 4px 0 0 26px; }
-.pd-rechte ul { margin: 4px 0; padding-left: 18px; }
-.pd-fortschritt { margin: 0; padding-left: 20px; display: grid; gap: 2px; font-size: calc(13px * var(--skala, 1)); color: var(--leise); }
-.pd-fortschritt li.aktiv { color: inherit; font-weight: 600; }
-.pd-fortschritt li.installiert::marker { color: var(--gruen); }
 .pd-datei { position: relative; display: inline-flex; align-self: flex-start; cursor: pointer; }
 .pd-datei input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 .pd-datei:focus-within .knopf { outline: 2px solid var(--akzent); outline-offset: 2px; }
 .pd-pruefwert { overflow-wrap: anywhere; word-break: break-all; }
+/* Mehrere Pakete in einem Ablauf (#405): Ergänzungen als Häkchen unter ihrem Paket, Fragen je Abschnitt. */
+.pd-ergaenzungen { margin: 8px 0 0 26px; padding: 6px 10px 8px; border: 1px dashed var(--linie); border-radius: 8px; min-width: 0; }
+.pd-ergaenzungen legend { padding: 0 4px; }
+.pd-ergaenzungsliste { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; }
+.pd-ergaenzungsliste .haken > span { font-weight: normal; overflow-wrap: anywhere; }
+.pa-rechte h3 { margin: 8px 0 2px; }
+.pa-rechte ul { margin: 2px 0; padding-left: 18px; }
+.pa-einstellungen { border: 1px solid var(--linie); border-radius: 10px; padding: 8px 12px 12px; margin: 0; min-width: 0; }
+.pa-einstellungen legend { padding: 0 4px; }
+.pa-reihe { margin: 0; padding-left: 20px; display: grid; gap: 2px; }
+.pa-reihe ul { margin: 2px 0; padding-left: 18px; }
+.pa-je-paket { margin-left: 26px; display: grid; gap: 4px; }
 /* Herkunft eines Pakets (#594): Zeile in der Vorschau, Fingerabdrücke umbrechen statt die Seite zu verbreitern */
 .herkunft { margin: 0 0 12px; overflow-wrap: anywhere; }
 .herkunft p { margin: 2px 0; }

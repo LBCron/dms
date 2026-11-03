@@ -54,6 +54,51 @@ export interface KatalogVersion {
   groesse: number;
   veroeffentlicht: string;
   quelle: string; readme: string; changelog: string;
+  /** Ergänzung eines anderen Pakets (#405, Manifest `ergaenzt`), z. B. eine Zusatzsprache der Texterkennung. */
+  ergaenzt?: Ergaenzung;
+}
+
+/**
+ * Ein Paket ergänzt ein anderes (#405): Manifest-Feld `ergaenzt: <paket>` oder `ergaenzt: { paket, gruppe }`. Das
+ * ergänzte Paket muss unter `abhaengigkeiten` stehen. Die Installation zeigt Ergänzungen als Häkchen unter dem
+ * ergänzten Paket, gruppiert nach `gruppe` (z. B. „Weitere Sprachen“); ohne Gruppe unter „Ergänzungen“.
+ * Ältere DMS-Versionen übergehen das Feld (#635) – Pakete damit brauchen kein höheres `dms`.
+ */
+export interface Ergaenzung { paket: string; gruppe?: string }
+/** Ab dieser Version zeigt das DMS Ergänzungen als Häkchen und installiert mehrere Pakete in einem Ablauf (#405). */
+export const DMS_ERGAENZUNG_AB = '0.151.0';
+export const ERGAENZUNG_GRUPPE_MAX = 40;
+
+/** Liest `ergaenzt` (Manifest oder Katalog); null, wenn nicht da. fehler: was daran ungültig ist. */
+export function liesErgaenzt(v: unknown, abhaengigkeiten: Record<string, unknown> = {}): { ergaenzt: Ergaenzung | null; fehler: string[] } {
+  if (v === undefined || v === null) return { ergaenzt: null, fehler: [] };
+  const roh = typeof v === 'string' ? { paket: v } : v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : null;
+  if (!roh) return { ergaenzt: null, fehler: ['ergaenzt: der Name eines Pakets oder { paket, gruppe }.'] };
+  const fehler: string[] = [];
+  const paket = typeof roh.paket === 'string' ? roh.paket : '';
+  if (!PAKET_ID.test(paket)) fehler.push('ergaenzt: ungültige Paket-Id.');
+  else if (!(paket in abhaengigkeiten)) fehler.push(`ergaenzt: „${paket}“ muss auch unter abhaengigkeiten stehen.`);
+  const gruppe = roh.gruppe === undefined ? undefined : typeof roh.gruppe === 'string' ? roh.gruppe.trim() : null;
+  if (gruppe === null || (gruppe !== undefined && (!gruppe || gruppe.length > ERGAENZUNG_GRUPPE_MAX))) fehler.push(`ergaenzt.gruppe: ein Text mit höchstens ${ERGAENZUNG_GRUPPE_MAX} Zeichen, z. B. „Weitere Sprachen“.`);
+  for (const k of Object.keys(roh)) if (k !== 'paket' && k !== 'gruppe') fehler.push(`ergaenzt: „${k}“ gibt es nicht (nur paket und gruppe).`);
+  return fehler.length ? { ergaenzt: null, fehler } : { ergaenzt: { paket, ...(gruppe ? { gruppe } : {}) }, fehler };
+}
+
+/** Ein Angebot zum Mitinstallieren (#405): Ergänzung eines Pakets aus dem Katalog. */
+export interface ErgaenzungAngebot { id: string; name: string; version: string; beschreibung: string; gruppe: string | null; code: boolean }
+
+/**
+ * Ergänzungen eines Pakets im Katalog (#405): Pakete, deren neueste zur DMS-Version passende Version `ergaenzt: <basis>`
+ * angibt und die noch nicht installiert sind – nach Gruppe und Namen sortiert.
+ */
+export function ergaenzungenVon(k: Katalog, basis: string, dms: string, installiert: Array<{ id: string }> = []): ErgaenzungAngebot[] {
+  const erg: ErgaenzungAngebot[] = [];
+  for (const p of k.pakete) {
+    if (p.id === basis || installiert.some((x) => x.id === p.id)) continue;
+    const v = [...p.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((x) => dmsPasst(dms, x.dms));
+    if (v?.ergaenzt?.paket === basis) erg.push({ id: p.id, name: p.name, version: v.version, beschreibung: p.beschreibung, gruppe: v.ergaenzt.gruppe ?? null, code: v.code });
+  }
+  return erg.sort((a, b) => (a.gruppe ?? '').localeCompare(b.gruppe ?? '', 'de') || a.name.localeCompare(b.name, 'de'));
 }
 export interface KatalogPaket {
   id: string; name: string; beschreibung: string;
@@ -196,14 +241,17 @@ export interface AuswahlPaket {
   /** Von diesen Paketen gebraucht. */
   fuer: string[];
   abhaengigkeiten: Record<string, string>;
+  /** Ergänzung eines anderen Pakets (#405). */
+  ergaenzt?: Ergaenzung;
 }
 
 /**
  * Pakete aus einem Katalog auswählen (#460, #461): je Paket die neueste Version, die zur DMS-Version passt;
  * Abhängigkeiten kommen mit (neueste passende Version), außer sie sind schon passend installiert. Reihenfolge:
  * Abhängigkeiten zuerst. probleme: was sich nicht auflösen lässt (dann fehlt das Paket in der Liste).
+ * versionen: für selbst gewählte Pakete eine bestimmte Version statt der neuesten (#405).
  */
-export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: string, installiert: Array<{ id: string; version: string }> = []): { pakete: AuswahlPaket[]; probleme: string[] } {
+export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: string, installiert: Array<{ id: string; version: string }> = [], versionen: Record<string, string> = {}): { pakete: AuswahlPaket[]; probleme: string[] } {
   const plan = new Map<string, AuswahlPaket>();
   const probleme: string[] = [];
   const name = (id: string) => k.pakete.find((p) => p.id === id)?.name ?? id;
@@ -218,12 +266,13 @@ export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: s
     }
     const kp = k.pakete.find((p) => p.id === id);
     if (!kp) { probleme.push(`„${name(von ?? id)}“ braucht „${id}“ – das gibt es im Katalog nicht.`); return; }
-    const v = [...kp.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((x) => (!bereich || passt(x.version, bereich)) && dmsPasst(dms, x.dms));
+    const fest = !von ? versionen[id] : undefined;
+    const v = [...kp.versionen].sort((a, b) => vergleicheVersion(b.version, a.version)).find((x) => (fest ? x.version === fest : !bereich || passt(x.version, bereich)) && dmsPasst(dms, x.dms));
     if (!v) {
       probleme.push(von ? `„${name(von)}“ braucht „${kp.name}“ ${bereich}; dazu passt keine Version für DMS ${dms}.` : `„${kp.name}“: keine Version passt zu DMS ${dms}.`);
       return;
     }
-    plan.set(id, { id, name: kp.name, version: v.version, code: v.code, gewaehlt: !von, fuer: von ? [von] : [], abhaengigkeiten: v.abhaengigkeiten });
+    plan.set(id, { id, name: kp.name, version: v.version, code: v.code, gewaehlt: !von, fuer: von ? [von] : [], abhaengigkeiten: v.abhaengigkeiten, ...(v.ergaenzt ? { ergaenzt: v.ergaenzt } : {}) });
     for (const [a, b] of Object.entries(v.abhaengigkeiten)) nimm(a, b, id);
   };
   for (const id of gewaehlt) {
@@ -255,6 +304,8 @@ export function liesKatalog(j: unknown): Katalog {
         abhaengigkeiten: v.abhaengigkeiten && typeof v.abhaengigkeiten === 'object' ? v.abhaengigkeiten : {},
         inhalt: { mappentypen: v.inhalt?.mappentypen ?? [], sichten: v.inhalt?.sichten ?? [], beispiele: Number(v.inhalt?.beispiele) || 0 },
         code: !!v.code,
+        // Ergänzung (#405): ungültige Angaben zählen nicht (das Paket bleibt installierbar, nur ohne Häkchen).
+        ergaenzt: liesErgaenzt(v.ergaenzt, v.abhaengigkeiten && typeof v.abhaengigkeiten === 'object' ? v.abhaengigkeiten : {}).ergaenzt ?? undefined,
       }))
       .sort((a, b) => vergleicheVersion(b.version, a.version));
     if (!versionen.length) continue;
@@ -588,3 +639,67 @@ export { DMS_ARCHIVFASSUNG_AB };
 /** Darf das Paket diese Schnittstelle des Kerns nutzen (#442)? */
 export const hatSchnittstelle = (c: PaketCode | undefined, s: Schnittstelle) => !!c?.rechte.schnittstellen?.includes(s);
 
+
+/* ---------- Mehrere Pakete in einem Ablauf (#405) ---------- */
+
+/**
+ * Was zusammen installiert werden soll: Pakete aus einem Katalog (Abhängigkeiten kommen mit) oder die hochgeladenen
+ * Pakete einer Sammeldatei (Upload-Kennungen). Derselbe Ablauf für Werkbank → Pakete, den Einrichtungsassistenten
+ * (#460) und die Sammeldatei (#461).
+ */
+export interface AblaufEingabe {
+  /** Katalogadresse; ohne: der offizielle Katalog. */
+  quelle?: string;
+  /** Paket-Ids aus dem Katalog – selbst gewählt, samt angehakter Ergänzungen; „id@1.2.0“ für eine bestimmte Version. */
+  pakete?: string[];
+  /** Upload-Kennungen der Pakete einer Sammeldatei. */
+  uploads?: string[];
+}
+/** Die Antworten aus dem Ablauf – jede Frage einmal, mit Ausnahmen je Paket. */
+export interface AblaufInstallation extends AblaufEingabe {
+  /** Je Paket-Id: Namen für Mappentypen bzw. Ansichten (nur bei Namenskonflikten nötig). */
+  namen?: Record<string, Record<string, string>>;
+  sichtNamen?: Record<string, Record<string, string>>;
+  /** Paket-Ids, deren Beispiel-Mappen angelegt werden. */
+  beispiele?: string[];
+  /** Herkunft bestätigt (nicht offizielle Quelle bzw. ohne gültige Signatur) – ein Haken für alle. */
+  bestaetigt?: boolean;
+  /** Stand der Rechte, die der Administrator gesehen und erlaubt hat (AblaufPlan.rechte.stand) – ein Haken für alle. */
+  rechteStand?: string;
+  /** Je Paket-Id: Pflicht-Einstellungen. */
+  einstellungen?: Record<string, Record<string, unknown>>;
+  /** Paket-Ids, deren Pflicht-Einstellungen bewusst später kommen („Einstellungen nötig“ und Hinweis in der Übersicht). */
+  spaeter?: string[];
+  /** Dienst-Adressen in den Einstellungen bestätigt. */
+  adresseBestaetigt?: boolean;
+}
+export interface AblaufPaket<V> {
+  /** Paket-Id (Katalog) bzw. Upload-Kennung (Sammeldatei). */
+  schluessel: string;
+  id: string; name: string; version: string;
+  /** Selbst gewählt; sonst kommt es als Abhängigkeit mit (fuer: Ids der Pakete, die es brauchen). */
+  gewaehlt: boolean; fuer: string[];
+  ergaenzt: Ergaenzung | null;
+  vorschau: V;
+  /** Pflicht-Einstellungen (Abschnitte), die nach den Vorgaben noch leer sind – gefragt im selben Ablauf. */
+  einstellungen: import('./paketeinstellungen').EinstellungFeld[];
+}
+export interface AblaufPlan<V> {
+  /** Reihenfolge der Installation: Abhängigkeiten zuerst. */
+  pakete: AblaufPaket<V>[];
+  /** Was die Installation verhindert (fehlende Abhängigkeiten, Kreise, schon installiert …). */
+  probleme: string[];
+  herkunft: HerkunftPruefung | null;
+  herkunftBestaetigen: boolean;
+  /** stand: Prüfwert aller Rechte, die bestätigt werden müssen – ändert sich eines, gilt die Bestätigung nicht mehr. */
+  rechte: { bestaetigen: boolean; stand: string };
+  /** Auswahl für Einstellungen mit Verweisen (Mappentypen, Benutzer, Rollen, Ansichten). */
+  auswahl: { typen: Array<{ id: string; name: string; felder: Array<{ key: string; label: string }> }>; benutzer: Array<{ id: string; name: string }>; rollen: Array<{ id: string; name: string }>; sichten: Array<{ id: string; name: string }> };
+}
+export interface AblaufErgebnis {
+  installiert: Array<{ id: string; name: string; version: string; einstellungen: 'keine' | 'fertig' | 'spaeter' | 'fehler' }>;
+  /** Das Paket, bei dem es scheiterte – es ist vollständig zurückgenommen. */
+  fehler: { id: string; name: string; meldung: string; gruende: string[] } | null;
+  /** Danach nicht mehr installiert (nach einem Fehler). */
+  nichtInstalliert: Array<{ id: string; name: string; version: string }>;
+}

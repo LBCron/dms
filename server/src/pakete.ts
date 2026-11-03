@@ -15,9 +15,9 @@ import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
-import { BEREICH, CODE_MAX, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../shared/src/pakete';
+import { BEREICH, CODE_MAX, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
-import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand } from '../../shared/src/paketeinstellungen';
+import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
@@ -99,6 +99,8 @@ export interface Manifest {
   autor: { name: string; github: string }; lizenz: string; dms: string;
   abhaengigkeiten: Record<string, string>;
   code?: unknown;
+  /** Ergänzt ein anderes Paket (#405), z. B. eine Zusatzsprache die Texterkennung. */
+  ergaenzt?: Ergaenzung;
 }
 export interface PaketFeld extends Partial<Feld> { key: string; label: string; typ: Feld['typ']; ziel?: string }
 export interface PaketRegister { key: string; name: string; art: Register['art']; felder?: string[]; quellen?: Array<{ typ: string; feld: string }>; volltext?: boolean }
@@ -194,6 +196,9 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   if (!BEREICH.test(str(m.dms))) fehler.push('manifest.yaml: ungültige DMS-Version (z. B. >=0.63.0).');
   const abh = istObjekt(m.abhaengigkeiten) ? m.abhaengigkeiten : {};
   for (const [k, v] of Object.entries(abh)) if (!PAKET_ID.test(k) || !BEREICH.test(str(v))) fehler.push(`manifest.yaml: Abhängigkeit „${k}: ${str(v)}“ ist ungültig.`);
+  // Ergänzung eines anderen Pakets (#405): steht auch unter abhaengigkeiten.
+  const erg = liesErgaenzt(m.ergaenzt, abh);
+  fehler.push(...erg.fehler.map((f) => `manifest.yaml: ${f}`));
   const inhalt = istObjekt(m.inhalt) ? m.inhalt : {};
   const liste = (art: string): Record<string, unknown>[] => {
     if (!inhalt[art]) return [];
@@ -292,6 +297,7 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       autor: { name: str((m.autor as Record<string, unknown>)?.name), github: str((m.autor as Record<string, unknown>)?.github) },
       lizenz: str(m.lizenz), dms: str(m.dms), abhaengigkeiten: Object.fromEntries(Object.entries(abh).map(([k, v]) => [k, str(v)])),
       ...(m.code !== undefined ? { code: m.code } : {}),
+      ...(erg.ergaenzt ? { ergaenzt: erg.ergaenzt } : {}),
     },
     typen, sichten, beispiele, wortlisten, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
   };
@@ -430,6 +436,11 @@ export interface PaketOptionen {
   benutzer?: () => Promise<Array<{ id: string; name: string }>>;
   /** Paket-Läufer (Pakete mit Code): Aktionen ausführen, Ereignisse zustellen. Fehlt noch im Betrieb. */
   laeufer?: PaketLaeufer;
+  /**
+   * Sperre über alle Instanzen (#405, PostgreSQL): Installieren, Aktualisieren und Entfernen laufen nacheinander, auch
+   * wenn mehrere Server dieselbe Datenbank nutzen. Ohne (Tests): keine.
+   */
+  sperre?: <T>(f: () => Promise<T>) => Promise<T>;
 }
 
 /** Schnittstelle zum Paket-Läufer (#197); kommt mit den Paketen mit Code. */
@@ -543,6 +554,8 @@ export function liesSammelVerzeichnis(roh: Buffer | undefined): SammelVerzeichni
 /** Ein Paket der Sammeldatei, geprüft und zum Installieren bereit (Upload-Kennung wie beim einzelnen Hochladen). */
 export interface SammelPaket {
   upload: string; id: string; name: string; version: string; gewaehlt: boolean; abhaengigkeiten: Record<string, string>;
+  /** Ergänzt ein anderes Paket (#405), aus dem Manifest. */
+  ergaenzt?: Ergaenzung;
   /** Prüfsumme gegen den offiziellen Katalog (abgerufen oder signiert in der Sammeldatei): gleich, oder unbekannt. */
   katalog: 'gleich' | 'unbekannt';
   /** Gegenüber dem installierten Paket. */
@@ -910,6 +923,7 @@ export class Paketverwaltung {
       const c = da ? vergleicheVersion(e.version, da) : 1;
       pakete.push({
         upload, id: e.id, name: paket.manifest.name, version: e.version, gewaehlt: e.gewaehlt, abhaengigkeiten: paket.manifest.abhaengigkeiten,
+        ...(paket.manifest.ergaenzt ? { ergaenzt: paket.manifest.ergaenzt } : {}),
         katalog: imKatalog(e) || drin ? 'gleich' : 'unbekannt', installiert: da, stand: !da ? 'neu' : c > 0 ? 'neuer' : c === 0 ? 'gleich' : 'aelter',
         vorschau: mitPruefung(await this.plane(paket, undefined, katalog ?? signiert.katalog ?? undefined), pruefung),
       });
@@ -942,7 +956,11 @@ export class Paketverwaltung {
     return mitPruefung(await this.plane(paket, v, katalog), pruefung);
   }
 
-  private async plane(paket: Paket, v?: KatalogVersion, katalog?: Katalog, namen: Record<string, string> = {}, sichtNamen: Record<string, string> = {}): Promise<Vorschau> {
+  /**
+   * geplant (#405): Namen von Mappentypen und Ansichten (oberste Ebene), die Pakete davor im selben Ablauf anlegen –
+   * sie zählen wie vorhandene; die eigenen kommen dazu.
+   */
+  private async plane(paket: Paket, v?: KatalogVersion, katalog?: Katalog, namen: Record<string, string> = {}, sichtNamen: Record<string, string> = {}, geplant?: { typen: Set<string>; sichten: Set<string> }): Promise<Vorschau> {
     const m = paket.manifest;
     const installierte = await this.d.listePakete();
     const ich = installierte.find((p) => p.id === m.id) ?? null;
@@ -977,7 +995,7 @@ export class Paketverwaltung {
     for (const a of abhaengigkeiten) {
       if (a.installiert && !a.ok) probleme.push(`„${a.id}“ ist in Version ${a.installiert} installiert, das Paket braucht ${a.bereich}. Bitte „${a.id}“ zuerst aktualisieren.`);
     }
-    const belegt = new Set(typen.map((t) => t.name.trim().toLowerCase()));
+    const belegt = new Set([...typen.map((t) => t.name.trim().toLowerCase()), ...(geplant?.typen ?? [])]);
     // Text → Verweis (#534): Angaben im alten Textfeld, deren Verweis noch leer ist.
     const umwandelbar = async (t: PaketTyp) => {
       const typ = typen.find((x) => x.id === ich?.typen[t.schluessel]);
@@ -1013,14 +1031,16 @@ export class Paketverwaltung {
       belegt.add(name.toLowerCase());
       return { schluessel: t.schluessel, dmsSchluessel, name, felder: t.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt, vorschlag };
     }));
+    for (const n of belegt) geplant?.typen.add(n);
     const sichtPlaene = paket.sichten.map((s): SichtPlan => {
       const vorhandenId = ich?.sichten[s.schluessel];
       const vorhanden = vorhandenId ? sichten.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden || vorhandenId) return { schluessel: s.schluessel, name: vorhanden?.name ?? s.name, eltern: s.eltern ?? null, vorhanden: true, konflikt: null, vorschlag: null };
       const name = (sichtNamen[s.schluessel] ?? s.name).trim();
       // Konflikt nur auf oberster Ebene: Untersichten stehen unter der neuen Elternsicht.
-      const geschwister = s.eltern ? [] : sichten.filter((x) => !x.elternId).map((x) => x.name.trim().toLowerCase());
+      const geschwister = s.eltern ? [] : [...sichten.filter((x) => !x.elternId).map((x) => x.name.trim().toLowerCase()), ...(geplant?.sichten ?? [])];
       const konflikt = geschwister.includes(name.toLowerCase()) ? `Eine Ansicht „${name}“ gibt es schon.` : null;
+      if (!s.eltern) geplant?.sichten.add(name.toLowerCase());
       return { schluessel: s.schluessel, name, eltern: s.eltern ?? null, vorhanden: false, konflikt, vorschlag: konflikt ? freierName(name, m.name, new Set(geschwister)) : null };
     });
     return {
@@ -1329,6 +1349,206 @@ export class Paketverwaltung {
     const neu = await this.lege(paket, alt.herkunft, v, plan, false, von, alt);
     log.info('Paket aktualisiert', { von: von.email, paket: id, vorher: alt.version, version: neu.version, pruefung: pruefung.art, neueTypen: plan.typen.filter((t) => !t.vorhanden && !t.geloescht).length, neueSichten: plan.sichten.filter((s) => !s.vorhanden).length });
     return neu;
+  }
+
+  /* ---------- Mehrere Pakete in einem Ablauf (#405) ---------- */
+
+  /** Installieren, Aktualisieren und Entfernen nacheinander – über alle Instanzen (PaketOptionen.sperre). */
+  mitSperre<T>(f: () => Promise<T>): Promise<T> { return this.o.sperre ? this.o.sperre(f) : f(); }
+
+  /**
+   * Plan für einen gemeinsamen Ablauf (#405): alle Pakete samt Abhängigkeiten in der Reihenfolge der Installation, je
+   * eine Vorschau (Namenskonflikte auch zwischen den Paketen), die Pflicht-Einstellungen, eine Herkunft und ein Prüfwert
+   * aller zu bestätigenden Rechte. Es wird nichts gespeichert – die Installation rechnet den Plan neu.
+   */
+  async ablaufPlan(e: AblaufEingabe): Promise<AblaufPlan<Vorschau>> { return (await this.ablaufIntern(e)).plan; }
+
+  private async ablaufIntern(e: AblaufEingabe, namen: Record<string, Record<string, string>> = {}, sichtNamen: Record<string, Record<string, string>> = {}) {
+    const installierte = await this.d.listePakete();
+    const dms = this.o.version();
+    const probleme: string[] = [];
+    type Teil = { schluessel: string; paket: Paket; v?: KatalogVersion; katalog?: Katalog; herkunft: InstalliertesPaket['herkunft']; gewaehlt: boolean; fuer: string[]; pruefung: HerkunftPruefung; upload?: string };
+    const teile: Teil[] = [];
+    let herkunft: HerkunftPruefung | null = null;
+    const uploads = Array.isArray(e.uploads) ? [...new Set(e.uploads.map(String))] : [];
+    if (uploads.length) {
+      // Sammeldatei (#461): die hochgeladenen Pakete; Abhängigkeiten müssen installiert oder in der Datei sein.
+      if (uploads.length > SAMMEL_PAKETE_MAX) throw new Fachfehler(422, t('pakete.ablauf.fehler.zuviele', { max: SAMMEL_PAKETE_MAX }));
+      const gelesen = uploads.map((token) => { const u = this.hochgeladen(token); return { token, u, id: u.paket.manifest.id, abhaengigkeiten: u.paket.manifest.abhaengigkeiten }; });
+      for (const g of gelesen) if (gelesen.filter((x) => x.id === g.id).length > 1) throw new Fachfehler(422, t('pakete.ablauf.fehler.doppelt', { name: g.u.paket.manifest.name }));
+      const ordnung = nachAbhaengigkeiten(gelesen);
+      if (!ordnung) probleme.push(t('pakete.ablauf.fehler.kreis'));
+      for (const g of ordnung ?? gelesen) {
+        // Ein Paket aus einem Katalog bekommt Updates nur von dort (wie beim einzelnen Hochladen).
+        const da = installierte.find((x) => x.id === g.id);
+        if (da && da.herkunft.art !== 'hochgeladen') probleme.push(t('pakete.ablauf.fehler.katalogupdate', { name: da.name }));
+        for (const [a, bereich] of Object.entries(g.abhaengigkeiten)) {
+          const mit = gelesen.find((x) => x.id === a);
+          if (mit && !passt(mit.u.paket.manifest.version, bereich)) probleme.push(t('pakete.ablauf.fehler.version', { name: g.u.paket.manifest.name, abh: mit.u.paket.manifest.name, bereich, version: mit.u.paket.manifest.version }));
+          else if (!mit && !installierte.some((x) => x.id === a)) probleme.push(t('pakete.ablauf.fehler.sammelfehlt', { name: g.u.paket.manifest.name, abh: a, bereich }));
+        }
+        const fuer = gelesen.filter((x) => x !== g && g.id in x.abhaengigkeiten).map((x) => x.id);
+        teile.push({ schluessel: g.token, paket: g.u.paket, herkunft: { art: 'hochgeladen', von: g.u.von.email, am: g.u.am }, gewaehlt: true, fuer, pruefung: g.u.pruefung, upload: g.token });
+      }
+      herkunft = teile.find((x) => x.pruefung.bestaetigen)?.pruefung ?? teile[0]?.pruefung ?? null;
+    } else {
+      // „id“ oder „id@1.2.0“ (bestimmte Version, z. B. aus der Versionsauswahl in der Werkbank).
+      const versionen: Record<string, string> = {};
+      const ids = [...new Set((Array.isArray(e.pakete) ? e.pakete : []).map((x) => { const [id, ver] = String(x).split('@'); if (ver !== undefined) versionen[id] = ver; return id; }))];
+      if (!ids.length) throw new Fachfehler(422, t('pakete.ablauf.fehler.leer'));
+      if (ids.length > SAMMEL_PAKETE_MAX) throw new Fachfehler(422, t('pakete.ablauf.fehler.zuviele', { max: SAMMEL_PAKETE_MAX }));
+      for (const id of ids) if (!PAKET_ID.test(id) || (versionen[id] !== undefined && !VERSION.test(versionen[id]))) throw new Fachfehler(422, t('pakete.ablauf.fehler.id', { id }));
+      const { katalog, url, pruefung } = await this.aktuellerKatalog(e.quelle ? String(e.quelle) : undefined);
+      herkunft = pruefung;
+      // Neu installiert wird hier nur, was fehlt – Updates gehen über „Aktualisieren“.
+      for (const id of ids) { const da = installierte.find((x) => x.id === id); if (da) probleme.push(t('pakete.ablauf.fehler.schon', { name: da.name, version: da.version })); }
+      const aus = auswahlMitAbhaengigkeiten(katalog, ids.filter((id) => !installierte.some((x) => x.id === id)), dms, installierte, versionen);
+      probleme.push(...aus.probleme);
+      for (const a of aus.pakete) {
+        const { paket, v } = await this.lade(a.id, a.version, url);
+        teile.push({ schluessel: a.id, paket, v, katalog, herkunft: { art: 'katalog', url }, gewaehlt: a.gewaehlt, fuer: a.fuer, pruefung });
+      }
+    }
+    const geplant = { typen: new Set<string>(), sichten: new Set<string>() };
+    const offizieller = await this.offiziell();
+    const pakete: AblaufPlan<Vorschau>['pakete'] = [];
+    for (const x of teile) {
+      const id = x.paket.manifest.id;
+      const vorschau = mitPruefung(await this.plane(x.paket, x.v, x.katalog ?? offizieller, namen[id] ?? {}, sichtNamen[id] ?? {}, geplant), x.pruefung);
+      // Abhängigkeiten im selben Ablauf fehlen noch nicht – sie kommen vorher dran.
+      vorschau.abhaengigkeiten = vorschau.abhaengigkeiten.map((a) => { const mit = teile.find((y) => y.paket.manifest.id === a.id); return mit && !a.installiert ? { ...a, verfuegbar: mit.paket.manifest.version } : a; });
+      pakete.push({ schluessel: x.schluessel, id, name: x.paket.manifest.name, version: x.paket.manifest.version, gewaehlt: x.gewaehlt, fuer: x.fuer, ergaenzt: x.paket.manifest.ergaenzt ?? null, vorschau, einstellungen: await this.offenePflicht(x.paket) });
+    }
+    // Ein Haken für alle Rechte: gilt nur für genau die Rechte, die der Administrator gesehen hat.
+    const zuBestaetigen = pakete.filter((p) => p.vorschau.laeufer?.bestaetigen).map((p) => [p.id, p.version, rechteZeilen(p.vorschau.laeufer!.rechte)]);
+    const q = await this.verweisquelle(null);
+    const plan: AblaufPlan<Vorschau> = {
+      pakete, probleme, herkunft, herkunftBestaetigen: teile.some((x) => x.pruefung.bestaetigen),
+      rechte: { bestaetigen: zuBestaetigen.length > 0, stand: createHash('sha256').update(JSON.stringify(zuBestaetigen)).digest('hex') },
+      auswahl: { typen: q.anzeige.typen, benutzer: q.anzeige.benutzer, rollen: q.anzeige.rollen, sichten: q.anzeige.sichten },
+    };
+    return { plan, teile };
+  }
+
+  /** Werte, mit denen ein Paket nach der Installation startet: Vorgaben, ggf. behaltene Werte (wie lege). */
+  private async startwerte(paket: Paket): Promise<Record<string, unknown>> {
+    if (!paket.einstellungen) return {};
+    const alt = await this.d.paketEinstellungen(paket.manifest.id);
+    return ueberfuehre(paket.einstellungen, alt?.werte ?? {}).werte;
+  }
+
+  /** Pflichtfelder in Abschnitten, die nach den Vorgaben leer bleiben (#405); Listen beginnen leer und fehlen nie. */
+  private async offenePflicht(paket: Paket): Promise<EinstellungFeld[]> {
+    if (!paket.einstellungen) return [];
+    const w = await this.startwerte(paket);
+    return abschnittsfelder(paket.einstellungen).filter((f) => f.pflicht && (w[f.schluessel] === undefined || w[f.schluessel] === null || w[f.schluessel] === '' || (Array.isArray(w[f.schluessel]) && !(w[f.schluessel] as unknown[]).length)));
+  }
+
+  /** Auswahl für Verweise in Einstellungen; paket: für Mappentyp-Verweise ohne Präfix. */
+  private async verweisquelle(paket: string | null): Promise<Verweisquelle & { anzeige: AblaufPlan<Vorschau>['auswahl'] }> {
+    const typen = await this.d.listeTypen();
+    const installierte = await this.d.listePakete();
+    const dmsTypen = await this.dmsTypen();
+    const anzeige = {
+      typen: typen.map((x) => ({ id: x.id, name: x.name, felder: x.felder.filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label })) })),
+      benutzer: this.o.benutzer ? await this.o.benutzer() : [],
+      rollen: (await this.d.listeRollen()).map((r) => ({ id: r.id, name: r.name })),
+      sichten: (await this.d.listeSichten()).map((x) => ({ id: x.id, name: x.name })),
+    };
+    return {
+      anzeige, typen: anzeige.typen, benutzer: anzeige.benutzer.map((x) => x.id), rollen: anzeige.rollen.map((x) => x.id), sichten: anzeige.sichten.map((x) => x.id),
+      typVon: (vw: string) => {
+        const [p, s] = vw.includes(':') ? vw.split(':') : [paket ?? '', vw];
+        if (p === 'dms') return dmsTypen.get(s)?.id ?? null;
+        return installierte.find((x) => x.id === p)?.typen[s] ?? null;
+      },
+    };
+  }
+
+  /**
+   * Gespeicherte Werte als Eingabe fürs Speichern: Geheimnisse als „behalten“ (sonst würde der verschlüsselte Wert
+   * noch einmal verschlüsselt), alles andere wie gespeichert.
+   */
+  private static alsEingabe(b: Einstellungsbeschreibung, werte: Record<string, unknown>): Record<string, unknown> {
+    const g = (f: EinstellungFeld, v: unknown) => (f.typ === 'geheim' ? (typeof v === 'string' && v ? { behalten: true } : null) : v);
+    const erg: Record<string, unknown> = {};
+    for (const f of abschnittsfelder(b)) erg[f.schluessel] = g(f, werte[f.schluessel]);
+    for (const l of listen(b)) erg[l.schluessel] = (Array.isArray(werte[l.schluessel]) ? werte[l.schluessel] as Record<string, unknown>[] : [])
+      .map((x) => Object.fromEntries([[EINTRAG_ID, x[EINTRAG_ID]], ...l.felder.map((f) => [f.schluessel, g(f, x[f.schluessel])])]));
+    return erg;
+  }
+
+  /**
+   * Alles aus einem Ablauf installieren (#405) – erst alles prüfen, dann Paket für Paket (Abhängigkeiten zuerst).
+   * Fehlt eine Bestätigung, eine Einstellung oder passt ein Name nicht, wird nichts installiert. Scheitert ein Paket
+   * beim Anlegen, ist es vollständig zurückgenommen; die Pakete davor bleiben installiert, die danach kommen nicht
+   * mehr dran – das Ergebnis sagt genau, was installiert ist.
+   */
+  async ablaufInstallieren(e: AblaufInstallation, von: Handelnder): Promise<AblaufErgebnis> {
+    const karte = (x: unknown): Record<string, Record<string, string>> => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).filter(([, v]) => v && typeof v === 'object').map(([k, v]) => [k, Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([a, b]) => [a, String(b)]))])) : {});
+    const namen = karte(e.namen), sichtNamen = karte(e.sichtNamen);
+    const { plan, teile } = await this.ablaufIntern(e, namen, sichtNamen);
+    if (plan.probleme.length) throw new Fachfehler(409, plan.probleme[0], { gruende: plan.probleme });
+    const pp = plan.pakete.flatMap((p) => p.vorschau.probleme.map((x) => `${p.name}: ${x}`));
+    if (pp.length) throw new Fachfehler(409, pp[0], { gruende: pp });
+    if (plan.herkunftBestaetigen && e.bestaetigt !== true) throw herkunftFehler(plan.herkunft ?? { art: 'unsigniert', offiziell: false, bestaetigen: true });
+    if (plan.rechte.bestaetigen && e.rechteStand !== plan.rechte.stand) {
+      const rechte = plan.pakete.filter((p) => p.vorschau.laeufer?.bestaetigen).flatMap((p) => rechteZeilen(p.vorschau.laeufer!.rechte).map((z) => `${p.name}: ${z}`));
+      throw new Fachfehler(409, t(e.rechteStand ? 'pakete.ablauf.fehler.rechteneu' : 'pakete.ablauf.fehler.rechte'), { rechte, rechteStand: plan.rechte.stand });
+    }
+    const konflikte = plan.pakete.flatMap((p) => [...p.vorschau.typen, ...p.vorschau.sichten].filter((x) => x.konflikt).map((x) => `${p.name}: ${x.konflikt} Vorschlag: „${x.vorschlag}“.`));
+    if (konflikte.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: konflikte, konflikte: true });
+    // Pflicht-Einstellungen: ausgefüllt und gültig – oder bewusst später.
+    const spaeter = new Set(Array.isArray(e.spaeter) ? e.spaeter.map(String) : []);
+    const eingaben = e.einstellungen && typeof e.einstellungen === 'object' ? e.einstellungen as Record<string, Record<string, unknown>> : {};
+    const zuSpeichern = new Map<string, Record<string, unknown>>();
+    const felderFehler: Record<string, string> = {};
+    const adressen: Array<{ paket: string; feld: string; wert: string }> = [];
+    for (const [i, p] of plan.pakete.entries()) {
+      const b = teile[i].paket.einstellungen;
+      if (!b || !p.einstellungen.length || spaeter.has(p.id)) continue;
+      const eingabe = eingaben[p.id] && typeof eingaben[p.id] === 'object' ? eingaben[p.id] : {};
+      const werte = Paketverwaltung.alsEingabe(b, await this.startwerte(teile[i].paket));
+      for (const f of p.einstellungen) werte[f.schluessel] = eingabe[f.schluessel] ?? null;
+      const r = pruefeWerte(b, werte, await this.verweisquelle(p.id));
+      for (const [k, v] of Object.entries(r.fehler)) felderFehler[`${p.id}.${k}`] = `${p.name}: ${v}`;
+      for (const f of p.einstellungen) if (f.typ === 'geheim' && !(typeof werte[f.schluessel] === 'string' && werte[f.schluessel])) felderFehler[`${p.id}.${f.schluessel}`] = `${p.name}: Pflichtfeld.`;
+      for (const f of adressfelder(b)) if (typeof r.werte[f.schluessel] === 'string' && r.werte[f.schluessel]) adressen.push({ paket: p.name, feld: f.name, wert: String(r.werte[f.schluessel]) });
+      zuSpeichern.set(p.id, werte);
+    }
+    if (Object.keys(felderFehler).length) throw new Fachfehler(422, t('pakete.ablauf.fehler.einstellungen'), { felderFehler, gruende: Object.values(felderFehler) });
+    if (adressen.length && e.adresseBestaetigt !== true) {
+      throw new Fachfehler(409, t('pakete.ablauf.fehler.adresse', { adressen: adressen.map((a) => `${a.paket} → ${a.wert}`).join(', ') }), { adresse: adressen.map((a) => ({ feld: `${a.paket}: ${a.feld}`, wert: a.wert })) });
+    }
+    const beispiele = new Set(Array.isArray(e.beispiele) ? e.beispiele.map(String) : []);
+    const erg: AblaufErgebnis = { installiert: [], fehler: null, nichtInstalliert: [] };
+    for (const [i, p] of plan.pakete.entries()) {
+      if (erg.fehler) { erg.nichtInstalliert.push({ id: p.id, name: p.name, version: p.version }); continue; }
+      const x = teile[i];
+      try {
+        const alt = (await this.d.listePakete()).find((y) => y.id === p.id) ?? null;
+        // Frisch planen: Die Pakete davor sind jetzt installiert (Verweise, Namen).
+        const vorschau = await this.plane(x.paket, x.v, x.katalog ?? await this.offiziell(), namen[p.id] ?? {}, sichtNamen[p.id] ?? {});
+        if (vorschau.probleme.length) throw new Fachfehler(409, vorschau.probleme[0], { gruende: vorschau.probleme });
+        const k = [...vorschau.typen, ...vorschau.sichten].filter((y) => y.konflikt);
+        if (k.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: k.map((y) => `${y.konflikt} Vorschlag: „${y.vorschlag}“.`), konflikte: true });
+        const ds = await this.lege(x.paket, x.herkunft, x.v, vorschau, beispiele.has(p.id) && !alt, von, alt);
+        if (x.upload) this.uploads.delete(x.upload);
+        log.info(alt ? 'Paket aktualisiert (Ablauf)' : 'Paket installiert (Ablauf)', { von: von.email, paket: p.id, version: ds.version, ...(alt ? { vorher: alt.version } : {}), herkunft: x.herkunft.art === 'katalog' ? x.herkunft.url : 'hochgeladen', pruefung: x.pruefung.art, gebrauchtVon: p.fuer.join(', ') || '–' });
+        let einst: AblaufErgebnis['installiert'][number]['einstellungen'] = p.einstellungen.length ? (spaeter.has(p.id) ? 'spaeter' : 'fertig') : 'keine';
+        const w = zuSpeichern.get(p.id);
+        if (w) {
+          try { await this.speichereEinstellungen(p.id, { werte: w, adresseBestaetigt: true }, von); }
+          catch (f) { einst = 'fehler'; log.warn('Einstellungen aus dem Ablauf nicht gespeichert', { paket: p.id, fehler: meldungen(f) }); }
+        }
+        erg.installiert.push({ id: p.id, name: ds.name, version: ds.version, einstellungen: einst });
+      } catch (f) {
+        erg.fehler = { id: p.id, name: p.name, meldung: (f as Error).message, gruende: ((f as Fachfehler).details as { gruende?: string[] } | undefined)?.gruende ?? [] };
+        log.warn('Ablauf: Paket nicht installiert', { paket: p.id, fehler: meldungen(f) });
+      }
+    }
+    log.info('Pakete in einem Ablauf', { von: von.email, installiert: erg.installiert.map((y) => `${y.id}@${y.version}`).join(', ') || '–', fehler: erg.fehler?.id ?? '–', ausgelassen: erg.nichtInstalliert.map((y) => y.id).join(', ') || '–', spaeter: [...spaeter].join(', ') || '–' });
+    return erg;
   }
 
   /* ---------- Einstellungen (#197) ---------- */

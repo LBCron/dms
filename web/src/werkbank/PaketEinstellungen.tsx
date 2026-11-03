@@ -96,7 +96,7 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
   );
 }
 
-type Auswahl = PaketEinstellungenStand['auswahl'];
+export type Auswahl = PaketEinstellungenStand['auswahl'];
 
 function Block({ blk, werte, setze, fehler, auswahl }: { blk: EinstellungBlock; werte: Werte; setze: (f: (w: Werte) => Werte) => void; fehler: Record<string, string>; auswahl: Auswahl }) {
   if (blk.art === 'abschnitt') return (
@@ -137,7 +137,7 @@ function Block({ blk, werte, setze, fehler, auswahl }: { blk: EinstellungBlock; 
 }
 
 /** Ein Feld mit den Bausteinen der Oberfläche; Verweise als Auswahllisten (gespeichert wird die Id). */
-function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: EinstellungFeld; wert: unknown; setze: (v: unknown) => void; fehler?: string; auswahl: Auswahl; id: string }) {
+export function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: EinstellungFeld; wert: unknown; setze: (v: unknown) => void; fehler?: string; auswahl: Auswahl; id: string }) {
   const [geheimNeu, setGeheimNeu] = useState(false);
   const [warGesetzt] = useState(!!wert && typeof wert === 'object');
   let ctl: React.ReactNode;
