@@ -5,7 +5,7 @@ import { protokoll } from './protokoll';
 const log = protokoll.modul('konto');
 import { Anmeldesperre } from './anmeldesperre';
 import { randomUUID } from 'node:crypto';
-import { abwesenheitWirkt, istEmail, KEINE_ABWESENHEIT, PASSWORT_MINDESTLAENGE, type Abwesenheit, type Benutzer, type Rolle } from '../../shared/src/model';
+import { abwesenheitWirkt, istEmail, istPerson, KEINE_ABWESENHEIT, PASSWORT_MINDESTLAENGE, SYSTEMKONTEN, type Abwesenheit, type Benutzer, type Rolle, type Systemkonto } from '../../shared/src/model';
 import { heuteIn } from '../../shared/src/sichten';
 import { Fachfehler } from './fehler';
 import type { KontoRepo, SitzungIntern, SitzungsInfo, Zweck } from './konto-repo';
@@ -212,7 +212,8 @@ export class Konten {
     const s = await this.repo.holeSitzung(hash);
     if (!s || s.ablauf.getTime() < Date.now()) return undefined;
     const b = await this.repo.holeBenutzer(s.benutzerId);
-    if (!b || !b.aktiv) return undefined;
+    // Systemkonten (#673) haben nie eine Sitzung – auch eine untergeschobene gilt nicht.
+    if (!b || !b.aktiv || b.art === 'system') return undefined;
     if (Date.now() - s.zuletztAktiv.getTime() > BERUEHREN_MS) await this.repo.beruehreSitzung(hash);
     return { benutzer: b, sitzung: s };
   }
@@ -234,16 +235,28 @@ export class Konten {
 
   listeDienstkonten() { return this.repo.listeDienstkonten(); }
 
+  /**
+   * Systemkonto des DMS (#673) anlegen, falls es fehlt (beim Start). Meldet sich nie an: kein Passwort, keine Sitzung,
+   * kein API-Schlüssel; nicht deaktivierbar oder löschbar (die Benutzerverwaltung kennt es nicht).
+   */
+  async systemkonto(kennung: Systemkonto): Promise<Benutzer> {
+    const da = await this.repo.systemkonto(kennung);
+    if (da) return da.aktiv ? da : this.repo.aendereBenutzer(da.id, { aktiv: true });
+    return this.repo.legeSystemkontoAn({ id: randomUUID(), kennung, name: SYSTEMKONTEN[kennung] });
+  }
+  listeSystemkonten() { return this.repo.listeSystemkonten(); }
+
   /** Benutzer für Verwaltung, Vertretung, Abwesenheit, Links (#338): Dienstkonten von Paketen gibt es dort nicht. */
   private async person(id: string): Promise<Benutzer | undefined> {
     const b = await this.repo.holeBenutzer(id);
-    return b?.art === 'dienst' ? undefined : b;
+    return istPerson(b) ? b : undefined;
   }
 
   /** Aktiver Benutzer zur Id (für API-Schlüssel). */
   async benutzerMitId(id: string): Promise<Benutzer | undefined> {
     const b = await this.repo.holeBenutzer(id);
-    return b?.aktiv ? b : undefined;
+    // Systemkonten (#673) haben keinen API-Schlüssel.
+    return b?.aktiv && b.art !== 'system' ? b : undefined;
   }
 
   /** Gehört die E-Mail-Adresse zu einem aktiven Konto? (Anmeldeschutz #368: Sofortmeldung, z. B. für WebDAV.) */
@@ -441,6 +454,8 @@ export class Konten {
     }).concat(
       // Dienstkonten der Pakete (#338): nur für Namen in Historie und „angelegt von“ – nie auswählbar (aktiv: false).
       (await this.repo.listeDienstkonten()).map((b) => ({ id: b.id, name: b.name, aktiv: false, art: 'dienst' as const })),
+      // Systemkonten (#673), z. B. „Automatisierung“: ebenso nur für Namen.
+      (await this.repo.listeSystemkonten()).map((b) => ({ id: b.id, name: b.name, aktiv: false, art: 'system' as const })),
     );
   }
 

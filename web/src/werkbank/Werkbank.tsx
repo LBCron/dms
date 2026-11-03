@@ -19,7 +19,7 @@ import { TypEditor } from '../einrichtung/Einrichtung';
 import { geheZu, Link } from '../ort';
 import { bereichName, hatMitte, wartungsPlakette, werkbankEbene, werkbankUmleitung, werkbankZurueck } from '../../../shared/src/werkbankansicht';
 import { t } from '../sprache';
-import { BenutzerDetail, BenutzerListe, BenutzerNeu, useBenutzer } from './Benutzer';
+import { BenutzerDetail, BenutzerListe, BenutzerNeu, SystemkontoDetail, useBenutzer } from './Benutzer';
 import { BetriebPanel, useBetrieb } from './Betrieb';
 import { SichtEditor, SichtenListe } from './Sichten';
 import { DatenbankAbschnitte, useDatenbank } from './Datenbank';
@@ -169,6 +169,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   } else if (bereich === 'benutzer') {
     liste = <BenutzerListe liste={benutzer.liste} offen={id} />;
     if (id === 'neu') rechts = <BenutzerNeu key="neu" neuLaden={benutzer.laden} />;
+    else if (id?.startsWith('konto-')) rechts = <SystemkontoDetail key={id} id={id.slice(6)} />;
     else if (id) {
       const b = benutzer.liste.find((x) => x.id === id);
       rechts = b ? <BenutzerDetail key={b.id} b={b} neuLaden={benutzer.laden} /> : benutzer.geladen ? <div className="leer"><p>Diesen Benutzer gibt es nicht (mehr).</p></div> : <p className="leise">Lade …</p>;

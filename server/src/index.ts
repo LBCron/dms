@@ -433,6 +433,9 @@ const nachgezogen = await dienst.titelNachziehen();
 if (nachgezogen) log.info(`Titel von ${nachgezogen} Mappen berechnet`);
 // Systemtypen Benutzer und Rolle anlegen und jedem Benutzer seine Mappe geben (auch nach einem Update).
 await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
+// Systemkonto „Automatisierung“ (#673): sichtbar, nie anmeldbar; Automatisierungen (#674) laufen darunter.
+await konten.systemkonto('automatisierung');
+dienst.systemkonten = (k) => konten.systemkonto(k);
 // Schlüssel für Mappentypen (#145), einmalig nach dem Update.
 await dienst.typSchluesselNachziehen();
 // Haken „Neue Mappen/Löschen erlauben“ → Berechtigungen (#146), einmalig nach dem Update.

@@ -323,6 +323,20 @@ export function ersterGrund(t: Pick<Mappentyp, 'felder'>, p: Pruefergebnis): str
 export type Rolle = 'admin' | 'mitglied';
 export const ROLLEN: Record<Rolle, string> = { admin: 'Administrator', mitglied: 'Mitglied' };
 
+/**
+ * Systemrollen für Konten, die kein Mensch sind (#673): Systemkonto (z. B. „Automatisierung“) und Paket (Dienstkonten
+ * der Pakete mit Code). Sie stehen neben Administrator und Mitglied als Rollen-Mappen (`rolle:systemkonto`,
+ * `rolle:paket`) und lassen sich in Regeln am Mappentyp nennen – vergeben werden sie nie an Menschen.
+ */
+export type Kontorolle = 'systemkonto' | 'paket';
+export const KONTOROLLEN: Record<Kontorolle, string> = { systemkonto: 'Systemkonto', paket: 'Paket' };
+export const kontorolleKennung = (r: Kontorolle) => `rolle:${r}`;
+/** Systemkonten des DMS (#673): Kennung → Anzeigename. */
+export const SYSTEMKONTEN = { automatisierung: 'Automatisierung' } as const;
+export type Systemkonto = keyof typeof SYSTEMKONTEN;
+/** Die Systemrolle eines Kontos, wie sie die Oberfläche zeigt. */
+export const kontorolleVon = (b: Pick<Benutzer, 'art'>): Kontorolle | null => (b.art === 'system' ? 'systemkonto' : b.art === 'dienst' ? 'paket' : null);
+
 export interface Benutzer {
   id: string;
   email: string;
@@ -345,11 +359,19 @@ export interface Benutzer {
   deaktiviert?: string | null;
   /** Offene Aufgaben (nur in der Benutzerverwaltung). */
   offeneAufgaben?: number;
-  /** Dienstkonto eines Pakets mit Code (#338): meldet sich nie an, erscheint in keiner Benutzerliste. */
-  art?: 'dienst';
+  /**
+   * Kein Mensch (#338, #673): `dienst` = Dienstkonto eines Pakets mit Code (Systemrolle „Paket“), `system` = Systemkonto
+   * des DMS, z. B. „Automatisierung“ (Systemrolle „Systemkonto“). Beide melden sich nie an und stehen in keiner Auswahl.
+   */
+  art?: 'dienst' | 'system';
   /** Paket, zu dem das Dienstkonto gehört. */
   paketId?: string;
+  /** Kennung des Systemkontos, z. B. `automatisierung`. */
+  systemkonto?: string;
 }
+
+/** Ein Mensch – kein Dienst- oder Systemkonto (#673). */
+export const istPerson = (b: Pick<Benutzer, 'art'> | undefined | null): boolean => !!b && !b.art;
 
 /** Abwesenheit (#78): an/aus, optionaler Zeitraum (JJJJ-MM-TT, jeweils einschließlich), Vertreter. */
 export interface Abwesenheit { an: boolean; von: string | null; bis: string | null; vertreterId: string | null }

@@ -56,6 +56,20 @@ export const kurzStandard = (g: Rechte) => RECHTE_LISTE.filter((k) => g[k]).join
 export const systemSperre = (t: Pick<Mappentyp, 'system'> | undefined): { C: boolean; D: boolean } =>
   ({ C: t?.system === 'benutzer', D: t?.system === 'benutzer' });
 
+/**
+ * Konten, die kein Mensch sind (#673): Systemkonto „Automatisierung“ und Dienstkonten der Pakete. Für sie gilt die
+ * Grundeinstellung des Typs nicht (sonst würde jede strenge Grundeinstellung für Mitglieder auch Automatisierungen
+ * und Pakete aussperren) – es gelten nur die Regeln, die ihre Rolle ausdrücklich nennen, z. B. „Wenn Benutzer hat
+ * Rolle Systemkonto → Lesen entziehen“. Ohne solche Regeln: wie bisher (Systemkonto alles, Paket die bestätigten Rechte).
+ */
+export const nenntRolle = (r: Regel, rolleId: string) => r.wenn.some((b) => b.art === 'rolle' && !b.nicht && b.rollen.includes(rolleId));
+export function kontoRegelwerk(typ: Mappentyp, rolleId: string): Mappentyp {
+  const regeln = regelwerkVon(typ).regeln.filter((r) => nenntRolle(r, rolleId));
+  return { ...typ, berechtigungen: { grund: { ...ALLES }, regeln } };
+}
+/** Hat der Typ Regeln für diese Kontorolle? */
+export const hatKontoRegeln = (typ: Mappentyp, rolleId: string) => regelwerkVon(typ).regeln.some((r) => nenntRolle(r, rolleId));
+
 /** Wer gerade fragt. */
 export interface Wer { id: string; rollen: string[] }
 

@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
-  REGISTERARTEN, ROLLEN, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
+  REGISTERARTEN, ROLLEN, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
@@ -80,7 +80,7 @@ import { t } from './sprache';
 import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
 import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
-import { ALLES, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
+import { ALLES, hatKontoRegeln, kontoRegelwerk, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
 
 /** Mappen in der Reihenfolge der Ids (#542: mit Index statt `indexOf` je Vergleich – bei 20.000 Mappen Sekunden). */
 function inReihenfolge<T extends { id: string }>(liste: T[], ids: string[]): T[] {
@@ -126,7 +126,16 @@ export interface Zugriff {
    * Dienstkonto eines Pakets (#338): Rechte fest aus dem bestätigten Manifest statt aus Regeln.
    * typen enthält dann nur die lesbaren Typen; schreiben = Ids der Typen mit Anlegen/Bearbeiten.
    */
-  paket?: { id: string; schreiben: Set<string>; dokumente: PaketCode['rechte']['dokumente']; schnittstellen?: Schnittstelle[] };
+  paket?: { id: string; schreiben: Set<string>; dokumente: PaketCode['rechte']['dokumente']; schnittstellen?: Schnittstelle[];
+    /** Typen mit Regeln für die Rolle „Paket“ (#673), schon auf diese Regeln zugeschnitten – sie schränken die bestätigten Rechte weiter ein. */
+    regeln?: Map<string, Mappentyp> };
+  /** Systemkonto (#673), z. B. „Automatisierung“: Rechte aus den Regeln für die Rolle „Systemkonto“ (typen sind darauf zugeschnitten). */
+  systemkonto?: string;
+}
+/** Ein Konto, das kein Mensch ist (#673), für Werkbank → Benutzer. */
+export interface SystemkontoEintrag {
+  id: string; name: string; rolle: Kontorolle; aktiv: boolean; systemkonto?: string;
+  paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string }>;
 }
 export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
 
@@ -2915,21 +2924,28 @@ export class Dienst {
    * Wer greift zu, und was darf er lesen? Für Administratoren gelten die Regeln nicht (#128):
    * lesen = null (alles). Wird je Anfrage einmal gebildet.
    */
-  async zugriff(ich: { id: string; rolle: string; art?: 'dienst'; paketId?: string }): Promise<Zugriff> {
+  async zugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }): Promise<Zugriff> {
     return rechteMessen(() => this.bildeZugriff(ich));
   }
 
-  private async bildeZugriff(ich: { id: string; rolle: string; art?: 'dienst'; paketId?: string }): Promise<Zugriff> {
+  private async bildeZugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }): Promise<Zugriff> {
     const a = await this.aufloesung(ich.id);
     const typen = await this.repo.listeTypen();
-    const admin = ich.rolle === 'admin' && ich.art !== 'dienst';
+    const admin = ich.rolle === 'admin' && !ich.art;
+    if (ich.art) {
+      // Konten, die kein Mensch sind (#673): ihre Rolle (Systemkonto bzw. Paket) statt der Rollen aus einer Benutzer-Mappe.
+      const rolleId = (await this.sichereSystem()).kontorollen.get(ich.art === 'system' ? 'systemkonto' : 'paket')!;
+      const wer: Wer = { id: ich.id, rollen: [rolleId] };
+      if (ich.art === 'dienst') return this.paketZugriff(ich, a, wer, typen, rolleId);
+      const eigene = typen.map((t) => kontoRegelwerk(t, rolleId));
+      return { ich: { id: ich.id, rolle: 'mitglied' }, admin: false, wer, a, typen: new Map(eigene.map((t) => [t.id, t])), lesen: lesefilter(eigene, wer, a), systemkonto: ich.systemkonto ?? 'system' };
+    }
     const wer: Wer = { id: ich.id, rollen: a.meineRollen };
-    if (ich.art === 'dienst') return this.paketZugriff(ich, a, wer, typen);
     return { ich, admin, wer, a, typen: new Map(typen.map((t) => [t.id, t])), lesen: admin ? null : lesefilter(typen, wer, a) };
   }
 
   /** Zugriff eines Dienstkontos (#338): nur die Typen und Rechte, die bei der Installation bestätigt wurden. */
-  private async paketZugriff(ich: { id: string; rolle: string; paketId?: string }, a: Aufloesung, wer: Wer, typen: Mappentyp[]): Promise<Zugriff> {
+  private async paketZugriff(ich: { id: string; rolle: string; paketId?: string }, a: Aufloesung, wer: Wer, typen: Mappentyp[], rolleId: string): Promise<Zugriff> {
     const pakete = await this.repo.listePakete();
     const p = pakete.find((x) => x.id === ich.paketId);
     const r = p?.laeufer?.rechte ?? { lesen: [], schreiben: [], dokumente: 'keine' as const };
@@ -2949,10 +2965,13 @@ export class Dienst {
     };
     const lesbar = aufloesen(r.lesen);
     const sichtbar = typen.filter((t) => lesbar.has(t.id));
+    // Regeln für die Rolle „Paket“ (#673) schränken die bestätigten Rechte weiter ein; ohne solche Regeln wie bisher.
+    const mitRegeln = sichtbar.filter((t) => hatKontoRegeln(t, rolleId)).map((t) => kontoRegelwerk(t, rolleId));
+    const lesen = mitRegeln.length ? lesefilter(sichtbar.map((t) => mitRegeln.find((x) => x.id === t.id) ?? kontoRegelwerk(t, rolleId)), wer, a)! : { offen: sichtbar.map((t) => t.id), je: [] };
     return {
       ich: { id: ich.id, rolle: 'mitglied' }, admin: false, wer, a, typen: new Map(sichtbar.map((t) => [t.id, t])),
-      lesen: { offen: sichtbar.map((t) => t.id), je: [] },
-      paket: { id: p?.id ?? '', schreiben: aufloesen(r.schreiben), dokumente: r.dokumente, schnittstellen: r.schnittstellen ?? [] },
+      lesen,
+      paket: { id: p?.id ?? '', schreiben: aufloesen(r.schreiben), dokumente: r.dokumente, schnittstellen: r.schnittstellen ?? [], ...(mitRegeln.length ? { regeln: new Map(mitRegeln.map((t) => [t.id, t])) } : {}) },
     };
   }
 
@@ -2970,9 +2989,20 @@ export class Dienst {
     if (!typ) return { ...NICHTS };
     if (z.admin) return wirksamVon(ALLES, typ);
     // Dienstkonto (#338): lesen, was bestätigt ist; anlegen/bearbeiten nur die Typen unter „schreiben“; nie löschen, nie Passwörter.
-    if (z.paket) { const w = wirksamVon(ALLES, typ); const s = z.paket.schreiben.has(typ.id); return { C: w.C && s, R: w.R, U: w.U && s, D: false, P: false }; }
+    if (z.paket) {
+      const w = wirksamVon(ALLES, typ); const s = z.paket.schreiben.has(typ.id);
+      const bestaetigt = { C: w.C && s, R: w.R, U: w.U && s, D: false, P: false };
+      const regeln = z.paket.regeln?.get(typ.id);
+      if (!regeln) return bestaetigt;
+      // Regeln für die Rolle „Paket“ (#673): nur einschränken, nie über die bestätigten Rechte hinaus.
+      const quelle = aufgaben && !neu ? quelleAus(z.wer.id, aufgaben.filter((x) => x.mappeId === m.id)) : await this.mappenquelle(z.wer.id, neu ? [] : [m.id]);
+      const r = rechteAnMappe(regeln, m, z.wer, z.a, quelle, neu).wirksam;
+      return { C: bestaetigt.C && r.C, R: bestaetigt.R && r.R, U: bestaetigt.U && r.U, D: false, P: false };
+    }
     const quelle = aufgaben && !neu ? quelleAus(z.wer.id, aufgaben.filter((x) => x.mappeId === m.id)) : await this.mappenquelle(z.wer.id, neu ? [] : [m.id]);
-    return rechteAnMappe(typ, m, z.wer, z.a, quelle, neu).wirksam;
+    const r = rechteAnMappe(typ, m, z.wer, z.a, quelle, neu).wirksam;
+    // Systemkonto (#673): Passwörter sieht es nie (Platzhalter in Automatisierungen würden sie sonst hinaustragen).
+    return z.systemkonto ? { ...r, P: false } : r;
   }
 
   /** Wie `rechteAn` für viele Mappen mit einem Zugriff (#367). */
@@ -2986,7 +3016,7 @@ export class Dienst {
     // Dienstkonto (#338): wie in rechteAn, ohne Regeln.
     if (z.paket) { for (const m of ms) r.set(m.id, await this.rechteAnEine(z, m, false)); return r; }
     const quelle = await this.mappenquelle(z.wer.id, ms.map((m) => m.id));
-    for (const m of ms) { const typ = z.typen.get(m.typId); r.set(m.id, typ ? rechteAnMappe(typ, m, z.wer, z.a, quelle, false).wirksam : { ...NICHTS }); }
+    for (const m of ms) { const typ = z.typen.get(m.typId); const x = typ ? rechteAnMappe(typ, m, z.wer, z.a, quelle, false).wirksam : { ...NICHTS }; r.set(m.id, z.systemkonto ? { ...x, P: false } : x); }
     return r;
   }
 
@@ -4334,7 +4364,7 @@ export class Dienst {
 
   /* ---------- Systemtypen: Benutzer und Rollen (#26, #27) ---------- */
 
-  private sichern?: Promise<{ benutzer: Mappentyp; rolle: Mappentyp; post: Mappentyp; systemrollen: Map<Rolle, string> }>;
+  private sichern?: Promise<{ benutzer: Mappentyp; rolle: Mappentyp; post: Mappentyp; systemrollen: Map<Rolle, string>; kontorollen: Map<Kontorolle, string> }>;
 
   /**
    * Legt die Systemtypen „Benutzer“ und „Rolle“ und die Systemrollen an, falls sie fehlen.
@@ -4348,6 +4378,7 @@ export class Dienst {
       rolle: (await this.repo.holeTyp(s.rolle.id)) ?? s.rolle,
       post: (await this.repo.holeTyp(s.post.id)) ?? s.post,
       systemrollen: s.systemrollen,
+      kontorollen: s.kontorollen,
     }));
   }
 
@@ -4465,8 +4496,19 @@ export class Dienst {
       }
       systemrollen.set(r, m.id);
     }
+    // Systemrollen für Konten, die kein Mensch sind (#673): Systemkonto und Paket – nur in Regeln am Mappentyp, nie an Menschen vergeben.
+    const kontorollen = new Map<Kontorolle, string>();
+    for (const r of Object.keys(KONTOROLLEN) as Kontorolle[]) {
+      const kennung = kontorolleKennung(r);
+      let m = await this.repo.holeSystemMappe(kennung);
+      if (!m) {
+        const name = (await this.repo.findeDoppelt(rolle.id, 'name', KONTOROLLEN[r])) ? `${KONTOROLLEN[r]} (System)` : KONTOROLLEN[r];
+        m = await this.schreibeSystemMappe(rolle, randomUUID(), { name }, null, kennung);
+      }
+      kontorollen.set(r, m.id);
+    }
     await this.sichereAblageort();
-    return { benutzer, rolle, post, systemrollen };
+    return { benutzer, rolle, post, systemrollen, kontorollen };
   }
 
   /**
@@ -4844,11 +4886,12 @@ export class Dienst {
   async pruefeRollen(eingabe: unknown): Promise<string[]> {
     if (!Array.isArray(eingabe)) throw new Fachfehler(422, 'Rollen als Liste angeben.');
     const ids = [...new Set(eingabe.map(String))];
-    const { rolle, systemrollen } = await this.sichereSystem();
+    const { rolle, systemrollen, kontorollen } = await this.sichereSystem();
     const typVon = await this.repo.typenVon(ids.filter(istUuid));
     if (ids.some((id) => typVon.get(id) !== rolle.id)) throw new Fachfehler(422, 'Mindestens eine dieser Rollen gibt es nicht.');
     const system = new Set(systemrollen.values());
     if (ids.some((id) => system.has(id))) throw new Fachfehler(422, 'Administrator und Mitglied werden über die Rolle des Benutzers vergeben.');
+    if (ids.some((id) => [...kontorollen.values()].includes(id))) throw new Fachfehler(422, t('konten.fehler.kontorolle'));
     return ids;
   }
 
@@ -4864,12 +4907,39 @@ export class Dienst {
   }
 
   /** Alle Rollen für die Auswahl in der Benutzerverwaltung; Systemrollen zuerst. */
-  async listeRollen() {
-    const { rolle } = await this.sichereSystem();
+  async listeRollen(mitKonten = false) {
+    const { rolle, kontorollen } = await this.sichereSystem();
+    const konto = new Set(kontorollen.values());
     return (await this.repo.listeMappen(rolle.id))
-      .map((m) => ({ id: m.id, name: m.titel || String(m.werte.name ?? ''), system: !!m.systemKennung }))
+      // Systemkonto und Paket (#673) vergibt niemand an Menschen – in Benutzerverwaltung und Freigaben nicht zur Wahl.
+      .filter((m) => mitKonten || !konto.has(m.id))
+      .map((m) => ({ id: m.id, name: m.titel || String(m.werte.name ?? ''), system: !!m.systemKennung, ...(konto.has(m.id) ? { konto: true } : {}) }))
       .sort((a, b) => Number(b.system) - Number(a.system) || a.name.localeCompare(b.name, 'de'));
   }
+
+  /**
+   * Werkbank → Benutzer, Abschnitt „Systemkonten“ (#673): das Systemkonto „Automatisierung“ und die Dienstkonten der
+   * Pakete mit ihrer Systemrolle; je Konto, welche Automatisierungen es ausführt (kommt mit #674 über `automatisierungenVon`).
+   */
+  async systemkontenUebersicht(system: Benutzer[], dienst: Benutzer[]): Promise<SystemkontoEintrag[]> {
+    const pakete = new Map((await this.repo.listePakete()).map((p) => [p.id, p.name]));
+    const eintrag = async (b: Benutzer, rolle: Kontorolle): Promise<SystemkontoEintrag> => ({
+      id: b.id, name: b.name, rolle, aktiv: b.aktiv,
+      ...(b.systemkonto ? { systemkonto: b.systemkonto } : {}),
+      ...(b.paketId ? { paketId: b.paketId, paket: pakete.get(b.paketId) ?? null } : {}),
+      automatisierungen: (await this.automatisierungenVon?.(b.id)) ?? [],
+    });
+    return [...await Promise.all(system.map((b) => eintrag(b, 'systemkonto'))), ...await Promise.all(dienst.map((b) => eintrag(b, 'paket')))];
+  }
+  /** Systemkonten des DMS (#673), vom Start gesetzt (Konten legen sie bei Bedarf an). */
+  systemkonten?: (kennung: Systemkonto) => Promise<Benutzer>;
+  /** Zugriff eines Systemkontos (#673), z. B. für Automatisierungen: Rechte aus den Regeln für die Rolle „Systemkonto“. */
+  async systemZugriff(kennung: Systemkonto = 'automatisierung'): Promise<Zugriff> {
+    if (!this.systemkonten) throw new Fachfehler(500, 'Systemkonten sind nicht eingerichtet.');
+    return this.zugriff(await this.systemkonten(kennung));
+  }
+  /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
+  automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string }>>;
 
   /** Weitere (nicht System-)Rollen je Benutzer. */
   async weitereRollen(): Promise<Map<string, string[]>> {

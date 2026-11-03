@@ -1,0 +1,14 @@
+{
+  "fehler.kontorolle": "Systemkonto und Paket sind Rollen für Konten, die kein Mensch sind – sie lassen sich nicht an Benutzer vergeben.",
+  "systemkonten.titel": "Systemkonten",
+  "systemkonten.beschreibung": "Konten, unter denen das DMS selbst und Pakete mit Code arbeiten. Sie melden sich nie an, haben kein Passwort und keinen API-Schlüssel und stehen in keiner Auswahl. Was sie an Mappen dürfen, legst du in den Regeln am Mappentyp mit den Rollen „Systemkonto“ und „Paket“ fest.",
+  "systemkonten.leer": "Noch keine Systemkonten.",
+  "systemkonten.rolle.systemkonto": "Systemkonto",
+  "systemkonten.rolle.paket": "Paket",
+  "systemkonten.automatisierungen": "Führt aus: {liste}",
+  "systemkonten.keineAutomatisierungen": "Führt noch keine Automatisierungen aus.",
+  "systemkonten.paket": "Dienstkonto des Pakets „{paket}“",
+  "systemkonten.paketEntfernt": "Paket entfernt – das Konto bleibt für die Historie.",
+  "systemkonten.nichtAnmeldbar": "nicht anmeldbar",
+  "systemkonten.rechte": "Rechte an Mappen: Regeln mit der Rolle „{rolle}“"
+}

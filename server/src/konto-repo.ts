@@ -7,6 +7,8 @@ import { ohneWarten } from './repo-pg';
 /** Adresse eines Dienstkontos: nie zustellbar (.invalid, RFC 2606). */
 /** Adresse eines Dienstkontos – mit Haushalt, weil die Adresse über alle Haushalte eindeutig ist (benutzer_email_uq). */
 export const dienstEmail = (paketId: string, haushaltId: string) => `paket-${paketId}.${haushaltId}@dienst.invalid`;
+/** Adresse eines Systemkontos (#673), ebenso nie zustellbar. */
+export const systemEmail = (kennung: string, haushaltId: string) => `${kennung}.${haushaltId}@system.invalid`;
 
 export type Zweck = 'einladung' | 'zuruecksetzen';
 export interface NeuerBenutzer { id: string; email: string; name: string; rolle: Rolle; passwortHash: string | null }
@@ -31,6 +33,10 @@ export interface KontoRepo {
   dienstkonto(paketId: string): Promise<Benutzer | undefined>;
   legeDienstkontoAn(d: { id: string; paketId: string; name: string }): Promise<Benutzer>;
   listeDienstkonten(): Promise<Benutzer[]>;
+  /** Systemkonten des DMS (#673), z. B. „Automatisierung“; wie Dienstkonten nicht in listeBenutzer, anzahlBenutzer, holeHash. */
+  systemkonto(kennung: string): Promise<Benutzer | undefined>;
+  legeSystemkontoAn(d: { id: string; kennung: string; name: string }): Promise<Benutzer>;
+  listeSystemkonten(): Promise<Benutzer[]>;
 
   legeSitzungAn(hash: string, benutzerId: string, ablauf: Date, info: SitzungsInfo): Promise<void>;
   holeSitzung(hash: string): Promise<SitzungIntern | undefined>;
@@ -79,17 +85,17 @@ export function speicherKontoRepo(): KontoRepo {
   const ohneHash = ({ hash: _h, ...b }: Benutzer & { hash: string | null }): Benutzer => ({ ...b, hatPasswort: !!_h });
 
   return {
-    async anzahlBenutzer() { return [...benutzer.values()].filter((b) => b.art !== 'dienst').length; },
+    async anzahlBenutzer() { return [...benutzer.values()].filter((b) => !b.art).length; },
     async listeBenutzer() {
       const zuletzt = (id: string) => {
         const t = [...sitzungen.values()].filter((x) => x.benutzerId === id && x.ablauf.getTime() > Date.now()).map((x) => x.zuletztAktiv.getTime());
         return t.length ? new Date(Math.max(...t)).toISOString() : null;
       };
-      return [...benutzer.values()].filter((b) => b.art !== 'dienst').map((b) => ({ ...ohneHash(b), zuletztAktiv: zuletzt(b.id) })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+      return [...benutzer.values()].filter((b) => !b.art).map((b) => ({ ...ohneHash(b), zuletztAktiv: zuletzt(b.id) })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
     },
     async holeBenutzer(id) { const b = benutzer.get(id); return b && ohneHash(b); },
     async holeHash(email) {
-      const b = [...benutzer.values()].find((x) => x.art !== 'dienst' && x.email.toLowerCase() === email.toLowerCase());
+      const b = [...benutzer.values()].find((x) => !x.art && x.email.toLowerCase() === email.toLowerCase());
       return b && { benutzer: ohneHash(b), hash: b.hash };
     },
     async dienstkonto(paketId) { const b = [...benutzer.values()].find((x) => x.art === 'dienst' && x.paketId === paketId); return b && ohneHash(b); },
@@ -99,6 +105,15 @@ export function speicherKontoRepo(): KontoRepo {
       return ohneHash(b);
     },
     async listeDienstkonten() { return [...benutzer.values()].filter((b) => b.art === 'dienst').map(ohneHash); },
+    async systemkonto(kennung) { const b = [...benutzer.values()].find((x) => x.art === 'system' && x.systemkonto === kennung); return b && ohneHash(b); },
+    async legeSystemkontoAn(d) {
+      const da = [...benutzer.values()].find((x) => x.art === 'system' && x.systemkonto === d.kennung);
+      if (da) return ohneHash(da);
+      const b = { id: d.id, email: systemEmail(d.kennung, 'speicher'), name: d.name, rolle: 'mitglied' as Rolle, aktiv: true, hatPasswort: false, erstellt: new Date().toISOString(), letzteAnmeldung: null, entwicklermodus: false, hash: null, abwesenheit: { ...KEINE_ABWESENHEIT }, deaktiviert: null, art: 'system' as const, systemkonto: d.kennung };
+      benutzer.set(b.id, b);
+      return ohneHash(b);
+    },
+    async listeSystemkonten() { return [...benutzer.values()].filter((b) => b.art === 'system').map(ohneHash); },
     async legeBenutzerAn(n) {
       if ([...benutzer.values()].some((x) => x.email.toLowerCase() === n.email.toLowerCase())) throw Object.assign(new Error('doppelt'), { code: '23505' });
       const b = { id: n.id, email: n.email, name: n.name, rolle: n.rolle, aktiv: true, hatPasswort: !!n.passwortHash, erstellt: new Date().toISOString(), letzteAnmeldung: null, entwicklermodus: false, hash: n.passwortHash, abwesenheit: { ...KEINE_ABWESENHEIT }, deaktiviert: null };
@@ -180,6 +195,7 @@ const alsBenutzer = (r: Zeile): Benutzer => ({
   abwesenheit: { an: !!r.abwesend, von: tag(r.abwesend_von), bis: tag(r.abwesend_bis), vertreterId: (r.vertreter_id as string | null) ?? null },
   deaktiviert: iso(r.deaktiviert),
   ...(r.art === 'dienst' ? { art: 'dienst' as const, paketId: r.paket_id as string } : {}),
+  ...(r.art === 'system' ? { art: 'system' as const, systemkonto: r.systemkonto as string } : {}),
 });
 /** date-Spalte als JJJJ-MM-TT (ohne Zeitzonenverschiebung). */
 const tag = (v: unknown): string | null => {
@@ -226,6 +242,20 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
       return alsBenutzer(r);
     },
     async listeDienstkonten() { return (await sql`SELECT * FROM benutzer WHERE haushalt_id = ${haushaltId} AND art = 'dienst' ORDER BY paket_id`).map(alsBenutzer); },
+    async systemkonto(kennung) {
+      const [r] = await sql`SELECT * FROM benutzer WHERE haushalt_id = ${haushaltId} AND art = 'system' AND systemkonto = ${kennung}`;
+      return r ? alsBenutzer(r) : undefined;
+    },
+    async legeSystemkontoAn(d) {
+      // Gleichzeitiger Start zweier Server: der eindeutige Index entscheidet, beide bekommen dasselbe Konto.
+      await sql`
+        INSERT INTO benutzer (id, haushalt_id, email, name, rolle, passwort_hash, art, systemkonto)
+        VALUES (${d.id}, ${haushaltId}, ${systemEmail(d.kennung, haushaltId)}, ${d.name}, 'mitglied', NULL, 'system', ${d.kennung})
+        ON CONFLICT DO NOTHING`;
+      const [r] = await sql`SELECT * FROM benutzer WHERE haushalt_id = ${haushaltId} AND art = 'system' AND systemkonto = ${d.kennung}`;
+      return alsBenutzer(r);
+    },
+    async listeSystemkonten() { return (await sql`SELECT * FROM benutzer WHERE haushalt_id = ${haushaltId} AND art = 'system' ORDER BY systemkonto`).map(alsBenutzer); },
     async legeBenutzerAn(n) {
       const [r] = await sql`
         INSERT INTO benutzer (id, haushalt_id, email, name, rolle, passwort_hash)

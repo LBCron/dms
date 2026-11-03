@@ -627,8 +627,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const alle = await konten.personen();
       const sichtbar = await dienst.lesbare(await zg(a), alle.map((p) => p.id));
       // Dienstkonten der Pakete haben keine Benutzer-Mappe; ihr Name („Paket …“) ist für alle sichtbar (#338).
-      return ok(alle.filter((p) => sichtbar.has(p.id) || ('art' in p && p.art === 'dienst')));
+      // Ebenso Systemkonten wie „Automatisierung“ (#673).
+      return ok(alle.filter((p) => sichtbar.has(p.id) || ('art' in p && (p.art === 'dienst' || p.art === 'system'))));
     } },
+    // Systemkonten und Dienstkonten der Pakete (#673): sichtbar, aber nicht bearbeitbar.
+    { methode: 'GET', pfad: '/api/benutzer/systemkonten', zugang: 'admin', handler: async () => ok(await dienst.systemkontenUebersicht(await konten.listeSystemkonten(), await konten.listeDienstkonten())) },
     { methode: 'GET', pfad: '/api/benutzer', zugang: 'admin', handler: async () => {
       const rollen = await dienst.weitereRollen();
       // Offene Aufgaben je Benutzer (#77): Deaktivieren geht erst ohne.

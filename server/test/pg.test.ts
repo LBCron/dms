@@ -942,7 +942,18 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     assert.ok(!(await kr.listeBenutzer()).some((b) => b.id === konto.id), 'nicht in der Benutzerliste');
     assert.equal(await kr.holeHash(dienstEmail('probe', HAUSHALT)), undefined, 'keine Anmeldung');
     await assert.rejects(kr.legeDienstkontoAn({ id: '00000000-0000-4000-8000-0000000003a9', paketId: 'probe', name: 'doppelt' }), 'ein Dienstkonto je Paket');
-    await assert.rejects(sql`UPDATE benutzer SET art = 'roboter' WHERE id = ${konto.id}`, 'nur person oder dienst');
+    await assert.rejects(sql`UPDATE benutzer SET art = 'roboter' WHERE id = ${konto.id}`, 'nur person, dienst oder system');
+    // Systemkonto „Automatisierung“ (#673): einmal je Haushalt, nie anmeldbar, nicht in Listen.
+    const s1 = await kr.legeSystemkontoAn({ id: '00000000-0000-4000-8000-0000000003b1', kennung: 'automatisierung', name: 'Automatisierung' });
+    const s2 = await kr.legeSystemkontoAn({ id: '00000000-0000-4000-8000-0000000003b2', kennung: 'automatisierung', name: 'Automatisierung' });
+    assert.equal(s2.id, s1.id, 'gleichzeitiger Start: dasselbe Konto');
+    assert.equal(s1.art, 'system');
+    assert.equal(s1.systemkonto, 'automatisierung');
+    assert.equal((await kr.systemkonto('automatisierung'))?.id, s1.id);
+    assert.deepEqual((await kr.listeSystemkonten()).map((b) => b.id), [s1.id]);
+    assert.equal(await kr.anzahlBenutzer(), vorher, 'zählt nicht als Benutzer');
+    assert.ok(!(await kr.listeBenutzer()).some((b) => b.id === s1.id));
+    assert.equal(await kr.holeHash(s1.email), undefined, 'keine Anmeldung');
 
     const repo = pgRepo(sql, HAUSHALT);
     await repo.speicherePaketCode('probe', [{ name: 'modul.wasm', inhalt: Buffer.from([0, 97, 115, 109]) }, { name: 'daten/x', inhalt: Buffer.from('x') }]);

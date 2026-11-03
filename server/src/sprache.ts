@@ -6,6 +6,7 @@
 import { uebersetzer } from '../../shared/src/sprache';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import mail from '../../shared/src/sprachen/de/mail.json';
+import konten from '../../shared/src/sprachen/de/konten.json';
 import mappen from '../../shared/src/sprachen/de/mappen.json';
 import pakete from '../../shared/src/sprachen/de/pakete.json';
 import systemzustand from '../../shared/src/sprachen/de/systemzustand.json';
@@ -13,4 +14,4 @@ import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 import api from '../../shared/src/sprachen/de/api.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 
-export const t = uebersetzer({ api, anmeldung, mail, mappen, pakete, systemzustand, webhook, werkbank });
+export const t = uebersetzer({ api, anmeldung, konten, mail, mappen, pakete, systemzustand, webhook, werkbank });
