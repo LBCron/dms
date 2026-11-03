@@ -2059,7 +2059,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Erster Aufruf">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zaehler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2490,7 +2501,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Erster Aufruf">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zaehler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2576,7 +2598,12 @@
 <p>Jeder Benutzer erzeugt seine Schlüssel selbst unter <strong>Profil → Sicherheit → API-Schlüssel</strong>, höchstens 50 je Benutzer – <strong>außer Administratoren</strong> (ab 0.26): Über die Schnittstelle arbeitet immer ein normaler Benutzer. Lege für ein Programm am besten einen eigenen Benutzer an (z. B. „Scanner“), melde dich als dieser an und erzeuge den Schlüssel dort. Schlüssel, die Administratoren schon vorher hatten, funktionieren weiter; die Werkbank-Übersicht erinnert daran, sie so zu ersetzen.</p>
 <ul>
 <li><strong>Name</strong> – wofür der Schlüssel ist, z. B. „Scanner Arbeitszimmer“.</li>
-<li><strong>Recht</strong> – <em>nur lesen</em> oder <em>lesen und schreiben</em>.</li>
+<li><strong>Recht</strong> (Stufe) – eine von dreien:<ul>
+<li><em>nur lesen</em> – liest alles, was der Benutzer lesen darf (nur <code>GET</code>).</li>
+<li><em>lesen und schreiben</em> – liest und ändert alles, was der Benutzer darf.</li>
+<li><em>nur Zähler</em> (ab #625) – ruft <strong>nur</strong> die <a href="#zaehler">Zahlen</a> ab (<code>GET /api/v1/ich/zaehler</code>): neue Post, Zu erledigen, anstehende und überfällige Fristen. Jeder andere Aufruf, auch das <a href="../webdav/">Laufwerk</a>, bekommt <code>403</code>. Gedacht für Hausautomatisierung, Wand-Tablets und Anzeigen: Geht der Schlüssel verloren, erfährt jemand höchstens, wie viel Post und Aufgaben der Benutzer hat – keine Titel, Namen oder Inhalte. „Passwörter lesen“ gibt es für diese Stufe nicht.</li>
+</ul>
+</li>
 <li><strong>Ablaufdatum</strong> – optional.</li>
 <li><strong>Passwörter lesen</strong> – eigenes Recht für <a href="../mappentypen/#passwortfelder">Passwortfelder</a>: Nur damit liefert <code>GET /api/v1/mappen…?passwoerter=anzeigen</code> sie im Klartext; jeder Abruf steht im Protokoll. Ohne den Parameter steht dort immer nur <code>{"gesetzt": true, "lesbar": true}</code>.</li>
 </ul>
@@ -2593,6 +2620,61 @@
 <span class="w">  </span>http://&lt;NAS&gt;:8080/api/v1/mappen
 </code></pre></div>
 <p>Die Ids der Mappentypen und die Kennungen ihrer Felder (<code>key</code>) liefert <code>GET /api/v1/typen</code>.</p>
+<h2 id="zaehler">Zähler: nur Zahlen, für Hausautomatisierung und Anzeigen<a class="headerlink" href="#zaehler" title="Permanent link">&para;</a></h2>
+<p><code>GET /api/v1/ich/zaehler</code> liefert <strong>nur Zahlen</strong> für den Benutzer des Schlüssels, in dessen <a href="../berechtigungen/">Berechtigungen</a> – ohne Titel, Namen, Absender oder Inhalte. Dafür genügt ein Schlüssel der Stufe <em>nur Zähler</em>; <em>nur lesen</em> und <em>lesen und schreiben</em> dürfen ihn ebenfalls. Ein Administrator ruft ihn mit seiner Anmeldung im Browser ab (Administratoren bekommen keine Schlüssel).</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>https://dms.example.org/api/v1/ich/zaehler
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">ETag</span><span class="o">:</span> <span class="l">"z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"</span>
+<span class="na">Cache-Control</span><span class="o">:</span> <span class="l">private, no-cache</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+
+<span class="p">{</span><span class="nt">"neuePost"</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="nt">"zuErledigen"</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="nt">"anstehend"</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">"ueberfaellig"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="nt">"stand"</span><span class="p">:</span><span class="mi">42</span><span class="p">,</span><span class="nt">"geaendert"</span><span class="p">:</span><span class="s2">"2026-11-03T07:15:00.000Z"</span><span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>neuePost</code></td>
+<td><a href="https://motom001.github.io/dms/benutzer/post/">Post</a> im Stand <em>Neu</em>, deren <em>Für</em> der Benutzer ist oder leer ist – nur Post, die er lesen darf</td>
+</tr>
+<tr>
+<td><code>zuErledigen</code></td>
+<td>wie <strong>Zu erledigen</strong> in der Ablage: Mappen mit offenen Aufgaben für ihn</td>
+</tr>
+<tr>
+<td><code>anstehend</code></td>
+<td>Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen (wie <strong>Anstehend</strong>)</td>
+</tr>
+<tr>
+<td><code>ueberfaellig</code></td>
+<td>offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute</td>
+</tr>
+<tr>
+<td><code>stand</code></td>
+<td>zählt um eins hoch, sobald sich eine der Zahlen gegenüber dem letzten Abruf geändert hat</td>
+</tr>
+<tr>
+<td><code>geaendert</code></td>
+<td>wann das DMS diese Änderung bemerkt hat (beim Abruf)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nichts Neues kostet nichts:</strong> Schicke das <code>ETag</code> des letzten Abrufs als <code>If-None-Match</code> mit. Hat sich nichts geändert, antwortet das DMS mit <code>304 Not Modified</code> ohne Inhalt:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer dms_…"</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://dms.example.org/api/v1/ich/zaehler
+<span class="c1"># HTTP/1.1 304 Not Modified</span>
+</code></pre></div>
+<ul>
+<li>Die Zahlen kommen aus demselben Zwischenspeicher wie die Zahlen der Ablage: Auch bei 50.000 Mappen ist ein Abruf meist in wenigen Millisekunden beantwortet. Alle paar Minuten abzufragen (z. B. alle 5 Minuten) ist unbedenklich.</li>
+<li>Der Stand liegt in der Datenbank: Er übersteht einen Neustart. Nach einer <a href="../wiederherstellen/">Wiederherstellung</a> kann er auf den Stand der Sicherung zurückgehen – vergleiche ihn deshalb nur auf „anders“, nicht auf „größer“.</li>
+<li>Andere Aufrufe mit einem Schlüssel <em>nur Zähler</em> bekommen <code>403</code> mit dem Hinweis, dass dieser Schlüssel nur die Zahlen abruft.</li>
+</ul>
 <h3 id="mappe-aendern">Mappe ändern, auch gleichzeitig mit anderen<a class="headerlink" href="#mappe-aendern" title="Permanent link">&para;</a></h3>
 <p><code>PUT /api/v1/mappen/{id}</code> ändert nur die Felder, die in <code>werte</code> stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb <strong>nur, was du ändern willst</strong> – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.</p>
 <p>Mit <code>stand</code> prüft das DMS zusätzlich, ob seit deinem Lesen jemand <strong>dasselbe Feld</strong> geändert hat (#609). <code>stand</code> ist der Wert <code>geaendert</code> der Mappe aus <code>GET /api/v1/mappen/{id}</code>:</p>
@@ -2677,7 +2759,7 @@ curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </spa
 <p>Gelöschte Mappen liegen im <a href="../papierkorb/">Papierkorb</a>: <code>GET /api/v1/papierkorb</code> (eigener), <code>POST /api/v1/papierkorb/&lt;Id&gt;/wiederherstellen</code>, <code>DELETE /api/v1/papierkorb/&lt;Id&gt;</code> und <code>DELETE /api/v1/papierkorb</code> (leeren).</p>
 <h2 id="regeln">Regeln<a class="headerlink" href="#regeln" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Schlüssel gelten nur unter <code>/api/v1</code>, nicht an den internen Adressen der Oberfläche.</li>
+<li>Schlüssel gelten nur unter <code>/api/v1</code>, nicht an den internen Adressen der Oberfläche. Ein Schlüssel <em>nur Zähler</em> gilt nur für <code>GET /api/v1/ich/zaehler</code>.</li>
 <li>Es gelten dieselben Prüfungen wie in der Oberfläche: Pflichtfelder, eindeutige Werte, geschützte Felder der Benutzer-Mappen – und die <a href="../berechtigungen/">Berechtigungen</a> des Benutzers, dem der Schlüssel gehört. Mappen, die er nicht lesen darf, liefert die Schnittstelle nicht; Passwörter nur mit dem Recht „Passwörter sehen“.</li>
 <li>Benutzer wählt man auch über die Schnittstelle nur aus denen, deren Benutzer-Mappe man sehen darf (Verantwortlich, Aufgaben, Vertreter). Wie man so ein Programm sauber abgrenzt, zeigt das Beispiel <a href="../berechtigungen/#beispiel-ein-programm-das-nur-rechnungen-sieht">Ein Programm, das nur Rechnungen sieht</a>.</li>
 <li>Im aktiven <a href="../wartungsmodus/">Wartungsmodus</a> antwortet die Schnittstelle mit <code>503</code> und <code>Retry-After</code> (Sekunden bis zum erwarteten Ende).</li>
