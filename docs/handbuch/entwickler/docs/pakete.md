@@ -22,6 +22,7 @@ Dann ausfüllen:
 | `inhalt/sichten.yaml` | Ansichten mit Elternansicht, Mappentypen und Bedingungen |
 | `inhalt/beispiele.yaml` | optional: Beispiel-Mappen mit erfundenen Daten |
 | `inhalt/wortlisten.yaml` | optional (ab Ablago 0.127.0): Gruppen gleichbedeutender Wörter für die Suche |
+| `inhalt/automatisierungen.yaml` | optional (ab Ablago 0.177.0): vorgefertigte Automatisierungen, nach der Installation aus |
 | `README.md`, `LICENSE`, `CHANGELOG.md` | Beschreibung, Lizenztext, Änderungen je Version |
 | `tests/erwartung.yaml` | was nach der Installation da sein muss |
 
@@ -45,7 +46,7 @@ So bildet der Export Ablago auf das Paketformat ab:
 
 Das Format beschreiben die JSON-Schemas in der Registry: [`schema/manifest.schema.json`](https://github.com/motom001/dms-registry/blob/main/schema/manifest.schema.json) und [`schema/inhalt.schema.json`](https://github.com/motom001/dms-registry/blob/main/schema/inhalt.schema.json). Die Vorlage zeigt jede Angabe mit Kommentar. Ablago liest genau dieses Format:
 
-- **Manifest:** `schema: 1` ist Pflicht; ein anderer Wert wird abgelehnt. `inhalt` nennt die Dateien mit `mappentypen`, `sichten`, `beispiele` und `wortlisten` (Pfade relativ zum Paketordner). Das Schema kennt außerdem `inhalt.rollen`; Ablago liest es nicht.
+- **Manifest:** `schema: 1` ist Pflicht; ein anderer Wert wird abgelehnt. `inhalt` nennt die Dateien mit `mappentypen`, `sichten`, `beispiele`, `wortlisten` und `automatisierungen` (Pfade relativ zum Paketordner). Das Schema kennt außerdem `inhalt.rollen`; Ablago liest es nicht.
 - **Unbekannte Felder** (dms #635): Felder, die Ablago nicht kennt, ignoriert es – im Manifest (oben und in Unterabschnitten wie `autor`, `inhalt`, an Mappentypen, Ansichten und Beispielen), in `katalog.json` und im Verzeichnis einer Sammeldatei. So brechen neue optionale Felder (z. B. `symbol`, `kuerzel`, `kategorien`) ältere Ablago nicht; neue Felder sind deshalb immer optional. Abgelehnt wird nur ein anderes Format: `schema` bzw. `format` ungleich 1. Die Signatur gilt weiter über die rohen Bytes von `katalog.json`, unbekannte Felder eingeschlossen. Der Test `server/test/unbekannte-felder.test.ts` hält das fest.
 - **Kennungen** (`schluessel` bei Mappentypen und Ansichten, `key` bei Feldern und Registern) sind im Paket lokal. Ablago legt Mappentypen als `<paket>_<schluessel>` an.
 - **Felder** wie in der Werkbank: `key`, `label`, `typ` (text, langtext, formatiert, zahl, betrag, datum, janein, auswahl, referenz, passwort) und die üblichen Eigenschaften (`pflicht`, `eindeutig`, `hilfe`, `standard`, `minLen`, `maxLen`, `muster`, `min`, `max`, `nachkomma`, `waehrung`, `optionen`, `mehrfach`, `verweisart`, `frist`, `erkennung`, `format`, `landFeld`).
@@ -69,6 +70,19 @@ Das Format beschreiben die JSON-Schemas in der Registry: [`schema/manifest.schem
     - woerter: [Nebenkosten, Betriebskosten]
     ```
 
+- **Automatisierungen** (dms #712, dms-registry #108, ab 0.177.0): `inhalt.automatisierungen` nennt eine Datei mit vorgefertigten [Automatisierungen](https://help.ablago.app/admin/aktuell/automatisierungen/) – je Eintrag `schluessel` (fest, wie bei Typen), `name`, optional `beschreibung`, genau eine Wenn-Karte `wenn`, optional `und`, mindestens eine Karte in `dann`. Karten und Werte wie im Editor; Mappentypen als eigener Schlüssel oder `paket:typ` einer Abhängigkeit. **Feste Personen gibt es nicht** – Empfänger sind ein Feld (`{ art: feld, feld: verantwortlich, sonst: ersteller }`), oder der Ersteller der Mappe. Nach der Installation sind sie **aus**; beim Installieren fragt Ablago, welche gleich eingeschaltet werden (Vorgabe: alle). Ein Update ersetzt nur unveränderte Automatisierungen, beim Entfernen des Pakets gehen unveränderte, ausgeschaltete mit. Ältere Ablago übergehen den Abschnitt; Pakete damit verlangen `dms: ">=0.177.0"`. Beispiel:
+
+    ```yaml
+    # inhalt/automatisierungen.yaml
+    - schluessel: hu_bald
+      name: HU wird bald fällig
+      beschreibung: Einen Monat vor der Hauptuntersuchung bekommt der Verantwortliche eine Frist.
+      wenn: { art: datum, typ: fahrzeug, feld: hu_faellig, vorlauf: 1, einheit: monate, uhrzeit: "07:00" }
+      dann:
+        - { art: aufgabe, als: aufgabe, empfaenger: [{ art: feld, feld: verantwortlich, sonst: ersteller }], text: "Für {kennzeichen} wird bald die HU fällig: {datum}." }
+    ```
+
+    Am Datumsfeld bleibt nur `frist` („ist eine Frist“: steht unter *Zu erledigen*, im Kalender und löst *Datum erreicht* aus). Seit 0.177.0 legt das Feld **keine Aufgaben mehr selbst an**; `frist.vorlauf`, `einheit`, `wiederholung` und `text` dienen nur noch als Vorgabe – erinnern soll eine mitgelieferte Automatisierung mit derselben Vorlaufzeit.
 - **Abhängigkeiten** (`abhaengigkeiten: { <paket>: "<bereich>" }`): Pakete, die vorher installiert sein müssen. Beim Installieren kommen fehlende Abhängigkeiten im selben Ablauf mit – seit Ablago 0.151.0 (#405) auch solche **mit Code**: Der Administrator sieht die Rechte aller Pakete auf einer Seite und bestätigt sie einmal; jedes Paket behält sein eigenes Dienstkonto und seine eigenen Rechte. Ein Update, das die Rechte ändert, braucht wie bisher eine neue Bestätigung.
 - **Ergänzungen** (`ergaenzt`, dms #405, ab 0.151.0): Ein Paket, das ein anderes erweitert – etwa eine Zusatzsprache der Texterkennung –, sagt das mit `ergaenzt`. Das ergänzte Paket muss auch unter `abhaengigkeiten` stehen. Die Installation zeigt Ergänzungen als **Häkchen unter dem ergänzten Paket** (beim ersten Installieren, im Einrichtungsassistenten, aus einer Sammeldatei und nachträglich am installierten Paket), gruppiert nach `gruppe` – ohne Gruppe unter „Ergänzungen“. Die Gruppe ist eine kurze Frage ohne Fragezeichen (höchstens 40 Zeichen), Ablago hängt „?“ an. Jede Ergänzung bleibt ein eigenes Paket mit eigener Version und eigenem Update. Ältere Ablago ignorieren das Feld; ein Paket braucht dafür kein höheres `dms`. Ohne `ergaenzt` erscheint ein abhängiges Paket nur als normales Paket in der Liste.
 

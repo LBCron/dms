@@ -112,12 +112,15 @@ describe('„Datum erreicht“ (#724)', () => {
     assert.match(l.schritte[2].text!, /Administratoren/);
   });
 
-  it('keine zweite Frist neben der eingebauten Erinnerung (gleiche Person, gleiches Datum)', async () => {
+  it('keine zweite Frist neben der übernommenen Erinnerung (gleiche Person, gleiches Datum, #712)', async () => {
     const { d, admin, vertrag, motor } = await aufbau();
+    assert.equal(await motor.fristenUebernehmen(), 2, 'Erinnerung am Feld → Automatisierung, dazu „Vertretung eingetragen“');
     const datum = verschiebe(heuteIn(), 30);
     const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendbar_bis: datum } }, admin.id);
+    assert.equal((await d.alleAufgaben()).filter((x) => x.mappeId === m.id && x.art === 'frist').length, 0, 'das Feld legt selbst keine an');
+    await motor.ereignis({ id: crypto.randomUUID(), art: 'mappe.angelegt', daten: { mappe: m.id, typ: vertrag.id }, ausloeser: { art: 'benutzer', id: admin.id, konto: admin.id }, erstellt: new Date().toISOString() });
     const eingebaut = (await d.alleAufgaben()).filter((x) => x.mappeId === m.id && x.art === 'frist');
-    assert.equal(eingebaut.length, 1, 'eingebaute Erinnerung an den Ersteller');
+    assert.equal(eingebaut.length, 1, 'übernommene Erinnerung an den Ersteller (Datum im Vorlauf, beim Speichern)');
     const a = await motor.lege({ name: 'Kündigen', aktiv: true, wenn: { art: 'datum', typ: vertrag.id, feld: 'kuendbar_bis', vorlauf: 30, einheit: 'tage', uhrzeit: '00:00' },
       dann: [{ art: 'aufgabe', als: 'aufgabe', empfaenger: [{ art: 'ersteller' }], text: 'Kündigen?' }] }, admin.id);
     await motor.zeitplan();
@@ -154,7 +157,7 @@ describe('Aufgaben mit Anlass (#724)', () => {
       await d.ereignisse.verteile();
       const [l] = await motor.laeufe(a.id);
       assert.equal(l?.zustand, 'abgeschlossen', JSON.stringify(l?.schritte));
-      const offen = (await d.aufgabenVon(lena.id)).filter((x) => x.anlass?.art === 'abwesenheit' && !x.erledigt);
+      const offen = (await d.aufgabenVon(lena.id)).filter((x) => x.anlass?.art === 'abwesenheit' && x.anlass.automatisierung === a.id && !x.erledigt);
       assert.equal(offen.length, 1);
       await konten.setzeAbwesenheit(lena, lena.id, { an: false });
       assert.ok((await d.aufgabenVon(lena.id)).find((x) => x.id === offen[0].id)?.erledigt, 'erledigt sich selbst');

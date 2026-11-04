@@ -174,8 +174,12 @@ Siehe auch: [Vollexport](#vollexport), [Meine Daten exportieren](#meine-daten-ex
 Text mit Überschriften, Listen und Hervorhebungen (Markdown) – als Feldart und in Notizen.
 
 <a id="frist"></a>**Frist** · ✓ Alltagswort · alle  
-Eine Aufgabe, die aus einem Datumsfeld mit Vorlauf entsteht, z. B. „Kündigen bis …“.  
+Eine Aufgabe, die eine Automatisierung „Datum erreicht“ aus einem Datumsfeld anlegt – die [Vorlaufzeit](#vorlaufzeit) vor dem Datum, z. B. „Kündigen bis …“.  
 Siehe auch: [Erinnerung](#erinnerung), [Anstehend](#anstehend).
+
+<a id="vorlaufzeit"></a>**Vorlaufzeit** · ✓ Alltagswort · Admins  
+Wie lange vor einem Datum Ablago erinnert – in Tagen, Wochen oder Monaten („… vorher erinnern“). Eingestellt an der Automatisierung, nicht am Feld.  
+Siehe auch: [Frist](#frist).
 
 <a id="historie"></a>**Historie** · ✓ Alltagswort · alle  
 Die Geschichte einer Mappe – Änderungen vorher und nachher, Dokumente, Papierkorb, Notizen, Aufgaben. Das technische Betriebsprotokoll heißt dagegen „Protokoll“.
@@ -205,7 +209,7 @@ Wie weit Post bearbeitet ist – Neu (noch nicht bearbeitet), Zugeordnet (liegt 
 Siehe auch: [Post](#post), [Neue Post](#neue-post).
 
 <a id="vertretung"></a>**Vertretung** · ✓ Alltagswort · alle  
-Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe der Art „Vertretung“.
+Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe – über die Automatisierung „Vertretung eingetragen“, die ein Admin einschaltet bzw. anpasst.
 
 <a id="volltext"></a>**Volltext** · ✗ Fachwort · alle  
 Der durchsuchbare Text in den Dokumenten – aus der Textebene der Datei oder aus der Texterkennung.  
