@@ -5,7 +5,7 @@ import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Mappe, type Mappentyp
 import { type Recht } from '../../shared/src/rechte';
 import { ladeBeispiele } from './beispiele';
 import { demoPhasen, erzeugeDemo, pruefeDemoOptionen, schaetzeDemo, type DemoPlatz } from './demo';
-import type { Dienst } from './dienst';
+import { taugtAlsAufgabenEmpfaenger, type Dienst } from './dienst';
 import { VOLLTEXT_KOERPER_MAX } from '../../shared/src/paketvolltext';
 import { ARCHIVFASSUNG_MAX_BYTES, archivfassungName, pdfaName } from '../../shared/src/archivfassung';
 import { Fachfehler } from './fehler';
@@ -40,6 +40,7 @@ import { Umwandlung } from './umwandlung';
 import type { Paketlaeufer } from './laeufer/verwaltung';
 import { eigeneVersion, standKennung, uebersicht, versionsabgleich, type SystemQuelle } from './system';
 import type { Fehlermeldungen } from './fehlermeldungen';
+import type { Verwaltung } from './verwaltung';
 import { MODULE, protokoll, STUFEN, type Stufe } from './protokoll';
 import type { Betrieb } from './betrieb';
 import { maskiere, type Tresor } from './tresor';
@@ -232,6 +233,8 @@ export interface RoutenExtras {
   region?: import('./region').RegionDienst;
   /** Fehlermeldungen von Benutzern (#70). */
   fehlermeldungen?: Fehlermeldungen;
+  /** Technische Aufgaben des Admin-Kontos (#719): Hinweis ohne Einzelheiten beim Alltags-Benutzer. */
+  verwaltung?: Verwaltung;
   /** API-Schlüssel (#20). */
   apiSchluessel?: ApiSchluesselDienst;
   /** Befehl `dms` im Container (#244). */
@@ -351,6 +354,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     if (a.query.passwoerter !== 'anzeigen') throw new Fachfehler(422, '„passwoerter“ kennt nur den Wert „anzeigen“.');
     if (!a.apiSchluessel?.passwoerter) throw new Fachfehler(403, 'Passwörter liefert die API nur mit einem API-Schlüssel, der das Recht „Passwörter lesen“ hat.');
     return a.apiSchluessel.name;
+  };
+  /**
+   * Technische Aufgaben (#719) für den Hinweis beim Alltags-Benutzer: nur, wer die Aufgaben ohne Empfänger bekommt und
+   * kein Administrator ist, nicht während ein Administrator als er agiert – und nur ja/nein.
+   */
+  const verwaltungHinweis = async (a: Anfrage): Promise<boolean> => {
+    if (!a.benutzer || a.benutzer.rolle === 'admin' || a.sitzungsDaten?.vertretungId || !x.verwaltung) return false;
+    if ((await dienst.alltagsEmpfaenger()).wirksam !== a.benutzer.id) return false;
+    try { return await x.verwaltung.offen(); } catch { return false; }
   };
   /** Berechtigungen (#124): Zugriff des Benutzers, einmal je Anfrage. */
   const zg = (a: Anfrage) => dienst.zugriff(ich(a));
@@ -479,6 +491,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       favoritenBenachrichtigung: a.benutzer ? await dienst.favoritenBenachrichtigungErlaubt(a.benutzer.id) : null,
       // Laufwerk (#720): eingeschaltet? Nur dann zeigt die Oberfläche „Als Laufwerk einbinden“.
       laufwerk: a.benutzer && x.webdav ? (await x.webdav.einstellung()).aktiv : false,
+      // Aufgaben ohne Empfänger (#719): Sieht dieser Benutzer sie (Administrator oder gewählter Alltags-Benutzer)?
+      aufgabenOhneEmpfaenger: a.benutzer ? await dienst.siehtOhneEmpfaenger(a.benutzer) : false,
+      // Technische Aufgaben (#719): nur beim Alltags-Benutzer, nur ja/nein – nie, was genau anliegt.
+      verwaltung: await verwaltungHinweis(a),
     }) },
     // Laufwerk für Benutzer (#720): Adresse und Benutzername; ausgeschaltet gibt es nichts.
     { methode: 'GET', pfad: '/api/konto/laufwerk', zugang: 'angemeldet', handler: async (a) => {
@@ -1354,6 +1370,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         // #459: Ist ein Paket für die Texterkennung installiert? Sonst Hinweis „Texterkennung ist jetzt ein Paket“.
         texterkennungPaket: !!(await sicher(() => dienst.texterkennungPaket())),
         aufgaben: { offen: aufgaben.length, ohneEmpfaenger: aufgaben.filter((y) => !y.empfaengerId).length },
+        // #719: Wer im Alltag die Aufgaben ohne Empfänger bekommt; `moeglich` = aktive Benutzer ohne Admin-Rechte.
+        aufgabenEmpfaenger: await sicher(async () => ({ benutzerId: (await dienst.alltagsEmpfaenger()).wirksam, moeglich: (await konten.listeBenutzer()).filter(taugtAlsAufgabenEmpfaenger).length })),
         unpassend: Object.values(z.typen).reduce((s, t) => s + (t.unpassend ?? 0), 0),
         papierkorb: { anzahl: korb.length, aeltester: korb.reduce<string | null>((m, e) => (!m || e.geloescht < m ? e.geloescht : m), null), tage: await dienst.papierkorbTage() },
         version: sys.dms,
@@ -1745,6 +1763,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/werkbank/aufgaben/mail', zugang: 'admin', handler: async (a) => ok(await mail().speichere(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/aufgaben/mail/senden', zugang: 'admin', handler: async () => ok({ verschickt: await mail().sende() }) },
     // Favoriten benachrichtigen (#506): für alle, je Rolle oder gar nicht; Vorgabe für neue Benutzer.
+    // Aufgaben ohne Empfänger gehen an einen Alltags-Benutzer (#719).
+    { methode: 'GET', pfad: '/api/werkbank/aufgaben-empfaenger', zugang: 'admin', handler: async () => ok(await dienst.alltagsEmpfaenger()) },
+    { methode: 'PUT', pfad: '/api/werkbank/aufgaben-empfaenger', zugang: 'admin', handler: async (a) => ok(await dienst.setzeAufgabenEmpfaenger(a.body, ich(a).id)) },
     { methode: 'GET', pfad: '/api/werkbank/favoriten-freigabe', zugang: 'admin', handler: async () => ok({ freigabe: await dienst.favoritenFreigabe(), rollen: await dienst.listeRollen() }) },
     { methode: 'PUT', pfad: '/api/werkbank/favoriten-freigabe', zugang: 'admin', handler: async (a) => ok({ freigabe: await dienst.setzeFavoritenFreigabe(a.body, ich(a).email), rollen: await dienst.listeRollen() }) },
     { methode: 'POST', pfad: '/api/werkbank/favoriten-freigabe/anwenden', zugang: 'admin', handler: async (a) => ok({ benutzer: await dienst.favoritenVorgabeAnwenden(ich(a).email) }) },

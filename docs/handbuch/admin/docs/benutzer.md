@@ -14,6 +14,21 @@ Unter **Werkbank → Benutzer** legst du fest, wer sich anmelden darf und mit we
 
 Ist E-Mail-Versand eingerichtet, bekommt der Benutzer eine Einladung. Sonst zeigt Ablago den Einladungslink zum Kopieren – schick ihn auf einem sicheren Weg weiter. Der Link ist 7 Tage gültig und funktioniert einmal. **Einladung erneut senden** macht den alten Link ungültig.
 
+## Aufgaben ohne Empfänger { #aufgaben-ohne-empfanger }
+
+Manche Aufgaben haben keinen einzelnen Empfänger: Aufgaben ohne Empfänger, Post ohne **Für** und Fristen ohne Zuständige. Sie landen bei den Administratoren. Weil Ablago Verwaltung und Alltag trennt, meldet sich im Alltag aber kaum jemand als Administrator an. Deshalb bekommt sie zusätzlich **eine Person ohne Admin-Rechte**.
+
+- Öffne **Werkbank → Benutzer**, ohne einen Benutzer auszuwählen. Rechts steht **Aufgaben ohne Empfänger gehen an**.
+- Wähle eine Person wie in einem Verweisfeld: Tippe den Namen und wähle ihn aus. Wählbar sind aktive Benutzer ohne Admin-Rechte. **Entfernen** und **Speichern** heißt: Nur die Administratoren sehen sie.
+- Der Einrichtungsassistent trägt den **ersten Benutzer** ein, den du dort anlegst. Admin-Rechte bekommt er dadurch nicht. Hast du einmal gespeichert – auch „niemand“ –, ändert Ablago nichts mehr von selbst.
+- Die gewählte Person sieht die Aufgaben unter **Zu erledigen** und in den Zahlen (auch im [Zähler-Endpunkt](api.md)), kann sie erledigen und weitergeben. Die Administratoren sehen sie weiterhin.
+- Ist die Person abwesend oder deaktiviert, übernimmt wie bei jeder Aufgabe ihr [Vertreter](#andern-deaktivieren-loschen). Ist sie deaktiviert, wähle am besten jemand anderen – die Werkbank weist darauf hin.
+
+**Technisches bleibt beim Admin-Konto:** Sicherung fehlgeschlagen, ein Paket braucht Einstellungen, eine Automatisierung ist angehalten, ein Postfach braucht eine neue Anmeldung und Ähnliches stehen in der [Übersicht](uebersicht.md). Damit es niemand übersieht:
+
+- Ablago schreibt den Administratoren **höchstens einmal am Tag** (ab 7 Uhr) eine E-Mail, wenn etwas Neues dazugekommen ist. Was ohnehin sofort eine eigene E-Mail schickt – Sicherung fehlgeschlagen oder zu alt, Speicherplatz, Notfallzugang –, kommt darin nicht noch einmal als neu. Ohne eingerichteten [E-Mail-Versand](installation.md#e-mail-und-adresse) entfällt die E-Mail.
+- Die gewählte Person sieht oben den Hinweis **„Für die Verwaltung liegt etwas an. Melde dich als Administrator an.“** mit dem Knopf **Als Administrator anmelden** (meldet sie ab). Der Hinweis nennt nie, was anliegt, und verschwindet, sobald nichts mehr offen ist.
+
 ## Passwort vergessen
 
 Mit E-Mail-Versand fordern Benutzer den Link selbst an. Ohne E-Mail-Versand erzeugst du ihn beim Benutzer mit **Passwort-Link erzeugen** und gibst ihn weiter. Ein Passwort-Link ist eine Stunde gültig; das bisherige Passwort gilt, bis ein neues gesetzt ist.

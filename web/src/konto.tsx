@@ -31,6 +31,10 @@ interface Konto {
   favoritenBenachrichtigung: boolean;
   /** Laufwerk (#720): vom Administrator eingeschaltet? Sonst kein Menüeintrag, kein Bereich. */
   laufwerk: boolean;
+  /** Aufgaben ohne Empfänger (#719): Sieht er sie (Administrator oder gewählter Alltags-Benutzer)? */
+  ohneEmpfaenger: boolean;
+  /** Technische Aufgaben (#719): Für die Verwaltung liegt etwas an (nur ja/nein). */
+  verwaltung: boolean;
 }
 const Ctx = createContext<Konto | null>(null);
 
@@ -125,7 +129,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   );
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
-    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, laufwerk: status.laufwerk === true }}>
+    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true }}>
       {/* … danach als Administrator: Benutzer, Schlüssel, Optionales, Fertig. */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
     </Ctx.Provider>

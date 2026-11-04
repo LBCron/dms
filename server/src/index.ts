@@ -60,6 +60,7 @@ import { t, tAuto } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
 import { anAlleAdmins } from './mail';
+import { Verwaltung } from './verwaltung';
 import { arch, release, type } from 'node:os';
 import { pgDatenquelle } from './datenbankabzug';
 import { pgEinstellungen } from './einstellungen';
@@ -410,6 +411,40 @@ const automatisierungen = new Automatisierungen({
   dienst, repo: messung.umhuelle(pgAutomatisierungRepo(sql, cfg.haushalt), 'automatisierungen'),
   pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
 });
+// Fehlermeldungen der Benutzer (#70) – Screenshots getrennt von den Dokumenten.
+const fehlermeldungen = new Fehlermeldungen(pgFehlerRepo(sql, cfg.haushalt), ordnerSpeicher(ordner.dateien, `${cfg.haushalt}/fehlermeldungen`));
+// Technische Aufgaben des Admin-Kontos (#719): gebündelte Mail an die Administratoren, Hinweis ohne Einzelheiten
+// beim Alltags-Benutzer. Jede Quelle liefert Punkte mit festem Schlüssel; die Texte gehen nur an Administratoren.
+const verwaltung = new Verwaltung({
+  einstellungen: pgEinstellungen(sql, cfg.haushalt),
+  anAdmins,
+  adresse: () => betrieb.adresseFuerLinks(),
+  quellen: [
+    async () => {
+      const z = await sicherung.zustand();
+      return [
+        ...(z.fehler ? [{ schluessel: `sicherung-fehler:${z.fehler.am}`, text: t('werkbank.verwaltung.sicherung.fehler'), eigeneMail: true }] : []),
+        ...(!z.fehler && z.planAktiv && z.zuAlt ? [{ schluessel: `sicherung-alt:${z.letzte?.ende ?? 'nie'}`, text: t('werkbank.verwaltung.sicherung.alt'), eigeneMail: true }] : []),
+        ...(z.probe.ampel === 'rot' ? [{ schluessel: `probe:${z.probe.letzte?.am ?? ''}`, text: t('werkbank.verwaltung.probe') }] : []),
+      ];
+    },
+    async () => (tresor.zustand === 'vorhanden' ? [] : [{ schluessel: `tresor:${tresor.zustand}`, text: t('werkbank.verwaltung.tresor') }]),
+    async () => (await pakete.installierte()).filter((p) => p.einstellungenNoetig).map((p) => ({ schluessel: `paket:${p.id}`, text: t('werkbank.verwaltung.paket', { name: p.name }) })),
+    async () => {
+      const w = await automatisierungen.warnungen();
+      return [
+        ...w.angehalten.map((a) => ({ schluessel: `automatisierung:${a.id}:${a.grund}`, text: t('werkbank.verwaltung.automatisierung', { name: a.name }) })),
+        ...(w.fehlgeschlagen ? [{ schluessel: `automatisierung-fehler:${w.fehlgeschlagen}`, text: t('werkbank.verwaltung.automatisierung.fehler', { anzahl: w.fehlgeschlagen }) }] : []),
+      ];
+    },
+    async () => { const z = (await speicherplatz.stand()).zustand; return z === 'ok' ? [] : [{ schluessel: `speicher:${z}`, text: t('werkbank.verwaltung.speicher'), eigeneMail: true }]; },
+    async () => (await postfaecher.anmeldungFehlt()).map((p) => ({ schluessel: `postfach:${p.id}:${p.zustand}`, text: t('werkbank.verwaltung.postfach', { name: p.name }) })),
+    async () => { const n = await fehlermeldungen.offen(); return n ? [{ schluessel: `fehlermeldungen:${n}`, text: t('werkbank.verwaltung.fehlermeldungen', { anzahl: n }) }] : []; },
+    async () => (await notfall.offen()).map((e) => ({ schluessel: `notfall:${e.id}`, text: t('werkbank.verwaltung.notfall'), eigeneMail: true })),
+    async () => { const n = (await texterkennung.zaehler()).fehler; return n ? [{ schluessel: `texterkennung:${n}`, text: t('werkbank.verwaltung.texterkennung', { anzahl: n }) }] : []; },
+    async () => ((await liesErweiterungen(sql)).some((e) => e.zustand !== 'ok') ? [{ schluessel: 'erweiterungen', text: t('werkbank.verwaltung.erweiterungen') }] : []),
+  ],
+});
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
 const webdav = new Webdav({ dienst, konten, schluessel: apiSchluessel, einstellungen: pgEinstellungen(sql, cfg.haushalt), adresse: () => betrieb.adresseFuerLinks(), wartung });
 const app = await baueApp(dienst, konten, {
@@ -453,7 +488,8 @@ const app = await baueApp(dienst, konten, {
   postfachOAuth,
   ordner: ordnerPruefung,
   lasttestAbbruch: () => lasttestAbbruch,
-  fehlermeldungen: new Fehlermeldungen(pgFehlerRepo(sql, cfg.haushalt), ordnerSpeicher(ordner.dateien, `${cfg.haushalt}/fehlermeldungen`)),
+  fehlermeldungen,
+  verwaltung,
 });
 
 const kurz = betrieb.kurz();
@@ -527,6 +563,11 @@ speicherplatz.start();
 await eingangsordner.start();
 postfaecher.start();
 webhooks.start();
+// Technische Aufgaben des Admin-Kontos (#719): alle 5 Minuten prüfen, höchstens einmal am Tag gebündelt mailen.
+setInterval(() => {
+  if (wartung.aktiv || wiederherstellung.laeuft()) return;
+  void verwaltung.tick().catch((e) => log.error('Technische Aufgaben prüfen fehlgeschlagen', { fehler: (e as Error).message }));
+}, 5 * 60 * 1000).unref();
 // Wörterverzeichnis der Suche (#575): neue Wörter aus dem Eingang übernehmen – entkoppelt von Mappen und Texterkennung.
 let woerterFehler = '';
 setInterval(() => {

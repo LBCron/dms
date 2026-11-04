@@ -25,6 +25,7 @@ import type { Texterkennung } from './texterkennung';
 import type { Vorschaubilder } from './vorschau';
 import type { Aufgabenmail } from './aufgabenmail';
 import type { Fehlermeldungen } from './fehlermeldungen';
+import type { Verwaltung } from './verwaltung';
 import { WartungFehler, type Wartung } from './wartung';
 import type { Notfallzugang } from './notfall';
 import type { Sicherung } from './sicherung';
@@ -66,6 +67,8 @@ interface Optionen {
   /** Region (#726): Land, Bundesland, Zeitzone. */
   region?: import('./region').RegionDienst;
   fehlermeldungen?: Fehlermeldungen;
+  /** Technische Aufgaben des Admin-Kontos (#719): Hinweis ohne Einzelheiten beim Alltags-Benutzer. */
+  verwaltung?: Verwaltung;
   /** Wartungsmodus (#102). */
   wartung?: Wartung;
   /** Notfallzugang (#108). */

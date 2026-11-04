@@ -28,11 +28,12 @@ type Folge = { aufgabe: Aufgabe; datum: string };
 
 function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe; neuLaden: () => Promise<void>; setBestaetigt: (t: string) => void; setFolge: (f: Folge) => void; zuNotizen?: () => void }) {
   const d = useDaten();
-  const { ich } = useKonto();
+  const { ich, ohneEmpfaenger } = useKonto();
   const [weiter, setWeiter] = useState(false);
   const [an, setAn] = useState('');
   const [fehler, setFehler] = useState<string>();
-  const meine = a.empfaengerId === ich.id || (!a.empfaengerId && ich.rolle === 'admin');
+  // Aufgaben ohne Empfänger (#719): auch beim gewählten Alltags-Benutzer.
+  const meine = a.empfaengerId === ich.id || (!a.empfaengerId && ohneEmpfaenger);
   const darf = meine || ich.rolle === 'admin';
   async function tu(f: () => Promise<unknown>, meldung?: string) {
     setFehler(undefined);

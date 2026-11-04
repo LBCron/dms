@@ -25,7 +25,7 @@ import { t } from './sprache';
 export function App() {
   const { pfad, suche } = useOrt();
   const d = useDaten();
-  const { ich, abmelden, vertretung, hinweise, aktualisieren, version, zweifaktor } = useKonto();
+  const { ich, abmelden, vertretung, hinweise, aktualisieren, version, zweifaktor, verwaltung } = useKonto();
   // Nach einem Ausfall (#122): gemeinsame Daten neu holen; „Ansicht neu laden“ baut den Inhalt neu auf.
   const [ansicht, setAnsicht] = useState(0);
   useBeiWiederErreichbar(() => void d.neuLaden());
@@ -67,6 +67,13 @@ export function App() {
         </div>
       )}
       {!vertretung && hinweise.length > 0 && <Hinweise />}
+      {/* Technische Aufgaben (#719): beim Alltags-Benutzer nur, dass etwas anliegt – keine Einzelheiten. */}
+      {!vertretung && verwaltung && (
+        <div className="hinweisbanner" role="status" id="verwaltung-hinweis">
+          <p>{t('konten.verwaltung.hinweis')}</p>
+          <button className="knopf klein" onClick={() => void abmelden()}>{t('konten.verwaltung.anmelden')}</button>
+        </div>
+      )}
       {/* #416: Pflicht eingeschaltet, während diese Sitzung lief – weiterarbeiten, aber deutlich darauf hinweisen. */}
       {!vertretung && zweifaktor.ausstehend && (
         <div className="hinweisbanner" role="alert" id="zweifaktor-hinweis">

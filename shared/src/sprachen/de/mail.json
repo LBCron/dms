@@ -16,5 +16,13 @@
   "dauer.tage_one": "{anzahl} Tag",
   "dauer.tage_other": "{anzahl} Tage",
   "dauer.stunden_one": "{anzahl} Stunde",
-  "dauer.stunden_other": "{anzahl} Stunden"
+  "dauer.stunden_other": "{anzahl} Stunden",
+  "verwaltung.betreff_one": "Ablago: Für die Verwaltung liegt etwas Neues an",
+  "verwaltung.betreff_other": "Ablago: Für die Verwaltung liegen {anzahl} neue Dinge an",
+  "verwaltung.einleitung": "in der Werkbank wartet Arbeit, die nur ein Administrator erledigen kann:",
+  "verwaltung.neu": "(neu)",
+  "verwaltung.anmelden": "Melde dich als Administrator an und öffne die Werkbank: {link}",
+  "verwaltung.anmelden.ohne-link": "Melde dich als Administrator an und öffne die Werkbank.",
+  "verwaltung.fuss": "Diese Mail kommt höchstens einmal am Tag und nur, wenn etwas Neues dazugekommen ist.",
+  "verwaltung.anrede": "Hallo,"
 }
