@@ -2,83 +2,114 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ablago – Handbücher</title>
-  <meta name="description" content="Handbücher zu Ablago – Dokumentenablage für zu Hause und kleine Betriebe">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ablago – Hilfe und Handbücher</title>
+  <meta name="description" content="Hilfe und Handbücher zu Ablago – Dokumentenablage für zu Hause und kleine Betriebe. Läuft auf deinem eigenen Gerät.">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" href="favicon.ico" sizes="48x48">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>
-    :root { --grund: #f6f7f8; --flaeche: #fff; --tinte: #1c2328; --leise: #5b6670; --linie: #dde2e6; --a: #00796b; --b: #3f51b5; --c: #2e7d32; --d: #546e7a; --e: #ef6c00; }
-    @media (prefers-color-scheme: dark) { :root { --grund: #14181b; --flaeche: #1d2226; --tinte: #e8ecef; --leise: #9aa5ae; --linie: #2e353a; --a: #4db6ac; --b: #8c9eff; --c: #81c784; --d: #b0bec5; --e: #ffb74d; } }
+    /* Erscheinungsbild wie ablago.app (#699): Farben aus marke/, Schrift nur angegeben, nie geladen (#698).
+       Jedes Handbuch trägt seinen Ton aus der Familie des Ablago-Blaus, wie in seiner Kopfzeile. */
+    :root {
+      --blau: #1F4E79; --blau-tief: #163A5B; --akzent: #E8A33D; --akzent-text: #9A5B05;
+      --grund: #F5F7FA; --flaeche: #FFFFFF; --band: #EAF0F6; --linie: #D9E1EA;
+      --text: #1A2433; --text-leise: #4A5668;
+      --benutzer: #1F4E79; --installieren: #1D6B66; --admin: #4F3F86; --entwickler: #3D4652; --katalog: #9A5B05; --wofuer: #1F4E79;
+      --schrift: 'Source Sans 3', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) { :root {
+      --blau: #8DB8E0; --blau-tief: #B9D3EC; --akzent: #F0B254; --akzent-text: #F0B254;
+      --grund: #0F151D; --flaeche: #17202B; --band: #131C26; --linie: #2A3644;
+      --text: #E6ECF3; --text-leise: #A7B3C2;
+      --benutzer: #8DB8E0; --installieren: #7FC8C1; --admin: #B3A6E6; --entwickler: #AEB8C4; --katalog: #F0B254; --wofuer: #8DB8E0;
+    } }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--grund); color: var(--tinte); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    main { max-width: 860px; margin: 0 auto; padding: 56px 16px 40px; }
-    h1 { font-size: 2rem; margin: 0 0 8px; }
-    h1 img { display: block; height: 56px; width: auto; margin: 0 0 12px; }
-    h1 .dunkel { display: none; }
-    @media (prefers-color-scheme: dark) { h1 .hell { display: none; } h1 .dunkel { display: block; } }
-    p.leise { color: var(--leise); margin: 0 0 16px; }
-    ul.versprechen { margin: 0 0 32px; padding-left: 1.2em; }
-    ul.versprechen li { margin: 4px 0; }
-    ul.versprechen a { color: var(--b); }
+    body { margin: 0; background: var(--grund); color: var(--text); font: 17px/1.55 var(--schrift); }
+    a { color: var(--blau); text-underline-offset: 3px; }
+    a:focus-visible { outline: 3px solid var(--akzent); outline-offset: 3px; border-radius: 6px; }
+    .kopf { border-bottom: 1px solid var(--linie); box-shadow: inset 0 -3px 0 var(--akzent); background: var(--flaeche); }
+    .innen { max-width: 960px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .kopf .innen { display: flex; align-items: center; gap: 16px; padding-block: 14px 17px; flex-wrap: wrap; }
+    .kopf img { height: 40px; width: auto; display: block; }
+    .kopf .dunkel { display: none; }
+    @media (prefers-color-scheme: dark) { .kopf .hell { display: none; } .kopf .dunkel { display: block; } }
+    .kopf .zurueck { margin-left: auto; font-size: 16px; text-decoration: none; color: var(--text-leise); }
+    .kopf .zurueck:hover { color: var(--blau); }
+    main { padding-block: 44px 40px; }
+    h1 { font-size: clamp(30px, 4.5vw, 40px); line-height: 1.2; margin: 0 0 10px; color: var(--blau-tief); letter-spacing: -.5px; text-wrap: balance; }
+    .vorspann { font-size: 13px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--akzent-text); margin: 0 0 8px; }
+    p.leise { color: var(--text-leise); margin: 0 0 14px; max-width: 62ch; }
+    .grundsatz { background: var(--band); border-radius: 14px; padding: 16px 20px; margin: 22px 0 34px; max-width: 70ch; }
+    .grundsatz p { margin: 0; }
     .karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    a.karte { display: block; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 10px; padding: 22px; color: inherit; text-decoration: none; border-top: 4px solid var(--a); }
-    a.karte.admin { border-top-color: var(--b); }
-    a.karte:hover, a.karte:focus-visible { border-color: var(--a); }
-    a.karte.admin:hover, a.karte.admin:focus-visible { border-color: var(--b); }
-    a.karte.installieren { border-top-color: var(--c); }
-    a.karte.installieren:hover, a.karte.installieren:focus-visible { border-color: var(--c); }
-    a.karte.entwickler { border-top-color: var(--d); }
-    a.karte.entwickler:hover, a.karte.entwickler:focus-visible { border-color: var(--d); }
-    a.karte.katalog { border-top-color: var(--e); }
-    a.karte.katalog:hover, a.karte.katalog:focus-visible { border-color: var(--e); }
-    a.karte h2 { margin: 0 0 6px; font-size: 1.25rem; }
-    a.karte p { margin: 0; color: var(--leise); }
-    footer { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; color: var(--leise); font-size: .9rem; }
+    a.karte { --ton: var(--benutzer); display: flex; gap: 14px; align-items: flex-start; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 14px; padding: 20px; color: inherit; text-decoration: none; border-top: 4px solid var(--ton); }
+    a.karte:hover, a.karte:focus-visible { border-color: var(--ton); }
+    a.karte .symbol { flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--band); color: var(--ton); display: grid; place-items: center; }
+    a.karte .symbol svg { width: 22px; height: 22px; }
+    a.karte h2 { margin: 0 0 4px; font-size: 1.15rem; line-height: 1.25; }
+    a.karte p { margin: 0; color: var(--text-leise); font-size: 16px; }
+    a.karte.wofuer { --ton: var(--wofuer); } a.karte.installieren { --ton: var(--installieren); } a.karte.admin { --ton: var(--admin); }
+    a.karte.entwickler { --ton: var(--entwickler); } a.karte.katalog { --ton: var(--katalog); }
+    footer { border-top: 1px solid var(--linie); margin-top: 44px; padding-top: 20px; display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-leise); font-size: 15px; }
     footer a { color: inherit; }
   </style>
 </head>
 <body>
-  <main>
-    <h1><img class="hell" src="ablago-logo-mit-schriftzug.svg" alt="Ablago"><img class="dunkel" src="ablago-logo-mit-schriftzug-dunkel.svg" alt="Ablago">Handbücher</h1>
-    <p class="leise">Ablago – Dokumentenablage für zu Hause und kleine Betriebe. Selbst gehostet: Mappen statt Ordner, verbunden über Verweise.</p>
-    <ul class="versprechen">
-      <li><strong>Deine Daten bleiben bei dir:</strong> selbst gehostet, alles jederzeit in offenen Formaten exportierbar.</li>
-      <li><strong>Datenschutz eingebaut:</strong> keine Telemetrie, kein Tracking; Auskunft, Aufbewahrungsfristen und Löschen sind Teil von Ablago. <a href="admin/aktuell/datenschutz/">Datenschutz in Ablago</a></li>
-      <li><strong>Frei:</strong> Open Source (Apache-2.0), ohne Lizenzkosten und ohne Abo.</li>
-    </ul>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <!-- Lucide (ISC-Lizenz): book-open, download, wrench, code, package, lightbulb -->
+    <symbol id="i-benutzer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="i-installieren" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
+    <symbol id="i-admin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+    <symbol id="i-entwickler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+    <symbol id="i-katalog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+    <symbol id="i-wofuer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  </svg>
+  <header class="kopf">
+    <div class="innen">
+      <a href="https://ablago.app/"><img class="hell" src="ablago-logo-mit-schriftzug.svg" alt="Ablago"><img class="dunkel" src="ablago-logo-mit-schriftzug-dunkel.svg" alt="Ablago"></a>
+      <a class="zurueck" href="https://ablago.app/">Zurück zu ablago.app</a>
+    </div>
+  </header>
+  <main class="innen">
+    <p class="vorspann">Hilfe und Handbücher</p>
+    <h1>Wie können wir dir helfen?</h1>
+    <p class="leise">Ablago ist die Dokumentenablage für zu Hause und kleine Betriebe. Ablago ist selbst gehostet, das heißt: Es läuft auf deinem eigenen Gerät, zum Beispiel auf deinem NAS, und nicht bei einem fremden Anbieter. Mappen statt Ordner, verbunden über Verweise.</p>
+    <div class="grundsatz">
+      <p><strong>Du entscheidest, was deine Ablage verlässt.</strong> Kein Abo, keine Telemetrie, offene Formate. Alle sechs Grundsätze stehen auf <a href="https://ablago.app/#worum">ablago.app</a>; wie Ablago mit Daten umgeht, steht unter <a href="admin/aktuell/datenschutz/">Datenschutz in Ablago</a>.</p>
+    </div>
     <div class="karten">
       <a class="karte wofuer" href="benutzer/aktuell/wofuer/">
-        <h2>Wofür ein DMS?</h2>
-        <p>Wann ein DMS im Alltag hilft – ohne Schreckensszenario. Mit 5-Minuten-Test und Selbstcheck: Wo hakt es bei dir?</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-wofuer"/></svg></span>
+        <div><h2>Wofür ein DMS?</h2><p>Wann Ablago im Alltag hilft – zu Hause und im Betrieb. Mit 5-Minuten-Test und Selbstcheck: Wo hakt es bei dir?</p></div>
       </a>
       <a class="karte installieren" href="installieren/">
-        <h2>Wie komme ich an ein DMS?</h2>
-        <p>Installieren auf Synology, UGREEN, QNAP, TrueNAS, Unraid, umbrelOS, ZimaOS oder jedem Server mit Docker – Schritt für Schritt.</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-installieren"/></svg></span>
+        <div><h2>Installieren</h2><p>Auf Synology, UGREEN, QNAP, TrueNAS, Unraid, umbrelOS, ZimaOS, Raspberry Pi oder jedem Server mit Docker – Schritt für Schritt.</p></div>
       </a>
       <a class="karte" href="benutzer/">
-        <h2>Benutzerhandbuch</h2>
-        <p>Mappen anlegen, Dokumente ablegen, suchen und finden – alles für die tägliche Arbeit in der Ablage.</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-benutzer"/></svg></span>
+        <div><h2>Benutzerhandbuch</h2><p>Mappen anlegen, Dokumente ablegen, suchen und finden – alles für die tägliche Arbeit in der Ablage.</p></div>
       </a>
       <a class="karte admin" href="admin/">
-        <h2>Administratorhandbuch</h2>
-        <p>Einrichtung und Betrieb, Mappentypen, Benutzer und Rollen, Sicherung, Fehlersuche und die Schnittstelle (API).</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-admin"/></svg></span>
+        <div><h2>Administratorhandbuch</h2><p>Einrichten und betreiben: Mappentypen, Benutzer und Rollen, Sicherung, Fehlersuche und die Schnittstelle (API).</p></div>
       </a>
       <a class="karte katalog" href="https://catalog.ablago.app/">
-        <h2>Paketkatalog</h2>
-        <p>Fertige Mappentypen und Sichten zum Installieren – ansehen wie im App Store und mit einem Klick in dein Ablago übernehmen.</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-katalog"/></svg></span>
+        <div><h2>Paketkatalog</h2><p>Fertige Mappentypen, Ansichten und Automatisierungen – ansehen wie im App Store und mit einem Klick übernehmen.</p></div>
       </a>
       <a class="karte entwickler" href="entwickler/">
-        <h2>Entwicklerhandbuch</h2>
-        <p>Mitmachen bei Ablago: wie Wünsche zu Issues werden, wie du das Projekt baust und testest und wie ein Release entsteht.</p>
+        <span class="symbol"><svg aria-hidden="true"><use href="#i-entwickler"/></svg></span>
+        <div><h2>Entwicklerhandbuch</h2><p>Mitmachen: wie Wünsche zu Issues werden, wie du Ablago baust und testest und wie ein Release entsteht.</p></div>
       </a>
     </div>
     <footer>
-      <a href="https://github.com/motom001/dms/releases">Was ist neu? (Changelog)</a>
+      <a href="https://github.com/motom001/dms/releases">Was ist neu?</a>
       <a href="https://github.com/motom001/dms">Quellcode</a>
       <a href="https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms">Wer nutzt Ablago? Erzähl, wie du es nutzt</a>
-      <a href="https://github.com/sponsors/motom001">Projekt unterstützen (GitHub Sponsors)</a>
+      <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
     </footer>
   </main>
 </body>

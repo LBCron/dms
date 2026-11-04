@@ -27,12 +27,17 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
+      primary: custom
+      accent: custom
       toggle: { icon: material/weather-night, name: Dunkle Darstellung }
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
+      primary: custom
+      accent: custom
       toggle: { icon: material/weather-sunny, name: Helle Darstellung }
+
+extra_css:
+  - stylesheets/ablago.css
 
 plugins:
   - search:

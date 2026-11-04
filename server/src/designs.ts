@@ -192,9 +192,9 @@ export class Designs {
 
 export function speicherDesignRepo(): DesignRepo {
   const start: Design[] = [
-    { id: randomUUID(), name: 'Automatisch', grundlage: 'automatisch', primaer: '#1D5A8A', sekundaer: '#2B7656', css: '' },
-    { id: randomUUID(), name: 'Hell', grundlage: 'hell', primaer: '#1D5A8A', sekundaer: '#2B7656', css: '' },
-    { id: randomUUID(), name: 'Dunkel', grundlage: 'dunkel', primaer: '#1D5A8A', sekundaer: '#2B7656', css: '' },
+    { id: randomUUID(), name: 'Automatisch', grundlage: 'automatisch', primaer: '#1F4E79', sekundaer: '#2B7656', css: '' },
+    { id: randomUUID(), name: 'Hell', grundlage: 'hell', primaer: '#1F4E79', sekundaer: '#2B7656', css: '' },
+    { id: randomUUID(), name: 'Dunkel', grundlage: 'dunkel', primaer: '#1F4E79', sekundaer: '#2B7656', css: '' },
     { id: randomUUID(), name: 'Kontrast', grundlage: 'kontrast', primaer: '#0040A0', sekundaer: '#006B3C', css: '' },
   ];
   const liste = new Map(start.map((d) => [d.id, d]));

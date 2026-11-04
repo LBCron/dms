@@ -15,6 +15,8 @@ export interface Design {
 export const GRUNDLAGEN: Record<Grundlage, string> = { automatisch: 'Automatisch (nach Gerät)', hell: 'Hell', dunkel: 'Dunkel', kontrast: 'Hoher Kontrast' };
 
 type Palette = Record<string, string>;
+/** Markenfarben aus dms-website/marke/ (#699). */
+export const MARKE = { blau: '#1F4E79', blauDunkel: '#8DB8E0' } as const;
 const NEUTRAL: Record<'hell' | 'dunkel' | 'kontrast', Palette> = {
   hell: {
     grund: '#ECEFF3', flaeche: '#FFFFFF', senke: '#F5F6F8', tinte: '#17202B', leise: '#5A6475', linie: '#D8DDE4', 'linie-stark': '#C3CAD4',
@@ -51,7 +53,8 @@ export function palette(grundlage: 'hell' | 'dunkel' | 'kontrast', primaer: stri
   const n = NEUTRAL[grundlage];
   const dunkel = grundlage === 'dunkel';
   const ziel = grundlage === 'kontrast' ? 7 : 4.5;
-  const akzent = lesbar(primaer, n.flaeche, ziel);
+  // Ablago-Blau (#699): im Dunkeln der Markenwert von ablago.app statt der rechnerisch aufgehellten, grauen Fassung.
+  const akzent = dunkel && primaer.toUpperCase() === MARKE.blau ? lesbar(MARKE.blauDunkel, n.flaeche, ziel) : lesbar(primaer, n.flaeche, ziel);
   const gruen = lesbar(sekundaer, n.flaeche, ziel);
   return {
     ...n,
