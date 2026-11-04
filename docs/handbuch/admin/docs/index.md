@@ -21,6 +21,7 @@ Dieses Handbuch ist für alle, die Ablago **installieren, einrichten und betreib
 | Festlegen, wer was sehen und ändern darf | Werkbank → Mappentypen → Berechtigungen, Werkbank → Ansichten | [Berechtigungen](berechtigungen.md) |
 | Auskunft geben, auf Verlangen löschen, Fristen einhalten (DSGVO) | Werkbank → Datenschutz, Darf weg, Papierkorb | [Datenschutz in Ablago](datenschutz.md) |
 | Daten sichern und wiederherstellen | Werkbank → Sicherung, Wiederherstellen | [Sicherung](sicherung.md), [Wiederherstellen](wiederherstellen.md) |
+| Alle Daten mitnehmen, lesbar auch ohne Ablago | Werkbank → Vollexport | [Daten exportieren](export.md) |
 | Fehler finden, Meldungen der Benutzer bearbeiten | Werkbank → Wartung und Fehlersuche | [Fehlersuche](fehlersuche.md) |
 | Andere Programme anbinden | eigenen Benutzer für das Programm anlegen, als dieser anmelden, dann Profil → Sicherheit → API-Schlüssel (Administratoren bekommen keine Schlüssel) | [Schnittstelle](api.md) |
 

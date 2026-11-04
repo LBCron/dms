@@ -4,6 +4,8 @@ Wie du eine Sicherung wieder einspielst und wie Ablago sie wöchentlich probewei
 
 Unter **Werkbank → Sicherung** legt Ablago Sicherungen selbst an: die ganze Datenbank und alle Dateien zum **selben Zeitpunkt**, verschlüsselt, ohne dass jemand aufhören muss zu arbeiten.
 
+Eine Sicherung spielst du mit Ablago wieder ein. Möchtest du deine Unterlagen zusätzlich so haben, dass du sie **auch ohne Ablago** lesen kannst – etwa zum Mitnehmen in ein anderes Programm –, nimm den [Vollexport](export.md) in offenen Formaten.
+
 ![Sicherung in der Werkbank](bilder/werkbank-sicherung.png)
 
 ## Was eine Sicherung enthält
