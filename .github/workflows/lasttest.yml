@@ -70,7 +70,7 @@ jobs:
           timeout 120 bash -c 'until curl -sf http://127.0.0.1:3100/api/gesundheit >/dev/null; do sleep 1; done'
       # Grenze der Stufe groß vom letzten Lauf (für die Warnung bei mehr als 20 % Verschlechterung).
       - name: Letzten Lauf holen
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/vorher
           key: lasttest-gross-${{ github.run_id }}
@@ -92,7 +92,7 @@ jobs:
         run: mkdir -p "$RUNNER_TEMP/vorher" && cp "$RUNNER_TEMP/lasttest.json" "$RUNNER_TEMP/vorher/lasttest.json"
       - name: Grenze speichern
         if: success() && (inputs.stufe == '' || inputs.stufe == 'alle' || inputs.stufe == 'gross')
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/vorher
           key: lasttest-gross-${{ github.run_id }}
