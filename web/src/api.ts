@@ -1,4 +1,4 @@
-import type { AutomatisierungAnsicht, AutomatisierungDaten, Fassung, Kontextdaten, Lauf } from '../../shared/src/automatisierung';
+import type { AutomatisierungAnsicht, AutomatisierungDaten, Fassung, Fehlschlag, Kontextdaten, Lauf } from '../../shared/src/automatisierung';
 import type { Design } from './design';
 import { messung } from './messung';
 import type { Nummernkreis } from '../../shared/src/nummernkreis';
@@ -713,7 +713,7 @@ export const api = {
   werkbankWebhookLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/webhooks/${id}`),
   werkbankWebhookZiele: (ziele: string[]) => anfrage<{ ziele: string[] }>('PUT', '/api/werkbank/webhooks/ziele', { ziele }),
   // Automatisierungen (#675)
-  automatisierungen: () => anfrage<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; kontext: Kontextdaten }>('GET', '/api/werkbank/automatisierungen'),
+  automatisierungen: () => anfrage<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; fehlschlaege: Fehlschlag[]; kontext: Kontextdaten }>('GET', '/api/werkbank/automatisierungen'),
   automatisierungAnlegen: (d: Partial<AutomatisierungDaten> & { aktiv?: boolean }) => anfrage<AutomatisierungAnsicht>('POST', '/api/werkbank/automatisierungen', d),
   automatisierungAendern: (id: string, d: Partial<AutomatisierungDaten> & { aktiv?: boolean; version: number }) => anfrage<AutomatisierungAnsicht>('PUT', `/api/werkbank/automatisierungen/${id}`, d),
   automatisierungLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/automatisierungen/${id}`),
@@ -721,6 +721,8 @@ export const api = {
   automatisierungKopieren: (id: string) => anfrage<AutomatisierungAnsicht>('POST', `/api/werkbank/automatisierungen/${id}/kopieren`),
   automatisierungLaeufe: (id: string) => anfrage<Lauf[]>('GET', `/api/werkbank/automatisierungen/${id}/laeufe?anzahl=30`),
   automatisierungLaufWiederholen: (laufId: string) => anfrage<Lauf>('POST', `/api/werkbank/automatisierungen/laeufe/${laufId}/wiederholen`),
+  automatisierungLaufNichtWiederholen: (laufId: string) => anfrage<unknown>('POST', `/api/werkbank/automatisierungen/laeufe/${laufId}/nicht-wiederholen`),
+  automatisierungenNichtWiederholen: () => anfrage<unknown>('POST', '/api/werkbank/automatisierungen/nicht-wiederholen'),
   automatisierungenWiederholen: (id?: string) => anfrage<unknown>('POST', id ? `/api/werkbank/automatisierungen/${id}/wiederholen` : '/api/werkbank/automatisierungen/wiederholen'),
   automatisierungFassungen: (id: string) => anfrage<Fassung[]>('GET', `/api/werkbank/automatisierungen/${id}/fassungen`),
   automatisierungFassungWiederherstellen: (id: string, version: number) => anfrage<AutomatisierungAnsicht>('POST', `/api/werkbank/automatisierungen/${id}/fassungen/${version}`),

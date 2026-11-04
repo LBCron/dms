@@ -903,7 +903,7 @@ async function main() {
   await s.locator('.stempeleditor').waitFor();
   await bild(s, 'werkbank-stempel');
   // Automatisierungen (#675): Beispiel aus dem Handbuch – Vertrag „Kündigung bis“ in 30 Tagen → Aufgabe an Verantwortlich.
-  // Ein Trockenlauf füllt den Verlauf. Bilder: Liste und Editor, aufgeklappte Dann-Karte, dunkel und am Handy.
+  // Ein Probelauf füllt den Verlauf. Bilder: Liste und Editor, aufgeklappte Dann-Karte, dunkel und am Handy.
   {
     const vt = d.typ('Vertrag');
     const auto = await api('POST', '/api/werkbank/automatisierungen', { name: 'Kündigung prüfen', aktiv: true,
@@ -919,6 +919,8 @@ async function main() {
     await bild(s, 'werkbank-automatisierung-karte');
     await s.getByRole('heading', { name: 'Verlauf', exact: true }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
     await s.locator('.automatisierung-schritte').first().waitFor({ state: 'attached' }).catch(() => null);
+    // Verlauf wie die Historie (#707): den Probelauf aufklappen, damit Karte · Ergebnis · Einzelheiten zu sehen ist.
+    await s.locator('.blatt:has(> h2:text-is("Verlauf")) .historie summary').first().click().catch(() => null);
     await bild(s, 'werkbank-automatisierung-verlauf');
     for (const [name, schema, viewport] of [['werkbank-automatisierung-dunkel', 'dark', { width: 1440, height: 860 }], ['werkbank-automatisierung-handy', 'light', { width: 393, height: 852 }]]) {
       const handy = viewport.width < 500;

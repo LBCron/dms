@@ -1898,15 +1898,15 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .automatisierung-vorrat .vorratkarte { display: flex; align-items: center; gap: 2px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 999px; padding: 2px 8px 2px 2px; }
 .platzhalterleiste { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .platzhalterleiste .chip { cursor: pointer; font-family: var(--mono); }
-.automatisierung-schritte { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 4px; }
-.automatisierung-schritte .schritt { border-left: 3px solid var(--linie-stark); padding: 2px 8px; transition: background .3s, border-color .3s; }
-.automatisierung-schritte .schritt.ok { border-color: var(--gruen); }
-.automatisierung-schritte .schritt.nein, .automatisierung-schritte .schritt.uebersprungen { border-color: var(--leise); }
-.automatisierung-schritte .schritt.fehler { border-color: var(--schlecht); background: var(--schlecht-zart); }
-.automatisierung-schritte .schritt.laeuft { border-color: var(--akzent); background: var(--akzent-zart); }
+.automatisierung-schritte { margin: 8px 0 4px; font-size: calc(13px * var(--skala, 1)); width: 100%; border-collapse: collapse; }
+.automatisierung-schritte th, .automatisierung-schritte td { padding: 4px 8px; text-align: left; vertical-align: top; overflow-wrap: break-word; hyphens: auto; }
+.automatisierung-schritte .laufschritt td { transition: background .3s; }
+.automatisierung-schritte .laufschritt.fehler td { background: var(--schlecht-zart); }
+.automatisierung-schritte .laufschritt.laeuft td { background: var(--akzent-zart); }
+.historie .knoepfe { margin-top: 6px; }
 .mappenliste .eintrag .problem { display: block; color: var(--schlecht); font-size: .85em; }
 .automatisierung-gruppe .h3 { margin: 10px 0 4px; }
-@media (prefers-reduced-motion: reduce) { .automatisierung-schritte .schritt { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .automatisierung-schritte .laufschritt td { transition: none; } }
 @media (max-width: 600px) { .automatisierung .einzug { margin-left: 6px; } }
 
 /* Schalter an/aus (#706): role="switch", Zustand zusätzlich als Text. */

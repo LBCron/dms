@@ -226,7 +226,6 @@ export function Historie({ mappeId, stand }: { mappeId: string; stand?: string }
   const d = useDaten();
   const [liste, setListe] = useState<Historieneintrag[] | null>(null);
   const [fehler, setFehler] = useState<string>();
-  const [alleOffen, setAlleOffen] = useState<boolean | null>(null);
   const emailTyp = d.typen.find((t) => t.system === 'post')?.id;
   useEffect(() => {
     api.historie(mappeId).then((h) => { setListe(h); setFehler(undefined); }, (e: Error) => setFehler(e.message));
@@ -234,8 +233,44 @@ export function Historie({ mappeId, stand }: { mappeId: string; stand?: string }
   if (fehler) return <div className="hinweis schlecht"><p>{fehler}</p></div>;
   if (!liste) return <p className="leise">Lade …</p>;
   if (!liste.length) return <p className="leise">Noch keine Einträge. Die Historie beginnt mit Version 0.12; ältere Änderungen sind nicht erfasst.</p>;
-  const mitEinzelheiten = liste.map((e) => ({ e, x: einzelheiten(e, emailTyp) }));
-  const aufklappbar = mitEinzelheiten.some(({ x }) => x);
+  const eintraege: Listeneintrag[] = liste.map((e) => {
+    const x = einzelheiten(e, emailTyp);
+    return {
+      id: e.id, wann: zeit(e.zeit),
+      wer: <Person id={e.benutzerId} ersatz={typeof e.daten.system === 'string' ? e.daten.system : undefined} />,
+      was: <><strong>{HISTORIENARTEN[e.art] ?? e.art}</strong>{kurz(e) ? `: ${kurz(e)}` : ''}
+        {e.art === 'email' && typeof e.daten.email === 'string' && emailTyp && <> · <Link to={`/ablage/${emailTyp}/${e.daten.email}`} className="verweis">öffnen</Link></>}</>,
+      ...(x ? { mehr: x.hinweis, inhalt: x.inhalt, label: `${HISTORIENARTEN[e.art] ?? e.art}, ${x.hinweis}, aufklappbar` } : {}),
+    };
+  });
+  return <Eintragsliste eintraege={eintraege} />;
+}
+
+/** Ein Eintrag der Liste im Stil der Historie (#707): Zeile mit Zeit, wer, was, rechts Zähler; Einzelheiten zum Aufklappen. */
+export interface Listeneintrag {
+  id: string | number;
+  wann: string;
+  wer: ReactNode;
+  was: ReactNode;
+  /** Zustand o. Ä. als Chip vor dem Zähler (nicht nur über Farbe: immer mit Text). */
+  zustand?: ReactNode;
+  /** Zähler rechts, z. B. „3 Felder“, „3 Karten“. */
+  mehr?: string;
+  inhalt?: ReactNode;
+  /** Name für Bildschirmleser, wenn aufklappbar. */
+  label?: string;
+  /** Immer offen, z. B. ein Lauf, der gerade läuft. */
+  offen?: boolean;
+}
+
+/**
+ * Liste wie die Historie einer Mappe (#57, #80): je Eintrag eine Zeile mit Pfeil, Datum und Uhrzeit, wer, Zusammenfassung
+ * und Zähler; aufgeklappt die Einzelheiten; „Alle aufklappen“/„Alle zuklappen“. Auch für Verlauf und Änderungsverlauf
+ * einer Automatisierung (#707), damit man sich überall gleich zurechtfindet.
+ */
+export function Eintragsliste({ eintraege }: { eintraege: Listeneintrag[] }) {
+  const [alleOffen, setAlleOffen] = useState<boolean | null>(null);
+  const aufklappbar = eintraege.some((x) => x.inhalt);
   return (
     <>
       {aufklappbar && (
@@ -245,22 +280,22 @@ export function Historie({ mappeId, stand }: { mappeId: string; stand?: string }
         </div>
       )}
       <ul className="historie">
-        {mitEinzelheiten.map(({ e, x }) => {
+        {eintraege.map((x) => {
           const kopf = (
             <>
               <span className="zeichen" aria-hidden="true" />
-              <span className="wann">{zeit(e.zeit)}</span>
-              <span className="wer"><Person id={e.benutzerId} ersatz={typeof e.daten.system === 'string' ? e.daten.system : undefined} /></span>
-              <span className="was"><strong>{HISTORIENARTEN[e.art] ?? e.art}</strong>{kurz(e) ? `: ${kurz(e)}` : ''}
-                {e.art === 'email' && typeof e.daten.email === 'string' && emailTyp && <> · <Link to={`/ablage/${emailTyp}/${e.daten.email}`} className="verweis">öffnen</Link></>}</span>
-              {x && <span className="mehr chip">{x.hinweis}</span>}
+              <span className="wann">{x.wann}</span>
+              <span className="wer">{x.wer}</span>
+              <span className="was">{x.was}</span>
+              {x.zustand}
+              {x.mehr && <span className="mehr chip">{x.mehr}</span>}
             </>
           );
           return (
-            <li key={e.id}>
-              {x
-                ? <details open={alleOffen ?? undefined} key={String(alleOffen)}>
-                    <summary aria-label={`${HISTORIENARTEN[e.art] ?? e.art}, ${x.hinweis}, aufklappbar`}>{kopf}</summary>
+            <li key={x.id}>
+              {x.inhalt
+                ? <details open={x.offen || (alleOffen ?? undefined)} key={String(alleOffen)}>
+                    <summary aria-label={x.label}>{kopf}</summary>
                     <div className="einzelheiten">{x.inhalt}</div>
                   </details>
                 : <div className="zeile">{kopf}</div>}
