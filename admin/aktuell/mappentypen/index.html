@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.176/mappentypen/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.177/mappentypen/">
       
       
         <link rel="prev" href="../uebersicht/">
@@ -947,7 +947,7 @@
   <a href="#fristen-erinnerungen-an-datumsfeldern" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fristen: Erinnerungen an Datumsfeldern
+        Fristen an Datumsfeldern
       
     </span>
   </a>
@@ -2871,7 +2871,7 @@
   <a href="#fristen-erinnerungen-an-datumsfeldern" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fristen: Erinnerungen an Datumsfeldern
+        Fristen an Datumsfeldern
       
     </span>
   </a>
@@ -3071,7 +3071,7 @@
 <h2 id="aufbau-des-editors">Aufbau des Editors<a class="headerlink" href="#aufbau-des-editors" title="Permanent link">&para;</a></h2>
 <p>Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: <strong>Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Erkennung → Berechtigungen → Testlauf</strong>.</p>
 <ul>
-<li>Jeder Bereich lässt sich mit einem Klick auf seine Überschrift <strong>ein- und ausklappen</strong>. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 mit Erinnerung“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.</li>
+<li>Jeder Bereich lässt sich mit einem Klick auf seine Überschrift <strong>ein- und ausklappen</strong>. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 Frist“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.</li>
 <li>Ein <strong>neuer</strong> Mappentyp ist ganz aufgeklappt, ein <strong>bestehender</strong> startet eingeklappt. Was du auf- oder zuklappst, merkt sich dein Gerät je Mappentyp.</li>
 <li>Die <strong>Sprungleiste</strong> oben führt zu jedem Bereich und klappt ihn auf; <strong>Alle aufklappen</strong> bzw. <strong>Alle zuklappen</strong> schaltet alle auf einmal.</li>
 <li>Bereiche mit einem <strong>Fehler</strong> sind in der Sprungleiste und am Rand rot markiert. Ein unbekannter Platzhalter im Titel oder eine unvollständige Regel fällt schon beim Tippen auf; was erst beim Speichern auffällt, klappt seinen Bereich von selbst auf.</li>
@@ -3118,7 +3118,7 @@
 </tr>
 <tr>
 <td>Datum</td>
-<td><a href="#formate-und-datumsgrenzen">Frühestens, Spätestens</a> (fest oder „heute“), Erinnern</td>
+<td><a href="#formate-und-datumsgrenzen">Frühestens, Spätestens</a> (fest oder „heute“), Ist eine Frist</td>
 </tr>
 <tr>
 <td>Ja/Nein</td>
@@ -3244,18 +3244,20 @@
 <li>Mit <strong>@</strong> lässt sich ein Benutzer erwähnen; er bekommt dann eine <a href="../aufgaben/">Aufgabe</a>.</li>
 <li>Ein bestehendes Langtextfeld kannst du auf <em>Formatierter Text</em> umstellen; die Texte bleiben, wie sie sind.</li>
 </ul>
-<h3 id="fristen-erinnerungen-an-datumsfeldern">Fristen: Erinnerungen an Datumsfeldern<a class="headerlink" href="#fristen-erinnerungen-an-datumsfeldern" title="Permanent link">&para;</a></h3>
-<p>An einem <strong>Datumsfeld</strong> wie „Kündigung bis“ oder „TÜV fällig“ kannst du <strong>Erinnern</strong> einschalten. Dann steht die Mappe rechtzeitig vor dem Datum als <strong>Frist</strong> unter „Zu erledigen“ – und damit auch in der täglichen Zusammenfassung.</p>
-<p><img alt="Erinnerung an einem Datumsfeld" src="../bilder/werkbank-frist.png" /></p>
+<h3 id="fristen-erinnerungen-an-datumsfeldern">Fristen an Datumsfeldern<a class="headerlink" href="#fristen-erinnerungen-an-datumsfeldern" title="Permanent link">&para;</a></h3>
+<p>An einem <strong>Datumsfeld</strong> wie „Kündigung bis“ oder „HU fällig“ kannst du <strong>Ist eine Frist</strong> einschalten. Dann steht das Datum unter „Zu erledigen“ und im Kalender, und es löst das Ereignis <em>Datum erreicht</em> aus.</p>
+<p><strong>Wann und an wen Ablago erinnert, stellst du in einer <a href="../automatisierungen/">Automatisierung</a> ein</strong> – Wenn-Karte <em>Datum erreicht</em>:</p>
 <ul>
-<li><strong>Vorlauf</strong> – wie lange vorher, in Tagen, Wochen oder Monaten. Bei 4 Wochen und dem 30.09. erscheint die Frist am 02.09.</li>
-<li><strong>Für</strong> – der <strong>Ersteller der Mappe</strong> oder der Benutzer in einem Feld, das auf Benutzer verweist (z. B. „Verantwortlich“). Ist dieses Feld leer, bekommt der Ersteller die Erinnerung. Abwesenheit und Vertretung gelten wie bei allen <a href="../aufgaben/">Aufgaben</a>.</li>
-<li><strong>Text</strong> – mit den Platzhaltern <code>{feld}</code>, <code>{datum}</code> und <code>{titel}</code>; Standard ist „{feld} {datum}“, also z. B. „Kündigung bis 30.09.2027“.</li>
+<li><strong>Vorlaufzeit</strong> – wie lange vorher, in Tagen, Wochen oder Monaten. Bei 4 Wochen und dem 30.09. erscheint die Frist am 02.09.</li>
+<li><strong>Empfänger</strong> – zum Beispiel der Benutzer in einem Feld, das auf Benutzer verweist (z. B. „Verantwortlich“), sonst wer die Mappe angelegt hat. Abwesenheit und Vertretung gelten wie bei allen <a href="../aufgaben/">Aufgaben</a>.</li>
+<li><strong>Text</strong> mit Platzhaltern wie dem Datum und dem Titel der Mappe.</li>
 <li><strong>Wiederkehrend</strong> – monatlich, vierteljährlich, halbjährlich, jährlich oder alle paar Jahre. Wer die Frist erledigt, bekommt den Vorschlag „Datum auf 30.09.2028 setzen“; das Datum ändert sich <strong>nie von selbst</strong>, und die Änderung steht wie jede andere in der Historie der Mappe.</li>
 </ul>
+<p>Pakete bringen passende Automatisierungen mit, zum Beispiel „Kündigung bald fällig“. Beim Installieren fragt Ablago, welche gleich eingeschaltet werden sollen (Vorgabe: alle). Für einen eigenen Mappentyp legst du die Automatisierung selbst an.</p>
+<p><strong>Seit Version 0.177 erinnert nur noch die Automatisierung.</strong> Früher stellte man Vorlauf, Empfänger und Text direkt am Feld ein. Beim Update hat Ablago jede dieser Erinnerungen <strong>einmal</strong> als eingeschaltete Automatisierung <em>Erinnerung: Feld (Mappentyp)</em> übernommen – mit derselben Vorlaufzeit, demselben Empfänger (ist das Feld leer: der Ersteller), demselben Text und derselben Wiederholung. Es erinnert also alles wie bisher; die Werkbank-Übersicht sagt einmal, was umgezogen ist. Eine übernommene Automatisierung, die du löschst, kommt nicht wieder. Bringt ein Paket-Update später eine eigene Automatisierung für dasselbe Feld mit, ersetzt sie die übernommene, solange du diese nicht geändert hast – doppelt erinnert wird nie.</p>
 <p>So verhalten sich Fristen:</p>
 <ul>
-<li>Ablago prüft die Fristen beim Speichern einer Mappe, nach Änderungen am Mappentyp und jeden Tag kurz nach Mitternacht. Je Mappe, Feld und Datum entsteht <strong>höchstens eine</strong> Frist – auch nach dem Erledigen nicht noch einmal.</li>
+<li>Die Automatisierung prüft jeden Tag zur eingestellten Uhrzeit (Vorgabe 07:00) und beim Speichern einer Mappe: Liegt das Datum schon im Vorlauf, kommt die Frist sofort. Je Person, Mappe, Feld und Datum entsteht <strong>höchstens eine</strong> Frist – auch nach dem Erledigen nicht noch einmal.</li>
 <li>Wird das Datum <strong>geändert oder geleert</strong>, erledigt sich eine offene Frist von selbst (mit Eintrag in der Historie der Mappe); für das neue Datum entsteht zur rechten Zeit eine neue.</li>
 <li>Daten, die schon vorbei sind, erzeugen keine Frist mehr.</li>
 <li>Darf der Empfänger die Mappe nach den <a href="../berechtigungen/">Berechtigungen</a> nicht lesen, bekommt er die Frist trotzdem; unter <em>Werkbank → Benachrichtigungen und Aufgaben</em> steht dann ein Hinweis.</li>

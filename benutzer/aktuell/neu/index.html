@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/benutzer/v0.176/neu/">
+        <link rel="canonical" href="https://help.ablago.app/benutzer/v0.177/neu/">
       
       
         <link rel="prev" href="../original/">
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0176" class="md-skip">
+        <a href="#neu-in-version-0177" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -413,33 +413,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01760" class="md-nav__link">
+  <a href="#01770" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.176.0
+        0.177.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.176.0">
+    <nav class="md-nav" aria-label="0.177.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
+  <a href="#fristen-erinnern-stellst-du-jetzt-in-automatisierungen-ein" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technik
+        Fristen: Erinnern stellst du jetzt in Automatisierungen ein
       
     </span>
   </a>
@@ -1171,33 +1160,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01760" class="md-nav__link">
+  <a href="#01770" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.176.0
+        0.177.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.176.0">
+    <nav class="md-nav" aria-label="0.177.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#neu" class="md-nav__link">
+  <a href="#fristen-erinnern-stellst-du-jetzt-in-automatisierungen-ein" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Neu
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#technik" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technik
+        Fristen: Erinnern stellst du jetzt in Automatisierungen ein
       
     </span>
   </a>
@@ -1240,20 +1218,21 @@
   
 
 
-<h1 id="neu-in-version-0176">Neu in Version 0.176<a class="headerlink" href="#neu-in-version-0176" title="Permanent link">&para;</a></h1>
-<h2 id="01760">0.176.0<a class="headerlink" href="#01760" title="Permanent link">&para;</a></h2>
-<h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
+<h1 id="neu-in-version-0177">Neu in Version 0.177<a class="headerlink" href="#neu-in-version-0177" title="Permanent link">&para;</a></h1>
+<h2 id="01770">0.177.0<a class="headerlink" href="#01770" title="Permanent link">&para;</a></h2>
+<h3 id="fristen-erinnern-stellst-du-jetzt-in-automatisierungen-ein">Fristen: Erinnern stellst du jetzt in Automatisierungen ein<a class="headerlink" href="#fristen-erinnern-stellst-du-jetzt-in-automatisierungen-ein" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Archivfassung: ankreuzen statt verneinen</strong> (#660). In den Einstellungen eines Archivfassungs-Pakets (PDF/A) kreuzt du an, was eine Archivfassung bekommt: <strong>PDFs mit Text</strong>, <strong>gescannte PDFs</strong> und <strong>Fotos und Bilder</strong> – Vorgabe alle. Der Haken „Nur Scans und Bilder“ entfällt.</li>
-<li>Was du abwählst, steht am Dokument ruhig als „ausgelassen – laut Einstellung“. Kreuzt du eine Art später an, holt Ablago die passenden Dokumente nach.</li>
-</ul>
-<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Manifest: <code>code.archivfassung.auswahl</code> mit <code>pdf_text</code>, <code>pdf_scan</code>, <code>bilder</code> (je der Schlüssel einer Ja/Nein-Einstellung) ersetzt <code>code.archivfassung.nur_scans</code> – ohne Übergang. Fehlt ein Schlüssel, ist die Art immer an. Das Paket PDF/A stellt in dms-registry #106 um.</li>
+<li><strong>Am Datumsfeld bleibt nur „Ist eine Frist“.</strong> Das Datum steht weiter unter <em>Zu erledigen</em> und im Kalender. Wann und an wen Ablago erinnert, stellst du in einer Automatisierung <em>Datum erreicht</em> ein – mit Vorlaufzeit in Tagen, Wochen oder Monaten, Empfänger, Text und Wiederholung.</li>
+<li><strong>Es erinnert alles wie bisher:</strong> Beim Update übernimmt Ablago jede Erinnerung am Feld einmal als eingeschaltete Automatisierung <em>Erinnerung: Feld (Mappentyp)</em> – mit derselben Vorlaufzeit, demselben Empfänger, Text und derselben Wiederholung. Die Werkbank-Übersicht sagt einmal, was umgezogen ist.</li>
+<li><strong>Sofort, wenn das Datum schon nah ist:</strong> Trägst du ein Datum ein, das schon im Vorlauf liegt, kommt die Frist gleich beim Speichern.</li>
+<li><strong>Vorgefertigte Automatisierungen aus Paketen:</strong> Pakete können Automatisierungen mitbringen. Beim Installieren – im Einrichtungsassistenten und in der Werkbank – fragt Ablago: „Sollen sie gleich eingeschaltet werden?“, mit dem Namen jeder Automatisierung, alle vorausgewählt. Was du abwählst, bleibt aus. In der Liste erkennst du sie an „aus Paket …“; ein Update ersetzt nur, was du nicht geändert hast.</li>
+<li><strong>Nie doppelt:</strong> Bringt ein Paket eine eigene Automatisierung für ein Feld mit, ersetzt sie die übernommene Erinnerung, solange du diese nicht geändert hast.</li>
+<li><strong>Empfänger aus einem Feld, sonst Ersteller:</strong> Ist das Feld leer, geht die Frist an den, der die Mappe angelegt hat.</li>
+<li><strong>Vertretung als Automatisierung:</strong> Die Aufgabe „Du wurdest für … als Vertreter hinterlegt“ kommt jetzt aus der Automatisierung <em>Vertretung eingetragen</em> – bei bestehenden Ablagen beim Update eingeschaltet übernommen, sonst aus dem Paket Benachrichtigungen. Neu: Empfänger <em>Person aus dem Ereignis</em> (z. B. der Vertreter), Platzhalter <code>{benutzer}</code>, <code>{vertreter}</code>, <code>{zeitraum}</code> und die Wenn-Karte <em>Vertretung zurückgezogen</em> für den bisherigen Vertreter.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.175.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.175.0...v0.176.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.176.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.176.0...v0.177.0">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
