@@ -3069,7 +3069,7 @@
 <li><strong>Zuordnung Benutzer ↔ Rolle</strong> ist das Systemfeld <code>rollen</code> der Benutzer-Mappe (Mehrfachverweis). Die Rolle zeigt ihre Benutzer als Rückverweise. Gesetzt wird es nur über die Benutzerverwaltung; ungültige Rollen werden geprüft, bevor sich etwas ändert.</li>
 <li><strong>Rollen sind Mappen</strong> des Systemmappentyps <em>Rolle</em>. Wer sie anlegen, umbenennen und löschen darf, regeln die Berechtigungen an diesem Mappentyp (ohne Regeln: alle). Keine verschachtelten Rollen.</li>
 <li><strong>Rolle löschen:</strong> erlaubt, auch wenn Benutzer sie haben – deren Zuordnung fällt weg. Verweise aus normalen Feldern (z. B. „verantwortliche Rolle“) verhindern das Löschen wie bei jeder Mappe.</li>
-<li><strong>Deaktivieren statt löschen:</strong> Wer sich schon angemeldet hat, wird deaktiviert; seine Mappe heißt dann „… (ehemalig)“ und Verweise bleiben gültig. Löschen geht nur für nie angenommene Einladungen.</li>
+<li><strong>Deaktivieren statt löschen:</strong> Wer sich schon angemeldet hat, wird deaktiviert; seine Mappe behält den Namen, der überall kursiv und durchgestrichen erscheint, und Verweise bleiben gültig. Löschen geht nur für nie angenommene Einladungen.</li>
 <li><strong>Neue Mappen / Löschen erlauben</strong> als Eigenschaft jedes Mappentyps (<code>erstellen_erlaubt</code>, <code>loeschen_erlaubt</code>); die Oberfläche blendet die Knöpfe aus, der Server prüft es. Beim Mappentyp <em>Benutzer</em> ist beides fest aus. <em>Seit 0.32 (#146) abgelöst: Anlegen und Löschen regeln die Berechtigungen (C, D); fest bleiben nur die Systemregeln für Benutzer-Mappen (seit 0.41, #192, gilt für Post die normale Berechtigung C).</em></li>
 <li>Demo-Daten und Beispiele lassen die Systemtypen aus.</li>
 </ul>
