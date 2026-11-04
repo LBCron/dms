@@ -265,6 +265,7 @@
   "ablauf.aufgabe.knopf": "Einstellungen ausfüllen",
   "ablauf.titel": "„{name}“ installieren",
   "ablauf.fertig": "Installiert: {namen}.",
+  "ablauf.fertig.einstellen": "{namen} braucht noch Einstellungen – im Reiter „Einstellungen“.",
   "ablauf.nachtraeglich_one": "Dazu gibt es {anzahl} Ergänzung: {namen}. Du kannst sie jetzt dazuholen.",
   "ablauf.nachtraeglich_other": "Dazu gibt es {anzahl} Ergänzungen, z. B. {namen}. Du kannst sie jetzt dazuholen.",
   "ablauf.nachtraeglich.knopf": "Auswählen …",

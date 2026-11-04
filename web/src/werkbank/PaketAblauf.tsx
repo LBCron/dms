@@ -97,8 +97,10 @@ function aufloesen(q: AblaufQuelle, liste: Kandidat[], wahl: string[], versionen
 /** Kurzer Name einer Ergänzung unter ihrem Paket: „Texterkennung – Zusatzsprache Französisch“ → „Zusatzsprache Französisch“. */
 const kurz = (name: string) => (name.includes(' – ') ? name.slice(name.lastIndexOf(' – ') + 3) : name);
 
-export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}, aktionen, weiterText, fertig, geaendert }: {
+export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}, aktionen, weiterText, fertig, geaendert, direkt }: {
   quelle: AblaufQuelle;
+  /** Ohne Fehler gleich `fertig` statt der Ergebnisseite mit „Weiter“ (#659) – die Seite zeigt dann selbst eine Meldung. */
+  direkt?: boolean;
   /** Vorgewählt (Paket-Ids bzw. Upload-Kennungen). */
   start: string[];
   /** Nur diese Pakete oben zeigen (Ids), samt ihrer Ergänzungen – z. B. ein Paket aus der Werkbank. */
@@ -136,7 +138,7 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
   if (ergebnis) return <AblaufErgebnisAnsicht e={ergebnis} weiter={() => fertig(ergebnis)} />;
   if (plan) return (
     <Fragen key={plan.rechte.stand + plan.pakete.map((p) => p.schluessel).join()} plan={plan} eingabe={eingabe} zurueck={() => setPlan(null)} neuerPlan={setPlan}
-      fertig={(e) => { setErgebnis(e); geaendert?.(); }} />
+      fertig={(e) => { geaendert?.(); if (direkt && !e.fehler) fertig(e); else setErgebnis(e); }} />
   );
 
   // Baum: oben die Pakete, darunter ihre Ergänzungen (auch unter einem schon installierten Paket).

@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { ergaenzungenVon, hatSchnittstelle, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { ergaenzungenVon, hatSchnittstelle, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type AblaufErgebnis, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -471,7 +471,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           <dt>Autor</dt><dd>{autor?.name}{autor?.github && <> (<a className="verweis" href={`https://github.com/${autor.github}`} target="_blank" rel="noreferrer">@{autor.github}</a>)</>}</dd>
           {v && <><dt>Nötige Ablago-Version</dt><dd>{v.dms} (dieser Installation: {z.stand?.dms})</dd></>}
           {v && <><dt>Abhängigkeiten</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : 'keine'}</dd></>}
-          {v && <><dt>Inhalt</dt><dd>Mappentypen: {v.inhalt.mappentypen.map((t) => t.name).join(', ') || '–'}<br />Ansichten: {v.inhalt.sichten.map((s) => s.name).join(', ') || '–'}{v.inhalt.beispiele ? <><br />{v.inhalt.beispiele} Beispiel-Mappen (optional)</> : null}</dd></>}
+          {v && (v.inhalt.mappentypen.length > 0 || v.inhalt.sichten.length > 0 || v.inhalt.beispiele > 0) && <><dt>Inhalt</dt><dd>Mappentypen: {v.inhalt.mappentypen.map((t) => t.name).join(', ') || '–'}<br />Ansichten: {v.inhalt.sichten.map((s) => s.name).join(', ') || '–'}{v.inhalt.beispiele ? <><br />{v.inhalt.beispiele} Beispiel-Mappen (optional)</> : null}</dd></>}
           {(v?.readme || inst?.links?.readme || imKatalog) && <><dt>Mehr</dt><dd>{(v?.readme || inst?.links?.readme) && <a className="verweis" href={v?.readme || inst!.links!.readme} target="_blank" rel="noreferrer">README ↗</a>}{(v?.changelog || inst?.links?.changelog) && <> · <a className="verweis" href={v?.changelog || inst!.links!.changelog} target="_blank" rel="noreferrer">Änderungen ↗</a></>}
             {/* Paketseite im offiziellen Katalog mit der Ablago-Version nur im Fragment (#622). */}
             {imKatalog && <>{(v?.readme || inst?.links?.readme) && ' · '}<a className="verweis" href={katalogSeiteMitVersion(z.stand?.dms ?? '', id)} target="_blank" rel={KATALOG_LINK_REL} title={tx('pakete.katalog.hinweis')}>{tx('pakete.katalog.ansehen')} <Symbol name="extern" /></a></>}</dd></>}
@@ -480,7 +480,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:vektoren') && <VektorStandBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:antworten') && <FragenGrenzenBlock />}
         {inst?.laeufer && hatSchnittstelle(inst.laeufer, 'dms:erkennen') && <ErkennungPaketBlock paket={inst.id} />}
-        {inst && (
+        {inst && (Object.keys(inst.typen).length > 0 || Object.keys(inst.sichten).length > 0) && (
           <>
             <h2 className="h3">Gehört dazu</h2>
             <ul className="klein">
@@ -514,10 +514,10 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
       {kp && ablauf && katalog && z.stand && (
         <section className="blatt stapel" aria-label={tx('pakete.ablauf.zusammenfassung')}>
           <h2 className="h3">{tx('pakete.ablauf.titel', { name: kp.name })} <Hilfe ort="werkbank.pakete.ablauf" /></h2>
-          <PaketAblauf quelle={{ art: 'katalog', katalog, quelle: aus?.offiziell ? undefined : aus?.url, dms: z.stand.dms, installiert: z.stand.installiert }} start={[id]} nur={[id]} versionen={version ? { [id]: version } : {}}
+          <PaketAblauf direkt quelle={{ art: 'katalog', katalog, quelle: aus?.offiziell ? undefined : aus?.url, dms: z.stand.dms, installiert: z.stand.installiert }} start={[id]} nur={[id]} versionen={version ? { [id]: version } : {}}
             aktionen={<button type="button" className="textknopf" onClick={() => setAblauf(false)}>Abbrechen</button>}
             geaendert={() => { void z.laden(); void d.neuLaden(); }}
-            fertig={(e) => { setAblauf(false); if (e.installiert.some((x) => x.id === id)) setMeldung({ art: 'gut', text: tx('pakete.ablauf.fertig', { namen: e.installiert.map((x) => `${x.name} ${x.version}`).join(', ') }) }); }} />
+            fertig={(e) => { setAblauf(false); if (e.installiert.some((x) => x.id === id)) setMeldung({ art: 'gut', text: fertigText(e) }); }} />
         </section>
       )}
       {inst && katalog && z.stand && <ErgaenzungenBlock z={z} inst={inst} katalog={katalog} quelle={aus?.offiziell ? undefined : aus?.url} />}
@@ -533,6 +533,13 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
       </>}
     </div>
   );
+}
+
+/** Erfolgsmeldung oben (#659): „… ist installiert“, bei Pflicht-Einstellungen mit dem Hinweis darauf. */
+function fertigText(e: AblaufErgebnis) {
+  const namen = e.installiert.map((x) => `${x.name} ${x.version}`).join(', ');
+  const spaeter = e.installiert.filter((x) => x.einstellungen === 'spaeter' || x.einstellungen === 'fehler');
+  return spaeter.length ? `${tx('pakete.ablauf.fertig', { namen })} ${tx('pakete.ablauf.fertig.einstellen', { namen: spaeter.map((x) => x.name).join(', ') })}` : tx('pakete.ablauf.fertig', { namen });
 }
 
 /**
@@ -560,7 +567,7 @@ function ErgaenzungenBlock({ z, inst, katalog, quelle }: { z: PaketeZustand; ins
         <PaketAblauf quelle={{ art: 'katalog', katalog, quelle, dms: stand.dms, installiert: stand.installiert }} start={[]} nur={[inst.id]}
           aktionen={<button type="button" className="textknopf" onClick={() => setOffen(false)}>Abbrechen</button>}
           geaendert={() => { void z.laden(); void d.neuLaden(); }}
-          fertig={(e) => { setOffen(false); if (e.installiert.length) setMeldung({ art: 'gut', text: tx('pakete.ablauf.fertig', { namen: e.installiert.map((x) => `${x.name} ${x.version}`).join(', ') }) }); }} />
+          fertig={(e) => { setOffen(false); if (e.installiert.length) setMeldung({ art: 'gut', text: fertigText(e) }); }} />
       )}
     </section>
   );
@@ -601,7 +608,8 @@ function LaeuferStand({ paket, abonniert = [] }: { paket: string; abonniert?: re
   if (s === undefined) return null;
   return (
     <>
-      <h2 className="h3">Paket-Läufer</h2>
+      {/* „Aktualisieren“ heißt in der Paketverwaltung nur das Update (#659); hier lädt der Knopf den Stand neu. */}
+      <div className="zeile-zwischen"><h2 className="h3">Paket-Läufer</h2>{s && stand && p && <button type="button" className="textknopf" onClick={laden}><Symbol name="neu-laden" /> Stand neu laden</button>}</div>
       {!s || !stand ? <p className="leise">Der Paket-Läufer läuft nicht.</p> : !p ? <p className="leise">{stand.text}</p> : (
         <>
           <dl className="eigenschaften">
@@ -614,7 +622,6 @@ function LaeuferStand({ paket, abonniert = [] }: { paket: string; abonniert?: re
           </dl>
           {p.letzte.length > 0 && <ul className="klein">{p.letzte.slice(0, 10).map((x) => <li key={x.zeit + x.art}>{datum(x.zeit)} · {ereignisName(x.art)} · {x.ok ? 'ok' : <span className="fehlertext">{x.text}</span>}{x.ok && x.text ? ` – ${x.text}` : ''}</li>)}</ul>}
           {p.protokoll.length > 0 && <details className="klein"><summary>Ausgaben des Pakets</summary><ul>{p.protokoll.slice(0, 30).map((x, i) => <li key={i} className={x.stufe >= 2 ? 'fehlertext' : undefined}>{datum(x.zeit)} · {x.text}</li>)}</ul></details>}
-          <button type="button" className="textknopf" onClick={laden}>Aktualisieren</button>
         </>
       )}
       <EreignisKatalogListe />
