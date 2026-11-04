@@ -34,7 +34,13 @@ Die Vorlagen nutzen **`:stabil`**. So bekommst du beim Aktualisieren nur Version
 Bei zwei Containern bleibt `postgres:17` für Sicherheits-Updates der Reihe 17 offen – unabhängig vom Tag von Ablago.
 
 !!! note "Wenn eine stabile Version einen schweren Fehler hat"
-    Der Maintainer setzt `:stabil` dann auf die vorige Version zurück (Workflow *:stabil zurücksetzen*). Beim nächsten Aktualisieren bekommst du sie wieder. Was passiert ist, steht in den [Releases](https://github.com/motom001/dms/releases). Hast du schon aktualisiert und läuft danach etwas nicht, hilft die Sicherung von vor dem Update (siehe [Sichern](#sichern)); eine feste ältere Nummer im Tag hält Ablago bis zur Korrektur dort.
+    Der Maintainer setzt `:stabil` dann auf die vorige Version zurück (Workflow *:stabil zurücksetzen*). Was passiert ist, steht in den [Releases](https://github.com/motom001/dms/releases).
+
+    - **Noch nicht aktualisiert:** Du bekommst beim nächsten Aktualisieren die vorige, bewährte Version.
+    - **Schon aktualisiert:** Bleib auf der neueren Version und warte auf die Korrektur – trag dafür die feste Nummer im Tag ein (z. B. `:0.160.0`). Eine ältere Version startet auf deiner Datenbank nicht: Ablago merkt, dass schon eine neuere Version die Datenbank eingerichtet hat, und bricht mit einem Hinweis ab, statt neue Daten zu übersehen. Zurück geht es nur über die Sicherung von vor dem Update (siehe [Sichern](#sichern)).
+    - **Neu eingerichtet ab 0.158.3:** Solche Ablagen und ihre Sicherungen lassen sich mit Versionen bis 0.158.2 nicht öffnen – auch nicht über eine Sicherung.
+
+    Startet der Container mit *Diese Datenbank stammt von einer neueren Version von Ablago*, steht im Tag eine ältere Version als zuletzt – oder `:stabil` wurde zurückgesetzt. Trag die zuletzt verwendete Nummer ein.
 
 !!! info "Woher kommt das Image?"
     Jedes Image von Ablago trägt einen **Herkunftsnachweis**: eine Signatur, die belegt, dass es von GitHub aus genau diesem Repository gebaut wurde, und eine **Stückliste** (SBOM) aller enthaltenen Pakete. Beides ist öffentlich und lässt sich mit der GitHub-Kommandozeile prüfen:
