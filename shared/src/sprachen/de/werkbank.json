@@ -162,5 +162,16 @@
   "sicherung.extern.nurneueste.hilfe": "Für knappen Platz, wenn eine Kopie außer Haus entsteht: Ältere automatische Sicherungen gibt es dann nur noch dort. Eine Sicherung, die gerade außer Haus kopiert wird, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage).",
   "demo.nichtErzeugbar": "{anzahl} lassen sich nicht erzeugen",
   "demo.warum": "Warum wurden Mappen übersprungen?",
-  "demo.tipp": "Tipp: Fehlt ein Ziel für einen Pflicht-Verweis, lege zuerst Mappen des Zieltyps an (oder erzeuge Demo-Mappen für ihn mit). Passwörter erzeugt Ablago nie; ein Pflicht-Passwort lässt sich nur von Hand füllen."
+  "demo.tipp": "Tipp: Fehlt ein Ziel für einen Pflicht-Verweis, lege zuerst Mappen des Zieltyps an (oder erzeuge Demo-Mappen für ihn mit). Passwörter erzeugt Ablago nie; ein Pflicht-Passwort lässt sich nur von Hand füllen.",
+  "testlauf.konto.label": "oder ein Konto ohne Person",
+  "testlauf.konto.leer": "– Systemkonto oder Paket wählen –",
+  "testlauf.konto.systemkonten": "Systemkonten",
+  "testlauf.konto.pakete": "Pakete",
+  "testlauf.konto.paket": "Paket: {name}",
+  "testlauf.konto.kennzeichen.systemkonto": "Systemkonto",
+  "testlauf.konto.kennzeichen.paket": "Paket",
+  "testlauf.konto.entfernen": "Auswahl „{name}“ entfernen",
+  "testlauf.konto.hinweis": "Für dieses Konto gilt die Grundeinstellung nicht – nur Regeln, die die Rolle „{rolle}“ nennen.",
+  "testlauf.konto.unbestaetigt": "Das Paket hat bei der Installation keinen Zugriff auf diesen Mappentyp bestätigt – es darf hier nichts, egal was die Regeln sagen.",
+  "testlauf.mappe.suchen": "Mappe suchen …"
 }

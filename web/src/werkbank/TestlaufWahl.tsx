@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Benutzer } from '../../../shared/src/model';
 import { passendesErgebnis, type TestlaufErgebnis } from '../../../shared/src/testlauf';
-import { api, type Bezuege } from '../api';
+import { api, type Bezuege, type Systemkonto } from '../api';
+import { t } from '../sprache';
 import { MappenWahl } from '../ablage/MappeFormular';
 import { useDaten } from '../daten';
 
@@ -17,22 +18,45 @@ function useBekannt() {
   return { bekannt, merke };
 }
 
-/** Benutzer wählen wie im Verweisfeld; Administratoren und deaktivierte Benutzer sind gekennzeichnet. */
-export function TestBenutzerWahl({ id, wert, setze }: { id: string; wert: string; setze: (id: string) => void }) {
+/**
+ * Benutzer wählen wie im Verweisfeld; Administratoren und deaktivierte Benutzer sind gekennzeichnet.
+ * `mitKonten` (#710, nur im Testlauf am Mappentyp): darunter zusätzlich die Konten ohne Person – Systemkonten und
+ * Paket-Benutzer –, gekennzeichnet und nach den Personen. Sonst bleiben sie überall ausgeblendet.
+ */
+export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; wert: string; setze: (id: string) => void; mitKonten?: boolean }) {
   const d = useDaten();
   const ziel = d.typen.find((t) => t.system === 'benutzer');
   const { bekannt, merke } = useBekannt();
   const [konten, setKonten] = useState<Benutzer[]>([]);
+  const [ohne, setOhne] = useState<Systemkonto[]>([]);
   useEffect(() => { api.benutzer().then(setKonten).catch(() => {}); }, []);
+  useEffect(() => { if (mitKonten) api.systemkonten().then(setOhne).catch(() => {}); }, [mitKonten]);
   if (!ziel) return <p className="leise klein">Der Mappentyp Benutzer fehlt.</p>;
   const konto = konten.find((k) => k.id === wert);
+  const sonder = ohne.find((k) => k.id === wert);
+  const name = (k: Systemkonto) => (k.rolle === 'paket' ? t('werkbank.testlauf.konto.paket', { name: k.paket ?? k.name }) : k.name);
+  const system = ohne.filter((k) => k.rolle === 'systemkonto');
+  const pakete = ohne.filter((k) => k.rolle === 'paket');
   return (
     <div className="feld">
-      <label htmlFor={id}>Benutzer</label>
-      <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
-        setze={(v) => setze(typeof v === 'string' ? v : '')} />
+      <label htmlFor={sonder ? `${id}-konto` : id}>Benutzer</label>
+      {sonder
+        ? <div className="mehrfach-gewaehlt"><span className="chip">{name(sonder)} <span className="chip klein">{t.frei(`werkbank.testlauf.konto.kennzeichen.${sonder.rolle}`)}</span>
+            <button type="button" className="textknopf klein" aria-label={t('werkbank.testlauf.konto.entfernen', { name: name(sonder) })} onClick={() => setze('')}>×</button></span></div>
+        : <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
+            setze={(v) => setze(typeof v === 'string' ? v : '')} />}
       {konto?.rolle === 'admin' && <span className="chip warn klein">Administrator – für ihn gelten die Regeln nicht</span>}
       {konto && !konto.aktiv && <span className="chip klein">deaktiviert</span>}
+      {mitKonten && ohne.length > 0 && !sonder && (
+        <div className="zeile klein">
+          <label htmlFor={`${id}-konto`} className="leise">{t('werkbank.testlauf.konto.label')}</label>
+          <select id={`${id}-konto`} value="" onChange={(e) => e.target.value && setze(e.target.value)}>
+            <option value="">{t('werkbank.testlauf.konto.leer')}</option>
+            {system.length > 0 && <optgroup label={t('werkbank.testlauf.konto.systemkonten')}>{system.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
+            {pakete.length > 0 && <optgroup label={t('werkbank.testlauf.konto.pakete')}>{pakete.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
@@ -47,7 +71,7 @@ export function TestMappeWahl({ id, typId, wert, setze }: { id: string; typId: s
     <div className="feld">
       <label htmlFor={id}>Testmappe</label>
       <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
-        setze={(v) => setze(typeof v === 'string' ? v : '')} />
+        platzhalter={t('werkbank.testlauf.mappe.suchen')} setze={(v) => setze(typeof v === 'string' ? v : '')} />
     </div>
   );
 }

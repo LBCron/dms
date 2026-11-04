@@ -575,6 +575,8 @@ export class Konten {
         if (b && !b.aktiv && !b.hatPasswort && !b.letzteAnmeldung) await this.repo.loescheBenutzer(id);
       },
       benutzer: () => this.repo.listeBenutzer(),
+      // Testlauf der Rechte (#710): auch Systemkonten und Dienstkonten der Pakete.
+      ohneMensch: async () => [...await this.repo.listeSystemkonten(), ...await this.repo.listeDienstkonten()],
       // Favorit = Abo (#422): persönliche Einstellungen (Benachrichtigen, Hervorheben).
       einstellungen: (id: string) => this.repo.einstellungen(id),
       // #506: Vorgabe für neue Benutzer und „auf alle anwenden“.

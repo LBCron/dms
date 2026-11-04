@@ -997,13 +997,15 @@ function Trefferliste({ treffer }: { treffer: Rueckverweis[] }) {
 
 /* ---------- Auswahl verwiesener Mappen (mit Suche statt langer Klappliste) ---------- */
 
-export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke, setze, sicht, vorbelegen, unpassend: vomServer = [], eigene, ohneAnlegen }: {
+export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke, setze, sicht, vorbelegen, unpassend: vomServer = [], eigene, ohneAnlegen, platzhalter }: {
   id: string; ziel: Mappentyp; mehrfach: boolean; wert: string | string[] | undefined; eigeneId?: string;
   bekannt: Bezuege; merke: (id: string, b: { titel: string; typId: string }) => void; setze: (v: Roh) => void;
   /** Auswahlfilter (#172): Sicht „feld:<typ>:<feld>“ und Vorbelegung für „+ anlegen“. */
   sicht?: string; vorbelegen?: Record<string, unknown>; unpassend?: string[]; eigene?: Werte;
   /** Ohne „+ … anlegen“, z. B. im Testlauf der Werkbank (#371). */
   ohneAnlegen?: boolean;
+  /** Eigener Platzhalter statt „<Typ> suchen …“, z. B. „Mappe suchen …“ für die Testmappe (#710). */
+  platzhalter?: string;
 }) {
   const eigeneText = eigene ? JSON.stringify(eigene) : '';
   const gewaehlt = (Array.isArray(wert) ? wert : wert ? [wert] : []).filter(Boolean);
@@ -1053,7 +1055,7 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
   const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">+ {ziel.name} anlegen</Link> : null;
 
   return (
-    <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={t('felder.verweis.suchen', { typ: ziel.name })}
+    <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={platzhalter ?? t('felder.verweis.suchen', { typ: ziel.name })}
       eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen} schliessen={() => setAendern(false)} ohneSuche={!zeigeSuche}
       vorschlaege={treffer === null ? null : auswahl.map((m) => ({ id: m.id, text: titelOder(m.titel) }))}
       leerText={eingabe ? t('felder.verweis.nichts') : t('felder.verweis.leer', { typ: ziel.name })}

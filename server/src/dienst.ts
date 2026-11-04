@@ -345,6 +345,8 @@ export interface KontenHaken {
   wiederda(id: string, von: string | null): Promise<void>;
   /** Alle Konten mit Abwesenheit und Vertreter – für die Umleitung von Aufgaben (#78). */
   benutzer?(): Promise<Benutzer[]>;
+  /** Konten, die kein Mensch sind (#673): Systemkonten und Dienstkonten der Pakete – nur für den Testlauf der Rechte (#710). */
+  ohneMensch?(): Promise<Benutzer[]>;
   /** Persönliche Einstellungen eines Benutzers (#422: Favoriten benachrichtigen, Geänderte hervorheben). */
   einstellungen?(id: string): Promise<Record<string, unknown>>;
   /** Persönliche Einstellung setzen (#506: Vorgabe für neue Benutzer, „auf alle anwenden“); `null` löscht. */
@@ -3205,14 +3207,32 @@ export class Dienst {
   async testlauf(e: { mappeId?: unknown; benutzerId?: unknown; berechtigungen?: unknown }) {
     const m = istUuid(e.mappeId) ? await this.repo.holeMappe(e.mappeId) : undefined;
     if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
-    const b = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === e.benutzerId) : undefined;
+    const person = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === e.benutzerId) : undefined;
+    // Systemkonten und Paket-Benutzer (#710): auswählbar nur hier, damit man ihre Rechte nachprüfen kann.
+    const b = person ?? (this.konten?.ohneMensch ? (await this.konten.ohneMensch()).find((x) => x.id === e.benutzerId && x.art) : undefined);
     if (!b) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
     const gespeichert = await this.repo.holeTyp(m.typId);
     if (!gespeichert) throw new Fachfehler(500, 'Der Mappentyp dieser Mappe fehlt.');
     const typ = e.berechtigungen === undefined ? gespeichert : { ...gespeichert, berechtigungen: bereinigeRegelwerk(e.berechtigungen) };
+    const mappe = { id: m.id, titel: m.titel ?? '', typId: m.typId };
+    if (b.art) {
+      // Wie im Zugriff solcher Konten: Rolle „Systemkonto“ bzw. „Paket“, nur Regeln, die diese Rolle nennen (#673).
+      const konto = b.art === 'system' ? 'systemkonto' as const : 'paket' as const;
+      const rolleId = (await this.sichereSystem()).kontorollen.get(konto)!;
+      const a = await this.aufloesung(b.id);
+      const name = b.art === 'dienst' ? `Paket: ${(await this.repo.listePakete()).find((p) => p.id === b.paketId)?.name ?? b.name}` : b.name;
+      const z = await this.zugriff(b);
+      const bestaetigt = !!z.typen.get(m.typId);
+      const erg = rechteAnMappe(kontoRegelwerk(typ, rolleId), m, { id: b.id, rollen: [rolleId] }, a, await this.mappenquelle(b.id, [m.id]));
+      // Wie rechteAn: Systemkonten sehen nie Passwörter; Pakete nie über die bei der Installation bestätigten Rechte hinaus.
+      const w = erg.wirksam;
+      const s = !!z.paket?.schreiben.has(m.typId);
+      erg.wirksam = !bestaetigt ? { ...NICHTS } : z.paket ? { C: w.C && s, R: w.R, U: w.U && s, D: false, P: false } : { ...w, P: false };
+      return { ...erg, admin: false, konto, ...(bestaetigt ? {} : { unbestaetigt: true }), mappe, benutzer: { id: b.id, name } };
+    }
     const a = await this.aufloesung(b.id);
     const erg = rechteAnMappe(typ, m, { id: b.id, rollen: a.meineRollen }, a, await this.mappenquelle(b.id, [m.id]));
-    return { ...erg, admin: b.rolle === 'admin', mappe: { id: m.id, titel: m.titel ?? '', typId: m.typId }, benutzer: { id: b.id, name: b.name || b.email } };
+    return { ...erg, admin: b.rolle === 'admin', mappe, benutzer: { id: b.id, name: b.name || b.email } };
   }
 
   /** „Was sieht Benutzer X?“ (#125): je Mappentyp gesamt und lesbar, dazu einige Titel. */

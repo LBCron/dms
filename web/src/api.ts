@@ -912,7 +912,7 @@ export interface PaketlaeuferStand {
 }
 export type RechtStufe = 'immer' | 'nie' | 'teils';
 export interface BerechtigungEintrag { typId: string; name: string; system: string | null; berechtigungen: Regelwerk }
-export interface Testlauf extends Ergebnis { admin: boolean; mappe: { id: string; titel: string; typId: string }; benutzer: { id: string; name: string } }
+export interface Testlauf extends Ergebnis { admin: boolean; /** Konto ohne Person (#710) */ konto?: 'systemkonto' | 'paket'; unbestaetigt?: boolean; mappe: { id: string; titel: string; typId: string }; benutzer: { id: string; name: string } }
 /** 404 ohne Leserecht (#124): eigene offene Aufgaben an der Mappe, zum Erledigen oder Weitergeben. */
 export const verborgeneAufgaben = (x: unknown): Aufgabe[] | null => {
   const d = x instanceof ApiFehler && x.status === 404 ? x.details as { verborgen?: boolean; aufgaben?: Aufgabe[] } | undefined : undefined;

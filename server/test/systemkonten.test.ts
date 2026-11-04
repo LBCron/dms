@@ -134,4 +134,41 @@ describe('Systemkonten (#673)', () => {
     assert.ok((await d.lesbare(z, [n.id])).has(n.id));
     assert.deepEqual(await d.rechteAn(z, n), { C: true, R: true, U: true, D: false, P: false });
   });
+
+  it('Testlauf der Rechte (#710): Systemkonten und Paket-Benutzer wählbar, mit entscheidender Regel', async () => {
+    const { d, repo, konten, admin, auto, gesundheit, rolleId, rufe } = await aufbau();
+    const m = await d.legeMappeAn({ typId: gesundheit.id, werte: { titel: 'Impfung' } }, admin.id);
+    const verbot = { grund: NICHTS, regeln: [{ id: 's', name: 'System- und Paketrollen verboten', wenn: [{ art: 'rolle' as const, rollen: [await rolleId('systemkonto'), await rolleId('paket')] }], dann: { C: 'entziehen' as const, R: 'entziehen' as const, U: 'entziehen' as const, D: 'entziehen' as const, P: 'entziehen' as const }, stopp: true }] };
+    type T = { konto?: string; admin: boolean; wirksam: Record<string, boolean>; spur: Array<{ name: string; traf: boolean | null }>; benutzer: { name: string }; unbestaetigt?: boolean };
+    const lauf = async (benutzerId: string, berechtigungen?: unknown) => (await rufe('POST', '/api/werkbank/berechtigungen/testlauf', { body: { mappeId: m.id, benutzerId, ...(berechtigungen ? { berechtigungen } : {}) } })).body as T;
+    // Ohne Regel für die Kontorolle: Systemkonto darf alles außer Passwörter – die Grundeinstellung gilt für es nicht.
+    let t = await lauf(auto.id);
+    assert.equal(t.konto, 'systemkonto');
+    assert.equal(t.benutzer.name, 'Automatisierung');
+    assert.deepEqual(t.wirksam, { C: true, R: true, U: true, D: true, P: false });
+    // Mit ungespeicherter Regel „verboten“: kein Leserecht, die Regel hat entschieden.
+    t = await lauf(auto.id, verbot);
+    assert.equal(t.wirksam.R, false);
+    assert.deepEqual(t.spur.map((s) => [s.name, s.traf]), [['System- und Paketrollen verboten', true]]);
+    // Gespeichert gilt dasselbe – und deckt sich mit den echten Rechten des Kontos.
+    await d.setzeBerechtigungen(gesundheit.id, verbot, true);
+    assert.equal((await lauf(auto.id)).wirksam.R, (await d.rechteAn(await d.zugriff(auto), m)).R);
+    // Paket ohne bestätigten Zugriff auf den Typ: nichts, gekennzeichnet.
+    await repo.speicherePaket({
+      id: 'probe', name: 'Probe', version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'Lena', github: 'lena' }, herkunft: 'katalog' as never,
+      installiert: new Date().toISOString(), installiertVon: admin.id, aktualisiert: null, aktualisiertVon: null,
+      typen: {}, sichten: {}, abhaengigkeiten: {}, code: true,
+      laeufer: { sprache: 'wasm', ereignisse: [], rechte: { lesen: [], schreiben: [], dokumente: 'keine' }, netz: [] } as never,
+    });
+    const paket = await konten.dienstkonto('probe', 'Probe');
+    t = await lauf(paket.id);
+    assert.equal(t.konto, 'paket');
+    assert.equal(t.benutzer.name, 'Paket: Probe');
+    assert.equal(t.unbestaetigt, true);
+    assert.equal(t.wirksam.R, false);
+    // Unbekannte Kennung bleibt 404; in der Benutzerliste tauchen die Konten weiter nicht auf.
+    await assert.rejects(lauf('00000000-0000-4000-8000-000000000000'), status(404));
+    const liste = await rufe('GET', '/api/benutzer') as { body: Array<{ id: string }> };
+    assert.ok(!liste.body.some((x) => x.id === auto.id || x.id === paket.id));
+  });
 });
