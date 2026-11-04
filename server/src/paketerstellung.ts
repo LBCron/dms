@@ -15,7 +15,7 @@
 import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
-import { BEREICH, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEREICH, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
 import { liesWortgruppe } from '../../shared/src/suche';
 import type { Synonymgruppe } from './repo';
 import { BESCHREIBUNG_LAENGE, EIGENE_LIZENZ, GITHUB, istFreieLizenz, KEINE_LIZENZ, LIZENZ_VORGABE, LIZENZEN, LIZENZNAME_LAENGE, LIZENZTEXT_MAX, lizenzVerweis, NAME_LAENGE, naechsteVersion, naechsteVersionen, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type SelbstErstellt, type SelbstErstelltDetail, type VersionsArt, type VersionsLage } from '../../shared/src/paketerstellung';
@@ -352,6 +352,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     // Eigene, nicht gewählte Typen (#656): nur ein Hinweis – der Typ bleibt über seine Kennung in der Ansicht.
     const fremd: FremderTyp[] = [];
     const typen = s.typen.map((tid) => {
+      if (tid === ALLE_TYPEN) return ALLE_TYPEN; // „*“ (#725): alle Mappentypen
       const t = typById.get(tid);
       if (t && !schluessel[tid] && !d.dmsTypen.has(tid) && !t.system && !typPaket.has(tid)) {
         const frueher = (d.entwuerfe ?? []).find((x) => x.id !== id && x.schluessel[tid]);

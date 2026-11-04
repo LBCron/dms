@@ -1,11 +1,4 @@
 {
-  "titel": "Anstehend",
-  "navi": "Fristen, Erinnerungen und Aufgaben mit Datum – als Liste, Monat oder Jahr",
-  "beschreibung.liste": "Deine Fristen, Erinnerungen und Aufgaben mit Datum der nächsten {tage} Tage – auch die, die noch nicht unter „Zu erledigen“ stehen.",
-  "beschreibung.kalender": "Deine Fristen, Erinnerungen und Aufgaben mit Datum. Wiederkehrende Fristen stehen mit ihren nächsten Terminen etwas heller da. Ein Klick öffnet die Mappe.",
-  "zeitraum": "Den Zeitraum stellst du im",
-  "zeitraum.link": "Mein Konto unter Darstellung",
-  "zeitraum.ende": "ein.",
   "titel": "Zu erledigen",
   "beschreibung": "Deine Aufgaben mit Datum, deine Erinnerungen und die Fristen an Mappen, die du lesen darfst. Wiederkehrende Fristen stehen mit ihren nächsten Terminen etwas heller da. Ein Klick öffnet die Mappe.",
   "nur-favoriten": "Nur Favoriten",

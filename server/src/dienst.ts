@@ -26,7 +26,7 @@ import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Variante
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
 import {
-  auswahlKlausel, auswahlProbleme, bereinigeAuswahlfilter, setzeEigeneWerte, erfuellt, bereinigeBedingungen, filterFuer, heuteIn, kinderVon, klauselnFuer, verschiebe, waereKreis, wirksameTypen,
+  auswahlKlausel, auswahlProbleme, bereinigeAuswahlfilter, setzeEigeneWerte, erfuellt, bereinigeBedingungen, filterFuer, heuteIn, kinderVon, klauselnFuer, verschiebe, waereKreis, wirksameTypen, zeigtAlleTypen,
   type Aufloesung, type Bedingung, type Klausel, type Sicht, type SichtDaten,
 } from '../../shared/src/sichten';
 import type { Readable } from 'node:stream';
@@ -2889,7 +2889,7 @@ export class Dienst {
     if (erweitert?.fehler.length) throw new Fachfehler(422, erweitert.fehler.join(' '));
     // Sortieren nach Feldern geht, wenn die Sicht genau einen Mappentyp zeigt.
     const fest = q.sicht === 'eingang' || q.sicht === 'favoriten';
-    const einTyp = erweitert ? (erweitert.typen.length === 1 ? erweitert.typen[0] : undefined) : link ? link.typ : fest ? undefined : sicht ? (() => { const w = wirksameTypen(sichten, sicht.id); return w.length === 1 ? typen.get(w[0]) : undefined; })() : typen.get(nurTyp ?? String(q.sicht));
+    const einTyp = erweitert ? (erweitert.typen.length === 1 ? erweitert.typen[0] : undefined) : link ? link.typ : fest ? undefined : sicht ? (() => { const w = wirksameTypen(sichten, sicht.id, typen.keys()); return w.length === 1 ? typen.get(w[0]) : undefined; })() : typen.get(nurTyp ?? String(q.sicht));
     const sortierung = link && !text(q.sortierung)
       ? (link.sortierung ? sortierungAus(link.sortierung.spalte, link.sortierung.absteigend, einTyp) : undefined)
       : sortierungAus(text(q.sortierung), q.absteigend === 'true' || q.absteigend === true, einTyp);
@@ -2961,8 +2961,8 @@ export class Dienst {
       /** Favorit = Abo (#422): Favoriten und eigene Mappen, die andere seit dem letzten Sehen geändert haben. */
       geaendert: await this.persoenlichAn(ich.id, 'geaenderte_hervorheben')
         ? [...await this.repo.geaendertVonAnderen(ich.id, r.mappen.filter((m) => !m.verborgen).map((m) => m.id), ABO_ARTEN)] : [],
-      /** In der Favoritenliste: Favoriten mit ausgeschalteter Benachrichtigung (#422). */
-      ...(q.sicht === 'favoriten' ? { stumm: [...await this.repo.stummeFavoriten(ich.id, r.mappen.map((m) => m.id))] } : {}),
+      /** In der Favoritenliste und Ansichten mit „ist mein Favorit“ (#725): Favoriten ohne Benachrichtigung (#422). */
+      ...(q.sicht === 'favoriten' || sicht?.bedingungen.some((x) => x.art === 'favorit') ? { stumm: [...await this.repo.stummeFavoriten(ich.id, r.mappen.map((m) => m.id))] } : {}),
     };
   }
 
@@ -2994,7 +2994,7 @@ export class Dienst {
    */
   async zaehlerRahmen() {
     // Post (#192): Zahl der Sicht „Neue Post“ hervorheben wie im Eingang.
-    return { papierkorbTage: await this.papierkorbTage(), neuePost: await this.neuePostSicht() };
+    return { papierkorbTage: await this.papierkorbTage(), neuePost: await this.neuePostSicht(), favoritenSicht: await this.favoritenSicht() };
   }
 
   /**
@@ -3501,7 +3501,9 @@ export class Dienst {
     if (elternId && !alle.some((s) => s.id === elternId)) throw new Fachfehler(422, 'Die gewählte Elternsicht gibt es nicht.');
     if (waereKreis(alle, id, elternId)) throw new Fachfehler(422, 'Eine Ansicht kann nicht unter sich selbst oder einer ihrer Unteransichten liegen.');
     const vorhanden = new Set((await this.repo.listeTypen()).map((t) => t.id));
-    const typen = [...new Set((Array.isArray(x.typen) ? x.typen : []).map(String))].filter((t) => vorhanden.has(t));
+    const gewaehlt = [...new Set((Array.isArray(x.typen) ? x.typen : []).map(String))];
+    // „Alle Mappentypen“ (#725) steht allein; sonst nur vorhandene Typen.
+    const typen = gewaehlt.includes(ALLE_TYPEN) ? [ALLE_TYPEN] : gewaehlt.filter((t) => vorhanden.has(t));
     const geschwister = kinderVon(alle.filter((s) => s.id !== id), elternId);
     const position = Number.isFinite(Number(x.position)) && x.position !== null && x.position !== undefined
       ? Math.trunc(Number(x.position))
@@ -4864,6 +4866,7 @@ export class Dienst {
     }
     post = await this.wandleZuPost(post, rolle.id, benutzer.id);
     await this.sicherePostSichten(post);
+    await this.sichereFavoritenSicht();
     benutzer = await this.ergaenzeSystemfelder(benutzer, rolle.id);
     const systemrollen = new Map<Rolle, string>();
     for (const r of Object.keys(ROLLEN) as Rolle[]) {
@@ -4954,6 +4957,38 @@ export class Dienst {
     }
     await this.einstellungen?.schreibe('post', { sichten: true, neu: neu.id });
     protokoll.modul('werkbank').info('Ansichten für Post angelegt', { neu: neu.id });
+  }
+
+  /**
+   * Mitgelieferte Ansicht „Favoriten“ (#725): alle Mappentypen, Bedingung „ist mein Favorit“, ganz oben unter
+   * „Neue Post“. Einmal angelegt; löscht der Administrator sie, kommt sie nicht wieder (die Favoriten selbst
+   * bleiben, der Stern an der Mappe auch).
+   */
+  private async sichereFavoritenSicht() {
+    if (!this.einstellungen) return;
+    const merk = (await this.einstellungen.lies('favoriten_sicht')) as { id?: string } | null;
+    if (merk?.id) return;
+    const alle = await this.repo.listeSichten();
+    let s = alle.find((x) => zeigtAlleTypen(x) && x.bedingungen.length === 1 && x.bedingungen[0].art === 'favorit');
+    if (!s) {
+      // Direkt unter „Neue Post“, sonst ganz oben.
+      const postId = await this.neuePostSicht();
+      const post = alle.find((x) => x.id === postId);
+      const oben = kinderVon(alle, null).map((x) => x.position);
+      s = await this.repo.legeSichtAn(randomUUID(), {
+        name: 'Favoriten', beschreibung: 'Deine Mappen mit Stern – aus allen Mappentypen', elternId: null,
+        position: post ? post.position + 1 : Math.min(10, ...oben) - 10, typen: [ALLE_TYPEN], bedingungen: [{ art: 'favorit' }], symbol: 'star',
+      });
+      protokoll.modul('werkbank').info('Ansicht „Favoriten“ angelegt', { sicht: s.id });
+    }
+    await this.einstellungen.schreibe('favoriten_sicht', { id: s.id });
+  }
+
+  /** Id der mitgelieferten Ansicht „Favoriten“ (#725), solange es sie gibt. */
+  async favoritenSicht(): Promise<string | null> {
+    const merk = this.einstellungen ? ((await this.einstellungen.lies('favoriten_sicht')) as { id?: string } | null) : null;
+    if (!merk?.id) return null;
+    return (await this.repo.listeSichten()).some((x) => x.id === merk.id) ? merk.id : null;
   }
 
   /** Id der Sicht „Neue Post“ (#192), damit die Oberfläche ihre Zahl hervorhebt. */

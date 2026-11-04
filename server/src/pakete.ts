@@ -17,7 +17,7 @@ import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
 import { typBild, type TypBild } from '../../shared/src/typvergleich';
-import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -176,7 +176,7 @@ const istDmsVerweis = (vw: string) => vw.startsWith(DMS_PRAEFIX);
 /** Alle Typverweise eines Pakets: Felder, Quellen der Verknüpfungsregister, Typen der Ansichten. */
 const typverweise = (typen: PaketTyp[], sichten: PaketSicht[]) => [
   ...typen.flatMap((t) => [...t.felder.flatMap((f) => (f.ziel ? [f.ziel] : [])), ...t.register.flatMap((r) => (r.quellen ?? []).map((q) => q.typ))]),
-  ...sichten.flatMap((s) => s.typen ?? []),
+  ...sichten.flatMap((s) => (s.typen ?? []).filter((t) => t !== ALLE_TYPEN)),
 ];
 const istObjekt = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -1299,9 +1299,10 @@ export class Paketverwaltung {
         const elternId = s.eltern ? sichtMap[s.eltern] ?? null : null;
         if (s.eltern && !elternId) throw new Fachfehler(422, `Ansicht „${s.name}“: Elternsicht „${s.eltern}“ fehlt.`);
         const position = Math.max(0, ...kinderVon(alle, elternId).map((x) => x.position)) + 10;
+        // „*“ (#725): Ansicht über alle Mappentypen – bleibt, wie es ist.
         const jetzt = await this.d.listeTypen();
         const fremd = (s.fremdeTypen ?? []).map((f) => jetzt.find((t) => t.schluessel === f.kennung)?.id).filter((x): x is string => !!x);
-        const typen = [...new Set([...(s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean), ...fremd])];
+        const typen = [...new Set([...(s.typen ?? []).map((x) => (x === ALLE_TYPEN ? ALLE_TYPEN : ziel(x, false)!)).filter(Boolean), ...fremd])];
         if (!typen.length && (s.fremdeTypen ?? []).length) continue;
         try {
           const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}), ...(s.symbol ? { symbol: s.symbol } : {}) });

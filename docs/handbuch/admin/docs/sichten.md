@@ -33,6 +33,7 @@ Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Untera
 Die Ansicht zeigt Mappen der angehakten Mappentypen, sofern sie alle Bedingungen erfüllen. Dazu kommen **immer** die Mappen ihrer Unteransichten – jede mit ihren eigenen Bedingungen, ohne Doppelte.
 
 - Eine Ansicht **ohne Mappentyp** dient nur zum Gruppieren, etwa *Finanzen* über *Offene Rechnungen* und *Zahlungen dieses Jahr*.
+- **Alle Mappentypen** (Haken über der Liste) zeigt Mappen aller Mappentypen, auch solcher, die später dazukommen. So ist die mitgelieferte Ansicht **Favoriten** gebaut: alle Mappentypen und die Bedingung *ist mein Favorit*. Sie entsteht einmal beim Start; löschst du sie, kommt sie nicht wieder (die Favoriten der Benutzer bleiben). In Paketen steht dafür `typen: ["*"]`.
 - Zeigt eine Ansicht (mit Unteransichten) **genau einen** Mappentyp, verhält sich die Liste wie gewohnt: Trefferliste des Mappentyps, Sortieren nach seinen Feldern und **+ Neu**. Den Knopf gibt es nur, wenn der Benutzer das Recht **C** (Anlegen) am Mappentyp ([Berechtigungen](berechtigungen.md)) **und** an der Ansicht ([Berechtigungen](#berechtigungen)) hat. In Ansichten mit Post heißt er **+ Post**.
 - Zeigt sie **mehrere** Mappentypen, gibt es kein **+ Neu**; sortieren lässt sich nach den Systemspalten.
 

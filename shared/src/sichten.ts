@@ -8,6 +8,7 @@
 import type { SichtRechte, SichtRegelwerk } from './sichtrechte';
 import { GEMISCHTE_SPALTEN, istLeer, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, type Feld, type Feldtyp, type Mappe, type Mappentyp, type Quelle } from './model';
 import { datumsformat } from './region';
+import { ALLE_TYPEN } from './pakete';
 
 /* ---------- Bedingungen ---------- */
 
@@ -152,9 +153,24 @@ export function waereKreis(alle: Sicht[], id: string, elternId: string | null): 
   return mitNachkommen(alle, id).some((s) => s.id === elternId);
 }
 
-/** Alle Mappentypen, die eine Sicht samt Kindern zeigt. */
-export function wirksameTypen(alle: Sicht[], id: string): string[] {
-  return [...new Set(mitNachkommen(alle, id).flatMap((s) => s.typen))];
+/**
+ * Platzhalter in `typen` (#725): die Ansicht zeigt Mappen aller Mappentypen, auch künftiger – etwa „Favoriten“
+ * mit der Bedingung „ist mein Favorit“. Gespeichert, exportiert und in Paketen steht er so, wie er ist.
+ */
+export { ALLE_TYPEN };
+
+/** Zeigt die Ansicht Mappen aller Mappentypen? */
+export const zeigtAlleTypen = (s: Pick<SichtDaten, 'typen'>) => s.typen.includes(ALLE_TYPEN);
+
+/** Die Mappentypen einer Ansicht selbst, „alle“ aufgelöst gegen die vorhandenen. */
+export function typenDerSicht(s: Pick<SichtDaten, 'typen'>, vorhanden: Iterable<string>): string[] {
+  return zeigtAlleTypen(s) ? [...vorhanden] : s.typen;
+}
+
+/** Alle Mappentypen, die eine Sicht samt Kindern zeigt; „alle“ wird gegen `vorhanden` aufgelöst (ohne: entfällt). */
+export function wirksameTypen(alle: Sicht[], id: string, vorhanden: Iterable<string> = []): string[] {
+  const liste = [...vorhanden];
+  return [...new Set(mitNachkommen(alle, id).flatMap((s) => typenDerSicht(s, liste).filter((t) => t !== ALLE_TYPEN)))];
 }
 
 /* ---------- Felder, die eine Sicht für Bedingungen anbietet ---------- */
@@ -341,9 +357,9 @@ export function klauselnFuer(alle: Sicht[], id: string, typen: Map<string, Mappe
   // Verborgene Untersichten (#148): ihre Mappen fehlen auch in der Elternsicht.
   return mitNachkommen(alle, id)
     .filter((s) => !verborgen?.has(s.id))
-    .filter((s) => s.typen.some((t) => typen.has(t)))
+    .filter((s) => typenDerSicht(s, typen.keys()).some((t) => typen.has(t)))
     .map((s) => {
-      const eigene = s.typen.map((t) => typen.get(t)).filter((t): t is Mappentyp => !!t);
+      const eigene = typenDerSicht(s, typen.keys()).map((t) => typen.get(t)).filter((t): t is Mappentyp => !!t);
       return { typen: eigene.map((t) => t.id), filter: filterFuer(s, eigene, a) };
     });
 }

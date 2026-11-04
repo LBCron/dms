@@ -233,6 +233,8 @@ export interface Zaehler {
   papierkorb?: number; papierkorbTage?: number;
   /** Post (#192): Id der Sicht „Neue Post“, deren Zahl hervorgehoben wird. */
   neuePost?: string | null;
+  /** #725: Id der mitgelieferten Ansicht „Favoriten“; null = gelöscht (dann gilt die feste Liste). */
+  favoritenSicht?: string | null;
 }
 /** Eine Mappe im Papierkorb (#43). */
 /** Einzelnes Dokument im Papierkorb (#344). mappe: da · papierkorb (erst die Mappe wiederherstellen) · weg. */
@@ -519,7 +521,7 @@ export const api = {
   einstellungSetzen: (schluessel: string, wert: unknown) => anfrage<null>('PUT', `/api/konto/einstellungen/${encodeURIComponent(schluessel)}`, { wert }),
   sichten: () => anfrage<Zaehler>('GET', '/api/sichten'),
   /** Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – vor den Zahlen. */
-  sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost'>>('GET', '/api/sichten/rahmen'),
+  sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost' | 'favoritenSicht'>>('GET', '/api/sichten/rahmen'),
   /* Sichten verwalten (#38) */
   sichtDefinitionen: () => anfrage<Sicht[]>('GET', '/api/sichten/definitionen'),
   sichtAnlegen: (s: Partial<SichtDaten>) => anfrage<Sicht>('POST', '/api/sichten/definitionen', s),

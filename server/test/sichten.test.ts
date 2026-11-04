@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { beschreibeBedingung, bedingungsfelder, bedingungsProblem, heuteIn, verschiebe, type Bedingung, type Operator } from '../../shared/src/sichten';
+import { ALLE_TYPEN, beschreibeBedingung, bedingungsfelder, bedingungsProblem, heuteIn, klauselnFuer, typenDerSicht, verschiebe, wirksameTypen, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
+import type { Mappentyp } from '../../shared/src/model';
 import { ladeBeispiele } from '../src/beispiele';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
@@ -283,6 +284,45 @@ function faelle() {
       await d.setzeFavorit(ICH, zahlung.id, false);
       await d.setzeFavorit(ICH, rechnung.id, false);
       assert.equal((await d.seite(ICH, { sicht: 'favoriten' })).gesamt, 0);
+    });
+
+    it('„*“ löst gegen die vorhandenen Mappentypen auf (#725)', () => {
+      const s = (id: string, typen: string[], elternId: string | null = null) => ({ id, name: id, beschreibung: '', elternId, position: 0, typen, bedingungen: [], erstellt: '', geaendert: '' }) as Sicht;
+      const alle = [s('a', [ALLE_TYPEN]), s('b', ['t1'], 'a')];
+      assert.deepEqual(typenDerSicht(alle[0], ['t1', 't2']), ['t1', 't2']);
+      assert.deepEqual(wirksameTypen(alle, 'a', ['t1', 't2']).sort(), ['t1', 't2']);
+      assert.deepEqual(wirksameTypen(alle, 'a'), ['t1'], 'ohne Liste fällt „*“ weg');
+      const typen = new Map(['t1', 't2'].map((id) => [id, { id, felder: [], register: [] } as unknown as Mappentyp] as const));
+      assert.deepEqual(klauselnFuer(alle, 'a', typen, { ich: 'x', meineRollen: [], heute: '2026-11-04' } as never).map((k) => k.typen), [['t1', 't2'], ['t1']]);
+    });
+
+    it('„Favoriten“ als normale Ansicht über alle Mappentypen, einmal mitgeliefert (#725)', async () => {
+      const { d, typ, mappe } = await mitBeispielen();
+      const rahmen = await d.zaehlerRahmen();
+      assert.ok(rahmen.favoritenSicht, 'beim Start angelegt');
+      const fav = (await d.listeSichten()).find((x) => x.id === rahmen.favoritenSicht)!;
+      assert.deepEqual(fav.typen, [ALLE_TYPEN]);
+      assert.deepEqual(fav.bedingungen, [{ art: 'favorit' }]);
+      assert.equal(fav.symbol, 'star');
+      const rechnung = mappe('rechnungsnummer', 'R-2026-117');
+      const zahlung = (await d.listeMappen()).find((m) => m.typId === typ('Zahlung').id)!;
+      await d.setzeFavorit(ICH, rechnung.id, true);
+      await d.setzeFavorit(ICH, zahlung.id, true);
+      await d.setzeFavoritBenachrichtigen(ICH, zahlung.id, false);
+      const seite = await d.seite(ICH, { sicht: fav.id });
+      assert.deepEqual(seite.mappen.map((m) => m.id).sort(), [rechnung.id, zahlung.id].sort(), 'aus zwei Mappentypen');
+      assert.deepEqual(seite.stumm, [zahlung.id], 'Glocke je Mappe wie in der festen Liste');
+      assert.equal((await d.zaehler(ICH)).sichten[fav.id], 2);
+      assert.equal((await d.zaehler(ICH)).favoriten, 2, 'die Zahl der Favoriten bleibt');
+      // „*“ steht allein und wird beim Speichern nicht verworfen.
+      const alle = await d.legeSichtAn({ name: 'Alles', typen: [typ('Rechnung').id, ALLE_TYPEN], bedingungen: [] });
+      assert.deepEqual(alle.typen, [ALLE_TYPEN]);
+      assert.ok((await d.seite(ICH, { sicht: alle.id })).gesamt > seite.gesamt);
+      // Gelöscht kommt sie nicht wieder.
+      await d.loescheSicht(fav.id);
+      await (d as unknown as { sichereFavoritenSicht(): Promise<void> }).sichereFavoritenSicht();
+      assert.equal(await d.favoritenSicht(), null);
+      assert.equal((await d.listeSichten()).filter((x) => x.name === 'Favoriten').length, 0);
     });
   });
 }

@@ -66,12 +66,15 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   const typ = d.typDerSicht(sicht);
   const ebene = dritt ? 'mappe' : istSuche ? (formular ? 'formular' : 'suchliste') : 'liste';
   // Spalten (#75): Trefferliste der Sicht, sonst Standard; bei mehreren Typen nur Gemeinsames.
-  const sichtTypen = verwaltet ? wirksameTypen(d.sichten, verwaltet.id).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t) : typ ? [typ] : [];
+  const sichtTypen = verwaltet ? wirksameTypen(d.sichten, verwaltet.id, d.typen.map((t) => t.id)).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t) : typ ? [typ] : [];
   const wahl = verwaltet ? spaltenDerSicht(sichtTypen, verwaltet.trefferliste) : typ ? { key: 'standard', spalten: standardliste(typ).spalten } : { key: null, spalten: GEMISCHTE_SPALTEN };
   const papierkorb = usePapierkorb(false, sicht === 'papierkorb');
   // „Zu erledigen“ mit Liste · Monat · Jahr (#528, #725): Monat und Jahr nutzen Mitte und rechts, bis eine Mappe offen ist.
   const ansicht = useErledigenAnsicht();
   const kalender = sicht === 'eingang' && ansicht.ansicht !== 'liste';
+  // Alte Adresse (#725): die feste Liste „Favoriten“ ist jetzt eine Ansicht.
+  const favoritenSicht = d.zaehler.favoritenSicht && d.sicht(d.zaehler.favoritenSicht) ? d.zaehler.favoritenSicht : null;
+  useEffect(() => { if (sicht === 'favoriten' && favoritenSicht) geheZu(`/ablage/${favoritenSicht}${dritt ? `/${dritt}` : ''}`, true); }, [sicht, dritt, favoritenSicht]);
   // Alte Adresse (#725): „Anstehend“ ist jetzt der Monat in „Zu erledigen“.
   useEffect(() => {
     if (sicht !== 'anstehend') return;
@@ -104,6 +107,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
 
   // Feste Einträge links (#507, #725): Erweiterte Suche · Start · Zu erledigen · Neue Post · Favoriten · Papierkorb.
   const neuePost = d.zaehler.neuePost ? d.sicht(d.zaehler.neuePost) : undefined;
+  const favSicht = d.zaehler.favoritenSicht ? d.sicht(d.zaehler.favoritenSicht) : undefined;
   // Zahlen kommen nach (#512): bis dahin ein Platzhalter (warte) bei den Einträgen, die aus dem Zähler kommen.
   const warte = !d.zahlenDa;
   const feste: Array<{ pfad: string; name: string; symbol: SymbolName; titel?: string; zahl?: number; warte?: boolean; hervor?: boolean; an: boolean }> = [
@@ -111,7 +115,10 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     ...(mitStart ? [{ pfad: '/ablage/start', name: 'Start', symbol: 'haus' as const, an: sicht === 'start' }] : []),
     { pfad: '/ablage/eingang', name: 'Zu erledigen', symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
     ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: neuePost.name, symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
-    { pfad: '/ablage/favoriten', name: 'Favoriten', symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
+    // Favoriten (#725): die mitgelieferte Ansicht oben wie „Neue Post“; die feste Liste nur, wenn der Administrator sie gelöscht hat.
+    favSicht
+      ? { pfad: `/ablage/${favSicht.id}`, name: favSicht.name, symbol: 'stern', titel: favSicht.beschreibung || undefined, zahl: d.zaehler.sichten?.[favSicht.id] ?? d.zaehler.favoriten, warte, an: sicht === favSicht.id }
+      : { pfad: '/ablage/favoriten', name: 'Favoriten', symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
     // Papierkorb (#43): sichtbar, solange er an ist oder noch etwas darin liegt.
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: 'Papierkorb', symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
   ];
@@ -123,7 +130,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
       <aside className="spalte sichten" aria-label="Ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
         <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : istSuche ? 'Erweiterte Suche' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
-          feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={neuePost ? [neuePost.id] : []} />
+          feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={[neuePost?.id, favSicht?.id].filter((x): x is string => !!x)} />
         <h2 className="ueber aw-breit">Ansichten</h2>
         <nav className="sichtliste">
           {/* Feste Einträge (#507): immer mit Symbol, in fester Reihenfolge; darunter nur die eingerichteten Ansichten. */}
@@ -133,7 +140,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
             </Link>
           ))}
           {d.sichten.length > 0 && <hr />}
-          <AnsichtFilter aktiv={sicht} baum={<SichtBaum aktiv={sicht} ohne={neuePost && !kinderVon(d.sichten, neuePost.id).length ? neuePost.id : undefined} />} />
+          <AnsichtFilter aktiv={sicht} baum={<SichtBaum aktiv={sicht} ohne={[neuePost, favSicht].filter((x): x is Sicht => !!x && !kinderVon(d.sichten, x.id).length).map((x) => x.id)} />} />
         </nav>
         {!d.typen.length && <p className="leise klein">Noch keine Mappentypen. {ich.rolle === 'admin' ? <Link to="/werkbank/typen" className="verweis">Zur Werkbank</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
         {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">Noch keine Ansichten. {ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">Ansichten einrichten</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
@@ -169,7 +176,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
               leerText="Noch keine Favoriten. Markiere eine Mappe mit dem Stern, um sie hier zu finden." />
           : verwaltet || typ ? <Liste key={sicht} sicht={sicht!} typ={typ} spaltenTyp={typ ?? sichtTypen[0]} spalten={wahl.spalten} listenSpalten={wahl.key ? wahl.spalten : []} titel={verwaltet?.name ?? typ!.name} beschreibung={verwaltet ? verwaltet.beschreibung : typ?.beschreibung}
               offen={dritt} neu={!!typ && darfErstellen(typ) && verwaltet?.rechte?.C !== false} post={!!typ && darfPostAnlegen(typ) && verwaltet?.rechte?.C !== false}
-              leerText={typ?.system === 'post' ? 'Keine Post. Mit „+ Post“ legst du Dateien als neue Post ab.' : 'Noch keine Mappen in dieser Ansicht.'} hilfe={typ?.system === 'post' ? 'ablage.post' : 'ablage.sicht'} auswahl export={verwaltet ? verwaltet.rechte?.E !== false : exportOhneSicht(ich.rolle === 'admin', d.sichten)} />
+              leerText={typ?.system === 'post' ? 'Keine Post. Mit „+ Post“ legst du Dateien als neue Post ab.' : verwaltet?.bedingungen.some((x) => x.art === 'favorit') ? 'Noch keine Favoriten. Markiere eine Mappe mit dem Stern, um sie hier zu finden.' : 'Noch keine Mappen in dieser Ansicht.'} hilfe={typ?.system === 'post' ? 'ablage.post' : 'ablage.sicht'} auswahl export={verwaltet ? verwaltet.rechte?.E !== false : exportOhneSicht(ich.rolle === 'admin', d.sichten)} />
           : sicht ? <div className="leer"><p>Diese Ansicht gibt es nicht (mehr).</p></div> : null}
       </section>
 
@@ -498,7 +505,7 @@ function Liste(p: {
                         : m.passt === false && <span className="problem">{p.typ ? 'passt nicht zur Definition' : m.problem}</span>}
                     </Link>
                     {/* Favorit = Abo (#422): je Favorit „bei Änderungen benachrichtigen“ – nur in der Favoritenliste. */}
-                    {p.sicht === 'favoriten' && !m.verborgen && favoritenBenachrichtigung && (
+                    {(p.sicht === 'favoriten' || !!d.sicht(p.sicht)?.bedingungen.some((x) => x.art === 'favorit')) && !m.verborgen && favoritenBenachrichtigung && (
                       <label className="haken klein abo-schalter">
                         <input type="checkbox" checked={!s.stumm.has(m.id)} onChange={(e) => {
                           const an = e.target.checked; s.setzeStumm(m.id, !an);
@@ -669,7 +676,7 @@ function Fundstelle({ a }: { a: Ausschnitt }) {
  * Verwaltete Sichten als Baum (#38). Untersichten lassen sich zuklappen; gemerkt je Gerät
  * und Benutzer. Die Vorfahren der geöffneten Sicht bleiben immer offen.
  */
-function SichtBaum({ aktiv, ohne }: { aktiv?: string; ohne?: string }) {
+function SichtBaum({ aktiv, ohne = [] }: { aktiv?: string; ohne?: string[] }) {
   const d = useDaten();
   const { ich } = useKonto();
   const schluessel = `dms:sichten-zu:${ich.id}`;
@@ -688,7 +695,7 @@ function SichtBaum({ aktiv, ohne }: { aktiv?: string; ohne?: string }) {
   const zeilen: Array<{ s: Sicht; tiefe: number; kinder: boolean; offen: boolean }> = [];
   const gehe = (eltern: string | null, tiefe: number) => {
     for (const s of kinderVon(d.sichten, eltern)) {
-      if (s.id === ohne) continue;
+      if (ohne.includes(s.id)) continue;
       const kinder = kinderVon(d.sichten, s.id).length > 0;
       const offen = kinder && (!zu.has(s.id) || vorfahren.has(s.id));
       zeilen.push({ s, tiefe, kinder, offen });

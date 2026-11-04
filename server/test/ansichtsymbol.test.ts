@@ -45,7 +45,7 @@ describe('Symbol je Ansicht (#428)', () => {
   });
 
   it('Migration ergänzt die Spalte und das Symbol der Ansicht „Neue Post“', () => {
-    const sql = readFileSync(new URL('../migrations/063_sicht_symbol.sql', import.meta.url), 'utf8');
+    const sql = readFileSync(new URL('../migrations/065_sicht_symbol.sql', import.meta.url), 'utf8');
     assert.match(sql, /ADD COLUMN IF NOT EXISTS symbol text/);
     assert.match(sql, /'inbox'/);
   });

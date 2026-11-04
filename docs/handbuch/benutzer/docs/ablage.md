@@ -172,7 +172,7 @@ Mappen, die du oft brauchst, markierst du mit dem **Stern** – oben rechts in d
 ![Die Ansicht Favoriten mit geöffneter Mappe](bilder/favoriten.png)
 
 - Favoriten sind **persönlich**: Jeder Benutzer hat seine eigenen. Das Markieren ändert weder „zuletzt geändert“ noch die Historie der Mappe.
-- Die Ansicht *Favoriten* zeigt Mappen aller Mappentypen, mit Titel, Mappentyp und Datum – wie „Zu erledigen“.
+- *Favoriten* ist eine **mitgelieferte Ansicht** über alle Mappentypen mit der Bedingung **ist mein Favorit** – wie *Neue Post* steht sie oben bei den festen Einträgen. Ein Administrator kann sie wie jede Ansicht umbenennen, mit Spalten versehen oder löschen; dann steht dort wieder die einfache Liste deiner Favoriten.
 - Löschst du eine Mappe, verschwindet sie aus den Favoriten; stellst du sie aus dem Papierkorb wieder her, ist sie wieder Favorit.
 - Ein Administrator kann Ansichten mit der Bedingung **ist mein Favorit** einrichten, etwa *Meine wichtigen Verträge*. Jeder sieht darin seine eigenen Favoriten.
 
