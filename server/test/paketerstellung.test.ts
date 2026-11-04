@@ -202,8 +202,8 @@ describe('Paket selbst erstellen (#374)', () => {
     const { paket } = await hochladenUndInstallieren(z.p, z1.daten);
     const gruppen = (await z.d.sucheStand()).synonyme.filter((g) => g.quelle === paket.id).map((g) => g.woerter);
     assert.deepEqual(gruppen.sort(), [['Kfz', 'Auto', 'PKW'], ['Strom', 'Energie']].sort());
-    // Neue Version: Auswahl übernommen.
-    assert.deepEqual((await q.e.stand()).vorschlag.wortlisten, ids);
+    // Neue Version (#652): Das erstellte Paket merkt sich die Auswahl der Wortlisten.
+    assert.deepEqual((await q.e.stand()).entwuerfe.find((x) => x.id === 'familie_vertraege')?.wortlisten, ids);
   });
 
   it('„geändert“ nur bei inhaltlicher Abweichung vom Paketstand, mit Kurzfassung und Liste (#653)', async () => {
@@ -289,8 +289,11 @@ describe('Paket selbst erstellen (#374)', () => {
     const vt = (await q.d.listeTypen()).find((t) => t.id === q.vertrag.id)!;
     await q.d.aendereTyp(vt.id, { ...vt, felder: [...vt.felder, { key: 'kundennummer', label: 'Kundennummer', typ: 'text' }], register: vt.register.map((x) => (x.art === 'felder' ? { ...x, felder: [...(x.felder ?? []), 'kundennummer'] } : x)) });
     const neueSicht = await q.d.legeSichtAn({ name: 'Zahlungen', typen: [q.zahlung.id] });
-    const st = await q.e.stand();
-    assert.equal(st.entwuerfe.length, 1);
+    const stand = await q.e.stand();
+    assert.equal(stand.entwuerfe.length, 1);
+    // #652: „Paket erstellen“ öffnet leer; „Neue Version von …“ übernimmt Auswahl und Angaben.
+    assert.equal(stand.vorschlag.id, ''); assert.deepEqual(stand.vorschlag.typen, []);
+    const st = { ...stand, vorschlag: q.e.ausEntwurf(stand.entwuerfe[0]) };
     assert.equal(st.vorschlag.id, 'familie_vertraege');
     assert.equal(st.vorschlag.version, '1.1.0');
     assert.deepEqual(st.vorschlag.typen, auswahl.typen);
@@ -389,6 +392,38 @@ describe('Paket selbst erstellen (#374)', () => {
     const pz = new Paketverwaltung(ziel, { version: () => '0.159.2', katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } });
     assert.equal((await pz.hochladen(ze.daten, ICH)).vorschau.paket.lizenz, 'LicenseRef-Kommerzielle-Lizenz-Muster-IT');
     assert.equal((await pz.hochladen(zk.daten, ICH)).vorschau.paket.lizenz, 'NONE');
+  });
+
+  it('selbst erstellte Pakete in der Paketverwaltung: Umfang, ZIP jeder Version, aus der Liste nehmen (#652)', async () => {
+    const q = await quelle();
+    assert.deepEqual(await q.e.selbstErstellt(), []);
+    const auswahl = { typen: [q.vertrag.id, q.zahlung.id], sichten: [q.sichten.vertraege.id] };
+    const r1 = await q.e.erstelle(angaben(auswahl), ICH);
+    assert.equal(r1.id, 'familie_vertraege'); assert.equal(r1.version, '1.0.0'); assert.equal(r1.datei, 'familie_vertraege-1.0.0.zip');
+    const z2 = await q.e.exportiere(angaben({ ...auswahl, version: '1.1.0' }), ICH);
+    const liste = await q.e.selbstErstellt();
+    assert.deepEqual(liste.map((x) => [x.id, x.version, x.versionen.map((v) => v.version)]), [['familie_vertraege', '1.1.0', ['1.1.0', '1.0.0']]]);
+    // Jede gemerkte Version kommt genau so wieder heraus.
+    assert.ok((await q.e.archiv('familie_vertraege', '1.1.0')).daten.equals(z2.daten));
+    assert.equal(liesZip((await q.e.archiv('familie_vertraege', '1.0.0')).daten).get('familie_vertraege/manifest.yaml')!.toString().includes('version: 1.0.0'), true);
+    await assert.rejects(q.e.archiv('familie_vertraege', '9.9.9'), (e) => e instanceof Fachfehler && e.status === 404);
+    // Umfang und Vergleich mit heute.
+    await new Promise((x) => setTimeout(x, 5));
+    const vt = (await q.d.listeTypen()).find((t) => t.id === q.vertrag.id)!;
+    await q.d.aendereTyp(vt.id, { ...vt, beschreibung: 'geändert' });
+    const d = await q.e.selbstErstelltDetail('familie_vertraege');
+    assert.deepEqual(d.typen.map((t) => [t.name, t.geaendert]), [['Vertrag', true], ['Zahlung', false]]);
+    assert.deepEqual(d.sichten.map((x) => x.name), ['Verträge']);
+    assert.equal(d.verlauf[0].version, '1.0.0');
+    // Typen aus selbst erstellten Paketen bleiben eigene Typen: kein „aus Paket“, wieder exportierbar.
+    const st = await q.e.stand();
+    assert.equal(st.typen.find((t) => t.id === q.vertrag.id)?.paket, null);
+    // Aus der Liste nehmen: vergisst Entwurf und Archive, löscht keine Typen oder Ansichten.
+    assert.deepEqual(await q.e.ausListeNehmen('familie_vertraege', ICH), []);
+    await assert.rejects(q.e.archiv('familie_vertraege', '1.0.0'), Fachfehler);
+    assert.ok((await q.d.listeTypen()).some((t) => t.id === q.vertrag.id));
+    assert.ok((await q.d.listeSichten()).some((x) => x.id === q.sichten.vertraege.id));
+    await assert.rejects(q.e.selbstErstelltDetail('familie_vertraege'), (e) => e instanceof Fachfehler && e.status === 404);
   });
 
   it('besteht pruefen.py der Registry', { skip: (!existsSync(join(REGISTRY, 'werkzeuge/pruefen.py')) || spawnSync('python3', ['-c', 'import yaml, jsonschema']).status !== 0) && 'python3 mit pyyaml/jsonschema oder dms-registry fehlt' }, async () => {

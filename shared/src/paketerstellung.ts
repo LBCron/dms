@@ -114,6 +114,21 @@ export interface VersionsLage {
   dmsOptionen: string[];
 }
 
+/** Selbst erstelltes Paket in der Paketverwaltung (#652): was zuletzt erstellt wurde, ohne Daten. */
+export interface SelbstErstellt {
+  id: string; name: string; version: string; erstellt: string; von: string | null; lizenz: string;
+  /** Versionen, die sich noch als ZIP herunterladen lassen (neueste zuerst). */
+  versionen: Array<{ version: string; erstellt: string; bytes: number }>;
+}
+/** Einzelheiten (#652): der damals erstellte Umfang und der Vergleich mit heute. */
+export interface SelbstErstelltDetail extends SelbstErstellt {
+  beschreibung: string; dms: string; autor: { name: string; github: string }; aenderungen: string;
+  typen: Array<{ id: string; name: string | null; geaendert: boolean }>;
+  sichten: Array<{ id: string; name: string | null }>;
+  beispiele: number;
+  verlauf: Array<{ version: string; datum: string; text: string }>;
+}
+
 /** Was es zur Auswahl gibt. */
 export interface ErstellenStand {
   /** geaendert (#653): inhaltlich anders als der Paketstand; unterschiede: Kurzfassung und Liste (null = Paketstand unbekannt, vor 0.179.0 installiert). */

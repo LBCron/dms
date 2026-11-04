@@ -1096,6 +1096,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/pakete/erstellen', zugang: 'admin', handler: async () => ok(await paketerstellung.stand()) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/pruefen', zugang: 'admin', handler: async (a) => ok(await paketerstellung.pruefe(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/letzte', zugang: 'admin', lesend: true, roh: ARCHIV_MAX + 1024, handler: async (a) => ok(paketerstellung.liesLetzteVersion(a.body)) },
+    // „Paket erstellen“ (#652): erstellt, ohne herunterzuladen; selbst erstellte Pakete in der Paketverwaltung.
+    { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/anlegen', zugang: 'admin', handler: async (a) => ok(await paketerstellung.erstelle(a.body, wer(a))) },
+    { methode: 'GET', pfad: '/api/werkbank/pakete/selbst', zugang: 'admin', handler: async () => ok(await paketerstellung.selbstErstellt()) },
+    { methode: 'GET', pfad: '/api/werkbank/pakete/selbst/:id', zugang: 'admin', handler: async (a) => ok(await paketerstellung.selbstErstelltDetail(a.params.id)) },
+    { methode: 'GET', pfad: '/api/werkbank/pakete/selbst/:id/zip', zugang: 'admin', handler: async (a) => {
+      const r = await paketerstellung.archiv(a.params.id, String(a.query.version ?? ''));
+      return { datei: { inhalt: r.daten, name: r.name, mime: 'application/zip', anzeigen: false, groesse: r.daten.length } };
+    } },
+    { methode: 'DELETE', pfad: '/api/werkbank/pakete/selbst/:id', zugang: 'admin', handler: async (a) => ok(await paketerstellung.ausListeNehmen(a.params.id, wer(a))) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/export', zugang: 'admin', handler: async (a) => {
       const r = await paketerstellung.exportiere(a.body, wer(a));
       return { datei: { inhalt: r.daten, name: r.name, mime: 'application/zip', anzeigen: false, groesse: r.daten.length } };
