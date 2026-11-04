@@ -1,0 +1,13 @@
+sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:sicherung-lesen)
+  participant Z as Ziel (WebDAV, S3 …)
+  K->>K: Sicherung lokal fertig
+  K->>P: sicherung.fertig (name, groesse, sha256 …)
+  loop Stück für Stück, über mehrere Aufrufe
+    P->>K: GET /sicherungen/{name}/datei?versatz=…&laenge=…
+    P->>Z: Teil hochladen
+    P-->>K: {"weiter": {…}, "extern": {"status": "laeuft", …}} (Fortsetzung)
+  end
+  P->>Z: zusammensetzen, Metadaten daneben, prüfen
+  P-->>K: {"extern": {"status": "geprueft", …}} (Antwort)

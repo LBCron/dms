@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.173/pakete-code/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.174/pakete-code/">
       
       
         <link rel="prev" href="../pakete/">
@@ -1072,6 +1072,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#archivfassung-farbe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Farbige Seitenbilder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#archivfassung-annahme" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1902,6 +1913,17 @@
     <span class="md-ellipsis">
       
         Wortpositionen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivfassung-farbe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Farbige Seitenbilder
       
     </span>
   </a>
@@ -3047,6 +3069,8 @@
 <li><code>quelle</code> je Seite: <code>textebene</code> (Text im PDF – die Seite braucht keine neue Textebene), <code>texterkennung</code> (Wörter der Texterkennung), <code>keine</code>. <code>vollstaendig</code>: jede Seite hat Wörter.</li>
 <li><strong>Für Texterkennungen:</strong> Die Wortpositionen schickt das Paket mit <code>dms:texterkennung</code> zusammen mit dem Text: <code>PUT /dokumente/{id}/volltext</code> mit <code>woerter</code> – je durch <code>\f</code> getrennter Seite eine Liste von Wörtern im selben Format (relativ zur Seite, <strong>wie <code>GET …/seiten/{nr}/scan</code> sie liefert</strong> – hat das Paket die Seite zum Lesen gedreht, rechnet es die Lage zurück) oder <code>null</code> (Seite ohne Angabe, z. B. eine Textseite eines gemischten PDFs). Höchstens 1,5 Millionen Wörter, Text höchstens 200 Zeichen je Wort. Schreibt ein Paket den Volltext <strong>ohne</strong> <code>woerter</code>, fallen die alten weg (sie gehörten zu einem anderen Text). Der Kern speichert sie zur Datei (<code>&lt;haushalt&gt;/wortpositionen/</code>, gzip, in der Sicherung).</li>
 </ul>
+<h3 id="archivfassung-farbe">Farbige Seitenbilder<a class="headerlink" href="#archivfassung-farbe" title="Permanent link">&para;</a></h3>
+<p>Baut ein Paket die Archivfassung aus Seitenbildern neu auf (z. B. PDFs, die am Computer entstanden sind), holt es die Seiten <strong>in Farbe</strong>: <code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300&amp;farbe=1</code> liefert statt des Graustufenbilds (PGM, <code>P5</code>) ein <strong>PPM</strong> – Kopf <code>P6 Breite Höhe 255</code>, danach je Bildpunkt drei Bytes R, G, B (<code>image/x-portable-pixmap</code>). Es gelten dieselben Grenzen wie für Graustufen: 72–400 dpi, höchstens 6000 × 6000 Bildpunkte, 60 s je Seite; ein Farbbild ist dreimal so groß, bei langen Dokumenten also eher mit weniger dpi anfragen. Ein eigenes Recht braucht es nicht – wie das Graustufenbild genügt das Leserecht, das <code>dms:archivfassung</code> ohnehin mitbringt. Ohne <code>farbe</code> bleibt alles wie bisher.</p>
 <h3 id="archivfassung-annahme">Was der Kern annimmt<a class="headerlink" href="#archivfassung-annahme" title="Permanent link">&para;</a></h3>
 <p><code>PUT /dokumente/{id}/archivfassung?sha256=…</code> mit dem PDF roh im Körper (<code>application/octet-stream</code>). Der Kern macht eine <strong>Grundprüfung</strong> (ohne veraPDF – die volle Prüfung gehört in die CI des Pakets):</p>
 <ul>
@@ -3214,7 +3238,7 @@
 <p>Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann einen Volltext setzen – die Erkennung startet danach von selbst (internes Ereignis „Volltext fertig“).</p>
 <h2 id="nutzliche-endpunkte-der-api-v1">Nützliche Endpunkte der API v1<a class="headerlink" href="#nutzliche-endpunkte-der-api-v1" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.</li>
+<li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung. Mit <code>farbe=1</code> als Farbbild (PPM, <a href="#archivfassung-farbe">Farbige Seitenbilder</a>).</li>
 <li><code>PUT /dokumente/{id}/fassung</code> und <code>PUT /dokumente/{id}/vorschaubild</code> – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> (Recht <code>dms:umwandeln</code>).</li>
 <li><code>GET /sicherungen/{name}</code>, <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> (und im Übergang <code>PUT /sicherungen/{name}/extern</code>) – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a> (Recht <code>dms:sicherung-lesen</code>, seit 0.142.0).</li>
 <li><code>PUT /dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> – Volltext setzen (Recht <code>dokumente: schreiben</code>). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab Ablago 0.128.0 optional mit <code>"sprache": "fra"</code> (Kennung wie bei Tesseract: <code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>); ohne erkennt Ablago die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.</li>
