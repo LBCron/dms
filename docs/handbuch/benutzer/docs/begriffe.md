@@ -38,8 +38,8 @@ Siehe auch: [Ablageort](#ablageort), [Nummernkreis](#nummernkreis), [Dokument](#
 Ein Filter einer Ansicht auf Feldwerte, Anzahlen, Fristen oder Persönliches, z. B. ein Feld gleich „aktueller Benutzer“ oder „ist mein Favorit“.
 
 <a id="darstellung"></a>**Darstellung** · ✓ Alltagswort · alle  
-Der Bereich im Profil, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).  
-Siehe auch: [Design](#design), [Profil](#profil).
+Der Bereich unter Mein Konto, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).  
+Siehe auch: [Design](#design), [Mein Konto](#mein-konto).
 
 <a id="dokument"></a>**Dokument** · ✓ Alltagswort · alle  
 Eine Datei, die in Ablago in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; in Ablago ist sie ein Dokument. An einer E-Mail heißt sie Anhang.  
@@ -77,6 +77,9 @@ Siehe auch: [Mappentyp](#mappentyp), [Register](#register), [Dokument](#dokument
 Der Bauplan einer Mappe – welche Felder und Register sie hat, wie ihr Titel entsteht und wer was darf.  
 Siehe auch: [Mappe](#mappe), [Feld](#feld), [Systemmappentyp](#systemmappentyp).
 
+<a id="mein-konto"></a>**Mein Konto** · ✓ Alltagswort · alle  
+Die persönlichen Einstellungen des angemeldeten Benutzers – ein Klick oben rechts auf den eigenen Namen, dann „Mein Konto“. Wege beschreiben wir so, wie man klickt, z. B. „Mein Konto → Sicherheit → API-Schlüssel“.
+
 <a id="niederlassung"></a>**Niederlassung** · ✓ Alltagswort · alle  
 Filiale, Zweigstelle, Praxis oder Außenstelle einer Organisation – mit eigener Anschrift und eigenem Telefon. Mappentyp aus dem Paket Basis (ab 1.1.0); gehört zu genau einer Organisation.  
 Siehe auch: [Organisation](#organisation), [Person](#person).
@@ -95,9 +98,6 @@ Siehe auch: [Benutzer](#benutzer), [Organisation](#organisation), [Niederlassung
 <a id="pflichtfeld"></a>**Pflichtfeld** · ✓ Alltagswort · alle  
 Ein Feld, das ausgefüllt sein muss, bevor die Mappe gespeichert werden kann.  
 Siehe auch: [Eindeutig](#eindeutig).
-
-<a id="profil"></a>**Profil** · ✓ Alltagswort · alle  
-Die persönlichen Einstellungen des angemeldeten Benutzers, erreichbar über das Benutzermenü → „Mein Konto“.
 
 <a id="register"></a>**Register** · ~ mit Erklärung · alle  
 Ein Trennblatt in einer Mappe, z. B. Allgemein (mit Feldern), Dokumente, Verknüpfungen oder Historie. Notizen und Historie sind feste Register jeder Mappe.
@@ -253,7 +253,7 @@ Siehe auch: [Werkbank anpassen](#werkbank-anpassen), [Haushalt](#haushalt).
 Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist.
 
 <a id="design"></a>**Design** · ✓ Alltagswort · Administratoren  
-Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines im Profil unter „Darstellung“.  
+Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines unter Mein Konto unter „Darstellung“.  
 Siehe auch: [Darstellung](#darstellung).
 
 <a id="dienstkonto"></a>**Dienstkonto** · ~ mit Erklärung · Administratoren  
@@ -310,7 +310,7 @@ Prüft, welche Rechte ein bestimmter Benutzer am Ende hat.
 Erkennt Text in Bildern und gescannten PDFs, damit er durchsuchbar wird.
 
 <a id="tagliche-zusammenfassung"></a>**Tägliche Zusammenfassung** · ✓ Alltagswort · alle  
-Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder im Profil.  
+Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.  
 Siehe auch: [Aufgabe](#aufgabe), [Anstehend](#anstehend).
 
 <a id="werkbank-anpassen"></a>**Werkbank anpassen** · ~ mit Erklärung · Administratoren  
@@ -358,7 +358,7 @@ Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installati
 Der Befehl „dms“ im Container für Notfall und Betrieb.
 
 <a id="meine-daten-exportieren"></a>**Meine Daten exportieren** · ✓ Alltagswort · alle  
-Ein Benutzer lädt im Profil seine eigenen Daten herunter.
+Ein Benutzer lädt unter Mein Konto seine eigenen Daten herunter.
 
 <a id="notfallblatt"></a>**Notfallblatt** · ✓ Alltagswort · Administratoren  
 Ein PDF mit dem Schlüssel und einer Anleitung zur Wiederherstellung.
@@ -465,7 +465,7 @@ Datei = was hochgeladen oder heruntergeladen wird, Dokument = was in Ablago in e
 Zwei Begriffe – „Version“ gehört zu einem Dokument, „Version von Ablago“ ist der Stand des Programms. Erklärt auf der Seite „Versionen verstehen“.
 
 <a id="offen-19"></a>**19. Design, Darstellung, Theme** (31.10.2026)  
-„Design“ legen Administratoren in der Werkbank an (Logo, Farben, eigenes CSS); „Darstellung“ ist der Bereich im Profil, in dem jeder sein Design, die Schriftgröße und die Breiten wählt. „Theme“ nicht verwenden.
+„Design“ legen Administratoren in der Werkbank an (Logo, Farben, eigenes CSS); „Darstellung“ ist der Bereich unter Mein Konto, in dem jeder sein Design, die Schriftgröße und die Breiten wählt. „Theme“ nicht verwenden.
 
 <a id="offen-20"></a>**20. „Neue Post“ als Ansicht und als Art einer Aufgabe** (31.10.2026)  
 Die Aufgabenart heißt „Post für dich“; die Ansicht „Neue Post“ bleibt.
@@ -515,6 +515,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Link | Direktlink, sprechender Link | `Direktlink` |
 | Mappe | Akte, Ordner, Datensatz | `Mappe` |
 | Mappentyp | Typ (allein), Vorlage, Klasse | `Mappentyp` |
+| Mein Konto | Profil | – |
 | Meine Daten exportieren | Persönlicher Export | – |
 | Niederlassung | Standort (verwechselbar mit Ablageort), Filiale (als Mappentyp – ist eine der Arten) | `basis_niederlassung` |
 | Notiz | – | `Notiz` |

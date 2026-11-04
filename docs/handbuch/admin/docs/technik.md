@@ -12,7 +12,7 @@ Browser ── HTTP ──▶ Ablago-Container (Node.js) ──▶ PostgreSQL-Co
 
 | Baustein | Technik | Wozu |
 | --- | --- | --- |
-| Oberfläche | React 19, gebaut mit Vite | Ablage, Werkbank, Profil – alles im Browser |
+| Oberfläche | React 19, gebaut mit Vite | Ablage, Werkbank, Mein Konto – alles im Browser |
 | Server | Node.js 24, Fastify 5, TypeScript (mit esbuild gebündelt) | Schnittstelle unter `/api`, liefert auch die Oberfläche aus |
 | Datenbank | PostgreSQL 17, Zugriff mit postgres.js, SQL-Migrationen in `server/migrations` | Alle Daten außer den Dateien |
 | Dateien | Feste Ordner `/data/files`, `/data/geheim`, `/data/sicherung` (Volumes, siehe [Installation](installation.md#ordner-und-volumes)); je Datei ihr SHA-256 als Name; optional der [Eingangsordner](eingangsordner.md) `/eingang` | Hochgeladene Dokumente, gleicher Inhalt nur einmal; Schlüssel; Sicherungen; Scans zum Abholen |

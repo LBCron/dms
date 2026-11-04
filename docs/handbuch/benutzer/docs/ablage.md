@@ -182,7 +182,7 @@ Ein Stern heißt auch: **Sag mir, wenn sich hier etwas tut.** Ändert jemand and
 
 - **Hervorhebung:** In allen Listen steht ein **Punkt** vor dem Titel von Favoriten und von Mappen, die du selbst angelegt hast, wenn andere sie seit deinem letzten Öffnen geändert haben – wie „ungelesen“ im E-Mail-Programm. Eigene Mappen werden nur hervorgehoben, eine Benachrichtigung gibt es für sie nur, wenn sie auch Favorit sind. Über der Liste steht dann „2 geändert · **Alle als gesehen markieren**“.
 - **Stumm schalten:** In der Ansicht *Favoriten* steht unter jedem Eintrag **Bei Änderungen benachrichtigen**. Nimm den Haken weg bei Mappen, die du oft brauchst, die sich aber ständig ändern – der Stern bleibt. Fehlt der Schalter, hat ein Administrator die Benachrichtigung für deine Rolle abgeschaltet; deine Einstellung bleibt gespeichert.
-- **Ganz abschalten:** unter Profil → [Benachrichtigungen](profil.md#benachrichtigungen) – Benachrichtigung und Hervorhebung getrennt.
+- **Ganz abschalten:** unter Mein Konto → [Benachrichtigungen](profil.md#benachrichtigungen) – Benachrichtigung und Hervorhebung getrennt.
 - Benachrichtigt wird nur, wer die Mappe lesen darf; die Benachrichtigung verrät nichts, was du nicht sehen darfst. Hat jemand eine [Auskunft](https://help.ablago.app/admin/aktuell/datenschutz/) zu einer Person abgerufen, deren Mappe dein Favorit ist, bekommst du dazu eine eigene Benachrichtigung *Auskunft* – ebenfalls nur, solange die Benachrichtigung für diesen Favoriten an ist.
 
 ![Favoriten: geänderte Mappe mit Punkt, Schalter je Favorit](bilder/favoriten-geaendert.png){ loading=lazy }
@@ -202,6 +202,6 @@ Gelöschte Mappen und einzeln gelöschte Dokumente kommen in den **Papierkorb** 
 - **Mit verknüpften Mappen gelöscht** ([so geht's](mappen.md#mit-verknupften-mappen-loschen)): Diese Mappen tragen den Hinweis *mit … verknüpften* bzw. *verknüpft*. Öffnest du eine davon, holt **Alle wiederherstellen** den ganzen Vorgang zurück – samt der Verweise, die dabei an anderen Mappen entfernt wurden. **Nur diese wiederherstellen** holt nur die eine Mappe.
 - **Endgültig löschen** entfernt sie für immer, **Papierkorb leeren** alle auf einmal – Mappen und Dokumente.
 - Nach einer Frist, die der Administrator festlegt (meist 30 Tage), löscht Ablago gelöschte Mappen von selbst endgültig. Wie lange, steht über der Liste.
-- Im Profil kannst du einstellen, dass dein Papierkorb **beim Abmelden geleert** wird.
+- Unter Mein Konto kannst du einstellen, dass dein Papierkorb **beim Abmelden geleert** wird.
 
 Ist der Papierkorb ausgeschaltet, fehlt er links, und Löschen ist sofort endgültig.

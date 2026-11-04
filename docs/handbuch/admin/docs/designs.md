@@ -1,6 +1,6 @@
 # Designs
 
-Ein **Design** bestimmt die Farben der Oberfläche. Unter **Werkbank → Designs** pflegst du die Designs; jeder Benutzer wählt seines im Profil. Eines ist das **Standard**-Design für alle, die nichts anderes gewählt haben.
+Ein **Design** bestimmt die Farben der Oberfläche. Unter **Werkbank → Designs** pflegst du die Designs; jeder Benutzer wählt seines unter Mein Konto. Eines ist das **Standard**-Design für alle, die nichts anderes gewählt haben.
 
 --8<-- "ausgeblendet-organisation.md"
 
@@ -45,4 +45,4 @@ Unter **Eigenes CSS** kannst du die Oberfläche weiter anpassen, etwa `.kopf { b
 
 ## Schriftgröße
 
-Die Schriftgröße ist kein Teil des Designs: Jeder Benutzer stellt sie im Profil unter **Darstellung** ein, je Gerät.
+Die Schriftgröße ist kein Teil des Designs: Jeder Benutzer stellt sie unter Mein Konto unter **Darstellung** ein, je Gerät.

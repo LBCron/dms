@@ -54,7 +54,7 @@ In einem neuen Ablago gibt es noch nichts zu zählen. Dann zeigt die Startseite 
 
 ## Einstellen
 
-Im [Profil](profil.md#startseite) unter **Darstellung → Startseite**:
+Unter [Mein Konto](profil.md#startseite) unter **Darstellung → Startseite**:
 
 - **Mit der Startseite beginnen** – ausgeschaltet geht es nach der Anmeldung direkt zu *Zu erledigen*, und *Start* verschwindet aus der Liste der Ansichten.
 - **Vierte Kachel** – *Favoriten* (Standard) oder eine Ansicht, z. B. *Verträge* oder *Kündigung in den nächsten 3 Monaten*.

@@ -17,7 +17,7 @@ export function DesignListe({ offen }: { offen?: string }) {
   const d = useDaten();
   return (
     <>
-      <Listenkopf titel="Designs" hilfe="werkbank.designs" beschreibung="Farben und eigenes CSS der Oberfläche. Jeder Benutzer wählt sein Design im Profil.">
+      <Listenkopf titel="Designs" hilfe="werkbank.designs" beschreibung="Farben und eigenes CSS der Oberfläche. Jeder Benutzer wählt sein Design unter Mein Konto.">
         <Link to="/werkbank/designs/neu" className="knopf primaer klein">+ Neu</Link>
       </Listenkopf>
       <ul className="mappenliste">

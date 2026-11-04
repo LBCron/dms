@@ -105,7 +105,7 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
   return (
     <div className="einspaltig schmal">
       <div className="mappenkopf">
-        <p className="ueber">Profil · {BEREICHE[bereich]}</p>
+        <p className="ueber">Mein Konto · {BEREICHE[bereich]}</p>
         <h1>{ich.name || ich.email}</h1>
         <dl className="index"><div><dt>Systemrolle</dt><dd>{ROLLEN[ich.rolle]}</dd></div><div><dt>E-Mail</dt><dd>{ich.email}</dd></div></dl>
       </div>

@@ -64,7 +64,7 @@ Ablago schlägt Mappentypen vor, die nach Kontakten aussehen (Felder wie Name, E
 
 ## Meine Daten exportieren
 
-Jeder Benutzer kann unter **Profil → Konto → Meine Daten exportieren** einen eigenen Export anstoßen – im selben Aufbau, aber nur mit den Mappen, die er lesen darf, seinen eigenen Aufgaben, Erinnerungen, Favoriten und Papierkorb-Einträgen. Ansichten, Nummernkreise und andere Benutzer fehlen; Passwörter nur aus Mappen, in denen er Passwörter sehen darf, und nur mit Bestätigung. Er liegt unter `export/persoenlich/<Benutzer-Id>/`; ein neuer Export ersetzt den alten. Abschalten lässt sich das unter **Werkbank → Vollexport** im Abschnitt *Meine Daten exportieren* mit dem Haken **Benutzer dürfen ihre eigenen Daten exportieren**. Solange ein Administrator über [Fehler nachstellen](benutzer.md#fehler-nachstellen) als ein Benutzer arbeitet, gibt es für diesen Benutzer keinen eigenen Export.
+Jeder Benutzer kann unter **Mein Konto → Konto → Meine Daten exportieren** (oben rechts auf deinen Namen klicken) einen eigenen Export anstoßen – im selben Aufbau, aber nur mit den Mappen, die er lesen darf, seinen eigenen Aufgaben, Erinnerungen, Favoriten und Papierkorb-Einträgen. Ansichten, Nummernkreise und andere Benutzer fehlen; Passwörter nur aus Mappen, in denen er Passwörter sehen darf, und nur mit Bestätigung. Er liegt unter `export/persoenlich/<Benutzer-Id>/`; ein neuer Export ersetzt den alten. Abschalten lässt sich das unter **Werkbank → Vollexport** im Abschnitt *Meine Daten exportieren* mit dem Haken **Benutzer dürfen ihre eigenen Daten exportieren**. Solange ein Administrator über [Fehler nachstellen](benutzer.md#fehler-nachstellen) als ein Benutzer arbeitet, gibt es für diesen Benutzer keinen eigenen Export.
 
 ## Weiterverarbeiten
 

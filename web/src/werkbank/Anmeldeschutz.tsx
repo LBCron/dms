@@ -117,7 +117,7 @@ function ZweifaktorPflichtBlatt() {
   return (
     <div className="blatt">
       <h2 className="h3">Zwei-Faktor-Anmeldung <Hilfe ort="werkbank.zweifaktor" /></h2>
-      <p className="leise">Jeder kann sie unter Profil → Sicherheit für sich einrichten. Hier schreibst du sie für eine Rolle vor: Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein, bevor es weitergeht – wer gerade angemeldet ist, arbeitet weiter und sieht einen Hinweis. Ein verlorenes Handy setzt du unter Benutzer zurück.</p>
+      <p className="leise">Jeder kann sie unter Mein Konto → Sicherheit für sich einrichten. Hier schreibst du sie für eine Rolle vor: Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein, bevor es weitergeht – wer gerade angemeldet ist, arbeitet weiter und sieht einen Hinweis. Ein verlorenes Handy setzt du unter Benutzer zurück.</p>
       {!p ? !meldung && <p className="leise">Lade …</p> : <>
         <label className="haken"><input id="zf-admin" type="checkbox" checked={p.admin} disabled={sendet} onChange={(x) => void setze({ admin: x.target.checked })} /><span>Für Administratoren vorschreiben</span></label>
         <label className="haken"><input id="zf-mitglied" type="checkbox" checked={p.mitglied} disabled={sendet} onChange={(x) => void setze({ mitglied: x.target.checked })} /><span>Für Mitglieder vorschreiben</span></label>

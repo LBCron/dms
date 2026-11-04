@@ -178,7 +178,7 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
       <form className="blatt" onKeyDown={ent.tasten} onSubmit={(e) => { e.preventDefault(); setSendet(true); void aktion(() => api.benutzerAendern(b.id, { name }), 'Gespeichert.').finally(() => setSendet(false)); }}>
         <div className="raster">
           <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
-          <label className="eigenschaft"><span>E-Mail-Adresse <small>{selbst ? 'änderst du in deinem Profil' : 'ändert der Benutzer selbst'}</small></span><input value={b.email} readOnly disabled /></label>
+          <label className="eigenschaft"><span>E-Mail-Adresse <small>{selbst ? 'änderst du unter Mein Konto' : 'ändert der Benutzer selbst'}</small></span><input value={b.email} readOnly disabled /></label>
           <label className="eigenschaft"><span>Systemrolle</span>
             <select value={b.rolle} onChange={(e) => void aktion(() => api.benutzerAendern(b.id, { rolle: e.target.value as Rolle }), 'Systemrolle geändert.')}>
               {Object.entries(ROLLEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

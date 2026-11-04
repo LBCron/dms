@@ -183,7 +183,7 @@ Fehlt der Knopf, dürfen Mappen dieses Mappentyps nicht gelöscht werden.
 
 ## Was du sehen und ändern darfst
 
-Ein Administrator kann je Mappentyp festlegen, wer Mappen anlegen, lesen, bearbeiten, löschen und Passwörter darin sehen darf – zum Beispiel, dass nur die Buchhaltung Rechnungen bearbeitet oder dass vertrauliche Mappen nur ihre Verantwortlichen sehen. Was für dich gilt, steht in deinem Profil unter [Meine Rechte](profil.md#meine-rechte).
+Ein Administrator kann je Mappentyp festlegen, wer Mappen anlegen, lesen, bearbeiten, löschen und Passwörter darin sehen darf – zum Beispiel, dass nur die Buchhaltung Rechnungen bearbeitet oder dass vertrauliche Mappen nur ihre Verantwortlichen sehen. Was für dich gilt, steht unter Mein Konto unter [Meine Rechte](profil.md#meine-rechte).
 
 Auch an jeder **Ansicht** kann er Rechte setzen: wer sie **sieht**, wer dort mit **+ Neu** **anlegen** darf und wer aus ihr **exportieren** darf. Eine Ansicht zeigt dir aber nie Mappen, die du am Mappentyp nicht lesen darfst.
 

@@ -10,7 +10,7 @@
     Dafür gibt es mehrere Gründe:
 
     - Von diesem Mappentyp legt man in der Ablage keine Mappen an – zum Beispiel *Benutzer*. Die legt ein Administrator in der Benutzerverwaltung an.
-    - Du darfst Mappen dieses Mappentyps nicht anlegen, oder du darfst in dieser Ansicht nicht anlegen. Beides legt ein Administrator in den Berechtigungen fest; was für dich gilt, steht im Profil unter [Meine Rechte](profil.md#meine-rechte).
+    - Du darfst Mappen dieses Mappentyps nicht anlegen, oder du darfst in dieser Ansicht nicht anlegen. Beides legt ein Administrator in den Berechtigungen fest; was für dich gilt, steht unter Mein Konto unter [Meine Rechte](profil.md#meine-rechte).
     - Die Ansicht zeigt mehrere Mappentypen. Lege die Mappe dann in der Ansicht des einzelnen Mappentyps an.
     - Bei *Post* heißt der Knopf **+ Post** (siehe [Post](post.md)).
 
@@ -28,7 +28,7 @@
     - Bei *Post* setzt Ablago *Kanal* und *Zugeordnet zu* selbst.
 
 ??? question "Ich sehe eine Mappe oder Ansicht nicht, die andere sehen."
-    Ein Administrator kann festlegen, wer welche Mappen lesen und welche Ansichten sehen darf – zum Beispiel nur die „Eltern“. Was du je Mappentyp darfst, steht im Profil unter [Meine Rechte](profil.md#meine-rechte). Brauchst du Zugriff, frag den Administrator.
+    Ein Administrator kann festlegen, wer welche Mappen lesen und welche Ansichten sehen darf – zum Beispiel nur die „Eltern“. Was du je Mappentyp darfst, steht unter Mein Konto unter [Meine Rechte](profil.md#meine-rechte). Brauchst du Zugriff, frag den Administrator.
 
 ??? question "Eine Mappe ist plötzlich unter „Zu erledigen“."
     Dann hast du an ihr eine offene Aufgabe. Was zu tun ist, steht oben in der Mappe. Mögliche Gründe:
@@ -53,7 +53,7 @@
     Setze neben dem Suchfeld den Haken **Volltext durchsuchen**. Ist das Dokument gerade erst hochgeladen, steht daneben vielleicht noch *Volltext: wartet* – dann einen Moment warten. Bei *ausgelassen* oder *Fehler* kannst du es mit **Erneut versuchen** am Dokument noch einmal anstoßen; für manche Dateitypen gibt es aber keinen Volltext.
 
 ??? question "Die Spalten sind verrutscht oder eine ist verschwunden."
-    Im Profil unter **Darstellung auf diesem Gerät** → **Standard-Darstellung wiederherstellen**. Oder kurz auf den Griff zwischen den Spalten klicken – das klappt eingeklappte Bereiche wieder auf.
+    Unter Mein Konto unter **Darstellung auf diesem Gerät** → **Standard-Darstellung wiederherstellen**. Oder kurz auf den Griff zwischen den Spalten klicken – das klappt eingeklappte Bereiche wieder auf.
 
 ??? question "Die Schrift ist zu klein."
     Menü unter deinem Namen → **Mein Konto** → **Darstellung** → **Schriftgröße auf diesem Gerät** → *groß*.
@@ -74,4 +74,4 @@
     **Passwort vergessen?** unter der Anmeldung. Verschickt Ablago keine E-Mails, erzeugt dir ein Administrator einen Link.
 
 ??? question "Ich habe einen Fehler gefunden oder einen Wunsch."
-    Im Menü unter deinem Namen → **Fehler melden** (siehe [Profil und Einstellungen](profil.md#fehler-melden)). Wünsche gern auch direkt als [Issue auf GitHub](https://github.com/motom001/dms/issues/new?template=wunsch.md).
+    Im Menü unter deinem Namen → **Fehler melden** (siehe [Mein Konto und Einstellungen](profil.md#fehler-melden)). Wünsche gern auch direkt als [Issue auf GitHub](https://github.com/motom001/dms/issues/new?template=wunsch.md).

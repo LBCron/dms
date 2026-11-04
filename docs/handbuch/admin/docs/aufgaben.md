@@ -18,7 +18,7 @@ Aufgaben entstehen auf diesen Wegen:
 
 - Empfänger sind immer **Benutzer**, keine Rollen – eine Aufgabe für alle bleibt sonst gern liegen.
 - Wer sich selbst erwähnt, bekommt keine Aufgabe; erneutes Speichern erzeugt keine zweite. Wird eine Erwähnung wieder entfernt, bleibt die Aufgabe offen; in der Historie der Mappe steht, dass sie entfernt wurde.
-- **Weitergeben** dürfen der Empfänger selbst und Administratoren; das steht in der Historie der Mappe. Mehrere auf einmal gehen in [Werkbank → Benachrichtigungen und Aufgaben](#mehrere-aufgaben-auf-einmal-weitergeben) und für die eigenen unter Profil → [Abwesenheit](https://help.ablago.app/benutzer/aktuell/profil/#abwesenheit).
+- **Weitergeben** dürfen der Empfänger selbst und Administratoren; das steht in der Historie der Mappe. Mehrere auf einmal gehen in [Werkbank → Benachrichtigungen und Aufgaben](#mehrere-aufgaben-auf-einmal-weitergeben) und für die eigenen unter Mein Konto → [Abwesenheit](https://help.ablago.app/benutzer/aktuell/profil/#abwesenheit).
 
 ## Werkbank → Benachrichtigungen und Aufgaben { #werkbank-aufgaben }
 
@@ -59,9 +59,9 @@ Statt bei jeder neuen Aufgabe eine E-Mail zu schicken, verschickt Ablago **einma
 
 - Oben in der Mitte stellst du ein, ob sie verschickt wird, und die **Standard-Uhrzeit** (deutsche Zeit). Standard: an, 7:00 Uhr.
 - Den Abschnitt kannst du mit einem Klick auf die Überschrift **zuklappen**; Ablago merkt sich das für dich. Zugeklappt steht daneben der Stand (z. B. „Standard 07:00 · an“) – und darunter die Warnung, wenn die Zusammenfassung nicht verschickt werden kann, weil der E-Mail-Versand aus ist.
-- **Jeder Benutzer** wählt in seinem **Profil** eine eigene Uhrzeit (im 15-Minuten-Raster) und die **Wochentage**; ohne eigene Wahl gelten die Standard-Uhrzeit und **Montag bis Freitag**. Änderst du die Standard-Uhrzeit, gilt sie für alle ohne eigene Uhrzeit. Abbestellen kann er sie dort auch.
+- **Jeder Benutzer** wählt unter **Mein Konto** eine eigene Uhrzeit (im 15-Minuten-Raster) und die **Wochentage**; ohne eigene Wahl gelten die Standard-Uhrzeit und **Montag bis Freitag**. Änderst du die Standard-Uhrzeit, gilt sie für alle ohne eigene Uhrzeit. Abbestellen kann er sie dort auch.
 - Die Mail kommt höchstens einmal am Tag, frühestens zur gewählten Uhrzeit. War Ablago zu dieser Zeit aus, kommt sie nach dem Start noch am selben Tag; am nächsten Tag wird nichts nachgeholt. Wer abwesend ist oder nichts offen hat, bekommt keine.
-- **Bundesland** – damit niemand an gesetzlichen Feiertagen eine Zusammenfassung bekommt (jeder kann das im Profil abwählen). Ablago berechnet die Feiertage selbst: die bundesweiten und die landesweiten des gewählten Landes, Ostern und die davon abhängigen Tage nach der Gaußschen Osterformel. Feiertage, die nur in einzelnen Gemeinden gelten – etwa Mariä Himmelfahrt in Teilen Bayerns oder das Augsburger Friedensfest –, und einmalige Feiertage werden nicht berücksichtigt. *Keins* schaltet das ab.
+- **Bundesland** – damit niemand an gesetzlichen Feiertagen eine Zusammenfassung bekommt (jeder kann das unter Mein Konto abwählen). Ablago berechnet die Feiertage selbst: die bundesweiten und die landesweiten des gewählten Landes, Ostern und die davon abhängigen Tage nach der Gaußschen Osterformel. Feiertage, die nur in einzelnen Gemeinden gelten – etwa Mariä Himmelfahrt in Teilen Bayerns oder das Augsburger Friedensfest –, und einmalige Feiertage werden nicht berücksichtigt. *Keins* schaltet das ab.
 - **Jetzt senden** verschickt sie sofort an alle mit offenen Aufgaben – unabhängig von Uhrzeit, Wochentag und Feiertag, z. B. zum Ausprobieren.
 - Voraussetzung ist der eingerichtete [E-Mail-Versand](installation.md#e-mail-und-adresse). Ist er aus, steht im Abschnitt „E-Mail-Versand ist ausgeschaltet – es wird nichts verschickt“ mit **E-Mail einrichten**.
 
@@ -71,8 +71,8 @@ Wer eine Mappe als **Favorit** markiert, bekommt eine Benachrichtigung „Geänd
 
 - **Erlaubt** – *für alle* (Standard), *nur für bestimmte Rollen* oder *für niemanden*.
 - **Nur für bestimmte Rollen:** oben die Systemrollen **Administrator** und **Mitglied**, darunter die weiteren Rollen aus der [Benutzerverwaltung](benutzer.md). Ein Benutzer bekommt die Benachrichtigung, wenn er mindestens eine der gewählten Rollen hat. Mindestens eine Rolle muss gewählt sein.
-- Wer nicht dazugehört, sieht den Schalter **Bei Änderungen benachrichtigen** in seiner Favoritenliste und im Profil nicht mehr; im Profil steht stattdessen ein Hinweis. Was er selbst eingestellt hat, bleibt gespeichert und gilt wieder, sobald du die Benachrichtigung für ihn erlaubst. Der Stern selbst und das Hervorheben geänderter Mappen bleiben.
+- Wer nicht dazugehört, sieht den Schalter **Bei Änderungen benachrichtigen** in seiner Favoritenliste und unter Mein Konto nicht mehr; unter Mein Konto steht stattdessen ein Hinweis. Was er selbst eingestellt hat, bleibt gespeichert und gilt wieder, sobald du die Benachrichtigung für ihn erlaubst. Der Stern selbst und das Hervorheben geänderter Mappen bleiben.
 - **Für neue Benutzer eingeschaltet** – die Vorgabe für alle, die ab jetzt dazukommen (Standard: an). Bestehende Benutzer behalten ihre Einstellung.
-- **Vorgabe auf alle anwenden** setzt die gespeicherte Vorgabe nach einer Rückfrage bei allen bestehenden Benutzern – auch über das hinweg, was sie im Profil gewählt haben. Einzeln stumm geschaltete Favoriten bleiben stumm.
+- **Vorgabe auf alle anwenden** setzt die gespeicherte Vorgabe nach einer Rückfrage bei allen bestehenden Benutzern – auch über das hinweg, was sie unter Mein Konto gewählt haben. Einzeln stumm geschaltete Favoriten bleiben stumm.
 
 Den Abschnitt klappst du wie die Tägliche Zusammenfassung mit einem Klick auf die Überschrift zu; daneben steht dann der Stand. Die Tägliche Zusammenfassung zeigt geänderte Favoriten nicht eigens – die Aufgabe „Geändert“ steht dort ohnehin mit.

@@ -2,7 +2,7 @@
 
 Mit einem **Webhook** meldet sich Ablago selbst bei einem anderen System, sobald sich die Zahlen eines Benutzers ändern: neue Post, *Zu erledigen*, anstehende und überfällige Fristen. Hausautomatisierung (Homey, Node-RED, ioBroker, openHAB) und eigene Skripte reagieren dann sofort, statt alle paar Minuten nachzufragen.
 
-Benutzer legen ihre Webhooks selbst an (**Profil → Benachrichtigungen → Sofort melden**); sie gelten immer für die eigenen Zahlen und in den eigenen Rechten. Du als Administrator bestimmst unter **Werkbank → Webhooks**, **wohin** gemeldet werden darf, siehst alle Webhooks und schaltest sie bei Bedarf ab. Wie Benutzer einen Webhook einrichten (mit Beispiel für Node-RED), steht im Benutzerhandbuch unter [In die Hausautomatisierung einbinden](https://help.ablago.app/benutzer/aktuell/hausautomatisierung/#sofort-melden-webhook).
+Benutzer legen ihre Webhooks selbst an (**Mein Konto → Benachrichtigungen → Sofort melden** (oben rechts auf deinen Namen klicken)); sie gelten immer für die eigenen Zahlen und in den eigenen Rechten. Du als Administrator bestimmst unter **Werkbank → Webhooks**, **wohin** gemeldet werden darf, siehst alle Webhooks und schaltest sie bei Bedarf ab. Wie Benutzer einen Webhook einrichten (mit Beispiel für Node-RED), steht im Benutzerhandbuch unter [In die Hausautomatisierung einbinden](https://help.ablago.app/benutzer/aktuell/hausautomatisierung/#sofort-melden-webhook).
 
 ## Was gemeldet wird – und was nie
 
@@ -25,7 +25,7 @@ https://hooks.example.org
 ```
 
 - **`https://`** geht überall, **`http://`** ohne TLS nur im Heimnetz: private Adressen (`192.168.…`, `10.…`, `172.16–31.…`), `localhost`, Namen ohne Punkt und die Endungen `.home.arpa`, `.lan`, `.local`, `.internal` – dieselbe Liste wie bei der Anmeldung über einen Anbieter.
-- Benutzer können Webhooks **nur an freigegebene Ziele** richten. Legst du selbst im Profil einen Webhook an, gibt Ablago dessen Ziel gleich mit frei.
+- Benutzer können Webhooks **nur an freigegebene Ziele** richten. Legst du selbst unter Mein Konto einen Webhook an, gibt Ablago dessen Ziel gleich mit frei.
 - Nimmst du ein Ziel heraus, stellt Ablago dorthin **nichts mehr zu**; die Webhooks zeigen dann „Das Ziel ist nicht mehr freigegeben“.
 
 !!! warning "Ein Ziel ist eine ausgehende Verbindung"
@@ -44,7 +44,7 @@ Darunter stehen **alle Webhooks** mit Benutzer, Adresse, letzter Zustellung (Zei
 - **Zeitgrenze:** 5 Sekunden je Zustellung. Als angekommen gilt jede Antwort `2xx`.
 - **Keine Weiterleitungen:** Antwortet der Empfänger mit `301`, `302` usw., folgt Ablago nicht und meldet einen Fehler. Trag die endgültige Adresse ein.
 - **Wiederholen:** Bei einem Fehler versucht es Ablago erneut, mit wachsenden Abständen (30 Sekunden, 1, 2, 5, 10, 30 Minuten, 1, 2, 4, 6, 8 Stunden) – zusammen etwa 22 Stunden, 12 Versuche. Kommen inzwischen neue Zahlen, geht beim nächsten Versuch der neue Stand hinaus.
-- **Abschalten nach vielen Fehlschlägen:** Klappt auch der letzte Versuch nicht, schaltet Ablago den Webhook ab, zeigt den Grund im Profil und hier und schickt den Administratoren und dem Benutzer, dem der Webhook gehört, eine E-Mail (wenn der [E-Mail-Versand](installation.md#e-mail-und-adresse) eingerichtet ist). Der Benutzer schaltet ihn nach der Reparatur wieder ein; dann kommt gleich eine Meldung mit dem aktuellen Stand.
+- **Abschalten nach vielen Fehlschlägen:** Klappt auch der letzte Versuch nicht, schaltet Ablago den Webhook ab, zeigt den Grund unter Mein Konto und hier und schickt den Administratoren und dem Benutzer, dem der Webhook gehört, eine E-Mail (wenn der [E-Mail-Versand](installation.md#e-mail-und-adresse) eingerichtet ist). Der Benutzer schaltet ihn nach der Reparatur wieder ein; dann kommt gleich eine Meldung mit dem aktuellen Stand.
 - **Mindestens einmal:** Die Meldungen warten in der Datenbank. Nach einem Neustart oder einer Unterbrechung geht eine Meldung unter Umständen ein zweites Mal hinaus – mit derselben **Ereignis-Id**, an der der Empfänger die Wiederholung erkennt.
 - Im **Wartungsmodus** und während einer **Wiederherstellung** ruht die Zustellung und holt danach nach.
 
@@ -61,7 +61,7 @@ Jeder Webhook hat ein eigenes **Geheimnis** (`whsec_…`). Ablago zeigt es nur b
 | `X-DMS-Versuch` | 1 beim ersten Versuch, dann 2, 3 … |
 | `X-DMS-Webhook` | Id des Webhooks |
 
-Der Empfänger rechnet die Signatur mit dem Geheimnis nach und verwirft Meldungen, deren Zeit mehr als 5 Minuten abweicht. Beispiele in JavaScript und Python stehen im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). Geht ein Geheimnis verloren, erzeugt der Benutzer im Profil mit **Neues Geheimnis** ein neues; das alte gilt sofort nicht mehr.
+Der Empfänger rechnet die Signatur mit dem Geheimnis nach und verwirft Meldungen, deren Zeit mehr als 5 Minuten abweicht. Beispiele in JavaScript und Python stehen im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). Geht ein Geheimnis verloren, erzeugt der Benutzer unter Mein Konto mit **Neues Geheimnis** ein neues; das alte gilt sofort nicht mehr.
 
 ## Sicherung und Export
 

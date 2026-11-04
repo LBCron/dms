@@ -164,12 +164,12 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
         <div className="hinweis warn hinweiszeile"><p>{warnung}</p><Link to="/werkbank/betrieb" className="knopf klein">E-Mail einrichten</Link></div>
       )}
       <div id="zusammenfassung-inhalt" className="sammel-inhalt" hidden={zu}>
-      <p className="leise klein">Statt einer Mail je Aufgabe bekommt jeder mit offenen Aufgaben die Tägliche Zusammenfassung. Jeder kann sie im Profil anpassen (Uhrzeit, Wochentage, Feiertage) oder abbestellen.</p>
+      <p className="leise klein">Statt einer Mail je Aufgabe bekommt jeder mit offenen Aufgaben die Tägliche Zusammenfassung. Jeder kann sie unter Mein Konto anpassen (Uhrzeit, Wochentage, Feiertage) oder abbestellen.</p>
       {wirktNicht && (
         <div className="hinweis warn hinweiszeile"><p>{warnung}</p><Link to="/werkbank/betrieb" className="knopf klein">E-Mail einrichten</Link></div>
       )}
       <label className="haken"><input type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Zusammenfassung verschicken</span></label>
-      <label className="eigenschaft"><span>Standard-Uhrzeit <small>für alle ohne eigene im Profil</small></span><input type="time" step={900} value={e.uhrzeit} onChange={(x) => setE({ ...e, uhrzeit: x.target.value })} /></label>
+      <label className="eigenschaft"><span>Standard-Uhrzeit <small>für alle ohne eigene unter Mein Konto</small></span><input type="time" step={900} value={e.uhrzeit} onChange={(x) => setE({ ...e, uhrzeit: x.target.value })} /></label>
       <label className="eigenschaft"><span>Bundesland <small>für Feiertage ohne Zusammenfassung; nur landesweite Feiertage</small></span>
         <select value={e.bundesland ?? ''} onChange={(x) => setE({ ...e, bundesland: x.target.value || null })}>
           <option value="">keins – ohne Feiertage</option>

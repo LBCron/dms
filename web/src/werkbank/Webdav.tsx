@@ -62,7 +62,7 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
           <dt>Anfragen seit dem Start</dt><dd>{s.anfragen}</dd>
           <dt>Grenze</dt><dd>{s.grenze} Anfragen je Benutzer und Minute</dd>
         </dl>
-        <p className="leise klein">Benutzer erzeugen den Schlüssel selbst unter Profil → Sicherheit → API-Schlüssel („lesen und schreiben“, damit sie ablegen können). Administratoren bekommen keine API-Schlüssel und nutzen das Laufwerk darum nicht.</p>
+        <p className="leise klein">Benutzer erzeugen den Schlüssel selbst unter Mein Konto → Sicherheit → API-Schlüssel („lesen und schreiben“, damit sie ablegen können). Administratoren bekommen keine API-Schlüssel und nutzen das Laufwerk darum nicht.</p>
       </div>
       {/* #366: früher die mittlere Spalte; ganz unten, mit fester Höhe (etwa zehn Einträge), neueste oben. */}
       <div className="blatt" id="zugriffe">
