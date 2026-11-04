@@ -3,7 +3,7 @@
 !!! info "Geprüft: Image automatisch, Gerät noch nicht"
     Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-Läuft bei dir ohnehin ein Windows-Rechner rund um die Uhr, kann er das DMS mit übernehmen. Das DMS ist ein Linux-Container. Unter Windows braucht es deshalb eine kleine Linux-Umgebung, die Windows selbst mitbringt: **WSL 2** oder **Hyper-V**.
+Läuft bei dir ohnehin ein Windows-Rechner rund um die Uhr, kann er Ablago mit übernehmen. Ablago ist ein Linux-Container. Unter Windows braucht es deshalb eine kleine Linux-Umgebung, die Windows selbst mitbringt: **WSL 2** oder **Hyper-V**.
 
 | Rechner | Empfohlener Weg |
 |---|---|
@@ -15,16 +15,16 @@ Läuft bei dir ohnehin ein Windows-Rechner rund um die Uhr, kann er das DMS mit 
 
 1. [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) installieren und beim Einrichten **WSL 2** wählen. Für die private Nutzung ist Docker Desktop kostenlos; für Firmen gelten die [Lizenzbedingungen von Docker](https://docs.docker.com/subscription/desktop-license/).
 2. Eine Linux-Umgebung aus dem Microsoft Store installieren, z. B. **Ubuntu**, und in Docker Desktop unter **Settings → Resources → WSL integration** einschalten.
-3. Das **Ubuntu-Terminal** öffnen und dort die Befehle aus [PC mit Linux → DMS starten](linux.md#3-dms-starten) ausführen.
+3. Das **Ubuntu-Terminal** öffnen und dort die Befehle aus [PC mit Linux → Ablago starten](linux.md#3-dms-starten) ausführen.
 4. Im Browser `http://localhost:8080` öffnen.
 
 !!! tip "Daten in Linux ablegen, nicht auf C:"
-    Lege das DMS im Ubuntu-Terminal unter `~/dms` an, nicht unter `/mnt/c/…`. Ordner auf dem Windows-Laufwerk sind über WSL deutlich langsamer, und die Datenbank kann dort Probleme mit Dateirechten bekommen. Im Explorer findest du die Ordner unter **Linux → Ubuntu → home**.
+    Lege Ablago im Ubuntu-Terminal unter `~/dms` an, nicht unter `/mnt/c/…`. Ordner auf dem Windows-Laufwerk sind über WSL deutlich langsamer, und die Datenbank kann dort Probleme mit Dateirechten bekommen. Im Explorer findest du die Ordner unter **Linux → Ubuntu → home**.
 
 !!! warning "Läuft nur, solange jemand angemeldet ist"
-    Docker Desktop startet erst nach der Anmeldung an Windows (**Settings → General → Start Docker Desktop when you sign in**). Ist der Rechner aus, im Ruhezustand oder niemand angemeldet, ist das DMS nicht erreichbar. Für einen Rechner, der als Server dienen soll, ist die Hyper-V-VM der bessere Weg.
+    Docker Desktop startet erst nach der Anmeldung an Windows (**Settings → General → Start Docker Desktop when you sign in**). Ist der Rechner aus, im Ruhezustand oder niemand angemeldet, ist Ablago nicht erreichbar. Für einen Rechner, der als Server dienen soll, ist die Hyper-V-VM der bessere Weg.
 
-Damit andere Geräte im Heimnetz das DMS erreichen, muss die **Windows-Firewall** eingehende Verbindungen auf Port 8080 erlauben. Docker Desktop fragt danach beim ersten Start.
+Damit andere Geräte im Heimnetz Ablago erreichen, muss die **Windows-Firewall** eingehende Verbindungen auf Port 8080 erlauben. Docker Desktop fragt danach beim ersten Start.
 
 ## Linux-VM in Hyper-V
 

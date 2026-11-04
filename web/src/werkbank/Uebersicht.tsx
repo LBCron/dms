@@ -54,7 +54,7 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   else if (tr && tr.betroffen) h.push({ art: 'warn', text: <><strong>{tr.betroffen === 1 ? 'Ein Passwort ist' : `${tr.betroffen} Passwörter sind`} nicht lesbar oder unverschlüsselt.</strong></>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
   // Postfächer mit OAuth (#358): Anmeldung abgelaufen/entzogen oder noch nicht erfolgt – bis dahin kein Abruf.
   for (const p of u.postfachAnmeldung ?? []) h.push(p.zustand === 'abgelaufen'
-    ? { art: 'schlecht', text: <><strong>Postfach „{p.name}“: Die Anmeldung ist abgelaufen oder wurde entzogen.</strong> Bis zur neuen Anmeldung holt das DMS dort keine Mails ab.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Neu anmelden' }
+    ? { art: 'schlecht', text: <><strong>Postfach „{p.name}“: Die Anmeldung ist abgelaufen oder wurde entzogen.</strong> Bis zur neuen Anmeldung holt Ablago dort keine Mails ab.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Neu anmelden' }
     : { art: 'warn', text: <><strong>Postfach „{p.name}“ ist noch nicht angemeldet.</strong> Mit OAuth 2.0 erst nach der Anmeldung beim Anbieter abrufbar.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Anmelden' });
   // Sicherung (#105): fehlgeschlagen, zu alt, Notfallblatt, Speicherort.
   if (u.sicherung) for (const x of sicherungsHinweise(u.sicherung)) h.push({ ...x, ziel: '/werkbank/sicherung', knopf: 'Zur Sicherung' });
@@ -62,7 +62,7 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (u.adminSchluessel) h.push({ art: 'warn', text: <><strong>{u.adminSchluessel === 1 ? 'Ein API-Schlüssel gehört' : `${u.adminSchluessel} API-Schlüssel gehören`} einem Administrator.</strong> Administratoren bekommen keine neuen Schlüssel mehr. Lege für das Programm einen normalen Benutzer an, erzeuge damit einen neuen Schlüssel und lösche den alten (Profil → API-Schlüssel des Administrators).</>, ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' });
   // Datenbank-Anbindung (#119)
   if (u.anbindung?.umgebung === 'abweichend') h.push({ art: 'warn', text: <><strong>DATABASE_URL weicht von der Datenbank-Anbindung ab und wird ignoriert.</strong> Führend ist die Anbindung unter /data/geheim; entferne die Variable aus der Compose-Datei.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
-  if (u.anbindung?.neustartNoetig) h.push({ art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart des DMS.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
+  if (u.anbindung?.neustartNoetig) h.push({ art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart von Ablago.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
   // DMS_LASTTEST in einer echten Installation (#612): Der Lasttest ist nicht gestartet, das DMS läuft normal.
   if (u.lasttestAbbruch) h.push({ art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/technik', knopf: t('lasttest.uebersicht.knopf') });
   // Pflicht-Einstellungen eines Pakets fehlen (#405, z. B. im Ablauf „später ausfüllen“): bis sie da sind, läuft das Paket nicht.
@@ -105,7 +105,7 @@ export function UebersichtListe({ u }: { u: UebersichtZustand }) {
   const h = u.stand ? hinweiseAus(u.stand) : [];
   return (
     <>
-      <Listenkopf titel="Übersicht" hilfe="werkbank.uebersicht" beschreibung="Was in diesem DMS gerade zu tun ist.">
+      <Listenkopf titel="Übersicht" hilfe="werkbank.uebersicht" beschreibung="Was in dieser Installation gerade zu tun ist.">
         <button type="button" className="knopf klein" onClick={() => void u.laden()}>Neu laden</button>
       </Listenkopf>
       {u.fehler && <div className="hinweis schlecht"><p>{u.fehler}</p></div>}

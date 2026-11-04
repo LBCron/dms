@@ -17,15 +17,15 @@
 ??? question "Ich kann eine Mappe nicht löschen."
     Klicke neben dem ausgegrauten **Mappe löschen** auf **Warum nicht?** – dort steht der Grund:
 
-    - Es verweisen noch andere Mappen auf sie – dann zeigt das DMS, welche. Entferne dort zuerst den Verweis.
+    - Es verweisen noch andere Mappen auf sie – dann zeigt Ablago, welche. Entferne dort zuerst den Verweis.
     - Du darfst Mappen dieses Mappentyps nicht löschen. Das legt ein Administrator in den Berechtigungen fest.
     - Der Mappentyp ist im **Archivmodus**, und die Aufbewahrungsfrist der Mappe läuft noch. Dann lässt sie sich erst nach dem Fristende löschen – von niemandem.
 
 ??? question "Ich kann ein Feld nicht ändern."
     - Du darfst Mappen dieses Mappentyps nur lesen, nicht bearbeiten. Dann steht unten in der Mappe „Nur lesen“.
     - Felder mit gestricheltem Rahmen sind nur zum Lesen, zum Beispiel Name und E-Mail-Adresse in der Mappe eines Benutzers. Daneben steht, wo sie geändert werden.
-    - Eine **fortlaufende Nummer** (z. B. eine Rechnungsnummer) vergibt das DMS beim ersten Speichern; danach kann sie niemand mehr ändern.
-    - Bei *Post* setzt das DMS *Kanal* und *Zugeordnet zu* selbst.
+    - Eine **fortlaufende Nummer** (z. B. eine Rechnungsnummer) vergibt Ablago beim ersten Speichern; danach kann sie niemand mehr ändern.
+    - Bei *Post* setzt Ablago *Kanal* und *Zugeordnet zu* selbst.
 
 ??? question "Ich sehe eine Mappe oder Ansicht nicht, die andere sehen."
     Ein Administrator kann festlegen, wer welche Mappen lesen und welche Ansichten sehen darf – zum Beispiel nur die „Eltern“. Was du je Mappentyp darfst, steht im Profil unter [Meine Rechte](profil.md#meine-rechte). Brauchst du Zugriff, frag den Administrator.
@@ -59,19 +59,19 @@
     Menü unter deinem Namen → **Mein Konto** → **Darstellung** → **Schriftgröße auf diesem Gerät** → *groß*.
 
 ??? question "Ich sehe einen Hinweis „Wartung“."
-    Ein Administrator wartet das DMS, z. B. für ein Update. Speichere deine Arbeit, bevor der Countdown abläuft – dann wirst du abgemeldet. Anmelden kannst du dich wieder, sobald die Wartung vorbei ist; die Anmeldeseite sagt, wie lange es voraussichtlich dauert.
+    Ein Administrator wartet Ablago, z. B. für ein Update. Speichere deine Arbeit, bevor der Countdown abläuft – dann wirst du abgemeldet. Anmelden kannst du dich wieder, sobald die Wartung vorbei ist; die Anmeldeseite sagt, wie lange es voraussichtlich dauert.
 
-??? question "Oben steht „Das DMS ist gerade nicht erreichbar“."
-    Das DMS startet gerade neu, meist wegen eines Updates. Lass die Seite offen: Der Browser fragt selbst nach und zeigt „Das DMS ist wieder erreichbar“, sobald es weitergeht. Was du eingetragen hast, bleibt stehen. Speichere danach noch einmal, falls Speichern während der Pause nicht geklappt hat. Zeigt die Ansicht danach noch Fehler, wähle in der Leiste „Ansicht neu laden“.
+??? question "Oben steht „Ablago ist gerade nicht erreichbar“."
+    Ablago startet gerade neu, meist wegen eines Updates. Lass die Seite offen: Der Browser fragt selbst nach und zeigt „Ablago ist wieder erreichbar“, sobald es weitergeht. Was du eingetragen hast, bleibt stehen. Speichere danach noch einmal, falls Speichern während der Pause nicht geklappt hat. Zeigt die Ansicht danach noch Fehler, wähle in der Leiste „Ansicht neu laden“.
 
 ??? question "Oben steht „Neue Version ist da“."
-    Das DMS wurde aktualisiert, während die Seite offen war. Sichere ungespeicherte Eingaben und wähle „Seite neu laden“ – erst dann passt die Oberfläche zur neuen Version.
+    Ablago wurde aktualisiert, während die Seite offen war. Sichere ungespeicherte Eingaben und wähle „Seite neu laden“ – erst dann passt die Oberfläche zur neuen Version.
 
 ??? question "Ich bin abgemeldet und meine letzten Änderungen fehlen."
     Ein Administrator hat vermutlich eine Sicherung wiederhergestellt. Dann gilt der Stand der Sicherung – auch das Passwort aus dieser Zeit. Frag ihn, von wann die Sicherung ist; was danach geändert wurde, musst du ggf. noch einmal eintragen.
 
 ??? question "Ich habe mein Passwort vergessen."
-    **Passwort vergessen?** unter der Anmeldung. Verschickt das DMS keine E-Mails, erzeugt dir ein Administrator einen Link.
+    **Passwort vergessen?** unter der Anmeldung. Verschickt Ablago keine E-Mails, erzeugt dir ein Administrator einen Link.
 
 ??? question "Ich habe einen Fehler gefunden oder einen Wunsch."
     Im Menü unter deinem Namen → **Fehler melden** (siehe [Profil und Einstellungen](profil.md#fehler-melden)). Wünsche gern auch direkt als [Issue auf GitHub](https://github.com/motom001/dms/issues/new?template=wunsch.md).

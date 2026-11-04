@@ -45,7 +45,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Anmeldeschutz</h1>
-        <p className="leise">Nach zu vielen falschen Passwörtern sperrt das DMS die Anmeldung – je E-Mail-Adresse und IP und zusätzlich je IP über alle Adressen. Sperren überstehen einen Neustart. Deine Adresse gerade: <code>{s.deineIp}</code> <Hilfe ort="werkbank.anmeldeschutz" /></p>
+        <p className="leise">Nach zu vielen falschen Passwörtern sperrt Ablago die Anmeldung – je E-Mail-Adresse und IP und zusätzlich je IP über alle Adressen. Sperren überstehen einen Neustart. Deine Adresse gerade: <code>{s.deineIp}</code> <Hilfe ort="werkbank.anmeldeschutz" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
@@ -166,11 +166,11 @@ function AnbieterBlatt() {
         {feld('knopf', 'Beschriftung des Knopfes')}
       </div>
       <label className="haken"><input id="oidc-anlegen" type="checkbox" checked={e.anlegen} onChange={(x) => setE({ ...e, anlegen: x.target.checked })} /><span>Unbekannte Adressen als neue Benutzer anlegen
-        <small className="leise">sonst nur Benutzer, die es im DMS schon gibt</small></span></label>
+        <small className="leise">sonst nur Benutzer, die es in Ablago schon gibt</small></span></label>
       {e.anlegen && <label className="eigenschaft"><span>Systemrolle neuer Benutzer</span>
         <select id="oidc-rolle" value={e.standardrolle} onChange={(x) => setE({ ...e, standardrolle: x.target.value === 'admin' ? 'admin' : 'mitglied' })}><option value="mitglied">Mitglied</option><option value="admin">Administrator</option></select></label>}
       <div className="raster">
-        {feld('adminGruppe', <>Gruppe für Administratoren <small>leer: Rollen nur im DMS pflegen</small></>, 'z. B. dms-admins oder Objekt-ID')}
+        {feld('adminGruppe', <>Gruppe für Administratoren <small>leer: Rollen nur in Ablago pflegen</small></>, 'z. B. dms-admins oder Objekt-ID')}
         {feld('gruppenClaim', <>Claim mit den Gruppen <small>meist groups</small></>, 'groups')}
       </div>
       <label className="haken"><input id="oidc-lokal" type="checkbox" checked={e.lokalNurAdmins} onChange={(x) => setE({ ...e, lokalNurAdmins: x.target.checked })} /><span>Passwort-Anmeldung nur noch für Administratoren

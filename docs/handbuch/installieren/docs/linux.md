@@ -3,9 +3,9 @@
 !!! info "Geprüft: Image automatisch, Gerät noch nicht"
     Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-Ein alter Bürorechner, ein ausgedienter Laptop oder ein kleiner Mini-PC mit Intel- oder AMD-Prozessor reicht für das DMS gut aus. Diese Seite ist auch die Grundlage für [virtuelle Maschinen](proxmox.md). Für den Raspberry Pi gibt es eine eigene [Anleitung Schritt für Schritt](raspberry-pi.md) mit Einrichtungsskript.
+Ein alter Bürorechner, ein ausgedienter Laptop oder ein kleiner Mini-PC mit Intel- oder AMD-Prozessor reicht für Ablago gut aus. Diese Seite ist auch die Grundlage für [virtuelle Maschinen](proxmox.md). Für den Raspberry Pi gibt es eine eigene [Anleitung Schritt für Schritt](raspberry-pi.md) mit Einrichtungsskript.
 
-**Du brauchst:** 2 GB Arbeitsspeicher oder mehr, etwa 20 GB für System und Programme, dazu Platz für deine Dokumente und Sicherungen. Eine SSD macht das DMS spürbar schneller.
+**Du brauchst:** 2 GB Arbeitsspeicher oder mehr, etwa 20 GB für System und Programme, dazu Platz für deine Dokumente und Sicherungen. Eine SSD macht Ablago spürbar schneller.
 
 ## 1. Linux installieren
 
@@ -58,9 +58,9 @@ Andere Distributionen (Fedora, RHEL, …) haben eigene Anleitungen in der [Docke
 
 **Offizielle Anleitung:** [Docker Engine installieren](https://docs.docker.com/engine/install/) · [Docker ohne sudo benutzen](https://docs.docker.com/engine/install/linux-postinstall/)
 
-## 3. DMS starten
+## 3. Ablago starten { #3-dms-starten }
 
-**Empfohlen: zwei Container** (DMS und PostgreSQL, siehe [Ein oder zwei Container?](index.md#ein-oder-zwei-container)):
+**Empfohlen: zwei Container** (Ablago und PostgreSQL, siehe [Ein oder zwei Container?](index.md#ein-oder-zwei-container)):
 
 ```sh
 mkdir -p ~/dms && cd ~/dms
@@ -90,9 +90,9 @@ Bei zwei Containern liegen die Daten damit in `~/dms/daten`, bei dms-komplett di
   ```
   Beim Laptop zusätzlich in `/etc/systemd/logind.conf` `HandleLidSwitch=ignore` setzen, damit er bei geschlossenem Deckel weiterläuft.
 - **Nach Stromausfall wieder an:** Im BIOS/UEFI die Einstellung *Restore on AC Power Loss* (o. ä.) auf *Power On* stellen. Die Container starten danach von selbst wieder.
-- **Feste Adresse:** Im Router dem Rechner immer dieselbe IP-Adresse geben (DHCP-Reservierung). Dann bleibt die Adresse des DMS gleich.
+- **Feste Adresse:** Im Router dem Rechner immer dieselbe IP-Adresse geben (DHCP-Reservierung). Dann bleibt die Adresse von Ablago gleich.
 - **Updates des Systems:** Unter Debian und Ubuntu übernimmt das Paket `unattended-upgrades` die Sicherheitsupdates.
 
 ## Sicherung
 
-Die Sicherungen des DMS landen im Ordner `sicherung` auf demselben Rechner. Fällt die Platte aus, sind sie mit weg. Kopiere den Ordner deshalb regelmäßig woandershin, z. B. auf eine USB-Platte, ein NAS oder in einen Cloudspeicher (etwa mit `rclone`). Mehr dazu unter [Sicherung](https://motom001.github.io/dms/admin/aktuell/sicherung/).
+Die Sicherungen von Ablago landen im Ordner `sicherung` auf demselben Rechner. Fällt die Platte aus, sind sie mit weg. Kopiere den Ordner deshalb regelmäßig woandershin, z. B. auf eine USB-Platte, ein NAS oder in einen Cloudspeicher (etwa mit `rclone`). Mehr dazu unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).

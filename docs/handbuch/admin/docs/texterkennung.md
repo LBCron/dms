@@ -1,12 +1,12 @@
 # Texterkennung und Wartung
 
-Damit die Suche auch den Text von Dokumenten findet, erzeugt das DMS zu jedem neuen Dokument einen **Volltext** – im Hintergrund, ohne dass jemand warten muss:
+Damit die Suche auch den Text von Dokumenten findet, erzeugt Ablago zu jedem neuen Dokument einen **Volltext** – im Hintergrund, ohne dass jemand warten muss:
 
 *Texterkennung* gehört zur Vorlage **Betrieb**, *Wartungsoperationen* nur zur Vorlage **Alles**.
 
 --8<-- "ausgeblendet-schritt.md"
 
-- **PDFs:** Das DMS liest die vorhandene **Textebene** selbst (poppler) – sofort. PDFs, die ein Programm oder ein Scanner mit Text erzeugt hat, sind damit gleich durchsuchbar.
+- **PDFs:** Ablago liest die vorhandene **Textebene** selbst (poppler) – sofort. PDFs, die ein Programm oder ein Scanner mit Text erzeugt hat, sind damit gleich durchsuchbar.
 - **Scans und Fotos** (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket **Texterkennung (Deutsch und Englisch)** (Kennung `texterkennung`) aus dem [Katalog](pakete.md).
 - **Andere Dateien** (z. B. Word, Excel, TIFF) bekommen vorerst keinen Volltext.
 
@@ -17,8 +17,8 @@ Damit die Suche auch den Text von Dokumenten findet, erzeugt das DMS zu jedem ne
 
 Das Paket **Texterkennung** (ab 2.0, Tesseract als WebAssembly im [Paket-Läufer](pakete.md)) übernimmt die Texterkennung. Es braucht dafür das Recht [Texterkennung übernehmen](pakete.md#recht-texterkennung). So läuft es:
 
-1. Das DMS liest bei PDFs die **Textebene** – sofort, ohne Wartezeit. Hat ein PDF Text, ist es gleich durchsuchbar.
-2. Jedes Dokument meldet das DMS dem Paket (Ereignis [Volltext fertig](pakete.md#ereignis-volltext-fertig)) – auch, wenn es keinen Text gefunden hat.
+1. Ablago liest bei PDFs die **Textebene** – sofort, ohne Wartezeit. Hat ein PDF Text, ist es gleich durchsuchbar.
+2. Jedes Dokument meldet Ablago dem Paket (Ereignis [Volltext fertig](pakete.md#ereignis-volltext-fertig)) – auch, wenn es keinen Text gefunden hat.
 3. Dokumente **ohne Text** (Scans, Fotos) – und PDFs, in denen neben Textseiten gescannte Seiten stecken – stehen auf **„wartet auf Texterkennung (Paket …)“**, bis das Paket den Volltext schreibt. Danach steht am Dokument „Texterkennung durch Paket …“. Bei langen Dokumenten zeigt das Paket dort, wie weit es ist (z. B. „Seite 20 von 64“).
 4. Was das Paket erkennt (Sprache, Seiten aufrichten, ob es auch PDFs mit Text neu erkennt, Auflösung), stellst du **beim Paket** ein: **Werkbank → Pakete → Texterkennung → Einstellungen**.
 
@@ -30,16 +30,16 @@ Ohne Paket bleiben Scans und Fotos ohne Text („wartet auf Texterkennung – ke
 
 ## Andere Dateitypen { #andere-dateitypen }
 
-Das DMS liest selbst nur **PDF, JPEG und PNG**. Für andere Dateitypen gibt es Vorschaubild und Volltext, wenn ein **Paket zum Umwandeln** installiert ist (Recht [Dateien umwandeln](pakete.md#recht-umwandeln), seit Version 0.137): Das Paket macht aus der Datei eine **umgewandelte Fassung** (PDF, PNG oder JPEG), daraus entstehen das Vorschaubild und der Volltext – bei einem Scan über das Paket Texterkennung. Das Dokument bleibt die Originaldatei; Herunterladen, Weitergeben und Versionen betreffen immer das Original.
+Ablago liest selbst nur **PDF, JPEG und PNG**. Für andere Dateitypen gibt es Vorschaubild und Volltext, wenn ein **Paket zum Umwandeln** installiert ist (Recht [Dateien umwandeln](pakete.md#recht-umwandeln), seit Version 0.137): Das Paket macht aus der Datei eine **umgewandelte Fassung** (PDF, PNG oder JPEG), daraus entstehen das Vorschaubild und der Volltext – bei einem Scan über das Paket Texterkennung. Das Dokument bleibt die Originaldatei; Herunterladen, Weitergeben und Versionen betreffen immer das Original.
 
 | Dateityp | Vorschau und Volltext mit | Fassung |
 | --- | --- | --- |
-| PDF, JPEG, PNG | dem DMS selbst (Scans und Fotos: Paket **Texterkennung**) | – |
+| PDF, JPEG, PNG | Ablago selbst (Scans und Fotos: Paket **Texterkennung**) | – |
 | TIFF (auch mehrseitig, z. B. vom Scanner), WebP, GIF (erstes Bild), BMP | Paket **Bildformate** (dazu für den Text: Paket **Texterkennung**) | TIFF → PDF, WebP → JPEG, GIF und BMP → PNG |
 | HEIC/HEIF (Fotos vom iPhone) | noch keinem Paket – siehe unten | – |
 | Word, Excel, PowerPoint, OpenDocument, RTF, Text, E-Mails (`.eml`, `.msg`) | Volltext: Paket **Office und E-Mail** (Vorschau noch nicht, dms-registry #72) | – (das Paket liest das Original) |
 
-Für Office-Dateien und E-Mails macht das Paket keine Fassung, sondern liefert **nur den Volltext** (Recht [Volltext liefern](pakete.md#recht-volltext), seit Version 0.145). Es liest dabei die Originaldatei. Bis es den Text schreibt, steht am Dokument „Volltext: wartet auf Paket · wartet auf Volltext (Paket Office und E-Mail)“. Das DMS gibt ihm jede solche Datei – beim Hochladen, bei einer neuen Version, bei **Volltext neu erzeugen**, bei **Erneut versuchen** und **Neu erzeugen** am Dokument und beim Installieren für alle vorhandenen Dateien ohne Text. Kann das Paket eine Datei nicht lesen, steht sein Grund am Dokument, z. B. „Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. Bis 5 Millionen Zeichen je Dokument kommen in den Volltext (wie bei allen Dokumenten).
+Für Office-Dateien und E-Mails macht das Paket keine Fassung, sondern liefert **nur den Volltext** (Recht [Volltext liefern](pakete.md#recht-volltext), seit Version 0.145). Es liest dabei die Originaldatei. Bis es den Text schreibt, steht am Dokument „Volltext: wartet auf Paket · wartet auf Volltext (Paket Office und E-Mail)“. Ablago gibt ihm jede solche Datei – beim Hochladen, bei einer neuen Version, bei **Volltext neu erzeugen**, bei **Erneut versuchen** und **Neu erzeugen** am Dokument und beim Installieren für alle vorhandenen Dateien ohne Text. Kann das Paket eine Datei nicht lesen, steht sein Grund am Dokument, z. B. „Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. Bis 5 Millionen Zeichen je Dokument kommen in den Volltext (wie bei allen Dokumenten).
 
 So sieht es aus:
 
@@ -50,7 +50,7 @@ So sieht es aus:
 
 **Werkbank → Texterkennung → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt bzw. ihren Volltext liefert – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
 
-**Sicherung:** Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (`/data/files/<Haushalts-Id>/fassungen`) und gehen mit in die [Sicherung](sicherung.md#was-eine-sicherung-enthalt) und den [Vollexport](export.md) (dort als `<Datei>.fassung.pdf` neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch **ohne** das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (`/data/files/fassungen`, Versionen 0.137 bis 0.140.0) zieht das DMS beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt **Werkbank → Wartungsoperationen → Vorschaubilder nachholen** die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).
+**Sicherung:** Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (`/data/files/<Haushalts-Id>/fassungen`) und gehen mit in die [Sicherung](sicherung.md#was-eine-sicherung-enthalt) und den [Vollexport](export.md) (dort als `<Datei>.fassung.pdf` neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch **ohne** das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (`/data/files/fassungen`, Versionen 0.137 bis 0.140.0) zieht Ablago beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt **Werkbank → Wartungsoperationen → Vorschaubilder nachholen** die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).
 
 **Warum noch kein Paket für HEIC?** HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter *Einstellungen → Kamera → Formate* „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.
 
@@ -58,10 +58,10 @@ So sieht es aus:
 
 Mit einem Paket wie **PDF/A** (Recht [Archivfassung ablegen](pakete.md#recht-archivfassung)) bekommt jedes Dokument zusätzlich eine **Archivfassung**: ein durchsuchbares PDF/A, ein Format für die Langzeitaufbewahrung mit unsichtbarer Textebene genau auf den Wörtern. Das Original bleibt unverändert das Dokument.
 
-- **Wann:** erst, wenn der Volltext feststeht – bei Scans also nach der Texterkennung. Das DMS gibt dem Paket dafür die **Wortpositionen** aus der Textebene bzw. aus der Texterkennung. Bei TIFF und Co. nimmt das Paket die Lesefassung aus [Andere Dateitypen](#andere-dateitypen).
+- **Wann:** erst, wenn der Volltext feststeht – bei Scans also nach der Texterkennung. Ablago gibt dem Paket dafür die **Wortpositionen** aus der Textebene bzw. aus der Texterkennung. Bei TIFF und Co. nimmt das Paket die Lesefassung aus [Andere Dateitypen](#andere-dateitypen).
 - **Welche:** Standard sind **alle PDFs** (auch mit Text), Fotos und Scans. Mit der Einstellung des Pakets „nur Scans und Bilder“ bekommen PDFs mit vollständigem Text keine – das spart Platz (für PDFs verdoppelt sich der Speicherbedarf etwa). Ist ein PDF schon gültiges PDF/A, gilt es selbst als Archivfassung. **Verschlüsselte PDFs** bekommen keine, der Grund steht am Dokument. **Digital signierte PDFs** bekommen eine für die Anzeige; die Signatur prüft man am Original.
-- **Nie nachladen:** Die Archivfassung enthält nur, was in der Datei selbst steckt. Verweise auf Inhalte im Internet, JavaScript und Aktionen beim Öffnen übernimmt sie nicht – das DMS lehnt eine Archivfassung mit solchen Inhalten ab. Hatte das Original welche, steht am Dokument „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden“; die Adressen stehen nur im Protokoll (Modul *archivfassung*).
-- **Prüfung:** Das DMS nimmt nur ein PDF mit PDF/A-Kennung an (XMP-Metadaten, ungefiltert), unverschlüsselt, bis 100 MB und 1000 Seiten. Die volle Prüfung der Konformität macht das Paket selbst (z. B. mit veraPDF in seiner CI).
+- **Nie nachladen:** Die Archivfassung enthält nur, was in der Datei selbst steckt. Verweise auf Inhalte im Internet, JavaScript und Aktionen beim Öffnen übernimmt sie nicht – Ablago lehnt eine Archivfassung mit solchen Inhalten ab. Hatte das Original welche, steht am Dokument „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden“; die Adressen stehen nur im Protokoll (Modul *archivfassung*).
+- **Prüfung:** Ablago nimmt nur ein PDF mit PDF/A-Kennung an (XMP-Metadaten, ungefiltert), unverschlüsselt, bis 100 MB und 1000 Seiten. Die volle Prüfung der Konformität macht das Paket selbst (z. B. mit veraPDF in seiner CI).
 - **Werkbank → Texterkennung → Archivfassung (PDF/A)** zeigt das Paket, wie viele Archivfassungen es gibt, wie viele warten, ausgelassen oder abgelehnt sind – und die Dokumente mit Grund.
 - **Sicherung und Vollexport:** Die Archivfassung gehört zur Sicherung (mit Probe-Wiederherstellung) und steht im Vollexport als `<Datei>.pdfa.pdf` neben dem Original. Die [Auskunft nach Art. 15](datenschutz.md) bleibt, wie sie ist: Dokumente wie abgelegt.
 - **Nach Änderungen am Original** (neue Version, drehen, Seiten löschen, teilen, schwärzen) gilt die alte Archivfassung nicht mehr; angezeigt wird das Original, bis das Paket neu erzeugt hat.
@@ -82,7 +82,7 @@ Steht die Warteschlange, sagt ein Hinweis oben auf der Seite und bei *Volltext n
 
 ## Sprache automatisch erkennen
 
-Das DMS erkennt aus dem Text selbst, in welcher Sprache ein Dokument geschrieben ist – offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.
+Ablago erkennt aus dem Text selbst, in welcher Sprache ein Dokument geschrieben ist – offline und ohne fremde Dienste: Es zählt typische kurze Wörter (Artikel, Präpositionen, Grußformeln) und Sonderzeichen. Unterschieden werden Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Türkisch, Polnisch, Portugiesisch, Russisch, Ukrainisch und Arabisch. Bei sehr wenig Text (z. B. nur Zahlen) bleibt die Sprache offen.
 
 Die erkannte Sprache steht **am Dokument** neben dem Stand des Volltexts (z. B. „Volltext: fertig · 2 Seiten · Französisch“), auch bei PDFs mit Textebene. Sie ist ein eigenes Feld des Dokuments, und die **Volltextsuche nimmt die Wortstämme dieser Sprache**: Im französischen Brief findet „cheval“ auch „chevaux“, im englischen „invoice“ auch „invoices“. Ohne erkannte Sprache gilt Deutsch.
 
@@ -92,7 +92,7 @@ Das Paket **Texterkennung** nutzt dieselbe Erkennung bei *Sprache: Automatisch* 
 
 Seit 0.139.0 hat ein Dokument nicht nur eine Sprache: Die Sprache steht **je Seite** fest, auf einer Mischseite auch zwei (etwa ein deutscher Brief mit beigelegtem französischem Schreiben, oder eine zweisprachige Bestätigung). Am Dokument steht dann die Sprache mit dem meisten Text und die übrigen: „Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch“. Die Suche nimmt **je Seite die Wortstämme ihrer Sprache** – „Beglaubigung“ findet die deutsche Seite, „ambassades“ die französische.
 
-- Bei **PDFs mit Textebene** erkennt das DMS die Sprache jeder Seite selbst (Absatz für Absatz; eine zweite Sprache zählt ab etwa einem Fünftel des Texts der Seite).
+- Bei **PDFs mit Textebene** erkennt Ablago die Sprache jeder Seite selbst (Absatz für Absatz; eine zweite Sprache zählt ab etwa einem Fünftel des Texts der Seite).
 - Bei **Scans** meldet das Paket **Texterkennung** ab 2.1.0 die Sprachen je Seite: Es liest jede Seite in ihrer Sprache (zweiter Durchgang, wenn die Sprache wechselt) und eine Mischseite mit beiden Sprachen zugleich, wenn das deutlich sicherer ist. Dafür braucht es die Sprachdaten (z. B. die Zusatzsprache Französisch); ohne sie liest es die Seite auf Deutsch, die Suche nimmt trotzdem die Wortstämme der erkannten Sprache.
 - Wechselt die Sprache zwischen zwei Seiten ganz, zeigt die **Post** den Hinweis „Ab Seite 2 beginnt vermutlich ein eigenes Schreiben – Post teilen?“. Geteilt wird **nie von selbst**: Der Knopf öffnet nur die Seitenansicht mit dem Vorschlag; der Hinweis lässt sich für alle ausblenden.
 - **Bestand:** Vorhandene Dokumente behalten ihre eine Sprache und ihren Suchindex; das Update baut nichts neu auf (Migration 053 in Sekundenbruchteilen). Wer auch ältere Scans je Seite lesen lassen will, startet **Volltext neu erzeugen → Für alle Dokumente** (siehe unten; das dauert, je nach Menge, Stunden). PDFs mit Textebene bekommen ihre Seitensprachen damit in Sekunden.
@@ -103,7 +103,7 @@ Pakete und die [Schnittstelle](api.md) geben die Sprache mit dem Volltext an (`P
 
 Im Paket **Texterkennung (Deutsch und Englisch)** stecken Deutsch, Englisch und die Lageerkennung. Weitere Sprachen kommen als **Zusatzsprachen** aus dem Katalog dazu, je Sprache ein eigenes Paket, z. B. **Texterkennung – Zusatzsprache Französisch** (`texterkennung_fra`). Es gibt sie für Französisch, Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Türkisch, Russisch, Ukrainisch und Arabisch (Kennung `texterkennung_` und das Sprachkürzel: `fra`, `spa`, `ita`, `nld`, `por`, `pol`, `tur`, `rus`, `ukr`, `ara`). Ein eigenes Image oder eingehängte Sprachdateien braucht es nicht mehr.
 
-**Installieren:** Beim Installieren der Texterkennung – unter **Werkbank → Pakete** oder im Einrichtungsassistenten – fragt das DMS gleich darunter **Weitere Sprachen?** und installiert die angehakten Sprachen im selben Schritt mit, mit einer Bestätigung für alle Rechte. Später geht das unter **Werkbank → Pakete → Texterkennung → Weitere Sprachen → Auswählen …** (siehe [Mehrere Pakete in einem Schritt](pakete.md#mehrere-pakete-in-einem-schritt-installieren)). Jede Sprache bleibt ein eigenes Paket mit eigener Version und eigenem Update.
+**Installieren:** Beim Installieren der Texterkennung – unter **Werkbank → Pakete** oder im Einrichtungsassistenten – fragt Ablago gleich darunter **Weitere Sprachen?** und installiert die angehakten Sprachen im selben Schritt mit, mit einer Bestätigung für alle Rechte. Später geht das unter **Werkbank → Pakete → Texterkennung → Weitere Sprachen → Auswählen …** (siehe [Mehrere Pakete in einem Schritt](pakete.md#mehrere-pakete-in-einem-schritt-installieren)). Jede Sprache bleibt ein eigenes Paket mit eigener Version und eigenem Update.
 
 **Ob mehr Sprachen die Erkennung bremsen:** Welche Sprache eine Seite hat, erkennt das Paket am gelesenen Text anhand kurzer Wortlisten für alle oben genannten Sprachen – immer für alle, ob ihre Sprachdaten installiert sind oder nicht. Mehr Zusatzsprachen machen diese Erkennung also weder langsamer noch ungenauer. Eine Zusatzsprache kostet nur dort Zeit, wo sie gebraucht wird: Erkennt das Paket eine Seite als Französisch und ist Französisch installiert, liest es die Seite ein zweites Mal auf Französisch und nimmt die sicherere Lesung.
 
@@ -116,17 +116,17 @@ Nach dem Installieren einer Zusatzsprache erkennt **Volltext neu erzeugen → F�
 Unter **Aufträge** siehst du in einer Liste mit fester Höhe die Dokumente je Stand (*Fehler*, *wartet*, *läuft*, *wartet auf Texterkennung*, *ausgelassen*, *fertig*) – mit Mappe (als Link), Größe, Zeitpunkt und dem **Grund** bei Fehlern oder ausgelassenen Dokumenten.
 
 - Dokumente auswählen und **Neu starten**: Sie kommen wieder in die Warteschlange.
-- Wartende **aus der Warteschlange nehmen** bzw. laufende **abbrechen**: Sie gelten dann als *ausgelassen* („Vom Administrator abgebrochen“); ein laufender Vorgang (pdftotext) wird beendet. Bei *wartet auf Texterkennung* verwirft das DMS die noch nicht zugestellte Meldung an das Paket; Text aus dem PDF bleibt.
+- Wartende **aus der Warteschlange nehmen** bzw. laufende **abbrechen**: Sie gelten dann als *ausgelassen* („Vom Administrator abgebrochen“); ein laufender Vorgang (pdftotext) wird beendet. Bei *wartet auf Texterkennung* verwirft Ablago die noch nicht zugestellte Meldung an das Paket; Text aus dem PDF bleibt.
 - **Neu starten** lässt den Volltext ausdrücklich neu erzeugen: Auch ein Paket erkennt dann Dokumente neu, die schon Text haben.
 - **Alle Fehler neu starten** reiht alle Dokumente mit Fehler wieder ein.
 
-**Wenn die Datenbank ausgelastet ist:** Speichern viele Vorgänge gleichzeitig (ein Stapel Scans, Demo-Daten, ein Import), kann die Datenbank das Speichern eines Ergebnisses ausnahmsweise abbrechen. Das DMS versucht es dann von selbst noch einige Male mit kurzer Pause. Klappt es auch dann nicht, steht das Dokument auf *Fehler* mit dem Grund „Text erkannt, aber nicht gespeichert – die Datenbank war ausgelastet“ und einem Eintrag im Protokoll – nie still ohne Volltext. **Neu starten** bzw. **Alle Fehler neu starten** holt es nach. Das gilt auch, wenn ein Paket den Text schreibt: Es bekommt dann die Antwort 503 und sendet erneut.
+**Wenn die Datenbank ausgelastet ist:** Speichern viele Vorgänge gleichzeitig (ein Stapel Scans, Demo-Daten, ein Import), kann die Datenbank das Speichern eines Ergebnisses ausnahmsweise abbrechen. Ablago versucht es dann von selbst noch einige Male mit kurzer Pause. Klappt es auch dann nicht, steht das Dokument auf *Fehler* mit dem Grund „Text erkannt, aber nicht gespeichert – die Datenbank war ausgelastet“ und einem Eintrag im Protokoll – nie still ohne Volltext. **Neu starten** bzw. **Alle Fehler neu starten** holt es nach. Das gilt auch, wenn ein Paket den Text schreibt: Es bekommt dann die Antwort 503 und sendet erneut.
 
-**Passwortgeschützte PDFs** erkennt das DMS und lässt sie mit dem Grund „Das PDF ist mit einem Passwort geschützt“ aus, statt einen Fehler zu melden – ein neuer Versuch würde nichts ändern.
+**Passwortgeschützte PDFs** erkennt Ablago und lässt sie mit dem Grund „Das PDF ist mit einem Passwort geschützt“ aus, statt einen Fehler zu melden – ein neuer Versuch würde nichts ändern.
 
 Alle Meldungen der Texterkennung stehen im [Protokoll](fehlersuche.md) unter dem Modul `texterkennung`.
 
-Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texterkennung*, *fertig*, *Fehler*, *ausgelassen*) und woher der Text kommt („Text aus dem PDF“, „Texterkennung durch Paket …“); bei einem Fehler lässt sich die Texterkennung dort **erneut versuchen**, und ein fertiger Text lässt sich anzeigen. Wer die Mappe bearbeiten darf, kann den Volltext eines Dokuments mit **Neu erzeugen** ausdrücklich neu erzeugen lassen. Liegt dieselbe Datei schon mit Volltext in einer anderen Mappe, übernimmt das DMS diesen Text.
+Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texterkennung*, *fertig*, *Fehler*, *ausgelassen*) und woher der Text kommt („Text aus dem PDF“, „Texterkennung durch Paket …“); bei einem Fehler lässt sich die Texterkennung dort **erneut versuchen**, und ein fertiger Text lässt sich anzeigen. Wer die Mappe bearbeiten darf, kann den Volltext eines Dokuments mit **Neu erzeugen** ausdrücklich neu erzeugen lassen. Liegt dieselbe Datei schon mit Volltext in einer anderen Mappe, übernimmt Ablago diesen Text.
 
 ## Wartungsoperationen
 
@@ -139,22 +139,22 @@ Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texte
 - **Absender bereinigen** leert falsche Absender bei älterer Post, siehe unten.
 - **Angaben, die nicht zum Format passen** listet gespeicherte Werte auf, die nicht zu einem Format oder zu Datumsgrenzen passen, siehe unten.
 
-Alle laufen im Hintergrund; das DMS bleibt dabei benutzbar.
+Alle laufen im Hintergrund; Ablago bleibt dabei benutzbar.
 
 ### Volltext neu erzeugen
 
-Läuft wie bei einem neuen Dokument: Das DMS liest die Textebene neu und gibt das Dokument an das Paket für die Texterkennung.
+Läuft wie bei einem neuen Dokument: Ablago liest die Textebene neu und gibt das Dokument an das Paket für die Texterkennung.
 
 - **Für Dokumente ohne Text** – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Dazu gehören auch [andere Dateitypen](#andere-dateitypen) wie TIFF: Ohne Fassung gehen sie an das Paket zum Umwandeln, mit Fassung wird diese gelesen. Ersetzt das frühere „Volltext nachholen“.
 - **Für alle Dokumente** – nach einer Rückfrage mit der Anzahl. Das ist ein **ausdrückliches Neu**: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.
 
-Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; das DMS bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 35 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter **Werkbank → Texterkennung** („wartet auf Texterkennung“).
+Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; Ablago bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 35 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter **Werkbank → Texterkennung** („wartet auf Texterkennung“).
 
 Ist kein Paket für die Texterkennung installiert, sagt die Seite das mit dem Weg zu **Werkbank → Pakete**.
 
 ### Absender bereinigen
 
-Bis Version 0.99 trug das DMS bei hochgeladener Post ohne Absender den **Namen dessen ein, der sie angelegt hat** – bei Post aus dem Eingangsordner „Eingangsordner“. Absender ist aber, wer den Brief geschickt hat. Neue Post bekommt seitdem keinen Absender mehr, solange niemand ihn einträgt.
+Bis Version 0.99 trug Ablago bei hochgeladener Post ohne Absender den **Namen dessen ein, der sie angelegt hat** – bei Post aus dem Eingangsordner „Eingangsordner“. Absender ist aber, wer den Brief geschickt hat. Neue Post bekommt seitdem keinen Absender mehr, solange niemand ihn einträgt.
 
 Für den Bestand zeigt **Absender bereinigen** eine Vorschau: eingehende Post mit Kanal *Hochgeladen*, *API*, *WebDAV* oder *Ordner*, deren Absender genau der Name des Anlegenden (bzw. „Eingangsordner“) ist. Post aus Postfächern und versendete E-Mails sind nie dabei. Nimm den Haken weg, wo der Absender doch stimmt, und tippe auf **Absender leeren**. In der Historie jeder Post steht danach, was vorher im Feld stand und wer bereinigt hat.
 

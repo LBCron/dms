@@ -294,11 +294,11 @@ async function einrichtenImBrowser(browser, bild) {
 function lasttestStand(fertig) {
   const jetzt = Date.now();
   const vorlage = [
-    '```text', 'Messergebnis Lasttest (#563)', 'DMS-Version: 0.144.0 · Image: dms-komplett · Datenbank: im Container', 'Gerät/Modell: {{geraet}}',
-    'CPU: Intel(R) N100 · 4 Kerne für das DMS, Rechner 4 · x64', 'RAM: 15,5 GB · Speicher: {{speicher}}', 'Bestand: 5013 Mappen, 110 Dokumente (PDF)',
+    '```text', 'Messergebnis Lasttest (#563)', 'Ablago-Version: 0.144.0 · Image: dms-komplett · Datenbank: im Container', 'Gerät/Modell: {{geraet}}',
+    'CPU: Intel(R) N100 · 4 Kerne für Ablago, Rechner 4 · x64', 'RAM: 15,5 GB · Speicher: {{speicher}}', 'Bestand: 5013 Mappen, 110 Dokumente (PDF)',
     'Einstellungen: DMS_ARBEITER=2, DMS_DB_VERBINDUNGEN=10, DMS_MAX_ANFRAGEN=250',
     'klein    25 gleichzeitig: p50 48 ms, p95 131 ms, p99 212 ms, Fehler 0,00 % – Ziel eingehalten (Ziel < 300 ms, CI-Grenze 300 ms)',
-    'Arbeitsspeicher DMS höchstens: 342 MB · Ereignisschleife p99 höchstens: 21 ms', 'Gemessen: 2026-11-02', '```',
+    'Arbeitsspeicher Ablago höchstens: 342 MB · Ereignisschleife p99 höchstens: 21 ms', 'Gemessen: 2026-11-02', '```',
   ].join('\n');
   return {
     wahl: 'klein', zustand: fertig ? 'fertig' : 'laeuft', stufe: 'klein', nr: 1, von: 1, schritt: fertig ? 'auswerten' : 'demo',
@@ -806,8 +806,8 @@ async function main() {
   await s.locator('.benutzermenue .wer').click();
   await s.locator('.benutzermenue .menue').waitFor();
   await bild(s, 'benutzermenue', { clip: { x: 1440 - 420, y: 0, width: 420, height: 400 } });
-  // Über das DMS (#430): Version, Lizenz, Quellcode der laufenden Version.
-  await s.getByRole('button', { name: 'Über das DMS' }).click();
+  // Über Ablago (#430): Version, Lizenz, Quellcode der laufenden Version.
+  await s.getByRole('button', { name: 'Über Ablago' }).click();
   const ueber = s.locator('dialog.ueber-dms');
   await ueber.waitFor();
   {

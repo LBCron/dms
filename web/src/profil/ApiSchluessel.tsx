@@ -33,7 +33,7 @@ export function ApiSchluesselBlatt() {
     <div className="blatt">
       <div className="blattkopf">
         <h2 className="h3">API-Schlüssel</h2>
-        <p className="leise">Damit greifen andere Programme auf das DMS zu – mit höchstens deinen Rechten. Header: <span className="mono">Authorization: Bearer dms_…</span>. <Link to="/api-doku" className="verweis">API-Dokumentation</Link></p>
+        <p className="leise">Damit greifen andere Programme auf Ablago zu – mit höchstens deinen Rechten. Header: <span className="mono">Authorization: Bearer dms_…</span>. <Link to="/api-doku" className="verweis">API-Dokumentation</Link></p>
         <p className="leise klein">Auch für das Laufwerk (WebDAV), wenn der Administrator es eingeschaltet hat: Benutzername ist deine E-Mail-Adresse, Passwort der Schlüssel. <Hilfe ort="profil.laufwerk" /></p>
       </div>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}

@@ -50,7 +50,7 @@ export function VollexportPanel({ z }: { z: VollexportZustand }) {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Vollexport</h1>
-        <p className="leise">Deine Daten gehören dir: Der Vollexport schreibt <strong>alles</strong> – Mappen, Dokumente im Original mit allen Versionen, Notizen, Aufgaben, Historie, Struktur – in offenen Formaten (CSV, JSON, Excel, PDF, iCalendar, vCard) in einen Ordner, den du ohne das DMS lesen kannst. Anders als die Sicherung ist er <strong>unverschlüsselt</strong> – bewahre ihn sicher auf. <Hilfe ort="werkbank.vollexport" /></p>
+        <p className="leise">Deine Daten gehören dir: Der Vollexport schreibt <strong>alles</strong> – Mappen, Dokumente im Original mit allen Versionen, Notizen, Aufgaben, Historie, Struktur – in offenen Formaten (CSV, JSON, Excel, PDF, iCalendar, vCard) in einen Ordner, den du ohne Ablago lesen kannst. Anders als die Sicherung ist er <strong>unverschlüsselt</strong> – bewahre ihn sicher auf. <Hilfe ort="werkbank.vollexport" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <div className="blatt">

@@ -1,6 +1,6 @@
 # Automatisierungen
 
-Mit einer **Automatisierung** erledigt das DMS etwas von selbst: **Wenn** etwas passiert (ein Ereignis oder ein Datum), **und** die Bedingungen stimmen, **dann** setzt es Felder oder gibt jemandem eine Aufgabe. Du findest sie unter **Werkbank → Ablage aufbauen → Automatisierungen**. Im Haushalt erscheint der Bereich im **Expertenmodus** (Werkbank → Werkbank anpassen), in Betrieben immer.
+Mit einer **Automatisierung** erledigt Ablago etwas von selbst: **Wenn** etwas passiert (ein Ereignis oder ein Datum), **und** die Bedingungen stimmen, **dann** setzt es Felder oder gibt jemandem eine Aufgabe. Du findest sie unter **Werkbank → Ablage aufbauen → Automatisierungen**. Im Haushalt erscheint der Bereich im **Expertenmodus** (Werkbank → Werkbank anpassen), in Betrieben immer.
 
 ![Werkbank → Automatisierungen: Liste und Editor](bilder/werkbank-automatisierungen.png)
 
@@ -36,8 +36,8 @@ Der Vorrat zeigt nur, was zur Wenn-Karte passt: **Feld ändern** etwa nur, wenn 
 
 ## Was die Dann-Karten tun
 
-- **Feld ändern** setzt nur die gewählten Felder und lässt alle anderen unverändert. Text mit Platzhaltern; bei Datumsfeldern `heute`, `heute+7` oder `heute-3`. Das DMS prüft den Wert wie im Formular (Pflichtfelder, Auswahllisten, Archivmodus). In der Historie der Mappe steht „durch Automatisierung ‚…‘“.
-- **Aufgabe / Benachrichtigung** geht an Personen, an **alle aktiven Mitglieder einer Rolle** oder an die **Person in einem Feld** der Mappe. Eine *Aufgabe* kann ein Fälligkeitsdatum haben; *Benachrichtigungen* bündelt das DMS, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
+- **Feld ändern** setzt nur die gewählten Felder und lässt alle anderen unverändert. Text mit Platzhaltern; bei Datumsfeldern `heute`, `heute+7` oder `heute-3`. Ablago prüft den Wert wie im Formular (Pflichtfelder, Auswahllisten, Archivmodus). In der Historie der Mappe steht „durch Automatisierung ‚…‘“.
+- **Aufgabe / Benachrichtigung** geht an Personen, an **alle aktiven Mitglieder einer Rolle** oder an die **Person in einem Feld** der Mappe. Eine *Aufgabe* kann ein Fälligkeitsdatum haben; *Benachrichtigungen* bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
 - **Danach keine weiteren Automatisierungen** beendet die Reihe: Automatisierungen mit höherer Nummer laufen für dieses Ereignis nicht mehr (im Verlauf „Übersprungen durch …“).
 
 Automatisierungen arbeiten mit dem **Systemkonto „Automatisierung“** (Werkbank → Benutzer). Was dieses Konto nicht lesen darf, überspringt die Automatisierung; Platzhalter zeigen dann „(nicht sichtbar)“.
@@ -50,20 +50,20 @@ Gibt es mehrere Automatisierungen für denselben Auslöser, laufen sie nach ihre
 
 ![Verlauf mit den Schritten eines Laufs](bilder/werkbank-automatisierung-verlauf.png)
 
-- **Ausprobieren:** Mappe wählen und **Ausführen** – als wäre das Ereignis eingetreten. Mit **Trockenlauf** zeigt das DMS nur, was passieren würde („Würde Aufgabe an 1 Person senden: …“), und ändert nichts.
+- **Ausprobieren:** Mappe wählen und **Ausführen** – als wäre das Ereignis eingetreten. Mit **Trockenlauf** zeigt Ablago nur, was passieren würde („Würde Aufgabe an 1 Person senden: …“), und ändert nichts.
 - **Verlauf:** jeder Lauf mit Zeit und Ergebnis (*abgeschlossen*, *trifft nicht zu*, *übersprungen*, *fehlgeschlagen*); aufgeklappt siehst du je Schritt, welche Bedingung zutraf und welche Karte was getan hat. Läuft die Automatisierung gerade, während der Editor offen ist, erscheinen die Schritte **live** nacheinander.
 - **Fehlgeschlagene Läufe** bleiben stehen und lassen sich **wiederholen** – einzeln im Verlauf oder alle über den Hinweis oben in der Liste. Die [Übersicht der Werkbank](uebersicht.md) meldet sie ebenfalls.
 - **Änderungsverlauf:** jede gespeicherte Fassung mit Zeit und wer; **Wiederherstellen** holt einen früheren Stand zurück (der jetzige bleibt als eigene Fassung erhalten).
 
 ## Wenn etwas nicht mehr passt
 
-Das DMS blockiert deine Arbeit nicht: Mappentypen, Felder und Ansichten lassen sich weiterhin ändern und löschen. Fehlt einer Automatisierung danach etwas (Feld gelöscht, Ansicht weg), wird sie **rot markiert und angehalten** – mit Grund in der Liste und einem Hinweis in der Übersicht. Korrigieren, speichern, wieder einschalten.
+Ablago blockiert deine Arbeit nicht: Mappentypen, Felder und Ansichten lassen sich weiterhin ändern und löschen. Fehlt einer Automatisierung danach etwas (Feld gelöscht, Ansicht weg), wird sie **rot markiert und angehalten** – mit Grund in der Liste und einem Hinweis in der Übersicht. Korrigieren, speichern, wieder einschalten.
 
-Außerdem hält das DMS eine Automatisierung an, wenn sie **mehr als 30-mal in einer Minute** läuft, und nach einer [Wiederherstellung](wiederherstellen.md) alle eingeschalteten – damit eingespielte Daten nicht sofort eine Welle von Aufgaben auslösen. Automatisierungen, die einander auslösen, laufen höchstens drei Ebenen tief.
+Außerdem hält Ablago eine Automatisierung an, wenn sie **mehr als 30-mal in einer Minute** läuft, und nach einer [Wiederherstellung](wiederherstellen.md) alle eingeschalteten – damit eingespielte Daten nicht sofort eine Welle von Aufgaben auslösen. Automatisierungen, die einander auslösen, laufen höchstens drei Ebenen tief.
 
 ## Beispiele
 
-Das DMS bringt einige **ausgeschaltete Beispiele** mit (Herkunft „vom DMS“): *An die Kündigungsfrist erinnern*, *Kontosperre melden* und *Neue Dokumente melden*. Beispiele lassen sich einschalten und anpassen, aber nicht löschen; mit **Kopieren** machst du eine eigene daraus (die Kopie ist zunächst aus).
+Ablago bringt einige **ausgeschaltete Beispiele** mit (Herkunft „von Ablago“): *An die Kündigungsfrist erinnern*, *Kontosperre melden* und *Neue Dokumente melden*. Beispiele lassen sich einschalten und anpassen, aber nicht löschen; mit **Kopieren** machst du eine eigene daraus (die Kopie ist zunächst aus).
 
 ![Editor in dunkler Darstellung](bilder/werkbank-automatisierung-dunkel.png)
 

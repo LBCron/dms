@@ -60,6 +60,7 @@ export function palette(grundlage: 'hell' | 'dunkel' | 'kontrast', primaer: stri
     'akzent-stark': dunkel ? mische(akzent, '#FFFFFF', 0.2) : mische(akzent, '#000000', 0.18),
     gruen, 'gruen-tinte': schriftAuf(gruen),
     'gruen-zart': mische(n.flaeche, sekundaer, dunkel ? 0.24 : 0.12),
+    'marke-hell': dunkel ? 'none' : 'block', 'marke-dunkel': dunkel ? 'block' : 'none',
     'color-scheme': dunkel ? 'dark' : 'light',
   };
 }

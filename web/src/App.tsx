@@ -31,7 +31,7 @@ export function App() {
   const teile = pfad.split('/').filter(Boolean);
   const bereich = teile[0] === 'werkbank' || teile[0] === 'profil' ? teile[0] : teile[0] === 'api-doku' ? 'profil' : 'ablage';
   // Titel und Symbol im Browser-Tab aus dem Design (#72).
-  const marke = schriftzugVon(d.meinDesign) || 'DMS';
+  const marke = schriftzugVon(d.meinDesign) || 'Ablago';
   const symbol = logoUrl(d.meinDesign);
   useEffect(() => {
     document.title = `${marke} – ${{ ablage: 'Ablage', werkbank: 'Werkbank', profil: 'Profil' }[bereich]}`;
@@ -49,7 +49,7 @@ export function App() {
 
   let inhalt;
   if (!d.geladen) inhalt = <p className="leise">Lade …</p>;
-  else if (bereich === 'werkbank' && !admin) inhalt = <div className="leer"><p>{teile[1] === 'pakete' && new URLSearchParams(location.search).has('installieren') ? 'Pakete installieren nur Administratoren. Schick den Link an einen Administrator deines DMS.' : 'Die Werkbank ist Administratoren vorbehalten.'}</p></div>;
+  else if (bereich === 'werkbank' && !admin) inhalt = <div className="leer"><p>{teile[1] === 'pakete' && new URLSearchParams(location.search).has('installieren') ? 'Pakete installieren nur Administratoren. Schick den Link an einen Administrator deines Ablago.' : 'Die Werkbank ist Administratoren vorbehalten.'}</p></div>;
   else if (bereich === 'werkbank') inhalt = <Werkbank teile={teile} />;
   else if (teile[0] === 'api-doku') inhalt = <ApiDoku />;
   else if (bereich === 'profil') inhalt = <Profil teile={teile} />;
@@ -90,7 +90,7 @@ export function App() {
         </nav>
         <NeuKnopf />
         <div className="konto">
-          {/* Quellcode, Version und Lizenz stehen unter Benutzermenü → „Über das DMS“ (#430). */}
+          {/* Quellcode, Version und Lizenz stehen unter Benutzermenü → „Über Ablago“ (#430). */}
           <Benutzermenue an={bereich === 'profil'} abmelden={abmelden} />
         </div>
       </header>
@@ -169,7 +169,7 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
           <Link to="/profil/konto" className="menuepunkt"><Pikto name="person" />{vertretung ? `Konto von ${ich.name || ich.email}` : 'Mein Konto'}</Link>
           <a href={handbuch('benutzer')} target="_blank" rel="noreferrer" className="menuepunkt" onClick={() => setOffen(false)}><Pikto name="hilfe" />Hilfe <span aria-hidden="true">↗</span></a>
           <Link to="/profil/fehler-melden" className="menuepunkt"><Pikto name="fehler" />Fehler melden</Link>
-          <button type="button" className="menuepunkt" onClick={() => { setOffen(false); setUeber(true); }}><Pikto name="info" />Über das DMS</button>
+          <button type="button" className="menuepunkt" onClick={() => { setOffen(false); setUeber(true); }}><Pikto name="info" />Über Ablago</button>
           <button type="button" className="menuepunkt" onClick={() => void abmelden()}><Pikto name="abmelden" />Abmelden</button>
         </div>
       )}

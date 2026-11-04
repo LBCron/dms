@@ -126,7 +126,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const lauf = await warte(ziel.w);
     assert.equal(lauf.status, 'neustart', JSON.stringify(lauf, null, 1));
     await new Promise((r) => setTimeout(r, 1700));
-    assert.equal(ziel.neustarts(), 1, 'nach dem Umschalten startet das DMS neu');
+    assert.equal(ziel.neustarts(), 1, 'nach dem Umschalten startet Ablago neu');
 
     const neu = await frisch(dbs[1]);
     assert.deepEqual(await zaehle(neu), vorher, 'Mappen, Dokumente, Benutzer wie in der Quelle');
@@ -183,7 +183,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     assert.deepEqual(mit.probleme, []);
     assert.equal(mit.meta.haushaltId, HAUSHALT, 'aus der Inhaltsangabe der Sicherung');
     assert.ok(mit.vergleich.some((v) => v.was === 'Datenbank-Stand' && v.urteil === 'gleich'));
-    assert.ok(mit.vergleich.some((v) => v.was === 'DMS' && v.damals === 'unbekannt'));
+    assert.ok(mit.vergleich.some((v) => v.was === 'Ablago' && v.damals === 'unbekannt'));
     await ziel.w.starte({ name: sicherungsName, schluessel }, null);
     const lauf = await warte(ziel.w);
     assert.equal(lauf.status, 'neustart', JSON.stringify(lauf, null, 1));
@@ -240,8 +240,8 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const json = JSON.parse(await readFile(jsonPfad, 'utf8'));
     await writeFile(jsonPfad, JSON.stringify({ ...json, umgebung: { ...json.umgebung, dms: '9.0.0', datenbankStand: '999_zukunft.sql' }, migrationen: [...json.migrationen, '999_zukunft.sql'] }));
     const a = await ziel.w.abgleich(sicherungsName, schluessel);
-    assert.match(a.probleme.join(' '), /neueren DMS/);
-    await assert.rejects(ziel.w.starte({ name: sicherungsName, schluessel, bestaetigt: true }, { email: 'x' }), /neueren DMS/);
+    assert.match(a.probleme.join(' '), /neueren Ablago/);
+    await assert.rejects(ziel.w.starte({ name: sicherungsName, schluessel, bestaetigt: true }, { email: 'x' }), /neueren Ablago/);
     await writeFile(jsonPfad, JSON.stringify(json));
     assert.ok(existsSync(datei));
   });

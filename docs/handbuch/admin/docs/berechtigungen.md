@@ -18,7 +18,7 @@ Mit Berechtigungen legst du je Mappentyp fest, **wer welche Mappen anlegen, lese
 | **P** | Passwörter sehen | den Klartext von Passwortfeldern anzeigen (das „Auge“) |
 
 - **Ohne Lesen wirkt nichts außer Anlegen.** Wer eine Mappe nicht lesen darf, darf sie auch nicht bearbeiten, löschen oder ihre Passwörter sehen – egal was die Regeln sonst sagen.
-- **Systemregeln** gelten für alle, auch für Administratoren, und lassen sich nicht ändern: Benutzer-Mappen entstehen und verschwinden nur über die Benutzerverwaltung (kein C, kein D). In der Standard-Zeile sind diese Rechte deshalb gesperrt. Bei *Post* regelt C, wer über **+ Post** oder die Schnittstelle neue Post anlegen darf; versendete E-Mails legt das DMS immer an.
+- **Systemregeln** gelten für alle, auch für Administratoren, und lassen sich nicht ändern: Benutzer-Mappen entstehen und verschwinden nur über die Benutzerverwaltung (kein C, kein D). In der Standard-Zeile sind diese Rechte deshalb gesperrt. Bei *Post* regelt C, wer über **+ Post** oder die Schnittstelle neue Post anlegen darf; versendete E-Mails legt Ablago immer an.
 - **Systemfelder** von Benutzern (Systemrolle, Rollen, Aktiv) ändern sich weiterhin nur in der Benutzerverwaltung und im eigenen Profil.
 - **Archivmodus:** Ist er am Mappentyp eingeschaltet, lassen sich Mappen und Dokumente bis zum Ende ihrer Aufbewahrungsfrist nicht löschen – auch nicht mit dem Recht **D** und auch nicht von Administratoren. Siehe [Archivmodus](archiv.md).
 - Den **eigenen Papierkorb** sieht jeder Benutzer immer und kann daraus wiederherstellen – auch wenn er die Mappe danach nach den Regeln nicht mehr sehen darf. Er bekommt dann einen Hinweis.
@@ -58,17 +58,17 @@ Eine Regel heißt: **Wenn** alle Bedingungen zutreffen, **dann** setze diese Rec
 Jede Bedingung lässt sich mit **nicht** umkehren. Mehrere Bedingungen einer Regel müssen **alle** zutreffen; für „oder“ legst du zwei Regeln an.
 
 !!! tip "Rechte, die vom Inhalt abhängen"
-    Ändert jemand ein Feld, von dem seine Rechte abhängen (etwa „Verantwortlich“), fragt das DMS vor dem Speichern nach, wenn er sich damit selbst das Lesen oder Bearbeiten entziehen würde.
+    Ändert jemand ein Feld, von dem seine Rechte abhängen (etwa „Verantwortlich“), fragt Ablago vor dem Speichern nach, wenn er sich damit selbst das Lesen oder Bearbeiten entziehen würde.
 
 ### Regel in andere Mappentypen kopieren
 
-Mit **In andere Mappentypen kopieren …** an einer gespeicherten Regel übernimmst du sie in weitere Mappentypen (bei ungespeicherten Änderungen erst speichern); sie landet dort am Ende. Bedingungen auf Felder, die es im Zieltyp nicht gibt, fallen weg – das DMS sagt, wie viele.
+Mit **In andere Mappentypen kopieren …** an einer gespeicherten Regel übernimmst du sie in weitere Mappentypen (bei ungespeicherten Änderungen erst speichern); sie landet dort am Ende. Bedingungen auf Felder, die es im Zieltyp nicht gibt, fallen weg – Ablago sagt, wie viele.
 
 ### Speichern
 
-Die Regeln werden mit **Mappentyp speichern** gespeichert, zusammen mit Feldern, Registern und Trefferlisten. Eine Regel darf deshalb auch ein Feld nutzen, das du im selben Zug neu anlegst. Passt eine Regel nicht (z. B. auf ein Feld, das du gerade entfernst), speichert das DMS nichts und nennt die Regel.
+Die Regeln werden mit **Mappentyp speichern** gespeichert, zusammen mit Feldern, Registern und Trefferlisten. Eine Regel darf deshalb auch ein Feld nutzen, das du im selben Zug neu anlegst. Passt eine Regel nicht (z. B. auf ein Feld, das du gerade entfernst), speichert Ablago nichts und nennt die Regel.
 
-Beim Speichern prüft das DMS außerdem, ob danach Mappen dieses Mappentyps **niemand mehr lesen** könnte (außer Administratoren), und fragt in diesem Fall nach. Jede Änderung steht im [Protokoll](fehlersuche.md) mit der vollständigen Regelliste.
+Beim Speichern prüft Ablago außerdem, ob danach Mappen dieses Mappentyps **niemand mehr lesen** könnte (außer Administratoren), und fragt in diesem Fall nach. Jede Änderung steht im [Protokoll](fehlersuche.md) mit der vollständigen Regelliste.
 
 ## Systemkonten und Pakete
 

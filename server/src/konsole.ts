@@ -62,6 +62,6 @@ export function konsolenBenutzer(liste: Benutzer[], als: string | undefined): Be
     if (!b) throw new Fachfehler(404, `Unter ${als} gibt es keinen aktiven Administrator.`);
     return b;
   }
-  if (!admins.length) throw new Fachfehler(409, 'Es gibt noch keinen aktiven Administrator. Richte das DMS im Browser ein (oder nutze den Notfallzugang).');
+  if (!admins.length) throw new Fachfehler(409, 'Es gibt noch keinen aktiven Administrator. Richte Ablago im Browser ein (oder nutze den Notfallzugang).');
   return admins[0];
 }

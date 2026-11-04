@@ -25,7 +25,7 @@ function alsText(text: string, angaben: Record<string, unknown>): string {
     else zeilen.push(`${ein}${schluessel}: ${typeof v === 'boolean' ? (v ? 'ja' : 'nein') : v ?? '–'}`);
   };
   gehe(angaben, 0);
-  return `Fehlermeldung DMS\n\n${text.trim()}\n\n--- Technische Angaben ---\n${zeilen.join('\n')}\n`;
+  return `Fehlermeldung Ablago\n\n${text.trim()}\n\n--- Technische Angaben ---\n${zeilen.join('\n')}\n`;
 }
 
 export function FehlerMelden() {

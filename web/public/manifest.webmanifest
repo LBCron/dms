@@ -1,0 +1,16 @@
+{
+  "name": "Ablago",
+  "short_name": "Ablago",
+  "description": "Ablago – Dokumentenablage für zu Hause und kleine Betriebe",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1F4E79",
+  "icons": [
+    { "src": "/ablago-app-blau-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ablago-app-blau-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/ablago-app-blau.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

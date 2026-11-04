@@ -145,10 +145,10 @@ export class Wiederherstellung {
     if (!eintrag.meta && !aussen) throw new Fachfehler(422, 'Zu dieser Sicherung fehlt die Metadaten-Datei (.json). Lege sie mit in den Sicherungsordner – bei einer Kopie außer Haus die .json vom Ziel.');
     const m = eintrag.meta ?? aussen!.meta;
     if (aussen) {
-      hinweise.push('Neben dieser Sicherung liegt nur die schlanke Metadaten-Datei (Kopie außer Haus). Version und Umfang liest das DMS mit dem Schlüssel aus der Sicherung selbst.');
+      hinweise.push('Neben dieser Sicherung liegt nur die schlanke Metadaten-Datei (Kopie außer Haus). Version und Umfang liest Ablago mit dem Schlüssel aus der Sicherung selbst.');
       if (aussen.problem) probleme.push(aussen.problem);
       if (!aussen.gelesen) {
-        if (!aussen.problem) hinweise.push(`Gib den Schlüssel vom Notfallblatt ein (Fingerabdruck ${m.verschluesselung.fingerabdruck}) – dann prüft das DMS die Sicherung.`);
+        if (!aussen.problem) hinweise.push(`Gib den Schlüssel vom Notfallblatt ein (Fingerabdruck ${m.verschluesselung.fingerabdruck}) – dann prüft Ablago die Sicherung.`);
         return { name, meta: m, vergleich: [], probleme, hinweise, schluesselNoetig: true };
       }
     }
@@ -162,10 +162,10 @@ export class Wiederherstellung {
     const unbekannt = m.migrationen.filter((x) => !heute.migrationen.includes(x));
     const dms = aussen ? -1 : vergleicheVersion(m.umgebung.dms, heute.dms);
     if (unbekannt.length) {
-      probleme.push(`Die Sicherung stammt von einem neueren DMS (${m.umgebung.dms}, Datenbank-Stand ${m.umgebung.datenbankStand}). Dieses DMS (${heute.dms}) kennt ${unbekannt.length === 1 ? 'eine Änderung' : `${unbekannt.length} Änderungen`} der Datenbank nicht. Aktualisiere zuerst das DMS.`);
+      probleme.push(`Die Sicherung stammt von einer neueren Ablago-Version (${m.umgebung.dms}, Datenbank-Stand ${m.umgebung.datenbankStand}). Diese Installation (${heute.dms}) kennt ${unbekannt.length === 1 ? 'eine Änderung' : `${unbekannt.length} Änderungen`} der Datenbank nicht. Aktualisiere zuerst Ablago.`);
     }
-    if (aussen) vergleich.push({ was: 'DMS', damals: 'unbekannt', heute: heute.dms, urteil: unbekannt.length ? 'fehler' : 'ok', info: unbekannt.length ? undefined : 'steht nicht in der schlanken Metadaten-Datei; maßgeblich ist der Datenbank-Stand' });
-    else vergleich.push({ was: 'DMS', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? 'älter – wird nach dem Einspielen auf den heutigen Stand gebracht' : undefined });
+    if (aussen) vergleich.push({ was: 'Ablago', damals: 'unbekannt', heute: heute.dms, urteil: unbekannt.length ? 'fehler' : 'ok', info: unbekannt.length ? undefined : 'steht nicht in der schlanken Metadaten-Datei; maßgeblich ist der Datenbank-Stand' });
+    else vergleich.push({ was: 'Ablago', damals: m.umgebung.dms, heute: heute.dms, urteil: unbekannt.length ? 'fehler' : dms === 0 ? 'gleich' : 'ok', info: !unbekannt.length && dms < 0 ? 'älter – wird nach dem Einspielen auf den heutigen Stand gebracht' : undefined });
     const fehlende = heute.migrationen.filter((x) => !m.migrationen.includes(x)).length;
     vergleich.push({ was: 'Datenbank-Stand', damals: m.umgebung.datenbankStand ?? '–', heute: heute.migrationen.at(-1) ?? '–', urteil: unbekannt.length ? 'fehler' : fehlende ? 'ok' : 'gleich', info: fehlende && !unbekannt.length ? `${fehlende} ${fehlende === 1 ? 'Änderung läuft' : 'Änderungen laufen'} danach` : undefined });
     if (!aussen) {
@@ -176,8 +176,8 @@ export class Wiederherstellung {
     vergleich.push({ was: 'Haushalts-Id', damals: m.haushaltId, heute: heute.haushaltId, urteil: m.haushaltId === heute.haushaltId ? 'gleich' : 'hinweis', info: m.haushaltId !== heute.haushaltId ? 'abweichend – siehe Hinweis' : undefined });
     if (m.haushaltId !== heute.haushaltId) {
       hinweise.push(this.q.mandantUebernehmen
-        ? `Die Sicherung gehört zum Haushalt ${m.haushaltId}, dieses DMS ist bisher auf ${heute.haushaltId} eingestellt. Das DMS übernimmt die Id der Sicherung beim Wiederherstellen.`
-        : `Die Sicherung gehört zum Haushalt ${m.haushaltId}, dieses DMS ist auf ${heute.haushaltId} eingestellt – sonst sind die Daten nicht zu sehen.`);
+        ? `Die Sicherung gehört zum Haushalt ${m.haushaltId}, dieser Installation ist bisher auf ${heute.haushaltId} eingestellt. Ablago übernimmt die Id der Sicherung beim Wiederherstellen.`
+        : `Die Sicherung gehört zum Haushalt ${m.haushaltId}, dieser Installation ist auf ${heute.haushaltId} eingestellt – sonst sind die Daten nicht zu sehen.`);
     }
 
     let schluesselNoetig = !aussen?.mitEingabe && this.q.tresor.fingerabdruck !== m.verschluesselung.fingerabdruck;
@@ -187,7 +187,7 @@ export class Wiederherstellung {
       else if (fingerabdruck(k) !== m.verschluesselung.fingerabdruck) probleme.push(`Der eingegebene Schlüssel hat den Fingerabdruck ${fingerabdruck(k)}; die Sicherung braucht ${m.verschluesselung.fingerabdruck}. Nimm das Notfallblatt zu dieser Sicherung.`);
       else schluesselNoetig = false;
     }
-    if (schluesselNoetig) hinweise.push(`Der Schlüssel dieses DMS passt nicht zur Sicherung (Fingerabdruck ${m.verschluesselung.fingerabdruck}). Gib den Schlüssel vom Notfallblatt ein.`);
+    if (schluesselNoetig) hinweise.push(`Der Schlüssel dieser Installation passt nicht zur Sicherung (Fingerabdruck ${m.verschluesselung.fingerabdruck}). Gib den Schlüssel vom Notfallblatt ein.`);
     try {
       const { kopf } = await liesKopf(join(this.q.sicherung.ordner, m.datei));
       if (kopf.fingerabdruck !== m.verschluesselung.fingerabdruck) probleme.push('Sicherungsdatei und Metadaten passen nicht zusammen (verschiedene Schlüssel).');
@@ -289,7 +289,7 @@ export class Wiederherstellung {
     log.info('Probe-Wiederherstellung begonnen', { sicherung: ziel.name, von });
     const fertig = (async () => {
       if (!k) {
-        this.fehlschlag(lauf, 'Prüfsumme der Datei', `Die Sicherung braucht den Schlüssel ${m.verschluesselung.fingerabdruck}; dieses DMS hat ${this.q.tresor.fingerabdruck ?? 'keinen'}.`);
+        this.fehlschlag(lauf, 'Prüfsumme der Datei', `Die Sicherung braucht den Schlüssel ${m.verschluesselung.fingerabdruck}; dieser Installation hat ${this.q.tresor.fingerabdruck ?? 'keinen'}.`);
         await this.merkeProbe(ziel.name, false, lauf.fehler!);
         return false;
       }
@@ -344,7 +344,7 @@ export class Wiederherstellung {
         // Ohne (passenden) Schlüssel lässt sich der jetzige Stand nicht sichern – z. B. wenn er verloren ist.
         // Dann bleibt das alte Schema nach dem Umschalten noch eine Weile in der Datenbank.
         behalten = true;
-        this.schritt(lauf, 'Sicherung des jetzigen Stands', 'hinweis', `nicht möglich: Dieses DMS hat keinen passenden Schlüssel. Der bisherige Stand bleibt ${BEHALTEN_TAGE} Tage in der Datenbank.`);
+        this.schritt(lauf, 'Sicherung des jetzigen Stands', 'hinweis', `nicht möglich: Diese Installation hat keinen passenden Schlüssel. Der bisherige Stand bleibt ${BEHALTEN_TAGE} Tage in der Datenbank.`);
       } else if (art === 'laufend') {
         schritt('Sicherung des jetzigen Stands');
         const { fertig } = await this.q.sicherung.starte('vor-wiederherstellung', lauf.von);
@@ -592,9 +592,9 @@ export class Wiederherstellung {
         log.warn('Haushalt der Sicherung übernommen', { mandant: m.haushaltId });
       }
       ok();
-      this.schritt(lauf, 'Neustart', 'laeuft', 'Das DMS startet neu …');
+      this.schritt(lauf, 'Neustart', 'laeuft', 'Ablago startet neu …');
       lauf.status = 'neustart';
-      log.warn('Wiederherstellung abgeschlossen, DMS startet neu', { sicherung: lauf.sicherung, von: lauf.von, mappen: ist.mappen, dateien });
+      log.warn('Wiederherstellung abgeschlossen, Ablago startet neu', { sicherung: lauf.sicherung, von: lauf.von, mappen: ist.mappen, dateien });
       setTimeout(() => this.q.neustart(), 1500).unref?.();
       return true;
     } catch (e) {
@@ -624,7 +624,7 @@ export class Wiederherstellung {
       const vorfall = `probe:${eintrag.am}`;
       if ((await e.lies('sicherung_probe_gemeldet')) !== vorfall) {
         await e.schreibe('sicherung_probe_gemeldet', vorfall);
-        try { await this.q.anAdmins?.('DMS: Probe-Wiederherstellung fehlgeschlagen', `Die probeweise Wiederherstellung der Sicherung ${name} ist fehlgeschlagen:\n\n${info}\n\nIm Ernstfall ließe sich diese Sicherung womöglich nicht einspielen. Details stehen in der Werkbank unter „Sicherung“.`); }
+        try { await this.q.anAdmins?.('Ablago: Probe-Wiederherstellung fehlgeschlagen', `Die probeweise Wiederherstellung der Sicherung ${name} ist fehlgeschlagen:\n\n${info}\n\nIm Ernstfall ließe sich diese Sicherung womöglich nicht einspielen. Details stehen in der Werkbank unter „Sicherung“.`); }
         catch (x) { log.warn('Mail zur Probe nicht verschickt', { fehler: (x as Error).message }); }
       }
     }

@@ -13,13 +13,13 @@ In der Liste steht bei jeder Mappe, was zu tun ist. In der Mappe selbst steht ob
 | **Passt nicht** | Ein Administrator hat den Mappentyp geändert – z. B. ein neues Pflichtfeld –, und deine Mappe passt nicht mehr dazu. | Ergänze oder korrigiere die markierten Angaben und speichere. Dann erledigt sie sich von selbst. |
 | **Erwähnung** | Jemand hat dich in einem formatierten Text oder einer Notiz mit **@** erwähnt. | Klicke im Hinweis auf **Erledigt**. |
 | **Zugewiesen** | Jemand hat dir über **Mappe ▾ → Aufgabe vergeben** etwas zu tun gegeben. | Klicke im Hinweis auf **Erledigt**. |
-| **Frist** | Ein Datum in einer deiner Mappen rückt näher, z. B. „Kündigung bis 30.09.2027“. Daneben steht, wie viele Tage noch bleiben. | Klicke auf **Erledigt**. Ändert sich das Datum oder wird es geleert, erledigt sie sich von selbst. Wiederholt sich der Termin (z. B. jährlich), schlägt das DMS den nächsten vor: **Datum auf … setzen**. |
+| **Frist** | Ein Datum in einer deiner Mappen rückt näher, z. B. „Kündigung bis 30.09.2027“. Daneben steht, wie viele Tage noch bleiben. | Klicke auf **Erledigt**. Ändert sich das Datum oder wird es geleert, erledigt sie sich von selbst. Wiederholt sich der Termin (z. B. jährlich), schlägt Ablago den nächsten vor: **Datum auf … setzen**. |
 | **Erinnerung** | Du oder jemand anderes hat über **Mappe ▾ → Erinnern** an diese Mappe erinnert, und der Tag ist da. | Klicke auf **Erledigt**. |
 | **Vertretung** | Jemand hat dich als [Vertreter](profil.md#abwesenheit) für seine Abwesenheit eingetragen. Die Aufgabe steht an seiner Benutzer-Mappe und nennt den Zeitraum. | **Erledigt** heißt „zur Kenntnis genommen“. Ändert sich die Abwesenheit oder endet sie, erledigt sie sich von selbst. |
 | **Post für dich** | Bei neuer [Post](post.md) steht dein Name unter **Für**. | Ordne die Post zu, erledige sie oder gib sie weiter. Dann erledigt sie sich von selbst. |
 | **Auskunft** | Eine Person hat ihre Auskunft nach Art. 15 DSGVO über den Abruf-Link heruntergeladen – oder der Link wurde nach zu vielen falschen Abrufcodes gesperrt. Du bekommst das, wenn du die Auskunft erstellt hast oder die Mappe der Person ein [Favorit](ablage.md#favoriten) von dir ist. | **Erledigt** heißt „zur Kenntnis genommen“. Bis dahin kommt für denselben Link keine zweite Meldung. |
 
-Bei „Passt nicht“ löscht oder ändert das DMS nichts von selbst; die betroffenen Felder sind in der Mappe markiert, und geprüft wird beim nächsten Speichern.
+Bei „Passt nicht“ löscht oder ändert Ablago nichts von selbst; die betroffenen Felder sind in der Mappe markiert, und geprüft wird beim nächsten Speichern.
 
 ## Eine Aufgabe vergeben
 
@@ -41,7 +41,7 @@ Steht bei dir unter „Zu erledigen“ eine **nicht sichtbare Mappe**, hast du e
 
 **Anstehend** zeigt, was auf dich zukommt: deine Fristen, Erinnerungen und Aufgaben mit Datum – auch die, die noch nicht unter „Zu erledigen“ stehen. Du siehst nur deine eigenen Einträge und nur aus Mappen, die du lesen darfst. Ein Klick auf einen Eintrag öffnet die Mappe; erledigt wird wie gewohnt in der Mappe oder unter „Zu erledigen“. Anstehend zeigt nur an – Termine verschieben oder freie Termine ohne Mappe gibt es hier bewusst nicht.
 
-Oben schaltest du um zwischen **Liste**, **Monat** und **Jahr** – wie im Kalender am Handy. Das DMS merkt sich deine Wahl. **Heute** springt zurück zum heutigen Tag.
+Oben schaltest du um zwischen **Liste**, **Monat** und **Jahr** – wie im Kalender am Handy. Ablago merkt sich deine Wahl. **Heute** springt zurück zum heutigen Tag.
 
 ### Liste
 
@@ -87,4 +87,4 @@ Hat jemand eine [Abwesenheit](profil.md#abwesenheit) eingetragen, steht das in d
 
 ## Tägliche Zusammenfassung
 
-Hast du offene Aufgaben, schickt dir das DMS die **Tägliche Zusammenfassung**: eine E-Mail mit der Liste und Links zu den Mappen – keine Mail bei jeder einzelnen Aufgabe. Üblich ist **an Werktagen um 7 Uhr**; Uhrzeit und Wochentage stellst du im [Profil unter Benachrichtigungen](profil.md#benachrichtigungen) ein, dort kannst du die Mail auch abbestellen.
+Hast du offene Aufgaben, schickt dir Ablago die **Tägliche Zusammenfassung**: eine E-Mail mit der Liste und Links zu den Mappen – keine Mail bei jeder einzelnen Aufgabe. Üblich ist **an Werktagen um 7 Uhr**; Uhrzeit und Wochentage stellst du im [Profil unter Benachrichtigungen](profil.md#benachrichtigungen) ein, dort kannst du die Mail auch abbestellen.

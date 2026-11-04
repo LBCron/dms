@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Probe-Installation der NAS-Vorlagen (#184, #185, #179) und der Vorlage für den Raspberry Pi (#578):
-# startet jede Vorlage unter deploy/*/ mit dem gerade gebauten Image, wartet, bis das DMS antwortet,
+# startet jede Vorlage unter deploy/*/ mit dem gerade gebauten Image, wartet, bis Ablago antwortet,
 # und prüft, dass der Einrichtungsassistent ohne Datenbankschritt beginnt. Läuft in der CI (image.yml).
 #
 #   deploy/vorlagen-probe.sh <image> [vorlage …]      z. B. deploy/vorlagen-probe.sh dms:probe

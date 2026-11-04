@@ -28,7 +28,7 @@ export function BetriebPanel({ b }: { b: BetriebZustand }) {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>E-Mail und Adresse</h1>
-        <p className="leise">Wie das DMS E-Mails verschickt und unter welcher Adresse es erreichbar ist. Änderungen gelten sofort, ohne Neustart. <Hilfe ort="werkbank.betrieb" /></p>
+        <p className="leise">Wie Ablago E-Mails verschickt und unter welcher Adresse es erreichbar ist. Änderungen gelten sofort, ohne Neustart. <Hilfe ort="werkbank.betrieb" /></p>
       </div>
       <Adresse b={b} />
       <Mail key={JSON.stringify(b.stand.mail)} b={b} />
@@ -48,17 +48,17 @@ function Adresse({ b }: { b: BetriebZustand }) {
   }
   return (
     <form className="blatt" id="adresse" onSubmit={speichern} onKeyDown={ent.tasten}>
-      <h2 className="h3">Adresse des DMS</h2>
-      <p className="leise">Unter dieser Adresse öffnen die Benutzer das DMS. Sie steht in den Links der E-Mails (Einladungen, Passwort vergessen). Beginnt sie mit <span className="mono">https://</span>, gilt die Anmeldung nur noch über HTTPS.</p>
+      <h2 className="h3">Adresse von Ablago</h2>
+      <p className="leise">Unter dieser Adresse öffnen die Benutzer Ablago. Sie steht in den Links der E-Mails (Einladungen, Passwort vergessen). Beginnt sie mit <span className="mono">https://</span>, gilt die Anmeldung nur noch über HTTPS.</p>
       <label className="eigenschaft"><span>Adresse <small>z. B. http://nas.local:8080 oder https://dms.example.org</small></span>
         <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder={s.vorschlag ?? 'http://nas.local:8080'} inputMode="url" autoComplete="off" /></label>
       {!s.adresse && (
-        <div className="hinweis info"><p>Noch keine Adresse gepflegt. Bis dahin nimmt das DMS die Adresse, unter der es gerade aufgerufen wird{s.vorschlag ? <> – hier <span className="mono">{s.vorschlag}</span></> : ''}.</p>
+        <div className="hinweis info"><p>Noch keine Adresse gepflegt. Bis dahin nimmt Ablago die Adresse, unter der es gerade aufgerufen wird{s.vorschlag ? <> – hier <span className="mono">{s.vorschlag}</span></> : ''}.</p>
           {s.vorschlag && <button type="button" className="knopf klein" onClick={() => { setAdresse(s.vorschlag!); void speichern(undefined, s.vorschlag!); }}>Diese Adresse übernehmen</button>}
         </div>
       )}
       {s.adresse.startsWith('https://') && s.vorschlag?.startsWith('http://') && (
-        <div className="hinweis warn"><p>Du rufst das DMS gerade über HTTP auf, die Adresse ist aber HTTPS. Nach der nächsten Anmeldung geht das nur noch über HTTPS. Läuft ein Reverse-Proxy davor und steht <span className="mono">TRUST_PROXY</span> auf <span className="mono">false</span>, die Variable entfernen.</p></div>
+        <div className="hinweis warn"><p>Du rufst Ablago gerade über HTTP auf, die Adresse ist aber HTTPS. Nach der nächsten Anmeldung geht das nur noch über HTTPS. Läuft ein Reverse-Proxy davor und steht <span className="mono">TRUST_PROXY</span> auf <span className="mono">false</span>, die Variable entfernen.</p></div>
       )}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <Speicherleiste ent={ent} gegenstand="Adresse" />
@@ -113,7 +113,7 @@ function Mail({ b }: { b: BetriebZustand }) {
         <label className="eigenschaft"><span>Benutzer <small>leer = ohne Anmeldung</small></span><input value={m.benutzer} onChange={(e) => setze({ benutzer: e.target.value })} autoComplete="off" spellCheck={false} /></label>
         <label className="eigenschaft"><span>Passwort <small>{s.mail.passwortGesetzt && !loeschen ? 'gesetzt – leer lassen, um es zu behalten' : 'nicht gesetzt'}</small></span>
           <input type="password" value={m.passwort} disabled={!s.passwoerterMoeglich} onChange={(e) => { setze({ passwort: e.target.value }); setLoeschen(false); }} autoComplete="new-password" placeholder={s.mail.passwortGesetzt && !loeschen ? '••••••••' : ''} /></label>
-        <label className="eigenschaft"><span>Absender <small>z. B. DMS &lt;dms@example.org&gt;; leer = Benutzer</small></span><input value={m.absender} onChange={(e) => setze({ absender: e.target.value })} autoComplete="off" spellCheck={false} /></label>
+        <label className="eigenschaft"><span>Absender <small>z. B. Ablago &lt;dms@example.org&gt;; leer = Benutzer</small></span><input value={m.absender} onChange={(e) => setze({ absender: e.target.value })} autoComplete="off" spellCheck={false} /></label>
       </div>
       {s.mail.passwortGesetzt && <label className="haken"><input type="checkbox" checked={loeschen} onChange={(e) => { setLoeschen(e.target.checked); if (e.target.checked) setze({ passwort: '' }); }} /><span>Gespeichertes Passwort entfernen</span></label>}
       <label className="haken"><input type="checkbox" checked={m.selbstsigniert} onChange={(e) => setze({ selbstsigniert: e.target.checked })} />
@@ -122,7 +122,7 @@ function Mail({ b }: { b: BetriebZustand }) {
         ? <div className="hinweis warn"><p>Ein Passwort lässt sich erst speichern, wenn es einen Schlüssel gibt. <Link to="/werkbank/verschluesselung" className="verweis">Schlüssel unter „Verschlüsselung“ erzeugen</Link>.{s.mail.passwortUnverschluesselt ? ' Das bisher gespeicherte Passwort liegt noch unverschlüsselt in der Datenbank.' : ''}</p></div>
         : !s.mail.passwortLesbar
           ? <div className="hinweis schlecht"><p>Das gespeicherte Passwort wurde mit einem anderen, nicht mehr vorhandenen Schlüssel verschlüsselt und ist nicht lesbar. Bitte neu eingeben.</p></div>
-          : <p className="leise klein">Das Passwort wird verschlüsselt gespeichert. Den Schlüssel dazu hält das DMS in einer eigenen Datei, nicht in der Datenbank.</p>}
+          : <p className="leise klein">Das Passwort wird verschlüsselt gespeichert. Den Schlüssel dazu hält Ablago in einer eigenen Datei, nicht in der Datenbank.</p>}
 
       <h3 className="zwischen">Testen – mit den Werten oben, auch ungespeichert</h3>
       <div className="raster">

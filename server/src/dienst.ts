@@ -312,7 +312,7 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
 
 /** Wert eines Mehrfachverweises als Liste. */
 /** Post (#192): Beschreibung und Spalten der Standard-Trefferliste. */
-const POST_BESCHREIBUNG = 'Alles, was ins DMS kommt oder hinausgeht: Hochgeladenes, Scans, E-Mails. Von hier aus ordnest du es passenden Mappen zu.';
+const POST_BESCHREIBUNG = 'Alles, was in Ablago kommt oder hinausgeht: Hochgeladenes, Scans, E-Mails. Von hier aus ordnest du es passenden Mappen zu.';
 const POST_SPALTEN = ['datum', 'stand', 'kanal', 'absender'];
 
 const alsListe = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' && v ? [v] : []);
@@ -2650,7 +2650,7 @@ export class Dienst {
     const t = await this.repo.holeTyp(id);
     if (!t) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
     if (t.system) throw new Fachfehler(409, `„${t.name}“ ist ein Systemmappentyp. Er lässt sich erweitern, aber nicht löschen.`);
-    if (id === (await this.ablageortId())) throw new Fachfehler(409, `„${t.name}“ gehört zum Standard des DMS (Ablageorte für Originale). Er lässt sich erweitern und umbenennen, aber nicht löschen.`);
+    if (id === (await this.ablageortId())) throw new Fachfehler(409, `„${t.name}“ gehört zum Standard von Ablago (Ablageorte für Originale). Er lässt sich erweitern und umbenennen, aber nicht löschen.`);
     const gruende: string[] = [];
     const n = await this.repo.zaehleMappen(id);
     if (n) gruende.push(`${n} ${n === 1 ? 'Mappe gehört' : 'Mappen gehören'} zu diesem Typ.`);
@@ -4584,7 +4584,7 @@ export class Dienst {
     }
     if (!benutzer) {
       benutzer = await this.repo.legeTypAn(ids.benutzer, {
-        name: frei('Benutzer'), schluessel: sk('benutzer'), beschreibung: 'Die Benutzer dieses DMS; gepflegt in der Benutzerverwaltung', titelVorlage: '{name}',
+        name: frei('Benutzer'), schluessel: sk('benutzer'), beschreibung: 'Die Benutzer dieser Installation; gepflegt in der Benutzerverwaltung', titelVorlage: '{name}',
         felder: systemfelder('benutzer', rolle.id, ids.benutzer),
         register: [
           { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'email', 'rollen', 'aktiv', 'abwesend', 'abwesend_von', 'abwesend_bis', 'vertreter'] },
@@ -4664,10 +4664,10 @@ export class Dienst {
     const altName = t.name === 'E-Mail' || t.name === 'E-Mail (System)';
     const register = t.register.map((r) => (r.art === 'dokumente' && r.name === 'Anhänge' ? { ...r, name: 'Dokumente' } : r));
     const altListe = JSON.stringify(standardliste(t).spalten) === JSON.stringify(['datum', 'an', 'bezug']);
-    if (geaendert || altName || JSON.stringify(register) !== JSON.stringify(t.register) || altListe || t.beschreibung === 'Aus dem DMS verschickte E-Mails mit Anhängen') {
+    if (geaendert || altName || JSON.stringify(register) !== JSON.stringify(t.register) || altListe || t.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen') {
       const typen = await this.repo.listeTypen();
       const name = altName ? (typen.some((x) => x.id !== t.id && x.name.trim().toLowerCase() === 'post') ? 'Post (System)' : 'Post') : t.name;
-      const beschreibung = t.beschreibung === 'Aus dem DMS verschickte E-Mails mit Anhängen' ? POST_BESCHREIBUNG : t.beschreibung;
+      const beschreibung = t.beschreibung === 'Aus Ablago verschickte E-Mails mit Anhängen' ? POST_BESCHREIBUNG : t.beschreibung;
       const trefferlisten = altListe ? trefferlistenVon(t).map((l) => (l.standard ? { ...l, spalten: POST_SPALTEN } : l)) : trefferlistenVon(t);
       t = await this.repo.aendereTyp(t.id, { ...t, name, beschreibung, felder, register, trefferlisten, trefferliste: undefined });
       protokoll.modul('werkbank').info('Systemmappentyp Post nachgezogen', { typ: t.name });
@@ -4698,8 +4698,8 @@ export class Dienst {
       });
     }
     if (typSicht && !kinderVon(alle, typSicht.id).length) {
-      await this.repo.legeSichtAn(randomUUID(), { name: 'Eingegangen', beschreibung: 'Post, die ins DMS gekommen ist', elternId: typSicht.id, position: 10, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.eingehend) });
-      await this.repo.legeSichtAn(randomUUID(), { name: 'Versendet', beschreibung: 'Aus dem DMS verschickte E-Mails', elternId: typSicht.id, position: 20, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.ausgehend) });
+      await this.repo.legeSichtAn(randomUUID(), { name: 'Eingegangen', beschreibung: 'Post, die in Ablago gekommen ist', elternId: typSicht.id, position: 10, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.eingehend) });
+      await this.repo.legeSichtAn(randomUUID(), { name: 'Versendet', beschreibung: 'Aus Ablago verschickte E-Mails', elternId: typSicht.id, position: 20, typen: [post.id], bedingungen: bed('richtung', POST_RICHTUNG.ausgehend) });
     }
     await this.einstellungen?.schreibe('post', { sichten: true, neu: neu.id });
     protokoll.modul('werkbank').info('Ansichten für Post angelegt', { neu: neu.id });
@@ -5389,7 +5389,7 @@ export class Dienst {
   private async loeschKontext(von: string | null, anlass: Anlass = {}): Promise<LoeschKontext> {
     const a = liesAnlass({ grund: anlass.grund, text: anlass.text });
     const ausloeser: Ausloeser = anlass.ausloeser ?? (von ? 'benutzer' : 'automatisch');
-    return { vonId: von, von: von ? await this.name(von) : 'DMS', ausloeser, grund: a.grund ?? null, grundText: a.text ?? '' };
+    return { vonId: von, von: von ? await this.name(von) : 'Ablago', ausloeser, grund: a.grund ?? null, grundText: a.text ?? '' };
   }
 
   /** Lebende Mappen samt Dokumenten (aller Versionen) und Notizen – für Einträge vor dem Löschen. Demo-Mappen bleiben draußen. */
@@ -5517,7 +5517,7 @@ export class Dienst {
       f.grund && (f.grund === 'ohne' ? 'ohne Grund' : LOESCHGRUENDE[f.grund]), f.schritt && LOESCHSCHRITTE[f.schritt], f.vorgang && `Vorgang ${f.vorgang}`, f.suche && `Suche „${f.suche}“`].filter(Boolean).join(', ');
     const b = await schriftstueckPdf({
       titel: 'Löschprotokoll', untertitel: x.mandant, quer: true,
-      stand: `Erstellt am ${zeit(new Date().toISOString())} von ${x.von} · DMS ${x.version} · ${eintraege.length}${gesamt > eintraege.length ? ` von ${gesamt}` : ''} Einträge${filter ? ` · Filter: ${filter}` : ''}`,
+      stand: `Erstellt am ${zeit(new Date().toISOString())} von ${x.von} · Ablago ${x.version} · ${eintraege.length}${gesamt > eintraege.length ? ` von ${gesamt}` : ''} Einträge${filter ? ` · Filter: ${filter}` : ''}`,
       vorbemerkung: 'Nachweis über gelöschte Mappen und Dokumente (Art. 5 Abs. 2 DSGVO). Das Löschprotokoll enthält keine Titel, Feldwerte oder Dateinamen; Dokumente sind über ihre Prüfsumme (SHA-256) wiedererkennbar. Es lässt sich nicht ändern.',
       abschnitte: [{ titel: 'Einträge', bloecke: [{ art: 'tabelle', breiten: [0.9, 0.85, 0.95, 0.8, 1.6, 2.1, 0.9, 1.0, 1.1], kopf: ['Zeit', 'Schritt', 'Mappentyp · Nummer', 'Wie', 'Mappe / Dokument', 'Inhalt', 'Von', 'Grund', 'Vorgang'],
         zeilen: eintraege.map((e) => [
@@ -7050,7 +7050,7 @@ export class Dienst {
     if (e.fehler.length) throw new Fachfehler(422, e.fehler.join(' '));
     if (e.senden && !x.mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse). Kopiere den Link und schicke ihn selbst.');
     if (e.senden && !istEmail(e.an)) throw new Fachfehler(422, 'Bitte eine gültige E-Mail-Adresse für den Link angeben.');
-    if (!x.adresse) throw new Fachfehler(409, 'Die Adresse des DMS ist nicht bekannt (Werkbank → E-Mail und Adresse).');
+    if (!x.adresse) throw new Fachfehler(409, 'Die Adresse von Ablago ist nicht bekannt (Werkbank → E-Mail und Adresse).');
     for (const alt of await this.repo.auskunftLinks({ auskunftId: stand.id })) {
       if (linkStatus(alt) === 'aktiv' && (await this.repo.widerrufeAuskunftLink(alt.id))) await this.notiere(alt.mappeId, ich.id, 'auskunft', { text: 'Abruf-Link zurückgezogen (ersetzt durch einen neuen)', zustellung: 'link', link: alt.id, auskunft: stand.id });
     }

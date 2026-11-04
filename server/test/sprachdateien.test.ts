@@ -84,10 +84,10 @@ describe('Sprachdateien (#473)', () => {
 
   it('Pilot Anmeldung: Mails des Servers wie bisher, Mehrzahl in der Dauer', () => {
     const z1 = mailtexte.zuruecksetzen('', 'lena@example.org', 'https://dms/passwort/x', 1);
-    assert.equal(z1.betreff, 'Passwort für das DMS zurücksetzen');
-    assert.equal(z1.text, 'Hallo lena@example.org,\n\nfür deinen Zugang zum DMS wurde ein neues Passwort angefordert.\n\nLege hier ein neues Passwort fest (der Link ist 1 Stunde gültig und funktioniert nur einmal):\nhttps://dms/passwort/x\n\nFalls du das nicht warst, kannst du diese Nachricht ignorieren. Dein bisheriges Passwort bleibt dann gültig.\n');
+    assert.equal(z1.betreff, 'Passwort für Ablago zurücksetzen');
+    assert.equal(z1.text, 'Hallo lena@example.org,\n\nfür deinen Zugang zu Ablago wurde ein neues Passwort angefordert.\n\nLege hier ein neues Passwort fest (der Link ist 1 Stunde gültig und funktioniert nur einmal):\nhttps://dms/passwort/x\n\nFalls du das nicht warst, kannst du diese Nachricht ignorieren. Dein bisheriges Passwort bleibt dann gültig.\n');
     assert.match(mailtexte.zuruecksetzen('', 'x@y', 'l', 2).text, /der Link ist 2 Stunden gültig/);
-    assert.match(mailtexte.einladung('Lena', 'x@y', 'l', 7).text, /^Hallo Lena,\n\nfür dich wurde ein Zugang zum DMS angelegt\.\n\nAnmeldung mit: x@y\n\nLege hier dein Passwort fest \(der Link ist 7 Tage gültig/);
+    assert.match(mailtexte.einladung('Lena', 'x@y', 'l', 7).text, /^Hallo Lena,\n\nfür dich wurde ein Zugang zu Ablago angelegt\.\n\nAnmeldung mit: x@y\n\nLege hier dein Passwort fest \(der Link ist 7 Tage gültig/);
   });
 
   it('Texte für Dritte (#474) passen ins neue Format: Mehrzahl beim Abruf-Link', () => {

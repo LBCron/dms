@@ -211,7 +211,7 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
       {!selbst && b.aktiv && (
         <div className="blatt">
           <h2 className="h3">Fehler nachstellen</h2>
-          <p className="leise">Du siehst und bedienst das DMS dann genau so wie {b.name || b.email}, mit den Rechten dieses Kontos. Oben steht die ganze Zeit ein Warnhinweis mit dem Weg zurück. {b.name || b.email} erfährt bei der nächsten Anmeldung, dass und wann du unter diesem Konto gearbeitet hast.</p>
+          <p className="leise">Du siehst und bedienst Ablago dann genau so wie {b.name || b.email}, mit den Rechten dieses Kontos. Oben steht die ganze Zeit ein Warnhinweis mit dem Weg zurück. {b.name || b.email} erfährt bei der nächsten Anmeldung, dass und wann du unter diesem Konto gearbeitet hast.</p>
           <div className="knoepfe"><button className="knopf" onClick={async () => {
             if (await rueckfrage({ titel: `Als ${b.name || b.email} anmelden?`, text: 'Deine eigene Sitzung endet dabei; zurück geht es über den Warnhinweis oben.', ja: 'Anmelden' })) {
               void aktion(async () => { await api.vertreten(b.id); geheZu('/ablage', true); await aktualisieren(); });

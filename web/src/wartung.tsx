@@ -83,7 +83,7 @@ export function WartungsHinweis({ start }: { start?: WartungOeffentlich | null }
   if (!stand || stand.stufe === 'aus') return null;
   return (
     <div className="hinweis warn stapel" role="status">
-      <p><strong>{stand.stufe === 'aktiv' ? 'Das DMS wird gerade gewartet.' : 'Gleich beginnt eine Wartung.'}</strong> Anmelden können sich {stand.stufe === 'aktiv' ? 'nur' : 'bis dahin nur noch'} Administratoren.</p>
+      <p><strong>{stand.stufe === 'aktiv' ? 'Ablago wird gerade gewartet.' : 'Gleich beginnt eine Wartung.'}</strong> Anmelden können sich {stand.stufe === 'aktiv' ? 'nur' : 'bis dahin nur noch'} Administratoren.</p>
       {(stand.text || stand.ende) && <p>{stand.text}{stand.text && stand.ende ? ' – ' : ''}{stand.ende && <>voraussichtlich bis {zeitpunkt(stand.ende)} Uhr</>}</p>}
     </div>
   );

@@ -1,6 +1,6 @@
 # Aufgaben
 
-Eine **Aufgabe** sagt, dass an einer Mappe jemand etwas tun soll. Jede Mappe mit einer offenen Aufgabe steht bei ihrem Empfänger unter **Zu erledigen** – „Zu erledigen“ ist damit die Liste der eigenen Aufgaben. Wie Benutzer damit arbeiten, beschreibt das [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/zusammenarbeit/).
+Eine **Aufgabe** sagt, dass an einer Mappe jemand etwas tun soll. Jede Mappe mit einer offenen Aufgabe steht bei ihrem Empfänger unter **Zu erledigen** – „Zu erledigen“ ist damit die Liste der eigenen Aufgaben. Wie Benutzer damit arbeiten, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/zusammenarbeit/).
 
 Aufgaben entstehen auf diesen Wegen:
 
@@ -12,13 +12,13 @@ Aufgaben entstehen auf diesen Wegen:
 | **Frist** | vor dem Datum eines Datumsfelds mit [Erinnerung](mappentypen.md#fristen-erinnerungen-an-datumsfeldern) | Benutzer im gewählten Feld, sonst wer die Mappe angelegt hat | per Knopf *Erledigt*, oder von selbst, wenn sich das Datum ändert |
 | **Erinnerung** | am gewählten Tag nach *Mappe ▾ →* **Erinnern** an der Mappe | der gewählte Benutzer | per Knopf *Erledigt* |
 | **Vertretung** | wenn für einen Benutzer eine [Abwesenheit](benutzer.md#abwesenheit) mit Vertreter eingetragen wird | der Vertreter; die Aufgabe hängt an der Benutzer-Mappe des Abwesenden | von selbst, sobald die Abwesenheit endet oder sich Zeitraum oder Vertreter ändern; oder per Knopf *Erledigt* |
-| **Post für dich** | wenn bei neuer [Post](https://motom001.github.io/dms/benutzer/aktuell/post/) ein Benutzer unter *Für* steht | der Benutzer bei *Für* | von selbst, sobald die Post zugeordnet, erledigt oder weitergegeben ist |
+| **Post für dich** | wenn bei neuer [Post](https://help.ablago.app/benutzer/aktuell/post/) ein Benutzer unter *Für* steht | der Benutzer bei *Für* | von selbst, sobald die Post zugeordnet, erledigt oder weitergegeben ist |
 | **Auskunft** | wenn eine Person ihre [Auskunft](datenschutz.md#auskunft-zustellen) über den Abruf-Link heruntergeladen hat oder der Link nach Fehlversuchen gesperrt wurde | wer den Link bzw. die Auskunft erstellt hat und wer die Mappe der Person als Favorit hat (sofern die Benachrichtigung für den Favoriten an ist) | per Knopf *Erledigt*; solange sie offen ist, kommt für denselben Link keine zweite |
-| **Geändert** | wenn jemand eine Mappe ändert, die andere als Favorit haben ([Favorit = Abo](https://motom001.github.io/dms/benutzer/aktuell/ablage/#favoriten-als-abo)) | wer die Mappe als Favorit hat, lesen darf und die Benachrichtigung nicht abgeschaltet hat – nie der, der geändert hat | von selbst beim Öffnen der Mappe, oder per Knopf *Erledigt*; bis dahin zählt sie nur hoch |
+| **Geändert** | wenn jemand eine Mappe ändert, die andere als Favorit haben ([Favorit = Abo](https://help.ablago.app/benutzer/aktuell/ablage/#favoriten-als-abo)) | wer die Mappe als Favorit hat, lesen darf und die Benachrichtigung nicht abgeschaltet hat – nie der, der geändert hat | von selbst beim Öffnen der Mappe, oder per Knopf *Erledigt*; bis dahin zählt sie nur hoch |
 
 - Empfänger sind immer **Benutzer**, keine Rollen – eine Aufgabe für alle bleibt sonst gern liegen.
 - Wer sich selbst erwähnt, bekommt keine Aufgabe; erneutes Speichern erzeugt keine zweite. Wird eine Erwähnung wieder entfernt, bleibt die Aufgabe offen; in der Historie der Mappe steht, dass sie entfernt wurde.
-- **Weitergeben** dürfen der Empfänger selbst und Administratoren; das steht in der Historie der Mappe. Mehrere auf einmal gehen in [Werkbank → Benachrichtigungen und Aufgaben](#mehrere-aufgaben-auf-einmal-weitergeben) und für die eigenen unter Profil → [Abwesenheit](https://motom001.github.io/dms/benutzer/aktuell/profil/#abwesenheit).
+- **Weitergeben** dürfen der Empfänger selbst und Administratoren; das steht in der Historie der Mappe. Mehrere auf einmal gehen in [Werkbank → Benachrichtigungen und Aufgaben](#mehrere-aufgaben-auf-einmal-weitergeben) und für die eigenen unter Profil → [Abwesenheit](https://help.ablago.app/benutzer/aktuell/profil/#abwesenheit).
 
 ## Werkbank → Benachrichtigungen und Aufgaben { #werkbank-aufgaben }
 
@@ -55,19 +55,19 @@ Ging eine Frist oder Erinnerung an jemanden, der die Mappe nach den [Berechtigun
 
 ## Tägliche Zusammenfassung
 
-Statt bei jeder neuen Aufgabe eine E-Mail zu schicken, verschickt das DMS **einmal am Tag** eine Übersicht an jeden, der offene Aufgaben hat – mit Links zu den Mappen.
+Statt bei jeder neuen Aufgabe eine E-Mail zu schicken, verschickt Ablago **einmal am Tag** eine Übersicht an jeden, der offene Aufgaben hat – mit Links zu den Mappen.
 
 - Oben in der Mitte stellst du ein, ob sie verschickt wird, und die **Standard-Uhrzeit** (deutsche Zeit). Standard: an, 7:00 Uhr.
-- Den Abschnitt kannst du mit einem Klick auf die Überschrift **zuklappen**; das DMS merkt sich das für dich. Zugeklappt steht daneben der Stand (z. B. „Standard 07:00 · an“) – und darunter die Warnung, wenn die Zusammenfassung nicht verschickt werden kann, weil der E-Mail-Versand aus ist.
+- Den Abschnitt kannst du mit einem Klick auf die Überschrift **zuklappen**; Ablago merkt sich das für dich. Zugeklappt steht daneben der Stand (z. B. „Standard 07:00 · an“) – und darunter die Warnung, wenn die Zusammenfassung nicht verschickt werden kann, weil der E-Mail-Versand aus ist.
 - **Jeder Benutzer** wählt in seinem **Profil** eine eigene Uhrzeit (im 15-Minuten-Raster) und die **Wochentage**; ohne eigene Wahl gelten die Standard-Uhrzeit und **Montag bis Freitag**. Änderst du die Standard-Uhrzeit, gilt sie für alle ohne eigene Uhrzeit. Abbestellen kann er sie dort auch.
-- Die Mail kommt höchstens einmal am Tag, frühestens zur gewählten Uhrzeit. War das DMS zu dieser Zeit aus, kommt sie nach dem Start noch am selben Tag; am nächsten Tag wird nichts nachgeholt. Wer abwesend ist oder nichts offen hat, bekommt keine.
-- **Bundesland** – damit niemand an gesetzlichen Feiertagen eine Zusammenfassung bekommt (jeder kann das im Profil abwählen). Das DMS berechnet die Feiertage selbst: die bundesweiten und die landesweiten des gewählten Landes, Ostern und die davon abhängigen Tage nach der Gaußschen Osterformel. Feiertage, die nur in einzelnen Gemeinden gelten – etwa Mariä Himmelfahrt in Teilen Bayerns oder das Augsburger Friedensfest –, und einmalige Feiertage werden nicht berücksichtigt. *Keins* schaltet das ab.
+- Die Mail kommt höchstens einmal am Tag, frühestens zur gewählten Uhrzeit. War Ablago zu dieser Zeit aus, kommt sie nach dem Start noch am selben Tag; am nächsten Tag wird nichts nachgeholt. Wer abwesend ist oder nichts offen hat, bekommt keine.
+- **Bundesland** – damit niemand an gesetzlichen Feiertagen eine Zusammenfassung bekommt (jeder kann das im Profil abwählen). Ablago berechnet die Feiertage selbst: die bundesweiten und die landesweiten des gewählten Landes, Ostern und die davon abhängigen Tage nach der Gaußschen Osterformel. Feiertage, die nur in einzelnen Gemeinden gelten – etwa Mariä Himmelfahrt in Teilen Bayerns oder das Augsburger Friedensfest –, und einmalige Feiertage werden nicht berücksichtigt. *Keins* schaltet das ab.
 - **Jetzt senden** verschickt sie sofort an alle mit offenen Aufgaben – unabhängig von Uhrzeit, Wochentag und Feiertag, z. B. zum Ausprobieren.
 - Voraussetzung ist der eingerichtete [E-Mail-Versand](installation.md#e-mail-und-adresse). Ist er aus, steht im Abschnitt „E-Mail-Versand ist ausgeschaltet – es wird nichts verschickt“ mit **E-Mail einrichten**.
 
 ## Favoriten benachrichtigen
 
-Wer eine Mappe als **Favorit** markiert, bekommt eine Benachrichtigung „Geändert“ unter *Zu erledigen*, wenn jemand anderes sie ändert (siehe Benutzerhandbuch, [Favoriten als Abo](https://motom001.github.io/dms/benutzer/aktuell/ablage/#favoriten-als-abo)). Unter der Täglichen Zusammenfassung legst du fest, für wen es das gibt:
+Wer eine Mappe als **Favorit** markiert, bekommt eine Benachrichtigung „Geändert“ unter *Zu erledigen*, wenn jemand anderes sie ändert (siehe Benutzerhandbuch, [Favoriten als Abo](https://help.ablago.app/benutzer/aktuell/ablage/#favoriten-als-abo)). Unter der Täglichen Zusammenfassung legst du fest, für wen es das gibt:
 
 - **Erlaubt** – *für alle* (Standard), *nur für bestimmte Rollen* oder *für niemanden*.
 - **Nur für bestimmte Rollen:** oben die Systemrollen **Administrator** und **Mitglied**, darunter die weiteren Rollen aus der [Benutzerverwaltung](benutzer.md). Ein Benutzer bekommt die Benachrichtigung, wenn er mindestens eine der gewählten Rollen hat. Mindestens eine Rolle muss gewählt sein.

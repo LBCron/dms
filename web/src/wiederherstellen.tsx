@@ -62,10 +62,10 @@ export function Wiederherstellungsbildschirm({ fertig }: { fertig: () => void })
           </>
         ) : (
           <>
-            <p>Sicherung <strong>{lauf?.sicherung ?? '…'}</strong>. Bitte lass dieses Fenster offen; das DMS startet am Ende einmal neu.</p>
+            <p>Sicherung <strong>{lauf?.sicherung ?? '…'}</strong>. Bitte lass dieses Fenster offen; Ablago startet am Ende einmal neu.</p>
             <progress max={lauf?.schritte.length ?? 1} value={erledigt} />
             {weg || lauf?.status === 'neustart'
-              ? <p className="leise">Das DMS startet neu … gleich geht es weiter.</p>
+              ? <p className="leise">Ablago startet neu … gleich geht es weiter.</p>
               : prozent !== null && <p className="leise klein">Aktueller Schritt: {prozent} %</p>}
             {lauf && <Schritte schritte={lauf.schritte} />}
           </>
@@ -98,7 +98,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
   }
   async function starten() {
     if (!abgleich) return;
-    if (!frisch && !(await rueckfrage({ titel: 'Wirklich wiederherstellen?', text: 'Der jetzige Stand des DMS wird durch die Sicherung ersetzt. Vorher wird er selbst gesichert.', ja: 'Wiederherstellen', gefahr: true, bestaetigeMit: 'wiederherstellen' }))) return;
+    if (!frisch && !(await rueckfrage({ titel: 'Wirklich wiederherstellen?', text: 'Der jetzige Stand von Ablago wird durch die Sicherung ersetzt. Vorher wird er selbst gesichert.', ja: 'Wiederherstellen', gefahr: true, bestaetigeMit: 'wiederherstellen' }))) return;
     setLaeuft(true); setFehler(undefined);
     try { await api.whStart({ name: abgleich.name, ...(schluessel.trim() ? { schluessel } : {}), bestaetigt: !frisch && verstanden }); gestartet(); }
     catch (e) { setFehler((e as Error).message); setLaeuft(false); }
@@ -119,7 +119,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
             <li key={x.name}>
               <label className="haken">
                 <input type="radio" name="sicherung" checked={gewaehlt === x.name} onChange={() => { setSchluessel(''); void waehle(x.name); }} />
-                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> · {ART[x.meta.art] ?? x.meta.art} · DMS {x.meta.umgebung.dms} · {x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen · {groesse(x.bytes)}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> – Metadaten (.json) fehlen</span>}</span>
+                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> · {ART[x.meta.art] ?? x.meta.art} · Ablago {x.meta.umgebung.dms} · {x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen · {groesse(x.bytes)}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> – Metadaten (.json) fehlen</span>}</span>
               </label>
             </li>
           ))}
@@ -130,7 +130,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
         <>
           <h3 className="h3">Abgleich: damals ↔ heute</h3>
           {abgleich.vergleich.length > 0 && <div className="trefferliste"><table>
-            <thead><tr><th /><th>In der Sicherung</th><th>Dieses DMS</th><th /></tr></thead>
+            <thead><tr><th /><th>In der Sicherung</th><th>Diese Installation</th><th /></tr></thead>
             <tbody>{abgleich.vergleich.map((v) => (
               <tr key={v.was}><th>{v.was}</th><td className="mono">{v.damals}</td><td className="mono">{v.heute}</td>
                 <td><span className={`chip ${v.urteil === 'fehler' ? 'schlecht' : v.urteil === 'hinweis' ? 'warn' : 'gut'}`}>{v.urteil === 'gleich' ? 'gleich' : v.urteil === 'ok' ? 'passt' : v.urteil === 'hinweis' ? 'Hinweis' : 'geht nicht'}</span>{v.info && <span className="leise klein"> {v.info}</span>}</td></tr>
@@ -147,7 +147,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
           )}
           {!frisch && (
             <label className="haken"><input type="checkbox" checked={verstanden} onChange={(e) => setVerstanden(e.target.checked)} />
-              <span>Mir ist klar: Der jetzige Stand wird durch die Sicherung ersetzt. Vorher sichert das DMS ihn selbst; Änderungen seit der Sicherung sind danach nur noch in dieser Sicherung.</span></label>
+              <span>Mir ist klar: Der jetzige Stand wird durch die Sicherung ersetzt. Vorher sichert Ablago ihn selbst; Änderungen seit der Sicherung sind danach nur noch in dieser Sicherung.</span></label>
           )}
           <div className="knoepfe">
             <button className="knopf primaer" disabled={!startbar} onClick={() => void starten()}>{laeuft ? 'Starte …' : 'Wiederherstellen'}</button>

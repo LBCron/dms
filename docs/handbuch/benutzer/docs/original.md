@@ -1,6 +1,6 @@
 # Original behalten oder vernichten?
 
-Du hast ein Papier eingescannt und im DMS abgelegt. Darf das Original jetzt weg? Oft ja, manchmal besser nicht. Diese Seite hilft dir bei der Entscheidung.
+Du hast ein Papier eingescannt und in Ablago abgelegt. Darf das Original jetzt weg? Oft ja, manchmal besser nicht. Diese Seite hilft dir bei der Entscheidung.
 
 !!! warning "Keine Rechts- oder Steuerberatung"
     Hier stehen Faustregeln für einen privaten Haushalt. Im Einzelfall, besonders bei Streit, Erbe, Steuer oder Firma, frag bitte eine Beratungsstelle, deinen Steuerberater oder einen Anwalt.
@@ -48,13 +48,13 @@ Deshalb gilt: **Im Zweifel behalten.** Mit der [Kiste je Jahr](#die-kiste-je-jah
 
 - **Rechnungen von Handwerkern an Haus oder Wohnung** musst du als Privatperson **zwei Jahre** aufbewahren ([§ 14b UStG](https://www.gesetze-im-internet.de/ustg_1980/__14b.html)). Die Frist beginnt mit dem Ende des Jahres, in dem die Rechnung ausgestellt wurde. Erlaubt sind die Rechnung, ein Zahlungsbeleg oder eine andere beweiskräftige Unterlage. Lege deshalb **Scan und Kontoauszug zusammen** in derselben Mappe ab. Bei Mängeln am Bau gilt meist eine Verjährung von fünf Jahren. Die Landesarchive empfehlen Eigentümern und privaten Vermietern deshalb, Handwerkerrechnungen **sechs Jahre** aufzuheben. Mit der [Kiste je Jahr](#die-kiste-je-jahr) kostet das kaum etwas.
 - **Garantie und Gewährleistung:** Manche Hersteller verlangen für die Garantie den **Original-Kaufbeleg**. Heb ihn für die Gewährleistung mindestens zwei Jahre auf, bei längerer Garantie entsprechend länger.
-- **Vor dem Vernichten die Sicherung prüfen.** Ein Scan nützt nur, wenn er nicht mit der Festplatte verloren geht. Frag deinen Administrator, ob die [Sicherung des DMS](https://motom001.github.io/dms/admin/aktuell/sicherung/) läuft und wann sie zuletzt geprüft wurde.
+- **Vor dem Vernichten die Sicherung prüfen.** Ein Scan nützt nur, wenn er nicht mit der Festplatte verloren geht. Frag deinen Administrator, ob die [Sicherung von Ablago](https://help.ablago.app/admin/aktuell/sicherung/) läuft und wann sie zuletzt geprüft wurde.
 
-## Auch wenn du das Original behältst – das DMS hilft
+## Auch wenn du das Original behältst – Ablago hilft { #auch-wenn-du-das-original-behaltst-das-dms-hilft }
 
 ### Originale sicher wegschließen
 
-Was im Original bleiben muss, also Urkunden, Reisepass, notarielle Verträge, Fahrzeugbrief, Sparbücher, kann in ein **Bankschließfach** oder einen feuerfesten Dokumententresor. Dort ist es vor Brand, Wasser und Einbruch geschützt. Den Inhalt kannst du trotzdem jederzeit im DMS lesen.
+Was im Original bleiben muss, also Urkunden, Reisepass, notarielle Verträge, Fahrzeugbrief, Sparbücher, kann in ein **Bankschließfach** oder einen feuerfesten Dokumententresor. Dort ist es vor Brand, Wasser und Einbruch geschützt. Den Inhalt kannst du trotzdem jederzeit in Ablago lesen.
 
 - Was du im Alltag brauchst, zum Beispiel Personalausweis und Führerschein, bleibt natürlich zu Hause.
 - **Nicht ins Schließfach** gehört, was im Notfall sofort gebraucht wird: Vorsorgevollmacht, Patientenverfügung, Betreuungsverfügung. An das Schließfach kommt man nur zu den Öffnungszeiten der Bank und ohne Vollmacht gar nicht.
@@ -64,15 +64,15 @@ Was im Original bleiben muss, also Urkunden, Reisepass, notarielle Verträge, Fa
 
 Für Papiere, die du nur eine Zeit lang aufheben musst, brauchst du keinen Ordner. Das sind zum Beispiel Handwerkerrechnungen (zwei Jahre) oder Kaufbelege für die Gewährleistung.
 
-1. Einscannen und im DMS ablegen.
+1. Einscannen und in Ablago ablegen.
 2. Das Papier einfach der Reihe nach in eine **Kiste mit der Jahreszahl** legen, zum Beispiel „Kiste 2026“.
 3. Ist die Frist für alles darin vorbei, kommt die Kiste als Ganzes weg. Nach der gesetzlichen Frist dürften Handwerkerrechnungen aus „Kiste 2026“ also Ende 2028 weg; wer der Empfehlung der Archive folgt, wartet bis Ende 2032. Bitte schreddern oder zu einer Aktenvernichtung bringen, denn darin stehen persönliche Daten.
 
-Brauchst du doch einmal ein Original, findest du es im DMS. Am Datum siehst du, in welcher Kiste es liegt.
+Brauchst du doch einmal ein Original, findest du es in Ablago. Am Datum siehst du, in welcher Kiste es liegt.
 
 ### Festhalten, wo das Original liegt
 
-Jedes DMS hat die Ansicht **Ablageort**. Ein Ablageort ist eine kleine Mappe für einen Platz, an dem Papier liegt – und er kann in einem anderen liegen: „zu Hause › Arbeitszimmer Schrank › roter Ordner“, „Kiste 2026“, „Bankschließfach Sparkasse“, „beim Notar“ oder einfach „vernichtet“.
+Jede Ablago-Installation hat die Ansicht **Ablageort**. Ein Ablageort ist eine kleine Mappe für einen Platz, an dem Papier liegt – und er kann in einem anderen liegen: „zu Hause › Arbeitszimmer Schrank › roter Ordner“, „Kiste 2026“, „Bankschließfach Sparkasse“, „beim Notar“ oder einfach „vernichtet“.
 
 1. In der Ansicht *Ablageort* mit **+ Neu** einen Ort anlegen: *Name* eintragen und bei *Liegt in* den Ort wählen, in dem er liegt (z. B. der Schrank für den Ordner). Ganz oben bleibt *Liegt in* leer.
 2. In der Mappe, deren Papier du aufhebst, im Feld **Verbleib Originaldokumente** den Ort wählen – sofern dein Administrator das Feld eingerichtet hat.
@@ -85,7 +85,7 @@ Am Ablageort selbst zeigt das Register **Liegt hier**, welche Mappen dort liegen
 !!! note "Hier gelten strengere Regeln"
     Wer ein Gewerbe hat oder freiberuflich arbeitet, muss Belege meist **acht oder zehn Jahre** aufbewahren und darf Papier nur nach einem **festgelegten Ablauf** vernichten (GoBD). Bei vielen Belegen geht es dann nicht mehr um das einzelne Blatt, sondern um den Ablauf: Wer scannt, wie wird geprüft, wann wird vernichtet? Große Firmen orientieren sich dafür oft an der Technischen Richtlinie *TR-RESISCAN* des BSI.
 
-    Im DMS helfen dabei der [Archivmodus](https://motom001.github.io/dms/admin/aktuell/archiv/) und die [Vorlage Verfahrensdokumentation](https://motom001.github.io/dms/admin/aktuell/verfahrensdokumentation/). Sprich den Ablauf auf jeden Fall mit deinem Steuerberater ab.
+    In Ablago helfen dabei der [Archivmodus](https://help.ablago.app/admin/aktuell/archiv/) und die [Vorlage Verfahrensdokumentation](https://help.ablago.app/admin/aktuell/verfahrensdokumentation/). Sprich den Ablauf auf jeden Fall mit deinem Steuerberater ab.
 
 ## Quellen
 

@@ -408,7 +408,7 @@ describe('Erkannte Post automatisch zuordnen (#337)', () => {
     // Mit Vertragsnummer im Text: genau dieser Vertrag.
     const p2 = await post(`${BRIEF}\nVertragsnummer GV-998877`, 'Mit Nummer');
     assert.deepEqual((await d.holeMappe(p2.id)).mappe.werte.bezug, [gas.id]);
-    assert.equal((await d.holeMappe(p2.id)).aufgaben.find((a) => a.art === 'zugeordnet')?.empfaengerId, anna.id, 'ohne „Für“: wer die Post ins DMS gebracht hat');
+    assert.equal((await d.holeMappe(p2.id)).aufgaben.find((a) => a.art === 'zugeordnet')?.empfaengerId, anna.id, 'ohne „Für“: wer die Post in Ablago gebracht hat');
     // Empfänger Ben darf Verträge nicht lesen → nicht automatisch.
     await d.setzeBerechtigungen(vertrag.id, { grund: { ...NICHTS }, regeln: [] }, true);
     const p3 = await d.legePostAn({ betreff: 'Für Ben', fuer: ben.id }, { id: anna.id, name: 'Anna' }, await d.zugriff(A));

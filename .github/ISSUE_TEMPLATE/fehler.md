@@ -14,7 +14,7 @@ labels: bug
      Für die Eltern sorgen, Vermieter, Selbständige, Kleinbetrieb, Mittelstand, Großunternehmen.
      Which audience is it for? One or more: beginner family, family member, household admin,
      caring for parents, landlord, self-employed, small business, mid-sized company, large enterprise.
-     Die Personas · The personas (German): https://motom001.github.io/dms/entwickler/aktuell/personas/ -->
+     Die Personas · The personas (German): https://help.ablago.app/entwickler/aktuell/personas/ -->
 
 ### Was passiert · What happens
 <!-- Schritte zum Nachstellen, was du erwartet hast, was stattdessen passiert ist, Meldung oder Bildschirmfoto.

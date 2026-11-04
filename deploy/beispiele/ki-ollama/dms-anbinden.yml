@@ -1,13 +1,13 @@
-# Ergänzung für das Compose-Projekt des DMS (#564): hängt das DMS in das Netz dms-ki des KI-Dienstes.
-# Danach trägst du im DMS als Dienst-Adresse des Pakets „KI-Assistent“ ein: http://ollama:11434/v1
+# Ergänzung für das Compose-Projekt von Ablago (#564): hängt Ablago in das Netz dms-ki des KI-Dienstes.
+# Danach trägst du in Ablago als Dienst-Adresse des Pakets „KI-Assistent“ ein: http://ollama:11434/v1
 #
 # Zwei Wege:
-#   - Kommandozeile, neben der Compose-Datei des DMS:
+#   - Kommandozeile, neben der Compose-Datei von Ablago:
 #       docker compose -f docker-compose.yml -f /pfad/zu/ki-ollama/dms-anbinden.yml up -d
 #   - Oberfläche des NAS (z. B. UGREEN Docker → Projekt): die Zeilen unten von Hand in die Compose-Datei
-#     des DMS übernehmen – „networks“ unter den Dienst „app“, den Block „networks:“ ganz ans Ende.
+#     von Ablago übernehmen – „networks“ unter den Dienst „app“, den Block „networks:“ ganz ans Ende.
 #
-# Den KI-Dienst zuerst starten: Er legt das Netz dms-ki an. Fehlt es, startet das DMS nicht
+# Den KI-Dienst zuerst starten: Er legt das Netz dms-ki an. Fehlt es, startet Ablago nicht
 # („network dms-ki declared as external, but could not be found“).
 #
 # Der Dienst heißt in den Vorlagen deploy/nas, synology, ugreen, qnap, truenas und unraid „app“,

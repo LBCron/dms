@@ -1,8 +1,8 @@
 # Für wen wir bauen
 
-Das DMS soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Begriffe, Voreinstellungen und neue Funktionen zusammenpassen, richten wir uns nach **neun Personas**: erfundene, aber typische Menschen, vom kleinen Haushalt bis zum Konzern. Die Namen sind nur Merkhilfen.
+Ablago soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Begriffe, Voreinstellungen und neue Funktionen zusammenpassen, richten wir uns nach **neun Personas**: erfundene, aber typische Menschen, vom kleinen Haushalt bis zum Konzern. Die Namen sind nur Merkhilfen.
 
-**Stand:** 31.10.2026 (DMS 0.73.6). Der Fokus ist eine bewusste Entscheidung des Maintainers. Er kann sich verschieben, zum Beispiel in Richtung Kleinbetrieb, und wird regelmäßig geprüft. Änderungen stehen unten unter [Fokus-Entscheidungen](#fokus-entscheidungen).
+**Stand:** 31.10.2026 (Ablago 0.73.6). Der Fokus ist eine bewusste Entscheidung des Maintainers. Er kann sich verschieben, zum Beispiel in Richtung Kleinbetrieb, und wird regelmäßig geprüft. Änderungen stehen unten unter [Fokus-Entscheidungen](#fokus-entscheidungen).
 
 ## Die Skala
 
@@ -29,9 +29,9 @@ Das DMS soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Be
 
 **Warum dieser Schnitt?**
 
-- Das DMS ist als **Haushalts-DMS** entstanden: Mappen statt Ordner, Sicherung mit Notfallblatt, Installation über die App-Stores von Heimservern.
+- Ablago ist als **Haushalts-DMS** entstanden: Mappen statt Ordner, Sicherung mit Notfallblatt, Installation über die App-Stores von Heimservern.
 - Für Kleinbetriebe gibt es schon einiges (Archivmodus, Vorlage Verfahrensdokumentation, Zwei-Faktor, Anmeldung über einen Anbieter, Konsole). Das soll nutzbar sein, aber **nicht die Richtung bestimmen**.
-- Mittelstand und Konzern setzen Dinge voraus, die das DMS heute nicht hat. Viele davon würden die Einrichtung für Stufe 1 schwerer machen.
+- Mittelstand und Konzern setzen Dinge voraus, die Ablago heute nicht hat. Viele davon würden die Einrichtung für Stufe 1 schwerer machen.
 
 ## Die Entscheidungsregel
 
@@ -68,7 +68,7 @@ Jedes Issue bekommt ein oder mehrere **Labels mit dem Namen der Zielgruppe**: `E
 - **Typische Aufgaben:** Post fotografieren und zuordnen, eine Mappe für einen Vertrag anlegen, nach „Waschmaschine“ suchen, an eine Kündigungsfrist erinnern lassen, die Sicherung einschalten.
 - **Stolpersteine:** Fachwörter, zu viele Einstellungen, die Frage „Was muss ich überhaupt einrichten?“, Angst, Daten zu verlieren.
 - **Braucht:** fertige Pakete statt leerer Werkbank, gute Voreinstellungen, eine Einrichtung in wenigen Schritten, Hilfe mit Bildern, eine Sicherung, die einfach läuft.
-- **Erfolg:** Nach einer Stunde liegt die erste Mappe mit Dokument im DMS, die Sicherung läuft, und Lena musste nichts nachschlagen.
+- **Erfolg:** Nach einer Stunde liegt die erste Mappe mit Dokument in Ablago, die Sicherung läuft, und Lena musste nichts nachschlagen.
 
 Lena **administriert selbst**: Sie ist Einsteigerin und Administratorin zugleich.
 
@@ -92,7 +92,7 @@ Lena **administriert selbst**: Sie ist Einsteigerin und Administratorin zugleich
 - **Stolpersteine:** versteckte Einstellungen, fehlende Technik-Doku, Updates, die etwas ändern, ohne es zu sagen.
 - **Braucht:** Expertenmodus, Administratorhandbuch, API und Konsole, Release-Notizen, Vollexport.
 
-Markus richtet das DMS **für Lena und Jonas** ein. Was er baut, müssen die beiden verstehen.
+Markus richtet Ablago **für Lena und Jonas** ein. Was er baut, müssen die beiden verstehen.
 
 ### 4 · Für die Eltern sorgen – Petra und Geschwister (Fokus)
 
@@ -118,7 +118,7 @@ Markus richtet das DMS **für Lena und Jonas** ein. Was er baut, müssen die bei
 
 - **Wer:** Grafikdesignerin, Einzelunternehmerin, eine Teilzeitkraft.
 - **Ziele:** Eingangs- und Ausgangsrechnungen, Kundenverträge, E-Rechnungen im Original aufbewahren, Belege für den Steuerberater.
-- **Besonderheit:** Für sie gilt die GoBD. Privates und Geschäftliches liegen oft im selben DMS.
+- **Besonderheit:** Für sie gilt die GoBD. Privates und Geschäftliches liegen oft im selben Ablago.
 - **Braucht:** Archivmodus, Versionen, Nummernkreise, Vorlage Verfahrensdokumentation, Trennung von Privat und Geschäft über Ansichten und Rechte.
 - **Stolperstein:** „Ist das GoBD-konform?“ Wir versprechen kein Zertifikat, sondern liefern Werkzeuge und ehrliche Doku.
 
@@ -146,7 +146,7 @@ Markus richtet das DMS **für Lena und Jonas** ein. Was er baut, müssen die bei
 
 - **Wer:** 2.000+ Mitarbeitende, IT-Abteilung, viele Administratoren mit getrennten Zuständigkeiten, Compliance.
 - **Erwartet zusätzlich:** Hochverfügbarkeit, mehrere Mandanten in einer Installation, Rechte aus dem Verzeichnisdienst, Aufbewahrungsrichtlinien, Zertifizierungen, Anbindung an ERP und CRM.
-- **Haltung:** Das DMS steht unter der Apache-2.0. Ein Konzern darf es einsetzen und erweitern. Wir gestalten aber nicht dafür.
+- **Haltung:** Ablago steht unter der Apache-2.0. Ein Konzern darf es einsetzen und erweitern. Wir gestalten aber nicht dafür.
 
 ## Fokus-Entscheidungen
 

@@ -10,7 +10,7 @@ Hilfreich sind: betroffene Version (Werkbank → Technik), Schritte zum Nachstel
 
 ## Unterstützte Versionen
 
-Korrekturen gibt es für die **neueste Version**. Aktualisiere bitte zuerst, bevor du meldest – siehe [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+Korrekturen gibt es für die **neueste Version**. Aktualisiere bitte zuerst, bevor du meldest – siehe [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ## Was automatisch geprüft wird
 
@@ -33,11 +33,11 @@ gh attestation verify oci://ghcr.io/motom001/dms:<version> -R motom001/dms
 gh attestation verify oci://ghcr.io/motom001/dms-komplett:<version> -R motom001/dms
 ```
 
-Wie das im Einzelnen gebaut ist, steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates).
+Wie das im Einzelnen gebaut ist, steht im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/release/#abhangigkeiten-und-sicherheitsupdates).
 
 ## Herkunft der Pakete prüfen
 
-Das DMS-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://github.com/motom001/dms-registry)) mit Ed25519. Das DMS prüft die Signatur mit diesen beiden öffentlichen Schlüsseln des Maintainers (fest im Code, `server/src/projektschluessel.ts`); gültig ist eine Signatur mit einem der beiden:
+Das Ablago-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://github.com/motom001/dms-registry)) mit Ed25519. Ablago prüft die Signatur mit diesen beiden öffentlichen Schlüsseln des Maintainers (fest im Code, `server/src/projektschluessel.ts`); gültig ist eine Signatur mit einem der beiden:
 
 | Schlüssel | Kennung | Fingerabdruck (SHA-256 des öffentlichen Schlüssels) |
 | --- | --- | --- |
@@ -46,4 +46,4 @@ Das DMS-Projekt signiert den offiziellen Paketkatalog ([dms-registry](https://gi
 
 > **Versionen 0.141.0 bis 0.144.1** kennen nur Testschlüssel, deren private Gegenstücke offen in den Tests stehen. Sobald die Registry mit den Schlüsseln oben signiert, melden sie beim offiziellen Katalog „Signatur ungültig“. Aktualisiere auf eine neuere Version. Die Fingerabdrücke prüfst du in der Registry mit `python3 werkzeuge/signieren.py fingerabdruck signier.pub`; die öffentlichen Schlüssel stehen in [motom001/dms-registry#74](https://github.com/motom001/dms-registry/issues/74).
 
-Was „signiert“ und „nicht signiert“ in der Vorschau bedeutet, steht im [Administrationshandbuch](https://motom001.github.io/dms/admin/aktuell/pakete/#herkunft-signiert-oder-nicht).
+Was „signiert“ und „nicht signiert“ in der Vorschau bedeutet, steht im [Administrationshandbuch](https://help.ablago.app/admin/aktuell/pakete/#herkunft-signiert-oder-nicht).

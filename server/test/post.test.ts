@@ -231,7 +231,7 @@ describe('Umstellung vom Systemtyp E-Mail (#58 → #192)', () => {
       { key: 'bezug', label: 'Bezug', typ: 'referenz' as const, zielTyp: '*', verweisart: 'bezug' as const, system: true, hilfe: 'Die Mappe, aus der die E-Mail verschickt wurde' },
       { key: 'nachricht', label: 'Nachricht', typ: 'langtext' as const, system: true },
     ];
-    await repo.aendereTyp(post0.id, { ...post0, name: 'E-Mail', beschreibung: 'Aus dem DMS verschickte E-Mails mit Anhängen', felder: alt,
+    await repo.aendereTyp(post0.id, { ...post0, name: 'E-Mail', beschreibung: 'Aus Ablago verschickte E-Mails mit Anhängen', felder: alt,
       register: [{ key: 'allgemein', name: 'Allgemein', art: 'felder', felder: alt.map((f) => f.key) }, { key: 'anhaenge', name: 'Anhänge', art: 'dokumente' }, { key: 'protokoll', name: 'Protokoll', art: 'protokoll' }],
       trefferlisten: [{ key: 'standard', name: 'Standard', spalten: ['datum', 'an', 'bezug'], standard: true }], trefferliste: undefined });
     for (const s of await repo.listeSichten()) if (s.id !== post0.id && s.typen.includes(post0.id)) await repo.loescheSicht(s.id);

@@ -3,7 +3,7 @@
 !!! info "Geprüft: Image automatisch, Gerät noch nicht"
     Das Image prüfen die Rechner von GitHub bei jeder Änderung auf amd64 und arm64. Von einem bestimmten Gerät gibt es hier noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-Hast du zu Hause schon einen Server mit **Proxmox VE** oder einer anderen Virtualisierung, bekommt das DMS am besten eine eigene kleine **Linux-VM** mit Docker.
+Hast du zu Hause schon einen Server mit **Proxmox VE** oder einer anderen Virtualisierung, bekommt Ablago am besten eine eigene kleine **Linux-VM** mit Docker.
 
 ## Proxmox VE
 
@@ -24,7 +24,7 @@ Docker läuft auch in einem LXC-Container, wenn dort **nesting** (bei unprivileg
 
 ### Sicherung
 
-Proxmox kann die ganze VM sichern (**Datacenter → Backup** oder Proxmox Backup Server). Das ist ein guter zusätzlicher Schutz, ersetzt aber nicht die Sicherung des DMS: Sie ist verschlüsselt, lässt sich auf jedem Gerät wiederherstellen und braucht kein Proxmox. Kopiere den Ordner `sicherung` deshalb trotzdem an einen anderen Ort, siehe [PC mit Linux → Sicherung](linux.md#sicherung).
+Proxmox kann die ganze VM sichern (**Datacenter → Backup** oder Proxmox Backup Server). Das ist ein guter zusätzlicher Schutz, ersetzt aber nicht die Sicherung von Ablago: Sie ist verschlüsselt, lässt sich auf jedem Gerät wiederherstellen und braucht kein Proxmox. Kopiere den Ordner `sicherung` deshalb trotzdem an einen anderen Ort, siehe [PC mit Linux → Sicherung](linux.md#sicherung).
 
 ## Andere Virtualisierung
 

@@ -163,7 +163,7 @@ describe('WebDAV-Laufwerk (#346, Stufe 1)', () => {
     assert.equal(null0.status, 207);
     assert.equal((null0.text.match(/<D:response>/g) ?? []).length, 1);
     const eins = await rufe('PROPFIND', '/webdav/', { auth: A, depth: '1' });
-    assert.deepEqual(namen(eins), ['DMS', 'Neue Post', 'Ablage']);
+    assert.deepEqual(namen(eins), ['Ablago', 'Neue Post', 'Ablage']);
     assert.match(eins.text, /<D:href>\/webdav\/Neue%20Post\/<\/D:href>/);
     assert.match(eins.text, /<D:collection\/>/);
     const unendlich = await rufe('PROPFIND', '/webdav/', { auth: A, depth: 'infinity' });

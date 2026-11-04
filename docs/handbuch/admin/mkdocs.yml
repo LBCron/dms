@@ -1,16 +1,19 @@
-site_name: DMS – Administratorhandbuch
-site_description: Einrichten, betreiben und erweitern des DMS
-site_url: !ENV [SITE_URL, 'https://motom001.github.io/dms/admin/aktuell/']
+site_name: Ablago – Administratorhandbuch
+site_description: Ablago einrichten, betreiben und erweitern
+site_url: !ENV [SITE_URL, 'https://help.ablago.app/admin/aktuell/']
 repo_url: https://github.com/motom001/dms
 repo_name: motom001/dms
 edit_uri: edit/main/docs/handbuch/admin/docs/
 docs_dir: docs
-copyright: DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+copyright: Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
 
 theme:
   name: material
   # Hinweis auf ältere Versionen (#111)
   custom_dir: ../overrides
+  # Logo und Favicon aus marke/ (#689)
+  logo: marke/ablago-app-blau.svg
+  favicon: marke/favicon.svg
   language: de
   features:
     - navigation.sections
@@ -67,10 +70,10 @@ nav:
   - Neu in dieser Version: neu.md
   - Installation und Betrieb:
       - Einrichtung und Betrieb: installation.md
-      - "Wie komme ich an ein DMS?": https://motom001.github.io/dms/installieren/aktuell/
+      - "Wie komme ich an ein DMS?": https://help.ablago.app/installieren/aktuell/
       - Aktualisieren und Sichern: aktualisieren.md
       - Wachsen und umziehen: wachsen.md
-      - Was das DMS verkraftet: verkraftet.md
+      - Was Ablago verkraftet: verkraftet.md
       - Lasttest selbst durchführen: lasttest.md
       - KI lokal betreiben: ki-lokal.md
       - Verschlüsselung: verschluesselung.md
@@ -89,7 +92,7 @@ nav:
       - Benutzer und Sicherheit:
           - Benutzer und Rollen: benutzer.md
           - Berechtigungen: berechtigungen.md
-          - Datenschutz im DMS: datenschutz.md
+          - Datenschutz in Ablago: datenschutz.md
           - Löschkonzept (Vorlage): loeschkonzept.md
       - Post und Eingänge:
           - Postfächer: postfaecher.md
@@ -120,9 +123,9 @@ nav:
   - Hintergrund:
       - Technik: technik.md
       - Entscheidungen: entscheidungen.md
-      - Begriffe (Glossar): https://motom001.github.io/dms/benutzer/aktuell/begriffe/
+      - Begriffe (Glossar): https://help.ablago.app/benutzer/aktuell/begriffe/
   - Weiteres:
       - Was ist neu? (Changelog): https://github.com/motom001/dms/releases
-      - Benutzerhandbuch: https://motom001.github.io/dms/benutzer/
-      - "Wie komme ich an ein DMS?": https://motom001.github.io/dms/installieren/
-      - Entwicklerhandbuch: https://motom001.github.io/dms/entwickler/
+      - Benutzerhandbuch: https://help.ablago.app/benutzer/
+      - "Wie komme ich an ein DMS?": https://help.ablago.app/installieren/
+      - Entwicklerhandbuch: https://help.ablago.app/entwickler/

@@ -111,7 +111,7 @@ describe('Unbekannte Felder werden ignoriert (#635)', () => {
     assert.ok(!('symbol' in mit.manifest) && !('kuerzel' in mit.manifest) && !('kategorien' in mit.manifest));
     // Nur ein anderes Format wird abgelehnt.
     assert.throws(() => liesPaket(dateienVon({ ...basisMitMehr, 'manifest.yaml': basisMitMehr['manifest.yaml'].replace('schema: 1', 'schema: 2') })),
-      (e: unknown) => ((e as { details?: { gruende?: string[] } }).details?.gruende ?? []).some((g) => /Format 2 kennt dieses DMS nicht/.test(g)));
+      (e: unknown) => ((e as { details?: { gruende?: string[] } }).details?.gruende ?? []).some((g) => /Format 2 kennt diese Ablago-Version nicht/.test(g)));
   });
 
   it('Manifest: installiert aus dem Katalog genau wie ohne die Felder', async () => {

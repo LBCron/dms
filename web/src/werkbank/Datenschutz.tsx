@@ -50,7 +50,7 @@ export function DatenschutzPanel({ z }: { z: DatenschutzZustand }) {
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
         <h1>Datenschutz</h1>
-        <p className="leise">Fragt ein Kunde, Mieter oder Kontakt nach seinen Daten (Auskunft nach Art. 15 DSGVO), sammelt das DMS alles, was mit ihm verknüpft ist. Du prüfst die Liste und bekommst eine ZIP-Datei mit Deckblatt, Übersicht, Dokumenten und maschinenlesbaren Daten. <Hilfe ort="werkbank.datenschutz" /></p>
+        <p className="leise">Fragt ein Kunde, Mieter oder Kontakt nach seinen Daten (Auskunft nach Art. 15 DSGVO), sammelt Ablago alles, was mit ihm verknüpft ist. Du prüfst die Liste und bekommst eine ZIP-Datei mit Deckblatt, Übersicht, Dokumenten und maschinenlesbaren Daten. <Hilfe ort="werkbank.datenschutz" /></p>
       </div>
       <AuskunftErteilen einstellung={s.einstellung} nachher={z.laden} zustellen={oeffne} />
       <Bereitliegend z={z} offen={zustellen} setOffen={setZustellen} />
@@ -385,7 +385,7 @@ function AnredeWahl({ anrede, setAnrede }: { anrede: Anrede; setAnrede(a: Anrede
   return (
     <fieldset className="anrede-dritte" id="anrede">
       <legend>Anrede in Unterlagen für Dritte <Hilfe ort="werkbank.datenschutz.anrede" /></legend>
-      <p className="leise klein">Gilt für alles, was an die Person geht: Deckblatt, Übersicht und LIESMICH der Auskunft, die Abrufseite und die E-Mails dazu. Das DMS selbst spricht dich weiter mit „du“ an.</p>
+      <p className="leise klein">Gilt für alles, was an die Person geht: Deckblatt, Übersicht und LIESMICH der Auskunft, die Abrufseite und die E-Mails dazu. Ablago selbst spricht dich weiter mit „du“ an.</p>
       <div className="anrede-dritte-wahl" role="radiogroup" aria-label="Anrede">
         {ANREDEN.map((a) => (
           <label key={a} className={`anrede-dritte-form${a === anrede ? ' gewaehlt' : ''}`}>

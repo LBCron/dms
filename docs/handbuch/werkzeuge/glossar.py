@@ -87,7 +87,7 @@ def seite(g: dict) -> str:
         '',
         '<!-- Erzeugt aus docs/glossar.yml mit docs/handbuch/werkzeuge/glossar.py – bitte dort ändern. -->',
         '',
-        'Hier steht, was die Wörter im DMS bedeuten. Oberfläche, Handbücher und Meldungen verwenden sie genau so.',
+        'Hier steht, was die Wörter in Ablago bedeuten. Oberfläche, Handbücher und Meldungen verwenden sie genau so.',
         '',
         'Hinter jedem Begriff steht, wie gut ihn jemand versteht, der zum ersten Mal mit einem DMS arbeitet:',
         '',

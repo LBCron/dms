@@ -59,7 +59,7 @@ export function LoeschBaum({ mappeId, titel, sicht, schliessen, neuLaden }: { ma
       // Ist die Mappe selbst weg, erst zur Liste – sonst lädt die Ansicht sie noch einmal (404).
       if (start) geheZu(`/ablage/${sicht}`);
       await d.neuLaden();
-      const erinnert = r.erinnerung ? ` Am ${datumText(r.erinnerung.datum)} erinnert dich das DMS unter „Zu erledigen“ daran, das Löschen zu wiederholen – dann ist die Aufbewahrungsfrist abgelaufen.` : '';
+      const erinnert = r.erinnerung ? ` Am ${datumText(r.erinnerung.datum)} erinnert dich Ablago unter „Zu erledigen“ daran, das Löschen zu wiederholen – dann ist die Aufbewahrungsfrist abgelaufen.` : '';
       await hinweis({ titel: korb ? 'In den Papierkorb gelegt' : 'Endgültig gelöscht', text: `${loeschZusammenfassung({ ...plan, zahlen: r.zahlen }, korb, true)}${start ? '' : ` „${titelOder(titel)}“ selbst bleibt.`}${korb ? ' Im Papierkorb stellst du alles mit „Alle wiederherstellen“ gemeinsam wieder her.' : ''}${erinnert}` });
       if (!start) { await neuLaden(); schliessen(); }
     } catch (e) { setFehler((e as Error).message); setLaeuft(false); }
@@ -133,7 +133,7 @@ export function LoeschBaum({ mappeId, titel, sicht, schliessen, neuLaden }: { ma
           )}
           <ul className="lb-baum lb-wurzel">{zeige(v.baum.knoten[0])}</ul>
           {v.baum.knoten.filter((k) => k.gesperrt).length > 0 && (
-            <p className="leise klein"><Symbol name="schloss" /> Aufbewahrung: {v.baum.knoten.filter((k) => k.gesperrt).slice(0, 5).map((k) => `„${titelOder(k.titel)}“ bis ${datumText(k.aufbewahrenBis!)}`).join(', ')}{v.baum.knoten.filter((k) => k.gesperrt).length > 5 ? ' …' : ''}.{erinnerung && <> Bleibt „{titelOder(titel)}“ deshalb stehen, legt das DMS dir eine Erinnerung zum {datumText(erinnerung.datum)} an.</>}</p>
+            <p className="leise klein"><Symbol name="schloss" /> Aufbewahrung: {v.baum.knoten.filter((k) => k.gesperrt).slice(0, 5).map((k) => `„${titelOder(k.titel)}“ bis ${datumText(k.aufbewahrenBis!)}`).join(', ')}{v.baum.knoten.filter((k) => k.gesperrt).length > 5 ? ' …' : ''}.{erinnerung && <> Bleibt „{titelOder(titel)}“ deshalb stehen, legt Ablago dir eine Erinnerung zum {datumText(erinnerung.datum)} an.</>}</p>
           )}
           <div className={`hinweis ${plan!.zahlen.mappen ? 'warn' : 'info'} lb-summe`} role="status"><p>{loeschZusammenfassung(plan!, korb)}</p></div>
           <div className="knoepfe">

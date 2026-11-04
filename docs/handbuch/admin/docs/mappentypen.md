@@ -6,7 +6,7 @@ Mappentypen pflegst du unter **Werkbank → Mappentypen**. Mit **+ Neu** legst d
 
 ![Mappentyp Vertrag in der Werkbank](bilder/werkbank-mappentyp.png)
 
-Wie Benutzer mit den Mappen arbeiten, beschreibt das [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/mappen/).
+Wie Benutzer mit den Mappen arbeiten, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/mappen/).
 
 ## Aufbau des Editors
 
@@ -54,13 +54,13 @@ Steht im Standardwert eines Textfelds `{nummernkreis:<kennung>}`, bekommt jede n
 
 ### Formate und Datumsgrenzen
 
-Ein **Textfeld** kann ein **Format** haben. Dann prüft das DMS die Angabe, und am Handy erscheint die passende Tastatur:
+Ein **Textfeld** kann ein **Format** haben. Dann prüft Ablago die Angabe, und am Handy erscheint die passende Tastatur:
 
 | Format | Was passt | Anzeige |
 | --- | --- | --- |
 | E-Mail | `name@example.org` – mit @ und einer Endung wie .de oder .org | daneben ein Knopf zum Schreiben (`mailto:`) |
 | Telefon | Ziffern, + am Anfang, Leerzeichen, `/`, `-` und Klammern – keine Buchstaben, z. B. `+49 30 123456` | daneben ein Knopf zum Anrufen (`tel:`) |
-| Internetseite | `www.example.org` oder `https://www.example.org`; ohne `https://` ergänzt das DMS es | daneben ein Knopf, der die Seite in einem neuen Tab öffnet |
+| Internetseite | `www.example.org` oder `https://www.example.org`; ohne `https://` ergänzt Ablago es | daneben ein Knopf, der die Seite in einem neuen Tab öffnet |
 | IBAN | Länge des Landes und Prüfziffer stimmen, z. B. `DE89 3704 0044 0532 0130 00` | in Vierergruppen |
 | PLZ | in Deutschland genau 5 Ziffern, sonst frei (bis zur Höchstlänge) | – |
 
@@ -70,25 +70,25 @@ Ein **Datumsfeld** kann **Frühestens** und **Spätestens** haben – ein festes
 
 Die Fehlermeldungen sagen, was zu tun ist, z. B. „Eine Telefonnummer enthält nur Ziffern, + am Anfang, Leerzeichen, /, - und Klammern.“ Dieselben Prüfungen gelten für die [Schnittstelle](api.md), für Pakete und ihre Beispiele; die Meldung nennt die Felder.
 
-**Gespeicherte Angaben bleiben gültig.** Bekommt ein Feld nachträglich ein Format oder Grenzen, ändert das DMS keine Werte, und die Mappen landen nicht unter *Zu erledigen*. Erst wer das Feld ändert, muss eine passende Angabe eintragen; andere Felder der Mappe lassen sich wie bisher speichern. Welche Angaben nicht passen, zeigt [Werkbank → Wartungsoperationen](texterkennung.md#angaben-die-nicht-zum-format-passen).
+**Gespeicherte Angaben bleiben gültig.** Bekommt ein Feld nachträglich ein Format oder Grenzen, ändert Ablago keine Werte, und die Mappen landen nicht unter *Zu erledigen*. Erst wer das Feld ändert, muss eine passende Angabe eintragen; andere Felder der Mappe lassen sich wie bisher speichern. Welche Angaben nicht passen, zeigt [Werkbank → Wartungsoperationen](texterkennung.md#angaben-die-nicht-zum-format-passen).
 
 Die Erkennung nutzt das Format: Ein Feld mit Format Telefon gilt als Telefon, auch wenn es anders heißt, und sie schlägt nur Werte vor, die passen.
 
 ### Für die Erkennung nutzen
 
-Mit dem Haken **Für die Erkennung nutzen** an einem Feld sagst du der Erkennung im DMS, dass sich der Wert zum Wiedererkennen eignet bzw. dass sie das Feld füllen darf. Die Erkennung läuft im DMS selbst, ohne KI und ohne Internet:
+Mit dem Haken **Für die Erkennung nutzen** an einem Feld sagst du der Erkennung in Ablago, dass sich der Wert zum Wiedererkennen eignet bzw. dass sie das Feld füllen darf. Die Erkennung läuft in Ablago selbst, ohne KI und ohne Internet:
 
-- **Vorschläge beim Zuordnen von Post:** Steht der Wert eines markierten Felds – z. B. Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail-Adresse, Internetseite (auch als Domain einer E-Mail-Adresse), Telefon oder Name – im Text eines Briefs, schlägt das DMS diese Mappe als **Absender** vor, mit Begründung („gefunden: Kundennummer 100-4711“). Ein Typ mit markiertem Namen oder Kontaktangaben gilt als möglicher Absender (Organisation, Niederlassung, Person); ein Typ, der nur Nummern markiert (z. B. Vertragsnummer), als mögliche **Zielmappe**. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, `100-4711` findet also auch `100 4711`. Gerechnet wird einmal, sobald der Volltext einer Post fertig ist – egal ob von der eingebauten Texterkennung oder einem Paket.
+- **Vorschläge beim Zuordnen von Post:** Steht der Wert eines markierten Felds – z. B. Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail-Adresse, Internetseite (auch als Domain einer E-Mail-Adresse), Telefon oder Name – im Text eines Briefs, schlägt Ablago diese Mappe als **Absender** vor, mit Begründung („gefunden: Kundennummer 100-4711“). Ein Typ mit markiertem Namen oder Kontaktangaben gilt als möglicher Absender (Organisation, Niederlassung, Person); ein Typ, der nur Nummern markiert (z. B. Vertragsnummer), als mögliche **Zielmappe**. Leerzeichen, Punkte und Bindestriche in Nummern zählen nicht, `100-4711` findet also auch `100 4711`. Gerechnet wird einmal, sobald der Volltext einer Post fertig ist – egal ob von der eingebauten Texterkennung oder einem Paket.
 
 - **Aus Dokument ausfüllen:** In einer Mappe füllt die Erkennung die markierten Felder aus einem Foto oder Dokument als Vorschlag (siehe [Erkennung](#erkennung)). Hat ein Mappentyp gar keine markierten Felder, nimmt sie alle, deren Art sie aus der Bezeichnung erkennt. Verweisfelder schlagen eine vorhandene Mappe des Zieltyps vor, die im Text steht – an ihren markierten Feldern, sonst am Titel.
 
-Geeignet sind Text, Langtext, Zahl, Betrag, Datum, Auswahlliste und Verweis – Passwortfelder nie. Ist der Haken an, wählst du optional **Was steht im Feld?** (Name oder Firma, Nummer, IBAN, E-Mail-Adresse, Telefon, Straße, PLZ, Ort …). Ohne Angabe schließt das DMS es aus Feldart, Kennung und Bezeichnung („Kundennummer“ → Nummer, „E-Mail“ → E-Mail-Adresse); was es erkannt hat, steht in der Auswahl hinter *automatisch*. Der **Erkennungshinweis** ist ein freier Text, z. B. „Kundennummer oben rechts, Muster 100-####“ – ein Muster nach dem Wort *Muster* (`#` = Ziffer, `A` = Großbuchstabe) sucht die Erkennung gezielt.
+Geeignet sind Text, Langtext, Zahl, Betrag, Datum, Auswahlliste und Verweis – Passwortfelder nie. Ist der Haken an, wählst du optional **Was steht im Feld?** (Name oder Firma, Nummer, IBAN, E-Mail-Adresse, Telefon, Straße, PLZ, Ort …). Ohne Angabe schließt Ablago es aus Feldart, Kennung und Bezeichnung („Kundennummer“ → Nummer, „E-Mail“ → E-Mail-Adresse); was es erkannt hat, steht in der Auswahl hinter *automatisch*. Der **Erkennungshinweis** ist ein freier Text, z. B. „Kundennummer oben rechts, Muster 100-####“ – ein Muster nach dem Wort *Muster* (`#` = Ziffer, `A` = Großbuchstabe) sucht die Erkennung gezielt.
 
-Die Pakete der Registry (z. B. *Basis*) markieren ihre Felder selbst. Bei einem Update übernimmt das DMS die Markierung nur an Feldern, an denen du noch nichts eingestellt hast; die Vorschau nennt sie unter „für die Erkennung“.
+Die Pakete der Registry (z. B. *Basis*) markieren ihre Felder selbst. Bei einem Update übernimmt Ablago die Markierung nur an Feldern, an denen du noch nichts eingestellt hast; die Vorschau nennt sie unter „für die Erkennung“.
 
 ### Die Kennung
 
-Unter der Kennung speichert das DMS die Werte, und die [Schnittstelle](api.md) verwendet sie. Deshalb ist sie nach dem ersten Speichern fest. Die Bezeichnung kannst du jederzeit ändern.
+Unter der Kennung speichert Ablago die Werte, und die [Schnittstelle](api.md) verwendet sie. Deshalb ist sie nach dem ersten Speichern fest. Die Bezeichnung kannst du jederzeit ändern.
 
 ### Verweise: Mappen verbinden
 
@@ -100,16 +100,16 @@ Ein Feld der Feldart **Verweis** zeigt auf Mappen eines anderen Mappentyps (oder
     - **Zugehörigkeit** – „gehört zu“: Die Rechnung gehört zum Vertrag. Zählt später bei Auswertungen wie „alles zum Haus“ mit.
     - **Bezug** – „hat zu tun mit“: Die Rechnung kommt von diesem Aussteller. Nur eine Verknüpfung.
 
-    Die Verweisart entscheidet auch beim **Löschen mit verknüpften Mappen** und bei der **Auskunft** ([Datenschutz im DMS](datenschutz.md#mit-verknupften-mappen-loschen)): Mitgelöscht und vollständig herausgegeben wird nur, was über **Zugehörigkeit** dranhängt. Soll z. B. ein Vertrag mit seinem Vertragspartner gehen, stell das Feld *Vertragspartner* im Vertrag auf Zugehörigkeit (bei den Beispiel-Mappentypen ist das so).
+    Die Verweisart entscheidet auch beim **Löschen mit verknüpften Mappen** und bei der **Auskunft** ([Datenschutz in Ablago](datenschutz.md#mit-verknupften-mappen-loschen)): Mitgelöscht und vollständig herausgegeben wird nur, was über **Zugehörigkeit** dranhängt. Soll z. B. ein Vertrag mit seinem Vertragspartner gehen, stell das Feld *Vertragspartner* im Vertrag auf Zugehörigkeit (bei den Beispiel-Mappentypen ist das so).
 
 #### Auswahl einschränken
 
 In der Zeile unter Ziel-Mappentyp, Art des Verweises und *Mehrere Mappen erlaubt* legst du mit **Nur Mappen, die …** fest, welche Mappen das Feld anbietet – etwa beim Feld *Arzt* im Arztbericht nur Vertragspartner mit *Art = Arzt*. Die Bedingungen funktionieren wie bei [Ansichten](sichten.md): Felder des Zieltyps und Systemwerte (angelegt, geändert, von wem), feste und dynamische Werte (heute ± n, aktueller Benutzer, seine Rollen). Mehrere Bedingungen gelten zusammen. Darunter steht, wie viele Mappen passen, z. B. „12 von 85 Vertragspartner passen“.
 
 - In der Mappe bietet die Suche im Feld nur passende Mappen an – und nur solche, die der Benutzer lesen darf. **+ … anlegen** belegt die neue Mappe mit dem vor, was sich eindeutig aus dem Filter ergibt (z. B. *Art = Arzt*).
-- **Streng:** Ein neuer oder geänderter Wert muss passen, sonst lehnt das DMS das Speichern ab – auch über die [Schnittstelle](api.md).
+- **Streng:** Ein neuer oder geänderter Wert muss passen, sonst lehnt Ablago das Speichern ab – auch über die [Schnittstelle](api.md).
 - **Bestehende Werte bleiben gültig**, auch wenn die Ziel-Mappe später nicht mehr passt oder du den Filter änderst. Am Feld steht dann „passt nicht mehr zum Filter“.
-- Beim Speichern des Mappentyps meldet das DMS Bedingungen auf Felder, die es im Zieltyp nicht (mehr) gibt.
+- Beim Speichern des Mappentyps meldet Ablago Bedingungen auf Felder, die es im Zieltyp nicht (mehr) gibt.
 - Nicht bei Feldern, die auf jede Mappe zeigen.
 
 **Werte aus dieser Mappe:** Statt eines festen Werts kann eine Bedingung einen Wert der eigenen Mappe nehmen – Haken **Wert aus dieser Mappe** und das Feld wählen. Beispiele: *Fachgebiet* (am Arzt) *ist einer von* **Fachgebiet dieser Mappe**; *Vertragspartner* (am Vertrag) *zeigt auf* **Vertragspartner dieser Mappe**.
@@ -117,14 +117,14 @@ In der Zeile unter Ziel-Mappentyp, Art des Verweises und *Mehrere Mappen erlaubt
 - Angeboten werden nur Felder mit passender Feldart: Text zu Text, Zahl zu Zahl, Datum zu Datum, ein Auswahlfeld, dessen Werte es auch am Ziel gibt, ein Verweisfeld auf denselben Mappentyp. Das Verweisfeld selbst geht nicht.
 - Ändert man in der Mappe das eigene Feld, filtert die Auswahl sofort neu. Passt eine schon gewählte Mappe nicht mehr, steht der Hinweis „passt nicht mehr zum Filter“ schon vor dem Speichern am Feld.
 - **Ist das eigene Feld leer**, gilt die Bedingung nicht – dann werden alle angeboten, die die übrigen Bedingungen erfüllen.
-- Das DMS prüft beim Speichern mit den Werten, die gespeichert werden sollen – auch wenn beide Felder im selben Zug geändert werden.
+- Ablago prüft beim Speichern mit den Werten, die gespeichert werden sollen – auch wenn beide Felder im selben Zug geändert werden.
 - Werte aus Mappen, auf die diese Mappe verweist (eine Ebene weiter), gibt es nicht.
 
 Auf eine Mappe, auf die noch verwiesen wird, kann niemand sie löschen.
 
 ### Passwortfelder
 
-Ein Feld der Feldart **Passwort** nimmt z. B. das Kennwort eines Online-Zugangs auf. Das DMS speichert es verschlüsselt mit dem Schlüssel aus **Werkbank → [Verschlüsselung](verschluesselung.md)**; solange es keinen gibt, lässt sich kein Wert speichern, und das Feld weist darauf hin.
+Ein Feld der Feldart **Passwort** nimmt z. B. das Kennwort eines Online-Zugangs auf. Ablago speichert es verschlüsselt mit dem Schlüssel aus **Werkbank → [Verschlüsselung](verschluesselung.md)**; solange es keinen gibt, lässt sich kein Wert speichern, und das Feld weist darauf hin.
 
 - In der Mappe steht nur „••••••••“. Das Auge zeigt das Passwort – und jedes Anzeigen steht im [Protokoll](fehlersuche.md) mit Benutzer, Mappe und Feld, nie mit dem Wert.
 - Passwortfelder erscheinen nie im Titel, in der Trefferliste, in der Suche, in Bedingungen von Ansichten oder in Demo-Daten.
@@ -152,7 +152,7 @@ An einem **Datumsfeld** wie „Kündigung bis“ oder „TÜV fällig“ kannst 
 
 So verhalten sich Fristen:
 
-- Das DMS prüft die Fristen beim Speichern einer Mappe, nach Änderungen am Mappentyp und jeden Tag kurz nach Mitternacht. Je Mappe, Feld und Datum entsteht **höchstens eine** Frist – auch nach dem Erledigen nicht noch einmal.
+- Ablago prüft die Fristen beim Speichern einer Mappe, nach Änderungen am Mappentyp und jeden Tag kurz nach Mitternacht. Je Mappe, Feld und Datum entsteht **höchstens eine** Frist – auch nach dem Erledigen nicht noch einmal.
 - Wird das Datum **geändert oder geleert**, erledigt sich eine offene Frist von selbst (mit Eintrag in der Historie der Mappe); für das neue Datum entsteht zur rechten Zeit eine neue.
 - Daten, die schon vorbei sind, erzeugen keine Frist mehr.
 - Darf der Empfänger die Mappe nach den [Berechtigungen](berechtigungen.md) nicht lesen, bekommt er die Frist trotzdem; unter *Werkbank → Benachrichtigungen und Aufgaben* steht dann ein Hinweis.
@@ -164,7 +164,7 @@ Du kannst Mappentypen jederzeit ändern, auch wenn es schon Mappen gibt:
 
 - **Felder entfernen** löscht keine Werte. Sie bleiben an der Mappe und erscheinen dort als „Werte ohne Felddefinition“. Fügst du das Feld mit derselben Kennung wieder hinzu, sind sie wieder da.
 - **Formate und Datumsgrenzen** machen gespeicherte Angaben nicht ungültig (siehe [oben](#formate-und-datumsgrenzen)).
-- **Neue Pflichtfelder, strengere Regeln, entfernte Auswahlwerte:** Mappen, die nicht mehr passen, werden markiert und bekommen eine [Aufgabe](aufgaben.md) „Passt nicht“ für ihren Ersteller; so landen sie bei ihm unter [Zu erledigen](https://motom001.github.io/dms/benutzer/eingang/). Die Aufgabe erledigt sich, sobald die Mappe wieder passt. Nichts wird stillschweigend geändert. Über dem Mappentyp steht, wie viele Mappen betroffen sind.
+- **Neue Pflichtfelder, strengere Regeln, entfernte Auswahlwerte:** Mappen, die nicht mehr passen, werden markiert und bekommen eine [Aufgabe](aufgaben.md) „Passt nicht“ für ihren Ersteller; so landen sie bei ihm unter [Zu erledigen](https://help.ablago.app/benutzer/eingang/). Die Aufgabe erledigt sich, sobald die Mappe wieder passt. Nichts wird stillschweigend geändert. Über dem Mappentyp steht, wie viele Mappen betroffen sind.
 
 ![Zu erledigen in der Ablage](bilder/eingang.png)
 
@@ -174,7 +174,7 @@ Die **Vorlage** bestimmt, wie eine Mappe in Listen und Verweisen heißt, z. B. `
 
 Verweist der Titel auf eine andere Mappe (`{vertragspartner}`), wird der Titel nachgezogen, wenn sich der Vertragspartner ändert.
 
-Ohne Vorlage verwendet das DMS das erste Textfeld.
+Ohne Vorlage verwendet Ablago das erste Textfeld.
 
 ### Platzhalter formatieren
 
@@ -228,10 +228,10 @@ Register sind die Trennblätter einer Mappe, in der angegebenen Reihenfolge:
 | **Verknüpfungsregister** | Mappen, die auf diese Mappe verweisen – alle oder nur bestimmte (z. B. „Rechnungen“ nur über das Feld *Vertrag*). Als Quelle lässt sich auch *Post › Zugeordnet zu* wählen: Dann steht hier die Post, die dieser Mappe zugeordnet ist, z. B. verschickte E-Mails und eingegangene Briefe |
 | **Historienregister** | die Historie der Mappe: wer wann was geändert hat, mit altem und neuem Wert; dazu Dokumente, Papierkorb, Notizen, Aufgaben, E-Mails und angezeigte Passwörter (ohne Wert). Höchstens eins je Mappentyp |
 
-**Versionierung einschalten** (Standard: aus) an einem Dokumentenregister: Beim Ersetzen bleibt die alte Version erhalten und lässt sich wieder hervorholen. Mit **Nur die letzten … Versionen behalten** räumt das DMS ältere Versionen samt ihren Dateien auf (leer = alle behalten). Schaltest du die Versionierung ein, gilt jedes vorhandene Dokument als Version 1; schaltest du sie aus, bleiben vorhandene ältere Versionen sichtbar, neue entstehen keine mehr. Ohne Versionierung gibt es kein Ersetzen – über die Schnittstelle kommt dann eine verständliche Fehlermeldung. Das Ein- und Ausschalten steht im [Protokoll](fehlersuche.md#protokoll) beim Speichern des Mappentyps. Wie es für Benutzer aussieht, steht im Benutzerhandbuch unter [Versionen verstehen](https://motom001.github.io/dms/benutzer/aktuell/versionen/).
+**Versionierung einschalten** (Standard: aus) an einem Dokumentenregister: Beim Ersetzen bleibt die alte Version erhalten und lässt sich wieder hervorholen. Mit **Nur die letzten … Versionen behalten** räumt Ablago ältere Versionen samt ihren Dateien auf (leer = alle behalten). Schaltest du die Versionierung ein, gilt jedes vorhandene Dokument als Version 1; schaltest du sie aus, bleiben vorhandene ältere Versionen sichtbar, neue entstehen keine mehr. Ohne Versionierung gibt es kein Ersetzen – über die Schnittstelle kommt dann eine verständliche Fehlermeldung. Das Ein- und Ausschalten steht im [Protokoll](fehlersuche.md#protokoll) beim Speichern des Mappentyps. Wie es für Benutzer aussieht, steht im Benutzerhandbuch unter [Versionen verstehen](https://help.ablago.app/benutzer/aktuell/versionen/).
 
 !!! tip "Warum die Versionierung einschalten?"
-    Wer bisher im Dateimanager ablegt, erwartet, dass eine neue Datei die alte überschreibt – und hängt deshalb `_v2` oder `_final` an den Namen. Mit Versionierung legt man einfach die neue Fassung ab, die alte bleibt darunter und lässt sich zurückholen. Für Register wie *Vertragsunterlagen* oder *Belege* lohnt sich das fast immer. **Nur die letzten … Versionen behalten** brauchst du nur, wenn Speicherplatz knapp ist: Ältere Versionen löscht das DMS dann von selbst, sie lassen sich nicht mehr zurückholen.
+    Wer bisher im Dateimanager ablegt, erwartet, dass eine neue Datei die alte überschreibt – und hängt deshalb `_v2` oder `_final` an den Namen. Mit Versionierung legt man einfach die neue Fassung ab, die alte bleibt darunter und lässt sich zurückholen. Für Register wie *Vertragsunterlagen* oder *Belege* lohnt sich das fast immer. **Nur die letzten … Versionen behalten** brauchst du nur, wenn Speicherplatz knapp ist: Ältere Versionen löscht Ablago dann von selbst, sie lassen sich nicht mehr zurückholen.
 
 Register haben feste Kennungen, damit Dokumente ihr Register behalten, wenn es umbenannt wird. Ein Dokumentenregister, in dem schon Dokumente liegen, lässt sich nicht entfernen.
 
@@ -252,29 +252,29 @@ Das ändert nur den Entwurf; übernommen wird es wie alles andere mit **Mappenty
 - Du kannst sie um eigene Felder und Register erweitern, z. B. eine Telefonnummer.
 - Ihre **Systemfelder** (Name, E-Mail-Adresse, Rollen, Aktiv bzw. Name der Rolle) sind fest: Bezeichnung, Hilfetext und Register darfst du ändern, Feldart und Eigenschaften nicht.
 - Mappen vom Mappentyp *Benutzer* lassen sich in der Ablage weder anlegen noch löschen (Systemregel) – Benutzer entstehen in der Benutzerverwaltung.
-- **Post** ist alles, was ins DMS kommt oder hinausgeht ([Benutzerhandbuch: Post](https://motom001.github.io/dms/benutzer/post/)). Systemfelder: *Betreff*, *Stand* (Neu, Zugeordnet, Erledigt), *Kanal* (Hochgeladen, E-Mail, Scan, Ordner, Import, API, WebDAV), *Richtung*, *Datum*, *Absender*, *Empfänger*, *Für*, *Zugeordnet zu* und *Nachricht*.
-    - Post entsteht über **+ Post** in den Ansichten mit Post, über die [Schnittstelle](api.md) (`POST /api/v1/post`) und beim [Versenden per E-Mail](https://motom001.github.io/dms/benutzer/versenden/). Über das allgemeine Formular „+ Neu“ legt man keine Post an. Wer Post anlegen darf, regeln die [Berechtigungen](berechtigungen.md) (C) wie bei jedem Mappentyp.
-    - *Kanal* hält das DMS fest, *Zugeordnet zu* setzt **Zuordnen**. Bei versendeten E-Mails sind auch Betreff, Empfänger, Absender, Datum, Nachricht und Richtung fest.
+- **Post** ist alles, was in Ablago kommt oder hinausgeht ([Benutzerhandbuch: Post](https://help.ablago.app/benutzer/post/)). Systemfelder: *Betreff*, *Stand* (Neu, Zugeordnet, Erledigt), *Kanal* (Hochgeladen, E-Mail, Scan, Ordner, Import, API, WebDAV), *Richtung*, *Datum*, *Absender*, *Empfänger*, *Für*, *Zugeordnet zu* und *Nachricht*.
+    - Post entsteht über **+ Post** in den Ansichten mit Post, über die [Schnittstelle](api.md) (`POST /api/v1/post`) und beim [Versenden per E-Mail](https://help.ablago.app/benutzer/versenden/). Über das allgemeine Formular „+ Neu“ legt man keine Post an. Wer Post anlegen darf, regeln die [Berechtigungen](berechtigungen.md) (C) wie bei jedem Mappentyp.
+    - *Kanal* hält Ablago fest, *Zugeordnet zu* setzt **Zuordnen**. Bei versendeten E-Mails sind auch Betreff, Empfänger, Absender, Datum, Nachricht und Richtung fest.
     - *Zugeordnet zu* darf als einziges Feld auf Mappen *jedes* Mappentyps zeigen, auch auf mehrere. Wird eine dieser Mappen gelöscht, bleibt die Post erhalten; nur der Verweis entfällt.
     - *Für* verweist auf einen Benutzer: Solange die Post neu ist, hat er die Aufgabe *Post für dich* unter „Zu erledigen“.
-    - Beim ersten Start legt das DMS die Ansichten **Neue Post** (ganz oben, Stand *Neu*) und unter **Post** die Ansichten **Eingegangen** und **Versendet** an. Du kannst sie ändern, verschieben oder löschen; gelöschte kommen nicht wieder.
+    - Beim ersten Start legt Ablago die Ansichten **Neue Post** (ganz oben, Stand *Neu*) und unter **Post** die Ansichten **Eingegangen** und **Versendet** an. Du kannst sie ändern, verschieben oder löschen; gelöschte kommen nicht wieder.
     - **Aus E-Mail wird Post (0.41):** Der frühere Systemtyp *E-Mail* wird beim Update zu *Post*. Vorhandene E-Mails bekommen Kanal *E-Mail*, Richtung *Ausgehend* und Stand *Erledigt*. Felder, Dokumente und Verweise bleiben erhalten; eigene Felder und Bezeichnungen auch. Links mit `typ=email` funktionieren weiter.
 
 Mehr dazu in [Benutzer und Rollen](benutzer.md).
 
 ## Ablageort: wo die Originale liegen
 
-Jedes DMS hat seit 0.74 den Mappentyp **Ablageort** (Kennung `ablageort`). Damit hält man fest, wo das Papier zu einem eingescannten Dokument liegt – oder dass es vernichtet ist. Er ist kein Systemmappentyp: Du kannst ihn umbenennen, um Felder und Register erweitern und seine Berechtigungen ändern wie bei jedem Mappentyp. **Löschen lässt er sich nicht**, weil Pakete und Beispiele auf ihn verweisen.
+Jede Ablago-Installation hat seit 0.74 den Mappentyp **Ablageort** (Kennung `ablageort`). Damit hält man fest, wo das Papier zu einem eingescannten Dokument liegt – oder dass es vernichtet ist. Er ist kein Systemmappentyp: Du kannst ihn umbenennen, um Felder und Register erweitern und seine Berechtigungen ändern wie bei jedem Mappentyp. **Löschen lässt er sich nicht**, weil Pakete und Beispiele auf ihn verweisen.
 
 - **Felder:** *Name*, *Liegt in* (ein Verweis auf einen anderen Ablageort) und *Beschreibung*.
 - **Register:** *Allgemein*, *Enthält* (die Ablageorte, die hier liegen), *Liegt hier* (alle Mappen, die auf diesen Ort verweisen) und *Fotos*.
 - **Titel:** `{liegt_in} › {name}`. So heißt der rote Ordner z. B. „zu Hause › Arbeitszimmer Schrank › roter Ordner“. Ganz oben (ohne *Liegt in*) bleibt nur der Name.
-- **Umzug in einem Schritt:** Kommt der Schrank ins Wohnzimmer, änderst du nur *Liegt in* am Schrank. Die Titel der Orte darunter und aller Mappen, die den Ort im Titel zeigen, zieht das DMS nach – über höchstens sechs Ebenen.
+- **Umzug in einem Schritt:** Kommt der Schrank ins Wohnzimmer, änderst du nur *Liegt in* am Schrank. Die Titel der Orte darunter und aller Mappen, die den Ort im Titel zeigen, zieht Ablago nach – über höchstens sechs Ebenen.
 
 **Verbleib in deinen Mappentypen:** Gib Mappentypen mit Papier (Vertrag, Rechnung, Versicherung, Urkunde …) ein Verweisfeld auf *Ablageort* mit der Kennung **`verbleib_original`** und der Bezeichnung *Verbleib Originaldokumente*. Die gleiche Kennung in allen Mappentypen ist wichtig: Nur dann gibt es die Spalte in gemeinsamen Trefferlisten und die Bedingung in Ansichten über mehrere Mappentypen. Die [Beispiele](demo.md) bringen das Feld bei *Vertrag* und *Rechnung* mit, dazu ein paar Ablageorte und die Ansicht *Originale nach Ort*.
 
 !!! note "Bewusst einfach"
-    Der Verbleib gilt für die ganze Mappe, nicht für jeden einzelnen Scan. *Liegt hier* zeigt nur, was direkt an diesem Ort liegt; was in Orten darunter liegt, siehst du über *Enthält* Ebene für Ebene. Wann man das Papier überhaupt aufheben sollte, steht im Benutzerhandbuch unter [Original behalten oder vernichten?](https://motom001.github.io/dms/benutzer/aktuell/original/).
+    Der Verbleib gilt für die ganze Mappe, nicht für jeden einzelnen Scan. *Liegt hier* zeigt nur, was direkt an diesem Ort liegt; was in Orten darunter liegt, siehst du über *Enthält* Ebene für Ebene. Wann man das Papier überhaupt aufheben sollte, steht im Benutzerhandbuch unter [Original behalten oder vernichten?](https://help.ablago.app/benutzer/aktuell/original/).
 
 ## Erkennung
 
@@ -282,8 +282,8 @@ Unter **Erkennung** (nicht bei Systemmappentypen) stellst du den Knopf **Aus Dok
 
 - **Knopf zeigen** (Standard: an) – abwählen blendet ihn aus, z. B. bei Mappentypen ohne Papier.
 - **Beschriftung** – z. B. „Visitenkarte scannen“ beim Mappentyp *Person* oder „Kassenbon fotografieren“; leer heißt er „Aus Dokument ausfüllen“.
-- **Erkennung** – nur, wenn ein Paket mit dem Recht [Felder aus Dokumenten vorschlagen](pakete.md#recht-erkennen) installiert ist: **Standard aus der Werkbank** (Vorgabe), **eingebaut (ohne KI)** oder ein **Paket**, etwa ein KI-Assistent. Ein Paket, das ins Netz darf, steht mit „schickt Text über das Netz“ in der Liste; wählst du es, fragt das DMS nach und du bestätigst den Datenabfluss. Mehr unter [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
-- **Post automatisch zuordnen, wenn die Erkennung sicher ist** (Standard: aus) – für Mappentypen, zu denen Post gehört, z. B. *Vertrag*. Sicher heißt: Absender eindeutig an einem starken Merkmal erkannt (Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail, Internetseite, Telefon) **und** genau eine passende Mappe dieses Typs (sie verweist auf den Absender, frühere Post ging dorthin oder ihre Nummer steht im Brief; steht genau eine Nummer im Brief, gewinnt diese Mappe). Das DMS legt dabei nie neue Mappen an, ordnet nie zu, wenn der Empfänger die Mappe nicht lesen darf, und nie bei Mappentypen im [Archivmodus](archiv.md) (dort ist der Haken gesperrt). Der Empfänger (*Für*, sonst wer die Post gebracht hat) bekommt die Aufgabe **Automatisch zugeordnet – bitte prüfen** mit **Passt** und **Rückgängig**; die Begründung steht in der Historie von Post und Mappe. Je Post höchstens einmal, und nur nach neuem Volltext – vorhandene Post bleibt, wie sie ist.
+- **Erkennung** – nur, wenn ein Paket mit dem Recht [Felder aus Dokumenten vorschlagen](pakete.md#recht-erkennen) installiert ist: **Standard aus der Werkbank** (Vorgabe), **eingebaut (ohne KI)** oder ein **Paket**, etwa ein KI-Assistent. Ein Paket, das ins Netz darf, steht mit „schickt Text über das Netz“ in der Liste; wählst du es, fragt Ablago nach und du bestätigst den Datenabfluss. Mehr unter [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
+- **Post automatisch zuordnen, wenn die Erkennung sicher ist** (Standard: aus) – für Mappentypen, zu denen Post gehört, z. B. *Vertrag*. Sicher heißt: Absender eindeutig an einem starken Merkmal erkannt (Kundennummer, IBAN, Umsatzsteuer-Id, E-Mail, Internetseite, Telefon) **und** genau eine passende Mappe dieses Typs (sie verweist auf den Absender, frühere Post ging dorthin oder ihre Nummer steht im Brief; steht genau eine Nummer im Brief, gewinnt diese Mappe). Ablago legt dabei nie neue Mappen an, ordnet nie zu, wenn der Empfänger die Mappe nicht lesen darf, und nie bei Mappentypen im [Archivmodus](archiv.md) (dort ist der Haken gesperrt). Der Empfänger (*Für*, sonst wer die Post gebracht hat) bekommt die Aufgabe **Automatisch zugeordnet – bitte prüfen** mit **Passt** und **Rückgängig**; die Begründung steht in der Historie von Post und Mappe. Je Post höchstens einmal, und nur nach neuem Volltext – vorhandene Post bleibt, wie sie ist.
 
 Darunter steht, welche Felder für die Erkennung markiert sind; markieren lässt sich jedes Feld unter [Für die Erkennung nutzen](#fur-die-erkennung-nutzen). Die Erkennung ist eingebaut und arbeitet ohne KI: Muster für E-Mail, Telefon, Internetseite, IBAN, Datum, Betrag, PLZ/Ort, Briefkopf und Visitenkarte sowie vCards (`.vcf`); Fotos und PDFs liest die [Texterkennung](texterkennung.md) sofort (höchstens 5 Seiten, mit den Sprachen ihrer Einstellungen). Jeder Wert wird gegen die Feldart geprüft, bevor er erscheint; gespeichert wird erst mit *Mappe speichern*. QR-Codes (z. B. vCard-QR auf Visitenkarten) liest sie noch nicht. Statt der eingebauten Erkennung kann ein Paket erkennen, etwa mit KI auf dem eigenen Rechner – siehe [Erkennung durch ein Paket](pakete.md#erkennung-durch-ein-paket).
 
@@ -305,4 +305,4 @@ Unter Registern und Archivmodus legst du fest, wer Mappen dieses Mappentyps anle
 
 ## Mappentyp löschen
 
-**Mappentyp löschen** geht nur, solange es keine Mappen dieses Mappentyps gibt – auch keine im [Papierkorb](papierkorb.md) – und kein anderer Mappentyp auf ihn verweist. Sonst nennt das DMS die Gründe. [Systemmappentypen](#systemmappentypen-benutzer-rolle-und-post) und der [Ablageort](#ablageort-wo-die-originale-liegen) lassen sich nie löschen.
+**Mappentyp löschen** geht nur, solange es keine Mappen dieses Mappentyps gibt – auch keine im [Papierkorb](papierkorb.md) – und kein anderer Mappentyp auf ihn verweist. Sonst nennt Ablago die Gründe. [Systemmappentypen](#systemmappentypen-benutzer-rolle-und-post) und der [Ablageort](#ablageort-wo-die-originale-liegen) lassen sich nie löschen.

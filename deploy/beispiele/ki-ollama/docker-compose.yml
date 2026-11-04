@@ -1,5 +1,5 @@
-# Lokaler KI-Dienst (Ollama) neben dem DMS – Beispiel aus https://github.com/motom001/dms (deploy/beispiele/ki-ollama)
-# Anleitung: https://motom001.github.io/dms/admin/aktuell/ki-lokal/
+# Lokaler KI-Dienst (Ollama) neben Ablago – Beispiel aus https://github.com/motom001/dms (deploy/beispiele/ki-ollama)
+# Anleitung: https://help.ablago.app/admin/aktuell/ki-lokal/
 #
 # Variante „nur Prozessor“: läuft auf jedem Gerät mit Docker, ohne Grafikkarte. Für Grafik gibt es
 # Ergänzungen in diesem Ordner (intel-grafik.yml als Versuch, nvidia.yml, amd.yml) – siehe README.md.
@@ -30,11 +30,11 @@ services:
     volumes:
       # Modelle (einige GB). Auf einem NAS z. B. /volume1/docker/dms-ki/ollama statt ./ollama.
       - ./ollama:/root/.ollama
-    # Speichergrenze: Das Modell teilt sich den Arbeitsspeicher mit DMS, Datenbank und anderen Containern.
+    # Speichergrenze: Das Modell teilt sich den Arbeitsspeicher mit Ablago, Datenbank und anderen Containern.
     # 6 GB reichen für Modelle mit 3–4 Mrd. Parametern; für 7–8 Mrd. auf 9g erhöhen (siehe README).
     mem_limit: 6g
     memswap_limit: 6g
-    # Wenn beide rechnen, bekommt das DMS den Vorrang (Standard ist 1024).
+    # Wenn beide rechnen, bekommt Ablago den Vorrang (Standard ist 1024).
     cpu_shares: 256
     healthcheck:
       test: ["CMD", "ollama", "list"]
@@ -44,7 +44,7 @@ services:
     networks:
       - default
       - dms-ki
-    # Absichtlich kein „ports:“ – der Dienst ist von außen nicht erreichbar, nur für das DMS im Netz dms-ki.
+    # Absichtlich kein „ports:“ – der Dienst ist von außen nicht erreichbar, nur für Ablago im Netz dms-ki.
 
   # Lädt das Modell beim ersten Start und beendet sich dann („Beendet“ ist hier also richtig).
   # Ist das Modell schon da, lädt es nichts.
@@ -62,8 +62,8 @@ services:
       - 'if ollama show "$$MODELL" >/dev/null 2>&1; then echo "Modell $$MODELL ist schon da."; else ollama pull "$$MODELL"; fi'
 
 networks:
-  # Gemeinsames Netz für DMS und KI-Dienst. „internal“: kein Weg nach draußen über dieses Netz.
-  # Das DMS hängt sich mit dms-anbinden.yml dazu und erreicht Ollama dann unter http://ollama:11434/v1.
+  # Gemeinsames Netz für Ablago und KI-Dienst. „internal“: kein Weg nach draußen über dieses Netz.
+  # Ablago hängt sich mit dms-anbinden.yml dazu und erreicht Ollama dann unter http://ollama:11434/v1.
   dms-ki:
     name: dms-ki
     internal: true

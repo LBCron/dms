@@ -3,7 +3,7 @@
 !!! info "Geprüft: Vorlage automatisch, Gerät noch nicht"
     Die Vorlage auf dieser Seite startet bei jeder Änderung probehalber auf den Rechnern von GitHub (Linux mit Docker, amd64). Von einem echten Gerät gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-So richtest du das DMS auf einem Synology-NAS mit DSM 7.2 oder neuer ein, ganz ohne Kommandozeile. Du brauchst ein Modell mit **Container Manager**, also die meisten Plus-Modelle mit Intel- oder AMD-Prozessor. Ob dein Modell dazu gehört, zeigt das Paket-Zentrum: Gibt es dort den Container Manager, passt es.
+So richtest du Ablago auf einem Synology-NAS mit DSM 7.2 oder neuer ein, ganz ohne Kommandozeile. Du brauchst ein Modell mit **Container Manager**, also die meisten Plus-Modelle mit Intel- oder AMD-Prozessor. Ob dein Modell dazu gehört, zeigt das Paket-Zentrum: Gibt es dort den Container Manager, passt es.
 
 --8<-- "ausgeblendet-schritt.md"
 
@@ -29,7 +29,7 @@ docker/dms/sicherung
     Hat dein NAS mehrere Speicherpools, lege `sicherung` besser auf einen anderen. Dann ändere in der Vorlage später nur diese eine Zeile, z. B. auf `/volume2/sicherung/dms`.
 
 !!! tip "Eingangsordner für den Scanner"
-    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://motom001.github.io/dms/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
+    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
 
 ## 3. Projekt anlegen
 
@@ -47,22 +47,22 @@ docker/dms/sicherung
 ## 4. Einrichten
 
 1. Im Browser `http://<NAS>:8080` öffnen, z. B. `http://192.168.1.20:8080`.
-2. Der Assistent fragt nach dem **Einrichtungscode**. Er steht im **Container Manager → Container → `dms-app-1` → Protokoll** (eine auffällige Zeile *Einrichtungscode für das DMS*). Er steht auch in der Datei `docker/dms/geheim/EINRICHTUNGSCODE`, die du in der File Station öffnen kannst.
+2. Der Assistent fragt nach dem **Einrichtungscode**. Er steht im **Container Manager → Container → `dms-app-1` → Protokoll** (eine auffällige Zeile *Einrichtungscode für Ablago*). Er steht auch in der Datei `docker/dms/geheim/EINRICHTUNGSCODE`, die du in der File Station öffnen kannst.
 3. Die Datenbank fragt der Assistent nicht ab, sie ist schon angebunden.
 
 --8<-- "assistent-weiter.md"
 
 ## Updates
 
-**Container Manager → Projekt → `dms` → Aktion → Erstellen** (bzw. *Build*). Das lädt das neueste Image und startet das DMS neu. Die Daten bleiben in den Ordnern. Was sich geändert hat, steht unter **Werkbank → Technik**. Vorher kannst du den Wartungsmodus einschalten, siehe [Aktualisieren](https://motom001.github.io/dms/admin/aktuell/aktualisieren/).
+**Container Manager → Projekt → `dms` → Aktion → Erstellen** (bzw. *Build*). Das lädt das neueste Image und startet Ablago neu. Die Daten bleiben in den Ordnern. Was sich geändert hat, steht unter **Werkbank → Technik**. Vorher kannst du den Wartungsmodus einschalten, siehe [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ## Sicherung außer Haus
 
-Das DMS sichert sich selbst in den Ordner `sicherung` (**Werkbank → Sicherung**). Mit **Hyper Backup** kopierst du diesen Ordner zusätzlich auf eine USB-Platte, ein zweites NAS oder einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien.
+Ablago sichert sich selbst in den Ordner `sicherung` (**Werkbank → Sicherung**). Mit **Hyper Backup** kopierst du diesen Ordner zusätzlich auf eine USB-Platte, ein zweites NAS oder einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien.
 
 ## Von unterwegs erreichbar
 
-Erst **nach** der Einrichtung: In DSM unter **Systemsteuerung → Anmeldeportal → Erweitert → Reverse Proxy** einen Eintrag von `https://dms.<deine-domain>` auf `http://localhost:8080` anlegen. Ein Zertifikat gibt es unter **Sicherheit → Zertifikat**. Im DMS dann unter **Werkbank → E-Mail und Adresse** die öffentliche Adresse eintragen. Hintergrund: [Hinter einem Reverse-Proxy](https://motom001.github.io/dms/admin/aktuell/installation/#hinter-einem-reverse-proxy).
+Erst **nach** der Einrichtung: In DSM unter **Systemsteuerung → Anmeldeportal → Erweitert → Reverse Proxy** einen Eintrag von `https://dms.<deine-domain>` auf `http://localhost:8080` anlegen. Ein Zertifikat gibt es unter **Sicherheit → Zertifikat**. In Ablago dann unter **Werkbank → E-Mail und Adresse** die öffentliche Adresse eintragen. Hintergrund: [Hinter einem Reverse-Proxy](https://help.ablago.app/admin/aktuell/installation/#hinter-einem-reverse-proxy).
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Die Menüpunkte entsprechen DSM 7.2. Weicht bei dir etwas ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

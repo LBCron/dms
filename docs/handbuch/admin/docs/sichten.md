@@ -2,7 +2,7 @@
 
 Eine **Ansicht** legt fest, was die Ablage links anbietet: welche Mappen eine Liste zeigt und wie die Ansichten zu einem Baum geordnet sind. Eine Ansicht ist eine gespeicherte Abfrage – die Benutzer sehen nur das Ergebnis.
 
-Ansichten pflegst du unter **Werkbank → Ansichten**. Links steht der Baum, rechts die gewählte Ansicht. Wie Benutzer mit Ansichten arbeiten, beschreibt das [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/ablage/).
+Ansichten pflegst du unter **Werkbank → Ansichten**. Links steht der Baum, rechts die gewählte Ansicht. Wie Benutzer mit Ansichten arbeiten, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/ablage/).
 
 ![Eine Ansicht mit Bedingung in der Werkbank](bilder/werkbank-sichten.png)
 
@@ -45,7 +45,7 @@ Welche Spalten die Liste zeigt, wählst du unter **Trefferliste**. Ein Mappentyp
 
 ## Bedingungen
 
-Bedingungen gelten für die eigenen Mappentypen der Ansicht und **alle zusammen** (UND). Unter jeder Bedingung steht, wie das DMS sie versteht, z. B. „Kündigung bis zwischen heute und heute + 12 Monate“. Unten zeigt die **Vorschau**, wie viele Mappen die Ansicht mit dem aktuellen Entwurf zeigen würde – auch vor dem Speichern.
+Bedingungen gelten für die eigenen Mappentypen der Ansicht und **alle zusammen** (UND). Unter jeder Bedingung steht, wie Ablago sie versteht, z. B. „Kündigung bis zwischen heute und heute + 12 Monate“. Unten zeigt die **Vorschau**, wie viele Mappen die Ansicht mit dem aktuellen Entwurf zeigen würde – auch vor dem Speichern.
 
 ### Auf Feldwerte
 
@@ -65,7 +65,7 @@ Bei einer Ansicht mit **mehreren** Mappentypen gibt es nur Felder, die alle Mapp
 
 ### Dynamische Werte
 
-Statt eines festen Werts kannst du einen nehmen, den das DMS bei **jedem Öffnen** neu berechnet:
+Statt eines festen Werts kannst du einen nehmen, den Ablago bei **jedem Öffnen** neu berechnet:
 
 | Wert | Wofür | Beispiel |
 | --- | --- | --- |
@@ -107,7 +107,7 @@ Mit Berechtigungen legst du fest, **wer eine Ansicht sieht**, **wer dort neue Ma
 |---|---|
 | **R** Sehen | Die Ansicht erscheint im Baum der Ablage und lässt sich öffnen. |
 | **C** Anlegen | In der Ansicht gibt es „+ Neu“. Anlegen dürfen muss man zusätzlich am [Mappentyp](berechtigungen.md) – beide müssen es erlauben. |
-| **E** Exportieren | Mappen der Ansicht als Excel, CSV, ZIP mit Dokumenten oder PDF ausgeben – alles, was Daten aus dem DMS hinausgibt. Lesen muss man jede Mappe zusätzlich am Mappentyp. Außerhalb einer Ansicht (erweiterte Suche, „Als PDF exportieren“ und „Per E-Mail versenden“ an der Mappe) darf eine Mappe hinaus, wenn sie in mindestens einer Ansicht mit E läge. |
+| **E** Exportieren | Mappen der Ansicht als Excel, CSV, ZIP mit Dokumenten oder PDF ausgeben – alles, was Daten aus Ablago hinausgibt. Lesen muss man jede Mappe zusätzlich am Mappentyp. Außerhalb einer Ansicht (erweiterte Suche, „Als PDF exportieren“ und „Per E-Mail versenden“ an der Mappe) darf eine Mappe hinaus, wenn sie in mindestens einer Ansicht mit E läge. |
 
 !!! info "Ansichtsregeln regeln die Ansicht, nicht die Mappen"
     Ob jemand eine **Mappe** lesen darf, entscheiden allein die [Berechtigungen am Mappentyp](berechtigungen.md). Eine Mappe aus einer verborgenen Ansicht kann also über die Suche, eine andere Ansicht oder einen Link weiter auftauchen. Wer Mappen verbergen will, regelt das am Mappentyp. Für Administratoren gelten die Regeln an Ansichten nicht.
@@ -120,7 +120,7 @@ Mit Berechtigungen legst du fest, **wer eine Ansicht sieht**, **wer dort neue Ma
 - Eine Unteransicht **erbt** die Regeln ihrer Elternansicht und deren Eltern. Sie stehen oben unter **Geerbt**, schreibgeschützt und mit dem Namen der Ansicht, von der sie kommen; ändern lassen sie sich nur dort.
 - **Eigene Regeln** einer Unteransicht können nur weiter **einschränken** (✗). Ein Recht gilt an der Unteransicht nur, wenn es an der Elternansicht gilt **und** keine eigene Regel es entzieht. Einen eigenen Standard hat eine Unteransicht nicht.
 - **Ist eine Unteransicht für jemanden verborgen, fehlen ihre Mappen auch in der Elternansicht**, und die Zahlen im Baum passen dazu.
-- **Verschieben** (Ziehen im Baum oder *Liegt unter* ändern): Sofort gelten die Regeln der neuen Eltern. Das DMS sagt beim Ablegen, von wem die Ansicht jetzt erbt. Wandert sie auf die oberste Ebene, entfallen die geerbten Regeln, und ihr eigener Standard gilt wieder.
+- **Verschieben** (Ziehen im Baum oder *Liegt unter* ändern): Sofort gelten die Regeln der neuen Eltern. Ablago sagt beim Ablegen, von wem die Ansicht jetzt erbt. Wandert sie auf die oberste Ebene, entfallen die geerbten Regeln, und ihr eigener Standard gilt wieder.
 
 ### Testlauf
 

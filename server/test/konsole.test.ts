@@ -153,7 +153,7 @@ describe('Befehl dms im Container (#244)', () => {
     await assert.rejects(lauf(['gibtsnicht']), (e) => e instanceof KonsolenFehler && e.code === 2);
   });
 
-  it('klare Meldung, wenn das DMS nicht läuft oder im Einrichtungsmodus ist', async () => {
+  it('klare Meldung, wenn Ablago nicht läuft oder im Einrichtungsmodus ist', async () => {
     const env = { DMS_KONSOLE_DATEI: join(tmpdir(), 'gibt-es-nicht-dms.json'), PORT: '3999' };
     await assert.rejects(verbinde(env, undefined, (async () => { throw new Error('ECONNREFUSED'); }) as Holen), /läuft nicht/);
     await assert.rejects(verbinde(env, undefined, (async () => new Response('{}', { status: 200 })) as Holen), /Einrichtungsmodus/);

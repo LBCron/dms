@@ -146,7 +146,7 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       await d.loescheMappe(v.id, ANNA, undefined, { grund: 'frist' });
       await d.raeumePapierkorbAuf(Date.now() + 40 * 24 * 3600 * 1000);
       const [weg] = await alle(d, { schritt: 'endgueltig', art: 'mappe' });
-      assert.deepEqual([weg.mappeId, weg.weg, weg.ausloeser, weg.von, weg.grund], [v.id, 'ablauf', 'automatisch', 'DMS', 'frist']);
+      assert.deepEqual([weg.mappeId, weg.weg, weg.ausloeser, weg.von, weg.grund], [v.id, 'ablauf', 'automatisch', 'Ablago', 'frist']);
     });
 
     it('Dokumente einzeln, ältere Versionen, Papierkorb leeren, Schnittstelle', async () => {

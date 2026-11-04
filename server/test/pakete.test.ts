@@ -226,14 +226,14 @@ function faelle(pg: boolean) {
       assert.deepEqual(await d.listePakete(), []);
     });
 
-    it('Prüfsumme falsch, DMS zu alt, Abhängigkeit fehlt', async () => {
+    it('Prüfsumme falsch, Ablago zu alt, Abhängigkeit fehlt', async () => {
       const { d, p } = await aufbau([{ dateien: basis, falscheSumme: true }]);
       await assert.rejects(p.vorschau({ id: 'basis' }), /Prüfsumme/);
-      assert.deepEqual(await paketTypen(d), [], 'nur noch die Typen des DMS (System, Ablageort)');
+      assert.deepEqual(await paketTypen(d), [], 'nur noch die Typen von Ablago (System, Ablageort)');
       const alt = await aufbau([{ dateien: basis }], '0.62.0');
       const v = await alt.p.vorschau({ id: 'basis' });
       assert.equal(v.dmsOk, false);
-      await assert.rejects(alt.p.installiere({ id: 'basis' }, ICH), /braucht DMS >=0\.63\.0/);
+      await assert.rejects(alt.p.installiere({ id: 'basis' }, ICH), /braucht Ablago >=0\.63\.0/);
       const ohne = await aufbau([{ dateien: vertraege }]);
       await assert.rejects(ohne.p.installiere({ id: 'vertraege' }, ICH), /Es fehlen Pakete.*basis/);
       await assert.rejects(ohne.p.installiere({ id: 'vertraege', mitAbhaengigkeiten: true }, ICH), /gibt es im Katalog nicht/);
@@ -256,7 +256,7 @@ function faelle(pg: boolean) {
       await assert.rejects(p.entferne('basis', ICH), (e) => e instanceof Fachfehler && JSON.stringify(e.details).includes('braucht'));
       await p.entferne('vertraege', ICH);
       await p.entferne('basis', ICH);
-      assert.deepEqual(await paketTypen(d), [], 'nur noch die Typen des DMS (System, Ablageort)');
+      assert.deepEqual(await paketTypen(d), [], 'nur noch die Typen von Ablago (System, Ablageort)');
     });
 
     it('Namenskonflikt mit Vorschlag; ein Fehler lässt nichts halb angelegt', async () => {
@@ -339,12 +339,12 @@ function faelle(pg: boolean) {
       assert.deepEqual(gruende('- { typ: vertrag, schluessel: v, werte: { nr: V } }\n- { typ: zahlung, werte: { datum: "2026-01-01", vertrag: { beispiel: "vertraege:v" } } }\n'), [], 'eigene Paket-Id als Präfix ist erlaubt');
     });
 
-    it('verweist mit dms:… auf Mappentypen des DMS (#310)', async () => {
+    it('verweist mit dms:… auf Mappentypen von Ablago (#310)', async () => {
       const { d, p } = await aufbau([{ dateien: ordnerpaket }], '0.75.0');
       const ablageort = (await d.ablageortTyp())!;
       const v = await p.vorschau({ id: 'ordnerpaket' });
       assert.deepEqual(v.probleme, []);
-      assert.ok(v.hinweise.some((h) => /Ablageort \(aus dem DMS\)/.test(h) && /Benutzer \(aus dem DMS\)/.test(h)), v.hinweise.join(' | '));
+      assert.ok(v.hinweise.some((h) => /Ablageort \(aus Ablago\)/.test(h) && /Benutzer \(aus Ablago\)/.test(h)), v.hinweise.join(' | '));
       const ok = await p.installiere({ id: 'ordnerpaket' }, ICH);
       const urkunde = (await d.listeTypen()).find((t) => t.id === ok.typen.urkunde)!;
       assert.equal(urkunde.felder.find((f) => f.key === 'verbleib_original')!.zielTyp, ablageort.id);
@@ -364,7 +364,7 @@ function faelle(pg: boolean) {
       assert.equal(h.vorschau.paket.id, 'basis');
       assert.equal(h.vorschau.typen[0].dmsSchluessel, 'basis_organisation');
       assert.deepEqual((await p.vorschau({ upload: h.upload })).sichten.length, 5);
-      await assert.rejects(p.installiere({ upload: h.upload }, ICH), /nicht vom DMS-Projekt geprüft/);
+      await assert.rejects(p.installiere({ upload: h.upload }, ICH), /nicht vom Ablago-Projekt geprüft/);
       const inst = await p.installiere({ upload: h.upload, bestaetigt: true, beispiele: true }, ICH);
       assert.equal(inst.herkunft.art, 'hochgeladen');
       assert.equal(inst.herkunft.art === 'hochgeladen' && inst.herkunft.von, ICH.email);
@@ -391,7 +391,7 @@ function faelle(pg: boolean) {
       assert.equal(s.datei.dms, '0.107.1');
       assert.match(s.datei.sha256, /^[0-9a-f]{64}$/);
       // Je Paket: Herkunft bestätigen wie beim einzelnen Hochladen; installiert wird einzeln.
-      await assert.rejects(p.installiere({ upload: s.pakete[0].upload }, ICH), /nicht vom DMS-Projekt geprüft/);
+      await assert.rejects(p.installiere({ upload: s.pakete[0].upload }, ICH), /nicht vom Ablago-Projekt geprüft/);
       const b = await p.installiere({ upload: s.pakete[0].upload, bestaetigt: true }, ICH);
       assert.equal(b.herkunft.art, 'hochgeladen');
       assert.equal((await p.vorschau({ upload: s.pakete[1].upload })).abhaengigkeiten[0].installiert, '1.0.0');
@@ -456,7 +456,7 @@ describe('Pakete dazuholen: Auswahl mit Abhängigkeiten (#460)', () => {
     kp('haus', [kv('1.0.2', '>=0.79.0', { basis: '>=1.0.0', haushalt: '>=1.0.0' })]),
     kp('texterkennung', [kv('1.0.0', '>=0.88.0', {}, true)]),
   ] };
-  it('nimmt Abhängigkeiten mit, Abhängigkeiten zuerst, passend zur DMS-Version', () => {
+  it('nimmt Abhängigkeiten mit, Abhängigkeiten zuerst, passend zur Ablago-Version', () => {
     const r = auswahlMitAbhaengigkeiten(k, ['vermietung', 'texterkennung'], '0.107.1');
     assert.deepEqual(r.probleme, []);
     assert.deepEqual(r.pakete.map((p) => `${p.id}@${p.version}${p.gewaehlt ? '' : '*'}`), ['basis@1.1.1*', 'haushalt@1.0.2*', 'haus@1.0.2*', 'vermietung@1.0.1', 'texterkennung@1.0.0']);
@@ -468,7 +468,7 @@ describe('Pakete dazuholen: Auswahl mit Abhängigkeiten (#460)', () => {
     assert.deepEqual(auswahlMitAbhaengigkeiten(k, ['haushalt'], '0.107.1', [{ id: 'basis', version: '1.0.0' }]).pakete.map((p) => p.id), ['haushalt']);
     const alt = auswahlMitAbhaengigkeiten(k, ['texterkennung', 'basis'], '0.70.0');
     assert.deepEqual(alt.pakete.map((p) => `${p.id}@${p.version}`), ['basis@1.0.0']);
-    assert.match(alt.probleme[0], /Texterkennung.*keine Version passt zu DMS 0\.70\.0/);
+    assert.match(alt.probleme[0], /Texterkennung.*keine Version passt zu Ablago 0\.70\.0/);
     assert.match(auswahlMitAbhaengigkeiten({ ...k, pakete: k.pakete.filter((p) => p.id !== 'basis') }, ['haushalt'], '0.107.1').probleme[0], /braucht „basis“/);
   });
   it('Reihenfolge nach Abhängigkeiten, Kreis = null', () => {

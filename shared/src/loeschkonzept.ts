@@ -49,7 +49,7 @@ export type Block =
 export interface Abschnitt { titel: string; bloecke: Block[] }
 export interface Loeschkonzept { titel: string; untertitel: string; stand: string; vorbemerkung: string; abschnitte: Abschnitt[]; luecken: Luecke[]; datenarten: Datenart[] }
 
-export const LOESCHKONZEPT_TITEL = 'Löschkonzept: Aufbewahren, Sperren und Löschen mit dem DMS';
+export const LOESCHKONZEPT_TITEL = 'Löschkonzept: Aufbewahren, Sperren und Löschen mit Ablago';
 export const FEHLT = (was: string) => `[${was}]`;
 
 const jahre = (n: number) => `${n} ${n === 1 ? 'Jahr' : 'Jahre'}`;
@@ -130,32 +130,32 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       ['Ansprechpartner für Datenschutz', FEHLT('Name, E-Mail – ggf. Datenschutzbeauftragter')],
       ['Verantwortlich für Löschungen', FEHLT('Name')],
       ['Vertretung', FEHLT('Name')],
-      ['Eingesetzte Software', `DMS (Open Source, https://github.com/motom001/dms), Version ${q.version}, selbst betrieben auf ${FEHLT('Gerät / Anbieter')}`],
+      ['Eingesetzte Software', `Ablago (Open Source, https://github.com/motom001/dms), Version ${q.version}, selbst betrieben auf ${FEHLT('Gerät / Anbieter')}`],
       ['Geltungsbereich', arten.length ? `Datenarten aus Abschnitt 2: ${arten.map((a) => a.typ).join(', ')}` : FEHLT('Welche Daten: z. B. Mieter und Mietverhältnisse, Kunden, Lieferanten, Beschäftigte …')],
       ['Gültig ab', FEHLT('Datum')],
     ] }] },
     { titel: '2. Datenarten und Fristen', bloecke: [
-      { art: 'absatz', text: `Jeder Mappentyp im DMS ist eine Datenart. Die Tabelle enthält die Mappentypen, die eine Person betreffen, auf eine solche verweisen oder für die ein Zweck hinterlegt ist (Stand ${datum(q.stand)}). Zweck und „betrifft eine Person“ stehen unter Werkbank → Datenschutz → Einstellungen, Frist und Stichtag im Archivmodus unter Werkbank → Mappentypen.` },
-      { art: 'tabelle', breiten: [1.1, 1.3, 1.3, 0.6, 1.1, 1.2, 0.95, 1.4], kopf: ['Datenart (Mappentyp)', 'Betroffene', 'Zweck', 'Frist', 'Grund der Frist', 'Beginn der Frist (Stichtag)', 'Sperre im DMS', 'Löschweg'],
+      { art: 'absatz', text: `Jeder Mappentyp in Ablago ist eine Datenart. Die Tabelle enthält die Mappentypen, die eine Person betreffen, auf eine solche verweisen oder für die ein Zweck hinterlegt ist (Stand ${datum(q.stand)}). Zweck und „betrifft eine Person“ stehen unter Werkbank → Datenschutz → Einstellungen, Frist und Stichtag im Archivmodus unter Werkbank → Mappentypen.` },
+      { art: 'tabelle', breiten: [1.1, 1.3, 1.3, 0.6, 1.1, 1.2, 0.95, 1.4], kopf: ['Datenart (Mappentyp)', 'Betroffene', 'Zweck', 'Frist', 'Grund der Frist', 'Beginn der Frist (Stichtag)', 'Sperre in Ablago', 'Löschweg'],
         zeilen: arten.length ? arten.map((a) => [a.typ, a.betroffene, a.zweck, a.frist, a.grund, a.stichtag, a.sperre, a.loeschweg])
           : [[FEHLT('Mappentyp'), FEHLT('Betroffene'), FEHLT('Zweck'), FEHLT('Frist'), FEHLT('Grund'), FEHLT('Stichtag'), 'keine', FEHLT('Löschweg')]] },
       ...(fehlt.length ? [{ art: 'hinweis' as const, titel: 'Bitte ergänzen', punkte: fehlt.map((x) => x.text) }] : []),
       ...(ohne.length ? [{ art: 'absatz' as const, text: `Ohne Personenbezug (nicht in der Tabelle): ${ohne.join(', ')}. Betrifft einer davon doch Personen, markiere ihn unter Werkbank → Datenschutz → Einstellungen und erzeuge das Löschkonzept neu.` }] : []),
-      { art: 'absatz', text: 'Sperre im DMS:' },
+      { art: 'absatz', text: 'Sperre in Ablago:' },
       { art: 'punkte', punkte: [
         'Archivmodus (Werkbank → Mappentypen → Archivmodus): Mappen und Dokumente dieses Mappentyps lassen sich bis zum Ende der Aufbewahrungsfrist nicht löschen – auch nicht von Administratoren, über den Papierkorb oder die Schnittstelle. Dokumente ändern sich nur als neue Version. Die Frist läuft bis zum 31.12. des Stichtagsjahres plus die Jahre.',
         'Keine: Die Mappen lassen sich jederzeit löschen. Wer das darf, regeln die Berechtigungen (Abschnitt 5).',
       ] },
       { art: 'absatz', text: 'Löschweg:' },
       { art: 'punkte', punkte: [
-        'Darf weg: Nach Fristende stehen die Mappen unter Werkbank → Darf weg. Das DMS löscht nie von selbst.',
+        'Darf weg: Nach Fristende stehen die Mappen unter Werkbank → Darf weg. Ablago löscht nie von selbst.',
         `Ansicht: Für Fristen ohne Archivmodus zeigt die Ansicht ${FEHLT('Name')} die fälligen Mappen nach dem Feld ${FEHLT('Datumsfeld')}.`,
       ] },
     ] },
     { titel: '3. Regelmäßiges Löschen', bloecke: [{ art: 'punkte', punkte: [
-      `${FEHLT('Wer')} geht ${FEHLT('jährlich, z. B. im Januar')} Werkbank → Darf weg und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf.${q.loeschprotokoll ? ' Das DMS hält jede Löschung im Löschprotokoll fest (Abschnitt 8).' : ` ${FEHLT('Wer')} hält fest, wann das geschah (Abschnitt 8).`}`,
-      korb ? `Gelöschte Mappen und Dokumente kommen in den Papierkorb (Werkbank → Papierkorb, Aufbewahrung ${tage(q.papierkorbTage)}). Danach löscht das DMS sie mit ihren Dateien und dem Volltext endgültig.`
-        : 'Der Papierkorb ist ausgeschaltet: Gelöschte Mappen und Dokumente löscht das DMS sofort endgültig mit ihren Dateien und dem Volltext.',
+      `${FEHLT('Wer')} geht ${FEHLT('jährlich, z. B. im Januar')} Werkbank → Darf weg und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf.${q.loeschprotokoll ? ' Ablago hält jede Löschung im Löschprotokoll fest (Abschnitt 8).' : ` ${FEHLT('Wer')} hält fest, wann das geschah (Abschnitt 8).`}`,
+      korb ? `Gelöschte Mappen und Dokumente kommen in den Papierkorb (Werkbank → Papierkorb, Aufbewahrung ${tage(q.papierkorbTage)}). Danach löscht Ablago sie mit ihren Dateien und dem Volltext endgültig.`
+        : 'Der Papierkorb ist ausgeschaltet: Gelöschte Mappen und Dokumente löscht Ablago sofort endgültig mit ihren Dateien und dem Volltext.',
       `Die Historie endgültig gelöschter Mappen bleibt ${tage(q.historieTage)} (Werkbank → Papierkorb), damit sich nachvollziehen lässt, was mit ihnen geschah. Die Historie lebender Mappen und von Mappen im Archivmodus bleibt immer.`,
     ] }] },
     { titel: '4. Sperren auf Verlangen', bloecke: [
@@ -175,12 +175,12 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
     { titel: '6. Kopien außerhalb der Ablage', bloecke: [
       { art: 'absatz', text: 'Gelöschte Daten können noch an diesen Stellen liegen; sie fallen so weg:' },
       { art: 'tabelle', breiten: [1.4, 1.2, 1.6], kopf: ['Wo', 'Wie lange', 'Wie gelöscht'], zeilen: [
-        ['Automatische Sicherungen (Werkbank → Sicherung)', sicherungText, 'das DMS entfernt ältere Sicherungen nach jeder automatischen Sicherung'],
+        ['Automatische Sicherungen (Werkbank → Sicherung)', sicherungText, 'Ablago entfernt ältere Sicherungen nach jeder automatischen Sicherung'],
         ['Von Hand angelegte Sicherungen', 'bis zum Löschen', `${FEHLT('Wer')} löscht sie ${FEHLT('wann')}`],
         ['Kopie der Sicherungen außer Haus', FEHLT('z. B. die letzten 4 Wochen'), FEHLT('Wer, wie')],
         ['Vollexporte (export/ im Sicherungsordner)', 'bis zum Löschen', `Werkbank → Vollexport → Löschen, ${FEHLT('spätestens nach …')}`],
         ['Persönliche Exporte der Benutzer', 'bis zum nächsten Export des Benutzers', FEHLT('Hinweis an die Benutzer')],
-        ['Bereitliegende Auskünfte', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}, mit Abruf-Link bis dieser abläuft`, 'das DMS löscht sie selbst'],
+        ['Bereitliegende Auskünfte', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}, mit Abruf-Link bis dieser abläuft`, 'Ablago löscht sie selbst'],
         ['Protokoll (Werkbank → Protokoll, Container-Logs)', `24 Stunden in der Werkbank; Container-Logs ${FEHLT('nach Einstellung von Docker')}`, FEHLT('ggf. Log-Rotation einstellen')],
         ['Heruntergeladene Dateien, Ausdrucke, E-Mails', FEHLT('Regel'), FEHLT('Regel')],
       ] },
@@ -191,7 +191,7 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       `${FEHLT('Wer')} deaktiviert Konten von Personen, die gehen, ${FEHLT('am letzten Arbeitstag')}.`,
     ] }] },
     { titel: '8. Nachweis', bloecke: [{ art: 'punkte', punkte: q.loeschprotokoll ? [
-      `Das DMS führt ein Löschprotokoll (Werkbank → Datenschutz → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – ohne Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern, wird als PDF oder CSV ausgegeben und nach ${q.loeschprotokoll.jahre === 1 ? 'einem Jahr' : `${q.loeschprotokoll.jahre} Jahren`} automatisch gekürzt.`,
+      `Ablago führt ein Löschprotokoll (Werkbank → Datenschutz → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – ohne Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern, wird als PDF oder CSV ausgegeben und nach ${q.loeschprotokoll.jahre === 1 ? 'einem Jahr' : `${q.loeschprotokoll.jahre} Jahren`} automatisch gekürzt.`,
       'Bei Löschungen auf Verlangen wählt, wer löscht, den Grund „Auf Verlangen der betroffenen Person“.',
       'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz).',
     ] : [
@@ -199,15 +199,15 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz).',
     ] }] },
     { titel: '9. Änderungen dieses Löschkonzepts', bloecke: [{ art: 'tabelle', breiten: [1, 2.4, 1.2], kopf: ['Datum', 'Was geändert', 'Wer'], zeilen: [
-      [datum(q.stand), `aus dem DMS erzeugt (Version ${q.version})`, FEHLT('Name')],
+      [datum(q.stand), `aus Ablago erzeugt (Version ${q.version})`, FEHLT('Name')],
       [FEHLT('Datum'), FEHLT('erste Version'), FEHLT('Name')],
     ] }] },
   ];
   return {
     titel: LOESCHKONZEPT_TITEL,
     untertitel: q.mandant || verantwortlicher || '',
-    stand: `Stand ${datum(q.stand)} · aus dem DMS ${q.version} erzeugt`,
-    vorbemerkung: 'Erzeugt aus den Mappentypen und Einstellungen deines DMS. Alles in [eckigen Klammern] ersetzt du durch deine Angaben oder streichst es. Das Dokument ist ein Ausgangspunkt, keine Rechtsberatung – stimme Fristen und Gründe mit deiner Steuerberatung bzw. deinem Datenschutzbeauftragten ab. Erzeuge es neu, wenn sich Mappentypen oder Fristen ändern, und halte die Änderungstabelle am Ende aktuell.',
+    stand: `Stand ${datum(q.stand)} · aus Ablago ${q.version} erzeugt`,
+    vorbemerkung: 'Erzeugt aus den Mappentypen und Einstellungen deines Ablago. Alles in [eckigen Klammern] ersetzt du durch deine Angaben oder streichst es. Das Dokument ist ein Ausgangspunkt, keine Rechtsberatung – stimme Fristen und Gründe mit deiner Steuerberatung bzw. deinem Datenschutzbeauftragten ab. Erzeuge es neu, wenn sich Mappentypen oder Fristen ändern, und halte die Änderungstabelle am Ende aktuell.',
     abschnitte, luecken: fehlt, datenarten: arten,
   };
 }

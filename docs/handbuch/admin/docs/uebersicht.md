@@ -29,8 +29,8 @@ Jedes Formular endet mit derselben Leiste, die beim Scrollen unten sichtbar blei
 
 - **Neu anlegen:** **Entwurf verwerfen** schließt das Formular, ohne etwas anzulegen, und du bist zurück in der Liste.
 - **Bearbeiten:** **Änderungen verwerfen** setzt alle Felder auf den gespeicherten Stand zurück. Beide Knöpfe gehen erst, wenn du etwas geändert hast; solange steht in der Leiste „Ungespeicherte Änderungen“.
-- **Esc** im Formular wirkt wie Verwerfen. Hast du etwas geändert, fragt das DMS vorher nach.
-- Klickst du mit ungespeicherten Änderungen einen anderen Eintrag oder Bereich an oder schließt den Tab, fragt das DMS nach, ob du die Änderungen verwerfen willst.
+- **Esc** im Formular wirkt wie Verwerfen. Hast du etwas geändert, fragt Ablago vorher nach.
+- Klickst du mit ungespeicherten Änderungen einen anderen Eintrag oder Bereich an oder schließt den Tab, fragt Ablago nach, ob du die Änderungen verwerfen willst.
 
 Knöpfe wie **Verbindung testen** oder **Jetzt prüfen** stehen darüber im Formular; links in der Leiste steht, wo es das gibt, **Löschen** bzw. **Entfernen**.
 
@@ -105,13 +105,13 @@ Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldun
 | [Postfächer](postfaecher.md) | Post aus einem E-Mail-Konto abholen | Betrieb |
 | [Eingangsordner](eingangsordner.md) | Scans aus einem Ordner übernehmen | Betrieb |
 | [WebDAV-Laufwerk](webdav.md) | Die Ablage im Explorer, Finder oder in der Dateien-App einbinden und Dateien hineinlegen | Haushalt, Betrieb |
-| [Webhooks](webhooks.md) | Sehen und abschalten, wohin das DMS neue Post, Aufgaben und Fristen meldet (Hausautomatisierung), und Ziele freigeben | Haushalt, Betrieb |
+| [Webhooks](webhooks.md) | Sehen und abschalten, wohin Ablago neue Post, Aufgaben und Fristen meldet (Hausautomatisierung), und Ziele freigeben | Haushalt, Betrieb |
 | [Texterkennung](texterkennung.md) | Text in gescannten Dokumenten finden | Betrieb |
 | [Sicherung](sicherung.md) | Sicherungen einrichten und prüfen | Haushalt, Betrieb |
 | [Wiederherstellen](wiederherstellen.md) | Eine Sicherung zurückspielen | Haushalt, Betrieb |
 | [Vollexport](export.md) | Alle Daten in offenen Formaten mitnehmen | Haushalt, Betrieb |
 | [Papierkorb](papierkorb.md) | Gelöschte Mappen zurückholen | Haushalt, Betrieb |
-| [E-Mail und Adresse](installation.md#e-mail-und-adresse) | E-Mail-Versand und Adresse des DMS | Haushalt, Betrieb |
+| [E-Mail und Adresse](installation.md#e-mail-und-adresse) | E-Mail-Versand und Adresse von Ablago | Haushalt, Betrieb |
 | [Benachrichtigungen und Aufgaben](aufgaben.md) | Die Tägliche Zusammenfassung und die Benachrichtigung für Favoriten einstellen, alle offenen Aufgaben im Blick behalten | Haushalt, Betrieb |
 | [Anmeldeschutz](anmeldeschutz.md) | Zwei-Faktor vorschreiben, Anmeldung über einen Anbieter, gesperrte Adressen | Betrieb |
 | [Designs](designs.md) | Logo, Farben und eigenes CSS | Betrieb |

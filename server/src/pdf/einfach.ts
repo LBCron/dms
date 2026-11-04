@@ -73,7 +73,7 @@ export function pdfAus(absaetze: Absatz[], titel = 'Dokument'): Buffer {
   }
   objekte[katalog - 1] = Buffer.from(`<< /Type /Catalog /Pages ${seitenObj} 0 R >>`, 'latin1');
   objekte[seitenObj - 1] = Buffer.from(`<< /Type /Pages /Kids [${kinder.map((k) => `${k} 0 R`).join(' ')}] /Count ${kinder.length} >>`, 'latin1');
-  const info = neu(Buffer.concat([Buffer.from('<< /Title ', 'latin1'), pdfText(titel), Buffer.from(' /Producer (DMS) >>', 'latin1')]));
+  const info = neu(Buffer.concat([Buffer.from('<< /Title ', 'latin1'), pdfText(titel), Buffer.from(' /Producer (Ablago) >>', 'latin1')]));
 
   const teile: Buffer[] = [Buffer.from('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n', 'latin1')];
   let pos = teile[0].length;

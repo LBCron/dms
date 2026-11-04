@@ -1,8 +1,8 @@
-# DMS auf dem Raspberry Pi (und jedem Linux-Rechner) – Vorlage aus https://github.com/motom001/dms
-# (deploy/raspberry-pi), zwei Container: DMS und PostgreSQL.
-# Anleitung: https://motom001.github.io/dms/installieren/aktuell/raspberry-pi/
+# Ablago auf dem Raspberry Pi (und jedem Linux-Rechner) – Vorlage aus https://github.com/motom001/dms
+# (deploy/raspberry-pi), zwei Container: Ablago und PostgreSQL.
+# Anleitung: https://help.ablago.app/installieren/aktuell/raspberry-pi/
 #
-# Das Einrichtungsskript (einrichten.sh) legt diese Datei in deinen DMS-Ordner (z. B. ~/dms) und
+# Das Einrichtungsskript (einrichten.sh) legt diese Datei in deinen Ablago-Ordner (z. B. ~/dms) und
 # daneben eine Datei .env mit einem zufälligen Passwort:  DB_PASSWORD=<langes Passwort>
 # Ohne Skript legst du die .env selbst an. Alle Ordner liegen neben dieser Datei.
 
@@ -30,7 +30,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Dasselbe Passwort für das DMS – der Einrichtungsassistent überspringt dann den Datenbankschritt.
+      # Dasselbe Passwort für Ablago – der Einrichtungsassistent überspringt dann den Datenbankschritt.
       DMS_DB_PASSWORT: ${DB_PASSWORD:?DB_PASSWORD in .env setzen}
     volumes:
       # Hochgeladene Dateien

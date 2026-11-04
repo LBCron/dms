@@ -148,7 +148,7 @@ describe('Projektschlüssel (#594)', () => {
 });
 
 describe('Offizieller Katalog mit Signatur (#594)', () => {
-  it('gültig signiert: Herkunft „DMS-Projekt“, keine Bestätigung nötig', async () => {
+  it('gültig signiert: Herkunft „Ablago-Projekt“, keine Bestätigung nötig', async () => {
     const { p, offiziell } = await aufbau();
     const stand = iso(1);
     offiziell([basis], stand);

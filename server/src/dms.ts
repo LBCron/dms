@@ -34,7 +34,7 @@ export function zerlege(args: string[]): Zerlegt {
   return { befehl, opt };
 }
 
-export const HILFE = `dms – Befehle für das DMS in diesem Container
+export const HILFE = `dms – Befehle für Ablago in diesem Container
 
 Aufruf:  docker exec -it <container> dms <befehl> [--json] [--als <admin-email>]
 
@@ -70,7 +70,7 @@ Optionen
   --als <email> als dieser Administrator handeln (sonst der älteste aktive)
   --ja          Rückfragen mit Ja beantworten
 
-Handbuch: https://motom001.github.io/dms/admin/aktuell/konsole/`;
+Handbuch: https://help.ablago.app/admin/aktuell/konsole/`;
 
 const BEFEHLE = ['passwort', 'zweifaktor-zuruecksetzen', 'gesperrt', 'entsperren', 'wartung', 'abmelden', 'status', 'sicherung', 'benutzer', 'api'];
 
@@ -90,10 +90,10 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
       // Läuft der Server, aber ohne Konsolenzugang? Dann ist es der Einrichtungsmodus.
       const url = lokaleUrl(Number(env.PORT ?? 3000), env.HOST);
       const antwort = await holen(`${url}/api/gesundheit`).then((r) => r.ok).catch(() => false);
-      if (antwort) throw new KonsolenFehler('Das DMS läuft im Einrichtungsmodus (noch keine Datenbank angebunden). Richte es zuerst im Browser ein; danach geht der Befehl dms.', 3);
-      throw new KonsolenFehler('Das DMS läuft nicht (oder startet gerade). Prüfe das Protokoll des Containers und versuche es in einer Minute noch einmal.', 3);
+      if (antwort) throw new KonsolenFehler('Ablago läuft im Einrichtungsmodus (noch keine Datenbank angebunden). Richte es zuerst im Browser ein; danach geht der Befehl dms.', 3);
+      throw new KonsolenFehler('Ablago läuft nicht (oder startet gerade). Prüfe das Protokoll des Containers und versuche es in einer Minute noch einmal.', 3);
     }
-    if ((e as NodeJS.ErrnoException).code === 'EACCES') throw new KonsolenFehler(`Keine Berechtigung für ${datei}. Rufe dms als derselbe Benutzer auf wie das DMS (z. B. docker exec ohne --user).`, 3);
+    if ((e as NodeJS.ErrnoException).code === 'EACCES') throw new KonsolenFehler(`Keine Berechtigung für ${datei}. Rufe dms als derselbe Benutzer auf wie Ablago (z. B. docker exec ohne --user).`, 3);
     throw new KonsolenFehler(`${datei} ist nicht lesbar: ${(e as Error).message}`, 3);
   }
   return {
@@ -106,7 +106,7 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
       } catch {
-        throw new KonsolenFehler('Das DMS antwortet nicht. Läuft es noch? (Nach einem Neustart einfach noch einmal versuchen.)', 3);
+        throw new KonsolenFehler('Ablago antwortet nicht. Läuft es noch? (Nach einem Neustart einfach noch einmal versuchen.)', 3);
       }
       const text = await r.text();
       let daten: unknown = null;
@@ -216,7 +216,7 @@ export async function fuehreAus(z: Zerlegt, v: Verbindung, ein: Ein, aus: Aus): 
       const s = await v.anfrage<{ dms: { version: string; variante: string; commit: string | null }; laufzeit: { node: string; laeuftSeit: string; zeitzone: string }; datenbank: Record<string, unknown> }>('GET', '/api/werkbank/system');
       const db = s.datenbank;
       return zeige(s, () => [
-        `DMS ${s.dms.version} (${s.dms.variante})${s.dms.commit ? `, Commit ${s.dms.commit.slice(0, 7)}` : ''}`,
+        `Ablago ${s.dms.version} (${s.dms.variante})${s.dms.commit ? `, Commit ${s.dms.commit.slice(0, 7)}` : ''}`,
         `Läuft seit ${zeit(s.laufzeit.laeuftSeit)} · Node ${s.laufzeit.node} · ${s.laufzeit.zeitzone}`,
         `Datenbank: ${'fehler' in db ? `Fehler – ${String(db.fehler)}` : Object.entries(db).filter(([, x]) => typeof x !== 'object').map(([k, x]) => `${k} ${String(x)}`).join(' · ')}`,
       ]);

@@ -282,7 +282,7 @@ function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbiet
     try { setGeraet(await api.postfachOAuthGeraet(postfach.id)); setMeldung(undefined); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   async function abmelden() {
-    if (!postfach || !(await rueckfrage({ titel: 'Anmeldung entfernen?', text: 'Das DMS löscht die gespeicherten Token und holt bis zur neuen Anmeldung keine Mails aus diesem Postfach ab.', ja: 'Abmelden', gefahr: true }))) return;
+    if (!postfach || !(await rueckfrage({ titel: 'Anmeldung entfernen?', text: 'Ablago löscht die gespeicherten Token und holt bis zur neuen Anmeldung keine Mails aus diesem Postfach ab.', ja: 'Abmelden', gefahr: true }))) return;
     try { z.setListe(await api.postfachOAuthAbmelden(postfach.id)); setMeldung({ art: 'gut', text: 'Abgemeldet.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
 
@@ -319,7 +319,7 @@ function OAuthBereich({ anbieter, postfach, geaendert, z, setMeldung }: { anbiet
           </dl>
           {geraet && <div className="hinweis info" role="status"><p>Öffne <a href={geraet.adresse} target="_blank" rel="noreferrer noopener" className="verweis">{geraet.adresse} ↗</a> auf einem beliebigen Gerät und gib diesen Code ein: <strong className="mono">{geraet.code}</strong>. Gültig bis {zeit(geraet.bis)}. Diese Seite wartet, bis du dich angemeldet hast.</p></div>}
           <div className="knoepfe">
-            <button type="button" className="knopf primaer" disabled={!gespeichert?.clientId || !stand?.rueckruf || !rueckrufOk(stand.rueckruf) || appEnt.geaendert} title={!stand?.rueckruf ? 'Ohne Adresse des DMS nur mit Gerätecode' : !rueckrufOk(stand.rueckruf) ? 'Nur mit https-Adresse des DMS – sonst mit Gerätecode' : appEnt.geaendert ? 'Erst die App speichern' : undefined} onClick={() => void imBrowser()}>Im Browser anmelden</button>
+            <button type="button" className="knopf primaer" disabled={!gespeichert?.clientId || !stand?.rueckruf || !rueckrufOk(stand.rueckruf) || appEnt.geaendert} title={!stand?.rueckruf ? 'Ohne Adresse von Ablago nur mit Gerätecode' : !rueckrufOk(stand.rueckruf) ? 'Nur mit https-Adresse von Ablago – sonst mit Gerätecode' : appEnt.geaendert ? 'Erst die App speichern' : undefined} onClick={() => void imBrowser()}>Im Browser anmelden</button>
             {ANBIETER[anbieter].geraet && <button type="button" className="knopf" disabled={!gespeichert?.clientId || !!geraet || appEnt.geaendert} onClick={() => void mitGeraetecode()}>Mit Gerätecode anmelden</button>}
             {o && o.zustand !== 'abgemeldet' && <button type="button" className="knopf gefahr-rand" onClick={() => void abmelden()}>Abmelden</button>}
           </div>

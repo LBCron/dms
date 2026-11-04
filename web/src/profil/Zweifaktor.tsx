@@ -98,7 +98,7 @@ export function ZweifaktorBlatt() {
   return (
     <div className="blatt" id="zweifaktor">
       <h2 className="h3">Zwei-Faktor-Anmeldung <Hilfe ort="profil.zweifaktor" /></h2>
-      <p className="leise">Neben dem Passwort fragt das DMS bei der Anmeldung einen Code aus einer App auf deinem Handy ab. Wer nur dein Passwort kennt, kommt dann nicht hinein.</p>
+      <p className="leise">Neben dem Passwort fragt Ablago bei der Anmeldung einen Code aus einer App auf deinem Handy ab. Wer nur dein Passwort kennt, kommt dann nicht hinein.</p>
       {!stand ? <p className="leise">Lade …</p> : modus === 'einrichten' ? (
         <ZweifaktorEinrichten fertig={() => { setModus('ruhe'); setMeldung({ art: 'gut', text: 'Zwei-Faktor-Anmeldung eingerichtet.' }); void laden(); void aktualisieren(); }} abbrechen={() => setModus('ruhe')} />
       ) : neueCodes ? (

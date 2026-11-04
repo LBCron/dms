@@ -126,7 +126,7 @@ export function EmailMehrere({ ids, fertig }: { ids: string[]; fertig(meldung?: 
               Dokumente zusammen {groesse(summe)}{kleinAn ? ' vor dem Verkleinern' : ''}{angaben ? `, dazu ${ids.length} kleine PDFs mit den Angaben` : ''}.{zuGross ? ' Das ist zu groß zum Versenden; bitte weniger auswählen.' : summe > EMAIL_WARNUNG && !kleinAn ? ` Viele Mailserver nehmen E-Mails über 20 MB nicht an.${mitPdf ? ' Tipp: PDFs verkleinert senden.' : ''}` : ''}
             </p>}
           </fieldset>
-          <p className="leise klein">Eine E-Mail an alle Empfänger. Absender ist die Adresse des DMS, Antworten gehen an dich ({ich?.email}).</p>
+          <p className="leise klein">Eine E-Mail an alle Empfänger. Absender ist die Adresse von Ablago, Antworten gehen an dich ({ich?.email}).</p>
           {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
           {stempelProblem && <p className="leise klein">{stempelProblem}</p>}
           <div className="knoepfe">

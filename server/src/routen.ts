@@ -532,7 +532,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/konsole/ich', zugang: 'offen', konsole: true, handler: async (a) => ok({ als: a.benutzer?.email ?? null, version: eigeneVersion() }) },
     /* ---------- Zwei-Faktor-Anmeldung (#242) ---------- */
     { methode: 'GET', pfad: '/api/konto/zweifaktor', zugang: 'angemeldet', handler: async (a) => ok({ ...(await zf().status(ich(a).id)), pflicht: (await zf().pflicht())[ich(a).rolle] }) },
-    { methode: 'POST', pfad: '/api/konto/zweifaktor/beginnen', zugang: 'angemeldet', handler: async (a) => ok(zf().beginne(ich(a), (await x.designs?.marke())?.schriftzug || 'DMS')) },
+    { methode: 'POST', pfad: '/api/konto/zweifaktor/beginnen', zugang: 'angemeldet', handler: async (a) => ok(zf().beginne(ich(a), (await x.designs?.marke())?.schriftzug || 'Ablago')) },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/bestaetigen', zugang: 'angemeldet', handler: async (a) => ok({ codes: await zf().bestaetige(ich(a).id, b(a).code, ich(a).email) }) },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/codes', zugang: 'angemeldet', handler: async (a) => {
       await konten.pruefeEigenesPasswort(ich(a), b(a).passwort);
@@ -1123,7 +1123,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'PUT', pfad: '/api/werkbank/vektoren', zugang: 'admin', handler: async (a) => { await dienst.setzeVektorEinstellung(a.body); return ok(await dienst.vektorStand()); } },
     { methode: 'POST', pfad: '/api/werkbank/vektoren/neu', zugang: 'admin', handler: async () => {
-      if (!x.paketlaeufer) throw new Fachfehler(404, 'Pakete mit Code laufen in diesem DMS nicht.');
+      if (!x.paketlaeufer) throw new Fachfehler(404, 'Pakete mit Code laufen in dieser Installation nicht.');
       try { return ok(await x.paketlaeufer.vektorenNeu()); } catch (e) { throw e instanceof Fachfehler ? e : new Fachfehler(409, (e as Error).message); }
     } },
     { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.mitSperre(() => pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1')); return leer; } },
@@ -1221,7 +1221,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!text || !t.fingerabdruck) throw new Fachfehler(409, 'Es gibt noch keinen passenden Schlüssel. Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
       const jetzt = new Date();
       const inhalt = notfallblatt({
-        name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'DMS',
+        name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'Ablago',
         haushaltId: x.sicherung?.haushaltId ?? '–',
         adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
         version: eigeneVersion(), erstellt: jetzt, schluessel: text, fingerabdruck: t.fingerabdruck,
@@ -1230,7 +1230,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       });
       if (x.sicherung) await x.sicherung.notfallblattErstellt(ich(a).email);
       else L.system.warn('Notfallblatt heruntergeladen', { von: ich(a).email, fingerabdruck: t.fingerabdruck });
-      return { datei: { inhalt, name: `DMS-Notfallblatt-${jetzt.toISOString().slice(0, 10)}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: inhalt.length } };
+      return { datei: { inhalt, name: `Ablago-Notfallblatt-${jetzt.toISOString().slice(0, 10)}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: inhalt.length } };
     } },
 
     { methode: 'GET', pfad: '/api/werkbank/tresor', zugang: 'admin', handler: async () => ok({ ...await tresor().status(), notfallblatt: x.sicherung ? await x.sicherung.notfallblatt() : null }) },
@@ -2221,7 +2221,7 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
   // Befehl `dms` im Container (#244): Schlüssel aus /tmp, nur über Loopback; handelt als Administrator.
   const k = kopf(KONSOLE_KOPF);
   if (k !== undefined) {
-    if (!konsole || !konsole.passt(k) || !istLoopback(a.peer)) throw new Fachfehler(401, 'Konsolenzugang ungültig. Der Befehl dms funktioniert nur im Container des DMS.');
+    if (!konsole || !konsole.passt(k) || !istLoopback(a.peer)) throw new Fachfehler(401, 'Konsolenzugang ungültig. Der Befehl dms funktioniert nur im Container von Ablago.');
     a.konsole = true;
     try { a.benutzer = konsolenBenutzer(await konten.listeBenutzer(), kopf(ALS_KOPF)); } catch (e) {
       // Nur die Konsolen-Befehle selbst gehen auch ohne Administrator (z. B. Passwort setzen).

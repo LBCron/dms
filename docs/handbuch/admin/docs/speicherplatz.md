@@ -2,7 +2,7 @@
 
 Wie geht es dem Server gerade? Das zeigt **Werkbank → Wartung und Fehlersuche → Systemzustand**: den **Speicherplatz** und die **Auslastung** von CPU, Arbeitsspeicher und Netzwerk. (Früher hieß der Bereich *Speicherplatz* und stand unter *Einstellungen*; alte Links und Lesezeichen führen hierher.)
 
-Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Das DMS misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die **Schwellen**, darunter die [Auslastung](#auslastung), dann die **Ordner** mit ihrer Belegung, ganz unten **Große PDFs verkleinern**.
+Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Ablago misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die **Schwellen**, darunter die [Auslastung](#auslastung), dann die **Ordner** mit ihrer Belegung, ganz unten **Große PDFs verkleinern**.
 
 --8<-- "ausgeblendet-schritt.md"
 
@@ -21,19 +21,19 @@ Die Warnschwelle muss mehr freien Platz verlangen als die Grenze – sonst käme
 
 ## Auslastung
 
-Ist das DMS langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Das DMS misst **jede Minute** die Auslastung **seines Containers**; die kleinen Kurven zeigen die letzte Stunde, daneben steht der Wert **jetzt**. Die Werte stehen nur im Arbeitsspeicher, nach einem Neustart beginnen die Kurven neu.
+Ist Ablago langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Ablago misst **jede Minute** die Auslastung **seines Containers**; die kleinen Kurven zeigen die letzte Stunde, daneben steht der Wert **jetzt**. Die Werte stehen nur im Arbeitsspeicher, nach einem Neustart beginnen die Kurven neu.
 
 ![Werkbank → Systemzustand → Auslastung](bilder/werkbank-auslastung.png)
 
 | Wert | Was er bedeutet |
 | --- | --- |
-| **CPU** | Anteil der Rechenzeit an den Kernen, die der Container nutzen darf (Grenze aus `cpus:` in der Compose-Datei). Ohne Grenze bezieht sich der Anteil auf alle Kerne. Darunter die **Systemlast** des ganzen Rechners (1, 5, 15 Minuten) – liegt sie dauerhaft über der Zahl der Kerne, ist das NAS insgesamt ausgelastet, nicht nur das DMS. |
-| **Arbeitsspeicher** | Belegt von der Grenze des Containers (`mem_limit:`); ohne Grenze verglichen mit dem ganzen Rechner. Darunter die Anteile von **DMS**, **Paket-Läufer** (läuft nur mit installierten Paketen mit Code) und – bei dms-komplett – **PostgreSQL**. |
+| **CPU** | Anteil der Rechenzeit an den Kernen, die der Container nutzen darf (Grenze aus `cpus:` in der Compose-Datei). Ohne Grenze bezieht sich der Anteil auf alle Kerne. Darunter die **Systemlast** des ganzen Rechners (1, 5, 15 Minuten) – liegt sie dauerhaft über der Zahl der Kerne, ist das NAS insgesamt ausgelastet, nicht nur Ablago. |
+| **Arbeitsspeicher** | Belegt von der Grenze des Containers (`mem_limit:`); ohne Grenze verglichen mit dem ganzen Rechner. Darunter die Anteile von **Ablago**, **Paket-Läufer** (läuft nur mit installierten Paketen mit Code) und – bei dms-komplett – **PostgreSQL**. |
 | **Netzwerk** | Empfangen und gesendet je Sekunde, über alle Netzwerkschnittstellen des Containers. |
-| **Wartezeit des Servers** | Wie lange eine Anfrage warten musste, weil das DMS gerade etwas anderes rechnete (Ereignisschleife). Die Einzelheiten stehen unter **Einstellungen → [Datenbank-Anbindung](installation.md#lange-datenbankzugriffe)**, zusammen mit den langen Datenbankzugriffen. |
+| **Wartezeit des Servers** | Wie lange eine Anfrage warten musste, weil Ablago gerade etwas anderes rechnete (Ereignisschleife). Die Einzelheiten stehen unter **Einstellungen → [Datenbank-Anbindung](installation.md#lange-datenbankzugriffe)**, zusammen mit den langen Datenbankzugriffen. |
 | **Arbeiter für PDF und Exporte** | Wie viele [Arbeiter](#arbeiter-fur-pdf-und-exporte) gerade beschäftigt sind, wie viele Aufträge warten, wie lange ein Auftrag im Mittel dauert und wartet, was fehlschlug. |
 
-**Warnung:** Liegt CPU oder Arbeitsspeicher **5 Minuten lang über 90 %**, steht ein Hinweis hier, in der [Übersicht](uebersicht.md) und als **hoch** neben *Systemzustand* in der Leiste – auch wenn der Bereich ausgeblendet ist. Genauso warnt das DMS, wenn die **Wartezeit des Servers** in **5 Minutenfenstern hintereinander** bei 99 % der Messungen (p99) **über 100 ms** liegt; dann steht zusätzlich ein Eintrag im [Protokoll](fehlersuche.md#protokoll) (Modul `datenbank`, „Hohe Wartezeit des Servers“) und einer, sobald es wieder normal ist. 100 ms merkt man beim Klicken gerade eben; liegt fast jede Anfrage so lange in der Warteschlange, ist das DMS spürbar zäh.
+**Warnung:** Liegt CPU oder Arbeitsspeicher **5 Minuten lang über 90 %**, steht ein Hinweis hier, in der [Übersicht](uebersicht.md) und als **hoch** neben *Systemzustand* in der Leiste – auch wenn der Bereich ausgeblendet ist. Genauso warnt Ablago, wenn die **Wartezeit des Servers** in **5 Minutenfenstern hintereinander** bei 99 % der Messungen (p99) **über 100 ms** liegt; dann steht zusätzlich ein Eintrag im [Protokoll](fehlersuche.md#protokoll) (Modul `datenbank`, „Hohe Wartezeit des Servers“) und einer, sobald es wieder normal ist. 100 ms merkt man beim Klicken gerade eben; liegt fast jede Anfrage so lange in der Warteschlange, ist Ablago spürbar zäh.
 
 **Typische Ursachen und was hilft:**
 
@@ -41,17 +41,17 @@ Ist das DMS langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Da
 - **Demo-Daten** werden angelegt oder entfernt – ebenfalls vorübergehend.
 - Ein **Paket mit Code** rechnet viel – der Anteil *Paket-Läufer* zeigt das; die Auslastung je Paket folgt in einer späteren Version.
 - Der Arbeitsspeicher ist dauerhaft knapp – erhöhe `mem_limit` in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.
-- Die Systemlast des Rechners ist hoch, die CPU des DMS aber nicht – dann bremst ein anderer Dienst auf dem NAS.
-- Die **Wartezeit des Servers** ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet das DMS etwas Großes im Hauptfaden. Melde das bitte als [Issue](https://github.com/motom001/dms/issues) mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen [Arbeiter](#arbeiter-fur-pdf-und-exporte).
+- Die Systemlast des Rechners ist hoch, die CPU von Ablago aber nicht – dann bremst ein anderer Dienst auf dem NAS.
+- Die **Wartezeit des Servers** ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet Ablago etwas Großes im Hauptfaden. Melde das bitte als [Issue](https://github.com/motom001/dms/issues) mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen [Arbeiter](#arbeiter-fur-pdf-und-exporte).
 
 ### Arbeiter für PDF und Exporte { #arbeiter-fur-pdf-und-exporte }
 
-Das DMS beantwortet alle Anfragen in **einem** Faden. Rechnet er an etwas Großem, warten alle anderen. Darum laufen die schweren Arbeiten in eigenen **Arbeitern** neben dem Hauptfaden: Stempeln und Wasserzeichen beim Weitergeben, Seiten bearbeiten und zusammenfügen, Schwärzen, Verkleinern, Vorschaubilder von Fotos, PDF-Exporte, Auskunft, Aufkleber, Löschkonzept und -protokoll als PDF, Demo-Dokumente sowie Excel- und CSV-Tabellen großer Exporte. Texterkennung und Vorschaubilder von PDFs liefen schon immer als eigene Programme; der [Paket-Läufer](pakete.md) ist ein eigener Prozess und hat mit den Arbeitern nichts zu tun.
+Ablago beantwortet alle Anfragen in **einem** Faden. Rechnet er an etwas Großem, warten alle anderen. Darum laufen die schweren Arbeiten in eigenen **Arbeitern** neben dem Hauptfaden: Stempeln und Wasserzeichen beim Weitergeben, Seiten bearbeiten und zusammenfügen, Schwärzen, Verkleinern, Vorschaubilder von Fotos, PDF-Exporte, Auskunft, Aufkleber, Löschkonzept und -protokoll als PDF, Demo-Dokumente sowie Excel- und CSV-Tabellen großer Exporte. Texterkennung und Vorschaubilder von PDFs liefen schon immer als eigene Programme; der [Paket-Läufer](pakete.md) ist ein eigener Prozess und hat mit den Arbeitern nichts zu tun.
 
 - **Zahl der Arbeiter:** Vorgabe ist die Hälfte der Kerne, die der Container nutzen darf (Grenze `cpus:` in der Compose-Datei, sonst alle Kerne des Rechners) – mindestens 1, höchstens 4. Der Hauptfaden und PostgreSQL brauchen die übrigen Kerne. Ändern lässt sie sich mit der Umgebungsvariable `DMS_ARBEITER` (1–16, siehe [Installation](installation.md#einstellungen)); `DMS_ARBEITER=0` schaltet die Arbeiter aus – dann läuft alles wie früher im Hauptfaden (nur zur Fehlersuche).
-- **Warteschlange:** Sind alle Arbeiter beschäftigt, wartet ein Auftrag. Warten schon 50, antwortet das DMS sofort mit „Gerade laufen sehr viele PDF-Arbeiten und Exporte. Bitte versuche es in einer Minute noch einmal.“ (HTTP 503) statt endlos.
+- **Warteschlange:** Sind alle Arbeiter beschäftigt, wartet ein Auftrag. Warten schon 50, antwortet Ablago sofort mit „Gerade laufen sehr viele PDF-Arbeiten und Exporte. Bitte versuche es in einer Minute noch einmal.“ (HTTP 503) statt endlos.
 - **Zeitgrenze:** Ein Auftrag darf höchstens **10 Minuten** dauern. Danach wird der Arbeiter beendet, und der Benutzer liest „Die Bearbeitung dauerte länger als 10 Minuten und wurde abgebrochen.“
-- **Arbeitsspeicher:** Ein Arbeiter darf höchstens 1,5 GB belegen. Braucht ein riesiges PDF mehr, scheitert nur dieser Auftrag („… mehr Arbeitsspeicher als erlaubt …“), nicht das DMS.
+- **Arbeitsspeicher:** Ein Arbeiter darf höchstens 1,5 GB belegen. Braucht ein riesiges PDF mehr, scheitert nur dieser Auftrag („… mehr Arbeitsspeicher als erlaubt …“), nicht Ablago.
 - Ein Arbeiter entsteht bei Bedarf und beendet sich nach zwei Minuten ohne Arbeit wieder; einer läuft ab dem Start bereit.
 
 Mehr Arbeiter helfen nur, wenn genug Kerne frei sind: Bei 2 Kernen bleibt es bei einem Arbeiter, damit Anfragen und Datenbank nicht leer ausgehen.
@@ -75,9 +75,9 @@ Wird etwas knapp, steht über den Werten ein **Engpass**-Hinweis mit der Variabl
 | Wartezeit des Servers | seit 5 Minuten oft über 100 ms (siehe oben) | `DMS_ARBEITER` – die Arbeiter nehmen dem Hauptfaden PDF-Arbeiten und Exporte ab. Ist die CPU ohnehin voll, hilft nur mehr Rechenzeit für den Container. |
 | Warten auf eine Verbindung zur Datenbank | in der letzten Minute üblich über 50 ms | `DMS_DB_VERBINDUNGEN` – nur sinnvoll, wenn CPU und Datenbank nicht ausgelastet sind |
 | Warteschlange der Arbeiter voll | in den letzten 15 Minuten wurde ein Auftrag abgewiesen | `DMS_ARBEITER` – nur sinnvoll mit freien Kernen |
-| Überlastschutz | in den letzten 15 Minuten „gerade sehr beschäftigt“ (503) | `DMS_MAX_ANFRAGEN` – prüfe zuerst, ob ein Programm (z. B. über WebDAV) ungewöhnlich viele Anfragen schickt; eine höhere Grenze macht das DMS nicht schneller |
+| Überlastschutz | in den letzten 15 Minuten „gerade sehr beschäftigt“ (503) | `DMS_MAX_ANFRAGEN` – prüfe zuerst, ob ein Programm (z. B. über WebDAV) ungewöhnlich viele Anfragen schickt; eine höhere Grenze macht Ablago nicht schneller |
 
-**Nicht verfügbar** steht dort, wo der Container einen Wert nicht lesen kann – das DMS schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht das DMS **ihre** Auslastung nicht; das steht unter dem Arbeitsspeicher.
+**Nicht verfügbar** steht dort, wo der Container einen Wert nicht lesen kann – Ablago schätzt nichts und braucht keine zusätzlichen Rechte (kein privilegierter Container, kein Docker-Socket). Läuft die Datenbank in einem eigenen Container oder auf einem anderen Server, sieht Ablago **ihre** Auslastung nicht; das steht unter dem Arbeitsspeicher.
 
 ## Was gemessen wird
 
@@ -92,7 +92,7 @@ Gemessen werden die drei festen Ordner im Container (siehe [Ordner und Volumes](
 Je Ordner zeigt die Seite belegt, frei und die Größe des Datenträgers, als Balken mit Marken für Warnschwelle und Grenze. Liegen alle drei auf demselben Datenträger (der übliche Fall auf dem NAS), zeigt die Seite **einen** Balken „Ein Datenträger für Dateien, Schlüssel und Sicherungen“ mit den Ordnern darunter – und den Hinweis, dass die Sicherungen damit auf derselben Platte liegen wie die Dokumente. Liegen nur einige auf demselben Datenträger, steht das beim jeweiligen Ordner. Darunter steht, wie viel davon die **Vorschaubilder** der Dokumente belegen (Ordner `/data/files/vorschau`, meist wenige Kilobyte je Dokument). Sie werden **nicht gesichert** – nach einer Wiederherstellung entstehen sie beim Anzeigen oder über **Wartungsoperationen → Vorschaubilder nachholen** neu. **Werkbank → Technik** zeigt dieselben Zahlen in der Übersicht für den Support.
 
 !!! note "Die Datenbank wird nicht gemessen"
-    Bei zwei Containern läuft PostgreSQL in einem eigenen Container; sein Volume kann das DMS nicht sehen. Bei [dms-komplett](https://motom001.github.io/dms/installieren/aktuell/komplett/) liegt die Datenbank im vierten Ordner `/data/postgres` – auch den misst das DMS nicht. Liegen alle Ordner auf derselben Platte des NAS (der übliche Fall), reicht die Messung trotzdem. Liegt die Datenbank auf einer anderen Platte, behalte deren Platz in der Speicherverwaltung des NAS im Blick.
+    Bei zwei Containern läuft PostgreSQL in einem eigenen Container; sein Volume kann Ablago nicht sehen. Bei [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) liegt die Datenbank im vierten Ordner `/data/postgres` – auch den misst Ablago nicht. Liegen alle Ordner auf derselben Platte des NAS (der übliche Fall), reicht die Messung trotzdem. Liegt die Datenbank auf einer anderen Platte, behalte deren Platz in der Speicherverwaltung des NAS im Blick.
 
 ## Große PDFs verkleinern {#grosse-pdfs-verkleinern}
 
@@ -103,7 +103,7 @@ Gescannte und fotografierte PDFs sind oft viel größer als nötig: Ein Scanner 
 3. Auf Wunsch **Originale nicht als ältere Version behalten** anhaken (siehe unten).
 4. **… PDFs verkleinern** – nach einer Rückfrage läuft die Arbeit im Hintergrund; die Seite zeigt den Fortschritt („PDFs verkleinern: 12 von 40“) und am Ende das Ergebnis, z. B. „38 PDFs verkleinert von 812,4 MB auf 141,0 MB (−83 %)“.
 
-Jedes Dokument wird so verkleinert wie mit [PDF verkleinern](https://motom001.github.io/dms/benutzer/aktuell/dokumente/#pdf-verkleinern) am Dokument:
+Jedes Dokument wird so verkleinert wie mit [PDF verkleinern](https://help.ablago.app/benutzer/aktuell/dokumente/#pdf-verkleinern) am Dokument:
 
 - **Mit Versionierung** wird das Ergebnis die neue Version, das Original bleibt als ältere Version. **Platz wird dann erst frei, wenn die ältere Version wegfällt** – deshalb das Kästchen **Originale nicht als ältere Version behalten**: Es entfernt genau diese eine Version gleich wieder (ältere Versionen davor bleiben). In Mappentypen mit [Archivmodus](archiv.md) bleibt das Original während der Aufbewahrungsfrist trotzdem erhalten.
 - **Ohne Versionierung** ersetzt das verkleinerte PDF das bisherige; das bisherige kommt in den [Papierkorb](papierkorb.md) und gibt seinen Platz frei, wenn der Papierkorb geleert wird.
@@ -113,10 +113,10 @@ Jedes verkleinerte Dokument hat in der Historie seiner Mappe den Eintrag „PDF 
 
 ### Neue PDFs automatisch verkleinern
 
-Darunter: **Neue PDFs beim Ablegen verkleinern** ab einer Größe (Standard 5 MB) in einer Stufe. **Standard ist aus.** Eingeschaltet gilt es für neue PDFs von außen – Hochladen, [Eingangsordner](eingangsordner.md), [Postfächer](postfaecher.md), Schnittstelle und [WebDAV](webdav.md) –, nicht für PDFs, die im DMS bearbeitet wurden. Gespeichert wird dann **nur das verkleinerte PDF**; das Original kommt nicht ins DMS. Bringt es weniger als 10 % oder lässt sich die Datei nicht lesen, wird sie abgelegt, wie sie kam. Der Eintrag „Dokument hochgeladen“ in der Historie nennt dann „Verkleinert: automatisch von … auf …“.
+Darunter: **Neue PDFs beim Ablegen verkleinern** ab einer Größe (Standard 5 MB) in einer Stufe. **Standard ist aus.** Eingeschaltet gilt es für neue PDFs von außen – Hochladen, [Eingangsordner](eingangsordner.md), [Postfächer](postfaecher.md), Schnittstelle und [WebDAV](webdav.md) –, nicht für PDFs, die in Ablago bearbeitet wurden. Gespeichert wird dann **nur das verkleinerte PDF**; das Original kommt nicht in Ablago. Bringt es weniger als 10 % oder lässt sich die Datei nicht lesen, wird sie abgelegt, wie sie kam. Der Eintrag „Dokument hochgeladen“ in der Historie nennt dann „Verkleinert: automatisch von … auf …“.
 
 !!! note "Technik: kein Ghostscript"
-    Das DMS verkleinert ohne Ghostscript (dessen Lizenz AGPL ist). Die Bilder rechnet **pdftoppm** aus poppler neu (ohnehin für Texterkennung und Vorschaubilder im Image), die Struktur des PDFs optimiert **qpdf** (Apache-2.0, seit Version 0.93.0 im Image). Wer ein eigenes Image baut, nimmt `apk add qpdf` mit auf – ohne qpdf funktioniert das Verkleinern auch, die Dateien werden nur etwas weniger klein.
+    Ablago verkleinert ohne Ghostscript (dessen Lizenz AGPL ist). Die Bilder rechnet **pdftoppm** aus poppler neu (ohnehin für Texterkennung und Vorschaubilder im Image), die Struktur des PDFs optimiert **qpdf** (Apache-2.0, seit Version 0.93.0 im Image). Wer ein eigenes Image baut, nimmt `apk add qpdf` mit auf – ohne qpdf funktioniert das Verkleinern auch, die Dateien werden nur etwas weniger klein.
 
 ## Im Ernstfall
 
@@ -127,8 +127,8 @@ Darunter: **Neue PDFs beim Ablegen verkleinern** ab einer Größe (Standard 5 MB
     - [große PDFs verkleinern](#grosse-pdfs-verkleinern) (mit „Originale nicht als ältere Version behalten“),
     - auf dem NAS andere Daten aufräumen oder das Volume vergrößern.
 3. **Neu messen** (im Abschnitt *Ordner*, neben der Uhrzeit der letzten Messung). Reicht der Platz wieder, zeigen diese Seite und die Übersicht: „Wieder … frei – Wartung beenden?“
-4. **Wartung beenden** – der Modus endet **nicht von selbst**, damit das DMS an der Grenze nicht hin- und herspringt.
+4. **Wartung beenden** – der Modus endet **nicht von selbst**, damit Ablago an der Grenze nicht hin- und herspringt.
 
-Beendest du die Wartung, obwohl die Grenze noch unterschritten ist, startet sie nicht erneut von selbst; das Hochladen bleibt aber gesperrt, bis wieder genug Platz frei ist. Läuft gerade eine Wartung, die du selbst eingeschaltet hast, lässt das DMS sie unverändert.
+Beendest du die Wartung, obwohl die Grenze noch unterschritten ist, startet sie nicht erneut von selbst; das Hochladen bleibt aber gesperrt, bis wieder genug Platz frei ist. Läuft gerade eine Wartung, die du selbst eingeschaltet hast, lässt Ablago sie unverändert.
 
 Alle Übergänge – Warnschwelle unterschritten, Grenze erreicht, wieder genug Platz – stehen im [Protokoll](fehlersuche.md#protokoll) (Modul *system*).

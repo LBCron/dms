@@ -2,7 +2,7 @@
 
 **Deutsch** · [English](CONTRIBUTING.en.md)
 
-Danke für dein Interesse am DMS! **Issues und Pull Requests sind auf Deutsch oder Englisch willkommen.** Wie Mitarbeit hier läuft, steht ausführlich im **[Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/)**. Das Wichtigste in Kürze:
+Danke für dein Interesse an Ablago! **Issues und Pull Requests sind auf Deutsch oder Englisch willkommen.** Wie Mitarbeit hier läuft, steht ausführlich im **[Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/)**. Das Wichtigste in Kürze:
 
 1. **Erst ein Issue**, als User Story („Als … möchte ich …, damit …“) mit Akzeptanzkriterien. Das gilt für Wünsche wie für Fehler.
 2. **Diskussion im Issue**, bis klar ist, was gebaut wird.
@@ -11,7 +11,7 @@ Danke für dein Interesse am DMS! **Issues und Pull Requests sind auf Deutsch od
 
 ## Neue Abhängigkeiten nur mit Begründung
 
-Das DMS kommt mit sehr wenig fremdem Code aus – das schützt vor Angriffen über die Lieferkette und hält Wartung und Image klein. Eine **neue Laufzeit-Abhängigkeit** (npm-Paket unter `dependencies` oder Alpine-Paket per `apk add` im `Dockerfile`) kommt deshalb nur mit Begründung im Pull Request:
+Ablago kommt mit sehr wenig fremdem Code aus – das schützt vor Angriffen über die Lieferkette und hält Wartung und Image klein. Eine **neue Laufzeit-Abhängigkeit** (npm-Paket unter `dependencies` oder Alpine-Paket per `apk add` im `Dockerfile`) kommt deshalb nur mit Begründung im Pull Request:
 
 - **Wozu** wird sie gebraucht?
 - **Warum nicht** mit Node.js-Bordmitteln oder den schon vorhandenen Abhängigkeiten und Werkzeugen?
@@ -19,7 +19,7 @@ Das DMS kommt mit sehr wenig fremdem Code aus – das schützt vor Angriffen üb
 - **Pflegezustand** – letzte Version, Zahl der Betreuer?
 - **Eigene Abhängigkeiten** – was kommt mit ihr ins Image?
 
-Die Vorlage für Pull Requests fragt danach; die Prüfung „Abhängigkeiten“ weist im PR auf neue Abhängigkeiten hin. Die heutige Liste mit Zweck steht im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#abhaengigkeiten).
+Die Vorlage für Pull Requests fragt danach; die Prüfung „Abhängigkeiten“ weist im PR auf neue Abhängigkeiten hin. Die heutige Liste mit Zweck steht im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#abhaengigkeiten).
 
 ## Grafiken und Bilder je Sprache
 

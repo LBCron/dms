@@ -21,7 +21,7 @@ Eine Datei darf bis zu 100 MB groß sein.
 !!! tip "Gleiche Datei schon abgelegt?"
     Liegt genau diese Datei schon in einer anderen Mappe, die du sehen darfst, steht das **sofort** an der neuen Datei – noch vor dem Speichern: „Diese Datei liegt schon in *Stromvertrag Haus* (Vertrag, Register Dokumente, „Scan.pdf“, hochgeladen am …)“, mit Link dorthin. Du entscheidest: **Mappe speichern** legt sie trotzdem ab, **Nicht hochladen** lässt sie weg, der Link führt zur vorhandenen Mappe. Gespeichert wird der Inhalt in jedem Fall nur einmal.
 
-    Das DMS vergleicht den **Prüfwert** der Datei – nur exakt gleiche Dateien zählen, nicht ein zweiter Scan desselben Briefs. Liegt die Datei nur in Mappen, die du nicht sehen darfst, gibt es keinen Hinweis: Das DMS verrät nichts über Mappen, die dir verborgen sind.
+    Ablago vergleicht den **Prüfwert** der Datei – nur exakt gleiche Dateien zählen, nicht ein zweiter Scan desselben Briefs. Liegt die Datei nur in Mappen, die du nicht sehen darfst, gibt es keinen Hinweis: Ablago verrät nichts über Mappen, die dir verborgen sind.
 
 ## Ansehen und herunterladen
 
@@ -36,25 +36,25 @@ Neben jedem PDF und Bild (JPEG, PNG) steht ein **kleines Vorschaubild der ersten
 
 ### Archivfassung (PDF/A) { #archivfassung-pdfa }
 
-Ist ein Paket wie **PDF/A** installiert (das macht ein Administrator), bekommt jedes Dokument zusätzlich eine **Archivfassung**: ein durchsuchbares PDF/A, das sich auch in vielen Jahren und ohne das DMS noch öffnen und durchsuchen lässt – praktisch, wenn du Unterlagen an Steuerberater oder Behörde weitergibst. Das Original bleibt unverändert.
+Ist ein Paket wie **PDF/A** installiert (das macht ein Administrator), bekommt jedes Dokument zusätzlich eine **Archivfassung**: ein durchsuchbares PDF/A, das sich auch in vielen Jahren und ohne Ablago noch öffnen und durchsuchen lässt – praktisch, wenn du Unterlagen an Steuerberater oder Behörde weitergibst. Das Original bleibt unverändert.
 
-- **Anzeige:** Gibt es eine Archivfassung, zeigt das DMS sie an. Über der Anzeige steht **„Ansicht: Archivfassung (PDF/A)“**, daneben **Original anzeigen** (und zurück **Archivfassung anzeigen**). Ohne Archivfassung siehst du die Lesefassung (bei TIFF und Co.) oder das Original; solange das Paket noch arbeitet, steht dort „Archivfassung wird erstellt“.
+- **Anzeige:** Gibt es eine Archivfassung, zeigt Ablago sie an. Über der Anzeige steht **„Ansicht: Archivfassung (PDF/A)“**, daneben **Original anzeigen** (und zurück **Archivfassung anzeigen**). Ohne Archivfassung siehst du die Lesefassung (bei TIFF und Co.) oder das Original; solange das Paket noch arbeitet, steht dort „Archivfassung wird erstellt“.
 - **Herunterladen:** Mit Archivfassung hast du die Wahl – vorn steht, was du gerade siehst (**Herunterladen**), daneben **Original herunterladen** bzw. **Als PDF/A herunterladen**. Bei **E-Rechnungen** (ZUGFeRD, Factur-X) steht immer das Original vorn – nur dort steckt die Rechnung als XML.
 - **Am Dokument** steht der Stand: *Archivfassung: PDF/A-2b* (fertig), *wird erstellt*, *keine* (mit Grund, z. B. bei verschlüsselten PDFs) oder *Fehler*. Dazu Hinweise:
   - „Original ist digital signiert – zum Prüfen der Signatur das Original öffnen.“ Die Archivfassung trägt die Signatur nicht.
   - „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden.“ Die Archivfassung enthält nur, was in der Datei steckt – nichts wird aus dem Internet nachgeladen (das würde dem Absender verraten, wann du das Dokument öffnest).
   - „Das Original ist schon PDF/A und gilt selbst als Archivfassung.“
-- **Nach Änderungen** am Original (neue Version, Seiten drehen oder löschen, teilen, schwärzen) zeigt das DMS das Original, bis die neue Archivfassung da ist. Die Historie der Mappe vermerkt jede neue Archivfassung.
+- **Nach Änderungen** am Original (neue Version, Seiten drehen oder löschen, teilen, schwärzen) zeigt Ablago das Original, bis die neue Archivfassung da ist. Die Historie der Mappe vermerkt jede neue Archivfassung.
 
 ### Am Handy: Dokument vorzeigen
 
-Am Handy zeigt das DMS Dokumente **nicht eingebettet** in der Mappe – so bleibt die Seite beim Wischen nicht im Dokument hängen. Jede Karte hat stattdessen große Knöpfe:
+Am Handy zeigt Ablago Dokumente **nicht eingebettet** in der Mappe – so bleibt die Seite beim Wischen nicht im Dokument hängen. Jede Karte hat stattdessen große Knöpfe:
 
 - **Öffnen** zeigt das Dokument mit einem Tipp **im Vollbild** in der Anzeige deines Browsers. Dort zoomst du mit zwei Fingern; **Zurück** im Browser bringt dich mit einem Tipp in die Mappe. Ein Tipp auf das (größere) Vorschaubild oder den Namen öffnet ebenso.
-- **Teilen** (wo der Browser es kann, z. B. Safari am iPhone) schickt die Datei über „An … senden“ – etwa per Mail oder Nachricht, wenn dich jemand am Tresen darum bittet. Beim ersten Tipp lädt das DMS die Datei; dauert das zu lange, tippst du danach auf **Jetzt teilen**.
+- **Teilen** (wo der Browser es kann, z. B. Safari am iPhone) schickt die Datei über „An … senden“ – etwa per Mail oder Nachricht, wenn dich jemand am Tresen darum bittet. Beim ersten Tipp lädt Ablago die Datei; dauert das zu lange, tippst du danach auf **Jetzt teilen**.
 - **⋯** öffnet alle weiteren Aktionen als Blatt von unten: Herunterladen, Mit Stempel …, Seiten, Schwärzen, Archivnummer, Ersetzen und – nur hier – **Löschen**.
 
-Alle Knöpfe sind am Handy mindestens 44 Punkte groß. Muss das Dokument lange zu sehen sein, stell die automatische Sperre des Handys kurz länger ein – in der Anzeige des Browsers kann das DMS den Bildschirm nicht wach halten.
+Alle Knöpfe sind am Handy mindestens 44 Punkte groß. Muss das Dokument lange zu sehen sein, stell die automatische Sperre des Handys kurz länger ein – in der Anzeige des Browsers kann Ablago den Bildschirm nicht wach halten.
 
 ## Sortieren
 
@@ -72,7 +72,7 @@ Die Auswahl gilt nur für das Register, in dem du gerade bist.
 
 ## PDF bearbeiten
 
-Schief gescannt, eine leere Rückseite zu viel, drei Briefe in einem Scan? Das richtest du direkt im DMS – ohne anderes Programm.
+Schief gescannt, eine leere Rückseite zu viel, drei Briefe in einem Scan? Das richtest du direkt in Ablago – ohne anderes Programm.
 
 **Seiten** neben einem PDF öffnet darunter die Seitenansicht mit einem kleinen Bild jeder Seite. Je Seite gibt es:
 
@@ -95,9 +95,9 @@ Was beim Übernehmen passiert:
 
 Im **Archivmodus** ist die Versionierung immer an – das Original bleibt also auch dort erhalten. Für das Ergebnis entsteht der [Volltext](#volltext) neu, das Vorschaubild entsteht neu. In der Historie der Mappe steht „PDF bearbeitet“ mit dem, was sich geändert hat.
 
-**Zusammenfügen:** Wähle mit den Kästchen zwei oder mehr PDFs und klicke auf **Zusammenfügen**. Das DMS hängt sie in der Reihenfolge der Liste aneinander (sortiere vorher, wenn nötig) und legt das Ergebnis als **neues Dokument** in dieses Register; den Namen kannst du ändern. Die Ausgangsdokumente bleiben, außer du hakst **Ausgangsdokumente in den Papierkorb legen** an.
+**Zusammenfügen:** Wähle mit den Kästchen zwei oder mehr PDFs und klicke auf **Zusammenfügen**. Ablago hängt sie in der Reihenfolge der Liste aneinander (sortiere vorher, wenn nötig) und legt das Ergebnis als **neues Dokument** in dieses Register; den Namen kannst du ändern. Die Ausgangsdokumente bleiben, außer du hakst **Ausgangsdokumente in den Papierkorb legen** an.
 
-Bearbeiten lassen sich nur PDFs, keine Bilder oder Word-Dateien, und nur mit dem Recht „Bearbeiten“ an der Mappe. Ein PDF mit Passwortschutz lässt das DMS unverändert. Bilder gibt es für die ersten 400 Seiten; bei sehr langen PDFs stehen danach nur die Seitennummern.
+Bearbeiten lassen sich nur PDFs, keine Bilder oder Word-Dateien, und nur mit dem Recht „Bearbeiten“ an der Mappe. Ein PDF mit Passwortschutz lässt Ablago unverändert. Bilder gibt es für die ersten 400 Seiten; bei sehr langen PDFs stehen danach nur die Seitennummern.
 
 ## PDF verkleinern
 
@@ -114,7 +114,7 @@ Du wählst eine von drei **Stufen**; neben jeder steht die geschätzte Größe d
 | **Druck** | 300 dpi | für den Druck; kleiner werden nur sehr fein gescannte Seiten |
 
 - **Als neue Version speichern** – das verkleinerte PDF wird die neue [Version](#versionen) des Dokuments, das Original bleibt als ältere Version erhalten. Ohne Versionierung heißt der Knopf **Verkleinern und ersetzen**: Nach einer Rückfrage ersetzt das verkleinerte PDF das bisherige, das bisherige kommt in den [Papierkorb](ablage.md#papierkorb) – wie bei [PDF bearbeiten](#pdf-bearbeiten).
-- **Verkleinert herunterladen** – nur eine verkleinerte Kopie auf deinen Rechner; das Dokument im DMS bleibt, wie es ist. Das geht auch mit dem Recht „Lesen“.
+- **Verkleinert herunterladen** – nur eine verkleinerte Kopie auf deinen Rechner; das Dokument in Ablago bleibt, wie es ist. Das geht auch mit dem Recht „Lesen“.
 
 Danach steht dort, wie viel es gebracht hat, z. B. „verkleinert von 18,4 MB auf 2,1 MB (−89 %)“. Die Historie der Mappe vermerkt es unter „PDF bearbeitet“.
 
@@ -136,8 +136,8 @@ So wählst du aus, was schwarz wird:
 
 - **Bereiche aufziehen** – mit der Maus (oder dem Finger) ein Rechteck über die Stelle ziehen. Ein **Wort antippen** schwärzt genau dieses Wort; einen eigenen Bereich nochmal antippen nimmt ihn wieder weg. Am Handy schaltest du mit **✎ Aufziehen an/aus** zwischen Aufziehen und Blättern um.
 - **Überall schwärzen** – einen Suchbegriff eingeben, z. B. einen Namen oder eine IBAN, und **Hinzufügen**: Er wird auf allen Seiten geschwärzt, egal ob groß oder klein geschrieben und auch mit oder ohne Leerzeichen („DE89 3704“ findet „DE893704“). Daneben steht, wie oft er vorkommt.
-- **Vorschläge** – das DMS sucht selbst nach **IBAN**, **Steuer-Id**, **Geburtsdatum** (ein Datum mit „geb.“ davor), **E-Mail** und **Telefon** und listet die Fundstellen zum Anhaken auf. Das passiert auf deinem Rechner bzw. im DMS, ohne Internet. IBAN und Steuer-Id werden mit ihrer Prüfziffer geprüft, Telefonnummern können auch einmal danebenliegen – sieh dir die Liste an.
-- **Vorschau** zeigt die Seiten so, wie sie danach aussehen. **Textstellen zeigen** blendet ein, wo das DMS Text erkannt hat – so siehst du, ob die Textebene genau über dem sichtbaren Text liegt.
+- **Vorschläge** – Ablago sucht selbst nach **IBAN**, **Steuer-Id**, **Geburtsdatum** (ein Datum mit „geb.“ davor), **E-Mail** und **Telefon** und listet die Fundstellen zum Anhaken auf. Das passiert auf deinem Rechner bzw. in Ablago, ohne Internet. IBAN und Steuer-Id werden mit ihrer Prüfziffer geprüft, Telefonnummern können auch einmal danebenliegen – sieh dir die Liste an.
+- **Vorschau** zeigt die Seiten so, wie sie danach aussehen. **Textstellen zeigen** blendet ein, wo Ablago Text erkannt hat – so siehst du, ob die Textebene genau über dem sichtbaren Text liegt.
 
 Mit **Geschwärzt speichern** kommt eine Rückfrage: Schwärzen lässt sich nicht rückgängig machen. Danach liegt im selben Register ein neues Dokument **„… (geschwärzt)“**; das Original bleibt unverändert in der Mappe. Ist für das Register die [Versionierung](#versionen) an, kannst du stattdessen **Neue Version** wählen – dann bleibt die ungeschwärzte Fassung als ältere Version erhalten und ist für alle mit Leserecht weiter zu sehen. Zum Weitergeben ist die Kopie meist besser.
 
@@ -151,17 +151,17 @@ Was dabei passiert:
 
 Gut zu wissen:
 
-- Bei **Scans und Fotos ohne Textebene** kennt das DMS die Lage der Wörter nicht: Dort gehen nur **Bereiche aufziehen**, keine Suchbegriffe und Vorschläge. Bei PDFs mit Text und gescannten Seiten gilt das für die gescannten Seiten.
+- Bei **Scans und Fotos ohne Textebene** kennt Ablago die Lage der Wörter nicht: Dort gehen nur **Bereiche aufziehen**, keine Suchbegriffe und Vorschläge. Bei PDFs mit Text und gescannten Seiten gilt das für die gescannten Seiten.
 - Vektortext wird dabei zu einem Bild – die Kopie ist meist etwas größer und nicht ganz so scharf wie ein PDF direkt aus einem Programm.
 - Schwärzen geht mit dem Recht „Bearbeiten“ an der Mappe, für höchstens 300 Seiten auf einmal (längere PDFs vorher [teilen](#pdf-bearbeiten)), nicht bei PDFs mit Passwortschutz.
 - Das **Original** enthält weiterhin alles. Gib die geschwärzte Kopie weiter – per [E-Mail, Export oder Link](versenden.md).
-- **Schwärzen schützt beim Hinausgeben, nicht innerhalb des DMS:** Wer die Mappe lesen darf, sieht auch das Original (bzw. bei „Neue Version“ die ältere Version). Soll eine Person im Haushalt die Stellen nicht sehen, gehört das Original in eine Mappe, die sie nicht lesen darf – oder du löschst es nach dem Schwärzen.
+- **Schwärzen schützt beim Hinausgeben, nicht innerhalb von Ablago:** Wer die Mappe lesen darf, sieht auch das Original (bzw. bei „Neue Version“ die ältere Version). Soll eine Person im Haushalt die Stellen nicht sehen, gehört das Original in eine Mappe, die sie nicht lesen darf – oder du löschst es nach dem Schwärzen.
 - **Suchbegriffe** finden ein Wort auch über eine Silbentrennung am Zeilenende („Mül-“ / „ler“), mit weichem Trennzeichen und in Großbuchstaben mit „SS“ statt „ß“. Kontrolliere trotzdem die Vorschau: Falsch erkannter Text in einer Textebene (z. B. aus einer fremden Texterkennung) wird nicht gefunden – dort hilft nur ein aufgezogener Bereich.
 - Gibt ein PDF die Drehung einer Seite nicht eindeutig an, bricht das Schwärzen mit einer Meldung ab, statt Kästen neben die Wörter zu setzen. Dann das PDF einmal neu speichern (z. B. „Drucken als PDF“) und erneut schwärzen.
 
 ## Volltext
 
-Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest das DMS nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos erkennt ihn das Paket **Texterkennung**. Neben dem Dokument steht, wie weit es ist:
+Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument findet, liest Ablago nach dem Hochladen im Hintergrund seinen Text: bei PDFs die Textebene, bei Scans und Fotos erkennt ihn das Paket **Texterkennung**. Neben dem Dokument steht, wie weit es ist:
 
 | Anzeige | Bedeutung |
 | --- | --- |
@@ -169,37 +169,37 @@ Damit die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) ein Dokument f
 | *Volltext: wartet auf Texterkennung* | Das Dokument hat keinen lesbaren Text (z. B. ein Scan oder Foto); die Texterkennung – ein Paket – erkennt ihn gerade. Bei langen Scans dauert das einige Minuten; daneben steht, wie weit es ist. Steht dort „kein Paket installiert“, bitte deinen Administrator, das Paket „Texterkennung (Deutsch und Englisch)“ zu installieren. |
 | *Volltext: fertig* | Das Dokument ist durchsuchbar. **Text anzeigen** zeigt, was erkannt wurde. |
 | *Volltext: Fehler* | Etwas ging schief, z. B. eine beschädigte Datei. **Erneut versuchen** stellt es noch einmal an. |
-| *Volltext: wartet auf Paket* | Das DMS liest den Dateityp nicht selbst; ein Paket ist dran. Daneben steht, was es tut: „wartet auf Umwandlung (Paket …)“ – es macht aus der Datei (z. B. TIFF) eine Fassung, aus der Vorschau und Text entstehen –, oder „wartet auf Volltext (Paket …)“ – es liest den Text aus der Datei (z. B. Word, Excel, E-Mail). Ein Text von vorher bleibt so lange für die Suche stehen. |
+| *Volltext: wartet auf Paket* | Ablago liest den Dateityp nicht selbst; ein Paket ist dran. Daneben steht, was es tut: „wartet auf Umwandlung (Paket …)“ – es macht aus der Datei (z. B. TIFF) eine Fassung, aus der Vorschau und Text entstehen –, oder „wartet auf Volltext (Paket …)“ – es liest den Text aus der Datei (z. B. Word, Excel, E-Mail). Ein Text von vorher bleibt so lange für die Suche stehen. |
 | *Volltext: ausgelassen* | Für diesen Dateityp oder diese Größe gibt es keinen Volltext. Gibt es ein Paket, das ihn lesen kann (z. B. „Office und E-Mail“ für Word), steht sein Name daneben – frag deinen Administrator. Konnte das Paket die Datei nicht lesen, steht sein Grund daneben, z. B. „Word lässt sich nicht lesen: mit einem Passwort verschlüsselt“. |
 
-Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, die z. B. ein Programm oder der Scanner mitgeliefert hat) oder „Texterkennung durch Paket …“ (aus dem Bild erkannt). Bei Dateien, die das DMS nicht selbst liest (z. B. TIFF-Scans), steht dazu „aus der umgewandelten Fassung (Paket …)“: Ein Paket hat daraus ein PDF oder Bild gemacht, aus dem Vorschau und Text stammen. **Fassung ansehen** öffnet diese Fassung; das Dokument selbst bleibt die Originaldatei. Mit **Neu erzeugen** lässt du den Text eines Dokuments noch einmal lesen und erkennen – etwa, wenn die Erkennung schlecht war.
+Daneben steht, **woher der Text kommt**: „Text aus dem PDF“ (die Textebene, die z. B. ein Programm oder der Scanner mitgeliefert hat) oder „Texterkennung durch Paket …“ (aus dem Bild erkannt). Bei Dateien, die Ablago nicht selbst liest (z. B. TIFF-Scans), steht dazu „aus der umgewandelten Fassung (Paket …)“: Ein Paket hat daraus ein PDF oder Bild gemacht, aus dem Vorschau und Text stammen. **Fassung ansehen** öffnet diese Fassung; das Dokument selbst bleibt die Originaldatei. Mit **Neu erzeugen** lässt du den Text eines Dokuments noch einmal lesen und erkennen – etwa, wenn die Erkennung schlecht war.
 
 Erkannter Text aus Scans ist nicht immer fehlerfrei – je besser die Vorlage, desto besser das Ergebnis.
 
 ### Dokumente in mehreren Sprachen { #mehrere-sprachen }
 
-Nicht jedes Dokument ist einsprachig – etwa ein deutscher Brief der Gemeinde, dahinter das französische Schreiben einer Botschaft, oder ein Beipackzettel auf Deutsch und Englisch. Das DMS liest deshalb **jede Seite in ihrer Sprache**; eine Seite, auf der beides steht, liest die Texterkennung mit beiden Sprachen zugleich.
+Nicht jedes Dokument ist einsprachig – etwa ein deutscher Brief der Gemeinde, dahinter das französische Schreiben einer Botschaft, oder ein Beipackzettel auf Deutsch und Englisch. Ablago liest deshalb **jede Seite in ihrer Sprache**; eine Seite, auf der beides steht, liest die Texterkennung mit beiden Sprachen zugleich.
 
 Neben dem Volltext steht dann die Sprache mit dem meisten Text und die übrigen, zum Beispiel *Volltext: fertig · 3 Seiten · Deutsch, enthält auch Französisch*. Die [Volltextsuche](ablage.md#im-text-der-dokumente-suchen) findet so beide Teile, auch gebeugte Wörter: „Botschaft“ ebenso wie „ambassade“ oder „ambassades“.
 
 Wechselt die Sprache mitten im Dokument ganz – Seite 1 Deutsch, ab Seite 2 nur Französisch –, ist das oft ein beigelegtes zweites Schreiben. An einer [Post](post.md) steht dann der Hinweis **„Ab Seite 2 beginnt vermutlich ein eigenes Schreiben (die Sprache wechselt) – Post teilen?“**:
 
 - **Post teilen …** öffnet die [Seitenansicht](#pdf-bearbeiten) mit „Teilen ab hier“ an dieser Seite. Prüfe die Seiten und klicke **Übernehmen** – erst dann entstehen die neuen Posts. Du kannst den Vorschlag dort auch ändern oder **Abbrechen**.
-- **Hinweis ausblenden** – der Hinweis verschwindet, für alle und auf allen Geräten. Bekommt das Dokument später einen neuen Volltext (z. B. „Neu erzeugen“), prüft das DMS den Wechsel neu.
+- **Hinweis ausblenden** – der Hinweis verschwindet, für alle und auf allen Geräten. Bekommt das Dokument später einen neuen Volltext (z. B. „Neu erzeugen“), prüft Ablago den Wechsel neu.
 
-Das DMS **teilt nie von selbst**. Den Hinweis gibt es nur bei PDFs und nur, wenn du die Post bearbeiten darfst. Eine Seite mit beiden Sprachen (etwa ein deutscher Brief mit einem französischen Absatz) gilt nicht als Wechsel.
+Ablago **teilt nie von selbst**. Den Hinweis gibt es nur bei PDFs und nur, wenn du die Post bearbeiten darfst. Eine Seite mit beiden Sprachen (etwa ein deutscher Brief mit einem französischen Absatz) gilt nicht als Wechsel.
 
-Wie gut die Sprachen erkannt werden, hängt am Paket Texterkennung und seinen Sprachen: Deutsch und Englisch sind immer dabei, für weitere Sprachen installiert dein Administrator Zusatzsprachen (etwa „Texterkennung – Zusatzsprache Französisch“). Bei PDFs mit Textebene erkennt das DMS die Sprache je Seite selbst.
+Wie gut die Sprachen erkannt werden, hängt am Paket Texterkennung und seinen Sprachen: Deutsch und Englisch sind immer dabei, für weitere Sprachen installiert dein Administrator Zusatzsprachen (etwa „Texterkennung – Zusatzsprache Französisch“). Bei PDFs mit Textebene erkennt Ablago die Sprache je Seite selbst.
 
 ## Ähnliche Dokumente { #aehnliche-dokumente }
 
 Hat dein Administrator ein Paket wie **KI lokal – Ähnlichkeit** installiert, steht unter den Dokumenten einer Mappe **„Ähnliche Dokumente“**: bis zu fünf andere Mappen, deren Dokumente inhaltlich ähnlich sind – zum Beispiel zur Rechnung des Heizungsbauers die Mappe mit dem Wartungsvertrag der Gastherme. Hinter jeder Mappe stehen das ähnliche Dokument und wie ähnlich es ist (in Prozent). Du siehst nur Mappen, die du lesen darfst.
 
-Die Ähnlichkeit berechnet das Paket aus dem [Volltext](#volltext), im DMS und ohne dass Daten es verlassen. Steht dort „noch nicht berechnet“, holt das Paket das gerade im Hintergrund nach. Ohne ein solches Paket gibt es den Abschnitt nicht.
+Die Ähnlichkeit berechnet das Paket aus dem [Volltext](#volltext), in Ablago und ohne dass Daten es verlassen. Steht dort „noch nicht berechnet“, holt das Paket das gerade im Hintergrund nach. Ohne ein solches Paket gibt es den Abschnitt nicht.
 
 ## Versionen
 
-Warum du im DMS nichts mehr in `_v2` oder `_final` umbenennen musst, erklärt mit Bildern die Seite [Versionen verstehen](versionen.md). Kurz:
+Warum du in Ablago nichts mehr in `_v2` oder `_final` umbenennen musst, erklärt mit Bildern die Seite [Versionen verstehen](versionen.md). Kurz:
 
 Ist an einem Dokumentenregister die **Versionierung** eingeschaltet (das macht ein Administrator), bleibt beim Ersetzen die alte Fassung erhalten:
 
@@ -207,21 +207,21 @@ Ist an einem Dokumentenregister die **Versionierung** eingeschaltet (das macht e
 - Am Dokument steht **Version 3**. Ein Klick darauf zeigt alle Versionen mit Datum, wer sie gespeichert hat, Herkunft, Dateiname und Größe. Jede ältere Version lässt sich ansehen (↗) und herunterladen.
 - **Zurückholen** übernimmt eine ältere Version als neue, höchste Version – aus Version 1 wird z. B. Version 4. Die bisherigen Versionen bleiben dabei stehen.
 - Die Volltextsuche findet nur die aktuelle Version.
-- Hat der Administrator **nur die letzten … Versionen behalten** eingestellt, löscht das DMS ältere Versionen darüber hinaus von selbst – sie lassen sich dann nicht mehr zurückholen.
+- Hat der Administrator **nur die letzten … Versionen behalten** eingestellt, löscht Ablago ältere Versionen darüber hinaus von selbst – sie lassen sich dann nicht mehr zurückholen.
 - In der Historie der Mappe steht jede neue Version, z. B. „Version 3 (ersetzt Kassenbon.jpg)“ oder „Version 1 zurückgeholt“.
 
-**Gleicher Dateiname beim Hochladen:** Gibt es im Register schon ein Dokument mit demselben Namen, fragt das DMS in der Liste nach:
+**Gleicher Dateiname beim Hochladen:** Gibt es im Register schon ein Dokument mit demselben Namen, fragt Ablago in der Liste nach:
 
 - mit Versionierung: **als neue Version** speichern (vorausgewählt) oder **als eigenes Dokument mit Zähler**, z. B. `Rechnung (2).pdf`
 - ohne Versionierung: **als eigenes Dokument mit Zähler** (vorausgewählt) oder **altes Dokument löschen und neues hochladen** – das Löschen ist endgültig
 
 ## Archivnummer
 
-Bewahrst du Papieroriginale auf, verbindet die **Archivnummer** das Papier mit dem Dokument im DMS: Auf das Blatt kommt ein Aufkleber mit Barcode und Nummer (z. B. `A-000123`), am Dokument steht dieselbe Nummer. So findest du zum Dokument das Papier – und vom Papier zum Dokument.
+Bewahrst du Papieroriginale auf, verbindet die **Archivnummer** das Papier mit dem Dokument in Ablago: Auf das Blatt kommt ein Aufkleber mit Barcode und Nummer (z. B. `A-000123`), am Dokument steht dieselbe Nummer. So findest du zum Dokument das Papier – und vom Papier zum Dokument.
 
 - **Eintragen:** **Archivnummer** neben dem Dokument, Nummer eintippen oder mit einem Handscanner einscannen, **Übernehmen**. Das gilt sofort, ohne „Mappe speichern“. Danach steht „Archivnummer A-000123“ unter dem Namen; **ändern** – auch leeren – geht dort.
-- **Jede Nummer gibt es nur einmal.** Hat ein anderes Dokument sie schon, sagt das DMS das und trägt nichts ein – dann klebt wohl ein falscher Aufkleber.
-- **Finden:** Tippe die Nummer ins **Suchfeld** einer Liste und drücke ++enter++ – oder scanne den Aufkleber mit einem Handscanner (er tippt wie eine Tastatur und drückt selbst ++enter++). Das DMS öffnet die Mappe mit dem Register und zeigt das Dokument an. Ist es eine Mappe, die du nicht sehen darfst, sucht es normal weiter.
+- **Jede Nummer gibt es nur einmal.** Hat ein anderes Dokument sie schon, sagt Ablago das und trägt nichts ein – dann klebt wohl ein falscher Aufkleber.
+- **Finden:** Tippe die Nummer ins **Suchfeld** einer Liste und drücke ++enter++ – oder scanne den Aufkleber mit einem Handscanner (er tippt wie eine Tastatur und drückt selbst ++enter++). Ablago öffnet die Mappe mit dem Register und zeigt das Dokument an. Ist es eine Mappe, die du nicht sehen darfst, sucht es normal weiter.
 - In der [Historie](zusammenarbeit.md#historie) der Mappe steht jede Änderung der Archivnummer.
 
 Die Aufkleber druckt ein Administrator (Werkbank → Nummernkreise → *Archivnummer*). Das Feld für die Nummer gehört zum **Dokument**, nicht zur Mappe: Eine Mappe kann mehrere Papiere haben.
@@ -233,6 +233,6 @@ Die Aufkleber druckt ein Administrator (Werkbank → Nummernkreise → *Archivnu
 
 Ein Klick auf **Löschen** neben einem Dokument markiert es mit „wird beim Speichern gelöscht“. Erst **Mappe speichern** löscht es; **Behalten** oder **Änderungen verwerfen** holt es zurück. Noch nicht gespeicherte Dateien nimmst du mit **Nicht hochladen** wieder aus der Liste.
 
-Ein gelöschtes Dokument kommt beim Speichern mit allen seinen Versionen in den [Papierkorb](ablage.md#papierkorb) – ein falscher Klick ist also nicht gleich endgültig. Dort steht es unter **Dokumente** mit der Mappe und dem Register, aus dem es kam; **Wiederherstellen** legt es genau dorthin zurück. Hat es ältere Versionen, fragt das DMS vorher nach und nennt ihre Zahl. Löschst du eine ganze Mappe, kommen ihre Dokumente mit ihr in den Papierkorb.
+Ein gelöschtes Dokument kommt beim Speichern mit allen seinen Versionen in den [Papierkorb](ablage.md#papierkorb) – ein falscher Klick ist also nicht gleich endgültig. Dort steht es unter **Dokumente** mit der Mappe und dem Register, aus dem es kam; **Wiederherstellen** legt es genau dorthin zurück. Hat es ältere Versionen, fragt Ablago vorher nach und nennt ihre Zahl. Löschst du eine ganze Mappe, kommen ihre Dokumente mit ihr in den Papierkorb.
 
 Ist der Papierkorb ausgeschaltet (Werkbank), ist ein gelöschtes Dokument sofort endgültig weg – die Zeile sagt dann „wird beim Speichern endgültig gelöscht“.

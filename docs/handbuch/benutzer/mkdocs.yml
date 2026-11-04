@@ -1,16 +1,19 @@
-site_name: DMS – Benutzerhandbuch
-site_description: Arbeiten mit dem DMS – Mappen, Dokumente, Suche und Profil
-site_url: !ENV [SITE_URL, 'https://motom001.github.io/dms/benutzer/aktuell/']
+site_name: Ablago – Benutzerhandbuch
+site_description: Arbeiten mit Ablago – Mappen, Dokumente, Suche und Profil
+site_url: !ENV [SITE_URL, 'https://help.ablago.app/benutzer/aktuell/']
 repo_url: https://github.com/motom001/dms
 repo_name: motom001/dms
 edit_uri: edit/main/docs/handbuch/benutzer/docs/
 docs_dir: docs
-copyright: DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+copyright: Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
 
 theme:
   name: material
   # Hinweis auf ältere Versionen (#111)
   custom_dir: ../overrides
+  # Logo und Favicon aus marke/ (#689)
+  logo: marke/ablago-app-blau.svg
+  favicon: marke/favicon.svg
   language: de
   features:
     - navigation.sections
@@ -87,6 +90,6 @@ nav:
   - Begriffe: begriffe.md
   - Weiteres:
       - Was ist neu? (Changelog): https://github.com/motom001/dms/releases
-      - Administratorhandbuch: https://motom001.github.io/dms/admin/
-      - "Wie komme ich an ein DMS?": https://motom001.github.io/dms/installieren/
-      - Entwicklerhandbuch: https://motom001.github.io/dms/entwickler/
+      - Administratorhandbuch: https://help.ablago.app/admin/
+      - "Wie komme ich an ein DMS?": https://help.ablago.app/installieren/
+      - Entwicklerhandbuch: https://help.ablago.app/entwickler/

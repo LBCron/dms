@@ -633,9 +633,9 @@ export const PLATZHALTER = { geraet: '{{geraet}}', speicher: '{{speicher}}' };
 export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--geraet'), speicher: arg('--speicher') }) {
   const kz = ['```text', 'Messergebnis Lasttest (#563)'];
   const nv = 'bitte ergänzen';
-  kz.push(`DMS-Version: ${f(u.version)} · Image: ${u.image} · Datenbank: ${f(u.datenbank)}`);
+  kz.push(`Ablago-Version: ${f(u.version)} · Image: ${u.image} · Datenbank: ${f(u.datenbank)}`);
   kz.push(`Gerät/Modell: ${angaben.geraet ?? nv}`);
-  kz.push(`CPU: ${u.cpu ?? nv} · ${f(u.kerne)} Kerne für das DMS${u.kerneBegrenzt ? ' (Grenze des Containers)' : ''}, Rechner ${f(u.rechnerKerne)} · ${f(u.architektur)}`);
+  kz.push(`CPU: ${u.cpu ?? nv} · ${f(u.kerne)} Kerne für Ablago${u.kerneBegrenzt ? ' (Grenze des Containers)' : ''}, Rechner ${f(u.rechnerKerne)} · ${f(u.architektur)}`);
   kz.push(`RAM: ${u.ramGb === null ? nv : `${String(u.ramGb).replace('.', ',')} GB${u.ramBegrenzt ? ' (Grenze des Containers)' : ''}`} · Speicher: ${angaben.speicher ?? `${nv} (HDD/SSD/NVMe)`}`);
   kz.push(`Bestand: ${x.bestand.gesamt} Mappen, ${x.dokumente} Dokumente (PDF)`);
   if (u.grenzen) kz.push(`Einstellungen: ${Object.entries(u.grenzen).map(([k, w]) => `${k}=${w}`).join(', ')}`);
@@ -650,7 +650,7 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   const alle = x.laeufe;
   const spitze = Math.max(0, ...alle.map((l) => l.speicherMbMax ?? 0));
   const schleife = Math.max(0, ...alle.map((l) => l.schleifeP99 ?? 0));
-  kz.push(`Arbeitsspeicher DMS höchstens: ${spitze} MB · Ereignisschleife p99 höchstens: ${Math.round(schleife)} ms`);
+  kz.push(`Arbeitsspeicher Ablago höchstens: ${spitze} MB · Ereignisschleife p99 höchstens: ${Math.round(schleife)} ms`);
   kz.push(`Gemessen: ${new Date().toISOString().slice(0, 10)}`, '```');
   return kz.join('\n');
 }

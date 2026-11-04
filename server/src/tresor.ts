@@ -304,7 +304,7 @@ export class Tresor {
       await chmod(this.datei, 0o600).catch(() => {});
     } catch (e) {
       const f = e as NodeJS.ErrnoException;
-      if (f.code === 'EEXIST') throw new Fachfehler(409, `Unter ${this.datei} liegt schon eine Datei. Lade die Seite neu oder starte das DMS neu, damit sie gelesen wird.`);
+      if (f.code === 'EEXIST') throw new Fachfehler(409, `Unter ${this.datei} liegt schon eine Datei. Lade die Seite neu oder starte Ablago neu, damit sie gelesen wird.`);
       throw new Fachfehler(500, `Die Schlüsseldatei ließ sich nicht schreiben (${this.datei}): ${f.message}`);
     }
     const vorher = this.gespeichert?.fingerabdruck ?? null;

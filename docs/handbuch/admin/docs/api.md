@@ -1,6 +1,6 @@
 # Schnittstelle (API)
 
-Andere Programme – ein Scanner, ein Skript, eine Haushalts-App – greifen über die Schnittstelle unter `/api/v1` auf das DMS zu. Sie können Mappen anlegen, lesen, ändern und löschen und Dokumente hoch- und herunterladen.
+Andere Programme – ein Scanner, ein Skript, eine Haushalts-App – greifen über die Schnittstelle unter `/api/v1` auf Ablago zu. Sie können Mappen anlegen, lesen, ändern und löschen und Dokumente hoch- und herunterladen.
 
 ## API-Beschreibung
 
@@ -10,7 +10,7 @@ Die vollständige Beschreibung im **OpenAPI-Format** (Version 3.1):
 - **Maschinenlesbar** unter `/api/openapi.json` oder `/api/v1/openapi.json` der eigenen Installation, z. B. `http://<NAS>:8080/api/openapi.json`. Das lässt sich in Werkzeuge wie Swagger UI, Postman oder einen Code-Generator laden.
 - Die Beschreibung der aktuellen Version liegt auch hier: [openapi.json](api/openapi.json).
 
-![API-Dokumentation im DMS](bilder/api-doku.png)
+![API-Dokumentation in Ablago](bilder/api-doku.png)
 
 ## API-Schlüssel
 
@@ -24,7 +24,7 @@ Jeder Benutzer erzeugt seine Schlüssel selbst unter **Profil → Sicherheit →
 - **Ablaufdatum** – optional.
 - **Passwörter lesen** – eigenes Recht für [Passwortfelder](mappentypen.md#passwortfelder): Nur damit liefert `GET /api/v1/mappen…?passwoerter=anzeigen` sie im Klartext; jeder Abruf steht im Protokoll. Ohne den Parameter steht dort immer nur `{"gesetzt": true, "lesbar": true}`.
 
-Der Schlüssel ist **nur einmal vollständig sichtbar**, direkt nach dem Erzeugen; danach zeigt das DMS nur noch seinen Anfang. Gespeichert wird nur ein Prüfwert. Wer ihn verliert, erzeugt einen neuen und löscht den alten.
+Der Schlüssel ist **nur einmal vollständig sichtbar**, direkt nach dem Erzeugen; danach zeigt Ablago nur noch seinen Anfang. Gespeichert wird nur ein Prüfwert. Wer ihn verliert, erzeugt einen neuen und löscht den alten.
 
 Ein Schlüssel hat höchstens die Rechte seines Benutzers. Ist der Benutzer deaktiviert, gilt auch sein Schlüssel nicht mehr.
 
@@ -67,14 +67,14 @@ Content-Type: application/json; charset=utf-8
 
 | Feld | Bedeutung |
 | --- | --- |
-| `neuePost` | [Post](https://motom001.github.io/dms/benutzer/post/) im Stand *Neu*, deren *Für* der Benutzer ist oder leer ist – nur Post, die er lesen darf |
+| `neuePost` | [Post](https://help.ablago.app/benutzer/post/) im Stand *Neu*, deren *Für* der Benutzer ist oder leer ist – nur Post, die er lesen darf |
 | `zuErledigen` | wie **Zu erledigen** in der Ablage: Mappen mit offenen Aufgaben für ihn |
 | `anstehend` | Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen (wie **Anstehend**) |
 | `ueberfaellig` | offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute |
 | `stand` | zählt um eins hoch, sobald sich eine der Zahlen gegenüber dem letzten Abruf geändert hat |
-| `geaendert` | wann das DMS diese Änderung bemerkt hat (beim Abruf) |
+| `geaendert` | wann Ablago diese Änderung bemerkt hat (beim Abruf) |
 
-**Nichts Neues kostet nichts:** Schicke das `ETag` des letzten Abrufs als `If-None-Match` mit. Hat sich nichts geändert, antwortet das DMS mit `304 Not Modified` ohne Inhalt:
+**Nichts Neues kostet nichts:** Schicke das `ETag` des letzten Abrufs als `If-None-Match` mit. Hat sich nichts geändert, antwortet Ablago mit `304 Not Modified` ohne Inhalt:
 
 ```sh
 curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"' \
@@ -88,13 +88,13 @@ curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ
 
 ### Sofort statt abfragen: Webhooks { #webhooks }
 
-Statt den Zähler regelmäßig abzufragen, kann sich das DMS auch selbst melden: Ein **Webhook** schickt dieselben Zahlen per `POST` an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks im Profil an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: [Webhooks](webhooks.md); Prüfen der Signatur mit Beispielcode im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/aufbau/#webhooks). Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.
+Statt den Zähler regelmäßig abzufragen, kann sich Ablago auch selbst melden: Ein **Webhook** schickt dieselben Zahlen per `POST` an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks im Profil an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: [Webhooks](webhooks.md); Prüfen der Signatur mit Beispielcode im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.
 
 ### Mappe ändern, auch gleichzeitig mit anderen { #mappe-aendern }
 
 `PUT /api/v1/mappen/{id}` ändert nur die Felder, die in `werte` stehen; alle anderen bleiben, wie sie gerade gespeichert sind. Schicke deshalb **nur, was du ändern willst** – nicht die ganze Mappe, die du vorher gelesen hast. Sonst setzt du Felder zurück, die inzwischen jemand anderes geändert hat.
 
-Mit `stand` prüft das DMS zusätzlich, ob seit deinem Lesen jemand **dasselbe Feld** geändert hat (#609). `stand` ist der Wert `geaendert` der Mappe aus `GET /api/v1/mappen/{id}`:
+Mit `stand` prüft Ablago zusätzlich, ob seit deinem Lesen jemand **dasselbe Feld** geändert hat (#609). `stand` ist der Wert `geaendert` der Mappe aus `GET /api/v1/mappen/{id}`:
 
 ```sh
 curl -X PUT -H "Authorization: Bearer dms_…" -H "Content-Type: application/json" \
@@ -102,11 +102,11 @@ curl -X PUT -H "Authorization: Bearer dms_…" -H "Content-Type: application/jso
   http://<NAS>:8080/api/v1/mappen/<Id>
 ```
 
-- Hat seitdem niemand eines der übergebenen Felder anders geändert, speichert das DMS – auch wenn andere Felder inzwischen geändert wurden; die bleiben.
+- Hat seitdem niemand eines der übergebenen Felder anders geändert, speichert Ablago – auch wenn andere Felder inzwischen geändert wurden; die bleiben.
 - Sonst kommt **409** und nichts wird gespeichert. In `details` stehen `stand` (der aktuelle) und `konflikte`: je Feld `feld`, `label`, `deins`, `aktuell` (lesbar), `wert` (der jetzige Wert wie in `werte`; nicht bei Passwörtern), `von`, `name` und `zeit` der letzten Änderung.
 - Deinen Wert trotzdem übernehmen: dieselbe Anfrage mit `stand` aus der 409-Antwort. Den anderen Wert behalten: das Feld weglassen.
 
-Ohne `stand` prüft das DMS nichts – wie bis 0.143.0 gilt, was du schickst. Bestehende Skripte laufen unverändert weiter; nicht übergebene Felder setzt das DMS nie zurück. „Zuletzt geändert“ (`geaendert`) ist auf die Millisekunde genau und wird bei jedem Speichern größer – vergleiche es als Text, rechne nicht damit.
+Ohne `stand` prüft Ablago nichts – wie bis 0.143.0 gilt, was du schickst. Bestehende Skripte laufen unverändert weiter; nicht übergebene Felder setzt Ablago nie zurück. „Zuletzt geändert“ (`geaendert`) ist auf die Millisekunde genau und wird bei jedem Speichern größer – vergleiche es als Text, rechne nicht damit.
 
 !!! note "Namen in der API"
     Die Schnittstelle behält ihre Namen, auch wo die Oberfläche seit 0.73 andere Wörter verwendet: `sicht` ist die **Ansicht**, `sicht=eingang` die Liste **Zu erledigen**, `key` die **Kennung** eines Felds, Registers oder Mappentyps, die Feldart `referenz` der **Verweis**, das Register der Art `protokoll` die **Historie** und `mandant` bzw. `haushalt_id` der **Haushalt**.
@@ -132,11 +132,11 @@ Die API-Dokumentation beschreibt alle Endpunkte mit ihren Parametern. Ein Überb
 | **Dokumente und Versionen** | `POST /api/v1/mappen/{id}/dokumente` (hochladen), `POST /api/v1/dokumente/{id}/ersetzen` (neue Version), `GET /api/v1/dokumente/{id}/versionen`, ältere Version herunterladen und `…/zurueckholen` |
 | **Texterkennung** | `POST /api/v1/dokumente/{id}/texterkennung` stößt sie für ein Dokument (erneut) an; `GET /api/v1/dokumente/{id}/volltext` liefert den Text |
 | **Volltext setzen** | `PUT /api/v1/dokumente/{id}/volltext` mit `{ "text": "…" }` (Recht U auf die Mappe) ersetzt den Volltext, z. B. aus einer eigenen Texterkennung; `GET /api/v1/dokumente/{id}/seiten/{nr}/scan?dpi=300` liefert eine Seite als Graustufenbild (PGM) |
-| **Umgewandelte Fassung** | `GET /api/v1/dokumente/{id}/fassung` liefert die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die das DMS nicht selbst liest (z. B. TIFF); setzen dürfen sie nur Pakete mit dem Recht [Dateien umwandeln](pakete.md#recht-umwandeln) |
+| **Umgewandelte Fassung** | `GET /api/v1/dokumente/{id}/fassung` liefert die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die Ablago nicht selbst liest (z. B. TIFF); setzen dürfen sie nur Pakete mit dem Recht [Dateien umwandeln](pakete.md#recht-umwandeln) |
 
 ### Post anlegen und zuordnen
 
-Ein Skript, ein Scanner oder Home Assistant legt neue [Post](https://motom001.github.io/dms/benutzer/post/) an und lädt die Datei dazu hoch:
+Ein Skript, ein Scanner oder Home Assistant legt neue [Post](https://help.ablago.app/benutzer/post/) an und lädt die Datei dazu hoch:
 
 ```sh
 curl -X POST -H "Authorization: Bearer dms_…" -H "Content-Type: application/json" \

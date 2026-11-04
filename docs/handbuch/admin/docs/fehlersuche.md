@@ -12,11 +12,11 @@ Benutzer melden Fehler über **Fehler melden** in ihrem Menü – mit eigener Be
 
 ![Werkbank → Gemeldete Fehler](bilder/werkbank-fehlermeldung.png)
 
-Unter **Werkbank → Gemeldete Fehler** stehen die Meldungen, neueste zuerst; der Zähler in der Leiste und in der Übersicht nennt die offenen. In der Meldung siehst du Beschreibung, Screenshots und Angaben und kannst sie **als erledigt markieren** (und wieder öffnen) oder **löschen** – endgültig, samt Bildern. Eine Rückmeldung an den Benutzer gibt es im DMS bewusst nicht; die erledigst du auf deinem Weg.
+Unter **Werkbank → Gemeldete Fehler** stehen die Meldungen, neueste zuerst; der Zähler in der Leiste und in der Übersicht nennt die offenen. In der Meldung siehst du Beschreibung, Screenshots und Angaben und kannst sie **als erledigt markieren** (und wieder öffnen) oder **löschen** – endgültig, samt Bildern. Eine Rückmeldung an den Benutzer gibt es in Ablago bewusst nicht; die erledigst du auf deinem Weg.
 
 ## Protokoll
 
-**Werkbank → Protokoll** zeigt, was im DMS passiert – die letzten 24 Stunden, höchstens 10.000 Einträge, die neuesten oben. Nach einem Neustart beginnt die Liste leer; dauerhaft steht alles in den Container-Logs.
+**Werkbank → Protokoll** zeigt, was in Ablago passiert – die letzten 24 Stunden, höchstens 10.000 Einträge, die neuesten oben. Nach einem Neustart beginnt die Liste leer; dauerhaft steht alles in den Container-Logs.
 
 ![Protokoll](bilder/werkbank-protokoll.png)
 
@@ -42,15 +42,15 @@ docker logs <app-container>
 
 ## Datenbank
 
-Lange Datenbankzugriffe und Anfragen, die **Auslastung des Servers** und was gerade in der Datenbank läuft stehen unter **Werkbank → Einstellungen → Datenbank-Anbindung**, unter der Verbindung – siehe [Lange Datenbankzugriffe](installation.md#lange-datenbankzugriffe). Wirkt das DMS langsam, schau dort zuerst nach – und unter **Wartung und Fehlersuche → [Systemzustand](speicherplatz.md#auslastung)**, wie ausgelastet CPU, Arbeitsspeicher und Netzwerk sind.
+Lange Datenbankzugriffe und Anfragen, die **Auslastung des Servers** und was gerade in der Datenbank läuft stehen unter **Werkbank → Einstellungen → Datenbank-Anbindung**, unter der Verbindung – siehe [Lange Datenbankzugriffe](installation.md#lange-datenbankzugriffe). Wirkt Ablago langsam, schau dort zuerst nach – und unter **Wartung und Fehlersuche → [Systemzustand](speicherplatz.md#auslastung)**, wie ausgelastet CPU, Arbeitsspeicher und Netzwerk sind.
 
 Einträge, die mit **Anfrage:** beginnen, betreffen eine ganze Anfrage; aufgeklappt zeigen sie die **Aufteilung**: Warten vor dem Handler, Datenbank (mit Anzahl der Zugriffe), Rechte, Aufbereitung und JSON. Einzelheiten zur selben Zeit stehen im [Protokoll](#protokoll) (Modul *datenbank*).
 
-**Auslastung des Servers:** Das DMS arbeitet Anfragen auf einem Faden ab. Rechnet eine Anfrage lange, warten alle anderen so lange. Die Werte zeigen, wie lange in der letzten Minute üblicherweise, in 99 % der Fälle und höchstens gewartet wurde. Unter 50 ms ist unauffällig; ab 100 ms (99 %) erscheint ein Hinweis.
+**Auslastung des Servers:** Ablago arbeitet Anfragen auf einem Faden ab. Rechnet eine Anfrage lange, warten alle anderen so lange. Die Werte zeigen, wie lange in der letzten Minute üblicherweise, in 99 % der Fälle und höchstens gewartet wurde. Unter 50 ms ist unauffällig; ab 100 ms (99 %) erscheint ein Hinweis.
 
 ## Zeitmessung (Entwicklermodus)
 
-Wirkt eine Seite langsam, schalte im **Profil** den **Entwicklermodus** ein. Dann zeigt das DMS unten rechts bei jedem Seitenaufruf je Anfrage, wo die Zeit geblieben ist, oben die Summe über alle Anfragen der Seite. Er gilt nur für dein Konto.
+Wirkt eine Seite langsam, schalte im **Profil** den **Entwicklermodus** ein. Dann zeigt Ablago unten rechts bei jedem Seitenaufruf je Anfrage, wo die Zeit geblieben ist, oben die Summe über alle Anfragen der Seite. Er gilt nur für dein Konto.
 
 | Abschnitt | Was es ist |
 |---|---|
@@ -67,12 +67,12 @@ Die Werte kommen vom Server im Header `Server-Timing` (`vor`, `app`, `db`, `rech
 
 ## Technik
 
-**Werkbank → Einstellungen → Technik** zeigt im Abschnitt **Installiert** (unter *Neuere Versionen*), was installiert ist: Version und Stand des DMS, Laufzeit (Node.js, Betriebssystem), Datenbank, Bibliotheken und Oberfläche.
+**Werkbank → Einstellungen → Technik** zeigt im Abschnitt **Installiert** (unter *Neuere Versionen*), was installiert ist: Version und Stand von Ablago, Laufzeit (Node.js, Betriebssystem), Datenbank, Bibliotheken und Oberfläche.
 
 ![Technik und Versionen](bilder/werkbank-technik.png)
 
 - **Für den Support:** Übersicht kopieren und in ein [GitHub-Issue](https://github.com/motom001/dms/issues/new?template=wunsch.md) einfügen. Passwörter und Zugangsdaten stehen nicht darin.
-- **Neuere Versionen:** Ein Knopfdruck fragt nach, ob es neuere Versionen gibt – bei GitHub für das DMS, bei endoflife.date für Node.js, PostgreSQL und Alpine, bei npm für die Bibliotheken. Ohne Knopfdruck fragt das DMS nirgends nach. Beim DMS selbst steht unter *Aktuell* das neueste Release mit Datum; liegen auf `main` schon weitere Änderungen, die noch in keinem Release sind, nennt sie der Hinweis.
+- **Neuere Versionen:** Ein Knopfdruck fragt nach, ob es neuere Versionen gibt – bei GitHub für Ablago, bei endoflife.date für Node.js, PostgreSQL und Alpine, bei npm für die Bibliotheken. Ohne Knopfdruck fragt Ablago nirgends nach. Bei Ablago selbst steht unter *Aktuell* das neueste Release mit Datum; liegen auf `main` schon weitere Änderungen, die noch in keinem Release sind, nennt sie der Hinweis.
 
 Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 
@@ -84,20 +84,20 @@ Wie die Bausteine zusammenhängen, beschreibt [Technik](technik.md).
 ??? question "E-Mails kommen nicht an."
     Unter **Werkbank → E-Mail und Adresse** zuerst **Verbindung prüfen**, dann **Testmail senden** – darunter steht die Meldung des Mailservers. Typisch: falsches Passwort (bei vielen Anbietern braucht es ein App-Passwort), Verbindungsart passt nicht zum Port (STARTTLS ↔ 587, SSL/TLS ↔ 465), Port vom Netz gesperrt. Im Protokoll (Modul `mail`) steht jeder Versand mit Fehler. Auch im Spam-Ordner nachsehen.
 
-??? question "Das DMS ist zäh, während jemand exportiert oder viele PDFs bearbeitet."
+??? question "Ablago ist zäh, während jemand exportiert oder viele PDFs bearbeitet."
     Schwere Arbeiten laufen in eigenen [Arbeitern](speicherplatz.md#arbeiter-fur-pdf-und-exporte) (#542); andere Benutzer sollten davon kaum etwas merken. Unter **Werkbank → Systemzustand → Auslastung** siehst du, ob die Arbeiter beschäftigt sind, wie viele Aufträge warten und wie hoch die **Wartezeit des Servers** ist. Ist die CPU des Containers dauerhaft am Anschlag, fehlen Kerne – gib dem Container mehr (`cpus:`) oder setze `DMS_ARBEITER` niedriger, damit Anfragen und Datenbank mehr Rechenzeit bekommen. Steht im Protokoll „Hohe Wartezeit des Servers“, obwohl die Arbeiter nichts tun, rechnet etwas im Hauptfaden: Bitte als Issue melden, mit dem Protokolleintrag.
 
 ??? question "Eine PDF-Bearbeitung oder ein Export bricht mit „dauerte länger als 10 Minuten“ oder „mehr Arbeitsspeicher als erlaubt“ ab."
-    Ein Auftrag im Arbeiter darf höchstens 10 Minuten dauern und 1,5 GB Arbeitsspeicher belegen – damit ein einzelnes riesiges PDF das DMS nicht lahmlegt. Exportiere weniger Mappen auf einmal oder teile ein großes PDF vorher („Seiten“). Läuft der Arbeiter an der Grenze des Containers (`mem_limit`), hilft mehr Arbeitsspeicher für den Container.
+    Ein Auftrag im Arbeiter darf höchstens 10 Minuten dauern und 1,5 GB Arbeitsspeicher belegen – damit ein einzelnes riesiges PDF Ablago nicht lahmlegt. Exportiere weniger Mappen auf einmal oder teile ein großes PDF vorher („Seiten“). Läuft der Arbeiter an der Grenze des Containers (`mem_limit`), hilft mehr Arbeitsspeicher für den Container.
 
 ??? question "Links in E-Mails zeigen auf localhost."
-    Unter **Werkbank → E-Mail und Adresse** die Adresse eintragen, unter der Benutzer das DMS aufrufen.
+    Unter **Werkbank → E-Mail und Adresse** die Adresse eintragen, unter der Benutzer Ablago aufrufen.
 
 ??? question "Anmeldung klappt hinter dem Proxy nicht."
-    Ist die Adresse des DMS (Werkbank → E-Mail und Adresse) eine `https://`-Adresse, wird das Sitzungs-Cookie nur über HTTPS gesetzt. Rufe das DMS dann auch über HTTPS auf. Steht `TRUST_PROXY` auf `false` oder auf einer Liste, die den Proxy nicht enthält, glaubt das DMS dem Proxy nicht, dass die Verbindung HTTPS ist – dann die Variable entfernen. Siehe [Hinter einem Reverse-Proxy](installation.md#hinter-einem-reverse-proxy).
+    Ist die Adresse von Ablago (Werkbank → E-Mail und Adresse) eine `https://`-Adresse, wird das Sitzungs-Cookie nur über HTTPS gesetzt. Rufe Ablago dann auch über HTTPS auf. Steht `TRUST_PROXY` auf `false` oder auf einer Liste, die den Proxy nicht enthält, glaubt Ablago dem Proxy nicht, dass die Verbindung HTTPS ist – dann die Variable entfernen. Siehe [Hinter einem Reverse-Proxy](installation.md#hinter-einem-reverse-proxy).
 
 ??? question "Im Protokoll und bei den Sitzungen steht immer dieselbe IP-Adresse."
-    Das ist die Adresse des Reverse-Proxys: Das DMS glaubt seinen Angaben nicht. Unter **Technik** nachsehen, was bei `TRUST_PROXY` steht. Hat der Proxy eine öffentliche Adresse, kann `TRUST_PROXY` auf diese Adresse oder auf `true` gesetzt werden – mehr unter [Was der Proxy dem DMS mitteilt](installation.md#was-der-proxy-dem-dms-mitteilt).
+    Das ist die Adresse des Reverse-Proxys: Ablago glaubt seinen Angaben nicht. Unter **Technik** nachsehen, was bei `TRUST_PROXY` steht. Hat der Proxy eine öffentliche Adresse, kann `TRUST_PROXY` auf diese Adresse oder auf `true` gesetzt werden – mehr unter [Was der Proxy Ablago mitteilt](installation.md#was-der-proxy-dem-dms-mitteilt).
 
 ??? question "Hochladen großer Dateien bricht ab."
     Den Reverse-Proxy größere Anfragen erlauben, z. B. bei nginx `client_max_body_size 110m;`.

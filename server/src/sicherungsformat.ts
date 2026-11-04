@@ -109,13 +109,13 @@ export async function liesKopf(pfad: string): Promise<{ kopf: Dateikopf; vorspan
   try {
     const anfang = Buffer.alloc(MAGIE.length + 4);
     const { bytesRead } = await f.read(anfang, 0, anfang.length, 0);
-    if (bytesRead < anfang.length || !anfang.subarray(0, MAGIE.length).equals(MAGIE)) throw new Error('Das ist keine Sicherungsdatei des DMS (oder ein unbekanntes Format).');
+    if (bytesRead < anfang.length || !anfang.subarray(0, MAGIE.length).equals(MAGIE)) throw new Error('Das ist keine Sicherungsdatei von Ablago (oder ein unbekanntes Format).');
     const laenge = anfang.readUInt32BE(MAGIE.length);
     if (laenge > 64 * 1024) throw new Error('Der Kopf der Sicherungsdatei ist beschädigt.');
     const kopfBytes = Buffer.alloc(laenge);
     await f.read(kopfBytes, 0, laenge, anfang.length);
     const kopf = JSON.parse(kopfBytes.toString('utf8')) as Dateikopf;
-    if (kopf.format !== FORMAT) throw new Error(`Die Sicherung hat das Format ${kopf.format}; dieses DMS kennt Format ${FORMAT}. Aktualisiere das DMS.`);
+    if (kopf.format !== FORMAT) throw new Error(`Die Sicherung hat das Format ${kopf.format}; dieser Installation kennt Format ${FORMAT}. Aktualisiere Ablago.`);
     return { kopf, vorspann: Buffer.concat([anfang, kopfBytes]) };
   } finally { await f.close(); }
 }

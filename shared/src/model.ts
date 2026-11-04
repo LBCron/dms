@@ -183,7 +183,7 @@ export function systemfelder(s: Systemtyp, rolleTypId: string, benutzerTypId = '
   if (s === 'post') return [
     { key: 'betreff', label: 'Betreff', typ: 'text', pflicht: true, maxLen: 250, system: true },
     { key: 'stand', label: 'Stand', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_STAND), system: true, hilfe: 'Neu: noch nicht bearbeitet. Zugeordnet: liegt bei einer passenden Mappe. Erledigt: nichts mehr zu tun.' },
-    { key: 'kanal', label: 'Kanal', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_KANAL), system: true, hilfe: 'Wie die Post ins DMS kam bzw. hinausging' },
+    { key: 'kanal', label: 'Kanal', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_KANAL), system: true, hilfe: 'Wie die Post in Ablago kam bzw. hinausging' },
     { key: 'richtung', label: 'Richtung', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_RICHTUNG), system: true },
     { key: 'datum', label: 'Datum', typ: 'datum', system: true },
     { key: 'absender', label: 'Absender', typ: 'text', system: true },
@@ -797,7 +797,7 @@ export interface Dokument {
 }
 
 /** Herkunft einer Dokumentversion (#194). */
-export const HERKUNFT = { hochgeladen: 'hochgeladen', api: 'über die Schnittstelle', webdav: 'über WebDAV', paket: 'von einem Paket', eingang: 'Eingangskanal', zurueckgeholt: 'zurückgeholt', bearbeitet: 'im DMS bearbeitet', geschwaerzt: 'im DMS geschwärzt' } as const;
+export const HERKUNFT = { hochgeladen: 'hochgeladen', api: 'über die Schnittstelle', webdav: 'über WebDAV', paket: 'von einem Paket', eingang: 'Eingangskanal', zurueckgeholt: 'zurückgeholt', bearbeitet: 'in Ablago bearbeitet', geschwaerzt: 'in Ablago geschwärzt' } as const;
 export type Herkunft = keyof typeof HERKUNFT;
 /** Eine ältere Version eines Dokuments (#194). */
 export interface DokumentVersion {

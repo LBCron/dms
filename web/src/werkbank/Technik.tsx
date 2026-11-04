@@ -22,7 +22,7 @@ type Zeilen = Array<[string, Array<[string, string]>]>;
 function zeilenAus(u: Systemuebersicht): Zeilen {
   const db = 'version' in u.datenbank ? u.datenbank : null;
   return [
-    ['DMS', [
+    ['Ablago', [
       ['Version', u.dms.version],
       ['Commit', u.dms.commit ? u.dms.commit.slice(0, 7) : 'unbekannt (lokal gebaut)'],
       ['Image gebaut', zeit(u.dms.gebaut)],
@@ -53,19 +53,19 @@ function zeilenAus(u: Systemuebersicht): Zeilen {
 
 /** Markdown für ein GitHub-Issue. */
 /** #216: Was der Betreiber selbst aktualisiert – und was mit einem DMS-Update kommt. */
-const GRUPPEN = [['selbst', 'Von dir zu aktualisieren'], ['dms', 'Kommt mit dem DMS']] as const;
+const GRUPPEN = [['selbst', 'Von dir zu aktualisieren'], ['dms', 'Kommt mit Ablago']] as const;
 function gruppiert(abgleich: Vergleich[]): Array<[string, Vergleich[]]> {
   return GRUPPEN.map(([g, titel]) => [titel, abgleich.filter((v) => (v.gruppe ?? 'selbst') === g)]);
 }
 /** In „Kommt mit dem DMS“ ist Neueres keine Aufgabe für den Betreiber; nicht mehr unterstützt bleibt eine Warnung. */
 function statusVon(v: Vergleich): { text: string; art: string } {
-  if (v.gruppe === 'dms' && v.status === 'neuer') return { text: 'kommt mit DMS-Update', art: '' };
+  if (v.gruppe === 'dms' && v.status === 'neuer') return { text: 'kommt mit Ablago-Update', art: '' };
   return STATUS[v.status];
 }
 const istAufgabe = (v: Vergleich) => ((v.gruppe ?? 'selbst') === 'selbst' && v.status === 'neuer') || v.status === 'veraltet';
 
 function alsText(z: Zeilen, abgleich: Vergleich[] | null): string {
-  const t = ['### Systemangaben (DMS)', '', '| Bereich | Angabe | Wert |', '| --- | --- | --- |'];
+  const t = ['### Systemangaben (Ablago)', '', '| Bereich | Angabe | Wert |', '| --- | --- | --- |'];
   for (const [g, liste] of z) for (const [k, v] of liste) t.push(`| ${g} | ${k} | ${markdownZelle(v)} |`);
   if (abgleich) {
     t.push('', '#### Versionsabgleich', '', '| Komponente | Installiert | Aktuell | Status |', '| --- | --- | --- | --- |');
@@ -142,13 +142,13 @@ export function TechnikPanel({ t }: { t: TechnikZustand }) {
       <div className="blatt">
         <h2 className="h3">Neuere Versionen</h2>
         {release && <p>Was sich seit deiner Version {version} geändert hat: <a className="verweis" href={handbuch('admin', 'neu/')} target="_blank" rel="noreferrer">Neu in dieser Version</a> im Handbuch, <a className="verweis" href="https://github.com/motom001/dms/releases" target="_blank" rel="noreferrer">alle Releases</a> und <a className="verweis" href={`https://github.com/motom001/dms/compare/v${version}...main`} target="_blank" rel="noreferrer">alle Änderungen seit {version}</a> auf GitHub.</p>}
-        <p className="leise">Fragt GitHub (DMS), endoflife.date (Node.js, PostgreSQL, Alpine) und npm (Bibliotheken). Das DMS verbindet sich dafür nur jetzt, auf Knopfdruck, mit dem Internet.</p>
+        <p className="leise">Fragt GitHub (Ablago), endoflife.date (Node.js, PostgreSQL, Alpine) und npm (Bibliotheken). Ablago verbindet sich dafür nur jetzt, auf Knopfdruck, mit dem Internet.</p>
         <div className="knoepfe"><button className="knopf" disabled={laeuft} onClick={() => void pruefen()}>{laeuft ? 'Prüfe …' : t.abgleich ? 'Erneut prüfen' : 'Jetzt prüfen'}</button></div>
         {fehler && !fehler.startsWith('Kopieren') && <p className="fehlertext">{fehler}</p>}
         {t.abgleich && (
           <>
             <p className={aufgaben.length ? 'hinweis warn' : 'hinweis gut'}>{aufgaben.length
-              ? aufgaben.map((v) => v.status === 'veraltet' ? `${v.bezeichnung ?? v.komponente} wird nicht mehr unterstützt.` : v.komponente === 'DMS' ? 'Eine neuere DMS-Version ist verfügbar.' : `Für ${v.bezeichnung ?? v.komponente} gibt es ein Update.`).join(' ')
+              ? aufgaben.map((v) => v.status === 'veraltet' ? `${v.bezeichnung ?? v.komponente} wird nicht mehr unterstützt.` : v.komponente === 'Ablago' ? 'Eine neuere Ablago-Version ist verfügbar.' : `Für ${v.bezeichnung ?? v.komponente} gibt es ein Update.`).join(' ')
               : 'Für dich ist nichts zu tun.'}</p>
             {gruppiert(t.abgleich).map(([titel, liste]) => liste.length > 0 && (
               <div key={titel}>
@@ -170,7 +170,7 @@ export function TechnikPanel({ t }: { t: TechnikZustand }) {
                 </div>
               </div>
             ))}
-            <p className="leise klein">Aktualisieren: Das Image <span className="mono">{imageName}</span> enthält Node.js, Alpine und die Bibliotheken{komplett ? ' – und PostgreSQL' : ''}. Neu ziehen und den Container neu starten genügt.{komplett ? '' : ' PostgreSQL ist ein eigenes Image (postgres:17), das du getrennt neu ziehst.'} Die Bibliotheken aktualisiert das Projekt; sie kommen mit dem nächsten DMS-Update.</p>
+            <p className="leise klein">Aktualisieren: Das Image <span className="mono">{imageName}</span> enthält Node.js, Alpine und die Bibliotheken{komplett ? ' – und PostgreSQL' : ''}. Neu ziehen und den Container neu starten genügt.{komplett ? '' : ' PostgreSQL ist ein eigenes Image (postgres:17), das du getrennt neu ziehst.'} Die Bibliotheken aktualisiert das Projekt; sie kommen mit dem nächsten Ablago-Update.</p>
           </>
         )}
       </div>

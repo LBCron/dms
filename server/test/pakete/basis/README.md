@@ -26,7 +26,7 @@ Die **Kundennummer** ist *deine* Nummer bei der Organisation – Kunden-, Mitgli
 
 ## Voraussetzungen
 
-- DMS ab Version 0.63 (Paketverwaltung)
+- Ablago ab Version 0.63 (Paketverwaltung)
 - keine weiteren Pakete
 
 ## Rechte und Netz

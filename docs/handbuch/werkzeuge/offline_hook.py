@@ -3,7 +3,7 @@ mkdocs-Hook für die Offline-Fassung der Handbücher im Image (#219).
 
 - Screenshots (bilder/…) fallen weg; an ihrer Stelle steht ein Hinweis mit Link auf dieselbe
   Seite in der Online-Hilfe der installierten Version.
-- Verweise zwischen den Handbüchern (https://motom001.github.io/dms/<handbuch>/aktuell/…)
+- Verweise zwischen den Handbüchern (https://help.ablago.app/<handbuch>/aktuell/…)
   zeigen auf die lokale Fassung unter /hilfe/<handbuch>/….
 - Dateien, die es nur online gibt (Vorlagen), verweisen auf die Online-Hilfe; die
   API-Beschreibung auf die eigene Installation.
@@ -15,7 +15,7 @@ DMS_HILFE_VERSION (z. B. v0.44).
 import os
 import re
 
-ONLINE = 'https://motom001.github.io/dms'
+ONLINE = 'https://help.ablago.app'
 HANDBUCH = os.environ.get('DMS_HILFE_HANDBUCH', '')
 VERSION = os.environ.get('DMS_HILFE_VERSION', 'aktuell')
 HANDBUECHER = 'admin|benutzer|installieren|entwickler'

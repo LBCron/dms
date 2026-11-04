@@ -48,7 +48,7 @@ export const problemeAus = (s: ErweiterungStand[]) => s.filter((e) => e.zustand 
 /** Ein Satz je Problem (Protokoll beim Start, Probe-Wiederherstellung). */
 export function beschreibe(e: ErweiterungStand): string {
   if (e.zustand === 'gefaehrdet') return `${e.name} liegt im Schema ${e.schema} und ginge bei einer Wiederherstellung verloren`;
-  return e.name === 'pg_trgm' ? 'pg_trgm fehlt: keine Tippfehler-Suche, Wortteile ohne Index' : 'unaccent fehlt: Umlaute faltet das DMS selbst';
+  return e.name === 'pg_trgm' ? 'pg_trgm fehlt: keine Tippfehler-Suche, Wortteile ohne Index' : 'unaccent fehlt: Umlaute faltet Ablago selbst';
 }
 
 export interface Protokoll { info(text: string, daten?: Record<string, unknown>): void; warn(text: string, daten?: Record<string, unknown>): void }

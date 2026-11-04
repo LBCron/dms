@@ -1,6 +1,6 @@
 # Anmeldeschutz
 
-Nach zu vielen falschen Passwörtern sperrt das DMS die Anmeldung. Unter **Werkbank → Einstellungen → Anmeldeschutz** stellst du ein, wann und wie lange. Den Schlüssel für Passwörter und Sicherungen findest du unter **Benutzer und Sicherheit → [Verschlüsselung](verschluesselung.md)**.
+Nach zu vielen falschen Passwörtern sperrt Ablago die Anmeldung. Unter **Werkbank → Einstellungen → Anmeldeschutz** stellst du ein, wann und wie lange. Den Schlüssel für Passwörter und Sicherungen findest du unter **Benutzer und Sicherheit → [Verschlüsselung](verschluesselung.md)**.
 
 --8<-- "ausgeblendet-organisation.md"
 
@@ -17,13 +17,13 @@ Sperren stehen in der Datenbank und überstehen einen Neustart. Jede Sperre und 
 
 ## Mail an die Administratoren
 
-Ist das DMS aus dem Internet erreichbar, probieren Fremde ständig Passwörter durch. Das ist normal, und die Sperren passieren automatisch. Darum schickt das DMS im Standard **keine Mail**, wenn es sperrt. Was gesperrt ist, siehst du jederzeit unter **Werkbank → Anmeldeschutz** und im Protokoll.
+Ist Ablago aus dem Internet erreichbar, probieren Fremde ständig Passwörter durch. Das ist normal, und die Sperren passieren automatisch. Darum schickt Ablago im Standard **keine Mail**, wenn es sperrt. Was gesperrt ist, siehst du jederzeit unter **Werkbank → Anmeldeschutz** und im Protokoll.
 
 Wer trotzdem Bescheid wissen will, setzt im Block **Mail an die Administratoren** einen oder beide Haken:
 
 | Haken | Was kommt |
 | --- | --- |
-| **Einmal am Tag eine Sammelmeldung über die Sperren schicken** | Höchstens eine Mail am Tag, kurz nach Mitternacht, über die Sperren des Vortags: wie viele IP-Adressen und Benutzerkonten gesperrt wurden, dazu die fünf Adressen mit den meisten Fehlversuchen. War das DMS aus, kommt die Meldung beim nächsten Start und fasst die verpassten Tage zusammen. An Tagen ohne Sperre kommt nichts. |
+| **Einmal am Tag eine Sammelmeldung über die Sperren schicken** | Höchstens eine Mail am Tag, kurz nach Mitternacht, über die Sperren des Vortags: wie viele IP-Adressen und Benutzerkonten gesperrt wurden, dazu die fünf Adressen mit den meisten Fehlversuchen. War Ablago aus, kommt die Meldung beim nächsten Start und fasst die verpassten Tage zusammen. An Tagen ohne Sperre kommt nichts. |
 | **Sofort melden, wenn ein Benutzerkonto gesperrt wird** | Eine Mail, sobald für ein bestehendes Konto zu viele falsche Passwörter oder Codes kamen. Das ist seltener und wichtiger als eine gesperrte IP: Vielleicht hat jemand das Passwort dieses Kontos im Visier. Je Konto höchstens eine Mail am Tag; Fehlversuche mit unbekannten Adressen lösen keine Mail aus. |
 
 Die Mails gehen an alle aktiven Administratoren mit E-Mail-Adresse und brauchen einen eingerichteten [Mailversand](installation.md#e-mail-und-adresse).
@@ -33,10 +33,10 @@ Die Mails gehen an alle aktiven Administratoren mit E-Mail-Adresse und brauchen 
 
 ## Gesperrte Adressen
 
-Ganz unten auf der Seite zeigt der Abschnitt **Gesperrte Adressen** jede gesperrte IP mit Grund, Beginn und Ende – bei vielen Sperren in einer Liste mit fester Höhe, in der du scrollst. **Freigeben** hebt die Sperre sofort auf. Oben auf der Seite steht deine eigene Adresse, wie das DMS sie sieht.
+Ganz unten auf der Seite zeigt der Abschnitt **Gesperrte Adressen** jede gesperrte IP mit Grund, Beginn und Ende – bei vielen Sperren in einer Liste mit fester Höhe, in der du scrollst. **Freigeben** hebt die Sperre sofort auf. Oben auf der Seite steht deine eigene Adresse, wie Ablago sie sieht.
 
 !!! warning "Hinter einem Reverse-Proxy"
-    Damit die Sperre je IP die richtige Adresse trifft, muss das DMS die Angaben des Proxys glauben. Sitzt der Proxy auf demselben Rechner oder in einem privaten Netz, erkennt das DMS das von selbst (`TRUST_PROXY` nicht gesetzt oder `auto`). Prüfe oben auf der Seite: Steht dort bei deiner Adresse die Adresse des Proxys statt die deines Geräts, sieht das DMS für alle Anmeldungen dieselbe Adresse und sperrt im Ernstfall alle aus. Siehe [Hinter einem Reverse-Proxy](installation.md#hinter-einem-reverse-proxy).
+    Damit die Sperre je IP die richtige Adresse trifft, muss Ablago die Angaben des Proxys glauben. Sitzt der Proxy auf demselben Rechner oder in einem privaten Netz, erkennt Ablago das von selbst (`TRUST_PROXY` nicht gesetzt oder `auto`). Prüfe oben auf der Seite: Steht dort bei deiner Adresse die Adresse des Proxys statt die deines Geräts, sieht Ablago für alle Anmeldungen dieselbe Adresse und sperrt im Ernstfall alle aus. Siehe [Hinter einem Reverse-Proxy](installation.md#hinter-einem-reverse-proxy).
 
 ## Ausnahmen
 
@@ -55,17 +55,17 @@ Kommst du wegen der [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) nicht weiter
 
 ## Zwei-Faktor-Anmeldung
 
-Jeder Benutzer kann unter **Profil → Sicherheit** eine Zwei-Faktor-Anmeldung mit einer Authenticator-App einrichten (TOTP, 6 Stellen, 30 Sekunden) und bekommt dazu zehn Wiederherstellungscodes. Wie das für Benutzer aussieht, beschreibt das [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/profil/#zwei-faktor-anmeldung).
+Jeder Benutzer kann unter **Profil → Sicherheit** eine Zwei-Faktor-Anmeldung mit einer Authenticator-App einrichten (TOTP, 6 Stellen, 30 Sekunden) und bekommt dazu zehn Wiederherstellungscodes. Wie das für Benutzer aussieht, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/profil/#zwei-faktor-anmeldung).
 
 Unter **Werkbank → Anmeldeschutz** im Block **Zwei-Faktor-Anmeldung** **schreibst du sie je Systemrolle vor**: mit den Haken **Für Administratoren vorschreiben** und **Für Mitglieder vorschreiben**. Die Pflicht greift **bei der nächsten Anmeldung**: Wer sie dann noch nicht hat, sieht nach der Anmeldung nur die Einrichtung und kommt erst danach weiter. Abschalten kann er sie selbst nicht mehr. Wer gerade angemeldet ist, arbeitet weiter und sieht oben einen Hinweis mit dem Weg zur Einrichtung.
 
-Schreibst du sie für Administratoren vor und hast sie selbst noch nicht, fragt das DMS vorher nach: **Jetzt einrichten** führt dich zu **Profil → Sicherheit**, **Trotzdem vorschreiben** schaltet die Pflicht ein – du richtest sie dann bei deiner nächsten Anmeldung ein. Die Einstellung selbst bleibt für Administratoren immer erreichbar: Ausschalten geht auch, solange du die Einrichtung noch vor dir hast; die Einrichtungsseite nach der Anmeldung bietet dafür **Pflicht für Administratoren ausschalten** an.
+Schreibst du sie für Administratoren vor und hast sie selbst noch nicht, fragt Ablago vorher nach: **Jetzt einrichten** führt dich zu **Profil → Sicherheit**, **Trotzdem vorschreiben** schaltet die Pflicht ein – du richtest sie dann bei deiner nächsten Anmeldung ein. Die Einstellung selbst bleibt für Administratoren immer erreichbar: Ausschalten geht auch, solange du die Einrichtung noch vor dir hast; die Einrichtungsseite nach der Anmeldung bietet dafür **Pflicht für Administratoren ausschalten** an.
 
-Falsche Codes zählen wie falsche Passwörter für den [Anmeldeschutz](#zwei-sperren). Ein Link zum Zurücksetzen des Passworts ersetzt nur das Passwort; den Code fragt das DMS trotzdem ab.
+Falsche Codes zählen wie falsche Passwörter für den [Anmeldeschutz](#zwei-sperren). Ein Link zum Zurücksetzen des Passworts ersetzt nur das Passwort; den Code fragt Ablago trotzdem ab.
 
 **Handy verloren?** Unter **Werkbank → Benutzer** steht beim Benutzer, ob die Zwei-Faktor-Anmeldung eingerichtet ist; **Zurücksetzen** entfernt sie. Danach reicht wieder das Passwort – ist sie vorgeschrieben, richtet der Benutzer sie bei der nächsten Anmeldung neu ein. Jedes Einrichten, Zurücksetzen und jede Anmeldung mit Wiederherstellungscode steht im [Protokoll](fehlersuche.md#protokoll).
 
-Das Geheimnis liegt mit dem [Schlüssel des DMS](verschluesselung.md) verschlüsselt in der Datenbank und ist damit Teil der Sicherung; ein Schlüsselwechsel schlüsselt es mit um. Wiederherstellungscodes speichert das DMS nur als Prüfwert.
+Das Geheimnis liegt mit dem [Schlüssel von Ablago](verschluesselung.md) verschlüsselt in der Datenbank und ist damit Teil der Sicherung; ein Schlüsselwechsel schlüsselt es mit um. Wiederherstellungscodes speichert Ablago nur als Prüfwert.
 
 !!! warning "Uhrzeit"
     Die Codes hängen an der Uhrzeit. Weicht die Uhr des Servers mehr als etwa 30 Sekunden ab, passen sie nicht. Lass den Server die Zeit per NTP stellen.
@@ -81,8 +81,8 @@ Statt mit Passwort melden sich Benutzer mit dem Konto eines Identitätsanbieters
 
 Lege beim Anbieter eine Anwendung (Client) vom Typ *Web* an:
 
-- **Weiterleitungs-URI** (Redirect URI): steht in der Werkbank, z. B. `https://dms.example.org/api/konto/anbieter/rueckkehr`. Sie folgt aus der [Adresse des DMS](installation.md); trage diese vorher ein.
-- **Abmelde-Adresse** (Post-Logout Redirect URI): die Adresse des DMS mit `/` am Ende.
+- **Weiterleitungs-URI** (Redirect URI): steht in der Werkbank, z. B. `https://dms.example.org/api/konto/anbieter/rueckkehr`. Sie folgt aus der [Adresse von Ablago](installation.md); trage diese vorher ein.
+- **Abmelde-Adresse** (Post-Logout Redirect URI): die Adresse von Ablago mit `/` am Ende.
 - **Scopes:** `openid`, `email`, `profile`.
 - Notiere **Client-ID** und **Client-Secret**.
 
@@ -94,7 +94,7 @@ Lege beim Anbieter eine Anwendung (Client) vom Typ *Web* an:
 | Authentik | `https://<server>/application/o/<anwendung>/` |
 | Authelia | `https://<server>` |
 
-### Im DMS
+### In Ablago { #im-dms }
 
 Unter **Werkbank → Anmeldeschutz → Anmeldung über einen Anbieter** trägst du ein:
 
@@ -103,18 +103,18 @@ Unter **Werkbank → Anmeldeschutz → Anmeldung über einen Anbieter** trägst 
 - **Client-Secret** – leer lassen bei öffentlichen Clients, die kein Secret haben. Ist schon eines gespeichert, lässt ein leeres Feld es unverändert; **Secret löschen** entfernt es,
 - **Beschriftung des Knopfes** auf der Anmeldeseite.
 
-Dann klickst du auf **Verbindung prüfen**. Danach **Eingeschaltet – Knopf auf der Anmeldeseite** ankreuzen und speichern. Das Client-Secret liegt mit dem [Schlüssel des DMS](verschluesselung.md) verschlüsselt in der Datenbank.
+Dann klickst du auf **Verbindung prüfen**. Danach **Eingeschaltet – Knopf auf der Anmeldeseite** ankreuzen und speichern. Das Client-Secret liegt mit dem [Schlüssel von Ablago](verschluesselung.md) verschlüsselt in der Datenbank.
 
-- **Zuordnung:** über die E-Mail-Adresse. Gibt es sie im DMS nicht, lehnt das DMS ab – außer **Unbekannte Adressen als neue Benutzer anlegen** ist an; dann entsteht ein Benutzer mit der **Systemrolle neuer Benutzer** (Mitglied oder Administrator). Bei Entra ID dient auch der Anmeldename (UPN) als Adresse.
-- **Gruppe für Administratoren:** Ist sie gesetzt, folgt die Systemrolle bei jeder Anmeldung der Gruppe: Mitglieder der Gruppe sind Administratoren, alle anderen Mitglieder. Der letzte aktive Administrator bleibt Administrator. Aus welchem Claim das DMS die Gruppen liest, steht im Feld **Claim mit den Gruppen** (meist `groups`). Bei Entra ID liefert der Claim `groups` die Objekt-IDs der Gruppen (Anwendung → *Token-Konfiguration* → *Gruppenanspruch hinzufügen*); trage dann die Objekt-ID ein.
+- **Zuordnung:** über die E-Mail-Adresse. Gibt es sie in Ablago nicht, lehnt das Ablago ab – außer **Unbekannte Adressen als neue Benutzer anlegen** ist an; dann entsteht ein Benutzer mit der **Systemrolle neuer Benutzer** (Mitglied oder Administrator). Bei Entra ID dient auch der Anmeldename (UPN) als Adresse.
+- **Gruppe für Administratoren:** Ist sie gesetzt, folgt die Systemrolle bei jeder Anmeldung der Gruppe: Mitglieder der Gruppe sind Administratoren, alle anderen Mitglieder. Der letzte aktive Administrator bleibt Administrator. Aus welchem Claim Ablago die Gruppen liest, steht im Feld **Claim mit den Gruppen** (meist `groups`). Bei Entra ID liefert der Claim `groups` die Objekt-IDs der Gruppen (Anwendung → *Token-Konfiguration* → *Gruppenanspruch hinzufügen*); trage dann die Objekt-ID ein.
 - **Passwort-Anmeldung nur noch für Administratoren:** Mitglieder melden sich nur noch über den Anbieter an. Administratoren behalten ihr Passwort als Notzugang, falls der Anbieter einmal nicht erreichbar ist.
 - **Beim Abmelden auch beim Anbieter abmelden:** Wer sich über den Anbieter angemeldet hat, wird beim Abmelden auch dort abgemeldet (wenn der Anbieter das anbietet).
-- Eine eingerichtete [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) des DMS gilt auch hier. Verlangt schon der Anbieter einen zweiten Faktor, schreibe sie im DMS für diese Rollen nicht zusätzlich vor.
+- Eine eingerichtete [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) von Ablago gilt auch hier. Verlangt schon der Anbieter einen zweiten Faktor, schreibe sie in Ablago für diese Rollen nicht zusätzlich vor.
 
 Jede Anmeldung, Ablehnung und angelegter Benutzer steht im [Protokoll](fehlersuche.md#protokoll). Schlägt eine Anmeldung fehl, zeigt die Anmeldeseite den Grund.
 
 !!! tip "Im eigenen Netz"
-    Läuft der Anbieter im Heimnetz (z. B. Keycloak auf dem NAS), geht auch `http://` – aber nur für Adressen im eigenen Netz. Das DMS muss den Anbieter selbst erreichen können.
+    Läuft der Anbieter im Heimnetz (z. B. Keycloak auf dem NAS), geht auch `http://` – aber nur für Adressen im eigenen Netz. Ablago muss den Anbieter selbst erreichen können.
 
     Als eigenes Netz gelten:
 

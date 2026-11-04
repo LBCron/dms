@@ -1,5 +1,5 @@
-# DMS auf UGREEN (UGOS Pro, Docker) – Vorlage aus https://github.com/motom001/dms (deploy/ugreen)
-# Anleitung: https://motom001.github.io/dms/installieren/aktuell/ugreen/
+# Ablago auf UGREEN (UGOS Pro, Docker) – Vorlage aus https://github.com/motom001/dms (deploy/ugreen)
+# Anleitung: https://help.ablago.app/installieren/aktuell/ugreen/
 #
 # Nur eine Stelle ändern: das Passwort in der nächsten Zeile. Ein langes aus Buchstaben und
 # Zahlen genügt. Es schützt die Datenbank und steht danach nur noch in dieser Datei.
@@ -28,7 +28,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Dasselbe Passwort für das DMS – der Einrichtungsassistent überspringt dann den Datenbankschritt.
+      # Dasselbe Passwort für Ablago – der Einrichtungsassistent überspringt dann den Datenbankschritt.
       DMS_DB_PASSWORT: *passwort
     volumes:
       # Hochgeladene Dateien

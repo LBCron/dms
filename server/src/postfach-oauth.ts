@@ -233,8 +233,8 @@ export class PostfachOAuth {
 
   /** Schritt 1: Adresse beim Anbieter. `bindung` geht als Cookie an den Browser des Administrators. */
   async start(p: { id: string; anbieter: OAuthAnbieter; benutzer: string }, admin: { id: string; email: string }, rueckruf: string): Promise<{ url: string; bindung: string }> {
-    if (!/^https?:\/\//.test(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht das DMS seine Adresse (Werkbank → E-Mail und Adresse). Ohne öffentliche Adresse den Gerätecode nutzen.');
-    if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht das DMS eine https-Adresse (http nur für localhost). Ohne https den Gerätecode nutzen.');
+    if (!/^https?:\/\//.test(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago seine Adresse (Werkbank → E-Mail und Adresse). Ohne öffentliche Adresse den Gerätecode nutzen.');
+    if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago eine https-Adresse (http nur für localhost). Ohne https den Gerätecode nutzen.');
     const { app, e } = await this.app(p.anbieter);
     const t = this.jetzt;
     for (const [k, v] of this.codes) if (v.bis < t) this.codes.delete(k);
@@ -396,8 +396,8 @@ export class PostfachOAuth {
     if (!w.ok) return this.geaendert(p, w.jetzt, versuch);
     log.warn('Postfach: OAuth-Anmeldung abgelaufen oder entzogen', { postfach: p.name, grund });
     if (melden) {
-      await this.d.anAdmins?.(`DMS: Postfach „${p.name}“ – Anmeldung abgelaufen`,
-        `Die Anmeldung (OAuth 2.0) des Postfachs „${p.name}“ (${p.benutzer}) ist abgelaufen oder wurde beim Anbieter entzogen:\n\n${grund}\n\nBis zur neuen Anmeldung holt das DMS keine Mails aus diesem Postfach ab. Bitte unter Werkbank → Postfächer → „${p.name}“ neu anmelden.`).catch(() => {});
+      await this.d.anAdmins?.(`Ablago: Postfach „${p.name}“ – Anmeldung abgelaufen`,
+        `Die Anmeldung (OAuth 2.0) des Postfachs „${p.name}“ (${p.benutzer}) ist abgelaufen oder wurde beim Anbieter entzogen:\n\n${grund}\n\nBis zur neuen Anmeldung holt Ablago keine Mails aus diesem Postfach ab. Bitte unter Werkbank → Postfächer → „${p.name}“ neu anmelden.`).catch(() => {});
     }
     throw new AnmeldungAbgelaufen(`Die Anmeldung ist abgelaufen oder wurde entzogen – bitte in der Werkbank neu anmelden. (${grund})`);
   }

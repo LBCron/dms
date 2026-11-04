@@ -422,12 +422,12 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
 }
 
 function liesmich(q: ExportQuelle, jetzt: Date, n: Record<string, number>, opt: ExportOptionen) {
-  return `# DMS – Vollexport
+  return `# Ablago – Vollexport
 
-Erstellt am ${jetzt.toISOString()} mit DMS ${q.version} (Formatversion ${FORMATVERSION}), Haushalt „${q.mandant}“.
+Erstellt am ${jetzt.toISOString()} mit Ablago ${q.version} (Formatversion ${FORMATVERSION}), Haushalt „${q.mandant}“.
 ${n.mappen} Mappen in ${n.mappentypen} Mappentypen, ${n.dokumente} Dokumente.
 
-Alles hier lässt sich ohne das DMS lesen. **Der Export ist unverschlüsselt** – bewahre ihn sicher auf.${opt.passwoerter ? '\n\n**Achtung: passwoerter.csv enthält Passwörter im Klartext.** Importiere sie in einen Passwortmanager (Bitwarden-CSV) und lösche die Datei danach.' : ''}
+Alles hier lässt sich ohne Ablago lesen. **Der Export ist unverschlüsselt** – bewahre ihn sicher auf.${opt.passwoerter ? '\n\n**Achtung: passwoerter.csv enthält Passwörter im Klartext.** Importiere sie in einen Passwortmanager (Bitwarden-CSV) und lösche die Datei danach.' : ''}
 
 ## Aufbau
 
@@ -467,7 +467,7 @@ print('alles in Ordnung' if not fehler else f'abweichend: {fehler}')
 
 - **Excel/LibreOffice:** \`daten/<typ>.xlsx\` öffnen – oder \`.csv\` (Komma, UTF-8).
 - **Python:** \`pandas.read_csv('daten/rechnung.csv')\` oder Zeile für Zeile \`json.loads\` aus \`.jsonl\`.
-- **Anderes DMS:** \`ablage/\` enthält alle Dateien in lesbaren Ordnern; Metadaten in \`mappe.json\`.
+- **Anderes Ablago:** \`ablage/\` enthält alle Dateien in lesbaren Ordnern; Metadaten in \`mappe.json\`.
 `;
 }
 

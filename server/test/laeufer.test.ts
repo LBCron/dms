@@ -192,7 +192,7 @@ describe('Paket-Läufer: Recht nur für Post (#435)', () => {
     const r = liesCode({ sprache: 'c', rechte: { lesen: ['dms:post'], schreiben: ['dms:post'], dokumente: 'schreiben' } });
     assert.deepEqual([r.fehler, r.code?.rechte], [[], { lesen: ['dms:post'], schreiben: ['dms:post'], dokumente: 'schreiben' }]);
     assert.deepEqual(liesCode({ sprache: 'c', rechte: { lesen: ['dms:ablageort', 'dms:rolle'] } }).fehler, []);
-    assert.match(liesCode({ sprache: 'c', rechte: { lesen: ['dms:brief'] } }).fehler.join(), /„dms:brief“ – diesen Mappentyp bringt das DMS nicht mit\. Erlaubt sind dms:ablageort, dms:rolle, dms:post/);
+    assert.match(liesCode({ sprache: 'c', rechte: { lesen: ['dms:brief'] } }).fehler.join(), /„dms:brief“ – diesen Mappentyp bringt Ablago nicht mit\. Erlaubt sind dms:ablageort, dms:rolle, dms:post/);
     assert.match(liesCode({ sprache: 'c', rechte: { schreiben: ['dms:benutzer'] } }).fehler.join(), /Pakete sehen keine Benutzer/);
   });
 

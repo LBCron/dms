@@ -76,7 +76,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
 
   const uebernehmen = async (a: Anbindung, wer: string) => {
     await schreibeAnbindung(o.geheim, a);
-    log.info(`Datenbank-Anbindung gespeichert (${wer}) – das DMS startet`, { host: a.host, port: a.port, datenbank: a.datenbank, benutzer: a.benutzer });
+    log.info(`Datenbank-Anbindung gespeichert (${wer}) – Ablago startet`, { host: a.host, port: a.port, datenbank: a.datenbank, benutzer: a.benutzer });
     beendet = true;
     // Erst antworten, dann den Port für das eigentliche DMS freigeben.
     setTimeout(() => { void app.close().then(() => fertig(a)); }, 300).unref?.();
@@ -112,7 +112,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
     return { ok: true, pruefung: p };
   });
   // Alles andere: Verweis auf den Assistenten.
-  app.all('/api/*', async (_req, reply) => reply.code(503).header('retry-after', '30').send({ fehler: 'Das DMS ist noch nicht eingerichtet: Es fehlt die Verbindung zur Datenbank. Öffne das DMS im Browser, um den Einrichtungsassistenten zu starten.' }));
+  app.all('/api/*', async (_req, reply) => reply.code(503).header('retry-after', '30').send({ fehler: 'Ablago ist noch nicht eingerichtet: Es fehlt die Verbindung zur Datenbank. Öffne Ablago im Browser, um den Einrichtungsassistenten zu starten.' }));
 
   if (o.webDir && existsSync(o.webDir)) {
     await app.register(fastifyStatic, { root: o.webDir, wildcard: false });

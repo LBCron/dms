@@ -47,7 +47,7 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
         <p className="leise">Die Ablage als Laufwerk im Explorer, im Finder oder in der Dateien-App: Ordner lesen, Dokumente öffnen (mit Exportrecht) und Dateien in „Neue Post“ oder einen Register-Ordner legen. Angemeldet wird mit der E-Mail-Adresse und einem API-Schlüssel, nie mit dem Passwort. <Hilfe ort="werkbank.webdav" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
-      {!s.https && <div className="hinweis warn"><p>Die Adresse des DMS beginnt nicht mit <code>https://</code>. Windows bindet ein Laufwerk mit Anmeldung nur über HTTPS ein, und ohne HTTPS gingen die API-Schlüssel offen über das Netz. Richte zuerst HTTPS ein (Werkbank → E-Mail und Adresse, Reverse-Proxy).</p></div>}
+      {!s.https && <div className="hinweis warn"><p>Die Adresse von Ablago beginnt nicht mit <code>https://</code>. Windows bindet ein Laufwerk mit Anmeldung nur über HTTPS ein, und ohne HTTPS gingen die API-Schlüssel offen über das Netz. Richte zuerst HTTPS ein (Werkbank → E-Mail und Adresse, Reverse-Proxy).</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <h2 className="h3">Einstellungen</h2>
         <label className="haken"><input id="webdav-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} />

@@ -41,7 +41,8 @@ describe('README je Sprache (#574)', () => {
   const en = lies('README.en.md');
 
   it('README.en.md bindet nur englische Grafiken ein, Bildschirmfotos mit Hinweis „German only“', () => {
-    const falsch = bilder(en).filter((u) => !istAbzeichen(u) && !nurDeutsch(u) && !/\.en\.(svg|png|jpe?g|webp|gif)$/i.test(u));
+    // Logo aus marke/ (#687): der Name Ablago ist in jeder Sprache gleich.
+    const falsch = bilder(en).filter((u) => !istAbzeichen(u) && !nurDeutsch(u) && !u.startsWith('docs/marke/') && !/\.en\.(svg|png|jpe?g|webp|gif)$/i.test(u));
     assert.deepEqual(falsch, [], 'Grafiken ohne .en in README.en.md – englische Fassung anlegen (CONTRIBUTING: Grafiken und Bilder je Sprache)');
     // Jedes deutsche Bildschirmfoto: im <picture> bzw. Absatz direkt darunter der Hinweis.
     for (const u of bilder(en).filter(nurDeutsch)) {

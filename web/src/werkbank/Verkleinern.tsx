@@ -139,7 +139,7 @@ export function AutomatischVerkleinern() {
             {STUFEN_LISTE.map((s) => <option key={s} value={s}>{STUFEN[s].name} (≈ {STUFEN[s].dpi} dpi)</option>)}
           </select></label>
       </div>
-      <p className="leise klein">Standard: aus. Eingeschaltet wird nur das verkleinerte PDF gespeichert – das Original ist dann nicht im DMS. Bringt es weniger als 10 %, bleibt die Datei, wie sie kam. Im DMS bearbeitete PDFs werden nicht automatisch verkleinert.</p>
+      <p className="leise klein">Standard: aus. Eingeschaltet wird nur das verkleinerte PDF gespeichert – das Original ist dann nicht in Ablago. Bringt es weniger als 10 %, bleibt die Datei, wie sie kam. In Ablago bearbeitete PDFs werden nicht automatisch verkleinert.</p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <Speicherleiste ent={ent} gegenstand="Einstellung" sendet={laeuft} />
     </form>

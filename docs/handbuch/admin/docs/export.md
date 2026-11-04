@@ -1,18 +1,18 @@
 # Daten exportieren
 
-**Deine Daten gehören dir.** Unter **Werkbank → Vollexport** schreibt das DMS alle Daten in offenen Formaten in einen Ordner, den du ohne das DMS lesen und mit anderen Programmen weiterverarbeiten kannst – kein Vendor-Lock-in.
+**Deine Daten gehören dir.** Unter **Werkbank → Vollexport** schreibt Ablago alle Daten in offenen Formaten in einen Ordner, den du ohne Ablago lesen und mit anderen Programmen weiterverarbeiten kannst – kein Vendor-Lock-in.
 
 | | Wofür | Format |
 | --- | --- | --- |
 | [Sicherung](sicherung.md) | wiederherstellen *in ein DMS* | eigenes Format, verschlüsselt |
-| Export einer Ansicht ([Ablage](https://motom001.github.io/dms/benutzer/aktuell/ablage/)) | ausgewählte Mappen weitergeben | Excel, CSV, ZIP, PDF |
-| **Vollexport** | alles mitnehmen, Ausstieg, Weiterverarbeitung | offene Formate, ohne DMS lesbar |
+| Export einer Ansicht ([Ablage](https://help.ablago.app/benutzer/aktuell/ablage/)) | ausgewählte Mappen weitergeben | Excel, CSV, ZIP, PDF |
+| **Vollexport** | alles mitnehmen, Ausstieg, Weiterverarbeitung | offene Formate, ohne Ablago lesbar |
 
 ## Export starten
 
 1. **Werkbank → Vollexport** zeigt, wie viele Mappen und Dateien es gibt, wie viel Platz nötig ist und wie viel frei ist.
 2. Wähle, ob **technische Protokolle** und **Passwörter** mit sollen (siehe unten), und bestätige die **Kontakte**.
-3. **Export starten** – die Arbeit läuft im Hintergrund, das DMS bleibt benutzbar.
+3. **Export starten** – die Arbeit läuft im Hintergrund, Ablago bleibt benutzbar.
 
 Der Export landet im Ordner `export/` neben den [Sicherungen](sicherung.md), z. B. `/data/sicherung/export/dms-export-2026-10-31-14-05-00/`. Von dort kopierst du ihn – oder lädst ihn mit **Als ZIP herunterladen** (bis 4 GB). **Prüfen** vergleicht jede Datei mit ihrem Prüfwert aus `manifest.json`. **Löschen** entfernt ihn.
 
@@ -60,7 +60,7 @@ Passwortfelder stehen nie in den Daten – nur „gesetzt“. Wählst du **Passw
 
 ## Kontakte als vCard
 
-Das DMS schlägt Mappentypen vor, die nach Kontakten aussehen (Felder wie Name, E-Mail, Telefon, Adresse), und ordnet die Felder zu. Prüfe die Zuordnung vor dem Export; abgewählte Mappentypen bekommen keine vCard.
+Ablago schlägt Mappentypen vor, die nach Kontakten aussehen (Felder wie Name, E-Mail, Telefon, Adresse), und ordnet die Felder zu. Prüfe die Zuordnung vor dem Export; abgewählte Mappentypen bekommen keine vCard.
 
 ## Meine Daten exportieren
 
@@ -72,4 +72,4 @@ Jeder Benutzer kann unter **Profil → Konto → Meine Daten exportieren** einen
 - **Python:** `pandas.read_csv("daten/rechnung.csv")`; JSON Lines Zeile für Zeile mit `json.loads`.
 - **Kalender:** `kalender/fristen.ics` in Outlook, Google, Apple oder Thunderbird importieren.
 - **Anderes DMS:** `ablage/` enthält alle Dateien in lesbaren Ordnern, die Metadaten in `mappe.json`.
-- **Vollständig?** Das Skript in `LIESMICH.md` prüft alle Dateien gegen das Manifest – ohne das DMS.
+- **Vollständig?** Das Skript in `LIESMICH.md` prüft alle Dateien gegen das Manifest – ohne Ablago.

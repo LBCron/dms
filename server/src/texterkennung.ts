@@ -429,7 +429,7 @@ export class Texterkennung {
    * Paket, und das erst nach dem Speichern.
    */
   async erkenneSofort(inhalt: Buffer, mime: string): Promise<{ text: string; info: string }> {
-    if (mime !== 'application/pdf') throw new Fachfehler(422, 'Fotos und Bilder liest das DMS nicht sofort – ihren Text erkennt das Paket Texterkennung nach dem Speichern.');
+    if (mime !== 'application/pdf') throw new Fachfehler(422, 'Fotos und Bilder liest Ablago nicht sofort – ihren Text erkennt das Paket Texterkennung nach dem Speichern.');
     const dir = await mkdtemp(join(tmpdir(), 'dms-sofort-'));
     try {
       const pfad = join(dir, 'datei');

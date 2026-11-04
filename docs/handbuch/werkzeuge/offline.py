@@ -41,6 +41,9 @@ def main():
     start = (WURZEL / 'docs/handbuch/start/index.html').read_text(encoding='utf-8')
     start = re.sub(rf'href="({"|".join(HANDBUECHER)})/aktuell/', r'href="\1/', start)
     (ziel / 'index.html').write_text(start, encoding='utf-8')
+    for f in (WURZEL / 'docs/handbuch/start').iterdir():  # Logo und Favicon der Startseite (#689)
+        if f.is_file() and f.name != 'index.html':
+            shutil.copy(f, ziel / f.name)
 
     fehler = pruefe(ziel)
     groesse = sum(p.stat().st_size for p in ziel.rglob('*') if p.is_file())

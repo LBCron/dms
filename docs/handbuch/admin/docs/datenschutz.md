@@ -1,31 +1,31 @@
-# Datenschutz im DMS
+# Datenschutz in Ablago
 
-Das DMS ist **auf Datenschutz ausgelegt** – „Datenschutz durch Technikgestaltung und datenschutzfreundliche Voreinstellungen“ heißt das in Art. 25 DSGVO. Es läuft bei dir, sendet nichts nach Hause und bringt Werkzeuge mit, mit denen du Auskunft gibst, Aufbewahrungsfristen einhältst und löschst. So legst du Daten von Familie, Mietern und Kunden guten Gewissens darin ab. Diese Seite zeigt, was es dafür gibt und wo du es findest, was du selbst regeln musst und wie du bei einer Anfrage Schritt für Schritt vorgehst.
+Ablago ist **auf Datenschutz ausgelegt** – „Datenschutz durch Technikgestaltung und datenschutzfreundliche Voreinstellungen“ heißt das in Art. 25 DSGVO. Es läuft bei dir, sendet nichts nach Hause und bringt Werkzeuge mit, mit denen du Auskunft gibst, Aufbewahrungsfristen einhältst und löschst. So legst du Daten von Familie, Mietern und Kunden guten Gewissens darin ab. Diese Seite zeigt, was es dafür gibt und wo du es findest, was du selbst regeln musst und wie du bei einer Anfrage Schritt für Schritt vorgehst.
 
 !!! note "Unterstützt – ersetzt nichts. Keine Rechtsberatung."
-    Eine Software allein ist nie „DSGVO-konform“, und ein Siegel dafür hat das DMS nicht. Datenschutzgerecht wird es erst durch **Software, deine Abläufe und deine Dokumentation zusammen** – wie bei der [Verfahrensdokumentation](verfahrensdokumentation.md) nach GoBD. Das DMS stellt Daten zusammen, sperrt und löscht und hält fest, was geschah. Ob und was du herausgeben, aufbewahren oder löschen musst, entscheidest du – im Zweifel mit deinem Datenschutzbeauftragten oder einer Rechtsberatung. Diese Seite ist keine Rechtsberatung.
+    Eine Software allein ist nie „DSGVO-konform“, und ein Siegel dafür hat Ablago nicht. Datenschutzgerecht wird es erst durch **Software, deine Abläufe und deine Dokumentation zusammen** – wie bei der [Verfahrensdokumentation](verfahrensdokumentation.md) nach GoBD. Ablago stellt Daten zusammen, sperrt und löscht und hält fest, was geschah. Ob und was du herausgeben, aufbewahren oder löschen musst, entscheidest du – im Zweifel mit deinem Datenschutzbeauftragten oder einer Rechtsberatung. Diese Seite ist keine Rechtsberatung.
 
 ## Datenschutz eingebaut
 
-| DSGVO | Was das DMS dafür hat | Wo |
+| DSGVO | Was Ablago dafür hat | Wo |
 | --- | --- | --- |
-| Art. 5 Abs. 1 c und Art. 25 – Datenminimierung, datenschutzfreundliche Voreinstellungen | **Selbst gehostet:** Die Daten liegen nur auf deinem Gerät – oder bei einem [Anbieter](https://motom001.github.io/dms/installieren/aktuell/anbieter/), den du selbst wählst. [Keine Telemetrie](#keine-telemetrie), kein Tracking, keine Werbung, keine KI im Kern; die Texterkennung läuft lokal. KI-Funktionen kommen als Pakete und laufen ebenfalls lokal – ein externer KI-Dienst wird nur angebunden, wenn du ihn ausdrücklich als Paket installierst und ihm den Netzzugriff bei der Installation bestätigst. Wer was sehen darf, regeln Rechte je Mappentyp mit Regeln. | Werkbank → Mappentypen → [Berechtigungen](berechtigungen.md) |
+| Art. 5 Abs. 1 c und Art. 25 – Datenminimierung, datenschutzfreundliche Voreinstellungen | **Selbst gehostet:** Die Daten liegen nur auf deinem Gerät – oder bei einem [Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), den du selbst wählst. [Keine Telemetrie](#keine-telemetrie), kein Tracking, keine Werbung, keine KI im Kern; die Texterkennung läuft lokal. KI-Funktionen kommen als Pakete und laufen ebenfalls lokal – ein externer KI-Dienst wird nur angebunden, wenn du ihn ausdrücklich als Paket installierst und ihm den Netzzugriff bei der Installation bestätigst. Wer was sehen darf, regeln Rechte je Mappentyp mit Regeln. | Werkbank → Mappentypen → [Berechtigungen](berechtigungen.md) |
 | Art. 5 Abs. 1 e – Speicherbegrenzung; Art. 17 – Löschen | [Archivmodus](archiv.md) mit Aufbewahrungsfrist und der Liste **Darf weg**; [Papierkorb](papierkorb.md) für Mappen und Dokumente mit endgültigem Löschen; die Historie gelöschter Mappen fällt nach einer einstellbaren Zeit weg | Werkbank → Mappentypen → Archivmodus, Werkbank → Darf weg, Werkbank → Papierkorb |
 | Art. 18 – Einschränkung (Sperren) | **Löschsperre bis Fristende** im Archivmodus – der erste Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen); den Zugriff schränkst du über Berechtigungen ein | Werkbank → Mappentypen |
 | Art. 15 – Auskunft | [Auskunft](#auskunft-nach-art-15-dsgvo) als ZIP mit Deckblatt, Prüfliste und Nachweis; [zustellen](#auskunft-zustellen) per Abruf-Link oder E-Mail | Werkbank → Datenschutz |
 | Art. 20 – Datenübertragbarkeit | **Persönlicher Export** für jeden Benutzer, **Vollexport** aller Daten – beides in offenen Formaten (CSV, JSON, Excel, Dokumente im Original) | Profil → Konto → Meine Daten exportieren; Werkbank → Vollexport ([Daten exportieren](export.md)) |
-| Art. 5 Abs. 2 – Rechenschaft; Art. 30 – Nachweis | **Historie** jeder Mappe (wer hat wann was geändert), [Protokoll](fehlersuche.md#protokoll), Nachweis jeder Auskunft in der Historie der Person, [Löschprotokoll](#loschprotokoll) mit Prüfsummen ohne Inhalte; [Löschkonzept](loeschkonzept.md) aus dem DMS erzeugen und Vorlage [Verfahrensdokumentation](verfahrensdokumentation.md) | Register *Historie* an jeder Mappe, Werkbank → Protokoll, Werkbank → Datenschutz |
+| Art. 5 Abs. 2 – Rechenschaft; Art. 30 – Nachweis | **Historie** jeder Mappe (wer hat wann was geändert), [Protokoll](fehlersuche.md#protokoll), Nachweis jeder Auskunft in der Historie der Person, [Löschprotokoll](#loschprotokoll) mit Prüfsummen ohne Inhalte; [Löschkonzept](loeschkonzept.md) aus Ablago erzeugen und Vorlage [Verfahrensdokumentation](verfahrensdokumentation.md) | Register *Historie* an jeder Mappe, Werkbank → Protokoll, Werkbank → Datenschutz |
 | Art. 32 – Sicherheit | [Verschlüsselte](verschluesselung.md) Passwortfelder und Zugangsdaten, verschlüsselte [Sicherung](sicherung.md) mit [Probe-Wiederherstellung](wiederherstellen.md#probe-wiederherstellung), [Anmeldeschutz und Zwei-Faktor-Anmeldung](anmeldeschutz.md), Prüfwerte für jede Datei, Hinweise zu [HTTPS](installation.md#https-und-zertifikate) | Werkbank → Verschlüsselung, Sicherung, Anmeldeschutz |
 
 ## Keine Telemetrie { #keine-telemetrie }
 
-Das DMS sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst jemanden: keine anonymen Statistiken, keine regelmäßigen „Lebenszeichen“, keine Absturzberichte, kein Tracking in der Oberfläche. Die Oberfläche lädt von Haus aus nichts von fremden Servern – keine Schriften, Skripte oder Bilder.
+Ablago sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst jemanden: keine anonymen Statistiken, keine regelmäßigen „Lebenszeichen“, keine Absturzberichte, kein Tracking in der Oberfläche. Die Oberfläche lädt von Haus aus nichts von fremden Servern – keine Schriften, Skripte oder Bilder.
 
-**Von sich aus baut das DMS keine Verbindung ins Internet auf.** Eine automatische Suche nach neuen Versionen gibt es nicht – also auch nichts abzuschalten. Nach außen geht es nur, wenn du es auslöst oder einrichtest:
+**Von sich aus baut Ablago keine Verbindung ins Internet auf.** Eine automatische Suche nach neuen Versionen gibt es nicht – also auch nichts abzuschalten. Nach außen geht es nur, wenn du es auslöst oder einrichtest:
 
 | Verbindung | Wann | Wohin, was |
 | --- | --- | --- |
-| **Versionsabgleich** | nur auf Knopfdruck unter **Werkbank → Technik** | GitHub (Stand des DMS), endoflife.date (Node.js, PostgreSQL, Alpine), npm-Registry (Bibliotheken). Die Anfrage an GitHub enthält die Commit-Kennung deiner Version, damit sich die Änderungen seitdem zählen lassen – keine Daten aus deiner Ablage. Siehe [Technik](technik.md#versionen-und-aktualisierung). |
+| **Versionsabgleich** | nur auf Knopfdruck unter **Werkbank → Technik** | GitHub (Stand von Ablago), endoflife.date (Node.js, PostgreSQL, Alpine), npm-Registry (Bibliotheken). Die Anfrage an GitHub enthält die Commit-Kennung deiner Version, damit sich die Änderungen seitdem zählen lassen – keine Daten aus deiner Ablage. Siehe [Technik](technik.md#versionen-und-aktualisierung). |
 | **Paketkatalog** | auf Knopfdruck unter **Werkbank → Pakete** (Katalog abrufen, auf neue Versionen prüfen) und wenn du einen Installationslink aus dem Katalog öffnest | GitHub ([Pakete](pakete.md)); weitere Kataloge nur, wenn du sie einträgst |
 | **E-Mail** | wenn du den E-Mail-Versand oder [Postfächer](postfaecher.md) einrichtest | dein Mailserver |
 | **Anmeldung über einen Anbieter** | wenn du sie [einrichtest](anmeldeschutz.md#anmeldung-uber-einen-anbieter-openid-connect) | dein Anbieter (OpenID Connect) |
@@ -33,25 +33,25 @@ Das DMS sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst je
 | **Pakete mit Code** | nur, wenn ein Paket es braucht und du es bei der Installation bestätigst | nur die Adressen, die das Paket angibt ([Rechte eines Pakets](pakete.md#recht-netzwerk-und-internet)) |
 | **Handbuch** | wenn du auf **Hilfe** oder ein **?** klickst | Das mitgelieferte Handbuch unter `/hilfe/` kommt ohne Internet aus ([Hilfe ohne Internet](technik.md#hilfe-ohne-internet)); Links auf das Online-Handbuch öffnet dein Browser. |
 
-Wer dem Projekt sagen möchte, dass und wie er das DMS nutzt, tut das bewusst und selbst – über die Mitmach-Seite [Wer nutzt das DMS?](https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms) mit dem Formular [Ich nutze das DMS](https://github.com/motom001/dms/issues/new?template=ich-nutze-das-dms.yml). Das DMS meldet nichts.
+Wer dem Projekt sagen möchte, dass und wie er Ablago nutzt, tut das bewusst und selbst – über die Mitmach-Seite [Wer nutzt Ablago?](https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms) mit dem Formular [Ich nutze Ablago](https://github.com/motom001/dms/issues/new?template=ich-nutze-das-dms.yml). Ablago meldet nichts.
 
 ## Was du selbst regeln musst { #grenzen }
 
-Das DMS gibt dir Werkzeuge. Diese Punkte bleiben bei dir als Verantwortlichem:
+Ablago gibt dir Werkzeuge. Diese Punkte bleiben bei dir als Verantwortlichem:
 
-- **Verzeichnis der Verarbeitungstätigkeiten** (Art. 30), **Rechtsgrundlagen und Informationspflichten** (Art. 13, 14) – etwa der Datenschutzhinweis im Mietvertrag. Die Angaben dafür stehen im DMS: Mappentypen, Zwecke aus den [Einstellungen](#einstellungen), Fristen aus dem Archivmodus.
-- **Welche Frist gilt:** Aufbewahrungsfristen klärst du mit deiner Steuerberatung; das DMS setzt um, was du einträgst.
-- **Löschen nach Fristende:** Das DMS löscht nie von selbst. Du prüfst **Darf weg** regelmäßig.
+- **Verzeichnis der Verarbeitungstätigkeiten** (Art. 30), **Rechtsgrundlagen und Informationspflichten** (Art. 13, 14) – etwa der Datenschutzhinweis im Mietvertrag. Die Angaben dafür stehen in Ablago: Mappentypen, Zwecke aus den [Einstellungen](#einstellungen), Fristen aus dem Archivmodus.
+- **Welche Frist gilt:** Aufbewahrungsfristen klärst du mit deiner Steuerberatung; Ablago setzt um, was du einträgst.
+- **Löschen nach Fristende:** Ablago löscht nie von selbst. Du prüfst **Darf weg** regelmäßig.
 - **Kopien außerhalb der Ablage:** Gelöschtes steckt noch in älteren [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung), bis sie nach deiner Aufbewahrung wegfallen (Standard: bis zu 12 Monate; von Hand angelegte bleiben, bis du sie löschst), in Vollexporten und persönlichen Exporten unter `export/`, in Kopien außer Haus, heruntergeladenen Dateien und Ausdrucken.
 - **Wer Zugriff hat:** Administratoren sehen alles. Rollen und Berechtigungen richtest du ein; Zugänge von Personen, die gehen, [deaktivierst](benutzer.md#zugang-sperren) du.
-- **Die Umgebung:** Gerät und Festplatten, Netzwerk, HTTPS, Updates, Kopie der Sicherungen außer Haus – und Verträge zur Auftragsverarbeitung mit Dienstleistern, etwa dem Mailanbieter. Läuft dein DMS [bei einem Anbieter](https://motom001.github.io/dms/installieren/aktuell/anbieter/), brauchst du als Vermieter oder Betrieb mit ihm einen **AV-Vertrag**; dort steht auch, worauf du bei der Wahl achtest.
+- **Die Umgebung:** Gerät und Festplatten, Netzwerk, HTTPS, Updates, Kopie der Sicherungen außer Haus – und Verträge zur Auftragsverarbeitung mit Dienstleistern, etwa dem Mailanbieter. Läuft dein Ablago [bei einem Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), brauchst du als Vermieter oder Betrieb mit ihm einen **AV-Vertrag**; dort steht auch, worauf du bei der Wahl achtest.
 - **Datenpannen** melden (Art. 33, 34) und, wo vorgeschrieben, einen Datenschutzbeauftragten benennen.
 
 ## Schritt für Schritt
 
 ### Auskunft an einen Benutzer { #auskunft-an-einen-benutzer }
 
-Ein Familienmitglied oder jemand aus dem Betrieb, der ein Konto im DMS hat, möchte wissen, was über ihn gespeichert ist.
+Ein Familienmitglied oder jemand aus dem Betrieb, der ein Konto in Ablago hat, möchte wissen, was über ihn gespeichert ist.
 
 1. **Selbst exportieren lassen:** Unter **Profil → Konto → Meine Daten exportieren** bekommt er alles, was er lesen darf – Mappen mit Dokumenten, seine Aufgaben, Erinnerungen, Favoriten und seinen Papierkorb, sein Benutzerkonto ohne Passwort ([Meine Daten exportieren](export.md#meine-daten-exportieren)). Prüfe vorher unter **Werkbank → Vollexport**, ob der persönliche Export eingeschaltet ist.
 2. **Was darin fehlt, ergänzt du:** Mappen über ihn, die er nicht lesen darf (z. B. eine Personalakte), und Einträge im [Protokoll](fehlersuche.md#protokoll) (Anmeldungen, Fehler). Ist er auch als Person erfasst – etwa als Mappe *Mitarbeiter* –, erteile dafür eine [Auskunft wie für eine Person, die kein Benutzer ist](#auskunft-an-eine-person-die-kein-benutzer-ist).
@@ -64,8 +64,8 @@ Ein Mieter, Kunde oder Kontakt fragt nach seinen Daten. Das erledigt **Werkbank 
 
 1. **Einmal einrichten:** Verantwortlicher, Empfänger und die Mappentypen, die eine Person betreffen, jeweils mit Zweck ([Einstellungen](#einstellungen)).
 2. **Person wählen** – oder an ihrer Mappe **Mappe ▾ → Auskunft erstellen …** – und den Eingang der Anfrage eintragen. **Frist als Aufgabe anlegen** erinnert dich unter „Zu erledigen“.
-3. **Sammeln:** Das DMS folgt den Verweisen von der Mappe der Person aus (Mietvertrag, Abrechnungen, Wohnung) – vollständig nur, was über eine **Zugehörigkeit** zu ihr gehört. Mappen, in denen sie nur über einen **Bezug** genannt ist (z. B. als Ansprechpartner), stehen ohne ihre Inhalte da ([Zugehörigkeit oder Bezug](#zugehorigkeit-oder-bezug)).
-4. **Weitersuchen**, wenn die Person auch anderswo vorkommt: Eine Volltext-Suche macht das DMS bewusst nicht ([warum](#warum-keine-volltext-suche)). Such selbst in der Ablage mit der [erweiterten Suche](https://motom001.github.io/dms/benutzer/aktuell/ablage/#erweiterte-suche) ohne gewählten Mappentyp, mit **Volltext** auch in Dokumenten und Notizen. Was wirklich zur Person gehört, verknüpfst du mit ihrer Mappe (als Zugehörigkeit) und sammelst neu.
+3. **Sammeln:** Ablago folgt den Verweisen von der Mappe der Person aus (Mietvertrag, Abrechnungen, Wohnung) – vollständig nur, was über eine **Zugehörigkeit** zu ihr gehört. Mappen, in denen sie nur über einen **Bezug** genannt ist (z. B. als Ansprechpartner), stehen ohne ihre Inhalte da ([Zugehörigkeit oder Bezug](#zugehorigkeit-oder-bezug)).
+4. **Weitersuchen**, wenn die Person auch anderswo vorkommt: Eine Volltext-Suche macht Ablago bewusst nicht ([warum](#warum-keine-volltext-suche)). Such selbst in der Ablage mit der [erweiterten Suche](https://help.ablago.app/benutzer/aktuell/ablage/#erweiterte-suche) ohne gewählten Mappentyp, mit **Volltext** auch in Dokumenten und Notizen. Was wirklich zur Person gehört, verknüpfst du mit ihrer Mappe (als Zugehörigkeit) und sammelst neu.
 5. **Prüfen und schwärzen:** Nur Angehaktes geht hinaus; Angaben zu anderen Personen schwärzt du vorher.
 6. **Erzeugen und zustellen:** am besten mit Passwort, dann per [Abruf-Link oder E-Mail](#auskunft-zustellen). Der Nachweis steht in der Historie der Person.
 
@@ -81,32 +81,32 @@ Jemand verlangt, dass seine Daten gelöscht werden (Art. 17 DSGVO).
     - **Nach Fristende** steht die Mappe unter **Werkbank → Darf weg**; dann löschst du sie wie unten.
     - Sag der Person, dass und bis wann ihre Daten gesperrt bleiben und warum.
 4. **Keine Frist → löschen:**
-    - In der Ablage die Mappen löschen – einzeln oder über die [Mehrfachauswahl](https://motom001.github.io/dms/benutzer/aktuell/ablage/#mehrere-mappen-loschen); einzelne Dokumente an der Dokumentzeile. Wähle beim Löschen den Grund **Auf Verlangen der betroffenen Person** – er steht im [Löschprotokoll](#loschprotokoll). Eine Mappe, auf die noch andere verweisen, lässt sich nicht löschen: Entferne zuerst den Verweis oder lösche die verweisende Mappe mit, wenn auch sie weg soll.
+    - In der Ablage die Mappen löschen – einzeln oder über die [Mehrfachauswahl](https://help.ablago.app/benutzer/aktuell/ablage/#mehrere-mappen-loschen); einzelne Dokumente an der Dokumentzeile. Wähle beim Löschen den Grund **Auf Verlangen der betroffenen Person** – er steht im [Löschprotokoll](#loschprotokoll). Eine Mappe, auf die noch andere verweisen, lässt sich nicht löschen: Entferne zuerst den Verweis oder lösche die verweisende Mappe mit, wenn auch sie weg soll.
     - Unter **Werkbank → Papierkorb** die Mappen und Dokumente wählen und **endgültig löschen** (oder den ganzen Papierkorb leeren). Erst dann sind auch Dateien und Volltext weg.
 5. **Was danach noch bleibt** – sag es der Person, wenn sie fragt:
     - die **Historie der gelöschten Mappen** für die eingestellte Zeit (Standard 365 Tage, [einstellbar](papierkorb.md#historie-endgultig-geloschter-mappen); 0 löscht sie sofort mit – das gilt dann für alle Mappen),
     - ältere **Sicherungen**, bis sie nach der Aufbewahrung wegfallen,
-    - **Exporte** unter `export/`, bereitliegende **Auskünfte** (höchstens 7 Tage oder bis ein Abruf-Link abläuft) und Kopien außerhalb des DMS.
+    - **Exporte** unter `export/`, bereitliegende **Auskünfte** (höchstens 7 Tage oder bis ein Abruf-Link abläuft) und Kopien außerhalb von Ablago.
 6. **Festhalten, dass gelöscht wurde:** Das macht das [Löschprotokoll](#loschprotokoll) – mit Grund, Mappentyp, Nummer und den Prüfsummen der Dokumente, ohne die Daten selbst. Filter nach dem Tag und dem Grund *Auf Verlangen der betroffenen Person* und gib es als PDF aus, wenn die Person oder eine Aufsichtsbehörde einen Nachweis möchte.
 
-Hat die Person ein **Benutzerkonto**, das schon benutzt wurde, [deaktivierst](benutzer.md#zugang-sperren) du es: Das DMS löscht solche Konten nicht, damit „angelegt von“ und Verweise stimmen. Ihr Name bleibt dort stehen.
+Hat die Person ein **Benutzerkonto**, das schon benutzt wurde, [deaktivierst](benutzer.md#zugang-sperren) du es: Ablago löscht solche Konten nicht, damit „angelegt von“ und Verweise stimmen. Ihr Name bleibt dort stehen.
 
 ### Sperr- und Löschkonzept aufsetzen { #sperr-und-loschkonzept-aufsetzen }
 
-Für Vermieter, Selbständige und Betriebe: einmal festlegen, wie lange welche Daten bleiben, und das DMS so einrichten, dass es dich daran hält.
+Für Vermieter, Selbständige und Betriebe: einmal festlegen, wie lange welche Daten bleiben, und Ablago so einrichten, dass es dich daran hält.
 
-1. **Datenarten erfassen:** Jeder Mappentyp ist eine Datenart – Mieter, Mietvertrag, Rechnung, Kunde, Bewerbung … Markiere unter **Werkbank → Datenschutz → Einstellungen**, welche eine Person betreffen, und trage je Mappentyp den Zweck ein. Daraus [erzeugt das DMS das Löschkonzept](loeschkonzept.md#aus-dem-dms-erzeugen) mit ausgefüllter Tabelle „Datenarten und Fristen“ – oder du füllst die [Vorlage](loeschkonzept.md#die-vorlage) von Hand aus.
+1. **Datenarten erfassen:** Jeder Mappentyp ist eine Datenart – Mieter, Mietvertrag, Rechnung, Kunde, Bewerbung … Markiere unter **Werkbank → Datenschutz → Einstellungen**, welche eine Person betreffen, und trage je Mappentyp den Zweck ein. Daraus [erzeugt Ablago das Löschkonzept](loeschkonzept.md#aus-dem-dms-erzeugen) mit ausgefüllter Tabelle „Datenarten und Fristen“ – oder du füllst die [Vorlage](loeschkonzept.md#die-vorlage) von Hand aus.
 2. **Fristen festlegen** – mit deiner Steuerberatung: z. B. Buchungsbelege 8 Jahre, Geschäftsbriefe 6 Jahre, Bewerbungen ohne Zusage 6 Monate.
 3. **Archivmodus einschalten** für jeden Mappentyp mit gesetzlicher Frist: Frist in Jahren und Stichtag (z. B. Rechnungsdatum). Bis Fristende ist die Mappe gegen Löschen gesperrt; danach steht sie unter **Darf weg**. Siehe [Archivmodus](archiv.md#einschalten).
 4. **Kürzere Fristen ohne Archivmodus** (z. B. Interessenten, Bewerbungen): Lege eine [Ansicht](sichten.md) an, die die fälligen Mappen nach einem Datumsfeld zeigt, und schau sie regelmäßig durch.
 5. **Wie lange Gelöschtes nachwirkt:** Aufbewahrung des [Papierkorbs](papierkorb.md#aufbewahrung) (Standard 30 Tage), Historie gelöschter Mappen (Standard 365 Tage) und Aufbewahrung der [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung) passend zu deinem Konzept einstellen.
 6. **Regelmäßig prüfen:** z. B. jedes Jahr im Januar **Werkbank → Darf weg** durchgehen und löschen, was weg darf – einen Kunden oder Vertragspartner samt allem, was dranhängt, mit [Mit verknüpften Mappen löschen](#mit-verknupften-mappen-loschen). Gelöscht wird nie automatisch.
 7. **Sperren auf Verlangen** wie unter [Löschen auf Verlangen](#loschen-auf-verlangen) beschrieben.
-8. **Dokumentieren:** Erzeuge das Löschkonzept unter **Werkbank → Datenschutz → Löschkonzept** (PDF oder Word), ergänze die [eckigen Klammern] und lege es als Mappe im DMS ab. Ändern sich Mappentypen oder Fristen, erzeugst du es neu.
+8. **Dokumentieren:** Erzeuge das Löschkonzept unter **Werkbank → Datenschutz → Löschkonzept** (PDF oder Word), ergänze die [eckigen Klammern] und lege es als Mappe in Ablago ab. Ändern sich Mappentypen oder Fristen, erzeugst du es neu.
 
 ## Auskunft erteilen: Werkbank → Datenschutz
 
-Wer Daten von Kunden, Mietern oder Kontakten verwaltet, muss auf Anfrage sagen können, was er über sie gespeichert hat – und das in einer Form, die die Person mitnehmen kann. Unter **Werkbank → Datenschutz** erledigt das DMS das in wenigen Minuten.
+Wer Daten von Kunden, Mietern oder Kontakten verwaltet, muss auf Anfrage sagen können, was er über sie gespeichert hat – und das in einer Form, die die Person mitnehmen kann. Unter **Werkbank → Datenschutz** erledigt Ablago das in wenigen Minuten.
 
 --8<-- "ausgeblendet-organisation.md"
 
@@ -118,7 +118,7 @@ Einmal einrichten, unten auf der Seite unter **Einstellungen**:
 
 - **Verantwortlicher:** Name und Anschrift – steht als Absender auf dem Deckblatt.
 - **Empfänger:** an wen du Daten weitergibst (z. B. Steuerberatung, Hausmeisterdienst). Das ist der Vorschlag für jede Auskunft; du kannst ihn je Auskunft ändern.
-- **Rechte der Person:** der Text auf dem Deckblatt (Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Beschwerde). Ein Vorschlag steht schon drin – in der eingestellten [Anrede](#anrede). Du kannst den Text hier anpassen; einen eigenen Text ändert das DMS beim Wechsel der Anrede nicht.
+- **Rechte der Person:** der Text auf dem Deckblatt (Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch, Beschwerde). Ein Vorschlag steht schon drin – in der eingestellten [Anrede](#anrede). Du kannst den Text hier anpassen; einen eigenen Text ändert Ablago beim Wechsel der Anrede nicht.
 - **Anrede in Unterlagen für Dritte:** siehe [unten](#anrede).
 - **Mappentypen:** Hake an, welche Mappentypen **eine Person betreffen** – z. B. Mieter, Kunde, Vertragspartner, Kontakt. Nur Mappen dieser Typen lassen sich als Betroffene wählen. Je Mappentyp trägst du den **Zweck** ein (z. B. „Durchführung des Mietverhältnisses“); er steht auf dem Deckblatt bei jeder Art von Daten, die herausgeht.
 
@@ -126,7 +126,7 @@ Die **Speicherdauer** auf dem Deckblatt kommt aus dem [Archivmodus](archiv.md): 
 
 ### Anrede in Unterlagen für Dritte: du oder Sie { #anrede }
 
-Das DMS spricht dich mit „du“ an – und standardmäßig auch die Personen, an die eine Auskunft geht. Schreibst du deinen Mietern oder Kunden sonst mit „Sie“, stellst du unter **Einstellungen → Anrede in Unterlagen für Dritte** auf **Sie** um. Ein Beispielsatz zeigt beide Formen nebeneinander; wirksam wird die Wahl mit **Speichern**. Sie gilt für die ganze Installation und für alles, was an Personen **außerhalb** des DMS geht:
+Ablago spricht dich mit „du“ an – und standardmäßig auch die Personen, an die eine Auskunft geht. Schreibst du deinen Mietern oder Kunden sonst mit „Sie“, stellst du unter **Einstellungen → Anrede in Unterlagen für Dritte** auf **Sie** um. Ein Beispielsatz zeigt beide Formen nebeneinander; wirksam wird die Wahl mit **Speichern**. Sie gilt für die ganze Installation und für alles, was an Personen **außerhalb** von Ablago geht:
 
 | Was | Wo |
 | --- | --- |
@@ -136,17 +136,17 @@ Das DMS spricht dich mit „du“ an – und standardmäßig auch die Personen, 
 
 **Die Oberfläche bleibt in jedem Fall beim „du“** – auch für dich als Administrator. Ändert sich die Anrede, gilt sie für alle danach erzeugten Auskünfte und verschickten E-Mails; schon erzeugte ZIP-Dateien und verschickte E-Mails bleiben, wie sie sind. Die Abrufseite zeigt immer die aktuelle Einstellung.
 
-E-Mails mit Mappen und Dokumenten (*Per E-Mail versenden*) schreibst du selbst – das DMS gibt dort nur den Betreff „Mappentyp: Titel“ vor, ohne Anrede.
+E-Mails mit Mappen und Dokumenten (*Per E-Mail versenden*) schreibst du selbst – Ablago gibt dort nur den Betreff „Mappentyp: Titel“ vor, ohne Anrede.
 
 ## Auskunft nach Art. 15 DSGVO
 
 1. **Person wählen:** Art (einer der markierten Mappentypen) und Name suchen – oder direkt an der Mappe unter **Mappe ▾ → Auskunft erstellen …** (nur für Administratoren und nur bei Mappentypen, die eine Person betreffen).
 2. **Frist:** Trage ein, wann die Anfrage eingegangen ist, und lege mit **Frist als Aufgabe anlegen** eine Aufgabe für dich an – „Auskunft nach Art. 15 DSGVO an … bis …“, fällig einen Monat nach Eingang (Art. 12 Abs. 3 DSGVO). Sie steht wie jede Aufgabe unter „Zu erledigen“.
-3. **Sammeln:** Das DMS folgt den Verweisen von der Mappe der Person aus – **Mappen, die darauf verweisen** (Mietvertrag → Nebenkostenabrechnungen) und **Mappen, auf die sie verweist** (Wohnung, Arbeitgeber). Die **Tiefe** stellst du ein (Vorgabe 2: Vertrag und dessen Rechnungen). Kreise (zwei Verträge, die aufeinander verweisen) werden erkannt; jede Mappe steht nur einmal da. Benutzer und Rollen sind nie dabei.
-    - **Richtung:** Nach unten (Mappen, die zur Person gehören) sammelt das DMS alles, über mehrere Stufen. Nach oben (Person → Firma → Muttergesellschaft) geht es nur weiter nach oben, **nie wieder hinunter**: Von der Wohnung aus sammelt es nicht die anderen Mieter, von der Firma aus nicht deren Verträge.
-    - <a id="zugehorigkeit-oder-bezug"></a>**Zugehörigkeit oder Bezug:** Vollständig – mit Dokumenten, Notizen und allen Angaben – kommt nur, was über einen Verweis der [Verweisart](mappentypen.md#verweise-mappen-verbinden) **Zugehörigkeit** verbunden ist. Ist die Person in einer Mappe nur über einen **Bezug** eingetragen – z. B. ein Wartungsvertrag mit ihr als *Ansprechpartner*, Post mit *Zugeordnet zu* –, steht die Mappe in der Prüfliste als „als Ansprechpartner eingetragen in Wartungsvertrag „W-1““: In die Auskunft geht nur das – Art, Titel und Feld –, **ohne ihre Dokumente, Notizen und übrigen Angaben**, und über sie sammelt das DMS nicht weiter. Gehört sie doch ganz dazu, setzt du **ganz aufnehmen** (Vorgabe: aus). Prüfe darum die Verweisart deiner Felder: Soll Post zur Person ganz hinausgehen, nimm sie bewusst auf oder verknüpfe sie über ein Feld der Art Zugehörigkeit.
+3. **Sammeln:** Ablago folgt den Verweisen von der Mappe der Person aus – **Mappen, die darauf verweisen** (Mietvertrag → Nebenkostenabrechnungen) und **Mappen, auf die sie verweist** (Wohnung, Arbeitgeber). Die **Tiefe** stellst du ein (Vorgabe 2: Vertrag und dessen Rechnungen). Kreise (zwei Verträge, die aufeinander verweisen) werden erkannt; jede Mappe steht nur einmal da. Benutzer und Rollen sind nie dabei.
+    - **Richtung:** Nach unten (Mappen, die zur Person gehören) sammelt Ablago alles, über mehrere Stufen. Nach oben (Person → Firma → Muttergesellschaft) geht es nur weiter nach oben, **nie wieder hinunter**: Von der Wohnung aus sammelt es nicht die anderen Mieter, von der Firma aus nicht deren Verträge.
+    - <a id="zugehorigkeit-oder-bezug"></a>**Zugehörigkeit oder Bezug:** Vollständig – mit Dokumenten, Notizen und allen Angaben – kommt nur, was über einen Verweis der [Verweisart](mappentypen.md#verweise-mappen-verbinden) **Zugehörigkeit** verbunden ist. Ist die Person in einer Mappe nur über einen **Bezug** eingetragen – z. B. ein Wartungsvertrag mit ihr als *Ansprechpartner*, Post mit *Zugeordnet zu* –, steht die Mappe in der Prüfliste als „als Ansprechpartner eingetragen in Wartungsvertrag „W-1““: In die Auskunft geht nur das – Art, Titel und Feld –, **ohne ihre Dokumente, Notizen und übrigen Angaben**, und über sie sammelt Ablago nicht weiter. Gehört sie doch ganz dazu, setzt du **ganz aufnehmen** (Vorgabe: aus). Prüfe darum die Verweisart deiner Felder: Soll Post zur Person ganz hinausgehen, nimm sie bewusst auf oder verknüpfe sie über ein Feld der Art Zugehörigkeit.
 4. **Prüfen:** Die Liste zeigt den Baum mit Häkchen je **Mappe**, **Dokument**, **Notiz** und **Historie**. Nur Angehaktes geht hinaus, und erst wenn du **„Ich habe die Auswahl geprüft“** bestätigst, lässt sich die Auskunft erzeugen.
-    - **Daten Dritter?** Ist eine Mappe noch mit anderen Personen verbunden (Mappen eines Typs, der eine Person betrifft – z. B. eine Wohnung, in der auch andere Mieter wohnen), steht das dabei. Enthält ein Dokument Angaben zu anderen Personen, öffne es über **schwärzen …** in einem neuen Tab, schwärze die Stellen ([Schwärzen](https://motom001.github.io/dms/benutzer/aktuell/dokumente/)) und sammle neu: Die **geschwärzte Fassung** ist dann angehakt, das Original nicht.
+    - **Daten Dritter?** Ist eine Mappe noch mit anderen Personen verbunden (Mappen eines Typs, der eine Person betrifft – z. B. eine Wohnung, in der auch andere Mieter wohnen), steht das dabei. Enthält ein Dokument Angaben zu anderen Personen, öffne es über **schwärzen …** in einem neuen Tab, schwärze die Stellen ([Schwärzen](https://help.ablago.app/benutzer/aktuell/dokumente/)) und sammle neu: Die **geschwärzte Fassung** ist dann angehakt, das Original nicht.
     - **Notizen** sind vorgewählt. Hältst du eine zurück (z. B. eine interne Bewertung), ist eine **Begründung Pflicht**; sie steht im Nachweis, nicht in der Auskunft.
 5. **Erzeugen:** Empfänger und eine Anmerkung fürs Deckblatt, optional ein **Passwort** (mindestens 10 Zeichen, „Vorschlagen“ erzeugt eines). Die Auskunft entsteht im Hintergrund; danach erscheint **Herunterladen**.
 
@@ -180,26 +180,26 @@ Nur **Administratoren**. Ein eigenes Recht „Auskunft erteilen“ gibt es (noch
 
 ## Auskunft zustellen
 
-Die fertige Auskunft schickst du direkt aus dem DMS – unter **Bereitliegende Auskünfte** mit **Zustellen …** (oder gleich nach dem Erzeugen). Kommst du von der Mappe der Person (*Mappe ▾ → Auskunft erstellen …*), stehen ihre Auskünfte oben. Zwei Wege:
+Die fertige Auskunft schickst du direkt aus Ablago – unter **Bereitliegende Auskünfte** mit **Zustellen …** (oder gleich nach dem Erzeugen). Kommst du von der Mappe der Person (*Mappe ▾ → Auskunft erstellen …*), stehen ihre Auskünfte oben. Zwei Wege:
 
 | | Abruf-Link mit Abrufcode | ZIP per E-Mail |
 | --- | --- | --- |
-| **Wie** | Die Person bekommt einen Link auf eine schlichte Seite deines DMS und lädt die Datei dort mit einem Abrufcode herunter. | Die ZIP-Datei geht als Anhang über den [E-Mail-Versand](installation.md#e-mail-und-adresse) des DMS. |
-| **Voraussetzung** | Dein DMS ist **aus dem Internet erreichbar**. | Die Auskunft ist **mit Passwort** erzeugt; höchstens 50 MB (viele Mailserver nehmen nur 10–25 MB). |
+| **Wie** | Die Person bekommt einen Link auf eine schlichte Seite deines Ablago und lädt die Datei dort mit einem Abrufcode herunter. | Die ZIP-Datei geht als Anhang über den [E-Mail-Versand](installation.md#e-mail-und-adresse) von Ablago. |
+| **Voraussetzung** | Dein Ablago ist **aus dem Internet erreichbar**. | Die Auskunft ist **mit Passwort** erzeugt; höchstens 50 MB (viele Mailserver nehmen nur 10–25 MB). |
 | **Nachweis** | Jeder Abruf mit Zeitpunkt, „abgerufen am …“, Benachrichtigung | „per E-Mail gesendet an … am …“ |
 | **Zweiter Weg** | Abrufcode per Brief, Telefon oder SMS | Passwort per Telefon, SMS oder Brief |
 
-Vorgeschlagen ist der Abruf-Link, wenn die [Adresse des DMS](installation.md#e-mail-und-adresse) nach Internet aussieht – sonst (z. B. `http://192.168.…`, `localhost`, `nas.local`) die E-Mail.
+Vorgeschlagen ist der Abruf-Link, wenn die [Adresse von Ablago](installation.md#e-mail-und-adresse) nach Internet aussieht – sonst (z. B. `http://192.168.…`, `localhost`, `nas.local`) die E-Mail.
 
 ### Weg 1: per E-Mail
 
-Nur für Auskünfte **mit Passwort** – unverschlüsselt geht keine Auskunft per E-Mail hinaus. Gib die Adresse ein; Betreff und Text sind vorbereitet (in der eingestellten [Anrede](#anrede)) und lassen sich ändern. **Das Passwort steht nie in der E-Mail** – das DMS kennt es nach dem Erzeugen gar nicht mehr. Teile es auf einem anderen Weg mit. Antworten gehen an deine Adresse. In der Historie der Person steht „Auskunft per E-Mail gesendet an …“.
+Nur für Auskünfte **mit Passwort** – unverschlüsselt geht keine Auskunft per E-Mail hinaus. Gib die Adresse ein; Betreff und Text sind vorbereitet (in der eingestellten [Anrede](#anrede)) und lassen sich ändern. **Das Passwort steht nie in der E-Mail** – Ablago kennt es nach dem Erzeugen gar nicht mehr. Teile es auf einem anderen Weg mit. Antworten gehen an deine Adresse. In der Historie der Person steht „Auskunft per E-Mail gesendet an …“.
 
 ### Weg 2: Abruf-Link mit Abrufcode
 
-1. **Adresse der Person** (optional): Mit **Link per E-Mail an diese Adresse schicken** verschickt das DMS den Link – ohne Code. Ohne E-Mail-Versand kopierst du den Link und schickst ihn selbst.
+1. **Adresse der Person** (optional): Mit **Link per E-Mail an diese Adresse schicken** verschickt Ablago den Link – ohne Code. Ohne E-Mail-Versand kopierst du den Link und schickst ihn selbst.
 2. **Gültig** (Vorgabe 30 Tage, höchstens 90) und **Abrufe** (Vorgabe 3, höchstens 10).
-3. **Abrufcode:** Am besten **vom DMS erzeugen** (8 Zeichen ohne Verwechsler wie 0/O und 1/I). Alternativ ein **eigener Code**, den nur die Person kennt – z. B. die Vertragsnummer (mindestens 6 Zeichen). Eine **Kundennummer allein ist schwach**: Sie steht oft auf Briefen und Rechnungen.
+3. **Abrufcode:** Am besten **von Ablago erzeugen** (8 Zeichen ohne Verwechsler wie 0/O und 1/I). Alternativ ein **eigener Code**, den nur die Person kennt – z. B. die Vertragsnummer (mindestens 6 Zeichen). Eine **Kundennummer allein ist schwach**: Sie steht oft auf Briefen und Rechnungen.
 4. **Abruf-Link erstellen:** Link und Code stehen **nur jetzt** auf dem Bildschirm. Teile den Code auf einem anderen Weg mit – per Brief, Telefon oder SMS, **nie in derselben E-Mail wie den Link**. Geht er verloren, erstelle einen neuen Link; der alte gilt dann nicht mehr.
 
 Die Person öffnet den Link und sieht nur: „Du hast eine Auskunft nach Art. 15 DSGVO über die hier gespeicherten Daten angefordert. Zur Sicherheit gib bitte deinen Abrufcode ein.“ (mit der [Anrede](#anrede) „Sie“: „Sie haben … Zur Sicherheit geben Sie bitte Ihren Abrufcode ein.“) – kein Menü, kein Logo, kein Name des Haushalts, keine Anmeldung. Mit dem richtigen Code startet der Download.
@@ -210,11 +210,11 @@ Unter **Abruf-Links** stehen alle Links mit Stand (*aktiv*, *abgelaufen*, *alle 
 
 ![Zustellen an einer bereitliegenden Auskunft](bilder/werkbank-datenschutz-zustellen.png)
 
-**Nachweis und Benachrichtigung:** Jeder Abruf und jeder falsche Code steht in der **Historie der Person** (Zeitpunkt, erfolgreich oder nicht – **ohne IP-Adresse**, ohne Code). Wer den Link oder die Auskunft erstellt hat und wer die Person als **Favorit** (★) hat – sofern er die Benachrichtigung für diesen Favoriten nicht abgeschaltet hat ([Favorit = Abo](https://motom001.github.io/dms/benutzer/aktuell/ablage/#favoriten-als-abo)) –, bekommt unter „Zu erledigen“ die Aufgabe **Auskunft** – „Auskunft an … wurde abgerufen“. Solange sie offen ist, kommt für denselben Link keine zweite. Sind alle Abrufe verbraucht, wird die ZIP-Datei gelöscht.
+**Nachweis und Benachrichtigung:** Jeder Abruf und jeder falsche Code steht in der **Historie der Person** (Zeitpunkt, erfolgreich oder nicht – **ohne IP-Adresse**, ohne Code). Wer den Link oder die Auskunft erstellt hat und wer die Person als **Favorit** (★) hat – sofern er die Benachrichtigung für diesen Favoriten nicht abgeschaltet hat ([Favorit = Abo](https://help.ablago.app/benutzer/aktuell/ablage/#favoriten-als-abo)) –, bekommt unter „Zu erledigen“ die Aufgabe **Auskunft** – „Auskunft an … wurde abgerufen“. Solange sie offen ist, kommt für denselben Link keine zweite. Sind alle Abrufe verbraucht, wird die ZIP-Datei gelöscht.
 
 ### Sicherheit der Abrufseite
 
-Die Abrufseite ist der **einzige** Weg, ohne Anmeldung an Daten im DMS zu kommen. Darum:
+Die Abrufseite ist der **einzige** Weg, ohne Anmeldung an Daten in Ablago zu kommen. Darum:
 
 - **Nicht zu erraten:** Der Link enthält nur einen Zufallsschlüssel mit 256 Bit, sonst nichts – keine Id, keinen Namen. Er steht hinter dem `#` (`/abruf#…`): Diesen Teil schickt der Browser nie mit, er landet also in keinem Zugriffsprotokoll (auch nicht beim Reverse-Proxy) und in keinem Referer.
 - **Zwei Faktoren:** Link (E-Mail) und Abrufcode (anderer Weg). Gespeichert sind nur Hashes – der Schlüssel als SHA-256, der Code wie ein Passwort (scrypt); verglichen wird in konstanter Zeit.
@@ -222,15 +222,15 @@ Die Abrufseite ist der **einzige** Weg, ohne Anmeldung an Daten im DMS zu kommen
 - **Sperre:** Nach **10 falschen Codes** ist der Link gesperrt – dann hilft auch der richtige nicht mehr; du erfährst es über die Aufgabe *Auskunft*. Zusätzlich hat die Abrufseite eine eigene Bremse je IP-Adresse (bei IPv6 je /64): nach **5 falschen Codes** über alle Links 15 Minuten Pause. Sie ist vom [Anmeldeschutz](anmeldeschutz.md) getrennt – Fehlversuche auf der Abrufseite sperren also nie die Anmeldung, auch nicht hinter einem Reverse Proxy. Es laufen höchstens zwei Code-Prüfungen gleichzeitig; ein Download wird nicht im Browser-Zwischenspeicher abgelegt.
 - **Download über ein Einmal-Ticket:** Nach dem richtigen Code gibt es ein Ticket für genau einen Download, zwei Minuten gültig. Gezählt wird beim Start des Downloads; ein abgebrochener Download steht als *abgebrochen* in der Historie.
 - **Protokoll ohne Geheimnisse:** Im [Protokoll](fehlersuche.md#protokoll) (Modul „datenschutz“) stehen Abrufe und Fehlversuche mit **gekürzter IP** (z. B. `203.0.113.0`), nie Schlüssel oder Code.
-- Die Anfrage mit dem Code braucht die Kennung der eigenen Oberfläche (Schutz vor fremden Seiten, CSRF); die Seite lädt sonst nur die eingestellte [Anrede](#anrede) aus dem DMS (keinen Kontostatus, kein Design).
+- Die Anfrage mit dem Code braucht die Kennung der eigenen Oberfläche (Schutz vor fremden Seiten, CSRF); die Seite lädt sonst nur die eingestellte [Anrede](#anrede) aus Ablago (keinen Kontostatus, kein Design).
 
 ### Erreichbarkeit aus dem Internet
 
-Der Abruf-Link funktioniert nur, wenn die Person dein DMS von außen erreicht. Viele Installationen zu Hause sind das nicht – dann nimm den Weg per E-Mail. Soll das DMS erreichbar sein, geht das über einen [Reverse-Proxy](installation.md#hinter-einem-reverse-proxy) mit HTTPS (z. B. auf dem NAS mit Portfreigabe), einen Tunnel (z. B. Cloudflare Tunnel, Tailscale Funnel) oder [bei einem Anbieter](https://motom001.github.io/dms/installieren/aktuell/anbieter/). Trage unter [E-Mail und Adresse](installation.md#e-mail-und-adresse) die Adresse ein, unter der es von außen erreichbar ist – sie steht im Link. Wer nur die Abrufseite nach außen geben will, gibt am Proxy `/abruf`, `/api/abruf`, `/api/abruf/anrede`, `/api/abruf/datei` und die Dateien der Oberfläche (`/assets/`) frei.
+Der Abruf-Link funktioniert nur, wenn die Person dein Ablago von außen erreicht. Viele Installationen zu Hause sind das nicht – dann nimm den Weg per E-Mail. Soll Ablago erreichbar sein, geht das über einen [Reverse-Proxy](installation.md#hinter-einem-reverse-proxy) mit HTTPS (z. B. auf dem NAS mit Portfreigabe), einen Tunnel (z. B. Cloudflare Tunnel, Tailscale Funnel) oder [bei einem Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/). Trage unter [E-Mail und Adresse](installation.md#e-mail-und-adresse) die Adresse ein, unter der es von außen erreichbar ist – sie steht im Link. Wer nur die Abrufseite nach außen geben will, gibt am Proxy `/abruf`, `/api/abruf`, `/api/abruf/anrede`, `/api/abruf/datei` und die Dateien der Oberfläche (`/assets/`) frei.
 
 ## Löschen mit verknüpften Mappen { #mit-verknupften-mappen-loschen }
 
-Der dritte Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen) neben Archivmodus und **Darf weg**: An einer Mappe, z. B. einem Kunden oder Vertragspartner ohne Aktivität seit Jahren, löscht **Mappe ▾ → Mit verknüpften Mappen löschen …** die Mappe mit Verträgen, Rechnungen, Post und Dokumenten – nach einer Vorschau als Baum ([Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)).
+Der dritte Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen) neben Archivmodus und **Darf weg**: An einer Mappe, z. B. einem Kunden oder Vertragspartner ohne Aktivität seit Jahren, löscht **Mappe ▾ → Mit verknüpften Mappen löschen …** die Mappe mit Verträgen, Rechnungen, Post und Dokumenten – nach einer Vorschau als Baum ([Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)).
 
 Dabei gilt:
 
@@ -259,17 +259,17 @@ Jeder Schritt ist ein eigener Eintrag: **in den Papierkorb**, **endgültig gelö
 | Mappentyp, Mappen-Id, **Nummer** aus dem [Nummernkreis](nummernkreise.md) (falls vorhanden) | **Prüfsumme (SHA-256)**, Größe, Dateityp, Seitenzahl, Archivnummer |
 | Anzahl Dokumente, ältere Versionen, Notizen, entfernte Verweise | zu welcher Mappe (Id, Nummer, Mappentyp) |
 
-Dazu bei jedem Eintrag: **wann**, **von wem** (Benutzer; *Schnittstelle* bei einem API-Schlüssel, *Paket* beim Dienstkonto eines Pakets, *DMS* bei automatischem Löschen), **wie** (einzeln, mehrere, mit verknüpften Mappen, aus dem Papierkorb, Papierkorb geleert, Aufbewahrung abgelaufen …), **warum** und der **Vorgang** beim [Löschen mit verknüpften Mappen](#mit-verknupften-mappen-loschen) – alle Mappen eines Vorgangs mit gemeinsamer Id und der Start-Mappe.
+Dazu bei jedem Eintrag: **wann**, **von wem** (Benutzer; *Schnittstelle* bei einem API-Schlüssel, *Paket* beim Dienstkonto eines Pakets, *Ablago* bei automatischem Löschen), **wie** (einzeln, mehrere, mit verknüpften Mappen, aus dem Papierkorb, Papierkorb geleert, Aufbewahrung abgelaufen …), **warum** und der **Vorgang** beim [Löschen mit verknüpften Mappen](#mit-verknupften-mappen-loschen) – alle Mappen eines Vorgangs mit gemeinsamer Id und der Start-Mappe.
 
 **Nie drin:** Titel, Feldwerte, Dateinamen, Notizen – die sind personenbezogen und sollen ja weg.
 
-**Warum:** Beim Löschen fragt das DMS nach dem Grund – *Frist abgelaufen („Darf weg“)*, *Auf Verlangen der betroffenen Person*, *Nicht mehr nötig* oder *Sonstiges* – und optional nach einer kurzen Anmerkung. Schreib dort **keine Namen** hinein: Das Löschprotokoll bleibt, wenn die Daten weg sind. Beim endgültigen Löschen aus dem Papierkorb übernimmt das DMS den Grund vom Schritt „in den Papierkorb“. Über die Schnittstelle gibst du ihn mit `grund` und `grundText` an.
+**Warum:** Beim Löschen fragt Ablago nach dem Grund – *Frist abgelaufen („Darf weg“)*, *Auf Verlangen der betroffenen Person*, *Nicht mehr nötig* oder *Sonstiges* – und optional nach einer kurzen Anmerkung. Schreib dort **keine Namen** hinein: Das Löschprotokoll bleibt, wenn die Daten weg sind. Beim endgültigen Löschen aus dem Papierkorb übernimmt Ablago den Grund vom Schritt „in den Papierkorb“. Über die Schnittstelle gibst du ihn mit `grund` und `grundText` an.
 
 ### Wann ist „gelöscht“ wirklich gelöscht?
 
 - **In den Papierkorb:** Die Mappe ist aus Ablage, Suche und Schnittstelle verschwunden, liegt aber vollständig im Papierkorb – mit Feldwerten, Dokumenten, Volltext und Notizen – und lässt sich wiederherstellen.
 - **Endgültig gelöscht:** nach der [Aufbewahrung des Papierkorbs](papierkorb.md#aufbewahrung), mit *Endgültig löschen* oder *Papierkorb leeren*, sofort bei ausgeschaltetem Papierkorb. Dann sind Mappe, Dokumente, Volltext und Notizen aus der Datenbank entfernt, und die **Datei** ist vom Speicher gelöscht – es sei denn, ein anderes Dokument hat genau dieselbe Datei (gleiche Prüfsumme); sie ist ja nur einmal gespeichert.
-- **Was danach noch bleibt:** die Historie gelöschter Mappen für ihre eingestellte Zeit, ältere Sicherungen bis zu ihrer Aufbewahrung, Exporte und Kopien außerhalb des DMS (siehe [Löschen auf Verlangen](#loschen-auf-verlangen)). Das Löschprotokoll hält den Zeitpunkt des endgültigen Löschens fest; diese Fristen ergänzt du im [Löschkonzept](loeschkonzept.md).
+- **Was danach noch bleibt:** die Historie gelöschter Mappen für ihre eingestellte Zeit, ältere Sicherungen bis zu ihrer Aufbewahrung, Exporte und Kopien außerhalb von Ablago (siehe [Löschen auf Verlangen](#loschen-auf-verlangen)). Das Löschprotokoll hält den Zeitpunkt des endgültigen Löschens fest; diese Fristen ergänzt du im [Löschkonzept](loeschkonzept.md).
 
 Erfasst werden alle Wege: einzeln, mehrere ausgewählt, mit verknüpften Mappen, „Darf weg“, einzelne Dokumente (auch beim Ersetzen, Bearbeiten und Zusammenfügen von PDFs), ältere Versionen über die eingestellte Anzahl hinaus, der Papierkorb (von Hand, geleert, beim Abmelden geleert, Aufbewahrung abgelaufen, ausgeschaltet), Schnittstelle und Pakete. Nicht erfasst werden [Demo-Mappen](demo.md) – sie enthalten keine echten Daten.
 
@@ -279,11 +279,11 @@ Erfasst werden alle Wege: einzeln, mehrere ausgewählt, mit verknüpften Mappen,
 
 - **Filter:** Zeitraum, Mappentyp, Grund, Schritt; ein Klick auf einen Vorgang zeigt alle Mappen und Dokumente dieses Vorgangs.
 - **Suche nach Nummer** (Nummernkreis oder Archivnummer) oder **Prüfsumme**.
-- **„Wurde dieses Dokument gelöscht?“** Zieh die Datei auf das Feld: Dein Browser rechnet die Prüfsumme, das DMS sucht sie. Die Datei selbst wird nicht hochgeladen.
+- **„Wurde dieses Dokument gelöscht?“** Zieh die Datei auf das Feld: Dein Browser rechnet die Prüfsumme, Ablago sucht sie. Die Datei selbst wird nicht hochgeladen.
 - **Als PDF** (Nachweis, mit Filter und Stand im Kopf) oder **als CSV** – jeweils mit dem gewählten Filter.
 
 !!! info "Prüfsumme und Datenschutz"
-    Die Prüfsumme (SHA-256) ist ein Fingerabdruck der Datei: Aus ihr lässt sich der Inhalt nicht zurückgewinnen. Wer die Datei aber noch hat, kann zeigen, dass genau sie im DMS war und wann sie gelöscht wurde – genau das ist der Zweck. Die Prüfsumme ist damit ein **pseudonymes** Datum; behandle das Löschprotokoll wie andere Nachweise vertraulich.
+    Die Prüfsumme (SHA-256) ist ein Fingerabdruck der Datei: Aus ihr lässt sich der Inhalt nicht zurückgewinnen. Wer die Datei aber noch hat, kann zeigen, dass genau sie in Ablago war und wann sie gelöscht wurde – genau das ist der Zweck. Die Prüfsumme ist damit ein **pseudonymes** Datum; behandle das Löschprotokoll wie andere Nachweise vertraulich.
 
 ### Nicht änderbar, eigene Aufbewahrung
 

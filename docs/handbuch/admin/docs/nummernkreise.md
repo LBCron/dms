@@ -48,11 +48,11 @@ Löschen geht nur, wenn kein Feld den Nummernkreis mehr verwendet.
 
 ## Nummern nachträglich vergeben
 
-Mappen, die es schon gab, bevor das Feld den Nummernkreis bekam, haben keine Nummer. Unter **Werkbank → Wartungsoperationen → Nummern nachträglich vergeben** wählst du das Feld; das DMS zeigt, wie viele Mappen betroffen sind und welche Nummern entstehen (von … bis …), und vergibt sie dann in der Reihenfolge des Anlegens. Als Datum gilt der heutige Tag. Die Arbeit läuft im Hintergrund und steht im Protokoll.
+Mappen, die es schon gab, bevor das Feld den Nummernkreis bekam, haben keine Nummer. Unter **Werkbank → Wartungsoperationen → Nummern nachträglich vergeben** wählst du das Feld; Ablago zeigt, wie viele Mappen betroffen sind und welche Nummern entstehen (von … bis …), und vergibt sie dann in der Reihenfolge des Anlegens. Als Datum gilt der heutige Tag. Die Arbeit läuft im Hintergrund und steht im Protokoll.
 
 ## Archivnummern und Aufkleber
 
-Den Nummernkreis **Archivnummer** gibt es in jedem DMS. Er vergibt die Nummern für Aufkleber auf Papieroriginalen (Muster am Anfang `A-{zaehler:6}`, also `A-000001`). Wie Benutzer die Nummer am Dokument eintragen und wiederfinden, steht im Benutzerhandbuch unter *Dokumente → Archivnummer*.
+Den Nummernkreis **Archivnummer** gibt es in jeder Ablago-Installation. Er vergibt die Nummern für Aufkleber auf Papieroriginalen (Muster am Anfang `A-{zaehler:6}`, also `A-000001`). Wie Benutzer die Nummer am Dokument eintragen und wiederfinden, steht im Benutzerhandbuch unter *Dokumente → Archivnummer*.
 
 Unter **Werkbank → Nummernkreise → Archivnummer → Aufkleber drucken**:
 

@@ -2,7 +2,7 @@
 
 ## Zugang bekommen
 
-Einen Zugang legt ein Administrator für dich an. Du bekommst dann eine **Einladung** – per E-Mail oder, wenn das DMS keine E-Mails verschickt, als Link vom Administrator. Über den Link legst du dein Passwort fest (mindestens 10 Zeichen) und bist sofort angemeldet.
+Einen Zugang legt ein Administrator für dich an. Du bekommst dann eine **Einladung** – per E-Mail oder, wenn Ablago keine E-Mails verschickt, als Link vom Administrator. Über den Link legst du dein Passwort fest (mindestens 10 Zeichen) und bist sofort angemeldet.
 
 Eine Einladung ist 7 Tage gültig und funktioniert nur einmal. Ist sie abgelaufen, bitte den Administrator um eine neue.
 
@@ -12,20 +12,20 @@ Eine Einladung ist 7 Tage gültig und funktioniert nur einmal. Ist sie abgelaufe
 
 Melde dich mit deiner E-Mail-Adresse und deinem Passwort an. Die Anmeldung bleibt auf diesem Gerät **30 Tage** bestehen – oder bis du dich abmeldest.
 
-Nach mehreren falschen Versuchen wartet das DMS kurz, bevor es einen weiteren zulässt – das schützt dein Konto vor dem Durchprobieren von Passwörtern.
+Nach mehreren falschen Versuchen wartet Ablago kurz, bevor es einen weiteren zulässt – das schützt dein Konto vor dem Durchprobieren von Passwörtern.
 
 ### Passwort vergessen
 
 Klicke unter der Anmeldung auf **Passwort vergessen?** und gib deine E-Mail-Adresse ein. Du bekommst einen Link, mit dem du ein neues Passwort festlegst. Der Link ist eine Stunde gültig und funktioniert einmal.
 
-Verschickt dein DMS keine E-Mails, steht das dort. Dann erzeugt dir ein Administrator den Link.
+Verschickt dein Ablago keine E-Mails, steht das dort. Dann erzeugt dir ein Administrator den Link.
 
 ## Die Oberfläche
 
 Oben siehst du die Bereiche:
 
 - **Ablage** – hier arbeitest du mit Mappen. Das ist für die meisten Benutzer der einzige Bereich.
-- **Werkbank** – nur für Administratoren; hier wird das DMS eingerichtet.
+- **Werkbank** – nur für Administratoren; hier wird Ablago eingerichtet.
 - **+ Neu** – legt von überall neue [Post](post.md) an (Dateien wählen oder am Handy fotografieren) oder eine neue Mappe eines Mappentyps, den du anlegen darfst.
 - **Dein Name** – öffnet ein Menü mit *Mein Konto* (dort auch Darstellung und Abwesenheit), der Hilfe, *Fehler melden* und Abmelden.
 
@@ -37,9 +37,9 @@ Die Ablage ist in **drei Spalten** geteilt, von groß nach klein:
 
 ![Drei Spalten: Ansichten, Liste, Mappe](bilder/ablage.png)
 
-Ein Klick auf **DMS** oben links bringt dich von überall zurück zur Startseite, der Liste [Zu erledigen](eingang.md).
+Ein Klick auf **Ablago** oben links bringt dich von überall zurück zur Startseite, der Liste [Zu erledigen](eingang.md).
 
-Steht neben einer Überschrift ein kleines **?**, öffnet es in einem neuen Tab genau den passenden Abschnitt dieses Handbuchs – passend zur Version deines DMS. Was neu ist, steht unter [Neu in dieser Version](neu.md).
+Steht neben einer Überschrift ein kleines **?**, öffnet es in einem neuen Tab genau den passenden Abschnitt dieses Handbuchs – passend zur Version deines Ablago. Was neu ist, steht unter [Neu in dieser Version](neu.md).
 
 ### Spalten anpassen
 
@@ -61,7 +61,7 @@ Auf dem Smartphone und in schmalen Fenstern siehst du immer nur eine Spalte; üb
 
 ### Rückfragen
 
-Bevor etwas Folgenreiches passiert – löschen, abmelden, ungespeicherte Änderungen verwerfen –, fragt das DMS in einem eigenen Fenster nach. Oben steht, **was passiert**, darunter die Folgen. Die Knöpfe sagen, was sie tun, z. B. **Löschen** und **Abbrechen**.
+Bevor etwas Folgenreiches passiert – löschen, abmelden, ungespeicherte Änderungen verwerfen –, fragt Ablago in einem eigenen Fenster nach. Oben steht, **was passiert**, darunter die Folgen. Die Knöpfe sagen, was sie tun, z. B. **Löschen** und **Abbrechen**.
 
 ![Rückfrage vor dem Schlüsselwechsel](bilder/rueckfrage.png)
 

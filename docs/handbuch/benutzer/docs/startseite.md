@@ -24,8 +24,8 @@ Hat dein Administrator ein Paket wie **KI-Assistent** eingerichtet, steht unter 
 - **Quellen:** Unter der Antwort stehen die Mappen, aus denen sie stammt, als Links. Die Nummern in eckigen Klammern, z. B. „[2]“, zeigen auf die Stellen darunter.
 - **„An die KI geschickt: n Ausschnitte aus m Mappen“:** Aufgeklappt siehst du genau die Stellen, die an den KI-Dienst gingen – nie mehr als das, nie deine ganze Ablage. Gesucht wird nur in Mappen, die **du** lesen darfst; Passwörter sind nie dabei.
 - **„… 6 von 9 Ausschnitten (gekürzt)“:** Der KI-Dienst kann nur eine bestimmte Menge Text auf einmal lesen. War es zu viel, hat das Paket gekürzt – aufgeklappt siehst du dann nur die Stellen, die wirklich hingingen. Bei langen Chats kann es auch ältere Fragen und Antworten weglassen; das steht dann unter der Antwort. Fehlt etwas in der Antwort, hilft oft ein **Neuer Chat**.
-- **Nachfragen:** Du kannst im selben Chat weiterfragen („Und wann ist die Kündigungsfrist?“). Für jede Frage sucht das DMS neue Stellen. **Neuer Chat** fängt von vorn an.
-- **Nichts wird gespeichert.** Der Chat bleibt nur in diesem Browser-Fenster und ist beim Neuladen weg. Im Protokoll des DMS steht nur, *dass* gefragt wurde – nicht was.
+- **Nachfragen:** Du kannst im selben Chat weiterfragen („Und wann ist die Kündigungsfrist?“). Für jede Frage sucht Ablago neue Stellen. **Neuer Chat** fängt von vorn an.
+- **Nichts wird gespeichert.** Der Chat bleibt nur in diesem Browser-Fenster und ist beim Neuladen weg. Im Protokoll von Ablago steht nur, *dass* gefragt wurde – nicht was.
 
 Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden – prüfe Wichtiges in den Quellen. Die Antwort ist nur Text: Sie ändert nichts in deiner Ablage. Wohin die Ausschnitte gehen (eigener Rechner im Heimnetz oder ein Anbieter), weiß dein Administrator.
 
@@ -46,7 +46,7 @@ Darunter stehen die **zuletzt geöffneten** Mappen – die letzten fünf, die du
 
 ## Wenn die Ablage noch leer ist
 
-In einem neuen DMS gibt es noch nichts zu zählen. Dann zeigt die Startseite drei Einstiege:
+In einem neuen Ablago gibt es noch nichts zu zählen. Dann zeigt die Startseite drei Einstiege:
 
 - **Erste Post ablegen** – Datei wählen oder am Handy fotografieren; daraus wird eine [Post](post.md).
 - **Paket Haushalt installieren** – nur für Administratoren: fertige Mappentypen für Konten, Verträge, Versicherungen und mehr.

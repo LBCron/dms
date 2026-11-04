@@ -41,7 +41,7 @@ export function lasttestAus(env: Record<string, string | undefined>): LasttestEi
   const dauer = d && /^\d+$/.test(d) && Number(d) >= 1 ? Number(d) : null;
   const dauerFehler = d && dauer === null ? `DMS_LASTTEST_DAUER „${d}“ ist keine Zahl von Sekunden und wird ignoriert.` : null;
   if (!roh || ['aus', '0', 'nein', 'false', 'off'].includes(roh)) return { wahl: null, dauer: null, fehler: null };
-  if (!(LASTTEST_WAHL as readonly string[]).includes(roh)) return { wahl: null, dauer: null, fehler: `DMS_LASTTEST „${env.DMS_LASTTEST}“ ist keine Stufe (klein, mittel, gross oder alle) – das DMS startet normal.` };
+  if (!(LASTTEST_WAHL as readonly string[]).includes(roh)) return { wahl: null, dauer: null, fehler: `DMS_LASTTEST „${env.DMS_LASTTEST}“ ist keine Stufe (klein, mittel, gross oder alle) – Ablago startet normal.` };
   return { wahl: roh as LasttestWahl, dauer, fehler: dauerFehler };
 }
 
@@ -188,7 +188,7 @@ export class Lasttestmodus {
   private starteSkript(): void {
     const args = [this.o.wahl, '--ziel', this.o.ziel, ...(this.o.dauer ? ['--dauer', String(this.o.dauer)] : [])];
     const starte = this.o.starte ?? ((skript, a, env) => fork(skript, a, { env, stdio: ['ignore', 'inherit', 'pipe', 'ipc'] }));
-    log.warn(`Lasttest-Modus: Stufe ${this.o.wahl} startet. Das DMS ist keine Ablage – Fortschritt und Ergebnis im Browser (Port ${this.o.port}).`);
+    log.warn(`Lasttest-Modus: Stufe ${this.o.wahl} startet. Ablago ist keine Ablage – Fortschritt und Ergebnis im Browser (Port ${this.o.port}).`);
     const k = starte(this.o.skript, args, this.o.env);
     this.kind = k;
     k.on('message', (m: Meldung) => { try { this.melde(m); } catch { /* unbekannte Meldung */ } });
@@ -255,12 +255,12 @@ export class Lasttestmodus {
       await this.merkeBeendet();
       // In die Logs des Containers, mit Gerät und Speicher – falls die Seite schon zu ist.
       if (this.stand.ergebnis) process.stdout.write(`\nLasttest beendet. Ergebnis zum Kopieren:\n\n${this.block()}\n\n`);
-      log.warn('Lasttest-Modus: Test beendet – das DMS fährt herunter.');
+      log.warn('Lasttest-Modus: Test beendet – Ablago fährt herunter.');
       // Erst antworten, dann beenden.
       setTimeout(() => { void this.stop().then(() => this.o.beenden()); }, 300).unref?.();
       return { ok: true };
     });
-    app.all('/api/*', async (_req, reply) => reply.code(503).send({ fehler: 'Lasttest-Modus: Dieses DMS misst gerade und ist keine Ablage. Fortschritt und Ergebnis stehen auf der Startseite.' }));
+    app.all('/api/*', async (_req, reply) => reply.code(503).send({ fehler: 'Lasttest-Modus: Diese Installation misst gerade und ist keine Ablage. Fortschritt und Ergebnis stehen auf der Startseite.' }));
 
     if (this.o.webDir && existsSync(this.o.webDir)) {
       await app.register(fastifyStatic, { root: this.o.webDir, wildcard: false });

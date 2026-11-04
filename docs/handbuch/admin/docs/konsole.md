@@ -1,6 +1,6 @@
 # Konsole: Befehl `dms`
 
-Im Container des DMS gibt es den Befehl `dms`. Damit erledigst du Notfälle und Routinearbeiten ohne Browser – etwa wenn du dich ausgesperrt hast oder etwas per Skript tun willst.
+Im Container von Ablago gibt es den Befehl `dms`. Damit erledigst du Notfälle und Routinearbeiten ohne Browser – etwa wenn du dich ausgesperrt hast oder etwas per Skript tun willst.
 
 Am einfachsten rufst du ihn im Ordner der Compose-Datei über den Namen des Dienstes auf:
 
@@ -9,7 +9,7 @@ docker compose exec app dms hilfe     # zwei Container (Dienst „app“)
 docker compose exec dms dms hilfe     # dms-komplett (Dienst „dms“)
 ```
 
-Mit `docker exec` brauchst du den Namen des Containers. Docker setzt ihn aus dem Namen des Projekts und des Dienstes zusammen, z. B. `dms-app-1` (zwei Container) oder `dms-dms-1` (dms-komplett). Welche Namen es gibt, zeigt `docker ps`. Nimm den Container des DMS, nicht den der Datenbank:
+Mit `docker exec` brauchst du den Namen des Containers. Docker setzt ihn aus dem Namen des Projekts und des Dienstes zusammen, z. B. `dms-app-1` (zwei Container) oder `dms-dms-1` (dms-komplett). Welche Namen es gibt, zeigt `docker ps`. Nimm den Container von Ablago, nicht den der Datenbank:
 
 ```sh
 docker exec -it dms-app-1 dms hilfe
@@ -19,11 +19,11 @@ In der Docker-Oberfläche des NAS (Synology Container Manager, QNAP Container St
 
 ## Wer darf das?
 
-Wer Befehle im Container ausführen darf, darf auch `dms` – wie ein Administrator. Der Befehl spricht mit dem **laufenden DMS**, nicht direkt mit der Datenbank; Sperren, Sitzungen und Protokoll bleiben so stimmig. Jede Aktion steht im [Protokoll](fehlersuche.md#protokoll) mit dem Vermerk **(Konsole)**.
+Wer Befehle im Container ausführen darf, darf auch `dms` – wie ein Administrator. Der Befehl spricht mit dem **laufenden Ablago**, nicht direkt mit der Datenbank; Sperren, Sitzungen und Protokoll bleiben so stimmig. Jede Aktion steht im [Protokoll](fehlersuche.md#protokoll) mit dem Vermerk **(Konsole)**.
 
 `dms` handelt als der älteste aktive Administrator. Mit `--als <email>` wählst du einen anderen.
 
-Technisch legt das DMS beim Start eine Datei `/tmp/dms-konsole.json` mit einem zufälligen Schlüssel an, lesbar nur im Container. Einen anderen Ort legt die Umgebungsvariable `DMS_KONSOLE_DATEI` fest; sie muss dann für das DMS und den Befehl `dms` gleich sein. Den Schlüssel nimmt das DMS nur über die Adresse `127.0.0.1` an – über den veröffentlichten Port oder einen Reverse-Proxy funktioniert er nicht.
+Technisch legt Ablago beim Start eine Datei `/tmp/dms-konsole.json` mit einem zufälligen Schlüssel an, lesbar nur im Container. Einen anderen Ort legt die Umgebungsvariable `DMS_KONSOLE_DATEI` fest; sie muss dann für Ablago und den Befehl `dms` gleich sein. Den Schlüssel nimmt Ablago nur über die Adresse `127.0.0.1` an – über den veröffentlichten Port oder einen Reverse-Proxy funktioniert er nicht.
 
 Der Befehl `dms` funktioniert auch im [Wartungsmodus](wartungsmodus.md). So beendest du ihn mit `dms wartung aus`, auch wenn die Oberfläche gesperrt ist.
 
@@ -80,10 +80,10 @@ Welche Pfade es gibt, zeigt der Netzwerk-Reiter der Entwicklerwerkzeuge im Brows
 
 - `--json` gibt jede Antwort als JSON aus.
 - `--ja` beantwortet Rückfragen (z. B. bei `abmelden --alle`); ohne Terminal (`docker exec` ohne `-it`) ist es Pflicht.
-- Rückgabewert: `0` erledigt, `1` Fehler, `2` falscher Aufruf, `3` DMS läuft nicht oder ist im Einrichtungsmodus, `4` Zugang abgelehnt, `130` Eingabe abgebrochen (z. B. mit Strg+C bei der Abfrage des Passworts).
+- Rückgabewert: `0` erledigt, `1` Fehler, `2` falscher Aufruf, `3` Ablago läuft nicht oder ist im Einrichtungsmodus, `4` Zugang abgelehnt, `130` Eingabe abgebrochen (z. B. mit Strg+C bei der Abfrage des Passworts).
 
 ## Meldungen
 
-- **„Das DMS läuft nicht“** – der Server startet gerade oder ist abgestürzt; siehe Protokoll des Containers.
-- **„Das DMS läuft im Einrichtungsmodus“** – es ist noch keine Datenbank angebunden. Richte das DMS zuerst im Browser ein.
+- **„Ablago läuft nicht“** – der Server startet gerade oder ist abgestürzt; siehe Protokoll des Containers.
+- **„Ablago läuft im Einrichtungsmodus“** – es ist noch keine Datenbank angebunden. Richte Ablago zuerst im Browser ein.
 - **„Keine Berechtigung für /tmp/dms-konsole.json“** – `docker exec` mit `--user` aufgerufen; ohne `--user` aufrufen.

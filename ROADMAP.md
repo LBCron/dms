@@ -1,6 +1,6 @@
 # Fahrplan (Roadmap)
 
-Wie wir entscheiden, was als Nächstes ins DMS kommt – und wo du den aktuellen Stand siehst.
+Wie wir entscheiden, was als Nächstes in Ablago kommt – und wo du den aktuellen Stand siehst.
 
 **Der aktuelle Fahrplan steht in den [Meilensteinen](https://github.com/motom001/dms/milestones?direction=asc&sort=title&state=open)** (für Pakete im Katalog zusätzlich in den [Meilensteinen von dms-registry](https://github.com/motom001/dms-registry/milestones?direction=asc&sort=title&state=open)). Diese Seite erklärt nur, wie man sie liest; sie wird nicht bei jeder Änderung angepasst.
 
@@ -22,7 +22,7 @@ Zusammengehörige Wünsche werden zu einer **Etappe** gebündelt – zum Beispie
 - Fehler, die beim Ausprobieren auffallen, werden meist als kleine Korrektur (Patch-Version) zwischendurch behoben.
 - Nach jeder Etappe schauen wir neu hin; die Reihenfolge kann sich dabei ändern.
 
-> **Etappe oder Paket?** Ein **Paket** ist im DMS etwas, das du installierst (Mappentypen, Ansichten, Beispiele aus dem [Paketkatalog](https://github.com/motom001/dms-registry)). Eine **Etappe** ist ein Abschnitt im Fahrplan.
+> **Etappe oder Paket?** Ein **Paket** ist in Ablago etwas, das du installierst (Mappentypen, Ansichten, Beispiele aus dem [Paketkatalog](https://github.com/motom001/dms-registry)). Eine **Etappe** ist ein Abschnitt im Fahrplan.
 
 ## Wünsche einbringen
 

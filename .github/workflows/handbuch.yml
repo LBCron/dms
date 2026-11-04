@@ -177,7 +177,7 @@ jobs:
           rm -f docs/handbuch/benutzer/docs/bilder/openapi.json
           # Alle Handbücher (#179, #180): Benutzer, Administrator, Installieren, Entwickler.
           for h in benutzer admin installieren entwickler; do
-            SITE_URL="https://motom001.github.io/dms/$h/$ZIEL/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.yml" -d "$GITHUB_WORKSPACE/site/$h"
+            SITE_URL="https://help.ablago.app/$h/$ZIEL/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.yml" -d "$GITHUB_WORKSPACE/site/$h"
           done
 
       # Weiche Zeitangaben (#303): Liste zum Durchsehen in der Zusammenfassung des Laufs, bricht nie ab.

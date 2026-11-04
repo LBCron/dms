@@ -26,4 +26,4 @@ jobs:
           WER: ${{ github.event.sender.login }}
         run: |
           gh api -X DELETE "repos/${{ github.repository }}/issues/$NUMMER/labels/freigegeben" || true
-          gh api "repos/${{ github.repository }}/issues/$NUMMER/comments" -f body="Das Label \`freigegeben\` vergibt nur der Maintainer (@${{ github.repository_owner }}) – ich habe es wieder entfernt (gesetzt von @$WER). Mehr dazu im [Entwicklerhandbuch](https://motom001.github.io/dms/entwickler/aktuell/)."
+          gh api "repos/${{ github.repository }}/issues/$NUMMER/comments" -f body="Das Label \`freigegeben\` vergibt nur der Maintainer (@${{ github.repository_owner }}) – ich habe es wieder entfernt (gesetzt von @$WER). Mehr dazu im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/)."

@@ -54,9 +54,9 @@ function lauf(d: ArbeiterDaten) {
   const frage = (a: Hostanfrage): Hostantwort => {
     Atomics.store(sig, 0, 0);
     d.port.postMessage({ art: 'frage', anfrage: a });
-    if (Atomics.wait(sig, 0, 0, d.warten) === 'timed-out') throw new Error('Keine Antwort vom DMS.');
+    if (Atomics.wait(sig, 0, 0, d.warten) === 'timed-out') throw new Error('Keine Antwort von Ablago.');
     const m = receiveMessageOnPort(d.port);
-    if (!m) throw new Error('Antwort des DMS fehlt.');
+    if (!m) throw new Error('Antwort von Ablago fehlt.');
     return m.message as Hostantwort;
   };
   const merke = (r: Hostantwort) => { antwort = r.body; return r.status; };

@@ -213,7 +213,7 @@ export class Eingangsordner {
     // Doppelt (#333): auf Wunsch gar nicht erst als Post übernehmen.
     if (e.doppelteUeberspringen && (await this.d.dienst.dokumenteMitInhalt(sha256)).length) {
       await this.nachher(pfad, rel, e);
-      await this.merke('uebernommen', { datei: anzeige, zeit: new Date().toISOString(), grund: 'doppelt – liegt schon im DMS, übersprungen' });
+      await this.merke('uebernommen', { datei: anzeige, zeit: new Date().toISOString(), grund: 'doppelt – liegt schon in Ablago, übersprungen' });
       log.info('Eingangsordner: doppelte Datei übersprungen', { datei: anzeige });
       return true;
     }

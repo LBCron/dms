@@ -3,7 +3,7 @@
 !!! info "Geprüft: Vorlage automatisch, Gerät noch nicht"
     Die Vorlage auf dieser Seite startet bei jeder Änderung probehalber auf den Rechnern von GitHub (Linux mit Docker, amd64). Von einem echten Gerät gibt es noch keine Meldung. Was das heißt, steht unter [Geprüfte Plattformen](plattformen.md).
 
-So richtest du das DMS auf einem QNAP-NAS mit QTS 5 oder QuTS hero und **Container Station 3** ein, ohne Kommandozeile.
+So richtest du Ablago auf einem QNAP-NAS mit QTS 5 oder QuTS hero und **Container Station 3** ein, ohne Kommandozeile.
 
 !!! note "Alternative: ein Container"
     Empfohlen ist das Projekt mit zwei Containern unten. Zum schnellen Ausprobieren geht auch **ein Container** aus dem Image `ghcr.io/motom001/dms-komplett:main` – ohne Projekt und Passwort, siehe [Ein Container: dms-komplett](komplett.md#in-der-oberflache-eines-nas) und [Ein oder zwei Container?](index.md#ein-oder-zwei-container).
@@ -17,7 +17,7 @@ Im **App Center** die **Container Station** installieren und einmal öffnen. Dab
 In der **File Station** im Ordner `Container` einen Ordner `dms` anlegen. Darin vier Ordner: `postgres`, `files`, `geheim` und `sicherung`.
 
 !!! tip "Eingangsordner für den Scanner"
-    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://motom001.github.io/dms/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
+    Leg auch einen fünften Ordner `eingang` daneben an. Die Vorlage bindet ihn ein, und manche NAS brechen beim Start ab, wenn ein eingebundener Ordner fehlt. Er wird zum [Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/): Jede Datei, die dein Scanner oder das NAS dort ablegt, wird neue Post. Gib ihn im NAS für den Scanner frei. Brauchst du keinen Scanner, bleibt er einfach leer.
 
 ## 3. Anwendung erstellen
 
@@ -45,7 +45,7 @@ In der **File Station** im Ordner `Container` einen Ordner `dms` anlegen. Darin 
 
 ## Sicherung außer Haus
 
-Die Sicherungen des DMS (**Werkbank → Sicherung**) landen in `Container/dms/sicherung`. Mit **Hybrid Backup Sync** kopierst du den Ordner auf eine USB-Platte, ein zweites NAS oder in einen Cloudspeicher.
+Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `Container/dms/sicherung`. Mit **Hybrid Backup Sync** kopierst du den Ordner auf eine USB-Platte, ein zweites NAS oder in einen Cloudspeicher.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

@@ -117,8 +117,8 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
 
   // 1. Angaben
   if (!PAKET_ID.test(id)) probleme.push('Id: nur Kleinbuchstaben, Ziffern und _, beginnt mit einem Buchstaben, 2 bis 20 Zeichen (z. B. vertraege_familie).');
-  else if (id === 'dms') probleme.push('Id: „dms“ ist für Verweise auf Mappentypen des DMS reserviert.');
-  else if (d.pakete.some((p) => p.id === id)) probleme.push(`Id: Das Paket „${id}“ ist in diesem DMS installiert. Wähle eine andere Id – ein eigenes Paket darf kein installiertes überdecken.`);
+  else if (id === 'dms') probleme.push('Id: „dms“ ist für Verweise auf Mappentypen von Ablago reserviert.');
+  else if (d.pakete.some((p) => p.id === id)) probleme.push(`Id: Das Paket „${id}“ ist in dieser Installation installiert. Wähle eine andere Id – ein eigenes Paket darf kein installiertes überdecken.`);
   const name = e.name.trim();
   if (name.length < NAME_LAENGE.min || name.length > NAME_LAENGE.max) probleme.push(`Name: ${NAME_LAENGE.min} bis ${NAME_LAENGE.max} Zeichen.`);
   if (!VERSION.test(e.version.trim())) probleme.push('Version: drei Zahlen, z. B. 1.0.0.');
@@ -130,7 +130,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   if (!autor.github) hinweis('Ohne GitHub-Namen lässt sich das Paket installieren, aber nicht in die Registry einreichen (dort ist er Pflicht).');
   if (!(LIZENZEN as readonly string[]).includes(e.lizenz)) probleme.push(`Lizenz: bitte eine aus der Liste der Registry wählen (${LIZENZEN.join(', ')}).`);
   const dms = e.dms.trim();
-  if (!BEREICH.test(dms)) probleme.push('DMS-Version: z. B. >=0.86.0.');
+  if (!BEREICH.test(dms)) probleme.push('Ablago-Version: z. B. >=0.86.0.');
   const version = e.version.trim();
   if (d.entwurf && VERSION.test(version) && vergleicheVersion(version, d.entwurf.version) <= 0) {
     hinweis(`Version ${d.entwurf.version} hast du schon exportiert. Damit der Empfänger aktualisieren kann, braucht es eine höhere Version (Vorschlag ${naechsteVersion(d.entwurf.version)}).`);
@@ -142,7 +142,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     const t = typById.get(tid);
     if (!t) { probleme.push('Ein gewählter Mappentyp existiert nicht mehr. Bitte die Auswahl prüfen.'); continue; }
     const h = typPaket.get(t.id);
-    if (d.dmsTypen.has(t.id) || t.system) hinweis(`„${t.name}“ bringt jedes DMS selbst mit und kommt nicht ins Paket.`);
+    if (d.dmsTypen.has(t.id) || t.system) hinweis(`„${t.name}“ bringt jede Installation von Ablago selbst mit und kommt nicht ins Paket.`);
     else if (h) ausPaket('Der Mappentyp', t.name, h.p, t);
     else eigene.push(t);
   }
@@ -184,11 +184,11 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
       if (frist) x.frist = ohneLeere(frist as unknown as Record<string, unknown>);
       if (standard !== undefined && standard !== null && standard !== '') {
         if (kreisImStandard(standard)) hinweis(`${wo(`Feld „${f.label}“`)}: Der Nummernkreis gehört nicht zum Paketformat. Das Feld kommt ohne Nummernkreis ins Paket; richte ihn beim Empfänger unter Werkbank → Nummernkreise ein und trage ihn am Feld ein.`);
-        else if (mitId(standard)) hinweis(`${wo(`Feld „${f.label}“`)}: Der Standardwert zeigt auf eine Mappe dieses DMS und kommt nicht ins Paket.`);
+        else if (mitId(standard)) hinweis(`${wo(`Feld „${f.label}“`)}: Der Standardwert zeigt auf eine Mappe dieser Installation und kommt nicht ins Paket.`);
         else x.standard = standard;
       }
       if (auswahlFilter?.length) {
-        if (mitId(auswahlFilter)) hinweis(`${wo(`Feld „${f.label}“`)}: Der Auswahlfilter nennt Mappen dieses DMS und kommt nicht ins Paket.`);
+        if (mitId(auswahlFilter)) hinweis(`${wo(`Feld „${f.label}“`)}: Der Auswahlfilter nennt Mappen dieser Installation und kommt nicht ins Paket.`);
         else x.auswahlFilter = auswahlFilter;
       }
       if (x.ziel === undefined) delete x.ziel;
@@ -242,7 +242,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     const bedingungen = s.bedingungen.flatMap((b: Bedingung) => {
       if (b.art !== 'feld') { hinweis(`Ansicht „${s.name}“: Bedingungen auf Anzahlen, Favoriten oder Fristen kennt das Paketformat nicht; sie fehlen im Paket.`); return []; }
       const w = (b.op === 'zwischen' || b.op === 'ausserhalb') && b.bis ? [fest(b.wert), fest(b.bis)] : fest(b.wert);
-      if (mitId(w)) { hinweis(`Ansicht „${s.name}“: Eine Bedingung nennt Mappen oder Benutzer dieses DMS und kommt nicht ins Paket.`); return []; }
+      if (mitId(w)) { hinweis(`Ansicht „${s.name}“: Eine Bedingung nennt Mappen oder Benutzer dieser Installation und kommt nicht ins Paket.`); return []; }
       return [w === undefined ? { feld: b.feld, operator: b.op } : { feld: b.feld, operator: b.op, wert: w }];
     });
     if (s.trefferliste && s.trefferliste !== 'standard') hinweis(`Ansicht „${s.name}“: zeigt im Paket die Standard-Trefferliste.`);
@@ -293,7 +293,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   if (!paketTypen.length && !paketSichten.length) probleme.push('Wähle mindestens einen eigenen Mappentyp oder eine eigene Ansicht – Typen und Ansichten aus Paketen kommen nur als Abhängigkeit mit.');
   const noetigAb = [dmsVerweise ? DMS_VERWEISE_AB : null, beispielVerweise ? BEISPIELVERWEISE_AB : null].filter((x): x is string => !!x).sort(vergleicheVersion).pop();
   const unten = untergrenze(dms);
-  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`DMS-Version: Das Paket nutzt ${dmsVerweise ? 'Verweise auf Mappentypen des DMS' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
+  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${dmsVerweise ? 'Verweise auf Mappentypen von Ablago' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
   const fehlt = fehlend.filter((f) => f.noetig);
   if (fehlt.length) probleme.push(`Es wird auf Mappentypen verwiesen, die nicht gewählt sind: ${fehlt.map((f) => `„${f.name}“`).join(', ')}. Nimm sie mit auf oder entferne den Verweis.`);
 
@@ -312,7 +312,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   };
   const datum = d.jetzt.toISOString().slice(0, 10);
   const text = aenderungsText(e, d.entwurf);
-  const verlauf = (d.entwurf ? [{ version: d.entwurf.version, datum: d.entwurf.exportiert.slice(0, 10), text: d.entwurf.aenderungen || 'Aus dem DMS exportiert.' }, ...d.entwurf.verlauf] : [])
+  const verlauf = (d.entwurf ? [{ version: d.entwurf.version, datum: d.entwurf.exportiert.slice(0, 10), text: d.entwurf.aenderungen || 'Aus Ablago exportiert.' }, ...d.entwurf.verlauf] : [])
     .filter((v) => vergleicheVersion(v.version, version) < 0);
   const changelog = ['# Änderungen', '', `## ${version}`, '', ...text.split('\n').map((z) => (z.trim().startsWith('-') ? z : `- ${z}`)).filter((z) => z.trim() !== '-'),
     ...verlauf.flatMap((v) => ['', `## ${v.version}`, '', ...v.text.split('\n').map((z) => (z.trim().startsWith('-') ? z : `- ${z}`)).filter((z) => z.trim() !== '-')]), ''].join('\n');
@@ -322,15 +322,15 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     ...(paketTypen.length ? ['| Mappentyp | Felder |', '| --- | --- |', ...paketTypen.map((t) => `| ${zelle(String(t.name))} | ${zelle((t.felder as Array<{ label: string }>).map((f) => f.label).join(', ') || '–')} |`), ''] : []),
     ...(sortiert.length ? [`**Ansichten:** ${sortiert.map((s) => (s.eltern ? `${sortiert.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ')}`, ''] : []),
     ...(beispiele.length ? [`**Beispiele:** ${beispiele.length} Beispiel-Mappen (${[...new Set(beispiele.map((b) => typName.get(b.typ)))].join(', ')}), auf Wunsch bei der Installation.`, ''] : []),
-    '## Voraussetzungen', '', `- DMS ${dms}`,
+    '## Voraussetzungen', '', `- Ablago ${dms}`,
     ...(Object.keys(abh).length ? Object.entries(abh).map(([k, v]) => `- Paket \`${k}\` ${v}`) : ['- keine weiteren Pakete']), '',
     '## Rechte und Netzwerkzugriff', '', 'Dieses Paket enthält keinen Code. Es legt nur Mappentypen und Ansichten an.', '',
-    '## Herkunft', '', `Erstellt mit „Paket erstellen“ im DMS (Werkbank → Pakete) am ${datum}${autor.name ? ` von ${autor.name}` : ''}.`, '',
+    '## Herkunft', '', `Erstellt mit „Paket erstellen“ in Ablago (Werkbank → Pakete) am ${datum}${autor.name ? ` von ${autor.name}` : ''}.`, '',
   ].join('\n');
   const lizenz = (LIZENZTEXTE[e.lizenz] ?? '').replace('{jahr}', String(d.jetzt.getFullYear())).replace('{name}', autor.name);
   const erwartung = { mappentypen: inhalt.typen.map((t) => t.schluessel), sichten: inhalt.sichten.map((s) => s.schluessel), beispiele: beispiele.length };
   const dateien = [
-    { name: 'manifest.yaml', daten: Buffer.from(`# Erstellt mit „Paket erstellen“ im DMS. Format: https://github.com/motom001/dms-registry\n${stringify(manifest, { version: '1.1', lineWidth: 0 })}`) },
+    { name: 'manifest.yaml', daten: Buffer.from(`# Erstellt mit „Paket erstellen“ in Ablago. Format: https://github.com/motom001/dms-registry\n${stringify(manifest, { version: '1.1', lineWidth: 0 })}`) },
     { name: 'inhalt/mappentypen.yaml', daten: y(paketTypen) },
     { name: 'inhalt/sichten.yaml', daten: y(sortiert) },
     ...(beispiele.length ? [{ name: 'inhalt/beispiele.yaml', daten: y(beispiele) }] : []),
@@ -343,7 +343,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
 }
 
 /** Eintrag im CHANGELOG für diese Version; ohne Angabe ein Standardtext. */
-const aenderungsText = (e: PaketErstellenEingabe, entwurf: PaketEntwurf | null) => e.aenderungen.trim() || (entwurf ? 'Neue Version aus dem DMS exportiert.' : 'Erste Fassung.');
+const aenderungsText = (e: PaketErstellenEingabe, entwurf: PaketEntwurf | null) => e.aenderungen.trim() || (entwurf ? 'Neue Version aus Ablago exportiert.' : 'Erste Fassung.');
 
 /** Eingabe aus der Anfrage vereinheitlichen. */
 export function liesEingabe(x: unknown): PaketErstellenEingabe {
@@ -452,7 +452,7 @@ export class Paketerstellung {
     const entwurf: PaketEntwurf = {
       ...e, id, version: e.version.trim(), aenderungen: aenderungsText(e, daten.entwurf),
       schluessel: { ...(daten.entwurf?.schluessel ?? {}), ...bau.schluessel },
-      verlauf: daten.entwurf ? [{ version: daten.entwurf.version, datum: daten.entwurf.exportiert.slice(0, 10), text: daten.entwurf.aenderungen || 'Aus dem DMS exportiert.' }, ...daten.entwurf.verlauf].filter((v) => vergleicheVersion(v.version, e.version.trim()) < 0).slice(0, 50) : [],
+      verlauf: daten.entwurf ? [{ version: daten.entwurf.version, datum: daten.entwurf.exportiert.slice(0, 10), text: daten.entwurf.aenderungen || 'Aus Ablago exportiert.' }, ...daten.entwurf.verlauf].filter((v) => vergleicheVersion(v.version, e.version.trim()) < 0).slice(0, 50) : [],
       exportiert: daten.jetzt.toISOString(), von: von.email,
     };
     const rest = (await this.d.paketEntwuerfe()).filter((x) => x.id !== id);

@@ -6,7 +6,7 @@
 ![Images für amd64 und arm64](https://img.shields.io/badge/Image-amd64%20%7C%20arm64-2b7656?logo=docker&logoColor=white)
 [![Lizenz Apache-2.0](https://img.shields.io/github/license/motom001/dms?label=Lizenz)](https://github.com/motom001/dms/blob/main/LICENSE)
 
-Das DMS läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder jedem Rechner mit Docker. Deine Unterlagen bleiben damit bei dir. Ohne eigenes Gerät geht es auch [bei einem Anbieter](anbieter.md). Welcher Weg der richtige ist, hängt davon ab, was du schon hast.
+Ablago läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder jedem Rechner mit Docker. Deine Unterlagen bleiben damit bei dir. Ohne eigenes Gerät geht es auch [bei einem Anbieter](anbieter.md). Welcher Weg der richtige ist, hängt davon ab, was du schon hast.
 
 ## Was hast du?
 
@@ -21,53 +21,53 @@ Das DMS läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder je
 | **TrueNAS** | [Apps → Custom App](truenas.md) | ☆☆ gering: Datensatz anlegen, Vorlage einfügen |
 | **Unraid** | [Compose Manager](unraid.md) | ☆☆ gering: Plugin installieren, Vorlage einfügen |
 | **PC oder Mini-PC** (Intel, AMD) | [Linux mit Docker](linux.md) | ☆☆☆ mittel: Linux installieren, ein paar Befehle |
-| **Raspberry Pi** 4 oder 5 | [Schritt für Schritt für Einsteiger](raspberry-pi.md): Raspberry Pi OS, Docker, DMS mit einem Befehl | ☆☆ gering bis ☆☆☆ mittel: jeder Klick erklärt, ein paar Befehle zum Kopieren |
+| **Raspberry Pi** 4 oder 5 | [Schritt für Schritt für Einsteiger](raspberry-pi.md): Raspberry Pi OS, Docker, Ablago mit einem Befehl | ☆☆ gering bis ☆☆☆ mittel: jeder Klick erklärt, ein paar Befehle zum Kopieren |
 | **Windows-PC oder Windows Server** | [Docker Desktop oder Hyper-V](windows.md) | ☆☆☆ mittel: Docker Desktop installieren oder Linux-VM anlegen |
 | **Proxmox**, XCP-ng, ESXi … | [Linux-VM mit Docker](proxmox.md) | ☆☆☆ mittel: VM anlegen, dann wie beim PC |
 | **Alternative: ein Container** (Ausprobieren, nur ein Container möglich) | [dms-komplett](komplett.md) | ☆☆ gering: ein Image, vier Ordner, kein Passwort – siehe [Ein oder zwei Container?](#ein-oder-zwei-container) |
 | **anderer Server mit Docker** | [Docker Compose](docker.md) | ☆☆☆ mittel: Kommandozeile oder eigene Docker-Oberfläche |
 | **kein eigenes Gerät** | [bei einem Anbieter](anbieter.md): fertige App, Docker-Plattform oder eigener vServer | ☆ bis ☆☆☆ je nach Weg – mit Checkliste, worauf du beim Anbieter achtest |
 
-Alle Wege brauchen ein Gerät mit **amd64** (Intel, AMD) oder **arm64** (z. B. Raspberry Pi 4/5) und etwa 1 GB freien Arbeitsspeicher. Dazu kommt Platz für deine Dokumente. Auf welchen Geräten das Projekt das DMS selbst prüft und was andere gemeldet haben, steht unter [Geprüfte Plattformen](plattformen.md).
+Alle Wege brauchen ein Gerät mit **amd64** (Intel, AMD) oder **arm64** (z. B. Raspberry Pi 4/5) und etwa 1 GB freien Arbeitsspeicher. Dazu kommt Platz für deine Dokumente. Auf welchen Geräten das Projekt Ablago selbst prüft und was andere gemeldet haben, steht unter [Geprüfte Plattformen](plattformen.md).
 
 !!! tip "Du hast noch nichts davon?"
-    Am einfachsten ist ein kleiner Heimserver mit **umbrelOS** oder **ZimaOS**, z. B. ein Mini-PC oder ein ZimaBoard. Dort installierst du das DMS wie eine App auf dem Handy. Ein NAS von Synology, UGREEN oder QNAP geht ebenso und kümmert sich zusätzlich um deine Festplatten. Willst du gar kein Gerät betreiben, läuft das DMS auch [bei einem Anbieter](anbieter.md) – worauf du dann achtest, steht dort.
+    Am einfachsten ist ein kleiner Heimserver mit **umbrelOS** oder **ZimaOS**, z. B. ein Mini-PC oder ein ZimaBoard. Dort installierst du Ablago wie eine App auf dem Handy. Ein NAS von Synology, UGREEN oder QNAP geht ebenso und kümmert sich zusätzlich um deine Festplatten. Willst du gar kein Gerät betreiben, läuft Ablago auch [bei einem Anbieter](anbieter.md) – worauf du dann achtest, steht dort.
 
 ## Ein oder zwei Container?
 
-Das DMS gibt es in zwei Varianten. **Wir empfehlen zwei Container** – so laufen auch alle Anleitungen und App-Stores hier.
+Ablago gibt es in zwei Varianten. **Wir empfehlen zwei Container** – so laufen auch alle Anleitungen und App-Stores hier.
 
 | | **Zwei Container** (empfohlen): `dms` + `postgres:17` | **Ein Container**: `dms-komplett` |
 | --- | --- | --- |
 | Einrichten | Compose-Projekt bzw. App-Store, ein Passwort für die Datenbank | ein Image, vier Ordner, kein Passwort |
-| Updates von PostgreSQL | sofort, unabhängig vom DMS: `postgres:17` neu ziehen | mit `:main` wöchentlich neu gebaut, mit fester Version erst mit dem nächsten Release |
-| Betrieb | DMS und Datenbank einzeln neu starten, überwachen, mit Standardwerkzeugen sichern | alles zusammen; Datenbank von außen nicht erreichbar (gewollt) |
+| Updates von PostgreSQL | sofort, unabhängig von Ablago: `postgres:17` neu ziehen | mit `:main` wöchentlich neu gebaut, mit fester Version erst mit dem nächsten Release |
+| Betrieb | Ablago und Datenbank einzeln neu starten, überwachen, mit Standardwerkzeugen sichern | alles zusammen; Datenbank von außen nicht erreichbar (gewollt) |
 | Neue Hauptversion von PostgreSQL | planbar, im eigenen Takt | nur über Sicherung und Wiederherstellung |
 | App-Stores (umbrelOS, ZimaOS, CasaOS) | ja | nein |
 | Gut für | den Dauerbetrieb | Ausprobieren und Testen, Oberflächen, die nur „Container aus Image erstellen“ können, Anbieter, die nur einen Container erlauben |
 
-**Warum zwei Container?** Ein Dienst je Container ist der übliche Docker-Weg. Die Datenbank kommt aus dem offiziellen PostgreSQL-Image und bekommt Sicherheits-Updates, sobald es sie gibt – unabhängig davon, wann das DMS ein neues Release hat. Fällt einer der beiden aus, lässt er sich allein neu starten und untersuchen. Der Preis ist ein Passwort und ein Compose-Projekt; die Vorlagen hier halten beides so klein wie möglich.
+**Warum zwei Container?** Ein Dienst je Container ist der übliche Docker-Weg. Die Datenbank kommt aus dem offiziellen PostgreSQL-Image und bekommt Sicherheits-Updates, sobald es sie gibt – unabhängig davon, wann Ablago ein neues Release hat. Fällt einer der beiden aus, lässt er sich allein neu starten und untersuchen. Der Preis ist ein Passwort und ein Compose-Projekt; die Vorlagen hier halten beides so klein wie möglich.
 
-**Wann ein Container?** Wenn es schnell gehen soll (ausprobieren, testen) oder die Umgebung nur einen Container zulässt. Ein Wechsel zwischen beiden Varianten geht jederzeit über Sicherung und Wiederherstellung, siehe [Wachsen und umziehen](https://motom001.github.io/dms/admin/aktuell/wachsen/).
+**Wann ein Container?** Wenn es schnell gehen soll (ausprobieren, testen) oder die Umgebung nur einen Container zulässt. Ein Wechsel zwischen beiden Varianten geht jederzeit über Sicherung und Wiederherstellung, siehe [Wachsen und umziehen](https://help.ablago.app/admin/aktuell/wachsen/).
 
 ## Was du in jedem Fall bekommst
 
-- Das DMS und eine PostgreSQL-Datenbank – in zwei Containern oder mit [dms-komplett](komplett.md) in einem.
+- Ablago und eine PostgreSQL-Datenbank – in zwei Containern oder mit [dms-komplett](komplett.md) in einem.
 - Vier Ordner auf deinem Gerät: `files` (Dokumente), `geheim` (Schlüssel), `sicherung` (Sicherungen) und `postgres` (Datenbank).
 - Die Oberfläche im Browser, meist unter `http://<Gerät>:8080`. Bei den App-Stores ist es Port `8478`.
 
 ## Nach der Installation
 
-1. **Einrichten.** Beim ersten Aufruf führt ein Assistent durch die Einrichtung: je nach Weg Einrichtungscode und Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name des Haushalts, Administrator, erster Benutzer, Schlüssel und Notfallblatt. Die Schritte im Einzelnen beschreibt das [Administratorhandbuch](https://motom001.github.io/dms/admin/aktuell/installation/#der-einrichtungsassistent).
-2. **Sichern.** Unter **Werkbank → Sicherung** den Zeitplan einschalten und das Notfallblatt ausdrucken. Kopiere die Sicherungen ab und zu an einen anderen Ort, z. B. auf einen USB-Stick oder in einen Cloudspeicher. Fällt das Gerät aus, sind sonst auch die Sicherungen weg. Mehr unter [Sicherung](https://motom001.github.io/dms/admin/aktuell/sicherung/).
-3. **Loslegen.** Wie man mit Mappen, Dokumenten und Aufgaben arbeitet, steht im [Benutzerhandbuch](https://motom001.github.io/dms/benutzer/aktuell/).
+1. **Einrichten.** Beim ersten Aufruf führt ein Assistent durch die Einrichtung: je nach Weg Einrichtungscode und Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name des Haushalts, Administrator, erster Benutzer, Schlüssel und Notfallblatt. Die Schritte im Einzelnen beschreibt das [Administratorhandbuch](https://help.ablago.app/admin/aktuell/installation/#der-einrichtungsassistent).
+2. **Sichern.** Unter **Werkbank → Sicherung** den Zeitplan einschalten und das Notfallblatt ausdrucken. Kopiere die Sicherungen ab und zu an einen anderen Ort, z. B. auf einen USB-Stick oder in einen Cloudspeicher. Fällt das Gerät aus, sind sonst auch die Sicherungen weg. Mehr unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).
+3. **Loslegen.** Wie man mit Mappen, Dokumenten und Aufgaben arbeitet, steht im [Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/).
 
 !!! warning "Erst einrichten, dann von außen erreichbar machen"
-    Gib das DMS erst über eine Portfreigabe, einen Tunnel oder einen Reverse-Proxy nach außen frei, wenn die Einrichtung abgeschlossen ist. Wie das mit HTTPS geht, steht unter [Hinter einem Reverse-Proxy](https://motom001.github.io/dms/admin/aktuell/installation/#hinter-einem-reverse-proxy).
+    Gib Ablago erst über eine Portfreigabe, einen Tunnel oder einen Reverse-Proxy nach außen frei, wenn die Einrichtung abgeschlossen ist. Wie das mit HTTPS geht, steht unter [Hinter einem Reverse-Proxy](https://help.ablago.app/admin/aktuell/installation/#hinter-einem-reverse-proxy).
 
 ## Ein Beispiel
 
-Wie das DMS beim Entwickler im Alltag läuft – Gerät, Zugriff von unterwegs, Speicher und Sicherung, jeweils mit dem Warum –, steht unter [So läuft es beim Entwickler](beispiel.md).
+Wie Ablago beim Entwickler im Alltag läuft – Gerät, Zugriff von unterwegs, Speicher und Sicherung, jeweils mit dem Warum –, steht unter [So läuft es beim Entwickler](beispiel.md).
 
 ## Hilfe
 

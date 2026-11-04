@@ -87,7 +87,7 @@ export class Notfallzugang {
       link,
       '',
       'Steht im Link „localhost“, ersetze es durch die Adresse deines NAS, z. B. http://nas:8080.',
-      'Der Link gilt nur einmal. Diese Datei löscht das DMS nach 15 Minuten selbst.',
+      'Der Link gilt nur einmal. Diese Datei löscht Ablago nach 15 Minuten selbst.',
       'Benenne den Notfall-Admin danach in der Werkbank um oder deaktiviere ihn.',
       '',
     ].join('\n'), { mode: 0o600 });
@@ -96,8 +96,8 @@ export class Notfallzugang {
     await this.einstellungen.schreibe('notfallzugaenge', liste.slice(-20));
     log.warn('Notfallzugang angelegt (RESCUE-Datei)', { benutzer: benutzer.name, gueltigBis: ablauf.toISOString(), datei: this.datei });
     try {
-      await this.anAdmins('DMS: Notfallzugang angelegt',
-        `Auf dem NAS wurde eine RESCUE-Datei angelegt. Das DMS hat daraufhin den Administrator „${benutzer.name}“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis ${bis} Uhr.\n\n`
+      await this.anAdmins('Ablago: Notfallzugang angelegt',
+        `Auf dem NAS wurde eine RESCUE-Datei angelegt. Ablago hat daraufhin den Administrator „${benutzer.name}“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis ${bis} Uhr.\n\n`
         + 'Warst du das nicht, deaktiviere den Benutzer sofort in der Werkbank unter „Benutzer“ und prüfe, wer Zugriff auf das NAS hat.');
     } catch (e) { log.warn('Mail zum Notfallzugang nicht verschickt', { fehler: (e as Error).message }); }
     return 'angelegt';

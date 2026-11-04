@@ -91,7 +91,7 @@ const log = protokoll.modul('system');
 const ordnerPruefung = pruefeOrdner(env, pfad('../../data'));
 const { ordner } = ordnerPruefung;
 const version = env.DMS_VERSION ?? 'Entwicklung';
-log.info(`DMS startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text });
+log.info(`Ablago startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text });
 if (cfg.proxy.fehler) log.warn(cfg.proxy.fehler);
 if (cfg.einbetten.fehler) log.warn(cfg.einbetten.fehler);
 // Lasttest-Modus (#612): DMS_LASTTEST=klein|mittel|gross|alle – nur in einer eigenen Test-Installation (unten geprüft).
@@ -325,7 +325,7 @@ let appFuerPakete: Awaited<ReturnType<typeof baueApp>> | null = null;
 const paketlaeufer: Paketlaeufer = new Paketlaeufer({
   dienst, konten, schluessel: apiSchluessel,
   api: async (q) => {
-    if (!appFuerPakete) return { status: 503, kopf: {}, body: Buffer.from('DMS startet noch.') };
+    if (!appFuerPakete) return { status: 503, kopf: {}, body: Buffer.from('Ablago startet noch.') };
     const r = await appFuerPakete.inject({ method: q.methode as 'GET', url: q.pfad, headers: q.kopf, payload: q.body, remoteAddress: '127.0.0.1' });
     return { status: r.statusCode, kopf: Object.fromEntries(Object.entries(r.headers).map(([k, v]) => [k, String(v)])), body: r.rawPayload };
   },
@@ -488,7 +488,7 @@ const fristen = async () => {
 await fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 setInterval(() => void fristen().then(() => (wartung.aktiv ? 0 : aufgabenmail.pruefe()))
   .catch((e) => log.error('Fristen oder Aufgaben-Mail fehlgeschlagen', { fehler: (e as Error).message })), 5 * 60 * 1000).unref();
-if (einrichtungNoetig) log.warn(`Noch kein Benutzer vorhanden: Öffne das DMS im Browser (Port ${cfg.port}) und richte es mit dem Einrichtungscode ein.`);
+if (einrichtungNoetig) log.warn(`Noch kein Benutzer vorhanden: Öffne Ablago im Browser (Port ${cfg.port}) und richte es mit dem Einrichtungscode ein.`);
 
 appFuerPakete = app;
 await texterkennung.start();
@@ -543,11 +543,11 @@ if (lasttest.wahl) {
       intern = null;
     }
   }
-  if (lasttestAbbruch) log.error(`DMS_LASTTEST ist gesetzt, der Lasttest startet aber nicht: ${lasttestAbbruch} Das DMS läuft normal weiter – entferne die Variable.`);
+  if (lasttestAbbruch) log.error(`DMS_LASTTEST ist gesetzt, der Lasttest startet aber nicht: ${lasttestAbbruch} Ablago läuft normal weiter – entferne die Variable.`);
 }
 
 const beenden = async () => {
-  log.info('DMS wird beendet');
+  log.info('Ablago wird beendet');
   await lasttestSeite?.stop();
   if (intern) { const s = intern; await new Promise<void>((r) => { s.closeAllConnections(); s.close(() => r()); }); }
   texterkennung.stop();

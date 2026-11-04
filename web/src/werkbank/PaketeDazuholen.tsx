@@ -121,12 +121,12 @@ export function SammeldateiAnsicht({ s, datei, dms, installiert, fertig, abbrech
     <section className="blatt stapel" aria-label="Sammeldatei">
       <h2 className="h3">Sammeldatei „{datei}“</h2>
       <dl className="eigenschaften">
-        <dt>Zusammengestellt</dt><dd>{datum(s.datei.erstellt)}{s.datei.dms ? ` für DMS ${s.datei.dms}` : ''} (dieses DMS: {dms})</dd>
+        <dt>Zusammengestellt</dt><dd>{datum(s.datei.erstellt)}{s.datei.dms ? ` für Ablago ${s.datei.dms}` : ''} (dieser Installation: {dms})</dd>
         <dt>Prüfwert der Datei</dt><dd><code className="pd-pruefwert" title={s.datei.sha256}>SHA-256 {s.datei.sha256}</code></dd>
       </dl>
       <HerkunftZeile p={s.datei.pruefung} sammel />
       <div className="hinweis gut klein"><p><strong>Geprüft:</strong> Jedes Archiv hat genau die Größe und Prüfsumme aus dem Verzeichnis der Sammeldatei, jedes Paket ist gültig, und es liegt nichts anderes darin.
-        {abgeglichen ? ' Alle Prüfsummen stimmen außerdem mit dem offiziellen Katalog überein.' : ' Mit dem offiziellen Katalog konnte das DMS sie nicht abgleichen (nicht abgerufen oder ohne Internet).'}</p></div>
+        {abgeglichen ? ' Alle Prüfsummen stimmen außerdem mit dem offiziellen Katalog überein.' : ' Mit dem offiziellen Katalog konnte Ablago sie nicht abgleichen (nicht abgerufen oder ohne Internet).'}</p></div>
       {!herkunftNoetig && <div className="hinweis gut klein"><p>{t('pakete.herkunft.sammel.ok')}</p></div>}
       {herkunftNoetig && s.datei.nichtImKatalog.length > 0 && <div className="hinweis info klein"><p>{t('pakete.herkunft.sammel.fehlen', { namen: s.datei.nichtImKatalog.join(', ') })}</p></div>}
       <PaketAblauf quelle={{ art: 'sammel', sammeldatei: s, dms, installiert }} start={s.pakete.filter((p) => p.gewaehlt).map((p) => p.upload)}

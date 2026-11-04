@@ -60,7 +60,7 @@ export function PostAblage() {
   const register = typ?.register.find((r) => r.art === 'dokumente')?.key;
   const erreichbar = useErreichbarkeit().stufe !== 'weg';
   const darf = darfPostAnlegen(typ) && !!register;
-  const gesperrt = wartungAktiv() ? 'Im Wartungsmodus lassen sich keine Dateien ablegen.' : !erreichbar ? 'Das DMS ist gerade nicht erreichbar – Dateien lassen sich nicht ablegen.' : null;
+  const gesperrt = wartungAktiv() ? 'Im Wartungsmodus lassen sich keine Dateien ablegen.' : !erreichbar ? 'Ablago ist gerade nicht erreichbar – Dateien lassen sich nicht ablegen.' : null;
   const ziel = useAktuellesZiel();
   const [zieht, setZieht] = useState(false);
   const [ueber, setUeber] = useState<'post' | 'mappe' | null>(null);
