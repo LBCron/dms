@@ -89,7 +89,7 @@ Adresse von Ablago (vorbelegt mit der Adresse im Browser), Bundesland für Feier
 
 Mit Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und dem Hinweis auf GitHub Sponsors.
 
-Danach: unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md).
+Danach: Wie es weitergeht, steht kurz unter [Einrichten in fünf Schritten](fuenf-schritte.md) – unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md).
 
 **Für Selbständige und kleine Betriebe:** Die Werkbank startet mit der schlanken Vorlage *Haushalt*. Stell unter **Werkbank → Werkbank anpassen** die Vorlage **Betrieb** ein – dann siehst du auch Nummernkreise, Archivmodus, Postfächer, Datenschutz und die übrigen Bereiche, die ein Betrieb braucht (siehe [Übersicht](uebersicht.md)).
 

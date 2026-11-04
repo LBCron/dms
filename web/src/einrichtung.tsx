@@ -473,6 +473,7 @@ function FertigSchritt({ stand, weiter, zurueck }: { stand: EinrichtungStand; we
     <Rahmen aktiv={NACH.fertig} titel={`${stand.mandant ?? 'Dein Ablago'} ist eingerichtet`} unter="Melde dich mit dem Benutzer aus Schritt 6 an, um in der Ablage zu arbeiten. Als Administrator geht es in der Werkbank weiter – dort legst du Mappentypen und Ansichten an.">
       {stand.uebersprungen.length > 0 && <div className="hinweis info"><p>Übersprungen: {stand.uebersprungen.map((s) => SCHRITTE[NACH[s]]).join(', ')}. Das lässt sich in der Werkbank nachholen; die Übersicht erinnert daran.</p></div>}
       <ul className="linkliste">
+        <li><a className="verweis" href={handbuchUrl('admin', version, 'fuenf-schritte/')} target="_blank" rel="noreferrer">Einrichten in fünf Schritten ↗</a> – was du jetzt noch tun solltest, damit alles sicher läuft.</li>
         <li><a className="verweis" href={handbuchUrl('benutzer', version)} target="_blank" rel="noreferrer">Benutzerhandbuch ↗</a> – Ablage, Dokumente, Aufgaben.</li>
         <li><a className="verweis" href={handbuchUrl('admin', version)} target="_blank" rel="noreferrer">Administratorhandbuch ↗</a> – Mappentypen, Sicherung, Wartung.</li>
         <li><a className="verweis" href={issue} target="_blank" rel="noreferrer">Problem melden ↗</a> – als vorbereitetes GitHub-Issue mit Version und Umgebung.</li>
