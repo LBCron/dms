@@ -35,9 +35,9 @@ Rechts neben dem Titel einer Mappe, neben dem Stern, steht das Menü **Mappe ▾
 
 ![Aufgabe vergeben](bilder/aufgabe-vergeben.png)
 
-Aufgaben gehen immer an einen Benutzer, nicht an eine Rolle – damit klar ist, wer sich kümmert. Darf der Empfänger die Mappe nach den [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) nicht lesen, bekommt er die Aufgabe trotzdem – du erhältst dazu einen Hinweis.
+Aufgaben gehen immer an einen Benutzer, nicht an eine Rolle – damit klar ist, wer sich kümmert. Darf der Empfänger die Mappe nach den [Berechtigungen](mappen.md#was-du-sehen-und-andern-darfst) nicht lesen, fragt Ablago vorher: „Jonas darf diese Mappe nicht sehen. Die Aufgabe kommt bei Jonas an, die Mappe aber nicht. Der Admin wird informiert.“ Mit **Trotzdem zuweisen** geht sie raus, mit **Abbrechen** nicht. Rechte geben kannst du dabei nicht – das macht der Administrator.
 
-Steht bei dir unter „Zu erledigen“ eine **nicht sichtbare Mappe**, hast du eine Aufgabe an einer Mappe, die du nicht lesen darfst. Öffnest du sie, kannst du die Aufgabe erledigen oder an jemanden weitergeben, der die Mappe sehen darf.
+Steht bei dir unter „Zu erledigen“ eine **nicht sichtbare Mappe**, hast du eine Aufgabe an einer Mappe, die du nicht lesen darfst. Hat jemand sie dir von Hand gegeben, steht ihr Text da. Ist sie automatisch entstanden, siehst du nur „Aufgabe zu einer Mappe, die du nicht sehen darfst – frag Lena“ und die Fälligkeit – in der Täglichen Zusammenfassung genauso. Öffnest du sie, kannst du die Aufgabe erledigen oder an jemanden weitergeben, der die Mappe sehen darf. Gibt dir der Administrator ein Leserecht für die Dauer der Aufgabe, kannst du die Mappe lesen, bis die Aufgabe erledigt oder weitergegeben ist.
 
 ## Erinnern
 

@@ -309,7 +309,8 @@ function RechteZeile({ r }: { r: Record<Recht, boolean> }) {
 export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwurf: Regelwerk; klappe: Klappe }) {
   // Vorausgewähltes Konto über ?testkonto=<id> (#710), z. B. aus der Warnung einer Automatisierung (#709).
   const [b, setB] = useState(() => new URLSearchParams(location.search).get('testkonto') ?? '');
-  const [mappe, setMappe] = useState('');
+  // Vorausgewählte Testmappe über ?testmappe=<id> (#798, aus „Aufgaben bei Personen ohne Leserecht“).
+  const [mappe, setMappe] = useState(() => new URLSearchParams(location.search).get('testmappe') ?? '');
   // Das Ergebnis gehört zu (Benutzer, Mappe, Regeln) – wechselt eines davon, ist es sofort weg (#371).
   const stand = JSON.stringify(entwurf);
   const schluessel = testlaufSchluessel({ benutzerId: b, mappeId: mappe, stand });
@@ -348,7 +349,9 @@ export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwu
                     ))}
                   </tbody>
                 </table>
-                {RECHTE_LISTE.some((k) => erg.rechte[k] !== erg.wirksam[k]) && (
+                {/* Leserecht auf Zeit (#798) mit seinem Grund. */}
+                {erg.aufZeit && <p className="hinweis info klein">{t(erg.aufZeit.wirkt ? 'werkbank.testlauf.auf-zeit' : 'werkbank.testlauf.auf-zeit.ohnehin', { aufgabe: erg.aufZeit.aufgabe, seit: new Date(erg.aufZeit.seit).toLocaleDateString('de-DE'), von: erg.aufZeit.von ?? t('werkbank.ohne-leserecht.unbekannt') })}</p>}
+                {RECHTE_LISTE.some((k) => erg.rechte[k] !== erg.wirksam[k]) && !erg.aufZeit?.wirkt && (
                   <p className="leise klein">Wirksam weicht ab: ohne Lesen wirkt nur Anlegen; außerdem gelten die Systemregeln des Mappentyps.</p>
                 )}
               </>}

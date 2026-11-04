@@ -55,6 +55,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   papierkorb_dokumente: 'daten/papierkorb-dokumente.jsonl (ohne Datei)',
   loeschprotokoll: 'daten/loeschprotokoll.csv (#470, Nachweis gelöschter Mappen und Dokumente ohne Inhalte)',
   vertretungen: 'daten/vertretungen.jsonl',
+  aufgaben_ohne_leserecht: 'nicht enthalten: Aufgaben bei Personen ohne Leserecht (#798, Übersicht für den Admin; Vergabe und Entzug eines Leserechts auf Zeit stehen in daten/historie.jsonl)',
   fehlermeldungen: 'nicht enthalten: gemeldete Fehler an die Administratoren (technisch)',
   langlaeufer: 'nicht enthalten: Messwerte langsamer Datenbankzugriffe (technisch)',
   einstellungen: 'nicht enthalten: Betriebseinstellungen mit Zugangsdaten (Mail, Postfächer, Schlüssel, Anmeldung); die Region (#726) steht in struktur/region.json',

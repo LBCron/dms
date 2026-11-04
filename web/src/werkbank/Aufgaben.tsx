@@ -13,6 +13,10 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { SammelHaken, SammelKopf, SammelLeiste, useSammelauswahl } from '../ablage/Sammelweitergabe';
 import { t } from '../sprache';
 import { FavoritenFreigabeBlock, type FavoritenFreigabeZustand } from './Benachrichtigungen';
+import { OhneLeserechtPanel } from './OhneLeserecht';
+
+/** Rechts statt einer Aufgabe (#798): Aufgaben bei Personen ohne Leserecht – /werkbank/aufgaben/ohne-leserecht. */
+export const OHNE_LESERECHT = 'ohne-leserecht';
 
 /**
  * Werkbank → Einstellungen → Aufgaben (#54, #366, #354): Mitte oben die tägliche Zusammenfassung (zuklappbar, #415)
@@ -101,7 +105,10 @@ export function AufgabenListe({ z, filter, offen, mailAn, favoriten }: { z: Aufg
       </section>
       {!z.erledigt && <SammelLeiste s={wahl} titel={titelVon} erledigen nachher={async () => { await z.laden(); await d.neuLaden(); }} />}
       {(z.fehler || fehler) && <div className="hinweis schlecht"><p>{z.fehler ?? fehler}</p></div>}
-      {!z.erledigt && z.unlesbar.size > 0 && <div className="hinweis warn"><p>{z.unlesbar.size === 1 ? 'Eine Frist oder Erinnerung ging' : `${z.unlesbar.size} Fristen oder Erinnerungen gingen`} an jemanden, der die Mappe nach den Berechtigungen nicht lesen darf. Gib sie weiter oder passe die Berechtigungen an.</p></div>}
+      {/* #798: Aufgaben bei Personen ohne Leserecht – offen als Warnung, sonst ein leiser Link (auch zu den vergangenen). */}
+      {!z.erledigt && z.unlesbar.size > 0
+        ? <div className="hinweis warn hinweiszeile"><p><strong>{t('werkbank.ohne-leserecht.offen', { anzahl: z.unlesbar.size })}.</strong> {t('werkbank.ohne-leserecht.hinweis')}</p><Link to={`/werkbank/aufgaben/${OHNE_LESERECHT}${suche}`} className="knopf klein">{t('werkbank.ohne-leserecht.knopf')}</Link></div>
+        : <p className="leise klein"><Link to={`/werkbank/aufgaben/${OHNE_LESERECHT}${suche}`} className={`verweis${offen === OHNE_LESERECHT ? ' an' : ''}`}>{t('werkbank.ohne-leserecht.titel')}</Link></p>}
       {/* Kästchen auch am Handy sichtbar (#415) – deshalb immer „mit-auswahl“. */}
       <div className={`listenrumpf${z.erledigt ? '' : ' mit-auswahl'}`}>
         {z.liste === null ? null : !liste.length ? <p className="leise leerliste">{alle.length ? 'Keine Aufgabe passt zum Filter.' : z.erledigt ? 'Noch nichts erledigt.' : 'Keine offenen Aufgaben.'}</p> : (
@@ -113,7 +120,7 @@ export function AufgabenListe({ z, filter, offen, mailAn, favoriten }: { z: Aufg
                   <span className="titel">{titelOder(a.mappeTitel)}</span>
                   <span className="unter">{d.typ(a.typId ?? '')?.name} · {AUFGABENARTEN[a.art]}{a.datum ? ` · ${tag(a.datum)}` : ''} · {datum(z.erledigt && a.erledigt ? a.erledigt : a.erstellt)}</span>
                   <span className="unter">{a.text}</span>
-                  {!z.erledigt && z.unlesbar.has(a.id) && <span className="problem">Empfänger darf die Mappe nicht lesen</span>}
+                  {!z.erledigt && z.unlesbar.has(a.id) && <span className="problem">{t('werkbank.ohne-leserecht.marke')}</span>}
                 </Link>
                 <div className="aufgabenzeile">
                   {z.erledigt
@@ -183,6 +190,7 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
 
 /** Rechts: die Mappe der gewählten Aufgabe (#366), ohne Auswahl ein kurzer Leerzustand. */
 export function AufgabenPanel({ z, id }: { z: AufgabenZustand; id?: string }) {
+  if (id === OHNE_LESERECHT) return <OhneLeserechtPanel nachher={z.laden} />;
   if (!id) return (
     <div className="platzhalter"><p>Wähle links eine Aufgabe aus, um ihre Mappe anzusehen oder die Aufgabe weiterzugeben.<br />
       <span className="leise klein">Aufgaben entstehen, wenn eine Mappe nicht mehr zur Definition passt, bei Erwähnungen, Fristen und Erinnerungen oder von Hand. Jede Mappe mit offener Aufgabe steht unter „Zu erledigen“ ihres Empfängers.</span></p></div>

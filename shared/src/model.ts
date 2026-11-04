@@ -826,6 +826,23 @@ export interface Aufgabe {
 }
 export const AUFGABE_MAX = 2000;
 /**
+ * Aufgabe bei einer Person ohne Leserecht (#798): Von wann bis wann lag die Aufgabe bei jemandem, der die Mappe nach
+ * den Berechtigungen nicht lesen darf – und ob der Admin ein Leserecht auf Zeit gegeben hat. Offen, solange `ende` leer
+ * ist. Das Leserecht auf Zeit gilt nur für diese Mappe und nur, solange die Aufgabe offen bei dieser Person liegt.
+ */
+export interface FallOhneLeserecht {
+  id: string; aufgabeId: string; mappeId: string; benutzerId: string;
+  /** Text der Aufgabe beim Entstehen des Falls (die Aufgabe kann es später nicht mehr geben). */
+  aufgabentext: string;
+  beginn: string; ende: string | null;
+  /** Warum der Fall endete: Aufgabe erledigt, gelöscht, an jemand anderen gegeben – oder die Person darf jetzt lesen. */
+  endeGrund: FallEnde | null;
+  leserechtSeit: string | null; leserechtVon: string | null;
+  /** Für Listen: Titel und Typ der Mappe (fehlen, wenn es die Mappe nicht mehr gibt). */
+  mappeTitel?: string; typId?: string;
+}
+export type FallEnde = 'erledigt' | 'geloescht' | 'weitergegeben' | 'lesbar';
+/**
  * Anlass einer Aufgabe (#724), gemeinsam für Kern und Automatisierungen:
  * - `datum`: Das Datumsfeld `feld` der Mappe hat das Datum der Aufgabe – geändert oder geleert → erledigt;
  *   `wiederholung` (Monate) → nach dem Erledigen den Folgetermin vorschlagen.
@@ -852,6 +869,7 @@ export const HISTORIENARTEN = {
   geschwaerzt: 'geschwärzte Fassung erstellt', auskunft: 'Auskunft erteilt',
   umgewandelt: 'umgewandelte Fassung erstellt',
   archivfassung: 'Archivfassung (PDF/A) abgelegt',
+  leserecht: 'Leserecht auf Zeit',
 } as const;
 export type Historienart = keyof typeof HISTORIENARTEN;
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */

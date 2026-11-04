@@ -92,6 +92,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (u.texterkennung?.fehler) h.push({ art: 'warn', text: <><strong>{u.texterkennung.fehler === 1 ? 'Ein Dokument' : `${zahl(u.texterkennung.fehler)} Dokumente`}</strong> mit Fehler in der Texterkennung.</>, ziel: '/werkbank/texterkennung', knopf: 'Zur Texterkennung' });
   // #719: Niemand im Alltag bekommt die Aufgaben ohne Empfänger, obwohl es Benutzer ohne Admin-Rechte gibt.
   if (u.aufgabenEmpfaenger && !u.aufgabenEmpfaenger.benutzerId && u.aufgabenEmpfaenger.moeglich > 0) h.push({ art: 'info', text: <>{t('werkbank.aufgabenempfaenger.uebersicht')}</>, ziel: '/werkbank/benutzer', knopf: t('werkbank.aufgabenempfaenger.uebersicht.knopf') });
+  // #798: Aufgaben bei Personen ohne Leserecht – Rechte richten oder Leserecht auf Zeit geben.
+  if (u.ohneLeserecht) h.push({ art: 'warn', text: <><strong>{t('werkbank.ohne-leserecht.offen', { anzahl: u.ohneLeserecht })}.</strong> {t('werkbank.ohne-leserecht.hinweis')}</>, ziel: '/werkbank/aufgaben/ohne-leserecht', knopf: t('werkbank.ohne-leserecht.knopf') });
   if (u.aufgaben.ohneEmpfaenger) h.push({ art: 'info', text: <><strong>{u.aufgaben.ohneEmpfaenger === 1 ? 'Eine Aufgabe' : `${zahl(u.aufgaben.ohneEmpfaenger)} Aufgaben`}</strong> für die Administratoren (ohne einzelnen Empfänger).</>, ziel: '/ablage/eingang', knopf: 'Zu erledigen öffnen' });
   if (u.unpassend) h.push({ art: 'info', text: <><strong>{u.unpassend === 1 ? 'Eine Mappe passt' : `${zahl(u.unpassend)} Mappen passen`}</strong> nicht zur aktuellen Definition ihres Mappentyps.</>, ziel: '/werkbank/typen', knopf: 'Zu den Mappentypen' });
   return h;

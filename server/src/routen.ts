@@ -1400,6 +1400,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         // #459: Ist ein Paket für die Texterkennung installiert? Sonst Hinweis „Texterkennung ist jetzt ein Paket“.
         texterkennungPaket: !!(await sicher(() => dienst.texterkennungPaket())),
         aufgaben: { offen: aufgaben.length, ohneEmpfaenger: aufgaben.filter((y) => !y.empfaengerId).length },
+        // #798: Aufgaben bei Personen ohne Leserecht (offene Fälle, abgeglichen alle fünf Minuten und beim Öffnen).
+        ohneLeserecht: (await sicher(async () => (await dienst.offeneFaelle()).length)) ?? 0,
         // #719: Wer im Alltag die Aufgaben ohne Empfänger bekommt; `moeglich` = aktive Benutzer ohne Admin-Rechte.
         aufgabenEmpfaenger: await sicher(async () => ({ benutzerId: (await dienst.alltagsEmpfaenger()).wirksam, moeglich: (await konten.listeBenutzer()).filter(taugtAlsAufgabenEmpfaenger).length })),
         unpassend: Object.values(z.typen).reduce((s, t) => s + (t.unpassend ?? 0), 0),
@@ -1737,6 +1739,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const auf = await dienst.legeAufgabeAn(a.params.id, a.body, ich(a).id);
       return ok({ ...auf, ...await leseHinweis(auf.empfaengerId, a.params.id) }, 201);
     } },
+    // Vor dem Zuweisen (#798): Darf dieser Benutzer die Mappe lesen? Nur ja/nein, für den Hinweis mit „Trotzdem zuweisen“.
+    { methode: 'GET', pfad: '/api/mappen/:id/leserecht/:benutzer', zugang: 'angemeldet', handler: async (a) => {
+      await darf(a, a.params.id, 'R');
+      await empfaengerSichtbar(a, a.params.benutzer);
+      return ok({ lesen: await dienst.kannLesen(a.params.benutzer, a.params.id) });
+    } },
     { methode: 'POST', pfad: '/api/aufgaben/:id/erledigt', zugang: 'angemeldet', handler: async (a) => ok(await dienst.erledigeAufgabe(a.params.id, ich(a))) },
     // Automatisch zugeordnet (#337): Rückgängig direkt aus der Aufgabe.
     { methode: 'POST', pfad: '/api/aufgaben/:id/rueckgaengig', zugang: 'angemeldet', handler: async (a) => ok(await dienst.automatikRueckgaengig(a.params.id, ich(a), await zg(a))) },
@@ -1751,12 +1759,18 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const auf = await dienst.delegiereAufgabe(a.params.id, b(a).empfaengerId, ich(a));
       return ok({ ...auf, ...await leseHinweis(auf.empfaengerId, auf.mappeId) });
     } },
-    { methode: 'GET', pfad: '/api/werkbank/aufgaben', zugang: 'admin', handler: async (a) => ok({
-      aufgaben: await dienst.alleAufgaben(a.query.erledigt !== undefined),
-      mail: x.aufgabenmail ? await x.aufgabenmail.einstellung() : null,
-      // Fristen und Erinnerungen, deren Empfänger die Mappe nicht lesen darf (#129, #131).
-      unlesbar: await dienst.unlesbareFristen(),
-    }) },
+    { methode: 'GET', pfad: '/api/werkbank/aufgaben', zugang: 'admin', handler: async (a) => {
+      // Aufgaben, deren Empfänger die Mappe nicht lesen darf (#129, #131; seit #798 jede Art, über die Fälle).
+      await dienst.faelleAbgleichen();
+      return ok({
+        aufgaben: await dienst.alleAufgaben(a.query.erledigt !== undefined),
+        mail: x.aufgabenmail ? await x.aufgabenmail.einstellung() : null,
+        unlesbar: (await dienst.offeneFaelle()).map((f) => f.aufgabeId),
+      });
+    } },
+    // Aufgaben bei Personen ohne Leserecht (#798): offene und vergangene Fälle; Leserecht auf Zeit gibt nur der Admin.
+    { methode: 'GET', pfad: '/api/werkbank/aufgaben/ohne-leserecht', zugang: 'admin', handler: async () => ok(await dienst.faelleUebersicht()) },
+    { methode: 'POST', pfad: '/api/werkbank/aufgaben/ohne-leserecht/:id/leserecht', zugang: 'admin', handler: async (a) => ok(await dienst.leserechtAufZeitGeben(a.params.id, ich(a).id)) },
     // Fristen (#129–#132)
     { methode: 'POST', pfad: '/api/aufgaben/:id/folgetermin', zugang: 'angemeldet', handler: async (a) => ok(await dienst.setzeFolgetermin(a.params.id, ich(a), await zg(a))) },
     // Termine für „Zu erledigen“ → Monat und Jahr (?von=&bis=&favoriten=1, #528, #725) – mit den Feiertagen der Region (#726).

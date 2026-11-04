@@ -14,8 +14,10 @@ import { Fachfehler } from './fehler';
  *   Verweisziele werden geprüft, Archivmodus und Fristsperre nie umgangen. Text mit Platzhaltern wie beim Titel;
  *   bei Datumsfeldern `heute` bzw. `heute+7` / `heute-3`. Die Historie zeigt „durch Automatisierung ‚…‘“.
  * - **Aufgabe / Benachrichtigung:** an Personen, alle aktiven Mitglieder einer Rolle oder die Person(en) in einem
- *   Feld der Mappe. Text mit Platzhaltern (Werte mit den Rechten des Systemkontos, Stufe 1). Wer die Mappe nicht lesen
- *   darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
+ *   Feld der Mappe. Text mit Platzhaltern – je Empfänger mit dessen Rechten (#795; der, der sie nach der Vertretung
+ *   wirklich bekommt): Was er nicht sehen darf, steht als „(nicht sichtbar)“ da. Wer die Mappe nicht lesen darf, bekommt
+ *   die Aufgabe trotzdem an der Mappe, sieht aber nur einen Hinweis und die Fälligkeit (#798); der Admin sieht den Fall
+ *   in der Werkbank. Der Testlauf nennt, wer etwas nicht sehen darf.
  */
 const t = uebersetzer({ automatisierung: texte });
 
@@ -56,7 +58,18 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
   if (!an.length) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.niemand'));
   const datum = k.als === 'aufgabe' && k.faellig !== null && k.faellig !== undefined ? verschiebe(heuteIn(), k.faellig) : null;
   const als = k.als === 'aufgabe' ? t('automatisierung.karte.aufgabe.als-aufgabe') : t('automatisierung.karte.aufgabe.als-benachrichtigung');
-  if (c.trocken) return t('automatisierung.karte.aufgabe.trocken', { als, anzahl: an.length, text });
+  if (c.trocken) {
+    // Testlauf (#795): je Empfänger mit seinen Rechten – wer etwas nicht sehen darf, steht dabei.
+    const teils: string[] = []; const gar: string[] = [];
+    for (const id of an) {
+      const wer = (await c.dienst.aufgabenEmpfaenger(id)).an;
+      const f = await c.fuelleFuer(k.text, wer);
+      if (!f.mappe) gar.push(await c.dienst.name(wer)); else if (f.verborgen) teils.push(await c.dienst.name(wer));
+    }
+    return [t('automatisierung.karte.aufgabe.trocken', { als, anzahl: an.length, text }),
+      ...(teils.length ? [t('automatisierung.karte.aufgabe.trocken.nicht-sichtbar', { anzahl: teils.length, namen: teils.join(', ') })] : []),
+      ...(gar.length ? [t('automatisierung.karte.aufgabe.trocken.ohne-leserecht', { anzahl: gar.length, namen: gar.join(', ') })] : [])].join(' ');
+  }
   // Anlass (#724): Die Aufgabe erledigt sich selbst, wenn er wegfällt. Aus „Datum erreicht“ wird sie eine Frist.
   const w = c.automatisierung.wenn;
   const auto = c.automatisierung.id;
@@ -65,15 +78,17 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
     : w.art === 'datum' ? { art: 'datum', feld: w.feld, wiederholung: w.wiederholung ?? null, automatisierung: auto }
       : w.art === 'post.angelegt' ? { art: 'post', automatisierung: auto }
         : w.art === 'benutzer.abwesenheit_gesetzt' ? { art: 'abwesenheit', benutzer: c.mappe.id, automatisierung: auto } : null;
-  let ohneLink = 0; let vorhanden = 0; let admins = 0;
+  let ohneLeserecht = 0; let vorhanden = 0; let admins = 0;
+  // Platzhalter je Empfänger mit dessen Rechten (#795) – fürs Konto leer ist er schon oben abgefangen.
+  const fuer = async (wer: string | null) => (await c.fuelleFuer(k.text, wer)).text.trim() || text;
   for (const id of an) {
-    const r = await c.dienst.aufgabeAusAutomatisierung({ mappeId: c.mappe.id, empfaengerId: id, text, datum: frist ? null : datum, von: c.konto.id, buendeln: k.als === 'benachrichtigung' ? auto : null, anlass: c.anlass, aufgabenAnlass, frist });
-    if (r.ohneLink) ohneLink++;
+    const r = await c.dienst.aufgabeAusAutomatisierung({ mappeId: c.mappe.id, empfaengerId: id, text: fuer, datum: frist ? null : datum, von: c.konto.id, buendeln: k.als === 'benachrichtigung' ? auto : null, anlass: c.anlass, aufgabenAnlass, frist });
+    if (r.ohneLeserecht) ohneLeserecht++;
     if (r.vorhanden) vorhanden++;
     if (!r.an) admins++;
   }
   return ((an.length - vorhanden ? t('automatisierung.karte.aufgabe.ergebnis', { als, anzahl: an.length - vorhanden }) : '')
-    + (ohneLink ? ` ${t('automatisierung.karte.aufgabe.ohne-link', { anzahl: ohneLink })}` : '')
+    + (ohneLeserecht ? ` ${t('automatisierung.karte.aufgabe.ohne-leserecht', { anzahl: ohneLeserecht })}` : '')
     + (vorhanden ? ` ${t('automatisierung.karte.aufgabe.vorhanden', { anzahl: vorhanden })}` : '')
     + (admins ? ` ${t('automatisierung.karte.aufgabe.an-admins', { anzahl: admins })}` : '')).trim();
 };

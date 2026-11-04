@@ -277,6 +277,12 @@ export interface KartenKontext {
   trocken: boolean;
   /** Text mit Platzhaltern füllen (Werte mit den Rechten des Kontos). */
   fuelle(text: string): Promise<string>;
+  /**
+   * Text mit Platzhaltern für einen Empfänger füllen (#795): mit den Rechten des Kontos **und** des Empfängers (null =
+   * Administratoren: nur die des Kontos). `verborgen`: Platzhalter, die er nicht sehen darf („(nicht sichtbar)“) –
+   * mehr als beim Konto selbst; `mappe`: false, wenn er die Mappe gar nicht lesen darf.
+   */
+  fuelleFuer(text: string, an: string | null): Promise<{ text: string; verborgen: number; mappe: boolean }>;
   /** Personen hinter einem Empfänger (aktive Benutzer). */
   personen(e: Empfaenger): Promise<string[]>;
   /** Vermerk für die Historie der Mappe: „durch Automatisierung ‚…‘ (eingerichtet von …)“. */
@@ -906,6 +912,14 @@ export class Automatisierungen {
       const kontext: KartenKontext = {
         dienst: this.d.dienst, z, konto, automatisierung: a, mappe, typ, daten: anlass.daten, trocken: o.trocken, personen,
         fuelle: (text) => this.fuelle(text, { a, mappe, typ, z, daten: anlass.daten, art: anlass.art }),
+        fuelleFuer: async (text, an) => {
+          const c = { a, mappe, typ, z, daten: anlass.daten, art: anlass.art };
+          const empf = an ? await this.d.dienst.zugriffVon(an) : null;
+          if (!empf) return { text: await this.fuelle(text, c), verborgen: 0, mappe: true };
+          const basis = await this.fuelleMit(text, c, null);
+          const fuer = await this.fuelleMit(text, c, empf);
+          return { text: fuer.text, verborgen: Math.max(0, fuer.verborgen - basis.verborgen), mappe: fuer.mappe };
+        },
         anlass: { automatisierung: { id: a.id, name: a.name, eingerichtetVon: a.erstelltVon } },
       };
       const begonnen = this.jetzt();
@@ -958,28 +972,54 @@ export class Automatisierungen {
 
   /** Platzhalter wie beim Mappentitel – Feldwerte mit den Rechten des Kontos; Passwörter nie. */
   async fuelle(text: string, c: { a: Automatisierung; mappe: Mappe | null; typ: Mappentyp | null; z: Zugriff; daten: Record<string, unknown>; art?: string }): Promise<string> {
+    return (await this.fuelleMit(text, c, null)).text;
+  }
+
+  /**
+   * Platzhalter füllen (#795): mit den Rechten des Kontos und – mit `empf` – zusätzlich mit denen des Empfängers. Was er
+   * nicht sehen darf, erscheint als „(nicht sichtbar)“: Darf er die Mappe nicht lesen, gilt das für Titel, Mappentyp,
+   * Datum, Tage und alle Felder; sonst für Titel verknüpfter Mappen und Personen, die er nicht sehen darf.
+   * `verborgen` zählt die Platzhalter mit verdecktem Inhalt.
+   */
+  async fuelleMit(text: string, c: { a: Automatisierung; mappe: Mappe | null; typ: Mappentyp | null; z: Zugriff; daten: Record<string, unknown>; art?: string }, empf: Zugriff | null): Promise<{ text: string; verborgen: number; mappe: boolean }> {
     const { a, mappe, typ, z, daten } = c;
+    const versteckt = t('automatisierung.platzhalter.nicht-sichtbar');
+    const mappeSichtbar = !empf || !mappe || (await this.d.dienst.lesbare(empf, [mappe.id])).has(mappe.id);
     const refs = mappe && typ ? typ.felder.filter((f) => f.typ === 'referenz').flatMap((f) => alsListe(mappe.werte[f.key])).filter(istUuid) : [];
     const titel = refs.length ? await this.d.dienst.lesbareTitel(z, refs) : new Map<string, string>();
-    const titelVon = (id: string) => titel.get(id) ?? t('automatisierung.platzhalter.nicht-sichtbar');
+    if (empf && refs.length) { const ok = await this.d.dienst.lesbare(empf, refs); for (const id of [...titel.keys()]) if (!ok.has(id)) titel.delete(id); }
     const fest: Record<string, string> = {
       titel: mappe?.titel ?? '', mappentyp: typ?.name ?? '', heute: tagVon(new Date(this.jetzt()).toISOString()), automatisierung: a.name,
       datum: typeof daten.datum === 'string' ? tagVon(`${daten.datum}T12:00:00Z`) : '', tage: daten.tage === undefined ? '' : String(daten.tage),
     };
+    const verdeckt = new Set<string>();
+    // Ohne Leserecht an der Mappe: nichts, was aus ihr stammt.
+    if (!mappeSichtbar) for (const k of ['titel', 'mappentyp', 'datum', 'tage']) if (fest[k]) { fest[k] = versteckt; verdeckt.add(k); }
     // Aus dem Ereignis (#678/#712): Personen mit Namen, Zeitraum einer Abwesenheit lesbar.
     const tag = (x: unknown) => (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) ? tagVon(`${x}T12:00:00Z`) : '');
-    for (const k of PERSONEN_IM_EREIGNIS[c.art ?? ''] ?? []) if (typeof daten[k] === 'string' && istUuid(daten[k] as string)) fest[k] = await this.d.dienst.name(daten[k] as string);
+    const personen = (PERSONEN_IM_EREIGNIS[c.art ?? ''] ?? []).filter((k) => typeof daten[k] === 'string' && istUuid(daten[k] as string));
+    const siehtPersonen = empf && personen.length ? await this.d.dienst.lesbare(empf, personen.map((k) => daten[k] as string)) : null;
+    for (const k of personen) {
+      const id = daten[k] as string;
+      if (siehtPersonen && !siehtPersonen.has(id)) { fest[k] = versteckt; verdeckt.add(k); } else fest[k] = await this.d.dienst.name(id);
+    }
     if ('von' in daten || 'bis' in daten) {
       fest.von = tag(daten.von); fest.bis = tag(daten.bis);
       fest.zeitraum = fest.von && fest.bis ? t('automatisierung.platzhalter.zeitraum.von-bis', { von: fest.von, bis: fest.bis }) : fest.von ? t('automatisierung.platzhalter.zeitraum.ab', { von: fest.von })
         : fest.bis ? t('automatisierung.platzhalter.zeitraum.bis', { bis: fest.bis }) : t('automatisierung.platzhalter.zeitraum.offen');
     }
-    return text.replace(/\{([a-z][a-z0-9_]*)((?:\|[^{}|]*)*)\}/g, (ganz, key: string) => {
-      if (key in fest) return fest[key];
+    let verborgen = 0;
+    const erg = text.replace(/\{([a-z][a-z0-9_]*)((?:\|[^{}|]*)*)\}/g, (ganz, key: string) => {
+      if (key in fest) { if (verdeckt.has(key)) verborgen++; return fest[key]; }
       const f = typ?.felder.find((x) => x.key === key);
       if (!f || f.typ === 'passwort' || !mappe) return ganz;
-      return titelAus({ felder: typ!.felder, titelVorlage: ganz }, mappe.werte, titelVon);
+      if (!mappeSichtbar) { verborgen++; return versteckt; }
+      let fehlt = false;
+      const w = titelAus({ felder: typ!.felder, titelVorlage: ganz }, mappe.werte, (id) => { const x = titel.get(id); if (x === undefined) fehlt = true; return x ?? versteckt; });
+      if (fehlt) verborgen++;
+      return w;
     });
+    return { text: erg, verborgen, mappe: mappeSichtbar };
   }
 
   /* ---------- Zeitplan „Datum in N Tagen“ ---------- */

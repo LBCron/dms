@@ -27,5 +27,16 @@
   "mitnehmen.warum": "Warum nicht?",
   "mitnehmen.titel": "Herunterladen nicht möglich:",
   "mitnehmen.grund": "Dir fehlt für diese Mappe das Recht „Exportieren“ (E). Es gilt für alles, womit Dateien Ablago verlassen: Herunterladen, Teilen, Versenden, Exportieren und das Laufwerk.",
-  "mitnehmen.ansehen": "Ansehen kannst du die Dokumente hier in Ablago. Das Recht vergibt ein Administrator an den Ansichten."
+  "mitnehmen.ansehen": "Ansehen kannst du die Dokumente hier in Ablago. Das Recht vergibt ein Administrator an den Ansichten.",
+  "aufgabe.ohne-leserecht": "Aufgabe zu einer Mappe, die du nicht sehen darfst – frag {name}",
+  "aufgabe.ohne-leserecht.admin": "Aufgabe zu einer Mappe, die du nicht sehen darfst – frag einen Administrator",
+  "aufgabe.zuweisen.titel": "{name} darf diese Mappe nicht sehen",
+  "aufgabe.zuweisen.text": "Die Aufgabe kommt bei {name} an, die Mappe aber nicht. Der Admin wird informiert.",
+  "aufgabe.zuweisen.trotzdem": "Trotzdem zuweisen",
+  "aufgabe.zuweisen.abbrechen": "Abbrechen",
+  "leserecht.vergeben": "Leserecht an {name} wegen Aufgabe „{aufgabe}“ vergeben (von {von})",
+  "leserecht.entzogen.erledigt": "Leserecht von {name} nach Erledigen der Aufgabe wieder entzogen",
+  "leserecht.entzogen.geloescht": "Leserecht von {name} nach Löschen der Aufgabe wieder entzogen",
+  "leserecht.entzogen.weitergegeben": "Leserecht von {name} nach Weitergeben der Aufgabe wieder entzogen",
+  "leserecht.entzogen.lesbar": "Leserecht auf Zeit von {name} beendet – die Berechtigungen erlauben das Lesen jetzt ohnehin"
 }

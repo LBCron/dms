@@ -42,6 +42,8 @@ export const OHNE_FOLGEN = new Set<string>([
   'echteVerweiseAufDemo', 'papierkorb', 'zaehlePapierkorb', 'dateiBenutzt', 'papierkorbDokumente', 'holeAusPapierkorb', 'holeDokumentAusPapierkorb',
   'ocrNaechster', 'ocrVonSha', 'ocrZaehler', 'ocrAuftraege', 'ocrOhneVolltext', 'volltextKandidaten', 'volltextHerkunft', 'ocrSprachen', 'volltext', 'volltexte',
   'aufgabenZurPassung', 'holeAufgabe', 'aufgabenVon', 'aufgabenVonMappen', 'offeneAufgaben', 'erledigteAufgaben', 'fristAufgaben',
+  // Aufgaben bei Personen ohne Leserecht (#798): Lesen und neue Fälle ändern keine Zahl; Leserecht auf Zeit und Ende schon.
+  'faelleOhneLeserecht', 'leserechteAufZeit', 'legeFallAn',
   'verschluesselteFundstellen', 'erinnerungen', 'holeErinnerung', 'notizen', 'notizenVon', 'holeNotiz', 'historie', 'historieVon',
   // schreiben, ohne Folgen für die Zahlen
   'legeEreignisseAn', 'ereignisZugestellt', 'ereignisDaten', 'ereignisFehlgeschlagen', 'loescheEreignisse', 'loescheOffeneEreignisse', 'speicherePaketCode', 'loeschePaketCode',

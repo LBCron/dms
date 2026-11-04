@@ -51,7 +51,20 @@ Als Ziel gehen nur Benutzer, die die jeweilige Mappe lesen dürfen – wie beim 
 
 ![Mehrere Aufgaben ausgewählt](bilder/werkbank-aufgaben-auswahl.png){ loading=lazy }
 
-Ging eine Frist oder Erinnerung an jemanden, der die Mappe nach den [Berechtigungen](berechtigungen.md) nicht lesen darf, steht oben ein Hinweis und an der Aufgabe „Empfänger darf die Mappe nicht lesen“. Gib sie weiter oder passe die Berechtigungen an.
+Liegt eine Aufgabe bei jemandem, der die Mappe nach den [Berechtigungen](berechtigungen.md) nicht lesen darf, steht oben ein Hinweis und an der Aufgabe „Empfänger darf die Mappe nicht lesen“.
+
+## Aufgaben bei Personen ohne Leserecht
+
+Grundsatz: **Wer eine Aufgabe bekommt, darf die Mappe lesen.** Ablago hält die Arbeit trotzdem nicht auf, sondern zeigt, wo das nicht so ist. Das kommt vor, wenn jemand vertritt, der bestimmte Mappen nicht sehen darf, wenn eine Aufgabe von Hand an so jemanden geht, wenn sich Berechtigungen ändern oder wenn eine Automatisierung an eine Rolle oder ein Feld geht.
+
+- **Von Hand zugewiesen:** Wer eine Aufgabe vergibt oder weitergibt, bekommt vorher den Hinweis „Jonas darf diese Mappe nicht sehen …“ mit **Trotzdem zuweisen** und **Abbrechen**. Rechte geben kann dabei niemand – das machst nur du in der Werkbank. Der Text bleibt für den Empfänger sichtbar.
+- **Automatisch entstanden** (Fristen, Automatisierungen, Vertretung): Die Aufgabe kommt an, der Empfänger sieht aber nur „Aufgabe zu einer Mappe, die du nicht sehen darfst – frag Lena“ (wer die Mappe angelegt hat) und die Fälligkeit – unter „Zu erledigen“ wie in der Täglichen Zusammenfassung.
+
+**Werkbank → Aufgaben → Aufgaben bei Personen ohne Leserecht** zeigt oben die offenen Fälle („3 Aufgaben liegen bei Personen ohne Leserecht“) und darunter die **früheren Fälle** mit Zeitraum, Person, Mappe und ob ein Leserecht auf Zeit gegeben wurde. So siehst du, wo das schon öfter vorkam. Je Fall springst du **zur Mappe** oder mit **Rechte prüfen** in den [Testlauf](berechtigungen.md#testlauf) des Mappentyps, Person und Mappe schon gewählt. Von neuen Fällen erfährst du wie von den anderen [technischen Aufgaben](benutzer.md#aufgaben-ohne-empfanger): Hinweis in der Werkbank und die gebündelte E-Mail an die Administratoren.
+
+**Leserecht für die Dauer der Aufgabe geben:** Der Knopf steht bei jedem offenen Fall. Das Recht gilt nur zum **Lesen**, nur für **diese Mappe** und endet von selbst, wenn die Aufgabe erledigt, gelöscht oder an jemand anderen gegeben wird. In der Historie der Mappe stehen beide Schritte, etwa „Leserecht an Jonas wegen Aufgabe „Bitte unterschreiben“ vergeben (von Markus)“ und „Leserecht von Jonas nach Erledigen der Aufgabe wieder entzogen“. Der Testlauf der Rechte zeigt das Recht auf Zeit mit seinem Grund. Dauerhaft richtest du es über die Berechtigungen des Mappentyps; erlauben die das Lesen, endet der Fall von selbst.
+
+Ablago gleicht die Fälle nach jedem Vergeben, Weitergeben und Erledigen ab und sonst alle fünf Minuten (etwa nach geänderten Berechtigungen). Aufgaben ohne einzelnen Empfänger (für die Administratoren) zählen nicht als Fall.
 
 ## Tägliche Zusammenfassung
 

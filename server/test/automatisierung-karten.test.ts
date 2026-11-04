@@ -1,7 +1,7 @@
 /**
  * Dann-Karten (#676): „Feld ändern“ (nur gewählte Felder, Platzhalter, heute+N, Prüfung wie im Formular, Historie
  * „durch Automatisierung“, keine Selbstauslösung über den Katalog) und „Aufgabe / Benachrichtigung“ (Person, Rolle,
- * Feld; Fälligkeit; Benachrichtigung gebündelt; ohne Leserecht an der eigenen Benutzer-Mappe), Beispiel aus dem
+ * Feld; Fälligkeit; Benachrichtigung gebündelt; ohne Leserecht trotzdem an der Mappe, #798), Beispiel aus dem
  * Handbuch „Vertrag – Kündbar bis in 7 Tagen → Aufgabe an Verantwortlich“.
  */
 import assert from 'node:assert/strict';
@@ -108,7 +108,7 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
     assert.equal(aufgaben[0].datum, verschiebe(heuteIn(), 7));
   });
 
-  it('Benachrichtigung an eine Rolle gebündelt; ohne Leserecht an der eigenen Benutzer-Mappe', async () => {
+  it('Benachrichtigung an eine Rolle gebündelt; ohne Leserecht trotzdem an der Mappe (#798)', async () => {
     const { d, admin, lena, vertrag, motor, ereignis } = await aufbau();
     const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom' } }, admin.id);
     const rollen = await d.listeRollen();
@@ -124,8 +124,8 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
     const fuerLena = (await d.alleAufgaben()).filter((x) => x.empfaengerId === lena.id);
     assert.equal(fuerLena.length, 1, 'gebündelt, Rolle und Person sind dieselbe Lena');
     const lesbar = (await d.sichtbarFuer(lena.id, [m.id])).has(m.id);
-    assert.equal(fuerLena[0].mappeId, lesbar ? m.id : lena.id);
-    if (!lesbar) assert.match(l.schritte[2].text!, /ohne Link/);
+    assert.equal(fuerLena[0].mappeId, m.id, 'seit #798 immer an der Mappe – ohne Leserecht nur mit Hinweis');
+    if (!lesbar) assert.match(l.schritte[2].text!, /darf die Mappe nicht sehen/);
   });
 });
 

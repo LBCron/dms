@@ -97,6 +97,8 @@ Der Testlauf nutzt die Regeln, **wie sie gerade im Editor stehen** – auch unge
 
 **Konten ohne Person prüfen:** Unter dem Feld *Benutzer* wählst du bei **oder ein Konto ohne Person** auch das Systemkonto **Automatisierung** oder den Benutzer eines **Pakets** (angezeigt als „Paket: Name“). So siehst du, ob eine Automatisierung oder ein Paket an einer Mappe überhaupt etwas darf – etwa, wenn eine Regel „System- und Paketrollen verboten“ greift. Für diese Konten gilt die Grundeinstellung des Mappentyps nicht, sondern nur Regeln, die ihre Rolle **Systemkonto** bzw. **Paket** nennen; das Systemkonto sieht nie Passwörter, und ein Paket darf nie mehr als das, was du bei seiner Installation bestätigt hast. Hat ein Paket für diesen Mappentyp gar keinen Zugriff bestätigt, steht das über dem Ergebnis. In allen anderen Auswahlen (Verweisfelder, Empfänger …) tauchen diese Konten nicht auf.
 
+**Leserecht auf Zeit:** Hat die Person an dieser Mappe ein [Leserecht für die Dauer einer Aufgabe](aufgaben.md#aufgaben-bei-personen-ohne-leserecht), steht es unter dem Ergebnis mit seinem Grund (die Aufgabe), seit wann und von wem. Es erlaubt nur das Lesen.
+
 ![Testlauf: Jonas an „Stromvertrag Haus“](bilder/werkbank-berechtigungen-testlauf.png)
 
 Was ein Benutzer über alle Mappentypen hinweg lesen darf, zeigt [Was sieht ein Benutzer?](benutzer.md#was-sieht-ein-benutzer) in der Benutzerverwaltung.
@@ -108,7 +110,7 @@ Wer eine **Ansicht** im Baum sieht, dort „+ Neu“ bekommt und aus ihr exporti
 ## Was Benutzer davon merken
 
 - Mappen ohne Leserecht fehlen in Listen, Suche, Zählern, Favoriten und Trefferlisten. Verweist eine sichtbare Mappe auf eine unsichtbare, steht dort „nicht sichtbare Mappe“ ohne Link.
-- Hat jemand eine **Aufgabe** an einer Mappe, die er nicht lesen darf, steht sie trotzdem bei ihm unter „Zu erledigen“ – ohne Titel. Er kann sie erledigen oder an jemanden weitergeben, der die Mappe sehen darf. Wer eine Aufgabe vergibt, bekommt einen Hinweis, wenn der Empfänger die Mappe nicht lesen darf.
+- Hat jemand eine **Aufgabe** an einer Mappe, die er nicht lesen darf, steht sie trotzdem bei ihm unter „Zu erledigen“ – ohne Titel; bei automatisch entstandenen Aufgaben auch ohne Text, nur mit Hinweis und Fälligkeit. Er kann sie erledigen oder an jemanden weitergeben, der die Mappe sehen darf. Wer eine Aufgabe vergibt, wird vorher gefragt, wenn der Empfänger die Mappe nicht lesen darf. Wo das vorkommt und wie du ein **Leserecht auf Zeit** gibst, steht unter [Aufgaben bei Personen ohne Leserecht](aufgaben.md#aufgaben-bei-personen-ohne-leserecht).
 - Ohne **Bearbeiten** zeigt die Mappe ihre Felder nur an; ohne **Löschen** ist „Mappe löschen“ gesperrt (Schloss), der Grund steht daneben, „Warum ist Löschen gesperrt?“ erklärt mehr; ohne **Anlegen** fehlt „+ Neu“.
 - Ohne **Exportieren** (E an einer Ansicht) lassen sich die Dokumente einer Mappe nur ansehen: Statt „Herunterladen“ steht ein gesperrter Knopf mit **Warum nicht?**; Teilen, Kopien mit Stempel, „Per E-Mail versenden“ und „Als PDF exportieren“ fehlen. Über die API antwortet Ablago mit 403.
 - Bei der Auswahl von Benutzern (Verantwortlich, Erwähnungen, Vertreter, Aufgaben-Empfänger) erscheinen nur Benutzer, deren Benutzer-Mappe man sehen darf.

@@ -5,7 +5,7 @@ import type { Erinnerung } from '../../shared/src/fristen';
 import { umschluesseleTief } from './tresor';
 import { datumIn, ziehe, type Nummernkreis } from '../../shared/src/nummernkreis';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
-import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type Werte } from '../../shared/src/model';
+import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type FallOhneLeserecht, type DokumentVersion, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type Werte } from '../../shared/src/model';
 import { alsText } from '../../shared/src/markdown';
 import { SPRACHE_MARKE, spracheAusInfo } from '../../shared/src/textsprache';
 import { teilenAb, type Seitensprache } from '../../shared/src/seitensprachen';
@@ -63,6 +63,12 @@ export function speicherRepo(): Repo {
   const offenFuer = (m: Mappe, benutzerId: string, admin: boolean) =>
     [...aufgaben.values()].some((a) => a.mappeId === m.id && !a.erledigt && (a.empfaengerId === benutzerId || (admin && !a.empfaengerId)));
   const mitMappe = (a: Aufgabe): Aufgabe => ({ ...kopie(a), mappeTitel: mappen.get(a.mappeId)?.titel ?? '', typId: mappen.get(a.mappeId)?.typId });
+  /** Aufgaben bei Personen ohne Leserecht (#798). */
+  const faelle = new Map<string, FallOhneLeserecht>();
+  const mitMappeF = (f: FallOhneLeserecht): FallOhneLeserecht => {
+    const m = mappen.get(f.mappeId);
+    return m ? { ...kopie(f), mappeTitel: m.titel ?? '', typId: m.typId } : kopie(f);
+  };
   /** Notizen (#55). */
   const notizen = new Map<string, Notiz>();
   /** Freie Erinnerungen (#131). */
@@ -725,6 +731,34 @@ export function speicherRepo(): Repo {
     async fristAufgaben(mappeIds) {
       return [...aufgaben.values()].filter((a) => a.art === 'frist' && mappen.has(a.mappeId) && (!mappeIds || mappeIds.includes(a.mappeId)))
         .sort((a, b) => a.erstellt.localeCompare(b.erstellt)).map(mitMappe);
+    },
+    async faelleOhneLeserecht(f = {}) {
+      return [...faelle.values()].filter((x) => (!f.offen || !x.ende) && (!f.mappeIds || f.mappeIds.includes(x.mappeId)))
+        .sort((a, b) => Number(!!a.ende) - Number(!!b.ende) || (b.ende ?? b.beginn).localeCompare(a.ende ?? a.beginn) || a.id.localeCompare(b.id))
+        .slice(0, f.max ?? 1000).map(mitMappeF);
+    },
+    async legeFallAn(f) {
+      if ([...faelle.values()].some((x) => !x.ende && x.aufgabeId === f.aufgabeId && x.benutzerId === f.benutzerId)) return false;
+      faelle.set(f.id, { ...f, beginn: jetzt(), ende: null, endeGrund: null, leserechtSeit: null, leserechtVon: null });
+      return true;
+    },
+    async beendeFall(id, grund, zeit) {
+      const x = faelle.get(id);
+      if (!x || x.ende) return false;
+      x.ende = zeit ?? jetzt(); x.endeGrund = grund;
+      return true;
+    },
+    async gibLeserechtAufZeit(id, von) {
+      const x = faelle.get(id);
+      if (!x || x.ende || x.leserechtSeit) return false;
+      x.leserechtSeit = jetzt(); x.leserechtVon = von;
+      return true;
+    },
+    async leserechteAufZeit(benutzerId) {
+      return [...faelle.values()].filter((f) => {
+        const a = aufgaben.get(f.aufgabeId);
+        return f.benutzerId === benutzerId && !f.ende && f.leserechtSeit && a && !a.erledigt && a.empfaengerId === benutzerId && a.mappeId === f.mappeId && mappen.has(f.mappeId);
+      }).map((f) => ({ fallId: f.id, mappeId: f.mappeId, typId: mappen.get(f.mappeId)!.typId, aufgabeId: f.aufgabeId, aufgabentext: f.aufgabentext, seit: f.leserechtSeit!, von: f.leserechtVon }));
     },
     async umschluesseln(um) {
       // Arbeitsspeicher: Mappen und Papierkorb (Einstellungen liegen anderswo); erst rechnen, dann schreiben.

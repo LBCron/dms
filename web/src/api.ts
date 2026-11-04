@@ -9,7 +9,7 @@ import type { Archiv } from '../../shared/src/archiv';
 import type { WebhookAnsicht, WebhookEingabe, WebhookErgebnis, WebhookVerlauf, WebhookWerkbank } from '../../shared/src/webhook';
 import type { UeberfluessigeVariable } from '../../shared/src/umgebungsvariablen';
 import type { LasttestStand } from '../../shared/src/lasttest';
-import type { Abwesenheit, Aufgabe, Ausschnitt, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
+import type { Abwesenheit, Aufgabe, Ausschnitt, FallOhneLeserecht, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
 import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
@@ -627,6 +627,11 @@ export const api = {
   aufgabenWeitergeben: (ids: string[], empfaengerId: string) => anfrage<{ weitergegeben: string[]; nicht: Array<{ id: string; grund: string }> }>('POST', '/api/aufgaben/weitergeben', { ids, empfaengerId }),
   aufgabenErledigen: (ids: string[]) => anfrage<{ erledigt: string[]; nicht: Array<{ id: string; grund: string }> }>('POST', '/api/aufgaben/erledigt', { ids }),
   meineAufgaben: () => anfrage<Array<Aufgabe & { verborgen?: boolean }>>('GET', '/api/aufgaben'),
+  /** Aufgaben bei Personen ohne Leserecht (#798): Übersicht und Leserecht auf Zeit (nur Administratoren). */
+  ohneLeserecht: () => anfrage<{ offen: FallOhneLeserecht[]; vergangen: FallOhneLeserecht[] }>('GET', '/api/werkbank/aufgaben/ohne-leserecht'),
+  leserechtAufZeit: (fallId: string) => anfrage<FallOhneLeserecht>('POST', `/api/werkbank/aufgaben/ohne-leserecht/${fallId}/leserecht`),
+  /** Vor dem Zuweisen (#798): Darf dieser Benutzer die Mappe lesen? */
+  darfLesen: (mappeId: string, benutzerId: string) => anfrage<{ lesen: boolean }>('GET', `/api/mappen/${mappeId}/leserecht/${benutzerId}`),
   aufgabenWerkbank: (erledigt = false) => anfrage<{ aufgaben: Aufgabe[]; mail: MailEinstellung | null; unlesbar?: string[] }>('GET', `/api/werkbank/aufgaben${erledigt ? '?erledigt' : ''}`),
   aufgabenMailSpeichern: (e: MailEinstellung) => anfrage<MailEinstellung>('PUT', '/api/werkbank/aufgaben/mail', e),
   /** Eigene tägliche Zusammenfassung (#92, #94). */
@@ -952,7 +957,7 @@ export interface PaketlaeuferStand {
 }
 export type RechtStufe = 'immer' | 'nie' | 'teils';
 export interface BerechtigungEintrag { typId: string; name: string; system: string | null; berechtigungen: Regelwerk }
-export interface Testlauf extends Ergebnis { admin: boolean; /** Konto ohne Person (#710) */ konto?: 'systemkonto' | 'paket'; unbestaetigt?: boolean; mappe: { id: string; titel: string; typId: string }; benutzer: { id: string; name: string } }
+export interface Testlauf extends Ergebnis { admin: boolean; /** Leserecht auf Zeit (#798) mit Grund; wirkt = die Regeln allein erlauben kein Lesen. */ aufZeit?: { aufgabe: string; seit: string; von: string | null; wirkt: boolean }; /** Konto ohne Person (#710) */ konto?: 'systemkonto' | 'paket'; unbestaetigt?: boolean; mappe: { id: string; titel: string; typId: string }; benutzer: { id: string; name: string } }
 /** 404 ohne Leserecht (#124): eigene offene Aufgaben an der Mappe, zum Erledigen oder Weitergeben. */
 export const verborgeneAufgaben = (x: unknown): Aufgabe[] | null => {
   const d = x instanceof ApiFehler && x.status === 404 ? x.details as { verborgen?: boolean; aufgaben?: Aufgabe[] } | undefined : undefined;
@@ -1064,6 +1069,8 @@ export interface WerkbankUebersicht {
   /** #459: Ein Paket übernimmt die Texterkennung. */
   texterkennungPaket?: boolean;
   aufgaben: { offen: number; ohneEmpfaenger: number };
+  /** #798: offene Fälle – Aufgaben bei Personen ohne Leserecht. */
+  ohneLeserecht?: number;
   /** #719: Alltags-Benutzer für Aufgaben ohne Empfänger; `moeglich` = aktive Benutzer ohne Admin-Rechte. */
   aufgabenEmpfaenger?: { benutzerId: string | null; moeglich: number } | null;
   unpassend: number;
