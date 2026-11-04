@@ -4,9 +4,43 @@
  */
 import { PAKET_ID, VERSION } from './pakete';
 
-/** Lizenzen der Registry (REGELN.md, Positivliste); die erste ist der Vorschlag. */
+/** Freie Lizenzen der Registry (REGELN.md, Positivliste) – nur sie dürfen in den offiziellen Katalog. */
 export const LIZENZEN = ['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'MPL-2.0', 'LGPL-3.0-or-later', 'GPL-3.0-or-later', 'AGPL-3.0-or-later', 'CC0-1.0'] as const;
 export type Lizenz = typeof LIZENZEN[number];
+/** Schlüssel der Sprachtexte je freier Lizenz (Name und ein sachlicher Satz, `pakete.erstellen.lizenz.<schluessel>.…`). */
+export const LIZENZ_SCHLUESSEL: Record<Lizenz, string> = {
+  'MIT': 'mit', 'Apache-2.0': 'apache', 'BSD-2-Clause': 'bsd2', 'BSD-3-Clause': 'bsd3', 'MPL-2.0': 'mpl',
+  'LGPL-3.0-or-later': 'lgpl', 'GPL-3.0-or-later': 'gpl', 'AGPL-3.0-or-later': 'agpl', 'CC0-1.0': 'cc0',
+};
+/** Freie Lizenzen alphabetisch nach Kürzel (keine Wertung, #651). */
+export const LIZENZEN_ALPHABETISCH: Lizenz[] = [...LIZENZEN].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+/** Passt eine Lizenz zur Suche? Kürzel und Name, ohne Groß-/Kleinschreibung („apa“ → Apache-2.0, „gnu“ → GPL, LGPL, AGPL). */
+export function lizenzPasst(l: Lizenz, name: string, suche: string): boolean {
+  const s = suche.trim().toLowerCase();
+  return !s || l.toLowerCase().includes(s) || name.toLowerCase().includes(s);
+}
+/** Vorgabe beim Erstellen (#651): wie Ablago selbst. */
+export const LIZENZ_VORGABE: Lizenz = 'Apache-2.0';
+/**
+ * Lizenz im Manifest, wenn keine angegeben ist (#651, Weg 3). SPDX kennt „NONE“ für „keine Lizenz“;
+ * eigene Lizenzen stehen als „LicenseRef-…“ darin.
+ */
+export const KEINE_LIZENZ = 'NONE';
+export const EIGENE_LIZENZ = /^LicenseRef-[A-Za-z0-9.-]{1,60}$/;
+/** Art der Lizenz (#651): freie aus der Liste, eigene (Name + Text) oder keine. */
+export type LizenzArt = 'frei' | 'eigen' | 'keine';
+export const LIZENZNAME_LAENGE = { min: 2, max: 80 } as const;
+export const LIZENZTEXT_MAX = 100_000;
+/** Ist das eine freie Lizenz der Registry? Alles andere kommt nicht in den offiziellen Katalog. */
+export const istFreieLizenz = (l: string) => (LIZENZEN as readonly string[]).includes(l);
+/** Art einer Lizenzangabe im Manifest (für die Anzeige bei der Installation). */
+export const lizenzArtVon = (l: string): LizenzArt => (istFreieLizenz(l) ? 'frei' : !l || l === KEINE_LIZENZ ? 'keine' : 'eigen');
+/** „LicenseRef-…“ aus dem Namen einer eigenen Lizenz. */
+export function lizenzVerweis(name: string): string {
+  const s = name.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss')
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
+  return `LicenseRef-${s || 'eigene'}`;
+}
 
 /** Grenzen aus dem Schema der Registry (manifest.schema.json). */
 export const NAME_LAENGE = { min: 2, max: 60 } as const;
@@ -20,11 +54,24 @@ export interface PaketAuswahl { typen: string[]; sichten: string[]; beispiele: s
 export interface PaketAngaben {
   id: string; name: string; version: string; beschreibung: string;
   autor: { name: string; github: string };
+  /** Bei „frei“ das SPDX-Kürzel; sonst setzt der Server LicenseRef-… bzw. NONE. */
   lizenz: string;
-  /** Nötige DMS-Version, z. B. „>=0.86.0“. */
+  /** #651: Art der Lizenz; fehlt sie (ältere Entwürfe), gilt „frei“. */
+  lizenzArt?: LizenzArt;
+  /** Bei „eigen“: Name und voller Text (kommt als LICENSE ins Paket). */
+  lizenzName?: string;
+  lizenzText?: string;
+  /** Nötige DMS-Version, immer „>=X.Y.0“ (#651, Auswahl). */
   dms: string;
   /** Eintrag für CHANGELOG.md zu dieser Version. */
   aenderungen: string;
+  /**
+   * #651: Version, die der Empfänger zuletzt bekommen hat, wenn Ablago sie nicht selbst kennt
+   * (aus „Letzte Version des Pakets hochladen“). Die neue Version muss höher sein.
+   */
+  bekannteVersion?: string;
+  /** #651, nur im Expertenmodus: Version und Ablago-Version von Hand (werden trotzdem geprüft). */
+  vonHand?: boolean;
 }
 export type PaketErstellenEingabe = PaketAuswahl & PaketAngaben;
 
@@ -36,6 +83,34 @@ export interface PaketEntwurf extends PaketErstellenEingabe {
   verlauf: Array<{ version: string; datum: string; text: string }>;
   exportiert: string;
   von: string | null;
+  /** #651: Feldschlüssel je exportiertem Mappentyp (Id im DMS) – daraus erkennt Ablago die Art der nächsten Änderung. */
+  felder?: Record<string, string[]>;
+}
+
+/** Art einer neuen Version (#651) mit Beispiel. */
+export type VersionsArt = 'korrektur' | 'inhalt' | 'gross';
+export const VERSIONSARTEN: VersionsArt[] = ['korrektur', 'inhalt', 'gross'];
+
+/** Die drei möglichen nächsten Versionen nach `v` (1.2.3 → 1.2.4 / 1.3.0 / 2.0.0). */
+export function naechsteVersionen(v: string): Record<VersionsArt, string> {
+  if (!VERSION.test(v)) return { korrektur: '1.0.0', inhalt: '1.0.0', gross: '1.0.0' };
+  const [a, b, c] = v.split('.').map(Number);
+  return { korrektur: `${a}.${b}.${c + 1}`, inhalt: `${a}.${b + 1}.0`, gross: `${a + 1}.0.0` };
+}
+
+/** Was die Prüfung zu Version und nötiger Ablago-Version sagt (#651). */
+export interface VersionsLage {
+  /** Höchste Version, die der Empfänger schon haben kann (Entwurf oder hochgeladen); null = erstes Paket. */
+  bekannt: string | null;
+  /** Von Ablago erkannte Art der Änderung seit dem letzten Export, sonst null. */
+  art: VersionsArt | null;
+  /** Grund für die erkannte Art, z. B. „Feld Kundennummer entfernt“. */
+  artGrund: string | null;
+  /** Ermittelte Mindestversion von Ablago (X.Y.0) und warum. */
+  mindest: string;
+  gruende: string[];
+  /** Wählbare Angaben für „Nötige Ablago-Version“, älteste zuerst (Mindestversion … eigene Version). */
+  dmsOptionen: string[];
 }
 
 /** Was es zur Auswahl gibt. */
@@ -68,9 +143,11 @@ export interface PaketPruefung {
   einspielbar: boolean;
   /** Archivname und Größe, wenn einspielbar. */
   datei: { name: string; bytes: number } | null;
+  /** #651: Version und nötige Ablago-Version. */
+  version: VersionsLage;
 }
 
-/** Nächste Version: Nebenversion + 1 (1.0.0 → 1.1.0); ungültig → 1.0.0. */
+/** Nächste Version: Nebenversion + 1 (1.0.0 → 1.1.0); ungültig → 1.0.0 (Vorschlag „Neue Inhalte“). */
 export function naechsteVersion(v: string): string {
   if (!VERSION.test(v)) return '1.0.0';
   const [a, b] = v.split('.').map(Number);
