@@ -57,11 +57,11 @@ export type ApiAufruf = (a: { methode: string; pfad: string; kopf: Record<string
 
 /**
  * Recht des API-Schlüssels eines Dienstkontos: „lesen und schreiben“, sobald das Paket irgendetwas schreiben darf –
- * Mappen, Dokumente, Vektoren (#442), Fassungen (#577, dms:umwandeln), Volltext (#614, dms:volltext), Archivfassungen (#631) oder die Rückmeldung zur Kopie außer Haus
- * (#585, dms:sicherung-lesen). Was es genau darf, prüft die Route je Recht.
+ * Mappen, Dokumente, Vektoren (#442), Fassungen (#577, dms:umwandeln), Volltext (#614, dms:volltext), Archivfassungen (#631). Pakete für die Kopie außer
+ * Haus (#585, dms:sicherung-lesen) lesen nur: Ihren Stand melden sie in der Antwort auf das Ereignis (#636). Was es genau darf, prüft die Route je Recht.
  */
 export const schluesselRecht = (c: PaketCode): 'lesen' | 'schreiben' =>
-  c.rechte.schreiben.length || c.rechte.dokumente === 'schreiben' || hatSchnittstelle(c, 'dms:vektoren') || hatSchnittstelle(c, 'dms:umwandeln') || hatSchnittstelle(c, 'dms:sicherung-lesen') || hatSchnittstelle(c, 'dms:volltext') || hatSchnittstelle(c, 'dms:archivfassung') ? 'schreiben' : 'lesen';
+  c.rechte.schreiben.length || c.rechte.dokumente === 'schreiben' || hatSchnittstelle(c, 'dms:vektoren') || hatSchnittstelle(c, 'dms:umwandeln') || hatSchnittstelle(c, 'dms:volltext') || hatSchnittstelle(c, 'dms:archivfassung') ? 'schreiben' : 'lesen';
 
 export interface LaeuferOptionen {
   dienst: Dienst;
@@ -503,7 +503,12 @@ export class Paketlaeufer implements PaketLaeufer {
     for (const e of es) {
       if (!this.laeuft()) return; // Wartung oder Läufer weg: später, ohne Versuch
       if (!this.pakete.some((p) => p.id === paket)) { await this.o.dienst.ereignisFehlgeschlagen(e.id, 'Das Paket hat keinen Code mehr.', null); continue; }
+      // Antwort jedes Aufrufs (#636): z. B. Stand der Kopie außer Haus – das Paket meldet ihn, statt selbst zu schreiben.
+      const antwort = (r: Ergebnis, beginn: number) => r.ohneVersuch ? Promise.resolve() :
+        this.o.dienst.nachEreignisAufruf(paket, e, { ok: r.ok, text: r.text, fehler: r.fehler, rc: r.rc, beginn }).catch((f) => log.warn('Paket-Läufer: Antwort des Pakets nicht übernommen', { paket, art: e.art, fehler: (f as Error).message }));
+      let beginn = Date.now();
       let r = await this.rufe(paket, 'ereignis', { art: e.art, id: e.id, erstellt: e.erstellt, versuch: e.versuche + 1, daten: e.daten });
+      await antwort(r, beginn);
       // Fortsetzung (#458): gleich noch einmal, mit dem Stand des Pakets; der Stand bleibt für eine Wiederholung gespeichert.
       for (let weiter = r.ok ? liesWeiter(r.text) : null; weiter; weiter = r.ok ? liesWeiter(r.text) : null) {
         const abschnitt = (Number(e.daten.abschnitt) || 0) + 1;
@@ -513,7 +518,9 @@ export class Paketlaeufer implements PaketLaeufer {
         await this.o.dienst.ereignisDaten(e.id, e.daten);
         await this.o.dienst.texterkennungFortschritt(paket, e, weiter).catch(() => {});
         if (!this.laeuft()) return;
+        beginn = Date.now();
         r = await this.rufe(paket, 'ereignis', { art: e.art, id: e.id, erstellt: e.erstellt, versuch: e.versuche + 1, daten: e.daten });
+        await antwort(r, beginn);
       }
       // Texterkennung als Paket (#458): Dokument wartet nicht länger, wenn das Paket fertig ist oder aufgibt.
       const nachher = (x: { ok: boolean; text: string; fehler?: string | null; aufgegeben?: boolean }) =>

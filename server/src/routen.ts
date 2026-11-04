@@ -166,6 +166,8 @@ function archivProtokoll(t: { name: string; archiv?: Mappentyp['archiv'] }, vorh
   else L.werkbank.info(vorher ? 'Archivmodus geändert' : 'Archivmodus eingeschaltet', daten);
 }
 const leer: Antwort = { status: 204 };
+/** Rückmeldung zur Kopie außer Haus per PUT (#585) – nur noch im Übergang für Pakete vor #636. */
+const SICHERUNG_EXTERN_PFAD = '/api/v1/sicherungen/:name/extern';
 const b = (a: Anfrage) => (a.body ?? {}) as Record<string, unknown>;
 const info = (a: Anfrage) => ({ ip: a.ip, geraet: a.geraet ?? '' });
 /** Löschprotokoll (#470): wer löscht – Benutzer in der Oberfläche, Schnittstelle (API-Schlüssel) oder Paket (Dienstkonto). */
@@ -2239,7 +2241,11 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     a.benutzer = b; a.apiSchluessel = s;
     // „Nur Zähler“ (#625): genau eine Adresse, alles andere 403.
     if (s.recht === NUR_ZAEHLER && !(r.methode === 'GET' && r.pfad === ZAEHLER_PFAD)) throw new Fachfehler(403, t('api.schluessel.nur-zaehler'));
-    if (r.methode !== 'GET' && s.recht === 'lesen') throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen.');
+    // Übergang (#636): Pakete für die Kopie außer Haus haben seit 0.158.1 nur noch einen Leseschlüssel und melden ihren
+    // Stand in der Antwort auf das Ereignis. Ältere Fassungen dürfen noch per PUT melden (die Route prüft, ob ein Paket
+    // mit dms:sicherung-lesen fragt). Fällt mit der übernächsten Fassung weg.
+    const uebergang = r.methode === 'PUT' && r.pfad === SICHERUNG_EXTERN_PFAD;
+    if (r.methode !== 'GET' && s.recht === 'lesen' && !uebergang) throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen.');
     if (r.zugang === 'admin' && b.rolle !== 'admin') throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
     return;
   }

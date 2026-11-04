@@ -17,7 +17,7 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:umwandeln` | 0.137.0 | Dateien, die der Kern nicht liest (TIFF, WebP …), in PDF, PNG oder JPEG umwandeln – für Vorschaubild und Volltext | **[Dateien umwandeln](#dateien-umwandeln)** – mit den Formaten, die ein Paket zurückgeben darf |
 | `dms:volltext` | 0.145.0 | Volltext für Dateien liefern, die der Kern nicht liest (Word, Excel, E-Mails …) – nur mit „Dokumente lesen“ | **[Volltext liefern](#volltext-liefern)** – Ereignis, Schreiben, Grenzen |
 | `dms:archivfassung` | 0.149.0 | Zu Dokumenten mit fertigem Volltext ein durchsuchbares PDF/A ablegen – mit Wortpositionen, nur mit „Dokumente lesen“ | **[Archivfassung ablegen](#archivfassung)** – Ereignis, Wortpositionen, Annahme, Grenzen |
-| `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
+| `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, Stand in der Antwort melden (nur Leseschlüssel) | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
 
 ## So läuft Code in Ablago { #so-lauft-code-im-dms }
 
@@ -752,10 +752,10 @@ sequenceDiagram
   loop Stück für Stück, über mehrere Aufrufe
     P->>K: GET /sicherungen/{name}/datei?versatz=…&laenge=…
     P->>Z: Teil hochladen
-    P-->>K: {"weiter": {…}} (Fortsetzung)
+    P-->>K: {"weiter": {…}, "extern": {"status": "laeuft", …}} (Fortsetzung)
   end
   P->>Z: zusammensetzen, Metadaten daneben, prüfen
-  P->>K: PUT /sicherungen/{name}/extern (geprueft)
+  P-->>K: {"extern": {"status": "geprueft", …}} (Antwort)
 ```
 
 1. **Ereignis `sicherung.fertig`** nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). `daten` sind die **schlanken Metadaten** und der Name:
@@ -771,7 +771,7 @@ sequenceDiagram
 3. **Hochladen in Teilen:** Je Stück eine Anfrage mit `dms.netz` (Körper = Stück), z. B. Nextcloud-Chunking (`/remote.php/dav/uploads/…`, Teile ab 5 MB), `Content-Range` bei WebDAV-Servern, die es können, oder S3 Multipart. Eine Anfrage mit mehr als 1 MB Körper darf so lange dauern wie der Aufruf.
 4. **Fortsetzung:** Nach etwa der halben Zeitgrenze antwortet das Paket mit `{"weiter": {"versatz": …, …}}` (siehe [Fortsetzung](#fortsetzung)); der Läufer ruft es gleich wieder auf und speichert den Stand. Schlägt ein Aufruf fehl (Netz weg), setzt die Wiederholung (1, 5, 30 Minuten, 2, 6 Stunden) an der letzten gespeicherten Stelle an – nicht von vorn. Für Stände, die über das Ereignis hinaus gelten (z. B. „zuletzt vollständig geprüft“), gibt es den [Speicher des Pakets](#importe-aus-dms). Die Zeit je Sicherung insgesamt begrenzen die 500 Fortsetzungen je Ereignis.
 5. **Prüfen:** am besten mit der Prüfsumme des Ziels (S3 `x-amz-checksum-sha256`), sonst Größe und Zurücklesen (SHA-256 über die ganze Datei mit `Range`-Anfragen bis 10 MB; bei großen Dateien Stichproben, regelmäßig vollständig). Kann das Ziel nicht lesen (Nextcloud-Dateiablage), sag das ehrlich: `hochgeladen` statt `geprueft`.
-6. **Rückmeldung:** `PUT /sicherungen/{name}/extern` mit
+6. **Rückmeldung in der Antwort:** Seit 0.158.1 (#636) bekommt das Paket nur noch einen **Leseschlüssel** – zum Kopieren muss es im DMS nichts schreiben. Seinen Stand meldet es in der Antwort auf jeden Aufruf: als `extern` im JSON-Ergebnis (`dms.ergebnis`), auch neben `weiter`, z. B. `{"weiter": {…}, "extern": {"status": "laeuft", "bytes": 268435456, "gesamt": 1834567890}}`. Felder:
 
     | Feld | |
     |---|---|
@@ -781,9 +781,13 @@ sequenceDiagram
     | `endgueltig` | bei `fehlgeschlagen`: Eine Wiederholung hilft nicht – die Administratoren bekommen eine E-Mail. Vorübergehendes (Netz weg) meldest du besser als `laeuft` mit `grund`. |
     | `ziel` | Ziel in Worten, ohne Zugangsdaten (der Kern entfernt `benutzer:passwort@` aus Adressen) |
 
+    Ohne `extern` zählt der Rückgabewert: **2** heißt `fehlgeschlagen` und endgültig, ein anderer Fehler `laeuft` mit dem Text aus `dms.ergebnis` als `grund` – der Läufer wiederholt in beiden Fällen. Ein Erfolg ohne `extern` ändert den Stand nicht.
+
+    Bis 0.158.0 meldeten Pakete per `PUT /sicherungen/{name}/extern` (gleiche Felder). Das geht im Übergang noch, auch mit dem Leseschlüssel, und fällt mit der übernächsten Fassung weg.
+
     **Werkbank → Sicherung** zeigt den Stand je Sicherung („lokal ✓ · extern ✓ geprüft“), die Übersicht einen Hinweis bei Fehlern oder wenn seit mehr als 2 Tagen keine neuere Kopie ankam. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, setzt der Kern selbst `fehlgeschlagen` (endgültig).
 
-Antworten der drei Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.
+Antworten der Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.
 
 ### Löschschutz { #sicherung-loeschschutz }
 
@@ -843,7 +847,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 
 - `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.
 - `PUT /dokumente/{id}/fassung` und `PUT /dokumente/{id}/vorschaubild` – siehe [Dateien umwandeln](#dateien-umwandeln) (Recht `dms:umwandeln`).
-- `GET /sicherungen/{name}`, `GET /sicherungen/{name}/datei?versatz=&laenge=` und `PUT /sicherungen/{name}/extern` – siehe [Sicherung außer Haus](#sicherung-ausser-haus) (Recht `dms:sicherung-lesen`, seit 0.142.0).
+- `GET /sicherungen/{name}`, `GET /sicherungen/{name}/datei?versatz=&laenge=` (und im Übergang `PUT /sicherungen/{name}/extern`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) (Recht `dms:sicherung-lesen`, seit 0.142.0).
 - `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab Ablago 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt Ablago die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.
 - `PUT /dokumente/{id}/sprache` mit `{ "sprache": "fra" }` bzw. `null` – nur die Sprache setzen (ab 0.128.0, Recht `dokumente: schreiben`); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch `weitere` – siehe [Sprachen je Seite](#seitensprachen).
 - Ab 0.139.0: `PUT /dokumente/{id}/volltext` mit Seiten (`\f`) und `seitensprachen`, `GET /dokumente/{id}/volltext` mit `seiten` – siehe [Sprachen je Seite](#seitensprachen).

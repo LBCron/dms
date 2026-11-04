@@ -9,6 +9,7 @@ import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { schreibeSicherung, sha256Von, ZWECK, type Eintrag } from './sicherungsformat';
 import { aufVolume, geraetVon } from './tresor';
+import type { EreignisAufruf } from './dienst';
 
 /**
  * Sicherungen (#103–#105): Datenbank und Dateien zum selben Zeitpunkt, verschlüsselt mit dem
@@ -662,6 +663,34 @@ export class Sicherung {
     else if (status !== 'laeuft') log.info(status === 'geprueft' ? 'Kopie außer Haus geprüft' : 'Kopie außer Haus hochgeladen', { name, paket, pruefung: pruefung ?? null, ziel: neu.ziel ?? null });
     if (status === 'fehlgeschlagen' && neu.endgueltig) void this.melde().catch(() => {});
     return neu;
+  }
+
+  /**
+   * Antwort des Pakets auf einen Aufruf von sicherung.fertig (#636) – so meldet es seinen Stand, ohne schreiben zu dürfen:
+   * als „extern“ im JSON-Ergebnis (auch neben „weiter“), dieselben Felder wie bei PUT /sicherungen/{name}/extern.
+   * Ohne „extern“ zählt der Rückgabewert: 2 → „fehlgeschlagen“ (endgültig – hier muss jemand handeln), sonst ≠ 0 →
+   * „läuft“ mit der Meldung als Grund; der Läufer wiederholt. Erfolg ohne „extern“ ändert nichts.
+   */
+  async externAntwort(paket: string, name: string, r: EreignisAufruf): Promise<void> {
+    const stand = (await this.externStaende())[name]?.[paket];
+    if (!stand) return;
+    let extern: unknown;
+    if (r.text.trimStart().startsWith('{')) { try { extern = (JSON.parse(r.text) as Record<string, unknown> | null)?.extern; } catch { /* kein JSON: Text */ } }
+    if (extern !== undefined) {
+      await this.externRueckmeldung(paket, name, extern).catch((f) => log.warn('Kopie außer Haus: Rückmeldung des Pakets nicht übernommen', { name, paket, fehler: (f as Error).message }));
+      return;
+    }
+    // Erfolg ohne Stand; schon erfolgreich; oder während des Aufrufs schon gemeldet (Pakete vor #636, PUT): nichts ändern.
+    if (r.ok || erfolgreich(stand) || Date.parse(stand.am) >= r.beginn) return;
+    const endgueltig = r.rc === 2;
+    const grund = ohneZugangsdaten((r.fehler ?? '').trim().replace(/\s+/g, ' ')).slice(0, 500) || 'Das Paket meldet einen Fehler ohne Text.';
+    await this.setzeExtern(name, paket, {
+      status: endgueltig ? 'fehlgeschlagen' : 'laeuft', grund, ...(endgueltig ? { endgueltig: true } : {}),
+      ...(stand.ziel ? { ziel: stand.ziel } : {}), ...(stand.bytes !== undefined ? { bytes: stand.bytes } : {}), ...(stand.gesamt !== undefined ? { gesamt: stand.gesamt } : {}),
+      seit: stand.seit, am: this.jetzt().toISOString(),
+    });
+    log.warn(endgueltig ? 'Kopie außer Haus fehlgeschlagen' : 'Kopie außer Haus: Versuch fehlgeschlagen', { name, paket, grund, endgueltig });
+    if (endgueltig) void this.melde().catch(() => {});
   }
 
   /** Das Paket hat das Ereignis aufgegeben (alle Wiederholungen fehlgeschlagen): „fehlgeschlagen“, endgültig. */

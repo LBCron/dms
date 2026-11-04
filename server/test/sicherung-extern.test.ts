@@ -134,6 +134,48 @@ describe('Sicherung außer Haus (#585)', () => {
     assert.equal(ohneZugangsdaten('https://a:b@x.example.org/p und http://c@y.example.org'), 'https://x.example.org/p und http://y.example.org');
   });
 
+  it('Antwort auf das Ereignis (#636): Stand als „extern“, auch neben „weiter“; Fehler nach Rückgabewert', async () => {
+    const { s, sichere, mails, stelle } = await aufbau();
+    const meta = await sichere();
+    const name = meta.datei.replace('.dms-sicherung', '');
+    const st = async () => (await s.liste())[0].extern!.sicherung_webdav;
+    const antwort = (x: Partial<{ ok: boolean; text: string; fehler: string | null; rc: number | null; beginn: number }>) =>
+      s.externAntwort('sicherung_webdav', name, { ok: true, text: '', fehler: null, rc: 0, beginn: Date.parse('2026-11-02T03:30:00Z'), ...x });
+    stelle(new Date('2026-11-02T03:31:00Z'));
+    await antwort({ text: JSON.stringify({ weiter: { versatz: 8 }, extern: { status: 'laeuft', bytes: 8, gesamt: 100, ziel: 'WebDAV https://lena:geheim@cloud.example.org/DMS' } }) });
+    assert.deepEqual([(await st()).status, (await st()).bytes, (await st()).ziel], ['laeuft', 8, 'WebDAV https://cloud.example.org/DMS']);
+    // Ungültig: geprüft, aber nicht wie (wird nicht übernommen, wirft nicht).
+    await antwort({ text: JSON.stringify({ extern: { status: 'geprueft' } }) });
+    assert.equal((await st()).status, 'laeuft');
+    // Fehler ohne „extern“: läuft mit Grund (Wiederholung), Zugangsdaten entfernt, Fortschritt und Ziel bleiben.
+    stelle(new Date('2026-11-02T03:35:00Z'));
+    await antwort({ ok: false, text: 'Netz weg: https://lena:geheim@cloud.example.org', fehler: 'Netz weg: https://lena:geheim@cloud.example.org', rc: 1, beginn: Date.parse('2026-11-02T03:34:00Z') });
+    assert.deepEqual([(await st()).status, (await st()).grund, (await st()).bytes, (await st()).ziel], ['laeuft', 'Netz weg: https://cloud.example.org', 8, 'WebDAV https://cloud.example.org/DMS']);
+    assert.equal(mails.length, 0);
+    // Rückgabewert 2: endgültig, E-Mail.
+    stelle(new Date('2026-11-02T03:40:00Z'));
+    await antwort({ ok: false, text: 'Passwort falsch', fehler: 'Passwort falsch', rc: 2, beginn: Date.parse('2026-11-02T03:39:00Z') });
+    await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual([(await st()).status, (await st()).endgueltig, (await st()).grund], ['fehlgeschlagen', true, 'Passwort falsch']);
+    assert.equal(mails.length, 1);
+    // Ein Paket vor #636 hat während des Aufrufs schon per PUT gemeldet: die Antwort überschreibt das nicht.
+    await antwort({ ok: false, text: 'x', fehler: 'x', rc: 1, beginn: Date.parse('2026-11-02T03:39:30Z') });
+    assert.equal((await st()).grund, 'Passwort falsch');
+    // Nächster Versuch, vorübergehend: wieder „läuft“, nicht mehr endgültig.
+    stelle(new Date('2026-11-02T04:40:00Z'));
+    await antwort({ ok: false, text: 'Zeitüberschreitung', fehler: 'Zeitüberschreitung', rc: 1, beginn: Date.parse('2026-11-02T04:39:00Z') });
+    assert.deepEqual([(await st()).status, (await st()).endgueltig], ['laeuft', undefined]);
+    // Erfolg mit Stand; danach ändern weder Erfolg ohne Stand noch ein Fehler etwas.
+    await antwort({ text: JSON.stringify({ extern: { status: 'geprueft', pruefung: 'pruefsumme', bytes: 100, gesamt: 100 } }), beginn: Date.parse('2026-11-02T04:39:30Z') });
+    await antwort({ text: 'Sicherung außer Haus', beginn: Date.parse('2026-11-02T05:00:00Z') });
+    await antwort({ ok: false, text: 'x', fehler: 'x', rc: 1, beginn: Date.parse('2026-11-02T05:00:00Z') });
+    assert.equal((await st()).status, 'geprueft');
+    // Fremdes Paket oder unbekannte Sicherung: nichts.
+    await s.externAntwort('fremd', name, { ok: true, text: JSON.stringify({ extern: { status: 'laeuft' } }), fehler: null, rc: 0, beginn: 0 });
+    await s.externAntwort('sicherung_webdav', 'gibt-es-nicht', { ok: false, text: '', fehler: 'x', rc: 2, beginn: 0 });
+    assert.deepEqual(Object.keys((await s.liste())[0].extern!), ['sicherung_webdav']);
+  });
+
   it('gleichzeitige Rückmeldungen und eine neue Sicherung gehen nicht verloren', async () => {
     const { s, sichere, stelle } = await aufbau({ pakete: [{ id: 'a', name: 'A', adresse: null }, { id: 'b', name: 'B', adresse: null }] });
     const erste = (await sichere()).datei.replace('.dms-sicherung', '');
@@ -261,13 +303,13 @@ describe('Sicherung außer Haus (#585)', () => {
     assert.ok(hat('liegt nicht auf dem Ziel'));
   });
 
-  it('Recht und Ereignis: nur zusammen, im Manifest lesbar, in der Rückfrage verständlich, Schlüssel darf rückmelden', () => {
+  it('Recht und Ereignis: nur zusammen, im Manifest lesbar, in der Rückfrage verständlich, Schlüssel darf nur lesen', () => {
     assert.ok('sicherung.fertig' in EREIGNISSE);
     assert.match(SCHNITTSTELLEN['dms:sicherung-lesen'], /kann sie nicht öffnen/);
     const gut = liesCode({ sprache: 'c', ereignisse: ['sicherung.fertig'], rechte: { schnittstellen: ['dms:sicherung-lesen'] } });
     assert.deepEqual(gut.fehler, []);
     assert.deepEqual(gut.code!.rechte.lesen, []);
-    assert.equal(schluesselRecht(gut.code!), 'schreiben', 'PUT /sicherungen/{name}/extern');
+    assert.equal(schluesselRecht(gut.code!), 'lesen', 'meldet in der Antwort, schreibt nichts (#636)');
     assert.match(liesCode({ sprache: 'c', rechte: { schnittstellen: ['dms:sicherung-lesen'] } }).fehler.join(' '), /braucht das Ereignis sicherung.fertig/);
     assert.match(liesCode({ sprache: 'c', ereignisse: ['sicherung.fertig'] }).fehler.join(' '), /nur mit code.rechte.schnittstellen: \[dms:sicherung-lesen\]/);
     const zeilen = rechteText(gut.code!, (v) => v);

@@ -108,6 +108,8 @@ const versionInfo = (v: DokumentVersion): LoeschDokument => ({ dokumentId: v.dok
 export interface DokumentImKorb extends DokumentImPapierkorb { art: 'dokument'; typId: string; mappeTitel: string; register: string; mappe: 'da' | 'papierkorb' | 'weg' }
 /** Wo eine gleiche Datei schon liegt (#333) – nur lesbare Mappen. */
 /** Bestätigter bzw. neuer (gesperrter) Schlüssel eines eigenen Katalogs (#594). */
+/** Antwort eines Pakets auf einen Aufruf eines Ereignisses (#636). rc: Rückgabewert des Pakets; beginn: Start des Aufrufs (ms). */
+export interface EreignisAufruf { ok: boolean; text: string; fehler: string | null; rc: number | null; beginn: number }
 export interface KatalogSchluessel { pem: string; fingerabdruck: string; von: string | null; am: string }
 /** Eine weitere Katalogquelle (#189) mit Schlüssel des Anbieters (#594). */
 export interface PaketQuelleEintrag { url: string; aktiv: boolean; von: string | null; am: string; schluessel?: KatalogSchluessel | null; gesperrt?: KatalogSchluessel | null }
@@ -1371,6 +1373,13 @@ export class Dienst {
 
   /** Sicherung außer Haus (#585): ein Paket hat das Ereignis sicherung.fertig aufgegeben (index.ts verbindet mit der Sicherung). */
   sicherungAufgegeben?: (paket: string, name: string, fehler: string | null | undefined) => Promise<void>;
+  /** Sicherung außer Haus (#636): Antwort des Pakets auf einen Aufruf von sicherung.fertig (index.ts verbindet mit der Sicherung). */
+  sicherungAntwort?: (paket: string, name: string, r: EreignisAufruf) => Promise<void>;
+
+  /** Antwort eines Pakets auf jeden einzelnen Aufruf eines Ereignisses, auch Fortsetzungen und Fehlschläge (#636). */
+  async nachEreignisAufruf(paket: string, e: { art: string; daten: Record<string, unknown> }, r: EreignisAufruf): Promise<void> {
+    if (e.art === 'sicherung.fertig' && typeof e.daten.name === 'string') await this.sicherungAntwort?.(paket, e.daten.name, r);
+  }
 
   /**
    * Ergebnis eines Ereignisses „Volltext fertig“ beim Paket für die Texterkennung (#458, aus dem Paket-Läufer):
