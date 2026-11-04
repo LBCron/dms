@@ -53,6 +53,8 @@ Hast du eine **Visitenkarte**, einen Kassenbon oder einen Brief vor dir, musst d
 
 Welche Felder die Erkennung füllt, legt der Administrator am Mappentyp fest; Passwortfelder füllt sie nie. Hat er dafür ein Paket gewählt, etwa einen KI-Assistenten, steht unter dem Ergebnis „Erkannt mit „…“.“ – auch dann sind es nur Vorschläge. Der Text des Dokuments geht dabei an den KI-Dienst des Pakets – im Heimnetz bleibt er bei dir; ob es ein Anbieter ist, sieht dein Administrator an der Dienst-Adresse des Pakets. Antwortet das Paket nicht, übernimmt die eingebaute Erkennung, und ein Satz sagt dir das. Geht etwas schief (unscharfes Foto, kein Text), steht der Grund im Kasten – versuch es mit mehr Licht und gerade gehaltener Karte.
 
+**Visitenkarte mit QR-Code:** Viele Karten tragen einen QR-Code mit allen Kontaktdaten (vCard). Hat der Administrator das Paket **QR-Code lesen** gewählt, übernimmt Ablago die Angaben aus diesem Code statt aus dem erkannten Text – Telefonnummern und Namen stimmen dann Zeichen für Zeichen. Unter dem Ergebnis steht „Erkannt mit „QR-Code lesen“.“; die Fundstelle nennt die Zeile aus der vCard. Das Paket liest Dokumente, die schon in der Mappe oder in einer Post liegen: Lege das Foto der Karte also zuerst ab (oder öffne die Post, in der es angekommen ist) und klicke dann **Aus Dokument ausfüllen** mit diesem Dokument. Hat die Karte keinen QR-Code oder steht darin etwas anderes (eine Internetadresse, ein GiroCode), liest Ablago wie gewohnt den Text, und ein Satz sagt dir das.
+
 ### Die Felder
 
 | Feld | So gibst du es ein |

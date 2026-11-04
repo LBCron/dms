@@ -268,7 +268,7 @@ Ein Paket wie **KI-Assistent** rechnet nicht selbst, sondern fragt einen Dienst,
 
 ### Erkennung durch ein Paket { #erkennung-durch-ein-paket }
 
-**Aus Dokument ausfüllen** (Knopf in der Mappe) nutzt normalerweise die **eingebaute Erkennung** – Muster für E-Mail, Telefon, Datum, Betrag und Ähnliches, ohne KI. Ein Paket mit dem Recht [Felder aus Dokumenten vorschlagen](#recht-erkennen) – etwa ein KI-Assistent über Ollama – erkennt auch Freitext, Briefköpfe und schwierige Belege.
+**Aus Dokument ausfüllen** (Knopf in der Mappe) nutzt normalerweise die **eingebaute Erkennung** – Muster für E-Mail, Telefon, Datum, Betrag und Ähnliches, ohne KI. Ein Paket mit dem Recht [Felder aus Dokumenten vorschlagen](#recht-erkennen) – etwa ein KI-Assistent über Ollama – erkennt auch Freitext, Briefköpfe und schwierige Belege. Das Paket **QR-Code lesen** übernimmt bei Visitenkarten die Angaben aus dem QR-Code (vCard) und lässt ohne Code die eingebaute Erkennung arbeiten; es liest dafür die Seitenbilder der Dokumente, die schon abgelegt sind (Recht *Dokumente lesen*), und braucht kein Netz.
 
 - **Standard für alle Mappentypen:** Werkbank → Pakete → *Paket* → Abschnitt **Aus Dokument ausfüllen** → **Dieses Paket als Standard für alle Mappentypen nutzen**. Ohne Haken bleibt die eingebaute Erkennung der Standard.
 - **Je Mappentyp:** In der [Erkennung des Mappentyps](mappentypen.md#erkennung) wählst du *Standard aus der Werkbank*, *eingebaut* oder ein bestimmtes Paket.
