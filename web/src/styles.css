@@ -817,6 +817,9 @@ input.kurz { width: 7em; }
 .loeschwahl-grund { flex-basis: 100%; }
 .loeschwahl-begruendung { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: min(380px, calc(100vw - 48px)); padding: 10px 12px; background: var(--flaeche); border: 1px solid var(--linie-stark); border-radius: var(--r); box-shadow: 0 10px 30px rgba(15, 23, 42, .18); }
 .loeschwahl-begruendung p { margin: 0; }
+/* Unter dem Knopf aufklappen (#723: „Herunterladen“ steht oben in der Dokumentleiste). */
+.loeschwahl-begruendung.unten { bottom: auto; top: calc(100% + 8px); z-index: 30; }
+.loeschwahl-begruendung p + p { margin-top: 6px; }
 .loeschwahl-begruendung ul { margin: 6px 0 0; padding-left: 18px; }
 .loeschwahl-wege { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--linie); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .textknopf.gefahr:disabled { color: var(--leise); cursor: not-allowed; text-decoration: none; }

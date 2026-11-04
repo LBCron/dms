@@ -15,6 +15,7 @@ import { pdfaName, type ArchivStand } from '../../../shared/src/archivfassung';
 import { useDaten } from '../daten';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
+import { Symbol } from '../Symbol';
 import { rueckfrage } from '../rueckfrage';
 import { StempelDialog } from './Stempel';
 import { PdfVerkleinern } from './PdfVerkleinern';
@@ -58,7 +59,7 @@ export function sortiereDokumente(liste: Dokument[], s: Dokumentsortierung): Dok
 
 const HINWEIS_MEHRFACH = 'dms:mehrere-herunterladen-gesehen';
 
-export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuegen, entferne, entferneMehrere, vergiss, nurLesen, setzeNeue, neuLaden, post, typ, mappeTitel = '' }: {
+export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuegen, entferne, entferneMehrere, vergiss, nurLesen, setzeNeue, neuLaden, post, typ, mappeTitel = '', mitnehmen = true }: {
   register: Register; dokumente: Dokument[]; neue: NeueDatei[]; entfernt: string[];
   /** Ohne Recht „Bearbeiten“ (#126): nur ansehen und herunterladen. */
   nurLesen?: boolean;
@@ -71,6 +72,11 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   post?: boolean;
   /** Stempel beim Weitergeben (#394): Einstellung des Mappentyps, Titel für {mappe}. */
   typ?: Mappentyp; mappeTitel?: string;
+  /**
+   * Exportrecht (#723): Herunterladen ist Mitnehmen und braucht E. Ohne E bleiben die Dokumente zum Ansehen;
+   * Herunterladen, Teilen und Kopien mit Stempel gibt es dann nicht – „Warum nicht?“ erklärt es an der Leiste.
+   */
+  mitnehmen?: boolean;
 }) {
   const [stempelOffen, setStempelOffen] = useState<{ id: string; version?: number }>();
   const stempelPflicht = typ?.stempel?.modus === 'pflicht';
@@ -260,9 +266,10 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                   onChange={() => setGewaehlt(alleAn ? new Set() : new Set(waehlbar.map((x) => x.id)))} />
                   <span>{auswahl.length ? `${auswahl.length} von ${waehlbar.length} ausgewählt` : 'Alle auswählen'}</span></label>
                 <Hilfe ort="dokumente.mehrere" />
+                {!mitnehmen && <NichtHerunterladen />}
                 {auswahl.length > 0 && <>
-                  <button type="button" className="knopf klein" onClick={alleHerunterladen} disabled={stempelPflicht}
-                    title={stempelPflicht ? 'Dieser Mappentyp verlangt beim Weitergeben einen Stempel: lade die Dokumente einzeln mit Stempel herunter.' : undefined}>Herunterladen</button>
+                  {mitnehmen && <button type="button" className="knopf klein" onClick={alleHerunterladen} disabled={stempelPflicht}
+                    title={stempelPflicht ? 'Dieser Mappentyp verlangt beim Weitergeben einen Stempel: lade die Dokumente einzeln mit Stempel herunter.' : undefined}>Herunterladen</button>}
                   {bearbeitbar && pdfAuswahl.length >= 2 && <button type="button" className="knopf klein" aria-expanded={!!zusammen}
                     onClick={() => setZusammen(zusammen ? null : { name: pdfAuswahl[0].name, entfernen: false })}>Zusammenfügen</button>}
                   {!nurLesen && <button type="button" className="knopf klein gefahr-rand" onClick={auswahlLoeschen}>Löschen</button>}
@@ -348,7 +355,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                             </form>
                           : <span className="klein">Archivnummer <strong className="mono">{x.archivnummer}</strong>
                               {!nurLesen && neuLaden && <> · <button type="button" className="textknopf klein" onClick={() => setAsn({ id: x.id, wert: x.archivnummer ?? '' })}>ändern</button></>}</span>)}
-                        {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden}
+                        {!weg && versionenOffen === x.id && <Versionen d={x} zurueck={!nurLesen && versioniert} neuLaden={neuLaden} mitnehmen={mitnehmen}
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
                         {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && <ArchivAnzeige s={x.archivfassung} />}
@@ -357,19 +364,19 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                       {handy ? (
                         <div className="zeilenaktionen dk-handy">
                           {klickbar && <a className="knopf primaer dk-gross" href={sicht!.url} aria-label={`${x.name} öffnen`}>Öffnen</a>}
-                          {!weg && !stempelPflicht && <DokTeilen d={x} />}
+                          {!weg && !stempelPflicht && mitnehmen && <DokTeilen d={x} />}
                           <button type="button" className="knopf dk-gross dk-mehr" aria-haspopup="menu" aria-expanded={menue === x.id} aria-label={`Weitere Aktionen für ${x.name}`} onClick={() => setMenue(x.id)}>⋯</button>
                           {menue === x.id && <>
                             <div className="hy-schleier" aria-hidden="true" onClick={() => setMenue(undefined)} />
                             <div className="dk-blatt" role="menu" aria-label={`Aktionen für ${x.name}`} onClick={(e) => { if ((e.target as HTMLElement).closest('a, button')) setMenue(undefined); }}>
                               <p className="dk-titel">{x.name}</p>
-                        {!weg && !stempelPflicht && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
-                        {!weg && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
+                        {!weg && !stempelPflicht && mitnehmen && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
+                        {!weg && mitnehmen && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
                           title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
                           onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
                         {bearbeitbar && !weg && x.mime === 'application/pdf' && <button type="button" className="textknopf" aria-expanded={seitenOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title="Seiten drehen, löschen, umsortieren oder teilen">Seiten</button>}
-                        {!weg && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
+                        {!weg && (mitnehmen || bearbeitbar) && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title="Bilder im PDF herunterrechnen – als neue Version oder als Kopie zum Herunterladen">Verkleinern</button>}
                         {bearbeitbar && !weg && kannSchwaerzen(x.mime) && <button type="button" className="textknopf" aria-expanded={schwarzOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title="Stellen endgültig schwärzen – als Kopie, das Original bleibt">Schwärzen</button>}
@@ -388,13 +395,13 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                       ) : (
                       <div className="zeilenaktionen">
                         {klickbar && <a className="symbolverweis" href={sicht!.url} target="_blank" rel="noreferrer" title="In neuem Tab öffnen" aria-label={`${x.name} in neuem Tab öffnen`}>↗</a>}
-                        {!weg && !stempelPflicht && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
-                        {!weg && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
+                        {!weg && !stempelPflicht && mitnehmen && <Herunterladen x={x} archiv={sicht?.art === 'archiv'} />}
+                        {!weg && mitnehmen && kannStempeln(x.mime) && typ && <button type="button" className="textknopf" aria-expanded={stempelOffen?.id === x.id && !stempelOffen.version}
                           title="Eine Kopie mit Stempel oder Wasserzeichen herunterladen; das Original bleibt unverändert"
                           onClick={() => setStempelOffen(stempelOffen?.id === x.id && !stempelOffen.version ? undefined : { id: x.id })}>{stempelPflicht ? 'Herunterladen mit Stempel' : 'Mit Stempel …'}</button>}
                         {bearbeitbar && !weg && x.mime === 'application/pdf' && <button type="button" className="textknopf" aria-expanded={seitenOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setKleinOffen(undefined); setSchwarzOffen(undefined); setSeitenOffen(seitenOffen === x.id ? undefined : x.id); }} title="Seiten drehen, löschen, umsortieren oder teilen">Seiten</button>}
-                        {!weg && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
+                        {!weg && (mitnehmen || bearbeitbar) && x.mime === 'application/pdf' && x.groesse >= VERKLEINERN_AB && <button type="button" className="textknopf" aria-expanded={kleinOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setSchwarzOffen(undefined); setKleinOffen(kleinOffen === x.id ? undefined : x.id); }} title="Bilder im PDF herunterrechnen – als neue Version oder als Kopie zum Herunterladen">Verkleinern</button>}
                         {bearbeitbar && !weg && kannSchwaerzen(x.mime) && <button type="button" className="textknopf" aria-expanded={schwarzOffen === x.id}
                           onClick={() => { setPdfMeldung(undefined); setSeitenOffen(undefined); setKleinOffen(undefined); setSchwarzOffen(schwarzOffen === x.id ? undefined : x.id); }} title="Stellen endgültig schwärzen – als Kopie, das Original bleibt">Schwärzen</button>}
@@ -413,7 +420,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                       <StempelDialog key={`${x.id}-${stempelOffen.version ?? ''}`} d={x} typ={typ} mappe={mappeTitel} version={stempelOffen.version} schliessen={() => setStempelOffen(undefined)} />
                     )}
                     {kleinOffen === x.id && !weg && (
-                      <PdfVerkleinern d={x} bearbeitbar={bearbeitbar} schliessen={() => setKleinOffen(undefined)}
+                      <PdfVerkleinern d={x} bearbeitbar={bearbeitbar} mitnehmen={mitnehmen} schliessen={() => setKleinOffen(undefined)}
                         fertig={(m, geaendert) => { setKleinOffen(undefined); setPdfMeldung(m); if (geaendert) void neuLaden?.(); }} />
                     )}
                     {schwarzOffen === x.id && !weg && (
@@ -529,6 +536,40 @@ function AnsichtKopf({ x, art, umschalten }: { x: Dokument; art: 'archiv' | 'les
 }
 
 /**
+ * „Herunterladen“ ohne Exportrecht (#723): gesperrt erkennbar (Schloss) mit „Warum nicht?“ – wie beim Löschen (#423).
+ * Die Begründung klappt direkt am Knopf auf; Bildschirmleser hören den Grund schon am Knopf.
+ */
+function NichtHerunterladen() {
+  const [offen, setOffen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!offen) return;
+    const zu = (e: globalThis.MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOffen(false);
+    };
+    document.addEventListener('mousedown', zu); document.addEventListener('keydown', zu);
+    return () => { document.removeEventListener('mousedown', zu); document.removeEventListener('keydown', zu); };
+  }, [offen]);
+  return (
+    <div className="loeschwahl" ref={ref}>
+      <button type="button" className="knopf klein loeschwahl-gesperrt" aria-disabled="true" aria-describedby="mitnehmen-grund" onClick={() => setOffen(!offen)}>
+        <Symbol name="schloss" /> {t('mappen.mitnehmen.knopf')}
+      </button>
+      <span id="mitnehmen-grund" className="sr">{t('mappen.mitnehmen.grund')}</span>
+      <button type="button" className="textknopf klein loeschwahl-warum" aria-expanded={offen} aria-controls="mitnehmen-begruendung" onClick={() => setOffen(!offen)}>
+        <Symbol name="info" /> {t('mappen.mitnehmen.warum')}
+      </button>
+      {offen && (
+        <div className="loeschwahl-begruendung unten klein" id="mitnehmen-begruendung" role="region" aria-label={t('mappen.mitnehmen.warum')}>
+          <p><strong>{t('mappen.mitnehmen.titel')}</strong> {t('mappen.mitnehmen.grund')}</p>
+          <p className="leise">{t('mappen.mitnehmen.ansehen')} <Hilfe ort="dokumente.mitnehmen" /></p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Herunterladen (#631): mit Archivfassung die Wahl – vorausgewählt (vorn) ist, was man gerade sieht, bei E-Rechnungen
  * immer das Original.
  */
@@ -600,7 +641,7 @@ function mitZaehler(name: string) {
 }
 
 /** Alle Versionen eines Dokuments (#194): ansehen, herunterladen, zurückholen. */
-function Versionen({ d, zurueck, neuLaden, mitStempel }: { d: Dokument; zurueck: boolean; neuLaden?: () => Promise<void>; /** Pflicht-Stempel (#394): Herunterladen nur über den Dialog. */ mitStempel?: (nummer: number) => void }) {
+function Versionen({ d, zurueck, neuLaden, mitStempel, mitnehmen = true }: { d: Dokument; zurueck: boolean; neuLaden?: () => Promise<void>; /** Pflicht-Stempel (#394): Herunterladen nur über den Dialog. */ mitStempel?: (nummer: number) => void; /** Exportrecht (#723): ohne E nur ansehen. */ mitnehmen?: boolean }) {
   const [liste, setListe] = useState<DokumentVersion[] | null>(null);
   const [fehler, setFehler] = useState<string>();
   useEffect(() => { api.versionen(d.id).then((r) => setListe(r.aeltere)).catch((e) => setFehler((e as Error).message)); }, [d.id, d.version]);
@@ -621,7 +662,7 @@ function Versionen({ d, zurueck, neuLaden, mitStempel }: { d: Dokument; zurueck:
               <td>{v.nummer}</td><td>{v.name}</td><td>{zeit(v.erstellt)}</td><td><Person id={v.erstelltVon} /></td><td>{herkunft(v.herkunft)}</td><td>{groesse(v.groesse)}</td>
               <td className="zeilenaktionen">
                 {v.anzeigbar && <a className="symbolverweis" href={versionUrl(d.id, v.nummer)} target="_blank" rel="noreferrer" title="Ansehen" aria-label={`Version ${v.nummer} ansehen`}>↗</a>}
-                {mitStempel ? kannStempeln(v.mime) && <button type="button" className="textknopf" onClick={() => mitStempel(v.nummer)}>Mit Stempel herunterladen</button>
+                {!mitnehmen ? null : mitStempel ? kannStempeln(v.mime) && <button type="button" className="textknopf" onClick={() => mitStempel(v.nummer)}>Mit Stempel herunterladen</button>
                   : <a className="textknopf" href={versionUrl(d.id, v.nummer, true)}>Herunterladen</a>}
                 {zurueck && <button type="button" className="textknopf" onClick={async () => { if (await rueckfrage({ titel: `Version ${v.nummer} zurückholen?`, text: `Sie wird zur neuen Version ${(d.version ?? 1) + 1}; nichts geht verloren.`, ja: 'Zurückholen' })) void hole(v.nummer); }}>Zurückholen</button>}
               </td>

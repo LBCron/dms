@@ -10,8 +10,11 @@ import { rueckfrage } from '../rueckfrage';
  * Version (ohne Versionierung nach Rückfrage als Ersatz); „Verkleinert herunterladen“ lässt das Dokument,
  * wie es ist. Bringt es weniger als 10 %, bleibt alles unverändert (Meldung).
  */
-export function PdfVerkleinern({ d, bearbeitbar, schliessen, fertig }: {
-  d: Dokument; bearbeitbar: boolean; schliessen(): void; fertig(meldung: string, geaendert: boolean): void;
+export function PdfVerkleinern({ d, bearbeitbar, mitnehmen = true, schliessen, fertig }: {
+  d: Dokument; bearbeitbar: boolean;
+  /** Exportrecht (#723): ohne E keine verkleinerte Kopie zum Herunterladen. */
+  mitnehmen?: boolean;
+  schliessen(): void; fertig(meldung: string, geaendert: boolean): void;
 }) {
   const [v, setV] = useState<VerkleinernVorschau>();
   const [stufe, setStufe] = useState<Stufe>('standard');
@@ -72,7 +75,7 @@ export function PdfVerkleinern({ d, bearbeitbar, schliessen, fertig }: {
       <div className="pdfseiten-fuss">
         <span className="leise klein">{s.lohnt ? `${mb(v.groesse)} → ≈ ${mb(s.geschaetzt)}` : 'lohnt sich kaum'}</span>
         {bearbeitbar && <button type="button" className="knopf primaer klein" disabled={!!laeuft} onClick={() => void verkleinern()}>{laeuft === 'speichern' ? 'Wird verkleinert …' : v.versioniert ? 'Als neue Version speichern' : 'Verkleinern und ersetzen'}</button>}
-        <button type="button" className="knopf klein" disabled={!!laeuft} onClick={() => void herunterladen()} title="Nur eine verkleinerte Kopie herunterladen; das Dokument bleibt unverändert">{laeuft === 'laden' ? 'Wird vorbereitet …' : 'Verkleinert herunterladen'}</button>
+        {mitnehmen && <button type="button" className="knopf klein" disabled={!!laeuft} onClick={() => void herunterladen()} title="Nur eine verkleinerte Kopie herunterladen; das Dokument bleibt unverändert">{laeuft === 'laden' ? 'Wird vorbereitet …' : 'Verkleinert herunterladen'}</button>}
         <button type="button" className="knopf klein" disabled={!!laeuft} onClick={schliessen}>Abbrechen</button>
       </div>
     </div>

@@ -303,6 +303,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
    */
   const weitergabe = (a: Anfrage) => a.query.herunterladen !== undefined || a.query.verkleinern !== undefined || !!wunschAus(a.query) || (!!a.apiSchluessel && a.benutzer?.art !== 'dienst');
   /**
+   * Herunterladen ist Mitnehmen (#723): verlangt außer Lesen das Exportrecht E – über die gemeinsame Prüfstelle wie
+   * E-Mail, Export und Laufwerk. Anzeigen im Browser (inline) bleibt mit R. Dienstkonten der Pakete (Texterkennung,
+   * Umwandlung, Archivfassung) lesen Dateien zur Verarbeitung in Ablago und brauchen E nicht.
+   */
+  const mitnehmen = async (a: Anfrage, mappeId: string) => {
+    if (a.benutzer?.art === 'dienst') return;
+    await dienst.pruefeAusgang(ich(a), await zg(a), 'herunterladen', [mappeId]);
+  };
+  /** Kommt die Datei nicht zum Ansehen (inline), sondern zum Abspeichern? Mit API-Schlüssel eines Menschen immer. */
+  const zumAbspeichern = (a: Anfrage) => a.query.herunterladen !== undefined || (!!a.apiSchluessel && a.benutzer?.art !== 'dienst');
+  /**
    * Anzeige im Browser (#639): Ein PDF kommt nur als bereinigte Kopie in den eingebauten Betrachter (ohne JavaScript,
    * automatische Aktionen, Formular-Übermittlung, eingebettete Dateien). Mit API-Schlüssel (Pakete) das Original.
    * Lässt es sich nicht bereinigen, gibt es statt der Anzeige einen kurzen Hinweis – Herunterladen geht weiter.
@@ -1698,8 +1709,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const klartext = passwoerterAnzeigen(a);
       const z = await zg(a);
       const d = { ...await dienst.holeMappe(a.params.id, z), favorit: await dienst.istFavorit(ich(a), a.params.id), exportierbar: false };
-      // Exportrecht (#294): „Als PDF exportieren“ nur für lesbare Mappen, die in einer Sicht mit Recht E liegen.
-      d.exportierbar = d.rechte?.R !== false && (await dienst.exportierbar(ich(a), z, [a.params.id])).has(a.params.id);
+      // Exportrecht (#294, #723): Herunterladen, Versenden, „Als PDF exportieren“ nur für lesbare Mappen, die in einer
+      // Sicht mit Recht E liegen – dieselbe Prüfstelle wie beim Herunterladen selbst.
+      d.exportierbar = d.rechte?.R !== false && (await dienst.mitnehmbar(ich(a), z, [a.params.id])).has(a.params.id);
       if (klartext && !d.rechte.P) throw new Fachfehler(403, 'Passwörter dieser Mappe darfst du nicht sehen.');
       // Startseite (#334): „Zuletzt geöffnet“ – nur in der Oberfläche, nicht über API-Schlüssel.
       if (!a.apiSchluessel && a.benutzer) await konten.merkeGeoeffnet(a.benutzer, a.params.id).catch(() => {});
@@ -1799,12 +1811,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/email/bereit', zugang: 'angemeldet', handler: async () => ok({ bereit: !!x.betrieb?.mailer() }) },
     { methode: 'POST', pfad: '/api/mappen/:id/email', zugang: 'angemeldet', handler: async (a) => {
       const i = ich(a);
-      await darf(a, a.params.id, 'R');
-      // Versenden gibt Daten hinaus wie ein Export (#330): Regel A aus #294.
-      if (!(await dienst.exportierbar(i, await zg(a), [a.params.id])).has(a.params.id)) {
-        throw new Fachfehler(403, 'Du darfst diese Mappe nicht versenden. Versenden ist wie Exportieren nur aus Ansichten erlaubt, für die du das Recht dazu hast.');
-      }
-      return ok(await dienst.versendeMappe(a.params.id, b(a), { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null), 201);
+      // Versenden gibt Daten hinaus wie ein Export (#330): Lesen und Exportrecht, gemeinsame Prüfstelle (#723).
+      return ok(await dienst.versendeMappe(a.params.id, b(a), { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null, await zg(a)), 201);
     } },
     // Post (#192): anlegen („+ Post“, Dokumente danach über das Hochladen) und einer Mappe zuordnen.
     { methode: 'POST', pfad: '/api/post', zugang: 'angemeldet', handler: async (a) => {
@@ -1954,9 +1962,16 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({ fundstellen: await dienst.fundstellen(await zg(a), e.pruefwerte, typeof e.ohneMappe === 'string' ? e.ohneMappe : undefined) });
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/inhalt', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
-      // Herunterladen ist Weitergeben (#394): mit Stempel-Parametern oder Pflicht des Mappentyps gestempelt.
-      if (weitergabe(a) || a.query.fassung !== undefined) return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { stempel: a.query, verkleinern: a.query.verkleinern, fassung: a.query.fassung, ich: ich(a) }));
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      // Herunterladen ist Weitergeben (#394): mit Stempel-Parametern oder Pflicht des Mappentyps gestempelt – und Mitnehmen (#723, Recht E).
+      if (weitergabe(a) || a.query.fassung !== undefined) {
+        await mitnehmen(a, mappeId);
+        return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { stempel: a.query, verkleinern: a.query.verkleinern, fassung: a.query.fassung, ich: ich(a) }));
+      }
+      const d0 = await dienst.holeDokument(a.params.id);
+      // Was der Browser nicht anzeigen kann (Word, Excel …), kommt nur zum Abspeichern: auch das ist Mitnehmen (#723).
+      if (!d0.anzeigbar) await mitnehmen(a, mappeId);
       const { dokument: d, inhalt } = await dienst.dokumentInhalt(a.params.id);
       const anzeigen = d.anzeigbar;
       L.dokumente.debug(anzeigen ? 'Dokument angezeigt' : 'Dokument heruntergeladen', { name: d.name, id: d.id });
@@ -1964,7 +1979,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Herunterladen mit Stempel aus der Oberfläche (#394): Angaben im Körper, sonst wie oben.
     { methode: 'POST', pfad: '/api/dokumente/:id/herunterladen', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      await mitnehmen(a, mappeId);
       const e = (a.body ?? {}) as { stempel?: unknown; version?: unknown; verkleinern?: unknown; fassung?: unknown };
       const version = e.version == null ? undefined : Number(e.version);
       return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { stempel: e.stempel, verkleinern: e.verkleinern, fassung: e.fassung, version: Number.isInteger(version) ? version : undefined, ich: ich(a) }));
@@ -1989,7 +2006,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.setzeVorschaubild(await zg(a), a.params.id, a.query.sha256, a.body));
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/fassung', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      if (zumAbspeichern(a)) await mitnehmen(a, mappeId);
       const f = await dienst.fassungVon(a.params.id);
       const punkt = f.d.name.lastIndexOf('.');
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
@@ -2004,7 +2023,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.setzeArchivfassung(await zg(a), a.params.id, a.query.sha256, a.body));
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/archivfassung', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      if (zumAbspeichern(a)) await mitnehmen(a, mappeId);
       const f = await dienst.archivfassungVon(a.params.id);
       return fuerAnzeige(a, { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
         koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': 'private, max-age=60' } });
@@ -2064,7 +2085,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Seite als Graustufenbild (#338): Eingabe für eine Texterkennung im Paket (PGM, 8 Bit).
     // Mit ?farbe=1 (#716) als Farbbild (PPM) – für die Archivfassung; wie das Graustufenbild nur mit Leserecht.
     { methode: 'GET', pfad: '/api/dokumente/:id/seiten/:nr/scan', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      // Rohbild der Seite zum Abspeichern: für Pakete (Dienstkonten) mit Lesen, für Menschen ist es Mitnehmen (#723).
+      await mitnehmen(a, mappeId);
       const dpi = a.query.dpi === undefined ? 300 : Number(a.query.dpi);
       const farbe = a.query.farbe === '1' || a.query.farbe === 'true';
       const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe);
@@ -2082,9 +2106,16 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.versionen(a.params.id));
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/versionen/:nummer/inhalt', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
-      if (weitergabe(a)) return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { version: Number(a.params.nummer), stempel: a.query, verkleinern: a.query.verkleinern, ich: ich(a) }));
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      if (weitergabe(a)) {
+        await mitnehmen(a, mappeId);
+        return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { version: Number(a.params.nummer), stempel: a.query, verkleinern: a.query.verkleinern, ich: ich(a) }));
+      }
       const { version: v, inhalt } = await dienst.versionInhalt(a.params.id, Number(a.params.nummer));
+      if (!v.anzeigbar) {
+        try { await mitnehmen(a, mappeId); } catch (e) { if (!Buffer.isBuffer(inhalt)) (inhalt as Readable).destroy(); throw e; }
+      }
       const anzeigen = v.anzeigbar;
       return fuerAnzeige(a, { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse });
     } },

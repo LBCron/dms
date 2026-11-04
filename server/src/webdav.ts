@@ -3,6 +3,8 @@ import { extname } from 'node:path';
 import type { Readable } from 'node:stream';
 import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Dokument, type Mappe, type Register } from '../../shared/src/model';
 import { kinderVon, type Sicht } from '../../shared/src/sichten';
+import { ersetzePlatzhalter, kannStempeln, WEBDAV_VORLAGE, type GeltenderStempel } from '../../shared/src/stempel';
+import { pdfName } from './ausgabe';
 import { NUR_ZAEHLER, PRAEFIX, type ApiSchluessel, type ApiSchluesselDienst } from './apischluessel';
 import { t } from './sprache';
 import type { Dienst, Zugriff } from './dienst';
@@ -32,6 +34,12 @@ import {
  * LOCK/UNLOCK: macOS bindet ein Laufwerk ohne „DAV: 2“ nur lesend ein, Windows und macOS sperren eine Datei vor
  * dem Hochladen. Stufe 1 antwortet darum mit einer Schein-Sperre (Token, nicht durchgesetzt) – nur dort, wo
  * Ablegen erlaubt ist. Echte Sperren gegen gleichzeitiges Überschreiben kommen mit Stufe 2 (Office bearbeiten).
+ *
+ * Stempel beim Lesen (#722): Herunterladen ist Mitnehmen (gemeinsame Prüfstelle, #723). Hat der Mappentyp einen
+ * Pflicht-Stempel, kommt jede Datei gestempelt heraus (Bilder als PDF), auch wenn die Einstellung „aus“ ist; sonst
+ * stempelt die gewählte Vorlage PDFs (Vorgabe: die mitgelieferte Vorlage „webdav“). Größe und ETag beziehen sich auf
+ * die gestempelte Fassung. Register mit Pflicht-Stempel sind schreibgeschützt; gestempelt ausgelieferte Dokumente
+ * lassen sich nicht überschreiben (neue Dateien ablegen geht). „Nur lesend“ sperrt alles Schreibende für alle.
  */
 
 export const WEBDAV_METHODEN = ['OPTIONS', 'GET', 'HEAD', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE', 'COPY', 'MOVE', 'LOCK', 'UNLOCK'] as const;
@@ -54,7 +62,13 @@ const EMAIL_MAX = 254;
 const log = protokoll.modul('dokumente');
 const logKonto = protokoll.modul('konto');
 
-export interface WebdavEinstellung { aktiv: boolean }
+export interface WebdavEinstellung {
+  aktiv: boolean;
+  /** Stempel beim Lesen (#722): Id einer Stempel-Vorlage oder null (aus). Ohne Angabe die mitgelieferte Vorlage. */
+  stempel: string | null;
+  /** Nur lesend für alle Benutzer (#722): alle schreibenden Methoden einschließlich LOCK → 403. */
+  nurLesend: boolean;
+}
 export interface WebdavZugriff { zeit: string; benutzer: string; methode: string; pfad: string; status: number }
 export interface WebdavStand {
   einstellung: WebdavEinstellung;
@@ -64,6 +78,8 @@ export interface WebdavStand {
   grenze: number;
   anfragen: number;
   zugriffe: WebdavZugriff[];
+  /** Stempel-Vorlagen zur Auswahl für „Stempel beim Lesen“. */
+  vorlagen: Array<{ id: string; name: string; text: string }>;
 }
 
 export interface WebdavAnfrage {
@@ -109,9 +125,25 @@ type Knoten =
 interface Kind { name: string; k: Knoten }
 interface Schwebend { ort: string; name: string; groesse: number; zeit: string }
 interface Ctx {
-  b: Benutzer; s: ApiSchluessel; z: Zugriff;
+  b: Benutzer; s: ApiSchluessel; z: Zugriff; e: WebdavEinstellung;
   mappen: Map<string, Awaited<ReturnType<Dienst['laufwerkMappe']>>>;
+  /** Stempel je Mappentyp (#722) und ob eine Mappe hinausdarf (#723) – einmal je Anfrage. */
+  stempel: Map<string, Promise<Awaited<ReturnType<Dienst['laufwerkStempel']>>>>;
+  raus: Map<string, Promise<boolean>>;
 }
+/** Was beim Lesen eines Dokuments hinausgeht (#722): gestempelt oder das Original, mit Größe und ETag dazu. */
+interface Auslieferung {
+  gestempelt: boolean; name: string; mime: string; groesse: number; etag: string;
+  inhalt(): Promise<Buffer | Readable>;
+  /** Pflicht-Stempel, der sich nicht bilden lässt: die Datei geht nicht hinaus. */
+  fehler?: string;
+}
+/** Methoden, die etwas ändern würden (#722: bei „nur lesend“ und in schreibgeschützten Registern 403). */
+const SCHREIBEND = new Set(['PUT', 'PROPPATCH', 'MKCOL', 'DELETE', 'COPY', 'MOVE', 'LOCK']);
+const LESEMETHODEN = ['OPTIONS', 'GET', 'HEAD', 'PROPFIND'];
+/** Gestempelte Fassungen im Speicher: höchstens so viele Bytes; Größe und Stand bleiben länger gemerkt. */
+const STEMPEL_SPEICHER = 64 * 1024 * 1024;
+const STEMPEL_EINTRAEGE = 2000;
 
 const text = (status: number, t: string, extra: Record<string, string> = {}): WebdavAntwort => ({ status, koepfe: { 'content-type': 'text/plain; charset=utf-8', ...extra }, body: `${t}\n` });
 const xmlAntwort = (status: number, body: string, extra: Record<string, string> = {}): WebdavAntwort => ({ status, koepfe: { 'content-type': 'application/xml; charset=utf-8', ...extra }, body });
@@ -150,6 +182,10 @@ async function leere(koerper: WebdavAnfrage['koerper'], max: number): Promise<vo
 export function etagVon(d: Pick<Dokument, 'id' | 'sha256'>): string {
   return `"${createHash('sha256').update(`${d.id}:${d.sha256}`).digest('hex').slice(0, 32)}"`;
 }
+/** ETag der gestempelten Fassung (#722): ändert sich mit Stempel, Text (Datum, Leser) und Inhalt. */
+function etagGestempelt(d: Pick<Dokument, 'id' | 'sha256'>, signatur: string): string {
+  return `"${createHash('sha256').update(`${d.id}:${d.sha256}:${signatur}`).digest('hex').slice(0, 32)}"`;
+}
 /** Unbenutzten Körper verwerfen, damit die Verbindung frei wird. */
 function verwerfe(koerper: WebdavAnfrage['koerper']) {
   if (koerper && !Buffer.isBuffer(koerper) && typeof koerper.resume === 'function') koerper.resume();
@@ -163,6 +199,9 @@ export class Webdav {
   private cache: { wert: WebdavEinstellung; bis: number } | null = null;
   /** Laufende Uploads je Benutzer-Id (MAX_UPLOADS). */
   private uploads = new Map<string, number>();
+  /** Gestempelte Fassungen (#722) je Dokument, Inhalt und Stempel; `inhalt` fällt bei Platzmangel weg. */
+  private gestempelt = new Map<string, { gestempelt: boolean; groesse: number; inhalt: Buffer | null }>();
+  private stempelBytes = 0;
   private jetzt: () => number;
 
   constructor(private d: WebdavDeps) {
@@ -175,18 +214,32 @@ export class Webdav {
   async einstellung(): Promise<WebdavEinstellung> {
     if (this.cache && this.cache.bis > this.jetzt()) return this.cache.wert;
     const roh = (await this.d.einstellungen.lies('webdav')) as Partial<WebdavEinstellung> | null;
-    const wert = { aktiv: roh?.aktiv === true };
+    // Stempel (#722): ohne Angabe die mitgelieferte Vorlage (neue Installationen; bestehende über Migration 067).
+    const stempel = roh && 'stempel' in roh ? (typeof roh.stempel === 'string' && roh.stempel ? roh.stempel : null) : WEBDAV_VORLAGE;
+    const wert: WebdavEinstellung = { aktiv: roh?.aktiv === true, stempel, nurLesend: roh?.nurLesend === true };
     this.cache = { wert, bis: this.jetzt() + 5000 };
     return wert;
   }
 
   async speichere(e: unknown, von: string): Promise<WebdavStand> {
     const x = (e && typeof e === 'object' ? e : {}) as Record<string, unknown>;
-    if (typeof x.aktiv !== 'boolean') throw new Fachfehler(422, 'aktiv: true oder false.');
-    const vorher = (await this.einstellung()).aktiv;
-    await this.d.einstellungen.schreibe('webdav', { aktiv: x.aktiv });
+    const hat = (k: string) => k in x && x[k] !== undefined;
+    if (!hat('aktiv') && !hat('stempel') && !hat('nurLesend')) throw new Fachfehler(422, 'aktiv: true oder false.');
+    if (hat('aktiv') && typeof x.aktiv !== 'boolean') throw new Fachfehler(422, 'aktiv: true oder false.');
+    if (hat('nurLesend') && typeof x.nurLesend !== 'boolean') throw new Fachfehler(422, t('api.webdav.nur-lesend-ungueltig'));
+    if (hat('stempel') && x.stempel !== null && typeof x.stempel !== 'string') throw new Fachfehler(422, t('api.webdav.stempel-ungueltig'));
+    if (hat('stempel') && x.stempel && !(await this.d.dienst.stempelVorlagen()).some((v) => v.id === x.stempel)) throw new Fachfehler(422, t('api.webdav.vorlage-fehlt'));
+    const vorher = await this.einstellung();
+    const neu: WebdavEinstellung = {
+      aktiv: hat('aktiv') ? x.aktiv as boolean : vorher.aktiv,
+      stempel: hat('stempel') ? (x.stempel as string | null) || null : vorher.stempel,
+      nurLesend: hat('nurLesend') ? x.nurLesend as boolean : vorher.nurLesend,
+    };
+    await this.d.einstellungen.schreibe('webdav', neu);
     this.cache = null;
-    if (vorher !== x.aktiv) (x.aktiv ? logKonto.warn : logKonto.info)(x.aktiv ? 'WebDAV-Laufwerk eingeschaltet' : 'WebDAV-Laufwerk ausgeschaltet', { von });
+    if (vorher.aktiv !== neu.aktiv) (neu.aktiv ? logKonto.warn : logKonto.info)(neu.aktiv ? 'WebDAV-Laufwerk eingeschaltet' : 'WebDAV-Laufwerk ausgeschaltet', { von });
+    if (vorher.stempel !== neu.stempel) logKonto.info('WebDAV-Laufwerk: Stempel beim Lesen eingestellt', { vorlage: neu.stempel ?? 'aus', von });
+    if (vorher.nurLesend !== neu.nurLesend) logKonto.info(neu.nurLesend ? 'WebDAV-Laufwerk nur lesend' : 'WebDAV-Laufwerk wieder mit Ablegen', { von });
     return this.stand();
   }
 
@@ -195,6 +248,7 @@ export class Webdav {
     return {
       einstellung: await this.einstellung(), adresse: `${basis}${WEBDAV_PFAD}/`, https: basis.startsWith('https://'),
       grenze: this.grenze.grenze, anfragen: this.anfragen, zugriffe: [...this.zugriffe].reverse(),
+      vorlagen: (await this.d.dienst.stempelVorlagen()).map((v) => ({ id: v.id, name: v.name, text: v.text })),
     };
   }
 
@@ -212,7 +266,9 @@ export class Webdav {
     if (!pfad) { verwerfe(a.koerper); return text(400, 'Ungültiger Pfad.'); }
     if (methode === 'OPTIONS') {
       verwerfe(a.koerper);
-      return { status: 200, lesend: true, koepfe: { dav: '1, 2', 'ms-author-via': 'DAV', allow: WEBDAV_METHODEN.join(', '), 'content-length': '0' } };
+      // Nur lesend (#722): ohne „DAV: 2“ (keine Sperren) bindet macOS das Laufwerk schreibgeschützt ein.
+      const nur = (await this.einstellung()).nurLesend;
+      return { status: 200, lesend: true, koepfe: { dav: nur ? '1' : '1, 2', 'ms-author-via': 'DAV', allow: (nur ? LESEMETHODEN : WEBDAV_METHODEN).join(', '), 'content-length': '0' } };
     }
     this.anfragen++;
     let wer = '';
@@ -274,10 +330,17 @@ export class Webdav {
       logKonto.info('WebDAV: Anmeldung abgelehnt', { email: kurz, ip: a.ip, grund: 'Schlüssel nur Zähler' });
       return { status: true, wer: kurz, antwort: text(403, t('api.schluessel.nur-zaehler-laufwerk')) };
     }
-    return { b, s, z: await this.d.dienst.zugriff(b), mappen: new Map() };
+    return { b, s, z: await this.d.dienst.zugriff(b), e: await this.einstellung(), mappen: new Map(), stempel: new Map(), raus: new Map() };
   }
 
   private async verarbeite(methode: string, teile: string[], a: WebdavAnfrage, ctx: Ctx): Promise<WebdavAntwort> {
+    // Nur lesend (#722): für alle Benutzer, auch Hilfsdateien und Schein-Sperren.
+    if (ctx.e.nurLesend && SCHREIBEND.has(methode)) { verwerfe(a.koerper); return text(403, t('api.webdav.nur-lesend')); }
+    // Register mit Pflicht-Stempel (#722): nichts ablegen, ändern, umbenennen, kopieren oder löschen.
+    if (methode === 'MKCOL' || methode === 'DELETE' || methode === 'MOVE' || methode === 'COPY') {
+      verwerfe(a.koerper);
+      if (await this.inPflichtMappe(teile, ctx)) return text(403, t('api.webdav.pflicht'));
+    }
     switch (methode) {
       case 'PROPFIND': return this.propfind(teile, a, ctx);
       case 'GET': case 'HEAD': verwerfe(a.koerper); return this.hole(teile, ctx, methode === 'HEAD', a);
@@ -288,6 +351,8 @@ export class Webdav {
         const body = (await lies(a.koerper, XML_MAX)).toString('utf8');
         const k = await this.finde(teile, ctx);
         if (!k) return text(404, 'Nicht gefunden.');
+        if (await this.istPflicht(k, ctx)) return text(403, t('api.webdav.pflicht'));
+        if (k.art === 'dokument' && (await this.auslieferung(k, ctx))?.gestempelt) return text(403, t('api.webdav.gestempelt', { name: k.dok.name }));
         return xmlAntwort(207, proppatchAntwort(teile, istOrdner(k), proppatchNamen(body)));
       }
       case 'MKCOL': verwerfe(a.koerper); return text(403, 'Ordner lassen sich über das Laufwerk nicht anlegen. Mappen legst du in der Ablage von Ablago an.');
@@ -304,6 +369,112 @@ export class Webdav {
     let m = ctx.mappen.get(id);
     if (!m) { m = await this.d.dienst.laufwerkMappe(id, ctx.z); ctx.mappen.set(id, m); }
     return m;
+  }
+
+  /* ---------- Stempel und Mitnehmen (#722, #723) ---------- */
+
+  private leser(ctx: Ctx) { return ctx.b.name || ctx.b.email; }
+
+  /** Stempel beim Lesen für Mappen dieses Typs: Pflicht des Typs, sonst die Vorlage der Einstellung. */
+  private stempelFuer(typId: string, ctx: Ctx) {
+    let p = ctx.stempel.get(typId);
+    if (!p) { p = this.d.dienst.laufwerkStempel(typId, ctx.e.stempel, this.leser(ctx)); ctx.stempel.set(typId, p); }
+    return p;
+  }
+  /** Hat der Mappentyp dieser Mappe einen Pflicht-Stempel? Dann ist sie über das Laufwerk nur lesbar. */
+  private async pflichtMappe(mappeId: string, ctx: Ctx): Promise<boolean> {
+    const m = await this.mappe(mappeId, ctx);
+    return (await this.stempelFuer(m.mappe.typId, ctx)).pflicht;
+  }
+  private mappeVon(k: Knoten): string | null {
+    return k.art === 'mappe' || k.art === 'verknuepft' ? k.id : k.art === 'register' || k.art === 'dokument' ? k.mappeId : null;
+  }
+  private async istPflicht(k: Knoten, ctx: Ctx): Promise<boolean> {
+    const id = this.mappeVon(k);
+    return !!id && this.pflichtMappe(id, ctx);
+  }
+  /** Liegt der Pfad (oder bei neuen Namen sein Ordner) in einer Mappe mit Pflicht-Stempel? */
+  private async inPflichtMappe(teile: string[], ctx: Ctx): Promise<boolean> {
+    const { k, eltern } = await this.loese(teile, ctx);
+    const ziel = k ?? eltern;
+    return !!ziel && this.istPflicht(ziel, ctx);
+  }
+  /** Darf die Mappe über das Laufwerk hinaus (Lesen und Exportrecht, gemeinsame Prüfstelle #723)? */
+  private darfRaus(mappeId: string, ctx: Ctx): Promise<boolean> {
+    let p = ctx.raus.get(mappeId);
+    if (!p) { p = this.d.dienst.mitnehmbar(ctx.b, ctx.z, [mappeId]).then((x) => x.has(mappeId)); ctx.raus.set(mappeId, p); }
+    return p;
+  }
+
+  /**
+   * Was beim Lesen herauskommt (#722). Pflicht: jede stempelbare Datei gestempelt (Bilder als PDF), sonst gar nicht;
+   * Vorlage der Einstellung: nur PDFs, und lässt sich eins nicht stempeln (z. B. verschlüsselt), das Original.
+   * Gestempelte Fassungen merkt sich das Laufwerk, damit Größe (PROPFIND) und Inhalt (GET) übereinstimmen.
+   */
+  private async auslieferung(k: Extract<Knoten, { art: 'dokument' }>, ctx: Ctx): Promise<Auslieferung> {
+    const d = k.dok;
+    const original: Auslieferung = {
+      gestempelt: false, name: d.name, mime: d.anzeigbar ? d.mime : 'application/octet-stream', groesse: d.groesse, etag: etagVon(d),
+      inhalt: async () => (await this.d.dienst.dokumentInhalt(d.id)).inhalt,
+    };
+    const m = await this.mappe(k.mappeId, ctx);
+    const s = await this.stempelFuer(m.mappe.typId, ctx);
+    if (s.pflicht && !s.plan) return { ...original, fehler: s.fehler ?? t('api.webdav.nicht-stempelbar', { name: d.name }) };
+    if (!s.plan || (!s.pflicht && d.mime !== 'application/pdf')) return original;
+    if (!kannStempeln(d.mime)) return { ...original, fehler: t('api.webdav.nicht-stempelbar', { name: d.name }) };
+    const plan: GeltenderStempel = s.plan;
+    const text = ersetzePlatzhalter(plan.stempel.text, { empfaenger: plan.empfaenger, benutzer: this.leser(ctx), mappe: m.mappe.titel || 'Ohne Titel' });
+    const signatur = createHash('sha256').update(JSON.stringify([plan.stempel, text, plan.stempel.archivnummer ? d.archivnummer ?? null : null])).digest('hex');
+    const schluessel = `${d.id}:${d.sha256}:${signatur}`;
+    const name = d.mime === 'application/pdf' ? d.name : pdfName(d.name);
+    const fertig = (inhalt: Buffer | null, groesse: number): Auslieferung => ({
+      gestempelt: true, name, mime: 'application/pdf', groesse, etag: etagGestempelt(d, signatur),
+      inhalt: async () => inhalt ?? (await this.stemple(d, m.mappe, plan, ctx, schluessel)).inhalt!,
+    });
+    const alt = this.gestempelt.get(schluessel);
+    if (alt) {
+      this.gestempelt.delete(schluessel); this.gestempelt.set(schluessel, alt);
+      if (!alt.gestempelt) return original;
+      return fertig(alt.inhalt, alt.groesse);
+    }
+    try {
+      const neu = await this.stemple(d, m.mappe, plan, ctx, schluessel);
+      return fertig(neu.inhalt, neu.groesse);
+    } catch (e) {
+      // Beschädigte PDFs scheitern auch unterwegs im PDF-Leser (kein Fachfehler) – das Laufwerk bleibt dabei ruhig.
+      const grund = e instanceof Fachfehler ? e.message : t('api.webdav.nicht-stempelbar', { name: d.name });
+      if (!(e instanceof Fachfehler)) log.debug('WebDAV: Stempeln fehlgeschlagen', { id: d.id, fehler: (e as Error).message });
+      if (s.pflicht) return { ...original, fehler: grund };
+      // Freiwilliger Stempel: Lässt sich das PDF nicht stempeln, geht das Original hinaus (und bleibt überschreibbar).
+      this.merkeStempel(schluessel, { gestempelt: false, groesse: d.groesse, inhalt: null });
+      log.debug('WebDAV: PDF ließ sich nicht stempeln, Original ausgeliefert', { id: d.id, grund });
+      return original;
+    }
+  }
+  private async stemple(d: Dokument, m: Mappe, plan: GeltenderStempel, ctx: Ctx, schluessel: string) {
+    const a = await this.d.dienst.laufwerkAusgabe(d, m, plan, this.leser(ctx));
+    const eintrag = { gestempelt: true, groesse: a.inhalt.length, inhalt: a.inhalt };
+    this.merkeStempel(schluessel, eintrag);
+    return eintrag;
+  }
+  /** Merken mit Grenzen: älteste Inhalte fallen zuerst weg, Größen bleiben bis STEMPEL_EINTRAEGE. */
+  private merkeStempel(schluessel: string, e: { gestempelt: boolean; groesse: number; inhalt: Buffer | null }) {
+    const alt = this.gestempelt.get(schluessel);
+    if (alt?.inhalt) this.stempelBytes -= alt.inhalt.length;
+    this.gestempelt.delete(schluessel);
+    if (e.inhalt && e.inhalt.length > STEMPEL_SPEICHER / 4) e = { ...e, inhalt: null };
+    this.gestempelt.set(schluessel, e);
+    if (e.inhalt) this.stempelBytes += e.inhalt.length;
+    for (const [k, v] of this.gestempelt) {
+      if (this.stempelBytes <= STEMPEL_SPEICHER && this.gestempelt.size <= STEMPEL_EINTRAEGE) break;
+      if (k === schluessel) continue;
+      if (this.gestempelt.size > STEMPEL_EINTRAEGE) { this.gestempelt.delete(k); if (v.inhalt) this.stempelBytes -= v.inhalt.length; continue; }
+      if (v.inhalt) { this.stempelBytes -= v.inhalt.length; v.inhalt = null; }
+    }
+  }
+  /** Wird dieses Dokument gestempelt ausgeliefert? Nur für Leser mit Exportrecht – andere bekommen es ohnehin nicht. */
+  private async istGestempelt(k: Extract<Knoten, { art: 'dokument' }>, ctx: Ctx): Promise<boolean> {
+    return (await this.darfRaus(k.mappeId, ctx)) && (await this.auslieferung(k, ctx)).gestempelt;
   }
 
   private schwebende(ctx: Ctx, ort: string): Schwebend[] {
@@ -364,7 +535,9 @@ export class Webdav {
         const m = await this.mappe(k.mappeId, ctx);
         const doks = m.dokumente.filter((x) => x.registerKey === k.register.key)
           .sort((x, y) => x.name.localeCompare(y.name, 'de') || x.erstellt.localeCompare(y.erstellt) || x.id.localeCompare(y.id));
-        const namen = eindeutig(doks.map((x) => ({ name: x.name, datei: true })));
+        // Pflicht-Stempel (#722): Bilder kommen als PDF heraus und heißen darum auch so.
+        const pflicht = doks.some((x) => x.mime !== 'application/pdf' && kannStempeln(x.mime)) && await this.pflichtMappe(k.mappeId, ctx);
+        const namen = eindeutig(doks.map((x) => ({ name: pflicht && x.mime !== 'application/pdf' && kannStempeln(x.mime) ? pdfName(x.name) : x.name, datei: true })));
         const erg: Kind[] = doks.map((x, i) => ({ name: namen[i], k: { art: 'dokument', dok: x, mappeId: k.mappeId, register: k.register } }));
         const belegt = new Set(namen.map(schluessel));
         for (const s of this.schwebende(ctx, ortVon(k)!)) if (!belegt.has(schluessel(s.name))) erg.push({ name: s.name, k: { art: 'schwebend', s } });
@@ -400,11 +573,22 @@ export class Webdav {
     return { k, eltern };
   }
 
-  private eintrag(teile: string[], name: string, k: Knoten): Eintrag {
-    if (k.art === 'dokument') return { teile, ordner: false, name, groesse: k.dok.groesse, mime: k.dok.mime, etag: etagVon(k.dok), geaendert: k.dok.erstellt, erstellt: k.dok.erstellt };
-    if (k.art === 'schwebend') return { teile, ordner: false, name, groesse: k.s.groesse, geaendert: k.s.zeit, erstellt: k.s.zeit };
-    if (k.art === 'mappe') return { teile, ordner: true, name, geaendert: k.geaendert, erstellt: k.erstellt };
-    return { teile, ordner: true, name };
+  /**
+   * Eintrag für PROPFIND. Größe, Art und ETag eines Dokuments beziehen sich auf das, was GET liefert – bei Stempel
+   * die gestempelte Fassung (#722). Nur lesbar (kein LOCK angeboten, Windows-Attribut „schreibgeschützt“): alles bei
+   * „nur lesend“, Mappen mit Pflicht-Stempel und gestempelt ausgelieferte Dokumente.
+   */
+  private async eintrag(teile: string[], name: string, k: Knoten, ctx: Ctx): Promise<Eintrag> {
+    const nurLesend = ctx.e.nurLesend || (k.art !== 'schwebend' && await this.istPflicht(k, ctx));
+    if (k.art === 'dokument') {
+      const raus = await this.darfRaus(k.mappeId, ctx);
+      const a = raus ? await this.auslieferung(k, ctx) : null;
+      return { teile, ordner: false, name, groesse: a?.groesse ?? k.dok.groesse, mime: a?.gestempelt ? a.mime : k.dok.mime, etag: a?.etag ?? etagVon(k.dok),
+        geaendert: k.dok.erstellt, erstellt: k.dok.erstellt, nurLesend: nurLesend || !!a?.gestempelt };
+    }
+    if (k.art === 'schwebend') return { teile, ordner: false, name, groesse: k.s.groesse, geaendert: k.s.zeit, erstellt: k.s.zeit, nurLesend };
+    if (k.art === 'mappe') return { teile, ordner: true, name, geaendert: k.geaendert, erstellt: k.erstellt, nurLesend };
+    return { teile, ordner: true, name, nurLesend };
   }
 
   /* ---------- Methoden ---------- */
@@ -419,8 +603,8 @@ export class Webdav {
     const k = await this.finde(teile, ctx);
     if (!k || k.art === 'hilfsdatei') return text(404, 'Nicht gefunden.');
     const name = teile.length ? teile[teile.length - 1] : 'Ablago';
-    const liste = [this.eintrag(teile, name, k)];
-    if (tiefe === '1' && istOrdner(k)) for (const c of await this.kinder(k, ctx)) liste.push(this.eintrag([...teile, c.name], c.name, c.k));
+    const liste = [await this.eintrag(teile, name, k, ctx)];
+    if (tiefe === '1' && istOrdner(k)) for (const c of await this.kinder(k, ctx)) liste.push(await this.eintrag([...teile, c.name], c.name, c.k, ctx));
     return { ...xmlAntwort(207, multistatus(liste)), lesend: true };
   }
 
@@ -431,15 +615,16 @@ export class Webdav {
       return { ...text(200, 'Dies ist ein Ordner des Ablago-Laufwerks. Binde die Adresse im Explorer, im Finder oder in der Dateien-App ein – siehe Benutzerhandbuch „Als Laufwerk einbinden“.'), lesend: true };
     }
     if (k.art !== 'dokument') return text(404, 'Diese Datei ist noch nicht fertig abgelegt.');
-    // Herunterladen gibt Daten hinaus wie ein Export (#294): nur mit Exportrecht E einer Ansicht.
-    if (!(await this.d.dienst.exportierbar(ctx.b, ctx.z, [k.mappeId])).has(k.mappeId)) {
-      return text(403, 'Herunterladen ist für diese Mappe nicht erlaubt. Dafür brauchst du das Exportrecht in einer Ansicht, die sie zeigt.');
-    }
+    // Herunterladen gibt Daten hinaus wie ein Export (#294): gemeinsame Prüfstelle aller Wege nach draußen (#723).
+    if (!(await this.darfRaus(k.mappeId, ctx))) return text(403, t('api.ausgang.webdav.eine'));
     const d = k.dok;
-    const etag = etagVon(d);
+    // Stempel beim Lesen (#722): Pflicht des Mappentyps oder Vorlage der Einstellung.
+    const aus = await this.auslieferung(k, ctx);
+    if (aus.fehler) return text(403, aus.fehler);
+    const etag = aus.etag;
     const koepfe: Record<string, string> = {
-      ...dateiKoepfe({ inhalt: Buffer.alloc(0), name: d.name, mime: d.anzeigbar ? d.mime : 'application/octet-stream', anzeigen: false, groesse: d.groesse }),
-      etag, 'accept-ranges': 'none',
+      ...dateiKoepfe({ inhalt: Buffer.alloc(0), name: aus.name, mime: aus.mime, anzeigen: false, groesse: aus.groesse }),
+      etag, 'accept-ranges': 'none', ...(aus.gestempelt ? { 'x-dms-stempel': '1' } : {}),
     };
     const lm = httpDatumSicher(d.erstellt);
     if (lm) koepfe['last-modified'] = lm;
@@ -449,8 +634,8 @@ export class Webdav {
       return { status: 304, koepfe: rest, lesend: true };
     }
     if (nurKopf) return { status: 200, koepfe, lesend: true };
-    const { inhalt } = await this.d.dienst.dokumentInhalt(d.id);
-    log.debug('Dokument über WebDAV heruntergeladen', { name: d.name, id: d.id, von: ctx.b.email });
+    const inhalt = await aus.inhalt();
+    log.debug(aus.gestempelt ? 'Dokument über WebDAV mit Stempel heruntergeladen' : 'Dokument über WebDAV heruntergeladen', { name: d.name, id: d.id, von: ctx.b.email });
     return { status: 200, koepfe, body: inhalt, lesend: true };
   }
 
@@ -466,6 +651,10 @@ export class Webdav {
       throw new Fachfehler(403, 'Hier lässt sich nichts ablegen. Lege Dateien in „Neue Post“ oder in den Register-Ordner einer Mappe.');
     }
     if (ctx.s.recht !== 'schreiben') throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen. Zum Ablegen braucht er „lesen und schreiben“.');
+    // Pflicht-Stempel (#722): Register schreibgeschützt; gestempelt ausgelieferte Dokumente nicht überschreiben
+    // (sonst käme der Stempel beim Zurückspeichern in eine neue Version) – neue Dateien ablegen geht.
+    if (eltern.art === 'register' && await this.pflichtMappe(eltern.mappeId, ctx)) throw new Fachfehler(403, t('api.webdav.pflicht'));
+    if (k?.art === 'dokument' && await this.istGestempelt(k, ctx)) throw new Fachfehler(403, t('api.webdav.gestempelt', { name: k.dok.name }));
     return { name, k, eltern, ort };
   }
 

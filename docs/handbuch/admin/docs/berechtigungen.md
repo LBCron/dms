@@ -12,11 +12,12 @@ Mit Berechtigungen legst du je Mappentyp fest, **wer welche Mappen anlegen, lese
 | Kürzel | Recht | Was es erlaubt |
 |---|---|---|
 | **C** | Anlegen | neue Mappen dieses Mappentyps anlegen |
-| **R** | Lesen | die Mappe in Listen, Suche, Zählern und Verweisen sehen und öffnen; Notizen schreiben, Aufgaben vergeben, per E-Mail versenden |
+| **R** | Lesen | die Mappe in Listen, Suche, Zählern und Verweisen sehen und öffnen, Dokumente in Ablago ansehen; Notizen schreiben, Aufgaben vergeben |
 | **U** | Bearbeiten | Felder ändern, Dokumente hochladen und entfernen |
 | **D** | Löschen | die Mappe in den Papierkorb legen |
 | **P** | Passwörter sehen | den Klartext von Passwortfeldern anzeigen (das „Auge“) |
 
+- **Mitnehmen braucht E:** Herunterladen, Teilen, Versenden per E-Mail, Exportieren und das [WebDAV-Laufwerk](webdav.md) verlangen außer Lesen das Recht **E** (Exportieren), das du an den [Ansichten](sichten.md#berechtigungen) vergibst. Kurz: **R heißt ansehen, E heißt mitnehmen.** Ganz verhindern lässt sich das Abspeichern beim Ansehen nie (Browser, Bildschirmfoto) – E macht es nur nicht einfach.
 - **Ohne Lesen wirkt nichts außer Anlegen.** Wer eine Mappe nicht lesen darf, darf sie auch nicht bearbeiten, löschen oder ihre Passwörter sehen – egal was die Regeln sonst sagen.
 - **Systemregeln** gelten für alle, auch für Administratoren, und lassen sich nicht ändern: Benutzer-Mappen entstehen und verschwinden nur über die Benutzerverwaltung (kein C, kein D). In der Standard-Zeile sind diese Rechte deshalb gesperrt. Bei *Post* regelt C, wer über **+ Post** oder die Schnittstelle neue Post anlegen darf; versendete E-Mails legt Ablago immer an.
 - **Systemfelder** von Benutzern (Systemrolle, Rollen, Aktiv) ändern sich weiterhin nur in der Benutzerverwaltung und im eigenen Profil.
@@ -109,6 +110,7 @@ Wer eine **Ansicht** im Baum sieht, dort „+ Neu“ bekommt und aus ihr exporti
 - Mappen ohne Leserecht fehlen in Listen, Suche, Zählern, Favoriten und Trefferlisten. Verweist eine sichtbare Mappe auf eine unsichtbare, steht dort „nicht sichtbare Mappe“ ohne Link.
 - Hat jemand eine **Aufgabe** an einer Mappe, die er nicht lesen darf, steht sie trotzdem bei ihm unter „Zu erledigen“ – ohne Titel. Er kann sie erledigen oder an jemanden weitergeben, der die Mappe sehen darf. Wer eine Aufgabe vergibt, bekommt einen Hinweis, wenn der Empfänger die Mappe nicht lesen darf.
 - Ohne **Bearbeiten** zeigt die Mappe ihre Felder nur an; ohne **Löschen** ist „Mappe löschen“ gesperrt (Schloss), der Grund steht daneben, „Warum ist Löschen gesperrt?“ erklärt mehr; ohne **Anlegen** fehlt „+ Neu“.
+- Ohne **Exportieren** (E an einer Ansicht) lassen sich die Dokumente einer Mappe nur ansehen: Statt „Herunterladen“ steht ein gesperrter Knopf mit **Warum nicht?**; Teilen, Kopien mit Stempel, „Per E-Mail versenden“ und „Als PDF exportieren“ fehlen. Über die API antwortet Ablago mit 403.
 - Bei der Auswahl von Benutzern (Verantwortlich, Erwähnungen, Vertreter, Aufgaben-Empfänger) erscheinen nur Benutzer, deren Benutzer-Mappe man sehen darf.
 - Unter Mein Konto zeigt **Meine Rechte** je Mappentyp, was man darf: ja, nein oder „je nach Mappe“ – die Regeln selbst bleiben verborgen.
 

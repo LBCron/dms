@@ -64,7 +64,12 @@ export const STANDARD_VORLAGEN: StempelVorlage[] = [
   { id: 'vorlage', name: 'Nur zur Vorlage bei …', text: 'Nur zur Vorlage bei {empfänger}', ...GRUND, lage: 'kopf', deckkraft: 0.8 },
   { id: 'entwurf', name: 'Entwurf', text: 'ENTWURF', ...GRUND, deckkraft: 0.2 },
   { id: 'vertraulich', name: 'Vertraulich', text: 'VERTRAULICH', ...GRUND, lage: 'ecke', deckkraft: 0.9, seiten: 'erste' },
+  // WebDAV-Laufwerk (#722): leise Fußzeile auf jeder Seite; bestehende Installationen bekommen sie per Migration 067.
+  { id: 'webdav', name: 'Aus Ablago (Laufwerk)', text: 'Aus Ablago · {datum}', ...GRUND, lage: 'fuss', deckkraft: 0.6 },
 ];
+
+/** Id der mitgelieferten Vorlage für das WebDAV-Laufwerk (#722) – Vorgabe für „Stempel beim Lesen“. */
+export const WEBDAV_VORLAGE = 'webdav';
 
 /** Ohne Vorlage: ein schlichter Stempel, falls ein Mappentyp Pflicht verlangt und keine Vorlage nennt. */
 export const ERSATZ_STEMPEL: Stempel = { text: 'Kopie – {datum}', ...GRUND };

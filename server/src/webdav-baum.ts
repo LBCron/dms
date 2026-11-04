@@ -133,6 +133,8 @@ export interface Eintrag {
   etag?: string;
   geaendert?: string;
   erstellt?: string;
+  /** Über das Laufwerk nur lesbar (#722): keine Sperre angeboten, unter Windows als „schreibgeschützt“ markiert. */
+  nurLesend?: boolean;
 }
 
 const SPERRBAR = '<D:supportedlock><D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>';
@@ -151,10 +153,14 @@ export function multistatus(eintraege: Eintrag[]): string {
       p.push(`<D:getcontenttype>${xml(e.mime ?? 'application/octet-stream')}</D:getcontenttype>`);
       if (e.etag) p.push(`<D:getetag>${xml(e.etag)}</D:getetag>`);
     }
-    p.push(SPERRBAR, '<D:lockdiscovery/>');
+    // Nur lesbar (#722): ohne supportedlock bieten Finder und Explorer kein Bearbeiten an; Windows liest dazu das
+    // Attribut „schreibgeschützt“ (FILE_ATTRIBUTE_READONLY, bei Ordnern mit FILE_ATTRIBUTE_DIRECTORY).
+    if (e.nurLesend) p.push(`<Z:Win32FileAttributes>${e.ordner ? '00000011' : '00000001'}</Z:Win32FileAttributes>`, '<D:lockdiscovery/>');
+    else p.push(SPERRBAR, '<D:lockdiscovery/>');
     return `<D:response><D:href>${xml(href(e.teile, e.ordner))}</D:href><D:propstat><D:prop>${p.join('')}</D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`;
   });
-  return `<?xml version="1.0" encoding="utf-8"?>\n<D:multistatus xmlns:D="DAV:">${teile.join('')}</D:multistatus>`;
+  const ms = eintraege.some((e) => e.nurLesend) ? ' xmlns:Z="urn:schemas-microsoft-com:"' : '';
+  return `<?xml version="1.0" encoding="utf-8"?>\n<D:multistatus xmlns:D="DAV:"${ms}>${teile.join('')}</D:multistatus>`;
 }
 
 /** Fehlerkörper nach RFC 4918 (z. B. propfind-finite-depth). */

@@ -49,10 +49,11 @@ import { schriftstueckPdf } from './schriftstueck';
 import { eindeutig, exportSpalten, mappenPdf, sichererName, spaltenKopf, zeile } from './export';
 import { zipGroesse, zipStrom, ZIP_MAX, type ZipEintrag } from './zip';
 import { fuerAusgabe, kannStempeln, weitergabeWas, type Ausgabe } from './ausgabe';
+import { mitnehmbar, pruefeAlle, sichtVerboten, verboten, type Ausgang, type Ausgangsrechte } from './ausgang';
 import { analysiere as schwaerzAnalyse, schwaerze, seitenbild as schwaerzSeitenbild, type Analyse as SchwaerzAnalyse } from './schwaerzen';
 import { bereicheVon, findeBegriff, findeMuster, geschwaerztName, istMuster, kannSchwaerzen, MUSTER, pruefeBegriffe, pruefeBereiche, SCHWAERZEN_MAX_SEITEN, stellenText, type Bereich } from '../../shared/src/schwaerzen';
 import { analysiere, ergebnisText, istStufe, MIN_ERSPARNIS, STANDARD_STUFE, stufeAus, STUFEN, verkleinere, type Analyse, type Stufe } from './verkleinern';
-import { geltenderStempel, liesStempelTyp, liesVorlagen, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
+import { geltenderStempel, liesStempelTyp, liesVorlagen, WEBDAV_VORLAGE, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
 import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestlauf, type SichtRegelwerk } from '../../shared/src/sichtrechte';
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
@@ -142,6 +143,16 @@ export interface SystemkontoEintrag {
   paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string }>;
 }
 export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
+
+/** Ein Anhang einer E-Mail (#723): Dokument (oder das PDF „Angaben“, dann ohne Dokument) und was hinausgeht. */
+interface Versandanhang {
+  dokument: Dokument | null; name: string; mime: string; groesse: number;
+  /** Bearbeitet (Stempel, verkleinert) oder Archivfassung: liegt als eigene Datei in der Post. */
+  ausgabe: Ausgabe | null;
+  inhalt(): Promise<Buffer | Readable>;
+}
+/** Alles, was von einer Mappe per E-Mail hinausgeht. `ausgaben`: die bearbeiteten (für Historie und Hinweise). */
+interface Versandteil { m: Mappe; plan: GeltenderStempel | null; angaben: Versandanhang | null; dokumente: Versandanhang[]; ausgaben: Ausgabe[]; groesse: number }
 
 /** Titel nicht lesbarer Mappen ausblenden (#124); `ok`: die lesbaren. */
 function maskiert(b: Map<string, MappenBezug>, ok: Set<string>): Record<string, MappenBezug> {
@@ -2194,9 +2205,9 @@ export class Dienst {
   /**
    * Mehrere Mappen per E-Mail (#151): eine E-Mail an alle Empfänger. Anhänge: je Mappe ihre Angaben als
    * PDF („Titel.pdf“, wenn `angaben`) und die gewählten Dokumente (`dokumente`: „alle“ oder Ids).
-   * Rechte: Lesen und Versenden (Recht E einer Ansicht, Regel A wie beim Export) je Mappe – prüft der Aufrufer
-   * über `z`. Danach eine Post (Kanal E-Mail, ausgehend, erledigt), die auf alle Mappen verweist, und je
-   * Mappe ein Eintrag in der Historie.
+   * Rechte: Lesen und Versenden (Recht E einer Ansicht, Regel A wie beim Export) je Mappe – über die gemeinsame
+   * Prüfstelle (#723). Anhänge wie bei einer Mappe (`versandTeil`). Danach eine Post (Kanal E-Mail, ausgehend,
+   * erledigt), die auf alle Mappen verweist, und je Mappe ein Eintrag in der Historie.
    */
   async versendeMappen(eingabe: unknown, ich: { id: string; name: string; email: string; rolle: string }, z: Zugriff, mailer: Mailer | null) {
     const e = (eingabe ?? {}) as Record<string, unknown>;
@@ -2204,54 +2215,29 @@ export class Dienst {
     if (!ids.length) throw new Fachfehler(422, 'Keine Mappen ausgewählt.');
     if (ids.length > EMAIL_MAX_MAPPEN) throw new Fachfehler(422, `Höchstens ${EMAIL_MAX_MAPPEN} Mappen in einer E-Mail.`);
     const { an, betreff, nachricht } = Dienst.emailKopf(e);
-    // Rechte: jede Mappe lesbar und versendbar – sonst nichts verschicken (keine stillen Lücken in der Mail).
-    const lesbar = await this.lesbare(z, ids);
-    const versendbar = await this.exportierbar(ich, z, ids.filter((id) => lesbar.has(id)));
-    const nicht = ids.filter((id) => !versendbar.has(id));
-    if (nicht.length) throw new Fachfehler(403, `${nicht.length === 1 ? 'Eine Mappe darfst' : `${nicht.length} Mappen darfst`} du nicht versenden. Versenden ist wie Exportieren nur aus Ansichten erlaubt, für die du das Recht dazu hast.`, { nicht });
+    Dienst.pruefeFassungswahl(e);
+    // Rechte (#723, gemeinsame Prüfstelle): jede Mappe lesbar und versendbar – sonst nichts verschicken (keine stillen Lücken).
+    await this.pruefeAusgang(ich, z, 'email', ids);
     if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
     const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
     if (mappen.length !== ids.length) throw new Fachfehler(404, 'Eine ausgewählte Mappe gibt es nicht (mehr).');
     const angaben = e.angaben !== false;
     const gewaehlt = e.dokumente === 'alle' ? null : new Set((Array.isArray(e.dokumente) ? e.dokumente : []).map(String));
-    // Archivfassung oder Original (#715): wie beim Herunterladen; ohne Archivfassung geht das Original.
-    const fw = await this.archivWahl(e.fassung);
-    const lies = fw.lies;
-    const verweise = mappen.flatMap((m) => { const t = z.typen.get(m.typId); return [...(t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v); });
-    const bezuege = await this.maskiereBezuege(z, await this.repo.bezuege([...new Set(verweise)]));
-    const quelle = { typen: z.typen, titel: (id: string | null | undefined) => (id ? bezuege[id]?.titel || NICHT_SICHTBAR : '') };
-    const je: Array<{ m: Mappe; dokumente: Dokument[]; pdf: Buffer | null; plan: GeltenderStempel | null; ausgaben: Ausgabe[] | null }> = [];
     const dokJe = await this.dokumenteJeMappe(mappen.map((m) => m.id));
-    // Stempel (#394): je Mappe, weil die Pflicht am Mappentyp hängt; {empfänger} ohne Angabe = die Adressen.
-    const wunsch = wunschAus(e.stempel);
-    const stempelDaten = await this.stempelDaten();
-    // Verkleinert senden (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
-    const klein = stufeAus(e.verkleinern);
-    for (const m of mappen) {
-      const docs = await Promise.all((dokJe.get(m.id) ?? []).filter((d) => !gewaehlt || gewaehlt.has(d.id)).map(fw.waehle));
-      const pdf = angaben ? await mappenPdf(m.titel || 'Ohne Titel', [{ mappe: m, typ: z.typen.get(m.typId), dokumente: [], inhalt: lies }], quelle, null) : null;
-      const plan = docs.length ? await this.stempelPlan(m.typId, wunsch, an.join(', '), stempelDaten) : null;
-      const ausgaben = plan || (klein && docs.length) ? await Promise.all(docs.map(async (d) => fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await lies(d) }, { stempel: plan, verkleinern: klein },
-        { benutzer: ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer }))) : null;
-      je.push({ m, dokumente: docs, pdf, plan, ausgaben });
-    }
     if (gewaehlt) {
-      const bekannt = new Set(je.flatMap((x) => x.dokumente.map((d) => d.id)));
+      const bekannt = new Set(mappen.flatMap((m) => (dokJe.get(m.id) ?? []).map((d) => d.id)));
       if ([...gewaehlt].some((id) => !bekannt.has(id))) throw new Fachfehler(422, 'Ein ausgewähltes Dokument gehört nicht (mehr) zu diesen Mappen.');
     }
-    const groesse = je.reduce((a, x) => a + (x.pdf?.length ?? 0) + (x.ausgaben ? x.ausgaben.reduce((b, y) => b + y.inhalt.length, 0) : x.dokumente.reduce((b, d) => b + d.groesse, 0)), 0);
-    if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB. Bitte weniger Mappen oder Dokumente wählen.`);
-    // Dateinamen eindeutig: „Titel.pdf“ der Angaben, dann die Dokumente (gestempelte Bilder heißen .pdf).
-    const namen = eindeutig(je.flatMap((x) => [...(x.pdf ? [`${sichererName(x.m.titel || 'Ohne Titel')}.pdf`] : []), ...x.dokumente.map((d, j) => sichererName(x.ausgaben?.[j].name ?? d.name, 120))]));
-    let i = 0;
-    const anhaenge: Array<{ name: string; mime: string; inhalt: Buffer | Readable }> = [];
-    for (const x of je) {
-      if (x.pdf) anhaenge.push({ name: namen[i++], mime: 'application/pdf', inhalt: x.pdf });
-      for (const [j, d] of x.dokumente.entries()) {
-        const a = x.ausgaben?.[j];
-        anhaenge.push(a ? { name: namen[i++], mime: a.mime, inhalt: a.inhalt } : { name: namen[i++], mime: d.mime, inhalt: await fw.strom(d) });
-      }
+    const quelle = angaben ? await this.angabenQuelle(z, mappen) : null;
+    const stempelDaten = await this.stempelDaten();
+    const je: Versandteil[] = [];
+    for (const m of mappen) {
+      const docs = (dokJe.get(m.id) ?? []).filter((d) => !gewaehlt || gewaehlt.has(d.id));
+      je.push(await this.versandTeil(m, docs, { e, an, ich, quelle, stempelDaten }));
     }
+    const groesse = je.reduce((a, x) => a + x.groesse, 0);
+    if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB. Bitte weniger Mappen oder Dokumente wählen.`);
+    const { namen, anhaenge } = await this.versandAnhaenge(je);
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge });
@@ -2264,32 +2250,111 @@ export class Dienst {
       betreff, an: an.join(', '), absender: antwortAn.replace(/"/g, ''), datum: heuteIn(), bezug: ids, ...(nachricht.trim() ? { nachricht } : {}),
       kanal: POST_KANAL.email, richtung: POST_RICHTUNG.ausgehend, stand: POST_STAND.erledigt,
     }, ich.id);
-    // In der Post liegt, was verschickt wurde: die Dokumente (gleiche Datei) und die PDFs der Angaben.
-    const reg = typ.register.find((r) => r.art === 'dokumente');
-    i = 0;
-    if (reg) for (const x of je) {
-      if (x.pdf) {
-        const sha256 = createHash('sha256').update(x.pdf).digest('hex');
-        await this.dateien.schreibe(sha256, x.pdf);
-        const neu = await this.repo.legeDokumentAn({ id: randomUUID(), mappeId: id, registerKey: reg.key, name: namen[i++], mime: 'application/pdf', groesse: x.pdf.length, sha256, anzeigbar: true, erstellt: new Date().toISOString(), erstelltVon: ich.id, herkunft: 'hochgeladen' });
-        this.neueDateien([neu]);
-      }
-      for (const [j, d] of x.dokumente.entries()) await this.legeVersandkopieAn(d, x.ausgaben?.[j], id, reg.key, ich.id, namen[i++]);
-    }
+    await this.legeVersandAb(typ, id, je, namen, ich.id);
+    let i = 0;
     for (const x of je) {
-      const n = x.dokumente.length + (x.pdf ? 1 : 0);
-      const stempeltext = x.ausgaben?.find((y) => y.stempeltext)?.stempeltext;
-      const mitStempel = x.ausgaben?.some((y) => y.gestempelt);
+      const teile = [...(x.angaben ? [x.angaben] : []), ...x.dokumente];
+      const n = teile.length;
+      const stempeltext = x.ausgaben.find((y) => y.stempeltext)?.stempeltext;
+      const mitStempel = x.ausgaben.some((y) => y.gestempelt);
       const was = weitergabeWas(x.ausgaben);
       await this.notiere(x.m.id, ich.id, 'email', {
         text: `„${betreff}“ an ${an.join(', ')} mit ${mappen.length} Mappen${n ? ` (von dieser ${n} ${n === 1 ? 'Anhang' : 'Anhänge'})` : ''}${was ? `, ${was}` : ''}`, email: id,
         an, betreff, nachricht: nachricht.slice(0, NOTIZ_MAX), mappen: mappen.length,
-        anhaenge: [...(x.pdf ? [{ name: `${sichererName(x.m.titel || 'Ohne Titel')}.pdf`, groesse: x.pdf.length }] : []), ...x.dokumente.map((d, j) => ({ name: x.ausgaben?.[j].name ?? d.name, groesse: x.ausgaben?.[j].inhalt.length ?? d.groesse }))],
+        anhaenge: teile.map((y) => ({ name: namen[i++], groesse: y.groesse })),
         ...(mitStempel ? { stempel: stempeltext ?? null, stempelAn: x.plan?.empfaenger ?? null } : {}),
       });
     }
     protokoll.modul('ablage').info('E-Mail mit mehreren Mappen verschickt', { mappen: mappen.length, empfaenger: an.length, anhaenge: anhaenge.length, bytes: groesse });
     return { id, typId: typ.id, mappen: mappen.length, anhaenge: anhaenge.length };
+  }
+
+  /** `fassung` und `fassungen` (je Dokument) kennen nur „original“ und „archiv“ – geprüft, bevor etwas geschieht. */
+  private static pruefeFassungswahl(e: Record<string, unknown>) {
+    const werte = [e.fassung, ...(e.fassungen && typeof e.fassungen === 'object' ? Object.values(e.fassungen) : [])];
+    if (werte.some((v) => v !== undefined && v !== null && v !== 'original' && v !== 'archiv')) throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+  }
+
+  /** Typen und Titel der Verweise für das PDF „Angaben“ – mit `z` nur, was der Benutzer sehen darf. */
+  private async angabenQuelle(z: Zugriff | undefined, mappen: Mappe[]): Promise<Parameters<typeof mappenPdf>[2]> {
+    const typen = z?.typen ?? new Map((await this.repo.listeTypen()).map((t) => [t.id, t] as const));
+    const verweise = mappen.flatMap((m) => { const t = typen.get(m.typId); return [...(t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v); });
+    const bezuege = await this.maskiereBezuege(z, await this.repo.bezuege([...new Set(verweise)]));
+    return { typen, titel: (id: string | null | undefined) => (id ? bezuege[id]?.titel || NICHT_SICHTBAR : '') };
+  }
+
+  /**
+   * Was von einer Mappe per E-Mail hinausgeht (#723: ein Weg für eine und mehrere Mappen). Für jedes Dokument gilt
+   * dieselbe Wahl Original/Archivfassung (`fassungen` je Dokument, sonst `fassung` für alle; ohne Archivfassung
+   * und bei E-Rechnungen das Original), derselbe Stempel (gewünscht oder Pflicht des Mappentyps) – auch auf dem
+   * PDF „Angaben“ – und dasselbe Verkleinern. `groesse` zählt alles, was angehängt wird, das Angaben-PDF mit.
+   */
+  private async versandTeil(m: Mappe, docs: Dokument[], o: {
+    e: Record<string, unknown>; an: string[]; ich: { name: string };
+    /** Mit Angaben-PDF: Typen und Titel der Verweise; null = ohne. */
+    quelle: Parameters<typeof mappenPdf>[2] | null;
+    stempelDaten: Awaited<ReturnType<Dienst['stempelDaten']>>;
+  }): Promise<Versandteil> {
+    const wahl = (o.e.fassungen && typeof o.e.fassungen === 'object' ? o.e.fassungen : {}) as Record<string, unknown>;
+    const quellen = await Promise.all(docs.map((d) => this.ausgabeQuelle(d, wahl[d.id] ?? o.e.fassung, wahl[d.id] === undefined)));
+    const pdf = o.quelle ? await mappenPdf(m.titel || 'Ohne Titel', [{ mappe: m, typ: o.quelle.typen.get(m.typId), dokumente: [], inhalt: (d: Dokument) => this.liesGanz(d.sha256) }], o.quelle, null) : null;
+    // Stempel (#394): gewünscht oder vom Mappentyp verlangt; {empfänger} sind ohne Angabe die Adressen.
+    const plan = docs.length || pdf ? await this.stempelPlan(m.typId, wunschAus(o.e.stempel), o.an.join(', '), o.stempelDaten) : null;
+    // Verkleinert senden (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
+    const klein = stufeAus(o.e.verkleinern);
+    const kontext = (d?: Dokument) => ({ benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d?.archivnummer ?? null });
+    const bearbeiten = !!plan || (!!klein && docs.length > 0);
+    const dokumente: Versandanhang[] = await Promise.all(quellen.map(async (q, i): Promise<Versandanhang> => {
+      const d = docs[i];
+      if (bearbeiten) {
+        const roh = await fuerAusgabe({ name: q.name, mime: q.mime, inhalt: await q.inhalt() }, { stempel: plan, verkleinern: klein }, kontext(d));
+        // Unverändert, aber Archivfassung: in der Post liegt dann die Fassung, nicht das Original.
+        const a: Ausgabe = q.archiv && roh.unveraendert ? { ...roh, unveraendert: undefined } : roh;
+        return { dokument: d, name: a.name, mime: a.mime, groesse: a.inhalt.length, ausgabe: a, inhalt: async () => a.inhalt };
+      }
+      if (q.archiv) {
+        const b = await q.inhalt();
+        return { dokument: d, name: q.name, mime: q.mime, groesse: b.length, ausgabe: { name: q.name, mime: q.mime, inhalt: b, stempeltext: null }, inhalt: async () => b };
+      }
+      return { dokument: d, name: d.name, mime: d.mime, groesse: d.groesse, ausgabe: null, inhalt: () => this.dateien.lies(d.sha256) as Promise<Buffer | Readable> };
+    }));
+    let angaben: Versandanhang | null = null;
+    if (pdf) {
+      const name = `${m.titel || 'Ohne Titel'}.pdf`;
+      // Das PDF „Angaben“ geht ebenso hinaus: der Stempel (Pflicht oder gewünscht) gilt auch für es (#723).
+      const a = plan ? await fuerAusgabe({ name, mime: 'application/pdf', inhalt: pdf }, { stempel: plan }, kontext()) : null;
+      const b = a?.inhalt ?? pdf;
+      angaben = { dokument: null, name, mime: 'application/pdf', groesse: b.length, ausgabe: a ?? { name, mime: 'application/pdf', inhalt: b, stempeltext: null }, inhalt: async () => b };
+    }
+    const ausgaben = [...(angaben?.ausgabe?.gestempelt ? [angaben.ausgabe] : []), ...dokumente.flatMap((x) => (x.ausgabe ? [x.ausgabe] : []))];
+    const groesse = (angaben?.groesse ?? 0) + dokumente.reduce((s, x) => s + x.groesse, 0);
+    return { m, plan, angaben, dokumente, ausgaben, groesse };
+  }
+
+  /** Anhänge der E-Mail mit eindeutigen Dateinamen: je Mappe erst „Titel.pdf“ der Angaben, dann die Dokumente. */
+  private async versandAnhaenge(je: Versandteil[]) {
+    const teile = je.flatMap((x) => [...(x.angaben ? [x.angaben] : []), ...x.dokumente]);
+    const namen = eindeutig(teile.map((x) => sichererName(x.name, 120)));
+    const anhaenge = await Promise.all(teile.map(async (x, i) => ({ name: namen[i], mime: x.mime, inhalt: await x.inhalt() })));
+    return { namen, anhaenge };
+  }
+
+  /** In der Post liegt, was verschickt wurde: gestempelte Kopien und Fassungen als eigene Datei, sonst dieselbe Datei. */
+  private async legeVersandAb(typ: Mappentyp, postId: string, je: Versandteil[], namen: string[], von: string) {
+    const reg = typ.register.find((r) => r.art === 'dokumente');
+    if (!reg) return;
+    let i = 0;
+    for (const x of je) {
+      for (const y of [...(x.angaben ? [x.angaben] : []), ...x.dokumente]) {
+        const name = namen[i++];
+        if (y.dokument) { await this.legeVersandkopieAn(y.dokument, y.ausgabe ?? undefined, postId, reg.key, von, name); continue; }
+        const inhalt = y.ausgabe!.inhalt;
+        const sha256 = createHash('sha256').update(inhalt).digest('hex');
+        await this.dateien.schreibe(sha256, inhalt);
+        const neu = await this.repo.legeDokumentAn({ id: randomUUID(), mappeId: postId, registerKey: reg.key, name, mime: 'application/pdf', groesse: inhalt.length, sha256, anzeigbar: true, erstellt: new Date().toISOString(), erstelltVon: von, herkunft: 'hochgeladen' });
+        this.neueDateien([neu]);
+      }
+    }
   }
 
   /** Kopie eines verschickten Dokuments in der Post: gestempelt als eigene Datei (#394), sonst dieselbe Datei. */
@@ -2302,28 +2367,27 @@ export class Dienst {
     this.neueDateien([neu]);
   }
 
-  async versendeMappe(mappeId: string, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null) {
+  /**
+   * Eine Mappe per E-Mail (#58). Mit `z` prüft die gemeinsame Prüfstelle (#723) Lesen und Exportrecht, bevor
+   * irgendetwas anderes geschieht. Anhänge wie bei mehreren Mappen (`versandTeil`): Archivfassung je Dokument
+   * (`fassungen`) oder für alle (`fassung`), Stempel, Verkleinern; mit `angaben: true` auch das PDF „Angaben“.
+   */
+  async versendeMappe(mappeId: string, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null, z?: Zugriff) {
+    if (z) await this.pruefeAusgang(z.ich, z, 'email', [mappeId]);
     if (!mailer) throw new Fachfehler(409, 'Der E-Mail-Versand ist nicht eingerichtet (Werkbank → E-Mail und Adresse).');
     const m = await this.repo.holeMappe(mappeId);
     if (!m) throw new Fachfehler(404, 'Diese Mappe gibt es nicht.');
     const e = (eingabe ?? {}) as Record<string, unknown>;
     const { an, betreff, nachricht } = Dienst.emailKopf(e);
+    Dienst.pruefeFassungswahl(e);
     const ids = Array.isArray(e.dokumente) ? [...new Set(e.dokumente.map(String))] : [];
     const alle = await this.repo.listeDokumente(mappeId);
     const dokumente = ids.map((id) => alle.find((d) => d.id === id));
     if (dokumente.some((d) => !d)) throw new Fachfehler(422, 'Ein ausgewähltes Dokument gehört nicht (mehr) zu dieser Mappe.');
-    // Stempel (#394): gewünscht oder vom Mappentyp verlangt; {empfänger} sind ohne Angabe die Adressen.
-    const plan = dokumente.length ? await this.stempelPlan(m.typId, wunschAus(e.stempel), an.join(', ')) : null;
-    const klein = stufeAus(e.verkleinern);
-    // Archivfassung oder Original (#631): je Dokument (fassungen: { id: archiv|original }) oder für alle (fassung).
-    const wahl = (e.fassungen && typeof e.fassungen === 'object' ? e.fassungen : {}) as Record<string, unknown>;
-    const quellen = await Promise.all(dokumente.map((d) => this.ausgabeQuelle(d!, wahl[d!.id] ?? e.fassung, wahl[d!.id] === undefined)));
-    const ausgaben = plan || (klein && dokumente.length) ? await Promise.all(quellen.map(async (d, i) => fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await d.inhalt() }, { stempel: plan, verkleinern: klein },
-      { benutzer: ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: dokumente[i]!.archivnummer }))) : null;
-    const groesse = ausgaben ? ausgaben.reduce((a, x) => a + x.inhalt.length, 0) : quellen.reduce((a, d) => a + d.groesse, 0);
-    if (groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB.`);
-    const anhaenge = ausgaben ? ausgaben.map((x) => ({ name: x.name, mime: x.mime, inhalt: x.inhalt as Buffer | Readable }))
-      : await Promise.all(quellen.map(async (d) => ({ name: d.name, mime: d.mime, inhalt: d.archiv ? await d.inhalt() : await this.dateien.lies(d.sha256) })));
+    const quelle = e.angaben === true ? await this.angabenQuelle(z, [m]) : null;
+    const teil = await this.versandTeil(m, dokumente as Dokument[], { e, an, ich, quelle, stempelDaten: await this.stempelDaten() });
+    if (teil.groesse > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, `Die Anhänge sind zusammen größer als ${Math.round(EMAIL_MAX_ANHAENGE / 1e6)} MB.`);
+    const { namen, anhaenge } = await this.versandAnhaenge([teil]);
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
       await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge });
@@ -2337,16 +2401,15 @@ export class Dienst {
       betreff, an: an.join(', '), absender: antwortAn.replace(/"/g, ''), datum, bezug: [mappeId], ...(nachricht.trim() ? { nachricht } : {}),
       kanal: POST_KANAL.email, richtung: POST_RICHTUNG.ausgehend, stand: POST_STAND.erledigt,
     }, ich.id);
-    const reg = typ.register.find((r) => r.art === 'dokumente');
-    // In der Post liegt, was verschickt wurde: gestempelt die Kopie, sonst dieselbe Datei.
-    if (reg) for (const [i, d] of dokumente.entries()) await this.legeVersandkopieAn(d!, ausgaben?.[i], id, reg.key, ich.id);
-    const stempeltext = ausgaben?.find((x) => x.stempeltext)?.stempeltext;
-    const mitStempel = ausgaben?.some((x) => x.gestempelt);
-    const was = weitergabeWas(ausgaben);
-    await this.notiere(mappeId, ich.id, 'email', { text: `„${betreff}“ an ${an.join(', ')}${dokumente.length ? ` mit ${dokumente.length} ${dokumente.length === 1 ? 'Anhang' : 'Anhängen'}` : ''}${was ? `, ${was}` : ''}`, email: id,
-      an, betreff, nachricht: nachricht.slice(0, NOTIZ_MAX), anhaenge: ausgaben ? ausgaben.map((x) => ({ name: x.name, groesse: x.inhalt.length })) : dokumente.map((d) => ({ name: d!.name, groesse: d!.groesse })),
-      ...(mitStempel ? { stempel: stempeltext ?? null, stempelAn: plan?.empfaenger ?? null } : {}) });
-    protokoll.modul('ablage').info('E-Mail aus Mappe verschickt', { mappe: mappeId, empfaenger: an.length, anhaenge: dokumente.length, bytes: groesse });
+    await this.legeVersandAb(typ, id, [teil], namen, ich.id);
+    const stempeltext = teil.ausgaben.find((x) => x.stempeltext)?.stempeltext;
+    const mitStempel = teil.ausgaben.some((x) => x.gestempelt);
+    const was = weitergabeWas(teil.ausgaben);
+    const n = anhaenge.length;
+    await this.notiere(mappeId, ich.id, 'email', { text: `„${betreff}“ an ${an.join(', ')}${n ? ` mit ${n} ${n === 1 ? 'Anhang' : 'Anhängen'}` : ''}${was ? `, ${was}` : ''}`, email: id,
+      an, betreff, nachricht: nachricht.slice(0, NOTIZ_MAX), anhaenge: anhaenge.map((x, i) => ({ name: x.name, groesse: [...(teil.angaben ? [teil.angaben] : []), ...teil.dokumente][i].groesse })),
+      ...(mitStempel ? { stempel: stempeltext ?? null, stempelAn: teil.plan?.empfaenger ?? null } : {}) });
+    protokoll.modul('ablage').info('E-Mail aus Mappe verschickt', { mappe: mappeId, empfaenger: an.length, anhaenge: n, bytes: teil.groesse });
     return { id, typId: typ.id };
   }
 
@@ -4523,7 +4586,7 @@ export class Dienst {
     if (sicht && !z.admin) {
       const r = alleSichtRechte(alle, z.wer, false).get(sicht.id);
       if (!r?.R) throw new Fachfehler(404, 'Diese Ansicht gibt es nicht.');
-      if (!r.E) throw new Fachfehler(403, 'Aus dieser Ansicht darfst du nicht exportieren.');
+      if (!r.E) throw sichtVerboten();
     }
     const treffer = (await this.trefferIds(ich, q, z)).ids;
     const gewaehlt = Array.isArray(x.ids) ? new Set(x.ids.map(String)) : null;
@@ -4533,10 +4596,10 @@ export class Dienst {
     // in mindestens einer Sicht mit Recht E sehen würde; die übrigen werden ausgelassen und gezählt.
     let ausgelassen = 0;
     if (!sicht && !z.admin) {
-      const erlaubt = await this.exportierbar(ich, z, ids);
+      const erlaubt = await this.mitnehmbar(ich, z, ids);
       ausgelassen = ids.length - erlaubt.size;
       ids = ids.filter((id) => erlaubt.has(id));
-      if (!ids.length) throw new Fachfehler(403, 'Du darfst keine dieser Mappen exportieren. Exportieren ist nur aus Ansichten erlaubt, für die du das Recht dazu hast.');
+      if (!ids.length) throw verboten('export', [], Math.max(2, ausgelassen));
     }
     const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
     const typen = [...new Set(mappen.map((m) => m.typId))].map((t) => z.typen.get(t)).filter((t): t is Mappentyp => !!t);
@@ -4650,6 +4713,19 @@ export class Dienst {
     const klauseln = alle.filter((s) => rechte.get(s.id)?.R && rechte.get(s.id)?.E)
       .flatMap((s) => klauselnFuer(alle, s.id, z.typen, a, verborgen));
     return klauseln.length ? this.repo.inKlauseln(ids, klauseln) : new Set();
+  }
+
+  /** Lesen und Exportrecht für die Prüfstelle der Wege nach draußen (#723, `ausgang.ts`). */
+  private ausgangsrechte(ich: { id: string; rolle: string }, z: Zugriff): Ausgangsrechte {
+    return { lesbar: (ids) => this.lesbare(z, ids), exportierbar: (ids) => this.exportierbar(ich, z, ids) };
+  }
+  /** Welche dieser Mappen dürfen hinaus (Herunterladen, E-Mail, Export, Laufwerk)? Lesen und Exportrecht (#723). */
+  async mitnehmbar(ich: { id: string; rolle: string }, z: Zugriff, ids: string[]): Promise<Set<string>> {
+    return mitnehmbar(this.ausgangsrechte(ich, z), ids);
+  }
+  /** Gemeinsame Prüfstelle (#723): alle Mappen müssen über diesen Weg hinausdürfen, sonst 404 bzw. 403. */
+  async pruefeAusgang(ich: { id: string; rolle: string }, z: Zugriff, ausgang: Ausgang, ids: string[]): Promise<void> {
+    return pruefeAlle(this.ausgangsrechte(ich, z), ausgang, ids);
   }
 
   /** Alle Treffer einer Sicht mit Suche (#149): nur die Ids der lesbaren Mappen, höchstens MAX_AUSWAHL. */
@@ -6157,6 +6233,9 @@ export class Dienst {
     const typen = await this.repo.listeTypen();
     const nutzer = Object.entries(d.typen).filter(([t, s]) => s.vorlage === id && typen.some((x) => x.id === t)).map(([t]) => typen.find((x) => x.id === t)!.name);
     if (nutzer.length) throw new Fachfehler(409, `Die Vorlage „${v.name}“ wird noch von ${nutzer.length === 1 ? 'dem Mappentyp' : 'den Mappentypen'} ${nutzer.map((n) => `„${n}“`).join(', ')} verwendet.`);
+    // Stempel beim Lesen über das Laufwerk (#722): ohne Angabe gilt die mitgelieferte Vorlage.
+    const laufwerk = (await this.einstellungen?.lies('webdav')) as { stempel?: unknown } | null;
+    if ((laufwerk && 'stempel' in laufwerk ? laufwerk.stempel : WEBDAV_VORLAGE) === id) throw new Fachfehler(409, t('api.webdav.vorlage-in-gebrauch', { name: v.name }));
     d.vorlagen = d.vorlagen.filter((x) => x.id !== id);
     await this.schreibeStempelDaten(d);
     protokoll.modul('werkbank').info('Stempel-Vorlage gelöscht', { name: v.name, von });
@@ -6197,6 +6276,29 @@ export class Dienst {
       if (x instanceof StempelFehler) throw new Fachfehler(422, x.message, { stempel: true, pflicht: d.typen[typId]?.modus === 'pflicht' });
       throw x;
     }
+  }
+
+  /**
+   * Stempel beim Lesen über das WebDAV-Laufwerk (#722): Der Pflicht-Stempel des Mappentyps gewinnt immer – auch wenn
+   * die Einstellung des Laufwerks „aus“ ist. Sonst gilt die Vorlage der Einstellung (`vorlage`, null = aus; eine
+   * gelöschte Vorlage wirkt wie „aus“). {empfänger} und {benutzer} sind der lesende Benutzer (`leser`).
+   * `fehler`: Der Stempel lässt sich nicht bilden – bei Pflicht geht die Datei dann nicht hinaus.
+   */
+  async laufwerkStempel(typId: string, vorlage: string | null, leser: string): Promise<{ pflicht: boolean; plan: GeltenderStempel | null; fehler?: string }> {
+    const d = await this.stempelDaten();
+    const pflicht = d.typen[typId]?.modus === 'pflicht';
+    const wunsch = !pflicht && vorlage && d.vorlagen.some((v) => v.id === vorlage) ? { vorlage } : null;
+    if (!pflicht && !wunsch) return { pflicht, plan: null };
+    try { return { pflicht, plan: await this.stempelPlan(typId, wunsch, leser, d) }; } catch (x) {
+      if (x instanceof Fachfehler) return { pflicht, plan: null, fehler: x.message };
+      throw x;
+    }
+  }
+
+  /** Gestempelte Kopie eines Dokuments fürs Laufwerk (#722); das gespeicherte Original bleibt unverändert. */
+  async laufwerkAusgabe(d: Dokument, m: Pick<Mappe, 'titel'>, plan: GeltenderStempel, leser: string): Promise<Ausgabe> {
+    return fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) }, { stempel: plan },
+      { benutzer: leser, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null });
   }
 
   private async liesGanz(sha256: string): Promise<Buffer> {

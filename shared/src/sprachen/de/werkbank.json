@@ -360,5 +360,11 @@
   "export.umzug.text": "Exporte sind unverschlüsselt und gehören nicht in die Kopie der Sicherung. Sie liegen jetzt unter {pfad} und werden nach dem Herunterladen bzw. nach {tage} Tagen gelöscht.",
   "export.umzug.uebrig": "Einiges ließ sich nicht verschieben und liegt noch im Unterordner export/ des Sicherungsordners. Lösche es dort oder nimm es von der Kopie der Sicherung aus.",
   "export.umzug.ok": "Verstanden",
-  "export.knopf": "Zum Vollexport"
+  "export.knopf": "Zum Vollexport",
+  "webdav.stempel": "Stempel beim Lesen",
+  "webdav.stempel.aus": "Kein Stempel",
+  "webdav.stempel.hinweis": "PDFs kommen über das Laufwerk mit dieser Vorlage gestempelt heraus; das Original in Ablago bleibt unverändert. Verlangt ein Mappentyp einen Stempel (Pflicht), gilt dessen Stempel immer – auch bei „Kein Stempel“.",
+  "webdav.nur-lesend": "Nur lesend",
+  "webdav.nur-lesend.hinweis": "für alle Benutzer: blättern und öffnen ja, ablegen, ändern und löschen nein",
+  "webdav.stand.nur-lesend": "eingeschaltet, nur lesend"
 }

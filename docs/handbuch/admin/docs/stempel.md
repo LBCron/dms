@@ -6,7 +6,7 @@ Du legst zweierlei fest: die **Vorlagen**, aus denen Benutzer wählen, und je Ma
 
 ## Stempel-Vorlagen
 
-Unter **Werkbank → Stempel** stehen die Vorlagen. Am Anfang sind es vier:
+Unter **Werkbank → Stempel** stehen die Vorlagen. Am Anfang sind es fünf:
 
 | Vorlage | Text | Lage |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ Unter **Werkbank → Stempel** stehen die Vorlagen. Am Anfang sind es vier:
 | Nur zur Vorlage bei … | `Nur zur Vorlage bei {empfänger}` | Kopfzeile |
 | Entwurf | `ENTWURF` | diagonal |
 | Vertraulich | `VERTRAULICH` | Ecke oben rechts, nur erste Seite |
+| Aus Ablago (Laufwerk) | `Aus Ablago · {datum}` | Fußzeile – für das [WebDAV-Laufwerk](webdav.md#stempel-beim-lesen) |
 
 ![Werkbank → Stempel](bilder/werkbank-stempel.png)
 
@@ -29,7 +30,7 @@ Ein Klick auf eine Vorlage klappt sie auf; du änderst sie direkt dort und speic
 | **Seitenzahlen** | Fußzeile „Seite x von y“ auf jeder Seite |
 | **Archivnummer** | die [Archivnummer](nummernkreise.md#archivnummern-und-aufkleber) des Dokuments in der Fußzeile |
 
-Die kleine Seite neben den Kästchen zeigt ungefähr, wo der Stempel sitzt. Benutzer können beim Weitergeben alles noch ändern; die Vorlage ist nur der Ausgangspunkt. Eine Vorlage, die ein Mappentyp verwendet, lässt sich nicht löschen – unter **Verwendet in** steht, welcher.
+Die kleine Seite neben den Kästchen zeigt ungefähr, wo der Stempel sitzt. Benutzer können beim Weitergeben alles noch ändern; die Vorlage ist nur der Ausgangspunkt. Eine Vorlage, die ein Mappentyp verwendet, lässt sich nicht löschen – unter **Verwendet in** steht, welcher. Dasselbe gilt für die Vorlage, mit der das [WebDAV-Laufwerk](webdav.md#stempel-beim-lesen) beim Lesen stempelt.
 
 Die Vorlagen liegen in den Einstellungen der Datenbank und gehören damit zur [Sicherung](sicherung.md).
 
@@ -39,7 +40,7 @@ Im [Mappentyp](mappentypen.md) gibt es den Bereich **Stempel beim Weitergeben**:
 
 - **Kein Stempel** (Standard): Benutzer können beim Weitergeben einen Stempel wählen, müssen aber nicht.
 - **Vorschlagen**: **Mit Stempel** ist beim Herunterladen, Exportieren und Versenden schon angehakt, mit der gewählten Vorlage – z. B. bei „Ausweis & Urkunde“: „Kopie – nur für {empfänger} – {datum}“. Benutzer können ihn abwählen.
-- **Pflicht**: Dokumente dieses Mappentyps verlassen Ablago nur gestempelt – beim Herunterladen (auch älterer Versionen), im Export als ZIP oder PDF, per E-Mail und über die [API](api.md). Gibt jemand keinen eigenen Stempel an, nimmt Ablago die Vorlage des Mappentyps. Nutzt sie `{empfänger}`, muss ein Empfänger angegeben sein (bei E-Mails sind es ohne Angabe die Adressen). Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.
+- **Pflicht**: Dokumente dieses Mappentyps verlassen Ablago nur gestempelt – beim Herunterladen (auch älterer Versionen), im Export als ZIP oder PDF, per E-Mail (auch das PDF „Angaben“ der Mappe), über die [API](api.md) und über das [WebDAV-Laufwerk](webdav.md#stempel-beim-lesen). Gibt jemand keinen eigenen Stempel an, nimmt Ablago die Vorlage des Mappentyps. Nutzt sie `{empfänger}`, muss ein Empfänger angegeben sein (bei E-Mails sind es ohne Angabe die Adressen). Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.
 
 Gespeichert wird die Einstellung mit **Mappentyp speichern**.
 
@@ -47,8 +48,17 @@ Gespeichert wird die Einstellung mit **Mappentyp speichern**.
 
 - **PDFs** und **Bilder** (JPEG, PNG). Bilder werden dabei zu einem PDF (A4, hoch oder quer wie das Bild). Verschlüsselte PDFs lassen sich nicht stempeln.
 - Beim **Export als PDF** bekommen die eingebundenen Dokumente den Stempel, nicht die Seiten mit den Angaben der Mappe.
+- Bei **E-Mails** (einer und mehrerer Mappen) bekommt auch das PDF **„Angaben“** mit den Feldern der Mappe den Stempel – es geht ebenso hinaus. In der Post liegt dann die gestempelte Fassung.
 - Beim **Export als ZIP** und bei E-Mails gehen andere Dateien (z. B. Word) ungestempelt mit – außer der Mappentyp verlangt den Stempel, dann bricht Ablago mit einer Meldung ab.
-- Das **Anzeigen** in Ablago, das Vorschaubild, die Texterkennung, [WebDAV](webdav.md) und Pakete bekommen immer das Original.
+- Das **Anzeigen** in Ablago, das Vorschaubild, die Texterkennung und Pakete bekommen immer das Original.
+
+## Pflicht gilt auch für das Laufwerk { #pflicht-gilt-auch-fur-das-laufwerk }
+
+Über das [WebDAV-Laufwerk](webdav.md) kommen Dokumente eines Mappentyps mit **Pflicht** immer mit dessen Stempel heraus – auch wenn unter **Werkbank → WebDAV-Laufwerk** „Stempel beim Lesen: Kein Stempel“ eingestellt ist. Bilder kommen dort als PDF heraus und heißen im Laufwerk auch so (`foto.pdf`); Dateien, die sich nicht stempeln lassen, öffnet das Laufwerk gar nicht.
+
+Die Register solcher Mappen sind über das Laufwerk **nur lesbar**: nichts ablegen, ändern, umbenennen, kopieren oder löschen. Sonst käme der Stempel beim Zurückspeichern als neue Version in Ablago an. Explorer und Finder zeigen diese Ordner und Dateien als schreibgeschützt. Ablegen geht dort weiter in Ablago selbst.
+
+Ohne Pflicht stempelt das Laufwerk mit der Vorlage aus seiner eigenen Einstellung (Vorgabe: *Aus Ablago (Laufwerk)*) – siehe [Stempel beim Lesen](webdav.md#stempel-beim-lesen).
 
 Jede Weitergabe mit Stempel steht in der **Historie** der Mappe („weitergegeben: mit Stempel „…“ an …“, mit Dokumenten und Art der Weitergabe); bei E-Mails im Eintrag der E-Mail, und in der Post liegt die gestempelte Kopie.
 

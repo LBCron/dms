@@ -20,7 +20,7 @@ Jede verschickte E-Mail legt Ablago als [Post](post.md#versendete-e-mails) ab �
 
 Steht dort „Der E-Mail-Versand ist nicht eingerichtet“, muss ein Administrator ihn erst in der Werkbank einrichten.
 
-Versenden gibt Daten aus Ablago hinaus wie ein Export. Deshalb gibt es **Per E-Mail versenden** und **Als PDF exportieren** nur bei Mappen, die du in mindestens einer Ansicht mit Exportrecht siehst. Fehlt beides im Menü, hat dir der Administrator dieses Recht nicht gegeben.
+Versenden gibt Daten aus Ablago hinaus wie ein Export oder das Herunterladen. Deshalb gibt es **Per E-Mail versenden** und **Als PDF exportieren** nur bei Mappen, die du in mindestens einer Ansicht mit Exportrecht siehst. Fehlt beides im Menü, hat dir der Administrator dieses Recht nicht gegeben – dann kannst du die Dokumente auch nicht herunterladen (siehe [Ohne Exportrecht](dokumente.md#ohne-exportrecht)).
 
 ## Mehrere Mappen per E-Mail
 
@@ -30,11 +30,11 @@ Alle Belege eines Jahres an den Steuerberater, die Unterlagen zum Auto an die Ve
 2. In der Leiste über der Liste: **Per E-Mail …**.
 3. **An**, **Betreff** und **Nachricht** wie bei einer Mappe.
 4. Unter **Anhänge** wählst du:
-    - **Angaben je Mappe als PDF** – je Mappe eine Datei „Titel.pdf“ mit allen Feldern (Passwörter nie). Vorausgewählt.
+    - **Angaben je Mappe als PDF** – je Mappe eine Datei „Titel.pdf“ mit allen Feldern (Passwörter nie). Vorausgewählt. Verlangt der Mappentyp einen Stempel, ist auch dieses PDF gestempelt.
     - **Dokumente:** **alle** Dokumente der Mappen, **keine** oder **Auswählen …** – dann stehen die Dokumente je Mappe mit Kästchen da.
 5. **Senden**.
 
-Darunter steht wieder, wie groß die Anhänge zusammen sind (Warnung ab 20 MB, höchstens 50 MB). In eine E-Mail passen höchstens 100 Mappen.
+Darunter steht wieder, wie groß die Anhänge zusammen sind (Warnung ab 20 MB, höchstens 50 MB – die PDFs mit den Angaben zählen mit). Für Stempel, Archivfassung und Verkleinern gelten dieselben Regeln wie bei einer Mappe. In eine E-Mail passen höchstens 100 Mappen.
 
 Danach gibt es **eine** [Post](post.md#versendete-e-mails) unter **Post → Versendet**. Sie verweist unter „Zugeordnet zu“ auf alle versendeten Mappen und enthält, was verschickt wurde – die Dokumente und die PDFs mit den Angaben. In der [Historie](zusammenarbeit.md#historie) **jeder** versendeten Mappe steht die E-Mail mit Link.
 
