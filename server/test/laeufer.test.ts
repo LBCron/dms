@@ -187,6 +187,24 @@ describe('Paket-Läufer: Nacharbeiten (#403)', () => {
   });
 });
 
+describe('Sicherung außer Haus (#636): Leseschlüssel, PUT nur im Übergang', () => {
+  it('ein Leseschlüssel darf PUT /sicherungen/{name}/extern (Pakete vor #636), sonst nichts schreiben', async () => {
+    const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
+    const konten = new Konten(speicherKontoRepo(), () => null, () => 'http://localhost', d.benutzerspiegel());
+    const schluessel = new ApiSchluesselDienst(speicherApiSchluesselRepo());
+    const tabelle = routen(d, konten, { apiSchluessel: schluessel });
+    const key = await schluessel.fuerDienstkonto(await konten.dienstkonto('sicherung_webdav', 'Sicherungsziel WebDAV'), 'lesen');
+    const zugang = (methode: string, pfad: string) => {
+      const r = tabelle.find((y) => y.methode === methode && y.pfad === pfad);
+      assert.ok(r, `${methode} ${pfad}`);
+      return pruefeZugang(r as Route, { body: {}, params: {}, query: {}, ip: '127.0.0.1' } as unknown as Anfrage, (n) => (n === 'authorization' ? `Bearer ${key}` : undefined), konten, schluessel);
+    };
+    await zugang('PUT', '/api/v1/sicherungen/:name/extern');
+    await zugang('GET', '/api/v1/sicherungen/:name/datei');
+    await assert.rejects(zugang('PUT', '/api/v1/dokumente/:id/fassung'), /darf nur lesen/);
+  });
+});
+
 describe('Paket-Läufer: Recht nur für Post (#435)', () => {
   it('code.rechte kennt dms:post; unbekannte dms:-Kennungen und dms:benutzer nicht', () => {
     const r = liesCode({ sprache: 'c', rechte: { lesen: ['dms:post'], schreiben: ['dms:post'], dokumente: 'schreiben' } });
@@ -277,6 +295,9 @@ describe('Paket-Läufer (#338): Ablauf', () => {
 
   it('Fortsetzung (#458): {"weiter": …} ruft das Paket gleich wieder auf, mit weiter und abschnitt; höchstens weiterMax-mal', async () => {
     const { d, l } = await aufbau({}, undefined, { weiterMax: 3 });
+    // Antwort jedes Aufrufs (#636) – auch der Fortsetzungen – geht an den Dienst.
+    const antworten: Array<{ art: string; ok: boolean; text: string; rc: number | null; beginn: number }> = [];
+    d.nachEreignisAufruf = async (_p, e, r) => { antworten.push({ art: e.art, ok: r.ok, text: r.text, rc: r.rc, beginn: r.beginn }); };
     await installiere(d, 'weiter', WEITER);
     await l.start();
     await warte(async () => (await l.uebersicht()).laeuft);
@@ -287,6 +308,9 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     assert.ok(p.protokoll.some((x) => /nach 3 Fortsetzungen beendet/.test(x.text)), JSON.stringify(p.protokoll));
     // Die Fortsetzung bekam weiter und abschnitt mit (das Modul schreibt seine Eingabe ins Protokoll).
     assert.ok(p.protokoll.some((x) => /"abschnitt":2/.test(x.text) && /"weiter":\{"fortschritt":"Seite 1"\}/.test(x.text)), JSON.stringify(p.protokoll.map((x) => x.text.slice(0, 200))));
+    assert.equal(antworten.length, 4, 'je Aufruf eine Antwort');
+    assert.ok(antworten.every((a) => a.art === 'dokument.hochgeladen' && a.ok && a.rc === 0 && a.text === WEITER_TEXT && a.beginn > 0), JSON.stringify(antworten));
+    assert.ok(antworten.every((a, i) => i === 0 || a.beginn >= antworten[i - 1].beginn), 'Beginn je Aufruf');
     assert.deepEqual(liesWeiter('{"weiter":{"seite":3}}'), { seite: 3 });
     assert.equal(liesWeiter('fertig'), null);
     assert.equal(liesWeiter('{"weiter":[1]}'), null);

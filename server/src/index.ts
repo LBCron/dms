@@ -367,6 +367,7 @@ sicherung.extern = {
   melde: (daten) => dienst.melde('sicherung.fertig', { ...daten }, undefined, null, (p) => hatSchnittstelle(p.laeufer, 'dms:sicherung-lesen')),
 };
 dienst.sicherungAufgegeben = (paket, name, fehler) => sicherung.externAufgegeben(paket, name, fehler);
+dienst.sicherungAntwort = (paket, name, r) => sicherung.externAntwort(paket, name, r);
 wartung.beimAusschalten(() => void paketlaeufer.stelleZu());
 // Systemzustand → Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk jede Minute, nur im Arbeitsspeicher.
 const systemlast = new Systemlast({ laeufer: () => paketlaeufer.pid, postgres: process.env.DMS_VARIANTE === 'komplett', schleife: () => !!messung.auslastung.warnung() });
