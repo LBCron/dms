@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.167/fehlersuche/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.168/fehlersuche/">
       
       
         <link rel="prev" href="../speicherplatz/">
@@ -2679,7 +2679,7 @@
 <h2 id="protokoll">Protokoll<a class="headerlink" href="#protokoll" title="Permanent link">&para;</a></h2>
 <p><strong>Werkbank → Protokoll</strong> zeigt, was in Ablago passiert – die letzten 24 Stunden, höchstens 10.000 Einträge, die neuesten oben. Nach einem Neustart beginnt die Liste leer; dauerhaft steht alles in den Container-Logs.</p>
 <p><img alt="Protokoll" src="../bilder/werkbank-protokoll.png" /></p>
-<p>Jeder Eintrag gehört zu einem <strong>Modul</strong>, etwa <code>konto</code> für Anmeldungen oder <code>sicherung</code> für Sicherungen. Welche Module es gibt, steht unter <a href="../technik/#module">Technik → Module</a>.</p>
+<p>Jeder Eintrag gehört zu einem <strong>Modul</strong>, etwa <em>Benutzerkonten und Anmeldung</em> (<code>konto</code>) für Anmeldungen und gesperrte Konten oder <em>Sicherung</em> (<code>sicherung</code>). Welche Module es gibt, steht unter <a href="../technik/#module">Technik → Module</a>.</p>
 <p>Filtern lässt sich nach Stufe, Modul, Benutzer und Text; <strong>Live</strong> aktualisiert die Liste alle zwei Sekunden. Ein Klick auf einen Eintrag zeigt alle Daten dazu, auch Benutzer und Anfrage-Kennung.</p>
 <h3 id="debug-modus">Debug-Modus<a class="headerlink" href="#debug-modus" title="Permanent link">&para;</a></h3>
 <p>Schaltet für <strong>eine Stunde</strong> zusätzliche, ausführliche Meldungen ein – etwa jede einzelne Datenbankabfrage. Danach (oder nach einem Neustart) ist er von selbst wieder aus. Die Grundstufe stellt <code>LOG_LEVEL</code> ein (siehe <a href="../installation/#einstellungen">Installation</a>).</p>
