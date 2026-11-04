@@ -654,6 +654,10 @@ code:
 - `quelle` je Seite: `textebene` (Text im PDF – die Seite braucht keine neue Textebene), `texterkennung` (Wörter der Texterkennung), `keine`. `vollstaendig`: jede Seite hat Wörter.
 - **Für Texterkennungen:** Die Wortpositionen schickt das Paket mit `dms:texterkennung` zusammen mit dem Text: `PUT /dokumente/{id}/volltext` mit `woerter` – je durch `\f` getrennter Seite eine Liste von Wörtern im selben Format (relativ zur Seite, **wie `GET …/seiten/{nr}/scan` sie liefert** – hat das Paket die Seite zum Lesen gedreht, rechnet es die Lage zurück) oder `null` (Seite ohne Angabe, z. B. eine Textseite eines gemischten PDFs). Höchstens 1,5 Millionen Wörter, Text höchstens 200 Zeichen je Wort. Schreibt ein Paket den Volltext **ohne** `woerter`, fallen die alten weg (sie gehörten zu einem anderen Text). Der Kern speichert sie zur Datei (`<haushalt>/wortpositionen/`, gzip, in der Sicherung).
 
+### Farbige Seitenbilder { #archivfassung-farbe }
+
+Baut ein Paket die Archivfassung aus Seitenbildern neu auf (z. B. PDFs, die am Computer entstanden sind), holt es die Seiten **in Farbe**: `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300&farbe=1` liefert statt des Graustufenbilds (PGM, `P5`) ein **PPM** – Kopf `P6 Breite Höhe 255`, danach je Bildpunkt drei Bytes R, G, B (`image/x-portable-pixmap`). Es gelten dieselben Grenzen wie für Graustufen: 72–400 dpi, höchstens 6000 × 6000 Bildpunkte, 60 s je Seite; ein Farbbild ist dreimal so groß, bei langen Dokumenten also eher mit weniger dpi anfragen. Ein eigenes Recht braucht es nicht – wie das Graustufenbild genügt das Leserecht, das `dms:archivfassung` ohnehin mitbringt. Ohne `farbe` bleibt alles wie bisher.
+
 ### Was der Kern annimmt { #archivfassung-annahme }
 
 `PUT /dokumente/{id}/archivfassung?sha256=…` mit dem PDF roh im Körper (`application/octet-stream`). Der Kern macht eine **Grundprüfung** (ohne veraPDF – die volle Prüfung gehört in die CI des Pakets):
@@ -798,7 +802,7 @@ Unabhängig davon gilt: Ein Paket mit dem Recht, Dokumente zu schreiben, kann ei
 
 ## Nützliche Endpunkte der API v1
 
-- `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.
+- `GET /dokumente/{id}/seiten/{nr}/scan?dpi=300` – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung. Mit `farbe=1` als Farbbild (PPM, [Farbige Seitenbilder](#archivfassung-farbe)).
 - `PUT /dokumente/{id}/fassung` und `PUT /dokumente/{id}/vorschaubild` – siehe [Dateien umwandeln](#dateien-umwandeln) (Recht `dms:umwandeln`).
 - `GET /sicherungen/{name}`, `GET /sicherungen/{name}/datei?versatz=&laenge=` (und im Übergang `PUT /sicherungen/{name}/extern`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) (Recht `dms:sicherung-lesen`, seit 0.142.0).
 - `PUT /dokumente/{id}/volltext` mit `{ "text": "…" }` – Volltext setzen (Recht `dokumente: schreiben`). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab Ablago 0.128.0 optional mit `"sprache": "fra"` (Kennung wie bei Tesseract: `deu`, `eng`, `fra`, `spa`, `ita`, `nld`, `tur`, `pol`, `por`, `rus`, `ukr`, `ara`); ohne erkennt Ablago die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.

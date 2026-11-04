@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { describe, it } from 'node:test';
 import { crc32, deflateSync } from 'node:zlib';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { kenntVolltextOhneText, liesCode } from '../../shared/src/pakete';
 import { infoWartet, volltextHerkunft } from '../../shared/src/volltext';
@@ -297,6 +297,22 @@ describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
     const pdf = await PDFDocument.create(); pdf.addPage([100, 100]);
     const pid = await hoch('leer.pdf', 'application/pdf', Buffer.from(await pdf.save()));
     assert.match((await d.seiteAlsGraubild(pid, 1, 72)).subarray(0, 2).toString('latin1'), /^P5/);
+  });
+
+  it('Farbiges Seitenbild für die Archivfassung (#716): PPM mit Farbe, ohne farbe weiter Graustufen', { skip: !poppler && 'ohne poppler' }, async () => {
+    const { d, hoch } = await aufbau();
+    const pdf = await PDFDocument.create();
+    pdf.addPage([72, 72]).drawRectangle({ x: 0, y: 0, width: 72, height: 72, color: rgb(1, 0, 0) });
+    const id = await hoch('rot.pdf', 'application/pdf', Buffer.from(await pdf.save()));
+    const farbig = await d.seiteAlsGraubild(id, 1, 72, true);
+    const kopf = /^P6\s+(\d+)\s+(\d+)\s+255\s/.exec(farbig.subarray(0, 20).toString('latin1'));
+    assert.ok(kopf, 'PPM P6');
+    const mitte = farbig.length - Number(kopf[1]) * Number(kopf[2]) * 3 + (Math.floor(Number(kopf[2]) / 2) * Number(kopf[1]) + Math.floor(Number(kopf[1]) / 2)) * 3;
+    assert.ok(farbig[mitte] > 200 && farbig[mitte + 1] < 60 && farbig[mitte + 2] < 60, `rot: ${[...farbig.subarray(mitte, mitte + 3)]}`);
+    const grau = await d.seiteAlsGraubild(id, 1, 72);
+    assert.match(grau.subarray(0, 2).toString('latin1'), /^P5/);
+    assert.ok(farbig.length > grau.length * 2.5, 'drei Bytes je Bildpunkt');
+    await assert.rejects(d.seiteAlsGraubild(id, 1, 500, true), /dpi/);
   });
 });
 
