@@ -231,8 +231,18 @@ describe('Automatisierungen in PostgreSQL (#674)', { skip: url ? false : 'TEST_D
     await repo.aktualisiere(l.id, { zustand: 'fehlgeschlagen', fehler: 'kaputt', schritte: [{ teil: 'wenn', zustand: 'ok' }] });
     assert.equal((await repo.fehlgeschlagene()).length, 1);
     assert.equal((await repo.letzte()).get(A)!.fehler, 'kaputt');
+    // Nicht wiederholen (#707): bleibt fehlgeschlagen, aber nicht mehr im Hinweis; ein Probelauf zählt nie.
+    const B = '00000000-0000-4000-8000-0000000000b1';
+    assert.equal(await repo.nichtWiederholen([l.id, 'kein-uuid'], B), 1);
+    assert.equal(await repo.nichtWiederholen([l.id], B), 0, 'nur einmal');
+    assert.equal((await repo.fehlgeschlagene()).length, 0);
+    const n = (await repo.lauf(l.id))!;
+    assert.equal(n.zustand, 'fehlgeschlagen');
+    assert.equal(n.nichtWiederholt?.von, B);
+    await repo.beginne({ ...lauf(crypto.randomUUID()), ereignisId: crypto.randomUUID(), zustand: 'fehlgeschlagen', test: true, trocken: true });
+    assert.equal((await repo.fehlgeschlagene()).length, 0, 'Probelauf zählt nicht');
     assert.equal(await repo.zaehleSeit(A, new Date(Date.now() - 60_000).toISOString()), 1);
-    assert.equal(await repo.raeumeAuf(30, 0, 10), 1);
+    assert.equal(await repo.raeumeAuf(30, 0, 10), 2);
     await repo.loesche(A);
     assert.equal((await repo.liste()).length, 0);
   });
@@ -264,3 +274,31 @@ describe('Automatisierungen: Ausprobieren und Rechte des Kontos (#709)', () => {
   });
 });
 
+describe('Automatisierungen: fehlgeschlagene Läufe nicht wiederholen (#707)', () => {
+  it('Hinweis nennt Automatisierung und Zeit, „nicht wiederholen“ vermerkt Person und Zeit, Probeläufe zählen nicht', async () => {
+    const { motor, vertrag, admin, d, repo } = await aufbau();
+    const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom' } }, admin.id);
+    const a = await motor.lege({ name: 'Kaputt', aktiv: true, wenn: { art: 'mappe.notiz', typ: vertrag.id }, dann: [stopp] }, admin.id);
+    const jetzt = new Date().toISOString();
+    const lauf = (test: boolean) => ({ id: crypto.randomUUID(), automatisierungId: a.id, ereignisId: crypto.randomUUID(), art: 'mappe.notiz', daten: { mappe: m.id, typ: vertrag.id }, mappeId: m.id, zustand: 'fehlgeschlagen' as const, trocken: test, test, schritte: [], fehler: 'kaputt', gestartet: jetzt, beendet: jetzt });
+    const echt = lauf(false); const probe = lauf(true);
+    await repo.beginne(echt); await repo.beginne(probe);
+    let u = await motor.uebersicht();
+    assert.equal(u.fehlgeschlagen, 1, 'Probelauf zählt nicht mit');
+    assert.deepEqual(u.fehlschlaege.map((f) => [f.id, f.name]), [[echt.id, 'Kaputt']]);
+    await motor.nichtWiederholen({ laufId: echt.id }, admin.id);
+    u = await motor.uebersicht();
+    assert.equal(u.fehlgeschlagen, 0);
+    const x = await motor.lauf(echt.id);
+    assert.equal(x.zustand, 'fehlgeschlagen', 'bleibt im Verlauf');
+    assert.equal(x.nichtWiederholt?.von, admin.id);
+    assert.deepEqual(await motor.wiederholeAlle(), { wiederholt: 0 });
+    // Ein Probelauf wiederholt bleibt ein Probelauf.
+    const w = await motor.wiederhole(probe.id);
+    assert.equal(w.trocken, true);
+    // Alle auf einmal.
+    await repo.beginne(lauf(false)); await repo.beginne(lauf(false));
+    assert.deepEqual(await motor.nichtWiederholen({}, admin.id), { anzahl: 2 });
+    assert.equal((await motor.uebersicht()).fehlgeschlagen, 0);
+  });
+});

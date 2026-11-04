@@ -3,7 +3,7 @@ import type postgres from 'postgres';
 import {
   AUTOMATISIERUNG_GRENZEN, ausloeserSchluessel, automatisierungsProbleme, bereinigeAutomatisierung, kontextTyp, kurzform, REIHENFOLGE,
   type Angehalten, type Automatisierung, type AutomatisierungAnsicht, type AutomatisierungDaten, type DannArt, type DannKarte,
-  type Empfaenger, type Fassung, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte, erreichteDaten,
+  type Empfaenger, type Fassung, type Fehlschlag, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte, erreichteDaten,
 } from '../../shared/src/automatisierung';
 import { EREIGNISKATALOG, OHNE_WENN, type KatalogEreignis } from '../../shared/src/ereignisse';
 import { tagVon, titelAus, ZEITZONE, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
@@ -68,7 +68,10 @@ export interface AutomatisierungRepo {
   letzte(): Promise<Map<string, Lauf>>;
   /** Läufe einer Automatisierung seit diesem Zeitpunkt (Bremse). */
   zaehleSeit(automatisierungId: string, seit: string): Promise<number>;
+  /** Fehlgeschlagene echte Läufe, die noch wiederholt werden können (ohne Probeläufe und ohne „nicht wiederholen“, #707). */
   fehlgeschlagene(automatisierungId?: string): Promise<Lauf[]>;
+  /** Fehlgeschlagene Läufe aus dem Hinweis nehmen (#707); liefert die Anzahl. */
+  nichtWiederholen(ids: string[], von: string | null): Promise<number>;
   /** Alte Läufe entfernen, hängende als fehlgeschlagen markieren. */
   raeumeAuf(tage: number, jeAutomatisierung: number, haengtMin: number): Promise<number>;
 }
@@ -118,7 +121,12 @@ export function speicherAutomatisierungRepo(uhr: () => number = Date.now): Autom
       return m;
     },
     async zaehleSeit(a, seit) { return laeufe.filter((l) => l.automatisierungId === a && l.gestartet >= seit && !l.test).length; },
-    async fehlgeschlagene(a) { return structuredClone(laeufe.filter((l) => l.zustand === 'fehlgeschlagen' && (!a || l.automatisierungId === a))); },
+    async fehlgeschlagene(a) { return structuredClone(laeufe.filter((l) => l.zustand === 'fehlgeschlagen' && !l.test && !l.nichtWiederholt && (!a || l.automatisierungId === a)).sort((x, y) => y.gestartet.localeCompare(x.gestartet))); },
+    async nichtWiederholen(ids, von) {
+      let n = 0;
+      for (const l of laeufe) if (ids.includes(l.id) && l.zustand === 'fehlgeschlagen' && !l.nichtWiederholt) { l.nichtWiederholt = { von, zeit: jetzt() }; n++; }
+      return n;
+    },
     async raeumeAuf(tage, je, haengt) {
       const grenze = new Date(uhr() - tage * 86_400_000).toISOString();
       const alt = new Date(uhr() - haengt * 60_000).toISOString();
@@ -144,6 +152,7 @@ const alsLauf = (r: any): Lauf => ({
   id: r.id, automatisierungId: r.automatisierung_id, ereignisId: r.ereignis_id, art: r.art, daten: r.daten ?? {}, mappeId: r.mappe_id ?? null,
   zustand: r.zustand, trocken: r.trocken, test: r.test, schritte: r.schritte ?? [], fehler: r.fehler ?? null, wiederholtVon: r.wiederholt_von ?? null,
   gestartet: iso(r.gestartet)!, beendet: iso(r.beendet),
+  nichtWiederholt: r.nicht_wiederholt_zeit ? { von: r.nicht_wiederholt_von ?? null, zeit: iso(r.nicht_wiederholt_zeit)! } : null,
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -224,8 +233,15 @@ export function pgAutomatisierungRepo(sql: postgres.Sql, haushaltId: string): Au
       return r.n as number;
     },
     async fehlgeschlagene(a) {
-      return (await sql`SELECT * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND zustand = 'fehlgeschlagen'
+      return (await sql`SELECT * FROM automatisierung_laeufe WHERE haushalt_id = ${haushaltId} AND zustand = 'fehlgeschlagen' AND NOT test AND nicht_wiederholt_zeit IS NULL
         ${a && istUuid(a) ? sql`AND automatisierung_id = ${a}` : sql``} ORDER BY gestartet DESC LIMIT 500`).map(alsLauf);
+    },
+    async nichtWiederholen(ids, von) {
+      const gueltig = ids.filter(istUuid);
+      if (!gueltig.length) return 0;
+      const r = await sql`UPDATE automatisierung_laeufe SET nicht_wiederholt_von = ${von}, nicht_wiederholt_zeit = now()
+        WHERE haushalt_id = ${haushaltId} AND id IN ${sql(gueltig)} AND zustand = 'fehlgeschlagen' AND nicht_wiederholt_zeit IS NULL`;
+      return r.count;
     },
     async raeumeAuf(tage, je, haengt) {
       await sql`UPDATE automatisierung_laeufe SET zustand = 'fehlgeschlagen', fehler = ${t('automatisierung.lauf.abgebrochen')}, beendet = now()
@@ -393,9 +409,12 @@ export class Automatisierungen {
     return { typen, kontoId: konto.id };
   }
 
-  async uebersicht(): Promise<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number }> {
+  async uebersicht(): Promise<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; fehlschlaege: Fehlschlag[] }> {
     const [liste, k, letzte, fehl, u] = await Promise.all([this.d.repo.liste(), this.kontext(), this.d.repo.letzte(), this.d.repo.fehlgeschlagene(), this.unlesbar()]);
-    return { automatisierungen: await Promise.all(liste.map((a) => this.ansicht(a, k, letzte, u.typen, u.kontoId))), fehlgeschlagen: fehl.length };
+    const namen = new Map(liste.map((a) => [a.id, a.name]));
+    // Welche Läufe fehlgeschlagen sind (#707): Automatisierung und Zeitpunkt, neueste zuerst; Probeläufe zählen nicht.
+    const fehlschlaege = fehl.map((l) => ({ id: l.id, automatisierungId: l.automatisierungId, name: namen.get(l.automatisierungId) ?? '', gestartet: l.gestartet }));
+    return { automatisierungen: await Promise.all(liste.map((a) => this.ansicht(a, k, letzte, u.typen, u.kontoId))), fehlgeschlagen: fehl.length, fehlschlaege };
   }
 
   async hole(id: string): Promise<AutomatisierungAnsicht> {
@@ -543,8 +562,22 @@ export class Automatisierungen {
     if (alt.zustand !== 'fehlgeschlagen') throw new Fachfehler(409, t('automatisierung.wiederholen.nicht'));
     const a = await this.gibt(alt.automatisierungId);
     await this.d.repo.aktualisiere(alt.id, { zustand: 'wiederholt' });
-    const l = await this.fuehreAus(a, { id: randomUUID(), art: alt.art, daten: alt.daten, kette: 0 }, { trocken: false, test: alt.test, wiederholtVon: alt.id });
+    const l = await this.fuehreAus(a, { id: randomUUID(), art: alt.art, daten: alt.daten, kette: 0 }, { trocken: alt.trocken, test: alt.test, wiederholtVon: alt.id });
     return l!;
+  }
+
+  /**
+   * Fehlgeschlagene Läufe nicht wiederholen (#707): einer (`laufId`) oder alle (einer Automatisierung bzw. alle). Sie bleiben
+   * im Verlauf als „fehlgeschlagen, nicht wiederholt“ mit Person und Zeit stehen; nichts wird gelöscht.
+   */
+  async nichtWiederholen(o: { laufId?: string; automatisierungId?: string }, von: string | null): Promise<{ anzahl: number }> {
+    if (o.laufId) {
+      const l = await this.lauf(o.laufId);
+      if (l.zustand !== 'fehlgeschlagen') throw new Fachfehler(409, t('automatisierung.wiederholen.nicht'));
+      return { anzahl: await this.d.repo.nichtWiederholen([l.id], von) };
+    }
+    const ids = (await this.d.repo.fehlgeschlagene(o.automatisierungId)).map((l) => l.id);
+    return { anzahl: ids.length ? await this.d.repo.nichtWiederholen(ids, von) : 0 };
   }
 
   /** Alle fehlgeschlagenen Läufe (einer oder aller Automatisierungen) wiederholen. */

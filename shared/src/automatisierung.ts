@@ -126,7 +126,12 @@ export interface Lauf {
   fehler: string | null;
   gestartet: string; beendet: string | null;
   wiederholtVon?: string | null;
+  /** Fehlgeschlagen, aber bewusst nicht wiederholt (#707): wer und wann. Bleibt im Verlauf, zählt nicht mehr im Hinweis. */
+  nichtWiederholt?: { von: string | null; zeit: string } | null;
 }
+
+/** Ein fehlgeschlagener Lauf für den Hinweis über der Liste (#707). */
+export interface Fehlschlag { id: string; automatisierungId: string; name: string; gestartet: string }
 
 export interface Fassung { version: number; zeit: string; von: string | null; daten: AutomatisierungDaten & { aktiv: boolean } }
 

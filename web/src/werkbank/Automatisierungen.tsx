@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  AUTOMATISIERUNG_GRENZEN, automatisierungsProbleme, kontextTyp, platzhalterFuer, REIHENFOLGE, WENN_EREIGNISSE,
-  type AutomatisierungAnsicht, type AutomatisierungDaten, type DannKarte, type Empfaenger, type Fassung, type Kontextdaten,
+  AUTOMATISIERUNG_GRENZEN, automatisierungsProbleme, kontextTyp, kurzform, platzhalterFuer, REIHENFOLGE, WENN_EREIGNISSE,
+  type AutomatisierungAnsicht, type AutomatisierungDaten, type DannKarte, type Empfaenger, type Fassung, type Fehlschlag, type Kontextdaten,
   type Lauf, type Schritt, type UndKarte, type WennKarte,
 } from '../../../shared/src/automatisierung';
 import { EREIGNISKATALOG, ereignisSchluessel, type Ereignisgruppe } from '../../../shared/src/ereignisse';
@@ -10,6 +10,7 @@ import type { Mappentyp } from '../../../shared/src/model';
 import { bedingungsfelder, beschreibeBedingung, OPERATOREN_JE_ART, type Bedingung, type Bedingungsfeld } from '../../../shared/src/sichten';
 import { api, type Bezuege } from '../api';
 import { MappenWahl } from '../ablage/MappeFormular';
+import { Eintragsliste, type Listeneintrag } from '../ablage/Historie';
 import { useDaten } from '../daten';
 import { Listenkopf } from '../Listenkopf';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -27,7 +28,7 @@ import { FeldBedingung } from './Sichten';
  * Der Sonst-Zweig kommt mit Stufe 2 (#677) – gespeichert wird er schon, angezeigt noch nicht.
  */
 
-type Stand = { automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; kontext: Kontextdaten };
+type Stand = { automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; fehlschlaege: Fehlschlag[]; kontext: Kontextdaten };
 
 export function useAutomatisierungen(offen: boolean) {
   const [stand, setStand] = useState<Stand | null>(null);
@@ -60,7 +61,10 @@ export function AutomatisierungenListe({ z, offen }: { z: AutomatisierungenZusta
   const [ansage, setAnsage] = useState('');
   const [fehler, setFehler] = useState<string>();
   const s = z.stand;
-  const liste = (s?.automatisierungen ?? []).filter((a) => !suche.trim() || `${a.name} ${a.kurz}`.toLowerCase().includes(suche.trim().toLowerCase()));
+  // „Anzeigen“ beim Hinweis über fehlgeschlagene Läufe (#707): nur die betroffenen Automatisierungen.
+  const [nurFehl, setNurFehl] = useState(false);
+  const betroffen = new Set((s?.fehlschlaege ?? []).map((f) => f.automatisierungId));
+  const liste = (s?.automatisierungen ?? []).filter((a) => (!nurFehl || betroffen.has(a.id)) && (!suche.trim() || `${a.name} ${a.kurz}`.toLowerCase().includes(suche.trim().toLowerCase())));
   const gruppen = useMemo(() => {
     const m = new Map<string, AutomatisierungAnsicht[]>();
     for (const a of liste) m.set(a.ausloeser, [...(m.get(a.ausloeser) ?? []), a]);
@@ -114,8 +118,15 @@ export function AutomatisierungenListe({ z, offen }: { z: AutomatisierungenZusta
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
       {!!s?.fehlgeschlagen && (
         <div className="hinweis warn">
-          <p>{t('automatisierung.ui.fehlgeschlagen', { anzahl: s.fehlgeschlagen })}</p>
-          <button type="button" className="knopf klein" onClick={async () => { try { await api.automatisierungenWiederholen(); await z.laden(); } catch (e) { setFehler((e as Error).message); } }}>{t('automatisierung.ui.alle-wiederholen')}</button>
+          {/* Welcher Lauf und wann (#707); bei mehreren „Anzeigen“ filtert die Liste. Probeläufe zählen nicht. */}
+          <p>{s.fehlgeschlagen === 1 && s.fehlschlaege[0]
+            ? <>{t('automatisierung.ui.fehlgeschlagen.einer', { name: s.fehlschlaege[0].name, zeit: zeit(s.fehlschlaege[0].gestartet) })} <Link to={`/werkbank/automatisierungen/${s.fehlschlaege[0].automatisierungId}`} className="verweis">{t('automatisierung.ui.fehlgeschlagen.anzeigen')}</Link></>
+            : t('automatisierung.ui.fehlgeschlagen', { anzahl: s.fehlgeschlagen })}</p>
+          <div className="knoepfe">
+            {s.fehlgeschlagen > 1 && <button type="button" className="knopf klein" aria-pressed={nurFehl} onClick={() => setNurFehl(!nurFehl)}>{nurFehl ? t('automatisierung.ui.fehlgeschlagen.alle') : t('automatisierung.ui.fehlgeschlagen.anzeigen')}</button>}
+            <button type="button" className="knopf klein" onClick={async () => { try { await api.automatisierungenWiederholen(); setNurFehl(false); await z.laden(); } catch (e) { setFehler((e as Error).message); } }}>{t('automatisierung.ui.alle-wiederholen')}</button>
+            <button type="button" className="knopf klein" onClick={async () => { try { await api.automatisierungenNichtWiederholen(); setNurFehl(false); await z.laden(); } catch (e) { setFehler((e as Error).message); } }}>{t('automatisierung.ui.nicht-wiederholen.alle')}</button>
+          </div>
         </div>
       )}
       <Ansage text={ansage} />
@@ -589,14 +600,24 @@ function DannEditor({ karte, typ, wenn, k, setze }: { karte: DannKarte; typ: Map
 
 /* ---------- Wiedergeben, Verlauf, Änderungsverlauf ---------- */
 
+/** Karte · Ergebnis · Einzelheiten je Schritt (#707) – für Verlauf, Live-Fortschritt und Ausprobieren gleich. */
 function Schritte({ l, a }: { l: Lauf; a: AutomatisierungAnsicht }) {
-  const name = (s: Schritt) => s.teil === 'dann' ? vorratName({ bereich: 'dann', art: a.dann.find((k) => k.id === s.karte)?.art ?? 'stopp' }) : t.frei(`automatisierung.ui.${s.teil}`);
+  const name = (x: Schritt) => x.teil === 'dann' ? vorratName({ bereich: 'dann', art: a.dann.find((k) => k.id === x.karte)?.art ?? 'stopp' }) : t.frei(`automatisierung.ui.${x.teil}`);
   return (
-    <ol className="automatisierung-schritte">
-      {l.schritte.map((s, i) => <li key={i} className={`schritt ${s.zustand}`}><strong>{name(s)}</strong> <span className="chip">{t.frei(`automatisierung.ui.schritt.${s.zustand}`)}</span>{s.text && <span className="leise"> {s.text}</span>}</li>)}
-    </ol>
+    <table className="aenderungen automatisierung-schritte">
+      <thead><tr><th>{t('automatisierung.ui.schritte.karte')}</th><th>{t('automatisierung.ui.schritte.ergebnis')}</th><th>{t('automatisierung.ui.schritte.einzelheiten')}</th></tr></thead>
+      <tbody>{l.schritte.map((x, i) => (
+        <tr key={i} className={`laufschritt ${x.zustand}`}>
+          <td>{name(x)}</td>
+          <td><span className={`chip ${SCHRITT_ART[x.zustand] ?? ''}`}>{t.frei(`automatisierung.ui.schritt.${x.zustand}`)}</span></td>
+          <td className={x.text ? '' : 'leise'}>{x.text || '–'}</td>
+        </tr>
+      ))}</tbody>
+    </table>
   );
 }
+
+const SCHRITT_ART: Record<string, string> = { ok: 'gut', fehler: 'schlecht', laeuft: 'info', nein: 'leise', uebersprungen: 'leise', offen: 'leise' };
 
 function Wiedergeben({ a, typ, nachher }: { a: AutomatisierungAnsicht; typ: Mappentyp | null; nachher: () => void }) {
   const [mappe, setMappe] = useState('');
@@ -630,61 +651,122 @@ function Wiedergeben({ a, typ, nachher }: { a: AutomatisierungAnsicht; typ: Mapp
   );
 }
 
-/** Verlauf mit Live-Fortschritt: solange der Editor offen ist, alle 2 s nachsehen (mehrere Server: aus der Datenbank). */
+/** Wodurch ein Lauf ausgelöst wurde (#707): Ereignis, Probelauf, von Hand oder Wiederholung. */
+function ausloeserText(l: Lauf): string {
+  if (l.test) return l.trocken ? t('automatisierung.ui.trocken.kurz') : t('automatisierung.ui.verlauf.von-hand');
+  if (l.wiederholtVon) return t('automatisierung.ui.verlauf.wiederholung');
+  return ereignisName(l.art);
+}
+
+/**
+ * Verlauf mit Live-Fortschritt (#707): dieselbe Darstellung wie die Historie einer Mappe; ein laufender Durchgang ist
+ * aufgeklappt, noch nicht erreichte Karten stehen auf „wartet“. Solange der Editor offen ist, alle 2 s nachsehen
+ * (mehrere Server: aus der Datenbank).
+ */
 function Verlauf({ a }: { a: AutomatisierungAnsicht; k: Kontextdaten; d: unknown }) {
+  const d = useDaten();
   const [laeufe, setLaeufe] = useState<Lauf[] | null>(null);
-  const [offen, setOffen] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string>();
   const laden = useCallback(async () => { try { setLaeufe(await api.automatisierungLaeufe(a.id)); } catch (e) { setFehler((e as Error).message); } }, [a.id]);
   useEffect(() => { void laden(); const z = setInterval(() => void laden(), 2_000); return () => clearInterval(z); }, [laden]);
-  const laufend = laeufe?.find((l) => l.zustand === 'laeuft');
+  const handle = async (f: () => Promise<unknown>) => { try { await f(); await laden(); } catch (e) { setFehler((e as Error).message); } };
+  const laufend = laeufe?.some((l) => l.zustand === 'laeuft');
+  const eintraege: Listeneintrag[] = (laeufe ?? []).map((l) => {
+    const offenFuerWiederholen = l.zustand === 'fehlgeschlagen' && !l.trocken && !l.nichtWiederholt;
+    const zusammen = l.fehler ?? l.schritte.filter((x) => x.teil === 'dann' && x.text).map((x) => x.text).join(' · ');
+    return {
+      id: l.id, wann: zeit(l.gestartet), wer: ausloeserText(l),
+      was: <>{zusammen}{l.nichtWiederholt && <span className="leise"> {t('automatisierung.ui.verlauf.nicht-wiederholt', { wer: l.nichtWiederholt.von ? d.person(l.nichtWiederholt.von) : '–', zeit: zeit(l.nichtWiederholt.zeit) })}</span>}</>,
+      zustand: <span className={`chip ${ZUSTAND_ART[l.zustand] ?? ''}`}>{t.frei(`automatisierung.ui.zustand.${l.zustand}`)}</span>,
+      mehr: t('automatisierung.ui.verlauf.karten', { anzahl: l.schritte.length }),
+      label: t('automatisierung.ui.verlauf.eintrag', { zeit: zeit(l.gestartet), zustand: t.frei(`automatisierung.ui.zustand.${l.zustand}`) }),
+      offen: l.zustand === 'laeuft',
+      inhalt: <>
+        <Schritte l={l} a={a} />
+        {offenFuerWiederholen && <div className="knoepfe">
+          <button type="button" className="knopf klein" onClick={() => void handle(() => api.automatisierungLaufWiederholen(l.id))}>{t('automatisierung.ui.wiederholen')}</button>
+          <button type="button" className="knopf klein" onClick={() => void handle(() => api.automatisierungLaufNichtWiederholen(l.id))}>{t('automatisierung.ui.nicht-wiederholen')}</button>
+        </div>}
+      </>,
+    };
+  });
   return (
     <div className="blatt">
       <h2 className="h3">{t('automatisierung.ui.verlauf')}</h2>
       {fehler && <p className="fehlertext">{fehler}</p>}
-      {laufend && <div className="hinweis info" role="status"><p><strong>{t('automatisierung.ui.verlauf.laeuft')}</strong></p><Schritte l={laufend} a={a} /></div>}
-      {!laeufe ? <p className="leise">{t('automatisierung.ui.lade')}</p> : !laeufe.length ? <p className="leise">{t('automatisierung.ui.verlauf.leer')}</p> : (
-        <ul className="stapel">
-          {laeufe.map((l) => (
-            <li key={l.id}>
-              <button type="button" className="textknopf" aria-expanded={offen === l.id} onClick={() => setOffen(offen === l.id ? null : l.id)}>
-                {zeit(l.gestartet)} <span className={`chip ${ZUSTAND_ART[l.zustand] ?? ''}`}>{t.frei(`automatisierung.ui.zustand.${l.zustand}`)}</span>
-                {l.test && <span className="chip">{l.trocken ? t('automatisierung.ui.trocken.kurz') : t('automatisierung.ui.test')}</span>}
-                {l.fehler && <span className="leise"> {l.fehler}</span>}
-              </button>
-              {l.zustand === 'fehlgeschlagen' && <button type="button" className="textknopf klein" onClick={async () => { try { await api.automatisierungLaufWiederholen(l.id); await laden(); } catch (e) { setFehler((e as Error).message); } }}>{t('automatisierung.ui.wiederholen')}</button>}
-              {offen === l.id && <Schritte l={l} a={a} />}
-            </li>
-          ))}
-        </ul>
-      )}
+      {laufend && <p className="leise klein" role="status">{t('automatisierung.ui.verlauf.laeuft')}</p>}
+      {!laeufe ? <p className="leise">{t('automatisierung.ui.lade')}</p> : !laeufe.length ? <p className="leise">{t('automatisierung.ui.verlauf.leer')}</p> : <Eintragsliste eintraege={eintraege} />}
     </div>
   );
 }
 
-function Fassungen({ a, nachher }: { a: AutomatisierungAnsicht; k: Kontextdaten; nachher: () => void }) {
+type FassungDaten = Fassung['daten'];
+
+/** Was sich zwischen zwei Versionen geändert hat (#707): Name, Beschreibung, Reihenfolge, an/aus, Wenn, Und, je Dann- und Sonst-Karte. */
+function unterschiede(alt: FassungDaten | null, neu: FassungDaten, k: Kontextdaten, titelVon: (id: string) => string): Array<{ was: string; vorher: string; nachher: string }> {
+  const zeilen: Array<{ was: string; vorher: string; nachher: string }> = [];
+  const neben = (was: string, v: string, n: string) => { if (v !== n) zeilen.push({ was, vorher: v, nachher: n }); };
+  const typA = alt ? kontextTyp(alt.wenn, k.typen) : null;
+  const typN = kontextTyp(neu.wenn, k.typen);
+  const wenn = (x: FassungDaten) => kurzform({ ...x, und: { modus: 'alle', karten: [] }, dann: [] }, k, ereignisName).replace(/^Wenn /, '').replace(/ → .*$/, '');
+  const und = (x: FassungDaten, typ: Mappentyp | null) => x.und.karten.map((u) => undKurz(u, typ, k, titelVon)).join(x.und.modus === 'alle' ? ' · ' : ` ${t('automatisierung.ui.verlauf.oder')} `);
+  const karte = (x: DannKarte | undefined, typ: Mappentyp | null) => !x ? '' : x.art === 'aufgabe' ? `${dannKurz(x, typ, k)}${x.text ? ` · „${x.text}“` : ''}` : x.art === 'stopp' ? vorratName({ bereich: 'dann', art: 'stopp' }) : dannKurz(x, typ, k);
+  neben(t('automatisierung.ui.verlauf.name'), alt?.name ?? '', neu.name);
+  neben(t('automatisierung.ui.verlauf.beschreibung'), alt?.beschreibung ?? '', neu.beschreibung);
+  neben(t('automatisierung.ui.verlauf.reihenfolge'), alt ? String(alt.reihenfolge) : '', String(neu.reihenfolge));
+  neben(t('automatisierung.ui.verlauf.anaus'), alt ? (alt.aktiv ? t('automatisierung.ui.an') : t('automatisierung.ui.aus')) : '', neu.aktiv ? t('automatisierung.ui.an') : t('automatisierung.ui.aus'));
+  neben(t('automatisierung.ui.wenn'), alt ? wenn(alt) : '', wenn(neu));
+  neben(t('automatisierung.ui.und'), alt ? und(alt, typA) : '', und(neu, typN));
+  for (const bereich of ['dann', 'sonst'] as const) {
+    const ids = [...new Set([...(alt?.[bereich] ?? []).map((x) => x.id), ...neu[bereich].map((x) => x.id)])];
+    for (const id of ids) {
+      const v = alt?.[bereich].find((x) => x.id === id) as DannKarte | undefined;
+      const n = neu[bereich].find((x) => x.id === id) as DannKarte | undefined;
+      const art = (n ?? v)!.art;
+      neben(`${t.frei(`automatisierung.ui.${bereich}`)}: ${vorratName({ bereich: 'dann', art })}`, karte(v, typA), karte(n, typN));
+    }
+    const reihe = (x: FassungDaten | null) => (x?.[bereich] ?? []).map((y) => y.id).join(',');
+    if (alt && reihe(alt) !== reihe(neu) && alt[bereich].length === neu[bereich].length) zeilen.push({ was: t.frei(`automatisierung.ui.${bereich}`), vorher: t('automatisierung.ui.verlauf.reihenfolge-alt'), nachher: t('automatisierung.ui.verlauf.reihenfolge-neu') });
+  }
+  return zeilen;
+}
+
+/** Änderungsverlauf (#707): Versionen wie die Historie einer Mappe; aufgeklappt Was · Vorher · Nachher und „Wiederherstellen“. */
+function Fassungen({ a, k, nachher }: { a: AutomatisierungAnsicht; k: Kontextdaten; nachher: () => void }) {
   const d = useDaten();
   const [liste, setListe] = useState<Fassung[] | null>(null);
-  const [offen, setOffen] = useState(false);
   const [fehler, setFehler] = useState<string>();
-  useEffect(() => { if (offen) api.automatisierungFassungen(a.id).then(setListe).catch((e) => setFehler((e as Error).message)); }, [offen, a.id, a.version]);
+  useEffect(() => { api.automatisierungFassungen(a.id).then(setListe).catch((e) => setFehler((e as Error).message)); }, [a.id, a.version]);
+  const neueste = liste?.[0]?.version ?? a.version;
+  const eintraege: Listeneintrag[] = (liste ?? []).map((f, i) => {
+    const vorher = liste![i + 1]?.daten ?? null;
+    const zeilen = unterschiede(vorher, f.daten, k, (id) => d.person(id));
+    const aktuell = f.version === a.version;
+    return {
+      id: f.version, wann: zeit(f.zeit), wer: f.von ? d.person(f.von) : '–',
+      was: <><strong>{t('automatisierung.ui.version', { version: f.version })}</strong>{vorher ? (zeilen.length ? `: ${t('automatisierung.ui.verlauf.geaendert', { was: zeilen.map((z) => z.was).join(', ') })}` : '') : `: ${t('automatisierung.ui.verlauf.angelegt')}`}</>,
+      zustand: aktuell ? <span className="chip gut">{t('automatisierung.ui.version.aktuell')}</span> : undefined,
+      mehr: vorher ? t('automatisierung.ui.verlauf.aenderungen', { anzahl: zeilen.length }) : undefined,
+      label: t('automatisierung.ui.version', { version: f.version }),
+      inhalt: <>
+        {zeilen.length > 0 && (
+          <table className="aenderungen">
+            <thead><tr><th>{t('automatisierung.ui.verlauf.was')}</th><th>{t('automatisierung.ui.verlauf.vorher')}</th><th>{t('automatisierung.ui.verlauf.nachher')}</th></tr></thead>
+            <tbody>{zeilen.map((z, j) => <tr key={j}><td>{z.was}</td><td className={z.vorher ? '' : 'leise'}>{z.vorher || '–'}</td><td className={z.nachher ? '' : 'leise'}>{z.nachher || '–'}</td></tr>)}</tbody>
+          </table>
+        )}
+        {!aktuell && <div className="knoepfe"><button type="button" className="knopf klein" onClick={async () => {
+          if (!(await rueckfrage({ titel: t('automatisierung.ui.version.frage', { version: f.version }), text: t('automatisierung.ui.version.text', { version: f.version, neu: neueste + 1 }), ja: t('automatisierung.ui.version.ja') }))) return;
+          try { await api.automatisierungFassungWiederherstellen(a.id, f.version); nachher(); } catch (e) { setFehler((e as Error).message); }
+        }}>{t('automatisierung.ui.version.ja')}</button></div>}
+      </>,
+    };
+  });
   return (
     <div className="blatt">
-      <button type="button" className="textknopf" aria-expanded={offen} onClick={() => setOffen(!offen)}><h2 className="h3">{t('automatisierung.ui.fassungen')}</h2></button>
+      <h2 className="h3">{t('automatisierung.ui.fassungen')}</h2>
       {fehler && <p className="fehlertext">{fehler}</p>}
-      {offen && liste && (
-        <ul className="stapel">
-          {liste.map((f) => (
-            <li key={f.version}>
-              <span>{t('automatisierung.ui.fassung', { version: f.version, zeit: zeit(f.zeit), wer: f.von ? d.person(f.von) : '–' })} · {f.daten.name}{f.daten.aktiv ? '' : ` (${t('automatisierung.ui.aus')})`}</span>
-              {f.version !== a.version && <button type="button" className="textknopf klein" onClick={async () => {
-                if (!(await rueckfrage({ titel: t('automatisierung.ui.fassung.frage', { version: f.version }), text: t('automatisierung.ui.fassung.text'), ja: t('automatisierung.ui.fassung.ja') }))) return;
-                try { await api.automatisierungFassungWiederherstellen(a.id, f.version); nachher(); } catch (e) { setFehler((e as Error).message); }
-              }}>{t('automatisierung.ui.fassung.ja')}</button>}
-            </li>
-          ))}
-        </ul>
-      )}
+      {!liste ? <p className="leise">{t('automatisierung.ui.lade')}</p> : <Eintragsliste eintraege={eintraege} />}
     </div>
   );
 }
