@@ -932,6 +932,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#an-aus-und-angehalten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        An, aus und angehalten
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#karten-hinzufugen-umsortieren-entfernen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2539,6 +2550,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#an-aus-und-angehalten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        An, aus und angehalten
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#karten-hinzufugen-umsortieren-entfernen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2657,7 +2679,7 @@
 <li><strong>Wenn:</strong> <strong>Datum erreicht</strong>, Mappentyp <em>Vertrag</em>, Datumsfeld <em>Kündigung bis</em>, <strong>Vorlauf</strong> 30 <em>Tage</em>, Uhrzeit 07:00.</li>
 <li><strong>Und:</strong> <strong>+ Karte → Feld-Bedingung</strong>, Feld <em>Verantwortlich</em> „ist nicht leer“.</li>
 <li><strong>Dann:</strong> <strong>+ Karte → Aufgabe / Benachrichtigung</strong>, Als <em>Aufgabe</em>, Empfänger <em>Person im Feld „Verantwortlich“</em>, Text <code>Bitte {titel} prüfen – kündbar bis {kuendigung_bis}.</code></li>
-<li><strong>Gleich einschalten</strong> ankreuzen und <strong>Speichern</strong>.</li>
+<li><strong>Speichern</strong>. Der Schalter oben neben dem Namen steht bei einer neuen Automatisierung auf <strong>an</strong> – mit dem Speichern ist sie eingeschaltet. Soll sie noch nicht arbeiten, stell ihn vorher auf <strong>aus</strong>.</li>
 </ol>
 <p><img alt="Aufgeklappte Dann-Karte mit Empfänger und Platzhaltern" src="../bilder/werkbank-automatisierung-karte.png" /></p>
 <p>Eine Karte klappst du mit einem Klick auf ihren Namen <strong>auf</strong> (Einstellungen) und wieder <strong>zu</strong> (Kurzzeile wie „Aufgabe → Person im Feld „Verantwortlich““). Unter dem Text stehen die <strong>Platzhalter</strong>, die zur Wenn-Karte passen: die Felder des Mappentyps sowie <code>{titel}</code>, <code>{mappentyp}</code>, <code>{heute}</code>, <code>{automatisierung}</code> und beim Datum <code>{datum}</code> und <code>{tage}</code>. Ein Klick setzt den Platzhalter ein.</p>
@@ -2670,6 +2692,13 @@
 <li>War Ablago zur Uhrzeit aus, holt es verpasste Tage nach (bis zu 31 Tage zurück). Eine neu eingeschaltete Automatisierung beginnt heute.</li>
 </ul>
 <p>Die früheren Karten „Datum in N Tagen“ und „Frist erreicht“ sind in <strong>Datum erreicht</strong> aufgegangen. Aus „Datum in N Tagen“ wird beim nächsten Öffnen dieselbe Karte mit Vorlauf in Tagen. Bei „Frist erreicht“ fehlt das Datumsfeld: Die Automatisierung steht rot da, bis du es wählst.</p>
+<h2 id="an-aus-und-angehalten">An, aus und angehalten<a class="headerlink" href="#an-aus-und-angehalten" title="Permanent link">&para;</a></h2>
+<p>Ob eine Automatisierung arbeitet, siehst und änderst du an <strong>einer</strong> Stelle: am Schalter oben neben dem Namen, in der Liste steht derselbe Zustand (<strong>an</strong>, <strong>aus</strong>, <strong>angehalten</strong>).</p>
+<ul>
+<li>Bei einer gespeicherten Automatisierung wirkt der Schalter sofort; an seiner Stelle steht kurz „Eingeschaltet.“ bzw. „Ausgeschaltet.“.</li>
+<li>Ist sie <strong>angehalten</strong> (rot, siehe unten), steht dort der Grund und der Knopf <strong>Wieder einschalten</strong>.</li>
+<li>Daneben steht der Knopf <strong>Kopieren</strong>: Er legt eine eigene Kopie an und öffnet sie.</li>
+</ul>
 <h2 id="karten-hinzufugen-umsortieren-entfernen">Karten hinzufügen, umsortieren, entfernen<a class="headerlink" href="#karten-hinzufugen-umsortieren-entfernen" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Mit der Maus oder am Handy:</strong> <strong>Kartenvorrat</strong> aufklappen, nach einer Karte suchen und sie in ihren Bereich <strong>ziehen</strong> (am Handy lange drücken) – oder einfach anklicken.</li>
