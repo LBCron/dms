@@ -1548,6 +1548,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({
         schleife: w ? { median: w.median, p99: w.p99, max: w.max } : null, schleifeWarnung: s?.warnungSeit ?? null,
         speicherMb: Math.round(m.rss / 1024 ** 2), heapMb: Math.round(m.heapUsed / 1024 ** 2),
+        // Ganzer Container (#696): so viel zeigt die NAS an – mit PostgreSQL (dms-komplett) und Dateizwischenspeicher.
+        container: (() => { const c = x.systemlast?.container(); const mb = (v: number | null | undefined) => (v == null ? null : Math.round(v / 1024 ** 2)); return c && c.aktuell !== null ? { mb: mb(c.aktuell), spitzeMb: mb(c.spitze), programmeMb: mb(c.programme), zwischenspeicherMb: mb(c.zwischenspeicher), datenbankMb: mb(c.datenbank) } : null; })(),
         datenbank: v ? { verbindungen: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
         anfragen: x.ueberlast?.stand() ?? null,
         arbeiter: arbeiterStand(),

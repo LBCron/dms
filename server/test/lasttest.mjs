@@ -413,6 +413,8 @@ async function durchgang(v, { name, n, dauer, mitExport }) {
     dbWartenP95: rund(quantil(sv.map((s) => s.datenbank?.wartenJetzt).filter((x) => typeof x === 'number'), 0.95)), dbWartenMax: rund(max((s) => s.datenbank?.wartenJetzt)),
     dbVerbindungen: sv.find((s) => s.datenbank)?.datenbank?.verbindungen ?? null, ueberlastGrenze: sv.find((s) => s.anfragen)?.anfragen?.max ?? null,
     speicherMbStart: rund(sv[0]?.speicherMb), speicherMbMax: rund(max((s) => s.speicherMb)), speicherMbEnde: rund(sv.at(-1)?.speicherMb),
+    // Ganzer Container (#696) beim höchsten Stand dieses Durchgangs, mit Aufteilung; null, wenn nicht lesbar.
+    container: (() => { const m = sv.filter((s) => typeof s.container?.mb === 'number').sort((a, b) => b.container.mb - a.container.mb)[0]?.container; return m ? { mb: m.mb, programmeMb: m.programmeMb, zwischenspeicherMb: m.zwischenspeicherMb, datenbankMb: m.datenbankMb } : null; })(),
     serverAusfaelle: server.length - sv.length,
     exporte: exporte.map((e) => ({ ...e, ms: Math.round(e.ms), mb: Math.round(e.mb * 10) / 10 })),
   };
@@ -653,8 +655,22 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   const spitze = Math.max(0, ...alle.map((l) => l.speicherMbMax ?? 0));
   const schleife = Math.max(0, ...alle.map((l) => l.schleifeP99 ?? 0));
   kz.push(`Arbeitsspeicher Ablago höchstens: ${spitze} MB · Ereignisschleife p99 höchstens: ${Math.round(schleife)} ms`);
+  kz.push(containerZeile(alle));
   kz.push(`Gemessen: ${new Date().toISOString().slice(0, 10)}`, '```');
   return kz.join('\n');
+}
+
+/**
+ * „Arbeitsspeicher Container höchstens: 1950 MB (davon Programme 1700 MB, Dateizwischenspeicher 250 MB; PostgreSQL
+ * 600 MB)“ (#696) – der Wert, den die NAS für den Container anzeigt. Ohne lesbare cgroup: „nicht verfügbar“.
+ */
+export function containerZeile(laeufe) {
+  const c = laeufe.map((l) => l.container).filter((x) => x && typeof x.mb === 'number').sort((a, b) => b.mb - a.mb)[0];
+  if (!c) return 'Arbeitsspeicher Container höchstens: nicht verfügbar';
+  const teile = [c.programmeMb != null ? `Programme ${c.programmeMb} MB` : null, c.zwischenspeicherMb != null ? `Dateizwischenspeicher ${c.zwischenspeicherMb} MB` : null].filter(Boolean);
+  const db = c.datenbankMb != null ? `PostgreSQL ${c.datenbankMb} MB` : null;
+  const klammer = [teile.length ? `davon ${teile.join(', ')}` : null, db].filter(Boolean).join('; ');
+  return `Arbeitsspeicher Container höchstens: ${c.mb} MB${klammer ? ` (${klammer})` : ''}`;
 }
 
 /* ---------- Ablauf ---------- */

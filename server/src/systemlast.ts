@@ -66,6 +66,31 @@ export function liesCgroup(lies: Leser, wurzel = '/sys/fs/cgroup'): Cgroup {
   };
 }
 
+/**
+ * Arbeitsspeicher des ganzen Containers (#696), wie ihn die NAS anzeigt: jetzt, Spitze seit dem Start und die
+ * Aufteilung in Programme (anon) und Dateizwischenspeicher (file). cgroup v2: memory.current, memory.peak,
+ * memory.stat; v1: memory.usage_in_bytes, memory.max_usage_in_bytes, memory.stat (total_rss/total_cache).
+ * Was nicht lesbar ist, bleibt null – geschätzt wird nichts.
+ */
+export interface ContainerSpeicher { aktuell: number | null; spitze: number | null; programme: number | null; zwischenspeicher: number | null }
+export function liesContainerSpeicher(lies: Leser, wurzel = '/sys/fs/cgroup'): ContainerSpeicher {
+  const stat = (text: string | null, ...namen: string[]) => {
+    for (const n of namen) { const m = text?.match(new RegExp(`^${n}\\s+(\\d+)`, 'm')); if (m) return Number(m[1]); }
+    return null;
+  };
+  const v2 = lies(`${wurzel}/memory.current`);
+  if (v2 !== null) {
+    const s = lies(`${wurzel}/memory.stat`);
+    return { aktuell: zahl(v2), spitze: zahl(lies(`${wurzel}/memory.peak`)), programme: stat(s, 'anon'), zwischenspeicher: stat(s, 'file') };
+  }
+  const v1 = lies(`${wurzel}/memory/memory.usage_in_bytes`);
+  if (v1 !== null) {
+    const s = lies(`${wurzel}/memory/memory.stat`);
+    return { aktuell: zahl(v1), spitze: zahl(lies(`${wurzel}/memory/memory.max_usage_in_bytes`)), programme: stat(s, 'total_rss', 'rss'), zwischenspeicher: stat(s, 'total_cache', 'cache') };
+  }
+  return { aktuell: null, spitze: null, programme: null, zwischenspeicher: null };
+}
+
 /** Empfangene und gesendete Bytes aller Schnittstellen außer `lo` aus `/proc/net/dev`. */
 export function liesNetz(text: string | null): { rx: number; tx: number } | null {
   if (!text) return null;
@@ -170,6 +195,13 @@ export class Systemlast {
 
   /** Warnung für Übersicht und Navigation: Werte, die seit 5 Minuten über 90 % liegen; Wartezeit des Servers (#542). */
   warnung(): Warnung[] { return [...dauerhaftHoch(this.verlauf), ...(this.o.schleife?.() ? ['schleife' as const] : [])]; }
+
+  /** Speicher des ganzen Containers (#696) und – wenn PostgreSQL mitläuft – dessen Anteil (Pss). */
+  container(): ContainerSpeicher & { datenbank: number | null } {
+    const c = liesContainerSpeicher(this.lies);
+    const datenbank = this.o.postgres ? liesAnteile(this.lies, { eigen: process.pid, laeufer: null, postgres: true }).datenbank : null;
+    return { ...c, datenbank };
+  }
 
   stand(): SystemlastStand {
     const c = liesCgroup(this.lies);
