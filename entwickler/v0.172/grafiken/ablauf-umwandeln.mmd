@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:umwandeln)
+  participant T as Paket Texterkennung
+  K->>P: datei.umwandeln (dokument, mime, sha256)
+  P->>K: GET /dokumente/{id}/inhalt
+  K-->>P: Originaldatei
+  P->>K: PUT /dokumente/{id}/fassung?sha256=… (PDF, PNG oder JPEG)
+  Note over K: Vorschaubild aus der Fassung, Textebene (PDF)
+  K->>T: volltext.fertig (mime der Fassung, original, fassung: true)
+  T->>K: GET /dokumente/{id}/seiten/1/scan (aus der Fassung)
+  T->>K: PUT /dokumente/{id}/volltext
