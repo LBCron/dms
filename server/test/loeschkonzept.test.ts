@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { inflateRawSync } from 'node:zlib';
 import { DATENSCHUTZ_STANDARD } from '../../shared/src/auskunft';
-import { datenarten, FEHLT, loeschkonzept, luecken, type LoeschkonzeptQuelle } from '../../shared/src/loeschkonzept';
+import { datenarten, FEHLT, loeschkonzept, luecken, personenbezug, type LoeschkonzeptQuelle } from '../../shared/src/loeschkonzept';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
@@ -62,10 +62,30 @@ describe('Löschkonzept (#469)', () => {
 
   it('meldet Lücken: ohne Zweck, ohne Frist, ohne Verantwortlichen, gar keine Datenart', () => {
     const l = luecken(basis([kunde, rechnung, haus], ds));
-    assert.deepEqual(l.map((x) => [x.art, x.typ ?? '']), [['verantwortlicher', ''], ['frist', 'Kunde'], ['zweck', 'Rechnung']]);
+    assert.deepEqual(l.map((x) => [x.art, x.typ ?? '', x.art === 'typ' ? x.fehlt.join('+') : '']), [['verantwortlicher', '', ''], ['typ', 'Kunde', 'frist'], ['typ', 'Rechnung', 'zweck']]);
     assert.deepEqual(luecken(basis([haus])).map((x) => x.art), ['verantwortlicher', 'keine']);
     const voll = luecken(basis([kunde, rechnung], { ...ds, verantwortlicher: 'Muster GmbH', typen: { k: { person: true, zweck: 'x' }, r: { person: false, zweck: 'Buchführung' } } }));
     assert.deepEqual(voll.map((x) => x.typ), ['Kunde'], 'nur noch die Frist beim Kunden');
+  });
+
+  it('nennt je Mappentyp eine Lücke mit Grund: angekreuzt oder über ein Verweisfeld (#664)', () => {
+    const person = { id: 'p', name: 'Person', felder: [{ key: 'name', label: 'Name', typ: 'text' as const }] };
+    const konto = { id: 'ko', name: 'Konto', felder: [{ key: 'inhaber', label: 'Inhaber', typ: 'referenz' as const, zielTyp: 'p' }] };
+    const q = basis([person, konto, haus], { ...DATENSCHUTZ_STANDARD, verantwortlicher: 'Muster GmbH', typen: { p: { person: true, zweck: '' } } });
+    const l = luecken(q);
+    assert.equal(l.length, 2, 'je Mappentyp genau eine Zeile, Haus fehlt');
+    const k = l.find((x) => x.typ === 'Konto');
+    assert.ok(k && k.art === 'typ');
+    assert.equal(k.bezug, 'verweis');
+    assert.deepEqual(k.verweise, [{ feld: 'Inhaber', ziel: 'Person' }]);
+    assert.deepEqual(k.fehlt, ['zweck', 'frist']);
+    assert.equal(k.text, 'Konto – enthält Personendaten, weil er über „Inhaber“ auf Person verweist. Es fehlen: Zweck · Aufbewahrungsfrist.');
+    const p = l.find((x) => x.typ === 'Person');
+    assert.ok(p && p.art === 'typ');
+    assert.match(p.text, /weil du ihn als „betrifft eine Person“ markiert hast/);
+    const karte = personenbezug(q.typen, q.datenschutz);
+    assert.equal(karte.get('ko')?.bezug, 'verweis');
+    assert.equal(karte.has('h'), false);
   });
 
   it('Gliederung wie die Vorlage, Stand und Version im Kopf, Einstellungen vorbelegt', () => {

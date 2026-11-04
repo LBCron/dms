@@ -4,7 +4,8 @@ import { fortschrittText } from '../../../shared/src/auftrag';
 import { ANREDE_BEISPIEL, ANREDE_NAME, ANREDEN, textDritte, type Anrede } from '../../../shared/src/anrede';
 import { AUSKUNFT_PASSWORT_MIN, erwaehnungText, GRUND_MIN, istOffen, istRechteStandard, personenTypen, rechteStandard, tageBisFrist, type AuskunftAuswahl, type AuskunftEintrag, type AuskunftZustand, type AuskunftMappe, type AuskunftStand, type AuskunftVorschau, type Datenschutz } from '../../../shared/src/auskunft';
 import { LinkZeile, Zustellen } from './Zustellen';
-import { LoeschkonzeptBlatt } from './Loeschkonzept';
+import { LoeschkonzeptBlatt, verweiseText } from './Loeschkonzept';
+import { personenbezug } from '../../../shared/src/loeschkonzept';
 import { LoeschprotokollBlatt } from './Loeschprotokoll';
 import { BAUM_RICHTUNGEN, kinderVon, type BaumKnoten, type BaumRichtung } from '../../../shared/src/baum';
 import { datumText } from '../../../shared/src/archiv';
@@ -536,23 +537,45 @@ function AuskunftEinstellungen({ z }: { z: DatenschutzZustand }) {
   );
 }
 
-/** Personendaten in Mappentypen (#668, beim Löschkonzept): betrifft eine Person, Zweck. */
+/**
+ * Personendaten in Mappentypen (#668, beim Löschkonzept): betrifft eine Person, Zweck. Typen, die über ein
+ * Verweisfeld auf einen Personen-Typ zeigen, sind als solche gekennzeichnet (#664); Typen ohne Personendaten
+ * stehen eingeklappt darunter.
+ */
 function PersonendatenTypen({ z }: { z: DatenschutzZustand }) {
   const d = useDaten();
   const { e, setE, laeuft, meldung, ent, speichern } = useDatenschutzForm(z);
   const typen = d.typen.filter((t) => t.system !== 'benutzer' && t.system !== 'rolle');
   const typ = (id: string) => e.typen[id] ?? { person: false, zweck: '' };
+  const bezug = useMemo(() => personenbezug(d.typen, { typen: e.typen }), [d.typen, e.typen]);
+  const zeile = (ty: Mappentyp) => {
+    const b = bezug.get(ty.id);
+    const automatisch = b?.bezug === 'verweis' && !typ(ty.id).person;
+    return (
+      <li key={ty.id}>
+        <label className="haken" title={automatisch ? t('werkbank.loeschkonzept.automatischTitel') : undefined}>
+          <input type="checkbox" checked={typ(ty.id).person} onChange={(x) => setE({ ...e, typen: { ...e.typen, [ty.id]: { ...typ(ty.id), person: x.target.checked } } })} />
+          <span>{ty.name} <span className="leise klein">{automatisch ? t('werkbank.loeschkonzept.automatisch', { verweise: verweiseText(b!.verweise) }) : t('werkbank.loeschkonzept.betrifftPerson')}{ty.archiv ? ` · ${t('werkbank.loeschkonzept.aufbewahrung', { jahre: ty.archiv.jahre })}` : ''}</span></span></label>
+        <label className="eigenschaft einzug klein"><span>{t('werkbank.loeschkonzept.zweck')}</span><input id={`zweck-${ty.id}`} value={typ(ty.id).zweck} maxLength={500} placeholder={t('werkbank.loeschkonzept.zweckBeispiel')} onChange={(x) => setE({ ...e, typen: { ...e.typen, [ty.id]: { ...typ(ty.id), zweck: x.target.value } } })} /></label>
+      </li>
+    );
+  };
+  // Aufteilen nach dem gespeicherten Stand – sonst springt eine Zeile beim Tippen in die andere Liste.
+  const gespeichert = z.stand?.einstellung.typen;
+  const gruppe = useMemo(() => personenbezug(d.typen, { typen: gespeichert ?? {} }), [d.typen, gespeichert]);
+  const mit = typen.filter((ty) => gruppe.has(ty.id));
+  const ohne = typen.filter((ty) => !gruppe.has(ty.id));
   return (
     <form className="blatt" id="personendaten" onSubmit={(x) => { x.preventDefault(); void speichern((g) => ({ ...g, typen: e.typen })); }} onKeyDown={ent.tasten}>
       <h2 className="h3">{t('werkbank.loeschkonzept.personendaten')}</h2>
       <p className="leise klein">{t('werkbank.loeschkonzept.personendatenText')}</p>
-      <ul className="stapel auskunft-typen">{typen.map((ty) => (
-        <li key={ty.id}>
-          <label className="haken"><input type="checkbox" checked={typ(ty.id).person} onChange={(x) => setE({ ...e, typen: { ...e.typen, [ty.id]: { ...typ(ty.id), person: x.target.checked } } })} />
-            <span>{ty.name} <span className="leise klein">betrifft eine Person{ty.archiv ? ` · Aufbewahrung ${ty.archiv.jahre} Jahre` : ''}</span></span></label>
-          <label className="eigenschaft einzug klein"><span>Zweck</span><input value={typ(ty.id).zweck} maxLength={500} placeholder="z. B. Durchführung des Mietverhältnisses" onChange={(x) => setE({ ...e, typen: { ...e.typen, [ty.id]: { ...typ(ty.id), zweck: x.target.value } } })} /></label>
-        </li>
-      ))}</ul>
+      {mit.length > 0 && <ul className="stapel auskunft-typen">{mit.map(zeile)}</ul>}
+      {ohne.length > 0 && (
+        <details className="weitere-typen" open={mit.length === 0}>
+          <summary>{t('werkbank.loeschkonzept.weitere')} ({ohne.length})</summary>
+          <ul className="stapel auskunft-typen">{ohne.map(zeile)}</ul>
+        </details>
+      )}
       <p className="leise klein">{t('werkbank.loeschkonzept.verantwortlicher')} <Link to="/werkbank/auskuenfte/einstellungen" className="verweis">{t('werkbank.auskunft.einstellungen.titel')}</Link></p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <Speicherleiste ent={ent} gegenstand="Personendaten" sendet={laeuft} />
