@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0175" class="md-skip">
+        <a href="#neu-in-version-0176" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -384,15 +384,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01750" class="md-nav__link">
+  <a href="#01760" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.175.0
+        0.176.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.175.0">
+    <nav class="md-nav" aria-label="0.176.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -407,10 +407,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#technik" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Handbuch
+        Technik
       
     </span>
   </a>
@@ -2504,15 +2504,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01750" class="md-nav__link">
+  <a href="#01760" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.175.0
+        0.176.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.175.0">
+    <nav class="md-nav" aria-label="0.176.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2527,10 +2527,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#technik" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Handbuch
+        Technik
       
     </span>
   </a>
@@ -2573,24 +2573,24 @@
   
 
 
-<h1 id="neu-in-version-0175">Neu in Version 0.175<a class="headerlink" href="#neu-in-version-0175" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0176">Neu in Version 0.176<a class="headerlink" href="#neu-in-version-0176" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01750">0.175.0<a class="headerlink" href="#01750" title="Permanent link">&para;</a></h2>
+<h2 id="01760">0.176.0<a class="headerlink" href="#01760" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Lasttest misst den Arbeitsspeicher des ganzen Containers</strong> (#696): Das Ergebnis hat die neue Zeile „Arbeitsspeicher Container höchstens: … MB (davon Programme …, Dateizwischenspeicher …; PostgreSQL …)“. Sie passt zu dem, was die Docker-Oberfläche einer NAS anzeigt – bisher stand dort nur der Speicher von Ablago selbst, und die NAS zeigte deutlich mehr. Gelesen wird aus den cgroup-Dateien im Container (v2 und v1); was nicht lesbar ist, heißt „nicht verfügbar“. Auch die Seite des Lasttests im Browser zeigt den Wert.</li>
-<li>Die Grenze des Projekts von 1,5 GB gilt weiter für „Arbeitsspeicher Ablago höchstens“.</li>
+<li><strong>Archivfassung: ankreuzen statt verneinen</strong> (#660). In den Einstellungen eines Archivfassungs-Pakets (PDF/A) kreuzt du an, was eine Archivfassung bekommt: <strong>PDFs mit Text</strong>, <strong>gescannte PDFs</strong> und <strong>Fotos und Bilder</strong> – Vorgabe alle. Der Haken „Nur Scans und Bilder“ entfällt.</li>
+<li>Was du abwählst, steht am Dokument ruhig als „ausgelassen – laut Einstellung“. Kreuzt du eine Art später an, holt Ablago die passenden Dokumente nach.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>„Lasttest selbst durchführen“ erklärt beide Zahlen und warum die Anzeige der NAS höher ist; „Was Ablago verkraftet“ gibt eine Empfehlung für den Arbeitsspeicher auf Grundlage des Containers.</li>
+<li>Manifest: <code>code.archivfassung.auswahl</code> mit <code>pdf_text</code>, <code>pdf_scan</code>, <code>bilder</code> (je der Schlüssel einer Ja/Nein-Einstellung) ersetzt <code>code.archivfassung.nur_scans</code> – ohne Übergang. Fehlt ein Schlüssel, ist die Art immer an. Das Paket PDF/A stellt in dms-registry #106 um.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.174.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.174.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.175.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.175.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
