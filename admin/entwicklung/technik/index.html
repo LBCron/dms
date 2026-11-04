@@ -2732,56 +2732,104 @@
 <p>Das Image bringt die Handbücher seiner Version mit: Startseite, Wie komme ich an ein DMS?, Benutzer-, Administrator- und Entwicklerhandbuch, erreichbar unter <code>/hilfe/</code> der eigenen Installation (z. B. <code>http://&lt;NAS&gt;:8080/hilfe/</code>), ohne Anmeldung und schon im Einrichtungsassistenten. Das Fragezeichen neben einer Überschrift und die Links auf das Handbuch öffnen diese Version. Sie kommt ohne Internet aus; nur die Bildschirmfotos fehlen – an ihrer Stelle steht ein Link auf dieselbe Seite online. Im Fuß jeder Seite geht es zur Online-Hilfe und zur neuesten Version.</p>
 <h2 id="module">Module<a class="headerlink" href="#module" title="Permanent link">&para;</a></h2>
 <p>Jede Zeile im <a href="../fehlersuche/#protokoll">Protokoll</a> gehört zu einem Modul. Für jede Anfrage an den Server schreibt Ablago eine Zeile mit Methode, Pfad, Status, Dauer und Datenbankzugriffen – im Modul des Bereichs, zu dem die Anfrage gehört (z. B. <code>ablage</code> für Mappen). Anfragen, die nur lesen – auch Vorschauen, Zählungen und Testläufe, die die Oberfläche per POST schickt –, stehen nur auf Stufe <code>debug</code>, also nur im Debug-Modus.</p>
+<p>Im Filter von <strong>Werkbank → Protokoll</strong> stehen alle Module mit ihrem Namen – auch solche, zu denen gerade nichts im Protokoll steht („(keine Einträge)“).</p>
 <table>
 <thead>
 <tr>
+<th>Name im Filter</th>
 <th>Modul</th>
 <th>Was</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>System</td>
 <td><code>system</code></td>
 <td>Start, Einstellungen, Debug-Modus</td>
 </tr>
 <tr>
+<td>Anfragen (HTTP)</td>
 <td><code>http</code></td>
 <td>Anfragen, die zu keinem anderen Modul gehören (z. B. Seiten der Oberfläche)</td>
 </tr>
 <tr>
+<td>Benutzerkonten und Anmeldung</td>
 <td><code>konto</code></td>
-<td>Anmeldung, Sitzungen, Benutzer, Rollen, Vertretung</td>
+<td>Anmeldung, <strong>Anmeldeschutz</strong> (gesperrte Konten und IP-Adressen), Sitzungen, Benutzer, Rollen, Vertretung</td>
 </tr>
 <tr>
+<td>Ablage</td>
 <td><code>ablage</code></td>
 <td>Mappen anlegen, ändern, löschen; Ansichten, Papierkorb, Notizen, Aufgaben</td>
 </tr>
 <tr>
-<td><code>werkbank</code></td>
-<td>Mappentypen, Demo-Daten, Einstellungen, Versionsabgleich</td>
-</tr>
-<tr>
+<td>Dokumente</td>
 <td><code>dokumente</code></td>
 <td>Hochladen, Anzeigen, Löschen</td>
 </tr>
 <tr>
+<td>Werkbank</td>
+<td><code>werkbank</code></td>
+<td>Mappentypen, Pakete, Demo-Daten, Einstellungen, Versionsabgleich</td>
+</tr>
+<tr>
+<td>Datenschutz</td>
+<td><code>datenschutz</code></td>
+<td>Auskünfte, Abruf-Links, Löschkonzept</td>
+</tr>
+<tr>
+<td>Texterkennung</td>
 <td><code>texterkennung</code></td>
-<td>Texterkennung: abgeschlossen, ausgelassen, fehlgeschlagen, neu gestartet, abgebrochen; Einstellungen</td>
+<td>abgeschlossen, ausgelassen, fehlgeschlagen, neu gestartet, abgebrochen; Einstellungen</td>
 </tr>
 <tr>
-<td><code>sicherung</code></td>
-<td>Sicherung, Notfallblatt, Wiederherstellung und Probe</td>
+<td>Dateien umwandeln</td>
+<td><code>umwandlung</code></td>
+<td>Fassungen aus Paketen (z. B. TIFF → PDF)</td>
 </tr>
 <tr>
+<td>Archivfassung</td>
+<td><code>archivfassung</code></td>
+<td>PDF/A aus Paketen</td>
+</tr>
+<tr>
+<td>Vorschaubilder</td>
+<td><code>vorschau</code></td>
+<td>Vorschaubilder erzeugen</td>
+</tr>
+<tr>
+<td>Datenbank</td>
 <td><code>datenbank</code></td>
 <td>Migrationen, Verbindung, lange Zugriffe</td>
 </tr>
 <tr>
+<td>E-Mail</td>
 <td><code>mail</code></td>
 <td>Versand und Fehler beim Versand</td>
 </tr>
+<tr>
+<td>Sicherung</td>
+<td><code>sicherung</code></td>
+<td>Sicherung, Notfallblatt, Wiederherstellung und Probe</td>
+</tr>
+<tr>
+<td>Ereignisse</td>
+<td><code>ereignisse</code></td>
+<td>Verteilen von Ereignissen an Pakete und Automatisierungen</td>
+</tr>
+<tr>
+<td>Automatisierungen</td>
+<td><code>automatisierung</code></td>
+<td>Läufe der Automatisierungen</td>
+</tr>
+<tr>
+<td>Webhooks</td>
+<td><code>webhook</code></td>
+<td>Meldungen an Webhooks, Abschalten nach Fehlern</td>
+</tr>
 </tbody>
 </table>
+<p>Anmeldung und Anmeldeschutz bleiben bewusst in einem Modul: Eine Sperre ergibt sich aus Fehlversuchen bei der Anmeldung – wer nach einer Sperre sucht, sieht beides zusammen.</p>
 <h2 id="wo-was-steht">Wo was steht<a class="headerlink" href="#wo-was-steht" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
