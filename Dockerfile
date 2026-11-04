@@ -35,15 +35,16 @@ LABEL org.opencontainers.image.title="Ablago" \
       org.opencontainers.image.documentation="https://help.ablago.app" \
       org.opencontainers.image.source="https://github.com/motom001/dms" \
       org.opencontainers.image.licenses="Apache-2.0"
-# Alpine-Pakete aktuell halten (#214): Die Kalenderwoche gehört zur Cache-Kennung dieser Schicht,
-# also holt jeder Bau in einer neuen Woche die neuesten Pakete (sonst nähme der Build-Cache ewig die alten).
-ARG APK_WOCHE=""
+# Alpine-Pakete aktuell halten (#214): Das Datum gehört zur Cache-Kennung dieser Schicht, also holt der erste
+# Bau jedes Tages die neuesten Pakete (sonst nähme der Build-Cache die alten). Früher war es die Kalenderwoche –
+# dann blieben Korrekturen aus der Wochenmitte bis zum Montag im Cache hängen (libexpat, November 2026).
+ARG APK_TAG=""
 # poppler (#45): Textebene von PDFs (pdftotext), Vorschau- und Seitenbilder, Schwärzen, Verkleinern (pdftoppm).
 # Keine Texterkennung im Image (#459): Scans und Fotos erkennt das Paket „Texterkennung“ aus dem Katalog
 # (Tesseract als WebAssembly im Paket-Läufer); weitere Sprachen kommen als Zusatzpakete dazu.
 # PDF verkleinern (#393): qpdf (Apache-2.0, Alpine „community“) optimiert die Struktur; die Bilder rechnet
 # pdftoppm aus poppler-utils. Bewusst kein Ghostscript (AGPL). Fehlt qpdf, geht es auch ohne.
-RUN echo "Alpine-Pakete Stand ${APK_WOCHE}" && apk upgrade --no-cache && apk add --no-cache poppler-utils qpdf
+RUN echo "Alpine-Pakete Stand ${APK_TAG}" && apk upgrade --no-cache && apk add --no-cache poppler-utils qpdf
 # Stand des Images für die Versionsübersicht in der Werkbank (setzt GitHub Actions).
 ARG DMS_COMMIT=""
 ARG DMS_GEBAUT=""
@@ -84,8 +85,8 @@ CMD ["node", "--enable-source-maps", "server/dist/index.js"]
 # Containers erreichbar (127.0.0.1, „trust“) – kein Passwort, das jemand kennen muss. tini startet das
 # Skript, das erst PostgreSQL, dann Ablago startet und beim Stoppen beide sauber beendet.
 FROM laufzeit AS komplett
-ARG APK_WOCHE=""
-RUN echo "Alpine-Pakete Stand ${APK_WOCHE}" && apk upgrade --no-cache && apk add --no-cache postgresql17 postgresql17-contrib tini su-exec
+ARG APK_TAG=""
+RUN echo "Alpine-Pakete Stand ${APK_TAG}" && apk upgrade --no-cache && apk add --no-cache postgresql17 postgresql17-contrib tini su-exec
 COPY deploy/komplett/start.sh /usr/local/bin/dms-komplett
 RUN chmod 755 /usr/local/bin/dms-komplett
 ENV DMS_VARIANTE=komplett

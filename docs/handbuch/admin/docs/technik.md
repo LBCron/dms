@@ -88,7 +88,7 @@ Anmeldung und Anmeldeschutz bleiben bewusst in einem Modul: Eine Sperre ergibt s
 Das Image enthält Node.js, Alpine Linux und alle Bibliotheken; aktualisiert wird durch Neuziehen von `ghcr.io/motom001/dms:stabil` und Neustart (siehe [Welches Image-Tag?](aktualisieren.md#image-tag)).
 
 - **Zwei Container (empfohlen):** PostgreSQL ist ein eigenes Image (`postgres:17`): kleinere Versionen (17.x) durch Neuziehen, unabhängig von Ablago.
-- **dms-komplett:** PostgreSQL (Alpine-Paket) steckt im Image `ghcr.io/motom001/dms-komplett` und kommt mit dessen Updates. Beide Images werden jede Woche neu gebaut, mit den aktuellen Alpine-Paketen (Tag `main`); `:stabil` und feste Versionsnummern bekommen neue Alpine-Pakete mit dem nächsten Release.
+- **dms-komplett:** PostgreSQL (Alpine-Paket) steckt im Image `ghcr.io/motom001/dms-komplett` und kommt mit dessen Updates. Beide Images werden bei jeder Änderung und mindestens jede Woche neu gebaut, mit den Alpine-Paketen vom selben Tag (Tag `main`); `:stabil` und feste Versionsnummern bekommen neue Alpine-Pakete mit dem nächsten Release.
 - Ein Wechsel der Hauptversion (z. B. 17 → 18) braucht in beiden Fällen eine Sicherung und Wiederherstellung, siehe [Wachsen und umziehen](wachsen.md#neue-hauptversion-von-postgresql).
 
 Der Versionsabgleich in der Werkbank fragt nur auf Knopfdruck: GitHub für den Stand von Ablago, [endoflife.date](https://endoflife.date) für Node.js, PostgreSQL und Alpine, die npm-Registry für die Bibliotheken. Er trennt, was du **selbst aktualisierst** (Ablago-Image, bei zwei Containern PostgreSQL), von dem, was **mit Ablago kommt** (Node.js, Alpine, Bibliotheken – bei dms-komplett auch PostgreSQL).
