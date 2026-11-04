@@ -6,17 +6,7 @@ Schön, dass du mitmachen möchtest! Ablago ist ein kleines Projekt mit einem Ma
 
 ## So läuft es
 
-```mermaid
-flowchart LR
-  A[Issue als User Story] --> B[Diskussion im Issue]
-  B --> C{Label „freigegeben“?}
-  C -- nein --> B
-  C -- ja --> D[Umsetzen im Branch]
-  D --> E[Pull Request]
-  E --> F[Prüfungen grün, Review]
-  F --> G[Merge durch den Maintainer]
-  G --> H[Release, Image, Handbuch, App-Stores automatisch]
-```
+![Ablauf eines Beitrags: Issue als User Story, Diskussion, Label „freigegeben“, Umsetzen im Branch, Pull Request, Prüfungen, Merge durch den Maintainer, dann Release, Image, Handbuch und App-Stores automatisch](grafiken/ablauf-beitrag.png){ loading=lazy }
 
 1. **Alles beginnt mit einem Issue**, geschrieben als User Story: *„Als … möchte ich …, damit …“* und mit Akzeptanzkriterien als Checkliste. Das gilt für Wünsche wie für Fehler. Vorlage: [Neues Issue](https://github.com/motom001/dms/issues/new/choose). Schreib dazu, **für wen** der Wunsch ist: für welche der [Personas](personas.md), von der Einsteiger-Familie bis zum Großunternehmen.
 2. **Diskutiert wird im Issue**, bis klar ist, was gebaut wird und was nicht.

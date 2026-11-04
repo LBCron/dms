@@ -43,4 +43,4 @@ Du nutzt Ablago? [Erzähl, wie](https://github.com/motom001/dms/issues/new?templ
 
 Ablago ist freie Software und kostenlos. Wenn es dir hilft, freut sich das Projekt über eine Unterstützung:
 
-[![Projekt unterstützen](https://img.shields.io/badge/Projekt_unterst%C3%BCtzen-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/motom001)
+[Projekt unterstützen (GitHub Sponsors)](https://github.com/sponsors/motom001)

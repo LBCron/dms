@@ -189,6 +189,11 @@ jobs:
       - name: Hilfe-Links prüfen
         run: npx tsx docs/handbuch/werkzeuge/hilfe-pruefen.ts site
 
+      # Nichts von fremden Diensten (#698): keine Schriften, Skripte, Stile oder Bilder von außerhalb
+      # help.ablago.app – weder in den Handbüchern noch auf der Einstiegsseite. Links nach draußen sind erlaubt.
+      - name: Nichts von fremden Diensten
+        run: python3 docs/handbuch/werkzeuge/fremd.py site docs/handbuch/start/index.html
+
       # Offline-Fassung fürs Image (#219): baut wie im Dockerfile und prüft lokale Verweise und Hilfe-Ziele.
       - name: Offline-Hilfe prüfen
         run: |

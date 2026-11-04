@@ -46,6 +46,10 @@ def main():
             shutil.copy(f, ziel / f.name)
 
     fehler = pruefe(ziel)
+    # Nichts von außen (#698): Die Hilfe im Programm lädt keine Schrift, kein Skript, kein Bild von fremden Diensten.
+    sys.path.insert(0, str(Path(__file__).parent))
+    import fremd
+    fehler += fremd.pruefe([p for p in ziel.rglob('*') if p.suffix in ('.html', '.css')], offline=True)
     groesse = sum(p.stat().st_size for p in ziel.rglob('*') if p.is_file())
     print(f'Offline-Hilfe {ordner}: {sum(1 for _ in ziel.rglob("*.html"))} Seiten, {groesse / 1e6:.1f} MB')
     if fehler:

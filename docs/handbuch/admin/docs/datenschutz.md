@@ -33,6 +33,8 @@ Ablago sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst jem
 | **Pakete mit Code** | nur, wenn ein Paket es braucht und du es bei der Installation bestätigst | nur die Adressen, die das Paket angibt ([Rechte eines Pakets](pakete.md#recht-netzwerk-und-internet)) |
 | **Handbuch** | wenn du auf **Hilfe** oder ein **?** klickst | Das mitgelieferte Handbuch unter `/hilfe/` kommt ohne Internet aus ([Hilfe ohne Internet](technik.md#hilfe-ohne-internet)); Links auf das Online-Handbuch öffnet dein Browser. |
 
+**Das Online-Handbuch** unter help.ablago.app liefert GitHub Pages aus; wie bei jeder Webseite sieht GitHub dabei deine IP-Adresse. Das Handbuch selbst lädt nichts von Dritten – keine Schriften von Google, keine Skripte, keine Abzeichen von fremden Diensten. Das prüft die CI bei jedem Bau, für die Hilfe im Programm ebenso.
+
 Wer dem Projekt sagen möchte, dass und wie er Ablago nutzt, tut das bewusst und selbst – über die Mitmach-Seite [Wer nutzt Ablago?](https://github.com/motom001/dms/issues?q=label%3Anutzt-das-dms) mit dem Formular [Ich nutze Ablago](https://github.com/motom001/dms/issues/new?template=ich-nutze-das-dms.yml). Ablago meldet nichts.
 
 ## Was du selbst regeln musst { #grenzen }
