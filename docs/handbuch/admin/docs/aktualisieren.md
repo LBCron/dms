@@ -19,14 +19,28 @@ Während des Neustarts ist Ablago kurz nicht erreichbar. Offene Seiten zeigen da
 
 Welche Version läuft und ob es neuere gibt, zeigt **Werkbank → Technik** (siehe [Fehlersuche](fehlersuche.md#technik)).
 
-!!! tip "Auf einer festen Version bleiben"
-    Statt `ghcr.io/motom001/dms:main` kannst du in der Compose-Datei eine Versionsnummer angeben, z. B. `ghcr.io/motom001/dms:0.8.0` – bzw. `ghcr.io/motom001/dms-komplett:0.42.0`. Dann ändert sich nichts, bis du die Nummer selbst erhöhst. Bei zwei Containern bleibt `postgres:17` trotzdem für Sicherheits-Updates der Reihe 17 offen.
+### Welches Image-Tag? { #image-tag }
+
+Die Vorlagen nutzen **`:stabil`**. So bekommst du beim Aktualisieren nur Versionen mit Nummer und Release-Notes – nichts, was nirgends beschrieben ist.
+
+| Tag | Was du bekommst | Für wen |
+|---|---|---|
+| `ghcr.io/motom001/dms:stabil` (bzw. `dms-komplett:stabil`) | die neueste geprüfte Version mit Nummer und Release-Notes | **Empfehlung** für alle |
+| `ghcr.io/motom001/dms:0.158.0` (eine feste Nummer) | genau diese Version, bis du die Nummer selbst erhöhst | wer jedes Update selbst anstoßen möchte |
+| `ghcr.io/motom001/dms:main` | jeden Stand auf `main`, auch Unveröffentlichtes ohne Nummer und Release-Notes | nur zum Testen |
+
+`:stabil` wandert automatisch weiter, wenn eine neue Version veröffentlicht ist und alle Prüfungen bestanden hat: Release mit Nummer und Release-Notes, beide Images für amd64 und arm64 gebaut und mit Herkunftsnachweis, und ein **Update-Test** vom bisherigen `:stabil` auf die neue Version (mit Probedaten, allen Migrationen und einer Probe-Wiederherstellung der alten Sicherung). Fehlerbehebungen und neue Funktionen wandern gleich. Der Maintainer kann eine Version zurückhalten; dann bleibt `:stabil` auf der vorigen.
+
+Bei zwei Containern bleibt `postgres:17` für Sicherheits-Updates der Reihe 17 offen – unabhängig vom Tag von Ablago.
+
+!!! note "Wenn eine stabile Version einen schweren Fehler hat"
+    Der Maintainer setzt `:stabil` dann auf die vorige Version zurück (Workflow *:stabil zurücksetzen*). Beim nächsten Aktualisieren bekommst du sie wieder. Was passiert ist, steht in den [Releases](https://github.com/motom001/dms/releases). Hast du schon aktualisiert und läuft danach etwas nicht, hilft die Sicherung von vor dem Update (siehe [Sichern](#sichern)); eine feste ältere Nummer im Tag hält Ablago bis zur Korrektur dort.
 
 !!! info "Woher kommt das Image?"
     Jedes Image von Ablago trägt einen **Herkunftsnachweis**: eine Signatur, die belegt, dass es von GitHub aus genau diesem Repository gebaut wurde, und eine **Stückliste** (SBOM) aller enthaltenen Pakete. Beides ist öffentlich und lässt sich mit der GitHub-Kommandozeile prüfen:
 
     ```sh
-    gh attestation verify oci://ghcr.io/motom001/dms:main -R motom001/dms
+    gh attestation verify oci://ghcr.io/motom001/dms:stabil -R motom001/dms
     ```
 
     Vor jeder Veröffentlichung prüft die CI die Images außerdem auf bekannte Sicherheitslücken. Mehr dazu in der [Sicherheitsrichtlinie](https://github.com/motom001/dms/blob/main/SECURITY.md).
@@ -73,9 +87,10 @@ Kleinere Versionen (17.x) bekommst du durch Neuziehen des Images `postgres:17`. 
 Jede Version von Ablago hat eine Nummer wie `0.8.1`. Sobald auf `main` eine neue Nummer steht und alle Prüfungen bestanden sind, entsteht automatisch:
 
 - ein **Release** auf GitHub mit dem Changelog – [Releases](https://github.com/motom001/dms/releases),
-- ein **Image** mit dieser Nummer, z. B. `ghcr.io/motom001/dms:0.8.1`.
+- ein **Image** mit dieser Nummer, z. B. `ghcr.io/motom001/dms:0.8.1`,
+- danach, wenn der Update-Test bestanden ist, das Tag **`:stabil`** auf dieser Version.
 
-Änderungen ohne neue Nummer (kleine Korrekturen, Doku) landen nur im Image `main`. Mehrere Wünsche lassen sich so zu einem Release bündeln: Die Nummer wird erst mit dem letzten erhöht.
+Änderungen ohne neue Nummer (kleine Korrekturen, Doku) landen nur im Image `main`, nie in `:stabil`. Mehrere Wünsche lassen sich so zu einem Release bündeln: Die Nummer wird erst mit dem letzten erhöht.
 
 ## Sichern
 

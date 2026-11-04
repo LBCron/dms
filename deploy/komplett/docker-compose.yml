@@ -6,7 +6,7 @@
 # auf einem NAS z. B. /volume1/docker/dms/files statt ./files.
 services:
   dms:
-    image: ghcr.io/motom001/dms-komplett:main
+    image: ghcr.io/motom001/dms-komplett:stabil
     restart: unless-stopped
     # Beim Stoppen fährt der Container erst Ablago, dann die Datenbank sauber herunter.
     stop_grace_period: 60s

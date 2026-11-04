@@ -103,7 +103,7 @@ Das Image `ghcr.io/motom001/dms` ist öffentlich – eine Anmeldung bei der Regi
 2. Daneben eine Datei `.env` mit `DB_PASSWORD=<langes zufälliges Passwort>` ablegen.
 3. Starten und `http://<NAS>:8080` aufrufen. Ein Assistent führt durch die Einrichtung: Einrichtungscode (steht im Protokoll des Containers und in `geheim/EINRICHTUNGSCODE`), Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name des Haushalts, Administrator, erster Benutzer, Schlüssel und Notfallblatt.
 
-`ghcr.io/motom001/dms:main` folgt jedem Stand auf `main`; mit einer Versionsnummer, also `ghcr.io/motom001/dms:<Version>` mit einer Nummer aus den [Releases](https://github.com/motom001/dms/releases), bleibt die Installation auf einem Release. Alles Weitere steht im Administratorhandbuch unter [Einrichtung und Betrieb](https://help.ablago.app/admin/aktuell/installation/) und [Aktualisieren und Sichern](https://help.ablago.app/admin/aktuell/aktualisieren/).
+`ghcr.io/motom001/dms:stabil` (in allen Vorlagen) folgt den geprüften Releases; `:main` folgt jedem Stand auf `main` und ist nur zum Testen; mit einer Versionsnummer, also `ghcr.io/motom001/dms:<Version>` mit einer Nummer aus den [Releases](https://github.com/motom001/dms/releases), bleibt die Installation auf einem Release. Alles Weitere steht im Administratorhandbuch unter [Einrichtung und Betrieb](https://help.ablago.app/admin/aktuell/installation/) und [Aktualisieren und Sichern](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ## Sicherheit und Offenheit
 

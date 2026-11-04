@@ -16,7 +16,7 @@ for v in "${VORLAGEN[@]}"; do
   # Pfade auf einen leeren Ordner, Passwort setzen, Image austauschen, Port frei wählen.
   sed -e "s#\(/volume1/docker/dms\|/share/Container/dms\|/mnt/tank/apps/dms\|/mnt/user/appdata/dms\)#$arbeit#g" \
       -e 's#HIER-EIN-LANGES-PASSWORT-EINTRAGEN#probe-passwort-123#' \
-      -e "s#ghcr.io/motom001/dms:main#$IMAGE#" \
+      -e "s#ghcr.io/motom001/dms:stabil#$IMAGE#" \
       -e 's#"8080:3000"#"18080:3000"#' \
       "$v/docker-compose.yml" > "$arbeit/docker-compose.yml"
   # Vorlagen mit Passwort in der .env (raspberry-pi; das Einrichtungsskript schreibt sie dort).

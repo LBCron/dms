@@ -19,7 +19,7 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/motom001/dms:main
+    image: ghcr.io/motom001/dms:stabil
     restart: unless-stopped
     depends_on:
       db:
