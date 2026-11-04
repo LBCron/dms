@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Symbol } from '../Symbol';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import { ANREDE_BEISPIEL, ANREDE_NAME, ANREDEN, textDritte, type Anrede } from '../../../shared/src/anrede';
@@ -253,14 +253,33 @@ function AuskunftErteilen({ einstellung, nachher, zustellen }: { einstellung: Da
           {ohneGrund > 0 && <p className="fehlertext klein">{ohneGrund === 1 ? 'Eine abgewählte Notiz braucht' : `${ohneGrund} abgewählte Notizen brauchen`} eine Begründung.</p>}
           {auftrag?.status === 'laeuft' && <p className="leise" role="status">{fortschrittText(auftrag)}</p>}
           {auftrag?.status === 'fehler' && <p className="fehlertext" role="alert">{auftrag.fehler}</p>}
-          {fertig && <div className="hinweis gut" role="status"><p>Fertig: {fertig.mappen} Mappen, {fertig.dokumente} Dokumente ({groesse(fertig.bytes)}){fertig.verschluesselt ? ', mit Passwort' : ''}. Die Datei wird nach dem Herunterladen gelöscht, spätestens am {zeit(fertig.bis)} – außer, du stellst sie über einen Abruf-Link zu. In der Historie der Person ist die Auskunft vermerkt.</p>
-            <p className="knoepfe"><button type="button" className="knopf primaer" onClick={() => zustellen(fertig.id)}>Zustellen …</button>
-              <a className="knopf" href={`/api/werkbank/auskunft/${fertig.id}/zip`} onClick={() => window.setTimeout(() => void nachher(), 3000)}>Herunterladen</a></p></div>}
-          <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!geprueft || !auswahl.mappen.length || ohneGrund > 0 || !!pwFehler || auftrag?.status === 'laeuft'} onClick={() => void erzeugen()}>
-            {auftrag?.status === 'laeuft' ? 'Wird erzeugt …' : 'Auskunft erzeugen'}</button></div>
+          {/* #665: Das Ergebnis steht an der Stelle des Knopfs – darüber verschiebt sich nichts; ein zweites Erzeugen nur über „Neue Auskunft erstellen“. */}
+          {fertig ? <AuskunftFertig f={fertig} zustellen={zustellen} nachher={nachher} neu={() => { setAuftrag(null); setGeprueft(false); }} />
+            : <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!geprueft || !auswahl.mappen.length || ohneGrund > 0 || !!pwFehler || auftrag?.status === 'laeuft'} onClick={() => void erzeugen()}>
+            {auftrag?.status === 'laeuft' ? 'Wird erzeugt …' : 'Auskunft erzeugen'}</button></div>}
         </>
       )}
     </section>
+  );
+}
+
+const anzahl = (n: number, eins: string, viele: string) => `${n} ${n === 1 ? eins : viele}`;
+
+/** Ergebnis von „Auskunft erzeugen“ (#665): Text und Knöpfe untereinander, Fokus darauf, darunter „Neue Auskunft erstellen“. */
+function AuskunftFertig({ f, zustellen, nachher, neu }: { f: AuskunftStand; zustellen(id: string): void; nachher(): Promise<void>; neu(): void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  return (
+    <div className="auskunft-fertig">
+      <div ref={ref} tabIndex={-1} className="hinweis gut stapel" role="status">
+        <p><strong>Auskunft ist fertig</strong> – {anzahl(f.mappen, 'Mappe', 'Mappen')}, {anzahl(f.dokumente, 'Dokument', 'Dokumente')} ({groesse(f.bytes)}){f.verschluesselt ? ', mit Passwort' : ''}.</p>
+        <p>Wie soll sie zur Person kommen?</p>
+        <p className="knoepfe"><button type="button" className="knopf primaer" onClick={() => zustellen(f.id)}>Zustellen …</button>
+          <a className="knopf" href={`/api/werkbank/auskunft/${f.id}/zip`} onClick={() => window.setTimeout(() => void nachher(), 3000)}>Herunterladen</a></p>
+        <p className="leise klein">Ohne Abruf-Link wird die Datei nach dem Herunterladen gelöscht, spätestens am {zeit(f.bis)}. In der Historie der Person ist die Auskunft vermerkt; sie steht auch unter „Bereitliegende Auskünfte“.</p>
+      </div>
+      <p><button type="button" className="textknopf klein" onClick={neu}>Neue Auskunft erstellen</button></p>
+    </div>
   );
 }
 
