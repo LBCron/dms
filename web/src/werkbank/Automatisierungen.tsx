@@ -138,7 +138,8 @@ export function AutomatisierungenListe({ z, offen }: { z: AutomatisierungenZusta
 /* ---------- Editor ---------- */
 
 type Entwurf = AutomatisierungDaten & { aktiv: boolean };
-const LEER: Entwurf = { name: '', beschreibung: '', reihenfolge: REIHENFOLGE.eigen, wenn: { art: 'mappe.geaendert', typ: null }, und: { modus: 'alle', karten: [] }, dann: [], sonst: [], aktiv: false };
+// Neue Automatisierungen sind vorgegeben „an“ (#706) – wirksam erst mit dem Speichern.
+const LEER: Entwurf = { name: '', beschreibung: '', reihenfolge: REIHENFOLGE.eigen, wenn: { art: 'mappe.geaendert', typ: null }, und: { modus: 'alle', karten: [] }, dann: [], sonst: [], aktiv: true };
 const kopie = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 const neueId = () => `k${Math.random().toString(36).slice(2, 8)}`;
 
@@ -162,6 +163,7 @@ export function AutomatisierungEditor({ z, id }: { z: AutomatisierungenZustand; 
   const [e, setE] = useState<Entwurf>(() => kopie(gespeichert));
   const [offenKarte, setOffenKarte] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
+  const [schaltRueckmeldung, setSchaltRueckmeldung] = useState<string | null>(null);
   const [sendet, setSendet] = useState(false);
   const [vorratOffen, setVorratOffen] = useState(false);
   const [ansage, setAnsage] = useState('');
@@ -206,15 +208,22 @@ export function AutomatisierungEditor({ z, id }: { z: AutomatisierungenZustand; 
         <p className="ueber">{t('automatisierung.ui.ueber')}</p>
         <h1>{neu ? t('automatisierung.ui.neu.titel') : a!.name} {a && <Zustandschip a={a} />}</h1>
         {a && <p className="leise">{a.kurz}{position > 0 && gleiche.length > 1 && <> · {t('automatisierung.ui.position', { nr: position, anzahl: gleiche.length })}</>}</p>}
-        {a?.angehalten && <div className="hinweis schlecht"><p>{a.angehalten.text}</p></div>}
-        {a && (
-          <div className="zeile">
-            <button type="button" className="knopf klein" onClick={() => void aktion(() => api.automatisierungSchalten(a.id, !a.aktiv || !!a.angehalten), a.aktiv && !a.angehalten ? t('automatisierung.ui.ausgeschaltet') : t('automatisierung.ui.eingeschaltet'))}>
-              {a.aktiv && !a.angehalten ? t('automatisierung.ui.ausschalten') : t('automatisierung.ui.einschalten')}
-            </button>
-            <button type="button" className="textknopf klein" onClick={() => void aktion(async () => { const x = await api.automatisierungKopieren(a.id); geheZu(`/werkbank/automatisierungen/${x.id}`); }, t('automatisierung.ui.kopiert'))}>{t('automatisierung.ui.kopieren')}</button>
-          </div>
-        )}
+        {/* An/aus an einer Stelle (#706): neu wirkt der Schalter mit dem Speichern, sonst sofort; angehalten mit Grund. */}
+        <div className="zeile handlungen">
+          {a?.angehalten ? <>
+            <div className="hinweis schlecht"><p>{t('automatisierung.ui.angehalten')}: {a.angehalten.text}</p></div>
+            <button type="button" className="knopf klein" onClick={() => void aktion(() => api.automatisierungSchalten(a.id, true), t('automatisierung.ui.eingeschaltet'))}>{t('automatisierung.ui.wieder-einschalten')}</button>
+          </> : schaltRueckmeldung ? <p className="gut" role="status">{schaltRueckmeldung}</p>
+            : <Schalter an={a ? a.aktiv : e.aktiv} beschriftung={t('automatisierung.ui.schalter')} onChange={(an) => {
+              if (!a) { setE({ ...e, aktiv: an }); return; }
+              void (async () => {
+                try { await api.automatisierungSchalten(a.id, an); await z.laden(); setSchaltRueckmeldung(an ? t('automatisierung.ui.eingeschaltet') : t('automatisierung.ui.ausgeschaltet')); setTimeout(() => setSchaltRueckmeldung(null), 2500); }
+                catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+              })();
+            }} />}
+          {neu && <span className="leise klein">{t('automatisierung.ui.schalter.neu')}</span>}
+          {a && <button type="button" className="knopf klein" onClick={() => void aktion(async () => { const x = await api.automatisierungKopieren(a.id); geheZu(`/werkbank/automatisierungen/${x.id}`); }, t('automatisierung.ui.kopiert'))}>{t('automatisierung.ui.kopieren')}</button>}
+        </div>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <Ansage text={ansage} />
@@ -261,7 +270,6 @@ export function AutomatisierungEditor({ z, id }: { z: AutomatisierungenZustand; 
           </ol>
         </Bereichskasten>
         {probleme.length > 0 && <ul className="fehlertext klein">{probleme.map((p) => <li key={p}>{p}</li>)}</ul>}
-        {neu && <label className="haken"><input type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>{t('automatisierung.ui.gleich-einschalten')}</span></label>}
         <Speicherleiste ent={ent} gegenstand={t('automatisierung.ui.gegenstand')} sendet={sendet} ungueltig={probleme.length > 0}
           links={a && a.herkunft === 'eigen' && <button type="button" className="textknopf gefahr" onClick={async () => {
             if (await rueckfrage({ titel: t('automatisierung.ui.loeschen.frage', { name: a.name }), text: t('automatisierung.ui.loeschen.text'), ja: t('automatisierung.ui.loeschen'), gefahr: true })) {
@@ -667,5 +675,15 @@ function Fassungen({ a, nachher }: { a: AutomatisierungAnsicht; k: Kontextdaten;
         </ul>
       )}
     </div>
+  );
+}
+
+/** Schalter an/aus (#706): echtes Schaltelement (`role="switch"`), Zustand als Text wie in der Liste. */
+function Schalter({ an, beschriftung, onChange }: { an: boolean; beschriftung: string; onChange: (an: boolean) => void }) {
+  return (
+    <button type="button" role="switch" aria-checked={an} aria-label={beschriftung} className={`schalter${an ? ' an' : ''}`} onClick={() => onChange(!an)}>
+      <span className="schalter-spur" aria-hidden="true"><span className="schalter-knopf" /></span>
+      <span>{an ? t('automatisierung.ui.an') : t('automatisierung.ui.aus')}</span>
+    </button>
   );
 }

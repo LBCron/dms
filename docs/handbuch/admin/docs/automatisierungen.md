@@ -20,7 +20,7 @@ Petra soll 30 Tage vor Ablauf der Kündigungsfrist eines Vertrags eine Aufgabe b
 2. **Wenn:** **Datum erreicht**, Mappentyp *Vertrag*, Datumsfeld *Kündigung bis*, **Vorlauf** 30 *Tage*, Uhrzeit 07:00.
 3. **Und:** **+ Karte → Feld-Bedingung**, Feld *Verantwortlich* „ist nicht leer“.
 4. **Dann:** **+ Karte → Aufgabe / Benachrichtigung**, Als *Aufgabe*, Empfänger *Person im Feld „Verantwortlich“*, Text `Bitte {titel} prüfen – kündbar bis {kuendigung_bis}.`
-5. **Gleich einschalten** ankreuzen und **Speichern**.
+5. **Speichern**. Der Schalter oben neben dem Namen steht bei einer neuen Automatisierung auf **an** – mit dem Speichern ist sie eingeschaltet. Soll sie noch nicht arbeiten, stell ihn vorher auf **aus**.
 
 ![Aufgeklappte Dann-Karte mit Empfänger und Platzhaltern](bilder/werkbank-automatisierung-karte.png)
 
@@ -36,6 +36,14 @@ Die Karte **Datum erreicht** prüft einmal am Tag zur gewählten Uhrzeit, bei we
 - War Ablago zur Uhrzeit aus, holt es verpasste Tage nach (bis zu 31 Tage zurück). Eine neu eingeschaltete Automatisierung beginnt heute.
 
 Die früheren Karten „Datum in N Tagen“ und „Frist erreicht“ sind in **Datum erreicht** aufgegangen. Aus „Datum in N Tagen“ wird beim nächsten Öffnen dieselbe Karte mit Vorlauf in Tagen. Bei „Frist erreicht“ fehlt das Datumsfeld: Die Automatisierung steht rot da, bis du es wählst.
+
+## An, aus und angehalten
+
+Ob eine Automatisierung arbeitet, siehst und änderst du an **einer** Stelle: am Schalter oben neben dem Namen, in der Liste steht derselbe Zustand (**an**, **aus**, **angehalten**).
+
+- Bei einer gespeicherten Automatisierung wirkt der Schalter sofort; an seiner Stelle steht kurz „Eingeschaltet.“ bzw. „Ausgeschaltet.“.
+- Ist sie **angehalten** (rot, siehe unten), steht dort der Grund und der Knopf **Wieder einschalten**.
+- Daneben steht der Knopf **Kopieren**: Er legt eine eigene Kopie an und öffnet sie.
 
 ## Karten hinzufügen, umsortieren, entfernen
 
