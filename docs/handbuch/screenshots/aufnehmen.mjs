@@ -934,7 +934,7 @@ async function main() {
   }
   // Datenschutz (#396): Vertragspartner „betrifft eine Person“, Auskunft für die Stadtwerke gesammelt – Prüfliste.
   await api('PUT', '/api/werkbank/datenschutz', { verantwortlicher: 'Familie Beispiel\nMusterweg 1, 01234 Musterstadt', empfaenger: '', typen: { [d.typ('Vertragspartner').id]: { person: true, zweck: 'Verträge und Rechnungen des Haushalts' } } });
-  await geheZu(s, `/werkbank/datenschutz?mappe=${d.stadtwerke.id}`);
+  await geheZu(s, `/werkbank/auskuenfte/neu?mappe=${d.stadtwerke.id}`);
   await s.getByRole('button', { name: 'Sammeln', exact: true }).click();
   await s.getByRole('heading', { name: '3. Prüfen' }).waitFor();
   await s.getByRole('heading', { name: '3. Prüfen' }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
@@ -946,7 +946,9 @@ async function main() {
     await api('POST', '/api/werkbank/auskunft', { mappeId: d.stadtwerke.id, tiefe: 1, geprueft: true, passwort: 'Handbuch-Passwort-2026',
       auswahl: { mappen: [d.stadtwerke.id], dokumente: x.dokumente.map((y) => y.id), notizen: x.notizen.map((y) => y.id), historie: [d.stadtwerke.id], ohneNotizen: [] } });
     await warteAufAuftrag();
-    await geheZu(s, '/werkbank/datenschutz');
+    // Liste der Auskünfte (#668): die neue Auskunft wählen, rechts Zustellen.
+    await geheZu(s, '/werkbank/auskuenfte');
+    await s.locator('.spalte.liste .eintrag').first().click();
     await s.getByRole('button', { name: 'Zustellen …' }).first().click();
     await s.getByRole('radio', { name: /Abruf-Link mit Abrufcode/ }).check();
     await s.getByRole('checkbox', { name: /Link per E-Mail/ }).uncheck();
@@ -967,7 +969,7 @@ async function main() {
   {
     const alt = await api('POST', '/api/mappen', { typId: d.typ('Vertragspartner').id, werte: { name: 'Alter Stromanbieter' } });
     await api('DELETE', `/api/mappen/${alt.id}?grund=nicht_noetig`);
-    await geheZu(s, '/werkbank/datenschutz');
+    await geheZu(s, '/werkbank/loeschkonzept');
     await s.locator('#loeschkonzept').evaluate((e) => e.scrollIntoView({ block: 'start' }));
     await bild(s, 'werkbank-loeschkonzept');
     await s.locator('#loeschprotokoll .lp-eintrag').first().waitFor();

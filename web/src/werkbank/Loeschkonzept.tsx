@@ -1,8 +1,9 @@
 import type { Luecke } from '../../../shared/src/loeschkonzept';
 import { Hilfe } from '../Hilfe';
+import { Link } from '../ort';
 
 /**
- * Werkbank → Datenschutz → Löschkonzept (#469): das Löschkonzept als PDF oder Word-Datei, Abschnitt 2
+ * Werkbank → Löschkonzept (#469, eigener Eintrag seit #668): das Löschkonzept als PDF oder Word-Datei, Abschnitt 2
  * „Datenarten und Fristen“ aus den Mappentypen. Lücken (ohne Zweck, ohne Frist) stehen hier und im Dokument.
  */
 export function LoeschkonzeptBlatt({ luecken }: { luecken: Luecke[] }) {
@@ -13,7 +14,7 @@ export function LoeschkonzeptBlatt({ luecken }: { luecken: Luecke[] }) {
       {luecken.length > 0 && (
         <div className="hinweis warn stapel">
           <p><strong>Bitte ergänzen</strong> – sonst steht es im Dokument als Lücke:</p>
-          <ul>{luecken.map((l, i) => <li key={i}>{l.art === 'zweck' || l.art === 'verantwortlicher' || l.art === 'keine' ? <a href="#datenschutz-einstellungen" className="verweis">{l.text}</a> : l.text}</li>)}</ul>
+          <ul>{luecken.map((l, i) => <li key={i}>{l.art === 'verantwortlicher' ? <Link to="/werkbank/auskuenfte/einstellungen" className="verweis">{l.text}</Link> : l.art === 'zweck' || l.art === 'keine' ? <a href="#personendaten" className="verweis">{l.text}</a> : l.text}</li>)}</ul>
         </div>
       )}
       <p className="knoepfe">

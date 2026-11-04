@@ -6,16 +6,16 @@ Ablago **unterstützt** dabei: Mappentypen als Datenarten, der [Archivmodus](arc
 
 ## Aus Ablago erzeugen { #aus-dem-dms-erzeugen }
 
-Statt die Vorlage von Hand auszufüllen, lässt du Ablago ein Löschkonzept erzeugen: **Werkbank → Datenschutz → Löschkonzept → Als PDF erzeugen** oder **Als Word-Datei (.docx)** (nur Administratoren). Die Gliederung ist dieselbe wie in der Vorlage (Abschnitte 1–9), vorbelegt mit dem, was Ablago weiß:
+Statt die Vorlage von Hand auszufüllen, lässt du Ablago ein Löschkonzept erzeugen: **Werkbank → Benutzer und Sicherheit → Löschkonzept → Als PDF erzeugen** oder **Als Word-Datei (.docx)** (nur Administratoren). Die Gliederung ist dieselbe wie in der Vorlage (Abschnitte 1–9), vorbelegt mit dem, was Ablago weiß:
 
-- **Abschnitt 2 „Datenarten und Fristen“** aus deinen Mappentypen. In der Tabelle steht jeder Mappentyp, der **eine Person betrifft** (Werkbank → Datenschutz → Einstellungen), der **auf einen solchen verweist** (z. B. Rechnung → Kunde) oder für den ein **Zweck** hinterlegt ist. Je Zeile: Betroffene, Zweck, Frist und Stichtag aus dem [Archivmodus](archiv.md), Sperre in Ablago (Archivmodus oder keine) und der Löschweg („Aufbewahrung abgelaufen“ → Papierkorb → endgültig nach … Tagen). Mappentypen ohne Personenbezug stehen darunter in einer Zeile, damit du siehst, ob einer fehlt.
+- **Abschnitt 2 „Datenarten und Fristen“** aus deinen Mappentypen. In der Tabelle steht jeder Mappentyp, der **eine Person betrifft** (Werkbank → Löschkonzept → Personendaten in Mappentypen), der **auf einen solchen verweist** (z. B. Rechnung → Kunde) oder für den ein **Zweck** hinterlegt ist. Je Zeile: Betroffene, Zweck, Frist und Stichtag aus dem [Archivmodus](archiv.md), Sperre in Ablago (Archivmodus oder keine) und der Löschweg („Aufbewahrung abgelaufen“ → Papierkorb → endgültig nach … Tagen). Mappentypen ohne Personenbezug stehen darunter in einer Zeile, damit du siehst, ob einer fehlt.
 - **Weitere Abschnitte** mit deinen Einstellungen: Verantwortlicher, Ablago-Version, Aufbewahrung im [Papierkorb](papierkorb.md) und der Historie gelöschter Mappen, Aufbewahrung der automatischen [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung), bereitliegende Auskünfte, Benutzer werden deaktiviert statt gelöscht.
 - **Was Ablago nicht wissen kann** – Rechtsgrundlage und Grund der Frist, Zuständige, eigene Ansichten für kürzere Fristen –, bleibt als **[eckige Klammer]** stehen; in der Word-Datei gelb markiert.
-- **Lücken** meldet Ablago in der Werkbank und im Dokument unter „Bitte ergänzen“: Mappentyp mit Personenbezug **ohne Zweck** oder **ohne Frist** (kein Archivmodus), kein Verantwortlicher hinterlegt.
+- **Lücken** meldet Ablago in der Werkbank (der Eintrag **Löschkonzept** trägt dann ein „!“) und im Dokument unter „Bitte ergänzen“: Mappentyp mit Personenbezug **ohne Zweck** oder **ohne Frist** (kein Archivmodus), kein Verantwortlicher hinterlegt. Zweck und Personenbezug trägst du auf derselben Seite unter **Personendaten in Mappentypen** ein, den Verantwortlichen unter [Datenschutz-Auskünfte → Einstellungen](datenschutz.md#einstellungen).
 - Im Kopf stehen **Stand und Ablago-Version**; der Hinweis „keine Rechtsberatung“ wie in der Vorlage.
 - **Abschnitt 8 „Nachweis“** verweist auf das [Löschprotokoll](datenschutz.md#loschprotokoll) mit seiner Aufbewahrung.
 
-![Werkbank → Datenschutz → Löschkonzept mit den Lücken „Bitte ergänzen“ und den Knöpfen für PDF und Word](bilder/werkbank-loeschkonzept.png)
+![Werkbank → Löschkonzept mit den Lücken „Bitte ergänzen“ und den Knöpfen für PDF und Word](bilder/werkbank-loeschkonzept.png)
 
 Aus den Mappen selbst kommt nichts in das Dokument – keine Titel, keine Feldwerte, keine Dokumente. Erzeuge das Löschkonzept neu, wenn du Mappentypen oder Fristen änderst, und trage die Änderung in Abschnitt 9 ein.
 

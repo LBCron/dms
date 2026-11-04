@@ -766,6 +766,7 @@ export function speicherRepo(): Repo {
     },
     async historie(mappeId) { return historie.filter((h) => h.mappeId === mappeId).map(kopie).reverse(); },
     async historieVon(mappeIds) { const ids = new Set(mappeIds); return historie.filter((h) => ids.has(h.mappeId)).map(kopie).reverse(); },
+    async historieArt(art, max) { return historie.filter((h) => h.art === art).map(kopie).reverse().slice(0, max); },
     async historieAufraeumen(vor) {
       const weg = new Set(historie.filter((h) => h.art === 'endgueltig' && h.zeit < vor && !mappen.has(h.mappeId) && !korb.has(h.mappeId)).map((h) => h.mappeId));
       const vorher = historie.length;

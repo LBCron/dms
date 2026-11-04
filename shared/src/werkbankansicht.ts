@@ -62,7 +62,9 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'automatisierungen', gruppe: 'ablage', in: O, experte: ['haushalt'] },
   { pfad: 'benutzer', gruppe: 'benutzer', in: H },
   { pfad: 'verschluesselung', gruppe: 'benutzer', in: H },
-  { pfad: 'datenschutz', gruppe: 'benutzer', in: O },
+  // Datenschutz getrennt (#668): Auskünfte (mit Mitte, wachsende Sammlung) und Löschkonzept.
+  { pfad: 'auskuenfte', gruppe: 'benutzer', in: O },
+  { pfad: 'loeschkonzept', gruppe: 'benutzer', in: O },
   // „Aufbewahrung abgelaufen“ (#725, früher „Darf weg“) und Stempel (#717) regeln, was die Ablage verlässt.
   { pfad: 'aufbewahrung', gruppe: 'benutzer', in: O },
   { pfad: 'stempel', gruppe: 'benutzer', in: H },
@@ -127,6 +129,8 @@ export const UMGEZOGEN: Readonly<Record<string, string>> = {
   datenbank: 'anbindung', speicherplatz: 'systemzustand',
   // #717/#725: zusammengelegt oder umbenannt.
   darfweg: 'aufbewahrung', suche: 'texterkennung', wiederherstellung: 'sicherung', technik: 'systemzustand', wartungsmodus: 'wartung',
+  // #668: Datenschutz in Auskünfte und Löschkonzept getrennt; die alte Adresse führt zu den Auskünften.
+  datenschutz: 'auskuenfte',
 };
 
 /** Wohin ein umgezogener Bereich innerhalb seiner neuen Seite springt (Abschnitt, `#…`). */
@@ -200,12 +204,14 @@ export function ansichtAus(vorlage: Vorlage, sichtbareBereiche: Iterable<string>
 /**
  * Die Mitte gibt es nur für große Sammlungen, die man bearbeitet (Mappentypen, Ansichten, Benutzer …).
  * Kleine oder nur lesende Listen (lange Datenbankzugriffe unter Datenbank-Anbindung #407, Demo-Übersicht, Technik, Exporte, gesperrte Adressen,
- * Stempel-Vorlagen #394, Datenschutz #396)
+ * Stempel-Vorlagen #394, Löschkonzept #668)
  * stehen rechts im passenden Abschnitt. Alle anderen Bereiche – auch künftige – sind zweiteilig.
  */
 export const MIT_MITTE: ReadonlySet<string> = new Set([
   'uebersicht', 'typen', 'sichten', 'nummernkreise', 'pakete', 'benutzer', 'aufgaben',
   'designs', 'papierkorb', 'automatisierungen', 'postfaecher', 'protokoll', 'fehlermeldungen',
+  // Datenschutz-Auskünfte (#668): Ausnahme zu „kleine Listen rechts“ – die Sammlung wächst mit jeder Anfrage.
+  'auskuenfte',
 ]);
 
 export const hatMitte = (bereich: string) => MIT_MITTE.has(bereich);

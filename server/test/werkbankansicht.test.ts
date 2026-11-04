@@ -120,9 +120,9 @@ describe('Werkbank-Ansicht: Dienst', () => {
 
 describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
   it('Sammlungen behalten die Mitte, Seiten sind zweiteilig', () => {
-    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll', 'automatisierungen']) assert.ok(hatMitte(b), b);
+    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll', 'automatisierungen', 'auskuenfte']) assert.ok(hatMitte(b), b);
     for (const b of ['demo', 'betrieb', 'verschluesselung', 'texterkennung', 'wartung', 'sicherung',
-      'systemzustand', 'anbindung', 'eingangsordner', 'anmeldeschutz', 'aufbewahrung', 'vollexport', 'ansicht', 'webdav', 'stempel', 'region']) assert.ok(!hatMitte(b), b);
+      'systemzustand', 'anbindung', 'eingangsordner', 'anmeldeschutz', 'aufbewahrung', 'vollexport', 'ansicht', 'webdav', 'stempel', 'region', 'loeschkonzept']) assert.ok(!hatMitte(b), b);
     // Jeder Bereich der Leiste ist eingeordnet; neue Bereiche sind ohne Zutun zweiteilig.
     assert.ok(BEREICHE.every((b) => typeof hatMitte(b.pfad) === 'boolean'));
   });
@@ -169,7 +169,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.deepEqual(Object.values(GRUPPEN), ['Ablage aufbauen', 'Benutzer und Sicherheit', 'Post und Eingänge', 'Daten sichern', 'Einstellungen', 'Wartung und Fehlersuche']);
     const je = (g: string) => BEREICHE.filter((x) => x.gruppe === g).map((x) => x.pfad);
     assert.deepEqual(je('ablage'), ['pakete', 'typen', 'sichten', 'nummernkreise', 'automatisierungen']);
-    assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz', 'aufbewahrung', 'stempel']);
+    assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'auskuenfte', 'loeschkonzept', 'aufbewahrung', 'stempel']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'vollexport', 'papierkorb']);
     assert.deepEqual(je('einstellungen'), ['betrieb', 'region', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung']);
@@ -191,13 +191,15 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
       ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks']);
   });
 
-  it('#354 Nacharbeit: Datenschutz steht unter „Benutzer und Sicherheit“, Kennung bleibt', () => {
-    const b = BEREICHE.find((x) => x.pfad === 'datenschutz');
-    assert.equal(b?.gruppe, 'benutzer');
-    assert.equal(GRUPPEN[b!.gruppe], 'Benutzer und Sicherheit');
-    assert.deepEqual(b?.in, ['organisation'], 'Vorlagen unverändert');
-    assert.equal(werkbankUmleitung('datenschutz'), null, 'Pfad bleibt, alte Links gelten weiter');
-    assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['datenschutz'], aus: [] }), { vorlage: 'haushalt', ein: ['datenschutz'], aus: [] });
+  it('#354 Nacharbeit, #668: Datenschutz-Auskünfte und Löschkonzept unter „Benutzer und Sicherheit“, alte Adresse leitet um', () => {
+    for (const pfad of ['auskuenfte', 'loeschkonzept']) {
+      const b = BEREICHE.find((x) => x.pfad === pfad);
+      assert.equal(b?.gruppe, 'benutzer');
+      assert.equal(GRUPPEN[b!.gruppe], 'Benutzer und Sicherheit');
+      assert.deepEqual(b?.in, ['organisation'], 'Vorlagen wie vorher Datenschutz');
+    }
+    assert.equal(werkbankUmleitung('datenschutz'), '/werkbank/auskuenfte', 'alte Links führen zu den Auskünften');
+    assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['datenschutz'], aus: [] }), { vorlage: 'haushalt', ein: ['auskuenfte'], aus: [] });
     // Verschlüsselung bleibt unter Benutzer und Sicherheit, WebDAV unter Post und Eingänge.
     assert.equal(BEREICHE.find((x) => x.pfad === 'verschluesselung')?.gruppe, 'benutzer');
     assert.equal(BEREICHE.find((x) => x.pfad === 'webdav')?.gruppe, 'post');

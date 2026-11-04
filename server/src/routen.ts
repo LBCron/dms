@@ -978,13 +978,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     /* ---------- Baum über Verweise (#396, #424): mit den Rechten des Aufrufers ---------- */
     { methode: 'GET', pfad: '/api/mappen/:id/baum', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.baum(a.params.id, a.query, await zg(a))) },
     /* ---------- Datenschutz: Auskunft nach Art. 15 DSGVO (#396), nur Administratoren ---------- */
-    { methode: 'GET', pfad: '/api/werkbank/datenschutz', zugang: 'admin', handler: async () => ok({
-      einstellung: await dienst.datenschutz(), auskuenfte: await auskuenfteIn(auskunftZiel()), tage: AUSKUNFT_TAGE,
+    { methode: 'GET', pfad: '/api/werkbank/datenschutz', zugang: 'admin', handler: async () => {
+      const bereit = await auskuenfteIn(auskunftZiel());
+      const auftrag = dienst.auftraege.aktuell();
+      const laufend = auftrag?.art === 'auskunft' && auftrag.status === 'laeuft' ? { id: auftrag.id, titel: auftrag.titel, gestartet: auftrag.gestartet } : null;
+      return ok({
+      einstellung: await dienst.datenschutz(), auskuenfte: bereit, tage: AUSKUNFT_TAGE,
+      // Liste der Auskünfte (#668): auch Gelöschte als Nachweis, Anfragen mit Frist, der laufende Auftrag.
+      verzeichnis: await dienst.auskunftVerzeichnis(bereit, laufend),
       // Zustellen (#455): Abruf-Links (Nachweis, auch nach dem Löschen der ZIP), Erreichbarkeit, E-Mail-Versand.
       links: await dienst.auskunftLinks({ max: 200 }), adresse: adresse(), oeffentlich: oeffentlichErreichbar(adresse()), mail: !!x.betrieb?.mailer(),
       // Löschkonzept (#469): was im erzeugten Dokument noch fehlen würde.
       loeschkonzept: { luecken: luecken(await loeschkonzeptQuelle()) },
-    }) },
+    }); } },
     { methode: 'GET', pfad: '/api/werkbank/datenschutz/loeschkonzept', zugang: 'admin', handler: async (a) => {
       const format = a.query.format === 'docx' ? 'docx' : 'pdf';
       const q = await loeschkonzeptQuelle();
@@ -1027,13 +1033,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // gilt noch (#455): Dann bleibt sie, bis die Person sie abgerufen hat oder der Link abläuft.
       const halten = await dienst.auskunftLinkAktiv(stand.id);
       const strom = createReadStream(pfad);
+      strom.on('end', () => void dienst.auskunftNotiz(stand, ich(a).id, 'download').catch(() => {}));
       strom.on('end', () => (halten ? L.datenschutz.info('Auskunft heruntergeladen (bleibt für den Abruf-Link)', { mappeId: stand.mappeId, von: ich(a).email })
         : void loescheAuskunft(ziel, stand.id).then(() => L.datenschutz.info('Auskunft heruntergeladen und gelöscht', { mappeId: stand.mappeId, von: ich(a).email }))));
       // Personenbezogene Daten: nicht im Cache des Browsers ablegen (fremder oder gemeinsam genutzter Rechner).
       return { datei: { inhalt: strom, name: `${stand.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
     } },
     { methode: 'DELETE', pfad: '/api/werkbank/auskunft/:id', zugang: 'admin', handler: async (a) => {
+      // Nachweis (#668): vorher merken, zu wem sie gehört – die Zeile bleibt in der Liste der Auskünfte.
+      const vorher = (await auskuenfteIn(auskunftZiel())).find((s) => s.id === a.params.id);
       await loescheAuskunft(auskunftZiel(), a.params.id);
+      if (vorher) await dienst.auskunftNotiz(vorher, ich(a).id, 'geloescht');
       // Ohne ZIP kein Abruf (#455): gültige Links gleich mit zurückziehen.
       for (const l of await dienst.auskunftLinks({ auskunftId: a.params.id })) if (linkStatus(l) === 'aktiv') await dienst.auskunftLinkWiderrufen(l.id, ich(a));
       L.datenschutz.info('Auskunft gelöscht', { id: a.params.id, von: ich(a).email });

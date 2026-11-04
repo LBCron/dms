@@ -578,6 +578,8 @@ export interface Repo {
   historie(mappeId: string): Promise<Historieneintrag[]>;
   /** Historie mehrerer Mappen (#367), je Mappe neueste zuerst. */
   historieVon(mappeIds: string[]): Promise<Historieneintrag[]>;
+  /** Alle Einträge einer Art, neueste zuerst (#668: Verzeichnis der Auskünfte). */
+  historieArt(art: Historienart, max: number): Promise<Historieneintrag[]>;
   /** Löscht die Historie von Mappen, die vor diesem Zeitpunkt endgültig gelöscht wurden. */
   historieAufraeumen(vor: string): Promise<number>;
 }
