@@ -14,6 +14,9 @@ import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
+import { Mehrfachauswahl } from '../ablage/Mehrfachauswahl';
+import { formatiere, type Mappe, type Mappentyp } from '../../../shared/src/model';
+import { falte } from '../../../shared/src/suche';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 
 /**
@@ -64,6 +67,53 @@ export function DatenschutzPanel({ z }: { z: DatenschutzZustand }) {
 
 /* ---------- Auskunft erteilen ---------- */
 
+/** Steht ein Suchwort nicht im Titel, das erste Feld, in dem es vorkommt („Firma: Muster GmbH“, #667). */
+function grundVon(typ: Mappentyp | undefined, m: Mappe, eingabe: string): string | null {
+  const woerter = falte(eingabe).split(/\s+/).filter(Boolean);
+  if (!typ || !woerter.length || woerter.every((w) => falte(m.titel ?? '').includes(w))) return null;
+  for (const f of typ.felder) {
+    if (f.typ === 'passwort' || f.typ === 'referenz') continue;
+    const text = formatiere(f, m.werte[f.key]);
+    if (text && woerter.some((w) => falte(text).includes(w))) return `${f.label}: ${text}`;
+  }
+  return null;
+}
+
+/**
+ * Person wählen wie in einem Verweisfeld (#667): gemeinsame Auswahl aus #602, Suche beim Tippen über alle
+ * Mappentypen, die eine Person betreffen; je Treffer der Mappentyp und – wenn nicht der Name trifft – das Feld.
+ */
+function PersonWahl({ typen, waehle }: { typen: Mappentyp[]; waehle(m: { id: string; typId: string; titel: string }): void }) {
+  const [eingabe, setEingabe] = useState('');
+  const [offen, setOffen] = useState(false);
+  const [treffer, setTreffer] = useState<Mappe[] | null>(null);
+  const [gesamt, setGesamt] = useState(0);
+  const ids = typen.map((t) => t.id).join(',');
+  useEffect(() => {
+    if (!offen) return;
+    let aktuell = true;
+    const t = setTimeout(() => {
+      Promise.all(ids.split(',').map((id) => api.seite(`typ:${id}`, 0, 20, eingabe.trim())))
+        .then((r) => { if (!aktuell) return; setTreffer(r.flatMap((x) => x.mappen).slice(0, 20)); setGesamt(r.reduce((n, x) => n + x.gesamt, 0)); })
+        .catch(() => aktuell && setTreffer([]));
+    }, 200);
+    return () => { aktuell = false; clearTimeout(t); };
+  }, [offen, eingabe, ids]);
+  const typ = (id: string) => typen.find((t) => t.id === id);
+  return (
+    <Mehrfachauswahl id="auskunft-person" name="Person" platzhalter={`${typen.map((t) => t.name).join(', ')} suchen …`}
+      eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen}
+      vorschlaege={treffer === null ? null : treffer.map((m) => {
+        const grund = grundVon(typ(m.typId), m, eingabe);
+        return { id: m.id, text: <span>{titelOder(m.titel)} <span className="leise klein">{typ(m.typId)?.name}{grund ? ` · ${grund}` : ''}</span></span> };
+      })}
+      leerText={eingabe ? 'Nichts gefunden.' : 'Noch keine Mappe dieser Art.'}
+      fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{gesamt.toLocaleString('de-DE')} insgesamt – tippe, um einzugrenzen.</p>}
+      waehle={(id) => { const m = treffer?.find((x) => x.id === id); if (m) waehle({ id: m.id, typId: m.typId, titel: m.titel ?? '' }); }}
+      gewaehlt={[]} entferne={() => {}} />
+  );
+}
+
 interface Wahl { mappen: Set<string>; dokumente: Set<string>; notizen: Set<string>; historie: Set<string>; gruende: Record<string, string>; erwaehnungen: Set<string> }
 const LEER: Wahl = { mappen: new Set(), dokumente: new Set(), notizen: new Set(), historie: new Set(), gruende: {}, erwaehnungen: new Set() };
 
@@ -82,9 +132,6 @@ function vorgabe(inhalte: Record<string, AuskunftMappe>, ids: string[], w: Wahl 
 function AuskunftErteilen({ einstellung, nachher, zustellen }: { einstellung: Datenschutz; nachher(): Promise<void>; zustellen(id: string): void }) {
   const d = useDaten();
   const personTypen = personenTypen(einstellung).map((id) => d.typ(id)).filter((t) => !!t);
-  const [typId, setTypId] = useState(personTypen[0]?.id ?? '');
-  const [suche, setSuche] = useState('');
-  const [treffer, setTreffer] = useState<Array<{ id: string; typId: string; titel: string }> | null>(null);
   const [betroffen, setBetroffen] = useState<{ id: string; typId: string; titel: string } | null>(null);
   const [tiefe, setTiefe] = useState(2);
   const [richtungen, setRichtungen] = useState<BaumRichtung[]>(['verwiesenVon', 'verweistAuf']);
@@ -111,12 +158,6 @@ function AuskunftErteilen({ einstellung, nachher, zustellen }: { einstellung: Da
     return () => clearInterval(t);
   }, [auftrag?.status, nachher]);
 
-  async function suchen() {
-    if (!typId) return;
-    setTreffer(null);
-    try { const r = await api.seite(`typ:${typId}`, 0, 20, suche.trim()); setTreffer(r.mappen.map((m) => ({ id: m.id, typId: m.typId, titel: m.titel ?? '' }))); }
-    catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
-  }
   async function sammeln() {
     if (!betroffen) return;
     setLaeuft(true); setMeldung(undefined); setVorschau(null); setGeprueft(false); setAuftrag(null);
@@ -195,23 +236,16 @@ function AuskunftErteilen({ einstellung, nachher, zustellen }: { einstellung: Da
         <div className="hinweis info"><p>Lege zuerst unter <a href="#datenschutz-einstellungen" className="verweis">Einstellungen</a> fest, welche Mappentypen eine Person betreffen (z. B. Mieter, Kunde, Kontakt).</p></div>
       ) : !betroffen ? (
         <>
-          <p className="leise klein">1. Wähle die Person, die nach ihren Daten fragt.</p>
-          <form className="zeile-umbruch" onSubmit={(e) => { e.preventDefault(); void suchen(); }}>
-            <label className="inline">Art <select value={typId} onChange={(e) => { setTypId(e.target.value); setTreffer(null); }}>{personTypen.map((t) => <option key={t!.id} value={t!.id}>{t!.name}</option>)}</select></label>
-            <label className="inline">Suche <input type="search" value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Name, Kundennummer …" /></label>
-            <button className="knopf klein">Suchen</button>
-          </form>
-          {treffer && (!treffer.length ? <p className="leise">Nichts gefunden.</p> : (
-            <ul className="stapel auskunft-treffer">{treffer.map((m) => (
-              <li key={m.id}><button type="button" className="textknopf" onClick={() => { setBetroffen(m); setVorschau(null); }}>{titelOder(m.titel)}</button></li>
-            ))}</ul>
-          ))}
+          <label className="eigenschaft" htmlFor="auskunft-person"><span>1. Person, die nach ihren Daten fragt</span></label>
+          <PersonWahl typen={personTypen as Mappentyp[]} waehle={(m) => { setBetroffen(m); setVorschau(null); }} />
         </>
       ) : (
         <>
-          <p className="betroffen"><strong>{titelOder(betroffen.titel)}</strong> <span className="leise klein">{d.typ(betroffen.typId)?.name}</span>{' '}
-            <Link to={`/ablage/${betroffen.typId}/${betroffen.id}`} className="verweis klein">öffnen</Link>{' '}
-            <button type="button" className="textknopf klein" onClick={() => { setBetroffen(null); setVorschau(null); setAuftrag(null); }}>andere Person</button></p>
+          {/* Gewählte Person als Eintrag wie im Verweisfeld (#667); „Entfernen“ führt zurück zur Suche. */}
+          <Mehrfachauswahl name="Person" platzhalter="" eingabe="" setEingabe={() => {}} offen={false} setOffen={() => {}} vorschlaege={[]} leerText="" waehle={() => {}} ohneSuche
+            className="betroffen"
+            gewaehlt={[{ id: betroffen.id, inhalt: <><Link to={`/ablage/${betroffen.typId}/${betroffen.id}`} className="verweis">{titelOder(betroffen.titel)}</Link> <span className="leise klein">{d.typ(betroffen.typId)?.name}</span></>, entfernenText: `${titelOder(betroffen.titel)} entfernen – andere Person wählen` }]}
+            entferne={() => { setBetroffen(null); setVorschau(null); setAuftrag(null); }} />
           <div className="zeile-umbruch">
             <label className="inline">Anfrage eingegangen am <input type="date" value={eingang} max={heute()} onChange={(e) => setEingang(e.target.value)} /></label>
             <button type="button" className="knopf klein" onClick={() => void frist()} title="Aufgabe für dich, fällig einen Monat nach Eingang (Art. 12 Abs. 3 DSGVO)">Frist als Aufgabe anlegen</button>
