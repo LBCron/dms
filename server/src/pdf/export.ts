@@ -8,6 +8,7 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import { eigenerPuffer } from './puffer';
 import { A4, neuesDokument, PdfSchreiber, RAND } from './schreiber';
 import { groesseText, pdfSicher } from './text';
+import { ladePdf } from './laden';
 
 export interface PdfMappenSeite {
   titel: string;
@@ -58,7 +59,7 @@ export async function mappenPdfZeichnen(daten: MappenPdfDaten): Promise<Buffer> 
       if (d.mime !== 'application/pdf' && !istBild) { hinweis.push('nicht eingebunden'); continue; }
       if (!d.inhalt) { hinweis.push('konnte nicht eingebunden werden'); continue; }
       if (istBild) { bilder.push({ name: d.name, b: d.inhalt, png: d.mime === 'image/png' }); hinweis.push('als Bild eingebunden'); continue; }
-      try { pdfs.push(await PDFDocument.load(d.inhalt, { ignoreEncryption: true, updateMetadata: false })); hinweis.push('eingebunden'); } catch { hinweis.push('konnte nicht eingebunden werden'); }
+      try { pdfs.push(await ladePdf(d.inhalt, { ignoreEncryption: true, updateMetadata: false })); hinweis.push('eingebunden'); } catch { hinweis.push('konnte nicht eingebunden werden'); }
     }
     const s = new PdfSchreiber(doc, f);
     s.neueSeite();

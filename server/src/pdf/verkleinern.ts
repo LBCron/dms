@@ -32,6 +32,7 @@ import {
 import { Fachfehler } from '../fehler';
 import { MIN_ERSPARNIS, STANDARD_STUFE, STUFEN, type Stufe } from '../../../shared/src/verkleinern';
 import { jpegMasse } from './bild';
+import { ladePdf } from './laden';
 
 /* ---------- Inhaltsströme lesen: Bilder und ihre Größe auf der Seite ---------- */
 
@@ -265,7 +266,7 @@ export interface Analyse {
 
 async function lade(inhalt: Buffer): Promise<PDFDocument> {
   try {
-    return await PDFDocument.load(inhalt, { updateMetadata: false });
+    return await ladePdf(inhalt, { updateMetadata: false });
   } catch (e) {
     if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht verkleinern.');
     throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');

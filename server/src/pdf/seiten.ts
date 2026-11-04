@@ -7,13 +7,14 @@ import { degrees, PDFDocument } from 'pdf-lib';
 import { Fachfehler } from '../fehler';
 import { bildArt, exifAusrichtung } from './bild';
 import { eigenerPuffer } from './puffer';
+import { ladePdf } from './laden';
 
 /** Eine Seite im Ergebnis: Nummer im Original (ab 1) und zusätzliche Drehung im Uhrzeigersinn. */
 export interface SeitenWahl { nr: number; drehung?: number }
 
 async function lade(inhalt: Buffer): Promise<PDFDocument> {
   try {
-    return await PDFDocument.load(inhalt, { updateMetadata: false });
+    return await ladePdf(inhalt, { updateMetadata: false });
   } catch (e) {
     const m = (e as Error).message;
     if (/encrypt/i.test(m)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht bearbeiten.');
