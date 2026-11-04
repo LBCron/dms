@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.174/verkraftet/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.175/verkraftet/">
       
       
         <link rel="prev" href="../wachsen/">
@@ -2489,6 +2489,7 @@
 </tbody>
 </table>
 <p>Du hast selbst gemessen? <a href="../lasttest/">Lasttest selbst durchführen</a> beschreibt, wie es geht. Den Ergebnisblock fügst du als Kommentar in das Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a> ein – oder du legst mit der Vorlage <a href="https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml">Messergebnis Lasttest</a> ein eigenes Issue an. Das Projekt trägt die Meldungen hier ein.</p>
+<p><strong>Wie viel Arbeitsspeicher?</strong> Entscheidend für die Wahl des Geräts ist, was der <strong>ganze Container</strong> braucht – im Ergebnis die Zeile <em>Arbeitsspeicher Container höchstens</em>, nicht nur <em>Ablago höchstens</em>. Auf dem NAS des Projekts (UGREEN DXP4800 Plus, <code>dms-komplett</code>, 200.000 Mappen) brauchte Ablago selbst höchstens rund 1 GB, die Docker-Oberfläche zeigte für den Container knapp 2 GB. Als Faustregel: Für einen Haushalt reicht ein Gerät mit <strong>2 GB</strong> frei für den Container, für einen Kleinbetrieb oder sehr viele Mappen plane <strong>4 GB</strong> ein. Ein Teil davon ist Dateizwischenspeicher, den das System bei Bedarf zurückgibt.</p>
 <p><strong>So liest du die Tabelle:</strong> Liegt <em>klein</em> unter 0,3 s, fühlt sich Ablago für einen Haushalt flüssig an. Liegt <em>mittel</em> unter 1 s, reicht das Gerät auch für einen kleinen Betrieb mit großen Exporten nebenher. Diese Werte sind das <strong>Ziel</strong> des Projekts. Die <em>Grenze</em> von groß ist kein Ziel für den Alltag – 100 gleichzeitige Anfragen sind schon 10–15 Personen, die im selben Moment klicken (siehe <a href="../technik/#last">Technik → Viele gleichzeitige Anfragen</a>).</p>
 <p><strong>Ziel und CI-Grenze:</strong> Bei <em>klein</em> und <em>mittel</em> wird die wöchentliche Messung auf den Rechnern von GitHub rot, wenn sie die <strong>CI-Grenze</strong> verfehlt. Die CI-Grenze kam aus dem ersten Lauf dort plus 20 % und wird nur strenger, höchstens bis zum Ziel. Seit dem Beschleunigen (#615) hält auch <em>mittel</em> das Ziel (586 ms auf den Rechnern von GitHub, 423 ms auf dem NAS des Maintainers); damit ist die CI-Grenze jetzt <strong>gleich dem Ziel</strong>: 0,3 s für <em>klein</em>, 1 s für <em>mittel</em>. Messwerte von anderen Geräten helfen weiter – melde sie im Sammel-Issue <a href="https://github.com/motom001/dms/issues/576">Messergebnisse Lasttest (#576)</a>.</p>
 
