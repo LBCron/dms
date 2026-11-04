@@ -61,7 +61,7 @@ Was dabei geschieht:
 Eine Meldung sieht so aus:
 
 ```json
-{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
+{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
 ```
 
 Bei **Probe senden** steht unter `art` der Wert `probe`.
@@ -90,7 +90,7 @@ Ein kleiner Flow: Ein **http in**-Knoten nimmt die Meldung an, ein **function**-
     const gesehen = flow.get('dms_ids') || [];
     if (gesehen.includes(msg.payload.id)) return [null, msg];
     flow.set('dms_ids', [...gesehen.slice(-50), msg.payload.id]);
-    msg.payload = msg.payload.daten;  // { neuePost, zuErledigen, anstehend, ueberfaellig, stand, geaendert }
+    msg.payload = msg.payload.daten;  // { neuePost, zuErledigen, ueberfaellig, stand, geaendert }
     return [msg, msg];               // Ausgang 1: weiter im Flow, Ausgang 2: Antwort
     ```
 

@@ -17,7 +17,6 @@ import { Farbfelder } from '../werkbank/Designs';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
 import { RECHTE, RECHTE_LISTE } from '../../../shared/src/rechte';
-import { ANSTEHEND_MAX, ANSTEHEND_TAGE } from '../../../shared/src/fristen';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
 
@@ -191,10 +190,10 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
 
       <SchriftWahl />
 
-      {/* #420: Startseite und Anstehend steuern, was du siehst – deshalb unter Darstellung. */}
+      {/* #420: Die Startseite steuert, was du siehst – deshalb unter Darstellung. */}
       <div className="blatt">
         <h2 className="h3">Startseite</h2>
-        <p className="leise">Die Startseite der Ablage zeigt Zu erledigen, neue Post, Anstehendes, eine Kachel deiner Wahl und die zuletzt geöffneten Mappen.</p>
+        <p className="leise">Die Startseite der Ablage zeigt Zu erledigen, neue Post, den nächsten Termin, eine Kachel deiner Wahl und die zuletzt geöffneten Mappen.</p>
         <label className="haken"><input type="checkbox" checked={d.einstellungen.startseite !== false}
           onChange={(e) => d.setzeEinstellung('startseite', e.target.checked ? null : false)} />
           <span>Mit der Startseite beginnen<small className="hilfe">Aus: Nach der Anmeldung geht es direkt zu „Zu erledigen“.</small></span></label>
@@ -208,12 +207,12 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
         )}
       </div>
 
+      {/* #725: Darstellung, keine Benachrichtigung – deshalb hier statt unter Benachrichtigungen. */}
       <div className="blatt">
-        <h2 className="h3">Anstehend <Hilfe ort="ablage.anstehend" /></h2>
-        <p className="leise">Die Ansicht „Anstehend“ unter „Zu erledigen“ zeigt deine Fristen und Erinnerungen, die bald fällig sind – auch die, die noch nicht unter „Zu erledigen“ stehen.</p>
-        <label className="eigenschaft schmal"><span>Zeitraum <small>Tage ab heute</small></span>
-          <input type="number" min={1} max={ANSTEHEND_MAX} className="kurz" defaultValue={Number(d.einstellungen.anstehend_tage ?? ANSTEHEND_TAGE)}
-            onBlur={(e) => { const n = Math.min(ANSTEHEND_MAX, Math.max(1, Math.trunc(Number(e.target.value) || ANSTEHEND_TAGE))); e.target.value = String(n); d.setzeEinstellung('anstehend_tage', n === ANSTEHEND_TAGE ? null : n); }} /></label>
+        <h2 className="h3">Geänderte Mappen</h2>
+        <label className="haken"><input type="checkbox" checked={d.einstellungen.geaenderte_hervorheben !== false}
+          onChange={(e) => d.setzeEinstellung('geaenderte_hervorheben', e.target.checked ? null : false)} />
+          <span>Geänderte Favoriten und eigene Mappen in Listen hervorheben<small className="hilfe">Mit einem Punkt vor dem Titel, bis du die Mappe öffnest – wie „ungelesen“ im E-Mail-Programm.</small></span></label>
       </div>
 
       <div className="blatt">
@@ -248,9 +247,6 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
               onChange={(e) => d.setzeEinstellung('favoriten_benachrichtigen', e.target.checked ? null : false)} />
               <span>Bei Änderungen an meinen Favoriten benachrichtigen</span></label>
           : <p className="hinweis info">{t('profil.favoriten.abgeschaltet')}</p>}
-        <label className="haken"><input type="checkbox" checked={d.einstellungen.geaenderte_hervorheben !== false}
-          onChange={(e) => d.setzeEinstellung('geaenderte_hervorheben', e.target.checked ? null : false)} />
-          <span>Geänderte Favoriten und eigene Mappen in Listen hervorheben<small className="hilfe">Mit einem Punkt vor dem Titel, bis du die Mappe öffnest – wie „ungelesen“ im E-Mail-Programm.</small></span></label>
       </div>
 
       {/* Webhooks (#627): Hausautomatisierung sofort anstoßen. */}

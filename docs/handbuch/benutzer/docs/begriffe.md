@@ -150,9 +150,6 @@ Ein Zeitraum, in dem ein Benutzer nicht da ist – mit einem Vertreter, der sein
 <a id="aktionen"></a>**Aktionen** · ✓ Alltagswort · alle  
 Das Menü „Mappe ▾“ neben dem Titel einer Mappe – Aufgabe vergeben, Erinnern, Versenden, Exportieren und mehr. Hieß früher selbst „Aktionen“.
 
-<a id="anstehend"></a>**Anstehend** · ✓ Alltagswort · alle  
-Die Ansicht mit meinen Fristen und Erinnerungen der nächsten Tage (Standard 30) – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen.
-
 <a id="aufgabe"></a>**Aufgabe** · ✓ Alltagswort · alle  
 Etwas, das ein Mensch an einer Mappe tun soll. Arten sind Passt nicht, Erwähnung, Zugewiesen (von Hand vergeben), Post für dich, Frist, Erinnerung, Vertretung und Auskunft.  
 Siehe auch: [Zu erledigen](#zu-erledigen), [Frist](#frist), [Erinnerung](#erinnerung), [Auftrag](#auftrag).
@@ -175,7 +172,7 @@ Text mit Überschriften, Listen und Hervorhebungen (Markdown) – als Feldart un
 
 <a id="frist"></a>**Frist** · ✓ Alltagswort · alle  
 Eine Aufgabe, die aus einem Datumsfeld mit Vorlauf entsteht, z. B. „Kündigen bis …“.  
-Siehe auch: [Erinnerung](#erinnerung), [Anstehend](#anstehend).
+Siehe auch: [Erinnerung](#erinnerung), [Zu erledigen](#zu-erledigen).
 
 <a id="historie"></a>**Historie** · ✓ Alltagswort · alle  
 Die Geschichte einer Mappe – Änderungen vorher und nachher, Dokumente, Papierkorb, Notizen, Aufgaben. Das technische Betriebsprotokoll heißt dagegen „Protokoll“.
@@ -219,8 +216,8 @@ Siehe auch: [Dokument](#dokument).
 Eine Aufgabe einem anderen Benutzer übertragen.
 
 <a id="zu-erledigen"></a>**Zu erledigen** · ✓ Alltagswort · alle  
-Die oberste Ansicht. Sie zeigt die Mappen, an denen ich etwas tun soll (meine offenen Aufgaben).  
-Siehe auch: [Aufgabe](#aufgabe).
+Die oberste Ansicht – als Liste die Mappen, an denen ich etwas tun soll (meine offenen Aufgaben), als Monat und Jahr meine Termine im Kalender.  
+Siehe auch: [Aufgabe](#aufgabe), [Frist](#frist).
 
 <a id="zuordnen"></a>**Zuordnen** · ✓ Alltagswort · alle  
 Post einer vorhandenen oder neuen Mappe zuweisen. Die Dokumente wandern dabei in das Register der Mappe.
@@ -314,7 +311,7 @@ Erkennt Text in Bildern und gescannten PDFs, damit er durchsuchbar wird.
 
 <a id="tagliche-zusammenfassung"></a>**Tägliche Zusammenfassung** · ✓ Alltagswort · alle  
 Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder im Profil.  
-Siehe auch: [Aufgabe](#aufgabe), [Anstehend](#anstehend).
+Siehe auch: [Aufgabe](#aufgabe), [Zu erledigen](#zu-erledigen).
 
 <a id="werkbank-anpassen"></a>**Werkbank anpassen** · ~ mit Erklärung · Administratoren  
 Legt fest, welche Bereiche links in der Werkbank stehen – nach einer Vorlage („Haushalt“, „Betrieb“ oder „Alles“) und mit Abweichungen. Ausblenden schaltet nichts ab. Neue Installationen starten mit „Haushalt“; Installationen von vor dieser Einstellung zeigen alles.  
@@ -491,7 +488,6 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Administrator | Admin (in der Oberfläche) | – |
 | Anmeldung über einen Anbieter | SSO, OIDC (in der Oberfläche) | – |
 | Ansicht | Sicht, Filter, View | `Sicht` |
-| Anstehend | – | `Anstehend` |
 | Archivmodus | – | `Archiv` |
 | Archivnummer | – | `archivnummer` |
 | Aufbewahrung abgelaufen | Darf weg | – |
@@ -550,7 +546,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Verweisart | – | `Verweisart, VERWEISARTEN` |
 | Vorschaubild | Thumbnail, Miniatur | `vorschau` |
 | Werkbank anpassen | – | `WerkbankAnsicht, VORLAGEN` |
-| Zu erledigen | Eingang, Inbox, Posteingang | `eingang` |
+| Zu erledigen | Eingang, Inbox, Posteingang, Anstehend | `eingang` |
 | Zwei-Faktor-Anmeldung | 2FA, MFA (in der Oberfläche) | – |
 
 *Stand: 2026-11-04*

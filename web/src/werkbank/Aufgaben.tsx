@@ -15,7 +15,7 @@ import { t } from '../sprache';
 import { FavoritenFreigabeBlock, type FavoritenFreigabeZustand } from './Benachrichtigungen';
 
 /**
- * Werkbank → Einstellungen → Benachrichtigungen und Aufgaben (#54, #366, #354): Mitte oben die tägliche Zusammenfassung (zuklappbar, #415)
+ * Werkbank → Einstellungen → Aufgaben (#54, #366, #354): Mitte oben die tägliche Zusammenfassung (zuklappbar, #415)
  * und „Favoriten benachrichtigen“ (#506), darunter alle
  * Aufgaben mit Filter (in der Adresse) und Mehrfachauswahl zum gesammelten Weitergeben (#415); rechts die Mappe
  * der gewählten Aufgabe – mit „Weitergeben an“.

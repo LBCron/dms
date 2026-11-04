@@ -2,6 +2,8 @@
 
 **Zu erledigen** ist die oberste Ansicht in der Ablage. Sie zeigt die Mappen, an denen **du etwas tun sollst** – jede davon hat eine offene **Aufgabe** für dich. Die Zahl daneben sagt, wie viele es sind.
 
+Oben schaltest du um zwischen **Liste**, **Monat** und **Jahr**: Die Liste zeigt, was jetzt zu tun ist; [Monat und Jahr](#monat-und-jahr) zeigen deine Termine im Kalender. Eine Vorschau „demnächst“ gibt es nicht – Erinnerungen an Fristen kommen über [Automatisierungen](https://help.ablago.app/admin/aktuell/automatisierungen/) genau dann in die Liste, wenn es Zeit ist.
+
 ![Zu erledigen mit einer Aufgabe](bilder/eingang.png)
 
 In der Liste steht bei jeder Mappe, was zu tun ist. In der Mappe selbst steht oben, unter dem Titel, ein gelber Hinweis mit der Aufgabe: vorne **Deine Aufgabe:** (bzw. **Post für dich:**, **Du wurdest erwähnt:**, **Deine Erinnerung:**), rechts die Knöpfe **Erledigt** und **Weitergeben** – sie gehören zur Aufgabe, nicht zur Mappe. Was du mit der ganzen Mappe tun kannst, steht im Menü **Mappe ▾** neben dem Titel. Bei einer Erwähnung in einer Notiz öffnet sich die Mappe gleich auf dem Register **Notizen**; **Zur Notiz** im Hinweis springt dorthin.
@@ -13,7 +15,7 @@ In der Liste steht bei jeder Mappe, was zu tun ist. In der Mappe selbst steht ob
 | **Passt nicht** | Ein Administrator hat den Mappentyp geändert – z. B. ein neues Pflichtfeld –, und deine Mappe passt nicht mehr dazu. | Ergänze oder korrigiere die markierten Angaben und speichere. Dann erledigt sie sich von selbst. |
 | **Erwähnung** | Jemand hat dich in einem formatierten Text oder einer Notiz mit **@** erwähnt. | Klicke im Hinweis auf **Erledigt**. |
 | **Zugewiesen** | Jemand hat dir über **Mappe ▾ → Aufgabe vergeben** etwas zu tun gegeben. | Klicke im Hinweis auf **Erledigt**. |
-| **Frist** | Ein Datum in einer deiner Mappen rückt näher, z. B. „Kündigung bis 30.09.2027“. Daneben steht, wie viele Tage noch bleiben. | Klicke auf **Erledigt**. Ändert sich das Datum oder wird es geleert, erledigt sie sich von selbst. Wiederholt sich der Termin (z. B. jährlich), schlägt Ablago den nächsten vor: **Datum auf … setzen**. |
+| **Frist** | Ein Datum in einer Mappe rückt näher, z. B. „Kündigung bis 30.09.2027“ – wann und für wen, legt eine Automatisierung fest. Daneben steht, wie viele Tage noch bleiben. | Klicke auf **Erledigt**. Ändert sich das Datum oder wird es geleert, erledigt sie sich von selbst. Wiederholt sich der Termin (z. B. jährlich), schlägt Ablago den nächsten vor: **Datum auf … setzen**. |
 | **Erinnerung** | Du oder jemand anderes hat über **Mappe ▾ → Erinnern** an diese Mappe erinnert, und der Tag ist da. | Klicke auf **Erledigt**. |
 | **Vertretung** | Jemand hat dich als [Vertreter](profil.md#abwesenheit) für seine Abwesenheit eingetragen. Die Aufgabe steht an seiner Benutzer-Mappe und nennt den Zeitraum. | **Erledigt** heißt „zur Kenntnis genommen“. Ändert sich die Abwesenheit oder endet sie, erledigt sie sich von selbst. |
 | **Post für dich** | Bei neuer [Post](post.md) steht dein Name unter **Für**. | Ordne die Post zu, erledige sie oder gib sie weiter. Dann erledigt sie sich von selbst. |
@@ -33,31 +35,30 @@ Steht bei dir unter „Zu erledigen“ eine **nicht sichtbare Mappe**, hast du e
 
 ## Erinnern
 
-Über **Mappe ▾ → Erinnern** in einer Mappe lässt du dich – oder jemand anderen – an einem bestimmten Tag an die Mappe erinnern, z. B. „am 15.11.: Angebote vergleichen“. Bis dahin steht die Erinnerung oben in der Mappe und unter [Anstehend](#anstehend); wer sie angelegt hat und wer sie bekommt, kann sie dort ändern oder löschen. Am gewählten Tag landet die Mappe unter „Zu erledigen“.
+Über **Mappe ▾ → Erinnern** in einer Mappe lässt du dich – oder jemand anderen – an einem bestimmten Tag an die Mappe erinnern, z. B. „am 15.11.: Angebote vergleichen“. Bis dahin steht die Erinnerung oben in der Mappe und im [Kalender](#monat-und-jahr); wer sie angelegt hat und wer sie bekommt, kann sie dort ändern oder löschen. Am gewählten Tag landet die Mappe unter „Zu erledigen“.
 
 ![Erinnerung an einer Mappe](bilder/erinnerung.png)
 
-## Anstehend
+## Monat und Jahr
 
-**Anstehend** zeigt, was auf dich zukommt: deine Fristen, Erinnerungen und Aufgaben mit Datum – auch die, die noch nicht unter „Zu erledigen“ stehen. Du siehst nur deine eigenen Einträge und nur aus Mappen, die du lesen darfst. Ein Klick auf einen Eintrag öffnet die Mappe; erledigt wird wie gewohnt in der Mappe oder unter „Zu erledigen“. Anstehend zeigt nur an – Termine verschieben oder freie Termine ohne Mappe gibt es hier bewusst nicht.
+**Monat** und **Jahr** zeigen, was auf dich zukommt – wie im Kalender am Handy:
 
-Oben schaltest du um zwischen **Liste**, **Monat** und **Jahr** – wie im Kalender am Handy. Ablago merkt sich deine Wahl. **Heute** springt zurück zum heutigen Tag.
+- deine Aufgaben mit Datum (auch Überfälliges),
+- deine Erinnerungen,
+- die Daten der **Fristen** an allen Mappen, die du lesen darfst – z. B. „Kündigung bis“ oder „HU fällig“,
+- die gesetzlichen Feiertage der [Region](https://help.ablago.app/admin/aktuell/region/).
 
-### Liste
-
-Die Liste zeigt die nächsten 30 Tage, gruppiert nach **Überfällig**, **Heute**, **Diese Woche** (bis Sonntag) und **Später**. Überfälliges steht oben, rot markiert und mit Text, z. B. „überfällig seit 12 Tagen“. Den Zeitraum stellst du im [Profil unter Darstellung](profil.md#anstehend) ein.
-
-![Anstehend als Liste](bilder/anstehend.png)
+Mit **Nur Favoriten** siehst du nur die Termine deiner [Favoriten](ablage.md#favoriten). Ein Klick auf einen Eintrag öffnet die Mappe; erledigt wird wie gewohnt in der Mappe oder in der Liste. Der Kalender zeigt nur an – Termine verschieben oder freie Termine ohne Mappe gibt es hier bewusst nicht. Ablago merkt sich deine Wahl; **Heute** springt zurück zum heutigen Tag.
 
 ### Monat
 
-Der Monat zeigt die Wochen von Montag bis Sonntag, heute ist hervorgehoben. Gesetzliche Feiertage stehen klein beim Tag – dieselben wie bei der [Täglichen Zusammenfassung](#tagliche-zusammenfassung) (das Bundesland wählt ein Administrator). Jeder Eintrag ist eine kurze Zeile mit Symbol und Mappentitel; fährst du mit der Maus darüber, siehst du den ganzen Text. Stehen an einem Tag mehr als drei Einträge, zeigt **+2 weitere** die ganze Tagesliste darunter; ein Klick auf die Zahl des Tags tut dasselbe. Mit den Pfeilen neben dem Monat oder den Pfeiltasten blätterst du.
+Der Monat zeigt die Wochen von Montag bis Sonntag, heute ist hervorgehoben. Feiertage stehen klein beim Tag. Jeder Eintrag ist eine kurze Zeile mit Symbol und Mappentitel; fährst du mit der Maus darüber, siehst du den ganzen Text. Stehen an einem Tag mehr als drei Einträge, zeigt **+2 weitere** die ganze Tagesliste darunter; ein Klick auf die Zahl des Tags tut dasselbe. Mit den Pfeilen neben dem Monat oder den Pfeiltasten blätterst du.
 
 Überfällige Einträge stehen rot an ihrem Tag und zusätzlich oben als **„1 überfällig“** – so gehen sie nicht verloren, wenn ihr Tag in einem früheren Monat liegt. Ein Klick darauf zeigt sie als Liste.
 
 **Wiederkehrende Fristen** (z. B. jährlich kündbare Verträge) erscheinen auch mit ihren nächsten Terminen, etwas heller und gestrichelt: Sie sind berechnet und noch nicht in der Mappe eingetragen.
 
-![Anstehend als Monat](bilder/anstehend-monat.png)
+![Zu erledigen als Monat](bilder/anstehend-monat.png)
 
 Monat und Jahr nutzen die ganze Breite neben den Ansichten. Öffnest du einen Eintrag, steht die Mappe rechts und der Monat rückt kompakt in die Mitte: Tage mit Einträgen tragen einen Punkt, darunter stehen die Einträge des gewählten Tags.
 
@@ -67,19 +68,23 @@ Monat und Jahr nutzen die ganze Breite neben den Ansichten. Öffnest du einen Ei
 
 Das Jahr zeigt zwölf kleine Monate. Tage mit Einträgen sind fett und tragen einen Punkt (heller, wenn dort nur berechnete Termine wiederkehrender Fristen stehen, rot bei Überfälligem); die Anzahl erscheint, wenn du mit der Maus darüberfährst. Ein Klick auf einen Tag oder einen Monat öffnet die Monatsansicht.
 
-![Anstehend als Jahr](bilder/anstehend-jahr.png)
+![Zu erledigen als Jahr](bilder/anstehend-jahr.png)
 
 ### Am Handy
 
-Am Handy beginnt Anstehend mit der **Liste**. Daneben gibt es den **Monat** in kompakter Form wie im Kalender des Handys: ein Punkt je Eintrag, darunter die Einträge des angetippten Tags. Wischen nach links oder rechts blättert den Monat. Die Jahresansicht gibt es nur am größeren Bildschirm.
+Am Handy gibt es **Liste** und **Monat**. Der Monat ist kompakt wie im Kalender des Handys: ein Punkt je Eintrag, darunter die Einträge des angetippten Tags. Wischen nach links oder rechts blättert den Monat. Die Jahresansicht gibt es nur am größeren Bildschirm.
 
-![Anstehend am Handy](bilder/anstehend-handy.png)
+![Monat am Handy](bilder/anstehend-handy.png)
 
 Ein Abo für deinen Kalender (z. B. am Handy) gibt es noch nicht.
+
+<span id="anstehend"></span>Früher hieß ein Teil davon **Anstehend**; alte Lesezeichen führen jetzt zum Monat.
 
 ## Weitergeben
 
 Passt eine Aufgabe besser zu jemand anderem, klicke im Hinweis auf **Weitergeben**, wähle den Benutzer und bestätige mit **Weitergeben** (**Esc** bricht ab). Die Mappe steht dann bei ihm unter „Zu erledigen“; in der [Historie](zusammenarbeit.md#historie) steht, wer sie wann an wen gegeben hat.
+
+<span id="mehrere-weitergeben"></span>Vor dem Urlaub gibst du mehrere Aufgaben auf einmal weiter: In der Liste **Zu erledigen** führt **Mehrere Aufgaben weitergeben …** zu allen deinen offenen Aufgaben – mit Filter und Auswahl, z. B. drei an Lena, vier an Jonas und den Rest an deinen Vertreter.
 
 ## Wenn jemand abwesend ist
 

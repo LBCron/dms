@@ -24,7 +24,7 @@ export type FavoritenFreigabeZustand = ReturnType<typeof useFavoritenFreigabe>;
 const ZU = 'werkbank_favoriten_zu';
 
 /**
- * Werkbank → Einstellungen → Benachrichtigungen und Aufgaben (#354, #506): Favoriten benachrichtigen für alle,
+ * Werkbank → Einstellungen → Aufgaben (#354, #506): Favoriten benachrichtigen für alle,
  * je Rolle oder für niemanden. „Rolle“ heißt beides: die Systemrollen Administrator und Mitglied als feste
  * Einträge, darunter die fachlichen Rollen. Dazu die Vorgabe für neue Benutzer und „auf alle anwenden“.
  * Zuklappbar wie die Tägliche Zusammenfassung darüber.

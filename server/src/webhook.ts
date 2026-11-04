@@ -16,7 +16,7 @@ import { istUuid } from './repo';
 
 /**
  * Webhooks (#627): Das DMS meldet sich selbst, sobald sich die Zahlen eines Benutzers ändern (neue Post,
- * Zu erledigen, anstehende und überfällige Fristen – dieselben wie `GET /api/v1/ich/zaehler`, #625).
+ * Zu erledigen, überfällige Fristen – dieselben wie `GET /api/v1/ich/zaehler`, #625).
  *
  * - **Ohne Inhalte:** Der Rumpf enthält Art, Ereignis-Id, Zeit und die Zahlen. Keine Titel, Namen, Absender.
  * - **Signiert:** HMAC-SHA256 über `<zeit>.<rumpf>` mit einem Geheimnis je Webhook (verschlüsselt gespeichert,

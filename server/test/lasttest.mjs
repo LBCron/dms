@@ -294,7 +294,7 @@ function naechsteAnfrage(v) {
   for (const [a, g] of PROFIL) { if ((x -= g) < 0) { art = a; break; } }
   const doc = v.dokumente.length ? zufall(v.dokumente) : null;
   switch (art) {
-    case 'Startseite': return { art, cookie, pfad: zufall(['/api/startseite', '/api/sichten', '/api/anstehend', '/api/typen']) };
+    case 'Startseite': return { art, cookie, pfad: zufall(['/api/startseite', '/api/sichten', '/api/termine/naechster', '/api/typen']) };
     case 'Liste': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=${50 * Math.floor(Math.random() * 10)}&anzahl=50` };
     case 'Mappe öffnen': return { art, cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
     case 'Suche': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&suche=${encodeURIComponent(zufall(WOERTER))}&von=0&anzahl=50` };

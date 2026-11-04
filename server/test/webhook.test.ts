@@ -97,7 +97,7 @@ describe('Zustellung an einen Empfänger (#627)', () => {
     // Zeitgeber des vorigen Tests (anstossen nach dem Anlegen) sollen hier nichts mehr zustellen.
     w?.stop(); await warte(100);
     e.eingaenge.length = 0; e.status = 204; admins = [];
-    zahlen = { neuePost: 0, zuErledigen: 0, anstehend: 0, ueberfaellig: 0, stand: 1, geaendert: new Date().toISOString() };
+    zahlen = { neuePost: 0, zuErledigen: 0, ueberfaellig: 0, stand: 1, geaendert: new Date().toISOString() };
     w = baue();
   });
 
@@ -132,7 +132,7 @@ describe('Zustellung an einen Empfänger (#627)', () => {
     assert.match(x.rumpf, /^[\x20-\x7e]+$/, 'nur ASCII');
     assert.deepEqual(Object.keys(r).sort(), ['art', 'daten', 'id', 'zeit']);
     assert.equal(r.id, x.kopf[WEBHOOK_KOPF.ereignis]);
-    assert.deepEqual(Object.keys(r.daten).sort(), ['anstehend', 'geaendert', 'neuePost', 'stand', 'ueberfaellig', 'zuErledigen']);
+    assert.deepEqual(Object.keys(r.daten).sort(), ['geaendert', 'neuePost', 'stand', 'ueberfaellig', 'zuErledigen']);
     for (const [k, v] of Object.entries(r.daten)) assert.ok(k === 'geaendert' ? typeof v === 'string' : Number.isInteger(v), k);
     for (const wort of ['Lena', 'lena@', 'Homey']) assert.ok(!x.rumpf.includes(wort), wort);
     // Nichts geändert: keine weitere Meldung.
@@ -318,7 +318,7 @@ describe('Webhooks in PostgreSQL (#627)', { skip: url ? false : 'TEST_DATABASE_U
   const HAUSHALT = '00000000-0000-4000-8000-000000000001';
   const B = '00000000-0000-4000-8000-0000000000b1';
   const W = '00000000-0000-4000-8000-0000000000d1';
-  const zahlen = (stand: number): WebhookZahlen => ({ neuePost: stand, zuErledigen: 0, anstehend: 0, ueberfaellig: 0, stand, geaendert: new Date().toISOString() });
+  const zahlen = (stand: number): WebhookZahlen => ({ neuePost: stand, zuErledigen: 0, ueberfaellig: 0, stand, geaendert: new Date().toISOString() });
   before(async () => {
     const { verbinde, migriere } = await import('../src/db');
     haupt = verbinde(url!);

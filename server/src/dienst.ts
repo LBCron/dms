@@ -10,7 +10,7 @@ import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
 import { istVerklemmung } from './db';
-import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_ANSTEHEND, Zaehlerspeicher } from './zaehlerspeicher';
+import { fingerabdruck, Haushaltsstand, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher } from './zaehlerspeicher';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
 import { Fachfehler } from './fehler';
@@ -80,7 +80,7 @@ import { t } from './sprache';
 import { Ereignisverteiler } from './ereignisse';
 import { zeitzone } from '../../shared/src/region';
 import { EREIGNISKATALOG, mischeFelder, VERALTETE_EREIGNISSE, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
-import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
+import { bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Erinnerung, type Termin, type TermineAntwort } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
 import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
 import { ALLES, hatKontoRegeln, kontoRegelwerk, RECHTE_LISTE, kurzStandard, systemSperre, bereinigeRegelwerk, FALSCH, istOffen, kopiereRegel, kurz, leseAusdruck, lesefilter, NICHTS, nicht, oder, rechteAn as rechteAnMappe, rechteUebersicht, regelProblem, regelwerkVon, wirksamVon, type Ausdruck, type Regelwerk, type Mappenquelle, type Recht, type Rechte, type Wer } from '../../shared/src/rechte';
@@ -116,9 +116,7 @@ export interface KatalogSchluessel { pem: string; fingerabdruck: string; von: st
 export interface PaketQuelleEintrag { url: string; aktiv: boolean; von: string | null; am: string; schluessel?: KatalogSchluessel | null; gesperrt?: KatalogSchluessel | null }
 export interface Fundstelle { mappeId: string; typId: string; titel: string; typ: string; register: string; name: string; erstellt: string }
 /** Zähler-Endpunkt (#625): nur Zahlen, keine Inhalte. */
-export interface Zaehlerzahlen { neuePost: number; zuErledigen: number; anstehend: number; ueberfaellig: number }
-/** Zähler-Endpunkt (#625): „anstehend“ zählt Termine von heute bis in so vielen Tagen. */
-export const ZAEHLER_TAGE = 7;
+export interface Zaehlerzahlen { neuePost: number; zuErledigen: number; ueberfaellig: number }
 
 export interface Zugriff {
   ich: { id: string; rolle: string };
@@ -535,11 +533,11 @@ export class Dienst {
   /** Zahlen der Ansichten je Benutzer und Rechte (#512). */
   private readonly zahlen = new Zaehlerspeicher<Awaited<ReturnType<Dienst['zaehle']>>>(this.stand);
   /**
-   * „Anstehend“ (#528): eigener Stand, der zusätzlich bei Erinnerungen hochzählt – die ändern keine Zahl
+   * Termine (#528, #725): eigener Stand, der zusätzlich bei Erinnerungen hochzählt – die ändern keine Zahl
    * der Ansichten, aber den Kalender. Zwischenspeicher je Benutzer, Rechte und Zeitraum.
    */
-  readonly fristenstand = new Haushaltsstand(ZAEHLT_FUER_ANSTEHEND);
-  private readonly anstehendSpeicher = new Zaehlerspeicher<Anstehend[]>(this.fristenstand);
+  readonly fristenstand = new Haushaltsstand(ZAEHLT_FUER_TERMINE);
+  private readonly termineSpeicher = new Zaehlerspeicher<Termin[]>(this.fristenstand);
   /** Zähler-Endpunkt (#625): „neue Post für mich bzw. ohne Für“ je Benutzer und Rechte, wie die Zahlen der Ansichten. */
   private readonly neuePostSpeicher = new Zaehlerspeicher<number>(this.stand);
 
@@ -2009,45 +2007,47 @@ export class Dienst {
   }
 
   /**
-   * Sicht „Anstehend“ (#132): eigene Fristen, Erinnerungen und Aufgaben mit Datum – fällige (schon im
-   * Eingang) und kommende –, nur an Mappen, die man lesen darf; nach Datum.
+   * Termine für „Zu erledigen“ → Monat und Jahr (#528, #725): von … bis (höchstens ein Jahr), nach Datum.
    *
-   * - Liste: `tage` ab heute (Standard 30); Überfälliges steht immer dabei.
-   * - Kalender (#528): `von` und `bis` (höchstens ein Jahr). Dazu die künftigen Termine wiederkehrender
-   *   Fristen (`folgetermin`), Überfälliges auch außerhalb des Zeitraums (für „3 überfällig“) und die
-   *   Feiertage des Bundeslands der Werkbank.
+   * - Eigene offene Aufgaben mit Datum (Fristen, Erinnerungen, andere wie „Auskunft bis …“) – Überfälliges auch
+   *   außerhalb des Zeitraums (für „3 überfällig“).
+   * - Die Daten der Frist-Felder („ist eine Frist“, #712) an allen Mappen, die man **lesen darf** – der Empfänger
+   *   am Feld ist mit #712 weggefallen –, dazu die künftigen Termine wiederkehrender Fristen; `favoriten` grenzt
+   *   auf die eigenen Favoriten ein.
+   * - Eigene freie Erinnerungen und die Feiertage der Region (#726).
+   *
+   * Eine Vorschau „demnächst“ gibt es nicht mehr (#725): Automatisierungen legen die Aufgabe zum richtigen
+   * Zeitpunkt in „Zu erledigen“.
    *
    * Zwischengespeichert wie die Zahlen der Ansichten (#512): je Benutzer, Rechte und Zeitraum, solange sich
    * am Haushalt nichts ändert (auch Erinnerungen zählen hier), höchstens 5 Minuten, nie über Mitternacht.
    */
-  async anstehend(z: Zugriff, q: { tage?: unknown; von?: unknown; bis?: unknown } = {}, land?: Bundesland | null): Promise<AnstehendAntwort> {
+  async termine(z: Zugriff, q: { von?: unknown; bis?: unknown; favoriten?: unknown } = {}, land?: Bundesland | null): Promise<TermineAntwort> {
     const heute = heuteIn();
-    let von = heute; let bis: string; let tage: number; let kalender = false;
-    if (q.von !== undefined || q.bis !== undefined) {
-      const problem = zeitraumProblem(q.von, q.bis);
-      if (problem) throw new Fachfehler(422, problem);
-      von = q.von as string; bis = q.bis as string; kalender = true;
-      tage = Math.max(0, tageZwischen(heute, bis));
-    } else {
-      const t = Math.trunc(Number(q.tage));
-      tage = Number.isFinite(t) && t >= 0 ? Math.min(ANSTEHEND_MAX, t) : ANSTEHEND_TAGE;
-      bis = verschiebe(heute, tage);
-    }
-    const schluessel = `${z.ich.id}|${z.ich.rolle}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${kalender ? 'k' : 'l'}`;
+    const problem = zeitraumProblem(q.von, q.bis);
+    if (problem) throw new Fachfehler(422, problem);
+    const von = q.von as string; const bis = q.bis as string;
+    const nurFavoriten = q.favoriten === true || q.favoriten === '1' || q.favoriten === 'true';
+    const schluessel = `${z.ich.id}|${z.ich.rolle}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${nurFavoriten ? 'f' : 'a'}`;
     const beginn = performance.now();
-    const r = await this.anstehendSpeicher.hole(schluessel, async () => ({ wert: await this.sammleAnstehend(z, heute, von, bis, kalender), zeitabhaengig: true }));
+    const r = await this.termineSpeicher.hole(schluessel, async () => ({ wert: await this.sammleTermine(z, heute, von, bis, nurFavoriten), zeitabhaengig: true }));
     const k = kontext.getStore();
     if (k) k.zwischenspeicher = { art: r.art, ms: performance.now() - beginn };
-    return { tage, heute, von, bis, eintraege: r.wert, ...(kalender ? { feiertage: feiertageZwischen(von, bis, land) } : {}) };
+    return { heute, von, bis, eintraege: r.wert, feiertage: feiertageZwischen(von, bis, land) };
   }
 
-  private async sammleAnstehend(z: Zugriff, heute: string, von: string, bis: string, kalender: boolean): Promise<Anstehend[]> {
+  /** Startseite (#725): der nächste Termin ab heute (innerhalb eines Jahres) und die Zahl des Überfälligen. */
+  async naechsterTermin(z: Zugriff): Promise<{ termin: Termin | null; ueberfaellig: number }> {
+    const heute = heuteIn();
+    const t = await this.termine(z, { von: heute, bis: verschiebe(heute, 365) });
+    return { termin: t.eintraege.find((x) => x.datum >= heute) ?? null, ueberfaellig: t.eintraege.filter((x) => x.faellig && x.datum < heute).length };
+  }
+
+  private async sammleTermine(z: Zugriff, heute: string, von: string, bis: string, nurFavoriten: boolean): Promise<Termin[]> {
     const ich = z.ich.id;
-    const meins = (empf: string | null) => empf === ich || (!empf && z.admin);
     const ab = von > heute ? von : heute;
-    const erg: Anstehend[] = [];
-    // Schon fällig: offene Aufgaben mit Datum – Fristen, Erinnerungen und andere (z. B. Auskunft bis …).
-    // Überfälliges immer, sonst nur im Zeitraum.
+    const erg: Termin[] = [];
+    // Schon fällig: eigene offene Aufgaben mit Datum. Überfälliges immer, sonst nur im Zeitraum.
     const offen = (await this.repo.offeneAufgaben({ benutzerId: ich, admin: z.admin })).filter((a) => istDatum(a.datum) && a.datum <= bis && (a.datum < heute || a.datum >= von));
     const lesbar = await this.lesbare(z, offen.map((a) => a.mappeId));
     for (const a of offen) {
@@ -2055,14 +2055,14 @@ export class Dienst {
       const art = a.art === 'frist' || a.art === 'erinnerung' ? a.art : 'aufgabe';
       erg.push({ art, datum: a.datum!, ab: a.erstellt.slice(0, 10), text: a.text, mappeId: a.mappeId, mappeTitel: a.mappeTitel ?? '', typId: a.typId ?? '', faellig: true, feldKey: a.feldKey ?? null });
     }
-    // Kommende Fristen: Datumsfelder mit Erinnerung, die noch keine Aufgabe sind – im Kalender auch die
-    // künftigen Termine wiederkehrender Fristen (#528), gerechnet vom eingetragenen Datum.
+    // Frist-Felder an lesbaren Mappen (#725: „lesen darf“ statt „für mich“), mit künftigen Terminen
+    // wiederkehrender Fristen (#528), gerechnet vom eingetragenen Datum.
     for (const typ of [...z.typen.values()].filter((x) => fristFelder(x).length)) {
       const felder = fristFelder(typ);
-      const wiederkehrend = kalender ? felder.filter((f) => f.frist!.wiederholung) : [];
+      const wiederkehrend = felder.filter((f) => f.frist!.wiederholung);
       const termine = (m: Mappe, f: Feld): Array<{ datum: string; folge: boolean }> => {
         const w = m.werte[f.key];
-        if (!istDatum(w) || !meins(fristEmpfaenger(f.frist!, m))) return [];
+        if (!istDatum(w)) return [];
         const x = w >= ab && w <= bis ? [{ datum: w, folge: false }] : [];
         return wiederkehrend.includes(f) ? [...x, ...folgetermine(w, f.frist!.wiederholung!, ab, bis).map((d) => ({ datum: d, folge: true }))] : x;
       };
@@ -2071,29 +2071,32 @@ export class Dienst {
       const kandidaten = new Map<string, Mappe>();
       for (const m of await this.repo.mappenMitDatum(typ.id, felder.map((f) => f.key), ab, bis)) kandidaten.set(m.id, m);
       if (wiederkehrend.length) for (const m of await this.repo.mappenMitDatum(typ.id, wiederkehrend.map((f) => f.key), '0001-01-01', bis)) kandidaten.set(m.id, m);
-      const passend = [...kandidaten.values()].filter((m) => felder.some((f) => termine(m, f).length));
+      let passend = [...kandidaten.values()].filter((m) => felder.some((f) => termine(m, f).length));
+      if (nurFavoriten && passend.length) { const fav = await this.repo.favoritenVon(ich, passend.map((m) => m.id)); passend = passend.filter((m) => fav.has(m.id)); }
       if (!passend.length) continue;
       const ok = await this.lesbare(z, passend.map((m) => m.id));
-      const schon = new Set((await this.repo.fristAufgaben(passend.map((m) => m.id))).map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
+      const schon = new Set(erg.filter((x) => x.faellig && x.feldKey).map((x) => `${x.mappeId}|${x.feldKey}|${x.datum}`));
       for (const m of passend) {
         if (!ok.has(m.id)) continue;
         for (const f of felder) {
           for (const t of termine(m, f)) {
             if (schon.has(`${m.id}|${f.key}|${t.datum}`)) continue;
-            erg.push({ art: 'frist', datum: t.datum, ab: fristAb(t.datum, f.frist!), text: fristText(f.frist!, f, t.datum, m.titel ?? ''), mappeId: m.id, mappeTitel: m.titel ?? '', typId: m.typId, faellig: false, feldKey: f.key, ...(t.folge ? { folgetermin: true } : {}) });
+            erg.push({ art: 'frist', datum: t.datum, ab: t.datum, text: fristText(f.frist!, f, t.datum, m.titel ?? ''), mappeId: m.id, mappeTitel: m.titel ?? '', typId: m.typId, faellig: false, feldKey: f.key, ...(t.folge ? { folgetermin: true } : {}) });
           }
         }
       }
     }
-    // Kommende freie Erinnerungen.
+    // Eigene freie Erinnerungen.
     const erinnerungen = (await this.repo.erinnerungen({ empfaengerId: ich, bis })).filter((e) => e.datum >= von);
     const ok = await this.lesbare(z, erinnerungen.map((e) => e.mappeId));
     for (const e of erinnerungen) {
       if (!ok.has(e.mappeId)) continue;
       erg.push({ art: 'erinnerung', datum: e.datum, ab: e.datum, text: e.text, mappeId: e.mappeId, mappeTitel: e.mappeTitel ?? '', typId: e.typId ?? '', faellig: false, erinnerungId: e.id });
     }
-    erg.sort((a, b) => a.datum.localeCompare(b.datum) || a.mappeTitel.localeCompare(b.mappeTitel, 'de'));
-    return erg;
+    let liste = erg;
+    if (nurFavoriten) { const fav = await this.repo.favoritenVon(ich, [...new Set(erg.map((x) => x.mappeId))]); liste = erg.filter((x) => fav.has(x.mappeId)); }
+    liste.sort((a, b) => a.datum.localeCompare(b.datum) || a.mappeTitel.localeCompare(b.mappeTitel, 'de'));
+    return liste;
   }
 
   /** Wiederkehrende Frist (#130): Vorschlag für den nächsten Termin, solange das Datum noch das der Frist ist. */
@@ -2902,8 +2905,9 @@ export class Dienst {
    *
    * - neuePost: Post im Stand „Neu“, deren „Für“ der Benutzer ist oder leer ist, und die er lesen darf.
    * - zuErledigen: wie „Zu erledigen“ in der Ablage (Mappen mit offenen Aufgaben für ihn).
-   * - anstehend: Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in `ZAEHLER_TAGE` Tagen (wie „Anstehend“).
-   * - ueberfaellig: offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute.
+   * - ueberfaellig: eigene offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute.
+   *
+   * „anstehend“ gibt es seit #725 nicht mehr: Automatisierungen legen Aufgaben zum richtigen Zeitpunkt an.
    *
    * Alle Zahlen kommen aus den Zwischenspeichern von #512 und #528. Der Stand liegt in der Datenbank
    * (`zaehlerstaende`): Er zählt hoch, sobald die Zahlen beim Abruf anders sind als beim letzten – das übersteht
@@ -2911,10 +2915,10 @@ export class Dienst {
    */
   async zaehlerAbruf(z: Zugriff): Promise<{ zahlen: Zaehlerzahlen; stand: number; geaendert: string; etag: string }> {
     const ansichten = await this.zaehler(z.ich, z);
-    const anstehend = await this.anstehend(z, { tage: ZAEHLER_TAGE });
-    let kommend = 0; let ueberfaellig = 0;
-    for (const e of anstehend.eintraege) if (e.faellig && e.datum < anstehend.heute) ueberfaellig++; else kommend++;
-    const zahlen: Zaehlerzahlen = { neuePost: await this.neuePostFuer(z), zuErledigen: ansichten.eingang, anstehend: kommend, ueberfaellig };
+    const heute = heuteIn();
+    const t = await this.termine(z, { von: heute, bis: heute });
+    const ueberfaellig = t.eintraege.filter((e) => e.faellig && e.datum < heute).length;
+    const zahlen: Zaehlerzahlen = { neuePost: await this.neuePostFuer(z), zuErledigen: ansichten.eingang, ueberfaellig };
     // Meist unverändert: dann nur lesen, nichts schreiben.
     const abdruck = fingerabdruck({ v: 1, ich: z.ich.id, zahlen });
     const da = await this.repo.zaehlerstand(z.ich.id);
@@ -2922,7 +2926,7 @@ export class Dienst {
     return { zahlen, stand: s.stand, geaendert: s.geaendert, etag: `"z${s.stand}-${s.abdruck}"` };
   }
 
-  /** Webhooks (#627): nach jeder Änderung, die Zahlen der Ansichten oder „Anstehend“ ändern kann. */
+  /** Webhooks (#627): nach jeder Änderung, die Zahlen der Ansichten oder die Termine ändern kann. */
   beiAenderung(f: () => void) { this.stand.beiAenderung(f); this.fristenstand.beiAenderung(f); }
 
   /** Neue Post für den Benutzer (#625): Stand „Neu“ und „Für“ ist er selbst oder leer; nur lesbare Post. */

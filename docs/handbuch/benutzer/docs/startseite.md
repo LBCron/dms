@@ -35,7 +35,7 @@ Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden �
 | --- | --- | --- |
 | **Zu erledigen** | offene Aufgaben und Mappen, an denen du etwas tun sollst | [Zu erledigen](eingang.md) |
 | **Neue Post** | Post, die noch niemand zugeordnet hat | die Ansicht *Neue Post* ([Post](post.md)) |
-| **Anstehend** | Fristen, Erinnerungen und Aufgaben mit Datum der nächsten Tage (wie viele Tage, stellst du im [Profil unter Darstellung](profil.md#anstehend) ein) | [Anstehend](eingang.md#anstehend) |
+| **Nächster Termin** | Datum und Mappe des nächsten Termins (deine Aufgaben mit Datum, Erinnerungen, Fristen an Mappen, die du lesen darfst); darunter, wie viel überfällig ist | den [Monat in Zu erledigen](eingang.md#monat-und-jahr) |
 | **Favoriten** oder eine **Ansicht deiner Wahl** | deine Favoriten bzw. die Mappen der Ansicht | die Favoriten bzw. die Ansicht |
 
 Ist eine Kachel leer, steht dort statt einer Null ein grünes Häkchen, z. B. „✓ Nichts zu erledigen“. *Zu erledigen* ist hervorgehoben, solange es etwas zu tun gibt. Alle Zahlen zählen nur, was du sehen darfst.

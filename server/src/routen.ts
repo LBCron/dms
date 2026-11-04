@@ -1687,9 +1687,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     }) },
     // Fristen (#129–#132)
     { methode: 'POST', pfad: '/api/aufgaben/:id/folgetermin', zugang: 'angemeldet', handler: async (a) => ok(await dienst.setzeFolgetermin(a.params.id, ich(a), await zg(a))) },
-    // Liste (?tage=) oder Kalender (?von=&bis=, #528) – mit den Feiertagen des Bundeslands aus der Region (#94, #726).
-    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async (a) => ok(await dienst.anstehend(await zg(a), { tage: a.query.tage, von: a.query.von, bis: a.query.bis },
-      a.query.von === undefined ? null : x.region ? (await x.region.lies()).bundesland : x.aufgabenmail ? (await x.aufgabenmail.einstellung()).bundesland : null)) },
+    // Termine für „Zu erledigen“ → Monat und Jahr (?von=&bis=&favoriten=1, #528, #725) – mit den Feiertagen der Region (#726).
+    { methode: 'GET', pfad: '/api/termine', zugang: 'angemeldet', handler: async (a) => ok(await dienst.termine(await zg(a), { von: a.query.von, bis: a.query.bis, favoriten: a.query.favoriten },
+      x.region ? (await x.region.lies()).bundesland : x.aufgabenmail ? (await x.aufgabenmail.einstellung()).bundesland : null)) },
+    // Startseite (#725): Kachel „Nächster Termin“.
+    { methode: 'GET', pfad: '/api/termine/naechster', zugang: 'angemeldet', handler: async (a) => ok(await dienst.naechsterTermin(await zg(a))) },
+    // Alte Adresse (#725): „Anstehend“ gibt es nicht mehr.
+    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async () => { throw new Fachfehler(410, '„Anstehend“ gibt es nicht mehr. Termine stehen unter „Zu erledigen“ → Monat und Jahr (GET /api/termine?von=…&bis=…).'); } },
     { methode: 'POST', pfad: '/api/mappen/:id/erinnerungen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, a.params.id, 'R');
       await empfaengerSichtbar(a, b(a).empfaengerId);

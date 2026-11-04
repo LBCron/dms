@@ -42,7 +42,7 @@ export const WEBHOOK_VERSUCHE = WEBHOOK_WARTEN_S.length + 1;
 export const WEBHOOK_MAX_JE_BENUTZER = 10;
 
 /** Zahlen wie beim Zähler-Endpunkt (#625). */
-export interface WebhookZahlen { neuePost: number; zuErledigen: number; anstehend: number; ueberfaellig: number; stand: number; geaendert: string }
+export interface WebhookZahlen { neuePost: number; zuErledigen: number; ueberfaellig: number; stand: number; geaendert: string }
 
 /** Rumpf einer Meldung (JSON). `daten` ist bei `probe` und `zaehler.geaendert` gleich aufgebaut. */
 export interface WebhookRumpf { art: WebhookEreignis; id: string; zeit: string; daten: WebhookZahlen }

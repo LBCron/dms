@@ -10,6 +10,7 @@ import { api } from '../api';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
+import { t } from '../sprache';
 import type { Hilfeort } from '../../../shared/src/hilfe';
 
 /** Abwesenheit mit Vertreter (#78): Formular für das eigene Profil und für Administratoren in der Werkbank. */
@@ -50,7 +51,7 @@ export function AbwesenheitFormular({ benutzerId, wer, wert, offeneAufgaben, spe
       {/* #419: Die Abwesenheit leitet nur neue Aufgaben um – auf die vorhandenen hinweisen. */}
       {du && a.an && !wert.an && offeneAufgaben > 0 && (
         <div className="hinweis info hinweiszeile"><p>Du hast {offeneAufgaben === 1 ? 'eine offene Aufgabe' : `${offeneAufgaben} offene Aufgaben`}. Neue Aufgaben gehen an den Vertreter – die bestehenden bleiben bei dir, bis du sie weitergibst.</p>
-          <a href="#meine-aufgaben" className="knopf klein" onClick={(e) => { e.preventDefault(); document.getElementById('meine-aufgaben')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>Zu meinen Aufgaben</a></div>
+          <Link to="/ablage/eingang/weitergeben" className="knopf klein">Zu meinen Aufgaben</Link></div>
       )}
       <div className="raster">
         <label className="eigenschaft"><span>Von <small>optional</small></span><input type="date" value={a.von ?? ''} onChange={(e) => setA({ ...a, von: e.target.value || null })} /></label>
@@ -95,7 +96,22 @@ export function MeineAbwesenheit() {
           speichern={(a) => api.abwesenheitSetzen(a)} uebergeben={() => api.aufgabenAnVertreter()}
           nachSpeichern={async () => { await laden(); await aktualisieren(); setNeu((n) => n + 1); }} />
       )}
-      {stand && <MeineOffenenAufgaben key={neu} vertreter={stand.abwesenheit?.vertreterId ?? null} geaendert={laden} />}
+      {/* #725: Die Liste der eigenen Aufgaben steht jetzt unter „Zu erledigen“. */}
+      {stand && stand.offeneAufgaben > 0 && <p className="leise" key={neu}>Einzelne Aufgaben oder Gruppen gibst du unter <Link to="/ablage/eingang/weitergeben" className="verweis">Zu erledigen → Mehrere Aufgaben weitergeben</Link> weiter.</p>}
+    </div>
+  );
+}
+
+/** Zu erledigen → „Mehrere Aufgaben weitergeben“ (#419, seit #725 dort statt unter Mein Konto → Abwesenheit). */
+export function AufgabenWeitergeben() {
+  const [stand, setStand] = useState<{ abwesenheit: Abwesenheit | null; offeneAufgaben: number } | null>(null);
+  const [fehler, setFehler] = useState<string>();
+  const laden = async () => { try { setStand(await api.abwesenheit()); } catch (e) { setFehler((e as Error).message); } };
+  useEffect(() => { void laden(); }, []);
+  return (
+    <div className="einspaltig">
+      {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
+      {!stand ? <p className="leise">Lade …</p> : <MeineOffenenAufgaben vertreter={stand.abwesenheit?.vertreterId ?? null} geaendert={laden} />}
     </div>
   );
 }
@@ -126,8 +142,8 @@ function MeineOffenenAufgaben({ vertreter, geaendert }: { vertreter: string | nu
   }
   return (
     <section className="blatt" id="meine-aufgaben">
-      <h2 className="h3">Meine offenen Aufgaben</h2>
-      <p className="leise">Was gerade bei dir liegt. Vor dem Urlaub gibst du es einzeln, in Gruppen oder alles auf einmal weiter – zum Beispiel drei an Anna, vier an Paul und den Rest an deinen Vertreter. Jede Weitergabe steht in der Historie der Mappe.</p>
+      <h2 className="h3">{t('termine.weitergeben.titel')}</h2>
+      <p className="leise">{t('termine.weitergeben.text')}</p>
       {alle === null ? <p className="leise">Lade …</p> : !alle.length ? <p className="leise">Du hast keine offenen Aufgaben.</p> : <>
         <div className="aufgabenfilter stapel">
           <input type="search" aria-label="Im Titel suchen" placeholder="Im Titel suchen …" value={f.text ?? ''} onChange={(e) => setF({ ...f, text: e.target.value || undefined })} />

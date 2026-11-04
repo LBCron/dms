@@ -1,4 +1,4 @@
-/** Fristen (#129–#133): Erinnerungen an Datumsfeldern, wiederkehrend, freie Erinnerungen, Anstehend, Sichtbedingung. */
+/** Fristen (#129–#133): Erinnerungen an Datumsfeldern, wiederkehrend, freie Erinnerungen, Termine im Kalender (#725), Sichtbedingung. */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import { bereinigeFrist, fristAb, fristText, naechsterTermin } from '../../shared/src/fristen';
@@ -88,8 +88,8 @@ function faelle(pg: boolean) {
     });
   });
 
-  describe(`Erinnerungen und Anstehend (#131, #132)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
-    it('Erinnerung anlegen, ändern, fällig werden; Anstehend zeigt Fristen und Erinnerungen', async () => {
+  describe(`Erinnerungen und Termine (#131, #725)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
+    it('Erinnerung anlegen, ändern, fällig werden; Termine zeigen Fristen und Erinnerungen', async () => {
       const { d, anna, ben, vertrag, rufe } = await aufbauFristen(pg);
       const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendigung: in_(20), verantwortlich: anna.id } }, ben.id);
       const e = (await rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: in_(5), text: 'Angebote vergleichen' } })).body as { id: string; empfaengerId: string };
@@ -97,12 +97,14 @@ function faelle(pg: boolean) {
       await assert.rejects(rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: 'morgen', text: 'x' } }), status(422));
       // Ben darf Annas Erinnerung nicht ändern.
       await assert.rejects(rufe(ben, 'PUT', '/api/erinnerungen/:id', { params: { id: e.id }, body: { datum: in_(6), text: 'x' } }), status(403));
-      let a = (await rufe(anna, 'GET', '/api/anstehend', { query: { tage: '30' } })).body as { eintraege: Array<{ art: string; datum: string; faellig: boolean }> };
+      let a = (await rufe(anna, 'GET', '/api/termine', { query: { von: heute, bis: in_(30) } })).body as { eintraege: Array<{ art: string; datum: string; faellig: boolean }> };
       assert.deepEqual(a.eintraege.map((x) => [x.art, x.datum, x.faellig]), [['erinnerung', in_(5), false], ['frist', in_(20), false]]);
-      a = (await rufe(anna, 'GET', '/api/anstehend', { query: { tage: '10' } })).body as typeof a;
+      a = (await rufe(anna, 'GET', '/api/termine', { query: { von: heute, bis: in_(10) } })).body as typeof a;
       assert.equal(a.eintraege.length, 1);
-      // Ben sieht nichts davon.
-      assert.equal(((await rufe(ben, 'GET', '/api/anstehend', { query: {} })).body as typeof a).eintraege.length, 0);
+      // Ben darf die Mappe lesen: Er sieht das Datum der Frist (#725), aber nicht Annas Erinnerung.
+      assert.deepEqual(((await rufe(ben, 'GET', '/api/termine', { query: { von: heute, bis: in_(30) } })).body as typeof a).eintraege.map((x) => x.art), ['frist']);
+      // „/api/anstehend“ gibt es nicht mehr (#725).
+      await assert.rejects(rufe(anna, 'GET', '/api/anstehend', { query: {} }), status(410));
       // Fällig: wird Aufgabe, Erinnerung verschwindet aus der Tabelle.
       assert.equal((await d.fristenLauf(in_(7))).erinnerungen, 1);
       const auf = (await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).filter((x) => x.art === 'erinnerung');
@@ -129,9 +131,9 @@ function faelle(pg: boolean) {
     });
   });
 
-  describe(`Anstehend als Kalender (#528)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
-    type Antwort = { tage: number; heute: string; von: string; bis: string; feiertage?: Record<string, string>; eintraege: Array<{ art: string; datum: string; faellig: boolean; folgetermin?: boolean; mappeId: string }> };
-    it('Zeitraum mit künftigen Terminen wiederkehrender Fristen, Überfälligem und Aufgaben mit Datum; nur eigene', async () => {
+  describe(`Termine im Kalender von „Zu erledigen“ (#528, #725)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
+    type Antwort = { heute: string; von: string; bis: string; feiertage?: Record<string, string>; eintraege: Array<{ art: string; datum: string; faellig: boolean; folgetermin?: boolean; mappeId: string }> };
+    it('Zeitraum mit künftigen Terminen wiederkehrender Fristen, Überfälligem und Aufgaben mit Datum; Fristen aller lesbaren Mappen, nur Favoriten', async () => {
       const { d, admin, anna, ben, vertrag, rufe } = await aufbauFristen(pg);
       // Jährlich (wiederholung 12), Anna verantwortlich, erstellt von Ben.
       const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendigung: in_(20), verantwortlich: anna.id } }, ben.id);
@@ -141,7 +143,7 @@ function faelle(pg: boolean) {
       // Überfällig: Erinnerung mit vergangenem Datum wird gleich Aufgabe.
       await rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: in_(-12), text: 'Zählerstand melden' } });
       const bis = in_(399);
-      const k = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort;
+      const k = (await rufe(anna, 'GET', '/api/termine', { query: { von: heute, bis } })).body as Antwort;
       assert.equal(k.von, heute); assert.equal(k.bis, bis); assert.equal(k.heute, heute);
       assert.deepEqual(k.feiertage, {}, 'ohne Bundesland keine Feiertage');
       const zeile = (x: Antwort['eintraege'][number]) => [x.mappeId === m.id ? 'Strom' : 'Gas', x.art, x.datum, !!x.faellig, !!x.folgetermin];
@@ -153,22 +155,24 @@ function faelle(pg: boolean) {
         ['Strom', 'frist', verschiebe(in_(20), 12, 'monate'), false, true],
       ].sort((a, b) => String(a[2]).localeCompare(String(b[2]))));
       // Später Zeitraum: Überfälliges bleibt dabei (für „n überfällig“), sonst nur, was hineinfällt.
-      const spaeter = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: in_(100), bis: in_(399) } })).body as Antwort;
+      const spaeter = (await rufe(anna, 'GET', '/api/termine', { query: { von: in_(100), bis: in_(399) } })).body as Antwort;
       assert.deepEqual(spaeter.eintraege.map((x) => [x.datum, !!x.folgetermin]).sort(), [[in_(-12), false], [verschiebe(basis, 36, 'monate'), true], [verschiebe(in_(20), 12, 'monate'), true]].sort());
-      // Liste wie bisher: keine berechneten Termine, Überfälliges ja.
-      const liste = (await rufe(anna, 'GET', '/api/anstehend', { query: { tage: '60' } })).body as Antwort;
-      assert.deepEqual(liste.eintraege.map((x) => [x.art, x.datum]), [['erinnerung', in_(-12)], ['frist', in_(20)]]);
-      assert.equal(liste.von, heute); assert.equal(liste.bis, in_(60)); assert.equal(liste.feiertage, undefined);
-      // Nur eigene: Ben (Ersteller, aber nicht verantwortlich) sieht nichts.
-      assert.equal(((await rufe(ben, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort).eintraege.length, 0);
+      // „Lesen darf“ statt „für mich“ (#725): Ben sieht die Fristen beider Mappen, nicht Annas Erinnerung.
+      const benK = (await rufe(ben, 'GET', '/api/termine', { query: { von: heute, bis } })).body as Antwort;
+      assert.deepEqual(benK.eintraege.map((x) => x.art), ['frist', 'frist', 'frist', 'frist']);
+      // Nur Favoriten: ohne Favorit nichts, mit Stern an „Strom“ nur dessen Termine.
+      assert.equal(((await rufe(ben, 'GET', '/api/termine', { query: { von: heute, bis, favoriten: '1' } })).body as Antwort).eintraege.length, 0);
+      await rufe(ben, 'PUT', '/api/mappen/:id/favorit', { params: { id: m.id } });
+      const fav = (await rufe(ben, 'GET', '/api/termine', { query: { von: heute, bis, favoriten: '1' } })).body as Antwort;
+      assert.ok(fav.eintraege.length === 2 && fav.eintraege.every((x) => x.mappeId === m.id));
       // Aufgabe mit Datum (z. B. Auskunft bis …) erscheint als „aufgabe“ beim Empfänger.
       await rufe(admin, 'POST', '/api/werkbank/auskunft/frist', { body: { mappeId: alt.id } });
-      const a = (await rufe(admin, 'GET', '/api/anstehend', { query: { von: heute, bis: in_(40) } })).body as Antwort;
-      assert.deepEqual(a.eintraege.map((x) => [x.art, x.faellig, x.mappeId]), [['aufgabe', true, alt.id]]);
+      const a = (await rufe(admin, 'GET', '/api/termine', { query: { von: heute, bis: in_(40) } })).body as Antwort;
+      assert.deepEqual(a.eintraege.filter((x) => x.art === 'aufgabe').map((x) => [x.faellig, x.mappeId]), [[true, alt.id]]);
       // Zwischenspeicher: eine geänderte Erinnerung, ein geändertes Datum zeigen sich sofort.
       await rufe(anna, 'POST', '/api/mappen/:id/erinnerungen', { params: { id: m.id }, body: { datum: in_(30), text: 'Angebote vergleichen' } });
       await d.aendereMappe(alt.id, { werte: { kuendigung: null } }, ben.id);
-      const neu = (await rufe(anna, 'GET', '/api/anstehend', { query: { von: heute, bis } })).body as Antwort;
+      const neu = (await rufe(anna, 'GET', '/api/termine', { query: { von: heute, bis } })).body as Antwort;
       assert.ok(neu.eintraege.some((x) => x.art === 'erinnerung' && x.datum === in_(30)));
       assert.ok(!neu.eintraege.some((x) => x.mappeId === alt.id));
     });
@@ -176,12 +180,12 @@ function faelle(pg: boolean) {
     it('prüft den Zeitraum und liefert die Feiertage des Bundeslands', async () => {
       const { anna, rufe } = await aufbauFristen(pg);
       for (const query of [{ von: heute }, { von: '2027-02-30', bis: '2027-03-01' }, { von: '2027-03-01', bis: '2027-02-01' }, { von: '2027-01-01', bis: '2028-02-05' }]) {
-        await assert.rejects(rufe(anna, 'GET', '/api/anstehend', { query }), status(422), JSON.stringify(query));
+        await assert.rejects(rufe(anna, 'GET', '/api/termine', { query }), status(422), JSON.stringify(query));
       }
       const { routen: r } = await import('../src/routen');
       const { d, konten } = await aufbauFristen(pg);
       const mail = { einstellung: async () => ({ aktiv: true, uhrzeit: '07:00', bundesland: 'SN' as const }) };
-      const route = r(d, konten, { aufgabenmail: mail as never }).find((x) => x.methode === 'GET' && x.pfad === '/api/anstehend')!;
+      const route = r(d, konten, { aufgabenmail: mail as never }).find((x) => x.methode === 'GET' && x.pfad === '/api/termine')!;
       const ich = (await konten.listeBenutzer())[0];
       const j = (await route.handler({ body: {}, params: {}, query: { von: '2027-01-01', bis: '2027-12-31' }, ip: '1', benutzer: ich })).body as Antwort;
       assert.equal(j.feiertage?.['2027-11-17'], 'Buß- und Bettag');

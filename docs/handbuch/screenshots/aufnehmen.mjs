@@ -528,7 +528,7 @@ async function main() {
   await neueAufgabe.getByPlaceholder(/Rechnung/).fill('Sonderkündigung vorbereiten');
   await bild(s, 'aufgabe-vergeben');
   await neueAufgabe.getByRole('button', { name: 'Schließen' }).click();
-  // Erinnern (#131) und Anstehend (#132)
+  // Erinnern (#131) und Termine in „Zu erledigen“ (#528, #725)
   await s.getByRole('button', { name: 'Mappe', exact: true }).click();
   await s.getByRole('menuitem', { name: /Erinnern/ }).click();
   const erinnern = s.getByRole('region', { name: 'Erinnern' });
@@ -536,7 +536,7 @@ async function main() {
   await erinnern.getByRole('button', { name: 'Erinnern' }).click();
   await s.locator('.erinnerungen').waitFor();
   await bild(s, 'erinnerung');
-  // Anstehend als Kalender (#528): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
+  // Kalender in „Zu erledigen“ (#528, #725): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
   // (steht schon unter „Zu erledigen“); die Kündigungsfristen der Verträge wiederholen sich jährlich.
   const tagIn = (n) => new Date(Date.now() + n * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
   const vertraege = (await api('GET', '/api/mappen')).filter((m) => m.typId === vertrag.id);
@@ -545,10 +545,8 @@ async function main() {
     [10, 'Abschlag anpassen lassen', d.strom], [17, 'Unterlagen für die Steuererklärung zusammenstellen', vertraege[2] ?? d.strom], [24, 'Neue Tarife vergleichen', vertraege[3] ?? d.strom]]) {
     await api('POST', `/api/mappen/${m.id}/erinnerungen`, { datum: tagIn(n), text });
   }
-  await geheZu(s, '/ablage/anstehend');
-  await s.locator('.spalte.liste .mappenliste .eintrag').first().waitFor();
-  await bild(s, 'anstehend');
-  // Anstehend als Kalender (#528): Monat über Mitte und rechts, mit offener Mappe in der Mitte, Jahr.
+  await geheZu(s, '/ablage/eingang');
+  // Monat über Mitte und rechts, mit offener Mappe in der Mitte, Jahr.
   await s.getByRole('radio', { name: 'Monat' }).click();
   await s.locator('.ka-raster[aria-busy="false"] .ka-zeile').first().waitFor();
   await bild(s, 'anstehend-monat');
@@ -556,13 +554,13 @@ async function main() {
   await s.locator('.spalte.mappe h1').first().waitFor();
   await s.locator('.ka-kompakt').waitFor();
   await bild(s, 'anstehend-monat-mappe');
-  await geheZu(s, '/ablage/anstehend');
+  await geheZu(s, '/ablage/eingang');
   await s.getByRole('radio', { name: 'Jahr' }).click();
   // Ab Herbst zeigt das nächste Jahr mehr: dort stehen die Folgetermine der jährlichen Fristen.
   if (new Date().getMonth() >= 8) await s.getByRole('button', { name: 'Nächstes Jahr' }).click();
   await s.locator('.ka-jahr[aria-busy="false"] .ka-mt-knopf').first().waitFor();
   await bild(s, 'anstehend-jahr');
-  await api('PUT', '/api/konto/einstellungen/anstehend_ansicht', { wert: null });
+  await api('PUT', '/api/konto/einstellungen/erledigen_ansicht', { wert: null });
   // Am Handy: Monat kompakt mit Punkten, darunter die Einträge des gewählten Tags.
   {
     const kh = await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
@@ -570,13 +568,13 @@ async function main() {
     await kh.addCookies([{ name, value: wert, url: BASIS }]);
     await kh.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.adminbanner{display:none!important}'; document.head.append(st); }));
     const sh = await kh.newPage();
-    await geheZu(sh, '/ablage/anstehend');
+    await geheZu(sh, '/ablage/eingang');
     await sh.getByRole('radio', { name: 'Monat' }).click();
     await sh.locator('.ka-kompakt .ka-raster[aria-busy="false"]').waitFor();
     const mitEintrag = sh.locator('td:not(.ka-fremd) > .ka-tagknopf:has(.ka-punkt)').first();
     if (await mitEintrag.count()) await mitEintrag.click();
     await bild(sh, 'anstehend-handy');
-    await api('PUT', '/api/konto/einstellungen/anstehend_ansicht_handy', { wert: null });
+    await api('PUT', '/api/konto/einstellungen/erledigen_ansicht_handy', { wert: null });
     await kh.close();
   }
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
@@ -786,8 +784,8 @@ async function main() {
     await blatt.scrollIntoViewIfNeeded();
     const box = await blatt.boundingBox();
     await bild(sm, 'meine-rechte', { clip: { x: box.x - 8, y: box.y - 8, width: box.width + 16, height: box.height + 16 } });
-    // #419: Profil → Abwesenheit mit den eigenen offenen Aufgaben, alle ausgewählt.
-    await geheZu(sm, '/profil/abwesenheit');
+    // #419, #725: Zu erledigen → Mehrere Aufgaben weitergeben, alle ausgewählt.
+    await geheZu(sm, '/ablage/eingang/weitergeben');
     const meine = sm.locator('#meine-aufgaben');
     await meine.waitFor();
     if (await meine.getByLabel('Alle angezeigten auswählen').count()) {
@@ -845,9 +843,9 @@ async function main() {
   await geheZu(s, '/profil/sicherheit');
   await s.getByRole('heading', { name: 'Meine angemeldeten Geräte' }).waitFor();
   await bild(s, 'profil', { fullPage: true });
-  // #420: Startseite und Anstehend unter Darstellung, Benachrichtigungen nur noch Benachrichtigungen.
+  // #420, #725: Startseite und „Geänderte Mappen“ unter Darstellung, Benachrichtigungen nur noch Benachrichtigungen.
   await geheZu(s, '/profil/darstellung');
-  await s.getByRole('heading', { name: 'Anstehend' }).waitFor();
+  await s.getByRole('heading', { name: 'Geänderte Mappen' }).waitFor();
   await bild(s, 'profil-darstellung', { fullPage: true });
   await geheZu(s, '/profil/benachrichtigungen');
   await s.getByRole('heading', { name: /Aufgaben/ }).waitFor();

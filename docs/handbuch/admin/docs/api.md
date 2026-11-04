@@ -20,7 +20,7 @@ Jeder Benutzer erzeugt seine Schlüssel selbst unter **Profil → Sicherheit →
 - **Recht** (Stufe) – eine von dreien:
     - *nur lesen* – liest alles, was der Benutzer lesen darf (nur `GET`).
     - *lesen und schreiben* – liest und ändert alles, was der Benutzer darf.
-    - *nur Zähler* (ab #625) – ruft **nur** die [Zahlen](#zaehler) ab (`GET /api/v1/ich/zaehler`): neue Post, Zu erledigen, anstehende und überfällige Fristen. Jeder andere Aufruf, auch das [Laufwerk](webdav.md), bekommt `403`. Gedacht für Hausautomatisierung, Wand-Tablets und Anzeigen: Geht der Schlüssel verloren, erfährt jemand höchstens, wie viel Post und Aufgaben der Benutzer hat – keine Titel, Namen oder Inhalte. „Passwörter lesen“ gibt es für diese Stufe nicht.
+    - *nur Zähler* (ab #625) – ruft **nur** die [Zahlen](#zaehler) ab (`GET /api/v1/ich/zaehler`): neue Post, Zu erledigen und Überfälliges. Jeder andere Aufruf, auch das [Laufwerk](webdav.md), bekommt `403`. Gedacht für Hausautomatisierung, Wand-Tablets und Anzeigen: Geht der Schlüssel verloren, erfährt jemand höchstens, wie viel Post und Aufgaben der Benutzer hat – keine Titel, Namen oder Inhalte. „Passwörter lesen“ gibt es für diese Stufe nicht.
 - **Ablaufdatum** – optional.
 - **Passwörter lesen** – eigenes Recht für [Passwortfelder](mappentypen.md#passwortfelder): Nur damit liefert `GET /api/v1/mappen…?passwoerter=anzeigen` sie im Klartext; jeder Abruf steht im Protokoll. Ohne den Parameter steht dort immer nur `{"gesetzt": true, "lesbar": true}`.
 
@@ -62,15 +62,14 @@ ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"
 Cache-Control: private, no-cache
 Content-Type: application/json; charset=utf-8
 
-{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
+{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
 ```
 
 | Feld | Bedeutung |
 | --- | --- |
 | `neuePost` | [Post](https://help.ablago.app/benutzer/post/) im Stand *Neu*, deren *Für* der Benutzer ist oder leer ist – nur Post, die er lesen darf |
 | `zuErledigen` | wie **Zu erledigen** in der Ablage: Mappen mit offenen Aufgaben für ihn |
-| `anstehend` | Fristen, Erinnerungen und Aufgaben mit Datum von heute bis in 7 Tagen (wie **Anstehend**) |
-| `ueberfaellig` | offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute |
+| `ueberfaellig` | eigene offene Fristen, Erinnerungen und Aufgaben mit Datum vor heute |
 | `stand` | zählt um eins hoch, sobald sich eine der Zahlen gegenüber dem letzten Abruf geändert hat |
 | `geaendert` | wann Ablago diese Änderung bemerkt hat (beim Abruf) |
 
@@ -124,8 +123,7 @@ Die API-Dokumentation beschreibt alle Endpunkte mit ihren Parametern. Ein Überb
 | Wofür | Endpunkte |
 | --- | --- |
 | **Erweiterte Suche** | `GET /api/v1/mappen?sicht=suche&link=…` mit den Parametern der erweiterten Suche als ein kodierter Wert, z. B. `typ%3Drechnung%26volltext%3DBackofen` |
-| **Aufgaben** | `GET /api/v1/aufgaben` (eigene offene), `POST /api/v1/mappen/{id}/aufgaben` (vergeben), `POST /api/v1/aufgaben/{id}/erledigt` und `…/delegieren`, mehrere auf einmal mit `POST /api/v1/aufgaben/weitergeben` bzw. `…/aufgaben/erledigt` (#415); Fristen und Erinnerungen über `GET /api/v1/anstehend` und `…/erinnerungen` |
-| **Anstehend als Kalender** (#528) | `GET /api/v1/anstehend?von=2027-01-01&bis=2027-12-31` liefert Fristen, Erinnerungen und Aufgaben mit Datum des Schlüssel-Benutzers für einen Zeitraum (höchstens 400 Tage) in einer Anfrage – mit den berechneten künftigen Terminen wiederkehrender Fristen (`folgetermin: true`), allem Überfälligen (`faellig` und `datum` vor `heute`) und den Feiertagen (`feiertage`). Ohne `von`/`bis` wie die Liste: `?tage=30` ab heute |
+| **Aufgaben** | `GET /api/v1/aufgaben` (eigene offene), `POST /api/v1/mappen/{id}/aufgaben` (vergeben), `POST /api/v1/aufgaben/{id}/erledigt` und `…/delegieren`, mehrere auf einmal mit `POST /api/v1/aufgaben/weitergeben` bzw. `…/aufgaben/erledigt` (#415); Erinnerungen über `…/erinnerungen` |
 | **Notizen** | `GET`/`POST /api/v1/mappen/{id}/notizen`, `PUT`/`DELETE /api/v1/notizen/{id}` |
 | **Historie** einer Mappe | `GET /api/v1/mappen/{id}/historie` |
 | **E-Mail** | `POST /api/v1/mappen/{id}/email` versendet eine Mappe mit Dokumenten (zusammen höchstens 50 MB) über deinen Mailserver nach draußen. Das kann jeder Schlüssel mit Schreibrecht – vergib „lesen und schreiben“ deshalb nur an Programme, denen du das zutraust. |
@@ -149,6 +147,14 @@ curl -X POST -H "Authorization: Bearer dms_…" -H "Content-Type: application/oc
 Die Post steht dann mit Kanal *API* und Stand *Neu* in **Neue Post**. `POST /api/v1/post/<Id>/zuordnen` mit `{"ziel": "<Id einer Mappe>"}` ordnet sie zu; die Dokumente wandern ins erste Dokumentenregister der Mappe (oder in `register`, mit `kopieren: true` bleiben sie auch in der Post). Bei Post, die vor 0.41 als E-Mail angelegt wurde, heißt das Dokumentenregister `anhaenge`.
 
 Gelöschte Mappen liegen im [Papierkorb](papierkorb.md): `GET /api/v1/papierkorb` (eigener), `POST /api/v1/papierkorb/<Id>/wiederherstellen`, `DELETE /api/v1/papierkorb/<Id>` und `DELETE /api/v1/papierkorb` (leeren).
+
+## Änderungen der API { #aenderungen }
+
+Hier steht, was sich an der API v1 so geändert hat, dass bestehende Programme es merken. Neue Felder und neue Aufrufe stehen nur in der [API-Beschreibung](#api-beschreibung).
+
+| Seit | Änderung | Was tun? |
+| --- | --- | --- |
+| #725 (Navigation verschlankt) | **„Anstehend“ gibt es nicht mehr.** `GET /api/v1/anstehend` ist entfallen; der [Zähler](#zaehler) und die [Webhooks](webhooks.md) liefern kein Feld `anstehend` mehr. Erinnerungen an Fristen kommen über Automatisierungen zum richtigen Zeitpunkt als Aufgabe – sie stehen dann in `zuErledigen` bzw. `GET /api/v1/aufgaben`. | Statt `anstehend` `zuErledigen` oder `ueberfaellig` anzeigen. Wer die Zahlen streng prüft (z. B. ein JSON-Schema mit `required`), entfernt `anstehend`. |
 
 ## Regeln
 
