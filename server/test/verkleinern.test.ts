@@ -224,7 +224,7 @@ describe('Ausgabe „verkleinert“ (#393)', () => {
     const r = await fuerAusgabe({ name: 'scan.pdf', mime: 'application/pdf', inhalt: gross }, { verkleinern: 'standard' }, { benutzer: 'A', mappe: 'M' });
     assert.ok(r.verkleinert && r.inhalt.length < gross.length / 4);
     const s = await fuerAusgabe({ name: 'scan.pdf', mime: 'application/pdf', inhalt: gross }, {
-      verkleinern: 'standard', stempel: { stempel: { text: 'KOPIE', lage: 'kopf', deckkraft: 0.3, seiten: 'alle', seitenzahlen: false, archivnummer: false }, empfaenger: '', vorlage: null, pflicht: false },
+      verkleinern: 'standard', stempel: { stempel: { text: 'KOPIE', lage: 'kopf', deckkraft: 0.3, seiten: 'alle', tinte: false, drehung: 0, x: 0.5, y: 0.5, farbe: 'rot', groesse: 100 }, empfaenger: '', vorlage: null, pflicht: false },
     }, { benutzer: 'A', mappe: 'M' });
     assert.equal(s.gestempelt, true);
     assert.ok(s.inhalt.length < gross.length / 4, 'gestempelt bleibt es klein');

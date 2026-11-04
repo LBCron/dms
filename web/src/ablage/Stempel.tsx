@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Dokument, Mappentyp } from '../../../shared/src/model';
 import {
-  ersetzePlatzhalter, platzhalterIn, STEMPEL_LAGEN, STEMPEL_SEITEN, STEMPEL_TEXT_MAX,
-  type StempelLage, type StempelSeiten, type StempelTyp, type StempelVorlage, type StempelWunsch,
+  DECKKRAFT_HINWEIS_AB, NEUER_STEMPEL, platzhalterIn, STEMPEL_LAGEN, STEMPEL_SEITEN, STEMPEL_TEXT_MAX,
+  type Stempel, type StempelLage, type StempelSeiten, type StempelTyp, type StempelVorlage, type StempelWunsch,
 } from '../../../shared/src/stempel';
+import { t } from '../sprache';
+import { beispielWerte, PlatzhalterKnoepfe, StempelVorschau } from './StempelVorschau';
 import { api } from '../api';
 import { Hilfe } from '../Hilfe';
 import { VerkleinertWahl } from './VerkleinertWahl';
@@ -25,15 +27,13 @@ export function useStempelVorlagen(): StempelVorlage[] | null {
 }
 export const merkeStempelVorlagen = (v: StempelVorlage[]) => { zwischenspeicher = v; };
 
-export interface StempelWahl {
-  an: boolean; vorlage: string; text: string; empfaenger: string;
-  lage: StempelLage; deckkraft: number; seiten: StempelSeiten; seitenzahlen: boolean; archivnummer: boolean;
-}
+export interface StempelWahl extends Stempel { an: boolean; vorlage: string; empfaenger: string }
 
-const ausVorlage = (v: StempelVorlage | undefined) => ({
-  vorlage: v?.id ?? '', text: v?.text ?? '', lage: v?.lage ?? 'diagonal' as StempelLage, deckkraft: v?.deckkraft ?? 0.25,
-  seiten: v?.seiten ?? 'alle' as StempelSeiten, seitenzahlen: v?.seitenzahlen ?? false, archivnummer: v?.archivnummer ?? false,
-});
+/** Werte einer Vorlage; ohne Vorlage die Vorgaben für einen neuen Stempel (70 %, „wie Tinte“, #799). */
+const ausVorlage = (v: StempelVorlage | undefined): Stempel & { vorlage: string } => {
+  const { text, lage, deckkraft, seiten, tinte, drehung, x, y, farbe, groesse } = v ?? NEUER_STEMPEL;
+  return { vorlage: v?.id ?? '', text, lage, deckkraft, seiten, tinte, drehung, x, y, farbe, groesse };
+};
 
 /** Startwerte: Schlägt der Mappentyp einen Stempel vor oder verlangt ihn, ist er an – mit seiner Vorlage. */
 export function stempelStart(vorlagen: StempelVorlage[], typ?: StempelTyp | null): StempelWahl {
@@ -51,7 +51,7 @@ export function alsWunsch(w: StempelWahl | null): StempelWunsch | null {
 /** Fehler, bevor man abschickt; `ersatz` = Empfänger, wenn keiner eingegeben ist (z. B. E-Mail-Adressen). */
 export function stempelFehler(w: StempelWahl | null, ersatz = ''): string | null {
   if (!w?.an) return null;
-  if (!w.text.trim() && !w.seitenzahlen && !w.archivnummer) return 'Gib einen Text für den Stempel ein.';
+  if (!w.text.trim()) return 'Gib einen Text für den Stempel ein.';
   if (platzhalterIn(w.text).includes('empfaenger') && !w.empfaenger.trim() && !ersatz.trim()) return 'Gib den Empfänger an – der Stempel nennt ihn.';
   return null;
 }
@@ -76,8 +76,9 @@ export function StempelFelder({ wahl, setze, vorlagen, pflicht, mappe, empfaenge
 }) {
   const { ich } = useKonto();
   const nutztEmpfaenger = platzhalterIn(wahl.text).includes('empfaenger');
-  const vorschau = ersetzePlatzhalter(wahl.text, { empfaenger: wahl.empfaenger.trim() || empfaengerErsatz || '…', benutzer: ich?.name || ich?.email, mappe: mappe ?? '…' });
+  const werte = { ...beispielWerte(), empfaenger: wahl.empfaenger.trim() || empfaengerErsatz || '…', benutzer: ich?.name || ich?.email, mappe: mappe ?? '…', archivnummer: 'A-000123' };
   const s = (p: Partial<StempelWahl>) => setze({ ...wahl, ...p });
+  const textfeld = useRef<HTMLTextAreaElement>(null);
   return (
     <fieldset className="stempelwahl">
       <legend className="sr">Stempel</legend>
@@ -96,41 +97,31 @@ export function StempelFelder({ wahl, setze, vorlagen, pflicht, mappe, empfaenge
             <label className="eigenschaft"><span>Empfänger {!nutztEmpfaenger && <small>nur für {'{empfänger}'}</small>}</span>
               <input id={`${id}-empfaenger`} value={wahl.empfaenger} maxLength={120} onChange={(e) => s({ empfaenger: e.target.value })}
                 placeholder={empfaengerErsatz ? `ohne Angabe: ${empfaengerErsatz}` : 'z. B. Hausverwaltung Müller'} required={nutztEmpfaenger && !empfaengerErsatz} /></label>
-            <label className="eigenschaft breit"><span>Text <small>{'{datum} {empfänger} {benutzer} {mappe}'}</small></span>
-              <input id={`${id}-text`} value={wahl.text} maxLength={STEMPEL_TEXT_MAX} onChange={(e) => s({ text: e.target.value, vorlage: '' })} /></label>
-            <label className="eigenschaft"><span>Lage</span>
+            <div className="eigenschaft breit"><label htmlFor={`${id}-text`}><span>{t('werkbank.stempel.text')}</span></label>
+              <textarea id={`${id}-text`} ref={textfeld} rows={2} value={wahl.text} maxLength={STEMPEL_TEXT_MAX} onChange={(e) => s({ text: e.target.value, vorlage: '' })} />
+              <PlatzhalterKnoepfe feld={() => textfeld.current} text={wahl.text} setze={(text) => s({ text, vorlage: '' })} /></div>
+            <label className="eigenschaft"><span>{t('werkbank.stempel.lage')}</span>
               <select id={`${id}-lage`} value={wahl.lage} onChange={(e) => s({ lage: e.target.value as StempelLage })}>
-                {Object.entries(STEMPEL_LAGEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {Object.keys(STEMPEL_LAGEN).map((k) => <option key={k} value={k}>{t.frei(`werkbank.stempel.lage.${k}`)}</option>)}
               </select></label>
-            <label className="eigenschaft"><span>Deckkraft <small>{Math.round(wahl.deckkraft * 100)} %</small></span>
-              <input id={`${id}-deckkraft`} type="range" min={10} max={100} step={5} value={Math.round(wahl.deckkraft * 100)} onChange={(e) => s({ deckkraft: Number(e.target.value) / 100 })} /></label>
-            <label className="eigenschaft"><span>Seiten</span>
+            <div className="eigenschaft"><label htmlFor={`${id}-deckkraft`}><span>{t('werkbank.stempel.deckkraft')} <small>{Math.round(wahl.deckkraft * 100)} %</small></span></label>
+              <input id={`${id}-deckkraft`} type="range" min={10} max={100} step={5} value={Math.round(wahl.deckkraft * 100)} onChange={(e) => s({ deckkraft: Number(e.target.value) / 100 })} />
+              {wahl.deckkraft >= DECKKRAFT_HINWEIS_AB && <small className="warntext" role="status">{t('werkbank.stempel.deckkraft.hinweis')}</small>}</div>
+            <label className="eigenschaft"><span>{t('werkbank.stempel.seiten')}</span>
               <select id={`${id}-seiten`} value={wahl.seiten} onChange={(e) => s({ seiten: e.target.value as StempelSeiten })}>
-                {Object.entries(STEMPEL_SEITEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {Object.keys(STEMPEL_SEITEN).map((k) => <option key={k} value={k}>{t.frei(`werkbank.stempel.seiten.${k}`)}</option>)}
               </select></label>
           </div>
           <div className="stempelzeile">
-            <StempelBild text={vorschau} lage={wahl.lage} deckkraft={wahl.deckkraft} fuss={[wahl.archivnummer ? 'A-000123' : '', wahl.seitenzahlen ? 'Seite 1 von 3' : ''].filter(Boolean).join(' · ')} />
+            <div className="stempelvorschau-klein"><StempelVorschau stempel={wahl} werte={werte} beispiele={['rechnung']} /></div>
             <div>
-              <label className="haken"><input type="checkbox" checked={wahl.seitenzahlen} onChange={(e) => s({ seitenzahlen: e.target.checked })} /><span>Seitenzahlen „Seite x von y“ als Fußzeile</span></label>
-              <label className="haken"><input type="checkbox" checked={wahl.archivnummer} onChange={(e) => s({ archivnummer: e.target.checked })} /><span>Archivnummer in der Fußzeile <small className="hilfe">wenn das Dokument eine hat</small></span></label>
-              {wahl.text.trim() && <p className="klein">Vorschau: <strong className="stempeltext">{vorschau}</strong></p>}
+              <label className="haken"><input id={`${id}-tinte`} type="checkbox" checked={wahl.tinte} onChange={(e) => s({ tinte: e.target.checked })} />
+                <span>{t('werkbank.stempel.tinte')} <small className="hilfe">{t('werkbank.stempel.tinte.hilfe')}</small></span></label>
             </div>
           </div>
         </div>
       )}
     </fieldset>
-  );
-}
-
-/** Kleine Seite mit dem Stempel an seiner Stelle – zur Orientierung, nicht maßstäblich. */
-export function StempelBild({ text, lage, deckkraft, fuss }: { text: string; lage: StempelLage; deckkraft: number; fuss?: string }) {
-  return (
-    <div className={`stempelbild ${lage}`} aria-hidden="true">
-      {Array.from({ length: 9 }, (_, i) => <span key={i} className="zeile" />)}
-      {text && <span className="stempel" style={{ opacity: deckkraft }}>{text}</span>}
-      {fuss && <span className="fuss">{fuss}</span>}
-    </div>
   );
 }
 

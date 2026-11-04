@@ -1,16 +1,17 @@
 /**
- * Stempel und Fußzeile auf PDFs (#394), gezeichnet in der PDF-Stelle (#541). Was gestempelt wird und
- * wann, entscheidet `ausgabe.ts`.
+ * Stempel auf PDFs (#394, #799), gezeichnet in der PDF-Stelle (#541). Was gestempelt wird und wann,
+ * entscheidet `ausgabe.ts`. Der Stempel steht auf den Seiten des Dokuments selbst, nie auf einem eigenen
+ * Deckblatt, das man einfach entfernen könnte.
  *
  * Der Stempel wird als Seiteninhalt gezeichnet (Textoperatoren im Inhaltsstrom der Seite), nicht als
  * Anmerkung. Danach werden alle Inhaltsströme einer Seite zu einem einzigen zusammengeführt, damit der
  * Stempel nicht als eigener, leicht löschbarer Strom übrig bleibt.
  */
 import {
-  PDFArray, PDFContentStream, PDFDocument, PDFName, PDFRawStream, PDFRef, StandardFonts, decodePDFRawStream, degrees, rgb,
-  type PDFFont, type PDFPage,
+  BlendMode, PDFArray, PDFContentStream, PDFDocument, PDFName, PDFRawStream, PDFRef, StandardFonts, concatTransformationMatrix, decodePDFRawStream,
+  popGraphicsState, pushGraphicsState, rgb, type PDFFont, type PDFPage,
 } from 'pdf-lib';
-import type { Stempel } from '../../../shared/src/stempel';
+import { ersetzePlatzhalter, STEMPEL_FARBEN, stempelLayout, type Stempel } from '../../../shared/src/stempel';
 import { Fachfehler } from '../fehler';
 import { eigenerPuffer } from './puffer';
 import { pdfSicher } from './text';
@@ -20,9 +21,8 @@ export interface StempelAuftrag {
   /** Name (nur für Meldungen), Art und Inhalt der Datei: PDF, JPEG oder PNG. */
   name: string; mime: string; inhalt: Uint8Array;
   stempel: Stempel;
-  /** Stempeltext mit ersetzten Platzhaltern. */
+  /** Stempeltext mit ersetzten Platzhaltern; {seite} und {seiten} ersetzt erst diese Stelle je Seite (#799). */
   text: string;
-  archivnummer: string | null;
   /** Mit Objektströmen speichern (nach dem Verkleinern, sonst wäre ein Teil der Ersparnis wieder weg). */
   objektstroeme?: boolean;
 }
@@ -36,7 +36,7 @@ export async function stempelePdf(a: StempelAuftrag): Promise<Buffer> {
     const verschluesselt = /encrypt/i.test((x as Error).message);
     throw new Fachfehler(422, verschluesselt ? `„${a.name}“ ist verschlüsselt und lässt sich darum nicht stempeln.` : `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);
   }
-  await stempele(doc, a.stempel, a.text, a.archivnummer);
+  await stempele(doc, a.stempel, a.text);
   return Buffer.from(await doc.save({ useObjectStreams: !!a.objektstroeme }));
 }
 
@@ -58,25 +58,25 @@ async function bildDokument(bild: Uint8Array, png: boolean): Promise<PDFDocument
   return doc;
 }
 
-const ROT = rgb(0.75, 0.08, 0.08);
-const SCHWARZ = rgb(0.15, 0.15, 0.18);
-
-/** Zeichnet Stempel und Fußzeile auf die Seiten und führt danach die Inhaltsströme zusammen. */
-async function stempele(doc: PDFDocument, s: Stempel, text: string, archivnummer: string | null) {
+/**
+ * Zeichnet den Stempel auf die Seiten (je Seite mit {seite} und {seiten}) und führt danach die Inhaltsströme
+ * zusammen. Das Layout kommt aus `stempelLayout` (shared) – dieselbe Rechnung wie die Vorschau der Werkbank.
+ */
+async function stempele(doc: PDFDocument, s: Stempel, text: string) {
   const fett = await doc.embedFont(StandardFonts.HelveticaBold);
-  const normal = await doc.embedFont(StandardFonts.Helvetica);
   const seiten = doc.getPages();
-  const t = pdfSicher(text);
-  const fuss = (i: number) => [s.archivnummer && archivnummer ? pdfSicher(archivnummer) : '', s.seitenzahlen ? `Seite ${i + 1} von ${seiten.length}` : ''].filter(Boolean).join(' · ');
+  const gestempelt: PDFPage[] = [];
   seiten.forEach((p, i) => {
-    const f = fuss(i);
-    if (t && (s.seiten === 'alle' || i === 0)) zeichneStempel(p, s, t, fett, !!f);
-    if (f) zeichneFuss(p, f, normal);
+    if (s.seiten === 'erste' && i > 0) return;
+    const t = pdfSicher(ersetzePlatzhalter(text, { seite: i + 1, seiten: seiten.length }));
+    if (!t.trim()) return;
+    zeichneStempel(p, s, t, fett);
+    gestempelt.push(p);
   });
-  verschmelzeInhalte(doc, s.seiten === 'erste' && !s.seitenzahlen && !s.archivnummer ? seiten.slice(0, 1) : seiten);
+  verschmelzeInhalte(doc, gestempelt);
 }
 
-/** Sichtbarer Bereich der Seite und Abbildung „sichtbar → Seitenkoordinaten“ (gedrehte Seiten, /Rotate). */
+/** Sichtbarer Bereich der Seite und Abbildung „sichtbar (Ursprung unten links) → Seitenkoordinaten“ (/Rotate). */
 function rahmen(p: PDFPage) {
   const box = p.getCropBox();
   const r = ((p.getRotation().angle % 360) + 360) % 360;
@@ -93,50 +93,30 @@ function rahmen(p: PDFPage) {
   return { w, h, r, nach };
 }
 
-/** Text an einer Stelle im sichtbaren Koordinatensystem, um `winkel` gedreht (Grad, gegen den Uhrzeigersinn). */
-function text(p: PDFPage, s: string, vx: number, vy: number, winkel: number, groesse: number, font: PDFFont, farbe = ROT, deckkraft = 1) {
+/**
+ * Ein Stempel als Block: Koordinatensystem in die Mitte des Stempels legen und um die Drehung kippen (auch bei
+ * gedrehten Seiten), darin Zeilen und Rahmen zeichnen. „Wie Tinte“ ist der Mischmodus „Multiplizieren“.
+ */
+function zeichneStempel(p: PDFPage, s: Stempel, t: string, font: PDFFont) {
   const R = rahmen(p);
-  const { x, y } = R.nach(vx, vy);
-  p.drawText(s, { x, y, size: groesse, font, color: farbe, opacity: deckkraft, rotate: degrees(winkel + R.r) });
-}
-
-function zeichneStempel(p: PDFPage, s: Stempel, t: string, font: PDFFont, mitFuss: boolean) {
-  const { w, h } = rahmen(p);
-  const breite = (g: number) => font.widthOfTextAtSize(t, g);
-  const passend = (max: number, platz: number, min = 6) => Math.max(min, Math.min(max, max * platz / Math.max(1, breite(max))));
-  const rand = Math.max(18, Math.min(w, h) * 0.04);
-  if (s.lage === 'diagonal') {
-    const a = Math.atan2(h, w);
-    const laenge = Math.hypot(w, h);
-    const g = passend(110, laenge * 0.75, 10);
-    const tw = breite(g);
-    const cos = Math.cos(a), sin = Math.sin(a);
-    // Mitte der Seite; Grundlinie um die halbe Versalhöhe nach unten versetzt.
-    const hoehe = font.heightAtSize(g, { descender: false }) / 2;
-    const vx = w / 2 - (tw / 2) * cos + hoehe * sin;
-    const vy = h / 2 - (tw / 2) * sin - hoehe * cos;
-    text(p, t, vx, vy, (a * 180) / Math.PI, g, font, ROT, s.deckkraft);
-  } else if (s.lage === 'kopf' || s.lage === 'fuss') {
-    const g = passend(14, w - 2 * rand);
-    const vy = s.lage === 'kopf' ? h - rand - g * 0.75 : rand + (mitFuss ? 14 : 0);
-    text(p, t, (w - breite(g)) / 2, vy, 0, g, font, ROT, s.deckkraft);
-  } else {
-    // Ecke: wie ein Stempel mit Rahmen, oben rechts.
-    const g = passend(13, w * 0.45);
-    const pad = g * 0.5;
-    const bw = breite(g) + 2 * pad, bh = g + 2 * pad;
-    const vx = w - rand - bw, vy = h - rand - bh;
-    const R = rahmen(p);
-    const o = R.nach(vx, vy);
-    p.drawRectangle({ x: o.x, y: o.y, width: bw, height: bh, borderColor: ROT, borderWidth: 1.5, borderOpacity: s.deckkraft, opacity: 0, rotate: degrees(R.r) });
-    text(p, t, vx + pad, vy + pad + g * 0.12, 0, g, font, ROT, s.deckkraft);
+  const L = stempelLayout(s, t, R.w, R.h, (z, g) => font.widthOfTextAtSize(z, g));
+  // Lokal (lx, ly; y nach oben) → sichtbar (unten links) → Seite. Im Uhrzeigersinn drehen heißt mathematisch negativ.
+  const phi = (-L.winkel * Math.PI) / 180;
+  const cos = Math.cos(phi), sin = Math.sin(phi);
+  const abb = (lx: number, ly: number) => R.nach(L.cx + lx * cos - ly * sin, R.h - L.cy + lx * sin + ly * cos);
+  const o = abb(0, 0), ex = abb(1, 0), ey = abb(0, 1);
+  const [rr, gg, bb] = STEMPEL_FARBEN[s.farbe];
+  const farbe = rgb(rr, gg, bb);
+  const misch = s.tinte ? BlendMode.Multiply : undefined;
+  p.pushOperators(pushGraphicsState(), concatTransformationMatrix(ex.x - o.x, ex.y - o.y, ey.x - o.x, ey.y - o.y, o.x, o.y));
+  if (L.rahmen) {
+    const { b, h, doppelt } = L.rahmen;
+    const rand = { borderColor: farbe, borderOpacity: s.deckkraft, opacity: 0, blendMode: misch };
+    p.drawRectangle({ x: -b / 2, y: -h / 2, width: b, height: h, borderWidth: doppelt ? 2 : 1.5, ...rand });
+    if (doppelt) { const e = L.groesse * 0.22; p.drawRectangle({ x: -b / 2 + e, y: -h / 2 + e, width: b - 2 * e, height: h - 2 * e, borderWidth: 0.75, ...rand }); }
   }
-}
-
-function zeichneFuss(p: PDFPage, f: string, font: PDFFont) {
-  const { w } = rahmen(p);
-  const g = 8;
-  text(p, f, w - 18 - font.widthOfTextAtSize(f, g), 10, 0, g, font, SCHWARZ, 1);
+  for (const z of L.zeilen) p.drawText(z.text, { x: z.x, y: -z.y, size: L.groesse, font, color: farbe, opacity: s.deckkraft, blendMode: misch });
+  p.pushOperators(popGraphicsState());
 }
 
 /**

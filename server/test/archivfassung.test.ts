@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { deflateSync } from 'node:zlib';
-import { PDFDocument, PDFName, PDFString, StandardFonts } from 'pdf-lib';
+import { PDFArray, PDFDocument, PDFName, PDFRawStream, PDFString, StandardFonts, decodePDFRawStream } from 'pdf-lib';
 import { pdfaKennungAus, pruefeWoerter } from '../../shared/src/archivfassung';
 import { HILFE } from '../../shared/src/hilfe';
 import { liesBeschreibung } from '../../shared/src/paketeinstellungen';
@@ -173,7 +173,7 @@ async function aufbau(o: { mitPaket?: boolean } = {}) {
     }
     return erg;
   };
-  return { d, t, a, repo, m, hoch, offen, dok, rufe, laeufer, ablage, einstellungen };
+  return { d, t, a, repo, m, hoch, offen, dok, rufe, laeufer, ablage, einstellungen, konten, tabelle };
 }
 
 describe('Archivfassung (#631): Manifest und Rechte', () => {
@@ -475,5 +475,62 @@ describe('Archivfassung (#631): Ablage im Haushaltsordner', () => {
       assert.equal(await ab.woerter(sha), null);
       assert.deepEqual(await ab.staende(), []);
     } finally { await rm(wurzel, { recursive: true, force: true }); }
+  });
+});
+
+describe('Archivfassung (#799): bleibt unverändert, Herausgeben mit API-Schlüssel stempelt die Kopie', () => {
+  /** Inhalt aller Inhaltsströme einer Seite als Text (Stempel steht als Hex darin). */
+  const seitentext = async (b: Buffer, i = 0) => {
+    const doc = await PDFDocument.load(b);
+    const p = doc.getPage(i);
+    const c = p.node.Contents();
+    const refs = c instanceof PDFArray ? c.asArray() : [p.node.get(PDFName.of('Contents'))!];
+    return refs.map((r) => Buffer.from(decodePDFRawStream(doc.context.lookup(r) as PDFRawStream).decode()).toString('latin1')).join('\n');
+  };
+  const hex = (t: string) => Buffer.from(t, 'latin1').toString('hex').toUpperCase();
+
+  it('Paket bekommt die Archivfassung unverändert; Mensch mit API-Schlüssel und Pflicht-Stempel eine gestempelte Kopie ohne Deckblatt; Seitenbilder ebenso', async () => {
+    const x = await aufbau();
+    const id = await x.hoch('rechnung.pdf', await pdf({ text: TEXT }));
+    await warte(async () => (await x.offen()).length === 1);
+    assert.deepEqual(await x.laeufer(), ['PDF/A-2b']);
+    const gespeichert = Buffer.from((await x.d.archivfassungVon(id)).inhalt);
+    const seiten = (await PDFDocument.load(gespeichert)).getPageCount();
+    // Pflicht-Stempel am Mappentyp.
+    const typ = (await x.d.listeTypen()).find((y) => y.name === 'Rechnung')!;
+    await x.d.aendereTyp(typ.id, { ...typ, stempel: { modus: 'pflicht', vorlage: 'entwurf' } } as never);
+    // Paket (Dienstkonto): unverändert, ohne Stempel.
+    const paketAbruf = await x.rufe('pdfa', 'GET', '/api/v1/dokumente/:id/archivfassung', { id }, undefined) as { datei: { inhalt: Buffer; koepfe?: Record<string, string> } };
+    assert.ok(paketAbruf.datei.inhalt.equals(gespeichert), 'Paket: Archivfassung wie gespeichert');
+    assert.equal(paketAbruf.datei.koepfe?.['x-dms-stempel'], undefined);
+    // Mensch mit API-Schlüssel (Administrator, also mit Exportrecht): gestempelte Kopie.
+    const { benutzer: markus } = await x.konten.einrichten({ email: 'markus@example.org', name: 'Markus', passwort: 'ein-langes-passwort' });
+    await x.d.gleicheBenutzerAb(await x.konten.listeBenutzer());
+    const mensch = async (pfad: string, params: Record<string, string>, query: Record<string, string> = {}) => {
+      const r = x.tabelle.find((y) => y.methode === 'GET' && y.pfad === pfad)!;
+      return r.handler({ body: undefined, params, query, ip: '1', benutzer: markus, apiSchluessel: { id: 'k', name: 'Skript', recht: 'lesen' } } as unknown as Anfrage) as Promise<{ datei: { inhalt: Buffer; name: string; koepfe?: Record<string, string> } }>;
+    };
+    const k = await mensch('/api/dokumente/:id/archivfassung', { id });
+    assert.equal(k.datei.koepfe?.['x-dms-stempel'], '1');
+    assert.equal(k.datei.name, 'rechnung (PDF-A).pdf');
+    assert.equal((await PDFDocument.load(k.datei.inhalt)).getPageCount(), seiten, 'kein eigenes Deckblatt');
+    assert.ok((await seitentext(k.datei.inhalt)).includes(hex('ENTWURF')), 'Stempel auf der Seite des Dokuments');
+    assert.ok((await x.d.archivfassungVon(id)).inhalt.equals(gespeichert), 'gespeicherte Archivfassung unverändert');
+    const h = (await x.d.historie(x.m.id)).filter((e) => e.art === 'weitergegeben');
+    assert.ok(h.some((e) => /über die API \(Archivfassung\)/.test(String(e.daten.text))), 'Historie vermerkt die Weitergabe');
+    // Seitenbilder: aus der gestempelten Kopie (Graustufen); die Oberfläche bekommt sie wie abgelegt.
+    const ui = await x.d.seiteAlsGraubild(id, 1, 72);
+    const api = (await mensch('/api/dokumente/:id/seiten/:nr/scan', { id, nr: '1' }, { dpi: '72' })).datei.inhalt;
+    assert.equal(api.length, ui.length, 'gleiche Größe');
+    assert.ok(!api.equals(ui), 'mit Stempel');
+    assert.ok((await x.d.seiteAlsGraubild(id, 1, 72)).equals(ui), 'ohne API-Schlüssel wie abgelegt');
+    // Das Seitenbild der Seitenansicht ebenso.
+    const bildApi = (await mensch('/api/dokumente/:id/seiten/:nr/bild', { id, nr: '1' })).datei.inhalt;
+    const bildUi = (await x.d.pdfSeitenbild(id, 1))!;
+    assert.ok(!bildApi.equals(bildUi));
+    // Ohne Pflicht: die Archivfassung, wie sie ist.
+    await x.d.aendereTyp(typ.id, { ...typ, stempel: null } as never);
+    const ohne = await mensch('/api/dokumente/:id/archivfassung', { id });
+    assert.ok(ohne.datei.inhalt.equals(gespeichert));
   });
 });

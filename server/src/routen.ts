@@ -311,6 +311,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     if (a.benutzer?.art === 'dienst') return;
     await dienst.pruefeAusgang(ich(a), await zg(a), 'herunterladen', [mappeId]);
   };
+  /** Abruf mit dem API-Schlüssel eines Menschen (nicht eines Pakets): gilt als Herausgeben (#394, #799). */
+  const herausgeben = (a: Anfrage) => !!a.apiSchluessel && a.benutzer?.art !== 'dienst';
+  /**
+   * Seitenbilder über einen API-Schlüssel (#799): Recht E und – wenn ein Stempel gilt – Bilder aus der gestempelten
+   * Kopie. Oberfläche und Pakete bekommen die Seiten, wie sie abgelegt sind (null).
+   */
+  const seitenquelle = async (a: Anfrage, mappeId: string) => {
+    if (!herausgeben(a)) return null;
+    await mitnehmen(a, mappeId);
+    return dienst.gestempelteSeiten(a.params.id, { stempel: a.query, ich: ich(a) });
+  };
   /** Kommt die Datei nicht zum Ansehen (inline), sondern zum Abspeichern? Mit API-Schlüssel eines Menschen immer. */
   const zumAbspeichern = (a: Anfrage) => a.query.herunterladen !== undefined || (!!a.apiSchluessel && a.benutzer?.art !== 'dienst');
   /**
@@ -2002,7 +2013,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Vorschaubild der ersten Seite (#332): gleiche Rechte wie das Dokument; 404, solange es keins gibt.
     { methode: 'GET', pfad: '/api/dokumente/:id/vorschau', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      // Mit API-Schlüssel und Stempel (#799): Seite 1 der gestempelten Kopie statt des abgelegten Vorschaubilds.
+      const q = await seitenquelle(a, mappeId);
+      if (q) {
+        const s1 = await dienst.pdfSeitenbild(a.params.id, 1, q);
+        if (!s1) throw new Fachfehler(404, 'Für dieses Dokument gibt es (noch) kein Vorschaubild.');
+        return { datei: { inhalt: s1, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: s1.length, koepfe: { 'cache-control': 'no-store' } } };
+      }
       const d = await dienst.holeDokument(a.params.id);
       const bild = x.vorschau ? await x.vorschau.bild(d) : null;
       if (!bild) throw new Fachfehler(404, 'Für dieses Dokument gibt es (noch) kein Vorschaubild.');
@@ -2023,6 +2042,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
       if (zumAbspeichern(a)) await mitnehmen(a, mappeId);
+      const g = herausgeben(a) ? await dienst.fassungFuerAusgabe(a.params.id, 'umgewandelt', { stempel: a.query, ich: ich(a) }) : null;
+      if (g) return ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true });
       const f = await dienst.fassungVon(a.params.id);
       const punkt = f.d.name.lastIndexOf('.');
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
@@ -2040,6 +2061,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
       if (zumAbspeichern(a)) await mitnehmen(a, mappeId);
+      // Mit API-Schlüssel ist das Herausgeben (#799): mit Pflicht- oder gewünschtem Stempel eine gestempelte Kopie.
+      // Die gespeicherte Archivfassung bleibt unverändert; Pakete bekommen sie immer, wie sie ist.
+      const g = herausgeben(a) ? await dienst.fassungFuerAusgabe(a.params.id, 'archiv', { stempel: a.query, ich: ich(a) }) : null;
+      if (g) return ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true });
       const f = await dienst.archivfassungVon(a.params.id);
       return fuerAnzeige(a, { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
         koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': 'private, max-age=60' } });
@@ -2105,7 +2130,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await mitnehmen(a, mappeId);
       const dpi = a.query.dpi === undefined ? 300 : Number(a.query.dpi);
       const farbe = a.query.farbe === '1' || a.query.farbe === 'true';
-      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe);
+      // Mit API-Schlüssel und Stempel (#799): die Seite der gestempelten Kopie.
+      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe, await seitenquelle(a, mappeId));
       return { datei: { inhalt: bild, name: `seite-${a.params.nr}.${farbe ? 'ppm' : 'pgm'}`, mime: farbe ? 'image/x-portable-pixmap' : 'image/x-portable-graymap', anzeigen: false, groesse: bild.length } };
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/texterkennung', zugang: 'angemeldet', handler: async (a) => {
@@ -2151,8 +2177,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.pdfSeiten(a.params.id));
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/seiten/:nr/bild', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
-      const bild = await dienst.pdfSeitenbild(a.params.id, Number(a.params.nr));
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      const bild = await dienst.pdfSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
       if (!bild) throw new Fachfehler(404, 'Für diese Seite gibt es kein Bild.');
       return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=3600' } } };
     } },
@@ -2167,8 +2194,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.schwaerzenVorschau(a.params.id));
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/schwaerzen/seiten/:nr', zugang: 'angemeldet', handler: async (a) => {
-      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
-      const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr));
+      const mappeId = await dienst.mappeVon('dokument', a.params.id);
+      await darf(a, mappeId, 'R');
+      const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
       if (!bild) throw new Fachfehler(404, 'Für diese Seite gibt es kein Bild.');
       return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=3600' } } };
     } },

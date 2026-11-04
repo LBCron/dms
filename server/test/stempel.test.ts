@@ -50,7 +50,7 @@ function png(b: number, h: number): Buffer {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(zeilen)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-const S = (x: Partial<Stempel> = {}): Stempel => ({ text: 'ENTWURF', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle', seitenzahlen: false, archivnummer: false, ...x });
+const S = (x: Partial<Stempel> = {}): Stempel => ({ text: 'ENTWURF', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle', tinte: false, drehung: 0, x: 0.72, y: 0.16, farbe: 'rot', groesse: 100, ...x });
 
 describe('Platzhalter (#394)', () => {
   it('ersetzt {datum}, {empfänger}/{empfaenger}, {benutzer}, {mappe}; Unbekanntes bleibt', () => {
@@ -81,9 +81,9 @@ describe('Platzhalter (#394)', () => {
     assert.throws(() => geltenderStempel(null, { modus: 'pflicht', vorlage: 'kopie' }, v), /verlangt/);
     assert.equal(geltenderStempel(null, { modus: 'pflicht', vorlage: 'kopie' }, v, 'a@example.org')!.empfaenger, 'a@example.org');
     assert.equal(geltenderStempel(null, { modus: 'pflicht', vorlage: null }, v)!.stempel.text, 'Kopie – {datum}');
-    // Nur Seitenzahlen, ohne Text.
+    // Nur Seitenzahlen, ohne Text (entfallener Haken, #799): eine Zeile mit Platzhaltern in der Fußzeile.
     const z = geltenderStempel({ seitenzahlen: true }, null, v)!;
-    assert.equal(z.stempel.text, ''); assert.equal(z.stempel.seitenzahlen, true);
+    assert.equal(z.stempel.text, 'Seite {seite} von {seiten}'); assert.equal(z.stempel.lage, 'fuss');
   });
 
   it('liest Wünsche aus Abfrageparametern (API v1)', () => {
@@ -97,17 +97,17 @@ describe('PDF mit Stempel (#394)', () => {
   it('Seitenzahl bleibt, Text steht im (einzigen) Inhaltsstrom, keine Anmerkung, Original unverändert', async () => {
     const original = await pdfMitSeiten(3);
     const kopie = Buffer.from(original);
-    const plan = { stempel: S({ seitenzahlen: true, archivnummer: true }), empfaenger: '', pflicht: false, vorlage: null };
+    const plan = { stempel: S({ text: 'ENTWURF\n{archivnummer} · Seite {seite} von {seiten}' }), empfaenger: '', pflicht: false, vorlage: null };
     const a = await fuerAusgabe({ name: 'a.pdf', mime: 'application/pdf', inhalt: original }, { stempel: plan }, { benutzer: 'Anna', mappe: 'M', archivnummer: 'A-000007' });
     assert.ok(original.equals(kopie), 'Original unverändert');
-    assert.equal(a.mime, 'application/pdf'); assert.equal(a.name, 'a.pdf'); assert.equal(a.stempeltext, 'ENTWURF');
+    assert.equal(a.mime, 'application/pdf'); assert.equal(a.name, 'a.pdf'); assert.equal(a.stempeltext, 'ENTWURF / A-000007 · Seite 1 von 3');
     const doc = await PDFDocument.load(a.inhalt);
     assert.equal(doc.getPageCount(), 3);
     for (let i = 0; i < 3; i++) {
       const s = await seiteninhalt(a.inhalt, i);
       assert.equal(s.stroeme, 1, 'ein zusammengeführter Inhaltsstrom');
       assert.ok(s.text.includes(hex('ENTWURF')), 'Stempeltext im Inhaltsstrom');
-      assert.ok(s.text.includes(hex(`A-000007 · Seite ${i + 1} von 3`)), 'Fußzeile');
+      assert.ok(s.text.includes(hex(`A-000007 · Seite ${i + 1} von 3`)), 'Zeile mit Archivnummer und Seitenzahl je Seite');
       assert.ok(s.text.includes('Seite') || s.text.includes(hex(`Seite ${i + 1}`)), 'Seiteninhalt bleibt');
       assert.equal(doc.getPage(i).node.Annots()?.size() ?? 0, 0, 'keine Anmerkungen');
     }

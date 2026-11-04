@@ -424,7 +424,7 @@ export class Webdav {
     if (!kannStempeln(d.mime)) return { ...original, fehler: t('api.webdav.nicht-stempelbar', { name: d.name }) };
     const plan: GeltenderStempel = s.plan;
     const text = ersetzePlatzhalter(plan.stempel.text, { empfaenger: plan.empfaenger, benutzer: this.leser(ctx), mappe: m.mappe.titel || 'Ohne Titel' });
-    const signatur = createHash('sha256').update(JSON.stringify([plan.stempel, text, plan.stempel.archivnummer ? d.archivnummer ?? null : null])).digest('hex');
+    const signatur = createHash('sha256').update(JSON.stringify([plan.stempel, text, d.archivnummer ?? null])).digest('hex');
     const schluessel = `${d.id}:${d.sha256}:${signatur}`;
     const name = d.mime === 'application/pdf' ? d.name : pdfName(d.name);
     const fertig = (inhalt: Buffer | null, groesse: number): Auslieferung => ({

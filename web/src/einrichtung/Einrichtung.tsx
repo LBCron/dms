@@ -1097,7 +1097,7 @@ function StempelEinstellung({ stempel, setze }: { stempel: StempelTyp | null; se
       {stempel && <label className="eigenschaft"><span>Vorlage <small><Link to="/werkbank/stempel" className="verweis">Vorlagen bearbeiten</Link></small></span>
         <select id="typ-stempel-vorlage" value={stempel.vorlage ?? ''} onChange={(ev) => setze({ ...stempel, vorlage: ev.target.value || null })}>
           {!vorlagen?.some((v) => v.id === stempel.vorlage) && <option value={stempel.vorlage ?? ''}>{stempel.vorlage ? 'unbekannte Vorlage' : '– Standard: „Kopie – {datum}“ –'}</option>}
-          {(vorlagen ?? []).map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text}</option>)}
+          {(vorlagen ?? []).map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text.split('\n').join(' / ')}</option>)}
         </select></label>}
       <p className="leise klein" style={{ gridColumn: "1 / -1" }}>{modus === 'pflicht'
         ? 'Pflicht: Dokumente dieses Mappentyps verlassen Ablago nur gestempelt – beim Herunterladen, im Export (PDF, ZIP), per E-Mail und über die API. Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.'
