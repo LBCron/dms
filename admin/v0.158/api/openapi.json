@@ -8390,8 +8390,8 @@
         "tags": [
           "Werkbank"
         ],
-        "summary": "Stand der Kopie außer Haus melden (Pakete)",
-        "description": "Rückmeldung des Pakets je Sicherung (#585): laeuft (mit bytes/gesamt), hochgeladen (pruefung groesse oder keine), geprueft (pruefung pruefsumme oder stichprobe), fehlgeschlagen (grund Pflicht; endgueltig=true, wenn eine Wiederholung nicht hilft – dann bekommen die Administratoren eine E-Mail). ziel nennt das Ziel in Worten, ohne Zugangsdaten (Adressen werden davon befreit). Werkbank → Sicherung zeigt den Stand je Sicherung. Gibt Ablago das Ereignis nach allen Wiederholungen auf, setzt es selbst „fehlgeschlagen“.",
+        "summary": "Stand der Kopie außer Haus melden (Pakete, veraltet)",
+        "description": "Veraltet seit 0.158.1 (#636), fällt mit der übernächsten Fassung weg: Pakete haben nur noch einen Leseschlüssel und melden ihren Stand als „extern“ im JSON-Ergebnis des Ereignisses sicherung.fertig – dieselben Felder wie hier, auch neben „weiter“. Ohne „extern“ gilt: Rückgabewert 2 → fehlgeschlagen (endgültig), anderer Fehler → läuft mit der Meldung als Grund. Rückmeldung des Pakets je Sicherung (#585): laeuft (mit bytes/gesamt), hochgeladen (pruefung groesse oder keine), geprueft (pruefung pruefsumme oder stichprobe), fehlgeschlagen (grund Pflicht; endgueltig=true, wenn eine Wiederholung nicht hilft – dann bekommen die Administratoren eine E-Mail). ziel nennt das Ziel in Worten, ohne Zugangsdaten (Adressen werden davon befreit). Werkbank → Sicherung zeigt den Stand je Sicherung. Gibt Ablago das Ereignis nach allen Wiederholungen auf, setzt es selbst „fehlgeschlagen“.",
         "operationId": "putSicherungenMitnameExtern",
         "parameters": [
           {
