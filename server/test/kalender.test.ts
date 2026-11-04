@@ -1,9 +1,9 @@
-/** „Anstehend“ als Kalender (#528): Rechnen mit Tagen, Wochen, Monaten und Folgeterminen. */
+/** Kalender in „Zu erledigen“ (#528, #725): Rechnen mit Tagen, Wochen, Monaten und Folgeterminen. */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { feiertageZwischen } from '../../shared/src/feiertage';
 import { folgetermine } from '../../shared/src/fristen';
-import { blaettere, gruppeVon, istTag, jahresZeitraum, monatsende, monatsraster, monatsZeitraum, montag, tageZwischen, ueberfaelligSeit, wochentag, zeitraumProblem } from '../../shared/src/kalender';
+import { blaettere, istTag, jahresZeitraum, monatsende, monatsraster, monatsZeitraum, montag, tageZwischen, ueberfaelligSeit, wochentag, zeitraumProblem } from '../../shared/src/kalender';
 
 describe('Kalender (#528)', () => {
   it('Tage, Wochentage, Monate', () => {
@@ -38,13 +38,8 @@ describe('Kalender (#528)', () => {
     assert.match(zeitraumProblem('2027-01-01', '2028-02-05')!, /400 Tage/);
   });
 
-  it('Gruppen der Liste und „überfällig seit“', () => {
-    const heute = '2026-11-04'; // Mittwoch
-    assert.equal(gruppeVon('2026-10-23', heute), 'ueberfaellig');
-    assert.equal(gruppeVon(heute, heute), 'heute');
-    assert.equal(gruppeVon('2026-11-08', heute), 'woche'); // Sonntag dieser Woche
-    assert.equal(gruppeVon('2026-11-09', heute), 'spaeter');
-    assert.equal(gruppeVon('2026-11-09', '2026-11-08'), 'spaeter'); // am Sonntag ist der Montag schon „später“
+  it('„überfällig seit“', () => {
+    const heute = '2026-11-04';
     assert.equal(ueberfaelligSeit('2026-10-23', heute), 12);
     assert.equal(ueberfaelligSeit('2026-11-05', heute), 0);
   });

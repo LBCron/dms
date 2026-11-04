@@ -18,7 +18,7 @@ import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung, SelbstErstel
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
 import type { FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import type { SichtRechte, SichtRegelwerk, SichtSchritt } from '../../shared/src/sichtrechte';
-import type { AnstehendAntwort, Erinnerung } from '../../shared/src/fristen';
+import type { Erinnerung, Termin, TermineAntwort } from '../../shared/src/fristen';
 import type { Auftrag } from '../../shared/src/auftrag';
 import type { Baum } from '../../shared/src/baum';
 import type { LoeschAktion, LoeschPlan, LoeschVorschau } from '../../shared/src/loeschbaum';
@@ -613,9 +613,10 @@ export const api = {
   /* Fristen und Erinnerungen (#129–#132) */
   /** Startseite (#334): zuletzt geöffnete Mappen und ob es schon eigene Mappen gibt. */
   startseite: () => anfrage<{ zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean }>('GET', '/api/startseite'),
-  anstehend: (tage?: number) => anfrage<AnstehendAntwort>('GET', `/api/anstehend${tage === undefined ? '' : `?tage=${tage}`}`),
-  /** Kalender (#528): ein Monat oder ein Jahr in einer Anfrage, mit Folgeterminen und Feiertagen. */
-  anstehendZeitraum: (von: string, bis: string) => anfrage<AnstehendAntwort>('GET', `/api/anstehend?von=${von}&bis=${bis}`),
+  /** „Zu erledigen“ → Monat und Jahr (#528, #725): ein Zeitraum in einer Anfrage, mit Folgeterminen und Feiertagen. */
+  termine: (von: string, bis: string, favoriten = false) => anfrage<TermineAntwort>('GET', `/api/termine?von=${von}&bis=${bis}${favoriten ? '&favoriten=1' : ''}`),
+  /** Startseite (#725): Kachel „Nächster Termin“. */
+  naechsterTermin: () => anfrage<{ termin: Termin | null; ueberfaellig: number }>('GET', '/api/termine/naechster'),
   erinnerungAnlegen: (mappeId: string, e: { datum: string; text: string; empfaengerId?: string }) => anfrage<Erinnerung & { hinweis?: string }>('POST', `/api/mappen/${mappeId}/erinnerungen`, e),
   erinnerungAendern: (id: string, e: { datum: string; text: string; empfaengerId?: string }) => anfrage<Erinnerung & { hinweis?: string }>('PUT', `/api/erinnerungen/${id}`, e),
   erinnerungLoeschen: (id: string) => anfrage<null>('DELETE', `/api/erinnerungen/${id}`),

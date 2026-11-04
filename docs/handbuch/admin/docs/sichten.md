@@ -21,7 +21,7 @@ Schneller geht es links im Baum: Jede Ansicht hat einen **Griff ⠿**. Daran zie
 - **zwischen zwei Ansichten** – eine Linie zeigt die Einfügestelle, auch auf einer anderen Ebene;
 - **auf eine Ansicht** – die Zielansicht wird umrandet, deine Ansicht wird ihre **Unteransicht**.
 
-Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Unteransicht ziehen. Die neue Ordnung gilt **sofort**, ohne Speichern – auch in der Ablage. Die festen Einträge oben – *Erweiterte Suche*, *Zu erledigen*, *Anstehend*, *Favoriten* und *Papierkorb* (nur, solange er an ist oder etwas darin liegt) – sind keine Ansichten in diesem Baum.
+Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Unteransicht ziehen. Die neue Ordnung gilt **sofort**, ohne Speichern – auch in der Ablage. Die festen Einträge oben – *Erweiterte Suche*, *Zu erledigen*, *Favoriten* und *Papierkorb* (nur, solange er an ist oder etwas darin liegt) – sind keine Ansichten in diesem Baum.
 
 - **Tastatur:** Griff mit Tab ansteuern, dann **Alt+↑/↓** verschiebt innerhalb der Ebene, **Alt+→** macht die Ansicht zur Unteransicht der Ansicht darüber, **Alt+←** hängt sie eine Ebene höher (hinter die bisherige Elternansicht).
 - **Smartphone/Tablet:** Griff **lange antippen**, dann ziehen. Die Knöpfe ↑/↓ in der geöffneten Ansicht gibt es weiterhin.

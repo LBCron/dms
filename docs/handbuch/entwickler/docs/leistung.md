@@ -89,7 +89,7 @@ DMS_URL=http://localhost:3100 N=5 node server/test/ladezeiten.mjs
 
 Befund: Die Rechte-Auswertung im Arbeitsspeicher kostet je Seite nur wenige Millisekunden (unter 1 %); der Verdacht aus dem Issue hat sich nicht bestätigt. Die Zeit lag in der Datenbank, bei zwei Anfragen, die jede Seite der Ablage stellt:
 
-- `/api/anstehend` lud **alle** Mappen jedes Typs mit Fristfeldern und filterte das Datum im Arbeitsspeicher. Jetzt holt `mappenMitDatum` nur Mappen mit einem Datum im Zeitraum (einzeln gemessen etwa 250 → 30 ms).
+- `/api/anstehend` (heute `/api/termine`) lud **alle** Mappen jedes Typs mit Fristfeldern und filterte das Datum im Arbeitsspeicher. Jetzt holt `mappenMitDatum` nur Mappen mit einem Datum im Zeitraum (einzeln gemessen etwa 250 → 30 ms).
 - `/api/sichten` zählte den Eingang mit einem `EXISTS` je Mappe; für Mitglieder mit Lesefilter lief der ganze Zähler dafür **ein zweites Mal** ohne Filter. Jetzt zählt eine Abfrage über die offenen Aufgaben den Eingang, einmal für alle.
 
 Zielwert: Ein Mitglied lädt Startseite und Ablage bei gleichen Daten höchstens 10 % langsamer als der Administrator – erfüllt (sogar schneller, weil für den Administrator auch Fristen ohne Empfänger anstehen). Die Verzögerung der Ereignisschleife blieb bei 99 % unter 16 ms. Größter Posten ist jetzt `/api/sichten` (Zähler je Typ und Ansicht, 150–230 ms bei 50.000 Mappen, für alle Benutzer gleich). Das behebt #512 (nächster Abschnitt).
@@ -119,9 +119,9 @@ Die Zahlen neben den Ansichten (`GET /api/sichten` → `Dienst.zaehler`) zählen
 
 Nicht umgesetzt: **nur zählen, was zu sehen ist** (eingeklappte Gruppen, geschlossene Ansicht-Auswahl am Handy) – mit 1 und 2 wartet die Ablage nicht mehr auf die Zahlen, und ein Treffer kostet einstellige Millisekunden; ein Teilzählen würde den Zwischenspeicher nur aufsplitten. Auch ein **Index** für einzelne Bedingungen lohnt nicht: Die eine Abfrage liest ohnehin alle Mappen des Haushalts einmal (Seq Scan), und sie läuft nur noch nach Änderungen.
 
-## Anstehend als Kalender (#528)
+## Kalender in „Zu erledigen“ (#528, #725)
 
-Monat und Jahr in „Anstehend“ laden ihren Zeitraum mit **einer** Anfrage: `GET /api/anstehend?von=…&bis=…` (höchstens 400 Tage, `zeitraumProblem` in `shared/src/kalender.ts`). Der Server holt wie die Liste nur Mappen mit einem Datum im Zeitraum (`mappenMitDatum`, #477); für Felder mit **wiederkehrender** Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (`folgetermine` in `shared/src/fristen.ts`, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (`Zaehlerspeicher`), je Benutzer, Rechte und Zeitraum; ein eigener `Haushaltsstand` (`fristenstand`) zählt zusätzlich bei geänderten Erinnerungen (`ZAEHLT_FUER_ANSTEHEND`), weil die sonst in `OHNE_FOLGEN` stehen.
+Monat und Jahr in „Zu erledigen“ laden ihren Zeitraum mit **einer** Anfrage: `GET /api/termine?von=…&bis=…` (wahlweise `&favoriten=1`) (höchstens 400 Tage, `zeitraumProblem` in `shared/src/kalender.ts`). Der Server holt nur Mappen mit einem Datum im Zeitraum (`mappenMitDatum`, #477); für Felder mit **wiederkehrender** Frist zusätzlich alle Mappen mit einem Datum bis zum Ende des Zeitraums, denn deren künftige Termine (`folgetermine` in `shared/src/fristen.ts`, Datum + k · Abstand) können hineinfallen. Gespeichert werden diese Termine nie. Die Antwort liegt wie die Zahlen der Ansichten im Zwischenspeicher (`Zaehlerspeicher`), je Benutzer, Rechte und Zeitraum; ein eigener `Haushaltsstand` (`fristenstand`) zählt zusätzlich bei geänderten Erinnerungen (`ZAEHLT_FUER_TERMINE`), weil die sonst in `OHNE_FOLGEN` stehen.
 
 **Messung zu #528** (dieselben Daten wie #477: 50.000 Demo-Mappen, lokaler Rechner; Median aus 5 Anfragen; *kalt* = je Anfrage ein neuer Zeitraum, *Treffer* = derselbe Zeitraum aus dem Zwischenspeicher; Zeit bis zur vollständigen Antwort):
 
@@ -154,7 +154,7 @@ Ein passendes Ablago startet man aus `server/` mit eigener, leerer Datenbank (z.
 
 **Schutz der echten Ablage:** Ist Ablago frisch, richtet der Test es ein (Haushalt „Lasttest“, Konten mit Persona-Namen unter `example.org`, Beispiele, eine Rolle, Regeln wie in einem Haushalt). Ist es schon eingerichtet, misst er nur, wenn er sich mit seinem Administrator-Konto anmelden kann und höchstens 200 Mappen keine Demo-Mappen sind – sonst Abbruch mit Exit-Code 2, ohne etwas anzulegen. Nach neuen Demo-Mappen wartet er, bis die Arbeit im Hintergrund (Texterkennung, Vorschaubilder) vorbei ist.
 
-**Profil:** Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (`/api/startseite`, `/api/sichten`, `/api/anstehend`, `/api/typen`) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie `Retry-After` sagt.
+**Profil:** Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (`/api/startseite`, `/api/sichten`, `/api/termine/naechster`, `/api/typen`) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie `Retry-After` sagt.
 
 **Stufen** (#563; die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf, `--stufe normal` bzw. `ueberlast` laufen als `mittel` bzw. `gross`)
 

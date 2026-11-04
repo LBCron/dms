@@ -29,14 +29,15 @@ import { UnscharfHinweis } from './Unscharf';
 import { mitGrund } from './Loeschgrund';
 import { rueckfrage } from '../rueckfrage';
 import { ZahlWarte } from './ZahlWarte';
-import { AnstehendSicht, useAnstehend, useAnstehendAnsicht } from './Anstehend';
+import { AufgabenWeitergeben } from '../profil/Abwesenheit';
+import { ErledigenUmschalter, MeineAufgabenWeitergeben, TermineSicht, useErledigenAnsicht } from './Termine';
 import { Ehemalig } from '../Person';
 
 /**
  * Ablage in drei Spalten, von groß nach klein:
  *   Sichten  →  Mappen der Sicht  →  eine Mappe
  *
- * /ablage/:sicht                    „eingang“, „favoriten“ (#62), „papierkorb“ (#43), eine verwaltete Sicht (#38) oder die Id eines Mappentyps
+ * /ablage/:sicht                    „eingang“ (Zu erledigen mit Liste · Monat · Jahr, #725; /ablage/anstehend leitet dorthin), „favoriten“ (#62), „papierkorb“ (#43), eine verwaltete Sicht (#38) oder die Id eines Mappentyps
  * /ablage/:sicht/:mappeId           Mappe rechts geöffnet
  * /ablage/:typId/neu?verweis=k:id   neue Mappe, optional mit vorbelegtem Verweis
  * /ablage/link?typ=…&feld=…         sprechender Link (#98); geöffnet: /ablage/link/:mappeId?typ=…
@@ -68,10 +69,15 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   const sichtTypen = verwaltet ? wirksameTypen(d.sichten, verwaltet.id).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t) : typ ? [typ] : [];
   const wahl = verwaltet ? spaltenDerSicht(sichtTypen, verwaltet.trefferliste) : typ ? { key: 'standard', spalten: standardliste(typ).spalten } : { key: null, spalten: GEMISCHTE_SPALTEN };
   const papierkorb = usePapierkorb(false, sicht === 'papierkorb');
-  const anstehend = useAnstehend();
-  // Anstehend als Kalender (#528): Monat und Jahr nutzen Mitte und rechts, bis eine Mappe offen ist.
-  const ansicht = useAnstehendAnsicht();
-  const kalender = sicht === 'anstehend' && ansicht.ansicht !== 'liste';
+  // „Zu erledigen“ mit Liste · Monat · Jahr (#528, #725): Monat und Jahr nutzen Mitte und rechts, bis eine Mappe offen ist.
+  const ansicht = useErledigenAnsicht();
+  const kalender = sicht === 'eingang' && ansicht.ansicht !== 'liste';
+  // Alte Adresse (#725): „Anstehend“ ist jetzt der Monat in „Zu erledigen“.
+  useEffect(() => {
+    if (sicht !== 'anstehend') return;
+    if (ansicht.ansicht === 'liste') ansicht.setze('monat');
+    geheZu(`/ablage/eingang${dritt ? `/${dritt}` : ''}`, true);
+  }, [sicht, dritt, ansicht]);
   // Sprechender Link (#98): die Adresse ist der Link; beim Öffnen einer Mappe bleibt sie erhalten.
   const istLink = sicht === 'link';
   const anhang = istLink || istSuche ? `?${suche.toString()}` : '';
@@ -86,6 +92,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     rechts = <div className="leer"><p>Von „{typ.name}“ lassen sich in der Ablage keine neuen Mappen anlegen.{typ.system === 'benutzer' ? ' Benutzer legt ein Administrator in der Werkbank unter „Benutzer“ an.' : ''}</p></div>;
   } else if (dritt === 'neu' && typ) {
     rechts = <NeueMappe key={`${typ.id}-${suche.get('verweis') ?? ''}-${suche.get('zuordnen') ?? ''}-${suche.get('vorbelegen') ?? ''}`} typ={typ} sicht={sicht} verweis={suche.get('verweis') ?? undefined} zuordnen={zuordnenAus(suche)} vorbelegen={suche.get('vorbelegen') ?? undefined} />;
+  } else if (dritt === 'weitergeben' && sicht === 'eingang') {
+    rechts = <AufgabenWeitergeben />;
   } else if (dritt && sicht === 'papierkorb') {
     rechts = <PapierkorbDetail key={dritt} id={dritt} werkbank={false} />;
   } else if (dritt) {
@@ -94,7 +102,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     rechts = <div className="platzhalter"><p>Wähle in der Liste eine Mappe aus{typ ? ' oder lege eine neue an' : ''}.</p></div>;
   }
 
-  // Feste Einträge links (#507): Erweiterte Suche · Start · Zu erledigen · Neue Post · Anstehend · Favoriten · Papierkorb.
+  // Feste Einträge links (#507, #725): Erweiterte Suche · Start · Zu erledigen · Neue Post · Favoriten · Papierkorb.
   const neuePost = d.zaehler.neuePost ? d.sicht(d.zaehler.neuePost) : undefined;
   // Zahlen kommen nach (#512): bis dahin ein Platzhalter (warte) bei den Einträgen, die aus dem Zähler kommen.
   const warte = !d.zahlenDa;
@@ -103,7 +111,6 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     ...(mitStart ? [{ pfad: '/ablage/start', name: 'Start', symbol: 'haus' as const, an: sicht === 'start' }] : []),
     { pfad: '/ablage/eingang', name: 'Zu erledigen', symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
     ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: neuePost.name, symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
-    { pfad: '/ablage/anstehend', name: 'Anstehend', symbol: 'kalender', titel: t('anstehend.navi'), zahl: anstehend.liste?.eintraege.length, an: sicht === 'anstehend' },
     { pfad: '/ablage/favoriten', name: 'Favoriten', symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
     // Papierkorb (#43): sichtbar, solange er an ist oder noch etwas darin liegt.
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: 'Papierkorb', symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
@@ -111,11 +118,11 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
 
   return (
     // Startseite ohne geöffnete Mappe (#429): ein großes Dashboard über Mitte und rechts. Ebenso die erweiterte
-    // Suche (#426) und der Kalender in „Anstehend“ (#528): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
+    // Suche (#426) und der Kalender in „Zu erledigen“ (#528, #725): Sie nutzen Mitte und rechts, bis ein Eintrag geöffnet wird.
     <Dreiteilung ort="ablage" ebene={ebene} offen={dritt} rechts={!((sicht === 'start' || istSuche || kalender) && !dritt)}>
       <aside className="spalte sichten" aria-label="Ansichten">
         {/* Handy (#498): ein Knopf „<Ansicht> ▾“ mit Suche und Gruppen statt der Reiterleiste. */}
-        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : istSuche ? 'Erweiterte Suche' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'anstehend' ? 'Anstehend' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
+        <AnsichtWahl aktiv={sicht} aktuell={sicht === 'start' ? 'Start' : istSuche ? 'Erweiterte Suche' : sicht === 'eingang' ? 'Zu erledigen' : sicht === 'favoriten' ? 'Favoriten' : sicht === 'papierkorb' ? 'Papierkorb' : verwaltet?.name ?? typ?.name ?? 'Ansicht wählen'}
           feste={feste.map((f) => ({ pfad: f.pfad, name: <><Symbol name={f.symbol} /> {f.name}</>, text: f.name, zahl: f.zahl, warte: f.warte, hervor: f.hervor, an: f.an }))} ohne={neuePost ? [neuePost.id] : []} />
         <h2 className="ueber aw-breit">Ansichten</h2>
         <nav className="sichtliste">
@@ -146,15 +153,16 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
                 </div>
               </>
           : sicht === 'start'
-          ? <Startseite anstehend={anstehend} offen={dritt} breit={!dritt} />
+          ? <Startseite offen={dritt} breit={!dritt} />
           : sicht === 'papierkorb'
           ? <PapierkorbListe z={papierkorb} werkbank={false} offen={dritt} />
+          : sicht === 'eingang' && kalender
+          ? <TermineSicht offen={dritt} a={ansicht} />
           : sicht === 'eingang'
           ? <Liste key="eingang" sicht="eingang" titel="Zu erledigen" offen={dritt} hilfe="ablage.eingang"
-              beschreibung="Mappen, an denen du etwas tun sollst: Sie passen nicht mehr zur Definition, jemand hat dich erwähnt oder dir eine Aufgabe gegeben."
+              beschreibung="Mappen, an denen du etwas tun sollst: Sie passen nicht mehr zur Definition, jemand hat dich erwähnt oder dir eine Aufgabe gegeben – auch Erinnerungen an Fristen, sobald sie fällig sind."
+              kopf={<div className="ka-leiste ka-liste"><ErledigenUmschalter a={ansicht} /><MeineAufgabenWeitergeben /></div>}
               leerText="Nichts zu tun." />
-          : sicht === 'anstehend'
-          ? <AnstehendSicht z={anstehend} offen={dritt} {...ansicht} />
           : sicht === 'favoriten'
           ? <Liste key="favoriten" sicht="favoriten" titel="Favoriten" offen={dritt} hilfe="ablage.favoriten"
               beschreibung="Mappen, die du mit einem Stern markiert hast."

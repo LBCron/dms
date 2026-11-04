@@ -178,7 +178,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.equal(bereichName('texterkennung'), 'Suche und Volltext');
     assert.equal(bereichName('aufbewahrung'), 'Aufbewahrung abgelaufen');
     // Aufgaben und Tägliche Zusammenfassung: ein Eintrag unter Einstellungen, Kennung bleibt „aufgaben“.
-    assert.equal(bereichName('aufgaben'), 'Benachrichtigungen und Aufgaben');
+    assert.equal(bereichName('aufgaben'), 'Aufgaben');
     assert.equal(bereichName('uebersicht'), 'Übersicht');
     // Jeder Bereich hat Name und „wann“ aus der Sprachdatei.
     for (const b of BEREICHE) assert.ok(b.name && !b.name.startsWith('werkbank.') && b.wann && !b.wann.startsWith('werkbank.'), b.pfad);

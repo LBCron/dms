@@ -7,7 +7,7 @@ Ein Klick auf deinen Namen oben rechts öffnet ein Menü:
 ![Benutzermenü](bilder/benutzermenue.png)
 
 - Oben stehen dein Name, deine E-Mail-Adresse und deine Rolle.
-- **Mein Konto** – alle deine Einstellungen ([siehe unten](#profil)): Konto, Sicherheit, Darstellung (Design, Schriftgröße, Startseite, Anstehend, Spaltenbreiten), Benachrichtigungen, [Abwesenheit](#abwesenheit).
+- **Mein Konto** – dein [Profil](#profil) mit allen Bereichen: Konto, Sicherheit, Darstellung (Design, Schriftgröße, Startseite, geänderte Mappen hervorheben, Spaltenbreiten), Benachrichtigungen, [Abwesenheit](#abwesenheit).
 - Solange eine Abwesenheit wirkt, steht oben im Menü „Du bist abwesend“ – ein Klick darauf führt direkt dorthin –, und neben deinem Namen ist ein Punkt.
 - **Hilfe** – öffnet dieses Handbuch.
 - **Fehler melden** – siehe [Fehler melden](#fehler-melden).
@@ -68,7 +68,7 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
 - **API-Schlüssel** – damit können andere Programme in deinem Namen auf Ablago zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen **Passwörter lesen** ankreuzt. Unter **Rechte** wählst du eine von drei Stufen:
     - **nur lesen** – das Programm liest alles, was du lesen darfst, und ändert nichts.
     - **lesen und schreiben** – das Programm liest und ändert alles, was du darfst, z. B. ein Scanner, der Post ablegt.
-    - **nur Zähler** – für Hausautomatisierung und Anzeigen, z. B. eine Lampe bei neuer Post oder die Zahl auf dem Wand-Tablet. Der Schlüssel ruft nur deine Zahlen ab: neue Post, Zu erledigen, anstehende und überfällige Fristen. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast – keine Titel, Absender oder Inhalte. Alles andere lehnt das Ablago ab.
+    - **nur Zähler** – für Hausautomatisierung und Anzeigen, z. B. eine Lampe bei neuer Post oder die Zahl auf dem Wand-Tablet. Der Schlüssel ruft nur deine Zahlen ab: neue Post, Zu erledigen und überfällige Fristen. Geht er verloren, erfährt jemand höchstens, wie viel Post und Aufgaben du hast – keine Titel, Absender oder Inhalte. Alles andere lehnt das Ablago ab.
 
     Wie du damit zum Beispiel einen Homey Pro einbindest, steht unter [Ablago in die Hausautomatisierung einbinden](hausautomatisierung.md); die Technik beschreibt das [Administratorhandbuch](https://help.ablago.app/admin/aktuell/api/#zaehler).
 - <span id="papierkorb"></span>**Papierkorb** – **Beim Abmelden leeren** löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im [Papierkorb](ablage.md#papierkorb), wie der Administrator es eingestellt hat.
@@ -96,8 +96,8 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 
 - **Design** – wie Ablago für dich aussieht. **Standard** folgt dem Design, das der Administrator festgelegt hat. Gilt für dein Konto auf allen Geräten.
 - **Schriftgröße auf diesem Gerät** – klein, normal oder groß. Gilt nur für das Gerät, an dem du gerade sitzt; am Smartphone kannst du eine andere Größe wählen als am PC.
-- <span id="startseite"></span>**Startseite** – **Mit der Startseite beginnen** schaltet die [Startseite](startseite.md) ein oder aus; ohne sie geht es nach der Anmeldung direkt zu *Zu erledigen*. **Vierte Kachel** wählt, was neben Zu erledigen, Neue Post und Anstehend steht: deine Favoriten oder eine Ansicht.
-- <span id="anstehend"></span>**Anstehend** – wie viele Tage im Voraus die [Liste in Anstehend](eingang.md#liste) deine Fristen, Erinnerungen und Aufgaben mit Datum zeigt (Standard: 30). Monat und Jahr zeigen immer den ganzen Monat bzw. das ganze Jahr.
+- <span id="startseite"></span>**Startseite** – **Mit der Startseite beginnen** schaltet die [Startseite](startseite.md) ein oder aus; ohne sie geht es nach der Anmeldung direkt zu *Zu erledigen*. **Vierte Kachel** wählt, was neben Zu erledigen, Neue Post und Nächster Termin steht: deine Favoriten oder eine Ansicht.
+- <span id="geaenderte"></span>**Geänderte Mappen** – **Geänderte Favoriten und eigene Mappen in Listen hervorheben** (Standard: an) setzt einen Punkt vor den Titel, bis du die Mappe öffnest. Was dahintersteckt, steht unter [Favoriten als Abo](ablage.md#favoriten-als-abo).
 - **Darstellung auf diesem Gerät** – die Breite der Spalten und eingeklappte Bereiche merkt sich jedes Gerät. Ist etwas nicht mehr zu finden, stellt **Standard-Darstellung wiederherstellen** die ursprüngliche Aufteilung her.
 - **Entwicklermodus** – zeigt unten rechts, wie lange ein Seitenaufruf gedauert hat.
 
@@ -112,7 +112,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
     - **Wochentage** – Standard Montag bis Freitag. Ohne Wochentag kommt keine Zusammenfassung.
     - **Nicht an Feiertagen** – an gesetzlichen Feiertagen des Bundeslands, das der Administrator gewählt hat, kommt keine (Standard: an). Ohne Bundesland ist der Haken ausgegraut.
 
-- **Favoriten** – **Bei Änderungen an meinen Favoriten benachrichtigen** und **Geänderte Favoriten und eigene Mappen in Listen hervorheben** (beides Standard: an). Was dahintersteckt, steht unter [Favoriten als Abo](ablage.md#favoriten-als-abo). Hat ein Administrator die Benachrichtigung für deine Rolle abgeschaltet, steht hier statt des ersten Schalters ein Hinweis.
+- **Favoriten** – **Bei Änderungen an meinen Favoriten benachrichtigen** (Standard: an); das Hervorheben geänderter Mappen steht unter [Darstellung](#geaenderte). Was dahintersteckt, steht unter [Favoriten als Abo](ablage.md#favoriten-als-abo). Hat ein Administrator die Benachrichtigung für deine Rolle abgeschaltet, steht hier statt des ersten Schalters ein Hinweis.
 
 - **Sofort melden (Webhooks)** – Ablago meldet an eine Adresse, sobald sich deine Zahlen ändern (neue Post, Zu erledigen, Fristen), z. B. an Homey oder Node-RED. Nur Zahlen, keine Inhalte; nur an Ziele, die ein Administrator freigegeben hat. **Probe senden**, **Ein-/Ausschalten**, **Neues Geheimnis**, **Löschen** und die **letzten Meldungen** stehen an jedem Webhook. Wie du ihn einrichtest: [In die Hausautomatisierung einbinden](hausautomatisierung.md#sofort-melden-webhook).
 
@@ -131,14 +131,15 @@ Damit während deines Urlaubs nichts liegen bleibt, trägst du unter **Abwesenhe
 
 #### Meine offenen Aufgaben { #meine-offenen-aufgaben }
 
-Unter der Abwesenheit stehen alle Aufgaben, die gerade bei dir liegen – mit Filter nach **Art**, **Mappentyp**, **Fälligkeit** und Suche im Titel. So gibst du sie vor dem Urlaub weiter, einzeln, in Gruppen oder alle auf einmal:
+Alle Aufgaben, die gerade bei dir liegen, gibst du unter **Zu erledigen → Mehrere Aufgaben weitergeben …** weiter – einzeln, in Gruppen oder alle auf einmal:
 
+- **Filter** nach **Art**, **Mappentyp**, **Fälligkeit** und Suche im Titel.
 - **Einzeln:** unter der Aufgabe bei *weitergeben an* eine Person wählen.
-- **Mehrere:** die Kästchen links anhaken oder **Alle angezeigten auswählen** (gilt für die gerade gefilterten). In der Leiste **Ausgewählte weitergeben an** eine Person wählen – dein eingetragener Vertreter ist schon vorausgewählt – und **Weitergeben**. Das geht mehrmals hintereinander, etwa drei an Anna, vier an Paul und den Rest an den Vertreter.
+- **Mehrere:** die Kästchen links anhaken oder **Alle angezeigten auswählen** (gilt für die gerade gefilterten). In der Leiste **Ausgewählte weitergeben an** eine Person wählen – dein eingetragener Vertreter ist schon vorausgewählt.
 
-Weitergeben geht nur an Personen, die die jeweilige Mappe lesen dürfen; was nicht geht, steht danach mit Grund da und bleibt ausgewählt. Jede Weitergabe steht in der Historie der Mappe, und wer etwas von dir bekommt, erhält **eine** Sammelbenachrichtigung unter „Zu erledigen“ statt einer je Aufgabe.
+Weitergeben geht nur an Personen, die die jeweilige Mappe lesen dürfen; was nicht geht, steht danach mit Grund da und bleibt ausgewählt. Jede Weitergabe steht in der Historie der Mappe.
 
-![Meine offenen Aufgaben unter Abwesenheit](bilder/profil-abwesenheit-aufgaben.png){ loading=lazy }
+![Mehrere Aufgaben weitergeben](bilder/profil-abwesenheit-aufgaben.png){ loading=lazy }
 
 ## Fehler melden
 

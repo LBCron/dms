@@ -1791,10 +1791,13 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .synonymliste form input, .synonymneu input { flex: 1 1 14em; min-width: 0; }
 .hinweis.unscharf { margin: 4px 0; }
 
-/* „Anstehend“ als Kalender (#528): Umschalter Liste · Monat · Jahr, nur lesen – wie im Kalender am Handy. Präfix ka-. */
+/* „Zu erledigen“ mit Liste · Monat · Jahr (#528, #725) – Kalender nur lesen, wie am Handy. Präfix ka-. */
 .ka { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ka-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .ka-umschalter button { padding: 5px 14px; font-weight: 600; }
+.ka-liste { margin: 4px 0 8px; justify-content: space-between; }
+.ka-favoriten { margin: 0; }
+.ka-kachel-datum { font-size: 1.6em; }
 .ka-blaettern { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .ka-pfeil { padding: 4px 6px; }
 .ka-pfeil .sym { width: 18px; height: 18px; }

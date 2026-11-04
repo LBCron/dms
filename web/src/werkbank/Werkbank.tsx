@@ -69,7 +69,7 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/verschluesselung        Schlüssel für Passwörter (#39)
  * /werkbank/papierkorb[/:id]        Papierkorb aller Benutzer und Aufbewahrung (#43)
  * /werkbank/texterkennung           Suche und Volltext: Texterkennung, automatisch verkleinern, Suche (#45, #356, #725)
- * /werkbank/aufgaben[/:id][?filter] Benachrichtigungen und Aufgaben: tägliche Zusammenfassung, Aufgaben aller Benutzer mit Filter (#54, #366, #354)
+ * /werkbank/aufgaben[/:id][?filter] Aufgaben aller Benutzer mit Filter (#54, #366, #354; seit #725 „Aufgaben“)
  * /werkbank/wartung                 Wartung: Wartungsmodus und Wartungsoperationen, z. B. Volltext neu erzeugen (#45, #458, #725)
  * /werkbank/fehlermeldungen[/:id]  Fehlermeldungen der Benutzer (#70)
  * /werkbank/sicherung              Sicherung, Zeitplan, Notfallblatt, Probe, darunter Wiederherstellen (#103–#109, #725)
