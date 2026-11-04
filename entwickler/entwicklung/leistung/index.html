@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Mitmachen beim DMS: Arbeitsweise, Entwicklung, Aufbau und Release">
+        <meta name="description" content="Mitmachen bei Ablago: Arbeitsweise, Entwicklung, Aufbau und Release">
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/entwicklung/leistung/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/entwicklung/leistung/">
       
       
         <link rel="prev" href="../pakete/">
@@ -22,12 +22,12 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../marke/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
-        <title>Leistung - DMS – Entwicklerhandbuch</title>
+        <title>Leistung - Ablago – Entwicklerhandbuch</title>
       
     
     
@@ -108,10 +108,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -122,7 +121,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            DMS – Entwicklerhandbuch
+            Ablago – Entwicklerhandbuch
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -246,13 +245,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
-    DMS – Entwicklerhandbuch
+    Ablago – Entwicklerhandbuch
   </label>
   
     <div class="md-nav__source">
@@ -717,7 +715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/benutzer/aktuell/begriffe/" class="md-nav__link">
+      <a href="https://help.ablago.app/benutzer/aktuell/begriffe/" class="md-nav__link">
         
   
   
@@ -773,7 +771,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/admin/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/admin/aktuell/" class="md-nav__link">
         
   
   
@@ -801,7 +799,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/installieren/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/installieren/aktuell/" class="md-nav__link">
         
   
   
@@ -975,7 +973,7 @@
 
 
 <h1 id="leistung">Leistung<a class="headerlink" href="#leistung" title="Permanent link">&para;</a></h1>
-<p>Das DMS soll auch nach Jahren mit vielen Mappen flüssig bleiben. Dafür gibt es eine Messlatte, einen Test, der sie in der CI prüft, und ein Mess-Skript für genauere Messungen (#367).</p>
+<p>Ablago soll auch nach Jahren mit vielen Mappen flüssig bleiben. Dafür gibt es eine Messlatte, einen Test, der sie in der CI prüft, und ein Mess-Skript für genauere Messungen (#367).</p>
 <h2 id="messlatte">Messlatte<a class="headerlink" href="#messlatte" title="Permanent link">&para;</a></h2>
 <p>Bei <strong>10.000 Mappen und 20.000–30.000 Dokumenten</strong> (Volltext je Dokument 5–50 KB) gilt im Median:</p>
 <table>
@@ -1063,7 +1061,7 @@
 <p>Wartet eine Anfrage, weil der eine Faden von Node.js gerade für eine andere rechnet, nimmt der Server sie erst danach an – das steckt dann nicht in <code>vor</code>, sondern in der „Leitung“ der Zeitmessung im Browser. Dafür misst <code>Auslastung</code> (<code>perf_hooks.monitorEventLoopDelay</code>) die Verzögerung der Ereignisschleife; Werkbank → Datenbank zeigt sie. Ganze Anfragen über der Schwelle für lange Zugriffe landen mit ihrer Aufteilung bei den Langläufern (<code>zugriff</code> beginnt mit <code>Anfrage:</code>).</p>
 <p>Im Browser teilt <code>shared/src/zeitmessung.ts</code> die Zeit mit Resource Timing weiter auf: „Warten (Browser)“ (<code>startTime</code> bis <code>requestStart</code> ohne Verbindungsaufbau – der Browser schickt höchstens etwa 6 Anfragen gleichzeitig) und „Leitung“ (Hin- und Rückweg minus <code>gesamt</code>).</p>
 <h2 id="ladezeiten-der-oberflache">Ladezeiten der Oberfläche<a class="headerlink" href="#ladezeiten-der-oberflache" title="Permanent link">&para;</a></h2>
-<p><code>server/test/ladezeiten.mjs</code> lädt Startseite, eine Liste und eine Mappe in Chromium als Administrator, als Mitglied mit Rolle und als Mitglied ohne Rolle (mit Regeln, die einen Lesefilter in SQL ergeben) und fasst Server-Timing je Seite zusammen. Gegen ein laufendes DMS mit frischer Datenbank:</p>
+<p><code>server/test/ladezeiten.mjs</code> lädt Startseite, eine Liste und eine Mappe in Chromium als Administrator, als Mitglied mit Rolle und als Mitglied ohne Rolle (mit Regeln, die einen Lesefilter in SQL ergeben) und fasst Server-Timing je Seite zusammen. Gegen ein laufendes Ablago mit frischer Datenbank:</p>
 <div class="highlight"><pre><span></span><code><span class="nv">DMS_URL</span><span class="o">=</span>http://localhost:3100<span class="w"> </span><span class="nv">CODE</span><span class="o">=</span>&lt;Einrichtungscode&gt;<span class="w"> </span>node<span class="w"> </span>server/test/ladezeiten.mjs<span class="w"> </span>--einrichten<span class="w"> </span>--mappen<span class="w"> </span><span class="m">50000</span>
 <span class="nv">DMS_URL</span><span class="o">=</span>http://localhost:3100<span class="w"> </span><span class="nv">N</span><span class="o">=</span><span class="m">5</span><span class="w"> </span>node<span class="w"> </span>server/test/ladezeiten.mjs
 </code></pre></div>
@@ -1380,15 +1378,15 @@
 </table>
 <p>Der Administrator ist der ungünstigste Fall: Ihm gehören alle Fristen ohne Empfänger, bei den Demo-Daten fast alle Verträge mit jährlicher Kündigungsfrist. Das Jahr ist dann 3,2 MB JSON (ohne Kompression); im Browser steht die Jahresansicht trotzdem nach etwa 0,1–0,2 s, der Monat nach 0,1–0,3 s. Die Mitglieder haben in den Demo-Daten keine eigenen Fristen; ihre Zeit ist das Suchen der Kandidaten. In einem Haushalt mit einigen Dutzend Fristen liegt alles im Bereich der Liste.</p>
 <h2 id="lasttest">Lasttest<a class="headerlink" href="#lasttest" title="Permanent link">&para;</a></h2>
-<p><code>server/test/lasttest.mjs</code> (#544, #563) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes DMS – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js. Im Image steckt es als Befehl <code>dms-lasttest</code> (Betreiber: Administratorhandbuch → <a href="https://motom001.github.io/dms/admin/aktuell/lasttest/">Lasttest selbst durchführen</a>).</p>
-<p><strong>Lasttest-Modus</strong> (#612): Mit <code>DMS_LASTTEST=klein|mittel|gross|alle</code> lauscht das DMS nur auf 127.0.0.1 (freier Port) und startet das Skript als Kindprozess (<code>fork</code>, IPC) gegen diese Adresse; unter dem eigentlichen Port gibt es nur die Seite mit Fortschritt und Ergebnis (<code>server/src/lasttestmodus.ts</code>, <code>web/src/lasttest.tsx</code>, gemeinsame Typen in <code>shared/src/lasttest.ts</code>). Das Skript meldet seine Schritte mit <code>process.send</code> (nur mit IPC-Kanal, auf der Konsole ändert sich nichts) und schickt am Ende Bericht und Ergebnisblock mit den Platzhaltern <code>{{geraet}}</code> und <code>{{speicher}}</code>, die die Seite füllt. Vorher prüft <code>lasttest.mjs --pruefen</code> die Sperre der echten Ablage, ohne etwas anzulegen; schlägt sie an, startet das DMS normal und meldet den Grund in der Werkbank-Übersicht (<code>lasttestAbbruch</code>). <code>DMS_LASTTEST_DAUER</code> entspricht <code>--dauer</code>. Tests: <code>lasttestmodus.test.ts</code>, mit PostgreSQL <code>lasttestmodus-e2e.test.ts</code> (Stufe klein mit 3 s Messdauer, etwa eine Minute).</p>
+<p><code>server/test/lasttest.mjs</code> (#544, #563) schickt viele <strong>gleichzeitige HTTP-Anfragen</strong> an ein laufendes Ablago – das Gegenstück zum Mess-Skript, das einzelne Datenbankzugriffe misst. Ohne Abhängigkeiten, nur mit <code>fetch</code> von Node.js. Im Image steckt es als Befehl <code>dms-lasttest</code> (Betreiber: Administratorhandbuch → <a href="https://help.ablago.app/admin/aktuell/lasttest/">Lasttest selbst durchführen</a>).</p>
+<p><strong>Lasttest-Modus</strong> (#612): Mit <code>DMS_LASTTEST=klein|mittel|gross|alle</code> lauscht Ablago nur auf 127.0.0.1 (freier Port) und startet das Skript als Kindprozess (<code>fork</code>, IPC) gegen diese Adresse; unter dem eigentlichen Port gibt es nur die Seite mit Fortschritt und Ergebnis (<code>server/src/lasttestmodus.ts</code>, <code>web/src/lasttest.tsx</code>, gemeinsame Typen in <code>shared/src/lasttest.ts</code>). Das Skript meldet seine Schritte mit <code>process.send</code> (nur mit IPC-Kanal, auf der Konsole ändert sich nichts) und schickt am Ende Bericht und Ergebnisblock mit den Platzhaltern <code>{{geraet}}</code> und <code>{{speicher}}</code>, die die Seite füllt. Vorher prüft <code>lasttest.mjs --pruefen</code> die Sperre der echten Ablage, ohne etwas anzulegen; schlägt sie an, startet Ablago normal und meldet den Grund in der Werkbank-Übersicht (<code>lasttestAbbruch</code>). <code>DMS_LASTTEST_DAUER</code> entspricht <code>--dauer</code>. Tests: <code>lasttestmodus.test.ts</code>, mit PostgreSQL <code>lasttestmodus-e2e.test.ts</code> (Stufe klein mit 3 s Messdauer, etwa eine Minute).</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># DMS frisch starten (eigene, leere Datenbank), dann eine Stufe oder alle – das Skript richtet selbst ein</span>
 <span class="c1"># und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000; 2 % mit einem Brief als PDF)</span>
 node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>klein<span class="w"> </span>--ziel<span class="w"> </span>http://127.0.0.1:3100<span class="w"> </span>--grenzen
 node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>alle<span class="w"> </span>--ziel<span class="w"> </span>http://127.0.0.1:3100<span class="w"> </span>--dauer<span class="w"> </span><span class="m">120</span><span class="w"> </span>--bericht<span class="w"> </span>bericht.md<span class="w"> </span>--json<span class="w"> </span>lasttest.json<span class="w"> </span>--grenzen
 </code></pre></div>
-<p>Ein passendes DMS startet man aus <code>server/</code> mit eigener, leerer Datenbank (z. B. <code>dmslast</code>): <code>NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js</code> nach <code>npm run build -w server</code>. Die Datenbank danach wieder löschen.</p>
-<p><strong>Schutz der echten Ablage:</strong> Ist das DMS frisch, richtet der Test es ein (Haushalt „Lasttest“, Konten mit Persona-Namen unter <code>example.org</code>, Beispiele, eine Rolle, Regeln wie in einem Haushalt). Ist es schon eingerichtet, misst er nur, wenn er sich mit seinem Administrator-Konto anmelden kann und höchstens 200 Mappen keine Demo-Mappen sind – sonst Abbruch mit Exit-Code 2, ohne etwas anzulegen. Nach neuen Demo-Mappen wartet er, bis die Arbeit im Hintergrund (Texterkennung, Vorschaubilder) vorbei ist.</p>
+<p>Ein passendes Ablago startet man aus <code>server/</code> mit eigener, leerer Datenbank (z. B. <code>dmslast</code>): <code>NODE_ENV=production DMS_DATENWURZEL=/tmp/dmslast DMS_EINRICHTUNGSCODE=aus DATABASE_URL=postgres://…/dmslast PORT=3100 node dist/index.js</code> nach <code>npm run build -w server</code>. Die Datenbank danach wieder löschen.</p>
+<p><strong>Schutz der echten Ablage:</strong> Ist Ablago frisch, richtet der Test es ein (Haushalt „Lasttest“, Konten mit Persona-Namen unter <code>example.org</code>, Beispiele, eine Rolle, Regeln wie in einem Haushalt). Ist es schon eingerichtet, misst er nur, wenn er sich mit seinem Administrator-Konto anmelden kann und höchstens 200 Mappen keine Demo-Mappen sind – sonst Abbruch mit Exit-Code 2, ohne etwas anzulegen. Nach neuen Demo-Mappen wartet er, bis die Arbeit im Hintergrund (Texterkennung, Vorschaubilder) vorbei ist.</p>
 <p><strong>Profil:</strong> Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (<code>/api/startseite</code>, <code>/api/sichten</code>, <code>/api/anstehend</code>, <code>/api/typen</code>) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie <code>Retry-After</code> sagt.</p>
 <p><strong>Stufen</strong> (#563; die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf, <code>--stufe normal</code> bzw. <code>ueberlast</code> laufen als <code>mittel</code> bzw. <code>gross</code>)</p>
 <table>
@@ -1417,15 +1415,15 @@ node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>alle
 <td>groß</td>
 <td>5, 10, dann ab 25 gleichzeitig alle <code>--schritt-dauer</code> (120) Sekunden 25 mehr (<code>--start</code> beginnt genau dort), bis p95 &gt; 3 s, Fehlerquote &gt; 1 % oder der Überlastschutz greift (503); danach 1000 gleichzeitig (höchstens 60 s) mit Anmeldeschutz-Probe, dann Erholung</td>
 <td>200.000 Mappen</td>
-<td><strong>Messung:</strong> Grenze = höchste Stufe ohne Abbruch; mit <code>--vorher</code> Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt. <strong>Pflicht:</strong> keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher des DMS ≤ 1,5 GB, Server bleibt erreichbar, Erholung (20 Anfragen in Folge mit p95 ≤ 1 s) innerhalb von 30 s, Anmeldeschutz sperrt nach falschen Passwörtern auch das richtige (429)</td>
+<td><strong>Messung:</strong> Grenze = höchste Stufe ohne Abbruch; mit <code>--vorher</code> Warnung, wenn sie mehr als 20 % unter der des letzten Laufs liegt. <strong>Pflicht:</strong> keine Anfrage ohne Antwort nach 60 s, Arbeitsspeicher von Ablago ≤ 1,5 GB, Server bleibt erreichbar, Erholung (20 Anfragen in Folge mit p95 ≤ 1 s) innerhalb von 30 s, Anmeldeschutz sperrt nach falschen Passwörtern auch das richtige (429)</td>
 </tr>
 </tbody>
 </table>
-<p>Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit <code>Retry-After</code>), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher des DMS (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über <code>GET /api/werkbank/last</code>. Am Ende steht der <strong>Ergebnisblock</strong> zum Kopieren – ohne Adresse des Ziels, ohne Namen; das CPU-Modell nur, wenn der Test auf demselben Rechner läuft. Mit <code>--json</code> alles als Datei (auch Eingabe für <code>--vorher</code>), mit <code>--gleichzeitig &lt;n&gt;</code> (und <code>--ohne-export</code>) ein einzelner Durchgang.</p>
-<p><strong>Warum diese Grenzen:</strong> klein und mittel sind eine <strong>Qualitätszusage</strong> (Thomas, #563): Ein Haushalt soll das DMS flüssig erleben, ein Kleinbetrieb auch mit Export nebenher. Die <strong>Ziele</strong> (p95 &lt; 0,3 s bzw. &lt; 1 s) sind deutlich strenger als die großzügigen Grenzen aus #544 (p95 ≤ 5 s bzw. 6 s, Fehlerquote ≤ 1 %). Weil schon der erste Lauf auf den Rechnern von GitHub das Ziel von mittel verfehlte, gilt für den Exit-Code eine eigene <strong>CI-Grenze</strong> (Entscheidung Thomas, #563): erster GitHub-Lauf + 20 % (Run 41448183378, DMS 0.139.0: klein p95 95 ms → bleibt beim Ziel 300 ms; mittel p95 2384 ms → 2860 ms). Sie wird nur strenger, nie lockerer, bis sie das Ziel erreicht. Ein verfehltes Ziel steht im Bericht (Abschnitt „Ziel verfehlt“, im Workflow als Hinweis) und führt zu einem Folge-Issue „Beschleunigen“; rot wird der Lauf nur über der CI-Grenze. Beides steht in <code>STUFEN</code> (<code>ziel</code>, <code>ciGrenze</code>) in <code>server/test/lasttest.mjs</code>, geprüft von <code>server/test/lasttest-grenzen.test.ts</code>. Groß ist dagegen eine <strong>Messung</strong>: Wo die Grenze liegt, hängt an der Hardware; der Lauf meldet sie und warnt bei deutlicher Verschlechterung, statt rot zu werden. Lokal, auf einem belasteten Rechner mit 2 Kernen, lagen klein bei p95 525 ms und mittel bei p95 4,7 s – nicht aussagekräftig, aber ein Hinweis, dass ein Rechner mit 2 Kernen die Zusage für mittel nicht schafft.</p>
+<p>Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx und ohne Antwort), abgewiesen (503, mit <code>Retry-After</code>), Verzögerung der Ereignisschleife (p99 und höchstens), Warten auf eine Verbindung zur Datenbank, Arbeitsspeicher von Ablago (Start, höchstens, Ende), dazu Dauer und Größe jedes Exports und Median/p95 je Art. Die Werte des Servers liest der Test alle 2 Sekunden über <code>GET /api/werkbank/last</code>. Am Ende steht der <strong>Ergebnisblock</strong> zum Kopieren – ohne Adresse des Ziels, ohne Namen; das CPU-Modell nur, wenn der Test auf demselben Rechner läuft. Mit <code>--json</code> alles als Datei (auch Eingabe für <code>--vorher</code>), mit <code>--gleichzeitig &lt;n&gt;</code> (und <code>--ohne-export</code>) ein einzelner Durchgang.</p>
+<p><strong>Warum diese Grenzen:</strong> klein und mittel sind eine <strong>Qualitätszusage</strong> (Thomas, #563): Ein Haushalt soll Ablago flüssig erleben, ein Kleinbetrieb auch mit Export nebenher. Die <strong>Ziele</strong> (p95 &lt; 0,3 s bzw. &lt; 1 s) sind deutlich strenger als die großzügigen Grenzen aus #544 (p95 ≤ 5 s bzw. 6 s, Fehlerquote ≤ 1 %). Weil schon der erste Lauf auf den Rechnern von GitHub das Ziel von mittel verfehlte, gilt für den Exit-Code eine eigene <strong>CI-Grenze</strong> (Entscheidung Thomas, #563): erster GitHub-Lauf + 20 % (Run 41448183378, Ablago 0.139.0: klein p95 95 ms → bleibt beim Ziel 300 ms; mittel p95 2384 ms → 2860 ms). Sie wird nur strenger, nie lockerer, bis sie das Ziel erreicht. Ein verfehltes Ziel steht im Bericht (Abschnitt „Ziel verfehlt“, im Workflow als Hinweis) und führt zu einem Folge-Issue „Beschleunigen“; rot wird der Lauf nur über der CI-Grenze. Beides steht in <code>STUFEN</code> (<code>ziel</code>, <code>ciGrenze</code>) in <code>server/test/lasttest.mjs</code>, geprüft von <code>server/test/lasttest-grenzen.test.ts</code>. Groß ist dagegen eine <strong>Messung</strong>: Wo die Grenze liegt, hängt an der Hardware; der Lauf meldet sie und warnt bei deutlicher Verschlechterung, statt rot zu werden. Lokal, auf einem belasteten Rechner mit 2 Kernen, lagen klein bei p95 525 ms und mittel bei p95 4,7 s – nicht aussagekräftig, aber ein Hinweis, dass ein Rechner mit 2 Kernen die Zusage für mittel nicht schafft.</p>
 <p><strong>Überlastschutz</strong> (<code>server/src/ueberlast.ts</code>): Mehr als <code>DMS_MAX_ANFRAGEN</code> (250) gleichzeitige Anfragen an <code>/api/</code> und <code>/webdav</code> beantwortet ein Hook vor allem anderen sofort mit 503 und <code>Retry-After: 5</code>. Gezählt wird vom Eingang bis die Antwort fertig oder die Verbindung zu ist (<code>close</code>). Ausgenommen: <code>/api/gesundheit</code> und <code>/api/werkbank/last</code>. Dazu nimmt der Server neue Verbindungen mit einer längeren Warteschlange an (<code>backlog: 2048</code> statt 511). Programme, die <code>Retry-After</code> nicht beachten und sofort wieder fragen, bekommen ebenfalls sofort ihre 503; auf dem Testrechner mit 2 Kernen blieben dann bei 1000 gleichzeitig rund 1–2 % der Anfragen nach 60 s ohne Antwort, obwohl der Server keine Anfrage länger als 15 s bearbeitete – der Lasttest selbst (im selben Rechner) kam mit dem Verbindungsaufbau nicht mehr hinterher.</p>
 <p><strong>Verbindungen zur Datenbank</strong> (<code>server/src/db.ts</code>): Vorgabe 10, einstellbar mit <code>DMS_DB_VERBINDUNGEN</code> (2–100). Gemessen bei 100 gleichzeitig ohne Export, je zwei Runden: 5 Verbindungen 3.894–4.117 Anfragen je Minute (p95 2,7–2,9 s), 10 Verbindungen 3.516–3.726 (p95 2,9–3,1 s), 20 Verbindungen 3.512–3.517 (p95 2,9 s) – gleichauf im Rahmen der Schwankung. <code>Verbindungswarten</code> misst alle 5 Sekunden mit <code>SELECT 1</code>, wie lange eine Abfrage auf eine freie Verbindung wartet (einschließlich Hin- und Rückweg und Wartezeit der Ereignisschleife); Werkbank → Datenbank-Anbindung zeigt Median und Höchstwert der letzten Minute.</p>
-<p><strong>Workflow</strong> <code>.github/workflows/lasttest.yml</code>: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf gut eine Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, misst alle drei Stufen mit <code>--grenzen</code> (CI-Grenze von klein oder mittel oder eine Pflicht verfehlt → Lauf rot; Ziel verfehlt → Hinweis) und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll des DMS als Artefakt). Die Grenze von groß merkt er sich im Cache (<code>lasttest-gross-…</code>) für die Warnung beim nächsten Lauf. Vor einem größeren Release von Hand starten.</p>
+<p><strong>Workflow</strong> <code>.github/workflows/lasttest.yml</code>: wöchentlich (mittwochs nachts) und von Hand („Run workflow“, wahlweise Stufe und Dauer) – nicht bei jedem Pull Request, weil die Rechner von GitHub schwanken und ein Lauf gut eine Stunde dauert. Er startet PostgreSQL 17 als Dienst, baut den Server, misst alle drei Stufen mit <code>--grenzen</code> (CI-Grenze von klein oder mittel oder eine Pflicht verfehlt → Lauf rot; Ziel verfehlt → Hinweis) und hängt den Bericht an den Lauf (Zusammenfassung; Bericht, JSON und Protokoll von Ablago als Artefakt). Die Grenze von groß merkt er sich im Cache (<code>lasttest-gross-…</code>) für die Warnung beim nächsten Lauf. Vor einem größeren Release von Hand starten.</p>
 <p><strong>Beschleunigt in #615</strong> (Suche und „Mappe öffnen“ unter Last): Gemessen mit Stichproben aus <code>pg_stat_activity</code> während des Laufs, <code>EXPLAIN ANALYZE</code>, Server-Timing und einem CPU-Profil des Servers (<code>--cpu-prof</code>). Die Ursachen, in der Reihenfolge ihres Gewichts:</p>
 <ol>
 <li><strong>Suche faltete jede Mappe neu.</strong> Titel und jeder Wert gingen bei jeder Suche durch <code>dms_falte</code> (unaccent) und <code>jsonb_each_text</code> – rund 200 ms Rechenzeit der Datenbank je Abfrage bei 20.000 Mappen, und eine Suche braucht zwei bis fünf Abfragen (Zählen, Seite, ohne Treffer noch einmal mit ähnlichen Wörtern). Jetzt steht der gefaltete Text in <code>mappen.suchtext</code> (Migration 055, Trigger); die Suche filtert damit vor und vergleicht danach wie bisher genau je Titel und Wert – dieselben Treffer, 10–15 ms je Abfrage. Mit Suche sortiert PostgreSQL erst nach dem Filtern (Teilabfrage mit <code>OFFSET 0</code>): Der allgemeine Plan einer vorbereiteten Abfrage ging sonst bei seltenen Begriffen den Titel-Index ganz durch (über 100 ms).</li>
@@ -1522,7 +1520,7 @@ node<span class="w"> </span>server/test/lasttest.mjs<span class="w"> </span>alle
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
     </div>
   
   

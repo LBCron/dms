@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DMS API",
+    "title": "Ablago API",
     "version": "handbuch",
-    "description": "Schnittstelle des selbst gehosteten DMS. Anmeldung mit einem API-Schlüssel aus dem Profil: `Authorization: Bearer dms_…`. Ein Schlüssel hat höchstens die Rechte seines Benutzers; Schlüssel „nur lesen“ erlauben nur GET, Schlüssel „nur Zähler“ nur GET /ich/zaehler (alles andere 403). Diese Beschreibung entsteht aus der installierten Version.",
+    "description": "Schnittstelle von Ablago, selbst gehostet. Anmeldung mit einem API-Schlüssel aus dem Profil: `Authorization: Bearer dms_…`. Ein Schlüssel hat höchstens die Rechte seines Benutzers; Schlüssel „nur lesen“ erlauben nur GET, Schlüssel „nur Zähler“ nur GET /ich/zaehler (alles andere 403). Diese Beschreibung entsteht aus der installierten Version.",
     "license": {
       "name": "Apache-2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
@@ -801,7 +801,7 @@
           "Ablage"
         ],
         "summary": "Mappe ändern",
-        "description": "Übergebene Werte ersetzen die bisherigen; nicht übergebene Felder bleiben, wie sie gerade gespeichert sind – schicke nur, was du ändern willst. Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern. Gleichzeitig bearbeiten (#609): Mit stand (der Wert geaendert der Mappe, so wie du sie gelesen hast) prüft das DMS, ob seitdem jemand eines der übergebenen Felder geändert hat. Dann kommt 409 mit details: Mappenkonflikt (betroffene Felder, wer, wann, aktueller Wert) und nichts wird gespeichert; andere Felder werden ohne Rückfrage zusammengeführt. Den eigenen Wert trotzdem übernehmen: noch einmal mit stand aus der 409-Antwort senden; den anderen behalten: das Feld weglassen. Ohne stand keine Prüfung (wie bis 0.143): Die übergebenen Felder gelten.",
+        "description": "Übergebene Werte ersetzen die bisherigen; nicht übergebene Felder bleiben, wie sie gerade gespeichert sind – schicke nur, was du ändern willst. Werte von Feldern, die es im Typ nicht mehr gibt, bleiben erhalten. Formate und Datumsgrenzen (#535) gelten nur für Werte, die sich ändern. Gleichzeitig bearbeiten (#609): Mit stand (der Wert geaendert der Mappe, so wie du sie gelesen hast) prüft Ablago, ob seitdem jemand eines der übergebenen Felder geändert hat. Dann kommt 409 mit details: Mappenkonflikt (betroffene Felder, wer, wann, aktueller Wert) und nichts wird gespeichert; andere Felder werden ohne Rückfrage zusammengeführt. Den eigenen Wert trotzdem übernehmen: noch einmal mit stand aus der 409-Antwort senden; den anderen behalten: das Feld weglassen. Ohne stand keine Prüfung (wie bis 0.143): Die übergebenen Felder gelten.",
         "operationId": "putMappenMitid",
         "parameters": [
           {
@@ -1298,7 +1298,7 @@
           "Ablage"
         ],
         "summary": "Mit verknüpften Mappen löschen: ausführen",
-        "description": "Sammelt die Vorschau neu (gleiche tiefe/max angeben) und löscht nach auswahl (Id → loeschen | entkoppeln | behalten; fehlende Ids bleiben – z. B. vorschlag aus der Vorschau übernehmen). Dieselben Prüfungen wie in der Vorschau: Rechte, Aufbewahrungsfristen; eine Mappe, auf die eine bleibende Mappe noch verweist, bleibt. entkoppeln entfernt nur die Verweise dieser Mappe auf gelöschte Mappen (Recht „Bearbeiten“). Alles geht als ein Vorgang in den Papierkorb (bei 0 Tagen Aufbewahrung sofort endgültig) und lässt sich mit POST /papierkorb/vorgang/{vorgang}/wiederherstellen gemeinsam wiederherstellen. Bleibt die Start-Mappe wegen Mappen in der Aufbewahrungsfrist, legt das DMS dem Aufrufer an ihr eine Erinnerung zum Tag nach dem spätesten Fristende an (erinnerung). 422, wenn nach der Auswahl nichts gelöscht würde.",
+        "description": "Sammelt die Vorschau neu (gleiche tiefe/max angeben) und löscht nach auswahl (Id → loeschen | entkoppeln | behalten; fehlende Ids bleiben – z. B. vorschlag aus der Vorschau übernehmen). Dieselben Prüfungen wie in der Vorschau: Rechte, Aufbewahrungsfristen; eine Mappe, auf die eine bleibende Mappe noch verweist, bleibt. entkoppeln entfernt nur die Verweise dieser Mappe auf gelöschte Mappen (Recht „Bearbeiten“). Alles geht als ein Vorgang in den Papierkorb (bei 0 Tagen Aufbewahrung sofort endgültig) und lässt sich mit POST /papierkorb/vorgang/{vorgang}/wiederherstellen gemeinsam wiederherstellen. Bleibt die Start-Mappe wegen Mappen in der Aufbewahrungsfrist, legt Ablago dem Aufrufer an ihr eine Erinnerung zum Tag nach dem spätesten Fristende an (erinnerung). 422, wenn nach der Auswahl nichts gelöscht würde.",
         "operationId": "postMappenMitidMit-verknuepften-loeschen",
         "parameters": [
           {
@@ -3078,7 +3078,7 @@
           "Ablage"
         ],
         "summary": "Mappe per E-Mail versenden",
-        "description": "Absender ist die Adresse des DMS, „Antworten an“ der Benutzer des Schlüssels. Anhänge sind Dokumente der Mappe (zusammen höchstens 50 MB). Danach gibt es eine Post-Mappe (Kanal E-Mail, ausgehend, erledigt), die dieser Mappe zugeordnet ist, und einen Protokolleintrag. 409, wenn der Versand nicht eingerichtet ist; 502, wenn der Mailserver ablehnt.",
+        "description": "Absender ist die Adresse von Ablago, „Antworten an“ der Benutzer des Schlüssels. Anhänge sind Dokumente der Mappe (zusammen höchstens 50 MB). Danach gibt es eine Post-Mappe (Kanal E-Mail, ausgehend, erledigt), die dieser Mappe zugeordnet ist, und einen Protokolleintrag. 409, wenn der Versand nicht eingerichtet ist; 502, wenn der Mailserver ablehnt.",
         "operationId": "postMappenMitidEmail",
         "parameters": [
           {
@@ -4776,7 +4776,7 @@
           "Dokumente"
         ],
         "summary": "Volltext schreiben",
-        "description": "Für Pakete mit eigener Texterkennung (#338) oder mit dem Recht „dms:volltext“ (#614): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest – oder dms:volltext mit „Dokumente lesen“, dann nur für Dokumente der Dateitypen aus code.volltext (sonst 403); Benutzer das Recht Bearbeiten an der Mappe. Höchstens 5 Millionen Zeichen (413), der Körper darf dafür bis 32 MB groß sein. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt das DMS sie. Mehrere Sprachen (#579): Seiten im Text durch Seitenvorschub (\\f) trennen und in seitensprachen je Seite ihre Sprache(n) nennen (Mischseite: zwei, null: das DMS erkennt sie) – der Suchindex nimmt dann je Seite die Wortstämme ihrer Sprache, das Dokument bekommt Hauptsprache und weitere Sprachen. Gespeichert wird der Text mit Leerzeilen zwischen den Seiten.",
+        "description": "Für Pakete mit eigener Texterkennung (#338) oder mit dem Recht „dms:volltext“ (#614): ersetzt den Volltext. Dienstkonten brauchen das Recht „Dokumente schreiben“ aus dem Manifest – oder dms:volltext mit „Dokumente lesen“, dann nur für Dokumente der Dateitypen aus code.volltext (sonst 403); Benutzer das Recht Bearbeiten an der Mappe. Höchstens 5 Millionen Zeichen (413), der Körper darf dafür bis 32 MB groß sein. Die Herkunft steht in ocr.info und in der Historie; die eingebaute Texterkennung überschreibt den Text danach nicht mehr von selbst. Mit sprache (#400) gibt das Paket die Sprache des Texts an, sonst erkennt Ablago sie. Mehrere Sprachen (#579): Seiten im Text durch Seitenvorschub (\\f) trennen und in seitensprachen je Seite ihre Sprache(n) nennen (Mischseite: zwei, null: Ablago erkennt sie) – der Suchindex nimmt dann je Seite die Wortstämme ihrer Sprache, das Dokument bekommt Hauptsprache und weitere Sprachen. Gespeichert wird der Text mit Leerzeilen zwischen den Seiten.",
         "operationId": "putDokumenteMitidVolltext",
         "parameters": [
           {
@@ -5330,7 +5330,7 @@
           "Dokumente"
         ],
         "summary": "Umgewandelte Fassung setzen (Pakete)",
-        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577), z. B. „Bildformate“: die Fassung einer Datei, die das DMS nicht selbst liest (Ereignis datei.umwandeln), als PDF, PNG oder JPEG – roh im Körper (application/octet-stream), erkannt am Inhalt, höchstens 50 MB, Bilder höchstens 36 Millionen Bildpunkte, PDFs höchstens 1000 Seiten. Daraus entstehen Vorschaubild und Volltext (Textebene bzw. Paket Texterkennung). Die Fassung gehört zur Datei (Prüfwert), nicht zum Dokument, und ersetzt eine vorhandene. 403 ohne das Recht oder wenn das Paket für den Dateityp nicht zuständig ist (code.umwandeln), 409, wenn sha256 nicht mehr die Datei des Dokuments ist (neue Version), 413 zu groß, 415 kein PDF, PNG oder JPEG, 422 nicht lesbar.",
+        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577), z. B. „Bildformate“: die Fassung einer Datei, die Ablago nicht selbst liest (Ereignis datei.umwandeln), als PDF, PNG oder JPEG – roh im Körper (application/octet-stream), erkannt am Inhalt, höchstens 50 MB, Bilder höchstens 36 Millionen Bildpunkte, PDFs höchstens 1000 Seiten. Daraus entstehen Vorschaubild und Volltext (Textebene bzw. Paket Texterkennung). Die Fassung gehört zur Datei (Prüfwert), nicht zum Dokument, und ersetzt eine vorhandene. 403 ohne das Recht oder wenn das Paket für den Dateityp nicht zuständig ist (code.umwandeln), 409, wenn sha256 nicht mehr die Datei des Dokuments ist (neue Version), 413 zu groß, 415 kein PDF, PNG oder JPEG, 422 nicht lesbar.",
         "operationId": "putDokumenteMitidFassung",
         "parameters": [
           {
@@ -5411,7 +5411,7 @@
           "Dokumente"
         ],
         "summary": "Umgewandelte Fassung herunterladen",
-        "description": "Die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die das DMS nicht selbst liest (#577); Dateiname „… (umgewandelt)“, der Kopf x-dms-fassung-paket nennt Paket und Version. Das Dokument selbst bleibt das Original. 404, wenn es keine gibt. Braucht Lesen.",
+        "description": "Die Fassung (PDF, PNG oder JPEG), die ein Paket aus einer Datei gemacht hat, die Ablago nicht selbst liest (#577); Dateiname „… (umgewandelt)“, der Kopf x-dms-fassung-paket nennt Paket und Version. Das Dokument selbst bleibt das Original. 404, wenn es keine gibt. Braucht Lesen.",
         "operationId": "getDokumenteMitidFassung",
         "parameters": [
           {
@@ -5484,7 +5484,7 @@
           "Dokumente"
         ],
         "summary": "Vorschaubild setzen (Pakete)",
-        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577): ein eigenes Vorschaubild der Datei (JPEG oder PNG, roh im Körper, höchstens 5 MB). Das DMS verkleinert es auf seine Größe (längste Seite 104 px, JPEG) und ersetzt ein vorhandenes – auch eins aus der Fassung; schicke es deshalb nach der Fassung. Fehler wie bei der Fassung.",
+        "description": "Für Pakete mit dem Recht „dms:umwandeln“ (#577): ein eigenes Vorschaubild der Datei (JPEG oder PNG, roh im Körper, höchstens 5 MB). Ablago verkleinert es auf seine Größe (längste Seite 104 px, JPEG) und ersetzt ein vorhandenes – auch eins aus der Fassung; schicke es deshalb nach der Fassung. Fehler wie bei der Fassung.",
         "operationId": "putDokumenteMitidVorschaubild",
         "parameters": [
           {
@@ -6486,7 +6486,7 @@
           "Dokumente"
         ],
         "summary": "PDF verkleinern",
-        "description": "PDF verkleinern (#393): Bilder werden auf die Auflösung der Stufe heruntergerechnet und als JPEG neu komprimiert, doppelte und unbenutzte Objekte entfernt; Textebene und Volltext bleiben (keine neue Texterkennung). Ergebnis ist eine neue Version (Herkunft „im DMS bearbeitet“, kein Ereignis dokument.hochgeladen); ist die Versionierung des Registers aus, ersetzt es das Dokument nur mit bestaetigt=true (sonst 409 mit rueckfrage), das bisherige kommt in den Papierkorb. Bringt es weniger als 10 %, bleibt das Dokument unverändert: 200 mit unveraendert=true und meldung; sonst 201. Braucht Bearbeiten.",
+        "description": "PDF verkleinern (#393): Bilder werden auf die Auflösung der Stufe heruntergerechnet und als JPEG neu komprimiert, doppelte und unbenutzte Objekte entfernt; Textebene und Volltext bleiben (keine neue Texterkennung). Ergebnis ist eine neue Version (Herkunft „in Ablago bearbeitet“, kein Ereignis dokument.hochgeladen); ist die Versionierung des Registers aus, ersetzt es das Dokument nur mit bestaetigt=true (sonst 409 mit rueckfrage), das bisherige kommt in den Papierkorb. Bringt es weniger als 10 %, bleibt das Dokument unverändert: 200 mit unveraendert=true und meldung; sonst 201. Braucht Bearbeiten.",
         "operationId": "postDokumenteMitidVerkleinern",
         "parameters": [
           {
@@ -7647,7 +7647,7 @@
           "Werkbank"
         ],
         "summary": "Löschkonzept erzeugen (Administrator)",
-        "description": "Löschkonzept (#469) wie die Vorlage im Administratorhandbuch, Abschnitt 2 „Datenarten und Fristen“ aus den Mappentypen mit Personenbezug, Zweck und Archivmodus; weitere Abschnitte mit den Einstellungen (Papierkorb, Sicherungen). Was das DMS nicht weiß, steht in [eckigen Klammern]. Nur Typen, Einstellungen und Fristen – nichts aus Mappen. Lücken liefert GET /werkbank/datenschutz unter loeschkonzept.luecken.",
+        "description": "Löschkonzept (#469) wie die Vorlage im Administratorhandbuch, Abschnitt 2 „Datenarten und Fristen“ aus den Mappentypen mit Personenbezug, Zweck und Archivmodus; weitere Abschnitte mit den Einstellungen (Papierkorb, Sicherungen). Was Ablago nicht weiß, steht in [eckigen Klammern]. Nur Typen, Einstellungen und Fristen – nichts aus Mappen. Lücken liefert GET /werkbank/datenschutz unter loeschkonzept.luecken.",
         "operationId": "getWerkbankDatenschutzLoeschkonzept",
         "parameters": [
           {
@@ -8017,7 +8017,7 @@
           "Werkbank"
         ],
         "summary": "Auskunft per E-Mail senden (Administrator)",
-        "description": "Auskunft zustellen, Weg 1 (#455): die ZIP als Anhang über den E-Mail-Versand des DMS. Nur für Auskünfte mit Passwort (sonst 422); das Passwort kennt das DMS nicht und schickt es nie mit – teile es auf einem anderen Weg mit. Größer als 50 MB: 413, dann den Abruf-Link nutzen. Ohne betreff/nachricht gilt ein Vorschlag in Du-Form. Nachweis in der Historie der Person.",
+        "description": "Auskunft zustellen, Weg 1 (#455): die ZIP als Anhang über den E-Mail-Versand von Ablago. Nur für Auskünfte mit Passwort (sonst 422); das Passwort kennt Ablago nicht und schickt es nie mit – teile es auf einem anderen Weg mit. Größer als 50 MB: 413, dann den Abruf-Link nutzen. Ohne betreff/nachricht gilt ein Vorschlag in Du-Form. Nachweis in der Historie der Person.",
         "operationId": "postWerkbankAuskunftMitidEmail",
         "parameters": [
           {
@@ -8391,7 +8391,7 @@
           "Werkbank"
         ],
         "summary": "Stand der Kopie außer Haus melden (Pakete)",
-        "description": "Rückmeldung des Pakets je Sicherung (#585): laeuft (mit bytes/gesamt), hochgeladen (pruefung groesse oder keine), geprueft (pruefung pruefsumme oder stichprobe), fehlgeschlagen (grund Pflicht; endgueltig=true, wenn eine Wiederholung nicht hilft – dann bekommen die Administratoren eine E-Mail). ziel nennt das Ziel in Worten, ohne Zugangsdaten (Adressen werden davon befreit). Werkbank → Sicherung zeigt den Stand je Sicherung. Gibt das DMS das Ereignis nach allen Wiederholungen auf, setzt es selbst „fehlgeschlagen“.",
+        "description": "Rückmeldung des Pakets je Sicherung (#585): laeuft (mit bytes/gesamt), hochgeladen (pruefung groesse oder keine), geprueft (pruefung pruefsumme oder stichprobe), fehlgeschlagen (grund Pflicht; endgueltig=true, wenn eine Wiederholung nicht hilft – dann bekommen die Administratoren eine E-Mail). ziel nennt das Ziel in Worten, ohne Zugangsdaten (Adressen werden davon befreit). Werkbank → Sicherung zeigt den Stand je Sicherung. Gibt Ablago das Ereignis nach allen Wiederholungen auf, setzt es selbst „fehlgeschlagen“.",
         "operationId": "putSicherungenMitnameExtern",
         "parameters": [
           {
@@ -9089,7 +9089,7 @@
                   "type": "string",
                   "format": "uuid",
                   "nullable": true,
-                  "description": "Wer zuletzt geändert hat; null = das DMS selbst"
+                  "description": "Wer zuletzt geändert hat; null = Ablago selbst"
                 },
                 "name": {
                   "type": "string"
@@ -9711,7 +9711,7 @@
           },
           "unscharf": {
             "type": "object",
-            "description": "Unscharfe Suche (#356): Gab es keinen genauen Treffer, sucht das DMS mit ähnlich geschriebenen Wörtern aus dem Wörterverzeichnis weiter (Werkbank → Suche); dann stehen hier der gesuchte Text (statt), „Meintest du …?“ (vorschlag, oder null) und die ähnlichen Wörter je Begriff. Fehlt bei genauen Treffern.",
+            "description": "Unscharfe Suche (#356): Gab es keinen genauen Treffer, sucht Ablago mit ähnlich geschriebenen Wörtern aus dem Wörterverzeichnis weiter (Werkbank → Suche); dann stehen hier der gesuchte Text (statt), „Meintest du …?“ (vorschlag, oder null) und die ähnlichen Wörter je Begriff. Fehlt bei genauen Treffern.",
             "properties": {
               "statt": {
                 "type": "string"
@@ -10786,7 +10786,7 @@
           },
           "seiten": {
             "type": "array",
-            "description": "Nur wenn das DMS die Seiten kennt (#579: mehrsprachig oder gemischtes PDF): Text und Sprache(n) je Seite",
+            "description": "Nur wenn Ablago die Seiten kennt (#579: mehrsprachig oder gemischtes PDF): Text und Sprache(n) je Seite",
             "items": {
               "type": "object",
               "properties": {
@@ -11416,7 +11416,7 @@
           },
           "adresse": {
             "type": "string",
-            "description": "Adresse des DMS für Links"
+            "description": "Adresse von Ablago für Links"
           },
           "oeffentlich": {
             "type": "boolean",
@@ -11680,7 +11680,7 @@
           },
           "code": {
             "type": "string",
-            "description": "eigener Abrufcode (z. B. Vertragsnummer, mindestens 6 Zeichen); ohne Angabe erzeugt das DMS einen"
+            "description": "eigener Abrufcode (z. B. Vertragsnummer, mindestens 6 Zeichen); ohne Angabe erzeugt Ablago einen"
           },
           "an": {
             "type": "string",
@@ -12721,12 +12721,12 @@
               "ara",
               null
             ],
-            "description": "Sprache des Texts (#400) bzw. Hauptsprache; fehlt oder null: das DMS erkennt sie (bei Seiten: die mit dem meisten Text)"
+            "description": "Sprache des Texts (#400) bzw. Hauptsprache; fehlt oder null: Ablago erkennt sie (bei Seiten: die mit dem meisten Text)"
           },
           "seitensprachen": {
             "type": "array",
             "maxItems": 1000,
-            "description": "Sprache je Seite (#579), ein Eintrag je durch \\f getrennter Seite: ein bis zwei Kennungen (Mischseite) oder null (das DMS erkennt sie). Beispiel: [[\"deu\"], [\"fra\"], [\"deu\", \"fra\"]]",
+            "description": "Sprache je Seite (#579), ein Eintrag je durch \\f getrennter Seite: ein bis zwei Kennungen (Mischseite) oder null (Ablago erkennt sie). Beispiel: [[\"deu\"], [\"fra\"], [\"deu\", \"fra\"]]",
             "items": {
               "type": "array",
               "nullable": true,
