@@ -468,7 +468,9 @@ Die Sammeldatei ist ein ZIP mit dem Verzeichnis `sammeldatei.json` (je Paket Id,
 
 ## Paket aus deinem Ablago erstellen { #paket-aus-deinem-dms-erstellen }
 
-Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket zu einer anderen Familie mit, ohne YAML von Hand zu schreiben. Unter **Werkbank → Pakete → Paket erstellen** führt dich ein Assistent in vier Schritten; unten stehen **Zurück**, **Weiter** und am Ende **Als .zip exportieren**.
+Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket zu einer anderen Familie mit, ohne YAML von Hand zu schreiben. Unter **Werkbank → Pakete → Paket erstellen** führt dich ein Assistent in vier Schritten – **Auswählen · Prüfen · Angaben · Erstellen**; unten stehen **Zurück** und **Weiter**, am Ende **Paket erstellen** und **Erstellen und als ZIP herunterladen**.
+
+Hast du schon Pakete erstellt, fragt der erste Schritt zuerst: **Neues Paket** (ohne Auswahl, ohne Angaben) oder **Neue Version von …** (übernimmt Auswahl und Angaben eines früheren Pakets und schlägt die nächste Version vor; Mappentypen und Ansichten, die es nicht mehr gibt, fallen mit Hinweis weg, eigene Typen, die du seitdem angelegt hast, nimmst du selbst dazu).
 
 1. **Auswählen** – Mappentypen und Ansichten mit Haken, oben eine Suche. Optional **Beispiel-Mappen**: Ohne Auswahl enthält das Paket keine einzige Mappe. Wählst du Mappen der gewählten Typen aus, kommen ihre Feldwerte als Beispiele mit – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen.
 2. **Prüfen** – Ablago prüft automatisch und sagt, was es daraus macht:
@@ -481,11 +483,19 @@ Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit 
     - **Nötige Ablago-Version** – Ablago ermittelt die **Mindestversion** aus dem, was das Paket nutzt (z. B. Feldformate ab 0.121.0), und schlägt sie vor. Zur Auswahl stehen die Versionen von dort bis zu deiner eigenen („nur ab meiner Version“); niedriger geht nicht. Gespeichert wird immer `>=X.Y.0`.
     - **Lizenz** – drei Wege: eine **freie Lizenz** aus der Liste (Vorgabe Apache-2.0 wie Ablago selbst; tippe Kürzel oder Name, z. B. „apa“ oder „gnu“, die Liste ist alphabetisch, je Lizenz ein Satz, was sie verlangt), eine **eigene Lizenz** (Name und Text, z. B. für Pakete, die ein IT-Dienstleister nur an seine Kunden gibt – der Text kommt als LICENSE ins Paket) oder **keine Lizenz** (dann bleiben alle Rechte bei dir). Mit eigener oder ohne Lizenz lässt sich das Paket überall installieren, kommt aber nicht in den offiziellen Katalog – dort gelten nur freie Lizenzen. Die Installations-Vorschau zeigt die Lizenz immer an, bei eigener oder fehlender mit Hinweis.
     - **Expertenmodus** (unter **Werkbank → Werkbank anpassen**): Version und Ablago-Version gehen dann auch von Hand – Ablago prüft trotzdem, dass die Version höher ist und die Mindestversion reicht. Für ein Paket, das noch nicht fertig ist, gibt es dort außerdem 0.1.0.
-4. **Exportieren** – vor dem Download prüft Ablago das fertige Archiv genauso wie beim Hochladen; erst dann gibt es die Datei `<id>-<version>.zip` (Format der Registry mit `manifest.yaml`, `inhalt/…`, README, CHANGELOG, LICENSE).
+4. **Erstellen** – Ablago prüft das fertige Archiv genauso wie beim Hochladen. **Paket erstellen** legt es dann an: Es steht unter **Werkbank → Pakete → Installiert** mit dem Zeichen **selbst erstellt**. **Erstellen und als ZIP herunterladen** gibt dir zusätzlich gleich die Datei `<id>-<version>.zip` (Format der Registry mit `manifest.yaml`, `inhalt/…`, README, CHANGELOG, LICENSE).
 
 In der anderen Ablago-Installation installierst du zuerst die Abhängigkeiten (z. B. *Basis* aus dem Katalog) und lädst die Datei dann unter **Expertenmodus → Paket hochladen** hoch.
 
-**Nächste Version:** Ablago merkt sich Id, Version, Autor, Lizenz, Auswahl und die Felder jedes Exports. Beim nächsten Mal schlägt der Assistent dieselbe Id mit höherer Version vor (Vorgabe nach der erkannten Art der Änderung); frühere Pakete holst du unter „Früher exportiert“ zurück. Lädt die andere Familie die höhere Version hoch, **aktualisiert** ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.
+**Selbst erstellte Pakete** zeigt die Paketverwaltung unter **Installiert** mit dem Zeichen **selbst erstellt** und der zuletzt erstellten Version. Ein Klick zeigt, was damals erstellt wurde – Mappentypen, Ansichten, Beispiele, Angaben, Version und Datum –, und markiert Mappentypen, die du seitdem geändert hast. Dort gibt es:
+
+- **Neue Version erstellen** – öffnet „Paket erstellen“ mit dieser Auswahl und schlägt die nächste Version vor,
+- **Als ZIP herunterladen** – jede gespeicherte Version genau so, wie sie erstellt wurde (die letzten zehn, je bis 5 MB; sie sind Teil der Sicherung),
+- **Aus der Liste nehmen** – vergisst nur die Angaben und die gespeicherten Archive. Ein **Entfernen**, das Mappentypen oder Ansichten löscht, gibt es nicht: Sie sind das Original in diesem Ablago, bleiben eigene Typen und lassen sich wieder exportieren.
+
+Updates aus einem Katalog gibt es für selbst erstellte Pakete nicht. Hat ein Katalog ein Paket mit derselben Id, weist die Paketverwaltung darauf hin.
+
+**Nächste Version:** Ablago merkt sich Id, Version, Autor, Lizenz, Auswahl und die Felder jedes erstellten Pakets. Mit **Neue Version von …** schlägt der Assistent dieselbe Id mit höherer Version vor (Vorgabe nach der erkannten Art der Änderung). Lädt die andere Familie die höhere Version hoch, **aktualisiert** ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.
 
 !!! note "Keine Daten im Paket"
     Ein Paket enthält nur den Aufbau – Mappentypen und Ansichten. Mappen, Dokumente, Notizen, Benutzer und Passwörter kommen nie mit; aus ausdrücklich gewählten Beispiel-Mappen nur Feldwerte ohne Passwörter. Paket erstellen dürfen nur Administratoren; das Protokoll vermerkt jeden Export.

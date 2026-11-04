@@ -14,7 +14,7 @@ import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten'
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
 import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
-import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung } from '../../shared/src/paketerstellung';
+import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung, SelbstErstellt, SelbstErstelltDetail } from '../../shared/src/paketerstellung';
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
 import type { FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import type { SichtRechte, SichtRegelwerk, SichtSchritt } from '../../shared/src/sichtrechte';
@@ -690,6 +690,12 @@ export const api = {
   paketErstellenPruefen: (e: PaketErstellenEingabe) => anfrage<PaketPruefung>('POST', '/api/werkbank/pakete/erstellen/pruefen', e),
   /** #651: Id, Name und Version aus der zuletzt weitergegebenen .zip lesen (installiert nichts). */
   paketLetzteVersion: (datei: File) => sendeDatei('/api/werkbank/pakete/erstellen/letzte', datei) as Promise<{ id: string; name: string; version: string }>,
+  /** #652: Paket erstellen ohne Download; erscheint unter „Installiert“ als selbst erstellt. */
+  paketAnlegen: (e: PaketErstellenEingabe) => anfrage<SelbstErstellt & { datei: string; bytes: number }>('POST', '/api/werkbank/pakete/erstellen/anlegen', e),
+  selbstErstellt: () => anfrage<SelbstErstellt[]>('GET', '/api/werkbank/pakete/selbst'),
+  selbstErstelltDetail: (id: string) => anfrage<SelbstErstelltDetail>('GET', `/api/werkbank/pakete/selbst/${encodeURIComponent(id)}`),
+  selbstErstelltZip: (id: string, version: string) => `/api/werkbank/pakete/selbst/${encodeURIComponent(id)}/zip?version=${encodeURIComponent(version)}`,
+  selbstAusListe: (id: string) => anfrage<SelbstErstellt[]>('DELETE', `/api/werkbank/pakete/selbst/${encodeURIComponent(id)}`),
   paketExportieren: (e: PaketErstellenEingabe) => speichereDatei('/api/werkbank/pakete/erstellen/export', e, `${e.id}-${e.version}.zip`),
   nummernkreisAnlegen: (k: NummernkreisEingabe) => anfrage<NummernkreisAnsicht[]>('POST', '/api/werkbank/nummernkreise', k),
   nummernkreisAendern: (s: string, k: Omit<NummernkreisEingabe, 'schluessel'>) => anfrage<NummernkreisAnsicht[]>('PUT', `/api/werkbank/nummernkreise/${encodeURIComponent(s)}`, k),

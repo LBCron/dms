@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { BESCHREIBUNG_LAENGE, LIZENZ_SCHLUESSEL, LIZENZEN_ALPHABETISCH, lizenzPasst, LIZENZNAME_LAENGE, naechsteVersion, naechsteVersionen, paketIdAus, VERSIONSARTEN, type ErstellenStand, type Lizenz, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type VersionsArt } from '../../../shared/src/paketerstellung';
+import { BESCHREIBUNG_LAENGE, LIZENZ_SCHLUESSEL, LIZENZEN_ALPHABETISCH, lizenzPasst, LIZENZNAME_LAENGE, naechsteVersionen, paketIdAus, VERSIONSARTEN, type ErstellenStand, type Lizenz, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type VersionsArt } from '../../../shared/src/paketerstellung';
 import { t } from '../sprache';
 import { api, ApiFehler } from '../api';
 import { Hilfe } from '../Hilfe';
@@ -12,12 +12,15 @@ import { geheZu } from '../ort';
  * Prüfung und Erzeugung macht der Server; hier wird nur ausgewählt, angezeigt und heruntergeladen.
  */
 
-const SCHRITTE = ['Auswählen', 'Prüfen', 'Angaben', 'Exportieren'] as const;
+const SCHRITTE = ['Auswählen', 'Prüfen', 'Angaben', 'Erstellen'] as const;
 /** Probleme, die zu den Angaben gehören (Schritt 3), statt zur Auswahl. */
 const istAngabe = (p: string) => /^(Id|Name|Version|Beschreibung|Autor|GitHub|Lizenz|Ablago-Version):/.test(p);
 const groesse = (b: number) => (b < 1024 ? `${b} Bytes` : `${(b / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 })} KB`);
 
-export function PaketErstellen() {
+/** Selbst erstelltes Paket in der Paketverwaltung (#652): Kennung in der Adresse. */
+export const SELBST = '~selbst:';
+
+export function PaketErstellen({ onErstellt }: { onErstellt?: () => void } = {}) {
   const [stand, setStand] = useState<ErstellenStand | null>(null);
   const [e, setE] = useState<PaketErstellenEingabe | null>(null);
   const [idAuto, setIdAuto] = useState(true);
@@ -30,10 +33,19 @@ export function PaketErstellen() {
   const [sendet, setSendet] = useState(false);
   const [experte, setExperte] = useState(false);
   const [hochgeladen, setHochgeladen] = useState(false);
+  /** #652: Gibt es frühere Pakete, beginnt Schritt 1 mit „Neues Paket“ oder „Neue Version von …“. */
+  const [frage, setFrage] = useState(false);
+  const [weg, setWeg] = useState<string>();
   const lauf = useRef(0);
 
   useEffect(() => {
-    api.paketErstellenStand().then((s) => { setStand(s); setE(s.vorschlag); setIdAuto(!s.vorschlag.id); }, (x) => setFehler((x as Error).message));
+    api.paketErstellenStand().then((s) => {
+      setStand(s);
+      const von = new URLSearchParams(location.search).get('von');
+      const w = von ? s.entwuerfe.find((x) => x.id === von) : undefined;
+      if (w) { setE(alsNeueVersion(w, s).e); setIdAuto(false); setWeg(alsNeueVersion(w, s).weg); }
+      else { setE(s.vorschlag); setIdAuto(!s.vorschlag.id); setFrage(s.entwuerfe.length > 0); }
+    }, (x) => setFehler((x as Error).message));
     // Expertenmodus der Werkbank (#356): Version und Ablago-Version dann auch von Hand (#651).
     api.werkbankAnsicht().then((w) => setExperte(!!w.eigene.experte), () => setExperte(false));
   }, []);
@@ -66,7 +78,8 @@ export function PaketErstellen() {
 
   const setze = (x: Partial<PaketErstellenEingabe>) => { setFertig(undefined); setE({ ...e, ...x }); };
   const umschalten = (liste: 'typen' | 'sichten' | 'beispiele', id: string, an: boolean) => setze({ [liste]: an ? [...e[liste], id] : e[liste].filter((x) => x !== id) });
-  const ausEntwurf = (x: PaketEntwurf) => { setIdAuto(false); setHochgeladen(false); setze({ ...x, version: naechsteVersion(x.version), dms: '', aenderungen: '', bekannteVersion: undefined }); };
+  const ausEntwurf = (x: PaketEntwurf) => { const n = alsNeueVersion(x, stand); setIdAuto(false); setHochgeladen(false); setWeg(n.weg); setFrage(false); setze(n.e); };
+  const neuesPaket = () => { setIdAuto(true); setHochgeladen(false); setWeg(undefined); setFrage(false); setze(stand.vorschlag); };
   async function letzteHochladen(datei: File) {
     if (!e) return;
     try {
@@ -82,13 +95,20 @@ export function PaketErstellen() {
   const auswahlProbleme = p?.probleme.filter((x) => !istAngabe(x)) ?? [];
   const angabeProbleme = p?.probleme.filter(istAngabe) ?? [];
 
-  async function exportieren() {
+  /** #652: „Paket erstellen“ legt es an (unter „Installiert“ als selbst erstellt), auf Wunsch zusätzlich als ZIP. */
+  async function erstellen(mitZip: boolean) {
     if (!e) return;
     setSendet(true); setFehler(undefined); setFertig(undefined);
     try {
-      const r = await api.paketExportieren(e);
-      setFertig(`Gespeichert als „${r.name}“ (${groesse(r.bytes)}). In der anderen Ablago-Installation: Werkbank → Pakete → Expertenmodus → Paket hochladen.`);
+      if (mitZip) {
+        const r = await api.paketExportieren(e);
+        setFertig(t('pakete.erstellen.fertig.zip', { datei: r.name, groesse: groesse(r.bytes) }));
+      } else {
+        const r = await api.paketAnlegen(e);
+        setFertig(t('pakete.erstellen.fertig.angelegt', { name: r.name, version: r.version }));
+      }
       setStand(await api.paketErstellenStand());
+      onErstellt?.();
     } catch (x) { setFehler([(x as Error).message, ...(x instanceof ApiFehler ? x.gruende : [])].join(' ')); }
     finally { setSendet(false); }
   }
@@ -108,7 +128,9 @@ export function PaketErstellen() {
         ))}
       </ol>
 
-      {schritt === 0 && <Auswahl stand={stand} e={e} suche={suche} setSuche={setSuche} umschalten={umschalten} pruefung={p} />}
+      {schritt === 0 && frage && <NeuOderVersion stand={stand} neu={neuesPaket} version={ausEntwurf} />}
+      {schritt === 0 && !frage && weg && <div className="hinweis warn" role="status"><p>{weg}</p></div>}
+      {schritt === 0 && !frage && <Auswahl stand={stand} e={e} suche={suche} setSuche={setSuche} umschalten={umschalten} pruefung={p} />}
 
       {schritt === 1 && (
         <section className="blatt" aria-label="Prüfung">
@@ -134,15 +156,6 @@ export function PaketErstellen() {
         <section className="blatt" aria-label="Angaben">
           <h2 className="h3">Angaben</h2>
           <div className="raster">
-          {stand.entwuerfe.length > 0 && (
-            <label className="eigenschaft breit"><span>Früher exportiert</span>
-              <select value="" onChange={(x) => { const w = stand.entwuerfe.find((y) => y.id === x.target.value); if (w) ausEntwurf(w); }}>
-                <option value="">– Angaben übernehmen –</option>
-                {stand.entwuerfe.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.id}) · {w.version} · {new Date(w.exportiert).toLocaleDateString('de-DE')}</option>)}
-              </select>
-              <small className="leise">Dieselbe Id mit höherer Version – dann aktualisiert die andere Ablago-Installation das Paket.</small>
-            </label>
-          )}
           <label className="eigenschaft"><span>Name</span><input value={e.name} maxLength={60} onChange={(x) => setze({ name: x.target.value, ...(idAuto ? { id: paketIdAus(x.target.value) } : {}) })} /></label>
           <label className="eigenschaft"><span>Id</span><input value={e.id} maxLength={20} onChange={(x) => { setIdAuto(false); setze({ id: x.target.value }); }} />
             <small className="leise">Kleinbuchstaben, Ziffern und _, z. B. <code>vertraege_familie</code>. Bleibt bei jeder Version gleich.</small></label>
@@ -160,8 +173,8 @@ export function PaketErstellen() {
       )}
 
       {schritt === 3 && (
-        <section className="blatt" aria-label="Exportieren">
-          <h2 className="h3">Exportieren</h2>
+        <section className="blatt" aria-label="Erstellen">
+          <h2 className="h3">Erstellen</h2>
           {!p ? <p className="leise">Prüfe …</p> : p.einspielbar ? <>
             <div className="hinweis gut"><p>Das Paket hat dieselbe Prüfung bestanden wie beim Hochladen – es lässt sich so in einer anderen Ablago-Installation installieren{Object.keys(p.abhaengigkeiten).length ? ', wenn dort die Abhängigkeiten installiert sind' : ''}.</p></div>
             <dl className="eigenschaften">
@@ -171,7 +184,7 @@ export function PaketErstellen() {
             <Inhalt p={p} />
             {e.lizenzArt && e.lizenzArt !== 'frei' && <div className="hinweis warn"><p>{t('pakete.erstellen.lizenz.nichtKatalog')}</p></div>}
           </> : <div className="hinweis schlecht stapel"><p>{t('pakete.erstellen.nochnicht')}</p><ul>{p.probleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-          {fertig && <div className="hinweis gut" role="status"><p>{fertig}</p></div>}
+          {fertig && <div className="hinweis gut" role="status"><p>{fertig} <button type="button" className="textknopf" onClick={() => e && geheZu(`/werkbank/pakete/${SELBST}${e.id}`)}>{t('pakete.erstellen.fertig.ansehen')}</button></p></div>}
         </section>
       )}
 
@@ -179,15 +192,56 @@ export function PaketErstellen() {
 
       <div className="speicherleiste">
         <button type="button" className="textknopf" onClick={() => geheZu('/werkbank/pakete')}>Abbrechen</button>
-        <span className="status" role="status">{prueft ? 'Prüfe …' : p ? (p.einspielbar ? 'Bereit zum Export' : `${p.probleme.length} ${p.probleme.length === 1 ? 'Punkt' : 'Punkte'} offen`) : ''}</span>
+        <span className="status" role="status">{prueft ? 'Prüfe …' : p ? (p.einspielbar ? 'Bereit zum Erstellen' : `${p.probleme.length} ${p.probleme.length === 1 ? 'Punkt' : 'Punkte'} offen`) : ''}</span>
         <div className="knoepfe">
           {schritt > 0 && <button type="button" className="knopf" onClick={() => setSchritt(schritt - 1)}>Zurück</button>}
           {schritt < SCHRITTE.length - 1
-            ? <button type="button" className="knopf primaer" onClick={() => setSchritt(schritt + 1)}>Weiter</button>
-            : <button type="button" className="knopf primaer" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void exportieren()}>{sendet ? 'Erstelle …' : 'Als .zip exportieren'}</button>}
+            ? <button type="button" className="knopf primaer" disabled={schritt === 0 && frage} onClick={() => setSchritt(schritt + 1)}>Weiter</button>
+            : <>
+              <button type="button" className="knopf" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void erstellen(true)}>{t('pakete.erstellen.mitZip')}</button>
+              <button type="button" className="knopf primaer" disabled={sendet || prueft || !p?.einspielbar} onClick={() => void erstellen(false)}>{sendet ? 'Erstelle …' : t('pakete.erstellen.knopf')}</button>
+            </>}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Angaben eines früheren Pakets als neue Version (#652): Auswahl und Angaben übernehmen; die Version setzt die Prüfung
+ * nach der erkannten Art der Änderung (#651);
+ * Mappentypen und Ansichten, die es nicht mehr gibt, fallen mit Hinweis weg. Neue eigene Typen kommen nicht von selbst dazu.
+ */
+function alsNeueVersion(w: PaketEntwurf, stand: ErstellenStand): { e: PaketErstellenEingabe; weg?: string } {
+  const typen = w.typen.filter((id) => stand.typen.some((x) => x.id === id));
+  const sichten = w.sichten.filter((id) => stand.sichten.some((x) => x.id === id));
+  const fehlt = w.typen.length - typen.length + w.sichten.length - sichten.length;
+  return {
+    e: {
+      typen, sichten, beispiele: w.beispiele, id: w.id, name: w.name, version: '', beschreibung: w.beschreibung, autor: w.autor,
+      lizenz: w.lizenz, lizenzArt: w.lizenzArt ?? 'frei', lizenzName: w.lizenzName, lizenzText: w.lizenzText, dms: '', aenderungen: '',
+    },
+    weg: fehlt ? t('pakete.erstellen.frage.weg', { anzahl: fehlt }) : undefined,
+  };
+}
+
+/** #652: Schritt 1 beginnt mit der Frage „Neues Paket“ oder „Neue Version von …“, sobald es frühere Pakete gibt. */
+function NeuOderVersion({ stand, neu, version }: { stand: ErstellenStand; neu(): void; version(w: PaketEntwurf): void }) {
+  const liste = [...stand.entwuerfe].sort((a, b) => b.exportiert.localeCompare(a.exportiert));
+  return (
+    <section className="blatt" aria-label={t('pakete.erstellen.frage.titel')}>
+      <h2 className="h3">{t('pakete.erstellen.frage.titel')}</h2>
+      <div className="knoepfe"><button type="button" className="knopf primaer" onClick={neu}>{t('pakete.erstellen.frage.neu')}</button></div>
+      <p className="leise klein">{t('pakete.erstellen.frage.neuText')}</p>
+      <h3 className="h4">{t('pakete.erstellen.frage.version')}</h3>
+      <ul className="stapel">
+        {liste.map((w) => (
+          <li key={w.id}><button type="button" className="textknopf" onClick={() => version(w)}>{t('pakete.erstellen.frage.versionVon', { name: w.name })}</button>
+            <small className="leise"> {w.id} · {t('pakete.erstellen.frage.zuletzt', { version: w.version, datum: new Date(w.exportiert).toLocaleDateString('de-DE') })}</small></li>
+        ))}
+      </ul>
+      <p className="leise klein">{t('pakete.erstellen.frage.versionText')}</p>
+    </section>
   );
 }
 

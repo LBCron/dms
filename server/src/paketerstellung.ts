@@ -14,7 +14,7 @@ import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
 import { BEREICH, inMB, PAKET_ID, VERSION, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
-import { BESCHREIBUNG_LAENGE, EIGENE_LIZENZ, GITHUB, istFreieLizenz, KEINE_LIZENZ, LIZENZ_VORGABE, LIZENZEN, LIZENZNAME_LAENGE, LIZENZTEXT_MAX, lizenzVerweis, NAME_LAENGE, naechsteVersion, naechsteVersionen, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type VersionsArt, type VersionsLage } from '../../shared/src/paketerstellung';
+import { BESCHREIBUNG_LAENGE, EIGENE_LIZENZ, GITHUB, istFreieLizenz, KEINE_LIZENZ, LIZENZ_VORGABE, LIZENZEN, LIZENZNAME_LAENGE, LIZENZTEXT_MAX, lizenzVerweis, NAME_LAENGE, naechsteVersion, naechsteVersionen, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type SelbstErstellt, type SelbstErstelltDetail, type VersionsArt, type VersionsLage } from '../../shared/src/paketerstellung';
 import type { Bedingung, Sicht, WertAngabe } from '../../shared/src/sichten';
 import type { Dienst } from './dienst';
 import { t } from './sprache';
@@ -100,6 +100,10 @@ const SCHLUESSEL = /^[a-z][a-z0-9_]{0,39}$/;
 const ID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const mitId = (v: unknown) => ID.test(JSON.stringify(v) ?? '');
 const ENTWUERFE_MAX = 20;
+/** Gemerkte Archive je selbst erstelltem Paket (#652): die letzten Versionen, je höchstens 5 MB (Einstellung, in der Sicherung). */
+const ARCHIVE_JE_PAKET = 10;
+const ARCHIV_MERKEN_MAX = 5 * 1024 * 1024;
+type GemerktesArchiv = { version: string; erstellt: string; zip: string };
 const BEISPIELMAPPEN_MAX = 200;
 
 /** Alles, was die Erzeugung aus dem DMS braucht. */
@@ -495,7 +499,6 @@ export class Paketerstellung {
       const p = pakete.find((x) => Object.values(map(x)).includes(id));
       return p ? { id: p.id, name: p.name, version: p.version } : null;
     };
-    const letzter = [...entwuerfe].sort((a, b) => b.exportiert.localeCompare(a.exportiert))[0];
     // Nötige Ablago-Version bleibt leer: Die Oberfläche setzt die ermittelte Mindestversion aus der Prüfung (#651).
     const leer: PaketErstellenEingabe = { typen: [], sichten: [], beispiele: [], id: '', name: '', version: '1.0.0', beschreibung: '', autor: { name: '', github: '' }, lizenz: LIZENZ_VORGABE, lizenzArt: 'frei', dms: '', aenderungen: '' };
     return {
@@ -506,7 +509,8 @@ export class Paketerstellung {
       sichten: sichten.map((s) => ({ id: s.id, name: s.name, elternId: s.elternId ?? null, paket: herkunft((x) => x.sichten, s.id) })),
       entwuerfe,
       dms: this.o.version(),
-      vorschlag: letzter ? this.ausEntwurf(letzter) : leer,
+      // #652: nie ungefragt vorbelegen – „Neue Version von …“ wählt man im ersten Schritt.
+      vorschlag: leer,
     };
   }
 
@@ -574,6 +578,63 @@ export class Paketerstellung {
     return { id: m.id, name: m.name, version: m.version };
   }
 
+  private async archive(id: string): Promise<GemerktesArchiv[]> {
+    const v = await this.d.paketArchive(id);
+    return Array.isArray(v) ? v.filter((x): x is GemerktesArchiv => !!x && typeof x.version === 'string' && typeof x.zip === 'string') : [];
+  }
+
+  /** Selbst erstellte Pakete für die Paketverwaltung (#652), zuletzt erstellte zuerst. */
+  async selbstErstellt(): Promise<SelbstErstellt[]> {
+    const liste = [...await this.d.paketEntwuerfe()].sort((a, b) => b.exportiert.localeCompare(a.exportiert));
+    return Promise.all(liste.map(async (e) => this.kurz(e, await this.archive(e.id))));
+  }
+  private kurz(e: PaketEntwurf, archive: GemerktesArchiv[]): SelbstErstellt {
+    return {
+      id: e.id, name: e.name, version: e.version, erstellt: e.exportiert, von: e.von, lizenz: e.lizenz,
+      versionen: archive.map((a) => ({ version: a.version, erstellt: a.erstellt, bytes: Math.floor((a.zip.length * 3) / 4) })),
+    };
+  }
+
+  /** Was damals erstellt wurde und was sich seitdem geändert hat (#652). */
+  async selbstErstelltDetail(id: string): Promise<SelbstErstelltDetail> {
+    const e = (await this.d.paketEntwuerfe()).find((x) => x.id === id);
+    if (!e) throw new Fachfehler(404, 'Dieses selbst erstellte Paket gibt es nicht (mehr).');
+    const [typen, sichten] = [await this.d.listeTypen(), await this.d.listeSichten()];
+    return {
+      ...this.kurz(e, await this.archive(id)), beschreibung: e.beschreibung, dms: e.dms, autor: e.autor, aenderungen: e.aenderungen, verlauf: e.verlauf,
+      typen: e.typen.map((tid) => { const t = typen.find((x) => x.id === tid); return { id: tid, name: t?.name ?? null, geaendert: !!t && t.geaendert > e.exportiert }; }),
+      sichten: e.sichten.map((sid) => ({ id: sid, name: sichten.find((x) => x.id === sid)?.name ?? null })),
+      beispiele: e.beispiele.length,
+    };
+  }
+
+  /** Eine erstellte Version noch einmal als ZIP (#652) – genau so, wie sie erstellt wurde. */
+  async archiv(id: string, version: string): Promise<{ name: string; daten: Buffer }> {
+    const a = (await this.archive(id)).find((x) => x.version === version);
+    if (!a) throw new Fachfehler(404, `Version ${version} von „${id}“ ist nicht mehr gespeichert. Erstelle eine neue Version.`);
+    return { name: `${id}-${version}.zip`, daten: Buffer.from(a.zip, 'base64') };
+  }
+
+  /** „Aus der Liste nehmen“ (#652): vergisst Entwurf und gemerkte Archive – Mappentypen und Ansichten bleiben. */
+  async ausListeNehmen(id: string, von: Handelnder): Promise<SelbstErstellt[]> {
+    const alle = await this.d.paketEntwuerfe();
+    if (!alle.some((x) => x.id === id)) throw new Fachfehler(404, 'Dieses selbst erstellte Paket gibt es nicht (mehr).');
+    await this.d.setzePaketEntwuerfe(alle.filter((x) => x.id !== id));
+    await this.d.setzePaketArchive(id, null);
+    log.info('Selbst erstelltes Paket aus der Liste genommen', { von: von.email, paket: id });
+    return this.selbstErstellt();
+  }
+
+  /**
+   * „Paket erstellen“ (#652): erstellt das Paket – es erscheint unter „Installiert“ als selbst erstellt –,
+   * merkt die Angaben für die nächste Version und das Archiv zum späteren Herunterladen.
+   */
+  async erstelle(eingabe: unknown, von: Handelnder): Promise<SelbstErstellt & { name: string; datei: string; bytes: number }> {
+    const r = await this.exportiere(eingabe, von);
+    const e = (await this.d.paketEntwuerfe()).find((x) => r.name.startsWith(`${x.id}-`))!;
+    return { ...this.kurz(e, await this.archive(e.id)), datei: r.name, bytes: r.daten.length };
+  }
+
   /** Export als .zip: nur, wenn die Prüfung bestanden ist; merkt die Angaben für den nächsten Export. */
   async exportiere(eingabe: unknown, von: Handelnder): Promise<{ name: string; daten: Buffer }> {
     const e = liesEingabe(eingabe);
@@ -588,7 +649,13 @@ export class Paketerstellung {
     };
     const rest = (await this.d.paketEntwuerfe()).filter((x) => x.id !== id);
     await this.d.setzePaketEntwuerfe([entwurf, ...rest].slice(0, ENTWUERFE_MAX));
-    log.info('Paket erstellt und exportiert', { von: von.email, paket: id, version: entwurf.version, typen: bau.inhalt.typen.length, sichten: bau.inhalt.sichten.length, beispiele: bau.inhalt.beispiele, abhaengigkeiten: Object.keys(bau.abhaengigkeiten) });
+    // Archiv merken (#652), damit „Als ZIP herunterladen“ später genau diese Version liefert.
+    if (zip.length <= ARCHIV_MERKEN_MAX) {
+      const alt = (await this.archive(id)).filter((a) => a.version !== entwurf.version);
+      await this.d.setzePaketArchive(id, [{ version: entwurf.version, erstellt: entwurf.exportiert, zip: zip.toString('base64') }, ...alt].slice(0, ARCHIVE_JE_PAKET));
+    }
+    for (const weg of rest.length + 1 > ENTWUERFE_MAX ? rest.slice(ENTWUERFE_MAX - 1) : []) await this.d.setzePaketArchive(weg.id, null);
+    log.info('Paket erstellt', { von: von.email, paket: id, version: entwurf.version, typen: bau.inhalt.typen.length, sichten: bau.inhalt.sichten.length, beispiele: bau.inhalt.beispiele, abhaengigkeiten: Object.keys(bau.abhaengigkeiten) });
     return { name: `${id}-${entwurf.version}.zip`, daten: zip };
   }
 }
