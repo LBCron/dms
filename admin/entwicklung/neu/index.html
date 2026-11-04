@@ -45,12 +45,6 @@
     
     
       
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
     
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
@@ -361,6 +355,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01582" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.158.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.158.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01581" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -373,7 +406,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
+  <a href="#sicherheit_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -2531,6 +2564,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01582" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.158.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.158.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01581" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2543,7 +2615,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
+  <a href="#sicherheit_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -2655,8 +2727,19 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01581">0.158.1<a class="headerlink" href="#01581" title="Permanent link">&para;</a></h2>
+<h2 id="01582">0.158.2<a class="headerlink" href="#01582" title="Permanent link">&para;</a></h2>
 <h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PDFs werden beim Ansehen bereinigt</strong> (#639). Der Betrachter im Browser bekommt nicht mehr das Original, sondern eine Kopie ohne JavaScript, automatische Aktionen (beim Öffnen, beim Blättern), Formular-Übermittlung, Start- und Fernaktionen und ohne eingebettete Dateien. So erfährt niemand über ein präpariertes PDF, wann und wo du es öffnest. Links bleiben und öffnen sich nur auf Klick. Gilt auch für ältere Versionen, die umgewandelte Fassung und die Archivfassung.</li>
+<li>Lässt sich ein PDF nicht bereinigen (verschlüsselt oder beschädigt), zeigt Ablago statt der Anzeige einen kurzen Hinweis; herunterladen geht weiter.</li>
+<li><strong>Unverändert:</strong> Herunterladen, Weitergeben, Export, E-Mail und die API liefern das Original (bzw. gestempelt). Das gespeicherte Original bleibt, wie es ist.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Die bereinigte Kopie entsteht im Arbeiter-Pool und wird je Prüfsumme im Speicher gehalten (höchstens 256 MB), damit das Ansehen nicht spürbar langsamer wird. Kopfzeile <code>X-DMS-Anzeige: bereinigt</code> bzw. <code>nur-herunterladen</code>.</li>
+</ul>
+<h2 id="01581">0.158.1<a class="headerlink" href="#01581" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit_1">Sicherheit<a class="headerlink" href="#sicherheit_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Sicherung außer Haus: Pakete dürfen nur noch lesen</strong> (#636). Ein Paket wie „Sicherungsziel WebDAV“ bekommt jetzt einen API-Schlüssel, der nur lesen darf – zum Kopieren muss es in Ablago nichts schreiben. Seinen Stand („läuft“, „hochgeladen“, „geprüft“, „fehlgeschlagen“) meldet es in der Antwort auf das Ereignis <code>sicherung.fertig</code>; Ablago trägt ihn ein. Der Schlüssel wird beim nächsten Start des Paket-Läufers neu ausgestellt.</li>
 </ul>
@@ -2763,7 +2846,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a> · Das Handbuch lädt nichts von Dritten (<a href="https://help.ablago.app/admin/aktuell/datenschutz/#keine-telemetrie">Datenschutz</a>)
     </div>
   
   
