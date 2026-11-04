@@ -1,0 +1,4169 @@
+
+<!doctype html>
+<html lang="de" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Ablago einrichten, betreiben und erweitern">
+      
+      
+      
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.162/pakete/">
+      
+      
+        <link rel="prev" href="../automatisierungen/">
+      
+      
+        <link rel="next" href="../suche/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../marke/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Pakete - Ablago – Administratorhandbuch</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pakete" class="md-skip">
+          Zum Inhalt
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  Du liest nicht das Handbuch zur neuesten Version des DMS.
+  <a href="../.."><strong>Zur aktuellen Version</strong></a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL(".."),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
+    <a href=".." title="Ablago – Administratorhandbuch" class="md-header__button md-logo" aria-label="Ablago – Administratorhandbuch" data-md-component="logo">
+      
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Ablago – Administratorhandbuch
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Pakete
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dunkle Darstellung"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dunkle Darstellung" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Helle Darstellung"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Helle Darstellung" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Suche" placeholder="Suche" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Suche">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Zurücksetzen" aria-label="Zurücksetzen" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Suche wird initialisiert
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/motom001/dms" title="Zum Repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    motom001/dms
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Ablago – Administratorhandbuch" class="md-nav__button md-logo" aria-label="Ablago – Administratorhandbuch" data-md-component="logo">
+      
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
+
+    </a>
+    Ablago – Administratorhandbuch
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/motom001/dms" title="Zum Repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    motom001/dms
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Überblick
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../neu/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neu in dieser Version
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation und Betrieb
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Installation und Betrieb
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Einrichtung und Betrieb
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://help.ablago.app/installieren/aktuell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wie komme ich an ein DMS?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../aktualisieren/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aktualisieren und Sichern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wachsen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wachsen und umziehen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verkraftet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Was Ablago verkraftet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lasttest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lasttest selbst durchführen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ki-lokal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KI lokal betreiben
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verschluesselung/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verschlüsselung
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Werkbank
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Werkbank
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uebersicht/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Werkbank und Übersicht
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ablage aufbauen
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ablage aufbauen
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mappentypen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mappentypen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sichten/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ansichten
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nummernkreise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Nummernkreise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stempel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stempel beim Weitergeben
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../automatisierungen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatisierungen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pakete
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pakete
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#katalog-abrufen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Katalog abrufen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mehrere-pakete-in-einem-schritt-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mehrere Pakete in einem Schritt installieren
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uber-die-katalog-webseite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Über die Katalog-Webseite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#im-katalog-ansehen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Katalog ansehen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#herkunft-signiert-oder-nicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Herkunft: signiert oder nicht
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installierte-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installierte Pakete
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aktualisieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aktualisieren
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-in-verweise-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text in Verweise umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entfernen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entfernen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#einstellungen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einstellungen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pakete-mit-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete mit Code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete mit Code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rechte-eines-pakets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rechte eines Pakets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rechte eines Pakets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recht-mappen-lesen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen lesen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-mappen-anlegen-und-andern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen anlegen und ändern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-dokumente" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dokumente lesen oder Volltext schreiben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-vektoren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vektoren zu Dokumenten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-netzwerk-und-internet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zugriff auf Netzwerk und Internet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-antworten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fragen an die Ablage beantworten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-erkennen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Felder aus Dokumenten vorschlagen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dateien umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext liefern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-sicherung-lesen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherung lesen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dienst-adresse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dienst-Adresse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#erkennung-durch-ein-paket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung durch ein Paket
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frag-deine-ablage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frag deine Ablage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignisse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignisse
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ereignisse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-post-angelegt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neue Post ist angelegt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-dokument-hochgeladen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ein Dokument wurde hochgeladen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-texterkennung-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Die Texterkennung eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Der Volltext eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei soll umgewandelt werden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei braucht ihren Volltext
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung erstellen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-sicherung-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Sicherung ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-einstellungen-geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Die Einstellungen des Pakets wurden geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-mappe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignisse zu Mappen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-frist-erreicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frist erreicht
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aehnlichkeit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ähnlichkeit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expertenmodus-weitere-kataloge-und-hochladen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expertenmodus: weitere Kataloge und Hochladen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Expertenmodus: weitere Kataloge und Hochladen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#katalog-mit-eigenem-schlussel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Katalog mit eigenem Schlüssel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pakete-ohne-internet-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete ohne Internet installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete ohne Internet installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wie-das-dms-einer-sammeldatei-traut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wie Ablago einer Sammeldatei traut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paket-aus-deinem-dms-erstellen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paket aus deinem Ablago erstellen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eigene-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eigene Pakete
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../suche/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Suche
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Archivmodus und Aufbewahrung
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direktlinks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Links über Feldwerte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benutzer und Sicherheit
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benutzer und Sicherheit
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benutzer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benutzer und Rollen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../berechtigungen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Berechtigungen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datenschutz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datenschutz in Ablago
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../loeschkonzept/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Löschkonzept (Vorlage)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post und Eingänge
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Post und Eingänge
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postfaecher/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Postfächer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eingangsordner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eingangsordner
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webdav/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebDAV-Laufwerk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webhooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webhooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../texterkennung/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Texterkennung und Wartung
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Daten sichern
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Daten sichern
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sicherung/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sicherung
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sicherung-ausser-haus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sicherung außer Haus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wiederherstellen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wiederherstellen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Daten exportieren
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../papierkorb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papierkorb
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Einstellungen
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Einstellungen
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../aufgaben/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benachrichtigungen und Aufgaben
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../anmeldeschutz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anmeldeschutz
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../designs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Designs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wartung und Fehlersuche
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Wartung und Fehlersuche
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../speicherplatz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Systemzustand
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fehlersuche/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protokoll, Datenbank, Technik
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wartungsmodus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wartungsmodus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo-Daten
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notfall
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notfall
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notfall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notfall: kein Admin mehr
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../konsole/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Konsole: Befehl dms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../verfahrensdokumentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verfahrensdokumentation (Vorlage)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schnittstelle (API)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hintergrund
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hintergrund
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../technik/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Technik
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entscheidungen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entscheidungen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://help.ablago.app/benutzer/aktuell/begriffe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Begriffe (Glossar)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Weiteres
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Weiteres
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/motom001/dms/releases" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Was ist neu? (Changelog)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://help.ablago.app/benutzer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benutzerhandbuch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://help.ablago.app/installieren/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wie komme ich an ein DMS?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://help.ablago.app/entwickler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entwicklerhandbuch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#katalog-abrufen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Katalog abrufen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mehrere-pakete-in-einem-schritt-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mehrere Pakete in einem Schritt installieren
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uber-die-katalog-webseite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Über die Katalog-Webseite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#im-katalog-ansehen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Im Katalog ansehen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#herkunft-signiert-oder-nicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Herkunft: signiert oder nicht
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installierte-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installierte Pakete
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aktualisieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aktualisieren
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-in-verweise-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text in Verweise umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entfernen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entfernen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#einstellungen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Einstellungen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pakete-mit-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete mit Code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete mit Code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rechte-eines-pakets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rechte eines Pakets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rechte eines Pakets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recht-mappen-lesen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen lesen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-mappen-anlegen-und-andern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mappen anlegen und ändern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-dokumente" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dokumente lesen oder Volltext schreiben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-vektoren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vektoren zu Dokumenten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-netzwerk-und-internet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zugriff auf Netzwerk und Internet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-antworten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fragen an die Ablage beantworten
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-erkennen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Felder aus Dokumenten vorschlagen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-texterkennung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Texterkennung übernehmen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dateien umwandeln
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volltext liefern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung ablegen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recht-sicherung-lesen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherung lesen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dienst-adresse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dienst-Adresse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#erkennung-durch-ein-paket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erkennung durch ein Paket
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frag-deine-ablage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frag deine Ablage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignisse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignisse
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ereignisse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-post-angelegt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neue Post ist angelegt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-dokument-hochgeladen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ein Dokument wurde hochgeladen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-texterkennung-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Die Texterkennung eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-volltext-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Der Volltext eines Dokuments ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-umwandeln" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei soll umgewandelt werden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-volltext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Datei braucht ihren Volltext
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-datei-archivfassung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Archivfassung erstellen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-sicherung-fertig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eine Sicherung ist fertig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-einstellungen-geandert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Die Einstellungen des Pakets wurden geändert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-mappe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ereignisse zu Mappen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ereignis-frist-erreicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frist erreicht
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aehnlichkeit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ähnlichkeit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expertenmodus-weitere-kataloge-und-hochladen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expertenmodus: weitere Kataloge und Hochladen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Expertenmodus: weitere Kataloge und Hochladen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#katalog-mit-eigenem-schlussel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Katalog mit eigenem Schlüssel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pakete-ohne-internet-installieren" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete ohne Internet installieren
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pakete ohne Internet installieren">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wie-das-dms-einer-sammeldatei-traut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wie Ablago einer Sammeldatei traut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paket-aus-deinem-dms-erstellen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paket aus deinem Ablago erstellen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#eigene-pakete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eigene Pakete
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pakete">Pakete<a class="headerlink" href="#pakete" title="Permanent link">&para;</a></h1>
+<p>Ein <strong>Paket</strong> bringt fertige Mappentypen, Ansichten und auf Wunsch Beispiel-Mappen mit – etwa das Basis-Paket mit dem Mappentyp „Organisation“ für Firmen, Behörden, Ärzte und Versicherungen. Statt Feld für Feld in der Werkbank zu bauen, installierst du es mit wenigen Klicks unter <strong>Werkbank → Pakete</strong>.</p>
+<p>Pakete kommen aus dem <strong>offiziellen Katalog</strong> des Ablago-Projekts (<a href="https://github.com/motom001/dms-registry">dms-registry</a>). Jedes Paket dort ist Open Source und wurde vom Maintainer freigegeben. Meist sind es <strong>Konfigurationspakete</strong> (Mappentypen, Ansichten, Beispiele). Pakete mit Code lassen sich installieren und einstellen, ihr Code läuft aber erst mit dem Paket-Läufer.</p>
+<h2 id="katalog-abrufen">Katalog abrufen<a class="headerlink" href="#katalog-abrufen" title="Permanent link">&para;</a></h2>
+<p>Ablago fragt den Katalog <strong>nur auf Knopfdruck</strong> ab, nie im Hintergrund: Klicke <strong>Katalog abrufen</strong>. Die Seite zeigt dann zwei Listen:</p>
+<ul>
+<li><strong>Installiert</strong> – Pakete in dieser Installation, mit Version und Herkunft</li>
+<li><strong>Verfügbar</strong> – Pakete aus dem Katalog, die noch nicht installiert sind</li>
+</ul>
+<p>Ein Klick auf ein Paket zeigt Name, Beschreibung, Version, Lizenz, Autor, die nötige Ablago-Version, Abhängigkeiten, die enthaltenen Mappentypen und Ansichten sowie Links zum README und zu den Änderungen.</p>
+<p>Ablago lädt den Katalog von <code>https://catalog.ablago.app/katalog.json</code> und prüft seine <strong>Signatur</strong> (siehe <a href="#herkunft-signiert-oder-nicht">Herkunft</a>). Weiterleitungen folgt es dabei nur auf <code>https://</code>-Adressen. Dafür muss Ablago selbst ins Internet kommen. Einen Proxy für ausgehende Abrufe kann Ablago nicht einstellen. Ohne Internetzugang lädst du ein Paket als Datei hoch (siehe <a href="#expertenmodus-weitere-kataloge-und-hochladen">Expertenmodus</a>).</p>
+<h2 id="installieren">Installieren<a class="headerlink" href="#installieren" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Wähle ein Paket unter <strong>Verfügbar</strong> und ggf. eine ältere Version.</li>
+<li>Klicke <strong>Installieren …</strong>. Es öffnet sich der <a href="#mehrere-pakete-in-einem-schritt-installieren">gemeinsame Ablauf</a>: oben das Paket, darunter, was es braucht („Braucht: …“), und seine <strong>Ergänzungen</strong> als Häkchen – bei der Texterkennung etwa <strong>Weitere Sprachen?</strong> mit Französisch, Spanisch, Türkisch …</li>
+<li>Klicke <strong>Weiter mit … Paketen</strong>. Auf <strong>einer Seite</strong> fragt Ablago jetzt alles, was nötig ist, und nur das:<ul>
+<li>bei Paketen mit Code <strong>was der Code darf</strong> – je Paket als Liste, Ereignisse als Unterliste, mit <strong>?</strong> zur Erklärung (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a>). Darunter <strong>ein</strong> Haken für alle, sonst bleibt <strong>Installieren</strong> grau</li>
+<li><strong>Namen</strong>, die es schon gibt: Gibt es einen Mappentyp oder eine Ansicht (auf oberster Ebene) mit gleichem Namen schon, schlägt Ablago einen anderen vor, z. B. „Organisation (Basis)“. Alles andere bekommt den Namen aus dem Paket, ohne Rückfrage</li>
+<li><strong>Beispiel-Mappen</strong> – nur, wenn du den Haken setzt</li>
+<li><strong>Einstellungen</strong>, ohne die ein Paket nicht läuft – oder <strong>Später ausfüllen</strong> (siehe <a href="#einstellungen">Einstellungen</a>)</li>
+</ul>
+</li>
+<li>Unten steht die <strong>Zusammenfassung</strong>: welche Pakete in welcher Reihenfolge, wie viele Mappentypen und Ansichten, Beispiele, Pakete mit Code. Darunter die Hinweise des Pakets, z. B. ob es <strong>gleichbedeutende Wörter</strong> für die Suche mitbringt (Wortlisten, siehe <a href="../suche/#gleichbedeutende-worter">Suche</a>) oder Mappentypen aus Ablago nutzt.</li>
+<li>Klicke <strong>Installieren</strong>.</li>
+</ol>
+<p>Vor dem Anlegen prüft Ablago:</p>
+<ul>
+<li>ob die <strong>eigene Version</strong> passt (sonst erst Ablago <a href="../aktualisieren/">aktualisieren</a>),</li>
+<li>ob alle <strong>Abhängigkeiten</strong> installiert sind und in einer passenden Version,</li>
+<li>ob das heruntergeladene Archiv zur <strong>Prüfsumme (SHA-256)</strong> im Katalog passt. Passt sie nicht, installiert Ablago nichts.</li>
+</ul>
+<p>Angelegt wird über dieselben Funktionen wie in der Werkbank, mit allen Prüfregeln. Die Kennungen bekommen das Paket-Präfix (<code>&lt;paket&gt;_&lt;schluessel&gt;</code>), damit sich Pakete nicht in die Quere kommen; Verweise auf Mappentypen anderer Pakete löst Ablago auf. <strong>Scheitert etwas, nimmt Ablago alles zurück</strong> – es bleibt nichts halb angelegt.</p>
+<h3 id="mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt installieren<a class="headerlink" href="#mehrere-pakete-in-einem-schritt-installieren" title="Permanent link">&para;</a></h3>
+<p>Ob ein Paket mit seinen Abhängigkeiten, die Texterkennung mit drei Sprachen oder zehn Pakete im <a href="../installation/#pakete-dazuholen">Einrichtungsassistenten</a> oder aus einer <a href="#pakete-ohne-internet-installieren">Sammeldatei</a>: Ablago installiert alles in <strong>einem Ablauf</strong> – ohne Kette von Rückfragen je Paket.</p>
+<ol>
+<li><strong>Auswahl:</strong> Die Pakete als Kacheln wie im Katalog – mit Symbol, Kurzbeschreibung und Größe des Downloads; oben lässt sich nach <strong>Kategorie</strong> filtern (was du schon gewählt hast, bleibt sichtbar). Im Einrichtungsassistenten sieht die Auswahl genauso aus. Was ein Paket braucht, kommt automatisch mit und ist mit „kommt mit – gebraucht von …“ markiert – <strong>auch Pakete mit Code</strong>. <strong>Ergänzungen</strong> eines Pakets (Pakete, die es erweitern, z. B. die Zusatzsprachen der Texterkennung) stehen als Häkchen direkt darunter, sobald du das Paket wählst; jede Ergänzung bleibt ein eigenes Paket mit eigener Version und eigenem Update.</li>
+<li><strong>Jede Frage einmal, mit Ausnahme je Paket:</strong><ul>
+<li><strong>Herkunft</strong> (nur außerhalb des offiziellen Katalogs bzw. ohne gültige Signatur): ein Haken für alle.</li>
+<li><strong>Rechte:</strong> alle Pakete mit Code untereinander, je Paket mit seinen Rechten, und <strong>ein</strong> Haken „Ich erlaube diesen Paketen jeweils diese Rechte“. Jedes Paket bekommt trotzdem nur seine <strong>eigenen</strong> Rechte und sein eigenes Dienstkonto.</li>
+<li><strong>Namen:</strong> nur Mappentypen und Ansichten, deren Name schon vergeben ist.</li>
+<li><strong>Beispiel-Mappen:</strong> ein Haken für alle Pakete mit Beispielen; unter <strong>Je Paket abwählen</strong> nimmst du einzelne heraus.</li>
+<li><strong>Einstellungen:</strong> die Pflichtfelder aller Pakete, je Paket ein Kasten. Eine Dienst-Adresse ist nie voreingestellt – <strong>Beispiel übernehmen</strong> trägt das Beispiel des Pakets ein, und du bestätigst die Adressen mit einem Haken. Mit <strong>Später ausfüllen</strong> wird das Paket trotzdem installiert, steht aber auf <strong>Einstellungen nötig</strong>, und die <a href="../uebersicht/">Übersicht der Werkbank</a> zeigt dir die Aufgabe „… braucht noch Einstellungen“, bis du sie ausgefüllt hast.</li>
+</ul>
+</li>
+<li><strong>Zusammenfassung</strong> und <strong>ein</strong> Knopf „… Pakete installieren“.</li>
+</ol>
+<p>Ablago prüft <strong>vor dem ersten Paket</strong> alles: Herkunft, Rechte, Namen, Einstellungen und Dienst-Adressen. Fehlt etwas, installiert es <strong>nichts</strong>. Dann geht es Paket für Paket vor, Abhängigkeiten zuerst. Scheitert ein Paket trotzdem (z. B. ein ungültiges Beispiel), ist <strong>dieses Paket vollständig zurückgenommen</strong>; die übrigen werden weiter installiert. Nur Pakete, die das gescheiterte brauchen, fallen mit Begründung weg. Lässt sich ein Paket schon gar nicht laden (z. B. keine Verbindung), zeigt Ablago das vor dem Installieren an, mit <strong>Nochmal versuchen</strong> – die übrigen kannst du trotzdem installieren. Am Ende nennt das Ergebnis, was installiert ist und was nicht, jeweils mit Grund; Fehlendes holst du später unter <strong>Werkbank → Pakete</strong> nach.</p>
+<p>Deine Bestätigung gilt nur für <strong>genau die Rechte, die du gesehen hast</strong>. Ändern sie sich bis zum Klick (z. B. weil der Katalog inzwischen eine neue Version mit mehr Rechten hat), zeigt Ablago die neuen Rechte und fragt noch einmal. Während eine Installation läuft, warten andere Installationen, Updates und das Entfernen von Paketen – auch auf einem zweiten Server mit derselben Datenbank.</p>
+<p><strong>Nachträglich:</strong> Unter <strong>Werkbank → Pakete → <em>Paket</em></strong> stehen die Ergänzungen, die es dazu im Katalog gibt (z. B. <strong>Weitere Sprachen</strong> bei der Texterkennung), mit <strong>Auswählen …</strong> – danach derselbe Ablauf. Die Seite der <a href="../texterkennung/#weitere-sprachen">Texterkennung</a> schlägt Sprachen vor, die in deinen Dokumenten vorkommen.</p>
+<p>Mappentypen aus Paketen tragen in <strong>Werkbank → Mappentypen</strong> den Hinweis <strong>Paket …</strong>. Du kannst sie danach wie jeden anderen Mappentyp anpassen.</p>
+<h3 id="uber-die-katalog-webseite">Über die Katalog-Webseite<a class="headerlink" href="#uber-die-katalog-webseite" title="Permanent link">&para;</a></h3>
+<p>Den Katalog gibt es auch als Webseite: <a href="https://catalog.ablago.app/">Paketkatalog</a> (auch auf der Startseite der Handbücher). Dort siehst du je Paket die Beschreibung, was angelegt wird, Rechte, Änderungen und ältere Versionen.</p>
+<ol>
+<li>Klicke beim Paket <strong>In meinem Ablago installieren</strong>.</li>
+<li>Beim ersten Mal fragt die Seite nach der <strong>Adresse deines Ablago</strong>, z. B. <code>https://dms.example.org</code>. Sie merkt sie sich nur in deinem Browser; über <strong>Ablago-Adresse</strong> oben änderst du sie. Die Webseite sendet nichts an dein Ablago und speichert keine Zugangsdaten.</li>
+<li>Dein Ablago öffnet <strong>Werkbank → Pakete</strong> mit der <strong>Vorschau</strong> genau dieses Pakets (Adresse <code>…/werkbank/pakete?installieren=&lt;paket&gt;@&lt;version&gt;</code>). Bist du nicht angemeldet, meldest du dich zuerst an und landest danach wieder dort. Andere Benutzer sehen einen Hinweis, dass nur Administratoren Pakete installieren.</li>
+<li>Ablago holt Paket und Prüfsumme <strong>selbst aus dem offiziellen Katalog</strong> – Angaben im Link, die auf andere Quellen zeigen, zählen nicht. Gibt es das Paket oder die Version dort nicht, sagt Ablago es.</li>
+<li>Installiert wird <strong>erst, wenn du auf „Installieren“ klickst</strong>. Der Link allein ändert nichts. Ist das Paket schon installiert, zeigt die Vorschau das; ein Update bietet sie an, wenn der Link eine neuere Version nennt.</li>
+</ol>
+<h3 id="im-katalog-ansehen">Im Katalog ansehen<a class="headerlink" href="#im-katalog-ansehen" title="Permanent link">&para;</a></h3>
+<p>Unter <strong>Werkbank → Pakete</strong> steht über der Liste <strong>Verfügbar</strong> der Link <strong>Im Katalog ansehen</strong>; bei jedem Paket aus dem offiziellen Katalog gibt es ihn zusätzlich unter <strong>Mehr</strong> für die Seite genau dieses Pakets. Der Link öffnet die Katalog-Webseite in einem neuen Tab und gibt ihr die <strong>Version deines Ablago</strong> mit. Die Webseite zeigt dann gleich, welche Pakete zu deinem Ablago passen, und filtert auf Wunsch danach – du musst die Version nicht suchen und eintippen.</p>
+<p><strong>Was übertragen wird:</strong> nichts außer dem Seitenaufruf selbst, wie bei jeder anderen Webseite. Die Version steht im <strong>Fragment</strong> der Adresse, also hinter dem <code>#</code>, z. B. <code>https://catalog.ablago.app/#dms=0.146.0</code>. Diesen Teil schickt der Browser nie an den Server; er steht in keinem Zugriffsprotokoll. Nur das Skript der Katalogseite liest ihn in deinem Browser, merkt sich die Version dort und entfernt das Fragment gleich wieder aus der Adresse, damit sie nicht mit einem geteilten Link weitergeht.</p>
+<ul>
+<li>Im Fragment steht <strong>nur die Version</strong> – keine Adresse deines Ablago, kein Haushaltsname, keine Liste deiner Pakete, keine Kennung.</li>
+<li>Der Link öffnet ohne <strong>Herkunftsadresse</strong> (<code>rel="noopener noreferrer"</code>): Die Katalogseite erfährt nicht, von welcher Adresse du kommst, und hat keinen Zugriff auf den Tab deines Ablago.</li>
+<li>Ist der offizielle Katalog gerade nicht erreichbar (nach <strong>Katalog abrufen</strong>), steht statt des Links ein Hinweis auf <a href="#pakete-ohne-internet-installieren">Pakete ohne Internet</a>.</li>
+<li>Weitere Kataloge aus dem <a href="#expertenmodus-weitere-kataloge-und-hochladen">Expertenmodus</a> haben keine bekannte Webseite; den Link gibt es nur für den offiziellen Katalog.</li>
+</ul>
+<h2 id="herkunft-signiert-oder-nicht">Herkunft: signiert oder nicht<a class="headerlink" href="#herkunft-signiert-oder-nicht" title="Permanent link">&para;</a></h2>
+<p>Das Ablago-Projekt <strong>signiert</strong> den offiziellen Katalog (ab Ablago 0.141.0). Weil der Katalog die Prüfsumme jedes Pakets enthält, belegt eine einzige Signatur, dass alle Pakete darin vom Ablago-Projekt stammen. Die <strong>Vorschau</strong> zeigt deshalb vor jeder Installation eine Zeile <strong>Herkunft</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Herkunft</th>
+<th>Bedeutung</th>
+<th>Was du tust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>signiert vom Ablago-Projekt</strong> (Katalog vom …)</td>
+<td>Katalog und Paket sind nachweislich vom Ablago-Projekt und unverändert.</td>
+<td>Nichts – installieren.</td>
+</tr>
+<tr>
+<td><strong>signiert vom Anbieter dieses Katalogs</strong></td>
+<td>Ein <a href="#expertenmodus-weitere-kataloge-und-hochladen">weiterer Katalog</a> mit eigenem Schlüssel, dessen Fingerabdruck du bestätigt hast.</td>
+<td>Nichts – du hast dem Anbieter beim Hinzufügen vertraut.</td>
+</tr>
+<tr>
+<td><strong>nicht signiert</strong></td>
+<td>Niemand belegt, woher das Paket kommt.</td>
+<td>Nur installieren, wenn du die Quelle kennst; du bestätigst die Herkunft mit einem Haken.</td>
+</tr>
+<tr>
+<td><strong>Signatur ungültig</strong></td>
+<td>Der Katalog ist verändert oder nicht vom Ablago-Projekt. Ablago vermerkt das im Protokoll.</td>
+<td>Im Zweifel nicht installieren und später erneut abrufen. Installieren geht nur mit ausdrücklicher Bestätigung.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Übergang:</strong> In dieser Version gibt es beim offiziellen Katalog <strong>ohne</strong> Signatur nur einen Hinweis. Eine Minor-Version später verlangt Ablago die Signatur; Pakete aus weiteren Quellen, hochgeladene Pakete und Sammeldateien ohne Signatur gehen dann weiter mit Bestätigung.</p>
+<p><strong>Älterer Katalog:</strong> Ablago merkt sich, welchen Stand des Katalogs es zuletzt signiert gesehen hat. Bekommt es danach online einen <strong>älteren</strong> signierten Katalog, nimmt es ihn nicht – so kann niemand einen alten Katalog mit einer inzwischen korrigierten Paketversion unterschieben. Die Meldung nennt beide Zeitpunkte. Meist hilft es, später noch einmal abzurufen; bleibt es so, melde es dem Ablago-Projekt.</p>
+<p><strong>Ältere Versionen:</strong> Ablago 0.141.0 bis 0.144.1 kennen nur Testschlüssel. Sobald das Ablago-Projekt den Katalog mit seinen echten Schlüsseln signiert, zeigen sie beim offiziellen Katalog „Signatur ungültig“ – aktualisiere dann Ablago. Die Fingerabdrücke der echten Schlüssel stehen in der <a href="https://github.com/motom001/dms/blob/main/SECURITY.md">Sicherheitsrichtlinie</a>.</p>
+<h2 id="installierte-pakete">Installierte Pakete<a class="headerlink" href="#installierte-pakete" title="Permanent link">&para;</a></h2>
+<p>Je Paket merkt sich Ablago Version, <strong>Herkunft</strong> (der Katalog), wann und von wem es installiert bzw. aktualisiert wurde und welche Mappentypen und Ansichten dazugehören. Diese Angaben sind Teil der <a href="../sicherung/">Sicherung</a> und des <a href="../export/">Vollexports</a> (<code>struktur/pakete.json</code>). Installieren, Aktualisieren und Entfernen stehen im Protokoll.</p>
+<h2 id="aktualisieren">Aktualisieren<a class="headerlink" href="#aktualisieren" title="Permanent link">&para;</a></h2>
+<p><strong>Auf neue Versionen prüfen</strong> fragt den Katalog ab (auf Knopfdruck) und markiert Pakete, für die es Neueres gibt. Im Paket zeigt <strong>Auf … aktualisieren …</strong> eine Vorschau mit dem, was dazukommt, und einem Link zu den Änderungen.</p>
+<p>Ein Update <strong>ergänzt nur</strong>:</p>
+<ul>
+<li>neue Mappentypen und Ansichten,</li>
+<li>neue Felder und Register bei vorhandenen Mappentypen.</li>
+</ul>
+<p>Es <strong>löscht nichts</strong> und <strong>überschreibt nichts</strong>, was du selbst geändert hast: Hast du einen Mappentyp umbenannt, Felder ergänzt oder eine Ansicht gelöscht, bleibt das so.</p>
+<h2 id="text-in-verweise-umwandeln">Text in Verweise umwandeln<a class="headerlink" href="#text-in-verweise-umwandeln" title="Permanent link">&para;</a></h2>
+<p>Manche Pakete hatten früher ein <strong>Textfeld</strong>, wo eigentlich ein <strong>Verweis</strong> hingehört – zum Beispiel „Halter: Lena Muster“ am Fahrzeug statt eines Verweises auf die <strong>Person</strong> Lena Muster. Eine neuere Version des Pakets bringt dafür ein Verweisfeld mit und sagt, aus welchem Textfeld es sich füllen lässt. <strong>Updates ändern nichts heimlich:</strong></p>
+<ul>
+<li>Das Update legt das Verweisfeld <strong>zusätzlich</strong> an. Das alte Textfeld bleibt mit allen Werten, nichts wird umgeschrieben. Die Vorschau des Updates sagt schon, wie viele Angaben sich danach umwandeln lassen.</li>
+<li>Danach steht im Paket unter <strong>Text in Verweise umwandeln</strong>, was offen ist, etwa „Fahrzeug – Halter: 3 Angaben in „Halter“ (Text) können Verweise auf Person werden“.</li>
+</ul>
+<p><strong>Vorschau …</strong> zeigt je Name einen Vorschlag, den du in jeder Zeile ändern kannst:</p>
+<ul>
+<li><strong>vorhandene Person:</strong> gleicher Name, ohne Groß- und Kleinschreibung und Leerzeichen („lena muster“ = „Lena Muster“, auch „Muster Lena“). Passen mehrere, steht das dabei – wähle dann die richtige.</li>
+<li><strong>Neu anlegen:</strong> legt eine Person mit Vor- und Nachname an. Vorgeschlagen, wenn der Text wie ein Name aussieht.</li>
+<li><strong>Überspringen:</strong> Der Text bleibt, z. B. bei „Familie“ oder „Auto MU-ST 123“.</li>
+</ul>
+<p>Darf ein Feld mehrere Verweise haben (Inhaber eines Kontos, Versicherte), teilt Ablago den Text an „und“, Komma, Schrägstrich oder „&amp;“: „Lena und Tom Muster“ wird zu „Lena Muster“ und „Tom Muster“. Umgewandelt wird eine Mappe nur, wenn <strong>jeder</strong> ihrer Namen eine Person bekommt.</p>
+<p><strong>Ausgelassen</strong> werden Mappen, die du nicht bearbeiten darfst, Mappen im <a href="../archiv/">Archivmodus</a> innerhalb der Aufbewahrungsfrist und Mappen, deren Verweis schon gesetzt ist. Die Vorschau nennt jede mit Grund.</p>
+<p><strong>Umwandeln</strong> setzt den Verweis und leert das Textfeld. Jede Änderung steht in der <strong>Historie</strong> der Mappe („Paket-Update: Text in Verweis umgewandelt“). Außerdem:</p>
+<ul>
+<li>Das alte Textfeld ist keine Pflicht mehr. Ist es leer, zeigt die Ablage es in der Mappe nicht mehr.</li>
+<li>Titel-Vorlage und Trefferlisten zeigen den Verweis statt des Texts, das Verweisfeld rückt an die Stelle des Textfelds. Mappen, die du übersprungen hast, zeigen dort weiter ihren Text.</li>
+</ul>
+<p><strong>Rückgängig …</strong> unter „Bisherige Umwandlungen“ nimmt einen ganzen Vorgang zurück: Text zurück, Verweis leer, neu angelegte Personen in den Papierkorb, sofern nichts anderes mehr auf sie verweist, Mappentyp wie vorher. Was seit der Umwandlung jemand geändert hat, bleibt und wird genannt. Die Vorgänge sind Teil der <a href="../sicherung/">Sicherung</a>.</p>
+<p>Für Paket-Autoren steht das Format (<code>aus_text</code>) in den <a href="https://github.com/motom001/dms-registry/blob/main/REGELN.md#text-in-verweis-umwandeln">Regeln der Registry</a>.</p>
+<h2 id="entfernen">Entfernen<a class="headerlink" href="#entfernen" title="Permanent link">&para;</a></h2>
+<p><strong>Entfernen</strong> löscht die Mappentypen, Ansichten und Wortlisten des Pakets und seinen Eintrag. Das geht nur,</p>
+<ul>
+<li>solange es <strong>keine Mappen</strong> dieser Mappentypen gibt (auch nicht im Papierkorb) und</li>
+<li><strong>kein anderes Paket</strong> davon abhängt.</li>
+</ul>
+<p>Sonst nennt Ablago die Gründe. Beispiel-Mappen löschst du vorher wie andere Mappen.</p>
+<p>Liefert das Paket Volltext oder wandelt es Dateien um (z. B. <strong>Office und E-Mail</strong>, <strong>Bildformate</strong>), warten danach keine Dokumente mehr darauf: Ohne Text steht am Dokument wieder, dass es für diesen Dateityp kein Paket gibt; hatte es schon Text, bleibt der Text stehen.</p>
+<h2 id="einstellungen">Einstellungen<a class="headerlink" href="#einstellungen" title="Permanent link">&para;</a></h2>
+<p>Manche Pakete brauchen Einstellungen – etwa Regeln, nach denen sie Post zuordnen, oder ein Zugangsschlüssel für einen Dienst. Das Paket <strong>beschreibt</strong> sie nur; Ablago baut daraus ein Formular, prüft die Werte und speichert sie. Du findest es unter <strong>Werkbank → Pakete → <em>Paket</em> → Reiter „Einstellungen“</strong> – den Reiter gibt es nur bei Paketen, die Einstellungen haben.</p>
+<ul>
+<li><strong>Abschnitte</strong> mit Feldern und <strong>Listen</strong> gleich aufgebauter Einträge (z. B. eine Regel je Eintrag) mit <strong>+ Eintrag</strong>, Löschen und – wenn das Paket es erlaubt – Sortieren mit ↑/↓.</li>
+<li><strong>Felder</strong> wie bei den Mappentypen: Text, mehrzeiliger Text, Zahl, Ja/Nein, Datum, Auswahl, Mehrfachauswahl und <strong>Verweise</strong> auf einen Mappentyp, ein Feld eines Mappentyps, einen Benutzer, eine Rolle oder eine Ansicht. Verweise wählst du aus Listen; gespeichert wird die feste Id, nicht der Name – Umbenennen schadet also nicht.</li>
+<li><strong>Dienst-Adresse</strong> (z. B. eines KI-Dienstes): Die einzige Adresse, zu der das Paket außer den festen Adressen aus seinem Manifest ins Netz darf – siehe <a href="#dienst-adresse">Dienst-Adresse</a>. Sie ist nie voreingestellt; im leeren Feld steht höchstens ein Beispiel. Beim Speichern einer neuen oder geänderten Adresse fragt Ablago nach und zeigt, wohin Daten gehen.</li>
+<li><strong>Geheimnisse</strong> (z. B. Zugangsdaten) verschlüsselt Ablago mit seinem Schlüssel (siehe <a href="../verschluesselung/">Verschlüsselung</a>). Nach dem Speichern zeigt es sie nie wieder an, nur <strong>gesetzt</strong> mit <strong>Ändern</strong> und <strong>Löschen</strong>.</li>
+<li>Beim <strong>Speichern</strong> prüft Ablago Mappentyp, Pflichtfelder, Auswahlwerte und ob Verweise existieren, und zeigt Fehler am Feld.</li>
+<li><strong>Aktionen</strong> des Pakets erscheinen als Knöpfe (z. B. „Regeln jetzt anwenden“), die Antwort des Pakets steht darüber. Eine Zeitgrenze verhindert, dass ein Knopf hängt.</li>
+<li>Der <strong>Status</strong> (letzter Lauf, Meldungen) kommt vom Paket selbst und ist schreibgeschützt.</li>
+</ul>
+<p><strong>Lebenszyklus:</strong></p>
+<ul>
+<li><strong>Installieren</strong> setzt die Vorgaben. Pflichtfelder ohne Vorgabe fragt der <a href="#mehrere-pakete-in-einem-schritt-installieren">Ablauf</a> gleich mit ab; wählst du <strong>Später ausfüllen</strong>, steht das Paket auf <strong>Einstellungen nötig</strong>, die Übersicht der Werkbank nennt es als Aufgabe, und es läuft erst danach.</li>
+<li><strong>Aktualisieren:</strong> Neue Felder bekommen ihre Vorgabe, vorhandene Werte bleiben. Felder, die die neue Version nicht mehr kennt, werden entfernt – die Vorschau vor dem Update nennt sie.</li>
+<li><strong>Entfernen</strong> fragt, ob die Einstellungen für eine spätere Neuinstallation <strong>bleiben</strong> sollen (Standard: nein).</li>
+</ul>
+<p>Die Einstellungen sind <strong>Teil der Sicherung</strong>; Geheimnisse bleiben dabei verschlüsselt und werden beim Schlüsselwechsel mit umgeschlüsselt. Über die API v1 sind sie nicht lesbar; das Paket selbst bekommt sie über den Paket-Läufer. Das Protokoll vermerkt „Einstellungen von Paket … geändert (Felder …)“ – nie die Werte von Geheimnissen. Nur Administratoren sehen und ändern Einstellungen.</p>
+<h2 id="pakete-mit-code">Pakete mit Code<a class="headerlink" href="#pakete-mit-code" title="Permanent link">&para;</a></h2>
+<p>Manche Pakete bringen <strong>Code</strong> mit – etwa eine eigene Texterkennung oder Regeln, die neue Post zuordnen. Der Code reagiert auf Ereignisse (neue Post, hochgeladenes Dokument, fertige Texterkennung, fertiger Volltext, geänderte Einstellungen) und auf die <strong>Aktionen</strong> im Reiter „Einstellungen“. Ablago führt ihn im <strong>Paket-Läufer</strong> aus:</p>
+<ul>
+<li><strong>Abgeschottet:</strong> Der Code ist WebAssembly und läuft in einem eigenen Prozess von Ablago, ohne Zugriff auf Dateien, Schlüssel oder Datenbank. Netzwerk und Internet erreicht er nur unter den Adressen, die das Paket angibt, und unter der <a href="#dienst-adresse">Dienst-Adresse</a>, die du in seinen Einstellungen einträgst – meist gar nicht.</li>
+<li><strong>Nur bestätigte Rechte:</strong> Vor der Installation zeigt Ablago, was der Code darf – welche Mappentypen er lesen bzw. anlegen und ändern darf, ob er Dokumente lesen oder schreiben darf, ob er aufs Netzwerk oder Internet zugreifen darf und auf welche Ereignisse er reagiert (siehe <a href="#rechte-eines-pakets">Rechte eines Pakets</a> und <a href="#ereignisse">Ereignisse</a>). Erst wenn du das bestätigst, installiert Ablago. Kommen mehrere Pakete mit Code zusammen (etwa eine Zusatzsprache samt Texterkennung), stehen alle Rechte aller Pakete auf einer Seite und du bestätigst sie <strong>einmal</strong> (siehe <a href="#mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt</a>). Will ein <strong>Update</strong> mehr Rechte oder andere Adressen, fragt Ablago erneut.</li>
+<li><strong>Dienstkonto:</strong> Für jedes Paket mit Code legt Ablago ein Dienstkonto „Paket <em>Name</em>“ an. Mit ihm arbeitet der Code über die API; die Historie zeigt deshalb, was ein Paket geändert hat. Dienstkonten erscheinen nicht unter <strong>Benutzer</strong>, melden sich nie an und können <strong>nie löschen</strong> – auch nicht mit Rechten auf alle Mappentypen. Benutzer und Passwörter sehen sie nicht.</li>
+<li><strong>Grenzen:</strong> Jeder Aufruf hat höchstens 256 MB Speicher und 2 Minuten Zeit; es laufen höchstens zwei Aufrufe gleichzeitig. Was die Grenzen reißt, bricht ab, ohne Ablago zu stören.</li>
+<li><strong>Wiederholen:</strong> Ereignisse merkt sich Ablago. Scheitert ein Aufruf, versucht es der Läufer nach 1, 5, 30, 120 und 360 Minuten erneut und gibt dann auf. Während einer Wartung (z. B. beim Wiederherstellen) ruht der Läufer.</li>
+</ul>
+<p><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt im Abschnitt <strong>Paket-Läufer</strong> den Stand, die letzten Aufrufe mit Dauer und Speicher, offene und aufgegebene Ereignisse und das Protokoll des Pakets. Meldungen stehen zusätzlich im <a href="../fehlersuche/#protokoll">Protokoll</a> von Ablago. Der <strong>Stand</strong> ist einer von diesen:</p>
+<table>
+<thead>
+<tr>
+<th>Stand</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>startet …</strong></td>
+<td>Der Läufer startet oder lädt das Modul des Pakets – etwa direkt nach der Installation. Die Seite fragt von selbst nach.</td>
+</tr>
+<tr>
+<td><strong>bereit – wartet auf das erste Ereignis</strong></td>
+<td>Das Modul ist geladen; das Paket wurde aber noch nie aufgerufen. Es läuft, sobald ein Ereignis kommt, auf das es reagiert, oder du eine Aktion auslöst.</td>
+</tr>
+<tr>
+<td><strong>bereit</strong></td>
+<td>Das Modul ist geladen und wurde schon aufgerufen.</td>
+</tr>
+<tr>
+<td><strong>abgestürzt um … – startet neu …</strong></td>
+<td>Der Läufer-Prozess ist abgestürzt. Ablago startet ihn nach einer kurzen Pause selbst neu (bei wiederholten Abstürzen wartet es länger, höchstens eine Minute). Ereignisse gehen dabei nicht verloren.</td>
+</tr>
+<tr>
+<td><strong>neu gestartet nach Absturz um …</strong></td>
+<td>Der Läufer läuft wieder; die Zeit nennt den letzten Absturz. Die Ursache steht im Protokoll von Ablago.</td>
+</tr>
+<tr>
+<td><strong>pausiert (Wartungsmodus)</strong></td>
+<td>Während einer Wartung ruht der Läufer.</td>
+</tr>
+<tr>
+<td><em>Fehlermeldung in Rot</em></td>
+<td>Das Modul ließ sich nicht laden (z. B. fehlt der Code nach einer Wiederherstellung) – das Paket neu installieren.</td>
+</tr>
+</tbody>
+</table>
+<p>Schlägt ein <strong>Update</strong> fehl, bleibt die alte Version mit ihrem alten Code installiert. Ein Paket darf höchstens <strong>128 MB</strong> groß sein – das gilt für das Archiv beim Herunterladen, Hochladen und in der Sammeldatei ebenso wie für alle Dateien unter <code>code/</code> zusammen. Ist ein Paket größer, nennt Ablago Größe und Grenze und lädt es gar nicht erst herunter.</p>
+<p><strong>Entfernen</strong> beendet den Code, löscht seine offenen Ereignisse und seinen Speicher und schaltet das Dienstkonto ab.</p>
+<div class="admonition note">
+<p class="admonition-title">Volltext aus einem Paket</p>
+<p>Setzt ein Paket den Volltext eines Dokuments (z. B. das Paket <strong>Texterkennung</strong>), vermerkt die Historie „Volltext gesetzt“ mit dem Namen des Pakets, und Ablago überschreibt diesen Text nicht.</p>
+</div>
+<h3 id="rechte-eines-pakets">Rechte eines Pakets<a class="headerlink" href="#rechte-eines-pakets" title="Permanent link">&para;</a></h3>
+<p>Vor der Installation zeigt die Vorschau unter <strong>„Das Paket enthält Code.“</strong> eine Liste der Rechte. Hinter jedem Punkt führt ein <strong>?</strong> zur passenden Stelle hier. <strong>Unter der Liste</strong> steht links der Haken <strong>„Ich erlaube dem Paket diese Rechte.“</strong> – lies erst die Liste, dann setze den Haken. Ohne ihn bleibt <strong>Installieren</strong> gesperrt. Bei einem <strong>Update</strong> mit geänderten Rechten heißt der Haken <strong>„Die Rechte haben sich geändert. Ich erlaube sie.“</strong>; sind die Rechte gleich geblieben, steht dort nur „Die Rechte sind dieselben wie bisher.“</p>
+<p>Was nicht in der Liste steht, darf der Code nicht. Benutzer und Passwörter sieht ein Paket nie, und löschen darf es nichts.</p>
+<h4 id="recht-mappen-lesen">Mappen lesen<a class="headerlink" href="#recht-mappen-lesen" title="Permanent link">&para;</a></h4>
+<p><strong>„Mappen lesen: <em>Mappentypen</em>“</strong> – Der Code darf Mappen dieser Mappentypen lesen, mit allen Feldern und Verweisen. <strong>„alle Mappentypen“</strong> heißt jede Mappe (außer Benutzern). Stammt ein Mappentyp aus einem anderen Paket, steht dessen Kennung in Klammern dahinter, z. B. „Organisation (basis)“; <strong>Post</strong>, <strong>Ablageort</strong> und <strong>Rolle</strong> bringt Ablago selbst mit.</p>
+<h4 id="recht-mappen-anlegen-und-andern">Mappen anlegen und ändern<a class="headerlink" href="#recht-mappen-anlegen-und-andern" title="Permanent link">&para;</a></h4>
+<p><strong>„Mappen anlegen und ändern: <em>Mappentypen</em>“</strong> – Der Code darf Mappen dieser Mappentypen anlegen und ihre Felder ändern; lesen darf er sie damit auch. Löschen darf ein Paket nie. Jede Änderung steht in der Historie der Mappe mit dem Dienstkonto „Paket <em>Name</em>“.</p>
+<h4 id="recht-dokumente">Dokumente lesen oder Volltext schreiben<a class="headerlink" href="#recht-dokumente" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>„Dokumente lesen“</strong> – Der Code darf die Dokumente in den Mappen lesen, die er lesen darf: die Datei, den Volltext und die Seiten als Bild.</li>
+<li><strong>„Dokumente lesen und Volltext schreiben“</strong> – zusätzlich darf er dort Dokumente hochladen und ersetzen und den Volltext setzen, etwa für eine eigene Texterkennung.</li>
+</ul>
+<p>Braucht ein Paket nur den Volltext bestimmter Dateitypen (z. B. Word oder E-Mails), genügt seit Version 0.145 <strong>„Dokumente lesen“</strong> zusammen mit dem Recht <a href="#recht-volltext">Volltext liefern</a> – ohne Schreibrecht auf Dokumente.</p>
+<p>Steht keins von beiden in der Liste, sieht der Code keine Dokumente.</p>
+<h4 id="recht-vektoren">Vektoren zu Dokumenten<a class="headerlink" href="#recht-vektoren" title="Permanent link">&para;</a></h4>
+<p><strong>„Vektoren zu Dokumenten speichern und ähnliche Dokumente finden (dms:vektoren)“</strong> – Der Code darf zu Dokumenten, die er lesen darf, einen <strong>Vektor</strong> ablegen: eine Liste von Zahlen, die den Inhalt des Volltexts beschreibt. Ablago vergleicht diese Vektoren und zeigt damit <a href="#aehnlichkeit">ähnliche Dokumente</a> an der Mappe und in der Suche. Außerdem fragt die Suche das Paket nach dem Vektor des Suchbegriffs. Ablago selbst rechnet dabei nichts – es speichert und vergleicht nur, was das Paket liefert. Dokumente, Mappen und Volltext ändern darf der Code mit diesem Recht nicht; ähnliche Dokumente sieht jeder nur aus Mappen, die er lesen darf.</p>
+<h4 id="recht-netzwerk-und-internet">Zugriff auf Netzwerk und Internet<a class="headerlink" href="#recht-netzwerk-und-internet" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>„kein Zugriff auf Netzwerk und Internet“</strong> – Der Code erreicht weder Geräte in deinem Heimnetz noch das Internet. Das ist der Normalfall: Die Daten bleiben in Ablago.</li>
+<li><strong>„Zugriff auf Netzwerk/Internet nur zu: <em>Adressen</em>“</strong> – Der Code darf nur diese Adressen erreichen (immer <code>https://</code>, auch Pfade darunter), z. B. einen Dienst im Internet oder ein Gerät in deinem Netzwerk. Alles andere sperrt der Paket-Läufer, auch Weiterleitungen. Wozu das Paket die Adressen braucht, erklärt sein README – was du dorthin schickst, verlässt dein Ablago.</li>
+</ul>
+<p>Will ein Update andere Adressen, fragt Ablago erneut.</p>
+<ul>
+<li><strong>„… zu: der Adresse aus der Einstellung „<em>Name</em>“ (trägst du ein und bestätigst sie)“</strong> – Das Paket bringt keine feste Adresse mit, sondern fragt nach einer <a href="#dienst-adresse">Dienst-Adresse</a>, etwa der deines KI-Dienstes. Erst wenn du sie in den Einstellungen einträgst und bestätigst, erreicht der Code genau diese Adresse.</li>
+</ul>
+<h4 id="recht-antworten">Fragen an die Ablage beantworten<a class="headerlink" href="#recht-antworten" title="Permanent link">&para;</a></h4>
+<p><strong>„Fragen an die Ablage beantworten („Frag deine Ablage“) – nur aus Ausschnitten, die Ablago mitgibt (dms:antworten)“</strong> – Mit diesem Recht erscheint in der Ablage das Feld <a href="#frag-deine-ablage">Frag deine Ablage</a>. Das Paket bekommt je Frage nur die Frage, den bisherigen Chat und wenige Ausschnitte, die Ablago selbst herausgesucht hat – <strong>mit den Rechten des Fragenden</strong>. Es liest dabei nichts selbst aus der Ablage (dafür bräuchte es die Rechte oben) und kann nichts ändern: Ablago zeigt nur seinen Text und prüft die Quellen.</p>
+<h4 id="recht-erkennen">Felder aus Dokumenten vorschlagen<a class="headerlink" href="#recht-erkennen" title="Permanent link">&para;</a></h4>
+<p><strong>„Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den Ablago mitgibt (dms:erkennen)“</strong> – Das Paket kann statt der eingebauten Erkennung die Felder beim Knopf <strong>Aus Dokument ausfüllen</strong> vorschlagen, wenn du es wählst (siehe <a href="#erkennung-durch-ein-paket">Erkennung durch ein Paket</a>). Es bekommt dabei nur den Text des Dokuments und die Beschreibung der Felder – keine Rechte an Mappen oder Dokumenten. Was es liefert, prüft Ablago und zeigt es nur als Vorschlag.</p>
+<h4 id="recht-texterkennung">Texterkennung übernehmen<a class="headerlink" href="#recht-texterkennung" title="Permanent link">&para;</a></h4>
+<p><strong>„Texterkennung für Scans und Bilder übernehmen – Ablago meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“</strong> – Das Paket ist dann die <a href="../texterkennung/">Texterkennung</a> von Ablago: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit <a href="#recht-dokumente">Dokumente lesen und Volltext schreiben</a>.</p>
+<h4 id="recht-umwandeln">Dateien umwandeln<a class="headerlink" href="#recht-umwandeln" title="Permanent link">&para;</a></h4>
+<p><strong>„Dateien umwandeln, die Ablago nicht selbst lesen kann – das Paket liest die Originaldatei und liefert eine Fassung (PDF, PNG oder JPEG) für Vorschaubild und Volltext; das Original bleibt unverändert (dms:umwandeln): TIFF, WebP, …“</strong> – Seit Version 0.137 liest Ablago selbst nur PDF, JPEG und PNG. Für andere Dateitypen – hinter dem Recht stehen die, für die das Paket zuständig sein will – bekommt das Paket die Datei (Ereignis <a href="#ereignis-datei-umwandeln">Datei umwandeln</a>) und gibt eine <strong>umgewandelte Fassung</strong> zurück, z. B. ein mehrseitiges TIFF als PDF. Daraus macht Ablago das Vorschaubild und den Volltext wie bei einem PDF oder Foto (siehe <a href="../texterkennung/#andere-dateitypen">Andere Dateitypen</a>). Das Dokument selbst bleibt die Originaldatei; ändern, ersetzen oder löschen kann das Paket damit nichts. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a> (die Originaldatei).</p>
+<h4 id="recht-volltext">Volltext liefern<a class="headerlink" href="#recht-volltext" title="Permanent link">&para;</a></h4>
+<p><strong>„Volltext für Dateien liefern, die Ablago nicht selbst lesen kann – das Paket liest die Datei und schreibt nur ihren Volltext; Dokumente ändern, ersetzen oder löschen kann es nicht (dms:volltext): Word, Excel, E-Mail, …“</strong> – Seit Version 0.145. Hinter dem Recht stehen die Dateitypen, für die das Paket den Volltext liefert. Für jede solche Datei bekommt es das Ereignis <a href="#ereignis-datei-volltext">Datei braucht Volltext</a>, liest die Datei und schreibt ihren Text – für <strong>genau diese Dateitypen</strong>, für andere Dokumente nicht. Am Dokument steht so lange <strong>„wartet auf Volltext (Paket …)“</strong>; kann das Paket eine Datei nicht lesen (z. B. weil sie mit einem Passwort verschlüsselt ist), steht sein Grund am Dokument. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a>; Schreibrecht auf Dokumente braucht es nicht. Das Paket <strong>Office und E-Mail</strong> nutzt dieses Recht (ab 1.1.0). PDF, JPEG und PNG liest Ablago selbst; Scans erkennt das Recht <a href="#recht-texterkennung">Texterkennung übernehmen</a>.</p>
+<h4 id="recht-archivfassung">Archivfassung ablegen<a class="headerlink" href="#recht-archivfassung" title="Permanent link">&para;</a></h4>
+<p><strong>„Archivfassung (PDF/A) ablegen – das Paket liest Dokumente mit ihrem Volltext und den Wortpositionen und legt daneben ein durchsuchbares PDF/A ab; das Original bleibt unverändert, ändern, ersetzen oder löschen kann es nichts (dms:archivfassung): PDF, JPEG, PNG, TIFF, …“</strong> – Seit Version 0.149. Hinter dem Recht stehen die Dateitypen, zu denen das Paket eine Archivfassung macht. Für jedes solche Dokument bekommt es das Ereignis <a href="#ereignis-datei-archivfassung">Archivfassung erstellen</a> – <strong>erst, wenn der Volltext feststeht</strong> –, liest die Datei (bei TIFF und Co. die Lesefassung aus <a href="#recht-umwandeln">Dateien umwandeln</a>), den Volltext und die <strong>Wortpositionen</strong> (wo jedes Wort auf der Seite steht) und legt ein PDF/A ab. Ablago nimmt nur ein PDF mit PDF/A-Kennung an, das nichts aus dem Netz nachlädt (kein JavaScript, keine Aktionen, keine externen Verweise); sonst steht der Grund am Dokument und unter <a href="../texterkennung/#archivfassung-pdfa">Werkbank → Texterkennung → Archivfassung</a>. Dafür braucht es außerdem <a href="#recht-dokumente">Dokumente lesen</a>. Die Archivfassung kommt mit in Sicherung und Vollexport (siehe <a href="../sicherung/">Sicherung</a>).</p>
+<h4 id="recht-sicherung-lesen">Sicherung lesen<a class="headerlink" href="#recht-sicherung-lesen" title="Permanent link">&para;</a></h4>
+<p><strong>„Die verschlüsselte Sicherung lesen, um sie außer Haus zu kopieren – kann sie nicht öffnen (kein Schlüssel, keine Inhalte) (dms:sicherung-lesen)“</strong> – Seit Version 0.142. Nach jeder Sicherung bekommt das Paket das Ereignis <a href="#ereignis-sicherung-fertig">Sicherung fertig</a> und darf <strong>genau diese</strong> Sicherungsdatei in Stücken lesen – verschlüsselt, so wie sie im Sicherungsordner liegt – und ihre schlanken Metadaten (Größe, Prüfsumme, Zeitpunkt, Fingerabdruck des Schlüssels). Den Schlüssel, die Inhalte und andere Dateien des Sicherungsordners bekommt es nie. Es meldet je Sicherung zurück, ob die Kopie angekommen und geprüft ist; das zeigt <strong>Werkbank → Sicherung</strong>. Seit Version 0.158.1 darf sein API-Schlüssel nur lesen – den Stand meldet es in der Antwort auf das Ereignis. Mappen und Dokumente sieht es mit diesem Recht nicht. Siehe <a href="../sicherung-ausser-haus/">Sicherung außer Haus</a>.</p>
+<h3 id="dienst-adresse">Dienst-Adresse<a class="headerlink" href="#dienst-adresse" title="Permanent link">&para;</a></h3>
+<p>Ein Paket wie <strong>KI-Assistent</strong> rechnet nicht selbst, sondern fragt einen Dienst, den du betreibst oder wählst – z. B. <strong>Ollama</strong> auf deinem Heimserver (fertiges Beispiel und Anleitung: <a href="../ki-lokal/">KI lokal betreiben</a>). Die Adresse dieses Dienstes trägst du in den <strong>Einstellungen</strong> des Pakets ein (Werkbank → Pakete → <em>Paket</em> → Reiter „Einstellungen“):</p>
+<ul>
+<li><strong>Nie voreingestellt.</strong> Im leeren Feld steht höchstens ein Beispiel wie <code>http://ollama:11434/v1</code> – gespeichert ist nichts, bis du eine Adresse einträgst.</li>
+<li><strong>Bestätigen.</strong> Beim Speichern einer neuen oder geänderten Adresse fragt Ablago <strong>„Daten an diese Adresse schicken?“</strong> und nennt sie. Erst mit <strong>Adresse bestätigen und speichern</strong> gilt sie; das Protokoll vermerkt „Dienst-Adresse von Paket … bestätigt“ mit der Adresse.</li>
+<li><strong>Nur dorthin.</strong> Der Paket-Läufer erlaubt Netz nur zu dieser Adresse und Pfaden darunter (gleicher Rechner, gleicher Port), ohne Weiterleitungen. Weil Dienste im Heimnetz selten HTTPS sprechen, ist hier auch <code>http://</code> erlaubt. Zugangsdaten gehören nicht in die Adresse, sondern in ein eigenes Feld (Geheimnis).</li>
+<li><strong>Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago.</strong> Läuft er bei dir im eigenen Netz, verlassen die Daten das Haus nicht. Gehört er einem anderen Anbieter, ist das eine <strong>Vertrauensbeziehung zu diesem Dienstleister</strong> – wie beim Hosten von Ablago selbst: Standort, Auftragsverarbeitung, Speicherung, Nutzung zum Training. Diese Entscheidung triffst du mit dem Eintragen und Bestätigen; Ablago hat dafür keinen weiteren Schalter. Den Hinweis zeigt es auch schon in der Vorschau vor der Installation.</li>
+</ul>
+<h3 id="erkennung-durch-ein-paket">Erkennung durch ein Paket<a class="headerlink" href="#erkennung-durch-ein-paket" title="Permanent link">&para;</a></h3>
+<p><strong>Aus Dokument ausfüllen</strong> (Knopf in der Mappe) nutzt normalerweise die <strong>eingebaute Erkennung</strong> – Muster für E-Mail, Telefon, Datum, Betrag und Ähnliches, ohne KI. Ein Paket mit dem Recht <a href="#recht-erkennen">Felder aus Dokumenten vorschlagen</a> – etwa ein KI-Assistent über Ollama – erkennt auch Freitext, Briefköpfe und schwierige Belege. Das Paket <strong>QR-Code lesen</strong> übernimmt bei Visitenkarten die Angaben aus dem QR-Code (vCard) und lässt ohne Code die eingebaute Erkennung arbeiten; es liest dafür die Seitenbilder der Dokumente, die schon abgelegt sind (Recht <em>Dokumente lesen</em>), und braucht kein Netz.</p>
+<ul>
+<li><strong>Standard für alle Mappentypen:</strong> Werkbank → Pakete → <em>Paket</em> → Abschnitt <strong>Aus Dokument ausfüllen</strong> → <strong>Dieses Paket als Standard für alle Mappentypen nutzen</strong>. Ohne Haken bleibt die eingebaute Erkennung der Standard.</li>
+<li><strong>Je Mappentyp:</strong> In der <a href="../mappentypen/#erkennung">Erkennung des Mappentyps</a> wählst du <em>Standard aus der Werkbank</em>, <em>eingebaut</em> oder ein bestimmtes Paket.</li>
+<li><strong>Datenabfluss:</strong> Darf das Paket ins Netz (feste Adresse oder <a href="#dienst-adresse">Dienst-Adresse</a>), schickt es den Text der Dokumente dorthin. Diese Wahl geht nur ausdrücklich: Ablago fragt <strong>„Text der Dokumente an einen Dienst schicken?“</strong>, und erst mit <strong>Bestätigen und wählen</strong> gilt sie.</li>
+</ul>
+<p><strong>Was das Paket bekommt:</strong> den Text, aus dem ausgefüllt wird (höchstens 50 000 Zeichen), den Namen des Mappentyps und eine Beschreibung der Felder als JSON Schema – <strong>nie Passwortfelder</strong> und nie Felder, die der Benutzer nicht bearbeiten darf. <strong>Verweise</strong> (z. B. <em>Organisation</em>) gleicht Ablago weiterhin selbst mit vorhandenen Mappen ab.</p>
+<p><strong>Was Ablago mit der Antwort macht:</strong> Es prüft jeden Wert gegen die Feldart wie bei der eingebauten Erkennung. Falsche Typen, unbekannte Felder und Werte außerhalb einer Auswahl verwirft es und vermerkt das im <a href="../fehlersuche/#protokoll">Protokoll</a> (Feld und Grund, ohne Werte). Die Werte erscheinen nur als <strong>Vorschlag</strong>; gespeichert wird erst mit <em>Mappe speichern</em>. Unter dem Ergebnis steht „Erkannt mit „<em>Paket</em>“.“</p>
+<p><strong>Wenn das Paket nicht antwortet</strong> (läuft nicht, Dienst nicht erreichbar, keine Antwort nach 60 Sekunden, Antwort unbrauchbar), übernimmt die eingebaute Erkennung; der Benutzer sieht einen Hinweis darauf. Antwortet es, aber ohne einen Wert, der die Prüfung besteht, heißt der Hinweis „<em>Paket</em> hat nichts Brauchbares geliefert“ – auch dann übernimmt die eingebaute Erkennung.</p>
+<p><strong>Gekürzter Text:</strong> Liest das Paket nur einen Teil des Texts – weil Ablago höchstens 50 000 Zeichen mitgibt oder das Paket für seinen KI-Dienst kürzt (beim KI-Assistenten: Einstellung <em>Kontextlänge</em>, siehe <a href="../ki-lokal/#kontext-speicher">KI lokal betreiben</a>) –, steht unter dem Ergebnis „Dokumenttext gekürzt“. Angaben weiter hinten im Dokument fehlen dann vielleicht.</p>
+<h3 id="frag-deine-ablage">Frag deine Ablage<a class="headerlink" href="#frag-deine-ablage" title="Permanent link">&para;</a></h3>
+<p>Ist ein Paket mit dem Recht <a href="#recht-antworten">Fragen an die Ablage beantworten</a> installiert und geladen, steht auf der Startseite der Ablage das Feld <strong>„Frag deine Ablage“</strong> (siehe <a href="https://help.ablago.app/benutzer/aktuell/startseite/#frag-deine-ablage">Benutzerhandbuch</a>). So läuft eine Frage ab:</p>
+<ol>
+<li>Der Browser schickt die Frage und den bisherigen Chat an Ablago.</li>
+<li>Ablago sucht <strong>selbst</strong> passende Stellen – im Volltext der Dokumente, in Titel und Feldern der Mappen und, wenn ein Paket mit <a href="#recht-vektoren">Vektoren</a> da ist, nach Ähnlichkeit –, <strong>nur in Mappen, die der Fragende lesen darf</strong>. Passwortfelder und Benutzer sind nie dabei.</li>
+<li>Es schneidet höchstens so viele <strong>Ausschnitte</strong> heraus, wie unten eingestellt, und gibt sie mit der Frage dem Paket – als <strong>Daten gekennzeichnet</strong>, mit dem Hinweis an den KI-Dienst, darin stehende Anweisungen nicht zu befolgen.</li>
+<li>Das Paket fragt den Dienst unter der <a href="#dienst-adresse">Dienst-Adresse</a> und gibt die Antwort Stück für Stück zurück.</li>
+<li>Ablago zeigt die Antwort als <strong>Text</strong> (nichts davon wird ausgeführt oder gespeichert) und darunter die genannten <strong>Quellen</strong> – nur Mappen aus den mitgegebenen Ausschnitten, noch einmal auf Lesbarkeit geprüft. Unter jeder Antwort steht aufklappbar <strong>„An die KI geschickt: n Ausschnitte aus m Mappen“</strong> mit genau diesen Stellen.</li>
+</ol>
+<p><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt im Abschnitt <strong>Frag deine Ablage</strong> die <strong>Höchstmenge je Frage</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Bereich</th>
+<th>Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Höchstens Ausschnitte je Frage</strong></td>
+<td>1 bis 20</td>
+<td>8</td>
+</tr>
+<tr>
+<td><strong>Höchstens Zeichen je Frage</strong> (alle Ausschnitte zusammen)</td>
+<td>500 bis 30 000</td>
+<td>6 000</td>
+</tr>
+</tbody>
+</table>
+<p>Ein einzelner Ausschnitt ist höchstens 1 500 Zeichen lang. Weniger heißt: weniger Daten an den Dienst und schnellere Antworten, aber eher „steht nicht in den Ausschnitten“.</p>
+<p><strong>Kein Protokoll der Inhalte:</strong> Den Chat hält nur der Browser (bis zum Neuladen); der Server speichert weder Fragen noch Ausschnitte noch Antworten. Das Protokoll von Ablago vermerkt nur „Frage an die Ablage gestellt“ mit Anzahl der Ausschnitte und Dauer, die Werkbank beim Paket nur „Frage beantwortet“ mit der Länge der Antwort. Je Benutzer läuft eine Frage zur Zeit, im ganzen Ablago höchstens vier.</p>
+<h3 id="ereignisse">Ereignisse<a class="headerlink" href="#ereignisse" title="Permanent link">&para;</a></h3>
+<p>Unter <strong>„Reagiert auf diese Ereignisse:“</strong> nennt die Vorschau, wann der Code von selbst läuft – je Ereignis eine Zeile mit <strong>?</strong>. Ohne Ereignisse läuft er nur, wenn du im Reiter <strong>Einstellungen</strong> eine Aktion auslöst. Ein Ereignis gibt dem Paket keine weiteren Rechte: Es erfährt nur, <em>dass</em> etwas passiert ist (z. B. die Kennung der neuen Post), und arbeitet dann mit den Rechten oben. Kommen in einem Update nur Ereignisse dazu, fragt Ablago deshalb nicht erneut. Was ein Paket selbst ändert, wird ihm nicht zurückgemeldet.</p>
+<h4 id="ereignis-post-angelegt">Neue Post ist angelegt<a class="headerlink" href="#ereignis-post-angelegt" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Sobald eine neue Post entsteht – mit <strong>+ Post</strong> in der Ablage, über die API, aus einem Eingangsordner oder Postfach und beim <strong>Post teilen</strong> für jede neue Post.</p>
+<p><strong>Typisch:</strong> Post prüfen, zuordnen oder zählen – das Beispielpaket <strong>Hallo Post</strong> etwa zählt neue Post.</p>
+<h4 id="ereignis-dokument-hochgeladen">Ein Dokument wurde hochgeladen<a class="headerlink" href="#ereignis-dokument-hochgeladen" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Bei jedem neuen Dokument – Hochladen in der Oberfläche oder über die API, aus Eingangsordner und Postfach, und für die neuen Dokumente beim <strong>PDF teilen</strong>, <strong>Zusammenfügen</strong>, <strong>Post teilen</strong> und <strong>Schwärzen</strong> (als Kopie). Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument.</p>
+<p><strong>Typisch:</strong> Das Dokument ansehen und etwas daraus machen – das Paket <strong>Trennblatt</strong> teilt Post an Trennblättern, <strong>Texterkennung</strong> erkennt Text in Scans.</p>
+<h4 id="ereignis-texterkennung-fertig">Die Texterkennung eines Dokuments ist fertig<a class="headerlink" href="#ereignis-texterkennung-fertig" title="Permanent link">&para;</a></h4>
+<p><strong>Veraltet</strong> – gibt es weiter für Pakete, die vor Version 0.133 entstanden sind. <strong>Wann:</strong> Gleichzeitig mit <a href="#ereignis-volltext-fertig">Volltext fertig</a>, wenn Ablago ein Dokument selbst gelesen hat (Textebene).</p>
+<p><strong>Typisch:</strong> Ältere Fassungen des Pakets <strong>Texterkennung</strong> (1.x) erkennen damit Scans ohne Text. Seit Version 0.134 gibt es keine eingebaute Texterkennung mehr – aktualisiere das Paket auf 2.0, damit Ablago es als Texterkennung kennt.</p>
+<h4 id="ereignis-volltext-fertig">Der Volltext eines Dokuments ist fertig<a class="headerlink" href="#ereignis-volltext-fertig" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Sobald der Volltext eines Dokuments feststeht – egal, woher er kommt: aus der Textebene eines PDFs, von einem Paket wie <strong>Texterkennung</strong> oder über die API. Seit Version 0.133 auch dann, wenn Ablago <strong>keinen Text</strong> gefunden hat (z. B. bei einem Scan) – genau das braucht ein Paket, das die <a href="#recht-texterkennung">Texterkennung übernimmt</a>. Pakete von vor 0.133 bekommen es weiter nur mit Text. Für ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> schickt Ablago dieses Ereignis außerdem für den <strong>Bestand</strong> nach (siehe <a href="#aehnlichkeit">Ähnlichkeit</a>).</p>
+<p><strong>Typisch:</strong> Scans erkennen – das Paket <strong>Texterkennung</strong> (ab 2.0); aus dem Volltext etwas berechnen – das Paket <strong>KI lokal – Ähnlichkeit</strong> rechnet daraus den Vektor des Dokuments.</p>
+<h4 id="ereignis-datei-umwandeln">Eine Datei soll umgewandelt werden<a class="headerlink" href="#ereignis-datei-umwandeln" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.137 für jede Datei eines Typs, den Ablago nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-umwandeln">Dateien umwandeln</a> zuständig ist – beim Hochladen und bei einer neuen Version, wenn das Paket neu installiert wird (für die vorhandenen Dateien), bei <strong>Vorschaubilder nachholen</strong> und bei <strong>Volltext neu erzeugen</strong> (für Dateien ohne Fassung). Dateien über 50 MB meldet Ablago nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id).</p>
+<p><strong>Typisch:</strong> Das Paket <strong>Bildformate</strong> macht aus einem TIFF-Scan ein PDF, aus WebP ein JPEG und aus GIF und BMP ein PNG.</p>
+<h4 id="ereignis-datei-volltext">Eine Datei braucht ihren Volltext<a class="headerlink" href="#ereignis-datei-volltext" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.145 für jede Datei eines Typs, den Ablago nicht selbst liest und für den das Paket mit dem Recht <a href="#recht-volltext">Volltext liefern</a> zuständig ist – beim <strong>Hochladen</strong>, bei einer <strong>neuen Version</strong>, wenn das Paket <strong>neu installiert</strong> wird (für die vorhandenen Dateien ohne Text), bei <strong>Volltext neu erzeugen</strong> und bei <strong>Erneut versuchen</strong> bzw. <strong>Neu erzeugen</strong> am Dokument. Dateien über 50 MB meldet Ablago nicht. Nur das zuständige Paket bekommt es (bei mehreren für denselben Typ das erste nach Id). Bis das Paket schreibt, bleibt ein vorhandener Text für die Suche stehen.</p>
+<p><strong>Typisch:</strong> Das Paket <strong>Office und E-Mail</strong> liest den Text aus Word-, Excel- und PowerPoint-Dateien, OpenDocument, RTF, Textdateien und E-Mails.</p>
+<h4 id="ereignis-datei-archivfassung">Archivfassung erstellen<a class="headerlink" href="#ereignis-datei-archivfassung" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.149 für jedes Dokument eines Typs, für den das Paket mit dem Recht <a href="#recht-archivfassung">Archivfassung ablegen</a> zuständig ist – <strong>sobald sein Volltext feststeht</strong>: nach dem Hochladen (bei Scans also erst nach der Texterkennung), bei einer <strong>neuen Version</strong> oder einer Änderung am PDF (drehen, Seiten löschen, teilen, schwärzen), bei <strong>Volltext neu erzeugen</strong> und wenn das Paket <strong>neu installiert</strong> wird (für alle vorhandenen Dokumente mit fertigem Volltext). Standard sind <strong>alle PDFs</strong>, auch solche mit Text (Online-Rechnungen, Kontoauszüge); mit der Einstellung des Pakets „nur Scans und Bilder“ bekommen PDFs mit vollständigem Text keine. Nicht gemeldet werden: verschlüsselte PDFs (Grund am Dokument), PDFs, die schon gültiges PDF/A sind (das Original gilt dann als Archivfassung), und Dateien über 50 MB. Nur das zuständige Paket bekommt es (bei mehreren das erste nach Id).</p>
+<p><strong>Typisch:</strong> Das Paket <strong>PDF/A</strong> legt zu jedem Scan, Foto und PDF ein durchsuchbares PDF/A-2b ab.</p>
+<h4 id="ereignis-sicherung-fertig">Eine Sicherung ist fertig<a class="headerlink" href="#ereignis-sicherung-fertig" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.142 nach jeder erfolgreichen Sicherung – von Hand, automatisch oder vor einer Wiederherstellung –, sobald sie vollständig im Sicherungsordner liegt. Nur Pakete mit dem Recht <a href="#recht-sicherung-lesen">Sicherung lesen</a> bekommen es. Schlägt die Kopie fehl, wiederholt Ablago das Ereignis (nach 1, 5, 30 Minuten, 2 und 6 Stunden); danach gilt sie als fehlgeschlagen und die Administratoren bekommen eine E-Mail.</p>
+<p><strong>Typisch:</strong> Das Paket <strong>Sicherungsziel WebDAV</strong> lädt die verschlüsselte Sicherung auf Nextcloud, ein NAS oder zum Hoster und prüft sie dort.</p>
+<h4 id="ereignis-einstellungen-geandert">Die Einstellungen des Pakets wurden geändert<a class="headerlink" href="#ereignis-einstellungen-geandert" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Wenn ein Administrator die <a href="#einstellungen">Einstellungen des Pakets</a> speichert. Nur das Paket selbst bekommt dieses Ereignis.</p>
+<p><strong>Typisch:</strong> Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.</p>
+<h4 id="ereignis-mappe">Ereignisse zu Mappen<a class="headerlink" href="#ereignis-mappe" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.153 – eine Mappe ist <strong>angelegt</strong>, <strong>gespeichert</strong> (und dabei geändert), <strong>gelöscht</strong> (in den Papierkorb) oder <strong>wiederhergestellt</strong>. Ein Paket bekommt diese Ereignisse nur für die Mappentypen, die es im Manifest nennt (bisher nur seine eigenen); die Vorschau zeigt sie als „– zu: <em>Typen</em>“. Viele schnelle Änderungen an derselben Mappe kommen als <strong>ein</strong> Ereignis (binnen etwa 5 Sekunden), mit den Schlüsseln aller geänderten Felder. Das Paket erfährt nur Kennung, Typ und Feldschlüssel – nie Werte –, und liest mit seinen Rechten nach. Beispiel-Mappen, Demo-Daten und eine Wiederherstellung lösen nichts aus.</p>
+<p><strong>Typisch:</strong> Aus einer geänderten Mappe etwas nachrechnen oder einen Stand an einen anderen Dienst geben.</p>
+<h4 id="ereignis-frist-erreicht">Frist erreicht<a class="headerlink" href="#ereignis-frist-erreicht" title="Permanent link">&para;</a></h4>
+<p><strong>Wann:</strong> Seit Version 0.153 für jedes Datumsfeld mit einer <a href="../mappentypen/#fristen-erinnerungen-an-datumsfeldern">Frist</a> – zum <strong>Erinnerungszeitpunkt</strong> (so viele Tage vorher, wie die Frist vorsieht) und <strong>am Tag selbst</strong>, je Mappe, Feld, Datum und Zeitpunkt <strong>genau einmal</strong>, auch mit mehreren Servern und nach einem Neustart. Wie bei den Mappen-Ereignissen nur für die Mappentypen aus dem Manifest. Ändert jemand das Datum, gilt der neue Tag wieder als offen.</p>
+<p><strong>Typisch:</strong> Zu einer Kündigungsfrist etwas vorbereiten, eine Erinnerung an einen anderen Dienst schicken.</p>
+<h3 id="aehnlichkeit">Ähnlichkeit<a class="headerlink" href="#aehnlichkeit" title="Permanent link">&para;</a></h3>
+<p>Ein Paket mit dem Recht <a href="#recht-vektoren">Vektoren zu Dokumenten</a> – etwa <strong>KI lokal – Ähnlichkeit</strong> – rechnet zu jedem Dokument mit Volltext einen Vektor. Damit zeigt Ablago:</p>
+<ul>
+<li>an der Mappe unter den Dokumenten <strong>„Ähnliche Dokumente“</strong> aus anderen Mappen,</li>
+<li>in der Suche der <a href="https://help.ablago.app/benutzer/aktuell/startseite/#schnell-finden">Startseite</a> mit <strong>„auch in Dokumenten“</strong> zusätzlich <strong>ähnliche Treffer</strong> – Mappen ohne passendes Wort, deren Dokument dem Suchbegriff ähnlich ist, gekennzeichnet mit <strong>„ähnlich“</strong>.</li>
+</ul>
+<p>Jeder sieht dabei nur Mappen, die er lesen darf. Den Vektor des Suchbegriffs liefert das Paket; antwortet es nicht innerhalb von 1,5 Sekunden, sucht Ablago wie bisher ohne Ähnlichkeit.</p>
+<p><strong>Werkbank → Pakete → <em>Paket</em></strong> zeigt im Abschnitt <strong>Ähnlichkeit</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Angabe</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Modell</strong></td>
+<td>womit das Paket rechnet (meldet das Paket selbst)</td>
+</tr>
+<tr>
+<td><strong>Stand</strong></td>
+<td>für wie viele Dokumente mit Volltext es schon einen Vektor gibt</td>
+</tr>
+<tr>
+<td><strong>Zwischenspeicher</strong></td>
+<td>wie viel Arbeitsspeicher die Vektoren in Ablago belegen</td>
+</tr>
+<tr>
+<td><strong>Ähnliche Treffer in der Suche zeigen</strong></td>
+<td>Einstellung, Standard: an. Aus: Die Suche fragt das Paket nicht mehr; „Ähnliche Dokumente“ an der Mappe bleiben.</td>
+</tr>
+<tr>
+<td><strong>Neu berechnen</strong></td>
+<td>löscht alle Vektoren; das Paket rechnet sie im Hintergrund neu</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bestand und Modellwechsel:</strong> Nach der Installation rechnet das Paket zuerst nur neue Dokumente. Den Bestand holt Ablago gedrosselt nach: Hat das Paket nichts mehr offen, bekommt es alle 30 Sekunden bis zu 50 Dokumente ohne Vektor (Ereignis <a href="#ereignis-volltext-fertig">Volltext ist da</a>). Meldet das Paket nach einem Update ein <strong>anderes Modell</strong>, sind die alten Vektoren ungültig: Ablago löscht sie und lässt sie auf dieselbe Weise neu berechnen. Bis dahin fehlen ähnliche Dokumente für die noch offenen Dokumente.</p>
+<p><strong>Daten:</strong> Vektoren sind abgeleitet. Sie stehen in der Datenbank (Tabelle <code>vektoren</code>), nicht im <a href="../export/">Vollexport</a>, und verschwinden mit ihrem Dokument. Nach einer Wiederherstellung rechnet das Paket sie neu.</p>
+<p><strong>Speicher und Antwortzeit</strong> (256 Zahlen je Vektor, gemessen auf einem Rechner mit 2 Kernen, PostgreSQL 16):</p>
+<table>
+<thead>
+<tr>
+<th>Dokumente</th>
+<th>Datenbank</th>
+<th>Zwischenspeicher</th>
+<th>erstes Laden</th>
+<th>Ähnliche Dokumente</th>
+<th>zum Vergleich: Kosinus in SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10 000</td>
+<td>12 MB</td>
+<td>4 MB</td>
+<td>0,4 s</td>
+<td>4 ms</td>
+<td>0,3 s</td>
+</tr>
+<tr>
+<td>100 000</td>
+<td>118 MB</td>
+<td>33 MB</td>
+<td>3,2 s</td>
+<td>37 ms</td>
+<td>3,0 s</td>
+</tr>
+</tbody>
+</table>
+<p>Ablago braucht dafür keine Datenbank-Erweiterung (wie pgvector, die im Image <code>postgres:17</code> fehlt). Es vergleicht im eigenen Arbeitsspeicher mit 8 Bit je Zahl; den Zwischenspeicher lädt es nach dem Start im Hintergrund – bis er da ist, sucht die Suche ohne Ähnlichkeit. Gemessen mit <code>server/test/vektoren-messen.ts</code>.</p>
+<h2 id="expertenmodus-weitere-kataloge-und-hochladen">Expertenmodus: weitere Kataloge und Hochladen<a class="headerlink" href="#expertenmodus-weitere-kataloge-und-hochladen" title="Permanent link">&para;</a></h2>
+<p>Für Paketentwickler und für Ablago ohne Internetzugang gibt es unter <strong>Werkbank → Pakete</strong> direkt unter den Knöpfen den Abschnitt <strong>Expertenmodus</strong>. Er ist zugeklappt; ein Klick auf <strong>▸ Expertenmodus</strong> (oder Enter bzw. Leertaste) klappt ihn an Ort und Stelle auf. Ob er auf- oder zugeklappt ist, merkt sich dein Browser für dich – das ist nur Bequemlichkeit, kein Recht: Was dort steht, dürfen alle Administratoren.</p>
+<p><img alt="Werkbank → Pakete mit aufgeklapptem Expertenmodus" src="../bilder/werkbank-pakete.png" /></p>
+<p>Im Expertenmodus kannst du:</p>
+<ul>
+<li><strong>Weitere Quellen</strong> – Katalogadressen hinzufügen, abschalten und entfernen, höchstens 20. Erlaubt ist nur HTTPS, das Format ist dasselbe wie beim offiziellen Katalog (<code>katalog.json</code> der Registry). Wie ein Katalog mit <strong>eigenem Schlüssel</strong> behandelt wird, steht <a href="#katalog-mit-eigenem-schlussel">unten</a>. <strong>Katalog abrufen</strong> fragt neben dem offiziellen Katalog alle <strong>eingeschalteten</strong> weiteren Kataloge ab – egal, ob der Abschnitt gerade auf- oder zugeklappt ist; ihre Pakete tragen die Adresse als Kennzeichen. Willst du eine Quelle nicht mehr nutzen, schalte sie ab oder entferne sie. Ohne weitere Quellen gibt es nur den offiziellen Katalog.</li>
+<li>Ein <strong>Paket als Datei hochladen</strong> (<code>.zip</code> im Format der Registry, z. B. der Paketordner gepackt, höchstens 128 MB). Ablago prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau. Eine <a href="#pakete-ohne-internet-installieren">Sammeldatei</a> erkennt es selbst.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Nicht vom Ablago-Projekt geprüft</p>
+<p>Pakete aus einer anderen Quelle als dem offiziellen Katalog hat niemand vom Ablago-Projekt angesehen. Vor der Installation zeigt Ablago deshalb deutlich die Herkunft, und du musst ausdrücklich bestätigen, dass du weißt, woher das Paket stammt.</p>
+</div>
+<p>Die Liste der installierten Pakete zeigt bei jedem die <strong>Herkunft</strong>: „offizieller Katalog“, die Katalogadresse oder „hochgeladen von … am …“. <strong>Updates sucht Ablago nur in der Quelle, aus der das Paket stammt.</strong> Ein hochgeladenes Paket aktualisierst du, indem du eine höhere Version hochlädst; dann gelten dieselben Regeln wie bei jedem Update (nur ergänzen). Ist die Quelle eines Pakets abgeschaltet oder entfernt, gibt es dafür keine Updates.</p>
+<p>Lädst du ein einzelnes Paket hoch, dessen Prüfsumme genau so im (schon abgerufenen) offiziellen Katalog steht, zeigt die Vorschau „entspricht Katalogversion …“. Die Herkunft bestätigst du trotzdem, wie bei jedem hochgeladenen Paket.</p>
+<p>Das Protokoll vermerkt, wer welche Quelle hinzugefügt, abgeschaltet oder entfernt und wer welches Paket hochgeladen hat.</p>
+<h3 id="katalog-mit-eigenem-schlussel">Katalog mit eigenem Schlüssel<a class="headerlink" href="#katalog-mit-eigenem-schlussel" title="Permanent link">&para;</a></h3>
+<p>Ein weiterer Katalog kann einen <strong>eigenen Schlüssel</strong> haben (Datei <code>katalog.schluessel</code> neben <code>katalog.json</code>; wie ein Anbieter das einrichtet, steht im <a href="https://help.ablago.app/entwickler/aktuell/pakete/#eigener-katalog-mit-eigenem-schluessel">Entwicklerhandbuch</a>). Ablago geht damit um wie SSH beim ersten Kontakt:</p>
+<ol>
+<li><strong>Hinzufügen:</strong> Hat der Katalog einen Schlüssel, zeigt Ablago dessen <strong>Fingerabdruck</strong> – 64 Zeichen in Vierergruppen, z. B. <code>3f9a 0c12 …</code>. Vergleiche ihn mit dem, den der Anbieter auf seiner Webseite nennt. Erst wenn du <strong>Fingerabdruck stimmt</strong> klickst, merkt sich Ablago den Schlüssel. Stimmt auch nur ein Zeichen nicht, klicke <strong>Abbrechen</strong>.</li>
+<li><strong>Danach</strong> muss jeder Abruf dieses Katalogs gültig signiert sein; dafür fragt Ablago beim Installieren nicht mehr nach der Herkunft. Fehlt die Signatur oder passt sie nicht, nimmt Ablago den Katalog nicht und vermerkt es im Protokoll.</li>
+<li><strong>Geordneter Schlüsselwechsel:</strong> Hat der Anbieter seinen neuen Schlüssel mit dem alten signiert, übernimmt Ablago ihn selbst. Die Vorschau zeigt einen Hinweis, das Protokoll den Wechsel.</li>
+<li><strong>Schlüssel geändert ohne diesen Nachweis:</strong> Ablago <strong>sperrt</strong> den Katalog. In der Liste der Quellen steht „Gesperrt seit …“ mit dem neuen Fingerabdruck, und das Protokoll vermerkt es. Pakete daraus lassen sich nicht installieren oder aktualisieren.</li>
+</ol>
+<p><strong>Was tun bei einem gesperrten Katalog?</strong></p>
+<ul>
+<li>Frag beim Anbieter nach (nicht über einen Link aus dem Katalog selbst), ob er den Schlüssel wirklich gewechselt hat, und vergleiche den neuen Fingerabdruck mit seiner Webseite.</li>
+<li>Stimmt er, klicke bei der Quelle <strong>Schlüssel prüfen …</strong> und bestätige den Fingerabdruck. Die Sperre ist dann aufgehoben.</li>
+<li>Stimmt er nicht oder erreichst du den Anbieter nicht: Schalte die Quelle ab oder entferne sie. Schon installierte Pakete bleiben, bekommen aber keine Updates mehr.</li>
+</ul>
+<p>Ein Katalog <strong>ohne</strong> Schlüssel funktioniert wie bisher: Bei jeder Installation bestätigst du die Herkunft. Veröffentlicht der Anbieter später einen Schlüssel, übernimmst du ihn mit <strong>Schlüssel prüfen …</strong>.</p>
+<h2 id="pakete-ohne-internet-installieren">Pakete ohne Internet installieren<a class="headerlink" href="#pakete-ohne-internet-installieren" title="Permanent link">&para;</a></h2>
+<p>Kommt dein Ablago nicht ins Internet, holst du mehrere Pakete auf einmal als <strong>Sammeldatei</strong>:</p>
+<ol>
+<li>Öffne an einem Gerät mit Internet die Seite <strong><a href="https://catalog.ablago.app/sammeldatei.html">Pakete ohne Internet</a></strong> des Katalogs. Am schnellsten über <strong>Werkbank → Pakete → Ohne Internet …</strong> und den Link dort – dann ist die Version deines Ablago schon eingetragen. Wie bei <a href="#im-katalog-ansehen">Im Katalog ansehen</a> steht sie nur im <strong>Fragment</strong> der Adresse (<code>…/sammeldatei.html#dms=0.147.0</code>): Der Browser schickt sie an keinen Server, die Seite merkt sie sich nur in deinem Browser und entfernt das Fragment gleich wieder aus der Adresse.</li>
+<li>Kreuze die Pakete an. Die <strong>Ablago-Version</strong> bestimmt, welche Paketversionen passen (Vorgabe: die Version, die sich dein Browser gemerkt hat, sonst die neueste). <strong>Abhängigkeiten</strong> wie „Basis“ kommen automatisch mit und sind mit „kommt mit – gebraucht von …“ markiert. Die Texterkennung ist vorausgewählt.</li>
+<li><strong>Sammeldatei herunterladen.</strong> Die Seite holt die Pakete aus dem Katalog, prüft jedes gegen seine Prüfsumme und packt sie zusammen – mit einer Kopie des signierten Katalogs. Sie zeigt den <strong>SHA-256</strong> der fertigen Datei.</li>
+<li>Bring die Datei zu Ablago (USB-Stick, Netzlaufwerk) und lade sie unter <strong>Werkbank → Pakete → Ohne Internet …</strong> hoch – oder im <a href="../installation/#pakete-dazuholen">Einrichtungsassistenten</a>, wenn der Katalog dort nicht erreichbar ist. Ein einzelnes Paket oder eine Sammeldatei nimmt auch <strong>Paket hochladen</strong> im Expertenmodus an.</li>
+<li>Ablago zeigt den Inhalt: je Paket die Version und ob es <strong>neu</strong>, ein <strong>Update</strong>, <strong>schon installiert</strong> oder <strong>älter als installiert</strong> ist und ob es zur Ablago-Version passt. Ergänzungen (z. B. Zusatzsprachen) stehen unter ihrem Paket. Enthält die Datei den signierten Katalog, steht dort <strong>Herkunft: aus dem offiziellen Katalog vom …</strong>; sonst bestätigst du im Ablauf einmal, dass du weißt, woher die Datei stammt. Abwählen kannst du jedes Paket, das kein anderes gewähltes braucht. Danach geht es weiter wie unter <a href="#mehrere-pakete-in-einem-schritt-installieren">Mehrere Pakete in einem Schritt</a>: eine Rechte-Bestätigung, Namen nur bei Konflikten, Beispiele, Einstellungen, ein Knopf.</li>
+</ol>
+<h3 id="wie-das-dms-einer-sammeldatei-traut">Wie Ablago einer Sammeldatei traut<a class="headerlink" href="#wie-das-dms-einer-sammeldatei-traut" title="Permanent link">&para;</a></h3>
+<p>Die Sammeldatei ist ein ZIP mit dem Verzeichnis <code>sammeldatei.json</code> (je Paket Id, Version, Größe und SHA-256), einer kurzen <code>LIESMICH.txt</code>, den Paket-Archiven aus dem Katalog, Byte für Byte unverändert, und – bei Sammeldateien aus dem signierten Katalog – einer Kopie von <code>katalog.json</code> mit <code>katalog.sig</code>. Ablago nimmt sie <strong>nur ganz oder gar nicht</strong> an:</p>
+<ul>
+<li>Jedes Archiv muss genau die <strong>Größe und Prüfsumme (SHA-256)</strong> aus dem Verzeichnis haben. Hat Ablago den offiziellen Katalog in dieser Sitzung schon abgerufen, muss die Prüfsumme <strong>auch zum Katalog</strong> passen – sonst lehnt es die Datei ab.</li>
+<li>Es dürfen <strong>keine anderen Dateien</strong> darin liegen; Dateinamen mit <code>..</code> oder <code>/</code> am Anfang, verschlüsselte Einträge und doppelte Namen lehnt es ab.</li>
+<li><strong>Grenzen gegen ZIP-Bomben:</strong> höchstens 256 MB je Sammeldatei, 50 Pakete, 128 MB je Paket-Archiv, entpackt 20 MB je Paket (plus 128 MB für Code) und 512 MB für alle Pakete zusammen. Ein großes Paket braucht beim Installieren etwa doppelt so viel Arbeitsspeicher, wie es groß ist. Ablago entpackt nie mehr, als im Archiv angegeben ist.</li>
+<li>Jedes Paket durchläuft <strong>dieselben Prüfungen wie ein einzeln hochgeladenes</strong>; Id und Version im Paket müssen zum Verzeichnis passen. Ist eins ungültig, wird nichts übernommen.</li>
+<li>Enthält die Datei den <strong>signierten Katalog</strong>, prüft Ablago die Signatur – ohne Internet – und vergleicht jedes Archiv mit der Prüfsumme darin. Passt eines nicht dazu, lehnt es die ganze Datei ab.</li>
+</ul>
+<p><strong>Mit gültig signiertem Katalog</strong>, in dem jedes Archiv mit seiner Prüfsumme steht, zeigt Ablago „aus dem offiziellen Katalog vom …, signiert vom Ablago-Projekt“, und du musst die Herkunft <strong>nicht bestätigen</strong>. Ist der Katalogstand älter als <strong>90 Tage</strong>, weist Ablago darauf hin: Neuere Paketversionen fehlen darin vielleicht – stell bei Gelegenheit eine neue Sammeldatei zusammen. Steht ein Paket nicht im signierten Katalog, nennt Ablago es; für dieses bestätigst du die Herkunft wie bisher.</p>
+<p><strong>Ohne Signatur</strong> (ältere Sammeldateien) oder mit <strong>ungültiger Signatur</strong> beweisen die Prüfsummen nur, dass die Datei vollständig und seit dem Zusammenstellen <strong>unverändert</strong> ist – nicht, <strong>wer</strong> sie zusammengestellt hat. Dann gilt sie wie ein hochgeladenes Paket als „nicht vom Ablago-Projekt geprüft“: Du bestätigst die Herkunft. Eine ungültige Signatur steht außerdem im Protokoll. In jedem Fall tragen die installierten Pakete als Herkunft „hochgeladen von … am …“. Vergleiche bei Zweifel den SHA-256, den Ablago nach dem Hochladen zeigt, mit dem auf der Katalog-Seite. Updates dieser Pakete holst du mit einer neuen Sammeldatei; Pakete, die aus dem Katalog installiert sind, aktualisiert eine Sammeldatei nicht.</p>
+<h2 id="paket-aus-deinem-dms-erstellen">Paket aus deinem Ablago erstellen<a class="headerlink" href="#paket-aus-deinem-dms-erstellen" title="Permanent link">&para;</a></h2>
+<p>Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket zu einer anderen Familie mit, ohne YAML von Hand zu schreiben. Unter <strong>Werkbank → Pakete → Paket erstellen</strong> führt dich ein Assistent in vier Schritten; unten stehen <strong>Zurück</strong>, <strong>Weiter</strong> und am Ende <strong>Als .zip exportieren</strong>.</p>
+<ol>
+<li><strong>Auswählen</strong> – Mappentypen und Ansichten mit Haken, oben eine Suche. Optional <strong>Beispiel-Mappen</strong>: Ohne Auswahl enthält das Paket keine einzige Mappe. Wählst du Mappen der gewählten Typen aus, kommen ihre Feldwerte als Beispiele mit – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen.</li>
+<li><strong>Prüfen</strong> – Ablago prüft automatisch und sagt, was es daraus macht:<ul>
+<li><strong>Aus einem Paket:</strong> Ein Mappentyp oder eine Ansicht, die ein installiertes Paket mitgebracht hat (etwa „Organisation“ aus <em>Basis</em>), wird <strong>nicht kopiert</strong>, sondern als <strong>Abhängigkeit</strong> eingetragen, z. B. <code>basis: "&gt;=1.1.0"</code> mit der hier installierten Version. Hast du so einen Typ hier nachträglich geändert, weist Ablago darauf hin: Deine Änderungen gehören nicht zu deinem Paket – lege dafür einen eigenen Typ an.</li>
+<li><strong>Benutzer, Rolle, Ablageort:</strong> Verweise darauf werden zu <code>dms:benutzer</code>, <code>dms:rolle</code>, <code>dms:ablageort</code> – die bringt jede Ablago-Installation mit.</li>
+<li><strong>Nicht gewählt:</strong> Verweist ein gewählter Typ (Feld, Verknüpfungsregister) oder eine Ansicht auf einen <strong>eigenen</strong> Typ, den du nicht gewählt hast, steht er unter „Nicht gewählt, aber gebraucht“ mit <strong>Mit aufnehmen</strong>. So lange geht der Export nicht. Eine Ansicht, deren Elternansicht fehlt, kommt auf die oberste Ebene.</li>
+<li><strong>Was nicht ins Paket passt</strong>, nennt die Prüfung als Hinweis: weitere Trefferlisten (nur die Standard-Trefferliste kommt mit), Berechtigungen, Archivmodus, Nummernkreise an Feldern, Bedingungen auf Anzahlen, Favoriten oder Fristen und alles, was auf bestimmte Mappen oder Benutzer dieser Installation zeigt.</li>
+</ul>
+</li>
+<li><strong>Angaben</strong> – Name, Id (Kleinbuchstaben, Ziffern und <code>_</code>, wird aus dem Namen vorgeschlagen), Version (Vorschlag <code>1.0.0</code>), Beschreibung (ein, zwei Sätze, daraus wird auch die README), Autor und optional dein GitHub-Name, <strong>Lizenz</strong> aus der Liste der Registry (im Zweifel MIT; der volle Lizenztext kommt mit) und die nötige Ablago-Version (Vorschlag: dieser Installation). Unter „Was ist neu“ steht, was ins CHANGELOG kommt.</li>
+<li><strong>Exportieren</strong> – vor dem Download prüft Ablago das fertige Archiv genauso wie beim Hochladen; erst dann gibt es die Datei <code>&lt;id&gt;-&lt;version&gt;.zip</code> (Format der Registry mit <code>manifest.yaml</code>, <code>inhalt/…</code>, README, CHANGELOG, LICENSE).</li>
+</ol>
+<p>In der anderen Ablago-Installation installierst du zuerst die Abhängigkeiten (z. B. <em>Basis</em> aus dem Katalog) und lädst die Datei dann unter <strong>Expertenmodus → Paket hochladen</strong> hoch.</p>
+<p><strong>Nächste Version:</strong> Ablago merkt sich Id, Version, Autor, Lizenz und Auswahl jedes Exports. Beim nächsten Mal schlägt der Assistent dieselbe Id mit höherer Version vor (1.0.0 → 1.1.0); frühere Pakete holst du unter „Früher exportiert“ zurück. Lädt die andere Familie die höhere Version hoch, <strong>aktualisiert</strong> ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.</p>
+<div class="admonition note">
+<p class="admonition-title">Keine Daten im Paket</p>
+<p>Ein Paket enthält nur den Aufbau – Mappentypen und Ansichten. Mappen, Dokumente, Notizen, Benutzer und Passwörter kommen nie mit; aus ausdrücklich gewählten Beispiel-Mappen nur Feldwerte ohne Passwörter. Paket erstellen dürfen nur Administratoren; das Protokoll vermerkt jeden Export.</p>
+</div>
+<h2 id="eigene-pakete">Eigene Pakete<a class="headerlink" href="#eigene-pakete" title="Permanent link">&para;</a></h2>
+<p>Ein selbst erstelltes Paket kannst du auch in die Registry einreichen. Wie ein Paket aufgebaut ist und wie es in den Katalog kommt, steht im <a href="https://help.ablago.app/entwickler/aktuell/pakete/">Entwicklerhandbuch</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Zurück zum Seitenanfang
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Fußzeile" >
+        
+          
+          <a href="../automatisierungen/" class="md-footer__link md-footer__link--prev" aria-label="Zurück: Automatisierungen">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Zurück
+              </span>
+              <div class="md-ellipsis">
+                Automatisierungen
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../suche/" class="md-footer__link md-footer__link--next" aria-label="Weiter: Suche">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Weiter
+              </span>
+              <div class="md-ellipsis">
+                Suche
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a> · Das Handbuch lädt nichts von Dritten (<a href="https://help.ablago.app/admin/aktuell/datenschutz/#keine-telemetrie">Datenschutz</a>)
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/sponsors/motom001" target="_blank" rel="noopener" title="Projekt unterstützen (GitHub Sponsors)" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="m241 87.1 15 20.7 15-20.7C296 52.5 336.2 32 378.9 32 452.4 32 512 91.6 512 165.1v2.6c0 112.2-139.9 242.5-212.9 298.2-12.4 9.4-27.6 14.1-43.1 14.1s-30.8-4.6-43.1-14.1C139.9 410.2 0 279.9 0 167.7v-2.6C0 91.6 59.6 32 133.1 32 175.8 32 216 52.5 241 87.1"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://github.com/motom001/dms" target="_blank" rel="noopener" title="Quellcode auf GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "In Zwischenablage kopiert", "clipboard.copy": "In Zwischenablage kopieren", "search.result.more.one": "1 weiteres Suchergebnis auf dieser Seite", "search.result.more.other": "# weitere Suchergebnisse auf dieser Seite", "search.result.none": "Keine Suchergebnisse", "search.result.one": "1 Suchergebnis", "search.result.other": "# Suchergebnisse", "search.result.placeholder": "Suchbegriff eingeben", "search.result.term.missing": "Es fehlt", "select.version": "Version ausw\u00e4hlen"}, "version": {"alias": true, "default": "aktuell", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
