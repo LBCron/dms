@@ -211,5 +211,7 @@
   "region.feiertage.wofuer": "An Feiertagen kommt keine Tägliche Zusammenfassung (wer das in Mein Konto so eingestellt hat), und der Kalender zeigt sie an.",
   "region.aufgaben.mit": "Feiertage nach dem Bundesland {land}.",
   "region.aufgaben.ohne": "Feiertage werden nicht berücksichtigt – dafür ein Bundesland wählen.",
-  "region.aufgaben.link": "Region einstellen"
+  "region.aufgaben.link": "Region einstellen",
+  "ablegen.hinweis": "In der Werkbank wird eingerichtet – Dokumente legst du in der Ablage ab.",
+  "ablegen.link": "Zur Ablage"
 }

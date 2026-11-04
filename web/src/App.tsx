@@ -90,7 +90,8 @@ export function App() {
           <Link to="/ablage" className={bereich === 'ablage' ? 'an' : ''}>Ablage</Link>
           {admin && <Link to="/werkbank/typen" className={bereich === 'werkbank' ? 'an' : ''}>Werkbank</Link>}
         </nav>
-        <NeuKnopf />
+        {/* #649: „+ Neu“ nur in der Ablage – in der Werkbank wird eingerichtet, nicht abgelegt. */}
+        {bereich === 'ablage' && <NeuKnopf />}
         <div className="konto">
           {/* Quellcode, Version und Lizenz stehen unter Benutzermenü → „Über Ablago“ (#430). */}
           <Benutzermenue an={bereich === 'profil'} abmelden={abmelden} />
@@ -100,7 +101,7 @@ export function App() {
         {d.fehler && <div className="hinweis schlecht"><p>{d.fehler}</p><button className="knopf klein" onClick={() => void d.neuLaden()}>Erneut versuchen</button></div>}
         {inhalt}
       </main>
-      <PostAblage />
+      <PostAblage werkbank={bereich === 'werkbank'} />
       <PostKamera />
       {ich.entwicklermodus && <Messpanel />}
     </div>
