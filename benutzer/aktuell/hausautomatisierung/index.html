@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Arbeiten mit Ablago – Mappen, Dokumente, Suche und Profil">
+        <meta name="description" content="Arbeiten mit Ablago – Mappen, Dokumente, Suche und Mein Konto">
       
       
       
@@ -917,7 +917,7 @@
   <span class="md-ellipsis">
     
   
-    Profil und Einstellungen
+    Mein Konto und Einstellungen
   
 
     
@@ -1264,7 +1264,7 @@
 
 <h1 id="ablago-in-die-hausautomatisierung-einbinden">Ablago in die Hausautomatisierung einbinden<a class="headerlink" href="#ablago-in-die-hausautomatisierung-einbinden" title="Permanent link">&para;</a></h1>
 <p>Eine Lampe im Flur, die leuchtet, wenn neue Post da ist. Eine Mitteilung aufs Handy, wenn eine Frist ansteht. Die Zahl der offenen Aufgaben auf dem Wand-Tablet. Dafür bindest du Ablago in deine <strong>Hausautomatisierung</strong> ein – ohne dass jemand Ablago öffnen muss.</p>
-<p>Die Hausautomatisierung bekommt dabei <strong>nur Zahlen</strong>: wie viel neue Post, wie viel unter <em>Zu erledigen</em>, wie viele Fristen in den nächsten 7 Tagen und wie viele überfällig sind. Titel, Absender, Namen oder Dokumente sieht sie nie.</p>
+<p>Die Hausautomatisierung bekommt dabei <strong>nur Zahlen</strong>: wie viel neue Post, wie viel unter <em>Zu erledigen</em>, wie viel <strong>fällig in 7 Tagen</strong> und wie viel überfällig ist. Titel, Absender, Namen oder Dokumente sieht sie nie.</p>
 <h2 id="was-es-gibt">Was es gibt<a class="headerlink" href="#was-es-gibt" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1297,25 +1297,25 @@
 <p>Die Hausautomatisierung meldet sich mit einem <strong>API-Schlüssel</strong> an. Nimm dafür die Stufe <strong>nur Zähler</strong>:</p>
 <ol>
 <li>Melde dich als die Person an, deren Zahlen angezeigt werden sollen – die Zahlen gelten immer für den Benutzer des Schlüssels und in seinen Rechten.</li>
-<li>Öffne <strong>Profil → Sicherheit → API-Schlüssel</strong> und erzeuge einen neuen Schlüssel, z. B. „Homey“.</li>
+<li>Öffne <strong>Mein Konto → Sicherheit → API-Schlüssel</strong> (oben rechts auf deinen Namen klicken) und erzeuge einen neuen Schlüssel, z. B. „Homey“.</li>
 <li>Wähle unter <strong>Rechte</strong> die Stufe <strong>nur Zähler</strong>.</li>
 <li>Kopiere den Schlüssel gleich (er beginnt mit <code>dms_</code>) – er ist nur jetzt ganz zu sehen – und trag ihn zusammen mit der Adresse deines Ablago (z. B. <code>https://dms.home.arpa</code>) in der Hausautomatisierung ein.</li>
 </ol>
-<p>Warum <em>nur Zähler</em>: Dieser Schlüssel ruft <strong>nur die Zahlen</strong> ab; alles andere lehnt das Ablago ab, auch das <a href="../laufwerk/">Laufwerk</a>. Geht er verloren – etwa mit einer Sicherung der Hausautomatisierung –, erfährt jemand höchstens, wie viel Post und Aufgaben du hast. Die Homey-App funktioniert auch mit <em>nur lesen</em>, empfiehlt aber <em>nur Zähler</em>; einen Schlüssel <em>lesen und schreiben</em> lehnt sie ab.</p>
+<p>Warum <em>nur Zähler</em>: Dieser Schlüssel ruft <strong>nur die Zahlen</strong> ab; alles andere lehnt das Ablago ab, auch das <a href="../laufwerk/">Laufwerk</a>. Geht er verloren – etwa mit einer Sicherung der Hausautomatisierung –, erfährt jemand höchstens, wie viel Post und Aufgaben du hast.</p>
 <div class="admonition tip">
 <p class="admonition-title">Für mehrere Personen</p>
-<p>Soll die Familie die Zahlen von Lena und Jonas getrennt sehen, legt jede Person ihren eigenen Schlüssel <em>nur Zähler</em> an. In der Homey-App wird daraus je Person ein eigenes Gerät „Ablago“.</p>
+<p>Soll die Familie die Zahlen von Lena und Jonas getrennt sehen, legt jede Person ihren eigenen Schlüssel <em>nur Zähler</em> an. Wie die einzelne App das abbildet, steht in ihrem README.</p>
 </div>
-<p>Brauchst du den Schlüssel nicht mehr, löschst du ihn unter <strong>Profil → Sicherheit → API-Schlüssel</strong>; die Hausautomatisierung meldet dann „Schlüssel ungültig“.</p>
+<p>Brauchst du den Schlüssel nicht mehr, löschst du ihn unter <strong>Mein Konto → Sicherheit → API-Schlüssel</strong>; die Hausautomatisierung meldet dann „Schlüssel ungültig“.</p>
 <h2 id="wie-schnell-die-hausautomatisierung-neues-bemerkt">Wie schnell die Hausautomatisierung Neues bemerkt<a class="headerlink" href="#wie-schnell-die-hausautomatisierung-neues-bemerkt" title="Permanent link">&para;</a></h2>
-<p>Die Homey-App fragt Ablago in einem festen Abstand ab, Vorgabe alle <strong>5 Minuten</strong>. Hat sich nichts geändert, antwortet Ablago nur mit „nichts Neues“ – das kostet praktisch nichts. Neue Post bemerkt die Hausautomatisierung also spätestens nach einem Abfrage-Abstand.</p>
+<p>Die Apps fragen Ablago in einem festen Abstand ab (welcher, steht im README der App). Hat sich nichts geändert, antwortet Ablago nur mit „nichts Neues“ – das kostet praktisch nichts. Neue Post bemerkt die Hausautomatisierung also spätestens nach einem Abfrage-Abstand.</p>
 <p>Soll es <strong>sofort</strong> gehen, richtest du zusätzlich einen <strong>Webhook</strong> ein (nächster Abschnitt): Dann meldet sich Ablago selbst, wenige Sekunden nachdem neue Post da ist, und die Abfrage darf seltener laufen.</p>
 <h2 id="sofort-melden-webhook">Sofort melden (Webhook)<a class="headerlink" href="#sofort-melden-webhook" title="Permanent link">&para;</a></h2>
 <p>Mit einem <strong>Webhook</strong> meldet sich Ablago bei deiner Hausautomatisierung, sobald sich deine Zahlen ändern. Die Meldung enthält <strong>nur die Zahlen</strong> – dieselben wie beim Schlüssel <em>nur Zähler</em> –, nie Titel, Absender oder Inhalte.</p>
 <p><strong>Einmal vorab (Administrator):</strong> Unter <strong>Werkbank → Webhooks</strong> gibt ein Administrator die Adresse der Hausautomatisierung als <strong>Ziel</strong> frei, z. B. <code>http://homey.home.arpa</code> oder <code>http://192.168.178.20:1880</code>. Nur an freigegebene Ziele meldet Ablago. Ohne TLS (<code>http://</code>) geht das nur im Heimnetz; sonst braucht es <code>https://</code>.</p>
 <p><strong>Dann du:</strong></p>
 <ol>
-<li>Öffne <strong>Profil → Benachrichtigungen → Sofort melden (Webhooks)</strong> und wähle <strong>Neuen Webhook anlegen</strong>.</li>
+<li>Öffne <strong>Mein Konto → Benachrichtigungen → Sofort melden (Webhooks)</strong> und wähle <strong>Neuen Webhook anlegen</strong>.</li>
 <li>Gib einen <strong>Namen</strong> (z. B. „Node-RED“) und die <strong>Adresse des Empfängers</strong> ein, z. B. <code>http://192.168.178.20:1880/dms</code>.</li>
 <li>Kopiere das <strong>Geheimnis</strong> (es beginnt mit <code>whsec_</code>) und trag es beim Empfänger ein – es ist nur jetzt ganz zu sehen. Damit prüft der Empfänger, dass die Meldung wirklich von Ablago kommt.</li>
 <li>Gleich danach kommt eine erste Meldung mit deinen aktuellen Zahlen. Mit <strong>Probe senden</strong> schickst du jederzeit eine weitere; darunter siehst du, ob sie angekommen ist.</li>
@@ -1323,7 +1323,7 @@
 <p>Was dabei geschieht:</p>
 <ul>
 <li><strong>Mehrere Änderungen auf einmal</strong> – etwa 20 Briefe aus dem Scanner – kommen als <strong>wenige Meldungen</strong>: höchstens eine je 30 Sekunden, und die letzte hat immer den neuesten Stand.</li>
-<li><strong>Ist die Hausautomatisierung aus</strong>, versucht es Ablago mit wachsenden Abständen erneut, etwa einen Tag lang. Den Fehler siehst du am Webhook. Klappt es so lange nicht, schaltet Ablago den Webhook ab und sagt dir das im Profil; die Administratoren bekommen eine E-Mail. Mit <strong>Einschalten</strong> geht es weiter.</li>
+<li><strong>Ist die Hausautomatisierung aus</strong>, versucht es Ablago mit wachsenden Abständen erneut, etwa einen Tag lang. Den Fehler siehst du am Webhook. Klappt es so lange nicht, schaltet Ablago den Webhook ab und sagt dir das unter Mein Konto; die Administratoren bekommen eine E-Mail. Mit <strong>Einschalten</strong> geht es weiter.</li>
 <li><strong>Doppelt angekommen?</strong> Jede Meldung hat eine <strong>Ereignis-Id</strong>. Kommt dieselbe Id noch einmal (etwa nach einem Neustart von Ablago), ist es eine Wiederholung und kann übergangen werden.</li>
 </ul>
 <p>Eine Meldung sieht so aus:</p>
@@ -1360,7 +1360,7 @@
 <p>Den function-Knoten auf <strong>2 Ausgänge</strong> stellen: Ausgang 2 an <strong>http response</strong>, Ausgang 1 an deine Logik, z. B. einen <strong>switch</strong> auf <code>msg.payload.neuePost &gt; 0</code>.</p>
 </li>
 </ol>
-<p>In der Homey-App kommt das sofortige Melden mit einer späteren Version; bis dahin fragt sie im festen Abstand ab. Format, Köpfe und die Prüfung der Signatur in anderen Sprachen stehen im <a href="https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks">Entwicklerhandbuch</a>.</p>
+<p>Ob eine App den Webhook schon nutzt, steht in ihrem README. Format, Köpfe und die Prüfung der Signatur in anderen Sprachen stehen im <a href="https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks">Entwicklerhandbuch</a>.</p>
 <p>Technische Einzelheiten zur Schnittstelle stehen im <a href="https://help.ablago.app/admin/aktuell/api/#zaehler">Administratorhandbuch</a>.</p>
 
 
