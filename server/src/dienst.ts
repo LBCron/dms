@@ -57,7 +57,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
-import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
@@ -1424,7 +1424,7 @@ export class Dienst {
    * Die Herkunft steht in ocr.info und in der Historie der Mappe; die eingebaute Texterkennung
    * überschreibt diesen Text danach nicht mehr von selbst (nur „Texterkennung erneut“).
    */
-  async schreibeVolltext(id: string, eingabe: unknown, von: { id: string; herkunft: string; paket: boolean }) {
+  async schreibeVolltext(id: string, eingabe: unknown, von: { id: string; herkunft: string; paket: boolean; ausgelesen?: boolean }) {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     const e = (eingabe ?? {}) as Record<string, unknown>;
@@ -1436,7 +1436,7 @@ export class Dienst {
     const herkunft = von.herkunft.split(SPRACHE_MARKE.trim()).join('Sprache:');
     // Aus der umgewandelten Fassung (#577): Das Paket hat die Fassung gelesen, nicht das Original.
     const fassung = !kernTyp(d.mime) ? await this.umwandlung?.info(d.sha256) : null;
-    const info = ((von.paket ? `${PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200) + (fassung ? ` – ${infoFassung(fassung.paket)}` : '')).slice(0, 300);
+    const info = ((von.paket ? `${von.ausgelesen ? PAKET_VOLLTEXT : PAKET_TEXT}${herkunft}` : `Volltext ${herkunft}`).slice(0, 200) + (fassung ? ` – ${infoFassung(fassung.paket)}` : '')).slice(0, 300);
     let text = e.text.replace(/\u0000/g, '');
     // Sprache (#400): angegeben (z. B. vom Paket Texterkennung) oder erkannt; sie bestimmt die Wortstämme der Suche.
     if (e.sprache !== undefined && e.sprache !== null && !istTextsprache(e.sprache)) throw new Fachfehler(422, `sprache: unbekannt (erlaubt: ${Object.keys(TEXTSPRACHEN).join(', ')} oder null).`);

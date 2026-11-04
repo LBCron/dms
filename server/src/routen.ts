@@ -34,7 +34,7 @@ import { ALS_KOPF, KONSOLE_KOPF, istLoopback, konsolenBenutzer, type Konsolenzug
 import type { Messung } from './messung';
 import type { Vorschaubilder } from './vorschau';
 import { Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } from './pakete';
-import type { AblaufEingabe, AblaufInstallation } from '../../shared/src/pakete';
+import { hatSchnittstelle, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { Paketerstellung } from './paketerstellung';
 import { Umwandlung } from './umwandlung';
 import type { Paketlaeufer } from './laeufer/verwaltung';
@@ -1935,7 +1935,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (a.benutzer?.art === 'dienst') await dienst.pruefeVolltextRecht(await zg(a), a.params.id);
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
       const herkunft = p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})`;
-      const d = await dienst.schreibeVolltext(a.params.id, a.body, { id: ich(a).id, herkunft, paket: !!p });
+      const d = await dienst.schreibeVolltext(a.params.id, a.body, { id: ich(a).id, herkunft, paket: !!p, ausgelesen: !!p && hatSchnittstelle(p.laeufer, 'dms:volltext') && !hatSchnittstelle(p.laeufer, 'dms:texterkennung') });
       return ok({ id: d.id, name: d.name, ocr: d.ocr, sprache: d.sprache ?? null, weitereSprachen: d.weitereSprachen ?? [] });
     } },
     // Sprache des Volltexts (#400): bestimmt die Wortstämme der Suche – Rechte wie beim Volltext schreiben.

@@ -329,6 +329,10 @@ export function herkunftText(h: Herkunft, person: (id: string | null) => string 
 
 /** Volltext von einem Paket: so beginnt ocr.info; die eingebaute Texterkennung lässt ihn stehen. */
 export const PAKET_TEXT = 'Texterkennung durch Paket ';
+/** Volltext von einem Paket mit `dms:volltext` (#614): ausgelesen, nicht erkannt (Frage 49) – gilt intern ebenso als „vom Paket“. */
+export const PAKET_VOLLTEXT = 'Volltext durch Paket ';
+/** Stammt der Volltext (ocr.info) von einem Paket – erkannt oder ausgelesen? */
+export const istPaketText = (info: string | null | undefined) => !!info && (info.startsWith(PAKET_TEXT) || info.startsWith(PAKET_VOLLTEXT));
 
 /** Was ein Paket mit Dokumenten darf. */
 export type DokumentRecht = 'keine' | 'lesen' | 'schreiben';

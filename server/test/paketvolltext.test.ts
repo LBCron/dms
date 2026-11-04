@@ -77,7 +77,7 @@ async function aufbau(o: { mitPaket?: boolean } = {}) {
   const ereignisse = async (art: string) => (await repo.faelligeEreignisse(1000)).filter((e) => e.art === art);
   const dok = async (id: string) => (await repo.holeDokument(id))!;
   /** So schreibt das Paket (Dienstkonto mit Paket-Kennung). */
-  const schreibt = (id: string, text = TEXT) => d.schreibeVolltext(id, { text }, { id: 'konto', herkunft: 'Office und E-Mail 1.1.0', paket: true });
+  const schreibt = (id: string, text = TEXT) => d.schreibeVolltext(id, { text }, { id: 'konto', herkunft: 'Office und E-Mail 1.1.0', paket: true, ausgelesen: true });
   return { d, t, repo, m, hoch, fertig, ereignisse, dok, schreibt, gelesen };
 }
 
@@ -210,7 +210,7 @@ describe('Volltext aus Paketen (#614): Ablauf im Kern', () => {
     await x.schreibt(b);
     await x.d.nachTexterkennungsEreignis('office_email', e3, { ok: true, text: 'egal' });
     assert.equal((await x.dok(b)).ocr?.stand, 'fertig');
-    assert.match((await x.dok(b)).ocr?.info ?? '', /^Texterkennung durch Paket Office und E-Mail 1\.1\.0/);
+    assert.match((await x.dok(b)).ocr?.info ?? '', /^Volltext durch Paket Office und E-Mail 1\.1\.0/);
   });
 
   it('Paket installiert: vorhandene Dateien ohne Text gehen an das Paket, solche mit Text nicht; PDFs liest weiter der Kern', async () => {
@@ -260,7 +260,7 @@ describe('Volltext aus Paketen (#614): API für Pakete', () => {
     assert.ok(inhalt);
     const r = await rufe('office_email', 'PUT', '/api/v1/dokumente/:id/volltext', { id: word }, { text: TEXT });
     assert.equal((r.body as { ocr: { stand: string } }).ocr.stand, 'fertig');
-    assert.match((r.body as { ocr: { info: string } }).ocr.info, /^Texterkennung durch Paket Office und E-Mail 1\.1\.0/);
+    assert.match((r.body as { ocr: { info: string } }).ocr.info, /^Volltext durch Paket Office und E-Mail 1\.1\.0/);
     await rufe('office_email', 'PUT', '/api/v1/dokumente/:id/sprache', { id: word }, { sprache: 'deu' });
     // Nicht für PDFs (nicht zuständig) und nicht ohne dms:volltext.
     await assert.rejects(rufe('office_email', 'PUT', '/api/v1/dokumente/:id/volltext', { id: pdf }, { text: 'fremd' }), (e: { status?: number; message: string }) => e.status === 403 && /liefert dieses Paket keinen Volltext/.test(e.message));
@@ -304,5 +304,16 @@ describe('Volltext aus Paketen (#614): Grenze der Textmenge über HTTP', () => {
     const zuviel = await app.inject({ method: 'PUT', url: `/api/dokumente/${id}/volltext`, headers: { 'x-dms': '1', cookie, 'content-type': 'application/json' }, payload: JSON.stringify({ text: `${text}x` }) });
     assert.equal(zuviel.statusCode, 413);
     assert.match(zuviel.body, /höchstens 5000000 Zeichen/);
+  });
+});
+
+describe('Herkunft „Volltext durch Paket“ (Frage 49)', () => {
+  it('ausgelesener Text zählt als vom Paket, ein Grund ohne Text nicht', async () => {
+    const { volltextHerkunft } = await import('../../shared/src/volltext');
+    const { istPaketText } = await import('../../shared/src/pakete');
+    assert.deepEqual(volltextHerkunft({ stand: 'fertig', info: 'Volltext durch Paket Office und E-Mail 1.1.0 · Sprache: deu (100 %)' } as never), { art: 'paket', ausgelesen: true, paket: 'Office und E-Mail 1.1.0' });
+    assert.equal(volltextHerkunft({ stand: 'fertig', info: 'Volltext durch Paket Office und E-Mail: Word lässt sich nicht lesen' } as never), null);
+    assert.deepEqual(volltextHerkunft({ stand: 'fertig', info: 'Texterkennung durch Paket Texterkennung 2.2.0' } as never), { art: 'paket', paket: 'Texterkennung 2.2.0' });
+    assert.ok(istPaketText('Volltext durch Paket Office und E-Mail 1.1.0') && istPaketText('Texterkennung durch Paket X') && !istPaketText('Volltext über die API (x)'));
   });
 });

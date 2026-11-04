@@ -8,7 +8,7 @@
 import type { OcrStand } from './model';
 import { INFO_UMWANDLUNG } from './dateiumwandlung';
 import { INFO_VOLLTEXT_PAKET } from './paketvolltext';
-import { PAKET_TEXT } from './pakete';
+import { PAKET_TEXT, PAKET_VOLLTEXT } from './pakete';
 
 /** Id des Pakets Texterkennung im offiziellen Katalog (#459: für „jetzt installieren“). */
 export const TEXTERKENNUNG_PAKET = 'texterkennung';
@@ -23,7 +23,7 @@ export const infoWartet = (paket: { name: string } | null) => (paket ? `${INFO_W
 
 export type VolltextHerkunft =
   | { art: 'pdf' }
-  | { art: 'paket'; paket: string }
+  | { art: 'paket'; paket: string; ausgelesen?: true }
   | { art: 'wartet'; paket: string | null }
   /** Andere Dateitypen (#577): wartet auf die Fassung eines Pakets zum Umwandeln. */
   | { art: 'umwandlung'; paket: string }
@@ -42,6 +42,11 @@ export function volltextHerkunft(o: OcrStand | null | undefined): VolltextHerkun
   // „übernommen (gleicher Inhalt): …“ – die Herkunft des übernommenen Texts zählt.
   const info = o.info.replace(/^übernommen \(gleicher Inhalt\): /, '');
   if (info.startsWith(PAKET_TEXT)) return { art: 'paket', paket: info.slice(PAKET_TEXT.length).split(/ · | – /)[0].trim() };
+  if (info.startsWith(PAKET_VOLLTEXT)) {
+    // „Volltext durch Paket X: Grund“ bzw. „… fehlgeschlagen“ heißt: kein Text geliefert (#614) – das ist keine Herkunft.
+    const name = info.slice(PAKET_VOLLTEXT.length).split(/ · | – /)[0].trim();
+    return name.includes(':') || name.endsWith('fehlgeschlagen') ? null : { art: 'paket', ausgelesen: true, paket: name };
+  }
   if (info.startsWith(INFO_TEXTEBENE)) return { art: 'pdf' };
   if (info.startsWith('Volltext über die API')) return { art: 'api' };
   if (/Texterkennung/.test(info)) return { art: 'eingebaut' };
