@@ -1247,6 +1247,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pakete-am-mappentyp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete am Mappentyp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#testlauf" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2718,6 +2729,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pakete-am-mappentyp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pakete am Mappentyp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#testlauf" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2952,6 +2974,10 @@
 <li>Eine Regel für <em>Paket</em> kann nur einschränken, nie über die bestätigten Rechte hinaus erteilen.</li>
 </ul>
 <p>Beispiel: Am Mappentyp <em>Gesundheit</em> eine Regel „Wenn Benutzer hat Rolle <em>Systemkonto</em> → C R U D P entziehen“. Danach liest und ändert keine Automatisierung mehr Gesundheitsmappen.</p>
+<h2 id="pakete-am-mappentyp">Pakete am Mappentyp<a class="headerlink" href="#pakete-am-mappentyp" title="Permanent link">&para;</a></h2>
+<p>Unter dem Testlauf steht der Abschnitt <strong>Pakete</strong>. Er zeigt jedes installierte Paket mit Code, das Mappen dieses Mappentyps nach seinen bestätigten Rechten lesen darf – mit dem Zusatz, ob es sie nur liest oder auch ändert und ob es <a href="../pakete/#ereignis-mappe">Ereignisse dazu</a> bekommt. Nimmst du bei einem Paket den Haken <strong>darf diesen Mappentyp sehen</strong> weg, sieht es den Mappentyp gar nicht mehr: Es liest und ändert keine solchen Mappen und bekommt keine Ereignisse dazu. Das wirkt <strong>sofort</strong>, ohne <em>Mappentyp speichern</em>, und steht im Protokoll. Setzt du den Haken wieder, gilt wieder, was bei der Installation bestätigt wurde.</p>
+<p>Beispiel: Ein Paket zur Vertragsverwaltung möchte erfahren, wenn mit einem Vertragspartner etwas passiert – etwa wenn er gesperrt wird –, und liest dafür auch Organisationen. Ein Paket <em>Installation Heizung</em> braucht weder Verträge noch Vertragspartner: Am Mappentyp <em>Vertrag</em> und am Mappentyp <em>Organisation</em> nimmst du ihm den Haken.</p>
+<p>Feiner – nur einzelne Mappen eines Typs – geht es mit einer Regel für die Rolle <strong>Paket</strong> (siehe oben). Ereignisse zu einer Mappe bekommt ein Paket nur, wenn es genau diese Mappe gerade lesen darf.</p>
 <h2 id="testlauf">Testlauf<a class="headerlink" href="#testlauf" title="Permanent link">&para;</a></h2>
 <p>Unter den Regeln steht der <strong>Testlauf</strong>: Welche Rechte hätte ein bestimmter Benutzer an einer bestimmten Mappe? <strong>Benutzer</strong> und <strong>Testmappe</strong> wählst du genauso wie in einem Verweisfeld einer Mappe: Tippe einen Teil des Namens bzw. Titels und klicke auf einen Treffer; mit <strong>Ändern</strong> wählst du neu. Ist ein Administrator gewählt, steht das gleich daneben – für ihn gelten die Regeln nicht. Sobald beides gewählt ist, erscheint das Ergebnis von selbst. Die Tabelle zeigt Schritt für Schritt, welche Regel zutraf, was sie gesetzt hat und wie der Stand danach war.</p>
 <p>Der Testlauf nutzt die Regeln, <strong>wie sie gerade im Editor stehen</strong> – auch ungespeicherte. So probierst du eine Änderung aus, bevor du <em>Mappentyp speichern</em> klickst. Das Ergebnis gehört immer genau zu Benutzer, Testmappe und Regeln, wie sie gerade gewählt sind: Wechselst du Benutzer oder Testmappe, wird sofort neu geprüft; änderst du eine Regel, verschwindet das alte Ergebnis, und du prüfst mit <strong>Prüfen</strong> erneut. Den Testlauf gibt es, sobald der Mappentyp gespeichert ist; prüfen kannst du erst, wenn es Mappen dieses Mappentyps gibt.</p>
