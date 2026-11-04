@@ -41,7 +41,9 @@ const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 const basis = ordner(BASIS);
 const basis11 = { ...basis, 'manifest.yaml': basis['manifest.yaml'].replace('version: 1.0.0', 'version: 1.1.0') };
 const TAG = 86_400_000;
-const iso = (vorTagen: number) => new Date(Date.now() - vorTagen * TAG).toISOString().replace(/\.\d+Z$/, 'Z');
+// Feste Bezugszeit je Testlauf: zwei Aufrufe von iso(1) dürfen nicht eine Sekunde auseinanderliegen.
+const JETZT = Date.now();
+const iso = (vorTagen: number) => new Date(JETZT - vorTagen * TAG).toISOString().replace(/\.\d+Z$/, 'Z');
 
 /** Katalog-Bytes und Archive für eine Adresse. */
 function katalogDaten(url: string, pakete: Array<Record<string, string>>, erstellt: string, dateien: Map<string, Buffer>): Buffer {
