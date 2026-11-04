@@ -252,7 +252,7 @@ function ZugangSperren({ b, selbst, loeschbar, aktion }: { b: Benutzer; selbst: 
         <li>Der Vertreter bleibt hinterlegt und bekommt dauerhaft, was noch für {name} entsteht (z. B. „passt nicht“ an Mappen, die {name} angelegt hat).</li>
         <li><strong>Aktivieren</strong> macht es jederzeit rückgängig.</li>
       </ul>
-      {gruende.length > 0 && <div className="hinweis warn"><p>Deaktivieren geht erst, wenn ein Vertreter hinterlegt ist und keine Aufgaben mehr offen sind.</p><ul>{gruende.map((g) => <li key={g}>{g}</li>)}</ul></div>}
+      {gruende.length > 0 && <div className="hinweis warn stapel"><p>{t('konten.sperren.nochnicht')}</p><ul>{gruende.map((g) => <li key={g}>{g}</li>)}</ul></div>}
       <div className="knoepfe">
         {loeschbar && <button className="knopf gefahr-rand" onClick={async () => {
           if (await rueckfrage({ titel: 'Einladung löschen?', text: `Die Einladung an ${b.email} wird zurückgezogen und der Benutzer gelöscht.`, ja: 'Einladung löschen', gefahr: true })) void aktion(async () => { await api.benutzerLoeschen(b.id); loeseWache(); geheZu('/werkbank/benutzer'); });

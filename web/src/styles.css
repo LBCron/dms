@@ -130,6 +130,8 @@ fieldset.mischung legend { font-weight: 600; padding: 0 4px; }
 .hinweis.gut { background: var(--gruen-zart); color: var(--gruen); }
 .hinweis.info { background: var(--akzent-zart); color: var(--tinte); }
 .hinweis.stapel { flex-direction: column; align-items: stretch; }
+/* Satz mit Liste oder mehrere Absätze stehen immer untereinander (#662) – auch wo „stapel“ fehlt. */
+.hinweis:has(> ul, > ol, > p + p) { flex-direction: column; align-items: stretch; }
 /* „Link kopieren“ (#98) */
 .linkkopiert { margin-top: 8px; }
 .linkkopiert input { flex: 1 1 260px; min-width: 0; font: inherit; }

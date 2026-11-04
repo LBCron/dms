@@ -3,6 +3,7 @@ import { Symbol } from '../Symbol';
 import { BESCHREIBUNG_LAENGE, LIZENZEN, naechsteVersion, paketIdAus, type ErstellenStand, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung } from '../../../shared/src/paketerstellung';
 import { api, ApiFehler } from '../api';
 import { Hilfe } from '../Hilfe';
+import { t } from '../sprache';
 import { geheZu } from '../ort';
 
 /**
@@ -147,7 +148,7 @@ export function PaketErstellen() {
               <dt>Datei</dt><dd>{p.datei?.name} · {groesse(p.datei?.bytes ?? 0)}</dd>
             </dl>
             <Inhalt p={p} />
-          </> : <div className="hinweis schlecht"><p>So lässt sich das Paket noch nicht exportieren:</p><ul>{p.probleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
+          </> : <div className="hinweis schlecht stapel"><p>{t('pakete.erstellen.nochnicht')}</p><ul>{p.probleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
           {fertig && <div className="hinweis gut" role="status"><p>{fertig}</p></div>}
         </section>
       )}

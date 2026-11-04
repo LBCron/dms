@@ -272,5 +272,6 @@
   "groesse.sammelZuGross": "Die Sammeldatei ist {groesse} MB groß, höchstens {max} MB sind erlaubt. Teile sie auf: weniger Pakete auswählen.",
   "groesse.erstellenZuGross": "Das Paket wäre {groesse} MB groß, höchstens {max} MB sind erlaubt. Weniger Beispiele wählen.",
   "vorschau.update": "Ein Update ergänzt nur. Es löscht nichts und überschreibt nichts, was du selbst geändert hast.",
-  "vorschau.anlegen": "Das wird angelegt:"
+  "vorschau.anlegen": "Das wird angelegt:",
+  "erstellen.nochnicht": "So lässt sich das Paket noch nicht exportieren:"
 }
