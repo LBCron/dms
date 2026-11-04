@@ -17,6 +17,7 @@ import { SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
 import { PaketAblauf } from './PaketAblauf';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
+import { KEINE_LIZENZ, lizenzArtVon } from '../../../shared/src/paketerstellung';
 import { HerkunftZeile } from './Herkunft';
 import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } from '../../../shared/src/ereignisse';
 
@@ -300,7 +301,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
       {vorschau && (
         <section className="blatt">
           <dl className="eigenschaften">
-            <dt>Lizenz</dt><dd>{vorschau.paket.lizenz}</dd>
+            <dt>Lizenz</dt><dd><LizenzAngabe lizenz={vorschau.paket.lizenz} /></dd>
             <dt>Autor</dt><dd>{vorschau.paket.autor.name}{vorschau.paket.autor.github ? ` (@${vorschau.paket.autor.github})` : ''}</dd>
             <dt>Nötige Ablago-Version</dt><dd>{vorschau.paket.dms} (dieser Installation: {vorschau.dmsVersion})</dd>
             {vorschau.installiert && <><dt>Installiert</dt><dd>Version {vorschau.installiert}</dd></>}
@@ -375,7 +376,7 @@ function UploadDetail({ z }: { z: PaketeZustand }) {
       <section className="blatt">
         <dl className="eigenschaften">
           <dt>Datei</dt><dd>{u.datei}</dd>
-          <dt>Lizenz</dt><dd>{p.lizenz}</dd>
+          <dt>Lizenz</dt><dd><LizenzAngabe lizenz={p.lizenz} /></dd>
           <dt>Autor</dt><dd>{p.autor.name}{p.autor.github ? ` (@${p.autor.github})` : ''}</dd>
           <dt>Nötige Ablago-Version</dt><dd>{p.dms} (dieser Installation: {u.vorschau.dmsVersion})</dd>
           {u.vorschau.installiert && <><dt>Installiert</dt><dd>Version {u.vorschau.installiert}{u.vorschau.herkunft ? ` · ${herkunftText(u.vorschau.herkunft)}` : ''}</dd></>}
@@ -467,7 +468,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           {inst?.aktualisiert && <><dt>Aktualisiert</dt><dd>{datum(inst.aktualisiert)}{inst.aktualisiertVon ? ` von ${inst.aktualisiertVon}` : ''}</dd></>}
           <dt>Herkunft</dt><dd>{inst ? herkunftText(inst.herkunft) : aus?.offiziell ? 'offizieller Katalog' : `Katalog ${aus?.url}`}</dd>
           {kp && <><dt>Im Katalog</dt><dd>Version {kp.aktuell}{neuer && <> · <strong>neuer als installiert</strong></>}</dd></>}
-          <dt>Lizenz</dt><dd>{inst?.lizenz ?? kp?.lizenz}</dd>
+          <dt>Lizenz</dt><dd><LizenzAngabe lizenz={inst?.lizenz ?? kp?.lizenz ?? ''} /></dd>
           <dt>Autor</dt><dd>{autor?.name}{autor?.github && <> (<a className="verweis" href={`https://github.com/${autor.github}`} target="_blank" rel="noreferrer">@{autor.github}</a>)</>}</dd>
           {v && <><dt>Nötige Ablago-Version</dt><dd>{v.dms} (dieser Installation: {z.stand?.dms})</dd></>}
           {v && <><dt>Abhängigkeiten</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : 'keine'}</dd></>}
@@ -754,4 +755,12 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       </div>
     </section>
   );
+}
+
+/** Lizenz eines Pakets (#651): bei eigener oder fehlender Lizenz mit sachlichem Hinweis. */
+function LizenzAngabe({ lizenz }: { lizenz: string }) {
+  const art = lizenzArtVon(lizenz);
+  if (art === 'frei') return <>{lizenz}</>;
+  return <>{art === 'keine' || lizenz === KEINE_LIZENZ ? tx('pakete.erstellen.lizenz.keine') : lizenz.replace(/^LicenseRef-/, '').replace(/-/g, ' ')}
+    <small className="leise" style={{ display: 'block' }}>{tx(art === 'keine' ? 'pakete.vorschau.lizenz.keine' : 'pakete.vorschau.lizenz.eigen')}</small></>;
 }

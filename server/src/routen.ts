@@ -33,7 +33,7 @@ import { join } from 'node:path';
 import { ALS_KOPF, KONSOLE_KOPF, istLoopback, konsolenBenutzer, type Konsolenzugang } from './konsole';
 import type { Messung } from './messung';
 import type { Vorschaubilder } from './vorschau';
-import { Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } from './pakete';
+import { ARCHIV_MAX, Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } from './pakete';
 import { hatSchnittstelle, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { Paketerstellung } from './paketerstellung';
 import { Umwandlung } from './umwandlung';
@@ -1095,6 +1095,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Paket selbst erstellen (#374): Auswahl, Prüfung, Export als .zip im Format der Registry.
     { methode: 'GET', pfad: '/api/werkbank/pakete/erstellen', zugang: 'admin', handler: async () => ok(await paketerstellung.stand()) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/pruefen', zugang: 'admin', handler: async (a) => ok(await paketerstellung.pruefe(a.body)) },
+    { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/letzte', zugang: 'admin', lesend: true, roh: ARCHIV_MAX + 1024, handler: async (a) => ok(paketerstellung.liesLetzteVersion(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/pakete/erstellen/export', zugang: 'admin', handler: async (a) => {
       const r = await paketerstellung.exportiere(a.body, wer(a));
       return { datei: { inhalt: r.daten, name: r.name, mime: 'application/zip', anzeigen: false, groesse: r.daten.length } };

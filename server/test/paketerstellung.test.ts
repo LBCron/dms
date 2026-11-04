@@ -9,14 +9,14 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { standardliste, type Mappentyp } from '../../shared/src/model';
 import type { PaketErstellenEingabe } from '../../shared/src/paketerstellung';
-import { naechsteVersion, paketIdAus } from '../../shared/src/paketerstellung';
+import { lizenzArtVon, lizenzVerweis, naechsteVersion, naechsteVersionen, paketIdAus } from '../../shared/src/paketerstellung';
 import type { Sicht } from '../../shared/src/sichten';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import { liesZip, Paketverwaltung } from '../src/pakete';
-import { Paketerstellung } from '../src/paketerstellung';
+import { dmsOptionen, mindestversion, Paketerstellung } from '../src/paketerstellung';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
 
@@ -133,7 +133,7 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.ok(f.probleme.some((p) => /reserviert/.test(p)));
     assert.ok(f.probleme.some((p) => /Beschreibung/.test(p)));
     assert.ok(f.probleme.some((p) => /Lizenz/.test(p)));
-    assert.ok(f.probleme.some((p) => /mindestens >=0\.75\.0/.test(p)), 'dms:… braucht Ablago ab 0.75.0');
+    assert.ok(f.probleme.some((p) => /mindestens >=0\.86\.0/.test(p)), 'unter der Grundlage 0.86.0 (Paket erstellen) geht nichts');
     assert.ok((await q.e.pruefe(angaben({ typen: [q.vertrag.id, q.zahlung.id], id: 'basis' }))).probleme.some((p) => /installiert/.test(p)));
     // Nur Typen aus Paketen: nichts Eigenes.
     assert.ok((await q.e.pruefe(angaben({ typen: [q.org.id] }))).probleme.some((p) => /mindestens einen eigenen/.test(p)));
@@ -150,7 +150,7 @@ describe('Paket selbst erstellen (#374)', () => {
     const s = q.sichten;
     const auswahl = { sichten: [s.vertraege.id, s.teuer.id] };
     // Zu alte Ablago-Version im Paket: Problem.
-    assert.ok((await q.e.pruefe(angaben(auswahl))).probleme.some((p) => /Ansichten mit Mappentypen, die nicht im Paket sind, und braucht mindestens >=0\.178\.0/.test(p)));
+    assert.ok((await q.e.pruefe(angaben(auswahl))).probleme.some((p) => /Ansichten mit Mappentypen, die nicht im Paket sind \(ab 0\.178\.0\) und braucht mindestens >=0\.178\.0/.test(p)));
     const r = await q.e.pruefe(angaben({ ...auswahl, dms: '>=0.178.0' }));
     assert.deepEqual(r.probleme, []);
     assert.equal(r.einspielbar, true);
@@ -192,7 +192,7 @@ describe('Paket selbst erstellen (#374)', () => {
     const r = await q.e.pruefe(angaben(auswahl));
     assert.deepEqual(r.probleme, []);
     assert.equal(r.inhalt.wortlisten, 2);
-    assert.ok((await q.e.pruefe(angaben({ wortlisten: ids, dms: '>=0.86.0' }))).probleme.some((p) => /Wortlisten und braucht mindestens >=0\.127\.0/.test(p)));
+    assert.ok((await q.e.pruefe(angaben({ wortlisten: ids, dms: '>=0.86.0' }))).probleme.some((p) => /Wortlisten \(ab 0\.127\.0\) und braucht mindestens >=0\.127\.0/.test(p)));
     const z1 = await q.e.exportiere(angaben(auswahl), ICH);
     const dateien = liesZip(z1.daten);
     assert.deepEqual(parse(dateien.get('familie_vertraege/inhalt/wortlisten.yaml')!.toString()), [{ woerter: ['Kfz', 'Auto', 'PKW'] }, { woerter: ['Strom', 'Energie'] }]);
@@ -295,9 +295,13 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.equal(st.vorschlag.version, '1.1.0');
     assert.deepEqual(st.vorschlag.typen, auswahl.typen);
     assert.ok(!st.typen.some((t) => t.name === 'Benutzer' || t.name === 'Ablageort'), 'Systemtypen nicht zur Auswahl');
-    // Gleiche Version noch einmal: Hinweis.
-    assert.ok((await q.e.pruefe({ ...st.vorschlag, version: '1.0.0' })).hinweise.some((h) => /schon exportiert/.test(h)));
-    const z2 = await q.e.exportiere({ ...st.vorschlag, sichten: [...st.vorschlag.sichten, neueSicht.id], aenderungen: 'Kundennummer am Vertrag, Ansicht Zahlungen.' }, ICH);
+    // Gleiche Version noch einmal: nicht wählbar (#651).
+    assert.equal(st.vorschlag.dms, '', 'nötige Ablago-Version setzt die Oberfläche aus der Prüfung');
+    const gleich = await q.e.pruefe({ ...st.vorschlag, dms: '>=0.86.0', version: '1.0.0' });
+    assert.ok(gleich.probleme.some((h) => /1\.0\.0 hast du schon erstellt/.test(h)), gleich.probleme.join('\n'));
+    assert.equal(gleich.version.bekannt, '1.0.0');
+    assert.equal(gleich.version.art, 'inhalt', 'neues Feld → neue Inhalte');
+    const z2 = await q.e.exportiere({ ...st.vorschlag, dms: '>=0.86.0', sichten: [...st.vorschlag.sichten, neueSicht.id], aenderungen: 'Kundennummer am Vertrag, Ansicht Zahlungen.' }, ICH);
     assert.equal(z2.name, 'familie_vertraege-1.1.0.zip');
     const cl = liesZip(z2.daten).get('familie_vertraege/CHANGELOG.md')!.toString();
     assert.match(cl, /## 1\.1\.0\n\n- Kundennummer am Vertrag, Ansicht Zahlungen\.\n\n## 1\.0\.0\n\n- Erste Fassung\./);
@@ -310,6 +314,81 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.ok((await z.d.listeTypen()).find((t) => t.id === n.typen.vertrag)!.felder.some((f) => f.key === 'kundennummer'));
     assert.ok((await z.d.listeSichten()).some((x) => x.name === 'Zahlungen'));
     assert.equal((await z.d.listeTypen()).filter((t) => t.schluessel?.startsWith('familie_vertraege_')).length, 2);
+  });
+
+  it('Version, nötige Ablago-Version und Lizenz werden ausgewählt (#651)', async () => {
+    assert.deepEqual(naechsteVersionen('1.2.3'), { korrektur: '1.2.4', inhalt: '1.3.0', gross: '2.0.0' });
+    assert.deepEqual(mindestversion([]), { version: '0.86.0', gruende: [] });
+    assert.equal(mindestversion(['dmsVerweise', 'feldformate', 'beispielVerweise']).version, '0.121.0');
+    assert.deepEqual(mindestversion(['feldformate', 'erkennung']).gruende, ['Feldformate und Datumsgrenzen (ab 0.121.0)', 'Erkennung an Feldern („Aus Dokument ausfüllen“) (ab 0.113.0)']);
+    const opt = dmsOptionen('0.121.0', '0.159.2');
+    assert.equal(opt[0], '>=0.121.0'); assert.equal(opt.at(-1), '>=0.159.0'); assert.ok(!opt.includes('>=0.157.0'), 'nie erschienen'); assert.equal(opt.length, 38);
+    assert.deepEqual(dmsOptionen('0.121.0', '0.121.0'), ['>=0.121.0']);
+    assert.equal(lizenzVerweis('Kommerzielle Lizenz Muster-IT'), 'LicenseRef-Kommerzielle-Lizenz-Muster-IT');
+    assert.deepEqual(['Apache-2.0', 'NONE', 'LicenseRef-x', ''].map(lizenzArtVon), ['frei', 'keine', 'eigen', 'keine']);
+
+    const q = await quelle();
+    const a = (x: Partial<PaketErstellenEingabe> = {}) => angaben({ typen: [q.vertrag.id, q.zahlung.id], ...x });
+    // Erstes Paket: 1.0.0 (oder 0.1.0); alles andere nur von Hand.
+    const v = (r: { probleme: string[] }) => r.probleme.filter((p) => p.startsWith('Version:'));
+    assert.deepEqual(v(await q.e.pruefe(a({ version: '0.1.0' }))), []);
+    assert.equal(v(await q.e.pruefe(a({ version: '2.0.0' }))).length, 1);
+    assert.deepEqual(v(await q.e.pruefe(a({ version: '2.0.0', vonHand: true }))), []);
+    const erst = await q.e.pruefe(a());
+    assert.equal(erst.version.bekannt, null); assert.equal(erst.version.art, null);
+    assert.deepEqual(erst.version.dmsOptionen, ['>=0.86.0']);
+    // Nötige Ablago-Version: nur aus der Auswahl.
+    assert.ok((await q.e.pruefe(a({ dms: '' }))).probleme.some((p) => /Ablago-Version: bitte auswählen/.test(p)));
+    assert.ok((await q.e.pruefe(a({ dms: '>=0.86.1' }))).probleme.some((p) => /aus der Auswahl/.test(p)));
+    assert.ok((await q.e.pruefe(a({ dms: '^0.86.0', vonHand: true }))).probleme.every((p) => !p.startsWith('Ablago-Version')));
+    // Hochgeladene letzte Version: neue muss höher sein.
+    const hoch = await q.e.pruefe(a({ bekannteVersion: '2.4.0', version: '2.5.0' }));
+    assert.equal(hoch.version.bekannt, '2.4.0'); assert.deepEqual(v(hoch), []);
+    assert.ok(v(await q.e.pruefe(a({ bekannteVersion: '2.4.0' }))).some((p) => /2\.4\.0 gibt es schon/.test(p)));
+
+    // Nach dem Export: drei Möglichkeiten, Art erkannt.
+    const z1 = await q.e.exportiere(a(), ICH);
+    assert.deepEqual(q.e.liesLetzteVersion(z1.daten), { id: 'familie_vertraege', name: 'Verträge der Familie', version: '1.0.0' });
+    assert.throws(() => q.e.liesLetzteVersion(Buffer.alloc(0)), Fachfehler);
+    for (const x of ['1.0.1', '1.1.0', '2.0.0']) assert.deepEqual(v(await q.e.pruefe(a({ version: x }))), [], x);
+    assert.equal(v(await q.e.pruefe(a({ version: '1.3.0' }))).length, 1, 'nur die drei Möglichkeiten');
+    assert.deepEqual(v(await q.e.pruefe(a({ version: '1.3.0', vonHand: true }))), []);
+    assert.equal((await q.e.pruefe(a({ version: '1.0.1' }))).version.art, 'korrektur');
+    const ohne = await q.e.pruefe(a({ typen: [q.vertrag.id, q.zahlung.id, q.notiz.id], version: '1.1.0' }));
+    assert.equal(ohne.version.art, 'inhalt', ohne.version.artGrund ?? '');
+    const zt = (await q.d.listeTypen()).find((t) => t.id === q.zahlung.id)!;
+    await q.d.aendereTyp(zt.id, { ...zt, felder: zt.felder.filter((f) => f.key !== 'betrag'), register: zt.register.map((r) => ({ ...r, felder: r.felder?.filter((k) => k !== 'betrag') })) });
+    const weg = await q.e.pruefe(a({ version: '2.0.0' }));
+    assert.equal(weg.version.art, 'gross'); assert.match(weg.version.artGrund ?? '', /betrag/);
+
+    // Feldformat hebt die Mindestversion an; die Auswahl reicht bis zur eigenen Version.
+    const d2 = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
+    const e2 = new Paketerstellung(d2, { version: () => '0.159.2' });
+    const iban = await d2.legeTypAn({ name: 'Konto', schluessel: 'konto', felder: [{ key: 'iban', label: 'IBAN', typ: 'text', format: 'iban' }] });
+    const k = (x: Partial<PaketErstellenEingabe> = {}) => angaben({ id: 'konten', typen: [iban.id], ...x });
+    const f = await e2.pruefe(k({ dms: '>=0.100.0' }));
+    assert.equal(f.version.mindest, '0.121.0'); assert.deepEqual(f.version.gruende, ['Feldformate und Datumsgrenzen (ab 0.121.0)']);
+    assert.ok(f.probleme.some((p) => /Feldformate und Datumsgrenzen \(ab 0\.121\.0\) und braucht mindestens >=0\.121\.0/.test(p)), f.probleme.join('\n'));
+    assert.ok((await e2.pruefe(k({ dms: '>=0.160.0' }))).probleme.some((p) => /gibt es nicht zur Auswahl/.test(p)));
+    assert.deepEqual((await e2.pruefe(k({ dms: '>=0.121.0' }))).probleme, []);
+
+    // Lizenz: eigene und keine – installierbar, aber nicht für den offiziellen Katalog.
+    const eigen = await e2.pruefe(k({ dms: '>=0.121.0', lizenzArt: 'eigen', lizenzName: 'Kommerzielle Lizenz Muster-IT', lizenzText: '' }));
+    assert.ok(eigen.probleme.some((p) => /Text der eigenen Lizenz/.test(p)));
+    assert.ok(eigen.hinweise.some((h) => /nicht in den offiziellen Katalog/.test(h)));
+    const ze = await e2.exportiere(k({ dms: '>=0.121.0', lizenzArt: 'eigen', lizenzName: 'Kommerzielle Lizenz Muster-IT', lizenzText: 'Nutzung nur für Kunden der Muster-IT.' }), ICH);
+    const de = liesZip(ze.daten);
+    assert.equal((parse(de.get('konten/manifest.yaml')!.toString()) as { lizenz: string }).lizenz, 'LicenseRef-Kommerzielle-Lizenz-Muster-IT');
+    assert.equal(de.get('konten/LICENSE')!.toString(), 'Nutzung nur für Kunden der Muster-IT.\n');
+    const zk = await e2.exportiere(k({ id: 'konten2', dms: '>=0.121.0', lizenzArt: 'keine' }), ICH);
+    const dk = liesZip(zk.daten);
+    assert.equal((parse(dk.get('konten2/manifest.yaml')!.toString()) as { lizenz: string }).lizenz, 'NONE');
+    assert.match(dk.get('konten2/LICENSE')!.toString(), /keine Lizenz angegeben/);
+    // Ein anderes Ablago nimmt beide an und zeigt die Lizenz in der Vorschau.
+    const ziel = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
+    const pz = new Paketverwaltung(ziel, { version: () => '0.159.2', katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } });
+    assert.equal((await pz.hochladen(ze.daten, ICH)).vorschau.paket.lizenz, 'LicenseRef-Kommerzielle-Lizenz-Muster-IT');
+    assert.equal((await pz.hochladen(zk.daten, ICH)).vorschau.paket.lizenz, 'NONE');
   });
 
   it('besteht pruefen.py der Registry', { skip: (!existsSync(join(REGISTRY, 'werkzeuge/pruefen.py')) || spawnSync('python3', ['-c', 'import yaml, jsonschema']).status !== 0) && 'python3 mit pyyaml/jsonschema oder dms-registry fehlt' }, async () => {

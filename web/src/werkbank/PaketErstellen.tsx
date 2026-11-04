@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { BESCHREIBUNG_LAENGE, LIZENZEN, naechsteVersion, paketIdAus, type ErstellenStand, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung } from '../../../shared/src/paketerstellung';
+import { BESCHREIBUNG_LAENGE, LIZENZ_SCHLUESSEL, LIZENZEN_ALPHABETISCH, lizenzPasst, LIZENZNAME_LAENGE, naechsteVersion, naechsteVersionen, paketIdAus, VERSIONSARTEN, type ErstellenStand, type Lizenz, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung, type VersionsArt } from '../../../shared/src/paketerstellung';
+import { t } from '../sprache';
 import { api, ApiFehler } from '../api';
 import { Hilfe } from '../Hilfe';
-import { t } from '../sprache';
 import { geheZu } from '../ort';
 
 /**
@@ -28,11 +28,26 @@ export function PaketErstellen() {
   const [fehler, setFehler] = useState<string>();
   const [fertig, setFertig] = useState<string>();
   const [sendet, setSendet] = useState(false);
+  const [experte, setExperte] = useState(false);
+  const [hochgeladen, setHochgeladen] = useState(false);
   const lauf = useRef(0);
 
   useEffect(() => {
     api.paketErstellenStand().then((s) => { setStand(s); setE(s.vorschlag); setIdAuto(!s.vorschlag.id); }, (x) => setFehler((x as Error).message));
+    // Expertenmodus der Werkbank (#356): Version und Ablago-Version dann auch von Hand (#651).
+    api.werkbankAnsicht().then((w) => setExperte(!!w.eigene.experte), () => setExperte(false));
   }, []);
+
+  // #651: Version und nötige Ablago-Version aus der Prüfung vorbelegen, solange nichts Passendes gewählt ist.
+  const lage = pruefung?.version;
+  useEffect(() => {
+    if (!e || !lage || e.vonHand) return;
+    const x: Partial<PaketErstellenEingabe> = {};
+    if (!lage.dmsOptionen.includes(e.dms)) x.dms = lage.dmsOptionen[0];
+    const moeglich = lage.bekannt ? Object.values(naechsteVersionen(lage.bekannt)) : ['1.0.0', ...(experte ? ['0.1.0'] : [])];
+    if (!moeglich.includes(e.version)) x.version = lage.bekannt ? naechsteVersionen(lage.bekannt)[lage.art ?? 'inhalt'] : '1.0.0';
+    if (Object.keys(x).length) setE({ ...e, ...x });
+  }, [lage, e, experte]);
 
   // Automatische Prüfung bei jeder Änderung (kurz verzögert); die letzte Antwort gewinnt.
   useEffect(() => {
@@ -51,7 +66,17 @@ export function PaketErstellen() {
 
   const setze = (x: Partial<PaketErstellenEingabe>) => { setFertig(undefined); setE({ ...e, ...x }); };
   const umschalten = (liste: 'typen' | 'sichten' | 'beispiele' | 'wortlisten', id: string, an: boolean) => { const l = e[liste] ?? []; setze({ [liste]: an ? [...l, id] : l.filter((x) => x !== id) }); };
-  const ausEntwurf = (x: PaketEntwurf) => { setIdAuto(false); setze({ ...x, version: naechsteVersion(x.version), dms: stand.vorschlag.dms, aenderungen: '' }); };
+  const ausEntwurf = (x: PaketEntwurf) => { setIdAuto(false); setHochgeladen(false); setze({ ...x, version: naechsteVersion(x.version), dms: '', aenderungen: '', bekannteVersion: undefined }); };
+  async function letzteHochladen(datei: File) {
+    if (!e) return;
+    try {
+      const r = await api.paketLetzteVersion(datei);
+      if (e.id && r.id !== e.id) { setFehler(t('pakete.erstellen.version.andereId', { id: r.id, eigene: e.id })); return; }
+      setFehler(undefined); setHochgeladen(true);
+      if (!e.id) setIdAuto(false);
+      setze({ bekannteVersion: r.version, ...(e.id ? {} : { id: r.id, name: e.name || r.name }) });
+    } catch (x) { setFehler([(x as Error).message, ...(x instanceof ApiFehler ? x.gruende : [])].join(' ')); }
+  }
 
   const p = pruefung;
   const auswahlProbleme = p?.probleme.filter((x) => !istAngabe(x)) ?? [];
@@ -121,19 +146,15 @@ export function PaketErstellen() {
           <label className="eigenschaft"><span>Name</span><input value={e.name} maxLength={60} onChange={(x) => setze({ name: x.target.value, ...(idAuto ? { id: paketIdAus(x.target.value) } : {}) })} /></label>
           <label className="eigenschaft"><span>Id</span><input value={e.id} maxLength={20} onChange={(x) => { setIdAuto(false); setze({ id: x.target.value }); }} />
             <small className="leise">Kleinbuchstaben, Ziffern und _, z. B. <code>vertraege_familie</code>. Bleibt bei jeder Version gleich.</small></label>
-          <label className="eigenschaft"><span>Version</span><input value={e.version} onChange={(x) => setze({ version: x.target.value })} /></label>
           <label className="eigenschaft breit"><span>Beschreibung</span><textarea rows={3} value={e.beschreibung} maxLength={BESCHREIBUNG_LAENGE.max} onChange={(x) => setze({ beschreibung: x.target.value })} />
             <small className="leise">Ein, zwei Sätze: was das Paket bringt und für wen ({BESCHREIBUNG_LAENGE.min}–{BESCHREIBUNG_LAENGE.max} Zeichen). Daraus wird auch die README.</small></label>
           <label className="eigenschaft"><span>Autor</span><input value={e.autor.name} onChange={(x) => setze({ autor: { ...e.autor, name: x.target.value } })} /></label>
           <label className="eigenschaft"><span>GitHub-Name (optional)</span><input value={e.autor.github} onChange={(x) => setze({ autor: { ...e.autor, github: x.target.value } })} /></label>
-          <label className="eigenschaft"><span>Lizenz</span>
-            <select value={e.lizenz} onChange={(x) => setze({ lizenz: x.target.value })}>{LIZENZEN.map((l) => <option key={l} value={l}>{l}</option>)}</select>
-            <small className="leise">Die Lizenzen der Registry; der volle Text kommt als LICENSE ins Paket. Im Zweifel MIT.</small></label>
-          <label className="eigenschaft"><span>Nötige Ablago-Version</span><input value={e.dms} onChange={(x) => setze({ dms: x.target.value })} />
-            <small className="leise">Vorschlag: dieser Installation ({stand.dms}) oder neuer.</small></label>
           <label className="eigenschaft breit"><span>Was ist neu in dieser Version?</span><textarea rows={2} value={e.aenderungen} onChange={(x) => setze({ aenderungen: x.target.value })} placeholder="z. B. Feld Kundennummer am Vertrag" />
             <small className="leise">Steht im CHANGELOG; leer: „Erste Fassung.“ bzw. „Neue Version …“.</small></label>
           </div>
+          <VersionWahl e={e} setze={setze} lage={lage ?? null} experte={experte} hochgeladen={hochgeladen} hochladen={(d) => void letzteHochladen(d)} />
+          <LizenzWahl e={e} setze={setze} />
           {angabeProbleme.length > 0 && <div className="hinweis schlecht"><ul>{angabeProbleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
         </section>
       )}
@@ -144,10 +165,11 @@ export function PaketErstellen() {
           {!p ? <p className="leise">Prüfe …</p> : p.einspielbar ? <>
             <div className="hinweis gut"><p>Das Paket hat dieselbe Prüfung bestanden wie beim Hochladen – es lässt sich so in einer anderen Ablago-Installation installieren{Object.keys(p.abhaengigkeiten).length ? ', wenn dort die Abhängigkeiten installiert sind' : ''}.</p></div>
             <dl className="eigenschaften">
-              <dt>Paket</dt><dd>{e.name} ({e.id}) · Version {e.version} · {e.lizenz}</dd>
+              <dt>Paket</dt><dd>{e.name} ({e.id}) · Version {e.version} · {e.lizenzArt === 'eigen' ? e.lizenzName : e.lizenzArt === 'keine' ? t('pakete.erstellen.lizenz.keine') : e.lizenz} · Ablago {e.dms}</dd>
               <dt>Datei</dt><dd>{p.datei?.name} · {groesse(p.datei?.bytes ?? 0)}</dd>
             </dl>
             <Inhalt p={p} />
+            {e.lizenzArt && e.lizenzArt !== 'frei' && <div className="hinweis warn"><p>{t('pakete.erstellen.lizenz.nichtKatalog')}</p></div>}
           </> : <div className="hinweis schlecht stapel"><p>{t('pakete.erstellen.nochnicht')}</p><ul>{p.probleme.map((x) => <li key={x}>{x}</li>)}</ul></div>}
           {fertig && <div className="hinweis gut" role="status"><p>{fertig}</p></div>}
         </section>
@@ -255,5 +277,118 @@ function Inhalt({ p }: { p: PaketPruefung }) {
       <dt>Wortlisten</dt><dd>{p.inhalt.wortlisten || 'keine'}</dd>
       <dt>Abhängigkeiten</dt><dd>{abh.length ? abh.map(([k, v]) => `${k} ${v}`).join(', ') : 'keine'}</dd>
     </dl>
+  );
+}
+
+/** #651: Version wählen (drei Arten der Änderung) und nötige Ablago-Version aus der Auswahl. */
+function VersionWahl({ e, setze, lage, experte, hochgeladen, hochladen }: {
+  e: PaketErstellenEingabe; setze(x: Partial<PaketErstellenEingabe>): void; lage: PaketPruefung['version'] | null;
+  experte: boolean; hochgeladen: boolean; hochladen(d: File): void;
+}) {
+  const datei = useRef<HTMLInputElement>(null);
+  const name = useId();
+  if (!lage) return <p className="leise">{t('pakete.erstellen.version.titel')}: …</p>;
+  const n = lage.bekannt ? naechsteVersionen(lage.bekannt) : null;
+  const beispiel: Record<VersionsArt, string> = { korrektur: t('pakete.erstellen.version.korrekturBeispiel'), inhalt: t('pakete.erstellen.version.inhaltBeispiel'), gross: t('pakete.erstellen.version.grossBeispiel') };
+  const titel: Record<VersionsArt, (v: string) => string> = { korrektur: (v) => t('pakete.erstellen.version.korrektur', { version: v }), inhalt: (v) => t('pakete.erstellen.version.inhalt', { version: v }), gross: (v) => t('pakete.erstellen.version.gross', { version: v }) };
+  const opt = lage.dmsOptionen;
+  return (
+    <>
+      <fieldset className="eigenschaft breit">
+        <legend>{t('pakete.erstellen.version.titel')}</legend>
+        {e.vonHand ? (
+          <label className="eigenschaft"><span>{t('pakete.erstellen.version.titel')}</span><input value={e.version} onChange={(x) => setze({ version: x.target.value })} /></label>
+        ) : n ? <>
+          <p className="leise klein">{t(hochgeladen ? 'pakete.erstellen.version.bekanntHochgeladen' : 'pakete.erstellen.version.bekannt', { version: lage.bekannt! })}</p>
+          {VERSIONSARTEN.map((a) => (
+            <label key={a} className="haken"><input type="radio" name={name} checked={e.version === n[a]} onChange={() => setze({ version: n[a] })} />
+              <span>{titel[a](n[a])}<small className="leise">{beispiel[a]}</small></span></label>
+          ))}
+          {lage.art && lage.artGrund && <p className="leise klein">{t('pakete.erstellen.version.erkannt', { grund: lage.artGrund })}</p>}
+        </> : <>
+          {experte ? <>
+            <label className="haken"><input type="radio" name={name} checked={e.version === '1.0.0'} onChange={() => setze({ version: '1.0.0' })} /><span>1.0.0<small className="leise">{t('pakete.erstellen.version.erstesErklaerung')}</small></span></label>
+            <label className="haken"><input type="radio" name={name} checked={e.version === '0.1.0'} onChange={() => setze({ version: '0.1.0' })} /><span>{t('pakete.erstellen.version.nullEins')}</span></label>
+          </> : <p><strong>{t('pakete.erstellen.version.erstes')}</strong><br /><small className="leise">{t('pakete.erstellen.version.erstesErklaerung')}</small></p>}
+        </>}
+        {!e.vonHand && <p className="leise klein">{t('pakete.erstellen.version.unbekannt')}{' '}
+          <button type="button" className="textknopf" onClick={() => datei.current?.click()}>{t('pakete.erstellen.version.hochladen')}</button>
+          <input ref={datei} type="file" accept=".zip,application/zip" hidden onChange={(x) => { const f = x.target.files?.[0]; if (f) hochladen(f); x.target.value = ''; }} /></p>}
+        {experte && <label className="haken"><input type="checkbox" checked={!!e.vonHand} onChange={(x) => setze({ vonHand: x.target.checked || undefined })} />
+          <span>{t('pakete.erstellen.version.vonHand')}<small className="leise">{t('pakete.erstellen.version.vonHandHinweis')}</small></span></label>}
+      </fieldset>
+      <label className="eigenschaft"><span>{t('pakete.erstellen.dms.titel')}</span>
+        {e.vonHand ? <input value={e.dms} onChange={(x) => setze({ dms: x.target.value })} />
+          : <select value={opt.includes(e.dms) ? e.dms : ''} onChange={(x) => setze({ dms: x.target.value })}>
+            {[...opt].reverse().map((o, i, alle) => <option key={o} value={o}>{o === opt[0] ? t('pakete.erstellen.dms.mindest', { angabe: o }) : i === 0 && alle.length > 1 ? t('pakete.erstellen.dms.eigene', { angabe: o }) : o}</option>)}
+          </select>}
+        <small className="leise">{lage.gruende.length ? t('pakete.erstellen.dms.gruende', { gruende: lage.gruende.join(', ') }) : t('pakete.erstellen.dms.grundlage')}</small></label>
+    </>
+  );
+}
+
+/** #651: freie Lizenz (Suchfeld mit Vorschlägen), eigene Lizenz (Name + Text) oder keine. */
+function LizenzWahl({ e, setze }: { e: PaketErstellenEingabe; setze(x: Partial<PaketErstellenEingabe>): void }) {
+  const art = e.lizenzArt ?? 'frei';
+  const name = useId();
+  return (
+    <fieldset className="eigenschaft breit">
+      <legend>{t('pakete.erstellen.lizenz.titel')}</legend>
+      {(['frei', 'eigen', 'keine'] as const).map((a) => (
+        <label key={a} className="haken"><input type="radio" name={name} checked={art === a} onChange={() => setze({ lizenzArt: a })} /><span>{t(`pakete.erstellen.lizenz.${a}`)}</span></label>
+      ))}
+      {art === 'frei' && <LizenzSuche wert={e.lizenz} waehle={(l) => setze({ lizenz: l })} />}
+      {art === 'eigen' && <>
+        <label className="eigenschaft"><span>{t('pakete.erstellen.lizenz.name')}</span>
+          <input value={e.lizenzName ?? ''} maxLength={LIZENZNAME_LAENGE.max} placeholder={t('pakete.erstellen.lizenz.namePlatzhalter')} onChange={(x) => setze({ lizenzName: x.target.value })} /></label>
+        <label className="eigenschaft breit"><span>{t('pakete.erstellen.lizenz.text')}</span>
+          <textarea rows={6} value={e.lizenzText ?? ''} onChange={(x) => setze({ lizenzText: x.target.value })} /></label>
+        <label className="eigenschaft"><span>{t('pakete.erstellen.lizenz.datei')}</span>
+          <input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={(x) => { const f = x.target.files?.[0]; if (f) void f.text().then((text) => setze({ lizenzText: text })); }} /></label>
+      </>}
+      {art === 'keine' && <p className="leise klein">{t('pakete.erstellen.lizenz.keineHinweis')}</p>}
+      {art !== 'frei' && <div className="hinweis info"><p>{t('pakete.erstellen.lizenz.nichtKatalog')}</p></div>}
+    </fieldset>
+  );
+}
+
+const lizenzName = (l: Lizenz) => t.frei(`pakete.erstellen.lizenz.${LIZENZ_SCHLUESSEL[l]}.name`);
+const lizenzSatz = (l: Lizenz) => t.frei(`pakete.erstellen.lizenz.${LIZENZ_SCHLUESSEL[l]}.satz`);
+
+/** Suchfeld mit Vorschlägen (Combobox): Kürzel und Name, alphabetisch; Pfeiltasten, Enter, Escape. */
+function LizenzSuche({ wert, waehle }: { wert: string; waehle(l: Lizenz): void }) {
+  const [eingabe, setEingabe] = useState(wert);
+  const [offen, setOffen] = useState(false);
+  const [aktiv, setAktiv] = useState(0);
+  const id = useId();
+  const liste = LIZENZEN_ALPHABETISCH.filter((l) => lizenzPasst(l, lizenzName(l), eingabe === wert ? '' : eingabe));
+  const nimm = (l: Lizenz) => { waehle(l); setEingabe(l); setOffen(false); };
+  const gewaehlt = (LIZENZEN_ALPHABETISCH as string[]).includes(wert) ? (wert as Lizenz) : null;
+  return (
+    <div className="refbox" onBlur={(x) => { if (!x.currentTarget.contains(x.relatedTarget as Node)) { setOffen(false); setEingabe(wert); } }}>
+      <div className="wahl">
+        <input type="search" role="combobox" aria-label={t('pakete.erstellen.lizenz.suchen')} placeholder={t('pakete.erstellen.lizenz.suchen')} autoComplete="off"
+          aria-expanded={offen} aria-controls={offen ? `${id}-l` : undefined} aria-autocomplete="list" aria-activedescendant={offen && liste[aktiv] ? `${id}-${aktiv}` : undefined}
+          value={eingabe} onFocus={() => setOffen(true)} onClick={() => setOffen(true)}
+          onChange={(x) => { setEingabe(x.target.value); setOffen(true); setAktiv(0); }}
+          onKeyDown={(x) => {
+            if (x.key === 'Escape') { setOffen(false); setEingabe(wert); }
+            else if (x.key === 'ArrowDown') { x.preventDefault(); if (!offen) setOffen(true); else setAktiv((a) => Math.min(a + 1, liste.length - 1)); }
+            else if (x.key === 'ArrowUp') { x.preventDefault(); setAktiv((a) => Math.max(a - 1, 0)); }
+            else if (x.key === 'Enter') { x.preventDefault(); if (offen && liste[aktiv]) nimm(liste[aktiv]); }
+          }} />
+        {offen && (
+          <div id={`${id}-l`} className="wahlliste" role="listbox" aria-label={t('pakete.erstellen.lizenz.frei')}>
+            {!liste.length ? <p className="leise klein">{t('pakete.erstellen.lizenz.keinTreffer')}</p> : liste.map((l, i) => (
+              <button key={l} id={`${id}-${i}`} type="button" role="option" aria-selected={l === wert} className={i === aktiv ? 'an' : undefined}
+                onMouseDown={(x) => x.preventDefault()} onClick={() => nimm(l)}>
+                <strong>{l}</strong> – {lizenzName(l)}<br /><small className="leise">{lizenzSatz(l)}</small>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {gewaehlt && <p className="leise klein">{lizenzName(gewaehlt)}: {lizenzSatz(gewaehlt)} {t('pakete.erstellen.lizenz.freiHinweis')}</p>}
+    </div>
   );
 }

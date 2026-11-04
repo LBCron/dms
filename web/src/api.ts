@@ -691,6 +691,8 @@ export const api = {
   /* Paket selbst erstellen (#374) */
   paketErstellenStand: () => anfrage<ErstellenStand>('GET', '/api/werkbank/pakete/erstellen'),
   paketErstellenPruefen: (e: PaketErstellenEingabe) => anfrage<PaketPruefung>('POST', '/api/werkbank/pakete/erstellen/pruefen', e),
+  /** #651: Id, Name und Version aus der zuletzt weitergegebenen .zip lesen (installiert nichts). */
+  paketLetzteVersion: (datei: File) => sendeDatei('/api/werkbank/pakete/erstellen/letzte', datei) as Promise<{ id: string; name: string; version: string }>,
   paketExportieren: (e: PaketErstellenEingabe) => speichereDatei('/api/werkbank/pakete/erstellen/export', e, `${e.id}-${e.version}.zip`),
   nummernkreisAnlegen: (k: NummernkreisEingabe) => anfrage<NummernkreisAnsicht[]>('POST', '/api/werkbank/nummernkreise', k),
   nummernkreisAendern: (s: string, k: Omit<NummernkreisEingabe, 'schluessel'>) => anfrage<NummernkreisAnsicht[]>('PUT', `/api/werkbank/nummernkreise/${encodeURIComponent(s)}`, k),
