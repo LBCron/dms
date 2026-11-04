@@ -104,7 +104,7 @@ describe('Doppelte Dateien (#333)', () => {
     const sitzung: ImapSitzung = {
       uidValidity: '1', anzahl: 1,
       async neue() { return [{ uid: 1, messageId: mail.messageId }]; }, async quelle() { return Buffer.from('x'); },
-      async verschiebe() {}, async gelesen() {}, async loesche() {}, async ordnerListe() { return ['INBOX', 'DMS']; }, async schliessen() {},
+      async verschiebe() {}, async gelesen() {}, async loesche() {}, async ordnerListe() { return ['INBOX', 'Ablago']; }, async schliessen() {},
     };
     const pf = new Postfaecher({ dienst: d, einstellungen: speicherEinstellungen(), verbinde: async () => sitzung, lies: async () => mail,
       verschluessele: (k) => k, entschluessele: (w) => w, anAdmins: async () => {} });

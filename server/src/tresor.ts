@@ -51,7 +51,15 @@ export interface TresorStatus {
 interface Gespeichert { fingerabdruck: string; erstellt: string }
 
 /** Bekanntes Wort, verschlüsselt in der Datenbank: zeigt nach einer Wiederherstellung, ob der Schlüssel passt (#103). */
-export const PRUEFWORT = 'DMS';
+export const PRUEFWORT = 'Ablago';
+
+/** Prüfwörter früherer Versionen (bis 0.158 „DMS“): alte Sicherungen und Datenbanken bleiben damit lesbar (#692). */
+export const PRUEFWORTE_ALT: readonly string[] = ['DMS'];
+
+/** Ist das entschlüsselte Wort ein gültiges Prüfwort (aktuell oder aus einer früheren Version)? */
+export function istPruefwort(w: string | null | undefined): boolean {
+  return w === PRUEFWORT || (typeof w === 'string' && PRUEFWORTE_ALT.includes(w));
+}
 
 /** Schlüssel für einen bestimmten Zweck aus dem Hauptschlüssel ableiten (HKDF-SHA256), z. B. „dms-sicherung“. */
 export const leiteAb = (k: Buffer, zweck: string) => Buffer.from(hkdfSync('sha256', k, Buffer.alloc(0), zweck, 32));
@@ -354,7 +362,7 @@ export class Tresor {
       await this.einstellungen.schreibe('pruefwort', this.verschluessele(PRUEFWORT));
       return true;
     }
-    return entschluesseleMit(this.schluessel, w) === PRUEFWORT;
+    return istPruefwort(entschluesseleMit(this.schluessel, w));
   }
 
   /** Lässt sich der Wert lesen? (Für Listen betroffener Werte.) */

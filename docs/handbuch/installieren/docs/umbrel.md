@@ -20,7 +20,7 @@ Danach gibt es im App Store den Bereich **Ablago App Store**.
 
 ## 2. Installieren
 
-In Ablago App Store **Ablago** öffnen und **Installieren** wählen. umbrelOS lädt Ablago und seine Datenbank und startet beide.
+Im **Ablago App Store** die App **Ablago** öffnen und **Installieren** wählen. umbrelOS lädt Ablago und seine Datenbank und startet beide.
 
 ## 3. Einrichten
 

@@ -8,7 +8,7 @@ import { cssOhneSpitzeKlammer } from '../../shared/src/maskieren';
 export type Grundlage = 'automatisch' | 'hell' | 'dunkel' | 'kontrast';
 export interface Design {
   id: string; name: string; grundlage: Grundlage; primaer: string; sekundaer: string; css: string;
-  /** Text neben dem Logo (#72): null = „DMS“, leer = nur das Logo. */
+  /** Text neben dem Logo (#72): null = „Ablago“, leer = nur das Logo. */
   schriftzug?: string | null;
   logo?: { sha256: string; mime: string; groesse: number } | null;
 }

@@ -30,7 +30,7 @@ for v in "${VORLAGEN[@]}"; do
     sleep 2
   done
   if [ -z "$ok" ]; then
-    echo "::error::$v: DMS antwortet nicht"; docker compose -p "$projekt" -f "$arbeit/docker-compose.yml" logs --tail 40; fehler=1
+    echo "::error::$v: Ablago antwortet nicht"; docker compose -p "$projekt" -f "$arbeit/docker-compose.yml" logs --tail 40; fehler=1
   else
     echo "$s" | jq -c '{einrichtungNoetig, einrichtung}'
     # Datenbank vorbelegt: der Assistent beginnt beim Konto (Mandant), nicht bei der Datenbank.

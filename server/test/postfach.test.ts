@@ -38,7 +38,7 @@ class TestServer {
       async verschiebe(uid, o) { s.verschoben.push([uid, o]); s.mails.delete(uid); },
       async gelesen(uid) { s.gelesenMarkiert.push(uid); },
       async loesche(uid) { s.geloescht.push(uid); s.mails.delete(uid); },
-      async ordnerListe() { return ['INBOX', 'DMS']; },
+      async ordnerListe() { return ['INBOX', 'Ablago']; },
       async schliessen() {},
     };
   };
@@ -96,7 +96,7 @@ describe('Postfächer (#196)', () => {
     assert.equal(m.werte.datum, '2026-10-30');
     assert.equal(m.werte.nachricht, 'Anbei Ihre Rechnung.');
     assert.deepEqual(x.dokumente.map((dok) => dok.name).sort(), ['Ihre Rechnung 4711.eml', 'Rechnung 4711.pdf'], 'Logo übersprungen, Original dabei');
-    assert.deepEqual(server.verschoben, [[1, 'DMS']]);
+    assert.deepEqual(server.verschoben, [[1, 'Ablago']]);
     assert.equal(await pf.abrufen(p.id), 0, 'nichts doppelt');
     assert.equal((await pf.ansicht())[0].stand.uebernommen[0].mappeId, m.id);
   });

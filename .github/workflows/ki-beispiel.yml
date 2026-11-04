@@ -1,8 +1,8 @@
 name: KI-Beispiel
 
-# Beispiel „lokaler KI-Dienst (Ollama) neben dem DMS“ (#564): deploy/beispiele/ki-ollama/probe.sh prüft die
+# Beispiel „lokaler KI-Dienst (Ollama) neben Ablago“ (#564): deploy/beispiele/ki-ollama/probe.sh prüft die
 # Dateien (eine Ollama-Version, gültiges Compose, kein Port nach außen), startet die Variante „nur Prozessor“
-# mit einem winzigen Modell und fragt Ollama aus dem Netz dms-ki – so, wie es das DMS tut. Die Grafik-Varianten
+# mit einem winzigen Modell und fragt Ollama aus dem Netz dms-ki – so, wie es Ablago tut. Die Grafik-Varianten
 # lassen sich auf den Rechnern von GitHub nicht starten; die Intel-Variante wird nur gebaut.
 # Nicht bei jedem Pull Request – nur, wenn sich das Beispiel ändert, und jede Woche (neue Ollama-Images).
 

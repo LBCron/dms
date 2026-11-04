@@ -14,7 +14,7 @@ import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { ortszeit, type Eintragsliste, type Metadaten, type SchlankeMetadaten, type Sicherung } from './sicherung';
 import { liesKopf, liesSicherung, sha256Von, ZWECK } from './sicherungsformat';
-import { entschluesseleMit, fingerabdruck, leiteAb, PRUEFWORT, schluesselAusText } from './tresor';
+import { entschluesseleMit, fingerabdruck, istPruefwort, leiteAb, schluesselAusText } from './tresor';
 import { STATISTIK_SPALTEN } from './repo-pg';
 
 /**
@@ -478,7 +478,7 @@ export class Wiederherstellung {
       schritt('Prüfwort');
       const [pw] = await neu`SELECT wert FROM einstellungen WHERE schluessel = 'pruefwort' LIMIT 1`;
       if (!pw) this.schritt(lauf, 'Prüfwort', 'hinweis', 'Die Sicherung enthält noch kein Prüfwort (älter als 0.20).');
-      else if (entschluesseleMit(k, String(pw.wert)) !== PRUEFWORT) throw new Error('Das Prüfwort lässt sich mit diesem Schlüssel nicht lesen – der Schlüssel passt nicht zu den Daten.');
+      else if (!istPruefwort(entschluesseleMit(k, String(pw.wert)))) throw new Error('Das Prüfwort lässt sich mit diesem Schlüssel nicht lesen – der Schlüssel passt nicht zu den Daten.');
       else ok('mit dem Schlüssel lesbar');
 
       schritt('Anzahl Mappen, Dokumente, Benutzer');

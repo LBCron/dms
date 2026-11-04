@@ -60,7 +60,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null
       - name: Server bauen
         run: npm run build -w server
-      - name: DMS starten
+      - name: Ablago starten
         run: |
           mkdir -p "$RUNNER_TEMP/daten"
           cd server
@@ -77,7 +77,7 @@ jobs:
           restore-keys: lasttest-gross-
       - name: Lasttest
         # Eingaben nur über Umgebungsvariablen, nie direkt ins Skript (Schutz vor Einschleusen). Das Skript richtet
-        # das frische DMS selbst ein und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000).
+        # das frische Ablago selbst ein und legt die Demo-Mappen je Stufe dazu (5.000, 50.000, 200.000).
         env:
           STUFE: ${{ inputs.stufe || 'alle' }}
           DAUER: ${{ inputs.dauer || '120' }}

@@ -23,7 +23,7 @@
 <rect x="28" y="390" width="584" height="334" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-opacity=".35"/>
 <rect x="28" y="390" width="584" height="40" rx="10" fill="#2e7d32" stroke="none"/>
 <rect x="28" y="415" width="584" height="15" rx="0" fill="#2e7d32" stroke="none"/>
-<text x="46" y="417" font-size="16" fill="#ffffff" font-weight="700" text-anchor="start">Heute: im DMS</text>
+<text x="46" y="417" font-size="16" fill="#ffffff" font-weight="700" text-anchor="start">Heute: in Ablago</text>
 <rect x="48" y="446" width="544" height="258" rx="10" fill="#ffffff" stroke="#c8d3cc"/>
 <text x="66" y="476" font-size="15" fill="#1c2328" font-weight="700" text-anchor="start">Mappe „Mietvertrag Wohnung“</text>
 <text x="66" y="498" font-size="13.5" fill="#5b6670" font-weight="400" text-anchor="start">Register „Dokumente“</text>

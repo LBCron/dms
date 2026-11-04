@@ -23,7 +23,7 @@ Danach lässt sich in der Store-Auswahl der **Ablago App Store** wählen.
 
 ## 2. Installieren
 
-In Ablago App Store **Ablago** öffnen und **Installieren** wählen. ZimaOS lädt Ablago als **einen** Container (Image `dms-komplett`) und startet ihn. Die Datenbank läuft darin mit – ohne Passwort und ohne Port nach außen. Einen eigenen Container „Datenbank“ gibt es nicht.
+Im **Ablago App Store** die App **Ablago** öffnen und **Installieren** wählen. ZimaOS lädt Ablago als **einen** Container (Image `dms-komplett`) und startet ihn. Die Datenbank läuft darin mit – ohne Passwort und ohne Port nach außen. Einen eigenen Container „Datenbank“ gibt es nicht.
 
 ## 3. Einrichten
 
