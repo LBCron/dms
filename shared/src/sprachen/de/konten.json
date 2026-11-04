@@ -11,5 +11,8 @@
   "systemkonten.paketEntfernt": "Paket entfernt – das Konto bleibt für die Historie.",
   "systemkonten.nichtAnmeldbar": "nicht anmeldbar",
   "systemkonten.rechte": "Rechte an Mappen: Regeln mit der Rolle „{rolle}“",
-  "sperren.nochnicht": "Deaktivieren geht noch nicht:"
+  "sperren.nochnicht": "Deaktivieren geht noch nicht:",
+  "deaktiviert.vorlesen": " (deaktiviert)",
+  "deaktiviert.titel": "deaktiviert",
+  "deaktiviert.titel.seit": "deaktiviert seit {datum}"
 }

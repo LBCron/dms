@@ -693,11 +693,13 @@ export function verweisAusText(t: Pick<Mappentyp, 'felder'>, f: Feld): Feld | un
   return t.felder.find((x) => x.key !== f.key && altesTextfeldVon(t, x)?.key === f.key);
 }
 
-/** Titel einer Mappe aus der Vorlage; Platzhalter werden formatiert eingesetzt. Deaktivierte Benutzer heißen „… (ehemalig)“. */
+/**
+ * Titel einer Mappe aus der Vorlage; Platzhalter werden formatiert eingesetzt. Deaktivierte Benutzer behalten
+ * ihren Namen (#663) – „deaktiviert“ ist ein Zustand (`aktiv`), den die Oberfläche durchgestrichen zeigt.
+ */
 export function titelAus(t: Pick<Mappentyp, 'felder' | 'titelVorlage'> & Pick<Partial<Mappentyp>, 'system'> | undefined, werte: Werte, titelVon: (id: string) => string = (id) => id, index: Indexwerte = {}): string {
   if (!t) return '';
-  const titel = titelAusVorlage(t, werte, titelVon, index);
-  return t.system === 'benutzer' && werte.aktiv === false ? `${titel} (ehemalig)`.trim() : titel;
+  return titelAusVorlage(t, werte, titelVon, index);
 }
 
 function titelAusVorlage(t: Pick<Mappentyp, 'felder' | 'titelVorlage'>, werte: Werte, titelVon: (id: string) => string, index: Indexwerte): string {

@@ -8,6 +8,7 @@ import { t } from '../sprache';
 import { useDaten } from '../daten';
 import { geheZu, Link } from '../ort';
 import { titelOder } from '../seiten';
+import { Ehemalig } from '../Person';
 
 /**
  * Suchfeld der Startseite (#497): sucht sofort über alle Mappen, die man lesen darf (Titel und
@@ -88,7 +89,7 @@ export function StartSuche({ sonst, ohneSuche = false }: { sonst?: ReactNode; oh
                 {g.treffer.map((t) => (
                   <li key={t.m.id}>
                     <Link to={`/ablage/start/${t.m.id}`} className="eintrag">
-                      <span className="titel"><Hervor text={titelOder(t.m.titel)} woerter={woerter} /></span>
+                      <span className="titel"><Ehemalig id={t.m.id}><Hervor text={titelOder(t.m.titel)} woerter={woerter} /></Ehemalig></span>
                       {t.grund && !t.titelTreffer && <span className="unter">{t.grund.feld}: <Hervor text={t.grund.wert} woerter={woerter} /></span>}
                       {t.grund && t.titelTreffer && t.grund.wert !== t.m.titel && <span className="unter leise">{t.grund.feld}: <Hervor text={t.grund.wert} woerter={woerter} /></span>}
                     </Link>

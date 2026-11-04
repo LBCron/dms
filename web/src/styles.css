@@ -825,6 +825,8 @@ input.kurz { width: 7em; }
 a.person { color: var(--akzent); text-decoration: none; }
 a.person:hover, a.person:focus-visible { text-decoration: underline; }
 .person.weg { color: var(--leise); }
+/* Deaktivierte Benutzer (#663): Name bleibt, Zustand nur in der Darstellung. */
+.person-ehemalig { font-style: italic; text-decoration: line-through; text-decoration-thickness: 1px; }
 
 /* Werkbank: Gruppen in der Leiste und Übersicht (#68) */
 .gruppenwahl { display: none; }
