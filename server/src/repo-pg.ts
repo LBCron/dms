@@ -3,7 +3,7 @@ import { AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TIPPFEHLER_MIN, 
 import { alsText } from '../../shared/src/markdown';
 import { SPRACHE_MARKE, SPRACHE_SQL_MUSTER, spracheAusInfo, suchkonfig } from '../../shared/src/textsprache';
 import { alsSeitensprachen, teilenAb } from '../../shared/src/seitensprachen';
-import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
+import { standardliste, TREFFER_ANFANG, TREFFER_ENDE, trefferlistenVon, type Aufgabe, type Ausschnitt, type Dokument, type FallEnde, type FallOhneLeserecht, type DokumentVersion, type Herkunft, type Historienart, type Historieneintrag, type Mappe, type Notiz, type Mappentyp, type MappentypDaten, type OcrStandArt, type Werte } from '../../shared/src/model';
 import type { Filter, Klausel, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ausdruck, Lesefilter } from '../../shared/src/rechte';
 import type { Erinnerung } from '../../shared/src/fristen';
@@ -145,6 +145,12 @@ function suchanfrage(sql: Sql, t: string, v: Varianten, konfigs: string[] = ['dm
 }
 /** Ausschnitte aus dem Volltext: höchstens zwei Stellen, Treffer markiert (#45). */
 const AUSSCHNITT = `StartSel=${TREFFER_ANFANG}, StopSel=${TREFFER_ENDE}, MaxFragments=2, MaxWords=18, MinWords=6, FragmentDelimiter=" … "`;
+const alsFall = (r: Zeile): FallOhneLeserecht => ({
+  id: r.id as string, aufgabeId: r.aufgabe_id as string, mappeId: r.mappe_id as string, benutzerId: r.benutzer_id as string,
+  aufgabentext: r.aufgabentext as string, beginn: iso(r.beginn), ende: isoOder(r.ende), endeGrund: (r.ende_grund as FallEnde | null) ?? null,
+  leserechtSeit: isoOder(r.leserecht_seit), leserechtVon: (r.leserecht_von as string | null) ?? null,
+  ...(r.typ_id ? { mappeTitel: (r.mappe_titel as string | null) ?? '', typId: r.typ_id as string } : {}),
+});
 const alsAufgabe = (r: Zeile): Aufgabe => ({
   id: r.id as string, mappeId: r.mappe_id as string, empfaengerId: (r.empfaenger_id as string | null) ?? null,
   art: r.art as Aufgabe['art'], text: r.text as string, feldKey: (r.feld_key as string | null) ?? null,
@@ -1882,6 +1888,44 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       return (await sql`
         SELECT a.*, m.titel AS mappe_titel, m.typ_id FROM aufgaben a JOIN mappen m ON m.id = a.mappe_id
         WHERE a.haushalt_id = ${haushaltId} AND a.art = 'frist' ${welche} ORDER BY a.erstellt, a.id`).map(alsAufgabe);
+    },
+
+    // Aufgaben bei Personen ohne Leserecht (#798)
+    async faelleOhneLeserecht(f = {}) {
+      const offen = f.offen ? sql`AND f.ende IS NULL` : sql``;
+      const welche = f.mappeIds ? sql`AND f.mappe_id = ANY(${f.mappeIds.filter(istUuid)}::uuid[])` : sql``;
+      return (await sql`
+        SELECT f.*, m.titel AS mappe_titel, m.typ_id FROM aufgaben_ohne_leserecht f LEFT JOIN mappen m ON m.id = f.mappe_id
+        WHERE f.haushalt_id = ${haushaltId} ${offen} ${welche}
+        ORDER BY f.ende IS NOT NULL, coalesce(f.ende, f.beginn) DESC, f.id LIMIT ${f.max ?? 1000}`).map(alsFall);
+    },
+    async legeFallAn(f) {
+      const r = await sql`
+        INSERT INTO aufgaben_ohne_leserecht (id, haushalt_id, aufgabe_id, mappe_id, benutzer_id, aufgabentext)
+        VALUES (${f.id}, ${haushaltId}, ${f.aufgabeId}, ${f.mappeId}, ${f.benutzerId}, ${f.aufgabentext})
+        ON CONFLICT (aufgabe_id, benutzer_id) WHERE ende IS NULL DO NOTHING`;
+      return r.count > 0;
+    },
+    async beendeFall(id, grund, zeit) {
+      const r = await sql`UPDATE aufgaben_ohne_leserecht SET ende = coalesce(${zeit ?? null}::timestamptz, now()), ende_grund = ${grund}
+        WHERE haushalt_id = ${haushaltId} AND id = ${id} AND ende IS NULL`;
+      return r.count > 0;
+    },
+    async gibLeserechtAufZeit(id, von) {
+      const r = await sql`UPDATE aufgaben_ohne_leserecht SET leserecht_seit = now(), leserecht_von = ${istUuid(von) ? von : null}::uuid
+        WHERE haushalt_id = ${haushaltId} AND id = ${id} AND ende IS NULL AND leserecht_seit IS NULL`;
+      return r.count > 0;
+    },
+    async leserechteAufZeit(benutzerId) {
+      if (!istUuid(benutzerId)) return [];
+      return (await sql`
+        SELECT f.id, f.mappe_id, m.typ_id, f.aufgabe_id, f.aufgabentext, f.leserecht_seit, f.leserecht_von
+        FROM aufgaben_ohne_leserecht f JOIN aufgaben a ON a.id = f.aufgabe_id JOIN mappen m ON m.id = f.mappe_id
+        WHERE f.haushalt_id = ${haushaltId} AND f.benutzer_id = ${benutzerId} AND f.ende IS NULL AND f.leserecht_seit IS NOT NULL
+          AND a.erledigt IS NULL AND a.empfaenger_id = f.benutzer_id AND a.mappe_id = f.mappe_id`).map((r) => ({
+        fallId: r.id as string, mappeId: r.mappe_id as string, typId: r.typ_id as string, aufgabeId: r.aufgabe_id as string,
+        aufgabentext: r.aufgabentext as string, seit: iso(r.leserecht_seit), von: (r.leserecht_von as string | null) ?? null,
+      }));
     },
 
     async umschluesseln(um, einstellungen) {

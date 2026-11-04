@@ -1,4 +1,4 @@
-import type { Aufgabe, Ausschnitt, Dokument, DokumentVersion, Herkunft, Historienart, Historieneintrag, Mappe, Notiz, MappenBezug, Mappentyp, MappentypDaten, OcrStandArt, Systemtyp, Werte } from '../../shared/src/model';
+import type { Aufgabe, Ausschnitt, FallEnde, FallOhneLeserecht, Dokument, DokumentVersion, Herkunft, Historienart, Historieneintrag, Mappe, Notiz, MappenBezug, Mappentyp, MappentypDaten, OcrStandArt, Systemtyp, Werte } from '../../shared/src/model';
 import type { Klausel, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ausdruck, Lesefilter, Regelwerk } from '../../shared/src/rechte';
 import type { Erinnerung } from '../../shared/src/fristen';
@@ -545,6 +545,21 @@ export interface Repo {
   aendereAufgabeText(id: string, text: string): Promise<void>;
   /** Fristen (#129): alle Aufgaben der Art „frist“ (offen und erledigt), ggf. nur dieser Mappen. */
   fristAufgaben(mappeIds?: string[]): Promise<Aufgabe[]>;
+
+  /* ---------- Aufgaben bei Personen ohne Leserecht (#798) ---------- */
+  /** Fälle, neueste zuerst: nur offene oder alle; ggf. nur dieser Mappen. Mit Titel und Typ der Mappe, wenn es sie gibt. */
+  faelleOhneLeserecht(f?: { offen?: boolean; mappeIds?: string[]; max?: number }): Promise<FallOhneLeserecht[]>;
+  /** Neuen offenen Fall anlegen; gibt es für Aufgabe und Person schon einen offenen, passiert nichts (false). */
+  legeFallAn(f: { id: string; aufgabeId: string; mappeId: string; benutzerId: string; aufgabentext: string }): Promise<boolean>;
+  /** Offenen Fall beenden; false, wenn er schon beendet war (dann schreibt niemand ein zweites Mal in die Historie). */
+  beendeFall(id: string, grund: FallEnde, zeit?: string | null): Promise<boolean>;
+  /** Leserecht auf Zeit an einem offenen Fall vermerken; false, wenn er beendet ist oder schon eines hat. */
+  gibLeserechtAufZeit(id: string, von: string | null): Promise<boolean>;
+  /**
+   * Wirksame Leserechte auf Zeit eines Benutzers: offener Fall mit Leserecht, dessen Aufgabe noch offen bei ihm liegt.
+   * Mit Typ der Mappe für den Lesefilter.
+   */
+  leserechteAufZeit(benutzerId: string): Promise<Array<{ fallId: string; mappeId: string; typId: string; aufgabeId: string; aufgabentext: string; seit: string; von: string | null }>>;
 
   /**
    * Schlüsselwechsel (#47): alle verschlüsselten Werte (Mappen, Papierkorb, Einstellungen) umschlüsseln

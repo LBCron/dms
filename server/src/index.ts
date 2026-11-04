@@ -458,6 +458,8 @@ const verwaltung = new Verwaltung({
     async () => (await notfall.offen()).map((e) => ({ schluessel: `notfall:${e.id}`, text: t('werkbank.verwaltung.notfall'), eigeneMail: true })),
     async () => { const n = (await texterkennung.zaehler()).fehler; return n ? [{ schluessel: `texterkennung:${n}`, text: t('werkbank.verwaltung.texterkennung', { anzahl: n }) }] : []; },
     async () => ((await liesErweiterungen(sql)).some((e) => e.zustand !== 'ok') ? [{ schluessel: 'erweiterungen', text: t('werkbank.verwaltung.erweiterungen') }] : []),
+    // Aufgaben bei Personen ohne Leserecht (#798): je Fall einmal gemeldet; der Alltags-Benutzer sieht nur „etwas liegt an“.
+    async () => Promise.all((await dienst.offeneFaelle()).map(async (f) => ({ schluessel: `ohne-leserecht:${f.id}`, text: t('werkbank.verwaltung.ohne-leserecht', { name: await dienst.name(f.benutzerId) }) }))),
   ],
 });
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
@@ -581,9 +583,11 @@ await eingangsordner.start();
 postfaecher.start();
 webhooks.start();
 // Technische Aufgaben des Admin-Kontos (#719): alle 5 Minuten prüfen, höchstens einmal am Tag gebündelt mailen.
+// Vorher die Aufgaben bei Personen ohne Leserecht abgleichen (#798: Rechte geändert, Erwähnungen, Fristen …).
 setInterval(() => {
   if (wartung.aktiv || wiederherstellung.laeuft()) return;
-  void verwaltung.tick().catch((e) => log.error('Technische Aufgaben prüfen fehlgeschlagen', { fehler: (e as Error).message }));
+  void dienst.faelleAbgleichen().catch((e) => log.warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }))
+    .then(() => verwaltung.tick()).catch((e) => log.error('Technische Aufgaben prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 }, 5 * 60 * 1000).unref();
 // Wörterverzeichnis der Suche (#575): neue Wörter aus dem Eingang übernehmen – entkoppelt von Mappen und Texterkennung.
 let woerterFehler = '';

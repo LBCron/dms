@@ -24,7 +24,7 @@ Manche Aufgaben haben keinen einzelnen Empfänger: Aufgaben ohne Empfänger, Pos
 - Die gewählte Person sieht die Aufgaben unter **Zu erledigen** und in den Zahlen (auch im [Zähler-Endpunkt](api.md)), kann sie erledigen und weitergeben. Die Administratoren sehen sie weiterhin.
 - Ist die Person abwesend oder deaktiviert, übernimmt wie bei jeder Aufgabe ihr [Vertreter](#andern-deaktivieren-loschen). Ist sie deaktiviert, wähle am besten jemand anderen – die Werkbank weist darauf hin.
 
-**Technisches bleibt beim Admin-Konto:** Sicherung fehlgeschlagen, ein Paket braucht Einstellungen, eine Automatisierung ist angehalten, ein Postfach braucht eine neue Anmeldung und Ähnliches stehen in der [Übersicht](uebersicht.md). Damit es niemand übersieht:
+**Technisches bleibt beim Admin-Konto:** Sicherung fehlgeschlagen, ein Paket braucht Einstellungen, eine Automatisierung ist angehalten, ein Postfach braucht eine neue Anmeldung, eine Aufgabe liegt bei jemandem [ohne Leserecht](aufgaben.md#aufgaben-bei-personen-ohne-leserecht) und Ähnliches stehen in der [Übersicht](uebersicht.md). Damit es niemand übersieht:
 
 - Ablago schreibt den Administratoren **höchstens einmal am Tag** (ab 7 Uhr) eine E-Mail, wenn etwas Neues dazugekommen ist. Was ohnehin sofort eine eigene E-Mail schickt – Sicherung fehlgeschlagen oder zu alt, Speicherplatz, Notfallzugang –, kommt darin nicht noch einmal als neu. Ohne eingerichteten [E-Mail-Versand](installation.md#e-mail-und-adresse) entfällt die E-Mail.
 - Die gewählte Person sieht oben den Hinweis **„Für die Verwaltung liegt etwas an. Melde dich als Administrator an.“** mit dem Knopf **Als Administrator anmelden** (meldet sie ab). Der Hinweis nennt nie, was anliegt, und verschwindet, sobald nichts mehr offen ist.

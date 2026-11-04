@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
   REGISTERARTEN, ROLLEN, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
-  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
+  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
@@ -136,6 +136,28 @@ export interface Zugriff {
     regeln?: Map<string, Mappentyp> };
   /** Systemkonto (#673), z. B. „Automatisierung“: Rechte aus den Regeln für die Rolle „Systemkonto“ (typen sind darauf zugeschnitten). */
   systemkonto?: string;
+  /**
+   * Leserecht auf Zeit (#798) je Mappe: vom Admin für die Dauer einer Aufgabe gegeben. Nur Lesen, nur diese Mappe,
+   * nur solange die Aufgabe offen bei dieser Person liegt – steht schon im Lesefilter (`lesen`).
+   */
+  aufZeit?: Map<string, LeserechtAufZeit>;
+}
+/** Ein wirksames Leserecht auf Zeit (#798): Grund ist die Aufgabe; von = der Admin, der es gegeben hat. */
+export interface LeserechtAufZeit { fallId: string; aufgabeId: string; aufgabentext: string; seit: string; von: string | null }
+
+/** Lesefilter um Leserechte auf Zeit erweitern (#798): je Mappentyp „oder die Mappe ist eine dieser“. */
+function mitAufZeit(f: Lesefilter | null, typen: Mappentyp[], aufZeit: Array<{ mappeId: string; typId: string }>): Lesefilter | null {
+  if (!f || !aufZeit.length) return f;
+  const je = new Map<string, string[]>();
+  for (const x of aufZeit) if (typen.some((t) => t.id === x.typId) && !f.offen.includes(x.typId)) je.set(x.typId, [...(je.get(x.typId) ?? []), x.mappeId]);
+  if (!je.size) return f;
+  const neu: Lesefilter = { offen: [...f.offen], je: f.je.map((e) => ({ ...e })) };
+  for (const [typId, ids] of je) {
+    const ausdruck: Ausdruck = { k: 'filter', f: { art: 'id', ids: [...new Set(ids)].sort() } };
+    const e = neu.je.find((x) => x.typId === typId);
+    if (e) e.ausdruck = oder(e.ausdruck, ausdruck); else neu.je.push({ typId, ausdruck });
+  }
+  return neu;
 }
 /** Ein Konto, das kein Mensch ist (#673), für Werkbank → Benutzer. */
 export interface SystemkontoEintrag {
@@ -1735,6 +1757,7 @@ export class Dienst {
       });
     }
     if (offen.length) protokoll.modul('ablage').info('Offene Aufgaben übergeben', { von: await this.name(id), an: await this.name(ziel), anzahl: offen.length });
+    await this.faelleNach(offen.map((a) => a.mappeId));
     return offen.length;
   }
 
@@ -1792,7 +1815,10 @@ export class Dienst {
     const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null });
     await this.notiere(mappeId, von, 'aufgabe', { text: `für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
     protokoll.modul('ablage').info('Aufgabe vergeben', { mappeId, an: await this.name(an) });
-    return this.leiteUm(a);
+    const erg = await this.leiteUm(a);
+    // #798: Darf der Empfänger die Mappe nicht lesen, entsteht ein Fall – der Admin erfährt davon.
+    await this.faelleNach([mappeId]);
+    return erg;
   }
 
   private async eigeneAufgabe(id: string, ich: { id: string; rolle: string }) {
@@ -1813,6 +1839,7 @@ export class Dienst {
     await this.repo.erledigeAufgabe(id, ich.id);
     await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `erledigt: ${a.text}`, aufgabe: id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
     protokoll.modul('ablage').info('Aufgabe erledigt', { mappeId: a.mappeId, aufgabe: a.text });
+    await this.faelleNach([a.mappeId]);
     const folgetermin = await this.folgeterminVon(a);
     return { ...(await this.repo.holeAufgabe(id))!, ...(folgetermin ? { folgetermin } : {}) };
   }
@@ -1826,6 +1853,7 @@ export class Dienst {
     const von = await this.name(a.empfaengerId), nach = await this.name(ziel);
     await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `weitergegeben von ${von} an ${nach}: ${a.text}`, aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text });
     protokoll.modul('ablage').info('Aufgabe weitergegeben', { mappeId: a.mappeId, von, an: nach, aufgabe: a.text });
+    await this.faelleNach([a.mappeId]);
     return (await this.repo.holeAufgabe(id))!;
   }
 
@@ -1843,6 +1871,7 @@ export class Dienst {
     const ziel = await this.pruefeEmpfaenger(an);
     const nach = await this.name(ziel);
     const weitergegeben: string[] = [];
+    const mappenWeiter: string[] = [];
     const nicht: Array<{ id: string; grund: string }> = [];
     for (const id of [...new Set(ids.map(String))]) {
       let a: Aufgabe;
@@ -1855,7 +1884,9 @@ export class Dienst {
       const von = await this.name(a.empfaengerId);
       await this.notiere(a.mappeId, ich.id, 'aufgabe', { text: `weitergegeben von ${von} an ${nach}: ${a.text}`, aufgabe: id, aufgabenart: a.art, vonId: a.empfaengerId, anId: ziel, aufgabentext: a.text, sammel: true });
       weitergegeben.push(id);
+      mappenWeiter.push(a.mappeId);
     }
+    await this.faelleNach(mappenWeiter);
     if (weitergegeben.length) {
       protokoll.modul('ablage').info('Aufgaben gesammelt weitergegeben', { an: nach, anzahl: weitergegeben.length, nicht: nicht.length });
       if (ziel !== ich.id) await this.sammelHinweisWeitergabe(ziel, ich.id, weitergegeben.length);
@@ -1904,9 +1935,137 @@ export class Dienst {
   /** Meine offenen Aufgaben (mit denen der Administratoren, wenn ich einer bin). */
   async meineAufgaben(ich: { id: string; rolle: string }, z?: Zugriff) {
     const liste = await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich) });
-    // Aufgaben zu Mappen, die man nicht lesen darf: ohne Titel (#127).
+    // Aufgaben zu Mappen, die man nicht lesen darf: ohne Titel (#127); automatische nur mit Hinweis (#798).
     const ok = await this.lesbare(z, liste.map((a) => a.mappeId));
-    return liste.map((a) => (ok.has(a.mappeId) ? a : { ...a, mappeTitel: NICHT_SICHTBAR, verborgen: true }));
+    return (await this.ohneLeserechtText(liste, ok, ich.id)).map((a) => (ok.has(a.mappeId) ? a : { ...a, mappeTitel: NICHT_SICHTBAR, verborgen: true }));
+  }
+
+  /* ---------- Aufgaben bei Personen ohne Leserecht (#798) ---------- */
+
+  /**
+   * Automatische Aufgaben zu Mappen, die der Empfänger nicht lesen darf (#798): Statt des Textes steht nur „Aufgabe zu
+   * einer Mappe, die du nicht sehen darfst – frag …“ (wer die Mappe angelegt hat, sonst ein Administrator); die
+   * Fälligkeit bleibt. Von Hand geschriebene Texte (Zugewiesen, Erinnerung – von einem Menschen) bleiben sichtbar.
+   * `lesbar`: die Mappen, die er lesen darf. Gilt für „Zu erledigen“, die Mappe ohne Leserecht und die Tägliche Zusammenfassung.
+   */
+  private async ohneLeserechtText<T extends Aufgabe>(liste: T[], lesbar: Set<string>, ich: string): Promise<T[]> {
+    const fremd = liste.filter((a) => !lesbar.has(a.mappeId));
+    if (!fremd.length) return liste;
+    const menschen = new Set(this.konten?.benutzer ? (await this.konten.benutzer()).map((b) => b.id) : []);
+    const vonHand = (a: Aufgabe) => (a.art === 'manuell' || a.art === 'erinnerung') && !a.anlass
+      && (!a.feldKey || a.feldKey === SAMMEL_WEITERGABE) && !!a.erstelltVon && menschen.has(a.erstelltVon);
+    const ersteller = new Map((await this.repo.holeMappen([...new Set(fremd.map((a) => a.mappeId))])).map((m) => [m.id, m.erstelltVon] as const));
+    const text = new Map<string, string>();
+    for (const id of new Set(fremd.map((a) => a.mappeId))) {
+      const e = ersteller.get(id);
+      text.set(id, e && e !== ich && menschen.has(e) ? t('mappen.aufgabe.ohne-leserecht', { name: await this.name(e) }) : t('mappen.aufgabe.ohne-leserecht.admin'));
+    }
+    return liste.map((a) => (lesbar.has(a.mappeId) || vonHand(a) ? a : { ...a, text: text.get(a.mappeId)! }));
+  }
+
+  /** Zugriff eines anderen Benutzers, etwa für Platzhalter mit den Rechten des Empfängers (#795); kein Mensch: null. */
+  async zugriffVon(benutzerId: string): Promise<Zugriff | null> {
+    const b = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === benutzerId) : undefined;
+    return b ? this.zugriff(b) : null;
+  }
+
+  /** Wie sichtbarFuer, aber ohne Leserechte auf Zeit (#798): Was erlauben die Berechtigungen selbst? */
+  async regulaerSichtbarFuer(benutzerId: string, ids: string[]): Promise<Set<string>> {
+    const b = this.konten?.benutzer ? (await this.konten.benutzer()).find((x) => x.id === benutzerId) : undefined;
+    if (!b) return new Set(ids);
+    return this.lesbare(await rechteMessen(() => this.bildeZugriff(b, { ohneAufZeit: true })), ids);
+  }
+
+  /**
+   * Fälle abgleichen (#798): Wo liegt eine offene Aufgabe bei einem Menschen ohne Admin-Rechte, der die Mappe nach den
+   * Berechtigungen nicht lesen darf? Neue Fälle anlegen; offene beenden, wenn die Aufgabe erledigt, gelöscht oder an
+   * jemand anderen gegeben ist – oder die Person die Mappe inzwischen lesen darf. Endet ein Fall mit Leserecht auf
+   * Zeit, steht der Entzug in der Historie der Mappe (das Recht selbst wirkt schon nicht mehr, sobald die Aufgabe
+   * nicht mehr offen bei ihm liegt). Nach dem Vergeben, Weitergeben und Erledigen von Aufgaben (nur deren Mappen) und
+   * regelmäßig für alle (Rechte geändert, Erwähnungen, Fristen …). Mehrere Server: Anlegen und Beenden sind eindeutig.
+   */
+  async faelleAbgleichen(f: { mappeIds?: string[] } = {}): Promise<{ neu: number; beendet: number }> {
+    if (!this.konten?.benutzer || (f.mappeIds && !f.mappeIds.length)) return { neu: 0, beendet: 0 };
+    const menschen = new Map((await this.konten.benutzer()).filter((b) => b.rolle !== 'admin').map((b) => [b.id, b] as const));
+    const offen = (await this.repo.offeneAufgaben(f.mappeIds ? { mappeIds: f.mappeIds } : {})).filter((a) => a.empfaengerId && menschen.has(a.empfaengerId));
+    const jeEmpfaenger = new Map<string, Aufgabe[]>();
+    for (const a of offen) jeEmpfaenger.set(a.empfaengerId!, [...(jeEmpfaenger.get(a.empfaengerId!) ?? []), a]);
+    const ohne = new Set<string>();
+    for (const [id, liste] of jeEmpfaenger) {
+      const ok = await this.regulaerSichtbarFuer(id, [...new Set(liste.map((a) => a.mappeId))]);
+      for (const a of liste) if (!ok.has(a.mappeId)) ohne.add(a.id);
+    }
+    const nachId = new Map(offen.map((a) => [a.id, a] as const));
+    const faelle = await this.repo.faelleOhneLeserecht({ offen: true, ...(f.mappeIds ? { mappeIds: f.mappeIds } : {}) });
+    let beendet = 0;
+    const bleiben = new Set<string>();
+    for (const x of faelle) {
+      const a = nachId.get(x.aufgabeId);
+      let grund: FallEnde | null = null;
+      let zeit: string | null = null;
+      if (a) grund = a.empfaengerId !== x.benutzerId ? 'weitergegeben' : ohne.has(a.id) ? null : 'lesbar';
+      else {
+        const g = await this.repo.holeAufgabe(x.aufgabeId);
+        if (!g || !(await this.repo.holeMappe(g.mappeId))) grund = 'geloescht';
+        else if (g.erledigt) { grund = 'erledigt'; zeit = g.erledigt; }
+        else if (g.empfaengerId !== x.benutzerId) grund = 'weitergegeben';
+        // Offen bei ihm, aber kein Mensch ohne Admin-Rechte mehr (z. B. Administrator geworden): Er darf jetzt lesen.
+        else grund = 'lesbar';
+      }
+      if (!grund) { bleiben.add(`${x.aufgabeId}|${x.benutzerId}`); continue; }
+      if (!(await this.repo.beendeFall(x.id, grund, zeit))) continue;
+      beendet++;
+      if (x.leserechtSeit) {
+        const name = await this.name(x.benutzerId);
+        await this.notiere(x.mappeId, null, 'leserecht', { text: t.frei(`mappen.leserecht.entzogen.${grund}`, { name }), fall: x.id, fuer: x.benutzerId, aufgabe: x.aufgabeId, entzogen: true });
+        protokoll.modul('ablage').info('Leserecht auf Zeit beendet', { mappeId: x.mappeId, fuer: name, grund });
+      }
+    }
+    let neu = 0;
+    for (const a of offen) {
+      if (!ohne.has(a.id) || bleiben.has(`${a.id}|${a.empfaengerId}`)) continue;
+      if (await this.repo.legeFallAn({ id: randomUUID(), aufgabeId: a.id, mappeId: a.mappeId, benutzerId: a.empfaengerId!, aufgabentext: a.text })) {
+        neu++;
+        protokoll.modul('ablage').info('Aufgabe bei einer Person ohne Leserecht', { mappeId: a.mappeId, fuer: await this.name(a.empfaengerId) });
+      }
+    }
+    return { neu, beendet };
+  }
+
+  /** Abgleich für einzelne Mappen nach dem Vergeben, Weitergeben oder Erledigen (#798) – ein Fehler hält die Aufgabe nicht auf. */
+  private async faelleNach(mappeIds: string[]) {
+    try { await this.faelleAbgleichen({ mappeIds: [...new Set(mappeIds)] }); }
+    catch (e) { protokoll.modul('ablage').warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }); }
+  }
+
+  /** Offene Fälle (#798) – für den Hinweis in der Werkbank und die Mail an die Administratoren (#719). */
+  async offeneFaelle(): Promise<FallOhneLeserecht[]> { return this.repo.faelleOhneLeserecht({ offen: true }); }
+
+  /** Werkbank → Aufgaben → Ohne Leserecht (#798): erst abgleichen, dann offene Fälle oben, vergangene darunter. */
+  async faelleUebersicht(): Promise<{ offen: FallOhneLeserecht[]; vergangen: FallOhneLeserecht[] }> {
+    await this.faelleAbgleichen();
+    const alle = await this.repo.faelleOhneLeserecht({ max: 500 });
+    return { offen: alle.filter((x) => !x.ende), vergangen: alle.filter((x) => x.ende) };
+  }
+
+  /**
+   * Leserecht für die Dauer der Aufgabe geben (#798, nur in der Werkbank): nur Lesen, nur diese Mappe; es endet von selbst,
+   * wenn die Aufgabe erledigt, gelöscht oder an jemand anderen gegeben wird. Steht in der Historie der Mappe.
+   */
+  async leserechtAufZeitGeben(fallId: unknown, von: string | null): Promise<FallOhneLeserecht> {
+    if (!istUuid(fallId)) throw new Fachfehler(404, t('werkbank.ohne-leserecht.fehler.weg'));
+    const vorher = (await this.repo.faelleOhneLeserecht({ offen: true })).find((x) => x.id === fallId);
+    if (vorher) await this.faelleAbgleichen({ mappeIds: [vorher.mappeId] });
+    const f = (await this.repo.faelleOhneLeserecht({ offen: true })).find((x) => x.id === fallId);
+    if (!f) throw new Fachfehler(409, t('werkbank.ohne-leserecht.fehler.weg'));
+    if (!f.leserechtSeit) {
+      if (!(await this.repo.gibLeserechtAufZeit(f.id, von))) throw new Fachfehler(409, t('werkbank.ohne-leserecht.fehler.weg'));
+      const name = await this.name(f.benutzerId);
+      const aufgabe = f.aufgabentext.length > 80 ? `${f.aufgabentext.slice(0, 79)}…` : f.aufgabentext;
+      await this.notiere(f.mappeId, von, 'leserecht', { text: t('mappen.leserecht.vergeben', { name, aufgabe, von: await this.name(von) }), fall: f.id, fuer: f.benutzerId, aufgabe: f.aufgabeId, vergeben: true });
+      protokoll.modul('werkbank').info('Leserecht auf Zeit gegeben', { mappeId: f.mappeId, fuer: name, von: await this.name(von) });
+    }
+    return (await this.repo.faelleOhneLeserecht({ offen: true, mappeIds: [f.mappeId] })).find((x) => x.id === f.id) ?? f;
   }
   /** Werkbank: alle offenen oder die zuletzt erledigten. */
   async alleAufgaben(erledigt = false) { return erledigt ? this.repo.erledigteAufgaben(500) : this.repo.offeneAufgaben(); }
@@ -1975,15 +2134,6 @@ export class Dienst {
         await this.ereignis('frist.erreicht', { mappe: m.id, typ: m.typId, feld, datum, zeitpunkt, empfaenger });
       });
     } catch (e) { protokoll.modul('ablage').warn('„Frist erreicht“ nicht gemeldet', { mappe: m.id, feld, fehler: (e as Error).message }); }
-  }
-
-  /** Offene Fristen und Erinnerungen, deren Empfänger die Mappe nicht lesen darf – Hinweis in der Werkbank. */
-  async unlesbareFristen(): Promise<string[]> {
-    const erg: string[] = [];
-    for (const a of await this.repo.offeneAufgaben()) {
-      if ((a.art === 'frist' || a.art === 'erinnerung') && a.empfaengerId && !(await this.kannLesen(a.empfaengerId, a.mappeId))) erg.push(a.id);
-    }
-    return erg;
   }
 
   /** Fällige freie Erinnerungen (#131) werden zu Aufgaben. */
@@ -2868,7 +3018,8 @@ export class Dienst {
     // Berechtigungen (#124): ohne Lesen nur die eigenen offenen Aufgaben – zum Erledigen oder Weitergeben.
     const rechte = z ? await this.rechteAn(z, mappe, false, aufgaben) : null;
     if (z && rechte && !rechte.R) {
-      const meine = aufgaben.filter((x) => !x.erledigt && x.empfaengerId === z.ich.id);
+      // #798: automatische Aufgaben nur mit Hinweis und Fälligkeit; von Hand geschriebene mit Text.
+      const meine = await this.ohneLeserechtText(aufgaben.filter((x) => !x.erledigt && x.empfaengerId === z.ich.id), new Set(), z.ich.id);
       throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true, aufgaben: meine });
     }
     // Mappentypen hat der Zugriff schon gelesen (#615); ein Dienstkonto kennt nur seine – dann wie bisher.
@@ -3005,7 +3156,9 @@ export class Dienst {
     // Eingang (#54): je Mappe, was für mich zu tun ist.
     const aufgaben: Record<string, string> = {};
     if (q.sicht === 'eingang' && r.mappen.length) {
-      for (const a of await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich), mappeIds: r.mappen.map((m) => m.id) })) {
+      const offen = await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich), mappeIds: r.mappen.map((m) => m.id) });
+      // #798: automatische Aufgaben an Mappen ohne Leserecht nur mit Hinweis.
+      for (const a of await this.ohneLeserechtText(offen, new Set(r.mappen.filter((m) => !m.verborgen).map((m) => m.id)), ich.id)) {
         aufgaben[a.mappeId] = aufgaben[a.mappeId] ? `${aufgaben[a.mappeId]} · ${a.text}` : a.text;
       }
     }
@@ -3145,7 +3298,7 @@ export class Dienst {
     return rechteMessen(() => this.bildeZugriff(ich));
   }
 
-  private async bildeZugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }): Promise<Zugriff> {
+  private async bildeZugriff(ich: { id: string; rolle: string; art?: 'dienst' | 'system'; paketId?: string; systemkonto?: string }, o: { ohneAufZeit?: boolean } = {}): Promise<Zugriff> {
     const a = await this.aufloesung(ich.id);
     const typen = await this.repo.listeTypen();
     const admin = ich.rolle === 'admin' && !ich.art;
@@ -3158,7 +3311,13 @@ export class Dienst {
       return { ich: { id: ich.id, rolle: 'mitglied' }, admin: false, wer, a, typen: new Map(eigene.map((t) => [t.id, t])), lesen: lesefilter(eigene, wer, a), systemkonto: ich.systemkonto ?? 'system' };
     }
     const wer: Wer = { id: ich.id, rollen: a.meineRollen };
-    return { ich, admin, wer, a, typen: new Map(typen.map((t) => [t.id, t])), lesen: admin ? null : lesefilter(typen, wer, a) };
+    const lesen = admin ? null : lesefilter(typen, wer, a);
+    // Leserecht auf Zeit (#798): nur für Menschen ohne Admin-Rechte, nur wenn die Regeln nicht ohnehin alles erlauben.
+    const aufZeit = admin || !lesen || o.ohneAufZeit ? [] : await this.repo.leserechteAufZeit(ich.id);
+    return {
+      ich, admin, wer, a, typen: new Map(typen.map((t) => [t.id, t])), lesen: mitAufZeit(lesen, typen, aufZeit),
+      ...(aufZeit.length ? { aufZeit: new Map(aufZeit.map((x) => [x.mappeId, { fallId: x.fallId, aufgabeId: x.aufgabeId, aufgabentext: x.aufgabentext, seit: x.seit, von: x.von }])) } : {}),
+    };
   }
 
   /** Zugriff eines Dienstkontos (#338): nur die Typen und Rechte, die bei der Installation bestätigt wurden. */
@@ -3288,6 +3447,8 @@ export class Dienst {
     }
     const quelle = aufgaben && !neu ? quelleAus(z.wer.id, aufgaben.filter((x) => x.mappeId === m.id)) : await this.mappenquelle(z.wer.id, neu ? [] : [m.id]);
     const r = rechteAnMappe(typ, m, z.wer, z.a, quelle, neu).wirksam;
+    // Leserecht auf Zeit (#798): nur Lesen – Bearbeiten, Löschen und Passwörter bleiben, wie die Regeln sagen (ohne Lesen: nein).
+    if (!r.R && !neu && z.aufZeit?.has(m.id)) return { ...r, R: true };
     // Systemkonto (#673): Passwörter sieht es nie (Platzhalter in Automatisierungen würden sie sonst hinaustragen).
     return z.systemkonto ? { ...r, P: false } : r;
   }
@@ -3303,7 +3464,13 @@ export class Dienst {
     // Dienstkonto (#338): wie in rechteAn, ohne Regeln.
     if (z.paket) { for (const m of ms) r.set(m.id, await this.rechteAnEine(z, m, false)); return r; }
     const quelle = await this.mappenquelle(z.wer.id, ms.map((m) => m.id));
-    for (const m of ms) { const typ = z.typen.get(m.typId); const x = typ ? rechteAnMappe(typ, m, z.wer, z.a, quelle, false).wirksam : { ...NICHTS }; r.set(m.id, z.systemkonto ? { ...x, P: false } : x); }
+    for (const m of ms) {
+      const typ = z.typen.get(m.typId);
+      const x = typ ? rechteAnMappe(typ, m, z.wer, z.a, quelle, false).wirksam : { ...NICHTS };
+      // Leserecht auf Zeit (#798): wie in rechteAn.
+      const y = !x.R && typ && z.aufZeit?.has(m.id) ? { ...x, R: true } : x;
+      r.set(m.id, z.systemkonto ? { ...y, P: false } : y);
+    }
     return r;
   }
 
@@ -3457,7 +3624,14 @@ export class Dienst {
     }
     const a = await this.aufloesung(b.id);
     const erg = rechteAnMappe(typ, m, { id: b.id, rollen: a.meineRollen }, a, await this.mappenquelle(b.id, [m.id]));
-    return { ...erg, admin: b.rolle === 'admin', mappe, benutzer: { id: b.id, name: b.name || b.email } };
+    // Leserecht auf Zeit (#798) mit seinem Grund: wirkt nur, wo die Regeln kein Lesen erlauben – und nur Lesen.
+    const z = b.rolle === 'admin' ? undefined : (await this.repo.leserechteAufZeit(b.id)).find((x) => x.mappeId === m.id);
+    const regulaer = erg.wirksam.R;
+    if (z && !regulaer) erg.wirksam = { ...erg.wirksam, R: true };
+    return {
+      ...erg, admin: b.rolle === 'admin', mappe, benutzer: { id: b.id, name: b.name || b.email },
+      ...(z ? { aufZeit: { aufgabe: z.aufgabentext, seit: z.seit, von: z.von ? await this.name(z.von) : null, wirkt: !regulaer } } : {}),
+    };
   }
 
   /** „Was sieht Benutzer X?“ (#125): je Mappentyp gesamt und lesbar, dazu einige Titel. */
@@ -5502,7 +5676,7 @@ export class Dienst {
    * er selbst – abwesend oder deaktiviert sein Vertreter (`empfaengerAufloesen`); ist niemand Aktives erreichbar, die
    * Administratoren (null). Wirft nur, wenn `id` kein Benutzer ist; ein deaktivierter Empfänger bricht nichts ab.
    */
-  private async aufgabenEmpfaenger(id: string): Promise<{ an: string | null; ueber: string[] }> {
+  async aufgabenEmpfaenger(id: string): Promise<{ an: string | null; ueber: string[] }> {
     const { benutzer } = await this.sichereSystem();
     const m = istUuid(id) ? await this.repo.holeMappe(id) : undefined;
     if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, 'Bitte einen Benutzer als Empfänger wählen.');
@@ -5520,41 +5694,45 @@ export class Dienst {
    *   Abwesenheit beendet). Kommt sie von „Datum erreicht“, ist sie eine **Frist** (Art „Frist“, Feld und Datum,
    *   wiederkehrend mit Folgetermin) – dieselbe Person bekommt je Mappe, Feld und Datum nur eine (auch neben der
    *   eingebauten Erinnerung).
-   * - Darf der Empfänger die Mappe nicht lesen, hängt sie an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
+   * - **Text** (#795): als Funktion bekommt sie den, der die Aufgabe wirklich bekommt (nach der Vertretung), und füllt
+   *   die Platzhalter mit dessen Rechten.
+   * - **Ohne Leserecht** (#798): Die Aufgabe hängt trotzdem an der Mappe; der Empfänger sieht nur einen Hinweis und die
+   *   Fälligkeit, der Admin den Fall in der Werkbank.
    * - Benachrichtigungen bündeln je Automatisierung, Mappe und Empfänger (eine offene, der Text wird aktualisiert).
    */
-  async aufgabeAusAutomatisierung(e: { mappeId: string; empfaengerId: string; text: string; datum: string | null; von: string; buendeln: string | null; anlass: Record<string, unknown>; aufgabenAnlass?: AufgabenAnlass | null; frist?: { feld: string; datum: string } | null }): Promise<{ id: string; ohneLink: boolean; vorhanden?: boolean; an: string | null }> {
+  async aufgabeAusAutomatisierung(e: { mappeId: string; empfaengerId: string; text: string | ((an: string | null) => Promise<string>); datum: string | null; von: string; buendeln: string | null; anlass: Record<string, unknown>; aufgabenAnlass?: AufgabenAnlass | null; frist?: { feld: string; datum: string } | null }): Promise<{ id: string; ohneLeserecht: boolean; vorhanden?: boolean; an: string | null }> {
     const { an, ueber } = await this.aufgabenEmpfaenger(e.empfaengerId);
-    const ohneLink = !!an && !(await this.sichtbarFuer(an, [e.mappeId])).has(e.mappeId);
-    const mappeId = ohneLink && an ? an : e.mappeId;
-    const text = e.text.slice(0, AUFGABE_MAX);
+    const ohneLeserecht = !!an && !(await this.sichtbarFuer(an, [e.mappeId])).has(e.mappeId);
+    const text = (typeof e.text === 'string' ? e.text : await e.text(an)).slice(0, AUFGABE_MAX);
     if (e.buendeln && an) {
-      const id = await this.benachrichtigeGebuendelt({ empfaengerId: an, mappeId, art: 'manuell', schluessel: `auto:${e.buendeln}:${e.mappeId}`.slice(0, 120), von: e.von, text: () => text });
-      return { id, ohneLink, an };
+      const id = await this.benachrichtigeGebuendelt({ empfaengerId: an, mappeId: e.mappeId, art: 'manuell', schluessel: `auto:${e.buendeln}:${e.mappeId}`.slice(0, 120), von: e.von, text: () => text });
+      if (ohneLeserecht) await this.faelleNach([e.mappeId]);
+      return { id, ohneLeserecht, an };
     }
-    const frist = e.frist && !ohneLink ? e.frist : null;
+    const frist = e.frist ?? null;
     if (frist) {
       // Schon eine Frist für diese Person (eingebaut, weitergegeben oder von einer anderen Automatisierung)? Dann keine zweite.
       const schon = (await this.repo.fristAufgaben([e.mappeId])).find((x) => x.feldKey === frist.feld && x.datum === frist.datum && [an, e.empfaengerId].includes(x.empfaengerId));
-      if (schon) return { id: schon.id, ohneLink, vorhanden: true, an };
+      if (schon) return { id: schon.id, ohneLeserecht, vorhanden: true, an };
     }
     let a: Aufgabe;
     try {
       a = await this.neueAufgabe({
-        id: randomUUID(), mappeId, empfaengerId: an, art: frist ? 'frist' : 'manuell', text,
+        id: randomUUID(), mappeId: e.mappeId, empfaengerId: an, art: frist ? 'frist' : 'manuell', text,
         ...(frist ? { feldKey: frist.feld, datum: frist.datum } : { datum: e.datum }),
-        anlass: ohneLink ? null : e.aufgabenAnlass ?? null,
+        anlass: e.aufgabenAnlass ?? null,
         erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null,
       });
     } catch (x) {
       // Gleichzeitig angelegt (eindeutiger Index der Fristen): die vorhandene zählt.
       const schon = frist ? (await this.repo.fristAufgaben([e.mappeId])).find((y) => y.feldKey === frist.feld && y.datum === frist.datum && y.empfaengerId === an) : undefined;
-      if (schon) return { id: schon.id, ohneLink, vorhanden: true, an };
+      if (schon) return { id: schon.id, ohneLeserecht, vorhanden: true, an };
       throw x;
     }
     const weiter = ueber.length ? ` (weitergegeben wegen Abwesenheit von ${(await Promise.all(ueber.map((x) => this.name(x)))).join(', ')})` : '';
-    await this.notiere(mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}${weiter}: ${text}`, aufgabe: a.id, aufgabenart: a.art, fuer: an, aufgabentext: text });
-    return { id: a.id, ohneLink, an };
+    await this.notiere(e.mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}${weiter}: ${text}`, aufgabe: a.id, aufgabenart: a.art, fuer: an, aufgabentext: text });
+    if (ohneLeserecht) await this.faelleNach([e.mappeId]);
+    return { id: a.id, ohneLeserecht, an };
   }
 
   /** Offene Aufgaben einer Mappe, deren Anlass `passt`, als erledigt eintragen (#724: „erledigt sich selbst“). */
@@ -5566,6 +5744,7 @@ export class Dienst {
       await this.notiere(mappeId, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
       n++;
     }
+    if (n) await this.faelleNach([mappeId]);
     return n;
   }
 

@@ -10,6 +10,7 @@ import { useKonto } from '../konto';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
+import { t } from '../sprache';
 
 /** Aufgaben an einer Mappe (#54): offene als Hinweis über der Mappe; eigene erledigen oder weitergeben. */
 const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'short' });
@@ -25,6 +26,16 @@ export function BenutzerWahl({ wert, setze, ohne, label, fokus }: { wert: string
 }
 
 type Folge = { aufgabe: Aufgabe; datum: string };
+
+/**
+ * Zuweisen von Hand (#798): Darf der Empfänger die Mappe nicht lesen, erst Bescheid sagen – „Trotzdem zuweisen“ oder
+ * „Abbrechen“. Rechte vergibt hier niemand; das kann nur der Admin in der Werkbank. Klappt die Prüfung nicht, geht es
+ * weiter wie bisher (der Server antwortet dann mit einem Hinweis).
+ */
+export async function trotzdemZuweisen(mappeId: string, an: string, name: string): Promise<boolean> {
+  try { if ((await api.darfLesen(mappeId, an)).lesen) return true; } catch { return true; }
+  return rueckfrage({ titel: t('mappen.aufgabe.zuweisen.titel', { name }), text: t('mappen.aufgabe.zuweisen.text', { name }), ja: t('mappen.aufgabe.zuweisen.trotzdem'), nein: t('mappen.aufgabe.zuweisen.abbrechen') });
+}
 
 function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe; neuLaden: () => Promise<void>; setBestaetigt: (t: string) => void; setFolge: (f: Folge) => void; zuNotizen?: () => void }) {
   const d = useDaten();
@@ -69,7 +80,7 @@ function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe
         </div>
       )}
       {darf && weiter && (
-        <form className="weitergeben" onSubmit={(e) => { e.preventDefault(); if (an) void tu(() => api.aufgabeDelegieren(a.id, an), `An ${d.person(an)} weitergegeben.`); }}
+        <form className="weitergeben" onSubmit={(e) => { e.preventDefault(); if (an) void (async () => { if (await trotzdemZuweisen(a.mappeId, an, d.person(an))) await tu(() => api.aufgabeDelegieren(a.id, an), `An ${d.person(an)} weitergegeben.`); })(); }}
           onKeyDown={(e) => { if (e.key === 'Escape') { setWeiter(false); setAn(''); } }}>
           <span className="leise klein">Weitergeben an</span>
           <BenutzerWahl label="Weitergeben an" wert={an} setze={setAn} ohne={a.empfaengerId} fokus />
@@ -210,6 +221,7 @@ export function NeueAufgabe({ mappeId, neuLaden, schliessen }: { mappeId: string
   const [hinweis, setHinweis] = useState<string>();
   async function senden() {
     setFehler(undefined);
+    if (!(await trotzdemZuweisen(mappeId, an, d.person(an)))) return;
     try {
       const r = await api.aufgabeAnlegen(mappeId, an, text);
       await neuLaden(); await d.neuLaden();
