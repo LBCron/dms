@@ -357,6 +357,73 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01642" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.164.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.164.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01641" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.164.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.164.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01640" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2466,6 +2533,73 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01642" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.164.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.164.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01641" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.164.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.164.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01640" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2525,6 +2659,21 @@
 
 
 <h1 id="neu-in-version-0164">Neu in Version 0.164<a class="headerlink" href="#neu-in-version-0164" title="Permanent link">&para;</a></h1>
+<h2 id="01642">0.164.2<a class="headerlink" href="#01642" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PDFs, die sich auf ein Vielfaches entpacken, werden nicht mehr gelesen</strong> (#823). Manche PDFs enthalten gepackte Objektströme, die beim Öffnen vollständig entpackt werden. Ein präpariertes PDF von 2 MB konnte so mehrere GB Arbeitsspeicher belegen – etwa beim automatischen Prüfen für die Archivfassung oder beim Ansehen, auch wenn es per E-Mail ins Postfach kam. Ablago prüft diese Ströme jetzt vorher (höchstens 64 MB je Strom, 256 MB zusammen) und meldet stattdessen „Das PDF entpackt sich auf ein Vielfaches seiner Größe …“. Gewöhnliche PDFs sind davon nicht betroffen.</li>
+</ul>
+<h2 id="01641">0.164.1<a class="headerlink" href="#01641" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit_1">Sicherheit<a class="headerlink" href="#sicherheit_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Große Uploads erst nach der Anmeldung lesen</strong> (#683). Beim Hochladen von Paketen und Dokumenten prüft Ablago jetzt zuerst Anmeldung und Rolle und liest erst danach den Inhalt. Vorher nahm der Server bis zu 256 MB je Anfrage entgegen, bevor die Antwort „bitte anmelden“ kam – mit mehreren solchen Anfragen ließ sich ein kleiner Server ohne Anmeldung an die Grenze seines Arbeitsspeichers bringen.</li>
+<li><strong>Katalog, Signatur und Schlüssel höchstens 10 MB</strong> (#683). Seit der größeren Paketgrenze (#644) galten die 128 MB auch dafür.</li>
+</ul>
+<h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Große Paket-Archive brachen nach 20 Sekunden ab, obwohl sie bis zu 5 Minuten laden dürfen (#644): Die 20 Sekunden gelten jetzt nur bis zur Antwort des Servers.</li>
+</ul>
 <h2 id="01640">0.164.0<a class="headerlink" href="#01640" title="Permanent link">&para;</a></h2>
 <h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2534,7 +2683,7 @@
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.163.2 im Detail: <a href="https://github.com/motom001/dms/compare/v0.163.2...v0.164.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.163.2 im Detail: <a href="https://github.com/motom001/dms/compare/v0.163.2...v0.164.2">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
