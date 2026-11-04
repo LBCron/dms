@@ -317,3 +317,27 @@ describe('Herkunft „Volltext durch Paket“ (Frage 49)', () => {
     assert.ok(istPaketText('Volltext durch Paket Office und E-Mail 1.1.0') && istPaketText('Texterkennung durch Paket X') && !istPaketText('Volltext über die API (x)'));
   });
 });
+
+describe('Paket entfernt (Frage 51)', () => {
+  it('wartende Dokumente warten nicht mehr: ohne Text „kein Paket“, mit Text von vorher fertig', async () => {
+    const x = await aufbau();
+    const a = await x.hoch('angebot.docx', DOCX);
+    assert.equal((await x.dok(a)).ocr?.stand, 'paket');
+    const b = await x.hoch('brief.docx', Buffer.concat([DOCX, Buffer.from('b')]));
+    await x.schreibt(b);
+    await x.d.texterkennungErneut(b);
+    await x.fertig(b);
+    assert.equal((await x.dok(b)).ocr?.stand, 'paket');
+    await x.d.loeschePaket('office_email');
+    assert.equal(await x.d.paketWegFuerDateien(office(), [WORD]), 2);
+    await x.fertig(a);
+    const da = await x.dok(a);
+    assert.equal(da.ocr?.stand, 'ausgelassen');
+    assert.match(da.ocr?.info ?? '', /Office und E-Mail/);
+    const db = await x.dok(b);
+    assert.equal(db.ocr?.stand, 'fertig');
+    assert.match(db.ocr?.info ?? '', /Text von vorher – das Paket Office und E-Mail ist entfernt/);
+    assert.equal((await x.d.volltext(b)).text, TEXT);
+    assert.equal(await x.d.paketWegFuerDateien(office(), [WORD]), 0, 'nichts wartet mehr');
+  });
+});

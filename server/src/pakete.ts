@@ -1757,6 +1757,9 @@ export class Paketverwaltung {
     await this.d.loeschePaket(id);
     await this.d.setzePaketSynonyme(id, []);
     if (p.laeufer) { await this.d.loeschePaketCode(id); await this.d.loescheEreignisse(id); await this.d.setzePaketSpeicher(id, null).catch(() => {}); await this.o.laeufer?.codeGeaendert?.(); }
+    // Volltext und Umwandeln (Frage 51): Was noch auf dieses Paket wartete, wartet nicht mehr.
+    const wartetAuf = [...(hatSchnittstelle(p.laeufer, 'dms:volltext') ? p.laeufer?.volltext ?? [] : []), ...(hatSchnittstelle(p.laeufer, 'dms:umwandeln') ? p.laeufer?.umwandeln ?? [] : [])];
+    if (wartetAuf.length) await this.d.paketWegFuerDateien(p, wartetAuf).catch((e: Error) => log.warn('Wartende Dokumente nach dem Entfernen nicht zurückgesetzt', { paket: id, fehler: e.message }));
     // Einstellungen (#197): nur auf ausdrücklichen Wunsch für eine spätere Neuinstallation behalten.
     if (!behalten) await this.d.setzePaketEinstellungen(id, null);
     log.info('Paket entfernt', { von: von.email, paket: id, version: p.version, einstellungenBehalten: behalten });

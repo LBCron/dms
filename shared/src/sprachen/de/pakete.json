@@ -84,6 +84,7 @@
   "fassung.ohne-paket": "{typ}-Dateien bekommen Vorschau und Volltext mit dem Paket „{paket}“ (Werkbank → Pakete).",
   "fassung.ohne-paket-typ": "Dateityp {typ} bekommt keinen Volltext – Ablago liest ihn nicht selbst, und kein Paket wandelt ihn um.",
   "fassung.zu-gross": "{typ}-Datei größer als {mb} MB – sie wird nicht umgewandelt und bekommt keinen Volltext.",
+  "volltext.paket-entfernt": "Text von vorher – das Paket {paket} ist entfernt",
   "volltext.ohne-paket": "{typ}-Dateien bekommen Volltext mit dem Paket „{paket}“ (Werkbank → Pakete).",
   "volltext.zu-gross": "{typ}-Datei größer als {mb} MB – sie geht nicht an das Paket und bekommt keinen Volltext.",
   "volltext.typ-fremd": "Für Dateien vom Typ {typ} liefert dieses Paket keinen Volltext (code.volltext im Manifest). Ohne „Dokumente schreiben“ darf es nur den Volltext dieser Dateitypen schreiben.",

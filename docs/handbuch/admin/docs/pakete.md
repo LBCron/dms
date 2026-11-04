@@ -144,6 +144,8 @@ Für Paket-Autoren steht das Format (`aus_text`) in den [Regeln der Registry](ht
 
 Sonst nennt Ablago die Gründe. Beispiel-Mappen löschst du vorher wie andere Mappen.
 
+Liefert das Paket Volltext oder wandelt es Dateien um (z. B. **Office und E-Mail**, **Bildformate**), warten danach keine Dokumente mehr darauf: Ohne Text steht am Dokument wieder, dass es für diesen Dateityp kein Paket gibt; hatte es schon Text, bleibt der Text stehen.
+
 ## Einstellungen
 
 Manche Pakete brauchen Einstellungen – etwa Regeln, nach denen sie Post zuordnen, oder ein Zugangsschlüssel für einen Dienst. Das Paket **beschreibt** sie nur; Ablago baut daraus ein Formular, prüft die Werte und speichert sie. Du findest es unter **Werkbank → Pakete → *Paket* → Reiter „Einstellungen“** – den Reiter gibt es nur bei Paketen, die Einstellungen haben.
