@@ -277,5 +277,7 @@
   "ablauf.braucht.gescheitert": "braucht „{name}“, das sich nicht installieren ließ",
   "ablauf.ergebnis.nachholen": "Du kannst sie später unter Werkbank → Pakete nachholen, wenn der Grund behoben ist.",
   "ablauf.ausgelassen": "Diese Pakete lassen sich gerade nicht laden und werden übersprungen – die übrigen kannst du trotzdem installieren:",
-  "ablauf.ausgelassen.nochmal": "Nochmal versuchen"
+  "ablauf.ausgelassen.nochmal": "Nochmal versuchen",
+  "einstellung.zahl.keine": "– keine Auswahl –",
+  "einstellung.zahl.eigen": "Eigener Wert …"
 }

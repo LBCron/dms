@@ -5,7 +5,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { EINTRAG_ID, liesBeschreibung } from '../../shared/src/paketeinstellungen';
+import { EINTRAG_ID, liesBeschreibung, pruefeWerte, zahlFehler } from '../../shared/src/paketeinstellungen';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
@@ -86,6 +86,34 @@ async function aufbau(laeufer?: PaketLaeufer) {
   const p = new Paketverwaltung(d, { version: () => '0.66.0', abruf: katalog([paket('1.0.0', V1), paket('1.1.0', V2)]), katalogUrl: KATALOG, benutzer: async () => [{ id: 'u1', name: 'Anna' }], laeufer });
   return { d, p, einst };
 }
+
+describe('Zahlen in Paket-Einstellungen (#657)', () => {
+  const code = (feld: Record<string, unknown>) => ({ einstellungen: [{ abschnitt: 'Lesen', felder: [{ schluessel: 'dpi', name: 'Auflösung (dpi)', typ: 'zahl', min: 150, max: 400, ...feld }] }] });
+  const q = { typen: [], benutzer: [], rollen: [], sichten: [], typVon: () => null };
+
+  it('Buchstaben, unter min und über max werden abgelehnt – mit Bereich in der Meldung', () => {
+    const b = liesBeschreibung(code({ standard: 300 })).beschreibung!;
+    for (const v of ['456fggdhf', '12a', 'abc', 100, '401']) assert.equal(pruefeWerte(b, { dpi: v }, q).fehler.dpi, 'Bitte eine Zahl zwischen 150 und 400.', String(v));
+    assert.equal(pruefeWerte(b, { dpi: '300' }, q).werte.dpi, 300);
+    assert.equal(pruefeWerte(b, { dpi: 250 }, q).werte.dpi, 250);
+    assert.equal(zahlFehler({ min: 0.5 }, '0,75'), null, 'Komma als Dezimaltrennzeichen');
+    assert.equal(zahlFehler({ schritt: 1 }, '2,5'), 'Bitte eine ganze Zahl.');
+    assert.equal(zahlFehler({ min: 150, schritt: 50 }, '275'), 'Bitte in Schritten von 50.');
+  });
+
+  it('vorschlaege: Auswahl mit Beschriftung, in min/max, Vorgabe ist einer davon; ohne vorschlaege ein Zahlenfeld', () => {
+    const vorschlaege = [{ wert: 150, name: 'gering – schneller' }, { wert: 300, name: 'normal – empfohlen' }, { wert: 400, name: 'hoch – dauert länger' }];
+    const r = liesBeschreibung(code({ standard: 300, vorschlaege }));
+    assert.deepEqual(r.fehler, []);
+    const f = (r.beschreibung!.bloecke[0] as unknown as { felder: Array<Record<string, unknown>> }).felder[0];
+    assert.deepEqual(f.vorschlaege, vorschlaege);
+    assert.equal(f.standard, 300);
+    assert.match(liesBeschreibung(code({ standard: 300, vorschlaege: [{ wert: 600, name: 'zu hoch' }, { wert: 300, name: 'normal' }] })).fehler.join(), /600 liegt nicht zwischen min und max/);
+    assert.match(liesBeschreibung(code({ standard: 250, vorschlaege })).fehler.join(), /standard muss einer der vorschlaege sein/);
+    assert.match(liesBeschreibung({ einstellungen: [{ abschnitt: 'A', felder: [{ schluessel: 'x', name: 'X', typ: 'text', vorschlaege }] }] }).fehler.join(), /vorschlaege nur bei zahl/);
+    assert.equal((liesBeschreibung(code({ standard: 300 })).beschreibung!.bloecke[0] as unknown as { felder: Array<Record<string, unknown>> }).felder[0].vorschlaege, undefined);
+  });
+});
 
 describe('Paket-Einstellungen (#197)', () => {
   it('liest die Beschreibung; Schlüssel eindeutig, Auswahl braucht Optionen, Geheimnis ohne Vorgabe', () => {

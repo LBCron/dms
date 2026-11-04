@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { abschnittsfelder, EINTRAG_ID, listen, type EinstellungBlock, type EinstellungFeld, type FeldVerweis, type GeheimStand } from '../../../shared/src/paketeinstellungen';
+import { abschnittsfelder, EINTRAG_ID, listen, zahlFehler, type EinstellungBlock, type EinstellungFeld, type FeldVerweis, type GeheimStand } from '../../../shared/src/paketeinstellungen';
 import { api, ApiFehler, type PaketEinstellungenStand } from '../api';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
@@ -152,7 +152,7 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: Einstellun
     // Dienst-Adresse (#444): nie voreingestellt, nur ein Beispiel im leeren Feld; beim Speichern bestätigen.
     case 'adresse': ctl = <><input id={id} type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder={f.beispiel} value={String(wert ?? '')} onChange={(e) => setze(e.target.value || null)} /><small className="leise">{t('fragen.adresse.feld')}</small></>; break;
     case 'mehrzeilig': ctl = <textarea id={id} rows={4} value={String(wert ?? '')} onChange={(e) => setze(e.target.value)} />; break;
-    case 'zahl': ctl = <input id={id} type="text" inputMode="decimal" value={wert == null ? '' : String(wert)} onChange={(e) => setze(e.target.value)} />; break;
+    case 'zahl': ctl = <ZahlEingabe f={f} wert={wert} setze={setze} id={id} />; break;
     case 'datum': ctl = <input id={id} type="date" value={String(wert ?? '')} onChange={(e) => setze(e.target.value || null)} />; break;
     case 'janein': ctl = <label className="haken"><input id={id} type="checkbox" checked={wert === true} onChange={(e) => setze(e.target.checked)} /><span>{f.name}</span></label>; break;
     case 'auswahl': ctl = (
@@ -194,5 +194,38 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: Einstellun
       {f.hilfe && <small className="leise">{f.hilfe}</small>}
       {fehler && <small className="fehlertext">{fehler}</small>}
     </div>
+  );
+}
+
+/**
+ * Zahl (#657): nur Ziffern und ein Komma, Prüfung von min/max/schritt direkt am Feld. Mit `vorschlaege` eine Auswahl
+ * mit Beschriftung; „Eigener Wert …“ öffnet das Zahlenfeld (innerhalb von min/max).
+ */
+function ZahlEingabe({ f, wert, setze, id }: { f: EinstellungFeld; wert: unknown; setze: (v: unknown) => void; id: string }) {
+  const text = wert == null ? '' : String(wert).replace('.', ',');
+  const passend = f.vorschlaege?.find((v) => String(v.wert) === String(wert));
+  const [eigen, setEigen] = useState(!!f.vorschlaege && wert != null && wert !== '' && !passend);
+  const falsch = text.trim() ? zahlFehler(f, text) : null;
+  const ganz = f.schritt !== undefined && Number.isInteger(f.schritt) && Number.isInteger(f.min ?? 0);
+  const feld = (
+    <input id={eigen || !f.vorschlaege ? id : undefined} type="text" inputMode={ganz ? 'numeric' : 'decimal'} autoComplete="off" value={text}
+      aria-invalid={!!falsch} placeholder={f.min !== undefined && f.max !== undefined ? `${f.min}–${f.max}` : undefined}
+      onChange={(e) => setze(e.target.value.replace(/[^0-9,.-]/g, '').replace('.', ',') || null)} />
+  );
+  return (
+    <>
+      {f.vorschlaege ? (
+        <select id={eigen ? undefined : id} value={eigen ? '__eigen' : passend ? String(passend.wert) : ''} onChange={(e) => {
+          if (e.target.value === '__eigen') { setEigen(true); return; }
+          setEigen(false); setze(e.target.value === '' ? null : Number(e.target.value));
+        }}>
+          {!f.pflicht && <option value="">{t('pakete.einstellung.zahl.keine')}</option>}
+          {f.vorschlaege.map((v) => <option key={v.wert} value={String(v.wert)}>{String(v.wert).replace('.', ',')} – {v.name}</option>)}
+          <option value="__eigen">{t('pakete.einstellung.zahl.eigen')}</option>
+        </select>
+      ) : feld}
+      {f.vorschlaege && eigen && feld}
+      {falsch && <small className="fehlertext">{falsch}</small>}
+    </>
   );
 }

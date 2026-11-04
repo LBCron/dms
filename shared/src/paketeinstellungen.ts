@@ -21,7 +21,27 @@ export interface EinstellungFeld {
   mappentyp?: string;
   /** Beim Typ adresse (#444): Beispiel im leeren Feld, z. B. „http://ollama:11434/v1“ – nie ein gespeicherter Wert. */
   beispiel?: string;
+  /** Beim Typ zahl (#657): Schrittweite (z. B. 1 = nur ganze Zahlen) und Vorschläge mit Beschriftung als Auswahl. */
+  schritt?: number;
+  vorschlaege?: ZahlVorschlag[];
 }
+/** Ein Vorschlag für eine Zahl (#657), z. B. { wert: 300, name: "normal – empfohlen" }. */
+export interface ZahlVorschlag { wert: number; name: string }
+
+/** Meldung, wenn eine Zahl nicht passt (#657) – dieselbe im Formular und auf dem Server. */
+export function zahlFehler(f: Pick<EinstellungFeld, 'min' | 'max' | 'schritt'>, v: unknown): string | null {
+  const roh = typeof v === 'number' ? String(v) : String(v ?? '').trim();
+  const n = typeof v === 'number' ? v : /^-?\d+([.,]\d+)?$/.test(roh) ? Number(roh.replace(',', '.')) : NaN;
+  const bereich = f.min !== undefined && f.max !== undefined ? `Bitte eine Zahl zwischen ${zahlText(f.min)} und ${zahlText(f.max)}.`
+    : f.min !== undefined ? `Bitte eine Zahl ab ${zahlText(f.min)}.` : f.max !== undefined ? `Bitte eine Zahl bis ${zahlText(f.max)}.` : 'Bitte eine Zahl.';
+  if (!Number.isFinite(n)) return bereich;
+  if ((f.min !== undefined && n < f.min) || (f.max !== undefined && n > f.max)) return bereich;
+  if (f.schritt && Math.abs(Math.round((n - (f.min ?? 0)) / f.schritt) * f.schritt - (n - (f.min ?? 0))) > 1e-9) {
+    return f.schritt === 1 ? 'Bitte eine ganze Zahl.' : `Bitte in Schritten von ${zahlText(f.schritt)}.`;
+  }
+  return null;
+}
+const zahlText = (n: number) => String(n).replace('.', ',');
 
 /**
  * Dienst-Adresse (#444): Ein Paket mit Code darf zusätzlich zu `code.netz` nur zu der Adresse ins Netz, die der
@@ -74,6 +94,21 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
     // Dienst-Adresse (#444): nie voreingestellt – der Administrator trägt sie selbst ein und bestätigt sie.
     if (typ === 'adresse' && f.standard !== undefined) fehler.push(`${wo}/${str(f.schluessel)}: adresse hat keine Vorgabe (höchstens ein beispiel, das im leeren Feld steht).`);
     if (typ === 'adresse' && f.beispiel !== undefined && (typeof f.beispiel !== 'string' || pruefeAdresse(f.beispiel))) fehler.push(`${wo}/${str(f.schluessel)}: beispiel ist keine gültige Adresse.`);
+    // Zahlen (#657): Schrittweite und Vorschläge; Vorschläge liegen in min/max, die Vorgabe ist einer davon.
+    let vorschlaege: ZahlVorschlag[] | undefined;
+    if (f.schritt !== undefined && (typ !== 'zahl' || typeof f.schritt !== 'number' || !(f.schritt > 0))) fehler.push(`${wo}/${str(f.schluessel)}: schritt nur bei zahl, größer als 0.`);
+    if (f.vorschlaege !== undefined) {
+      if (typ !== 'zahl' || !Array.isArray(f.vorschlaege) || !f.vorschlaege.length) fehler.push(`${wo}/${str(f.schluessel)}: vorschlaege nur bei zahl, als Liste mit wert und name.`);
+      else {
+        vorschlaege = [];
+        for (const x of f.vorschlaege) {
+          if (!istObjekt(x) || typeof x.wert !== 'number' || !Number.isFinite(x.wert) || !str(x.name).trim()) { fehler.push(`${wo}/${str(f.schluessel)}: vorschlaege: jeder Eintrag braucht wert (Zahl) und name.`); continue; }
+          if ((typeof f.min === 'number' && x.wert < f.min) || (typeof f.max === 'number' && x.wert > f.max)) fehler.push(`${wo}/${str(f.schluessel)}: Vorschlag ${x.wert} liegt nicht zwischen min und max.`);
+          vorschlaege.push({ wert: x.wert, name: str(x.name).trim().slice(0, 100) });
+        }
+        if (f.standard !== undefined && !vorschlaege.some((x) => x.wert === f.standard)) fehler.push(`${wo}/${str(f.schluessel)}: standard muss einer der vorschlaege sein.`);
+      }
+    }
     return {
       schluessel: str(f.schluessel), name: str(f.name) || str(f.schluessel), typ,
       ...(f.hilfe ? { hilfe: str(f.hilfe) } : {}), ...(f.pflicht === true ? { pflicht: true } : {}),
@@ -81,6 +116,8 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
       ...(typ === 'adresse' && typeof f.beispiel === 'string' ? { beispiel: f.beispiel } : {}),
       ...(Array.isArray(f.optionen) ? { optionen: f.optionen.map(str) } : {}),
       ...(typeof f.min === 'number' ? { min: f.min } : {}), ...(typeof f.max === 'number' ? { max: f.max } : {}),
+      ...(typ === 'zahl' && typeof f.schritt === 'number' && f.schritt > 0 ? { schritt: f.schritt } : {}),
+      ...(vorschlaege?.length ? { vorschlaege } : {}),
       ...(typ === 'feld' && f.mappentyp ? { mappentyp: str(f.mappentyp) } : {}),
     };
   };
@@ -210,11 +247,10 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
         return a;
       }
       case 'zahl': {
-        const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
-        if (!Number.isFinite(n)) { fehler[pfad] = 'Keine Zahl.'; return null; }
-        if (f.min !== undefined && n < f.min) { fehler[pfad] = `Mindestens ${f.min}.`; return null; }
-        if (f.max !== undefined && n > f.max) { fehler[pfad] = `Höchstens ${f.max}.`; return null; }
-        return n;
+        // Nur Ziffern (ggf. Komma), in min/max und Schrittweite (#657) – dieselbe Prüfung wie im Formular.
+        const falsch = zahlFehler(f, v);
+        if (falsch) { fehler[pfad] = falsch; return null; }
+        return typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
       }
       case 'janein': return v === true || v === 'true';
       case 'datum': if (typeof v !== 'string' || !DATUM.test(v) || Number.isNaN(Date.parse(v))) { fehler[pfad] = 'Kein Datum.'; return null; } return v;
