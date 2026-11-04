@@ -793,7 +793,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         seit: Number(q.seit) || undefined, stufe, modul: q.modul || undefined, benutzer: q.benutzer || undefined, anfrage: q.anfrage || undefined,
         suche: q.suche?.slice(0, 200) || undefined, max: Math.min(2000, Number(q.max) || 500),
       });
-      return ok({ eintraege, letzte: protokoll.letzteNr, gespeichert: protokoll.anzahl, debug: protokoll.debugStand, module: MODULE });
+      return ok({ eintraege, letzte: protokoll.letzteNr, gespeichert: protokoll.anzahl, debug: protokoll.debugStand, module: MODULE, jeModul: protokoll.jeModul() });
     } },
     { methode: 'PUT', pfad: '/api/werkbank/debug', zugang: 'admin', handler: async (a) => {
       const an = !!b(a).an;

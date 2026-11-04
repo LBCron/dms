@@ -3,6 +3,7 @@ import { api, type DebugStand, type Protokolleintrag, type Stufe } from '../api'
 import { Link } from '../ort';
 import { Listenkopf } from '../Listenkopf';
 import { istWeg } from '../erreichbar';
+import { t } from '../sprache';
 
 /**
  * Protokoll in der Werkbank: Mitte die Einträge (neueste oben, mit Filtern und
@@ -18,12 +19,16 @@ const STUFENNAME: Record<Stufe, string> = { trace: 'Trace', debug: 'Debug', info
 const uhr = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const datumUhr = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'medium' });
 
+/** Verständlicher Name eines Moduls (#682); unbekannte Kürzel bleiben, wie sie sind. */
+export const modulName = (m: string): string => (t.hat(`werkbank.protokoll.modul.${m}`) ? t.frei(`werkbank.protokoll.modul.${m}`) : m);
+
 export interface Filter { stufe: Stufe; modul: string; benutzer: string; anfrage: string; suche: string }
 
 export function useProtokoll(sichtbar = true) {
   const [filter, setFilter] = useState<Filter>({ stufe: 'debug', modul: '', benutzer: '', anfrage: '', suche: '' });
   const [eintraege, setEintraege] = useState<Protokolleintrag[]>([]);
   const [module, setModule] = useState<string[]>([]);
+  const [jeModul, setJeModul] = useState<Record<string, number>>({});
   const [debug, setDebug] = useState<DebugStand | null>(null);
   const [gespeichert, setGespeichert] = useState(0);
   const [live, setLive] = useState(true);
@@ -37,7 +42,7 @@ export function useProtokoll(sichtbar = true) {
     try {
       const r = await api.protokoll({ ...params, seit: nurNeue ? letzte.current : undefined, max: nurNeue ? 500 : ANZEIGE_MAX });
       letzte.current = r.letzte;
-      setModule(r.module); setDebug(r.debug); setGespeichert(r.gespeichert); setFehler(undefined);
+      setModule(r.module); setJeModul(r.jeModul ?? {}); setDebug(r.debug); setGespeichert(r.gespeichert); setFehler(undefined);
       setEintraege((alt) => (nurNeue ? [...r.eintraege, ...alt].slice(0, ANZEIGE_MAX) : r.eintraege));
     } catch (e) { setFehler((e as Error).message); }
   }, [params]);
@@ -50,7 +55,7 @@ export function useProtokoll(sichtbar = true) {
     return () => clearInterval(t);
   }, [live, laden, sichtbar]);
 
-  return { filter, setFilter, eintraege, module, debug, setDebug, gespeichert, live, setLive, fehler, neu: () => laden(false) };
+  return { filter, setFilter, eintraege, module, jeModul, debug, setDebug, gespeichert, live, setLive, fehler, neu: () => laden(false) };
 }
 export type ProtokollZustand = ReturnType<typeof useProtokoll>;
 
@@ -65,7 +70,7 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
         <label><span className="sr">Stufe</span>
           <select value={f.stufe} onChange={(e) => setze({ stufe: e.target.value as Stufe })}>{STUFEN.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}</select></label>
         <label><span className="sr">Modul</span>
-          <select value={f.modul} onChange={(e) => setze({ modul: e.target.value })}><option value="">Alle Module</option>{p.module.map((m) => <option key={m}>{m}</option>)}</select></label>
+          <select value={f.modul} onChange={(e) => setze({ modul: e.target.value })}><option value="">Alle Module</option>{p.module.map((m) => <option key={m} value={m}>{modulName(m)}{p.jeModul[m] ? '' : ` ${t('werkbank.protokoll.modul.leer')}`}</option>)}</select></label>
         <label><span className="sr">Benutzer</span>
           <select value={f.benutzer} onChange={(e) => setze({ benutzer: e.target.value })}><option value="">Alle Benutzer</option>{benutzer.map((b) => <option key={b}>{b}</option>)}{f.benutzer && !benutzer.includes(f.benutzer) && <option>{f.benutzer}</option>}</select></label>
         <label className="suche"><span className="sr">Text</span><input type="search" placeholder="Text …" value={f.suche} onChange={(e) => setze({ suche: e.target.value })} /></label>
@@ -79,7 +84,7 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
             {p.eintraege.map((e) => (
               <li key={e.nr}>
                 <Link to={`/werkbank/protokoll/${e.nr}`} className={`eintrag werk stufe-${e.stufe} ${offen === String(e.nr) ? 'an' : ''}`}>
-                  <span className="zeile1"><span className="mono klein">{uhr(e.zeit)}</span> <span className={`chip stufe-${e.stufe}`}>{STUFENNAME[e.stufe]}</span> <span className="leise klein">{e.modul}</span></span>
+                  <span className="zeile1"><span className="mono klein">{uhr(e.zeit)}</span> <span className={`chip stufe-${e.stufe}`}>{STUFENNAME[e.stufe]}</span> <span className="leise klein" title={e.modul}>{modulName(e.modul)}</span></span>
                   <span className="titel">{e.text}</span>
                   {e.benutzer && <span className="unter">{e.benutzer}</span>}
                 </Link>
@@ -104,7 +109,7 @@ export function ProtokollDetail({ p, nr }: { p: ProtokollZustand; nr?: string })
         <dl className="index">
           <div><dt>Zeit</dt><dd>{datumUhr(e.zeit)}</dd></div>
           <div><dt>Stufe</dt><dd><span className={`chip stufe-${e.stufe}`}>{STUFENNAME[e.stufe]}</span></dd></div>
-          <div><dt>Modul</dt><dd>{e.modul}</dd></div>
+          <div><dt>Modul</dt><dd>{modulName(e.modul)} <span className="mono leise klein">{e.modul}</span></dd></div>
           {e.benutzer && <div><dt>Benutzer</dt><dd>{e.benutzer}</dd></div>}
           {e.anfrage && <div><dt>Anfrage</dt><dd className="mono">{e.anfrage}</dd></div>}
         </dl>

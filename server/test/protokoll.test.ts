@@ -144,3 +144,18 @@ describe('Versionsübersicht', () => {
     assert.match(komplett.hinweis!, /nächsten Image dms-komplett/);
   });
 });
+
+describe('Module des Protokolls (#682)', () => {
+  it('jedes Modul, in das der Server schreibt, steht in der Liste und hat einen Namen in der Sprachdatei', async () => {
+    const { readdirSync, readFileSync } = await import('node:fs');
+    const { MODULE } = await import('../../shared/src/protokollmodule');
+    const namen = JSON.parse(readFileSync(new URL('../../shared/src/sprachen/de/werkbank.json', import.meta.url), 'utf8')) as Record<string, string>;
+    const ordner = new URL('../src/', import.meta.url);
+    const benutzt = new Set<string>();
+    const lies = (u: URL) => { for (const e of readdirSync(u, { withFileTypes: true })) { if (e.isDirectory()) lies(new URL(`${e.name}/`, u)); else if (e.name.endsWith('.ts')) for (const m of readFileSync(new URL(e.name, u), 'utf8').matchAll(/\.modul\('([a-z]+)'\)/g)) benutzt.add(m[1]); } };
+    lies(ordner);
+    assert.ok(benutzt.has('konto') && benutzt.size >= 10);
+    for (const m of benutzt) assert.ok((MODULE as readonly string[]).includes(m), `Modul „${m}“ fehlt in shared/src/protokollmodule.ts`);
+    for (const m of MODULE) assert.ok(namen[`protokoll.modul.${m}`], `Modul „${m}“ hat keinen Namen in werkbank.json`);
+  });
+});

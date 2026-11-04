@@ -994,7 +994,7 @@ export interface DemoErgebnis {
 export type Stufe = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export interface Protokolleintrag { nr: number; zeit: string; stufe: Stufe; modul: string; text: string; benutzer?: string; anfrage?: string; daten?: Record<string, unknown> }
 export interface DebugStand { an: boolean; bis: string | null; grundstufe: string }
-export interface ProtokollAntwort { eintraege: Protokolleintrag[]; letzte: number; gespeichert: number; debug: DebugStand; module: string[] }
+export interface ProtokollAntwort { eintraege: Protokolleintrag[]; letzte: number; gespeichert: number; debug: DebugStand; module: string[]; /** Einträge je Modul (#682). */ jeModul?: Record<string, number> }
 export interface MessEinstellungen { schwelleMs: number; tage: number }
 export interface Langlaeufer { id: number; zeit: string; dauerMs: number; zugriff: string; anfrage: string; benutzer: string }
 export interface LaufendeAbfrage { pid: number; seitMs: number; zustand: string; abfrage: string; anwendung: string }
