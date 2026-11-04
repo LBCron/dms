@@ -107,6 +107,8 @@ export interface KatalogPaket {
   lizenz: string; aktuell: string;
   /** Neueste zuerst. */
   versionen: KatalogVersion[];
+  /** Anzeige wie im Katalog (#645, dms-registry #84/#98): Lucide-Name, Sprachkürzel, Kategorien – optional. */
+  symbol?: string; kuerzel?: string; kategorien?: string[];
 }
 export interface Katalog { format: number; erstellt: string; quelle: string; pakete: KatalogPaket[] }
 
@@ -291,6 +293,16 @@ export function auswahlMitAbhaengigkeiten(k: Katalog, gewaehlt: string[], dms: s
 const text = (v: unknown) => (typeof v === 'string' ? v : '');
 
 /** Prüft und vereinheitlicht einen geladenen Katalog; wirft mit verständlicher Meldung. */
+/** Symbol, Kürzel und Kategorien eines Katalogeintrags (#645) – nur gültige Werte, sonst weggelassen. */
+function anzeige(p: Record<string, unknown>): Pick<KatalogPaket, 'symbol' | 'kuerzel' | 'kategorien'> {
+  const r: Pick<KatalogPaket, 'symbol' | 'kuerzel' | 'kategorien'> = {};
+  if (typeof p.symbol === 'string' && /^[a-z0-9-]{1,60}$/.test(p.symbol)) r.symbol = p.symbol;
+  if (typeof p.kuerzel === 'string' && /^[A-Za-z]{1,3}$/.test(p.kuerzel)) r.kuerzel = p.kuerzel.toUpperCase();
+  const k = Array.isArray(p.kategorien) ? p.kategorien.filter((x): x is string => typeof x === 'string' && /^[a-z0-9_-]{1,40}$/.test(x)).slice(0, 5) : [];
+  if (k.length) r.kategorien = k;
+  return r;
+}
+
 export function liesKatalog(j: unknown): Katalog {
   const k = j as Partial<Katalog> | null;
   if (!k || typeof k !== 'object' || !Array.isArray(k.pakete)) throw new Error('Das ist kein Paketkatalog (katalog.json).');
@@ -314,6 +326,7 @@ export function liesKatalog(j: unknown): Katalog {
       id: p.id, name: text(p.name) || p.id, beschreibung: text(p.beschreibung),
       autor: { name: text(p.autor?.name), github: text(p.autor?.github) }, lizenz: text(p.lizenz),
       aktuell: VERSION.test(text(p.aktuell)) ? p.aktuell : versionen[0].version, versionen,
+      ...anzeige(p as unknown as Record<string, unknown>),
     });
   }
   return { format: 1, erstellt: text(k.erstellt), quelle: text(k.quelle), pakete: pakete.sort((a, b) => a.name.localeCompare(b.name, 'de')) };

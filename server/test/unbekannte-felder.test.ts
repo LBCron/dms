@@ -132,7 +132,10 @@ describe('Unbekannte Felder werden ignoriert (#635)', () => {
     const k = liesKatalog(roh);
     const ohne = liesKatalog(JSON.parse(katalogBytes([basis], false).toString('utf8')));
     assert.deepEqual(Object.keys(k).sort(), Object.keys(ohne).sort());
-    assert.deepEqual({ ...k.pakete[0], versionen: [] }, { ...ohne.pakete[0], versionen: [] });
+    // Symbol, Kürzel und Kategorien liest Ablago seit #645 für die Kacheln; alles andere bleibt unbeachtet.
+    const { symbol, kuerzel, kategorien, ...rest } = k.pakete[0];
+    assert.deepEqual({ symbol, kuerzel, kategorien }, { symbol: 'building', kuerzel: 'DE', kategorien: ['verwaltung'] });
+    assert.deepEqual({ ...rest, versionen: [] }, { ...ohne.pakete[0], versionen: [] });
     assert.equal(k.pakete[0].versionen[0].sha256, ohne.pakete[0].versionen[0].sha256);
     assert.deepEqual(k.pakete[0].versionen[0].inhalt, ohne.pakete[0].versionen[0].inhalt);
     assert.throws(() => liesKatalog({ ...roh, format: 2 }), /Katalogformat 2/);

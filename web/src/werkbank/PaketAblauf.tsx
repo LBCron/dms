@@ -7,6 +7,7 @@ import { Link } from '../ort';
 import { t } from '../sprache';
 import { HerkunftZeile } from './Herkunft';
 import { Eingabe } from './PaketEinstellungen';
+import { PaketSymbol } from './PaketSymbol';
 
 /**
  * Mehrere Pakete in einem Ablauf (#405): Auswahl als Baum (Abhängigkeiten sichtbar, Ergänzungen wie die Zusatzsprachen
@@ -32,6 +33,8 @@ interface Kandidat {
   /** Zusatz, z. B. „Update von 1.0.0“ in der Sammeldatei. */
   zusatz?: string;
   inhalt?: string;
+  /** Wie im Katalog (#645): Symbol, Sprachkürzel, Kategorien, Größe des Archivs in Bytes. */
+  symbol?: string; kuerzel?: string; kategorien?: string[]; groesse?: number;
 }
 
 /** Was mit einem Paket der Sammeldatei passiert (#461). */
@@ -59,6 +62,7 @@ function kandidaten(q: AblaufQuelle, versionen: Record<string, string>): Kandida
       return {
         schluessel: p.id, id: p.id, name: p.name, version: z.version, beschreibung: p.beschreibung, code: z.code, ergaenzt: z.ergaenzt ?? null, abhaengigkeiten: z.abhaengigkeiten,
         ...(v ? {} : { gesperrt: t('pakete.ablauf.dms', { dms: z.dms, version: q.dms }) }), inhalt: inhaltText(z),
+        symbol: p.symbol, kuerzel: p.kuerzel, kategorien: p.kategorien, groesse: z.groesse,
       };
     });
   }
@@ -94,6 +98,10 @@ function aufloesen(q: AblaufQuelle, liste: Kandidat[], wahl: string[], versionen
   return { pakete: [...plan.values()], probleme };
 }
 
+/** Name einer Kategorie aus dem Katalog (#645); unbekannte Kennungen zeigt Ablago, wie sie sind. */
+const kategorieName = (k: string) => { const s = `pakete.kategorie.${k}`; const x = t(s as never); return x === s ? k : x; };
+const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
 /** Kurzer Name einer Ergänzung unter ihrem Paket: „Texterkennung – Zusatzsprache Französisch“ → „Zusatzsprache Französisch“. */
 const kurz = (name: string) => (name.includes(' – ') ? name.slice(name.lastIndexOf(' – ') + 3) : name);
 
@@ -118,6 +126,7 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
   geaendert?(): void;
 }) {
   const liste = kandidaten(quelle, versionen);
+  const [kategorie, setKategorie] = useState<string | null>(null);
   const [wahl, setWahl] = useState<string[]>(() => start.filter((s) => liste.some((k) => k.schluessel === s && !k.gesperrt)));
   const [plan, setPlan] = useState<AblaufPlan<PaketVorschau> | null>(null);
   const [ergebnis, setErgebnis] = useState<AblaufErgebnis | null>(null);
@@ -143,7 +152,10 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
 
   // Baum: oben die Pakete, darunter ihre Ergänzungen (auch unter einem schon installierten Paket).
   const basis = (k: Kandidat) => (k.ergaenzt && (liste.some((x) => x.id === k.ergaenzt!.paket) || quelle.installiert.some((x) => x.id === k.ergaenzt!.paket)) ? k.ergaenzt.paket : null);
-  const oben = liste.filter((k) => !basis(k) && (!nur || nur.includes(k.id)));
+  const alleOben = liste.filter((k) => !basis(k) && (!nur || nur.includes(k.id)));
+  // Kategorien wie im Katalog (#645): nur die, die hier vorkommen; Gewähltes bleibt beim Filtern sichtbar.
+  const kategorien = [...new Set(alleOben.flatMap((k) => k.kategorien ?? []))];
+  const oben = kategorie ? alleOben.filter((k) => k.kategorien?.includes(kategorie) || wahl.includes(k.schluessel)) : alleOben;
   const installierteBasen = [...new Set(liste.map(basis).filter((b): b is string => !!b && quelle.installiert.some((x) => x.id === b)))].filter((b) => !nur || nur.includes(b));
   const imPlan = (id: string) => aufgeloest.pakete.find((p) => p.id === id);
   const name = (id: string) => liste.find((k) => k.id === id)?.name ?? quelle.installiert.find((x) => x.id === id)?.name ?? id;
@@ -157,8 +169,9 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
     const erg = ergaenzungen(k.id);
     return (
       <li key={k.schluessel} className={an ? 'an' : undefined}>
-        <label className="haken">
+        <label className="haken pd-kachel">
           <input type="checkbox" checked={an} disabled={!!k.gesperrt || mit} onChange={(e) => schalten(k.schluessel, e.target.checked)} aria-describedby={`pa-${k.id}`} />
+          <PaketSymbol symbol={k.symbol} kuerzel={k.kuerzel} name={k.name} />
           <span>
             <span><strong>{k.name}</strong> <span className="leise klein">{k.version}</span>
               {empfohlen.includes(k.id) && !k.gesperrt && <> <span className="chip gut">{t('pakete.ablauf.empfohlen')}</span></>}
@@ -166,6 +179,7 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
               {k.zusatz && <> <span className="chip gut">{k.zusatz}</span></>}
               {mit && <> <span className="chip">{t('pakete.ablauf.kommtmit', { namen: p!.fuer.map(name).join(', ') })}</span></>}</span>
             <span className="klein">{k.beschreibung}</span>
+            {k.groesse !== undefined && k.groesse > 0 && <span className="klein leise">{t('pakete.ablauf.groesse', { groesse: groesseText(k.groesse) })}</span>}
           </span>
         </label>
         <div className="pd-darf klein leise" id={`pa-${k.id}`}>
@@ -179,6 +193,14 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
 
   return (
     <div className="stapel">
+      {kategorien.length > 1 && (
+        <div className="pd-kategorien" role="group" aria-label={t('pakete.ablauf.kategorien')}>
+          <button type="button" className="knopf klein" aria-pressed={kategorie === null} onClick={() => setKategorie(null)}>{t('pakete.ablauf.kategorien.alle')}</button>
+          {kategorien.map((k) => (
+            <button key={k} type="button" className="knopf klein" aria-pressed={kategorie === k} onClick={() => setKategorie(kategorie === k ? null : k)}>{kategorieName(k)}</button>
+          ))}
+        </div>
+      )}
       <ul className="pd-liste" aria-label={t('pakete.ablauf.auswahl')}>
         {installierteBasen.map((b) => (
           <li key={`da-${b}`}>
