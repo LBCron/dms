@@ -55,6 +55,12 @@ export const OHNE_FOLGEN = new Set<string>([
   'setzeDokumentSprache',
   // Zähler-Endpunkt (#625): merkt sich nur den Stand der Zahlen.
   'zaehlerstand', 'setzeZaehlerstand',
+  // Ausgangskorb des Ereigniskatalogs (#670) und „Frist erreicht“ schon gemeldet: nur Buchführung des Verteilers.
+  // Der Verteiler fragt alle 2 Sekunden nach (`holeKatalogEreignisse`) – zählte das, wären Zahlen und Termine
+  // nie länger als 2 Sekunden gültig (Lasttest: Speicher und Ereignisschleife, seit #725 die Termine eines ganzen
+  // Jahres für die Startseite rechnen).
+  'legeKatalogEreignisAn', 'holeKatalogEreignisse', 'katalogEreignisVerteilt', 'katalogEreignisFehlgeschlagen',
+  'raeumeKatalogEreignisseAuf', 'katalogEreignisStand', 'merkeFristMeldung',
 ]);
 
 /**
