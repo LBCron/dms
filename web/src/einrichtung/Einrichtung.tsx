@@ -481,7 +481,7 @@ function FeldZeile(p: {
       <input id={id(prop)} inputMode="decimal" placeholder={platzhalter} value={f[prop]} onChange={(e) => setze({ [prop]: e.target.value } as Partial<EntwurfFeld>)} /></label>
   );
   const haken = (prop: 'pflicht' | 'eindeutig' | 'mehrfach', label: string, hilfe: string) => (
-    <label className="haken"><input type="checkbox" checked={!!f[prop]} onChange={(e) => setze({ [prop]: e.target.checked })} /><span>{label}<small className="hilfe">{hilfe}</small></span></label>
+    <label className="haken"><input type="checkbox" checked={!!f[prop]} onChange={(e) => setze({ [prop]: e.target.checked })} /><span><span className="haken-titel">{label}</span><small className="hilfe">{hilfe}</small></span></label>
   );
 
   let besonders = null;
@@ -529,7 +529,7 @@ function FeldZeile(p: {
   else if (f.typ === 'datum')
     standard = <label className="eigenschaft" htmlFor={id('std')}><span>Standardwert</span><input id={id('std')} type="date" value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })} /></label>;
   else if (f.typ === 'janein')
-    standard = <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={f.standard === true} onChange={(e) => setze({ standard: e.target.checked })} /><span>Standardmäßig „Ja“</span></label></div>;
+    standard = <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={f.standard === true} onChange={(e) => setze({ standard: e.target.checked })} /><span><span className="haken-titel">Standardmäßig „Ja“</span></span></label></div>;
   else if (f.typ === 'auswahl' && !f.mehrfach)
     standard = <label className="eigenschaft" htmlFor={id('std')}><span>Standardwert</span><select id={id('std')} value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })}>
       <option value="">– keiner –</option>{(f.optionen ?? []).map((o) => <option key={o}>{o}</option>)}</select></label>;
@@ -646,7 +646,7 @@ function ErkennungEditor({ f, id, setze }: { f: EntwurfFeld; id: (x: string) => 
     <div className="raster">
       <div className="eigenschaft unten">
         <label className="haken"><input type="checkbox" checked={an} onChange={(e) => setze({ erkennung: e.target.checked ? {} : null })} />
-          <span>Für die Erkennung nutzen <Hilfe ort="mappentyp.erkennung" /><small className="hilfe">Die Erkennung sucht diesen Wert im Text neuer Post (z. B. Kundennummer, IBAN, E-Mail) und füllt das Feld bei „Aus Dokument ausfüllen“.</small></span></label>
+          <span><span className="haken-titel">Für die Erkennung nutzen&nbsp;<Hilfe ort="mappentyp.erkennung" /></span><small className="hilfe">Die Erkennung sucht diesen Wert im Text neuer Post (z. B. Kundennummer, IBAN, E-Mail) und füllt das Feld bei „Aus Dokument ausfüllen“.</small></span></label>
       </div>
       {an && artenFuer(f.typ).length > 1 && (
         <label className="eigenschaft" htmlFor={id('erkart')}><span>Was steht im Feld?</span>
@@ -670,7 +670,7 @@ function FristEditor({ f, setze }: { f: EntwurfFeld; id: (x: string) => string; 
   return (
     <div className="fristeditor">
       <label className="haken"><input type="checkbox" checked={!!f.frist} onChange={(e) => setze({ frist: e.target.checked ? { ...(f.frist ?? FRIST_STANDARD) } : null })} />
-        <span>{t('felder.editor.frist')} <Hilfe ort="mappentyp.frist" /><small className="hilfe">{t('felder.editor.frist.hilfe')}</small></span></label>
+        <span><span className="haken-titel">{t('felder.editor.frist')}&nbsp;<Hilfe ort="mappentyp.frist" /></span><small className="hilfe">{t('felder.editor.frist.hilfe')}</small></span></label>
       {f.frist && <p className="leise klein">{t('felder.editor.frist.erinnern')} <Link className="verweis" to="/werkbank/automatisierungen">{t('felder.editor.frist.link')}</Link></p>}
     </div>
   );

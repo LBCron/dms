@@ -826,6 +826,12 @@ export const api = {
   adresseSpeichern: (adresse: string) => anfrage<BetriebAnsicht>('PUT', '/api/werkbank/betrieb/adresse', { adresse }),
   mailPruefen: (m: MailEingabe) => anfrage<Probe>('POST', '/api/werkbank/betrieb/mail/pruefen', m),
   testmail: (m: MailEingabe, an: string) => anfrage<Probe>('POST', '/api/werkbank/betrieb/mail/testmail', { mail: m, an }),
+  /* E-Mail-Versand leicht einrichten (#813) */
+  mailFinden: (email: string, thunderbird = false) => anfrage<MailSuche>('POST', '/api/werkbank/betrieb/mail/finden', { email, thunderbird }),
+  mailOAuthStart: () => anfrage<{ url: string }>('POST', '/api/werkbank/betrieb/mail/oauth/start'),
+  mailOAuthGeraet: () => anfrage<{ code: string; adresse: string; bis: string; intervall: number }>('POST', '/api/werkbank/betrieb/mail/oauth/geraet'),
+  mailOAuthGeraetPruefen: () => anfrage<{ fertig: boolean; text: string }>('POST', '/api/werkbank/betrieb/mail/oauth/geraet/pruefen'),
+  mailOAuthAbmelden: () => anfrage<BetriebAnsicht>('POST', '/api/werkbank/betrieb/mail/oauth/abmelden'),
   profil: (name: string) => anfrage<Benutzer>('PUT', '/api/konto/profil', { name }),
   entwicklermodus: (an: boolean) => anfrage<Benutzer>('PUT', '/api/konto/profil', { entwicklermodus: an }),
   emailAendern: (email: string, passwort: string) => anfrage<Benutzer>('PUT', '/api/konto/email', { email, passwort }),
@@ -1161,6 +1167,8 @@ export interface ApiSchluesselEingabe { name: string; recht: ApiSchluesselRecht;
 export type Verbindung = 'starttls' | 'ssl' | 'keine';
 export interface MailAnsicht {
   aktiv: boolean; host: string; port: number; verbindung: Verbindung; benutzer: string; absender: string; selbstsigniert: boolean;
+  /** #813: Passwort oder Anmeldung über OAuth (Microsoft 365, Google). */
+  anmeldung: 'passwort' | 'oauth'; anbieter?: 'microsoft' | 'google';
   /** Das Passwort selbst kommt nie zurück. */
   passwortGesetzt: boolean;
   /** false = mit einem verlorenen Schlüssel verschlüsselt (#39). */
@@ -1169,7 +1177,16 @@ export interface MailAnsicht {
   passwortUnverschluesselt: boolean;
 }
 export type MailEingabe = Omit<MailAnsicht, 'passwortGesetzt' | 'passwortLesbar' | 'passwortUnverschluesselt'> & { passwort?: string; passwortLoeschen?: boolean };
-export interface BetriebAnsicht { mail: MailAnsicht; adresse: string; vorschlag: string | null; verbindungen: Record<Verbindung, string>; passwoerterMoeglich: boolean }
+export interface BetriebAnsicht {
+  mail: MailAnsicht; adresse: string; vorschlag: string | null; verbindungen: Record<Verbindung, string>; passwoerterMoeglich: boolean;
+  /** #813: Zustand der OAuth-Anmeldung des Versands (ohne Token); Name der Ablage für den Absender. */
+  oauth?: OAuthStatus | null; oauthMoeglich?: boolean; ablage?: string | null;
+}
+/** Server zur Adresse (#813); `gefragt`: wen Ablago dafür gefragt hat. */
+export interface MailSuche {
+  domain: string; gefragt: string[];
+  fund: { host: string; port: number; verbindung: Verbindung; quelle: 'liste' | 'dns' | 'mx' | 'autoconfig' | 'thunderbird'; anbieter: string | null; benutzer: 'adresse' | 'lokalteil' } | null;
+}
 export interface TresorStatus {
   zustand: 'vorhanden' | 'fehlt' | 'verloren' | 'falsch';
   fingerabdruck: string | null; erwartet: string | null; erstellt: string | null; datei: string;
@@ -1180,7 +1197,7 @@ export interface TresorStatus {
   /** Notfallblatt zum aktuellen Schlüssel (#106). */
   notfallblatt?: Notfallblattstand | null;
 }
-export interface Probe { ok: boolean; meldung: string }
+export interface Probe { ok: boolean; meldung: string; /** Antwort des Servers (#813). */ technisch?: string }
 
 /** Eingangsordner (#195). */
 export interface EingangEinstellung { aktiv: boolean; abstand: number; nachher: 'erledigt' | 'loeschen'; /** #333 */ doppelteUeberspringen?: boolean }

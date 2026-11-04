@@ -27,6 +27,15 @@ const log = protokoll.modul('ablage');
 export type OAuthAnbieter = 'microsoft' | 'google' | 'andere';
 export const OAUTH_ANBIETER: OAuthAnbieter[] = ['microsoft', 'google', 'andere'];
 
+/**
+ * E-Mail-Versand (#813): dieselbe App-Registrierung und derselbe Ablauf wie bei den Postfächern, die Anmeldung
+ * liegt unter dieser festen Kennung (`postfach_oauth_versand`) und bekommt den Bereich zum Senden (SMTP).
+ * Postfächer haben UUIDs als Kennung, es gibt also keine Verwechslung.
+ */
+export const VERSAND_OAUTH_ID = 'versand';
+export type OAuthZweck = 'abruf' | 'versand';
+const zweckVon = (id: string): OAuthZweck => (id === VERSAND_OAUTH_ID ? 'versand' : 'abruf');
+
 /** App-Registrierung je Anbieter (eine je Installation). Endpunkte nur bei „anderer Anbieter“. */
 export interface OAuthApp {
   clientId: string;
@@ -103,16 +112,20 @@ export function rueckrufErlaubt(rueckruf: string): boolean {
 }
 
 /** Endpunkte und Bereich eines Anbieters aus der App-Registrierung. */
-export function endpunkte(anbieter: OAuthAnbieter, app: OAuthApp): Endpunkte {
+export function endpunkte(anbieter: OAuthAnbieter, app: OAuthApp, zweck: OAuthZweck = 'abruf'): Endpunkte {
   if (anbieter === 'microsoft') {
     const t = app.tenant || 'common';
     const basis = `https://login.microsoftonline.com/${encodeURIComponent(t)}/oauth2/v2.0`;
-    return { autorisierung: `${basis}/authorize`, token: `${basis}/token`, geraet: `${basis}/devicecode`, bereich: 'https://outlook.office.com/IMAP.AccessAsUser.All offline_access', widerruf: null, extra: {} };
+    // Versand (#813): SMTP.Send statt IMAP – dieselbe App braucht dafür die Berechtigung SMTP.Send.
+    const bereich = zweck === 'versand' ? 'https://outlook.office.com/SMTP.Send offline_access' : 'https://outlook.office.com/IMAP.AccessAsUser.All offline_access';
+    return { autorisierung: `${basis}/authorize`, token: `${basis}/token`, geraet: `${basis}/devicecode`, bereich, widerruf: null, extra: {} };
   }
   if (anbieter === 'google') {
     // Gerätecode erlaubt Google für den Bereich mail.google.com nicht.
     return { autorisierung: 'https://accounts.google.com/o/oauth2/v2/auth', token: 'https://oauth2.googleapis.com/token', geraet: null, bereich: 'https://mail.google.com/', widerruf: 'https://oauth2.googleapis.com/revoke', extra: { access_type: 'offline', prompt: 'consent' } };
   }
+  // Google: https://mail.google.com/ gilt für IMAP und SMTP. Für „anderer Anbieter“ gibt es keinen Versand per OAuth.
+  if (zweck === 'versand') throw new Fachfehler(422, 'Den E-Mail-Versand per OAuth gibt es für Microsoft 365 und Google.');
   if (!app.autorisierung || !app.token || !app.bereich) throw new Fachfehler(422, 'Für „anderer Anbieter“ bitte Autorisierungs- und Token-Endpunkt sowie den Bereich eintragen.');
   return { autorisierung: app.autorisierung, token: app.token, geraet: app.geraet || null, bereich: app.bereich, widerruf: null, extra: {} };
 }
@@ -195,12 +208,12 @@ export class PostfachOAuth {
     return this.appsAnsicht();
   }
 
-  private async app(anbieter: OAuthAnbieter): Promise<{ app: OAuthApp; e: Endpunkte; secret: string }> {
+  private async app(anbieter: OAuthAnbieter, zweck: OAuthZweck = 'abruf'): Promise<{ app: OAuthApp; e: Endpunkte; secret: string }> {
     const app = (await this.apps())[anbieter];
     if (!app?.clientId) throw new Fachfehler(409, 'Für diesen Anbieter ist noch keine App eingetragen (Client-ID). Siehe Handbuch „Postfächer“.');
     const secret = app.clientSecret ? this.d.entschluessele(app.clientSecret) : '';
     if (secret === null) throw new Fachfehler(409, 'Das Client-Geheimnis ist mit dem aktuellen Schlüssel nicht lesbar. Bitte in der Werkbank neu eintragen.');
-    return { app, e: endpunkte(anbieter, app), secret };
+    return { app, e: endpunkte(anbieter, app, zweck), secret };
   }
 
   /* ---------- Gespeicherte Anmeldung ---------- */
@@ -235,7 +248,7 @@ export class PostfachOAuth {
   async start(p: { id: string; anbieter: OAuthAnbieter; benutzer: string }, admin: { id: string; email: string }, rueckruf: string): Promise<{ url: string; bindung: string }> {
     if (!/^https?:\/\//.test(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago seine Adresse (Werkbank → E-Mail und Adresse). Ohne öffentliche Adresse den Gerätecode nutzen.');
     if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago eine https-Adresse (http nur für localhost). Ohne https den Gerätecode nutzen.');
-    const { app, e } = await this.app(p.anbieter);
+    const { app, e } = await this.app(p.anbieter, zweckVon(p.id));
     const t = this.jetzt;
     for (const [k, v] of this.codes) if (v.bis < t) this.codes.delete(k);
     if (this.codes.size > 500) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
@@ -265,7 +278,7 @@ export class PostfachOAuth {
     if (q.error) throw new RueckrufFehler(o.postfachId, 401, `Der Anbieter hat die Anmeldung abgelehnt: ${kurz(q.error_description || q.error)}`, 'abgelehnt');
     if (!q.code) throw new RueckrufFehler(o.postfachId, 400, 'Der Anbieter hat keinen Code geliefert.', 'ohnecode');
     try {
-      const { app, e, secret } = await this.app(o.anbieter);
+      const { app, e, secret } = await this.app(o.anbieter, zweckVon(o.postfachId));
       const felder: Record<string, string> = { grant_type: 'authorization_code', code: q.code, redirect_uri: o.rueckruf, code_verifier: o.verifier, client_id: app.clientId, ...(secret ? { client_secret: secret } : {}) };
       const r = await this.abruf(e.token, felder);
       await this.merke(o.postfachId, o.anbieter, r, false, o.von);
@@ -292,7 +305,7 @@ export class PostfachOAuth {
   /* ---------- Gerätecode (RFC 8628) ---------- */
 
   async geraetStart(p: { id: string; anbieter: OAuthAnbieter }, admin: { id: string; email: string }): Promise<{ code: string; adresse: string; bis: string; intervall: number }> {
-    const { app, e } = await this.app(p.anbieter);
+    const { app, e } = await this.app(p.anbieter, zweckVon(p.id));
     if (!e.geraet) throw new Fachfehler(409, 'Dieser Anbieter bietet keinen Gerätecode an. Bitte im Browser anmelden.');
     const r = await this.abruf(e.geraet, { client_id: app.clientId, scope: e.bereich });
     const d = r.daten;
@@ -313,7 +326,7 @@ export class PostfachOAuth {
     if (g.bis < this.jetzt) { this.geraete.delete(id); throw new Fachfehler(410, 'Der Gerätecode ist abgelaufen. Bitte neu anfordern.'); }
     if (g.naechste > this.jetzt) return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
     g.naechste = this.jetzt + g.intervall * 1000;
-    const { app, e } = await this.app(g.anbieter);
+    const { app, e } = await this.app(g.anbieter, zweckVon(id));
     const r = await this.abruf(e.token, { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: g.deviceCode, client_id: app.clientId });
     const fehler = String(r.daten.error ?? '');
     if (!r.ok && fehler === 'authorization_pending') return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
@@ -367,7 +380,7 @@ export class PostfachOAuth {
     }
     const a = t.aktualisierung ? this.d.entschluessele(t.aktualisierung) : null;
     if (!a) return this.abgelaufen(p, t, g, versuch, t.aktualisierung ? 'Das Aktualisierungstoken ist mit dem aktuellen Schlüssel nicht lesbar.' : 'Der Anbieter hat kein Aktualisierungstoken geliefert (offline_access fehlt?).');
-    const { app, e, secret } = await this.app(p.anbieter);
+    const { app, e, secret } = await this.app(p.anbieter, zweckVon(p.id));
     const r = await this.abruf(e.token, {
       grant_type: 'refresh_token', refresh_token: a, client_id: app.clientId, scope: e.bereich,
       ...(secret && !t.oeffentlich ? { client_secret: secret } : {}),
@@ -395,7 +408,8 @@ export class PostfachOAuth {
     const w = await this.schreibeWennGleich(p.id, g, t, { ...t, zustand: 'abgelaufen', fehler: grund, gemeldet: true });
     if (!w.ok) return this.geaendert(p, w.jetzt, versuch);
     log.warn('Postfach: OAuth-Anmeldung abgelaufen oder entzogen', { postfach: p.name, grund });
-    if (melden) {
+    // Versand (#813): Die Mail ginge über genau diese Anmeldung – dafür warnt die Werkbank.
+    if (melden && zweckVon(p.id) === 'abruf') {
       await this.d.anAdmins?.(`Ablago: Postfach „${p.name}“ – Anmeldung abgelaufen`,
         `Die Anmeldung (OAuth 2.0) des Postfachs „${p.name}“ (${p.benutzer}) ist abgelaufen oder wurde beim Anbieter entzogen:\n\n${grund}\n\nBis zur neuen Anmeldung holt Ablago keine Mails aus diesem Postfach ab. Bitte unter Werkbank → Postfächer → „${p.name}“ neu anmelden.`).catch(() => {});
     }

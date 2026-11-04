@@ -279,6 +279,13 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('button', { name: 'Überspringen' }).click();
   await s.getByRole('heading', { name: 'Optionales' }).waitFor();
   await bild(s, 'einrichtung-optional', { fullPage: true });
+  // E-Mail-Versand im Assistenten (#813): Adresse vorbelegt; beim Verlassen des Felds sucht Ablago den Server.
+  await s.locator('#mail-adresse').focus();
+  await s.locator('#mail-passwort').focus();
+  await s.locator('#mail .mail-vorschlag').waitFor({ timeout: 20_000 });
+  await s.getByText('Suche den Server …').waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {});
+  await s.locator('#mail').evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  await bild(s, 'einrichtung-mail');
   await s.getByRole('button', { name: 'Überspringen' }).click();
   await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor();
   await bild(s, 'einrichtung-fertig');
@@ -997,6 +1004,9 @@ async function main() {
   await geheZu(s, '/werkbank/betrieb');
   await s.getByRole('heading', { name: 'E-Mail-Versand' }).waitFor();
   await bild(s, 'werkbank-betrieb');
+  // E-Mail-Versand (#813): Vorschläge, Verbindung prüfen, Erweitert.
+  await s.locator('#mail').evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  await bild(s, 'werkbank-mail');
   await geheZu(s, '/werkbank/verschluesselung');
   await s.getByRole('heading', { name: /^Schlüssel\b/ }).first().waitFor();
   await bild(s, 'werkbank-verschluesselung');

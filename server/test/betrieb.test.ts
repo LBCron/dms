@@ -136,7 +136,9 @@ describe('E-Mail-Versand (#37)', () => {
     assert.equal((await b.pruefeVerbindung({ ...ohneAnmeldung(portPw), benutzer: 'dms' })).ok, true, 'Prüfen nimmt das gespeicherte Passwort');
     const falsch = await b.pruefeVerbindung({ ...ohneAnmeldung(portPw), benutzer: 'dms', passwort: 'falsch' });
     assert.equal(falsch.ok, false);
-    assert.match(falsch.meldung, /Anmeldung abgelehnt/);
+    // #813: verständliche Ursache, die Antwort des Servers getrennt.
+    assert.match(falsch.meldung, /^Passwort falsch oder App-Passwort nötig/);
+    assert.match(falsch.technisch ?? '', /535/);
     await b.speichereMail({ ...ohneAnmeldung(portPw), benutzer: 'dms', passwortLoeschen: true });
     assert.equal(b.ansicht().mail.passwortGesetzt, false);
   });

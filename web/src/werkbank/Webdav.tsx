@@ -61,7 +61,7 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
           </select>
           <small className="leise">{t('werkbank.webdav.stempel.hinweis')}</small></label>
         <label className="haken"><input id="webdav-nur-lesend" type="checkbox" checked={e.nurLesend} onChange={(x) => setE({ ...e, nurLesend: x.target.checked })} />
-          <span>{t('werkbank.webdav.nur-lesend')} <small className="leise">– {t('werkbank.webdav.nur-lesend.hinweis')}</small> <Hilfe ort="webdav.nurLesend" /></span></label>
+          <span><span className="haken-titel">{t('werkbank.webdav.nur-lesend')}&nbsp;<Hilfe ort="webdav.nurLesend" /></span><small className="leise">{t('werkbank.webdav.nur-lesend.hinweis')}</small></span></label>
         <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={sendet} />
       </form>
       <div className="blatt">

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { api, type BetriebAnsicht, type MailEingabe, type Probe, type Verbindung } from '../api';
-import { useKonto } from '../konto';
-import { Link } from '../ort';
+import { api, type BetriebAnsicht } from '../api';
+import { MailVersand } from './MailVersand';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
 
@@ -31,7 +30,8 @@ export function BetriebPanel({ b }: { b: BetriebZustand }) {
         <p className="leise">Wie Ablago E-Mails verschickt und unter welcher Adresse es erreichbar ist. Änderungen gelten sofort, ohne Neustart. <Hilfe ort="werkbank.betrieb" /></p>
       </div>
       <Adresse b={b} />
-      <Mail key={JSON.stringify(b.stand.mail)} b={b} />
+      {/* #813: Adresse und Passwort genügen; Vorschläge, Server finden, Erweitert, OAuth. */}
+      <MailVersand key={JSON.stringify(b.stand.mail)} b={b} />
     </div>
   );
 }
@@ -43,7 +43,7 @@ function Adresse({ b }: { b: BetriebZustand }) {
   const ent = useEntwurf(s.adresse, adresse.trim(), { zuruecksetzen: () => { setAdresse(s.adresse); setMeldung(undefined); } });
   async function speichern(ev?: FormEvent, wert = adresse) {
     ev?.preventDefault();
-    try { const n = await api.adresseSpeichern(wert); b.setStand(n); setAdresse(n.adresse); setMeldung({ art: 'gut', text: n.adresse ? 'Gespeichert.' : 'Keine Adresse gepflegt – Links nutzen die Adresse der Anfrage.' }); }
+    try { const n = await api.adresseSpeichern(wert); b.setStand({ ...b.stand!, ...n }); setAdresse(n.adresse); setMeldung({ art: 'gut', text: n.adresse ? 'Gespeichert.' : 'Keine Adresse gepflegt – Links nutzen die Adresse der Anfrage.' }); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   return (
@@ -62,80 +62,6 @@ function Adresse({ b }: { b: BetriebZustand }) {
       )}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <Speicherleiste ent={ent} gegenstand="Adresse" />
-    </form>
-  );
-}
-
-function Mail({ b }: { b: BetriebZustand }) {
-  const { ich, aktualisieren } = useKonto();
-  const s = b.stand!;
-  const start = (): MailEingabe & { passwort: string } => ({
-    aktiv: s.mail.aktiv, host: s.mail.host, port: s.mail.port, verbindung: s.mail.verbindung,
-    benutzer: s.mail.benutzer, absender: s.mail.absender, selbstsigniert: s.mail.selbstsigniert, passwort: '',
-  });
-  const [m, setM] = useState(start);
-  const [loeschen, setLoeschen] = useState(false);
-  const [an, setAn] = useState(ich.email);
-  const [laeuft, setLaeuft] = useState<string | null>(null);
-  const [probe, setProbe] = useState<Probe & { was: string }>();
-  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
-  const ent = useEntwurf({ ...start(), loeschen: false }, { ...m, loeschen }, { zuruecksetzen: () => { setM(start()); setLoeschen(false); setMeldung(undefined); } });
-  const setze = (p: Partial<typeof m>) => { setM((x) => ({ ...x, ...p })); setMeldung(undefined); };
-  const eingabe = (): MailEingabe => ({ ...m, passwortLoeschen: loeschen || undefined });
-
-  async function speichern(ev: FormEvent) {
-    ev.preventDefault();
-    setLaeuft('speichern');
-    try { b.setStand(await api.mailSpeichern(eingabe())); setM((x) => ({ ...x, passwort: '' })); setLoeschen(false); await aktualisieren(); setMeldung({ art: 'gut', text: 'Gespeichert – gilt ab sofort.' }); }
-    catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
-    finally { setLaeuft(null); }
-  }
-  async function teste(was: 'pruefen' | 'testmail') {
-    setLaeuft(was); setProbe(undefined);
-    try { setProbe({ ...(was === 'pruefen' ? await api.mailPruefen(eingabe()) : await api.testmail(eingabe(), an)), was }); }
-    catch (x) { setProbe({ ok: false, meldung: (x as Error).message, was }); }
-    finally { setLaeuft(null); }
-  }
-  const portFuer = (v: Verbindung) => (v === 'ssl' ? 465 : v === 'starttls' ? 587 : 25);
-
-  return (
-    <form className="blatt" id="mail" onSubmit={speichern} onKeyDown={ent.tasten} noValidate>
-      <h2 className="h3">E-Mail-Versand</h2>
-      <p className="leise">Für Einladungen, „Passwort vergessen“ und Hinweise bei geänderter E-Mail-Adresse oder geändertem Passwort. Ohne E-Mail-Versand zeigt die Benutzerverwaltung die Links zum Kopieren an.</p>
-      <label className="haken"><input type="checkbox" checked={m.aktiv} onChange={(e) => setze({ aktiv: e.target.checked })} /><span>E-Mails verschicken</span></label>
-      <div className="raster">
-        <label className="eigenschaft"><span>Server <small>z. B. smtp.example.org</small></span><input value={m.host} onChange={(e) => setze({ host: e.target.value })} autoComplete="off" spellCheck={false} /></label>
-        <label className="eigenschaft"><span>Verbindungsart</span>
-          <select value={m.verbindung} onChange={(e) => { const v = e.target.value as Verbindung; setze({ verbindung: v, port: m.port === portFuer(m.verbindung) ? portFuer(v) : m.port }); }}>
-            {(Object.entries(s.verbindungen) as Array<[Verbindung, string]>).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select></label>
-        <label className="eigenschaft"><span>Port</span><input type="number" min={1} max={65535} value={m.port} onChange={(e) => setze({ port: Number(e.target.value) })} /></label>
-        <label className="eigenschaft"><span>Benutzer <small>leer = ohne Anmeldung</small></span><input value={m.benutzer} onChange={(e) => setze({ benutzer: e.target.value })} autoComplete="off" spellCheck={false} /></label>
-        <label className="eigenschaft"><span>Passwort <small>{s.mail.passwortGesetzt && !loeschen ? 'gesetzt – leer lassen, um es zu behalten' : 'nicht gesetzt'}</small></span>
-          <input type="password" value={m.passwort} disabled={!s.passwoerterMoeglich} onChange={(e) => { setze({ passwort: e.target.value }); setLoeschen(false); }} autoComplete="new-password" placeholder={s.mail.passwortGesetzt && !loeschen ? '••••••••' : ''} /></label>
-        <label className="eigenschaft"><span>Absender <small>z. B. Ablago &lt;dms@example.org&gt;; leer = Benutzer</small></span><input value={m.absender} onChange={(e) => setze({ absender: e.target.value })} autoComplete="off" spellCheck={false} /></label>
-      </div>
-      {s.mail.passwortGesetzt && <label className="haken"><input type="checkbox" checked={loeschen} onChange={(e) => { setLoeschen(e.target.checked); if (e.target.checked) setze({ passwort: '' }); }} /><span>Gespeichertes Passwort entfernen</span></label>}
-      <label className="haken"><input type="checkbox" checked={m.selbstsigniert} onChange={(e) => setze({ selbstsigniert: e.target.checked })} />
-        <span>Selbstsigniertes Zertifikat erlauben<small className="hilfe">Nur für einen eigenen Mailserver im Heimnetz; sonst ausgeschaltet lassen.</small></span></label>
-      {!s.passwoerterMoeglich
-        ? <div className="hinweis warn"><p>Ein Passwort lässt sich erst speichern, wenn es einen Schlüssel gibt. <Link to="/werkbank/verschluesselung" className="verweis">Schlüssel unter „Verschlüsselung“ erzeugen</Link>.{s.mail.passwortUnverschluesselt ? ' Das bisher gespeicherte Passwort liegt noch unverschlüsselt in der Datenbank.' : ''}</p></div>
-        : !s.mail.passwortLesbar
-          ? <div className="hinweis schlecht"><p>Das gespeicherte Passwort wurde mit einem anderen, nicht mehr vorhandenen Schlüssel verschlüsselt und ist nicht lesbar. Bitte neu eingeben.</p></div>
-          : <p className="leise klein">Das Passwort wird verschlüsselt gespeichert. Den Schlüssel dazu hält Ablago in einer eigenen Datei, nicht in der Datenbank.</p>}
-
-      <h3 className="zwischen">Testen – mit den Werten oben, auch ungespeichert</h3>
-      <div className="raster">
-        <label className="eigenschaft"><span>Testmail an</span><input type="email" value={an} onChange={(e) => setAn(e.target.value)} /></label>
-        <div className="eigenschaft unten"><div className="knoepfe">
-          <button type="button" className="knopf" disabled={!!laeuft || !m.host} onClick={() => void teste('pruefen')}>{laeuft === 'pruefen' ? 'Prüfe …' : 'Verbindung prüfen'}</button>
-          <button type="button" className="knopf" disabled={!!laeuft || !m.host || !an} onClick={() => void teste('testmail')}>{laeuft === 'testmail' ? 'Sende …' : 'Testmail senden'}</button>
-        </div></div>
-      </div>
-      {probe && <div className={`hinweis ${probe.ok ? 'gut' : 'schlecht'}`} role="status"><p>{probe.meldung}</p></div>}
-
-      {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-      <Speicherleiste ent={ent} gegenstand="E-Mail-Einstellungen" sendet={laeuft === 'speichern'} />
     </form>
   );
 }
