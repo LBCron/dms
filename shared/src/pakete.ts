@@ -171,6 +171,8 @@ export interface InstalliertesPaket {
   links?: { readme?: string; changelog?: string; quelle?: string };
   /** Nötige DMS-Version laut Manifest (seit #458 gespeichert; fehlt bei älteren Installationen). */
   dms?: string;
+  /** Stand der Mappentypen, wie das Paket sie gebracht hat (#653), je Id – für „geändert“ mit Unterschieden. */
+  typStand?: Record<string, import('./typvergleich').TypBild>;
 }
 
 /* ---------- Versionen ---------- */

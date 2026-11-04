@@ -15,6 +15,7 @@ import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
+import { typBild, type TypBild } from '../../shared/src/typvergleich';
 import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
@@ -1283,6 +1284,21 @@ export class Paketverwaltung {
       } else if (alteEinstellungen && alt) { await this.d.setzePaketEinstellungen(m.id, null); einstellungenGeschrieben = true; }
       if (paket.wortlisten.length || alteWortlisten.length) { wortlistenGeschrieben = true; await this.d.setzePaketSynonyme(m.id, paket.wortlisten); }
       const jetzt = new Date().toISOString();
+      // Paketstand der Mappentypen (#653): neue Typen so, wie sie angelegt wurden; beim Update bleibt der alte Stand,
+      // nur was das Update hinzufügt (Felder, Register), kommt dazu – eigene Änderungen gehören nicht dazu.
+      const nachher = new Map((await this.d.listeTypen()).map((t) => [t.id, t] as const));
+      const typStand: Record<string, TypBild> = {};
+      for (const tid of Object.values(typMap)) {
+        const t = nachher.get(tid);
+        if (!t) continue;
+        const jetztBild = typBild(t);
+        const vorBild = alt?.typStand?.[tid];
+        typStand[tid] = !vorBild ? jetztBild : {
+          ...vorBild,
+          felder: [...vorBild.felder, ...jetztBild.felder.filter((f) => !vorBild.felder.some((g) => g.key === f.key) && !(vorher.get(tid)?.felder.some((g) => g.key === f.key)))],
+          register: [...vorBild.register, ...jetztBild.register.filter((r) => !vorBild.register.some((g) => g.key === r.key) && !(vorher.get(tid)?.register.some((g) => g.key === r.key)))],
+        };
+      }
       const datensatz: InstalliertesPaket = {
         id: m.id, name: m.name, version: m.version, beschreibung: m.beschreibung, lizenz: m.lizenz, autor: m.autor,
         herkunft,
@@ -1296,6 +1312,7 @@ export class Paketverwaltung {
         einstellungen: paket.einstellungen, code: m.code !== undefined,
         ...(paket.code ? { laeufer: { ...paket.code.info, modul: modulInfo(paket.code), daten: paket.code.dateien.filter((d) => d.name !== 'modul.wasm').map((d) => d.name) } } : {}),
         ...(v ? { links: { readme: v.readme, changelog: v.changelog, quelle: v.quelle } } : alt?.links ? { links: alt.links } : {}),
+        typStand,
       };
       // Code (#338): ersetzt den bisherigen; ohne Code im neuen Paket fällt er weg.
       if (paket.code || alt?.laeufer) codeGeschrieben = true;

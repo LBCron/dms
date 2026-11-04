@@ -145,6 +145,26 @@ describe('Paket selbst erstellen (#374)', () => {
     assert.equal((await q.e.stand()).typen.find((t) => t.id === q.org.id)?.geaendert, true);
   });
 
+  it('„geändert“ nur bei inhaltlicher Abweichung vom Paketstand, mit Kurzfassung und Liste (#653)', async () => {
+    const q = await quelle();
+    const org = (await q.d.listeTypen()).find((t) => t.id === q.org.id)!;
+    const bild = async () => (await q.e.stand()).typen.find((t) => t.id === q.org.id)!;
+    // Speichern ohne Änderung: nicht geändert.
+    await new Promise((x) => setTimeout(x, 5));
+    await q.d.aendereTyp(org.id, { ...org });
+    assert.equal((await bild()).geaendert, false);
+    // Feld hinzufügen, Feld umbenennen, Pflicht ändern.
+    const erstes = org.felder.find((f) => !f.system)!;
+    await q.d.aendereTyp(org.id, { ...org,
+      felder: [...org.felder.map((f) => (f.key === erstes.key ? { ...f, label: `${f.label} neu`, pflicht: !f.pflicht } : f)), { key: 'eigen', label: 'Eigenes Feld', typ: 'text' }],
+      register: org.register.map((r) => (r.key === 'stammdaten' ? { ...r, felder: [...(r.felder ?? []), 'eigen'] } : r)) });
+    const b = await bild();
+    assert.equal(b.geaendert, true);
+    assert.equal(b.unterschiede!.kurz, '+1 Feld · 1 Feld geändert · 1 Register geändert');
+    assert.ok(b.unterschiede!.liste.includes('Feld „Eigenes Feld“ hinzugefügt'), b.unterschiede!.liste.join('\n'));
+    assert.ok(b.unterschiede!.liste.some((x) => x.startsWith(`Feld „${erstes.label} neu“: umbenannt von „${erstes.label}“, Pflicht`)), b.unterschiede!.liste.join('\n'));
+  });
+
   it('Export → frisches Ablago: hochladen, installieren, Typen und Ansichten gleich; höhere Version aktualisiert', async () => {
     const q = await quelle();
     const s = q.sichten;

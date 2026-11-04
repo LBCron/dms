@@ -22,6 +22,7 @@ import { Fachfehler } from './fehler';
 import { LIZENZTEXTE } from './lizenztexte';
 import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, liesPaket, liesZip, type Handelnder } from './pakete';
 import { protokoll } from './protokoll';
+import { typBild, typUnterschiede, type TypUnterschiede } from '../../shared/src/typvergleich';
 import { zipPuffer } from './zip';
 
 const log = protokoll.modul('werkbank');
@@ -103,7 +104,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     for (const [s, tid] of Object.entries(p.typen)) typPaket.set(tid, { p, s });
     for (const [s, sid] of Object.entries(p.sichten)) sichtPaket.set(sid, { p, s });
   }
-  const geaendert = (t: Mappentyp) => { const h = typPaket.get(t.id); return !!h && t.geaendert > (h.p.aktualisiert ?? h.p.installiert); };
+  const geaendert = (t: Mappentyp) => { const h = typPaket.get(t.id); return !!h && aenderung(t, h.p).geaendert; };
   const einmal = new Set<string>();
   const hinweis = (h: string) => { if (!einmal.has(h)) { einmal.add(h); hinweise.push(h); } };
   const abhaengig = (p: InstalliertesPaket) => {
@@ -359,6 +360,16 @@ export function liesEingabe(x: unknown): PaketErstellenEingabe {
   };
 }
 
+/**
+ * Weicht ein Typ aus einem Paket von dessen Stand ab (#653)? Mit gespeichertem Paketstand inhaltlich (Speichern ohne
+ * Änderung zählt nicht), sonst – bei älteren Installationen – wie bisher nach der Zeit, ohne Einzelheiten.
+ */
+export function aenderung(t: Mappentyp, p: InstalliertesPaket): { geaendert: boolean; unterschiede: TypUnterschiede | null } {
+  const stand = p.typStand?.[t.id];
+  if (stand) { const u = typUnterschiede(stand, typBild(t)); return { geaendert: !!u, unterschiede: u }; }
+  return { geaendert: t.geaendert > (p.aktualisiert ?? p.installiert), unterschiede: null };
+}
+
 /** Paket erstellen im DMS: Stand, Prüfung, Export; gemerkt werden die Angaben (Einstellung). */
 export class Paketerstellung {
   constructor(private d: Dienst, private o: { version: () => string }) {}
@@ -386,7 +397,8 @@ export class Paketerstellung {
     return {
       typen: typen.filter((t) => !t.system && !dmsTypen.has(t.id)).map((t) => {
         const p = pakete.find((x) => Object.values(x.typen).includes(t.id));
-        return { id: t.id, name: t.name, beschreibung: t.beschreibung ?? '', paket: herkunft((x) => x.typen, t.id), geaendert: !!p && t.geaendert > (p.aktualisiert ?? p.installiert) };
+        const a = p ? aenderung(t, p) : { geaendert: false, unterschiede: null };
+        return { id: t.id, name: t.name, beschreibung: t.beschreibung ?? '', paket: herkunft((x) => x.typen, t.id), geaendert: a.geaendert, ...(a.geaendert ? { unterschiede: a.unterschiede } : {}) };
       }).sort((a, b) => a.name.localeCompare(b.name, 'de')),
       sichten: sichten.map((s) => ({ id: s.id, name: s.name, elternId: s.elternId ?? null, paket: herkunft((x) => x.sichten, s.id) })),
       entwuerfe,
