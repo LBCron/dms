@@ -1306,12 +1306,12 @@ docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms/geheim:/data/geheim<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms/sicherung:/data/sicherung<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms/postgres:/data/postgres<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>ghcr.io/motom001/dms-komplett:main
+<span class="w">  </span>ghcr.io/motom001/dms-komplett:stabil
 </code></pre></div>
 <h2 id="in-der-oberflache-eines-nas">In der Oberfläche eines NAS<a class="headerlink" href="#in-der-oberflache-eines-nas" title="Permanent link">&para;</a></h2>
 <p>Synology (Container Manager), UGREEN (Docker), QNAP (Container Station) und Unraid können einen Container direkt aus einem Image erstellen:</p>
 <ol>
-<li>Image <strong><code>ghcr.io/motom001/dms-komplett:main</code></strong> herunterladen bzw. als Container anlegen.</li>
+<li>Image <strong><code>ghcr.io/motom001/dms-komplett:stabil</code></strong> herunterladen bzw. als Container anlegen.</li>
 <li><strong>Port:</strong> lokal <code>8080</code> → Container <code>3000</code>.</li>
 <li><strong>Ordner:</strong> vier Ordner auf dem NAS anlegen und zuordnen – <code>files</code> → <code>/data/files</code>, <code>geheim</code> → <code>/data/geheim</code>, <code>sicherung</code> → <code>/data/sicherung</code>, <code>postgres</code> → <code>/data/postgres</code>. Optional für den Scanner einen fünften: <code>eingang</code> → <code>/eingang</code> (<a href="https://help.ablago.app/admin/aktuell/eingangsordner/">Eingangsordner</a>).</li>
 <li><strong>Neustart-Richtlinie:</strong> „immer“ bzw. „unless-stopped“.</li>

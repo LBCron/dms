@@ -2720,7 +2720,7 @@
 <tbody>
 <tr>
 <td>Image</td>
-<td><code>ghcr.io/motom001/dms-komplett:main</code> (Ablago und Datenbank in einem Container)</td>
+<td><code>ghcr.io/motom001/dms-komplett:stabil</code> (Ablago und Datenbank in einem Container)</td>
 </tr>
 <tr>
 <td>Name</td>
@@ -2771,13 +2771,13 @@
 </details>
 <h3 id="mit-einem-befehl-in-der-konsole">Mit einem Befehl in der Konsole<a class="headerlink" href="#mit-einem-befehl-in-der-konsole" title="Permanent link">&para;</a></h3>
 <p>Dasselbe in einer Zeile – <code>--rm</code> löscht den Container, sobald du den Test auf der Seite beendest:</p>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>dms-lasttest<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span>-e<span class="w"> </span><span class="nv">DMS_LASTTEST</span><span class="o">=</span>klein<span class="w"> </span>ghcr.io/motom001/dms-komplett:main
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>dms-lasttest<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span>-e<span class="w"> </span><span class="nv">DMS_LASTTEST</span><span class="o">=</span>klein<span class="w"> </span>ghcr.io/motom001/dms-komplett:stabil
 </code></pre></div>
-<p>Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit <code>docker image rm ghcr.io/motom001/dms-komplett:main</code>.</p>
+<p>Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit <code>docker image rm ghcr.io/motom001/dms-komplett:stabil</code>.</p>
 <h3 id="einen-bestimmten-datentrager-messen">Einen bestimmten Datenträger messen<a class="headerlink" href="#einen-bestimmten-datentrager-messen" title="Permanent link">&para;</a></h3>
 <p>Ohne Ordner liegt alles dort, wo Docker seine Container ablegt – auf vielen NAS die System-SSD oder das erste Speicher-Volume. Willst du gezielt einen anderen Datenträger messen (z. B. die Festplatten statt der System-SSD), verbinde <strong>einen leeren Ordner</strong> auf diesem Datenträger mit <code>/data</code> im Container – das ist der einzige Grund für einen Ordner:</p>
 <div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--rm<span class="w"> </span>--name<span class="w"> </span>dms-lasttest<span class="w"> </span>-p<span class="w"> </span><span class="m">8099</span>:3000<span class="w"> </span>-e<span class="w"> </span><span class="nv">DMS_LASTTEST</span><span class="o">=</span>klein<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-v<span class="w"> </span>/volume1/dms-lasttest:/data<span class="w"> </span>ghcr.io/motom001/dms-komplett:main
+<span class="w">  </span>-v<span class="w"> </span>/volume1/dms-lasttest:/data<span class="w"> </span>ghcr.io/motom001/dms-komplett:stabil
 </code></pre></div>
 <p>Der Test erkennt dann die Speicherart dieses Datenträgers, und das Ergebnis liegt zusätzlich als Datei in diesem Ordner unter <code>ergebnis/</code>. Lösche den Ordner nach dem Test.</p>
 <h3 id="wo-das-ergebnis-sonst-noch-steht">Wo das Ergebnis sonst noch steht<a class="headerlink" href="#wo-das-ergebnis-sonst-noch-steht" title="Permanent link">&para;</a></h3>
@@ -2792,7 +2792,7 @@
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/geheim:/data/geheim<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/sicherung:/data/sicherung<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span>/pfad/zu/dms-test/postgres:/data/postgres<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>ghcr.io/motom001/dms-komplett:main
+<span class="w">  </span>ghcr.io/motom001/dms-komplett:stabil
 </code></pre></div>
 <p>Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. <code>dms-test</code>, mit anderen Ordnern und anderem Port – dort geht auch der Weg im Browser mit <code>DMS_LASTTEST</code>. Nicht einrichten – das macht der Lasttest.</p>
 </li>

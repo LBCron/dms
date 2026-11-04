@@ -2785,10 +2785,10 @@
 </tbody>
 </table>
 <h2 id="versionen-und-aktualisierung">Versionen und Aktualisierung<a class="headerlink" href="#versionen-und-aktualisierung" title="Permanent link">&para;</a></h2>
-<p>Das Image enthält Node.js, Alpine Linux und alle Bibliotheken; aktualisiert wird durch Neuziehen von <code>ghcr.io/motom001/dms:main</code> und Neustart.</p>
+<p>Das Image enthält Node.js, Alpine Linux und alle Bibliotheken; aktualisiert wird durch Neuziehen von <code>ghcr.io/motom001/dms:stabil</code> und Neustart (siehe <a href="../aktualisieren/#image-tag">Welches Image-Tag?</a>).</p>
 <ul>
 <li><strong>Zwei Container (empfohlen):</strong> PostgreSQL ist ein eigenes Image (<code>postgres:17</code>): kleinere Versionen (17.x) durch Neuziehen, unabhängig von Ablago.</li>
-<li><strong>dms-komplett:</strong> PostgreSQL (Alpine-Paket) steckt im Image <code>ghcr.io/motom001/dms-komplett</code> und kommt mit dessen Updates. Beide Images werden jede Woche neu gebaut, mit den aktuellen Alpine-Paketen (Tag <code>main</code>); feste Versionsnummern ändern sich dabei nicht.</li>
+<li><strong>dms-komplett:</strong> PostgreSQL (Alpine-Paket) steckt im Image <code>ghcr.io/motom001/dms-komplett</code> und kommt mit dessen Updates. Beide Images werden jede Woche neu gebaut, mit den aktuellen Alpine-Paketen (Tag <code>main</code>); <code>:stabil</code> und feste Versionsnummern bekommen neue Alpine-Pakete mit dem nächsten Release.</li>
 <li>Ein Wechsel der Hauptversion (z. B. 17 → 18) braucht in beiden Fällen eine Sicherung und Wiederherstellung, siehe <a href="../wachsen/#neue-hauptversion-von-postgresql">Wachsen und umziehen</a>.</li>
 </ul>
 <p>Der Versionsabgleich in der Werkbank fragt nur auf Knopfdruck: GitHub für den Stand von Ablago, <a href="https://endoflife.date">endoflife.date</a> für Node.js, PostgreSQL und Alpine, die npm-Registry für die Bibliotheken. Er trennt, was du <strong>selbst aktualisierst</strong> (Ablago-Image, bei zwei Containern PostgreSQL), von dem, was <strong>mit Ablago kommt</strong> (Node.js, Alpine, Bibliotheken – bei dms-komplett auch PostgreSQL).</p>
