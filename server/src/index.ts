@@ -18,7 +18,7 @@ import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { migriere, verbinde, verbindungenAus, Verbindungswarten } from './db';
+import { migriere, NeuereDatenbankFehler, verbinde, verbindungenAus, Verbindungswarten } from './db';
 import { Dienst } from './dienst';
 import { mitPruefung, ordnerSpeicher } from './dateispeicher';
 import { Speicherplatz, type SpeicherplatzDeps } from './speicherplatz';
@@ -155,7 +155,14 @@ const datenbankUrl = alsUrl(db);
 const verbindungsZahl = verbindungenAus(env);
 if (verbindungsZahl.fehler) log.warn(verbindungsZahl.fehler);
 const sql = verbinde(datenbankUrl, verbindungsZahl.max);
-await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m));
+try {
+  await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m));
+} catch (e) {
+  // Datenbank von einer neueren Version (#714): klar melden und nicht starten.
+  if (!(e instanceof NeuereDatenbankFehler)) throw e;
+  log.error(`Start abgebrochen: ${e.message}`, { unbekannt: e.unbekannt.join(', ') });
+  process.exit(1);
+}
 const [{ server_version: pgVersion }] = await sql`SHOW server_version`;
 protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank, verbindungen: `${verbindungsZahl.max}${verbindungsZahl.quelle === 'umgebung' ? ' (DMS_DB_VERBINDUNGEN)' : ''}` });
 const verbindungswarten = new Verbindungswarten(sql, verbindungsZahl.max, verbindungsZahl.quelle);

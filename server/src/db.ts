@@ -101,6 +101,17 @@ export async function beiVerklemmungWiederholen<T>(f: () => Promise<T>, o: { ver
   }
 }
 
+/** Die Datenbank wurde schon von einer neueren Version von Ablago migriert (Sperre gegen Downgrade, #714). */
+export class NeuereDatenbankFehler extends Error {
+  constructor(readonly unbekannt: string[]) {
+    super(
+      `Diese Datenbank stammt von einer neueren Version von Ablago (unbekannte Migration ${unbekannt[unbekannt.length - 1]}). ` +
+        'Bitte diese oder eine neuere Version verwenden – zurück auf eine ältere Version geht nur über eine Sicherung von vor dem Update.',
+    );
+    this.name = 'NeuereDatenbankFehler';
+  }
+}
+
 /**
  * Führt alle noch nicht ausgeführten SQL-Dateien aus `verzeichnis` in
  * Namensreihenfolge aus. Alles läuft in einer Transaktion: scheitert eine
@@ -117,6 +128,12 @@ export async function migriere(sql: postgres.Sql, verzeichnis: string, log: (m: 
         ausgefuehrt timestamptz NOT NULL DEFAULT now()
       )`;
     const erledigt = new Set((await tx`SELECT name FROM schema_migrationen`).map((r) => r.name as string));
+    // Sperre gegen ein Zurückgehen auf eine ältere Version (#714): Kennt dieses Programm eine
+    // schon ausgeführte Migration nicht, stammt die Datenbank von einer neueren Version. Dann
+    // nicht starten – eine ältere Version würde neue Spalten (z. B. für Rechte oder Sperren) übersehen.
+    const bekannt = new Set(dateien);
+    const unbekannt = [...erledigt].filter((n) => !bekannt.has(n)).sort();
+    if (unbekannt.length > 0) throw new NeuereDatenbankFehler(unbekannt);
     for (const datei of dateien) {
       if (erledigt.has(datei)) continue;
       await tx.unsafe(await readFile(join(verzeichnis, datei), 'utf8'));
