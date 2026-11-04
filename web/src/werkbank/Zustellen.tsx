@@ -51,14 +51,15 @@ export function Zustellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzS
 
 function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStand; nachher(): Promise<void> }) {
   const [an, setAn] = useState('');
-  const [senden, setSenden] = useState(s.mail);
+  // E-Mail ist freiwillig (#666): ohne Haken genügt der Link, die Adresse dient nur dem Nachweis.
+  const [senden, setSenden] = useState(false);
   const [tage, setTage] = useState(LINK_TAGE_STANDARD);
   const [abrufe, setAbrufe] = useState(LINK_ABRUFE_STANDARD);
   const [eigen, setEigen] = useState(false);
   const [code, setCode] = useState('');
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string>();
-  const [neu, setNeu] = useState<{ url: string; code: string; gesendet: boolean } | null>(null);
+  const [neu, setNeu] = useState<{ url: string; code: string; eigen: boolean; gesendet: boolean; an: string } | null>(null);
   const [kopiert, setKopiert] = useState<string>();
   const aktiv = s.links.some((l) => l.auskunftId === a.id && linkStatus(l) === 'aktiv');
   const codeKurz = eigen && normiereCode(code).length < CODE_EIGEN_MIN;
@@ -68,7 +69,7 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
     setLaeuft(true); setFehler(undefined); setNeu(null);
     try {
       const r = await api.auskunftLink(a.id, { tage, abrufe, senden: senden && s.mail, ...(an.trim() ? { an: an.trim() } : {}), ...(eigen ? { code } : {}) });
-      setNeu({ url: r.url, code: r.code, gesendet: r.gesendet });
+      setNeu({ url: r.url, code: r.code, eigen, gesendet: r.gesendet, an: an.trim() });
       await nachher();
     } catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
   }
@@ -79,32 +80,32 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
       {!s.oeffentlich && <div className="hinweis warn"><p><strong>Ist dein Ablago aus dem Internet erreichbar?</strong> Die Adresse {s.adresse ? <code>{s.adresse}</code> : 'von Ablago'} sieht nach einem Heimnetz aus. Den Link kann die Person nur öffnen, wenn dein Ablago von außen erreichbar ist (Reverse Proxy, Tunnel oder Hosting). Sonst nimm den Weg per E-Mail. Die Adresse stellst du unter <Link to="/werkbank/betrieb" className="verweis">E-Mail und Adresse</Link> ein.</p></div>}
       {neu ? (
         <div className="hinweis gut auskunft-neu" role="status"><div className="auskunft-neu-inhalt">
-          <p>{neu.gesendet ? <>Der Link ist per E-Mail an <strong>{an}</strong> unterwegs – ohne Abrufcode.</> : 'Der Link ist erstellt. Schicke ihn der Person, z. B. per E-Mail.'}</p>
+          <p>{neu.gesendet ? <>Link per E-Mail an <strong>{neu.an}</strong> gesendet (ohne Code).</> : <>Nicht per E-Mail gesendet – kopiere den Link und schicke ihn selbst.</>}</p>
           <label className="eigenschaft"><span>Link</span>
             <span className="zeile-umbruch"><input readOnly value={neu.url} className="mono auskunft-url" onFocus={(e) => e.currentTarget.select()} />
               <button type="button" className="knopf klein" onClick={() => void kopieren('link', neu.url)}>{kopiert === 'link' ? 'Kopiert' : 'Kopieren'}</button></span></label>
-          <p className="auskunft-code-zeile"><span>Abrufcode</span> <strong className="mono auskunft-code">{zeigeCode(neu.code)}</strong>
+          <p className="auskunft-code-zeile"><span>Abrufcode</span> <strong className="mono auskunft-code">{neu.eigen ? neu.code : zeigeCode(neu.code)}</strong>
             <button type="button" className="knopf klein" onClick={() => void kopieren('code', neu.code)}>{kopiert === 'code' ? 'Kopiert' : 'Kopieren'}</button></p>
           <p><strong>Teile den Abrufcode auf einem anderen Weg mit</strong> – per Brief, Telefon oder SMS, nie in derselben E-Mail wie den Link. Er wird nur jetzt angezeigt; geht er verloren, erstelle einen neuen Link.</p>
         </div></div>
       ) : (
         <>
           <div className="raster">
-            <label className="eigenschaft"><span>E-Mail-Adresse der Person <small>{s.mail ? 'bekommt den Link (ohne Code)' : 'nur für den Nachweis; der E-Mail-Versand ist nicht eingerichtet'}</small></span>
-              <input type="email" value={an} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" /></label>
+            <label className="eigenschaft"><span>E-Mail-Adresse der Person {senden ? '' : '(optional)'} <small>{s.mail ? 'nur für den Nachweis in der Historie; mit Haken bekommt sie den Link (ohne Code)' : 'nur für den Nachweis in der Historie; der E-Mail-Versand ist nicht eingerichtet'}</small></span>
+              <input type="email" value={an} required={senden && s.mail} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" /></label>
             <label className="eigenschaft"><span>Gültig <small>Tage, höchstens {LINK_TAGE_MAX}</small></span>
               <input type="number" min={1} max={LINK_TAGE_MAX} value={tage} onChange={(e) => setTage(Number(e.target.value))} /></label>
             <label className="eigenschaft"><span>Abrufe <small>höchstens so oft herunterladen</small></span>
               <input type="number" min={1} max={LINK_ABRUFE_MAX} value={abrufe} onChange={(e) => setAbrufe(Number(e.target.value))} /></label>
           </div>
-          {s.mail && <label className="haken"><input type="checkbox" checked={senden} onChange={(e) => setSenden(e.target.checked)} /><span>Link per E-Mail an diese Adresse schicken</span></label>}
+          {s.mail && <label className="haken"><input type="checkbox" checked={senden} onChange={(e) => setSenden(e.target.checked)} /><span>Link per E-Mail schicken</span></label>}
           <fieldset className="auskunft-codewahl">
             <legend>Abrufcode</legend>
             <label className="haken"><input type="radio" name={`code-${a.id}`} checked={!eigen} onChange={() => setEigen(false)} /><span>Von Ablago erzeugen (empfohlen) – 8 Zeichen, nur jetzt sichtbar</span></label>
             <label className="haken"><input type="radio" name={`code-${a.id}`} checked={eigen} onChange={() => setEigen(true)} /><span>Eigener Code, den nur die Person kennt – z. B. die Vertragsnummer</span></label>
             {eigen && <>
               <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} className="mono" aria-label="Eigener Abrufcode" />
-              <p className="leise klein">Mindestens {CODE_EIGEN_MIN} Zeichen; Groß-/Kleinschreibung, Leerzeichen und Bindestriche zählen nicht. <strong>Eine Kundennummer allein ist schwach</strong> – sie steht oft auf Briefen und Rechnungen.</p>
+              <p className="leise klein">Mindestens {CODE_EIGEN_MIN} Zeichen. Er wird genau so angezeigt, wie du ihn eingibst. Groß-/Kleinschreibung, Leerzeichen und Bindestriche spielen beim Abruf keine Rolle – „KD-12345“ und „kd12345“ gelten als gleich. <strong>Eine Kundennummer allein ist schwach</strong> – sie steht oft auf Briefen und Rechnungen.</p>
             </>}
           </fieldset>
           <p className="leise klein">Nach {LINK_FEHLVERSUCHE_MAX} falschen Codes ist der Link gesperrt; zusätzlich greift der Anmeldeschutz je Internetanschluss.</p>
