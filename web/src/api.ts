@@ -584,10 +584,10 @@ export const api = {
   stempelVorlageAnlegen: (v: Omit<StempelVorlage, 'id'>) => anfrage<StempelVorlage[]>('POST', '/api/werkbank/stempel/vorlagen', v),
   stempelVorlageAendern: (id: string, v: Omit<StempelVorlage, 'id'>) => anfrage<StempelVorlage[]>('PUT', `/api/werkbank/stempel/vorlagen/${encodeURIComponent(id)}`, v),
   stempelVorlageLoeschen: (id: string) => anfrage<StempelVorlage[]>('DELETE', `/api/werkbank/stempel/vorlagen/${encodeURIComponent(id)}`),
-  herunterladenMitStempel: (id: string, stempel: StempelWunsch | null, name: string, version?: number, verkleinern?: KleinStufe | null) => speichereDatei(`/api/dokumente/${id}/herunterladen`, { stempel, version, verkleinern }, name),
-  emailMehrere: (e: { ids: string[]; an: string; betreff: string; nachricht: string; angaben: boolean; dokumente: 'alle' | string[]; stempel?: StempelWunsch | null; verkleinern?: KleinStufe | null }) =>
+  herunterladenMitStempel: (id: string, stempel: StempelWunsch | null, name: string, version?: number, verkleinern?: KleinStufe | null, fassung?: 'archiv' | 'original') => speichereDatei(`/api/dokumente/${id}/herunterladen`, { stempel, version, verkleinern, fassung }, name),
+  emailMehrere: (e: { ids: string[]; an: string; betreff: string; nachricht: string; angaben: boolean; dokumente: 'alle' | string[]; stempel?: StempelWunsch | null; verkleinern?: KleinStufe | null; fassung?: 'archiv' | 'original' }) =>
     anfrage<{ id: string; typId: string; mappen: number; anhaenge: number }>('POST', '/api/mappen/email', e),
-  emailSenden: (mappeId: string, e: { an: string; betreff: string; nachricht: string; dokumente: string[]; stempel?: StempelWunsch | null; verkleinern?: KleinStufe | null }) => anfrage<{ id: string; typId: string }>('POST', `/api/mappen/${mappeId}/email`, e),
+  emailSenden: (mappeId: string, e: { an: string; betreff: string; nachricht: string; dokumente: string[]; stempel?: StempelWunsch | null; verkleinern?: KleinStufe | null; fassung?: 'archiv' | 'original' }) => anfrage<{ id: string; typId: string }>('POST', `/api/mappen/${mappeId}/email`, e),
   papierkorbTage: (e: { tage?: number; historieTage?: number }) => anfrage<{ tage: number; geleert: number; historieTage: number }>('PUT', '/api/werkbank/papierkorb/einstellungen', e),
   /* Aufgaben (#54) */
   aufgabeAnlegen: (mappeId: string, empfaengerId: string, text: string) => anfrage<Aufgabe & { hinweis?: string }>('POST', `/api/mappen/${mappeId}/aufgaben`, { empfaengerId, text }),

@@ -9,6 +9,7 @@ import { Hilfe } from '../Hilfe';
 import { VerkleinertWahl } from './VerkleinertWahl';
 import type { Stufe } from '../../../shared/src/verkleinern';
 import { useKonto } from '../konto';
+import { FassungWahl, hatArchivfassung, type Fassung } from './FassungWahl';
 
 /**
  * Stempel beim Weitergeben (#394): dieselben Felder beim Herunterladen, beim Export und bei der E-Mail.
@@ -141,6 +142,9 @@ export function StempelDialog({ d, typ, mappe, version, schliessen }: { d: Dokum
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   // Verkleinert (#393): erst verkleinern, dann stempeln – nur für PDFs.
   const [klein, setKlein] = useState<Stufe | null>(null);
+  // Archivfassung oder Original (#715); ältere Versionen haben keine Archivfassung.
+  const [fassung, setFassung] = useState<Fassung>('archiv');
+  const mitArchiv = !version && hatArchivfassung(d);
   useEffect(() => { if (vorlagen && !wahl) setWahl({ ...stempelStart(vorlagen, typ?.stempel), an: true }); }, [vorlagen, wahl, typ]);
   const pflicht = typ?.stempel?.modus === 'pflicht';
   const fehler = stempelFehler(wahl);
@@ -148,7 +152,7 @@ export function StempelDialog({ d, typ, mappe, version, schliessen }: { d: Dokum
     if (!wahl) return;
     setLaeuft(true); setMeldung(undefined);
     try {
-      const r = await api.herunterladenMitStempel(d.id, alsWunsch({ ...wahl, an: true }), d.name, version, d.mime === 'application/pdf' ? klein : null);
+      const r = await api.herunterladenMitStempel(d.id, alsWunsch({ ...wahl, an: true }), d.name, version, d.mime === 'application/pdf' || (mitArchiv && fassung === 'archiv') ? klein : null, mitArchiv ? fassung : undefined);
       setMeldung({ art: 'gut', text: `„${r.name}“ gespeichert. Die Historie der Mappe vermerkt die Weitergabe.` });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setLaeuft(false); }
   }
@@ -161,7 +165,8 @@ export function StempelDialog({ d, typ, mappe, version, schliessen }: { d: Dokum
         // Kein eigenes <form>: Der Dialog steht im Formular der Mappe; Enter lädt herunter statt die Mappe zu speichern.
         <div onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') { e.preventDefault(); if (!fehler && !laeuft) void los(); } }}>
           <StempelFelder wahl={{ ...wahl, an: true }} setze={setWahl} vorlagen={vorlagen} pflicht={pflicht} mappe={mappe} id={`stempel-${d.id}`} immer />
-          {d.mime === 'application/pdf' && <VerkleinertWahl wert={klein} setze={setKlein} wie="herunterladen" id={`stempel-klein-${d.id}`} />}
+          {!version && <FassungWahl wert={fassung} setze={setFassung} dokumente={[d]} id={`stempel-fassung-${d.id}`} />}
+          {(d.mime === 'application/pdf' || (mitArchiv && fassung === 'archiv')) && <VerkleinertWahl wert={klein} setze={setKlein} wie="herunterladen" id={`stempel-klein-${d.id}`} />}
           {fehler && <p className="leise klein">{fehler}</p>}
           {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
           <div className="knoepfe">

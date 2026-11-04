@@ -320,6 +320,36 @@ describe('Archivfassung (#631): Ablauf Ende zu Ende mit dem Test-Paket', () => {
     await assert.rejects(x.d.dokumentFuerAusgabe(id, { fassung: 'kopie', ich }), /kennt nur/);
   });
 
+  it('#715: E-Mail mehrerer Mappen und ZIP-Export nehmen mit fassung „archiv“ die Archivfassung, ohne Fassung das Original', async () => {
+    const x = await aufbau();
+    const mit = await x.hoch('rechnung.pdf', await pdf({ text: TEXT }));
+    await warte(async () => (await x.offen()).length === 1);
+    await x.laeufer();
+    const ohne = await x.hoch('notiz.pdf', await pdf({ text: `${TEXT} zwei` }));
+    await warte(async () => (await x.offen()).length === 1);
+    await x.laeufer(async () => 'kein PDF/A heute');
+    assert.equal((await x.a.stand(await x.dok(mit)))?.stand, 'fertig');
+    assert.notEqual((await x.a.stand(await x.dok(ohne)))?.stand, 'fertig');
+    const ich = { id: '00000000-0000-4000-8000-000000000001', name: 'Markus', email: 'markus@example.org', rolle: 'admin' };
+    const z = await x.d.zugriff({ id: ich.id, rolle: 'admin' });
+    const mails: Array<{ anhaenge: Array<{ name: string; mime: string }> }> = [];
+    const mailer = { async sende(_an: string, _b: string, _t: string, o?: { anhaenge?: Array<{ name: string; mime: string }> }) { mails.push({ anhaenge: o?.anhaenge ?? [] }); } };
+    await x.d.versendeMappen({ ids: [x.m.id], an: 'steuer@example.org', betreff: 'Belege', angaben: false, dokumente: 'alle', fassung: 'archiv' }, ich, z, mailer as never);
+    assert.deepEqual(mails[0].anhaenge.map((y) => y.name).sort(), ['notiz.pdf', 'rechnung (PDF-A).pdf']);
+    await x.d.versendeMappen({ ids: [x.m.id], an: 'steuer@example.org', betreff: 'Belege', angaben: false, dokumente: 'alle' }, ich, z, mailer as never);
+    assert.deepEqual(mails[1].anhaenge.map((y) => y.name).sort(), ['notiz.pdf', 'rechnung.pdf'], 'ohne Angabe: Original');
+    await assert.rejects(x.d.versendeMappen({ ids: [x.m.id], an: 'a@example.org', betreff: 'x', fassung: 'kopie' }, ich, z, mailer as never), /kennt nur/);
+    const zip = async (fassung?: string) => {
+      const r = await x.d.exportiere(ich, { format: 'zip', ids: [x.m.id], ...(fassung ? { fassung } : {}) }, z);
+      const teile: Buffer[] = []; for await (const c of r.inhalt as AsyncIterable<Buffer>) teile.push(Buffer.from(c));
+      const b = Buffer.concat(teile); assert.equal(b.length, r.groesse); return b.toString('latin1');
+    };
+    const a = await zip('archiv');
+    assert.ok(a.includes('rechnung (PDF-A).pdf') && a.includes('notiz.pdf') && !a.includes('/rechnung.pdf'));
+    const o = await zip();
+    assert.ok(o.includes('/rechnung.pdf') && !o.includes('(PDF-A)'));
+  });
+
   it('verschlüsselt: keine Archivfassung, Grund am Dokument; neue Version: die alte Archivfassung gilt nicht mehr, neues Ereignis; neu erzeugen; Löschen nimmt sie mit', async (t) => {
     const x = await aufbau();
     const id = await x.hoch('vertrag.pdf', await pdf({ text: TEXT }));

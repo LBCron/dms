@@ -102,5 +102,12 @@
   "werkbank.archiv.zaehler": "{fertig} fertig · {wartet} warten · {ausgelassen} ausgelassen · {fehler} mit Fehler",
   "werkbank.archiv.dokument": "Dokument",
   "werkbank.archiv.grund": "Grund",
-  "werkbank.archiv.keine": "Keine Dokumente mit Fehler oder ausgelassen."
+  "werkbank.archiv.keine": "Keine Dokumente mit Fehler oder ausgelassen.",
+  "archiv.wahl.legende": "Welche Fassung geht hinaus?",
+  "archiv.wahl.archiv": "Archivfassung (PDF/A), wo vorhanden",
+  "archiv.wahl.original": "Original",
+  "archiv.wahl.teil": "{zahl} von {gesamt} Dokumenten haben eine Archivfassung – die übrigen gehen als Original.",
+  "archiv.wahl.alle": "Alle Dokumente haben eine Archivfassung.",
+  "archiv.wahl.unbekannt": "Dokumente ohne Archivfassung (und E-Rechnungen) gehen als Original.",
+  "archiv.wahl.keine": "Keines dieser Dokumente hat eine Archivfassung – es geht das Original hinaus."
 }
