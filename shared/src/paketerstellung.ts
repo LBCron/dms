@@ -41,7 +41,8 @@ export interface PaketEntwurf extends PaketErstellenEingabe {
 
 /** Was es zur Auswahl gibt. */
 export interface ErstellenStand {
-  typen: Array<{ id: string; name: string; beschreibung: string; paket: { id: string; name: string; version: string } | null; geaendert: boolean }>;
+  /** geaendert (#653): inhaltlich anders als der Paketstand; unterschiede: Kurzfassung und Liste (null = Paketstand unbekannt, vor 0.179.0 installiert). */
+  typen: Array<{ id: string; name: string; beschreibung: string; paket: { id: string; name: string; version: string } | null; geaendert: boolean; unterschiede?: import('./typvergleich').TypUnterschiede | null }>;
   sichten: Array<{ id: string; name: string; elternId: string | null; paket: { id: string; name: string; version: string } | null }>;
   /** Gruppen gleichbedeutender Wörter (#661): eigene zum Ankreuzen, aus Paketen nur zur Anzeige. */
   wortlisten: Array<{ id: string; woerter: string[]; paket: { id: string; name: string } | null }>;

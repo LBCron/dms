@@ -196,7 +196,9 @@ function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
         <ul className="stapel">
           {stand.typen.filter((t) => passt(t.name)).map((t) => (
             <li key={t.id}><label className="haken"><input type="checkbox" checked={e.typen.includes(t.id)} onChange={(x) => umschalten('typen', t.id, x.target.checked)} />
-              <span>{t.name}{t.paket && <> <span className="chip" title="Kommt beim Export als Abhängigkeit mit, nicht als Kopie">aus {t.paket.name} {t.paket.version}</span></>}{t.geaendert && <> <span className="chip warn" title="Nach der Installation des Pakets geändert">geändert</span></>}
+              <span>{t.name}{t.paket && <> <span className="chip" title="Kommt beim Export als Abhängigkeit mit, nicht als Kopie">aus {t.paket.name} {t.paket.version}</span></>}{t.geaendert && (t.unterschiede
+                ? <details className="unterschiede"><summary><span className="chip warn">geändert: {t.unterschiede.kurz}</span></summary><ul className="klein">{t.unterschiede.liste.map((x) => <li key={x}>{x}</li>)}</ul></details>
+                : <> <span className="chip warn" title="Nach der Installation des Pakets geändert – Einzelheiten kennt Ablago erst nach dem nächsten Update des Pakets">geändert</span></>)}
                 {t.beschreibung && <small className="leise">{t.beschreibung}</small>}</span></label></li>
           ))}
           {!stand.typen.length && <li className="leise">Keine Mappentypen.</li>}
