@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Symbol } from '../Symbol';
-import { ergaenzungenVon, hatSchnittstelle, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
+import { ergaenzungenVon, hatSchnittstelle, legtEtwasAn, herkunftText, KATALOG_LINK_REL, katalogSeiteMitVersion, sammelSeiteMitVersion, laeuferZustandText, vergleicheVersion, type HerkunftPruefung, type InstalliertesPaket, type Katalog, type KatalogPaket } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketlaeuferStand, type PaketQuelle, type PaketVorschau, type Sammeldatei } from '../api';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
@@ -683,9 +683,11 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       {v.einstellungen && (v.einstellungen.neu.length > 0 || v.einstellungen.weg.length > 0) && (
         <div className="hinweis info"><p>Einstellungen:{v.update && v.einstellungen.neu.length > 0 && <> neu (mit Vorgabe) {v.einstellungen.neu.join(', ')}.</>}{!v.update && <> das Paket hat Einstellungen; Vorgaben werden gesetzt, Pflichtfelder füllst du danach im Bereich „Einstellungen“.</>}{v.einstellungen.weg.length > 0 && <> <strong>Fallen weg:</strong> {v.einstellungen.weg.join(', ')} – ihre Werte werden entfernt.</>}</p></div>
       )}
+      {/* Nur, wenn wirklich etwas angelegt wird (#643); Namenskonflikte stehen direkt am betroffenen Namen. */}
       {v.update
-        ? <p className="leise">Ein Update ergänzt nur. Es löscht nichts und überschreibt nichts, was du selbst geändert hast.</p>
-        : <p className="leise">Das wird angelegt. Gibt es einen Namen schon, wähle einen anderen.</p>}
+        ? <p className="leise">{tx('pakete.vorschau.update')}</p>
+        : legtEtwasAn(v) ? <p className="leise">{tx('pakete.vorschau.anlegen')}</p>
+        : v.paket.beschreibung ? <p>{v.paket.beschreibung}</p> : null}
       {v.typen.length > 0 && <h3>Mappentypen</h3>}
       <ul className="stapel">
         {v.typen.map((t) => (
