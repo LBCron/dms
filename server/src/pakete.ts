@@ -1683,9 +1683,9 @@ export class Paketverwaltung {
       // Der Läufer bekommt die erlaubten Adressen neu (Netz nur zur bestätigten Adresse).
       if (adressfelder(b).some((x) => geaendert.includes(x.schluessel))) await this.o.laeufer?.codeGeaendert?.();
       try { this.o.laeufer?.ereignis?.(id, 'paket.einstellungen_geaendert', geaendert); } catch { /* das Paket entscheidet selbst */ }
-      // Archivfassung (#631): „nur Scans und Bilder“ aus – jetzt bekommen auch PDFs mit Textebene eine.
-      const nur = p.laeufer?.archivfassung?.nur_scans;
-      if (nur && geaendert.includes(nur) && r.werte[nur] !== true) void this.d.archivPaketDa(p.laeufer!.archivfassung!.typen).catch(() => 0);
+      // Archivfassung (#660): eine Art nachträglich angekreuzt – die passenden Dokumente werden nachgeholt.
+      const auswahl = Object.values(p.laeufer?.archivfassung?.auswahl ?? {});
+      if (auswahl.some((k) => geaendert.includes(k) && r.werte[k] === true)) void this.d.archivPaketDa(p.laeufer!.archivfassung!.typen).catch(() => 0);
     }
     return this.einstellungen(id);
   }

@@ -1157,7 +1157,7 @@ export class Dienst {
     } catch (e) { protokoll.modul('archivfassung').warn('Dokument nicht zur Archivfassung gemeldet', { dokument: id, fehler: (e as Error).message }); }
   }
 
-  /** Paket für die Archivfassung installiert, neue Dateitypen oder „nur Scans“ aus: Bestand melden (#631). */
+  /** Paket für die Archivfassung installiert, neue Dateitypen oder eine Art nachträglich angekreuzt: Bestand melden (#631, #660). */
   async archivPaketDa(typen: string[]): Promise<number> {
     if (!this.archiv || !typen.length) return 0;
     const klein = new Set(typen.map((m) => m.toLowerCase()));

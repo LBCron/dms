@@ -438,6 +438,11 @@ export const hatNetz = (c: PaketCode | undefined) => !!c && (c.netz.length > 0 |
 /** Alle Mappentypen (außer Benutzer) – für Pakete wie die Texterkennung, die an jedes Dokument müssen. */
 export const ALLE_TYPEN = '*';
 
+/** Arten von Dokumenten für die Archivfassung (#660): je ein Schlüssel einer Ja/Nein-Einstellung des Pakets. */
+export const ARCHIV_ARTEN = ['pdf_text', 'pdf_scan', 'bilder'] as const;
+export type ArchivArt = (typeof ARCHIV_ARTEN)[number];
+export type ArchivAuswahl = Partial<Record<ArchivArt, string>>;
+
 export interface PaketCode {
   sprache: string;
   ereignisse: EreignisArt[];
@@ -462,10 +467,10 @@ export interface PaketCode {
   volltext?: string[];
   /**
    * Archivfassung (#631, `code.archivfassung`, nur mit `dms:archivfassung`): Dateitypen, zu denen das Paket ein PDF/A
-   * ablegt (PDF, JPEG und PNG erlaubt), und optional der Schlüssel einer Ja/Nein-Einstellung des Pakets „nur Scans und
-   * Bilder“: an = PDFs mit vollständiger Textebene bekommen keine Archivfassung (Vorgabe: alle PDFs).
+   * ablegt (PDF, JPEG und PNG erlaubt), und optional je Art (#660: `pdf_text`, `pdf_scan`, `bilder`) der Schlüssel einer
+   * Ja/Nein-Einstellung des Pakets: an = diese Dokumente bekommen eine Archivfassung (fehlt der Schlüssel: immer).
    */
-  archivfassung?: { typen: string[]; nur_scans?: string };
+  archivfassung?: { typen: string[]; auswahl?: ArchivAuswahl };
   /**
    * Mappentypen, zu denen das Paket Mappen-Ereignisse bekommt (#670, `code.mappentypen`): Schlüssel aus dem eigenen
    * `inhalt`, Verweise auf fremde Typen wie in `code.rechte` (#686, `paket:typ`, `dms:post`) oder `*` (alle, die das
@@ -580,22 +585,30 @@ export function liesCode(c: unknown, dateien: Array<{ name: string; groesse: num
   let archivfassung: PaketCode['archivfassung'];
   if (x.archivfassung !== undefined) {
     const a = x.archivfassung as Record<string, unknown>;
-    if (!a || typeof a !== 'object' || Array.isArray(a)) fehler.push('code.archivfassung: ein Objekt mit typen (Dateitypen) und optional nur_scans erwartet.');
+    if (!a || typeof a !== 'object' || Array.isArray(a)) fehler.push('code.archivfassung: ein Objekt mit typen (Dateitypen) und optional auswahl erwartet.');
     else {
       const typen = liste(a.typen, 'code.archivfassung.typen').map((m) => m.toLowerCase());
       for (const m of typen) if (!MIME.test(m)) fehler.push(`code.archivfassung.typen: „${m}“ ist kein Dateityp (z. B. image/jpeg).`);
       if (!typen.length) fehler.push('code.archivfassung.typen: mindestens ein Dateityp, z. B. [application/pdf, image/jpeg, image/png].');
       if (typen.length > ARCHIV_TYPEN_MAX) fehler.push(`code.archivfassung.typen: höchstens ${ARCHIV_TYPEN_MAX} Dateitypen.`);
-      for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'nur_scans') fehler.push(`code.archivfassung: „${k}“ gibt es nicht (nur typen und nur_scans).`);
-      let nurScans: string | undefined;
-      if (a.nur_scans !== undefined) {
-        // Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = nur Scans und Bilder, keine PDFs mit Text.
+      for (const k of Object.keys(a)) if (k !== 'typen' && k !== 'auswahl') fehler.push(`code.archivfassung: „${k}“ gibt es nicht (nur typen und auswahl).`);
+      const auswahl: ArchivAuswahl = {};
+      if (a.auswahl !== undefined) {
+        // Je Art (PDFs mit Text, gescannte PDFs, Bilder) der Schlüssel einer Ja/Nein-Einstellung (Abschnitt, keine Liste): an = bekommt eine Archivfassung.
+        const w = a.auswahl as Record<string, unknown>;
         const felder = (Array.isArray(x.einstellungen) ? x.einstellungen : []).flatMap((b) => (b && typeof b === 'object' && !Array.isArray(b) && Array.isArray((b as Record<string, unknown>).felder) && (b as Record<string, unknown>).liste === undefined ? (b as Record<string, unknown>).felder as unknown[] : []));
-        const f = felder.find((y): y is Record<string, unknown> => !!y && typeof y === 'object' && (y as Record<string, unknown>).schluessel === a.nur_scans);
-        if (typeof a.nur_scans !== 'string' || !f || f.typ !== 'janein') fehler.push('code.archivfassung.nur_scans: der Schlüssel einer Einstellung vom Typ janein (Abschnitt, keine Liste) – an: nur Scans und Bilder, keine PDFs mit Text.');
-        else nurScans = a.nur_scans;
+        if (!w || typeof w !== 'object' || Array.isArray(w)) fehler.push('code.archivfassung.auswahl: ein Objekt mit pdf_text, pdf_scan und/oder bilder erwartet.');
+        else {
+          for (const k of Object.keys(w)) if (!(ARCHIV_ARTEN as readonly string[]).includes(k)) fehler.push(`code.archivfassung.auswahl: „${k}“ gibt es nicht (nur ${ARCHIV_ARTEN.join(', ')}).`);
+          for (const art of ARCHIV_ARTEN) {
+            if (w[art] === undefined) continue;
+            const f = felder.find((y): y is Record<string, unknown> => !!y && typeof y === 'object' && (y as Record<string, unknown>).schluessel === w[art]);
+            if (typeof w[art] !== 'string' || !f || f.typ !== 'janein') fehler.push(`code.archivfassung.auswahl.${art}: der Schlüssel einer Einstellung vom Typ janein (Abschnitt, keine Liste) – an: diese Dokumente bekommen eine Archivfassung.`);
+            else auswahl[art] = w[art] as string;
+          }
+        }
       }
-      archivfassung = { typen: [...new Set(typen)], ...(nurScans ? { nur_scans: nurScans } : {}) };
+      archivfassung = { typen: [...new Set(typen)], ...(Object.keys(auswahl).length ? { auswahl } : {}) };
     }
   }
   if (willArchiv && !archivfassung?.typen.length) fehler.push('code.rechte.schnittstellen: dms:archivfassung braucht code.archivfassung.typen – die Dateitypen, zu denen das Paket ein PDF/A ablegt.');

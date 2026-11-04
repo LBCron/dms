@@ -5,8 +5,8 @@
  *
  * - **Zeitpunkt:** Der Kern meldet ein Dokument mit `datei.archivfassung` erst, wenn sein **Volltext feststeht** (Stand
  *   *fertig*) – beim Hochladen, bei einer neuen Version, bei „Volltext neu erzeugen“ bzw. neuem Text eines Pakets
- *   (`neu`) und nach der Installation des Pakets für den Bestand. Alle PDFs (Ergänzung Thomas, 03.11.2026) – außer
- *   die Einstellung „nur Scans und Bilder“ (`code.archivfassung.nur_scans`) ist an. Ist das Original schon gültiges
+ *   (`neu`) und nach der Installation des Pakets für den Bestand. Welche Dokumente, kreuzt der Administrator an
+ *   (#660, `code.archivfassung.auswahl`: PDFs mit Text, gescannte PDFs, Bilder – ohne Angabe alle). Ist das Original schon gültiges
  *   PDF/A, gilt es selbst als Archivfassung (keine zweite Datei); verschlüsselte PDFs bekommen keine (Grund am Dokument).
  * - **Nie nachladen:** Die Archivfassung enthält nur, was in der Datei steckt – kein JavaScript, keine Aktionen, keine
  *   Verweise auf externe Inhalte (sonst abgelehnt). Hatte das Original welche, steht ein Hinweis am Dokument; die
@@ -32,7 +32,7 @@ import {
 } from '../../shared/src/archivfassung';
 import { dateitypName, kernTyp, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dokument } from '../../shared/src/model';
-import { hatSchnittstelle, type InstalliertesPaket } from '../../shared/src/pakete';
+import { hatSchnittstelle, type ArchivArt, type ArchivAuswahl, type InstalliertesPaket } from '../../shared/src/pakete';
 import type { SchwaerzSeite, Wort } from '../../shared/src/schwaerzen';
 import { bildGroesse, ordnerFassungen } from './dateiumwandlung';
 import { Fachfehler } from './fehler';
@@ -196,8 +196,8 @@ export function bewertePdfA(b: PdfaBefund): { seiten: number; pdfa: PdfaKennung 
 
 /* ---------- Ablauf ---------- */
 
-/** Ein Paket mit dms:archivfassung: Id, Name, Version, Dateitypen und ggf. die Einstellung „auch PDFs mit Textebene“. */
-export interface ArchivPaket { id: string; name: string; version: string; typen: string[]; nurScans?: string }
+/** Ein Paket mit dms:archivfassung: Id, Name, Version, Dateitypen und ggf. je Art die Einstellung, ob sie eine Archivfassung bekommt (#660). */
+export interface ArchivPaket { id: string; name: string; version: string; typen: string[]; auswahl?: ArchivAuswahl }
 
 export interface ArchivAnbindung {
   ablage: ArchivAblage;
@@ -232,7 +232,7 @@ export class Archivfassung {
     return (await this.o.pakete())
       .filter((p) => hatSchnittstelle(p.laeufer, 'dms:archivfassung') && p.laeufer?.archivfassung?.typen.length)
       .sort((a, b) => a.id.localeCompare(b.id))
-      .map((p) => ({ id: p.id, name: p.name, version: p.version, typen: p.laeufer!.archivfassung!.typen, ...(p.laeufer!.archivfassung!.nur_scans ? { nurScans: p.laeufer!.archivfassung!.nur_scans } : {}) }));
+      .map((p) => ({ id: p.id, name: p.name, version: p.version, typen: p.laeufer!.archivfassung!.typen, ...(p.laeufer!.archivfassung!.auswahl ? { auswahl: p.laeufer!.archivfassung!.auswahl } : {}) }));
   }
 
   /** Das zuständige Paket für einen Dateityp (bei mehreren das erste nach Id; ohne Rücksicht auf Groß- und Kleinschreibung). */
@@ -291,7 +291,15 @@ export class Archivfassung {
     if (!q || d.groesse > ARCHIV_QUELLE_MAX_BYTES) return false;
     const paket = { id: p.id, name: p.name, version: p.version };
     const jetztIso = new Date().toISOString();
-    // Textebene (PDF): vollständig, teilweise (gemischt) oder keine. Alle PDFs, außer „nur Scans und Bilder“ ist an.
+    // Auswahl im Paket (#660): Ist die Art abgewählt, bleibt das Dokument ruhig „ausgelassen – laut Einstellung“.
+    const abgewaehlt = async (art: ArchivArt) => {
+      const k = p.auswahl?.[art];
+      if (!k || (await this.o.einstellung(p.id, k).catch(() => true)) === true) return false;
+      await this.o.ablage.setzeStand(d.sha256, { stand: 'ausgelassen', info: t('pakete.archiv.laut-einstellung', { art: t(({ pdf_text: 'pakete.archiv.art.pdfText', pdf_scan: 'pakete.archiv.art.pdfScan', bilder: 'pakete.archiv.art.bilder' } as const)[art]) }), paket, zeit: jetztIso });
+      return true;
+    };
+    if (d.mime.toLowerCase() !== 'application/pdf' && (await abgewaehlt('bilder'))) return false;
+    // Textebene (PDF): vollständig, teilweise (gemischt) oder keine.
     let textebene: 'voll' | 'teilweise' | 'keine' = 'keine';
     let seiten: SchwaerzSeite[] | null = null;
     let befund: PdfaBefund | null = null;
@@ -318,7 +326,7 @@ export class Archivfassung {
       seiten = await this.o.textebene(pdf).catch(() => null);
       const mit = seiten?.filter(mitText).length ?? 0;
       textebene = !seiten || !mit ? 'keine' : mit === seiten.length ? 'voll' : 'teilweise';
-      if (textebene === 'voll' && p.nurScans && (await this.o.einstellung(p.id, p.nurScans).catch(() => false)) === true) return false;
+      if (await abgewaehlt(textebene === 'voll' ? 'pdf_text' : 'pdf_scan')) return false;
     }
     // Wortpositionen: für jede Seite ohne Textebene von der Texterkennung?
     const w = await this.o.ablage.woerter(d.sha256).catch(() => null);
