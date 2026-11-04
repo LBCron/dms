@@ -6,7 +6,7 @@
 
 | | |
 | --- | --- |
-| Verantwortlicher | [Name, Anschrift – wie unter Werkbank → Datenschutz → Einstellungen] |
+| Verantwortlicher | [Name, Anschrift – wie unter Werkbank → Datenschutz-Auskünfte-Auskünfte → Einstellungen] |
 | Ansprechpartner für Datenschutz | [Name, E-Mail – ggf. Datenschutzbeauftragter] |
 | Verantwortlich für Löschungen | [Name] |
 | Vertretung | [Name] |
@@ -16,7 +16,7 @@
 
 ## 2. Datenarten und Fristen
 
-Jeder **Mappentyp** in Ablago ist eine Datenart. Die Liste der Mappentypen steht unter **Werkbank → Mappentypen**; der Zweck je Mappentyp, der eine Person betrifft, unter **Werkbank → Datenschutz → Einstellungen**.
+Jeder **Mappentyp** in Ablago ist eine Datenart. Die Liste der Mappentypen steht unter **Werkbank → Mappentypen**; der Zweck je Mappentyp, der eine Person betrifft, unter **Werkbank → Löschkonzept → Personendaten in Mappentypen**.
 
 | Datenart (Mappentyp) | Betroffene | Zweck | Frist | Grund der Frist | Beginn der Frist (Stichtag) | Sperre in Ablago | Löschweg |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -81,9 +81,9 @@ Gelöschte Daten können noch an diesen Stellen liegen; sie fallen so weg:
 
 ## 8. Nachweis
 
-- Ablago führt ein **Löschprotokoll** (Werkbank → Datenschutz → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – **ohne** Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern und bleibt [10] Jahre.
+- Ablago führt ein **Löschprotokoll** (Werkbank → Löschkonzept → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – **ohne** Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern und bleibt [10] Jahre.
 - Bei Löschungen auf Verlangen wählt, wer löscht, den Grund „Auf Verlangen der betroffenen Person“. [Wer] gibt das Löschprotokoll bei Bedarf als PDF aus.
-- Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz).
+- Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz-Auskünfte).
 
 ## 9. Änderungen dieses Löschkonzepts
 

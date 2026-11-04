@@ -2012,6 +2012,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       if (!gueltig.length) return [];
       return (await sql`SELECT * FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id = ANY(${gueltig}::uuid[]) ORDER BY mappe_id, zeit DESC, id DESC`).map(alsHistorie);
     },
+    async historieArt(art, max) {
+      return (await sql`SELECT * FROM historie WHERE haushalt_id = ${haushaltId} AND art = ${art} ORDER BY zeit DESC, id DESC LIMIT ${max}`).map(alsHistorie);
+    },
     async historieAufraeumen(vor) {
       const r = await sql`
         DELETE FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id IN (

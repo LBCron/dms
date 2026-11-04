@@ -7,7 +7,7 @@ import { NummernkreisEditor, NummernkreiseListe, useNummernkreise } from './Numm
 import { StempelPanel, useStempelVorlagenWerkbank } from './Stempel';
 import { DarfWegPanel, useDarfWeg } from './Archiv';
 import { AutomatischVerkleinern } from './Verkleinern';
-import { DatenschutzPanel, useDatenschutz } from './Datenschutz';
+import { AuskuenfteListe, AuskunftRechts, LoeschkonzeptPanel, useDatenschutz } from './Datenschutz';
 import { PaketeListe, PaketLink, PaketePanel, usePakete } from './Pakete';
 import { useVollexport, VollexportPanel } from './Vollexport';
 import { PostfachEditor, PostfaecherListe, usePostfaecher } from './Postfaecher';
@@ -47,6 +47,7 @@ import { SpeicherplatzPanel, useSpeicherplatz } from './Speicherplatz';
 import { AuslastungAbschnitt, ErweiterungenHinweis, useSystemlast } from './Auslastung';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from '../ablage/Papierkorb';
 import { filterAusAdresse } from '../../../shared/src/aufgabenfilter';
+import { istOffen } from '../../../shared/src/auskunft';
 import { useBeiWiederErreichbar } from '../erreichbar';
 
 /**
@@ -80,7 +81,9 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/webhooks              Webhooks: freigegebene Ziele, alle Webhooks, abschalten (#627)
  * /werkbank/automatisierungen[/:id|/neu]  Automatisierungen Wenn – Und – Dann (#675), dreiteilig
  * /werkbank/stempel                Vorlagen für Stempel beim Weitergeben (#394), zweiteilig
- * /werkbank/datenschutz[?mappe=]    Auskunft nach Art. 15 DSGVO als ZIP (#396), zweiteilig
+ * /werkbank/auskuenfte[/:id|/neu|/einstellungen][?mappe=]  Datenschutz-Auskünfte (#396, #668), dreiteilig;
+ *                                  früher /werkbank/datenschutz (leitet um)
+ * /werkbank/loeschkonzept          Löschkonzept, Personendaten in Mappentypen, Löschprotokoll (#469, #470, #668)
  *
  * Die Mitte gibt es nur für große Sammlungen, die man bearbeitet (#366, `hatMitte`); alle anderen
  * Bereiche sind zweiteilig: links die Bereiche, rechts die ganze Seite.
@@ -116,7 +119,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const nummernkreise = useNummernkreise(bereich === 'nummernkreise');
   const stempel = useStempelVorlagenWerkbank(bereich === 'stempel');
   const darfWeg = useDarfWeg(bereich === 'aufbewahrung');
-  const datenschutz = useDatenschutz(bereich === 'datenschutz');
+  const datenschutz = useDatenschutz(bereich === 'auskuenfte' || bereich === 'loeschkonzept');
   const vollexport = useVollexport(bereich === 'vollexport');
   const pakete = usePakete(bereich === 'pakete' || bereich === 'typen');
   const anmeldeschutz = useAnmeldeschutz(bereich === 'anmeldeschutz');
@@ -134,7 +137,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
       verschluesselung: tresor.laden, papierkorb: papierkorb.laden, aufgaben: aufgaben.laden, texterkennung: ocr.laden,
       wartung: async () => { await ocr.laden(); await wartungsmodus.laden(); }, fehlermeldungen: meldungen.laden, sicherung: sicherung.laden,
       systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); await technik.laden(); await datenbank.laden(); }, anbindung: anbindung.laden, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden, automatisierungen: automatisierungen.laden,
-      datenschutz: datenschutz.laden,
+      auskuenfte: datenschutz.laden, loeschkonzept: datenschutz.laden,
     };
     void offen[bereich]?.();
   });
@@ -225,8 +228,12 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = <VollexportPanel z={vollexport} />;
   } else if (bereich === 'aufbewahrung') {
     rechts = <DarfWegPanel z={darfWeg} />;
-  } else if (bereich === 'datenschutz') {
-    rechts = <DatenschutzPanel z={datenschutz} />;
+  } else if (bereich === 'auskuenfte') {
+    // Datenschutz-Auskünfte (#668): Liste in der Mitte, rechts Auskunft, Assistent („neu“) oder Einstellungen.
+    liste = <AuskuenfteListe z={datenschutz} offen={id} />;
+    rechts = <AuskunftRechts z={datenschutz} id={id} />;
+  } else if (bereich === 'loeschkonzept') {
+    rechts = <LoeschkonzeptPanel z={datenschutz} />;
   } else if (bereich === 'nummernkreise') {
     liste = <NummernkreiseListe z={nummernkreise} offen={id} />;
     rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>Wähle links einen Nummernkreis oder lege mit „+ Neu“ einen an.</p></div>;
@@ -272,7 +279,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
     // Benutzer und Sicherheit
     { pfad: 'benutzer', name: n('benutzer'), gruppe: 'benutzer', zahl: zahl(benutzer.geladen ? benutzer.liste.filter((b) => b.aktiv).length : undefined, uz?.benutzer) },
     { pfad: 'verschluesselung', name: n('verschluesselung'), gruppe: 'benutzer', warn: tresor.stand && tresor.stand.zustand !== 'vorhanden' ? t('werkbank.leiste.fehlt') : undefined },
-    { pfad: 'datenschutz', name: n('datenschutz'), gruppe: 'benutzer', zahl: datenschutz.stand?.auskuenfte.length || undefined },
+    { pfad: 'auskuenfte', name: n('auskuenfte'), gruppe: 'benutzer', zahl: datenschutz.stand?.verzeichnis.filter((e) => istOffen(e.zustand)).length || undefined },
+    { pfad: 'loeschkonzept', name: n('loeschkonzept'), gruppe: 'benutzer', warn: datenschutz.stand?.loeschkonzept?.luecken.length ? '!' : undefined, warnTitel: t('werkbank.loeschkonzept.personendaten') },
     ...(d.typen.some((x) => x.archiv) ? [{ pfad: 'aufbewahrung', name: n('aufbewahrung'), gruppe: 'benutzer' as const, zahl: zahl(darfWeg.liste?.length, uz?.darfWeg) }] : []),
     { pfad: 'stempel', name: n('stempel'), gruppe: 'benutzer', zahl: stempel.liste?.length || undefined },
     // Post und Eingänge

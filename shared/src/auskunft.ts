@@ -295,3 +295,100 @@ export const auskunftMail = {
     nachricht: `${textDritte(anrede, 'mail.link.text', { bis, link, wieOft: textDritte(anrede, 'mail.link.abrufe', { anzahl: abrufe }) })}\n${absender ? `\n${absender}\n` : ''}`,
   }),
 };
+
+/* ---------- Verzeichnis der Auskünfte (#668): Liste mit Zustand, Frist und Verlauf ---------- */
+
+/** Zustand einer Auskunft in der Liste der Werkbank. */
+export type AuskunftZustand = 'angefragt' | 'inArbeit' | 'bereit' | 'zugestellt' | 'abgerufen' | 'geloescht';
+export const AUSKUNFT_ZUSTAENDE: AuskunftZustand[] = ['angefragt', 'inArbeit', 'bereit', 'zugestellt', 'abgerufen', 'geloescht'];
+/** Offen = noch nicht bei der Person angekommen: Antwortfrist zählt. */
+export const istOffen = (z: AuskunftZustand) => z === 'angefragt' || z === 'inArbeit' || z === 'bereit';
+
+/** Ein Schritt im Verlauf einer Auskunft – aus der Historie der Person (nur Zahlen, keine Inhalte). */
+export interface AuskunftSchritt { zeit: string; text: string; von: string | null; erfolg?: boolean }
+
+/** Ein Eintrag der Liste: eine erzeugte Auskunft (auch gelöscht, als Nachweis), eine Anfrage mit Frist oder ein laufender Auftrag. */
+export interface AuskunftEintrag {
+  /** Id der Auskunft; bei einer Anfrage `frist-<Aufgabe>`, beim laufenden Auftrag `auftrag-<Id>`. */
+  id: string;
+  art: 'auskunft' | 'anfrage' | 'auftrag';
+  mappeId: string | null;
+  titel: string;
+  zustand: AuskunftZustand;
+  /** Erstellt bzw. angefragt (Frist angelegt). */
+  zeit: string;
+  /** Antwortfrist (Datum JJJJ-MM-TT), solange offen und eine Frist-Aufgabe besteht. */
+  frist: string | null;
+  fristAufgabe: string | null;
+  mappen?: number;
+  dokumente?: number;
+  verschluesselt?: boolean;
+  /** Liegt die ZIP noch bereit, ihr Stand. */
+  bereit?: AuskunftStand;
+  verlauf: AuskunftSchritt[];
+}
+
+/** Woran eine Frist-Aufgabe der Auskunft zu erkennen ist (#396 legt sie als manuelle Aufgabe an). */
+export const FRIST_SCHLUESSEL = 'auskunft.frist';
+export const FRIST_TEXT_ANFANG = 'Auskunft nach Art. 15 DSGVO an ';
+
+export interface VerzeichnisQuelle {
+  /** Historie-Einträge der Art „auskunft“, beliebige Reihenfolge. */
+  historie: Array<{ mappeId: string; zeit: string; benutzerId: string | null; daten: Record<string, unknown> }>;
+  bereit: AuskunftStand[];
+  /** Offene Frist-Aufgaben (Art manuell, siehe FRIST_SCHLUESSEL). */
+  fristen: Array<{ id: string; mappeId: string; mappeTitel?: string; datum: string | null; erstellt: string }>;
+  titel: Map<string, string>;
+  namen: Map<string, string>;
+  laufend?: { id: string; titel: string; gestartet: string } | null;
+}
+
+/**
+ * Baut die Liste (#668) aus dem, was ohnehin gespeichert ist: Historie der Person (erstellt, zugestellt,
+ * abgerufen, heruntergeladen, gelöscht), bereitliegende ZIP-Dateien und offene Frist-Aufgaben. Gelöschte und
+ * abgelaufene Auskünfte bleiben so als Nachweis in der Liste – ohne Datei. Neueste zuerst.
+ */
+export function auskunftVerzeichnis(q: VerzeichnisQuelle): AuskunftEintrag[] {
+  const je = new Map<string, AuskunftEintrag>();
+  const bereit = new Map(q.bereit.map((b) => [b.id, b]));
+  const hist = [...q.historie].sort((a, b) => a.zeit.localeCompare(b.zeit));
+  for (const h of hist) {
+    const id = typeof h.daten.auskunft === 'string' ? h.daten.auskunft : null;
+    if (!id) continue;
+    let e = je.get(id);
+    if (!e) {
+      e = { id, art: 'auskunft', mappeId: h.mappeId, titel: q.titel.get(h.mappeId) ?? '', zustand: 'geloescht', zeit: h.zeit, frist: null, fristAufgabe: null, verlauf: [] };
+      je.set(id, e);
+    }
+    const z = h.daten.zustellung;
+    if (!z && typeof h.daten.mappen === 'number') {
+      e.zeit = h.zeit; e.mappen = h.daten.mappen; e.dokumente = typeof h.daten.dokumente === 'number' ? h.daten.dokumente : undefined;
+      e.verschluesselt = h.daten.verschluesselt === true;
+    }
+    e.verlauf.push({ zeit: h.zeit, text: String(h.daten.text ?? ''), von: h.benutzerId ? q.namen.get(h.benutzerId) ?? null : null, ...(typeof h.daten.erfolg === 'boolean' ? { erfolg: h.daten.erfolg } : {}) });
+  }
+  // Bereitliegende ohne Historie (z. B. Eintrag schon aufgeräumt): trotzdem zeigen.
+  for (const b of q.bereit) if (!je.has(b.id)) je.set(b.id, { id: b.id, art: 'auskunft', mappeId: b.mappeId, titel: b.titel, zustand: 'bereit', zeit: b.erstellt, frist: null, fristAufgabe: null, mappen: b.mappen, dokumente: b.dokumente, verschluesselt: b.verschluesselt, verlauf: [] });
+  for (const e of je.values()) {
+    const b = bereit.get(e.id);
+    // Ein zurückgezogener Link (ohne Ablauf) zählt nicht als Zustellung.
+    const zust = (art: string) => q.historie.some((h) => h.daten.auskunft === e.id && h.daten.zustellung === art && h.daten.erfolg !== false && (art !== 'link' || !!h.daten.ablauf));
+    if (b) { e.bereit = b; e.titel = e.titel || b.titel; }
+    e.zustand = zust('abruf') ? 'abgerufen' : zust('email') || zust('link') || zust('download') ? 'zugestellt' : b ? 'bereit' : 'geloescht';
+    e.verlauf.reverse();
+  }
+  const liste = [...je.values()];
+  // Offene Frist: zur jüngsten offenen Auskunft der Person, die nach der Frist entstand – sonst als Anfrage.
+  for (const f of q.fristen) {
+    const ziel = liste.filter((e) => e.art === 'auskunft' && e.mappeId === f.mappeId && istOffen(e.zustand) && e.zeit >= f.erstellt).sort((a, b) => b.zeit.localeCompare(a.zeit))[0];
+    if (ziel) { ziel.frist = f.datum; ziel.fristAufgabe = f.id; continue; }
+    liste.push({ id: `frist-${f.id}`, art: 'anfrage', mappeId: f.mappeId, titel: q.titel.get(f.mappeId) ?? f.mappeTitel ?? '', zustand: 'angefragt', zeit: f.erstellt, frist: f.datum, fristAufgabe: f.id, verlauf: [] });
+  }
+  if (q.laufend) liste.push({ id: `auftrag-${q.laufend.id}`, art: 'auftrag', mappeId: null, titel: q.laufend.titel, zustand: 'inArbeit', zeit: q.laufend.gestartet, frist: null, fristAufgabe: null, verlauf: [] });
+  return liste.sort((a, b) => b.zeit.localeCompare(a.zeit));
+}
+
+/** Tage bis zur Frist (negativ = überfällig), gerechnet in Kalendertagen. */
+export function tageBisFrist(frist: string, heute: string): number {
+  return Math.round((Date.parse(`${frist}T00:00:00Z`) - Date.parse(`${heute}T00:00:00Z`)) / 86400000);
+}

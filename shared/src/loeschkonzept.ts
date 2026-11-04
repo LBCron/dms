@@ -38,7 +38,7 @@ export interface Datenart {
   betroffene: string; zweck: string; frist: string; grund: string; stichtag: string; sperre: string; loeschweg: string;
 }
 
-/** Was fehlt und im DMS ergänzt werden kann (Werkbank → Datenschutz bzw. Mappentypen). */
+/** Was fehlt und im DMS ergänzt werden kann (Werkbank → Datenschutz-Auskünfte bzw. Mappentypen). */
 export interface Luecke { art: 'zweck' | 'frist' | 'verantwortlicher' | 'keine'; typId?: string; typ?: string; text: string }
 
 export type Block =
@@ -101,10 +101,10 @@ export function datenarten(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' 
 /** Lücken, die das DMS kennt: Datenart ohne Zweck oder Frist, kein Verantwortlicher, gar keine Datenart. */
 export function luecken(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' | 'papierkorbTage'>, arten = datenarten(q)): Luecke[] {
   const l: Luecke[] = [];
-  if (!q.datenschutz.verantwortlicher.trim()) l.push({ art: 'verantwortlicher', text: 'Kein Verantwortlicher hinterlegt – bitte unter Einstellungen ergänzen.' });
-  if (!arten.length) l.push({ art: 'keine', text: 'Kein Mappentyp betrifft eine Person – lege unter Einstellungen fest, welche Mappentypen Personen betreffen.' });
+  if (!q.datenschutz.verantwortlicher.trim()) l.push({ art: 'verantwortlicher', text: 'Kein Verantwortlicher hinterlegt – bitte unter Datenschutz-Auskünfte → Einstellungen ergänzen.' });
+  if (!arten.length) l.push({ art: 'keine', text: 'Kein Mappentyp betrifft eine Person – lege unter „Personendaten in Mappentypen“ fest, welche Mappentypen Personen betreffen.' });
   for (const a of arten) {
-    if (a.zweck === FEHLT('Zweck')) l.push({ art: 'zweck', typId: a.typId, typ: a.typ, text: `${a.typ}: kein Zweck hinterlegt – bitte unter Einstellungen ergänzen.` });
+    if (a.zweck === FEHLT('Zweck')) l.push({ art: 'zweck', typId: a.typId, typ: a.typ, text: `${a.typ}: kein Zweck hinterlegt – bitte unter „Personendaten in Mappentypen“ ergänzen.` });
     if (a.frist === FEHLT('Frist')) l.push({ art: 'frist', typId: a.typId, typ: a.typ, text: `${a.typ}: keine Aufbewahrungsfrist – bitte den Archivmodus einschalten (Werkbank → Mappentypen) oder die Frist im Dokument ergänzen.` });
   }
   return l;
@@ -126,7 +126,7 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
 
   const abschnitte: Abschnitt[] = [
     { titel: '1. Allgemeines', bloecke: [{ art: 'tabelle', breiten: [1, 2.4], kopf: ['', ''], zeilen: [
-      ['Verantwortlicher', verantwortlicher || FEHLT('Name, Anschrift – wie unter Werkbank → Datenschutz → Einstellungen')],
+      ['Verantwortlicher', verantwortlicher || FEHLT('Name, Anschrift – wie unter Werkbank → Datenschutz-Auskünfte-Auskünfte → Einstellungen')],
       ['Ansprechpartner für Datenschutz', FEHLT('Name, E-Mail – ggf. Datenschutzbeauftragter')],
       ['Verantwortlich für Löschungen', FEHLT('Name')],
       ['Vertretung', FEHLT('Name')],
@@ -135,12 +135,12 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       ['Gültig ab', FEHLT('Datum')],
     ] }] },
     { titel: '2. Datenarten und Fristen', bloecke: [
-      { art: 'absatz', text: `Jeder Mappentyp in Ablago ist eine Datenart. Die Tabelle enthält die Mappentypen, die eine Person betreffen, auf eine solche verweisen oder für die ein Zweck hinterlegt ist (Stand ${datum(q.stand)}). Zweck und „betrifft eine Person“ stehen unter Werkbank → Datenschutz → Einstellungen, Frist und Stichtag im Archivmodus unter Werkbank → Mappentypen.` },
+      { art: 'absatz', text: `Jeder Mappentyp in Ablago ist eine Datenart. Die Tabelle enthält die Mappentypen, die eine Person betreffen, auf eine solche verweisen oder für die ein Zweck hinterlegt ist (Stand ${datum(q.stand)}). Zweck und „betrifft eine Person“ stehen unter Werkbank → Löschkonzept → Personendaten in Mappentypen, Frist und Stichtag im Archivmodus unter Werkbank → Mappentypen.` },
       { art: 'tabelle', breiten: [1.1, 1.3, 1.3, 0.6, 1.1, 1.2, 0.95, 1.4], kopf: ['Datenart (Mappentyp)', 'Betroffene', 'Zweck', 'Frist', 'Grund der Frist', 'Beginn der Frist (Stichtag)', 'Sperre in Ablago', 'Löschweg'],
         zeilen: arten.length ? arten.map((a) => [a.typ, a.betroffene, a.zweck, a.frist, a.grund, a.stichtag, a.sperre, a.loeschweg])
           : [[FEHLT('Mappentyp'), FEHLT('Betroffene'), FEHLT('Zweck'), FEHLT('Frist'), FEHLT('Grund'), FEHLT('Stichtag'), 'keine', FEHLT('Löschweg')]] },
       ...(fehlt.length ? [{ art: 'hinweis' as const, titel: 'Bitte ergänzen', punkte: fehlt.map((x) => x.text) }] : []),
-      ...(ohne.length ? [{ art: 'absatz' as const, text: `Ohne Personenbezug (nicht in der Tabelle): ${ohne.join(', ')}. Betrifft einer davon doch Personen, markiere ihn unter Werkbank → Datenschutz → Einstellungen und erzeuge das Löschkonzept neu.` }] : []),
+      ...(ohne.length ? [{ art: 'absatz' as const, text: `Ohne Personenbezug (nicht in der Tabelle): ${ohne.join(', ')}. Betrifft einer davon doch Personen, markiere ihn unter Werkbank → Löschkonzept → Personendaten in Mappentypen und erzeuge das Löschkonzept neu.` }] : []),
       { art: 'absatz', text: 'Sperre in Ablago:' },
       { art: 'punkte', punkte: [
         'Archivmodus (Werkbank → Mappentypen → Archivmodus): Mappen und Dokumente dieses Mappentyps lassen sich bis zum Ende der Aufbewahrungsfrist nicht löschen – auch nicht von Administratoren, über den Papierkorb oder die Schnittstelle. Dokumente ändern sich nur als neue Version. Die Frist läuft bis zum 31.12. des Stichtagsjahres plus die Jahre.',
@@ -191,12 +191,12 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       `${FEHLT('Wer')} deaktiviert Konten von Personen, die gehen, ${FEHLT('am letzten Arbeitstag')}.`,
     ] }] },
     { titel: '8. Nachweis', bloecke: [{ art: 'punkte', punkte: q.loeschprotokoll ? [
-      `Ablago führt ein Löschprotokoll (Werkbank → Datenschutz → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – ohne Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern, wird als PDF oder CSV ausgegeben und nach ${q.loeschprotokoll.jahre === 1 ? 'einem Jahr' : `${q.loeschprotokoll.jahre} Jahren`} automatisch gekürzt.`,
+      `Ablago führt ein Löschprotokoll (Werkbank → Löschkonzept → Löschprotokoll): je gelöschter Mappe Mappentyp, Id und Nummer, wann, von wem, warum und in welchem Vorgang; je gelöschtem Dokument die Prüfsumme (SHA-256), Größe, Dateityp und Seitenzahl – ohne Titel, Feldwerte und Dateinamen. Es lässt sich nicht ändern, wird als PDF oder CSV ausgegeben und nach ${q.loeschprotokoll.jahre === 1 ? 'einem Jahr' : `${q.loeschprotokoll.jahre} Jahren`} automatisch gekürzt.`,
       'Bei Löschungen auf Verlangen wählt, wer löscht, den Grund „Auf Verlangen der betroffenen Person“.',
-      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz).',
+      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz-Auskünfte).',
     ] : [
       `Löschungen auf Verlangen und das regelmäßige Löschen hält ${FEHLT('Wer')} in ${FEHLT('einer Mappe „Datenschutzanfragen“ / einer Liste')} fest: Datum, Anlass, welche Datenarten – ohne die gelöschten Daten selbst.`,
-      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz).',
+      'Auskünfte nach Art. 15 DSGVO stehen mit Nachweis in der Historie der Person (Werkbank → Datenschutz-Auskünfte).',
     ] }] },
     { titel: '9. Änderungen dieses Löschkonzepts', bloecke: [{ art: 'tabelle', breiten: [1, 2.4, 1.2], kopf: ['Datum', 'Was geändert', 'Wer'], zeilen: [
       [datum(q.stand), `aus Ablago erzeugt (Version ${q.version})`, FEHLT('Name')],

@@ -117,7 +117,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
             <Stern mappeId={mappe.id} an={!!details.favorit} />
             <Aktionsmenue aufgabe={() => setAufgabeOffen(true)} erinnern={() => setErinnernOffen(true)} email={details.exportierbar === false ? undefined : () => setEmailOffen(true)} drucken={details.exportierbar === false ? undefined : () => setDrucken(true)}
               link={direktlink ? () => { const l = location.origin + direktlink; void kopiere(l).then((ok) => setKopiert({ link: l, ok })); } : undefined}
-              auskunft={details.auskunft ? () => geheZu(`/werkbank/datenschutz?mappe=${encodeURIComponent(details.mappe.id)}`) : undefined}
+              auskunft={details.auskunft ? () => geheZu(`/werkbank/auskuenfte/neu?mappe=${encodeURIComponent(details.mappe.id)}`) : undefined}
               loeschwege={[
                 ...(loeschbarHier ? [{ text: 'Mappe löschen …', tu: () => setLoeschWunsch((n) => n + 1), nurSchmal: true }] : []),
                 ...(mitVerknuepften ? [{ text: 'Mit verknüpften Mappen löschen …', titel: 'Diese Mappe samt allen Mappen, die zu ihr gehören – nach einer Vorschau als Baum', tu: mitVerknuepften }] : []),
