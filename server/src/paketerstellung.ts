@@ -5,6 +5,8 @@
  * - Nur, was das Paketformat heute kann; was nicht hineinpasst, steht als Hinweis in der Prüfung.
  * - Typen und Ansichten aus installierten Paketen werden nicht kopiert, sondern Abhängigkeit (>= installierte Version).
  * - Verweise auf Benutzer, Rolle und Ablageort werden dms:…; auf eigene, nicht gewählte Typen: „mit aufnehmen“.
+ * - Ansichten dürfen ohne ihre Mappentypen ins Paket (#656): Der Typ bleibt über seine Kennung erhalten (`fremde_typen`),
+ *   die Prüfung warnt nur.
  * - Keine Mappendaten außer ausdrücklich gewählten Beispiel-Mappen; nie Passwörter, nie Benutzer, keine Ids.
  * - Vor dem Download dieselbe Prüfung wie beim Hochladen (liesPaket).
  *
@@ -20,7 +22,7 @@ import type { Dienst } from './dienst';
 import { t } from './sprache';
 import { Fachfehler } from './fehler';
 import { LIZENZTEXTE } from './lizenztexte';
-import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, liesPaket, liesZip, type Handelnder } from './pakete';
+import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, FREMDE_TYPEN_AB, liesPaket, liesZip, type FremderTyp, type Handelnder } from './pakete';
 import { protokoll } from './protokoll';
 import { zipPuffer } from './zip';
 
@@ -47,6 +49,8 @@ export interface ErstellenDaten {
   dmsVersion: string;
   /** Zuletzt exportierter Entwurf mit derselben Id. */
   entwurf: PaketEntwurf | null;
+  /** Alle gemerkten Entwürfe (#656): unter welcher Kennung ein eigener Typ in einem früher exportierten Paket steckt. */
+  entwuerfe?: PaketEntwurf[];
   jetzt: Date;
 }
 
@@ -228,6 +232,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   }
   for (const s of eigeneSichten) if (!schluessel[s.id]) schluessel[s.id] = frei(s.name, 40, belegtS);
   const fest = (w: WertAngabe | undefined): unknown => (!w ? undefined : w.art === 'fest' ? w.wert : w);
+  let fremdeTypen = false;
   const paketSichten = eigeneSichten.map((s) => {
     let eltern: string | undefined;
     if (s.elternId) {
@@ -239,7 +244,20 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
         if (!fehlend.some((f) => f.id === ep.id)) fehlend.push({ art: 'sicht', id: ep.id, name: ep.name, grund: `Elternansicht von „${s.name}“`, noetig: false });
       }
     }
-    const typen = s.typen.map((t) => ziel(t, `Ansicht „${s.name}“`)).filter((t): t is string => !!t);
+    // Eigene, nicht gewählte Typen (#656): nur ein Hinweis – der Typ bleibt über seine Kennung in der Ansicht.
+    const fremd: FremderTyp[] = [];
+    const typen = s.typen.map((tid) => {
+      const t = typById.get(tid);
+      if (t && !schluessel[tid] && !d.dmsTypen.has(tid) && !t.system && !typPaket.has(tid)) {
+        const frueher = (d.entwuerfe ?? []).find((x) => x.id !== id && x.schluessel[tid]);
+        fremd.push({ kennung: frueher ? `${frueher.id}_${frueher.schluessel[tid]}` : t.schluessel || frei(t.name, 40, new Set()), name: t.name });
+        hinweis(`Ansicht „${s.name}“ zeigt Mappen vom Typ „${t.name}“. „${t.name}“ kommt nicht ins Paket – beim Empfänger muss es „${t.name}“ schon geben, sonst bleibt die Ansicht leer oder wird nicht installiert.`);
+        if (!fehlend.some((f) => f.id === t.id)) fehlend.push({ art: 'typ', id: t.id, name: t.name, grund: `Vorsicht: steckt in der Ansicht „${s.name}“ – muss beim Empfänger vorhanden sein`, noetig: false });
+        return null;
+      }
+      return ziel(tid, `Ansicht „${s.name}“`);
+    }).filter((t): t is string => !!t);
+    if (fremd.length) fremdeTypen = true;
     const bedingungen = s.bedingungen.flatMap((b: Bedingung) => {
       if (b.art !== 'feld') { hinweis(`Ansicht „${s.name}“: Bedingungen auf Anzahlen, Favoriten oder Fristen kennt das Paketformat nicht; sie fehlen im Paket.`); return []; }
       const w = (b.op === 'zwischen' || b.op === 'ausserhalb') && b.bis ? [fest(b.wert), fest(b.bis)] : fest(b.wert);
@@ -248,7 +266,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     });
     if (s.trefferliste && s.trefferliste !== 'standard') hinweis(`Ansicht „${s.name}“: zeigt im Paket die Standard-Trefferliste.`);
     if (s.berechtigungen) hinweis(`Ansicht „${s.name}“: Berechtigungen an der Ansicht kommen nicht ins Paket.`);
-    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, bedingungen });
+    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, fremde_typen: fremd, bedingungen });
   });
   // Elternansichten zuerst (liest sich besser; das DMS sortiert ohnehin).
   const sortiert: typeof paketSichten = [];
@@ -292,9 +310,9 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   if (bsp.length) hinweis(`${bsp.length} Beispiel-Mappen aus deiner Auswahl kommen ins Paket – nimm nur Mappen mit erfundenen Daten. Dokumente, Notizen und Aufgaben kommen nicht mit.`);
 
   if (!paketTypen.length && !paketSichten.length) probleme.push('Wähle mindestens einen eigenen Mappentyp oder eine eigene Ansicht – Typen und Ansichten aus Paketen kommen nur als Abhängigkeit mit.');
-  const noetigAb = [dmsVerweise ? DMS_VERWEISE_AB : null, beispielVerweise ? BEISPIELVERWEISE_AB : null].filter((x): x is string => !!x).sort(vergleicheVersion).pop();
+  const noetigAb = [dmsVerweise ? DMS_VERWEISE_AB : null, beispielVerweise ? BEISPIELVERWEISE_AB : null, fremdeTypen ? FREMDE_TYPEN_AB : null].filter((x): x is string => !!x).sort(vergleicheVersion).pop();
   const unten = untergrenze(dms);
-  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${dmsVerweise ? 'Verweise auf Mappentypen von Ablago' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
+  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${noetigAb === FREMDE_TYPEN_AB && fremdeTypen ? 'Ansichten mit Mappentypen, die nicht im Paket sind,' : dmsVerweise ? 'Verweise auf Mappentypen von Ablago' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
   const fehlt = fehlend.filter((f) => f.noetig);
   if (fehlt.length) probleme.push(`Es wird auf Mappentypen verwiesen, die nicht gewählt sind: ${fehlt.map((f) => `„${f.name}“`).join(', ')}. Nimm sie mit auf oder entferne den Verweis.`);
 
@@ -406,7 +424,7 @@ export class Paketerstellung {
     const mappen = gewaehlt.size ? (await Promise.all(e.typen.filter((t) => typen.some((x) => x.id === t)).map((t) => this.d.listeMappen(t)))).flat().filter((m) => gewaehlt.has(m.id)) : [];
     return {
       typen, sichten: await this.d.listeSichten(), pakete: await this.d.listePakete(), dmsTypen: await this.dmsTypen(), mappen,
-      dmsVersion: this.o.version(), entwurf: (await this.d.paketEntwuerfe()).find((x) => x.id === e.id.trim()) ?? null, jetzt: new Date(),
+      dmsVersion: this.o.version(), entwurf: (await this.d.paketEntwuerfe()).find((x) => x.id === e.id.trim()) ?? null, entwuerfe: await this.d.paketEntwuerfe(), jetzt: new Date(),
     };
   }
 
