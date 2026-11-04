@@ -330,6 +330,8 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       assert.equal(JSON.parse(text('manifest.json')).format, 'dms-vollexport');
       assert.equal(JSON.parse(text('manifest.json')).zweck, 'auskunft-art-15');
       assert.deepEqual(JSON.parse(text('struktur/benutzer.json')), []);
+      // Nichts vom ganzen Haushalt (#683): kein Löschprotokoll, keine Synonyme, keine Automatisierungen.
+      for (const n of ['daten/loeschprotokoll.csv', 'struktur/synonyme.json', 'struktur/automatisierungen.json']) assert.ok(!e.has(n), `${n} gehört nicht in die Auskunft`);
       const pdf = e.get('Deckblatt.pdf')!.daten;
       assert.ok(pdf.subarray(0, 5).toString() === '%PDF-');
       // Nachweis: Historie des Betroffenen ohne Inhalte
