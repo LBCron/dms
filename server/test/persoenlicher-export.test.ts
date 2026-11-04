@@ -31,6 +31,11 @@ describe('Persönlicher Export (#255)', () => {
     ] }, true);
     const offen = await d.legeMappeAn({ typId: t.id, werte: { name: 'Strom', privat: false, pw: 'strom123' } }, admin.id);
     await d.legeMappeAn({ typId: t.id, werte: { name: 'Geheim', privat: true, pw: 'geheim456' } }, admin.id);
+    const geheim = (await d.listeMappen(t.id)).find((m) => m.titel === 'Geheim')!;
+    // Was der Admin im Haushalt löscht, gehört nicht in Max' Export (#683).
+    const reg = t.register.find((x) => x.art === 'dokumente')!.key;
+    const dok = (await d.ladeHoch(geheim.id, { register: reg, name: 'kontoauszug-geheim.pdf' }, Buffer.from('%PDF-1.4 geheim'), admin.id)).dokument;
+    await d.loescheDokument(dok.id, admin.id);
     await d.legeAufgabeAn(offen.id, { empfaengerId: max.id, text: 'Für Max' }, admin.id);
     await d.legeAufgabeAn(offen.id, { empfaengerId: admin.id, text: 'Für Admin' }, admin.id);
     await d.setzeFavorit({ id: max.id }, offen.id, true);
@@ -51,6 +56,9 @@ describe('Persönlicher Export (#255)', () => {
     const benutzer = JSON.parse(await lies('struktur/benutzer.json'));
     assert.deepEqual(benutzer.map((b: { email: string }) => b.email), ['max@example.org']);
     assert.deepEqual(JSON.parse(await lies('struktur/sichten.json')), []);
+    // Nur Eigenes (#683): kein Löschprotokoll, keine Synonyme und Automatisierungen, nur selbst gelöschte Dokumente.
+    for (const datei of ['daten/loeschprotokoll.csv', 'struktur/synonyme.json', 'struktur/automatisierungen.json']) await assert.rejects(lies(datei), { code: 'ENOENT' }, datei);
+    assert.ok(!(await lies('daten/papierkorb-dokumente.jsonl')).includes('kontoauszug-geheim'));
     const pw = await lies('passwoerter.csv');
     assert.match(pw, /strom123/);
     assert.ok(!pw.includes('geheim456'));

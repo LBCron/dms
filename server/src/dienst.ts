@@ -6558,8 +6558,9 @@ export class Dienst {
   /* ---------- Vollexport (#254) ---------- */
 
   /** Datenquelle für den Vollexport; Benutzer, Designs und Protokoll kommen von außen. */
-  vollexportQuelle(x: { mandant: string; version: string; benutzer: ExportQuelle['benutzer']; designs: ExportQuelle['designs']; protokoll: ExportQuelle['protokoll'] }): ExportQuelle {
+  vollexportQuelle(e: { mandant: string; version: string; benutzer: ExportQuelle['benutzer']; designs: ExportQuelle['designs']; protokoll: ExportQuelle['protokoll']; z?: Zugriff }): ExportQuelle {
     const r = this.repo;
+    const { z, ...x } = e;
     const bezugCache = new Map<string, MappenBezug | undefined>();
     return {
       ...x,
@@ -6592,7 +6593,12 @@ export class Dienst {
         const ids = mappen.flatMap((m) => [...verweiseVon(typ, m.werte).map((v) => v.zielId), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v));
         // Bezüge merken (#367): je Mappe ein PDF, die Ziele wiederholen sich (Benutzer, Partner).
         const fehlt = [...new Set(ids)].filter((id) => !bezugCache.has(id));
-        if (fehlt.length) { const neu = await r.bezuege(fehlt); for (const id of fehlt) bezugCache.set(id, neu.get(id)); }
+        // Mit Zugriff (persönlicher Export): Titel von Mappen, die der Benutzer nicht lesen darf, verdeckt – wie in der Oberfläche.
+        if (fehlt.length) {
+          const neu = await r.bezuege(fehlt);
+          const sichtbar = z ? await this.maskiereBezuege(z, neu) : null;
+          for (const id of fehlt) bezugCache.set(id, sichtbar ? sichtbar[id] : neu.get(id));
+        }
         const b = new Map([...new Set(ids)].map((id) => [id, bezugCache.get(id)] as const));
         const quelle = { typen: new Map([[typ.id, typ]]), titel: (id: string | null | undefined) => (id ? b.get(id)?.titel ?? '' : '') };
         return mappenPdf(titel, mappen.map((m) => ({ mappe: m, typ, dokumente: [], inhalt: async () => Buffer.alloc(0) })), quelle, uebersicht ? { spalten: exportSpalten([typ], 'liste'), typen: [typ] } : null);
@@ -6606,7 +6612,7 @@ export class Dienst {
    * Benutzer, keine Protokolle. Passwörter nur, wo er sie sehen darf (und nur mit Bestätigung).
    */
   async persoenlicheQuelle(z: Zugriff, x: { mandant: string; version: string; ich: { benutzer: Array<Record<string, unknown>>; vertretungen: Vertretung[] } }): Promise<ExportQuelle> {
-    const voll = this.vollexportQuelle({ mandant: x.mandant, version: x.version, benutzer: async () => x.ich, designs: async () => [], protokoll: () => [] });
+    const voll = this.vollexportQuelle({ mandant: x.mandant, version: x.version, benutzer: async () => x.ich, designs: async () => [], protokoll: () => [], z });
     const ich = z.ich.id;
     const mappenJeTyp = new Map<string, Mappe[]>();
     const lesbar = new Set<string>();
@@ -6632,6 +6638,10 @@ export class Dienst {
       pakete: async () => [],
       mappen: async (typId) => mappenJeTyp.get(typId) ?? [],
       papierkorb: async () => (await this.repo.papierkorb({ von: ich })),
+      // Nur Eigenes (#683): Dokumente im Papierkorb, die er gelöscht hat; Löschprotokoll, Synonyme und Automatisierungen
+      // gehören dem ganzen Haushalt (Werkbank) und stehen nur im Vollexport.
+      papierkorbDokumente: async () => (await this.repo.papierkorbDokumente({ von: ich })),
+      loeschprotokoll: undefined, synonyme: undefined, automatisierungen: undefined,
       aufgaben: async (ids) => (await this.repo.aufgabenVonMappen(ids)).filter((a) => a.empfaengerId === ich || a.erstelltVon === ich),
       erinnerungen: async () => (await this.repo.erinnerungen({ empfaengerId: ich })).filter((e) => lesbar.has(e.mappeId)),
       favoriten: async () => (await this.repo.alleFavoriten()).filter((f) => f.benutzerId === ich),
@@ -6957,6 +6967,8 @@ export class Dienst {
       typen: async () => typen, sichten: async () => [], nummernkreise: async () => [], pakete: async () => [],
       mappen: async (typId) => jeTyp.get(typId) ?? [],
       papierkorb: async () => [], papierkorbDokumente: async () => [],
+      // Nicht für Dritte (#683): Löschprotokoll, Synonyme und Automatisierungen betreffen den ganzen Haushalt.
+      loeschprotokoll: undefined, synonyme: undefined, automatisierungen: undefined,
       dokumente: async (ids) => (await this.repo.dokumenteVon(ids)).filter((d) => dok.has(d.id)),
       versionen: async () => [],
       // Die Auskunft enthält die Dokumente, wie sie abgelegt sind – ohne Fassungen von Paketen (#577).
