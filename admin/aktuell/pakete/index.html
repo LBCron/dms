@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.165/pakete/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.166/pakete/">
       
       
         <link rel="prev" href="../automatisierungen/">
@@ -3919,7 +3919,7 @@
 <p><strong>Wann:</strong> Wenn ein Administrator die <a href="#einstellungen">Einstellungen des Pakets</a> speichert. Nur das Paket selbst bekommt dieses Ereignis.</p>
 <p><strong>Typisch:</strong> Die neuen Werte übernehmen, z. B. eine Verbindung neu prüfen oder den Status aktualisieren.</p>
 <h4 id="ereignis-mappe">Ereignisse zu Mappen<a class="headerlink" href="#ereignis-mappe" title="Permanent link">&para;</a></h4>
-<p><strong>Wann:</strong> Seit Version 0.153 – eine Mappe ist <strong>angelegt</strong>, <strong>gespeichert</strong> (und dabei geändert), <strong>gelöscht</strong> (in den Papierkorb) oder <strong>wiederhergestellt</strong>. Ein Paket bekommt diese Ereignisse nur für die Mappentypen, die es im Manifest nennt (bisher nur seine eigenen); die Vorschau zeigt sie als „– zu: <em>Typen</em>“. Viele schnelle Änderungen an derselben Mappe kommen als <strong>ein</strong> Ereignis (binnen etwa 5 Sekunden), mit den Schlüsseln aller geänderten Felder. Das Paket erfährt nur Kennung, Typ und Feldschlüssel – nie Werte –, und liest mit seinen Rechten nach. Beispiel-Mappen, Demo-Daten und eine Wiederherstellung lösen nichts aus.</p>
+<p><strong>Wann:</strong> Seit Version 0.153 – eine Mappe ist <strong>angelegt</strong>, <strong>gespeichert</strong> (und dabei geändert), <strong>gelöscht</strong> (in den Papierkorb) oder <strong>wiederhergestellt</strong>. Ein Paket bekommt diese Ereignisse nur für die Mappentypen, die es im Manifest nennt – seine eigenen und, seit Version 0.166, auch Mappentypen anderer Pakete oder „alle, die es lesen darf“; die Vorschau zeigt sie als „– zu: <em>Typen</em>“ (fremde mit dem Paket in Klammern). Zugestellt wird nur, was das Paket <strong>gerade lesen darf</strong>: Hast du ihm einen Mappentyp unter <a href="../berechtigungen/#pakete-am-mappentyp">Pakete am Mappentyp</a> verwehrt oder schränkt eine Regel für die Rolle <em>Paket</em> es ein, bekommt es dazu nichts – der Grund steht im Protokoll. Viele schnelle Änderungen an derselben Mappe kommen als <strong>ein</strong> Ereignis (binnen etwa 5 Sekunden), mit den Schlüsseln aller geänderten Felder. Das Paket erfährt nur Kennung, Typ und Feldschlüssel – nie Werte –, und liest mit seinen Rechten nach. Beispiel-Mappen, Demo-Daten und eine Wiederherstellung lösen nichts aus.</p>
 <p><strong>Typisch:</strong> Aus einer geänderten Mappe etwas nachrechnen oder einen Stand an einen anderen Dienst geben.</p>
 <h4 id="ereignis-frist-erreicht">Frist erreicht<a class="headerlink" href="#ereignis-frist-erreicht" title="Permanent link">&para;</a></h4>
 <p><strong>Wann:</strong> Seit Version 0.153 für jedes Datumsfeld mit einer <a href="../mappentypen/#fristen-erinnerungen-an-datumsfeldern">Frist</a> – zum <strong>Erinnerungszeitpunkt</strong> (so viele Tage vorher, wie die Frist vorsieht) und <strong>am Tag selbst</strong>, je Mappe, Feld, Datum und Zeitpunkt <strong>genau einmal</strong>, auch mit mehreren Servern und nach einem Neustart. Wie bei den Mappen-Ereignissen nur für die Mappentypen aus dem Manifest. Ändert jemand das Datum, gilt der neue Tag wieder als offen.</p>
