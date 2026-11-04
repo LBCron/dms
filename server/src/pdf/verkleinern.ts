@@ -266,7 +266,10 @@ export interface Analyse {
 
 async function lade(inhalt: Buffer): Promise<PDFDocument> {
   try {
-    return await ladePdf(inhalt, { updateMetadata: false });
+    const doc = await ladePdf(inhalt, { updateMetadata: false });
+    // Seitenbaum einmal ablaufen: Ein kreisförmiger oder falscher Baum scheitert hier mit klarer Meldung (#823).
+    doc.getPageCount();
+    return doc;
   } catch (e) {
     if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht verkleinern.');
     throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');

@@ -179,6 +179,13 @@ export interface TexterkennungUmwandlung {
   anfordern(d: Dokument[]): Promise<number>;
 }
 
+/** Fassung, aus der der Kern liest (#577 umgewandelt, #827 entsperrt); `herkunft` ersetzt den Hinweis zum Paket. */
+type Lesefassung = { info: { paket: { name: string; version: string } }; inhalt: Buffer; herkunft?: string };
+/** Hinweis bei PDFs mit Passwort zum Öffnen (ohne entsperrte Fassung, #827). */
+export const INFO_PASSWORT = 'Das PDF ist mit einem Passwort geschützt.';
+/** So steht im Hinweis des Volltexts, dass er aus der entsperrten Fassung eines geschützten PDFs stammt (#827). */
+export const INFO_ENTSPERRT = 'aus der entsperrten Fassung';
+
 export class Texterkennung {
   private laufend = 0;
   /** Laufende Aufträge je Dokument, damit Administratoren sie abbrechen können (#61). */
@@ -197,6 +204,8 @@ export class Texterkennung {
   umwandlung: TexterkennungUmwandlung | null = null;
   /** Volltext aus Paketen (#614); ohne: andere Dateitypen wie bisher (Umwandlung oder ausgelassen). */
   volltextPaket: TexterkennungVolltextPaket | null = null;
+  /** Entsperrte Fassung eines geschützten PDFs (#827); ohne: geschützte PDFs bleiben ausgelassen. */
+  entsperrt: ((sha: string) => Promise<{ inhalt: Buffer } | null>) | null = null;
 
   constructor(
     private repo: Repo,
@@ -284,7 +293,7 @@ export class Texterkennung {
       const m = (f as Error).message;
       e = abbruch.signal.aborted ? { stand: 'ausgelassen', info: 'Vom Administrator abgebrochen.', text: null }
         // Ein erneuter Versuch ändert nichts: als ausgelassen mit klarem Grund (#61).
-        : /password|passwort|encrypt/i.test(m) ? { stand: 'ausgelassen', info: 'Das PDF ist mit einem Passwort geschützt.', text: null }
+        : /password|passwort|encrypt/i.test(m) ? { stand: 'ausgelassen', info: INFO_PASSWORT, text: null }
         : { stand: 'fehler', info: m.slice(0, 500) };
     } finally { this.laeufe.delete(d.id); }
     // Hat inzwischen ein Paket den Volltext geschrieben (#338), bleibt der stehen – außer bei „neu“ (#458).
@@ -308,6 +317,12 @@ export class Texterkennung {
         .catch((g) => log.error('Stand der Texterkennung nicht gesetzt – das Dokument wird beim nächsten Start neu eingereiht', { dokument: d.name, id: d.id, fehler: (g as Error).message }));
       return;
     }
+    // Inzwischen entsperrt (#827, z. B. mit einem gemerkten Passwort, während der Kern noch das Original las): gleich
+    // noch einmal – diesmal aus der entsperrten Fassung.
+    if (e.stand === 'ausgelassen' && e.info === INFO_PASSWORT && this.entsperrt && (await this.entsperrt(d.sha256).catch(() => null))) {
+      await this.repo.ocrEinreihen([d.id]);
+      return;
+    }
     const daten = { dokument: d.name, id: d.id, stand: e.stand, seiten: e.seiten ?? undefined, ms: Date.now() - start, info: e.info ?? undefined };
     if (e.stand === 'fehler') log.warn('Texterkennung fehlgeschlagen', daten); else if (e.stand === 'ausgelassen') log.info('Texterkennung ausgelassen', daten);
     else if (e.stand === 'paket') log.info('Textebene gelesen, Texterkennung durch Paket folgt', daten); else log.info('Texterkennung abgeschlossen', daten);
@@ -329,6 +344,13 @@ export class Texterkennung {
   private async ergebnis(d: Dokument, signal?: AbortSignal, neu = false): Promise<OcrErgebnis> {
     if (!DATEITYPEN[d.mime]) return this.umgewandelt(d, signal, neu);
     if (d.groesse > MAX_MB * 1024 * 1024) return { stand: 'ausgelassen', info: `Größer als ${MAX_MB} MB.`, text: null };
+    // Geschütztes PDF (#827): Text aus der entsperrten Fassung. Das Ereignis nennt sie (`fassung`), damit ein Paket für
+    // die Texterkennung sie statt des Originals liest.
+    const frei = d.mime === 'application/pdf' ? await this.entsperrt?.(d.sha256).catch(() => null) : null;
+    if (frei) {
+      const r = await this.nurTextebene(d, await this.paket().catch(() => null), neu, signal, { info: { paket: { name: 'Ablago', version: '' } }, inhalt: frei.inhalt, herkunft: INFO_ENTSPERRT });
+      return { ...r, fassung: 'application/pdf' } as OcrErgebnis;
+    }
     // Der Kern liest nur die Textebene (#458, #459); Scans und Bilder erkennt das Paket – ist keins installiert,
     // wartet das Dokument, bis eins kommt.
     return this.nurTextebene(d, await this.paket().catch(() => null), neu, signal);
@@ -375,7 +397,7 @@ export class Texterkennung {
   }
 
   /** Datei lesen: Textebene (poppler). Mit `fassung` (#577) deren Inhalt statt der Datei des Dokuments. */
-  private async lese(d: Dokument, signal?: AbortSignal, fassung?: { info: { paket: { name: string; version: string } }; inhalt: Buffer }): Promise<OcrErgebnis & { ohneText?: number[] }> {
+  private async lese(d: Dokument, signal?: AbortSignal, fassung?: Lesefassung): Promise<OcrErgebnis & { ohneText?: number[] }> {
     const dir = await mkdtemp(join(tmpdir(), 'dms-ocr-'));
     try {
       const pfad = join(dir, 'datei');
@@ -385,7 +407,7 @@ export class Texterkennung {
       // Erkannte Sprache am Ende des Hinweises (#395) – für Anzeige und Statistik.
       let sprache = erkenneSprache(r.text);
       // Aus der umgewandelten Fassung (#577): steht vor der Sprache im Hinweis.
-      const herkunft = fassung ? ` – ${infoFassung(fassung.info.paket)}` : '';
+      const herkunft = fassung ? ` – ${fassung.herkunft ?? infoFassung(fassung.info.paket)}` : '';
       // Sprache je Seite (#579): Wechselt sie zwischen den Seiten (oder steht eine Seite in zwei Sprachen), gilt die
       // mit dem meisten Text als Hauptsprache, die anderen als „enthält auch“; der Suchindex nimmt je Seite ihre
       // Wortstämme. Bei gemischten PDFs (gescannte Seiten erkennt das Paket) bleiben die Seiten auch einsprachig
@@ -409,7 +431,7 @@ export class Texterkennung {
    * Texterkennung (Stand paket; ohne Paket „kein Paket installiert“); vorhandener Text bleibt so lange stehen, damit
    * die Suche ihn findet. Bilder haben keine Textebene: Sie warten gleich auf das Paket.
    */
-  private async nurTextebene(d: Dokument, paket: TexterkennungPaket | null, neu: boolean, signal?: AbortSignal, fassung?: { info: { paket: { name: string; version: string } }; inhalt: Buffer }): Promise<OcrErgebnis> {
+  private async nurTextebene(d: Dokument, paket: TexterkennungPaket | null, neu: boolean, signal?: AbortSignal, fassung?: Lesefassung): Promise<OcrErgebnis> {
     const wartet: OcrErgebnis = { stand: 'paket', info: infoWartet(paket), seiten: d.ocr?.seiten ?? null };
     // Gleiche Datei schon mit Text (auch von der früheren eingebauten Texterkennung oder einem Paket): übernehmen.
     const vorhanden = neu ? undefined : await this.repo.ocrVonSha(d.sha256, d.id);

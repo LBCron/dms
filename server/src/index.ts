@@ -41,6 +41,7 @@ import { Einrichtung } from './einrichtung';
 import { bestimmeMandant, mandantNamen } from './mandant';
 import { ordnerAblage, Vorschaubilder } from './vorschau';
 import { Dateiumwandlung, fassungsOrdner, ordnerFassungen, zieheFassungenUm } from './dateiumwandlung';
+import { PdfEntsperren } from './entsperren';
 import { Archivfassung, archivOrdner, ordnerArchiv, woerterOrdner } from './archivfassung';
 import { Texterkennung } from './texterkennung';
 import { Paketlaeufer } from './laeufer/verwaltung';
@@ -278,10 +279,15 @@ try {
   }
 } catch (e) { log.warn('Exporte nicht aus dem Sicherungsordner verschoben', { fehler: (e as Error).message }); }
 if (exporte.imSicherungsordner) log.warn('Der Export-Ordner liegt im Sicherungsordner: Unverschlüsselte Exporte gehen mit jeder Kopie der Sicherung mit. Lege das Volume für /data/export an einen anderen Ort.', { pfad: exporte.pfad });
-const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassungen(fassungsOrdner(ordner.dateien, cfg.haushalt)), vorschau));
+const fassungen = ordnerFassungen(fassungsOrdner(ordner.dateien, cfg.haushalt));
+const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(fassungen, vorschau));
 dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
 texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
+// Geschützte PDFs (#827): entsperrte Fassungen (qpdf) neben den umgewandelten; gemerkte Passwörter je Konto verschlüsselt.
+const entsperren = new PdfEntsperren(dienst.entsperrenAnbindung({ ablage: fassungen, speicher: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w) }));
+dienst.verbindeEntsperren(entsperren);
+texterkennung.entsperrt = (sha) => entsperren.fassung(sha);
 // Volltext aus Paketen (#614): Dateitypen, für die ein Paket mit dms:volltext den Text liefert.
 texterkennung.volltextPaket = dienst.paketVolltext;
 // Archivfassung (PDF/A, #631): Pakete mit dms:archivfassung legen sie im Haushaltsordner ab (Sicherung, Vollexport);

@@ -11,6 +11,7 @@ import { GRUNDLAGEN, leseSchrift, SCHRIFTEN, setzeSchrift, type Schrift } from '
 import { Link } from '../ort';
 import { FehlerMelden } from './FehlerMelden';
 import { ZweifaktorBlatt } from './Zweifaktor';
+import { DokumentPasswoerter } from './DokumentPasswoerter';
 import { MeinExport } from './MeinExport';
 import { LaufwerkBereich } from './Laufwerk';
 import { Farbfelder } from '../werkbank/Designs';
@@ -155,6 +156,8 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
       <ZweifaktorBlatt />
 
       <MeineGeraete />
+
+      <DokumentPasswoerter />
 
       <ApiSchluesselBlatt />
 

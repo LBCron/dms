@@ -18,6 +18,7 @@ import { bildSeitePdf } from './pdf';
  * - Andere Dateitypen (TIFF, WebP, HEIC, Office …): aus der umgewandelten Fassung eines Pakets (#577, PDF, PNG oder
  *   JPEG – wie oben) oder aus dem Vorschaubild, das das Paket selbst liefert; ohne Paket zeigt die Oberfläche das
  *   Dateisymbol.
+ * - Geschützte PDFs (#827): aus der entsperrten Fassung, sobald es sie gibt (gleiche Quelle `fassung`).
  * - Einmal erzeugt im Hintergrund, abgelegt nach Prüfwert und VERSION – nicht bei jedem Aufruf.
  *   Ein fehlgeschlagener Versuch wird gemerkt und erst mit einer neuen VERSION wiederholt.
  * - Ablage außerhalb des Haushaltsordners: Vorschaubilder werden nicht gesichert (lassen sich neu erzeugen).
@@ -171,7 +172,8 @@ export class Vorschaubilder {
   ausFassung(docs: Auftrag[]) {
     let neu = 0;
     for (const d of docs) {
-      if (hatVorschau(d.mime) || this.warteschlange.has(d.sha256)) continue;
+      // PDFs nur mit entsperrter Fassung (#827) – die Quelle liefert für PDFs nichts anderes.
+      if ((hatVorschau(d.mime) && d.mime !== 'application/pdf') || this.warteschlange.has(d.sha256)) continue;
       this.warteschlange.set(d.sha256, { sha256: d.sha256, mime: d.mime, groesse: d.groesse, name: d.name, fassung: true });
       neu++;
     }
@@ -258,8 +260,9 @@ export class Vorschaubilder {
       if (!sha || !d) return;
       try {
         if (!(await this.ablage.lies(sha))) {
-          // Andere Dateitypen (#577): aus der Fassung (PDF, PNG oder JPEG) des Pakets.
-          const f = d.fassung ? await this.fassung(sha) : null;
+          // Andere Dateitypen (#577): aus der Fassung (PDF, PNG oder JPEG) des Pakets; geschützte PDFs (#827) aus der
+          // entsperrten Fassung, sobald es sie gibt.
+          const f = d.fassung || d.mime === 'application/pdf' ? await this.fassung(sha).catch(() => null) : null;
           if (d.fassung && !f) continue;
           if (f) await this.ablage.loesche(sha);
           const bild = f ? await this.erzeuger(f.inhalt, f.info.mime) : await this.erzeuger(await alsBuffer(await this.dateien.lies(sha)), d.mime);

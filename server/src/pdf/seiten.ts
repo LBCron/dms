@@ -22,24 +22,39 @@ async function lade(inhalt: Buffer): Promise<PDFDocument> {
   }
 }
 
+/**
+ * Kaputte Strukturen (kreisförmiger Seitenbaum, falsche Objektarten) zeigen sich oft erst nach dem Laden, beim Lesen
+ * der Seiten (#823). Dann dieselbe verständliche Meldung wie beim Laden statt eines Fehlers aus pdf-lib.
+ */
+async function lesbar<T>(f: () => Promise<T>): Promise<T> {
+  try { return await f(); } catch (e) {
+    if (e instanceof Fachfehler) throw e;
+    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
+  }
+}
+
 /** Seitenzahl und aktuelle Drehung je Seite. */
 export async function seitenInfo(inhalt: Buffer): Promise<{ anzahl: number; drehungen: number[] }> {
   const doc = await lade(inhalt);
-  const seiten = doc.getPages();
-  return { anzahl: seiten.length, drehungen: seiten.map((s) => ((s.getRotation().angle % 360) + 360) % 360) };
+  return lesbar(async () => {
+    const seiten = doc.getPages();
+    return { anzahl: seiten.length, drehungen: seiten.map((s) => ((s.getRotation().angle % 360) + 360) % 360) };
+  });
 }
 
 /** Neues PDF aus Seiten des Originals (Reihenfolge, Drehung, ohne die weggelassenen). */
 export async function baueSeiten(inhalt: Buffer, seiten: SeitenWahl[]): Promise<Buffer> {
   const quelle = await lade(inhalt);
-  const ziel = await PDFDocument.create();
-  const kopien = await ziel.copyPages(quelle, seiten.map((s) => s.nr - 1));
-  kopien.forEach((p, i) => {
-    const d = seiten[i].drehung ?? 0;
-    if (d) p.setRotation(degrees((((p.getRotation().angle + d) % 360) + 360) % 360));
-    ziel.addPage(p);
+  return lesbar(async () => {
+    const ziel = await PDFDocument.create();
+    const kopien = await ziel.copyPages(quelle, seiten.map((s) => s.nr - 1));
+    kopien.forEach((p, i) => {
+      const d = seiten[i].drehung ?? 0;
+      if (d) p.setRotation(degrees((((p.getRotation().angle + d) % 360) + 360) % 360));
+      ziel.addPage(p);
+    });
+    return Buffer.from(await ziel.save());
   });
-  return Buffer.from(await ziel.save());
 }
 
 /** In Teile zerlegen: je Teil ein PDF. */
@@ -54,7 +69,7 @@ export async function fuegeZusammen(inhalte: Buffer[]): Promise<Buffer> {
   const ziel = await PDFDocument.create();
   for (const b of inhalte) {
     const q = await lade(b);
-    for (const p of await ziel.copyPages(q, q.getPageIndices())) ziel.addPage(p);
+    await lesbar(async () => { for (const p of await ziel.copyPages(q, q.getPageIndices())) ziel.addPage(p); });
   }
   return Buffer.from(await ziel.save());
 }

@@ -796,6 +796,11 @@ export interface Dokument {
    * in der Mappe (GET /mappen/{id}) und nur, wenn es eine gibt oder ein Paket dran ist.
    */
   archivfassung?: import('./archivfassung').ArchivStand | null;
+  /**
+   * Geschütztes PDF (#827): mit Passwort zum Öffnen oder nur mit Rechte-Sperre (Drucken, Kopieren) – und ob es eine
+   * entsperrte Fassung gibt. Nur in der Mappe (GET /mappen/{id}) und nur bei geschützten PDFs.
+   */
+  pdfSchutz?: import('./entsperren').PdfSchutz | null;
 }
 
 /** Herkunft einer Dokumentversion (#194). */
@@ -870,6 +875,7 @@ export const HISTORIENARTEN = {
   umgewandelt: 'umgewandelte Fassung erstellt',
   archivfassung: 'Archivfassung (PDF/A) abgelegt',
   leserecht: 'Leserecht auf Zeit',
+  entsperrt: 'Passwortschutz entfernt',
 } as const;
 export type Historienart = keyof typeof HISTORIENARTEN;
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */

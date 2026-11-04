@@ -41,4 +41,18 @@ describe('Entpack-Grenze für Objektströme (#823)', () => {
     assert.equal((await seitenInfo(mitStroemen)).anzahl, 2);
     assert.doesNotThrow(() => pruefeObjektstroeme(pdfMitObjektstrom(deflateSync(Buffer.from('5 0 << /A 1 >>')))));
   });
+
+  it('unmögliche Angaben in Querverweis- und Objektströmen (gefunden mit den Fuzz-Tests): abgelehnt statt Hänger', async () => {
+    const xref = (dict: string, strom = Buffer.from([1, 0, 0, 0])) => {
+      const kopf = Buffer.from('%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+      return Buffer.concat([kopf, Buffer.from(`3 0 obj\n<< /Type /XRef ${dict} /Length ${strom.length} >>\nstream\n`), strom, Buffer.from('\nendstream\nendobj\nstartxref\n0\n%%EOF\n')]);
+    };
+    assert.throws(() => pruefeObjektstroeme(xref('/Size 1 /W [1 2 2147483647]')), /unstimmige Querverweise/);
+    assert.throws(() => pruefeObjektstroeme(xref('/Size 2 /W [1 1 1] /Index [0 2147483647]')), /unstimmige Querverweise/);
+    assert.throws(() => pruefeObjektstroeme(xref('/Size 99999 /W [1 1 1]')), /unstimmige Querverweise/);
+    assert.throws(() => pruefeObjektstroeme(Buffer.from(pdfMitObjektstrom(deflateSync(Buffer.from('5 0 << /A 1 >>'))).toString('latin1').replace('/N 1', '/N 2147483647'), 'latin1')), /unstimmige/);
+    assert.doesNotThrow(() => pruefeObjektstroeme(xref('/Size 1 /W [1 2 1]')));
+    await assert.rejects(ladePdf(xref('/Size 1 /W [1 2 2147483647]')), /unstimmige Querverweise/);
+  });
 });
+

@@ -64,6 +64,7 @@ import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandl
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
 import { PaketVolltext } from './paketvolltext';
 import type { ArchivAblage, ArchivAnbindung, Archivfassung } from './archivfassung';
+import type { EntsperrenAnbindung, PdfEntsperren } from './entsperren';
 import { archivfassungName, pruefeWoerter } from '../../shared/src/archivfassung';
 import { vorgaben } from '../../shared/src/paketeinstellungen';
 import { liesPdfA, textebeneWoerter } from './pdf';
@@ -1033,11 +1034,82 @@ export class Dienst {
     return (await this.vorschau.nachholen(docs)) + gemeldet;
   }
 
-  /** Neue Dateien (#332, #577): Vorschaubild einreihen, andere Dateitypen an das Paket zum Umwandeln melden. */
+  /**
+   * Neue Dateien (#332, #577, #827): Vorschaubild einreihen, andere Dateitypen an das Paket zum Umwandeln melden,
+   * geschützte PDFs erkennen (Rechte-Sperre gleich aufheben, bei Post für eine Person deren gemerkte Passwörter).
+   */
   private neueDateien(docs: Dokument[]) {
     this.vorschau?.einreihen(docs);
     const andere = docs.filter((d) => d && !kernTyp(d.mime));
     if (andere.length && this.umwandlung) void this.umwandlung.anfordern(andere).catch((e: Error) => protokoll.modul('umwandlung').warn('Datei nicht zum Umwandeln gemeldet', { fehler: e.message }));
+    const pdfs = docs.filter((d) => d && d.mime === 'application/pdf');
+    if (pdfs.length && this.entsperren) void this.entsperren.neu(pdfs, (d) => this.besitzerDerPost(d.mappeId)).catch((e: Error) => protokoll.modul('dokumente').warn('Geschützte PDFs nicht geprüft', { fehler: e.message }));
+  }
+
+  /* ---------- Geschützte PDFs (#827) ---------- */
+
+  private entsperren?: PdfEntsperren;
+  verbindeEntsperren(e: PdfEntsperren) { this.entsperren = e; }
+  get pdfEntsperren() { return this.entsperren; }
+
+  /** Was PdfEntsperren vom Dienst braucht (#827) – für index.ts und Tests. */
+  entsperrenAnbindung(o: Omit<EntsperrenAnbindung, 'datei' | 'dokumenteMitSha' | 'nachEntsperren'>): EntsperrenAnbindung {
+    return { ...o, datei: (sha) => this.liesGanz(sha), dokumenteMitSha: (sha) => this.repo.dokumenteMitSha(sha), nachEntsperren: (docs, info) => this.nachEntsperren(docs, info) };
+  }
+
+  /**
+   * Wem gehört die Post (#827)? Das Konto aus „Für“ einer Post-Mappe; bei Post für alle und anderen Mappen null –
+   * dann probiert Ablago keine gemerkten Passwörter.
+   */
+  private async besitzerDerPost(mappeId: string): Promise<string | null> {
+    const m = await this.repo.holeMappe(mappeId);
+    if (!m) return null;
+    const typ = (await this.listeTypen()).find((x) => x.id === m.typId);
+    if (typ?.system !== 'post') return null;
+    return alsListe(m.werte.fuer)[0] ?? null;
+  }
+
+  /**
+   * Eine entsperrte Fassung ist da (#827): Vorschaubild daraus, Volltext neu (wo er am Schutz scheiterte), Archivfassung
+   * (wo der Volltext schon steht) und – wenn eine Person entsperrt hat – ein Eintrag in der Historie.
+   */
+  private async nachEntsperren(docs: Dokument[], info: FassungInfo) {
+    this.vorschauFassung?.ausFassung(docs);
+    const neu = docs.filter((d) => d.ocr && (d.ocr.stand === 'ausgelassen' || d.ocr.stand === 'fehler')).map((d) => d.id);
+    if (neu.length) { await this.repo.ocrEinreihen(neu); this.ocr?.anstossen(); }
+    for (const d of docs) if (d.ocr?.stand === 'fertig') void this.archivNachVolltext(d.id);
+    const e = info.entsperrt;
+    if (!e || e.art === 'rechte') return;
+    for (const d of docs) {
+      const text = e.art === 'gemerkt' ? t('mappen.entsperren.historie.gemerkt', { name: e.name ?? '' }) : t('mappen.entsperren.historie.passwort');
+      await this.notiere(d.mappeId, e.von, 'entsperrt', { dokument: d.name, text })
+        .catch((f: Error) => protokoll.modul('dokumente').warn('Historie zum Entsperren nicht geschrieben', { dokument: d.id, fehler: f.message }));
+    }
+  }
+
+  /** Geschütztes PDF mit Passwort entsperren (POST /dokumente/{id}/entsperren); Lesen prüft die Route. */
+  async entsperreDokument(id: string, konto: string, e: { passwort?: unknown; merken?: unknown; name?: unknown }, merkenErlaubt: boolean) {
+    if (!this.entsperren) throw new Fachfehler(404, t('mappen.entsperren.aus'));
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    if (e.merken === true && !merkenErlaubt) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.nur-browser'));
+    const r = await this.entsperren.mitPasswort(d, konto, e.passwort, e.merken === true ? { name: e.name } : null);
+    return { dokument: d.id, ...r };
+  }
+
+  /** Inhalt der entsperrten Fassung zum Inhalt einer Datei (Stempel, Verkleinern, #827); null ohne. */
+  private entsperrtZu = async (inhalt: Buffer): Promise<Buffer | null> => {
+    if (!this.entsperren || inhalt.subarray(0, 5).toString('latin1') !== '%PDF-') return null;
+    return (await this.entsperren.fassung(createHash('sha256').update(inhalt).digest('hex')))?.inhalt ?? null;
+  };
+
+  /** Schutz je Dokument (#827), nur bei geschützten PDFs. */
+  private async mitPdfSchutz(docs: Dokument[]): Promise<Dokument[]> {
+    if (!this.entsperren || !docs.length) return docs;
+    return Promise.all(docs.map(async (d) => {
+      const s = await this.entsperren!.stand(d).catch(() => null);
+      return s ? { ...d, pdfSchutz: s } : d;
+    }));
   }
 
   /* ---------- Dateien umwandeln (#577) ---------- */
@@ -1120,7 +1192,8 @@ export class Dienst {
   async fassungVon(id: string): Promise<{ d: Dokument; info: FassungInfo; inhalt: Buffer }> {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
-    const f = kernTyp(d.mime) ? null : await this.umwandlung?.lies(d.sha256);
+    // Geschützte PDFs (#827): die entsperrte Fassung.
+    const f = kernTyp(d.mime) ? (d.mime === 'application/pdf' ? await this.entsperren?.fassung(d.sha256) : null) : await this.umwandlung?.lies(d.sha256);
     if (!f) throw new Fachfehler(404, t('pakete.fassung.keine'));
     return { d, ...f };
   }
@@ -2461,7 +2534,7 @@ export class Dienst {
     const plan = docs.length || pdf ? await this.stempelPlan(m.typId, wunschAus(o.e.stempel), o.an.join(', '), o.stempelDaten) : null;
     // Verkleinert senden (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
     const klein = stufeAus(o.e.verkleinern);
-    const kontext = (d?: Dokument) => ({ benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d?.archivnummer ?? null });
+    const kontext = (d?: Dokument) => ({ benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d?.archivnummer ?? null, entsperrt: this.entsperrtZu });
     const bearbeiten = !!plan || (!!klein && docs.length > 0);
     const dokumente: Versandanhang[] = await Promise.all(quellen.map(async (q, i): Promise<Versandanhang> => {
       const d = docs[i];
@@ -3050,7 +3123,7 @@ export class Dienst {
       rechte: rechte ?? { C: true, R: true, U: true, D: true, P: true },
       /** Ob „Mappe löschen“ geht, sonst warum nicht (#79). */
       loeschbar: p.ok ? { ok: true } : { ok: false, grund: p.grund, rueckverweise: fremd },
-      dokumente: await this.mitArchivStand(await this.repo.listeDokumente(id)),
+      dokumente: await this.mitPdfSchutz(await this.mitArchivStand(await this.repo.listeDokumente(id))),
       /** Notizen an der Mappe (#55). */
       notizen: await this.repo.notizen(id),
       /** Aufgaben an der Mappe, offene zuerst (#54). */
@@ -4826,7 +4899,7 @@ export class Dienst {
     const gestempelt = new Map<string, Ausgabe[]>();
     const ausgabe = async (m: Mappe, d: Dokument, streng: boolean): Promise<Ausgabe> => {
       const a = await fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await fw.lies(d) }, { stempel: plaene.get(m.id), verkleinern: klein },
-        { benutzer: ich.name ?? '', mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer }, streng);
+        { benutzer: ich.name ?? '', mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer, entsperrt: this.entsperrtZu }, streng);
       gestempelt.set(m.id, [...(gestempelt.get(m.id) ?? []), a]);
       return a;
     };
@@ -6493,7 +6566,7 @@ export class Dienst {
   /** Gestempelte Kopie eines Dokuments fürs Laufwerk (#722); das gespeicherte Original bleibt unverändert. */
   async laufwerkAusgabe(d: Dokument, m: Pick<Mappe, 'titel'>, plan: GeltenderStempel, leser: string): Promise<Ausgabe> {
     return fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) }, { stempel: plan },
-      { benutzer: leser, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null });
+      { benutzer: leser, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null, entsperrt: this.entsperrtZu });
   }
 
   private async liesGanz(sha256: string): Promise<Buffer> {
@@ -6564,7 +6637,7 @@ export class Dienst {
     const lies = async () => ('archiv' in datei && datei.archiv ? datei.inhalt() : this.liesGanz(datei.sha256));
     if (!plan && !klein) return { name: datei.name, mime: datei.mime, anzeigbar: datei.anzeigbar, groesse: datei.groesse, inhalt: ('archiv' in datei && datei.archiv ? await datei.inhalt() : await this.dateien.lies(datei.sha256)) as Buffer | Readable, gestempelt: false };
     const a = await fuerAusgabe({ name: datei.name, mime: datei.mime, inhalt: await lies() }, { stempel: plan, verkleinern: klein },
-      { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: dokument.archivnummer }, true);
+      { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: dokument.archivnummer, entsperrt: this.entsperrtZu }, true);
     await this.notiereWeitergabe(m!.id, o.ich.id, o.version != null ? `heruntergeladen, Version ${o.version}` : 'archiv' in datei && datei.archiv ? 'heruntergeladen (Archivfassung)' : 'heruntergeladen', plan, [a]);
     if (plan) protokoll.modul('dokumente').info('Dokument mit Stempel heruntergeladen', { id, mappe: m!.id, pflicht: plan.pflicht });
     if (a.verkleinert) protokoll.modul('dokumente').info('Dokument verkleinert heruntergeladen', { id, mappe: m!.id, vorher: a.verkleinert.vorher, nachher: a.verkleinert.nachher });

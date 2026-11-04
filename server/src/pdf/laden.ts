@@ -12,6 +12,7 @@ import { inflateSync } from 'node:zlib';
 import { PDFDocument, type LoadOptions } from 'pdf-lib';
 import { Fachfehler } from '../fehler';
 import { eigenerPuffer } from './puffer';
+import { t } from '../sprache';
 
 /** Höchstens so viel darf ein einzelner Objekt- oder Querverweis-Strom entpackt groß sein. */
 export const OBJEKTSTROM_MAX = 64 * 1024 * 1024;
@@ -50,7 +51,7 @@ export function pruefeObjektstroeme(daten: Uint8Array): void {
     const ende = buf.indexOf(ENDSTREAM, start);
     if (ende < 0) continue; // pdf-lib scheitert selbst
     const filter = /\/Filter\s*(\[[^\]]*\]|\/[A-Za-z0-9]+)/.exec(dict)?.[1]?.replace(/\s+/g, ' ').trim();
-    if (!filter) { summe += ende - start; continue; }
+    if (!filter) { pruefeAngaben(dict, ende - start, objektstrom); summe += ende - start; continue; }
     if (filter !== '/FlateDecode' && filter !== '[/FlateDecode]' && filter !== '[ /FlateDecode ]') {
       throw new Fachfehler(422, 'Das PDF ist ungewöhnlich verpackt (Objektstrom mit anderem Filter als FlateDecode) und wird nicht gelesen.');
     }
@@ -61,11 +62,55 @@ export function pruefeObjektstroeme(daten: Uint8Array): void {
       if ((e as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE' || e instanceof RangeError) {
         throw new Fachfehler(422, 'Das PDF entpackt sich auf ein Vielfaches seiner Größe und wird zum Schutz des Servers nicht gelesen.');
       }
-      continue; // kaputt gepackt: pdf-lib entscheidet selbst
+      // Kaputt gepackt: pdf-lib entscheidet selbst – unmögliche Angaben lehnen wir trotzdem ab.
+      pruefeAngaben(dict, Infinity, objektstrom);
+      continue;
     }
+    pruefeAngaben(dict, n, objektstrom);
     summe += n;
     if (summe > OBJEKTSTROEME_MAX) throw new Fachfehler(422, 'Das PDF entpackt sich auf ein Vielfaches seiner Größe und wird zum Schutz des Servers nicht gelesen.');
   }
+}
+
+/** Höchstens so viele Einträge hat ein Objekt- oder Querverweis-Strom (auch wenn er sich nicht entpacken lässt). */
+export const EINTRAEGE_MAX = 10_000_000;
+const SPIEL = 1000;
+
+/** Zahlen in einem Feld wie `/W [1 2 1]`; null ohne Feld. */
+function feld(dict: string, name: string): number[] | null {
+  const m = new RegExp(`/${name}\\s*\\[([^\\]]*)\\]`).exec(dict);
+  return m ? m[1].trim().split(/\s+/).filter(Boolean).map(Number) : null;
+}
+
+/**
+ * Angaben eines Objekt- oder Querverweis-Stroms gegen seine entpackte Länge prüfen (#823, gefunden mit den
+ * Fuzz-Tests): Mit unmöglichen Breiten (`/W`), Bereichen (`/Index`, `/Size`) oder Anzahlen (`/N`) läuft pdf-lib beim
+ * Laden Milliarden Schritte bzw. belegt den ganzen Speicher – ein PDF von 1 KB hielte einen Arbeiter bis zur
+ * Zeitgrenze fest. Jeder Eintrag braucht Platz im Strom; deutlich mehr Einträge, als hineinpassen, lehnt Ablago ab.
+ * Großzügig (`SPIEL`, doppelte Zahl), damit ungenaue, aber harmlose Erzeuger durchkommen – die Hänger brauchen Milliarden.
+ */
+function pruefeAngaben(dict: string, laenge: number, objektstrom: boolean) {
+  const unstimmig = () => new Fachfehler(422, t('mappen.pdf.unstimmig'));
+  if (objektstrom) {
+    const n = Number(/\/N\s+(-?\d+)/.exec(dict)?.[1] ?? 0);
+    const first = Number(/\/First\s+(-?\d+)/.exec(dict)?.[1] ?? 0);
+    // Je Objekt mindestens „1 0 “ im Kopf.
+    if (n < 0 || first < 0 || n > EINTRAEGE_MAX || first > laenge || n > laenge + SPIEL) throw unstimmig();
+    return;
+  }
+  const w = feld(dict, 'W');
+  if (!w || w.length !== 3 || w.some((x) => !Number.isInteger(x) || x < 0 || x > 8)) throw unstimmig();
+  const breite = w[0] + w[1] + w[2];
+  const index = feld(dict, 'Index');
+  const size = Number(/\/Size\s+(-?\d+)/.exec(dict)?.[1] ?? 0);
+  if (!Number.isInteger(size) || size < 0) throw unstimmig();
+  let anzahl = size;
+  if (index) {
+    if (index.length % 2 || index.some((x) => !Number.isInteger(x) || x < 0)) throw unstimmig();
+    anzahl = 0;
+    for (let i = 1; i < index.length; i += 2) anzahl += index[i];
+  }
+  if (anzahl > EINTRAEGE_MAX || (breite === 0 ? anzahl > SPIEL : anzahl > (laenge / breite) * 2 + SPIEL)) throw unstimmig();
 }
 
 /** PDFDocument.load mit Prüfung der Objektströme und eigenem Puffer (#456). */

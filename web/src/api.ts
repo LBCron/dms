@@ -11,6 +11,7 @@ import type { UeberfluessigeVariable } from '../../shared/src/umgebungsvariablen
 import type { LasttestStand } from '../../shared/src/lasttest';
 import type { Akzeptiert, Schwere } from '../../shared/src/meldungen';
 import type { SystemkontoFehler } from '../../shared/src/systemkonten';
+import type { GemerktesPasswort, PdfSchutz } from '../../shared/src/entsperren';
 import type { Abwesenheit, Aufgabe, Ausschnitt, FallOhneLeserecht, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
@@ -467,6 +468,14 @@ export const api = {
   neuerLink: (id: string) => anfrage<LinkErgebnis>('POST', `/api/benutzer/${id}/link`),
   sitzungen: (id: string) => anfrage<Sitzung[]>('GET', `/api/benutzer/${id}/sitzungen`),
   meineSitzungen: () => anfrage<Sitzung[]>('GET', '/api/konto/sitzungen'),
+  /** Geschütztes PDF entsperren (#827); mit `merken` zusätzlich im eigenen Konto. */
+  dokumentEntsperren: (id: string, passwort: string, merken?: { name: string }) => anfrage<{ dokument: string; pdfSchutz: PdfSchutz | null; gemerkt: boolean; hinweis?: string }>('POST', `/api/dokumente/${id}/entsperren`, { passwort, ...(merken ? { merken: true, name: merken.name } : {}) }),
+  /** Passwörter für Dokumente (#827, Mein Konto → Sicherheit). */
+  dokumentPasswoerter: () => anfrage<{ eintraege: GemerktesPasswort[]; bestaetigtBis: string | null; max: number; zweifaktor: boolean }>('GET', '/api/konto/dokument-passwoerter'),
+  dokumentPasswoerterBestaetigen: (e: { passwort?: string; code?: string }) => anfrage<{ bestaetigtBis: string }>('POST', '/api/konto/dokument-passwoerter/bestaetigen', e),
+  dokumentPasswortZeigen: (id: string) => anfrage<{ passwort: string }>('GET', `/api/konto/dokument-passwoerter/${id}`),
+  dokumentPasswortAendern: (id: string, e: { name?: string; passwort?: string }) => anfrage<GemerktesPasswort>('PUT', `/api/konto/dokument-passwoerter/${id}`, e),
+  dokumentPasswortLoeschen: (id: string) => anfrage<null>('DELETE', `/api/konto/dokument-passwoerter/${id}`),
   meineSitzungBeenden: (sitzung: string) => anfrage<null>('DELETE', `/api/konto/sitzungen/${sitzung}`),
   andereSitzungenBeenden: () => anfrage<{ beendet: number }>('POST', '/api/konto/sitzungen/andere-beenden'),
   sitzungBeenden: (id: string, sitzung: string) => anfrage<null>('DELETE', `/api/benutzer/${id}/sitzungen/${sitzung}`),

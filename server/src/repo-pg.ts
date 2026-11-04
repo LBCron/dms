@@ -1966,7 +1966,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const korb = await sql`SELECT id, mappe FROM papierkorb WHERE haushalt_id = ${haushaltId} AND mappe::text LIKE ${muster}`;
       const einst = await sql`
         SELECT e.schluessel, e.wert, coalesce(nullif(b.name, ''), b.email) AS titel FROM einstellungen e
-        LEFT JOIN benutzer b ON b.haushalt_id = e.haushalt_id AND e.schluessel = 'zweifaktor_' || b.id::text
+        LEFT JOIN benutzer b ON b.haushalt_id = e.haushalt_id AND (e.schluessel = 'zweifaktor_' || b.id::text OR e.schluessel = 'dokpasswoerter_' || b.id::text)
         WHERE e.haushalt_id = ${haushaltId} AND e.wert::text LIKE ${muster} ORDER BY e.schluessel`;
       const hooks = await sql`SELECT id, name, geheimnis FROM webhooks WHERE haushalt_id = ${haushaltId} AND geheimnis LIKE ${muster} ORDER BY erstellt, id`;
       return [

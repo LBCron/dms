@@ -110,5 +110,6 @@
   "archiv.wahl.teil": "{zahl} von {gesamt} Dokumenten haben eine Archivfassung – die übrigen gehen als Original.",
   "archiv.wahl.alle": "Alle Dokumente haben eine Archivfassung.",
   "archiv.wahl.unbekannt": "Dokumente ohne Archivfassung (und E-Rechnungen) gehen als Original.",
-  "archiv.wahl.keine": "Keines dieser Dokumente hat eine Archivfassung – es geht das Original hinaus."
+  "archiv.wahl.keine": "Keines dieser Dokumente hat eine Archivfassung – es geht das Original hinaus.",
+  "archiv.ansicht.entsperrt": "Ansicht: entsperrte Fassung"
 }
