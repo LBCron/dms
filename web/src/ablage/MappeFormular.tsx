@@ -913,10 +913,13 @@ function LoeschKnopf({ sperre, loeschen, wege }: { sperre?: Loeschsperre; loesch
   const zeige = quellen.slice(0, 8);
   return (
     <div className="loeschwahl" ref={ref}>
-      <button type="button" className="textknopf gefahr" disabled aria-describedby="loeschwahl-grund">Mappe löschen</button>
-      <span id="loeschwahl-grund" className="sr-only">Löschen nicht möglich: {sperre.grund}</span>
+      {/* Gesperrt als Knopf erkennbar (#648): Rahmen, gedämpft, Schloss; der Grund steht sichtbar daneben. */}
+      <button type="button" className="knopf klein loeschwahl-gesperrt" aria-disabled="true" aria-describedby="loeschwahl-grund" onClick={() => setOffen(!offen)}>
+        <Symbol name="schloss" /> {t('mappen.loeschen.knopf')}
+      </button>
+      <span id="loeschwahl-grund" className="klein leise loeschwahl-grund">{t('mappen.loeschen.gesperrt', { grund: sperre.grund })}</span>
       <button type="button" className="textknopf klein loeschwahl-warum" aria-expanded={offen} aria-controls="loeschwahl-begruendung" onClick={() => setOffen(!offen)}>
-        <Symbol name="info" /> Warum nicht?
+        <Symbol name="info" /> {t('mappen.loeschen.warum')}
       </button>
       {offen && (
         <div className="loeschwahl-begruendung klein" id="loeschwahl-begruendung" role="region" aria-label="Warum sich die Mappe nicht löschen lässt">

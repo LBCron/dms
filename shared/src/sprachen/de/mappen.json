@@ -19,5 +19,8 @@
   "konflikt.fehlt": "Wähle bei jedem Feld, was gelten soll.",
   "konflikt.speichern": "So speichern",
   "konflikt.abbrechen": "Zurück zum Bearbeiten",
-  "konflikt.status": "Noch nicht gespeichert – entscheide oben, was gelten soll."
+  "konflikt.status": "Noch nicht gespeichert – entscheide oben, was gelten soll.",
+  "loeschen.knopf": "Mappe löschen",
+  "loeschen.gesperrt": "Gesperrt: {grund}",
+  "loeschen.warum": "Warum ist Löschen gesperrt?"
 }

@@ -809,9 +809,12 @@ input.kurz { width: 7em; }
 .wahlliste button.an { background: var(--akzent-zart); }
 
 /* Löschen vorab prüfen (#79) */
-/* Mappe löschen mit „Warum nicht?“ (#423): Begründung klappt direkt am Knopf auf (über der Speicherleiste). */
+/* Mappe löschen mit „Warum ist Löschen gesperrt?“ (#423, #648): Begründung klappt direkt am Knopf auf (über der Speicherleiste). */
 .loeschwahl { position: relative; display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
 .loeschwahl-warum { display: inline-flex; align-items: center; gap: 4px; }
+/* Gesperrter Löschknopf (#648): als Knopf erkennbar, aber gedämpft – nicht klickbar wie ein echter Knopf. */
+.knopf.loeschwahl-gesperrt { color: var(--leise); border-style: dashed; background: transparent; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; }
+.loeschwahl-grund { flex-basis: 100%; }
 .loeschwahl-begruendung { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: min(380px, calc(100vw - 48px)); padding: 10px 12px; background: var(--flaeche); border: 1px solid var(--linie-stark); border-radius: var(--r); box-shadow: 0 10px 30px rgba(15, 23, 42, .18); }
 .loeschwahl-begruendung p { margin: 0; }
 .loeschwahl-begruendung ul { margin: 6px 0 0; padding-left: 18px; }
