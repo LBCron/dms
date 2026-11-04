@@ -14,10 +14,11 @@ import { IBAN_LAENGEN, istIban } from './erkennung';
 import type { Feld, Mappentyp, Wert, Werte } from './model';
 import { uebersetzer } from './sprache';
 import felder from './sprachen/de/felder.json';
+import { datumsformat } from './region';
 
 const t = uebersetzer({ felder });
-/** Heute in der Zeitzone des Haushalts (wie `ZEITZONE` im Modell); hier eigen, damit es keinen Ring der Module gibt. */
-const heuteIn = (jetzt = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(jetzt);
+/** Heute in der Zeitzone des Haushalts (Region, #726). */
+const heuteIn = (jetzt = new Date()) => datumsformat('sv-SE').format(jetzt);
 
 export const FELDFORMATE = ['email', 'telefon', 'internetseite', 'iban', 'plz'] as const;
 export type Feldformat = (typeof FELDFORMATE)[number];

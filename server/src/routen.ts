@@ -69,6 +69,9 @@ import { werkbankZahlen } from './werkbankzahlen';
 import { ueberfluessigeVariablen } from '../../shared/src/umgebungsvariablen';
 import { Fotostapel } from './fotostapel';
 import { MAIL_STANDARD, pruefeZeit, STANDARD_TAGE, wirksameZeit, type Aufgabenmail, type MailZeit } from './aufgabenmail';
+import { LAENDER, ZEITZONEN, zeitzone } from '../../shared/src/region';
+import { BUNDESLAENDER } from '../../shared/src/feiertage';
+import { RegionDienst } from './region';
 
 const L = {
   konto: protokoll.modul('konto'), ablage: protokoll.modul('ablage'), werkbank: protokoll.modul('werkbank'),
@@ -225,6 +228,8 @@ export interface RoutenExtras {
   texterkennung?: Texterkennung;
   /** Tägliche Zusammenfassung der Aufgaben (#54). */
   aufgabenmail?: Aufgabenmail;
+  /** Region der Ablage (#726): Land, Bundesland, Zeitzone. */
+  region?: import('./region').RegionDienst;
   /** Fehlermeldungen von Benutzern (#70). */
   fehlermeldungen?: Fehlermeldungen;
   /** API-Schlüssel (#20). */
@@ -314,6 +319,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const typName = async (id: string) => (await dienst.listeTypen()).find((t) => t.id === id)?.name ?? id;
   const betrieb = () => { if (!x.betrieb) throw new Fachfehler(404, 'Betriebseinstellungen sind nicht eingerichtet.'); return x.betrieb; };
   const mail = () => { if (!x.aufgabenmail) throw new Fachfehler(404, 'Die Aufgaben-Mail ist nicht eingerichtet.'); return x.aufgabenmail; };
+  const region = () => { if (!x.region) throw new Fachfehler(404, 'Die Region ist nicht eingerichtet.'); return x.region; };
+  const regionStand = async (r: import('../../shared/src/region').Region) => ({
+    region: r, laender: LAENDER, bundeslaender: BUNDESLAENDER, zeitzonen: ZEITZONEN, feiertage: RegionDienst.feiertageIm(r),
+  });
   /** Eigene Einstellung der täglichen Zusammenfassung mit den Standards der Werkbank (#92, #94). */
   const zusammenfassung = async (i: Benutzer) => {
     const std = x.aufgabenmail ? await x.aufgabenmail.einstellung() : MAIL_STANDARD;
@@ -381,7 +390,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     papierkorbTage: await dienst.papierkorbTage(), historieTage: await dienst.historieTage(),
     // Ohne eingerichtete Sicherung (oder wenn der Plan nicht lesbar ist) steht im Dokument „keine automatischen Sicherungen“.
     sicherung: (await x.sicherung?.plan?.().catch(() => null)) ?? null, auskunftTage: AUSKUNFT_TAGE,
-    version: eigeneVersion(), stand: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date()), mandant: (await x.mandantName?.()) ?? '',
+    version: eigeneVersion(), stand: new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(new Date()), mandant: (await x.mandantName?.()) ?? '',
     loeschprotokoll: { jahre: await dienst.loeschprotokollJahre() },
   });
   /** Auskunft zustellen (#455): Einmal-Tickets der öffentlichen Abrufseite. */
@@ -454,6 +463,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       passwoerterMoeglich: dienst.passwoerterMoeglich,
       // Logo und Schriftzug des Standard-Designs für die Anmeldeseite (#72).
       marke: x.designs ? await x.designs.marke() : null,
+      // Zeitzone der Region (#726): die Oberfläche rechnet „heute“ und Uhrzeiten wie der Server.
+      zeitzone: zeitzone(),
       // Wartungsmodus (#102): Hinweis auf der Anmeldeseite.
       wartung: x.wartung?.oeffentlich() ?? null,
       // Version der Installation für Hilfe-Links ins passende Handbuch (#110, #111); nur angemeldet.
@@ -466,7 +477,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       hinweise: a.benutzer && !a.sitzungsDaten?.vertretungId ? await konten.hinweise(a.benutzer.id) : [],
       // Favoriten benachrichtigen (#506): von der Werkbank für diesen Benutzer erlaubt? Sonst kein Schalter.
       favoritenBenachrichtigung: a.benutzer ? await dienst.favoritenBenachrichtigungErlaubt(a.benutzer.id) : null,
+      // Laufwerk (#720): eingeschaltet? Nur dann zeigt die Oberfläche „Als Laufwerk einbinden“.
+      laufwerk: a.benutzer && x.webdav ? (await x.webdav.einstellung()).aktiv : false,
     }) },
+    // Laufwerk für Benutzer (#720): Adresse und Benutzername; ausgeschaltet gibt es nichts.
+    { methode: 'GET', pfad: '/api/konto/laufwerk', zugang: 'angemeldet', handler: async (a) => {
+      if (!x.webdav || !(await x.webdav.einstellung()).aktiv) throw new Fachfehler(404, 'Das Laufwerk ist nicht eingeschaltet.');
+      const s = await x.webdav.stand();
+      return ok({ adresse: s.adresse, https: s.https, benutzername: ich(a).email });
+    } },
     { methode: 'POST', pfad: '/api/konto/hinweise/gesehen', zugang: 'angemeldet', handler: async (a) => {
       if (!a.sitzungsDaten?.vertretungId) await konten.hinweiseGesehen(ich(a).id);
       return leer;
@@ -798,7 +817,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/werkbank/debug', zugang: 'admin', handler: async (a) => {
       const an = !!b(a).an;
       const r = protokoll.setzeDebug(an);
-      L.system.warn(an ? `Debug-Modus eingeschaltet bis ${new Date(r.bis!).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin' })}` : 'Debug-Modus ausgeschaltet');
+      L.system.warn(an ? `Debug-Modus eingeschaltet bis ${new Date(r.bis!).toLocaleTimeString('de-DE', { timeZone: zeitzone() })}` : 'Debug-Modus ausgeschaltet');
       return ok(r);
     } },
 
@@ -871,6 +890,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(),
         benutzer: () => konten.exportDaten(), designs: async () => (x.designs ? (await x.designs.liste()).designs : []),
         protokoll: () => protokoll.eintraege({}),
+        // Region (#726): Land, Bundesland, Zeitzone als struktur/region.json.
+        ...(x.region ? { region: () => x.region!.lies() } : {}),
       });
       const von = ich(a).email;
       if (e.passwoerter === true) L.werkbank.warn('Vollexport mit Passwörtern im Klartext gestartet', { von });
@@ -1687,9 +1708,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     }) },
     // Fristen (#129–#132)
     { methode: 'POST', pfad: '/api/aufgaben/:id/folgetermin', zugang: 'angemeldet', handler: async (a) => ok(await dienst.setzeFolgetermin(a.params.id, ich(a), await zg(a))) },
-    // Liste (?tage=) oder Kalender (?von=&bis=, #528) – mit den Feiertagen des Bundeslands der Täglichen Zusammenfassung (#94).
+    // Liste (?tage=) oder Kalender (?von=&bis=, #528) – mit den Feiertagen des Bundeslands aus der Region (#94, #726).
     { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async (a) => ok(await dienst.anstehend(await zg(a), { tage: a.query.tage, von: a.query.von, bis: a.query.bis },
-      a.query.von !== undefined && x.aufgabenmail ? (await x.aufgabenmail.einstellung()).bundesland : null)) },
+      a.query.von === undefined ? null : x.region ? (await x.region.lies()).bundesland : x.aufgabenmail ? (await x.aufgabenmail.einstellung()).bundesland : null)) },
     { methode: 'POST', pfad: '/api/mappen/:id/erinnerungen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, a.params.id, 'R');
       await empfaengerSichtbar(a, b(a).empfaengerId);
@@ -1717,6 +1738,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.konto.info('Tägliche Zusammenfassung eingestellt', { uhrzeit: z.uhrzeit ?? 'Standard', tage: z.tage.join(','), feiertage: z.feiertage });
       return ok(await zusammenfassung(ich(a)));
     } },
+    // Region (#726): Land, Bundesland, Zeitzone an einer Stelle; Vorschau der Feiertage des laufenden Jahres.
+    { methode: 'GET', pfad: '/api/werkbank/region', zugang: 'admin', handler: async () => ok(await regionStand(await region().lies())) },
+    { methode: 'PUT', pfad: '/api/werkbank/region', zugang: 'admin', handler: async (a) => ok(await regionStand(await region().speichere(a.body))) },
+    { methode: 'GET', pfad: '/api/region', zugang: 'angemeldet', handler: async () => ok(await region().lies()) },
     { methode: 'PUT', pfad: '/api/werkbank/aufgaben/mail', zugang: 'admin', handler: async (a) => ok(await mail().speichere(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/aufgaben/mail/senden', zugang: 'admin', handler: async () => ok({ verschickt: await mail().sende() }) },
     // Favoriten benachrichtigen (#506): für alle, je Rolle oder gar nicht; Vorgabe für neue Benutzer.

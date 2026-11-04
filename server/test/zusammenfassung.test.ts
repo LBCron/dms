@@ -7,6 +7,7 @@ import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import { Konten } from '../src/konten';
+import { RegionDienst } from '../src/region';
 import { speicherKontoRepo } from '../src/konto-repo';
 import { speicherRepo } from '../src/repo-speicher';
 
@@ -25,12 +26,14 @@ async function aufbau() {
   await d.legeAufgabeAn(m.id, { empfaengerId: ben.id, text: 'Prüfen' }, anna.id);
   await d.legeAufgabeAn(m.id, { empfaengerId: anna.id, text: 'Ablegen' }, anna.id);
   const an: string[] = [];
+  const einst = speicherEinstellungen();
   const mail = new Aufgabenmail({
     benutzer: () => konten.listeBenutzer(), einstellungenVon: (b) => konten.einstellungen(b),
     aufgabenVon: (b) => d.meineAufgaben(b), typName: async () => 'Vorgang',
-  }, () => ({ async sende(x) { an.push(x); } }), () => 'http://nas', speicherEinstellungen());
+  }, () => ({ async sende(x) { an.push(x); } }), () => 'http://nas', einst);
+  const region = new RegionDienst(einst);
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
-  return { konten, anna, ben, mail, an, ich };
+  return { konten, anna, ben, mail, an, ich, region };
 }
 
 describe('Tägliche Zusammenfassung je Benutzer (#92, #94)', () => {
@@ -61,19 +64,20 @@ describe('Tägliche Zusammenfassung je Benutzer (#92, #94)', () => {
     assert.equal(await mail.pruefe(berlin('2026-11-02', '08:00')), 0);
   });
 
-  it('lässt Feiertage des gewählten Bundeslands aus, wenn gewünscht', async () => {
-    const { konten, ben, mail, an, ich } = await aufbau();
-    await assert.rejects(mail.speichere({ bundesland: 'XX' }), status(422));
+  it('lässt Feiertage des Bundeslands aus der Region aus, wenn gewünscht (#94, #726)', async () => {
+    const { konten, ben, mail, an, ich, region } = await aufbau();
+    await assert.rejects(region.speichere({ bundesland: 'XX' }), status(422));
     // Reformationstag 2025 (Freitag) gilt in Hamburg, nicht in Bayern
-    await mail.speichere({ uhrzeit: '07:00', bundesland: 'BY' });
+    await mail.speichere({ uhrzeit: '07:00' });
+    await region.speichere({ bundesland: 'BY' });
     assert.equal(await mail.pruefe(berlin('2025-10-31', '08:00')), 2);
-    await mail.speichere({ bundesland: 'HH' });
+    await region.speichere({ bundesland: 'HH' });
     an.length = 0;
     assert.equal(await mail.pruefe(berlin('2026-12-25', '08:00')), 0, '1. Weihnachtstag (Freitag)');
     await konten.setzeEinstellung(await ich(ben.id), 'aufgaben_mail_zeit', pruefeZeit({ feiertage: false }));
     assert.equal(await mail.pruefe(berlin('2026-12-25', '09:00')), 1, 'Ben möchte sie auch an Feiertagen');
     assert.deepEqual(an, ['ben@example.org']);
-    await mail.speichere({ bundesland: null });
+    await region.speichere({ bundesland: null });
     assert.equal((await mail.einstellung()).bundesland, null);
   });
 });

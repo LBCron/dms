@@ -1,0 +1,68 @@
+import { BUNDESLAENDER, istBundesland, type Bundesland } from './feiertage';
+
+/**
+ * Region der Ablage (#726): Land, Bundesland und Zeitzone an einer Stelle (Werkbank → Einstellungen → Region).
+ *
+ * Die Zeitzone gilt für alles, was „heute“, Uhrzeiten oder Kalendertage braucht: Tägliche Zusammenfassung,
+ * „Datum erreicht“ und Zeitpläne, Auskünfte, Kalender, Datumsangaben in E-Mails und Dokumenten.
+ * Der Server liest sie aus der Datenbank (Einstellung „region“) und setzt sie hier mit `setzeZeitzone`;
+ * die Oberfläche übernimmt sie aus dem Kontostatus. Vorgabe ist Europe/Berlin – so ändert ein Update nichts.
+ */
+
+/** Länder, für die es Feiertage gibt. Weitere kommen hier dazu (Schlüssel nach ISO 3166-1). */
+export const LAENDER = { DE: 'Deutschland' } as const;
+export type Land = keyof typeof LAENDER;
+export const istLand = (v: unknown): v is Land => typeof v === 'string' && v in LAENDER;
+
+export const STANDARD_ZEITZONE = 'Europe/Berlin';
+
+/** Gängige Zeitzonen für die Auswahl (Europa zuerst); jede andere gültige IANA-Zone wird beim Speichern auch angenommen. */
+export const ZEITZONEN: readonly string[] = [
+  'Europe/Berlin', 'Europe/Vienna', 'Europe/Zurich', 'Europe/Amsterdam', 'Europe/Brussels', 'Europe/Luxembourg', 'Europe/Paris',
+  'Europe/Copenhagen', 'Europe/Oslo', 'Europe/Stockholm', 'Europe/Helsinki', 'Europe/Warsaw', 'Europe/Prague', 'Europe/Budapest',
+  'Europe/Rome', 'Europe/Madrid', 'Europe/Lisbon', 'Europe/London', 'Europe/Dublin', 'Europe/Athens', 'Europe/Istanbul',
+  'Atlantic/Canary', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Asia/Dubai', 'Asia/Tokyo',
+  'Australia/Sydney', 'UTC',
+];
+
+/** Gibt es diese Zeitzone (IANA)? */
+export function istZeitzone(v: unknown): v is string {
+  if (typeof v !== 'string' || !v || v.length > 64) return false;
+  try { new Intl.DateTimeFormat('en', { timeZone: v }); return true; } catch { return false; }
+}
+
+export interface Region { land: Land; bundesland: Bundesland | null; zeitzone: string }
+/** Neue Installation: Deutschland, ohne Bundesland, Europe/Berlin (Lena muss nichts tun). */
+export const REGION_STANDARD: Region = { land: 'DE', bundesland: null, zeitzone: STANDARD_ZEITZONE };
+
+/** Liest einen gespeicherten Wert; Unbekanntes fällt auf die Vorgabe zurück. */
+export function liesRegion(v: unknown, bundeslandAlt: unknown = null): Region {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  return {
+    land: istLand(o.land) ? o.land : REGION_STANDARD.land,
+    // Bis #726 stand das Bundesland bei der Täglichen Zusammenfassung – es zieht ohne Zutun mit um.
+    bundesland: istBundesland(o.bundesland) ? o.bundesland : v ? null : istBundesland(bundeslandAlt) ? bundeslandAlt : null,
+    zeitzone: istZeitzone(o.zeitzone) ? o.zeitzone : STANDARD_ZEITZONE,
+  };
+}
+
+export { BUNDESLAENDER };
+
+let aktuell = STANDARD_ZEITZONE;
+/** Die eingestellte Zeitzone der Ablage. */
+export const zeitzone = () => aktuell;
+/** Setzt die Zeitzone für diesen Prozess (Server nach dem Lesen der Einstellung, Oberfläche nach dem Kontostatus). */
+export function setzeZeitzone(z: unknown) { if (istZeitzone(z)) aktuell = z; }
+
+const formate = new Map<string, Intl.DateTimeFormat>();
+/** Ein Datumsformat in der eingestellten Zeitzone – zwischengespeichert, damit nicht jeder Aufruf ein neues baut. */
+export function datumsformat(sprache: string, optionen: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormat {
+  const k = `${aktuell}|${sprache}|${JSON.stringify(optionen)}`;
+  let f = formate.get(k);
+  if (!f) { f = new Intl.DateTimeFormat(sprache, { ...optionen, timeZone: aktuell }); formate.set(k, f); }
+  return f;
+}
+/** Kalendertag JJJJ-MM-TT in der eingestellten Zeitzone. */
+export const tagIn = (d: Date = new Date()) => datumsformat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+/** Wie `Date.toLocaleString` usw., aber in der eingestellten Zeitzone. */
+export const zeitText = (d: Date, optionen: Intl.DateTimeFormatOptions, sprache = 'de-DE') => d.toLocaleString(sprache, { ...optionen, timeZone: aktuell });

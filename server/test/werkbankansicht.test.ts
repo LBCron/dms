@@ -171,7 +171,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'wiederherstellung', 'vollexport', 'papierkorb']);
-    assert.deepEqual(je('einstellungen'), ['betrieb', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung', 'technik']);
+    assert.deepEqual(je('einstellungen'), ['betrieb', 'aufgaben', 'region', 'anmeldeschutz', 'designs', 'anbindung', 'technik']);
     assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartungsmodus', 'wartung', 'demo']);
     // Ablage aufbauen hat seit den Automatisierungen (#675) acht Bereiche, alle anderen höchstens sieben.
     for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= (g === 'ablage' ? 8 : 7), g);
@@ -184,9 +184,9 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     const alt = { vorlage: 'haushalt', ein: ['nummernkreise', 'protokoll', 'anmeldeschutz'], aus: ['aufgaben', 'technik'] };
     assert.deepEqual(liesAnsicht(alt), alt);
     for (const p of ['aufgaben', 'verschluesselung', 'technik', 'papierkorb', 'webdav']) assert.equal(werkbankUmleitung(p), null, p);
-    // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung.
+    // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung (dazu die Region, #726).
     assert.deepEqual(BEREICHE.filter((b) => inVorlage('haushalt', b.pfad)).map((b) => b.pfad).sort(),
-      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'technik', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks', 'wiederherstellung']);
+      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'technik', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks', 'wiederherstellung']);
   });
 
   it('#354 Nacharbeit: Datenschutz steht unter „Benutzer und Sicherheit“, Kennung bleibt', () => {

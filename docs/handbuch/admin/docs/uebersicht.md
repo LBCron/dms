@@ -1,6 +1,6 @@
 # Werkbank und Übersicht
 
-Die **Werkbank** sehen nur Administratoren. Links stehen ihre Bereiche in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
+Die **Werkbank** sehen nur Administratoren. Nach der Anmeldung landest du als Administrator direkt in der **Übersicht** der Werkbank – ein Administrator-Konto arbeitet im Alltag nicht in der Ablage. Führt dich ein Link in die Werkbank (z. B. aus einer E-Mail „Sicherung fehlgeschlagen“), landest du genau dort; ein Link in die Ablage führt dich in die Übersicht. Die **Ablage** erreichst du jederzeit über **Ablage** oben, etwa um nachzusehen, was ein Benutzer sieht. Eine Einstellung dafür gibt es bewusst nicht. Links stehen ihre Bereiche in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
 
 <!-- bereiche:gruppen -->
 | Gruppe | Bereiche |
@@ -9,7 +9,7 @@ Die **Werkbank** sehen nur Administratoren. Links stehen ihre Bereiche in sechs 
 | **Benutzer und Sicherheit** | [Benutzer](benutzer.md), [Verschlüsselung](verschluesselung.md), [Datenschutz](datenschutz.md) |
 | **Post und Eingänge** | [Postfächer](postfaecher.md), [Eingangsordner](eingangsordner.md) (nur wenn der Ordner eingebunden ist), [WebDAV-Laufwerk](webdav.md), [Webhooks](webhooks.md), [Texterkennung](texterkennung.md) |
 | **Daten sichern** | [Sicherung](sicherung.md), [Wiederherstellen](wiederherstellen.md), [Vollexport](export.md), [Papierkorb](papierkorb.md) |
-| **Einstellungen** | [E-Mail und Adresse](installation.md#e-mail-und-adresse), [Benachrichtigungen und Aufgaben](aufgaben.md), [Anmeldeschutz](anmeldeschutz.md), [Designs](designs.md), [Datenbank-Anbindung](installation.md#datenbank-anbindung), [Technik](fehlersuche.md#technik) |
+| **Einstellungen** | [E-Mail und Adresse](installation.md#e-mail-und-adresse), [Benachrichtigungen und Aufgaben](aufgaben.md), [Region](region.md), [Anmeldeschutz](anmeldeschutz.md), [Designs](designs.md), [Datenbank-Anbindung](installation.md#datenbank-anbindung), [Technik](fehlersuche.md#technik) |
 | **Wartung und Fehlersuche** | [Systemzustand](speicherplatz.md), [Protokoll](fehlersuche.md#protokoll), [Gemeldete Fehler](fehlersuche.md#gemeldete-fehler), [Wartungsmodus](wartungsmodus.md), [Wartungsoperationen](texterkennung.md#wartungsoperationen), [Demo-Daten](demo.md) |
 <!-- /bereiche:gruppen -->
 
@@ -113,6 +113,7 @@ Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldun
 | [Papierkorb](papierkorb.md) | Gelöschte Mappen zurückholen | Haushalt, Betrieb |
 | [E-Mail und Adresse](installation.md#e-mail-und-adresse) | E-Mail-Versand und Adresse von Ablago | Haushalt, Betrieb |
 | [Benachrichtigungen und Aufgaben](aufgaben.md) | Die Tägliche Zusammenfassung und die Benachrichtigung für Favoriten einstellen, alle offenen Aufgaben im Blick behalten | Haushalt, Betrieb |
+| [Region](region.md) | Land, Bundesland und Zeitzone – für Feiertage, „heute“ und Uhrzeiten von Erinnerungen und Zusammenfassungen | Haushalt, Betrieb |
 | [Anmeldeschutz](anmeldeschutz.md) | Zwei-Faktor vorschreiben, Anmeldung über einen Anbieter, gesperrte Adressen | Betrieb |
 | [Designs](designs.md) | Logo, Farben und eigenes CSS | Betrieb |
 | [Datenbank-Anbindung](installation.md#datenbank-anbindung) | Die Verbindung zur Datenbank, lange Datenbankzugriffe und was gerade läuft | nur Alles |

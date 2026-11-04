@@ -15,7 +15,7 @@ const alsDatum = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
 const ausDatum = (t: string) => (t ? new Date(`${t}T23:59:59`).toISOString() : null);
 
 export function ApiSchluesselBlatt() {
-  const { ich } = useKonto();
+  const { ich, laufwerk } = useKonto();
   const admin = ich.rolle === 'admin';
   const [liste, setListe] = useState<ApiSchluessel[] | null>(null);
   const [neu, setNeu] = useState<(ApiSchluessel & { schluessel: string }) | null>(null);
@@ -34,7 +34,8 @@ export function ApiSchluesselBlatt() {
       <div className="blattkopf">
         <h2 className="h3">API-Schlüssel</h2>
         <p className="leise">Damit greifen andere Programme auf Ablago zu – mit höchstens deinen Rechten. Header: <span className="mono">Authorization: Bearer dms_…</span>. <Link to="/api-doku" className="verweis">API-Dokumentation</Link></p>
-        <p className="leise klein">Auch für das Laufwerk (WebDAV), wenn der Administrator es eingeschaltet hat: Benutzername ist deine E-Mail-Adresse, Passwort der Schlüssel. <Hilfe ort="profil.laufwerk" /></p>
+        {/* #720: nur, wenn das Laufwerk eingeschaltet ist – sonst erwähnt die Oberfläche es nirgends. */}
+        {laufwerk && <p className="leise klein">Auch für das <Link to="/profil/laufwerk" className="verweis">Laufwerk</Link>: Benutzername ist deine E-Mail-Adresse, Passwort der Schlüssel. <Hilfe ort="profil.laufwerk" /></p>}
       </div>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
       {neu && <NeuerSchluessel s={neu} schliessen={() => setNeu(null)} />}
@@ -100,7 +101,7 @@ function SchluesselFormular({ start, knopf, senden, abbrechen }: { start?: ApiSc
   );
 }
 
-function NeuerSchluessel({ s, schliessen }: { s: ApiSchluessel & { schluessel: string }; schliessen: () => void }) {
+export function NeuerSchluessel({ s, schliessen }: { s: ApiSchluessel & { schluessel: string }; schliessen: () => void }) {
   const [kopiert, setKopiert] = useState(false);
   return (
     <div className="hinweis warn stapel" role="status">

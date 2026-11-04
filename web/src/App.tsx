@@ -19,6 +19,8 @@ import { ErreichbarkeitsBanner, useBeiWiederErreichbar } from './erreichbar';
 import { useHandbuch } from './Hilfe';
 import { Pikto } from './piktogramme';
 import { UeberDms } from './UeberDms';
+import { ADMIN_START, startseiteVon } from '../../shared/src/startseite';
+import { t } from './sprache';
 
 export function App() {
   const { pfad, suche } = useOrt();
@@ -41,7 +43,8 @@ export function App() {
   useEffect(() => { setzeSchrift(ich.id, leseSchrift(ich.id)); }, [ich.id]);
 
   useEffect(() => {
-    if (pfad === '/' || pfad.startsWith('/passwort/')) geheZu('/ablage', true);
+    // Startseite (#721): Administratoren in die Werkbank, alle anderen in die Ablage.
+    if (pfad === '/' || pfad.startsWith('/passwort/')) geheZu(admin && !vertretung ? ADMIN_START : '/ablage', true);
     // Frühere Adressen
     else if (teile[0] === 'einrichtung') geheZu(`/werkbank/typen${teile[1] ? `/${teile[1]}` : ''}`, true);
     else if (teile[0] === 'benutzer') geheZu('/werkbank/benutzer', true);
@@ -81,14 +84,15 @@ export function App() {
         </div>
       )}
       <header className="kopf">
-        <Link to={d.einstellungen.startseite === false ? '/ablage/eingang' : '/ablage/start'} className="marke" title="Zur Startseite">
+        <Link to={startseiteVon(vertretung ? undefined : ich.rolle, d.einstellungen.startseite === false)} className="marke" title="Zur Startseite">
           <Marke logo={logoUrl(d.meinDesign)} schriftzug={schriftzugVon(d.meinDesign)} /><span className="sr-only">{schriftzugVon(d.meinDesign) ? '' : schriftzugVon(null)} – Startseite</span>
         </Link>
         <nav className="bereiche" aria-label="Bereiche">
           <Link to="/ablage" className={bereich === 'ablage' ? 'an' : ''}>Ablage</Link>
           {admin && <Link to="/werkbank/typen" className={bereich === 'werkbank' ? 'an' : ''}>Werkbank</Link>}
         </nav>
-        <NeuKnopf />
+        {/* #649: „+ Neu“ nur in der Ablage – in der Werkbank wird eingerichtet, nicht abgelegt. */}
+        {bereich === 'ablage' && <NeuKnopf />}
         <div className="konto">
           {/* Quellcode, Version und Lizenz stehen unter Benutzermenü → „Über Ablago“ (#430). */}
           <Benutzermenue an={bereich === 'profil'} abmelden={abmelden} />
@@ -98,7 +102,7 @@ export function App() {
         {d.fehler && <div className="hinweis schlecht"><p>{d.fehler}</p><button className="knopf klein" onClick={() => void d.neuLaden()}>Erneut versuchen</button></div>}
         {inhalt}
       </main>
-      <PostAblage />
+      <PostAblage werkbank={bereich === 'werkbank'} />
       <PostKamera />
       {ich.entwicklermodus && <Messpanel />}
     </div>
@@ -135,7 +139,7 @@ function Hinweise() {
 
 /** Menü unter dem eigenen Namen (#69): Konto, Einstellungen, Hilfe, Fehler melden, Über das DMS (#430), Abmelden. */
 function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<void> }) {
-  const { ich, vertretung } = useKonto();
+  const { ich, vertretung, laufwerk } = useKonto();
   const handbuch = useHandbuch();
   const [offen, setOffen] = useState(false);
   const [ueber, setUeber] = useState(false);
@@ -167,6 +171,7 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
               „Mein Konto“ das Konto des vertretenen Benutzers; damit es nicht verwechselt wird, heißt es dann so. */}
           {/* Jeder Weg nur einmal (#175): Darstellung, Abwesenheit usw. sind Reiter unter „Mein Konto“. */}
           <Link to="/profil/konto" className="menuepunkt"><Pikto name="person" />{vertretung ? `Konto von ${ich.name || ich.email}` : 'Mein Konto'}</Link>
+          {laufwerk && <Link to="/profil/laufwerk" className="menuepunkt"><Pikto name="laufwerk" />{t('profil.laufwerk.menue')}</Link>}
           <a href={handbuch('benutzer')} target="_blank" rel="noreferrer" className="menuepunkt" onClick={() => setOffen(false)}><Pikto name="hilfe" />Hilfe <span aria-hidden="true">↗</span></a>
           <Link to="/profil/fehler-melden" className="menuepunkt"><Pikto name="fehler" />Fehler melden</Link>
           <button type="button" className="menuepunkt" onClick={() => { setOffen(false); setUeber(true); }}><Pikto name="info" />Über Ablago</button>

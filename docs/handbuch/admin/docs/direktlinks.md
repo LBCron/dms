@@ -17,7 +17,7 @@ Eingerichtet wird dafür nichts: Jeder Link, der dem Aufbau unten folgt, funktio
 
 ![Trefferliste eines Links über Mappentyp und Feldwerte](bilder/direktlink.png)
 
-Die Adresse im Browser bleibt der Link, auch wenn eine Mappe geöffnet ist oder die Liste umsortiert wird. Wer nicht angemeldet ist, meldet sich an und landet danach direkt beim Link. Es gelten die Rechte des Empfängers: Er sieht nur, was er auch in der Ablage sieht.
+Die Adresse im Browser bleibt der Link, auch wenn eine Mappe geöffnet ist oder die Liste umsortiert wird. Wer nicht angemeldet ist, meldet sich an und landet danach direkt beim Link – Administratoren nur bei Links in die Werkbank; ein Link in die Ablage führt sie in die Werkbank-Übersicht (die Ablage ist von dort einen Klick entfernt). Es gelten die Rechte des Empfängers: Er sieht nur, was er auch in der Ablage sieht.
 
 ## Aufbau
 

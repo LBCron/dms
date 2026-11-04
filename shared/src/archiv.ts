@@ -4,6 +4,7 @@
  * Unterstützt eine GoBD-gerechte Aufbewahrung – ersetzt keine Verfahrensdokumentation.
  */
 import type { Mappe } from './model';
+import { datumsformat } from './region';
 
 export interface Archiv {
   /** Aufbewahrungsfrist in Jahren. */
@@ -21,8 +22,7 @@ export const FRISTEN = [
 ] as const;
 export const JAHRE_MAX = 30;
 
-const ZEITZONE = 'Europe/Berlin';
-const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE }).format(d);
+const tag = (d: Date) => datumsformat('sv-SE').format(d);
 
 /** „aufbewahren bis“ als JJJJ-12-31, oder null ohne Archivmodus. */
 export function aufbewahrenBis(a: Archiv | null | undefined, m: Pick<Mappe, 'werte' | 'erstellt'>): string | null {

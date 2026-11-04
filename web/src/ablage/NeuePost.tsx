@@ -4,10 +4,11 @@ import { api, type Fundstelle } from '../api';
 import { Fundstellen, fundstellenFuer } from './Doppelt';
 import { useDaten } from '../daten';
 import { useErreichbarkeit } from '../erreichbar';
-import { geheZu } from '../ort';
+import { geheZu, Link } from '../ort';
 import { wartungAktiv } from '../wartung';
 import { istTouch, postFotografieren } from './PostKamera';
 import { Symbol } from '../Symbol';
+import { t } from '../sprache';
 
 /**
  * Neue Post von überall (#193): Dateien irgendwo ins Fenster ziehen oder über „+ Neu“ wählen –
@@ -54,7 +55,11 @@ const nurDateien = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.type
 const postTyp = (typen: Mappentyp[]) => typen.find((t) => t.system === 'post');
 
 /** Fläche beim Ziehen, Fortschritt und Fehler beim Hochladen. Einmal in der App eingebunden. */
-export function PostAblage() {
+/**
+ * Ablegen überall (#193). In der Werkbank (#649) legt eine hineingezogene Datei keine Post an – es erscheint nur der
+ * Hinweis, dass Dokumente in der Ablage abgelegt werden, mit Link dorthin.
+ */
+export function PostAblage({ werkbank = false }: { werkbank?: boolean }) {
   const d = useDaten();
   const typ = postTyp(d.typen);
   const register = typ?.register.find((r) => r.art === 'dokumente')?.key;
@@ -68,8 +73,9 @@ export function PostAblage() {
   const [fehler, setFehler] = useState<string[]>([]);
   const [hinweis, setHinweis] = useState<string>();
   const zaehler = useRef(0);
-  const zustand = useRef({ darf, gesperrt });
-  zustand.current = { darf, gesperrt };
+  const [inWerkbank, setInWerkbank] = useState(false);
+  const zustand = useRef({ darf, gesperrt, werkbank });
+  zustand.current = { darf, gesperrt, werkbank };
 
   // Doppelte Dateien (#333): vor dem Anlegen fragen, je betroffener Datei.
   const [rueckfrage, setRueckfrage] = useState<{ dateien: File[]; doppelt: Array<{ datei: File; f: Fundstelle[] }>; trotzdem: Set<File> } | null>(null);
@@ -113,12 +119,13 @@ export function PostAblage() {
   pruefenRef.current = pruefen;
 
   useEffect(() => {
-    const neu = (e: Event) => void pruefenRef.current((e as CustomEvent<File[]>).detail);
+    const neu = (e: Event) => { if (!zustand.current.werkbank) void pruefenRef.current((e as CustomEvent<File[]>).detail); };
     const rein = (e: DragEvent) => {
       if (!nurDateien(e)) return;
       e.preventDefault();
       zaehler.current++;
       const { darf: ok } = zustand.current;
+      if (zustand.current.werkbank) { setInWerkbank(true); return; }
       const zu = wartungAktiv() ? 'Im Wartungsmodus lassen sich keine Dateien ablegen.' : zustand.current.gesperrt;
       if (zu) { setHinweis(zu); return; }
       if (ok) setZieht(true);
@@ -148,6 +155,8 @@ export function PostAblage() {
     };
   }, []);
   useEffect(() => { if (!hinweis) return; const t = setTimeout(() => setHinweis(undefined), 5000); return () => clearTimeout(t); }, [hinweis]);
+  useEffect(() => { if (!inWerkbank) return; const t = setTimeout(() => setInWerkbank(false), 8000); return () => clearTimeout(t); }, [inWerkbank]);
+  useEffect(() => { if (!werkbank) setInWerkbank(false); }, [werkbank]);
 
   const ablegen = (wohin: 'post' | 'mappe') => (e: ReactDragEvent) => {
     e.preventDefault();
@@ -187,6 +196,11 @@ export function PostAblage() {
             <button type="button" className="knopf primaer klein" onClick={() => void weiter()}>Weiter</button>
             <button type="button" className="knopf klein" onClick={() => setRueckfrage(null)}>Abbrechen</button>
           </div>
+        </div>
+      )}
+      {inWerkbank && (
+        <div className="ablagestatus" role="status" id="werkbank-ablegen">
+          <p>{t('werkbank.ablegen.hinweis')} <Link to="/ablage">{t('werkbank.ablegen.link')}</Link></p>
         </div>
       )}
       {(laeuft || fehler.length > 0 || hinweis) && (

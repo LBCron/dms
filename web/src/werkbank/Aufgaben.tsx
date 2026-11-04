@@ -170,11 +170,7 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
       )}
       <label className="haken"><input type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Zusammenfassung verschicken</span></label>
       <label className="eigenschaft"><span>Standard-Uhrzeit <small>für alle ohne eigene unter Mein Konto</small></span><input type="time" step={900} value={e.uhrzeit} onChange={(x) => setE({ ...e, uhrzeit: x.target.value })} /></label>
-      <label className="eigenschaft"><span>Bundesland <small>für Feiertage ohne Zusammenfassung; nur landesweite Feiertage</small></span>
-        <select value={e.bundesland ?? ''} onChange={(x) => setE({ ...e, bundesland: x.target.value || null })}>
-          <option value="">keins – ohne Feiertage</option>
-          {Object.entries(BUNDESLAENDER).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select></label>
+      <p className="leise klein">{e.bundesland ? t('werkbank.region.aufgaben.mit', { land: BUNDESLAENDER[e.bundesland as keyof typeof BUNDESLAENDER] ?? e.bundesland }) : t('werkbank.region.aufgaben.ohne')} <Link to="/werkbank/region">{t('werkbank.region.aufgaben.link')}</Link></p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">
         <button type="button" className="knopf klein" onClick={() => void senden()}>Jetzt senden</button>

@@ -53,6 +53,7 @@ import { Systemlast } from './systemlast';
 import { liesErweiterungen, sichereErweiterungen } from './erweiterungen';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
+import { RegionDienst } from './region';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
 import { Fachfehler } from './fehler';
 import { t } from './sprache';
@@ -192,6 +193,10 @@ messung.auslastung.start();
 const arbeiter = richteArbeiterEin(env, { vorwaermen: true });
 if (arbeiter.fehler) log.warn(arbeiter.fehler);
 log.info(arbeiter.groesse ? `Arbeiter für PDF und Exporte: ${arbeiter.groesse}${arbeiter.quelle === 'umgebung' ? ' (DMS_ARBEITER)' : ` (Vorgabe bei ${arbeiter.kerne} Kernen)`}` : 'Arbeiter für PDF und Exporte ausgeschaltet (DMS_ARBEITER=0): PDF-Arbeiten laufen im Hauptfaden');
+// Region (#726): Zeitzone aus der Datenbank, bevor irgendetwas „heute“ oder Uhrzeiten rechnet; jede Minute neu gelesen.
+const region = new RegionDienst(pgEinstellungen(sql, cfg.haushalt));
+await region.lade().catch((e) => log.warn(`Region nicht lesbar, es gilt Europe/Berlin: ${(e as Error).message}`));
+region.starte();
 // Speicherplatz (#116): an der Grenze ist das Hochladen gesperrt; Wartung und Mail kommen unten dazu.
 const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt) };
 const speicherplatz = new Speicherplatz(ordner, spDeps);
@@ -432,6 +437,7 @@ const app = await baueApp(dienst, konten, {
   texterkennung,
   vorschau,
   aufgabenmail,
+  region,
   // Screenshots der Fehlermeldungen getrennt von den Dokumenten (#70).
   wartung,
   notfall,

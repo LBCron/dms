@@ -299,6 +299,10 @@ Siehe auch: [Testlauf](#testlauf).
 <a id="regel"></a>**Regel** · ~ mit Erklärung · Administratoren  
 Ein Wenn-dann-Baustein der Berechtigungen – Bedingung, dann Recht erteilen oder entziehen, auf Wunsch mit Stopp.
 
+<a id="region"></a>**Region** · ~ mit Erklärung · Administratoren  
+Wo die Ablage zu Hause ist – Land, Bundesland und Zeitzone (Werkbank → Einstellungen → Region). Danach richten sich die Feiertage, „heute“ bei Fristen und alle Uhrzeiten von Erinnerungen, Zeitplänen und der Täglichen Zusammenfassung.  
+Siehe auch: [Tägliche Zusammenfassung](#tagliche-zusammenfassung).
+
 <a id="rolle"></a>**Rolle** · ~ mit Erklärung · Administratoren  
 Eine Gruppe von Benutzern, z. B. „Eltern“. Grundlage für Berechtigungsregeln. Nicht zu verwechseln mit der Systemrolle.  
 Siehe auch: [Systemrolle](#systemrolle).
@@ -533,6 +537,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Post | Posteingang, Inbox | – |
 | Probelauf | Trockenlauf, trocken | `trocken` |
 | Regel | – | `Regel` |
+| Region | Standort, Gebietsschema, Locale | `region` |
 | Register | Tab, Reiter | `Register` |
 | Rolle | Gruppe, Weitere Rollen | `rolle (Systemtyp), Benutzer.rollen` |
 | Sicherung | Backup (in der Oberfläche) | – |

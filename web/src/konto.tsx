@@ -11,6 +11,8 @@ import { ZweifaktorEinrichten } from './profil/Zweifaktor';
 import { rueckfrage } from './rueckfrage';
 import { t } from './sprache';
 import { LasttestSeite } from './lasttest';
+import { setzeZeitzone } from '../../shared/src/region';
+import { zielNachAnmeldung } from '../../shared/src/startseite';
 
 /** Logo und Schriftzug des Standard-Designs für Anmeldung und Passwortseiten (#72). */
 let MARKE: { schriftzug: string | null; logo: string | null } = { schriftzug: null, logo: null };
@@ -27,6 +29,8 @@ interface Konto {
   zweifaktor: { aktiv: boolean; ausstehend: boolean };
   /** Favoriten benachrichtigen (#506): von der Werkbank erlaubt? Sonst kein Schalter an den Favoriten. */
   favoritenBenachrichtigung: boolean;
+  /** Laufwerk (#720): vom Administrator eingeschaltet? Sonst kein Menüeintrag, kein Bereich. */
+  laufwerk: boolean;
 }
 const Ctx = createContext<Konto | null>(null);
 
@@ -47,10 +51,14 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   // Ist die Anwendung schon offen, ersetzt ein Ausfall (#122) sie nicht durch „Keine Verbindung“ –
   // die Leiste oben meldet ihn, Eingaben bleiben stehen.
   const geladen = useRef(false);
+  // War zuletzt niemand angemeldet? Dann ist das nächste Laden mit Benutzer eine frische Anmeldung (#721).
+  const ohneBenutzer = useRef(false);
 
   const laden = useCallback(async () => {
     try {
       const st = await api.status();
+      // Region (#726): „heute“, Uhrzeiten und Kalendertage wie auf dem Server.
+      setzeZeitzone(st.zeitzone);
       if (st.marke) {
         MARKE = st.marke;
         if (!st.benutzer) {
@@ -60,7 +68,15 @@ export function KontoProvider({ children }: { children: ReactNode }) {
         }
       }
       // Nach der Anmeldung über einen Anbieter (#191): zurück zur Seite, von der sie ausging.
-      if (st.benutzer) { const ziel = nachAnmeldung(); if (ziel && ziel !== location.pathname + location.search) geheZu(ziel, true); }
+      // Nach der Anmeldung (Passwort, Anbieter, Zwei-Faktor): Admins in die Werkbank, ein Link dorthin hat Vorrang (#721).
+      if (st.benutzer) {
+        const hier = location.pathname + location.search;
+        const gemerkt = nachAnmeldung();
+        const frisch = gemerkt !== null || ohneBenutzer.current;
+        const ziel = frisch ? zielNachAnmeldung(st.vertretung ? 'mitglied' : st.benutzer.rolle, gemerkt ?? hier) : null;
+        if (ziel && ziel !== hier) geheZu(ziel, true);
+      }
+      ohneBenutzer.current = !st.benutzer;
       setStatus(st); setFehler(undefined); geladen.current = true;
     }
     catch (e) { if (!geladen.current) setFehler((e as Error).message); }
@@ -83,6 +99,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
     // Über einen Anbieter angemeldet (#241): auch dort abmelden.
     if (r?.abmelden) { location.href = r.abmelden; return; }
     setStatus((s) => (s ? { ...s, benutzer: null } : s));
+    ohneBenutzer.current = true;
     geheZu('/', true);
   }, []);
 
@@ -108,7 +125,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   );
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
-    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false }}>
+    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, laufwerk: status.laufwerk === true }}>
       {/* … danach als Administrator: Benutzer, Schlüssel, Optionales, Fertig. */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
     </Ctx.Provider>
@@ -135,7 +152,7 @@ function PflichtAusschalten({ fertig }: { fertig: () => Promise<void> }) {
 
 /** Ziel nach einer Anmeldung über einen Anbieter (#191), z. B. /werkbank/pakete?installieren=… */
 const ZIEL = 'dms:nach-anmeldung';
-function merkeZiel() { try { if (location.pathname !== '/') sessionStorage.setItem(ZIEL, location.pathname + location.search); } catch { /* ohne */ } }
+function merkeZiel() { try { sessionStorage.setItem(ZIEL, location.pathname + location.search); } catch { /* ohne */ } }
 function nachAnmeldung(entfernen = true): string | null {
   try { const z = sessionStorage.getItem(ZIEL); if (entfernen) sessionStorage.removeItem(ZIEL); return z && z.startsWith('/') && !z.startsWith('//') ? z : null; } catch { return null; }
 }

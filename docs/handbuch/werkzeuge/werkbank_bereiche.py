@@ -31,7 +31,7 @@ SEITE = {
     'fehlermeldungen': 'fehlersuche.md#gemeldete-fehler', 'sicherung': 'sicherung.md',
     'wiederherstellung': 'wiederherstellen.md', 'vollexport': 'export.md', 'wartungsmodus': 'wartungsmodus.md',
     'wartung': 'texterkennung.md#wartungsoperationen', 'technik': 'fehlersuche.md#technik',
-    'demo': 'demo.md',
+    'demo': 'demo.md', 'region': 'region.md',
 }
 # Bereiche, die nur unter einer Bedingung in der Leiste stehen.
 BEDINGT = {'darfweg': 'nur mit Archivmodus', 'eingangsordner': 'nur wenn der Ordner eingebunden ist'}
