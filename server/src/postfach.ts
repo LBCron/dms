@@ -109,7 +109,7 @@ const log = protokoll.modul('ablage');
 
 const NEU: Omit<Postfach, 'id'> = {
   name: '', aktiv: true, server: '', port: 993, verschluesselung: 'ssl', benutzer: '', passwort: '', ordner: 'INBOX', abstand: 5,
-  fuer: null, absender: [], nachher: 'verschieben', zielordner: 'DMS', nurMitAnhang: false, original: true,
+  fuer: null, absender: [], nachher: 'verschieben', zielordner: 'Ablago', nurMitAnhang: false, original: true,
 };
 
 const text = (v: unknown, max = 250) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -156,7 +156,7 @@ export function pruefePostfach(x: unknown, alt: Postfach | null, verschluessele:
     passwort: anmeldung === 'oauth' ? '' : neuesPasswort ? verschluessele(neuesPasswort) : basis.passwort,
     aktiv: o.aktiv === undefined ? basis.aktiv : o.aktiv === true,
     ordner: o.ordner === undefined ? basis.ordner : text(o.ordner, 200) || 'INBOX',
-    zielordner: o.zielordner === undefined ? basis.zielordner : text(o.zielordner, 200) || 'DMS',
+    zielordner: o.zielordner === undefined ? basis.zielordner : text(o.zielordner, 200) || 'Ablago',
     fuer: o.fuer === undefined ? basis.fuer : (typeof o.fuer === 'string' && o.fuer ? o.fuer : null),
     nurMitAnhang: o.nurMitAnhang === undefined ? basis.nurMitAnhang : o.nurMitAnhang === true,
     original: o.original === undefined ? basis.original : o.original === true,
@@ -464,7 +464,7 @@ export class Postfaecher {
   private async nachher(p: Postfach, s: ImapSitzung, uid: number) {
     if (p.nachher === 'loeschen') await s.loesche(uid);
     else if (p.nachher === 'gelesen') await s.gelesen(uid);
-    else await s.verschiebe(uid, p.zielordner || 'DMS');
+    else await s.verschiebe(uid, p.zielordner || 'Ablago');
   }
 
   get andereInstanz() { return this.gesperrt; }

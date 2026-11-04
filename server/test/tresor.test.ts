@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { Fachfehler } from '../src/fehler';
-import { istVerschluesselt, punktFuer, Tresor } from '../src/tresor';
+import { istPruefwort, istVerschluesselt, punktFuer, PRUEFWORT, Tresor } from '../src/tresor';
 
 /** Einstellungen im Arbeitsspeicher (wie speicherBetrieb, ohne den Mailversand zu laden). */
 function speicherBetrieb() {
@@ -191,5 +191,15 @@ describe('Schlüssel wechseln (#47)', () => {
     const t = new Tresor(speicherBetrieb(), join(await ordner(), 'dms.schluessel'), () => null);
     await t.laden();
     await assert.rejects(t.wechsle(async () => ({ umgeschluesselt: 0, unlesbar: 0 }), 'admin'), (e: unknown) => e instanceof Fachfehler && e.status === 409);
+  });
+});
+
+describe('Prüfwort (#692)', () => {
+  it('heißt „Ablago“ und erkennt das alte „DMS“ aus früheren Sicherungen', () => {
+    assert.equal(PRUEFWORT, 'Ablago');
+    assert.equal(istPruefwort('Ablago'), true);
+    assert.equal(istPruefwort('DMS'), true);
+    assert.equal(istPruefwort('dms'), false);
+    assert.equal(istPruefwort(null), false);
   });
 });

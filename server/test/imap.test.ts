@@ -48,8 +48,8 @@ describe('Postfächer mit GreenMail (#196)', { skip: HOST ? false : 'IMAP_TEST_H
     assert.deepEqual((await d.holeMappe(m.id)).dokumente.map((x) => x.name).sort(), ['Rechnung Oktober.eml', 'Rechnung.pdf']);
     assert.equal(await pf.abrufen(p.id), 0, 'keine Doppelten');
 
-    const s = await verbindeImap({ server: HOST!, port: 3143, verschluesselung: 'keine', benutzer: 'dms', passwort: 'geheim' }, 'DMS');
-    try { assert.equal(s.anzahl, 1, 'in den Ordner DMS verschoben'); } finally { await s.schliessen(); }
+    const s = await verbindeImap({ server: HOST!, port: 3143, verschluesselung: 'keine', benutzer: 'dms', passwort: 'geheim' }, 'Ablago');
+    try { assert.equal(s.anzahl, 1, 'in den Ordner Ablago verschoben'); } finally { await s.schliessen(); }
     const html = await liesMail(Buffer.from('From: a@b.example\r\nSubject: X\r\nContent-Type: text/html\r\n\r\n<p>Nur <b>heute</b><img src="https://tracker.example/x.gif"></p>'));
     assert.match(html.text, /Nur heute/);
     assert.doesNotMatch(html.text, /tracker/);

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# DMS auf dem Raspberry Pi einrichten (#578) – aus https://github.com/motom001/dms (deploy/raspberry-pi)
+# Ablago auf dem Raspberry Pi einrichten (#578) – aus https://github.com/motom001/dms (deploy/raspberry-pi)
 # Anleitung Schritt für Schritt: https://help.ablago.app/installieren/aktuell/raspberry-pi/
 #
 # Aufruf als normaler Benutzer, NICHT mit sudo:
-#   bash einrichten.sh                  DMS im Ordner ~/dms
-#   bash einrichten.sh /mnt/ssd/dms     DMS in einem anderen Ordner, z. B. auf einer zusätzlichen SSD
+#   bash einrichten.sh                  Ablago im Ordner ~/dms
+#   bash einrichten.sh /mnt/ssd/dms     Ablago in einem anderen Ordner, z. B. auf einer zusätzlichen SSD
 #
 # Was das Skript tut:
 #   1. Es prüft: 64-Bit-System (arm64), Arbeitsspeicher, freien Platz und ob Docker mit Compose da ist.
-#   2. Es legt den Ordner an, lädt die Vorlage docker-compose.yml (zwei Container: DMS und Datenbank)
+#   2. Es legt den Ordner an, lädt die Vorlage docker-compose.yml (zwei Container: Ablago und Datenbank)
 #      und schreibt daneben eine Datei .env mit einem zufälligen Passwort für die Datenbank.
 #   3. Es lädt die Programme (Images), startet Ablago und zeigt Adresse und Einrichtungscode.
 #

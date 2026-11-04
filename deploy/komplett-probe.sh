@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Probe für dms-komplett (#208), läuft in der CI auf amd64 und arm64 (image.yml):
-#   1. starten → DMS antwortet, Assistent beginnt beim Konto (Datenbank angebunden, kein Passwort)
+#   1. starten → Ablago antwortet, Assistent beginnt beim Konto (Datenbank angebunden, kein Passwort)
 #   2. einrichten (mit dem Code aus geheim/), neu starten → eingerichtet, Anmeldung klappt
 #   3. docker stop → PostgreSQL sauber heruntergefahren, Exit-Code 0
 #   4. Prozess abschießen → Container endet
@@ -32,7 +32,7 @@ warte() {
     [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = true ] || fehler "Container läuft nicht mehr"
     sleep 2
   done
-  fehler "DMS antwortet nicht"
+  fehler "Ablago antwortet nicht"
 }
 
 echo "::group::1. Erster Start"
@@ -99,7 +99,7 @@ docker start "$NAME" >/dev/null; warte
 [ "$(curl -fsS "http://127.0.0.1:$PORT/api/konto/status" | jq -r '.einrichtungNoetig')" = false ] || fehler "nach stop/start wieder uneingerichtet"
 echo "::endgroup::"; echo "::notice::dms-komplett: Schritt erledigt"
 
-echo "::group::4. DMS-Prozess abschießen"
+echo "::group::4. Ablago-Prozess abschießen"
 # pkill -x trifft nur den Prozess „node“, nicht die Shell von docker exec.
 docker exec "$NAME" pkill -9 -x node || true
 for _ in $(seq 1 30); do [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = false ] && break; sleep 1; done

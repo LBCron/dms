@@ -74,7 +74,7 @@ describe('WebDAV über HTTP (#346)', { skip: echtesFastify ? false : 'Fastify ni
   it('PROPFIND: ohne Anmeldung 401 mit WWW-Authenticate, mit Schlüssel 207 als XML', async () => {
     const ohne = await app.inject({ method: 'PROPFIND', url: '/webdav/', headers: { depth: '1' } });
     assert.equal(ohne.statusCode, 401);
-    assert.equal(ohne.headers['www-authenticate'], 'Basic realm="DMS", charset="UTF-8"');
+    assert.equal(ohne.headers['www-authenticate'], 'Basic realm="Ablago", charset="UTF-8"');
     const r = await app.inject({ method: 'PROPFIND', url: '/webdav/', headers: { authorization: basic, depth: '1', 'content-type': 'application/xml' },
       payload: '<?xml version="1.0"?><D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>' });
     assert.equal(r.statusCode, 207);

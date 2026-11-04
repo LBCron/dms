@@ -245,7 +245,7 @@ export class Webdav {
 
   /** Basic mit E-Mail-Adresse und API-Schlüssel. Liefert den Kontext oder die Antwort (401/429). */
   private async anmelden(a: WebdavAnfrage): Promise<Ctx | { status: true; antwort: WebdavAntwort; wer: string }> {
-    const nein = (t: string) => text(401, t, { 'www-authenticate': 'Basic realm="DMS", charset="UTF-8"' });
+    const nein = (t: string) => text(401, t, { 'www-authenticate': 'Basic realm="Ablago", charset="UTF-8"' });
     const c = basic(a.kopf('authorization'));
     if (!c) return { status: true, wer: '', antwort: nein('Bitte mit E-Mail-Adresse und API-Schlüssel anmelden.') };
     const email = c.name.toLowerCase();

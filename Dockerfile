@@ -54,7 +54,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json server/
 COPY web/package.json web/
-# Danach npm, Yarn und Corepack entfernen (#220): Das DMS braucht sie zur Laufzeit nicht, und sie
+# Danach npm, Yarn und Corepack entfernen (#220): Ablago braucht sie zur Laufzeit nicht, und sie
 # bringen eigene Bibliotheken mit, deren Lücken sonst im Image stünden. Nur node selbst bleibt.
 RUN npm ci --omit=dev --workspace server --no-audit --no-fund && npm cache clean --force \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
@@ -67,7 +67,7 @@ COPY --from=hilfe /hilfe web/dist/hilfe
 RUN printf '#!/bin/sh\nexec node /app/server/dist/dms.js "$@"\n' > /usr/local/bin/dms && chmod 755 /usr/local/bin/dms
 # Lasttest selbst durchführen (#563): docker exec -it <Test-Container> dms-lasttest klein – nur gegen eine eigene
 # Test-Installation; das Skript prüft das selbst. Ohne Abhängigkeiten, nur node.
-# Ohne Konsole (#612): DMS_LASTTEST=klein|mittel|gross|alle – das DMS startet dieses Skript selbst und zeigt
+# Ohne Konsole (#612): DMS_LASTTEST=klein|mittel|gross|alle – Ablago startet dieses Skript selbst und zeigt
 # Fortschritt und Ergebnis unter seinem Port (server/src/lasttestmodus.ts).
 COPY server/test/lasttest.mjs /app/lasttest/lasttest.mjs
 RUN printf '#!/bin/sh\nexec node /app/lasttest/lasttest.mjs "$@"\n' > /usr/local/bin/dms-lasttest && chmod 755 /usr/local/bin/dms-lasttest
@@ -80,9 +80,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/api/gesundheit" >/dev/null || exit 1
 CMD ["node", "--enable-source-maps", "server/dist/index.js"]
 
-# dms-komplett (#208): DMS und PostgreSQL 17 in einem Container. PostgreSQL ist nur innerhalb des
+# dms-komplett (#208): Ablago und PostgreSQL 17 in einem Container. PostgreSQL ist nur innerhalb des
 # Containers erreichbar (127.0.0.1, „trust“) – kein Passwort, das jemand kennen muss. tini startet das
-# Skript, das erst PostgreSQL, dann das DMS startet und beim Stoppen beide sauber beendet.
+# Skript, das erst PostgreSQL, dann Ablago startet und beim Stoppen beide sauber beendet.
 FROM laufzeit AS komplett
 ARG APK_WOCHE=""
 RUN echo "Alpine-Pakete Stand ${APK_WOCHE}" && apk upgrade --no-cache && apk add --no-cache postgresql17 postgresql17-contrib tini su-exec
@@ -95,5 +95,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/usr/local/bin/dms-komplett"]
 
-# Standard-Ziel: nur das DMS, die Datenbank läuft daneben.
+# Standard-Ziel: nur Ablago, die Datenbank läuft daneben.
 FROM laufzeit AS dms

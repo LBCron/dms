@@ -143,7 +143,7 @@ describe('WebDAV-Laufwerk (#346, Stufe 1)', () => {
     await wd.speichere({ aktiv: true }, 'admin');
     const ohne = await rufe('PROPFIND', '/webdav/', { depth: '0' });
     assert.equal(ohne.status, 401);
-    assert.equal(ohne.koepfe['www-authenticate'], 'Basic realm="DMS", charset="UTF-8"');
+    assert.equal(ohne.koepfe['www-authenticate'], 'Basic realm="Ablago", charset="UTF-8"');
     assert.equal((await rufe('PROPFIND', '/webdav/', { depth: '0', auth: auth('admin@example.org', 'ein-langes-passwort'), ip: '9.9.9.1' })).status, 401, 'Hauptpasswort nie');
     assert.equal((await rufe('PROPFIND', '/webdav/', { depth: '0', auth: auth('bert@example.org', annaKey), ip: '9.9.9.1' })).status, 401, 'Schlüssel gehört zu Anna');
     assert.equal((await rufe('PROPFIND', '/webdav/', { depth: '0', auth: A })).status, 207);

@@ -1,6 +1,6 @@
 name: Release
 
-# GitHub Releases sind der Changelog des DMS. Dieser Workflow legt sie an oder füllt ihren Text:
+# GitHub Releases sind der Changelog von Ablago. Dieser Workflow legt sie an oder füllt ihren Text:
 #  - automatisch: „Prüfen und Image bauen“ ruft ihn auf, wenn auf main eine neue
 #    Versionsnummer in package.json steht (#34) – Tag und Release entstehen dann hier,
 #  - bei einem von Hand gepushten Tag v*,

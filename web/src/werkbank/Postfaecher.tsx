@@ -15,7 +15,7 @@ import { rueckfrage } from '../rueckfrage';
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
 const NEU: PostfachEingabe = {
   name: '', aktiv: true, server: '', port: 993, verschluesselung: 'ssl', benutzer: '', passwort: '', ordner: 'INBOX', abstand: 5,
-  fuer: null, absender: '', nachher: 'verschieben', zielordner: 'DMS', nurMitAnhang: false, original: true, anmeldung: 'passwort', anbieter: 'microsoft',
+  fuer: null, absender: '', nachher: 'verschieben', zielordner: 'Ablago', nurMitAnhang: false, original: true, anmeldung: 'passwort', anbieter: 'microsoft',
 };
 const PORT = { ssl: 993, starttls: 143, keine: 143 } as const;
 /** OAuth 2.0 (#358): Voreinstellungen je Anbieter. */
