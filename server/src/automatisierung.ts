@@ -366,24 +366,55 @@ export class Automatisierungen {
 
   async kontext(): Promise<Kontextdaten> { return this.d.dienst.automatisierungKontext(); }
 
-  private async ansicht(a: Automatisierung, k: Kontextdaten, letzte: Map<string, Lauf>): Promise<AutomatisierungAnsicht> {
+  private async ansicht(a: Automatisierung, k: Kontextdaten, letzte: Map<string, Lauf>, unlesbar: Set<string>, kontoId: string | null): Promise<AutomatisierungAnsicht> {
     const l = letzte.get(a.id);
     const ohne = { ...a } as Automatisierung & { letzterTag?: unknown };
     delete ohne.letzterTag;
+    // Darf das Konto „Automatisierung“ den Mappentyp der Wenn-Karte gar nicht lesen, kann sie nie laufen (#709) – nur Hinweis.
+    const typ = kontextTyp(a.wenn, k.typen);
+    const rechte = typ && unlesbar.has(typ.id) ? { typId: typ.id, typ: typ.name, kontoId, text: t('automatisierung.rechte.warnung', { typ: typ.name }) } : null;
     return {
       ...ohne, kurz: kurzform(a, k, (art) => (art === 'datum' ? t('automatisierung.wenn.datum') : t.frei(`ereignisse.name.${art.replace(/_/g, '-')}`))), probleme: automatisierungsProbleme(a, k), ausloeser: ausloeserSchluessel(a.wenn),
       letzterLauf: l ? { id: l.id, zustand: l.zustand, gestartet: l.gestartet, fehler: l.fehler } : null,
+      ...(rechte ? { rechte } : {}),
     };
   }
 
+  /** Mappentypen, die das Konto „Automatisierung“ überhaupt nicht lesen darf (#709). */
+  private async unlesbar(): Promise<{ typen: Set<string>; kontoId: string | null }> {
+    const konto = await this.konto().catch(() => null);
+    if (!konto) return { typen: new Set(), kontoId: null };
+    const z = await this.d.dienst.zugriff(konto);
+    const typen = new Set<string>();
+    for (const typ of await this.d.dienst.listeTypen()) {
+      const lesbar = z.typen.has(typ.id) && (!z.lesen || z.lesen.offen.includes(typ.id) || z.lesen.je.some((x) => x.typId === typ.id));
+      if (!lesbar) typen.add(typ.id);
+    }
+    return { typen, kontoId: konto.id };
+  }
+
   async uebersicht(): Promise<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number }> {
-    const [liste, k, letzte, fehl] = await Promise.all([this.d.repo.liste(), this.kontext(), this.d.repo.letzte(), this.d.repo.fehlgeschlagene()]);
-    return { automatisierungen: await Promise.all(liste.map((a) => this.ansicht(a, k, letzte))), fehlgeschlagen: fehl.length };
+    const [liste, k, letzte, fehl, u] = await Promise.all([this.d.repo.liste(), this.kontext(), this.d.repo.letzte(), this.d.repo.fehlgeschlagene(), this.unlesbar()]);
+    return { automatisierungen: await Promise.all(liste.map((a) => this.ansicht(a, k, letzte, u.typen, u.kontoId))), fehlgeschlagen: fehl.length };
   }
 
   async hole(id: string): Promise<AutomatisierungAnsicht> {
     const a = await this.gibt(id);
-    return this.ansicht(a, await this.kontext(), await this.d.repo.letzte());
+    const u = await this.unlesbar();
+    return this.ansicht(a, await this.kontext(), await this.d.repo.letzte(), u.typen, u.kontoId);
+  }
+
+  /**
+   * Mappen zum Ausprobieren (#709): nur vom Mappentyp der Wenn-Karte und nur solche, die das Konto „Automatisierung“
+   * lesen darf. Die Werkbank ist nur für Administratoren – die Schnittmenge mit ihren Rechten ist damit diese Menge.
+   */
+  async testmappen(id: string, suche: unknown): Promise<{ mappen: Array<{ id: string; titel: string; typId: string }>; gesamt: number }> {
+    const a = await this.gibt(id);
+    const typ = kontextTyp(a.wenn, (await this.kontext()).typen);
+    if (!typ) return { mappen: [], gesamt: 0 };
+    const konto = await this.konto();
+    const s = await this.d.dienst.seite(konto, { sicht: `typ:${typ.id}`, suche, anzahl: 20 }, await this.d.dienst.zugriff(konto), 20);
+    return { mappen: s.mappen.map((m) => ({ id: m.id, titel: m.titel ?? '', typId: m.typId })), gesamt: s.gesamt };
   }
 
   private async gibt(id: string) {
@@ -494,7 +525,12 @@ export class Automatisierungen {
     if (!istUuid(mappeId)) throw new Fachfehler(422, t('automatisierung.test.mappe'));
     const k = await this.kontext();
     const typ = kontextTyp(a.wenn, k.typen);
-    const m = await this.d.dienst.pruefeRecht(await this.d.dienst.systemZugriff('automatisierung'), mappeId, 'R');
+    // Rechte des Kontos „Automatisierung“, nicht die des Admins – die Meldung sagt das auch so (#709).
+    const roh = await this.d.dienst.pruefeRecht(undefined, mappeId, 'R');
+    const m = await this.d.dienst.pruefeRecht(await this.d.dienst.systemZugriff('automatisierung'), mappeId, 'R').catch((x: unknown) => {
+      if (x instanceof Fachfehler && (x.status === 403 || x.status === 404)) throw new Fachfehler(403, t('automatisierung.test.rechte', { typ: k.typen.find((y) => y.id === roh.typId)?.name ?? '' }));
+      throw x;
+    });
     if (typ && m.typId !== typ.id) throw new Fachfehler(422, t('automatisierung.test.typ', { typ: typ.name }));
     const daten: Record<string, unknown> = { mappe: m.id, typ: m.typId, ...(a.wenn.art === 'datum' ? { feld: a.wenn.feld, datum: m.werte[a.wenn.feld] ?? null, tage: tageBis(m.werte[a.wenn.feld]) } : {}) };
     const l = await this.fuehreAus(a, { id: randomUUID(), art: a.wenn.art, daten, kette: 0 }, { trocken, test: true });

@@ -273,7 +273,7 @@ Kleine Abläufe ohne Code: **Wenn · Und · Dann** (Sonst kommt mit Stufe 2). Mo
 
 - **Genau eine Wenn-Karte:** ein Ereignis aus dem Katalog (alle Gruppen außer `zaehler`, optional nur ein Mappentyp, bei `mappe.geaendert` optional nur bestimmte Felder) oder `datum` – „Datumsfeld in N Tagen erreicht“ (negativ: vor N Tagen), täglich ab einer Uhrzeit in der Zeitzone des Haushalts. Die Wenn-Karte legt den **Kontext** fest: die Mappe des Ereignisses (`daten.mappe`, bei Benutzer-Ereignissen die Benutzer-Mappe) und ihren Mappentyp.
 - **Und:** Bedingungen aus dem Baukasten der Ansichten (`Bedingung` aus `sichten.ts`), dazu „Mappe ist in Ansicht …“ und „Mappe ist in den Favoriten von …“ (Person, Rolle, Feld). Jede umkehrbar (`nicht`), Gruppen `alle`/`eine` eine Ebene tief. Ausgewertet in der Datenbank (`Dienst.trifftTeile` → `repo.inKlauseln`), „ich“ ist das Systemkonto.
-- **Dann:** Karten in ihrer Reihenfolge; ausführen tun sie die Einträge in `DANN_AUSFUEHRER` (`(karte, kontext) => Promise<string>` – die Zeile fürs Protokoll; im Trockenlauf nur beschreiben). „Danach keine weiteren Automatisierungen ausführen“ (`stopp`) erledigt der Motor selbst.
+- **Dann:** Karten in ihrer Reihenfolge; ausführen tun sie die Einträge in `DANN_AUSFUEHRER` (`(karte, kontext) => Promise<string>` – die Zeile fürs Protokoll; im Probelauf (`trocken`) nur beschreiben). „Danach keine weiteren Automatisierungen ausführen“ (`stopp`) erledigt der Motor selbst.
 - **Platzhalter** wie beim Mappentitel (`{feld}`, `{feld|filter}`), dazu `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}`, bei `datum` auch `{datum}` und `{tage}`. Werte mit den Rechten des Systemkontos; Titel verknüpfter Mappen, die es nicht lesen darf, erscheinen als „(nicht sichtbar)“; Passwörter nie.
 
 **Ablauf**

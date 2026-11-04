@@ -288,6 +288,10 @@ Siehe auch: [Paket](#paket), [Expertenmodus](#expertenmodus).
 <a id="postfach"></a>**Postfach** · ~ mit Erklärung · Administratoren  
 Ein angebundenes E-Mail-Konto (IMAP), aus dem Ablago Post abholt.
 
+<a id="probelauf"></a>**Probelauf** · ~ mit Erklärung · Administratoren  
+Eine Automatisierung mit einer gewählten Mappe ausprobieren, ohne dass etwas geändert oder jemand benachrichtigt wird – Ablago zeigt nur, was passieren würde.  
+Siehe auch: [Testlauf](#testlauf).
+
 <a id="regel"></a>**Regel** · ~ mit Erklärung · Administratoren  
 Ein Wenn-dann-Baustein der Berechtigungen – Bedingung, dann Recht erteilen oder entziehen, auf Wunsch mit Stopp.
 
@@ -521,6 +525,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Paketkatalog | – | `Katalog, OFFIZIELLER_KATALOG` |
 | Person | Kontakt (als Mappentyp), Benutzer (für Kontakte) | `basis_person` |
 | Post | Posteingang, Inbox | – |
+| Probelauf | Trockenlauf, trocken | `trocken` |
 | Regel | – | `Regel` |
 | Register | Tab, Reiter | `Register` |
 | Rolle | Gruppe, Weitere Rollen | `rolle (Systemtyp), Benutzer.rollen` |

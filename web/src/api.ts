@@ -724,6 +724,7 @@ export const api = {
   automatisierungenWiederholen: (id?: string) => anfrage<unknown>('POST', id ? `/api/werkbank/automatisierungen/${id}/wiederholen` : '/api/werkbank/automatisierungen/wiederholen'),
   automatisierungFassungen: (id: string) => anfrage<Fassung[]>('GET', `/api/werkbank/automatisierungen/${id}/fassungen`),
   automatisierungFassungWiederherstellen: (id: string, version: number) => anfrage<AutomatisierungAnsicht>('POST', `/api/werkbank/automatisierungen/${id}/fassungen/${version}`),
+  automatisierungTestmappen: (id: string, suche: string) => anfrage<{ mappen: Array<{ id: string; titel: string; typId: string }>; gesamt: number }>('GET', `/api/werkbank/automatisierungen/${id}/testmappen?suche=${encodeURIComponent(suche)}`),
   automatisierungWiedergeben: (id: string, mappeId: string, trocken: boolean) => anfrage<Lauf>('POST', `/api/werkbank/automatisierungen/${id}/wiedergeben`, { mappeId, trocken }),
   webdav: () => anfrage<WebdavStand>('GET', '/api/werkbank/webdav'),
   webdavSetzen: (e: WebdavEinstellung) => anfrage<WebdavStand>('PUT', '/api/werkbank/webdav', e),

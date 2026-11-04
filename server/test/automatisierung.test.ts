@@ -237,3 +237,30 @@ describe('Automatisierungen in PostgreSQL (#674)', { skip: url ? false : 'TEST_D
     assert.equal((await repo.liste()).length, 0);
   });
 });
+
+describe('Automatisierungen: Ausprobieren und Rechte des Kontos (#709)', () => {
+  it('nur Mappen, die die Automatisierung sehen darf; Meldung nennt das Konto; Warnung, wenn der Typ gar nicht lesbar ist', async () => {
+    const { motor, vertrag, admin, d } = await aufbau();
+    const rolle = (await d.listeRollen(true)).find((r) => r.konto && r.name === 'Systemkonto')!.id;
+    const strom = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', status: 'offen' } }, admin.id);
+    const geheim = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Geheim', status: 'erledigt' } }, admin.id);
+    const a = await motor.lege({ name: 'Probe', wenn: { art: 'mappe.notiz', typ: vertrag.id }, dann: [stopp] }, admin.id);
+    // Erledigte Verträge sind für das Systemkonto verboten.
+    await d.setzeBerechtigungen(vertrag.id, { grund: { C: true, R: true, U: true, D: true, P: false }, regeln: [{ id: 'r', name: 'Erledigte nicht', wenn: [{ art: 'rolle', rollen: [rolle] }, { art: 'feld', bedingung: { art: 'feld', feld: 'status', op: 'einerVon', wert: { art: 'fest', wert: ['erledigt'] } } }], dann: { R: 'entziehen' }, stopp: true }] } as never, true);
+    const vorschlaege = await motor.testmappen(a.id, '');
+    assert.deepEqual(vorschlaege.mappen.map((m) => m.titel), ['Strom'], 'nur lesbare Mappen vom Typ der Wenn-Karte');
+    await assert.rejects(motor.wiedergeben(a.id, geheim.id, true), /Die Automatisierung darf diese Mappe nicht sehen \(Rechte am Mappentyp „Vertrag“\)/);
+    assert.equal((await motor.wiedergeben(a.id, strom.id, true)).zustand, 'abgeschlossen');
+    assert.equal((await motor.hole(a.id)).rechte, undefined, 'teilweise lesbar: keine Warnung');
+    // Ganz verboten: Hinweis an der Automatisierung (Liste und Editor), Speichern bleibt erlaubt.
+    await d.setzeBerechtigungen(vertrag.id, { grund: { C: true, R: true, U: true, D: true, P: false }, regeln: [{ id: 'r', name: 'Nie', wenn: [{ art: 'rolle', rollen: [rolle] }], dann: { C: 'entziehen', R: 'entziehen', U: 'entziehen', D: 'entziehen', P: 'entziehen' }, stopp: true }] } as never, true);
+    const x = await motor.hole(a.id);
+    assert.match(x.rechte?.text ?? '', /kann nicht laufen: Das Konto „Automatisierung“ darf Mappen vom Typ „Vertrag“ nicht sehen/);
+    assert.equal(x.rechte?.typId, vertrag.id);
+    assert.ok(x.rechte?.kontoId, 'mit Konto für den Testlauf (#710)');
+    assert.ok((await motor.uebersicht()).automatisierungen.find((y) => y.id === a.id)?.rechte);
+    assert.equal((await motor.testmappen(a.id, '')).mappen.length, 0);
+    await motor.aendere(a.id, { name: 'Probe 2', wenn: { art: 'mappe.notiz', typ: vertrag.id }, dann: [stopp] }, admin.id);
+  });
+});
+
