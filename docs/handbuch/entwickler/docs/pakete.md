@@ -107,7 +107,20 @@ code:
 ```
 
 - Höchstens **zwei Ebenen**: Abschnitte (`abschnitt`, `hilfe`, `felder`) und Listen (`liste`, `name`, `eintrag`, `hilfe`, `sortierbar`, `felder`).
-- **Typen:** `text`, `mehrzeilig`, `zahl` (`min`/`max`), `janein`, `datum`, `auswahl` und `mehrfachauswahl` (`optionen`), `geheim`, Verweise `mappentyp`, `feld` (mit `mappentyp:`), `benutzer`, `rolle`, `sicht`, und seit Ablago 0.124.0 `adresse` – die Dienst-Adresse, zu der allein das Paket ins Netz darf (ohne `standard`, höchstens mit `beispiel`; siehe [Pakete mit Code](pakete-code.md#im-manifest)).
+- **Typen:** `text`, `mehrzeilig`, `zahl` (`min`/`max`, optional `schritt` und `vorschlaege`, siehe unten), `janein`, `datum`, `auswahl` und `mehrfachauswahl` (`optionen`), `geheim`, Verweise `mappentyp`, `feld` (mit `mappentyp:`), `benutzer`, `rolle`, `sicht`, und seit Ablago 0.124.0 `adresse` – die Dienst-Adresse, zu der allein das Paket ins Netz darf (ohne `standard`, höchstens mit `beispiel`; siehe [Pakete mit Code](pakete-code.md#im-manifest)).
+- **Zahlen mit Vorschlägen** (#657): Eine `zahl` nimmt nur Ziffern (ggf. mit Komma) innerhalb von `min`/`max` an – geprüft im Formular und beim Speichern („Bitte eine Zahl zwischen 150 und 400.“). `schritt: 1` erlaubt nur ganze Zahlen. Mit `vorschlaege` zeigt Ablago eine Auswahl mit Beschriftung statt eines Zahlenfelds; „Eigener Wert …“ öffnet das Zahlenfeld. Jeder Vorschlag liegt in `min`/`max`, `standard` muss einer davon sein. Ältere Ablago-Versionen ignorieren `schritt` und `vorschlaege` und zeigen ein Textfeld.
+  ```yaml
+  - schluessel: dpi
+    name: Auflösung (dpi)
+    typ: zahl
+    min: 150
+    max: 400
+    standard: 300
+    vorschlaege:
+      - { wert: 150, name: "gering – schneller, für klare Ausdrucke" }
+      - { wert: 300, name: "normal – empfohlen" }
+      - { wert: 400, name: "hoch – kleine Schrift, dauert länger" }
+  ```
 - **Werte**, wie das Paket sie bekommt: Abschnittsfelder unter ihrer Kennung, Listen als Liste von Objekten (mit `_id` je Eintrag). Verweise sind Ids (bei `feld`: `{ typ, feld }`), Geheimnisse im Klartext – nur für das eigene Paket.
 - Zu `code` gehören außerdem `sprache`, `quelle`, `ereignisse`, `rechte` und `netz` (siehe [Pakete mit Code](pakete-code.md#im-manifest)); das Beispiel oben zeigt nur Einstellungen und Aktionen.
 - **Zugangsdaten nur als `geheim`**, nie als `text` und nie mit `standard`.
