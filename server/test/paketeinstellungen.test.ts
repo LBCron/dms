@@ -5,7 +5,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { EINTRAG_ID, liesBeschreibung, pruefeWerte, zahlFehler } from '../../shared/src/paketeinstellungen';
+import { EINTRAG_ID, liesBeschreibung, pruefeWerte, ueberfuehre, zahlFehler, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
@@ -122,6 +122,30 @@ describe('Paket-Einstellungen (#197)', () => {
     assert.equal(ok.beschreibung!.bloecke.length, 2);
     const f = liesBeschreibung({ einstellungen: [{ abschnitt: 'A', felder: [{ schluessel: 'a', name: 'A', typ: 'auswahl' }, { schluessel: 'a', name: 'B', typ: 'geheim', standard: 'x' }] }] }).fehler;
     assert.ok(f.some((x) => x.includes('braucht optionen')) && f.some((x) => x.includes('doppelt')) && f.some((x) => x.includes('geheim hat keine Vorgabe')));
+  });
+
+  it('Mehrfachauswahl für Verweise (#658): mehrfach und schliesst_aus – Manifest und Prüfung', () => {
+    const code = (felder: unknown[]) => ({ einstellungen: [{ abschnitt: 'Typen', felder }] });
+    const gut = liesBeschreibung(code([
+      { schluessel: 'nur', name: 'Nur diese Mappentypen', typ: 'mappentyp', mehrfach: true, schliesst_aus: 'ohne' },
+      { schluessel: 'ohne', name: 'Diese Mappentypen ausschließen', typ: 'mappentyp', mehrfach: true, schliesst_aus: 'nur' },
+    ]));
+    assert.deepEqual(gut.fehler, []);
+    const [nur, ohne] = gut.beschreibung!.bloecke[0].felder;
+    assert.equal(nur.mehrfach, true);
+    assert.equal(ohne.schliesstAus, 'nur');
+    assert.match(liesBeschreibung(code([{ schluessel: 'x', name: 'X', typ: 'text', mehrfach: true }])).fehler.join(' '), /mehrfach: true gibt es nur bei mappentyp, benutzer, rolle, sicht/);
+    assert.match(liesBeschreibung(code([{ schluessel: 'x', name: 'X', typ: 'mappentyp', mehrfach: true, schliesst_aus: 'y' }, { schluessel: 'y', name: 'Y', typ: 'benutzer', mehrfach: true }])).fehler.join(' '), /schliesst_aus „y“ muss ein anderes Feld/);
+    const q: Verweisquelle = { typen: [{ id: 't1', felder: [] }, { id: 't2', felder: [] }, { id: 't3', felder: [] }], benutzer: [], rollen: [], sichten: [], typVon: () => null };
+    const r = pruefeWerte(gut.beschreibung!, { nur: ['t1', 't2', 't1'], ohne: ['t3'] }, q);
+    assert.deepEqual(r.fehler, {});
+    assert.deepEqual(r.werte, { nur: ['t1', 't2'], ohne: ['t3'] });
+    assert.deepEqual(pruefeWerte(gut.beschreibung!, {}, q).werte, { nur: [], ohne: [] });
+    assert.match(pruefeWerte(gut.beschreibung!, { nur: ['t1', 'weg'] }, q).fehler.nur, /Einen der Mappentypen gibt es nicht/);
+    const beide = pruefeWerte(gut.beschreibung!, { nur: ['t1'], ohne: ['t1', 't3'] }, q);
+    assert.match(beide.fehler.nur, /Steht auch in „Diese Mappentypen ausschließen“/);
+    // Update: Liste mit einem Verweisfeld → Mehrfachauswahl unter demselben Schlüssel, Werte bleiben.
+    assert.deepEqual(ueberfuehre(gut.beschreibung!, { nur: [{ [EINTRAG_ID]: 'e1', typ: 't1' }, { [EINTRAG_ID]: 'e2', typ: 't2' }] }).werte.nur, ['t1', 't2']);
   });
 
   it('alle Feldtypen, Pflicht, Liste mit Sortierung, Geheimnisse, Aktionen, Update, Entfernen', async () => {

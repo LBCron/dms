@@ -10,13 +10,15 @@ import { PaketEinstellungen } from './PaketEinstellungen';
 import { VektorStandBlock } from '../ablage/Aehnlich';
 import { FragenGrenzenBlock } from './FragenGrenzen';
 import { ErkennungPaketBlock } from './ErkennungPaket';
-import { PaketErstellen } from './PaketErstellen';
+import { PaketErstellen, SELBST } from './PaketErstellen';
+import { SelbstErstelltAnsicht } from './SelbstErstellt';
 import { rueckfrage } from '../rueckfrage';
 import { useKonto } from '../konto';
 import { SammeldateiAnsicht, SammeldateiWahl } from './PaketeDazuholen';
 import { PaketAblauf } from './PaketAblauf';
 import { PaketUmwandeln } from './PaketUmwandeln';
 import { t as tx } from '../sprache';
+import { KEINE_LIZENZ, lizenzArtVon, type SelbstErstellt } from '../../../shared/src/paketerstellung';
 import { HerkunftZeile } from './Herkunft';
 import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } from '../../../shared/src/ereignisse';
 
@@ -62,7 +64,12 @@ export function usePakete(offen: boolean) {
   const [sammel, setSammel] = useState<{ sammeldatei: Sammeldatei; datei: string } | null>(null);
   const [fehler, setFehler] = useState<string>();
   const [laedt, setLaedt] = useState(false);
-  const laden = useCallback(async () => { try { setStand(await api.pakete()); setFehler(undefined); } catch (e) { setFehler((e as Error).message); } }, []);
+  // Selbst erstellte Pakete (#652) stehen unter „Installiert“ mit dem Zeichen „selbst erstellt“.
+  const [selbst, setSelbst] = useState<SelbstErstellt[] | null>(null);
+  const laden = useCallback(async () => {
+    try { const [st, se] = await Promise.all([api.pakete(), api.selbstErstellt()]); setStand(st); setSelbst(se); setFehler(undefined); }
+    catch (e) { setFehler((e as Error).message); }
+  }, []);
   useEffect(() => { if (offen) void laden(); }, [offen, laden]);
   // Abgefragt werden der offizielle Katalog und die eingeschalteten weiteren Quellen (#369);
   // der Link aus der Katalog-Webseite (#191) fragt nur den offiziellen ab (alle = false).
@@ -80,7 +87,9 @@ export function usePakete(offen: boolean) {
     const kp = k?.katalog?.pakete.find((p) => p.id === id);
     return kp && k ? { kp, url: k.url, offiziell: k.offiziell } : undefined;
   };
-  return { stand, kataloge, updates, upload, setUpload, sammel, setSammel, fehler, laedt, laden, abrufen, pruefen, paketAus, setStand };
+  /** Hat ein Katalog ein Paket mit derselben Id wie ein selbst erstelltes (#652)? */
+  const konflikt = (id: string) => !!kataloge?.liste.some((k) => k.katalog?.pakete.some((p) => p.id === id));
+  return { stand, selbst, kataloge, updates, upload, setUpload, sammel, setSammel, fehler, laedt, laden, abrufen, pruefen, paketAus, setStand, konflikt };
 }
 export type PaketeZustand = ReturnType<typeof usePakete>;
 
@@ -132,8 +141,14 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
       </section>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       <h2 className="ueber">Installiert</h2>
-      {!z.stand ? <p className="leise">Lade …</p> : !installiert.length ? <p className="leise leerliste">Noch keine Pakete installiert.</p> : (
+      {!z.stand ? <p className="leise">Lade …</p> : !installiert.length && !z.selbst?.length ? <p className="leise leerliste">Noch keine Pakete installiert.</p> : (
         <ul className="mappenliste">
+          {(z.selbst ?? []).map((p) => (
+            <li key={`selbst|${p.id}`}><Link to={`/werkbank/pakete/${SELBST}${p.id}`} className={`eintrag werk ${offen === `${SELBST}${p.id}` ? 'an' : ''}`}>
+              <span className="titel">{p.name} <span className="chip" title={tx('pakete.selbst.chipTitel')}>{tx('pakete.selbst.chip')}</span>{z.konflikt(p.id) && <> <span className="chip warn" title={tx('pakete.selbst.konflikt', { id: p.id })}>{tx('pakete.selbst.konfliktChip')}</span></>}</span>
+              <span className="unter">{tx('pakete.selbst.unter', { version: p.version, datum: new Date(p.erstellt).toLocaleDateString('de-DE') })}</span>
+            </Link></li>
+          ))}
           {installiert.map((p) => (
             <li key={p.id}><Link to={`/werkbank/pakete/${p.id}`} className={`eintrag werk ${offen === p.id ? 'an' : ''}`}>
               <span className="titel">{p.name} {neuer(p.id) && <span className="chip warn" title="Neuere Version in der Quelle">{neuer(p.id)!.neu}</span>}{p.einstellungenNoetig && <> <span className="chip warn" title="Pflichtfelder in den Einstellungen fehlen">Einstellungen nötig</span></>}</span>
@@ -256,7 +271,8 @@ export function PaketePanel({ z, id }: { z: PaketeZustand; id?: string }) {
   );
   if (id === UPLOAD) return <UploadDetail z={z} />;
   if (id === SAMMEL) return <SammelDetail z={z} />;
-  if (id === ERSTELLEN) return <PaketErstellen />;
+  if (id === ERSTELLEN) return <PaketErstellen key={location.search} onErstellt={() => void z.laden()} />;
+  if (id.startsWith(SELBST)) return <SelbstErstelltAnsicht id={id.slice(SELBST.length)} konflikt={z.konflikt(id.slice(SELBST.length))} onGeaendert={() => void z.laden()} />;
   const quelle = new URLSearchParams(location.search).get('quelle') ?? undefined;
   return <PaketDetail key={`${id}|${quelle ?? ''}`} z={z} id={id} quelle={quelle} />;
 }
@@ -300,7 +316,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
       {vorschau && (
         <section className="blatt">
           <dl className="eigenschaften">
-            <dt>Lizenz</dt><dd>{vorschau.paket.lizenz}</dd>
+            <dt>Lizenz</dt><dd><LizenzAngabe lizenz={vorschau.paket.lizenz} /></dd>
             <dt>Autor</dt><dd>{vorschau.paket.autor.name}{vorschau.paket.autor.github ? ` (@${vorschau.paket.autor.github})` : ''}</dd>
             <dt>Nötige Ablago-Version</dt><dd>{vorschau.paket.dms} (dieser Installation: {vorschau.dmsVersion})</dd>
             {vorschau.installiert && <><dt>Installiert</dt><dd>Version {vorschau.installiert}</dd></>}
@@ -375,7 +391,7 @@ function UploadDetail({ z }: { z: PaketeZustand }) {
       <section className="blatt">
         <dl className="eigenschaften">
           <dt>Datei</dt><dd>{u.datei}</dd>
-          <dt>Lizenz</dt><dd>{p.lizenz}</dd>
+          <dt>Lizenz</dt><dd><LizenzAngabe lizenz={p.lizenz} /></dd>
           <dt>Autor</dt><dd>{p.autor.name}{p.autor.github ? ` (@${p.autor.github})` : ''}</dd>
           <dt>Nötige Ablago-Version</dt><dd>{p.dms} (dieser Installation: {u.vorschau.dmsVersion})</dd>
           {u.vorschau.installiert && <><dt>Installiert</dt><dd>Version {u.vorschau.installiert}{u.vorschau.herkunft ? ` · ${herkunftText(u.vorschau.herkunft)}` : ''}</dd></>}
@@ -467,7 +483,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           {inst?.aktualisiert && <><dt>Aktualisiert</dt><dd>{datum(inst.aktualisiert)}{inst.aktualisiertVon ? ` von ${inst.aktualisiertVon}` : ''}</dd></>}
           <dt>Herkunft</dt><dd>{inst ? herkunftText(inst.herkunft) : aus?.offiziell ? 'offizieller Katalog' : `Katalog ${aus?.url}`}</dd>
           {kp && <><dt>Im Katalog</dt><dd>Version {kp.aktuell}{neuer && <> · <strong>neuer als installiert</strong></>}</dd></>}
-          <dt>Lizenz</dt><dd>{inst?.lizenz ?? kp?.lizenz}</dd>
+          <dt>Lizenz</dt><dd><LizenzAngabe lizenz={inst?.lizenz ?? kp?.lizenz ?? ''} /></dd>
           <dt>Autor</dt><dd>{autor?.name}{autor?.github && <> (<a className="verweis" href={`https://github.com/${autor.github}`} target="_blank" rel="noreferrer">@{autor.github}</a>)</>}</dd>
           {v && <><dt>Nötige Ablago-Version</dt><dd>{v.dms} (dieser Installation: {z.stand?.dms})</dd></>}
           {v && <><dt>Abhängigkeiten</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : 'keine'}</dd></>}
@@ -754,4 +770,12 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       </div>
     </section>
   );
+}
+
+/** Lizenz eines Pakets (#651): bei eigener oder fehlender Lizenz mit sachlichem Hinweis. */
+function LizenzAngabe({ lizenz }: { lizenz: string }) {
+  const art = lizenzArtVon(lizenz);
+  if (art === 'frei') return <>{lizenz}</>;
+  return <>{art === 'keine' || lizenz === KEINE_LIZENZ ? tx('pakete.erstellen.lizenz.keine') : lizenz.replace(/^LicenseRef-/, '').replace(/-/g, ' ')}
+    <small className="leise" style={{ display: 'block' }}>{tx(art === 'keine' ? 'pakete.vorschau.lizenz.keine' : 'pakete.vorschau.lizenz.eigen')}</small></>;
 }

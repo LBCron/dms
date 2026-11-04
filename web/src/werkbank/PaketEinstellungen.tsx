@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { abschnittsfelder, EINTRAG_ID, listen, zahlFehler, type EinstellungBlock, type EinstellungFeld, type FeldVerweis, type GeheimStand } from '../../../shared/src/paketeinstellungen';
+import { abschnittsfelder, EINTRAG_ID, listen, MEHRFACH_VERWEISE, zahlFehler, type EinstellungBlock, type EinstellungFeld, type FeldVerweis, type GeheimStand } from '../../../shared/src/paketeinstellungen';
+import { Mehrfachauswahl } from '../ablage/Mehrfachauswahl';
 import { api, ApiFehler, type PaketEinstellungenStand } from '../api';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
@@ -98,15 +99,57 @@ export function PaketEinstellungen({ id, gespeichert }: { id: string; gespeicher
 
 export type Auswahl = PaketEinstellungenStand['auswahl'];
 
+/** Mögliche Einträge eines Verweises (Mappentyp, Benutzer, Rolle, Ansicht). */
+const optionenVon = (f: EinstellungFeld, a: Auswahl): Array<{ id: string; name: string }> =>
+  f.typ === 'mappentyp' ? a.typen : f.typ === 'benutzer' ? a.benutzer : f.typ === 'rolle' ? a.rollen : f.typ === 'sicht' ? a.sichten : [];
+
+/**
+ * Verweise als Mehrfachauswahl (#658) – dieselbe Bedienung wie bei Verweisfeldern (#602): suchen, die Auswahl steht
+ * unter dem Feld, je mit „Entfernen“. `ausgeschlossen`: im anderen Feld gewählt (schliesst_aus), hier nicht angeboten.
+ */
+function VerweisWahl({ id, name, optionen, gewaehlt, setze, ausgeschlossen = [] }: { id: string; name: string; optionen: Array<{ id: string; name: string }>; gewaehlt: string[]; setze: (l: string[]) => void; ausgeschlossen?: string[] }) {
+  const [eingabe, setEingabe] = useState('');
+  const [offen, setOffen] = useState(false);
+  const such = eingabe.trim().toLowerCase();
+  const frei = optionen.filter((o) => !gewaehlt.includes(o.id) && !ausgeschlossen.includes(o.id) && (!such || o.name.toLowerCase().includes(such)));
+  const nameVon = (x: string) => optionen.find((o) => o.id === x)?.name ?? t('pakete.einstellungen.verweis-weg');
+  return (
+    <Mehrfachauswahl id={id} name={name} platzhalter={t('pakete.einstellungen.suchen')} eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen}
+      vorschlaege={frei.slice(0, 50).map((o) => ({ id: o.id, text: o.name }))} leerText={t('pakete.einstellungen.nichts-frei')}
+      waehle={(x) => { setze([...gewaehlt, x]); setEingabe(''); }} entferne={(x) => setze(gewaehlt.filter((y) => y !== x))}
+      gewaehlt={gewaehlt.map((x) => ({ id: x, inhalt: nameVon(x), entfernenText: t('pakete.einstellungen.entfernen', { name: nameVon(x) }) }))} />
+  );
+}
+/** Übergang (#658): Eine Liste mit genau einem Verweisfeld zeigt das DMS wie eine Mehrfachauswahl; gespeichert bleibt die Liste. */
+const alsMehrfach = (blk: EinstellungBlock) => blk.art === 'liste' && blk.felder.length === 1 && MEHRFACH_VERWEISE.includes(blk.felder[0].typ);
+
 function Block({ blk, werte, setze, fehler, auswahl }: { blk: EinstellungBlock; werte: Werte; setze: (f: (w: Werte) => Werte) => void; fehler: Record<string, string>; auswahl: Auswahl }) {
   if (blk.art === 'abschnitt') return (
     <section className="blatt">
       {blk.titel && <h2 className="h3">{blk.titel}</h2>}
       {blk.hilfe && <p className="leise klein">{blk.hilfe}</p>}
       {blk.felder.map((f) => <Eingabe key={f.schluessel} f={f} wert={werte[f.schluessel]} fehler={fehler[f.schluessel]} auswahl={auswahl} id={`pe-${f.schluessel}`}
+        ausgeschlossen={[...blk.felder.filter((g) => g.schliesstAus === f.schluessel).map((g) => g.schluessel), ...(f.schliesstAus ? [f.schliesstAus] : [])].flatMap((k) => { const v = werte[k]; return Array.isArray(v) ? v.map(String) : v ? [String(v)] : []; })}
         setze={(v) => setze((w) => ({ ...w, [f.schluessel]: v }))} />)}
     </section>
   );
+  if (alsMehrfach(blk)) {
+    const f = blk.felder[0];
+    const eintraege = (werte[blk.schluessel] as Werte[] | undefined) ?? [];
+    const ids = eintraege.map((e) => String(e[f.schluessel] ?? '')).filter(Boolean);
+    const fehlerHier = Object.entries(fehler).filter(([k]) => k.startsWith(`${blk.schluessel}.`)).map(([, v]) => v)[0];
+    return (
+      <section className="blatt">
+        <div className={`eigenschaft${fehlerHier ? ' fehlerhaft' : ''}`}>
+          <label htmlFor={`pe-${blk.schluessel}`} className="h3">{blk.name}</label>
+          <VerweisWahl id={`pe-${blk.schluessel}`} name={blk.name} optionen={optionenVon(f, auswahl)} gewaehlt={ids}
+            setze={(l) => setze((w) => ({ ...w, [blk.schluessel]: l.map((x) => eintraege.find((e) => String(e[f.schluessel]) === x) ?? { [EINTRAG_ID]: neueId(), [f.schluessel]: x }) }))} />
+          {blk.hilfe && <small className="leise">{blk.hilfe}</small>}
+          {fehlerHier && <small className="fehlertext">{fehlerHier}</small>}
+        </div>
+      </section>
+    );
+  }
   const eintraege = (werte[blk.schluessel] as Werte[] | undefined) ?? [];
   const setzeListe = (n: Werte[]) => setze((w) => ({ ...w, [blk.schluessel]: n }));
   const schiebe = (i: number, d: number) => { const n = [...eintraege]; [n[i], n[i + d]] = [n[i + d], n[i]]; setzeListe(n); };
@@ -137,7 +180,7 @@ function Block({ blk, werte, setze, fehler, auswahl }: { blk: EinstellungBlock; 
 }
 
 /** Ein Feld mit den Bausteinen der Oberfläche; Verweise als Auswahllisten (gespeichert wird die Id). */
-export function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: EinstellungFeld; wert: unknown; setze: (v: unknown) => void; fehler?: string; auswahl: Auswahl; id: string }) {
+export function Eingabe({ f, wert, setze, fehler, auswahl, id, ausgeschlossen }: { f: EinstellungFeld; wert: unknown; setze: (v: unknown) => void; fehler?: string; auswahl: Auswahl; id: string; ausgeschlossen?: string[] }) {
   const [geheimNeu, setGeheimNeu] = useState(false);
   const [warGesetzt] = useState(!!wert && typeof wert === 'object');
   let ctl: React.ReactNode;
@@ -147,7 +190,8 @@ export function Eingabe({ f, wert, setze, fehler, auswahl, id }: { f: Einstellun
       {optionen.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
     </select>
   );
-  switch (f.typ) {
+  if (f.mehrfach) ctl = <VerweisWahl id={id} name={f.name} optionen={optionenVon(f, auswahl)} gewaehlt={Array.isArray(wert) ? wert.map(String) : wert ? [String(wert)] : []} setze={setze} ausgeschlossen={ausgeschlossen} />;
+  else switch (f.typ) {
     case 'text': ctl = <input id={id} type="text" value={String(wert ?? '')} onChange={(e) => setze(e.target.value)} />; break;
     // Dienst-Adresse (#444): nie voreingestellt, nur ein Beispiel im leeren Feld; beim Speichern bestätigen.
     case 'adresse': ctl = <><input id={id} type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder={f.beispiel} value={String(wert ?? '')} onChange={(e) => setze(e.target.value || null)} /><small className="leise">{t('fragen.adresse.feld')}</small></>; break;

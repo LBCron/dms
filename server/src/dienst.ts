@@ -3908,6 +3908,13 @@ export class Dienst {
     await this.einstellungen.schreibe('paket_entwuerfe', liste.length ? liste : null);
   }
 
+  /** Gemerkte Archive selbst erstellter Pakete (#652): je Paket-Id eine Einstellung (Teil der Sicherung). */
+  async paketArchive(id: string): Promise<unknown> { return (await this.einstellungen?.lies(`paket_erstellt_${id}`)) ?? null; }
+  async setzePaketArchive(id: string, liste: unknown[] | null) {
+    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    await this.einstellungen.schreibe(`paket_erstellt_${id}`, liste?.length ? liste : null);
+  }
+
   /** Paket-Einstellungen (#197): je Paket getrennt in den Einstellungen (Teil der Sicherung, Schlüsselwechsel inklusive). */
   async paketEinstellungen(id: string): Promise<{ werte: Record<string, unknown>; status?: { letzterLauf: string | null; meldungen: string[] } } | null> {
     const v = await this.einstellungen?.lies(`paket:${id}`);
