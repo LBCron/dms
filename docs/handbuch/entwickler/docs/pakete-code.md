@@ -168,7 +168,7 @@ Ein Paket, das `seitensprachen` schickt, gibt `dms: ">=0.139.0"` an – ältere 
 
 ### Zusatzdaten aus anderen Paketen { #zusatzdaten }
 
-Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 32 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu. Mit `ergaenzt: { paket: <paket>, gruppe: … }` im Manifest erscheint das Zusatzpaket bei der Installation als Häkchen unter dem erweiterten Paket (siehe [Paketformat → Ergänzungen](pakete.md#paketformat-verbindlich), ab Ablago 0.151.0).
+Seit 0.133.0 liest ein Paket mit `dms_datei` auch die Daten (`code/daten/…`) von Paketen, die **von ihm abhängen** – unter dem Namen `<paket>/<datei>`, z. B. `texterkennung_fra/fra.traineddata`. So bringen Zusatzpakete weitere Daten mit (etwa Sprachen der Texterkennung), ohne die Grenze von 128 MB je Paket zu sprengen. Das Zusatzpaket gibt sich damit selbst frei: Nur wer es als Abhängigkeit hat, wird erweitert. Es braucht ein eigenes (kleines) Modul; wird es installiert oder entfernt, lädt der Läufer das erweiterte Paket neu. Mit `ergaenzt: { paket: <paket>, gruppe: … }` im Manifest erscheint das Zusatzpaket bei der Installation als Häkchen unter dem erweiterten Paket (siehe [Paketformat → Ergänzungen](pakete.md#paketformat-verbindlich), ab Ablago 0.151.0).
 
 ### Fortsetzung bei langen Aufgaben { #fortsetzung }
 
@@ -229,7 +229,7 @@ Alle Funktionen sind synchron; Zeiger und Längen beziehen sich auf den importie
 | Zeit je Aufruf | 120 s (danach Abbruch, gilt als Fehler) |
 | gleichzeitige Aufrufe | 2 (alle Pakete zusammen) |
 | Speicher des Pakets | 64 KB |
-| Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 32 MB je Paket zusammen; größere Pakete lehnen Ablago und `pruefen.py` ab |
+| Dateien unter `code/` (`modul.wasm`, `daten/`, Quellcode) | 128 MB je Paket zusammen – dieselbe Grenze wie für das Archiv; größere Pakete lehnen Ablago und `pruefen.py` ab |
 | Körper einer Anfrage an die API | 2 MB (JSON); `PUT /dokumente/{id}/volltext` seit 0.145.0 bis 32 MB – genug für die 5 Millionen Zeichen, die der Kern als Volltext nimmt (mit Wortpositionen entsprechend weniger); `PUT /dokumente/{id}/archivfassung` seit 0.149.0 bis 100 MB (roh) |
 
 Ein Paket, das die Grenzen reißt, beeinträchtigt Ablago nicht; der Aufruf bricht ab und steht in der Übersicht des Läufers.

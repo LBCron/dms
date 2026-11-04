@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { auswahlMitAbhaengigkeiten, nachAbhaengigkeiten, passt, vergleicheVersion, type Katalog } from '../../shared/src/pakete';
+import { CODE_MAX, PAKET_MAX, auswahlMitAbhaengigkeiten, nachAbhaengigkeiten, passt, vergleicheVersion, type Katalog } from '../../shared/src/pakete';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
-import { liesPaket, liesZip, Paketverwaltung, type Sammeldatei } from '../src/pakete';
+import { ARCHIV_MAX, holeDaten, liesPaket, liesZip, Paketverwaltung, SAMMEL_MAX, type Sammeldatei } from '../src/pakete';
 import type { Repo } from '../src/repo';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
@@ -67,7 +69,7 @@ function sammeldatei(pakete: Array<Record<string, string>>, aendern: (d: Map<str
 const gruende = (re: RegExp) => (e: unknown) => e instanceof Fachfehler && ((e.details as { gruende?: string[] })?.gruende ?? [e.message]).some((g) => re.test(g));
 
 /** Kleiner Katalog im Arbeitsspeicher: Archive je Paket und Version. */
-function katalog(eintraege: Array<{ dateien: Record<string, string>; falscheSumme?: boolean }>, url = KATALOG, daten = new Map<string, Buffer>()) {
+function katalog(eintraege: Array<{ dateien: Record<string, string>; falscheSumme?: boolean; groesse?: number }>, url = KATALOG, daten = new Map<string, Buffer>()) {
   const basisUrl = url.slice(0, url.lastIndexOf('/') + 1);
   const pakete = new Map<string, Katalog['pakete'][number]>();
   for (const e of eintraege) {
@@ -79,7 +81,7 @@ function katalog(eintraege: Array<{ dateien: Record<string, string>; falscheSumm
     const p = pakete.get(m) ?? { id: m, name: m, beschreibung: '', autor: { name: 'Test', github: 'test' }, lizenz: 'MIT', aktuell: version, versionen: [] };
     const abh: Record<string, string> = {};
     for (const z of /abhaengigkeiten:\n((?:  \S+: .+\n)*)/.exec(e.dateien['manifest.yaml'])?.[1]?.split('\n').filter(Boolean) ?? []) { const [k, v] = z.trim().split(': '); abh[k] = v.replace(/"/g, ''); }
-    p.versionen.unshift({ version, dms, abhaengigkeiten: abh, inhalt: { mappentypen: [], sichten: [], beispiele: 0 }, code: false, archiv: `archive/${m}-${version}.zip`, sha256: e.falscheSumme ? '0'.repeat(64) : sha(b), groesse: b.length, veroeffentlicht: '2026-11-01T00:00:00Z', quelle: '', readme: '', changelog: '' });
+    p.versionen.unshift({ version, dms, abhaengigkeiten: abh, inhalt: { mappentypen: [], sichten: [], beispiele: 0 }, code: false, archiv: `archive/${m}-${version}.zip`, sha256: e.falscheSumme ? '0'.repeat(64) : sha(b), groesse: e.groesse ?? b.length, veroeffentlicht: '2026-11-01T00:00:00Z', quelle: '', readme: '', changelog: '' });
     if (vergleicheVersion(version, p.aktuell) > 0) p.aktuell = version;
     pakete.set(m, p);
   }
@@ -224,6 +226,14 @@ function faelle(pg: boolean) {
       assert.ok(!(await d.listeTypen()).some((t) => t.id === typ.id));
       assert.ok(!(await d.listeSichten()).some((s) => Object.values(neu.sichten).includes(s.id)));
       assert.deepEqual(await d.listePakete(), []);
+    });
+
+    it('Paket über der gemeinsamen Grenze wird verständlich abgelehnt, ohne es zu laden (#644)', async () => {
+      const { p } = await aufbau([{ dateien: basis, groesse: 200 * 1024 * 1024 }]);
+      await assert.rejects(p.vorschau({ id: 'basis' }), /Das Paket ist 200 MB groß, höchstens 128 MB sind erlaubt/);
+      const knapp = await aufbau([{ dateien: basis, groesse: ARCHIV_MAX }]);
+      // Die Angabe im Katalog darf bis zur Grenze gehen; geprüft wird danach die Prüfsumme.
+      assert.equal((await knapp.p.vorschau({ id: 'basis' })).dmsOk, true);
     });
 
     it('Prüfsumme falsch, Ablago zu alt, Abhängigkeit fehlt', async () => {
@@ -474,6 +484,40 @@ describe('Pakete dazuholen: Auswahl mit Abhängigkeiten (#460)', () => {
   it('Reihenfolge nach Abhängigkeiten, Kreis = null', () => {
     assert.deepEqual(nachAbhaengigkeiten([{ id: 'b', abhaengigkeiten: { a: '1.0.0' } }, { id: 'a', abhaengigkeiten: { x: '1.0.0' } }])!.map((x) => x.id), ['a', 'b']);
     assert.equal(nachAbhaengigkeiten([{ id: 'b', abhaengigkeiten: { a: '1.0.0' } }, { id: 'a', abhaengigkeiten: { b: '1.0.0' } }]), null);
+  });
+});
+
+describe('Pakete: eine Größengrenze überall (#644)', () => {
+  it('Archiv, code/ und Sammeldatei hängen an derselben Zahl', () => {
+    assert.equal(PAKET_MAX, 128 * 1024 * 1024);
+    assert.equal(ARCHIV_MAX, PAKET_MAX);
+    assert.equal(CODE_MAX, PAKET_MAX);
+    assert.ok(SAMMEL_MAX >= PAKET_MAX, 'eine Sammeldatei fasst mindestens ein Paket an der Grenze');
+  });
+
+  it('ein Paket mit 25 MB Modell (KI lokal – Ähnlichkeit) lässt sich lesen', () => {
+    const modell = Buffer.alloc(25 * 1024 * 1024, 7);
+    const b = zipPuffer([...Object.entries(basis).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })), { name: 'code/daten/modell.bin', daten: modell }]);
+    assert.equal(liesZip(b).get('code/daten/modell.bin')!.length, modell.length);
+  });
+
+  it('holeDaten lädt knapp unter der Grenze und bricht darüber mit Größe und Grenze ab', async () => {
+    // Feste Größen je Pfad – der Test-Server legt nie Puffer in einer Größe aus der Anfrage an (CodeQL).
+    const GROESSE: Record<string, number> = { '/genau': 3 * 1048576, '/zu-gross': 4 * 1048576 };
+    const server = createServer((q, a) => {
+      const [pfad, rest] = (q.url ?? '').split('?');
+      const n = GROESSE[pfad] ?? 0;
+      if (rest === 'ohne-laenge') { a.writeHead(200); a.write(Buffer.alloc(n - 10)); a.end(Buffer.alloc(10)); return; }
+      a.writeHead(200, { 'content-length': n }); a.end(Buffer.alloc(n));
+    });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const max = 3 * 1048576;
+      assert.equal((await holeDaten(`${url}/genau`, max)).length, max);
+      await assert.rejects(holeDaten(`${url}/zu-gross`, max), /4 MB groß, höchstens 3 MB/);
+      await assert.rejects(holeDaten(`${url}/zu-gross?ohne-laenge`, max), /höchstens 3 MB/);
+    } finally { server.close(); }
   });
 });
 

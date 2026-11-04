@@ -13,10 +13,11 @@
 import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
-import { BEREICH, PAKET_ID, VERSION, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { BEREICH, inMB, PAKET_ID, VERSION, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
 import { BESCHREIBUNG_LAENGE, GITHUB, LIZENZEN, NAME_LAENGE, naechsteVersion, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung } from '../../shared/src/paketerstellung';
 import type { Bedingung, Sicht, WertAngabe } from '../../shared/src/sichten';
 import type { Dienst } from './dienst';
+import { t } from './sprache';
 import { Fachfehler } from './fehler';
 import { LIZENZTEXTE } from './lizenztexte';
 import { ARCHIV_MAX, DMS_TYPEN, DMS_VERWEISE_AB, liesPaket, liesZip, type Handelnder } from './pakete';
@@ -416,7 +417,7 @@ export class Paketerstellung {
     if (bau.probleme.length) return { bau, zip: null, daten };
     const id = e.id.trim();
     const zip = zipPuffer(bau.dateien.map((f) => ({ name: `${id}/${f.name}`, daten: f.daten })), daten.jetzt);
-    if (zip.length > ARCHIV_MAX) { bau.probleme.push('Das Paket ist größer als 10 MB – so lässt es sich nicht hochladen. Weniger Beispiele wählen.'); return { bau, zip: null, daten }; }
+    if (zip.length > ARCHIV_MAX) { bau.probleme.push(t('pakete.groesse.erstellenZuGross', { groesse: inMB(zip.length), max: inMB(ARCHIV_MAX) })); return { bau, zip: null, daten }; }
     try {
       const p = liesPaket(liesZip(zip));
       if (p.manifest.id !== id || p.typen.length !== bau.inhalt.typen.length || p.sichten.length !== bau.inhalt.sichten.length) throw new Error('Inhalt weicht ab.');
