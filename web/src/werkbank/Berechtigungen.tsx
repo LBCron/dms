@@ -7,6 +7,7 @@ import {
 } from '../../../shared/src/rechte';
 import { api, type Testlauf } from '../api';
 import { useDaten } from '../daten';
+import { t } from '../sprache';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
@@ -260,7 +261,8 @@ function RechteZeile({ r }: { r: Record<Recht, boolean> }) {
 
 /** Testlauf am Mappentyp (#146): mit den Regeln, wie sie gerade im Editor stehen – auch ungespeichert. */
 export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwurf: Regelwerk; klappe: Klappe }) {
-  const [b, setB] = useState('');
+  // Vorausgewähltes Konto über ?testkonto=<id> (#710), z. B. aus der Warnung einer Automatisierung (#709).
+  const [b, setB] = useState(() => new URLSearchParams(location.search).get('testkonto') ?? '');
   const [mappe, setMappe] = useState('');
   // Das Ergebnis gehört zu (Benutzer, Mappe, Regeln) – wechselt eines davon, ist es sofort weg (#371).
   const stand = JSON.stringify(entwurf);
@@ -273,7 +275,7 @@ export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwu
       beschreibung="Welche Rechte hätte ein Benutzer an einer bestimmten Mappe – und welche Regel hat das entschieden? Geprüft werden die Regeln, wie sie oben stehen, auch wenn sie noch nicht gespeichert sind.">
       {!typId ? <p className="leise klein">Den Testlauf gibt es, sobald der Mappentyp gespeichert ist und Mappen hat.</p> : <>
       <div className="formular">
-        <TestBenutzerWahl id="testlauf-benutzer" wert={b} setze={setB} />
+        <TestBenutzerWahl id="testlauf-benutzer" wert={b} setze={setB} mitKonten />
         <TestMappeWahl key={typId} id="testlauf-mappe" typId={typId} wert={mappe} setze={setMappe} />
       </div>
       {!schluessel && <p className="leise klein">Wähle Benutzer und Testmappe – das Ergebnis erscheint sofort.</p>}
@@ -281,6 +283,7 @@ export function TestlaufBlatt({ typId, entwurf, klappe }: { typId: string; entwu
       {fehler && <p className="fehlertext klein">{fehler}</p>}
       {erg && (
         <div className="testlauf" role="status">
+          {erg.konto && <p className="leise klein">{erg.unbestaetigt ? t('werkbank.testlauf.konto.unbestaetigt') : t('werkbank.testlauf.konto.hinweis', { rolle: t.frei(`werkbank.testlauf.konto.kennzeichen.${erg.konto}`) })}</p>}
           {erg.admin
             ? <p><strong>{erg.benutzer.name}</strong> ist Administrator – für ihn gelten die Regeln nicht, er darf alles.</p>
             : <>
