@@ -6186,28 +6186,29 @@ export class Dienst {
    * Eine Seite als Graustufenbild (PGM) für eine Texterkennung im Paket (#338). JPEG und PNG (#458) haben genau eine
    * Seite: Das Bild wird ohne Neuberechnung in ein einseitiges PDF gelegt (wie bei den Vorschaubildern) und genauso
    * gerastert – kein zusätzliches Bildwerkzeug im Image. Bilder kommen in Originalgröße, dpi zählt dort nicht.
+   * `farbe` (#716): als Farbbild (PPM) statt Graustufen, z. B. für die Archivfassung.
    */
-  async seiteAlsGraubild(id: string, nr: number, dpi: number): Promise<Buffer> {
+  async seiteAlsGraubild(id: string, nr: number, dpi: number, farbe = false): Promise<Buffer> {
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     // Andere Dateitypen (#577): die Seiten der umgewandelten Fassung (PDF, PNG oder JPEG) eines Pakets.
     if (!kernTyp(d.mime)) {
       const f = await this.umwandlung?.lies(d.sha256);
       if (!f) throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG, und es gibt keine umgewandelte Fassung – davon gibt es kein Seitenbild.`);
-      if (f.info.mime === 'application/pdf') return graubild(f.inhalt, nr, dpi);
+      if (f.info.mime === 'application/pdf') return graubild(f.inhalt, nr, dpi, farbe);
       if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
-      return graubild(await bildSeitePdf(f.inhalt, f.info.mime), 1, 72);
+      return graubild(await bildSeitePdf(f.inhalt, f.info.mime), 1, 72, farbe);
     }
     if (d.mime === 'image/jpeg' || d.mime === 'image/png') {
       if (nr !== 1) throw new Fachfehler(404, `Seite ${nr} gibt es nicht – ein Bild hat eine Seite.`);
       const s = await this.dateien.lies(d.sha256);
       const bild = Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]);
       // Das Bild liegt in Originalgröße (1 Bildpunkt = 1 pt): bei 72 dpi kommen genau seine Bildpunkte.
-      return graubild(await bildSeitePdf(bild, d.mime), 1, 72);
+      return graubild(await bildSeitePdf(bild, d.mime), 1, 72, farbe);
     }
     if (d.mime !== 'application/pdf') throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG – davon gibt es kein Seitenbild.`);
     const { inhalt } = await this.pdfVon(id);
-    return graubild(inhalt, nr, dpi);
+    return graubild(inhalt, nr, dpi, farbe);
   }
 
   /** Seitenzahl und Drehung je Seite. */

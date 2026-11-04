@@ -1977,11 +1977,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'GET', pfad: '/api/mappen/:id/aehnliche', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.aehnlicheZurMappe(await zg(a), a.params.id)) },
     // Seite als Graustufenbild (#338): Eingabe für eine Texterkennung im Paket (PGM, 8 Bit).
+    // Mit ?farbe=1 (#716) als Farbbild (PPM) – für die Archivfassung; wie das Graustufenbild nur mit Leserecht.
     { methode: 'GET', pfad: '/api/dokumente/:id/seiten/:nr/scan', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
       const dpi = a.query.dpi === undefined ? 300 : Number(a.query.dpi);
-      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi);
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.pgm`, mime: 'image/x-portable-graymap', anzeigen: false, groesse: bild.length } };
+      const farbe = a.query.farbe === '1' || a.query.farbe === 'true';
+      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe);
+      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.${farbe ? 'ppm' : 'pgm'}`, mime: farbe ? 'image/x-portable-pixmap' : 'image/x-portable-graymap', anzeigen: false, groesse: bild.length } };
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/texterkennung', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
