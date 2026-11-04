@@ -40,6 +40,10 @@ export function LasttestSeite() {
   const [speicher, setSpeicher] = useState<Speicherwahl | null | undefined>(undefined);
   const [kopiert, setKopiert] = useState<'ja' | 'nein' | null>(null);
   const [beendet, setBeendet] = useState(false);
+  /** Heruntergeladen (#697): gilt wie kopiert – dann fragt „Herunterfahren“ nicht nach. */
+  const [gesichert, setGesichert] = useState(false);
+  /** Rückfrage an Stelle des Knopfs (#697), wenn das Ergebnis noch nicht kopiert oder heruntergeladen ist. */
+  const [nachfragen, setNachfragen] = useState(false);
   const feld = useRef<HTMLTextAreaElement>(null);
   const senden = useRef<ReturnType<typeof setTimeout>>(undefined);
   /** Wann der Stand kam (Uhr des Browsers): Die Restdauer rechnet mit der Uhr des Servers weiter. */
@@ -76,10 +80,19 @@ export function LasttestSeite() {
   const zustand = beendet ? 'beendet' : stand.zustand;
   const textDatei = stand.ergebnis ? `${stand.ergebnis.bericht}\n\n### ${t('lasttest.ergebnis')}\n\n${block}\n` : '';
 
+  async function herunterfahren() {
+    setNachfragen(false);
+    try { await api.lasttestBeenden(); setBeendet(true); setFehler(undefined); } catch (e) { setFehler((e as Error).message); }
+  }
   async function beenden() {
-    const ja = await rueckfrage({ titel: t('lasttest.beenden.frage'), text: zustand === 'laeuft' ? t('lasttest.beenden.frage.laeuft') : t('lasttest.beenden.frage.text'), ja: t('lasttest.beenden.frage.ja'), gefahr: true });
-    if (!ja) return;
-    try { await api.lasttestBeenden(); setBeendet(true); } catch (e) { setFehler((e as Error).message); }
+    // Läuft der Test noch, fällt alles weg – das fragt ein Dialog. Ist er fertig, aber das Ergebnis nicht gesichert,
+    // fragt die Seite an Stelle des Knopfs nach (#697).
+    if (zustand === 'laeuft') {
+      if (await rueckfrage({ titel: t('lasttest.beenden.frage'), text: t('lasttest.beenden.frage.laeuft'), ja: t('lasttest.beenden.frage.ja'), gefahr: true })) await herunterfahren();
+      return;
+    }
+    if (stand?.ergebnis && kopiert !== 'ja' && !gesichert) { setNachfragen(true); return; }
+    await herunterfahren();
   }
 
   return (
@@ -102,7 +115,6 @@ export function LasttestSeite() {
           {(zustand === 'abbruch' || zustand === 'fehler') && (
             <div className="hinweis schlecht"><p><Symbol name="warnung" /> <strong>{t(zustand === 'abbruch' ? 'lasttest.abbruch' : 'lasttest.fehler')}</strong> {stand.meldung} {zustand === 'fehler' ? t('lasttest.fehler.protokoll') : ''}</p></div>
           )}
-          {zustand === 'beendet' && <div className="hinweis info"><p><strong>{t('lasttest.beendet')}</strong> {t('lasttest.beendet.text')}</p></div>}
           {!!stand.durchgaenge.length && (
             <ul className="klein leise lasttest-durchgaenge">
               {stand.durchgaenge.map((d, i) => <li key={i}>{t('lasttest.durchgang.fertig', { name: d.name, p95: d.p95 ?? '–', fehler: prozent(d.fehlerquote) })}</li>)}
@@ -144,7 +156,7 @@ export function LasttestSeite() {
               <textarea ref={feld} className="mono lasttest-block" readOnly value={block} rows={block.split('\n').length} aria-label={t('lasttest.ergebnis')} />
               <div className="knoepfe">
                 <button type="button" className="knopf primaer" onClick={() => void kopiere(block, feld.current).then((ok) => setKopiert(ok ? 'ja' : 'nein'))}>{kopiert === 'ja' ? <><Symbol name="haken" /> {t('lasttest.kopiert')}</> : t('lasttest.kopieren')}</button>
-                <button type="button" className="knopf" onClick={() => herunterladen(`lasttest-${stand.wahl}.md`, textDatei)}>{t('lasttest.herunterladen')}</button>
+                <button type="button" className="knopf" onClick={() => { herunterladen(`lasttest-${stand.wahl}.md`, textDatei); setGesichert(true); }}>{t('lasttest.herunterladen')}</button>
                 <a className="knopf" href={FORMULAR} target="_blank" rel="noreferrer">{t('lasttest.formular')} <Symbol name="extern" /></a>
                 <a className="knopf" href={SAMMEL} target="_blank" rel="noreferrer">{t('lasttest.sammel')} <Symbol name="extern" /></a>
               </div>
@@ -155,10 +167,30 @@ export function LasttestSeite() {
           )}
         </section>
 
-        <div className="knoepfe lasttest-ende">
-          <a className="verweis klein" href={handbuchUrl('admin', null, 'lasttest/')} target="_blank" rel="noreferrer">{t('lasttest.handbuch')} <Symbol name="extern" /></a>
-          {zustand !== 'beendet' && <button type="button" className="knopf gefahr-rand" onClick={() => void beenden()}>{t('lasttest.beenden')}</button>}
-        </div>
+        {/* Ergebnis an Stelle des Knopfs (#697): erst ggf. die Rückfrage, dann der Abschluss – er bleibt stehen, auch wenn
+            der Server nicht mehr antwortet (das Herunterfahren ist ja gewollt; es wird nichts mehr abgefragt). */}
+        {zustand === 'beendet' ? (
+          <div className="hinweis gut stapel" role="status">
+            <p><strong>{t('lasttest.danke')}</strong></p>
+            <p>{t('lasttest.danke.text')}</p>
+            <p>{t('lasttest.danke.teilen')} <a className="verweis" href={SAMMEL} target="_blank" rel="noreferrer">{t('lasttest.sammel')} <Symbol name="extern" /></a></p>
+            <p className="klein">{t('lasttest.beendet.text')}</p>
+          </div>
+        ) : nachfragen ? (
+          <div className="hinweis warn stapel" role="alert">
+            <p>{t('lasttest.beenden.ungesichert')}</p>
+            <div className="knoepfe">
+              <button type="button" className="knopf primaer" onClick={() => void kopiere(block, feld.current).then((ok) => { setKopiert(ok ? 'ja' : 'nein'); if (ok) setNachfragen(false); })}>{t('lasttest.beenden.kopieren')}</button>
+              <button type="button" className="knopf gefahr-rand" onClick={() => void herunterfahren()}>{t('lasttest.beenden.trotzdem')}</button>
+              <button type="button" className="textknopf" onClick={() => setNachfragen(false)}>{t('lasttest.beenden.abbrechen')}</button>
+            </div>
+          </div>
+        ) : (
+          <div className="knoepfe lasttest-ende">
+            <a className="verweis klein" href={handbuchUrl('admin', null, 'lasttest/')} target="_blank" rel="noreferrer">{t('lasttest.handbuch')} <Symbol name="extern" /></a>
+            <button type="button" className="knopf gefahr-rand" onClick={() => void beenden()}>{t('lasttest.beenden')}</button>
+          </div>
+        )}
       </div>
     </div>
   );
