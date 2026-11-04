@@ -102,7 +102,14 @@ Neben der **Systemrolle** (*Administrator* oder *Mitglied*) kann ein Benutzer be
 
 ## Systemkonten
 
-Unter der Liste der Benutzer stehen die **Systemkonten**: Konten, unter denen Ablago selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.
+Über der Liste der Benutzer stehen die **Systemkonten**: Konten, unter denen Ablago selbst und Pakete mit Code arbeiten. Sie sind sichtbar, damit klar ist, wer im Protokoll und in der Historie steht – benutzen kann sie niemand.
+
+Die Gruppe ist **eingeklappt**, damit sie die Liste der Menschen nicht zustellt. Ihre Kopfzeile nennt Anzahl und Zusammensetzung, z. B. **Systemkonten (5)** · 4 Pakete · 1 Automatisierung. Ein Klick klappt sie auf; ob sie offen ist, merkt sich die Werkbank für dich. Auffälliges siehst du auch eingeklappt in der Kopfzeile:
+
+- **… mit Fehler** (rot): ein Konto ist deaktiviert, obwohl es gebraucht wird, oder eine seiner Automatisierungen ist angehalten. Das Konto eines entfernten Pakets zählt nicht dazu – es bleibt nur für die Historie.
+- **… mit weitreichenden Rechten** (gelb): ein Paket darf alle Mappentypen ändern, oder es darf alle lesen und dazu ins Internet. Prüfe beim [Paket](pakete.md), ob du das so willst.
+
+Aufgeklappt trägt jedes betroffene Konto dasselbe Kennzeichen; in seinen Angaben rechts steht, was los ist. Dieselbe Gruppe steht im [Testlauf am Mappentyp](berechtigungen.md#systemkonten-und-pakete), wenn du dort ein Systemkonto prüfen willst.
 
 - **Automatisierung** (Systemrolle *Systemkonto*): Unter diesem Konto laufen Automatisierungen. In der Historie steht dann „Automatisierung“ statt des Administrators, der sie eingerichtet hat – und sie laufen weiter, wenn dieser Administrator geht oder deaktiviert wird.
 - **Paket …** (Systemrolle *Paket*): je Paket mit Code ein Dienstkonto. Es darf nur, was du bei der Installation des Pakets bestätigt hast. Wird das Paket entfernt, bleibt das Konto für die Historie stehen.

@@ -855,6 +855,15 @@ a.person:hover, a.person:focus-visible { text-decoration: underline; }
 .handbuchlink { margin-top: 0; }
 .uebersicht .hinweiszeile { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
 .uebersicht .hinweiszeile p { flex: 1 1 22em; margin: 0; }
+/* Übersicht (#816): Kacheln oben, Meldungen nach Schwere, „Zur Kenntnis nehmen“ und der Abschnitt „Bewusst akzeptiert“. */
+.uebersicht .kacheln { margin-bottom: 12px; }
+.uebersicht .hinweiszeile + .hinweiszeile { margin-top: 8px; }
+.hinweiszeile .akzeptieren, .meldung-akzeptieren .akzeptieren { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.akzeptieren input { width: 100%; max-width: 32em; }
+.meldung-akzeptieren { padding: 0 12px 8px; }
+.meldung-akzeptieren.nur-schmal-block { margin-top: 0; }
+.aufklappbereich.akzeptiert { margin-top: 16px; }
+.akzeptiertliste { list-style: none; margin: 0; }
 .uebersicht .hinweis:not(.warn):not(.schlecht):not(.gut) { background: var(--senke); }
 .kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 6px; }
 .kachel { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--r); color: inherit; text-decoration: none; }

@@ -120,6 +120,7 @@ nav:
           - Wartungsmodus: wartungsmodus.md
           - Demo-Daten: demo.md
   - Notfall:
+      - "Was ist dir passiert?": was-ist-passiert.md
       - "Notfall: kein Admin mehr": notfall.md
       - "Konsole: Befehl dms": konsole.md
       - Verfahrensdokumentation (Vorlage): verfahrensdokumentation.md

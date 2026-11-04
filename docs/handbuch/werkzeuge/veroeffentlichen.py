@@ -11,6 +11,7 @@ Online gibt es nur noch „aktuell“. Ältere Fassungen bringt jede Installatio
 (#219), und aus jedem Git-Tag lassen sie sich neu bauen. Aufbau:
 
   /index.html                 Startseite mit Logo und Favicons
+  /notfall/, /emergency/      Kurzadressen vom Notfallblatt (#814) – bleiben dauerhaft gültig
   /404.html                   leitet alte Adressen (v0.xx, entwicklung, ohne Ordner) auf „aktuell“
   /benutzer/index.html        → aktuell/
   /benutzer/aktuell/          …, ebenso admin/, installieren/, entwickler/
@@ -23,6 +24,13 @@ from pathlib import Path
 
 HANDBUECHER = ('benutzer', 'admin', 'installieren', 'entwickler')
 ORDNER = 'aktuell'
+
+# Kurzadressen (#814): Sie stehen auf dem Notfallblatt, also auf Papier – nie entfernen oder umbenennen, nur das
+# Ziel darf sich ändern. Englisch zeigt bis zum englischen Handbuch (#730) auf die deutsche Seite.
+KURZADRESSEN = {
+    'notfall': 'admin/aktuell/was-ist-passiert/',
+    'emergency': 'admin/aktuell/was-ist-passiert/',
+}
 
 UMLEITUNG = """<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><title>Weiter …</title>
@@ -72,6 +80,12 @@ def main():
         shutil.copytree(gebaut / h, ausgabe / h / ORDNER)
         weiter = f'{ORDNER}/'
         (ausgabe / h / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
+    for kurz, ziel in KURZADRESSEN.items():
+        if not (ausgabe / ziel / 'index.html').is_file():
+            sys.exit(f'Kurzadresse /{kurz}/: Ziel {ziel} fehlt im Handbuch')
+        (ausgabe / kurz).mkdir()
+        weiter = f'/{ziel}'
+        (ausgabe / kurz / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
     shutil.copy(start, ausgabe / 'index.html')
     for f in start.parent.iterdir():  # Logo und Favicons der Startseite (#689)
         if f.is_file() and f.name != 'index.html':

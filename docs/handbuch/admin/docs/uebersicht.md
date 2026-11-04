@@ -38,30 +38,83 @@ Knöpfe wie **Verbindung testen** oder **Jetzt prüfen** stehen darüber im Form
 
 ## Übersicht
 
-Die Werkbank beginnt mit der **Übersicht**. Sie zeigt oben, was zu tun ist – jeweils mit einem Knopf in den passenden Bereich. **Das gilt auch für Bereiche, die in deiner Vorlage ausgeblendet sind.** Zum Beispiel:
+Die Werkbank beginnt mit der **Übersicht**. Oben stehen die **Kacheln**: offene Aufgaben, Warteschlange der Texterkennung, Papierkorb, Gemeldete Fehler, Bestand (Mappen, Dokumente, Speicher, Benutzer) und Version. So siehst du zuerst, was alles ansteht.
 
-- Sicherung fehlgeschlagen oder zu alt, Notfallblatt fehlt,
-- der [Export-Ordner](export.md#export-ordner) liegt im Sicherungsordner, oder Exporte wurden beim Update aus dem Sicherungsordner verschoben,
-- Speicherplatz knapp oder voll,
-- Wartungsmodus angekündigt oder aktiv,
-- ein Notfallzugang ist noch aktiv,
-- ein [Postfach mit OAuth](postfaecher.md#anmeldung-mit-oauth) ist abgelaufen oder noch nicht angemeldet,
-- kein Schlüssel für Passwörter oder Schlüsseldatei nicht auf eigenem Volume,
-- Datenbank-Anbindung weicht ab oder braucht einen Neustart,
-- im Einrichtungsassistenten übersprungene Schritte,
-- Umgebungsvariablen, die nicht mehr nötig sind – je Variable mit Grund (feste Ordner, Datenbank-Anbindung in einer Datei, gespeicherte Kennung des Haushalts),
-- E-Mail-Versand nicht eingerichtet,
-- offene gemeldete Fehler,
-- ein Paket, dem Pflicht-Einstellungen fehlen („… braucht noch Einstellungen“, mit **Einstellungen ausfüllen**) – etwa nach **Später ausfüllen** beim [Installieren mehrerer Pakete](pakete.md#mehrere-pakete-in-einem-schritt-installieren),
-- kein Paket für die Texterkennung installiert („Texterkennung ist jetzt ein Paket“, mit **Jetzt installieren**; deutlich, sobald Scans darauf warten),
-- Dokumente mit Fehler in der Texterkennung,
-- Aufgaben für die Administratoren und Mappen, die nicht zur Definition passen.
+Darunter stehen die **Meldungen**, jeweils mit einem Knopf in den passenden Bereich. **Das gilt auch für Bereiche, die in deiner Vorlage ausgeblendet sind.** Sie sind nach Schwere sortiert:
 
-Darunter stehen Kacheln mit offenen Aufgaben, Warteschlange der Texterkennung, Papierkorb, Gemeldete Fehler, Bestand (Mappen, Dokumente, Speicher, Benutzer) und Version. Ist alles eingerichtet, steht dort „Alles eingerichtet“.
+1. **Rot – kritisch:** Hier geht etwas nicht oder Daten sind in Gefahr. Das musst du erledigen.
+2. **Gelb – Warnung:** Etwas fehlt oder ist riskant eingerichtet.
+3. **Hinweis:** Eine Empfehlung oder etwas zum Nachholen.
+
+Innerhalb einer Stufe stehen Meldungen mit Datum (z. B. eine fehlgeschlagene Sicherung) vorn, die neueste zuerst. Ist alles eingerichtet, steht dort „Alles eingerichtet“.
 
 ![Werkbank → Übersicht](bilder/werkbank-uebersicht.png)
 
-Die Zahl hinter *Übersicht* in der Leiste nennt die Hinweise, die Aufmerksamkeit brauchen.
+Die Zahl hinter *Übersicht* in der Leiste nennt die roten und gelben Meldungen, die noch offen sind – ohne Hinweise und ohne bewusst akzeptierte.
+
+### Warnungen bewusst akzeptieren { #bewusst-akzeptieren }
+
+Manche Warnung nimmst du bewusst in Kauf, etwa „Der Sicherungsordner ist kein eigenes Volume“ in einer Testinstallation. Damit sie nicht für immer oben steht, wählst du an der Meldung **Zur Kenntnis nehmen**, auf Wunsch mit einer kurzen Begründung, und dann **Akzeptieren**.
+
+- Die Meldung wandert in den eingeklappten Abschnitt **Bewusst akzeptiert (…)** ganz unten. Dort steht, wer sie wann akzeptiert hat und mit welcher Begründung. Mit **Wieder einblenden** holst du sie zurück nach oben.
+- Das [Protokoll](fehlersuche.md#protokoll) hält jedes Akzeptieren und Wiedereinblenden fest (Modul *werkbank*, mit der Kennung der Meldung aus der Tabelle unten).
+- **Ändert sich die Lage, steht die Meldung wieder oben:** wenn sie schwerer wird (aus einem Hinweis wird gelb, aus gelb wird rot) oder wenn sie behoben war und dieselbe Ursache erneut auftritt.
+- **Rote Meldungen lassen sich nicht akzeptieren.** Sie müssen erledigt werden.
+
+Akzeptierte Meldungen gelten für alle Administratoren dieser Installation.
+
+### Alle Meldungen der Übersicht { #meldungen }
+
+| Meldung | Schwere | Kennung im Protokoll |
+| --- | --- | --- |
+| Notfallzugang ist aktiv | rot | `notfallzugang` |
+| Speicherplatzlimit erreicht | rot | `speicherplatz.grenze` |
+| Der Speicherplatz wird knapp | gelb | `speicherplatz.knapp` |
+| Wieder genug Platz – Wartung beenden? | gelb | `speicherplatz.wartung-beenden` |
+| Automatisierungen angehalten | rot | `automatisierung.angehalten` |
+| Automatisierungen mit fehlgeschlagenen Läufen | gelb | `automatisierung.fehlgeschlagen` |
+| Erinnerungen beim Update übernommen | Hinweis | `automatisierung.umgezogen` |
+| Ohne Paket „Benachrichtigungen“ keine Tägliche Zusammenfassung | Hinweis | `automatisierung.ohne-benachrichtigungen` |
+| CPU oder Arbeitsspeicher seit 5 Minuten über 90 % | gelb | `auslastung` |
+| Engpass (Wartezeit, Verbindungen, Arbeiter, Überlast) | gelb | `engpass` |
+| Erweiterungen der Suche fehlen oder liegen falsch | gelb | `erweiterungen` |
+| Wartungsmodus angekündigt oder aktiv | gelb | `wartung` |
+| Noch kein Schlüssel für Passwörter | gelb | `tresor.fehlt` |
+| Der Schlüssel für Passwörter fehlt | rot | `tresor.verloren` |
+| Die Schlüsseldatei passt nicht | rot | `tresor.falsch` |
+| Die Schlüsseldatei liegt nicht auf einem eigenen Volume | gelb | `tresor.volume` |
+| Passwörter nicht lesbar oder unverschlüsselt | gelb | `tresor.betroffen` |
+| Postfach: Anmeldung abgelaufen oder entzogen | rot | `postfach.abgelaufen` |
+| Postfach noch nicht angemeldet | gelb | `postfach.anmelden` |
+| Die letzte Sicherung ist fehlgeschlagen | rot | `sicherung.fehler` |
+| Es gibt noch keine Sicherung | gelb | `sicherung.keine` |
+| Die letzte Sicherung ist älter als 2 Tage | gelb | `sicherung.alt` |
+| Das Notfallblatt fehlt oder gehört zu einem früheren Schlüssel | gelb | `sicherung.notfallblatt` |
+| Die letzte Probe-Wiederherstellung ist fehlgeschlagen | rot | `sicherung.probe-fehler` |
+| Probe-Wiederherstellung fehlt oder ist alt | Hinweis | `sicherung.probe` |
+| Der Sicherungsordner ist kein eigenes Volume | gelb | `sicherung.volume` |
+| Sicherungen auf derselben Platte wie die Dokumente | Hinweis | `sicherung.gleiche-platte` |
+| Sicherung außer Haus fehlgeschlagen | rot | `sicherung.extern-fehler` |
+| Sicherung außer Haus mehr als 2 Tage im Rückstand | gelb | `sicherung.extern-alt` |
+| Der [Export-Ordner](export.md#export-ordner) liegt im Sicherungsordner | rot | `export.im-sicherungsordner` |
+| Exporte beim Update aus dem Sicherungsordner verschoben | Hinweis (rot, wenn etwas liegen blieb) | `export.umzug` |
+| API-Schlüssel eines Administrators | gelb | `api-schluessel-admin` |
+| DATABASE_URL weicht von der Datenbank-Anbindung ab | gelb | `anbindung.abweichend` |
+| Datenbank-Anbindung geändert, Neustart nötig | gelb | `anbindung.neustart` |
+| DMS_LASTTEST in einer echten Installation | gelb | `lasttest` |
+| Paket braucht noch Einstellungen | gelb | `paket-einstellungen` |
+| Aus der Einrichtung übersprungen | Hinweis | `einrichtung` |
+| Umgebungsvariablen, die nicht mehr nötig sind (je mit Grund) | Hinweis | `variablen` |
+| Der E-Mail-Versand ist nicht eingerichtet | gelb | `mail` |
+| Offene gemeldete Fehler | gelb | `fehlermeldungen` |
+| Texterkennung ist jetzt ein Paket | Hinweis (gelb, sobald Scans warten) | `texterkennung.paket` |
+| Dokumente mit Fehler in der Texterkennung | gelb | `texterkennung.fehler` |
+| Niemand bekommt die Aufgaben ohne Empfänger | Hinweis | `aufgabenempfaenger` |
+| Aufgaben bei Personen ohne Leserecht | gelb | `aufgaben.ohne-leserecht` |
+| Aufgaben für die Administratoren | Hinweis | `aufgaben.ohne-empfaenger` |
+| Mappen, die nicht zur Definition passen | Hinweis | `mappen.unpassend` |
+
+Bei Meldungen, die es je Postfach, Paket, Notfallzugang oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
 
 ## Werkbank anpassen
 

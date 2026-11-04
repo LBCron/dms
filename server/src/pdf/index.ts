@@ -16,9 +16,10 @@
  * - `schreiber.ts`     Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
  * - `export.ts`        PDF mehrerer Mappen (#152)
  * - `aufkleber.ts`     Aufkleberbogen mit Barcode (#345)
+ * - `notfallblatt.ts`  Notfallblatt in Ablago-Optik (#106, #814)
  * - `anzeige.ts`       bereinigte Kopie für die Anzeige im Browser (#639)
  * - `demo-dokumente.ts` Demo-Dokumente für Wachstumstests (#248)
- * - `einfach.ts`      sehr kleiner Schreiber für Textseiten ohne Bibliothek (Notfallblatt, #106)
+ * - `einfach.ts`      sehr kleiner Schreiber für Textseiten ohne Bibliothek (früher Notfallblatt, #106)
  * - `bild.ts`, `puffer.ts`, `text.ts` kleine Helfer (Bildart, EXIF, Umgehung #456, WinAnsi)
  */
 import { arbeite } from '../arbeit';
@@ -34,6 +35,7 @@ import type * as E from './export';
 import type * as Au from './aufkleber';
 import type * as Ar from './archiv';
 import type * as An from './anzeige';
+import type * as Nf from './notfallblatt';
 
 export { pdfAus, type Absatz, type Schrift } from './einfach';
 export { bildArt, exifAusrichtung, jpegMasse } from './bild';
@@ -73,6 +75,8 @@ export const arbeitsPdf = (...a: A<typeof Sw.arbeitsPdf>) => arbeite('arbeitsPdf
 export const textdokumentPdf = (...a: A<typeof Sch.textdokumentPdf>) => arbeite('textdokumentPdf', ...a);
 export const mappenPdfZeichnen = (...a: A<typeof E.mappenPdfZeichnen>) => arbeite('mappenPdfZeichnen', ...a);
 export const aufkleberbogenPdf = (...a: A<typeof Au.aufkleberbogenPdf>) => arbeite('aufkleberbogenPdf', ...a);
+/** Notfallblatt (#814): eine Seite A4 in Ablago-Optik. */
+export const notfallblattPdf = (...a: A<typeof Nf.notfallblattPdf>) => arbeite('notfallblattPdf', ...a);
 /** Archivfassung (#631): PDF/A-Kennung nachsehen, Wörter mit Lage aus der Textebene. */
 export const liesPdfA = (...a: A<typeof Ar.liesPdfA>) => arbeite('liesPdfA', ...a);
 export const textebeneWoerter = (...a: A<typeof Ar.textebeneWoerter>) => arbeite('textebeneWoerter', ...a);

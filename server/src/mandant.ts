@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type postgres from 'postgres';
 import type { Anbindung } from './anbindung';
 import { protokoll } from './protokoll';
@@ -18,8 +19,9 @@ export interface MandantErgebnis { id: string; quelle: 'datei' | 'umgebung' | 'b
  *   1. aus der Datei (führend),
  *   2. sonst HAUSHALT_ID (bisherige Installationen mit eigener Id),
  *   3. sonst der Mandant, der schon Benutzer hat (bisherige Installationen),
- *   4. sonst der Standard-Mandant aus der ersten Migration (frische Installation; für ihn legen
- *      die Migrationen Designs und Einstellungen an).
+ *   4. sonst eine neue, zufällige Id (frische Installation, #814): Was die Migrationen für den Standard-Mandanten
+ *      angelegt haben (Designs, Einstellungen), zieht auf die neue Id um. Bis 0.183 bekamen frische Installationen
+ *      fest die Id des Standard-Mandanten – sie behalten sie, weil sie in der Anbindung steht (Fall 1).
  */
 export async function bestimmeMandant(sql: postgres.Sql, a: Anbindung, env: Record<string, string | undefined>, speichern: (a: Anbindung) => Promise<void>): Promise<MandantErgebnis> {
   const ausEnv = env.HAUSHALT_ID && UUID.test(env.HAUSHALT_ID) ? env.HAUSHALT_ID.toLowerCase() : null;
@@ -31,7 +33,7 @@ export async function bestimmeMandant(sql: postgres.Sql, a: Anbindung, env: Reco
     e = { id: ausEnv, quelle: 'umgebung', hinweis: `HAUSHALT_ID wurde übernommen und kann aus der Compose-Datei entfernt werden. ${VARIABLEN_GRUND.haushalt}` };
   } else {
     const [r] = await sql`SELECT haushalt_id, count(*)::int AS n FROM benutzer WHERE art = 'person' GROUP BY haushalt_id ORDER BY n DESC, (haushalt_id = ${STANDARD_MANDANT}) DESC LIMIT 1`;
-    e = r ? { id: String(r.haushalt_id), quelle: 'bestand', hinweis: null } : { id: STANDARD_MANDANT, quelle: 'neu', hinweis: null };
+    e = r ? { id: String(r.haushalt_id), quelle: 'bestand', hinweis: null } : { id: await neuerMandant(sql), quelle: 'neu', hinweis: null };
   }
   await sql`INSERT INTO haushalte (id, name) VALUES (${e.id}, 'Mandant') ON CONFLICT (id) DO NOTHING`;
   if (a.mandant !== e.id) {
@@ -40,6 +42,24 @@ export async function bestimmeMandant(sql: postgres.Sql, a: Anbindung, env: Reco
     log.info(e.quelle === 'neu' ? 'Neue Ablage angelegt' : 'Ablage-Id in der Anbindung gemerkt', { mandant: e.id, quelle: e.quelle });
   }
   return e;
+}
+
+/**
+ * Frische Installation (#814): eine zufällige Ablage-Id statt der festen aus der ersten Migration. In einer Transaktion
+ * zieht alles, was die Migrationen für den Standard-Mandanten angelegt haben, auf die neue Id um – jede Tabelle mit
+ * einer Spalte haushalt_id –, danach fällt der Standard-Mandant weg.
+ */
+async function neuerMandant(sql: postgres.Sql): Promise<string> {
+  const id = randomUUID();
+  await sql.begin(async (tx) => {
+    const [alt] = await tx`SELECT name FROM haushalte WHERE id = ${STANDARD_MANDANT}`;
+    await tx`INSERT INTO haushalte (id, name) VALUES (${id}, ${alt ? String(alt.name) : 'Mandant'})`;
+    const tabellen = await tx`SELECT table_name FROM information_schema.columns WHERE table_schema = current_schema() AND column_name = 'haushalt_id' AND table_name <> 'haushalte'`;
+    // Alle diese Spalten verweisen nur auf haushalte(id), keine auf eine andere Tabelle – die Reihenfolge ist egal.
+    for (const { table_name: t } of tabellen) await tx.unsafe(`UPDATE "${String(t).replace(/"/g, '""')}" SET haushalt_id = $1 WHERE haushalt_id = $2`, [id, STANDARD_MANDANT]);
+    await tx`DELETE FROM haushalte WHERE id = ${STANDARD_MANDANT}`;
+  });
+  return id;
 }
 
 export function mandantNamen(sql: postgres.Sql, id: string) {

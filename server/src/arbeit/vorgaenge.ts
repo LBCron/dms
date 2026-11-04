@@ -5,6 +5,7 @@
  */
 import { mappenPdfZeichnen } from '../pdf/export';
 import { aufkleberbogenPdf } from '../pdf/aufkleber';
+import { notfallblattPdf } from '../pdf/notfallblatt';
 import { liesPdfA, textebeneWoerter } from '../pdf/archiv';
 import { bereinigePdf } from '../pdf/anzeige';
 import { erzeugeDokument, type MappenInhalt } from '../pdf/demo-dokumente';
@@ -34,7 +35,7 @@ export const VORGAENGE = {
   stempelePdf, bildAlsA4Pdf,
   analysiereVerkleinern, verkleinerePdf,
   analysiereSchwaerzen, schwaerze, schwaerzSeitenbild, arbeitsPdf,
-  textdokumentPdf, mappenPdfZeichnen, aufkleberbogenPdf,
+  textdokumentPdf, mappenPdfZeichnen, aufkleberbogenPdf, notfallblattPdf,
   liesPdfA, textebeneWoerter, bereinigePdf,
   demoDokument, exportTabellen,
 };

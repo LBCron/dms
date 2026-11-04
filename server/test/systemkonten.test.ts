@@ -4,7 +4,9 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { readFileSync } from 'node:fs';
 import { kontorolleKennung } from '../../shared/src/model';
+import { SYSTEMKONTEN_AUF, systemkontenKopf, systemkontoAuffaellig, type SystemkontoFehler } from '../../shared/src/systemkonten';
 import { NICHTS } from '../../shared/src/rechte';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
@@ -170,5 +172,49 @@ describe('Systemkonten (#673)', () => {
     await assert.rejects(lauf('00000000-0000-4000-8000-000000000000'), status(404));
     const liste = await rufe('GET', '/api/benutzer') as { body: Array<{ id: string }> };
     assert.ok(!liste.body.some((x) => x.id === auto.id || x.id === paket.id));
+  });
+
+  it('Gruppe „Systemkonten“ (#817): Zusammensetzung für die Kopfzeile, Auffälligkeiten je Konto', async () => {
+    const { repo, konten, admin, rufe } = await aufbau();
+    const paket = (id: string, name: string, rechte: { lesen: string[]; schreiben: string[] }, netz: string[] = []) => repo.speicherePaket({
+      id, name, version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'Lena', github: 'lena' }, herkunft: 'katalog' as never,
+      installiert: new Date().toISOString(), installiertVon: admin.id, aktualisiert: null, aktualisiertVon: null,
+      typen: {}, sichten: {}, abhaengigkeiten: {}, code: true,
+      laeufer: { sprache: 'wasm', ereignisse: [], rechte: { ...rechte, dokumente: 'keine' }, netz } as never,
+    });
+    await paket('ruhig', 'Ruhig', { lesen: ['notiz'], schreiben: [] });
+    await paket('alles', 'Alles ändern', { lesen: [], schreiben: ['*'] });
+    await paket('netz', 'Liest alles mit Netz', { lesen: ['*'], schreiben: [] }, ['https://dienst.example.org']);
+    await paket('ohnenetz', 'Liest alles ohne Netz', { lesen: ['*'], schreiben: [] });
+    for (const [id, name] of [['ruhig', 'Ruhig'], ['alles', 'Alles ändern'], ['netz', 'Liest alles mit Netz'], ['ohnenetz', 'Liest alles ohne Netz'], ['weg', 'Entfernt']]) await konten.dienstkonto(id, name);
+    await konten.dienstkontoAus('weg'); // Paket „weg“ gibt es nicht (mehr): Konto bleibt für die Historie
+    await konten.dienstkontoAus('ruhig'); // Paket noch da, Konto aber aus: Fehler
+    type K = { name: string; rolle: 'systemkonto' | 'paket'; fehler?: SystemkontoFehler; weitreichend?: boolean };
+    const liste = (await rufe('GET', '/api/benutzer/systemkonten')).body as K[];
+    const je = (n: string) => liste.find((k) => k.name === `Paket ${n}`)!;
+    assert.equal(je('Ruhig').fehler, 'deaktiviert');
+    assert.equal(je('Entfernt').fehler, undefined, 'entferntes Paket: nur Historie, kein Fehler');
+    assert.equal(je('Alles ändern').weitreichend, true);
+    assert.equal(je('Liest alles mit Netz').weitreichend, true);
+    assert.equal(je('Liest alles ohne Netz').weitreichend, undefined);
+    assert.deepEqual(systemkontenKopf(liste), { anzahl: 6, pakete: 5, automatisierung: 1, fehler: 1, weitreichend: 2 });
+  });
+
+  it('Auffälligkeiten (#817): angehaltene Automatisierung, deaktiviertes Systemkonto', () => {
+    const basis = { aktiv: true, rolle: 'systemkonto' as const, automatisierungen: [{}] };
+    assert.deepEqual(systemkontoAuffaellig(basis), { fehler: null, weitreichend: false });
+    assert.equal(systemkontoAuffaellig({ ...basis, automatisierungen: [{}, { angehalten: true }] }).fehler, 'angehalten');
+    assert.equal(systemkontoAuffaellig({ ...basis, aktiv: false }).fehler, 'deaktiviert');
+  });
+
+  it('Kopfzeile und Merker: eingeklappt als Vorgabe, Einstellung je Person', () => {
+    assert.equal(SYSTEMKONTEN_AUF, 'benutzer_systemkonten_auf');
+    assert.deepEqual(systemkontenKopf([]), { anzahl: 0, pakete: 0, automatisierung: 0, fehler: 0, weitreichend: 0 });
+    // Die Gruppe steht über den Benutzern und ist zu, solange die Person sie nicht aufklappt.
+    const quelle = readFileSync(new URL('../../web/src/werkbank/Benutzer.tsx', import.meta.url), 'utf8');
+    const liste = quelle.slice(quelle.indexOf('export function BenutzerListe'), quelle.indexOf('/** Systemkonten und Dienstkonten der Pakete'));
+    assert.ok(liste.indexOf('<SystemkontenListe') < liste.indexOf('<ul className="mappenliste">'), 'Gruppe über der Liste der Menschen');
+    assert.match(quelle, /d\.einstellungen\[SYSTEMKONTEN_AUF\] === true/);
+    assert.match(readFileSync(new URL('../../web/src/werkbank/TestlaufWahl.tsx', import.meta.url), 'utf8'), /<SystemkontenGruppe/, 'gleiches Muster im Testlauf');
   });
 });

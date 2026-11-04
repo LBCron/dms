@@ -65,9 +65,9 @@ import type { OrdnerPruefung } from './ordner';
 import type { Einrichtung } from './einrichtung';
 import type { AnbindungVerwaltung } from './anbindung';
 import { notfallblatt } from './notfallblatt';
-import { dirname } from 'node:path';
 import { WartungFehler } from './wartung';
 import { werkbankZahlen } from './werkbankzahlen';
+import { akzeptanzAufheben, akzeptierteMeldungen, meldungAkzeptieren } from './meldungen';
 import { ueberfluessigeVariablen } from '../../shared/src/umgebungsvariablen';
 import { Fotostapel } from './fotostapel';
 import { MAIL_STANDARD, pruefeZeit, STANDARD_TAGE, wirksameZeit, type Aufgabenmail, type MailZeit } from './aufgabenmail';
@@ -1326,12 +1326,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const text = t.alsText();
       if (!text || !t.fingerabdruck) throw new Fachfehler(409, 'Es gibt noch keinen passenden Schlüssel. Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
       const jetzt = new Date();
-      const inhalt = notfallblatt({
+      // #814: keine Ordner oder Dateinamen aus Docker oder vom NAS auf dem Blatt – nur Verweise ins Handbuch.
+      const inhalt = await notfallblatt({
         name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'Ablago',
         haushaltId: x.sicherung?.haushaltId ?? '–',
         adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
         version: eigeneVersion(), erstellt: jetzt, schluessel: text, fingerabdruck: t.fingerabdruck,
-        sicherungsordner: x.sicherung?.ordner ?? '/data/sicherung', schluesselordner: dirname(t.datei),
         aussenziele: x.sicherung ? await x.sicherung.externZiele().catch(() => []) : [],
       });
       if (x.sicherung) await x.sicherung.notfallblattErstellt(ich(a).email);
@@ -1462,8 +1462,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         }),
         // Postfächer mit abgelaufener oder fehlender OAuth-Anmeldung (#358).
         postfachAnmeldung: x.postfaecher ? await sicher(() => x.postfaecher!.anmeldungFehlt()) ?? [] : [],
+        // Bewusst akzeptierte Meldungen (#816): wer, wann, Begründung; die Übersicht stellt sie unten zusammen.
+        akzeptiert: await sicher(() => akzeptierteMeldungen(dienst.einstellungenSpeicher)) ?? {},
       });
     } },
+    // „Zur Kenntnis genommen“ (#816): nur gelbe Warnungen und Hinweise, im Protokoll mit Benutzer und Begründung.
+    { methode: 'POST', pfad: '/api/werkbank/uebersicht/akzeptieren', zugang: 'admin', handler: async (a) => ok(await meldungAkzeptieren(dienst.einstellungenSpeicher, b(a), ich(a).name || ich(a).email)) },
+    { methode: 'POST', pfad: '/api/werkbank/uebersicht/aufheben', zugang: 'admin', handler: async (a) => ok(await akzeptanzAufheben(dienst.einstellungenSpeicher, b(a), ich(a).name || ich(a).email)) },
     { methode: 'GET', pfad: '/api/werkbank/system', zugang: 'admin', handler: async () => {
       const sicher = async <T>(f: () => Promise<T>): Promise<T | null> => { try { return await f(); } catch { return null; } };
       const sp = x.speicherplatz ? await sicher(() => x.speicherplatz!.stand()) : null;
