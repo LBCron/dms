@@ -1906,7 +1906,7 @@
 <tr>
 <td><code>dms:sicherung-lesen</code></td>
 <td>0.142.0</td>
-<td>Jede Sicherung verschlüsselt lesen und außer Haus kopieren, je Sicherung zurückmelden</td>
+<td>Jede Sicherung verschlüsselt lesen und außer Haus kopieren, Stand in der Antwort melden (nur Leseschlüssel)</td>
 <td><strong><a href="#sicherung-ausser-haus">Sicherung außer Haus</a></strong> – Ereignis, Lesen in Stücken, Rückmeldung</td>
 </tr>
 </tbody>
@@ -2952,10 +2952,10 @@
   loop Stück für Stück, über mehrere Aufrufe
     P-&gt;&gt;K: GET /sicherungen/{name}/datei?versatz=…&amp;laenge=…
     P-&gt;&gt;Z: Teil hochladen
-    P--&gt;&gt;K: {"weiter": {…}} (Fortsetzung)
+    P--&gt;&gt;K: {"weiter": {…}, "extern": {"status": "laeuft", …}} (Fortsetzung)
   end
   P-&gt;&gt;Z: zusammensetzen, Metadaten daneben, prüfen
-  P-&gt;&gt;K: PUT /sicherungen/{name}/extern (geprueft)</code></pre>
+  P--&gt;&gt;K: {"extern": {"status": "geprueft", …}} (Antwort)</code></pre>
 <ol>
 <li>
 <p><strong>Ereignis <code>sicherung.fertig</code></strong> nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). <code>daten</code> sind die <strong>schlanken Metadaten</strong> und der Name:</p>
@@ -2968,7 +2968,7 @@
 3. <strong>Hochladen in Teilen:</strong> Je Stück eine Anfrage mit <code>dms.netz</code> (Körper = Stück), z. B. Nextcloud-Chunking (<code>/remote.php/dav/uploads/…</code>, Teile ab 5 MB), <code>Content-Range</code> bei WebDAV-Servern, die es können, oder S3 Multipart. Eine Anfrage mit mehr als 1 MB Körper darf so lange dauern wie der Aufruf.
 4. <strong>Fortsetzung:</strong> Nach etwa der halben Zeitgrenze antwortet das Paket mit <code>{"weiter": {"versatz": …, …}}</code> (siehe <a href="#fortsetzung">Fortsetzung</a>); der Läufer ruft es gleich wieder auf und speichert den Stand. Schlägt ein Aufruf fehl (Netz weg), setzt die Wiederholung (1, 5, 30 Minuten, 2, 6 Stunden) an der letzten gespeicherten Stelle an – nicht von vorn. Für Stände, die über das Ereignis hinaus gelten (z. B. „zuletzt vollständig geprüft“), gibt es den <a href="#importe-aus-dms">Speicher des Pakets</a>. Die Zeit je Sicherung insgesamt begrenzen die 500 Fortsetzungen je Ereignis.
 5. <strong>Prüfen:</strong> am besten mit der Prüfsumme des Ziels (S3 <code>x-amz-checksum-sha256</code>), sonst Größe und Zurücklesen (SHA-256 über die ganze Datei mit <code>Range</code>-Anfragen bis 10 MB; bei großen Dateien Stichproben, regelmäßig vollständig). Kann das Ziel nicht lesen (Nextcloud-Dateiablage), sag das ehrlich: <code>hochgeladen</code> statt <code>geprueft</code>.
-6. <strong>Rückmeldung:</strong> <code>PUT /sicherungen/{name}/extern</code> mit</p>
+6. <strong>Rückmeldung in der Antwort:</strong> Seit 0.158.1 (#636) bekommt das Paket nur noch einen <strong>Leseschlüssel</strong> – zum Kopieren muss es im DMS nichts schreiben. Seinen Stand meldet es in der Antwort auf jeden Aufruf: als <code>extern</code> im JSON-Ergebnis (<code>dms.ergebnis</code>), auch neben <code>weiter</code>, z. B. <code>{"weiter": {…}, "extern": {"status": "laeuft", "bytes": 268435456, "gesamt": 1834567890}}</code>. Felder:</p>
 <table>
 <thead>
 <tr>
@@ -2999,10 +2999,12 @@
 </tr>
 </tbody>
 </table>
+<p>Ohne <code>extern</code> zählt der Rückgabewert: <strong>2</strong> heißt <code>fehlgeschlagen</code> und endgültig, ein anderer Fehler <code>laeuft</code> mit dem Text aus <code>dms.ergebnis</code> als <code>grund</code> – der Läufer wiederholt in beiden Fällen. Ein Erfolg ohne <code>extern</code> ändert den Stand nicht.</p>
+<p>Bis 0.158.0 meldeten Pakete per <code>PUT /sicherungen/{name}/extern</code> (gleiche Felder). Das geht im Übergang noch, auch mit dem Leseschlüssel, und fällt mit der übernächsten Fassung weg.</p>
 <p><strong>Werkbank → Sicherung</strong> zeigt den Stand je Sicherung („lokal ✓ · extern ✓ geprüft“), die Übersicht einen Hinweis bei Fehlern oder wenn seit mehr als 2 Tagen keine neuere Kopie ankam. Gibt der Läufer das Ereignis nach allen Wiederholungen auf, setzt der Kern selbst <code>fehlgeschlagen</code> (endgültig).</p>
 </li>
 </ol>
-<p>Antworten der drei Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.</p>
+<p>Antworten der Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicherung ihm nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung); 422 bei ungültigen Angaben – alle drei nicht wiederholen. Lokal löscht der Kern nichts, weil die Kopie angekommen ist; die Aufbewahrung lässt eine Sicherung, deren Kopie noch läuft, bis zu 2 Tage stehen.</p>
 <h3 id="sicherung-loeschschutz">Löschschutz<a class="headerlink" href="#sicherung-loeschschutz" title="Permanent link">&para;</a></h3>
 <p>Wer Ablago übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit <strong>so wenig Rechten wie möglich</strong> auskommen: nur hochladen (S3: <code>PutObject</code> ohne <code>DeleteObject</code>, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe <strong>aus</strong> und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im <a href="https://help.ablago.app/admin/aktuell/sicherung-ausser-haus/#loschschutz">Administratorhandbuch</a>.</p>
 <h2 id="ausprobieren">Ausprobieren<a class="headerlink" href="#ausprobieren" title="Permanent link">&para;</a></h2>
@@ -3045,7 +3047,7 @@
 <ul>
 <li><code>GET /dokumente/{id}/seiten/{nr}/scan?dpi=300</code> – eine Seite als Graustufenbild (PGM), z. B. für eigene Texterkennung (72–400 dpi). Seit 0.133.0 auch für JPEG und PNG (Seite 1, Originalgröße), seit 0.137.0 für umgewandelte Dateien aus ihrer Fassung.</li>
 <li><code>PUT /dokumente/{id}/fassung</code> und <code>PUT /dokumente/{id}/vorschaubild</code> – siehe <a href="#dateien-umwandeln">Dateien umwandeln</a> (Recht <code>dms:umwandeln</code>).</li>
-<li><code>GET /sicherungen/{name}</code>, <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> und <code>PUT /sicherungen/{name}/extern</code> – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a> (Recht <code>dms:sicherung-lesen</code>, seit 0.142.0).</li>
+<li><code>GET /sicherungen/{name}</code>, <code>GET /sicherungen/{name}/datei?versatz=&amp;laenge=</code> (und im Übergang <code>PUT /sicherungen/{name}/extern</code>) – siehe <a href="#sicherung-ausser-haus">Sicherung außer Haus</a> (Recht <code>dms:sicherung-lesen</code>, seit 0.142.0).</li>
 <li><code>PUT /dokumente/{id}/volltext</code> mit <code>{ "text": "…" }</code> – Volltext setzen (Recht <code>dokumente: schreiben</code>). Die Historie vermerkt, wer den Text gesetzt hat; setzt ein Paket den Text, überschreibt der Kern ihn nicht mehr. Ab Ablago 0.128.0 optional mit <code>"sprache": "fra"</code> (Kennung wie bei Tesseract: <code>deu</code>, <code>eng</code>, <code>fra</code>, <code>spa</code>, <code>ita</code>, <code>nld</code>, <code>tur</code>, <code>pol</code>, <code>por</code>, <code>rus</code>, <code>ukr</code>, <code>ara</code>); ohne erkennt Ablago die Sprache selbst. Die Volltextsuche nimmt die Wortstämme dieser Sprache.</li>
 <li><code>PUT /dokumente/{id}/sprache</code> mit <code>{ "sprache": "fra" }</code> bzw. <code>null</code> – nur die Sprache setzen (ab 0.128.0, Recht <code>dokumente: schreiben</code>); der Suchindex des Dokuments entsteht neu. Ab 0.139.0 auch <code>weitere</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>
 <li>Ab 0.139.0: <code>PUT /dokumente/{id}/volltext</code> mit Seiten (<code>\f</code>) und <code>seitensprachen</code>, <code>GET /dokumente/{id}/volltext</code> mit <code>seiten</code> – siehe <a href="#seitensprachen">Sprachen je Seite</a>.</li>
