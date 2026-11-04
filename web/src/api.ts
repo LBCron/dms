@@ -1169,9 +1169,15 @@ export interface EingangStand {
 }
 
 /** WebDAV-Laufwerk (#346). */
-export interface WebdavEinstellung { aktiv: boolean }
+export interface WebdavEinstellung {
+  aktiv: boolean;
+  /** Stempel beim Lesen (#722): Id einer Stempel-Vorlage oder null (kein Stempel). */
+  stempel: string | null;
+  /** Nur lesend für alle Benutzer (#722). */
+  nurLesend: boolean;
+}
 export interface WebdavZugriff { zeit: string; benutzer: string; methode: string; pfad: string; status: number }
-export interface WebdavStand { einstellung: WebdavEinstellung; adresse: string; https: boolean; grenze: number; anfragen: number; zugriffe: WebdavZugriff[] }
+export interface WebdavStand { einstellung: WebdavEinstellung; adresse: string; https: boolean; grenze: number; anfragen: number; zugriffe: WebdavZugriff[]; /** Stempel-Vorlagen zur Auswahl (#722). */ vorlagen: Array<{ id: string; name: string; text: string }> }
 
 /** Postfächer (#196). */
 export interface PostfachEingabe {

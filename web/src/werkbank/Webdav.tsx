@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type WebdavEinstellung, type WebdavStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
+import { t } from '../sprache';
 
 /**
- * Werkbank → WebDAV-Laufwerk (#346, Stufe 1): an/aus (Standard aus), Adresse zum Einbinden,
+ * Werkbank → WebDAV-Laufwerk (#346, Stufe 1): an/aus (Standard aus), Stempel beim Lesen und „nur lesend“ (#722), Adresse zum Einbinden,
  * Stand und die letzten Zugriffe (nur im Arbeitsspeicher, nach einem Neustart leer).
  * Ohne mittlere Spalte (#366): die letzten Zugriffe stehen rechts mit fester Höhe, neueste oben.
  */
@@ -52,12 +53,22 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
         <h2 className="h3">Einstellungen</h2>
         <label className="haken"><input id="webdav-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} />
           <span>WebDAV-Laufwerk einschalten <small className="leise">– ausgeschaltet antwortet <code>/webdav/</code> mit „nicht gefunden“</small></span></label>
+        {/* Stempel beim Lesen (#722): Vorgabe ist die mitgelieferte Vorlage; Pflicht-Stempel der Mappentypen gelten immer. */}
+        <label className="eigenschaft"><span>{t('werkbank.webdav.stempel')} <Hilfe ort="webdav.stempel" /></span>
+          <select id="webdav-stempel" value={e.stempel ?? ''} onChange={(x) => setE({ ...e, stempel: x.target.value || null })}>
+            <option value="">{t('werkbank.webdav.stempel.aus')}</option>
+            {s.vorlagen.map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text}</option>)}
+          </select>
+          <small className="leise">{t('werkbank.webdav.stempel.hinweis')}</small></label>
+        <label className="haken"><input id="webdav-nur-lesend" type="checkbox" checked={e.nurLesend} onChange={(x) => setE({ ...e, nurLesend: x.target.checked })} />
+          <span>{t('werkbank.webdav.nur-lesend')} <small className="leise">– {t('werkbank.webdav.nur-lesend.hinweis')}</small> <Hilfe ort="webdav.nurLesend" /></span></label>
         <Speicherleiste ent={ent} gegenstand="Einstellungen" sendet={sendet} />
       </form>
       <div className="blatt">
         <h2 className="h3">Stand</h2>
         <dl className="eigenschaften">
-          <dt>Zustand</dt><dd>{s.einstellung.aktiv ? 'eingeschaltet' : 'ausgeschaltet'}</dd>
+          <dt>Zustand</dt><dd>{s.einstellung.aktiv ? (s.einstellung.nurLesend ? t('werkbank.webdav.stand.nur-lesend') : 'eingeschaltet') : 'ausgeschaltet'}</dd>
+          <dt>{t('werkbank.webdav.stempel')}</dt><dd>{s.einstellung.stempel ? s.vorlagen.find((v) => v.id === s.einstellung.stempel)?.name ?? s.einstellung.stempel : t('werkbank.webdav.stempel.aus')}</dd>
           <dt>Adresse zum Einbinden</dt><dd><code>{s.adresse}</code></dd>
           <dt>Anfragen seit dem Start</dt><dd>{s.anfragen}</dd>
           <dt>Grenze</dt><dd>{s.grenze} Anfragen je Benutzer und Minute</dd>

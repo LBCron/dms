@@ -66,7 +66,9 @@ Ablage/
 
 ## Dokumente öffnen
 
-Doppelklick öffnet das Dokument mit dem passenden Programm. Das geht nur bei Mappen, die du auch **exportieren** darfst (wie beim Export und beim Versenden per E-Mail) – sonst lehnt das Ablago ab, und dein Programm meldet einen Fehler. Im Browser kannst du solche Dokumente weiterhin ansehen.
+Doppelklick öffnet das Dokument mit dem passenden Programm. Das geht nur bei Mappen, die du auch **exportieren** darfst (wie Herunterladen, Export und Versenden per E-Mail) – sonst lehnt das Ablago ab, und dein Programm meldet einen Fehler. Im Browser kannst du solche Dokumente weiterhin ansehen.
+
+PDFs kommen über das Laufwerk meist mit einer kleinen Fußzeile „Aus Ablago“ und dem Datum heraus – so sieht man einem ausgedruckten oder weitergeschickten Blatt an, woher es stammt. Verlangt ein Mappentyp einen Stempel, tragen alle seine Dateien diesen Stempel; Bilder kommen dann als PDF. Das Original in Ablago bleibt immer unverändert. Was genau gestempelt wird, legt dein Administrator fest.
 
 ## Dateien ablegen
 
@@ -74,6 +76,8 @@ Doppelklick öffnet das Dokument mit dem passenden Programm. Das geht nur bei Ma
 - **In einen Register-Ordner** einer Mappe legst du eine Datei, die schon zu dieser Mappe gehört. Sie wird ein Dokument im Register. Gibt es dort schon ein Dokument mit **gleichem Namen** und hat das Register [Versionen](versionen.md), entsteht eine **neue Version**. Ohne Versionen lehnt das Ablago ab – gib der Datei dann einen anderen Namen.
 - Direkt in eine Mappe, in eine Ansicht oder unter „Ablage“ lässt sich nichts legen, und neue Ordner gehen nicht.
 - **Löschen, Umbenennen und Verschieben** gehen über das Laufwerk (noch) nicht. Das machst du im Browser.
+- **Gestempelte Dokumente** lassen sich über das Laufwerk nicht überschreiben – sonst käme der Stempel als neue Version zurück. Speichere deine Änderung unter einem neuen Namen oder lade die neue Version im Browser hoch. Mappen, deren Typ einen Stempel verlangt, sind im Laufwerk ganz schreibgeschützt.
+- Hat dein Administrator das Laufwerk auf **nur lesend** gestellt, kannst du gar nichts ablegen; Explorer und Finder melden dann „Zugriff verweigert“ bzw. zeigen das Laufwerk schreibgeschützt.
 - Dateien wie `desktop.ini`, `Thumbs.db` oder `.DS_Store`, die Windows und macOS selbst anlegen, nimmt Ablago still an und wirft sie weg.
 
 ## Wenn etwas nicht klappt

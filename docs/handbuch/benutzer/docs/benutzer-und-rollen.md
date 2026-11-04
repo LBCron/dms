@@ -27,6 +27,8 @@ Eine **Rolle** fasst Benutzer zusammen, die für etwas zuständig sind – zum B
 !!! info "Rollen und Rechte"
     Eine Rolle gibt von sich aus keine Rechte. Ein Administrator kann aber in den Berechtigungen festlegen, was eine Rolle darf – zum Beispiel, dass nur die „Eltern“ die Gehaltsabrechnungen sehen. Was für dich gilt, steht unter Mein Konto unter [Meine Rechte](profil.md#meine-rechte).
 
+    Zwei Rechte werden oft verwechselt: **Lesen (R) heißt ansehen** – Mappen und Dokumente in Ablago öffnen. **Exportieren (E) heißt mitnehmen** – herunterladen, teilen, per E-Mail versenden, exportieren und über das [Laufwerk](laufwerk.md) öffnen. Eine Rolle kann also Unterlagen ansehen dürfen, ohne sie mitnehmen zu können (siehe [Ohne Exportrecht](dokumente.md#ohne-exportrecht)). Ganz verhindern lässt sich das Abspeichern beim Ansehen nie (Browser, Bildschirmfoto).
+
 ## Verantwortliche eintragen
 
 Hat ein Mappentyp ein Feld wie **Verantwortlich**, wählst du dort einen Benutzer oder – in einem eigenen Feld – eine Rolle aus, genau wie bei jedem anderen [Verweis](mappen.md#auf-andere-mappen-verweisen).

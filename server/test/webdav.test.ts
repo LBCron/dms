@@ -12,6 +12,8 @@ import { speicherRepo } from '../src/repo-speicher';
 import type { Benutzer } from '../../shared/src/model';
 import { etagVon, MAX_UPLOADS, Webdav, type WebdavAntwort } from '../src/webdav';
 import { bereinige, eindeutig, href, istHilfsdatei, proppatchNamen, Ratenbegrenzung, xml, zerlege } from '../src/webdav-baum';
+import { pdfAus } from '../src/pdf';
+import { readFileSync } from 'node:fs';
 
 const PDF = (t: string) => Buffer.from(`%PDF-1.4\n% ${t}\n`);
 const ALLES = { C: true, R: true, U: true, D: true, P: true };
@@ -418,5 +420,169 @@ describe('WebDAV-Laufwerk (#346, Stufe 1)', () => {
     for (const r of await Promise.all(laufend)) assert.equal(r.status, 201);
     assert.equal(zaehler(), 0);
     assert.equal((await put('/webdav/Neue Post/Scan 9.pdf', PDF('9'))).status, 201);
+  });
+});
+
+describe('WebDAV: Stempel beim Lesen, Pflicht, nur lesend (#722)', () => {
+  // 1×1-PNG
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const k = (id: string) => id.replace(/-/g, '').slice(0, 6);
+  async function mitEcht() {
+    const x = await aufbau();
+    await x.wd.speichere({ aktiv: true }, 'admin');
+    const echt = pdfAus([{ text: 'Echter Vertrag' }]);
+    const dok = (await x.d.ladeHoch(x.v1a.id, { register: 'belege', name: 'Echt.pdf' }, echt, x.anna.id)).dokument;
+    const reg = `/webdav/Ablage/Verträge/V-1 (${k(x.v1a.id)})`;
+    return { ...x, echt, dok, reg, pfad: `${reg}/Belege/Echt.pdf` };
+  }
+  const groesseIn = (xmlText: string, name: string) => {
+    const teil = xmlText.split('<D:response>').find((r) => r.includes(`<D:displayname>${name}</D:displayname>`)) ?? '';
+    return { laenge: Number(/<D:getcontentlength>(\d+)</.exec(teil)?.[1]), etag: /<D:getetag>([^<]*)</.exec(teil)?.[1]?.replace(/&quot;/g, '"'), nurLesend: teil.includes('Win32FileAttributes>00000001'), sperre: teil.includes('supportedlock'), teil };
+  };
+
+  it('Vorgabe: mitgelieferte Vorlage an; PDFs kommen gestempelt, Größe und ETag passen zur gestempelten Fassung', async () => {
+    const { wd, rufe, A, dok, echt, pfad, reg } = await mitEcht();
+    assert.deepEqual((await wd.stand()).einstellung, { aktiv: true, stempel: 'webdav', nurLesend: false });
+    assert.ok((await wd.stand()).vorlagen.some((v) => v.id === 'webdav' && /Aus Ablago · \{datum\}/.test(v.text)));
+    const r = await rufe('GET', pfad, { auth: A });
+    assert.equal(r.status, 200);
+    assert.equal(r.koepfe['x-dms-stempel'], '1');
+    const inhalt = r.body as Buffer;
+    assert.notDeepEqual(inhalt, echt, 'nicht das Original');
+    assert.equal(Number(r.koepfe['content-length']), inhalt.length);
+    assert.notEqual(r.koepfe.etag, etagVon(dok), 'ETag der gestempelten Fassung');
+    const liste = await rufe('PROPFIND', `${reg}/Belege/`, { auth: A, depth: '1' });
+    const e = groesseIn(liste.text, 'Echt.pdf');
+    assert.equal(e.laenge, inhalt.length, 'PROPFIND nennt die Größe der gestempelten Fassung');
+    assert.equal(e.etag, r.koepfe.etag);
+    // Ein PDF, das sich nicht stempeln lässt (beschädigt), kommt unverändert – und bleibt überschreibbar.
+    const kaputt = await rufe('GET', `${reg}/Belege/Rechnung.pdf`, { auth: A });
+    assert.equal(kaputt.text, PDF('r1').toString());
+    assert.equal(kaputt.koepfe['x-dms-stempel'], undefined);
+    // HEAD und If-None-Match mit dem ETag der gestempelten Fassung.
+    assert.equal((await rufe('HEAD', pfad, { auth: A })).koepfe['content-length'], String(inhalt.length));
+    assert.equal((await rufe('GET', pfad, { auth: A, kopf: { 'if-none-match': r.koepfe.etag } })).status, 304);
+    assert.equal((await rufe('GET', pfad, { auth: A, kopf: { 'if-none-match': etagVon(dok) } })).status, 200, 'alter ETag des Originals gilt nicht');
+  });
+
+  it('Vorschlag umgesetzt: gestempelt ausgelieferte Dokumente sind nicht überschreibbar, neue Dateien gehen', async () => {
+    const { rufe, A, pfad, reg } = await mitEcht();
+    const liste = await rufe('PROPFIND', `${reg}/Belege/`, { auth: A, depth: '1' });
+    const e = groesseIn(liste.text, 'Echt.pdf');
+    assert.ok(e.nurLesend && !e.sperre, 'als schreibgeschützt gemeldet, keine Sperre angeboten');
+    assert.match(liste.text, /xmlns:Z="urn:schemas-microsoft-com:"/);
+    const ueber = await rufe('PUT', pfad, { auth: A, body: pdfAus([{ text: 'zurück' }]) });
+    assert.equal(ueber.status, 403);
+    assert.match(ueber.text, /mit Stempel heraus/);
+    assert.equal((await rufe('LOCK', pfad, { auth: A, body: '' })).status, 403);
+    assert.equal((await rufe('PROPPATCH', pfad, { auth: A, body: '<D:propertyupdate xmlns:D="DAV:"/>' })).status, 403);
+    assert.equal((await rufe('PUT', `${reg}/Belege/Neu.pdf`, { auth: A, body: PDF('neu') })).status, 201, 'neue Dateien ablegen geht');
+    // Das nicht stempelbare (beschädigte) PDF bleibt überschreibbar (neue Version).
+    assert.equal((await rufe('PUT', `${reg}/Belege/Rechnung.pdf`, { auth: A, body: PDF('r2') })).status, 204);
+  });
+
+  it('Einstellung „aus“: Original, ETag des Originals, überschreibbar; unbekannte Vorlage und falsche Werte 422', async () => {
+    const { wd, rufe, A, dok, echt, pfad } = await mitEcht();
+    await assert.rejects(wd.speichere({ stempel: 'gibt-es-nicht' }, 'admin'), /Vorlage/);
+    await assert.rejects(wd.speichere({ stempel: 7 }, 'admin'), /stempel/);
+    await assert.rejects(wd.speichere({ nurLesend: 'ja' }, 'admin'), /nurLesend/);
+    const s = await wd.speichere({ stempel: null }, 'admin');
+    assert.deepEqual(s.einstellung, { aktiv: true, stempel: null, nurLesend: false }, 'aktiv bleibt');
+    const r = await rufe('GET', pfad, { auth: A });
+    assert.deepEqual(r.body, echt);
+    assert.equal(r.koepfe.etag, etagVon(dok));
+    assert.equal((await rufe('PUT', pfad, { auth: A, body: pdfAus([{ text: 'Version 2' }]) })).status, 204);
+  });
+
+  it('Pflicht gewinnt: Einstellung „aus“ + Pflicht-Stempel → gestempelt (Bilder als PDF); Register schreibgeschützt', async () => {
+    const { d, wd, rufe, A, vt, v1a, pfad, reg, namen } = await mitEcht();
+    await wd.speichere({ stempel: null }, 'admin');
+    await d.ladeHoch(v1a.id, { register: 'briefe', name: 'foto.png', typ: 'image/png' }, PNG, null);
+    await d.aendereTyp(vt.id, { ...vt, stempel: { modus: 'pflicht', vorlage: 'entwurf' } } as never);
+    const r = await rufe('GET', pfad, { auth: A });
+    assert.equal(r.status, 200);
+    assert.equal(r.koepfe['x-dms-stempel'], '1', 'trotz „aus“ gestempelt');
+    // Bilder kommen als PDF und heißen auch so.
+    const briefe = await rufe('PROPFIND', `${reg}/Briefe_Post/`, { auth: A, depth: '1' });
+    assert.deepEqual(namen(briefe).slice(1), ['foto.pdf']);
+    assert.match(groesseIn(briefe.text, 'foto.pdf').teil, /<D:getcontenttype>application\/pdf</);
+    const foto = await rufe('GET', `${reg}/Briefe_Post/foto.pdf`, { auth: A });
+    assert.equal(foto.status, 200);
+    assert.equal((foto.body as Buffer).subarray(0, 5).toString(), '%PDF-');
+    // Nicht stempelbar (beschädigt) bei Pflicht: geht nicht hinaus.
+    const kaputt = await rufe('GET', `${reg}/Belege/Rechnung.pdf`, { auth: A });
+    assert.equal(kaputt.status, 403);
+    // Schreibgeschützt: alles Schreibende 403 mit verständlicher Meldung.
+    const pflicht = /Mappentyp verlangt beim Weitergeben einen Stempel/;
+    for (const [m, ziel] of [['PUT', `${reg}/Belege/Neu.pdf`], ['PUT', pfad], ['LOCK', `${reg}/Belege/Neu.pdf`], ['PROPPATCH', `${reg}/Belege/`], ['DELETE', pfad], ['MOVE', pfad], ['COPY', pfad], ['MKCOL', `${reg}/Belege/Neu/`]] as const) {
+      const x = await rufe(m, ziel, { auth: A, body: m === 'PUT' ? PDF('x') : '' });
+      assert.equal(x.status, 403, `${m} ${ziel}`);
+      assert.match(x.text, pflicht, `${m} ${ziel}`);
+    }
+    // PROPFIND meldet nur lesend: Mappe, Register und Dateien ohne Sperre, mit Attribut.
+    const mappe = await rufe('PROPFIND', `${reg}/`, { auth: A, depth: '1' });
+    assert.doesNotMatch(mappe.text, /supportedlock/);
+    assert.match(mappe.text, /Win32FileAttributes>00000011</);
+    // Andere Mappentypen und Neue Post bleiben beschreibbar.
+    assert.equal((await rufe('PUT', '/webdav/Neue Post/Scan.pdf', { auth: A, body: PDF('s') })).status, 201);
+  });
+
+  it('Schalter „nur lesend“: alle schreibenden Methoden einschließlich LOCK 403, für alle; Lesen geht; OPTIONS ohne DAV 2', async () => {
+    const { wd, rufe, A, pfad, reg } = await mitEcht();
+    await wd.speichere({ nurLesend: true }, 'admin');
+    const o = await rufe('OPTIONS', '/webdav/');
+    assert.equal(o.koepfe.dav, '1');
+    assert.doesNotMatch(o.koepfe.allow, /PUT|LOCK|DELETE/);
+    for (const [m, ziel] of [['PUT', '/webdav/Neue Post/Scan.pdf'], ['PUT', '/webdav/Neue Post/.DS_Store'], ['LOCK', '/webdav/Neue Post/Scan.pdf'], ['PROPPATCH', '/webdav/Neue Post/'],
+      ['PUT', `${reg}/Belege/Neu.pdf`], ['DELETE', pfad], ['MOVE', pfad], ['COPY', pfad], ['MKCOL', `${reg}/Neu/`]] as const) {
+      const x = await rufe(m, ziel, { auth: A, body: m === 'PUT' ? PDF('x') : '' });
+      assert.equal(x.status, 403, `${m} ${ziel}`);
+      assert.match(x.text, /nur zum Lesen/);
+    }
+    assert.equal((await rufe('GET', pfad, { auth: A })).status, 200);
+    const wurzel = await rufe('PROPFIND', '/webdav/', { auth: A, depth: '1' });
+    assert.equal(wurzel.status, 207);
+    assert.doesNotMatch(wurzel.text, /supportedlock/);
+    // Wieder aus: Ablegen geht.
+    await wd.speichere({ nurLesend: false }, 'admin');
+    assert.equal((await rufe('PUT', '/webdav/Neue Post/Scan.pdf', { auth: A, body: PDF('s') })).status, 201);
+  });
+
+  it('Migration 067 bringt Vorlage und Einstellung in bestehende Installationen (ohne Doppel)', () => {
+    const sql = readFileSync(new URL('../migrations/067_webdav_stempel.sql', import.meta.url), 'utf8');
+    assert.match(sql, /'id', 'webdav'/);
+    assert.match(sql, /'Aus Ablago · \{datum\}'/);
+    assert.match(sql, /NOT EXISTS \(SELECT 1 FROM jsonb_array_elements\(wert->'vorlagen'\) v WHERE v->>'id' = 'webdav'\)/);
+    assert.match(sql, /"stempel": "webdav"/);
+  });
+});
+
+describe('Migration 067 gegen PostgreSQL (#722)', { skip: process.env.TEST_DATABASE_URL ? false : 'TEST_DATABASE_URL nicht gesetzt' }, () => {
+  it('ergänzt die WebDAV-Vorlage bei gespeicherten Vorlagen, schaltet den Stempel ein und läuft doppelt ohne Doppel', async () => {
+    const { verbinde, migriere } = await import('../src/db');
+    const sql = verbinde(process.env.TEST_DATABASE_URL!);
+    try {
+      await sql.unsafe('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+      const dir = new URL('../migrations', import.meta.url).pathname;
+      await migriere(sql, dir, () => {});
+      const [h] = await sql`SELECT id FROM haushalte LIMIT 1`;
+      const haushalt = h?.id ?? (await sql`INSERT INTO haushalte (id, name) VALUES ('00000000-0000-4000-8000-000000000001', 'Test') RETURNING id`)[0].id;
+      // Stand vor 067: eigene Vorlagen gespeichert, Laufwerk eingeschaltet ohne Angabe zum Stempel.
+      await sql`INSERT INTO einstellungen (haushalt_id, schluessel, wert) VALUES (${haushalt}, 'stempel', ${sql.json({ vorlagen: [{ id: 'eigen', name: 'Eigen', text: 'X' }], typen: {} })}),
+        (${haushalt}, 'webdav', ${sql.json({ aktiv: true })})
+        ON CONFLICT (haushalt_id, schluessel) DO UPDATE SET wert = EXCLUDED.wert`;
+      const text = readFileSync(new URL('../migrations/067_webdav_stempel.sql', import.meta.url), 'utf8');
+      await sql.unsafe(text);
+      await sql.unsafe(text);
+      const [st] = await sql`SELECT wert FROM einstellungen WHERE haushalt_id = ${haushalt} AND schluessel = 'stempel'`;
+      assert.deepEqual(st.wert.vorlagen.map((v: { id: string }) => v.id), ['eigen', 'webdav']);
+      assert.equal(st.wert.vorlagen[1].lage, 'fuss');
+      const [wd] = await sql`SELECT wert FROM einstellungen WHERE haushalt_id = ${haushalt} AND schluessel = 'webdav'`;
+      assert.deepEqual(wd.wert, { aktiv: true, stempel: 'webdav' });
+      // Eine bewusst ausgeschaltete Einstellung bleibt aus.
+      await sql`UPDATE einstellungen SET wert = ${sql.json({ aktiv: true, stempel: null })} WHERE haushalt_id = ${haushalt} AND schluessel = 'webdav'`;
+      await sql.unsafe(text);
+      assert.deepEqual((await sql`SELECT wert FROM einstellungen WHERE haushalt_id = ${haushalt} AND schluessel = 'webdav'`)[0].wert, { aktiv: true, stempel: null });
+    } finally { await sql.end(); }
   });
 });

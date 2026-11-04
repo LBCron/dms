@@ -109,7 +109,10 @@ Mit Berechtigungen legst du fest, **wer eine Ansicht sieht**, **wer dort neue Ma
 |---|---|
 | **R** Sehen | Die Ansicht erscheint im Baum der Ablage und lässt sich öffnen. |
 | **C** Anlegen | In der Ansicht gibt es „+ Neu“. Anlegen dürfen muss man zusätzlich am [Mappentyp](berechtigungen.md) – beide müssen es erlauben. |
-| **E** Exportieren | Mappen der Ansicht als Excel, CSV, ZIP mit Dokumenten oder PDF ausgeben – alles, was Daten aus Ablago hinausgibt. Lesen muss man jede Mappe zusätzlich am Mappentyp. Außerhalb einer Ansicht (erweiterte Suche, „Als PDF exportieren“ und „Per E-Mail versenden“ an der Mappe) darf eine Mappe hinaus, wenn sie in mindestens einer Ansicht mit E läge. |
+| **E** Exportieren | Dateien und Daten **mitnehmen**: Dokumente herunterladen (auch ältere Versionen, Archivfassung, über die API), teilen, per E-Mail versenden, als Excel, CSV, ZIP oder PDF exportieren und über das [WebDAV-Laufwerk](webdav.md) öffnen – alles, was Daten aus Ablago hinausgibt. Lesen muss man jede Mappe zusätzlich am Mappentyp. Außerhalb einer Ansicht (Mappe, erweiterte Suche, Laufwerk) darf eine Mappe hinaus, wenn sie in mindestens einer Ansicht mit E läge. |
+
+!!! info "R heißt ansehen, E heißt mitnehmen"
+    Mit dem Leserecht sehen Benutzer Mappen und Dokumente **in Ablago** an – auch PDFs und Bilder im Browser. Herunterladen, Teilen, Versenden, Exportieren und das Laufwerk brauchen zusätzlich **E**. Alle diese Wege prüft dieselbe Stelle, sie können nicht auseinanderlaufen. Ganz verhindern lässt sich das Abspeichern beim Ansehen allerdings nie: Ein Browser kann eine angezeigte Seite speichern oder drucken, und ein Bildschirmfoto geht immer. E macht das Mitnehmen nicht unmöglich, aber auch nicht einfach.
 
 !!! info "Ansichtsregeln regeln die Ansicht, nicht die Mappen"
     Ob jemand eine **Mappe** lesen darf, entscheiden allein die [Berechtigungen am Mappentyp](berechtigungen.md). Eine Mappe aus einer verborgenen Ansicht kann also über die Suche, eine andere Ansicht oder einen Link weiter auftauchen. Wer Mappen verbergen will, regelt das am Mappentyp. Für Administratoren gelten die Regeln an Ansichten nicht.
