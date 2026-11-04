@@ -73,12 +73,13 @@ describe('Auskunft zustellen: reine Funktionen (#455)', () => {
   });
 
   it('Eingaben für den Link: Grenzen, eigener Code mindestens 6 Zeichen', () => {
-    assert.deepEqual(liesLinkEingabe({}), { tage: 30, abrufe: 3, code: null, an: '', senden: false, fehler: [] });
+    assert.deepEqual(liesLinkEingabe({}), { tage: 30, abrufe: 3, code: null, codeWieEingegeben: null, an: '', senden: false, fehler: [] });
     assert.equal(liesLinkEingabe({ tage: 0 }).fehler.length, 1);
     assert.equal(liesLinkEingabe({ tage: 91 }).fehler.length, 1);
     assert.equal(liesLinkEingabe({ abrufe: 11 }).fehler.length, 1);
     assert.match(liesLinkEingabe({ code: 'K-47' }).fehler[0], /mindestens 6/);
     assert.equal(liesLinkEingabe({ code: 'mv-2024-17' }).code, 'MV202417');
+    assert.equal(liesLinkEingabe({ code: ' 198405 ' }).codeWieEingegeben, '198405', 'eigener Code bleibt, wie er eingegeben wurde (#666)');
   });
 
   it('Status: zurückgezogen vor gesperrt vor verbraucht vor abgelaufen', () => {
@@ -379,8 +380,13 @@ for (const pg of [false, ...(process.env.TEST_DATABASE_URL ? [true] : [])]) {
       assert.ok(auf.some((x) => x.empfaengerId === admin.id && /gesperrt/.test(x.text)), 'Ersteller erfährt von der Sperre');
       // Ein neuer Link ersetzt den gesperrten nicht stillschweigend – der alte bleibt gesperrt, der neue gilt.
       const n2 = (await rufe(admin, 'POST', '/api/werkbank/auskunft/:id/link', { params: { id: a.id }, body: { code: 'MV-2024-17' } })).body as { url: string; code: string };
-      assert.equal(n2.code, 'MV202417');
+      assert.equal(n2.code, 'MV-2024-17', 'eigener Code kommt so zurück, wie er eingegeben wurde (#666)');
       assert.ok((await rufe(null, 'POST', '/api/abruf', { body: { schluessel: n2.url.split('#')[1], code: 'mv 2024 17' }, ip: '192.0.2.201' })).body);
+      // #666: Kundennummer mit Bindestrichen – Abruf mit und ohne Bindestriche, klein und mit Leerzeichen.
+      const n3 = (await rufe(admin, 'POST', '/api/werkbank/auskunft/:id/link', { params: { id: a.id }, body: { code: 'KD-12-345', abrufe: 3 } })).body as { url: string; code: string };
+      assert.equal(n3.code, 'KD-12-345');
+      for (const [i, c] of ['KD12345', 'kd-12-345', 'KD 12 345'].entries())
+        assert.ok((await rufe(null, 'POST', '/api/abruf', { body: { schluessel: n3.url.split('#')[1], code: c }, ip: `192.0.2.${210 + i}` })).body, c);
     });
 
     it('Härtung: parallele Versuche kommen nicht an den Zählern vorbei, unbekannte Schlüssel kosten kein scrypt, Anmeldung bleibt frei, Download ohne Cache und ohne HEAD', async () => {

@@ -7191,7 +7191,8 @@ export class Dienst {
     });
     protokoll.modul('datenschutz').info('Abruf-Link erstellt', { mappeId: stand.mappeId, link: link.id, tage: e.tage, abrufe: e.abrufe, code: link.codeArt, mail: e.senden, von: ich.email });
     const { schluessel: _s, code: _c, ...ohne } = link;
-    return { link: ohne as AuskunftLink, url, code, gesendet: e.senden };
+    // Eigener Code: so zurück, wie er eingegeben wurde (#666) – der Abruf vergleicht ohnehin normiert.
+    return { link: ohne as AuskunftLink, url, code: e.codeWieEingegeben ?? code, gesendet: e.senden };
   }
 
   /** Zurückziehen (#455): Der Link gilt sofort nicht mehr; die Zeile bleibt als Nachweis. */

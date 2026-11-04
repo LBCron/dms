@@ -82,7 +82,8 @@ export function Abrufseite() {
             <p className="leise klein">{t('abruf.code.herkunft')}</p>
             <label className="eigenschaft"><span>{t('abruf.code')}</span>
               <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" autoCapitalize="characters" spellCheck={false} required
-                maxLength={64} placeholder={'XXXX-XXXX'.slice(0, CODE_LAENGE + 1)} className="mono abruf-code" autoFocus /></label>
+                maxLength={64} placeholder={'XXXX-XXXX'.slice(0, CODE_LAENGE + 1)} className="mono abruf-code" autoFocus aria-describedby="abruf-schreibweise" /></label>
+            <p className="leise klein" id="abruf-schreibweise">{t('abruf.code.schreibweise')}</p>
             {fehler && <p className="hinweis schlecht" role="alert">{fehler}</p>}
             <button className="knopf primaer" disabled={laeuft || !code.trim()}>{laeuft ? t('abruf.knopf.laeuft') : t('abruf.knopf')}</button>
           </form>

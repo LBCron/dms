@@ -205,9 +205,9 @@ Nur für Auskünfte **mit Passwort** – unverschlüsselt geht keine Auskunft pe
 
 ### Weg 2: Abruf-Link mit Abrufcode
 
-1. **Adresse der Person** (optional): Mit **Link per E-Mail an diese Adresse schicken** verschickt Ablago den Link – ohne Code. Ohne E-Mail-Versand kopierst du den Link und schickst ihn selbst.
+1. **E-Mail-Adresse der Person** (optional): Ohne Haken dient sie nur dem Nachweis in der Historie – du kopierst den Link und schickst ihn selbst. Mit dem Haken **Link per E-Mail schicken** (Vorgabe: aus) verschickt Ablago den Link – ohne Code –, dann ist die Adresse Pflicht. Die Meldung danach sagt eindeutig, ob eine E-Mail hinausging.
 2. **Gültig** (Vorgabe 30 Tage, höchstens 90) und **Abrufe** (Vorgabe 3, höchstens 10).
-3. **Abrufcode:** Am besten **von Ablago erzeugen** (8 Zeichen ohne Verwechsler wie 0/O und 1/I). Alternativ ein **eigener Code**, den nur die Person kennt – z. B. die Vertragsnummer (mindestens 6 Zeichen). Eine **Kundennummer allein ist schwach**: Sie steht oft auf Briefen und Rechnungen.
+3. **Abrufcode:** Am besten **von Ablago erzeugen** (8 Zeichen ohne Verwechsler wie 0/O und 1/I). Alternativ ein **eigener Code**, den nur die Person kennt – z. B. die Vertragsnummer (mindestens 6 Zeichen). Ablago zeigt ihn genau so an, wie du ihn eingibst. Beim Abruf spielen Groß-/Kleinschreibung, Leerzeichen und Bindestriche keine Rolle – „KD-12345“ und „kd12345“ gelten als gleich; das steht auch auf der Abrufseite. Eine **Kundennummer allein ist schwach**: Sie steht oft auf Briefen und Rechnungen.
 4. **Abruf-Link erstellen:** Link und Code stehen **nur jetzt** auf dem Bildschirm. Teile den Code auf einem anderen Weg mit – per Brief, Telefon oder SMS, **nie in derselben E-Mail wie den Link**. Geht er verloren, erstelle einen neuen Link; der alte gilt dann nicht mehr.
 
 Die Person öffnet den Link und sieht nur: „Du hast eine Auskunft nach Art. 15 DSGVO über die hier gespeicherten Daten angefordert. Zur Sicherheit gib bitte deinen Abrufcode ein.“ (mit der [Anrede](#anrede) „Sie“: „Sie haben … Zur Sicherheit geben Sie bitte Ihren Abrufcode ein.“) – kein Menü, kein Logo, kein Name des Haushalts, keine Anmeldung. Mit dem richtigen Code startet der Download.
