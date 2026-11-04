@@ -743,13 +743,40 @@ export interface AblaufPlan<V> {
   herkunftBestaetigen: boolean;
   /** stand: Prüfwert aller Rechte, die bestätigt werden müssen – ändert sich eines, gilt die Bestätigung nicht mehr. */
   rechte: { bestaetigen: boolean; stand: string };
+  /**
+   * Pakete, die sich nicht laden ließen (Download, Prüfsumme, Archiv), und Pakete, die eines davon brauchen (#646):
+   * Sie werden übersprungen, die übrigen lassen sich trotzdem installieren.
+   */
+  ausgelassen?: AblaufAusgelassen[];
   /** Auswahl für Einstellungen mit Verweisen (Mappentypen, Benutzer, Rollen, Ansichten). */
   auswahl: { typen: Array<{ id: string; name: string; felder: Array<{ key: string; label: string }> }>; benutzer: Array<{ id: string; name: string }>; rollen: Array<{ id: string; name: string }>; sichten: Array<{ id: string; name: string }> };
 }
+/** Ein Paket, das übersprungen wurde (#646), mit Grund – z. B. „lässt sich nicht herunterladen …“ oder „braucht …“. */
+export interface AblaufAusgelassen { id: string; name: string; version: string; grund: string }
 export interface AblaufErgebnis {
   installiert: Array<{ id: string; name: string; version: string; einstellungen: 'keine' | 'fertig' | 'spaeter' | 'fehler' }>;
-  /** Das Paket, bei dem es scheiterte – es ist vollständig zurückgenommen. */
+  /** Pakete, die beim Installieren scheiterten (#646) – jedes ist vollständig zurückgenommen; die übrigen laufen weiter. */
+  fehlgeschlagen: Array<{ id: string; name: string; meldung: string; gruende: string[] }>;
+  /** Das erste davon (wie bis 0.158). */
   fehler: { id: string; name: string; meldung: string; gruende: string[] } | null;
-  /** Danach nicht mehr installiert (nach einem Fehler). */
-  nichtInstalliert: Array<{ id: string; name: string; version: string }>;
+  /** Nicht installiert, mit Grund: ließ sich nicht laden oder braucht ein Paket, das scheiterte (#646). */
+  nichtInstalliert: AblaufAusgelassen[];
+}
+
+/**
+ * Welche Pakete fallen weg, wenn diese scheitern (#646)? Alle, die – auch über Umwege – eines davon brauchen.
+ * Liefert je wegfallendem Paket die Id des gescheiterten, an dem es hängt.
+ */
+export function haengenAn(pakete: Array<{ id: string; abhaengigkeiten: Record<string, string> }>, gescheitert: string[]): Map<string, string> {
+  const weg = new Map<string, string>();
+  let neu = true;
+  while (neu) {
+    neu = false;
+    for (const p of pakete) {
+      if (weg.has(p.id) || gescheitert.includes(p.id)) continue;
+      const an = Object.keys(p.abhaengigkeiten).find((a) => gescheitert.includes(a) || weg.has(a));
+      if (an) { weg.set(p.id, gescheitert.includes(an) ? an : weg.get(an)!); neu = true; }
+    }
+  }
+  return weg;
 }

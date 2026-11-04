@@ -15,7 +15,7 @@ import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
-import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -1385,6 +1385,7 @@ export class Paketverwaltung {
     const probleme: string[] = [];
     type Teil = { schluessel: string; paket: Paket; v?: KatalogVersion; katalog?: Katalog; herkunft: InstalliertesPaket['herkunft']; gewaehlt: boolean; fuer: string[]; pruefung: HerkunftPruefung; upload?: string };
     const teile: Teil[] = [];
+    const ausgelassen: AblaufAusgelassen[] = [];
     let herkunft: HerkunftPruefung | null = null;
     const uploads = Array.isArray(e.uploads) ? [...new Set(e.uploads.map(String))] : [];
     if (uploads.length) {
@@ -1420,9 +1421,27 @@ export class Paketverwaltung {
       for (const id of ids) { const da = installierte.find((x) => x.id === id); if (da) probleme.push(t('pakete.ablauf.fehler.schon', { name: da.name, version: da.version })); }
       const aus = auswahlMitAbhaengigkeiten(katalog, ids.filter((id) => !installierte.some((x) => x.id === id)), dms, installierte, versionen);
       probleme.push(...aus.probleme);
+      // Lässt sich ein Paket nicht laden, fällt nur es weg – und was es braucht (#646); die übrigen bleiben im Plan.
+      const nichtLadbar: string[] = [];
       for (const a of aus.pakete) {
-        const { paket, v } = await this.lade(a.id, a.version, url);
-        teile.push({ schluessel: a.id, paket, v, katalog, herkunft: { art: 'katalog', url }, gewaehlt: a.gewaehlt, fuer: a.fuer, pruefung });
+        try {
+          const { paket, v } = await this.lade(a.id, a.version, url);
+          teile.push({ schluessel: a.id, paket, v, katalog, herkunft: { art: 'katalog', url }, gewaehlt: a.gewaehlt, fuer: a.fuer, pruefung });
+        } catch (f) {
+          const kp = katalog.pakete.find((x) => x.id === a.id);
+          nichtLadbar.push(a.id);
+          ausgelassen.push({ id: a.id, name: kp?.name ?? a.id, version: a.version, grund: (f as Error).message });
+          log.warn('Ablauf: Paket lässt sich nicht laden', { paket: a.id, version: a.version, fehler: meldungen(f) });
+        }
+      }
+      if (nichtLadbar.length) {
+        const mitAbh = aus.pakete.map((a) => ({ id: a.id, abhaengigkeiten: katalog.pakete.find((x) => x.id === a.id)?.versionen.find((v) => v.version === a.version)?.abhaengigkeiten ?? {} }));
+        for (const [id, an] of haengenAn(mitAbh, nichtLadbar)) {
+          const i = teile.findIndex((x) => x.schluessel === id);
+          if (i < 0) continue;
+          const [x] = teile.splice(i, 1);
+          ausgelassen.push({ id, name: x.paket.manifest.name, version: x.paket.manifest.version, grund: t('pakete.ablauf.braucht.gescheitert', { name: katalog.pakete.find((k) => k.id === an)?.name ?? an }) });
+        }
       }
     }
     const geplant = { typen: new Set<string>(), sichten: new Set<string>() };
@@ -1439,7 +1458,7 @@ export class Paketverwaltung {
     const zuBestaetigen = pakete.filter((p) => p.vorschau.laeufer?.bestaetigen).map((p) => [p.id, p.version, rechteZeilen(p.vorschau.laeufer!.rechte)]);
     const q = await this.verweisquelle(null);
     const plan: AblaufPlan<Vorschau> = {
-      pakete, probleme, herkunft, herkunftBestaetigen: teile.some((x) => x.pruefung.bestaetigen),
+      pakete, probleme, ...(ausgelassen.length ? { ausgelassen } : {}), herkunft, herkunftBestaetigen: teile.some((x) => x.pruefung.bestaetigen),
       rechte: { bestaetigen: zuBestaetigen.length > 0, stand: createHash('sha256').update(JSON.stringify(zuBestaetigen)).digest('hex') },
       auswahl: { typen: q.anzeige.typen, benutzer: q.anzeige.benutzer, rollen: q.anzeige.rollen, sichten: q.anzeige.sichten },
     };
@@ -1497,8 +1516,8 @@ export class Paketverwaltung {
   /**
    * Alles aus einem Ablauf installieren (#405) – erst alles prüfen, dann Paket für Paket (Abhängigkeiten zuerst).
    * Fehlt eine Bestätigung, eine Einstellung oder passt ein Name nicht, wird nichts installiert. Scheitert ein Paket
-   * beim Anlegen, ist es vollständig zurückgenommen; die Pakete davor bleiben installiert, die danach kommen nicht
-   * mehr dran – das Ergebnis sagt genau, was installiert ist.
+   * beim Anlegen, ist es vollständig zurückgenommen; die übrigen werden weiter installiert, nur Pakete, die das
+   * gescheiterte brauchen, fallen mit Grund weg (#646) – das Ergebnis sagt genau, was installiert ist.
    */
   async ablaufInstallieren(e: AblaufInstallation, von: Handelnder): Promise<AblaufErgebnis> {
     const karte = (x: unknown): Record<string, Record<string, string>> => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).filter(([, v]) => v && typeof v === 'object').map(([k, v]) => [k, Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([a, b]) => [a, String(b)]))])) : {});
@@ -1537,9 +1556,12 @@ export class Paketverwaltung {
       throw new Fachfehler(409, t('pakete.ablauf.fehler.adresse', { adressen: adressen.map((a) => `${a.paket} → ${a.wert}`).join(', ') }), { adresse: adressen.map((a) => ({ feld: `${a.paket}: ${a.feld}`, wert: a.wert })) });
     }
     const beispiele = new Set(Array.isArray(e.beispiele) ? e.beispiele.map(String) : []);
-    const erg: AblaufErgebnis = { installiert: [], fehler: null, nichtInstalliert: [] };
+    const erg: AblaufErgebnis = { installiert: [], fehlgeschlagen: [], fehler: null, nichtInstalliert: [...(plan.ausgelassen ?? [])] };
+    const abh = plan.pakete.map((p, i) => ({ id: p.id, abhaengigkeiten: teile[i].paket.manifest.abhaengigkeiten }));
     for (const [i, p] of plan.pakete.entries()) {
-      if (erg.fehler) { erg.nichtInstalliert.push({ id: p.id, name: p.name, version: p.version }); continue; }
+      // Ein gescheitertes Paket hält nur auf, was es braucht (#646); die übrigen werden weiter installiert.
+      const an = haengenAn(abh, erg.fehlgeschlagen.map((x) => x.id)).get(p.id);
+      if (an) { erg.nichtInstalliert.push({ id: p.id, name: p.name, version: p.version, grund: t('pakete.ablauf.braucht.gescheitert', { name: plan.pakete.find((y) => y.id === an)?.name ?? an }) }); continue; }
       const x = teile[i];
       try {
         const alt = (await this.d.listePakete()).find((y) => y.id === p.id) ?? null;
@@ -1559,11 +1581,12 @@ export class Paketverwaltung {
         }
         erg.installiert.push({ id: p.id, name: ds.name, version: ds.version, einstellungen: einst });
       } catch (f) {
-        erg.fehler = { id: p.id, name: p.name, meldung: (f as Error).message, gruende: ((f as Fachfehler).details as { gruende?: string[] } | undefined)?.gruende ?? [] };
+        erg.fehlgeschlagen.push({ id: p.id, name: p.name, meldung: (f as Error).message, gruende: ((f as Fachfehler).details as { gruende?: string[] } | undefined)?.gruende ?? [] });
+        erg.fehler ??= erg.fehlgeschlagen[0];
         log.warn('Ablauf: Paket nicht installiert', { paket: p.id, fehler: meldungen(f) });
       }
     }
-    log.info('Pakete in einem Ablauf', { von: von.email, installiert: erg.installiert.map((y) => `${y.id}@${y.version}`).join(', ') || '–', fehler: erg.fehler?.id ?? '–', ausgelassen: erg.nichtInstalliert.map((y) => y.id).join(', ') || '–', spaeter: [...spaeter].join(', ') || '–' });
+    log.info('Pakete in einem Ablauf', { von: von.email, installiert: erg.installiert.map((y) => `${y.id}@${y.version}`).join(', ') || '–', fehler: erg.fehlgeschlagen.map((y) => y.id).join(', ') || '–', ausgelassen: erg.nichtInstalliert.map((y) => y.id).join(', ') || '–', spaeter: [...spaeter].join(', ') || '–' });
     return erg;
   }
 

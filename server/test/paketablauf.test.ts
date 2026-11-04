@@ -257,7 +257,40 @@ function faelle(pg: boolean) {
       assert.deepEqual(erg.installiert.map((x) => x.id), ['kontakte', 'adressen']);
     });
 
-    it('Fehler bei einem Paket: es ist zurückgenommen, die davor bleiben, die danach kommen nicht dran', async () => {
+    it('fünf Pakete, das vierte scheitert: 1–3 und 5 sind installiert, was es braucht, fällt mit Grund weg (#646)', async () => {
+      const leer = (id: string, rest = '') => ({ 'manifest.yaml': kopf(id, '1.0.0', `${rest}inhalt: {}\n`) });
+      const kaputt = { ...kontakte, 'manifest.yaml': kontakte['manifest.yaml'].replace('id: kontakte', 'id: dritte'), 'inhalt/beispiele.yaml': '- typ: kontakt\n  werte: { gibtsnicht: 1 }\n' };
+      const { d, p } = await aufbau(pg, [leer('eins'), leer('zwei'), leer('drei'), kaputt, leer('fuenf'), leer('sechs', 'abhaengigkeiten:\n  dritte: ">=1.0.0"\n')]);
+      const wahl = ['eins', 'zwei', 'drei', 'dritte', 'fuenf', 'sechs'];
+      const plan = await p.ablaufPlan({ pakete: wahl });
+      assert.equal(plan.ausgelassen, undefined);
+      const erg = await p.ablaufInstallieren({ pakete: wahl, rechteStand: plan.rechte.stand, beispiele: ['dritte'] }, ICH);
+      assert.deepEqual(erg.installiert.map((x) => x.id).sort(), ['drei', 'eins', 'fuenf', 'zwei']);
+      assert.deepEqual(erg.fehlgeschlagen.map((x) => x.id), ['dritte']);
+      assert.equal(erg.fehler?.id, 'dritte');
+      assert.deepEqual(erg.nichtInstalliert.map((x) => [x.id, x.grund]), [['sechs', 'braucht „Kontakte“, das sich nicht installieren ließ']]);
+      assert.deepEqual((await d.listePakete()).map((x) => x.id).sort(), ['drei', 'eins', 'fuenf', 'zwei']);
+    });
+
+    it('ein Paket lässt sich nicht laden: nur es und was es braucht fallen weg, die übrigen lassen sich installieren (#646)', async () => {
+      const daten = new Map<string, Buffer>();
+      const leer = (id: string, rest = '') => ({ 'manifest.yaml': kopf(id, '1.0.0', `${rest}inhalt: {}\n`) });
+      const { d, p } = await aufbau(pg, [leer('eins'), leer('gross'), leer('nutzt', 'abhaengigkeiten:\n  gross: ">=1.0.0"\n'), leer('fuenf')], daten);
+      daten.delete('https://katalog.test/archive/gross-1.0.0.zip');
+      const wahl = ['eins', 'gross', 'nutzt', 'fuenf'];
+      const plan = await p.ablaufPlan({ pakete: wahl });
+      assert.deepEqual(plan.pakete.map((x) => x.id).sort(), ['eins', 'fuenf']);
+      assert.deepEqual(plan.ausgelassen?.map((x) => x.id), ['gross', 'nutzt']);
+      assert.match(plan.ausgelassen![0].grund, /lässt sich nicht herunterladen/);
+      assert.match(plan.ausgelassen![1].grund, /braucht „Gross“/);
+      assert.deepEqual(plan.probleme, []);
+      const erg = await p.ablaufInstallieren({ pakete: wahl, rechteStand: plan.rechte.stand }, ICH);
+      assert.deepEqual(erg.installiert.map((x) => x.id).sort(), ['eins', 'fuenf']);
+      assert.deepEqual(erg.nichtInstalliert.map((x) => x.id), ['gross', 'nutzt']);
+      assert.deepEqual((await d.listePakete()).map((x) => x.id).sort(), ['eins', 'fuenf']);
+    });
+
+    it('Fehler bei einem Paket: es ist zurückgenommen, die davor bleiben, was es braucht, kommt nicht dran', async () => {
       const kaputt = { ...kontakte, 'inhalt/beispiele.yaml': '- typ: kontakt\n  werte: { gibtsnicht: 1 }\n' };
       const nachher = { ...sprache('fra'), 'manifest.yaml': sprache('fra')['manifest.yaml'].replace('grund: ">=1.0.0"', 'kontakte: ">=1.0.0"').replace('paket: grund', 'paket: kontakte') };
       const { d, p } = await aufbau(pg, [grund(), kaputt, nachher]);

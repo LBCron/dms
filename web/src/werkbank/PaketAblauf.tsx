@@ -287,9 +287,24 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
     } finally { setLaeuft(false); }
   }
 
+  async function nochmal() {
+    setLaeuft(true); setMeldung(undefined);
+    try { neuerPlan(await api.paketAblaufPlan(eingabe())); }
+    catch (x) { setMeldung({ text: (x as Error).message, gruende: x instanceof ApiFehler ? x.gruende : [] }); }
+    finally { setLaeuft(false); }
+  }
+
   return (
     <div className="stapel pa-fragen">
       {probleme.length > 0 && <div className="hinweis schlecht"><ul>{probleme.map((p) => <li key={p}>{p}</li>)}</ul></div>}
+      {/* Ein Paket, das sich nicht laden lässt, hält nur sich selbst und was es braucht auf (#646). */}
+      {!!plan.ausgelassen?.length && (
+        <div className="hinweis warn stapel" role="status">
+          <p>{t('pakete.ablauf.ausgelassen')}</p>
+          <ul>{plan.ausgelassen.map((a) => <li key={a.id}><strong>{a.name}</strong> {a.version}: {a.grund}</li>)}</ul>
+          <div className="knoepfe"><button type="button" className="knopf" disabled={laeuft} onClick={() => void nochmal()}>{t('pakete.ablauf.ausgelassen.nochmal')}</button></div>
+        </div>
+      )}
 
       {plan.herkunftBestaetigen && (
         <section className="blatt stapel" aria-label={t('pakete.ablauf.herkunft')}>
@@ -437,15 +452,22 @@ export function AblaufErgebnisAnsicht({ e, weiter }: { e: AblaufErgebnis; weiter
           {spaeter.length > 0 && <p>{t('pakete.ablauf.ergebnis.spaeter')} {spaeter.map((x, i) => <span key={x.id}>{i > 0 && ', '}<Link to={`/werkbank/pakete/${x.id}?reiter=einstellungen`} className="verweis">{x.name}</Link></span>)}.</p>}
         </div>
       )}
-      {e.fehler && (
-        <div className="hinweis schlecht" role="alert">
-          <p><strong>{t('pakete.ablauf.ergebnis.fehler', { name: e.fehler.name })}</strong> {e.fehler.meldung}</p>
-          {e.fehler.gruende.length > 0 && <ul>{e.fehler.gruende.map((g) => <li key={g}>{g}</li>)}</ul>}
+      {/* Zusammenfassung (#646): jedes gescheiterte Paket mit Grund, übersprungene mit Grund, Weg zum Nachholen. */}
+      {(e.fehlgeschlagen ?? (e.fehler ? [e.fehler] : [])).map((f) => (
+        <div key={f.id} className="hinweis schlecht stapel" role="alert">
+          <p><strong>{t('pakete.ablauf.ergebnis.fehler', { name: f.name })}</strong> {f.meldung}</p>
+          {f.gruende.length > 0 && <ul>{f.gruende.map((g) => <li key={g}>{g}</li>)}</ul>}
           <p>{t('pakete.ablauf.ergebnis.zurueck')}</p>
-          {e.nichtInstalliert.length > 0 && <p>{t('pakete.ablauf.ergebnis.nicht', { namen: e.nichtInstalliert.map((x) => x.name).join(', ') })}</p>}
+        </div>
+      ))}
+      {e.nichtInstalliert.length > 0 && (
+        <div className="hinweis warn stapel" role="status">
+          <p><strong>{t('pakete.ablauf.ergebnis.nicht')}</strong></p>
+          <ul>{e.nichtInstalliert.map((x) => <li key={x.id}><strong>{x.name}</strong> {x.version}{x.grund ? `: ${x.grund}` : ''}</li>)}</ul>
         </div>
       )}
-      {!e.installiert.length && !e.fehler && <p className="leise">{t('pakete.ablauf.ergebnis.nichts')}</p>}
+      {(e.nichtInstalliert.length > 0 || !!e.fehler) && <p className="leise">{t('pakete.ablauf.ergebnis.nachholen')} <Link to="/werkbank/pakete" className="verweis">Werkbank → Pakete</Link></p>}
+      {!e.installiert.length && !e.fehler && !e.nichtInstalliert.length && <p className="leise">{t('pakete.ablauf.ergebnis.nichts')}</p>}
       <div className="knoepfe"><button type="button" className="knopf primaer" onClick={weiter}>{t('pakete.ablauf.ergebnis.weiter')}</button></div>
     </div>
   );
