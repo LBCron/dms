@@ -180,11 +180,15 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     const html = await hoch('x.html', Buffer.from('<script>alert(1)</script>'), 'text/html');
     assert.equal(html.body.dokument.anzeigbar, false);
 
-    const a = await app.inject({ method: 'GET', url: `/api/dokumente/${pdf.body.dokument.id}/inhalt`, headers: { cookie } });
+    const a = await app.inject({ method: 'GET', url: `/api/dokumente/${pdf.body.dokument.id}/inhalt?herunterladen=1`, headers: { cookie } });
     assert.equal(a.statusCode, 200);
     assert.equal(a.headers['content-type'], 'application/pdf');
-    assert.match(String(a.headers['content-disposition']), /^inline;.*filename\*=UTF-8''Rechnung%20M%C3%A4rz\.pdf/);
+    assert.match(String(a.headers['content-disposition']), /^attachment;.*filename\*=UTF-8''Rechnung%20M%C3%A4rz\.pdf/);
     assert.equal(a.body, '%PDF-1.7\n%%EOF');
+    // Anzeige (#639): Dieses „PDF“ lässt sich nicht bereinigen – statt des Originals ein Hinweis in der Sandbox.
+    const anz = await app.inject({ method: 'GET', url: `/api/dokumente/${pdf.body.dokument.id}/inhalt`, headers: { cookie } });
+    assert.equal(anz.headers['x-dms-anzeige'], 'nur-herunterladen');
+    assert.match(String(anz.headers['content-security-policy']), /sandbox/);
     const b = await app.inject({ method: 'GET', url: `/api/dokumente/${html.body.dokument.id}/inhalt`, headers: { cookie } });
     assert.equal(b.headers['content-type'], 'application/octet-stream');
     assert.match(String(b.headers['content-disposition']), /^attachment/);

@@ -30,6 +30,8 @@ Neben jedem PDF und Bild (JPEG, PNG) steht ein **kleines Vorschaubild der ersten
 - **PDFs und Bilder:** Ein Klick irgendwo auf die Zeile zeigt das Dokument **direkt darunter** an, ein zweiter Klick schließt es. Es ist immer nur ein Dokument offen. Per Tastatur: mit Tab auf den Namen, dann Enter. Das Symbol **↗** öffnet es in einem neuen Browser-Tab.
 - **Alle anderen Dateien** (z. B. Word, Excel) lassen sich nur herunterladen und dann in ihrem Programm öffnen.
 
+**Beim Ansehen führt Ablago nichts aus dem PDF aus und lädt nichts nach.** Ein PDF kann Skripte, automatische Aktionen, Formulare, die Daten verschicken, und angehängte Dateien enthalten – die Anzeige zeigt eine bereinigte Kopie ohne all das. Links im PDF öffnen sich nur, wenn du sie anklickst. Lässt sich ein PDF nicht bereinigen (z. B. verschlüsselt oder beschädigt), steht statt der Anzeige ein kurzer Hinweis; herunterladen kannst du es weiterhin.
+
 **Herunterladen** speichert jede Datei unverändert auf deinem Gerät. Neben jedem Dokument steht, wie groß es ist und wer es wann hochgeladen hat.
 
 ![Dokument direkt unter seiner Zeile](bilder/dokumente.png)

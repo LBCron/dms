@@ -16,6 +16,7 @@
  * - `schreiber.ts`     Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
  * - `export.ts`        PDF mehrerer Mappen (#152)
  * - `aufkleber.ts`     Aufkleberbogen mit Barcode (#345)
+ * - `anzeige.ts`       bereinigte Kopie für die Anzeige im Browser (#639)
  * - `demo-dokumente.ts` Demo-Dokumente für Wachstumstests (#248)
  * - `einfach.ts`      sehr kleiner Schreiber für Textseiten ohne Bibliothek (Notfallblatt, #106)
  * - `bild.ts`, `puffer.ts`, `text.ts` kleine Helfer (Bildart, EXIF, Umgehung #456, WinAnsi)
@@ -32,6 +33,7 @@ import type * as Sch from './schreiber';
 import type * as E from './export';
 import type * as Au from './aufkleber';
 import type * as Ar from './archiv';
+import type * as An from './anzeige';
 
 export { pdfAus, type Absatz, type Schrift } from './einfach';
 export { bildArt, exifAusrichtung, jpegMasse } from './bild';
@@ -74,6 +76,7 @@ export const aufkleberbogenPdf = (...a: A<typeof Au.aufkleberbogenPdf>) => arbei
 /** Archivfassung (#631): PDF/A-Kennung nachsehen, Wörter mit Lage aus der Textebene. */
 export const liesPdfA = (...a: A<typeof Ar.liesPdfA>) => arbeite('liesPdfA', ...a);
 export const textebeneWoerter = (...a: A<typeof Ar.textebeneWoerter>) => arbeite('textebeneWoerter', ...a);
+export const bereinigePdf = (...a: A<typeof An.bereinigePdf>) => arbeite('bereinigePdf', ...a);
 export type { PdfaBefund } from './archiv';
 
 /** Demo-Dokument (#248) im Arbeiter; der Zufall geht danach mit dem Stand aus dem Arbeiter weiter. */

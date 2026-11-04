@@ -1,4 +1,6 @@
 import { PassThrough, type Readable } from 'node:stream';
+import { buffer as alsPuffer } from 'node:stream/consumers';
+import { pdfFuerAnzeige } from './pdfanzeige';
 import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { type Recht } from '../../shared/src/rechte';
 import { ladeBeispiele } from './beispiele';
@@ -289,6 +291,20 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
    * eines Benutzers. Anzeigen in der Oberfläche und Pakete (Dienstkonten, z. B. Texterkennung) bekommen das Original.
    */
   const weitergabe = (a: Anfrage) => a.query.herunterladen !== undefined || a.query.verkleinern !== undefined || !!wunschAus(a.query) || (!!a.apiSchluessel && a.benutzer?.art !== 'dienst');
+  /**
+   * Anzeige im Browser (#639): Ein PDF kommt nur als bereinigte Kopie in den eingebauten Betrachter (ohne JavaScript,
+   * automatische Aktionen, Formular-Übermittlung, eingebettete Dateien). Mit API-Schlüssel (Pakete) das Original.
+   * Lässt es sich nicht bereinigen, gibt es statt der Anzeige einen kurzen Hinweis – Herunterladen geht weiter.
+   */
+  const fuerAnzeige = async (a: Anfrage, d: Datei): Promise<Antwort> => {
+    if (!d.anzeigen || d.mime !== 'application/pdf' || a.apiSchluessel) return { datei: d };
+    const pdf = await pdfFuerAnzeige(Buffer.isBuffer(d.inhalt) ? d.inhalt : await alsPuffer(d.inhalt));
+    if (!pdf) {
+      const hinweis = Buffer.from('Dieses PDF lässt sich nicht sicher anzeigen (verschlüsselt oder beschädigt). Bitte lade es herunter und öffne es in einem PDF-Programm.\n\nThis PDF cannot be displayed safely (encrypted or damaged). Please download it and open it in a PDF reader.\n');
+      return { datei: { inhalt: hinweis, name: 'hinweis.txt', mime: 'text/plain; charset=utf-8', anzeigen: true, groesse: hinweis.length, koepfe: { 'x-dms-anzeige': 'nur-herunterladen', 'cache-control': 'no-store' } } };
+    }
+    return { datei: { ...d, inhalt: pdf, groesse: pdf.length, koepfe: { ...d.koepfe, 'x-dms-anzeige': 'bereinigt' } } };
+  };
   /** Antwort für eine ausgegebene Datei (#394): immer als Herunterladen. Verkleinert (#393): Kopf X-DMS-Verkleinert „vorher/nachher“. */
   const ausgabeDatei = (r: { name: string; mime: string; anzeigbar: boolean; groesse: number; inhalt: Buffer | Readable; gestempelt: boolean; verkleinert?: { vorher: number; nachher: number } | null }): Antwort => {
     L.dokumente.debug(r.gestempelt ? 'Dokument mit Stempel heruntergeladen' : 'Dokument heruntergeladen', { name: r.name });
@@ -1850,7 +1866,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const { dokument: d, inhalt } = await dienst.dokumentInhalt(a.params.id);
       const anzeigen = d.anzeigbar;
       L.dokumente.debug(anzeigen ? 'Dokument angezeigt' : 'Dokument heruntergeladen', { name: d.name, id: d.id });
-      return { datei: { inhalt, name: d.name, mime: d.anzeigbar ? d.mime : 'application/octet-stream', anzeigen, groesse: d.groesse } };
+      return fuerAnzeige(a, { inhalt, name: d.name, mime: d.anzeigbar ? d.mime : 'application/octet-stream', anzeigen, groesse: d.groesse });
     } },
     // Herunterladen mit Stempel aus der Oberfläche (#394): Angaben im Körper, sonst wie oben.
     { methode: 'POST', pfad: '/api/dokumente/:id/herunterladen', zugang: 'angemeldet', handler: async (a) => {
@@ -1884,8 +1900,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const punkt = f.d.name.lastIndexOf('.');
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
       const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (umgewandelt).${endung}`;
-      return { datei: { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
-        koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': 'private, max-age=60' } } };
+      return fuerAnzeige(a, { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
+        koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': 'private, max-age=60' } });
     } },
     // Archivfassung (PDF/A, #631): ablegen nur Pakete mit dms:archivfassung, die das Dokument lesen dürfen (das Original
     // bleibt unverändert); ansehen, wer das Dokument liest. Wortpositionen ebenso mit Lesen (ohne weiteres Recht).
@@ -1896,8 +1912,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/dokumente/:id/archivfassung', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
       const f = await dienst.archivfassungVon(a.params.id);
-      return { datei: { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
-        koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': 'private, max-age=60' } } };
+      return fuerAnzeige(a, { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
+        koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': 'private, max-age=60' } });
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/wortpositionen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
@@ -1974,7 +1990,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (weitergabe(a)) return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { version: Number(a.params.nummer), stempel: a.query, verkleinern: a.query.verkleinern, ich: ich(a) }));
       const { version: v, inhalt } = await dienst.versionInhalt(a.params.id, Number(a.params.nummer));
       const anzeigen = v.anzeigbar;
-      return { datei: { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse } };
+      return fuerAnzeige(a, { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse });
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/ersetzen', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
