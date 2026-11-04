@@ -106,7 +106,14 @@ export interface Manifest {
 export interface PaketFeld extends Partial<Feld> { key: string; label: string; typ: Feld['typ']; ziel?: string }
 export interface PaketRegister { key: string; name: string; art: Register['art']; felder?: string[]; quellen?: Array<{ typ: string; feld: string }>; volltext?: boolean }
 export interface PaketTyp { schluessel: string; name: string; beschreibung: string; titelVorlage?: string; felder: PaketFeld[]; register: PaketRegister[]; trefferliste?: string[] }
-export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string }
+/**
+ * Mappentyp, den das Paket nicht mitbringt (#656): Das Zielsystem ordnet ihn über seine Kennung zu, wenn es ihn dort gibt –
+ * sonst wird die Ansicht ohne ihn angelegt bzw. ganz übersprungen.
+ */
+export interface FremderTyp { kennung: string; name: string }
+export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; fremdeTypen?: FremderTyp[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string }
+/** Ab dieser Version verstehen DMS Ansichten mit `fremde_typen` (#656). */
+export const FREMDE_TYPEN_AB = '0.178.0';
 /** Beispiel-Mappe (#347): optional mit Schlüssel; Verweisfelder dürfen { beispiel: schluessel } bzw. { beispiel: paket:schluessel } sein. */
 export interface PaketBeispiel { typ: string; werte: Record<string, unknown>; schluessel?: string }
 
@@ -240,6 +247,11 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     return {
       schluessel: str(s.schluessel), name: str(s.name).trim(), beschreibung: s.beschreibung ? str(s.beschreibung) : undefined, eltern: s.eltern ? str(s.eltern) : undefined,
       typen: Array.isArray(s.typen) ? s.typen.map(str) : [], trefferliste: s.trefferliste ? str(s.trefferliste) : undefined,
+      ...(s.fremde_typen !== undefined ? { fremdeTypen: (Array.isArray(s.fremde_typen) ? s.fremde_typen : []).map((f, j): FremderTyp => {
+        const k = istObjekt(f) ? str(f.kennung) : '';
+        if (!SCHLUESSEL.test(k)) fehler.push(`sichten[${i + 1}]: fremde_typen[${j + 1}]: ungültige Kennung „${k}“.`);
+        return { kennung: k, name: istObjekt(f) ? str(f.name).trim() || k : k };
+      }) } : {}),
       bedingungen: Array.isArray(s.bedingungen) ? s.bedingungen.filter(istObjekt).map((b) => ({ feld: str(b.feld), operator: str(b.operator), wert: b.wert })) : [],
     };
   });
@@ -374,7 +386,7 @@ export interface TypPlan {
   /** Fehlt im DMS, obwohl das Paket ihn installiert hatte (gelöscht) – wird nicht neu angelegt. */
   geloescht?: boolean;
 }
-export interface SichtPlan { schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null }
+export interface SichtPlan { schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null; /** Wird nicht installiert (#656), mit Grund. */ ausgelassen?: string | null; /** Mappentypen, die hier fehlen – die Ansicht kommt ohne sie (#656). */ ohne?: string[] }
 export interface AbhaengigkeitPlan { id: string; bereich: string; installiert: string | null; ok: boolean; verfuegbar: string | null }
 export interface Vorschau {
   paket: { id: string; name: string; version: string; beschreibung: string; lizenz: string; autor: { name: string; github: string }; dms: string; abhaengigkeiten: Record<string, string>; readme: string | null; changelog: string | null; quelle: string | null };
@@ -1081,7 +1093,20 @@ export class Paketverwaltung {
       return { schluessel: t.schluessel, dmsSchluessel, name, felder: t.felder.length, vorhanden: false, neueFelder: [], neueRegister: [], konflikt, vorschlag };
     }));
     for (const n of belegt) geplant?.typen.add(n);
+    // Ansichten mit Mappentypen, die das Paket nicht mitbringt (#656): fehlt einer, kommt die Ansicht ohne ihn; fehlen
+    // alle, wird sie (mit ihren Unteransichten) übersprungen – das übrige Paket wird trotzdem installiert.
+    const ausgelassen = new Map<string, string>();
+    for (const s of nachEltern(paket.sichten)) {
+      if (s.eltern && ausgelassen.has(s.eltern)) { ausgelassen.set(s.schluessel, `Ansicht „${s.name}“ wird nicht installiert: Sie steht unter „${paket.sichten.find((x) => x.schluessel === s.eltern)?.name ?? s.eltern}“, die nicht installiert wird.`); continue; }
+      const fremd = s.fremdeTypen ?? [];
+      const fehlt = fremd.filter((f) => !typen.some((t) => t.schluessel === f.kennung));
+      if (fremd.length && fehlt.length === fremd.length && !(s.typen ?? []).length) ausgelassen.set(s.schluessel, `Ansicht „${s.name}“ wird nicht installiert: Den Mappentyp ${fehlt.map((f) => `„${f.name}“`).join(', ')} gibt es in dieser Installation nicht.`);
+    }
+    for (const g of ausgelassen.values()) hinweise.push(g);
     const sichtPlaene = paket.sichten.map((s): SichtPlan => {
+      if (ausgelassen.has(s.schluessel) && !ich?.sichten[s.schluessel]) return { schluessel: s.schluessel, name: s.name, eltern: s.eltern ?? null, vorhanden: false, konflikt: null, vorschlag: null, ausgelassen: ausgelassen.get(s.schluessel)! };
+      const ohne = (s.fremdeTypen ?? []).filter((f) => !typen.some((t) => t.schluessel === f.kennung)).map((f) => f.name);
+      if (ohne.length && !ich?.sichten[s.schluessel]) hinweise.push(`Ansicht „${s.name}“ kommt ohne den Mappentyp ${ohne.map((n) => `„${n}“`).join(', ')} – den gibt es in dieser Installation nicht.`);
       const vorhandenId = ich?.sichten[s.schluessel];
       const vorhanden = vorhandenId ? sichten.find((x) => x.id === vorhandenId) : undefined;
       if (vorhanden || vorhandenId) return { schluessel: s.schluessel, name: vorhanden?.name ?? s.name, eltern: s.eltern ?? null, vorhanden: true, konflikt: null, vorschlag: null };
@@ -1090,7 +1115,7 @@ export class Paketverwaltung {
       const geschwister = s.eltern ? [] : [...sichten.filter((x) => !x.elternId).map((x) => x.name.trim().toLowerCase()), ...(geplant?.sichten ?? [])];
       const konflikt = geschwister.includes(name.toLowerCase()) ? `Eine Ansicht „${name}“ gibt es schon.` : null;
       if (!s.eltern) geplant?.sichten.add(name.toLowerCase());
-      return { schluessel: s.schluessel, name, eltern: s.eltern ?? null, vorhanden: false, konflikt, vorschlag: konflikt ? freierName(name, m.name, new Set(geschwister)) : null };
+      return { schluessel: s.schluessel, name, eltern: s.eltern ?? null, vorhanden: false, konflikt, vorschlag: konflikt ? freierName(name, m.name, new Set(geschwister)) : null, ...(ohne.length ? { ohne } : {}) };
     });
     return {
       paket: { id: m.id, name: m.name, version: m.version, beschreibung: m.beschreibung, lizenz: m.lizenz, autor: m.autor, dms: m.dms, abhaengigkeiten: m.abhaengigkeiten, readme: v?.readme ?? null, changelog: v?.changelog ?? null, quelle: v?.quelle ?? null },
@@ -1264,12 +1289,15 @@ export class Paketverwaltung {
       // 3. Neue Sichten, Elternsichten zuerst, am Ende ihrer Ebene.
       for (const s of nachEltern(paket.sichten)) {
         const sp = plan.sichten.find((x) => x.schluessel === s.schluessel)!;
-        if (sp.vorhanden) continue;
+        if (sp.vorhanden || sp.ausgelassen) continue;
         const alle = await this.d.listeSichten();
         const elternId = s.eltern ? sichtMap[s.eltern] ?? null : null;
         if (s.eltern && !elternId) throw new Fachfehler(422, `Ansicht „${s.name}“: Elternsicht „${s.eltern}“ fehlt.`);
         const position = Math.max(0, ...kinderVon(alle, elternId).map((x) => x.position)) + 10;
-        const typen = (s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean);
+        const jetzt = await this.d.listeTypen();
+        const fremd = (s.fremdeTypen ?? []).map((f) => jetzt.find((t) => t.schluessel === f.kennung)?.id).filter((x): x is string => !!x);
+        const typen = [...new Set([...(s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean), ...fremd])];
+        if (!typen.length && (s.fremdeTypen ?? []).length) continue;
         try {
           const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}) });
           neueSichten.push(neu.id);

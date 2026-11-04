@@ -36,9 +36,9 @@ function ordner(pfad: string, vor = ''): Record<string, string> {
 const basisZip = zipPuffer(Object.entries(ordner(BASIS)).map(([name, inhalt]) => ({ name, daten: Buffer.from(inhalt) })));
 
 /** Ein DMS im Arbeitsspeicher mit Paketverwaltung und Paketerstellung. */
-function dms() {
+function dms(version = '0.86.0') {
   const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
-  return { d, p: new Paketverwaltung(d, { version: () => '0.86.0', katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } }), e: new Paketerstellung(d, { version: () => '0.86.0' }) };
+  return { d, p: new Paketverwaltung(d, { version: () => version, katalogUrl: 'https://katalog.test/katalog.json', abruf: async () => { throw new Error('ohne Netz'); } }), e: new Paketerstellung(d, { version: () => version }) };
 }
 async function hochladenUndInstallieren(p: Paketverwaltung, zip: Buffer, beispiele = false) {
   const h = await p.hochladen(zip, ICH);
@@ -143,6 +143,42 @@ describe('Paket selbst erstellen (#374)', () => {
     const g = await q.e.pruefe(angaben({ typen: [q.vertrag.id, q.zahlung.id] }));
     assert.ok(g.hinweise.some((h) => /Änderungen an „Organisation“ \(Basis\) gehören nicht zu deinem Paket/.test(h)), g.hinweise.join('\n'));
     assert.equal((await q.e.stand()).typen.find((t) => t.id === q.org.id)?.geaendert, true);
+  });
+
+  it('nur Ansichten (#656): Hinweis statt Abbruch, Typ über die Kennung; beim Empfänger zugeordnet oder einzeln übersprungen', async () => {
+    const q = await quelle();
+    const s = q.sichten;
+    const auswahl = { sichten: [s.vertraege.id, s.teuer.id] };
+    // Zu alte Ablago-Version im Paket: Problem.
+    assert.ok((await q.e.pruefe(angaben(auswahl))).probleme.some((p) => /Ansichten mit Mappentypen, die nicht im Paket sind, und braucht mindestens >=0\.178\.0/.test(p)));
+    const r = await q.e.pruefe(angaben({ ...auswahl, dms: '>=0.178.0' }));
+    assert.deepEqual(r.probleme, []);
+    assert.equal(r.einspielbar, true);
+    assert.deepEqual(r.fehlend.map((f) => [f.art, f.name]), [['typ', 'Vertrag']], 'mit aufnehmen angeboten');
+    assert.ok(r.hinweise.some((h) => /Ansicht „Verträge“ zeigt Mappen vom Typ „Vertrag“\. „Vertrag“ kommt nicht ins Paket – beim Empfänger muss es „Vertrag“ schon geben/.test(h)), r.hinweise.join('\n'));
+    const z1 = await q.e.exportiere(angaben({ ...auswahl, dms: '>=0.178.0' }), ICH);
+    const sy = parse(liesZip(z1.daten).get('familie_vertraege/inhalt/sichten.yaml')!.toString()) as Array<{ name: string; typen?: string[]; fremde_typen?: Array<{ kennung: string; name: string }> }>;
+    assert.deepEqual(sy.map((x) => [x.name, x.typen ?? [], x.fremde_typen]), [['Verträge', [], [{ kennung: 'vertrag', name: 'Vertrag' }]], ['Teure Verträge', [], [{ kennung: 'vertrag', name: 'Vertrag' }]]]);
+
+    // Empfänger ohne „Vertrag“: beide Ansichten übersprungen, das Paket wird trotzdem installiert.
+    const ohne = dms('0.178.0');
+    const h = await ohne.p.hochladen(z1.daten, ICH);
+    assert.deepEqual(h.vorschau.probleme, []);
+    assert.deepEqual(h.vorschau.sichten.map((x) => [x.name, !!x.ausgelassen]), [['Verträge', true], ['Teure Verträge', true]]);
+    assert.ok(h.vorschau.hinweise.some((x) => /Ansicht „Verträge“ wird nicht installiert: Den Mappentyp „Vertrag“ gibt es in dieser Installation nicht\./.test(x)), h.vorschau.hinweise.join('\n'));
+    assert.ok(h.vorschau.hinweise.some((x) => /Ansicht „Teure Verträge“ wird nicht installiert: Sie steht unter „Verträge“/.test(x)));
+    const vorher = (await ohne.d.listeSichten()).length;
+    const p1 = await ohne.p.installiere({ upload: h.upload, bestaetigt: true, beispiele: false }, ICH);
+    assert.equal(p1.version, '1.0.0');
+    assert.equal((await ohne.d.listeSichten()).length, vorher, 'keine Ansicht angelegt');
+
+    // Empfänger mit einem Typ dieser Kennung: zugeordnet.
+    const mit = dms('0.178.0');
+    const t = await mit.d.legeTypAn({ name: 'Mein Vertrag', schluessel: 'vertrag', titelVorlage: '{nr}', felder: [{ key: 'nr', label: 'Nummer', typ: 'text' }, { key: 'monatlich', label: 'Monatlich', typ: 'betrag', waehrung: 'EUR' }] });
+    await hochladenUndInstallieren(mit.p, z1.daten);
+    const zs = await mit.d.listeSichten();
+    assert.deepEqual(zs.find((x) => x.name === 'Verträge')!.typen, [t.id]);
+    assert.deepEqual(zs.find((x) => x.name === 'Teure Verträge')!.typen, [t.id]);
   });
 
   it('Export → frisches Ablago: hochladen, installieren, Typen und Ansichten gleich; höhere Version aktualisiert', async () => {

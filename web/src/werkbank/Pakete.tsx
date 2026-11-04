@@ -645,7 +645,7 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
   const neueAutos = (v.automatisierungen ?? []).filter((a) => a.neu);
   const [ohneAuto, setOhneAuto] = useState<string[]>([]);
   const [namen, setNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.typen.filter((t) => !t.vorhanden).map((t) => [t.schluessel, t.vorschlag ?? t.name])));
-  const [sichtNamen, setSichtNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.sichten.filter((s) => !s.vorhanden).map((s) => [s.schluessel, s.vorschlag ?? s.name])));
+  const [sichtNamen, setSichtNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.sichten.filter((s) => !s.vorhanden && !s.ausgelassen).map((s) => [s.schluessel, s.vorschlag ?? s.name])));
   const [beispiele, setBeispiele] = useState(false);
   const [mit, setMit] = useState(true);
   const [ok, setOk] = useState(false);
@@ -654,7 +654,7 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
   const rechteFehlen = !!v.laeufer?.bestaetigen && !rechteOk;
   const fehlend = v.abhaengigkeiten.filter((a) => !a.installiert);
   const konflikt = v.typen.some((t) => !t.vorhanden && t.konflikt && (namen[t.schluessel] ?? '').trim().toLowerCase() === t.name.toLowerCase())
-    || v.sichten.some((s) => !s.vorhanden && s.konflikt && (sichtNamen[s.schluessel] ?? '').trim().toLowerCase() === s.name.toLowerCase());
+    || v.sichten.some((s) => !s.vorhanden && !s.ausgelassen && s.konflikt && (sichtNamen[s.schluessel] ?? '').trim().toLowerCase() === s.name.toLowerCase());
   const leer = Object.values(namen).some((n) => !n.trim()) || Object.values(sichtNamen).some((n) => !n.trim());
   // Herkunft bestätigen (#189, #594): außerhalb des offiziellen Katalogs bzw. ohne gültige Signatur.
   const pruefWarnung = warnung ?? (v.pruefung?.bestaetigen ? (v.pruefung.art === 'ungueltig' ? tx('pakete.herkunft.warnung.ungueltig') : '') : null);
@@ -719,6 +719,7 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
         {v.sichten.map((s) => (
           <li key={s.schluessel}>
             {s.vorhanden ? <span className="leise">{s.name} – vorhanden</span>
+              : s.ausgelassen ? <span className="leise">{s.ausgelassen}</span>
               : <label className="paketname"><span>{s.eltern ? `unter „${v.sichten.find((x) => x.schluessel === s.eltern)?.name ?? s.eltern}“` : 'oberste Ebene'}</span>
                   <input value={sichtNamen[s.schluessel] ?? s.name} aria-label={`Name für Ansicht ${s.name}`} onChange={(e) => setSichtNamen({ ...sichtNamen, [s.schluessel]: e.target.value })} />
                   {s.konflikt && (sichtNamen[s.schluessel] ?? '').trim().toLowerCase() === s.name.toLowerCase() && <span className="fehlertext klein">{s.konflikt}</span>}
