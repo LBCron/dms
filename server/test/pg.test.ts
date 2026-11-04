@@ -1008,14 +1008,15 @@ describe('PostgreSQL: Ereignis in derselben Transaktion (#404)', { skip: url ? f
     let stoeren = false;
     const repo: typeof basis = {
       ...basis,
-      transaktion: (f) => basis.transaktion((r) => f({ ...r, legeEreignisseAn: async (l) => {
+      // Seit #724 gehen die Ereignisse für Pakete über den einen Ausgangskorb – gestört wird also dessen Schreiben.
+      transaktion: (f) => basis.transaktion((r) => f({ ...r, legeKatalogEreignisAn: async (...x: Parameters<typeof r.legeKatalogEreignisAn>) => {
         if (stoeren) throw new Error('Ablago fällt aus');
-        return r.legeEreignisseAn(l);
+        return r.legeKatalogEreignisAn(...x);
       } })),
     };
     const d = new Dienst(repo, speicherDateien(), { einstellungen: speicherEinstellungen() });
     await repo.speicherePaket({ id: 'tx404', name: 'Tx', version: '1.0.0', beschreibung: '', lizenz: 'MIT', autor: { name: 'T', github: 't' }, herkunft: { art: 'hochgeladen', von: null, am: new Date().toISOString() }, installiert: new Date().toISOString(), installiertVon: null, aktualisiert: null, aktualisiertVon: null, typen: {}, sichten: {}, abhaengigkeiten: {}, code: true, laeufer: { sprache: 'c', ereignisse: ['dokument.hochgeladen', 'post.angelegt'], rechte: { lesen: [], schreiben: [], dokumente: 'schreiben' }, netz: [] } });
-    const ereignisse = async () => (await sql`SELECT art, daten FROM paket_ereignisse WHERE paket_id = 'tx404' ORDER BY erstellt`) as Array<{ art: string; daten: Record<string, string> }>;
+    const ereignisse = async () => { await d.ereignisse.verteile(); return (await sql`SELECT art, daten FROM paket_ereignisse WHERE paket_id = 'tx404' ORDER BY erstellt`) as Array<{ art: string; daten: Record<string, string> }>; };
     try {
       const { post } = await d.sichereSystem();
       const reg = post.register.find((x) => x.art === 'dokumente')!.key;

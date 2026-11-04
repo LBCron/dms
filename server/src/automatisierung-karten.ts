@@ -1,5 +1,5 @@
 import type { DannKarte } from '../../shared/src/automatisierung';
-import { formatiere, type Feld } from '../../shared/src/model';
+import { formatiere, type AufgabenAnlass, type Feld } from '../../shared/src/model';
 import { heuteIn, verschiebe } from '../../shared/src/sichten';
 import { uebersetzer } from '../../shared/src/sprache';
 import texte from '../../shared/src/sprachen/de/automatisierung.json';
@@ -55,10 +55,23 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
   const datum = k.als === 'aufgabe' && k.faellig !== null && k.faellig !== undefined ? verschiebe(heuteIn(), k.faellig) : null;
   const als = k.als === 'aufgabe' ? t('automatisierung.karte.aufgabe.als-aufgabe') : t('automatisierung.karte.aufgabe.als-benachrichtigung');
   if (c.trocken) return t('automatisierung.karte.aufgabe.trocken', { als, anzahl: an.length, text });
-  let ohneLink = 0;
+  // Anlass (#724): Die Aufgabe erledigt sich selbst, wenn er wegfällt. Aus „Datum erreicht“ wird sie eine Frist.
+  const w = c.automatisierung.wenn;
+  const auto = c.automatisierung.id;
+  const frist = k.als === 'aufgabe' && w.art === 'datum' && typeof c.daten.datum === 'string' ? { feld: w.feld, datum: c.daten.datum } : null;
+  const aufgabenAnlass: AufgabenAnlass | null = k.als !== 'aufgabe' ? null
+    : w.art === 'datum' ? { art: 'datum', feld: w.feld, wiederholung: w.wiederholung ?? null, automatisierung: auto }
+      : w.art === 'post.angelegt' ? { art: 'post', automatisierung: auto }
+        : w.art === 'benutzer.abwesenheit_gesetzt' ? { art: 'abwesenheit', benutzer: c.mappe.id, automatisierung: auto } : null;
+  let ohneLink = 0; let vorhanden = 0; let admins = 0;
   for (const id of an) {
-    const r = await c.dienst.aufgabeAusAutomatisierung({ mappeId: c.mappe.id, empfaengerId: id, text, datum, von: c.konto.id, buendeln: k.als === 'benachrichtigung' ? c.automatisierung.id : null, anlass: c.anlass });
+    const r = await c.dienst.aufgabeAusAutomatisierung({ mappeId: c.mappe.id, empfaengerId: id, text, datum: frist ? null : datum, von: c.konto.id, buendeln: k.als === 'benachrichtigung' ? auto : null, anlass: c.anlass, aufgabenAnlass, frist });
     if (r.ohneLink) ohneLink++;
+    if (r.vorhanden) vorhanden++;
+    if (!r.an) admins++;
   }
-  return t('automatisierung.karte.aufgabe.ergebnis', { als, anzahl: an.length }) + (ohneLink ? ` ${t('automatisierung.karte.aufgabe.ohne-link', { anzahl: ohneLink })}` : '');
+  return ((an.length - vorhanden ? t('automatisierung.karte.aufgabe.ergebnis', { als, anzahl: an.length - vorhanden }) : '')
+    + (ohneLink ? ` ${t('automatisierung.karte.aufgabe.ohne-link', { anzahl: ohneLink })}` : '')
+    + (vorhanden ? ` ${t('automatisierung.karte.aufgabe.vorhanden', { anzahl: vorhanden })}` : '')
+    + (admins ? ` ${t('automatisierung.karte.aufgabe.an-admins', { anzahl: admins })}` : '')).trim();
 };

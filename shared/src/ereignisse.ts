@@ -13,7 +13,9 @@
  */
 
 /** Wozu ein Ereignis gehört – zugleich der Kontext einer Wenn-Karte (welche Platzhalter es gibt). */
-export type Ereignisgruppe = 'mappe' | 'zeit' | 'person' | 'benutzer' | 'verarbeitung' | 'zaehler';
+export type Ereignisgruppe = 'mappe' | 'zeit' | 'person' | 'benutzer' | 'verarbeitung' | 'zaehler' | 'betrieb' | 'auftrag';
+/** Gruppen, die keine Wenn-Karte sind: Zahlen (Webhooks), Betrieb (kommt mit Stufe 2) und Aufträge an ein einzelnes Paket. */
+export const OHNE_WENN: readonly Ereignisgruppe[] = ['zaehler', 'betrieb', 'auftrag'];
 
 export interface Katalogeintrag {
   gruppe: Ereignisgruppe;
@@ -21,7 +23,7 @@ export interface Katalogeintrag {
   felder: readonly string[];
   /** Können Pakete es abonnieren (`code.ereignisse`)? */
   paket?: boolean;
-  /** Für Pakete nur zu Mappentypen, die im Manifest unter `code.mappentypen` stehen (Stufe 1: eigene Typen). */
+  /** Zu einer Mappe: Pakete bekommen es nur, wenn ihr Paket-Benutzer Mappen dieses Typs lesen darf (#686). */
   mappentyp?: boolean;
   /** Können Webhooks es melden? */
   webhook?: boolean;
@@ -57,6 +59,13 @@ export const EREIGNISKATALOG = {
   'datei.umgewandelt': { gruppe: 'verarbeitung', felder: ['dokument', 'mappe', 'typ', 'paket'] },
   'archivfassung.erstellt': { gruppe: 'verarbeitung', felder: ['dokument', 'mappe', 'typ', 'paket'] },
   'erkennung.fertig': { gruppe: 'verarbeitung', felder: ['mappe', 'typ', 'dokument'] },
+  // Betrieb
+  'sicherung.fertig': { gruppe: 'betrieb', felder: ['datei', 'groesse', 'sha256', 'beginn', 'verschluesselung'], paket: true },
+  // Aufträge an genau ein Paket (der Kern bittet ein bestimmtes Paket um etwas, #577, #614, #631, #338)
+  'paket.einstellungen_geaendert': { gruppe: 'auftrag', felder: ['felder'], paket: true },
+  'datei.umwandeln': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
+  'datei.volltext': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
+  'datei.archivfassung': { gruppe: 'auftrag', felder: ['dokument', 'mappe', 'mime', 'groesse', 'sha256'], paket: true },
   // Zahlen eines Benutzers (Webhooks, #627)
   'zaehler.geaendert': { gruppe: 'zaehler', felder: ['zahlen', 'stand'], webhook: true },
 } as const satisfies Record<string, Katalogeintrag>;
@@ -68,10 +77,33 @@ export const istKatalogArt = (a: string): a is KatalogArt => Object.prototype.ha
 type Bindestrich<S extends string> = S extends `${infer A}_${infer B}` ? `${A}-${Bindestrich<B>}` : S;
 export const ereignisSchluessel = <A extends KatalogArt>(a: A) => a.replace(/_/g, '-') as Bindestrich<A>;
 export const katalogeintrag = (a: KatalogArt): Katalogeintrag => EREIGNISKATALOG[a];
-/** Ereignisse, die Pakete nur zu Typen aus `code.mappentypen` bekommen (#670). */
+/** Ereignisse zu Mappen: Pakete bekommen sie nur zu Typen, die ihr Paket-Benutzer lesen darf (#686). */
 export const MAPPENTYP_EREIGNISSE = KATALOG_ARTEN.filter((a) => (EREIGNISKATALOG[a] as Katalogeintrag).mappentyp);
+/** Ereignisse, die Pakete abonnieren können (`code.ereignisse`), ohne die veralteten Namen. */
+export const PAKET_KATALOG = KATALOG_ARTEN.filter((a) => (EREIGNISKATALOG[a] as Katalogeintrag).paket);
+export type PaketKatalogArt = { [K in KatalogArt]: (typeof EREIGNISKATALOG)[K] extends { paket: true } ? K : never }[KatalogArt];
+/**
+ * Veraltete Namen, die Pakete noch abonnieren dürfen (Übergang, #724): Der Kern meldet nur das neue Ereignis; wer den
+ * alten Namen abonniert hat, bekommt es beim Zustellen unter diesem Namen – `texterkennung.fertig` nur für den
+ * Volltext der eingebauten Texterkennung (`quelle: kern`), wie vor 0.133.0.
+ */
+export const VERALTETE_EREIGNISSE = { 'texterkennung.fertig': 'volltext.fertig' } as const satisfies Record<string, KatalogArt>;
 /** Ereignisse, die Webhooks melden können (heute nur die Zahlen, #627). */
 export const WEBHOOK_KATALOG = KATALOG_ARTEN.filter((a) => (EREIGNISKATALOG[a] as Katalogeintrag).webhook);
+
+/**
+ * Eine Regel für Wiederholungen (#724) – Ereignisse im Ausgangskorb und ihre Zustellung an Pakete: nach 1, 5 und
+ * 30 Minuten, 2 und 6 Stunden; danach aufgegeben. Webhooks nutzen dieselbe Regel mit längerem Atem (Ziel im Heimnetz
+ * kann über Nacht aus sein): {@link wiederholungNach} mit `lang`.
+ */
+export const WIEDERHOLEN_MIN: readonly number[] = [1, 5, 30, 120, 360];
+/** Langer Atem (Webhooks): zuerst schneller (30 s bis 10 min), dann dieselben Stufen bis 8 Stunden – zusammen gut 22 Stunden. */
+export const WIEDERHOLEN_LANG_S: readonly number[] = [30, 60, 120, 300, 600, 1800, 3600, 7200, 14400, 21600, 28800];
+/** Wartezeit in Sekunden vor dem nächsten Versuch nach `versuche` Fehlschlägen; null = aufgeben. */
+export function wiederholungNach(versuche: number, plan: 'kurz' | 'lang' = 'kurz'): number | null {
+  const liste = plan === 'lang' ? WIEDERHOLEN_LANG_S : WIEDERHOLEN_MIN.map((m) => m * 60);
+  return versuche >= 0 && versuche < liste.length ? liste[versuche] : null;
+}
 
 /** Wer ein Ereignis ausgelöst hat – damit erkennt eine Automatisierung ihre eigenen Änderungen (#674). */
 export interface Ausloeser {
@@ -82,6 +114,8 @@ export interface Ausloeser {
   konto?: string | null;
   /** Tiefe einer Kette von Automatisierungen (0 = direkt ausgelöst). */
   kette?: number;
+  /** Still (Demo-Daten, Beispiel-Mappen, Import): nur Pakete bekommen Verarbeitungs-Ereignisse, sonst niemand. */
+  still?: boolean;
 }
 
 /** Ein Ereignis, wie es Abnehmer im DMS bekommen. */

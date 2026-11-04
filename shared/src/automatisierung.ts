@@ -1,7 +1,8 @@
 /**
  * Automatisierungen (#672, #674): kleine Abläufe ohne Code – **Wenn · Und · Dann** (Sonst kommt mit #677).
  *
- * - **Genau eine Wenn-Karte** – ein Ereignis aus dem Katalog (#670) oder „Datum in N Tagen“. Sie legt den Kontext
+ * - **Genau eine Wenn-Karte** – ein Ereignis aus dem Katalog (#670) oder „Datum erreicht“ (#724: Vorlauf in Tagen,
+ *   Wochen oder Monaten, auch wiederkehrend; ersetzt „Datum in N Tagen“ und die Wenn-Karte „Frist erreicht“). Sie legt den Kontext
  *   fest: die Mappe und ihren Mappentyp. Dessen Felder stehen in Und und Dann als Bedingungen und Platzhalter bereit.
  * - **Und** – Bedingungen aus dem Baukasten der Ansichten (`sichten.ts`), dazu „Mappe ist in Ansicht …“ und
  *   „Mappe ist in den Favoriten von …“; jede umkehrbar, Gruppen „alle“ / „eine davon“ (eine Ebene tief).
@@ -11,9 +12,10 @@
  * Automatisierung nicht (mehr) passt (Mappentyp gelöscht, Feld fehlt …), meldet `automatisierungsProbleme` –
  * sie wird dann rot und angehalten, die Arbeit im DMS blockiert das nie („Bearbeiten geht vor Automatisierung“).
  */
-import { EREIGNISKATALOG, KATALOG_ARTEN, type KatalogArt } from './ereignisse';
+import { EREIGNISKATALOG, KATALOG_ARTEN, OHNE_WENN, type KatalogArt } from './ereignisse';
+import { VORLAUF_EINHEITEN, type VorlaufEinheit } from './fristen';
 import type { Feld, Mappentyp } from './model';
-import { bedingungsProblem, bereinigeBedingungen, type Bedingung, type Sicht } from './sichten';
+import { bedingungsProblem, bereinigeBedingungen, verschiebe, type Bedingung, type Sicht } from './sichten';
 
 /** Grenzen (Zahl der Automatisierungen, Karten je Bereich, Länge der Texte, Laufzeit, Bremse). */
 export const AUTOMATISIERUNG_GRENZEN = {
@@ -31,7 +33,7 @@ export const AUTOMATISIERUNG_GRENZEN = {
   /** Verlauf je Automatisierung: so viele Läufe bzw. Tage bleiben stehen. */
   verlauf: 200,
   verlaufTage: 30,
-  /** „Datum in N Tagen“: so viele Tage holt der Zeitplan nach (NAS war aus). */
+  /** „Datum erreicht“: so viele Tage holt der Zeitplan nach (NAS war aus). */
   nachholenTage: 31,
 } as const;
 
@@ -39,20 +41,26 @@ export const AUTOMATISIERUNG_GRENZEN = {
 export const REIHENFOLGE = { min: 1, max: 99, eigen: 50, dms: 10, paket: 30 } as const;
 
 /** Ereignisse, die eine Wenn-Karte sein können: alle mit einer Mappe als Kontext (Benutzer sind Mappen). */
-export const WENN_EREIGNISSE = KATALOG_ARTEN.filter((a) => EREIGNISKATALOG[a].gruppe !== 'zaehler');
-export type WennEreignis = Exclude<KatalogArt, 'zaehler.geaendert'>;
+/** „Frist erreicht“ ist für Pakete; als Wenn-Karte steht es in „Datum erreicht“ (#724). */
+export const WENN_EREIGNISSE = KATALOG_ARTEN.filter((a) => !OHNE_WENN.includes(EREIGNISKATALOG[a].gruppe) && a !== 'frist.erreicht') as WennEreignis[];
+export type WennEreignis = Exclude<{ [K in KatalogArt]: (typeof EREIGNISKATALOG)[K]['gruppe'] extends 'zaehler' | 'betrieb' | 'auftrag' ? never : K }[KatalogArt], 'frist.erreicht'>;
 
 export type WennKarte =
   /** Ein Ereignis des Katalogs; typ = nur Mappen dieses Typs (leer = alle), felder = nur bei Änderung dieser Felder. */
   | { art: WennEreignis; typ?: string | null; felder?: string[] }
-  /** Datumsfeld einer Mappe ist in N Tagen erreicht (negativ: vor N Tagen), geprüft täglich zur Uhrzeit. */
-  | { art: 'datum'; typ: string; feld: string; tage: number; uhrzeit: string };
+  /**
+   * „Datum erreicht“ (#724): Das Datumsfeld ist in `vorlauf` Tagen/Wochen/Monaten erreicht (0 = am Tag selbst,
+   * negativ = so lange danach) – Monate sind Kalendermonate. Geprüft täglich zur Uhrzeit. `wiederholung`: Termin
+   * kehrt alle n Monate wieder – eine Aufgabe schlägt nach dem Erledigen den Folgetermin vor.
+   */
+  | { art: 'datum'; typ: string; feld: string; vorlauf: number; einheit: VorlaufEinheit; uhrzeit: string; wiederholung?: number | null };
 
-/** Wer gemeint ist: eine Person, alle aktiven Mitglieder einer Rolle oder die Person(en) in einem Feld der Mappe. */
+/** Wer gemeint ist: eine Person, alle aktiven Mitglieder einer Rolle, die Person(en) in einem Feld der Mappe oder wer die Mappe angelegt hat (#724). */
 export type Empfaenger =
   | { art: 'person'; id: string }
   | { art: 'rolle'; id: string }
-  | { art: 'feld'; feld: string };
+  | { art: 'feld'; feld: string }
+  | { art: 'ersteller' };
 
 export type UndKarte =
   | { art: 'bedingung'; bedingung: Bedingung; nicht?: boolean }
@@ -145,7 +153,27 @@ export function kontextTyp(w: WennKarte, typen: Mappentyp[]): Mappentyp | null {
 
 /** Schlüssel des Auslösers: gleiche Schlüssel = laufen nacheinander für dasselbe Ereignis. */
 export function ausloeserSchluessel(w: WennKarte): string {
-  return w.art === 'datum' ? `datum|${w.typ}|${w.feld}|${w.tage}` : `${w.art}|${w.typ ?? ''}`;
+  return w.art === 'datum' ? `datum|${w.typ}|${w.feld}|${w.vorlauf}|${w.einheit}` : `${w.art}|${w.typ ?? ''}`;
+}
+
+/**
+ * „Datum erreicht“ (#724): Welche Feld-Daten sind an `tag` erreicht? Genau die D mit D − Vorlauf = tag. Bei Monaten
+ * kappt das Monatsende (31.05. − 3 Monate = 28./29.02.) – am letzten Tag des Februars sind dann 28.–31.05. erreicht.
+ */
+export function erreichteDaten(tag: string, vorlauf: number, einheit: VorlaufEinheit): string[] {
+  if (einheit !== 'monate') return [verschiebe(tag, vorlauf * (einheit === 'wochen' ? 7 : 1))];
+  const ziel = verschiebe(tag, vorlauf, 'monate');
+  const erg: string[] = [];
+  for (let d = `${ziel.slice(0, 8)}01`; d.slice(0, 7) === ziel.slice(0, 7); d = verschiebe(d, 1)) if (verschiebe(d, -vorlauf, 'monate') === tag) erg.push(d);
+  return erg;
+}
+
+/** Vorlauf lesbar: „heute“, „in 3 Monaten“, „vor 2 Wochen“. */
+export function vorlaufText(vorlauf: number, einheit: VorlaufEinheit): string {
+  if (!vorlauf) return 'heute';
+  const n = Math.abs(vorlauf);
+  const wort = einheit === 'tage' ? (n === 1 ? 'Tag' : 'Tagen') : einheit === 'wochen' ? (n === 1 ? 'Woche' : 'Wochen') : (n === 1 ? 'Monat' : 'Monaten');
+  return `${vorlauf > 0 ? 'in' : 'vor'} ${n} ${wort}`;
 }
 
 /** Feste Platzhalter (außer den Feldern des Mappentyps). */
@@ -168,14 +196,20 @@ function bereinigeEmpfaenger(e: unknown): Empfaenger | null {
   const x = (e ?? {}) as Record<string, unknown>;
   if ((x.art === 'person' || x.art === 'rolle') && id(x.id)) return { art: x.art, id: id(x.id) };
   if (x.art === 'feld' && id(x.feld)) return { art: 'feld', feld: id(x.feld) };
+  if (x.art === 'ersteller') return { art: 'ersteller' };
   return null;
 }
 
 function bereinigeWenn(e: unknown): WennKarte {
   const x = (e ?? {}) as Record<string, unknown>;
-  if (x.art === 'datum') {
-    const tage = Math.max(-3650, Math.min(3650, Math.trunc(Number(x.tage) || 0)));
-    return { art: 'datum', typ: id(x.typ), feld: id(x.feld), tage, uhrzeit: typeof x.uhrzeit === 'string' && UHRZEIT.test(x.uhrzeit) ? x.uhrzeit : '07:00' };
+  // Bis 0.158: „Datum in N Tagen“ (tage) und „Frist erreicht“ – beide gehen in „Datum erreicht“ auf (#724).
+  if (x.art === 'datum' || x.art === 'frist.erreicht') {
+    const alt = x.vorlauf === undefined && x.tage !== undefined;
+    const einheit = (!alt && typeof x.einheit === 'string' && x.einheit in VORLAUF_EINHEITEN ? x.einheit : 'tage') as VorlaufEinheit;
+    const grenze = einheit === 'tage' ? 3650 : einheit === 'wochen' ? 520 : 120;
+    const vorlauf = Math.max(-grenze, Math.min(grenze, Math.trunc(Number(alt ? x.tage : x.vorlauf) || 0)));
+    const w = Math.trunc(Number(x.wiederholung) || 0);
+    return { art: 'datum', typ: id(x.typ), feld: x.art === 'datum' ? id(x.feld) : '', vorlauf, einheit, uhrzeit: typeof x.uhrzeit === 'string' && UHRZEIT.test(x.uhrzeit) ? x.uhrzeit : '07:00', wiederholung: w >= 1 && w <= 120 ? w : null };
   }
   const art = (WENN_EREIGNISSE as string[]).includes(String(x.art)) ? (x.art as WennEreignis) : 'mappe.angelegt';
   const w: WennKarte = { art, typ: id(x.typ) || null };
@@ -238,6 +272,7 @@ const feldIn = (typ: Mappentyp | null, key: string): Feld | undefined => typ?.fe
 function empfaengerProblem(e: Empfaenger, typ: Mappentyp | null, k: Kontextdaten): string | null {
   if (e.art === 'person') { const b = k.benutzer.find((x) => x.id === e.id); return !b ? 'Diese Person gibt es nicht mehr.' : b.aktiv === false ? `${b.name} ist deaktiviert.` : null; }
   if (e.art === 'rolle') return k.rollen.some((x) => x.id === e.id) ? null : 'Diese Rolle gibt es nicht mehr.';
+  if (e.art === 'ersteller') return null;
   const f = feldIn(typ, e.feld);
   if (!f) return `Das Feld „${e.feld}“ gibt es im Mappentyp nicht (mehr).`;
   const benutzerTyp = k.typen.find((t) => t.system === 'benutzer');
@@ -261,6 +296,7 @@ export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdate
   const typ = kontextTyp(w, k.typen);
   if (w.art === 'datum') {
     if (!typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
+    else if (!w.feld) p.push('„Datum erreicht“: Bitte ein Datumsfeld wählen.');
     else if (feldIn(typ, w.feld)?.typ !== 'datum') p.push(`Das Datumsfeld „${w.feld}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
   } else if (w.typ && !typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
   else if (w.felder?.length && typ) for (const f of w.felder) if (!feldIn(typ, f)) p.push(`Das Feld „${f}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
@@ -298,9 +334,9 @@ export function kurzform(a: AutomatisierungDaten, k: Pick<Kontextdaten, 'typen' 
   const typ = kontextTyp(a.wenn, k.typen);
   const w = a.wenn;
   const wenn = w.art === 'datum'
-    ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? w.feld} ${w.tage === 0 ? 'heute' : w.tage > 0 ? `in ${w.tage} ${w.tage === 1 ? 'Tag' : 'Tagen'}` : `vor ${-w.tage} ${w.tage === -1 ? 'Tag' : 'Tagen'}`}`
+    ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? (w.feld || '?')} ${vorlaufText(w.vorlauf, w.einheit)}`
     : `${typ && EREIGNISKATALOG[w.art].gruppe !== 'benutzer' ? `${typ.name} ` : ''}${ereignisName(w.art)}`;
-  const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : feldIn(typ, e.feld)?.label ?? e.feld;
+  const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : e.art === 'ersteller' ? 'Ersteller' : feldIn(typ, e.feld)?.label ?? e.feld;
   const dann = a.dann.map((d) => d.art === 'stopp' ? 'danach keine weiteren'
     : d.art === 'feld' ? `${Object.keys(d.werte).map((x) => feldIn(typ, x)?.label ?? x).join(', ')} setzen`
       : `${d.als === 'aufgabe' ? 'Aufgabe' : 'Benachrichtigung'} an ${d.empfaenger.map(wer).join(', ') || '?'}`).join(', ');

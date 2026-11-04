@@ -5,6 +5,7 @@ import {
   type Lauf, type Schritt, type UndKarte, type WennKarte,
 } from '../../../shared/src/automatisierung';
 import { EREIGNISKATALOG, ereignisSchluessel, type Ereignisgruppe } from '../../../shared/src/ereignisse';
+import { VORLAUF_EINHEITEN, WIEDERHOLUNGEN, type VorlaufEinheit } from '../../../shared/src/fristen';
 import type { Mappentyp } from '../../../shared/src/model';
 import { bedingungsfelder, beschreibeBedingung, OPERATOREN_JE_ART, type Bedingung, type Bedingungsfeld } from '../../../shared/src/sichten';
 import { api } from '../api';
@@ -178,7 +179,7 @@ export function AutomatisierungEditor({ z, id }: { z: AutomatisierungenZustand; 
   const position = a ? gleiche.findIndex((x) => x.id === a.id) + 1 : 0;
 
   function fuegeHinzu(bereich: string, art: string) {
-    if (bereich === 'wenn') setE({ ...e, wenn: art === 'datum' ? { art: 'datum', typ: typ?.id ?? k!.typen[0]?.id ?? '', feld: '', tage: 7, uhrzeit: '07:00' } : { art: art as never, typ: e.wenn.art !== 'datum' ? e.wenn.typ : e.wenn.typ } });
+    if (bereich === 'wenn') setE({ ...e, wenn: art === 'datum' ? { art: 'datum', typ: typ?.id ?? k!.typen[0]?.id ?? '', feld: '', vorlauf: 7, einheit: 'tage', uhrzeit: '07:00', wiederholung: null } : { art: art as never, typ: e.wenn.art !== 'datum' ? e.wenn.typ : e.wenn.typ } });
     if (bereich === 'und') setE({ ...e, und: { ...e.und, karten: [...e.und.karten, neueUnd(art, typ)] } });
     if (bereich === 'dann') { const n = neueDann(art); setE({ ...e, dann: [...e.dann, n] }); setOffenKarte(n.id); }
     setAnsage(t('automatisierung.ui.hinzugefuegt', { name: vorratName({ bereich, art }) }));
@@ -341,7 +342,7 @@ function WennEditor({ w, k, setze }: { w: WennKarte; k: Kontextdaten; setze: (w:
       <div className="raster">
         <label className="eigenschaft"><span>{t('automatisierung.ui.wenn.ereignis')}</span>
           <select value={w.art} onChange={(x) => setze(x.target.value === 'datum'
-            ? { art: 'datum', typ: typ?.id ?? typen[0]?.id ?? '', feld: '', tage: 7, uhrzeit: '07:00' }
+            ? { art: 'datum', typ: typ?.id ?? typen[0]?.id ?? '', feld: '', vorlauf: 7, einheit: 'tage', uhrzeit: '07:00', wiederholung: null }
             : { art: x.target.value as never, typ: w.art !== 'datum' ? w.typ ?? null : w.typ })}>
             <option value="datum">{ereignisName('datum')}</option>
             {GRUPPEN_FOLGE.map((g) => (
@@ -366,8 +367,18 @@ function WennEditor({ w, k, setze }: { w: WennKarte; k: Kontextdaten; setze: (w:
               {(typ?.felder ?? []).filter((f) => f.typ === 'datum').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
             </select>
           </label>
-          <label className="eigenschaft"><span>{t('automatisierung.ui.wenn.tage')} <small>{t('automatisierung.ui.wenn.tage.hilfe')}</small></span>
-            <input type="number" min={-3650} max={3650} value={w.tage} onChange={(x) => setze({ ...w, tage: Number(x.target.value) })} /></label>
+          <label className="eigenschaft"><span>{t('automatisierung.ui.wenn.vorlauf')} <small>{t('automatisierung.ui.wenn.vorlauf.hilfe')}</small></span>
+            <span className="zeile">
+              <input type="number" min={-3650} max={3650} value={w.vorlauf} onChange={(x) => setze({ ...w, vorlauf: Number(x.target.value) })} />
+              <select aria-label={t('automatisierung.ui.wenn.einheit')} value={w.einheit} onChange={(x) => setze({ ...w, einheit: x.target.value as VorlaufEinheit })}>
+                {Object.entries(VORLAUF_EINHEITEN).map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+              </select>
+            </span></label>
+          <label className="eigenschaft"><span>{t('automatisierung.ui.wenn.wiederholung')} <small>{t('automatisierung.ui.wenn.wiederholung.hilfe')}</small></span>
+            <select value={w.wiederholung ?? ''} onChange={(x) => setze({ ...w, wiederholung: x.target.value ? Number(x.target.value) : null })}>
+              <option value="">{t('automatisierung.ui.wenn.einmalig')}</option>
+              {Object.entries(WIEDERHOLUNGEN).map(([m, name]) => <option key={m} value={m}>{name}</option>)}
+            </select></label>
           <label className="eigenschaft"><span>{t('automatisierung.ui.wenn.uhrzeit')}</span><input type="time" value={w.uhrzeit} onChange={(x) => setze({ ...w, uhrzeit: x.target.value || '07:00' })} /></label>
         </>}
         {w.art === 'mappe.geaendert' && typ && (
@@ -449,6 +460,7 @@ function UndListe({ karten, typ, k, setze, tief = 0 }: { karten: UndKarte[]; typ
 function empfaengerName(e: Empfaenger, typ: Mappentyp | null, k: Kontextdaten) {
   if (e.art === 'person') return k.benutzer.find((b) => b.id === e.id)?.name ?? '?';
   if (e.art === 'rolle') return t('automatisierung.ui.empfaenger.rolle-name', { name: k.rollen.find((r) => r.id === e.id)?.name ?? '?' });
+  if (e.art === 'ersteller') return t('automatisierung.ui.empfaenger.ersteller');
   return t('automatisierung.ui.empfaenger.feld-name', { name: typ?.felder.find((f) => f.key === e.feld)?.label ?? e.feld });
 }
 
@@ -463,14 +475,15 @@ function undKurz(u: UndKarte, typ: Mappentyp | null, k: Kontextdaten, titelVon: 
 function EmpfaengerWahl({ e, typ, k, setze }: { e: Empfaenger; typ: Mappentyp | null; k: Kontextdaten; setze: (e: Empfaenger) => void }) {
   const benutzerTyp = k.typen.find((x) => x.system === 'benutzer');
   const felder = (typ?.felder ?? []).filter((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
-  const wert = e.art === 'feld' ? `feld:${e.feld}` : `${e.art}:${e.id}`;
+  const wert = e.art === 'feld' ? `feld:${e.feld}` : e.art === 'ersteller' ? 'ersteller:' : `${e.art}:${e.id}`;
   return (
     <select aria-label={t('automatisierung.ui.empfaenger')} value={wert} onChange={(x) => {
       const [art, ...rest] = x.target.value.split(':');
       const v = rest.join(':');
-      setze(art === 'feld' ? { art: 'feld', feld: v } : { art: art as 'person' | 'rolle', id: v });
+      setze(art === 'feld' ? { art: 'feld', feld: v } : art === 'ersteller' ? { art: 'ersteller' } : { art: art as 'person' | 'rolle', id: v });
     }}>
       <option value="person:">{t('automatisierung.ui.empfaenger.waehlen')}</option>
+      <option value="ersteller:">{t('automatisierung.ui.empfaenger.ersteller')}</option>
       {felder.length > 0 && <optgroup label={t('automatisierung.ui.empfaenger.felder')}>{felder.map((f) => <option key={f.key} value={`feld:${f.key}`}>{f.label}</option>)}</optgroup>}
       <optgroup label={t('automatisierung.ui.empfaenger.personen')}>{k.benutzer.filter((b) => b.aktiv !== false).map((b) => <option key={b.id} value={`person:${b.id}`}>{b.name}</option>)}</optgroup>
       <optgroup label={t('automatisierung.ui.empfaenger.rollen')}>{k.rollen.map((r) => <option key={r.id} value={`rolle:${r.id}`}>{r.name}</option>)}</optgroup>
@@ -539,8 +552,9 @@ function DannEditor({ karte, typ, wenn, k, setze }: { karte: DannKarte; typ: Map
           <select value={karte.als} onChange={(x) => setze({ ...karte, als: x.target.value as 'aufgabe' | 'benachrichtigung' })}>
             <option value="aufgabe">{t('automatisierung.karte.aufgabe.als-aufgabe')}</option><option value="benachrichtigung">{t('automatisierung.karte.aufgabe.als-benachrichtigung')}</option>
           </select></label>
-        {karte.als === 'aufgabe' && <label className="eigenschaft"><span>{t('automatisierung.ui.karte.dann.aufgabe.faellig')}</span>
+        {karte.als === 'aufgabe' && wenn.art !== 'datum' && <label className="eigenschaft"><span>{t('automatisierung.ui.karte.dann.aufgabe.faellig')}</span>
           <input type="number" min={0} max={3650} value={karte.faellig ?? ''} onChange={(x) => setze({ ...karte, faellig: x.target.value === '' ? null : Number(x.target.value) })} /></label>}
+        {karte.als === 'aufgabe' && wenn.art === 'datum' && <p className="leise breit">{t('automatisierung.ui.karte.dann.aufgabe.frist')}</p>}
       </div>
       <fieldset className="eigenschaft breit"><legend>{t('automatisierung.ui.empfaenger')}</legend>
         <ul className="stapel">

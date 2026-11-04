@@ -12,6 +12,7 @@ import { bezeichner, OHNE_INHALT, type Tabelle } from './datenbankabzug';
 import { beschreibe, liesErweiterungen, problemeAus, TRIGRAMM_INDEXNAMEN, trigrammIndizes } from './erweiterungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 import { ortszeit, type Eintragsliste, type Metadaten, type SchlankeMetadaten, type Sicherung } from './sicherung';
 import { liesKopf, liesSicherung, sha256Von, ZWECK } from './sicherungsformat';
 import { entschluesseleMit, fingerabdruck, istPruefwort, leiteAb, schluesselAusText } from './tresor';
@@ -634,11 +635,10 @@ export class Wiederherstellung {
   async tick(): Promise<'gestartet' | 'nichts'> {
     const plan = await this.q.sicherung.probePlan();
     if (!plan.aktiv || this.q.wartungAktiv() || this.laeuft() || this.q.sicherung.laeuft()) return 'nichts';
-    const o = ortszeit(this.jetzt());
-    if (o.wochentag !== plan.wochentag || o.uhr < plan.uhrzeit) return 'nichts';
-    const e = this.q.sicherung.einstellungen;
-    if ((await e.lies('sicherung_probe_zuletzt')) === o.datum) return 'nichts';
-    await e.schreibe('sicherung_probe_zuletzt', o.datum);
+    // Zeitplan-Baustein (#724): am gewählten Wochentag zur Uhrzeit, verpasst noch am selben Tag.
+    const tage = await laufeFaellige(einstellungsMerker(this.q.sicherung.einstellungen, 'sicherung_probe_zuletzt'), ortszeit(this.jetzt()),
+      { uhrzeit: plan.uhrzeit, an: (tag) => wochentagVon(tag) === plan.wochentag }, async () => {});
+    if (!tage.length) return 'nichts';
     if (!(await this.q.sicherung.liste()).some((x) => x.meta)) return 'nichts';
     if (!(await this.q.sicherung.genugPlatz())) { log.warn('Probe-Wiederherstellung nicht begonnen: zu wenig freier Speicherplatz'); return 'nichts'; }
     try { await this.starteProbe(null, 'Zeitplan'); return 'gestartet'; } catch (x) { log.warn('Probe-Wiederherstellung nicht begonnen', { grund: (x as Error).message }); return 'nichts'; }

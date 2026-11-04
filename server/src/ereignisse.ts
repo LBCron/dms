@@ -1,10 +1,11 @@
-import type { KatalogArt, KatalogEreignis, Ausloeser } from '../../shared/src/ereignisse';
+import { WIEDERHOLEN_MIN, type KatalogArt, type KatalogEreignis, type Ausloeser } from '../../shared/src/ereignisse';
 import type { GespeichertesKatalogEreignis, Repo } from './repo';
 import { protokoll } from './protokoll';
 
 /**
- * Verteiler des Ereigniskatalogs (#670): holt fällige Ereignisse aus dem Ausgangskorb (`ereignisse`) und gibt sie an
- * die Abnehmer im DMS – Pakete (Mappen-Ereignisse), künftig Automatisierungen (#674) und Webhooks (#671).
+ * Verteiler des Ereigniskatalogs (#670, #724): **der eine Ausgangskorb** (`ereignisse`). Der Kern schreibt jedes
+ * Geschehen genau einmal hinein; der Verteiler gibt es an die Abnehmer im DMS – Automatisierungen (#674), Pakete
+ * (alle abonnierten Ereignisse; sie landen in der Zustellung des Paket-Läufers) und Webhooks (#627: „Zahlen neu zählen“).
  *
  * - **Mindestens einmal:** Ein Ereignis gilt erst als verteilt, wenn **alle** Abnehmer es ohne Fehler angenommen haben.
  *   Wirft einer, kommt das Ereignis später noch einmal – an alle. Abnehmer erkennen eine Wiederholung an `e.id`.
@@ -18,8 +19,8 @@ const log = protokoll.modul('ereignisse');
 export type Abnehmer = (e: KatalogEreignis) => Promise<void>;
 /** Frist, in der ein Server ein geholtes Ereignis verteilen muss. */
 export const SPERRE_S = 120;
-/** Abstand der Wiederholungen in Minuten; danach aufgegeben. */
-export const WIEDERHOLEN_MIN = [1, 5, 30, 120, 360];
+/** Abstand der Wiederholungen in Minuten; danach aufgegeben (eine Regel für alle Abnehmer, shared/src/ereignisse.ts). */
+export { WIEDERHOLEN_MIN };
 /** Wie oft der Verteiler ohne Anlass nachsieht (gebündelte Ereignisse, andere Server). */
 const PRUEF_MS = 2_000;
 /** Verteiltes bleibt so lange stehen (Fehlersuche, Werkbank). */

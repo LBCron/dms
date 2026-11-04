@@ -94,7 +94,7 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
   it('Handbuch-Beispiel: Kündbar bis in 7 Tagen → Aufgabe an Verantwortlich, mit Fälligkeit und Platzhaltern', async () => {
     const { d, admin, lena, vertrag, motor } = await aufbau();
     const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendbar_bis: verschiebe(heuteIn(), 7), verantwortlich: lena.id } }, admin.id);
-    const a = await motor.lege({ name: 'Kündigung prüfen', aktiv: true, wenn: { art: 'datum', typ: vertrag.id, feld: 'kuendbar_bis', tage: 7, uhrzeit: '00:00' },
+    const a = await motor.lege({ name: 'Kündigung prüfen', aktiv: true, wenn: { art: 'datum', typ: vertrag.id, feld: 'kuendbar_bis', vorlauf: 7, einheit: 'tage', uhrzeit: '00:00' },
       und: { modus: 'alle', karten: [{ art: 'bedingung', bedingung: { art: 'feld', feld: 'verantwortlich', op: 'nichtLeer' } }] },
       dann: [{ art: 'aufgabe', als: 'aufgabe', empfaenger: [{ art: 'feld', feld: 'verantwortlich' }], faellig: 3, text: 'Bitte {name} prüfen – kündbar bis {kuendbar_bis}.' }] }, admin.id);
     await motor.zeitplan();
@@ -103,7 +103,9 @@ describe('Dann-Karte „Aufgabe / Benachrichtigung“ (#676)', () => {
     const aufgaben = (await d.alleAufgaben()).filter((x) => x.empfaengerId === lena.id && x.mappeId === m.id);
     assert.equal(aufgaben.length, 1);
     assert.match(aufgaben[0].text, /^Bitte Strom prüfen – kündbar bis \d{2}\.\d{2}\.\d{4}\.$/);
-    assert.equal(aufgaben[0].datum, verschiebe(heuteIn(), 3));
+    // Seit #724: aus „Datum erreicht“ eine Frist zum Datum der Mappe (erledigt sich selbst, wenn es sich ändert).
+    assert.equal(aufgaben[0].art, 'frist');
+    assert.equal(aufgaben[0].datum, verschiebe(heuteIn(), 7));
   });
 
   it('Benachrichtigung an eine Rolle gebündelt; ohne Leserecht an der eigenen Benutzer-Mappe', async () => {

@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
   REGISTERARTEN, ROLLEN, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
-  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
+  AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
@@ -78,7 +78,7 @@ import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
 import { Ereignisverteiler } from './ereignisse';
-import { EREIGNISKATALOG, MAPPENTYP_EREIGNISSE, mischeFelder, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
+import { EREIGNISKATALOG, mischeFelder, VERALTETE_EREIGNISSE, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
 import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
 import { feiertageZwischen, type Bundesland } from '../../shared/src/feiertage';
@@ -555,9 +555,9 @@ export class Dienst {
     this.fragen = new FragenAnDieAblage(this, () => this.repo, () => this.einstellungen);
     this.beiVolltextFertig(async (e) => { await this.erkennung.nachVolltext(e); });
     // Ereigniskatalog (#670): Mappen-Ereignisse und Fristen an die Pakete, die diese Mappentypen abonniert haben.
-    this.ereignisse.abonniere('pakete', (e) => this.mappenEreignisAnPakete(e));
+    this.ereignisse.abonniere('pakete', (e) => this.ereignisAnPakete(e));
     // Volltext aus Paketen (#614): zuständige Pakete mit dms:volltext, Ereignis datei.volltext an genau dieses.
-    this.paketVolltext = new PaketVolltext({ pakete: () => this.repo.listePakete(), melde: (paket, daten) => this.melde('datei.volltext', daten, paket) });
+    this.paketVolltext = new PaketVolltext({ pakete: () => this.repo.listePakete(), melde: (paket, daten) => this.auftrag(paket, 'datei.volltext', daten) });
   }
   /** Volltext aus Paketen (#614, paketvolltext.ts); die Texterkennung meldet darüber (index.ts). */
   readonly paketVolltext: PaketVolltext;
@@ -578,11 +578,9 @@ export class Dienst {
    */
   async volltextFertig(e: { dokument: string; mappe: string }, m: VolltextMeldung = { quelle: 'kern', text: true }, von?: string | null): Promise<void> {
     const daten = { dokument: e.dokument, mappe: e.mappe, quelle: m.quelle, text: m.text, ...(m.mime ? { mime: m.mime } : {}), ...(m.seiten !== undefined ? { seiten: m.seiten } : {}), ...(m.neu ? { neu: true } : {}), ...(m.paket ? { paket: m.paket } : {}), ...(m.seitenOhneText?.length ? { seitenOhneText: m.seitenOhneText } : {}), ...(m.original ? { original: m.original, fassung: true } : {}) };
-    // Für Pakete (#442, #458): z. B. „KI lokal – Ähnlichkeit“ rechnet den Vektor, das Paket Texterkennung erkennt Scans.
-    await this.melde('volltext.fertig', daten, undefined, von, m.text ? undefined : kenntVolltextOhneText);
-    await this.ereignis('volltext.fertig', { dokument: e.dokument, mappe: e.mappe, typ: await this.typVon(e.mappe), quelle: m.quelle }, von);
-    // Gleichlaut für Pakete von vor 0.133.0 (#458): texterkennung.fertig nach dem Schritt des Kerns, wie bisher.
-    if (m.quelle === 'kern') await this.melde('texterkennung.fertig', { ...daten, seiten: m.seiten ?? null });
+    // Einmal in den Ausgangskorb (#724): Automatisierungen, Pakete (#442, #458: z. B. „KI lokal – Ähnlichkeit“ rechnet den
+    // Vektor, das Paket Texterkennung erkennt Scans) und – unter altem Namen – Pakete mit texterkennung.fertig.
+    await this.ereignis('volltext.fertig', { ...daten, typ: await this.typVon(e.mappe) }, von);
     // Archivfassung (#631): erst jetzt, wenn der Volltext feststeht. Neuer Text (Paket, API, neu erzeugen) heißt neu.
     void this.archivNachVolltext(e.dokument, !!m.neu || m.quelle === 'paket' || m.quelle === 'api');
     if (!m.text) return;
@@ -1009,7 +1007,7 @@ export class Dienst {
     return {
       ablage,
       pakete: () => this.repo.listePakete(),
-      melde: (paket, daten) => this.melde('datei.umwandeln', daten, paket),
+      melde: (paket, daten) => this.auftrag(paket, 'datei.umwandeln', daten),
       dokumenteMitSha: (sha) => this.repo.dokumenteMitSha(sha),
       nachFassung: (docs, info) => this.nachFassung(docs, info),
       ...(vorschau ? { vorschaubild: (sha: string, bild: Buffer, mime: string) => vorschau.setze(sha, bild, mime) } : {}),
@@ -1131,7 +1129,7 @@ export class Dienst {
         const p = (await this.repo.listePakete()).find((x) => x.id === paket);
         return p?.einstellungen ? vorgaben(p.einstellungen)[k] : undefined;
       },
-      melde: (paket, daten) => this.melde('datei.archivfassung', daten, paket),
+      melde: (paket, daten) => this.auftrag(paket, 'datei.archivfassung', daten),
       dokumenteMitSha: (sha) => this.repo.dokumenteMitSha(sha),
       dokumenteMitTyp: (m) => this.repo.dokumenteMitTyp(m),
       lesefassung: async (sha) => (await this.umwandlung?.lies(sha)) ?? null,
@@ -1718,7 +1716,11 @@ export class Dienst {
       : `Vertreter ${neu.vertreterId ? `hinterlegt: ${await this.name(neu.vertreterId)}` : 'entfernt'}${durch}`;
     await this.notiere(b.id, von, 'abwesenheit', { text });
     // Ereigniskatalog (#670): Abwesenheit gesetzt (auch geändert) bzw. beendet.
-    if (endet) await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id }, von);
+    if (endet) {
+      await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id }, von);
+      // Aufgaben mit Anlass „Abwesenheit“ (#724, z. B. aus „Wenn Abwesenheit gesetzt“) erledigen sich.
+      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, 'Abwesenheit beendet');
+    }
     else if (neu.an) await this.ereignis('benutzer.abwesenheit_gesetzt', { benutzer: b.id, von: neu.von, bis: neu.bis, vertreter: neu.vertreterId }, von);
     // Vertretungs-Aufgaben: alte erledigen sich, solange sich Vertreter oder Zeitraum ändert oder die Abwesenheit endet.
     for (const a of (await this.repo.offeneAufgaben({ mappeIds: [b.id] })).filter((x) => x.art === 'vertretung')) {
@@ -1885,7 +1887,8 @@ export class Dienst {
     }
     if (!mappen.length) return { angelegt: 0, erledigt: 0 };
     const vorhanden = await this.repo.fristAufgaben(f.mappeIds ?? (f.typId ? mappen.map((m) => m.id) : undefined));
-    const schon = new Set(vorhanden.map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
+    // Eingebaute Erinnerungen (ohne Anlass); Fristen aus Automatisierungen (#724) zählen hier nicht mit.
+    const schon = new Set(vorhanden.filter((a) => !a.anlass).map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
     let angelegt = 0; let erledigt = 0;
     for (const m of mappen) {
       const typ = typen.get(m.typId);
@@ -1894,8 +1897,10 @@ export class Dienst {
       for (const a of vorhanden.filter((x) => x.mappeId === m.id && !x.erledigt)) {
         const feld = typ.felder.find((x) => x.key === a.feldKey);
         const wert = a.feldKey ? m.werte[a.feldKey] : null;
-        if (feld?.frist && wert === a.datum) continue;
-        const grund = !feld?.frist ? 'keine Erinnerung mehr' : !istDatum(wert) ? 'Datum leer' : wert > (a.datum ?? '') ? `verschoben auf ${datumDe(wert)}` : `geändert auf ${datumDe(wert)}`;
+        // Aus einer Automatisierung (Anlass Datum): erledigt sich nur, wenn das Datum nicht mehr stimmt.
+        const giltNoch = a.anlass?.art === 'datum' ? !!feld : !!feld?.frist;
+        if (giltNoch && wert === a.datum) continue;
+        const grund = !feld ? 'Feld entfernt' : !giltNoch ? 'keine Erinnerung mehr' : !istDatum(wert) ? 'Datum leer' : wert > (a.datum ?? '') ? `verschoben auf ${datumDe(wert)}` : `geändert auf ${datumDe(wert)}`;
         await this.repo.erledigeAufgabe(a.id, null);
         await this.notiere(m.id, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: 'frist', fuer: a.empfaengerId, aufgabentext: a.text });
         erledigt++;
@@ -2104,7 +2109,7 @@ export class Dienst {
     if (a.art !== 'frist' || !a.feldKey || !a.datum) return null;
     const m = await this.repo.holeMappe(a.mappeId);
     const typ = m ? await this.repo.holeTyp(m.typId) : undefined;
-    const w = typ?.felder.find((f) => f.key === a.feldKey)?.frist?.wiederholung;
+    const w = a.anlass?.art === 'datum' ? a.anlass.wiederholung : typ?.felder.find((f) => f.key === a.feldKey)?.frist?.wiederholung;
     return w && m && m.werte[a.feldKey] === a.datum ? naechsterTermin(a.datum, w) : null;
   }
 
@@ -3643,13 +3648,15 @@ export class Dienst {
    * Nur Ids, Typ, Feldschlüssel und Datum. Demo-Mappen und alles in `ohneEreignisse` lösen nichts aus.
    */
   async ereignis(art: KatalogArt, daten: Record<string, unknown>, von?: string | null): Promise<void> {
-    if (ereignisKontext.getStore()?.still) return;
-    const inTx = transaktionen.getStore()?.dienst === this;
     const k = EREIGNISKATALOG[art] as Katalogeintrag;
+    // Still (Demo, Beispiele, Import): nur was Pakete an Dateien verarbeiten (Volltext, Vektoren) – wie vor #724.
+    const still = !!ereignisKontext.getStore()?.still;
+    if (still && (!k.paket || k.mappentyp)) return;
+    const inTx = transaktionen.getStore()?.dienst === this;
     try {
       const mappe = typeof daten.mappe === 'string' ? daten.mappe : null;
       await this.repo.legeKatalogEreignisAn({
-        id: randomUUID(), art, daten, ausloeser: { ...this.ausloeser(von) },
+        id: randomUUID(), art, daten, ausloeser: { ...this.ausloeser(von), ...(still ? { still: true } : {}) },
         ...(k.buendelS && mappe ? { buendel: `${art}|${mappe}`, buendelS: k.buendelS } : {}),
       }, k.buendelS ? (alt) => mischeFelder(alt, daten) : undefined);
       this.danach(() => this.ereignisse.wecke());
@@ -3679,39 +3686,57 @@ export class Dienst {
   }
 
   /**
-   * Abnehmer „pakete“ (#670): Mappen-Ereignisse und `frist.erreicht` an Pakete, die sie abonniert haben und den Typ der
-   * Mappe unter `code.mappentypen` nennen. Die Id je Paket ist fest (aus Ereignis und Paket) – kommt das Ereignis
-   * noch einmal, legt das DMS es nicht doppelt an. Ein Paket bekommt seine eigenen Änderungen nicht gemeldet.
+   * Abnehmer „pakete“ (#670, #724): jedes Ereignis des Katalogs an die Pakete, die es abonniert haben – derselbe
+   * Ausgangskorb wie für Automatisierungen und Webhooks, die Zustellung samt Wiederholung macht der Paket-Läufer.
+   * - Ein Paket bekommt seine eigenen Änderungen nicht gemeldet (sonst Schleifen).
+   * - Mappen-Ereignisse nur zu Typen unter `code.mappentypen`; Ereignisse aus Demo-Daten und Beispielen nur, wenn
+   *   sie Dateien betreffen (Texterkennung, Vektoren), nie Mappen-Ereignisse.
+   * - `volltext.fertig` ohne Text nur an Pakete, die das kennen; `sicherung.fertig` nur mit `dms:sicherung-lesen`.
+   * - Veraltete Namen (Übergang): wer `texterkennung.fertig` abonniert hat, bekommt den Volltext der eingebauten
+   *   Texterkennung unter diesem Namen.
+   * Die Id je Paket ist fest (aus Ereignis, Paket und Name) – kommt das Ereignis noch einmal, entsteht nichts doppelt.
    */
-  private async mappenEreignisAnPakete(e: KatalogEreignis) {
-    if (!MAPPENTYP_EREIGNISSE.includes(e.art)) return;
-    const typ = e.daten.typ;
-    if (typeof typ !== 'string') return;
-    const pakete = (await this.grundRepo.listePakete()).filter((p) => p.laeufer?.ereignisse.includes(e.art as EreignisArt)
-      && (p.laeufer.mappentypen ?? []).some((k) => p.typen[k] === typ) && !(e.ausloeser.art === 'paket' && e.ausloeser.id === p.id));
-    if (!pakete.length) return;
-    const feste = (paket: string) => { const h = createHash('sha256').update(`${e.id}|${paket}`).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
-    await this.grundRepo.legeEreignisseAn(pakete.map((p) => ({ id: feste(p.id), paketId: p.id, art: e.art, daten: { ...e.daten, ereignis: e.id } })));
+  private async ereignisAnPakete(e: KatalogEreignis) {
+    const k = EREIGNISKATALOG[e.art] as Katalogeintrag;
+    if (!k.paket || k.gruppe === 'auftrag') return;
+    if (e.ausloeser.still && k.mappentyp) return;
+    const alt = Object.entries(VERALTETE_EREIGNISSE).filter(([, neu]) => neu === e.art).map(([name]) => name as EreignisArt);
+    const zustellungen: Array<{ paket: InstalliertesPaket; art: EreignisArt }> = [];
+    for (const p of await this.grundRepo.listePakete()) {
+      const l = p.laeufer;
+      if (!l || (e.ausloeser.art === 'paket' && e.ausloeser.id === p.id)) continue;
+      if (e.art === 'sicherung.fertig' && !hatSchnittstelle(l, 'dms:sicherung-lesen')) continue;
+      if (k.mappentyp && !(l.mappentypen ?? []).some((x) => p.typen[x] === e.daten.typ)) continue;
+      const ohneText = e.art === 'volltext.fertig' && e.daten.text === false && !kenntVolltextOhneText(p);
+      if (l.ereignisse.includes(e.art as EreignisArt) && !ohneText) zustellungen.push({ paket: p, art: e.art as EreignisArt });
+      for (const a of alt) if (l.ereignisse.includes(a) && e.daten.quelle === 'kern') zustellungen.push({ paket: p, art: a });
+    }
+    if (!zustellungen.length) return;
+    const daten: Record<string, unknown> = { ...e.daten, ereignis: e.id };
+    // Name der Datei nur für Pakete (nicht im Ausgangskorb, der nur Ids kennt).
+    if (e.art === 'dokument.hochgeladen' && typeof e.daten.dokument === 'string') daten.name = (await this.grundRepo.holeDokument(e.daten.dokument))?.name ?? null;
+    const fuer = (art: EreignisArt): Record<string, unknown> => (art === 'texterkennung.fertig' ? { ...daten, seiten: daten.seiten ?? null } : daten);
+    const feste = (paket: string, art: string) => { const h = createHash('sha256').update(`${e.id}|${paket}${art === e.art ? '' : `|${art}`}`).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
+    await this.grundRepo.legeEreignisseAn(zustellungen.map((z) => ({ id: feste(z.paket.id, z.art), paketId: z.paket.id, art: z.art, daten: fuer(z.art) })));
     this.ereignisWecker?.();
   }
 
   /**
-   * Ereignis für alle Pakete mit Code, die es abonniert haben (#338). In einer Transaktion (#404) gehört
-   * es zur Änderung: scheitert es, wird beides nicht gespeichert. Sonst nicht blockierend – Fehler landen
-   * nur im Protokoll. `von`: wer es ausgelöst hat – ein Paket bekommt seine eigenen Änderungen nicht
-   * gemeldet (sonst Schleifen).
+   * Auftrag an genau ein Paket (#577, #614, #631, #338): Der Kern bittet ein bestimmtes Paket um etwas (Datei umwandeln,
+   * Volltext, Archivfassung) bzw. sagt ihm, dass seine Einstellungen geändert sind. Kein Geschehen für andere – daher
+   * nicht im Ausgangskorb, sondern direkt in der Zustellung des Paket-Läufers (gleiche Wiederholung). In einer
+   * Transaktion gehört er zur Änderung; sonst landen Fehler nur im Protokoll.
    */
-  async melde(art: EreignisArt, daten: Record<string, unknown>, nurPaket?: string, von?: string | null, nurFuer?: (p: InstalliertesPaket) => boolean): Promise<void> {
+  async auftrag(paket: string, art: Extract<EreignisArt, 'datei.umwandeln' | 'datei.volltext' | 'datei.archivfassung' | 'paket.einstellungen_geaendert'>, daten: Record<string, unknown>): Promise<void> {
     const inTx = transaktionen.getStore()?.dienst === this;
     try {
-      const selbst = von ? this.paketKonten.get(von) : undefined;
-      const pakete = (await this.repo.listePakete()).filter((p) => p.laeufer?.ereignisse.includes(art) && (!nurPaket || p.id === nurPaket) && p.id !== selbst && (!nurFuer || nurFuer(p)));
-      if (!pakete.length) return;
-      await this.repo.legeEreignisseAn(pakete.map((p) => ({ id: randomUUID(), paketId: p.id, art, daten })));
+      const p = (await this.repo.listePakete()).find((x) => x.id === paket && x.laeufer?.ereignisse.includes(art));
+      if (!p) return;
+      await this.repo.legeEreignisseAn([{ id: randomUUID(), paketId: p.id, art, daten }]);
       this.danach(() => this.ereignisWecker?.());
     } catch (e) {
       if (inTx) throw e;
-      protokoll.modul('werkbank').error('Ereignis für Pakete nicht gespeichert', { art, fehler: (e as Error).message });
+      protokoll.modul('werkbank').error('Auftrag an Paket nicht gespeichert', { art, paket, fehler: (e as Error).message });
     }
   }
   speicherePaket(p: InstalliertesPaket) { return this.repo.speicherePaket(p); }
@@ -4760,7 +4785,6 @@ export class Dienst {
       if (herkunft) await this.notiere(m.id, null, 'uebernommen', { system: ich.name, ...herkunft });
       const titel = (await this.aktualisiereTitel([m.id])).get(m.id);
       await this.postAufgaben(m.id, ich.id);
-      await this.melde('post.angelegt', { mappe: m.id, kanal: werte.kanal }, undefined, ich.id);
       await this.ereignis('post.angelegt', { mappe: m.id, kanal: werte.kanal, fuer: typeof werte.fuer === 'string' ? werte.fuer : null }, ich.id);
       await this.meldeVerknuepft(typ, m.id, alt, werte, ich.id);
       return { m, titel };
@@ -4924,6 +4948,8 @@ export class Dienst {
     const fuer = m && auswahlText(m.werte.stand) === POST_STAND.neu ? alsListe(m.werte.fuer)[0] ?? null : null;
     const schluessel = fuer ? `fuer:${fuer}` : null;
     for (const a of offen) if (a.feldKey !== schluessel) await this.repo.erledigeAufgabe(a.id, von);
+    // Aufgaben mit Anlass „Post“ (#724, z. B. aus „Wenn neue Post“): erledigt, sobald die Post nicht mehr neu ist.
+    if (m && auswahlText(m.werte.stand) !== POST_STAND.neu) await this.erledigeNachAnlass(mappeId, (x) => x.art === 'post', 'Post zugeordnet');
     if (!fuer || offen.some((a) => a.feldKey === schluessel)) return;
     // Aufgaben gehen an Konten; ohne Kontenverwaltung (Tests) genügt der Verweis.
     if (this.konten?.benutzer && !(await this.konten.benutzer()).some((b) => b.id === fuer)) return;
@@ -5134,22 +5160,75 @@ export class Dienst {
   }
 
   /**
-   * Aufgabe oder Benachrichtigung aus einer Automatisierung (#676). Darf der Empfänger die Mappe nicht lesen, hängt sie
-   * an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe. Benachrichtigungen bündeln je Automatisierung, Mappe
-   * und Empfänger (eine offene, der Text wird aktualisiert); Aufgaben entstehen jedes Mal neu, mit Fälligkeit.
+   * Wer eine Aufgabe für den Benutzer `id` wirklich bekommt (#724, gemeinsamer Weg für Kern und Automatisierungen):
+   * er selbst – abwesend oder deaktiviert sein Vertreter (`empfaengerAufloesen`); ist niemand Aktives erreichbar, die
+   * Administratoren (null). Wirft nur, wenn `id` kein Benutzer ist; ein deaktivierter Empfänger bricht nichts ab.
    */
-  async aufgabeAusAutomatisierung(e: { mappeId: string; empfaengerId: string; text: string; datum: string | null; von: string; buendeln: string | null; anlass: Record<string, unknown> }): Promise<{ id: string; ohneLink: boolean }> {
-    const an = await this.pruefeEmpfaenger(e.empfaengerId);
-    const ohneLink = !(await this.sichtbarFuer(an, [e.mappeId])).has(e.mappeId);
-    const mappeId = ohneLink ? an : e.mappeId;
+  private async aufgabenEmpfaenger(id: string): Promise<{ an: string | null; ueber: string[] }> {
+    const { benutzer } = await this.sichereSystem();
+    const m = istUuid(id) ? await this.repo.holeMappe(id) : undefined;
+    if (!m || m.typId !== benutzer.id) throw new Fachfehler(422, 'Bitte einen Benutzer als Empfänger wählen.');
+    const { ziel, abwesende } = await this.empfaengerAufloesen(id);
+    const aktiv = async (x: string | null) => !!x && (!this.konten?.benutzer ? (await this.repo.holeMappe(x))?.werte.aktiv !== false : (await this.konten.benutzer()).some((b) => b.id === x && b.aktiv));
+    if (await aktiv(ziel)) return { an: ziel, ueber: abwesende };
+    return { an: null, ueber: [...abwesende, ...(ziel ? [ziel] : [])] };
+  }
+
+  /**
+   * Aufgabe oder Benachrichtigung aus einer Automatisierung (#676, #724) – auf demselben Weg wie die eingebauten:
+   * - **Vertretung:** Ist der Empfänger abwesend oder deaktiviert, geht sie an den Vertreter (mit Eintrag in der
+   *   Historie); ist niemand erreichbar, an die Administratoren. Der Lauf bricht dabei nicht ab.
+   * - **Anlass:** Mit Anlass erledigt sie sich selbst, wenn er wegfällt (Datum geändert/geleert, Post zugeordnet,
+   *   Abwesenheit beendet). Kommt sie von „Datum erreicht“, ist sie eine **Frist** (Art „Frist“, Feld und Datum,
+   *   wiederkehrend mit Folgetermin) – dieselbe Person bekommt je Mappe, Feld und Datum nur eine (auch neben der
+   *   eingebauten Erinnerung).
+   * - Darf der Empfänger die Mappe nicht lesen, hängt sie an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
+   * - Benachrichtigungen bündeln je Automatisierung, Mappe und Empfänger (eine offene, der Text wird aktualisiert).
+   */
+  async aufgabeAusAutomatisierung(e: { mappeId: string; empfaengerId: string; text: string; datum: string | null; von: string; buendeln: string | null; anlass: Record<string, unknown>; aufgabenAnlass?: AufgabenAnlass | null; frist?: { feld: string; datum: string } | null }): Promise<{ id: string; ohneLink: boolean; vorhanden?: boolean; an: string | null }> {
+    const { an, ueber } = await this.aufgabenEmpfaenger(e.empfaengerId);
+    const ohneLink = !!an && !(await this.sichtbarFuer(an, [e.mappeId])).has(e.mappeId);
+    const mappeId = ohneLink && an ? an : e.mappeId;
     const text = e.text.slice(0, AUFGABE_MAX);
-    if (e.buendeln) {
+    if (e.buendeln && an) {
       const id = await this.benachrichtigeGebuendelt({ empfaengerId: an, mappeId, art: 'manuell', schluessel: `auto:${e.buendeln}:${e.mappeId}`.slice(0, 120), von: e.von, text: () => text });
-      return { id, ohneLink };
+      return { id, ohneLink, an };
     }
-    const a = await this.neueAufgabe({ id: randomUUID(), mappeId, empfaengerId: an, art: 'manuell', text, datum: e.datum, erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null });
-    await this.notiere(mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'manuell', fuer: an, aufgabentext: text });
-    return { id: a.id, ohneLink };
+    const frist = e.frist && !ohneLink ? e.frist : null;
+    if (frist) {
+      // Schon eine Frist für diese Person (eingebaut, weitergegeben oder von einer anderen Automatisierung)? Dann keine zweite.
+      const schon = (await this.repo.fristAufgaben([e.mappeId])).find((x) => x.feldKey === frist.feld && x.datum === frist.datum && [an, e.empfaengerId].includes(x.empfaengerId));
+      if (schon) return { id: schon.id, ohneLink, vorhanden: true, an };
+    }
+    let a: Aufgabe;
+    try {
+      a = await this.neueAufgabe({
+        id: randomUUID(), mappeId, empfaengerId: an, art: frist ? 'frist' : 'manuell', text,
+        ...(frist ? { feldKey: frist.feld, datum: frist.datum } : { datum: e.datum }),
+        anlass: ohneLink ? null : e.aufgabenAnlass ?? null,
+        erstellt: '', erstelltVon: e.von, erledigt: null, erledigtVon: null,
+      });
+    } catch (x) {
+      // Gleichzeitig angelegt (eindeutiger Index der Fristen): die vorhandene zählt.
+      const schon = frist ? (await this.repo.fristAufgaben([e.mappeId])).find((y) => y.feldKey === frist.feld && y.datum === frist.datum && y.empfaengerId === an) : undefined;
+      if (schon) return { id: schon.id, ohneLink, vorhanden: true, an };
+      throw x;
+    }
+    const weiter = ueber.length ? ` (weitergegeben wegen Abwesenheit von ${(await Promise.all(ueber.map((x) => this.name(x)))).join(', ')})` : '';
+    await this.notiere(mappeId, e.von, 'aufgabe', { ...e.anlass, text: `für ${await this.name(an)}${weiter}: ${text}`, aufgabe: a.id, aufgabenart: a.art, fuer: an, aufgabentext: text });
+    return { id: a.id, ohneLink, an };
+  }
+
+  /** Offene Aufgaben einer Mappe, deren Anlass `passt`, als erledigt eintragen (#724: „erledigt sich selbst“). */
+  private async erledigeNachAnlass(mappeId: string, passt: (x: AufgabenAnlass) => boolean, grund: string): Promise<number> {
+    let n = 0;
+    for (const a of await this.repo.offeneAufgaben({ mappeIds: [mappeId] })) {
+      if (!a.anlass || !passt(a.anlass)) continue;
+      await this.repo.erledigeAufgabe(a.id, null);
+      await this.notiere(mappeId, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
+      n++;
+    }
+    return n;
   }
 
   /** Mappen eines Typs, deren Datumsfeld genau dieses Datum hat („Datum in N Tagen“, #674). Nur Ids. */
@@ -5731,8 +5810,7 @@ export class Dienst {
         neu = (await this.repo.holeDokument(dokument.id)) ?? dokument;
         this.danach(() => this.ocr?.anstossen());
       }
-      await this.melde('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, name, mime: dokument.mime, groesse: inhalt.length, volltextGeplant: neu.ocr?.stand === 'wartet' }, undefined, benutzerId);
-      await this.ereignis('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, typ: await this.typVon(mappeId), mime: dokument.mime, groesse: inhalt.length }, benutzerId);
+      await this.ereignis('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, typ: await this.typVon(mappeId), mime: dokument.mime, groesse: inhalt.length, volltextGeplant: neu.ocr?.stand === 'wartet' }, benutzerId);
       return neu;
     });
     const bezuege = await this.repo.bezuege(gleicherInhalt.map((d) => d.mappeId));

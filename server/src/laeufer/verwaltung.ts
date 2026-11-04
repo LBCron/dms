@@ -6,6 +6,7 @@
 import { fork, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { WIEDERHOLEN_MIN } from '../../../shared/src/ereignisse';
 import type { Benutzer } from '../../../shared/src/model';
 import { hatNetz, hatSchnittstelle, type InstalliertesPaket, type LaeuferZustand, type PaketCode, type Schnittstelle } from '../../../shared/src/pakete';
 import { adressfelder, pruefeAdresse } from '../../../shared/src/paketeinstellungen';
@@ -24,7 +25,7 @@ const log = protokoll.modul('werkbank');
 
 export const STANDARD_GRENZEN: Grenzen = { speicherMB: 256, sekunden: 120, parallel: 2 };
 /** Wiederholungen nach Fehlschlag: 1, 5, 30 Minuten, 2, 6 Stunden – danach aufgegeben. */
-const WARTEN_MIN = [1, 5, 30, 120, 360];
+const WARTEN_MIN = WIEDERHOLEN_MIN;
 /** Höchstens so viele Fortsetzungen je Ereignis (#458) – danach gilt es als zugestellt. */
 export const WEITER_MAX = 500;
 /** Größe der Daten einer Fortsetzung (JSON) höchstens – sie stehen im Ausgangskorb der Datenbank. */
@@ -176,7 +177,7 @@ export class Paketlaeufer implements PaketLaeufer {
   codeGeaendert(): Promise<void> { this.nachlauf.clear(); this.suchvektoren.clear(); return this.synchronisiere().catch((e) => log.error('Paket-Läufer: Pakete nicht neu geladen', { fehler: (e as Error).message })); }
 
 
-  ereignis(paket: string, name: 'paket.einstellungen_geaendert', felder: string[]) { void this.o.dienst.melde(name, { felder }, paket); }
+  ereignis(paket: string, name: 'paket.einstellungen_geaendert', felder: string[]) { void this.o.dienst.auftrag(paket, name, { felder }); }
 
   async aktion(paket: string, aktion: string, einstellungen: Record<string, unknown>): Promise<string> {
     if (this.o.pausiert?.()) throw new Error('Während der Wartung laufen keine Pakete. Bitte danach noch einmal.');

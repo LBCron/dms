@@ -7,6 +7,7 @@ import { FASSUNG_PFAD } from './dateiumwandlung';
 import { ARCHIV_PFAD } from './archivfassung';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 import { schreibeSicherung, sha256Von, ZWECK, type Eintrag } from './sicherungsformat';
 import { aufVolume, geraetVon } from './tresor';
 import type { EreignisAufruf } from './dienst';
@@ -813,16 +814,15 @@ export class Sicherung {
     const plan = await this.plan();
     // Läuft gerade eine Probe oder Wiederherstellung, in der nächsten Minute noch einmal versuchen.
     if (plan.aktiv && !this.q.wartungAktiv?.() && !this.laeuft() && !this.sperre()) {
-      const o = ortszeit(this.jetzt());
-      const tagPasst = plan.haeufigkeit === 'taeglich' || o.wochentag === plan.wochentag;
-      if (tagPasst && o.uhr >= plan.uhrzeit && (await this.q.einstellungen.lies('sicherung_zuletzt_auto')) !== o.datum) {
-        await this.q.einstellungen.schreibe('sicherung_zuletzt_auto', o.datum);
+      // Zeitplan-Baustein (#724): heute zur Uhrzeit, verpasste Läufe noch am selben Tag (auch nach einem Neustart).
+      const takt = { uhrzeit: plan.uhrzeit, an: (tag: string) => plan.haeufigkeit === 'taeglich' || wochentagVon(tag) === plan.wochentag };
+      await laufeFaellige(einstellungsMerker(this.q.einstellungen, 'sicherung_zuletzt_auto'), ortszeit(this.jetzt()), takt, async () => {
         try {
           const { fertig } = await this.starte('automatisch', 'Zeitplan');
           gestartet = 'gestartet';
           void fertig.then(() => this.melde()).catch(() => {});
         } catch (e) { log.warn('Automatische Sicherung nicht begonnen', { grund: (e as Error).message }); }
-      }
+      });
     }
     if (gestartet === 'nichts') await this.melde();
     return gestartet;
