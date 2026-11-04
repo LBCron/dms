@@ -411,6 +411,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01601" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.160.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.160.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01600" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -445,7 +495,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -1180,6 +1230,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01601" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.160.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.160.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01600" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1214,7 +1314,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#handbuch" class="md-nav__link">
+  <a href="#handbuch_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Handbuch
@@ -1261,6 +1361,21 @@
 
 
 <h1 id="neu-in-version-0160">Neu in Version 0.160<a class="headerlink" href="#neu-in-version-0160" title="Permanent link">&para;</a></h1>
+<h2 id="01601">0.160.1<a class="headerlink" href="#01601" title="Permanent link">&para;</a></h2>
+<h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Automatisierung an/aus an einer Stelle</strong> (#706): Oben neben dem Namen steht ein Schalter <strong>an/aus</strong> – bei einer neuen Automatisierung (Vorgabe „an“, wirksam mit dem Speichern) genauso wie bei einer gespeicherten (wirkt sofort, mit Rückmeldung an derselben Stelle). Der Haken „Gleich einschalten …“ unten ist weg.</li>
+<li><strong>Angehalten</strong> steht an derselben Stelle, mit Grund und dem Knopf <strong>Wieder einschalten</strong>.</li>
+<li><strong>Kopieren</strong> ist ein Knopf wie die übrigen Handlungen, kein Link mehr.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Administratorhandbuch: Automatisierungen → <strong>An, aus und angehalten</strong>.</li>
+</ul>
+<h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Schalter mit <code>role="switch"</code> und <code>aria-checked</code>, per Tastatur bedienbar; Texte in <code>shared/src/sprachen/de/automatisierung.json</code>.</li>
+</ul>
 <h2 id="01600">0.160.0<a class="headerlink" href="#01600" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1271,13 +1386,13 @@
 <ul>
 <li>Wer bisher <code>:main</code> in der Compose-Datei hat, stellt einmal auf <code>:stabil</code> um (oder lässt <code>:main</code>, wenn er mittesten möchte). Siehe Administratorhandbuch → Aktualisieren → „Welches Image-Tag?“.</li>
 </ul>
-<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<h3 id="handbuch_1">Handbuch<a class="headerlink" href="#handbuch_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Aktualisieren: welches Tag für wen, wann <code>:stabil</code> wandert, was beim Zurückrollen passiert. Installationsanleitungen, Technik und Entwicklerhandbuch „Release“ nennen <code>:stabil</code>.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.159.8 im Detail: <a href="https://github.com/motom001/dms/compare/v0.159.8...v0.160.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.159.8 im Detail: <a href="https://github.com/motom001/dms/compare/v0.159.8...v0.160.1">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
