@@ -217,7 +217,7 @@ jobs:
       - id: zeit
         run: |
           echo "jetzt=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-          echo "woche=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       - id: bau
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -225,7 +225,7 @@ jobs:
           build-args: |
             DMS_COMMIT=${{ github.sha }}
             DMS_GEBAUT=${{ steps.zeit.outputs.jetzt }}
-            APK_WOCHE=${{ steps.zeit.outputs.woche }}
+            APK_TAG=${{ steps.zeit.outputs.tag }}
           target: ${{ matrix.variante }}
           platforms: ${{ matrix.plattform }}
           outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true

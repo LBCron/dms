@@ -12,3 +12,7 @@ dist/
 
 # Erzeugt im Handbuch-Workflow (#213)
 docs/handbuch/admin/docs/vorlagen/
+
+# Python-Zwischendateien (Scorecard „Binary-Artifacts“)
+__pycache__/
+*.pyc
