@@ -15,7 +15,7 @@
     - Bei *Post* heißt der Knopf **+ Post** (siehe [Post](post.md)).
 
 ??? question "Ich kann eine Mappe nicht löschen."
-    Klicke neben dem ausgegrauten **Mappe löschen** auf **Warum nicht?** – dort steht der Grund:
+    Neben dem gesperrten **Mappe löschen** (mit Schloss) steht der Grund in einem Satz; **Warum ist Löschen gesperrt?** erklärt mehr:
 
     - Es verweisen noch andere Mappen auf sie – dann zeigt Ablago, welche. Entferne dort zuerst den Verweis.
     - Du darfst Mappen dieses Mappentyps nicht löschen. Das legt ein Administrator in den Berechtigungen fest.

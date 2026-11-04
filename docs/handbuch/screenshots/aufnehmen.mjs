@@ -708,8 +708,8 @@ async function main() {
   await s.getByRole('tab', { name: /Rechnungen/ }).click();
   await s.locator('.verweistabelle table').waitFor();
   await bild(s, 'verknuepfungen-tabelle');
-  // Mappe löschen (#423): Auf die Stadtwerke verweisen Verträge – „Warum nicht?“ am grauen Knopf.
-  await s.getByRole('button', { name: 'Warum nicht?' }).click();
+  // Mappe löschen (#423): Auf die Stadtwerke verweisen Verträge – „Warum ist Löschen gesperrt?“ am gesperrten Knopf (#648).
+  await s.getByRole('button', { name: 'Warum ist Löschen gesperrt?' }).click();
   await s.locator('.loeschwahl-begruendung').waitFor();
   await bild(s, 'mappe-loeschen-warum');
   await s.keyboard.press('Escape');
