@@ -11,9 +11,13 @@ Ablago läuft – **empfohlen** – als zwei Container: die Anwendung (`ghcr.io/
 
 ## Der Einrichtungsassistent
 
-Beim ersten Aufruf führt ein Assistent in zehn Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet. Übersprungenes lässt sich in der Werkbank nachholen; die Übersicht erinnert daran.
+Beim ersten Aufruf führt ein Assistent in zehn Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet.
 
-**Zurück:** Ab „Erster Benutzer“ kannst du mit **Zurück** oder in der Schrittleiste oben zu **Erster Benutzer**, **Pakete** und **Optionales** zurückgehen und dort nachholen oder ergänzen – etwa ein weiteres Paket wählen oder ein gescheitertes erneut versuchen. Schon Installiertes steht dann oben und wird nicht doppelt installiert. Was sich nicht rückgängig machen lässt (Datenbank, Neu oder Sicherung, Name, Administrator, Schlüssel), bleibt gesperrt; ein Klick darauf sagt, wo du es später änderst.
+**Erst sammeln, dann einrichten:** Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch nötig sind. Ab „Ablage“ sammelt der Assistent nur: Name der Ablage, Administrator, erster Benutzer, Pakete und Optionales. Angelegt wird dabei **nichts**. Mit **Zurück** oder einem Klick in die Schrittleiste kommst du jederzeit zu jedem dieser Schritte. Am Ende zeigt die [Zusammenfassung](#zusammenfassung) alles auf einer Seite, und erst **Jetzt einrichten** legt los. Brichst du vorher ab oder lädst die Seite neu, bleibt keine halbe Einrichtung zurück. Deine Eingaben merkt sich der Browser bis dahin, Passwörter nicht.
+
+**Keine einzelnen Speichern-Knöpfe:** In jedem Schritt übernimmt **Weiter** alles, was in den Feldern steht, auch Vorschläge, die du nicht geändert hast (sie tragen den Hinweis „vorgeschlagen – wird mit „Weiter“ übernommen“). Leer gelassene Felder bleiben leer, und es gibt keine versteckten Vorgaben. **Zurück** und **Weiter** stehen in jedem Schritt unten an derselben Stelle.
+
+**Aus Konfigurationsdatei laden:** Oben rechts, klein neben der Hilfe, lädst du eine gespeicherte Einrichtung. Ablago füllt dann alle Schritte vor und springt zur Zusammenfassung, oder zum ersten Schritt, der nicht passt (mit dem Grund). Passwörter stehen nie in der Datei, der Assistent fragt sie ab. Aufbau, Schema und Beispiel: [Einrichtung als Datei](einrichtungsdatei.md).
 
 ### Einrichtungscode
 
@@ -26,7 +30,7 @@ Damit niemand sonst im Netz Ablago einrichtet, fragt es zuerst nach einem Code w
 
 Wo genau das bei deinem Gerät ist, zeigt die Anleitung deiner Plattform unter [Wie komme ich an ein DMS?](https://help.ablago.app/installieren/aktuell/) – für Synology, UGREEN, QNAP, Unraid, TrueNAS, umbrelOS, ZimaOS, CasaOS und andere.
 
-Nach dem Anlegen des Administrators ist der Code wertlos; Ablago löscht die Datei. Nach zehn falschen Versuchen sperrt es die Eingabe für zehn Minuten.
+Nach „Jetzt einrichten“ ist der Code wertlos; Ablago löscht die Datei. Nach zehn falschen Versuchen sperrt es die Eingabe für zehn Minuten.
 
 ### Datenbank
 
@@ -38,7 +42,7 @@ Server (in der Vorlage `db`), Port `5432`, Datenbank und Benutzer `dms` und das 
 
 ![Neu einrichten oder wiederherstellen](bilder/einrichtung-wahl.png)
 
-Bei einer leeren Datenbank fragt Ablago, ob du neu anfängst oder eine Sicherung zurückholst. **Wiederherstellen** führt in den Ablauf unter [Wiederherstellen](wiederherstellen.md#neues-nas-alte-sicherung) und endet bei der Anmeldung mit den bisherigen Zugangsdaten.
+Bei einer leeren Datenbank fragt Ablago, ob du neu anfängst oder eine Sicherung zurückholst. **Wiederherstellen** führt in den Ablauf unter [Wiederherstellen](wiederherstellen.md#neues-nas-alte-sicherung) mit eigenem Fortschritt und endet bei der Anmeldung mit den bisherigen Zugangsdaten. **Neu einrichten** führt zum Sammeln.
 
 ### Name deiner Ablage { #haushalt }
 
@@ -50,44 +54,57 @@ Der Name deiner Ablage, meist der Name der Familie („Familie Mustermann“) od
 
 ![Administrator](bilder/einrichtung-administrator.png)
 
-Name, E-Mail-Adresse und Passwort des Administrators. Danach bist du als Administrator angemeldet.
+Name, E-Mail-Adresse und Passwort des Administrators. **Weiter** prüft Adresse und Passwort gleich, angelegt wird der Administrator aber erst mit **Jetzt einrichten**. Danach bist du als Administrator angemeldet.
 
 ### Erster Benutzer
 
 ![Erster Benutzer](bilder/einrichtung-benutzer.png)
 
-Administratoren richten ein, arbeiten aber nicht in der Ablage. Lege deshalb einen normalen Benutzer an – zum Beispiel dich selbst mit einer zweiten Adresse. Ohne E-Mail-Versand zeigt der Assistent den Einladungslink zum Kopieren.
-
-### Schlüssel und Notfallblatt
-
-![Schlüssel und Notfallblatt](bilder/einrichtung-schluessel.png)
-
-Der Schlüssel verschlüsselt gespeicherte Passwörter und alle Sicherungen (siehe [Verschlüsselung](verschluesselung.md)); das [Notfallblatt](sicherung.md#notfallblatt) enthält ihn zum Ausdrucken. Druck es aus und leg es zu deinen wichtigen Unterlagen – ohne Schlüssel lässt sich keine Sicherung zurückholen.
+Administratoren richten ein, arbeiten aber nicht in der Ablage. Lege deshalb einen normalen Benutzer an, zum Beispiel dich selbst mit einer zweiten Adresse. Das Häkchen darunter bestimmt, ob er die Aufgaben ohne eigenen Empfänger bekommt (vorgeschlagen: ja). Lässt du die Felder leer, legt Ablago keinen ersten Benutzer an. Ohne E-Mail-Versand zeigt die Abschlussseite den Einladungslink zum Kopieren.
 
 ### Pakete dazuholen
 
 ![Pakete dazuholen](bilder/einrichtung-pakete.png)
 
-Erst in diesem Schritt fragt Ablago den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Anfrage geht an catalog.ablago.app (ausgeliefert von GitHub Pages); dabei geht nur die Anfrage selbst hinaus, keine Daten aus deiner Ablage. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
+Installiert wird erst mit **Jetzt einrichten**; hier wählst du nur. Erst in diesem Schritt fragt Ablago den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Anfrage geht an catalog.ablago.app (ausgeliefert von GitHub Pages); dabei geht nur die Anfrage selbst hinaus, keine Daten aus deiner Ablage. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
 
 - **Texterkennung und Benachrichtigungen sind vorausgewählt** – ohne Texterkennung werden gescannte Dokumente nicht durchsuchbar, ohne Benachrichtigungen kommt keine Tägliche Zusammenfassung. Darunter fragt **Weitere Sprachen?** nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.
 - **Abhängigkeiten kommen mit**, z. B. „Basis“ für „Haushalt“; sie sind mit „kommt mit – gebraucht von …“ markiert.
-- **Weiter** führt zu **einer** Seite mit allen Fragen: die [Rechte](pakete.md#rechte-eines-pakets) aller Pakete mit Code (ein Haken für alle), Namen nur bei Konflikten, Beispiel-Mappen und Pflicht-Einstellungen – dann **ein** Knopf. Siehe [Mehrere Pakete in einem Schritt installieren](pakete.md#mehrere-pakete-in-einem-schritt-installieren).
+- **Weiter** führt zu **einer** Seite mit allen Fragen: die [Rechte](pakete.md#rechte-eines-pakets) aller Pakete mit Code (ein Haken für alle), Namen nur bei Konflikten, Beispiel-Mappen, mitgelieferte Automatisierungen und Pflicht-Einstellungen, dann **Pakete übernehmen und weiter**. Siehe [Mehrere Pakete in einem Schritt installieren](pakete.md#mehrere-pakete-in-einem-schritt-installieren).
 - **Überspringen** geht jederzeit; Pakete holst du später unter **Werkbank → [Pakete](pakete.md)**.
 
-Ist der Katalog nicht erreichbar (kein Internet), sagt der Schritt das deutlich: Es fehlen dann die Pakete, etwa die Texterkennung. Dann lädst du hier eine **Sammeldatei** hoch, die du an einem anderen Gerät auf der Katalog-Webseite zusammengestellt hast (siehe [Pakete ohne Internet installieren](pakete.md#pakete-ohne-internet-installieren)) – oder du überspringst den Schritt und holst die Pakete später nach.
+Ist der Katalog nicht erreichbar (kein Internet), sagt der Schritt das deutlich: Es fehlen dann die Pakete, etwa die Texterkennung. Überspring den Schritt und hol die Pakete nach der Einrichtung unter **Werkbank → Pakete**, dort auch mit einer **Sammeldatei**, die du an einem anderen Gerät auf der Katalog-Webseite zusammengestellt hast (siehe [Pakete ohne Internet installieren](pakete.md#pakete-ohne-internet-installieren)).
 
 ### Optionales
 
 ![Optionales](bilder/einrichtung-optional.png)
 
-Adresse von Ablago (vorbelegt mit der Adresse im Browser), der E-Mail-Versand und Beispiel-Mappentypen. Für den [E-Mail-Versand](e-mail-versand.md) genügen meist deine Adresse und dein Passwort; Server, Benutzer und Absender schlägt der Assistent vor, und **Weiter** übernimmt sie. Das Bundesland für Feiertage stellst du bei Bedarf später unter [Werkbank → Einstellungen → Region](region.md) ein. Alles lässt sich auch später in der Werkbank einstellen.
+Vier gleich aufgebaute Abschnitte, ohne eigene Speichern-Knöpfe:
 
-### Fertig
+- **Adresse von Ablago**, vorgeschlagen mit der Adresse im Browser. Feld leeren, wenn Ablago keine feste Adresse haben soll.
+- **Region:** das Bundesland für die Feiertage, anfangs *keins*. Land und Zeitzone stellst du unter [Werkbank → Einstellungen → Region](region.md) ein.
+- **Beispiele:** Beispiel-Mappentypen laden (nur ohne Pakete, die eigene Mappentypen mitbringen).
+- **E-Mail-Versand:** erst nach dem Häkchen „E-Mail-Versand jetzt einrichten“. Für den [E-Mail-Versand](e-mail-versand.md) genügen meist deine Adresse und dein Passwort; Server, Benutzer und Absender schlägt der Assistent vor und kennzeichnet sie, **Weiter** übernimmt sie in die Zusammenfassung. Eingerichtet wird der Versand erst mit **Jetzt einrichten**. Testen kannst du ihn nach der Einrichtung unter **Werkbank → E-Mail und Adresse**.
+
+Alles lässt sich auch später in der Werkbank einstellen.
+
+### Zusammenfassung
+
+![Zusammenfassung](bilder/einrichtung-zusammenfassung.png)
+
+Alles auf einer Seite, je Abschnitt mit **Ändern**: Ablage, Administrator, erster Benutzer, Pakete (mit der Zahl der eingeschalteten Automatisierungen) und Optionales. Passwörter stehen dort nur als „gesetzt“. Nach **Ändern** führt **Weiter** zurück zur Zusammenfassung; alles andere bleibt, wie es war.
+
+**Als Datei speichern** legt die Einrichtung als [Konfigurationsdatei](einrichtungsdatei.md) ab, ohne Passwörter und ohne Schlüssel.
+
+**Jetzt einrichten** prüft alles noch einmal und führt es dann aus, mit Fortschritt: Ablage und Administrator anlegen, Schlüssel erzeugen, Adresse, Bundesland und E-Mail-Versand speichern, ersten Benutzer anlegen, Beispiele laden, Pakete installieren. Klappt etwas nicht, steht dort, was und warum. Was schon erledigt ist, bleibt erhalten; mit **Ändern** korrigierst du die Angabe, mit **Erneut versuchen** geht es an dieser Stelle weiter. Doppelt angelegt wird nichts.
+
+### Fertig: Notfallblatt { #fertig }
 
 ![Fertig](bilder/einrichtung-fertig.png)
 
-Mit Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und dem Hinweis auf GitHub Sponsors.
+Beim Einrichten hat Ablago einen neuen **Schlüssel** erzeugt. Er verschlüsselt gespeicherte Passwörter und alle Sicherungen (siehe [Verschlüsselung](verschluesselung.md)); das [Notfallblatt](sicherung.md#notfallblatt) enthält ihn zum Ausdrucken. **Einrichtung abschließen** geht erst, wenn du das Notfallblatt heruntergeladen hast. Druck es aus und leg es zu deinen wichtigen Unterlagen, denn ohne Schlüssel lässt sich keine Sicherung zurückholen.
+
+Ohne E-Mail-Versand steht hier auch der Einladungslink für den ersten Benutzer. Dazu Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und der Hinweis auf GitHub Sponsors.
 
 Danach: Wie es weitergeht, steht kurz unter [Einrichten in fünf Schritten](fuenf-schritte.md) – unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md).
 

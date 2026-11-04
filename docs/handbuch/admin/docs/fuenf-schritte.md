@@ -6,7 +6,7 @@ Du hast Ablago gerade installiert und den Einrichtungsassistenten durchlaufen? D
 
 Das Wichtigste zuerst: **Werkbank → Sicherung**. Lade das **Notfallblatt** herunter und leg es getrennt vom NAS ab, ausgedruckt oder in einem Passwortsafe – nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen. Danach schaltest du den **Zeitplan** ein; Ablago sichert sich ab dann selbst und prüft jede Woche, ob sich die Sicherung einspielen lässt.
 
-*Schon erledigt, wenn du im Assistenten beim Schritt „Schlüssel“ das Notfallblatt heruntergeladen hast* – dann fehlt nur noch der Zeitplan.
+*Das Notfallblatt hast du am Ende des Assistenten schon heruntergeladen* – ohne geht „Einrichtung abschließen“ nicht. Es fehlt nur noch der Zeitplan.
 
 ![Sicherung in der Werkbank](bilder/werkbank-sicherung.png)
 
@@ -26,7 +26,7 @@ Mehr: [Benutzer und Rollen](benutzer.md)
 
 Pakete bringen fertige **Mappentypen** mit – für Verträge, Versicherungen, Fahrzeuge, die Vermietung oder den Betrieb. Unter **Werkbank → Pakete** siehst du den Katalog; installiere, was zu dir passt. Viele Pakete bringen auch **Erinnerungen** mit, etwa an eine Kündigungsfrist oder die nächste Hauptuntersuchung. Sie arbeiten als Automatisierungen; welche eingeschaltet sind, siehst du unter **Werkbank → Ablage aufbauen → Automatisierungen**.
 
-*Schon erledigt, wenn du im Assistenten beim Schritt „Pakete“ etwas angekreuzt hast.*
+*Schon erledigt, wenn du im Assistenten beim Schritt „Pakete“ etwas angekreuzt und mit „Jetzt einrichten“ eingerichtet hast.*
 
 ![Pakete in der Werkbank](bilder/werkbank-pakete.png)
 

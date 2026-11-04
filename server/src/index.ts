@@ -312,6 +312,10 @@ else if (existsSync(einrichtungscode.datei)) await einrichtungscode.entfernen();
 const einrichtung = new Einrichtung({
   konten, code: einrichtungNoetig ? einrichtungscode : null, einstellungen: pgEinstellungen(sql, cfg.haushalt),
   mandant: mandantNamen(sql, cfg.haushalt), schriftzug: (t) => designs.setzeSchriftzug(t),
+  // Konfigurationsdatei (#806): die verbundene Datenbank, ohne Passwort.
+  datenbank: () => ({ host: db.host, port: db.port, datenbank: db.datenbank, benutzer: db.benutzer }),
+  // „Einrichtung abschließen“ erst mit Notfallblatt (#804).
+  notfallblattAktuell: async () => (await sicherung.notfallblatt()).aktuell,
 });
 // Eingangsordner (#195): /eingang, wenn eingebunden; nur eine Instanz übernimmt (Sperre in PostgreSQL).
 let eingangSperre: Promise<boolean> | null = null;

@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://help.ablago.app/admin/aktuell/einrichtungsdatei/ablago-einrichtung-1.schema.json",
+  "title": "Einrichtung von Ablago",
+  "description": "Was der Einrichtungsassistent gesammelt hat – ohne Passwörter und ohne Schlüssel. Formatversion 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ablago-einrichtung",
+    "ablage",
+    "administrator"
+  ],
+  "properties": {
+    "ablago-einrichtung": {
+      "const": 1,
+      "description": "Formatversion dieser Datei."
+    },
+    "datenbank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rechner",
+        "port",
+        "name",
+        "benutzer"
+      ],
+      "description": "Verbindung zu PostgreSQL. Gilt nur, solange Ablago noch keine Datenbank hat.",
+      "properties": {
+        "rechner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63
+        },
+        "benutzer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63
+        },
+        "passwort": {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Z][A-Z0-9_]{0,63}\\}$",
+          "description": "Nie das Passwort selbst: höchstens ein Verweis auf eine Umgebungsvariable, z. B. ${DMS_DB_PASSWORT}. Fehlt das Feld, fragt der Assistent das Passwort ab."
+        }
+      }
+    },
+    "ablage": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 30,
+      "description": "Name der Ablage, z. B. „Familie Beispiel“."
+    },
+    "administrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254,
+          "pattern": "^[^\\s@]+@[^\\s@]+$"
+        },
+        "passwort": {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Z][A-Z0-9_]{0,63}\\}$",
+          "description": "Nie das Passwort selbst: höchstens ein Verweis auf eine Umgebungsvariable, z. B. ${DMS_ADMIN_PASSWORT}. Fehlt das Feld, fragt der Assistent das Passwort ab."
+        }
+      }
+    },
+    "erster-benutzer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "email"
+      ],
+      "description": "Das Konto für die Arbeit in der Ablage; fehlt der Abschnitt, legt Ablago keinen an.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254,
+          "pattern": "^[^\\s@]+@[^\\s@]+$"
+        },
+        "aufgaben-ohne-empfaenger": {
+          "type": "boolean",
+          "description": "Bekommt die Aufgaben ohne eigenen Empfänger (z. B. Post ohne „Für“)."
+        }
+      }
+    },
+    "pakete": {
+      "type": "array",
+      "maxItems": 100,
+      "description": "Pakete aus dem offiziellen Katalog, jeweils die neueste passende Version. Fehlt die Liste, wählst du im Assistenten.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "beispiele": {
+            "type": "boolean",
+            "description": "Beispiel-Mappen des Pakets anlegen."
+          },
+          "automatisierungen": {
+            "type": "object",
+            "description": "Mitgelieferte Automatisierungen: Schlüssel → eingeschaltet (true) oder aus (false).",
+            "propertyNames": {
+              "pattern": "^[a-z0-9][a-z0-9_-]*$",
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "optionales": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "adresse": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "^https?://",
+          "description": "Adresse von Ablago für Links in E-Mails."
+        },
+        "bundesland": {
+          "enum": [
+            "BW",
+            "BY",
+            "BE",
+            "BB",
+            "HB",
+            "HH",
+            "HE",
+            "MV",
+            "NI",
+            "NW",
+            "RP",
+            "SL",
+            "SN",
+            "ST",
+            "SH",
+            "TH"
+          ],
+          "description": "Für die Feiertage (Werkbank → Region)."
+        },
+        "beispiele": {
+          "type": "boolean",
+          "description": "Beispiel-Mappentypen laden."
+        },
+        "e-mail": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "server"
+          ],
+          "properties": {
+            "aktiv": {
+              "type": "boolean"
+            },
+            "server": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "verbindung": {
+              "enum": [
+                "starttls",
+                "ssl",
+                "keine"
+              ]
+            },
+            "benutzer": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "absender": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "selbstsigniert": {
+              "type": "boolean"
+            },
+            "passwort": {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Z][A-Z0-9_]{0,63}\\}$",
+              "description": "Nie das Passwort selbst: höchstens ein Verweis auf eine Umgebungsvariable, z. B. ${DMS_MAIL_PASSWORT}. Fehlt das Feld, fragt der Assistent das Passwort ab."
+            }
+          }
+        }
+      }
+    }
+  }
+}

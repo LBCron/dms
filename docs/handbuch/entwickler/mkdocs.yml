@@ -74,6 +74,7 @@ nav:
   - Kern:
       - Aufbau: aufbau.md
       - Leistung: leistung.md
+      - Einrichtungsdatei: einrichtungsdatei.md
   - Pakete:
       - Pakete entwickeln: pakete.md
       - Pakete mit Code: pakete-code.md

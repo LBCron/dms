@@ -23,13 +23,13 @@ const ZURUECKSETZEN_STUNDEN = 1;
 const text = (v: unknown) => (v == null ? '' : String(v)).trim();
 const rolleAus = (v: unknown): Rolle => (v === 'admin' ? 'admin' : 'mitglied');
 
-function pruefePasswortRegeln(pw: unknown): string {
+export function pruefePasswortRegeln(pw: unknown): string {
   const s = typeof pw === 'string' ? pw : '';
   if (s.length < PASSWORT_MINDESTLAENGE) throw new Fachfehler(422, t('anmeldung.fehler.passwort.kurz', { anzahl: PASSWORT_MINDESTLAENGE }));
   if (s.length > 200) throw new Fachfehler(422, t('anmeldung.fehler.passwort.lang'));
   return s;
 }
-function pruefeEmail(v: unknown): string {
+export function pruefeEmail(v: unknown): string {
   const e = text(v);
   if (!istEmail(e)) throw new Fachfehler(422, t('anmeldung.fehler.email'));
   return e;

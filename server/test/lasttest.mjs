@@ -171,6 +171,9 @@ async function einrichten() {
   const c0 = await code();
   const { cookie: admin } = await json('POST', '/api/konto/einrichten', { body: { mandant: HAUSHALT, email, name: 'Lena (Lasttest)', passwort }, koepfe: c0 ? { 'x-einrichtungscode': c0 } : {} });
   const c = { cookie: admin };
+  // Den Assistenten schließen (#804): erst mit Schlüssel und heruntergeladenem Notfallblatt.
+  await json('POST', '/api/werkbank/tresor/erzeugen', c).catch(() => {});
+  await anfrage('GET', '/api/werkbank/notfallblatt', c).then((r) => r.arrayBuffer()).catch(() => {});
   await json('POST', '/api/werkbank/einrichtung/schritt', { ...c, body: { schritt: 'fertig' } }).catch(() => {});
   await json('POST', '/api/beispiele', c);
   const { daten: typen } = await json('GET', '/api/typen', c);

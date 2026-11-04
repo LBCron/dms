@@ -20,7 +20,7 @@ Manche Aufgaben haben keinen einzelnen Empfänger: Aufgaben ohne Empfänger, Pos
 
 - Öffne **Werkbank → Benutzer**, ohne einen Benutzer auszuwählen. Rechts steht **Aufgaben ohne Empfänger gehen an**.
 - Wähle eine Person wie in einem Verweisfeld: Tippe den Namen und wähle ihn aus. Wählbar sind aktive Benutzer ohne Admin-Rechte. **Entfernen** und **Speichern** heißt: Nur die Administratoren sehen sie.
-- Der Einrichtungsassistent trägt den **ersten Benutzer** ein, den du dort anlegst. Admin-Rechte bekommt er dadurch nicht. Hast du einmal gespeichert – auch „niemand“ –, ändert Ablago nichts mehr von selbst.
+- Der Einrichtungsassistent trägt den **ersten Benutzer** ein, den du dort anlegst – sofern das Häkchen „bekommt die Aufgaben ohne Empfänger“ gesetzt bleibt (vorgeschlagen). Admin-Rechte bekommt er dadurch nicht. Hast du einmal gespeichert – auch „niemand“ –, ändert Ablago nichts mehr von selbst.
 - Die gewählte Person sieht die Aufgaben unter **Zu erledigen** und in den Zahlen (auch im [Zähler-Endpunkt](api.md)), kann sie erledigen und weitergeben. Die Administratoren sehen sie weiterhin.
 - Ist die Person abwesend oder deaktiviert, übernimmt wie bei jeder Aufgabe ihr [Vertreter](#andern-deaktivieren-loschen). Ist sie deaktiviert, wähle am besten jemand anderen – die Werkbank weist darauf hin.
 

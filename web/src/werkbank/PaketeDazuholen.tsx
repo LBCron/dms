@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { KATALOG_LINK_REL, sammelSeiteMitVersion, type AblaufErgebnis, type InstalliertesPaket, type Katalog } from '../../../shared/src/pakete';
 import { api, ApiFehler, type PaketVorschau, type Sammeldatei } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Symbol } from '../Symbol';
 import { HerkunftZeile } from './Herkunft';
-import { PaketAblauf, sammelStand } from './PaketAblauf';
+import { PaketAblauf, PaketApiKontext, sammelStand, type PaketVorgabe, type PaketWahl } from './PaketAblauf';
 import { t } from '../sprache';
 
 /**
@@ -23,8 +23,13 @@ export const VORAUSWAHL = ['texterkennung', 'benachrichtigungen'];
  * Auswahl aus dem offiziellen Katalog und Installation, z. B. im Einrichtungsassistenten (#460).
  * Ist der Katalog nicht erreichbar: Sammeldatei hochladen (#461) oder überspringen.
  */
-export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zurueck }: {
+export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zurueck, sammeln, start, vorgabe }: {
   weiter(e: AblaufErgebnis): void; ueberspringen(): void;
+  /** Einrichtungsassistent (#804): nur sammeln, installiert wird erst mit „Jetzt einrichten“. */
+  sammeln?(w: PaketWahl): void;
+  /** Vorgewählt statt der Empfehlung, z. B. beim „Ändern“ oder aus einer Konfigurationsdatei (#806). */
+  start?: string[];
+  vorgabe?: PaketVorgabe;
   /** Im Assistenten erneut geöffnet (#647): Installiertes oben zeigen, „Überspringen“ heißt „Weiter“. */
   erneut?: boolean;
   /** „Zurück“ im Assistenten (#647). */
@@ -37,16 +42,17 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
   const [fehler, setFehler] = useState<string>();
   const [versuch, setVersuch] = useState(0);
   const [sammel, setSammel] = useState<{ s: Sammeldatei; datei: string } | null>(null);
+  const pa = useContext(PaketApiKontext);
   useEffect(() => {
     let aktuell = true;
     setFehler(undefined); setKatalog(null);
     void (async () => {
       try {
-        const st = await api.pakete();
+        const st = await pa.stand();
         if (!aktuell) return;
         setStand({ dms: st.dms, installiert: st.installiert });
         // Nur der offizielle Katalog – und erst jetzt, weil der Schritt angezeigt wird (keine Verbindung ohne Anlass).
-        const k = (await api.paketKatalog(false)).kataloge.find((x) => x.offiziell);
+        const k = (await pa.katalog()).kataloge.find((x) => x.offiziell);
         if (!aktuell) return;
         if (!k?.katalog) throw new Error(k?.fehler ?? 'Der Katalog lässt sich nicht abrufen.');
         setKatalog(k.katalog);
@@ -64,12 +70,13 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
         <p><strong>Der Paketkatalog ist gerade nicht erreichbar.</strong> Ohne Internet fehlen die Pakete – etwa die Texterkennung, ohne die gescannte Dokumente nicht durchsuchbar sind.</p>
         <p className="leise klein">{fehler}</p>
       </div>
-      <section className="stapel" aria-label="Ohne Internet">
+      {/* Im Assistenten gibt es noch keinen Administrator, der eine Sammeldatei hochladen dürfte (#804). */}
+      {sammeln ? <p className="leise">{t('einrichtung.pakete.offline')}</p> : <section className="stapel" aria-label="Ohne Internet">
         <h2 className="h3">Ohne Internet: Sammeldatei hochladen</h2>
         <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen (Texterkennung und Benachrichtigungen sind dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
         <p className="leise klein">{t('pakete.katalog.hinweis')}</p>
         {stand && <SammeldateiWahl geladen={(x, datei) => setSammel({ s: x, datei })} />}
-      </section>
+      </section>}
       <div className="knoepfe">
         <button type="button" className="knopf" onClick={ueberspringen}>Überspringen</button>
         <button type="button" className="knopf" onClick={() => setVersuch((n) => n + 1)}>Nochmal versuchen</button>
@@ -85,7 +92,7 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
   return (
     <>
       {schonDa}
-      <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={erneut ? [] : VORAUSWAHL} empfohlen={VORAUSWAHL}
+      <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={start ?? (erneut ? [] : VORAUSWAHL)} empfohlen={VORAUSWAHL} sammeln={sammeln} vorgabe={vorgabe}
         aktionen={<>{zurueckKnopf}<button type="button" className="knopf" onClick={ueberspringen}>{erneut ? 'Weiter ohne weitere Pakete' : 'Überspringen'}</button></>}
         geaendert={geaendert} fertig={weiter} />
     </>

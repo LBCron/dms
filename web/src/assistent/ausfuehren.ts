@@ -1,0 +1,138 @@
+import { api, ApiFehler, setzeEinrichtungscode } from '../api';
+import { t } from '../sprache';
+import { geheim, holeStand, planAus, setzeStand, STUFEN, type Lauf, type Stufe, type StufeStand } from './stand';
+
+/**
+ * „Jetzt einrichten“ (#804): führt aus, was der Assistent gesammelt hat – Stufe für Stufe mit Fortschritt. Scheitert
+ * eine Stufe, bleibt alles Erledigte erhalten; „Erneut versuchen“ macht dort weiter und legt nichts doppelt an
+ * (jede Stufe prüft vorher, ob es schon da ist). Danach Schlüssel und Notfallblatt auf der Abschlussseite.
+ */
+
+export function neuerLauf(): Lauf {
+  return { stufen: Object.fromEntries(STUFEN.map((s) => [s, { zustand: 'wartet' }])) as Record<Stufe, StufeStand>, laeuft: false, fertig: false };
+}
+
+const setzeLauf = (f: (l: Lauf) => Lauf) => setzeStand((x) => (x.lauf ? { ...x, lauf: f(x.lauf) } : x));
+const setzeStufe = (s: Stufe, st: StufeStand) => setzeLauf((l) => ({ ...l, stufen: { ...l.stufen, [s]: st } }));
+
+/** Ohne Paket-Version: „texterkennung@1.2.0“ → „texterkennung“. */
+const ohneVersion = (id: string) => id.split('@')[0];
+
+/** Je Stufe: was zu tun ist; „ausgelassen“ = nichts gesammelt (leer gelassen). Rückgabe: Hinweis zur Stufe. */
+const AUSFUEHREN: Record<Stufe, () => Promise<string | void | 'ausgelassen'>> = {
+  async ablage() {
+    const s = holeStand().sammlung;
+    if (!geheim.administrator) throw new Error(t('einrichtung.lauf.passwort.neu'));
+    try {
+      await api.einrichten({ mandant: s.ablage.trim(), name: s.administrator.name.trim(), email: s.administrator.email.trim(), passwort: geheim.administrator });
+    } catch (e) {
+      // Schon angelegt (etwa Antwort verloren) und angemeldet: dann gilt die Stufe als erledigt.
+      if (!(e instanceof ApiFehler && e.status === 409 && await api.einrichtungStand().then(() => true, () => false))) throw e;
+    }
+    setzeEinrichtungscode(null);
+    geheim.administrator = '';
+  },
+  async schluessel() {
+    const st = await api.tresor();
+    if (st.zustand === 'vorhanden') return;
+    if (st.zustand !== 'fehlt') throw new Error(t('einrichtung.lauf.schluessel.zustand'));
+    await api.tresorErzeugen();
+  },
+  async adresse() {
+    const a = holeStand().sammlung.optional.adresse.trim();
+    if (!a) return 'ausgelassen';
+    await api.adresseSpeichern(a);
+  },
+  async region() {
+    const b = holeStand().sammlung.optional.bundesland;
+    if (!b) return 'ausgelassen';
+    await api.regionSetzen({ bundesland: b as never });
+  },
+  async mail() {
+    const m = holeStand().sammlung.optional.mail;
+    if (!m) return 'ausgelassen';
+    if (m.mitPasswort && !geheim.mail) throw new Error(t('einrichtung.lauf.mail.passwort'));
+    // Im Assistenten nur mit Passwort; OAuth richtet man danach in der Werkbank ein (#813).
+    await api.mailSpeichern({ anmeldung: 'passwort', aktiv: m.aktiv, host: m.host.trim(), port: m.port, verbindung: m.verbindung, benutzer: m.benutzer.trim(), absender: m.absender.trim(), selbstsigniert: m.selbstsigniert, ...(geheim.mail ? { passwort: geheim.mail } : {}) });
+  },
+  async benutzer() {
+    const b = holeStand().sammlung.benutzer;
+    const email = b.email.trim();
+    if (!email) return 'ausgelassen';
+    // Wiederholen ohne Doppeltes: Gibt es ihn schon, ist nichts mehr zu tun.
+    const da = (await api.benutzer()).find((x) => x.email.toLowerCase() === email.toLowerCase());
+    const id = da ? da.id : await (async () => {
+      const r = await api.benutzerAnlegen({ name: b.name.trim(), email, rolle: 'mitglied' });
+      setzeLauf((l) => ({ ...l, einladung: { name: r.benutzer.name || r.benutzer.email, link: r.link ?? null, mailVerschickt: r.mailVerschickt } }));
+      return r.benutzer.id;
+    })();
+    // #719: Ablago trägt den ersten Benutzer als Empfänger ein – nur, wenn das Häkchen sichtbar gesetzt war (#803).
+    if (!b.aufgabenOhneEmpfaenger && (await api.aufgabenEmpfaenger()).benutzerId === id) await api.aufgabenEmpfaengerSpeichern(null);
+    if (da) return t('einrichtung.lauf.benutzer.da');
+  },
+  async beispiele() {
+    if (!holeStand().sammlung.optional.beispiele) return 'ausgelassen';
+    try { await api.beispiele(); } catch (e) {
+      // 409: Es gibt schon Mappentypen – beim Wiederholen die eben geladenen.
+      if (!(e instanceof ApiFehler && e.status === 409)) throw e;
+    }
+  },
+  async pakete() {
+    const w = holeStand().sammlung.pakete;
+    if (!w || !w.eingabe.pakete?.length) return 'ausgelassen';
+    if (w.mitEinstellungen && !geheim.paketEinstellungen) throw new Error(t('einrichtung.lauf.pakete.einstellungen'));
+    const installiert = new Set((await api.pakete()).installiert.map((p) => p.id));
+    const rest = w.eingabe.pakete.filter((id) => !installiert.has(ohneVersion(id)));
+    if (!rest.length) return;
+    const e = await api.paketAblaufInstallieren({ ...w.eingabe, pakete: rest, einstellungen: geheim.paketEinstellungen ?? {} });
+    setzeLauf((l) => ({ ...l, pakete: e }));
+    const nicht = [...e.fehlgeschlagen.map((f) => f.name), ...e.nichtInstalliert.map((f) => f.name)];
+    if (nicht.length) return t('einrichtung.lauf.pakete.teil', { namen: nicht.join(', ') });
+  },
+};
+
+/** Was mit „Jetzt einrichten“ angelegt wird, nacheinander; bricht bei der ersten Stufe mit Fehler ab. */
+export async function ausfuehren() {
+  const start = holeStand();
+  if (start.lauf?.laeuft) return;
+  if (!start.lauf) setzeStand((x) => ({ ...x, lauf: neuerLauf() }));
+  setzeLauf((l) => ({ ...l, laeuft: true }));
+  for (const s of STUFEN) {
+    const st = holeStand().lauf!.stufen[s].zustand;
+    if (st === 'fertig' || st === 'ausgelassen') continue;
+    setzeStufe(s, { zustand: 'laeuft' });
+    try {
+      const r = await AUSFUEHREN[s]();
+      setzeStufe(s, r === 'ausgelassen' ? { zustand: 'ausgelassen' } : { zustand: 'fertig', ...(r ? { meldung: r } : {}) });
+    } catch (e) {
+      setzeStufe(s, { zustand: 'fehler', meldung: [(e as Error).message, ...(e instanceof ApiFehler ? e.gruende : [])].join(' ') });
+      setzeLauf((l) => ({ ...l, laeuft: false }));
+      return;
+    }
+  }
+  // Stand der Schritte auf dem Server (Übersicht erinnert an Übersprungenes).
+  const l = holeStand().lauf!;
+  const fertig = (...s: Stufe[]) => s.some((x) => l.stufen[x].zustand === 'fertig');
+  try {
+    // Unterbrochen (anderer Browser): Was schon erledigt war, bleibt erledigt.
+    const schon = l.unterbrochen ? new Set((await api.einrichtungStand()).erledigt) : new Set<string>();
+    await api.einrichtungSchritt('schluessel');
+    if (!schon.has('benutzer')) await api.einrichtungSchritt('benutzer', !fertig('benutzer'));
+    if (!schon.has('pakete')) await api.einrichtungSchritt('pakete', !(l.pakete?.installiert.length));
+    if (!schon.has('optional')) await api.einrichtungSchritt('optional', !fertig('adresse', 'region', 'mail', 'beispiele'));
+  } catch { /* Der Hinweis in der Übersicht ist nicht wichtig genug, um hier aufzuhalten. */ }
+  setzeLauf((x) => ({ ...x, laeuft: false, fertig: true }));
+}
+
+/** Nach „Ändern“ während des Laufs: die betroffenen Stufen erneut versuchen lassen. */
+export function stufenZuruecksetzen(stufen: Stufe[]) {
+  setzeLauf((l) => ({ ...l, stufen: { ...l.stufen, ...Object.fromEntries(stufen.filter((s) => l.stufen[s].zustand !== 'fertig').map((s) => [s, { zustand: 'wartet' }])) } }));
+}
+
+/** Welche Stufen ein Schritt des Assistenten betrifft – und umgekehrt (für „Ändern“ nach einem Fehler). */
+export const STUFEN_JE_SCHRITT = {
+  ablage: ['ablage'], administrator: ['ablage'], benutzer: ['benutzer'], pakete: ['pakete'], optional: ['adresse', 'region', 'mail', 'beispiele'],
+} as const satisfies Record<string, readonly Stufe[]>;
+
+/** Für die Konfigurationsdatei (#806): aktueller Plan. */
+export const aktuellerPlan = () => planAus(holeStand().sammlung);

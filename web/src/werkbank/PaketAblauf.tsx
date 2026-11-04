@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { auswahlMitAbhaengigkeiten, dmsPasst, passt, vergleicheVersion, type AblaufErgebnis, type AblaufPlan, type Ergaenzung, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../../shared/src/pakete';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { auswahlMitAbhaengigkeiten, dmsPasst, passt, vergleicheVersion, type AblaufEingabe, type AblaufErgebnis, type AblaufInstallation, type AblaufPlan, type Ergaenzung, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion } from '../../../shared/src/pakete';
 import type { EinstellungFeld } from '../../../shared/src/paketeinstellungen';
 import { api, ApiFehler, type PaketVorschau, type Sammeldatei, type SammelPaket } from '../api';
 import { Hilfe } from '../Hilfe';
@@ -17,6 +17,32 @@ import { PaketSymbol } from './PaketSymbol';
  * Zwischen den Schritten speichert der Server nichts: Er rechnet den Plan bei der Installation neu und prüft, ob die
  * bestätigten Rechte noch dieselben sind.
  */
+
+/**
+ * Welche Schnittstellen der Ablauf nutzt: in der Werkbank die des Administrators, im Einrichtungsassistenten (#804)
+ * die mit Einrichtungscode – dort gibt es noch keinen Administrator, und es wird nichts installiert.
+ */
+export interface PaketApi {
+  stand(): Promise<{ dms: string; installiert: InstalliertesPaket[] }>;
+  katalog(): Promise<{ kataloge: Array<{ offiziell: boolean; katalog: Katalog | null; fehler: string | null }> }>;
+  plan(e: AblaufEingabe): Promise<AblaufPlan<PaketVorschau>>;
+}
+export const PaketApiKontext = createContext<PaketApi>({ stand: () => api.pakete(), katalog: () => api.paketKatalog(false), plan: (e) => api.paketAblaufPlan(e) });
+
+/**
+ * Gesammelte Antworten des Ablaufs (#804): Was „Jetzt einrichten“ später installiert, dazu eine Kurzfassung für die
+ * Zusammenfassung und die Konfigurationsdatei (#806).
+ */
+export interface PaketWahl {
+  eingabe: AblaufInstallation;
+  pakete: Array<{ id: string; name: string; version: string; gewaehlt: boolean; beispiele: boolean; automatisierungen: Record<string, boolean> }>;
+  /** Neue Mappentypen aus den Paketen – dann keine Beispiel-Mappentypen dazu. */
+  neueTypen: number;
+  /** Mit Pflicht-Einstellungen: die Werte bleiben nur im Speicher (es kann Geheimes darunter sein). */
+  mitEinstellungen: boolean;
+}
+/** Vorbelegte Antworten, z. B. aus einer Konfigurationsdatei (#806) oder beim „Ändern“ (#804). */
+export interface PaketVorgabe { beispiele: string[]; automatisierungenAus: string[] }
 
 /** Woher die Pakete kommen. */
 export type AblaufQuelle =
@@ -105,8 +131,11 @@ const groesseText = (b: number) => (b >= 1048576 ? `${(b / 1048576).toLocaleStri
 /** Kurzer Name einer Ergänzung unter ihrem Paket: „Texterkennung – Zusatzsprache Französisch“ → „Zusatzsprache Französisch“. */
 const kurz = (name: string) => (name.includes(' – ') ? name.slice(name.lastIndexOf(' – ') + 3) : name);
 
-export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}, aktionen, weiterText, fertig, geaendert, direkt }: {
+export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}, aktionen, weiterText, fertig, geaendert, direkt, sammeln, vorgabe }: {
   quelle: AblaufQuelle;
+  /** Nur sammeln statt installieren (Einrichtungsassistent, #804). */
+  sammeln?(w: PaketWahl): void;
+  vorgabe?: PaketVorgabe;
   /** Ohne Fehler gleich `fertig` statt der Ergebnisseite mit „Weiter“ (#659) – die Seite zeigt dann selbst eine Meldung. */
   direkt?: boolean;
   /** Vorgewählt (Paket-Ids bzw. Upload-Kennungen). */
@@ -132,6 +161,7 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
   const [ergebnis, setErgebnis] = useState<AblaufErgebnis | null>(null);
   const [meldung, setMeldung] = useState<{ text: string; gruende?: string[] }>();
   const [laeuft, setLaeuft] = useState(false);
+  const pa = useContext(PaketApiKontext);
   const aufgeloest = aufloesen(quelle, liste, wahl, versionen);
   const eingabe = () => (quelle.art === 'katalog'
     ? { quelle: quelle.quelle, pakete: wahl.map((id) => (versionen[id] ? `${id}@${versionen[id]}` : id)) }
@@ -139,14 +169,14 @@ export function PaketAblauf({ quelle, start, nur, empfohlen = [], versionen = {}
 
   async function pruefen() {
     setLaeuft(true); setMeldung(undefined);
-    try { setPlan(await api.paketAblaufPlan(eingabe())); }
+    try { setPlan(await pa.plan(eingabe())); }
     catch (e) { setMeldung({ text: (e as Error).message, gruende: e instanceof ApiFehler ? e.gruende : [] }); }
     finally { setLaeuft(false); }
   }
 
   if (ergebnis) return <AblaufErgebnisAnsicht e={ergebnis} weiter={() => fertig(ergebnis)} />;
   if (plan) return (
-    <Fragen key={plan.rechte.stand + plan.pakete.map((p) => p.schluessel).join()} plan={plan} eingabe={eingabe} zurueck={() => setPlan(null)} neuerPlan={setPlan}
+    <Fragen key={plan.rechte.stand + plan.pakete.map((p) => p.schluessel).join()} plan={plan} eingabe={eingabe} zurueck={() => setPlan(null)} neuerPlan={setPlan} sammeln={sammeln} vorgabe={vorgabe}
       fertig={(e) => { geaendert?.(); if (direkt && !e.fehler) fertig(e); else setErgebnis(e); }} />
   );
 
@@ -254,20 +284,22 @@ function ErgaenzungenWahl({ erg, offen, wahl, imPlan, schalten }: { erg: Kandida
 const leer = (v: unknown) => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
 
 /** Jede Frage einmal (#405) – mit Ausnahmen je Paket –, Zusammenfassung und ein Knopf. */
-function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
-  plan: AblaufPlan<PaketVorschau>; eingabe(): object; zurueck(): void; neuerPlan(p: AblaufPlan<PaketVorschau>): void; fertig(e: AblaufErgebnis): void;
+function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig, sammeln, vorgabe }: {
+  plan: AblaufPlan<PaketVorschau>; eingabe(): AblaufEingabe; zurueck(): void; neuerPlan(p: AblaufPlan<PaketVorschau>): void; fertig(e: AblaufErgebnis): void;
+  sammeln?(w: PaketWahl): void; vorgabe?: PaketVorgabe;
 }) {
   const pk = plan.pakete;
+  const pa = useContext(PaketApiKontext);
   const konfliktTypen = (p: typeof pk[number]) => p.vorschau.typen.filter((x) => !x.vorhanden && !x.geloescht && x.konflikt);
   const konfliktSichten = (p: typeof pk[number]) => p.vorschau.sichten.filter((x) => !x.vorhanden && x.konflikt);
   const [namen, setNamen] = useState<Record<string, Record<string, string>>>(() => Object.fromEntries(pk.map((p) => [p.id, Object.fromEntries(konfliktTypen(p).map((x) => [x.schluessel, x.vorschlag ?? x.name]))])));
   const [sichtNamen, setSichtNamen] = useState<Record<string, Record<string, string>>>(() => Object.fromEntries(pk.map((p) => [p.id, Object.fromEntries(konfliktSichten(p).map((x) => [x.schluessel, x.vorschlag ?? x.name]))])));
   const mitBeispielen = pk.filter((p) => p.vorschau.beispiele > 0 && !p.vorschau.update);
-  const [beispiele, setBeispiele] = useState(false);
-  const [ohneBeispiele, setOhneBeispiele] = useState<string[]>([]);
+  const [beispiele, setBeispiele] = useState(() => !!vorgabe && mitBeispielen.some((p) => vorgabe.beispiele.includes(p.id)));
+  const [ohneBeispiele, setOhneBeispiele] = useState<string[]>(() => (vorgabe ? mitBeispielen.filter((p) => !vorgabe.beispiele.includes(p.id)).map((p) => p.id) : []));
   // Mitgelieferte Automatisierungen (#712): Vorgabe ja – abgewählte bleiben aus („paket|schlüssel“).
   const mitAutomatisierungen = pk.filter((p) => (p.vorschau.automatisierungen ?? []).some((a) => a.neu));
-  const [ohneAutomatisierung, setOhneAutomatisierung] = useState<string[]>([]);
+  const [ohneAutomatisierung, setOhneAutomatisierung] = useState<string[]>(() => vorgabe?.automatisierungenAus ?? []);
   const angehakt = Object.fromEntries(mitAutomatisierungen.map((p) => [p.id, (p.vorschau.automatisierungen ?? []).filter((a) => a.neu && !ohneAutomatisierung.includes(`${p.id}|${a.schluessel}`)).map((a) => a.schluessel)]));
   const anzahlAn = Object.values(angehakt).reduce((n, l) => n + l.length, 0);
   const [herkunftOk, setHerkunftOk] = useState(false);
@@ -298,27 +330,40 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
   const neueSichten = pk.reduce((n, p) => n + p.vorschau.sichten.filter((x) => !x.vorhanden).length, 0);
   const updates = pk.filter((p) => p.vorschau.update);
 
+  const antworten = (): AblaufInstallation => ({
+    ...eingabe(), namen, sichtNamen, beispiele: beispielPakete.map((p) => p.id), automatisierungen: angehakt,
+    ...(herkunftOk ? { bestaetigt: true } : {}), ...(rechteOk ? { rechteStand: plan.rechte.stand } : {}),
+    einstellungen: Object.fromEntries(Object.entries(werte).filter(([id]) => !spaeter.includes(id))), spaeter, ...(adresseOk ? { adresseBestaetigt: true } : {}),
+  });
+
   async function installieren() {
+    // Im Einrichtungsassistenten (#804): nur merken – installiert wird erst mit „Jetzt einrichten“.
+    if (sammeln) {
+      sammeln({
+        eingabe: antworten(), neueTypen, mitEinstellungen: mitEinstellungen.some((p) => !spaeter.includes(p.id)),
+        pakete: pk.map((p) => ({
+          id: p.id, name: p.name, version: p.version, gewaehlt: p.gewaehlt, beispiele: beispielPakete.includes(p),
+          automatisierungen: Object.fromEntries((p.vorschau.automatisierungen ?? []).filter((a) => a.neu).map((a) => [a.schluessel, !ohneAutomatisierung.includes(`${p.id}|${a.schluessel}`)])),
+        })),
+      });
+      return;
+    }
     setLaeuft(true); setMeldung(undefined); setFehler({});
     try {
-      const e = await api.paketAblaufInstallieren({
-        ...eingabe(), namen, sichtNamen, beispiele: beispielPakete.map((p) => p.id), automatisierungen: angehakt,
-        ...(herkunftOk ? { bestaetigt: true } : {}), ...(rechteOk ? { rechteStand: plan.rechte.stand } : {}),
-        einstellungen: Object.fromEntries(Object.entries(werte).filter(([id]) => !spaeter.includes(id))), spaeter, ...(adresseOk ? { adresseBestaetigt: true } : {}),
-      });
+      const e = await api.paketAblaufInstallieren(antworten());
       fertig(e);
     } catch (x) {
       const d = x instanceof ApiFehler ? x.details as { rechteStand?: string; felderFehler?: Record<string, string> } | undefined : undefined;
       setMeldung({ text: (x as Error).message, gruende: x instanceof ApiFehler ? x.gruende : [] });
       if (d?.felderFehler) setFehler(d.felderFehler);
       // Die Rechte haben sich geändert (z. B. neuer Katalog): neu zeigen, neu bestätigen.
-      if (d?.rechteStand && d.rechteStand !== plan.rechte.stand) { try { neuerPlan(await api.paketAblaufPlan(eingabe())); } catch { /* Meldung steht schon da */ } }
+      if (d?.rechteStand && d.rechteStand !== plan.rechte.stand) { try { neuerPlan(await pa.plan(eingabe())); } catch { /* Meldung steht schon da */ } }
     } finally { setLaeuft(false); }
   }
 
   async function nochmal() {
     setLaeuft(true); setMeldung(undefined);
-    try { neuerPlan(await api.paketAblaufPlan(eingabe())); }
+    try { neuerPlan(await pa.plan(eingabe())); }
     catch (x) { setMeldung({ text: (x as Error).message, gruende: x instanceof ApiFehler ? x.gruende : [] }); }
     finally { setLaeuft(false); }
   }
@@ -476,7 +521,7 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
         {fehlt.length > 0 && !probleme.length && <ul className="leise klein">{fehlt.map((f) => <li key={f}>{f}</li>)}</ul>}
         <div className="knoepfe">
           <button type="button" className="knopf primaer" disabled={laeuft || probleme.length > 0 || fehlt.length > 0} onClick={() => void installieren()}>
-            {laeuft ? t('pakete.ablauf.installiere') : t('pakete.ablauf.installieren', { anzahl: pk.length })}
+            {sammeln ? t('einrichtung.pakete.uebernehmen', { anzahl: pk.length }) : laeuft ? t('pakete.ablauf.installiere') : t('pakete.ablauf.installieren', { anzahl: pk.length })}
           </button>
           <button type="button" className="textknopf" disabled={laeuft} onClick={zurueck}>{t('pakete.ablauf.zurueck')}</button>
         </div>

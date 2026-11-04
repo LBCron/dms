@@ -6,6 +6,7 @@
 import { uebersetzer } from '../../shared/src/sprache';
 import aehnlich from '../../shared/src/sprachen/de/aehnlich.json';
 import api from '../../shared/src/sprachen/de/api.json';
+import einrichtung from '../../shared/src/sprachen/de/einrichtung.json';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import termine from '../../shared/src/sprachen/de/termine.json';
 import automatisierung from '../../shared/src/sprachen/de/automatisierung.json';
@@ -25,4 +26,4 @@ import volltext from '../../shared/src/sprachen/de/volltext.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import werkbank from '../../shared/src/sprachen/de/werkbank.json';
 
-export const t = uebersetzer({ aehnlich, api, anmeldung, automatisierung, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank });
+export const t = uebersetzer({ aehnlich, api, anmeldung, automatisierung, einrichtung, erkennung, ereignisse, felder, fragen, konten, lasttest, mappen, pakete, profil, spalten, suche, systemzustand, termine, volltext, webhook, werkbank });

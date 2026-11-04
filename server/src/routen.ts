@@ -298,6 +298,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const paketerstellung = new Paketerstellung(dienst, { version: eigeneVersion });
   const umwandlung = new Umwandlung(dienst);
   const wer = (a: Anfrage) => ({ id: a.benutzer?.id ?? null, email: a.benutzer?.email ?? null });
+  /** Hilfen des Einrichtungsassistenten (#804, #806): Code vor der Einrichtung, danach der Administrator bei offenem Assistenten. */
+  const einrichtungZugang = async (a: Anfrage) => {
+    if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
+    await x.einrichtung.pruefeZugang(a.einrichtungscode, a.benutzer?.rolle === 'admin' && !a.sitzungsDaten?.vertretungId);
+  };
   /**
    * Ist ein Abruf ein Weitergeben (#394)? Herunterladen (?herunterladen), Stempel-Parameter oder ein API-Schlüssel
    * eines Benutzers. Anzeigen in der Oberfläche und Pakete (Dienstkonten, z. B. Texterkennung) bekommen das Original.
@@ -551,6 +556,38 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
       await x.einrichtung.pruefeCode(a.einrichtungscode);
       return ok({ ok: true });
+    } },
+    // Sammeln vor „Jetzt einrichten“ (#804) und Konfigurationsdatei (#806): mit Code, solange nicht eingerichtet.
+    { methode: 'POST', pfad: '/api/einrichtung/pruefen', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok({ probleme: x.einrichtung!.pruefePlan(b(a).plan, { administrator: b(a).passwort }) });
+    } },
+    { methode: 'POST', pfad: '/api/einrichtung/datei/lesen', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok(x.einrichtung!.dateiLesen(b(a).text));
+    } },
+    { methode: 'POST', pfad: '/api/einrichtung/datei/schreiben', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok(x.einrichtung!.dateiSchreiben(b(a).plan));
+    } },
+    // Pakete wählen, bevor es einen Administrator gibt (#804): nur lesend und nur der offizielle Katalog.
+    { methode: 'GET', pfad: '/api/einrichtung/pakete', zugang: 'offen', handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok({ installiert: await pakete.installierte(), dms: eigeneVersion() });
+    } },
+    { methode: 'POST', pfad: '/api/einrichtung/pakete/katalog', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok(await pakete.abrufen(false));
+    } },
+    { methode: 'POST', pfad: '/api/einrichtung/pakete/plan', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      const liste = (b(a) as { pakete?: unknown }).pakete;
+      return ok(await pakete.ablaufPlan({ pakete: Array.isArray(liste) ? liste.filter((p): p is string => typeof p === 'string').slice(0, 100) : [] }));
+    } },
+    // E-Mail-Versand im Assistenten (#813, #804): nur die Server-Suche, nur lesend; gespeichert wird erst mit „Jetzt einrichten“.
+    { methode: 'POST', pfad: '/api/einrichtung/mail/finden', zugang: 'offen', lesend: true, handler: async (a) => {
+      await einrichtungZugang(a);
+      return ok(await betrieb().findeServer(b(a)));
     } },
     { methode: 'POST', pfad: '/api/konto/einrichten', zugang: 'offen', handler: async (a) => {
       const r = x.einrichtung ? await x.einrichtung.einrichten(b(a), a.einrichtungscode, info(a)) : await konten.einrichten(b(a), info(a));

@@ -116,7 +116,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   if (status.lasttest) return <LasttestSeite />;
   // Wiederherstellung (#107): eigener Bildschirm, auch nach Neuladen und Neustart.
   if (status.wiederherstellung?.laeuft || status.wiederherstellung?.abschluss) return <Wiederherstellungsbildschirm fertig={() => void laden()} />;
-  // Einrichtungsassistent (#119): ohne Datenbank, mit Code, Mandant und Administrator …
+  // Einrichtungsassistent (#119, #804): ohne Datenbank, mit Code; sammeln bis „Jetzt einrichten“ …
   if (status.einrichtungNoetig || status.einrichtung?.phase === 'datenbank' || status.einrichtung?.phase === 'startet') return <Einrichtungsassistent status={status} fertig={laden} />;
   if (!status.benutzer) return <Anmelden mail={status.mail} wartung={status.wartung} anbieter={status.anbieter ?? null} fertig={laden} />;
   // Zwei-Faktor vorgeschrieben (#242), aber noch nicht eingerichtet: erst einrichten.
@@ -130,7 +130,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
     <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true }}>
-      {/* … danach als Administrator: Benutzer, Schlüssel, Optionales, Fertig. */}
+      {/* … danach als Administrator: „Jetzt einrichten“ läuft weiter, dann Notfallblatt und Abschluss (#804). */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
     </Ctx.Provider>
   );
