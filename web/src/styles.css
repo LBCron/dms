@@ -202,7 +202,15 @@ tbody tr:last-child > * { border-bottom: 0; }
 .eigenschaft > span { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; }
 .eigenschaft small { font-weight: 400; color: var(--leise); }
 /* Im Raster stehen die Felder einer Zeile unten bündig, auch wenn eine Beschriftung umbricht (#245). */
-.raster > .eigenschaft > span:first-child { flex-grow: 1; }
+/*
+ * Formularzeilen (#245, #650): Jedes Feld im Raster belegt drei Teilzeilen – Beschriftung, Eingabe, Hinweis – und
+ * teilt sie mit seinen Nachbarn (subgrid). So stehen die Eingabefelder einer Zeile auf einer Linie, auch wenn eine
+ * Beschriftung umbricht, und Hinweise stehen darunter, ohne die Nachbarn nach unten zu schieben.
+ */
+.raster { row-gap: 5px; }
+.raster > * { grid-row: span 3; align-self: start; margin-bottom: 7px; }
+.raster > .eigenschaft:not(:has(> :nth-child(4))) { display: grid; grid-template-rows: subgrid; align-self: stretch; gap: 5px; }
+.raster > .eigenschaft:not(:has(> :nth-child(4))) > span:first-child { align-self: end; }
 .eigenschaft.unten { justify-content: flex-end; }
 .wahl { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .wahl legend { font-size: calc(12.5px * var(--skala, 1)); font-weight: 600; padding: 0; margin-bottom: 6px; }
@@ -749,7 +757,7 @@ input.kurz { width: 7em; }
 .aufgabenaktionen, .weitergeben { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .eigenschaft.breit { grid-column: 1 / -1; }
 /* Wartungsmodus (#402): Zeitschiene Beginn → Ende, Schnellwahl, „Jetzt sofort sperren“. */
-.raster > .wm-oben > span:first-child { flex-grow: 0; }
+.raster > .wm-oben > span:first-child { align-self: start; }
 .wm-schnell { display: flex; flex-wrap: wrap; gap: 6px; }
 .wm-sofort { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--linie); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .wm-sofort p { margin: 0; }
