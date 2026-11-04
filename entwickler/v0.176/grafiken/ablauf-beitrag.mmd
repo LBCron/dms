@@ -1,0 +1,9 @@
+flowchart LR
+  A[Issue als User Story] --> B[Diskussion im Issue]
+  B --> C{Label „freigegeben“?}
+  C -- nein --> B
+  C -- ja --> D[Umsetzen im Branch]
+  D --> E[Pull Request]
+  E --> F[Prüfungen grün, Review]
+  F --> G[Merge durch den Maintainer]
+  G --> H[Release, Image, Handbuch, App-Stores automatisch]
