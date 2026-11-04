@@ -37,7 +37,7 @@ export async function bestimmeMandant(sql: postgres.Sql, a: Anbindung, env: Reco
   if (a.mandant !== e.id) {
     await speichern({ ...a, mandant: e.id });
     a.mandant = e.id;
-    log.info(e.quelle === 'neu' ? 'Neuer Haushalt angelegt' : 'Id des Haushalts in der Anbindung gemerkt', { mandant: e.id, quelle: e.quelle });
+    log.info(e.quelle === 'neu' ? 'Neue Ablage angelegt' : 'Ablage-Id in der Anbindung gemerkt', { mandant: e.id, quelle: e.quelle });
   }
   return e;
 }

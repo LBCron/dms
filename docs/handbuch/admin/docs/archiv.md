@@ -8,7 +8,7 @@ Manche Belege musst du aufbewahren: Handwerkerrechnungen privat 2 Jahre (§ 14b 
     Damit die Dokumente die ganze Frist über lesbar bleiben, helfen drei Dinge: die [Archivfassung (PDF/A)](texterkennung.md#archivfassung-pdfa), ein Format, das auch in vielen Jahren noch jedes Programm öffnet; [Alle Dateien prüfen](#alle-dateien-prufen), das jede Datei mit ihrem Prüfwert vergleicht; und der [Vollexport](export.md), eine Kopie in offenen Formaten, die du ohne Ablago lesen kannst.
 
 !!! warning "Unterstützt – ersetzt nichts"
-    Der Archivmodus **unterstützt eine GoBD-gerechte Aufbewahrung**. Ein amtliches „GoBD-Zertifikat“ für Software gibt es nicht: Ordnungsgemäß wird es erst durch Software, Verfahren und eine **Verfahrensdokumentation** zusammen (eine Vorlage liegt im Repository unter `docs/handbuch/vorlagen/verfahrensdokumentation.md`). Er ersetzt weder diese noch eine Steuerberatung.
+    Der Archivmodus **unterstützt eine GoBD-gerechte Aufbewahrung**. Ein amtliches „GoBD-Zertifikat“ für Software gibt es nicht: Ordnungsgemäß wird es erst durch Software, Verfahren und eine **Verfahrensdokumentation** zusammen (eine Vorlage findest du unter [Verfahrensdokumentation](verfahrensdokumentation.md)). Er ersetzt weder diese noch eine Steuerberatung.
 
 ## Einschalten
 

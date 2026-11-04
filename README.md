@@ -19,7 +19,7 @@
 [![Lizenz](https://img.shields.io/badge/Lizenz-Apache--2.0-blue)](LICENSE)
 [![Unterstützen](https://img.shields.io/badge/Unterst%C3%BCtzen-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/motom001)
 
-**Die Unterlagen deines Haushalts an einem Ort – selbst gehostet, kostenlos, deine Daten bleiben bei dir.**
+**Deine Unterlagen an einem Ort, zu Hause und im kleinen Betrieb – selbst gehostet, kostenlos, deine Daten bleiben bei dir.**
 
 Statt loser Dateien in Ordnern legst du **Mappen** an: für den Vertrag, die Rechnung, die Heizung, den Handwerker. Mappen verweisen aufeinander. So findest du von der Heizung den Wartungsvertrag, von dort jede Rechnung und den Handwerker, der sie gestellt hat. Und an die Kündigungsfrist erinnert dich Ablago rechtzeitig.
 
@@ -31,9 +31,9 @@ Statt loser Dateien in Ordnern legst du **Mappen** an: für den Vertrag, die Rec
 
 ## Für wen?
 
-<img alt="Für wen Ablago gebaut ist: vom Haushalt bis zum Unternehmen" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.svg" width="100%">
+<img alt="Für wen Ablago gebaut ist: Kernfokus Familien, Fokus auch für Eltern-Sorgende, Vermieter, Selbständige und Kleinbetriebe, unterstützt der Mittelstand, nicht im Fokus Großunternehmen" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.svg" width="100%">
 
-Ablago ist für **Familien und Haushalte** gebaut. Es passt besonders gut, wenn du dich **um deine Eltern kümmerst** oder **ein paar Wohnungen vermietest**. **Selbständige und kleine Betriebe** können es ebenfalls gut nutzen; für größere Unternehmen ist es bewusst nicht gemacht.
+Ablago ist für **Familien** gebaut und für **Selbständige und kleine Betriebe**. Es passt auch gut, wenn du dich **um deine Eltern kümmerst** oder **ein paar Wohnungen vermietest**. Den **Mittelstand** unterstützen wir, für **Konzerne** ist Ablago nicht gemacht. Warum Selbständige und kleine Betriebe seit November 2026 zum Fokus gehören: Viele Funktionen helfen genau ihnen schon heute (Archivmodus, Verfahrensdokumentation, Rechte je Rolle, Postfächer, Vertretung, Anmeldung über einen Anbieter, Automatisierungen), und die Lasttests zeigen, dass Ablago deutlich größere Installationen verkraftet ([Was Ablago verkraftet](https://help.ablago.app/admin/aktuell/verkraftet/)). Im Zweifel gewinnt weiter die Einfachheit für Familien.
 
 Ob es zu dir passt, zeigt [Ist Ablago etwas für mich?](https://help.ablago.app/benutzer/aktuell/wofuer/#ist-das-dms-etwas-fur-mich) – mit dem [5-Minuten-Test](https://help.ablago.app/benutzer/aktuell/wofuer/#der-5-minuten-test).
 
@@ -81,7 +81,7 @@ Alle Wege im Überblick: **[Wie komme ich an ein DMS?](https://help.ablago.app/i
 - **Mappentypen selbst gestalten:** Felder, Verweise, Register, Titel-Vorlagen und Trefferlisten – in der Werkbank, ohne Programmieren. Fertige **Pakete** aus dem [Paketkatalog](https://github.com/motom001/dms-registry).
 - **Post** aus Postfächern (IMAP) und einem Eingangsordner, **Versionierung** von Dokumenten, **erweiterte Suche** über Felder und Volltext.
 - **Berechtigungen** je Mappentyp und Ansicht mit Regeln und Testlauf; **Zwei-Faktor-Anmeldung** und **Anmeldung über einen Anbieter** (OpenID Connect).
-- **Archivmodus** mit Löschsperre bis Fristende, **Werkbank anpassen** mit den Vorlagen Haushalt, Organisation und Alles.
+- **Archivmodus** mit Löschsperre bis Fristende, **Werkbank anpassen** mit den Vorlagen Haushalt, Betrieb und Alles.
 - **Konsole** `dms` im Container für Notfall und Betrieb, **Schnittstelle** `/api/v1` mit API-Schlüsseln.
 - Ein Image für **amd64 und arm64**, öffentlich unter `ghcr.io/motom001/dms`.
 
@@ -101,7 +101,7 @@ Das Image `ghcr.io/motom001/dms` ist öffentlich – eine Anmeldung bei der Regi
 
 1. Die Vorlage [`deploy/nas/docker-compose.yml`](deploy/nas/docker-compose.yml) als Compose-Projekt anlegen und die Pfade anpassen (Ordner `postgres`, `files`, `geheim` und `sicherung`).
 2. Daneben eine Datei `.env` mit `DB_PASSWORD=<langes zufälliges Passwort>` ablegen.
-3. Starten und `http://<NAS>:8080` aufrufen. Ein Assistent führt durch die Einrichtung: Einrichtungscode (steht im Protokoll des Containers und in `geheim/EINRICHTUNGSCODE`), Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name des Haushalts, Administrator, erster Benutzer, Schlüssel und Notfallblatt.
+3. Starten und `http://<NAS>:8080` aufrufen. Ein Assistent führt durch die Einrichtung: Einrichtungscode (steht im Protokoll des Containers und in `geheim/EINRICHTUNGSCODE`), Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name deiner Ablage, Administrator, erster Benutzer, Schlüssel und Notfallblatt.
 
 `ghcr.io/motom001/dms:stabil` (in allen Vorlagen) folgt den geprüften Releases; `:main` folgt jedem Stand auf `main` und ist nur zum Testen; mit einer Versionsnummer, also `ghcr.io/motom001/dms:<Version>` mit einer Nummer aus den [Releases](https://github.com/motom001/dms/releases), bleibt die Installation auf einem Release. Alles Weitere steht im Administratorhandbuch unter [Einrichtung und Betrieb](https://help.ablago.app/admin/aktuell/installation/) und [Aktualisieren und Sichern](https://help.ablago.app/admin/aktuell/aktualisieren/).
 

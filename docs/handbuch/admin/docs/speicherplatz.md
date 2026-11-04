@@ -40,7 +40,7 @@ Ist Ablago langsam, siehst du hier, woran es liegt – ohne Konsole des NAS. Abl
 - **Texterkennung** arbeitet viele neue Scans ab – das geht vorbei; die Warteschlange steht unter [Texterkennung](texterkennung.md).
 - **Demo-Daten** werden angelegt oder entfernt – ebenfalls vorübergehend.
 - Ein **Paket mit Code** rechnet viel – der Anteil *Paket-Läufer* zeigt das; die Auslastung je Paket folgt in einer späteren Version.
-- Der Arbeitsspeicher ist dauerhaft knapp – erhöhe `mem_limit` in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.
+- Der Arbeitsspeicher ist dauerhaft knapp – erhöhe `mem_limit` in der Compose-Datei (zu Hause und in kleinen Betrieben reichen meist 1–2 GB, mit Texterkennung eher 2 GB; Messwerte unter [Was Ablago verkraftet](verkraftet.md)) oder gib dem NAS mehr Speicher.
 - Die Systemlast des Rechners ist hoch, die CPU von Ablago aber nicht – dann bremst ein anderer Dienst auf dem NAS.
 - Die **Wartezeit des Servers** ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet Ablago etwas Großes im Hauptfaden. Melde das bitte als [Issue](https://github.com/motom001/dms/issues) mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen [Arbeiter](#arbeiter-fur-pdf-und-exporte).
 

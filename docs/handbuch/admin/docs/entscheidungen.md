@@ -24,7 +24,7 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 
 - **Einrichtungsassistent mit Einrichtungscode** (#119, zuvor: erster Aufruf ohne Code). Der Code steht im Protokoll des Containers und in `/data/geheim/EINRICHTUNGSCODE`; er schützt die Einrichtung und den Datenbanktest (der sonst Rechner im Netz abfragen könnte). Versuchsweise – ob der Code den Einstieg zu umständlich macht, zeigt die Rückmeldung aus der Praxis.
 - **Datenbank-Anbindung als Datei unter `/data/geheim`**, führend vor `DATABASE_URL` (#119): So lässt sich das Ablago ohne Bearbeiten von Umgebungsvariablen in Betrieb nehmen; ohne erreichbare Datenbank startet es im Einrichtungsmodus und danach im selben Prozess das eigentliche Ablago.
-- **Mandant statt Haushalt** in Oberfläche und Handbuch (#119; seit 0.73 heißt es wieder „Haushalt“, #305), damit Ablago auch für kleine Firmen passt. Intern heißt es weiter `haushalt_id`; ein Umbau brächte keinen sichtbaren Nutzen. Frische Installationen nutzen den Mandanten, den die erste Migration anlegt (mit Designs und Einstellungen).
+- **Mandant statt Haushalt** in Oberfläche und Handbuch (#119; seit 0.73 hieß es wieder „Haushalt“, #305; seit 04.11.2026 neutral „Ablage“ – „Name deiner Ablage“, „Ablage-Id“ –, #700), damit Ablago zu Hause wie im Betrieb passt. Intern heißt es weiter `haushalt_id`; ein Umbau brächte keinen sichtbaren Nutzen. Frische Installationen nutzen den Mandanten, den die erste Migration anlegt (mit Designs und Einstellungen).
 - **Administratoren arbeiten nicht in der Ablage:** Der Assistent legt deshalb gleich einen ersten normalen Benutzer an.
 - **Systemrollen:** Administrator (Einrichtung, Benutzer) und Mitglied (Ablage). Wer welche Mappen sieht, regeln die [Berechtigungen](berechtigungen.md) (#123).
 - **Passwörter** mit scrypt aus Node (keine native Bibliothek). **Sitzungen** als HttpOnly-Cookie, in der Datenbank nur als SHA-256-Hash. Gleiches gilt für Einladungs- und Passwort-Links (Einladung 7 Tage, Zurücksetzen 1 Stunde, jeweils nur einmal nutzbar).
@@ -186,10 +186,10 @@ Kurz festgehalten, damit spätere Änderungen wissen, warum etwas so ist.
 
 ## Werkbank anpassen (#281)
 
-- **Ausblenden heißt nicht abschalten.** Die Vorlagen *Haushalt*, *Betrieb* (bis 0.73 „Organisation“) und *Alles* bestimmen nur, welche Bereiche links in der Werkbank stehen. Was ausgeblendet ist, läuft weiter (z. B. Postfächer, Protokoll) und bleibt über die Adresse und die Übersicht erreichbar. Neue Installationen starten mit *Haushalt*, damit die Werkbank für Familien übersichtlich bleibt.
+- **Ausblenden heißt nicht abschalten.** Die Vorlagen *Haushalt*, *Betrieb* (bis 0.73 „Organisation“) und *Alles* bestimmen nur, welche Bereiche links in der Werkbank stehen. Was ausgeblendet ist, läuft weiter (z. B. Postfächer, Protokoll) und bleibt über die Adresse und die Übersicht erreichbar. Neue Installationen starten mit *Haushalt*, damit die Werkbank für Familien übersichtlich bleibt; Betriebe wählen *Betrieb*.
 - **Bereiche an einer Stelle:** `shared/src/werkbankansicht.ts` führt alle Bereiche mit Gruppe und Vorlagen; das Handbuch erzeugt seine Tabellen daraus. Eine spätere Neugruppierung und abgestufte Administratorrechte setzen dort an.
-- **Abgestufte Administratorrechte** (#282) – etwa ein Administrator nur für Benutzer – sind bewusst zurückgestellt: Im Haushalt gibt es meist einen Administrator, und jede Stufe mehr macht die Werkbank schwerer zu verstehen.
+- **Abgestufte Administratorrechte** (#282) – etwa ein Administrator nur für Benutzer – sind zurückgestellt: Zu Hause gibt es meist einen Administrator, und jede Stufe mehr macht die Werkbank schwerer zu verstehen. Seit Selbständige und kleine Betriebe zum Fokus gehören (03.11.2026), ist das ein **offener Punkt**: Im Betrieb kann es mehrere Administratoren mit verschiedenen Aufgaben geben.
 
 ## Bewusst noch nicht drin
 
-Feldrechte (einzelne Felder ausblenden), Texterkennung für Office-Dokumente, ein Kalender-Abo für Fristen, abgestufte Administratorrechte (#282, zurückgestellt, bis Kleinbetriebe in den Fokus rücken). Sicherung (#48), Zwei-Faktor-Anmeldung und der Kalender-Export im Vollexport sind inzwischen da.
+Feldrechte (einzelne Felder ausblenden), Texterkennung für Office-Dokumente, ein Kalender-Abo für Fristen, abgestufte Administratorrechte (#282; offen, seit Kleinbetriebe zum Fokus gehören). Sicherung (#48), Zwei-Faktor-Anmeldung und der Kalender-Export im Vollexport sind inzwischen da.

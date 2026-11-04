@@ -40,7 +40,7 @@ export function notfallblatt(d: Notfalldaten): Buffer {
     zeile('Groß- und Kleinschreibung zählen; die Leerzeichen zwischen den Gruppen nicht. Mögliche Zeichen: A–Z, a–z, 0–9, - und _.', { groesse: 9 }),
 
     zeile('Diese Installation', { schrift: 'fett', groesse: 13, abstand: 16 }),
-    zeile(`Haushalts-Id: ${d.haushaltId}`, { abstand: 4 }),
+    zeile(`Ablage-Id: ${d.haushaltId}`, { abstand: 4 }),
     zeile(`Adresse: ${d.adresse || '–'}`),
     zeile(`Sicherungen: Ordner ${d.sicherungsordner} im Container (in der Vorlage /volume1/docker/dms/sicherung auf dem NAS)`),
     zeile(`Schlüsseldatei: Ordner ${d.schluesselordner} im Container (in der Vorlage /volume1/docker/dms/geheim)`),
@@ -58,7 +58,7 @@ export function notfallblatt(d: Notfalldaten): Buffer {
     zeile(`3. Die Sicherung – beide Dateien, .dms-sicherung und .json – in den Ordner sicherung kopieren${d.aussenziele?.length ? ' (fehlt das Gerät: beide vom Ziel außer Haus holen)' : ''}.`),
     zeile('4. Ablago starten und im Browser öffnen. Der Einrichtungsassistent fragt nach dem Einrichtungscode (steht im Protokoll des Containers und in der Datei geheim/EINRICHTUNGSCODE). Dann „Aus einer Sicherung wiederherstellen“ wählen, die Sicherung auswählen und den Schlüssel von diesem Blatt eingeben.'),
     zeile('5. Nach der Wiederherstellung startet Ablago neu; danach meldest du dich mit deinen bisherigen Zugangsdaten an.'),
-    zeile('Die Haushalts-Id übernimmt Ablago beim Wiederherstellen aus der Sicherung.', { abstand: 6 }),
+    zeile('Die Ablage-Id übernimmt Ablago beim Wiederherstellen aus der Sicherung.', { abstand: 6 }),
     zeile(`Startet Ablago nicht mehr (z. B. nach einem Update), trage in der Compose-Datei ein älteres Image ein, etwa ghcr.io/motom001/dms:${d.version}, und starte neu.`),
     zeile('Kommt kein Administrator mehr hinein: im Ordner geheim eine Datei RESCUE mit dem Inhalt NOTFALLZUGANG anlegen (siehe Administratorhandbuch, „Notfall: kein Admin mehr“).'),
 

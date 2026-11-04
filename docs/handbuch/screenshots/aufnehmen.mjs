@@ -252,7 +252,7 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('heading', { name: 'Neu einrichten oder wiederherstellen?' }).waitFor({ timeout: 90_000 });
   await bild(s, 'einrichtung-wahl');
   await s.getByRole('button', { name: /^Neu einrichten/ }).click();
-  await s.getByLabel(/Name des Haushalts/).fill('Familie Beispiel');
+  await s.getByLabel(/Name deiner Ablage/).fill('Familie Beispiel');
   await bild(s, 'einrichtung-mandant');
   await s.getByRole('button', { name: 'Weiter' }).click();
   await s.getByLabel('Name', { exact: true }).fill(ADMIN.name);

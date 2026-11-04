@@ -70,20 +70,22 @@ Und deine Unterlagen liegen **bei dir**, auf deinem eigenen Gerät – nicht bei
 
 ## Ist Ablago etwas für mich? { #ist-das-dms-etwas-fur-mich }
 
-![Vom kleinen Haushalt bis zum Konzern: Wofür Ablago gebaut ist](grafiken/personas-skala.svg){ .grafik }
+![Vom Haushalt über Selbständige und kleine Betriebe bis zum Konzern: Wofür Ablago gebaut ist](grafiken/personas-skala.svg){ .grafik }
 
-Ablago ist **für Haushalte gebaut**. Wir denken dabei an diese Menschen:
+Ablago ist **für zu Hause und für kleine Betriebe gebaut**. Wir denken dabei an diese Menschen:
 
 - **Lena**, die in ihrer Familie den Papierkram macht und keine Technik-Kenntnisse hat. Nach einer Stunde soll ihre erste Mappe angelegt sein und die Sicherung laufen.
 - **Jonas**, ihren Sohn, der am Handy sein Zeugnis findet, ohne zu fragen.
 - **Markus**, der gern bastelt, Ablago auf seinem NAS betreibt und es für seine Familie einrichtet.
 - **Petra**, die sich mit ihren Brüdern um die Mutter kümmert. Alle sehen dieselben Unterlagen, auch aus einer anderen Stadt.
 - **Herrn Özdemir**, der zwei Mietshäuser hat und die Belege fürs Steuerjahr beisammen haben will.
+- **Katrin**, die selbständig arbeitet und Rechnungen, Verträge und Belege für die Steuerberatung an einem Ort braucht.
+- **ein kleines Team** mit ein paar Leuten, das sich Postfächer, Fristen und Vertretung teilt und Unterlagen nach den Regeln aufbewahren muss.
 
-**Selbständige und kleine Betriebe** können Ablago gut nutzen. Es gibt zum Beispiel den Archivmodus und die Anmeldung über Microsoft 365. Wir bauen dafür aber nur, was es für Familien nicht komplizierter macht.
+Für Selbständige und kleine Betriebe bringt Ablago schon viel mit: Archivmodus, Verfahrensdokumentation, Rechte je Rolle, Postfächer, Vertretung, Anmeldung über einen Anbieter wie Microsoft 365 und Automatisierungen. Im Zweifel gilt aber: Was eine Familie verwirrt, bauen wir nicht.
 
 !!! note "Was Ablago nicht sein will"
-    Für den **Mittelstand** und für **Konzerne** ist Ablago nicht gemacht. Dort braucht man Dinge wie abgestufte Administratorrechte, Freigaben nach dem Vier-Augen-Prinzip, Hochverfügbarkeit oder Support mit festen Reaktionszeiten. Ablago hat das nicht, und es ist auch nicht geplant.
+    Den **Mittelstand** unterstützen wir, bauen aber nicht gezielt dafür. Für **Konzerne** ist Ablago nicht gemacht: Dort braucht man Dinge wie Freigaben nach dem Vier-Augen-Prinzip, Hochverfügbarkeit oder Support mit festen Reaktionszeiten. Ablago hat das nicht, und es ist auch nicht geplant.
 
 Alle neun Personas mit Bildern, und warum wir uns so entschieden haben: [Für wen wir bauen](https://help.ablago.app/entwickler/aktuell/personas/) im Entwicklerhandbuch.
 
@@ -91,7 +93,7 @@ Alle neun Personas mit Bildern, und warum wir uns so entschieden haben: [Für we
 
 ![Fünf Unterlagen, die man in fünf Minuten finden sollte](grafiken/fuenf-minuten-test.svg){ .grafik }
 
-Stell dir eine Uhr auf fünf Minuten und suche diese fünf Dinge. Noch aufschlussreicher: Bitte jemanden aus deinem Haushalt, sie zu finden.
+Stell dir eine Uhr auf fünf Minuten und suche diese fünf Dinge. Noch aufschlussreicher: Bitte jemanden aus deiner Familie oder deinem Team, sie zu finden.
 
 ## Selbstcheck: Wo hakt es?
 

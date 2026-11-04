@@ -22,7 +22,7 @@ Du brauchst: die beiden Sicherungsdateien (`.dms-sicherung` und `.json`) und das
 2. Ablago neu installieren, wie unter [Wie komme ich an ein DMS?](https://help.ablago.app/installieren/aktuell/) beschrieben – empfohlen mit zwei Containern (z. B. die [Compose-Vorlage](https://github.com/motom001/dms/blob/main/deploy/nas/docker-compose.yml) mit einer `.env` mit neuem `DB_PASSWORD`), oder mit [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) ohne Passwort.
 3. Die beiden Sicherungsdateien in den Ordner `sicherung` kopieren.
 4. Das Projekt starten und Ablago im Browser öffnen. Der [Einrichtungsassistent](installation.md#der-einrichtungsassistent) fragt nach dem **Einrichtungscode** und – falls nötig – nach der Datenbank. Dann **Aus einer Sicherung wiederherstellen** wählen; einen „Wegwerf-Admin“ brauchst du nicht.
-5. Die Sicherung auswählen. Der **Abgleich** zeigt, mit welcher Version sie entstand und was heute läuft (Ablago, Datenbank-Stand, PostgreSQL, Architektur, Haushalts-Id). Gehört die Sicherung zu einem anderen Mandanten, übernimmt Ablago dessen Id.
+5. Die Sicherung auswählen. Der **Abgleich** zeigt, mit welcher Version sie entstand und was heute läuft (Ablago, Datenbank-Stand, PostgreSQL, Architektur, Ablage-Id). Gehört die Sicherung zu einem anderen Mandanten, übernimmt Ablago dessen Id.
 6. Den **Schlüssel vom Notfallblatt** eingeben (Leerzeichen zählen nicht) und **Schlüssel prüfen** – Ablago vergleicht ihn mit dem Fingerabdruck aus den Metadaten.
 7. **Wiederherstellen**. Der Bildschirm zeigt jeden Schritt; du kannst die Seite neu laden. Am Ende startet Ablago neu.
 8. **Weiter zur Anmeldung** und mit den bisherigen Zugangsdaten anmelden. Die Schlüsseldatei hat Ablago dabei selbst angelegt.
@@ -31,7 +31,7 @@ Dieser Weg ist nur offen, solange es noch keinen Benutzer gibt, und nur mit dem 
 
 ### Aus einer Kopie außer Haus { #aus-einer-kopie-ausser-haus }
 
-Ist das Gerät weg, holst du beide Dateien vom [Ziel außer Haus](sicherung-ausser-haus.md) – die `.dms-sicherung` und die `.json` daneben – und legst sie in den Ordner `sicherung`. Die `.json` dort ist die **schlanke** Fassung (ohne Versionen, Zähler und Haushalts-Id). Die Liste zeigt die Sicherung als *Kopie außer Haus*; sobald du den **Schlüssel vom Notfallblatt** eingibst, liest Ablago Datenbank-Stand, Haushalts-Id und Anzahl Mappen, Dokumente und Benutzer aus der Sicherung selbst. Die Ablago-Version, mit der sie entstand, steht dann als „unbekannt“ im Abgleich – maßgeblich ist der Datenbank-Stand. Beim Einspielen prüft Ablago jede Datei gegen ihren Prüfwert und am Ende die ganze Sicherung (GCM-Prüfwert); erst dann wird umgeschaltet.
+Ist das Gerät weg, holst du beide Dateien vom [Ziel außer Haus](sicherung-ausser-haus.md) – die `.dms-sicherung` und die `.json` daneben – und legst sie in den Ordner `sicherung`. Die `.json` dort ist die **schlanke** Fassung (ohne Versionen, Zähler und Ablage-Id). Die Liste zeigt die Sicherung als *Kopie außer Haus*; sobald du den **Schlüssel vom Notfallblatt** eingibst, liest Ablago Datenbank-Stand, Ablage-Id und Anzahl Mappen, Dokumente und Benutzer aus der Sicherung selbst. Die Ablago-Version, mit der sie entstand, steht dann als „unbekannt“ im Abgleich – maßgeblich ist der Datenbank-Stand. Beim Einspielen prüft Ablago jede Datei gegen ihren Prüfwert und am Ende die ganze Sicherung (GCM-Prüfwert); erst dann wird umgeschaltet.
 
 ## Auf dem laufenden System
 

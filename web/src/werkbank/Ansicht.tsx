@@ -86,7 +86,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
         <h1>Werkbank anpassen</h1>
         <p className="leise">Blende aus, was du nicht brauchst. <strong>Ausblenden schaltet nichts ab:</strong> Alles läuft weiter, Links und Hilfe führen weiter hin, und Hinweise wie „Sicherung zu alt“ erscheinen immer in der <Link to="/werkbank" className="verweis">Übersicht</Link>. <Hilfe ort="werkbank.ansicht" /></p>
       </div>
-      {!s.eingestellt && <div className="hinweis"><p>Noch nicht eingestellt – bisher siehst du alle Bereiche. Für einen Haushalt reicht meist die Vorlage <strong>Haushalt</strong>.</p></div>}
+      {!s.eingestellt && <div className="hinweis"><p>Noch nicht eingestellt – bisher siehst du alle Bereiche. Zu Hause reicht meist die Vorlage <strong>Haushalt</strong>, für Selbständige und kleine Betriebe die Vorlage <strong>Betrieb</strong>.</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <fieldset className="wahl">
           <legend className="h3">Vorlage für alle Administratoren</legend>

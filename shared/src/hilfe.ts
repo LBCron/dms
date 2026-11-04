@@ -19,7 +19,7 @@ export const HILFE = {
   'einrichtung.code': admin('installation/', 'Einrichtungscode', 'einrichtungscode'),
   'einrichtung.datenbank': admin('installation/', 'Datenbank', 'datenbank'),
   'einrichtung.wahl': admin('installation/', 'Neu einrichten oder wiederherstellen', 'neu-einrichten-oder-wiederherstellen'),
-  'einrichtung.mandant': admin('installation/', 'Haushalt', 'haushalt'),
+  'einrichtung.mandant': admin('installation/', 'Name deiner Ablage', 'haushalt'),
   'einrichtung.administrator': admin('installation/', 'Administrator', 'administrator'),
   'einrichtung.benutzer': admin('installation/', 'Erster Benutzer', 'erster-benutzer'),
   'einrichtung.schluessel': admin('installation/', 'Schlüssel und Notfallblatt', 'schlussel-und-notfallblatt'),

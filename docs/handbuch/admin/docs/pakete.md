@@ -470,7 +470,7 @@ Die Sammeldatei ist ein ZIP mit dem Verzeichnis `sammeldatei.json` (je Paket Id,
 
 ## Paket aus deinem Ablago erstellen { #paket-aus-deinem-dms-erstellen }
 
-Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket zu einer anderen Familie mit, ohne YAML von Hand zu schreiben. Unter **Werkbank → Pakete → Paket erstellen** führt dich ein Assistent in vier Schritten; unten stehen **Zurück**, **Weiter** und am Ende **Als .zip exportieren**.
+Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit Zahlungen –, nimmst du sie als Paket in eine andere Ablage mit, etwa zu einer anderen Familie oder in einen anderen Betrieb, ohne YAML von Hand zu schreiben. Unter **Werkbank → Pakete → Paket erstellen** führt dich ein Assistent in vier Schritten; unten stehen **Zurück**, **Weiter** und am Ende **Als .zip exportieren**.
 
 1. **Auswählen** – Mappentypen und Ansichten mit Haken, oben eine Suche. Optional **Beispiel-Mappen**: Ohne Auswahl enthält das Paket keine einzige Mappe. Wählst du Mappen der gewählten Typen aus, kommen ihre Feldwerte als Beispiele mit – nimm nur Mappen mit erfundenen Daten, z. B. Demo-Mappen.
 2. **Prüfen** – Ablago prüft automatisch und sagt, was es daraus macht:
@@ -483,7 +483,7 @@ Hast du dir eigene Mappentypen und Ansichten gebaut – etwa für Verträge mit 
 
 In der anderen Ablago-Installation installierst du zuerst die Abhängigkeiten (z. B. *Basis* aus dem Katalog) und lädst die Datei dann unter **Expertenmodus → Paket hochladen** hoch.
 
-**Nächste Version:** Ablago merkt sich Id, Version, Autor, Lizenz und Auswahl jedes Exports. Beim nächsten Mal schlägt der Assistent dieselbe Id mit höherer Version vor (1.0.0 → 1.1.0); frühere Pakete holst du unter „Früher exportiert“ zurück. Lädt die andere Familie die höhere Version hoch, **aktualisiert** ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.
+**Nächste Version:** Ablago merkt sich Id, Version, Autor, Lizenz und Auswahl jedes Exports. Beim nächsten Mal schlägt der Assistent dieselbe Id mit höherer Version vor (1.0.0 → 1.1.0); frühere Pakete holst du unter „Früher exportiert“ zurück. Lädt die andere Ablage die höhere Version hoch, **aktualisiert** ihr Ablago das Paket wie jedes Update: Es ergänzt neue Felder, Register und Ansichten und löscht nichts.
 
 !!! note "Keine Daten im Paket"
     Ein Paket enthält nur den Aufbau – Mappentypen und Ansichten. Mappen, Dokumente, Notizen, Benutzer und Passwörter kommen nie mit; aus ausdrücklich gewählten Beispiel-Mappen nur Feldwerte ohne Passwörter. Paket erstellen dürfen nur Administratoren; das Protokoll vermerkt jeden Export.

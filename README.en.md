@@ -19,7 +19,7 @@
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
 [![Support](https://img.shields.io/badge/Support-GitHub_Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/motom001)
 
-**Your household's paperwork in one place – self-hosted, free of charge, your data stays with you.**
+**Your paperwork in one place, at home and in a small business – self-hosted, free of charge, your data stays with you.**
 
 Instead of loose files in folders, you create **folders with structure** ("Mappen"): for the contract, the invoice, the heating system, the tradesperson. Mappen link to each other. From the heating system you find the maintenance contract, from there every invoice and the tradesperson who issued it. And Ablago reminds you of the notice period in good time.
 
@@ -36,9 +36,9 @@ Instead of loose files in folders, you create **folders with structure** ("Mappe
 
 ## Who is it for?
 
-<img alt="Who we build Ablago for, on a scale from private to business: core focus on beginner families, family members and household admins; focus on looking after parents and landlords; supported for the self-employed and small businesses; not in focus for mid-sized companies and large enterprises" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.en.svg" width="100%">
+<img alt="Who we build Ablago for, on a scale from private to business: core focus on beginner families, family members and household admins; focus on looking after parents, landlords, the self-employed and small businesses; supported for mid-sized companies; not in focus for large enterprises" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.en.svg" width="100%">
 
-Ablago is built for **families and households**. It fits particularly well if you **look after your parents** or **rent out a few flats**. **Self-employed people and small businesses** can use it well too; it is deliberately not made for larger companies.
+Ablago is built for **families** and for **self-employed people and small businesses**. It also fits well if you **look after your parents** or **rent out a few flats**. We **support** mid-sized companies; Ablago is not made for **large enterprises**. Why the self-employed and small businesses joined the focus in November 2026: many features already help exactly them (archive mode, procedure documentation, rights per role, mailboxes, deputies, sign-in via a provider, automations), and the load tests show that Ablago copes with much larger installations ([what Ablago can handle](https://help.ablago.app/admin/aktuell/verkraftet/)). When in doubt, simplicity for families still wins.
 
 Whether it suits you is shown in [Is Ablago right for me?](https://help.ablago.app/benutzer/aktuell/wofuer/#ist-das-dms-etwas-fur-mich) – with the [5-minute test](https://help.ablago.app/benutzer/aktuell/wofuer/#der-5-minuten-test) (German).
 
@@ -86,7 +86,7 @@ All ways at a glance: **[How do I get a DMS?](https://help.ablago.app/installier
 - **Design Mappe types yourself:** fields, links, tabs, title templates and result lists – in the workbench ("Werkbank"), without programming. Ready-made **packages** from the [package catalogue](https://github.com/motom001/dms-registry).
 - **Incoming mail** from mailboxes (IMAP) and an inbox folder, **versioning** of documents, **advanced search** across fields and full text.
 - **Permissions** per Mappe type and view with rules and a test run; **two-factor sign-in** and **sign-in via a provider** (OpenID Connect).
-- **Archive mode** with deletion lock until the retention period ends, **customisable workbench** with the presets Household, Organisation and Everything.
+- **Archive mode** with deletion lock until the retention period ends, **customisable workbench** with the presets Household, Business and Everything.
 - **Console** `dms` in the container for emergencies and operations, **API** `/api/v1` with API keys.
 - One image for **amd64 and arm64**, public at `ghcr.io/motom001/dms`.
 
@@ -108,7 +108,7 @@ The image `ghcr.io/motom001/dms` is public – you do not need to sign in to the
 
 1. Create the template [`deploy/nas/docker-compose.yml`](deploy/nas/docker-compose.yml) as a Compose project and adjust the paths (folders `postgres`, `files`, `geheim` and `sicherung`).
 2. Next to it, put a file `.env` with `DB_PASSWORD=<long random password>`.
-3. Start it and open `http://<NAS>:8080`. A wizard guides you through the setup: setup code (shown in the container log and in `geheim/EINRICHTUNGSCODE`), database, then **set up new** or **restore from a backup**, name of the household, administrator, first user, key and emergency sheet.
+3. Start it and open `http://<NAS>:8080`. A wizard guides you through the setup: setup code (shown in the container log and in `geheim/EINRICHTUNGSCODE`), database, then **set up new** or **restore from a backup**, name of your filing system, administrator, first user, key and emergency sheet.
 
 `ghcr.io/motom001/dms:stabil` (used by all templates) follows the tested releases; `:main` follows every state of `main` and is for testing only; with a version number, i.e. `ghcr.io/motom001/dms:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on a release. Everything else is in the administrator manual under [Setup and operation](https://help.ablago.app/admin/aktuell/installation/) and [Updating and backing up](https://help.ablago.app/admin/aktuell/aktualisieren/) (German).
 

@@ -33,7 +33,7 @@ export function UeberDms({ schliessen }: { schliessen: () => void }) {
       onClick={(e) => { if (e.target === ref.current) schliessen(); }}>
       <div className="ueber-dms-inhalt">
         <h2 id={`${id}-t`} className="marke ueber-dms-marke"><Marke logo={null} schriftzug="Ablago" gross /><span className="sr-only"> – Über Ablago</span></h2>
-        <p>Ablago ist ein selbst gehostetes Dokumentenmanagementsystem für Haushalte und kleine Betriebe. Es läuft auf eurem eigenen Rechner, NAS oder Server – deine Daten bleiben bei dir und gehen an keinen Cloud-Anbieter. Nutzungsdaten sendet es keine.</p>
+        <p>Ablago ist die Dokumentenablage für zu Hause und kleine Betriebe. Es läuft auf eurem eigenen Rechner, NAS oder Server – deine Daten bleiben bei dir und gehen an keinen Cloud-Anbieter. Nutzungsdaten sendet es keine.</p>
         <dl className="ueber-dms-angaben">
           <dt>Version</dt>
           <dd>{version ?? 'unbekannt'}</dd>
