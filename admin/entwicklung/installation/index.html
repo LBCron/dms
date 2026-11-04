@@ -3031,7 +3031,7 @@
 <p>Über den Mailserver gehen nur Mails, die jemand auslöst oder einschaltet: versandte Mappen samt Dokumenten, die <a href="../aufgaben/#tagliche-zusammenfassung">Tägliche Zusammenfassung</a> (Mappentitel und Links), Einladungen und Passwort-Links sowie <a href="../datenschutz/">Auskünfte</a> und Abruf-Links. Eine Übersicht aller Wege steht unter <a href="../datenschutz/#was-deine-ablage-verlasst">Was deine Ablage verlässt</a>.</p>
 <p><img alt="E-Mail und Adresse in der Werkbank" src="../bilder/werkbank-betrieb.png" /></p>
 <ul>
-<li><strong>Adresse von Ablago</strong> – unter dieser Adresse öffnen die Benutzer Ablago, z. B. <code>http://nas.local:8080</code> oder <code>https://dms.example.org</code>. Sie steht in den Links der E-Mails. Solange keine gepflegt ist, nimmt Ablago die Adresse, unter der es gerade aufgerufen wird; <strong>Diese Adresse übernehmen</strong> speichert sie. Beginnt sie mit <code>https://</code>, gilt die Anmeldung nur noch über HTTPS.</li>
+<li><strong>Adresse von Ablago</strong> – unter dieser Adresse öffnen die Benutzer Ablago, z. B. <code>http://nas.home.arpa:8080</code> oder <code>https://ablage.example.org</code>. Sie steht in den Links der E-Mails. Solange keine gepflegt ist, nimmt Ablago die Adresse, unter der es gerade aufgerufen wird; <strong>Diese Adresse übernehmen</strong> speichert sie. Beginnt sie mit <code>https://</code>, gilt die Anmeldung nur noch über HTTPS.</li>
 <li><strong>E-Mail-Versand</strong> – Server, Verbindungsart (STARTTLS, meist Port 587; SSL/TLS, meist 465; unverschlüsselt nur im Heimnetz), Benutzer, Passwort und Absender. <strong>Verbindung prüfen</strong> meldet sich am Server an, ohne etwas zu senden; <strong>Testmail senden</strong> schickt eine Mail an eine Adresse deiner Wahl – beides mit den Werten im Formular, auch bevor du speicherst. Schlägt etwas fehl, steht die Meldung des Mailservers darunter.</li>
 <li><strong>Selbstsigniertes Zertifikat erlauben</strong> – nur für einen eigenen Mailserver im Heimnetz.</li>
 <li>Der <strong>Absender</strong> ist auch der Absender, wenn Benutzer eine Mappe <a href="https://help.ablago.app/benutzer/versenden/">per E-Mail versenden</a>. Ablago trägt dabei die Adresse des Benutzers als <strong>Antworten an</strong> ein – so kommen Antworten bei ihm an, ohne dass Ablago fremde Absender vortäuscht (das würden viele Empfänger als Spam einstufen). Dieselbe Einstellung braucht die <a href="../aufgaben/#tagliche-zusammenfassung">tägliche Zusammenfassung der Aufgaben</a>.</li>
@@ -3116,7 +3116,7 @@
 </tr>
 <tr>
 <td><code>DMS_EINBETTEN</code></td>
-<td>Seiten, die Ablago einbetten dürfen (z. B. ein Dashboard), etwa <code>https://ha.example.org http://nas:8123</code>. Nicht gesetzt: nur Ablago selbst. Siehe <a href="#sicherheits-header">Sicherheits-Header</a></td>
+<td>Seiten, die Ablago einbetten dürfen (z. B. ein Dashboard), etwa <code>https://ha.example.org http://nas.home.arpa:8123</code>. Nicht gesetzt: nur Ablago selbst. Siehe <a href="#sicherheits-header">Sicherheits-Header</a></td>
 </tr>
 <tr>
 <td><code>LOG_LEVEL</code></td>
