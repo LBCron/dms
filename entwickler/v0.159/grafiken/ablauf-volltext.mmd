@@ -1,0 +1,9 @@
+sequenceDiagram
+  participant K as Kern
+  participant P as Paket (dms:volltext)
+  K->>P: datei.volltext (dokument, mime, sha256, neu)
+  P->>K: GET /dokumente/{id}/inhalt
+  K-->>P: Datei
+  P->>K: PUT /dokumente/{id}/volltext { "text": … }
+  Note over K: Stand fertig, Suchindex, Historie
+  K->>K: volltext.fertig an die anderen Pakete

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.158/automatisierungen/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.159/automatisierungen/">
       
       
         <link rel="prev" href="../stempel/">
@@ -914,6 +914,17 @@
     <span class="md-ellipsis">
       
         Beispiel: an die Kündigungsfrist erinnern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#datum-erreicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datum erreicht
       
     </span>
   </a>
@@ -2517,6 +2528,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#datum-erreicht" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Datum erreicht
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#karten-hinzufugen-umsortieren-entfernen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2605,7 +2627,7 @@
 <h1 id="automatisierungen">Automatisierungen<a class="headerlink" href="#automatisierungen" title="Permanent link">&para;</a></h1>
 <p>Mit einer <strong>Automatisierung</strong> erledigt Ablago etwas von selbst: <strong>Wenn</strong> etwas passiert (ein Ereignis oder ein Datum), <strong>und</strong> die Bedingungen stimmen, <strong>dann</strong> setzt es Felder oder gibt jemandem eine Aufgabe. Du findest sie unter <strong>Werkbank → Ablage aufbauen → Automatisierungen</strong>. Im Haushalt erscheint der Bereich im <strong>Expertenmodus</strong> (Werkbank → Werkbank anpassen), in Betrieben immer.</p>
 <p><img alt="Werkbank → Automatisierungen: Liste und Editor" src="../bilder/werkbank-automatisierungen.png" /></p>
-<p>Links stehen alle Automatisierungen mit Name, Kurzform („Wenn Datum in N Tagen erreicht (Vertrag) → Aufgabe an Verantwortlich“), an/aus, Nummer in der Reihenfolge und dem letzten Lauf. Rechts baust du sie aus Karten zusammen – drei Bereiche untereinander, verbunden mit Pfeilen:</p>
+<p>Links stehen alle Automatisierungen mit Name, Kurzform („Wenn Vertrag: Kündigung bis in 30 Tagen → Aufgabe an Verantwortlich“), an/aus, Nummer in der Reihenfolge und dem letzten Lauf. Rechts baust du sie aus Karten zusammen – drei Bereiche untereinander, verbunden mit Pfeilen:</p>
 <table>
 <thead>
 <tr>
@@ -2616,7 +2638,7 @@
 <tbody>
 <tr>
 <td><strong>Wenn</strong></td>
-<td>genau eine Karte: ein Ereignis (Mappe angelegt, gespeichert, Notiz, Dokument hochgeladen, Frist erreicht, Kontosperre …) oder <strong>Datum in N Tagen erreicht</strong></td>
+<td>genau eine Karte: ein Ereignis (Mappe angelegt, gespeichert, Notiz, Dokument hochgeladen, Kontosperre …) oder <strong>Datum erreicht</strong></td>
 </tr>
 <tr>
 <td><strong>Und</strong></td>
@@ -2632,13 +2654,22 @@
 <p>Petra soll 30 Tage vor Ablauf der Kündigungsfrist eines Vertrags eine Aufgabe bekommen – aber nur, wenn im Vertrag jemand als verantwortlich eingetragen ist.</p>
 <ol>
 <li><strong>+ Neu</strong>, Name „Kündigung prüfen“.</li>
-<li><strong>Wenn:</strong> Ereignis <strong>Datum in N Tagen erreicht</strong>, Mappentyp <em>Vertrag</em>, Datumsfeld <em>Kündigung bis</em>, <strong>In Tagen</strong> 30, Uhrzeit 07:00.</li>
+<li><strong>Wenn:</strong> <strong>Datum erreicht</strong>, Mappentyp <em>Vertrag</em>, Datumsfeld <em>Kündigung bis</em>, <strong>Vorlauf</strong> 30 <em>Tage</em>, Uhrzeit 07:00.</li>
 <li><strong>Und:</strong> <strong>+ Karte → Feld-Bedingung</strong>, Feld <em>Verantwortlich</em> „ist nicht leer“.</li>
-<li><strong>Dann:</strong> <strong>+ Karte → Aufgabe / Benachrichtigung</strong>, Als <em>Aufgabe</em>, Empfänger <em>Person im Feld „Verantwortlich“</em>, fällig in 7 Tagen, Text <code>Bitte {titel} prüfen – kündbar bis {kuendigung_bis}.</code></li>
+<li><strong>Dann:</strong> <strong>+ Karte → Aufgabe / Benachrichtigung</strong>, Als <em>Aufgabe</em>, Empfänger <em>Person im Feld „Verantwortlich“</em>, Text <code>Bitte {titel} prüfen – kündbar bis {kuendigung_bis}.</code></li>
 <li><strong>Gleich einschalten</strong> ankreuzen und <strong>Speichern</strong>.</li>
 </ol>
 <p><img alt="Aufgeklappte Dann-Karte mit Empfänger und Platzhaltern" src="../bilder/werkbank-automatisierung-karte.png" /></p>
 <p>Eine Karte klappst du mit einem Klick auf ihren Namen <strong>auf</strong> (Einstellungen) und wieder <strong>zu</strong> (Kurzzeile wie „Aufgabe → Person im Feld „Verantwortlich““). Unter dem Text stehen die <strong>Platzhalter</strong>, die zur Wenn-Karte passen: die Felder des Mappentyps sowie <code>{titel}</code>, <code>{mappentyp}</code>, <code>{heute}</code>, <code>{automatisierung}</code> und beim Datum <code>{datum}</code> und <code>{tage}</code>. Ein Klick setzt den Platzhalter ein.</p>
+<h2 id="datum-erreicht">Datum erreicht<a class="headerlink" href="#datum-erreicht" title="Permanent link">&para;</a></h2>
+<p>Die Karte <strong>Datum erreicht</strong> prüft einmal am Tag zur gewählten Uhrzeit, bei welchen Mappen ein Datumsfeld nach dem <strong>Vorlauf</strong> erreicht ist.</p>
+<ul>
+<li><strong>Vorlauf</strong> in <strong>Tagen, Wochen oder Monaten</strong>. 3 Monate sind drei Kalendermonate, nicht 90 Tage: Für ein Ende am 31.05. greift die Karte am letzten Tag im Februar. 0 heißt „am Tag selbst“, eine negative Zahl „so lange danach“.</li>
+<li><strong>Wiederkehrend</strong> (monatlich, vierteljährlich, halbjährlich, jährlich): Wer die Aufgabe erledigt, bekommt den Folgetermin vorgeschlagen, wie bei der Erinnerung am Datumsfeld.</li>
+<li>Eine <strong>Aufgabe</strong> daraus ist eine <strong>Frist</strong> zum Datum der Mappe. Sie erledigt sich selbst, wenn das Datum geändert oder geleert wird. Dieselbe Person bekommt je Mappe, Feld und Datum nur eine Frist, auch neben einer Erinnerung am Datumsfeld.</li>
+<li>War Ablago zur Uhrzeit aus, holt es verpasste Tage nach (bis zu 31 Tage zurück). Eine neu eingeschaltete Automatisierung beginnt heute.</li>
+</ul>
+<p>Die früheren Karten „Datum in N Tagen“ und „Frist erreicht“ sind in <strong>Datum erreicht</strong> aufgegangen. Aus „Datum in N Tagen“ wird beim nächsten Öffnen dieselbe Karte mit Vorlauf in Tagen. Bei „Frist erreicht“ fehlt das Datumsfeld: Die Automatisierung steht rot da, bis du es wählst.</p>
 <h2 id="karten-hinzufugen-umsortieren-entfernen">Karten hinzufügen, umsortieren, entfernen<a class="headerlink" href="#karten-hinzufugen-umsortieren-entfernen" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Mit der Maus oder am Handy:</strong> <strong>Kartenvorrat</strong> aufklappen, nach einer Karte suchen und sie in ihren Bereich <strong>ziehen</strong> (am Handy lange drücken) – oder einfach anklicken.</li>
@@ -2649,7 +2680,9 @@
 <h2 id="was-die-dann-karten-tun">Was die Dann-Karten tun<a class="headerlink" href="#was-die-dann-karten-tun" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Feld ändern</strong> setzt nur die gewählten Felder und lässt alle anderen unverändert. Text mit Platzhaltern; bei Datumsfeldern <code>heute</code>, <code>heute+7</code> oder <code>heute-3</code>. Ablago prüft den Wert wie im Formular (Pflichtfelder, Auswahllisten, Archivmodus). In der Historie der Mappe steht „durch Automatisierung ‚…‘“.</li>
-<li><strong>Aufgabe / Benachrichtigung</strong> geht an Personen, an <strong>alle aktiven Mitglieder einer Rolle</strong> oder an die <strong>Person in einem Feld</strong> der Mappe. Eine <em>Aufgabe</em> kann ein Fälligkeitsdatum haben; <em>Benachrichtigungen</em> bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.</li>
+<li><strong>Aufgabe / Benachrichtigung</strong> geht an Personen, an <strong>alle aktiven Mitglieder einer Rolle</strong>, an die <strong>Person in einem Feld</strong> der Mappe oder an <strong>wer die Mappe angelegt hat</strong>. Eine <em>Aufgabe</em> kann ein Fälligkeitsdatum haben; <em>Benachrichtigungen</em> bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.</li>
+<li>Aufgaben aus Automatisierungen verhalten sich wie die eingebauten: Ist jemand <strong>abwesend oder deaktiviert</strong>, geht die Aufgabe an seine <strong>Vertretung</strong> (in der Historie steht „weitergegeben wegen Abwesenheit …“). Gibt es keine, bekommen sie die Administratoren – der Lauf bricht nicht ab.</li>
+<li>Eine Aufgabe <strong>erledigt sich selbst</strong>, wenn ihr Anlass wegfällt: bei <strong>Datum erreicht</strong>, wenn das Datum geändert oder geleert wird; bei <strong>Neue Post</strong>, wenn die Post zugeordnet oder erledigt ist; bei <strong>Abwesenheit gesetzt</strong>, wenn die Abwesenheit endet.</li>
 <li><strong>Danach keine weiteren Automatisierungen</strong> beendet die Reihe: Automatisierungen mit höherer Nummer laufen für dieses Ereignis nicht mehr (im Verlauf „Übersprungen durch …“).</li>
 </ul>
 <p>Automatisierungen arbeiten mit dem <strong>Systemkonto „Automatisierung“</strong> (Werkbank → Benutzer). Was dieses Konto nicht lesen darf, überspringt die Automatisierung; Platzhalter zeigen dann „(nicht sichtbar)“.</p>

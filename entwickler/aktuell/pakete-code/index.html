@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.158/pakete-code/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.159/pakete-code/">
       
       
         <link rel="prev" href="../leistung/">
@@ -1962,6 +1962,7 @@
 <p>Die Vorschau bei der Installation nennt die Einstellung unter „Zugriff auf Netzwerk/Internet nur zu: …“; kommt in einem Update eine Adress-Einstellung dazu oder fällt weg, muss der Administrator neu bestätigen. Das Paket liest die Adresse wie jede Einstellung aus <code>einstellungen</code>.
 - Bei der <strong>Installation</strong> zeigt Ablago diese Rechte und lässt sie bestätigen; die Ereignisse stehen dort als Unterliste mit Link ins Administratorhandbuch. Ändern sich Rechte oder Adressen in einem Update, muss der Administrator neu bestätigen.</p>
 <h2 id="ereignisse">Ereignisse<a class="headerlink" href="#ereignisse" title="Permanent link">&para;</a></h2>
+<p>Seit #724 kommen alle Ereignisse aus dem einen Ereigniskatalog und Ausgangskorb des Kerns (<a href="../aufbau/#ereigniskatalog">Aufbau</a>). Sie tragen zusätzlich <code>ereignis</code> (Id im Ausgangskorb; gleich bei einer Wiederholung) und – zu Mappen und Dokumenten – <code>typ</code> (Mappentyp). Aufträge an genau ein Paket (<code>datei.*</code>, <code>paket.einstellungen_geaendert</code>) kommen direkt.</p>
 <table>
 <thead>
 <tr>
@@ -1988,8 +1989,8 @@
 </tr>
 <tr>
 <td><code>texterkennung.fertig</code></td>
-<td><strong>Veraltet</strong> (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit <code>volltext.fertig</code> (<code>quelle: kern</code>) und mit denselben Daten. Neue Pakete nehmen <code>volltext.fertig</code>.</td>
-<td>wie <code>volltext.fertig</code>, <code>seiten</code></td>
+<td><strong>Veraltet</strong> (bleibt für Pakete von vor 0.133.0): Seit #724 meldet der Kern es nicht mehr selbst. Ein Paket, das es abonniert hat, bekommt den Volltext der eingebauten Texterkennung (<code>volltext.fertig</code> mit <code>quelle: kern</code>) unter diesem Namen, mit denselben Daten und <code>seiten</code>. Neue Pakete nehmen <code>volltext.fertig</code>.</td>
+<td></td>
 </tr>
 <tr>
 <td><code>paket.einstellungen_geaendert</code></td>
