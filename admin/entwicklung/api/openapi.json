@@ -5783,8 +5783,8 @@
         "tags": [
           "Dokumente"
         ],
-        "summary": "Seite als Graustufenbild (PGM)",
-        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). Seit 0.133.0 (#458) auch JPEG und PNG: Seite 1 in Originalgröße (dpi zählt dort nicht). Seit 0.137.0 (#577) für andere Dateitypen die Seiten ihrer umgewandelten Fassung. 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen ohne Fassung oder zu große Seiten.",
+        "summary": "Seite als Graustufenbild (PGM) oder Farbbild (PPM)",
+        "description": "Für eine Texterkennung im Paket (#338): die Seite eines PDFs als PGM (8 Bit, „P5 Breite Höhe 255“, danach die Bildpunkte). Mit `farbe=1` (#716) als Farbbild PPM („P6 Breite Höhe 255“, je Bildpunkt 3 Bytes R, G, B), z. B. für die Archivfassung (PDF/A); gleiche Grenzen. Seit 0.133.0 (#458) auch JPEG und PNG: Seite 1 in Originalgröße (dpi zählt dort nicht). Seit 0.137.0 (#577) für andere Dateitypen die Seiten ihrer umgewandelten Fassung. 404, wenn es die Seite nicht gibt; 422 für andere Dateitypen ohne Fassung oder zu große Seiten.",
         "operationId": "getDokumenteMitidSeitenMitnrScan",
         "parameters": [
           {
@@ -5812,6 +5812,15 @@
             "description": "Auflösung 72–400, ohne Angabe 300",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "name": "farbe",
+            "in": "query",
+            "required": false,
+            "description": "1: Farbbild (PPM, P6) statt Graustufen (#716)",
+            "schema": {
+              "type": "string"
             }
           }
         ],

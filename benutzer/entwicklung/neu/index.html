@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0173" class="md-skip">
+        <a href="#neu-in-version-0175" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -413,15 +413,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01730" class="md-nav__link">
+  <a href="#01750" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.173.0
+        0.175.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.173.0">
+    <nav class="md-nav" aria-label="0.175.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -429,6 +429,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
       
     </span>
   </a>
@@ -1160,15 +1171,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01730" class="md-nav__link">
+  <a href="#01750" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.173.0
+        0.175.0
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.173.0">
+    <nav class="md-nav" aria-label="0.175.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1176,6 +1187,17 @@
     <span class="md-ellipsis">
       
         Neu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handbuch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handbuch
       
     </span>
   </a>
@@ -1218,19 +1240,24 @@
   
 
 
-<h1 id="neu-in-version-0173">Neu in Version 0.173<a class="headerlink" href="#neu-in-version-0173" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0175">Neu in Version 0.175<a class="headerlink" href="#neu-in-version-0175" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01730">0.173.0<a class="headerlink" href="#01730" title="Permanent link">&para;</a></h2>
+<h2 id="01750">0.175.0<a class="headerlink" href="#01750" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Archivfassung oder Original – überall gleich</strong> (#715): Die Wahl „Archivfassung (PDF/A), wo vorhanden“ oder „Original“ gibt es jetzt auch beim Versenden mehrerer Mappen per E-Mail und beim Export als ZIP oder PDF. Im Dialog „Herunterladen mit Stempel“ und beim Versenden einer Mappe steht sie sichtbar. Vorgabe ist wie beim Herunterladen die Archivfassung; Dokumente ohne Archivfassung und E-Rechnungen gehen als Original hinaus, mit kurzem Hinweis statt Rückfrage.</li>
+<li><strong>Lasttest misst den Arbeitsspeicher des ganzen Containers</strong> (#696): Das Ergebnis hat die neue Zeile „Arbeitsspeicher Container höchstens: … MB (davon Programme …, Dateizwischenspeicher …; PostgreSQL …)“. Sie passt zu dem, was die Docker-Oberfläche einer NAS anzeigt – bisher stand dort nur der Speicher von Ablago selbst, und die NAS zeigte deutlich mehr. Gelesen wird aus den cgroup-Dateien im Container (v2 und v1); was nicht lesbar ist, heißt „nicht verfügbar“. Auch die Seite des Lasttests im Browser zeigt den Wert.</li>
+<li>Die Grenze des Projekts von 1,5 GB gilt weiter für „Arbeitsspeicher Ablago höchstens“.</li>
+</ul>
+<h3 id="handbuch">Handbuch<a class="headerlink" href="#handbuch" title="Permanent link">&para;</a></h3>
+<ul>
+<li>„Lasttest selbst durchführen“ erklärt beide Zahlen und warum die Anzeige der NAS höher ist; „Was Ablago verkraftet“ gibt eine Empfehlung für den Arbeitsspeicher auf Grundlage des Containers.</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.172.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.172.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.174.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.174.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
