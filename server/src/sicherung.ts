@@ -11,6 +11,7 @@ import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 import { schreibeSicherung, sha256Von, ZWECK, type Eintrag } from './sicherungsformat';
 import { aufVolume, geraetVon } from './tresor';
 import type { EreignisAufruf } from './dienst';
+import { zeitzone } from '../../shared/src/region';
 
 /**
  * Sicherungen (#103–#105): Datenbank und Dateien zum selben Zeitpunkt, verschlüsselt mit dem
@@ -24,7 +25,6 @@ export const ENDUNG = '.dms-sicherung';
 const TAG_MS = 24 * 60 * 60 * 1000;
 /** Ab hier gilt die letzte erfolgreiche Sicherung als zu alt (#105). */
 export const ZU_ALT_TAGE = 2;
-const ZONE = 'Europe/Berlin';
 
 export type Sicherungsart = 'manuell' | 'automatisch' | 'vor-wiederherstellung';
 
@@ -159,7 +159,7 @@ export interface SicherungsQuellen {
   jetzt?: () => Date;
 }
 
-const teileIn = (d: Date) => Object.fromEntries(new Intl.DateTimeFormat('de-DE', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false })
+const teileIn = (d: Date) => Object.fromEntries(new Intl.DateTimeFormat('de-DE', { timeZone: zeitzone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false })
   .formatToParts(d).map((x) => [x.type, x.value])) as Record<string, string>;
 const WOCHENTAGE: Record<string, number> = { Mo: 1, Di: 2, Mi: 3, Do: 4, Fr: 5, Sa: 6, So: 7 };
 /** Datum (JJJJ-MM-TT), Uhrzeit (HH:MM) und Wochentag (1–7) in deutscher Zeit. */
@@ -771,11 +771,11 @@ export class Sicherung {
     if (z.fehler) {
       vorfall = `fehler:${z.fehler.am}`;
       betreff = 'Ablago: Sicherung fehlgeschlagen';
-      text = `Die ${z.fehler.art === 'automatisch' ? 'automatische ' : ''}Sicherung am ${new Date(z.fehler.am).toLocaleString('de-DE', { timeZone: ZONE })} ist fehlgeschlagen:\n\n${z.fehler.grund}\n\n`;
+      text = `Die ${z.fehler.art === 'automatisch' ? 'automatische ' : ''}Sicherung am ${new Date(z.fehler.am).toLocaleString('de-DE', { timeZone: zeitzone() })} ist fehlgeschlagen:\n\n${z.fehler.grund}\n\n`;
     } else if (z.planAktiv && z.zuAlt) {
       vorfall = `alt:${z.letzte?.ende ?? 'nie'}`;
       betreff = 'Ablago: Die letzte Sicherung ist zu alt';
-      text = z.letzte ? `Die letzte erfolgreiche Sicherung ist vom ${new Date(z.letzte.ende).toLocaleString('de-DE', { timeZone: ZONE })} – älter als ${ZU_ALT_TAGE} Tage.\n\n` : 'Es gibt noch keine erfolgreiche Sicherung, obwohl die automatische Sicherung eingeschaltet ist.\n\n';
+      text = z.letzte ? `Die letzte erfolgreiche Sicherung ist vom ${new Date(z.letzte.ende).toLocaleString('de-DE', { timeZone: zeitzone() })} – älter als ${ZU_ALT_TAGE} Tage.\n\n` : 'Es gibt noch keine erfolgreiche Sicherung, obwohl die automatische Sicherung eingeschaltet ist.\n\n';
     }
     if (vorfall) return this.meldeVorfall('sicherung_gemeldet', vorfall, betreff, text);
     return this.meldeExtern(z.extern);
@@ -785,7 +785,7 @@ export class Sicherung {
   private async meldeExtern(x: Awaited<ReturnType<Sicherung['externZustand']>>): Promise<string | null> {
     if (!x) return null;
     const zielText = (id: string) => { const z = x.ziele.find((y) => y.id === id); return z ? `${z.name}${z.adresse ? ` (${ohneZugangsdaten(z.adresse)})` : z.ziel ? ` (${z.ziel})` : ''}` : id; };
-    const wann = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: ZONE });
+    const wann = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone() });
     if (x.fehler?.stand.endgueltig) {
       return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, 'Ablago: Kopie außer Haus fehlgeschlagen',
         `Die Sicherung vom ${wann(x.fehler.beginn)} ließ sich nicht außer Haus kopieren.\n\nZiel: ${zielText(x.fehler.paket)}\nGrund: ${x.fehler.stand.grund ?? 'unbekannt'}\n\nDie lokale Sicherung ist davon nicht betroffen.\n\n`);

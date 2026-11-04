@@ -7,7 +7,7 @@ import {
   PERSONEN_IM_EREIGNIS,
 } from '../../shared/src/automatisierung';
 import { EREIGNISKATALOG, OHNE_WENN, type KatalogEreignis } from '../../shared/src/ereignisse';
-import { tagVon, titelAus, ZEITZONE, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
+import { tagVon, titelAus, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { heuteIn, verschiebe, type Bedingung } from '../../shared/src/sichten';
 import { uebersetzer } from '../../shared/src/sprache';
 import texte from '../../shared/src/sprachen/de/automatisierung.json';
@@ -19,6 +19,7 @@ import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { faelligeTage } from './zeitplan';
 import { istUuid } from './repo';
+import { datumsformat } from '../../shared/src/region';
 
 /**
  * Motor der Automatisierungen (#674): Wenn · Und · Dann, ausgeführt unter dem Systemkonto „Automatisierung“ (#673).
@@ -298,7 +299,7 @@ export interface AutomatisierungDeps {
 interface Anlass { id: string; art: string; daten: Record<string, unknown>; kette: number; ausloeser?: KatalogEreignis['ausloeser'] }
 
 const uuidAus = (s: string) => { const h = createHash('sha256').update(s).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
-const UHR_FORMAT = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const UHR_FORMAT = () => datumsformat('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 /** Feste Id der beim Update übernommenen Vertretungs-Aufgabe (#712/#678). */
 const UMZUG_VERTRETUNG = uuidAus('umzug|vertretung');
@@ -934,7 +935,7 @@ export class Automatisierungen {
       await this.legeBeispiele().catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
       const jetzt = new Date(this.jetzt());
       const heute = heuteIn(jetzt);
-      const uhrzeit = UHR_FORMAT.format(jetzt);
+      const uhrzeit = UHR_FORMAT().format(jetzt);
       // Bearbeiten geht vor Automatisierung: Was nicht mehr passt, wird rot und angehalten (mit Grund).
       const k = await this.kontext();
       for (const a of await this.d.repo.liste()) {

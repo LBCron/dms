@@ -11,6 +11,7 @@ import { ZweifaktorEinrichten } from './profil/Zweifaktor';
 import { rueckfrage } from './rueckfrage';
 import { t } from './sprache';
 import { LasttestSeite } from './lasttest';
+import { setzeZeitzone } from '../../shared/src/region';
 
 /** Logo und Schriftzug des Standard-Designs für Anmeldung und Passwortseiten (#72). */
 let MARKE: { schriftzug: string | null; logo: string | null } = { schriftzug: null, logo: null };
@@ -51,6 +52,8 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   const laden = useCallback(async () => {
     try {
       const st = await api.status();
+      // Region (#726): „heute“, Uhrzeiten und Kalendertage wie auf dem Server.
+      setzeZeitzone(st.zeitzone);
       if (st.marke) {
         MARKE = st.marke;
         if (!st.benutzer) {

@@ -13,6 +13,7 @@ import type { Benutzerspiegel } from './dienst';
 import { mailtexte, type Mailer } from './mail';
 import { t } from './sprache';
 import { hashePasswort, hasheSchluessel, neuerSchluessel, pruefePasswort } from './passwort';
+import { zeitzone } from '../../shared/src/region';
 
 const TAG = 24 * 60 * 60 * 1000;
 export const SITZUNG_TAGE = 30;
@@ -595,7 +596,7 @@ export class Konten {
    * `minuten` gilt; beim Öffnen legt man ein eigenes Passwort fest. Der Link wird nicht verschickt.
    */
   async notfallzugang(minuten: number, jetzt = new Date()): Promise<{ benutzer: Benutzer; link: string; ablauf: Date }> {
-    const teile = Object.fromEntries(new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    const teile = Object.fromEntries(new Intl.DateTimeFormat('de-DE', { timeZone: zeitzone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
       .formatToParts(jetzt).map((x) => [x.type, x.value]));
     const name = `Notfall-Admin ${teile.day}.${teile.month}.${teile.year} ${teile.hour}:${teile.minute}`;
     const email = `notfall-${teile.year}${teile.month}${teile.day}-${teile.hour}${teile.minute}${teile.second}@notfall.invalid`;

@@ -2,6 +2,7 @@ import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import type { Benutzer } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
+import { zeitzone } from '../../shared/src/region';
 
 /**
  * Notfallzugang über eine RESCUE-Datei (#108): Kommt kein Administrator mehr hinein, legt der
@@ -77,7 +78,7 @@ export class Notfallzugang {
     }
 
     const { benutzer, link, ablauf } = await this.quelle.notfallzugang(GUELTIG_MIN, jetzt);
-    const bis = ablauf.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
+    const bis = ablauf.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
     await writeFile(this.datei, [
       `${KENNUNG} für „${benutzer.name}“`,
       `Erstellt: ${jetzt.toISOString()}`,

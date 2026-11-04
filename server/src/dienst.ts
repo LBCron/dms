@@ -78,6 +78,7 @@ import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
 import { Ereignisverteiler } from './ereignisse';
+import { zeitzone } from '../../shared/src/region';
 import { EREIGNISKATALOG, mischeFelder, VERALTETE_EREIGNISSE, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
 import { ANSTEHEND_MAX, ANSTEHEND_TAGE, bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Anstehend, type AnstehendAntwort, type Erinnerung } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
@@ -2462,7 +2463,7 @@ export class Dienst {
           const namen = [...new Set(bisher ? [bisher.erstelltVon ?? von, ...h.map((x) => x.benutzerId!)] : [von])];
           const liste = await Promise.all(namen.slice(0, 3).map((id) => this.name(id)));
           const wer = namen.length > 3 ? `${liste.join(', ')} und weiteren` : liste.length > 1 ? `${liste.slice(0, -1).join(', ')} und ${liste.at(-1)}` : liste[0];
-          const tag = new Date(bisher?.erstellt || Date.now()).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Berlin' });
+          const tag = new Date(bisher?.erstellt || Date.now()).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', timeZone: zeitzone() });
           return `${n === 1 ? 'Eine Änderung' : `${n} Änderungen`} von ${wer} seit ${tag}`;
         },
       });
@@ -5751,9 +5752,9 @@ export class Dienst {
   async loeschprotokollAusgabe(q: Record<string, unknown>, format: 'csv' | 'pdf', x: { von: string; mandant: string; version: string }) {
     const f = { ...liesFilter(q), max: LOESCH_MAX * 10 };
     const { eintraege, gesamt } = await this.repo.loeschprotokoll(f);
-    const tag = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date());
+    const tag = new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(new Date());
     if (format === 'csv') { const b = csvAus(LOESCH_SPALTEN, eintraege.map(alsZeile)); return { name: `Löschprotokoll ${tag}.csv`, mime: 'text/csv; charset=utf-8', inhalt: b }; }
-    const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
+    const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
     const filter = [f.von && `ab ${datumText(f.von)}`, f.bis && `bis ${datumText(f.bis)}`, f.typId && `Mappentyp ${eintraege.find((e) => e.typId === f.typId)?.typ ?? f.typId}`,
       f.grund && (f.grund === 'ohne' ? 'ohne Grund' : LOESCHGRUENDE[f.grund]), f.schritt && LOESCHSCHRITTE[f.schritt], f.vorgang && `Vorgang ${f.vorgang}`, f.suche && `Suche „${f.suche}“`].filter(Boolean).join(', ');
     const b = await schriftstueckPdf({
@@ -6816,7 +6817,7 @@ export class Dienst {
   /* ---------- Vollexport (#254) ---------- */
 
   /** Datenquelle für den Vollexport; Benutzer, Designs und Protokoll kommen von außen. */
-  vollexportQuelle(e: { mandant: string; version: string; benutzer: ExportQuelle['benutzer']; designs: ExportQuelle['designs']; protokoll: ExportQuelle['protokoll']; z?: Zugriff }): ExportQuelle {
+  vollexportQuelle(e: { mandant: string; version: string; benutzer: ExportQuelle['benutzer']; designs: ExportQuelle['designs']; protokoll: ExportQuelle['protokoll']; region?: ExportQuelle['region']; z?: Zugriff }): ExportQuelle {
     const r = this.repo;
     const { z, ...x } = e;
     const bezugCache = new Map<string, MappenBezug | undefined>();

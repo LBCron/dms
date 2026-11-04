@@ -81,7 +81,7 @@ Ist der Katalog nicht erreichbar (kein Internet), sagt der Schritt das deutlich:
 
 ![Optionales](bilder/einrichtung-optional.png)
 
-Adresse von Ablago (vorbelegt mit der Adresse im Browser), Bundesland für Feiertage, Beispiel-Mappentypen und der E-Mail-Versand. Alles lässt sich auch später in der Werkbank einstellen.
+Adresse von Ablago (vorbelegt mit der Adresse im Browser), Beispiel-Mappentypen und der E-Mail-Versand. Das Bundesland für Feiertage stellst du bei Bedarf später unter [Werkbank → Einstellungen → Region](region.md) ein. Alles lässt sich auch später in der Werkbank einstellen.
 
 ### Fertig
 

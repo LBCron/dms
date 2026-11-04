@@ -41,7 +41,7 @@ export function leseSperrEinstellung(roh: unknown): { e: SperrEinstellung; mailG
   return { e: { ...SPERRE_STANDARD, ...rest, mail: gewaehlt ? rest.mail === true : SPERRE_STANDARD.mail, mailKonto: rest.mailKonto === true }, mailGewaehlt: gewaehlt };
 }
 
-/** Eine Sperre für die Sammelmeldung; `tag` als JJJJ-MM-TT (Europe/Berlin). */
+/** Eine Sperre für die Sammelmeldung; `tag` als JJJJ-MM-TT (Zeitzone der Region). */
 export interface Meldung { tag: string; art: 'ip' | 'konto'; wer: string; versuche: number }
 interface Meldestand { offen: Meldung[]; zuletzt?: string }
 const MELDUNGEN_HOECHSTENS = 2000;

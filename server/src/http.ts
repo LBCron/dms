@@ -63,6 +63,8 @@ interface Optionen {
   /** Vorschaubilder der ersten Seite (#332). */
   vorschau?: Vorschaubilder;
   aufgabenmail?: Aufgabenmail;
+  /** Region (#726): Land, Bundesland, Zeitzone. */
+  region?: import('./region').RegionDienst;
   fehlermeldungen?: Fehlermeldungen;
   /** Wartungsmodus (#102). */
   wartung?: Wartung;

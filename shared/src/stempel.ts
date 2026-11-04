@@ -1,3 +1,4 @@
+import { zeitzone } from './region';
 /**
  * Stempel und Wasserzeichen beim Weitergeben (#394).
  *
@@ -70,8 +71,8 @@ export const ERSATZ_STEMPEL: Stempel = { text: 'Kopie – {datum}', ...GRUND };
 
 export interface StempelWerte { datum?: string; empfaenger?: string; benutzer?: string; mappe?: string }
 
-/** Datum wie in Deutschland üblich, in Europe/Berlin. */
-export const stempelDatum = (d = new Date()) => d.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' });
+/** Datum wie in Deutschland üblich, in der Zeitzone der Region (#726). */
+export const stempelDatum = (d = new Date()) => d.toLocaleDateString('de-DE', { timeZone: zeitzone(), day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** Welche Platzhalter ein Text nutzt (bekannte, normiert: „empfaenger“ statt „empfänger“). */
 export function platzhalterIn(text: string): string[] {

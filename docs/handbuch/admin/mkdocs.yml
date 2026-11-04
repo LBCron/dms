@@ -111,6 +111,7 @@ nav:
           - Papierkorb: papierkorb.md
       - Einstellungen:
           - Benachrichtigungen und Aufgaben: aufgaben.md
+          - Region: region.md
           - Anmeldeschutz: anmeldeschutz.md
           - Designs: designs.md
       - Wartung und Fehlersuche:

@@ -2,6 +2,7 @@ import type { InstalliertesPaket } from '../../../shared/src/pakete';
 import { SuchePanel } from './SucheEinstellungen';
 import { Symbol } from '../Symbol';
 import { AnmeldeschutzPanel, useAnmeldeschutz } from './Anmeldeschutz';
+import { RegionPanel, useRegion } from './Region';
 import { NummernkreisEditor, NummernkreiseListe, useNummernkreise } from './Nummernkreise';
 import { StempelPanel, useStempelVorlagenWerkbank } from './Stempel';
 import { DarfWegPanel, useDarfWeg } from './Archiv';
@@ -117,6 +118,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const vollexport = useVollexport(bereich === 'vollexport');
   const pakete = usePakete(bereich === 'pakete' || bereich === 'typen');
   const anmeldeschutz = useAnmeldeschutz(bereich === 'anmeldeschutz');
+  const region = useRegion(bereich === 'region');
   const anbindung = useAnbindung(bereich === 'anbindung');
   const ansicht = useWerkbankAnsicht();
   // Zahlen links (#375): die des geladenen Bereichs, sonst die aus der Übersicht; nur > 0 anzeigen.
@@ -198,6 +200,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
   } else if (bereich === 'anbindung') {
     rechts = <AnbindungPanel z={anbindung} nachAenderung={() => void uebersicht.laden()}
       unten={<DatenbankAbschnitte z={datenbank} offen={new URLSearchParams(location.search).get('offen') ?? undefined} />} />;
+  } else if (bereich === 'region') {
+    rechts = <RegionPanel z={region} />;
   } else if (bereich === 'anmeldeschutz') {
     rechts = <AnmeldeschutzPanel z={anmeldeschutz} />;
   } else if (bereich === 'pakete') {
@@ -276,6 +280,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     // Einstellungen
     { pfad: 'betrieb', name: n('betrieb'), gruppe: 'einstellungen', warn: uebersicht.stand && !uebersicht.stand.mail ? t('werkbank.leiste.aus') : undefined, warnTitel: t('werkbank.leiste.mail') },
     { pfad: 'aufgaben', name: n('aufgaben'), gruppe: 'einstellungen', zahl: zahl(aufgaben.liste?.filter((a) => !a.erledigt).length, uebersicht.stand?.aufgaben.offen) },
+    { pfad: 'region', name: n('region'), gruppe: 'einstellungen' },
     { pfad: 'anmeldeschutz', name: n('anmeldeschutz'), gruppe: 'einstellungen', zahl: anmeldeschutz.stand?.gesperrt.length || undefined },
     { pfad: 'designs', name: n('designs'), gruppe: 'einstellungen', zahl: d.designs.length || undefined },
     { pfad: 'anbindung', name: n('anbindung'), gruppe: 'einstellungen', warn: uebersicht.stand?.anbindung && (uebersicht.stand.anbindung.umgebung === 'abweichend' || uebersicht.stand.anbindung.neustartNoetig) ? '!' : undefined, warnTitel: t('werkbank.leiste.anbindung') },

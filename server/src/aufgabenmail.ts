@@ -1,11 +1,12 @@
 import { feiertagAm, istBundesland, type Bundesland } from '../../shared/src/feiertage';
-import { abwesenheitWirkt, ZEITZONE, type Aufgabe, type Benutzer } from '../../shared/src/model';
+import { abwesenheitWirkt, type Aufgabe, type Benutzer } from '../../shared/src/model';
 import { heuteIn } from '../../shared/src/sichten';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import type { Mailer } from './mail';
 import { protokoll } from './protokoll';
 import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
+import { datumsformat, liesRegion } from '../../shared/src/region';
 
 /**
  * Tägliche Zusammenfassung der offenen Aufgaben (#54): keine Mail je Aufgabe, sondern einmal
@@ -13,7 +14,7 @@ import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
  * Abbestellen im Profil (Einstellung aufgaben_mail = false).
  */
 
-/** Werkbank: Versand an/aus, Standard-Uhrzeit (#92) und Bundesland für Feiertage (#94). */
+/** Werkbank: Versand an/aus, Standard-Uhrzeit (#92); Bundesland für Feiertage (#94) nur lesend aus der Region (#726). */
 export interface MailEinstellung { aktiv: boolean; uhrzeit: string; bundesland: Bundesland | null }
 export const MAIL_STANDARD: MailEinstellung = { aktiv: true, uhrzeit: '07:00', bundesland: null };
 /** Je Benutzer (#92, #94): eigene Uhrzeit (null = Standard), Wochentage 1 = Mo … 7 = So, „nicht an Feiertagen“. */
@@ -49,8 +50,8 @@ export interface AufgabenQuelle {
   typName(id: string | undefined): Promise<string>;
 }
 
-const HEUTE = new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
-const UHR = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const HEUTE = () => datumsformat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
+const UHR = () => datumsformat('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 export class Aufgabenmail {
   constructor(
@@ -63,7 +64,9 @@ export class Aufgabenmail {
   async einstellung(): Promise<MailEinstellung> {
     const e = (this.einstellungen ? await this.einstellungen.lies('aufgaben_mail') : null) as Partial<MailEinstellung> | null;
     const x = { ...MAIL_STANDARD, ...(e ?? {}) };
-    return { ...x, bundesland: istBundesland(x.bundesland) ? x.bundesland : null };
+    // Das Bundesland steht seit #726 unter Werkbank → Region; hier nur noch lesend für die Feiertage.
+    const region = this.einstellungen ? liesRegion(await this.einstellungen.lies('region'), x.bundesland) : null;
+    return { aktiv: x.aktiv, uhrzeit: x.uhrzeit, bundesland: region ? region.bundesland : istBundesland(x.bundesland) ? x.bundesland : null };
   }
 
   async speichere(e: unknown): Promise<MailEinstellung> {
@@ -72,12 +75,12 @@ export class Aufgabenmail {
     const alt = await this.einstellung();
     const uhrzeit = x.uhrzeit === undefined ? alt.uhrzeit : String(x.uhrzeit);
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, 'Uhrzeit als HH:MM, z. B. 07:00.');
-    if (x.bundesland !== undefined && x.bundesland !== null && x.bundesland !== '' && !istBundesland(x.bundesland)) throw new Fachfehler(422, 'Unbekanntes Bundesland.');
-    const bundesland = x.bundesland === undefined ? alt.bundesland : istBundesland(x.bundesland) ? x.bundesland : null;
-    const neu: MailEinstellung = { aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true, uhrzeit, bundesland };
+    // Bundesland: seit #726 unter Werkbank → Region (PUT /api/werkbank/region); hier wird es nicht mehr gespeichert.
+    const gespeichert = (await this.einstellungen.lies('aufgaben_mail')) as Partial<MailEinstellung> | null;
+    const neu = { aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true, uhrzeit, ...(gespeichert?.bundesland !== undefined ? { bundesland: gespeichert.bundesland } : {}) };
     await this.einstellungen.schreibe('aufgaben_mail', neu);
-    protokoll.modul('werkbank').info('Tägliche Aufgaben-Mail eingestellt', { ...neu });
-    return neu;
+    protokoll.modul('werkbank').info('Tägliche Aufgaben-Mail eingestellt', { aktiv: neu.aktiv, uhrzeit: neu.uhrzeit });
+    return { aktiv: neu.aktiv, uhrzeit: neu.uhrzeit, bundesland: alt.bundesland };
   }
 
   /**
@@ -89,10 +92,10 @@ export class Aufgabenmail {
     const e = await this.einstellung();
     const mailer = this.mailer();
     if (!e.aktiv || !mailer || !this.einstellungen) return 0;
-    const heute = HEUTE.format(jetzt);
+    const heute = HEUTE().format(jetzt);
     // Bis 0.16 gab es nur einen gemeinsamen Zeitpunkt: wurde heute schon so verschickt, nicht noch einmal.
     if ((await this.einstellungen.lies('aufgaben_mail_zuletzt')) === heute) return 0;
-    const ort = { datum: heute, uhr: UHR.format(jetzt) };
+    const ort = { datum: heute, uhr: UHR().format(jetzt) };
     let n = 0;
     for (const b of await this.quelle.benutzer()) {
       if (!b.aktiv || !b.email) continue;
