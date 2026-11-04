@@ -105,6 +105,7 @@ describe('Lasttest-Modus (#612): Speicherart erkennen', () => {
 interface Skript {
   PLATZHALTER: typeof PLATZHALTER;
   ergebnisblock(e: unknown[], x: unknown, u: unknown, a?: { geraet?: string; speicher?: string }): string;
+  containerZeile(laeufe: unknown[]): string;
 }
 const skript = (await import(new URL('./lasttest.mjs', import.meta.url).href)) as Skript;
 const umgebung = { version: '0.144.0', image: 'dms-komplett', datenbank: 'im Container', architektur: 'x64', cpu: 'Beispiel-CPU', kerne: 4, kerneBegrenzt: false, rechnerKerne: 4, ramGb: 15.5, ramBegrenzt: false, grenzen: null };
@@ -125,6 +126,17 @@ describe('Lasttest-Modus (#612): Ergebnisblock', () => {
     assert.match(fuelleErgebnis(vorlage, { geraet: '', speicher: null }, null), /Speicher: bitte ergänzen \(HDD\/SSD\/NVMe\)/);
     // Wie bisher auf der Konsole: ohne Angaben „bitte ergänzen“.
     assert.match(skript.ergebnisblock(ergebnisse, x, umgebung, {}), /Gerät\/Modell: bitte ergänzen/);
+  });
+
+  it('Arbeitsspeicher des Containers (#696): höchster Stand mit Aufteilung, sonst „nicht verfügbar“', () => {
+    assert.match(skript.ergebnisblock(ergebnisse, x, umgebung, {}), /Arbeitsspeicher Ablago höchstens: 300 MB.*\nArbeitsspeicher Container höchstens: nicht verfügbar\n/);
+    const laeufe = [
+      { container: { mb: 1200, programmeMb: 1000, zwischenspeicherMb: 200, datenbankMb: 400 } },
+      { container: { mb: 1950, programmeMb: 1700, zwischenspeicherMb: 250, datenbankMb: 600 } },
+      { container: null },
+    ];
+    assert.equal(skript.containerZeile(laeufe), 'Arbeitsspeicher Container höchstens: 1950 MB (davon Programme 1700 MB, Dateizwischenspeicher 250 MB; PostgreSQL 600 MB)');
+    assert.equal(skript.containerZeile([{ container: { mb: 800, programmeMb: null, zwischenspeicherMb: null, datenbankMb: null } }]), 'Arbeitsspeicher Container höchstens: 800 MB');
   });
 
   it('Gerät: eine Zeile, ohne Backticks, höchstens 120 Zeichen', () => {

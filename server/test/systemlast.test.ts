@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { totalmem } from 'node:os';
-import { dauerhaftHoch, liesAnteile, liesCgroup, liesNetz, Systemlast, type Leser, type Messpunkt } from '../src/systemlast';
+import { dauerhaftHoch, liesAnteile, liesCgroup, liesContainerSpeicher, liesNetz, Systemlast, type Leser, type Messpunkt } from '../src/systemlast';
 
 const dateien = (d: Record<string, string>): Leser => (p) => (p in d ? d[p] : null);
 const G = '/sys/fs/cgroup';
@@ -96,5 +96,22 @@ describe('Auslastung lesen (#409)', () => {
     const ohne = new Systemlast({ lies: dateien({ [`${G}/memory.current`]: '1000\n', [`${G}/memory.max`]: 'max\n' }) });
     assert.deepEqual(ohne.stand().speicher, { belegt: 1000, grenze: totalmem(), ohneGrenze: true });
     assert.equal(ohne.stand().jetzt.cpu, null);
+  });
+});
+
+describe('Arbeitsspeicher des ganzen Containers (#696)', () => {
+  const G = '/sys/fs/cgroup';
+  const MB = 1024 * 1024;
+  it('cgroup v2: memory.current, memory.peak und memory.stat (anon, file)', () => {
+    const c = liesContainerSpeicher(dateien({ [`${G}/memory.current`]: `${1900 * MB}\n`, [`${G}/memory.peak`]: `${1950 * MB}\n`, [`${G}/memory.stat`]: `anon ${1700 * MB}\nfile ${250 * MB}\nkernel 1000\n` }));
+    assert.deepEqual(c, { aktuell: 1900 * MB, spitze: 1950 * MB, programme: 1700 * MB, zwischenspeicher: 250 * MB });
+  });
+  it('cgroup v1: usage, max_usage, memory.stat (total_rss, total_cache)', () => {
+    const c = liesContainerSpeicher(dateien({ [`${G}/memory/memory.usage_in_bytes`]: '300\n', [`${G}/memory/memory.max_usage_in_bytes`]: '500\n', [`${G}/memory/memory.stat`]: 'cache 10\nrss 20\ntotal_cache 100\ntotal_rss 200\n' }));
+    assert.deepEqual(c, { aktuell: 300, spitze: 500, programme: 200, zwischenspeicher: 100 });
+  });
+  it('nichts lesbar: alles null, nichts geschätzt; ältere Kernel ohne memory.peak', () => {
+    assert.deepEqual(liesContainerSpeicher(dateien({})), { aktuell: null, spitze: null, programme: null, zwischenspeicher: null });
+    assert.equal(liesContainerSpeicher(dateien({ [`${G}/memory.current`]: '7\n' })).spitze, null);
   });
 });
