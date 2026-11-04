@@ -137,6 +137,8 @@ export interface AutomatisierungAnsicht extends Automatisierung {
   letzterLauf: Pick<Lauf, 'id' | 'zustand' | 'gestartet' | 'fehler'> | null;
   /** Schlüssel des Auslösers (Liste „nach Auslöser“, „läuft als 2. von 3“). */
   ausloeser: string;
+  /** Das Konto „Automatisierung“ darf den Mappentyp der Wenn-Karte nicht lesen (#709): Hinweis, kein Fehler. */
+  rechte?: { typId: string; typ: string; kontoId: string | null; text: string };
 }
 
 /* ---------- Kontext ---------- */

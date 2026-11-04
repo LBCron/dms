@@ -63,6 +63,8 @@ Der Vorrat zeigt nur, was zur Wenn-Karte passt: **Feld ändern** etwa nur, wenn 
 
 Automatisierungen arbeiten mit dem **Systemkonto „Automatisierung“** (Werkbank → Benutzer). Was dieses Konto nicht lesen darf, überspringt die Automatisierung; Platzhalter zeigen dann „(nicht sichtbar)“.
 
+Darf das Konto „Automatisierung“ Mappen vom Typ der Wenn-Karte **gar nicht** sehen – zum Beispiel, weil am Mappentyp eine Regel „System- und Paketrollen verboten“ gilt –, kann die Automatisierung nie laufen. Dann steht im Editor und in der Liste ein Hinweis „Diese Automatisierung kann nicht laufen …“. Über **Rechte am Mappentyp ansehen** kommst du zum [Testlauf](berechtigungen.md#testlauf) dieses Mappentyps, mit dem Konto „Automatisierung“ schon gewählt; dort siehst du, welche Regel entschieden hat. Speichern bleibt trotzdem möglich.
+
 ## Reihenfolge
 
 Gibt es mehrere Automatisierungen für denselben Auslöser, laufen sie nach ihrer **Reihenfolge** (1–99, kleinere zuerst; eigene beginnen bei 50). Im Editor steht dann „läuft als 2. von 3 beim selben Auslöser“. In der Liste zeigt **Nach Auslöser** alle Automatisierungen eines Ereignisses zusammen; dort sortierst du sie per Ziehen oder mit **Alt+↑/↓** am Griff um, die Nummern passen sich an.
@@ -71,7 +73,7 @@ Gibt es mehrere Automatisierungen für denselben Auslöser, laufen sie nach ihre
 
 ![Verlauf mit den Schritten eines Laufs](bilder/werkbank-automatisierung-verlauf.png)
 
-- **Ausprobieren:** Mappe wählen und **Ausführen** – als wäre das Ereignis eingetreten. Mit **Trockenlauf** zeigt Ablago nur, was passieren würde („Würde Aufgabe an 1 Person senden: …“), und ändert nichts.
+- **Ausprobieren:** Mappe wählen und **Ausführen** – als wäre das Ereignis eingetreten. Die Mappe wählst du wie in einem Verweisfeld: Tippe einen Teil des Titels und klicke auf einen Treffer. Angeboten werden nur Mappen vom Mappentyp der Wenn-Karte, die das Konto „Automatisierung“ sehen darf – mit allen anderen könnte die Automatisierung ohnehin nicht laufen. Mit **Probelauf** zeigt Ablago nur, was passieren würde („Würde Aufgabe an 1 Person senden: …“), und ändert nichts.
 - **Verlauf:** jeder Lauf mit Zeit und Ergebnis (*abgeschlossen*, *trifft nicht zu*, *übersprungen*, *fehlgeschlagen*); aufgeklappt siehst du je Schritt, welche Bedingung zutraf und welche Karte was getan hat. Läuft die Automatisierung gerade, während der Editor offen ist, erscheinen die Schritte **live** nacheinander.
 - **Fehlgeschlagene Läufe** bleiben stehen und lassen sich **wiederholen** – einzeln im Verlauf oder alle über den Hinweis oben in der Liste. Die [Übersicht der Werkbank](uebersicht.md) meldet sie ebenfalls.
 - **Änderungsverlauf:** jede gespeicherte Fassung mit Zeit und wer; **Wiederherstellen** holt einen früheren Stand zurück (der jetzige bleibt als eigene Fassung erhalten).

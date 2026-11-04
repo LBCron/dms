@@ -8,7 +8,8 @@ import { EREIGNISKATALOG, ereignisSchluessel, type Ereignisgruppe } from '../../
 import { VORLAUF_EINHEITEN, WIEDERHOLUNGEN, type VorlaufEinheit } from '../../../shared/src/fristen';
 import type { Mappentyp } from '../../../shared/src/model';
 import { bedingungsfelder, beschreibeBedingung, OPERATOREN_JE_ART, type Bedingung, type Bedingungsfeld } from '../../../shared/src/sichten';
-import { api } from '../api';
+import { api, type Bezuege } from '../api';
+import { MappenWahl } from '../ablage/MappeFormular';
 import { useDaten } from '../daten';
 import { Listenkopf } from '../Listenkopf';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -16,7 +17,7 @@ import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
-import { FeldBedingung, MappenSuche } from './Sichten';
+import { FeldBedingung } from './Sichten';
 
 /**
  * Werkbank → Ablage aufbauen → Automatisierungen (#675): Mitte die Liste (Name, Kurzform, an/aus, letzter Lauf,
@@ -99,6 +100,7 @@ export function AutomatisierungenListe({ z, offen }: { z: AutomatisierungenZusta
           <span className="unter">{a.kurz}</span>
           <span className="leise klein">{t('automatisierung.ui.liste.reihenfolge', { nr: a.reihenfolge })}{a.letzterLauf && <> · {t('automatisierung.ui.liste.letzter', { zeit: zeit(a.letzterLauf.gestartet), zustand: t.frei(`automatisierung.ui.zustand.${a.letzterLauf.zustand}`) })}</>}</span>
           {(a.probleme[0] || a.angehalten) && <span className="problem">{a.angehalten?.text ?? a.probleme[0]}</span>}
+          {a.rechte && !a.probleme[0] && !a.angehalten && <span className="problem">{a.rechte.text}</span>}
         </Link>
       </li>
     );
@@ -207,6 +209,8 @@ export function AutomatisierungEditor({ z, id }: { z: AutomatisierungenZustand; 
       <div className="mappenkopf">
         <p className="ueber">{t('automatisierung.ui.ueber')}</p>
         <h1>{neu ? t('automatisierung.ui.neu.titel') : a!.name} {a && <Zustandschip a={a} />}</h1>
+        {/* Kann nie laufen, weil das Konto „Automatisierung“ den Mappentyp nicht lesen darf (#709): Hinweis mit Weg zum Testlauf (#710). */}
+        {a?.rechte && <div className="hinweis warn" role="status"><p>{a.rechte.text} <Link to={`/werkbank/typen/${a.rechte.typId}${a.rechte.kontoId ? `?testkonto=${a.rechte.kontoId}` : ''}#testlauf`} className="verweis">{t('automatisierung.ui.rechte.link')}</Link></p></div>}
         {a && <p className="leise">{a.kurz}{position > 0 && gleiche.length > 1 && <> · {t('automatisierung.ui.position', { nr: position, anzahl: gleiche.length })}</>}</p>}
         {/* An/aus an einer Stelle (#706): neu wirkt der Schalter mit dem Speichern, sonst sofort; angehalten mit Grund. */}
         <div className="zeile handlungen">
@@ -595,22 +599,29 @@ function Schritte({ l, a }: { l: Lauf; a: AutomatisierungAnsicht }) {
 }
 
 function Wiedergeben({ a, typ, nachher }: { a: AutomatisierungAnsicht; typ: Mappentyp | null; nachher: () => void }) {
-  const [mappe, setMappe] = useState<string[]>([]);
-  const [titel, setTitel] = useState<Record<string, string>>({});
+  const [mappe, setMappe] = useState('');
+  const [bekannt, setBekannt] = useState<Bezuege>({});
   const [trocken, setTrocken] = useState(true);
   const [lauf, setLauf] = useState<Lauf | null>(null);
   const [fehler, setFehler] = useState<string>();
+  // Auswahl wie ein Verweisfeld (#709); vorgeschlagen werden nur Mappen, die die Automatisierung sehen darf.
+  const quelle = useCallback((suche: string) => api.automatisierungTestmappen(a.id, suche), [a.id]);
   return (
     <div className="blatt">
       <h2 className="h3">{t('automatisierung.ui.wiedergeben')}</h2>
       <p className="leise klein">{t('automatisierung.ui.wiedergeben.text')}</p>
       <div className="zeile">
-        {typ ? <MappenSuche typId={typ.id} gewaehlt={mappe} titel={titel} merke={(id, x) => setTitel((y) => ({ ...y, [id]: x }))} setze={(ids) => setMappe(ids.slice(-1))} />
+        {typ ? <div className="feld">
+            <label htmlFor="ausprobieren-mappe" className="sr-only">{t('automatisierung.ui.wiedergeben.suchen')}</label>
+            <MappenWahl id="ausprobieren-mappe" ziel={typ} mehrfach={false} wert={mappe || undefined} bekannt={bekannt} ohneAnlegen
+              merke={(id, x) => setBekannt((y) => ({ ...y, [id]: x }))} setze={(v) => setMappe(typeof v === 'string' ? v : '')}
+              platzhalter={t('automatisierung.ui.wiedergeben.suchen')} quelle={quelle} leer={t('automatisierung.ui.wiedergeben.leer', { typ: typ.name })} />
+          </div>
           : <p className="leise klein">{t('automatisierung.ui.wiedergeben.ohne-typ')}</p>}
-        <label className="haken klein"><input type="checkbox" checked={trocken} onChange={(x) => setTrocken(x.target.checked)} /><span>{t('automatisierung.ui.trocken')}</span></label>
-        <button type="button" className="knopf klein" disabled={!mappe.length} onClick={async () => {
+        <label className="haken klein" title={t('automatisierung.ui.trocken.hilfe')}><input type="checkbox" checked={trocken} onChange={(x) => setTrocken(x.target.checked)} /><span>{t('automatisierung.ui.trocken')}</span></label>
+        <button type="button" className="knopf klein" disabled={!mappe} onClick={async () => {
           setFehler(undefined);
-          try { setLauf(await api.automatisierungWiedergeben(a.id, mappe[0], trocken)); nachher(); } catch (e) { setFehler((e as Error).message); }
+          try { setLauf(await api.automatisierungWiedergeben(a.id, mappe, trocken)); nachher(); } catch (e) { setFehler((e as Error).message); }
         }}>{t('automatisierung.ui.wiedergeben.los')}</button>
       </div>
       {fehler && <p className="fehlertext">{fehler}</p>}
