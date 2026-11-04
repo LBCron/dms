@@ -16,7 +16,7 @@ import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import { liesSchluessel, nurTestschluessel, projektSchluessel, pruefeSignatur } from '../src/katalogsignatur';
-import { holeDaten, Paketverwaltung, type Sammeldatei } from '../src/pakete';
+import { holeDaten, KLEIN_MAX, Paketverwaltung, type Sammeldatei } from '../src/pakete';
 import { PROJEKT_SCHLUESSEL } from '../src/projektschluessel';
 import { speicherRepo } from '../src/repo-speicher';
 import { zipPuffer } from '../src/zip';
@@ -369,12 +369,16 @@ describe('Weiterleitungen nur auf https:// (#594)', () => {
       if (req.url === '/katalog.json') { res.writeHead(302, { location: 'http://127.0.0.1:1/boese.json' }); res.end(); return; }
       if (req.url === '/schleife') { res.writeHead(301, { location: 'https://127.0.0.1:1/x' }); res.end(); return; }
       if (req.url === '/ok') { res.end('{"ok":true}'); return; }
+      // Ohne Content-Length, in Stücken: die Grenze greift beim Lesen (#683, Katalog höchstens KLEIN_MAX).
+      if (req.url === '/gross') { const mb = Buffer.alloc(1024 * 1024, 32); let n = 0; const weiter = () => { while (n++ < 12) if (!res.write(mb)) return res.once('drain', weiter); res.end(); }; weiter(); return; }
       res.writeHead(404); res.end();
     });
     await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
     const port = (server.address() as { port: number }).port;
     try {
       assert.equal((await holeDaten(`http://127.0.0.1:${port}/ok`)).toString(), '{"ok":true}');
+      await assert.rejects(holeDaten(`http://127.0.0.1:${port}/gross`, KLEIN_MAX), /10 MB|zu groß/i);
+      assert.equal((await holeDaten(`http://127.0.0.1:${port}/gross`)).length, 12 * 1024 * 1024, 'Archive dürfen größer sein');
       await assert.rejects(holeDaten(`http://127.0.0.1:${port}/katalog.json`), /nur auf https:\/\//);
       // Auf https:// folgt es (hier nicht erreichbar) – entscheidend ist, dass es nicht auf http:// geht.
       await assert.rejects(holeDaten(`http://127.0.0.1:${port}/schleife`), (e) => !/nur auf https/.test((e as Error).message));

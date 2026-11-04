@@ -168,25 +168,29 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
   // Datei-Uploads kommen als rohe Bytes (application/octet-stream).
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_req, body, fertig) => fertig(null, body));
 
+  const anfrageAus = (req: FastifyRequest): Anfrage => ({
+    body: req.body,
+    params: req.params as Record<string, string>,
+    query: req.query as Record<string, string | undefined>,
+    sitzung: leseCookie(req.headers.cookie, SITZUNG_COOKIE),
+    cookieKopf: req.headers.cookie,
+    ip: req.ip,
+    peer: req.socket.remoteAddress,
+    geraet: String(req.headers['user-agent'] ?? ''),
+    einrichtungscode: typeof req.headers['x-einrichtungscode'] === 'string' ? req.headers['x-einrichtungscode'] : undefined,
+    kopf: (n) => { const v = req.headers[n]; return Array.isArray(v) ? v.join(', ') : v; },
+  });
   for (const r of routen(dienst, konten, opt)) {
     app.route({
       method: r.methode,
       url: r.pfad,
       ...(r.roh ? { bodyLimit: r.roh } : {}),
       ...(r.ohneHead ? { exposeHeadRoute: false } : {}),
+      // Große Uploads (#683): Anmeldung und Rolle prüfen, **bevor** der Körper (bis zu 256 MB) gelesen wird –
+      // sonst hält jede Anfrage ohne Anmeldung den ganzen Körper im Speicher, bis die 401 kommt.
+      ...(r.roh && r.zugang !== 'offen' ? { onRequest: async (req: FastifyRequest) => { await pruefeZugang(r, anfrageAus(req), (n) => req.headers[n] as string | undefined, konten, opt.apiSchluessel, opt.konsole); } } : {}),
       handler: async (req, reply) => {
-        const a: Anfrage = {
-          body: req.body,
-          params: req.params as Record<string, string>,
-          query: req.query as Record<string, string | undefined>,
-          sitzung: leseCookie(req.headers.cookie, SITZUNG_COOKIE),
-          cookieKopf: req.headers.cookie,
-          ip: req.ip,
-          peer: req.socket.remoteAddress,
-          geraet: String(req.headers['user-agent'] ?? ''),
-          einrichtungscode: typeof req.headers['x-einrichtungscode'] === 'string' ? req.headers['x-einrichtungscode'] : undefined,
-          kopf: (n) => { const v = req.headers[n]; return Array.isArray(v) ? v.join(', ') : v; },
-        };
+        const a: Anfrage = anfrageAus(req);
         const start = performance.now();
         const zeit = ((req as MitKontext).zeit ??= { eingang: start });
         zeit.start = start;

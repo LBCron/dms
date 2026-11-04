@@ -466,12 +466,16 @@ const WEITERLEITUNGEN_MAX = 5;
 export async function holeDaten(url: string, max = ARCHIV_MAX): Promise<Buffer> {
   let u = new URL(url);
   if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) throw new Fachfehler(422, 'Pakete gibt es nur über HTTPS.');
-  // 20 s bis zur Antwort; große Archive (#644) dürfen danach bis zu 5 Minuten laden.
-  const kopf = AbortSignal.timeout(20000), gesamt = new AbortController();
+  // 20 s bis zur Antwort; große Archive (#644) dürfen danach bis zu 5 Minuten laden. Die 20 s gelten nur bis zu
+  // den Köpfen (eigene Uhr, nach der Antwort gelöscht) – AbortSignal.timeout bräche sonst auch das Lesen ab.
+  const gesamt = new AbortController();
   const uhr = setTimeout(() => gesamt.abort(new Error('Zeitgrenze beim Laden erreicht.')), 300_000);
   try {
   for (let n = 0; ; n++) {
-    const r = await fetch(u, { signal: AbortSignal.any([kopf, gesamt.signal]), redirect: 'manual', headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } });
+    const kopf = new AbortController();
+    const kopfUhr = setTimeout(() => kopf.abort(new Error('Keine Antwort in 20 Sekunden.')), 20_000);
+    const r = await fetch(u, { signal: AbortSignal.any([kopf.signal, gesamt.signal]), redirect: 'manual', headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } })
+      .finally(() => clearTimeout(kopfUhr));
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
       await r.body?.cancel().catch(() => {});
       if (n >= WEITERLEITUNGEN_MAX) throw new Fachfehler(502, t('pakete.herkunft.fehler.weiterleitungen', { url }));
@@ -517,6 +521,8 @@ const TAG_MS = 86_400_000;
 /** Datei neben einem Katalog, z. B. katalog.sig neben katalog.json. */
 const daneben = (url: string, datei: string) => new URL(datei, url).href;
 const UPLOAD_GUELTIG = 30 * 60_000;
+/** Katalog, Signatur und Schlüssel: höchstens 10 MB (wie vor #644). */
+export const KLEIN_MAX = 10 * 1024 * 1024;
 
 /* ---------- Sammeldatei (#461) ---------- */
 
@@ -613,7 +619,8 @@ export class Paketverwaltung {
   }
 
   get katalogUrl() { return this.o.katalogUrl ?? OFFIZIELLER_KATALOG; }
-  private abruf(url: string) { return this.o.abruf ? this.o.abruf(url) : holeDaten(url); }
+  /** Archive bis ARCHIV_MAX; Katalog, Signatur und Schlüssel sind klein (KLEIN_MAX) – kein JSON von 128 MB (#683). */
+  private abruf(url: string, max = ARCHIV_MAX) { return this.o.abruf ? this.o.abruf(url) : holeDaten(url, max); }
 
   /* ---------- Quellen (#189) ---------- */
 
@@ -628,7 +635,7 @@ export class Paketverwaltung {
   /** Öffentlicher Schlüssel neben einem Katalog (katalog.schluessel, #594); null, wenn keiner abrufbar ist. */
   private async schluesselVon(url: string): Promise<{ s: Schluessel; roh: Buffer } | null> {
     let roh: Buffer;
-    try { roh = await this.abruf(daneben(url, SCHLUESSEL_DATEI)); } catch { return null; }
+    try { roh = await this.abruf(daneben(url, SCHLUESSEL_DATEI), KLEIN_MAX); } catch { return null; }
     try {
       if (roh.length > SIGNATUR_MAX) throw new Error(`größer als ${SIGNATUR_MAX} Bytes`);
       return { s: liesSchluessel(roh.toString('utf8')), roh };
@@ -713,7 +720,7 @@ export class Paketverwaltung {
   async katalog(url?: string): Promise<{ url: string; katalog: Katalog; pruefung: HerkunftPruefung; abgerufen: string }> {
     const u = await this.erlaubt(url);
     let daten: Buffer, katalog: Katalog;
-    try { daten = await this.abruf(u); katalog = liesKatalog(JSON.parse(daten.toString('utf8'))); }
+    try { daten = await this.abruf(u, KLEIN_MAX); katalog = liesKatalog(JSON.parse(daten.toString('utf8'))); }
     catch (e) { throw new Fachfehler(502, `Der Katalog lässt sich nicht abrufen: ${(e as Error).message}`); }
     const pruefung = await this.pruefeKatalog(u, daten, katalog);
     this.kataloge.set(u, { katalog, pruefung, zeit: Date.now() });
@@ -727,7 +734,7 @@ export class Paketverwaltung {
    * alten signiert ist – sonst ist der Katalog gesperrt, bis ein Admin den neuen bestätigt.
    */
   private async pruefeKatalog(url: string, daten: Buffer, katalog: Katalog): Promise<HerkunftPruefung> {
-    const sig = await this.abruf(daneben(url, SIGNATUR_DATEI)).catch(() => null);
+    const sig = await this.abruf(daneben(url, SIGNATUR_DATEI), KLEIN_MAX).catch(() => null);
     if (url === this.katalogUrl) {
       if (!sig) { log.info('Offizieller Katalog ohne Signatur', { url }); return { art: 'unsigniert', offiziell: true, bestaetigen: false }; }
       const r = pruefeSignatur(daten, sig, projektSchluessel(this.o.projektSchluessel));
@@ -749,7 +756,7 @@ export class Paketverwaltung {
       const neu = await this.schluesselVon(url).catch(() => null);
       if (neu && neu.s.fingerabdruck !== schluessel.fingerabdruck) {
         const eintrag = { pem: neu.s.pem, fingerabdruck: neu.s.fingerabdruck, von: null, am: new Date().toISOString() };
-        const w = await this.abruf(daneben(url, WECHSEL_DATEI)).catch(() => null);
+        const w = await this.abruf(daneben(url, WECHSEL_DATEI), KLEIN_MAX).catch(() => null);
         if (!w || !pruefeSignatur(neu.roh, w, [schluessel]).ok) {
           await this.aendereQuelle(url, { gesperrt: eintrag });
           this.kataloge.delete(url);
