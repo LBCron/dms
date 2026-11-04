@@ -197,13 +197,9 @@ export const HILFE = {
 export type Hilfeort = keyof typeof HILFE;
 
 /**
- * Ordner der Version im Handbuch: „v0.22“ für 0.22.x; sonst (Entwicklung, unbekannt) „aktuell“.
- * Gibt es die Version dort (noch) nicht, leitet die 404-Seite des Handbuchs auf „aktuell“ um.
+ * Online gibt es nur noch „aktuell“ (#846). Ältere Fassungen bringt jede Installation unter /hilfe/ mit.
  */
-export function handbuchVersion(version: string | null | undefined): string {
-  const m = /^(\d+)\.(\d+)\.\d+$/.exec(version ?? '');
-  return m ? `v${m[1]}.${m[2]}` : 'aktuell';
-}
+export const HANDBUCH_ONLINE_ORDNER = 'aktuell';
 
 /**
  * Handbuch im DMS selbst (#219): Das Image bringt die Handbücher seiner Version mit, ohne Internet
@@ -213,9 +209,9 @@ export function handbuchUrl(handbuch: Handbuch, _version: string | null | undefi
   return `/hilfe/${handbuch}/${seite}`;
 }
 
-/** Dieselbe Seite online auf GitHub Pages, passend zur Version. */
-export function handbuchOnlineUrl(handbuch: Handbuch, version: string | null | undefined, seite = ''): string {
-  return `${HANDBUCH_BASIS}/${handbuch}/${handbuchVersion(version)}/${seite}`;
+/** Dieselbe Seite online, immer in der aktuellen Fassung (#846). */
+export function handbuchOnlineUrl(handbuch: Handbuch, seite = ''): string {
+  return `${HANDBUCH_BASIS}/${handbuch}/${HANDBUCH_ONLINE_ORDNER}/${seite}`;
 }
 
 /**
@@ -223,10 +219,10 @@ export function handbuchOnlineUrl(handbuch: Handbuch, version: string | null | u
  * ob ein lokales Handbuch erreichbar ist, steht dort noch nicht fest.
  */
 export function hilfeOnlineUrl(ziel: Hilfeziel): string {
-  return `${handbuchOnlineUrl(ziel.handbuch, null, ziel.seite)}${ziel.anker ? `#${ziel.anker}` : ''}`;
+  return `${handbuchOnlineUrl(ziel.handbuch, ziel.seite)}${ziel.anker ? `#${ziel.anker}` : ''}`;
 }
 /** Anleitungen je Plattform: „Wie komme ich an ein DMS?“ */
-export const INSTALLIEREN_URL = `${HANDBUCH_BASIS}/installieren/aktuell/`;
+export const INSTALLIEREN_URL = `${HANDBUCH_BASIS}/installieren/${HANDBUCH_ONLINE_ORDNER}/`;
 
 export function hilfeUrl(ziel: Hilfeziel, version: string | null | undefined): string {
   return `${handbuchUrl(ziel.handbuch, version, ziel.seite)}${ziel.anker ? `#${ziel.anker}` : ''}`;

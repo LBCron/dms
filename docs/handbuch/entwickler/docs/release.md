@@ -5,22 +5,23 @@ Ein Release entsteht, sobald auf `main` eine Versionsnummer steht, für die es n
 1. **Pull Request** mit erhöhter Nummer in `package.json`, `server/package.json`, `web/package.json` und neuen Release-Notizen `docs/releases/v<version>.md`.
 2. Nach dem Merge baut **image.yml** (*Prüfen und Image bauen*) **zwei Images** nativ für amd64 und arm64 und pusht sie: `ghcr.io/motom001/dms:<version>` und `ghcr.io/motom001/dms-komplett:<version>`.
 3. Danach ruft image.yml **release.yml** auf. Der Workflow legt das Tag `v<version>` und das GitHub-Release an. Den Text übernimmt er aus `docs/releases/v<version>.md`; fehlt die Datei, nimmt er die Commit-Überschriften seit dem vorigen Tag.
-4. **handbuch.yml** baut alle Handbücher für diese Version (`v<Haupt>.<Neben>`) und legt sie auf dem Branch `gh-pages` ab. `aktuell` zeigt dann auf die neue Version, `entwicklung` folgt weiter `main`. Die Seite *Neu in dieser Version* entsteht aus den Release-Notizen.
+4. **handbuch.yml** baut alle vier Handbücher und veröffentlicht sie über GitHub Actions (`actions/upload-pages-artifact`, `actions/deploy-pages`) unter `https://help.ablago.app/<handbuch>/aktuell/`. Ältere Fassungen gibt es online nicht mehr: Jede Installation bringt ihr Handbuch unter `/hilfe/` mit, und aus jedem Tag lässt es sich neu bauen. Die 404-Seite leitet alte Adressen (`v0.xx/…`, `entwicklung/…`) auf dieselbe Seite unter `aktuell` um (`docs/handbuch/werkzeuge/veroeffentlichen.py`). Die Seite *Neu in dieser Version* entsteht aus den Release-Notizen. Die eigene Adresse steht in den Pages-Einstellungen (Quelle „GitHub Actions“); einen Zweig `gh-pages` gibt es nicht mehr.
 5. Danach prüft der Job **stabil** in image.yml, ob `:stabil` weiterwandert (#714): neue Nummer X.Y.Z (keine Vorabversion), Release-Notizen vorhanden, kein Label `nicht-stabil` am Pull Request, Update-Test vom bisherigen `:stabil` grün (`.github/werkzeuge/update-test.sh`: alter Stand einrichten, Dokument ablegen, sichern → neuer Stand mit denselben Ordnern → Daten da, Probe-Wiederherstellung gelingt). Dann zeigen `dms:stabil` und `dms-komplett:stabil` auf die neue Version. Die Regeln stehen in `.github/werkzeuge/stabil-pruefen.sh` und werden in jedem Pull Request getestet; den Update-Test vom letzten stabilen Stand auf den Stand des Pull Requests macht `image-probe` ebenfalls.
 6. **[motom001/dms-appstore](https://github.com/motom001/dms-appstore)** übernimmt die neue Version am nächsten Morgen, mit Images per Digest, für Umbrel, ZimaOS und CasaOS. Von Hand geht es sofort über den Workflow *Store aktualisieren*.
 
 ## Versionsnummern
 
-- **Neben-Version** (`0.40.0`) für neue Funktionen; das Handbuch bekommt eine eigene Version.
-- **Patch** (`0.39.1`) für Korrekturen; das Handbuch der Neben-Version wird überschrieben.
-- Ohne neue Nummer: nur das Image `main` und das Handbuch `entwicklung` ändern sich, `:stabil` nicht.
+- **Neben-Version** (`0.40.0`) für neue Funktionen.
+- **Patch** (`0.39.1`) für Korrekturen.
+- Jedes Release ersetzt das Handbuch online unter `aktuell`.
+- Ohne neue Nummer: nur das Image `main` ändert sich, Handbuch online und `:stabil` nicht.
 - **Zurückhalten:** Label `nicht-stabil` am Pull Request – Release und Image mit Nummer entstehen, `:stabil` bleibt auf der vorigen Version.
 - **Zurückrollen:** Actions → *:stabil zurücksetzen* → Version eingeben (nur veröffentlichte Releases, nur mit Schreibrecht am Repository).
 
 ### Workflows von Hand starten
 
 - *Prüfen und Image bauen* (`image.yml`) und *Scorecard* lassen sich unter **Actions** von Hand starten. Ein Handstart von image.yml baut und veröffentlicht die Images, legt aber kein Release an – das passiert nur nach einem Push auf `main` mit neuer Nummer.
-- *Handbuch* (`handbuch.yml`) baut von Hand wahlweise eine Version (z. B. `v0.22`) oder, ohne Angabe, `entwicklung`.
+- *Handbuch* (`handbuch.yml`) baut von Hand auf `main` und veröffentlicht neu unter `aktuell` – etwa nach einer Störung. Die Version gibt nur an, welche Release-Notizen *Neu in dieser Version* zeigt.
 - *Lockfile erzeugen* (`lockfile.yml`) lässt sich ebenfalls von Hand starten.
 - *Release* (`release.yml`) startet außerdem bei einem von Hand gepushten Tag `v*` (legt das Release an) und bei einem von Hand veröffentlichten Release (setzt nur den Text).
 

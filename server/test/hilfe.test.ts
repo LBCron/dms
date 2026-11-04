@@ -11,7 +11,7 @@ describe('Offline-Hilfe (#219)', () => {
   it('verweist aus der Oberfläche auf die lokale Fassung', () => {
     assert.equal(handbuchUrl('admin', '0.44.4', 'sicherung/'), '/hilfe/admin/sicherung/');
     assert.equal(hilfeUrl(HILFE['werkbank.sicherung'], '0.44.4'), '/hilfe/admin/sicherung/');
-    assert.equal(handbuchOnlineUrl('admin', '0.44.4', 'sicherung/'), 'https://help.ablago.app/admin/v0.44/sicherung/');
+    assert.equal(handbuchOnlineUrl('admin', 'sicherung/'), 'https://help.ablago.app/admin/aktuell/sicherung/');
   });
 
   it('Einrichtungsassistent (#278): immer das Online-Handbuch, aktuelle Version, mit Anker', () => {
@@ -34,14 +34,14 @@ describe('Offline-Hilfe (#219)', () => {
     assert.deepEqual(hilfeAntwort('/hilfe/../geheim/', web), { fehlt: true }, 'keine Pfad-Tricks');
   });
 
-  it('leitet ohne gebaute Handbücher auf die Online-Fassung der Version um', async () => {
+  it('leitet ohne gebaute Handbücher auf die Online-Fassung um – immer „aktuell“ (#846)', async () => {
     const web = await mkdtemp(join(tmpdir(), 'dms-hilfe-'));
     const alt = process.env.DMS_VERSION;
     process.env.DMS_VERSION = '0.44.4';
     try {
-      assert.deepEqual(hilfeAntwort('/hilfe/admin/sicherung/', web), { umleiten: 'https://help.ablago.app/admin/v0.44/sicherung/', status: 302 });
+      assert.deepEqual(hilfeAntwort('/hilfe/admin/sicherung/', web), { umleiten: 'https://help.ablago.app/admin/aktuell/sicherung/', status: 302 });
       assert.deepEqual(hilfeAntwort('/hilfe/', web), { umleiten: 'https://help.ablago.app/', status: 302 });
-      assert.deepEqual(hilfeAntwort('/hilfe/benutzer', undefined), { umleiten: 'https://help.ablago.app/benutzer/v0.44/', status: 302 });
+      assert.deepEqual(hilfeAntwort('/hilfe/benutzer', undefined), { umleiten: 'https://help.ablago.app/benutzer/aktuell/', status: 302 });
     } finally {
       if (alt === undefined) delete process.env.DMS_VERSION; else process.env.DMS_VERSION = alt;
     }

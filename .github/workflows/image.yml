@@ -399,12 +399,14 @@ jobs:
             echo "::notice title=:stabil::$image:stabil → $VERSION"
           done
 
-  # Handbuch zu dieser Version (#111): vX.Y auf gh-pages, bei der neuesten auch „aktuell“.
+  # Handbuch online (#846): nur „aktuell“, veröffentlicht über GitHub Actions.
   handbuch:
     needs: [version, release]
     if: needs.release.result == 'success'
     permissions:
-      contents: write
+      contents: read
+      pages: write
+      id-token: write
     uses: ./.github/workflows/handbuch.yml
     with:
       version: ${{ needs.version.outputs.handbuch }}

@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { HANDBUCH_BASIS, handbuchVersion } from '../../shared/src/hilfe';
-import { eigeneVersion } from './system';
+import { HANDBUCH_BASIS, HANDBUCH_ONLINE_ORDNER } from '../../shared/src/hilfe';
 
 /**
  * Offline-Hilfe (#219): Die Handbücher liegen im Image unter web/dist/hilfe und werden wie die
@@ -26,7 +25,7 @@ export function hilfeAntwort(url: string, webDir: string | undefined): HilfeAntw
     if (!handbuch) return { umleiten: `${HANDBUCH_BASIS}/`, status: 302 };
     const rest = seite.join('/');
     const schluss = rest && !rest.includes('.') ? '/' : '';
-    return { umleiten: `${HANDBUCH_BASIS}/${handbuch}/${handbuchVersion(eigeneVersion())}/${rest}${schluss}`, status: 302 };
+    return { umleiten: `${HANDBUCH_BASIS}/${handbuch}/${HANDBUCH_ONLINE_ORDNER}/${rest}${schluss}`, status: 302 };
   }
   const letztes = teile[teile.length - 1] ?? '';
   if (!pfad.endsWith('/') && !letztes.includes('.')) return { umleiten: `/hilfe/${teile.map((t) => `${t}/`).join('')}${abfrage ? `?${abfrage}` : ''}`, status: 301 };

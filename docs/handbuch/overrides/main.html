@@ -1,7 +1,3 @@
 {% extends "base.html" %}
 
-{# Handbuch je Version (#111): Hinweis, wenn nicht die neueste Version angezeigt wird. #}
-{% block outdated %}
-  Du liest nicht das Handbuch zur neuesten Version des DMS.
-  <a href="{{ '../' ~ base_url }}"><strong>Zur aktuellen Version</strong></a>
-{% endblock %}
+{# Online gibt es nur noch „aktuell“ (#846) – kein Hinweis auf andere Versionen mehr. #}
