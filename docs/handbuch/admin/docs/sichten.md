@@ -11,6 +11,7 @@ Der Editor ist wie beim [Mappentyp](mappentypen.md#aufbau-des-editors) in Bereic
 ## Grunddaten
 
 - **Name** und **Beschreibung** – erscheinen in der Ablage links bzw. über der Liste.
+- <span id="symbol"></span>**Symbol** – ein kleines Bild vor dem Namen, damit man Ansichten schneller wiederfindet, auch am Handy und auf der Startseite. Du wählst es aus einer festen Auswahl (Haus, Auto, Geld, Gesundheit, Familie, Post, Fristen …) mit Suche; **Symbol entfernen** stellt „ohne Symbol“ wieder her. Die mitgelieferte Ansicht *Neue Post* hat schon eins. Pakete können ein Symbol mitbringen; ändert ein Paket-Update eine Ansicht nicht, bleibt dein Symbol, wie es ist.
 - **Liegt unter** – die Elternansicht im Baum, beliebig tief. Eine Ansicht kann nicht unter sich selbst oder einer ihrer Unteransichten liegen.
 - **Reihenfolge** – mit **↑ nach oben** und **↓ nach unten** unter den Ansichten derselben Ebene.
 
@@ -21,7 +22,7 @@ Schneller geht es links im Baum: Jede Ansicht hat einen **Griff ⠿**. Daran zie
 - **zwischen zwei Ansichten** – eine Linie zeigt die Einfügestelle, auch auf einer anderen Ebene;
 - **auf eine Ansicht** – die Zielansicht wird umrandet, deine Ansicht wird ihre **Unteransicht**.
 
-Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Unteransicht ziehen. Die neue Ordnung gilt **sofort**, ohne Speichern – auch in der Ablage. Die festen Einträge oben – *Erweiterte Suche*, *Zu erledigen*, *Anstehend*, *Favoriten* und *Papierkorb* (nur, solange er an ist oder etwas darin liegt) – sind keine Ansichten in diesem Baum.
+Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Unteransicht ziehen. Die neue Ordnung gilt **sofort**, ohne Speichern – auch in der Ablage. Die festen Einträge oben – *Erweiterte Suche*, *Zu erledigen*, *Favoriten* und *Papierkorb* (nur, solange er an ist oder etwas darin liegt) – sind keine Ansichten in diesem Baum.
 
 - **Tastatur:** Griff mit Tab ansteuern, dann **Alt+↑/↓** verschiebt innerhalb der Ebene, **Alt+→** macht die Ansicht zur Unteransicht der Ansicht darüber, **Alt+←** hängt sie eine Ebene höher (hinter die bisherige Elternansicht).
 - **Smartphone/Tablet:** Griff **lange antippen**, dann ziehen. Die Knöpfe ↑/↓ in der geöffneten Ansicht gibt es weiterhin.
@@ -32,6 +33,7 @@ Unteransichten wandern mit. Eine Ansicht lässt sich nicht in ihre eigene Untera
 Die Ansicht zeigt Mappen der angehakten Mappentypen, sofern sie alle Bedingungen erfüllen. Dazu kommen **immer** die Mappen ihrer Unteransichten – jede mit ihren eigenen Bedingungen, ohne Doppelte.
 
 - Eine Ansicht **ohne Mappentyp** dient nur zum Gruppieren, etwa *Finanzen* über *Offene Rechnungen* und *Zahlungen dieses Jahr*.
+- **Alle Mappentypen** (Haken über der Liste) zeigt Mappen aller Mappentypen, auch solcher, die später dazukommen. So ist die mitgelieferte Ansicht **Favoriten** gebaut: alle Mappentypen und die Bedingung *ist mein Favorit*. Sie entsteht einmal beim Start; löschst du sie, kommt sie nicht wieder (die Favoriten der Benutzer bleiben). In Paketen steht dafür `typen: ["*"]`.
 - Zeigt eine Ansicht (mit Unteransichten) **genau einen** Mappentyp, verhält sich die Liste wie gewohnt: Trefferliste des Mappentyps, Sortieren nach seinen Feldern und **+ Neu**. Den Knopf gibt es nur, wenn der Benutzer das Recht **C** (Anlegen) am Mappentyp ([Berechtigungen](berechtigungen.md)) **und** an der Ansicht ([Berechtigungen](#berechtigungen)) hat. In Ansichten mit Post heißt er **+ Post**.
 - Zeigt sie **mehrere** Mappentypen, gibt es kein **+ Neu**; sortieren lässt sich nach den Systemspalten.
 

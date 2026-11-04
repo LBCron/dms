@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  ansichtAus, BEREICHE, bereichName, expertenBereiche, fuerAlle, nurImExpertenmodus, GRUPPEN, hatMitte, inVorlage, liesAnsicht, liesEigene, OHNE_EINSTELLUNG, sichtbar, wartungsPlakette,
+  bereichPasst, ansichtAus, BEREICHE, bereichName, expertenBereiche, fuerAlle, nurImExpertenmodus, GRUPPEN, hatMitte, inVorlage, liesAnsicht, liesEigene, OHNE_EINSTELLUNG, sichtbar, wartungsPlakette,
   werkbankEbene, werkbankUmleitung, werkbankZurueck, einDatentraeger,
 } from '../../shared/src/werkbankansicht';
 import { speicherDateien } from '../src/dateispeicher';
@@ -42,26 +42,26 @@ describe('Werkbank-Ansicht: Regeln', () => {
   it('liest nur bekannte Bereiche und gültige Vorlagen', () => {
     assert.equal(liesAnsicht(null), null);
     assert.deepEqual(liesAnsicht({ vorlage: 'quatsch', ein: ['demo', 'gibtsnicht', 'demo', 3], aus: 'x' }), { vorlage: 'alles', ein: ['demo'], aus: [] });
-    assert.deepEqual(liesEigene({ ein: ['technik', '../x'] }), { ein: ['technik'] });
+    assert.deepEqual(liesEigene({ ein: ['demo', '../x'] }), { ein: ['demo'] });
     assert.deepEqual(liesEigene(undefined), { ein: [] });
   });
 });
 
 describe('Werkbank-Ansicht: Expertenmodus (#356)', () => {
-  it('Suche: im Haushalt nur im Expertenmodus, für Betriebe immer', () => {
+  it('Suche und Volltext (früher Suche): im Haushalt nur im Expertenmodus, für Betriebe immer', () => {
     const haushalt = { vorlage: 'haushalt' as const, ein: [], aus: [] };
-    assert.equal(fuerAlle(haushalt, 'suche'), false);
-    assert.equal(sichtbar(haushalt, { ein: [] }, 'suche'), false, 'ohne Expertenmodus ausgeblendet');
-    assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'suche'), true, 'im Expertenmodus sichtbar');
-    assert.equal(nurImExpertenmodus('haushalt', 'suche'), true);
-    assert.equal(nurImExpertenmodus('organisation', 'suche'), false);
-    assert.equal(fuerAlle({ vorlage: 'organisation', ein: [], aus: [] }, 'suche'), true);
-    assert.deepEqual(expertenBereiche('haushalt').map((b) => b.pfad), ['automatisierungen', 'suche']);
+    assert.equal(fuerAlle(haushalt, 'texterkennung'), false);
+    assert.equal(sichtbar(haushalt, { ein: [] }, 'texterkennung'), false, 'ohne Expertenmodus ausgeblendet');
+    assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'texterkennung'), true, 'im Expertenmodus sichtbar');
+    assert.equal(nurImExpertenmodus('haushalt', 'texterkennung'), true);
+    assert.equal(nurImExpertenmodus('organisation', 'texterkennung'), false);
+    assert.equal(fuerAlle({ vorlage: 'organisation', ein: [], aus: [] }, 'texterkennung'), true);
+    assert.deepEqual(expertenBereiche('haushalt').map((b) => b.pfad), ['automatisierungen', 'texterkennung']);
     assert.deepEqual(expertenBereiche('alles'), []);
     // Der Expertenmodus zeigt nur, was die Vorlage dafür vorsieht – nicht alles.
     assert.equal(sichtbar(haushalt, { ein: [], experte: true }, 'protokoll'), false);
     // Für alle ausdrücklich ausgeblendet bleibt ausgeblendet.
-    assert.equal(sichtbar({ ...haushalt, aus: ['suche'] }, { ein: [], experte: true }, 'suche'), false);
+    assert.equal(sichtbar({ ...haushalt, aus: ['texterkennung'] }, { ein: [], experte: true }, 'texterkennung'), false);
   });
 
   it('liesEigene nimmt den Expertenmodus nur als true; der Dienst speichert ihn je Administrator', async () => {
@@ -70,9 +70,9 @@ describe('Werkbank-Ansicht: Expertenmodus (#356)', () => {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     await d.setzeWerkbankAnsicht(ICH, { installation: { vorlage: 'haushalt', ein: [], aus: [] }, eigene: { ein: [], experte: true } });
     const ich = await d.werkbankAnsicht(ICH);
-    assert.equal(sichtbar(ich.installation, ich.eigene, 'suche'), true);
+    assert.equal(sichtbar(ich.installation, ich.eigene, 'texterkennung'), true);
     const du = await d.werkbankAnsicht(DU);
-    assert.equal(sichtbar(du.installation, du.eigene, 'suche'), false, 'gilt nur für mich');
+    assert.equal(sichtbar(du.installation, du.eigene, 'texterkennung'), false, 'gilt nur für mich');
     await d.setzeWerkbankAnsicht(ICH, { eigene: { ein: [] } });
     assert.deepEqual((await d.werkbankAnsicht(ICH)).eigene, { ein: [] });
   });
@@ -109,8 +109,8 @@ describe('Werkbank-Ansicht: Dienst', () => {
 
   it('Administrator ohne Id (z. B. aus der Umgebung) wird über die E-Mail-Adresse unterschieden', async () => {
     const d = neu();
-    await d.setzeWerkbankAnsicht({ id: null, email: 'env@example.org' }, { eigene: { ein: ['technik'] } });
-    assert.deepEqual((await d.werkbankAnsicht({ id: null, email: 'env@example.org' })).eigene.ein, ['technik']);
+    await d.setzeWerkbankAnsicht({ id: null, email: 'env@example.org' }, { eigene: { ein: ['demo'] } });
+    assert.deepEqual((await d.werkbankAnsicht({ id: null, email: 'env@example.org' })).eigene.ein, ['demo']);
   });
 
   it('lehnt Unbrauchbares ab', async () => {
@@ -120,28 +120,29 @@ describe('Werkbank-Ansicht: Dienst', () => {
 
 describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
   it('Sammlungen behalten die Mitte, Seiten sind zweiteilig', () => {
-    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll', 'automatisierungen']) assert.ok(hatMitte(b), b);
-    for (const b of ['demo', 'technik', 'betrieb', 'verschluesselung', 'texterkennung', 'wartung', 'wartungsmodus', 'sicherung', 'wiederherstellung',
-      'systemzustand', 'anbindung', 'eingangsordner', 'anmeldeschutz', 'darfweg', 'vollexport', 'ansicht', 'webdav', 'stempel']) assert.ok(!hatMitte(b), b);
+    for (const b of ['typen', 'sichten', 'benutzer', 'pakete', 'postfaecher', 'papierkorb', 'protokoll', 'automatisierungen', 'auskuenfte']) assert.ok(hatMitte(b), b);
+    for (const b of ['demo', 'betrieb', 'verschluesselung', 'texterkennung', 'wartung', 'sicherung',
+      'systemzustand', 'anbindung', 'eingangsordner', 'anmeldeschutz', 'aufbewahrung', 'vollexport', 'ansicht', 'webdav', 'stempel', 'region', 'loeschkonzept']) assert.ok(!hatMitte(b), b);
     // Jeder Bereich der Leiste ist eingeordnet; neue Bereiche sind ohne Zutun zweiteilig.
     assert.ok(BEREICHE.every((b) => typeof hatMitte(b.pfad) === 'boolean'));
   });
 
   it('am Handy keine leere Zwischenstufe', () => {
-    assert.equal(werkbankEbene('technik'), 'mappe');
-    assert.equal(werkbankZurueck('technik'), '/werkbank');
+    assert.equal(werkbankEbene('systemzustand'), 'mappe');
+    assert.equal(werkbankZurueck('systemzustand'), '/werkbank');
     assert.equal(werkbankEbene('typen'), 'liste');
     assert.equal(werkbankEbene('typen', 'x'), 'mappe');
     assert.equal(werkbankZurueck('typen'), '/werkbank/typen');
     // Pakete: ohne Auswahl die Liste (Katalog abrufen, installierte Pakete), mit Installations-Link rechts.
     assert.equal(werkbankEbene('pakete'), 'liste');
     assert.equal(werkbankEbene('pakete', undefined, true), 'mappe');
-    assert.equal(werkbankEbene('technik', undefined, true), 'mappe');
+    assert.equal(werkbankEbene('systemzustand', undefined, true), 'mappe');
   });
 
   it('alte Direktlinks führen auf die Seite', () => {
-    assert.equal(werkbankUmleitung('anbindung', '42'), '/werkbank/anbindung?offen=42');
-    assert.equal(werkbankUmleitung('technik', 'irgendwas'), '/werkbank/technik');
+    // Lange Datenbankzugriffe stehen seit #725 im Systemzustand.
+    assert.equal(werkbankUmleitung('anbindung', '42'), '/werkbank/systemzustand?offen=42#datenbank');
+    assert.equal(werkbankUmleitung('region', 'irgendwas'), '/werkbank/region');
     assert.equal(werkbankUmleitung('stempel', 'kopie'), '/werkbank/stempel?offen=kopie');
     assert.equal(werkbankUmleitung('anbindung'), null);
     assert.equal(werkbankUmleitung('typen', 'abc'), null);
@@ -152,7 +153,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.equal(BEREICHE.find((b) => b.pfad === 'anbindung')?.gruppe, 'einstellungen');
     assert.equal(werkbankUmleitung('datenbank'), '/werkbank/anbindung');
     assert.equal(werkbankUmleitung('datenbank', undefined, '?offen=7'), '/werkbank/anbindung?offen=7');
-    assert.equal(werkbankUmleitung('datenbank', '42'), '/werkbank/anbindung?offen=42', 'alter Direktlink auf einen langen Zugriff');
+    assert.equal(werkbankUmleitung('datenbank', '42'), '/werkbank/systemzustand?offen=42#datenbank', 'alter Direktlink auf einen langen Zugriff');
     // Gespeicherte Ansichten übernehmen die neue Kennung.
     assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['datenbank', 'demo'], aus: [] }), { vorlage: 'haushalt', ein: ['anbindung', 'demo'], aus: [] });
     assert.deepEqual(liesEigene({ ein: ['datenbank', 'anbindung'] }), { ein: ['anbindung'] });
@@ -164,38 +165,41 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.equal(werkbankUmleitung('anmeldeschutz'), null, 'Pfad bleibt, alte Links gelten weiter');
   });
 
-  it('#354: sechs Gruppen nach Aufgaben, je höchstens 7 Bereiche, Kennungen unverändert', () => {
+  it('#354, #717, #725: sechs Gruppen nach Aufgaben, je höchstens 7 Bereiche', () => {
     assert.deepEqual(Object.values(GRUPPEN), ['Ablage aufbauen', 'Benutzer und Sicherheit', 'Post und Eingänge', 'Daten sichern', 'Einstellungen', 'Wartung und Fehlersuche']);
     const je = (g: string) => BEREICHE.filter((x) => x.gruppe === g).map((x) => x.pfad);
-    assert.deepEqual(je('ablage'), ['typen', 'sichten', 'nummernkreise', 'stempel', 'automatisierungen', 'pakete', 'suche', 'darfweg']);
-    assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'datenschutz']);
+    assert.deepEqual(je('ablage'), ['pakete', 'typen', 'sichten', 'nummernkreise', 'automatisierungen']);
+    assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'auskuenfte', 'loeschkonzept', 'aufbewahrung', 'stempel']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
-    assert.deepEqual(je('sichern'), ['sicherung', 'wiederherstellung', 'vollexport', 'papierkorb']);
-    assert.deepEqual(je('einstellungen'), ['betrieb', 'aufgaben', 'region', 'anmeldeschutz', 'designs', 'anbindung', 'technik']);
-    assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartungsmodus', 'wartung', 'demo']);
-    // Ablage aufbauen hat seit den Automatisierungen (#675) acht Bereiche, alle anderen höchstens sieben.
-    for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= (g === 'ablage' ? 8 : 7), g);
+    assert.deepEqual(je('sichern'), ['sicherung', 'vollexport', 'papierkorb']);
+    assert.deepEqual(je('einstellungen'), ['betrieb', 'region', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung']);
+    assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartung', 'demo']);
+    for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= 7, g);
+    assert.equal(bereichName('texterkennung'), 'Suche und Volltext');
+    assert.equal(bereichName('aufbewahrung'), 'Aufbewahrung abgelaufen');
     // Aufgaben und Tägliche Zusammenfassung: ein Eintrag unter Einstellungen, Kennung bleibt „aufgaben“.
-    assert.equal(bereichName('aufgaben'), 'Benachrichtigungen und Aufgaben');
+    assert.equal(bereichName('aufgaben'), 'Aufgaben');
     assert.equal(bereichName('uebersicht'), 'Übersicht');
     // Jeder Bereich hat Name und „wann“ aus der Sprachdatei.
     for (const b of BEREICHE) assert.ok(b.name && !b.name.startsWith('werkbank.') && b.wann && !b.wann.startsWith('werkbank.'), b.pfad);
     // Gespeicherte Auswahl bestehender Installationen bleibt gültig (es werden nur Bereiche gespeichert).
-    const alt = { vorlage: 'haushalt', ein: ['nummernkreise', 'protokoll', 'anmeldeschutz'], aus: ['aufgaben', 'technik'] };
+    const alt = { vorlage: 'haushalt', ein: ['nummernkreise', 'protokoll', 'anmeldeschutz'], aus: ['aufgaben', 'papierkorb'] };
     assert.deepEqual(liesAnsicht(alt), alt);
-    for (const p of ['aufgaben', 'verschluesselung', 'technik', 'papierkorb', 'webdav']) assert.equal(werkbankUmleitung(p), null, p);
+    for (const p of ['aufgaben', 'verschluesselung', 'papierkorb', 'webdav']) assert.equal(werkbankUmleitung(p), null, p);
     // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung (dazu die Region, #726).
     assert.deepEqual(BEREICHE.filter((b) => inVorlage('haushalt', b.pfad)).map((b) => b.pfad).sort(),
-      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'technik', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks', 'wiederherstellung']);
+      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks']);
   });
 
-  it('#354 Nacharbeit: Datenschutz steht unter „Benutzer und Sicherheit“, Kennung bleibt', () => {
-    const b = BEREICHE.find((x) => x.pfad === 'datenschutz');
-    assert.equal(b?.gruppe, 'benutzer');
-    assert.equal(GRUPPEN[b!.gruppe], 'Benutzer und Sicherheit');
-    assert.deepEqual(b?.in, ['organisation'], 'Vorlagen unverändert');
-    assert.equal(werkbankUmleitung('datenschutz'), null, 'Pfad bleibt, alte Links gelten weiter');
-    assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['datenschutz'], aus: [] }), { vorlage: 'haushalt', ein: ['datenschutz'], aus: [] });
+  it('#354 Nacharbeit, #668: Datenschutz-Auskünfte und Löschkonzept unter „Benutzer und Sicherheit“, alte Adresse leitet um', () => {
+    for (const pfad of ['auskuenfte', 'loeschkonzept']) {
+      const b = BEREICHE.find((x) => x.pfad === pfad);
+      assert.equal(b?.gruppe, 'benutzer');
+      assert.equal(GRUPPEN[b!.gruppe], 'Benutzer und Sicherheit');
+      assert.deepEqual(b?.in, ['organisation'], 'Vorlagen wie vorher Datenschutz');
+    }
+    assert.equal(werkbankUmleitung('datenschutz'), '/werkbank/auskuenfte', 'alte Links führen zu den Auskünften');
+    assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['datenschutz'], aus: [] }), { vorlage: 'haushalt', ein: ['auskuenfte'], aus: [] });
     // Verschlüsselung bleibt unter Benutzer und Sicherheit, WebDAV unter Post und Eingänge.
     assert.equal(BEREICHE.find((x) => x.pfad === 'verschluesselung')?.gruppe, 'benutzer');
     assert.equal(BEREICHE.find((x) => x.pfad === 'webdav')?.gruppe, 'post');
@@ -230,5 +234,38 @@ describe('Speicherplatz: ein Balken für einen Datenträger (#366)', () => {
     assert.ok(!einDatentraeger([o('8:1'), o('8:1', null)]), 'ein Ordner nicht messbar');
     assert.ok(!einDatentraeger([o(null), o(null)]), 'Gerät unbekannt');
     assert.ok(!einDatentraeger([o('8:1')]), 'nur ein Ordner');
+  });
+});
+
+describe('Werkbank neu geordnet (#717, #725)', () => {
+  it('alte Bereiche leiten auf den neuen Ort weiter, samt Abschnitt', () => {
+    assert.equal(werkbankUmleitung('darfweg'), '/werkbank/aufbewahrung');
+    assert.equal(werkbankUmleitung('suche'), '/werkbank/texterkennung#suche');
+    assert.equal(werkbankUmleitung('wiederherstellung'), '/werkbank/sicherung#wiederherstellen');
+    assert.equal(werkbankUmleitung('technik'), '/werkbank/systemzustand#version');
+    assert.equal(werkbankUmleitung('wartungsmodus'), '/werkbank/wartung#wartungsmodus');
+    for (const p of ['darfweg', 'suche', 'wiederherstellung', 'technik', 'wartungsmodus']) assert.ok(!BEREICHE.some((b) => b.pfad === p), p);
+  });
+
+  it('gespeicherte Ansichten übernehmen die neuen Kennungen, zusammengelegte erben die weiteste Sichtbarkeit', () => {
+    assert.deepEqual(liesAnsicht({ vorlage: 'haushalt', ein: ['darfweg', 'wartungsmodus', 'wartung'], aus: ['technik', 'wiederherstellung'] }),
+      { vorlage: 'haushalt', ein: ['aufbewahrung', 'wartung'], aus: ['systemzustand', 'sicherung'] });
+    // „Suche“ war im Haushalt Expertenmodus, Texterkennung nur im Betrieb: zusammen wie die Suche.
+    const sv = BEREICHE.find((b) => b.pfad === 'texterkennung')!;
+    assert.deepEqual([sv.in, sv.experte], [['organisation'], ['haushalt']]);
+    // Wartungsmodus war im Betrieb sichtbar, Wartungsoperationen nirgends: zusammen im Betrieb.
+    assert.deepEqual(BEREICHE.find((b) => b.pfad === 'wartung')!.in, ['organisation']);
+  });
+
+  it('die Werkbank-Suche findet Bereiche unter neuem und altem Namen', () => {
+    const finde = (s: string) => BEREICHE.filter((b) => bereichPasst(b.pfad, s)).map((b) => b.pfad);
+    assert.ok(finde('darf weg').includes('aufbewahrung'));
+    assert.ok(finde('Aufbewahrung abgelaufen').includes('aufbewahrung'));
+    assert.ok(finde('technik').includes('systemzustand'));
+    assert.ok(finde('wiederherstellen').includes('sicherung'));
+    assert.ok(finde('gleichbedeutende').includes('texterkennung'));
+    assert.ok(finde('wartungsmodus').includes('wartung'));
+    assert.ok(finde('STEMPEL').includes('stempel'));
+    assert.equal(finde('').length, BEREICHE.length);
   });
 });

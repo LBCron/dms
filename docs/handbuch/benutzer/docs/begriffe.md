@@ -150,9 +150,6 @@ Ein Zeitraum, in dem ein Benutzer nicht da ist – mit einem Vertreter, der sein
 <a id="aktionen"></a>**Aktionen** · ✓ Alltagswort · alle  
 Das Menü „Mappe ▾“ neben dem Titel einer Mappe – Aufgabe vergeben, Erinnern, Versenden, Exportieren und mehr. Hieß früher selbst „Aktionen“.
 
-<a id="anstehend"></a>**Anstehend** · ✓ Alltagswort · alle  
-Die Ansicht mit meinen Fristen und Erinnerungen der nächsten Tage (Standard 30) – kommende und solche, die schon fällig sind und unter „Zu erledigen“ stehen.
-
 <a id="aufgabe"></a>**Aufgabe** · ✓ Alltagswort · alle  
 Etwas, das ein Mensch an einer Mappe tun soll. Arten sind Passt nicht, Erwähnung, Zugewiesen (von Hand vergeben), Post für dich, Frist, Erinnerung, Vertretung und Auskunft.  
 Siehe auch: [Zu erledigen](#zu-erledigen), [Frist](#frist), [Erinnerung](#erinnerung), [Auftrag](#auftrag).
@@ -174,12 +171,8 @@ Siehe auch: [Vollexport](#vollexport), [Meine Daten exportieren](#meine-daten-ex
 Text mit Überschriften, Listen und Hervorhebungen (Markdown) – als Feldart und in Notizen.
 
 <a id="frist"></a>**Frist** · ✓ Alltagswort · alle  
-Eine Aufgabe, die eine Automatisierung „Datum erreicht“ aus einem Datumsfeld anlegt – die [Vorlaufzeit](#vorlaufzeit) vor dem Datum, z. B. „Kündigen bis …“.  
-Siehe auch: [Erinnerung](#erinnerung), [Anstehend](#anstehend).
-
-<a id="vorlaufzeit"></a>**Vorlaufzeit** · ✓ Alltagswort · Admins  
-Wie lange vor einem Datum Ablago erinnert – in Tagen, Wochen oder Monaten („… vorher erinnern“). Eingestellt an der Automatisierung, nicht am Feld.  
-Siehe auch: [Frist](#frist).
+Eine Aufgabe, die aus einem Datumsfeld mit Vorlauf entsteht, z. B. „Kündigen bis …“.  
+Siehe auch: [Erinnerung](#erinnerung), [Zu erledigen](#zu-erledigen).
 
 <a id="historie"></a>**Historie** · ✓ Alltagswort · alle  
 Die Geschichte einer Mappe – Änderungen vorher und nachher, Dokumente, Papierkorb, Notizen, Aufgaben. Das technische Betriebsprotokoll heißt dagegen „Protokoll“.
@@ -209,7 +202,7 @@ Wie weit Post bearbeitet ist – Neu (noch nicht bearbeitet), Zugeordnet (liegt 
 Siehe auch: [Post](#post), [Neue Post](#neue-post).
 
 <a id="vertretung"></a>**Vertretung** · ✓ Alltagswort · alle  
-Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe – über die Automatisierung „Vertretung eingetragen“, die ein Admin einschaltet bzw. anpasst.
+Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe der Art „Vertretung“.
 
 <a id="volltext"></a>**Volltext** · ✗ Fachwort · alle  
 Der durchsuchbare Text in den Dokumenten – aus der Textebene der Datei oder aus der Texterkennung.  
@@ -223,8 +216,8 @@ Siehe auch: [Dokument](#dokument).
 Eine Aufgabe einem anderen Benutzer übertragen.
 
 <a id="zu-erledigen"></a>**Zu erledigen** · ✓ Alltagswort · alle  
-Die oberste Ansicht. Sie zeigt die Mappen, an denen ich etwas tun soll (meine offenen Aufgaben).  
-Siehe auch: [Aufgabe](#aufgabe).
+Die oberste Ansicht – als Liste die Mappen, an denen ich etwas tun soll (meine offenen Aufgaben), als Monat und Jahr meine Termine im Kalender.  
+Siehe auch: [Aufgabe](#aufgabe), [Frist](#frist).
 
 <a id="zuordnen"></a>**Zuordnen** · ✓ Alltagswort · alle  
 Post einer vorhandenen oder neuen Mappe zuweisen. Die Dokumente wandern dabei in das Register der Mappe.
@@ -243,6 +236,9 @@ Anmelden mit einem fremden Konto, z. B. Microsoft 365 (OpenID Connect).
 <a id="archivmodus"></a>**Archivmodus** · ~ mit Erklärung · Administratoren  
 Eine Einstellung je Mappentyp für Aufbewahrungspflichten – mit Versionen und einer Löschsperre bis zum Fristende.
 
+<a id="aufbewahrung-abgelaufen"></a>**Aufbewahrung abgelaufen** · ✓ Alltagswort · Administratoren  
+Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist (Werkbank → Benutzer und Sicherheit). Früher „Darf weg“.
+
 <a id="benutzer"></a>**Benutzer** · ✓ Alltagswort · alle  
 Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
 
@@ -252,9 +248,6 @@ Wer was darf. Am Mappentyp – Anlegen, Lesen, Bearbeiten, Löschen, Passwörter
 <a id="betrieb"></a>**Betrieb** · ✓ Alltagswort · Administratoren  
 Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Gegenstück ist die Vorlage „Haushalt“.  
 Siehe auch: [Werkbank anpassen](#werkbank-anpassen), [Haushalt](#haushalt).
-
-<a id="darf-weg"></a>**Darf weg** · ✓ Alltagswort · Administratoren  
-Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist.
 
 <a id="design"></a>**Design** · ✓ Alltagswort · Administratoren  
 Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines unter Mein Konto unter „Darstellung“.  
@@ -307,6 +300,9 @@ Siehe auch: [Tägliche Zusammenfassung](#tagliche-zusammenfassung).
 Eine Gruppe von Benutzern, z. B. „Eltern“. Grundlage für Berechtigungsregeln. Nicht zu verwechseln mit der Systemrolle.  
 Siehe auch: [Systemrolle](#systemrolle).
 
+<a id="suche-und-volltext"></a>**Suche und Volltext** · ~ mit Erklärung · Administratoren  
+Der Werkbank-Bereich unter Post und Eingänge für Texterkennung, Archivfassung, automatisches Verkleinern, Tippfehler und gleichbedeutende Wörter. Fasst die früheren Bereiche „Texterkennung“ und „Suche“ zusammen.
+
 <a id="systemrolle"></a>**Systemrolle** · ~ mit Erklärung · Administratoren  
 Ob ein Benutzer Administrator oder Mitglied ist. Nur Administratoren kommen in die Werkbank.  
 Siehe auch: [Rolle](#rolle), [Administrator](#administrator).
@@ -318,8 +314,8 @@ Prüft, welche Rechte ein bestimmter Benutzer am Ende hat.
 Erkennt Text in Bildern und gescannten PDFs, damit er durchsuchbar wird.
 
 <a id="tagliche-zusammenfassung"></a>**Tägliche Zusammenfassung** · ✓ Alltagswort · alle  
-Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.  
-Siehe auch: [Aufgabe](#aufgabe), [Anstehend](#anstehend).
+Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Ob und wann sie kommt, stellen Administratoren in der Automatisierung „Tägliche Zusammenfassung“ ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.  
+Siehe auch: [Aufgabe](#aufgabe), [Zu erledigen](#zu-erledigen).
 
 <a id="werkbank-anpassen"></a>**Werkbank anpassen** · ~ mit Erklärung · Administratoren  
 Legt fest, welche Bereiche links in der Werkbank stehen – nach einer Vorlage („Haushalt“, „Betrieb“ oder „Alles“) und mit Abweichungen. Ausblenden schaltet nichts ab. Neue Installationen starten mit „Haushalt“; Installationen von vor dieser Einstellung zeigen alles.  
@@ -498,9 +494,9 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Administrator | Admin (in der Oberfläche) | – |
 | Anmeldung über einen Anbieter | SSO, OIDC (in der Oberfläche) | – |
 | Ansicht | Sicht, Filter, View | `Sicht` |
-| Anstehend | – | `Anstehend` |
 | Archivmodus | – | `Archiv` |
 | Archivnummer | – | `archivnummer` |
+| Aufbewahrung abgelaufen | Darf weg | – |
 | Aufgabe | Auftrag, Task, Todo | `Aufgabe, AUFGABENARTEN` |
 | Auftrag | Job | `Auftrag` |
 | Bedingung | – | `Bedingung` |
@@ -557,7 +553,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Verweisart | – | `Verweisart, VERWEISARTEN` |
 | Vorschaubild | Thumbnail, Miniatur | `vorschau` |
 | Werkbank anpassen | – | `WerkbankAnsicht, VORLAGEN` |
-| Zu erledigen | Eingang, Inbox, Posteingang | `eingang` |
+| Zu erledigen | Eingang, Inbox, Posteingang, Anstehend | `eingang` |
 | Zwei-Faktor-Anmeldung | 2FA, MFA (in der Oberfläche) | – |
 
 *Stand: 2026-11-04*

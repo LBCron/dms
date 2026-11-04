@@ -1,14 +1,14 @@
 /**
- * „Anstehend“ als Kalender (#528): Rechnen mit Tagen, Wochen und Monaten für Liste, Monat und Jahr.
+ * Kalender in „Zu erledigen“ (#528, #725): Rechnen mit Tagen, Wochen und Monaten für Monat und Jahr.
  * Server und Oberfläche teilen diese Datei – der Server prüft damit den Zeitraum einer Abfrage, die
- * Oberfläche baut daraus Gruppen und Raster. Alle Daten als Text JJJJ-MM-TT, gerechnet in UTC.
+ * Oberfläche baut daraus die Raster. Alle Daten als Text JJJJ-MM-TT, gerechnet in UTC.
  */
 import { verschiebe } from './sichten';
 
-/** Ansichten von „Anstehend“; die Wahl merkt sich das DMS je Benutzer. */
-export const ANSTEHEND_ANSICHTEN = ['liste', 'monat', 'jahr'] as const;
-export type AnstehendAnsicht = (typeof ANSTEHEND_ANSICHTEN)[number];
-export const istAnsicht = (v: unknown): v is AnstehendAnsicht => typeof v === 'string' && (ANSTEHEND_ANSICHTEN as readonly string[]).includes(v);
+/** Ansichten von „Zu erledigen“ (#725); die Wahl merkt sich Ablago je Benutzer. */
+export const ERLEDIGEN_ANSICHTEN = ['liste', 'monat', 'jahr'] as const;
+export type ErledigenAnsicht = (typeof ERLEDIGEN_ANSICHTEN)[number];
+export const istAnsicht = (v: unknown): v is ErledigenAnsicht => typeof v === 'string' && (ERLEDIGEN_ANSICHTEN as readonly string[]).includes(v);
 
 /** Längster Zeitraum einer Abfrage in Tagen: ein ganzes Jahr samt angeschnittener Wochen. */
 export const ZEITRAUM_MAX_TAGE = 400;
@@ -69,20 +69,6 @@ export function zeitraumProblem(von: unknown, bis: unknown): string | null {
   if (bis < von) return '„bis“ liegt vor „von“.';
   if (tageZwischen(von, bis) + 1 > ZEITRAUM_MAX_TAGE) return `Der Zeitraum darf höchstens ${ZEITRAUM_MAX_TAGE} Tage lang sein.`;
   return null;
-}
-
-/** Gruppen der Liste: Überfällig · Heute · Diese Woche (bis Sonntag) · Später. */
-export const ANSTEHEND_GRUPPEN = ['ueberfaellig', 'heute', 'woche', 'spaeter'] as const;
-export type AnstehendGruppe = (typeof ANSTEHEND_GRUPPEN)[number];
-
-/**
- * Gruppe eines Eintrags. Überfällig ist nur, was schon unter „Zu erledigen“ steht und dessen Datum vorbei
- * ist – eine Frist ohne Aufgabe mit vergangenem Datum zeigt „Anstehend“ gar nicht.
- */
-export function gruppeVon(datum: string, heute: string): AnstehendGruppe {
-  if (datum < heute) return 'ueberfaellig';
-  if (datum === heute) return 'heute';
-  return datum <= verschiebe(montag(heute), 6) ? 'woche' : 'spaeter';
 }
 
 /** Überfällig seit … Tagen (0, wenn nicht überfällig). */

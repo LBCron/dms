@@ -8,6 +8,7 @@
  * - Scheitert etwas, wird zurückgerollt: Es bleibt nichts halb angelegt.
  * - Ein Update ergänzt nur (neue Typen, Felder, Register, Sichten); es löscht und überschreibt nichts.
  */
+import { ansichtSymbol } from '../../shared/src/ansichtsymbole';
 import { liesFeldErkennung, type FeldErkennung } from '../../shared/src/erkennung';
 import { istDatumsgrenze, istFeldformat } from '../../shared/src/feldformate';
 import { createHash, randomUUID } from 'node:crypto';
@@ -16,7 +17,7 @@ import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
 import { typBild, type TypBild } from '../../shared/src/typvergleich';
-import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { ALLE_TYPEN, BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufAusgelassen, haengenAn, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -112,7 +113,7 @@ export interface PaketTyp { schluessel: string; name: string; beschreibung: stri
  * sonst wird die Ansicht ohne ihn angelegt bzw. ganz übersprungen.
  */
 export interface FremderTyp { kennung: string; name: string }
-export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; fremdeTypen?: FremderTyp[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string }
+export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; fremdeTypen?: FremderTyp[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string; symbol?: string }
 /** Ab dieser Version verstehen DMS Ansichten mit `fremde_typen` (#656). */
 export const FREMDE_TYPEN_AB = '0.178.0';
 /** Beispiel-Mappe (#347): optional mit Schlüssel; Verweisfelder dürfen { beispiel: schluessel } bzw. { beispiel: paket:schluessel } sein. */
@@ -175,7 +176,7 @@ const istDmsVerweis = (vw: string) => vw.startsWith(DMS_PRAEFIX);
 /** Alle Typverweise eines Pakets: Felder, Quellen der Verknüpfungsregister, Typen der Ansichten. */
 const typverweise = (typen: PaketTyp[], sichten: PaketSicht[]) => [
   ...typen.flatMap((t) => [...t.felder.flatMap((f) => (f.ziel ? [f.ziel] : [])), ...t.register.flatMap((r) => (r.quellen ?? []).map((q) => q.typ))]),
-  ...sichten.flatMap((s) => s.typen ?? []),
+  ...sichten.flatMap((s) => (s.typen ?? []).filter((t) => t !== ALLE_TYPEN)),
 ];
 const istObjekt = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -253,6 +254,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
         if (!SCHLUESSEL.test(k)) fehler.push(`sichten[${i + 1}]: fremde_typen[${j + 1}]: ungültige Kennung „${k}“.`);
         return { kennung: k, name: istObjekt(f) ? str(f.name).trim() || k : k };
       }) } : {}),
+      // Symbol (#428): unbekannte Namen (Paket für eine neuere Version) heißen „ohne Symbol“, kein Fehler.
+      symbol: ansichtSymbol(s.symbol) ?? undefined,
       bedingungen: Array.isArray(s.bedingungen) ? s.bedingungen.filter(istObjekt).map((b) => ({ feld: str(b.feld), operator: str(b.operator), wert: b.wert })) : [],
     };
   });
@@ -1044,7 +1047,7 @@ export class Paketverwaltung {
     const da = genutzt.filter((k) => dmsTypen.has(k));
     if (da.length) hinweise.push(`Nutzt Mappentypen aus Ablago: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus Ablago)`).join(', ')}.`);
     // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
-    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche).`);
+    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche und Volltext).`);
     // Beispiele, die auf Beispiele einer Abhängigkeit zeigen (#347): ohne diese bleiben die Verweise leer.
     for (const p of new Set(paket.beispiele.flatMap((b) => beispielVerweise(b.werte)).filter((z) => z.includes(':') && !z.startsWith(`${m.id}:`)).map((z) => z.split(':')[0]))) {
       const da = installierte.find((x) => x.id === p);
@@ -1296,12 +1299,13 @@ export class Paketverwaltung {
         const elternId = s.eltern ? sichtMap[s.eltern] ?? null : null;
         if (s.eltern && !elternId) throw new Fachfehler(422, `Ansicht „${s.name}“: Elternsicht „${s.eltern}“ fehlt.`);
         const position = Math.max(0, ...kinderVon(alle, elternId).map((x) => x.position)) + 10;
+        // „*“ (#725): Ansicht über alle Mappentypen – bleibt, wie es ist.
         const jetzt = await this.d.listeTypen();
         const fremd = (s.fremdeTypen ?? []).map((f) => jetzt.find((t) => t.schluessel === f.kennung)?.id).filter((x): x is string => !!x);
-        const typen = [...new Set([...(s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean), ...fremd])];
+        const typen = [...new Set([...(s.typen ?? []).map((x) => (x === ALLE_TYPEN ? ALLE_TYPEN : ziel(x, false)!)).filter(Boolean), ...fremd])];
         if (!typen.length && (s.fremdeTypen ?? []).length) continue;
         try {
-          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}) });
+          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}), ...(s.symbol ? { symbol: s.symbol } : {}) });
           neueSichten.push(neu.id);
           sichtMap[s.schluessel] = neu.id;
         } catch (f) { throw new Fachfehler(422, `Ansicht „${sp.name}“: ${meldungen(f)}`); }

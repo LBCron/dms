@@ -9,7 +9,7 @@ import type { Mappentyp, Werte } from './model';
 import { zeitzone } from './region';
 
 export const LOESCHGRUENDE = {
-  frist: 'Frist abgelaufen („Darf weg“)',
+  frist: 'Frist abgelaufen („Aufbewahrung abgelaufen“)',
   verlangen: 'Auf Verlangen der betroffenen Person',
   nicht_noetig: 'Nicht mehr nötig',
   sonstiges: 'Sonstiges',

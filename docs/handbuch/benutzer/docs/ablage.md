@@ -2,7 +2,7 @@
 
 ## Ansichten
 
-Links stehen die **Ansichten**. Ganz oben stehen fest, jeweils mit einem Symbol: [Erweiterte Suche](#erweiterte-suche), [Start](startseite.md), [Zu erledigen](eingang.md), [Neue Post](post.md), [Anstehend](eingang.md#anstehend), deine [Favoriten](#favoriten) und der [Papierkorb](#papierkorb) (solange er an ist oder etwas darin liegt). Unter dem Trenner stehen – ohne Symbol – die Ansichten, die ein Administrator eingerichtet hat – zum Beispiel *Vertrag*, *Rechnung*, *Vertragspartner* oder *Kündigung in den nächsten 12 Monaten*. Die Zahl dahinter sagt, wie viele Mappen die Ansicht gerade zeigt. Die Ablage wartet nicht auf die Zahlen: Bis sie da sind, steht an ihrer Stelle kurz „…“.
+Links stehen die **Ansichten**. Ganz oben stehen fest, jeweils mit einem Symbol: [Erweiterte Suche](#erweiterte-suche), [Start](startseite.md), [Zu erledigen](eingang.md), [Neue Post](post.md), deine [Favoriten](#favoriten) und der [Papierkorb](#papierkorb) (solange er an ist oder etwas darin liegt). Unter dem Trenner stehen – ohne Symbol – die Ansichten, die ein Administrator eingerichtet hat – zum Beispiel *Vertrag*, *Rechnung*, *Vertragspartner* oder *Kündigung in den nächsten 12 Monaten*. Die Zahl dahinter sagt, wie viele Mappen die Ansicht gerade zeigt. Die Ablage wartet nicht auf die Zahlen: Bis sie da sind, steht an ihrer Stelle kurz „…“.
 
 Ein Klick auf eine Ansicht zeigt ihre Mappen in der Liste. Welche Ansichten du siehst, kann ein Administrator festlegen; eine Ansicht, die für dich verborgen ist, fehlt samt ihrer Mappen auch in der Elternansicht. Mappen findest du trotzdem über die Suche, wenn du sie lesen darfst.
 
@@ -172,7 +172,7 @@ Mappen, die du oft brauchst, markierst du mit dem **Stern** – oben rechts in d
 ![Die Ansicht Favoriten mit geöffneter Mappe](bilder/favoriten.png)
 
 - Favoriten sind **persönlich**: Jeder Benutzer hat seine eigenen. Das Markieren ändert weder „zuletzt geändert“ noch die Historie der Mappe.
-- Die Ansicht *Favoriten* zeigt Mappen aller Mappentypen, mit Titel, Mappentyp und Datum – wie „Zu erledigen“.
+- *Favoriten* ist eine **mitgelieferte Ansicht** über alle Mappentypen mit der Bedingung **ist mein Favorit** – wie *Neue Post* steht sie oben bei den festen Einträgen. Ein Administrator kann sie wie jede Ansicht umbenennen, mit Spalten versehen oder löschen; dann steht dort wieder die einfache Liste deiner Favoriten.
 - Löschst du eine Mappe, verschwindet sie aus den Favoriten; stellst du sie aus dem Papierkorb wieder her, ist sie wieder Favorit.
 - Ein Administrator kann Ansichten mit der Bedingung **ist mein Favorit** einrichten, etwa *Meine wichtigen Verträge*. Jeder sieht darin seine eigenen Favoriten.
 

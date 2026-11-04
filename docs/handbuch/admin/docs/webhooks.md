@@ -1,6 +1,6 @@
 # Webhooks
 
-Mit einem **Webhook** meldet sich Ablago selbst bei einem anderen System, sobald sich die Zahlen eines Benutzers ändern: neue Post, *Zu erledigen*, anstehende und überfällige Fristen. Hausautomatisierung (Homey, Node-RED, ioBroker, openHAB) und eigene Skripte reagieren dann sofort, statt alle paar Minuten nachzufragen.
+Mit einem **Webhook** meldet sich Ablago selbst bei einem anderen System, sobald sich die Zahlen eines Benutzers ändern: neue Post, *Zu erledigen* und Überfälliges. Hausautomatisierung (Homey, Node-RED, ioBroker, openHAB) und eigene Skripte reagieren dann sofort, statt alle paar Minuten nachzufragen.
 
 Benutzer legen ihre Webhooks selbst an (**Mein Konto → Benachrichtigungen → Sofort melden** (oben rechts auf deinen Namen klicken)); sie gelten immer für die eigenen Zahlen und in den eigenen Rechten. Du als Administrator bestimmst unter **Werkbank → Webhooks**, **wohin** gemeldet werden darf, siehst alle Webhooks und schaltest sie bei Bedarf ab. Wie Benutzer einen Webhook einrichten (mit Beispiel für Node-RED), steht im Benutzerhandbuch unter [In die Hausautomatisierung einbinden](https://help.ablago.app/benutzer/aktuell/hausautomatisierung/#sofort-melden-webhook).
 
@@ -9,7 +9,7 @@ Benutzer legen ihre Webhooks selbst an (**Mein Konto → Benachrichtigungen → 
 Eine Meldung enthält **nur** die Art, eine Ereignis-Id, eine Zeit und die Zahlen – dieselben wie beim [Zähler-Endpunkt](api.md#zaehler):
 
 ```json
-{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
+{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
 ```
 
 **Keine** Titel, Absender, Namen, E-Mail-Adressen oder Inhalte. Wer mehr wissen will, holt es über die [Schnittstelle](api.md) mit einem eigenen Schlüssel und eigenen Rechten. Ablago meldet nur an Adressen, die du freigegeben hast – nie an das Projekt oder an andere Server.

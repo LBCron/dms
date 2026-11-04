@@ -16,6 +16,7 @@
   "dokument.neu": "Neu erzeugen",
   "dokument.neu.titel": "Textebene neu lesen und die Texterkennung neu laufen lassen",
   "werkbank.paket.titel": "Texterkennung für Scans und Bilder",
+  "werkbank.titel": "Suche und Volltext",
   "werkbank.einleitung": "Volltext für die Suche: Bei PDFs liest Ablago die Textebene selbst – sofort. Scans und Fotos erkennt das Paket Texterkennung; seine Einstellungen (Sprache, Seiten aufrichten …) stehen beim Paket. Ob ein Dokumentenregister einen Volltext erzeugt, stellst du am Mappentyp ein.",
   "werkbank.paket.da": "Das Paket „{paket}“ übernimmt die Texterkennung. Ablago liest selbst nur die Textebene von PDFs und gibt Dokumente ohne Text an das Paket weiter; die Einstellungen (z. B. Sprache) stehen beim Paket.",
   "werkbank.paket.einstellungen": "Zum Paket und seinen Einstellungen",

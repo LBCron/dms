@@ -124,7 +124,7 @@ async function pruefeEingang(repo: import('../src/repo').Repo, mappeId: string, 
   assert.equal((await repo.zaehler('00000000-0000-4000-8000-00000000ffff', false)).eingang, 0);
 }
 
-describe('Anstehend und Zähler ohne Durchgang über alle Mappen (#477)', () => {
+describe('Termine und Zähler ohne Durchgang über alle Mappen (#477)', () => {
   it('mappenMitDatum und Eingang im Arbeitsspeicher', async () => {
     const repo = speicherRepo();
     const { a } = await pruefeMappenMitDatum(repo);

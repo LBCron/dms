@@ -350,7 +350,7 @@ Fertig – dein Ablago läuft. Wie es weitergeht (Sicherung einschalten, loslege
 ## 7. Gut zu wissen { #gut-zu-wissen }
 
 - **Sicherung auf ein anderes Gerät:** Schalte unter **Werkbank → Sicherung** den Zeitplan ein und druck das **Notfallblatt** aus. Die Sicherungen landen in `~/dms/sicherung` – also auf derselben SSD. Geht die kaputt, sind sie mit weg. Kopiere sie deshalb regelmäßig woandershin, z. B. auf ein NAS oder eine USB-Platte. Mehr unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).
-- **Ablago aktualisieren:** **Werkbank → Technik** zeigt, ob es eine neue Version gibt. Aktualisieren: `cd ~/dms && docker compose pull && docker compose up -d` – oder einfach `bash einrichten.sh` noch einmal. Mehr unter [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
+- **Ablago aktualisieren:** **Werkbank → Systemzustand → Version und Updates** zeigt, ob es eine neue Version gibt. Aktualisieren: `cd ~/dms && docker compose pull && docker compose up -d` – oder einfach `bash einrichten.sh` noch einmal. Mehr unter [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 - **System aktualisieren:** etwa einmal im Monat `sudo apt update && sudo apt full-upgrade -y` (Schritt 5.1) – das bringt auch Docker auf den neuesten Stand. Wer das nicht vergessen will, lässt Sicherheitsupdates automatisch einspielen, siehe [PC mit Linux](linux.md#4-den-rechner-zum-server-machen).
 - **Wärme:** Mit `vcgencmd measure_temp` zeigt der Pi seine Temperatur. Bis etwa 70 °C ist alles gut; ab 80 °C bremst er sich aus. Dann hilft ein Lüfter oder ein luftigerer Platz (nicht in den geschlossenen Schrank).
 - **Ausschalten:** Nie einfach den Stecker ziehen, solange er läuft – die Datenbank könnte Schaden nehmen. Sauber herunterfahren mit `sudo shutdown -h now`, warten, bis die grüne Leuchte aus ist, dann Stecker ziehen.
@@ -422,7 +422,7 @@ Hier misst du, wie lange das Paket **Texterkennung** auf dem Pi für eine Seite 
     ![Werkbank → Demo-Daten](bilder/werkbank-demo.png)
 
 4. **Demo-Daten erzeugen** klicken. Sobald darunter „… Demo-Mappen und … Dokumente erzeugt“ steht, **Uhrzeit notieren**.
-5. **Werkbank → Texterkennung** öffnen und ab und zu neu laden. Wenn unter *Texterkennung für Scans und Bilder* **nichts mehr wartet**, wieder **Uhrzeit notieren**.
+5. **Werkbank → Suche und Volltext** öffnen und ab und zu neu laden. Wenn unter *Texterkennung für Scans und Bilder* **nichts mehr wartet**, wieder **Uhrzeit notieren**.
 6. **Rechnen:** Minuten × 60 ÷ Seiten = **Sekunden je Seite**. Beispiel: 6 Minuten für 45 Seiten → 360 ÷ 45 = 8 Sekunden je Seite.
 
 ### Zurückmelden

@@ -173,7 +173,7 @@ Nicht Teil von Stufe 1: weitere Sprachen, „Sie“ in der Oberfläche, Sprachwa
 
 ## Unterlagen für Dritte: Anrede du oder Sie { #unterlagen-fur-dritte }
 
-Die Oberfläche duzt immer. Texte, die an Personen **außerhalb** von Ablago gehen, folgen dagegen der Einstellung **Anrede in Unterlagen für Dritte** (#474, Werkbank → Datenschutz, `Datenschutz.anrede`, Vorgabe `du`). Alle diese Texte stehen im Bereich `dritte` der [Sprachdateien](#texte-und-sprachdateien): die du-Fassung in `shared/src/sprachen/de/dritte.json`, die Sie-Fassung in `shared/src/sprachen/de-formal/dritte.json`, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit `textDritte(anrede, schluessel, werte)` aus `shared/src/anrede.ts`. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.
+Die Oberfläche duzt immer. Texte, die an Personen **außerhalb** von Ablago gehen, folgen dagegen der Einstellung **Anrede in Unterlagen für Dritte** (#474, Werkbank → Datenschutz-Auskünfte-Auskünfte → Einstellungen, `Datenschutz.anrede`, Vorgabe `du`). Alle diese Texte stehen im Bereich `dritte` der [Sprachdateien](#texte-und-sprachdateien): die du-Fassung in `shared/src/sprachen/de/dritte.json`, die Sie-Fassung in `shared/src/sprachen/de-formal/dritte.json`, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit `textDritte(anrede, schluessel, werte)` aus `shared/src/anrede.ts`. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.
 
 Neue Texte für Dritte kommen als Schlüssel in beide `dritte.json` – keine `anrede === 'sie' ? … : …` im Code – und in diese Liste:
 
@@ -329,14 +329,14 @@ Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wiss
 curl -i -H "Authorization: Bearer dms_…" https://dms.example.org/api/v1/ich/zaehler
 # HTTP/1.1 200 OK
 # ETag: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"
-# {"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
+# {"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}
 
 curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ1aB2cD3eF"' https://dms.example.org/api/v1/ich/zaehler
 # HTTP/1.1 304 Not Modified   (ohne Inhalt)
 ```
 
 - **Nur Zahlen.** Die Antwort enthält nie Titel, Namen, Absender oder Inhalte – auch künftige Felder nicht. Das OpenAPI-Schema `Zaehlerstand` hat `additionalProperties: false`, der Test `server/test/zaehler-api.test.ts` prüft die Schlüssel und dass keine Texte durchrutschen.
-- **Woher die Zahlen kommen.** `zuErledigen` ist `eingang` aus `Dienst.zaehler` (#512), `anstehend` und `ueberfaellig` zählen die Einträge von `Dienst.anstehend` mit `tage = ZAEHLER_TAGE` (7, #528), `neuePost` zählt Post im Stand „Neu“ mit „Für“ = ich oder leer über `zaehleKlauseln` – mit eigenem `Zaehlerspeicher` am Haushaltsstand. Alles in den Rechten des Benutzers (Lesefilter); nichts wird für den Endpunkt neu gerechnet, solange sich am Haushalt nichts ändert.
+- **Woher die Zahlen kommen.** `zuErledigen` ist `eingang` aus `Dienst.zaehler` (#512), `ueberfaellig` zählt die eigenen überfälligen Einträge von `Dienst.termine` (#528, #725; `anstehend` ist mit #725 entfallen), `neuePost` zählt Post im Stand „Neu“ mit „Für“ = ich oder leer über `zaehleKlauseln` – mit eigenem `Zaehlerspeicher` am Haushaltsstand. Alles in den Rechten des Benutzers (Lesefilter); nichts wird für den Endpunkt neu gerechnet, solange sich am Haushalt nichts ändert.
 - **Stand in der Datenbank** (Tabelle `zaehlerstaende`, Migration 056). Je Abruf bildet der Server einen Hash der Zahlen (`fingerabdruck`), vergleicht ihn mit dem gespeicherten und zählt `stand` nur bei einer Abweichung hoch (`Repo.setzeZaehlerstand`, ein `INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …`: gleichzeitige Abrufe zählen eine Änderung einmal). Unverändert heißt: nur lesen. Der Haushaltsstand aus #512 lebt nur im Arbeitsspeicher und fängt nach jedem Neustart bei 0 an – als ETag taugt er darum nicht. Das ETag ist `"z<stand>-<hash>"`: Gleiches ETag heißt gleiche Zahlen, auch nach einem Neustart oder einer Wiederherstellung.
 - **ETag und 304.** `passtEtag` (`routen.ts`) versteht Listen, `W/…` und `*`. Eine Route setzt eigene Köpfe über `Antwort.koepfe`; Köpfe der Anfrage liest sie über `Anfrage.kopf(name)`. `Cache-Control: private, no-cache` statt `no-store`, damit Programme nachfragen dürfen.
 - **Schlüssel-Stufe „nur Zähler“** (`recht = 'zaehler'`, `NUR_ZAEHLER` und `ZAEHLER_PFAD` in `apischluessel.ts`). `pruefeZugang` lässt sie nur an `GET /api/v1/ich/zaehler` durch; jede andere Route unter `/api/v1` und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt `403` (`api.schluessel.nur-zaehler`), das Laufwerk ebenfalls (`webdav.ts`). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.
@@ -361,7 +361,7 @@ X-DMS-Signatur: v1=5d2f…(64 Zeichen hex)
 X-DMS-Versuch: 1
 X-DMS-Webhook: 0f8a…
 
-{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"anstehend":3,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
+{"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
 ```
 
 - `art`: `zaehler.geaendert` oder `probe` („Probe senden“, gleiche `daten`). Weitere Arten (`post.neu` …) kämen als neue Werte dazu; ein Empfänger übergeht unbekannte.
@@ -446,7 +446,7 @@ Im Server gibt es dieselbe Prüfung als `pruefeSignatur` (`webhook.ts`) für Tes
 
 ### Ablauf und mehrere Server
 
-- **Anstoß:** `Haushaltsstand.beiAenderung` (`zaehlerspeicher.ts`) ruft nach jeder ändernden Repo-Methode `Webhooks.anstossen()` (über `Dienst.beiAenderung`, für Zahlen der Ansichten und „Anstehend“). Nach 3 s zählt `pruefe()` für jeden Benutzer mit eingeschaltetem Webhook einmal `zaehlerAbruf` (aus dem Zwischenspeicher, meist Millisekunden). Ohne Anlass zählt der Server mit der Sperre jede Minute (Mitternacht, Fristen, Änderungen auf einem anderen Server).
+- **Anstoß:** `Haushaltsstand.beiAenderung` (`zaehlerspeicher.ts`) ruft nach jeder ändernden Repo-Methode `Webhooks.anstossen()` (über `Dienst.beiAenderung`, für Zahlen der Ansichten und die Termine). Nach 3 s zählt `pruefe()` für jeden Benutzer mit eingeschaltetem Webhook einmal `zaehlerAbruf` (aus dem Zwischenspeicher, meist Millisekunden). Ohne Anlass zählt der Server mit der Sperre jede Minute (Mitternacht, Fristen, Änderungen auf einem anderen Server).
 - **Ausgangskorb in der Datenbank:** `merkeStand` setzt in einer Transaktion mit Zeilensperre `webhooks.gemeldet_stand` und legt die Meldung an – oder ersetzt die Daten der offenen (höchstens eine je Webhook, eindeutiger Teilindex). So zählt jeder Stand einmal, auch wenn zwei Server gleichzeitig prüfen. Neue Meldungen sind frühestens 30 s nach dem letzten Senden (`webhooks.gesendet`) fällig – das ist das Zusammenfassen.
 - **Zustellen:** `faellige` holt Meldungen mit `FOR UPDATE SKIP LOCKED`, zählt den Versuch hoch und schiebt `faellig` um 60 s (Lease). Stirbt der Server beim Senden, holt ein anderer die Meldung danach – sie kommt dann womöglich doppelt, mit derselben Ereignis-Id (**mindestens einmal**). Ändern sich die Daten während des Sendens, schließt `zugestellt` die Meldung nicht (Ereignis-Id passt nicht mehr) und sie geht nach dem Mindestabstand erneut.
 - **Wiederholen und Aufgeben:** Wartezeiten `WEBHOOK_WARTEN_S` (30 s bis 8 h, zusammen etwa 22 h, 12 Versuche); nach dem letzten Fehlschlag `zustand = 'aufgegeben'`, Webhook aus (`abgeschaltet.grund = 'fehler'`), Protokoll, Mail an die Administratoren und – ist der Besitzer kein Administrator – auch an ihn (`anBesitzer`).

@@ -100,7 +100,7 @@ export function DatenProvider({ children }: { children: ReactNode }) {
       typDerSicht: (id) => {
         if (!id || id === 'eingang' || id === 'favoriten') return undefined;
         if (!sichtNachId.has(id)) return typNachId.get(id);
-        const w = wirksameTypen(sichten, id);
+        const w = wirksameTypen(sichten, id, typNachId.keys());
         return w.length === 1 ? typNachId.get(w[0]) : undefined;
       }, geladen, fehler, stand, neuLaden, einstellungen, setzeEinstellung,
       designs: designs.designs, standardDesign: designs.standard, meinDesign, designsLaden,

@@ -13,7 +13,7 @@ const echtesFastify = await import('fastify').then((m) => typeof m.default === '
 interface Antwort { statusCode: number; body: string; headers: Record<string, string | string[] | undefined> }
 interface App { inject(o: { method: string; url: string; headers?: Record<string, string>; payload?: unknown }): Promise<Antwort>; close(): Promise<unknown> }
 
-const ZAHLEN = ['anstehend', 'geaendert', 'neuePost', 'stand', 'ueberfaellig', 'zuErledigen'];
+const ZAHLEN = ['geaendert', 'neuePost', 'stand', 'ueberfaellig', 'zuErledigen'];
 const tagVersetzt = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' }); };
 
 describe('ETag-Vergleich (#625)', () => {
@@ -106,11 +106,11 @@ describe('Zähler-Endpunkt über HTTP (#625)', { skip: echtesFastify ? false : '
     const r = await zaehler(lena.zaehler);
     assert.equal(r.status, 200);
     assert.deepEqual(Object.keys(r.body).sort(), ZAHLEN);
-    for (const k of ['neuePost', 'zuErledigen', 'anstehend', 'ueberfaellig', 'stand']) assert.ok(Number.isInteger(r.body[k]), k);
+    for (const k of ['neuePost', 'zuErledigen', 'ueberfaellig', 'stand']) assert.ok(Number.isInteger(r.body[k]), k);
     assert.ok(!Number.isNaN(Date.parse(r.body.geaendert)));
     assert.match(r.etag, /^"z\d+-[\w-]+"$/);
     assert.equal(r.headers['cache-control'], 'private, no-cache');
-    assert.deepEqual({ ...r.body, stand: 0, geaendert: '' }, { neuePost: 0, zuErledigen: 0, anstehend: 0, ueberfaellig: 0, stand: 0, geaendert: '' });
+    assert.deepEqual({ ...r.body, stand: 0, geaendert: '' }, { neuePost: 0, zuErledigen: 0, ueberfaellig: 0, stand: 0, geaendert: '' });
   });
 
   it('antwortet mit 304 ohne Inhalt, solange sich nichts ändert', async () => {
@@ -139,14 +139,14 @@ describe('Zähler-Endpunkt über HTTP (#625)', { skip: echtesFastify ? false : '
     assert.equal((await zaehler(lena.zaehler, r.etag)).status, 304);
   });
 
-  it('zählt Fristen und Erinnerungen: anstehend in 7 Tagen und überfällig', async () => {
+  it('zählt Überfälliges; kommende Termine zählen nicht (#725: kein „anstehend“ mehr)', async () => {
     const post = await dienst.legePostAn({ betreff: 'Vertrag', fuer: lena.id }, { id: adminId, name: 'Markus' });
     const vorher = (await zaehler(lena.zaehler)).body;
     await dienst.legeErinnerungAn(post.id, { datum: tagVersetzt(3), text: 'Kündigen', empfaengerId: lena.id }, adminId);
     await dienst.legeErinnerungAn(post.id, { datum: tagVersetzt(30), text: 'Später', empfaengerId: lena.id }, adminId);
     await dienst.legeErinnerungAn(post.id, { datum: tagVersetzt(-2), text: 'Vergessen', empfaengerId: lena.id }, adminId);
     const r = (await zaehler(lena.zaehler)).body;
-    assert.equal(r.anstehend, vorher.anstehend + 1, 'nur die in 3 Tagen, nicht die in 30');
+    assert.equal(r.anstehend, undefined);
     assert.equal(r.ueberfaellig, vorher.ueberfaellig + 1);
     assert.ok(r.stand > vorher.stand);
   });
@@ -187,11 +187,11 @@ describe('Zähler-Endpunkt über HTTP (#625)', { skip: echtesFastify ? false : '
     const post = (await dienst.seite({ id: lena.id, rolle: 'mitglied' }, { sicht: 'eingang' })).mappen[0];
     assert.ok(post);
     const proben: Array<[string, string, unknown?]> = [
-      ['GET', '/api/v1/ich'], ['GET', '/api/v1/typen'], ['GET', '/api/v1/anstehend'], ['GET', `/api/v1/mappen/${post.id}`],
+      ['GET', '/api/v1/ich'], ['GET', '/api/v1/typen'], ['GET', `/api/v1/mappen/${post.id}`],
       ['GET', '/api/v1/aufgaben'], ['POST', '/api/v1/post', { betreff: 'x' }], ['PUT', '/api/v1/konto/abwesenheit', { an: false }],
       ['DELETE', `/api/v1/mappen/${post.id}`], ['HEAD', '/api/v1/typen'],
       // interne Schnittstellen der Oberfläche
-      ['GET', '/api/ich/zaehler'], ['GET', '/api/sichten'], ['GET', '/api/typen'], ['GET', '/api/konto/api-schluessel'], ['GET', '/api/anstehend'],
+      ['GET', '/api/ich/zaehler'], ['GET', '/api/sichten'], ['GET', '/api/typen'], ['GET', '/api/konto/api-schluessel'], ['GET', '/api/termine'],
       ['POST', '/api/konto/api-schluessel', { name: 'mehr', recht: 'schreiben' }],
     ];
     for (const [method, url, payload] of proben) {

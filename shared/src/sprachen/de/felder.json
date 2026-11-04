@@ -23,7 +23,7 @@
   "definition.datum.reihenfolge": "„Frühestens“ liegt nach „Spätestens“.",
   "editor.format": "Format",
   "editor.format.keins": "keins – freier Text",
-  "editor.format.hilfe": "Neue und geänderte Angaben müssen passen; am Handy erscheint die passende Tastatur. Gespeicherte Angaben bleiben gültig – welche nicht passen, zeigt Werkbank → Wartungsoperationen.",
+  "editor.format.hilfe": "Neue und geänderte Angaben müssen passen; am Handy erscheint die passende Tastatur. Gespeicherte Angaben bleiben gültig – welche nicht passen, zeigt Werkbank → Wartung.",
   "editor.landfeld": "Feld mit dem Land",
   "editor.landfeld.keins": "keins – immer Deutschland",
   "editor.landfeld.hilfe": "Steht dort Deutschland oder nichts, hat die PLZ genau 5 Ziffern. Bei anderen Ländern ist sie frei.",

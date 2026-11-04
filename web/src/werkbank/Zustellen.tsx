@@ -7,7 +7,6 @@ import { api, type DatenschutzStand } from '../api';
 import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
-import type { DatenschutzZustand } from './Datenschutz';
 
 /**
  * Auskunft zustellen (#455) – an einer bereitliegenden Auskunft:
@@ -148,7 +147,7 @@ function PerEmail({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStand; na
   );
 }
 
-function LinkZeile({ l, nachher, mitTitel }: { l: AuskunftLink; nachher(): Promise<void>; mitTitel?: boolean }) {
+export function LinkZeile({ l, nachher, mitTitel }: { l: AuskunftLink; nachher(): Promise<void>; mitTitel?: boolean }) {
   const st = linkStatus(l);
   const [fehler, setFehler] = useState<string>();
   return (
@@ -162,18 +161,5 @@ function LinkZeile({ l, nachher, mitTitel }: { l: AuskunftLink; nachher(): Promi
       }}>Zurückziehen</button>}
       {fehler && <span className="fehlertext klein">{fehler}</span>}
     </li>
-  );
-}
-
-/** Alle Abruf-Links als Nachweis – auch, wenn die ZIP-Datei längst gelöscht ist. */
-export function Zustellungen({ z }: { z: DatenschutzZustand }) {
-  const s = z.stand!;
-  if (!s.links.length) return null;
-  return (
-    <section className="blatt" id="abruf-links">
-      <h2 className="h3">Abruf-Links</h2>
-      <p className="leise klein">Nachweis, wann eine Auskunft abgerufen wurde. Jeder Abruf und jeder falsche Code steht auch in der Historie der Person (ohne IP-Adresse).</p>
-      <ul className="auskunft-links">{s.links.map((l) => <LinkZeile key={l.id} l={l} nachher={z.laden} mitTitel />)}</ul>
-    </section>
   );
 }

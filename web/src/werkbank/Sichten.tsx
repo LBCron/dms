@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ansage, useZiehen, ziehTasten, type Ort } from '../ziehen';
 import { SYSTEMSPALTEN, istSystemspalte, type Feld, type Mappe, type Mappentyp } from '../../../shared/src/model';
 import {
-  bedingungsfelder, bedingungsProblem, beschreibeBedingung, DYNAMISCH, EINHEITEN, gemeinsameTrefferlisten, kinderVon, mitNachkommen, OPERATOREN, OPERATOREN_JE_ART, spaltenDerSicht, trefferlistenProblem, wirksameTypen,
+  bedingungsfelder, bedingungsProblem, beschreibeBedingung, DYNAMISCH, EINHEITEN, gemeinsameTrefferlisten, kinderVon, mitNachkommen, OPERATOREN, OPERATOREN_JE_ART, spaltenDerSicht, trefferlistenProblem, wirksameTypen, typenDerSicht, zeigtAlleTypen, ALLE_TYPEN,
   ZAEHLVERGLEICHE, auswahlProbleme, OPS_EIGENES_FELD, passendeEigeneFelder, type Bedingung, type Bedingungsfeld, type Feldbedingung, type Einheit, type Operator, type Sicht, type SichtDaten, type WertAngabe, type Zaehlvergleich,
 } from '../../../shared/src/sichten';
 import { api } from '../api';
@@ -16,6 +16,9 @@ import { Bereich, SICHT_BEREICHE, useBereiche, type Klappe, type SichtBereich } 
 import { elternkette, SichtBerechtigungen, SichtTestlauf } from './SichtRechte';
 import { sichtRegelProblem, sichtRegelwerkVon } from '../../../shared/src/sichtrechte';
 import { rueckfrage } from '../rueckfrage';
+import { ANSICHT_SYMBOLE } from '../../../shared/src/ansichtsymbole';
+import { AnsichtSymbol } from '../Symbol';
+import { t } from '../sprache';
 
 /**
  * Sichten verwalten (#38) mit Bedingungen (#40, #41): Baum links, Bearbeitung rechts.
@@ -33,7 +36,7 @@ function baumzeilen(alle: Sicht[]): Zeile[] {
 export function SichtenListe({ offen }: { offen?: string }) {
   const d = useDaten();
   const zeilen = baumzeilen(d.sichten);
-  const typen = (s: Sicht) => s.typen.map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
+  const typen = (s: Sicht) => typenDerSicht(s, d.typen.map((t) => t.id)).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
   const [ansage, setAnsage] = useState('');
   const [fehler, setFehler] = useState<string>();
   const [hinweis, setHinweis] = useState<string>();
@@ -103,7 +106,7 @@ export function SichtenListe({ offen }: { offen?: string }) {
               const e = z.eintrag(s.id);
               const t = typen(s);
               const probleme = s.bedingungen.filter((b) => bedingungsProblem(b, t)).length;
-              const listenProblem = trefferlistenProblem(s.trefferliste, wirksameTypen(d.sichten, s.id).map((x) => d.typ(x)).filter((x): x is Mappentyp => !!x));
+              const listenProblem = trefferlistenProblem(s.trefferliste, wirksameTypen(d.sichten, s.id, d.typen.map((x) => x.id)).map((x) => d.typ(x)).filter((x): x is Mappentyp => !!x));
               const kinder = kinderVon(d.sichten, s.id).length;
               return (
                 <li key={s.id} {...e} className={`ziehbar ${e.className}`} style={{ paddingLeft: tiefe * 16 }}>
@@ -111,7 +114,7 @@ export function SichtenListe({ offen }: { offen?: string }) {
                   <Link to={`/werkbank/sichten/${s.id}`} className={`eintrag werk ${offen === s.id ? 'an' : ''}`}>
                     <span className="titel">{tiefe > 0 && <span className="leise" aria-hidden="true">└ </span>}{s.name}</span>
                     <span className="unter">
-                      {t.length ? t.map((x) => x.name).join(', ') : 'nur zum Gruppieren'}
+                      {zeigtAlleTypen(s) ? 'alle Mappentypen' : t.length ? t.map((x) => x.name).join(', ') : 'nur zum Gruppieren'}
                       {s.bedingungen.length > 0 && ` · ${s.bedingungen.length} Bedingung${s.bedingungen.length === 1 ? '' : 'en'}`}
                       {kinder > 0 && ` · ${kinder} Unteransicht${kinder === 1 ? '' : 'en'}`}
                       {d.zahlenDa && ` · ${(d.zaehler.sichten?.[s.id] ?? 0).toLocaleString('de-DE')} Mappen`}
@@ -128,8 +131,8 @@ export function SichtenListe({ offen }: { offen?: string }) {
   );
 }
 
-const leer = (): SichtDaten => ({ name: '', beschreibung: '', elternId: null, position: 0, typen: [], bedingungen: [], trefferliste: null, berechtigungen: null });
-const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null });
+const leer = (): SichtDaten => ({ name: '', beschreibung: '', elternId: null, position: 0, typen: [], bedingungen: [], trefferliste: null, berechtigungen: null, symbol: null });
+const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null, symbol: s.symbol ?? null });
 
 export function SichtEditor({ id }: { id: string }) {
   const d = useDaten();
@@ -147,11 +150,13 @@ export function SichtEditor({ id }: { id: string }) {
   const [fehlerOrte, setFehlerOrte] = useState<Set<SichtBereich>>(new Set());
   const untersicht = !!e.elternId;
   const liveFehler = (k: SichtBereich) => (k === 'berechtigungen' && (e.berechtigungen?.regeln ?? []).some((r) => !!sichtRegelProblem(r, untersicht)))
-    || (k === 'bedingungen' && e.bedingungen.some((x) => !!bedingungsProblem(x, e.typen.map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t))));
+    || (k === 'bedingungen' && e.bedingungen.some((x) => !!bedingungsProblem(x, typenDerSicht(e, d.typen.map((t) => t.id)).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t))));
   const hatFehler = (k: SichtBereich) => fehlerOrte.has(k) || liveFehler(k);
   const klappe = (k: SichtBereich): Klappe => b.klappe(k, hatFehler(k));
 
-  const eigeneTypen = e.typen.map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
+  const alleIds = d.typen.map((t) => t.id);
+  const alleTypen = zeigtAlleTypen(e);
+  const eigeneTypen = typenDerSicht(e, alleIds).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
   // Eine neue Sicht ist im Baum noch nicht da; für die Auswahl der Elternsicht zählt sie als Blatt.
   const ausgeschlossen = new Set(neu ? [] : mitNachkommen(d.sichten, id).map((s) => s.id));
   const elternWahl = baumzeilen(d.sichten).filter(({ s }) => !ausgeschlossen.has(s.id));
@@ -159,7 +164,7 @@ export function SichtEditor({ id }: { id: string }) {
   const stelle = vorhanden ? geschwister.findIndex((s) => s.id === id) : -1;
   const untersichten = neu ? 0 : mitNachkommen(d.sichten, id).length - 1;
   // Wirksame Typen: eigene und die der Untersichten – sie bestimmen, welche Trefferlisten es gibt (#75).
-  const wirksam = [...new Set([...e.typen, ...(neu ? [] : mitNachkommen(d.sichten, id).filter((s) => s.id !== id).flatMap((s) => s.typen))])]
+  const wirksam = [...new Set([...typenDerSicht(e, alleIds), ...(neu ? [] : mitNachkommen(d.sichten, id).filter((s) => s.id !== id).flatMap((s) => typenDerSicht(s, alleIds)))])]
     .map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
 
   // Vorschau: Anzahl Treffer mit dem aktuellen Entwurf (kurz nach dem Tippen).
@@ -228,6 +233,7 @@ export function SichtEditor({ id }: { id: string }) {
             </select></label>
         </div>
         <label className="eigenschaft"><span>Beschreibung <small>steht in der Ablage über der Liste</small></span><input value={e.beschreibung} onChange={(x) => setE({ ...e, beschreibung: x.target.value })} /></label>
+        <SymbolWahl wert={e.symbol ?? null} setze={(symbol) => setE({ ...e, symbol })} />
         {!neu && geschwister.length > 1 && (
           <div className="knoepfe">
             <span className="leise klein">Reihenfolge auf dieser Ebene: {stelle + 1} von {geschwister.length}</span>
@@ -241,11 +247,13 @@ export function SichtEditor({ id }: { id: string }) {
       </Bereich>
 
       <Bereich id="mappentypen" titel="Mappentypen" klappe={klappe('mappentypen')}
-        kurz={eigeneTypen.length ? `${eigeneTypen.length}: ${eigeneTypen.map((t) => t.name).join(', ')}` : 'nur zum Gruppieren'}
+        kurz={alleTypen ? 'alle Mappentypen' : eigeneTypen.length ? `${eigeneTypen.length}: ${eigeneTypen.map((t) => t.name).join(', ')}` : 'nur zum Gruppieren'}
         beschreibung={<>Mappen dieser Mappentypen zeigt die Ansicht selbst. {untersichten > 0 ? `Dazu kommen die Mappen ihrer ${untersichten} Unteransicht${untersichten === 1 ? '' : 'en'}.` : 'Ohne Mappentyp dient sie nur zum Gruppieren von Unteransichten.'} Zeigt sie mehrere Mappentypen, gibt es kein „+ Neu“; als Spalten bietet sie nur an, was alle Mappentypen gemeinsam haben.</>}>
+        <label className="haken"><input type="checkbox" checked={alleTypen} onChange={(x) => setE((y) => ({ ...y, typen: x.target.checked ? [ALLE_TYPEN] : [] }))} />
+          <span>Alle Mappentypen <span className="leise klein">– auch künftige, z. B. für „Favoriten“ mit der Bedingung „ist mein Favorit“</span></span></label>
         <div className="typwahl">
           {d.typen.map((t) => (
-            <label key={t.id} className="haken"><input type="checkbox" checked={e.typen.includes(t.id)} onChange={(x) => setzeTyp(t.id, x.target.checked)} /><span>{t.name}</span></label>
+            <label key={t.id} className="haken"><input type="checkbox" disabled={alleTypen} checked={alleTypen || e.typen.includes(t.id)} onChange={(x) => setzeTyp(t.id, x.target.checked)} /><span>{t.name}</span></label>
           ))}
         </div>
       </Bereich>
@@ -269,6 +277,48 @@ export function SichtEditor({ id }: { id: string }) {
 }
 
 /* ---------- Trefferliste (#75) ---------- */
+
+/**
+ * Symbol der Ansicht (#428): Raster aus der festen Auswahl (Lucide), mit Suche nach Namen und Bedeutung.
+ * Gespeichert wird nur der Name; „Ohne Symbol“ bleibt möglich.
+ */
+function SymbolWahl({ wert, setze }: { wert: string | null; setze(n: string | null): void }) {
+  const [offen, setOffen] = useState(false);
+  const [suche, setSuche] = useState('');
+  const q = suche.trim().toLowerCase();
+  const titel = ANSICHT_SYMBOLE.flatMap((g) => g.symbole).find((x) => x.name === wert)?.titel;
+  return (
+    <div className="eigenschaft symbolwahl">
+      <span id="symbolwahl-t">{t('werkbank.sicht.symbol')} <small>{t('werkbank.sicht.symbol.hinweis')}</small></span>
+      <div className="knoepfe">
+        <button type="button" className="knopf klein" aria-expanded={offen} aria-labelledby="symbolwahl-t symbolwahl-w" onClick={() => setOffen(!offen)}>
+          <span id="symbolwahl-w">{wert ? <><AnsichtSymbol name={wert} /> {titel ?? wert}</> : t('werkbank.sicht.symbol.ohne')}</span> <span aria-hidden="true">▾</span>
+        </button>
+        {wert && <button type="button" className="textknopf klein" onClick={() => setze(null)}>{t('werkbank.sicht.symbol.entfernen')}</button>}
+      </div>
+      {offen && (
+        <div className="symbolraster-rahmen">
+          <input type="search" className="klein" aria-label={t('werkbank.sicht.symbol.suchen')} placeholder={t('werkbank.sicht.symbol.suchen')} value={suche} onChange={(x) => setSuche(x.target.value)} />
+          {ANSICHT_SYMBOLE.map((g) => {
+            const liste = g.symbole.filter((x) => !q || x.titel.toLowerCase().includes(q) || x.name.includes(q) || g.gruppe.toLowerCase().includes(q));
+            if (!liste.length) return null;
+            return (
+              <fieldset key={g.gruppe} className="symbolgruppe">
+                <legend className="leise klein">{g.gruppe}</legend>
+                <div className="symbolraster">
+                  {liste.map((x) => (
+                    <button key={x.name} type="button" className={`symbolknopf${wert === x.name ? ' an' : ''}`} aria-pressed={wert === x.name} title={x.titel} aria-label={x.titel}
+                      onClick={() => { setze(x.name); setOffen(false); }}><AnsichtSymbol name={x.name} /></button>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TrefferlistenWahl({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: SichtDaten) => SichtDaten) => void; typen: Mappentyp[]; klappe: Klappe }) {
   const listen = gemeinsameTrefferlisten(typen);

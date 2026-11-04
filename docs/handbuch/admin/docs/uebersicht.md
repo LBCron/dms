@@ -5,15 +5,17 @@ Die **Werkbank** sehen nur Administratoren. Nach der Anmeldung landest du als Ad
 <!-- bereiche:gruppen -->
 | Gruppe | Bereiche |
 | --- | --- |
-| **Ablage aufbauen** | [Mappentypen](mappentypen.md), [Ansichten](sichten.md), [Nummernkreise](nummernkreise.md), [Stempel](stempel.md), [Automatisierungen](automatisierungen.md), [Pakete](pakete.md), [Suche](suche.md), [Darf weg](archiv.md#nach-der-frist-darf-weg) (nur mit Archivmodus) |
-| **Benutzer und Sicherheit** | [Benutzer](benutzer.md), [Verschlüsselung](verschluesselung.md), [Datenschutz](datenschutz.md) |
-| **Post und Eingänge** | [Postfächer](postfaecher.md), [Eingangsordner](eingangsordner.md) (nur wenn der Ordner eingebunden ist), [WebDAV-Laufwerk](webdav.md), [Webhooks](webhooks.md), [Texterkennung](texterkennung.md) |
-| **Daten sichern** | [Sicherung](sicherung.md), [Wiederherstellen](wiederherstellen.md), [Vollexport](export.md), [Papierkorb](papierkorb.md) |
-| **Einstellungen** | [E-Mail und Adresse](installation.md#e-mail-und-adresse), [Benachrichtigungen und Aufgaben](aufgaben.md), [Region](region.md), [Anmeldeschutz](anmeldeschutz.md), [Designs](designs.md), [Datenbank-Anbindung](installation.md#datenbank-anbindung), [Technik](fehlersuche.md#technik) |
-| **Wartung und Fehlersuche** | [Systemzustand](speicherplatz.md), [Protokoll](fehlersuche.md#protokoll), [Gemeldete Fehler](fehlersuche.md#gemeldete-fehler), [Wartungsmodus](wartungsmodus.md), [Wartungsoperationen](texterkennung.md#wartungsoperationen), [Demo-Daten](demo.md) |
+| **Ablage aufbauen** | [Pakete](pakete.md), [Mappentypen](mappentypen.md), [Ansichten](sichten.md), [Nummernkreise](nummernkreise.md), [Automatisierungen](automatisierungen.md) |
+| **Benutzer und Sicherheit** | [Benutzer](benutzer.md), [Verschlüsselung](verschluesselung.md), [Datenschutz-Auskünfte](datenschutz.md#auskunft-erteilen), [Löschkonzept](loeschkonzept.md#aus-dem-dms-erzeugen), [Aufbewahrung abgelaufen](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) (nur mit Archivmodus), [Stempel](stempel.md) |
+| **Post und Eingänge** | [Postfächer](postfaecher.md), [Eingangsordner](eingangsordner.md) (nur wenn der Ordner eingebunden ist), [WebDAV-Laufwerk](webdav.md), [Webhooks](webhooks.md), [Suche und Volltext](texterkennung.md) |
+| **Daten sichern** | [Sicherung](sicherung.md), [Vollexport](export.md), [Papierkorb](papierkorb.md) |
+| **Einstellungen** | [E-Mail und Adresse](installation.md#e-mail-und-adresse), [Region](region.md), [Aufgaben](aufgaben.md), [Anmeldeschutz](anmeldeschutz.md), [Designs](designs.md), [Datenbank-Anbindung](installation.md#datenbank-anbindung) |
+| **Wartung und Fehlersuche** | [Systemzustand](speicherplatz.md), [Protokoll](fehlersuche.md#protokoll), [Gemeldete Fehler](fehlersuche.md#gemeldete-fehler), [Wartung](wartungsmodus.md), [Demo-Daten](demo.md) |
 <!-- /bereiche:gruppen -->
 
 Jede Einstellung hat genau einen Ort. Die Adressen der Bereiche (`/werkbank/sicherung` …) sind beim Umsortieren in Version 0.116 gleich geblieben; Lesezeichen und eine gespeicherte Auswahl unter *Werkbank anpassen* gelten weiter.
+
+Beim Aufräumen der Werkbank sind einige Bereiche zusammengezogen: **Wiederherstellen** steht als Abschnitt unter *Sicherung*, **Technik** als *Version und Updates* und die langen Datenbankzugriffe unter *Systemzustand*, **Wartungsmodus** und **Wartungsoperationen** zusammen unter *Wartung*, **Suche** unter *Suche und Volltext*, und „Darf weg“ heißt jetzt **Aufbewahrung abgelaufen**. Alte Adressen wie `/werkbank/darfweg`, `/werkbank/technik` oder `/werkbank/wartungsmodus` führen an die neue Stelle. Das Suchfeld oben in der Leiste findet einen Bereich auch unter seinem alten Namen.
 
 Welche Bereiche dort stehen, legst du unter [Werkbank anpassen](#werkbank-anpassen) fest. Am Smartphone gehst du in Schritten: oben die Gruppe wählen, darunter den Bereich, bei großen Sammlungen dann den Eintrag – mit **← Bereiche** bzw. **← Zur Liste** kommst du zurück. Ganz unten in der Leiste stehen *Projekt unterstützen* und der Link zu diesem Handbuch.
 
@@ -71,7 +73,7 @@ Nicht jeder braucht jeden Bereich. Ein Haushalt fasst Nummernkreise, Postfächer
 
 - **Haushalt**: schlank, nur was eine Familie zum Einrichten und Sichern braucht. Neue Installationen beginnen damit. **Selbständige und kleine Betriebe** wählen gleich nach der Einrichtung **Betrieb**.
 <!-- bereiche:organisation -->
-- **Betrieb**: zusätzlich Nummernkreise, Automatisierungen, Suche, Darf weg, Datenschutz, Postfächer, Eingangsordner, Texterkennung, Anmeldeschutz, Designs, Protokoll, Gemeldete Fehler, Wartungsmodus.
+- **Betrieb**: zusätzlich Nummernkreise, Automatisierungen, Datenschutz-Auskünfte, Löschkonzept, Aufbewahrung abgelaufen, Postfächer, Eingangsordner, Suche und Volltext, Anmeldeschutz, Designs, Protokoll, Gemeldete Fehler, Wartung.
 <!-- /bereiche:organisation -->
 - **Alles**: jeder Bereich. So bleibt es bei Installationen, die vor Version 0.70 eingerichtet wurden, bis du etwas anderes wählst.
 
@@ -91,37 +93,34 @@ Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldun
 <!-- bereiche:wofuer -->
 | Bereich | Wofür | In der Vorlage |
 | --- | --- | --- |
+| [Pakete](pakete.md) | Fertige Mappentypen und Ansichten installieren | Haushalt, Betrieb |
 | [Mappentypen](mappentypen.md) | Eigene Arten von Mappen bauen | Haushalt, Betrieb |
 | [Ansichten](sichten.md) | Die Sammlungen links in der Ablage ordnen | Haushalt, Betrieb |
 | [Nummernkreise](nummernkreise.md) | Fortlaufende Nummern, z. B. für Rechnungen | Betrieb |
-| [Stempel](stempel.md) | Vorlagen für Stempel und Wasserzeichen beim Weitergeben | Haushalt, Betrieb |
 | [Automatisierungen](automatisierungen.md) | Abläufe nach dem Muster Wenn – Und – Dann einrichten: bei einem Ereignis oder Datum Felder setzen oder jemandem eine Aufgabe geben | Betrieb, Haushalt im Expertenmodus |
-| [Pakete](pakete.md) | Fertige Mappentypen und Ansichten installieren | Haushalt, Betrieb |
-| [Suche](suche.md) | Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche | Betrieb, Haushalt im Expertenmodus |
-| [Darf weg](archiv.md#nach-der-frist-darf-weg) | Mappen mit abgelaufener Aufbewahrungsfrist (nur mit Archivmodus) | Betrieb |
 | [Benutzer](benutzer.md) | Benutzer und Rollen anlegen | Haushalt, Betrieb |
 | [Verschlüsselung](verschluesselung.md) | Den Schlüssel für Passwörter und Sicherungen | Haushalt, Betrieb |
-| [Datenschutz](datenschutz.md) | Auskunft nach Art. 15 DSGVO an Kunden, Mieter und Kontakte als ZIP | Betrieb |
+| [Datenschutz-Auskünfte](datenschutz.md#auskunft-erteilen) | Auskunft nach Art. 15 DSGVO an Kunden, Mieter und Kontakte: anfragen, erzeugen, zustellen, Nachweis | Betrieb |
+| [Löschkonzept](loeschkonzept.md#aus-dem-dms-erzeugen) | Löschkonzept erzeugen, Löschprotokoll und welche Mappentypen Personendaten enthalten | Betrieb |
+| [Aufbewahrung abgelaufen](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) | Mappen, deren Aufbewahrungsfrist abgelaufen ist, prüfen und löschen (nur mit Archivmodus) | Betrieb |
+| [Stempel](stempel.md) | Vorlagen für Stempel und Wasserzeichen beim Weitergeben | Haushalt, Betrieb |
 | [Postfächer](postfaecher.md) | Post aus einem E-Mail-Konto abholen | Betrieb |
 | [Eingangsordner](eingangsordner.md) | Scans aus einem Ordner übernehmen | Betrieb |
 | [WebDAV-Laufwerk](webdav.md) | Die Ablage im Explorer, Finder oder in der Dateien-App einbinden und Dateien hineinlegen | Haushalt, Betrieb |
 | [Webhooks](webhooks.md) | Sehen und abschalten, wohin Ablago neue Post, Aufgaben und Fristen meldet (Hausautomatisierung), und Ziele freigeben | Haushalt, Betrieb |
-| [Texterkennung](texterkennung.md) | Text in gescannten Dokumenten finden | Betrieb |
-| [Sicherung](sicherung.md) | Sicherungen einrichten und prüfen | Haushalt, Betrieb |
-| [Wiederherstellen](wiederherstellen.md) | Eine Sicherung zurückspielen | Haushalt, Betrieb |
+| [Suche und Volltext](texterkennung.md) | Text in gescannten Dokumenten erkennen, Archivfassung, PDFs verkleinern, Tippfehler und gleichbedeutende Wörter (z. B. Kfz, Auto) für die Suche | Betrieb, Haushalt im Expertenmodus |
+| [Sicherung](sicherung.md) | Sicherungen einrichten, prüfen und zurückspielen | Haushalt, Betrieb |
 | [Vollexport](export.md) | Alle Daten in offenen Formaten mitnehmen | Haushalt, Betrieb |
 | [Papierkorb](papierkorb.md) | Gelöschte Mappen zurückholen | Haushalt, Betrieb |
 | [E-Mail und Adresse](installation.md#e-mail-und-adresse) | E-Mail-Versand und Adresse von Ablago | Haushalt, Betrieb |
-| [Benachrichtigungen und Aufgaben](aufgaben.md) | Die Tägliche Zusammenfassung und die Benachrichtigung für Favoriten einstellen, alle offenen Aufgaben im Blick behalten | Haushalt, Betrieb |
 | [Region](region.md) | Land, Bundesland und Zeitzone – für Feiertage, „heute“ und Uhrzeiten von Erinnerungen und Zusammenfassungen | Haushalt, Betrieb |
+| [Aufgaben](aufgaben.md) | Alle offenen Aufgaben aller Benutzer im Blick behalten | Haushalt, Betrieb |
 | [Anmeldeschutz](anmeldeschutz.md) | Zwei-Faktor vorschreiben, Anmeldung über einen Anbieter, gesperrte Adressen | Betrieb |
 | [Designs](designs.md) | Logo, Farben und eigenes CSS | Betrieb |
-| [Datenbank-Anbindung](installation.md#datenbank-anbindung) | Die Verbindung zur Datenbank, lange Datenbankzugriffe und was gerade läuft | nur Alles |
-| [Technik](fehlersuche.md#technik) | Version, Updates und die Übersicht für GitHub | Haushalt, Betrieb |
-| [Systemzustand](speicherplatz.md) | Sehen, wie es dem Server geht: Speicherplatz mit Warnschwellen, Auslastung von CPU, Arbeitsspeicher und Netzwerk | Haushalt, Betrieb |
+| [Datenbank-Anbindung](installation.md#datenbank-anbindung) | Die Verbindung zur Datenbank | nur Alles |
+| [Systemzustand](speicherplatz.md) | Sehen, wie es dem Server geht: Speicherplatz, Auslastung von CPU, Arbeitsspeicher, Netzwerk und Datenbank, Version und Updates | Haushalt, Betrieb |
 | [Protokoll](fehlersuche.md#protokoll) | Das technische Protokoll lesen | Betrieb |
 | [Gemeldete Fehler](fehlersuche.md#gemeldete-fehler) | Fehler, die Benutzer gemeldet haben | Betrieb |
-| [Wartungsmodus](wartungsmodus.md) | Benutzer vorübergehend aussperren | Betrieb |
-| [Wartungsoperationen](texterkennung.md#wartungsoperationen) | Einmalige Pflegearbeiten | nur Alles |
+| [Wartung](wartungsmodus.md) | Benutzer vorübergehend aussperren (Wartungsmodus) und einmalige Pflegearbeiten | Betrieb |
 | [Demo-Daten](demo.md) | Beispielmappen zum Ausprobieren | nur Alles |
 <!-- /bereiche:wofuer -->

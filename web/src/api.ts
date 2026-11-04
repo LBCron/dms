@@ -18,7 +18,7 @@ import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung, SelbstErstel
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
 import type { FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import type { SichtRechte, SichtRegelwerk, SichtSchritt } from '../../shared/src/sichtrechte';
-import type { AnstehendAntwort, Erinnerung } from '../../shared/src/fristen';
+import type { Erinnerung, Termin, TermineAntwort } from '../../shared/src/fristen';
 import type { Auftrag } from '../../shared/src/auftrag';
 import type { Baum } from '../../shared/src/baum';
 import type { LoeschAktion, LoeschPlan, LoeschVorschau } from '../../shared/src/loeschbaum';
@@ -60,7 +60,7 @@ export interface ErkennungStand { standard: { paket: string | null; abfluss?: bo
 /** Grund fürs Löschprotokoll (#470) als Body-Teil bzw. Query. */
 const grundAus = (a?: LoeschAnlass) => (a?.grund ? { grund: a.grund, grundText: a.text ?? '' } : {});
 const anlassQuery = (a?: LoeschAnlass) => (a?.grund ? `?${new URLSearchParams({ grund: a.grund, ...(a.text ? { grundText: a.text } : {}) })}` : '');
-import type { AuskunftAuswahl, AuskunftLink, AuskunftStand, AuskunftVorschau, Datenschutz } from '../../shared/src/auskunft';
+import type { AuskunftAuswahl, AuskunftEintrag, AuskunftLink, AuskunftStand, AuskunftVorschau, Datenschutz } from '../../shared/src/auskunft';
 import type { Dokumentart } from '../../shared/src/demodaten';
 import { merkeAnfrage } from './diagnose';
 import { erreichbarkeit, NICHT_ERREICHBAR } from './erreichbar';
@@ -233,6 +233,8 @@ export interface Zaehler {
   papierkorb?: number; papierkorbTage?: number;
   /** Post (#192): Id der Sicht „Neue Post“, deren Zahl hervorgehoben wird. */
   neuePost?: string | null;
+  /** #725: Id der mitgelieferten Ansicht „Favoriten“; null = gelöscht (dann gilt die feste Liste). */
+  favoritenSicht?: string | null;
 }
 /** Eine Mappe im Papierkorb (#43). */
 /** Einzelnes Dokument im Papierkorb (#344). mappe: da · papierkorb (erst die Mappe wiederherstellen) · weg. */
@@ -519,7 +521,7 @@ export const api = {
   einstellungSetzen: (schluessel: string, wert: unknown) => anfrage<null>('PUT', `/api/konto/einstellungen/${encodeURIComponent(schluessel)}`, { wert }),
   sichten: () => anfrage<Zaehler>('GET', '/api/sichten'),
   /** Ohne Zählen (#512): Papierkorb-Tage und „Neue Post“ – vor den Zahlen. */
-  sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost'>>('GET', '/api/sichten/rahmen'),
+  sichtenRahmen: () => anfrage<Pick<Zaehler, 'papierkorbTage' | 'neuePost' | 'favoritenSicht'>>('GET', '/api/sichten/rahmen'),
   /* Sichten verwalten (#38) */
   sichtDefinitionen: () => anfrage<Sicht[]>('GET', '/api/sichten/definitionen'),
   sichtAnlegen: (s: Partial<SichtDaten>) => anfrage<Sicht>('POST', '/api/sichten/definitionen', s),
@@ -613,9 +615,10 @@ export const api = {
   /* Fristen und Erinnerungen (#129–#132) */
   /** Startseite (#334): zuletzt geöffnete Mappen und ob es schon eigene Mappen gibt. */
   startseite: () => anfrage<{ zuletzt: Array<{ id: string; typId: string; titel: string }>; leer: boolean }>('GET', '/api/startseite'),
-  anstehend: (tage?: number) => anfrage<AnstehendAntwort>('GET', `/api/anstehend${tage === undefined ? '' : `?tage=${tage}`}`),
-  /** Kalender (#528): ein Monat oder ein Jahr in einer Anfrage, mit Folgeterminen und Feiertagen. */
-  anstehendZeitraum: (von: string, bis: string) => anfrage<AnstehendAntwort>('GET', `/api/anstehend?von=${von}&bis=${bis}`),
+  /** „Zu erledigen“ → Monat und Jahr (#528, #725): ein Zeitraum in einer Anfrage, mit Folgeterminen und Feiertagen. */
+  termine: (von: string, bis: string, favoriten = false) => anfrage<TermineAntwort>('GET', `/api/termine?von=${von}&bis=${bis}${favoriten ? '&favoriten=1' : ''}`),
+  /** Startseite (#725): Kachel „Nächster Termin“. */
+  naechsterTermin: () => anfrage<{ termin: Termin | null; ueberfaellig: number }>('GET', '/api/termine/naechster'),
   erinnerungAnlegen: (mappeId: string, e: { datum: string; text: string; empfaengerId?: string }) => anfrage<Erinnerung & { hinweis?: string }>('POST', `/api/mappen/${mappeId}/erinnerungen`, e),
   erinnerungAendern: (id: string, e: { datum: string; text: string; empfaengerId?: string }) => anfrage<Erinnerung & { hinweis?: string }>('PUT', `/api/erinnerungen/${id}`, e),
   erinnerungLoeschen: (id: string) => anfrage<null>('DELETE', `/api/erinnerungen/${id}`),
@@ -956,7 +959,7 @@ export const verborgeneAufgaben = (x: unknown): Aufgabe[] | null => {
 };
 export interface MappeDetails { /** Wirksame Rechte an der Mappe (#126). */ rechte?: Rechte; mappe: Mappe; favorit?: boolean; /** Noch nicht fällige Erinnerungen (#131). */ erinnerungen?: Erinnerung[]; rueckverweise: Rueckverweis[]; loeschbar?: { ok: boolean; grund?: string; rueckverweise?: Rueckverweis[] }; dokumente: Dokument[]; notizen: Notiz[]; aufgaben: Aufgabe[]; bezuege: Bezuege; /** Verweise, die nicht (mehr) zum Auswahlfilter passen (#172). */ unpassend?: Record<string, string[]>; /** Archivmodus (#212). */ aufbewahrenBis?: string | null; /** Exportrecht (#294): darf als PDF exportiert werden. */ exportierbar?: boolean; /** Auskunft nach Art. 15 DSGVO möglich (#396, Administratoren). */ auskunft?: boolean }
 /** Werkbank → Datenschutz (#396, #455). */
-export interface DatenschutzStand { einstellung: Datenschutz; auskuenfte: AuskunftStand[]; tage: number; links: AuskunftLink[]; adresse: string; oeffentlich: boolean; mail: boolean; /** #469 */ loeschkonzept?: { luecken: Luecke[] } }
+export interface DatenschutzStand { einstellung: Datenschutz; auskuenfte: AuskunftStand[]; /** #668 */ verzeichnis: AuskunftEintrag[]; tage: number; links: AuskunftLink[]; adresse: string; oeffentlich: boolean; mail: boolean; /** #469 */ loeschkonzept?: { luecken: Luecke[] } }
 export interface Hochgeladen { dokument: Dokument; gleicherInhalt: Array<{ mappeId: string; name: string; titel?: string; typId?: string }> }
 /** Vorschaubild der ersten Seite (#332); der Prüfwert in der Adresse sorgt für ein neues Bild nach einer neuen Version. */
 export interface SchwaerzenVorschau {

@@ -3,7 +3,7 @@ import { ansichtAbschnitte, EINSTELLUNG_ANGEHEFTET, EINSTELLUNG_AUSGEBLENDET, EI
 import type { Sicht } from '../../../shared/src/sichten';
 import { useDaten } from '../daten';
 import { Link } from '../ort';
-import { Symbol } from '../Symbol';
+import { AnsichtSymbol, Symbol } from '../Symbol';
 import { ZahlWarte } from './ZahlWarte';
 
 /**
@@ -24,7 +24,7 @@ function Zeile({ s, aktiv, angeheftet, tiefe = 0, pfad, anheften }: { s: Sicht; 
   return (
     <li className="aw-zeile" style={{ paddingLeft: `${tiefe * 16}px` }}>
       <Link to={`/ablage/${s.id}`} className={`aw-link ${aktiv === s.id ? 'an' : ''}`}>
-        <span className="aw-name">{pfad && <span className="leise klein">{pfad} › </span>}{s.name}</span>
+        <span className="aw-name">{pfad && <span className="leise klein">{pfad} › </span>}{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{s.name}</span>
         {!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
       </Link>
       <button type="button" className={`aw-stern ${angeheftet ? 'an' : ''}`} aria-pressed={angeheftet} onClick={() => anheften(s.id)}

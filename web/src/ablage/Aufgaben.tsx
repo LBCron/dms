@@ -183,7 +183,7 @@ export function ErinnerungFormular({ mappeId, e, neuLaden, schliessen, eingebett
         <label className="eigenschaft"><span>Für</span><BenutzerWahl label="Erinnerung für" wert={an} setze={setAn} /></label>
         <label className="eigenschaft breit"><span>Woran?</span><input value={text} maxLength={500} onChange={(x) => setText(x.target.value)} placeholder="z. B. Angebote vergleichen" autoFocus /></label>
       </div>
-      <p className="leise klein">Am gewählten Tag steht die Mappe unter „Zu erledigen“{an === ich.id ? '' : ' des Empfängers'}; bis dahin unter „Anstehend“.</p>
+      <p className="leise klein">Am gewählten Tag steht die Mappe unter „Zu erledigen“{an === ich.id ? '' : ' des Empfängers'}; bis dahin im Kalender von „Zu erledigen“.</p>
       {fehler && <p className="fehlertext">{fehler}</p>}
       {hinweis && <div className="hinweis warn"><p>{hinweis}</p></div>}
       <div className="knoepfe">

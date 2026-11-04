@@ -1,3 +1,4 @@
+import { Kopf } from './Kopf';
 import { useEffect, useState } from 'react';
 import { api, type SucheStand } from '../api';
 import { Hilfe } from '../Hilfe';
@@ -9,7 +10,7 @@ import { Symbol } from '../Symbol';
  * Werkbank → Suche (#356): unscharfe Suche an/aus, gleichbedeutende Wörter (eigene Gruppen; Wortlisten aus Paketen
  * nur zum Ansehen) und das Wörterverzeichnis für „Meintest du …?“.
  */
-export function SuchePanel() {
+export function SuchePanel({ abschnitt }: { abschnitt?: boolean } = {}) {
   const [s, setS] = useState<SucheStand | null>(null);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   const [neu, setNeu] = useState('');
@@ -29,7 +30,7 @@ export function SuchePanel() {
 
   return (
     <div className="einspaltig stapel">
-      <div className="mappenkopf"><p className="ueber">{t('suche.werkbank.ueber')}</p><h1>{t('suche.werkbank.titel')} <Hilfe ort="werkbank.suche" /></h1></div>
+      <Kopf titel={<>{t('suche.werkbank.titel')} <Hilfe ort="werkbank.suche" /></>} abschnitt={abschnitt} id="suche" ueber={t('suche.werkbank.ueber')} />
       <p className="leise">{t('suche.werkbank.text')}</p>
       {meldung && <div className={`hinweis ${meldung.art}`} role="status"><p>{meldung.text}</p></div>}
 

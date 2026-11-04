@@ -58,10 +58,10 @@ export const OHNE_FOLGEN = new Set<string>([
 ]);
 
 /**
- * „Anstehend“ (#528) hängt zusätzlich an den freien Erinnerungen und an den Datumsfeldern: Diese Methoden
+ * Die Termine (#528, #725) hängen zusätzlich an den freien Erinnerungen und an den Datumsfeldern: Diese Methoden
  * zählen für dessen Stand mit, obwohl sie keine Zahl einer Ansicht ändern.
  */
-export const ZAEHLT_FUER_ANSTEHEND: ReadonlySet<string> = new Set(['legeErinnerungAn', 'aendereErinnerung', 'loescheErinnerung']);
+export const ZAEHLT_FUER_TERMINE: ReadonlySet<string> = new Set(['legeErinnerungAn', 'aendereErinnerung', 'loescheErinnerung']);
 
 /** Stand des Haushalts: zählt nach jeder Änderung hoch, die Zahlen der Ansichten ändern kann. */
 export class Haushaltsstand {

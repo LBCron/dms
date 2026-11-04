@@ -172,7 +172,7 @@ const VORRAT: Array<{ bereich: 'wenn' | 'und' | 'dann'; art: string }> = [
   { bereich: 'dann', art: 'stopp' },
 ];
 /** Nach Wahl der Wenn-Karte nur passende Karten: „Feld ändern“ braucht einen Mappentyp, „in Ansicht“ eine Ansicht dafür. */
-const sichtenFuer = (k: Kontextdaten, typ: Mappentyp | null) => k.sichten.filter((s) => !typ || !s.typen?.length || s.typen.includes(typ.id));
+const sichtenFuer = (k: Kontextdaten, typ: Mappentyp | null) => k.sichten.filter((s) => !typ || !s.typen?.length || s.typen.includes(typ.id) || s.typen.includes('*'));
 const passt = (v: { art: string }, typ: Mappentyp | null, k: Kontextdaten, w?: WennKarte) => (v.art === 'feld' ? !!typ : v.art === 'ansicht' ? sichtenFuer(k, typ).length > 0
   : v.art === 'zusammenfassung' ? w?.art === 'zeitplan' && w.jeBenutzer : v.art === 'favoriten' ? w?.art === 'favorit.geaendert'
     : v.art === 'anmeldeschutz' ? (w?.art === 'zeitplan' && !w.jeBenutzer) || w?.art === 'benutzer.gesperrt' : true);

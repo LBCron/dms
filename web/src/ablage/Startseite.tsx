@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Anstehend } from '../../../shared/src/fristen';
+import { datumDe, type Termin } from '../../../shared/src/fristen';
+import { t } from '../sprache';
 import { api } from '../api';
 import { useDaten } from '../daten';
 import { useHandbuch } from '../Hilfe';
@@ -11,12 +12,12 @@ import { neuePost } from './NeuePost';
 import { StartSuche } from './StartSuche';
 import { FragAblage } from './FragAblage';
 import { istTouch, postFotografieren } from './PostKamera';
-import { Symbol } from '../Symbol';
+import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
 
 /**
  * Startseite der Ablage (#334): wenige Kacheln mit je einer Zahl und einer Handlung.
- * Zu erledigen, Neue Post, Anstehend, eine wählbare Kachel (Favoriten oder eine Ansicht) und
+ * Zu erledigen, Neue Post, Nächster Termin (#725, öffnet den Monat), eine wählbare Kachel (Favoriten oder eine Ansicht) und
  * „Zuletzt geöffnet“. In einer leeren Installation stattdessen drei Einstiege.
  * Abschalten und Kachel wählen: im Profil (Einstellungen „startseite“, „startseite_kachel“).
  *
@@ -26,12 +27,12 @@ import { darfPostAnlegen } from '../../../shared/src/model';
  */
 const zahl = (n: number) => n.toLocaleString('de-DE');
 
-function Kachel({ name, to, art, titel, anzahl, leer, unter }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string }) {
+function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
   const nichts = anzahl === 0;
   return (
     <div className="start-feld" data-kachel={name}>
       <Link to={to} className={`kachel ${art} ${nichts ? 'erledigt' : ''}`}>
-        <span className="kacheltitel">{titel}</span>
+        <span className="kacheltitel">{symbol && <><AnsichtSymbol name={symbol} /> </>}{titel}</span>
         {anzahl === null ? <span className="kachelzahl leise">…</span> : nichts ? <span className="kachelleer"><Symbol name="haken" /> {leer}</span> : <span className="kachelzahl">{zahl(anzahl)}</span>}
         {unter && !nichts && <span className="kachelunter leise klein">{unter}</span>}
       </Link>
@@ -39,7 +40,26 @@ function Kachel({ name, to, art, titel, anzahl, leer, unter }: { name: string; t
   );
 }
 
-export function Startseite({ anstehend, offen, breit = false }: { anstehend: { liste?: { tage: number; eintraege: Anstehend[] } }; offen?: string; breit?: boolean }) {
+/** Kachel „Nächster Termin“ (#725): Datum und Mappe des nächsten Termins; öffnet den Monat in „Zu erledigen“. */
+function TerminKachel({ z }: { z: { termin: Termin | null; ueberfaellig: number } | null }) {
+  const d = useDaten();
+  const zumMonat = () => { if (d.einstellungen.erledigen_ansicht !== 'monat' && d.einstellungen.erledigen_ansicht !== 'jahr') d.setzeEinstellung('erledigen_ansicht', 'monat'); };
+  const x = z?.termin;
+  return (
+    <div className="start-feld" data-kachel="termin" onClickCapture={zumMonat}>
+      <Link to="/ablage/eingang" className={`kachel ruhig ${z && !x ? 'erledigt' : ''}`}>
+        <span className="kacheltitel">{t('termine.kachel')}</span>
+        {!z ? <span className="kachelzahl leise">…</span>
+          : !x ? <span className="kachelleer"><Symbol name="haken" /> {t('termine.kachel.leer')}</span>
+          : <span className="kachelzahl ka-kachel-datum">{datumDe(x.datum)}</span>}
+        {x && <span className="kachelunter leise klein">{t.frei(`termine.art.${x.art}`)}: {titelOder(x.mappeTitel)}</span>}
+        {!!z?.ueberfaellig && <span className="kachelunter problem klein">{t('termine.kachel.ueberfaellig', { anzahl: z.ueberfaellig })}</span>}
+      </Link>
+    </div>
+  );
+}
+
+export function Startseite({ offen, breit = false }: { offen?: string; breit?: boolean }) {
   const d = useDaten();
   const { ich } = useKonto();
   const handbuch = useHandbuch();
@@ -50,13 +70,19 @@ export function Startseite({ anstehend, offen, breit = false }: { anstehend: { l
     api.startseite().then((x) => { if (aktuell) setDaten(x); }, () => { if (aktuell) setDaten({ zuletzt: [], leer: false }); });
     return () => { aktuell = false; };
   }, [d.stand]);
+  // Nächster Termin (#725): eigene Aufgaben mit Datum, Erinnerungen, Fristen an lesbaren Mappen.
+  const [termin, setTermin] = useState<{ termin: Termin | null; ueberfaellig: number } | null>(null);
+  useEffect(() => {
+    let aktuell = true;
+    api.naechsterTermin().then((x) => { if (aktuell) setTermin(x); }, () => { if (aktuell) setTermin({ termin: null, ueberfaellig: 0 }); });
+    return () => { aktuell = false; };
+  }, [d.stand]);
 
   const postSicht = d.zaehler.neuePost ? d.sicht(d.zaehler.neuePost) : undefined;
   // Zahlen kommen nach (#512): bis dahin „…“ in der Kachel.
   const z = (n: number) => (d.zahlenDa ? n : null);
   const wahl = typeof d.einstellungen.startseite_kachel === 'string' ? d.einstellungen.startseite_kachel : 'favoriten';
   const lieblings = wahl !== 'favoriten' ? d.sicht(wahl) : undefined;
-  const tage = anstehend.liste?.tage;
   const postTyp = d.typen.find((t) => t.system === 'post');
   const kamera = istTouch() && darfPostAnlegen(postTyp) && !!postTyp?.register.some((r) => r.art === 'dokumente');
 
@@ -90,9 +116,9 @@ export function Startseite({ anstehend, offen, breit = false }: { anstehend: { l
           <div className="kacheln start-raster">
             <Kachel name="eingang" to="/ablage/eingang" art="auffaellig" titel="Zu erledigen" anzahl={z(d.zaehler.eingang)} leer="Nichts zu erledigen" unter="Aufgaben und Mappen, an denen du etwas tun sollst" />
             {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={postSicht.name} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer="Keine neue Post" unter="Noch nicht zugeordnet" />}
-            <Kachel name="anstehend" to="/ablage/anstehend" art="ruhig" titel="Anstehend" anzahl={anstehend.liste ? anstehend.liste.eintraege.length : null} leer={`Nichts in den nächsten ${tage ?? 30} Tagen`} unter={tage ? `Fristen und Erinnerungen der nächsten ${tage} Tage` : undefined} />
+            <TerminKachel z={termin} />
             {lieblings
-              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer="Leer" />
+              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer="Leer" />
               : <Kachel name="wahl" to="/ablage/favoriten" art="ruhig" titel="Favoriten" anzahl={z(d.zaehler.favoriten ?? 0)} leer="Noch keine – der Stern an einer Mappe merkt sie dir" />}
           </div>
         )}

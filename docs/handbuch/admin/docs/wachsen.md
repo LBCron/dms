@@ -24,7 +24,7 @@ Das gilt für jeden Umzug: von zwei Containern zu `dms-komplett` und zurück, vo
 2. Die beiden Sicherungsdateien (`.dms-sicherung` und `.json`) aus dem Ordner `sicherung` kopieren.
 3. **Das neue System** starten, z. B. [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) oder eine der [Vorlagen](https://help.ablago.app/installieren/aktuell/). Die beiden Dateien in dessen Ordner `sicherung` legen.
 4. Im Browser den Einrichtungsassistenten öffnen, **Aus einer Sicherung wiederherstellen** wählen und den Schritten unter [Wiederherstellen → Neues NAS, alte Sicherung](wiederherstellen.md#neues-nas-alte-sicherung) folgen.
-5. Mit den bisherigen Zugangsdaten anmelden und kurz prüfen: Mappen, Dokumente, **Werkbank → Technik**.
+5. Mit den bisherigen Zugangsdaten anmelden und kurz prüfen: Mappen, Dokumente, **Werkbank → Systemzustand → Version und Updates**.
 6. Das alte System erst abschalten, wenn das neue läuft. Die Ordner des alten Systems aufheben, bis du sicher bist.
 
 Ändert sich die Adresse (neues Gerät, neuer Port), trage sie unter **Werkbank → E-Mail und Adresse** neu ein, damit Links in E-Mails stimmen.

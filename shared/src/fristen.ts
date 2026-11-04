@@ -33,9 +33,6 @@ export const FRIST_STANDARD: FristEinstellung = { vorlauf: 4, einheit: 'wochen',
 export const FRIST_TEXT_MAX = 200;
 /** Freie Erinnerungen (#131). */
 export const ERINNERUNG_TEXT_MAX = 500;
-/** Sicht „Anstehend“ (#132): Standard-Zeitraum in Tagen. */
-export const ANSTEHEND_TAGE = 30;
-export const ANSTEHEND_MAX = 366;
 
 /** Eingabe bereinigen; null = keine Erinnerung. */
 export function bereinigeFrist(e: unknown): FristEinstellung | null {
@@ -97,13 +94,13 @@ export function fristEmpfaenger(f: FristEinstellung, m: Pick<Mappe, 'werte' | 'e
 /** Gültiges Datum JJJJ-MM-TT? */
 export const istDatum = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-/** Ein Eintrag der Sicht „Anstehend“ (#132): Frist, Erinnerung oder eine andere Aufgabe mit Datum (#528). */
-export type AnstehendArt = 'frist' | 'erinnerung' | 'aufgabe';
-export interface Anstehend {
-  art: AnstehendArt;
+/** Ein Termin im Kalender von „Zu erledigen“ (#528, #725): Frist, Erinnerung oder eine andere Aufgabe mit Datum. */
+export type TerminArt = 'frist' | 'erinnerung' | 'aufgabe';
+export interface Termin {
+  art: TerminArt;
   /** Frist- bzw. Erinnerungsdatum, bei einer Aufgabe ihr Datum. */
   datum: string;
-  /** Ab wann im Eingang (Frist: Datum − Vorlauf). */
+  /** Seit wann die Aufgabe offen ist; sonst das Datum selbst. */
   ab: string;
   text: string;
   mappeId: string; mappeTitel: string; typId: string;
@@ -115,15 +112,14 @@ export interface Anstehend {
   folgetermin?: boolean;
 }
 
-/** Antwort von „Anstehend“: Zeitraum in Tagen ab heute (Liste) oder von … bis (Kalender, #528). */
-export interface AnstehendAntwort {
-  tage: number;
+/** Antwort der Termine (Monat und Jahr in „Zu erledigen“, #528, #725): Zeitraum von … bis. */
+export interface TermineAntwort {
   heute: string;
   von: string;
   bis: string;
-  eintraege: Anstehend[];
-  /** Nur mit Zeitraum: gesetzliche Feiertage darin (Bundesland der Werkbank), Datum → Name. */
-  feiertage?: Record<string, string>;
+  eintraege: Termin[];
+  /** Gesetzliche Feiertage im Zeitraum (Region, #726), Datum → Name. */
+  feiertage: Record<string, string>;
 }
 
 /** Freie Erinnerung an einer Mappe (#131), solange sie noch nicht fällig ist. */

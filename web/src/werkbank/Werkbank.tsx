@@ -6,7 +6,8 @@ import { RegionPanel, useRegion } from './Region';
 import { NummernkreisEditor, NummernkreiseListe, useNummernkreise } from './Nummernkreise';
 import { StempelPanel, useStempelVorlagenWerkbank } from './Stempel';
 import { DarfWegPanel, useDarfWeg } from './Archiv';
-import { DatenschutzPanel, useDatenschutz } from './Datenschutz';
+import { AutomatischVerkleinern } from './Verkleinern';
+import { AuskuenfteListe, AuskunftRechts, LoeschkonzeptPanel, useDatenschutz } from './Datenschutz';
 import { PaketeListe, PaketLink, PaketePanel, usePakete } from './Pakete';
 import { useVollexport, VollexportPanel } from './Vollexport';
 import { PostfachEditor, PostfaecherListe, usePostfaecher } from './Postfaecher';
@@ -47,9 +48,14 @@ import { SpeicherplatzPanel, useSpeicherplatz } from './Speicherplatz';
 import { AuslastungAbschnitt, ErweiterungenHinweis, useSystemlast } from './Auslastung';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from '../ablage/Papierkorb';
 import { filterAusAdresse } from '../../../shared/src/aufgabenfilter';
+import { istOffen } from '../../../shared/src/auskunft';
 import { useBeiWiederErreichbar } from '../erreichbar';
 
 /**
+ * Umgezogen (#717, #725): /werkbank/darfweg → aufbewahrung, /werkbank/suche → texterkennung#suche,
+ * /werkbank/wiederherstellung → sicherung#wiederherstellen, /werkbank/technik → systemzustand#version,
+ * /werkbank/wartungsmodus → wartung#wartungsmodus (`UMGEZOGEN` in werkbankansicht.ts).
+ *
  * Werkbank für Administratoren, aufgebaut wie die Ablage:
  *   Bereiche  →  Elemente des Bereichs  →  Bearbeitung
  *
@@ -59,18 +65,15 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/sichten[/:id|/neu]       Sichten der Ablage (#38)
  * /werkbank/demo
  * /werkbank/protokoll[/:nr]
- * /werkbank/technik
  * /werkbank/designs[/:id|/neu]
  * /werkbank/betrieb                 E-Mail-Versand und Adresse des DMS (#37)
  * /werkbank/verschluesselung        Schlüssel für Passwörter (#39)
  * /werkbank/papierkorb[/:id]        Papierkorb aller Benutzer und Aufbewahrung (#43)
- * /werkbank/texterkennung           Texterkennung und Volltext (#45)
- * /werkbank/aufgaben[/:id][?filter] Benachrichtigungen und Aufgaben: tägliche Zusammenfassung, Aufgaben aller Benutzer mit Filter (#54, #366, #354)
- * /werkbank/wartung                 Wartungsoperationen, z. B. Volltext neu erzeugen (#45, #458)
+ * /werkbank/texterkennung           Suche und Volltext: Texterkennung, automatisch verkleinern, Suche (#45, #356, #725)
+ * /werkbank/aufgaben[/:id][?filter] Aufgaben aller Benutzer mit Filter (#54, #366, #354; seit #725 „Aufgaben“)
+ * /werkbank/wartung                 Wartung: Wartungsmodus und Wartungsoperationen, z. B. Volltext neu erzeugen (#45, #458, #725)
  * /werkbank/fehlermeldungen[/:id]  Fehlermeldungen der Benutzer (#70)
- * /werkbank/wartungsmodus          Wartungsmodus (#102)
- * /werkbank/sicherung              Sicherung, Zeitplan, Notfallblatt, Probe (#103–#106, #109)
- * /werkbank/wiederherstellung      Sicherung einspielen (#107)
+ * /werkbank/sicherung              Sicherung, Zeitplan, Notfallblatt, Probe, darunter Wiederherstellen (#103–#109, #725)
  * /werkbank/anbindung[?offen=:id] Datenbank-Anbindung (#119), darunter lange Zugriffe, aufklappbar,
  *                                 und was gerade läuft (#407; früher /werkbank/datenbank, leitet weiter)
  * /werkbank/systemzustand         Systemzustand: Warnschwelle und Grenze, darunter Speicherplatz je Ordner
@@ -79,7 +82,9 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/webhooks              Webhooks: freigegebene Ziele, alle Webhooks, abschalten (#627)
  * /werkbank/automatisierungen[/:id|/neu]  Automatisierungen Wenn – Und – Dann (#675), dreiteilig
  * /werkbank/stempel                Vorlagen für Stempel beim Weitergeben (#394), zweiteilig
- * /werkbank/datenschutz[?mappe=]    Auskunft nach Art. 15 DSGVO als ZIP (#396), zweiteilig
+ * /werkbank/auskuenfte[/:id|/neu|/einstellungen][?mappe=]  Datenschutz-Auskünfte (#396, #668), dreiteilig;
+ *                                  früher /werkbank/datenschutz (leitet um)
+ * /werkbank/loeschkonzept          Löschkonzept, Personendaten in Mappentypen, Löschprotokoll (#469, #470, #668)
  *
  * Die Mitte gibt es nur für große Sammlungen, die man bearbeitet (#366, `hatMitte`); alle anderen
  * Bereiche sind zweiteilig: links die Bereiche, rechts die ganze Seite.
@@ -90,8 +95,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const [, bereich = 'uebersicht', id] = teile;
   const benutzer = useBenutzer();
   const protokoll = useProtokoll(bereich === 'protokoll');
-  const datenbank = useDatenbank(bereich === 'anbindung');
-  const technik = useTechnik(bereich === 'technik');
+  const datenbank = useDatenbank(bereich === 'systemzustand');
+  const technik = useTechnik(bereich === 'systemzustand');
   const betrieb = useBetrieb();
   const tresor = useTresor();
   const papierkorb = usePapierkorb(true, bereich === 'papierkorb');
@@ -104,7 +109,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const ocr = useTexterkennung(bereich === 'texterkennung' || bereich === 'wartung');
   const uebersicht = useUebersicht();
   const meldungen = useFehlermeldungen(bereich === 'fehlermeldungen');
-  const wartungsmodus = useWartungsmodus(bereich === 'wartungsmodus');
+  const wartungsmodus = useWartungsmodus(bereich === 'wartung');
   const sicherung = useSicherung(bereich === 'sicherung');
   const speicherplatz = useSpeicherplatz(bereich === 'systemzustand');
   const systemlast = useSystemlast(bereich === 'systemzustand');
@@ -115,8 +120,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const postfaecher = usePostfaecher(bereich === 'postfaecher');
   const nummernkreise = useNummernkreise(bereich === 'nummernkreise');
   const stempel = useStempelVorlagenWerkbank(bereich === 'stempel');
-  const darfWeg = useDarfWeg(bereich === 'darfweg');
-  const datenschutz = useDatenschutz(bereich === 'datenschutz');
+  const darfWeg = useDarfWeg(bereich === 'aufbewahrung');
+  const datenschutz = useDatenschutz(bereich === 'auskuenfte' || bereich === 'loeschkonzept');
   const vollexport = useVollexport(bereich === 'vollexport');
   const pakete = usePakete(bereich === 'pakete' || bereich === 'typen');
   const anmeldeschutz = useAnmeldeschutz(bereich === 'anmeldeschutz');
@@ -130,11 +135,11 @@ export function Werkbank({ teile }: { teile: string[] }) {
   useBeiWiederErreichbar(() => {
     void uebersicht.laden();
     const offen: Record<string, (() => Promise<unknown>) | undefined> = {
-      protokoll: protokoll.neu, technik: technik.laden, betrieb: betrieb.laden,
+      protokoll: protokoll.neu, betrieb: betrieb.laden,
       verschluesselung: tresor.laden, papierkorb: papierkorb.laden, aufgaben: aufgaben.laden, texterkennung: ocr.laden,
-      wartung: ocr.laden, fehlermeldungen: meldungen.laden, wartungsmodus: wartungsmodus.laden, sicherung: sicherung.laden,
-      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); }, anbindung: async () => { await anbindung.laden(); await datenbank.laden(); }, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden, automatisierungen: automatisierungen.laden,
-      datenschutz: datenschutz.laden,
+      wartung: async () => { await ocr.laden(); await wartungsmodus.laden(); }, fehlermeldungen: meldungen.laden, sicherung: sicherung.laden,
+      systemzustand: async () => { await speicherplatz.laden(); await systemlast.laden(); await technik.laden(); await datenbank.laden(); }, anbindung: anbindung.laden, benutzer: benutzer.laden, webdav: webdav.laden, webhooks: webhooks.laden, automatisierungen: automatisierungen.laden,
+      auskuenfte: datenschutz.laden, loeschkonzept: datenschutz.laden,
     };
     void offen[bereich]?.();
   });
@@ -144,6 +149,18 @@ export function Werkbank({ teile }: { teile: string[] }) {
   // umgezogene Bereiche (#407: /werkbank/datenbank → /werkbank/anbindung) an die neue Stelle.
   const umleitung = werkbankUmleitung(bereich, id, location.search);
   useEffect(() => { if (umleitung) geheZu(umleitung, true); }, [umleitung]);
+  // Sprungmarke (#725): Zusammengelegte Bereiche stehen als Abschnitt auf einer Seite (z. B. /werkbank/wartung#wartungsmodus).
+  // Der Abschnitt erscheint oft erst nach dem Laden – kurz danach suchen.
+  const marke = location.hash.slice(1);
+  useEffect(() => {
+    if (!marke) return;
+    let n = 0;
+    const iv = setInterval(() => {
+      const el = document.getElementById(marke);
+      if (el) { el.scrollIntoView({ block: 'start' }); clearInterval(iv); } else if (++n > 30) clearInterval(iv);
+    }, 150);
+    return () => clearInterval(iv);
+  }, [bereich, marke]);
   // Hintergrundarbeit ruht nur im aktiven Wartungsmodus (#366: Hinweis bei Texterkennung und Volltext).
   const wartungAn = wartungsPlakette(wartungsmodus.stand?.stufe ?? 'aus', wartungsmodus.stand?.aktivAb ?? null) === 'an';
 
@@ -194,16 +211,16 @@ export function Werkbank({ teile }: { teile: string[] }) {
     liste = <AufgabenListe z={aufgaben} filter={aufgabenFilter} offen={id} mailAn={uebersicht.stand?.mail} favoriten={favoritenFreigabe} />;
     rechts = <AufgabenPanel z={aufgaben} id={id} />;
   } else if (bereich === 'texterkennung') {
-    rechts = <TexterkennungPanel t={ocr} wartungAn={wartungAn} />;
+    // Suche und Volltext (#725): Texterkennung, automatisch verkleinern, Tippfehler und gleichbedeutende Wörter.
+    rechts = <><TexterkennungPanel t={ocr} wartungAn={wartungAn} /><div className="einspaltig"><AutomatischVerkleinern /></div><SuchePanel abschnitt /></>;
   } else if (bereich === 'wartung') {
-    rechts = <WartungPanel t={ocr} wartungAn={wartungAn} />;
-  } else if (bereich === 'wiederherstellung') {
-    rechts = <WiederherstellungPanel />;
+    // Wartung (#725): Wartungsmodus und Wartungsoperationen auf einer Seite.
+    rechts = <><WartungsmodusPanel w={wartungsmodus} /><WartungPanel t={ocr} wartungAn={wartungAn} abschnitt /></>;
   } else if (bereich === 'sicherung') {
-    rechts = <SicherungPanel z={sicherung} />;
+    // Sicherung mit Wiederherstellen als Abschnitt (#725).
+    rechts = <><SicherungPanel z={sicherung} /><WiederherstellungPanel abschnitt /></>;
   } else if (bereich === 'anbindung') {
-    rechts = <AnbindungPanel z={anbindung} nachAenderung={() => void uebersicht.laden()}
-      unten={<DatenbankAbschnitte z={datenbank} offen={new URLSearchParams(location.search).get('offen') ?? undefined} />} />;
+    rechts = <AnbindungPanel z={anbindung} nachAenderung={() => void uebersicht.laden()} />;
   } else if (bereich === 'region') {
     rechts = <RegionPanel z={region} />;
   } else if (bereich === 'anmeldeschutz') {
@@ -213,10 +230,14 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = installieren ? <PaketLink key={installieren} z={pakete} wert={installieren} /> : <PaketePanel z={pakete} id={id} />;
   } else if (bereich === 'vollexport') {
     rechts = <VollexportPanel z={vollexport} />;
-  } else if (bereich === 'darfweg') {
+  } else if (bereich === 'aufbewahrung') {
     rechts = <DarfWegPanel z={darfWeg} />;
-  } else if (bereich === 'datenschutz') {
-    rechts = <DatenschutzPanel z={datenschutz} />;
+  } else if (bereich === 'auskuenfte') {
+    // Datenschutz-Auskünfte (#668): Liste in der Mitte, rechts Auskunft, Assistent („neu“) oder Einstellungen.
+    liste = <AuskuenfteListe z={datenschutz} offen={id} />;
+    rechts = <AuskunftRechts z={datenschutz} id={id} />;
+  } else if (bereich === 'loeschkonzept') {
+    rechts = <LoeschkonzeptPanel z={datenschutz} />;
   } else if (bereich === 'nummernkreise') {
     liste = <NummernkreiseListe z={nummernkreise} offen={id} />;
     rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>Wähle links einen Nummernkreis oder lege mit „+ Neu“ einen an.</p></div>;
@@ -225,8 +246,6 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = id ? <AutomatisierungEditor key={`${id}-${automatisierungen.stand ? 1 : 0}`} z={automatisierungen} id={id} /> : <div className="platzhalter"><p>{t('automatisierung.ui.waehlen')}</p></div>;
   } else if (bereich === 'stempel') {
     rechts = <StempelPanel z={stempel} />;
-  } else if (bereich === 'suche') {
-    rechts = <SuchePanel />;
   } else if (bereich === 'postfaecher') {
     liste = <PostfaecherListe z={postfaecher} offen={id} />;
     rechts = id ? <PostfachEditor key={`${id}-${postfaecher.liste ? 1 : 0}`} z={postfaecher} id={id} /> : <div className="platzhalter"><p>Wähle links ein Postfach oder lege mit „+ Neu“ eines an.</p></div>;
@@ -237,16 +256,14 @@ export function Werkbank({ teile }: { teile: string[] }) {
   } else if (bereich === 'webhooks') {
     rechts = <WebhooksPanel z={webhooks} />;
   } else if (bereich === 'systemzustand') {
-    rechts = <SpeicherplatzPanel z={speicherplatz} nachAenderung={() => { void uebersicht.laden(); void wartungsmodus.laden(); }} auslastung={<><ErweiterungenHinweis liste={systemlast.stand?.erweiterungen} /><AuslastungAbschnitt z={systemlast} /></>} />;
-  } else if (bereich === 'wartungsmodus') {
-    rechts = <WartungsmodusPanel w={wartungsmodus} />;
+    // Systemzustand (#725) nimmt Version und Updates (früher „Technik“) und die Auslastung der Datenbank auf.
+    rechts = <SpeicherplatzPanel z={speicherplatz} nachAenderung={() => { void uebersicht.laden(); void wartungsmodus.laden(); }} auslastung={<><ErweiterungenHinweis liste={systemlast.stand?.erweiterungen} /><AuslastungAbschnitt z={systemlast} /></>}
+      unten={<><div id="datenbank"><DatenbankAbschnitte z={datenbank} offen={new URLSearchParams(location.search).get('offen') ?? undefined} /></div><TechnikPanel t={technik} abschnitt /></>} />;
   } else if (bereich === 'papierkorb') {
     liste = <PapierkorbListe z={papierkorb} werkbank offen={id} />;
     rechts = id ? <PapierkorbDetail key={id} id={id} werkbank /> : <div className="platzhalter"><p>Wähle links eine gelöschte Mappe aus, um sie anzusehen oder wiederherzustellen.</p></div>;
   } else if (bereich === 'verschluesselung') {
     rechts = <TresorPanel t={tresor} />;
-  } else if (bereich === 'technik') {
-    rechts = <TechnikPanel t={technik} />;
   } else if (bereich === 'protokoll') {
     liste = <ProtokollListe p={protokoll} offen={id} />;
     rechts = <ProtokollDetail p={protokoll} nr={id} />;
@@ -256,20 +273,20 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const n = bereichName;
   const eintraege: WerkbankEintrag[] = [
     { pfad: 'uebersicht', name: n('uebersicht'), gruppe: null, warn: uebersicht.hinweise || undefined },
-    // Ablage aufbauen
+    // Ablage aufbauen (#717)
+    { pfad: 'pakete', name: n('pakete'), gruppe: 'ablage', zahl: zahl(pakete.stand?.installiert.length, uz?.pakete) },
     { pfad: 'typen', name: n('typen'), gruppe: 'ablage', zahl: d.typen.length },
     { pfad: 'sichten', name: n('sichten'), gruppe: 'ablage', zahl: d.sichten.length || undefined },
     { pfad: 'nummernkreise', name: n('nummernkreise'), gruppe: 'ablage', zahl: zahl(nummernkreise.liste?.length, uz?.nummernkreise) },
-    { pfad: 'stempel', name: n('stempel'), gruppe: 'ablage', zahl: stempel.liste?.length || undefined },
     { pfad: 'automatisierungen', name: n('automatisierungen'), gruppe: 'ablage', zahl: automatisierungen.stand?.automatisierungen.length || undefined,
       warn: automatisierungWarnungen(automatisierungen.stand) || uebersicht.stand?.automatisierungen?.angehalten.length ? '!' : undefined, warnTitel: t('automatisierung.ui.leiste') },
-    { pfad: 'pakete', name: n('pakete'), gruppe: 'ablage', zahl: zahl(pakete.stand?.installiert.length, uz?.pakete) },
-    { pfad: 'suche', name: n('suche'), gruppe: 'ablage' },
-    ...(d.typen.some((x) => x.archiv) ? [{ pfad: 'darfweg', name: n('darfweg'), gruppe: 'ablage' as const, zahl: zahl(darfWeg.liste?.length, uz?.darfWeg) }] : []),
     // Benutzer und Sicherheit
     { pfad: 'benutzer', name: n('benutzer'), gruppe: 'benutzer', zahl: zahl(benutzer.geladen ? benutzer.liste.filter((b) => b.aktiv).length : undefined, uz?.benutzer) },
     { pfad: 'verschluesselung', name: n('verschluesselung'), gruppe: 'benutzer', warn: tresor.stand && tresor.stand.zustand !== 'vorhanden' ? t('werkbank.leiste.fehlt') : undefined },
-    { pfad: 'datenschutz', name: n('datenschutz'), gruppe: 'benutzer', zahl: datenschutz.stand?.auskuenfte.length || undefined },
+    { pfad: 'auskuenfte', name: n('auskuenfte'), gruppe: 'benutzer', zahl: datenschutz.stand?.verzeichnis.filter((e) => istOffen(e.zustand)).length || undefined },
+    { pfad: 'loeschkonzept', name: n('loeschkonzept'), gruppe: 'benutzer', warn: datenschutz.stand?.loeschkonzept?.luecken.length ? '!' : undefined, warnTitel: t('werkbank.loeschkonzept.personendaten') },
+    ...(d.typen.some((x) => x.archiv) ? [{ pfad: 'aufbewahrung', name: n('aufbewahrung'), gruppe: 'benutzer' as const, zahl: zahl(darfWeg.liste?.length, uz?.darfWeg) }] : []),
+    { pfad: 'stempel', name: n('stempel'), gruppe: 'benutzer', zahl: stempel.liste?.length || undefined },
     // Post und Eingänge
     { pfad: 'postfaecher', name: n('postfaecher'), gruppe: 'post', zahl: zahl(postfaecher.liste?.length, uz?.postfaecher), warn: uebersicht.stand?.postfachAnmeldung?.length || postfaecher.liste?.some((p) => p.stand.fehlerFolge > 0 || (p.oauth && p.oauth.zustand !== 'ok')) ? '!' : undefined, warnTitel: uebersicht.stand?.postfachAnmeldung?.length ? t('werkbank.leiste.postfach.anmeldung') : t('werkbank.leiste.postfach.abruf') },
     ...(eingang.stand?.vorhanden ? [{ pfad: 'eingangsordner', name: n('eingangsordner'), gruppe: 'post' as const, warn: eingang.stand.fehler?.length ? String(eingang.stand.fehler.length) : undefined, warnTitel: t('werkbank.leiste.eingangsordner') }] : []),
@@ -278,17 +295,15 @@ export function Werkbank({ teile }: { teile: string[] }) {
     { pfad: 'texterkennung', name: n('texterkennung'), gruppe: 'post', warn: uebersicht.stand?.texterkennung?.fehler ? String(uebersicht.stand.texterkennung.fehler) : undefined, warnTitel: t('werkbank.leiste.texterkennung') },
     // Daten sichern
     { pfad: 'sicherung', name: n('sicherung'), gruppe: 'sichern', warn: uebersicht.stand?.sicherung && (uebersicht.stand.sicherung.fehler || (uebersicht.stand.sicherung.schluessel && uebersicht.stand.sicherung.zuAlt)) ? '!' : undefined, warnTitel: t('werkbank.leiste.sicherung') },
-    { pfad: 'wiederherstellung', name: n('wiederherstellung'), gruppe: 'sichern' },
     { pfad: 'vollexport', name: n('vollexport'), gruppe: 'sichern' },
     { pfad: 'papierkorb', name: n('papierkorb'), gruppe: 'sichern', zahl: zahl(papierkorb.eintraege ? papierkorb.eintraege.length + papierkorb.dokumente.length : undefined, uebersicht.stand?.papierkorb.anzahl) },
     // Einstellungen
     { pfad: 'betrieb', name: n('betrieb'), gruppe: 'einstellungen', warn: uebersicht.stand && !uebersicht.stand.mail ? t('werkbank.leiste.aus') : undefined, warnTitel: t('werkbank.leiste.mail') },
-    { pfad: 'aufgaben', name: n('aufgaben'), gruppe: 'einstellungen', zahl: zahl(aufgaben.liste?.filter((a) => !a.erledigt).length, uebersicht.stand?.aufgaben.offen) },
     { pfad: 'region', name: n('region'), gruppe: 'einstellungen' },
+    { pfad: 'aufgaben', name: n('aufgaben'), gruppe: 'einstellungen', zahl: zahl(aufgaben.liste?.filter((a) => !a.erledigt).length, uebersicht.stand?.aufgaben.offen) },
     { pfad: 'anmeldeschutz', name: n('anmeldeschutz'), gruppe: 'einstellungen', zahl: anmeldeschutz.stand?.gesperrt.length || undefined },
     { pfad: 'designs', name: n('designs'), gruppe: 'einstellungen', zahl: d.designs.length || undefined },
     { pfad: 'anbindung', name: n('anbindung'), gruppe: 'einstellungen', warn: uebersicht.stand?.anbindung && (uebersicht.stand.anbindung.umgebung === 'abweichend' || uebersicht.stand.anbindung.neustartNoetig) ? '!' : undefined, warnTitel: t('werkbank.leiste.anbindung') },
-    { pfad: 'technik', name: n('technik'), gruppe: 'einstellungen' },
     // Wartung und Fehlersuche
     { pfad: 'systemzustand', name: n('systemzustand'), gruppe: 'wartung', ...(uebersicht.stand?.speicherplatz && uebersicht.stand.speicherplatz.zustand !== 'ok'
       ? { warn: uebersicht.stand.speicherplatz.zustand === 'grenze' ? t('werkbank.leiste.speicher.voll') : t('werkbank.leiste.speicher.knapp'), warnTitel: t('werkbank.leiste.speicher') }
@@ -296,8 +311,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
       : (systemlast.stand?.warnung.length || uebersicht.stand?.auslastung?.length) ? { warn: t('systemzustand.warnung.plakette'), warnTitel: t('systemzustand.warnung.leiste') } : {}) },
     { pfad: 'protokoll', name: n('protokoll'), gruppe: 'wartung', warn: protokoll.debug?.an ? t('werkbank.leiste.debug') : undefined, warnTitel: t('werkbank.leiste.debug.titel') },
     { pfad: 'fehlermeldungen', name: n('fehlermeldungen'), gruppe: 'wartung', warn: uebersicht.stand?.fehlermeldungen ? String(uebersicht.stand.fehlermeldungen) : undefined, warnTitel: t('werkbank.leiste.fehlermeldungen') },
-    { pfad: 'wartungsmodus', name: n('wartungsmodus'), gruppe: 'wartung', warn: wartungsPlakette(wartungsmodus.stand?.stufe ?? 'aus', wartungsmodus.stand?.aktivAb ?? null), warnTitel: wartungAn ? t('werkbank.leiste.wartung.an') : t('werkbank.leiste.wartung.angekuendigt') },
-    { pfad: 'wartung', name: n('wartung'), gruppe: 'wartung' },
+    { pfad: 'wartung', name: n('wartung'), gruppe: 'wartung', warn: wartungsPlakette(wartungsmodus.stand?.stufe ?? 'aus', wartungsmodus.stand?.aktivAb ?? null), warnTitel: wartungAn ? t('werkbank.leiste.wartung.an') : t('werkbank.leiste.wartung.angekuendigt') },
     { pfad: 'demo', name: n('demo'), gruppe: 'wartung', zahl: Object.values(d.zaehler.typen).reduce((a, z) => a + z.demo, 0) || undefined },
   ];
   const zustand: Record<string, BereichZustand> = Object.fromEntries(eintraege.map((e) => [e.pfad, { warn: e.warn }]));
