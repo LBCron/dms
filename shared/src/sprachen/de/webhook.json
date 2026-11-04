@@ -21,6 +21,7 @@
   "fehler.zeit": "Keine Antwort innerhalb von {s} Sekunden.",
   "fehler.verbindung": "Keine Verbindung ({text}).",
   "abgeschaltet.betreff": "Webhook „{name}“ abgeschaltet",
+  "abgeschaltet.besitzer": "Hallo {name},\n\ndein Webhook „{webhook}“ war nach {versuche} Versuchen (etwa einem Tag) nicht erreichbar und ist jetzt abgeschaltet. Letzter Fehler: {fehler}\n\nPrüfe den Empfänger und schalte den Webhook unter Mein Konto → Benachrichtigungen wieder ein.\n",
   "abgeschaltet.text": "Der Webhook „{name}“ von {benutzer} war nach {versuche} Versuchen (etwa einem Tag) nicht erreichbar und ist jetzt abgeschaltet. Letzter Fehler: {fehler}\n\nPrüfe den Empfänger und schalte den Webhook im Profil (oder unter Werkbank → Webhooks) wieder ein.",
   "an": "an",
   "aus": "aus",

@@ -136,6 +136,8 @@ export interface WebhookDeps {
   sperre?: () => Promise<boolean>;
   /** Hinweis an die Administratoren, wenn ein Webhook nach vielen Fehlschlägen abgeschaltet wurde. */
   anAdmins?: (betreff: string, text: string) => Promise<void>;
+  /** Mail an den Besitzer eines abgeschalteten Webhooks (Frage 67) – Administratoren bekommen schon die Mail an alle Admins. */
+  anBesitzer?: (b: Benutzer, betreff: string, text: string) => Promise<void>;
   /** Für Tests: kürzere Zeiten (Sekunden). */
   zeiten?: { abstandS?: number; anstossS?: number; wartenS?: readonly number[] };
 }
@@ -379,6 +381,11 @@ export class Webhooks {
     await this.d.anAdmins?.(t('webhook.abgeschaltet.betreff', { name: m.name }),
       t('webhook.abgeschaltet.text', { name: m.name, benutzer: b ? b.name || b.email : '–', versuche: m.versuch, fehler: e.fehler ?? '' }))
       .catch((f) => log.warn('Webhooks: Hinweis an die Administratoren nicht gesendet', { fehler: (f as Error).message }));
+    if (b && b.aktiv && b.rolle !== 'admin') {
+      await this.d.anBesitzer?.(b, t('webhook.abgeschaltet.betreff', { name: m.name }),
+        t('webhook.abgeschaltet.besitzer', { name: b.name || b.email, webhook: m.name, versuche: m.versuch, fehler: e.fehler ?? '' }))
+        .catch((f) => log.warn('Webhooks: Hinweis an den Besitzer nicht gesendet', { fehler: (f as Error).message }));
+    }
   }
 
   /** Nach dem Mindestabstand (noch einmal) zustellen; ein Zeitgeber genügt. */
