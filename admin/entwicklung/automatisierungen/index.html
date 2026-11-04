@@ -1027,6 +1027,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aus-paketen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aus Paketen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aus Paketen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vertretung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertretung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#erinnerungen-aus-fruheren-versionen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erinnerungen aus früheren Versionen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#beispiele" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2645,6 +2684,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aus-paketen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aus Paketen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aus Paketen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vertretung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertretung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#erinnerungen-aus-fruheren-versionen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erinnerungen aus früheren Versionen
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#beispiele" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2716,8 +2794,10 @@
 <p>Die Karte <strong>Datum erreicht</strong> prüft einmal am Tag zur gewählten Uhrzeit, bei welchen Mappen ein Datumsfeld nach dem <strong>Vorlauf</strong> erreicht ist.</p>
 <ul>
 <li><strong>Vorlauf</strong> in <strong>Tagen, Wochen oder Monaten</strong>. 3 Monate sind drei Kalendermonate, nicht 90 Tage: Für ein Ende am 31.05. greift die Karte am letzten Tag im Februar. 0 heißt „am Tag selbst“, eine negative Zahl „so lange danach“.</li>
-<li><strong>Wiederkehrend</strong> (monatlich, vierteljährlich, halbjährlich, jährlich): Wer die Aufgabe erledigt, bekommt den Folgetermin vorgeschlagen, wie bei der Erinnerung am Datumsfeld.</li>
-<li>Eine <strong>Aufgabe</strong> daraus ist eine <strong>Frist</strong> zum Datum der Mappe. Sie erledigt sich selbst, wenn das Datum geändert oder geleert wird. Dieselbe Person bekommt je Mappe, Feld und Datum nur eine Frist, auch neben einer Erinnerung am Datumsfeld.</li>
+<li><strong>Wiederkehrend</strong> (monatlich, vierteljährlich, halbjährlich, jährlich): Wer die Aufgabe erledigt, bekommt den Folgetermin vorgeschlagen.</li>
+<li>Eine <strong>Aufgabe</strong> daraus ist eine <strong>Frist</strong> zum Datum der Mappe. Sie erledigt sich selbst, wenn das Datum geändert oder geleert wird. Dieselbe Person bekommt je Mappe, Feld und Datum nur eine Frist.</li>
+<li>Liegt ein Datum beim <strong>Speichern</strong> einer Mappe schon im Vorlauf, läuft die Automatisierung sofort – ein spät eingetragenes Datum erinnert also trotzdem.</li>
+<li>Damit ein Datumsfeld unter <em>Zu erledigen</em> und im Kalender erscheint, braucht es am Mappentyp den Haken <a href="../mappentypen/#fristen-erinnerungen-an-datumsfeldern">Ist eine Frist</a>.</li>
 <li>War Ablago zur Uhrzeit aus, holt es verpasste Tage nach (bis zu 31 Tage zurück). Eine neu eingeschaltete Automatisierung beginnt heute.</li>
 </ul>
 <p>Die früheren Karten „Datum in N Tagen“ und „Frist erreicht“ sind in <strong>Datum erreicht</strong> aufgegangen. Aus „Datum in N Tagen“ wird beim nächsten Öffnen dieselbe Karte mit Vorlauf in Tagen. Bei „Frist erreicht“ fehlt das Datumsfeld: Die Automatisierung steht rot da, bis du es wählst.</p>
@@ -2738,7 +2818,7 @@
 <h2 id="was-die-dann-karten-tun">Was die Dann-Karten tun<a class="headerlink" href="#was-die-dann-karten-tun" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Feld ändern</strong> setzt nur die gewählten Felder und lässt alle anderen unverändert. Text mit Platzhaltern; bei Datumsfeldern <code>heute</code>, <code>heute+7</code> oder <code>heute-3</code>. Ablago prüft den Wert wie im Formular (Pflichtfelder, Auswahllisten, Archivmodus). In der Historie der Mappe steht „durch Automatisierung ‚…‘“.</li>
-<li><strong>Aufgabe / Benachrichtigung</strong> geht an Personen, an <strong>alle aktiven Mitglieder einer Rolle</strong>, an die <strong>Person in einem Feld</strong> der Mappe oder an <strong>wer die Mappe angelegt hat</strong>. Eine <em>Aufgabe</em> kann ein Fälligkeitsdatum haben; <em>Benachrichtigungen</em> bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.</li>
+<li><strong>Aufgabe / Benachrichtigung</strong> geht an Personen, an <strong>alle aktiven Mitglieder einer Rolle</strong>, an die <strong>Person in einem Feld</strong> der Mappe (optional „sonst wer die Mappe angelegt hat“), an <strong>wer die Mappe angelegt hat</strong> oder an eine <strong>Person aus dem Ereignis</strong> (z. B. den Vertreter bei <em>Abwesenheit gesetzt</em>). Eine <em>Aufgabe</em> kann ein Fälligkeitsdatum haben; <em>Benachrichtigungen</em> bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.</li>
 <li>Aufgaben aus Automatisierungen verhalten sich wie die eingebauten: Ist jemand <strong>abwesend oder deaktiviert</strong>, geht die Aufgabe an seine <strong>Vertretung</strong> (in der Historie steht „weitergegeben wegen Abwesenheit …“). Gibt es keine, bekommen sie die Administratoren – der Lauf bricht nicht ab.</li>
 <li>Eine Aufgabe <strong>erledigt sich selbst</strong>, wenn ihr Anlass wegfällt: bei <strong>Datum erreicht</strong>, wenn das Datum geändert oder geleert wird; bei <strong>Neue Post</strong>, wenn die Post zugeordnet oder erledigt ist; bei <strong>Abwesenheit gesetzt</strong>, wenn die Abwesenheit endet.</li>
 <li><strong>Danach keine weiteren Automatisierungen</strong> beendet die Reihe: Automatisierungen mit höherer Nummer laufen für dieses Ereignis nicht mehr (im Verlauf „Übersprungen durch …“).</li>
@@ -2758,6 +2838,17 @@
 <h2 id="wenn-etwas-nicht-mehr-passt">Wenn etwas nicht mehr passt<a class="headerlink" href="#wenn-etwas-nicht-mehr-passt" title="Permanent link">&para;</a></h2>
 <p>Ablago blockiert deine Arbeit nicht: Mappentypen, Felder und Ansichten lassen sich weiterhin ändern und löschen. Fehlt einer Automatisierung danach etwas (Feld gelöscht, Ansicht weg), wird sie <strong>rot markiert und angehalten</strong> – mit Grund in der Liste und einem Hinweis in der Übersicht. Korrigieren, speichern, wieder einschalten.</p>
 <p>Außerdem hält Ablago eine Automatisierung an, wenn sie <strong>mehr als 30-mal in einer Minute</strong> läuft, und nach einer <a href="../wiederherstellen/">Wiederherstellung</a> alle eingeschalteten – damit eingespielte Daten nicht sofort eine Welle von Aufgaben auslösen. Automatisierungen, die einander auslösen, laufen höchstens drei Ebenen tief.</p>
+<h2 id="aus-paketen">Aus Paketen<a class="headerlink" href="#aus-paketen" title="Permanent link">&para;</a></h2>
+<p>Pakete bringen <strong>vorgefertigte Automatisierungen</strong> mit, zum Beispiel „HU wird bald fällig“ (Paket Fahrzeuge) oder „Kündigung bald fällig“ (Paket Haushalt). Beim Installieren – im Einrichtungsassistenten wie in der Werkbank – listet Ablago sie mit Namen auf: <strong>„Sollen sie gleich eingeschaltet werden?“</strong>, alle vorausgewählt. Was angehakt bleibt, ist nach der Installation eingeschaltet, der Rest aus.</p>
+<ul>
+<li>In der Liste erkennst du sie an der Herkunft <strong>aus Paket …</strong>. Du kannst sie einschalten, anpassen und kopieren.</li>
+<li>Bei einem <strong>Update</strong> des Pakets ersetzt die neue Fassung die alte, solange du sie nicht geändert hast; an/aus bleibt. Eine geänderte bleibt, wie sie ist. Neue Automatisierungen aus dem Update stehen beim Aktualisieren wieder zur Wahl.</li>
+<li>Entfernst du das Paket, gehen seine Automatisierungen mit, wenn sie aus und unverändert sind.</li>
+</ul>
+<h3 id="vertretung">Vertretung<a class="headerlink" href="#vertretung" title="Permanent link">&para;</a></h3>
+<p>Wird für jemanden eine <strong>Abwesenheit mit Vertreter</strong> eingetragen, bekommt der Vertreter eine Aufgabe – das macht die Automatisierung <strong>Vertretung eingetragen</strong> (Wenn <em>Abwesenheit gesetzt</em>, Empfänger <em>Vertreter aus dem Ereignis</em>, Platzhalter <code>{benutzer}</code>, <code>{vertreter}</code>, <code>{von}</code>, <code>{bis}</code>, <code>{zeitraum}</code>). Sie erledigt sich, sobald die Abwesenheit endet oder sich Zeitraum oder Vertreter ändern. Für den bisherigen Vertreter gibt es die Wenn-Karte <strong>Vertretung zurückgezogen</strong> (Abwesenheit beendet, anderer oder kein Vertreter mehr). Beide bringt das Paket <strong>Benachrichtigungen</strong> mit; bei bestehenden Ablagen hat das Update <em>Vertretung eingetragen</em> eingeschaltet übernommen. Nennt das Ereignis keine Person (Abwesenheit ohne Vertreter), passiert nichts – das ist kein Fehler.</p>
+<h3 id="erinnerungen-aus-fruheren-versionen">Erinnerungen aus früheren Versionen<a class="headerlink" href="#erinnerungen-aus-fruheren-versionen" title="Permanent link">&para;</a></h3>
+<p>Bis Version 0.176 stellte man Vorlauf, Empfänger und Text einer Erinnerung direkt am Datumsfeld ein, und die Vertretungs-Aufgabe war fest eingebaut. Beim Update hat Ablago jede dieser Erinnerungen <strong>einmal</strong> als eingeschaltete Automatisierung <em>Erinnerung: Feld (Mappentyp)</em> übernommen – mit gleichem Verhalten. Die Werkbank-Übersicht weist einmal darauf hin (<em>Verstanden</em> blendet den Hinweis aus). Bringt ein Paket später eine eigene Automatisierung für dasselbe Feld mit, ersetzt sie die übernommene, solange du diese nicht geändert hast. So erinnert nie etwas doppelt.</p>
 <h2 id="beispiele">Beispiele<a class="headerlink" href="#beispiele" title="Permanent link">&para;</a></h2>
 <p>Ablago bringt einige <strong>ausgeschaltete Beispiele</strong> mit (Herkunft „von Ablago“): <em>An die Kündigungsfrist erinnern</em>, <em>Kontosperre melden</em> und <em>Neue Dokumente melden</em>. Beispiele lassen sich einschalten und anpassen, aber nicht löschen; mit <strong>Kopieren</strong> machst du eine eigene daraus (die Kopie ist zunächst aus).</p>
 <p><img alt="Editor in dunkler Darstellung" src="../bilder/werkbank-automatisierung-dunkel.png" /></p>

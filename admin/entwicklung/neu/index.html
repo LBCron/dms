@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#neu-in-version-0176" class="md-skip">
+        <a href="#neu-in-version-0178" class="md-skip">
           Zum Inhalt
         </a>
       
@@ -384,15 +384,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01760" class="md-nav__link">
+  <a href="#01781" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.176.0
+        0.178.1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.176.0">
+    <nav class="md-nav" aria-label="0.178.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01780" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.178.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.178.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2504,15 +2532,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#01760" class="md-nav__link">
+  <a href="#01781" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.176.0
+        0.178.1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.176.0">
+    <nav class="md-nav" aria-label="0.178.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#01780" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.178.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.178.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2573,24 +2629,30 @@
   
 
 
-<h1 id="neu-in-version-0176">Neu in Version 0.176<a class="headerlink" href="#neu-in-version-0176" title="Permanent link">&para;</a></h1>
+<h1 id="neu-in-version-0178">Neu in Version 0.178<a class="headerlink" href="#neu-in-version-0178" title="Permanent link">&para;</a></h1>
 <div class="admonition info">
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01760">0.176.0<a class="headerlink" href="#01760" title="Permanent link">&para;</a></h2>
+<h2 id="01781">0.178.1<a class="headerlink" href="#01781" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Alpine-Pakete im Image täglich frisch.</strong> Der Bau holt die Alpine-Pakete jetzt am ersten Bau jedes Tages neu, nicht mehr nur einmal je Kalenderwoche. Bisher blieben Korrekturen, die Alpine in der Wochenmitte veröffentlicht, bis zum nächsten Montag im Build-Cache hängen. So lag im Image <code>ghcr.io/motom001/dms</code> noch libexpat 2.9.0 mit drei bekannten Lücken, obwohl 2.10.0 schon bereitstand (<code>dms-komplett</code> hatte die Korrektur bereits). libexpat liest im Image nur die festen Schriftart-Einstellungen von poppler, keine Dokumente, die von außen kommen.</li>
+<li><strong>Keine Python-Zwischendatei mehr im Repository.</strong> Eine versehentlich eingecheckte <code>.pyc</code>-Datei der Handbuch-Werkzeuge ist entfernt, <code>__pycache__/</code> wird ignoriert.</li>
+</ul>
+<h2 id="01780">0.178.0<a class="headerlink" href="#01780" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Archivfassung: ankreuzen statt verneinen</strong> (#660). In den Einstellungen eines Archivfassungs-Pakets (PDF/A) kreuzt du an, was eine Archivfassung bekommt: <strong>PDFs mit Text</strong>, <strong>gescannte PDFs</strong> und <strong>Fotos und Bilder</strong> – Vorgabe alle. Der Haken „Nur Scans und Bilder“ entfällt.</li>
-<li>Was du abwählst, steht am Dokument ruhig als „ausgelassen – laut Einstellung“. Kreuzt du eine Art später an, holt Ablago die passenden Dokumente nach.</li>
+<li><strong>Paket nur mit Ansichten</strong> (#656): Zeigt eine Ansicht auf einen eigenen Mappentyp, der nicht ins Paket kommt, nennt die Prüfung ihn je Ansicht („muss beim Empfänger schon da sein“) mit <strong>Mit aufnehmen</strong> – der Export geht trotzdem. Der Typ bleibt über seine <strong>Kennung</strong> in der Ansicht statt still herauszufallen.</li>
+<li><strong>Beim Installieren</strong> ordnet Ablago solche Typen dem Mappentyp mit derselben Kennung zu. Gibt es ihn nicht, wird die Ansicht <strong>einzeln übersprungen</strong> (mit ihren Unteransichten) – die Vorschau sagt es vorher, das übrige Paket wird installiert. Fehlt nur einer von mehreren Typen, kommt die Ansicht ohne ihn.</li>
 </ul>
 <h3 id="technik">Technik<a class="headerlink" href="#technik" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Manifest: <code>code.archivfassung.auswahl</code> mit <code>pdf_text</code>, <code>pdf_scan</code>, <code>bilder</code> (je der Schlüssel einer Ja/Nein-Einstellung) ersetzt <code>code.archivfassung.nur_scans</code> – ohne Übergang. Fehlt ein Schlüssel, ist die Art immer an. Das Paket PDF/A stellt in dms-registry #106 um.</li>
+<li>Paketformat: Ansichten können <code>fremde_typen: [{ kennung, name }]</code> tragen; Pakete damit brauchen <code>dms: "&gt;=0.178.0"</code> (dms-registry: <code>pruefen.py</code>).</li>
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.175.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.175.0...main">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.177.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.177.0...main">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
