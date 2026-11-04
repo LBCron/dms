@@ -57,8 +57,13 @@ describe('Ereigniskatalog (#670): Katalog', () => {
     assert.deepEqual(liesCode(basis).code!.mappentypen, ['vertrag']);
     assert.match(f({ mappentypen: [] }), /braucht code.mappentypen/);
     assert.match(f({ ereignisse: ['post.angelegt'] }), /nur mit Mappen-Ereignissen/);
-    assert.match(f({ mappentypen: ['basis:organisation'] }), /fremden Mappentypen gibt es noch nicht/);
     assert.match(f({ rechte: { lesen: ['rechnung'] } }), /auch lesen dürfen/);
+    // #686: fremde Typen und „*“, wenn das Paket sie lesen darf.
+    assert.deepEqual(liesCode({ ...basis, mappentypen: ['basis:organisation'], rechte: { lesen: ['basis:organisation'] } }).fehler, []);
+    assert.match(f({ mappentypen: ['basis:organisation'] }), /auch lesen dürfen/);
+    assert.deepEqual(liesCode({ ...basis, mappentypen: ['*'], rechte: { lesen: ['*'] } }).fehler, []);
+    assert.match(f({ mappentypen: ['*'] }), /geht nur mit code.rechte.lesen: \["\*"\]/);
+    assert.match(f({ mappentypen: ['Vertrag!'] }), /Verweis wie paket:typ/);
   });
 });
 
@@ -130,6 +135,65 @@ describe('Ereigniskatalog (#670): Ausgangskorb und Verteiler', () => {
     assert.equal(beimPaket[0].art, 'mappe.angelegt');
     assert.equal(beimPaket[0].daten.mappe, m.id);
     assert.equal(typeof beimPaket[0].daten.ereignis, 'string');
+  });
+
+  it('#686: fremde Mappentypen – nur, was der Paket-Benutzer lesen darf; Verwehren am Mappentyp wirkt sofort', async () => {
+    const { d, repo, konten, admin, vertrag, notiz, verteile } = await aufbau();
+    const code = { sprache: 'c', ereignisse: ['mappe.angelegt', 'mappe.geaendert'], mappentypen: ['*'], rechte: { lesen: ['*'] } };
+    const p: InstalliertesPaket = {
+      id: 'vertraege', name: 'Vertragsverwaltung', version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'T', github: 't' }, dms: '>=0.166.0',
+      herkunft: { art: 'hochgeladen', von: null, am: '' }, installiert: new Date().toISOString(), installiertVon: null, aktualisiert: null, aktualisiertVon: null,
+      typen: {}, sichten: {}, abhaengigkeiten: {}, code: true, laeufer: liesCode(code).code!, einstellungen: undefined,
+    };
+    await repo.speicherePaket(p);
+    await konten.dienstkonto('vertraege', 'Vertragsverwaltung');
+    const beimPaket = async () => (await spaeter(30 * 60_000, () => repo.faelligeEreignisse(100))).filter((e) => e.paketId === 'vertraege').map((e) => e.daten.mappe);
+    const a = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom' } }, admin.id);
+    const b = await d.legeMappeAn({ typId: notiz.id, werte: { name: 'Zettel' } }, admin.id);
+    await verteile();
+    assert.deepEqual((await beimPaket()).sort(), [a.id, b.id].sort(), 'fremde Typen über „*“');
+    // Abschnitt „Pakete“ am Mappentyp: das Paket liest Vertrag und bekommt Ereignisse dazu.
+    assert.deepEqual(await d.paketeAmTyp(vertrag.id), [{ id: 'vertraege', name: 'Vertragsverwaltung', schreiben: false, verwehrt: false, ereignisse: true }]);
+    await d.setzePaketVerwehrt(vertrag.id, 'vertraege', true, admin.email);
+    assert.equal((await d.paketeAmTyp(vertrag.id))[0].verwehrt, true);
+    const z = await d.zugriff({ id: 'paket:vertraege', rolle: 'mitglied', art: 'dienst', paketId: 'vertraege' });
+    assert.equal(z.typen.has(vertrag.id), false, 'verwehrt: Paket sieht den Typ nicht mehr');
+    assert.equal(z.typen.has(notiz.id), true);
+    const c = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Gas' } }, admin.id);
+    const e = await d.legeMappeAn({ typId: notiz.id, werte: { name: 'Noch ein Zettel' } }, admin.id);
+    await spaeter(60_000, () => d.ereignisse.verteile());
+    const danach = await beimPaket();
+    assert.ok(danach.includes(e.id), 'erlaubter Typ kommt an');
+    assert.ok(!danach.includes(c.id), 'verwehrter Typ: still nichts');
+    // Wieder erlauben wirkt sofort.
+    await d.setzePaketVerwehrt(vertrag.id, 'vertraege', false, admin.email);
+    const f = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Wasser' } }, admin.id);
+    await spaeter(120_000, () => d.ereignisse.verteile());
+    assert.ok((await beimPaket()).includes(f.id));
+    // Ein Paket ohne Leserecht am Typ taucht am Mappentyp nicht auf und lässt sich nicht verwehren.
+    await assert.rejects(() => d.setzePaketVerwehrt(vertrag.id, 'gibtsnicht', true, null), /ohnehin nicht lesen/);
+  });
+
+  it('#686: Regel für die Rolle „Paket“ am Typ – Ereignisse nur zu Mappen, die das Paket lesen darf', async () => {
+    const { d, repo, konten, admin, vertrag, verteile } = await aufbau();
+    const code = { sprache: 'c', ereignisse: ['mappe.angelegt'], mappentypen: ['basis:vertrag'], rechte: { lesen: ['basis:vertrag'] } };
+    const basis: InstalliertesPaket = {
+      id: 'basis', name: 'Basis', version: '1.0.0', beschreibung: '', lizenz: 'Apache-2.0', autor: { name: 'T', github: 't' }, dms: '>=0.1.0',
+      herkunft: { art: 'hochgeladen', von: null, am: '' }, installiert: new Date().toISOString(), installiertVon: null, aktualisiert: null, aktualisiertVon: null,
+      typen: { vertrag: vertrag.id }, sichten: {}, abhaengigkeiten: {}, code: false, einstellungen: undefined,
+    };
+    await repo.speicherePaket(basis);
+    await repo.speicherePaket({ ...basis, id: 'kuendigen', name: 'Kündigen', typen: {}, code: true, laeufer: liesCode(code).code! });
+    await konten.dienstkonto('kuendigen', 'Kündigen');
+    // Regel: Paket darf Verträge mit Name „Geheim“ nicht lesen.
+    const paketRolle = (await d.zugriff({ id: 'x', rolle: 'mitglied', art: 'dienst', paketId: 'kuendigen' })).wer.rollen[0];
+    await d.setzeBerechtigungen(vertrag.id, { grund: { C: true, R: true, U: true, D: true, P: true }, regeln: [{ id: 'r1', name: 'Geheim', wenn: [{ art: 'rolle', rollen: [paketRolle] }, { art: 'feld', bedingung: { art: 'feld', feld: 'name', op: 'gleich', wert: { art: 'fest', wert: 'Geheim' } } }], dann: { R: 'entziehen' }, stopp: false }] }, true);
+    const offen = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom' } }, admin.id);
+    const geheim = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Geheim' } }, admin.id);
+    await verteile();
+    const da = (await spaeter(30 * 60_000, () => repo.faelligeEreignisse(100))).filter((e) => e.paketId === 'kuendigen').map((e) => e.daten.mappe);
+    assert.ok(da.includes(offen.id));
+    assert.ok(!da.includes(geheim.id), 'Mappe, die das Paket nicht lesen darf: kein Ereignis');
   });
 
   it('Frist erreicht: zum Erinnerungszeitpunkt und am Tag selbst je genau einmal', async () => {

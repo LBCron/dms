@@ -522,6 +522,9 @@ export const api = {
   meineRechte: () => anfrage<Array<{ typId: string; name: string; rechte: Record<Recht, RechtStufe> }>>('GET', '/api/konto/rechte'),
   berechtigungen: () => anfrage<BerechtigungEintrag[]>('GET', '/api/werkbank/berechtigungen'),
   berechtigungenSetzen: (typId: string, berechtigungen: Regelwerk, bestaetigt = false) => anfrage<{ typ: Mappentyp; niemand: number }>('PUT', `/api/werkbank/berechtigungen/${typId}`, { berechtigungen, bestaetigt }),
+  // Pakete am Mappentyp (#686).
+  paketeAmTyp: (typId: string) => anfrage<PaketAmTyp[]>('GET', `/api/werkbank/berechtigungen/${typId}/pakete`),
+  paketVerwehren: (typId: string, paketId: string, verwehrt: boolean) => anfrage<PaketAmTyp[]>('PUT', `/api/werkbank/berechtigungen/${typId}/pakete/${encodeURIComponent(paketId)}`, { verwehrt }),
   regelKopieren: (typId: string, regelId: string, ziele: string[]) => anfrage<{ kopiert: number; ausgelassen: number }>('POST', `/api/werkbank/berechtigungen/${typId}/kopieren`, { regelId, ziele }),
   testlauf: (e: { mappeId: string; benutzerId: string; berechtigungen?: Regelwerk }) => anfrage<Testlauf>('POST', '/api/werkbank/berechtigungen/testlauf', e),
   /** Testlauf an einer Sicht (#148), auch mit ungespeicherten Regeln und Elternsicht. */
@@ -1151,3 +1154,6 @@ export interface PostfachAnsicht extends Omit<PostfachEingabe, 'passwort' | 'abs
 export interface SperrEinstellung { konto: { versuche: number; minuten: number }; ip: { versuche: number; minuten: number }; ausnahmen: string[]; mail: boolean; mailKonto: boolean }
 export interface IpSperre { ip: string; seit: string; bis: string | null; grund: string }
 export interface AnmeldeschutzStand { einstellung: SperrEinstellung; gesperrt: IpSperre[]; deineIp: string }
+
+/** Ein Paket mit Code, das Mappen eines Typs lesen dürfte (#686, Abschnitt „Pakete“ im Mappentyp-Editor). */
+export interface PaketAmTyp { id: string; name: string; ereignisse: boolean; schreiben: boolean; verwehrt: boolean }

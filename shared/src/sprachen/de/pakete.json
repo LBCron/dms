@@ -293,5 +293,17 @@
   "ablauf.ausgelassen": "Diese Pakete lassen sich gerade nicht laden und werden übersprungen – die übrigen kannst du trotzdem installieren:",
   "ablauf.ausgelassen.nochmal": "Nochmal versuchen",
   "einstellung.zahl.keine": "– keine Auswahl –",
-  "einstellung.zahl.eigen": "Eigener Wert …"
+  "einstellung.zahl.eigen": "Eigener Wert …",
+  "amtyp.titel": "Pakete",
+  "amtyp.beschreibung": "Pakete mit Code, die Mappen dieses Typs lesen dürfen. Nimmst du den Haken weg, sieht das Paket diesen Mappentyp nicht mehr: Es liest und ändert keine solchen Mappen und bekommt keine Ereignisse dazu. Das wirkt sofort.",
+  "amtyp.neu": "Speichere den Mappentyp zuerst – danach siehst du hier, welche Pakete ihn lesen dürfen.",
+  "amtyp.darf": "„{name}“ darf diesen Mappentyp sehen",
+  "amtyp.was.lesen": "liest",
+  "amtyp.was.schreiben": "liest und ändert",
+  "amtyp.was.ereignisse": "bekommt Ereignisse dazu",
+  "amtyp.kurz_one": "{anzahl} Paket, {verwehrt} verwehrt",
+  "amtyp.kurz_other": "{anzahl} Pakete, {verwehrt} verwehrt",
+  "amtyp.kurz.keine": "keine",
+  "amtyp.gespeichert.an": "„{name}“ sieht diesen Mappentyp wieder.",
+  "amtyp.gespeichert.aus": "„{name}“ sieht diesen Mappentyp nicht mehr."
 }

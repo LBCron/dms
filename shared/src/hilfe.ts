@@ -38,6 +38,7 @@ export const HILFE = {
   'berechtigungen.grund': admin('berechtigungen/', 'Standard', 'standard'),
   'berechtigungen.regeln': admin('berechtigungen/', 'Regeln', 'regeln'),
   'berechtigungen.testlauf': admin('berechtigungen/', 'Testlauf', 'testlauf'),
+  'werkbank.pakete_am_typ': admin('berechtigungen/', 'Pakete am Mappentyp', 'pakete-am-mappentyp'),
   'werkbank.aufgaben': admin('aufgaben/', 'Benachrichtigungen und Aufgaben', 'tagliche-zusammenfassung'),
   'werkbank.favoriten': admin('aufgaben/', 'Favoriten benachrichtigen', 'favoriten-benachrichtigen'),
   'werkbank.betrieb': admin('installation/', 'E-Mail und Adresse', 'e-mail-und-adresse'),

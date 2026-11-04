@@ -1381,6 +1381,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const r = await dienst.setzeBerechtigungen(a.params.typId, b(a).berechtigungen, b(a).bestaetigt === true);
       return ok({ typ: r.typ, niemand: r.niemand });
     } },
+    // Pakete am Mappentyp (#686): welche Pakete Mappen dieses Typs lesen dürften, und einzelnen den Typ verwehren.
+    { methode: 'GET', pfad: '/api/werkbank/berechtigungen/:typId/pakete', zugang: 'admin', handler: async (a) => ok(await dienst.paketeAmTyp(a.params.typId)) },
+    { methode: 'PUT', pfad: '/api/werkbank/berechtigungen/:typId/pakete/:paketId', zugang: 'admin', handler: async (a) => {
+      await dienst.setzePaketVerwehrt(a.params.typId, a.params.paketId, b(a).verwehrt === true, ich(a).email);
+      return ok(await dienst.paketeAmTyp(a.params.typId));
+    } },
     { methode: 'POST', pfad: '/api/werkbank/berechtigungen/:typId/kopieren', zugang: 'admin', handler: async (a) => {
       const r = await dienst.kopiereRegel(a.params.typId, String(b(a).regelId ?? ''), b(a).ziele);
       L.werkbank.info('Regel kopiert', { typ: a.params.typId, regel: String(b(a).regelId ?? ''), kopiert: r.kopiert, ausgelassen: r.ausgelassen, von: ich(a).email });
