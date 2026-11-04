@@ -86,7 +86,7 @@ export class Notfallzugang {
       '',
       link,
       '',
-      'Steht im Link „localhost“, ersetze es durch die Adresse deines NAS, z. B. http://nas:8080.',
+      'Steht im Link „localhost“, ersetze es durch die Adresse deines NAS, z. B. http://nas.home.arpa:8080.',
       'Der Link gilt nur einmal. Diese Datei löscht Ablago nach 15 Minuten selbst.',
       'Benenne den Notfall-Admin danach in der Werkbank um oder deaktiviere ihn.',
       '',

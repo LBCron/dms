@@ -43,7 +43,7 @@ Soll es **sofort** gehen, richtest du zusätzlich einen **Webhook** ein (nächst
 
 Mit einem **Webhook** meldet sich Ablago bei deiner Hausautomatisierung, sobald sich deine Zahlen ändern. Die Meldung enthält **nur die Zahlen** – dieselben wie beim Schlüssel *nur Zähler* –, nie Titel, Absender oder Inhalte.
 
-**Einmal vorab (Administrator):** Unter **Werkbank → Webhooks** gibt ein Administrator die Adresse der Hausautomatisierung als **Ziel** frei, z. B. `http://homey.home.arpa` oder `http://192.168.178.20:1880`. Nur an freigegebene Ziele meldet Ablago. Ohne TLS (`http://`) geht das nur im Heimnetz; sonst braucht es `https://`.
+**Einmal vorab (Administrator):** Unter **Werkbank → Webhooks** gibt ein Administrator die Adresse der Hausautomatisierung als **Ziel** frei, z. B. `http://homey.home.arpa` oder `http://192.168.178.20:1880`. Nur an freigegebene Ziele meldet Ablago. Ohne Verschlüsselung (`http://`) geht das nur im Heimnetz; sonst braucht es `https://`.
 
 **Dann du:**
 

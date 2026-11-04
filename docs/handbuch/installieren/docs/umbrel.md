@@ -30,7 +30,7 @@ Im **Ablago App Store** die App **Ablago** öffnen und **Installieren** wählen.
 --8<-- "assistent-weiter.md"
 
 !!! warning "Gleich nach der Installation einrichten"
-    Bis der Administrator angelegt ist, könnte jeder in deinem Heimnetz die Einrichtung übernehmen.
+    Richte Ablago gleich ein – dann legst du als Erste oder Erster den Administrator an.
 
 !!! info "Keine Umbrel-Anmeldung vor Ablago"
     umbrelOS schaltet vor Ablago **keine** Umbrel-Anmeldung, denn die hat nur der Besitzer des Geräts. Familienmitglieder melden sich mit ihrem eigenen Ablago-Konto an. Auch Links aus E-Mails und die [Schnittstelle](https://help.ablago.app/admin/aktuell/api/) funktionieren so.
@@ -52,7 +52,7 @@ Die Daten liegen unter `~/umbrel/app-data/motom001-dms/data/`:
 ## Sichern
 
 - Unter **Werkbank → [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/)** einen Zeitplan einschalten und das Notfallblatt ausdrucken.
-- Die Sicherungen liegen auf demselben Gerät. Kopiere sie ab und zu an einen anderen Ort, z. B. auf einen USB-Stick oder in einen Cloudspeicher.
+- Die Sicherungen liegen auf demselben Gerät. Kopiere sie ab und zu an einen anderen Ort, z. B. auf einen USB-Stick oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
 - Hast du in umbrelOS **Backups** eingeschaltet, sichert umbrelOS die App-Daten zusätzlich mit.
 
 ## Aktualisieren

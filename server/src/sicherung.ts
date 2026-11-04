@@ -289,7 +289,7 @@ export class Sicherung {
     const neu = bereinigePlan({ ...(e as object), aktivSeit: undefined }, alt);
     neu.aktivSeit = neu.aktiv ? (alt.aktiv ? alt.aktivSeit : this.jetzt().toISOString()) : null;
     if (neu.aktiv && !alt.aktiv && !(await this.notfallblatt()).aktuell) {
-      throw new Fachfehler(409, 'Die automatische Sicherung lässt sich erst einschalten, wenn du das Notfallblatt heruntergeladen hast – ohne den Schlüssel darauf ist eine Sicherung wertlos.');
+      throw new Fachfehler(409, 'Die automatische Sicherung lässt sich erst einschalten, wenn du das Notfallblatt heruntergeladen hast – denn nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen.');
     }
     await this.q.einstellungen.schreibe('sicherung_plan', neu);
     log.info('Zeitplan der Sicherung geändert', { von, ...neu });

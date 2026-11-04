@@ -33,7 +33,7 @@ In der App-Liste **Ablago** öffnen und **Installieren** wählen. CasaOS lädt A
 --8<-- "assistent-weiter.md"
 
 !!! warning "Gleich nach der Installation einrichten"
-    Bis der Administrator angelegt ist, könnte jeder in deinem Heimnetz die Einrichtung übernehmen.
+    Richte Ablago gleich ein – dann legst du als Erste oder Erster den Administrator an.
 
 ## Daten
 
@@ -52,14 +52,14 @@ Die Daten liegen unter `/DATA/AppData/dms/`:
 ## Sichern
 
 - Unter **Werkbank → [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/)** einen Zeitplan einschalten und das Notfallblatt ausdrucken.
-- Die Sicherungen liegen auf demselben Gerät. Kopiere den Ordner `sicherung` ab und zu an einen anderen Ort, z. B. auf eine USB-Platte oder in einen Cloudspeicher.
+- Die Sicherungen liegen auf demselben Gerät. Kopiere den Ordner `sicherung` ab und zu an einen anderen Ort, z. B. auf eine USB-Platte oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
 
 ## Aktualisieren
 
 Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Technik**.
 
 !!! warning "Noch mit zwei Containern installiert?"
-    Wer Ablago vor Version 0.73.10 aus dem Store installiert hat, hat zwei Container: Ablago und Datenbank. Nach dem Update auf den einen Container startet Ablago mit einer **leeren** Datenbank. So kommst du wieder an deine Daten:
+    Wer Ablago vor Version 0.73.10 aus dem Store installiert hat, hat zwei Container: Ablago und Datenbank. Deine Daten sind noch da. Nach dem Update auf den einen Container startet Ablago zunächst mit einer leeren Datenbank – so holst du sie zurück:
 
     1. **Vor** dem Update unter **Werkbank → Sicherung** eine Sicherung erstellen (oder die letzte automatische nehmen).
     2. Update im App Store einspielen.

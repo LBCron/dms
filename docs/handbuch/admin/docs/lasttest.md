@@ -40,7 +40,7 @@ Du brauchst **keine Konsole, keine Ordner und keine Befehle** – nur einen neue
 
     Ohne verbundene Ordner läuft alles im Container und verschwindet mit ihm – deine Ordner auf dem NAS bleiben unberührt.
 
-2. **Seite öffnen** – im Browser `http://<Adresse des NAS>:8099`, z. B. `http://nas.local:8099`. Statt der Anmeldung siehst du die Seite **Lasttest**: welche Stufe läuft, was gerade passiert (Test-DMS einrichten, Demo-Mappen anlegen, messen) und die **geschätzte Restdauer**. Die Seite geht auch am Handy.
+2. **Seite öffnen** – im Browser `http://<Adresse des NAS>:8099`, z. B. `http://nas.home.arpa:8099`. Statt der Anmeldung siehst du die Seite **Lasttest**: welche Stufe läuft, was gerade passiert (Test-DMS einrichten, Demo-Mappen anlegen, messen) und die **geschätzte Restdauer**. Die Seite geht auch am Handy.
 
     ![Seite Lasttest im Browser](bilder/lasttest-seite.png)
 

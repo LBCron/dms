@@ -39,7 +39,7 @@ Danach kannst du freiwillig messen, [wie schnell dein Pi ist](#wie-schnell-ist-m
 | **PC oder Mac** | den hast du schon | Damit schreibst du das System auf die SSD und richtest später alles im Browser ein. |
 
 !!! tip "Warum eine SSD statt einer SD-Karte?"
-    Ablago hat eine **Datenbank**. Sie schreibt ständig viele kleine Änderungen. **SD-Karten verschleißen** dabei und gehen oft **ohne Vorwarnung** kaputt – mit allen Dokumenten darauf. Eine SSD ist für so etwas gebaut, hält viele Jahre und ist **um ein Vielfaches schneller**: Suche, Vorschaubilder, Texterkennung und Sicherungen gehen spürbar flotter. Am einfachsten ist eine SSD mit USB-Anschluss: Du schreibst das System direkt darauf und brauchst dann gar keine SD-Karte.
+    Ablago hat eine **Datenbank**. Sie schreibt ständig viele kleine Änderungen. **SD-Karten nutzen sich** dabei ab. Eine SSD ist für so etwas gebaut, hält viele Jahre und ist **um ein Vielfaches schneller**: Suche, Vorschaubilder, Texterkennung und Sicherungen gehen spürbar flotter. Am einfachsten ist eine SSD mit USB-Anschluss: Du schreibst das System direkt darauf und brauchst dann gar keine SD-Karte.
 
 **Was nicht geht:** Raspberry Pi 3, Pi 2, Pi 1 und Pi Zero haben zu wenig Arbeitsspeicher. Ein **32-Bit-System** geht auch auf einem Pi 4 oder 5 nicht – Ablago gibt es nur für 64 Bit.
 

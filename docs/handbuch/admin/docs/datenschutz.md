@@ -197,7 +197,7 @@ Die fertige Auskunft schickst du direkt aus Ablago – unter **Bereitliegende Au
 | **Nachweis** | Jeder Abruf mit Zeitpunkt, „abgerufen am …“, Benachrichtigung | „per E-Mail gesendet an … am …“ |
 | **Zweiter Weg** | Abrufcode per Brief, Telefon oder SMS | Passwort per Telefon, SMS oder Brief |
 
-Vorgeschlagen ist der Abruf-Link, wenn die [Adresse von Ablago](installation.md#e-mail-und-adresse) nach Internet aussieht – sonst (z. B. `http://192.168.…`, `localhost`, `nas.local`) die E-Mail.
+Vorgeschlagen ist der Abruf-Link, wenn die [Adresse von Ablago](installation.md#e-mail-und-adresse) nach Internet aussieht – sonst (z. B. `http://192.168.…`, `localhost`, `nas.home.arpa`) die E-Mail.
 
 ### Weg 1: per E-Mail
 

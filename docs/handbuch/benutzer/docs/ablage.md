@@ -98,11 +98,11 @@ Das Suchformular steht **oben in der Mitte**, die Treffer darunter; links bleibe
 
 ![Erweiterte Suche: Formular oben in der Mitte](bilder/erweiterte-suche.png)
 
-**Ein Beispiel:** Du suchst eine Rechnung über einen Backofen. Sie ist zwischen März und November letzten Jahres gekommen, wahrscheinlich von MediaMarkt, Saturn oder Otto.
+**Ein Beispiel:** Du suchst eine Rechnung über einen Backofen. Sie ist zwischen März und November letzten Jahres gekommen, wahrscheinlich von Küchenwelt Musterstadt, Elektro Sommer oder dem Versand Nordlicht.
 
 1. Tippe unter **Mappentypen** „Rech“ und wähle „Rechnung“.
 2. Wähle **+ Bedingung** → „Rechnungsdatum“ und trage 01.03. bis 30.11. des letzten Jahres ein.
-3. Wähle **+ Bedingung** → „Vertragspartner“ (bzw. Aussteller) und dort MediaMarkt, Saturn und Otto.
+3. Wähle **+ Bedingung** → „Vertragspartner“ (bzw. Aussteller) und dort Küchenwelt Musterstadt, Elektro Sommer und Versand Nordlicht.
 4. Gib unter **Volltext** „Backofen“ ein.
 5. Klicke **Suchen**.
 

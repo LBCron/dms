@@ -288,7 +288,7 @@ function Zeitplan({ plan, notfallblatt, gespeichert }: { plan: SicherungsPlan; n
     <form className="blatt" id="zeitplan" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
       <h2 className="h3">Zeitplan und Aufbewahrung <Hilfe ort="sicherung.zeitplan" /></h2>
       <label className="haken"><input type="checkbox" checked={p.aktiv} disabled={!p.aktiv && !notfallblatt} onChange={(e) => setP({ ...p, aktiv: e.target.checked })} /><span>Automatisch sichern</span></label>
-      {!notfallblatt && !p.aktiv && <p className="leise klein">Erst einschaltbar, wenn du das Notfallblatt heruntergeladen hast – ohne den Schlüssel darauf ist eine Sicherung wertlos. <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={() => { setTimeout(gespeichert, 1500); setTimeout(meldeSicherung, 1500); }}>Notfallblatt herunterladen</a></p>}
+      {!notfallblatt && !p.aktiv && <p className="leise klein">Erst einschaltbar, wenn du das Notfallblatt heruntergeladen hast – denn nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen. <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={() => { setTimeout(gespeichert, 1500); setTimeout(meldeSicherung, 1500); }}>Notfallblatt herunterladen</a></p>}
       <div className="raster">
         <label className="eigenschaft"><span>Häufigkeit</span>
           <select value={p.haeufigkeit} onChange={(e) => setP({ ...p, haeufigkeit: e.target.value as SicherungsPlan['haeufigkeit'] })}><option value="taeglich">täglich</option><option value="woechentlich">wöchentlich</option></select></label>
