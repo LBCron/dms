@@ -59,11 +59,6 @@ markdown_extensions:
   - pymdownx.keys
 
 extra:
-  # Versionsauswahl (#111): versions.json wie bei „mike“, „aktuell“ = neuestes Release
-  version:
-    provider: mike
-    default: aktuell
-    alias: true
   social:
     - icon: fontawesome/solid/heart
       link: https://github.com/sponsors/motom001

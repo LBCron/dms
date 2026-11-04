@@ -50,15 +50,7 @@ Was sich in welcher Version geändert hat, steht unter [Neu in dieser Version](n
 
 ### Das Handbuch zu deiner Version
 
-Zu jeder Version gibt es ein eigenes Handbuch – je Minor-Version, z. B. 0.22 (Korrekturen wie 0.22.1 aktualisieren es):
-
-| Adresse | Inhalt |
-| --- | --- |
-| `…/dms/admin/aktuell/` | neueste Version (Standard) |
-| `…/dms/admin/v0.22/` | Version 0.22 |
-| `…/dms/admin/entwicklung/` | Stand von `main`, noch nicht veröffentlicht |
-
-Oben im Handbuch wählst du die Version; liest du eine ältere, steht das darüber. Am einfachsten kommst du **aus Ablago** hin: Die Hilfe im Menü, der Link in der Werkbank und jedes **?** öffnen das Handbuch zur installierten Version. Ältere Adressen ohne Version (z. B. `…/dms/admin/sicherung/`) führen zur neuesten.
+Jede Installation bringt das Handbuch ihrer Version mit – auch ohne Internet. Die Hilfe im Menü, der Link in der Werkbank und jedes **?** öffnen es. Online unter `https://help.ablago.app/admin/aktuell/` steht immer das Handbuch zur neuesten Version. Ältere Adressen mit einer Versionsnummer (z. B. `…/admin/v0.22/sicherung/`) führen dort auf dieselbe Seite.
 
 !!! tip "Das ? neben Überschriften"
     In der Werkbank steht an jedem Bereich und an vielen Zwischenüberschriften ein kleines **?**. Es öffnet in einem neuen Tab genau den passenden Abschnitt dieses Handbuchs.

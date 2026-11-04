@@ -1,11 +1,11 @@
 name: Handbuch
 
-# Baut Benutzer- und Administratorhandbuch mit aktuellen Screenshots und legt sie auf dem
-# Branch gh-pages ab – je Version ein eigener Ordner (#111):
-#   push auf main         → entwicklung/
-#   Release (image.yml)    → vX.Y/ und, wenn es die neueste ist, aktuell/
-#   von Hand               → wahlweise eine Version (z. B. v0.22) oder entwicklung
-# Pull Requests bauen nur und legen die Screenshots als Artefakt ab.
+# Baut alle vier Handbücher mit aktuellen Screenshots. Online gibt es nur noch „aktuell“ (#846),
+# veröffentlicht über GitHub Actions (Pages-Quelle „GitHub Actions“, kein Zweig gh-pages):
+#   Release (image.yml)    → bauen und veröffentlichen
+#   von Hand auf main      → bauen und veröffentlichen (z. B. nach einer Störung)
+#   push auf main, PRs     → nur bauen und prüfen; PRs legen die Screenshots als Artefakt ab.
+# Ältere Fassungen bringt jede Installation unter /hilfe/ mit (#219).
 
 on:
   push:
@@ -14,13 +14,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version des Handbuchs, z. B. v0.22 (leer = entwicklung)'
+        description: 'Version für „Neu in dieser Version“, z. B. v0.22 (leer = entwicklung)'
         required: false
         type: string
   workflow_call:
     inputs:
       version:
-        description: 'Version des Handbuchs, z. B. v0.22'
+        description: 'Version für „Neu in dieser Version“, z. B. v0.22'
         required: true
         type: string
       ref:
@@ -177,7 +177,7 @@ jobs:
           rm -f docs/handbuch/benutzer/docs/bilder/openapi.json
           # Alle Handbücher (#179, #180): Benutzer, Administrator, Installieren, Entwickler.
           for h in benutzer admin installieren entwickler; do
-            SITE_URL="https://help.ablago.app/$h/$ZIEL/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.yml" -d "$GITHUB_WORKSPACE/site/$h"
+            SITE_URL="https://help.ablago.app/$h/aktuell/" mkdocs build --strict -f "docs/handbuch/$h/mkdocs.yml" -d "$GITHUB_WORKSPACE/site/$h"
           done
 
       # Weiche Zeitangaben (#303): Liste zum Durchsehen in der Zusammenfassung des Laufs, bricht nie ab.
@@ -214,46 +214,35 @@ jobs:
           path: site
           retention-days: 3
 
-  # Auf dem Branch gh-pages ablegen. Immer nur ein Lauf zur Zeit, damit nichts verloren geht.
+  # Über GitHub Actions veröffentlichen (#846). Immer nur ein Lauf zur Zeit; ein neuerer wartet.
   veroeffentlichen:
     needs: bauen
+    # Aufgerufen aus image.yml (inputs.ref gesetzt) oder von Hand auf main – nie bei PRs oder einem einfachen Push.
+    if: github.event_name != 'pull_request' && (inputs.ref != '' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     permissions:
-      contents: write
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || inputs.version != '')
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     concurrency:
-      group: gh-pages
+      group: pages
       cancel-in-progress: false
-    env:
-      ZIEL: ${{ inputs.version || 'entwicklung' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.bereitstellen.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: quelle
+          persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: handbuch
           path: gebaut
-      - name: Auf gh-pages ablegen
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for versuch in 1 2 3; do
-            rm -rf pages
-            if git ls-remote --exit-code --heads "$url" gh-pages >/dev/null; then
-              git clone --quiet --depth 1 --branch gh-pages "$url" pages
-            else
-              git init --quiet -b gh-pages pages && git -C pages remote add origin "$url"
-            fi
-            python3 quelle/docs/handbuch/werkzeuge/veroeffentlichen.py pages gebaut "$ZIEL" quelle/docs/handbuch/start/index.html
-            git -C pages add -A
-            if git -C pages diff --cached --quiet; then echo "Nichts geändert."; exit 0; fi
-            git -C pages commit --quiet -m "Handbuch $ZIEL (${{ inputs.ref || github.sha }})"
-            if git -C pages push --quiet origin gh-pages; then exit 0; fi
-            echo "Push abgelehnt – neuer Versuch"; sleep 5
-          done
-          exit 1
+      - name: Seite zusammenstellen
+        run: python3 quelle/docs/handbuch/werkzeuge/veroeffentlichen.py seite gebaut quelle/docs/handbuch/start/index.html
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: seite
+      - id: bereitstellen
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

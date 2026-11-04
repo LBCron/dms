@@ -1,41 +1,28 @@
 #!/usr/bin/env python3
 """
-Handbuch je Version (#111): legt ein gebautes Handbuch auf dem Branch gh-pages ab.
+Handbuch online (#846): stellt aus den gebauten Handbüchern die Seite für GitHub Pages zusammen.
 
-    python3 veroeffentlichen.py <gh-pages-Ordner> <gebaut> <ziel> <startseite.html>
+    python3 veroeffentlichen.py <ausgabe> <gebaut> <startseite.html>
 
-  <gebaut>   enthält benutzer/ und admin/ (mkdocs build)
-  <ziel>     v0.22 (Release, je Minor-Version) oder entwicklung (Stand von main)
+  <gebaut>   enthält benutzer/, admin/, installieren/ und entwickler/ (mkdocs build)
+  <ausgabe>  wird neu angelegt und mit actions/upload-pages-artifact hochgeladen
 
-Aufbau (wie bei „mike“, damit die Versionsauswahl von Material for MkDocs funktioniert):
+Online gibt es nur noch „aktuell“. Ältere Fassungen bringt jede Installation unter /hilfe/ mit
+(#219), und aus jedem Git-Tag lassen sie sich neu bauen. Aufbau:
 
-  /index.html                 Startseite
-  /404.html                   leitet alte Adressen und unbekannte Versionen auf „aktuell“
-  /benutzer/versions.json     Versionen für die Auswahl; „aktuell“ ist ein Alias der neuesten
-  /benutzer/index.html        → aktuell/ (oder entwicklung/, solange es kein Release gibt)
-  /benutzer/v0.22/  /benutzer/aktuell/  /benutzer/entwicklung/
-  /admin/…, /installieren/…, /entwickler/…   genauso (#179, #180)
+  /index.html                 Startseite mit Logo und Favicons
+  /404.html                   leitet alte Adressen (v0.xx, entwicklung, ohne Ordner) auf „aktuell“
+  /benutzer/index.html        → aktuell/
+  /benutzer/aktuell/          …, ebenso admin/, installieren/, entwickler/
+
+Die eigene Adresse help.ablago.app steht in den Pages-Einstellungen; eine Datei CNAME
+braucht die Veröffentlichung über Actions nicht.
 """
-import json, re, shutil, sys
+import json, shutil, sys
 from pathlib import Path
 
-RELEASE = re.compile(r'^v(\d+)\.(\d+)$')
 HANDBUECHER = ('benutzer', 'admin', 'installieren', 'entwickler')
-# Eigene Adresse (#689): GitHub Pages liest sie aus CNAME; bei jeder Veröffentlichung neu schreiben,
-# damit sie auch bei versionierten Fassungen nicht verloren geht.
-ADRESSE = 'help.ablago.app'
-
-def titel(v: str) -> str:
-    return v[1:] if RELEASE.match(v) else 'Entwicklung (main)'
-
-def schluessel(v: str):
-    m = RELEASE.match(v)
-    return (1, int(m.group(1)), int(m.group(2))) if m else (0, 0, 0)
-
-def ersetze(quelle: Path, ziel: Path):
-    if ziel.exists():
-        shutil.rmtree(ziel)
-    shutil.copytree(quelle, ziel)
+ORDNER = 'aktuell'
 
 UMLEITUNG = """<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><title>Weiter …</title>
@@ -48,64 +35,54 @@ UMLEITUNG = """<!doctype html>
 NICHT_GEFUNDEN = """<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><title>Ablago – Handbuch</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:15vh auto;padding:0 16px;color:#1c2328}a{color:#00796b}</style>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:15vh auto;padding:0 16px;color:#141A22}a{color:#1F4E79}</style>
 <script>
-// Alte Adressen (/benutzer/mappen/) und unbekannte Versionen (/admin/v0.9/…) auf die
-// passende Seite der neuesten Version umleiten (#111).
+// Alte Adressen (#846): /admin/v0.22/sicherung/, /admin/entwicklung/sicherung/ und /admin/sicherung/
+// führen auf /admin/aktuell/sicherung/ – gibt es die Seite dort nicht, auf die Startseite des Handbuchs.
 (async () => {
   const m = location.pathname.match(/^(.*?\\/)(benutzer|admin|installieren|entwickler)\\/(.*)$/);
   if (!m) return;
   const [, basis, h, rest] = m;
-  let versionen = [];
-  try { versionen = await (await fetch(basis + h + '/versions.json')).json(); } catch { return; }
-  const bekannt = new Set(versionen.flatMap((v) => [v.version, ...(v.aliases || [])]));
-  const standard = bekannt.has('aktuell') ? 'aktuell' : (versionen[0] && versionen[0].version);
-  if (!standard) return;
   const teile = rest.split('/');
-  let ziel;
-  if (bekannt.has(teile[0])) ziel = teile[0] + '/';                          // Seite fehlt in dieser Version
-  else if (/^v\\d+\\.\\d+$/.test(teile[0])) ziel = standard + '/' + teile.slice(1).join('/'); // Version gibt es nicht
-  else ziel = standard + '/' + rest;                                       // alte Adresse ohne Version
-  if (ziel === rest) return;
-  location.replace(basis + h + '/' + ziel + location.hash);
+  if (teile[0] === 'aktuell') {
+    if (teile.slice(1).join('') !== '') location.replace(basis + h + '/aktuell/');
+    return;
+  }
+  const seite = /^v\\d+\\.\\d+$/.test(teile[0]) || teile[0] === 'entwicklung' ? teile.slice(1).join('/') : rest;
+  const ziel = basis + h + '/aktuell/' + seite;
+  let da = false;
+  try { da = (await fetch(ziel, { method: 'HEAD' })).ok; } catch { /* offline: Startseite */ }
+  location.replace((da ? ziel : basis + h + '/aktuell/') + (da ? location.hash : ''));
 })();
 </script></head>
-<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/">allen Handbüchern</a>: <a href="/installieren/">Wie komme ich an ein DMS?</a>, <a href="/benutzer/">Benutzerhandbuch</a>, <a href="/admin/">Administratorhandbuch</a>, <a href="/entwickler/">Entwicklerhandbuch</a>.</p></body></html>
+<body><h1>Seite nicht gefunden</h1><p>Weiter zu <a href="/">allen Handbüchern</a>: <a href="/installieren/">Wie komme ich an Ablago?</a>, <a href="/benutzer/">Benutzerhandbuch</a>, <a href="/admin/">Administratorhandbuch</a>, <a href="/entwickler/">Entwicklerhandbuch</a>.</p></body></html>
 """
 
+
 def main():
-    pages, gebaut, ziel, start = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], Path(sys.argv[4])
-    if ziel != 'entwicklung' and not RELEASE.match(ziel):
-        sys.exit(f'Unbekanntes Ziel {ziel!r}: erwartet vX.Y oder entwicklung')
+    if len(sys.argv) != 4:
+        sys.exit(__doc__)
+    ausgabe, gebaut, start = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+    if ausgabe.exists():
+        shutil.rmtree(ausgabe)
+    ausgabe.mkdir(parents=True)
     for h in HANDBUECHER:
         if not (gebaut / h).is_dir():
-            continue  # ältere Stände bauen nicht alle Handbücher
-        basis = pages / h
-        basis.mkdir(parents=True, exist_ok=True)
-        datei = basis / 'versions.json'
-        versionen = json.loads(datei.read_text()) if datei.exists() else []
-        versionen = [v for v in versionen if v['version'] != ziel and (basis / v['version']).is_dir()]
-        ersetze(gebaut / h, basis / ziel)
-        versionen.append({'version': ziel, 'title': titel(ziel), 'aliases': []})
-        releases = [v['version'] for v in versionen if RELEASE.match(v['version'])]
-        neueste = max(releases, key=schluessel) if releases else None
-        if neueste == ziel:
-            ersetze(gebaut / h, basis / 'aktuell')
-        for v in versionen:
-            v['aliases'] = ['aktuell'] if v['version'] == neueste else []
-            v['title'] = titel(v['version'])
-        versionen.sort(key=lambda v: schluessel(v['version']), reverse=True)
-        datei.write_text(json.dumps(versionen, ensure_ascii=False, indent=2) + '\n')
-        weiter = 'aktuell/' if neueste else 'entwicklung/'
-        (basis / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
-    shutil.copy(start, pages / 'index.html')
-    for f in start.parent.iterdir():  # Logo und Favicon der Startseite (#689)
+            sys.exit(f'Handbuch {h} fehlt in {gebaut}')
+        shutil.copytree(gebaut / h, ausgabe / h / ORDNER)
+        weiter = f'{ORDNER}/'
+        (ausgabe / h / 'index.html').write_text(UMLEITUNG.format(ziel=weiter, ziel_js=json.dumps(weiter)))
+    shutil.copy(start, ausgabe / 'index.html')
+    for f in start.parent.iterdir():  # Logo und Favicons der Startseite (#689)
         if f.is_file() and f.name != 'index.html':
-            shutil.copy(f, pages / f.name)
-    (pages / '404.html').write_text(NICHT_GEFUNDEN)
-    (pages / '.nojekyll').write_text('')
-    (pages / 'CNAME').write_text(ADRESSE + '\n')
-    print(f'Handbuch „{ziel}“ abgelegt in {pages}')
+            shutil.copy(f, ausgabe / f.name)
+    (ausgabe / '404.html').write_text(NICHT_GEFUNDEN)
+    (ausgabe / '.nojekyll').write_text('')
+    groesse = sum(f.stat().st_size for f in ausgabe.rglob('*') if f.is_file())
+    print(f'Handbuch „{ORDNER}“ zusammengestellt in {ausgabe}: {groesse / 2**20:.0f} MB')
+    if groesse > 900 * 2**20:  # GitHub Pages: höchstens 1 GB je Seite
+        sys.exit('Zu groß für GitHub Pages (höchstens 1 GB)')
+
 
 if __name__ == '__main__':
     main()
