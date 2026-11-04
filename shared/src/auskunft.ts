@@ -259,7 +259,7 @@ export function linkStatus(l: Pick<AuskunftLink, 'ablauf' | 'maxAbrufe' | 'abruf
 }
 
 /** Eingaben für einen neuen Abruf-Link prüfen. */
-export function liesLinkEingabe(v: unknown): { tage: number; abrufe: number; code: string | null; an: string; senden: boolean; fehler: string[] } {
+export function liesLinkEingabe(v: unknown): { tage: number; abrufe: number; code: string | null; codeWieEingegeben: string | null; an: string; senden: boolean; fehler: string[] } {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
   const fehler: string[] = [];
   const zahl = (x: unknown, std: number) => (x === undefined || x === null || x === '' ? std : Math.round(Number(x)));
@@ -270,7 +270,9 @@ export function liesLinkEingabe(v: unknown): { tage: number; abrufe: number; cod
   const eigen = o.code === undefined || o.code === null || o.code === '' ? null : normiereCode(o.code);
   if (eigen !== null && eigen.length < CODE_EIGEN_MIN) fehler.push(`Ein eigener Abrufcode braucht mindestens ${CODE_EIGEN_MIN} Zeichen (ohne Leerzeichen und Bindestriche).`);
   const an = typeof o.an === 'string' ? o.an.trim().slice(0, 320) : '';
-  return { tage, abrufe, code: eigen, an, senden: o.senden === true, fehler };
+  // Ein eigener Code (z. B. eine Kundennummer) wird so angezeigt, wie er eingegeben wurde (#666); geprüft wird normiert.
+  const codeWieEingegeben = eigen === null ? null : String(o.code).trim().slice(0, 64);
+  return { tage, abrufe, code: eigen, codeWieEingegeben, an, senden: o.senden === true, fehler };
 }
 
 /**

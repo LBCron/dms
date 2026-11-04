@@ -21,6 +21,7 @@
   "abruf.einleitung": "Du hast eine Auskunft nach Art. 15 DSGVO über die hier gespeicherten Daten angefordert. Zur Sicherheit gib bitte deinen Abrufcode ein.",
   "abruf.code.herkunft": "Den Code hast du getrennt von diesem Link bekommen – zum Beispiel per Brief, Telefon oder SMS.",
   "abruf.code": "Abrufcode",
+  "abruf.code.schreibweise": "Groß- und Kleinschreibung, Leerzeichen und Bindestriche spielen keine Rolle – „KD-12345“ und „kd12345“ gelten als gleich.",
   "abruf.knopf": "Auskunft herunterladen",
   "abruf.knopf.laeuft": "Prüfe …",
   "abruf.download": "Der Download startet ({groesse}). Speichere die ZIP-Datei an einem sicheren Ort.",
