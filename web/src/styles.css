@@ -832,6 +832,11 @@ a.person:hover, a.person:focus-visible { text-decoration: underline; }
 .gruppenwahl { display: none; }
 .wbgruppe { display: flex; flex-direction: column; gap: 2px; }
 .wbgruppe + .wbgruppe { margin-top: 10px; }
+.werkbanksuche { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+.wbtreffer { display: flex; flex-direction: column; }
+.wbtreffer > .leise { padding-left: 10px; margin-top: -2px; }
+.teilkopf { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--linie, #ddd); }
+.teilkopf h2 { margin: 0 0 6px; }
 .gruppentitel { margin: 4px 10px 2px; font-size: calc(11px * var(--skala, 1)); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--leise); }
 .sicht.ausgeblendet .nm { opacity: .65; font-style: italic; }
 .ausgeblendet-fuss { margin: 12px 10px 0; }

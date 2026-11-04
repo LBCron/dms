@@ -20,7 +20,7 @@ export const VORLAGEN: Record<Vorlage, { name: string; text: string }> = {
 };
 
 /**
- * Gruppen der Leiste (#68), nach Aufgaben statt nach Technik (#354): höchstens sechs, je etwa 7 ± 2
+ * Gruppen der Leiste (#68), nach Aufgaben statt nach Technik (#354, neu geordnet #717/#725): höchstens sechs, je etwa 7 ± 2
  * Bereiche. Die Kennung der Gruppe wird nirgends gespeichert – gespeichert sind nur Bereiche.
  */
 const GRUPPENFOLGE = ['ablage', 'benutzer', 'post', 'sichern', 'einstellungen', 'wartung'] as const;
@@ -53,42 +53,44 @@ type Eintrag = { pfad: string; gruppe: Gruppe; in: readonly Exclude<Vorlage, 'al
  * Name und „wann“ kommen aus der Sprachdatei (`werkbank.bereich.<pfad>.name` / `.wann`).
  */
 const EINTRAEGE: Eintrag[] = [
+  // Ablage aufbauen (#717): erst Fertiges, dann Feinarbeit, zum Schluss, was auf allem aufbaut.
+  { pfad: 'pakete', gruppe: 'ablage', in: H },
   { pfad: 'typen', gruppe: 'ablage', in: H },
   { pfad: 'sichten', gruppe: 'ablage', in: H },
   { pfad: 'nummernkreise', gruppe: 'ablage', in: O },
-  { pfad: 'stempel', gruppe: 'ablage', in: H },
   // Automatisierungen (#675): für Betriebe sichtbar, im Haushalt nur im Expertenmodus.
   { pfad: 'automatisierungen', gruppe: 'ablage', in: O, experte: ['haushalt'] },
-  { pfad: 'pakete', gruppe: 'ablage', in: H },
-  // Gleichbedeutende Wörter (#356): für Betriebe sichtbar, im Haushalt nur im Expertenmodus.
-  { pfad: 'suche', gruppe: 'ablage', in: O, experte: ['haushalt'] },
-  { pfad: 'darfweg', gruppe: 'ablage', in: O },
   { pfad: 'benutzer', gruppe: 'benutzer', in: H },
   { pfad: 'verschluesselung', gruppe: 'benutzer', in: H },
   { pfad: 'datenschutz', gruppe: 'benutzer', in: O },
+  // „Aufbewahrung abgelaufen“ (#725, früher „Darf weg“) und Stempel (#717) regeln, was die Ablage verlässt.
+  { pfad: 'aufbewahrung', gruppe: 'benutzer', in: O },
+  { pfad: 'stempel', gruppe: 'benutzer', in: H },
   { pfad: 'postfaecher', gruppe: 'post', in: O },
   { pfad: 'eingangsordner', gruppe: 'post', in: O },
   { pfad: 'webdav', gruppe: 'post', in: H },
   // Webhooks (#627): bei den anderen Anbindungen für Programme (Laufwerk); meldet neue Post nach außen.
   { pfad: 'webhooks', gruppe: 'post', in: H },
-  { pfad: 'texterkennung', gruppe: 'post', in: O },
+  // Suche und Volltext (#725): Texterkennung samt Unscharfer Suche und Gleichbedeutenden Wörtern (früher „Suche“,
+  // im Haushalt nur im Expertenmodus – zusammengelegt erbt der Bereich die weiteste Sichtbarkeit).
+  { pfad: 'texterkennung', gruppe: 'post', in: O, experte: ['haushalt'] },
+  // Sicherung mit Wiederherstellen als Abschnitt (#725).
   { pfad: 'sicherung', gruppe: 'sichern', in: H },
-  { pfad: 'wiederherstellung', gruppe: 'sichern', in: H },
   { pfad: 'vollexport', gruppe: 'sichern', in: H },
   { pfad: 'papierkorb', gruppe: 'sichern', in: H },
   { pfad: 'betrieb', gruppe: 'einstellungen', in: H },
-  { pfad: 'aufgaben', gruppe: 'einstellungen', in: H },
   // Region (#726): Land, Bundesland, Zeitzone an einer Stelle.
   { pfad: 'region', gruppe: 'einstellungen', in: H },
+  { pfad: 'aufgaben', gruppe: 'einstellungen', in: H },
   { pfad: 'anmeldeschutz', gruppe: 'einstellungen', in: O },
   { pfad: 'designs', gruppe: 'einstellungen', in: O },
   { pfad: 'anbindung', gruppe: 'einstellungen', in: [] },
-  { pfad: 'technik', gruppe: 'einstellungen', in: H },
+  // Systemzustand nimmt „Technik“ (Version und Updates) und die Auslastung der Datenbank auf (#725).
   { pfad: 'systemzustand', gruppe: 'wartung', in: H },
   { pfad: 'protokoll', gruppe: 'wartung', in: O },
   { pfad: 'fehlermeldungen', gruppe: 'wartung', in: O },
-  { pfad: 'wartungsmodus', gruppe: 'wartung', in: O },
-  { pfad: 'wartung', gruppe: 'wartung', in: [] },
+  // Wartung (#725): Wartungsmodus und Wartungsoperationen auf einer Seite.
+  { pfad: 'wartung', gruppe: 'wartung', in: O },
   { pfad: 'demo', gruppe: 'wartung', in: [] },
 ];
 
@@ -99,6 +101,21 @@ export const BEREICHE: Bereich[] = EINTRAEGE.map((e) => ({
 /** Name eines Bereichs (auch der Übersicht) für Leiste, Überschriften und Verweise. */
 export const bereichName = (pfad: string) => t.frei(`werkbank.bereich.${pfad}.name`);
 
+/** Weitere Namen, unter denen die Werkbank-Suche einen Bereich findet (#725: auch alte Namen wie „Darf weg“). */
+export const bereichAuch = (pfad: string): string[] => {
+  const k = `werkbank.bereich.${pfad}.auch`;
+  return t.hat(k) ? t.frei(k).split('|').map((x) => x.trim()).filter(Boolean) : [];
+};
+
+const falte = (x: string) => x.toLocaleLowerCase('de-DE').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
+
+/** Findet die Werkbank-Suche diesen Bereich? Name, „wann“ und frühere Namen, Groß/klein und Umlaute egal. */
+export function bereichPasst(pfad: string, suche: string): boolean {
+  const s = falte(suche.trim());
+  if (!s) return true;
+  return [bereichName(pfad), t.frei(`werkbank.bereich.${pfad}.wann`), ...bereichAuch(pfad)].some((x) => falte(x).includes(s));
+}
+
 const BEKANNT = new Set(BEREICHE.map((b) => b.pfad));
 
 /**
@@ -106,7 +123,16 @@ const BEKANNT = new Set(BEREICHE.map((b) => b.pfad));
  * Ansichten übernehmen die neue Kennung (#407: Datenbank → Datenbank-Anbindung; #408: Speicherplatz
  * → Systemzustand unter Wartung und Fehlersuche).
  */
-export const UMGEZOGEN: Readonly<Record<string, string>> = { datenbank: 'anbindung', speicherplatz: 'systemzustand' };
+export const UMGEZOGEN: Readonly<Record<string, string>> = {
+  datenbank: 'anbindung', speicherplatz: 'systemzustand',
+  // #717/#725: zusammengelegt oder umbenannt.
+  darfweg: 'aufbewahrung', suche: 'texterkennung', wiederherstellung: 'sicherung', technik: 'systemzustand', wartungsmodus: 'wartung',
+};
+
+/** Wohin ein umgezogener Bereich innerhalb seiner neuen Seite springt (Abschnitt, `#…`). */
+export const UMGEZOGEN_ABSCHNITT: Readonly<Record<string, string>> = {
+  suche: 'suche', wiederherstellung: 'wiederherstellen', technik: 'version', wartungsmodus: 'wartungsmodus',
+};
 
 /** Für die ganze Installation: Vorlage plus Abweichungen. */
 export interface WerkbankAnsicht { vorlage: Vorlage; ein: string[]; aus: string[] }
@@ -203,9 +229,11 @@ export const werkbankZurueck = (bereich: string) => (hatMitte(bereich) ? `/werkb
  */
 export function werkbankUmleitung(bereich: string, id?: string, suche = ''): string | null {
   const neu = UMGEZOGEN[bereich];
-  if (neu) return id ? werkbankUmleitung(neu, id) ?? `/werkbank/${neu}` : `/werkbank/${neu}${suche}`;
+  if (neu) return id ? werkbankUmleitung(neu, id) ?? `/werkbank/${neu}` : `/werkbank/${neu}${suche}${UMGEZOGEN_ABSCHNITT[bereich] ? `#${UMGEZOGEN_ABSCHNITT[bereich]}` : ''}`;
   if (!id || hatMitte(bereich)) return null;
-  return bereich === 'anbindung' || bereich === 'stempel' ? `/werkbank/${bereich}?offen=${encodeURIComponent(id)}` : `/werkbank/${bereich}`;
+  // Lange Datenbankzugriffe stehen seit #725 im Systemzustand (Auslastung).
+  if (bereich === 'anbindung') return `/werkbank/systemzustand?offen=${encodeURIComponent(id)}#datenbank`;
+  return bereich === 'stempel' ? `/werkbank/${bereich}?offen=${encodeURIComponent(id)}` : `/werkbank/${bereich}`;
 }
 
 /** Plakette links für den Wartungsmodus (#366): „angekündigt“, solange er noch nicht wirkt, „an“ erst danach. */

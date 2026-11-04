@@ -5,7 +5,7 @@ import { t } from '../sprache';
 import { useHandbuch } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { sicherungsHinweise } from './Sicherung';
-import { GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
+import { bereichPasst, GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
 import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
 import { ENGPASS_VARIABLE } from '../../../shared/src/systemlast';
 import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
@@ -49,7 +49,7 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   // Erweiterungen der Suche (#562): fehlen oder lägen im Schema, das eine Wiederherstellung löscht.
   if (u.erweiterungen?.length) h.push({ art: 'warn', text: <><strong>{t('systemzustand.erweiterung.uebersicht')}</strong> {u.erweiterungen.map((e) => e.name).join(', ')}</>, ziel: '/werkbank/systemzustand#erweiterungen', knopf: t('systemzustand.warnung.knopf') });
   if (sp?.wartungBeenden) h.push({ art: 'warn', text: <><strong>Wieder {platzText(sp.ordner)} frei.</strong> Der Wartungsmodus wegen des Speicherplatzes endet nicht von selbst – Wartung beenden?</>, ziel: '/werkbank/systemzustand', knopf: 'Wartung beenden' });
-  if (u.wartung && u.wartung.stufe !== 'aus' && !sp?.wartungBeenden) h.push({ art: 'warn', text: <><strong>Der Wartungsmodus ist {u.wartung.stufe === 'aktiv' ? 'aktiv' : 'angekündigt'}.</strong> {u.wartung.stufe === 'aktiv' ? 'Nur Administratoren können arbeiten.' : 'Bald werden alle anderen abgemeldet.'}</>, ziel: '/werkbank/wartungsmodus', knopf: 'Zum Wartungsmodus' });
+  if (u.wartung && u.wartung.stufe !== 'aus' && !sp?.wartungBeenden) h.push({ art: 'warn', text: <><strong>Der Wartungsmodus ist {u.wartung.stufe === 'aktiv' ? 'aktiv' : 'angekündigt'}.</strong> {u.wartung.stufe === 'aktiv' ? 'Nur Administratoren können arbeiten.' : 'Bald werden alle anderen abgemeldet.'}</>, ziel: '/werkbank/wartung#wartungsmodus', knopf: 'Zum Wartungsmodus' });
   if (tr && tr.zustand === 'fehlt') h.push({ art: 'warn', text: <><strong>Es gibt noch keinen Schlüssel für Passwörter.</strong> Bis dahin lassen sich keine Passwörter speichern (E-Mail-Versand, Postfächer, Passwortfelder).</>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
   else if (tr && tr.zustand === 'verloren') h.push({ art: 'schlecht', text: <><strong>Der Schlüssel für Passwörter fehlt.</strong> Gespeicherte Passwörter sind nicht lesbar.</>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
   else if (tr && tr.zustand === 'falsch') h.push({ art: 'schlecht', text: <><strong>Die Schlüsseldatei passt nicht zu den gespeicherten Passwörtern.</strong></>, ziel: '/werkbank/verschluesselung', knopf: 'Zur Verschlüsselung' });
@@ -67,7 +67,7 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   if (u.anbindung?.umgebung === 'abweichend') h.push({ art: 'warn', text: <><strong>DATABASE_URL weicht von der Datenbank-Anbindung ab und wird ignoriert.</strong> Führend ist die Anbindung unter /data/geheim; entferne die Variable aus der Compose-Datei.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
   if (u.anbindung?.neustartNoetig) h.push({ art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart von Ablago.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
   // DMS_LASTTEST in einer echten Installation (#612): Der Lasttest ist nicht gestartet, das DMS läuft normal.
-  if (u.lasttestAbbruch) h.push({ art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/technik', knopf: t('lasttest.uebersicht.knopf') });
+  if (u.lasttestAbbruch) h.push({ art: 'warn', text: <><strong>{t('lasttest.uebersicht')}</strong> {u.lasttestAbbruch} {t('lasttest.uebersicht.text')}</>, ziel: '/werkbank/systemzustand#version', knopf: t('lasttest.uebersicht.knopf') });
   // Pflicht-Einstellungen eines Pakets fehlen (#405, z. B. im Ablauf „später ausfüllen“): bis sie da sind, läuft das Paket nicht.
   for (const p of u.paketeEinstellungen ?? []) h.push({ art: 'warn', text: <><strong>{t('pakete.ablauf.aufgabe', { name: p.name })}</strong> {t('pakete.ablauf.aufgabe.text')}</>, ziel: `/werkbank/pakete/${p.id}?reiter=einstellungen`, knopf: t('pakete.ablauf.aufgabe.knopf') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
@@ -156,7 +156,7 @@ function Kacheln({ s }: { s: WerkbankUebersicht }) {
             <Kachel titel="Papierkorb" ziel="/werkbank/papierkorb" wert={zahl(s.papierkorb.anzahl)} unter={s.papierkorb.tage ? (s.papierkorb.aeltester ? `älteste vom ${datum(s.papierkorb.aeltester)} · ${s.papierkorb.tage} Tage` : `${s.papierkorb.tage} Tage Aufbewahrung`) : 'ausgeschaltet'} />
             <Kachel titel="Gemeldete Fehler" ziel="/werkbank/fehlermeldungen" wert={s.fehlermeldungen === null ? '–' : zahl(s.fehlermeldungen)} unter="offen" />
             {s.bestand && <Kachel titel="Bestand" ziel="/werkbank/anbindung" wert={zahl(s.bestand.mappen)} unter={`Mappen · ${zahl(s.bestand.dokumente)} Dokumente (${bytes(s.bestand.dokumenteBytes)}) · ${zahl(s.bestand.benutzer)} Benutzer`} />}
-            <Kachel titel="Version" ziel="/werkbank/technik" wert={s.version.version} unter={s.version.commit ? `Build ${s.version.commit.slice(0, 7)} · unter Technik auf Updates prüfen` : 'unter Technik auf Updates prüfen'} />
+            <Kachel titel="Version" ziel="/werkbank/systemzustand#version" wert={s.version.version} unter={s.version.commit ? `Build ${s.version.commit.slice(0, 7)} · unter Systemzustand auf Updates prüfen` : 'unter Systemzustand auf Updates prüfen'} />
           </div>
   );
 }
@@ -182,6 +182,9 @@ export interface WerkbankEintrag { pfad: string; name: string; gruppe: Gruppe | 
  */
 export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, benutzt: eingerichtet = [] }: { bereich: string; eintraege: WerkbankEintrag[]; zeigen?: (pfad: string) => boolean; benutzt?: string[] }) {
   const [alleZeigen, setAlleZeigen] = useState(false);
+  // Werkbank-Suche (#725): findet Bereiche unter neuem und altem Namen, auch ausgeblendete.
+  const [suche, setSuche] = useState('');
+  const treffer = suche.trim() ? eintraege.filter((e) => bereichPasst(e.pfad, suche)) : null;
   const ausgeblendet = eintraege.filter((e) => e.pfad !== 'uebersicht' && !zeigen(e.pfad));
   const sichtbar = (e: WerkbankEintrag) => alleZeigen || zeigen(e.pfad) || e.pfad === bereich || !!e.warn;
   const liste = eintraege.filter(sichtbar);
@@ -213,8 +216,13 @@ export function WerkbankNavigation({ bereich, eintraege, zeigen = () => true, be
         ))}
       </div>
       <nav className="sichtliste werkbankleiste">
-        {liste.filter((e) => !e.gruppe).map((e) => <div key={e.pfad} className="wbgruppe ohne">{eintrag(e)}</div>)}
-        {gruppen.map((g) => (
+        <input type="search" className="werkbanksuche" value={suche} onChange={(x) => setSuche(x.target.value)}
+          placeholder={t('werkbank.suche.platzhalter')} aria-label={t('werkbank.suche.label')} />
+        {treffer && (treffer.length
+          ? <div className="wbgruppe gewaehlt">{treffer.map((e) => <span key={e.pfad} className="wbtreffer">{eintrag(e)}{e.gruppe && <span className="leise klein">{GRUPPEN[e.gruppe]}</span>}</span>)}</div>
+          : <p className="leise klein">{t('werkbank.suche.nichts')}</p>)}
+        {!treffer && liste.filter((e) => !e.gruppe).map((e) => <div key={e.pfad} className="wbgruppe ohne">{eintrag(e)}</div>)}
+        {!treffer && gruppen.map((g) => (
           <div key={g} className={`wbgruppe ${gewaehlt === g ? 'gewaehlt' : ''}`}>
             <h3 className="gruppentitel">{GRUPPEN[g]}</h3>
             {liste.filter((e) => e.gruppe === g).map(eintrag)}

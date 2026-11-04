@@ -33,7 +33,7 @@ Diese Leitplanken kommen aus der Mission von Ablago und gelten für Kern, Pakete
 
 ## Wo du helfen kannst
 
-- **Fehler melden**, am besten mit **Werkbank → Technik → Übersicht für GitHub kopieren**.
+- **Fehler melden**, am besten mit **Werkbank → Systemzustand → Version und Updates → Übersicht für GitHub kopieren**.
 - **Anleitungen prüfen und bebildern**, z. B. für [Synology, QNAP, UGREEN, TrueNAS oder Unraid](https://help.ablago.app/installieren/aktuell/), wenn du so ein Gerät hast.
 - **Issues mit dem Label `good first issue`**: kleine, gut abgegrenzte Aufgaben.
 - **Clients** für Hausautomatisierung, Handy oder Büro im Repository [dms-clients](https://github.com/motom001/dms-clients) – siehe [Clients entwickeln](clients.md).

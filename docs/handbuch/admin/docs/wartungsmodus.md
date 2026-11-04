@@ -1,6 +1,6 @@
 # Wartungsmodus
 
-Vor einem Update oder einer Wiederherstellung soll niemand gleichzeitig arbeiten – sonst gehen Änderungen verloren. Der Wartungsmodus unter **Werkbank → Wartungsmodus** sorgt dafür in zwei Stufen.
+Vor einem Update oder einer Wiederherstellung soll niemand gleichzeitig arbeiten – sonst gehen Änderungen verloren. Der Wartungsmodus unter **Werkbank → Wartung → Wartungsmodus** sorgt dafür in zwei Stufen. Auf derselben Seite stehen darunter die [Wartungsoperationen](texterkennung.md#wartungsoperationen).
 
 --8<-- "ausgeblendet-organisation.md"
 

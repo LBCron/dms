@@ -1,3 +1,4 @@
+import { Kopf } from './Kopf';
 import { version as reactVersion } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { geraetText } from '../../../shared/src/model';
@@ -105,7 +106,7 @@ function Installiert({ t }: { t: TechnikZustand }) {
   );
 }
 
-export function TechnikPanel({ t }: { t: TechnikZustand }) {
+export function TechnikPanel({ t, abschnitt }: { t: TechnikZustand; abschnitt?: boolean }) {
   const handbuch = useHandbuch();
   const { version } = useKonto();
   const release = /^\d+\.\d+\.\d+$/.test(version ?? '');
@@ -127,11 +128,9 @@ export function TechnikPanel({ t }: { t: TechnikZustand }) {
   const imageName = komplett ? 'ghcr.io/motom001/dms-komplett' : 'ghcr.io/motom001/dms';
   return (
     <div className="einspaltig">
-      <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Technik und Versionen</h1>
+      <Kopf titel="Version und Updates" abschnitt={abschnitt} id="version">
         <p className="leise">Für Fragen an den Support: Übersicht kopieren und in ein <a className="verweis" href="https://github.com/motom001/dms/issues/new?template=wunsch.md" target="_blank" rel="noreferrer">GitHub-Issue</a> einfügen. Passwörter und Zugangsdaten stehen nicht darin. Wie alles zusammenhängt, beschreibt <a className="verweis" href={handbuch('admin', 'technik/')} target="_blank" rel="noreferrer">das Administratorhandbuch</a>. <Hilfe ort="werkbank.technik" /></p>
-      </div>
+      </Kopf>
       <div className="blatt">
         <h2 className="h3">Für den Support</h2>
         <div className="knoepfe">

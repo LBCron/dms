@@ -101,7 +101,7 @@ export const HILFE = {
   'mappentyp.stempel': admin('stempel/', 'Stempel je Mappentyp', 'stempel-je-mappentyp'),
   'werkbank.vollexport': admin('export/', 'Daten exportieren'),
   'werkbank.vollexport.kontakte': admin('export/', 'Kontakte als vCard', 'kontakte-als-vcard'),
-  'werkbank.darfweg': admin('archiv/', '„Darf weg“', 'nach-der-frist-darf-weg'),
+  'werkbank.aufbewahrung': admin('archiv/', '„Aufbewahrung abgelaufen“', 'nach-der-frist-aufbewahrung-abgelaufen'),
   'werkbank.datenschutz': admin('datenschutz/', 'Datenschutz in Ablago'),
   'werkbank.datenschutz.anrede': admin('datenschutz/', 'Anrede in Unterlagen für Dritte', 'anrede'),
   'werkbank.auskunft': admin('datenschutz/', 'Auskunft nach Art. 15 DSGVO', 'auskunft-nach-art-15-dsgvo'),

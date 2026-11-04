@@ -5,7 +5,7 @@ import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { WARTUNG_GEAENDERT } from '../wartung';
 import { einDatentraeger } from '../../../shared/src/werkbankansicht';
-import { AutomatischVerkleinern, GrossePdfsVerkleinern } from './Verkleinern';
+import { GrossePdfsVerkleinern } from './Verkleinern';
 
 /**
  * Werkbank → Wartung und Fehlersuche → Systemzustand (#408, früher Einstellungen → Speicherplatz, #116):
@@ -72,7 +72,7 @@ function SchwelleFeld({ name, wert, aendern, hilfe }: { name: string; wert: Schw
   );
 }
 
-export function SpeicherplatzPanel({ z, nachAenderung, auslastung }: { z: SpeicherplatzZustand; nachAenderung?: () => void; auslastung?: ReactNode }) {
+export function SpeicherplatzPanel({ z, nachAenderung, auslastung, unten }: { z: SpeicherplatzZustand; nachAenderung?: () => void; auslastung?: ReactNode; unten?: ReactNode }) {
   const s = z.stand;
   const [e, setE] = useState<SpeicherplatzEinstellung | null>(null);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
@@ -105,7 +105,7 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung }: { z: Speich
         <p className="leise">Wie es dem Server gerade geht. <strong>Speicherplatz:</strong> Ablago misst jede Minute und vor jedem Hochladen, wie viel Platz in seinen Ordnern frei ist. Unter der <strong>Warnschwelle</strong> gibt es einen Hinweis hier und in der Übersicht sowie eine Mail an alle Administratoren. Unter der <strong>Grenze</strong> ist das Hochladen sofort gesperrt, und nach 5 Minuten Vorlauf beginnt der Wartungsmodus („Speicherplatzlimit erreicht“). <Hilfe ort="werkbank.speicherplatz" /></p>
       </div>
 
-      {s.zustand === 'grenze' && <div className="hinweis schlecht"><p><strong>Speicherplatzlimit erreicht.</strong> Hochladen ist gesperrt. Schaffe Platz – alte <Link to="/werkbank/sicherung" className="verweis">Sicherungen</Link> löschen, den <Link to="/werkbank/papierkorb" className="verweis">Papierkorb</Link> leeren, <a href="#verkleinern" className="verweis">große PDFs verkleinern</a> – oder vergrößere den Speicher des NAS. Danach beendest du den <Link to="/werkbank/wartungsmodus" className="verweis">Wartungsmodus</Link> selbst.</p></div>}
+      {s.zustand === 'grenze' && <div className="hinweis schlecht"><p><strong>Speicherplatzlimit erreicht.</strong> Hochladen ist gesperrt. Schaffe Platz – alte <Link to="/werkbank/sicherung" className="verweis">Sicherungen</Link> löschen, den <Link to="/werkbank/papierkorb" className="verweis">Papierkorb</Link> leeren, <a href="#verkleinern" className="verweis">große PDFs verkleinern</a> – oder vergrößere den Speicher des NAS. Danach beendest du den <Link to="/werkbank/wartung#wartungsmodus" className="verweis">Wartungsmodus</Link> selbst.</p></div>}
       {s.zustand === 'warnung' && <div className="hinweis warn"><p><strong>Der Speicherplatz wird knapp.</strong> Noch arbeiten alle normal. Schaffe rechtzeitig Platz, bevor die Grenze ({schwelleText(s.einstellung.grenze)} frei) erreicht ist.</p></div>}
       {s.wartungBeenden && (
         <div className="hinweis gut hinweiszeile">
@@ -167,9 +167,9 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung }: { z: Speich
       </section>
 
 
-      {/* PDF verkleinern (#393): Platz schaffen bei großen Scans. */}
+      {/* PDF verkleinern (#393): Platz schaffen bei großen Scans. „Neue PDFs automatisch verkleinern“ steht seit #725 unter Suche und Volltext. */}
       <GrossePdfsVerkleinern />
-      <AutomatischVerkleinern />
+      {unten}
     </div>
   );
 }

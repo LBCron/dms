@@ -1044,7 +1044,7 @@ export class Paketverwaltung {
     const da = genutzt.filter((k) => dmsTypen.has(k));
     if (da.length) hinweise.push(`Nutzt Mappentypen aus Ablago: ${da.map((k) => `${dmsTypen.get(k)!.name} (aus Ablago)`).join(', ')}.`);
     // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche.
-    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche).`);
+    if (paket.wortlisten.length) hinweise.push(`Bringt ${paket.wortlisten.length === 1 ? 'eine Gruppe' : `${paket.wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche mit (Werkbank → Suche und Volltext).`);
     // Beispiele, die auf Beispiele einer Abhängigkeit zeigen (#347): ohne diese bleiben die Verweise leer.
     for (const p of new Set(paket.beispiele.flatMap((b) => beispielVerweise(b.werte)).filter((z) => z.includes(':') && !z.startsWith(`${m.id}:`)).map((z) => z.split(':')[0]))) {
       const da = installierte.find((x) => x.id === p);

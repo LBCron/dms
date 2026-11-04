@@ -564,10 +564,16 @@ begriffe:
     einsteiger: erklaeren
     begegnet: admin
     code: Archiv
-  - begriff: Darf weg
+  - begriff: Aufbewahrung abgelaufen
     bereich: werkbank
-    beschreibung: Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist.
+    beschreibung: Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist (Werkbank → Benutzer und Sicherheit). Früher „Darf weg“.
     einsteiger: alltag
+    begegnet: admin
+    nicht_verwenden: [Darf weg]
+  - begriff: Suche und Volltext
+    bereich: werkbank
+    beschreibung: Der Werkbank-Bereich unter Post und Eingänge für Texterkennung, Archivfassung, automatisches Verkleinern, Tippfehler und gleichbedeutende Wörter. Fasst die früheren Bereiche „Texterkennung“ und „Suche“ zusammen.
+    einsteiger: erklaeren
     begegnet: admin
   - begriff: Postfach
     bereich: werkbank

@@ -8,7 +8,7 @@ import { titelOder } from '../seiten';
 import { mitGrund } from '../ablage/Loeschgrund';
 import { fortschrittText } from '../../../shared/src/auftrag';
 
-/** Werkbank → Darf weg (#212): Mappen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. */
+/** Werkbank → Aufbewahrung abgelaufen (#212, bis #725 „Darf weg“): Mappen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. */
 
 type Eintrag = Awaited<ReturnType<typeof api.darfWeg>>[number];
 
@@ -46,8 +46,8 @@ export function DarfWegPanel({ z }: { z: DarfWegZustand }) {
     <div className="einspaltig">
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
-        <h1>Darf weg</h1>
-        <p className="leise">Mappen aus Mappentypen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. Gelöscht wird nichts automatisch – entscheide selbst, was weg darf. <Hilfe ort="werkbank.darfweg" /></p>
+        <h1>Aufbewahrung abgelaufen</h1>
+        <p className="leise">Mappen aus Mappentypen im Archivmodus, deren Aufbewahrungsfrist abgelaufen ist. Gelöscht wird nichts automatisch – entscheide selbst, was weg darf. <Hilfe ort="werkbank.aufbewahrung" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}

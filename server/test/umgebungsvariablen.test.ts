@@ -15,7 +15,7 @@ describe('Überflüssige Umgebungsvariablen (#478)', () => {
     const h = variablenHinweis(v)!;
     assert.match(h.zeilen[0].grund, /Ordner im Container sind fest/);
     assert.equal(h.schluss, 'Entferne die Variable beim nächsten Update aus der Compose-Datei.');
-    assert.equal(h.ziel, '/werkbank/technik');
+    assert.equal(h.ziel, '/werkbank/systemzustand#version');
   });
 
   it('nur DATABASE_URL: Grund Datei, nicht „Ordner“, Knopf zur Anbindung', () => {
@@ -33,7 +33,7 @@ describe('Überflüssige Umgebungsvariablen (#478)', () => {
     const h = variablenHinweis(ueberfluessigeVariablen({ haushalt: true }))!;
     assert.deepEqual(h.zeilen, [{ name: 'HAUSHALT_ID', grund: 'die Ablage-Id ist gespeichert' }]);
     assert.match(h.schluss, /^Entferne die Variable /);
-    assert.equal(h.ziel, '/werkbank/technik');
+    assert.equal(h.ziel, '/werkbank/systemzustand#version');
   });
 
   it('gemischt: Grund je Zeile, feste Reihenfolge, „diese Variablen“', () => {
@@ -45,6 +45,6 @@ describe('Überflüssige Umgebungsvariablen (#478)', () => {
     assert.match(h.zeilen[3].grund, /Ablage-Id ist gespeichert/);
     assert.equal(h.schluss, 'Entferne diese Variablen beim nächsten Update aus der Compose-Datei.');
     assert.doesNotMatch(h.schluss, /\bsie\b/);
-    assert.equal(h.ziel, '/werkbank/technik');
+    assert.equal(h.ziel, '/werkbank/systemzustand#version');
   });
 });

@@ -11,7 +11,7 @@
 | Verantwortlich für die Belegablage | [Name] |
 | Vertretung | [Name] |
 | Steuerberatung | [Name, Kanzlei – oder „keine“] |
-| Eingesetzte Software | Ablago (Open Source, https://github.com/motom001/dms), Version [z. B. 0.43.0] (Werkbank → Technik) |
+| Eingesetzte Software | Ablago (Open Source, https://github.com/motom001/dms), Version [z. B. 0.43.0] (Werkbank → Systemzustand → Version und Updates) |
 | Betrieb | [Gerät, z. B. Synology DS224+], Variante [zwei Container (dms + postgres:17) / dms-komplett], Standort [z. B. Arbeitszimmer] |
 | Geltungsbereich | [Welche Unterlagen: z. B. Eingangs- und Ausgangsrechnungen, Kontoauszüge, Verträge der Tätigkeit …] |
 | Gültig ab | [Datum] |
@@ -45,7 +45,7 @@ Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer pas
 - Ordnungsmerkmal je Beleg: [z. B. Rechnungsdatum und Rechnungsnummer; ggf. Belegnummer der Buchhaltung].
 - Aufbewahrungsfristen: [Buchungsbelege 8 Jahre, Bücher und Aufzeichnungen 10 Jahre, Geschäftsbriefe 6 Jahre – jeweils ab Ende des Kalenderjahres; mit der Steuerberatung abstimmen]. Vor Ablauf der Frist werden Belege nicht gelöscht.
 - **Archivmodus:** Für die Mappentypen [Rechnung, Kontoauszug, …] ist der Archivmodus eingeschaltet (Werkbank → Mappentypen → Abschnitt Archivmodus): Aufbewahrungsfrist [8] Jahre, Stichtag [Rechnungsdatum], gerechnet bis zum 31.12. des Stichtagsjahres plus die Jahre. Bis zum Fristende lassen sich weder die Mappen noch einzelne Dokumente löschen – **auch nicht von Administratoren**, auch nicht über Papierkorb oder Schnittstelle.
-- **Nach Fristende:** Unter **Werkbank → Darf weg** stehen die Mappen, deren Frist abgelaufen ist. [Wer] prüft die Liste [jährlich, z. B. im Januar] und löscht, was weg darf. Ablago löscht nie von selbst.
+- **Nach Fristende:** Unter **Werkbank → Aufbewahrung abgelaufen** stehen die Mappen, deren Frist abgelaufen ist. [Wer] prüft die Liste [jährlich, z. B. im Januar] und löscht, was weg darf. Ablago löscht nie von selbst.
 
 ## 5. Nachvollziehbarkeit und Unveränderbarkeit
 
@@ -53,7 +53,7 @@ Die Post wird **zeitnah**, spätestens [z. B. innerhalb von 10 Tagen], einer pas
 - Dokumente werden **unverändert** gespeichert; der Prüfwert (SHA-256) je Datei macht nachträgliche Veränderungen erkennbar.
 - **Änderungen nur als neue Version:** Im Archivmodus ist die Versionierung für alle Dokumentenregister Pflicht. Ein geändertes Dokument wird als neue **Version** abgelegt; ältere Versionen bleiben bis zum Fristende erhalten.
 - **Ohne Archivmodus** lässt sich ein einzelnes Dokument endgültig löschen (der Papierkorb nimmt nur ganze Mappen auf). Deshalb gilt der Archivmodus für alle aufbewahrungspflichtigen Mappentypen: [Liste].
-- **Prüfung der Dateien:** [Wer] startet [vierteljährlich / nach jedem Umzug des Speichers / vor dem Vernichten von Papier] unter **Werkbank → Wartungsoperationen → Alle Dateien prüfen** einen Abgleich aller Dateien (auch älterer Versionen) mit ihrem Prüfwert. Abweichungen stehen in der Liste und im Protokoll; [Wer] klärt sie.
+- **Prüfung der Dateien:** [Wer] startet [vierteljährlich / nach jedem Umzug des Speichers / vor dem Vernichten von Papier] unter **Werkbank → Wartung → Wartungsoperationen → Alle Dateien prüfen** einen Abgleich aller Dateien (auch älterer Versionen) mit ihrem Prüfwert. Abweichungen stehen in der Liste und im Protokoll; [Wer] klärt sie.
 - Gelöschte Mappen kommen in den **Papierkorb** (Frist: [z. B. 30 Tage], Werkbank → Papierkorb) und lassen sich bis dahin wiederherstellen; das Löschen steht in der Historie.
 - [Wer Mappen nach Fristende löschen darf, regeln die Berechtigungen, siehe Abschnitt 6.]
 

@@ -106,7 +106,7 @@ Unter **Werkbank → Datenbank-Anbindung** siehst und änderst du die Anbindung.
 
 In der Datei steht auch die **Ablage-Id** (früher die Umgebungsvariable `HAUSHALT_ID`). Bisherige Installationen übernehmen sie beim ersten Start; die Variable kann danach entfernt werden.
 
-Unter der Verbindung zeigt die Seite, wie es der Datenbank im Betrieb geht: die **langen Datenbankzugriffe** und **was gerade läuft**. Früher stand das unter *Wartung und Fehlersuche → Datenbank*; alte Links und Lesezeichen führen hierher.
+Unter der Verbindung zeigt die Seite, wie es der Datenbank im Betrieb geht: die **langen Datenbankzugriffe** und **was gerade läuft**. Früher stand das unter *Wartung und Fehlersuche → Systemzustand*; alte Links und Lesezeichen führen hierher.
 
 ![Datenbank-Anbindung: lange Datenbankzugriffe](bilder/werkbank-datenbank.png)
 
@@ -154,7 +154,7 @@ Die Ordner im Container sind fest. Wohin sie auf dem NAS zeigen, bestimmst du al
 | `/data/sicherung` | [Sicherungen](sicherung.md), verschlüsselt | `/volume1/docker/dms/sicherung` |
 | `/eingang` (optional) | [Eingangsordner](eingangsordner.md) für Scanner und NAS | `/volume1/docker/dms/eingang` |
 
-Jeder der drei Ordner unter `/data` muss ein eigenes Volume sein; sonst ist sein Inhalt weg, sobald der Container neu erstellt wird (z. B. beim Update). Die Datenbank liegt im Volume des PostgreSQL-Containers – beim Image [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) im vierten Ordner `/data/postgres`. Wie viel Platz in jedem Ordner frei ist, zeigen **Werkbank → [Systemzustand](speicherplatz.md)** und **Werkbank → Technik**.
+Jeder der drei Ordner unter `/data` muss ein eigenes Volume sein; sonst ist sein Inhalt weg, sobald der Container neu erstellt wird (z. B. beim Update). Die Datenbank liegt im Volume des PostgreSQL-Containers – beim Image [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) im vierten Ordner `/data/postgres`. Wie viel Platz in jedem Ordner frei ist, zeigen **Werkbank → [Systemzustand](speicherplatz.md)** und **Werkbank → Systemzustand → Version und Updates**.
 
 ```yaml
     volumes:
@@ -210,7 +210,7 @@ Der Proxy leitet jede Anfrage an Ablago weiter. Für Ablago sieht sie deshalb so
 | **Sperre nach falschen Passwörtern** ([Anmeldeschutz](anmeldeschutz.md), je E-Mail-Adresse und IP sowie je IP) | trifft nur das Gerät, von dem die Fehlversuche kamen | trifft alle Geräte: Fehlversuche von außen sperren die Anmeldung auch zu Hause |
 | **HTTPS erkennen**, solange keine Adresse gepflegt ist | Cookie nur über HTTPS, Links mit `https://` | Cookie auch über HTTP, Links mit der internen `http://`-Adresse |
 
-Seit Version 0.43.0 nimmt Ablago diese Angaben **von selbst** an, wenn der Proxy im eigenen Rechner oder in einem privaten Netz sitzt (`127.0.0.1`, `10.x.x.x`, `172.16–31.x.x`, `192.168.x.x` und die entsprechenden IPv6-Netze). Das trifft auf einen Proxy-Container neben Ablago und auf den Proxy eines NAS praktisch immer zu. Anfragen direkt aus dem Internet können so keine fremde IP und kein HTTPS vortäuschen. Unter **Einstellungen → Technik** steht bei `TRUST_PROXY`, was gerade gilt.
+Seit Version 0.43.0 nimmt Ablago diese Angaben **von selbst** an, wenn der Proxy im eigenen Rechner oder in einem privaten Netz sitzt (`127.0.0.1`, `10.x.x.x`, `172.16–31.x.x`, `192.168.x.x` und die entsprechenden IPv6-Netze). Das trifft auf einen Proxy-Container neben Ablago und auf den Proxy eines NAS praktisch immer zu. Anfragen direkt aus dem Internet können so keine fremde IP und kein HTTPS vortäuschen. Unter **Wartung und Fehlersuche → Systemzustand → Version und Updates** steht bei `TRUST_PROXY`, was gerade gilt.
 
 !!! note "Wann `TRUST_PROXY` doch setzen?"
     - `TRUST_PROXY: "false"`: Wenn du ganz ausschließen willst, dass ein Gerät **in deinem Heimnetz**, das Ablago direkt über Port 8080 erreicht, eine andere IP-Adresse vortäuscht. Die IP-Adressen und die Sperre verhalten sich dann wie in der rechten Spalte oben.

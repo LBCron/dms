@@ -22,19 +22,18 @@ ZIEL = WURZEL / 'docs' / 'handbuch' / 'admin' / 'docs' / 'uebersicht.md'
 
 # Seite im Administratorhandbuch je Bereich (Pfad unter /werkbank).
 SEITE = {
-    'typen': 'mappentypen.md', 'sichten': 'sichten.md', 'nummernkreise': 'nummernkreise.md', 'stempel': 'stempel.md', 'automatisierungen': 'automatisierungen.md', 'pakete': 'pakete.md', 'suche': 'suche.md',
-    'darfweg': 'archiv.md#nach-der-frist-darf-weg', 'datenschutz': 'datenschutz.md', 'benutzer': 'benutzer.md', 'anmeldeschutz': 'anmeldeschutz.md',
-    'aufgaben': 'aufgaben.md', 'betrieb': 'installation.md#e-mail-und-adresse', 'verschluesselung': 'verschluesselung.md',
-    'designs': 'designs.md', 'papierkorb': 'papierkorb.md', 'anbindung': 'installation.md#datenbank-anbindung',
-    'systemzustand': 'speicherplatz.md', 'postfaecher': 'postfaecher.md', 'eingangsordner': 'eingangsordner.md', 'webdav': 'webdav.md', 'webhooks': 'webhooks.md',
-    'texterkennung': 'texterkennung.md', 'protokoll': 'fehlersuche.md#protokoll',
-    'fehlermeldungen': 'fehlersuche.md#gemeldete-fehler', 'sicherung': 'sicherung.md',
-    'wiederherstellung': 'wiederherstellen.md', 'vollexport': 'export.md', 'wartungsmodus': 'wartungsmodus.md',
-    'wartung': 'texterkennung.md#wartungsoperationen', 'technik': 'fehlersuche.md#technik',
-    'demo': 'demo.md', 'region': 'region.md',
+    'pakete': 'pakete.md', 'typen': 'mappentypen.md', 'sichten': 'sichten.md', 'nummernkreise': 'nummernkreise.md', 'automatisierungen': 'automatisierungen.md',
+    'benutzer': 'benutzer.md', 'verschluesselung': 'verschluesselung.md', 'datenschutz': 'datenschutz.md',
+    'aufbewahrung': 'archiv.md#nach-der-frist-aufbewahrung-abgelaufen', 'stempel': 'stempel.md',
+    'postfaecher': 'postfaecher.md', 'eingangsordner': 'eingangsordner.md', 'webdav': 'webdav.md', 'webhooks': 'webhooks.md',
+    'texterkennung': 'texterkennung.md', 'sicherung': 'sicherung.md', 'vollexport': 'export.md', 'papierkorb': 'papierkorb.md',
+    'betrieb': 'installation.md#e-mail-und-adresse', 'region': 'region.md', 'aufgaben': 'aufgaben.md', 'anmeldeschutz': 'anmeldeschutz.md',
+    'designs': 'designs.md', 'anbindung': 'installation.md#datenbank-anbindung',
+    'systemzustand': 'speicherplatz.md', 'protokoll': 'fehlersuche.md#protokoll', 'fehlermeldungen': 'fehlersuche.md#gemeldete-fehler',
+    'wartung': 'wartungsmodus.md', 'demo': 'demo.md',
 }
 # Bereiche, die nur unter einer Bedingung in der Leiste stehen.
-BEDINGT = {'darfweg': 'nur mit Archivmodus', 'eingangsordner': 'nur wenn der Ordner eingebunden ist'}
+BEDINGT = {'aufbewahrung': 'nur mit Archivmodus', 'eingangsordner': 'nur wenn der Ordner eingebunden ist'}
 
 
 def lies():

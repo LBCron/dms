@@ -131,7 +131,7 @@ export class Wiederherstellung {
       return 'frisch' as const;
     }
     if (!admin) throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
-    if (!this.q.wartungAktiv()) throw new Fachfehler(409, 'Wiederherstellen geht nur im aktiven Wartungsmodus – schalte ihn unter Werkbank → Wartungsmodus ein und melde alle ab.');
+    if (!this.q.wartungAktiv()) throw new Fachfehler(409, 'Wiederherstellen geht nur im aktiven Wartungsmodus – schalte ihn unter Werkbank → Wartung ein und melde alle ab.');
     return 'laufend' as const;
   }
 

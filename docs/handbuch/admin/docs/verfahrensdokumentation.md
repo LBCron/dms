@@ -17,7 +17,7 @@ Sie ist gegliedert in:
 1. **Allgemeines** – wer, welche Tätigkeit, welche Version und Variante von Ablago
 2. **Belegeingang** – Papier, Eingangsordner, Postfach, elektronische Belege und E-Rechnungen im Originalformat, Zuordnen
 3. **Ersetzendes Scannen** – Gerät, Kontrolle, wann das Papier vernichtet wird, Ausnahmen
-4. **Ablage und Ordnung** – Mappentypen, Pflichtfelder, Ansichten, Aufbewahrungsfristen, [Archivmodus](archiv.md) und „Darf weg“
+4. **Ablage und Ordnung** – Mappentypen, Pflichtfelder, Ansichten, Aufbewahrungsfristen, [Archivmodus](archiv.md) und „Aufbewahrung abgelaufen“
 5. **Nachvollziehbarkeit und Unveränderbarkeit** – Historie der Mappen, Prüfwerte, [Versionen](https://help.ablago.app/benutzer/aktuell/versionen/), Alle Dateien prüfen, Papierkorb
 6. **Zugriffsschutz** – Konten, Zwei-Faktor-Anmeldung, Anmeldeschutz, Rollen, Berechtigungen, Lesezugang für Prüfer
 7. **Datensicherung und Wiederherstellung** – Zeitplan, Kopie außer Haus, Notfallblatt, Probe

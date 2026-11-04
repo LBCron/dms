@@ -27,8 +27,8 @@
   "netz.je-sekunde": "{wert}/s",
   "schleife.titel": "Wartezeit des Servers",
   "schleife.wert": "üblich {median}, höchstens {max}",
-  "schleife.hilfe": "So lange musste eine Anfrage warten, weil der Server gerade etwas anderes rechnete (Ereignisschleife). Einzelheiten unter",
-  "schleife.verweis": "Einstellungen → Datenbank-Anbindung",
+  "schleife.hilfe": "So lange musste eine Anfrage warten, weil der Server gerade etwas anderes rechnete (Ereignisschleife). Einzelheiten unten unter",
+  "schleife.verweis": "Auslastung des Servers",
   "warnung.schleife": "Der Server musste seit mindestens 5 Minuten oft länger als 100 ms warten, bevor er eine Anfrage bearbeiten konnte (bei 99 % der Messungen).",
   "warnung.cpu": "Die CPU ist seit mindestens 5 Minuten zu über 90 % ausgelastet.",
   "warnung.speicher": "Der Arbeitsspeicher ist seit mindestens 5 Minuten zu über 90 % belegt.",
@@ -90,7 +90,5 @@
   "erweiterung.unaccent.abhilfe": "Die Suche funktioniert trotzdem. Die Images postgres:17 und dms-komplett bringen unaccent mit; bei einer eigenen Datenbank gehört sie zum Paket postgresql-contrib.",
   "erweiterung.gefaehrdet": "Die Erweiterung {name} liegt im Schema {schema}. Eine Wiederherstellung würde sie mitlöschen, danach wäre die Suche schlechter.",
   "erweiterung.gefaehrdet.abhilfe": "Ablago zieht sie bei jedem Start ins Schema erweiterungen_dms um. Klappt das nicht, gehört sie einem anderen Datenbank-Benutzer – dann zieht sie die Verwaltung der Datenbank um (siehe Handbuch).",
-  "erweiterung.uebersicht": "Eine Erweiterung der Datenbank fehlt oder ist gefährdet – die Suche arbeitet schlechter als möglich.",
-  "verweis.systemzustand": "CPU, Arbeitsspeicher und Netzwerk des Containers stehen unter",
-  "verweis.systemzustand.ziel": "Wartung und Fehlersuche → Systemzustand"
+  "erweiterung.uebersicht": "Eine Erweiterung der Datenbank fehlt oder ist gefährdet – die Suche arbeitet schlechter als möglich."
 }
