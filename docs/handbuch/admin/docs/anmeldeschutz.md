@@ -75,7 +75,7 @@ Das Geheimnis liegt mit dem [Schlüssel von Ablago](verschluesselung.md) verschl
 
 ## Anmeldung über einen Anbieter (OpenID Connect)
 
-Statt mit Passwort melden sich Benutzer mit dem Konto eines Identitätsanbieters an – etwa **Microsoft Entra ID** (Microsoft 365), **Google Workspace**, **Keycloak**, **Authentik** oder **Authelia**. Auf der Anmeldeseite erscheint dann ein Knopf wie **Mit Firmenkonto anmelden**.
+Statt mit Passwort melden sich Benutzer mit dem Konto eines Identitätsanbieters an – etwa **Microsoft Entra ID** (Microsoft 365), **Google Workspace**, **Keycloak**, **Authentik** oder **Authelia**. Auf der Anmeldeseite erscheint dann ein Knopf wie **Mit Firmenkonto anmelden**. Der Anbieter sieht dabei jede Anmeldung (wer, wann) – deine Unterlagen sieht er nicht.
 
 ### Beim Anbieter
 

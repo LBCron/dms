@@ -27,7 +27,7 @@ Hat dein Administrator ein Paket wie **KI-Assistent** eingerichtet, steht unter 
 - **Nachfragen:** Du kannst im selben Chat weiterfragen („Und wann ist die Kündigungsfrist?“). Für jede Frage sucht Ablago neue Stellen. **Neuer Chat** fängt von vorn an.
 - **Nichts wird gespeichert.** Der Chat bleibt nur in diesem Browser-Fenster und ist beim Neuladen weg. Im Protokoll von Ablago steht nur, *dass* gefragt wurde – nicht was.
 
-Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden – prüfe Wichtiges in den Quellen. Die Antwort ist nur Text: Sie ändert nichts in deiner Ablage. Wohin die Ausschnitte gehen (eigener Rechner im Heimnetz oder ein Anbieter), weiß dein Administrator.
+Die Antwort schreibt ein KI-Dienst. Er kann sich irren oder etwas nicht finden – prüfe Wichtiges in den Quellen. Die Antwort ist nur Text: Sie ändert nichts in deiner Ablage. Die Ausschnitte gehen an den KI-Dienst, den dein Administrator eingerichtet hat – entweder ein Rechner bei dir im Heimnetz, dann bleibt alles bei dir, oder ein Anbieter. Welcher es ist, sieht dein Administrator unter Werkbank → Pakete an der Dienst-Adresse des Pakets.
 
 ## Die Kacheln
 

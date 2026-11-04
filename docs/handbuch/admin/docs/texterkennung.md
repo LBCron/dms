@@ -7,7 +7,7 @@ Damit die Suche auch den Text von Dokumenten findet, erzeugt Ablago zu jedem neu
 --8<-- "ausgeblendet-schritt.md"
 
 - **PDFs:** Ablago liest die vorhandene **Textebene** selbst (poppler) – sofort. PDFs, die ein Programm oder ein Scanner mit Text erzeugt hat, sind damit gleich durchsuchbar.
-- **Scans und Fotos** (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket **Texterkennung (Deutsch und Englisch)** (Kennung `texterkennung`) aus dem [Katalog](pakete.md).
+- **Scans und Fotos** (gescannte PDF-Seiten, JPEG, PNG) haben keine Textebene. Ihren Text erkennt das Paket **Texterkennung (Deutsch und Englisch)** (Kennung `texterkennung`) aus dem [Katalog](pakete.md). Es läuft auf deinem eigenen Gerät; kein Dokument geht dafür nach draußen.
 - **Andere Dateien** (z. B. Word, Excel, TIFF) bekommen vorerst keinen Volltext.
 
 !!! warning "Seit Version 0.134: Texterkennung ist ein Paket"

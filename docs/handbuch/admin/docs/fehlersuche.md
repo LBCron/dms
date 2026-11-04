@@ -8,7 +8,7 @@ Alles dazu steht in der Werkbank unter **Wartung und Fehlersuche**. Die Gruppe e
 
 ## Gemeldete Fehler
 
-Benutzer melden Fehler über **Fehler melden** in ihrem Menü – mit eigener Beschreibung, bis zu zwei Screenshots und technischen Angaben (Version, Browser, Bildschirmgröße, Sprache, Zeitzone, die letzten 25 besuchten Seiten, die letzten 10 Fehler im Browser und fehlgeschlagenen Anfragen). Passwörter, Inhalte von Mappen und Cookies gehen nicht mit.
+Benutzer melden Fehler über **Fehler melden** in ihrem Menü – mit eigener Beschreibung, bis zu zwei Screenshots und technischen Angaben (Version, Browser, Bildschirmgröße, Sprache, Zeitzone, die letzten 25 besuchten Seiten, die letzten 10 Fehler im Browser und fehlgeschlagenen Anfragen). Passwörter, Inhalte von Mappen und Cookies gehen nicht mit. Die Meldung bleibt in deinem Ablago – sie geht nie an das Projekt. Wer daraus ein GitHub-Issue machen will, tut das selbst.
 
 ![Werkbank → Gemeldete Fehler](bilder/werkbank-fehlermeldung.png)
 

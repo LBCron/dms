@@ -128,7 +128,7 @@ Die API-Dokumentation beschreibt alle Endpunkte mit ihren Parametern. Ein Überb
 | **Anstehend als Kalender** (#528) | `GET /api/v1/anstehend?von=2027-01-01&bis=2027-12-31` liefert Fristen, Erinnerungen und Aufgaben mit Datum des Schlüssel-Benutzers für einen Zeitraum (höchstens 400 Tage) in einer Anfrage – mit den berechneten künftigen Terminen wiederkehrender Fristen (`folgetermin: true`), allem Überfälligen (`faellig` und `datum` vor `heute`) und den Feiertagen (`feiertage`). Ohne `von`/`bis` wie die Liste: `?tage=30` ab heute |
 | **Notizen** | `GET`/`POST /api/v1/mappen/{id}/notizen`, `PUT`/`DELETE /api/v1/notizen/{id}` |
 | **Historie** einer Mappe | `GET /api/v1/mappen/{id}/historie` |
-| **E-Mail** | `POST /api/v1/mappen/{id}/email` versendet eine Mappe mit Dokumenten (zusammen höchstens 50 MB) |
+| **E-Mail** | `POST /api/v1/mappen/{id}/email` versendet eine Mappe mit Dokumenten (zusammen höchstens 50 MB) über deinen Mailserver nach draußen. Das kann jeder Schlüssel mit Schreibrecht – vergib „lesen und schreiben“ deshalb nur an Programme, denen du das zutraust. |
 | **Dokumente und Versionen** | `POST /api/v1/mappen/{id}/dokumente` (hochladen), `POST /api/v1/dokumente/{id}/ersetzen` (neue Version), `GET /api/v1/dokumente/{id}/versionen`, ältere Version herunterladen und `…/zurueckholen` |
 | **Texterkennung** | `POST /api/v1/dokumente/{id}/texterkennung` stößt sie für ein Dokument (erneut) an; `GET /api/v1/dokumente/{id}/volltext` liefert den Text |
 | **Volltext setzen** | `PUT /api/v1/dokumente/{id}/volltext` mit `{ "text": "…" }` (Recht U auf die Mappe) ersetzt den Volltext, z. B. aus einer eigenen Texterkennung; `GET /api/v1/dokumente/{id}/seiten/{nr}/scan?dpi=300` liefert eine Seite als Graustufenbild (PGM) |

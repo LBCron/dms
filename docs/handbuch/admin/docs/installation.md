@@ -66,7 +66,7 @@ Der Schlüssel verschlüsselt gespeicherte Passwörter und alle Sicherungen (sie
 
 ![Pakete dazuholen](bilder/einrichtung-pakete.png)
 
-Erst in diesem Schritt fragt Ablago den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
+Erst in diesem Schritt fragt Ablago den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Anfrage geht an catalog.ablago.app (ausgeliefert von GitHub Pages); dabei geht nur die Anfrage selbst hinaus, keine Daten aus deiner Ablage. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
 
 - **Texterkennung ist vorausgewählt** – ohne sie werden gescannte Dokumente nicht durchsuchbar. Darunter fragt **Weitere Sprachen?** nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.
 - **Abhängigkeiten kommen mit**, z. B. „Basis“ für „Haushalt“; sie sind mit „kommt mit – gebraucht von …“ markiert.
@@ -122,6 +122,8 @@ Die Abfragen, die gerade in der Datenbank laufen, mit Dauer, Zustand und Prozess
 ## E-Mail und Adresse
 
 Unter **Werkbank → E-Mail und Adresse** stellst du ein, was früher Umgebungsvariablen waren. Änderungen gelten sofort, ohne Neustart.
+
+Über den Mailserver gehen nur Mails, die jemand auslöst oder einschaltet: versandte Mappen samt Dokumenten, die [Tägliche Zusammenfassung](aufgaben.md#tagliche-zusammenfassung) (Mappentitel und Links), Einladungen und Passwort-Links sowie [Auskünfte](datenschutz.md) und Abruf-Links. Eine Übersicht aller Wege steht unter [Was deine Ablage verlässt](datenschutz.md#was-deine-ablage-verlasst).
 
 ![E-Mail und Adresse in der Werkbank](bilder/werkbank-betrieb.png)
 

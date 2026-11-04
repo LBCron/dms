@@ -9,7 +9,7 @@ Ablago ist **auf Datenschutz ausgelegt** – „Datenschutz durch Technikgestalt
 
 | DSGVO | Was Ablago dafür hat | Wo |
 | --- | --- | --- |
-| Art. 5 Abs. 1 c und Art. 25 – Datenminimierung, datenschutzfreundliche Voreinstellungen | **Selbst gehostet:** Die Daten liegen nur auf deinem Gerät – oder bei einem [Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), den du selbst wählst. [Keine Telemetrie](#keine-telemetrie), kein Tracking, keine Werbung, keine KI im Kern; die Texterkennung läuft lokal. KI-Funktionen kommen als Pakete und laufen ebenfalls lokal – ein externer KI-Dienst wird nur angebunden, wenn du ihn ausdrücklich als Paket installierst und ihm den Netzzugriff bei der Installation bestätigst. Wer was sehen darf, regeln Rechte je Mappentyp mit Regeln. | Werkbank → Mappentypen → [Berechtigungen](berechtigungen.md) |
+| Art. 5 Abs. 1 c und Art. 25 – Datenminimierung, datenschutzfreundliche Voreinstellungen | **Selbst gehostet:** Die Daten liegen nur auf deinem Gerät – oder bei einem [Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), den du selbst wählst. [Keine Telemetrie](#keine-telemetrie), kein Tracking, keine Werbung, keine KI im Kern; die Texterkennung läuft lokal. KI-Funktionen kommen als Pakete. Sie können ganz auf deinem Gerät laufen ([KI lokal](ki-lokal.md)); einen fremden Dienst fragen sie nur, wenn du seine Adresse einrichtest und bei der Installation bestätigst. Wer was sehen darf, regeln Rechte je Mappentyp mit Regeln. | Werkbank → Mappentypen → [Berechtigungen](berechtigungen.md) |
 | Art. 5 Abs. 1 e – Speicherbegrenzung; Art. 17 – Löschen | [Archivmodus](archiv.md) mit Aufbewahrungsfrist und der Liste **Darf weg**; [Papierkorb](papierkorb.md) für Mappen und Dokumente mit endgültigem Löschen; die Historie gelöschter Mappen fällt nach einer einstellbaren Zeit weg | Werkbank → Mappentypen → Archivmodus, Werkbank → Darf weg, Werkbank → Papierkorb |
 | Art. 18 – Einschränkung (Sperren) | **Löschsperre bis Fristende** im Archivmodus – der erste Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen); den Zugriff schränkst du über Berechtigungen ein | Werkbank → Mappentypen |
 | Art. 15 – Auskunft | [Auskunft](#auskunft-nach-art-15-dsgvo) als ZIP mit Deckblatt, Prüfliste und Nachweis; [zustellen](#auskunft-zustellen) per Abruf-Link oder E-Mail | Werkbank → Datenschutz |
@@ -21,13 +21,19 @@ Ablago ist **auf Datenschutz ausgelegt** – „Datenschutz durch Technikgestalt
 
 Ablago sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst jemanden: keine anonymen Statistiken, keine regelmäßigen „Lebenszeichen“, keine Absturzberichte, kein Tracking in der Oberfläche. Die Oberfläche lädt von Haus aus nichts von fremden Servern – keine Schriften, Skripte oder Bilder.
 
-**Von sich aus baut Ablago keine Verbindung ins Internet auf.** Eine automatische Suche nach neuen Versionen gibt es nicht – also auch nichts abzuschalten. Nach außen geht es nur, wenn du es auslöst oder einrichtest:
+### Was deine Ablage verlässt – und wann { #was-deine-ablage-verlasst }
+
+**Von sich aus baut Ablago keine Verbindung ins Internet auf.** Eine automatische Suche nach neuen Versionen gibt es nicht – also auch nichts abzuschalten. Nach außen geht es nur, wenn du es auslöst oder einrichtest. Diese Tabelle ist die eine Stelle zum Nachschlagen; die verlinkten Seiten sagen jeweils mehr:
 
 | Verbindung | Wann | Wohin, was |
 | --- | --- | --- |
 | **Versionsabgleich** | nur auf Knopfdruck unter **Werkbank → Technik** | GitHub (Stand von Ablago), endoflife.date (Node.js, PostgreSQL, Alpine), npm-Registry (Bibliotheken). Die Anfrage an GitHub enthält die Commit-Kennung deiner Version, damit sich die Änderungen seitdem zählen lassen – keine Daten aus deiner Ablage. Siehe [Technik](technik.md#versionen-und-aktualisierung). |
 | **Paketkatalog** | auf Knopfdruck unter **Werkbank → Pakete** (Katalog abrufen, auf neue Versionen prüfen) und wenn du einen Installationslink aus dem Katalog öffnest | GitHub ([Pakete](pakete.md)); weitere Kataloge nur, wenn du sie einträgst |
-| **E-Mail** | wenn du den E-Mail-Versand oder [Postfächer](postfaecher.md) einrichtest | dein Mailserver |
+| **E-Mail** | wenn du den E-Mail-Versand oder [Postfächer](postfaecher.md) einrichtest | dein Mailserver. Hinaus gehen: Mappen und Dokumente, die jemand versendet (auch über die [Schnittstelle](api.md)), die [Tägliche Zusammenfassung](aufgaben.md#tagliche-zusammenfassung) (Mappentitel und Links, standardmäßig an, jeder bestellt sie selbst ab), Einladungen, Passwort-Links, [Auskünfte](#auskunft-erteilen-werkbank-datenschutz) und Abruf-Links |
+| **KI-Dienst** | nur, wenn du ein Paket wie den KI-Assistenten installierst und seine [Dienst-Adresse](pakete.md#dienst-adresse) bestätigst | genau diese Adresse: bei „Frag deine Ablage“ Ausschnitte aus Dokumenten, bei „Aus Dokument ausfüllen“ der Dokumenttext. Im Heimnetz ([KI lokal](ki-lokal.md)) bleibt alles bei dir |
+| **Sicherung außer Haus** | wenn du ein Sicherungsziel-Paket einrichtest | die verschlüsselte Sicherung, ohne Schlüssel ([Kopie außer Haus](sicherung-ausser-haus.md)) |
+| **Zugang von außen** | wenn du Ablago über einen Tunnel (z. B. Cloudflare Tunnel, Tailscale Funnel) erreichbar machst | aller Verkehr läuft über diesen Anbieter ([Erreichbarkeit aus dem Internet](#erreichbarkeit-aus-dem-internet)) |
+| **Links weitergeben** | wenn jemand einen [Link über Feldwerte](direktlinks.md) per Mail oder Chat schickt | die Feldwerte im Link (z. B. eine Vertragsnummer) sind darin lesbar |
 | **Anmeldung über einen Anbieter** | wenn du sie [einrichtest](anmeldeschutz.md#anmeldung-uber-einen-anbieter-openid-connect) | dein Anbieter (OpenID Connect) |
 | **Webhooks** | wenn du unter **Werkbank → Webhooks** ein Ziel freigibst und ein Benutzer dorthin einen Webhook anlegt | nur die freigegebenen Ziele, nur Zahlen (neue Post, Zu erledigen, Fristen) ohne Titel oder Inhalte ([Webhooks](webhooks.md)) |
 | **Pakete mit Code** | nur, wenn ein Paket es braucht und du es bei der Installation bestätigst | nur die Adressen, die das Paket angibt ([Rechte eines Pakets](pakete.md#recht-netzwerk-und-internet)) |
