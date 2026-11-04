@@ -1961,4 +1961,8 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .frist-bald { color: var(--warn); }
 .chip.aus { opacity: .7; }
 .auskunft-verlauf, .auskunft-typen { list-style: none; padding-left: 0; }
+.loeschkonzept-luecken { list-style: none; padding-left: 0; }
+.loeschkonzept-luecken > li { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: baseline; justify-content: space-between; }
+.loeschkonzept-luecken .knoepfe { margin: 0; }
+.weitere-typen > summary { cursor: pointer; margin: .5rem 0; }
 .auskunft-verlauf li { padding: 4px 0; border-bottom: 1px solid var(--linie); }

@@ -39,7 +39,18 @@ export interface Datenart {
 }
 
 /** Was fehlt und im DMS ergänzt werden kann (Werkbank → Datenschutz-Auskünfte bzw. Mappentypen). */
-export interface Luecke { art: 'zweck' | 'frist' | 'verantwortlicher' | 'keine'; typId?: string; typ?: string; text: string }
+/** Ein Verweisfeld, über das ein Mappentyp Personendaten enthält (z. B. Konto → „Inhaber“ → Person, #664). */
+export interface Personenverweis { feld: string; ziel: string }
+/** Warum ein Mappentyp im Löschkonzept steht (#664). */
+export interface Personenbezug { bezug: 'person' | 'verweis' | 'zweck'; verweise: Personenverweis[] }
+
+/**
+ * Was fehlt und im DMS ergänzt werden kann (Werkbank → Datenschutz-Auskünfte bzw. Mappentypen). Je Mappentyp
+ * genau eine Lücke (#664) mit Grund und den fehlenden Angaben.
+ */
+export type Luecke =
+  | { art: 'typ'; typId: string; typ: string; bezug: Personenbezug['bezug']; verweise: Personenverweis[]; fehlt: ('zweck' | 'frist')[]; text: string }
+  | { art: 'verantwortlicher' | 'keine'; typId?: undefined; typ?: undefined; text: string }
 
 export type Block =
   | { art: 'absatz'; text: string }
@@ -63,23 +74,55 @@ export function korbText(papierkorbTage: number) {
 }
 
 /**
+ * Personenbezug je Mappentyp (#664): angekreuzt („betrifft eine Person“), über ein Verweisfeld auf einen
+ * angekreuzten Typ, oder nur mit Zweck. Typen ohne Bezug fehlen in der Karte. Benutzer und Rollen zählen nicht.
+ */
+export function personenbezug(typen: LoeschkonzeptTyp[], datenschutz: Pick<Datenschutz, 'typen'>): Map<string, Personenbezug> {
+  const eigene = typen.filter(ohneSystem);
+  const name = new Map(typen.map((t) => [t.id, t.name] as const));
+  const ds = (id: string) => datenschutz.typen[id] ?? { person: false, zweck: '' };
+  const personen = new Set(eigene.filter((t) => ds(t.id).person).map((t) => t.id));
+  const karte = new Map<string, Personenbezug>();
+  for (const t of eigene) {
+    const verweise = t.felder
+      .filter((f) => f.typ === 'referenz' && f.zielTyp && (personen.has(f.zielTyp) || (f.zielTyp === BELIEBIGER_TYP && personen.size > 0)) && f.zielTyp !== t.id)
+      .map((f) => ({ feld: f.label, ziel: f.zielTyp === BELIEBIGER_TYP ? 'zugeordnete Personen' : name.get(f.zielTyp!) ?? f.zielTyp! }));
+    const bezug: Personenbezug['bezug'] | null = personen.has(t.id) ? 'person' : verweise.length ? 'verweis' : ds(t.id).zweck.trim() ? 'zweck' : null;
+    if (bezug) karte.set(t.id, { bezug, verweise });
+  }
+  return karte;
+}
+
+/** „über „Inhaber“ auf Person“, mehrere mit „und“ (#664). */
+export function verweisText(v: Personenverweis[]) {
+  const teile = v.map((x) => `über „${x.feld}“ auf ${x.ziel}`);
+  return teile.length <= 1 ? teile.join('') : `${teile.slice(0, -1).join(', ')} und ${teile[teile.length - 1]}`;
+}
+
+/** Grund, warum ein Mappentyp Personendaten enthält – als Satzteil nach „weil …“. */
+export function grundText(b: Personenbezug) {
+  return b.bezug === 'person' ? 'du ihn als „betrifft eine Person“ markiert hast'
+    : b.bezug === 'verweis' ? `er ${verweisText(b.verweise)} verweist`
+    : 'du einen Zweck für ihn hinterlegt hast';
+}
+
+/**
  * Datenarten mit Personenbezug: Mappentypen, die eine Person betreffen, die auf einen solchen
  * Mappentyp verweisen (z. B. Rechnung → Kunde) oder für die ein Zweck hinterlegt ist. Benutzer
  * und Rollen stehen in Abschnitt 7. Reihenfolge: Personen zuerst, dann nach Name.
  */
 export function datenarten(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' | 'papierkorbTage'>): Datenart[] {
   const typen = q.typen.filter(ohneSystem);
-  const name = new Map(q.typen.map((t) => [t.id, t.name] as const));
   const ds = (id: string) => q.datenschutz.typen[id] ?? { person: false, zweck: '' };
-  const personen = new Set(typen.filter((t) => ds(t.id).person).map((t) => t.id));
+  const karte = personenbezug(q.typen, q.datenschutz);
   const zeilen: Datenart[] = [];
   for (const t of typen) {
-    const verweise = t.felder.filter((f) => f.typ === 'referenz' && f.zielTyp && (personen.has(f.zielTyp) || (f.zielTyp === BELIEBIGER_TYP && personen.size > 0)) && f.zielTyp !== t.id);
     const zweck = ds(t.id).zweck.trim();
-    const bezug: Datenart['bezug'] | null = personen.has(t.id) ? 'person' : verweise.length ? 'verweis' : zweck ? 'zweck' : null;
-    if (!bezug) continue;
+    const pb = karte.get(t.id);
+    if (!pb) continue;
+    const bezug = pb.bezug;
     const betroffene = bezug === 'person' ? `${t.name} (die Person selbst)`
-      : bezug === 'verweis' ? verweise.map((f) => `${f.zielTyp === BELIEBIGER_TYP ? 'zugeordnete Personen' : name.get(f.zielTyp!)} (über „${f.label}“)`).join(', ')
+      : bezug === 'verweis' ? pb.verweise.map((v) => `${v.ziel} (über „${v.feld}“)`).join(', ')
       : FEHLT('Betroffene');
     const a = t.archiv ?? null;
     const vorschlag = a ? FRISTEN.find((x) => x.jahre === a.jahre)?.text : undefined;
@@ -103,9 +146,16 @@ export function luecken(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' | '
   const l: Luecke[] = [];
   if (!q.datenschutz.verantwortlicher.trim()) l.push({ art: 'verantwortlicher', text: 'Kein Verantwortlicher hinterlegt – bitte unter Datenschutz-Auskünfte → Einstellungen ergänzen.' });
   if (!arten.length) l.push({ art: 'keine', text: 'Kein Mappentyp betrifft eine Person – lege unter „Personendaten in Mappentypen“ fest, welche Mappentypen Personen betreffen.' });
+  const bezug = personenbezug(q.typen, q.datenschutz);
   for (const a of arten) {
-    if (a.zweck === FEHLT('Zweck')) l.push({ art: 'zweck', typId: a.typId, typ: a.typ, text: `${a.typ}: kein Zweck hinterlegt – bitte unter „Personendaten in Mappentypen“ ergänzen.` });
-    if (a.frist === FEHLT('Frist')) l.push({ art: 'frist', typId: a.typId, typ: a.typ, text: `${a.typ}: keine Aufbewahrungsfrist – bitte den Archivmodus einschalten (Werkbank → Mappentypen) oder die Frist im Dokument ergänzen.` });
+    const fehlt: ('zweck' | 'frist')[] = [];
+    if (a.zweck === FEHLT('Zweck')) fehlt.push('zweck');
+    if (a.frist === FEHLT('Frist')) fehlt.push('frist');
+    if (!fehlt.length) continue;
+    const b = bezug.get(a.typId) ?? { bezug: a.bezug, verweise: [] };
+    const was = fehlt.map((f) => (f === 'zweck' ? 'Zweck' : 'Aufbewahrungsfrist')).join(' · ');
+    l.push({ art: 'typ', typId: a.typId, typ: a.typ, bezug: b.bezug, verweise: b.verweise, fehlt,
+      text: `${a.typ} – enthält Personendaten, weil ${grundText(b)}. Es fehlen: ${was}.` });
   }
   return l;
 }
