@@ -2,7 +2,7 @@
 
 Damit die Suche auch den Text von Dokumenten findet, erzeugt Ablago zu jedem neuen Dokument einen **Volltext** – im Hintergrund, ohne dass jemand warten muss:
 
-*Texterkennung* gehört zur Vorlage **Betrieb**, *Wartungsoperationen* nur zur Vorlage **Alles**.
+Die Einstellungen stehen unter **Werkbank → Post und Eingänge → Suche und Volltext** – zusammen mit der [Suche](suche.md) (Tippfehler, gleichbedeutende Wörter) und „Neue PDFs automatisch verkleinern“. Der Bereich gehört zur Vorlage **Betrieb**, im Haushalt erscheint er im Expertenmodus. Die *Wartungsoperationen* stehen unter **Werkbank → Wartung und Fehlersuche → Wartung**.
 
 --8<-- "ausgeblendet-schritt.md"
 
@@ -26,7 +26,7 @@ Ohne Paket bleiben Scans und Fotos ohne Text („wartet auf Texterkennung – ke
 
 **Wie schnell?** Das Paket ist etwas langsamer als die frühere eingebaute Texterkennung, weil es als WebAssembly abgeschottet läuft: Auf einem Rechner mit 2 Kernen (amd64) brauchte es für 10 gescannte Seiten etwa 31–35 Sekunden, die eingebaute dort 25–26 Sekunden; eine einzelne Seite dauert vom Hochladen bis zum Text etwa 4–6 Sekunden. Erkannt hat es dabei genauso gut. Lange Dokumente erkennt es abschnittsweise, die Zeitgrenze des Paket-Läufers greift nicht. Mehr Messwerte stehen im README des Pakets.
 
-![Werkbank → Texterkennung](bilder/werkbank-texterkennung.png)
+![Werkbank → Suche und Volltext](bilder/werkbank-texterkennung.png)
 
 ## Andere Dateitypen { #andere-dateitypen }
 
@@ -48,9 +48,9 @@ So sieht es aus:
 3. Mit der Fassung entsteht das Vorschaubild (Hinweis beim Darüberfahren: „Vorschau aus der umgewandelten Fassung eines Pakets“) und der Volltext. Am Dokument steht dann z. B. „Text aus dem PDF · aus der umgewandelten Fassung (Bildformate 1.0.0)“ mit dem Link **Fassung ansehen**; in der Historie der Mappe „umgewandelte Fassung erstellt“.
 4. Kann das Paket eine Datei nicht lesen (z. B. beschädigt), steht sein Grund am Dokument („Umwandlung durch Paket Bildformate: …“). **Erneut versuchen** gibt die Datei noch einmal an das Paket.
 
-**Werkbank → Texterkennung → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt bzw. ihren Volltext liefert – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
+**Werkbank → Suche und Volltext → Andere Dateitypen** zeigt je Dateityp, wie viele Dokumente es gibt und welches Paket sie umwandelt bzw. ihren Volltext liefert – oder welches Paket aus dem Katalog es könnte, mit **Paket installieren**.
 
-**Sicherung:** Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (`/data/files/<Haushalts-Id>/fassungen`) und gehen mit in die [Sicherung](sicherung.md#was-eine-sicherung-enthalt) und den [Vollexport](export.md) (dort als `<Datei>.fassung.pdf` neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch **ohne** das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (`/data/files/fassungen`, Versionen 0.137 bis 0.140.0) zieht Ablago beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt **Werkbank → Wartungsoperationen → Vorschaubilder nachholen** die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).
+**Sicherung:** Seit Version 0.140.1 liegen die Fassungen mit den Dokumenten im Ordner des Haushalts (`/data/files/<Haushalts-Id>/fassungen`) und gehen mit in die [Sicherung](sicherung.md#was-eine-sicherung-enthalt) und den [Vollexport](export.md) (dort als `<Datei>.fassung.pdf` neben dem Original). Nach einer Wiederherstellung steht alles so da wie vorher – Fassung ansehen, Volltext und Vorschau –, auch **ohne** das Paket oder mit einer neueren Version, die heute anders umwandeln würde. Fassungen vom früheren Ort (`/data/files/fassungen`, Versionen 0.137 bis 0.140.0) zieht Ablago beim ersten Start von selbst um. Ältere Sicherungen ohne Fassungen lassen sich weiter einspielen; dann holt **Werkbank → Wartung → Wartungsoperationen → Vorschaubilder nachholen** die Fassungen beim Paket nach, sofern es installiert ist (der Volltext ist Teil jeder Sicherung und bleibt).
 
 **Warum noch kein Paket für HEIC?** HEIC-Fotos sind mit HEVC (H.265) komprimiert. Die freien Bibliotheken dafür (libheif, libde265) stehen unter LGPL, und für HEVC gibt es Patentpools, die auch Software-Decoder lizenzieren wollen – das klären wir, bevor ein Paket in den offiziellen Katalog kommt. Bis dahin: Auf dem iPhone unter *Einstellungen → Kamera → Formate* „Maximale Kompatibilität“ wählen (dann speichert es JPEG), oder beim Hochladen über den Browser – Safari wandelt Fotos aus der Mediathek dabei meist schon in JPEG.
 
@@ -62,11 +62,11 @@ Mit einem Paket wie **PDF/A** (Recht [Archivfassung ablegen](pakete.md#recht-arc
 - **Welche:** Standard sind **alle PDFs** (auch mit Text), Fotos und Scans. Mit der Einstellung des Pakets „nur Scans und Bilder“ bekommen PDFs mit vollständigem Text keine – das spart Platz (für PDFs verdoppelt sich der Speicherbedarf etwa). Ist ein PDF schon gültiges PDF/A, gilt es selbst als Archivfassung. **Verschlüsselte PDFs** bekommen keine, der Grund steht am Dokument. **Digital signierte PDFs** bekommen eine für die Anzeige; die Signatur prüft man am Original.
 - **Nie nachladen:** Die Archivfassung enthält nur, was in der Datei selbst steckt. Verweise auf Inhalte im Internet, JavaScript und Aktionen beim Öffnen übernimmt sie nicht – Ablago lehnt eine Archivfassung mit solchen Inhalten ab. Hatte das Original welche, steht am Dokument „Enthielt Verweise auf externe Inhalte, die nicht übernommen wurden“; die Adressen stehen nur im Protokoll (Modul *archivfassung*).
 - **Prüfung:** Ablago nimmt nur ein PDF mit PDF/A-Kennung an (XMP-Metadaten, ungefiltert), unverschlüsselt, bis 100 MB und 1000 Seiten. Die volle Prüfung der Konformität macht das Paket selbst (z. B. mit veraPDF in seiner CI).
-- **Werkbank → Texterkennung → Archivfassung (PDF/A)** zeigt das Paket, wie viele Archivfassungen es gibt, wie viele warten, ausgelassen oder abgelehnt sind – und die Dokumente mit Grund.
+- **Werkbank → Suche und Volltext → Archivfassung (PDF/A)** zeigt das Paket, wie viele Archivfassungen es gibt, wie viele warten, ausgelassen oder abgelehnt sind – und die Dokumente mit Grund.
 - **Sicherung und Vollexport:** Die Archivfassung gehört zur Sicherung (mit Probe-Wiederherstellung) und steht im Vollexport als `<Datei>.pdfa.pdf` neben dem Original. Die [Auskunft nach Art. 15](datenschutz.md) bleibt, wie sie ist: Dokumente wie abgelegt.
 - **Nach Änderungen am Original** (neue Version, drehen, Seiten löschen, teilen, schwärzen) gilt die alte Archivfassung nicht mehr; angezeigt wird das Original, bis das Paket neu erzeugt hat.
 
-## Werkbank → Texterkennung
+## Werkbank → Suche und Volltext
 
 Die Seite ist eine **Übersicht**; Einstellungen der Erkennung gibt es hier nicht mehr (sie stehen beim Paket):
 
@@ -107,7 +107,7 @@ Im Paket **Texterkennung (Deutsch und Englisch)** stecken Deutsch, Englisch und 
 
 **Ob mehr Sprachen die Erkennung bremsen:** Welche Sprache eine Seite hat, erkennt das Paket am gelesenen Text anhand kurzer Wortlisten für alle oben genannten Sprachen – immer für alle, ob ihre Sprachdaten installiert sind oder nicht. Mehr Zusatzsprachen machen diese Erkennung also weder langsamer noch ungenauer. Eine Zusatzsprache kostet nur dort Zeit, wo sie gebraucht wird: Erkennt das Paket eine Seite als Französisch und ist Französisch installiert, liest es die Seite ein zweites Mal auf Französisch und nimmt die sicherere Lesung.
 
-Unter **Werkbank → Texterkennung → Erkannte Sprachen** siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit ‚Texterkennung – Zusatzsprache Französisch‘ (texterkennung_fra)“, mit Link zu diesem Paket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).
+Unter **Werkbank → Suche und Volltext → Erkannte Sprachen** siehst du, wie viele Dokumente in welcher Sprache vorliegen und ob das Paket ihre Sprachdaten hat. Fehlen sie, macht die Seite einen Vorschlag, z. B. „12 Dokumente auf Französisch – das Paket Texterkennung liest sie besser mit ‚Texterkennung – Zusatzsprache Französisch‘ (texterkennung_fra)“, mit Link zu diesem Paket. Fehlende Sprachdaten nennt das Paket außerdem im Ergebnis und im Protokoll des Paket-Läufers („Sprachdaten fehlen: fra (Zusatzpaket texterkennung_fra)“).
 
 Nach dem Installieren einer Zusatzsprache erkennt **Volltext neu erzeugen → Für alle Dokumente** (siehe unten) die vorhandenen Dokumente neu – oder du startest einzelne unter **Aufträge → fertig** neu.
 
@@ -130,7 +130,7 @@ Am Dokument sehen alle Benutzer den Stand (*wartet*, *läuft*, *wartet auf Texte
 
 ## Wartungsoperationen
 
-**Werkbank → Wartungsoperationen** sammelt Arbeiten am ganzen Bestand, die du bei Bedarf anstößt:
+**Werkbank → Wartung → Wartungsoperationen** sammelt Arbeiten am ganzen Bestand, die du bei Bedarf anstößt:
 
 - **Volltext neu erzeugen** – für Dokumente ohne Text oder für alle, siehe unten.
 - **Vorschaubilder nachholen** erzeugt für ältere PDFs und Bilder das kleine Bild der ersten Seite, das neben jedem Dokument steht. Neue Dokumente bekommen es gleich nach dem Hochladen, ältere sonst beim ersten Anzeigen. Die Bilder entstehen eins nach dem anderen mit `pdftoppm` (poppler, im Image enthalten). Dateien anderer Typen ohne Fassung (z. B. TIFF) gibt es dabei an das [Paket zum Umwandeln](#andere-dateitypen), falls eins installiert ist.
@@ -148,7 +148,7 @@ Läuft wie bei einem neuen Dokument: Ablago liest die Textebene neu und gibt das
 - **Für Dokumente ohne Text** – alle Dokumente, deren Volltext leer ist: noch nie gelesen (z. B. vor Version 0.11 hochgeladen), Scans, für die es noch kein Paket gab, oder nach einem Fehler. Dazu gehören auch [andere Dateitypen](#andere-dateitypen) wie TIFF: Ohne Fassung gehen sie an das Paket zum Umwandeln, mit Fassung wird diese gelesen. Ersetzt das frühere „Volltext nachholen“.
 - **Für alle Dokumente** – nach einer Rückfrage mit der Anzahl. Das ist ein **ausdrückliches Neu**: Das Paket erkennt dann auch Dokumente neu, die schon Text haben – auch wenn bei ihm „Vorhandenen Volltext verwerfen und neu erkennen“ aus ist. Sinnvoll etwa nach einem neuen Sprachpaket. Bis das Paket fertig ist, bleibt der bisherige Text für die Suche stehen.
 
-Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; Ablago bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 35 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter **Werkbank → Texterkennung** („wartet auf Texterkennung“).
+Nur Dokumente in Registern, die einen Volltext erzeugen. Es läuft als **Auftrag mit Fortschritt** („Textebene lesen und an die Texterkennung geben: 120 von 800“) und lässt sich **abbrechen**; Ablago bleibt benutzbar. Der Auftrag selbst ist schnell – die Zeit braucht die Texterkennung danach: Das Paket **Texterkennung** schafft etwa **10 Seiten in 35 Sekunden** (amd64, 2 Kerne), 1.000 Seiten also in rund einer Stunde. Wie weit es ist, siehst du unter **Werkbank → Suche und Volltext** („wartet auf Texterkennung“).
 
 Ist kein Paket für die Texterkennung installiert, sagt die Seite das mit dem Weg zu **Werkbank → Pakete**.
 

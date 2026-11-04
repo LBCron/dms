@@ -67,7 +67,7 @@ Die Werte kommen vom Server im Header `Server-Timing` (`vor`, `app`, `db`, `rech
 
 ## Technik
 
-**Werkbank → Einstellungen → Technik** zeigt im Abschnitt **Installiert** (unter *Neuere Versionen*), was installiert ist: Version und Stand von Ablago, Laufzeit (Node.js, Betriebssystem), Datenbank, Bibliotheken und Oberfläche.
+**Werkbank → Wartung und Fehlersuche → Systemzustand → Version und Updates** zeigt im Abschnitt **Installiert** (unter *Neuere Versionen*), was installiert ist: Version und Stand von Ablago, Laufzeit (Node.js, Betriebssystem), Datenbank, Bibliotheken und Oberfläche.
 
 ![Technik und Versionen](bilder/werkbank-technik.png)
 

@@ -10,7 +10,7 @@ Ablago ist **auf Datenschutz ausgelegt** – „Datenschutz durch Technikgestalt
 | DSGVO | Was Ablago dafür hat | Wo |
 | --- | --- | --- |
 | Art. 5 Abs. 1 c und Art. 25 – Datenminimierung, datenschutzfreundliche Voreinstellungen | **Selbst gehostet:** Die Daten liegen nur auf deinem Gerät – oder bei einem [Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), den du selbst wählst. [Keine Telemetrie](#keine-telemetrie), kein Tracking, keine Werbung, keine KI im Kern; die Texterkennung läuft lokal. KI-Funktionen kommen als Pakete. Sie können ganz auf deinem Gerät laufen ([KI lokal](ki-lokal.md)); einen fremden Dienst fragen sie nur, wenn du seine Adresse einrichtest und bei der Installation bestätigst. Wer was sehen darf, regeln Rechte je Mappentyp mit Regeln. | Werkbank → Mappentypen → [Berechtigungen](berechtigungen.md) |
-| Art. 5 Abs. 1 e – Speicherbegrenzung; Art. 17 – Löschen | [Archivmodus](archiv.md) mit Aufbewahrungsfrist und der Liste **Darf weg**; [Papierkorb](papierkorb.md) für Mappen und Dokumente mit endgültigem Löschen; die Historie gelöschter Mappen fällt nach einer einstellbaren Zeit weg | Werkbank → Mappentypen → Archivmodus, Werkbank → Darf weg, Werkbank → Papierkorb |
+| Art. 5 Abs. 1 e – Speicherbegrenzung; Art. 17 – Löschen | [Archivmodus](archiv.md) mit Aufbewahrungsfrist und der Liste **Aufbewahrung abgelaufen**; [Papierkorb](papierkorb.md) für Mappen und Dokumente mit endgültigem Löschen; die Historie gelöschter Mappen fällt nach einer einstellbaren Zeit weg | Werkbank → Mappentypen → Archivmodus, Werkbank → Aufbewahrung abgelaufen, Werkbank → Papierkorb |
 | Art. 18 – Einschränkung (Sperren) | **Löschsperre bis Fristende** im Archivmodus – der erste Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen); den Zugriff schränkst du über Berechtigungen ein | Werkbank → Mappentypen |
 | Art. 15 – Auskunft | [Auskunft](#auskunft-nach-art-15-dsgvo) als ZIP mit Deckblatt, Prüfliste und Nachweis; [zustellen](#auskunft-zustellen) per Abruf-Link oder E-Mail | Werkbank → Datenschutz |
 | Art. 20 – Datenübertragbarkeit | **Persönlicher Export** für jeden Benutzer, **Vollexport** aller Daten – beides in offenen Formaten (CSV, JSON, Excel, Dokumente im Original) | Profil → Konto → Meine Daten exportieren; Werkbank → Vollexport ([Daten exportieren](export.md)) |
@@ -27,7 +27,7 @@ Ablago sendet **keine Nutzungsdaten** – weder an das Projekt noch an sonst jem
 
 | Verbindung | Wann | Wohin, was |
 | --- | --- | --- |
-| **Versionsabgleich** | nur auf Knopfdruck unter **Werkbank → Technik** | GitHub (Stand von Ablago), endoflife.date (Node.js, PostgreSQL, Alpine), npm-Registry (Bibliotheken). Die Anfrage an GitHub enthält die Commit-Kennung deiner Version, damit sich die Änderungen seitdem zählen lassen – keine Daten aus deiner Ablage. Siehe [Technik](technik.md#versionen-und-aktualisierung). |
+| **Versionsabgleich** | nur auf Knopfdruck unter **Werkbank → Systemzustand → Version und Updates** | GitHub (Stand von Ablago), endoflife.date (Node.js, PostgreSQL, Alpine), npm-Registry (Bibliotheken). Die Anfrage an GitHub enthält die Commit-Kennung deiner Version, damit sich die Änderungen seitdem zählen lassen – keine Daten aus deiner Ablage. Siehe [Technik](technik.md#versionen-und-aktualisierung). |
 | **Paketkatalog** | auf Knopfdruck unter **Werkbank → Pakete** (Katalog abrufen, auf neue Versionen prüfen) und wenn du einen Installationslink aus dem Katalog öffnest | GitHub ([Pakete](pakete.md)); weitere Kataloge nur, wenn du sie einträgst |
 | **E-Mail** | wenn du den E-Mail-Versand oder [Postfächer](postfaecher.md) einrichtest | dein Mailserver. Hinaus gehen: Mappen und Dokumente, die jemand versendet (auch über die [Schnittstelle](api.md)), die [Tägliche Zusammenfassung](aufgaben.md#tagliche-zusammenfassung) (Mappentitel und Links, standardmäßig an, jeder bestellt sie selbst ab), Einladungen, Passwort-Links, [Auskünfte](#auskunft-erteilen-werkbank-datenschutz) und Abruf-Links |
 | **KI-Dienst** | nur, wenn du ein Paket wie den KI-Assistenten installierst und seine [Dienst-Adresse](pakete.md#dienst-adresse) bestätigst | genau diese Adresse: bei „Frag deine Ablage“ Ausschnitte aus Dokumenten, bei „Aus Dokument ausfüllen“ der Dokumenttext. Im Heimnetz ([KI lokal](ki-lokal.md)) bleibt alles bei dir |
@@ -49,7 +49,7 @@ Ablago gibt dir Werkzeuge. Diese Punkte bleiben bei dir als Verantwortlichem:
 
 - **Verzeichnis der Verarbeitungstätigkeiten** (Art. 30), **Rechtsgrundlagen und Informationspflichten** (Art. 13, 14) – etwa der Datenschutzhinweis im Mietvertrag. Die Angaben dafür stehen in Ablago: Mappentypen, Zwecke aus den [Einstellungen](#einstellungen), Fristen aus dem Archivmodus.
 - **Welche Frist gilt:** Aufbewahrungsfristen klärst du mit deiner Steuerberatung; Ablago setzt um, was du einträgst.
-- **Löschen nach Fristende:** Ablago löscht nie von selbst. Du prüfst **Darf weg** regelmäßig.
+- **Löschen nach Fristende:** Ablago löscht nie von selbst. Du prüfst **Aufbewahrung abgelaufen** regelmäßig.
 - **Kopien außerhalb der Ablage:** Gelöschtes steckt noch in älteren [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung), bis sie nach deiner Aufbewahrung wegfallen (Standard: bis zu 12 Monate; von Hand angelegte bleiben, bis du sie löschst), in Vollexporten und persönlichen Exporten unter `export/`, in Kopien außer Haus, heruntergeladenen Dateien und Ausdrucken.
 - **Wer Zugriff hat:** Administratoren sehen alles. Rollen und Berechtigungen richtest du ein; Zugänge von Personen, die gehen, [deaktivierst](benutzer.md#zugang-sperren) du.
 - **Die Umgebung:** Gerät und Festplatten, Netzwerk, HTTPS, Updates, Kopie der Sicherungen außer Haus – und Verträge zur Auftragsverarbeitung mit Dienstleistern, etwa dem Mailanbieter. Läuft dein Ablago [bei einem Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), brauchst du als Vermieter oder Betrieb mit ihm einen **AV-Vertrag**; dort steht auch, worauf du bei der Wahl achtest.
@@ -86,7 +86,7 @@ Jemand verlangt, dass seine Daten gelöscht werden (Art. 17 DSGVO).
 3. **Frist steht entgegen → sperren statt löschen.** Die Mappe bleibt bis Fristende; benutze sie nur noch dafür, wofür du sie aufbewahren musst.
     - **Zugriff einschränken:** Gib dem Mappentyp ein Ja/Nein-Feld wie *Gesperrt* und lege in den [Berechtigungen](berechtigungen.md#bedingungen) eine Regel an: Wenn „Gesperrt ist ja“, dann Lesen und Bearbeiten nur für eine Rolle wie *Datenschutz*. Administratoren sehen weiter alles.
     - **Vermerken:** eine Notiz an der Mappe, z. B. „Gesperrt auf Verlangen vom 03.11.2026 – löschen nach Fristende“.
-    - **Nach Fristende** steht die Mappe unter **Werkbank → Darf weg**; dann löschst du sie wie unten.
+    - **Nach Fristende** steht die Mappe unter **Werkbank → Aufbewahrung abgelaufen**; dann löschst du sie wie unten.
     - Sag der Person, dass und bis wann ihre Daten gesperrt bleiben und warum.
 4. **Keine Frist → löschen:**
     - In der Ablage die Mappen löschen – einzeln oder über die [Mehrfachauswahl](https://help.ablago.app/benutzer/aktuell/ablage/#mehrere-mappen-loschen); einzelne Dokumente an der Dokumentzeile. Wähle beim Löschen den Grund **Auf Verlangen der betroffenen Person** – er steht im [Löschprotokoll](#loschprotokoll). Eine Mappe, auf die noch andere verweisen, lässt sich nicht löschen: Entferne zuerst den Verweis oder lösche die verweisende Mappe mit, wenn auch sie weg soll.
@@ -105,10 +105,10 @@ Für Vermieter, Selbständige und Betriebe: einmal festlegen, wie lange welche D
 
 1. **Datenarten erfassen:** Jeder Mappentyp ist eine Datenart – Mieter, Mietvertrag, Rechnung, Kunde, Bewerbung … Markiere unter **Werkbank → Datenschutz → Einstellungen**, welche eine Person betreffen, und trage je Mappentyp den Zweck ein. Daraus [erzeugt Ablago das Löschkonzept](loeschkonzept.md#aus-dem-dms-erzeugen) mit ausgefüllter Tabelle „Datenarten und Fristen“ – oder du füllst die [Vorlage](loeschkonzept.md#die-vorlage) von Hand aus.
 2. **Fristen festlegen** – mit deiner Steuerberatung: z. B. Buchungsbelege 8 Jahre, Geschäftsbriefe 6 Jahre, Bewerbungen ohne Zusage 6 Monate.
-3. **Archivmodus einschalten** für jeden Mappentyp mit gesetzlicher Frist: Frist in Jahren und Stichtag (z. B. Rechnungsdatum). Bis Fristende ist die Mappe gegen Löschen gesperrt; danach steht sie unter **Darf weg**. Siehe [Archivmodus](archiv.md#einschalten).
+3. **Archivmodus einschalten** für jeden Mappentyp mit gesetzlicher Frist: Frist in Jahren und Stichtag (z. B. Rechnungsdatum). Bis Fristende ist die Mappe gegen Löschen gesperrt; danach steht sie unter **Aufbewahrung abgelaufen**. Siehe [Archivmodus](archiv.md#einschalten).
 4. **Kürzere Fristen ohne Archivmodus** (z. B. Interessenten, Bewerbungen): Lege eine [Ansicht](sichten.md) an, die die fälligen Mappen nach einem Datumsfeld zeigt, und schau sie regelmäßig durch.
 5. **Wie lange Gelöschtes nachwirkt:** Aufbewahrung des [Papierkorbs](papierkorb.md#aufbewahrung) (Standard 30 Tage), Historie gelöschter Mappen (Standard 365 Tage) und Aufbewahrung der [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung) passend zu deinem Konzept einstellen.
-6. **Regelmäßig prüfen:** z. B. jedes Jahr im Januar **Werkbank → Darf weg** durchgehen und löschen, was weg darf – einen Kunden oder Vertragspartner samt allem, was dranhängt, mit [Mit verknüpften Mappen löschen](#mit-verknupften-mappen-loschen). Gelöscht wird nie automatisch.
+6. **Regelmäßig prüfen:** z. B. jedes Jahr im Januar **Werkbank → Aufbewahrung abgelaufen** durchgehen und löschen, was weg darf – einen Kunden oder Vertragspartner samt allem, was dranhängt, mit [Mit verknüpften Mappen löschen](#mit-verknupften-mappen-loschen). Gelöscht wird nie automatisch.
 7. **Sperren auf Verlangen** wie unter [Löschen auf Verlangen](#loschen-auf-verlangen) beschrieben.
 8. **Dokumentieren:** Erzeuge das Löschkonzept unter **Werkbank → Datenschutz → Löschkonzept** (PDF oder Word), ergänze die [eckigen Klammern] und lege es als Mappe in Ablago ab. Ändern sich Mappentypen oder Fristen, erzeugst du es neu.
 
@@ -238,7 +238,7 @@ Der Abruf-Link funktioniert nur, wenn die Person dein Ablago von außen erreicht
 
 ## Löschen mit verknüpften Mappen { #mit-verknupften-mappen-loschen }
 
-Der dritte Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen) neben Archivmodus und **Darf weg**: An einer Mappe, z. B. einem Kunden oder Vertragspartner ohne Aktivität seit Jahren, löscht **Mappe ▾ → Mit verknüpften Mappen löschen …** die Mappe mit Verträgen, Rechnungen, Post und Dokumenten – nach einer Vorschau als Baum ([Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)).
+Der dritte Baustein eines [Sperr- und Löschkonzepts](#sperr-und-loschkonzept-aufsetzen) neben Archivmodus und **Aufbewahrung abgelaufen**: An einer Mappe, z. B. einem Kunden oder Vertragspartner ohne Aktivität seit Jahren, löscht **Mappe ▾ → Mit verknüpften Mappen löschen …** die Mappe mit Verträgen, Rechnungen, Post und Dokumenten – nach einer Vorschau als Baum ([Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)).
 
 Dabei gilt:
 
@@ -252,7 +252,7 @@ Dabei gilt:
 - **Nachvollziehbar, ohne Inhalte:** Die Historie jeder Mappe hält „in den Papierkorb gelegt – mit verknüpften Mappen gelöscht“ mit der Zahl der Mappen und Dokumente fest, die Start-Mappe auch, wie viele aus welchem Grund blieben. Das [Protokoll](fehlersuche.md#protokoll) (Modul „ablage“) nennt wer, Start-Mappe und Vorgang (als Id), Anzahl Mappen, Dokumente, entfernte Verweise und was warum blieb – keine Titel oder Feldwerte. Nach dem endgültigen Löschen bleibt die Historie so lange, wie unter [Historie endgültig gelöschter Mappen](papierkorb.md#historie-endgultig-geloschter-mappen) eingestellt.
 
 !!! tip "Löschkonzept dokumentieren"
-    Halte in deiner [Verfahrensdokumentation](verfahrensdokumentation.md) fest, welche Fristen je Mappentyp gelten, wer wann prüft, was weg darf (z. B. einmal im Jahr über *Darf weg*), und dass dabei „Mit verknüpften Mappen löschen“ verwendet wird.
+    Halte in deiner [Verfahrensdokumentation](verfahrensdokumentation.md) fest, welche Fristen je Mappentyp gelten, wer wann prüft, was weg darf (z. B. einmal im Jahr über *Aufbewahrung abgelaufen*), und dass dabei „Mit verknüpften Mappen löschen“ verwendet wird.
 
 ## Löschprotokoll { #loschprotokoll }
 
@@ -271,7 +271,7 @@ Dazu bei jedem Eintrag: **wann**, **von wem** (Benutzer; *Schnittstelle* bei ein
 
 **Nie drin:** Titel, Feldwerte, Dateinamen, Notizen – die sind personenbezogen und sollen ja weg.
 
-**Warum:** Beim Löschen fragt Ablago nach dem Grund – *Frist abgelaufen („Darf weg“)*, *Auf Verlangen der betroffenen Person*, *Nicht mehr nötig* oder *Sonstiges* – und optional nach einer kurzen Anmerkung. Schreib dort **keine Namen** hinein: Das Löschprotokoll bleibt, wenn die Daten weg sind. Beim endgültigen Löschen aus dem Papierkorb übernimmt Ablago den Grund vom Schritt „in den Papierkorb“. Über die Schnittstelle gibst du ihn mit `grund` und `grundText` an.
+**Warum:** Beim Löschen fragt Ablago nach dem Grund – *Frist abgelaufen („Aufbewahrung abgelaufen“)*, *Auf Verlangen der betroffenen Person*, *Nicht mehr nötig* oder *Sonstiges* – und optional nach einer kurzen Anmerkung. Schreib dort **keine Namen** hinein: Das Löschprotokoll bleibt, wenn die Daten weg sind. Beim endgültigen Löschen aus dem Papierkorb übernimmt Ablago den Grund vom Schritt „in den Papierkorb“. Über die Schnittstelle gibst du ihn mit `grund` und `grundText` an.
 
 ### Wann ist „gelöscht“ wirklich gelöscht?
 
@@ -279,7 +279,7 @@ Dazu bei jedem Eintrag: **wann**, **von wem** (Benutzer; *Schnittstelle* bei ein
 - **Endgültig gelöscht:** nach der [Aufbewahrung des Papierkorbs](papierkorb.md#aufbewahrung), mit *Endgültig löschen* oder *Papierkorb leeren*, sofort bei ausgeschaltetem Papierkorb. Dann sind Mappe, Dokumente, Volltext und Notizen aus der Datenbank entfernt, und die **Datei** ist vom Speicher gelöscht – es sei denn, ein anderes Dokument hat genau dieselbe Datei (gleiche Prüfsumme); sie ist ja nur einmal gespeichert.
 - **Was danach noch bleibt:** die Historie gelöschter Mappen für ihre eingestellte Zeit, ältere Sicherungen bis zu ihrer Aufbewahrung, Exporte und Kopien außerhalb von Ablago (siehe [Löschen auf Verlangen](#loschen-auf-verlangen)). Das Löschprotokoll hält den Zeitpunkt des endgültigen Löschens fest; diese Fristen ergänzt du im [Löschkonzept](loeschkonzept.md).
 
-Erfasst werden alle Wege: einzeln, mehrere ausgewählt, mit verknüpften Mappen, „Darf weg“, einzelne Dokumente (auch beim Ersetzen, Bearbeiten und Zusammenfügen von PDFs), ältere Versionen über die eingestellte Anzahl hinaus, der Papierkorb (von Hand, geleert, beim Abmelden geleert, Aufbewahrung abgelaufen, ausgeschaltet), Schnittstelle und Pakete. Nicht erfasst werden [Demo-Mappen](demo.md) – sie enthalten keine echten Daten.
+Erfasst werden alle Wege: einzeln, mehrere ausgewählt, mit verknüpften Mappen, „Aufbewahrung abgelaufen“, einzelne Dokumente (auch beim Ersetzen, Bearbeiten und Zusammenfügen von PDFs), ältere Versionen über die eingestellte Anzahl hinaus, der Papierkorb (von Hand, geleert, beim Abmelden geleert, Aufbewahrung abgelaufen, ausgeschaltet), Schnittstelle und Pakete. Nicht erfasst werden [Demo-Mappen](demo.md) – sie enthalten keine echten Daten.
 
 ### Ansehen und ausgeben
 

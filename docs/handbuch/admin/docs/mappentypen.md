@@ -70,7 +70,7 @@ Ein **Datumsfeld** kann **Frühestens** und **Spätestens** haben – ein festes
 
 Die Fehlermeldungen sagen, was zu tun ist, z. B. „Eine Telefonnummer enthält nur Ziffern, + am Anfang, Leerzeichen, /, - und Klammern.“ Dieselben Prüfungen gelten für die [Schnittstelle](api.md), für Pakete und ihre Beispiele; die Meldung nennt die Felder.
 
-**Gespeicherte Angaben bleiben gültig.** Bekommt ein Feld nachträglich ein Format oder Grenzen, ändert Ablago keine Werte, und die Mappen landen nicht unter *Zu erledigen*. Erst wer das Feld ändert, muss eine passende Angabe eintragen; andere Felder der Mappe lassen sich wie bisher speichern. Welche Angaben nicht passen, zeigt [Werkbank → Wartungsoperationen](texterkennung.md#angaben-die-nicht-zum-format-passen).
+**Gespeicherte Angaben bleiben gültig.** Bekommt ein Feld nachträglich ein Format oder Grenzen, ändert Ablago keine Werte, und die Mappen landen nicht unter *Zu erledigen*. Erst wer das Feld ändert, muss eine passende Angabe eintragen; andere Felder der Mappe lassen sich wie bisher speichern. Welche Angaben nicht passen, zeigt [Werkbank → Wartung → Wartungsoperationen](texterkennung.md#angaben-die-nicht-zum-format-passen).
 
 Die Erkennung nutzt das Format: Ein Feld mit Format Telefon gilt als Telefon, auch wenn es anders heißt, und sie schlägt nur Werte vor, die passen.
 

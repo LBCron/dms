@@ -92,7 +92,7 @@ function Schleife({ s }: { s: SystemlastAntwort['schleife'] }) {
     <div className="az-wert">
       <h3 className="az-titel">{t('systemzustand.schleife.titel')}</h3>
       <p>{w ? t('systemzustand.schleife.wert', { median: ms(w.median), max: ms(w.max) }) : <NV />}</p>
-      <p className="leise klein">{t('systemzustand.schleife.hilfe')} <Link to="/werkbank/anbindung" className="verweis">{t('systemzustand.schleife.verweis')}</Link>.</p>
+      <p className="leise klein">{t('systemzustand.schleife.hilfe')} <a href="#datenbank" className="verweis">{t('systemzustand.schleife.verweis')}</a>.</p>
     </div>
   );
 }

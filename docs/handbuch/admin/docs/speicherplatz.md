@@ -2,6 +2,8 @@
 
 Wie geht es dem Server gerade? Das zeigt **Werkbank → Wartung und Fehlersuche → Systemzustand**: den **Speicherplatz** und die **Auslastung** von CPU, Arbeitsspeicher und Netzwerk. (Früher hieß der Bereich *Speicherplatz* und stand unter *Einstellungen*; alte Links und Lesezeichen führen hierher.)
 
+Auf derselben Seite stehen seit dem Aufräumen der Werkbank auch die **langen Datenbankzugriffe** und was gerade in der Datenbank läuft (früher unter *Datenbank-Anbindung*) sowie **Version und Updates** (früher eigener Bereich *Technik*, siehe [Fehlersuche](fehlersuche.md#technik)).
+
 Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Ablago misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die **Schwellen**, darunter die [Auslastung](#auslastung), dann die **Ordner** mit ihrer Belegung, ganz unten **Große PDFs verkleinern**.
 
 --8<-- "ausgeblendet-schritt.md"
@@ -89,7 +91,7 @@ Gemessen werden die drei festen Ordner im Container (siehe [Ordner und Volumes](
 | `/data/geheim` | Schlüssel und Notfallzugang |
 | `/data/sicherung` | Sicherungen |
 
-Je Ordner zeigt die Seite belegt, frei und die Größe des Datenträgers, als Balken mit Marken für Warnschwelle und Grenze. Liegen alle drei auf demselben Datenträger (der übliche Fall auf dem NAS), zeigt die Seite **einen** Balken „Ein Datenträger für Dateien, Schlüssel und Sicherungen“ mit den Ordnern darunter – und den Hinweis, dass die Sicherungen damit auf derselben Platte liegen wie die Dokumente. Liegen nur einige auf demselben Datenträger, steht das beim jeweiligen Ordner. Darunter steht, wie viel davon die **Vorschaubilder** der Dokumente belegen (Ordner `/data/files/vorschau`, meist wenige Kilobyte je Dokument). Sie werden **nicht gesichert** – nach einer Wiederherstellung entstehen sie beim Anzeigen oder über **Wartungsoperationen → Vorschaubilder nachholen** neu. **Werkbank → Technik** zeigt dieselben Zahlen in der Übersicht für den Support.
+Je Ordner zeigt die Seite belegt, frei und die Größe des Datenträgers, als Balken mit Marken für Warnschwelle und Grenze. Liegen alle drei auf demselben Datenträger (der übliche Fall auf dem NAS), zeigt die Seite **einen** Balken „Ein Datenträger für Dateien, Schlüssel und Sicherungen“ mit den Ordnern darunter – und den Hinweis, dass die Sicherungen damit auf derselben Platte liegen wie die Dokumente. Liegen nur einige auf demselben Datenträger, steht das beim jeweiligen Ordner. Darunter steht, wie viel davon die **Vorschaubilder** der Dokumente belegen (Ordner `/data/files/vorschau`, meist wenige Kilobyte je Dokument). Sie werden **nicht gesichert** – nach einer Wiederherstellung entstehen sie beim Anzeigen oder über **Wartungsoperationen → Vorschaubilder nachholen** neu. **Werkbank → Systemzustand → Version und Updates** zeigt dieselben Zahlen in der Übersicht für den Support.
 
 !!! note "Die Datenbank wird nicht gemessen"
     Bei zwei Containern läuft PostgreSQL in einem eigenen Container; sein Volume kann Ablago nicht sehen. Bei [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) liegt die Datenbank im vierten Ordner `/data/postgres` – auch den misst Ablago nicht. Liegen alle Ordner auf derselben Platte des NAS (der übliche Fall), reicht die Messung trotzdem. Liegt die Datenbank auf einer anderen Platte, behalte deren Platz in der Speicherverwaltung des NAS im Blick.

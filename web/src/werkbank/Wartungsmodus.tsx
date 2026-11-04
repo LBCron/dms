@@ -1,3 +1,4 @@
+import { Kopf } from './Kopf';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type WartungWerkbank } from '../api';
 import { dauerText, WARTUNG_GEAENDERT, zeitpunkt } from '../wartung';
@@ -66,7 +67,7 @@ export function zeitschiene(beginn: string, ende: string, jetzt = new Date()): {
   return { satz: `Ab jetzt sehen alle einen Hinweis mit Countdown; anmelden können sich nur noch Administratoren. ${ab[0].toUpperCase()}${ab.slice(1)} werden alle anderen abgemeldet.${e ? ` Ende voraussichtlich ${uhr(e)} Uhr.` : ''}` };
 }
 
-export function WartungsmodusPanel({ w }: { w: WartungsmodusZustand }) {
+export function WartungsmodusPanel({ w, abschnitt }: { w: WartungsmodusZustand; abschnitt?: boolean }) {
   const s = w.stand;
   const [text, setText] = useState('');
   const [ende, setEnde] = useState('');
@@ -96,11 +97,9 @@ export function WartungsmodusPanel({ w }: { w: WartungsmodusZustand }) {
 
   return (
     <div className="einspaltig">
-      <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Wartungsmodus</h1>
-        <p className="leise">Schalte ihn vor einem Update oder einer Wiederherstellung ein. Erst sehen alle einen Hinweis mit Countdown und können ihre Arbeit speichern; dann werden alle außer dir abgemeldet, die Schnittstelle antwortet mit „503“, und Texterkennung, tägliche Zusammenfassung und das Aufräumen des Papierkorbs pausieren. <Hilfe ort="werkbank.wartungsmodus" /></p>
-      </div>
+      <Kopf titel={abschnitt ? 'Wartungsmodus' : 'Wartung'} abschnitt={abschnitt} id="wartungsmodus">
+        <p className="leise"><strong>Wartungsmodus:</strong> Schalte ihn vor einem Update oder einer Wiederherstellung ein. Erst sehen alle einen Hinweis mit Countdown und können ihre Arbeit speichern; dann werden alle außer dir abgemeldet, die Schnittstelle antwortet mit „503“, und Texterkennung, tägliche Zusammenfassung und das Aufräumen des Papierkorbs pausieren. <Hilfe ort="werkbank.wartungsmodus" /></p>
+      </Kopf>
 
       <section className="blatt" id="stand">
         <h2 className="h3">Stand</h2>

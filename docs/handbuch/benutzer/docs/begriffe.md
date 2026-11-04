@@ -174,12 +174,8 @@ Siehe auch: [Vollexport](#vollexport), [Meine Daten exportieren](#meine-daten-ex
 Text mit Überschriften, Listen und Hervorhebungen (Markdown) – als Feldart und in Notizen.
 
 <a id="frist"></a>**Frist** · ✓ Alltagswort · alle  
-Eine Aufgabe, die eine Automatisierung „Datum erreicht“ aus einem Datumsfeld anlegt – die [Vorlaufzeit](#vorlaufzeit) vor dem Datum, z. B. „Kündigen bis …“.  
+Eine Aufgabe, die aus einem Datumsfeld mit Vorlauf entsteht, z. B. „Kündigen bis …“.  
 Siehe auch: [Erinnerung](#erinnerung), [Anstehend](#anstehend).
-
-<a id="vorlaufzeit"></a>**Vorlaufzeit** · ✓ Alltagswort · Admins  
-Wie lange vor einem Datum Ablago erinnert – in Tagen, Wochen oder Monaten („… vorher erinnern“). Eingestellt an der Automatisierung, nicht am Feld.  
-Siehe auch: [Frist](#frist).
 
 <a id="historie"></a>**Historie** · ✓ Alltagswort · alle  
 Die Geschichte einer Mappe – Änderungen vorher und nachher, Dokumente, Papierkorb, Notizen, Aufgaben. Das technische Betriebsprotokoll heißt dagegen „Protokoll“.
@@ -209,7 +205,7 @@ Wie weit Post bearbeitet ist – Neu (noch nicht bearbeitet), Zugeordnet (liegt 
 Siehe auch: [Post](#post), [Neue Post](#neue-post).
 
 <a id="vertretung"></a>**Vertretung** · ✓ Alltagswort · alle  
-Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe – über die Automatisierung „Vertretung eingetragen“, die ein Admin einschaltet bzw. anpasst.
+Ein Benutzer übernimmt während einer Abwesenheit die Aufgaben eines anderen. Der Vertreter bekommt dazu eine Aufgabe der Art „Vertretung“.
 
 <a id="volltext"></a>**Volltext** · ✗ Fachwort · alle  
 Der durchsuchbare Text in den Dokumenten – aus der Textebene der Datei oder aus der Texterkennung.  
@@ -243,6 +239,9 @@ Anmelden mit einem fremden Konto, z. B. Microsoft 365 (OpenID Connect).
 <a id="archivmodus"></a>**Archivmodus** · ~ mit Erklärung · Administratoren  
 Eine Einstellung je Mappentyp für Aufbewahrungspflichten – mit Versionen und einer Löschsperre bis zum Fristende.
 
+<a id="aufbewahrung-abgelaufen"></a>**Aufbewahrung abgelaufen** · ✓ Alltagswort · Administratoren  
+Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist (Werkbank → Benutzer und Sicherheit). Früher „Darf weg“.
+
 <a id="benutzer"></a>**Benutzer** · ✓ Alltagswort · alle  
 Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Personen und Firmen, mit denen man zu tun hat (Kontakte), sind keine Benutzer, sondern gewöhnliche Mappen vom Mappentyp „Person“ bzw. „Organisation“ aus dem Paket Basis.
 
@@ -252,9 +251,6 @@ Wer was darf. Am Mappentyp – Anlegen, Lesen, Bearbeiten, Löschen, Passwörter
 <a id="betrieb"></a>**Betrieb** · ✓ Alltagswort · Administratoren  
 Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Geplant ist „Betrieb“ auch als Sprachprofil für Firmen (Gegenstück zu „Haushalt“).  
 Siehe auch: [Werkbank anpassen](#werkbank-anpassen), [Haushalt](#haushalt).
-
-<a id="darf-weg"></a>**Darf weg** · ✓ Alltagswort · Administratoren  
-Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist.
 
 <a id="design"></a>**Design** · ✓ Alltagswort · Administratoren  
 Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines im Profil unter „Darstellung“.  
@@ -302,6 +298,9 @@ Siehe auch: [Tägliche Zusammenfassung](#tagliche-zusammenfassung).
 <a id="rolle"></a>**Rolle** · ~ mit Erklärung · Administratoren  
 Eine Gruppe von Benutzern, z. B. „Eltern“. Grundlage für Berechtigungsregeln. Nicht zu verwechseln mit der Systemrolle.  
 Siehe auch: [Systemrolle](#systemrolle).
+
+<a id="suche-und-volltext"></a>**Suche und Volltext** · ~ mit Erklärung · Administratoren  
+Der Werkbank-Bereich unter Post und Eingänge für Texterkennung, Archivfassung, automatisches Verkleinern, Tippfehler und gleichbedeutende Wörter. Fasst die früheren Bereiche „Texterkennung“ und „Suche“ zusammen.
 
 <a id="systemrolle"></a>**Systemrolle** · ~ mit Erklärung · Administratoren  
 Ob ein Benutzer Administrator oder Mitglied ist. Nur Administratoren kommen in die Werkbank.  
@@ -495,6 +494,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Anstehend | – | `Anstehend` |
 | Archivmodus | – | `Archiv` |
 | Archivnummer | – | `archivnummer` |
+| Aufbewahrung abgelaufen | Darf weg | – |
 | Aufgabe | Auftrag, Task, Todo | `Aufgabe, AUFGABENARTEN` |
 | Auftrag | Job | `Auftrag` |
 | Bedingung | – | `Bedingung` |

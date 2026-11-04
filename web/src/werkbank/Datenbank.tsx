@@ -144,8 +144,6 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
           </>}
       <p className="leise klein">Verzögerung der Ereignisschleife in der letzten Minute: So lange musste eine Anfrage höchstens warten, weil der Server gerade etwas anderes rechnete. Werte unter 50 ms sind unauffällig. In der Zeitmessung (Entwicklermodus) erscheint dieses Warten bei den anderen Anfragen als „Leitung“.</p>
       <Verbindungen z={z} />
-      {/* #409: CPU, Arbeitsspeicher und Netzwerk stehen im Systemzustand. */}
-      <p className="leise klein">{t('systemzustand.verweis.systemzustand')} <Link to="/werkbank/systemzustand#auslastung" className="verweis">{t('systemzustand.verweis.systemzustand.ziel')}</Link>.</p>
     </div>
   );
 }

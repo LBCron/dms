@@ -27,13 +27,15 @@ Das gilt sofort auch für vorhandene Mappen. Beim Einschalten zeigt Ablago, wie 
 - **Dokumente ändern sich nur als neue Version:** Die [Versionierung](mappentypen.md#register) ist für alle Dokumentenregister des Mappentyps Pflicht; ältere Versionen bleiben bis Fristende („nur die letzten N“ gilt hier nicht).
 - **Feldänderungen** bleiben möglich und stehen wie immer in der Historie. Die Historie dieser Mappen wird nie aufgeräumt.
 
-## Nach der Frist: „Darf weg“
+<a id="nach-der-frist-darf-weg"></a>
 
-Unter **Werkbank → Darf weg** stehen alle Mappen aus Mappentypen im Archivmodus, deren Frist abgelaufen ist, mit Datum. Du wählst einzelne oder alle und löschst sie – mit Papierkorb dorthin, sonst endgültig. **Gelöscht wird nie automatisch.** Wie Archivmodus, „Darf weg“ und Papierkorb zu einem Sperr- und Löschkonzept nach der DSGVO zusammenpassen, steht unter [Datenschutz in Ablago](datenschutz.md#sperr-und-loschkonzept-aufsetzen), mit einer [Vorlage Löschkonzept](loeschkonzept.md).
+## Nach der Frist: „Aufbewahrung abgelaufen“
+
+Unter **Werkbank → Aufbewahrung abgelaufen** stehen alle Mappen aus Mappentypen im Archivmodus, deren Frist abgelaufen ist, mit Datum. Du wählst einzelne oder alle und löschst sie – mit Papierkorb dorthin, sonst endgültig. **Gelöscht wird nie automatisch.** Wie Archivmodus, „Aufbewahrung abgelaufen“ und Papierkorb zu einem Sperr- und Löschkonzept nach der DSGVO zusammenpassen, steht unter [Datenschutz in Ablago](datenschutz.md#sperr-und-loschkonzept-aufsetzen), mit einer [Vorlage Löschkonzept](loeschkonzept.md).
 
 ## Alle Dateien prüfen
 
-Unter **Werkbank → Wartungsoperationen → Alle Dateien prüfen** liest Ablago jede gespeicherte Datei – auch ältere Versionen – und vergleicht sie mit ihrem Prüfwert (SHA-256). Abweichungen („Inhalt verändert“, „Datei fehlt“) stehen mit Dokument und Mappe in der Liste und im Protokoll. Prüfe das z. B. nach einem Umzug des Speichers und vor dem Vernichten von Papier.
+Unter **Werkbank → Wartung → Wartungsoperationen → Alle Dateien prüfen** liest Ablago jede gespeicherte Datei – auch ältere Versionen – und vergleicht sie mit ihrem Prüfwert (SHA-256). Abweichungen („Inhalt verändert“, „Datei fehlt“) stehen mit Dokument und Mappe in der Liste und im Protokoll. Prüfe das z. B. nach einem Umzug des Speichers und vor dem Vernichten von Papier.
 
 ## Sicherung
 

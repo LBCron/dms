@@ -57,7 +57,7 @@ Die Daten liegen unter `~/umbrel/app-data/motom001-dms/data/`:
 
 ## Aktualisieren
 
-Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Ein Klick genügt, die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Technik**.
+Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Ein Klick genügt, die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Systemzustand → Version und Updates**.
 
 ## Auf ein neues Gerät umziehen
 

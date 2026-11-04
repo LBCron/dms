@@ -91,7 +91,7 @@ export function datenarten(q: Pick<LoeschkonzeptQuelle, 'typen' | 'datenschutz' 
       grund: FEHLT(vorschlag ? `Grund, z. B. ${vorschlag}` : 'Grund der Frist'),
       stichtag,
       sperre: a ? 'Archivmodus' : 'keine',
-      loeschweg: a ? `„Darf weg“ → ${korbText(q.papierkorbTage)}` : `${FEHLT('Ansicht „…“')}, löschen von Hand → ${korbText(q.papierkorbTage)}`,
+      loeschweg: a ? `„Aufbewahrung abgelaufen“ → ${korbText(q.papierkorbTage)}` : `${FEHLT('Ansicht „…“')}, löschen von Hand → ${korbText(q.papierkorbTage)}`,
     });
   }
   const rang = { person: 0, verweis: 1, zweck: 2 } as const;
@@ -148,12 +148,12 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
       ] },
       { art: 'absatz', text: 'Löschweg:' },
       { art: 'punkte', punkte: [
-        'Darf weg: Nach Fristende stehen die Mappen unter Werkbank → Darf weg. Ablago löscht nie von selbst.',
+        'Aufbewahrung abgelaufen: Nach Fristende stehen die Mappen unter Werkbank → Benutzer und Sicherheit → Aufbewahrung abgelaufen. Ablago löscht nie von selbst.',
         `Ansicht: Für Fristen ohne Archivmodus zeigt die Ansicht ${FEHLT('Name')} die fälligen Mappen nach dem Feld ${FEHLT('Datumsfeld')}.`,
       ] },
     ] },
     { titel: '3. Regelmäßiges Löschen', bloecke: [{ art: 'punkte', punkte: [
-      `${FEHLT('Wer')} geht ${FEHLT('jährlich, z. B. im Januar')} Werkbank → Darf weg und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf.${q.loeschprotokoll ? ' Ablago hält jede Löschung im Löschprotokoll fest (Abschnitt 8).' : ` ${FEHLT('Wer')} hält fest, wann das geschah (Abschnitt 8).`}`,
+      `${FEHLT('Wer')} geht ${FEHLT('jährlich, z. B. im Januar')} Werkbank → Aufbewahrung abgelaufen und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf.${q.loeschprotokoll ? ' Ablago hält jede Löschung im Löschprotokoll fest (Abschnitt 8).' : ` ${FEHLT('Wer')} hält fest, wann das geschah (Abschnitt 8).`}`,
       korb ? `Gelöschte Mappen und Dokumente kommen in den Papierkorb (Werkbank → Papierkorb, Aufbewahrung ${tage(q.papierkorbTage)}). Danach löscht Ablago sie mit ihren Dateien und dem Volltext endgültig.`
         : 'Der Papierkorb ist ausgeschaltet: Gelöschte Mappen und Dokumente löscht Ablago sofort endgültig mit ihren Dateien und dem Volltext.',
       `Die Historie endgültig gelöschter Mappen bleibt ${tage(q.historieTage)} (Werkbank → Papierkorb), damit sich nachvollziehen lässt, was mit ihnen geschah. Die Historie lebender Mappen und von Mappen im Archivmodus bleibt immer.`,

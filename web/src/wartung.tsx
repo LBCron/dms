@@ -65,14 +65,14 @@ export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeld
           <strong>Wartung – {admin ? 'alle anderen werden' : 'du wirst'} in {dauerText(rest ?? 0)} abgemeldet.</strong>{' '}
           {admin ? 'Neue Anmeldungen gehen nur noch für Administratoren.' : 'Bitte speichere deine Arbeit.'}{zusatz}
         </p>
-        {admin && <Link to="/werkbank/wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
+        {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
       </div>
     );
   }
   return (
     <div className="vertretungsbanner wartungsbanner" role="status">
       <p><strong>Wartungsmodus aktiv.</strong> Nur Administratoren sind angemeldet; Schnittstelle und Hintergrundarbeiten pausieren.{zusatz}</p>
-      {admin && <Link to="/werkbank/wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
+      {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
     </div>
   );
 }

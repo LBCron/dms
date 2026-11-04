@@ -54,7 +54,7 @@ docker/dms/sicherung
 
 ## Updates
 
-**Container Manager → Projekt → `dms` → Aktion → Erstellen** (bzw. *Build*). Das lädt das neueste Image und startet Ablago neu. Die Daten bleiben in den Ordnern. Was sich geändert hat, steht unter **Werkbank → Technik**. Vorher kannst du den Wartungsmodus einschalten, siehe [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
+**Container Manager → Projekt → `dms` → Aktion → Erstellen** (bzw. *Build*). Das lädt das neueste Image und startet Ablago neu. Die Daten bleiben in den Ordnern. Was sich geändert hat, steht unter **Werkbank → Systemzustand → Version und Updates**. Vorher kannst du den Wartungsmodus einschalten, siehe [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
 ## Sicherung außer Haus
 

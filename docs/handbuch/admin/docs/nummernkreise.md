@@ -48,7 +48,7 @@ Löschen geht nur, wenn kein Feld den Nummernkreis mehr verwendet.
 
 ## Nummern nachträglich vergeben
 
-Mappen, die es schon gab, bevor das Feld den Nummernkreis bekam, haben keine Nummer. Unter **Werkbank → Wartungsoperationen → Nummern nachträglich vergeben** wählst du das Feld; Ablago zeigt, wie viele Mappen betroffen sind und welche Nummern entstehen (von … bis …), und vergibt sie dann in der Reihenfolge des Anlegens. Als Datum gilt der heutige Tag. Die Arbeit läuft im Hintergrund und steht im Protokoll.
+Mappen, die es schon gab, bevor das Feld den Nummernkreis bekam, haben keine Nummer. Unter **Werkbank → Wartung → Wartungsoperationen → Nummern nachträglich vergeben** wählst du das Feld; Ablago zeigt, wie viele Mappen betroffen sind und welche Nummern entstehen (von … bis …), und vergibt sie dann in der Reihenfolge des Anlegens. Als Datum gilt der heutige Tag. Die Arbeit läuft im Hintergrund und steht im Protokoll.
 
 ## Archivnummern und Aufkleber
 

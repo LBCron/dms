@@ -10,7 +10,7 @@
 | Ansprechpartner für Datenschutz | [Name, E-Mail – ggf. Datenschutzbeauftragter] |
 | Verantwortlich für Löschungen | [Name] |
 | Vertretung | [Name] |
-| Eingesetzte Software | Ablago (Open Source, https://github.com/motom001/dms), Version [z. B. 0.99.0] (Werkbank → Technik), selbst betrieben auf [Gerät / Anbieter] |
+| Eingesetzte Software | Ablago (Open Source, https://github.com/motom001/dms), Version [z. B. 0.99.0] (Werkbank → Systemzustand → Version und Updates), selbst betrieben auf [Gerät / Anbieter] |
 | Geltungsbereich | [Welche Daten: z. B. Mieter und Mietverhältnisse, Kunden, Lieferanten, Beschäftigte …] |
 | Gültig ab | [Datum] |
 
@@ -20,9 +20,9 @@ Jeder **Mappentyp** in Ablago ist eine Datenart. Die Liste der Mappentypen steht
 
 | Datenart (Mappentyp) | Betroffene | Zweck | Frist | Grund der Frist | Beginn der Frist (Stichtag) | Sperre in Ablago | Löschweg |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [Rechnung] | [Kunden, Lieferanten] | [Buchführung] | [8 Jahre] | [§ 147 AO, § 14b UStG] | [Rechnungsdatum, ab Ende des Kalenderjahres] | Archivmodus | Darf weg |
-| [Geschäftsbrief / Post] | [Absender, Empfänger] | [Geschäftsverkehr] | [6 Jahre] | [§ 147 AO, § 257 HGB] | [Datum, ab Ende des Kalenderjahres] | Archivmodus | Darf weg |
-| [Mietvertrag] | [Mieter] | [Durchführung des Mietverhältnisses] | [Ende des Mietverhältnisses + 3 Jahre] | [Verjährung, § 195 BGB] | [Vertragsende] | [Archivmodus / Ansicht] | [Darf weg / Ansicht] |
+| [Rechnung] | [Kunden, Lieferanten] | [Buchführung] | [8 Jahre] | [§ 147 AO, § 14b UStG] | [Rechnungsdatum, ab Ende des Kalenderjahres] | Archivmodus | Aufbewahrung abgelaufen |
+| [Geschäftsbrief / Post] | [Absender, Empfänger] | [Geschäftsverkehr] | [6 Jahre] | [§ 147 AO, § 257 HGB] | [Datum, ab Ende des Kalenderjahres] | Archivmodus | Aufbewahrung abgelaufen |
+| [Mietvertrag] | [Mieter] | [Durchführung des Mietverhältnisses] | [Ende des Mietverhältnisses + 3 Jahre] | [Verjährung, § 195 BGB] | [Vertragsende] | [Archivmodus / Ansicht] | [Aufbewahrung abgelaufen / Ansicht] |
 | [Mieter / Kunde / Kontakt] | [die Person] | [Kontakt, Vertragsdurchführung] | [solange ein Vertrag besteht + …] | [Zweck entfällt] | [letzter Vertrag endet] | [keine] | [Ansicht „…“, löschen von Hand] |
 | [Bewerbung] | [Bewerber] | [Stellenbesetzung] | [6 Monate nach Absage] | [Abwehr von Ansprüchen nach AGG] | [Datum der Absage] | [keine] | [Ansicht „…“, löschen von Hand] |
 | [Weitere] | | | | | | | |
@@ -34,12 +34,12 @@ Jeder **Mappentyp** in Ablago ist eine Datenart. Die Liste der Mappentypen steht
 
 **Löschweg:**
 
-- **Darf weg:** Nach Fristende stehen die Mappen unter **Werkbank → Darf weg**. Ablago löscht nie von selbst.
+- **Aufbewahrung abgelaufen:** Nach Fristende stehen die Mappen unter **Werkbank → Aufbewahrung abgelaufen**. Ablago löscht nie von selbst.
 - **Ansicht:** Für Fristen ohne Archivmodus zeigt die Ansicht [Name] die fälligen Mappen nach dem Feld [Datumsfeld].
 
 ## 3. Regelmäßiges Löschen
 
-- [Wer] geht [jährlich, z. B. im Januar] **Werkbank → Darf weg** und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf. [Wer] hält fest, wann das geschah (Abschnitt 8).
+- [Wer] geht [jährlich, z. B. im Januar] **Werkbank → Aufbewahrung abgelaufen** und die Ansichten aus Abschnitt 2 durch und löscht, was weg darf. [Wer] hält fest, wann das geschah (Abschnitt 8).
 - Gelöschte Mappen und Dokumente kommen in den **Papierkorb** (Werkbank → Papierkorb, Aufbewahrung [z. B. 30 Tage]). Danach löscht Ablago sie mit ihren Dateien und dem Volltext endgültig. [Oder: Der Papierkorb wird nach dem Löschen sofort geleert.]
 - Die **Historie endgültig gelöschter Mappen** bleibt [z. B. 365 Tage] (Werkbank → Papierkorb), damit sich nachvollziehen lässt, was mit ihnen geschah. Die Historie lebender Mappen und von Mappen im Archivmodus bleibt immer.
 

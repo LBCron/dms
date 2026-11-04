@@ -56,7 +56,7 @@ Die Daten liegen unter `/DATA/AppData/dms/`:
 
 ## Aktualisieren
 
-Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Technik**.
+Gibt es eine neue Version, zeigt der App Store bei **Ablago** ein Update an. Die Daten bleiben erhalten. Was neu ist, steht unter **Werkbank → Systemzustand → Version und Updates**.
 
 !!! warning "Noch mit zwei Containern installiert?"
     Wer Ablago vor Version 0.73.10 aus dem Store installiert hat, hat zwei Container: Ablago und Datenbank. Nach dem Update auf den einen Container startet Ablago mit einer **leeren** Datenbank. So kommst du wieder an deine Daten:

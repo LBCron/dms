@@ -1,3 +1,4 @@
+import { Kopf } from './Kopf';
 import { DateienPruefen } from './Archiv';
 import { NummernNachtragen } from './Nummernkreise';
 import { FormateUnpassend } from './FormateUnpassend';
@@ -94,7 +95,7 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
     <div className="einspaltig">
       <div className="mappenkopf">
         <p className="ueber">Werkbank</p>
-        <h1>Texterkennung</h1>
+        <h1>{tx('volltext.werkbank.titel')}</h1>
         <p className="leise">{tx('volltext.werkbank.einleitung')} <Hilfe ort="werkbank.texterkennung" /></p>
       </div>
       <PauseHinweis t={t} wartungAn={wartungAn} />
@@ -113,7 +114,7 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
         <h2 className="h3">Warteschlange</h2>
         <p><strong>{zahl(s.zaehler.wartet + s.zaehler.laeuft)} offen</strong> · {zahl(s.zaehler.fehler)} mit Fehler{!s.einstellungen.aktiv ? ' · ausgeschaltet' : wartungAn ? ' · pausiert (Wartungsmodus)' : ''}</p>
         <Warteschlange s={s} />
-        <p className="leise klein">{tx('volltext.werkbank.neu')} <Link to="/werkbank/wartung" className="verweis">{tx('volltext.werkbank.neu.link')}</Link></p>
+        <p className="leise klein">{tx('volltext.werkbank.neu')} <Link to="/werkbank/wartung#operationen" className="verweis">{tx('volltext.werkbank.neu.link')}</Link></p>
       </section>
 
       <section className="blatt" id="werkzeuge">
@@ -266,14 +267,12 @@ function ErkannteSprachen({ s }: { s: OcrStatus }) {
 
 /* ---------- Wartungsoperationen ---------- */
 
-export function WartungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
+export function WartungPanel({ t, wartungAn, abschnitt }: { t: TexterkennungZustand; wartungAn?: boolean; abschnitt?: boolean }) {
   return (
     <div className="einspaltig">
-      <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Wartungsoperationen</h1>
+      <Kopf titel="Wartungsoperationen" abschnitt={abschnitt} id="operationen">
         <p className="leise">Arbeiten am ganzen Bestand, die du bei Bedarf anstößt. Sie laufen im Hintergrund; Ablago bleibt benutzbar. <Hilfe ort="werkbank.wartung" /></p>
-      </div>
+      </Kopf>
       <VolltextNeu t={t} wartungAn={wartungAn} />
       <VorschauNachholen />
       <DateienPruefen />

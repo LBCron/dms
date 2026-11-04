@@ -1022,12 +1022,14 @@ async function main() {
   await bild(s, 'werkbank-texterkennung');
   // Ohne Mitte (#366): lange Zugriffe unter den Einstellungen, „Installiert“ unter „Neuere Versionen“.
   // #407: unter Einstellungen → Datenbank-Anbindung, unter der Verbindung.
-  await geheZu(s, '/werkbank/anbindung');
+  // #725: lange Datenbankzugriffe stehen im Systemzustand.
+  await geheZu(s, '/werkbank/systemzustand');
   await s.getByRole('heading', { name: /Lange Datenbankzugriffe/ }).waitFor();
   await s.locator('#lange-zugriffe').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-datenbank');
-  await geheZu(s, '/werkbank/technik');
+  await geheZu(s, '/werkbank/systemzustand#version');
   await s.getByRole('heading', { name: 'Installiert', exact: true }).waitFor();
+  await s.locator('#version').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'werkbank-technik');
   // #408: Systemzustand unter Wartung und Fehlersuche – Schwellen oben, Ordner darunter.
   await geheZu(s, '/werkbank/systemzustand');
@@ -1072,7 +1074,7 @@ async function main() {
   // weil die Wartung Anmeldungen sperrt.
   const mitgliedAnmeldung = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: MITGLIED.email, passwort: MITGLIED.passwort }) });
   const mitgliedCookie = (mitgliedAnmeldung.headers.get('set-cookie') ?? '').split(';')[0];
-  await geheZu(s, '/werkbank/wartungsmodus');
+  await geheZu(s, '/werkbank/wartung');
   await s.getByLabel(/Text für alle/).fill('Update auf die neue Version');
   // #402: Zeitschiene Beginn → Ende mit Satz darunter und „Jetzt sofort sperren“ – vor dem Ankündigen.
   await s.getByLabel(/Erwartetes Ende/).fill(await s.locator('#wartung-beginn').evaluate((e) => {
@@ -1098,11 +1100,11 @@ async function main() {
   await s.getByRole('button', { name: 'Alle jetzt abmelden' }).click();
   await s.getByRole('alertdialog').getByRole('button', { name: 'Alle abmelden' }).click();
   await s.getByText('Wartungsmodus aktiv', { exact: false }).first().waitFor();
-  await geheZu(s, '/werkbank/wiederherstellung');
+  await geheZu(s, '/werkbank/sicherung#wiederherstellen');
   await s.locator('.auswahlliste input[type=radio]').first().check();
   await s.getByRole('heading', { name: /Abgleich/ }).waitFor();
   await bild(s, 'werkbank-wiederherstellen');
-  await geheZu(s, '/werkbank/wartungsmodus');
+  await geheZu(s, '/werkbank/wartung');
   await s.getByRole('button', { name: 'Wartung beenden' }).click();
   await s.locator('.wartungsbanner').waitFor({ state: 'detached' });
 

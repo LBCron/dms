@@ -56,7 +56,7 @@ export function variablenHinweis(v: UeberfluessigeVariable[]): VariablenHinweis 
     titel: 'Nicht mehr nötig:',
     zeilen: v.map((x) => ({ name: x.name, grund: KURZ[x.art] })),
     schluss: eine ? 'Entferne die Variable beim nächsten Update aus der Compose-Datei.' : 'Entferne diese Variablen beim nächsten Update aus der Compose-Datei.',
-    ziel: nurDatenbank ? '/werkbank/anbindung' : '/werkbank/technik',
+    ziel: nurDatenbank ? '/werkbank/anbindung' : '/werkbank/systemzustand#version',
     knopf: nurDatenbank ? 'Zur Anbindung' : 'Zur Technik',
   };
 }

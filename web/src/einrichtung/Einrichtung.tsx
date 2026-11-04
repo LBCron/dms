@@ -1015,7 +1015,7 @@ function ArchivEinstellung({ archiv, setze, datumsfelder, typId }: { archiv: Arc
   const vorschlag = FRISTEN.some((f) => f.jahre === archiv?.jahre);
   return (
     <div className="stapel">
-      <p className="leise">Für Belege mit Aufbewahrungspflicht: Bis zum Ende der Frist lässt sich keine Mappe und kein Dokument löschen – auch nicht von Administratoren; Dokumente ändern sich nur als neue Version. Danach stehen die Mappen unter Werkbank → Darf weg. Gelöscht wird nie automatisch. Das unterstützt eine GoBD-gerechte Aufbewahrung, ersetzt aber keine Verfahrensdokumentation und keine Steuerberatung.</p>
+      <p className="leise">Für Belege mit Aufbewahrungspflicht: Bis zum Ende der Frist lässt sich keine Mappe und kein Dokument löschen – auch nicht von Administratoren; Dokumente ändern sich nur als neue Version. Danach stehen die Mappen unter Werkbank → Aufbewahrung abgelaufen. Gelöscht wird nie automatisch. Das unterstützt eine GoBD-gerechte Aufbewahrung, ersetzt aber keine Verfahrensdokumentation und keine Steuerberatung.</p>
       <label className="haken"><input type="checkbox" checked={!!archiv} onChange={async (ev) => {
         if (ev.target.checked) setze({ jahre: 8, stichtag: datumsfelder[0]?.key ?? null });
         else if (await rueckfrage({ titel: 'Archivmodus ausschalten?', text: 'Danach lassen sich Mappen und Dokumente dieses Mappentyps wieder vor Fristende löschen. Das steht im Protokoll.', ja: 'Ausschalten', gefahr: true })) setze(null);

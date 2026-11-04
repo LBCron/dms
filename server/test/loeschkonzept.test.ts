@@ -55,9 +55,9 @@ describe('Löschkonzept (#469)', () => {
     assert.equal(r.frist, '8 Jahre');
     assert.equal(r.stichtag, '„Rechnungsdatum“, ab Ende des Kalenderjahres');
     assert.equal(r.sperre, 'Archivmodus');
-    assert.equal(r.loeschweg, '„Darf weg“ → Papierkorb → endgültig nach 30 Tagen');
+    assert.equal(r.loeschweg, '„Aufbewahrung abgelaufen“ → Papierkorb → endgültig nach 30 Tagen');
     assert.match(r.grund, /^\[Grund, z\. B\. Buchungsbelege/);
-    assert.equal(datenarten({ ...basis([kunde, rechnung], ds), papierkorbTage: 0 })[1].loeschweg, '„Darf weg“ → sofort endgültig (kein Papierkorb)');
+    assert.equal(datenarten({ ...basis([kunde, rechnung], ds), papierkorbTage: 0 })[1].loeschweg, '„Aufbewahrung abgelaufen“ → sofort endgültig (kein Papierkorb)');
   });
 
   it('meldet Lücken: ohne Zweck, ohne Frist, ohne Verantwortlichen, gar keine Datenart', () => {

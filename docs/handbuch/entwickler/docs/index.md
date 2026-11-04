@@ -22,7 +22,7 @@ Schön, dass du mitmachen möchtest! Ablago ist ein kleines Projekt mit einem Ma
 
 ## Wo du helfen kannst
 
-- **Fehler melden**, am besten mit **Werkbank → Technik → Übersicht für GitHub kopieren**.
+- **Fehler melden**, am besten mit **Werkbank → Systemzustand → Version und Updates → Übersicht für GitHub kopieren**.
 - **Anleitungen prüfen und bebildern**, z. B. für [Synology, QNAP, UGREEN, TrueNAS oder Unraid](https://help.ablago.app/installieren/aktuell/), wenn du so ein Gerät hast.
 - **Issues mit dem Label `good first issue`**: kleine, gut abgegrenzte Aufgaben.
 - **Übersetzungen** sind noch nicht geplant. Oberfläche und Handbuch sind deutsch.

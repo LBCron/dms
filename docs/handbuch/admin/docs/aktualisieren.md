@@ -17,7 +17,7 @@
 
 Während des Neustarts ist Ablago kurz nicht erreichbar. Offene Seiten zeigen dann oben „Ablago ist gerade nicht erreichbar“ und fragen mit wachsendem Abstand (2 bis 30 Sekunden) nach, bis es wieder antwortet. Eingaben bleiben stehen; gespeichert wird nichts automatisch. Läuft danach eine andere Version, bittet die Leiste darum, die Seite neu zu laden – sonst arbeitet der Browser mit der alten Oberfläche gegen den neuen Server weiter. Erkannt wird das an `/api/gesundheit`, das neben `ok` eine Kennung des laufenden Stands liefert (ein Hash aus Version, Commit und Build-Zeit, damit ohne Anmeldung keine Version sichtbar ist).
 
-Welche Version läuft und ob es neuere gibt, zeigt **Werkbank → Technik** (siehe [Fehlersuche](fehlersuche.md#technik)).
+Welche Version läuft und ob es neuere gibt, zeigt **Werkbank → Systemzustand → Version und Updates** (siehe [Fehlersuche](fehlersuche.md#technik)).
 
 !!! tip "Auf einer festen Version bleiben"
     Statt `ghcr.io/motom001/dms:main` kannst du in der Compose-Datei eine Versionsnummer angeben, z. B. `ghcr.io/motom001/dms:0.8.0` – bzw. `ghcr.io/motom001/dms-komplett:0.42.0`. Dann ändert sich nichts, bis du die Nummer selbst erhöhst. Bei zwei Containern bleibt `postgres:17` trotzdem für Sicherheits-Updates der Reihe 17 offen.
@@ -50,7 +50,7 @@ Die Ordner im Container sind jetzt fest: `/data/files`, `/data/geheim` und `/dat
 
 - **Steht `FILES_DIR: /data/files` in deiner Compose-Datei** (so war es in der Vorlage), läuft alles weiter. Entferne die Zeile beim nächsten Update; bis dahin erinnert die Werkbank-Übersicht daran.
 - **Zeigte eine der Variablen auf einen anderen Ordner**, startet Ablago nicht und nennt im Protokoll des Containers das Volume, das stattdessen auf den festen Ordner zeigen muss. Beispiel: Stand bisher `FILES_DIR: /dokumente` mit dem Volume `/volume1/dms-daten:/dokumente`, wird daraus `/volume1/dms-daten:/data/files` – und die Variable fällt weg. Die Dateien selbst bleiben, wo sie sind.
-- Prüfe nach dem Start unter **Werkbank → Technik**, dass alle drei Ordner auf einem eigenen Volume liegen.
+- Prüfe nach dem Start unter **Werkbank → Systemzustand → Version und Updates**, dass alle drei Ordner auf einem eigenen Volume liegen.
 
 ### Auf 0.11 aktualisieren
 
