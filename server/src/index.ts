@@ -391,6 +391,7 @@ const webhooks = new Webhooks({
   benutzer: (id) => konten.benutzerMitId(id),
   pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
   anAdmins,
+  anBesitzer: async (b, betreff, text) => { const m = betrieb.mailer(); if (m && b.email && !b.email.endsWith('.invalid')) await m.sende(b.email, betreff, text); },
   sperre: () => (webhookSperre ??= (async () => {
     const v = await sql.reserve();
     const [r] = await v`SELECT pg_try_advisory_lock(4711197) AS ok`;

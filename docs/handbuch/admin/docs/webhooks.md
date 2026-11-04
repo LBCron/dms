@@ -44,7 +44,7 @@ Darunter stehen **alle Webhooks** mit Benutzer, Adresse, letzter Zustellung (Zei
 - **Zeitgrenze:** 5 Sekunden je Zustellung. Als angekommen gilt jede Antwort `2xx`.
 - **Keine Weiterleitungen:** Antwortet der Empfänger mit `301`, `302` usw., folgt Ablago nicht und meldet einen Fehler. Trag die endgültige Adresse ein.
 - **Wiederholen:** Bei einem Fehler versucht es Ablago erneut, mit wachsenden Abständen (30 Sekunden, 1, 2, 5, 10, 30 Minuten, 1, 2, 4, 6, 8 Stunden) – zusammen etwa 22 Stunden, 12 Versuche. Kommen inzwischen neue Zahlen, geht beim nächsten Versuch der neue Stand hinaus.
-- **Abschalten nach vielen Fehlschlägen:** Klappt auch der letzte Versuch nicht, schaltet Ablago den Webhook ab, zeigt den Grund im Profil und hier und schickt den Administratoren eine E-Mail (wenn der [E-Mail-Versand](installation.md#e-mail-und-adresse) eingerichtet ist). Der Benutzer schaltet ihn nach der Reparatur wieder ein; dann kommt gleich eine Meldung mit dem aktuellen Stand.
+- **Abschalten nach vielen Fehlschlägen:** Klappt auch der letzte Versuch nicht, schaltet Ablago den Webhook ab, zeigt den Grund im Profil und hier und schickt den Administratoren und dem Benutzer, dem der Webhook gehört, eine E-Mail (wenn der [E-Mail-Versand](installation.md#e-mail-und-adresse) eingerichtet ist). Der Benutzer schaltet ihn nach der Reparatur wieder ein; dann kommt gleich eine Meldung mit dem aktuellen Stand.
 - **Mindestens einmal:** Die Meldungen warten in der Datenbank. Nach einem Neustart oder einer Unterbrechung geht eine Meldung unter Umständen ein zweites Mal hinaus – mit derselben **Ereignis-Id**, an der der Empfänger die Wiederholung erkennt.
 - Im **Wartungsmodus** und während einer **Wiederherstellung** ruht die Zustellung und holt danach nach.
 

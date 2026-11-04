@@ -84,11 +84,13 @@ describe('Zustellung an einen Empfänger (#627)', () => {
   let zahlen: WebhookZahlen;
   let w: Webhooks;
   let admins: string[];
+  let besitzer: Array<{ an: string; text: string }>;
   const neu = (z: Partial<WebhookZahlen>) => { zahlen = { ...zahlen, ...z, stand: zahlen.stand + 1, geaendert: new Date().toISOString() }; };
   const baue = (mehr: Partial<WebhookDeps> = {}) => new Webhooks({
     repo: speicherWebhookRepo(), einstellungen: speicherEinstellungen(), verschluessele, entschluessele,
     zahlen: async () => ({ ...zahlen }), benutzer: async (id) => [lena, markus].find((b) => b.id === id),
     anAdmins: async (betreff) => { admins.push(betreff); },
+    anBesitzer: async (b, _betreff, text) => { besitzer.push({ an: b.email, text }); },
     zeiten: { abstandS: 0.3, anstossS: 0.02, wartenS: [0.05, 0.05, 0.05] }, ...mehr,
   });
   before(async () => { e = await empfaenger(); });
@@ -96,7 +98,7 @@ describe('Zustellung an einen Empfänger (#627)', () => {
   beforeEach(async () => {
     // Zeitgeber des vorigen Tests (anstossen nach dem Anlegen) sollen hier nichts mehr zustellen.
     w?.stop(); await warte(100);
-    e.eingaenge.length = 0; e.status = 204; admins = [];
+    e.eingaenge.length = 0; e.status = 204; admins = []; besitzer = [];
     zahlen = { neuePost: 0, zuErledigen: 0, anstehend: 0, ueberfaellig: 0, stand: 1, geaendert: new Date().toISOString() };
     w = baue();
   });
@@ -180,6 +182,9 @@ describe('Zustellung an einen Empfänger (#627)', () => {
     assert.deepEqual(e.eingaenge.map((x) => x.kopf[WEBHOOK_KOPF.versuch]), ['1', '2', '3', '4']);
     assert.equal(l.abgeschaltet?.grund, 'fehler');
     assert.equal(admins.length, 1);
+    assert.equal(besitzer.length, 1, 'Besitzerin bekommt auch eine Mail (Frage 67)');
+    assert.equal(besitzer[0].an, 'lena@example.org');
+    assert.match(besitzer[0].text, /Hallo Lena,\n\ndein Webhook „Homey“ .*Mein Konto → Benachrichtigungen/s);
     assert.equal((await w.verlauf(lena, h.id))[0].zustand, 'aufgegeben');
     // Wieder einschalten: beginnt von vorn und meldet den aktuellen Stand.
     e.status = 200;
