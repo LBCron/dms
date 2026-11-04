@@ -256,7 +256,7 @@
   "ablauf.ergebnis.spaeter": "Noch Einstellungen nötig (die Übersicht der Werkbank erinnert daran):",
   "ablauf.ergebnis.fehler": "„{name}“ ließ sich nicht installieren.",
   "ablauf.ergebnis.zurueck": "Davon ist nichts zurückgeblieben – das Paket ist vollständig zurückgenommen.",
-  "ablauf.ergebnis.nicht": "Danach nicht mehr installiert: {namen}. Wähle sie noch einmal, wenn der Fehler behoben ist.",
+  "ablauf.ergebnis.nicht": "Nicht installiert:",
   "ablauf.ergebnis.nichts": "Es wurde nichts installiert.",
   "ablauf.ergebnis.weiter": "Weiter",
   "ablauf.aufgabe": "„{name}“ braucht noch Einstellungen.",
@@ -273,5 +273,9 @@
   "groesse.erstellenZuGross": "Das Paket wäre {groesse} MB groß, höchstens {max} MB sind erlaubt. Weniger Beispiele wählen.",
   "vorschau.update": "Ein Update ergänzt nur. Es löscht nichts und überschreibt nichts, was du selbst geändert hast.",
   "vorschau.anlegen": "Das wird angelegt:",
-  "erstellen.nochnicht": "So lässt sich das Paket noch nicht exportieren:"
+  "erstellen.nochnicht": "So lässt sich das Paket noch nicht exportieren:",
+  "ablauf.braucht.gescheitert": "braucht „{name}“, das sich nicht installieren ließ",
+  "ablauf.ergebnis.nachholen": "Du kannst sie später unter Werkbank → Pakete nachholen, wenn der Grund behoben ist.",
+  "ablauf.ausgelassen": "Diese Pakete lassen sich gerade nicht laden und werden übersprungen – die übrigen kannst du trotzdem installieren:",
+  "ablauf.ausgelassen.nochmal": "Nochmal versuchen"
 }
