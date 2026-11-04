@@ -1224,6 +1224,30 @@ export class Dienst {
   }
 
   /**
+   * Ein Paket mit dms:volltext oder dms:umwandeln ist entfernt (Frage 49/51): Dokumente seiner Dateitypen, die noch
+   * auf dieses Paket warteten, warten nicht mehr. Ohne Text gehen sie erneut durch die Warteschlange – dort steht dann
+   * „kein Paket für diesen Dateityp“ (oder ein anderes zuständiges Paket übernimmt); mit Text von vorher bleibt der Text
+   * stehen und der Stand wird *fertig*.
+   */
+  async paketWegFuerDateien(paket: { name: string }, typen: string[]): Promise<number> {
+    if (!typen.length) return 0;
+    const klein = new Set(typen.map((m) => m.toLowerCase()));
+    const vorhanden = Object.keys(await this.repo.dokumentTypen()).filter((m) => klein.has(m.toLowerCase()));
+    const marke = `(Paket ${paket.name})`;
+    const wartend = (await this.repo.dokumenteMitTyp(vorhanden)).filter((d) => d.ocr?.stand === 'paket' && (d.ocr.info ?? '').includes(marke));
+    if (!wartend.length) return 0;
+    const ohne: string[] = [];
+    for (const d of wartend) {
+      const text = await this.repo.volltext(d.id);
+      if (text && text.replace(/\s/g, '').length >= 20) await this.repo.ocrSetze(d.id, { stand: 'fertig', info: t('pakete.volltext.paket-entfernt', { paket: paket.name }), seiten: d.ocr?.seiten ?? null });
+      else ohne.push(d.id);
+    }
+    if (ohne.length) { await this.repo.ocrEinreihen(ohne); this.ocr?.anstossen(); }
+    protokoll.modul('texterkennung').info('Paket entfernt – wartende Dokumente zurückgesetzt', { paket: paket.name, dokumente: wartend.length, ohneText: ohne.length });
+    return wartend.length;
+  }
+
+  /**
    * Darf dieses Dienstkonto den Volltext (bzw. die Sprache) des Dokuments schreiben (#614)? Mit „Dokumente schreiben“
    * immer (wie bisher, z. B. Paket Texterkennung); mit nur „lesen“ und dms:volltext nur für Dateitypen, für die das
    * Paket zuständig ist. Sonst 403.
