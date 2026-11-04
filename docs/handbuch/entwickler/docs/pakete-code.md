@@ -387,20 +387,7 @@ code:
 
 ### Ablauf { #umwandeln-ablauf }
 
-```mermaid
-sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:umwandeln)
-  participant T as Paket Texterkennung
-  K->>P: datei.umwandeln (dokument, mime, sha256)
-  P->>K: GET /dokumente/{id}/inhalt
-  K-->>P: Originaldatei
-  P->>K: PUT /dokumente/{id}/fassung?sha256=… (PDF, PNG oder JPEG)
-  Note over K: Vorschaubild aus der Fassung, Textebene (PDF)
-  K->>T: volltext.fertig (mime der Fassung, original, fassung: true)
-  T->>K: GET /dokumente/{id}/seiten/1/scan (aus der Fassung)
-  T->>K: PUT /dokumente/{id}/volltext
-```
+![Ablauf „Datei umwandeln“ zwischen Kern, umwandelndem Paket und Paket Texterkennung](grafiken/ablauf-umwandeln.png){ loading=lazy }
 
 1. **Melden:** Der Kern schickt `datei.umwandeln` an das zuständige Paket – beim Hochladen und bei einer neuen Version, wenn das Paket installiert wird oder einen Dateityp dazubekommt (für alle vorhandenen Dateien), bei *Vorschaubilder nachholen* und bei *Volltext neu erzeugen* bzw. *Erneut versuchen* am Dokument (für Dateien ohne Fassung). Dateien über **50 MB** meldet er nicht. Eine Datei, die gerade unterwegs ist, meldet er höchstens alle 30 Minuten einmal; Wiederholungen nach Fehlern macht der Läufer wie bei jedem Ereignis.
 2. **Warten:** Bis die Fassung da ist, steht das Dokument auf **„wartet auf Umwandlung (Paket *Name*)“** (Stand `paket` des Volltexts). „Volltext fertig“ gibt es erst mit der Fassung.
@@ -531,17 +518,7 @@ code:
 
 ### Ablauf { #volltext-ablauf }
 
-```mermaid
-sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:volltext)
-  K->>P: datei.volltext (dokument, mime, sha256, neu)
-  P->>K: GET /dokumente/{id}/inhalt
-  K-->>P: Datei
-  P->>K: PUT /dokumente/{id}/volltext { "text": … }
-  Note over K: Stand fertig, Suchindex, Historie
-  K->>K: volltext.fertig an die anderen Pakete
-```
+![Ablauf „Volltext aus einem Paket“ zwischen Kern und Paket mit dms:volltext](grafiken/ablauf-volltext.png){ loading=lazy }
 
 1. **Melden:** Der Kern schickt `datei.volltext` an das zuständige Paket – aus der Warteschlange des Volltexts, also beim **Hochladen**, bei einer **neuen Version**, bei *Volltext neu erzeugen* (`neu: true` bei „alle Dokumente“), bei *Erneut versuchen* und *Neu erzeugen* am Dokument (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (für alle vorhandenen Dateien dieser Typen **ohne Text**). Dateien über **50 MB** meldet er nicht (am Dokument: ausgelassen). Hat eine Datei mit gleichem Inhalt schon Text, übernimmt der Kern ihn ohne Ereignis (außer bei `neu`). Ein Dokument, das gerade unterwegs ist, meldet er höchstens alle 30 Minuten einmal (außer bei `neu`).
 2. **Warten:** Bis das Paket schreibt, steht das Dokument auf **„wartet auf Volltext (Paket *Name*)“** (Stand `paket`). Ein Text von vorher bleibt so lange für die Suche stehen. Mit der [Fortsetzung](#fortsetzung) steht `fortschritt` daneben.
@@ -621,20 +598,7 @@ code:
 
 ### Ablauf { #archivfassung-ablauf }
 
-```mermaid
-sequenceDiagram
-  participant K as Kern
-  participant T as Paket Texterkennung
-  participant P as Paket (dms:archivfassung)
-  T->>K: PUT /dokumente/{id}/volltext { text, woerter }
-  Note over K: Volltext steht fest (Stand fertig)
-  K->>P: datei.archivfassung (dokument, sha256, quelle, textebene, wortpositionen …)
-  P->>K: GET /dokumente/{id}/inhalt (bzw. …/fassung bei quelle lesefassung)
-  P->>K: GET /dokumente/{id}/wortpositionen
-  P->>K: GET /dokumente/{id}/volltext (optional)
-  P->>K: PUT /dokumente/{id}/archivfassung?sha256=… (PDF/A, roh)
-  Note over K: Prüfung, Ablage, Historie, Anzeige
-```
+![Ablauf „Archivfassung“ zwischen Kern, Paket Texterkennung und Paket mit dms:archivfassung](grafiken/ablauf-archivfassung.png){ loading=lazy }
 
 1. **Melden – erst mit feststehendem Volltext:** Der Kern schickt `datei.archivfassung`, sobald der Volltext eines Dokuments *fertig* ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit `dms:volltext`, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer **neuen Version** und jeder Änderung am PDF (neuer Prüfwert), bei *Volltext neu erzeugen* (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (**Bestand**: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls `neu: true` – die alte Archivfassung passt dann nicht mehr zum Text.
 2. **Nicht gemeldet:** Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer `neu`), **verschlüsselte PDFs** (Stand *keine* mit Grund am Dokument), PDFs, die **schon gültiges PDF/A** sind (das Original gilt als Archivfassung, keine zweite Datei) und mit `nur_scans` PDFs mit vollständiger Textebene. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer `neu`).
@@ -742,21 +706,7 @@ code:
 
 ### Ablauf { #sicherung-ablauf }
 
-```mermaid
-sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:sicherung-lesen)
-  participant Z as Ziel (WebDAV, S3 …)
-  K->>K: Sicherung lokal fertig
-  K->>P: sicherung.fertig (name, groesse, sha256 …)
-  loop Stück für Stück, über mehrere Aufrufe
-    P->>K: GET /sicherungen/{name}/datei?versatz=…&laenge=…
-    P->>Z: Teil hochladen
-    P-->>K: {"weiter": {…}, "extern": {"status": "laeuft", …}} (Fortsetzung)
-  end
-  P->>Z: zusammensetzen, Metadaten daneben, prüfen
-  P-->>K: {"extern": {"status": "geprueft", …}} (Antwort)
-```
+![Ablauf „Sicherung außer Haus“ zwischen Kern und Paket mit dms:sicherung-lesen](grafiken/ablauf-sicherung.png){ loading=lazy }
 
 1. **Ereignis `sicherung.fertig`** nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). `daten` sind die **schlanken Metadaten** und der Name:
 

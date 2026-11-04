@@ -1,6 +1,8 @@
 # Offline-Fassung im Image (#219), gebaut von werkzeuge/offline.py.
 INHERIT: mkdocs.yml
 site_url: https://dms.local/hilfe/benutzer/
+# Ohne Repository-Angabe (#698): Material fragt sonst beim Öffnen jeder Seite api.github.com nach Sternen und Version.
+repo_url: ''
 theme:
   font: false
 hooks:

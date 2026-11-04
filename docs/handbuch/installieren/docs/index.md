@@ -1,10 +1,6 @@
 # Wie komme ich an ein DMS?
 
-[![Neueste Version](https://img.shields.io/github/v/release/motom001/dms?label=Version)](https://github.com/motom001/dms/releases)
-[![Sterne auf GitHub](https://img.shields.io/github/stars/motom001/dms?label=Sterne&logo=github)](https://github.com/motom001/dms/stargazers)
-[![Letzte Änderung](https://img.shields.io/github/last-commit/motom001/dms?label=letzte%20%C3%84nderung)](https://github.com/motom001/dms/commits/main)
-![Images für amd64 und arm64](https://img.shields.io/badge/Image-amd64%20%7C%20arm64-2b7656?logo=docker&logoColor=white)
-[![Lizenz Apache-2.0](https://img.shields.io/github/license/motom001/dms?label=Lizenz)](https://github.com/motom001/dms/blob/main/LICENSE)
+[Neueste Version und Änderungen](https://github.com/motom001/dms/releases) · Images für amd64 und arm64 · [Lizenz Apache-2.0](https://github.com/motom001/dms/blob/main/LICENSE) · [Quellcode auf GitHub](https://github.com/motom001/dms)
 
 Ablago läuft bei dir zu Hause: auf einem NAS, einem kleinen Heimserver oder jedem Rechner mit Docker. Deine Unterlagen bleiben damit bei dir. Ohne eigenes Gerät geht es auch [bei einem Anbieter](anbieter.md). Welcher Weg der richtige ist, hängt davon ab, was du schon hast.
 
