@@ -59,7 +59,7 @@
     Menü unter deinem Namen → **Mein Konto** → **Darstellung** → **Schriftgröße auf diesem Gerät** → *groß*.
 
 ??? question "Ich sehe einen Hinweis „Wartung“."
-    Ein Administrator wartet Ablago, z. B. für ein Update. Speichere deine Arbeit, bevor der Countdown abläuft – dann wirst du abgemeldet. Anmelden kannst du dich wieder, sobald die Wartung vorbei ist; die Anmeldeseite sagt, wie lange es voraussichtlich dauert.
+    Ein Administrator wartet Ablago, z. B. für ein Update. Bis zur Wartung bleibt Zeit zum Speichern; danach meldet dich Ablago kurz ab. Anmelden kannst du dich wieder, sobald die Wartung vorbei ist; die Anmeldeseite sagt, wie lange es voraussichtlich dauert.
 
 ??? question "Oben steht „Ablago ist gerade nicht erreichbar“."
     Ablago startet gerade neu, meist wegen eines Updates. Lass die Seite offen: Der Browser fragt selbst nach und zeigt „Ablago ist wieder erreichbar“, sobald es weitergeht. Was du eingetragen hast, bleibt stehen. Speichere danach noch einmal, falls Speichern während der Pause nicht geklappt hat. Zeigt die Ansicht danach noch Fehler, wähle in der Leiste „Ansicht neu laden“.

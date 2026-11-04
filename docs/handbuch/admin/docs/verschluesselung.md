@@ -80,7 +80,7 @@ Unter **Nicht lesbare oder unverschlüsselte Werte** listet die Seite, welche Pa
 
 ## Schlüssel verloren
 
-Ohne die Schlüsseldatei kann Ablago seine Geheimnisse nicht mehr lesen. Erzeugst du einen neuen Schlüssel, gilt danach:
+Deine Mappen und Dokumente sind nicht betroffen – nur gespeicherte Geheimnisse wie Passwörter von Postfächern kann Ablago ohne die Schlüsseldatei nicht mehr lesen. Erzeugst du einen neuen Schlüssel, gibst du sie so wieder ein:
 
 - **Passwortfelder und Mailserver:** Die Werte stehen unter *Nicht lesbare oder unverschlüsselte Werte*. Gib sie neu ein.
 - **Postfächer:** Der Abruf scheitert, bis du das Passwort unter **Werkbank → Postfächer** neu einträgst. Bei OAuth trägst du das Client-Secret der App neu ein und meldest die Postfächer neu beim Anbieter an.

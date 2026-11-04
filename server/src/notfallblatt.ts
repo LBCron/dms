@@ -49,7 +49,7 @@ export function notfallblatt(d: Notfalldaten): Buffer {
       zeile('Kopie außer Haus', { schrift: 'fett', groesse: 13, abstand: 16 }),
       ...d.aussenziele.map((z, i) => zeile(`${z.name}: ${z.adresse ? ohneZugangsdaten(z.adresse) : z.ziel ?? 'Adresse in den Einstellungen des Pakets'}${z.ziel && z.adresse && z.ziel !== z.adresse ? ` – ${z.ziel}` : ''}`, i === 0 ? { abstand: 4 } : {})),
       zeile('Benutzer und Passwort für das Ziel stehen bewusst nicht auf diesem Blatt – du findest sie im Passwortsafe bzw. beim Anbieter.'),
-      zeile('Der Schlüssel der Werkbank liegt nicht auf dem Ziel – ohne ihn ist die Kopie wertlos. Lege ihn nie „zur Sicherheit“ dazu.', { schrift: 'fett' }),
+      zeile('Der Schlüssel der Werkbank liegt nicht auf dem Ziel. Die Kopie öffnest du nur mit dem Schlüssel von diesem Blatt. Lege ihn nie „zur Sicherheit“ dazu.', { schrift: 'fett' }),
     ] : []),
 
     zeile('Wiederherstellen auf einem neuen System', { schrift: 'fett', groesse: 13, abstand: 16 }),

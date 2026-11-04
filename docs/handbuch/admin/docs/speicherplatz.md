@@ -2,7 +2,7 @@
 
 Wie geht es dem Server gerade? Das zeigt **Werkbank → Wartung und Fehlersuche → Systemzustand**: den **Speicherplatz** und die **Auslastung** von CPU, Arbeitsspeicher und Netzwerk. (Früher hieß der Bereich *Speicherplatz* und stand unter *Einstellungen*; alte Links und Lesezeichen führen hierher.)
 
-Läuft die Platte voll, können beim Speichern oder Hochladen Daten verloren gehen. Ablago misst deshalb selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die **Schwellen**, darunter die [Auslastung](#auslastung), dann die **Ordner** mit ihrer Belegung, ganz unten **Große PDFs verkleinern**.
+Damit beim Speichern und Hochladen nie etwas verloren geht, misst Ablago selbst, wie viel Platz frei ist, warnt rechtzeitig und hält sich an der Grenze selbst an. Oben auf der Seite stehen die **Schwellen**, darunter die [Auslastung](#auslastung), dann die **Ordner** mit ihrer Belegung, ganz unten **Große PDFs verkleinern**.
 
 --8<-- "ausgeblendet-schritt.md"
 

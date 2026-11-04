@@ -14,7 +14,7 @@ Du hast ein Papier eingescannt und in Ablago abgelegt. Darf das Original jetzt w
 Warum? Im Haushalt ist das eine einfache Abwägung:
 
 - **Aufbewahren kostet fast nichts.** Ein Haushalt sammelt im Jahr ungefähr einen Schuhkarton Papier. Der steht in der Ecke und stört niemanden.
-- **Fehlt das Original, kann es teuer werden.** Das kommt selten vor, aber dann richtig: Garantiefall, Streit mit dem Handwerker, Erbschaft.
+- **Fehlt das Original, kann das im seltenen Streitfall Nachteile haben** – etwa bei Garantie, Handwerker oder Erbschaft.
 
 Deshalb gilt: **Im Zweifel behalten.** Mit der [Kiste je Jahr](#die-kiste-je-jahr) ist das kein Aufwand.
 

@@ -58,7 +58,7 @@ docker/dms/sicherung
 
 ## Sicherung außer Haus
 
-Ablago sichert sich selbst in den Ordner `sicherung` (**Werkbank → Sicherung**). Mit **Hyper Backup** kopierst du diesen Ordner zusätzlich auf eine USB-Platte, ein zweites NAS oder einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien.
+Ablago sichert sich selbst in den Ordner `sicherung` (**Werkbank → Sicherung**). Mit **Hyper Backup** kopierst du diesen Ordner zusätzlich auf eine USB-Platte, ein zweites NAS oder einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
 
 ## Von unterwegs erreichbar
 

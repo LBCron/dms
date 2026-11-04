@@ -50,8 +50,8 @@ function Adresse({ b }: { b: BetriebZustand }) {
     <form className="blatt" id="adresse" onSubmit={speichern} onKeyDown={ent.tasten}>
       <h2 className="h3">Adresse von Ablago</h2>
       <p className="leise">Unter dieser Adresse öffnen die Benutzer Ablago. Sie steht in den Links der E-Mails (Einladungen, Passwort vergessen). Beginnt sie mit <span className="mono">https://</span>, gilt die Anmeldung nur noch über HTTPS.</p>
-      <label className="eigenschaft"><span>Adresse <small>z. B. http://nas.local:8080 oder https://dms.example.org</small></span>
-        <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder={s.vorschlag ?? 'http://nas.local:8080'} inputMode="url" autoComplete="off" /></label>
+      <label className="eigenschaft"><span>Adresse <small>z. B. http://nas.home.arpa:8080 oder https://ablage.example.org</small></span>
+        <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder={s.vorschlag ?? 'http://nas.home.arpa:8080'} inputMode="url" autoComplete="off" /></label>
       {!s.adresse && (
         <div className="hinweis info"><p>Noch keine Adresse gepflegt. Bis dahin nimmt Ablago die Adresse, unter der es gerade aufgerufen wird{s.vorschlag ? <> – hier <span className="mono">{s.vorschlag}</span></> : ''}.</p>
           {s.vorschlag && <button type="button" className="knopf klein" onClick={() => { setAdresse(s.vorschlag!); void speichern(undefined, s.vorschlag!); }}>Diese Adresse übernehmen</button>}

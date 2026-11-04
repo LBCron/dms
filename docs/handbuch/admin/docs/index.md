@@ -60,7 +60,7 @@ Oben im Handbuch wählst du die Version; liest du eine ältere, steht das darüb
 !!! tip "Das ? neben Überschriften"
     In der Werkbank steht an jedem Bereich und an vielen Zwischenüberschriften ein kleines **?**. Es öffnet in einem neuen Tab genau den passenden Abschnitt dieses Handbuchs.
 
-Wünsche und Fehler bitte als [Issue](https://github.com/motom001/dms/issues/new?template=wunsch.md) im Format einer User Story mit Abnahmekriterien; umgesetzt wird, was das Label `freigegeben` trägt.
+Wünsche und Fehler bitte als [Issue](https://github.com/motom001/dms/issues/new?template=wunsch.md) – beschreib kurz, was du tun willst und woran du merkst, dass es klappt; umgesetzt wird, was das Label `freigegeben` trägt.
 
 ## Projekt unterstützen
 

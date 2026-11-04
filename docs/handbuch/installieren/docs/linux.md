@@ -95,4 +95,4 @@ Bei zwei Containern liegen die Daten damit in `~/dms/daten`, bei dms-komplett di
 
 ## Sicherung
 
-Die Sicherungen von Ablago landen im Ordner `sicherung` auf demselben Rechner. Fällt die Platte aus, sind sie mit weg. Kopiere den Ordner deshalb regelmäßig woandershin, z. B. auf eine USB-Platte, ein NAS oder in einen Cloudspeicher (etwa mit `rclone`). Mehr dazu unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).
+Die Sicherungen von Ablago landen im Ordner `sicherung` auf demselben Rechner. Fällt die Platte aus, sind sie mit weg. Kopiere den Ordner deshalb regelmäßig woandershin, z. B. auf eine USB-Platte, ein NAS oder in einen Cloudspeicher (etwa mit `rclone`). Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt. Mehr dazu unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).

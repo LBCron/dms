@@ -56,7 +56,7 @@ export function pruefeAdresse(e: unknown): string {
   if (!roh) return '';
   const mitSchema = /^[a-z]+:\/\//i.test(roh) ? roh : `http://${roh}`;
   let u: URL;
-  try { u = new URL(mitSchema); } catch { throw new Fachfehler(422, 'Bitte eine gültige Adresse angeben, z. B. http://nas.local:8080 oder https://dms.example.org.'); }
+  try { u = new URL(mitSchema); } catch { throw new Fachfehler(422, 'Bitte eine gültige Adresse angeben, z. B. http://nas.home.arpa:8080 oder https://dms.example.org.'); }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Fachfehler(422, 'Die Adresse muss mit http:// oder https:// beginnen.');
   if (u.search || u.hash) throw new Fachfehler(422, 'Die Adresse darf keine Parameter (?…) oder Anker (#…) enthalten.');
   return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, '')}`;

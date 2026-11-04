@@ -16,7 +16,7 @@ Hat niemand mehr Zugang als Administrator – Passwort vergessen, einziger Admin
 4. Öffne die Datei erneut und den Link darin im Browser – innerhalb von **15 Minuten**. Lege dort ein eigenes Passwort fest; danach bist du angemeldet.
 5. Gib dem Notfall-Admin in **Werkbank → Benutzer** einen richtigen Namen und unter **Mein Konto** eine echte E-Mail-Adresse – oder erzeuge damit einen Passwort-Link für dein eigentliches Konto und deaktiviere den Notfall-Admin danach.
 
-Steht im Link `localhost`, ist noch keine Adresse von Ablago eingestellt: Ersetze `http://localhost:3000` durch die Adresse, unter der du Ablago öffnest, z. B. `http://nas:8080`.
+Steht im Link `localhost`, ist noch keine Adresse von Ablago eingestellt: Ersetze `http://localhost:3000` durch die Adresse, unter der du Ablago öffnest, z. B. `http://nas.home.arpa:8080`.
 
 ## Was dabei geschieht
 

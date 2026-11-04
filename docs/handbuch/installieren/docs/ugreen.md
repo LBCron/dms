@@ -1,7 +1,7 @@
 # UGREEN-NAS (UGOS Pro)
 
 !!! success "Geprüft: vom Projekt getestet"
-    Das Projekt testet Ablago selbst auf einem **UGREEN DXP4800 Plus** (amd64); dort läuft es auch im Alltag, siehe [So läuft es beim Entwickler](beispiel.md). Die erste Prüfung mit Messwerten und das Datum, bis wann wir es voraussichtlich prüfen, stehen noch aus. Die Vorlage startet außerdem bei jeder Änderung probehalber auf den Rechnern von GitHub. Mehr unter [Geprüfte Plattformen](plattformen.md).
+    Das Projekt testet Ablago selbst auf einem **UGREEN DXP4800 Plus** (amd64); dort läuft es auch im Alltag, siehe [So läuft es beim Entwickler](beispiel.md). Die erste Prüfung war am 02.11.2026 mit Ablago 0.143.0 ([Messwerte](https://github.com/motom001/dms/issues/576#issuecomment-6588590651)); geprüft voraussichtlich bis 31.12.2028, siehe [Geprüfte Plattformen](plattformen.md). Die Vorlage startet außerdem bei jeder Änderung probehalber auf den Rechnern von GitHub. Mehr unter [Geprüfte Plattformen](plattformen.md).
 
 So richtest du Ablago auf einem UGREEN-NAS mit UGOS Pro ein. Die App **Docker** von UGREEN legt Ablago als *Projekt* aus einer Vorlage an.
 
@@ -50,7 +50,7 @@ In der App **Dateien** im Ordner `docker` (legt die Docker-App an) einen Ordner 
 
 ## Sicherung außer Haus
 
-Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher.
+Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).
