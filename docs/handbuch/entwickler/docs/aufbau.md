@@ -71,6 +71,7 @@ server/src/pdf/schwaerzen.ts     Seiten neu aufbauen, schwärzen, Textebene ohne
 server/src/pdf/schreiber.ts      Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
 server/src/pdf/export.ts         PDF mehrerer Mappen
 server/src/pdf/aufkleber.ts      Aufkleberbogen mit Barcode
+server/src/pdf/anzeige.ts        bereinigte Kopie für die Anzeige im Browser (#639)
 server/src/pdf/demo-dokumente.ts Demo-Dokumente
 server/src/pdf/einfach.ts        kleiner Schreiber für Textseiten ganz ohne Bibliothek (Notfallblatt)
 server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung #456; WinAnsi
@@ -97,6 +98,16 @@ pdf-lib (MIT) ist die einzige verbreitete PDF-Bibliothek in reinem JavaScript. D
 | **Anderes Werkzeug** (MuPDF, Ghostscript, PDFium …) | Sehr leistungsfähig | MuPDF und Ghostscript sind AGPL und bewusst nicht im Image; native Module widersprechen der schlanken Abhängigkeitsliste |
 
 **Empfehlung:** pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist `@cantoo/pdf-lib` (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus [Abhängigkeiten](#abhaengigkeiten)) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (`seiten.ts`) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.
+
+### Anzeige von PDFs im Browser (#639) { #pdf-anzeige }
+
+Dateien liefert der Server mit `dateiKoepfe` (`routen.ts`) aus: alles außer PDF mit einer strengen Content-Security-Policy samt `sandbox`. PDFs brauchen den eingebauten Betrachter des Browsers und bekommen diese Policy nicht – deshalb sieht der Browser **nie das Original**, wenn er ein PDF anzeigt:
+
+- `fuerAnzeige()` in `routen.ts` greift bei jeder Antwort mit `anzeigen: true` und `application/pdf` ohne API-Schlüssel – also beim Ansehen in der Oberfläche: `GET /api/dokumente/:id/inhalt`, `…/versionen/:nummer/inhalt`, `…/fassung` und `…/archivfassung` (jeweils ohne `herunterladen`).
+- `pdfanzeige.ts` holt die bereinigte Kopie aus der PDF-Stelle (`pdf/anzeige.ts`, im Arbeiter-Pool) und hält sie je SHA-256 des Inhalts im Speicher (höchstens 256 MB, älteste zuerst hinaus; Fehlschläge werden nicht gemerkt).
+- Entfernt werden JavaScript (`/JS`, Namensbaum `JavaScript`), automatische Aktionen (`/OpenAction`, `/AA`), die Aktionen `SubmitForm`, `Launch`, `ImportData`, `GoToR`, `GoToE`, Medien-Aktionen, XFA-Formulare, eingebettete Dateien (`/EF`, `EmbeddedFiles`, Ströme `/EmbeddedFile`) und Anmerkungen für Dateianhänge und Medien. Links (`URI`) und Sprünge im Dokument bleiben.
+- Lässt sich das PDF nicht bereinigen (verschlüsselt, beschädigt), kommt ein kurzer Text (`text/plain`, mit Sandbox) mit `X-DMS-Anzeige: nur-herunterladen`; sonst steht `X-DMS-Anzeige: bereinigt` im Kopf.
+- **Herunterladen, Weitergeben, Export, E-Mail und API-Schlüssel** (auch Pakete) bekommen weiter das Original bzw. die gestempelte Ausgabe.
 
 ## Arbeiter-Pool { #arbeiter-pool }
 
