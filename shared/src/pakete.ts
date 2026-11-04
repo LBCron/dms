@@ -153,6 +153,8 @@ export interface InstalliertesPaket {
   herkunft: Herkunft;
   installiert: string; installiertVon: string | null;
   aktualisiert: string | null; aktualisiertVon: string | null;
+  /** Schlüssel der mitgelieferten Automatisierungen dieser Version (#712) – bei einem Update stehen nur neue zur Wahl. */
+  automatisierungen?: string[];
   /** Lokaler Schlüssel → Id des Mappentyps bzw. der Sicht im DMS. */
   typen: Record<string, string>;
   sichten: Record<string, string>;
@@ -696,6 +698,8 @@ export interface AblaufInstallation extends AblaufEingabe {
   sichtNamen?: Record<string, Record<string, string>>;
   /** Paket-Ids, deren Beispiel-Mappen angelegt werden. */
   beispiele?: string[];
+  /** Je Paket-Id: Schlüssel der mitgelieferten Automatisierungen, die gleich eingeschaltet werden (#712). */
+  automatisierungen?: Record<string, string[]>;
   /** Herkunft bestätigt (nicht offizielle Quelle bzw. ohne gültige Signatur) – ein Haken für alle. */
   bestaetigt?: boolean;
   /** Stand der Rechte, die der Administrator gesehen und erlaubt hat (AblaufPlan.rechte.stand) – ein Haken für alle. */

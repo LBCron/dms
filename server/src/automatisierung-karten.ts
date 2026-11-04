@@ -51,6 +51,8 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
   const text = (await c.fuelle(k.text)).trim();
   if (!text) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.leer'));
   const an = [...new Set((await Promise.all(k.empfaenger.map((e) => c.personen(e)))).flat())];
+  // Nur Personen aus dem Ereignis und keine dabei (z. B. Abwesenheit ohne Vertreter): nichts zu tun, kein Fehler.
+  if (!an.length && k.empfaenger.length && k.empfaenger.every((e) => e.art === 'ereignis')) return t('automatisierung.karte.aufgabe.niemand-ereignis');
   if (!an.length) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.niemand'));
   const datum = k.als === 'aufgabe' && k.faellig !== null && k.faellig !== undefined ? verschiebe(heuteIn(), k.faellig) : null;
   const als = k.als === 'aufgabe' ? t('automatisierung.karte.aufgabe.als-aufgabe') : t('automatisierung.karte.aufgabe.als-benachrichtigung');

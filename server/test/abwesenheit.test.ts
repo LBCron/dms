@@ -11,6 +11,8 @@ import { Fachfehler } from '../src/fehler';
 import { Konten } from '../src/konten';
 import { speicherKontoRepo, type KontoRepo } from '../src/konto-repo';
 import { speicherRepo } from '../src/repo-speicher';
+import { Automatisierungen, speicherAutomatisierungRepo } from '../src/automatisierung';
+import '../src/automatisierung-karten';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 
@@ -28,17 +30,26 @@ async function aufbau() {
     { key: 'text', label: 'Beschreibung', typ: 'formatiert' },
   ] });
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
-  return { d, konten, kontoRepo: kontoRepo as KontoRepo, anna, ben, cora, t, ich, A: { id: anna.id, rolle: 'admin' }, B: { id: ben.id, rolle: 'mitglied' }, C: { id: cora.id, rolle: 'mitglied' } };
+  // Seit #712 legt die Automatisierung „Vertretung eingetragen“ die Vertretungs-Aufgabe an (beim Update übernommen).
+  await konten.systemkonto('automatisierung');
+  d.systemkonten = (k) => konten.systemkonto(k);
+  const motor = new Automatisierungen({ dienst: d, repo: speicherAutomatisierungRepo() });
+  d.ereignisse.abonniere('automatisierungen', (e) => motor.ereignis(e));
+  await motor.fristenUebernehmen();
+  const verteile = async () => { const echt = Date.now; Date.now = () => echt() + 30_000; try { await d.ereignisse.verteile(); } finally { Date.now = echt; } };
+  return { d, konten, kontoRepo: kontoRepo as KontoRepo, anna, ben, cora, t, ich, verteile, A: { id: anna.id, rolle: 'admin' }, B: { id: ben.id, rolle: 'mitglied' }, C: { id: cora.id, rolle: 'mitglied' } };
 }
+const vertretung = <T extends { text: string }>(l: T[]) => l.filter((a) => /als Vertreter hinterlegt/.test(a.text));
 
 describe('Abwesenheit mit Vertreter (#78)', () => {
   it('leitet neue Aufgaben aller Arten an den Vertreter und dokumentiert alles an der Benutzer-Mappe', async () => {
-    const { d, konten, ben, cora, t, A, B, C } = await aufbau();
+    const { d, konten, ben, cora, t, A, B, C, verteile } = await aufbau();
     await assert.rejects(konten.setzeAbwesenheit(ben, ben.id, { an: true }), status(422), 'Vertreter ist Pflicht');
     await assert.rejects(konten.setzeAbwesenheit(ben, ben.id, { an: true, vertreterId: ben.id }), status(422), 'nicht man selbst');
     await assert.rejects(konten.setzeAbwesenheit(ben, cora.id, { an: true, vertreterId: ben.id }), status(403), 'andere nur als Admin');
     const bis = verschiebe(heuteIn(), 14, 'tage');
     await konten.setzeAbwesenheit(ben, ben.id, { an: true, bis, vertreterId: cora.id });
+    await verteile();
 
     // Benutzer-Mappe: Systemfelder, Protokoll, Aufgabe „Vertretung“ für Cora
     const bm = await d.holeMappe(ben.id);
@@ -46,7 +57,7 @@ describe('Abwesenheit mit Vertreter (#78)', () => {
     assert.equal(bm.mappe.werte.abwesend_bis, bis);
     assert.equal(bm.mappe.werte.vertreter, cora.id);
     assert.ok((await d.historie(ben.id)).some((h) => h.art === 'abwesenheit' && /eingetragen.*Vertreter Cora/.test(String(h.daten.text))));
-    const [vt] = (await d.meineAufgaben(C)).filter((a) => a.art === 'vertretung');
+    const [vt] = vertretung(await d.meineAufgaben(C));
     assert.match(vt.text, /für Ben als Vertreter hinterlegt – ab sofort bis/);
     assert.equal(vt.mappeId, ben.id);
 
@@ -58,7 +69,7 @@ describe('Abwesenheit mit Vertreter (#78)', () => {
     await d.aendereMappe(m.id, { werte: { nr: '1', text: `Bitte ${erwaehnung('Ben', ben.id)} ansehen` } }, A.id);
     await d.aendereTyp(t.id, { ...t, felder: [...t.felder, { key: 'pflicht', label: 'Pflicht', typ: 'text', pflicht: true }], register: undefined });
     const beiCora = await d.meineAufgaben(C);
-    assert.deepEqual(beiCora.map((x) => x.art).sort(), ['erwaehnung', 'manuell', 'passung', 'vertretung']);
+    assert.deepEqual(beiCora.map((x) => x.art).sort(), ['erwaehnung', 'manuell', 'manuell', 'passung']);
     assert.match(beiCora.find((x) => x.art === 'erwaehnung')!.text, /Erwähnt von Anna/, 'Text der Erwähnung bleibt');
     assert.equal((await d.meineAufgaben(B)).length, 0);
   });
@@ -80,11 +91,14 @@ describe('Abwesenheit mit Vertreter (#78)', () => {
   });
 
   it('erledigt Vertretungs-Aufgaben bei Wechsel und Ende, beendet Abgelaufenes und schickt Abwesenden keine Mail', async () => {
-    const { d, konten, kontoRepo, anna, ben, cora, A, B, C } = await aufbau();
+    const { d, konten, kontoRepo, anna, ben, cora, A, B, C, verteile } = await aufbau();
     await konten.setzeAbwesenheit(ben, ben.id, { an: true, vertreterId: cora.id });
+    await verteile();
+    assert.equal(vertretung(await d.meineAufgaben(C)).length, 1);
     await konten.setzeAbwesenheit(ben, ben.id, { an: true, vertreterId: anna.id });
-    assert.equal((await d.meineAufgaben(C)).filter((a) => a.art === 'vertretung').length, 0, 'alte erledigt');
-    assert.equal((await d.meineAufgaben(A)).filter((a) => a.art === 'vertretung').length, 1);
+    await verteile();
+    assert.equal(vertretung(await d.meineAufgaben(C)).length, 0, 'alte erledigt');
+    assert.equal(vertretung(await d.meineAufgaben(A)).length, 1);
 
     // Tägliche Zusammenfassung: Ben ist abwesend, bekommt keine
     const t = await d.legeTypAn({ name: 'Notiz', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }] });
@@ -101,10 +115,11 @@ describe('Abwesenheit mit Vertreter (#78)', () => {
     // Abgelaufen: die stündliche Prüfung beendet die Abwesenheit
     await kontoRepo.setzeAbwesenheit(ben.id, { an: true, von: null, bis: verschiebe(heuteIn(), -1, 'tage'), vertreterId: anna.id });
     await konten.abwesenheitenPruefen();
+    await verteile();
     const b = (await konten.listeBenutzer()).find((x) => x.id === ben.id)!;
     assert.equal(b.abwesenheit?.an, false);
     assert.equal(b.abwesenheit?.vertreterId, anna.id, 'Vertreter bleibt hinterlegt');
-    assert.equal((await d.meineAufgaben(A)).filter((a) => a.art === 'vertretung').length, 0, 'erledigt mit dem Ende');
+    assert.equal(vertretung(await d.meineAufgaben(A)).length, 0, 'erledigt mit dem Ende');
     assert.ok((await d.historie(ben.id)).some((h) => h.art === 'abwesenheit' && /beendet.*abgelaufen/.test(String(h.daten.text))));
     assert.equal((await d.meineAufgaben(B)).length, 0);
   });

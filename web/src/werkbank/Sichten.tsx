@@ -394,7 +394,7 @@ function FristBedingung({ b, typen, setze }: { b: Extract<Bedingung, { art: 'fri
   return (
     <span className="wertgruppe umbruch">
       <select aria-label="Datumsfeld" value={b.feld ?? ''} onChange={(x) => setze({ ...b, feld: x.target.value || null })}>
-        <option value="">alle Datumsfelder mit Erinnerung</option>
+        <option value="">alle Datumsfelder, die eine Frist sind</option>
         {datumsfelder.map((f) => <option key={f.key} value={f.key}>{f.label}{f.frist ? ' (erinnert)' : ''}</option>)}
         {b.feld && !datumsfelder.some((f) => f.key === b.feld) && <option value={b.feld}>{b.feld} (fehlt)</option>}
       </select>
