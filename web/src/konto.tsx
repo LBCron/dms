@@ -29,6 +29,8 @@ interface Konto {
   zweifaktor: { aktiv: boolean; ausstehend: boolean };
   /** Favoriten benachrichtigen (#506): von der Werkbank erlaubt? Sonst kein Schalter an den Favoriten. */
   favoritenBenachrichtigung: boolean;
+  /** Laufwerk (#720): vom Administrator eingeschaltet? Sonst kein Menüeintrag, kein Bereich. */
+  laufwerk: boolean;
 }
 const Ctx = createContext<Konto | null>(null);
 
@@ -123,7 +125,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   );
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
-    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false }}>
+    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, laufwerk: status.laufwerk === true }}>
       {/* … danach als Administrator: Benutzer, Schlüssel, Optionales, Fertig. */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
     </Ctx.Provider>
