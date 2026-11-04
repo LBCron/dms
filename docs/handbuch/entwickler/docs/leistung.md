@@ -13,6 +13,8 @@ Bei **10.000 Mappen und 20.000–30.000 Dokumenten** (Volltext je Dokument 5–5
 
 Das gilt auch, **während** im selben Prozess Demo-Daten mit Dokumenten entstehen und die Texterkennung läuft. Gemessen auf einem gewöhnlichen Rechner liegen die Werte heute im einstelligen Millisekundenbereich; die Grenze lässt Platz für ein langsames NAS.
 
+**Kleine Hardware:** Ablago verspricht, auch auf kleiner Hardware flott zu sein. Maßstab dafür sind die Geräte unter [Geprüfte Plattformen](https://help.ablago.app/installieren/aktuell/plattformen/) und die Werte unter [Was Ablago verkraftet](https://help.ablago.app/admin/aktuell/verkraftet/): Ziel ist p95 unter 0,3 s bei der Lasttest-Stufe „klein“ und unter 1 s bei „mittel“ – auch auf einem NAS wie dem vom Projekt geprüften UGREEN DXP4800 Plus. Messungen auf einem Raspberry Pi 5 folgen ([#578](https://github.com/motom001/dms/issues/578)).
+
 Die Werte stehen als `MESSLATTE_MS` in `server/test/leistung-messen.ts`.
 
 ## Test in der CI

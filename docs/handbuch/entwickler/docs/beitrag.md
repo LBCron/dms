@@ -3,6 +3,7 @@
 ## Vor dem Pull Request
 
 - Das Issue trägt das Label **`freigegeben`**.
+- **Leitplanken eingehalten** ([Was jeder Beitrag einhält](index.md#was-jeder-beitrag-einhalt)): kein neuer Weg nach draußen ohne ausdrückliche Zustimmung und ohne Zeile in [Wege nach draußen](aufbau.md#wege-nach-draussen), keine Telemetrie, nichts von fremden Servern, offene Formate im Export, keine heimliche Änderung bei Updates.
 - Ein eigener Branch, z. B. `abwesenheit-vertreter`, von aktuellem `main`.
 - **Tests** für das Neue, im Arbeitsspeicher und, wo Daten gespeichert werden, auch gegen PostgreSQL.
 - `npm test` und `npm run typecheck` laufen lokal durch.
