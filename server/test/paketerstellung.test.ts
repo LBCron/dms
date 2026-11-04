@@ -75,7 +75,7 @@ async function quelle() {
   const v2 = (await q.d.listeTypen()).find((t) => t.id === vertrag.id)!;
   await q.d.aendereTyp(vertrag.id, { ...v2, register: [...v2.register, { key: 'zahlungen', name: 'Zahlungen', art: 'verknuepfungen', quellen: [{ typId: zahlung.id, feldKey: 'vertrag' }] }] });
   const notiz = await q.d.legeTypAn({ name: 'Notizzettel', felder: [{ key: 'text', label: 'Text', typ: 'text' }] });
-  const vertraege = await q.d.legeSichtAn({ name: 'Verträge', typen: [vertrag.id] });
+  const vertraege = await q.d.legeSichtAn({ name: 'Verträge', typen: [vertrag.id], symbol: 'signature' });
   const teuer = await q.d.legeSichtAn({ name: 'Teure Verträge', elternId: vertraege.id, typen: [vertrag.id], bedingungen: [{ art: 'feld', feld: 'monatlich', op: 'groesser', wert: { art: 'fest', wert: 100 } }] });
   const meine = await q.d.legeSichtAn({ name: 'Meine Verträge', elternId: vertraege.id, typen: [vertrag.id], bedingungen: [
     { art: 'feld', feld: 'verantwortlich', op: 'zeigtAuf', wert: { art: 'ich' } },
@@ -197,6 +197,7 @@ describe('Paket selbst erstellen (#374)', () => {
       const ziel = zs.find((x) => x.name === quell.name)!;
       assert.deepEqual(sichtBild(ziel, zs, zt), sichtBild(qs.find((x) => x.id === quell.id)!, qs, qt), quell.name);
     }
+    assert.equal(zs.find((x) => x.name === 'Verträge')!.symbol, 'signature', 'Symbol der Ansicht kommt mit (#428)');
     assert.deepEqual(zs.find((x) => x.name === 'Nur ein Partner')!.bedingungen, [], 'Bedingung mit fester Mappe bleibt draußen');
     // Beispiele angelegt, Verweis zwischen ihnen aufgelöst.
     const zv = (await z.d.listeMappen(paket.typen.vertrag))[0];

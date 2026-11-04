@@ -8,6 +8,7 @@
  * - Scheitert etwas, wird zurückgerollt: Es bleibt nichts halb angelegt.
  * - Ein Update ergänzt nur (neue Typen, Felder, Register, Sichten); es löscht und überschreibt nichts.
  */
+import { ansichtSymbol } from '../../shared/src/ansichtsymbole';
 import { liesFeldErkennung, type FeldErkennung } from '../../shared/src/erkennung';
 import { istDatumsgrenze, istFeldformat } from '../../shared/src/feldformate';
 import { createHash, randomUUID } from 'node:crypto';
@@ -106,7 +107,7 @@ export interface Manifest {
 export interface PaketFeld extends Partial<Feld> { key: string; label: string; typ: Feld['typ']; ziel?: string }
 export interface PaketRegister { key: string; name: string; art: Register['art']; felder?: string[]; quellen?: Array<{ typ: string; feld: string }>; volltext?: boolean }
 export interface PaketTyp { schluessel: string; name: string; beschreibung: string; titelVorlage?: string; felder: PaketFeld[]; register: PaketRegister[]; trefferliste?: string[] }
-export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string }
+export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string; symbol?: string }
 /** Beispiel-Mappe (#347): optional mit Schlüssel; Verweisfelder dürfen { beispiel: schluessel } bzw. { beispiel: paket:schluessel } sein. */
 export interface PaketBeispiel { typ: string; werte: Record<string, unknown>; schluessel?: string }
 
@@ -240,6 +241,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
     return {
       schluessel: str(s.schluessel), name: str(s.name).trim(), beschreibung: s.beschreibung ? str(s.beschreibung) : undefined, eltern: s.eltern ? str(s.eltern) : undefined,
       typen: Array.isArray(s.typen) ? s.typen.map(str) : [], trefferliste: s.trefferliste ? str(s.trefferliste) : undefined,
+      // Symbol (#428): unbekannte Namen (Paket für eine neuere Version) heißen „ohne Symbol“, kein Fehler.
+      symbol: ansichtSymbol(s.symbol) ?? undefined,
       bedingungen: Array.isArray(s.bedingungen) ? s.bedingungen.filter(istObjekt).map((b) => ({ feld: str(b.feld), operator: str(b.operator), wert: b.wert })) : [],
     };
   });
@@ -1264,7 +1267,7 @@ export class Paketverwaltung {
         const position = Math.max(0, ...kinderVon(alle, elternId).map((x) => x.position)) + 10;
         const typen = (s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean);
         try {
-          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}) });
+          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}), ...(s.symbol ? { symbol: s.symbol } : {}) });
           neueSichten.push(neu.id);
           sichtMap[s.schluessel] = neu.id;
         } catch (f) { throw new Fachfehler(422, `Ansicht „${sp.name}“: ${meldungen(f)}`); }

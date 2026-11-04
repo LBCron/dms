@@ -15,7 +15,7 @@ import { MappeAnsicht, NeueMappe } from './MappeFormular';
 import { PapierkorbDetail, PapierkorbListe, usePapierkorb } from './Papierkorb';
 import { Startseite } from './Startseite';
 import { t } from '../sprache';
-import { Symbol, type SymbolName } from '../Symbol';
+import { AnsichtSymbol, Symbol, type SymbolName } from '../Symbol';
 import { AnsichtFilter, AnsichtWahl } from './AnsichtWahl';
 import { Stern } from './Stern';
 import { spaltenName, zelle } from './spalten';
@@ -708,7 +708,7 @@ function SichtBaum({ aktiv, ohne }: { aktiv?: string; ohne?: string }) {
                   onClick={() => umschalten(s.id)}><span aria-hidden="true">{offen ? '▾' : '▸'}</span><span className="sr">{s.name} {offen ? 'zuklappen' : 'aufklappen'}</span></button>
               : null}
             <Link to={`/ablage/${s.id}`} className={`sicht ${aktiv === s.id ? 'an' : ''}`} title={s.beschreibung || undefined}>
-              <span className="nm">{s.name}</span>{!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
+              <span className="nm">{s.symbol && <><AnsichtSymbol name={s.symbol} className="fest-sym" /> </>}{s.name}</span>{!d.zahlenDa ? <ZahlWarte /> : n !== undefined && <span className={s.id === d.zaehler.neuePost && n > 0 ? 'zaehler' : 'zahl'}>{zahl(n)}</span>}
             </Link>
           </div>
         );

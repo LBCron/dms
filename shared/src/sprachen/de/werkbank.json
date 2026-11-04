@@ -186,5 +186,10 @@
   "bereich.betrieb.auch": "Adresse|Absender|SMTP",
   "suche.platzhalter": "Bereich suchen …",
   "suche.label": "Bereiche der Werkbank durchsuchen",
-  "suche.nichts": "Kein Bereich gefunden."
+  "suche.nichts": "Kein Bereich gefunden.",
+  "sicht.symbol": "Symbol",
+  "sicht.symbol.hinweis": "steht in der Ablage vor dem Namen",
+  "sicht.symbol.ohne": "Ohne Symbol",
+  "sicht.symbol.entfernen": "Symbol entfernen",
+  "sicht.symbol.suchen": "Symbol suchen …"
 }

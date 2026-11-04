@@ -12,7 +12,7 @@ import { neuePost } from './NeuePost';
 import { StartSuche } from './StartSuche';
 import { FragAblage } from './FragAblage';
 import { istTouch, postFotografieren } from './PostKamera';
-import { Symbol } from '../Symbol';
+import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
 
 /**
@@ -27,12 +27,12 @@ import { darfPostAnlegen } from '../../../shared/src/model';
  */
 const zahl = (n: number) => n.toLocaleString('de-DE');
 
-function Kachel({ name, to, art, titel, anzahl, leer, unter }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string }) {
+function Kachel({ name, to, art, titel, anzahl, leer, unter, symbol }: { name: string; to: string; art: 'auffaellig' | 'ruhig' | 'post'; titel: string; anzahl: number | null; leer: string; unter?: string; symbol?: string | null }) {
   const nichts = anzahl === 0;
   return (
     <div className="start-feld" data-kachel={name}>
       <Link to={to} className={`kachel ${art} ${nichts ? 'erledigt' : ''}`}>
-        <span className="kacheltitel">{titel}</span>
+        <span className="kacheltitel">{symbol && <><AnsichtSymbol name={symbol} /> </>}{titel}</span>
         {anzahl === null ? <span className="kachelzahl leise">…</span> : nichts ? <span className="kachelleer"><Symbol name="haken" /> {leer}</span> : <span className="kachelzahl">{zahl(anzahl)}</span>}
         {unter && !nichts && <span className="kachelunter leise klein">{unter}</span>}
       </Link>
@@ -118,7 +118,7 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
             {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={postSicht.name} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer="Keine neue Post" unter="Noch nicht zugeordnet" />}
             <TerminKachel z={termin} />
             {lieblings
-              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer="Leer" />
+              ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer="Leer" />
               : <Kachel name="wahl" to="/ablage/favoriten" art="ruhig" titel="Favoriten" anzahl={z(d.zaehler.favoriten ?? 0)} leer="Noch keine – der Stern an einer Mappe merkt sie dir" />}
           </div>
         )}

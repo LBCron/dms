@@ -16,6 +16,9 @@ import { Bereich, SICHT_BEREICHE, useBereiche, type Klappe, type SichtBereich } 
 import { elternkette, SichtBerechtigungen, SichtTestlauf } from './SichtRechte';
 import { sichtRegelProblem, sichtRegelwerkVon } from '../../../shared/src/sichtrechte';
 import { rueckfrage } from '../rueckfrage';
+import { ANSICHT_SYMBOLE } from '../../../shared/src/ansichtsymbole';
+import { AnsichtSymbol } from '../Symbol';
+import { t } from '../sprache';
 
 /**
  * Sichten verwalten (#38) mit Bedingungen (#40, #41): Baum links, Bearbeitung rechts.
@@ -128,8 +131,8 @@ export function SichtenListe({ offen }: { offen?: string }) {
   );
 }
 
-const leer = (): SichtDaten => ({ name: '', beschreibung: '', elternId: null, position: 0, typen: [], bedingungen: [], trefferliste: null, berechtigungen: null });
-const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null });
+const leer = (): SichtDaten => ({ name: '', beschreibung: '', elternId: null, position: 0, typen: [], bedingungen: [], trefferliste: null, berechtigungen: null, symbol: null });
+const datenVon = (s: Sicht): SichtDaten => ({ name: s.name, beschreibung: s.beschreibung, elternId: s.elternId, position: s.position, typen: s.typen, bedingungen: s.bedingungen, trefferliste: s.trefferliste ?? null, berechtigungen: s.berechtigungen ?? null, symbol: s.symbol ?? null });
 
 export function SichtEditor({ id }: { id: string }) {
   const d = useDaten();
@@ -228,6 +231,7 @@ export function SichtEditor({ id }: { id: string }) {
             </select></label>
         </div>
         <label className="eigenschaft"><span>Beschreibung <small>steht in der Ablage über der Liste</small></span><input value={e.beschreibung} onChange={(x) => setE({ ...e, beschreibung: x.target.value })} /></label>
+        <SymbolWahl wert={e.symbol ?? null} setze={(symbol) => setE({ ...e, symbol })} />
         {!neu && geschwister.length > 1 && (
           <div className="knoepfe">
             <span className="leise klein">Reihenfolge auf dieser Ebene: {stelle + 1} von {geschwister.length}</span>
@@ -269,6 +273,48 @@ export function SichtEditor({ id }: { id: string }) {
 }
 
 /* ---------- Trefferliste (#75) ---------- */
+
+/**
+ * Symbol der Ansicht (#428): Raster aus der festen Auswahl (Lucide), mit Suche nach Namen und Bedeutung.
+ * Gespeichert wird nur der Name; „Ohne Symbol“ bleibt möglich.
+ */
+function SymbolWahl({ wert, setze }: { wert: string | null; setze(n: string | null): void }) {
+  const [offen, setOffen] = useState(false);
+  const [suche, setSuche] = useState('');
+  const q = suche.trim().toLowerCase();
+  const titel = ANSICHT_SYMBOLE.flatMap((g) => g.symbole).find((x) => x.name === wert)?.titel;
+  return (
+    <div className="eigenschaft symbolwahl">
+      <span id="symbolwahl-t">{t('werkbank.sicht.symbol')} <small>{t('werkbank.sicht.symbol.hinweis')}</small></span>
+      <div className="knoepfe">
+        <button type="button" className="knopf klein" aria-expanded={offen} aria-labelledby="symbolwahl-t symbolwahl-w" onClick={() => setOffen(!offen)}>
+          <span id="symbolwahl-w">{wert ? <><AnsichtSymbol name={wert} /> {titel ?? wert}</> : t('werkbank.sicht.symbol.ohne')}</span> <span aria-hidden="true">▾</span>
+        </button>
+        {wert && <button type="button" className="textknopf klein" onClick={() => setze(null)}>{t('werkbank.sicht.symbol.entfernen')}</button>}
+      </div>
+      {offen && (
+        <div className="symbolraster-rahmen">
+          <input type="search" className="klein" aria-label={t('werkbank.sicht.symbol.suchen')} placeholder={t('werkbank.sicht.symbol.suchen')} value={suche} onChange={(x) => setSuche(x.target.value)} />
+          {ANSICHT_SYMBOLE.map((g) => {
+            const liste = g.symbole.filter((x) => !q || x.titel.toLowerCase().includes(q) || x.name.includes(q) || g.gruppe.toLowerCase().includes(q));
+            if (!liste.length) return null;
+            return (
+              <fieldset key={g.gruppe} className="symbolgruppe">
+                <legend className="leise klein">{g.gruppe}</legend>
+                <div className="symbolraster">
+                  {liste.map((x) => (
+                    <button key={x.name} type="button" className={`symbolknopf${wert === x.name ? ' an' : ''}`} aria-pressed={wert === x.name} title={x.titel} aria-label={x.titel}
+                      onClick={() => { setze(x.name); setOffen(false); }}><AnsichtSymbol name={x.name} /></button>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TrefferlistenWahl({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: SichtDaten) => SichtDaten) => void; typen: Mappentyp[]; klappe: Klappe }) {
   const listen = gemeinsameTrefferlisten(typen);

@@ -248,7 +248,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     });
     if (s.trefferliste && s.trefferliste !== 'standard') hinweis(`Ansicht „${s.name}“: zeigt im Paket die Standard-Trefferliste.`);
     if (s.berechtigungen) hinweis(`Ansicht „${s.name}“: Berechtigungen an der Ansicht kommen nicht ins Paket.`);
-    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, bedingungen });
+    return ohneLeere({ schluessel: schluessel[s.id], name: s.name, beschreibung: s.beschreibung || undefined, eltern, typen, bedingungen, symbol: s.symbol || undefined });
   });
   // Elternansichten zuerst (liest sich besser; das DMS sortiert ohnehin).
   const sortiert: typeof paketSichten = [];

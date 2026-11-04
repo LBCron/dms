@@ -232,6 +232,7 @@ const alsSicht = (r: Zeile): Sicht => ({
   bedingungen: (r.bedingungen as Sicht['bedingungen']) ?? [],
   trefferliste: (r.trefferliste as string | null) ?? null,
   berechtigungen: (r.berechtigungen as Sicht['berechtigungen']) ?? null,
+  symbol: (r.symbol as string | null) ?? null,
   erstellt: iso(r.erstellt),
   geaendert: iso(r.geaendert),
 });
@@ -1046,8 +1047,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
     async legeSichtAn(id, d: SichtDaten) {
       const [r] = await sql`
-        INSERT INTO sichten (id, haushalt_id, name, beschreibung, eltern_id, position, typen, bedingungen, trefferliste, berechtigungen)
-        VALUES (${id}, ${haushaltId}, ${d.name}, ${d.beschreibung}, ${d.elternId}, ${d.position}, ${json(sql, d.typen)}, ${json(sql, d.bedingungen)}, ${d.trefferliste ?? null}, ${d.berechtigungen ? json(sql, d.berechtigungen) : null})
+        INSERT INTO sichten (id, haushalt_id, name, beschreibung, eltern_id, position, typen, bedingungen, trefferliste, berechtigungen, symbol)
+        VALUES (${id}, ${haushaltId}, ${d.name}, ${d.beschreibung}, ${d.elternId}, ${d.position}, ${json(sql, d.typen)}, ${json(sql, d.bedingungen)}, ${d.trefferliste ?? null}, ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, ${d.symbol ?? null})
         RETURNING *`;
       return alsSicht(r);
     },
@@ -1055,7 +1056,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const [r] = await sql`
         UPDATE sichten SET name = ${d.name}, beschreibung = ${d.beschreibung}, eltern_id = ${d.elternId}, position = ${d.position},
           typen = ${json(sql, d.typen)}, bedingungen = ${json(sql, d.bedingungen)}, trefferliste = ${d.trefferliste ?? null},
-          berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, geaendert = now()
+          berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, symbol = ${d.symbol ?? null}, geaendert = now()
         WHERE haushalt_id = ${haushaltId} AND id = ${id} RETURNING *`;
       return alsSicht(r);
     },
