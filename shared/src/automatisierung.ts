@@ -53,7 +53,17 @@ export type WennKarte =
    * negativ = so lange danach) – Monate sind Kalendermonate. Geprüft täglich zur Uhrzeit. `wiederholung`: Termin
    * kehrt alle n Monate wieder – eine Aufgabe schlägt nach dem Erledigen den Folgetermin vor.
    */
-  | { art: 'datum'; typ: string; feld: string; vorlauf: number; einheit: VorlaufEinheit; uhrzeit: string; wiederholung?: number | null };
+  | { art: 'datum'; typ: string; feld: string; vorlauf: number; einheit: VorlaufEinheit; uhrzeit: string; wiederholung?: number | null }
+  /**
+   * „Zeitplan“ (#678): an den Wochentagen `tage` (1 = Mo … 7 = So) um `uhrzeit`, an Feiertagen nur ohne `feiertage`.
+   * `jeBenutzer`: läuft je aktivem Benutzer (nur der Rolle `rolle`) genau einmal je Tag – Kontext ist dann die
+   * Benutzer-Mappe, Platzhalter {benutzer}. `profilzeit`: Uhrzeit, Wochentage und Feiertage aus dem Profil des
+   * Benutzers (wie die Tägliche Zusammenfassung), sonst die Werte der Karte.
+   */
+  | { art: 'zeitplan'; uhrzeit: string; tage: number[]; feiertage: boolean; jeBenutzer: boolean; rolle?: string | null; profilzeit?: boolean };
+
+/** Wochentage 1 = Montag … 7 = Sonntag (wie im Profil). */
+export const WOCHENTAGE = [1, 2, 3, 4, 5, 6, 7] as const;
 
 /** Wer gemeint ist: eine Person, alle aktiven Mitglieder einer Rolle, die Person(en) in einem Feld der Mappe oder wer die Mappe angelegt hat (#724). */
 export type Empfaenger =
@@ -92,9 +102,15 @@ export type DannKarte =
   /** Felder der Mappe setzen: je Feld ein fester Wert oder Text mit Platzhaltern (#676). */
   | { id: string; art: 'feld'; werte: Record<string, unknown> }
   /** Aufgabe (mit Fälligkeit in Tagen) oder Benachrichtigung an Personen, Rollen oder ein Feld (#676). */
-  | { id: string; art: 'aufgabe'; empfaenger: Empfaenger[]; text: string; als: 'aufgabe' | 'benachrichtigung'; faellig?: number | null };
+  | { id: string; art: 'aufgabe'; empfaenger: Empfaenger[]; text: string; als: 'aufgabe' | 'benachrichtigung'; faellig?: number | null }
+  /** Tägliche Zusammenfassung der offenen Aufgaben an den Benutzer des Laufs senden (#678; Zeitplan „für jeden Benutzer“). */
+  | { id: string; art: 'zusammenfassung' }
+  /** Favoriten-Änderungen melden: gebündelte Benachrichtigung „Geändert“ an alle, die die Mappe als Favorit haben (#678, #422). */
+  | { id: string; art: 'favoriten' }
+  /** Anmeldeschutz (#678, #368): `sammel` = Sammelmeldung über die Sperren vor heute, `konto` = sofort melden, dass ein Konto gesperrt ist. */
+  | { id: string; art: 'anmeldeschutz'; was: 'sammel' | 'konto' };
 export type DannArt = DannKarte['art'];
-export const DANN_ARTEN: DannArt[] = ['feld', 'aufgabe', 'stopp'];
+export const DANN_ARTEN: DannArt[] = ['feld', 'aufgabe', 'zusammenfassung', 'favoriten', 'anmeldeschutz', 'stopp'];
 
 export type Herkunft = 'eigen' | 'dms' | 'paket';
 
@@ -161,13 +177,15 @@ export interface Kontextdaten { typen: Mappentyp[]; sichten: Pick<Sicht, 'id' | 
 
 /** Mappentyp der Wenn-Karte (null = jeder Typ bzw. Benutzer bei Benutzer-Ereignissen). */
 export function kontextTyp(w: WennKarte, typen: Mappentyp[]): Mappentyp | null {
+  if (w.art === 'zeitplan') return w.jeBenutzer ? typen.find((t) => t.system === 'benutzer') ?? null : null;
   if (w.art !== 'datum' && EREIGNISKATALOG[w.art].gruppe === 'benutzer') return typen.find((t) => t.system === 'benutzer') ?? null;
-  const id = w.art === 'datum' ? w.typ : w.typ;
+  const id = w.typ;
   return id ? typen.find((t) => t.id === id) ?? null : null;
 }
 
 /** Schlüssel des Auslösers: gleiche Schlüssel = laufen nacheinander für dasselbe Ereignis. */
 export function ausloeserSchluessel(w: WennKarte): string {
+  if (w.art === 'zeitplan') return `zeitplan|${w.uhrzeit}|${w.tage.join('')}|${w.feiertage ? 'f' : ''}|${w.jeBenutzer ? `b:${w.rolle ?? ''}${w.profilzeit ? ':p' : ''}` : ''}`;
   return w.art === 'datum' ? `datum|${w.typ}|${w.feld}|${w.vorlauf}|${w.einheit}` : `${w.art}|${w.typ ?? ''}`;
 }
 
@@ -198,8 +216,10 @@ export const PLATZHALTER_FEST = ['titel', 'mappentyp', 'heute', 'automatisierung
 export function platzhalterFuer(w: WennKarte, typ: Mappentyp | null): Array<{ key: string; label: string }> {
   const fest = [{ key: 'titel', label: 'Titel der Mappe' }, { key: 'mappentyp', label: 'Mappentyp' }, { key: 'heute', label: 'Datum heute' }, { key: 'automatisierung', label: 'Name dieser Automatisierung' }];
   if (w.art === 'datum') fest.push({ key: 'datum', label: 'Erreichtes Datum' }, { key: 'tage', label: 'Tage bis dahin' });
+  if (w.art === 'zeitplan' && w.jeBenutzer) fest.push({ key: 'benutzer', label: 'Benutzer' });
   // Aus dem Ereignis (#678/#712): Personen mit Namen, Zeitraum einer Abwesenheit.
   for (const p of PERSONEN_IM_EREIGNIS[w.art] ?? []) fest.push({ key: p, label: EREIGNIS_PERSON[p] ?? p });
+  if (w.art === 'zeitplan') return [...fest, ...(typ?.felder ?? []).filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label }))];
   if (w.art === 'benutzer.abwesenheit_gesetzt') fest.push({ key: 'von', label: 'Abwesend von' }, { key: 'bis', label: 'Abwesend bis' }, { key: 'zeitraum', label: 'Zeitraum der Abwesenheit' });
   return [...fest, ...(typ?.felder ?? []).filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label }))];
 }
@@ -230,6 +250,14 @@ function bereinigeWenn(e: unknown): WennKarte {
     const w = Math.trunc(Number(x.wiederholung) || 0);
     return { art: 'datum', typ: id(x.typ), feld: x.art === 'datum' ? id(x.feld) : '', vorlauf, einheit, uhrzeit: typeof x.uhrzeit === 'string' && UHRZEIT.test(x.uhrzeit) ? x.uhrzeit : '07:00', wiederholung: w >= 1 && w <= 120 ? w : null };
   }
+  if (x.art === 'zeitplan') {
+    const tage = [...new Set((Array.isArray(x.tage) ? x.tage : WOCHENTAGE).map(Number).filter((t) => Number.isInteger(t) && t >= 1 && t <= 7))].sort();
+    const jeBenutzer = x.jeBenutzer === true;
+    return {
+      art: 'zeitplan', uhrzeit: typeof x.uhrzeit === 'string' && UHRZEIT.test(x.uhrzeit) ? x.uhrzeit : '07:00', tage: tage.length ? tage : [...WOCHENTAGE],
+      feiertage: x.feiertage === true, jeBenutzer, ...(jeBenutzer ? { rolle: id(x.rolle) || null, profilzeit: x.profilzeit === true } : {}),
+    };
+  }
   const art = (WENN_EREIGNISSE as string[]).includes(String(x.art)) ? (x.art as WennEreignis) : 'mappe.angelegt';
   const w: WennKarte = { art, typ: id(x.typ) || null };
   if (art === 'mappe.geaendert' && Array.isArray(x.felder)) w.felder = [...new Set(x.felder.map(id).filter(Boolean))].slice(0, 50);
@@ -253,6 +281,8 @@ function bereinigeDann(e: unknown, i: number): DannKarte | null {
   const x = (e ?? {}) as Record<string, unknown>;
   const kid = id(x.id) || `k${i + 1}`;
   if (x.art === 'stopp') return { id: kid, art: 'stopp' };
+  if (x.art === 'zusammenfassung' || x.art === 'favoriten') return { id: kid, art: x.art };
+  if (x.art === 'anmeldeschutz') return { id: kid, art: 'anmeldeschutz', was: x.was === 'konto' ? 'konto' : 'sammel' };
   if (x.art === 'feld') {
     const w = x.werte && typeof x.werte === 'object' && !Array.isArray(x.werte) ? (x.werte as Record<string, unknown>) : {};
     return { id: kid, art: 'feld', werte: Object.fromEntries(Object.entries(w).slice(0, 50).map(([k, v]) => [id(k), typeof v === 'string' ? v.slice(0, AUTOMATISIERUNG_GRENZEN.text) : v]).filter(([k]) => k)) };
@@ -319,6 +349,8 @@ export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdate
     if (!typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
     else if (!w.feld) p.push('„Datum erreicht“: Bitte ein Datumsfeld wählen.');
     else if (feldIn(typ, w.feld)?.typ !== 'datum') p.push(`Das Datumsfeld „${w.feld}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
+  } else if (w.art === 'zeitplan') {
+    if (w.jeBenutzer && w.rolle && !k.rollen.some((r) => r.id === w.rolle)) p.push('Die Rolle der Zeitplan-Karte gibt es nicht mehr.');
   } else if (w.typ && !typ) p.push('Den Mappentyp der Wenn-Karte gibt es nicht (mehr).');
   else if (w.felder?.length && typ) for (const f of w.felder) if (!feldIn(typ, f)) p.push(`Das Feld „${f}“ gibt es im Mappentyp „${typ.name}“ nicht (mehr).`);
   for (const u of a.und.karten) p.push(...undProbleme(u, typ, k));
@@ -333,6 +365,10 @@ export function automatisierungsProbleme(a: AutomatisierungDaten, k: Kontextdate
         else if (f.typ === 'passwort') p.push(`„Feld ändern“: Passwortfelder („${f.label}“) setzt keine Automatisierung.`);
       }
     }
+    if (d.art === 'zusammenfassung' && !(w.art === 'zeitplan' && w.jeBenutzer)) p.push('„Tägliche Zusammenfassung senden“ braucht die Wenn-Karte „Zeitplan“ für jeden Benutzer.');
+    if (d.art === 'favoriten' && w.art !== 'favorit.geaendert') p.push('„Favoriten-Änderungen melden“ braucht die Wenn-Karte „Favorit geändert“.');
+    if (d.art === 'anmeldeschutz' && d.was === 'sammel' && !(w.art === 'zeitplan' && !w.jeBenutzer)) p.push('„Sammelmeldung Anmeldeschutz“ braucht die Wenn-Karte „Zeitplan“ (nicht je Benutzer).');
+    if (d.art === 'anmeldeschutz' && d.was === 'konto' && w.art !== 'benutzer.gesperrt') p.push('„Kontosperre melden“ braucht die Wenn-Karte „Benutzerkonto gesperrt“.');
     if (d.art === 'aufgabe') {
       if (!d.text) p.push('„Aufgabe“: bitte beschreiben, was zu tun ist.');
       if (!d.empfaenger.length) p.push('„Aufgabe“: bitte mindestens einen Empfänger wählen.');
@@ -356,10 +392,22 @@ export function kurzform(a: AutomatisierungDaten, k: Pick<Kontextdaten, 'typen' 
   const w = a.wenn;
   const wenn = w.art === 'datum'
     ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? (w.feld || '?')} ${vorlaufText(w.vorlauf, w.einheit)}`
+    : w.art === 'zeitplan' ? `${zeitplanText(w)}${w.jeBenutzer ? ` für jeden Benutzer${w.rolle ? ` der Rolle ${k.rollen.find((r) => r.id === w.rolle)?.name ?? '?'}` : ''}` : ''}`
     : `${typ && EREIGNISKATALOG[w.art].gruppe !== 'benutzer' ? `${typ.name} ` : ''}${ereignisName(w.art)}`;
   const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : e.art === 'ersteller' ? 'Ersteller' : e.art === 'ereignis' ? EREIGNIS_PERSON[e.feld] ?? e.feld : feldIn(typ, e.feld)?.label ?? e.feld;
   const dann = a.dann.map((d) => d.art === 'stopp' ? 'danach keine weiteren'
+    : d.art === 'zusammenfassung' ? 'Tägliche Zusammenfassung senden' : d.art === 'favoriten' ? 'Favoriten-Änderungen melden'
+    : d.art === 'anmeldeschutz' ? (d.was === 'sammel' ? 'Sammelmeldung Anmeldeschutz senden' : 'Kontosperre an Administratoren melden')
     : d.art === 'feld' ? `${Object.keys(d.werte).map((x) => feldIn(typ, x)?.label ?? x).join(', ')} setzen`
       : `${d.als === 'aufgabe' ? 'Aufgabe' : 'Benachrichtigung'} an ${d.empfaenger.map(wer).join(', ') || '?'}`).join(', ');
   return `Wenn ${wenn}${a.und.karten.length ? ` und ${a.und.karten.length === 1 ? '1 Bedingung' : `${a.und.karten.length} Bedingungen`}` : ''} → ${dann || '…'}`;
+}
+
+const TAG_KURZ = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+/** „werktags um 07:00“, „Mo, Mi um 18:30“, „täglich um 07:00 (nicht an Feiertagen)“; mit Profilzeit: „zur Uhrzeit im Profil“. */
+export function zeitplanText(w: Extract<WennKarte, { art: 'zeitplan' }>): string {
+  if (w.jeBenutzer && w.profilzeit) return 'zur Uhrzeit im Profil';
+  const t = w.tage.join('');
+  const tage = t === '1234567' ? 'täglich' : t === '12345' ? 'werktags' : w.tage.map((x) => TAG_KURZ[x]).join(', ');
+  return `${tage} um ${w.uhrzeit}${w.feiertage ? ' (nicht an Feiertagen)' : ''}`;
 }

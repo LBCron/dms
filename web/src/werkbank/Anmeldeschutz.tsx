@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, type AnbieterEingabe, type AnbieterStand, type AnmeldeschutzStand, type SperrEinstellung, type ZweifaktorPflicht } from '../api';
 import { Hilfe } from '../Hilfe';
 import { useKonto } from '../konto';
-import { geheZu } from '../ort';
+import { geheZu, Link } from '../ort';
+import { t } from '../sprache';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 
@@ -63,10 +64,8 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
           <input id="as-ausnahmen" value={e.ausnahmen} placeholder="192.168.0.0/16, 10.0.0.0/8" onChange={(x) => setE({ ...e, ausnahmen: x.target.value })} /></label>
         <h2 className="h3">Mail an die Administratoren</h2>
         <p className="leise klein">Angriffsversuche aus dem Internet sind normal; Sperren passieren automatisch. Gesperrte Adressen siehst du jederzeit hier und im Protokoll.</p>
-        <label className="haken"><input id="as-mail" type="checkbox" checked={e.mail} onChange={(x) => setE({ ...e, mail: x.target.checked })} /><span>Einmal am Tag eine Sammelmeldung über die Sperren schicken
-          <small className="leise">höchstens eine Mail am Tag, über die Sperren des Vortags – nicht eine je gesperrter IP</small></span></label>
-        <label className="haken"><input id="as-mail-konto" type="checkbox" checked={e.mailKonto} onChange={(x) => setE({ ...e, mailKonto: x.target.checked })} /><span>Sofort melden, wenn ein Benutzerkonto gesperrt wird
-          <small className="leise">nur für bestehende Konten, je Konto höchstens einmal am Tag</small></span></label>
+        {/* #678: Sammelmeldung und Sofortmeldung sind jetzt Automatisierungen (Paket „Benachrichtigungen“). */}
+        <div className="hinweis info hinweiszeile"><p>{t('werkbank.anmeldeschutz.automatisierung')}</p><Link to="/werkbank/automatisierungen" className="knopf klein">{t('werkbank.zusammenfassung.automatisierung.knopf')}</Link></div>
         <Speicherleiste ent={ent} gegenstand="Anmeldeschutz" sendet={sendet} />
       </form>
       <ZweifaktorPflichtBlatt />

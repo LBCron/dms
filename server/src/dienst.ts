@@ -2349,9 +2349,12 @@ export class Dienst {
       const felder = art === 'geaendert' ? [...new Set(((daten?.aenderungen ?? []) as Feldaenderung[]).map((a) => a.feld).filter((f) => !f.startsWith('_')))].sort() : undefined;
       if (art !== 'geaendert' || felder?.length) await this.ereignis(katalog, { mappe: mappeId, typ: await this.typVon(mappeId), ...(felder ? { felder } : {}) }, benutzerId);
     }
+    // Favoriten (#422, #678): Das Melden übernimmt die Automatisierung „Favoriten-Änderungen melden“ (Paket
+    // „Benachrichtigungen“). Ein Ereignis gibt es nur, wenn jemand anderes die Mappe als Favorit mit „benachrichtigen“ hat.
     if (benutzerId && (ABO_ARTEN as readonly string[]).includes(art) && daten?.aufgabenart !== 'aenderung') {
-      try { await this.aboMelden(mappeId, benutzerId); }
-      catch (e) { protokoll.modul('ablage').warn('Benachrichtigung zu Favoriten nicht angelegt', { mappeId, fehler: (e as Error).message }); }
+      try {
+        if ((await this.repo.favoritenDerMappe(mappeId)).some((f) => f.benachrichtigen && f.benutzerId !== benutzerId)) await this.ereignis('favorit.geaendert', { mappe: mappeId, typ: await this.typVon(mappeId), von: benutzerId }, benutzerId);
+      } catch (e) { protokoll.modul('ablage').warn('Benachrichtigung zu Favoriten nicht angelegt', { mappeId, fehler: (e as Error).message }); }
     }
   }
 
@@ -2361,6 +2364,9 @@ export class Dienst {
    * Persönliche Einstellung (Vorgabe an): „favoriten_benachrichtigen“ bzw. „geaenderte_hervorheben“ = false schaltet ab.
    * Benachrichtigen nur, wenn die Werkbank es für den Benutzer erlaubt (#506); seine Einstellung bleibt dabei gespeichert.
    */
+  /** Persönliche Einstellungen eines Benutzers (#678: Zeitplan „für jeden Benutzer“ mit Uhrzeit aus dem Profil). */
+  async persoenlicheEinstellungen(benutzerId: string): Promise<Record<string, unknown>> { return (await this.konten?.einstellungen?.(benutzerId)) ?? {}; }
+
   private async persoenlichAn(benutzerId: string, schluessel: string): Promise<boolean> {
     if (schluessel === 'favoriten_benachrichtigen' && !(await this.favoritenBenachrichtigungErlaubt(benutzerId))) return false;
     return (await this.konten?.einstellungen?.(benutzerId))?.[schluessel] !== false;
@@ -2413,14 +2419,16 @@ export class Dienst {
    * („3 Änderungen von Anna und Paul seit 01.11.“); erst nach dem Öffnen der Mappe oder „Erledigt“ kommt wieder eine.
    * Eigene Änderungen benachrichtigen nie.
    */
-  private async aboMelden(mappeId: string, von: string) {
+  async favoritenMelden(mappeId: string, von: string): Promise<number> {
     const fav = (await this.repo.favoritenDerMappe(mappeId)).filter((f) => f.benachrichtigen && f.benutzerId !== von);
-    if (!fav.length) return;
+    if (!fav.length) return 0;
+    let n = 0;
     const aktiv = this.konten?.benutzer ? new Set((await this.konten.benutzer()).filter((b) => b.aktiv).map((b) => b.id)) : null;
     for (const { benutzerId } of fav) {
       if (aktiv && !aktiv.has(benutzerId)) continue;
       if (!(await this.persoenlichAn(benutzerId, 'favoriten_benachrichtigen'))) continue;
       if (!(await this.kannLesen(benutzerId, mappeId))) continue;
+      n++;
       await this.benachrichtigeGebuendelt({
         empfaengerId: benutzerId, mappeId, art: 'aenderung', schluessel: 'aenderung', von,
         text: async (bisher) => {
@@ -2437,6 +2445,7 @@ export class Dienst {
         },
       });
     }
+    return n;
   }
 
   /**
@@ -5101,6 +5110,10 @@ export class Dienst {
   }
   /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
   automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string }>>;
+  /** Tägliche Zusammenfassung an einen Benutzer (#678, Dann-Karte); setzt der Server aus der Aufgaben-Mail. */
+  zusammenfassungAn?: (benutzerId: string, trocken: boolean) => Promise<{ gesendet: boolean; grund: string }>;
+  /** Anmeldeschutz melden (#678, Dann-Karte): Sammelmeldung bzw. Kontosperre; setzt der Server aus dem Anmeldeschutz. */
+  anmeldeschutzMelden?: (was: 'sammel' | 'konto', daten: Record<string, unknown>, trocken: boolean) => Promise<{ gesendet: boolean; grund: string }>;
   /** Erinnerungen am Feld als Automatisierungen übernehmen (#712); setzt der Baustein Automatisierungen. */
   fristenUebernehmen?: () => Promise<number>;
   /** Mitgelieferte Automatisierungen eines Pakets anlegen bzw. aktualisieren (#712); setzt der Baustein Automatisierungen. */

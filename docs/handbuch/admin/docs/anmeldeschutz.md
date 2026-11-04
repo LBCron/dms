@@ -19,12 +19,12 @@ Sperren stehen in der Datenbank und überstehen einen Neustart. Jede Sperre und 
 
 Ist Ablago aus dem Internet erreichbar, probieren Fremde ständig Passwörter durch. Das ist normal, und die Sperren passieren automatisch. Darum schickt Ablago im Standard **keine Mail**, wenn es sperrt. Was gesperrt ist, siehst du jederzeit unter **Werkbank → Anmeldeschutz** und im Protokoll.
 
-Wer trotzdem Bescheid wissen will, setzt im Block **Mail an die Administratoren** einen oder beide Haken:
+Wer trotzdem Bescheid wissen will, schaltet unter **Werkbank → Ablage aufbauen → [Automatisierungen](automatisierungen.md#benachrichtigungen)** eine oder beide Automatisierungen ein (das Paket **Benachrichtigungen** bringt sie ausgeschaltet mit; nach dem Update stehen sie so da, wie die früheren Haken hier gesetzt waren):
 
-| Haken | Was kommt |
+| Automatisierung | Was kommt |
 | --- | --- |
-| **Einmal am Tag eine Sammelmeldung über die Sperren schicken** | Höchstens eine Mail am Tag, kurz nach Mitternacht, über die Sperren des Vortags: wie viele IP-Adressen und Benutzerkonten gesperrt wurden, dazu die fünf Adressen mit den meisten Fehlversuchen. War Ablago aus, kommt die Meldung beim nächsten Start und fasst die verpassten Tage zusammen. An Tagen ohne Sperre kommt nichts. |
-| **Sofort melden, wenn ein Benutzerkonto gesperrt wird** | Eine Mail, sobald für ein bestehendes Konto zu viele falsche Passwörter oder Codes kamen. Das ist seltener und wichtiger als eine gesperrte IP: Vielleicht hat jemand das Passwort dieses Kontos im Visier. Je Konto höchstens eine Mail am Tag; Fehlversuche mit unbekannten Adressen lösen keine Mail aus. |
+| **Sammelmeldung Anmeldeschutz** (Zeitplan täglich 0:00 → *Anmeldeschutz melden: Sammelmeldung*) | Höchstens eine Mail am Tag, kurz nach Mitternacht, über die Sperren des Vortags: wie viele IP-Adressen und Benutzerkonten gesperrt wurden, dazu die fünf Adressen mit den meisten Fehlversuchen. War Ablago aus, kommt die Meldung beim nächsten Start und fasst die verpassten Tage zusammen. An Tagen ohne Sperre kommt nichts. |
+| **Kontosperre sofort melden** (*Benutzerkonto gesperrt* → *Anmeldeschutz melden: Kontosperre*) | Eine Mail, sobald für ein bestehendes Konto zu viele falsche Passwörter oder Codes kamen. Das ist seltener und wichtiger als eine gesperrte IP: Vielleicht hat jemand das Passwort dieses Kontos im Visier. Je Konto höchstens eine Mail am Tag; Fehlversuche mit unbekannten Adressen lösen keine Mail aus. |
 
 Die Mails gehen an alle aktiven Administratoren mit E-Mail-Adresse und brauchen einen eingerichteten [Mailversand](installation.md#e-mail-und-adresse).
 

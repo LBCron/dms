@@ -159,5 +159,9 @@
   "sicherung.extern.zurueck": "vom Ziel außer Haus",
   "sicherung.extern.schlank": "Kopie außer Haus vom {datum} – Version und Umfang liest Ablago mit dem Schlüssel aus der Sicherung",
   "sicherung.extern.nurneueste": "Lokal nur die neueste behalten",
-  "sicherung.extern.nurneueste.hilfe": "Für knappen Platz, wenn eine Kopie außer Haus entsteht: Ältere automatische Sicherungen gibt es dann nur noch dort. Eine Sicherung, die gerade außer Haus kopiert wird, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage)."
+  "sicherung.extern.nurneueste.hilfe": "Für knappen Platz, wenn eine Kopie außer Haus entsteht: Ältere automatische Sicherungen gibt es dann nur noch dort. Eine Sicherung, die gerade außer Haus kopiert wird, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage).",
+  "zusammenfassung.automatisierung": "Ob und wann die Zusammenfassung verschickt wird, stellst du jetzt in der Automatisierung „Tägliche Zusammenfassung“ ein (Wenn-Karte „Zeitplan“ für jeden Benutzer). Hier bleibt das Bundesland für Feiertage.",
+  "zusammenfassung.automatisierung.kurz": "über die Automatisierung",
+  "zusammenfassung.automatisierung.knopf": "Zu den Automatisierungen",
+  "anmeldeschutz.automatisierung": "Ob du eine Sammelmeldung über die Sperren bekommst oder sofort erfährst, wenn ein Benutzerkonto gesperrt wird, stellst du jetzt bei den Automatisierungen ein: „Sammelmeldung Anmeldeschutz“ (Wenn-Karte „Zeitplan“) und „Kontosperre sofort melden“ (Wenn-Karte „Benutzerkonto gesperrt“)."
 }

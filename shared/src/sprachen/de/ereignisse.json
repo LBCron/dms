@@ -25,6 +25,8 @@
   "text.post.angelegt": "Neue Post ist angelegt (hochgeladen, per E-Mail, Scan …).",
   "name.favorit.neu": "Neuer Favorit",
   "text.favorit.neu": "Jemand hat eine Mappe zu seinen Favoriten genommen.",
+  "name.favorit.geaendert": "Favorit geändert",
+  "text.favorit.geaendert": "Jemand hat eine Mappe geändert, die andere als Favorit haben und über Änderungen benachrichtigt werden wollen.",
   "name.benutzer.abwesenheit-gesetzt": "Abwesenheit gesetzt",
   "text.benutzer.abwesenheit-gesetzt": "Ein Benutzer ist abwesend (mit Zeitraum und Vertreter).",
   "name.benutzer.abwesenheit-beendet": "Abwesenheit beendet",

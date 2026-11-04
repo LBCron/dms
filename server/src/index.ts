@@ -55,7 +55,7 @@ import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
 import { Fachfehler } from './fehler';
-import { t } from './sprache';
+import { t, tAuto } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
 import { anAlleAdmins } from './mail';
@@ -473,10 +473,21 @@ setInterval(papierkorbLauf, 60 * 60 * 1000).unref();
 const abwesenheiten = () => konten.abwesenheitenPruefen().catch((e) => log.error('Abwesenheiten prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 await abwesenheiten();
 setInterval(abwesenheiten, 60 * 60 * 1000).unref();
-// Anmeldeschutz (#368): höchstens eine Sammelmeldung am Tag über die Sperren des Vortags.
-const sperrMeldung = () => anmeldesperre.meldeTaeglich().catch((e) => log.error('Sammelmeldung Anmeldeschutz fehlgeschlagen', { fehler: (e as Error).message }));
-await sperrMeldung();
-setInterval(sperrMeldung, 15 * 60 * 1000).unref();
+// Anmeldeschutz (#368) und Tägliche Zusammenfassung (#54): Wann gemeldet wird, entscheiden seit #678 die
+// Automatisierungen (Wenn-Karte „Zeitplan“, Paket „Benachrichtigungen“); die Dann-Karten rufen das hier auf.
+dienst.zusammenfassungAn = async (id, trocken) => {
+  const r = await aufgabenmail.fuerAutomatisierung(id, trocken);
+  return { gesendet: r.gesendet, grund: tAuto(`automatisierung.karte.zusammenfassung.${r.schluessel}` as never, { name: r.name, anzahl: r.anzahl }) };
+};
+dienst.anmeldeschutzMelden = async (was, daten, trocken) => {
+  let ok: boolean;
+  if (was === 'sammel') ok = await anmeldesperre.meldeTaeglich(trocken);
+  else {
+    const b = typeof daten.benutzer === 'string' ? (await konten.listeBenutzer()).find((x) => x.id === daten.benutzer) : undefined;
+    ok = !!b?.email && await anmeldesperre.kontoMelden(b.email, String(daten.ip ?? '?'), Number(daten.fehlversuche) || 0, trocken);
+  }
+  return { gesendet: ok && !trocken, grund: tAuto(ok ? (trocken ? 'automatisierung.karte.anmeldeschutz.trocken' : 'automatisierung.karte.anmeldeschutz.gesendet') : 'automatisierung.karte.anmeldeschutz.nichts') };
+};
 // Fristen und Erinnerungen (#129, #131): einmal am Tag – gleich nach Mitternacht bzw. beim Start –, vor der Zusammenfassung.
 let fristenTag = '';
 const fristen = async () => {
@@ -487,8 +498,7 @@ const fristen = async () => {
   if (r.angelegt || r.erledigt || r.erinnerungen) log.info('Fristen und Erinnerungen geprüft', r);
 };
 await fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message }));
-setInterval(() => void fristen().then(() => (wartung.aktiv ? 0 : aufgabenmail.pruefe()))
-  .catch((e) => log.error('Fristen oder Aufgaben-Mail fehlgeschlagen', { fehler: (e as Error).message })), 5 * 60 * 1000).unref();
+setInterval(() => void fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message })), 5 * 60 * 1000).unref();
 if (einrichtungNoetig) log.warn(`Noch kein Benutzer vorhanden: Öffne Ablago im Browser (Port ${cfg.port}) und richte es mit dem Einrichtungscode ein.`);
 
 appFuerPakete = app;

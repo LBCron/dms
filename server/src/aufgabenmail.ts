@@ -121,6 +121,25 @@ export class Aufgabenmail {
     return n;
   }
 
+  /**
+   * Dann-Karte „Tägliche Zusammenfassung senden“ (#678): an genau einen Benutzer, mit Grund für den Verlauf. Abbestellt
+   * im Profil, abwesend oder nichts offen → nichts (wie bisher). Wann, entscheidet die Wenn-Karte „Zeitplan“.
+   */
+  async fuerAutomatisierung(benutzerId: string, trocken: boolean): Promise<{ gesendet: boolean; grund: string; schluessel: string; name: string; anzahl: number }> {
+    const b = (await this.quelle.benutzer()).find((x) => x.id === benutzerId);
+    const name = b?.name || b?.email || '?';
+    const r = (schluessel: string, gesendet = false, anzahl = 0) => ({ gesendet, schluessel, name, anzahl, grund: '' });
+    if (!b || !b.aktiv || !b.email) return r('ohne-adresse');
+    if ((await this.quelle.einstellungenVon(b)).aufgaben_mail === false) return r('abbestellt');
+    if (abwesenheitWirkt(b.abwesenheit, heuteIn())) return r('abwesend');
+    const anzahl = (await this.quelle.aufgabenVon(b)).length;
+    if (!anzahl) return r('nichts');
+    const mailer = this.mailer();
+    if (!mailer) return r('kein-versand');
+    if (trocken) return r('trocken', false, anzahl);
+    return (await this.sendeAn(b, mailer)) ? r('gesendet', true, anzahl) : r('fehler');
+  }
+
   /** Zusammenfassung an einen Benutzer; false, wenn er nichts offen hat, abwesend ist oder der Versand scheitert. */
   private async sendeAn(b: Benutzer, mailer: Mailer): Promise<boolean> {
     {
