@@ -2,6 +2,9 @@
 
 Dieses Handbuch ist für alle, die Ablago **installieren, einrichten und betreiben**. Wie man im Alltag mit Mappen arbeitet, steht im [Benutzerhandbuch](https://help.ablago.app/benutzer/) – darauf verweist dieses Handbuch, statt es zu wiederholen.
 
+!!! tip "Gerade installiert?"
+    Was du jetzt noch tun solltest, steht kurz unter [Einrichten in fünf Schritten](fuenf-schritte.md). Die Tabelle unten ist das Nachschlagewerk für später.
+
 ![Werkbank: Mappentyp bearbeiten](bilder/werkbank-mappentyp.png)
 
 ## Aufgaben eines Administrators

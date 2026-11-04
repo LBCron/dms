@@ -73,6 +73,7 @@ extra:
       name: Quellcode auf GitHub
 
 nav:
+  - Einrichten in fünf Schritten: fuenf-schritte.md
   - Überblick: index.md
   - Neu in dieser Version: neu.md
   - Installation und Betrieb:
