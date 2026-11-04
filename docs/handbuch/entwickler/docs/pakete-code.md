@@ -581,7 +581,10 @@ code:
   ereignisse: [datei.archivfassung]
   archivfassung:
     typen: [application/pdf, image/jpeg, image/png, image/tiff]   # zuständige Dateitypen (MIME), höchstens 40
-    nur_scans: nur_scans        # optional: Schlüssel einer Einstellung vom Typ janein – an = keine PDFs mit Text
+    auswahl:                    # optional, je Art der Schlüssel einer Einstellung vom Typ janein – an = bekommt eine
+      pdf_text: pdf_text        #   PDFs mit Text (jede Seite hat eine Textebene)
+      pdf_scan: pdf_scan        #   gescannte PDFs (keine oder nicht auf jeder Seite eine Textebene)
+      bilder: bilder            #   Fotos und Bilder (alle Nicht-PDF-Typen aus typen)
   rechte:
     lesen: ["*"]                # Dokumente liegen in Mappen beliebiger Typen
     dokumente: lesen            # Datei, Volltext und Wortpositionen lesen; Schreibrecht braucht es nicht
@@ -590,12 +593,13 @@ code:
   einstellungen:
     - abschnitt: Archivfassung
       felder:
-        - { schluessel: nur_scans, name: "Nur Scans und Bilder", typ: janein, standard: false,
-            hilfe: "Aus – alle PDFs bekommen eine Archivfassung (Vorgabe). An – PDFs mit vollständigem Text nicht (spart Platz)." }
+        - { schluessel: pdf_text, name: "PDFs mit Text", typ: janein, standard: true }
+        - { schluessel: pdf_scan, name: "Gescannte PDFs", typ: janein, standard: true }
+        - { schluessel: bilder, name: "Fotos und Bilder (.jpg, .jpeg, .png, .tif, .tiff)", typ: janein, standard: true }
 ```
 
 - `code.archivfassung.typen`, `dms:archivfassung`, `datei.archivfassung` und `dokumente: lesen` gehören zusammen; fehlt eins, lehnen Ablago und `pruefen.py` das Paket ab. **PDF, JPEG und PNG sind erlaubt** (anders als bei `dms:umwandeln`).
-- `nur_scans` muss eine Ja/Nein-Einstellung des Pakets nennen. Ohne die Angabe bekommt das Paket alle PDFs. Schaltet der Administrator sie aus, meldet der Kern die PDFs mit Text nach.
+- `auswahl` (ersetzt `nur_scans`): je Art der Schlüssel einer Ja/Nein-Einstellung des Pakets. Der Kern bestimmt die Art je Dokument – bei PDFs an der Textebene (`voll` → `pdf_text`, `teilweise`/`keine` → `pdf_scan`), alle anderen Typen sind `bilder` – und meldet es nur, wenn die Einstellung **an** ist. Fehlt ein Schlüssel, ist die Art immer an. Abgewähltes steht am Dokument als „ausgelassen – laut Einstellung“ (kein Fehler); kreuzt der Administrator eine Art später an, meldet der Kern den Bestand nach.
 - Die Rückfrage bei der Installation zeigt „Archivfassung (PDF/A) ablegen – … (dms:archivfassung): PDF, JPEG, PNG, TIFF“. Andere Dateitypen bei einem Update heißen neu bestätigen; neue Dateitypen meldet der Kern für den Bestand.
 - **Zuständig** ist je Dateityp ein Paket – bei mehreren das erste nach Id.
 
@@ -604,7 +608,7 @@ code:
 ![Ablauf „Archivfassung“ zwischen Kern, Paket Texterkennung und Paket mit dms:archivfassung](grafiken/ablauf-archivfassung.png){ loading=lazy }
 
 1. **Melden – erst mit feststehendem Volltext:** Der Kern schickt `datei.archivfassung`, sobald der Volltext eines Dokuments *fertig* ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit `dms:volltext`, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer **neuen Version** und jeder Änderung am PDF (neuer Prüfwert), bei *Volltext neu erzeugen* (`neu: true`) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (**Bestand**: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls `neu: true` – die alte Archivfassung passt dann nicht mehr zum Text.
-2. **Nicht gemeldet:** Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer `neu`), **verschlüsselte PDFs** (Stand *keine* mit Grund am Dokument), PDFs, die **schon gültiges PDF/A** sind (das Original gilt als Archivfassung, keine zweite Datei) und mit `nur_scans` PDFs mit vollständiger Textebene. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer `neu`).
+2. **Nicht gemeldet:** Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer `neu`), **verschlüsselte PDFs** (Stand *keine* mit Grund am Dokument), PDFs, die **schon gültiges PDF/A** sind (das Original gilt als Archivfassung, keine zweite Datei) und Dokumente einer Art, die in `auswahl` abgewählt ist. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer `neu`).
 3. **Warten:** Bevor das Ereignis hinausgeht, steht der Stand „wartet“ in der Ablage – am Dokument „Archivfassung wird erstellt“. Die Anzeige zeigt bis dahin das Original.
 4. **Ablegen:** Das Paket liest die Quelle, die Wortpositionen und ggf. den Volltext und gibt das PDF/A mit `PUT /dokumente/{id}/archivfassung?sha256=…` zurück (Rohdaten mit `api_binaer`). Danach: Stand *fertig*, Eintrag in der Historie („PNG → PDF/A-2b (PDF/A 1.0.0)“), Anzeige der Archivfassung.
 5. **Ohne Archivfassung:** Endet der Aufruf mit Code `0` ohne Archivfassung, steht das `ergebnis` am Dokument („Archivfassung durch Paket *Name*: …“, *keine*); hat der Kern das PDF/A abgelehnt, steht der Grund der Ablehnung dort (*Fehler*), auch in Werkbank → Texterkennung → Archivfassung. Gibt der Läufer auf: *Fehler*.

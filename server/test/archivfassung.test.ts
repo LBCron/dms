@@ -90,9 +90,13 @@ async function pdf(o: { text?: string; woerter?: Array<[string, number, number, 
 
 const MANIFEST_CODE = {
   sprache: 'c', ereignisse: ['datei.archivfassung'],
-  archivfassung: { typen: [PDF, 'image/jpeg', 'image/png', 'image/tiff'], nur_scans: 'nur_scans' },
+  archivfassung: { typen: [PDF, 'image/jpeg', 'image/png', 'image/tiff'], auswahl: { pdf_text: 'pdf_text', pdf_scan: 'pdf_scan', bilder: 'bilder' } },
   rechte: { lesen: ['*'], dokumente: 'lesen', schnittstellen: ['dms:archivfassung'] },
-  einstellungen: [{ abschnitt: 'PDF/A', felder: [{ schluessel: 'nur_scans', name: 'Nur Scans und Bilder', typ: 'janein', standard: false }] }],
+  einstellungen: [{ abschnitt: 'PDF/A', felder: [
+    { schluessel: 'pdf_text', name: 'PDFs mit Text', typ: 'janein', standard: true },
+    { schluessel: 'pdf_scan', name: 'Gescannte PDFs', typ: 'janein', standard: true },
+    { schluessel: 'bilder', name: 'Fotos und Bilder (.jpg, .jpeg, .png, .tif, .tiff)', typ: 'janein', standard: true },
+  ] }],
 };
 
 const paket = (id: string, code: Record<string, unknown>, name: string): InstalliertesPaket => ({
@@ -176,11 +180,14 @@ describe('Archivfassung (#631): Manifest und Rechte', () => {
   it('code.archivfassung mit dms:archivfassung, Lesen und dem Ereignis; PDF, JPEG, PNG erlaubt; Vorschau nennt die Dateitypen', () => {
     const c = liesCode(MANIFEST_CODE);
     assert.deepEqual(c.fehler, []);
-    assert.deepEqual(c.code!.archivfassung, { typen: [PDF, 'image/jpeg', 'image/png', 'image/tiff'], nur_scans: 'nur_scans' });
+    assert.deepEqual(c.code!.archivfassung, { typen: [PDF, 'image/jpeg', 'image/png', 'image/tiff'], auswahl: { pdf_text: 'pdf_text', pdf_scan: 'pdf_scan', bilder: 'bilder' } });
     const f = (code: Record<string, unknown>) => liesCode({ ...MANIFEST_CODE, ...code }).fehler.join(' ');
     assert.match(f({ archivfassung: { typen: ['PDF'] } }), /kein Dateityp/);
     assert.match(f({ archivfassung: { typen: [] } }), /mindestens ein Dateityp/);
-    assert.match(f({ archivfassung: { typen: [PDF], nur_scans: 'gibtsnicht' } }), /nur_scans: der Schlüssel einer Einstellung vom Typ janein/);
+    assert.match(f({ archivfassung: { typen: [PDF], auswahl: { pdf_text: 'gibtsnicht' } } }), /auswahl.pdf_text: der Schlüssel einer Einstellung vom Typ janein/);
+    assert.match(f({ archivfassung: { typen: [PDF], auswahl: { alles: 'pdf_text' } } }), /„alles“ gibt es nicht/);
+    assert.match(f({ archivfassung: { typen: [PDF], nur_scans: 'pdf_text' } }), /„nur_scans“ gibt es nicht/);
+    assert.deepEqual(liesCode({ ...MANIFEST_CODE, archivfassung: { typen: [PDF] } }).code!.archivfassung, { typen: [PDF] });
     assert.match(f({ archivfassung: { typen: [PDF], stufe: 'B' } }), /„stufe“ gibt es nicht/);
     assert.match(f({ rechte: { lesen: ['*'], schnittstellen: ['dms:archivfassung'] } }), /braucht auch code.rechte.dokumente: lesen/);
     assert.match(f({ ereignisse: [] }), /braucht das Ereignis datei.archivfassung/);
@@ -236,7 +243,7 @@ describe('Archivfassung (#631): Ablauf Ende zu Ende mit dem Test-Paket', () => {
     assert.ok(h.some((y) => y.art === 'archivfassung' && /PNG → PDF\/A-2b \(PDF\/A 1\.0\.0\)/.test(String(y.daten?.text))), JSON.stringify(h.map((y) => y.art)));
   });
 
-  it('PDF mit Text: alle PDFs (Vorgabe), Wortpositionen aus der Textebene; „nur Scans und Bilder“ lässt sie aus; Original schon PDF/A: keine zweite Datei', async () => {
+  it('PDF mit Text: alle PDFs (Vorgabe), Wortpositionen aus der Textebene; „PDFs mit Text“ abgewählt lässt sie aus; Original schon PDF/A: keine zweite Datei', async () => {
     const x = await aufbau();
     const a = await x.hoch('rechnung.pdf', await pdf({ text: TEXT }));
     await warte(async () => (await x.offen()).length === 1);
@@ -248,14 +255,14 @@ describe('Archivfassung (#631): Ablauf Ende zu Ende mit dem Test-Paket', () => {
     assert.equal(wp.seiten[0].breite, 595);
     assert.equal(wp.seiten[0].woerter[0][0], 'Stromrechnung');
     assert.deepEqual(await x.laeufer(), ['PDF/A-2b']);
-    // Nur Scans und Bilder: ein weiteres PDF mit Text bekommt keine.
-    await x.d.setzePaketEinstellungen('pdfa', { werte: { nur_scans: true } });
+    // „PDFs mit Text“ abgewählt: ein weiteres PDF mit Text bekommt keine – ruhig „ausgelassen – laut Einstellung“.
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { pdf_text: false } });
     const b = await x.hoch('kontoauszug.pdf', await pdf({ text: `${TEXT} Kontoauszug` }));
-    await new Promise((r) => setTimeout(r, 300));
+    await warte(async () => (await x.a.stand(await x.dok(b)))?.stand === 'ausgelassen');
     assert.deepEqual(await x.offen(), []);
-    assert.equal((await x.a.stand(await x.dok(b))), null);
-    // Wieder aus: der Bestand mit Text kommt dazu (wie nach dem Speichern der Einstellung).
-    await x.d.setzePaketEinstellungen('pdfa', { werte: { nur_scans: false } });
+    assert.match(String((await x.a.stand(await x.dok(b)))!.info), /laut Einstellung bekommen PDFs mit Text keine Archivfassung/);
+    // Wieder angekreuzt: der Bestand mit Text kommt dazu (wie nach dem Speichern der Einstellung).
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { pdf_text: true } });
     assert.equal(await x.d.archivPaketDa([PDF]), 1);
     // Schon gültiges PDF/A: gilt selbst als Archivfassung, kein Ereignis, keine zweite Datei.
     await x.laeufer();
@@ -266,6 +273,31 @@ describe('Archivfassung (#631): Ablauf Ende zu Ende mit dem Test-Paket', () => {
     assert.deepEqual(await x.offen(), []);
     assert.equal(x.ablage.fassungen.get((await x.dok(c)).sha256)!.inhalt.length, 0, 'kein eigener Inhalt');
     assert.deepEqual((await x.d.archivfassungVon(c)).inhalt, (await x.d.dokumentInhalt(c).then(async (r) => Buffer.isBuffer(r.inhalt) ? r.inhalt : Buffer.concat(await (r.inhalt as NodeJS.ReadableStream & { toArray(): Promise<Buffer[]> }).toArray()))));
+  });
+
+  it('Auswahl (#660): „Fotos und Bilder“ und „Gescannte PDFs“ abgewählt lassen diese aus, nachträglich angekreuzt werden sie nachgeholt', async () => {
+    const x = await aufbau();
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { bilder: false, pdf_scan: false } });
+    const woerter: Array<[string, number, number, number, number]> = [['Stromrechnung', 0.1, 0.1, 0.3, 0.05]];
+    const bild = await x.hoch('foto.png', png(40, 20), 'image/png');
+    await x.d.schreibeVolltext(bild, { text: 'Stromrechnung', woerter: [woerter] }, { id: 'konto', herkunft: 'Texterkennung 2.2.0', paket: true });
+    const scan = await x.hoch('scan.pdf', await pdf());
+    await x.d.schreibeVolltext(scan, { text: 'Stromrechnung', woerter: [woerter] }, { id: 'konto', herkunft: 'Texterkennung 2.2.0', paket: true });
+    await warte(async () => (await x.a.stand(await x.dok(bild)))?.stand === 'ausgelassen' && (await x.a.stand(await x.dok(scan)))?.stand === 'ausgelassen');
+    assert.deepEqual(await x.offen(), []);
+    assert.match(String((await x.a.stand(await x.dok(bild)))!.info), /Fotos und Bilder/);
+    assert.match(String((await x.a.stand(await x.dok(scan)))!.info), /gescannte PDFs/);
+    // Ein PDF mit Text bekommt weiter eine (pdf_text an).
+    await x.hoch('rechnung.pdf', await pdf({ text: TEXT }));
+    await warte(async () => (await x.offen()).length === 1);
+    assert.equal((await x.offen())[0].daten.textebene, 'voll');
+    await x.laeufer();
+    // Bilder wieder angekreuzt: das Foto wird nachgeholt, der Scan bleibt ausgelassen.
+    await x.d.setzePaketEinstellungen('pdfa', { werte: { bilder: true, pdf_scan: false } });
+    assert.equal(await x.d.archivPaketDa(['image/png', PDF]), 1);
+    const [e] = await x.offen();
+    assert.equal(e.daten.mime, 'image/png');
+    assert.equal((await x.a.stand(await x.dok(scan)))?.stand, 'ausgelassen');
   });
 
   it('nimmt nur gültige PDF/A: ohne Kennung, komprimierte Metadaten, falsche Stufe, kein PDF, mit JavaScript oder externem Verweis abgelehnt – Grund am Dokument und in der Werkbank', async () => {
