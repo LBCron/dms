@@ -1,6 +1,6 @@
 # Links über Mappentyp und Feldwerte
 
-Ein Link über Mappentyp und Feldwerte findet eine Mappe über ihren **Mappentyp** und ihre **Angaben** statt über ihre technische Id. Den Link kannst du einem Kollegen mit eigenem Konto per Mail oder Chat schicken oder in anderen Programmen hinterlegen, etwa:
+Ein Link über Mappentyp und Feldwerte findet eine Mappe über ihren **Mappentyp** und ihre **Angaben** statt über ihre technische Id. Den Link kannst du einem Kollegen mit eigenem Konto per Mail oder Chat schicken oder in anderen Programmen hinterlegen. Die Feldwerte (etwa eine Vertragsnummer oder ein Name) stehen dabei lesbar im Link – wer ihn sieht, sieht sie; die Mappe selbst öffnet nur, wer darf. Zum Beispiel:
 
 ```
 http://<NAS>:8080/ablage/link?typ=rechnung&rechnungsnummer=A-2020-11380

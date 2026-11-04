@@ -87,4 +87,4 @@ Hat jemand eine [Abwesenheit](profil.md#abwesenheit) eingetragen, steht das in d
 
 ## Tägliche Zusammenfassung
 
-Hast du offene Aufgaben, schickt dir Ablago die **Tägliche Zusammenfassung**: eine E-Mail mit der Liste und Links zu den Mappen – keine Mail bei jeder einzelnen Aufgabe. Üblich ist **an Werktagen um 7 Uhr**; Uhrzeit und Wochentage stellst du im [Profil unter Benachrichtigungen](profil.md#benachrichtigungen) ein, dort kannst du die Mail auch abbestellen.
+Hast du offene Aufgaben, schickt dir Ablago die **Tägliche Zusammenfassung**: eine E-Mail mit der Liste und Links zu den Mappen – keine Mail bei jeder einzelnen Aufgabe. Üblich ist **an Werktagen um 7 Uhr**; Uhrzeit und Wochentage stellst du im [Profil unter Benachrichtigungen](profil.md#benachrichtigungen) ein, dort kannst du die Mail auch abbestellen. Die Mail enthält die Titel deiner Mappen und Links dorthin und geht über den Mailserver, den dein Administrator eingerichtet hat – die Dokumente selbst sind nicht dabei.

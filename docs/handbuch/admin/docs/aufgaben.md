@@ -55,7 +55,7 @@ Ging eine Frist oder Erinnerung an jemanden, der die Mappe nach den [Berechtigun
 
 ## Tägliche Zusammenfassung
 
-Statt bei jeder neuen Aufgabe eine E-Mail zu schicken, verschickt Ablago **einmal am Tag** eine Übersicht an jeden, der offene Aufgaben hat – mit Links zu den Mappen.
+Statt bei jeder neuen Aufgabe eine E-Mail zu schicken, verschickt Ablago **einmal am Tag** eine Übersicht an jeden, der offene Aufgaben hat – mit Links zu den Mappen. Sie enthält die Titel der Mappen (keine Dokumente) und geht über den eingerichteten [Mailserver](installation.md#e-mail-und-adresse) hinaus; jeder bestellt sie in Mein Konto selbst ab, ausschalten kannst du sie hier für alle.
 
 - Oben in der Mitte stellst du ein, ob sie verschickt wird, und die **Standard-Uhrzeit** (deutsche Zeit). Standard: an, 7:00 Uhr.
 - Den Abschnitt kannst du mit einem Klick auf die Überschrift **zuklappen**; Ablago merkt sich das für dich. Zugeklappt steht daneben der Stand (z. B. „Standard 07:00 · an“) – und darunter die Warnung, wenn die Zusammenfassung nicht verschickt werden kann, weil der E-Mail-Versand aus ist.

@@ -37,7 +37,7 @@ Das Profil hat links fünf Bereiche (am Smartphone oben als Knöpfe):
 
 #### Meine Daten { #meine-daten }
 
-Dein Ablago läuft bei deinem Haushalt oder Betrieb, nicht bei einem Cloud-Anbieter, und es sendet keine Nutzungsdaten – auch keine anonymen. Was es über dich speichert, sind dein Konto, die Mappen und Dokumente, die du und andere anlegen, und wer wann was geändert hat.
+Dein Ablago läuft bei dir zu Hause oder in deinem Betrieb, nicht bei einem Cloud-Anbieter, und es sendet keine Nutzungsdaten – auch keine anonymen. Was es über dich speichert, sind dein Konto, die Mappen und Dokumente, die du und andere anlegen, und wer wann was geändert hat.
 
 - **Eine Kopie deiner Daten** holst du dir selbst: unter [Meine Daten exportieren](#meine-daten-exportieren).
 - **Soll etwas gelöscht werden** – oder willst du wissen, was sonst noch über dich gespeichert ist –, frag den Administrator deines Ablago. Er kann Mappen löschen, die du selbst nicht löschen darfst. Manches muss eine Zeit lang aufbewahrt werden (z. B. Rechnungen); dann bleibt es gesperrt, bis die Frist abgelaufen ist. Dein Konto wird nicht gelöscht, sondern deaktiviert, sobald du es einmal benutzt hast – dein Name bleibt bei dem stehen, was du angelegt hast.
@@ -74,7 +74,7 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
 - <span id="papierkorb"></span>**Papierkorb** – **Beim Abmelden leeren** löscht deine gelöschten Mappen endgültig, sobald du dich abmeldest. Ohne den Haken bleiben sie so lange im [Papierkorb](ablage.md#papierkorb), wie der Administrator es eingestellt hat.
 
 !!! note "Anmelden mit dem Firmenkonto"
-    Steht auf der Anmeldeseite ein Knopf wie **Mit Firmenkonto anmelden**, meldest du dich darüber mit dem Konto deiner Firma oder deines Anmeldedienstes an. Dein Passwort für Ablago brauchst du dann nicht; Passwort und Abmelden verwaltet der Anbieter.
+    Steht auf der Anmeldeseite ein Knopf wie **Mit Firmenkonto anmelden**, meldest du dich darüber mit dem Konto deiner Firma oder deines Anmeldedienstes an. Dein Passwort für Ablago brauchst du dann nicht; Passwort und Abmelden verwaltet der Anbieter. Er sieht dabei, wann du dich anmeldest – deine Unterlagen sieht er nicht.
 
 #### Zwei-Faktor-Anmeldung
 
@@ -107,7 +107,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 
 <span id="benachrichtigungen-und-ablage"></span>
 
-- **Aufgaben** – Mappen mit offenen [Aufgaben](eingang.md) für dich stehen unter „Zu erledigen“. Zusätzlich schickt Ablago dir die **Tägliche Zusammenfassung** per E-Mail, solange du welche hast. **Tägliche Zusammenfassung meiner Aufgaben per E-Mail** bestellt sie ab oder wieder an. Darunter wählst du:
+- **Aufgaben** – Mappen mit offenen [Aufgaben](eingang.md) für dich stehen unter „Zu erledigen“. Zusätzlich schickt Ablago dir die **Tägliche Zusammenfassung** per E-Mail, solange du welche hast. **Tägliche Zusammenfassung meiner Aufgaben per E-Mail** bestellt sie ab oder wieder an. Sie enthält Mappentitel und Links, keine Dokumente, und geht über den Mailserver deiner Ablage. Darunter wählst du:
     - **Uhrzeit** – im 15-Minuten-Raster; *Standard* ist die Uhrzeit, die der Administrator eingestellt hat.
     - **Wochentage** – Standard Montag bis Freitag. Ohne Wochentag kommt keine Zusammenfassung.
     - **Nicht an Feiertagen** – an gesetzlichen Feiertagen des Bundeslands, das der Administrator gewählt hat, kommt keine (Standard: an). Ohne Bundesland ist der Haken ausgegraut.
