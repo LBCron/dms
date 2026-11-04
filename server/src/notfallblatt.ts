@@ -1,5 +1,6 @@
 import { pdfAus, type Absatz } from './pdf';
 import { ohneZugangsdaten } from './sicherung';
+import { zeitzone } from '../../shared/src/region';
 
 /**
  * Notfallblatt (#106): alles, um das DMS samt Sicherung auf einem neuen System wiederherzustellen.
@@ -27,7 +28,7 @@ export interface Notfalldaten {
 export const inGruppen = (s: string) => s.match(/.{1,4}/g)!.join(' ');
 
 export function notfallblatt(d: Notfalldaten): Buffer {
-  const datum = d.erstellt.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'long', timeStyle: 'short' });
+  const datum = d.erstellt.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
   const zeile = (text: string, x: Partial<Absatz> = {}): Absatz => ({ text, ...x });
   const absaetze: Absatz[] = [
     zeile(`Notfallblatt – ${d.name}`, { schrift: 'fett', groesse: 18 }),

@@ -27,6 +27,7 @@ import { planer, textdokumentPdf } from './pdf';
 import { istUuid } from './repo';
 import { csv, exportDateien, vollexport, type ExportQuelle } from './vollexport';
 import { ZIP_MAX, zipGroesse, zipStrom, type ZipEintrag } from './zip';
+import { zeitzone } from '../../shared/src/region';
 
 export interface AuskunftDaten {
   start: { id: string; titel: string; typ: string };
@@ -62,8 +63,8 @@ export const AUSKUNFT_PHASEN = [
 /** Wo die Auskünfte liegen: neben den Exporten, ohne Sicherungsordner im temporären Ordner. */
 export const auskunftOrdner = (sicherungsordner?: string | null) => (sicherungsordner ? join(sicherungsordner, 'export', 'auskunft') : join(tmpdir(), 'dms-auskunft'));
 
-const zeit = (d: Date) => d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'long', timeStyle: 'short' });
-const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(d);
+const zeit = (d: Date) => d.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
+const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(d);
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const mehrzahl = (n: number, eins: string, viele: string) => `${n} ${n === 1 ? eins : viele}`;
 

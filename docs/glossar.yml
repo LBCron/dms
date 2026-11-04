@@ -539,6 +539,14 @@ begriffe:
     begegnet: alle
     nicht_verwenden: [Übersicht per E-Mail, Digest]
     verwandt: [Aufgabe, Anstehend]
+  - begriff: Region
+    bereich: werkbank
+    beschreibung: Wo die Ablage zu Hause ist – Land, Bundesland und Zeitzone (Werkbank → Einstellungen → Region). Danach richten sich die Feiertage, „heute“ bei Fristen und alle Uhrzeiten von Erinnerungen, Zeitplänen und der Täglichen Zusammenfassung.
+    einsteiger: erklaeren
+    begegnet: admin
+    nicht_verwenden: [Standort, Gebietsschema, Locale]
+    verwandt: [Tägliche Zusammenfassung]
+    code: region
   - begriff: Archivmodus
     bereich: werkbank
     beschreibung: Eine Einstellung je Mappentyp für Aufbewahrungspflichten – mit Versionen und einer Löschsperre bis zum Fristende.

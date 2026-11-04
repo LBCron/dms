@@ -11,6 +11,8 @@ import { LEER, liesFilter, ohneLeereTeile, PLATZHALTER_MIT_FILTERN, pruefeFilter
 import { alsText } from './markdown';
 import { kreisImStandard, kreisVon } from './nummernkreis';
 import { ibanGruppen, pruefeFormatDefinition } from './feldformate';
+import { datumsformat } from './region';
+export { zeitzone } from './region';
 
 export const FELDTYPEN = {
   text: 'Text',
@@ -651,19 +653,17 @@ export type Indexplatzhalter = keyof typeof INDEXPLATZHALTER;
 export const istIndexplatzhalter = (k: string): k is Indexplatzhalter => Object.prototype.hasOwnProperty.call(INDEXPLATZHALTER, k);
 export type Indexwerte = Partial<Pick<Mappe, 'erstellt' | 'geaendert'>>;
 
-/** Zeitzone für Datumsangaben aus Zeitstempeln (Server und Browser sollen denselben Tag zeigen). */
-export const ZEITZONE = 'Europe/Berlin';
 /** Betreff einer fotografierten Post (#490): „Post vom 01.11.2026, 20:52“ statt des Dateinamens „image“. */
 export function fotoBetreff(d: Date = new Date()): string {
-  return `Post vom ${new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d)}`;
+  return `Post vom ${datumsformat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d)}`;
 }
-const TAG_FORMAT = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, day: '2-digit', month: '2-digit', year: 'numeric' });
+const TAG_FORMAT = () => datumsformat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** Tag eines Zeitstempels als TT.MM.JJJJ in der Zeitzone des Haushalts. */
 export function tagVon(zeitstempel: string | undefined): string {
   if (!zeitstempel) return '';
   const d = new Date(zeitstempel);
-  return Number.isNaN(d.getTime()) ? '' : TAG_FORMAT.format(d);
+  return Number.isNaN(d.getTime()) ? '' : TAG_FORMAT().format(d);
 }
 
 /** Feldschlüssel, die eine Titel-Vorlage verwendet. */
@@ -730,7 +730,7 @@ function titelAusVorlage(t: Pick<Mappentyp, 'felder' | 'titelVorlage'>, werte: W
 function isoTag(zeitstempel: string): string {
   const d = new Date(zeitstempel);
   if (Number.isNaN(d.getTime())) return '';
-  const teile = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: ZEITZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d).map((p) => [p.type, p.value]));
+  const teile = Object.fromEntries(datumsformat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d).map((p) => [p.type, p.value]));
   return `${teile.year}-${teile.month}-${teile.day}`;
 }
 

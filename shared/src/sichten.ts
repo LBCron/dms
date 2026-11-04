@@ -6,7 +6,8 @@
  * Treffer und die aller Kinder (ohne Doppelte). Server und Oberfläche teilen diese Datei.
  */
 import type { SichtRechte, SichtRegelwerk } from './sichtrechte';
-import { GEMISCHTE_SPALTEN, istLeer, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, ZEITZONE, type Feld, type Feldtyp, type Mappe, type Mappentyp, type Quelle } from './model';
+import { GEMISCHTE_SPALTEN, istLeer, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, type Feld, type Feldtyp, type Mappe, type Mappentyp, type Quelle } from './model';
+import { datumsformat } from './region';
 
 /* ---------- Bedingungen ---------- */
 
@@ -245,8 +246,7 @@ export interface Klausel { typen: string[]; filter: Filter[] }
 
 // Einmal angelegt (#615): Ein neues Intl.DateTimeFormat kostet spürbar Rechenzeit, und „heute“ braucht jede Anfrage
 // mit Rechten oder Ansichten mehrmals.
-const HEUTE_FORMAT = new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE });
-export const heuteIn = (jetzt = new Date()) => HEUTE_FORMAT.format(jetzt);
+export const heuteIn = (jetzt = new Date()) => datumsformat('sv-SE').format(jetzt);
 
 /** Datum (JJJJ-MM-TT) ± n Einheiten; Monatsende wird gekappt (31.01. + 1 Monat = 28./29.02.). */
 export function verschiebe(datum: string, n: number, einheit: Einheit = 'tage'): string {

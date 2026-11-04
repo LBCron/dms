@@ -15,6 +15,7 @@ import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
 import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
+import { zeitzone } from '../../shared/src/region';
 /** Sprachmarke im Hinweis der Texterkennung (#395) samt Konfidenz, zum Ersetzen (#400). */
 const log = protokoll.modul('texterkennung');
 const SPRACHE_INFO_SQL = ' · Sprache: [a-z_]{3,10}( \\(\\d{1,3} %\\))?';
@@ -243,8 +244,8 @@ type Teil = postgres.PendingQuery<postgres.Row[]> | postgres.Fragment;
 function ausdruck(sql: Sql, f: Extract<Filter, { art: 'feld' }>) {
   const k = f.key;
   switch (f.key) {
-    case '_erstellt': return sql`(mappen.erstellt AT TIME ZONE 'Europe/Berlin')::date`;
-    case '_geaendert': return sql`(mappen.geaendert AT TIME ZONE 'Europe/Berlin')::date`;
+    case '_erstellt': return sql`(mappen.erstellt AT TIME ZONE ${zeitzone()})::date`;
+    case '_geaendert': return sql`(mappen.geaendert AT TIME ZONE ${zeitzone()})::date`;
     case '_erstelltVon': return sql`mappen.erstellt_von::text`;
     case '_geaendertVon': return sql`mappen.geaendert_von::text`;
   }
@@ -1505,8 +1506,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     async loeschprotokoll(f) {
       const such = f.suche?.trim().toLowerCase();
       const bed = sql`haushalt_id = ${haushaltId}
-        ${f.von ? sql`AND (zeit AT TIME ZONE 'Europe/Berlin')::date >= ${f.von}::date` : sql``}
-        ${f.bis ? sql`AND (zeit AT TIME ZONE 'Europe/Berlin')::date <= ${f.bis}::date` : sql``}
+        ${f.von ? sql`AND (zeit AT TIME ZONE ${zeitzone()})::date >= ${f.von}::date` : sql``}
+        ${f.bis ? sql`AND (zeit AT TIME ZONE ${zeitzone()})::date <= ${f.bis}::date` : sql``}
         ${f.typId ? sql`AND typ_id = ${istUuid(f.typId) ? f.typId : null}::uuid` : sql``}
         ${f.grund ? (f.grund === 'ohne' ? sql`AND grund IS NULL` : sql`AND grund = ${f.grund}`) : sql``}
         ${f.schritt ? sql`AND schritt = ${f.schritt}` : sql``}

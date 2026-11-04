@@ -78,6 +78,8 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'papierkorb', gruppe: 'sichern', in: H },
   { pfad: 'betrieb', gruppe: 'einstellungen', in: H },
   { pfad: 'aufgaben', gruppe: 'einstellungen', in: H },
+  // Region (#726): Land, Bundesland, Zeitzone an einer Stelle.
+  { pfad: 'region', gruppe: 'einstellungen', in: H },
   { pfad: 'anmeldeschutz', gruppe: 'einstellungen', in: O },
   { pfad: 'designs', gruppe: 'einstellungen', in: O },
   { pfad: 'anbindung', gruppe: 'einstellungen', in: [] },

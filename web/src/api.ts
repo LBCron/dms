@@ -257,6 +257,9 @@ export type AnbieterStand = Omit<AnbieterEingabe, 'clientSecret' | 'clientSecret
 /** Zwei-Faktor-Anmeldung (#242). */
 export interface ZweifaktorStand { aktiv: boolean; seit: string | null; codesUebrig: number; pflicht: boolean }
 export interface ZweifaktorPflicht { admin: boolean; mitglied: boolean }
+/** Region der Ablage (#726). */
+export interface Region { land: string; bundesland: string | null; zeitzone: string }
+export interface RegionStand { region: Region; laender: Record<string, string>; bundeslaender: Record<string, string>; zeitzonen: string[]; feiertage: Array<{ datum: string; name: string }> }
 export interface KontoStatus {
   einrichtungNoetig: boolean; mail: boolean; benutzer: Benutzer | null;
   /**
@@ -268,6 +271,8 @@ export interface KontoStatus {
   anbieter?: { knopf: string; lokalNurAdmins: boolean } | null;
   /** Gibt es einen Schlüssel, um Passwörter zu speichern (#39, #46)? */
   passwoerterMoeglich?: boolean;
+  /** Zeitzone der Region (#726), z. B. Europe/Berlin. */
+  zeitzone?: string;
   /** Ein Administrator agiert gerade als dieser Benutzer. */
   vertretung?: { adminName: string; beginn: string } | null;
   /** Wer hat als dieser Benutzer agiert (noch nicht gesehen)? */
@@ -728,6 +733,8 @@ export const api = {
   webdav: () => anfrage<WebdavStand>('GET', '/api/werkbank/webdav'),
   webdavSetzen: (e: WebdavEinstellung) => anfrage<WebdavStand>('PUT', '/api/werkbank/webdav', e),
   postfaecher: () => anfrage<PostfachAnsicht[]>('GET', '/api/werkbank/postfaecher'),
+  region: () => anfrage<RegionStand>('GET', '/api/werkbank/region'),
+  regionSetzen: (e: Partial<Region>) => anfrage<RegionStand>('PUT', '/api/werkbank/region', e),
   anmeldeschutz: () => anfrage<AnmeldeschutzStand>('GET', '/api/werkbank/anmeldeschutz'),
   anmeldeschutzSetzen: (e: Partial<SperrEinstellung>) => anfrage<AnmeldeschutzStand>('PUT', '/api/werkbank/anmeldeschutz', e),
   entsperren: (ip: string) => anfrage<AnmeldeschutzStand>('POST', '/api/werkbank/anmeldeschutz/entsperren', { ip }),

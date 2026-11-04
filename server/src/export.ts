@@ -6,6 +6,7 @@ import { formatiere, istSystemspalte, SYSTEMSPALTEN, trefferlistenVon, type Doku
 import { spaltenDerSicht } from '../../shared/src/sichten';
 import type { Zelle } from './xlsx';
 import { mappenPdfZeichnen, type PdfMappenSeite } from './pdf';
+import { zeitzone } from '../../shared/src/region';
 
 export type Spaltenart = 'liste' | 'alle';
 
@@ -34,7 +35,7 @@ export function spaltenKopf(k: string, typen: Mappentyp[]): string {
 }
 
 const titelOder = (t: string | null | undefined) => (t && t.trim() ? t : 'Ohne Titel');
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
+const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
 
 export interface Quelle { typen: Map<string, Mappentyp>; titel(id: string | null | undefined): string }
 

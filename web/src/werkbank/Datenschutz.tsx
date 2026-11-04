@@ -15,6 +15,7 @@ import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
+import { zeitzone } from '../../../shared/src/region';
 
 /**
  * Werkbank → Datenschutz (#396): Auskunft nach Art. 15 DSGVO als ZIP.
@@ -28,7 +29,7 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 
 const groesse = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
-const heute = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date());
+const heute = () => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(new Date());
 
 export function useDatenschutz(offen: boolean) {
   const [stand, setStand] = useState<DatenschutzStand | null>(null);

@@ -4,8 +4,8 @@
  * schreibgeschützt und wird beim Anlegen der Mappe vergeben.
  */
 import type { Feld } from './model';
+import { zeitzone } from './region';
 
-const ZEITZONE = 'Europe/Berlin';
 
 export interface Nummernkreis {
   schluessel: string;
@@ -35,9 +35,9 @@ export function kreisImStandard(standard: unknown): string | null {
 }
 
 export interface Datum { jahr: number; monat: number; tag: number }
-/** Kalendertag in Europe/Berlin. */
+/** Kalendertag in der Zeitzone der Region (#726). */
 export function datumIn(jetzt: Date): Datum {
-  const [jahr, monat, tag] = new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE }).format(jetzt).split('-').map(Number);
+  const [jahr, monat, tag] = new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(jetzt).split('-').map(Number);
   return { jahr, monat, tag };
 }
 

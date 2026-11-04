@@ -56,7 +56,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   vertretungen: 'daten/vertretungen.jsonl',
   fehlermeldungen: 'nicht enthalten: gemeldete Fehler an die Administratoren (technisch)',
   langlaeufer: 'nicht enthalten: Messwerte langsamer Datenbankzugriffe (technisch)',
-  einstellungen: 'nicht enthalten: Betriebseinstellungen mit Zugangsdaten (Mail, Postfächer, Schlüssel, Anmeldung)',
+  einstellungen: 'nicht enthalten: Betriebseinstellungen mit Zugangsdaten (Mail, Postfächer, Schlüssel, Anmeldung); die Region (#726) steht in struktur/region.json',
   api_schluessel: 'nicht enthalten: Geheimnisse',
   paket_code: 'nicht enthalten: Code installierter Pakete (#338, steht im Paket selbst)',
   paket_ereignisse: 'nicht enthalten: Ereignisse für Pakete mit Code (#338, technisch)',
@@ -101,6 +101,8 @@ export interface ExportQuelle {
   designs(): Promise<unknown[]>;
   /** Gleichbedeutende Wörter der Suche (#356); fehlt bei Auskunft und persönlichem Export. */
   synonyme?(): Promise<unknown[]>;
+  /** Region der Ablage (#726); fehlt bei Auskunft und persönlichem Export. */
+  region?(): Promise<unknown>;
   /** Automatisierungen mit Änderungsverlauf (#674); fehlt bei Auskunft und persönlichem Export. */
   automatisierungen?(): Promise<unknown[]>;
   mappen(typId: string): Promise<Mappe[]>;
@@ -257,6 +259,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   await w.schreibe('struktur/pakete.json', json(await q.pakete()));
   await w.schreibe('struktur/designs.json', json(await q.designs()));
   if (q.synonyme) await w.schreibe('struktur/synonyme.json', json(await q.synonyme()));
+  if (q.region) await w.schreibe('struktur/region.json', json(await q.region()));
   if (q.automatisierungen) await w.schreibe('struktur/automatisierungen.json', json(await q.automatisierungen()));
   await w.schreibe('struktur/benutzer.json', json(b.benutzer));
 

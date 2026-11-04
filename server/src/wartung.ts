@@ -1,6 +1,7 @@
 import { Fachfehler } from './fehler';
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
+import { zeitzone } from '../../shared/src/region';
 
 /**
  * Wartungsmodus (#102): Wiederherstellungen und Updates, ohne dass jemand gleichzeitig arbeitet.
@@ -100,7 +101,7 @@ export class Wartung {
 
   /** Meldung für Abgewiesene. */
   meldung(): string {
-    const ende = this.s.ende ? ` Voraussichtlich bis ${new Date(this.s.ende).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' })} Uhr.` : '';
+    const ende = this.s.ende ? ` Voraussichtlich bis ${new Date(this.s.ende).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' })} Uhr.` : '';
     return `Ablago wird gerade gewartet${this.s.text ? ` (${this.s.text})` : ''}.${ende} Bitte versuche es später noch einmal.`;
   }
 

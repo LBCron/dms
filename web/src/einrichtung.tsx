@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Symbol } from './Symbol';
-import { BUNDESLAENDER } from '../../shared/src/feiertage';
 import { handbuchUrl, HILFE, hilfeOnlineUrl, INSTALLIEREN_URL, type Hilfeort } from '../../shared/src/hilfe';
 import { PASSWORT_MINDESTLAENGE } from '../../shared/src/model';
-import { api, ApiFehler, hatEinrichtungscode, setzeEinrichtungscode, type AnbindungEingabe, type AnbindungPruefung, type EinrichtungSchritt, type EinrichtungStand, type KontoStatus, type LinkErgebnis, type MailEinstellung, type TresorStatus } from './api';
+import { api, ApiFehler, hatEinrichtungscode, setzeEinrichtungscode, type AnbindungEingabe, type AnbindungPruefung, type EinrichtungSchritt, type EinrichtungStand, type KontoStatus, type LinkErgebnis, type TresorStatus } from './api';
 import { WiederherstellungsAssistent } from './wiederherstellen';
 import { BetriebPanel, useBetrieb } from './werkbank/Betrieb';
 import { Erledigt } from './werkbank/Sicherung';
@@ -366,11 +365,9 @@ function PaketeSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promise
 function OptionalSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promise<void> }) {
   const betrieb = useBetrieb();
   const [adresse, setAdresse] = useState(location.origin);
-  const [mail, setMail] = useState<MailEinstellung | null>(null);
   const [demo, setDemo] = useState(false);
   const [meldung, setMeldung] = useState<Record<string, string>>({});
   const s = useSenden();
-  useEffect(() => { void api.aufgabenWerkbank().then((r) => setMail(r.mail ?? { aktiv: true, uhrzeit: '07:00', bundesland: null }), () => {}); }, []);
   useEffect(() => { if (betrieb.stand?.adresse) setAdresse(betrieb.stand.adresse); }, [betrieb.stand?.adresse]);
   const gut = (k: string, t: string) => setMeldung((m) => ({ ...m, [k]: t }));
   return (
@@ -381,18 +378,6 @@ function OptionalSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promi
         <div className="zeile"><input value={adresse} onChange={(x) => setAdresse(x.target.value)} style={{ flex: 1 }} aria-label="Adresse von Ablago" />
           <button type="button" className="knopf" disabled={s.sendet} onClick={() => void s.los(async () => { await api.adresseSpeichern(adresse); gut('adresse', 'Gespeichert.'); await betrieb.laden(); })}>Speichern</button></div>
         {meldung.adresse && <p className="gutertext klein">{meldung.adresse}</p>}
-      </section>
-      <section className="blatt">
-        <h2 className="h3">Bundesland</h2>
-        <p className="leise klein">An gesetzlichen Feiertagen kommt keine tägliche Zusammenfassung der Aufgaben.</p>
-        <div className="zeile">
-          <select value={mail?.bundesland ?? ''} onChange={(x) => mail && setMail({ ...mail, bundesland: x.target.value || null })} aria-label="Bundesland">
-            <option value="">keins – Feiertage nicht berücksichtigen</option>
-            {Object.entries(BUNDESLAENDER).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-          <button type="button" className="knopf" disabled={s.sendet || !mail} onClick={() => void s.los(async () => { setMail(await api.aufgabenMailSpeichern(mail!)); gut('land', 'Gespeichert.'); })}>Speichern</button>
-        </div>
-        {meldung.land && <p className="gutertext klein">{meldung.land}</p>}
       </section>
       <section className="blatt">
         <h2 className="h3">Beispiele</h2>
