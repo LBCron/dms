@@ -413,6 +413,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01781" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.178.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.178.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01780" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1171,6 +1199,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01781" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.178.1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.178.1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01780" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1241,6 +1297,12 @@
 
 
 <h1 id="neu-in-version-0178">Neu in Version 0.178<a class="headerlink" href="#neu-in-version-0178" title="Permanent link">&para;</a></h1>
+<h2 id="01781">0.178.1<a class="headerlink" href="#01781" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Alpine-Pakete im Image täglich frisch.</strong> Der Bau holt die Alpine-Pakete jetzt am ersten Bau jedes Tages neu, nicht mehr nur einmal je Kalenderwoche. Bisher blieben Korrekturen, die Alpine in der Wochenmitte veröffentlicht, bis zum nächsten Montag im Build-Cache hängen. So lag im Image <code>ghcr.io/motom001/dms</code> noch libexpat 2.9.0 mit drei bekannten Lücken, obwohl 2.10.0 schon bereitstand (<code>dms-komplett</code> hatte die Korrektur bereits). libexpat liest im Image nur die festen Schriftart-Einstellungen von poppler, keine Dokumente, die von außen kommen.</li>
+<li><strong>Keine Python-Zwischendatei mehr im Repository.</strong> Eine versehentlich eingecheckte <code>.pyc</code>-Datei der Handbuch-Werkzeuge ist entfernt, <code>__pycache__/</code> wird ignoriert.</li>
+</ul>
 <h2 id="01780">0.178.0<a class="headerlink" href="#01780" title="Permanent link">&para;</a></h2>
 <h3 id="neu">Neu<a class="headerlink" href="#neu" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1253,7 +1315,7 @@
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.177.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.177.0...v0.178.0">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.177.0 im Detail: <a href="https://github.com/motom001/dms/compare/v0.177.0...v0.178.1">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 </ul>
 
