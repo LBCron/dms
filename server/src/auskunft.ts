@@ -60,8 +60,8 @@ export const AUSKUNFT_PHASEN = [
   { key: 'zip', name: 'ZIP-Datei packen', einheit: 'Dateien' },
 ];
 
-/** Wo die Auskünfte liegen: neben den Exporten, ohne Sicherungsordner im temporären Ordner. */
-export const auskunftOrdner = (sicherungsordner?: string | null) => (sicherungsordner ? join(sicherungsordner, 'export', 'auskunft') : join(tmpdir(), 'dms-auskunft'));
+/** Wo die Auskünfte liegen: im Export-Ordner (#797) unter auskunft/, ohne ihn im temporären Ordner. */
+export const auskunftOrdner = (exportOrdner?: string | null) => (exportOrdner ? join(exportOrdner, 'auskunft') : join(tmpdir(), 'dms-auskunft'));
 
 const zeit = (d: Date) => d.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
 const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(d);

@@ -41,6 +41,7 @@ Knöpfe wie **Verbindung testen** oder **Jetzt prüfen** stehen darüber im Form
 Die Werkbank beginnt mit der **Übersicht**. Sie zeigt oben, was zu tun ist – jeweils mit einem Knopf in den passenden Bereich. **Das gilt auch für Bereiche, die in deiner Vorlage ausgeblendet sind.** Zum Beispiel:
 
 - Sicherung fehlgeschlagen oder zu alt, Notfallblatt fehlt,
+- der [Export-Ordner](export.md#export-ordner) liegt im Sicherungsordner, oder Exporte wurden beim Update aus dem Sicherungsordner verschoben,
 - Speicherplatz knapp oder voll,
 - Wartungsmodus angekündigt oder aktiv,
 - ein Notfallzugang ist noch aktiv,

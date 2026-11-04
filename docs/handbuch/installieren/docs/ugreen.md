@@ -50,7 +50,7 @@ In der App **Dateien** im Ordner `docker` (legt die Docker-App an) einen Ordner 
 
 ## Sicherung außer Haus
 
-Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
+Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `docker/dms/sicherung`. Mit der UGREEN-App **Sicherung & Synchronisierung** kopierst du diesen Ordner auf eine USB-Platte oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Exporte sind nicht darin: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) ist unverschlüsselt und liegt deshalb im eigenen [Export-Ordner](https://help.ablago.app/admin/aktuell/export/#export-ordner), nie bei den Sicherungen.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

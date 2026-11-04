@@ -5,6 +5,7 @@ import { dirname, join, relative, sep } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { aufbewahrenBis } from '../../shared/src/archiv';
+import { EXPORT_TAGE } from '../../shared/src/auskunft';
 import { kernTyp } from '../../shared/src/dateiumwandlung';
 import { auswahlText, istLeer, verweiseVon, type Aufgabe, type Dokument, type DokumentVersion, type Mappe, type Mappentyp, type Notiz, type Vertretung, type Werte } from '../../shared/src/model';
 import type { Erinnerung } from '../../shared/src/fristen';
@@ -476,17 +477,42 @@ print('alles in Ordnung' if not fehler else f'abweichend: {fehler}')
 
 /* ---------- Verwaltung der Exporte ---------- */
 
-export interface ExportStand { name: string; erstellt: string | null; bytes: number; dateien: number; mappen: number | null; passwoerter: boolean }
+/** `bis`: danach löscht Ablago den Export (#797), ebenso nach dem Herunterladen. */
+export interface ExportStand { name: string; erstellt: string | null; bis: string; bytes: number; dateien: number; mappen: number | null; passwoerter: boolean }
 
-export async function exporteIn(ziel: string): Promise<ExportStand[]> {
+const TAG_MS = 24 * 3600 * 1000;
+/** Zeitpunkt aus dem Ordnernamen (dms-export-JJJJ-MM-TT-hh-mm-ss, UTC) – auch für Exporte ohne manifest.json. */
+export function exportZeit(name: string): Date | null {
+  const m = /^dms-export-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})$/.exec(name);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])) : null;
+}
+
+/**
+ * Bereitliegende Exporte, neueste zuerst. Wie bei der Auskunft (#396) räumt das Lesen auf: Was älter ist als
+ * EXPORT_TAGE (#797), wird gelöscht. Maßgeblich ist `erstellt` aus manifest.json (oder dessen Zeitstempel, wenn
+ * der später ist – so beim Umzug), sonst die Zeit im Namen – so bleibt ein Export, der gerade geschrieben wird
+ * (noch ohne Manifest), stehen.
+ */
+export async function exporteIn(ziel: string, jetzt = new Date()): Promise<ExportStand[]> {
   let eintraege: string[];
   try { eintraege = await readdir(ziel); } catch { return []; }
   const erg: ExportStand[] = [];
-  for (const n of eintraege.filter((x) => x.startsWith('dms-export-')).sort().reverse()) {
+  for (const n of eintraege.filter((x) => EXPORTNAME.test(x)).sort().reverse()) {
+    let m: { erstellt: string; dateien: Eintrag[]; anzahlen?: { mappen: number }; passwoerter?: boolean } | null = null;
+    let geaendert = 0;
     try {
-      const m = JSON.parse(await readFile(join(ziel, n, 'manifest.json'), 'utf8')) as { erstellt: string; dateien: Eintrag[]; anzahlen?: { mappen: number }; passwoerter?: boolean };
-      erg.push({ name: n, erstellt: m.erstellt, bytes: m.dateien.reduce((a, d) => a + d.bytes, 0), dateien: m.dateien.length + 1, mappen: m.anzahlen?.mappen ?? null, passwoerter: !!m.passwoerter });
-    } catch { erg.push({ name: n, erstellt: null, bytes: 0, dateien: 0, mappen: null, passwoerter: false }); }
+      const datei = join(ziel, n, 'manifest.json');
+      m = JSON.parse(await readFile(datei, 'utf8'));
+      // Beim Umzug aus dem Sicherungsordner (#797) frisch gestempelt: Die Frist beginnt dann erst dort.
+      geaendert = (await stat(datei)).mtimeMs;
+    } catch { /* läuft noch oder unvollständig */ }
+    const erstellt = (m?.erstellt ? new Date(m.erstellt) : null) ?? exportZeit(n);
+    const ab = erstellt && geaendert > erstellt.getTime() ? new Date(geaendert) : erstellt;
+    const bis = new Date((ab?.getTime() ?? jetzt.getTime()) + EXPORT_TAGE * TAG_MS);
+    if (bis.getTime() <= jetzt.getTime()) { await loescheExport(join(ziel, n)); continue; }
+    erg.push(m
+      ? { name: n, erstellt: m.erstellt, bis: bis.toISOString(), bytes: m.dateien.reduce((a, d) => a + d.bytes, 0), dateien: m.dateien.length + 1, mappen: m.anzahlen?.mappen ?? null, passwoerter: !!m.passwoerter }
+      : { name: n, erstellt: null, bis: bis.toISOString(), bytes: 0, dateien: 0, mappen: null, passwoerter: false });
   }
   return erg;
 }

@@ -35,5 +35,6 @@
   "laufwerk.iphone.2": "Tippe oben rechts auf „…“ und dann auf „Mit Server verbinden“.",
   "laufwerk.iphone.3": "Trage die Adresse ein und tippe auf „Verbinden“: {adresse}",
   "laufwerk.iphone.4": "Wähle „Registrierter Benutzer“, trage Benutzername und Schlüssel ein und tippe auf „Weiter“.",
-  "laufwerk.mehr": "Mehr im Handbuch"
+  "laufwerk.mehr": "Mehr im Handbuch",
+  "export.bereit": "Liegt bereit bis {datum}. Nach dem Herunterladen wird er gelöscht."
 }

@@ -50,7 +50,7 @@ Ablago gibt dir Werkzeuge. Diese Punkte bleiben bei dir als Verantwortlichem:
 - **Verzeichnis der Verarbeitungstätigkeiten** (Art. 30), **Rechtsgrundlagen und Informationspflichten** (Art. 13, 14) – etwa der Datenschutzhinweis im Mietvertrag. Die Angaben dafür stehen in Ablago: Mappentypen, Zwecke aus den [Einstellungen](#einstellungen), Fristen aus dem Archivmodus.
 - **Welche Frist gilt:** Aufbewahrungsfristen klärst du mit deiner Steuerberatung; Ablago setzt um, was du einträgst.
 - **Löschen nach Fristende:** Ablago löscht nie von selbst. Du prüfst **Aufbewahrung abgelaufen** regelmäßig.
-- **Kopien außerhalb der Ablage:** Gelöschtes steckt noch in älteren [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung), bis sie nach deiner Aufbewahrung wegfallen (Standard: bis zu 12 Monate; von Hand angelegte bleiben, bis du sie löschst), in Vollexporten und persönlichen Exporten unter `export/`, in Kopien außer Haus, heruntergeladenen Dateien und Ausdrucken.
+- **Kopien außerhalb der Ablage:** Gelöschtes steckt noch in älteren [Sicherungen](sicherung.md#zeitplan-und-aufbewahrung), bis sie nach deiner Aufbewahrung wegfallen (Standard: bis zu 12 Monate; von Hand angelegte bleiben, bis du sie löschst), in Vollexporten und persönlichen Exporten im [Export-Ordner](export.md#export-ordner) (nach dem Herunterladen bzw. nach 7 Tagen gelöscht), in Kopien außer Haus, heruntergeladenen Dateien und Ausdrucken.
 - **Wer Zugriff hat:** Administratoren sehen alles. Rollen und Berechtigungen richtest du ein; Zugänge von Personen, die gehen, [deaktivierst](benutzer.md#zugang-sperren) du.
 - **Die Umgebung:** Gerät und Festplatten, Netzwerk, HTTPS, Updates, Kopie der Sicherungen außer Haus – und Verträge zur Auftragsverarbeitung mit Dienstleistern, etwa dem Mailanbieter. Läuft dein Ablago [bei einem Anbieter](https://help.ablago.app/installieren/aktuell/anbieter/), brauchst du als Vermieter oder Betrieb mit ihm einen **AV-Vertrag**; dort steht auch, worauf du bei der Wahl achtest.
 - **Datenpannen** melden (Art. 33, 34) und, wo vorgeschrieben, einen Datenschutzbeauftragten benennen.
@@ -94,7 +94,7 @@ Jemand verlangt, dass seine Daten gelöscht werden (Art. 17 DSGVO).
 5. **Was danach noch bleibt** – sag es der Person, wenn sie fragt:
     - die **Historie der gelöschten Mappen** für die eingestellte Zeit (Standard 365 Tage, [einstellbar](papierkorb.md#historie-endgultig-geloschter-mappen); 0 löscht sie sofort mit – das gilt dann für alle Mappen),
     - ältere **Sicherungen**, bis sie nach der Aufbewahrung wegfallen,
-    - **Exporte** unter `export/`, bereitliegende **Auskünfte** (höchstens 7 Tage oder bis ein Abruf-Link abläuft) und Kopien außerhalb von Ablago.
+    - **Exporte** im [Export-Ordner](export.md#export-ordner) (höchstens 7 Tage), bereitliegende **Auskünfte** (höchstens 7 Tage oder bis ein Abruf-Link abläuft) und Kopien außerhalb von Ablago.
 6. **Festhalten, dass gelöscht wurde:** Das macht das [Löschprotokoll](#loschprotokoll) – mit Grund, Mappentyp, Nummer und den Prüfsummen der Dokumente, ohne die Daten selbst. Filter nach dem Tag und dem Grund *Auf Verlangen der betroffenen Person* und gib es als PDF aus, wenn die Person oder eine Aufsichtsbehörde einen Nachweis möchte.
 
 Hat die Person ein **Benutzerkonto**, das schon benutzt wurde, [deaktivierst](benutzer.md#zugang-sperren) du es: Ablago löscht solche Konten nicht, damit „angelegt von“ und Verweise stimmen. Ihr Name bleibt dort stehen.
@@ -198,7 +198,7 @@ Früher schlug die Prüfliste auch Mappen vor, in denen Name, E-Mail-Adresse, Ku
 ### Nachweis und Aufbewahrung
 
 - In der **Historie der Person** steht „Auskunft erteilt“ mit Zeit, wer sie erstellt hat, Anzahl Mappen, Dokumente und Notizen, ob mit Passwort und die Begründungen zurückgehaltener Notizen – **ohne Inhalte**. Dasselbe steht ohne Begründungen im [Protokoll](fehlersuche.md#protokoll) (Modul „datenschutz“).
-- Die ZIP-Datei liegt in der [Liste](#liste) als *bereit*, bis du sie **herunterlädst** – danach wird sie gelöscht –, höchstens **7 Tage**. Mit einem gültigen [Abruf-Link](#auskunft-zustellen) bleibt sie, bis die Person sie so oft abgerufen hat wie vorgesehen oder der Link abläuft. Gespeichert wird sie neben den Exporten (`export/auskunft/` im Sicherungsordner, ohne Sicherungsordner im temporären Ordner des Containers); sie ist nicht Teil der Sicherung.
+- Die ZIP-Datei liegt in der [Liste](#liste) als *bereit*, bis du sie **herunterlädst** – danach wird sie gelöscht –, höchstens **7 Tage**. Mit einem gültigen [Abruf-Link](#auskunft-zustellen) bleibt sie, bis die Person sie so oft abgerufen hat wie vorgesehen oder der Link abläuft. Gespeichert wird sie unverschlüsselt (außer mit Passwort) im [Export-Ordner](export.md#export-ordner) unter `auskunft/`, nicht im Sicherungsordner; sie ist nicht Teil der Sicherung.
 - Brauchst du sie noch einmal, erzeuge sie neu.
 
 ### Wer darf das?

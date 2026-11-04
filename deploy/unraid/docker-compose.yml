@@ -37,6 +37,10 @@ services:
       - /mnt/user/appdata/dms/geheim:/data/geheim
       # Sicherungen (Werkbank → Sicherung) – ab und zu an einen anderen Ort kopieren
       - /mnt/user/appdata/dms/sicherung:/data/sicherung
+      # Exporte (optional, #797): Vollexport, „Meine Daten exportieren“, Auskünfte – unverschlüsselt.
+      # Ohne diese Zeile liegen sie im Container; nach dem Herunterladen bzw. nach 7 Tagen sind sie ohnehin weg.
+      # Mit eigenem Ort (z. B. für große Exporte zum Kopieren) nie in den Sicherungsordner legen.
+      # - /mnt/user/appdata/dms/export:/data/export
       # Eingangsordner (optional): Scanner und NAS legen hier Dateien ab → neue Post
       - /mnt/user/appdata/dms/eingang:/eingang
     ports:

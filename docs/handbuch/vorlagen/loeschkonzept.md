@@ -67,8 +67,7 @@ Gelöschte Daten können noch an diesen Stellen liegen; sie fallen so weg:
 | Automatische Sicherungen (Werkbank → Sicherung) | [7 tägliche, 4 wöchentliche, 12 monatliche] | Ablago entfernt ältere Sicherungen nach jeder automatischen Sicherung |
 | Von Hand angelegte Sicherungen | bis zum Löschen | [Wer] löscht sie [wann] |
 | Kopie der Sicherungen außer Haus | [z. B. die letzten 4 Wochen] | [Wer, wie] |
-| Vollexporte (`export/` im Sicherungsordner) | bis zum Löschen | Werkbank → Vollexport → Löschen, [spätestens nach …] |
-| Persönliche Exporte der Benutzer | bis zum nächsten Export des Benutzers | [Hinweis an die Benutzer] |
+| Vollexporte und persönliche Exporte (Export-Ordner, nicht Teil der Sicherung) | höchstens 7 Tage | Ablago löscht sie nach dem Herunterladen, spätestens nach Ablauf der Frist |
 | Bereitliegende Auskünfte | höchstens 7 Tage, mit Abruf-Link bis dieser abläuft | Ablago löscht sie selbst |
 | Protokoll (Werkbank → Protokoll, Container-Logs) | 24 Stunden in der Werkbank; Container-Logs [nach Einstellung von Docker] | [ggf. Log-Rotation einstellen] |
 | Heruntergeladene Dateien, Ausdrucke, E-Mails | [Regel] | [Regel] |

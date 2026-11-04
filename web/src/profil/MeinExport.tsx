@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
+import { t } from '../sprache';
 
 /** Profil → Meine Daten exportieren (#255): eigene Daten im Format des Vollexports. */
 export function MeinExport() {
@@ -24,7 +25,9 @@ export function MeinExport() {
         {s.laeuft && <p className="leise">Export läuft …</p>}
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
         {fehler && <p className="fehlertext">{fehler}</p>}
-        {s.fertig && !s.laeuft && <p>Fertig am {s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–'}: <a className="knopf klein" href="/api/konto/export/zip">Herunterladen (ZIP)</a></p>}
+        {s.fertig && !s.laeuft && <p>Fertig am {s.fertig.erstellt ? new Date(s.fertig.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–'}: <a className="knopf klein" href="/api/konto/export/zip">Herunterladen (ZIP)</a>
+          {/* #797: nach dem Herunterladen bzw. nach 7 Tagen gelöscht. */}
+          <small className="hilfe">{t('profil.export.bereit', { datum: new Date(s.fertig.bis).toLocaleDateString('de-DE', { dateStyle: 'medium' }) })}</small></p>}
         <div className="knoepfe"><button type="button" className="knopf" disabled={s.laeuft || (pw && !pwOk) || !!vertretung}
           onClick={() => { setFehler(undefined); void api.meinExportStarten(pw, pwOk).then(laden).catch((e) => setFehler((e as Error).message)); }}>{s.fertig ? 'Neu exportieren' : 'Export erstellen'}</button></div>
       </>}

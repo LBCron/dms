@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { api, type Auftrag, type KontaktZuordnung, type VollexportStand } from '../api';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { api, type Auftrag, type ExportUmzug, type KontaktZuordnung, type VollexportStand } from '../api';
+import { t } from '../sprache';
+import { EXPORT_TAGE } from '../../../shared/src/auskunft';
 import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
@@ -7,11 +9,24 @@ import { fortschrittText } from '../../../shared/src/auftrag';
 
 /**
  * Werkbank → Vollexport (#254): alle Daten in offenen Formaten, lesbar ohne das DMS.
- * Läuft im Hintergrund und schreibt in den Ordner export/ neben den Sicherungen.
+ * Läuft im Hintergrund und schreibt in den Export-Ordner (#797) – neben files/, nicht bei den Sicherungen.
  */
 
 const mb = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(b < 10 * 1024 ** 2 ? 1 : 0).replace('.', ',')} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
+
+/** Hinweise zum Export-Ordner (#797) – oben auf der Seite und in der Übersicht der Werkbank. */
+export function exportHinweise(e: { pfad: string; imSicherungsordner: boolean; umzug: ExportUmzug | null }, tage = EXPORT_TAGE): Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean }> {
+  const h: Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean }> = [];
+  if (e.imSicherungsordner) h.push({ art: 'schlecht', text: <><strong>{t('werkbank.export.im-sicherungsordner')}</strong> {t('werkbank.export.im-sicherungsordner.text')}</> });
+  if (e.umzug) h.push({ art: e.umzug.uebrig ? 'schlecht' : 'info', umzug: true, text: <>
+    {e.umzug.anzahl > 0 && <><strong>{t('werkbank.export.umzug', { anzahl: e.umzug.anzahl })}</strong> {t('werkbank.export.umzug.text', { pfad: e.pfad, tage })}</>}
+    {e.umzug.uebrig && <> {t('werkbank.export.umzug.uebrig')}</>}
+  </> });
+  return h;
+}
+
 const ANGABEN: Array<[keyof KontaktZuordnung, string]> = [['name', 'Name'], ['firma', 'Firma'], ['email', 'E-Mail'], ['telefon', 'Telefon'], ['adresse', 'Adresse'], ['notiz', 'Notiz']];
 
 export function useVollexport(offen: boolean) {
@@ -53,10 +68,17 @@ export function VollexportPanel({ z }: { z: VollexportZustand }) {
         <p className="leise">Deine Daten gehören dir: Der Vollexport schreibt <strong>alles</strong> – Mappen, Dokumente im Original mit allen Versionen, Notizen, Aufgaben, Historie, Struktur – in offenen Formaten (CSV, JSON, Excel, PDF, iCalendar, vCard) in einen Ordner, den du ohne Ablago lesen kannst. Anders als die Sicherung ist er <strong>unverschlüsselt</strong> – bewahre ihn sicher auf. <Hilfe ort="werkbank.vollexport" /></p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
+      {exportHinweise({ pfad: s.ordner, imSicherungsordner: s.imSicherungsordner, umzug: s.umzug }, s.tage).map((x, i) => (
+        <div key={i} className={`hinweis ${x.art}`}><p>{x.text}</p>
+          {x.umzug && <button type="button" className="knopf klein" onClick={() => void api.vollexportUmzugGesehen().then(z.laden, (e: Error) => setMeldung({ art: 'schlecht', text: e.message }))}>{t('werkbank.export.umzug.ok')}</button>}
+        </div>
+      ))}
       <div className="blatt">
         <h2 className="h3">Neuer Export</h2>
         <p>{s.abschaetzung.mappen.toLocaleString('de-DE')} Mappen, {s.abschaetzung.dokumente.toLocaleString('de-DE')} Dateien ({mb(s.abschaetzung.bytes)}) – nötig etwa {mb(noetig)}{s.frei !== null && <>, frei {mb(s.frei)}</>}.</p>
         <p className="leise klein">Ziel: <code className="mono">{s.ordner}</code></p>
+        <p className="leise klein">{t('werkbank.export.ablage', { tage: s.tage })}</p>
+        {s.volume === false && <p className="leise klein">{t('werkbank.export.container')}</p>}
         {s.frei !== null && s.frei < noetig && <p className="hinweis schlecht">Zu wenig Platz am Ziel.</p>}
         <label className="haken"><input type="checkbox" checked={protokolle} onChange={(e) => setProtokolle(e.target.checked)} /><span>Technische Protokolle mitnehmen<small className="hilfe">das Protokoll seit dem letzten Start</small></span></label>
         <label className="haken"><input type="checkbox" checked={pw} onChange={(e) => { setPw(e.target.checked); if (!e.target.checked) setPwOk(false); }} /><span>Passwortfelder im Klartext als passwoerter.csv<small className="hilfe">im Format von Bitwarden, zum Import in einen Passwortmanager</small></span></label>
@@ -101,8 +123,8 @@ export function VollexportPanel({ z }: { z: VollexportZustand }) {
         {!s.exporte.length ? <p className="leise">Noch kein Export.</p> : <ul className="stapel">
           {s.exporte.map((e) => (
             <li key={e.name} className={e.passwoerter ? 'mitpasswoertern' : undefined}>
-              <strong>{e.erstellt ? zeit(e.erstellt) : e.name}</strong> <span className="leise klein">{mb(e.bytes)} · {e.dateien} Dateien{e.mappen !== null ? ` · ${e.mappen} Mappen` : ''}</span>
-              {/* #366: liegt unverschlüsselt im Sicherungsordner – deutlich markieren. */}
+              <strong>{e.erstellt ? zeit(e.erstellt) : e.name}</strong> <span className="leise klein">{mb(e.bytes)} · {e.dateien} Dateien{e.mappen !== null ? ` · ${e.mappen} Mappen` : ''} · {t('werkbank.export.bis', { datum: tag(e.bis) })}</span>
+              {/* #366: liegt unverschlüsselt im Export-Ordner – deutlich markieren. */}
               {e.passwoerter && <span className="fehlertext klein blockzeile"><strong>Enthält Passwörter im Klartext</strong> – nach dem Import in den Passwortmanager löschen.</span>}
               <span className="knoepfe">
                 <a className="knopf klein" href={`/api/werkbank/export/${encodeURIComponent(e.name)}/zip`}>Als ZIP herunterladen</a>

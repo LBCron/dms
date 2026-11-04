@@ -75,6 +75,8 @@ interface Optionen {
   notfall?: Notfallzugang;
   /** Sicherungen (#103–#105). */
   sicherung?: Sicherung;
+  /** Export-Ordner (#797). */
+  exporte?: import('./exportordner').ExportOrt;
   /** Wiederherstellen und Probe (#107, #109). */
   wiederherstellung?: Wiederherstellung;
   /** Speicherplatz-Überwachung (#116) und feste Ordner (#115). */

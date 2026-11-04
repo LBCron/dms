@@ -52,7 +52,7 @@ Unter **Konto → Meine Daten exportieren** bekommst du eine Kopie von allem, wa
 
 Was dem ganzen Haushalt gehört – Löschprotokoll, gleichbedeutende Wörter der Suche, Automatisierungen –, steht nur im Vollexport des Administrators. Verweist eine Mappe auf eine, die du nicht lesen darfst, steht dort statt des Titels „nicht sichtbare Mappe“.
 
-**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. Solange ein Administrator [in deinem Namen arbeitet](#hinweis-ein-administrator-hat-in-deinem-namen-gearbeitet), lässt sich kein Export starten. Hat ein Administrator den Export abgeschaltet, steht das an dieser Stelle.
+**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. **Nach dem Herunterladen wird er gelöscht**, spätestens nach 7 Tagen; bis wann er bereitliegt, steht neben dem Knopf. Brauchst du ihn länger, bewahre die ZIP-Datei auf. Solange ein Administrator [in deinem Namen arbeitet](#hinweis-ein-administrator-hat-in-deinem-namen-gearbeitet), lässt sich kein Export starten. Hat ein Administrator den Export abgeschaltet, steht das an dieser Stelle.
 
 ### Meine Rechte
 

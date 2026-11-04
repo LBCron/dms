@@ -21,7 +21,8 @@ import { exportDateien, exporteIn, exportOrdner, freierPlatz, loescheExport, pru
 import { createReadStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { AUSKUNFT_PHASEN, auskuenfteIn, auskunftDatei, auskunftOrdner, erzeugeAuskunft, haltenBis, loescheAuskunft } from './auskunft';
-import { AUSKUNFT_TAGE, linkStatus, oeffentlichErreichbar } from '../../shared/src/auskunft';
+import { AUSKUNFT_TAGE, EXPORT_TAGE, linkStatus, oeffentlichErreichbar } from '../../shared/src/auskunft';
+import { persoenlicherOrdner, umzugGesehen, umzugHinweis, type ExportOrt } from './exportordner';
 import { textDritte, type TextDritte } from '../../shared/src/anrede';
 import { t } from './sprache';
 import { loeschkonzept, luecken, type LoeschkonzeptQuelle } from '../../shared/src/loeschkonzept';
@@ -249,6 +250,8 @@ export interface RoutenExtras {
   notfall?: Notfallzugang;
   /** Sicherungen (#103–#105). */
   sicherung?: Sicherung;
+  /** Export-Ordner (#797): Vollexport, persönliche Exporte, Auskünfte – nie im Sicherungsordner. */
+  exporte?: ExportOrt;
   /** Wiederherstellen und Probe (#107, #109). */
   wiederherstellung?: Wiederherstellung;
   /** Speicherplatz-Überwachung (#116). */
@@ -393,9 +396,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   };
   /** Persönlicher Export (#255): je Benutzer, ob er gerade läuft. */
   const eigeneExporte = new Map<string, { laeuft: boolean; fehler: string | null }>();
-  // Vollexport (#254): neben den Sicherungen, Unterordner export/.
-  // Auskünfte (#396): neben den Exporten, ohne Sicherungsordner im temporären Ordner.
-  const auskunftZiel = () => auskunftOrdner(x.sicherung?.ordner);
+  // Vollexport (#254), persönliche Exporte (#255) und Auskünfte (#396) im Export-Ordner (#797), nicht bei den Sicherungen.
+  // Auskünfte ohne Export-Ordner (Tests) im temporären Ordner.
+  const auskunftZiel = () => auskunftOrdner(x.exporte?.pfad);
   /** Löschkonzept (#469): nur Typen, Einstellungen und Fristen – nichts aus Mappen. */
   const loeschkonzeptQuelle = async (): Promise<LoeschkonzeptQuelle> => ({
     typen: await dienst.listeTypen(), datenschutz: await dienst.datenschutz(),
@@ -411,7 +414,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const abrufBremse = new AbrufBremse();
   /** Meldungen der Abrufseite in der Anrede für Dritte (#474). */
   const abrufText = async (k: TextDritte) => textDritte((await dienst.datenschutz()).anrede, k);
-  const exportZiel = () => { if (!x.sicherung) throw new Fachfehler(404, 'Ohne Sicherungsordner gibt es keinen Vollexport.'); return join(x.sicherung.ordner, 'export'); };
+  const exportZiel = () => { if (!x.exporte) throw new Fachfehler(404, t('werkbank.export.ohne-ordner')); return x.exporte.pfad; };
+  /** Nach dem Herunterladen gelöscht (#797), wie die Auskunft: erst, wenn die ZIP ganz gelesen ist. */
+  const danachLoeschen = (strom: Readable, ordner: string, melde: () => void) => strom.on('end', () => void loescheExport(ordner).then(melde, () => {}));
   const oidc = () => { if (!x.oidc) throw new Fachfehler(404, 'Die Anmeldung über einen Anbieter ist nicht eingerichtet.'); return x.oidc; };
   const adresse = () => (x.betrieb?.adresseFuerLinks() ?? '').replace(/\/+$/, '');
   const zf = () => { if (!konten.zweifaktor) throw new Fachfehler(404, 'Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.'); return konten.zweifaktor; };
@@ -891,7 +896,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/export', zugang: 'admin', handler: async () => {
       const ziel = exportZiel();
       const typen = await dienst.listeTypen();
-      return ok({ ordner: ziel, exporte: await exporteIn(ziel), abschaetzung: await dienst.exportAbschaetzung(), frei: await freierPlatz(ziel), kontakte: kontaktVorschlaege(typen), persoenlich: await dienst.persoenlicherExportErlaubt() });
+      return ok({ ordner: ziel, tage: EXPORT_TAGE, imSicherungsordner: !!x.exporte?.imSicherungsordner, volume: x.exporte?.volume ?? null, umzug: await umzugHinweis(dienst.einstellungenSpeicher), exporte: await exporteIn(ziel), abschaetzung: await dienst.exportAbschaetzung(), frei: await freierPlatz(ziel), kontakte: kontaktVorschlaege(typen), persoenlich: await dienst.persoenlicherExportErlaubt() });
     } },
     { methode: 'POST', pfad: '/api/werkbank/export', zugang: 'admin', handler: async (a) => {
       const e = (a.body ?? {}) as { passwoerter?: unknown; passwoerterBestaetigt?: unknown; protokolle?: unknown; kontakte?: unknown };
@@ -918,6 +923,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         return r;
       }, VOLLEXPORT_PHASEN), 202);
     } },
+    // #797: Hinweis „Exporte aus dem Sicherungsordner verschoben“ gelesen.
+    { methode: 'POST', pfad: '/api/werkbank/export/umzug-gesehen', zugang: 'admin', handler: async () => { await umzugGesehen(dienst.einstellungenSpeicher); return ok(null); } },
     { methode: 'POST', pfad: '/api/werkbank/export/:name/pruefen', zugang: 'admin', handler: async (a) => ok(await pruefeExport(exportOrdner(exportZiel(), a.params.name))) },
     { methode: 'DELETE', pfad: '/api/werkbank/export/:name', zugang: 'admin', handler: async (a) => {
       await loescheExport(exportOrdner(exportZiel(), a.params.name));
@@ -931,13 +938,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const groesse = zipGroesse(eintraege);
       if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Der Export ist größer als 4 GB – bitte direkt aus dem Ordner kopieren.');
       L.werkbank.info('Vollexport heruntergeladen', { name: a.params.name, von: ich(a).email });
-      return { datei: { inhalt: zipStrom(eintraege), name: `${a.params.name}.zip`, mime: 'application/zip', anzeigen: false, groesse } };
+      const strom = danachLoeschen(zipStrom(eintraege), ordner, () => L.werkbank.info('Vollexport nach dem Herunterladen gelöscht', { name: a.params.name }));
+      return { datei: { inhalt: strom, name: `${a.params.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
     } },
     /* ---------- Persönlicher Export (#255) ---------- */
     { methode: 'PUT', pfad: '/api/werkbank/export/persoenlich', zugang: 'admin', handler: async (a) => ok({ erlaubt: await dienst.setzePersoenlicherExport((a.body as { erlaubt?: unknown })?.erlaubt, ich(a).email) }) },
     { methode: 'GET', pfad: '/api/konto/export', zugang: 'angemeldet', handler: async (a) => {
       const id = ich(a).id;
-      const ordner = join(exportZiel(), 'persoenlich', id);
+      const ordner = persoenlicherOrdner(exportZiel(), id);
       const fertig = (await exporteIn(ordner))[0] ?? null;
       return ok({ erlaubt: await dienst.persoenlicherExportErlaubt(), laeuft: eigeneExporte.get(id)?.laeuft ?? false, fehler: eigeneExporte.get(id)?.fehler ?? null, fertig });
     } },
@@ -948,7 +956,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const id = ich(a).id;
       if (eigeneExporte.get(id)?.laeuft) throw new Fachfehler(409, 'Dein Export läuft schon.');
       if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'Während ein Administrator als dieser Benutzer arbeitet, gibt es keinen persönlichen Export.');
-      const ziel = join(exportZiel(), 'persoenlich', id);
+      const ziel = persoenlicherOrdner(exportZiel(), id);
       const quelle = await dienst.persoenlicheQuelle(await zg(a), { mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(), ich: await konten.exportDatenVon(id) });
       const zustand = { laeuft: true, fehler: null as string | null };
       eigeneExporte.set(id, zustand);
@@ -964,7 +972,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({ laeuft: true }, 202);
     } },
     { methode: 'GET', pfad: '/api/konto/export/zip', zugang: 'angemeldet', handler: async (a) => {
-      const ziel = join(exportZiel(), 'persoenlich', ich(a).id);
+      const ziel = persoenlicherOrdner(exportZiel(), ich(a).id);
       const fertig = (await exporteIn(ziel))[0];
       if (!fertig) throw new Fachfehler(404, 'Es gibt noch keinen Export.');
       const ordner = exportOrdner(ziel, fertig.name);
@@ -973,7 +981,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const groesse = zipGroesse(eintraege);
       if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Dein Export ist größer als 4 GB. Bitte einen Administrator, ihn dir aus dem Ordner zu geben.');
       L.konto.info('„Meine Daten exportieren“ heruntergeladen', {});
-      return { datei: { inhalt: zipStrom(eintraege), name: `${fertig.name}.zip`, mime: 'application/zip', anzeigen: false, groesse } };
+      const strom = danachLoeschen(zipStrom(eintraege), ordner, () => L.konto.info('„Meine Daten exportieren“ nach dem Herunterladen gelöscht', {}));
+      return { datei: { inhalt: strom, name: `${fertig.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
     } },
     /* ---------- Baum über Verweise (#396, #424): mit den Rechten des Aufrufers ---------- */
     { methode: 'GET', pfad: '/api/mappen/:id/baum', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.baum(a.params.id, a.query, await zg(a))) },
@@ -1392,6 +1401,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         wartung: x.wartung?.oeffentlich() ?? null,
         // Sicherung (#105): fehlgeschlagen, zu alt, Speicherort, Notfallblatt.
         sicherung: x.sicherung ? await sicher(() => x.sicherung!.zustand()) : null,
+        // Export-Ordner (#797): liegt im Sicherungsordner; Exporte beim Update aus dem Sicherungsordner verschoben.
+        exporte: x.exporte ? { pfad: x.exporte.pfad, imSicherungsordner: x.exporte.imSicherungsordner, umzug: await sicher(() => umzugHinweis(dienst.einstellungenSpeicher)) ?? null } : null,
         // Speicherplatz (#116) und frühere Variablen, die entfernt werden können (#115).
         speicherplatz: x.speicherplatz ? await sicher(() => x.speicherplatz!.stand()) : null,
         // Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %.
