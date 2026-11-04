@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs';
-import { auskuenfteIn, auskunftOrdner } from './auskunft';
 import { liesMail, verbindeImap } from './imap';
 import { Postfaecher } from './postfach';
 import { PostfachOAuth } from './postfach-oauth';
@@ -72,6 +71,7 @@ import { VARIABLEN_GRUND } from '../../shared/src/umgebungsvariablen';
 import { createServer, type Server } from 'node:http';
 import { Lasttestmodus, lasttestAus, lasttestSkript, pruefeZiel } from './lasttestmodus';
 import { erkenneSpeicherart } from './speicherart';
+import { alterExportOrdner, exportOrdnerVon, exportOrt, merkeUmzug, raeumeExporteAuf, zieheExporteUm } from './exportordner';
 
 const pfad = (rel: string) => fileURLToPath(new URL(rel, import.meta.url));
 const env = process.env;
@@ -113,6 +113,8 @@ if (ordnerPruefung.fehler.length) {
 for (const v of ordnerPruefung.ueberfluessig) log.warn(`${v} ist nicht mehr nötig und kann aus der Compose-Datei entfernt werden. ${VARIABLEN_GRUND.ordner}`);
 
 for (const o of Object.values(ordner)) await mkdir(o, { recursive: true });
+// Export-Ordner (#797): neben files/, nie im Sicherungsordner; einstellbar nur über ein eigenes Volume.
+await mkdir(exportOrdnerVon(ordner), { recursive: true });
 
 // Datenbank-Anbindung (#119): Datei unter /data/geheim, führend; sonst DATABASE_URL übernehmen;
 // sonst (oder wenn sie nicht funktioniert) der Einrichtungsassistent im Browser.
@@ -265,6 +267,17 @@ wartung.beimAusschalten(() => vorschau.anstossen());
 // Dateien umwandeln (#577): Fassungen aus Paketen mit dms:umwandeln im Haushaltsordner – sie gehen mit in die
 // Sicherung (seit 0.140.1; vorher lagen sie daneben und ziehen beim Start um). Daraus Vorschaubild und Volltext.
 await zieheFassungenUm(ordner.dateien, cfg.haushalt).catch((e) => log.warn('Umgewandelte Fassungen nicht verschoben', { fehler: (e as Error).message }));
+// Exporte (#797): Was noch unter sicherung/export/ liegt, zieht in den Export-Ordner um – mit Hinweis in der Werkbank.
+const exporte = await exportOrt(ordner);
+try {
+  const u = await zieheExporteUm(alterExportOrdner(ordner), exporte.pfad);
+  if (u.anzahl || u.uebrig) {
+    await merkeUmzug(pgEinstellungen(sql, cfg.haushalt), u);
+    log[u.uebrig ? 'warn' : 'info']('Exporte aus dem Sicherungsordner in den Export-Ordner verschoben (unverschlüsselt, nicht für die Kopie der Sicherung)',
+      { anzahl: u.anzahl, nach: exporte.pfad, ...(u.uebrig ? { uebrig: alterExportOrdner(ordner) } : {}) });
+  }
+} catch (e) { log.warn('Exporte nicht aus dem Sicherungsordner verschoben', { fehler: (e as Error).message }); }
+if (exporte.imSicherungsordner) log.warn('Der Export-Ordner liegt im Sicherungsordner: Unverschlüsselte Exporte gehen mit jeder Kopie der Sicherung mit. Lege das Volume für /data/export an einen anderen Ort.', { pfad: exporte.pfad });
 const umwandlung = new Dateiumwandlung(dienst.umwandlungAnbindung(ordnerFassungen(fassungsOrdner(ordner.dateien, cfg.haushalt)), vorschau));
 dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
@@ -429,6 +442,8 @@ const verwaltung = new Verwaltung({
       ];
     },
     async () => (tresor.zustand === 'vorhanden' ? [] : [{ schluessel: `tresor:${tresor.zustand}`, text: t('werkbank.verwaltung.tresor') }]),
+    // #797: Unverschlüsselte Exporte gingen mit jeder Kopie der Sicherung mit.
+    async () => (exporte.imSicherungsordner ? [{ schluessel: 'export-im-sicherungsordner', text: t('werkbank.verwaltung.export') }] : []),
     async () => (await pakete.installierte()).filter((p) => p.einstellungenNoetig).map((p) => ({ schluessel: `paket:${p.id}`, text: t('werkbank.verwaltung.paket', { name: p.name }) })),
     async () => {
       const w = await automatisierungen.warnungen();
@@ -477,6 +492,7 @@ const app = await baueApp(dienst, konten, {
   wartung,
   notfall,
   sicherung,
+  exporte,
   wiederherstellung,
   speicherplatz,
   systemlast,
@@ -518,7 +534,8 @@ const geprueft = await dienst.passungNachziehen();
 if (geprueft) log.info(`Mappen von ${geprueft} Mappentypen gegen ihre Definition geprüft`);
 // Papierkorb (#43): Abgelaufenes stündlich endgültig löschen.
 // Auskünfte (#396): nach 7 Tagen weg – im selben stündlichen Lauf.
-const papierkorb = async () => { if (!wartung.aktiv) await dienst.raeumePapierkorbAuf(); await auskuenfteIn(auskunftOrdner(sicherung.ordner)); };
+// Exporte (#797): nach dem Herunterladen bzw. nach 7 Tagen weg – derselbe Lauf wie für die Auskünfte.
+const papierkorb = async () => { if (!wartung.aktiv) await dienst.raeumePapierkorbAuf(); await raeumeExporteAuf(exporte.pfad); };
 const papierkorbLauf = () => papierkorb().catch((e) => log.error('Papierkorb aufräumen fehlgeschlagen', { fehler: (e as Error).message }));
 await papierkorbLauf();
 setInterval(papierkorbLauf, 60 * 60 * 1000).unref();

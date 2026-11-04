@@ -9,6 +9,8 @@ import { aufVolume, geraetVon } from './tresor';
  *   /data/files      hochgeladene Dateien, Logos, Fehlerbilder
  *   /data/geheim     Schlüssel (dms.schluessel), RESCUE-Datei
  *   /data/sicherung  Sicherungen
+ *   /data/export     Exporte (#797, exportordner.ts) – unverschlüsselt, daher nie im Sicherungsordner;
+ *                    kein Pflicht-Volume, deshalb nicht in `Ordner` und nicht in der Speicherplatz-Belegung
  *
  * Ohne Docker (Entwicklung, Tests) liegen sie unter ./data im Projekt; DMS_DATENWURZEL
  * verlegt sie für Entwicklung und CI (nicht im Admin-Handbuch).

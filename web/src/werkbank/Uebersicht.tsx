@@ -5,6 +5,7 @@ import { t } from '../sprache';
 import { useHandbuch } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { sicherungsHinweise } from './Sicherung';
+import { exportHinweise } from './Vollexport';
 import { bereichPasst, GRUPPEN, type Gruppe } from '../../../shared/src/werkbankansicht';
 import { variablenHinweis } from '../../../shared/src/umgebungsvariablen';
 import { ENGPASS_VARIABLE } from '../../../shared/src/systemlast';
@@ -61,6 +62,8 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
     : { art: 'warn', text: <><strong>Postfach „{p.name}“ ist noch nicht angemeldet.</strong> Mit OAuth 2.0 erst nach der Anmeldung beim Anbieter abrufbar.</>, ziel: `/werkbank/postfaecher/${p.id}`, knopf: 'Anmelden' });
   // Sicherung (#105): fehlgeschlagen, zu alt, Notfallblatt, Speicherort.
   if (u.sicherung) for (const x of sicherungsHinweise(u.sicherung)) h.push({ ...x, ziel: '/werkbank/sicherung', knopf: 'Zur Sicherung' });
+  // Export-Ordner (#797): im Sicherungsordner, oder Exporte beim Update von dort verschoben.
+  if (u.exporte) for (const x of exportHinweise(u.exporte)) h.push({ ...x, ziel: '/werkbank/vollexport', knopf: t('werkbank.export.knopf') });
   // #128: API-Schlüssel gehören zu normalen Benutzern.
   if (u.adminSchluessel) h.push({ art: 'warn', text: <><strong>{u.adminSchluessel === 1 ? 'Ein API-Schlüssel gehört' : `${u.adminSchluessel} API-Schlüssel gehören`} einem Administrator.</strong> Administratoren bekommen keine neuen Schlüssel mehr. Lege für das Programm einen normalen Benutzer an, erzeuge damit einen neuen Schlüssel und lösche den alten (Mein Konto → API-Schlüssel des Administrators).</>, ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' });
   // Datenbank-Anbindung (#119)

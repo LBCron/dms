@@ -41,7 +41,7 @@ So richtest du Ablago auf **TrueNAS Community Edition 24.10 oder neuer** ein. Di
 ## Updates und Sicherung
 
 - **Updates:** **Apps → `dms` → Update** (bzw. *Pull Images* und neu starten). Die Daten bleiben im Datensatz.
-- **Sicherung außer Haus:** Den Ordner `sicherung` per **Cloud Sync Task** oder **Replication** an einen anderen Ort kopieren. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt. Snapshots des Datensatzes sind ein zusätzlicher Schutz, ersetzen aber keine Kopie außer Haus.
+- **Sicherung außer Haus:** Den Ordner `sicherung` per **Cloud Sync Task** oder **Replication** an einen anderen Ort kopieren. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Exporte sind nicht darin: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) ist unverschlüsselt und liegt deshalb im eigenen [Export-Ordner](https://help.ablago.app/admin/aktuell/export/#export-ordner), nie bei den Sicherungen. Snapshots des Datensatzes sind ein zusätzlicher Schutz, ersetzen aber keine Kopie außer Haus.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

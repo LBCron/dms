@@ -92,6 +92,8 @@ Ohne Sicherungs-App – etwa auf einem Raspberry Pi oder einem gemieteten Server
 
 Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das [Notfallblatt](#notfallblatt) mit dem Schlüssel gehört **nicht** dorthin.
 
+**Was unverschlüsselt ist und wo es liegt:** Vollexporte, „Meine Daten exportieren“ und Auskünfte nach Art. 15 sind unverschlüsselt. Sie liegen deshalb nicht im Sicherungsordner, sondern im eigenen [Export-Ordner](export.md#export-ordner) (`/data/export`, neben `files/`) und werden nach dem Herunterladen bzw. nach 7 Tagen gelöscht. Den Sicherungsordner kannst du also vollständig in die Cloud kopieren. Legst du den Export-Ordner selbst an einen anderen Ort, dann nie in den Sicherungsordner – die Werkbank warnt, wenn er dort liegt.
+
 ## Notfallblatt
 
 **Notfallblatt herunterladen** (hier und unter *Verschlüsselung*) erzeugt ein PDF mit allem, was du nach einem Ausfall brauchst:

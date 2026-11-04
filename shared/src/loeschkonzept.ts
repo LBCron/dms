@@ -228,8 +228,8 @@ export function loeschkonzept(q: LoeschkonzeptQuelle): Loeschkonzept {
         ['Automatische Sicherungen (Werkbank → Sicherung)', sicherungText, 'Ablago entfernt ältere Sicherungen nach jeder automatischen Sicherung'],
         ['Von Hand angelegte Sicherungen', 'bis zum Löschen', `${FEHLT('Wer')} löscht sie ${FEHLT('wann')}`],
         ['Kopie der Sicherungen außer Haus', FEHLT('z. B. die letzten 4 Wochen'), FEHLT('Wer, wie')],
-        ['Vollexporte (export/ im Sicherungsordner)', 'bis zum Löschen', `Werkbank → Vollexport → Löschen, ${FEHLT('spätestens nach …')}`],
-        ['Persönliche Exporte der Benutzer', 'bis zum nächsten Export des Benutzers', FEHLT('Hinweis an die Benutzer')],
+        // #797: eigener Export-Ordner, nicht in der Sicherung; dieselbe Frist wie die Auskunft.
+        ['Vollexporte und persönliche Exporte (Export-Ordner, nicht Teil der Sicherung)', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}`, 'Ablago löscht sie nach dem Herunterladen, spätestens nach Ablauf der Frist'],
         ['Bereitliegende Auskünfte', `höchstens ${tage(q.auskunftTage).replace('Tagen', 'Tage')}, mit Abruf-Link bis dieser abläuft`, 'Ablago löscht sie selbst'],
         ['Protokoll (Werkbank → Protokoll, Container-Logs)', `24 Stunden in der Werkbank; Container-Logs ${FEHLT('nach Einstellung von Docker')}`, FEHLT('ggf. Log-Rotation einstellen')],
         ['Heruntergeladene Dateien, Ausdrucke, E-Mails', FEHLT('Regel'), FEHLT('Regel')],

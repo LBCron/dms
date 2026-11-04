@@ -33,6 +33,8 @@ export const TEXT_MAX = 2000;
 export const ZWECK_MAX = 500;
 /** So lange liegt eine erzeugte Auskunft zum Herunterladen bereit (danach gelöscht, ebenso nach dem Herunterladen). */
 export const AUSKUNFT_TAGE = 7;
+/** Ebenso lange liegen Vollexport und „Meine Daten exportieren“ bereit (#797): dieselbe Frist, derselbe Ablauf. */
+export const EXPORT_TAGE = AUSKUNFT_TAGE;
 /** Frist zur Beantwortung (Art. 12 Abs. 3 DSGVO): ein Monat ab Eingang. */
 export const AUSKUNFT_FRIST_MONATE = 1;
 /** Begründung, warum eine Notiz nicht herausgegeben wird (Pflicht). */

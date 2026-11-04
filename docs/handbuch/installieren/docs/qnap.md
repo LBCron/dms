@@ -45,7 +45,7 @@ In der **File Station** im Ordner `Container` einen Ordner `dms` anlegen. Darin 
 
 ## Sicherung außer Haus
 
-Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `Container/dms/sicherung`. Mit **Hybrid Backup Sync** kopierst du den Ordner auf eine USB-Platte, ein zweites NAS oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Den Unterordner `export/` nimmst du dabei aus: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) liegt dort bewusst unverschlüsselt.
+Die Sicherungen von Ablago (**Werkbank → Sicherung**) landen in `Container/dms/sicherung`. Mit **Hybrid Backup Sync** kopierst du den Ordner auf eine USB-Platte, ein zweites NAS oder in einen Cloudspeicher. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Exporte sind nicht darin: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) ist unverschlüsselt und liegt deshalb im eigenen [Export-Ordner](https://help.ablago.app/admin/aktuell/export/#export-ordner), nie bei den Sicherungen.
 
 !!! info "Bilder folgen"
     Diese Anleitung ist noch ohne Bildschirmfotos. Weicht bei dir ein Menüpunkt ab, schreib es gern in ein [Issue](https://github.com/motom001/dms/issues).

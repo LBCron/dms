@@ -152,9 +152,10 @@ Die Ordner im Container sind fest. Wohin sie auf dem NAS zeigen, bestimmst du al
 | `/data/files` | hochgeladene Dokumente, Logos, Bilder gemeldeter Fehler | `/volume1/docker/dms/files` |
 | `/data/geheim` | Schlüssel für gespeicherte Passwörter (`dms.schluessel`), [Datenbank-Anbindung](#datenbank-anbindung) (`datenbank.json`), Einrichtungscode (`EINRICHTUNGSCODE`, nur bis zur Einrichtung), [RESCUE-Datei](notfall.md) | `/volume1/docker/dms/geheim` |
 | `/data/sicherung` | [Sicherungen](sicherung.md), verschlüsselt | `/volume1/docker/dms/sicherung` |
+| `/data/export` (optional) | [Exporte](export.md#export-ordner): Vollexport, Meine Daten exportieren, Auskünfte – **unverschlüsselt**, nach dem Herunterladen bzw. nach 7 Tagen gelöscht. Nie in den Sicherungsordner legen | auskommentiert: `/volume1/docker/dms/export` |
 | `/eingang` (optional) | [Eingangsordner](eingangsordner.md) für Scanner und NAS | `/volume1/docker/dms/eingang` |
 
-Jeder der drei Ordner unter `/data` muss ein eigenes Volume sein; sonst ist sein Inhalt weg, sobald der Container neu erstellt wird (z. B. beim Update). Die Datenbank liegt im Volume des PostgreSQL-Containers – beim Image [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) im vierten Ordner `/data/postgres`. Wie viel Platz in jedem Ordner frei ist, zeigen **Werkbank → [Systemzustand](speicherplatz.md)** und **Werkbank → Systemzustand → Version und Updates**.
+Jeder der drei Ordner `/data/files`, `/data/geheim` und `/data/sicherung` muss ein eigenes Volume sein; sonst ist sein Inhalt weg, sobald der Container neu erstellt wird (z. B. beim Update). `/data/export` braucht kein eigenes Volume – ohne liegt er im Container, und darin liegende Exporte sind nach einem Update weg. Die Datenbank liegt im Volume des PostgreSQL-Containers – beim Image [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) im vierten Ordner `/data/postgres`. Wie viel Platz in jedem Ordner frei ist, zeigen **Werkbank → [Systemzustand](speicherplatz.md)** und **Werkbank → Systemzustand → Version und Updates**.
 
 ```yaml
     volumes:

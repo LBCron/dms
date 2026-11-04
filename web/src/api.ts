@@ -818,6 +818,7 @@ export const api = {
   vollexportStarten: (o: { passwoerter: boolean; passwoerterBestaetigt: boolean; protokolle: boolean; kontakte: Record<string, KontaktZuordnung> }) => anfrage<Auftrag>('POST', '/api/werkbank/export', o),
   vollexportPruefen: (name: string) => anfrage<{ ok: boolean; dateien: number; fehlend: string[]; abweichend: string[] }>('POST', `/api/werkbank/export/${encodeURIComponent(name)}/pruefen`),
   vollexportLoeschen: (name: string) => anfrage<null>('DELETE', `/api/werkbank/export/${encodeURIComponent(name)}`),
+  vollexportUmzugGesehen: () => anfrage<null>('POST', '/api/werkbank/export/umzug-gesehen'),
   /* Persönlicher Export (#255) */
   meinExport: () => anfrage<{ erlaubt: boolean; laeuft: boolean; fehler: string | null; fertig: VollexportStand['exporte'][number] | null }>('GET', '/api/konto/export'),
   meinExportStarten: (passwoerter: boolean, passwoerterBestaetigt: boolean) => anfrage<{ laeuft: boolean }>('POST', '/api/konto/export', { passwoerter, passwoerterBestaetigt }),
@@ -995,10 +996,15 @@ export interface NummernkreisAnsicht extends Nummernkreis {
   verwendet: Array<{ typId: string; typ: string; feldKey: string; feld: string }>;
 }
 export interface KontaktZuordnung { name: string; email?: string; telefon?: string; adresse?: string; firma?: string; notiz?: string }
+/** Exporte aus dem Sicherungsordner verschoben (#797), bis ein Administrator den Hinweis gelesen hat. */
+export interface ExportUmzug { am: string; anzahl: number; uebrig: boolean }
 export interface VollexportStand {
   ordner: string; frei: number | null;
+  /** Export-Ordner (#797): Frist in Tagen, liegt im Sicherungsordner, eigenes Volume, Umzug beim Update. */
+  tage: number; imSicherungsordner: boolean; volume: boolean | null; umzug: ExportUmzug | null;
   abschaetzung: { mappen: number; dokumente: number; bytes: number };
-  exporte: Array<{ name: string; erstellt: string | null; bytes: number; dateien: number; mappen: number | null; passwoerter: boolean }>;
+  /** `bis`: danach (und nach dem Herunterladen) gelöscht (#797). */
+  exporte: Array<{ name: string; erstellt: string | null; bis: string; bytes: number; dateien: number; mappen: number | null; passwoerter: boolean }>;
   kontakte: Array<{ typId: string; typ: string; zuordnung: KontaktZuordnung }>;
   /** Dürfen Benutzer ihre Daten selbst exportieren (#255)? */
   persoenlich: boolean;
@@ -1073,6 +1079,8 @@ export interface WerkbankUebersicht {
   wartung?: WartungOeffentlich | null;
   /** Sicherung (#105). */
   sicherung?: SicherungsZustand | null;
+  /** Export-Ordner (#797): liegt im Sicherungsordner; Exporte beim Update verschoben. */
+  exporte?: { pfad: string; imSicherungsordner: boolean; umzug: ExportUmzug | null } | null;
   /** Speicherplatz (#116). */
   speicherplatz?: SpeicherplatzStand | null;
   /** Auslastung (#409): CPU oder Arbeitsspeicher seit 5 Minuten über 90 %. */

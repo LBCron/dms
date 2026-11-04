@@ -29,5 +29,9 @@ services:
       - ./data/files:/data/files
       - ./data/geheim:/data/geheim
       - ./data/sicherung:/data/sicherung
+      # Exporte (optional, #797): Vollexport, „Meine Daten exportieren“, Auskünfte – unverschlüsselt.
+      # Ohne diese Zeile liegen sie im Container; nach dem Herunterladen bzw. nach 7 Tagen sind sie ohnehin weg.
+      # Mit eigenem Ort (z. B. für große Exporte zum Kopieren) nie in den Sicherungsordner legen.
+      # - ./data/export:/data/export
     ports:
       - "8080:3000"

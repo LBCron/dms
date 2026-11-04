@@ -228,6 +228,7 @@
   "verwaltung.automatisierung.fehler_one": "Eine Automatisierung hat fehlgeschlagene Läufe.",
   "verwaltung.automatisierung.fehler_other": "{anzahl} Automatisierungen haben fehlgeschlagene Läufe.",
   "verwaltung.speicher": "Der Speicherplatz wird knapp.",
+  "verwaltung.export": "Der Export-Ordner liegt im Sicherungsordner – unverschlüsselte Exporte gehen mit jeder Kopie der Sicherung mit.",
   "verwaltung.postfach": "Das Postfach „{name}“ braucht eine neue Anmeldung.",
   "verwaltung.fehlermeldungen_one": "Eine Fehlermeldung eines Benutzers wartet.",
   "verwaltung.fehlermeldungen_other": "{anzahl} Fehlermeldungen von Benutzern warten.",
@@ -347,5 +348,17 @@
   "loeschkonzept.aufbewahrung": "Aufbewahrung {jahre} Jahre",
   "loeschkonzept.weitere": "Weitere Mappentypen (ohne Personendaten)",
   "loeschkonzept.zweck": "Zweck",
-  "loeschkonzept.zweckBeispiel": "z. B. Durchführung des Mietverhältnisses"
+  "loeschkonzept.zweckBeispiel": "z. B. Durchführung des Mietverhältnisses",
+  "export.ohne-ordner": "Ohne Export-Ordner gibt es keinen Export.",
+  "export.ablage": "Exporte liegen unverschlüsselt im Export-Ordner, nicht bei den Sicherungen. Ablago löscht jeden Export nach dem Herunterladen, spätestens nach {tage} Tagen.",
+  "export.bis": "bereit bis {datum}",
+  "export.container": "Der Export-Ordner liegt im Container. Zum Herunterladen als ZIP genügt das. Willst du große Exporte direkt aus dem Ordner kopieren, gib ihm in der Compose-Datei ein eigenes Volume.",
+  "export.im-sicherungsordner": "Der Export-Ordner liegt im Sicherungsordner.",
+  "export.im-sicherungsordner.text": "Exporte sind unverschlüsselt und gingen so mit jeder Kopie der Sicherung mit, etwa in die Cloud. Lege das Volume für /data/export in der Compose-Datei an einen Ort außerhalb des Sicherungsordners.",
+  "export.umzug_one": "Ein Export lag noch im Sicherungsordner und ist jetzt im Export-Ordner.",
+  "export.umzug_other": "{anzahl} Exporte lagen noch im Sicherungsordner und sind jetzt im Export-Ordner.",
+  "export.umzug.text": "Exporte sind unverschlüsselt und gehören nicht in die Kopie der Sicherung. Sie liegen jetzt unter {pfad} und werden nach dem Herunterladen bzw. nach {tage} Tagen gelöscht.",
+  "export.umzug.uebrig": "Einiges ließ sich nicht verschieben und liegt noch im Unterordner export/ des Sicherungsordners. Lösche es dort oder nimm es von der Kopie der Sicherung aus.",
+  "export.umzug.ok": "Verstanden",
+  "export.knopf": "Zum Vollexport"
 }

@@ -74,6 +74,7 @@ COPY server/test/lasttest.mjs /app/lasttest/lasttest.mjs
 RUN printf '#!/bin/sh\nexec node /app/lasttest/lasttest.mjs "$@"\n' > /usr/local/bin/dms-lasttest && chmod 755 /usr/local/bin/dms-lasttest
 
 # Feste Ordner (#115): /data/files, /data/geheim, /data/sicherung – zugeordnet nur über Volumes.
+# Dazu /data/export (#797) für Exporte: ohne eigenes Volume im Container, nie im Sicherungsordner.
 ENV PORT=3000
 EXPOSE 3000
 # Port wie der Server (PORT, Standard 3000) – sonst wäre ein Container mit eigener PORT-Einstellung „unhealthy“ (#321).

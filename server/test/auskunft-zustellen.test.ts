@@ -210,7 +210,8 @@ async function aufbau(pg: boolean, o: { mail?: boolean; adresse?: string } = {})
   };
   const ordner = await mkdtemp(join(tmpdir(), 'dms-zust-sich-'));
   const betrieb = { mailer: () => (o.mail === false ? null : mailer), adresseFuerLinks: () => o.adresse ?? 'https://dms.example.org' };
-  const tabelle = routen(d, konten, { betrieb: betrieb as never, sicherung: { ordner } as never });
+  // Export-Ordner (#797): Auskünfte unter export/auskunft/.
+  const tabelle = routen(d, konten, { betrieb: betrieb as never, sicherung: { ordner } as never, exporte: { pfad: join(ordner, 'export'), imSicherungsordner: false, volume: null } });
   const route = (m: string, p: string) => tabelle.find((x) => x.methode === m && x.pfad === p)!;
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const rufe = async (b: { id: string } | null, m: string, p: string, x: Partial<Anfrage> = {}) =>
