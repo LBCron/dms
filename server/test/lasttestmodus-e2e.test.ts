@@ -94,8 +94,10 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     }
     assert.equal(s.zustand, 'fertig', `${s.meldung}\n${d.log()}`);
     assert.deepEqual(s.fertigeStufen, ['klein']);
-    assert.equal(s.durchgaenge.length, 1);
-    assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50/);
+    // Der bisherige Durchgang und danach „mit Speichern“ (#739) als eigene Zeile.
+    assert.deepEqual(s.durchgaenge.map((x) => x.name), ['klein', 'klein + Speichern']);
+    assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50[^\n]*\nklein \+ Speichern\s+25 gleichzeitig: p50/);
+    assert.ok(!/Abgelehnt \(4xx\)/.test(s.ergebnis!.bericht), 'alle schreibenden Anfragen gehen durch');
     assert.match(s.ergebnis!.bericht, /Bestand: 50\d\d Mappen \(5000 Demo-Mappen\)/);
     assert.ok(!/lasttest-passwort|EINRICHTUNGSCODE|127\.0\.0\.1/.test(JSON.stringify(s)), 'keine Zugangsdaten, keine Adressen');
     await post(d.basis, '/api/lasttest/angaben', { geraet: 'Beispiel-NAS, 8 GB RAM', speicher: 'SSD' });

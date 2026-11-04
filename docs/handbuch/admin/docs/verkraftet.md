@@ -2,6 +2,8 @@
 
 Gemessen mit dem [Lasttest](lasttest.md) in drei Stufen: **klein** (Haushalt, 25 gleichzeitige Anfragen, 5.000 Mappen), **mittel** (Kleinbetrieb, 100 gleichzeitig mit Export nebenher, 50.000 Mappen) und **groß** (Last steigern bis zur Grenze, 200.000 Mappen). Die Spalten zeigen p95 – 95 % der Antworten waren schneller – und bei groß die Grenze in gleichzeitigen Anfragen, bei der 95 % der Antworten noch unter 3 s blieben.
 
+Seit #739 misst jede Stufe zusätzlich **mit Speichern** (gleiche Last, rund 10 % schreibende Anfragen) und es gibt die Stufe **extrem** (wie groß, mit 500.000 oder 1 Million Mappen). Die bisherigen Spalten messen genau wie vorher und bleiben mit den älteren Zeilen vergleichbar; die neuen Werte stehen in einer eigenen Tabelle darunter. Ältere Messungen haben dort keine Zeile.
+
 Die Zeilen „GitHub-Rechner“ misst das Projekt jede Woche auf den Rechnern von GitHub (Workflow *Lasttest*); dort laufen Ablago, PostgreSQL und der Lasttest auf demselben Rechner. Die übrigen Zeilen sind Meldungen von Betreibern – gesammelt im Issue [Messergebnisse Lasttest (#576)](https://github.com/motom001/dms/issues/576) und in [eigenen Meldungen](https://github.com/motom001/dms/issues?q=label%3Amessergebnis-lasttest), jede mit Version und Datum, denn neue Versionen können schneller oder langsamer sein.
 
 Auf welchen Geräten das Projekt Ablago selbst prüft – und bis wann voraussichtlich –, zeigt das Installationshandbuch unter [Geprüfte Plattformen](https://help.ablago.app/installieren/aktuell/plattformen/).
@@ -11,6 +13,12 @@ Auf welchen Geräten das Projekt Ablago selbst prüft – und bis wann voraussic
 | GitHub-Rechner (ubuntu-latest) | 4 Kerne (x64) | 16 GB | SSD | ohne Container, PostgreSQL 17 daneben | 0.146.0 | 60 ms | 586 ms | 200 (136/s, p95 2,8 s) | 03.11.2026 |
 | UGREEN DXP4800 Plus (Maintainer) | Intel Pentium Gold 8505, 6 Kerne (x64) | 15,4 GB | SSD | dms-komplett | 0.153.0 | 76 ms | 423 ms | 225 (157/s, p95 2,6 s) | 03.11.2026 |
 | GitHub-Rechner (ubuntu-latest) | 4 Kerne (x64) | 16 GB | SSD | ohne Container, PostgreSQL 17 daneben | 0.139.0 | 95 ms | 2.384 ms | unter 25 (p95 3,2 s bei 25) | 02.11.2026, erster Lauf, vor dem Beschleunigen (#615) |
+
+**Mit Speichern und extrem** – p95 der Durchgänge „+ Speichern“, in Klammern p95 nur der schreibenden Anfragen; bei extrem die Grenze, die Dauer des Anlegens der Demo-Daten und die Größe der Datenbank:
+
+| Gerät | Ablago | klein + Speichern p95 | mittel + Speichern p95 | groß + Speichern p95 (bei Grenze) | extrem 500.000: Grenze | extrem 1 Mio.: Grenze | Stand |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| GitHub-Rechner (ubuntu-latest) | – | noch nicht gemessen | | | | | |
 
 Du hast selbst gemessen? [Lasttest selbst durchführen](lasttest.md) beschreibt, wie es geht. Den Ergebnisblock fügst du als Kommentar in das Sammel-Issue [Messergebnisse Lasttest (#576)](https://github.com/motom001/dms/issues/576) ein – oder du legst mit der Vorlage [Messergebnis Lasttest](https://github.com/motom001/dms/issues/new?template=messergebnis-lasttest.yml) ein eigenes Issue an. Das Projekt trägt die Meldungen hier ein.
 
