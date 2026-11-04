@@ -57,7 +57,7 @@ describe('Persönlicher Export (#255)', () => {
     assert.deepEqual(benutzer.map((b: { email: string }) => b.email), ['max@example.org']);
     assert.deepEqual(JSON.parse(await lies('struktur/sichten.json')), []);
     // Nur Eigenes (#683): kein Löschprotokoll, keine Synonyme und Automatisierungen, nur selbst gelöschte Dokumente.
-    for (const datei of ['daten/loeschprotokoll.csv', 'struktur/synonyme.json', 'struktur/automatisierungen.json']) await assert.rejects(lies(datei), undefined, datei);
+    for (const datei of ['daten/loeschprotokoll.csv', 'struktur/synonyme.json', 'struktur/automatisierungen.json']) await assert.rejects(lies(datei), { code: 'ENOENT' }, datei);
     assert.ok(!(await lies('daten/papierkorb-dokumente.jsonl')).includes('kontoauszug-geheim'));
     const pw = await lies('passwoerter.csv');
     assert.match(pw, /strom123/);
