@@ -192,6 +192,44 @@ describe('Dienst: Zahlen der Ansichten (#512)', () => {
     assert.equal((await h.zahlen(h.max.id)).z.favoriten, 0);
   });
 
+  it('der Ereignisverteiler (alle 2 s) macht Zahlen und Termine nicht ungültig – eine Änderung schon (Lasttest)', async () => {
+    const h = await aufbau();
+    const b = { id: h.max.id, rolle: 'mitglied' };
+    const termine = async () => {
+      const k: Kontext = { anfrage: 't', db: { anzahl: 0, ms: 0 } };
+      await kontext.run(k, async () => h.d.naechsterTermin(await h.d.zugriff(b)));
+      return k.zwischenspeicher?.art;
+    };
+    await h.d.legeMappeAn({ typId: h.rechnung.id, werte: { nr: 'R1' } }, h.admin.id);
+    await h.d.ereignisse.verteile();
+    await h.zahlen(h.max.id); await termine();
+    const vorher = h.d.fristenstand.stand;
+    // Nichts fällig und einmal mit einem Ereignis im Ausgangskorb: holen, verteilen, aufräumen.
+    await h.d.ereignisse.verteile();
+    await h.d.legeMappeAn({ typId: h.rechnung.id, werte: { nr: 'R2' } }, h.admin.id);
+    await h.zahlen(h.max.id); await termine();
+    const nachAenderung = h.d.fristenstand.stand;
+    assert.ok(nachAenderung > vorher, 'die Änderung zählt');
+    await h.d.ereignisse.verteile();
+    await h.d.ereignisse.verteile();
+    assert.equal(h.d.fristenstand.stand, nachAenderung, 'Verteilen zählt nicht');
+    assert.equal((await h.zahlen(h.max.id)).art, 'treffer', 'Zahlen: Treffer nach dem Verteilen');
+    assert.equal(await termine(), 'treffer', 'Termine: Treffer nach dem Verteilen');
+  });
+
+  it('Buchführung des Ausgangskorbs (#670) zählt nicht', async () => {
+    const stand = new Haushaltsstand();
+    const repo = stand.umhuelle(speicherRepo());
+    await repo.legeKatalogEreignisAn({ id: 'e1', art: 'mappe.angelegt', daten: {}, ausloeser: {} });
+    for (const e of await repo.holeKatalogEreignisse(50, 60)) await repo.katalogEreignisVerteilt(e.id);
+    await repo.legeKatalogEreignisAn({ id: 'e2', art: 'mappe.angelegt', daten: {}, ausloeser: {} });
+    for (const e of await repo.holeKatalogEreignisse(50, 60)) await repo.katalogEreignisFehlgeschlagen(e.id, 'weg', null);
+    await repo.katalogEreignisStand();
+    await repo.raeumeKatalogEreignisseAuf(30);
+    await repo.merkeFristMeldung({ mappeId: 'm1', feld: 'f', datum: '2026-11-04', zeitpunkt: 'faellig' });
+    assert.equal(stand.stand, 0);
+  });
+
   it('zeitabhängige Ansicht stimmt nach Mitternacht auch ohne Änderung', async (t) => {
     // 23:30 in Berlin; die Rechnung ist morgen fällig.
     t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-11-01T22:30:00Z') });
