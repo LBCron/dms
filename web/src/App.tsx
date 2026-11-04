@@ -19,6 +19,7 @@ import { ErreichbarkeitsBanner, useBeiWiederErreichbar } from './erreichbar';
 import { useHandbuch } from './Hilfe';
 import { Pikto } from './piktogramme';
 import { UeberDms } from './UeberDms';
+import { ADMIN_START, startseiteVon } from '../../shared/src/startseite';
 
 export function App() {
   const { pfad, suche } = useOrt();
@@ -41,7 +42,8 @@ export function App() {
   useEffect(() => { setzeSchrift(ich.id, leseSchrift(ich.id)); }, [ich.id]);
 
   useEffect(() => {
-    if (pfad === '/' || pfad.startsWith('/passwort/')) geheZu('/ablage', true);
+    // Startseite (#721): Administratoren in die Werkbank, alle anderen in die Ablage.
+    if (pfad === '/' || pfad.startsWith('/passwort/')) geheZu(admin && !vertretung ? ADMIN_START : '/ablage', true);
     // Frühere Adressen
     else if (teile[0] === 'einrichtung') geheZu(`/werkbank/typen${teile[1] ? `/${teile[1]}` : ''}`, true);
     else if (teile[0] === 'benutzer') geheZu('/werkbank/benutzer', true);
@@ -81,7 +83,7 @@ export function App() {
         </div>
       )}
       <header className="kopf">
-        <Link to={d.einstellungen.startseite === false ? '/ablage/eingang' : '/ablage/start'} className="marke" title="Zur Startseite">
+        <Link to={startseiteVon(vertretung ? undefined : ich.rolle, d.einstellungen.startseite === false)} className="marke" title="Zur Startseite">
           <Marke logo={logoUrl(d.meinDesign)} schriftzug={schriftzugVon(d.meinDesign)} /><span className="sr-only">{schriftzugVon(d.meinDesign) ? '' : schriftzugVon(null)} – Startseite</span>
         </Link>
         <nav className="bereiche" aria-label="Bereiche">

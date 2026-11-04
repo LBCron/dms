@@ -1,6 +1,6 @@
 # Werkbank und Übersicht
 
-Die **Werkbank** sehen nur Administratoren. Links stehen ihre Bereiche in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
+Die **Werkbank** sehen nur Administratoren. Nach der Anmeldung landest du als Administrator direkt in der **Übersicht** der Werkbank – ein Administrator-Konto arbeitet im Alltag nicht in der Ablage. Führt dich ein Link in die Werkbank (z. B. aus einer E-Mail „Sicherung fehlgeschlagen“), landest du genau dort; ein Link in die Ablage führt dich in die Übersicht. Die **Ablage** erreichst du jederzeit über **Ablage** oben, etwa um nachzusehen, was ein Benutzer sieht. Eine Einstellung dafür gibt es bewusst nicht. Links stehen ihre Bereiche in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
 
 <!-- bereiche:gruppen -->
 | Gruppe | Bereiche |
