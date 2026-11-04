@@ -355,6 +355,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01603" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.160.3
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.160.3">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01602" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -367,7 +395,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -395,7 +423,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben_1" class="md-nav__link">
+  <a href="#behoben_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -2564,6 +2592,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01603" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.160.3
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.160.3">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01602" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2576,7 +2632,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -2604,7 +2660,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben_1" class="md-nav__link">
+  <a href="#behoben_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -2727,14 +2783,22 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01602">0.160.2<a class="headerlink" href="#01602" title="Permanent link">&para;</a></h2>
+<h2 id="01603">0.160.3<a class="headerlink" href="#01603" title="Permanent link">&para;</a></h2>
 <h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ausprobieren einer Automatisierung</strong> (#709): Die Mappe wählst du jetzt wie in einem Verweisfeld. Angeboten werden nur Mappen vom Mappentyp der Wenn-Karte, die das Konto „Automatisierung“ auch sehen darf – vorher standen dort Mappen, mit denen der Lauf sofort scheiterte.</li>
+<li>Scheitert ein Lauf an Rechten, sagt die Meldung jetzt, dass <strong>die Automatisierung</strong> die Mappe nicht sehen darf (mit dem Mappentyp) – nicht mehr „du“.</li>
+<li>Darf das Konto „Automatisierung“ den Mappentyp der Wenn-Karte gar nicht lesen, zeigen Editor und Liste den Hinweis „Diese Automatisierung kann nicht laufen …“ mit dem Weg zum Testlauf der Rechte, in dem das Konto schon gewählt ist. Speichern bleibt möglich.</li>
+<li>„Trockenlauf“ heißt jetzt <strong>Probelauf</strong>.</li>
+</ul>
+<h2 id="01602">0.160.2<a class="headerlink" href="#01602" title="Permanent link">&para;</a></h2>
+<h3 id="behoben_1">Behoben<a class="headerlink" href="#behoben_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Testlauf der Rechte auch für Konten ohne Person</strong> (#710): Am Mappentyp wählst du im Testlauf jetzt auch das Systemkonto „Automatisierung“ und die Benutzer der Pakete aus – gekennzeichnet und unter den Personen. Das Ergebnis zeigt wie gewohnt die Rechte und die Regel, die entschieden hat; so findest du heraus, warum eine Automatisierung oder ein Paket eine Mappe nicht sehen darf. In allen anderen Auswahlen bleiben diese Konten ausgeblendet.</li>
 <li>Das Feld <strong>Testmappe</strong> sagt jetzt „Mappe suchen …“ statt den Namen des Mappentyps.</li>
 </ul>
 <h2 id="01601">0.160.1<a class="headerlink" href="#01601" title="Permanent link">&para;</a></h2>
-<h3 id="behoben_1">Behoben<a class="headerlink" href="#behoben_1" title="Permanent link">&para;</a></h3>
+<h3 id="behoben_2">Behoben<a class="headerlink" href="#behoben_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Automatisierung an/aus an einer Stelle</strong> (#706): Oben neben dem Namen steht ein Schalter <strong>an/aus</strong> – bei einer neuen Automatisierung (Vorgabe „an“, wirksam mit dem Speichern) genauso wie bei einer gespeicherten (wirkt sofort, mit Rückmeldung an derselben Stelle). Der Haken „Gleich einschalten …“ unten ist weg.</li>
 <li><strong>Angehalten</strong> steht an derselben Stelle, mit Grund und dem Knopf <strong>Wieder einschalten</strong>.</li>
