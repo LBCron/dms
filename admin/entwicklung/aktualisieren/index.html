@@ -2741,7 +2741,13 @@
 <p>Bei zwei Containern bleibt <code>postgres:17</code> für Sicherheits-Updates der Reihe 17 offen – unabhängig vom Tag von Ablago.</p>
 <div class="admonition note">
 <p class="admonition-title">Wenn eine stabile Version einen schweren Fehler hat</p>
-<p>Der Maintainer setzt <code>:stabil</code> dann auf die vorige Version zurück (Workflow <em>:stabil zurücksetzen</em>). Beim nächsten Aktualisieren bekommst du sie wieder. Was passiert ist, steht in den <a href="https://github.com/motom001/dms/releases">Releases</a>. Hast du schon aktualisiert und läuft danach etwas nicht, hilft die Sicherung von vor dem Update (siehe <a href="#sichern">Sichern</a>); eine feste ältere Nummer im Tag hält Ablago bis zur Korrektur dort.</p>
+<p>Der Maintainer setzt <code>:stabil</code> dann auf die vorige Version zurück (Workflow <em>:stabil zurücksetzen</em>). Was passiert ist, steht in den <a href="https://github.com/motom001/dms/releases">Releases</a>.</p>
+<ul>
+<li><strong>Noch nicht aktualisiert:</strong> Du bekommst beim nächsten Aktualisieren die vorige, bewährte Version.</li>
+<li><strong>Schon aktualisiert:</strong> Bleib auf der neueren Version und warte auf die Korrektur – trag dafür die feste Nummer im Tag ein (z. B. <code>:0.160.0</code>). Eine ältere Version startet auf deiner Datenbank nicht: Ablago merkt, dass schon eine neuere Version die Datenbank eingerichtet hat, und bricht mit einem Hinweis ab, statt neue Daten zu übersehen. Zurück geht es nur über die Sicherung von vor dem Update (siehe <a href="#sichern">Sichern</a>).</li>
+<li><strong>Neu eingerichtet ab 0.158.3:</strong> Solche Ablagen und ihre Sicherungen lassen sich mit Versionen bis 0.158.2 nicht öffnen – auch nicht über eine Sicherung.</li>
+</ul>
+<p>Startet der Container mit <em>Diese Datenbank stammt von einer neueren Version von Ablago</em>, steht im Tag eine ältere Version als zuletzt – oder <code>:stabil</code> wurde zurückgesetzt. Trag die zuletzt verwendete Nummer ein.</p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Woher kommt das Image?</p>
