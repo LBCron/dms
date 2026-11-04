@@ -254,7 +254,7 @@ dienst.ereignisse.abonniere('mein-abnehmer', async (e: KatalogEreignis) => {
 });
 ```
 
-Der Abnehmer `pakete` gibt Mappen-Ereignisse und `frist.erreicht` an Pakete weiter, die sie abonniert haben und den Typ unter `code.mappentypen` nennen – mit einer aus Ereignis- und Paket-Id berechneten Id, damit eine Wiederholung beim Paket nicht doppelt ankommt.
+Der Abnehmer `pakete` gibt Mappen-Ereignisse und `frist.erreicht` an Pakete weiter, die sie abonniert haben, den Typ unter `code.mappentypen` nennen (eigene, fremde, `*`) und die Mappe mit den Rechten ihres Dienstkontos gerade lesen dürfen (#686: bestätigte Rechte, Einstellung `paket_verwehrt` je Mappentyp, Regeln für die Rolle *Paket*; sonst Protokolleintrag statt Zustellung) – mit einer aus Ereignis- und Paket-Id berechneten Id, damit eine Wiederholung beim Paket nicht doppelt ankommt.
 
 **Auslöser** (`e.ausloeser`): `{ art: 'benutzer' | 'paket' | 'automatisierung' | 'system', id, konto, kette }`. Den Auslöser nimmt `dienst.ereignis` aus dem Konto (`von`: Benutzer bzw. Dienstkonto eines Pakets) oder aus `dienst.mitAusloeser(a, f)`. Eine Automatisierung (#674) führt ihre Aktionen so aus:
 

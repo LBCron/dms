@@ -282,8 +282,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   // Code (#338): Manifest-Angaben, gebautes Modul und Daten.
   const cl = liesCode(m.code, [...dateien].map(([name, inhalt]) => ({ name, groesse: inhalt.length })));
   fehler.push(...cl.fehler.map((f) => (f.startsWith('code/:') ? f.slice('code/: '.length) : `manifest.yaml: ${f}`)));
-  // Mappen-Ereignisse (#670), Stufe 1: nur zu eigenen Mappentypen dieses Pakets.
-  for (const k of cl.code?.mappentypen ?? []) if (!typen.some((t) => t.schluessel === k)) fehler.push(`manifest.yaml: code.mappentypen: „${k}“ ist kein Mappentyp dieses Pakets (inhalt). Ereignisse zu Mappentypen anderer Pakete gibt es noch nicht.`);
+  // Mappen-Ereignisse (#670): Schlüssel ohne Präfix sind eigene Mappentypen; fremde (paket:typ, dms:post) und „*“ seit #686.
+  for (const k of cl.code?.mappentypen ?? []) if (k !== '*' && !k.includes(':') && !typen.some((t) => t.schluessel === k)) fehler.push(`manifest.yaml: code.mappentypen: „${k}“ ist kein Mappentyp dieses Pakets (inhalt) – fremde Mappentypen bitte mit Präfix, z. B. basis:vertrag.`);
   let code: PaketCodeTeil | null = null;
   if (cl.code) {
     const modul = dateien.get('code/modul.wasm');

@@ -57,7 +57,7 @@ import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestl
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
 import { dokumentsprachen, MAX_SEITENSPRACHEN, seitentexte, seitenZusammensetzen, SEITENVORSCHUB, SPRACHEN_JE_SEITE, zeichenzahl, type Seitensprache } from '../../shared/src/seitensprachen';
-import { ALLE_TYPEN, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
+import { ALLE_TYPEN, MAPPEN_EREIGNISSE, hatSchnittstelle, kenntVolltextOhneText, PAKET_TEXT, PAKET_VOLLTEXT, type EreignisArt, type InstalliertesPaket, type PaketCode, type Schnittstelle } from '../../shared/src/pakete';
 import { INFO_TEXTEBENE, infoWartet, NICHT_GESPEICHERT } from '../../shared/src/volltext';
 import { dateitypName, erkenneBildtyp, INFO_UMWANDLUNG, infoFassung, infoUmwandlung, katalogUmwandlung, kernTyp, UMWANDELN_MAX_BYTES, type FassungInfo } from '../../shared/src/dateiumwandlung';
 import type { Dateiumwandlung, FassungsAblage, UmwandlungsAnbindung } from './dateiumwandlung';
@@ -347,6 +347,8 @@ export interface KontenHaken {
   benutzer?(): Promise<Benutzer[]>;
   /** Konten, die kein Mensch sind (#673): Systemkonten und Dienstkonten der Pakete – nur für den Testlauf der Rechte (#710). */
   ohneMensch?(): Promise<Benutzer[]>;
+  /** Dienstkonten der Pakete (#686: Rechte des Paket-Benutzers bei der Zustellung von Ereignissen). */
+  dienstkonten?(): Promise<Benutzer[]>;
   /** Persönliche Einstellungen eines Benutzers (#422: Favoriten benachrichtigen, Geänderte hervorheben). */
   einstellungen?(id: string): Promise<Record<string, unknown>>;
   /** Persönliche Einstellung setzen (#506: Vorgabe für neue Benutzer, „auf alle anwenden“); `null` löscht. */
@@ -3035,22 +3037,11 @@ export class Dienst {
     const pakete = await this.repo.listePakete();
     const p = pakete.find((x) => x.id === ich.paketId);
     const r = p?.laeufer?.rechte ?? { lesen: [], schreiben: [], dokumente: 'keine' as const };
-    const dms = await this.sichereSystem();
-    const ablageort = await this.ablageortId();
-    const aufloesen = (liste: string[]): Set<string> => {
-      const ids = new Set<string>();
-      for (const vw of liste) {
-        if (vw === ALLE_TYPEN) { for (const t of typen) if (t.system !== 'benutzer') ids.add(t.id); continue; }
-        const [pk, sl] = vw.includes(':') ? vw.split(':') : [p?.id ?? '', vw];
-        // dms:benutzer lehnt liesCode ab; hier trotzdem nie auflösen (Pakete sehen keine Benutzer). dms:post seit #435.
-        const id = pk === 'dms' ? (sl === 'ablageort' ? ablageort : sl === 'rolle' ? dms.rolle.id : sl === 'post' ? dms.post.id : null)
-          : pakete.find((x) => x.id === pk)?.typen[sl];
-        if (id) ids.add(id);
-      }
-      return ids;
-    };
+    const aufloesen = await this.typverweise(p?.id ?? '', pakete, typen);
+    // „Pakete“ am Mappentyp (#686): Der Admin kann einem Paket einzelne Mappentypen verwehren – dann sieht es sie gar nicht.
+    const verwehrt = await this.paketVerwehrt();
     const lesbar = aufloesen(r.lesen);
-    const sichtbar = typen.filter((t) => lesbar.has(t.id));
+    const sichtbar = typen.filter((t) => lesbar.has(t.id) && !(p && verwehrt[t.id]?.includes(p.id)));
     // Regeln für die Rolle „Paket“ (#673) schränken die bestätigten Rechte weiter ein; ohne solche Regeln wie bisher.
     const mitRegeln = sichtbar.filter((t) => hatKontoRegeln(t, rolleId)).map((t) => kontoRegelwerk(t, rolleId));
     const lesen = mitRegeln.length ? lesefilter(sichtbar.map((t) => mitRegeln.find((x) => x.id === t.id) ?? kontoRegelwerk(t, rolleId)), wer, a)! : { offen: sichtbar.map((t) => t.id), je: [] };
@@ -3059,6 +3050,87 @@ export class Dienst {
       lesen,
       paket: { id: p?.id ?? '', schreiben: aufloesen(r.schreiben), dokumente: r.dokumente, schnittstellen: r.schnittstellen ?? [], ...(mitRegeln.length ? { regeln: new Map(mitRegeln.map((t) => [t.id, t])) } : {}) },
     };
+  }
+
+  /**
+   * Verweise auf Mappentypen aus einem Paket-Manifest (`code.rechte`, `code.mappentypen`) → Typ-Ids: eigener Schlüssel
+   * ohne Präfix, `paket:typ`, `dms:ablageort|rolle|post` oder `*` (alle außer Benutzer). Unbekanntes fällt still weg.
+   */
+  private async typverweise(paketId: string, pakete: InstalliertesPaket[], typen: Mappentyp[]): Promise<(liste: string[]) => Set<string>> {
+    const dms = await this.sichereSystem();
+    const ablageort = await this.ablageortId();
+    return (liste) => {
+      const ids = new Set<string>();
+      for (const vw of liste) {
+        if (vw === ALLE_TYPEN) { for (const t of typen) if (t.system !== 'benutzer') ids.add(t.id); continue; }
+        const [pk, sl] = vw.includes(':') ? vw.split(':') : [paketId, vw];
+        // dms:benutzer lehnt liesCode ab; hier trotzdem nie auflösen (Pakete sehen keine Benutzer). dms:post seit #435.
+        const id = pk === 'dms' ? (sl === 'ablageort' ? ablageort : sl === 'rolle' ? dms.rolle.id : sl === 'post' ? dms.post.id : null)
+          : pakete.find((x) => x.id === pk)?.typen[sl];
+        if (id) ids.add(id);
+      }
+      return ids;
+    };
+  }
+
+  /* ---------- Pakete am Mappentyp (#686) ---------- */
+
+  /**
+   * Darf der Benutzer dieses Pakets die Mappe (bzw. Mappen dieses Typs, wenn es sie nicht mehr gibt) lesen? null = ja,
+   * sonst der Grund fürs Protokoll. Wird je Zustellung neu gebildet – Rechteänderungen wirken sofort.
+   */
+  private async paketSiehtNicht(p: InstalliertesPaket, typId: string, mappeId: string | null): Promise<string | null> {
+    const konto = (await this.konten?.dienstkonten?.())?.find((b) => b.paketId === p.id);
+    const z = await this.zugriff({ id: konto?.id ?? `paket:${p.id}`, rolle: 'mitglied', art: 'dienst', paketId: p.id });
+    if (!z.typen.has(typId)) return (await this.paketVerwehrt())[typId]?.includes(p.id) ? 'Mappentyp für dieses Paket verwehrt' : 'kein Leserecht am Mappentyp';
+    const m = mappeId ? await this.repo.holeMappe(mappeId) : null;
+    if (m && !(await this.rechteAn(z, m)).R) return 'kein Leserecht an dieser Mappe (Regeln für die Rolle „Paket“)';
+    return null;
+  }
+
+  /** Je Mappentyp-Id die Pakete, denen der Admin diesen Typ verwehrt hat (Einstellung, Teil der Sicherung). */
+  async paketVerwehrt(): Promise<Record<string, string[]>> {
+    const v = await this.einstellungen?.lies('paket_verwehrt');
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => Array.isArray(x)).map(([k, x]) => [k, (x as unknown[]).map(String)]));
+  }
+
+  /**
+   * Pakete mit Code, die Mappen dieses Typs lesen dürften (bestätigte Rechte), samt ob sie Ereignisse dazu abonniert
+   * haben und ob der Admin ihnen den Typ verwehrt hat – für den Abschnitt „Pakete“ im Mappentyp-Editor.
+   */
+  async paketeAmTyp(typId: string): Promise<Array<{ id: string; name: string; ereignisse: boolean; schreiben: boolean; verwehrt: boolean }>> {
+    const typ = await this.repo.holeTyp(typId);
+    if (!typ) throw new Fachfehler(404, 'Diesen Mappentyp gibt es nicht.');
+    if (typ.system === 'benutzer') return [];
+    const [pakete, typen, verwehrt] = [await this.repo.listePakete(), await this.repo.listeTypen(), await this.paketVerwehrt()];
+    const erg: Array<{ id: string; name: string; ereignisse: boolean; schreiben: boolean; verwehrt: boolean }> = [];
+    for (const p of pakete) {
+      const l = p.laeufer;
+      if (!l) continue;
+      const auf = await this.typverweise(p.id, pakete, typen);
+      if (!auf(l.rechte.lesen).has(typId)) continue;
+      erg.push({
+        id: p.id, name: p.name, schreiben: auf(l.rechte.schreiben).has(typId), verwehrt: !!verwehrt[typId]?.includes(p.id),
+        ereignisse: l.ereignisse.some((e) => MAPPEN_EREIGNISSE.includes(e)) && auf(l.mappentypen ?? []).has(typId),
+      });
+    }
+    return erg.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  }
+
+  /** Einem Paket einen Mappentyp verwehren bzw. wieder erlauben; wirkt sofort (Lesen, Schreiben, Ereignisse). */
+  async setzePaketVerwehrt(typId: string, paketId: string, verwehrt: boolean, von: string | null): Promise<void> {
+    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    const am = await this.paketeAmTyp(typId);
+    const p = am.find((x) => x.id === paketId);
+    if (!p) throw new Fachfehler(404, 'Dieses Paket darf Mappen dieses Typs ohnehin nicht lesen.');
+    const alle = await this.paketVerwehrt();
+    const liste = new Set(alle[typId] ?? []);
+    if (verwehrt) liste.add(paketId); else liste.delete(paketId);
+    if (liste.size) alle[typId] = [...liste].sort(); else delete alle[typId];
+    await this.einstellungen.schreibe('paket_verwehrt', Object.keys(alle).length ? alle : null);
+    const typ = await this.repo.holeTyp(typId);
+    protokoll.modul('werkbank').info(verwehrt ? 'Paket den Mappentyp verwehrt' : 'Paket den Mappentyp wieder erlaubt', { paket: paketId, typ: typ?.name ?? typId, von });
   }
 
   /** Wirksame Rechte an einer Mappe (Administrator: alles im Rahmen der Haken am Mappentyp). */
@@ -3733,7 +3805,8 @@ export class Dienst {
    * Abnehmer „pakete“ (#670, #724): jedes Ereignis des Katalogs an die Pakete, die es abonniert haben – derselbe
    * Ausgangskorb wie für Automatisierungen und Webhooks, die Zustellung samt Wiederholung macht der Paket-Läufer.
    * - Ein Paket bekommt seine eigenen Änderungen nicht gemeldet (sonst Schleifen).
-   * - Mappen-Ereignisse nur zu Typen unter `code.mappentypen`; Ereignisse aus Demo-Daten und Beispielen nur, wenn
+   * - Mappen-Ereignisse nur zu Typen unter `code.mappentypen` (eigene, fremde, „*“) und nur, wenn der Paket-Benutzer
+   *   die Mappe gerade lesen darf (#686; sonst still nicht, Grund im Protokoll); Ereignisse aus Demo-Daten und Beispielen nur, wenn
    *   sie Dateien betreffen (Texterkennung, Vektoren), nie Mappen-Ereignisse.
    * - `volltext.fertig` ohne Text nur an Pakete, die das kennen; `sicherung.fertig` nur mit `dms:sicherung-lesen`.
    * - Veraltete Namen (Übergang): wer `texterkennung.fertig` abonniert hat, bekommt den Volltext der eingebauten
@@ -3746,11 +3819,19 @@ export class Dienst {
     if (e.ausloeser.still && k.mappentyp) return;
     const alt = Object.entries(VERALTETE_EREIGNISSE).filter(([, neu]) => neu === e.art).map(([name]) => name as EreignisArt);
     const zustellungen: Array<{ paket: InstalliertesPaket; art: EreignisArt }> = [];
-    for (const p of await this.grundRepo.listePakete()) {
+    const pakete = await this.grundRepo.listePakete();
+    const typen = k.mappentyp ? await this.grundRepo.listeTypen() : [];
+    for (const p of pakete) {
       const l = p.laeufer;
       if (!l || (e.ausloeser.art === 'paket' && e.ausloeser.id === p.id)) continue;
       if (e.art === 'sicherung.fertig' && !hatSchnittstelle(l, 'dms:sicherung-lesen')) continue;
-      if (k.mappentyp && !(l.mappentypen ?? []).some((x) => p.typen[x] === e.daten.typ)) continue;
+      if (k.mappentyp) {
+        const abonniert = l.ereignisse.includes(e.art as EreignisArt);
+        if (!abonniert || typeof e.daten.typ !== 'string' || !(await this.typverweise(p.id, pakete, typen))(l.mappentypen ?? []).has(e.daten.typ)) continue;
+        // #686: nur, was der Paket-Benutzer gerade lesen darf (bestätigte Rechte, „Pakete“ am Mappentyp, Regeln für die Rolle „Paket“).
+        const grund = await this.paketSiehtNicht(p, e.daten.typ, typeof e.daten.mappe === 'string' ? e.daten.mappe : null);
+        if (grund) { protokoll.modul('werkbank').info('Ereignis nicht an Paket zugestellt', { paket: p.id, ereignis: e.art, mappe: e.daten.mappe ?? null, grund }); continue; }
+      }
       const ohneText = e.art === 'volltext.fertig' && e.daten.text === false && !kenntVolltextOhneText(p);
       if (l.ereignisse.includes(e.art as EreignisArt) && !ohneText) zustellungen.push({ paket: p, art: e.art as EreignisArt });
       for (const a of alt) if (l.ereignisse.includes(a) && e.daten.quelle === 'kern') zustellungen.push({ paket: p, art: a });
