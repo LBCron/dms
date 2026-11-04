@@ -355,6 +355,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01592" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.159.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.159.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01591" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -367,7 +395,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -2547,6 +2575,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01592" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.159.2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.159.2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#behoben" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Behoben
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01591" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2559,7 +2615,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#behoben" class="md-nav__link">
+  <a href="#behoben_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Behoben
@@ -2693,8 +2749,13 @@
 <p class="admonition-title">Entwicklungsstand</p>
 <p>Dieses Handbuch beschreibt den Stand von <code>main</code> – manches davon ist noch in keinem Release.</p>
 </div>
-<h2 id="01591">0.159.1<a class="headerlink" href="#01591" title="Permanent link">&para;</a></h2>
+<h2 id="01592">0.159.2<a class="headerlink" href="#01592" title="Permanent link">&para;</a></h2>
 <h3 id="behoben">Behoben<a class="headerlink" href="#behoben" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Paket-Vorschau ohne rätselhaften Satz</strong> (#643): „Das wird angelegt. Gibt es einen Namen schon, wähle einen anderen.“ stand auch bei Paketen, die gar nichts anlegen (z. B. <em>Texterkennung</em>, <em>Bildformate</em>, Zusatzsprachen). Jetzt erscheint „Das wird angelegt:“ nur, wenn das Paket Mappentypen, Ansichten oder Beispiele mitbringt. Bei Paketen nur mit Code steht stattdessen ihre Beschreibung. Einen Namenskonflikt zeigt Ablago wie bisher direkt am betroffenen Namen.</li>
+</ul>
+<h2 id="01591">0.159.1<a class="headerlink" href="#01591" title="Permanent link">&para;</a></h2>
+<h3 id="behoben_1">Behoben<a class="headerlink" href="#behoben_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Große Pakete lassen sich installieren</strong> (#644): <em>KI lokal – Ähnlichkeit</em> (rund 25 MB) scheiterte mit „Die Datei ist zu groß“, weil Ablago Paket-Archive nur bis 10 MB lud, während <code>code/</code> bis 32 MB durfte. Jetzt gilt <strong>eine</strong> Grenze von <strong>128 MB</strong> – beim Herunterladen aus dem Katalog, beim Hochladen, in der Sammeldatei, beim Paket erstellen und für alle Dateien unter <code>code/</code>. Damit passen auch Modelle wie die des geplanten Pakets „Übersetzen“.</li>
 <li>Ist ein Paket größer, sagt Ablago, wie groß es ist und wie viel erlaubt ist („Das Paket ist 200 MB groß, höchstens 128 MB sind erlaubt.“), und lädt es gar nicht erst herunter.</li>
