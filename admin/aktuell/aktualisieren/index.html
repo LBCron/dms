@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.159/aktualisieren/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.160/aktualisieren/">
       
       
         <link rel="prev" href="../installation/">
@@ -502,6 +502,17 @@
   
     <nav class="md-nav" aria-label="Aktualisieren">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#image-tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Welches Image-Tag?
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#texterkennung-als-paket-ab-0134" class="md-nav__link">
@@ -2550,6 +2561,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#image-tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Welches Image-Tag?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#texterkennung-als-paket-ab-0134" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2687,14 +2709,44 @@
 </ol>
 <p>Während des Neustarts ist Ablago kurz nicht erreichbar. Offene Seiten zeigen dann oben „Ablago ist gerade nicht erreichbar“ und fragen mit wachsendem Abstand (2 bis 30 Sekunden) nach, bis es wieder antwortet. Eingaben bleiben stehen; gespeichert wird nichts automatisch. Läuft danach eine andere Version, bittet die Leiste darum, die Seite neu zu laden – sonst arbeitet der Browser mit der alten Oberfläche gegen den neuen Server weiter. Erkannt wird das an <code>/api/gesundheit</code>, das neben <code>ok</code> eine Kennung des laufenden Stands liefert (ein Hash aus Version, Commit und Build-Zeit, damit ohne Anmeldung keine Version sichtbar ist).</p>
 <p>Welche Version läuft und ob es neuere gibt, zeigt <strong>Werkbank → Technik</strong> (siehe <a href="../fehlersuche/#technik">Fehlersuche</a>).</p>
-<div class="admonition tip">
-<p class="admonition-title">Auf einer festen Version bleiben</p>
-<p>Statt <code>ghcr.io/motom001/dms:main</code> kannst du in der Compose-Datei eine Versionsnummer angeben, z. B. <code>ghcr.io/motom001/dms:0.8.0</code> – bzw. <code>ghcr.io/motom001/dms-komplett:0.42.0</code>. Dann ändert sich nichts, bis du die Nummer selbst erhöhst. Bei zwei Containern bleibt <code>postgres:17</code> trotzdem für Sicherheits-Updates der Reihe 17 offen.</p>
+<h3 id="image-tag">Welches Image-Tag?<a class="headerlink" href="#image-tag" title="Permanent link">&para;</a></h3>
+<p>Die Vorlagen nutzen <strong><code>:stabil</code></strong>. So bekommst du beim Aktualisieren nur Versionen mit Nummer und Release-Notes – nichts, was nirgends beschrieben ist.</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Was du bekommst</th>
+<th>Für wen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ghcr.io/motom001/dms:stabil</code> (bzw. <code>dms-komplett:stabil</code>)</td>
+<td>die neueste geprüfte Version mit Nummer und Release-Notes</td>
+<td><strong>Empfehlung</strong> für alle</td>
+</tr>
+<tr>
+<td><code>ghcr.io/motom001/dms:0.158.0</code> (eine feste Nummer)</td>
+<td>genau diese Version, bis du die Nummer selbst erhöhst</td>
+<td>wer jedes Update selbst anstoßen möchte</td>
+</tr>
+<tr>
+<td><code>ghcr.io/motom001/dms:main</code></td>
+<td>jeden Stand auf <code>main</code>, auch Unveröffentlichtes ohne Nummer und Release-Notes</td>
+<td>nur zum Testen</td>
+</tr>
+</tbody>
+</table>
+<p><code>:stabil</code> wandert automatisch weiter, wenn eine neue Version veröffentlicht ist und alle Prüfungen bestanden hat: Release mit Nummer und Release-Notes, beide Images für amd64 und arm64 gebaut und mit Herkunftsnachweis, und ein <strong>Update-Test</strong> vom bisherigen <code>:stabil</code> auf die neue Version (mit Probedaten, allen Migrationen und einer Probe-Wiederherstellung der alten Sicherung). Fehlerbehebungen und neue Funktionen wandern gleich. Der Maintainer kann eine Version zurückhalten; dann bleibt <code>:stabil</code> auf der vorigen.</p>
+<p>Bei zwei Containern bleibt <code>postgres:17</code> für Sicherheits-Updates der Reihe 17 offen – unabhängig vom Tag von Ablago.</p>
+<div class="admonition note">
+<p class="admonition-title">Wenn eine stabile Version einen schweren Fehler hat</p>
+<p>Der Maintainer setzt <code>:stabil</code> dann auf die vorige Version zurück (Workflow <em>:stabil zurücksetzen</em>). Beim nächsten Aktualisieren bekommst du sie wieder. Was passiert ist, steht in den <a href="https://github.com/motom001/dms/releases">Releases</a>. Hast du schon aktualisiert und läuft danach etwas nicht, hilft die Sicherung von vor dem Update (siehe <a href="#sichern">Sichern</a>); eine feste ältere Nummer im Tag hält Ablago bis zur Korrektur dort.</p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Woher kommt das Image?</p>
 <p>Jedes Image von Ablago trägt einen <strong>Herkunftsnachweis</strong>: eine Signatur, die belegt, dass es von GitHub aus genau diesem Repository gebaut wurde, und eine <strong>Stückliste</strong> (SBOM) aller enthaltenen Pakete. Beides ist öffentlich und lässt sich mit der GitHub-Kommandozeile prüfen:</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:main<span class="w"> </span>-R<span class="w"> </span>motom001/dms
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:stabil<span class="w"> </span>-R<span class="w"> </span>motom001/dms
 </code></pre></div>
 <p>Vor jeder Veröffentlichung prüft die CI die Images außerdem auf bekannte Sicherheitslücken. Mehr dazu in der <a href="https://github.com/motom001/dms/blob/main/SECURITY.md">Sicherheitsrichtlinie</a>.</p>
 </div>
@@ -2732,9 +2784,10 @@
 <p>Jede Version von Ablago hat eine Nummer wie <code>0.8.1</code>. Sobald auf <code>main</code> eine neue Nummer steht und alle Prüfungen bestanden sind, entsteht automatisch:</p>
 <ul>
 <li>ein <strong>Release</strong> auf GitHub mit dem Changelog – <a href="https://github.com/motom001/dms/releases">Releases</a>,</li>
-<li>ein <strong>Image</strong> mit dieser Nummer, z. B. <code>ghcr.io/motom001/dms:0.8.1</code>.</li>
+<li>ein <strong>Image</strong> mit dieser Nummer, z. B. <code>ghcr.io/motom001/dms:0.8.1</code>,</li>
+<li>danach, wenn der Update-Test bestanden ist, das Tag <strong><code>:stabil</code></strong> auf dieser Version.</li>
 </ul>
-<p>Änderungen ohne neue Nummer (kleine Korrekturen, Doku) landen nur im Image <code>main</code>. Mehrere Wünsche lassen sich so zu einem Release bündeln: Die Nummer wird erst mit dem letzten erhöht.</p>
+<p>Änderungen ohne neue Nummer (kleine Korrekturen, Doku) landen nur im Image <code>main</code>, nie in <code>:stabil</code>. Mehrere Wünsche lassen sich so zu einem Release bündeln: Die Nummer wird erst mit dem letzten erhöht.</p>
 <h2 id="sichern">Sichern<a class="headerlink" href="#sichern" title="Permanent link">&para;</a></h2>
 <p>Am einfachsten sichert Ablago sich selbst: <strong>Werkbank → <a href="../sicherung/">Sicherung</a></strong> – Datenbank und Dateien zum selben Zeitpunkt, verschlüsselt, auf Wunsch nach Zeitplan. Der Rest dieses Abschnitts beschreibt den Weg von Hand, z. B. für eine zusätzliche Kopie.</p>
 <p>Die Sicherung ist ein eigenes, verschlüsseltes Format – zum Wiederherstellen brauchst du Ablago. Eine Kopie, die du <strong>auch ohne Ablago</strong> lesen kannst, ist der <a href="../export/">Vollexport</a> in offenen Formaten (CSV, JSON, Dateien in Ordnern).</p>

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/installieren/v0.159/raspberry-pi/">
+        <link rel="canonical" href="https://help.ablago.app/installieren/v0.160/raspberry-pi/">
       
       
         <link rel="prev" href="../linux/">
@@ -2109,7 +2109,7 @@ docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </sp
 <span class="w">  </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/dms-test/geheim:/data/geheim"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/dms-test/sicherung:/data/sicherung"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/dms-test/postgres:/data/postgres"</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>ghcr.io/motom001/dms-komplett:main
+<span class="w">  </span>ghcr.io/motom001/dms-komplett:stabil
 <span class="k">until</span><span class="w"> </span>curl<span class="w"> </span>-fsS<span class="w"> </span>http://127.0.0.1:8099/api/konto/status<span class="w"> </span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">5</span><span class="p">;</span><span class="w"> </span><span class="k">done</span><span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span>bereit
 </code></pre></div>
 <p>Die Test-Installation ist <a href="../komplett/">dms-komplett</a> (Ablago und Datenbank in einem Container) unter Port 8099. Erscheint <code>bereit</code>, geht es weiter.</p>

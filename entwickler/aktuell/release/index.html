@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.159/release/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.160/release/">
       
       
         <link rel="prev" href="../beitrag/">
@@ -975,13 +975,16 @@
 <li>Nach dem Merge baut <strong>image.yml</strong> (<em>Prüfen und Image bauen</em>) <strong>zwei Images</strong> nativ für amd64 und arm64 und pusht sie: <code>ghcr.io/motom001/dms:&lt;version&gt;</code> und <code>ghcr.io/motom001/dms-komplett:&lt;version&gt;</code>.</li>
 <li>Danach ruft image.yml <strong>release.yml</strong> auf. Der Workflow legt das Tag <code>v&lt;version&gt;</code> und das GitHub-Release an. Den Text übernimmt er aus <code>docs/releases/v&lt;version&gt;.md</code>; fehlt die Datei, nimmt er die Commit-Überschriften seit dem vorigen Tag.</li>
 <li><strong>handbuch.yml</strong> baut alle Handbücher für diese Version (<code>v&lt;Haupt&gt;.&lt;Neben&gt;</code>) und legt sie auf dem Branch <code>gh-pages</code> ab. <code>aktuell</code> zeigt dann auf die neue Version, <code>entwicklung</code> folgt weiter <code>main</code>. Die Seite <em>Neu in dieser Version</em> entsteht aus den Release-Notizen.</li>
+<li>Danach prüft der Job <strong>stabil</strong> in image.yml, ob <code>:stabil</code> weiterwandert (#714): neue Nummer X.Y.Z (keine Vorabversion), Release-Notizen vorhanden, kein Label <code>nicht-stabil</code> am Pull Request, Update-Test vom bisherigen <code>:stabil</code> grün (<code>.github/werkzeuge/update-test.sh</code>: alter Stand einrichten, Dokument ablegen, sichern → neuer Stand mit denselben Ordnern → Daten da, Probe-Wiederherstellung gelingt). Dann zeigen <code>dms:stabil</code> und <code>dms-komplett:stabil</code> auf die neue Version. Die Regeln stehen in <code>.github/werkzeuge/stabil-pruefen.sh</code> und werden in jedem Pull Request getestet; den Update-Test vom letzten stabilen Stand auf den Stand des Pull Requests macht <code>image-probe</code> ebenfalls.</li>
 <li><strong><a href="https://github.com/motom001/dms-appstore">motom001/dms-appstore</a></strong> übernimmt die neue Version am nächsten Morgen, mit Images per Digest, für Umbrel, ZimaOS und CasaOS. Von Hand geht es sofort über den Workflow <em>Store aktualisieren</em>.</li>
 </ol>
 <h2 id="versionsnummern">Versionsnummern<a class="headerlink" href="#versionsnummern" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Neben-Version</strong> (<code>0.40.0</code>) für neue Funktionen; das Handbuch bekommt eine eigene Version.</li>
 <li><strong>Patch</strong> (<code>0.39.1</code>) für Korrekturen; das Handbuch der Neben-Version wird überschrieben.</li>
-<li>Ohne neue Nummer: nur das Image <code>main</code> und das Handbuch <code>entwicklung</code> ändern sich.</li>
+<li>Ohne neue Nummer: nur das Image <code>main</code> und das Handbuch <code>entwicklung</code> ändern sich, <code>:stabil</code> nicht.</li>
+<li><strong>Zurückhalten:</strong> Label <code>nicht-stabil</code> am Pull Request – Release und Image mit Nummer entstehen, <code>:stabil</code> bleibt auf der vorigen Version.</li>
+<li><strong>Zurückrollen:</strong> Actions → <em>:stabil zurücksetzen</em> → Version eingeben (nur veröffentlichte Releases, nur mit Schreibrecht am Repository).</li>
 </ul>
 <h3 id="workflows-von-hand-starten">Workflows von Hand starten<a class="headerlink" href="#workflows-von-hand-starten" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1017,8 +1020,8 @@
 </li>
 <li>
 <p><strong>Herkunftsnachweis und Stückliste (SBOM):</strong> Jedes veröffentlichte Image bekommt einen signierten Nachweis, aus welchem Commit und welchem Workflow es stammt, und eine Stückliste im SPDX-Format. Beides liegt neben dem Image in der Registry. Prüfen lässt sich das mit:</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:main<span class="w"> </span>-R<span class="w"> </span>motom001/dms
-gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:main<span class="w"> </span>-R<span class="w"> </span>motom001/dms<span class="w"> </span>--predicate-type<span class="w"> </span>https://spdx.dev/Document/v2.3
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:stabil<span class="w"> </span>-R<span class="w"> </span>motom001/dms
+gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/motom001/dms:stabil<span class="w"> </span>-R<span class="w"> </span>motom001/dms<span class="w"> </span>--predicate-type<span class="w"> </span>https://spdx.dev/Document/v2.3
 </code></pre></div>
 </li>
 </ul>
