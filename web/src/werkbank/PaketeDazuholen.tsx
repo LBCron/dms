@@ -20,8 +20,12 @@ export const VORAUSWAHL = ['texterkennung'];
  * Auswahl aus dem offiziellen Katalog und Installation, z. B. im Einrichtungsassistenten (#460).
  * Ist der Katalog nicht erreichbar: Sammeldatei hochladen (#461) oder überspringen.
  */
-export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
+export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zurueck }: {
   weiter(e: AblaufErgebnis): void; ueberspringen(): void;
+  /** Im Assistenten erneut geöffnet (#647): Installiertes oben zeigen, „Überspringen“ heißt „Weiter“. */
+  erneut?: boolean;
+  /** „Zurück“ im Assistenten (#647). */
+  zurueck?(): void;
   /** Nach der Installation (z. B. Daten neu laden). */
   geaendert?(): void;
 }) {
@@ -70,12 +74,18 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert }: {
     </>
   );
   if (!katalog || !stand) return <p className="leise">Frage den offiziellen Paketkatalog ab …</p>;
+  const zurueckKnopf = zurueck ? <button type="button" className="knopf" onClick={zurueck}><Symbol name="pfeil-links" /> Zurück</button> : null;
+  const schonDa = erneut && stand.installiert.length > 0
+    ? <div className="hinweis gut klein" role="status"><p><strong>Schon installiert:</strong> {stand.installiert.map((p) => p.name).join(', ')}. Wähle weitere Pakete oder versuch ein gescheitertes erneut.</p></div> : null;
   // Vorauswahl: Texterkennung, wenn sie hier passt und noch fehlt; empfohlene oben, sonst wie im Katalog nach Namen.
   const sortiert: Katalog = { ...katalog, pakete: [...katalog.pakete].sort((a, b) => Number(VORAUSWAHL.includes(b.id)) - Number(VORAUSWAHL.includes(a.id))) };
   return (
-    <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={VORAUSWAHL} empfohlen={VORAUSWAHL}
-      aktionen={<button type="button" className="knopf" onClick={ueberspringen}>Überspringen</button>}
-      geaendert={geaendert} fertig={weiter} />
+    <>
+      {schonDa}
+      <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={erneut ? [] : VORAUSWAHL} empfohlen={VORAUSWAHL}
+        aktionen={<>{zurueckKnopf}<button type="button" className="knopf" onClick={ueberspringen}>{erneut ? 'Weiter ohne weitere Pakete' : 'Überspringen'}</button></>}
+        geaendert={geaendert} fertig={weiter} />
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Symbol } from './Symbol';
 import { BUNDESLAENDER } from '../../shared/src/feiertage';
 import { handbuchUrl, HILFE, hilfeOnlineUrl, INSTALLIEREN_URL, type Hilfeort } from '../../shared/src/hilfe';
@@ -32,15 +32,50 @@ async function warteBisGestartet(abbrechen: () => boolean = () => false) {
   }
 }
 
+/**
+ * Zurück zu früheren Schritten (#647): Nach dem Anmelden lassen sich „Erster Benutzer“, „Pakete“ und „Optionales“
+ * erneut öffnen. Was sich nicht rückgängig machen lässt, bleibt gesperrt und sagt beim Anklicken, wo man es später
+ * ändert.
+ */
+interface SchrittWahl {
+  /** Bis zu welchem Schritt (Index) es schon ging – erledigte Schritte davor sind anklickbar. */
+  weitester: number;
+  /** Diese Schritte lassen sich gefahrlos erneut öffnen. */
+  offen: number[];
+  waehle(i: number): void;
+}
+const SchrittWahlKontext = createContext<SchrittWahl | null>(null);
+/** Warum ein erledigter Schritt gesperrt ist – und wo man es später ändert. */
+const GESPERRT: Record<number, string> = {
+  0: 'Der Einrichtungscode gilt nur für den Anfang – er ist schon verbraucht.',
+  1: 'Die Datenbank ist verbunden. Ändern lässt sich die Verbindung nur in der Konfiguration des Containers (Administratorhandbuch → Installation).',
+  2: 'Ablago ist schon neu eingerichtet. Eine Sicherung spielst du später unter Werkbank → Sicherung ein.',
+  3: 'Der Name ist festgelegt und steht schon in den Daten von Ablago.',
+  4: 'Der Administrator ist angelegt. Name, Adresse und Passwort änderst du unter Mein Konto, weitere Administratoren unter Werkbank → Benutzer und Sicherheit.',
+  6: 'Der Schlüssel ist erzeugt – ein zweiter würde alles Verschlüsselte unlesbar machen. Das Notfallblatt findest du jederzeit unter Werkbank → Sicherung.',
+};
+
 function Fortschritt({ aktiv }: { aktiv: number }) {
+  const wahl = useContext(SchrittWahlKontext);
+  const [grund, setGrund] = useState<string | null>(null);
+  const erledigt = (i: number) => i < Math.max(aktiv, wahl?.weitester ?? 0) && i !== aktiv;
   return (
-    <ol className="assistent-schritte" aria-label={`Schritt ${aktiv + 1} von ${SCHRITTE.length}: ${SCHRITTE[aktiv]}`}>
-      {SCHRITTE.map((s, i) => (
-        <li key={s} className={i < aktiv ? 'erledigt' : i === aktiv ? 'aktiv' : ''} aria-current={i === aktiv ? 'step' : undefined}>
-          <span className="nr" aria-hidden="true">{i < aktiv ? <Symbol name="haken" /> : i + 1}</span><span className="name">{s}</span>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="assistent-schritte" aria-label={`Schritt ${aktiv + 1} von ${SCHRITTE.length}: ${SCHRITTE[aktiv]}`}>
+        {SCHRITTE.map((s, i) => {
+          const inhalt = <><span className="nr" aria-hidden="true">{erledigt(i) ? <Symbol name="haken" /> : i + 1}</span><span className="name">{s}</span></>;
+          const klick = wahl && erledigt(i) ? () => { if (wahl.offen.includes(i)) { setGrund(null); wahl.waehle(i); } else setGrund(GESPERRT[i] ?? null); } : null;
+          return (
+            <li key={s} className={erledigt(i) ? 'erledigt' : i === aktiv ? 'aktiv' : ''} aria-current={i === aktiv ? 'step' : undefined}>
+              {klick
+                ? <button type="button" className="textknopf" onClick={klick} title={wahl!.offen.includes(i) ? `Zurück zu „${s}“` : `„${s}“ ist erledigt – warum gesperrt?`}>{inhalt}</button>
+                : inhalt}
+            </li>
+          );
+        })}
+      </ol>
+      {grund && <div className="hinweis info klein" role="status"><p><Symbol name="schloss" /> {grund}</p></div>}
+    </>
   );
 }
 
@@ -256,30 +291,50 @@ export function AssistentAngemeldet() {
   const { aktualisieren } = useKonto();
   const [stand, setStand] = useState<EinrichtungStand | null>(null);
   const [fehler, setFehler] = useState<string>();
+  /** Erneut geöffneter früherer Schritt (#647); null: der nächste offene. */
+  const [zurueck, setZurueck] = useState<EinrichtungSchritt | null>(null);
   const laden = useCallback(async () => { try { setStand(await api.einrichtungStand()); } catch (e) { setFehler((e as Error).message); } }, []);
   useEffect(() => { void laden(); }, [laden]);
   const merke = async (s: EinrichtungSchritt, uebersprungen = false) => {
+    // Erneut geöffnet und wieder verlassen: Ein erledigter Schritt bleibt erledigt, statt als übersprungen zu gelten.
+    if (zurueck === s && uebersprungen && stand?.erledigt.includes(s)) { setZurueck(null); return; }
     const neu = await api.einrichtungSchritt(s, uebersprungen);
-    setStand(neu);
+    setStand(neu); setZurueck(null);
     if (!neu.offen) { geheZu('/werkbank', true); await aktualisieren(); }
   };
   if (fehler) return <Rahmen aktiv={5} titel="Einrichtung"><p className="fehlertext">{fehler}</p></Rahmen>;
   if (!stand) return <p className="leise mittig">Lade …</p>;
   const fertig = new Set([...stand.erledigt, ...stand.uebersprungen]);
-  const schritt = (['benutzer', 'schluessel', 'pakete', 'optional', 'fertig'] as const).find((s) => !fertig.has(s)) ?? 'fertig';
-  if (schritt === 'benutzer') return <BenutzerSchritt weiter={(u) => merke('benutzer', u)} />;
-  if (schritt === 'schluessel') return <SchluesselSchritt weiter={(u) => merke('schluessel', u)} />;
-  if (schritt === 'pakete') return <PaketeSchritt weiter={(u) => merke('pakete', u)} />;
-  if (schritt === 'optional') return <OptionalSchritt weiter={(u) => merke('optional', u)} />;
-  return <FertigSchritt stand={stand} weiter={() => merke('fertig')} />;
+  const naechster = (['benutzer', 'schluessel', 'pakete', 'optional', 'fertig'] as const).find((s) => !fertig.has(s)) ?? 'fertig';
+  const schritt = zurueck ?? naechster;
+  const OFFEN: EinrichtungSchritt[] = ['benutzer', 'pakete', 'optional'];
+  const wahl: SchrittWahl = {
+    weitester: NACH[naechster],
+    offen: OFFEN.filter((s) => fertig.has(s)).map((s) => NACH[s]),
+    waehle: (i) => { const s = (Object.keys(NACH) as EinrichtungSchritt[]).find((x) => NACH[x] === i); if (s) setZurueck(s === naechster ? null : s); },
+  };
+  const zurueckKnopf = (s: EinrichtungSchritt) => { const frueher = OFFEN.filter((x) => NACH[x] < NACH[s] && fertig.has(x)).at(-1); return frueher ? () => setZurueck(frueher) : undefined; };
+  let inhalt: ReactNode;
+  if (schritt === 'benutzer') inhalt = <BenutzerSchritt weiter={(u) => merke('benutzer', u)} />;
+  else if (schritt === 'schluessel') inhalt = <SchluesselSchritt weiter={(u) => merke('schluessel', u)} />;
+  else if (schritt === 'pakete') inhalt = <PaketeSchritt weiter={(u) => merke('pakete', u)} zurueck={zurueckKnopf('pakete')} erneut={zurueck === 'pakete'} />;
+  else if (schritt === 'optional') inhalt = <OptionalSchritt weiter={(u) => merke('optional', u)} zurueck={zurueckKnopf('optional')} />;
+  else inhalt = <FertigSchritt stand={stand} weiter={() => merke('fertig')} zurueck={zurueckKnopf('fertig')} />;
+  return <SchrittWahlKontext.Provider value={wahl}>{inhalt}</SchrittWahlKontext.Provider>;
 }
 
-function Weiter({ weiter, kannWeiter, ueberspringen = true, text = 'Weiter' }: { weiter: (uebersprungen: boolean) => Promise<void>; kannWeiter: boolean; ueberspringen?: boolean; text?: string }) {
+/** „Zurück“ zum vorigen Schritt, der sich gefahrlos erneut öffnen lässt (#647). */
+function ZurueckKnopf({ zurueck }: { zurueck?: () => void }) {
+  return zurueck ? <button type="button" className="knopf" onClick={zurueck}><Symbol name="pfeil-links" /> Zurück</button> : null;
+}
+
+function Weiter({ weiter, kannWeiter, ueberspringen = true, text = 'Weiter', zurueck }: { weiter: (uebersprungen: boolean) => Promise<void>; kannWeiter: boolean; ueberspringen?: boolean; text?: string; zurueck?: () => void }) {
   const s = useSenden();
   return (
     <>
       {s.fehler && <p className="fehlertext">{s.fehler}</p>}
       <div className="knoepfe">
+        <ZurueckKnopf zurueck={zurueck} />
         {ueberspringen && <button type="button" className="knopf" disabled={s.sendet} onClick={() => void s.los(() => weiter(true))}>Überspringen</button>}
         <button type="button" className="knopf primaer" disabled={s.sendet || !kannWeiter} onClick={() => void s.los(() => weiter(false))}>{text}</button>
       </div>
@@ -353,17 +408,18 @@ function SchluesselSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Pro
  * erst abgefragt, wenn dieser Schritt erscheint. Ergänzungen wie weitere Sprachen der Texterkennung per Häkchen;
  * Rechte, Beispiele und Einstellungen aller Pakete in einem Ablauf (#405).
  */
-function PaketeSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promise<void> }) {
+function PaketeSchritt({ weiter, zurueck, erneut }: { weiter: (uebersprungen: boolean) => Promise<void>; zurueck?: () => void; erneut?: boolean }) {
   const s = useSenden();
   return (
     <Rahmen aktiv={NACH.pakete} titel="Pakete dazuholen" unter="Pakete bringen fertige Mappentypen, Ansichten und Funktionen wie die Texterkennung mit. Wähle, was du gleich brauchst – alles andere holst du später unter Werkbank → Pakete.">
-      <PaketeDazuholen ueberspringen={() => void s.los(() => weiter(true))} weiter={(e) => void s.los(() => weiter(!e.installiert.length))} />
+      {/* Erneut geöffnet (#647): Installiertes steht oben und fehlt in der Auswahl; Gescheitertes lässt sich erneut wählen. */}
+      <PaketeDazuholen erneut={erneut} zurueck={zurueck} ueberspringen={() => void s.los(() => weiter(true))} weiter={(e) => void s.los(() => weiter(!e.installiert.length))} />
       {s.fehler && <p className="fehlertext">{s.fehler}</p>}
     </Rahmen>
   );
 }
 
-function OptionalSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promise<void> }) {
+function OptionalSchritt({ weiter, zurueck }: { weiter: (uebersprungen: boolean) => Promise<void>; zurueck?: () => void }) {
   const betrieb = useBetrieb();
   const [adresse, setAdresse] = useState(location.origin);
   const [mail, setMail] = useState<MailEinstellung | null>(null);
@@ -404,12 +460,12 @@ function OptionalSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promi
         <BetriebPanel b={betrieb} />
       </details>
       {s.fehler && <p className="fehlertext">{s.fehler}</p>}
-      <Weiter weiter={weiter} kannWeiter />
+      <Weiter weiter={weiter} kannWeiter zurueck={zurueck} />
     </Rahmen>
   );
 }
 
-function FertigSchritt({ stand, weiter }: { stand: EinrichtungStand; weiter: () => Promise<void> }) {
+function FertigSchritt({ stand, weiter, zurueck }: { stand: EinrichtungStand; weiter: () => Promise<void>; zurueck?: () => void }) {
   const { version } = useKonto();
   const umgebung = `Version ${version ?? 'unbekannt'}, Browser ${navigator.userAgent}`;
   const issue = `${REPO}/issues/new?${new URLSearchParams({ title: 'Problem bei der Einrichtung', body: `**Was ist passiert?**\n\n\n**Was hätte ich erwartet?**\n\n\n---\n${umgebung}` })}`;
@@ -422,7 +478,7 @@ function FertigSchritt({ stand, weiter }: { stand: EinrichtungStand; weiter: () 
         <li><a className="verweis" href={issue} target="_blank" rel="noreferrer">Problem melden ↗</a> – als vorbereitetes GitHub-Issue mit Version und Umgebung.</li>
         <li><a className="verweis" href="https://github.com/sponsors/motom001" target="_blank" rel="noreferrer">Projekt unterstützen ↗</a> – freiwillig, Betrag frei wählbar.</li>
       </ul>
-      <Weiter weiter={() => weiter()} kannWeiter ueberspringen={false} text="Zur Werkbank" />
+      <Weiter weiter={() => weiter()} kannWeiter ueberspringen={false} text="Zur Werkbank" zurueck={zurueck} />
     </Rahmen>
   );
 }

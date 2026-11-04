@@ -13,6 +13,8 @@ Ablago läuft – **empfohlen** – als zwei Container: die Anwendung (`ghcr.io/
 
 Beim ersten Aufruf führt ein Assistent in zehn Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet. Übersprungenes lässt sich in der Werkbank nachholen; die Übersicht erinnert daran.
 
+**Zurück:** Ab „Erster Benutzer“ kannst du mit **Zurück** oder in der Schrittleiste oben zu **Erster Benutzer**, **Pakete** und **Optionales** zurückgehen und dort nachholen oder ergänzen – etwa ein weiteres Paket wählen oder ein gescheitertes erneut versuchen. Schon Installiertes steht dann oben und wird nicht doppelt installiert. Was sich nicht rückgängig machen lässt (Datenbank, Neu oder Sicherung, Name, Administrator, Schlüssel), bleibt gesperrt; ein Klick darauf sagt, wo du es später änderst.
+
 ### Einrichtungscode
 
 ![Einrichtungscode](bilder/einrichtung-code.png)
