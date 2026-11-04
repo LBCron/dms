@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://help.ablago.app/admin/v0.177/pakete/">
+        <link rel="canonical" href="https://help.ablago.app/admin/v0.178/pakete/">
       
       
         <link rel="prev" href="../automatisierungen/">
@@ -4053,7 +4053,8 @@
 <li><strong>Prüfen</strong> – Ablago prüft automatisch und sagt, was es daraus macht:<ul>
 <li><strong>Aus einem Paket:</strong> Ein Mappentyp oder eine Ansicht, die ein installiertes Paket mitgebracht hat (etwa „Organisation“ aus <em>Basis</em>), wird <strong>nicht kopiert</strong>, sondern als <strong>Abhängigkeit</strong> eingetragen, z. B. <code>basis: "&gt;=1.1.0"</code> mit der hier installierten Version. Hast du so einen Typ hier nachträglich geändert, weist Ablago darauf hin: Deine Änderungen gehören nicht zu deinem Paket – lege dafür einen eigenen Typ an.</li>
 <li><strong>Benutzer, Rolle, Ablageort:</strong> Verweise darauf werden zu <code>dms:benutzer</code>, <code>dms:rolle</code>, <code>dms:ablageort</code> – die bringt jede Ablago-Installation mit.</li>
-<li><strong>Nicht gewählt:</strong> Verweist ein gewählter Typ (Feld, Verknüpfungsregister) oder eine Ansicht auf einen <strong>eigenen</strong> Typ, den du nicht gewählt hast, steht er unter „Nicht gewählt, aber gebraucht“ mit <strong>Mit aufnehmen</strong>. So lange geht der Export nicht. Eine Ansicht, deren Elternansicht fehlt, kommt auf die oberste Ebene.</li>
+<li><strong>Nicht gewählt:</strong> Verweist ein gewählter Typ (Feld, Verknüpfungsregister) auf einen <strong>eigenen</strong> Typ, den du nicht gewählt hast, steht er unter „Nicht gewählt, aber gebraucht“ mit <strong>Mit aufnehmen</strong>. So lange geht der Export nicht. Eine Ansicht, deren Elternansicht fehlt, kommt auf die oberste Ebene.</li>
+<li><strong>Nur Ansichten</strong> darfst du ausdrücklich exportieren – etwa Ansichten für jemanden, der die Mappentypen schon hat. Zeigt eine Ansicht auf einen eigenen Typ, der nicht ins Paket kommt, sagt die Prüfung „Vorsicht“ und bietet <strong>Mit aufnehmen</strong> an; der Export geht trotzdem. Der Typ bleibt über seine Kennung in der Ansicht. Beim Empfänger ordnet Ablago ihn dem Typ mit derselben Kennung zu; gibt es ihn dort nicht, wird die Ansicht übersprungen und die Vorschau sagt es vorher – der Rest des Pakets wird installiert. Kommt der Typ aus einem Paket, steht er als Abhängigkeit in der Prüfung.</li>
 <li><strong>Was nicht ins Paket passt</strong>, nennt die Prüfung als Hinweis: weitere Trefferlisten (nur die Standard-Trefferliste kommt mit), Berechtigungen, Archivmodus, Nummernkreise an Feldern, Bedingungen auf Anzahlen, Favoriten oder Fristen und alles, was auf bestimmte Mappen oder Benutzer dieser Installation zeigt.</li>
 </ul>
 </li>
