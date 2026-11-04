@@ -355,6 +355,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01584" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.158.4
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.158.4">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01583" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -395,7 +423,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
+  <a href="#sicherheit_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -434,7 +462,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit_1" class="md-nav__link">
+  <a href="#sicherheit_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -2592,6 +2620,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#01584" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.158.4
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.158.4">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicherheit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sicherheit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01583" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2632,7 +2688,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit" class="md-nav__link">
+  <a href="#sicherheit_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -2671,7 +2727,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sicherheit_1" class="md-nav__link">
+  <a href="#sicherheit_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Sicherheit
@@ -2779,6 +2835,13 @@
 
 
 <h1 id="neu-in-version-0158">Neu in Version 0.158<a class="headerlink" href="#neu-in-version-0158" title="Permanent link">&para;</a></h1>
+<h2 id="01584">0.158.4<a class="headerlink" href="#01584" title="Permanent link">&para;</a></h2>
+<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>„Meine Daten exportieren“ enthält nur noch Eigenes</strong> (#683). Der persönliche Export übernahm einige Teile unverändert aus dem Vollexport des Administrators: das Löschprotokoll des ganzen Haushalts, alle Dokumente im Papierkorb, die gleichbedeutenden Wörter der Suche und die Automatisierungen. Jetzt stehen dort nur die Dokumente, die du selbst in den Papierkorb gelegt hast; Löschprotokoll, Synonyme und Automatisierungen gibt es nur im Vollexport. Im PDF jeder Mappe erscheinen Verweise auf Mappen, die du nicht lesen darfst, als „nicht sichtbare Mappe“ – wie in der Oberfläche.</li>
+<li><strong>Auskunft (Art. 15)</strong> ohne Löschprotokoll, Synonyme und Automatisierungen des Haushalts (#683) – sie betreffen nicht die betroffene Person.</li>
+</ul>
+<p>Wer einen persönlichen Export oder eine Auskunft aus einer früheren Version weitergegeben hat, findet die betroffenen Dateien unter <code>daten/loeschprotokoll.csv</code>, <code>daten/papierkorb-dokumente.jsonl</code>, <code>struktur/synonyme.json</code> und <code>struktur/automatisierungen.json</code>.</p>
 <h2 id="01583">0.158.3<a class="headerlink" href="#01583" title="Permanent link">&para;</a></h2>
 <h3 id="geandert">Geändert<a class="headerlink" href="#geandert" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2787,7 +2850,7 @@
 <li>Das Prüfwort, mit dem Ablago nach einer Wiederherstellung erkennt, ob der Schlüssel passt, heißt jetzt „Ablago“. Sicherungen und Datenbanken aus früheren Versionen bleiben lesbar – das alte Prüfwort wird weiter erkannt.</li>
 </ul>
 <h2 id="01582">0.158.2<a class="headerlink" href="#01582" title="Permanent link">&para;</a></h2>
-<h3 id="sicherheit">Sicherheit<a class="headerlink" href="#sicherheit" title="Permanent link">&para;</a></h3>
+<h3 id="sicherheit_1">Sicherheit<a class="headerlink" href="#sicherheit_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>PDFs werden beim Ansehen bereinigt</strong> (#639). Der Betrachter im Browser bekommt nicht mehr das Original, sondern eine Kopie ohne JavaScript, automatische Aktionen (beim Öffnen, beim Blättern), Formular-Übermittlung, Start- und Fernaktionen und ohne eingebettete Dateien. So erfährt niemand über ein präpariertes PDF, wann und wo du es öffnest. Links bleiben und öffnen sich nur auf Klick. Gilt auch für ältere Versionen, die umgewandelte Fassung und die Archivfassung.</li>
 <li>Lässt sich ein PDF nicht bereinigen (verschlüsselt oder beschädigt), zeigt Ablago statt der Anzeige einen kurzen Hinweis; herunterladen geht weiter.</li>
@@ -2798,7 +2861,7 @@
 <li>Die bereinigte Kopie entsteht im Arbeiter-Pool und wird je Prüfsumme im Speicher gehalten (höchstens 256 MB), damit das Ansehen nicht spürbar langsamer wird. Kopfzeile <code>X-DMS-Anzeige: bereinigt</code> bzw. <code>nur-herunterladen</code>.</li>
 </ul>
 <h2 id="01581">0.158.1<a class="headerlink" href="#01581" title="Permanent link">&para;</a></h2>
-<h3 id="sicherheit_1">Sicherheit<a class="headerlink" href="#sicherheit_1" title="Permanent link">&para;</a></h3>
+<h3 id="sicherheit_2">Sicherheit<a class="headerlink" href="#sicherheit_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Sicherung außer Haus: Pakete dürfen nur noch lesen</strong> (#636). Ein Paket wie „Sicherungsziel WebDAV“ bekommt jetzt einen API-Schlüssel, der nur lesen darf – zum Kopieren muss es in Ablago nichts schreiben. Seinen Stand („läuft“, „hochgeladen“, „geprüft“, „fehlgeschlagen“) meldet es in der Antwort auf das Ereignis <code>sicherung.fertig</code>; Ablago trägt ihn ein. Der Schlüssel wird beim nächsten Start des Paket-Läufers neu ausgestellt.</li>
 </ul>
@@ -2826,7 +2889,7 @@
 </ul>
 <h2 id="altere-versionen">Ältere Versionen<a class="headerlink" href="#altere-versionen" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Alle Änderungen seit 0.156.1 im Detail: <a href="https://github.com/motom001/dms/compare/v0.156.1...v0.158.3">Vergleich auf GitHub</a></li>
+<li>Alle Änderungen seit 0.156.1 im Detail: <a href="https://github.com/motom001/dms/compare/v0.156.1...v0.158.4">Vergleich auf GitHub</a></li>
 <li>Alle Versionen mit ihren Änderungen: <a href="https://github.com/motom001/dms/releases">Releases auf GitHub</a></li>
 <li>Was deine Installation seit ihrer Version verpasst hat, verlinkt <strong>Werkbank → Technik</strong>.</li>
 </ul>
