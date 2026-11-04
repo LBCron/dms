@@ -46,7 +46,7 @@ export function Farbfelder({ d }: { d: Pick<Design, 'primaer' | 'sekundaer' | 'g
   );
 }
 
-const LEER: Omit<Design, 'id' | 'logo'> = { name: '', grundlage: 'automatisch', primaer: '#1D5A8A', sekundaer: '#2B7656', css: '', schriftzug: null };
+const LEER: Omit<Design, 'id' | 'logo'> = { name: '', grundlage: 'automatisch', primaer: '#1F4E79', sekundaer: '#2B7656', css: '', schriftzug: null };
 
 export function DesignEditor({ id }: { id: string }) {
   const d = useDaten();
