@@ -124,6 +124,45 @@ export function verteilung(typen: Mappentyp[], n: number): Map<string, number> {
   return new Map(typen.map((t, i) => [t.id, Math.max(1, anzahl[i])]));
 }
 
+/** Ein Mappentyp, von dem sich (noch) keine Demo-Mappen erzeugen lassen (#711): wie viele bestellt, warum. */
+export interface NichtErzeugbar { typ: string; anzahl: number; grund: string }
+
+/** Grund, wenn sich für ein Pflichtfeld kein Wert erzeugen lässt – dieselben Worte vor dem Start und im Ergebnis. */
+export function pflichtGrund(label: string, art: 'verweis' | 'passwort' | 'eindeutig' | 'sonst', ziel?: string): string {
+  const zusatz = art === 'verweis' ? (ziel ? ` (es gibt noch keine Mappen „${ziel}“, und sie entstehen auch nicht im selben Lauf)` : ' (es gibt noch keine Mappen des Zieltyps)')
+    : art === 'passwort' ? ' (Passwörter gibt es in Demo-Daten nie)' : art === 'eindeutig' ? ' (der Wert muss eindeutig sein, und die möglichen Werte sind vergeben)' : '';
+  return `Für das Pflichtfeld „${label}“ lässt sich kein passender Wert erzeugen${zusatz}.`;
+}
+
+/**
+ * Welche Mappentypen lassen sich in diesem Lauf nicht erzeugen (#711)? Pflicht-Passwörter, Pflicht-Auswahl ohne
+ * Optionen und Pflicht-Verweise, deren Zieltyp weder Mappen hat noch im selben Lauf welche bekommt (Ziele entstehen
+ * vorher, wenn sie selbst erzeugbar sind). Eindeutige Felder ohne freie Werte zeigen sich erst beim Erzeugen.
+ */
+export function nichtErzeugbar(typen: Mappentyp[], ziel: Map<string, number>, vorhanden: (typId: string) => number): NichtErzeugbar[] {
+  const eigene = typen.filter((t) => !t.system && (ziel.get(t.id) ?? 0) > 0);
+  const name = (id: string) => typen.find((t) => t.id === id)?.name;
+  const gesperrt = new Map<string, string>();
+  for (let neu = true; neu;) {
+    neu = false;
+    for (const t of eigene) {
+      if (gesperrt.has(t.id)) continue;
+      for (const f of t.felder.filter((x) => x.pflicht)) {
+        let grund = '';
+        if (f.typ === 'passwort') grund = pflichtGrund(f.label, 'passwort');
+        else if (f.typ === 'auswahl' && !(f.optionen ?? []).length) grund = pflichtGrund(f.label, 'sonst');
+        else if (f.typ === 'referenz') {
+          const z = f.zielTyp ?? '';
+          const kommt = z !== t.id && eigene.some((x) => x.id === z) && !gesperrt.has(z);
+          if (!vorhanden(z) && !kommt) grund = pflichtGrund(f.label, 'verweis', name(z));
+        }
+        if (grund) { gesperrt.set(t.id, grund); neu = true; break; }
+      }
+    }
+  }
+  return eigene.filter((t) => gesperrt.has(t.id)).map((t) => ({ typ: t.name, anzahl: ziel.get(t.id) ?? 0, grund: gesperrt.get(t.id)! }));
+}
+
 export interface Menge { mappen: number; mappenMitRegister: number; dokumente: Abschaetzung | null }
 
 /** Abschätzung ohne Speicherplatz: aus den Mappentypen (ohne Systemtypen) und den Optionen. */

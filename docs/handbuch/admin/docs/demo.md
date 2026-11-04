@@ -16,7 +16,11 @@ Das geht nur, solange es außer den Systemmappentypen *Benutzer*, *Rolle* und *P
 
 Erzeugt bis zu **50.000 Mappen je Durchlauf** für die vorhandenen Mappentypen – mit passenden Werten je Feld und Verweisen auf vorhandene Mappen. So lässt sich prüfen, wie sich Listen, Suche, Sortierung, Texterkennung, Speicherplatz und Sicherung mit vielen Mappen und Dokumenten verhalten. Mehrere Durchläufe hintereinander sind möglich; neue Mappen verweisen auch auf die schon vorhandenen.
 
-Das läuft im Hintergrund; du kannst die Seite verlassen. Der Fortschritt steht auf dieser Seite – je Phase mit dem, was gezählt wird, z. B. „Mappen anlegen: 1.000 von 1.000 ✓ · Dokumente erzeugen: 1.326 von 1.907“. Die Zahl der Mappen entspricht deiner Eingabe; nur wenn sich für einen Mappentyp keine passenden Werte erzeugen lassen, werden es weniger, und das Ergebnis nennt den Grund.
+Das läuft im Hintergrund; du kannst die Seite verlassen. Der Fortschritt steht auf dieser Seite – je Phase mit dem, was gezählt wird, z. B. „Mappen anlegen: 1.000 von 1.000 ✓ · Dokumente erzeugen: 1.326 von 1.907“. Die Zahl der Mappen entspricht deiner Eingabe. Nur wenn sich für einen Mappentyp keine passenden Werte erzeugen lassen, werden es weniger:
+
+- **Schon vor dem Start** nennt die Abschätzung Mappentypen, die sich nicht erzeugen lassen, mit Anzahl und Grund – z. B. ein Pflicht-Passwort (Passwörter gibt es in Demo-Daten nie) oder ein Pflicht-Verweis, für den es keine Mappen des Zieltyps gibt und der Zieltyp im selben Lauf auch keine bekommt. Zieltypen, die selbst Demo-Mappen bekommen, legt Ablago zuerst an.
+- **Sobald die Mappen angelegt sind**, zeigt der Fortschritt statt des Hakens z. B. „Mappen anlegen: 1.415 von 1.500 – 85 übersprungen“; unter *Warum wurden Mappen übersprungen?* stehen die Gründe je Mappentyp. Das kann auch ein eindeutiges Feld sein, dessen mögliche Werte vergeben sind.
+- Das Ergebnis am Ende nennt die Gründe noch einmal.
 
 Demo-Mappen sind gekennzeichnet. Die Systemmappentypen *Benutzer*, *Rolle* und *Post* bekommen keine Demo-Mappen.
 

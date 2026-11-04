@@ -31,7 +31,7 @@ export class Auftraege {
     const beginn = Date.now();
     void (async () => {
       try {
-        a.ergebnis = await arbeit((fertig, gesamt, phase) => meldeFortschritt(a, fertig, gesamt, phase), signal);
+        a.ergebnis = await arbeit((fertig, gesamt, phase, extra) => meldeFortschritt(a, fertig, gesamt, phase, extra), signal);
         a.status = 'fertig';
         schliessePhasen(a);
         this.log(`${titel}: fertig nach ${Date.now() - beginn} ms`);

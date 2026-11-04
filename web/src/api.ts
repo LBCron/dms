@@ -975,10 +975,12 @@ export interface DemoOptionen {
 }
 export interface DemoAbschaetzung {
   mappen: number; mappenMitRegister: number; frei: number | null; mindest: number; reicht: boolean; rastern: boolean;
+  /** Mappentypen, die sich nicht erzeugen lassen (#711). */
+  nichtErzeugbar?: Array<{ typ: string; anzahl: number; grund: string }>;
   dokumente: { dokumente: number; bytes: number; ocrSeiten: number; seiten: number; jeArt: Record<Dokumentart, number> } | null;
 }
 export interface DemoErgebnis {
-  gesamt: number; erzeugt: Record<string, number>; uebersprungen: Array<{ typ: string; grund: string }>;
+  gesamt: number; erzeugt: Record<string, number>; uebersprungen: Array<{ typ: string; grund: string; anzahl?: number }>;
   startwert?: string; dauerMs?: number; abgebrochen?: string; ohneRastern?: boolean;
   dokumente?: { anzahl: number; bytes: number; seiten: number; texterkennung: number; duplikate: number; jeArt: Record<Dokumentart, number>; dauerMs: number } | null;
 }

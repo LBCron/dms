@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { ladeBeispiele } from '../src/beispiele';
 import { speicherDateien } from '../src/dateispeicher';
 import { erzeugeDemo, MAX_DEMO, pruefeDemoOptionen, schaetzeDemo } from '../src/demo';
+import { meldeFortschritt, neuerStand, phasenText } from '../../shared/src/auftrag';
 import { DOKUMENTARTEN, erzeugeDokument, kannRastern, MISCHUNGEN, png, pruefeDokumentOptionen, schaetze } from '../src/demo-dokumente';
 import { Dienst } from '../src/dienst';
 import { Fachfehler } from '../src/fehler';
@@ -85,6 +86,31 @@ describe('Demo-Daten für Wachstumstests (#248)', () => {
     assert.equal(e.entfernt, demo.length);
     assert.ok(entf.length >= 3, 'mehrere Pakete');
     assert.equal((await d.listeMappen()).filter((m) => m.demo).length, 0);
+  });
+
+  it('weniger als bestellt: übersprungen mit Grund je Mappentyp, sofort nach dem Schritt Mappen und schon vorab (#711)', async () => {
+    const d = new Dienst(speicherRepo(), speicherDateien());
+    await d.legeTypAn({ name: 'Zugang', felder: [{ key: 'name', label: 'Name', typ: 'text', pflicht: true }, { key: 'kennwort', label: 'Kennwort', typ: 'passwort', pflicht: true }] });
+    const zugang = (await d.listeTypen()).find((t) => t.name === 'Zugang')!;
+    await d.legeTypAn({ name: 'Konto', felder: [{ key: 'nr', label: 'Nr', typ: 'text', pflicht: true }, { key: 'zugang', label: 'Zugang', typ: 'referenz', zielTyp: zugang.id, pflicht: true }] });
+    await d.legeTypAn({ name: 'Platz', felder: [{ key: 'nr', label: 'Platznummer', typ: 'zahl', min: 1, max: 3, pflicht: true, eindeutig: true }] });
+    await d.legeTypAn({ name: 'Notiz', felder: [{ key: 'text', label: 'Text', typ: 'text' }] });
+    // Vorab: Passwort und Pflicht-Verweis auf einen Typ, der selbst nicht entsteht; eindeutige Werte zeigen sich erst beim Erzeugen.
+    const s = await schaetzeDemo(d, { anzahl: 40 });
+    assert.deepEqual(s.nichtErzeugbar.map((x) => x.typ).sort(), ['Konto', 'Zugang']);
+    assert.match(s.nichtErzeugbar.find((x) => x.typ === 'Zugang')!.grund, /„Kennwort“.*Passwörter gibt es in Demo-Daten nie/);
+    assert.match(s.nichtErzeugbar.find((x) => x.typ === 'Konto')!.grund, /„Zugang“.*keine Mappen „Zugang“/);
+    // Beim Erzeugen: die Meldung kommt mit dem Ende des Schritts Mappen, nicht erst am Schluss.
+    const a = { ...neuerStand([{ key: 'mappen', name: 'Mappen anlegen', einheit: 'Mappen' }]) };
+    const r = await erzeugeDemo(d, { anzahl: 40 }, null, (f, g, p, x) => meldeFortschritt(a, f, g, p, x));
+    assert.deepEqual(r.uebersprungen.map((x) => x.typ).sort(), ['Konto', 'Platz', 'Zugang']);
+    assert.deepEqual([r.erzeugt.Zugang, r.erzeugt.Konto, r.erzeugt.Platz], [0, 0, 3], 'Platz: nur drei Nummern möglich');
+    assert.equal(r.uebersprungen.reduce((n, x) => n + x.anzahl, 0), 40 - r.gesamt);
+    assert.match(r.uebersprungen.find((x) => x.typ === 'Platz')!.grund, /„Platznummer“.*eindeutig/);
+    assert.equal(a.phasen[0].uebersprungen, 40 - r.gesamt);
+    assert.equal(a.phasen[0].gruende?.length, 3);
+    a.phasen[0].status = 'fertig';
+    assert.equal(phasenText(a.phasen[0]), `Mappen anlegen: ${r.gesamt} von 40 – ${40 - r.gesamt} übersprungen`, 'kein Haken bei weniger als bestellt');
   });
 
   it('schätzt vorab und bricht bei zu wenig Platz gar nicht erst an', async () => {
