@@ -20,7 +20,7 @@ Unter **Werkbank → Gemeldete Fehler** stehen die Meldungen, neueste zuerst; de
 
 ![Protokoll](bilder/werkbank-protokoll.png)
 
-Jeder Eintrag gehört zu einem **Modul**, etwa `konto` für Anmeldungen oder `sicherung` für Sicherungen. Welche Module es gibt, steht unter [Technik → Module](technik.md#module).
+Jeder Eintrag gehört zu einem **Modul**, etwa *Benutzerkonten und Anmeldung* (`konto`) für Anmeldungen und gesperrte Konten oder *Sicherung* (`sicherung`). Welche Module es gibt, steht unter [Technik → Module](technik.md#module).
 
 Filtern lässt sich nach Stufe, Modul, Benutzer und Text; **Live** aktualisiert die Liste alle zwei Sekunden. Ein Klick auf einen Eintrag zeigt alle Daten dazu, auch Benutzer und Anfrage-Kennung.
 

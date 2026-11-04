@@ -17,7 +17,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export const STUFEN = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const;
 export type Stufe = (typeof STUFEN)[number];
 const RANG: Record<Stufe, number> = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 };
-export const MODULE = ['system', 'http', 'konto', 'ablage', 'werkbank', 'dokumente', 'texterkennung', 'datenbank', 'mail', 'sicherung'] as const;
+import { MODULE, type Modul } from '../../shared/src/protokollmodule';
+export { MODULE, type Modul };
 
 export const AUFBEWAHRUNG_MS = 24 * 60 * 60 * 1000;
 export const MAX_EINTRAEGE = 10_000;
@@ -122,10 +123,16 @@ export class Protokoll {
   }
 
   get anzahl() { return this.puffer.length; }
+  /** Einträge je Modul (#682), für „(keine Einträge)“ im Filter. */
+  jeModul(): Record<string, number> {
+    const z: Record<string, number> = {};
+    for (const e of this.puffer) z[e.modul] = (z[e.modul] ?? 0) + 1;
+    return z;
+  }
   get letzteNr() { return this.nr; }
 
   /** Logger für ein Modul. */
-  modul(name: string): Log {
+  modul(name: Modul): Log {
     return {
       trace: (t, d) => this.schreibe('trace', name, t, d),
       debug: (t, d) => this.schreibe('debug', name, t, d),

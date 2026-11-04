@@ -49,18 +49,29 @@ Das Image bringt die Handbücher seiner Version mit: Startseite, Wie komme ich a
 
 Jede Zeile im [Protokoll](fehlersuche.md#protokoll) gehört zu einem Modul. Für jede Anfrage an den Server schreibt Ablago eine Zeile mit Methode, Pfad, Status, Dauer und Datenbankzugriffen – im Modul des Bereichs, zu dem die Anfrage gehört (z. B. `ablage` für Mappen). Anfragen, die nur lesen – auch Vorschauen, Zählungen und Testläufe, die die Oberfläche per POST schickt –, stehen nur auf Stufe `debug`, also nur im Debug-Modus.
 
-| Modul | Was |
-| --- | --- |
-| `system` | Start, Einstellungen, Debug-Modus |
-| `http` | Anfragen, die zu keinem anderen Modul gehören (z. B. Seiten der Oberfläche) |
-| `konto` | Anmeldung, Sitzungen, Benutzer, Rollen, Vertretung |
-| `ablage` | Mappen anlegen, ändern, löschen; Ansichten, Papierkorb, Notizen, Aufgaben |
-| `werkbank` | Mappentypen, Demo-Daten, Einstellungen, Versionsabgleich |
-| `dokumente` | Hochladen, Anzeigen, Löschen |
-| `texterkennung` | Texterkennung: abgeschlossen, ausgelassen, fehlgeschlagen, neu gestartet, abgebrochen; Einstellungen |
-| `sicherung` | Sicherung, Notfallblatt, Wiederherstellung und Probe |
-| `datenbank` | Migrationen, Verbindung, lange Zugriffe |
-| `mail` | Versand und Fehler beim Versand |
+Im Filter von **Werkbank → Protokoll** stehen alle Module mit ihrem Namen – auch solche, zu denen gerade nichts im Protokoll steht („(keine Einträge)“).
+
+| Name im Filter | Modul | Was |
+| --- | --- | --- |
+| System | `system` | Start, Einstellungen, Debug-Modus |
+| Anfragen (HTTP) | `http` | Anfragen, die zu keinem anderen Modul gehören (z. B. Seiten der Oberfläche) |
+| Benutzerkonten und Anmeldung | `konto` | Anmeldung, **Anmeldeschutz** (gesperrte Konten und IP-Adressen), Sitzungen, Benutzer, Rollen, Vertretung |
+| Ablage | `ablage` | Mappen anlegen, ändern, löschen; Ansichten, Papierkorb, Notizen, Aufgaben |
+| Dokumente | `dokumente` | Hochladen, Anzeigen, Löschen |
+| Werkbank | `werkbank` | Mappentypen, Pakete, Demo-Daten, Einstellungen, Versionsabgleich |
+| Datenschutz | `datenschutz` | Auskünfte, Abruf-Links, Löschkonzept |
+| Texterkennung | `texterkennung` | abgeschlossen, ausgelassen, fehlgeschlagen, neu gestartet, abgebrochen; Einstellungen |
+| Dateien umwandeln | `umwandlung` | Fassungen aus Paketen (z. B. TIFF → PDF) |
+| Archivfassung | `archivfassung` | PDF/A aus Paketen |
+| Vorschaubilder | `vorschau` | Vorschaubilder erzeugen |
+| Datenbank | `datenbank` | Migrationen, Verbindung, lange Zugriffe |
+| E-Mail | `mail` | Versand und Fehler beim Versand |
+| Sicherung | `sicherung` | Sicherung, Notfallblatt, Wiederherstellung und Probe |
+| Ereignisse | `ereignisse` | Verteilen von Ereignissen an Pakete und Automatisierungen |
+| Automatisierungen | `automatisierung` | Läufe der Automatisierungen |
+| Webhooks | `webhook` | Meldungen an Webhooks, Abschalten nach Fehlern |
+
+Anmeldung und Anmeldeschutz bleiben bewusst in einem Modul: Eine Sperre ergibt sich aus Fehlversuchen bei der Anmeldung – wer nach einer Sperre sucht, sieht beides zusammen.
 
 ## Wo was steht
 
