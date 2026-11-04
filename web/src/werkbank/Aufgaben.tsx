@@ -149,7 +149,7 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
   }
   // Auf- und zuklappen (#415), je Benutzer gemerkt; zugeklappt steht der Stand in der Kopfzeile.
   const zu = d.einstellungen[ZUSAMMENFASSUNG_ZU] === true;
-  const wirktNicht = e.aktiv && mailAn === false;
+  const wirktNicht = mailAn === false;
   const warnung = <><strong>Der E-Mail-Versand ist ausgeschaltet</strong> – es wird nichts verschickt.</>;
   return (
     <form className="blatt sammel-zusammenfassung" id="zusammenfassung" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
@@ -158,7 +158,7 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
           onClick={() => d.setzeEinstellung(ZUSAMMENFASSUNG_ZU, zu ? null : true)}>
           <span className="sammel-pfeil" aria-hidden="true">{zu ? '▸' : '▾'}</span>Tägliche Zusammenfassung
         </button>
-        {zu && <span className="leise klein sammel-stand">{z.mail ? `Standard ${z.mail.uhrzeit} · ${z.mail.aktiv ? 'an' : 'aus'}` : ''}</span>}
+        {zu && <span className="leise klein sammel-stand">{t('werkbank.zusammenfassung.automatisierung.kurz')}</span>}
       </h2>
       {zu && wirktNicht && (
         <div className="hinweis warn hinweiszeile"><p>{warnung}</p><Link to="/werkbank/betrieb" className="knopf klein">E-Mail einrichten</Link></div>
@@ -168,8 +168,8 @@ function Zusammenfassung({ z, mailAn }: { z: AufgabenZustand; mailAn?: boolean }
       {wirktNicht && (
         <div className="hinweis warn hinweiszeile"><p>{warnung}</p><Link to="/werkbank/betrieb" className="knopf klein">E-Mail einrichten</Link></div>
       )}
-      <label className="haken"><input type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Zusammenfassung verschicken</span></label>
-      <label className="eigenschaft"><span>Standard-Uhrzeit <small>für alle ohne eigene unter Mein Konto</small></span><input type="time" step={900} value={e.uhrzeit} onChange={(x) => setE({ ...e, uhrzeit: x.target.value })} /></label>
+      {/* #678: Ob und wann verschickt wird, steht jetzt in der Automatisierung (Paket „Benachrichtigungen“). */}
+      <div className="hinweis info hinweiszeile"><p>{t('werkbank.zusammenfassung.automatisierung')}</p><Link to="/werkbank/automatisierungen" className="knopf klein">{t('werkbank.zusammenfassung.automatisierung.knopf')}</Link></div>
       <p className="leise klein">{e.bundesland ? t('werkbank.region.aufgaben.mit', { land: BUNDESLAENDER[e.bundesland as keyof typeof BUNDESLAENDER] ?? e.bundesland }) : t('werkbank.region.aufgaben.ohne')} <Link to="/werkbank/region">{t('werkbank.region.aufgaben.link')}</Link></p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">

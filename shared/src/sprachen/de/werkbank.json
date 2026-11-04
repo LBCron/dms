@@ -213,5 +213,9 @@
   "region.aufgaben.ohne": "Feiertage werden nicht berücksichtigt – dafür ein Bundesland wählen.",
   "region.aufgaben.link": "Region einstellen",
   "ablegen.hinweis": "In der Werkbank wird eingerichtet – Dokumente legst du in der Ablage ab.",
-  "ablegen.link": "Zur Ablage"
+  "ablegen.link": "Zur Ablage",
+  "zusammenfassung.automatisierung": "Ob und wann die Zusammenfassung verschickt wird, stellst du jetzt in der Automatisierung „Tägliche Zusammenfassung“ ein (Wenn-Karte „Zeitplan“ für jeden Benutzer). Das Bundesland für Feiertage stellst du unter Region ein.",
+  "zusammenfassung.automatisierung.kurz": "über die Automatisierung",
+  "zusammenfassung.automatisierung.knopf": "Zu den Automatisierungen",
+  "anmeldeschutz.automatisierung": "Ob du eine Sammelmeldung über die Sperren bekommst oder sofort erfährst, wenn ein Benutzerkonto gesperrt wird, stellst du jetzt bei den Automatisierungen ein: „Sammelmeldung Anmeldeschutz“ (Wenn-Karte „Zeitplan“) und „Kontosperre sofort melden“ (Wenn-Karte „Benutzerkonto gesperrt“)."
 }

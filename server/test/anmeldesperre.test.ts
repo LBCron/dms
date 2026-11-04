@@ -109,32 +109,32 @@ describe('Anmeldeschutz: Mails (#368)', () => {
     assert.equal(await s.meldeTaeglich(), false, 'ohne Sperre keine Mail');
   });
 
-  it('ausgeschaltet: keine Mail, auch nicht am nächsten Tag', async () => {
+  it('#678: ob gemeldet wird, entscheidet die Automatisierung – vorgemerkt wird immer', async () => {
     let t = start;
     const mails: string[] = [];
     const s = new Anmeldesperre(speicherEinstellungen(), async (b) => { mails.push(b); }, () => t);
     await s.speichere({ ip: { versuche: 1, minuten: 60 }, konto: { versuche: 1, minuten: 5 } }, 'admin');
     await s.fehlschlag('a@x.example', '203.0.113.9', true);
+    assert.deepEqual(mails, [], 'keine Sofortmeldung vom Kern');
     t += 2 * TAG;
-    assert.equal(await s.meldeTaeglich(), false);
-    assert.deepEqual(mails, []);
+    assert.equal(await s.meldeTaeglich(true), true, 'Probelauf: es gäbe etwas zu melden');
+    assert.deepEqual(mails, [], 'Probelauf schickt nichts');
+    assert.equal(await s.meldeTaeglich(), true);
+    assert.equal(mails.length, 1);
   });
 
-  it('wahlweise sofort bei Sperre eines bestehenden Kontos, je Konto einmal am Tag', async () => {
+  it('Kontosperre melden (Dann-Karte, #678): je Konto einmal am Tag', async () => {
     let t = start;
     const mails: string[] = [];
     const s = new Anmeldesperre(speicherEinstellungen(), async (b) => { mails.push(b); }, () => t);
-    await s.speichere({ konto: { versuche: 2, minuten: 1 }, mailKonto: true }, 'admin');
-    for (let k = 0; k < 2; k++) await s.fehlschlag('fremd@x.example', '203.0.113.1', false);
-    assert.equal(mails.length, 0, 'unbekannte Adresse: keine Mail');
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.1', true);
+    assert.equal(await s.kontoMelden('anna@x.example', '203.0.113.1', 5), true);
     assert.equal(mails.length, 1);
     assert.match(mails[0], /Benutzerkonto/);
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.2', true);
-    assert.equal(mails.length, 1, 'am selben Tag nicht noch einmal');
+    assert.equal(await s.kontoMelden('anna@x.example', '203.0.113.2', 5), false, 'am selben Tag nicht noch einmal');
+    assert.equal(await s.kontoMelden('ben@x.example', '203.0.113.2', 5), true, 'anderes Konto schon');
     t += TAG;
-    for (let k = 0; k < 2; k++) await s.fehlschlag('anna@x.example', '203.0.113.3', true);
-    assert.equal(mails.length, 2);
+    assert.equal(await s.kontoMelden('anna@x.example', '203.0.113.3', 5), true);
+    assert.equal(mails.length, 3);
   });
 
   it('Sammeltext nennt Zeitraum, Konten und den Weg zum Entsperren', () => {

@@ -12,6 +12,8 @@ const kurz = () => new Promise((r) => setTimeout(r, 5));
 
 async function aufbau() {
   const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
+  // #678: Das Melden macht die Automatisierung „Favoriten-Änderungen melden“ – hier direkt als Abnehmer.
+  d.ereignisse.abonniere('favoriten', async (e) => { if (e.art === 'favorit.geaendert') await d.favoritenMelden(String(e.daten.mappe), String(e.daten.von)); });
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
@@ -20,7 +22,7 @@ async function aufbau() {
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = await d.legeTypAn({ name: 'Vorgang', felder: [{ key: 'nr', label: 'Nummer', typ: 'text' }] });
   const B = { id: ben.id, rolle: 'mitglied' };
-  const geaendert = async () => (await d.meineAufgaben(B)).filter((a) => a.art === 'aenderung');
+  const geaendert = async () => { await d.ereignisse.verteile(); return (await d.meineAufgaben(B)).filter((a) => a.art === 'aenderung'); };
   const hervorgehoben = async () => ((await d.seite(B, { sicht: t.id })) as { geaendert: string[] }).geaendert;
   return { d, konten, anna, ben, carl, t, A: { id: anna.id, rolle: 'admin' }, B, C: { id: carl.id, rolle: 'mitglied' }, geaendert, hervorgehoben };
 }
@@ -114,7 +116,7 @@ describe('Favorit = Abo (#422)', () => {
     const m = await d.legeMappeAn({ typId: t.id, werte: { nr: '1' } }, anna.id);
     await d.setzeFavorit(B, m.id, true);
     await d.setzeFavorit(C, m.id, true);
-    const geaendertC = async () => (await d.meineAufgaben(C)).filter((a) => a.art === 'aenderung');
+    const geaendertC = async () => { await d.ereignisse.verteile(); return (await d.meineAufgaben(C)).filter((a) => a.art === 'aenderung'); };
     const rollen = await d.listeRollen();
     const mitglied = rollen.find((r) => r.system && r.name === 'Mitglied')!;
     const admin = rollen.find((r) => r.system && r.name !== 'Mitglied')!;

@@ -13,8 +13,11 @@ import { t } from '../sprache';
  * Der Katalog wird erst abgefragt, wenn diese Ansicht erscheint.
  */
 
-/** Vorgewählt (#460): ohne Texterkennung werden gescannte Dokumente nicht durchsuchbar (#458). */
-export const VORAUSWAHL = ['texterkennung'];
+/**
+ * Vorgewählt (#460): ohne Texterkennung werden gescannte Dokumente nicht durchsuchbar (#458); ohne Benachrichtigungen
+ * kommt keine Tägliche Zusammenfassung (#678, dms-registry #109).
+ */
+export const VORAUSWAHL = ['texterkennung', 'benachrichtigungen'];
 
 /**
  * Auswahl aus dem offiziellen Katalog und Installation, z. B. im Einrichtungsassistenten (#460).
@@ -63,7 +66,7 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
       </div>
       <section className="stapel" aria-label="Ohne Internet">
         <h2 className="h3">Ohne Internet: Sammeldatei hochladen</h2>
-        <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen (die Texterkennung ist dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+        <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen (Texterkennung und Benachrichtigungen sind dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
         <p className="leise klein">{t('pakete.katalog.hinweis')}</p>
         {stand && <SammeldateiWahl geladen={(x, datei) => setSammel({ s: x, datei })} />}
       </section>

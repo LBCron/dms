@@ -1052,7 +1052,7 @@ export interface WerkbankUebersicht {
   bestand: { version: string; groesseBytes: number; mappen: number; typen: number; benutzer: number; dokumente: number; dokumenteBytes: number } | null;
   fehlermeldungen: number | null;
   /** Automatisierungen (#675): mit fehlgeschlagenen Läufen bzw. angehalten oder fehlerhaft. */
-  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null };
+  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null; /** Keine Automatisierung schickt die Tägliche Zusammenfassung (#678). */ ohneBenachrichtigungen?: boolean };
   /** Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind. */
   notfallzugaenge?: Array<{ id: string; name: string; erstellt: string }>;
   /** Wartungsmodus (#102). */

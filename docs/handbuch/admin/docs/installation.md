@@ -70,7 +70,7 @@ Der Schlüssel verschlüsselt gespeicherte Passwörter und alle Sicherungen (sie
 
 Erst in diesem Schritt fragt Ablago den [offiziellen Paketkatalog](pakete.md) ab – vorher baut es keine Verbindung dafür auf. Die Anfrage geht an catalog.ablago.app (ausgeliefert von GitHub Pages); dabei geht nur die Anfrage selbst hinaus, keine Daten aus deiner Ablage. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.
 
-- **Texterkennung ist vorausgewählt** – ohne sie werden gescannte Dokumente nicht durchsuchbar. Darunter fragt **Weitere Sprachen?** nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.
+- **Texterkennung und Benachrichtigungen sind vorausgewählt** – ohne Texterkennung werden gescannte Dokumente nicht durchsuchbar, ohne Benachrichtigungen kommt keine Tägliche Zusammenfassung. Darunter fragt **Weitere Sprachen?** nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.
 - **Abhängigkeiten kommen mit**, z. B. „Basis“ für „Haushalt“; sie sind mit „kommt mit – gebraucht von …“ markiert.
 - **Weiter** führt zu **einer** Seite mit allen Fragen: die [Rechte](pakete.md#rechte-eines-pakets) aller Pakete mit Code (ein Haken für alle), Namen nur bei Konflikten, Beispiel-Mappen und Pflicht-Einstellungen – dann **ein** Knopf. Siehe [Mehrere Pakete in einem Schritt installieren](pakete.md#mehrere-pakete-in-einem-schritt-installieren).
 - **Überspringen** geht jederzeit; Pakete holst du später unter **Werkbank → [Pakete](pakete.md)**.
