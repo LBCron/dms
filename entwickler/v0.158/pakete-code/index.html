@@ -43,12 +43,6 @@
     
     
       
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
     
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
@@ -2418,18 +2412,7 @@
 <li><strong>Zuständig</strong> ist je Dateityp ein Paket – bei mehreren das erste nach Id. Kommt mit einem Update ein Dateityp dazu, meldet der Kern die vorhandenen Dateien dieses Typs.</li>
 </ul>
 <h3 id="umwandeln-ablauf">Ablauf<a class="headerlink" href="#umwandeln-ablauf" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:umwandeln)
-  participant T as Paket Texterkennung
-  K-&gt;&gt;P: datei.umwandeln (dokument, mime, sha256)
-  P-&gt;&gt;K: GET /dokumente/{id}/inhalt
-  K--&gt;&gt;P: Originaldatei
-  P-&gt;&gt;K: PUT /dokumente/{id}/fassung?sha256=… (PDF, PNG oder JPEG)
-  Note over K: Vorschaubild aus der Fassung, Textebene (PDF)
-  K-&gt;&gt;T: volltext.fertig (mime der Fassung, original, fassung: true)
-  T-&gt;&gt;K: GET /dokumente/{id}/seiten/1/scan (aus der Fassung)
-  T-&gt;&gt;K: PUT /dokumente/{id}/volltext</code></pre>
+<p><img alt="Ablauf „Datei umwandeln“ zwischen Kern, umwandelndem Paket und Paket Texterkennung" loading="lazy" src="../grafiken/ablauf-umwandeln.png" /></p>
 <ol>
 <li><strong>Melden:</strong> Der Kern schickt <code>datei.umwandeln</code> an das zuständige Paket – beim Hochladen und bei einer neuen Version, wenn das Paket installiert wird oder einen Dateityp dazubekommt (für alle vorhandenen Dateien), bei <em>Vorschaubilder nachholen</em> und bei <em>Volltext neu erzeugen</em> bzw. <em>Erneut versuchen</em> am Dokument (für Dateien ohne Fassung). Dateien über <strong>50 MB</strong> meldet er nicht. Eine Datei, die gerade unterwegs ist, meldet er höchstens alle 30 Minuten einmal; Wiederholungen nach Fehlern macht der Läufer wie bei jedem Ereignis.</li>
 <li><strong>Warten:</strong> Bis die Fassung da ist, steht das Dokument auf <strong>„wartet auf Umwandlung (Paket <em>Name</em>)“</strong> (Stand <code>paket</code> des Volltexts). „Volltext fertig“ gibt es erst mit der Fassung.</li>
@@ -2631,15 +2614,7 @@
 <li>Pakete mit <code>dokumente: schreiben</code> (z. B. <strong>Texterkennung</strong>) schreiben den Volltext weiter für jedes Dokument, das sie lesen dürfen – daran ändert <code>dms:volltext</code> nichts.</li>
 </ul>
 <h3 id="volltext-ablauf">Ablauf<a class="headerlink" href="#volltext-ablauf" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:volltext)
-  K-&gt;&gt;P: datei.volltext (dokument, mime, sha256, neu)
-  P-&gt;&gt;K: GET /dokumente/{id}/inhalt
-  K--&gt;&gt;P: Datei
-  P-&gt;&gt;K: PUT /dokumente/{id}/volltext { "text": … }
-  Note over K: Stand fertig, Suchindex, Historie
-  K-&gt;&gt;K: volltext.fertig an die anderen Pakete</code></pre>
+<p><img alt="Ablauf „Volltext aus einem Paket“ zwischen Kern und Paket mit dms:volltext" loading="lazy" src="../grafiken/ablauf-volltext.png" /></p>
 <ol>
 <li><strong>Melden:</strong> Der Kern schickt <code>datei.volltext</code> an das zuständige Paket – aus der Warteschlange des Volltexts, also beim <strong>Hochladen</strong>, bei einer <strong>neuen Version</strong>, bei <em>Volltext neu erzeugen</em> (<code>neu: true</code> bei „alle Dokumente“), bei <em>Erneut versuchen</em> und <em>Neu erzeugen</em> am Dokument (<code>neu: true</code>) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (für alle vorhandenen Dateien dieser Typen <strong>ohne Text</strong>). Dateien über <strong>50 MB</strong> meldet er nicht (am Dokument: ausgelassen). Hat eine Datei mit gleichem Inhalt schon Text, übernimmt der Kern ihn ohne Ereignis (außer bei <code>neu</code>). Ein Dokument, das gerade unterwegs ist, meldet er höchstens alle 30 Minuten einmal (außer bei <code>neu</code>).</li>
 <li><strong>Warten:</strong> Bis das Paket schreibt, steht das Dokument auf <strong>„wartet auf Volltext (Paket <em>Name</em>)“</strong> (Stand <code>paket</code>). Ein Text von vorher bleibt so lange für die Suche stehen. Mit der <a href="#fortsetzung">Fortsetzung</a> steht <code>fortschritt</code> daneben.</li>
@@ -2766,18 +2741,7 @@
 <li><strong>Zuständig</strong> ist je Dateityp ein Paket – bei mehreren das erste nach Id.</li>
 </ul>
 <h3 id="archivfassung-ablauf">Ablauf<a class="headerlink" href="#archivfassung-ablauf" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>sequenceDiagram
-  participant K as Kern
-  participant T as Paket Texterkennung
-  participant P as Paket (dms:archivfassung)
-  T-&gt;&gt;K: PUT /dokumente/{id}/volltext { text, woerter }
-  Note over K: Volltext steht fest (Stand fertig)
-  K-&gt;&gt;P: datei.archivfassung (dokument, sha256, quelle, textebene, wortpositionen …)
-  P-&gt;&gt;K: GET /dokumente/{id}/inhalt (bzw. …/fassung bei quelle lesefassung)
-  P-&gt;&gt;K: GET /dokumente/{id}/wortpositionen
-  P-&gt;&gt;K: GET /dokumente/{id}/volltext (optional)
-  P-&gt;&gt;K: PUT /dokumente/{id}/archivfassung?sha256=… (PDF/A, roh)
-  Note over K: Prüfung, Ablage, Historie, Anzeige</code></pre>
+<p><img alt="Ablauf „Archivfassung“ zwischen Kern, Paket Texterkennung und Paket mit dms:archivfassung" loading="lazy" src="../grafiken/ablauf-archivfassung.png" /></p>
 <ol>
 <li><strong>Melden – erst mit feststehendem Volltext:</strong> Der Kern schickt <code>datei.archivfassung</code>, sobald der Volltext eines Dokuments <em>fertig</em> ist: nach dem Lesen der Textebene, nach dem Text der Texterkennung bzw. eines Pakets mit <code>dms:volltext</code>, wenn die Texterkennung „nichts zu tun“ meldet (Text aus dem PDF bleibt), bei einer <strong>neuen Version</strong> und jeder Änderung am PDF (neuer Prüfwert), bei <em>Volltext neu erzeugen</em> (<code>neu: true</code>) und wenn das Paket installiert wird oder einen Dateityp dazubekommt (<strong>Bestand</strong>: alle Dokumente mit fertigem Volltext ohne Archivfassung). Neuer Text eines Pakets oder über die API heißt ebenfalls <code>neu: true</code> – die alte Archivfassung passt dann nicht mehr zum Text.</li>
 <li><strong>Nicht gemeldet:</strong> Dokumente ohne Quelle (andere Typen ohne Lesefassung), über 50 MB, solche mit Archivfassung (außer <code>neu</code>), <strong>verschlüsselte PDFs</strong> (Stand <em>keine</em> mit Grund am Dokument), PDFs, die <strong>schon gültiges PDF/A</strong> sind (das Original gilt als Archivfassung, keine zweite Datei) und mit <code>nur_scans</code> PDFs mit vollständiger Textebene. Dieselbe Datei meldet der Kern höchstens alle 30 Minuten (außer <code>neu</code>).</li>
@@ -2943,19 +2907,7 @@
 </code></pre></div>
 <p><code>dms:sicherung-lesen</code> und <code>sicherung.fertig</code> gibt es nur zusammen. Zugangsdaten sind Einstellungen vom Typ <code>geheim</code> (verschlüsselt gespeichert, nie angezeigt); ins Netz darf das Paket nur zur bestätigten Adresse. Mappen und Dokumente braucht es nicht.</p>
 <h3 id="sicherung-ablauf">Ablauf<a class="headerlink" href="#sicherung-ablauf" title="Permanent link">&para;</a></h3>
-<pre class="mermaid"><code>sequenceDiagram
-  participant K as Kern
-  participant P as Paket (dms:sicherung-lesen)
-  participant Z as Ziel (WebDAV, S3 …)
-  K-&gt;&gt;K: Sicherung lokal fertig
-  K-&gt;&gt;P: sicherung.fertig (name, groesse, sha256 …)
-  loop Stück für Stück, über mehrere Aufrufe
-    P-&gt;&gt;K: GET /sicherungen/{name}/datei?versatz=…&amp;laenge=…
-    P-&gt;&gt;Z: Teil hochladen
-    P--&gt;&gt;K: {"weiter": {…}, "extern": {"status": "laeuft", …}} (Fortsetzung)
-  end
-  P-&gt;&gt;Z: zusammensetzen, Metadaten daneben, prüfen
-  P--&gt;&gt;K: {"extern": {"status": "geprueft", …}} (Antwort)</code></pre>
+<p><img alt="Ablauf „Sicherung außer Haus“ zwischen Kern und Paket mit dms:sicherung-lesen" loading="lazy" src="../grafiken/ablauf-sicherung.png" /></p>
 <ol>
 <li>
 <p><strong>Ereignis <code>sicherung.fertig</code></strong> nach jeder erfolgreichen Sicherung (von Hand, automatisch, vor einer Wiederherstellung). <code>daten</code> sind die <strong>schlanken Metadaten</strong> und der Name:</p>
@@ -3113,7 +3065,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a> · Das Handbuch lädt nichts von Dritten (<a href="https://help.ablago.app/admin/aktuell/datenschutz/#keine-telemetrie">Datenschutz</a>)
     </div>
   
   

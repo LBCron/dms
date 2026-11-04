@@ -45,12 +45,6 @@
     
     
       
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
     
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
@@ -442,6 +436,17 @@
     <span class="md-ellipsis">
       
         Bewertung der Alternativen zu pdf-lib
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pdf-anzeige" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anzeige von PDFs im Browser (#639)
       
     </span>
   </a>
@@ -1004,6 +1009,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#pdf-anzeige" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anzeige von PDFs im Browser (#639)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1346,6 +1362,7 @@ server/src/pdf/schwaerzen.ts     Seiten neu aufbauen, schwärzen, Textebene ohne
 server/src/pdf/schreiber.ts      Textdokumente nach Plan (Auskunft, Löschkonzept, Löschprotokoll)
 server/src/pdf/export.ts         PDF mehrerer Mappen
 server/src/pdf/aufkleber.ts      Aufkleberbogen mit Barcode
+server/src/pdf/anzeige.ts        bereinigte Kopie für die Anzeige im Browser (#639)
 server/src/pdf/demo-dokumente.ts Demo-Dokumente
 server/src/pdf/einfach.ts        kleiner Schreiber für Textseiten ganz ohne Bibliothek (Notfallblatt)
 server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung #456; WinAnsi
@@ -1397,6 +1414,15 @@ server/src/pdf/bild.ts, puffer.ts, text.ts   Bildart, JPEG-Maße, EXIF; Umgehung
 </tbody>
 </table>
 <p><strong>Empfehlung:</strong> pdf-lib vorerst behalten – gekapselt in der PDF-Stelle ist das Risiko beherrschbar. Erster Kandidat für einen Austausch ist <code>@cantoo/pdf-lib</code> (gleiche Schnittstelle, mehrere Betreuer); vor einem Wechsel prüfen: ob #456 dort behoben ist, welche Abhängigkeiten mitkommen (Regel aus <a href="#abhaengigkeiten">Abhängigkeiten</a>) und ob alle PDF-Tests unverändert grün sind. Wo qpdf eine Aufgabe ganz übernehmen kann – vor allem bei den Seiten-Vorgängen (<code>seiten.ts</code>) –, ist es der zweite Weg, weil keine neue Abhängigkeit dazukommt. Anlass zum Handeln: eine Sicherheitslücke in pdf-lib, ein Fehler, den wir nicht umgehen können, oder eine neue Node.js-Version, mit der pdf-lib nicht mehr läuft.</p>
+<h3 id="pdf-anzeige">Anzeige von PDFs im Browser (#639)<a class="headerlink" href="#pdf-anzeige" title="Permanent link">&para;</a></h3>
+<p>Dateien liefert der Server mit <code>dateiKoepfe</code> (<code>routen.ts</code>) aus: alles außer PDF mit einer strengen Content-Security-Policy samt <code>sandbox</code>. PDFs brauchen den eingebauten Betrachter des Browsers und bekommen diese Policy nicht – deshalb sieht der Browser <strong>nie das Original</strong>, wenn er ein PDF anzeigt:</p>
+<ul>
+<li><code>fuerAnzeige()</code> in <code>routen.ts</code> greift bei jeder Antwort mit <code>anzeigen: true</code> und <code>application/pdf</code> ohne API-Schlüssel – also beim Ansehen in der Oberfläche: <code>GET /api/dokumente/:id/inhalt</code>, <code>…/versionen/:nummer/inhalt</code>, <code>…/fassung</code> und <code>…/archivfassung</code> (jeweils ohne <code>herunterladen</code>).</li>
+<li><code>pdfanzeige.ts</code> holt die bereinigte Kopie aus der PDF-Stelle (<code>pdf/anzeige.ts</code>, im Arbeiter-Pool) und hält sie je SHA-256 des Inhalts im Speicher (höchstens 256 MB, älteste zuerst hinaus; Fehlschläge werden nicht gemerkt).</li>
+<li>Entfernt werden JavaScript (<code>/JS</code>, Namensbaum <code>JavaScript</code>), automatische Aktionen (<code>/OpenAction</code>, <code>/AA</code>), die Aktionen <code>SubmitForm</code>, <code>Launch</code>, <code>ImportData</code>, <code>GoToR</code>, <code>GoToE</code>, Medien-Aktionen, XFA-Formulare, eingebettete Dateien (<code>/EF</code>, <code>EmbeddedFiles</code>, Ströme <code>/EmbeddedFile</code>) und Anmerkungen für Dateianhänge und Medien. Links (<code>URI</code>) und Sprünge im Dokument bleiben.</li>
+<li>Lässt sich das PDF nicht bereinigen (verschlüsselt, beschädigt), kommt ein kurzer Text (<code>text/plain</code>, mit Sandbox) mit <code>X-DMS-Anzeige: nur-herunterladen</code>; sonst steht <code>X-DMS-Anzeige: bereinigt</code> im Kopf.</li>
+<li><strong>Herunterladen, Weitergeben, Export, E-Mail und API-Schlüssel</strong> (auch Pakete) bekommen weiter das Original bzw. die gestempelte Ausgabe.</li>
+</ul>
 <h2 id="arbeiter-pool">Arbeiter-Pool<a class="headerlink" href="#arbeiter-pool" title="Permanent link">&para;</a></h2>
 <p>Der Server beantwortet alle Anfragen in <strong>einem</strong> Faden. Schwere Rechenarbeit läuft darum in einem kleinen Pool von Arbeiter-Fäden (<code>node:worker_threads</code>, #542), ohne neue Abhängigkeit:</p>
 <div class="highlight"><pre><span></span><code>server/src/arbeit/index.ts        arbeite(vorgang, ...args), Einstellung (DMS_ARBEITER), Stand für den Systemzustand
@@ -1780,7 +1806,7 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a> · Das Handbuch lädt nichts von Dritten (<a href="https://help.ablago.app/admin/aktuell/datenschutz/#keine-telemetrie">Datenschutz</a>)
     </div>
   
   

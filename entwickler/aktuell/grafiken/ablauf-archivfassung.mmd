@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant K as Kern
+  participant T as Paket Texterkennung
+  participant P as Paket (dms:archivfassung)
+  T->>K: PUT /dokumente/{id}/volltext { text, woerter }
+  Note over K: Volltext steht fest (Stand fertig)
+  K->>P: datei.archivfassung (dokument, sha256, quelle, textebene, wortpositionen …)
+  P->>K: GET /dokumente/{id}/inhalt (bzw. …/fassung bei quelle lesefassung)
+  P->>K: GET /dokumente/{id}/wortpositionen
+  P->>K: GET /dokumente/{id}/volltext (optional)
+  P->>K: PUT /dokumente/{id}/archivfassung?sha256=… (PDF/A, roh)
+  Note over K: Prüfung, Ablage, Historie, Anzeige
