@@ -29,6 +29,8 @@
   "text.benutzer.abwesenheit-gesetzt": "Ein Benutzer ist abwesend (mit Zeitraum und Vertreter).",
   "name.benutzer.abwesenheit-beendet": "Abwesenheit beendet",
   "text.benutzer.abwesenheit-beendet": "Die Abwesenheit eines Benutzers ist ausgeschaltet.",
+  "name.benutzer.vertretung-zurueckgezogen": "Vertretung zurückgezogen",
+  "text.benutzer.vertretung-zurueckgezogen": "Jemand ist nicht mehr Vertreter eines Benutzers – die Abwesenheit endet oder ein anderer Vertreter ist eingetragen.",
   "name.benutzer.gesperrt": "Benutzerkonto gesperrt",
   "text.benutzer.gesperrt": "Der Anmeldeschutz hat ein Konto nach Fehlversuchen gesperrt.",
   "name.benutzer.deaktiviert": "Benutzer deaktiviert",

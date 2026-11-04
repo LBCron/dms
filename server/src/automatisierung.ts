@@ -4,6 +4,7 @@ import {
   AUTOMATISIERUNG_GRENZEN, ausloeserSchluessel, automatisierungsProbleme, bereinigeAutomatisierung, kontextTyp, kurzform, REIHENFOLGE,
   type Angehalten, type Automatisierung, type AutomatisierungAnsicht, type AutomatisierungDaten, type DannArt, type DannKarte,
   type Empfaenger, type Fassung, type Fehlschlag, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte, erreichteDaten,
+  PERSONEN_IM_EREIGNIS,
 } from '../../shared/src/automatisierung';
 import { EREIGNISKATALOG, OHNE_WENN, type KatalogEreignis } from '../../shared/src/ereignisse';
 import { tagVon, titelAus, ZEITZONE, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
@@ -12,6 +13,8 @@ import { uebersetzer } from '../../shared/src/sprache';
 import texte from '../../shared/src/sprachen/de/automatisierung.json';
 import ereignisTexte from '../../shared/src/sprachen/de/ereignisse.json';
 import type { Dienst, Zugriff } from './dienst';
+import type { PaketAutomatisierung } from './pakete';
+import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { faelligeTage } from './zeitplan';
@@ -297,6 +300,9 @@ interface Anlass { id: string; art: string; daten: Record<string, unknown>; kett
 const uuidAus = (s: string) => { const h = createHash('sha256').update(s).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
 const UHR_FORMAT = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
+/** Feste Id der beim Update übernommenen Vertretungs-Aufgabe (#712/#678). */
+const UMZUG_VERTRETUNG = uuidAus('umzug|vertretung');
+
 export class Automatisierungen {
   private uhr: ReturnType<typeof setInterval> | null = null;
   private zeitplanLauf: Promise<void> | null = null;
@@ -305,6 +311,8 @@ export class Automatisierungen {
       const konto = await this.konto().catch(() => null);
       return konto?.id === kontoId ? (await this.d.repo.liste()).filter((a) => a.herkunft !== 'paket').map((a) => ({ id: a.id, name: a.name })) : [];
     };
+    d.dienst.fristenUebernehmen = () => this.fristenUebernehmen();
+    d.dienst.paketAutomatisierungen = (p, liste, ein) => this.ausPaket(p, liste, ein);
     // Vollexport: Automatisierungen mit ihrem Änderungsverlauf (die Läufe sind Protokoll und bleiben draußen).
     d.dienst.automatisierungenExport = async () => Promise.all((await this.d.repo.liste()).map(async (a) => ({ ...a, fassungen: await this.d.repo.fassungen(a.id) })));
   }
@@ -318,11 +326,131 @@ export class Automatisierungen {
   /** Abnehmer anmelden und den Zeitplan starten (Start des Servers). */
   start() {
     this.d.dienst.ereignisse.abonniere('automatisierungen', (e) => this.ereignis(e));
-    void this.legeBeispiele().catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
+    // #712: Erinnerungen am Feld werden zu Automatisierungen – erst die Fristen übernehmen, dann die Beispiele.
+    void this.fristenUebernehmen().catch((e) => log.warn('Erinnerungen nicht übernommen', { fehler: (e as Error).message }))
+      .then(() => this.legeBeispiele()).catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
     this.uhr ??= setInterval(() => { void this.zeitplan().catch((e) => log.error('Zeitplan fehlgeschlagen', { fehler: (e as Error).message })); }, ZEITPLAN_MS);
     this.uhr.unref?.();
   }
   stop() { if (this.uhr) clearInterval(this.uhr); this.uhr = null; this.d.dienst.ereignisse.abbestellen('automatisierungen'); }
+
+  /**
+   * Mitgelieferte Automatisierungen eines Pakets (#712, dms-registry #108): je Schlüssel eine mit fester Id, Herkunft
+   * „aus Paket“, nach der Installation **aus** (eingeschaltet wird im Einrichtungsassistenten bzw. von Hand). Typen im
+   * Paket als eigener Schlüssel oder `paket:typ` → Id. Bei einem Update ersetzt die neue Fassung die alte, solange
+   * niemand sie geändert hat (an/aus bleibt); eine geänderte bleibt, wie sie ist. Was das Paket nicht mehr mitbringt,
+   * fällt weg, wenn es unverändert und aus ist. `ein`: Schlüssel, die beim Installieren angehakt wurden – neu angelegte
+   * davon sind gleich eingeschaltet. Gibt es für dasselbe Datumsfeld schon eine beim Update übernommene Erinnerung
+   * (fristenUebernehmen), ersetzt die mitgelieferte sie, solange sie unverändert ist (an/aus bleibt); ist sie geändert,
+   * bleibt sie und die mitgelieferte entsteht nicht – so erinnert nie etwas doppelt.
+   */
+  async ausPaket(p: InstalliertesPaket, liste: PaketAutomatisierung[], ein: string[] = []): Promise<number> {
+    const pakete = await this.d.dienst.listePakete();
+    const typId = (vw: unknown): string | null => {
+      if (typeof vw !== 'string' || !vw) return null;
+      const [pk, sl] = vw.includes(':') ? vw.split(':') : [p.id, vw];
+      return (pk === p.id ? p.typen[sl] : pakete.find((x) => x.id === pk)?.typen[sl]) ?? null;
+    };
+    const vorhanden = (await this.d.repo.liste()).filter((a) => a.herkunft === 'paket' && a.paketId === p.id);
+    const ids = new Set<string>();
+    let neu = 0;
+    for (const x of liste) {
+      const id = uuidAus(`paket|${p.id}|${x.schluessel}`);
+      ids.add(id);
+      const d = bereinigeAutomatisierung({ name: x.name, beschreibung: x.beschreibung, wenn: { ...x.wenn, typ: typId(x.wenn.typ) }, und: x.und, dann: x.dann });
+      d.reihenfolge = REIHENFOLGE.paket;
+      const da = vorhanden.find((a) => a.id === id);
+      if (da) {
+        if (da.geaendertVon === null) await this.d.repo.speichere(id, { ...d, aktiv: da.aktiv }, null, da.version);
+        continue;
+      }
+      let aktiv = ein.includes(x.schluessel);
+      const uebernommeneId = d.wenn.art === 'datum' ? uuidAus(`frist|${d.wenn.typ}|${d.wenn.feld}`) : d.wenn.art === 'benutzer.abwesenheit_gesetzt' ? UMZUG_VERTRETUNG : null;
+      if (uebernommeneId) {
+        const alt = await this.d.repo.hole(uebernommeneId);
+        if (alt && alt.geaendertVon !== null) { log.info('Mitgelieferte Automatisierung nicht angelegt: die übernommene Erinnerung wurde geändert', { paket: p.id, automatisierung: x.schluessel, bleibt: alt.id }); continue; }
+        if (alt) { aktiv = alt.aktiv; await this.d.repo.loesche(alt.id); }
+      }
+      const a: Automatisierung = { ...d, id, aktiv, angehalten: null, herkunft: 'paket', paketId: p.id, version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
+      try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
+    }
+    // Nicht mehr mitgeliefert: weg, wenn aus und unverändert – übernommene Erinnerungen am Feld bleiben.
+    const uebernommen = (a: Automatisierung) => a.id === UMZUG_VERTRETUNG || (a.wenn.art === 'datum' && a.id === uuidAus(`frist|${a.wenn.typ}|${a.wenn.feld}`));
+    for (const a of vorhanden) if (!ids.has(a.id) && !a.aktiv && a.geaendertVon === null && !uebernommen(a)) await this.d.repo.loesche(a.id);
+    if (neu) log.info('Automatisierungen aus Paket angelegt (aus)', { paket: p.id, anzahl: neu });
+    return neu;
+  }
+
+  /**
+   * Erinnerungen am Feld → Automatisierungen (#712). Datumsfelder mit Frist legen keine Aufgaben mehr selbst an; für jede
+   * Frist ohne passende Automatisierung („Datum erreicht“ mit demselben Typ und Feld) entsteht genau eine – mit
+   * derselben Vorlaufzeit, demselben Empfänger und Text, eingeschaltet, damit sich nichts ändert. Feste Id je Typ und
+   * Feld: mehrere Server legen sie nicht doppelt an. Einmal übernommen, entsteht sie nie wieder (auch nicht, wenn der
+   * Admin sie löscht). Herkunft: das Paket des Mappentyps, sonst „eigen“. **Einmal** beim ersten Start nach dem Update
+   * (Einstellung `fristen_umzug`): Danach legt ein Feld mit „ist eine Frist“ keine Automatisierung mehr an – Erinnerungen
+   * bringen die Pakete mit (aus, beim Installieren wählbar) bzw. legt man selbst an. Die Werkbank sagt, was umgezogen ist.
+   */
+  async fristenUebernehmen(): Promise<number> {
+    const einstSp = this.d.dienst.einstellungenSpeicher;
+    if (await einstSp?.lies('fristen_umzug')) return 0;
+    const k = await this.kontext();
+    const pakete = await this.d.dienst.listePakete();
+    const alle = await this.d.repo.liste();
+    const einst = this.d.dienst.einstellungenSpeicher;
+    const schon = new Set<string>(((await einst?.lies('fristen_uebernommen')) as string[] | null) ?? []);
+    const vorher = schon.size;
+    let neu = 0;
+    for (const typ of k.typen) {
+      for (const feld of typ.felder.filter((f) => f.typ === 'datum' && f.frist)) {
+        const schluessel = `${typ.id}|${feld.key}`;
+        if (schon.has(schluessel)) continue;
+        schon.add(schluessel);
+        if (alle.some((a) => a.wenn.art === 'datum' && a.wenn.typ === typ.id && a.wenn.feld === feld.key && a.herkunft !== 'dms')) continue;
+        const fr = feld.frist!;
+        const paket = pakete.find((p) => Object.values(p.typen).includes(typ.id));
+        const text = fr.text.replace(/\{feld\}/g, feld.label);
+        const d = bereinigeAutomatisierung({
+          name: t('automatisierung.frist.name', { feld: feld.label, typ: typ.name }),
+          beschreibung: t('automatisierung.frist.text'),
+          wenn: { art: 'datum', typ: typ.id, feld: feld.key, vorlauf: fr.vorlauf, einheit: fr.einheit, uhrzeit: '07:00', wiederholung: fr.wiederholung },
+          dann: [{ id: 'f1', art: 'aufgabe', als: 'aufgabe', empfaenger: [fr.empfaengerFeld ? { art: 'feld', feld: fr.empfaengerFeld, sonst: 'ersteller' } : { art: 'ersteller' }], text }],
+        });
+        d.reihenfolge = paket ? REIHENFOLGE.paket : REIHENFOLGE.eigen;
+        const id = uuidAus(`frist|${typ.id}|${feld.key}`);
+        const a: Automatisierung = { ...d, id, aktiv: true, angehalten: null, herkunft: paket ? 'paket' : 'eigen', paketId: paket?.id ?? null, version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
+        try { await this.d.repo.lege(a); neu++; } catch { continue; /* ein anderer Server war schneller */ }
+        log.info('Erinnerung am Feld als Automatisierung übernommen', { typ: typ.name, feld: feld.key, automatisierung: id });
+      }
+    }
+    if (schon.size !== vorher) await einst?.schreibe('fristen_uebernommen', [...schon].sort());
+    // Vertretung (#712/#678): Der Kern legt keine Vertretungs-Aufgabe mehr an. In einer bestehenden Ablage (mehr als
+    // ein Benutzer) übernimmt eine eingeschaltete Automatisierung das – gleicher Text, erledigt sich wie bisher.
+    if (k.benutzer.filter((b) => b.aktiv !== false).length >= 2) {
+      const d = bereinigeAutomatisierung({
+        name: t('automatisierung.vertretung.name'), beschreibung: t('automatisierung.vertretung.beschreibung'),
+        wenn: { art: 'benutzer.abwesenheit_gesetzt', typ: null },
+        dann: [{ id: 'v1', art: 'aufgabe', als: 'aufgabe', empfaenger: [{ art: 'ereignis', feld: 'vertreter' }], text: t('automatisierung.vertretung.text'), faellig: null }],
+      });
+      d.reihenfolge = REIHENFOLGE.eigen;
+      const a: Automatisierung = { ...d, id: UMZUG_VERTRETUNG, aktiv: true, angehalten: null, herkunft: 'eigen', paketId: null, version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
+      try { await this.d.repo.lege(a); neu++; log.info('Vertretungs-Aufgabe als Automatisierung übernommen', { automatisierung: a.id }); } catch { /* ein anderer Server war schneller */ }
+    }
+    await einst?.schreibe('fristen_umzug', { am: this.iso(), anzahl: neu, gesehen: neu === 0 });
+    return neu;
+  }
+
+  /** Hinweis „umgezogen“ (#712) gelesen – verschwindet aus der Werkbank. */
+  async umzugGesehen(): Promise<void> {
+    const einst = this.d.dienst.einstellungenSpeicher;
+    const u = (await einst?.lies('fristen_umzug')) as { am: string; anzahl: number; gesehen: boolean } | null;
+    if (u && !u.gesehen) await einst?.schreibe('fristen_umzug', { ...u, gesehen: true });
+  }
+
+  /** Was beim Update aus Erinnerungen am Feld wurde (#712); null, wenn nichts oder schon gesehen. */
+  async umzug(): Promise<{ am: string; anzahl: number } | null> {
+    const u = (await this.d.dienst.einstellungenSpeicher?.lies('fristen_umzug')) as { am: string; anzahl: number; gesehen: boolean } | null;
+    return u && !u.gesehen && u.anzahl > 0 ? { am: u.am, anzahl: u.anzahl } : null;
+  }
 
   /**
    * Einige ausgeschaltete Beispiele (#675) statt Vorlagen: Herkunft „DMS“, also nur kopieren oder einschalten, nicht
@@ -514,14 +642,14 @@ export class Automatisierungen {
   async lauf(id: string): Promise<Lauf> { const l = await this.d.repo.lauf(id); if (!l) throw new Fachfehler(404, t('automatisierung.lauf.fehlt')); return l; }
 
   /** Für die Werkbank-Übersicht: fehlgeschlagene Läufe und angehaltene Automatisierungen. */
-  async warnungen(): Promise<{ fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: Angehalten['grund'] }> }> {
+  async warnungen(): Promise<{ fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: Angehalten['grund'] }>; umgezogen: { am: string; anzahl: number } | null }> {
     const [fehl, liste] = await Promise.all([this.d.repo.fehlgeschlagene(), this.d.repo.liste()]);
     const aktiv = liste.filter((a) => a.aktiv);
     // Was nicht mehr passt (Feld oder Ansicht gelöscht), zählt sofort – nicht erst beim nächsten Lauf.
     const k = aktiv.some((a) => !a.angehalten) ? await this.kontext() : null;
     const angehalten = aktiv.flatMap((a) => (a.angehalten ? [{ id: a.id, name: a.name, grund: a.angehalten.grund }]
       : k && automatisierungsProbleme(a, k).length ? [{ id: a.id, name: a.name, grund: 'fehlerhaft' as const }] : []));
-    return { fehlgeschlagen: new Set(fehl.map((l) => l.automatisierungId)).size, angehalten };
+    return { fehlgeschlagen: new Set(fehl.map((l) => l.automatisierungId)).size, angehalten, umgezogen: await this.umzug() };
   }
 
   /** Nach einer Wiederherstellung: alle eingeschalteten anhalten, bis ein Admin sie wieder einschaltet. */
@@ -592,9 +720,33 @@ export class Automatisierungen {
   /** Abnehmer des Ereigniskatalogs: passende Automatisierungen nacheinander. Wirft nur, wenn die Datenbank streikt. */
   async ereignis(e: KatalogEreignis): Promise<void> {
     if (!(e.art in EREIGNISKATALOG) || OHNE_WENN.includes(EREIGNISKATALOG[e.art].gruppe) || e.ausloeser?.still) return;
-    const liste = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === e.art && this.passt(a, e));
-    if (!liste.length) return;
-    await this.reihe(liste, { id: e.id, art: e.art, daten: e.daten, kette: e.ausloeser?.art === 'automatisierung' ? (e.ausloeser.kette ?? 1) : 0, ausloeser: e.ausloeser });
+    const alle = await this.d.repo.liste();
+    const liste = alle.filter((a) => a.aktiv && !a.angehalten && a.wenn.art === e.art && this.passt(a, e));
+    if (liste.length) await this.reihe(liste, { id: e.id, art: e.art, daten: e.daten, kette: e.ausloeser?.art === 'automatisierung' ? (e.ausloeser.kette ?? 1) : 0, ausloeser: e.ausloeser });
+    if (e.art === 'mappe.angelegt' || e.art === 'mappe.geaendert') await this.datumImVorlauf(e, alle);
+  }
+
+  /**
+   * „Datum erreicht“ auch beim Speichern (#712, wie früher die Erinnerung am Feld): Liegt das Datum einer gespeicherten
+   * Mappe schon im Vorlauf (heute bis Datum), läuft die Automatisierung sofort – sonst würde ein Datum, das erst nach dem
+   * Erinnerungstag eingetragen wird, nie erinnern. Dieselbe Ereignis-Id wie im Zeitplan: je Mappe und Datum genau einmal.
+   */
+  private async datumImVorlauf(e: KatalogEreignis, alle: Automatisierung[]) {
+    const mappe = e.daten.mappe, typ = e.daten.typ;
+    if (typeof mappe !== 'string' || typeof typ !== 'string') return;
+    const geaendert = e.art === 'mappe.geaendert' ? alsListe(e.daten.felder) : null;
+    const kandidaten = alle.filter((a) => a.aktiv && !a.angehalten && a.wenn.art === 'datum' && a.wenn.typ === typ && a.wenn.vorlauf > 0 && (!geaendert || geaendert.includes(a.wenn.feld)));
+    if (!kandidaten.length) return;
+    const heute = heuteIn(new Date(this.jetzt()));
+    const gruppen = new Map<string, Automatisierung[]>();
+    for (const a of kandidaten) gruppen.set(ausloeserSchluessel(a.wenn), [...(gruppen.get(ausloeserSchluessel(a.wenn)) ?? []), a]);
+    for (const liste of gruppen.values()) {
+      const w = liste[0].wenn as Extract<WennDatum, { art: 'datum' }>;
+      const datum = await this.d.dienst.datumVon(mappe, w.feld);
+      // Nur im Vorlauf: Datum heute oder später, Erinnerungstag erreicht (auch heute – lief der Zeitplan schon, holt es das nach).
+      if (!datum || datum < heute || verschiebe(datum, -w.vorlauf, w.einheit) > heute) continue;
+      await this.reihe(liste, { id: uuidAus(`datum|${ausloeserSchluessel(w)}|${mappe}|${datum}`), art: 'datum', daten: { mappe, typ, feld: w.feld, datum, tage: tageBis(datum, heute) }, kette: 0 });
+    }
   }
 
   private passt(a: Automatisierung, e: KatalogEreignis): boolean {
@@ -678,8 +830,12 @@ export class Automatisierungen {
       const personen = async (e: Empfaenger): Promise<string[]> => {
         if (e.art === 'person') return [e.id];
         if (e.art === 'rolle') return this.d.dienst.mitgliederDerRolle(e.id);
-        if (e.art === 'ersteller') return mappe?.erstelltVon && istUuid(mappe.erstelltVon) ? [mappe.erstelltVon] : [];
-        return mappe ? alsListe(mappe.werte[e.feld]).filter(istUuid) : [];
+        const ersteller = mappe?.erstelltVon && istUuid(mappe.erstelltVon) ? [mappe.erstelltVon] : [];
+        if (e.art === 'ersteller') return ersteller;
+        // Person aus dem Ereignis (#678/#712), z. B. der Vertreter bei „Abwesenheit gesetzt“.
+        if (e.art === 'ereignis') return alsListe(anlass.daten[e.feld]).filter(istUuid);
+        const imFeld = mappe ? alsListe(mappe.werte[e.feld]).filter(istUuid) : [];
+        return imFeld.length || e.sonst !== 'ersteller' ? imFeld : ersteller;
       };
       // Und
       const und = await this.pruefeUnd(a.und.karten, a.und.modus, mappe, konto.id, personen);
@@ -691,7 +847,7 @@ export class Automatisierungen {
       // Dann
       const kontext: KartenKontext = {
         dienst: this.d.dienst, z, konto, automatisierung: a, mappe, typ, daten: anlass.daten, trocken: o.trocken, personen,
-        fuelle: (text) => this.fuelle(text, { a, mappe, typ, z, daten: anlass.daten }),
+        fuelle: (text) => this.fuelle(text, { a, mappe, typ, z, daten: anlass.daten, art: anlass.art }),
         anlass: { automatisierung: { id: a.id, name: a.name, eingerichtetVon: a.erstelltVon } },
       };
       const begonnen = this.jetzt();
@@ -743,7 +899,7 @@ export class Automatisierungen {
   }
 
   /** Platzhalter wie beim Mappentitel – Feldwerte mit den Rechten des Kontos; Passwörter nie. */
-  async fuelle(text: string, c: { a: Automatisierung; mappe: Mappe | null; typ: Mappentyp | null; z: Zugriff; daten: Record<string, unknown> }): Promise<string> {
+  async fuelle(text: string, c: { a: Automatisierung; mappe: Mappe | null; typ: Mappentyp | null; z: Zugriff; daten: Record<string, unknown>; art?: string }): Promise<string> {
     const { a, mappe, typ, z, daten } = c;
     const refs = mappe && typ ? typ.felder.filter((f) => f.typ === 'referenz').flatMap((f) => alsListe(mappe.werte[f.key])).filter(istUuid) : [];
     const titel = refs.length ? await this.d.dienst.lesbareTitel(z, refs) : new Map<string, string>();
@@ -752,6 +908,14 @@ export class Automatisierungen {
       titel: mappe?.titel ?? '', mappentyp: typ?.name ?? '', heute: tagVon(new Date(this.jetzt()).toISOString()), automatisierung: a.name,
       datum: typeof daten.datum === 'string' ? tagVon(`${daten.datum}T12:00:00Z`) : '', tage: daten.tage === undefined ? '' : String(daten.tage),
     };
+    // Aus dem Ereignis (#678/#712): Personen mit Namen, Zeitraum einer Abwesenheit lesbar.
+    const tag = (x: unknown) => (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) ? tagVon(`${x}T12:00:00Z`) : '');
+    for (const k of PERSONEN_IM_EREIGNIS[c.art ?? ''] ?? []) if (typeof daten[k] === 'string' && istUuid(daten[k] as string)) fest[k] = await this.d.dienst.name(daten[k] as string);
+    if ('von' in daten || 'bis' in daten) {
+      fest.von = tag(daten.von); fest.bis = tag(daten.bis);
+      fest.zeitraum = fest.von && fest.bis ? t('automatisierung.platzhalter.zeitraum.von-bis', { von: fest.von, bis: fest.bis }) : fest.von ? t('automatisierung.platzhalter.zeitraum.ab', { von: fest.von })
+        : fest.bis ? t('automatisierung.platzhalter.zeitraum.bis', { bis: fest.bis }) : t('automatisierung.platzhalter.zeitraum.offen');
+    }
     return text.replace(/\{([a-z][a-z0-9_]*)((?:\|[^{}|]*)*)\}/g, (ganz, key: string) => {
       if (key in fest) return fest[key];
       const f = typ?.felder.find((x) => x.key === key);

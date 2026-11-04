@@ -1466,7 +1466,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // WebDAV-Laufwerk (#346): an/aus (Standard aus), Adresse, Stand und letzte Zugriffe.
     // Webhooks (#627): alle im Überblick, abschalten, löschen; freigegebene Ziele.
     // Automatisierungen (#674): nur Administratoren legen an und ändern; ausgeführt wird unter dem Systemkonto.
-    { methode: 'GET', pfad: '/api/werkbank/automatisierungen', zugang: 'admin', handler: async () => ok({ ...await autos().uebersicht(), kontext: await autos().kontext() }) },
+    { methode: 'GET', pfad: '/api/werkbank/automatisierungen', zugang: 'admin', handler: async () => ok({ ...await autos().uebersicht(), kontext: await autos().kontext(), umgezogen: await autos().umzug() }) },
+    // #712: Hinweis „Erinnerungen sind umgezogen“ gelesen.
+    { methode: 'POST', pfad: '/api/werkbank/automatisierungen/umzug-gesehen', zugang: 'admin', handler: async () => { await autos().umzugGesehen(); return ok(null); } },
     { methode: 'POST', pfad: '/api/werkbank/automatisierungen', zugang: 'admin', handler: async (a) => ok(await autos().lege(a.body, ich(a).id), 201) },
     { methode: 'POST', pfad: '/api/werkbank/automatisierungen/wiederholen', zugang: 'admin', handler: async () => ok(await autos().wiederholeAlle()) },
     { methode: 'GET', pfad: '/api/werkbank/automatisierungen/laeufe/:id', zugang: 'admin', handler: async (a) => ok(await autos().lauf(a.params.id)) },

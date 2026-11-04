@@ -1603,7 +1603,8 @@ export class Dienst {
 
   /* ---------- Aufgaben (#54) und Erwähnungen (#56) ---------- */
 
-  private async name(benutzerId: string | null): Promise<string> {
+  /** Anzeigename eines Benutzers (auch für Platzhalter in Automatisierungen, #678). */
+  async name(benutzerId: string | null): Promise<string> {
     if (!benutzerId) return 'Administratoren';
     return (await this.repo.titelVon([benutzerId])).get(benutzerId) || 'unbekannt';
   }
@@ -1743,25 +1744,26 @@ export class Dienst {
       : neu.an ? `Abwesenheit ${alt.an ? 'geändert' : 'eingetragen'}: ${zeitraum(neu)}, Vertreter ${await this.name(neu.vertreterId)}${durch}`
       : `Vertreter ${neu.vertreterId ? `hinterlegt: ${await this.name(neu.vertreterId)}` : 'entfernt'}${durch}`;
     await this.notiere(b.id, von, 'abwesenheit', { text });
-    // Ereigniskatalog (#670): Abwesenheit gesetzt (auch geändert) bzw. beendet.
+    // Ereigniskatalog (#670): Abwesenheit gesetzt (auch geändert) bzw. beendet; Vertretung zurückgezogen (#678/#712)
+    // für den bisherigen Vertreter, wenn die Abwesenheit endet oder ein anderer bzw. kein Vertreter eingetragen ist.
+    const bisher = alt.an ? alt.vertreterId ?? null : null;
+    const zurueck = bisher && (endet || !neu.an || neu.vertreterId !== bisher) ? bisher : null;
     if (endet) {
-      await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id }, von);
+      await this.ereignis('benutzer.abwesenheit_beendet', { benutzer: b.id, vertreter: bisher }, von);
       // Aufgaben mit Anlass „Abwesenheit“ (#724, z. B. aus „Wenn Abwesenheit gesetzt“) erledigen sich.
       await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, 'Abwesenheit beendet');
+    } else if (alt.an) {
+      // Geändert (Zeitraum oder Vertreter): Was „Abwesenheit gesetzt“ angelegt hatte, erledigt sich; das Ereignis
+      // unten legt es mit den neuen Angaben neu an – wie früher die Vertretungs-Aufgabe.
+      await this.erledigeNachAnlass(b.id, (x) => x.art === 'abwesenheit' && x.benutzer === b.id, 'Vertretung geändert');
     }
-    else if (neu.an) await this.ereignis('benutzer.abwesenheit_gesetzt', { benutzer: b.id, von: neu.von, bis: neu.bis, vertreter: neu.vertreterId }, von);
-    // Vertretungs-Aufgaben: alte erledigen sich, solange sich Vertreter oder Zeitraum ändert oder die Abwesenheit endet.
+    if (zurueck) await this.ereignis('benutzer.vertretung_zurueckgezogen', { benutzer: b.id, vertreter: zurueck }, von);
+    if (!endet && neu.an) await this.ereignis('benutzer.abwesenheit_gesetzt', { benutzer: b.id, von: neu.von, bis: neu.bis, vertreter: neu.vertreterId }, von);
+    // Seit #712 legt der Kern keine Vertretungs-Aufgabe mehr an – das macht die Automatisierung „Vertretung eingetragen“
+    // (Paket Benachrichtigungen bzw. beim Update übernommen). Alte Vertretungs-Aufgaben erledigen sich wie bisher.
     for (const a of (await this.repo.offeneAufgaben({ mappeIds: [b.id] })).filter((x) => x.art === 'vertretung')) {
       await this.repo.erledigeAufgabe(a.id, null);
       await this.notiere(b.id, null, 'aufgabe', { text: `erledigt (${endet ? 'Abwesenheit beendet' : 'Vertretung geändert'}): ${a.text}`, aufgabe: a.id, aufgabenart: 'vertretung', fuer: a.empfaengerId, aufgabentext: a.text });
-    }
-    if (neu.an && neu.vertreterId && (!neu.bis || neu.bis >= heuteIn())) {
-      const a = await this.neueAufgabe({
-        id: randomUUID(), mappeId: b.id, empfaengerId: neu.vertreterId, art: 'vertretung',
-        text: `Du wurdest für ${name} als Vertreter hinterlegt – ${zeitraum(neu)}.`.slice(0, AUFGABE_MAX),
-        erstellt: '', erstelltVon: von, erledigt: null, erledigtVon: null,
-      });
-      await this.notiere(b.id, von, 'aufgabe', { text: `für ${await this.name(neu.vertreterId)}: Vertretung`, aufgabe: a.id, aufgabenart: 'vertretung', fuer: neu.vertreterId, aufgabentext: a.text });
     }
   }
 
@@ -1899,8 +1901,8 @@ export class Dienst {
   /* ---------- Fristen (#129–#133) ---------- */
 
   /**
-   * Frist-Aufgaben abgleichen: ab „Datum − Vorlauf“ eine Aufgabe je Mappe, Feld und Datum (nie doppelt,
-   * auch nicht nach dem Erledigen); offene Fristen erledigen sich, sobald das Datum nicht mehr stimmt.
+   * Frist-Aufgaben abgleichen: offene Fristen erledigen sich, sobald das Datum nicht mehr stimmt; „Frist erreicht“
+   * melden. Neue Frist-Aufgaben legt seit #712 nur noch die Automatisierung „Datum erreicht“ an.
    * Nach dem Speichern einer Mappe, nach Änderungen am Mappentyp und regelmäßig (täglicher Lauf).
    */
   async fristenAbgleichen(f: { typId?: string; mappeIds?: string[] } = {}, heute = heuteIn()): Promise<{ angelegt: number; erledigt: number }> {
@@ -1915,9 +1917,7 @@ export class Dienst {
     }
     if (!mappen.length) return { angelegt: 0, erledigt: 0 };
     const vorhanden = await this.repo.fristAufgaben(f.mappeIds ?? (f.typId ? mappen.map((m) => m.id) : undefined));
-    // Eingebaute Erinnerungen (ohne Anlass); Fristen aus Automatisierungen (#724) zählen hier nicht mit.
-    const schon = new Set(vorhanden.filter((a) => !a.anlass).map((a) => `${a.mappeId}|${a.feldKey}|${a.datum}`));
-    let angelegt = 0; let erledigt = 0;
+    const angelegt = 0; let erledigt = 0;
     for (const m of mappen) {
       const typ = typen.get(m.typId);
       if (!typ) continue;
@@ -1942,17 +1942,8 @@ export class Dienst {
           await this.fristErreicht(m, feld.key, wert, 'vorlauf', an);
           if (wert === heute) await this.fristErreicht(m, feld.key, wert, 'faellig', an);
         }
-        if (!istDatum(wert) || wert < heute || fristAb(wert, fr) > heute || schon.has(`${m.id}|${feld.key}|${wert}`)) continue;
-        const text = fristText(fr, feld, wert, m.titel ?? '');
-        const an = fristEmpfaenger(fr, m);
-        let a: Aufgabe;
-        try {
-          a = await this.neueAufgabe({ id: randomUUID(), mappeId: m.id, empfaengerId: an, art: 'frist', text, feldKey: feld.key, datum: wert, erstellt: '', erstelltVon: null, erledigt: null, erledigtVon: null });
-        } catch { continue; } // gleichzeitiger Lauf hat sie schon angelegt (eindeutiger Index)
-        schon.add(`${m.id}|${feld.key}|${wert}`);
-        await this.notiere(m.id, null, 'aufgabe', { text: `Frist für ${await this.name(an)}: ${text}`, aufgabe: a.id, aufgabenart: 'frist', fuer: an, aufgabentext: text });
-        await this.leiteUm(a);
-        angelegt++;
+        // #712: Das Feld legt keine Aufgaben mehr selbst an – das tun die Automatisierungen „Datum erreicht“, in die
+        // jede Erinnerung am Feld beim Update übernommen wurde (Automatisierungen.fristenUebernehmen).
       }
     }
     if (angelegt || erledigt) protokoll.modul('ablage').info('Fristen abgeglichen', { angelegt, erledigt });
@@ -3725,6 +3716,8 @@ export class Dienst {
   /* ---------- Pakete (#188): Ablage der installierten Pakete; die Logik steckt in pakete.ts ---------- */
 
   listePakete() { return this.repo.listePakete(); }
+  /** Einstellungen für Bausteine neben dem Dienst (#712: Automatisierungen merken, welche Fristen übernommen sind). */
+  get einstellungenSpeicher(): Einstellungen | undefined { return this.einstellungen; }
   speicherePaketCode(id: string, dateien: Array<{ name: string; inhalt: Buffer }>) { return this.repo.speicherePaketCode(id, dateien); }
   paketCode(id: string) { return this.repo.paketCode(id); }
   loeschePaketCode(id: string) { return this.repo.loeschePaketCode(id); }
@@ -5250,6 +5243,10 @@ export class Dienst {
   }
   /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
   automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string }>>;
+  /** Erinnerungen am Feld als Automatisierungen übernehmen (#712); setzt der Baustein Automatisierungen. */
+  fristenUebernehmen?: () => Promise<number>;
+  /** Mitgelieferte Automatisierungen eines Pakets anlegen bzw. aktualisieren (#712); setzt der Baustein Automatisierungen. */
+  paketAutomatisierungen?: (p: InstalliertesPaket, liste: Array<{ schluessel: string; name: string; beschreibung: string; wenn: Record<string, unknown>; und?: Record<string, unknown>; dann: unknown[] }>, ein?: string[]) => Promise<number>;
   /** Automatisierungen mit Änderungsverlauf für den Vollexport (#674 setzt das). */
   automatisierungenExport?: () => Promise<unknown[]>;
 
@@ -5362,10 +5359,10 @@ export class Dienst {
   }
 
   /** Offene Aufgaben einer Mappe, deren Anlass `passt`, als erledigt eintragen (#724: „erledigt sich selbst“). */
-  private async erledigeNachAnlass(mappeId: string, passt: (x: AufgabenAnlass) => boolean, grund: string): Promise<number> {
+  private async erledigeNachAnlass(mappeId: string, passt: (x: AufgabenAnlass, a: Aufgabe) => boolean, grund: string): Promise<number> {
     let n = 0;
     for (const a of await this.repo.offeneAufgaben({ mappeIds: [mappeId] })) {
-      if (!a.anlass || !passt(a.anlass)) continue;
+      if (!a.anlass || !passt(a.anlass, a)) continue;
       await this.repo.erledigeAufgabe(a.id, null);
       await this.notiere(mappeId, null, 'aufgabe', { text: `erledigt (${grund}): ${a.text}`, aufgabe: a.id, aufgabenart: a.art, fuer: a.empfaengerId, aufgabentext: a.text });
       n++;
@@ -5374,6 +5371,13 @@ export class Dienst {
   }
 
   /** Mappen eines Typs, deren Datumsfeld genau dieses Datum hat („Datum in N Tagen“, #674). Nur Ids. */
+  /** Wert eines Datumsfelds einer Mappe (#712: „Datum erreicht“ beim Speichern im Vorlauf); null ohne Datum oder bei Demo-Daten. */
+  async datumVon(mappeId: string, feld: string): Promise<string | null> {
+    const m = await this.repo.holeMappe(mappeId);
+    const w = m?.werte[feld];
+    return m && !m.demo && istDatum(w) ? w : null;
+  }
+
   async mappenMitDatum(typId: string, feld: string, datum: string): Promise<string[]> {
     return (await this.repo.listeMappen(typId)).filter((m) => m.werte[feld] === datum && !m.demo).map((m) => m.id);
   }

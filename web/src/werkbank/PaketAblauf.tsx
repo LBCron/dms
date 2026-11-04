@@ -265,6 +265,11 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
   const mitBeispielen = pk.filter((p) => p.vorschau.beispiele > 0 && !p.vorschau.update);
   const [beispiele, setBeispiele] = useState(false);
   const [ohneBeispiele, setOhneBeispiele] = useState<string[]>([]);
+  // Mitgelieferte Automatisierungen (#712): Vorgabe ja – abgewählte bleiben aus („paket|schlüssel“).
+  const mitAutomatisierungen = pk.filter((p) => (p.vorschau.automatisierungen ?? []).some((a) => a.neu));
+  const [ohneAutomatisierung, setOhneAutomatisierung] = useState<string[]>([]);
+  const angehakt = Object.fromEntries(mitAutomatisierungen.map((p) => [p.id, (p.vorschau.automatisierungen ?? []).filter((a) => a.neu && !ohneAutomatisierung.includes(`${p.id}|${a.schluessel}`)).map((a) => a.schluessel)]));
+  const anzahlAn = Object.values(angehakt).reduce((n, l) => n + l.length, 0);
   const [herkunftOk, setHerkunftOk] = useState(false);
   const [rechteOk, setRechteOk] = useState(false);
   const [adresseOk, setAdresseOk] = useState(false);
@@ -297,7 +302,7 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
     setLaeuft(true); setMeldung(undefined); setFehler({});
     try {
       const e = await api.paketAblaufInstallieren({
-        ...eingabe(), namen, sichtNamen, beispiele: beispielPakete.map((p) => p.id),
+        ...eingabe(), namen, sichtNamen, beispiele: beispielPakete.map((p) => p.id), automatisierungen: angehakt,
         ...(herkunftOk ? { bestaetigt: true } : {}), ...(rechteOk ? { rechteStand: plan.rechte.stand } : {}),
         einstellungen: Object.fromEntries(Object.entries(werte).filter(([id]) => !spaeter.includes(id))), spaeter, ...(adresseOk ? { adresseBestaetigt: true } : {}),
       });
@@ -404,6 +409,20 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
         </section>
       )}
 
+      {mitAutomatisierungen.length > 0 && (
+        <section className="blatt stapel" aria-label={t('pakete.ablauf.automatisierungen')}>
+          <h2 className="h3">{t('pakete.ablauf.automatisierungen')}</h2>
+          <p className="leise">{t('pakete.ablauf.automatisierungen.text')}</p>
+          {mitAutomatisierungen.flatMap((p) => (p.vorschau.automatisierungen ?? []).filter((a) => a.neu).map((a) => {
+            const k = `${p.id}|${a.schluessel}`;
+            return (
+              <label key={k} className="haken"><input type="checkbox" checked={!ohneAutomatisierung.includes(k)} onChange={(e) => setOhneAutomatisierung(e.target.checked ? ohneAutomatisierung.filter((x) => x !== k) : [...ohneAutomatisierung, k])} />
+                <span>{a.name} <small className="leise">{t('pakete.ablauf.automatisierungen.paket', { name: p.name })}</small>{a.beschreibung && <small className="hilfe">{a.beschreibung}</small>}</span></label>
+            );
+          }))}
+        </section>
+      )}
+
       {mitEinstellungen.length > 0 && (
         <section className="blatt stapel" aria-label={t('pakete.ablauf.einstellungen')}>
           <h2 className="h3">{t('pakete.ablauf.einstellungen')}</h2>
@@ -440,6 +459,7 @@ function Fragen({ plan, eingabe, zurueck, neuerPlan, fertig }: {
           neueTypen ? t('pakete.ablauf.summe.typen', { anzahl: neueTypen }) : '',
           neueSichten ? t('pakete.ablauf.summe.sichten', { anzahl: neueSichten }) : '',
           beispielPakete.length ? t('pakete.ablauf.summe.beispiele', { anzahl: beispielPakete.length }) : '',
+          anzahlAn ? t('pakete.ablauf.summe.automatisierungen', { anzahl: anzahlAn }) : '',
           mitCode.length ? t('pakete.ablauf.summe.code', { anzahl: mitCode.length }) : '',
           spaeter.length ? t('pakete.ablauf.summe.spaeter', { anzahl: spaeter.length }) : '',
         ].filter(Boolean).join(' · ')}</p>

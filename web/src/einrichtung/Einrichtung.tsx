@@ -10,7 +10,7 @@ import { FILTER } from '../../../shared/src/titelfilter';
 import { wirksameTypen } from '../../../shared/src/sichten';
 import { OFFENES_REGELWERK, regelProblem, regelwerkVon, type Regelwerk } from '../../../shared/src/rechte';
 import { PaketeAmTyp, RegelwerkAbschnitt, TestlaufBlatt } from '../werkbank/Berechtigungen';
-import { FRIST_STANDARD, FRIST_TEXT, fristText, VORLAUF_EINHEITEN, wiederholungText, type FristEinstellung } from '../../../shared/src/fristen';
+import { FRIST_STANDARD } from '../../../shared/src/fristen';
 import { api, ApiFehler, type Bezuege } from '../api';
 import { useDaten } from '../daten';
 import { geheZu, Link, loeseWache } from '../ort';
@@ -415,12 +415,12 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
   );
 }
 
-/** Kurzinfo der Felder (#144), z. B. „8 Felder, 2 Pflicht, 1 mit Erinnerung“. */
+/** Kurzinfo der Felder (#144), z. B. „8 Felder, 2 Pflicht, 1 Frist“. */
 function feldKurz(felder: EntwurfFeld[]): string {
   if (!felder.length) return 'noch keine Felder';
   const pflicht = felder.filter((f) => f.pflicht).length;
   const frist = felder.filter((f) => f.typ === 'datum' && f.frist).length;
-  return [`${felder.length} ${felder.length === 1 ? 'Feld' : 'Felder'}`, pflicht && `${pflicht} Pflicht`, frist && `${frist} mit Erinnerung`].filter(Boolean).join(', ');
+  return [`${felder.length} ${felder.length === 1 ? 'Feld' : 'Felder'}`, pflicht && `${pflicht} Pflicht`, frist && `${frist} ${frist === 1 ? 'Frist' : 'Fristen'}`].filter(Boolean).join(', ');
 }
 
 /** „Verwendet in“ (#147): Sichten, Referenzfelder und Verknüpfungsregister, die diesen Typ nutzen. */
@@ -474,7 +474,7 @@ function FeldZeile(p: {
   const grenzeText = (g: string) => (g === HEUTE ? t('felder.editor.datum.heute') : /^\d{4}-\d{2}-\d{2}$/.test(g) ? `${g.slice(8, 10)}.${g.slice(5, 7)}.${g.slice(0, 4)}` : g);
   if (f.typ === 'datum' && f.min) chips.push(t('felder.editor.chip.min', { datum: grenzeText(f.min) }));
   if (f.typ === 'datum' && f.max) chips.push(t('felder.editor.chip.max', { datum: grenzeText(f.max) }));
-  if (f.typ === 'datum' && f.frist) chips.push(`erinnert ${f.frist.vorlauf} ${VORLAUF_EINHEITEN[f.frist.einheit]} vorher${f.frist.wiederholung ? ` · ${wiederholungText(f.frist.wiederholung)}` : ''}`);
+  if (f.typ === 'datum' && f.frist) chips.push(t('felder.editor.chip.frist'));
 
   const zahl = (prop: Zahlprop, label: string, platzhalter: string) => (
     <label className="eigenschaft" htmlFor={id(prop)}><span>{label}</span>
@@ -661,41 +661,17 @@ function ErkennungEditor({ f, id, setze }: { f: EntwurfFeld; id: (x: string) => 
   );
 }
 
-/** Erinnerung an einem Datumsfeld (#129) und wiederkehrende Termine (#130). */
-function FristEditor({ f, id, setze, benutzerFelder }: { f: EntwurfFeld; id: (x: string) => string; setze(p: Partial<EntwurfFeld>): void; benutzerFelder: Array<{ key: string; label: string }> }) {
-  const fr = f.frist;
-  const aendere = (p: Partial<FristEinstellung>) => setze({ frist: { ...(fr ?? FRIST_STANDARD), ...p } });
+/**
+ * „Ist eine Frist“ an einem Datumsfeld (#129, seit #712): Das Datum steht unter „Zu erledigen“ und im Kalender und löst
+ * „Datum erreicht“ aus. Wann und an wen Ablago erinnert, stellt man in einer Automatisierung ein – nicht mehr am Feld.
+ * Bestehende Angaben (Vorlauf, Empfänger, Text, Wiederholung) bleiben gespeichert (Vorgabe aus dem Paket).
+ */
+function FristEditor({ f, setze }: { f: EntwurfFeld; id: (x: string) => string; setze(p: Partial<EntwurfFeld>): void; benutzerFelder: Array<{ key: string; label: string }> }) {
   return (
     <div className="fristeditor">
-      <label className="haken"><input type="checkbox" checked={!!fr} onChange={(e) => setze({ frist: e.target.checked ? { ...FRIST_STANDARD } : null })} />
-        <span>Erinnern <Hilfe ort="mappentyp.frist" /><small className="hilfe">Rechtzeitig vor dem Datum steht die Mappe als Frist unter „Zu erledigen“ – auch in der täglichen Zusammenfassung</small></span></label>
-      {fr && <>
-        <div className="raster">
-          <label className="eigenschaft" htmlFor={id('vorlauf')}><span>Vorlauf <small>so lange vorher</small></span>
-            <span className="wertgruppe"><input id={id('vorlauf')} type="number" min={0} max={999} className="kurz" value={fr.vorlauf} onChange={(e) => aendere({ vorlauf: Math.max(0, Math.trunc(Number(e.target.value) || 0)) })} />
-              <select aria-label="Einheit des Vorlaufs" value={fr.einheit} onChange={(e) => aendere({ einheit: e.target.value as FristEinstellung['einheit'] })}>
-                {Object.entries(VORLAUF_EINHEITEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></span></label>
-          <label className="eigenschaft" htmlFor={id('empf')}><span>Für</span>
-            <select id={id('empf')} value={fr.empfaengerFeld ?? ''} onChange={(e) => aendere({ empfaengerFeld: e.target.value || null })}>
-              <option value="">Ersteller der Mappe</option>
-              {benutzerFelder.map((b) => <option key={b.key} value={b.key}>Benutzer im Feld „{b.label}“</option>)}
-            </select>
-            <small className="hilfe">{benutzerFelder.length ? 'Ist das Feld leer, bekommt der Ersteller die Erinnerung.' : 'Mit einem Feld, das auf Benutzer verweist (z. B. „Verantwortlich“), lässt sich ein anderer Empfänger wählen.'}</small></label>
-        </div>
-        <div className="raster">
-          <label className="eigenschaft" htmlFor={id('ftext')}><span>Text <small>Platzhalter {'{feld}'}, {'{datum}'}, {'{titel}'}</small></span>
-            <input id={id('ftext')} value={fr.text} maxLength={200} placeholder={FRIST_TEXT} onChange={(e) => aendere({ text: e.target.value })} />
-            <small className="hilfe">Ergibt z. B. „{fristText({ ...fr, text: fr.text || FRIST_TEXT }, { label: f.label || 'Datum' }, '2027-09-30', 'Stromvertrag Haus')}“</small></label>
-          <label className="eigenschaft" htmlFor={id('wdh')}><span>Wiederkehrend</span>
-            <select id={id('wdh')} value={fr.wiederholung ?? ''} onChange={(e) => aendere({ wiederholung: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">einmalig</option>
-              {[1, 3, 6, 12, 24, 36, 60].map((m) => <option key={m} value={m}>{wiederholungText(m)}</option>)}
-              {fr.wiederholung && ![1, 3, 6, 12, 24, 36, 60].includes(fr.wiederholung) && <option value={fr.wiederholung}>{wiederholungText(fr.wiederholung)}</option>}
-            </select>
-            <small className="hilfe">Beim Erledigen schlägt Ablago den nächsten Termin vor; das Datum ändert sich nie von selbst.</small></label>
-        </div>
-      </>}
+      <label className="haken"><input type="checkbox" checked={!!f.frist} onChange={(e) => setze({ frist: e.target.checked ? { ...(f.frist ?? FRIST_STANDARD) } : null })} />
+        <span>{t('felder.editor.frist')} <Hilfe ort="mappentyp.frist" /><small className="hilfe">{t('felder.editor.frist.hilfe')}</small></span></label>
+      {f.frist && <p className="leise klein">{t('felder.editor.frist.erinnern')} <Link className="verweis" to="/werkbank/automatisierungen">{t('felder.editor.frist.link')}</Link></p>}
     </div>
   );
 }

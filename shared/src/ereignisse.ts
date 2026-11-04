@@ -50,7 +50,9 @@ export const EREIGNISKATALOG = {
   'favorit.neu': { gruppe: 'person', felder: ['benutzer', 'mappe', 'typ'] },
   // Benutzer
   'benutzer.abwesenheit_gesetzt': { gruppe: 'benutzer', felder: ['benutzer', 'von', 'bis', 'vertreter'] },
-  'benutzer.abwesenheit_beendet': { gruppe: 'benutzer', felder: ['benutzer'] },
+  'benutzer.abwesenheit_beendet': { gruppe: 'benutzer', felder: ['benutzer', 'vertreter'] },
+  // #678/#712: Vertretung endet für den bisherigen Vertreter – Abwesenheit beendet, Vertreter gewechselt oder entfernt.
+  'benutzer.vertretung_zurueckgezogen': { gruppe: 'benutzer', felder: ['benutzer', 'vertreter'] },
   'benutzer.gesperrt': { gruppe: 'benutzer', felder: ['benutzer', 'zeitpunkt', 'fehlversuche', 'bis', 'ip'] },
   'benutzer.deaktiviert': { gruppe: 'benutzer', felder: ['benutzer'] },
   'benutzer.aktiviert': { gruppe: 'benutzer', felder: ['benutzer'] },

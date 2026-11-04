@@ -73,56 +73,11 @@ describe('Fristen: Rechnen', () => {
 
 function faelle(pg: boolean) {
   describe(`Fristen: Aufgaben aus Datumsfeldern (#129, #130)${pg ? ' – PostgreSQL' : ''}`, { skip: pg && !process.env.TEST_DATABASE_URL && 'ohne TEST_DATABASE_URL' }, () => {
-    it('legt ab Datum − Vorlauf an, nie doppelt, erledigt sich bei geändertem oder leerem Datum', async () => {
-      const { d, anna, ben, vertrag, rufe } = await aufbauFristen(pg);
-      // Ersteller Anna, Frist in 10 Tagen (Vorlauf 2 Wochen) → sofort fällig, für Anna (kein Verantwortlicher).
-      const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendigung: in_(10) } }, anna.id);
-      let offen = (await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist');
-      assert.equal(offen.length, 1);
-      assert.equal(offen[0].datum, in_(10));
-      assert.match(offen[0].text, /^Kündigung bis \d\d\.\d\d\.\d{4}$/);
-      // Mehrere Läufe am Tag: nichts Neues.
-      assert.deepEqual(await d.fristenLauf(), { angelegt: 0, erledigt: 0, erinnerungen: 0 });
-      // Verantwortlicher Ben: die offene Frist bleibt bei Anna (sie kann weitergeben) – neue Daten gehen an Ben.
-      await d.aendereMappe(m.id, { werte: { verantwortlich: ben.id } }, anna.id);
-      // Datum nach hinten → alte erledigt, neue (noch nicht im Vorlauf) nicht angelegt.
-      await d.aendereMappe(m.id, { werte: { kuendigung: in_(60) } }, anna.id);
-      assert.equal((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist').length, 0);
-      const historie = await d.historie(m.id);
-      assert.ok(historie.some((h) => /erledigt \(verschoben auf/.test(String(h.daten?.text ?? ''))));
-      // Lauf 50 Tage später: jetzt im Vorlauf → für Ben.
-      assert.equal((await d.fristenLauf(in_(50))).angelegt, 1);
-      offen = (await d.meineAufgaben({ id: ben.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist');
-      assert.equal(offen.length, 1);
-      // Erledigen mit Vorschlag für den nächsten Termin (jährlich).
-      const erledigt = (await rufe(ben, 'POST', '/api/aufgaben/:id/erledigt', { params: { id: offen[0].id } })).body as { folgetermin?: string };
-      assert.equal(erledigt.folgetermin, naechsterTermin(in_(60), 12));
-      // Nochmal ein Lauf: erledigte Frist mit gleichem Datum wird nicht wieder angelegt.
-      assert.equal((await d.fristenLauf(in_(50))).angelegt, 0);
-      // Folgetermin übernehmen: Datum geändert, im Protokoll.
-      const neu = (await rufe(ben, 'POST', '/api/aufgaben/:id/folgetermin', { params: { id: offen[0].id } })).body as { werte: Record<string, unknown> };
-      assert.equal(neu.werte.kuendigung, naechsterTermin(in_(60), 12));
-      await assert.rejects(rufe(ben, 'POST', '/api/aufgaben/:id/folgetermin', { params: { id: offen[0].id } }), status(409));
-      // Leeres Datum erledigt offene Fristen.
-      await d.aendereMappe(m.id, { werte: { kuendigung: in_(3) } }, anna.id);
-      assert.equal((await d.meineAufgaben({ id: ben.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist').length, 1);
-      await d.aendereMappe(m.id, { werte: { kuendigung: null } }, anna.id);
-      assert.equal((await d.meineAufgaben({ id: ben.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist').length, 0);
-    });
-
-    it('Vergangene Daten erzeugen keine Frist; Erinnerung im Typ abschalten erledigt offene', async () => {
+    it('Das Feld legt selbst keine Frist-Aufgaben mehr an (#712 – das tut die übernommene Automatisierung, test/fristen-umzug.test.ts)', async () => {
       const { d, anna, vertrag } = await aufbauFristen(pg);
-      await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Alt', kuendigung: in_(-3) } }, anna.id);
-      const m = await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Neu', kuendigung: in_(1) } }, anna.id);
-      assert.deepEqual((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).map((a) => a.mappeId), [m.id]);
-      const t = (await d.listeTypen()).find((x) => x.id === vertrag.id)!;
-      await d.aendereTyp(vertrag.id, { ...t, felder: t.felder.map((f) => (f.key === 'kuendigung' ? { ...f, frist: null } : f)) });
-      assert.equal((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).length, 0);
-      // Wieder an: dieselbe Frist (Mappe, Feld, Datum) entsteht nicht noch einmal – ein neues Datum schon.
-      await d.aendereTyp(vertrag.id, t);
-      assert.equal((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).length, 0);
-      await d.aendereMappe(m.id, { werte: { kuendigung: in_(2) } }, anna.id);
-      assert.equal((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).length, 1);
+      await d.legeMappeAn({ typId: vertrag.id, werte: { name: 'Strom', kuendigung: in_(10) } }, anna.id);
+      assert.deepEqual(await d.fristenLauf(), { angelegt: 0, erledigt: 0, erinnerungen: 0 });
+      assert.equal((await d.meineAufgaben({ id: anna.id, rolle: 'mitglied' })).filter((a) => a.art === 'frist').length, 0);
     });
 
     it('Empfängerfeld muss ein Benutzerfeld des Typs sein', async () => {

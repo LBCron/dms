@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  AUTOMATISIERUNG_GRENZEN, automatisierungsProbleme, kontextTyp, kurzform, platzhalterFuer, REIHENFOLGE, WENN_EREIGNISSE,
+  AUTOMATISIERUNG_GRENZEN, automatisierungsProbleme, EREIGNIS_PERSON, PERSONEN_IM_EREIGNIS, kontextTyp, kurzform, platzhalterFuer, REIHENFOLGE, WENN_EREIGNISSE,
   type AutomatisierungAnsicht, type AutomatisierungDaten, type DannKarte, type Empfaenger, type Fassung, type Fehlschlag, type Kontextdaten,
   type Lauf, type Schritt, type UndKarte, type WennKarte,
 } from '../../../shared/src/automatisierung';
@@ -28,7 +28,7 @@ import { FeldBedingung } from './Sichten';
  * Der Sonst-Zweig kommt mit Stufe 2 (#677) – gespeichert wird er schon, angezeigt noch nicht.
  */
 
-type Stand = { automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; fehlschlaege: Fehlschlag[]; kontext: Kontextdaten };
+type Stand = { automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; fehlschlaege: Fehlschlag[]; kontext: Kontextdaten; umgezogen?: { am: string; anzahl: number } | null };
 
 export function useAutomatisierungen(offen: boolean) {
   const [stand, setStand] = useState<Stand | null>(null);
@@ -116,6 +116,12 @@ export function AutomatisierungenListe({ z, offen }: { z: AutomatisierungenZusta
       </Listenkopf>
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
+      {s?.umgezogen && (
+        <div className="hinweis info">
+          <p><strong>{t('automatisierung.ui.umgezogen', { anzahl: s.umgezogen.anzahl })}</strong> {t('automatisierung.ui.umgezogen.text')}</p>
+          <button type="button" className="knopf klein" onClick={async () => { try { await api.automatisierungUmzugGesehen(); await z.laden(); } catch (e) { setFehler((e as Error).message); } }}>{t('automatisierung.ui.umgezogen.ok')}</button>
+        </div>
+      )}
       {!!s?.fehlgeschlagen && (
         <div className="hinweis warn">
           {/* Welcher Lauf und wann (#707); bei mehreren „Anzeigen“ filtert die Liste. Probeläufe zählen nicht. */}
@@ -484,6 +490,7 @@ function empfaengerName(e: Empfaenger, typ: Mappentyp | null, k: Kontextdaten) {
   if (e.art === 'person') return k.benutzer.find((b) => b.id === e.id)?.name ?? '?';
   if (e.art === 'rolle') return t('automatisierung.ui.empfaenger.rolle-name', { name: k.rollen.find((r) => r.id === e.id)?.name ?? '?' });
   if (e.art === 'ersteller') return t('automatisierung.ui.empfaenger.ersteller');
+  if (e.art === 'ereignis') return t('automatisierung.ui.empfaenger.ereignis-name', { name: EREIGNIS_PERSON[e.feld] ?? e.feld });
   return t('automatisierung.ui.empfaenger.feld-name', { name: typ?.felder.find((f) => f.key === e.feld)?.label ?? e.feld });
 }
 
@@ -495,18 +502,20 @@ function undKurz(u: UndKarte, typ: Mappentyp | null, k: Kontextdaten, titelVon: 
   return nicht + t.frei(`automatisierung.ui.und.gruppe.${u.modus}`, { anzahl: u.karten.length });
 }
 
-function EmpfaengerWahl({ e, typ, k, setze }: { e: Empfaenger; typ: Mappentyp | null; k: Kontextdaten; setze: (e: Empfaenger) => void }) {
+function EmpfaengerWahl({ e, typ, k, setze, wenn }: { e: Empfaenger; typ: Mappentyp | null; k: Kontextdaten; setze: (e: Empfaenger) => void; wenn?: WennKarte }) {
   const benutzerTyp = k.typen.find((x) => x.system === 'benutzer');
   const felder = (typ?.felder ?? []).filter((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
-  const wert = e.art === 'feld' ? `feld:${e.feld}` : e.art === 'ersteller' ? 'ersteller:' : `${e.art}:${e.id}`;
+  const ausEreignis = wenn ? PERSONEN_IM_EREIGNIS[wenn.art] ?? [] : [];
+  const wert = e.art === 'feld' ? `feld:${e.feld}` : e.art === 'ereignis' ? `ereignis:${e.feld}` : e.art === 'ersteller' ? 'ersteller:' : `${e.art}:${e.id}`;
   return (
     <select aria-label={t('automatisierung.ui.empfaenger')} value={wert} onChange={(x) => {
       const [art, ...rest] = x.target.value.split(':');
       const v = rest.join(':');
-      setze(art === 'feld' ? { art: 'feld', feld: v } : art === 'ersteller' ? { art: 'ersteller' } : { art: art as 'person' | 'rolle', id: v });
+      setze(art === 'feld' ? { art: 'feld', feld: v } : art === 'ereignis' ? { art: 'ereignis', feld: v } : art === 'ersteller' ? { art: 'ersteller' } : { art: art as 'person' | 'rolle', id: v });
     }}>
       <option value="person:">{t('automatisierung.ui.empfaenger.waehlen')}</option>
       <option value="ersteller:">{t('automatisierung.ui.empfaenger.ersteller')}</option>
+      {ausEreignis.length > 0 && <optgroup label={t('automatisierung.ui.empfaenger.ereignis')}>{ausEreignis.map((p) => <option key={p} value={`ereignis:${p}`}>{EREIGNIS_PERSON[p] ?? p}</option>)}</optgroup>}
       {felder.length > 0 && <optgroup label={t('automatisierung.ui.empfaenger.felder')}>{felder.map((f) => <option key={f.key} value={`feld:${f.key}`}>{f.label}</option>)}</optgroup>}
       <optgroup label={t('automatisierung.ui.empfaenger.personen')}>{k.benutzer.filter((b) => b.aktiv !== false).map((b) => <option key={b.id} value={`person:${b.id}`}>{b.name}</option>)}</optgroup>
       <optgroup label={t('automatisierung.ui.empfaenger.rollen')}>{k.rollen.map((r) => <option key={r.id} value={`rolle:${r.id}`}>{r.name}</option>)}</optgroup>
@@ -583,7 +592,7 @@ function DannEditor({ karte, typ, wenn, k, setze }: { karte: DannKarte; typ: Map
         <ul className="stapel">
           {karte.empfaenger.map((e, i) => (
             <li key={i} className="bedingungszeile">
-              <EmpfaengerWahl e={e} typ={typ} k={k} setze={(n) => setze({ ...karte, empfaenger: karte.empfaenger.map((x, j) => (j === i ? n : x)) })} />
+              <EmpfaengerWahl e={e} typ={typ} k={k} wenn={wenn} setze={(n) => setze({ ...karte, empfaenger: karte.empfaenger.map((x, j) => (j === i ? n : x)) })} />
               <button type="button" className="textknopf gefahr klein" onClick={() => setze({ ...karte, empfaenger: karte.empfaenger.filter((_, j) => j !== i) })}>{t('automatisierung.ui.entfernen')}</button>
             </li>
           ))}
