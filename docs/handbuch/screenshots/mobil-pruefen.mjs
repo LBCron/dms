@@ -7,7 +7,7 @@
  *    Startseite, Zu erledigen, Neue Post, eine Ansicht, eine Mappe, eine Post, Werkbank:
  *    - kein Element breiter als der Bildschirm (außer in einem Bereich, der selbst waagerecht scrollt),
  *      `scrollWidth <= clientWidth` für die Seite und jeden Hauptbereich;
- *    - Kopfzeile mit „+ Neu“ vollständig im Bild;
+ *    - Kopfzeile mit „+ Neu“ vollständig im Bild – in der Ablage, in der Werkbank gibt es keins (#649);
  *    - Eingabefelder mit mindestens 16 px Schrift (sonst vergrößert iOS die Seite beim Tippen und sie
  *      bleibt links und rechts abgeschnitten);
  *    - Kacheln der Startseite einspaltig;
@@ -189,6 +189,10 @@ for (const g of GROESSEN) {
     await s.waitForLoadState('networkidle');
     await s.waitForTimeout(400);
     const raus = await s.evaluate(zuBreiteElemente);
+    // #649: „+ Neu“ nur in der Ablage, nie in der Werkbank.
+    const neuDa = await s.locator('.neuknopf').count();
+    if (seite.pfad.startsWith('/werkbank') && neuDa) raus.push('„+ Neu“ in der Werkbank');
+    if (seite.pfad.startsWith('/ablage') && !neuDa) raus.push('„+ Neu“ fehlt in der Ablage');
     if (seite.kacheln) {
       const spalten = await s.evaluate(() => new Set([...document.querySelectorAll('.start-raster .kachel')].map((k) => Math.round(k.getBoundingClientRect().left))).size);
       if (spalten > 1) raus.push(`Kacheln ${spalten}-spaltig statt einspaltig`);
