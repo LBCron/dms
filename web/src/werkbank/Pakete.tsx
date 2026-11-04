@@ -321,7 +321,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
         <VorschauBlock v={vorschau} warnung={null} abbrechen={() => geheZu('/werkbank/pakete')}
           los={async (x) => {
             try {
-              const r = vorschau.update ? await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt) : await api.paketInstallieren({ id, version: vorschau.paket.version, ...x });
+              const r = vorschau.update ? await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt, x.automatisierungen) : await api.paketInstallieren({ id, version: vorschau.paket.version, ...x });
               await z.laden(); await d.neuLaden(); await z.abrufen(false);
               geheZu(`/werkbank/pakete/${r.id}`);
             } catch (e) { setMeldung(alsMeldung(e)); }
@@ -525,7 +525,7 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
       {vorschau && (
         <VorschauBlock v={vorschau} warnung={offiziell || vorschau.pruefung?.bestaetigen === false ? null : `Aus dem Katalog ${inst?.herkunft.art === 'katalog' ? inst.herkunft.url : quelle}`} abbrechen={() => setVorschau(null)}
           los={(x) => tu(async () => {
-            if (vorschau.update) { const r = await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt); return `${r.name} ist jetzt auf Version ${r.version}.`; }
+            if (vorschau.update) { const r = await api.paketAktualisieren(id, vorschau.paket.version, x.bestaetigt, x.rechteBestaetigt, x.automatisierungen); return `${r.name} ist jetzt auf Version ${r.version}.`; }
             const r = await api.paketInstallieren({ id, version: vorschau.paket.version, quelle, ...x });
             return `${r.name} ${r.version} ist installiert.`;
           })} />
@@ -632,8 +632,11 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
   v: PaketVorschau; warnung: string | null; abbrechen(): void; titel?: string; abbrechenText?: string;
   /** Herkunft schon vorher bestätigt (Sammeldatei): kein zweiter Haken. */
   herkunftBestaetigt?: boolean;
-  los(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean; bestaetigt?: boolean }): Promise<void>;
+  los(x: { namen: Record<string, string>; sichtNamen: Record<string, string>; beispiele: boolean; mitAbhaengigkeiten: boolean; rechteBestaetigt?: boolean; bestaetigt?: boolean; automatisierungen: string[] }): Promise<void>;
 }) {
+  // Mitgelieferte Automatisierungen (#712): Vorgabe ja, abgewählte bleiben aus.
+  const neueAutos = (v.automatisierungen ?? []).filter((a) => a.neu);
+  const [ohneAuto, setOhneAuto] = useState<string[]>([]);
   const [namen, setNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.typen.filter((t) => !t.vorhanden).map((t) => [t.schluessel, t.vorschlag ?? t.name])));
   const [sichtNamen, setSichtNamen] = useState<Record<string, string>>(() => Object.fromEntries(v.sichten.filter((s) => !s.vorhanden).map((s) => [s.schluessel, s.vorschlag ?? s.name])));
   const [beispiele, setBeispiele] = useState(false);
@@ -724,9 +727,19 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
         </>
       )}
       {!v.update && v.beispiele > 0 && <label className="haken"><input type="checkbox" checked={beispiele} onChange={(e) => setBeispiele(e.target.checked)} /><span>{v.beispiele} Beispiel-Mappen anlegen</span></label>}
+      {neueAutos.length > 0 && (
+        <fieldset className="stapel">
+          <legend><strong>{tx('pakete.ablauf.automatisierungen')}</strong></legend>
+          <p className="leise klein">{tx('pakete.ablauf.automatisierungen.text')}</p>
+          {neueAutos.map((a) => (
+            <label key={a.schluessel} className="haken"><input type="checkbox" checked={!ohneAuto.includes(a.schluessel)} onChange={(e) => setOhneAuto(e.target.checked ? ohneAuto.filter((x) => x !== a.schluessel) : [...ohneAuto, a.schluessel])} />
+              <span>{a.name}{a.beschreibung && <small className="hilfe">{a.beschreibung}</small>}</span></label>
+          ))}
+        </fieldset>
+      )}
       <div className="knoepfe">
         <button type="button" className="knopf primaer" disabled={laeuft || v.probleme.length > 0 || konflikt || leer || (bestaetigen && !ok) || rechteFehlen}
-          onClick={() => { setLaeuft(true); void los({ namen, sichtNamen, beispiele, mitAbhaengigkeiten: mit, ...(rechteOk ? { rechteBestaetigt: true } : {}), ...(bestaetigen && ok ? { bestaetigt: true } : {}) }).finally(() => setLaeuft(false)); }}>
+          onClick={() => { setLaeuft(true); void los({ namen, sichtNamen, beispiele, mitAbhaengigkeiten: mit, automatisierungen: neueAutos.map((a) => a.schluessel).filter((k) => !ohneAuto.includes(k)), ...(rechteOk ? { rechteBestaetigt: true } : {}), ...(bestaetigen && ok ? { bestaetigt: true } : {}) }).finally(() => setLaeuft(false)); }}>
           {laeuft ? (v.update ? 'Aktualisiere …' : 'Installiere …') : v.update ? 'Aktualisieren' : 'Installieren'}
         </button>
         <button type="button" className="textknopf" onClick={abbrechen}>{abbrechenText}</button>

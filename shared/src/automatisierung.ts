@@ -59,8 +59,23 @@ export type WennKarte =
 export type Empfaenger =
   | { art: 'person'; id: string }
   | { art: 'rolle'; id: string }
-  | { art: 'feld'; feld: string }
-  | { art: 'ersteller' };
+  /** sonst: ist das Feld leer, geht es an den Ersteller der Mappe (#712, wie die Erinnerung am Feld). */
+  | { art: 'feld'; feld: string; sonst?: 'ersteller' }
+  | { art: 'ersteller' }
+  /** Person aus dem Ereignis (#678/#712), z. B. der Vertreter bei „Abwesenheit gesetzt“. */
+  | { art: 'ereignis'; feld: string };
+
+/** Personen, die ein Ereignis mitbringt und die Empfänger sein können (#678/#712). */
+export const PERSONEN_IM_EREIGNIS: Partial<Record<string, string[]>> = {
+  'benutzer.abwesenheit_gesetzt': ['vertreter', 'benutzer'],
+  'benutzer.abwesenheit_beendet': ['vertreter', 'benutzer'],
+  'benutzer.vertretung_zurueckgezogen': ['vertreter', 'benutzer'],
+  'benutzer.gesperrt': ['benutzer'], 'benutzer.deaktiviert': ['benutzer'], 'benutzer.aktiviert': ['benutzer'],
+  'favorit.neu': ['benutzer'],
+};
+
+/** Beschriftung der Personen aus dem Ereignis (Platzhalter und Empfänger). */
+export const EREIGNIS_PERSON: Record<string, string> = { vertreter: 'Vertreter', benutzer: 'Benutzer' };
 
 export type UndKarte =
   | { art: 'bedingung'; bedingung: Bedingung; nicht?: boolean }
@@ -183,6 +198,9 @@ export const PLATZHALTER_FEST = ['titel', 'mappentyp', 'heute', 'automatisierung
 export function platzhalterFuer(w: WennKarte, typ: Mappentyp | null): Array<{ key: string; label: string }> {
   const fest = [{ key: 'titel', label: 'Titel der Mappe' }, { key: 'mappentyp', label: 'Mappentyp' }, { key: 'heute', label: 'Datum heute' }, { key: 'automatisierung', label: 'Name dieser Automatisierung' }];
   if (w.art === 'datum') fest.push({ key: 'datum', label: 'Erreichtes Datum' }, { key: 'tage', label: 'Tage bis dahin' });
+  // Aus dem Ereignis (#678/#712): Personen mit Namen, Zeitraum einer Abwesenheit.
+  for (const p of PERSONEN_IM_EREIGNIS[w.art] ?? []) fest.push({ key: p, label: EREIGNIS_PERSON[p] ?? p });
+  if (w.art === 'benutzer.abwesenheit_gesetzt') fest.push({ key: 'von', label: 'Abwesend von' }, { key: 'bis', label: 'Abwesend bis' }, { key: 'zeitraum', label: 'Zeitraum der Abwesenheit' });
   return [...fest, ...(typ?.felder ?? []).filter((f) => f.typ !== 'passwort').map((f) => ({ key: f.key, label: f.label }))];
 }
 
@@ -195,8 +213,9 @@ const UHRZEIT = /^([01]\d|2[0-3]):[0-5]\d$/;
 function bereinigeEmpfaenger(e: unknown): Empfaenger | null {
   const x = (e ?? {}) as Record<string, unknown>;
   if ((x.art === 'person' || x.art === 'rolle') && id(x.id)) return { art: x.art, id: id(x.id) };
-  if (x.art === 'feld' && id(x.feld)) return { art: 'feld', feld: id(x.feld) };
+  if (x.art === 'feld' && id(x.feld)) return { art: 'feld', feld: id(x.feld), ...(x.sonst === 'ersteller' ? { sonst: 'ersteller' as const } : {}) };
   if (x.art === 'ersteller') return { art: 'ersteller' };
+  if (x.art === 'ereignis' && id(x.feld)) return { art: 'ereignis', feld: id(x.feld) };
   return null;
 }
 
@@ -273,6 +292,8 @@ function empfaengerProblem(e: Empfaenger, typ: Mappentyp | null, k: Kontextdaten
   if (e.art === 'person') { const b = k.benutzer.find((x) => x.id === e.id); return !b ? 'Diese Person gibt es nicht mehr.' : b.aktiv === false ? `${b.name} ist deaktiviert.` : null; }
   if (e.art === 'rolle') return k.rollen.some((x) => x.id === e.id) ? null : 'Diese Rolle gibt es nicht mehr.';
   if (e.art === 'ersteller') return null;
+  // Person aus dem Ereignis: fehlt sie im einzelnen Ereignis, gibt es eben nichts zu tun (kein Fehler).
+  if (e.art === 'ereignis') return null;
   const f = feldIn(typ, e.feld);
   if (!f) return `Das Feld „${e.feld}“ gibt es im Mappentyp nicht (mehr).`;
   const benutzerTyp = k.typen.find((t) => t.system === 'benutzer');
@@ -336,7 +357,7 @@ export function kurzform(a: AutomatisierungDaten, k: Pick<Kontextdaten, 'typen' 
   const wenn = w.art === 'datum'
     ? `${typ?.name ?? '?'}: ${feldIn(typ, w.feld)?.label ?? (w.feld || '?')} ${vorlaufText(w.vorlauf, w.einheit)}`
     : `${typ && EREIGNISKATALOG[w.art].gruppe !== 'benutzer' ? `${typ.name} ` : ''}${ereignisName(w.art)}`;
-  const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : e.art === 'ersteller' ? 'Ersteller' : feldIn(typ, e.feld)?.label ?? e.feld;
+  const wer = (e: Empfaenger) => e.art === 'person' ? k.benutzer.find((b) => b.id === e.id)?.name ?? '?' : e.art === 'rolle' ? k.rollen.find((r) => r.id === e.id)?.name ?? '?' : e.art === 'ersteller' ? 'Ersteller' : e.art === 'ereignis' ? EREIGNIS_PERSON[e.feld] ?? e.feld : feldIn(typ, e.feld)?.label ?? e.feld;
   const dann = a.dann.map((d) => d.art === 'stopp' ? 'danach keine weiteren'
     : d.art === 'feld' ? `${Object.keys(d.werte).map((x) => feldIn(typ, x)?.label ?? x).join(', ')} setzen`
       : `${d.als === 'aufgabe' ? 'Aufgabe' : 'Benachrichtigung'} an ${d.empfaenger.map(wer).join(', ') || '?'}`).join(', ');

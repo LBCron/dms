@@ -89,7 +89,7 @@ Register stehen zur Wahl, wenn **alle** Mappentypen der Ansicht ein Register mit
 
 ### Fristen
 
-- **hat Frist in den nächsten n Tagen** – Mappen, bei denen ein Datumsfeld in den nächsten n Tagen liegt: wahlweise ein bestimmtes Datumsfeld oder **alle Datumsfelder mit Erinnerung** (siehe [Fristen](mappentypen.md#fristen-erinnerungen-an-datumsfeldern)). Mit **nur meine** zählen nur Fristen, die der angemeldete Benutzer bekommt. So zeigt etwa *Verträge mit Frist im nächsten Quartal* (Vertrag + hat Frist in den nächsten 90 Tagen) genau die passenden Verträge.
+- **hat Frist in den nächsten n Tagen** – Mappen, bei denen ein Datumsfeld in den nächsten n Tagen liegt: wahlweise ein bestimmtes Datumsfeld oder **alle Datumsfelder, die eine Frist sind** (siehe [Fristen](mappentypen.md#fristen-erinnerungen-an-datumsfeldern)). Mit **nur meine** zählen nur Fristen, die der angemeldete Benutzer bekommt. So zeigt etwa *Verträge mit Frist im nächsten Quartal* (Vertrag + hat Frist in den nächsten 90 Tagen) genau die passenden Verträge.
 
 ### Persönlich
 

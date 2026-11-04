@@ -12,7 +12,7 @@ Wie Benutzer mit den Mappen arbeiten, beschreibt das [Benutzerhandbuch](https://
 
 Der Editor ist in der Reihenfolge aufgebaut, in der du einen Mappentyp anlegst: **Grunddaten → Felder → Titel → Trefferlisten → Register → Archivmodus → Stempel beim Weitergeben → Erkennung → Berechtigungen → Testlauf**.
 
-- Jeder Bereich lässt sich mit einem Klick auf seine Überschrift **ein- und ausklappen**. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 mit Erinnerung“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.
+- Jeder Bereich lässt sich mit einem Klick auf seine Überschrift **ein- und ausklappen**. Eingeklappt zeigt er das Wichtigste in einer Zeile, z. B. „8 Felder, 2 Pflicht, 1 Frist“, die Titel-Vorlage mit einem Beispiel oder „Standard: R · 3 Regeln“.
 - Ein **neuer** Mappentyp ist ganz aufgeklappt, ein **bestehender** startet eingeklappt. Was du auf- oder zuklappst, merkt sich dein Gerät je Mappentyp.
 - Die **Sprungleiste** oben führt zu jedem Bereich und klappt ihn auf; **Alle aufklappen** bzw. **Alle zuklappen** schaltet alle auf einmal.
 - Bereiche mit einem **Fehler** sind in der Sprungleiste und am Rand rot markiert. Ein unbekannter Platzhalter im Titel oder eine unvollständige Regel fällt schon beim Tippen auf; was erst beim Speichern auffällt, klappt seinen Bereich von selbst auf.
@@ -42,7 +42,7 @@ Jedes Feld hat eine **Bezeichnung** (änderbar), eine **Kennung** (fest, sobald 
 | Formatierter Text | Mindest- und Höchstlänge (siehe unten) |
 | Zahl | Minimum, Maximum, Nachkommastellen, eindeutig |
 | Betrag | Minimum, Maximum, Standardwährung |
-| Datum | [Frühestens, Spätestens](#formate-und-datumsgrenzen) (fest oder „heute“), Erinnern |
+| Datum | [Frühestens, Spätestens](#formate-und-datumsgrenzen) (fest oder „heute“), Ist eine Frist |
 | Ja/Nein | – |
 | Auswahlliste | die Auswahlwerte (einer pro Zeile), Mehrfachauswahl |
 | Verweis | Ziel-Mappentyp, Art des Verweises, mehrere Mappen erlaubt |
@@ -139,20 +139,24 @@ Ein Feld der Feldart **Formatierter Text** nimmt längere Texte mit einfacher Fo
 - Mit **@** lässt sich ein Benutzer erwähnen; er bekommt dann eine [Aufgabe](aufgaben.md).
 - Ein bestehendes Langtextfeld kannst du auf *Formatierter Text* umstellen; die Texte bleiben, wie sie sind.
 
-### Fristen: Erinnerungen an Datumsfeldern
+### Fristen an Datumsfeldern { #fristen-erinnerungen-an-datumsfeldern }
 
-An einem **Datumsfeld** wie „Kündigung bis“ oder „TÜV fällig“ kannst du **Erinnern** einschalten. Dann steht die Mappe rechtzeitig vor dem Datum als **Frist** unter „Zu erledigen“ – und damit auch in der täglichen Zusammenfassung.
+An einem **Datumsfeld** wie „Kündigung bis“ oder „HU fällig“ kannst du **Ist eine Frist** einschalten. Dann steht das Datum unter „Zu erledigen“ und im Kalender, und es löst das Ereignis *Datum erreicht* aus.
 
-![Erinnerung an einem Datumsfeld](bilder/werkbank-frist.png)
+**Wann und an wen Ablago erinnert, stellst du in einer [Automatisierung](automatisierungen.md) ein** – Wenn-Karte *Datum erreicht*:
 
-- **Vorlauf** – wie lange vorher, in Tagen, Wochen oder Monaten. Bei 4 Wochen und dem 30.09. erscheint die Frist am 02.09.
-- **Für** – der **Ersteller der Mappe** oder der Benutzer in einem Feld, das auf Benutzer verweist (z. B. „Verantwortlich“). Ist dieses Feld leer, bekommt der Ersteller die Erinnerung. Abwesenheit und Vertretung gelten wie bei allen [Aufgaben](aufgaben.md).
-- **Text** – mit den Platzhaltern `{feld}`, `{datum}` und `{titel}`; Standard ist „{feld} {datum}“, also z. B. „Kündigung bis 30.09.2027“.
+- **Vorlaufzeit** – wie lange vorher, in Tagen, Wochen oder Monaten. Bei 4 Wochen und dem 30.09. erscheint die Frist am 02.09.
+- **Empfänger** – zum Beispiel der Benutzer in einem Feld, das auf Benutzer verweist (z. B. „Verantwortlich“), sonst wer die Mappe angelegt hat. Abwesenheit und Vertretung gelten wie bei allen [Aufgaben](aufgaben.md).
+- **Text** mit Platzhaltern wie dem Datum und dem Titel der Mappe.
 - **Wiederkehrend** – monatlich, vierteljährlich, halbjährlich, jährlich oder alle paar Jahre. Wer die Frist erledigt, bekommt den Vorschlag „Datum auf 30.09.2028 setzen“; das Datum ändert sich **nie von selbst**, und die Änderung steht wie jede andere in der Historie der Mappe.
+
+Pakete bringen passende Automatisierungen mit, zum Beispiel „Kündigung bald fällig“. Beim Installieren fragt Ablago, welche gleich eingeschaltet werden sollen (Vorgabe: alle). Für einen eigenen Mappentyp legst du die Automatisierung selbst an.
+
+**Seit Version 0.177 erinnert nur noch die Automatisierung.** Früher stellte man Vorlauf, Empfänger und Text direkt am Feld ein. Beim Update hat Ablago jede dieser Erinnerungen **einmal** als eingeschaltete Automatisierung *Erinnerung: Feld (Mappentyp)* übernommen – mit derselben Vorlaufzeit, demselben Empfänger (ist das Feld leer: der Ersteller), demselben Text und derselben Wiederholung. Es erinnert also alles wie bisher; die Werkbank-Übersicht sagt einmal, was umgezogen ist. Eine übernommene Automatisierung, die du löschst, kommt nicht wieder. Bringt ein Paket-Update später eine eigene Automatisierung für dasselbe Feld mit, ersetzt sie die übernommene, solange du diese nicht geändert hast – doppelt erinnert wird nie.
 
 So verhalten sich Fristen:
 
-- Ablago prüft die Fristen beim Speichern einer Mappe, nach Änderungen am Mappentyp und jeden Tag kurz nach Mitternacht. Je Mappe, Feld und Datum entsteht **höchstens eine** Frist – auch nach dem Erledigen nicht noch einmal.
+- Die Automatisierung prüft jeden Tag zur eingestellten Uhrzeit (Vorgabe 07:00) und beim Speichern einer Mappe: Liegt das Datum schon im Vorlauf, kommt die Frist sofort. Je Person, Mappe, Feld und Datum entsteht **höchstens eine** Frist – auch nach dem Erledigen nicht noch einmal.
 - Wird das Datum **geändert oder geleert**, erledigt sich eine offene Frist von selbst (mit Eintrag in der Historie der Mappe); für das neue Datum entsteht zur rechten Zeit eine neue.
 - Daten, die schon vorbei sind, erzeugen keine Frist mehr.
 - Darf der Empfänger die Mappe nach den [Berechtigungen](berechtigungen.md) nicht lesen, bekommt er die Frist trotzdem; unter *Werkbank → Benachrichtigungen und Aufgaben* steht dann ein Hinweis.

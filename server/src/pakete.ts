@@ -144,7 +144,9 @@ export function ordneBeispiele(beispiele: PaketBeispiel[]): PaketBeispiel[] | nu
 }
 /** Code eines Pakets (#338): Angaben aus dem Manifest und die Dateien unter code/ (modul.wasm, daten/…). */
 export interface PaketCodeTeil { info: PaketCode; dateien: Array<{ name: string; inhalt: Buffer }> }
-export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; /** Gleichbedeutende Wörter für die Suche (#356). */ wortlisten: string[][]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null }
+export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; /** Gleichbedeutende Wörter für die Suche (#356). */ wortlisten: string[][];
+  /** Mitgelieferte Automatisierungen (#712, dms-registry #108), roh aus inhalt/automatisierungen.yaml; Typen als Paket-Schlüssel. */
+  automatisierungen: PaketAutomatisierung[]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null }
 /** WebAssembly-Magie und Version 1. */
 const WASM_KOPF = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
 const CODE_DATEI = /^code\/(modul\.wasm|daten\/[A-Za-z0-9._-]{1,80})$/;
@@ -262,6 +264,20 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       fehler.push('beispiele: Die Verweise zwischen den Beispielen bilden einen Kreis (A zeigt auf B, B auf A). Ein Verweis muss weg.');
     }
   }
+  // Mitgelieferte Automatisierungen (#712): Schlüssel, Name, genau eine Wenn-Karte; Typen als eigener Schlüssel oder paket:typ.
+  const automatisierungen = liste('automatisierungen').map((a, i): PaketAutomatisierung => {
+    const wo = `automatisierungen[${i + 1}]`;
+    if (!SCHLUESSEL.test(str(a.schluessel))) fehler.push(`${wo}: ungültiger Schlüssel „${str(a.schluessel)}“.`);
+    if (!str(a.name).trim()) fehler.push(`${wo}: Name fehlt.`);
+    if (!istObjekt(a.wenn)) fehler.push(`${wo}: wenn fehlt (genau eine Karte).`);
+    if (!Array.isArray(a.dann) || !a.dann.length) fehler.push(`${wo}: dann braucht mindestens eine Karte.`);
+    const typ = istObjekt(a.wenn) && a.wenn.typ != null ? str(a.wenn.typ) : '';
+    if (typ && !TYPVERWEIS.test(typ)) fehler.push(`${wo}: wenn.typ „${typ}“ ist kein gültiger Mappentyp-Verweis.`);
+    const empf = (Array.isArray(a.dann) ? a.dann : []).filter(istObjekt).flatMap((k) => (Array.isArray(k.empfaenger) ? k.empfaenger : [])).filter(istObjekt);
+    if (empf.some((e) => e.art === 'person' || e.art === 'rolle')) fehler.push(`${wo}: feste Personen und Rollen gibt es in Paketen nicht – Empfänger aus einem Feld oder der Ersteller der Mappe.`);
+    return { schluessel: str(a.schluessel), name: str(a.name).trim(), beschreibung: str(a.beschreibung ?? ''), wenn: istObjekt(a.wenn) ? a.wenn : {}, und: istObjekt(a.und) ? a.und : undefined, dann: Array.isArray(a.dann) ? a.dann : [] };
+  });
+  for (const k of new Set(automatisierungen.map((a) => a.schluessel).filter((x, j, l) => l.indexOf(x) !== j))) fehler.push(`automatisierungen: Schlüssel „${k}“ doppelt.`);
   // Wortlisten (#356): Gruppen gleichbedeutender Wörter für die Suche, z. B. - woerter: [Kfz, Auto, PKW].
   const wortlisten = liste('wortlisten').map((w, i): string[] => {
     const g = liesWortgruppe(Array.isArray(w.woerter) ? w.woerter : null);
@@ -302,9 +318,15 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       ...(m.code !== undefined ? { code: m.code } : {}),
       ...(erg.ergaenzt ? { ergaenzt: erg.ergaenzt } : {}),
     },
-    typen, sichten, beispiele, wortlisten, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
+    typen, sichten, beispiele, wortlisten, automatisierungen, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
   };
 }
+
+/** Liste von Schlüsseln aus einer Eingabe (#712: anzuschaltende Automatisierungen); alles andere → leer. */
+const schluesselListe = (x: unknown): string[] => (Array.isArray(x) ? x.filter((y): y is string => typeof y === 'string').slice(0, 200) : []);
+
+/** Eine mitgelieferte Automatisierung im Paket (#712) – Wenn/Und/Dann wie im Editor, Typen als Paket-Schlüssel. */
+export interface PaketAutomatisierung { schluessel: string; name: string; beschreibung: string; wenn: Record<string, unknown>; und?: Record<string, unknown>; dann: unknown[] }
 
 /* ---------- Plan: was angelegt bzw. ergänzt wird ---------- */
 
@@ -368,6 +390,8 @@ export interface Vorschau {
   probleme: string[];
   /** Hinweise, die nicht verhindern (z. B. Code läuft noch nicht). */
   hinweise: string[];
+  /** Mitgelieferte Automatisierungen (#712); neu = kommt mit dieser Installation bzw. diesem Update dazu (nur die stehen zur Wahl). */
+  automatisierungen: Array<{ schluessel: string; name: string; beschreibung: string; neu: boolean }>;
   /** Einstellungen des Pakets (#197): bei einem Update neue und wegfallende Felder. */
   einstellungen: { neu: string[]; weg: string[] } | null;
   /** Code (#338): Rechte, Netzwerkzugriff, Ereignisse (#449) – muss bestätigt werden (bei einem Update nur, wenn sie sich ändern). */
@@ -375,6 +399,8 @@ export interface Vorschau {
 }
 export interface InstallierenEingabe {
   id?: string; version?: string; namen?: Record<string, string>; sichtNamen?: Record<string, string>; beispiele?: boolean; mitAbhaengigkeiten?: boolean;
+  /** Schlüssel mitgelieferter Automatisierungen, die gleich eingeschaltet werden (#712); ohne: alle bleiben aus. */
+  automatisierungen?: string[];
   /** Katalogadresse (#189); ohne: der offizielle Katalog. */
   quelle?: string;
   /** Hochgeladenes Paket (#189). */
@@ -1065,6 +1091,7 @@ export class Paketverwaltung {
       herkunft: ich?.herkunft ?? null,
       pruefung: null,
       abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, probleme, hinweise,
+      automatisierungen: paket.automatisierungen.map((a) => ({ schluessel: a.schluessel, name: a.name, beschreibung: a.beschreibung, neu: !ich?.automatisierungen?.includes(a.schluessel) })),
       einstellungen: paket.einstellungen || ich?.einstellungen ? einstellungsAenderung(ich?.einstellungen ?? null, paket.einstellungen) : null,
       laeufer: paket.code ? { rechte: rechtePunkte(paket.code.info, (vw) => this.typName(vw, paket, installierte, typen)), bestaetigen: !ich || !gleicheRechte(ich.laeufer, paket.code.info) } : null,
     };
@@ -1126,7 +1153,7 @@ export class Paketverwaltung {
     }
     const konflikte = [...vorschau.typen, ...vorschau.sichten].filter((x) => x.konflikt);
     if (konflikte.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: konflikte.map((x) => `${x.konflikt} Vorschlag: „${x.vorschlag}“.`), konflikte: true });
-    const datensatz = await this.lege(paket, herkunft, v, vorschau, e.beispiele === true && !alt, von, alt);
+    const datensatz = await this.lege(paket, herkunft, v, vorschau, e.beispiele === true && !alt, von, alt, schluesselListe(e.automatisierungen));
     if (hoch) this.uploads.delete(String(e.upload));
     log.info(alt ? 'Paket aktualisiert (hochgeladen)' : 'Paket installiert', { von: von.email, paket: id, version: paket.manifest.version, ...(alt ? { vorher: alt.version } : {}), herkunft: hoch ? 'hochgeladen' : quelle, pruefung: geladen.pruefung.art + (geladen.pruefung.stand ? ` (Katalog vom ${geladen.pruefung.stand})` : ''), typen: Object.keys(datensatz.typen).length, sichten: Object.keys(datensatz.sichten).length });
     return datensatz;
@@ -1136,7 +1163,7 @@ export class Paketverwaltung {
    * Legt Typen, Sichten und ggf. Beispiele an bzw. ergänzt sie (Update) und speichert den Eintrag.
    * Bei einem Fehler wird alles zurückgenommen.
    */
-  private async lege(paket: Paket, herkunft: InstalliertesPaket['herkunft'], v: KatalogVersion | undefined, plan: Vorschau, beispiele: boolean, von: Handelnder, alt: InstalliertesPaket | null): Promise<InstalliertesPaket> {
+  private async lege(paket: Paket, herkunft: InstalliertesPaket['herkunft'], v: KatalogVersion | undefined, plan: Vorschau, beispiele: boolean, von: Handelnder, alt: InstalliertesPaket | null, ein: string[] = []): Promise<InstalliertesPaket> {
     const m = paket.manifest;
     const installierte = await this.d.listePakete();
     const vorher = new Map((await this.d.listeTypen()).map((t) => [t.id, t] as const));
@@ -1294,6 +1321,7 @@ export class Paketverwaltung {
         // Beispiel-Mappen mit Schlüssel (#347), damit spätere Pakete auf sie verweisen können.
         ...(beispielIds.size ? { beispiele: Object.fromEntries(beispielIds) } : alt?.beispiele ? { beispiele: alt.beispiele } : {}),
         einstellungen: paket.einstellungen, code: m.code !== undefined,
+        ...(paket.automatisierungen.length ? { automatisierungen: paket.automatisierungen.map((a) => a.schluessel) } : {}),
         ...(paket.code ? { laeufer: { ...paket.code.info, modul: modulInfo(paket.code), daten: paket.code.dateien.filter((d) => d.name !== 'modul.wasm').map((d) => d.name) } } : {}),
         ...(v ? { links: { readme: v.readme, changelog: v.changelog, quelle: v.quelle } } : alt?.links ? { links: alt.links } : {}),
       };
@@ -1302,6 +1330,10 @@ export class Paketverwaltung {
       if (paket.code) await this.d.speicherePaketCode(m.id, paket.code.dateien);
       else if (alt?.laeufer) await this.d.loeschePaketCode(m.id);
       await this.d.speicherePaket(datensatz);
+      // #712: mitgelieferte Automatisierungen – aus, außer denen, die beim Installieren angehakt wurden (nach dem
+      // Speichern, damit Typen und Herkunft stimmen).
+      await Promise.resolve(this.d.paketAutomatisierungen?.(datensatz, paket.automatisierungen, ein))
+        .catch((e: Error) => log.warn('Automatisierungen des Pakets nicht angelegt', { paket: m.id, fehler: e.message }));
       if (paket.code || alt?.laeufer) await Promise.resolve(this.o.laeufer?.codeGeaendert?.()).catch(() => {});
       // Texterkennung als Paket (#459): Was ohne Paket wartete, geht jetzt an das neue Paket.
       if (hatSchnittstelle(datensatz.laeufer, 'dms:texterkennung') && !hatSchnittstelle(alt?.laeufer, 'dms:texterkennung')) {
@@ -1350,7 +1382,7 @@ export class Paketverwaltung {
   }
 
   /** Update aus der Quelle des Pakets: ergänzt nur – neue Typen, Felder, Register, Sichten. */
-  async aktualisiere(id: string, e: { version?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean }, von: Handelnder): Promise<InstalliertesPaket> {
+  async aktualisiere(id: string, e: { version?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean; automatisierungen?: string[] }, von: Handelnder): Promise<InstalliertesPaket> {
     const alt = (await this.d.listePakete()).find((p) => p.id === id);
     if (!alt) throw new Fachfehler(404, `„${id}“ ist nicht installiert.`);
     if (alt.herkunft.art !== 'katalog') throw new Fachfehler(409, 'Ein hochgeladenes Paket aktualisierst du durch erneutes Hochladen einer höheren Version.');
@@ -1362,7 +1394,7 @@ export class Paketverwaltung {
     if (fehlen.length) plan.probleme.push(`Es fehlen Pakete: ${fehlen.map((a) => `${a.id} ${a.bereich}`).join(', ')}.`);
     if (plan.probleme.length) throw new Fachfehler(409, plan.probleme[0], { gruende: plan.probleme });
     Paketverwaltung.rechteBestaetigen(plan, e);
-    const neu = await this.lege(paket, alt.herkunft, v, plan, false, von, alt);
+    const neu = await this.lege(paket, alt.herkunft, v, plan, false, von, alt, schluesselListe(e.automatisierungen));
     log.info('Paket aktualisiert', { von: von.email, paket: id, vorher: alt.version, version: neu.version, pruefung: pruefung.art, neueTypen: plan.typen.filter((t) => !t.vorhanden && !t.geloescht).length, neueSichten: plan.sichten.filter((s) => !s.vorhanden).length });
     return neu;
   }
@@ -1537,6 +1569,7 @@ export class Paketverwaltung {
       throw new Fachfehler(409, t('pakete.ablauf.fehler.adresse', { adressen: adressen.map((a) => `${a.paket} → ${a.wert}`).join(', ') }), { adresse: adressen.map((a) => ({ feld: `${a.paket}: ${a.feld}`, wert: a.wert })) });
     }
     const beispiele = new Set(Array.isArray(e.beispiele) ? e.beispiele.map(String) : []);
+    const ein = e.automatisierungen && typeof e.automatisierungen === 'object' && !Array.isArray(e.automatisierungen) ? e.automatisierungen as Record<string, unknown> : {};
     const erg: AblaufErgebnis = { installiert: [], fehler: null, nichtInstalliert: [] };
     for (const [i, p] of plan.pakete.entries()) {
       if (erg.fehler) { erg.nichtInstalliert.push({ id: p.id, name: p.name, version: p.version }); continue; }
@@ -1548,7 +1581,7 @@ export class Paketverwaltung {
         if (vorschau.probleme.length) throw new Fachfehler(409, vorschau.probleme[0], { gruende: vorschau.probleme });
         const k = [...vorschau.typen, ...vorschau.sichten].filter((y) => y.konflikt);
         if (k.length) throw new Fachfehler(409, 'Einige Namen gibt es schon. Bitte andere wählen.', { gruende: k.map((y) => `${y.konflikt} Vorschlag: „${y.vorschlag}“.`), konflikte: true });
-        const ds = await this.lege(x.paket, x.herkunft, x.v, vorschau, beispiele.has(p.id) && !alt, von, alt);
+        const ds = await this.lege(x.paket, x.herkunft, x.v, vorschau, beispiele.has(p.id) && !alt, von, alt, schluesselListe(ein[p.id]));
         if (x.upload) this.uploads.delete(x.upload);
         log.info(alt ? 'Paket aktualisiert (Ablauf)' : 'Paket installiert (Ablauf)', { von: von.email, paket: p.id, version: ds.version, ...(alt ? { vorher: alt.version } : {}), herkunft: x.herkunft.art === 'katalog' ? x.herkunft.url : 'hochgeladen', pruefung: x.pruefung.art, gebrauchtVon: p.fuer.join(', ') || '–' });
         let einst: AblaufErgebnis['installiert'][number]['einstellungen'] = p.einstellungen.length ? (spaeter.has(p.id) ? 'spaeter' : 'fertig') : 'keine';
@@ -1733,6 +1766,8 @@ export class Paketverwaltung {
     }
     await this.d.loeschePaket(id);
     await this.d.setzePaketSynonyme(id, []);
+    // #712: mitgelieferte Automatisierungen, die aus und unverändert sind, gehen mit; geänderte bleiben (rot, wenn ihr Typ fehlt).
+    await this.d.paketAutomatisierungen?.(p, []).catch((e: Error) => log.warn('Automatisierungen des Pakets nicht entfernt', { paket: id, fehler: e.message }));
     if (p.laeufer) { await this.d.loeschePaketCode(id); await this.d.loescheEreignisse(id); await this.d.setzePaketSpeicher(id, null).catch(() => {}); await this.o.laeufer?.codeGeaendert?.(); }
     // Einstellungen (#197): nur auf ausdrücklichen Wunsch für eine spätere Neuinstallation behalten.
     if (!behalten) await this.d.setzePaketEinstellungen(id, null);

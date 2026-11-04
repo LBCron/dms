@@ -660,9 +660,9 @@ export const api = {
   /** Mehrere Pakete in einem Ablauf (#405): Plan ohne zu speichern, dann alles mit einem Knopf. */
   paketAblaufPlan: (e: AblaufEingabe) => anfrage<AblaufPlan<PaketVorschau>>('POST', '/api/werkbank/pakete/ablauf/plan', e),
   paketAblaufInstallieren: (e: AblaufInstallation) => anfrage<AblaufErgebnis>('POST', '/api/werkbank/pakete/ablauf/installieren', e),
-  paketInstallieren: (e: { id?: string; version?: string; quelle?: string; upload?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean; namen?: Record<string, string>; sichtNamen?: Record<string, string>; beispiele?: boolean; mitAbhaengigkeiten?: boolean }) => anfrage<InstalliertesPaket>('POST', '/api/werkbank/pakete/installieren', e),
+  paketInstallieren: (e: { id?: string; version?: string; quelle?: string; upload?: string; bestaetigt?: boolean; rechteBestaetigt?: boolean; automatisierungen?: string[]; namen?: Record<string, string>; sichtNamen?: Record<string, string>; beispiele?: boolean; mitAbhaengigkeiten?: boolean }) => anfrage<InstalliertesPaket>('POST', '/api/werkbank/pakete/installieren', e),
   paketUpdates: () => anfrage<Array<{ id: string; installiert: string; neu: string; changelog: string | null; quelle: string }>>('POST', '/api/werkbank/pakete/updates'),
-  paketAktualisieren: (id: string, version?: string, bestaetigt?: boolean, rechteBestaetigt?: boolean) => anfrage<InstalliertesPaket>('POST', `/api/werkbank/pakete/${encodeURIComponent(id)}/aktualisieren`, { version, bestaetigt, rechteBestaetigt }),
+  paketAktualisieren: (id: string, version?: string, bestaetigt?: boolean, rechteBestaetigt?: boolean, automatisierungen?: string[]) => anfrage<InstalliertesPaket>('POST', `/api/werkbank/pakete/${encodeURIComponent(id)}/aktualisieren`, { version, bestaetigt, rechteBestaetigt, automatisierungen }),
   paketLaeufer: () => anfrage<PaketlaeuferStand | null>('GET', '/api/werkbank/pakete/laeufer'),
   /* Vektoren (#442) */
   vektorStand: () => anfrage<VektorStand>('GET', '/api/werkbank/vektoren'),
@@ -721,7 +721,8 @@ export const api = {
   werkbankWebhookLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/webhooks/${id}`),
   werkbankWebhookZiele: (ziele: string[]) => anfrage<{ ziele: string[] }>('PUT', '/api/werkbank/webhooks/ziele', { ziele }),
   // Automatisierungen (#675)
-  automatisierungen: () => anfrage<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; kontext: Kontextdaten }>('GET', '/api/werkbank/automatisierungen'),
+  automatisierungen: () => anfrage<{ automatisierungen: AutomatisierungAnsicht[]; fehlgeschlagen: number; kontext: Kontextdaten; umgezogen: { am: string; anzahl: number } | null }>('GET', '/api/werkbank/automatisierungen'),
+  automatisierungUmzugGesehen: () => anfrage<null>('POST', '/api/werkbank/automatisierungen/umzug-gesehen'),
   automatisierungAnlegen: (d: Partial<AutomatisierungDaten> & { aktiv?: boolean }) => anfrage<AutomatisierungAnsicht>('POST', '/api/werkbank/automatisierungen', d),
   automatisierungAendern: (id: string, d: Partial<AutomatisierungDaten> & { aktiv?: boolean; version: number }) => anfrage<AutomatisierungAnsicht>('PUT', `/api/werkbank/automatisierungen/${id}`, d),
   automatisierungLoeschen: (id: string) => anfrage<null>('DELETE', `/api/werkbank/automatisierungen/${id}`),
@@ -899,6 +900,8 @@ export interface PaketVorschau {
   typen: Array<{ schluessel: string; dmsSchluessel: string; name: string; felder: number; vorhanden: boolean; neueFelder: string[]; neueRegister: string[]; erkennung?: string[]; formate?: string[]; umwandeln?: Array<{ feld: string; aus: string; anzahl: number }>; konflikt: string | null; vorschlag: string | null; geloescht?: boolean }>;
   sichten: Array<{ schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null }>;
   beispiele: number; probleme: string[]; hinweise: string[]; einstellungen: { neu: string[]; weg: string[] } | null;
+  /** Mitgelieferte Automatisierungen (#712); neu = steht beim Installieren zur Wahl. */
+  automatisierungen?: Array<{ schluessel: string; name: string; beschreibung: string; neu: boolean }>;
   /** Paket mit Code (#338): Rechte, Netzwerkzugriff und Ereignisse (#449); bestaetigen = muss ausdrücklich erlaubt werden. */
   laeufer?: { rechte: RechtePunkt[]; bestaetigen: boolean } | null;
 }
@@ -1033,7 +1036,7 @@ export interface WerkbankUebersicht {
   bestand: { version: string; groesseBytes: number; mappen: number; typen: number; benutzer: number; dokumente: number; dokumenteBytes: number } | null;
   fehlermeldungen: number | null;
   /** Automatisierungen (#675): mit fehlgeschlagenen Läufen bzw. angehalten oder fehlerhaft. */
-  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }> };
+  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null };
   /** Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind. */
   notfallzugaenge?: Array<{ id: string; name: string; erstellt: string }>;
   /** Wartungsmodus (#102). */
