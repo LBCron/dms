@@ -84,12 +84,14 @@ code:
 
 ## Ereignisse
 
+Seit #724 kommen alle Ereignisse aus dem einen Ereigniskatalog und Ausgangskorb des Kerns ([Aufbau](aufbau.md#ereigniskatalog)). Sie tragen zusätzlich `ereignis` (Id im Ausgangskorb; gleich bei einer Wiederholung) und – zu Mappen und Dokumenten – `typ` (Mappentyp). Aufträge an genau ein Paket (`datei.*`, `paket.einstellungen_geaendert`) kommen direkt.
+
 | Ereignis | Auslöser | `daten` |
 |---|---|---|
 | `post.angelegt` | Neue Post: in der Oberfläche, über die API, aus Eingangsordner und Postfach, beim **Post teilen** je neuer Post | `mappe`, `kanal` |
 | `dokument.hochgeladen` | Jedes neue Dokument: Hochladen (Oberfläche, API, Eingangskanäle) und die neuen Dokumente beim **PDF teilen**, **Zusammenfügen** und **Post teilen**. Eine neue Version eines vorhandenen Dokuments ist kein neues Dokument. | `dokument`, `mappe`, `name`, `mime`, `groesse`, `volltextGeplant` (ob die Texterkennung von Ablago noch läuft) |
 | `volltext.fertig` | **Volltext fertig.** Der Volltext eines Dokuments steht fest – nach dem Schritt des Kerns (Textebene des PDFs, bis 0.133 auch die eingebaute Texterkennung), von einem Paket, über die API oder übernommen (seit 0.120.0). Seit 0.133.0 für **jedes** gelesene Dokument, **auch ohne Text** (`text: false`) – siehe unten. Für Pakete mit `dms:vektoren` schickt Ablago es auch für den Bestand nach (`nachberechnung: true`). | `dokument`, `mappe`, `quelle`, `text`, `mime`, `seiten`, ggf. `seitenOhneText`, `neu`, `paket`, `nachberechnung` |
-| `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): nach dem Schritt des Kerns, gleichzeitig mit `volltext.fertig` (`quelle: kern`) und mit denselben Daten. Neue Pakete nehmen `volltext.fertig`. | wie `volltext.fertig`, `seiten` |
+| `texterkennung.fertig` | **Veraltet** (bleibt für Pakete von vor 0.133.0): Seit #724 meldet der Kern es nicht mehr selbst. Ein Paket, das es abonniert hat, bekommt den Volltext der eingebauten Texterkennung (`volltext.fertig` mit `quelle: kern`) unter diesem Namen, mit denselben Daten und `seiten`. Neue Pakete nehmen `volltext.fertig`. |
 | `paket.einstellungen_geaendert` | Ein Administrator hat die Einstellungen des Pakets gespeichert | `felder` (geänderte Kennungen) |
 | `datei.umwandeln` | Seit 0.137.0, nur mit `dms:umwandeln`: Eine Datei eines Typs aus `code.umwandeln` braucht eine Fassung – siehe [Dateien umwandeln](#dateien-umwandeln) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256` |
 | `datei.volltext` | Seit 0.145.0, nur mit `dms:volltext`: Eine Datei eines Typs aus `code.volltext` braucht ihren Volltext – siehe [Volltext liefern](#volltext-liefern) | `dokument`, `mappe`, `name`, `mime`, `groesse`, `sha256`, ggf. `neu` |

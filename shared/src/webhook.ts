@@ -5,6 +5,7 @@
  * `GET /api/v1/ich/zaehler`, #625). Die Meldung enthält nur Art, Ereignis-Id, Zeit und Zahlen – keine Titel,
  * Namen, Absender oder Inhalte. Wer mehr wissen will, holt es per API mit eigenen Rechten.
  */
+import { WIEDERHOLEN_LANG_S } from './ereignisse';
 import { imHeimnetz } from './heimnetz';
 import { uebersetzer } from './sprache';
 import webhook from './sprachen/de/webhook.json';
@@ -35,7 +36,7 @@ export const WEBHOOK_ZEITGRENZE_S = 5;
  * Wartezeit vor dem 2., 3., … Versuch in Sekunden; nach dem letzten Versuch gibt das DMS die Meldung auf und
  * schaltet den Webhook ab (zusammen etwa 22 Stunden, 12 Versuche).
  */
-export const WEBHOOK_WARTEN_S: readonly number[] = [30, 60, 120, 300, 600, 1800, 3600, 7200, 14400, 21600, 28800];
+export const WEBHOOK_WARTEN_S: readonly number[] = WIEDERHOLEN_LANG_S;
 export const WEBHOOK_VERSUCHE = WEBHOOK_WARTEN_S.length + 1;
 /** Höchstens so viele Webhooks je Benutzer. */
 export const WEBHOOK_MAX_JE_BENUTZER = 10;

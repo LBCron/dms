@@ -6,6 +6,7 @@ import { dateitypName, DMS_UMWANDELN_AB, kernTyp, MIME, UMWANDELN_TYPEN_MAX } fr
 import { DMS_PAKET_VOLLTEXT_AB, VOLLTEXT_TYPEN_MAX } from './paketvolltext';
 import { ARCHIV_TYPEN_MAX, DMS_ARCHIVFASSUNG_AB } from './archivfassung';
 import type { Hilfeort } from './hilfe';
+import type { PaketKatalogArt, VERALTETE_EREIGNISSE } from './ereignisse';
 
 /** Der offizielle Katalog (Branch gh-pages der Registry). */
 export const OFFIZIELLER_KATALOG = 'https://catalog.ablago.app/katalog.json';
@@ -332,7 +333,10 @@ export const PAKET_TEXT = 'Texterkennung durch Paket ';
 /** Was ein Paket mit Dokumenten darf. */
 export type DokumentRecht = 'keine' | 'lesen' | 'schreiben';
 export const DOKUMENT_RECHTE: Record<DokumentRecht, string> = { keine: 'keine Dokumente', lesen: 'Dokumente lesen', schreiben: 'Dokumente lesen und Volltext schreiben' };
-/** Ereignisse, die ein Paket abonnieren kann (nicht blockierend, mit Wiederholung). */
+/**
+ * Ereignisse, die ein Paket abonnieren kann (nicht blockierend, mit Wiederholung) – genau die des gemeinsamen
+ * Ereigniskatalogs mit `paket: true` (shared/src/ereignisse.ts, #724) und die veralteten Namen im Übergang.
+ */
 export const EREIGNISSE = {
   'post.angelegt': 'Neue Post ist angelegt',
   'dokument.hochgeladen': 'Ein Dokument wurde hochgeladen',
@@ -349,7 +353,7 @@ export const EREIGNISSE = {
   'mappe.geloescht': 'Eine Mappe ist gelöscht (Papierkorb)',
   'mappe.wiederhergestellt': 'Eine Mappe ist aus dem Papierkorb zurück',
   'frist.erreicht': 'Eine Frist ist erreicht (zur Erinnerung und am Tag selbst)',
-} as const;
+} as const satisfies Record<PaketKatalogArt | keyof typeof VERALTETE_EREIGNISSE, string>;
 /** Ereignisse zu Mappen (#670): brauchen code.mappentypen, gelten nur für diese Typen. */
 export const MAPPEN_EREIGNISSE: readonly EreignisArt[] = ['mappe.angelegt', 'mappe.geaendert', 'mappe.geloescht', 'mappe.wiederhergestellt', 'frist.erreicht'];
 /** Ab dieser Version kennt das DMS Mappen-Ereignisse für Pakete (#670); ältere lehnen die Ereignisse beim Installieren ab. */

@@ -815,12 +815,24 @@ export interface Aufgabe {
   art: Aufgabenart; text: string; feldKey?: string | null;
   /** Frist und Erinnerung (#129, #131): das Datum, um das es geht. */
   datum?: string | null;
+  /** Warum es die Aufgabe gibt – fällt der Anlass weg, erledigt sie sich selbst (#724). Ohne: nur von Hand. */
+  anlass?: AufgabenAnlass | null;
   erstellt: string; erstelltVon: string | null;
   erledigt: string | null; erledigtVon: string | null;
   /** Für Listen: Titel und Typ der Mappe. */
   mappeTitel?: string; typId?: string;
 }
 export const AUFGABE_MAX = 2000;
+/**
+ * Anlass einer Aufgabe (#724), gemeinsam für Kern und Automatisierungen:
+ * - `datum`: Das Datumsfeld `feld` der Mappe hat das Datum der Aufgabe – geändert oder geleert → erledigt;
+ *   `wiederholung` (Monate) → nach dem Erledigen den Folgetermin vorschlagen.
+ * - `post`: Die Post ist neu – zugeordnet oder erledigt → erledigt.
+ * - `abwesenheit`: Der Benutzer ist abwesend – Abwesenheit beendet → erledigt.
+ * `automatisierung`: Id der Automatisierung, die die Aufgabe angelegt hat (zur Anzeige und zum Erkennen).
+ */
+export type AufgabenAnlass = ({ art: 'datum'; feld: string; wiederholung?: number | null } | { art: 'post' } | { art: 'abwesenheit'; benutzer: string })
+  & { automatisierung?: string };
 
 /* ---------- Notizen (#55) ---------- */
 export interface Notiz { id: string; mappeId: string; text: string; erstellt: string; erstelltVon: string | null; geaendert: string; geaendertVon: string | null }

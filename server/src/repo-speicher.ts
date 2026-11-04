@@ -696,7 +696,11 @@ export function speicherRepo(): Repo {
         } else if (offen) offen.erledigt = jetzt();
       }
     },
-    async legeAufgabeAn(a) { const x = { ...kopie(a), erstellt: jetzt(), erledigt: null, erledigtVon: null }; aufgaben.set(a.id, x); return kopie(x); },
+    async legeAufgabeAn(a) {
+      // Wie der eindeutige Index in PostgreSQL: je Mappe, Feld, Datum und Empfänger höchstens eine Frist.
+      if (a.art === 'frist' && [...aufgaben.values()].some((x) => x.art === 'frist' && x.mappeId === a.mappeId && x.feldKey === a.feldKey && x.datum === a.datum && (x.empfaengerId ?? null) === (a.empfaengerId ?? null))) throw new Error('duplicate key value violates unique constraint "aufgaben_frist_idx"');
+      const x = { ...kopie(a), erstellt: jetzt(), erledigt: null, erledigtVon: null }; aufgaben.set(a.id, x); return kopie(x);
+    },
     async holeAufgabe(id) { const a = aufgaben.get(id); return a && kopie(a); },
     async aufgabenVon(mappeId) {
       return [...aufgaben.values()].filter((a) => a.mappeId === mappeId)

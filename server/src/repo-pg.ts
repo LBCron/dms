@@ -148,6 +148,7 @@ const alsAufgabe = (r: Zeile): Aufgabe => ({
   id: r.id as string, mappeId: r.mappe_id as string, empfaengerId: (r.empfaenger_id as string | null) ?? null,
   art: r.art as Aufgabe['art'], text: r.text as string, feldKey: (r.feld_key as string | null) ?? null,
   ...(r.datum ? { datum: tag(r.datum) } : {}),
+  ...(r.anlass ? { anlass: r.anlass as Aufgabe['anlass'] } : {}),
   erstellt: iso(r.erstellt), erstelltVon: (r.erstellt_von as string | null) ?? null,
   erledigt: r.erledigt ? iso(r.erledigt) : null, erledigtVon: (r.erledigt_von as string | null) ?? null,
   ...(r.mappe_titel !== undefined ? { mappeTitel: (r.mappe_titel as string | null) ?? '', typId: r.typ_id as string } : {}),
@@ -1830,9 +1831,9 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
     async legeAufgabeAn(a) {
       const [r] = await sql`
-        INSERT INTO aufgaben (id, haushalt_id, mappe_id, empfaenger_id, art, text, feld_key, erstellt_von, datum)
+        INSERT INTO aufgaben (id, haushalt_id, mappe_id, empfaenger_id, art, text, feld_key, erstellt_von, datum, anlass)
         VALUES (${a.id}, ${haushaltId}, ${a.mappeId}, ${istUuid(a.empfaengerId) ? a.empfaengerId : null}::uuid, ${a.art}, ${a.text}, ${a.feldKey ?? null},
-          ${istUuid(a.erstelltVon) ? a.erstelltVon : null}::uuid, ${a.datum ?? null}::date)
+          ${istUuid(a.erstelltVon) ? a.erstelltVon : null}::uuid, ${a.datum ?? null}::date, ${a.anlass ? sql.json(a.anlass as never) : null})
         RETURNING *`;
       return alsAufgabe(r);
     },

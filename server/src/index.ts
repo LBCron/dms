@@ -364,7 +364,7 @@ sicherung.extern = {
     const adresse = p.einstellungen ? adressfelder(p.einstellungen).map((f) => werte[f.schluessel]).find((v): v is string => typeof v === 'string' && !!v) ?? null : null;
     return { id: p.id, name: p.name, adresse };
   })),
-  melde: (daten) => dienst.melde('sicherung.fertig', { ...daten }, undefined, null, (p) => hatSchnittstelle(p.laeufer, 'dms:sicherung-lesen')),
+  melde: (daten) => dienst.ereignis('sicherung.fertig', { ...daten }),
 };
 dienst.sicherungAufgegeben = (paket, name, fehler) => sicherung.externAufgegeben(paket, name, fehler);
 dienst.sicherungAntwort = (paket, name, r) => sicherung.externAntwort(paket, name, r);

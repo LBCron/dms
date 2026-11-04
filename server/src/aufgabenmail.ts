@@ -5,6 +5,7 @@ import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import type { Mailer } from './mail';
 import { protokoll } from './protokoll';
+import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 
 /**
  * Tägliche Zusammenfassung der offenen Aufgaben (#54): keine Mail je Aufgabe, sondern einmal
@@ -50,8 +51,6 @@ export interface AufgabenQuelle {
 
 const HEUTE = new Intl.DateTimeFormat('sv-SE', { timeZone: ZEITZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
 const UHR = new Intl.DateTimeFormat('de-DE', { timeZone: ZEITZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-const WOCHENTAG = new Intl.DateTimeFormat('en-US', { timeZone: ZEITZONE, weekday: 'short' });
-const TAGNR: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
 
 export class Aufgabenmail {
   constructor(
@@ -93,20 +92,16 @@ export class Aufgabenmail {
     const heute = HEUTE.format(jetzt);
     // Bis 0.16 gab es nur einen gemeinsamen Zeitpunkt: wurde heute schon so verschickt, nicht noch einmal.
     if ((await this.einstellungen.lies('aufgaben_mail_zuletzt')) === heute) return 0;
-    const uhr = UHR.format(jetzt);
-    const wochentag = TAGNR[WOCHENTAG.format(jetzt)];
-    const feiertag = feiertagAm(heute, e.bundesland);
+    const ort = { datum: heute, uhr: UHR.format(jetzt) };
     let n = 0;
     for (const b of await this.quelle.benutzer()) {
       if (!b.aktiv || !b.email) continue;
       const einst = await this.quelle.einstellungenVon(b);
       if (einst.aufgaben_mail === false) continue;
       const z = wirksameZeit(einst.aufgaben_mail_zeit, e);
-      if (!z.tage.includes(wochentag) || (feiertag && z.feiertage) || uhr < z.uhrzeit) continue;
-      const schluessel = `aufgaben_mail_zuletzt:${b.id}`;
-      if ((await this.einstellungen.lies(schluessel)) === heute) continue;
-      await this.einstellungen.schreibe(schluessel, heute);
-      if (await this.sendeAn(b, mailer)) n++;
+      // Zeitplan-Baustein (#724): je Benutzer zu seiner Uhrzeit, an seinen Wochentagen; verpasst noch am selben Tag.
+      const takt = { uhrzeit: z.uhrzeit, an: (tag: string) => z.tage.includes(wochentagVon(tag)) && !(z.feiertage && feiertagAm(tag, e.bundesland)) };
+      await laufeFaellige(einstellungsMerker(this.einstellungen, `aufgaben_mail_zuletzt:${b.id}`), ort, takt, async () => { if (await this.sendeAn(b, mailer)) n++; });
     }
     if (n) protokoll.modul('mail').info('Tägliche Aufgaben-Mails verschickt', { anzahl: n });
     return n;

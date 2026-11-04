@@ -282,8 +282,8 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     assert.equal(konto.name, 'Paket Probe echo');
     assert.equal(konto.art, 'dienst');
     assert.deepEqual(await konten.listeBenutzer(), [], 'nicht in der Benutzerliste');
-    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
-    await d.melde('post.angelegt', { mappe: 'm1' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
+    await d.ereignis('post.angelegt', { mappe: 'm1' }); await d.ereignisse.verteile();
     await warte(async () => (await d.ereignisStand()).echo?.zugestellt === 1);
     const u1 = await l.uebersicht();
     const echo = u1.pakete[0];
@@ -301,7 +301,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     await installiere(d, 'weiter', WEITER);
     await l.start();
     await warte(async () => (await l.uebersicht()).laeuft);
-    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
     await warte(async () => (await d.ereignisStand()).weiter?.zugestellt === 1);
     const p = (await l.uebersicht()).pakete[0];
     assert.equal(p.aufrufe, 4, 'erster Aufruf und drei Fortsetzungen');
@@ -483,7 +483,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     await installiere(d, 'schleife', SCHLEIFE);
     await l.start();
     await warte(async () => (await l.uebersicht()).laeuft);
-    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
     await new Promise((r) => setTimeout(r, 400)); // Aufruf läuft (Endlosschleife)
     await d.loeschePaket('schleife');
     await d.loescheEreignisse('schleife');
@@ -493,7 +493,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     await installiere(d, 'echo', ECHO);
     l.codeGeaendert();
     await warte(async () => (await l.uebersicht()).laeuft);
-    await d.melde('dokument.hochgeladen', { dokument: 'd2' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd2' }); await d.ereignisse.verteile();
     await warte(async () => (await d.ereignisStand()).echo?.zugestellt === 1);
     // Eigene Änderungen: was das Dienstkonto von echo hochlädt, meldet das DMS echo nicht.
     const konto = (await konten.listeDienstkonten()).find((b) => b.paketId === 'echo')!;
@@ -507,9 +507,9 @@ describe('Paket-Läufer (#338): Ablauf', () => {
   it('Ausgangskorb: ein wartendes Ereignis hält spätere desselben Pakets zurück', async () => {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     await installiere(d, 'echo', ECHO);
-    await d.melde('dokument.hochgeladen', { n: 1 });
+    await d.ereignis('dokument.hochgeladen', { n: 1 }); await d.ereignisse.verteile();
     await new Promise((r) => setTimeout(r, 5));
-    await d.melde('dokument.hochgeladen', { n: 2 });
+    await d.ereignis('dokument.hochgeladen', { n: 2 }); await d.ereignisse.verteile();
     const [e1] = await d.faelligeEreignisse(10);
     assert.equal(e1.daten.n, 1);
     await d.ereignisFehlgeschlagen(e1.id, 'x', new Date(Date.now() + 60_000));
@@ -537,7 +537,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     await warte(async () => (await l.uebersicht()).pakete.length === 3 && (await l.uebersicht()).pakete.every((p) => p.geladen));
     assert.deepEqual(gelesen, ['drei'], 'nur das neue Paket aus der Datenbank');
     // Die anderen laufen mit ihrem behaltenen Modul weiter.
-    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
     await warte(async () => { const e = await d.ereignisStand(); return e.eins?.zugestellt === 1 && e.zwei?.zugestellt === 1 && e.drei?.zugestellt === 1; });
     // Absturz: Zustand „neustart“ mit Zeit, danach „neu gestartet nach Absturz“; nach dem Neustart wieder alle Module.
     gelesen.length = 0;
@@ -558,7 +558,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     await installiere(d, 'gierig', GIERIG);
     await l.start();
     await warte(async () => (await l.uebersicht()).laeuft);
-    await d.melde('dokument.hochgeladen', { dokument: 'd1' });
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
     await warte(async () => (await l.uebersicht()).pakete.every((p) => p.fehlgeschlagen === 1));
     const u2 = await l.uebersicht();
     assert.match(u2.pakete.find((p) => p.id === 'schleife')!.letzte[0].text, /Zeitgrenze/);

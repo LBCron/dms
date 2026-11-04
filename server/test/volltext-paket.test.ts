@@ -90,7 +90,7 @@ async function aufbau(mitPaket = true) {
     scanJetzt = false;
     return id;
   };
-  const ereignisse = async (art = 'volltext.fertig') => (await repo.faelligeEreignisse(1000)).filter((e) => e.art === art);
+  const ereignisse = async (art = 'volltext.fertig') => (await d.ereignisse.verteile(), await repo.faelligeEreignisse(1000)).filter((e) => e.art === art);
   /** Wie die nächste gelesene Datei aussieht (für Dokumente, die später noch einmal gelesen werden). */
   const alsScan = (v: boolean | 'gemischt') => { scanJetzt = v; };
   return { d, t, repo, m, hoch, laeufe, ereignisse, alsScan };
@@ -327,6 +327,7 @@ describe('Volltext-Ablauf (#458) mit PostgreSQL', () => {
       assert.deepEqual((await repo.volltextKandidaten('ohne')).map((x) => x.id), [ohne]);
       assert.deepEqual((await repo.volltextKandidaten('alle')).map((x) => x.id).sort(), [mit, ohne].sort());
       await d.volltextFertig({ dokument: ohne, mappe: m.id }, { quelle: 'kern', text: false, mime: 'application/pdf', seiten: 1 });
+      await d.ereignisse.verteile();
       const [e] = (await repo.faelligeEreignisse(10)).filter((x) => x.art === 'volltext.fertig' && x.daten.dokument === ohne);
       assert.equal(e.daten.text, false);
       await repo.ereignisDaten(e.id, { ...e.daten, weiter: { seite: 3 }, abschnitt: 1 });

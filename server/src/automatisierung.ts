@@ -3,9 +3,9 @@ import type postgres from 'postgres';
 import {
   AUTOMATISIERUNG_GRENZEN, ausloeserSchluessel, automatisierungsProbleme, bereinigeAutomatisierung, kontextTyp, kurzform, REIHENFOLGE,
   type Angehalten, type Automatisierung, type AutomatisierungAnsicht, type AutomatisierungDaten, type DannArt, type DannKarte,
-  type Empfaenger, type Fassung, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte,
+  type Empfaenger, type Fassung, type Herkunft, type Kontextdaten, type Lauf, type LaufZustand, type Schritt, type UndKarte, erreichteDaten,
 } from '../../shared/src/automatisierung';
-import { EREIGNISKATALOG, type KatalogEreignis } from '../../shared/src/ereignisse';
+import { EREIGNISKATALOG, OHNE_WENN, type KatalogEreignis } from '../../shared/src/ereignisse';
 import { tagVon, titelAus, ZEITZONE, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { heuteIn, verschiebe, type Bedingung } from '../../shared/src/sichten';
 import { uebersetzer } from '../../shared/src/sprache';
@@ -14,6 +14,7 @@ import ereignisTexte from '../../shared/src/sprachen/de/ereignisse.json';
 import type { Dienst, Zugriff } from './dienst';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { faelligeTage } from './zeitplan';
 import { istUuid } from './repo';
 
 /**
@@ -314,15 +315,21 @@ export class Automatisierungen {
   async legeBeispiele(): Promise<number> {
     const k = await this.kontext();
     const admins = k.rollen.filter((r) => /administrator/i.test(r.name)).slice(0, 1).map((r) => ({ art: 'rolle' as const, id: r.id }));
-    // Kündigungsfrist: ein Mappentyp mit einem Datumsfeld „kündbar …“ / „Frist“, wenn es schon einen gibt.
-    const frist = k.typen.flatMap((typ) => typ.felder.filter((f) => f.typ === 'datum' && /k(ü|ue)nd|frist/i.test(`${f.key} ${f.label}`)).map((f) => ({ typ, f })))[0];
+    // Kündigungsfrist: ein Mappentyp mit einem Datumsfeld „kündbar …“ / „Frist“, wenn es schon einen gibt. Hat das Feld
+    // schon eine eingebaute Erinnerung, übernimmt das Beispiel deren Vorlauf und Empfänger – dieselbe Person bekommt je
+    // Datum nur eine Frist (#724), es entsteht also keine zweite Aufgabe (bis #712 die eingebaute ersetzt).
+    const kandidaten = k.typen.flatMap((typ) => typ.felder.filter((f) => f.typ === 'datum' && /k(ü|ue)nd|frist/i.test(`${f.key} ${f.label}`)).map((f) => ({ typ, f })));
+    const frist = kandidaten.find((x) => !x.f.frist) ?? kandidaten[0];
     const benutzerTyp = k.typen.find((x) => x.system === 'benutzer');
-    const zustaendig = frist?.typ.felder.find((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
+    const eingebaut = frist?.f.frist;
+    const zustaendig = eingebaut ? (eingebaut.empfaengerFeld ? frist.typ.felder.find((f) => f.key === eingebaut.empfaengerFeld) : undefined)
+      : frist?.typ.felder.find((f) => f.typ === 'referenz' && (!f.zielTyp || f.zielTyp === benutzerTyp?.id));
+    const empfaenger = zustaendig ? [{ art: 'feld', feld: zustaendig.key }] : eingebaut ? [{ art: 'ersteller' }] : admins;
     const beispiele: Array<{ key: string; e: Record<string, unknown> }> = [
       { key: 'kuendigung', e: {
         name: t('automatisierung.beispiel.kuendigung.name'), beschreibung: t('automatisierung.beispiel.kuendigung.text'),
-        wenn: { art: 'datum', typ: frist?.typ.id ?? '', feld: frist?.f.key ?? '', tage: 30, uhrzeit: '07:00' },
-        dann: [{ id: 'k1', art: 'aufgabe', als: 'aufgabe', faellig: 7, empfaenger: zustaendig ? [{ art: 'feld', feld: zustaendig.key }] : admins, text: t('automatisierung.beispiel.kuendigung.aufgabe') }],
+        wenn: { art: 'datum', typ: frist?.typ.id ?? '', feld: frist?.f.key ?? '', vorlauf: eingebaut?.vorlauf ?? 30, einheit: eingebaut?.einheit ?? 'tage', uhrzeit: '07:00' },
+        dann: [{ id: 'k1', art: 'aufgabe', als: 'aufgabe', faellig: 7, empfaenger, text: t('automatisierung.beispiel.kuendigung.aufgabe') }],
       } },
       { key: 'kontosperre', e: {
         name: t('automatisierung.beispiel.kontosperre.name'), beschreibung: t('automatisierung.beispiel.kontosperre.text'),
@@ -338,9 +345,17 @@ export class Automatisierungen {
     let neu = 0;
     for (const b of beispiele) {
       const id = uuidAus(`beispiel|${b.key}`);
-      if (await this.d.repo.hole(id)) continue;
       const d = bereinigeAutomatisierung(b.e);
       d.reihenfolge = REIHENFOLGE.dms;
+      const da = await this.d.repo.hole(id);
+      if (da) {
+        // Frage 78: Ein unverändertes Beispiel, das noch nicht passt (frische Installation ohne Vertragstyp), passt
+        // sich an, sobald es einen passenden Mappentyp gibt. Von Hand geändert oder eingeschaltet: nie.
+        if (!da.aktiv && da.geaendertVon === null && automatisierungsProbleme(da, k).length && !automatisierungsProbleme(d, k).length) {
+          if (await this.d.repo.speichere(id, { ...d, aktiv: false }, null, da.version)) log.info('Beispiel an die Ablage angepasst', { beispiel: b.key });
+        }
+        continue;
+      }
       const a: Automatisierung = { ...d, id, aktiv: false, angehalten: null, herkunft: 'dms', version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
       try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
     }
@@ -481,7 +496,7 @@ export class Automatisierungen {
     const typ = kontextTyp(a.wenn, k.typen);
     const m = await this.d.dienst.pruefeRecht(await this.d.dienst.systemZugriff('automatisierung'), mappeId, 'R');
     if (typ && m.typId !== typ.id) throw new Fachfehler(422, t('automatisierung.test.typ', { typ: typ.name }));
-    const daten: Record<string, unknown> = { mappe: m.id, typ: m.typId, ...(a.wenn.art === 'datum' ? { feld: a.wenn.feld, datum: m.werte[a.wenn.feld] ?? null, tage: a.wenn.tage } : {}) };
+    const daten: Record<string, unknown> = { mappe: m.id, typ: m.typId, ...(a.wenn.art === 'datum' ? { feld: a.wenn.feld, datum: m.werte[a.wenn.feld] ?? null, tage: tageBis(m.werte[a.wenn.feld]) } : {}) };
     const l = await this.fuehreAus(a, { id: randomUUID(), art: a.wenn.art, daten, kette: 0 }, { trocken, test: true });
     return l ?? this.lauf(id);
   }
@@ -507,7 +522,7 @@ export class Automatisierungen {
 
   /** Abnehmer des Ereigniskatalogs: passende Automatisierungen nacheinander. Wirft nur, wenn die Datenbank streikt. */
   async ereignis(e: KatalogEreignis): Promise<void> {
-    if (!(e.art in EREIGNISKATALOG) || EREIGNISKATALOG[e.art].gruppe === 'zaehler') return;
+    if (!(e.art in EREIGNISKATALOG) || OHNE_WENN.includes(EREIGNISKATALOG[e.art].gruppe) || e.ausloeser?.still) return;
     const liste = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === e.art && this.passt(a, e));
     if (!liste.length) return;
     await this.reihe(liste, { id: e.id, art: e.art, daten: e.daten, kette: e.ausloeser?.art === 'automatisierung' ? (e.ausloeser.kette ?? 1) : 0, ausloeser: e.ausloeser });
@@ -594,6 +609,7 @@ export class Automatisierungen {
       const personen = async (e: Empfaenger): Promise<string[]> => {
         if (e.art === 'person') return [e.id];
         if (e.art === 'rolle') return this.d.dienst.mitgliederDerRolle(e.id);
+        if (e.art === 'ersteller') return mappe?.erstelltVon && istUuid(mappe.erstelltVon) ? [mappe.erstelltVon] : [];
         return mappe ? alsListe(mappe.werte[e.feld]).filter(istUuid) : [];
       };
       // Und
@@ -682,6 +698,7 @@ export class Automatisierungen {
     if (this.zeitplanLauf) return this.zeitplanLauf;
     this.zeitplanLauf = (async () => {
       if (this.d.pause?.()) return;
+      await this.legeBeispiele().catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
       const jetzt = new Date(this.jetzt());
       const heute = heuteIn(jetzt);
       const uhrzeit = UHR_FORMAT.format(jetzt);
@@ -693,24 +710,21 @@ export class Automatisierungen {
         if (p.length) { await this.d.repo.setze(a.id, { angehalten: { grund: 'fehlerhaft', text: p.join(' '), zeit: this.iso() } }); log.warn('Automatisierung angehalten (passt nicht mehr)', { id: a.id, name: a.name, grund: p[0] }); }
       }
       const alle = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === 'datum');
-      // Gleiche Auslöser (Typ, Feld, Tage) gemeinsam: Reihenfolge und „Danach keine weiteren …“ gelten auch hier.
+      // Gleiche Auslöser (Typ, Feld, Vorlauf) gemeinsam: Reihenfolge und „Danach keine weiteren …“ gelten auch hier.
       const gruppen = new Map<string, typeof alle>();
       for (const a of alle) gruppen.set(ausloeserSchluessel(a.wenn), [...(gruppen.get(ausloeserSchluessel(a.wenn)) ?? []), a]);
+      const ort = { datum: heute, uhr: uhrzeit };
       for (const liste of gruppen.values()) {
         for (const a of liste) {
           const w = a.wenn as Extract<WennDatum, { art: 'datum' }>;
-          const bis = uhrzeit >= w.uhrzeit ? heute : verschiebe(heute, -1);
-          const fruehestens = verschiebe(heute, -AUTOMATISIERUNG_GRENZEN.nachholenTage);
-          // Neu eingeschaltet: ab heute (nichts rückwirkend).
-          let tag = a.letzterTag ? verschiebe(a.letzterTag, 1) : heute;
-          if (tag < fruehestens) tag = fruehestens;
-          if (!a.letzterTag && bis < heute) { await this.d.repo.setze(a.id, { letzterTag: bis }); continue; }
-          for (; tag <= bis; tag = verschiebe(tag, 1)) {
-            const ziel = verschiebe(tag, w.tage);
-            for (const mappe of await this.d.dienst.mappenMitDatum(w.typ, w.feld, ziel)) {
-              const ereignis = uuidAus(`datum|${ausloeserSchluessel(w)}|${mappe}|${ziel}`);
-              // Alle der Gruppe für diese Mappe und diesen Tag (die eigene Reihenfolge entscheidet).
-              await this.reihe(liste.filter((x) => x.id === a.id || (x.letzterTag ? x.letzterTag < tag : tag === heute)), { id: ereignis, art: 'datum', daten: { mappe, typ: w.typ, feld: w.feld, datum: ziel, tage: w.tage }, kette: 0 });
+          // Zeitplan-Baustein (#724): eine Regel zum Nachholen; neu eingeschaltet ab heute (nichts rückwirkend).
+          for (const tag of faelligeTage(a.letzterTag, ort, { uhrzeit: w.uhrzeit, nachholenTage: AUTOMATISIERUNG_GRENZEN.nachholenTage })) {
+            for (const ziel of erreichteDaten(tag, w.vorlauf, w.einheit)) {
+              for (const mappe of await this.d.dienst.mappenMitDatum(w.typ, w.feld, ziel)) {
+                const ereignis = uuidAus(`datum|${ausloeserSchluessel(w)}|${mappe}|${ziel}`);
+                // Alle der Gruppe für diese Mappe und diesen Tag (die eigene Reihenfolge entscheidet).
+                await this.reihe(liste.filter((x) => x.id === a.id || (x.letzterTag ? x.letzterTag < tag : tag === heute)), { id: ereignis, art: 'datum', daten: { mappe, typ: w.typ, feld: w.feld, datum: ziel, tage: tageBis(ziel, tag) }, kette: 0 });
+              }
             }
             for (const x of liste) await this.d.repo.setze(x.id, { letzterTag: tag });
             for (const x of liste) x.letzterTag = tag;
@@ -724,3 +738,9 @@ export class Automatisierungen {
 }
 
 type WennDatum = Automatisierung['wenn'];
+
+/** Tage von `ab` (Vorgabe heute) bis zum Datum – Platzhalter {tage}; leer ohne Datum. */
+function tageBis(datum: unknown, ab = heuteIn()): number | null {
+  if (typeof datum !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(datum)) return null;
+  return Math.round((Date.parse(`${datum}T12:00:00Z`) - Date.parse(`${ab}T12:00:00Z`)) / 86_400_000);
+}
