@@ -1,6 +1,7 @@
 {
   "herkunft.pdf": "Text aus dem PDF",
   "herkunft.paket": "Texterkennung durch Paket {paket}",
+  "herkunft.paket-ausgelesen": "Volltext durch Paket {paket}",
   "herkunft.wartet": "wartet auf Texterkennung (Paket {paket})",
   "herkunft.wartet-ohne": "wartet auf Texterkennung – kein Paket installiert",
   "herkunft.umwandlung": "wartet auf Umwandlung (Paket {paket})",

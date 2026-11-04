@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { OCR_STAENDE, type Dokument, type OcrStandArt } from '../../shared/src/model';
-import { PAKET_TEXT } from '../../shared/src/pakete';
+import { istPaketText } from '../../shared/src/pakete';
 import { erkenneSprache, istTextsprache, spracheZuInfo } from '../../shared/src/textsprache';
 import { dokumentsprachen, seitenZusammensetzen, zeichenzahl } from '../../shared/src/seitensprachen';
 import type { Dateispeicher } from './dateispeicher';
@@ -290,7 +290,7 @@ export class Texterkennung {
     // Hat inzwischen ein Paket den Volltext geschrieben (#338), bleibt der stehen – außer bei „neu“ (#458).
     const jetzt = await this.repo.holeDokument(d.id).catch(() => undefined);
     if (!jetzt) return;
-    if (!neu && jetzt.ocr?.stand === 'fertig' && jetzt.ocr.info?.startsWith(PAKET_TEXT)) { log.info('Texterkennung verworfen: Volltext kam schon von einem Paket', { dokument: d.name, id: d.id }); return; }
+    if (!neu && jetzt.ocr?.stand === 'fertig' && istPaketText(jetzt.ocr.info)) { log.info('Texterkennung verworfen: Volltext kam schon von einem Paket', { dokument: d.name, id: d.id }); return; }
     // Seiten ohne Text (#458) und der Typ der Fassung (#577) gehören nicht ins Repo, nur ins Ereignis.
     const ohneText = (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
     delete (e as OcrErgebnis & { ohneText?: number[] }).ohneText;
