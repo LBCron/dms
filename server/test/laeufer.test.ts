@@ -128,16 +128,16 @@ describe('Paket-Läufer (#338): Modul und Manifest', () => {
 });
 
 describe('Paket-Läufer: Nacharbeiten (#403)', () => {
-  it('Größengrenze für code/: höchstens 32 MB je Paket, mit klarer Meldung', () => {
-    assert.equal(CODE_MAX, 32 * 1024 * 1024);
+  it('Größengrenze für code/: höchstens 128 MB je Paket (wie das Archiv, #644), mit klarer Meldung', () => {
+    assert.equal(CODE_MAX, 128 * 1024 * 1024);
     assert.deepEqual(liesCode({ sprache: 'c' }, [{ name: 'code/modul.wasm', groesse: CODE_MAX - 10 }, { name: 'README.md', groesse: 100 }]).fehler, []);
-    const zuGross = liesCode({ sprache: 'c' }, [{ name: 'code/modul.wasm', groesse: 30 * 1048576 }, { name: 'code/daten/deu.traineddata', groesse: 3 * 1048576 }]);
+    const zuGross = liesCode({ sprache: 'c' }, [{ name: 'code/modul.wasm', groesse: 30 * 1048576 }, { name: 'code/daten/modell.bin', groesse: 103 * 1048576 }]);
     assert.equal(zuGross.code, null);
-    assert.match(zuGross.fehler.join(), /zusammen 33,0 MB groß – erlaubt sind höchstens 32 MB je Paket/);
+    assert.match(zuGross.fehler.join(), /zusammen 133,0 MB groß – erlaubt sind höchstens 128 MB je Paket/);
     // Im Paket: Meldung ohne „manifest.yaml:“ davor.
     const a = archiv('gross', ECHO);
     a.set('code/daten/gross.bin', Buffer.alloc(CODE_MAX));
-    assert.throws(() => liesPaket(a), (e: Error & { details?: { gruende: string[] } }) => /^Die Dateien unter code\/ sind zusammen 32,0 MB groß – erlaubt sind höchstens 32 MB/.test(e.details!.gruende[0]));
+    assert.throws(() => liesPaket(a), (e: Error & { details?: { gruende: string[] } }) => /^Die Dateien unter code\/ sind zusammen 128,0 MB groß – erlaubt sind höchstens 128 MB/.test(e.details!.gruende[0]));
     // Als ZIP: code/ zählt nicht zur allgemeinen Grenze von 20 MB, sondern zu seiner eigenen.
     const zip = zipPuffer([{ name: 'manifest.yaml', daten: Buffer.from(manifest('gross', '{ dokumente: keine }')) }, { name: 'code/modul.wasm', daten: ECHO }, { name: 'code/daten/gross.bin', daten: Buffer.alloc(25 * 1048576) }]);
     assert.equal(liesZip(zip).get('code/daten/gross.bin')?.length, 25 * 1048576);

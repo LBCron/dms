@@ -267,5 +267,8 @@
   "ablauf.nachtraeglich_one": "Dazu gibt es {anzahl} Ergänzung: {namen}. Du kannst sie jetzt dazuholen.",
   "ablauf.nachtraeglich_other": "Dazu gibt es {anzahl} Ergänzungen, z. B. {namen}. Du kannst sie jetzt dazuholen.",
   "ablauf.nachtraeglich.knopf": "Auswählen …",
-  "ablauf.adresse.hinweis": "Mindestens ein Paket schickt Daten an eine Dienst-Adresse, die du unten bei den Einstellungen einträgst – oder später. Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago: im eigenen Netz verlassen die Daten das Haus nicht, bei einem anderen Anbieter ist es eine Vertrauensbeziehung zu diesem Dienstleister."
+  "ablauf.adresse.hinweis": "Mindestens ein Paket schickt Daten an eine Dienst-Adresse, die du unten bei den Einstellungen einträgst – oder später. Betrieb und Hosting dieses Dienstes liegen außerhalb von Ablago: im eigenen Netz verlassen die Daten das Haus nicht, bei einem anderen Anbieter ist es eine Vertrauensbeziehung zu diesem Dienstleister.",
+  "groesse.zuGross": "Das Paket ist {groesse} MB groß, höchstens {max} MB sind erlaubt.",
+  "groesse.sammelZuGross": "Die Sammeldatei ist {groesse} MB groß, höchstens {max} MB sind erlaubt. Teile sie auf: weniger Pakete auswählen.",
+  "groesse.erstellenZuGross": "Das Paket wäre {groesse} MB groß, höchstens {max} MB sind erlaubt. Weniger Beispiele wählen."
 }

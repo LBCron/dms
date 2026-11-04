@@ -469,8 +469,16 @@ export const DMS_POST_RECHT_AB = '0.94.0';
 const SPRACHEN = ['rust', 'go', 'c', 'assemblyscript', 'javascript'];
 const TYPVERWEIS_ODER_ALLE = /^(\*|([a-z][a-z0-9_]{1,19}:)?[a-z][a-z0-9_]{0,39})$/;
 
-/** Höchstens so groß sind alle Dateien unter code/ eines Pakets zusammen (#403); dms-registry prüft dieselbe Grenze. */
-export const CODE_MAX = 32 * 1024 * 1024;
+/**
+ * Die eine Größengrenze für Pakete (#644): das Archiv beim Herunterladen, Hochladen, in der Sammeldatei und beim
+ * Paket erstellen, ebenso alle Dateien unter code/ zusammen. dms-registry prüft dieselbe Zahl (pruefen.py,
+ * katalog.py, sammeldatei.py). 128 MB, damit Modelle (z. B. Übersetzen, 17–44 MB je Sprachrichtung) passen.
+ */
+export const PAKET_MAX = 128 * 1024 * 1024;
+/** Höchstens so groß sind alle Dateien unter code/ eines Pakets zusammen (#403) – dieselbe Grenze wie das Archiv (#644). */
+export const CODE_MAX = PAKET_MAX;
+/** Größe in MB für Meldungen, gerundet auf eine Stelle mit Komma. */
+export const inMB = (bytes: number): string => (Math.round(bytes / 104857.6) / 10).toString().replace('.', ',');
 
 /**
  * Liest code: aus dem Manifest (ohne einstellungen/aktionen – die liest paketeinstellungen.ts).

@@ -15,7 +15,7 @@ import { liesWortgruppe } from '../../shared/src/suche';
 import { inflateRawSync } from 'node:zlib';
 import { parse as yamlLesen } from 'yaml';
 import { istLeer, type Feld, type Mappentyp, type Register } from '../../shared/src/model';
-import { BEREICH, CODE_MAX, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
+import { BEREICH, CODE_MAX, PAKET_MAX, inMB, KATALOG_ALT_TAGE, type HerkunftPruefung, hatSchnittstelle, DMS_RECHTE_TYPEN, WORTLISTEN_MAX, gleicheRechte, liesCode, rechtePunkte, rechteZeilen, type PaketCode, type RechtePunkt, dmsPasst, liesKatalog, nachAbhaengigkeiten, neuestePassende, OFFIZIELLER_KATALOG, PAKET_ID, passt, vergleicheVersion, VERSION, type InstalliertesPaket, type Katalog, type KatalogPaket, type KatalogVersion, auswahlMitAbhaengigkeiten, liesErgaenzt, type Ergaenzung, type AblaufPlan, type AblaufErgebnis, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { kinderVon, OPERATOREN, type Bedingung, type Operator, type Sicht } from '../../shared/src/sichten';
 import { adressfelder, EINTRAG_ID, einstellungsAenderung, fehlendePflicht, liesBeschreibung, listen, pruefeWerte, ueberfuehre, abschnittsfelder, type EinstellungFeld, type Einstellungsbeschreibung, type GeheimStand, type Verweisquelle } from '../../shared/src/paketeinstellungen';
 import type { Dienst, PaketQuelleEintrag } from './dienst';
@@ -30,7 +30,8 @@ const log = protokoll.modul('werkbank');
 
 /* ---------- ZIP lesen ---------- */
 
-export const ARCHIV_MAX = 10 * 1024 * 1024;
+/** Höchstens so groß ist ein Paket-Archiv – die gemeinsame Grenze aus shared (#644). */
+export const ARCHIV_MAX = PAKET_MAX;
 /** Entpackt höchstens – ohne code/; dafür gilt CODE_MAX (#403, geprüft in liesCode). */
 const ENTPACKT_MAX = 20 * 1024 * 1024;
 const DATEIEN_MAX = 500;
@@ -465,9 +466,12 @@ const WEITERLEITUNGEN_MAX = 5;
 export async function holeDaten(url: string, max = ARCHIV_MAX): Promise<Buffer> {
   let u = new URL(url);
   if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))) throw new Fachfehler(422, 'Pakete gibt es nur über HTTPS.');
-  const signal = AbortSignal.timeout(20000);
+  // 20 s bis zur Antwort; große Archive (#644) dürfen danach bis zu 5 Minuten laden.
+  const kopf = AbortSignal.timeout(20000), gesamt = new AbortController();
+  const uhr = setTimeout(() => gesamt.abort(new Error('Zeitgrenze beim Laden erreicht.')), 300_000);
+  try {
   for (let n = 0; ; n++) {
-    const r = await fetch(u, { signal, redirect: 'manual', headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } });
+    const r = await fetch(u, { signal: AbortSignal.any([kopf, gesamt.signal]), redirect: 'manual', headers: { 'user-agent': 'dms-paketverwaltung (https://github.com/motom001/dms)' } });
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
       await r.body?.cancel().catch(() => {});
       if (n >= WEITERLEITUNGEN_MAX) throw new Fachfehler(502, t('pakete.herkunft.fehler.weiterleitungen', { url }));
@@ -477,10 +481,19 @@ export async function holeDaten(url: string, max = ARCHIV_MAX): Promise<Buffer> 
       continue;
     }
     if (!r.ok) throw new Fachfehler(502, `${url}: ${r.status} ${r.statusText}`.trim());
-    const b = Buffer.from(await r.arrayBuffer());
-    if (b.length > max) throw new Fachfehler(422, 'Die Datei ist zu groß.');
-    return b;
+    const laenge = Number(r.headers.get('content-length') ?? NaN);
+    const zuGross = (bytes: number) => new Fachfehler(422, t('pakete.groesse.zuGross', { groesse: inMB(bytes), max: inMB(max) }));
+    if (laenge > max) { await r.body?.cancel().catch(() => {}); throw zuGross(laenge); }
+    // Stückweise lesen und früh abbrechen, statt erst alles in den Speicher zu holen.
+    const teile: Buffer[] = []; let zusammen = 0;
+    if (r.body) for await (const s of r.body as unknown as AsyncIterable<Uint8Array>) {
+      zusammen += s.length;
+      if (zusammen > max) { gesamt.abort(); throw zuGross(zusammen); }
+      teile.push(Buffer.from(s));
+    }
+    return Buffer.concat(teile, zusammen);
   }
+  } finally { clearTimeout(uhr); }
 }
 
 /** Wer handelt: Id für „angelegt von“, E-Mail fürs Protokoll. */
@@ -514,9 +527,9 @@ const UPLOAD_GUELTIG = 30 * 60_000;
 export const SAMMEL_VERZEICHNIS = 'sammeldatei.json';
 const SAMMEL_LIESMICH = 'LIESMICH.txt';
 /** Höchstens so groß ist eine Sammeldatei; so viele Pakete; entpackt alle Pakete zusammen höchstens. */
-export const SAMMEL_MAX = 64 * 1024 * 1024;
+export const SAMMEL_MAX = 2 * PAKET_MAX;
 export const SAMMEL_PAKETE_MAX = 50;
-const SAMMEL_ENTPACKT_MAX = 256 * 1024 * 1024;
+const SAMMEL_ENTPACKT_MAX = 4 * PAKET_MAX;
 const VERZEICHNIS_MAX = 1024 * 1024;
 
 export interface SammelEintrag { id: string; version: string; name: string; archiv: string; sha256: string; groesse: number; gewaehlt: boolean }
@@ -810,6 +823,7 @@ export class Paketverwaltung {
     if (!kp) throw new Fachfehler(404, `Das Paket „${id}“ gibt es im Katalog nicht.`);
     const v = version ? kp.versionen.find((x) => x.version === version) : kp.versionen.find((x) => x.version === kp.aktuell) ?? kp.versionen[0];
     if (!v) throw new Fachfehler(404, `Version ${version} von „${kp.name}“ gibt es im Katalog nicht.`);
+    if (v.groesse > ARCHIV_MAX) throw new Fachfehler(422, `Das Paket lässt sich nicht herunterladen: ${t('pakete.groesse.zuGross', { groesse: inMB(v.groesse), max: inMB(ARCHIV_MAX) })}`);
     let daten: Buffer;
     try { daten = await this.abruf(new URL(v.archiv, url).toString()); }
     catch (e) { throw new Fachfehler(502, `Das Paket lässt sich nicht herunterladen: ${(e as Error).message}`); }
@@ -827,7 +841,7 @@ export class Paketverwaltung {
    */
   async hochladen(daten: unknown, von: Handelnder): Promise<{ upload: string; vorschau: Vorschau }> {
     if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte eine .zip-Datei hochladen.');
-    if (daten.length > ARCHIV_MAX) throw new Fachfehler(422, 'Die Datei ist zu groß (höchstens 10 MB).');
+    if (daten.length > ARCHIV_MAX) throw new Fachfehler(422, t('pakete.groesse.zuGross', { groesse: inMB(daten.length), max: inMB(ARCHIV_MAX) }));
     const paket = liesPaket(liesZip(daten));
     const sha256 = createHash('sha256').update(daten).digest('hex');
     const kv = this.kataloge.get(this.katalogUrl)?.katalog.pakete.find((p) => p.id === paket.manifest.id)?.versionen.find((v) => v.sha256 === sha256);
@@ -842,7 +856,7 @@ export class Paketverwaltung {
   /** Hochgeladene Datei (#461): eine Sammeldatei erkennt das DMS an sammeldatei.json, sonst ein einzelnes Paket. */
   async hochladenDatei(daten: unknown, von: Handelnder): Promise<{ upload: string; vorschau: Vorschau } | { sammeldatei: Sammeldatei }> {
     if (!Buffer.isBuffer(daten) || !daten.length) throw new Fachfehler(422, 'Bitte eine .zip-Datei hochladen.');
-    if (daten.length > SAMMEL_MAX) throw new Fachfehler(422, `Die Datei ist zu groß (höchstens ${SAMMEL_MAX / 1048576} MB).`);
+    if (daten.length > SAMMEL_MAX) throw new Fachfehler(422, t('pakete.groesse.sammelZuGross', { groesse: inMB(daten.length), max: inMB(SAMMEL_MAX) }));
     if (zipNamen(daten).includes(SAMMEL_VERZEICHNIS)) return { sammeldatei: await this.sammeldatei(daten, von) };
     return this.hochladen(daten, von);
   }
