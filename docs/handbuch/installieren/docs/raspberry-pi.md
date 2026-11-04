@@ -390,7 +390,7 @@ docker run -d --name dms-test -p 8099:3000 \
   -v "$HOME/dms-test/geheim:/data/geheim" \
   -v "$HOME/dms-test/sicherung:/data/sicherung" \
   -v "$HOME/dms-test/postgres:/data/postgres" \
-  ghcr.io/motom001/dms-komplett:main
+  ghcr.io/motom001/dms-komplett:stabil
 until curl -fsS http://127.0.0.1:8099/api/konto/status >/dev/null; do sleep 5; done; echo bereit
 ```
 

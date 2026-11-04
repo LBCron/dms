@@ -36,7 +36,7 @@ Ablago gibt es in zwei Varianten. **Wir empfehlen zwei Container** – so laufen
 | | **Zwei Container** (empfohlen): `dms` + `postgres:17` | **Ein Container**: `dms-komplett` |
 | --- | --- | --- |
 | Einrichten | Compose-Projekt bzw. App-Store, ein Passwort für die Datenbank | ein Image, vier Ordner, kein Passwort |
-| Updates von PostgreSQL | sofort, unabhängig von Ablago: `postgres:17` neu ziehen | mit `:main` wöchentlich neu gebaut, mit fester Version erst mit dem nächsten Release |
+| Updates von PostgreSQL | sofort, unabhängig von Ablago: `postgres:17` neu ziehen | mit dem nächsten Release (`:stabil` oder feste Version); `:main` wird zum Testen wöchentlich neu gebaut |
 | Betrieb | Ablago und Datenbank einzeln neu starten, überwachen, mit Standardwerkzeugen sichern | alles zusammen; Datenbank von außen nicht erreichbar (gewollt) |
 | Neue Hauptversion von PostgreSQL | planbar, im eigenen Takt | nur über Sicherung und Wiederherstellung |
 | App-Stores (umbrelOS, ZimaOS, CasaOS) | ja | nein |

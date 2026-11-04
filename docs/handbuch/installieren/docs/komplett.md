@@ -27,14 +27,14 @@ docker run -d --name dms --restart unless-stopped --stop-timeout 60 -p 8080:3000
   -v /pfad/zu/dms/geheim:/data/geheim \
   -v /pfad/zu/dms/sicherung:/data/sicherung \
   -v /pfad/zu/dms/postgres:/data/postgres \
-  ghcr.io/motom001/dms-komplett:main
+  ghcr.io/motom001/dms-komplett:stabil
 ```
 
 ## In der Oberfläche eines NAS
 
 Synology (Container Manager), UGREEN (Docker), QNAP (Container Station) und Unraid können einen Container direkt aus einem Image erstellen:
 
-1. Image **`ghcr.io/motom001/dms-komplett:main`** herunterladen bzw. als Container anlegen.
+1. Image **`ghcr.io/motom001/dms-komplett:stabil`** herunterladen bzw. als Container anlegen.
 2. **Port:** lokal `8080` → Container `3000`.
 3. **Ordner:** vier Ordner auf dem NAS anlegen und zuordnen – `files` → `/data/files`, `geheim` → `/data/geheim`, `sicherung` → `/data/sicherung`, `postgres` → `/data/postgres`. Optional für den Scanner einen fünften: `eingang` → `/eingang` ([Eingangsordner](https://help.ablago.app/admin/aktuell/eingangsordner/)).
 4. **Neustart-Richtlinie:** „immer“ bzw. „unless-stopped“.

@@ -31,7 +31,7 @@ Du brauchst **keine Konsole, keine Ordner und keine Befehle** – nur einen neue
 
     | Einstellung | Wert |
     | --- | --- |
-    | Image | `ghcr.io/motom001/dms-komplett:main` (Ablago und Datenbank in einem Container) |
+    | Image | `ghcr.io/motom001/dms-komplett:stabil` (Ablago und Datenbank in einem Container) |
     | Name | z. B. `dms-lasttest` |
     | Port | ein freier Port des NAS, z. B. `8099`, auf Port `3000` im Container |
     | Umgebungsvariable | `DMS_LASTTEST` = `klein` (oder `mittel`, `gross`, `alle` – siehe [Die drei Stufen](#die-drei-stufen)) |
@@ -64,10 +64,10 @@ Du brauchst **keine Konsole, keine Ordner und keine Befehle** – nur einen neue
 Dasselbe in einer Zeile – `--rm` löscht den Container, sobald du den Test auf der Seite beendest:
 
 ```sh
-docker run -d --rm --name dms-lasttest -p 8099:3000 -e DMS_LASTTEST=klein ghcr.io/motom001/dms-komplett:main
+docker run -d --rm --name dms-lasttest -p 8099:3000 -e DMS_LASTTEST=klein ghcr.io/motom001/dms-komplett:stabil
 ```
 
-Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit `docker image rm ghcr.io/motom001/dms-komplett:main`.
+Danach weiter mit Schritt 2. Das Image löschst du bei Bedarf mit `docker image rm ghcr.io/motom001/dms-komplett:stabil`.
 
 ### Einen bestimmten Datenträger messen
 
@@ -75,7 +75,7 @@ Ohne Ordner liegt alles dort, wo Docker seine Container ablegt – auf vielen NA
 
 ```sh
 docker run -d --rm --name dms-lasttest -p 8099:3000 -e DMS_LASTTEST=klein \
-  -v /volume1/dms-lasttest:/data ghcr.io/motom001/dms-komplett:main
+  -v /volume1/dms-lasttest:/data ghcr.io/motom001/dms-komplett:stabil
 ```
 
 Der Test erkennt dann die Speicherart dieses Datenträgers, und das Ergebnis liegt zusätzlich als Datei in diesem Ordner unter `ergebnis/`. Lösche den Ordner nach dem Test.
@@ -96,7 +96,7 @@ Der Lasttest steckt als Befehl `dms-lasttest` im Image. So misst du ohne die Sei
       -v /pfad/zu/dms-test/geheim:/data/geheim \
       -v /pfad/zu/dms-test/sicherung:/data/sicherung \
       -v /pfad/zu/dms-test/postgres:/data/postgres \
-      ghcr.io/motom001/dms-komplett:main
+      ghcr.io/motom001/dms-komplett:stabil
     ```
 
     Willst du die Variante mit getrennter Datenbank messen, nimm deine Vorlage (Compose-Datei) als eigenes Projekt, z. B. `dms-test`, mit anderen Ordnern und anderem Port – dort geht auch der Weg im Browser mit `DMS_LASTTEST`. Nicht einrichten – das macht der Lasttest.

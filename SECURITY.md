@@ -12,6 +12,8 @@ Hilfreich sind: betroffene Version (Werkbank → Technik), Schritte zum Nachstel
 
 Korrekturen gibt es für die **neueste Version**. Aktualisiere bitte zuerst, bevor du meldest – siehe [Aktualisieren](https://help.ablago.app/admin/aktuell/aktualisieren/).
 
+Die Vorlagen nutzen das Image-Tag **`:stabil`** (#714). Es wandert nur mit einem Release weiter – Versionsnummer, Release-Notes, beide Images gebaut und mit Herkunftsnachweis, Update-Test vom bisherigen `:stabil` grün – und nur im Workflow *Prüfen und Image bauen* auf `main`. Hat eine stabile Version einen schweren Fehler, setzt der Maintainer `:stabil` über den Workflow *:stabil zurücksetzen* auf eine frühere veröffentlichte Version zurück; starten kann ihn nur, wer Schreibrecht am Repository hat.
+
 ## Was automatisch geprüft wird
 
 | Was | Womit | Wann |
