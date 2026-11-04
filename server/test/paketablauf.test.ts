@@ -336,3 +336,17 @@ describe('Sammeldatei im selben Ablauf (#405, #461)', () => {
     await assert.rejects(p.ablaufPlan({ uploads }), fehlerMit(410, /abgelaufen/), 'Upload-Kennungen gelten nur bis zur Installation');
   });
 });
+
+describe('Anzeige wie im Katalog (#645)', () => {
+  it('Symbol, Kürzel und Kategorien werden übernommen, Ungültiges weggelassen', () => {
+    const v = { version: '1.0.0', sha256: 'a'.repeat(64), archiv: 'archive/x-1.0.0.zip', dms: '>=0.1.0' };
+    const k = liesKatalog({ format: 1, erstellt: '', quelle: '', pakete: [
+      { id: 'texterkennung_fra', name: 'Französisch', versionen: [v], symbol: 'languages', kuerzel: 'fr', kategorien: ['sprachen', 'volltext'] },
+      { id: 'boese', name: 'Böse', versionen: [v], symbol: '<svg onload=x>', kuerzel: 'ABCD', kategorien: ['ok', 'Nicht Gültig', 3] },
+    ] });
+    const fra = k.pakete.find((p) => p.id === 'texterkennung_fra')!;
+    assert.equal(fra.symbol, 'languages'); assert.equal(fra.kuerzel, 'FR'); assert.deepEqual(fra.kategorien, ['sprachen', 'volltext']);
+    const b = k.pakete.find((p) => p.id === 'boese')!;
+    assert.equal(b.symbol, undefined); assert.equal(b.kuerzel, undefined); assert.deepEqual(b.kategorien, ['ok']);
+  });
+});

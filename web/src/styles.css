@@ -1281,13 +1281,25 @@ a.knopf.breit { display: flex; justify-content: center; text-decoration: none; }
 .pd-liste > li { border: 1px solid var(--linie); border-radius: 10px; padding: 10px 12px; min-width: 0; }
 .pd-liste > li.an { border-color: var(--akzent); }
 .pd-liste .chip { white-space: normal; }
-.pd-darf { margin: 4px 0 0 26px; overflow-wrap: anywhere; }
+/* Paketauswahl wie im Katalog (#645): Kacheln mit Symbol, Filter nach Kategorie. */
+.pd-kategorien { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-kategorien .knopf { min-height: 44px; }
+.pd-kategorien .knopf[aria-pressed="true"] { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); font-weight: 600; }
+.haken.pd-kachel { display: grid; grid-template-columns: auto auto 1fr; align-items: start; gap: 10px; min-height: 44px; }
+.haken.pd-kachel > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.pd-symbol { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--akzent-zart); color: var(--akzent); flex: none; }
+.pd-symbol svg { width: 24px; height: 24px; }
+.pd-symbol-buchstabe { font-weight: 700; font-size: 1.1rem; }
+.pd-symbol-kuerzel { position: absolute; right: -4px; bottom: -4px; font-size: .65rem; font-weight: 700; line-height: 1; padding: 2px 3px; border-radius: 4px; background: var(--akzent); color: var(--akzent-tinte); }
+@media (min-width: 720px) { .pd-liste { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }
+@media (max-width: 719px) { .pd-liste .pd-darf, .pd-liste .pd-ergaenzungen { margin-left: 0; } }
+.pd-darf { margin: 4px 0 0 76px; overflow-wrap: anywhere; }
 .pd-datei { position: relative; display: inline-flex; align-self: flex-start; cursor: pointer; }
 .pd-datei input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 .pd-datei:focus-within .knopf { outline: 2px solid var(--akzent); outline-offset: 2px; }
 .pd-pruefwert { overflow-wrap: anywhere; word-break: break-all; }
 /* Mehrere Pakete in einem Ablauf (#405): Ergänzungen als Häkchen unter ihrem Paket, Fragen je Abschnitt. */
-.pd-ergaenzungen { margin: 8px 0 0 26px; padding: 6px 10px 8px; border: 1px dashed var(--linie); border-radius: 8px; min-width: 0; }
+.pd-ergaenzungen { margin: 8px 0 0 76px; padding: 6px 10px 8px; border: 1px dashed var(--linie); border-radius: 8px; min-width: 0; }
 .pd-ergaenzungen legend { padding: 0 4px; }
 .pd-ergaenzungsliste { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; }
 .pd-ergaenzungsliste .haken > span { font-weight: normal; overflow-wrap: anywhere; }
