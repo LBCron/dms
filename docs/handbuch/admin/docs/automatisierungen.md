@@ -8,9 +8,9 @@ Links stehen alle Automatisierungen mit Name, Kurzform („Wenn Vertrag: Kündig
 
 | Bereich | Was hinein gehört |
 |---|---|
-| **Wenn** | genau eine Karte: ein Ereignis (Mappe angelegt, gespeichert, Notiz, Dokument hochgeladen, Kontosperre …) oder **Datum erreicht** |
+| **Wenn** | genau eine Karte: ein Ereignis (Mappe angelegt, gespeichert, Notiz, Dokument hochgeladen, Favorit geändert, Kontosperre …), **Datum erreicht** oder **Zeitplan** |
 | **Und** | keine, eine oder mehrere Bedingungen: Feldwerte wie bei den [Ansichten](sichten.md), „Mappe ist in Ansicht …“, „Mappe ist Favorit von …“, Gruppen mit „alle“ oder „eine genügt“; jede Bedingung lässt sich mit **nicht** umkehren |
-| **Dann** | eine oder mehrere Karten, der Reihe nach: **Feld ändern**, **Aufgabe / Benachrichtigung**, **Danach keine weiteren Automatisierungen** |
+| **Dann** | eine oder mehrere Karten, der Reihe nach: **Feld ändern**, **Aufgabe / Benachrichtigung**, **Tägliche Zusammenfassung senden**, **Favoriten-Änderungen melden**, **Anmeldeschutz melden**, **Danach keine weiteren Automatisierungen** |
 
 ## Beispiel: an die Kündigungsfrist erinnern
 
@@ -47,6 +47,14 @@ Ob eine Automatisierung arbeitet, siehst und änderst du an **einer** Stelle: am
 - Ist sie **angehalten** (rot, siehe unten), steht dort der Grund und der Knopf **Wieder einschalten**.
 - Daneben steht der Knopf **Kopieren**: Er legt eine eigene Kopie an und öffnet sie.
 
+## Zeitplan
+
+Die Karte **Zeitplan** löst an den gewählten **Wochentagen** zur gewählten **Uhrzeit** aus (in der Zeitzone der [Region](region.md)), auf Wunsch **nicht an Feiertagen** – das Bundesland dafür stellst du unter [Region](region.md) ein.
+
+- **Für jeden Benutzer:** Die Automatisierung läuft je aktivem Benutzer genau einmal am Tag – auf Wunsch nur für die Mitglieder einer **Rolle**. Die Karten sehen dann die Benutzer-Mappe der Person, der Platzhalter `{benutzer}` steht für ihren Namen.
+- **Uhrzeit aus Mein Konto:** Mit diesem Haken gelten Uhrzeit, Wochentage und Feiertage, die jemand unter Mein Konto für die Tägliche Zusammenfassung gewählt hat; wer nichts gewählt hat, bekommt die Uhrzeit der Karte und Montag bis Freitag.
+- War Ablago zur Uhrzeit aus, läuft die Automatisierung noch am selben Tag nach – an Folgetagen nicht. Auch mit mehreren Servern läuft jeder Tag (je Person) genau einmal.
+
 ## Karten hinzufügen, umsortieren, entfernen
 
 - **Mit der Maus oder am Handy:** **Kartenvorrat** aufklappen, nach einer Karte suchen und sie in ihren Bereich **ziehen** (am Handy lange drücken) – oder einfach anklicken.
@@ -61,6 +69,9 @@ Der Vorrat zeigt nur, was zur Wenn-Karte passt: **Feld ändern** etwa nur, wenn 
 - **Aufgabe / Benachrichtigung** geht an Personen, an **alle aktiven Mitglieder einer Rolle**, an die **Person in einem Feld** der Mappe (optional „sonst wer die Mappe angelegt hat“), an **wer die Mappe angelegt hat** oder an eine **Person aus dem Ereignis** (z. B. den Vertreter bei *Abwesenheit gesetzt*). Eine *Aufgabe* kann ein Fälligkeitsdatum haben; *Benachrichtigungen* bündelt Ablago, damit niemand bei vielen Läufen hintereinander überschwemmt wird. Wer die Mappe nicht sehen darf, bekommt die Aufgabe an seiner eigenen Benutzer-Mappe – ohne Link auf die Mappe.
 - Aufgaben aus Automatisierungen verhalten sich wie die eingebauten: Ist jemand **abwesend oder deaktiviert**, geht die Aufgabe an seine **Vertretung** (in der Historie steht „weitergegeben wegen Abwesenheit …“). Gibt es keine, bekommen sie die Administratoren – der Lauf bricht nicht ab.
 - Eine Aufgabe **erledigt sich selbst**, wenn ihr Anlass wegfällt: bei **Datum erreicht**, wenn das Datum geändert oder geleert wird; bei **Neue Post**, wenn die Post zugeordnet oder erledigt ist; bei **Abwesenheit gesetzt**, wenn die Abwesenheit endet.
+- **Tägliche Zusammenfassung senden** (nur mit *Zeitplan für jeden Benutzer*) schickt der Person ihre offenen Aufgaben per E-Mail – derselbe Inhalt wie bisher. Wer sie unter Mein Konto abbestellt hat, abwesend ist oder nichts offen hat, bekommt keine; der Verlauf nennt den Grund.
+- **Favoriten-Änderungen melden** (nur mit *Favorit geändert*) gibt allen, die die Mappe als Favorit haben, die gebündelte Benachrichtigung „Geändert“ – wie bisher. Die [Freigabe für Favoriten](aufgaben.md#favoriten-benachrichtigen) und der Schalter unter Mein Konto gelten weiter; eigene Änderungen melden nie.
+- **Anmeldeschutz melden** schickt den Administratoren entweder die **Sammelmeldung** über die Sperren (mit *Zeitplan*, nicht je Benutzer) oder sofort eine Mail, wenn ein **Benutzerkonto gesperrt** wurde (mit *Benutzerkonto gesperrt*, je Konto höchstens einmal am Tag). Siehe [Anmeldeschutz](anmeldeschutz.md#mail-an-die-administratoren).
 - **Danach keine weiteren Automatisierungen** beendet die Reihe: Automatisierungen mit höherer Nummer laufen für dieses Ereignis nicht mehr (im Verlauf „Übersprungen durch …“).
 
 Automatisierungen arbeiten mit dem **Systemkonto „Automatisierung“** (Werkbank → Benutzer). Was dieses Konto nicht lesen darf, überspringt die Automatisierung; Platzhalter zeigen dann „(nicht sichtbar)“.
@@ -97,6 +108,12 @@ Pakete bringen **vorgefertigte Automatisierungen** mit, zum Beispiel „HU wird 
 ### Vertretung
 
 Wird für jemanden eine **Abwesenheit mit Vertreter** eingetragen, bekommt der Vertreter eine Aufgabe – das macht die Automatisierung **Vertretung eingetragen** (Wenn *Abwesenheit gesetzt*, Empfänger *Vertreter aus dem Ereignis*, Platzhalter `{benutzer}`, `{vertreter}`, `{von}`, `{bis}`, `{zeitraum}`). Sie erledigt sich, sobald die Abwesenheit endet oder sich Zeitraum oder Vertreter ändern. Für den bisherigen Vertreter gibt es die Wenn-Karte **Vertretung zurückgezogen** (Abwesenheit beendet, anderer oder kein Vertreter mehr). Beide bringt das Paket **Benachrichtigungen** mit; bei bestehenden Ablagen hat das Update *Vertretung eingetragen* eingeschaltet übernommen. Nennt das Ereignis keine Person (Abwesenheit ohne Vertreter), passiert nichts – das ist kein Fehler.
+
+### Benachrichtigungen
+
+Die **Tägliche Zusammenfassung**, das Melden geänderter **Favoriten** und die Mails des **Anmeldeschutzes** sind Automatisierungen. Das Paket **Benachrichtigungen** bringt sie mit; im Einrichtungsassistenten ist es vorausgewählt. Ohne eine Automatisierung mit *Tägliche Zusammenfassung senden* weist die Werkbank-Übersicht darauf hin: „Keine automatischen Benachrichtigungen“ mit **Paket installieren**.
+
+Beim Update auf diese Fassung hat Ablago in bestehenden Ablagen **einmal** vier Automatisierungen mit den bisherigen Werten angelegt: *Tägliche Zusammenfassung* (Uhrzeit aus Mein Konto, an oder aus wie bisher), *Favoriten-Änderungen melden*, *Sammelmeldung Anmeldeschutz* und *Kontosperre sofort melden* (an, wenn die Haken im Anmeldeschutz gesetzt waren). Für Benutzer ändert sich nichts. Installierst du das Paket, gehen sie in dessen Automatisierungen auf, solange du sie nicht geändert hast.
 
 ### Erinnerungen aus früheren Versionen
 

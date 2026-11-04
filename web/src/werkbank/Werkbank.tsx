@@ -32,6 +32,7 @@ import { TechnikPanel, useTechnik } from './Technik';
 import { TresorPanel, useTresor } from './Verschluesselung';
 import { AufgabenListe, AufgabenPanel, useAufgaben } from './Aufgaben';
 import { useFavoritenFreigabe } from './Benachrichtigungen';
+import { AufgabenEmpfaengerBlock, useAufgabenEmpfaenger } from './AufgabenEmpfaenger';
 import { TexterkennungPanel, useTexterkennung, WartungPanel } from './Texterkennung';
 import { useHandbuch } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
@@ -99,6 +100,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const aufgabenFilter = filterAusAdresse(new URLSearchParams(location.search));
   const aufgaben = useAufgaben(bereich === 'aufgaben', !!aufgabenFilter.erledigt);
   const favoritenFreigabe = useFavoritenFreigabe(bereich === 'aufgaben');
+  const aufgabenEmpfaenger = useAufgabenEmpfaenger(bereich === 'benutzer');
   const ocr = useTexterkennung(bereich === 'texterkennung' || bereich === 'wartung');
   const uebersicht = useUebersicht();
   const meldungen = useFehlermeldungen(bereich === 'fehlermeldungen');
@@ -172,8 +174,10 @@ export function Werkbank({ teile }: { teile: string[] }) {
     liste = <SichtenListe offen={id} />;
     rechts = id ? <SichtEditor key={`${id}-${d.sicht(id)?.geaendert ?? ''}`} id={id} /> : <div className="platzhalter"><p>Wähle links eine Ansicht oder lege mit „+ Neu“ eine an.</p></div>;
   } else if (bereich === 'benutzer') {
-    liste = <BenutzerListe liste={benutzer.liste} offen={id} />;
-    if (id === 'neu') rechts = <BenutzerNeu key="neu" neuLaden={benutzer.laden} />;
+    liste = <BenutzerListe liste={benutzer.liste} offen={id} alltag={aufgabenEmpfaenger.stand?.benutzerId ?? null} />;
+    // Ohne Auswahl (#719): wer im Alltag die Aufgaben ohne Empfänger bekommt.
+    if (!id) rechts = <AufgabenEmpfaengerBlock z={aufgabenEmpfaenger} benutzer={benutzer.liste} />;
+    else if (id === 'neu') rechts = <BenutzerNeu key="neu" neuLaden={benutzer.laden} />;
     else if (id?.startsWith('konto-')) rechts = <SystemkontoDetail key={id} id={id.slice(6)} />;
     else if (id) {
       const b = benutzer.liste.find((x) => x.id === id);

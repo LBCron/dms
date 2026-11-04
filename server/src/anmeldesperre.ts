@@ -209,9 +209,8 @@ export class Anmeldesperre {
 
   private heute() { return heuteIn(new Date(this.jetzt())); }
 
-  /** Sperre für die tägliche Sammelmeldung vormerken (nur bei eingeschalteter Mail). */
+  /** Sperre für die tägliche Sammelmeldung vormerken – immer; ob gemeldet wird, entscheidet die Automatisierung (#678). */
   private async vormerken(m: Omit<Meldung, 'tag'>) {
-    if (!this.e.mail) return;
     const s = ((await this.speicher.lies('anmeldesperre_meldung')) as Meldestand | null) ?? { offen: [] };
     s.offen = [...s.offen, { tag: this.heute(), ...m }].slice(-MELDUNGEN_HOECHSTENS);
     await this.speicher.schreibe('anmeldesperre_meldung', s);
@@ -221,14 +220,15 @@ export class Anmeldesperre {
    * Regelmäßig aufgerufen (#368): höchstens eine Sammelmeldung am Tag, über die Sperren vor heute.
    * Liefert true, wenn eine Mail verschickt wurde.
    */
-  async meldeTaeglich(): Promise<boolean> {
+  async meldeTaeglich(trocken = false): Promise<boolean> {
     await this.lade();
-    if (!this.e.mail || !this.anAdmins) return false;
+    if (!this.anAdmins) return false;
     const s = (await this.speicher.lies('anmeldesperre_meldung')) as Meldestand | null;
     const heute = this.heute();
     if (!s || s.zuletzt === heute) return false;
     const faellig = s.offen.filter((m) => m.tag < heute);
     if (!faellig.length) return false;
+    if (trocken) return true;
     await this.speicher.schreibe('anmeldesperre_meldung', { offen: s.offen.filter((m) => m.tag >= heute), zuletzt: heute } satisfies Meldestand);
     const { betreff, text } = sammelText(faellig);
     await this.anAdmins(betreff, text).catch((e) => log.warn('Sammelmeldung Anmeldeschutz nicht verschickt', { fehler: (e as Error).message }));
@@ -274,11 +274,22 @@ export class Anmeldesperre {
     // Ereigniskatalog (#670): „Benutzerkonto gesperrt“ – jede Sperre, unabhängig von der Sofortmeldung.
     try { await this.beiKontosperre?.({ email, ip, versuche, bis: new Date(this.jetzt() + this.e.konto.minuten * MIN).toISOString() }); }
     catch (e) { log.warn('Ereignis zur Kontosperre nicht gespeichert', { fehler: (e as Error).message }); }
-    if (!this.e.mailKonto || !this.anAdmins) return;
+    // Die Sofortmeldung macht seit #678 die Automatisierung „Kontosperre melden“ (Paket „Benachrichtigungen“).
+  }
+
+  /**
+   * Dann-Karte „Kontosperre an Administratoren melden“ (#678): Mail wie bisher die Sofortmeldung (#368), je Konto
+   * höchstens einmal am Tag. Liefert false, wenn heute zu diesem Konto schon gemeldet wurde oder niemand da ist.
+   */
+  async kontoMelden(email: string, ip: string, versuche: number, trocken = false): Promise<boolean> {
+    await this.lade();
+    if (!this.anAdmins) return false;
     const heute = this.heute();
-    if (this.sofortGemeldet.get(email) === heute) return;
+    if (this.sofortGemeldet.get(email) === heute) return false;
+    if (trocken) return true;
     this.sofortGemeldet.set(email, heute);
-    await this.anAdmins('Ablago: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Anmeldeschutz.`).catch((e) => log.warn('Meldung zur Kontosperre nicht verschickt', { fehler: (e as Error).message }));
+    await this.anAdmins('Ablago: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Ablage aufbauen → Automatisierungen.`);
+    return true;
   }
 
   /** Nach erfolgreicher Anmeldung: Zähler für Konto und IP zurücksetzen. */

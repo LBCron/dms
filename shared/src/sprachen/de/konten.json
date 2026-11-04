@@ -14,5 +14,7 @@
   "sperren.nochnicht": "Deaktivieren geht noch nicht:",
   "deaktiviert.vorlesen": " (deaktiviert)",
   "deaktiviert.titel": "deaktiviert",
-  "deaktiviert.titel.seit": "deaktiviert seit {datum}"
+  "deaktiviert.titel.seit": "deaktiviert seit {datum}",
+  "verwaltung.hinweis": "Für die Verwaltung liegt etwas an. Melde dich als Administrator an.",
+  "verwaltung.anmelden": "Als Administrator anmelden"
 }

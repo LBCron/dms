@@ -17,7 +17,9 @@ import type { PaketAutomatisierung } from './pakete';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
-import { faelligeTage } from './zeitplan';
+import { faelligeTage, laufeFaellige, wochentagVon, type Merker } from './zeitplan';
+import { feiertagAm, istBundesland } from '../../shared/src/feiertage';
+import { wirksameZeit } from './aufgabenmail';
 import { istUuid } from './repo';
 import { datumsformat } from '../../shared/src/region';
 
@@ -303,10 +305,27 @@ const UHR_FORMAT = () => datumsformat('de-DE', { hour: '2-digit', minute: '2-dig
 
 /** Feste Id der beim Update übernommenen Vertretungs-Aufgabe (#712/#678). */
 const UMZUG_VERTRETUNG = uuidAus('umzug|vertretung');
+/** Feste Ids der beim Update übernommenen Benachrichtigungen (#678): Zusammenfassung, Favoriten, Anmeldeschutz. */
+const UMZUG = {
+  zusammenfassung: uuidAus('umzug|zusammenfassung'), favoriten: uuidAus('umzug|favoriten'),
+  sammel: uuidAus('umzug|anmeldeschutz'), konto: uuidAus('umzug|kontosperre'),
+} as const;
+/** Welche übernommene Benachrichtigung eine mitgelieferte Automatisierung ersetzt (nach ihrer ersten Dann-Karte). */
+function umzugFuer(d: AutomatisierungDaten): string | null {
+  const k = d.dann[0];
+  if (!k) return null;
+  if (k.art === 'zusammenfassung') return UMZUG.zusammenfassung;
+  if (k.art === 'favoriten') return UMZUG.favoriten;
+  if (k.art === 'anmeldeschutz') return k.was === 'sammel' ? UMZUG.sammel : UMZUG.konto;
+  return null;
+}
+const UMZUG_IDS = new Set<string>([UMZUG_VERTRETUNG, ...Object.values(UMZUG)]);
 
 export class Automatisierungen {
   private uhr: ReturnType<typeof setInterval> | null = null;
   private zeitplanLauf: Promise<void> | null = null;
+  /** Merker für den Zeitplan, wenn es keinen Einstellungsspeicher gibt (Tests). */
+  private merkerOhneSpeicher = new Map<string, string>();
   constructor(private d: AutomatisierungDeps) {
     d.dienst.automatisierungenVon = async (kontoId) => {
       const konto = await this.konto().catch(() => null);
@@ -329,6 +348,7 @@ export class Automatisierungen {
     this.d.dienst.ereignisse.abonniere('automatisierungen', (e) => this.ereignis(e));
     // #712: Erinnerungen am Feld werden zu Automatisierungen – erst die Fristen übernehmen, dann die Beispiele.
     void this.fristenUebernehmen().catch((e) => log.warn('Erinnerungen nicht übernommen', { fehler: (e as Error).message }))
+      .then(() => this.benachrichtigungenUebernehmen()).catch((e) => log.warn('Benachrichtigungen nicht übernommen', { fehler: (e as Error).message }))
       .then(() => this.legeBeispiele()).catch((e) => log.warn('Beispiele nicht angelegt', { fehler: (e as Error).message }));
     this.uhr ??= setInterval(() => { void this.zeitplan().catch((e) => log.error('Zeitplan fehlgeschlagen', { fehler: (e as Error).message })); }, ZEITPLAN_MS);
     this.uhr.unref?.();
@@ -366,7 +386,7 @@ export class Automatisierungen {
         continue;
       }
       let aktiv = ein.includes(x.schluessel);
-      const uebernommeneId = d.wenn.art === 'datum' ? uuidAus(`frist|${d.wenn.typ}|${d.wenn.feld}`) : d.wenn.art === 'benutzer.abwesenheit_gesetzt' ? UMZUG_VERTRETUNG : null;
+      const uebernommeneId = d.wenn.art === 'datum' ? uuidAus(`frist|${d.wenn.typ}|${d.wenn.feld}`) : d.wenn.art === 'benutzer.abwesenheit_gesetzt' ? UMZUG_VERTRETUNG : umzugFuer(d);
       if (uebernommeneId) {
         const alt = await this.d.repo.hole(uebernommeneId);
         if (alt && alt.geaendertVon !== null) { log.info('Mitgelieferte Automatisierung nicht angelegt: die übernommene Erinnerung wurde geändert', { paket: p.id, automatisierung: x.schluessel, bleibt: alt.id }); continue; }
@@ -376,7 +396,7 @@ export class Automatisierungen {
       try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
     }
     // Nicht mehr mitgeliefert: weg, wenn aus und unverändert – übernommene Erinnerungen am Feld bleiben.
-    const uebernommen = (a: Automatisierung) => a.id === UMZUG_VERTRETUNG || (a.wenn.art === 'datum' && a.id === uuidAus(`frist|${a.wenn.typ}|${a.wenn.feld}`));
+    const uebernommen = (a: Automatisierung) => UMZUG_IDS.has(a.id) || (a.wenn.art === 'datum' && a.id === uuidAus(`frist|${a.wenn.typ}|${a.wenn.feld}`));
     for (const a of vorhanden) if (!ids.has(a.id) && !a.aktiv && a.geaendertVon === null && !uebernommen(a)) await this.d.repo.loesche(a.id);
     if (neu) log.info('Automatisierungen aus Paket angelegt (aus)', { paket: p.id, anzahl: neu });
     return neu;
@@ -437,6 +457,41 @@ export class Automatisierungen {
       try { await this.d.repo.lege(a); neu++; log.info('Vertretungs-Aufgabe als Automatisierung übernommen', { automatisierung: a.id }); } catch { /* ein anderer Server war schneller */ }
     }
     await einst?.schreibe('fristen_umzug', { am: this.iso(), anzahl: neu, gesehen: neu === 0 });
+    return neu;
+  }
+
+  /**
+   * Benachrichtigungen → Automatisierungen (#678): Tägliche Zusammenfassung, Favoriten benachrichtigen und die Meldungen
+   * des Anmeldeschutzes macht der Kern nicht mehr von selbst. **Einmal** beim ersten Start nach dem Update (Einstellung
+   * `benachrichtigungen_umzug`) entstehen in einer bestehenden Ablage dafür Automatisierungen mit den heutigen Werten –
+   * eingeschaltet, wie die Einstellungen es waren. Das Paket „Benachrichtigungen“ ersetzt sie, solange sie unverändert
+   * sind. Eine frische Installation bekommt sie über das Paket (im Einrichtungsassistenten vorausgewählt).
+   */
+  async benachrichtigungenUebernehmen(): Promise<number> {
+    const einst = this.d.dienst.einstellungenSpeicher;
+    if (!einst || await einst.lies('benachrichtigungen_umzug')) return 0;
+    const k = await this.kontext();
+    let neu = 0;
+    if (k.benutzer.length) {
+      const mail = { aktiv: true, uhrzeit: '07:00', ...(((await einst.lies('aufgaben_mail')) ?? {}) as { aktiv?: boolean; uhrzeit?: string }) };
+      const sperre = ((await einst.lies('anmeldesperre')) ?? {}) as { mail?: boolean; mailKonto?: boolean; mailGewaehlt?: boolean };
+      const liste: Array<{ id: string; aktiv: boolean; name: string; wenn: Record<string, unknown>; dann: Record<string, unknown>[] }> = [
+        { id: UMZUG.zusammenfassung, aktiv: mail.aktiv !== false, name: t('automatisierung.umzug.zusammenfassung'),
+          wenn: { art: 'zeitplan', uhrzeit: mail.uhrzeit, tage: [1, 2, 3, 4, 5], feiertage: true, jeBenutzer: true, profilzeit: true }, dann: [{ id: 'z1', art: 'zusammenfassung' }] },
+        { id: UMZUG.favoriten, aktiv: true, name: t('automatisierung.umzug.favoriten'), wenn: { art: 'favorit.geaendert', typ: null }, dann: [{ id: 'f1', art: 'favoriten' }] },
+        { id: UMZUG.sammel, aktiv: sperre.mailGewaehlt === true && sperre.mail === true, name: t('automatisierung.umzug.anmeldeschutz'),
+          wenn: { art: 'zeitplan', uhrzeit: '00:00', tage: [1, 2, 3, 4, 5, 6, 7], feiertage: false, jeBenutzer: false }, dann: [{ id: 'a1', art: 'anmeldeschutz', was: 'sammel' }] },
+        { id: UMZUG.konto, aktiv: sperre.mailKonto === true, name: t('automatisierung.umzug.kontosperre'), wenn: { art: 'benutzer.gesperrt', typ: null }, dann: [{ id: 'k1', art: 'anmeldeschutz', was: 'konto' }] },
+      ];
+      for (const x of liste) {
+        const d = bereinigeAutomatisierung({ name: x.name, beschreibung: t('automatisierung.umzug.beschreibung'), wenn: x.wenn, dann: x.dann });
+        d.reihenfolge = REIHENFOLGE.eigen;
+        const a: Automatisierung = { ...d, id: x.id, aktiv: x.aktiv, angehalten: null, herkunft: 'eigen', paketId: null, version: 1, erstellt: this.iso(), erstelltVon: null, geaendert: this.iso(), geaendertVon: null };
+        try { await this.d.repo.lege(a); neu++; } catch { /* ein anderer Server war schneller */ }
+      }
+      log.info('Benachrichtigungen als Automatisierungen übernommen', { anzahl: neu });
+    }
+    await einst.schreibe('benachrichtigungen_umzug', { am: this.iso(), anzahl: neu });
     return neu;
   }
 
@@ -643,14 +698,16 @@ export class Automatisierungen {
   async lauf(id: string): Promise<Lauf> { const l = await this.d.repo.lauf(id); if (!l) throw new Fachfehler(404, t('automatisierung.lauf.fehlt')); return l; }
 
   /** Für die Werkbank-Übersicht: fehlgeschlagene Läufe und angehaltene Automatisierungen. */
-  async warnungen(): Promise<{ fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: Angehalten['grund'] }>; umgezogen: { am: string; anzahl: number } | null }> {
+  async warnungen(): Promise<{ fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: Angehalten['grund'] }>; umgezogen: { am: string; anzahl: number } | null; ohneBenachrichtigungen: boolean }> {
     const [fehl, liste] = await Promise.all([this.d.repo.fehlgeschlagene(), this.d.repo.liste()]);
     const aktiv = liste.filter((a) => a.aktiv);
     // Was nicht mehr passt (Feld oder Ansicht gelöscht), zählt sofort – nicht erst beim nächsten Lauf.
     const k = aktiv.some((a) => !a.angehalten) ? await this.kontext() : null;
     const angehalten = aktiv.flatMap((a) => (a.angehalten ? [{ id: a.id, name: a.name, grund: a.angehalten.grund }]
       : k && automatisierungsProbleme(a, k).length ? [{ id: a.id, name: a.name, grund: 'fehlerhaft' as const }] : []));
-    return { fehlgeschlagen: new Set(fehl.map((l) => l.automatisierungId)).size, angehalten, umgezogen: await this.umzug() };
+    // Ohne Paket „Benachrichtigungen“ (#678): Keine Automatisierung schickt die Tägliche Zusammenfassung.
+    const ohneBenachrichtigungen = !liste.some((a) => a.dann.some((d) => d.art === 'zusammenfassung'));
+    return { fehlgeschlagen: new Set(fehl.map((l) => l.automatisierungId)).size, angehalten, umgezogen: await this.umzug(), ohneBenachrichtigungen };
   }
 
   /** Nach einer Wiederherstellung: alle eingeschalteten anhalten, bis ein Admin sie wieder einschaltet. */
@@ -752,7 +809,7 @@ export class Automatisierungen {
 
   private passt(a: Automatisierung, e: KatalogEreignis): boolean {
     const w = a.wenn;
-    if (w.art === 'datum') return false;
+    if (w.art === 'datum' || w.art === 'zeitplan') return false;
     if (EREIGNISKATALOG[w.art].gruppe !== 'benutzer' && w.typ && e.daten.typ !== w.typ) return false;
     if (w.art === 'mappe.geaendert' && w.felder?.length) { const g = alsListe(e.daten.felder); if (!w.felder.some((f) => g.includes(f))) return false; }
     return true;
@@ -793,7 +850,7 @@ export class Automatisierungen {
       }
     }
     const schritte: Schritt[] = [
-      { teil: 'wenn', zustand: 'ok', text: anlass.art === 'datum' ? t('automatisierung.wenn.datum') : t.frei(`ereignisse.name.${anlass.art.replace(/_/g, '-')}`) },
+      { teil: 'wenn', zustand: 'ok', text: anlass.art === 'datum' ? t('automatisierung.wenn.datum') : anlass.art === 'zeitplan' ? t('automatisierung.wenn.zeitplan') : t.frei(`ereignisse.name.${anlass.art.replace(/_/g, '-')}`) },
       { teil: 'und', zustand: 'offen' },
       ...a.dann.map((k): Schritt => ({ teil: 'dann', karte: k.id, zustand: 'offen' })),
     ];
@@ -965,13 +1022,65 @@ export class Automatisierungen {
           }
         }
       }
+      await this.zeitplanKarten(ort);
       await this.d.repo.raeumeAuf(AUTOMATISIERUNG_GRENZEN.verlaufTage, AUTOMATISIERUNG_GRENZEN.verlauf, HAENGT_MIN);
     })().finally(() => { this.zeitplanLauf = null; });
     return this.zeitplanLauf;
   }
+
+  /**
+   * Wenn-Karte „Zeitplan“ (#678) über den Zeitplan-Baustein (#724): je Automatisierung – bzw. je Automatisierung und
+   * Benutzer bei „für jeden Benutzer“ – ein Merker in den Einstellungen; verpasste Läufe holt er nur am selben Tag nach
+   * (wie die Tägliche Zusammenfassung). Mehrere Server: Wer den Tag im Merker einträgt, macht den Lauf; dazu je Lauf eine
+   * feste Ereignis-Id (genau einmal).
+   */
+  private async zeitplanKarten(ort: { datum: string; uhr: string }) {
+    const alle = (await this.d.repo.liste()).filter((a) => a.aktiv && !a.angehalten && a.wenn.art === 'zeitplan');
+    if (!alle.length) return;
+    const einst = this.d.dienst.einstellungenSpeicher;
+    const roh = ((await einst?.lies('aufgaben_mail')) ?? {}) as { bundesland?: unknown };
+    const bundesland = istBundesland(roh.bundesland) ? roh.bundesland : null;
+    const merker = (schluessel: string): Merker => {
+      if (einst) return { lies: async () => { const v = await einst.lies(schluessel); return typeof v === 'string' ? v : null; }, beanspruche: async (alt, tag) => {
+        if (einst.tausche) return einst.tausche(schluessel, alt, tag);
+        if (((await einst.lies(schluessel)) ?? null) !== alt) return false;
+        await einst.schreibe(schluessel, tag); return true;
+      } };
+      return { lies: async () => this.merkerOhneSpeicher.get(schluessel) ?? null, beanspruche: async (alt, tag) => { if ((this.merkerOhneSpeicher.get(schluessel) ?? null) !== alt) return false; this.merkerOhneSpeicher.set(schluessel, tag); return true; } };
+    };
+    const takt = (uhrzeit: string, tage: number[], feiertage: boolean) => ({ uhrzeit, an: (tag: string) => tage.includes(wochentagVon(tag)) && !(feiertage && feiertagAm(tag, bundesland)) });
+    // Gleiche Auslöser gemeinsam (Reihenfolge, „Danach keine weiteren …“) – je Benutzer bzw. je Tag ein Ereignis.
+    const gruppen = new Map<string, Automatisierung[]>();
+    for (const a of alle) gruppen.set(ausloeserSchluessel(a.wenn), [...(gruppen.get(ausloeserSchluessel(a.wenn)) ?? []), a]);
+    const k = await this.kontext();
+    for (const [schluessel, liste] of gruppen) {
+      const w = liste[0].wenn as WennZeitplan;
+      const sk = createHash('sha256').update(schluessel).digest('hex').slice(0, 16);
+      if (!w.jeBenutzer) {
+        await laufeFaellige(merker(`zeitplan_zuletzt:${sk}`), ort, takt(w.uhrzeit, w.tage, w.feiertage), async (tag) => {
+          await this.reihe(liste, { id: uuidAus(`zeitplan|${schluessel}|${tag}`), art: 'zeitplan', daten: { tag }, kette: 0 });
+        });
+        continue;
+      }
+      const wer = w.rolle ? new Set(await this.d.dienst.mitgliederDerRolle(w.rolle)) : null;
+      for (const b of k.benutzer) {
+        if (b.aktiv === false || (wer && !wer.has(b.id))) continue;
+        let t_ = takt(w.uhrzeit, w.tage, w.feiertage);
+        if (w.profilzeit) {
+          // Wie bisher die Tägliche Zusammenfassung: Uhrzeit, Wochentage und Feiertage aus dem Profil, sonst die Karte.
+          const z = wirksameZeit((await this.d.dienst.persoenlicheEinstellungen(b.id)).aufgaben_mail_zeit, { aktiv: true, uhrzeit: w.uhrzeit, bundesland });
+          t_ = takt(z.uhrzeit, z.tage, z.feiertage);
+        }
+        await laufeFaellige(merker(`zeitplan_zuletzt:${sk}:${b.id}`), ort, t_, async (tag) => {
+          await this.reihe(liste, { id: uuidAus(`zeitplan|${schluessel}|${b.id}|${tag}`), art: 'zeitplan', daten: { benutzer: b.id, tag }, kette: 0 });
+        });
+      }
+    }
+  }
 }
 
 type WennDatum = Automatisierung['wenn'];
+type WennZeitplan = Extract<WennDatum, { art: 'zeitplan' }>;
 
 /** Tage von `ab` (Vorgabe heute) bis zum Datum – Platzhalter {tage}; leer ohne Datum. */
 function tageBis(datum: unknown, ab = heuteIn()): number | null {

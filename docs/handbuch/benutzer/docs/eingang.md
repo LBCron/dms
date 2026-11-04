@@ -21,6 +21,12 @@ In der Liste steht bei jeder Mappe, was zu tun ist. In der Mappe selbst steht ob
 
 Bei „Passt nicht“ löscht oder ändert Ablago nichts von selbst; die betroffenen Felder sind in der Mappe markiert, und geprüft wird beim nächsten Speichern.
 
+### Aufgaben ohne Empfänger
+
+Hat eine Aufgabe keinen einzelnen Empfänger – etwa Post ohne **Für** –, bekommen sie die Administratoren und eine Person, die die Verwaltung dafür ausgewählt hat. Bist du das, stehen solche Aufgaben bei dir unter **Zu erledigen**, und du erledigst sie oder gibst sie weiter wie jede andere.
+
+Außerdem siehst du dann manchmal oben den Hinweis **„Für die Verwaltung liegt etwas an. Melde dich als Administrator an.“** Das betrifft Technisches wie die Sicherung. Wenn du das Admin-Konto hast, klick auf **Als Administrator anmelden**. Sonst sag der Person Bescheid, die Ablago verwaltet. Der Hinweis verschwindet, sobald alles erledigt ist.
+
 ## Eine Aufgabe vergeben
 
 Rechts neben dem Titel einer Mappe, neben dem Stern, steht das Menü **Mappe ▾**; darin **Aufgabe vergeben**. Wähle, **für wen** sie ist, und schreibe, **was zu tun ist**. Die Mappe erscheint dann unter „Zu erledigen“ dieses Benutzers.

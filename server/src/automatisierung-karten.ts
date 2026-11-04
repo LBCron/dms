@@ -77,3 +77,30 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
     + (vorhanden ? ` ${t('automatisierung.karte.aufgabe.vorhanden', { anzahl: vorhanden })}` : '')
     + (admins ? ` ${t('automatisierung.karte.aufgabe.an-admins', { anzahl: admins })}` : '')).trim();
 };
+
+/* ---------- Benachrichtigungen (#678, Paket „Benachrichtigungen“) ---------- */
+
+DANN_AUSFUEHRER.zusammenfassung = async (k: DannKarte, c: KartenKontext) => {
+  if (k.art !== 'zusammenfassung') throw new Fachfehler(500, 'falsche Karte');
+  const benutzer = typeof c.daten.benutzer === 'string' ? c.daten.benutzer : null;
+  if (!benutzer) throw new Fachfehler(422, t('automatisierung.karte.zusammenfassung.ohne-benutzer'));
+  if (!c.dienst.zusammenfassungAn) throw new Fachfehler(500, t('automatisierung.karte.zusammenfassung.fehlt'));
+  const r = await c.dienst.zusammenfassungAn(benutzer, c.trocken);
+  return r.grund;
+};
+
+DANN_AUSFUEHRER.favoriten = async (k: DannKarte, c: KartenKontext) => {
+  if (k.art !== 'favoriten') throw new Fachfehler(500, 'falsche Karte');
+  if (!c.mappe) throw new Fachfehler(422, t('automatisierung.karte.favoriten.ohne-mappe'));
+  const von = typeof c.daten.von === 'string' ? c.daten.von : null;
+  if (!von) return t('automatisierung.karte.favoriten.niemand');
+  if (c.trocken) return t('automatisierung.karte.favoriten.trocken');
+  const n = await c.dienst.favoritenMelden(c.mappe.id, von);
+  return n ? t('automatisierung.karte.favoriten.ergebnis', { anzahl: n }) : t('automatisierung.karte.favoriten.niemand');
+};
+
+DANN_AUSFUEHRER.anmeldeschutz = async (k: DannKarte, c: KartenKontext) => {
+  if (k.art !== 'anmeldeschutz') throw new Fachfehler(500, 'falsche Karte');
+  if (!c.dienst.anmeldeschutzMelden) throw new Fachfehler(500, t('automatisierung.karte.anmeldeschutz.fehlt'));
+  return (await c.dienst.anmeldeschutzMelden(k.was, c.daten, c.trocken)).grund;
+};

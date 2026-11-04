@@ -293,7 +293,13 @@ export interface KontoStatus {
   favoritenBenachrichtigung?: boolean | null;
   /** Lasttest-Modus (#612): Das DMS misst und zeigt nur die Seite mit Fortschritt und Ergebnis. */
   lasttest?: boolean;
+  /** Aufgaben ohne Empfänger (#719): Sieht dieser Benutzer sie (Administrator oder gewählter Alltags-Benutzer)? */
+  aufgabenOhneEmpfaenger?: boolean;
+  /** Technische Aufgaben (#719): Für die Verwaltung liegt etwas an – nur ja/nein, beim Alltags-Benutzer. */
+  verwaltung?: boolean;
 }
+/** #719: gewählter Alltags-Benutzer (null = nur Administratoren); `gespeichert` kann ein inzwischen ungeeigneter sein. */
+export type AufgabenEmpfaenger = { benutzerId: string | null; wirksam: string | null; gesetzt: boolean; gespeichert: string | null };
 type FreigabeStand = { freigabe: FavoritenFreigabe; rollen: Array<{ id: string; name: string; system: boolean }> };
 export interface AnbindungAnsicht { host: string; port: number; datenbank: string; benutzer: string; passwortGesetzt: boolean }
 export interface AnbindungEingabe { host: string; port: number; datenbank: string; benutzer: string; passwort: string }
@@ -625,6 +631,9 @@ export const api = {
   zusammenfassungSetzen: (z: { aktiv: boolean; uhrzeit: string | null; tage: number[]; feiertage: boolean }) => anfrage<Zusammenfassung>('PUT', '/api/konto/zusammenfassung', z),
   aufgabenMailSenden: () => anfrage<{ verschickt: number }>('POST', '/api/werkbank/aufgaben/mail/senden'),
   /** Favoriten benachrichtigen (#506): Freigabe für alle, je Rolle oder gar nicht; Vorgabe für neue Benutzer. */
+  // Aufgaben ohne Empfänger gehen an einen Alltags-Benutzer (#719).
+  aufgabenEmpfaenger: () => anfrage<AufgabenEmpfaenger>('GET', '/api/werkbank/aufgaben-empfaenger'),
+  aufgabenEmpfaengerSpeichern: (benutzerId: string | null) => anfrage<AufgabenEmpfaenger>('PUT', '/api/werkbank/aufgaben-empfaenger', { benutzerId }),
   favoritenFreigabe: () => anfrage<FreigabeStand>('GET', '/api/werkbank/favoriten-freigabe'),
   favoritenFreigabeSpeichern: (f: FavoritenFreigabe) => anfrage<FreigabeStand>('PUT', '/api/werkbank/favoriten-freigabe', f),
   favoritenVorgabeAnwenden: () => anfrage<{ benutzer: number }>('POST', '/api/werkbank/favoriten-freigabe/anwenden'),
@@ -1046,13 +1055,15 @@ export interface WerkbankUebersicht {
   /** #459: Ein Paket übernimmt die Texterkennung. */
   texterkennungPaket?: boolean;
   aufgaben: { offen: number; ohneEmpfaenger: number };
+  /** #719: Alltags-Benutzer für Aufgaben ohne Empfänger; `moeglich` = aktive Benutzer ohne Admin-Rechte. */
+  aufgabenEmpfaenger?: { benutzerId: string | null; moeglich: number } | null;
   unpassend: number;
   papierkorb: { anzahl: number; aeltester: string | null; tage: number };
   version: { version: string; commit: string | null; gebaut: string | null };
   bestand: { version: string; groesseBytes: number; mappen: number; typen: number; benutzer: number; dokumente: number; dokumenteBytes: number } | null;
   fehlermeldungen: number | null;
   /** Automatisierungen (#675): mit fehlgeschlagenen Läufen bzw. angehalten oder fehlerhaft. */
-  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null };
+  automatisierungen?: { fehlgeschlagen: number; angehalten: Array<{ id: string; name: string; grund: string }>; /** Erinnerungen am Feld beim Update übernommen (#712), bis gelesen. */ umgezogen?: { am: string; anzahl: number } | null; /** Keine Automatisierung schickt die Tägliche Zusammenfassung (#678). */ ohneBenachrichtigungen?: boolean };
   /** Notfallzugänge (#108), bis sie umbenannt oder deaktiviert sind. */
   notfallzugaenge?: Array<{ id: string; name: string; erstellt: string }>;
   /** Wartungsmodus (#102). */

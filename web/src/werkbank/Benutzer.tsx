@@ -50,7 +50,7 @@ export function useBenutzer() {
   return { liste, geladen, laden };
 }
 
-export function BenutzerListe({ liste: alle, offen }: { liste: Benutzer[]; offen?: string }) {
+export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[]; offen?: string; alltag?: string | null }) {
   const { ich } = useKonto();
   const d = useDaten();
   // Deaktivierte standardmäßig ausblenden (#77); die Wahl merkt sich die Werkbank je Benutzer.
@@ -76,6 +76,7 @@ export function BenutzerListe({ liste: alle, offen }: { liste: Benutzer[]; offen
             <li key={b.id}>
               <Link to={`/werkbank/benutzer/${b.id}`} className={`eintrag werk ${offen === b.id ? 'an' : ''} ${b.aktiv ? '' : 'grau'}`}>
                 <span className="titel">{b.aktiv ? b.name || b.email : <span className="person-ehemalig">{b.name || b.email}</span>}{b.id === ich.id && <span className="chip">du</span>}</span>
+                {b.id === alltag && <span className="unter"><span className="chip info">{t('werkbank.aufgabenempfaenger.chip')}</span></span>}
                 <span className="unter">{b.email} · {ROLLEN[b.rolle]}</span>
                 <span className="unter">Letzte Anmeldung: {datumZeit(b.letzteAnmeldung)}</span>
                 <span><span className={`chip ${s.art}`}>{s.text}</span>{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}

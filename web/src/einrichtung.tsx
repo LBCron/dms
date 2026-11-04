@@ -10,6 +10,7 @@ import { useKonto } from './konto';
 import { PaketeDazuholen } from './werkbank/PaketeDazuholen';
 import { geheZu } from './ort';
 import { Marke } from './Marke';
+import { t } from './sprache';
 
 /**
  * Einrichtungsassistent (#119): führt beim ersten Aufruf durch die Einrichtung.
@@ -365,11 +366,35 @@ function BenutzerSchritt({ weiter }: { weiter: (uebersprungen: boolean) => Promi
               <button type="button" className="knopf" onClick={() => void navigator.clipboard?.writeText(r.link!).then(() => setKopiert(true), () => {})}>{kopiert ? 'Kopiert' : 'Kopieren'}</button>
             </div>
           )}
+          <AufgabenAnErsten b={r.benutzer} />
           <p className="leise klein">Weitere Benutzer lädst du später unter Werkbank → Benutzer ein.</p>
           <Weiter weiter={weiter} kannWeiter ueberspringen={false} />
         </>
       )}
     </Rahmen>
+  );
+}
+
+/**
+ * #719: Der erste Benutzer bekommt die Aufgaben ohne Empfänger (Post ohne „Für“ …) – Ablago trägt ihn beim Anlegen
+ * ein, solange nichts gewählt ist. Hier lässt sich das abwählen; Admin-Rechte bekommt er dadurch nicht.
+ */
+function AufgabenAnErsten({ b }: { b: { id: string; name: string; email: string } }) {
+  const [an, setAn] = useState<boolean | null>(null);
+  const [fehler, setFehler] = useState<string>();
+  useEffect(() => { api.aufgabenEmpfaenger().then((e) => setAn(e.benutzerId === b.id), () => setAn(null)); }, [b.id]);
+  if (an === null) return null;
+  const name = b.name || b.email;
+  async function setze(wert: boolean) {
+    setFehler(undefined);
+    try { const e = await api.aufgabenEmpfaengerSpeichern(wert ? b.id : null); setAn(e.benutzerId === b.id); } catch (x) { setFehler((x as Error).message); }
+  }
+  return (
+    <>
+      <label className="haken"><input type="checkbox" checked={an} onChange={(e) => void setze(e.target.checked)} />
+        <span>{t('werkbank.aufgabenempfaenger.assistent.haken', { name })}<small className="hilfe">{t('werkbank.aufgabenempfaenger.assistent.hilfe', { name })}</small></span></label>
+      {fehler && <p className="fehlertext">{fehler}</p>}
+    </>
   );
 }
 

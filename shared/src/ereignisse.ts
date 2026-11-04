@@ -48,6 +48,8 @@ export const EREIGNISKATALOG = {
   'aufgabe.neu': { gruppe: 'person', felder: ['aufgabe', 'mappe', 'typ', 'empfaenger', 'aufgabenart'] },
   'post.angelegt': { gruppe: 'person', felder: ['mappe', 'kanal', 'fuer'], paket: true },
   'favorit.neu': { gruppe: 'person', felder: ['benutzer', 'mappe', 'typ'] },
+  // #678: Jemand hat eine Mappe geändert, die andere als Favorit mit „benachrichtigen“ haben (Dann-Karte „Favoriten-Änderungen melden“).
+  'favorit.geaendert': { gruppe: 'person', felder: ['mappe', 'typ', 'von'] },
   // Benutzer
   'benutzer.abwesenheit_gesetzt': { gruppe: 'benutzer', felder: ['benutzer', 'von', 'bis', 'vertreter'] },
   'benutzer.abwesenheit_beendet': { gruppe: 'benutzer', felder: ['benutzer', 'vertreter'] },

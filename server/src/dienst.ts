@@ -524,6 +524,9 @@ export interface VolltextMeldung {
   original?: string;
 }
 
+/** Alltags-Benutzer für Aufgaben ohne Empfänger (#719): aktiver Mensch ohne Admin-Rechte. */
+export const taugtAlsAufgabenEmpfaenger = (b: Benutzer) => b.aktiv && b.rolle !== 'admin' && !b.art;
+
 export class Dienst {
   /** Abruf-Links, deren Code gerade geprüft wird (#455): je Link nur eine Prüfung gleichzeitig. */
   private abrufLaufend = new Set<string>();
@@ -1785,7 +1788,7 @@ export class Dienst {
   private async eigeneAufgabe(id: string, ich: { id: string; rolle: string }) {
     const a = await this.repo.holeAufgabe(id);
     if (!a) throw new Fachfehler(404, 'Diese Aufgabe gibt es nicht.');
-    const meine = a.empfaengerId === ich.id || (!a.empfaengerId && ich.rolle === 'admin');
+    const meine = a.empfaengerId === ich.id || (!a.empfaengerId && await this.siehtOhneEmpfaenger(ich));
     if (!meine && ich.rolle !== 'admin') throw new Fachfehler(403, 'Das ist nicht deine Aufgabe. Weitergeben oder erledigen kann sie nur ihr Empfänger oder ein Administrator.');
     if (a.erledigt) throw new Fachfehler(409, 'Diese Aufgabe ist schon erledigt.');
     return a;
@@ -1890,7 +1893,7 @@ export class Dienst {
 
   /** Meine offenen Aufgaben (mit denen der Administratoren, wenn ich einer bin). */
   async meineAufgaben(ich: { id: string; rolle: string }, z?: Zugriff) {
-    const liste = await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: ich.rolle === 'admin' });
+    const liste = await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich) });
     // Aufgaben zu Mappen, die man nicht lesen darf: ohne Titel (#127).
     const ok = await this.lesbare(z, liste.map((a) => a.mappeId));
     return liste.map((a) => (ok.has(a.mappeId) ? a : { ...a, mappeTitel: NICHT_SICHTBAR, verborgen: true }));
@@ -2061,7 +2064,9 @@ export class Dienst {
       tage = Number.isFinite(t) && t >= 0 ? Math.min(ANSTEHEND_MAX, t) : ANSTEHEND_TAGE;
       bis = verschiebe(heute, tage);
     }
-    const schluessel = `${z.ich.id}|${z.ich.rolle}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${kalender ? 'k' : 'l'}`;
+    // #719: Sieht er die Aufgaben ohne Empfänger? Das ändert sich mit der Werkbank, nicht mit dem Haushaltsstand.
+    const ohne = await this.siehtOhneEmpfaenger(z.ich);
+    const schluessel = `${z.ich.id}|${z.ich.rolle}|${ohne ? 'o' : ''}|${fingerabdruck({ lesen: z.lesen, paket: z.paket?.id ?? null })}|${von}|${bis}|${kalender ? 'k' : 'l'}`;
     const beginn = performance.now();
     const r = await this.anstehendSpeicher.hole(schluessel, async () => ({ wert: await this.sammleAnstehend(z, heute, von, bis, kalender), zeitabhaengig: true }));
     const k = kontext.getStore();
@@ -2071,12 +2076,13 @@ export class Dienst {
 
   private async sammleAnstehend(z: Zugriff, heute: string, von: string, bis: string, kalender: boolean): Promise<Anstehend[]> {
     const ich = z.ich.id;
-    const meins = (empf: string | null) => empf === ich || (!empf && z.admin);
+    const ohne = await this.siehtOhneEmpfaenger(z.ich);
+    const meins = (empf: string | null) => empf === ich || (!empf && ohne);
     const ab = von > heute ? von : heute;
     const erg: Anstehend[] = [];
     // Schon fällig: offene Aufgaben mit Datum – Fristen, Erinnerungen und andere (z. B. Auskunft bis …).
     // Überfälliges immer, sonst nur im Zeitraum.
-    const offen = (await this.repo.offeneAufgaben({ benutzerId: ich, admin: z.admin })).filter((a) => istDatum(a.datum) && a.datum <= bis && (a.datum < heute || a.datum >= von));
+    const offen = (await this.repo.offeneAufgaben({ benutzerId: ich, admin: ohne })).filter((a) => istDatum(a.datum) && a.datum <= bis && (a.datum < heute || a.datum >= von));
     const lesbar = await this.lesbare(z, offen.map((a) => a.mappeId));
     for (const a of offen) {
       if (!lesbar.has(a.mappeId)) continue;
@@ -2380,9 +2386,12 @@ export class Dienst {
       const felder = art === 'geaendert' ? [...new Set(((daten?.aenderungen ?? []) as Feldaenderung[]).map((a) => a.feld).filter((f) => !f.startsWith('_')))].sort() : undefined;
       if (art !== 'geaendert' || felder?.length) await this.ereignis(katalog, { mappe: mappeId, typ: await this.typVon(mappeId), ...(felder ? { felder } : {}) }, benutzerId);
     }
+    // Favoriten (#422, #678): Das Melden übernimmt die Automatisierung „Favoriten-Änderungen melden“ (Paket
+    // „Benachrichtigungen“). Ein Ereignis gibt es nur, wenn jemand anderes die Mappe als Favorit mit „benachrichtigen“ hat.
     if (benutzerId && (ABO_ARTEN as readonly string[]).includes(art) && daten?.aufgabenart !== 'aenderung') {
-      try { await this.aboMelden(mappeId, benutzerId); }
-      catch (e) { protokoll.modul('ablage').warn('Benachrichtigung zu Favoriten nicht angelegt', { mappeId, fehler: (e as Error).message }); }
+      try {
+        if ((await this.repo.favoritenDerMappe(mappeId)).some((f) => f.benachrichtigen && f.benutzerId !== benutzerId)) await this.ereignis('favorit.geaendert', { mappe: mappeId, typ: await this.typVon(mappeId), von: benutzerId }, benutzerId);
+      } catch (e) { protokoll.modul('ablage').warn('Benachrichtigung zu Favoriten nicht angelegt', { mappeId, fehler: (e as Error).message }); }
     }
   }
 
@@ -2392,6 +2401,9 @@ export class Dienst {
    * Persönliche Einstellung (Vorgabe an): „favoriten_benachrichtigen“ bzw. „geaenderte_hervorheben“ = false schaltet ab.
    * Benachrichtigen nur, wenn die Werkbank es für den Benutzer erlaubt (#506); seine Einstellung bleibt dabei gespeichert.
    */
+  /** Persönliche Einstellungen eines Benutzers (#678: Zeitplan „für jeden Benutzer“ mit Uhrzeit aus dem Profil). */
+  async persoenlicheEinstellungen(benutzerId: string): Promise<Record<string, unknown>> { return (await this.konten?.einstellungen?.(benutzerId)) ?? {}; }
+
   private async persoenlichAn(benutzerId: string, schluessel: string): Promise<boolean> {
     if (schluessel === 'favoriten_benachrichtigen' && !(await this.favoritenBenachrichtigungErlaubt(benutzerId))) return false;
     return (await this.konten?.einstellungen?.(benutzerId))?.[schluessel] !== false;
@@ -2415,6 +2427,57 @@ export class Dienst {
     await this.einstellungen.schreibe('favoriten_freigabe', freigabeZumSpeichern(f));
     protokoll.modul('werkbank').info('Benachrichtigung für Favoriten eingestellt', { von, erlaubt: f.erlaubt, rollen: f.rollen.length, vorgabe: f.vorgabe });
     return this.favoritenFreigabe();
+  }
+
+  /* ---------- Aufgaben ohne Empfänger an einen Alltags-Benutzer (#719) ---------- */
+
+  /**
+   * Wer im Alltag die Aufgaben ohne Empfänger bekommt (Aufgaben ohne Empfänger, Post ohne „Für“, Fristen ohne
+   * Zuständige) – zusätzlich zu den Administratoren. Nur aktive Menschen ohne Admin-Rechte; passt der gespeicherte
+   * Benutzer nicht mehr (deaktiviert, Administrator geworden), gilt niemand, bis die Werkbank einen neuen wählt.
+   * `gesetzt`: Die Einstellung wurde schon einmal gespeichert (auch „niemand“) – dann setzt Ablago keine Vorgabe mehr.
+   */
+  async alltagsEmpfaenger(): Promise<{ benutzerId: string | null; wirksam: string | null; gesetzt: boolean; gespeichert: string | null }> {
+    const e = (await this.einstellungen?.lies('aufgaben_empfaenger')) as { benutzer?: unknown } | null;
+    const gespeichert = typeof e?.benutzer === 'string' ? e.benutzer : null;
+    if (!gespeichert) return { benutzerId: null, wirksam: null, gesetzt: !!e, gespeichert: null };
+    const alle = (await this.konten?.benutzer?.()) ?? [];
+    const b = alle.find((x) => x.id === gespeichert);
+    // Abwesend oder deaktiviert: wie jede Aufgabe beim Vertreter (#78) – sofern er sie bekommen darf.
+    const { ziel } = b ? await this.empfaengerAufloesen(b.id) : { ziel: null };
+    const z = alle.find((x) => x.id === ziel);
+    return { benutzerId: b && taugtAlsAufgabenEmpfaenger(b) ? b.id : null, wirksam: z && taugtAlsAufgabenEmpfaenger(z) ? z.id : null, gesetzt: true, gespeichert };
+  }
+
+  /** Werkbank → Benutzer und Sicherheit (#719): Alltags-Benutzer wählen oder `null` (nur Administratoren). */
+  async setzeAufgabenEmpfaenger(eingabe: unknown, von: string | null) {
+    if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
+    const id = (eingabe as { benutzerId?: unknown } | null)?.benutzerId ?? null;
+    if (id !== null) {
+      const b = typeof id === 'string' ? (await this.konten?.benutzer?.())?.find((x) => x.id === id) : undefined;
+      if (!b) throw new Fachfehler(422, t('werkbank.aufgabenempfaenger.fehler.unbekannt'));
+      if (!taugtAlsAufgabenEmpfaenger(b)) throw new Fachfehler(422, t(b.rolle === 'admin' ? 'werkbank.aufgabenempfaenger.fehler.admin' : 'werkbank.aufgabenempfaenger.fehler.inaktiv'));
+    }
+    await this.einstellungen.schreibe('aufgaben_empfaenger', { benutzer: id });
+    this.stand.erhoehe(); this.fristenstand.erhoehe();
+    protokoll.modul('werkbank').info('Empfänger für Aufgaben ohne Empfänger eingestellt', { von: await this.name(von), an: id ? await this.name(id as string) : 'nur Administratoren' });
+    return this.alltagsEmpfaenger();
+  }
+
+  /** Sieht dieser Benutzer die Aufgaben ohne Empfänger (#719)? Administratoren immer, sonst nur der gewählte Alltags-Benutzer. */
+  async siehtOhneEmpfaenger(ich: { id: string; rolle: string }): Promise<boolean> {
+    if (ich.rolle === 'admin') return true;
+    return (await this.alltagsEmpfaenger()).wirksam === ich.id;
+  }
+
+  /** Erster Mensch ohne Admin-Rechte (#719): Vorgabe, solange die Werkbank noch nichts gewählt hat. */
+  private async vorgabeAufgabenEmpfaenger(b: Benutzer) {
+    if (!this.einstellungen || !taugtAlsAufgabenEmpfaenger(b) || (await this.alltagsEmpfaenger()).gesetzt) return;
+    const neu = { benutzer: b.id };
+    if (this.einstellungen.tausche ? await this.einstellungen.tausche('aufgaben_empfaenger', null, neu) : (await this.einstellungen.schreibe('aufgaben_empfaenger', neu), true)) {
+      this.stand.erhoehe(); this.fristenstand.erhoehe();
+      protokoll.modul('werkbank').info('Aufgaben ohne Empfänger gehen an den ersten Benutzer', { an: b.name || b.email });
+    }
   }
 
   /** Darf dieser Benutzer bei Änderungen an Favoriten benachrichtigt werden? Rollen aus seiner Benutzer-Mappe. */
@@ -2444,14 +2507,16 @@ export class Dienst {
    * („3 Änderungen von Anna und Paul seit 01.11.“); erst nach dem Öffnen der Mappe oder „Erledigt“ kommt wieder eine.
    * Eigene Änderungen benachrichtigen nie.
    */
-  private async aboMelden(mappeId: string, von: string) {
+  async favoritenMelden(mappeId: string, von: string): Promise<number> {
     const fav = (await this.repo.favoritenDerMappe(mappeId)).filter((f) => f.benachrichtigen && f.benutzerId !== von);
-    if (!fav.length) return;
+    if (!fav.length) return 0;
+    let n = 0;
     const aktiv = this.konten?.benutzer ? new Set((await this.konten.benutzer()).filter((b) => b.aktiv).map((b) => b.id)) : null;
     for (const { benutzerId } of fav) {
       if (aktiv && !aktiv.has(benutzerId)) continue;
       if (!(await this.persoenlichAn(benutzerId, 'favoriten_benachrichtigen'))) continue;
       if (!(await this.kannLesen(benutzerId, mappeId))) continue;
+      n++;
       await this.benachrichtigeGebuendelt({
         empfaengerId: benutzerId, mappeId, art: 'aenderung', schluessel: 'aenderung', von,
         text: async (bisher) => {
@@ -2468,6 +2533,7 @@ export class Dienst {
         },
       });
     }
+    return n;
   }
 
   /**
@@ -2827,7 +2893,7 @@ export class Dienst {
     const textfilter = erweitert?.volltext ?? undefined;
     const varianten = await this.suchVarianten([suche, textfilter?.text]);
     const anfrage: SeitenAnfrage = q.sicht === 'eingang'
-      ? { eingang: { benutzerId: ich.id, admin: ich.rolle === 'admin' }, suche, volltext, notizen, von, anzahl, sortierung, lesen: suche ? lesen : null }
+      ? { eingang: { benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich) }, suche, volltext, notizen, von, anzahl, sortierung, lesen: suche ? lesen : null }
       : q.sicht === 'favoriten'
         ? { favoriten: { benutzerId: ich.id }, suche, volltext, notizen, von, anzahl, sortierung, lesen }
       : erweitert
@@ -2872,7 +2938,7 @@ export class Dienst {
     // Eingang (#54): je Mappe, was für mich zu tun ist.
     const aufgaben: Record<string, string> = {};
     if (q.sicht === 'eingang' && r.mappen.length) {
-      for (const a of await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: ich.rolle === 'admin', mappeIds: r.mappen.map((m) => m.id) })) {
+      for (const a of await this.repo.offeneAufgaben({ benutzerId: ich.id, admin: await this.siehtOhneEmpfaenger(ich), mappeIds: r.mappen.map((m) => m.id) })) {
         aufgaben[a.mappeId] = aufgaben[a.mappeId] ? `${aufgaben[a.mappeId]} · ${a.text}` : a.text;
       }
     }
@@ -2909,9 +2975,10 @@ export class Dienst {
     const verborgen = this.verborgeneSichten(alleSichten, zg);
     const a = await this.aufloesung(ich.id);
     // Alles, was außer dem Stand des Haushalts in die Zählung eingeht: wer, mit welchen Rechten und Rollen.
-    const schluessel = `${ich.id}|${ich.rolle}|${fingerabdruck({ lesen, verborgen: [...verborgen].sort(), rollen: a.meineRollen })}`;
+    const ohneEmpfaenger = await this.siehtOhneEmpfaenger(ich);
+    const schluessel = `${ich.id}|${ich.rolle}|${ohneEmpfaenger ? 'o' : ''}|${fingerabdruck({ lesen, verborgen: [...verborgen].sort(), rollen: a.meineRollen })}`;
     const beginn = performance.now();
-    const z = await this.zahlen.hole(schluessel, async () => ({ wert: await this.zaehle(ich, lesen, alleSichten, verborgen, a), zeitabhaengig: alleSichten.some((x) => zeitabhaengig(x.bedingungen)) }));
+    const z = await this.zahlen.hole(schluessel, async () => ({ wert: await this.zaehle(ich, ohneEmpfaenger, lesen, alleSichten, verborgen, a), zeitabhaengig: alleSichten.some((x) => zeitabhaengig(x.bedingungen)) }));
     const k = kontext.getStore();
     if (k) k.zwischenspeicher = { art: z.art, ms: performance.now() - beginn };
     return { ...z.wert, ...await this.zaehlerRahmen() };
@@ -2972,8 +3039,8 @@ export class Dienst {
     return r.wert;
   }
 
-  private async zaehle(ich: { id: string; rolle: string }, lesen: Lesefilter | null, alleSichten: Sicht[], verborgen: Set<string>, a: Aufloesung) {
-    const z = await this.repo.zaehler(ich.id, ich.rolle === 'admin', lesen);
+  private async zaehle(ich: { id: string; rolle: string }, ohneEmpfaenger: boolean, lesen: Lesefilter | null, alleSichten: Sicht[], verborgen: Set<string>, a: Aufloesung) {
+    const z = await this.repo.zaehler(ich.id, ohneEmpfaenger, lesen);
     // Der Eingang zählt auch Aufgaben zu Mappen, die man nicht lesen darf (#127) – das liefert zaehler
     // gleich mit (#477); früher lief für Mitglieder dafür ein zweiter Durchgang über alle Mappen.
     const sichten = alleSichten.filter((x) => !verborgen.has(x.id));
@@ -5172,6 +5239,8 @@ export class Dienst {
     const alt = await this.repo.holeMappe(b.id);
     // Neuer Benutzer (#506): Vorgabe „Favoriten benachrichtigen“ aus der Werkbank – nur, wenn sie aus ist.
     if (!alt && b.art !== 'dienst' && !(await this.favoritenFreigabe()).vorgabe) await this.konten?.setzeEinstellung?.(b.id, 'favoriten_benachrichtigen', false);
+    // #719: Der erste Mensch ohne Admin-Rechte bekommt die Aufgaben ohne Empfänger, bis die Werkbank anders wählt.
+    if (!alt) await this.vorgabeAufgabenEmpfaenger(b);
     const system = new Set(systemrollen.values());
     const weitere = alt ? alsListe(alt.werte.rollen).filter((r) => !system.has(r)) : [];
     const ab = b.abwesenheit;
@@ -5251,6 +5320,10 @@ export class Dienst {
   }
   /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
   automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string }>>;
+  /** Tägliche Zusammenfassung an einen Benutzer (#678, Dann-Karte); setzt der Server aus der Aufgaben-Mail. */
+  zusammenfassungAn?: (benutzerId: string, trocken: boolean) => Promise<{ gesendet: boolean; grund: string }>;
+  /** Anmeldeschutz melden (#678, Dann-Karte): Sammelmeldung bzw. Kontosperre; setzt der Server aus dem Anmeldeschutz. */
+  anmeldeschutzMelden?: (was: 'sammel' | 'konto', daten: Record<string, unknown>, trocken: boolean) => Promise<{ gesendet: boolean; grund: string }>;
   /** Erinnerungen am Feld als Automatisierungen übernehmen (#712); setzt der Baustein Automatisierungen. */
   fristenUebernehmen?: () => Promise<number>;
   /** Mitgelieferte Automatisierungen eines Pakets anlegen bzw. aktualisieren (#712); setzt der Baustein Automatisierungen. */
