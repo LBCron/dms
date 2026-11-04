@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Mitmachen beim DMS: Arbeitsweise, Entwicklung, Aufbau und Release">
+        <meta name="description" content="Mitmachen bei Ablago: Arbeitsweise, Entwicklung, Aufbau und Release">
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.156/release/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.158/release/">
       
       
         <link rel="prev" href="../beitrag/">
@@ -22,12 +22,12 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../marke/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
-        <title>Release - DMS – Entwicklerhandbuch</title>
+        <title>Release - Ablago – Entwicklerhandbuch</title>
       
     
     
@@ -108,10 +108,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -122,7 +121,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            DMS – Entwicklerhandbuch
+            Ablago – Entwicklerhandbuch
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -246,13 +245,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
-    DMS – Entwicklerhandbuch
+    Ablago – Entwicklerhandbuch
   </label>
   
     <div class="md-nav__source">
@@ -718,7 +716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/benutzer/aktuell/begriffe/" class="md-nav__link">
+      <a href="https://help.ablago.app/benutzer/aktuell/begriffe/" class="md-nav__link">
         
   
   
@@ -774,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/admin/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/admin/aktuell/" class="md-nav__link">
         
   
   
@@ -802,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/installieren/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/installieren/aktuell/" class="md-nav__link">
         
   
   
@@ -1010,7 +1008,7 @@
 <li><strong>Ausnahmen</strong> (<code>ignore</code> in <code>dependabot.yml</code>), die bewusst von Hand kommen: neue Hauptversionen von <code>node</code> (Basis-Image, nur LTS-Reihen), <code>@types/node</code> und <code>typescript</code>; bei <code>esbuild</code> (noch 0.x) auch neue Nebenversionen.</li>
 </ul>
 </li>
-<li><strong><code>npm audit</code></strong> läuft in der CI über alles, was im Image landet (<code>--omit=dev</code>). Ab Stufe „hoch“ schlägt die Prüfung fehl. Ist eine Meldung für das DMS nachweislich ohne Wirkung, wird das im PR begründet.</li>
+<li><strong><code>npm audit</code></strong> läuft in der CI über alles, was im Image landet (<code>--omit=dev</code>). Ab Stufe „hoch“ schlägt die Prüfung fehl. Ist eine Meldung für Ablago nachweislich ohne Wirkung, wird das im PR begründet.</li>
 <li><strong><code>package-lock.json</code></strong> hält die genauen Versionen fest; CI und Image installieren mit <code>npm ci</code>. Ändert sich eine <code>package.json</code> ohne passende Lockfile, legt der Workflow <em>Lockfile erzeugen</em> eine neue auf den Branch <code>werkzeug/lockfile</code>; von dort wird sie mit einem normalen Commit übernommen.</li>
 <li><strong>Sicherheitskorrektur = Patch-Release</strong> mit dem Hinweis „Sicherheitsupdate – bitte aktualisieren“ in den Release-Notes. Meldungen von außen laufen vertraulich, siehe <a href="https://github.com/motom001/dms/blob/main/SECURITY.md"><code>SECURITY.md</code></a>.</li>
 </ul>
@@ -1194,7 +1192,7 @@ gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
     </div>
   
   

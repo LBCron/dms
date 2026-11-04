@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Mitmachen beim DMS: Arbeitsweise, Entwicklung, Aufbau und Release">
+        <meta name="description" content="Mitmachen bei Ablago: Arbeitsweise, Entwicklung, Aufbau und Release">
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.156/loslegen/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.158/loslegen/">
       
       
         <link rel="prev" href="../personas/">
@@ -22,12 +22,12 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../marke/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
-        <title>Loslegen - DMS – Entwicklerhandbuch</title>
+        <title>Loslegen - Ablago – Entwicklerhandbuch</title>
       
     
     
@@ -108,10 +108,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -122,7 +121,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            DMS – Entwicklerhandbuch
+            Ablago – Entwicklerhandbuch
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -246,13 +245,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
-    DMS – Entwicklerhandbuch
+    Ablago – Entwicklerhandbuch
   </label>
   
     <div class="md-nav__source">
@@ -696,7 +694,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/benutzer/aktuell/begriffe/" class="md-nav__link">
+      <a href="https://help.ablago.app/benutzer/aktuell/begriffe/" class="md-nav__link">
         
   
   
@@ -752,7 +750,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/admin/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/admin/aktuell/" class="md-nav__link">
         
   
   
@@ -780,7 +778,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/installieren/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/installieren/aktuell/" class="md-nav__link">
         
   
   
@@ -947,9 +945,9 @@ docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> 
 <span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://dms:dms@localhost:5432/dms<span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>dev
 </code></pre></div>
 <p><code>npm run dev</code> im Wurzelordner startet Server (Port 3000) und Oberfläche zusammen; die Oberfläche läuft auf http://localhost:5173 und leitet <code>/api</code> und <code>/hilfe</code> an den Server weiter. Einzeln geht es mit <code>npm run dev -w server</code> und <code>npm run dev -w web</code>.</p>
-<p>Ohne Docker für das DMS selbst legt der Server seine festen Ordner (<code>files</code>, <code>geheim</code>, <code>sicherung</code>) unter <code>./data</code> im Projekt an. <code>DMS_DATENWURZEL=/anderer/ordner</code> verlegt sie. Beim ersten Start mit funktionierender Verbindung übernimmt der Server <code>DATABASE_URL</code> in die Datei <code>./data/geheim/datenbank.json</code>. Danach gilt die Datei; die Variable ist nicht mehr nötig. Für eine andere Datenbank die Datei löschen oder unter <strong>Werkbank → Datenbank-Anbindung</strong> ändern.</p>
+<p>Ohne Docker für Ablago selbst legt der Server seine festen Ordner (<code>files</code>, <code>geheim</code>, <code>sicherung</code>) unter <code>./data</code> im Projekt an. <code>DMS_DATENWURZEL=/anderer/ordner</code> verlegt sie. Beim ersten Start mit funktionierender Verbindung übernimmt der Server <code>DATABASE_URL</code> in die Datei <code>./data/geheim/datenbank.json</code>. Danach gilt die Datei; die Variable ist nicht mehr nötig. Für eine andere Datenbank die Datei löschen oder unter <strong>Werkbank → Datenbank-Anbindung</strong> ändern.</p>
 <p>Beim ersten Aufruf führt der Einrichtungsassistent durch die Einrichtung. Den Einrichtungscode gibt der Server im Terminal aus; er steht auch in einer Datei unter <code>./data/geheim</code>.</p>
-<p>Die <a href="https://motom001.github.io/dms/benutzer/aktuell/begriffe/#konsole">Konsole</a> (<code>dms</code> im Container) gibt es auch lokal: Nach <code>npm run build -w server</code> zeigt <code>node server/dist/dms.js</code> die Befehle. Sie spricht mit dem laufenden Server.</p>
+<p>Die <a href="https://help.ablago.app/benutzer/aktuell/begriffe/#konsole">Konsole</a> (<code>dms</code> im Container) gibt es auch lokal: Nach <code>npm run build -w server</code> zeigt <code>node server/dist/dms.js</code> die Befehle. Sie spricht mit dem laufenden Server.</p>
 <p>Alles zusammen als Container: <code>docker compose up --build</code>, dann http://localhost:8080.</p>
 <h3 id="zwei-images-aus-einem-dockerfile">Zwei Images aus einem Dockerfile<a class="headerlink" href="#zwei-images-aus-einem-dockerfile" title="Permanent link">&para;</a></h3>
 <p>Das <code>Dockerfile</code> hat zwei Ziele (#208):</p>
@@ -965,12 +963,12 @@ docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> 
 <tr>
 <td><code>dms</code> (Standard)</td>
 <td><code>ghcr.io/motom001/dms</code></td>
-<td>nur das DMS; PostgreSQL läuft daneben (empfohlen)</td>
+<td>nur Ablago; PostgreSQL läuft daneben (empfohlen)</td>
 </tr>
 <tr>
 <td><code>komplett</code></td>
 <td><code>ghcr.io/motom001/dms-komplett</code></td>
-<td>DMS und PostgreSQL 17 in einem Container, Start über <code>deploy/komplett/start.sh</code> (tini)</td>
+<td>Ablago und PostgreSQL 17 in einem Container, Start über <code>deploy/komplett/start.sh</code> (tini)</td>
 </tr>
 </tbody>
 </table>
@@ -1017,7 +1015,7 @@ mkdocs<span class="w"> </span>serve<span class="w"> </span>-f<span class="w"> </
 <p>Das Dockerfile baut im Abschnitt <code>hilfe</code> alle vier Handbücher und die Startseite mit <code>docs/handbuch/werkzeuge/offline.py</code> und legt sie nach <code>web/dist/hilfe</code>; der Server liefert sie unter <code>/hilfe/</code> aus. Je Handbuch gibt es dafür <code>mkdocs.offline.yml</code> (erbt von <code>mkdocs.yml</code>) mit dem Hook <code>werkzeuge/offline_hook.py</code>:</p>
 <ul>
 <li>Bildschirmfotos (<code>bilder/…</code>) werden zu einem Hinweis mit Link auf dieselbe Seite online (<code>/dms/&lt;handbuch&gt;/vX.Y/…</code>).</li>
-<li>Verweise <code>https://motom001.github.io/dms/&lt;handbuch&gt;/aktuell/…</code> zeigen auf <code>/hilfe/&lt;handbuch&gt;/…</code>; Vorlagen bleiben online, <code>api/openapi.json</code> zeigt auf die eigene Installation.</li>
+<li>Verweise <code>https://help.ablago.app/&lt;handbuch&gt;/aktuell/…</code> zeigen auf <code>/hilfe/&lt;handbuch&gt;/…</code>; Vorlagen bleiben online, <code>api/openapi.json</code> zeigt auf die eigene Installation.</li>
 <li>Keine Versionsauswahl, keine Schriften aus dem Internet, keine Quellkarten, Suche nur auf Deutsch.</li>
 </ul>
 <p>Lokal: <code>python3 docs/handbuch/werkzeuge/offline.py /tmp/hilfe</code>. Das Skript prüft am Ende, dass jeder Verweis auf <code>/hilfe/…</code> eine Seite trifft; die CI prüft zusätzlich alle Ziele der kontextbezogenen Hilfe. Ohne gebaute Handbücher (<code>npm run dev</code>) leitet der Server <code>/hilfe/…</code> auf die Online-Fassung der Version um.</p>
@@ -1096,7 +1094,7 @@ mkdocs<span class="w"> </span>serve<span class="w"> </span>-f<span class="w"> </
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
     </div>
   
   

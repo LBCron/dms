@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Mitmachen beim DMS: Arbeitsweise, Entwicklung, Aufbau und Release">
+        <meta name="description" content="Mitmachen bei Ablago: Arbeitsweise, Entwicklung, Aufbau und Release">
       
       
       
-        <link rel="canonical" href="https://motom001.github.io/dms/entwickler/v0.156/aufbau/">
+        <link rel="canonical" href="https://help.ablago.app/entwickler/v0.158/aufbau/">
       
       
         <link rel="prev" href="../loslegen/">
@@ -22,12 +22,12 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../marke/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
-        <title>Aufbau - DMS – Entwicklerhandbuch</title>
+        <title>Aufbau - Ablago – Entwicklerhandbuch</title>
       
     
     
@@ -108,10 +108,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-header__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -122,7 +121,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            DMS – Entwicklerhandbuch
+            Ablago – Entwicklerhandbuch
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -246,13 +245,12 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="DMS – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="DMS – Entwicklerhandbuch" data-md-component="logo">
+    <a href=".." title="Ablago – Entwicklerhandbuch" class="md-nav__button md-logo" aria-label="Ablago – Entwicklerhandbuch" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../marke/ablago-app-blau.svg" alt="logo">
 
     </a>
-    DMS – Entwicklerhandbuch
+    Ablago – Entwicklerhandbuch
   </label>
   
     <div class="md-nav__source">
@@ -834,7 +832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/benutzer/aktuell/begriffe/" class="md-nav__link">
+      <a href="https://help.ablago.app/benutzer/aktuell/begriffe/" class="md-nav__link">
         
   
   
@@ -890,7 +888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/admin/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/admin/aktuell/" class="md-nav__link">
         
   
   
@@ -918,7 +916,7 @@
   
   
     <li class="md-nav__item">
-      <a href="https://motom001.github.io/dms/installieren/aktuell/" class="md-nav__link">
+      <a href="https://help.ablago.app/installieren/aktuell/" class="md-nav__link">
         
   
   
@@ -1217,7 +1215,7 @@ docs/             Handbücher (MkDocs), Screenshot-Skript, Release-Notizen
 docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteht die Seite „Begriffe“)
 .github/          Workflows (Prüfen, Images, Release, Handbuch …), Dependabot, Vorlagen für Issues und PRs
 </code></pre></div>
-<p>Das DMS ist ein <strong>modularer Monolith</strong>: ein Prozess, eine Datenbank. Server und Oberfläche stecken zusammen in einem Image – als <code>dms</code> oder, mit PostgreSQL im selben Container, als <code>dms-komplett</code>. Wichtige Muster:</p>
+<p>Ablago ist ein <strong>modularer Monolith</strong>: ein Prozess, eine Datenbank. Server und Oberfläche stecken zusammen in einem Image – als <code>dms</code> oder, mit PostgreSQL im selben Container, als <code>dms-komplett</code>. Wichtige Muster:</p>
 <ul>
 <li><strong>Repos doppelt:</strong> Jede Datenzugriffs-Schnittstelle gibt es für PostgreSQL (<code>repo-pg.ts</code>, <code>pg…</code>-Funktionen) und für den Arbeitsspeicher (<code>repo-speicher.ts</code>, <code>speicher…</code>). Die meisten Tests laufen schnell im Arbeitsspeicher, die Tests mit <code>TEST_DATABASE_URL</code> decken PostgreSQL ab. Neue Funktionen brauchen beides, und beide müssen sich gleich verhalten.</li>
 <li><strong>Routen</strong> stehen gesammelt in <code>server/src/routen.ts</code>, je mit <code>zugang: 'offen' | 'angemeldet' | 'admin'</code>. Zwei Merkmale kommen dazu: <code>api: true</code> macht eine Route zum Teil der öffentlichen API (Anmeldung auch mit API-Schlüssel); <code>konsole: true</code> erlaubt sie nur über den Befehl <code>dms</code> im Container. Die öffentliche API für Programme liegt unter <code>/api/v1</code> (<code>api-v1.ts</code>, OpenAPI).</li>
@@ -1230,7 +1228,7 @@ docs/glossar.yml  Glossar – die eine Quelle für alle Begriffe (daraus entsteh
 <li><strong>Sicherung und Wiederherstellung</strong> sichern alle Tabellen außer dem Inhalt von <code>sitzungen</code> und <code>schema_migrationen</code> (<code>OHNE_INHALT</code> in <code>server/src/datenbankabzug.ts</code>). Eine neue Tabelle ist automatisch dabei. Daten außerhalb der Datenbank brauchen einen Gedanken: Wo liegen sie, und kommen sie mit?</li>
 </ul>
 <h2 id="abhaengigkeiten">Abhängigkeiten<a class="headerlink" href="#abhaengigkeiten" title="Permanent link">&para;</a></h2>
-<p>Das DMS kommt mit <strong>wenig fremdem Code</strong> aus: 8 npm-Pakete im Server, 3 in der Oberfläche, dazu eine Handvoll Alpine-Pakete im Image. Das ist der beste Schutz gegen Angriffe über die Lieferkette und hält Sicherheitsupdates selten und überschaubar – und einer der Hauptgründe, warum Node.js hier gut passt. So soll es bleiben.</p>
+<p>Ablago kommt mit <strong>wenig fremdem Code</strong> aus: 8 npm-Pakete im Server, 3 in der Oberfläche, dazu eine Handvoll Alpine-Pakete im Image. Das ist der beste Schutz gegen Angriffe über die Lieferkette und hält Sicherheitsupdates selten und überschaubar – und einer der Hauptgründe, warum Node.js hier gut passt. So soll es bleiben.</p>
 <p><strong>Regel (#543):</strong> Eine neue <strong>Laufzeit-Abhängigkeit</strong> – npm unter <code>dependencies</code> oder ein Alpine-Paket per <code>apk add</code> im <code>Dockerfile</code> – kommt nur mit Begründung im Pull Request (Abschnitt „Neue Abhängigkeiten“ der Vorlage):</p>
 <ul>
 <li><strong>Wozu</strong> wird sie gebraucht?</li>
@@ -1442,7 +1440,7 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <p><strong>Bibliothek:</strong> eine eigene, kleine Umsetzung in <code>shared/src/sprache.ts</code> statt i18next – keine neue Abhängigkeit, offline, dieselben Regeln in Oberfläche und Server. Das Format (flaches JSON, <code>_one</code>/<code>_other</code>) entspricht i18next; ein späterer Wechsel bleibt möglich.</p>
 <p>Nicht Teil von Stufe 1: weitere Sprachen, „Sie“ in der Oberfläche, Sprachwahl im Profil (#357, spätere Stufen).</p>
 <h2 id="unterlagen-fur-dritte">Unterlagen für Dritte: Anrede du oder Sie<a class="headerlink" href="#unterlagen-fur-dritte" title="Permanent link">&para;</a></h2>
-<p>Die Oberfläche duzt immer. Texte, die an Personen <strong>außerhalb</strong> des DMS gehen, folgen dagegen der Einstellung <strong>Anrede in Unterlagen für Dritte</strong> (#474, Werkbank → Datenschutz, <code>Datenschutz.anrede</code>, Vorgabe <code>du</code>). Alle diese Texte stehen im Bereich <code>dritte</code> der <a href="#texte-und-sprachdateien">Sprachdateien</a>: die du-Fassung in <code>shared/src/sprachen/de/dritte.json</code>, die Sie-Fassung in <code>shared/src/sprachen/de-formal/dritte.json</code>, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit <code>textDritte(anrede, schluessel, werte)</code> aus <code>shared/src/anrede.ts</code>. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.</p>
+<p>Die Oberfläche duzt immer. Texte, die an Personen <strong>außerhalb</strong> von Ablago gehen, folgen dagegen der Einstellung <strong>Anrede in Unterlagen für Dritte</strong> (#474, Werkbank → Datenschutz, <code>Datenschutz.anrede</code>, Vorgabe <code>du</code>). Alle diese Texte stehen im Bereich <code>dritte</code> der <a href="#texte-und-sprachdateien">Sprachdateien</a>: die du-Fassung in <code>shared/src/sprachen/de/dritte.json</code>, die Sie-Fassung in <code>shared/src/sprachen/de-formal/dritte.json</code>, je mit denselben Schlüsseln und Platzhaltern. Abgerufen werden sie mit <code>textDritte(anrede, schluessel, werte)</code> aus <code>shared/src/anrede.ts</code>. Die Prüfung der Sprachdateien vergleicht beide Fassungen, ein Test prüft zusätzlich, dass die Sie-Fassung kein „du“ enthält.</p>
 <p>Neue Texte für Dritte kommen als Schlüssel in beide <code>dritte.json</code> – keine <code>anrede === 'sie' ? … : …</code> im Code – und in diese Liste:</p>
 <table>
 <thead>
@@ -1535,7 +1533,7 @@ web/src/sprache.ts, server/src/sprache.ts     t() mit den Bereichen, die Oberfl�
 <li><strong>Oberfläche:</strong> Werkbank → Benutzer, Abschnitt „Systemkonten“ (<code>GET /api/benutzer/systemkonten</code>, nur Administratoren).</li>
 </ul>
 <h2 id="ereigniskatalog">Ereigniskatalog (#670)<a class="headerlink" href="#ereigniskatalog" title="Permanent link">&para;</a></h2>
-<p>Was im DMS passiert, steht an <strong>einer</strong> Stelle: <code>shared/src/ereignisse.ts</code> (<code>EREIGNISKATALOG</code>), die Texte in <code>shared/src/sprachen/de/ereignisse.json</code> (<code>name.&lt;art&gt;</code>, <code>text.&lt;art&gt;</code> – Unterstrich als Bindestrich –, <code>gruppe.&lt;gruppe&gt;</code>). Pakete (<code>code.ereignisse</code>), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter <strong>Welche Ereignisse es gibt</strong>.</p>
+<p>Was in Ablago passiert, steht an <strong>einer</strong> Stelle: <code>shared/src/ereignisse.ts</code> (<code>EREIGNISKATALOG</code>), die Texte in <code>shared/src/sprachen/de/ereignisse.json</code> (<code>name.&lt;art&gt;</code>, <code>text.&lt;art&gt;</code> – Unterstrich als Bindestrich –, <code>gruppe.&lt;gruppe&gt;</code>). Pakete (<code>code.ereignisse</code>), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter <strong>Welche Ereignisse es gibt</strong>.</p>
 <p><strong>Regeln</strong></p>
 <ul>
 <li><strong>Nur Ids, Art, Feldschlüssel und Datum</strong> in <code>daten</code> – nie Werte, Titel oder Namen. Wer mehr wissen will, liest mit eigenen Rechten nach.</li>
@@ -1601,7 +1599,7 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
 <li><strong>Stand in der Datenbank</strong> (Tabelle <code>zaehlerstaende</code>, Migration 056). Je Abruf bildet der Server einen Hash der Zahlen (<code>fingerabdruck</code>), vergleicht ihn mit dem gespeicherten und zählt <code>stand</code> nur bei einer Abweichung hoch (<code>Repo.setzeZaehlerstand</code>, ein <code>INSERT … ON CONFLICT DO UPDATE … WHERE abdruck IS DISTINCT FROM …</code>: gleichzeitige Abrufe zählen eine Änderung einmal). Unverändert heißt: nur lesen. Der Haushaltsstand aus #512 lebt nur im Arbeitsspeicher und fängt nach jedem Neustart bei 0 an – als ETag taugt er darum nicht. Das ETag ist <code>"z&lt;stand&gt;-&lt;hash&gt;"</code>: Gleiches ETag heißt gleiche Zahlen, auch nach einem Neustart oder einer Wiederherstellung.</li>
 <li><strong>ETag und 304.</strong> <code>passtEtag</code> (<code>routen.ts</code>) versteht Listen, <code>W/…</code> und <code>*</code>. Eine Route setzt eigene Köpfe über <code>Antwort.koepfe</code>; Köpfe der Anfrage liest sie über <code>Anfrage.kopf(name)</code>. <code>Cache-Control: private, no-cache</code> statt <code>no-store</code>, damit Programme nachfragen dürfen.</li>
 <li><strong>Schlüssel-Stufe „nur Zähler“</strong> (<code>recht = 'zaehler'</code>, <code>NUR_ZAEHLER</code> und <code>ZAEHLER_PFAD</code> in <code>apischluessel.ts</code>). <code>pruefeZugang</code> lässt sie nur an <code>GET /api/v1/ich/zaehler</code> durch; jede andere Route unter <code>/api/v1</code> und – ausdrücklich – jede interne Route mit einem solchen Schlüssel im Kopf bekommt <code>403</code> (<code>api.schluessel.nur-zaehler</code>), das Laufwerk ebenfalls (<code>webdav.ts</code>). „Passwörter lesen“ gibt es für diese Stufe nicht. Eine neue Schnittstelle, die API-Schlüssel annimmt, muss die Stufe genauso abweisen.</li>
-<li><strong>Grenzen.</strong> Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft das DMS auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.</li>
+<li><strong>Grenzen.</strong> Der Überlastschutz (#544) zählt auch diese Anfragen. Eine Begrenzung je Schlüssel gibt es nicht; ein Abruf aus dem Zwischenspeicher kostet wenige Millisekunden. Läuft Ablago auf mehreren Servern, hat jeder seinen eigenen Zwischenspeicher (wie bei #512, höchstens 5 bzw. 30 Minuten alt) – bis dahin können zwei Server kurz verschiedene Zahlen liefern, der Stand zählt dann öfter hoch als nötig.</li>
 </ul>
 <p><strong>Weitere Zahl aufnehmen:</strong> Feld in <code>Zaehlerzahlen</code> (<code>dienst.ts</code>) und im OpenAPI-Schema ergänzen, im Test <code>ZAHLEN</code> – und nur Zahlen. Ändert sich die Bedeutung einer vorhandenen Zahl, <code>v</code> im Hash erhöhen, damit jeder Client einmal neu liest. Der <a href="#webhooks">Webhook</a> (#627) ruft <code>zaehlerAbruf</code> je Benutzer auf und meldet bei geändertem <code>stand</code>.</p>
 <h2 id="webhooks">Webhooks (#627)<a class="headerlink" href="#webhooks" title="Permanent link">&para;</a></h2>
@@ -1625,7 +1623,7 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
 <li><code>zeit</code>: wann die Meldung entstand; <code>daten.geaendert</code>: wann sich die Zahlen geändert haben.</li>
 <li>Der Rumpf ist kompaktes JSON (<code>JSON.stringify</code>), nur ASCII-Zeichen, Schlüssel in fester Reihenfolge – <code>JSON.stringify(JSON.parse(rumpf)) === rumpf</code>. Das erlaubt die Prüfung auch dort, wo ein Rahmenwerk nur das geparste JSON hergibt (Node-RED).</li>
 <li><strong>Nie Inhalte.</strong> Der Test <code>server/test/webhook.test.ts</code> prüft die Schlüssel des Rumpfs und dass keine Titel, Absender oder Namen hineinrutschen.</li>
-<li>Als angekommen gilt <code>2xx</code>; Weiterleitungen (<code>3xx</code>) folgt das DMS nicht (<code>redirect: 'manual'</code>), Zeitgrenze 5 s.</li>
+<li>Als angekommen gilt <code>2xx</code>; Weiterleitungen (<code>3xx</code>) folgt Ablago nicht (<code>redirect: 'manual'</code>), Zeitgrenze 5 s.</li>
 </ul>
 <h3 id="signatur-prufen">Signatur prüfen<a class="headerlink" href="#signatur-prufen" title="Permanent link">&para;</a></h3>
 <p><code>X-DMS-Signatur</code> ist <code>v1=</code> und HMAC-SHA256 (hex) über <code>&lt;X-DMS-Zeit&gt;.&lt;Rumpf&gt;</code> mit dem Geheimnis des Webhooks (<code>whsec_…</code>, als UTF-8-Text, nicht dekodiert). Mehrere Signaturen (später beim Wechsel des Verfahrens) stehen durch Komma getrennt; eine passende genügt. Prüfe den <strong>Rumpf als Bytes, wie er ankam</strong>, vergleiche in konstanter Zeit und verwirf Zeiten, die mehr als 5 Minuten abweichen.</p>
@@ -1702,11 +1700,11 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
 </ul>
 <h3 id="ziele-und-geheimnis">Ziele und Geheimnis<a class="headerlink" href="#ziele-und-geheimnis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Ziele:</strong> <code>zielProblem</code> (<code>shared/src/webhook.ts</code>) erlaubt <code>https://</code> und <code>http://</code> nur im Heimnetz (<code>imHeimnetz</code> aus <code>heimnetz.ts</code>), keine Anmeldedaten und kein <code>#</code>. Zusätzlich muss der Ursprung in der Einstellung <code>webhook_ziele</code> stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft das DMS erneut.</li>
-<li><strong>Geheimnis:</strong> <code>whsec_</code> + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel des DMS in <code>webhooks.geheimnis</code>. <code>umschluesseln</code> und <code>verschluesselteFundstellen</code> (<code>repo-pg.ts</code>) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.</li>
+<li><strong>Ziele:</strong> <code>zielProblem</code> (<code>shared/src/webhook.ts</code>) erlaubt <code>https://</code> und <code>http://</code> nur im Heimnetz (<code>imHeimnetz</code> aus <code>heimnetz.ts</code>), keine Anmeldedaten und kein <code>#</code>. Zusätzlich muss der Ursprung in der Einstellung <code>webhook_ziele</code> stehen (Werkbank). Ein Administrator gibt mit dem Anlegen frei; vor jedem Senden prüft Ablago erneut.</li>
+<li><strong>Geheimnis:</strong> <code>whsec_</code> + 32 Zufallsbytes (base64url), verschlüsselt mit dem Schlüssel von Ablago in <code>webhooks.geheimnis</code>. <code>umschluesseln</code> und <code>verschluesselteFundstellen</code> (<code>repo-pg.ts</code>) nehmen die Spalte mit; in Werkbank → Verschlüsselung erscheint die Art „Webhooks“.</li>
 <li><strong>Neue Art aufnehmen:</strong> Wert in <code>WEBHOOK_EREIGNISSE</code> und, wo nötig, eigene Erkennung; der Rumpf behält <code>art</code>, <code>id</code>, <code>zeit</code>, <code>daten</code> – und nur Zahlen bzw. Ids.</li>
 </ul>
-<p>Mehr Hintergrund im Administratorhandbuch: <a href="https://motom001.github.io/dms/admin/aktuell/technik/">Technik</a> und <a href="https://motom001.github.io/dms/admin/aktuell/entscheidungen/">Entscheidungen</a>.</p>
+<p>Mehr Hintergrund im Administratorhandbuch: <a href="https://help.ablago.app/admin/aktuell/technik/">Technik</a> und <a href="https://help.ablago.app/admin/aktuell/entscheidungen/">Entscheidungen</a>.</p>
 
 
 
@@ -1782,7 +1780,7 @@ curl<span class="w"> </span>-i<span class="w"> </span>-H<span class="w"> </span>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      DMS steht unter der Apache-2.0 · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
+      Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a>
     </div>
   
   
