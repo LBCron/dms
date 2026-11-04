@@ -50,7 +50,7 @@ export function PaketErstellen() {
   if (!stand || !e) return <div className="leer"><p>Lade …</p></div>;
 
   const setze = (x: Partial<PaketErstellenEingabe>) => { setFertig(undefined); setE({ ...e, ...x }); };
-  const umschalten = (liste: 'typen' | 'sichten' | 'beispiele', id: string, an: boolean) => setze({ [liste]: an ? [...e[liste], id] : e[liste].filter((x) => x !== id) });
+  const umschalten = (liste: 'typen' | 'sichten' | 'beispiele' | 'wortlisten', id: string, an: boolean) => { const l = e[liste] ?? []; setze({ [liste]: an ? [...l, id] : l.filter((x) => x !== id) }); };
   const ausEntwurf = (x: PaketEntwurf) => { setIdAuto(false); setze({ ...x, version: naechsteVersion(x.version), dms: stand.vorschlag.dms, aenderungen: '' }); };
 
   const p = pruefung;
@@ -172,7 +172,7 @@ export function PaketErstellen() {
 /** Schritt 1: Mappentypen, Ansichten und (optional) Beispiel-Mappen wählen. */
 function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
   stand: ErstellenStand; e: PaketErstellenEingabe; suche: string; setSuche(s: string): void; pruefung: PaketPruefung | null;
-  umschalten(liste: 'typen' | 'sichten' | 'beispiele', id: string, an: boolean): void;
+  umschalten(liste: 'typen' | 'sichten' | 'beispiele' | 'wortlisten', id: string, an: boolean): void;
 }) {
   const s = suche.trim().toLowerCase();
   const passt = (n: string) => !s || n.toLowerCase().includes(s);
@@ -190,7 +190,7 @@ function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
   }, [stand.sichten]);
   return (
     <>
-      <div className="zeile"><input type="search" placeholder="Suchen …" aria-label="Mappentypen und Ansichten durchsuchen" value={suche} onChange={(x) => setSuche(x.target.value)} /></div>
+      <div className="zeile"><input type="search" placeholder="Suchen …" aria-label="Mappentypen, Ansichten und Wortlisten durchsuchen" value={suche} onChange={(x) => setSuche(x.target.value)} /></div>
       <section className="blatt" aria-label="Mappentypen">
         <h2 className="h3">Mappentypen</h2>
         <ul className="stapel">
@@ -210,6 +210,17 @@ function Auswahl({ stand, e, suche, setSuche, umschalten, pruefung }: {
               <span>{x.name}{x.paket && <> <span className="chip">aus {x.paket.name}</span></>}</span></label></li>
           ))}
           {!stand.sichten.length && <li className="leise">Keine Ansichten.</li>}
+        </ul>
+      </section>
+      <section className="blatt" aria-label="Wortlisten">
+        <h2 className="h3">Wortlisten</h2>
+        <p className="leise klein">Gleichbedeutende Wörter für die Suche (Werkbank → Suche). Beim Empfänger stehen sie unter „aus Paketen“; Gruppen aus installierten Paketen kommen nicht mit.</p>
+        <ul className="stapel">
+          {(stand.wortlisten ?? []).filter((g) => passt(g.woerter.join(' '))).map((g) => (
+            <li key={g.id}><label className={`haken${g.paket ? ' grau' : ''}`}><input type="checkbox" disabled={!!g.paket} checked={!g.paket && (e.wortlisten ?? []).includes(g.id)} onChange={(x) => umschalten('wortlisten', g.id, x.target.checked)} />
+              <span>{g.woerter.join(', ')}{g.paket && <> <span className="chip">aus {g.paket.name}</span></>}</span></label></li>
+          ))}
+          {!(stand.wortlisten ?? []).length && <li className="leise">Keine Wortlisten.</li>}
         </ul>
       </section>
       <section className="blatt" aria-label="Beispiel-Mappen">
@@ -239,6 +250,7 @@ function Inhalt({ p }: { p: PaketPruefung }) {
       <dt>Mappentypen</dt><dd>{p.inhalt.typen.map((t) => t.name).join(', ') || '–'}</dd>
       <dt>Ansichten</dt><dd>{p.inhalt.sichten.map((s) => (s.eltern ? `${p.inhalt.sichten.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ') || '–'}</dd>
       <dt>Beispiele</dt><dd>{p.inhalt.beispiele || 'keine'}</dd>
+      <dt>Wortlisten</dt><dd>{p.inhalt.wortlisten || 'keine'}</dd>
       <dt>Abhängigkeiten</dt><dd>{abh.length ? abh.map(([k, v]) => `${k} ${v}`).join(', ') : 'keine'}</dd>
     </dl>
   );

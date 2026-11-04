@@ -14,7 +14,8 @@ export const BESCHREIBUNG_LAENGE = { min: 10, max: 300 } as const;
 export const GITHUB = /^[A-Za-z0-9-]+$/;
 
 /** Was ins Paket soll: Ids aus diesem DMS. Beispiele nur aus ausdrücklich gewählten Mappen. */
-export interface PaketAuswahl { typen: string[]; sichten: string[]; beispiele: string[] }
+/** Wortlisten (#661): Ids eigener Gruppen gleichbedeutender Wörter (Werkbank → Suche). */
+export interface PaketAuswahl { typen: string[]; sichten: string[]; beispiele: string[]; wortlisten?: string[] }
 
 /** Angaben für das Manifest. */
 export interface PaketAngaben {
@@ -42,6 +43,8 @@ export interface PaketEntwurf extends PaketErstellenEingabe {
 export interface ErstellenStand {
   typen: Array<{ id: string; name: string; beschreibung: string; paket: { id: string; name: string; version: string } | null; geaendert: boolean }>;
   sichten: Array<{ id: string; name: string; elternId: string | null; paket: { id: string; name: string; version: string } | null }>;
+  /** Gruppen gleichbedeutender Wörter (#661): eigene zum Ankreuzen, aus Paketen nur zur Anzeige. */
+  wortlisten: Array<{ id: string; woerter: string[]; paket: { id: string; name: string } | null }>;
   entwuerfe: PaketEntwurf[];
   dms: string;
   /** Angaben für einen neuen Export: aus dem zuletzt exportierten Entwurf mit höherer Version, sonst leer mit Vorschlägen. */
@@ -61,7 +64,7 @@ export interface PaketPruefung {
   hinweise: string[];
   abhaengigkeiten: Record<string, string>;
   /** Was ins Paket kommt (Kennung im Paket und Name). */
-  inhalt: { typen: Array<{ schluessel: string; name: string }>; sichten: Array<{ schluessel: string; name: string; eltern: string | null }>; beispiele: number };
+  inhalt: { typen: Array<{ schluessel: string; name: string }>; sichten: Array<{ schluessel: string; name: string; eltern: string | null }>; beispiele: number; wortlisten?: number };
   /** Mappen der gewählten eigenen Typen, aus denen man Beispiele wählen kann (je Typ höchstens 200). */
   beispielMappen: Array<{ typId: string; typ: string; mappen: Array<{ id: string; titel: string; demo: boolean }>; mehr: boolean }>;
   /** Dieselbe Prüfung wie beim Hochladen ist gelaufen: Das Paket ließe sich so wieder einspielen. */

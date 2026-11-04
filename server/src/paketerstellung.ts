@@ -15,7 +15,9 @@
 import { stringify } from 'yaml';
 import { istLeer, standardliste, trefferlistenVon, type Feld, type Mappe, type Mappentyp, type Register } from '../../shared/src/model';
 import { kreisImStandard } from '../../shared/src/nummernkreis';
-import { BEREICH, inMB, PAKET_ID, VERSION, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { BEREICH, DMS_WORTLISTEN_AB, inMB, PAKET_ID, VERSION, WORTLISTEN_MAX, vergleicheVersion, type InstalliertesPaket } from '../../shared/src/pakete';
+import { liesWortgruppe } from '../../shared/src/suche';
+import type { Synonymgruppe } from './repo';
 import { BESCHREIBUNG_LAENGE, GITHUB, LIZENZEN, NAME_LAENGE, naechsteVersion, type ErstellenStand, type Fehlend, type PaketEntwurf, type PaketErstellenEingabe, type PaketPruefung } from '../../shared/src/paketerstellung';
 import type { Bedingung, Sicht, WertAngabe } from '../../shared/src/sichten';
 import type { Dienst } from './dienst';
@@ -46,6 +48,8 @@ export interface ErstellenDaten {
   dmsTypen: Map<string, string>;
   /** Gewählte Beispiel-Mappen (nur aus gewählten eigenen Typen). */
   mappen: Mappe[];
+  /** Alle Gruppen gleichbedeutender Wörter (#661); eigene haben die Quelle „werkbank“. */
+  wortlisten?: Synonymgruppe[];
   dmsVersion: string;
   /** Zuletzt exportierter Entwurf mit derselben Id. */
   entwurf: PaketEntwurf | null;
@@ -309,10 +313,27 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   if (ohneZiel) hinweis(`Beispiel-Mappen: ${ohneZiel === 1 ? 'Ein Verweis zeigt' : `${ohneZiel} Verweise zeigen`} auf Mappen, die keine gewählten Beispiele sind, und ${ohneZiel === 1 ? 'bleibt' : 'bleiben'} leer.`);
   if (bsp.length) hinweis(`${bsp.length} Beispiel-Mappen aus deiner Auswahl kommen ins Paket – nimm nur Mappen mit erfundenen Daten. Dokumente, Notizen und Aufgaben kommen nicht mit.`);
 
-  if (!paketTypen.length && !paketSichten.length) probleme.push('Wähle mindestens einen eigenen Mappentyp oder eine eigene Ansicht – Typen und Ansichten aus Paketen kommen nur als Abhängigkeit mit.');
-  const noetigAb = [dmsVerweise ? DMS_VERWEISE_AB : null, beispielVerweise ? BEISPIELVERWEISE_AB : null, fremdeTypen ? FREMDE_TYPEN_AB : null].filter((x): x is string => !!x).sort(vergleicheVersion).pop();
+  // 6. Wortlisten (#661): nur eigene Gruppen; aus Paketen nicht kopiert. Doppelte Wörter in einer Gruppe zusammengefasst.
+  const wortlisten: Array<{ woerter: string[] }> = [];
+  for (const wid of new Set(e.wortlisten ?? [])) {
+    const g = (d.wortlisten ?? []).find((x) => x.id === wid);
+    if (!g) { probleme.push('Eine gewählte Wortliste gibt es nicht mehr. Bitte die Auswahl prüfen.'); continue; }
+    if (g.quelle !== 'werkbank') {
+      const p = d.pakete.find((x) => x.id === g.quelle);
+      if (p && abh[p.id]) hinweis(`Die Wortliste „${g.woerter.join(', ')}“ kommt über das Paket „${p.name}“ als Abhängigkeit mit, nicht kopiert.`);
+      else hinweis(`Die Wortliste „${g.woerter.join(', ')}“ gehört zum Paket „${p?.name ?? g.quelle}“ und kommt nicht ins Paket.`);
+      continue;
+    }
+    const w = liesWortgruppe(g.woerter).woerter;
+    if (w.length >= 2) wortlisten.push({ woerter: w });
+  }
+  if (wortlisten.length > WORTLISTEN_MAX) probleme.push(`Wortlisten: höchstens ${WORTLISTEN_MAX} Gruppen.`);
+  if (wortlisten.length) hinweis(`${wortlisten.length === 1 ? 'Eine Gruppe' : `${wortlisten.length} Gruppen`} gleichbedeutender Wörter kommen ins Paket – beim Empfänger stehen sie unter Werkbank → Suche bei „aus Paketen“.`);
+
+  if (!paketTypen.length && !paketSichten.length && !wortlisten.length) probleme.push('Wähle mindestens einen eigenen Mappentyp, eine eigene Ansicht oder eine eigene Wortliste – was aus Paketen kommt, kommt nur als Abhängigkeit mit.');
+  const noetigAb = [dmsVerweise ? DMS_VERWEISE_AB : null, beispielVerweise ? BEISPIELVERWEISE_AB : null, fremdeTypen ? FREMDE_TYPEN_AB : null, wortlisten.length ? DMS_WORTLISTEN_AB : null].filter((x): x is string => !!x).sort(vergleicheVersion).pop();
   const unten = untergrenze(dms);
-  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${noetigAb === FREMDE_TYPEN_AB && fremdeTypen ? 'Ansichten mit Mappentypen, die nicht im Paket sind,' : dmsVerweise ? 'Verweise auf Mappentypen von Ablago' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
+  if (noetigAb && unten && vergleicheVersion(unten, noetigAb) < 0) probleme.push(`Ablago-Version: Das Paket nutzt ${noetigAb === FREMDE_TYPEN_AB && fremdeTypen ? 'Ansichten mit Mappentypen, die nicht im Paket sind,' : noetigAb === DMS_WORTLISTEN_AB && wortlisten.length ? 'Wortlisten' : dmsVerweise ? 'Verweise auf Mappentypen von Ablago' : 'Verweise zwischen Beispielen'} und braucht mindestens >=${noetigAb}.`);
   const fehlt = fehlend.filter((f) => f.noetig);
   if (fehlt.length) probleme.push(`Es wird auf Mappentypen verwiesen, die nicht gewählt sind: ${fehlt.map((f) => `„${f.name}“`).join(', ')}. Nimm sie mit auf oder entferne den Verweis.`);
 
@@ -320,6 +341,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     typen: paketTypen.map((t) => ({ schluessel: String(t.schluessel), name: String(t.name) })),
     sichten: sortiert.map((s) => ({ schluessel: String(s.schluessel), name: String(s.name), eltern: (s.eltern as string | undefined) ?? null })),
     beispiele: beispiele.length,
+    ...(wortlisten.length ? { wortlisten: wortlisten.length } : {}),
   };
   if (probleme.length) return { probleme, fehlend, hinweise, abhaengigkeiten: abh, inhalt, schluessel, dateien: [] };
 
@@ -327,7 +349,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
   const y = (v: unknown) => Buffer.from(stringify(v, { version: '1.1', lineWidth: 0 }));
   const manifest = {
     schema: 1, id, name, version, beschreibung, autor, lizenz: e.lizenz, dms, abhaengigkeiten: abh,
-    inhalt: { mappentypen: 'inhalt/mappentypen.yaml', sichten: 'inhalt/sichten.yaml', ...(beispiele.length ? { beispiele: 'inhalt/beispiele.yaml' } : {}) },
+    inhalt: { mappentypen: 'inhalt/mappentypen.yaml', sichten: 'inhalt/sichten.yaml', ...(beispiele.length ? { beispiele: 'inhalt/beispiele.yaml' } : {}), ...(wortlisten.length ? { wortlisten: 'inhalt/wortlisten.yaml' } : {}) },
   };
   const datum = d.jetzt.toISOString().slice(0, 10);
   const text = aenderungsText(e, d.entwurf);
@@ -340,6 +362,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     `# ${name}`, '', beschreibung, '', '## Inhalt', '',
     ...(paketTypen.length ? ['| Mappentyp | Felder |', '| --- | --- |', ...paketTypen.map((t) => `| ${zelle(String(t.name))} | ${zelle((t.felder as Array<{ label: string }>).map((f) => f.label).join(', ') || '–')} |`), ''] : []),
     ...(sortiert.length ? [`**Ansichten:** ${sortiert.map((s) => (s.eltern ? `${sortiert.find((x) => x.schluessel === s.eltern)?.name} → ${s.name}` : s.name)).join(', ')}`, ''] : []),
+    ...(wortlisten.length ? [`**Wortlisten:** ${wortlisten.length === 1 ? 'eine Gruppe' : `${wortlisten.length} Gruppen`} gleichbedeutender Wörter für die Suche`, ''] : []),
     ...(beispiele.length ? [`**Beispiele:** ${beispiele.length} Beispiel-Mappen (${[...new Set(beispiele.map((b) => typName.get(b.typ)))].join(', ')}), auf Wunsch bei der Installation.`, ''] : []),
     '## Voraussetzungen', '', `- Ablago ${dms}`,
     ...(Object.keys(abh).length ? Object.entries(abh).map(([k, v]) => `- Paket \`${k}\` ${v}`) : ['- keine weiteren Pakete']), '',
@@ -347,12 +370,13 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     '## Herkunft', '', `Erstellt mit „Paket erstellen“ in Ablago (Werkbank → Pakete) am ${datum}${autor.name ? ` von ${autor.name}` : ''}.`, '',
   ].join('\n');
   const lizenz = (LIZENZTEXTE[e.lizenz] ?? '').replace('{jahr}', String(d.jetzt.getFullYear())).replace('{name}', autor.name);
-  const erwartung = { mappentypen: inhalt.typen.map((t) => t.schluessel), sichten: inhalt.sichten.map((s) => s.schluessel), beispiele: beispiele.length };
+  const erwartung = { mappentypen: inhalt.typen.map((t) => t.schluessel), sichten: inhalt.sichten.map((s) => s.schluessel), beispiele: beispiele.length, ...(wortlisten.length ? { wortlisten: wortlisten.length } : {}) };
   const dateien = [
     { name: 'manifest.yaml', daten: Buffer.from(`# Erstellt mit „Paket erstellen“ in Ablago. Format: https://github.com/motom001/dms-registry\n${stringify(manifest, { version: '1.1', lineWidth: 0 })}`) },
     { name: 'inhalt/mappentypen.yaml', daten: y(paketTypen) },
     { name: 'inhalt/sichten.yaml', daten: y(sortiert) },
     ...(beispiele.length ? [{ name: 'inhalt/beispiele.yaml', daten: y(beispiele) }] : []),
+    ...(wortlisten.length ? [{ name: 'inhalt/wortlisten.yaml', daten: y(wortlisten) }] : []),
     { name: 'README.md', daten: Buffer.from(readme) },
     { name: 'CHANGELOG.md', daten: Buffer.from(changelog) },
     { name: 'LICENSE', daten: Buffer.from(lizenz) },
@@ -371,7 +395,7 @@ export function liesEingabe(x: unknown): PaketErstellenEingabe {
   const ids = (v: unknown, max: number) => (Array.isArray(v) ? [...new Set(v.filter((s): s is string => typeof s === 'string'))].slice(0, max) : []);
   const a = (o.autor && typeof o.autor === 'object' ? o.autor : {}) as Record<string, unknown>;
   return {
-    typen: ids(o.typen, 500), sichten: ids(o.sichten, 500), beispiele: ids(o.beispiele, 100),
+    typen: ids(o.typen, 500), sichten: ids(o.sichten, 500), beispiele: ids(o.beispiele, 100), wortlisten: ids(o.wortlisten, 1000),
     id: t(o.id, 40), name: t(o.name, 200), version: t(o.version, 40), beschreibung: t(o.beschreibung, 1000),
     autor: { name: t(a.name, 200), github: t(a.github, 100) }, lizenz: t(o.lizenz, 40), dms: t(o.dms, 60), aenderungen: t(o.aenderungen, 2000),
   };
@@ -400,13 +424,14 @@ export class Paketerstellung {
       return p ? { id: p.id, name: p.name, version: p.version } : null;
     };
     const letzter = [...entwuerfe].sort((a, b) => b.exportiert.localeCompare(a.exportiert))[0];
-    const leer: PaketErstellenEingabe = { typen: [], sichten: [], beispiele: [], id: '', name: '', version: '1.0.0', beschreibung: '', autor: { name: '', github: '' }, lizenz: 'MIT', dms: this.vorschlagDms(), aenderungen: '' };
+    const leer: PaketErstellenEingabe = { typen: [], sichten: [], beispiele: [], wortlisten: [], id: '', name: '', version: '1.0.0', beschreibung: '', autor: { name: '', github: '' }, lizenz: 'MIT', dms: this.vorschlagDms(), aenderungen: '' };
     return {
       typen: typen.filter((t) => !t.system && !dmsTypen.has(t.id)).map((t) => {
         const p = pakete.find((x) => Object.values(x.typen).includes(t.id));
         return { id: t.id, name: t.name, beschreibung: t.beschreibung ?? '', paket: herkunft((x) => x.typen, t.id), geaendert: !!p && t.geaendert > (p.aktualisiert ?? p.installiert) };
       }).sort((a, b) => a.name.localeCompare(b.name, 'de')),
       sichten: sichten.map((s) => ({ id: s.id, name: s.name, elternId: s.elternId ?? null, paket: herkunft((x) => x.sichten, s.id) })),
+      wortlisten: (await this.d.sucheStand()).synonyme.map((g) => ({ id: g.id, woerter: g.woerter, paket: g.quelle === 'werkbank' ? null : { id: g.quelle, name: g.paketName ?? g.quelle } })),
       entwuerfe,
       dms: this.o.version(),
       vorschlag: letzter ? this.ausEntwurf(letzter) : leer,
@@ -415,7 +440,7 @@ export class Paketerstellung {
 
   /** Angaben eines gemerkten Entwurfs mit höherer Version und aktueller DMS-Version. */
   ausEntwurf(e: PaketEntwurf): PaketErstellenEingabe {
-    return { typen: e.typen, sichten: e.sichten, beispiele: e.beispiele, id: e.id, name: e.name, version: naechsteVersion(e.version), beschreibung: e.beschreibung, autor: e.autor, lizenz: e.lizenz, dms: this.vorschlagDms(), aenderungen: '' };
+    return { typen: e.typen, sichten: e.sichten, beispiele: e.beispiele, wortlisten: e.wortlisten ?? [], id: e.id, name: e.name, version: naechsteVersion(e.version), beschreibung: e.beschreibung, autor: e.autor, lizenz: e.lizenz, dms: this.vorschlagDms(), aenderungen: '' };
   }
 
   private async daten(e: PaketErstellenEingabe): Promise<ErstellenDaten> {
@@ -423,7 +448,7 @@ export class Paketerstellung {
     const gewaehlt = new Set(e.beispiele);
     const mappen = gewaehlt.size ? (await Promise.all(e.typen.filter((t) => typen.some((x) => x.id === t)).map((t) => this.d.listeMappen(t)))).flat().filter((m) => gewaehlt.has(m.id)) : [];
     return {
-      typen, sichten: await this.d.listeSichten(), pakete: await this.d.listePakete(), dmsTypen: await this.dmsTypen(), mappen,
+      typen, sichten: await this.d.listeSichten(), pakete: await this.d.listePakete(), dmsTypen: await this.dmsTypen(), mappen, wortlisten: (await this.d.sucheStand()).synonyme,
       dmsVersion: this.o.version(), entwurf: (await this.d.paketEntwuerfe()).find((x) => x.id === e.id.trim()) ?? null, entwuerfe: await this.d.paketEntwuerfe(), jetzt: new Date(),
     };
   }

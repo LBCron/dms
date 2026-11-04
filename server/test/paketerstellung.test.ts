@@ -46,8 +46,8 @@ async function hochladenUndInstallieren(p: Paketverwaltung, zip: Buffer, beispie
 }
 
 /** Quell-DMS: Basis installiert, eigene Typen Vertrag und Zahlung (aufeinander verweisend), Notiz (unbeteiligt). */
-async function quelle() {
-  const q = dms();
+async function quelle(version?: string) {
+  const q = dms(version);
   await hochladenUndInstallieren(q.p, basisZip);
   const typen = await q.d.listeTypen();
   const org = typen.find((t) => t.schluessel === 'basis_organisation')!;
@@ -179,6 +179,31 @@ describe('Paket selbst erstellen (#374)', () => {
     const zs = await mit.d.listeSichten();
     assert.deepEqual(zs.find((x) => x.name === 'Verträge')!.typen, [t.id]);
     assert.deepEqual(zs.find((x) => x.name === 'Teure Verträge')!.typen, [t.id]);
+  });
+
+  it('Wortlisten (#661): eigene Gruppen ankreuzen, auch ohne Typen; beim Empfänger „aus Paketen“; neue Version übernimmt die Auswahl', async () => {
+    const q = await quelle('0.127.0');
+    await q.d.legeSynonymAn({ woerter: ['Kfz', 'Auto', 'PKW'] }, ICH.email);
+    await q.d.legeSynonymAn({ woerter: ['Strom', 'Energie'] }, ICH.email);
+    const stand = await q.e.stand();
+    const ids = stand.wortlisten.filter((g) => !g.paket).map((g) => g.id);
+    assert.equal(ids.length, 2);
+    const auswahl = { wortlisten: ids, dms: '>=0.127.0' };
+    const r = await q.e.pruefe(angaben(auswahl));
+    assert.deepEqual(r.probleme, []);
+    assert.equal(r.inhalt.wortlisten, 2);
+    assert.ok((await q.e.pruefe(angaben({ wortlisten: ids, dms: '>=0.86.0' }))).probleme.some((p) => /Wortlisten und braucht mindestens >=0\.127\.0/.test(p)));
+    const z1 = await q.e.exportiere(angaben(auswahl), ICH);
+    const dateien = liesZip(z1.daten);
+    assert.deepEqual(parse(dateien.get('familie_vertraege/inhalt/wortlisten.yaml')!.toString()), [{ woerter: ['Kfz', 'Auto', 'PKW'] }, { woerter: ['Strom', 'Energie'] }]);
+    assert.equal((parse(dateien.get('familie_vertraege/tests/erwartung.yaml')!.toString()) as { wortlisten: number }).wortlisten, 2);
+    // Leeres Ablago: beide Gruppen „aus Paketen“.
+    const z = dms('0.127.0');
+    const { paket } = await hochladenUndInstallieren(z.p, z1.daten);
+    const gruppen = (await z.d.sucheStand()).synonyme.filter((g) => g.quelle === paket.id).map((g) => g.woerter);
+    assert.deepEqual(gruppen.sort(), [['Kfz', 'Auto', 'PKW'], ['Strom', 'Energie']].sort());
+    // Neue Version: Auswahl übernommen.
+    assert.deepEqual((await q.e.stand()).vorschlag.wortlisten, ids);
   });
 
   it('Export → frisches Ablago: hochladen, installieren, Typen und Ansichten gleich; höhere Version aktualisiert', async () => {
