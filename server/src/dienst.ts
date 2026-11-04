@@ -2212,7 +2212,9 @@ export class Dienst {
     if (mappen.length !== ids.length) throw new Fachfehler(404, 'Eine ausgewählte Mappe gibt es nicht (mehr).');
     const angaben = e.angaben !== false;
     const gewaehlt = e.dokumente === 'alle' ? null : new Set((Array.isArray(e.dokumente) ? e.dokumente : []).map(String));
-    const lies = async (d: Dokument) => { const x = await this.dateien.lies(d.sha256); return Buffer.isBuffer(x) ? x : Buffer.concat(await x.toArray() as Buffer[]); };
+    // Archivfassung oder Original (#715): wie beim Herunterladen; ohne Archivfassung geht das Original.
+    const fw = await this.archivWahl(e.fassung);
+    const lies = fw.lies;
     const verweise = mappen.flatMap((m) => { const t = z.typen.get(m.typId); return [...(t ? verweiseVon(t, m.werte).map((v) => v.zielId) : []), m.erstelltVon, m.geaendertVon].filter((v): v is string => !!v); });
     const bezuege = await this.maskiereBezuege(z, await this.repo.bezuege([...new Set(verweise)]));
     const quelle = { typen: z.typen, titel: (id: string | null | undefined) => (id ? bezuege[id]?.titel || NICHT_SICHTBAR : '') };
@@ -2224,7 +2226,7 @@ export class Dienst {
     // Verkleinert senden (#393): PDFs als verkleinerte Kopie, vor dem Stempeln.
     const klein = stufeAus(e.verkleinern);
     for (const m of mappen) {
-      const docs = (dokJe.get(m.id) ?? []).filter((d) => !gewaehlt || gewaehlt.has(d.id));
+      const docs = await Promise.all((dokJe.get(m.id) ?? []).filter((d) => !gewaehlt || gewaehlt.has(d.id)).map(fw.waehle));
       const pdf = angaben ? await mappenPdf(m.titel || 'Ohne Titel', [{ mappe: m, typ: z.typen.get(m.typId), dokumente: [], inhalt: lies }], quelle, null) : null;
       const plan = docs.length ? await this.stempelPlan(m.typId, wunsch, an.join(', '), stempelDaten) : null;
       const ausgaben = plan || (klein && docs.length) ? await Promise.all(docs.map(async (d) => fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await lies(d) }, { stempel: plan, verkleinern: klein },
@@ -2245,7 +2247,7 @@ export class Dienst {
       if (x.pdf) anhaenge.push({ name: namen[i++], mime: 'application/pdf', inhalt: x.pdf });
       for (const [j, d] of x.dokumente.entries()) {
         const a = x.ausgaben?.[j];
-        anhaenge.push(a ? { name: namen[i++], mime: a.mime, inhalt: a.inhalt } : { name: namen[i++], mime: d.mime, inhalt: await this.dateien.lies(d.sha256) });
+        anhaenge.push(a ? { name: namen[i++], mime: a.mime, inhalt: a.inhalt } : { name: namen[i++], mime: d.mime, inhalt: await fw.strom(d) });
       }
     }
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
@@ -4483,6 +4485,9 @@ export class Dienst {
     if (format === 'xlsx') { const b = (await tabelle({ xlsx: true })).xlsx; return { name: `${datei}.xlsx`, mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
     // Dokumente aller Mappen in einem Zugriff (#367).
     const dokJe = (format === 'pdf' || format === 'zip') ? await this.dokumenteJeMappe(mappen.map((m) => m.id)) : new Map<string, Dokument[]>();
+    // Archivfassung oder Original (#715): je Dokument, ohne Archivfassung das Original.
+    const fw = await this.archivWahl(x.fassung);
+    if (x.fassung === 'archiv') for (const [id, docs] of dokJe) dokJe.set(id, await Promise.all(docs.map(fw.waehle)));
     // Stempel (#394): je Mappe, weil die Pflicht am Mappentyp hängt. Nur PDFs und Bilder werden gestempelt.
     const wunsch = wunschAus(x.stempel);
     const stempelDaten = await this.stempelDaten();
@@ -4497,7 +4502,7 @@ export class Dienst {
     const wie = format === 'pdf' ? 'als PDF exportiert' : 'als ZIP exportiert';
     const gestempelt = new Map<string, Ausgabe[]>();
     const ausgabe = async (m: Mappe, d: Dokument, streng: boolean): Promise<Ausgabe> => {
-      const a = await fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) }, { stempel: plaene.get(m.id), verkleinern: klein },
+      const a = await fuerAusgabe({ name: d.name, mime: d.mime, inhalt: await fw.lies(d) }, { stempel: plaene.get(m.id), verkleinern: klein },
         { benutzer: ich.name ?? '', mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer }, streng);
       gestempelt.set(m.id, [...(gestempelt.get(m.id) ?? []), a]);
       return a;
@@ -4514,7 +4519,7 @@ export class Dienst {
           mappe: m, typ: z.typen.get(m.typId),
           dokumente: mitStempel ? docs.map((d) => (kannStempeln(d.mime) ? { ...d, mime: 'application/pdf' } : d)) : docs,
           inhalt: async (d: Dokument) => {
-            if (!mitAusgabe) return this.liesGanz(d.sha256);
+            if (!mitAusgabe) return fw.lies(d);
             const original = docs.find((y) => y.id === d.id)!;
             return (await ausgabe(m, original, false)).inhalt;
           },
@@ -4536,7 +4541,7 @@ export class Dienst {
       const namen = eindeutig(docs.map((d, j) => sichererName(aus?.[j].name ?? d.name, 120)));
       docs.forEach((d, j) => {
         const a = aus?.[j];
-        eintraege.push(a ? { name: `${ordner[i]}/${namen[j]}`, groesse: a.inhalt.length, inhalt: async () => a.inhalt } : { name: `${ordner[i]}/${namen[j]}`, groesse: d.groesse, inhalt: () => this.dateien.lies(d.sha256) });
+        eintraege.push(a ? { name: `${ordner[i]}/${namen[j]}`, groesse: a.inhalt.length, inhalt: async () => a.inhalt } : { name: `${ordner[i]}/${namen[j]}`, groesse: d.groesse, inhalt: () => fw.strom(d) });
       });
     }
     const groesse = zipGroesse(eintraege);
@@ -6089,6 +6094,26 @@ export class Dienst {
    * Ein Dokument oder eine ältere Version herunterladen (#394): mit Stempel, wenn gewünscht (`stempel`,
    * aus Anfragekörper oder Abfrageparametern) oder vom Mappentyp verlangt. Ohne Stempel unverändert als Strom.
    */
+  /**
+   * Archivfassung für mehrere Dokumente (#715: E-Mail mehrerer Mappen, Export): mit `fassung` = „archiv“ tritt an die
+   * Stelle jedes Dokuments mit Archivfassung (keine E-Rechnung) ein Dokument mit Name, Typ und Größe der Fassung;
+   * die übrigen bleiben Original – ohne Rückfrage. `lies`/`strom` lesen dann die richtige Datei.
+   */
+  private async archivWahl(fassung: unknown) {
+    if (fassung !== undefined && fassung !== null && fassung !== 'original' && fassung !== 'archiv') throw new Fachfehler(422, '„fassung“ kennt nur „original“ und „archiv“.');
+    const original = new Map<string, Dokument>();
+    const waehle = async (d: Dokument): Promise<Dokument> => {
+      if (fassung !== 'archiv') return d;
+      const q = await this.ausgabeQuelle(d, 'archiv', true);
+      if (!q.archiv) return d;
+      original.set(d.id, d);
+      return { ...d, name: q.name, mime: q.mime, groesse: q.groesse };
+    };
+    const lies = async (d: Dokument): Promise<Buffer> => (original.has(d.id) ? (await this.ausgabeQuelle(original.get(d.id)!, 'archiv', true)).inhalt() : this.liesGanz(d.sha256));
+    const strom = async (d: Dokument): Promise<Buffer | Readable> => (original.has(d.id) ? lies(d) : this.dateien.lies(d.sha256) as Promise<Buffer | Readable>);
+    return { waehle, lies, strom, anzahl: () => original.size };
+  }
+
   /**
    * Archivfassung statt Original weitergeben (#631): `fassung` = „archiv“ nimmt die aktuelle Archivfassung des
    * Dokuments (gibt es keine, 404), sonst das Original. `nurWo` (mehrere Dokumente): ohne Archivfassung und bei

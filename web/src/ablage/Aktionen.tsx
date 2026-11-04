@@ -12,6 +12,7 @@ import { NamenOhneLinks } from '../Person';
 import { alsWunsch, stempelFehler, StempelFelder, stempelStart, useStempelVorlagen, type StempelWahl } from './Stempel';
 import { VerkleinertWahl } from './VerkleinertWahl';
 import type { Stufe } from '../../../shared/src/verkleinern';
+import { FassungWahl, hatArchivfassung, type Fassung } from './FassungWahl';
 
 /** Aktionen an der Mappe (#58): per E-Mail versenden, als PDF exportieren, Link kopieren (#98). */
 
@@ -78,7 +79,9 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
   const summe = details.dokumente.filter((x) => gewaehlt.has(x.id)).reduce((a, x) => a + x.groesse, 0);
   // Verkleinert senden (#393): die Größe danach kennt erst der Server; er prüft sie vor dem Versand.
   const [klein, setKlein] = useState<Stufe | null>(null);
-  const mitPdf = details.dokumente.some((x) => gewaehlt.has(x.id) && x.mime === 'application/pdf');
+  // Archivfassung oder Original (#715), Vorgabe wie beim Herunterladen.
+  const [fassung, setFassung] = useState<Fassung>('archiv');
+  const mitPdf = details.dokumente.some((x) => gewaehlt.has(x.id) && (x.mime === 'application/pdf' || (fassung === 'archiv' && hatArchivfassung(x))));
   const zuGross = summe > EMAIL_HOECHSTENS && !(klein && mitPdf);
   // Stempel (#394): Vorschlag oder Pflicht des Mappentyps; {empfänger} ohne Angabe = die Adressen.
   const vorlagen = useStempelVorlagen();
@@ -90,7 +93,7 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
   async function senden() {
     setFehler(undefined); setLaeuft(true);
     try {
-      setFertig(await api.emailSenden(mappe.id, { an, betreff, nachricht, dokumente: [...gewaehlt], stempel: alsWunsch(stempel), verkleinern: mitPdf ? klein : null }));
+      setFertig(await api.emailSenden(mappe.id, { an, betreff, nachricht, dokumente: [...gewaehlt], stempel: alsWunsch(stempel), verkleinern: mitPdf ? klein : null, fassung }));
       await neuLaden(); await d.neuLaden();
     } catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
   }
@@ -124,6 +127,7 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
             )}
             {details.dokumente.length > 0 && stempel && vorlagen && <StempelFelder wahl={stempel} setze={setStempel} vorlagen={vorlagen} pflicht={typ.stempel?.modus === 'pflicht'}
               mappe={titelOder(mappe.titel)} empfaengerErsatz={an.trim() || 'die Adressen unter „An“'} id="email-stempel" />}
+            {gewaehlt.size > 0 && <FassungWahl wert={fassung} setze={setFassung} dokumente={details.dokumente.filter((x) => gewaehlt.has(x.id))} id="email-fassung" />}
             {mitPdf && <VerkleinertWahl wert={klein} setze={setKlein} id="email-verkleinert" />}
             {details.dokumente.length > 0 && <p className={`klein ${summe > EMAIL_WARNUNG && !(klein && mitPdf) ? 'fehlertext' : 'leise'}`}>
               Zusammen {groesse(summe)}{klein && mitPdf ? ' vor dem Verkleinern' : ''}.{zuGross ? ' Das ist zu groß zum Versenden; bitte weniger auswählen.' : summe > EMAIL_WARNUNG && !(klein && mitPdf) ? ` Viele Mailserver nehmen E-Mails über 20 MB nicht an.${mitPdf ? ' Tipp: PDFs verkleinert senden.' : ''}` : ''}
