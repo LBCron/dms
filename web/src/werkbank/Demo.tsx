@@ -4,6 +4,7 @@ import { useDaten } from '../daten';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 import { fortschrittText } from '../../../shared/src/auftrag';
+import { t } from '../sprache';
 import { JE_MAPPE_STUFEN, MAX_DEMO, MAX_DEMO_DOKUMENTE, MAX_DUPLIKATE, mengenWarnung, MISCHUNGEN, schaetzeMenge, stelleMischung, stelleVonBis, stufeVon } from '../../../shared/src/demodaten';
 
 type Uebersicht = Array<{ typId: string; name: string; demo: number; gesamt: number }>;
@@ -110,6 +111,8 @@ export function DemoPanel() {
     return () => clearTimeout(t);
   }, [schluessel, anzahlOk, zuViele]);
   const bytes = menge?.dokumente?.bytes ?? 0;
+  // Mappentypen, die sich nicht erzeugen lassen (#711) – kommt vom Server mit der Abschätzung.
+  const fehlen = (schaetzung?.nichtErzeugbar ?? []).reduce((n, x) => n + x.anzahl, 0);
   const reicht = !schaetzung || schaetzung.frei === null || schaetzung.frei - bytes >= schaetzung.mindest;
   const [meldung, setMeldung] = useState<Meldung>();
   const { auftrag, setze } = useAuftrag((a) => { setMeldung(meldungAus(a)); void d.neuLaden(); });
@@ -135,6 +138,13 @@ export function DemoPanel() {
           {auftrag.gesamt > 0 && <>
             <progress max={auftrag.gesamt} value={auftrag.fertig} />
             <p className="klein leise">{fortschrittText(auftrag, 'Mappen')}</p>
+            {/* Weniger als bestellt (#711): Gründe je Mappentyp, sobald der Schritt Mappen fertig ist. */}
+            {auftrag.phasen.some((p) => p.gruende?.length) && (
+              <details className="klein"><summary>{t('werkbank.demo.warum')}</summary>
+                <ul>{auftrag.phasen.flatMap((p) => p.gruende ?? []).map((g) => <li key={g}>{g}</li>)}</ul>
+                <p className="leise">{t('werkbank.demo.tipp')}</p>
+              </details>
+            )}
           </>}
         </div>
       )}
@@ -187,11 +197,12 @@ export function DemoPanel() {
           </>}
           {menge && (
             <div className={`hinweis ${!reicht || zuViele ? 'schlecht' : warnung ? 'warn' : 'info'} stapel`} role="status" aria-live="polite">
-              <p><strong>Abschätzung:</strong> ≈ {menge.mappen.toLocaleString('de-DE')} Mappen
+              <p><strong>Abschätzung:</strong> ≈ {(menge.mappen - fehlen).toLocaleString('de-DE')} Mappen{fehlen > 0 && <> ({t('werkbank.demo.nichtErzeugbar', { anzahl: fehlen.toLocaleString('de-DE') })})</>}
                 {menge.dokumente && <>, ≈ {dokumente(menge.dokumente.dokumente)} mit ≈ {menge.dokumente.seiten.toLocaleString('de-DE')} Seiten, zusammen ≈ {groesse(menge.dokumente.bytes)}; ≈ {menge.dokumente.ocrSeiten.toLocaleString('de-DE')} Seiten für die Texterkennung</>}.
                 {schaetzung && schaetzung.frei !== null && <> Frei: {groesse(schaetzung.frei)}, frei bleiben müssen mindestens {groesse(schaetzung.mindest)}.</>}</p>
               {warnung && <p>{warnung}</p>}
               {!reicht && <p>Der Speicherplatz reicht dafür nicht. Weniger Mappen, weniger Dokumente oder eine leichtere Mischung wählen.</p>}
+              {!!schaetzung?.nichtErzeugbar?.length && <ul className="klein">{schaetzung.nichtErzeugbar.map((x) => <li key={x.typ}>{x.typ}: {x.anzahl.toLocaleString('de-DE')} – {x.grund}</li>)}</ul>}
               {mitDok && schaetzung && !schaetzung.rastern && <p className="klein">Ohne pdftoppm (nur in der Entwicklung) werden Scans und Bilder als einfache PDFs erzeugt.</p>}
             </div>
           )}

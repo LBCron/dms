@@ -5627,6 +5627,12 @@ export class Dienst {
 
   /* ---------- Demo-Daten ---------- */
 
+  /** Mappen je Typ, auch Systemtypen (#711: lassen sich Pflicht-Verweise der Demo-Daten füllen?). */
+  async mappenJeTyp(): Promise<Map<string, number>> {
+    const z = (await this.repo.zaehler('', false)).typen;
+    return new Map([...z].map(([id, x]) => [id, x.anzahl]));
+  }
+
   async demoUebersicht() {
     const demo = await this.repo.zaehleDemo();
     const z = (await this.repo.zaehler('', false)).typen;

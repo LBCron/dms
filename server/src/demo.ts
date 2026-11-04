@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { grenzeAlsTag, ibanGruppen, pruefeFormate } from '../../shared/src/feldformate';
 import { formatiere, istOk, pruefeMappe, titelAus, verweiseVon, type Feld, type Mappentyp, type Wert, type Werte } from '../../shared/src/model';
-import { dokumentRegister, MAX_DEMO, MAX_DEMO_DOKUMENTE, mengenWarnung, schaetzeMenge, verteilung } from '../../shared/src/demodaten';
+import { dokumentRegister, MAX_DEMO, MAX_DEMO_DOKUMENTE, mengenWarnung, nichtErzeugbar, pflichtGrund, schaetzeMenge, verteilung, type NichtErzeugbar } from '../../shared/src/demodaten';
 import { DOKUMENTARTEN, erzeugeDokument, kannRastern, pruefeDokumentOptionen, type Abschaetzung, type DokumentOptionen, type Dokumentart, type MappenInhalt } from './demo-dokumente';
 import { NACHNAMEN, ORTE, STRASSEN, VORNAMEN } from './demo-text';
 import type { PhasenPlan } from './auftrag';
@@ -91,7 +91,8 @@ function wertFuer(f: Feld, nr: number, pools: Map<string, string[]>, vergeben: S
       const min = typeof f.min === 'number' ? f.min : 1, max = typeof f.max === 'number' ? f.max : Math.max(min + 1000, 1000);
       const stellen = Math.min(f.nachkomma ?? 0, 4);
       let x = Number(zwischen(min, max).toFixed(stellen));
-      if (f.eindeutig) while (vergeben.has(String(x))) x = Number(zwischen(min, max).toFixed(stellen));
+      // Eindeutig (#711): nach 200 Versuchen sind die Werte zwischen min und max vermutlich vergeben – nicht endlos suchen.
+      for (let n = 0; f.eindeutig && vergeben.has(String(x)); n++) { if (n >= 200) return undefined; x = Number(zwischen(min, max).toFixed(stellen)); }
       return x;
     }
     case 'betrag': {
@@ -150,7 +151,7 @@ export function takt(anteil = 0.25, maxMs = 250) {
   };
 }
 
-export interface Fortschritt { (fertig: number, gesamt: number, phase?: 'mappen' | 'dokumente'): void }
+export interface Fortschritt { (fertig: number, gesamt: number, phase?: 'mappen' | 'dokumente', extra?: { uebersprungen?: number; gruende?: string[] }): void }
 
 /** Phasen des Auftrags (#364): erst Mappen, dann wahlweise Dokumente – jeweils mit eigener Zahl. */
 export function demoPhasen(mitDokumenten: boolean): PhasenPlan[] {
@@ -186,14 +187,19 @@ export interface DemoAbschaetzung {
   reicht: boolean;
   /** Ohne pdftoppm (Entwicklung) werden Scans und Bilder zu einfachen PDFs. */
   rastern: boolean;
+  /** Mappentypen, die sich nicht erzeugen lassen (#711), mit bestellter Anzahl und Grund. */
+  nichtErzeugbar: NichtErzeugbar[];
 }
 
 export async function schaetzeDemo(dienst: Dienst, o: DemoOptionen, platz?: DemoPlatz): Promise<DemoAbschaetzung> {
   // Dieselbe Rechnung wie in der Oberfläche (#365), hier zusätzlich mit dem freien Platz.
-  const { mappen, mappenMitRegister, dokumente } = schaetzeMenge(await dienst.listeTypen(), o);
+  const typen = await dienst.listeTypen();
+  const { mappen, mappenMitRegister, dokumente } = schaetzeMenge(typen, o);
   const frei = platz ? await platz.frei().catch(() => null) : null;
   const mindest = platz ? await platz.mindest().catch(() => 0) : 0;
-  return { mappen, mappenMitRegister, dokumente, frei, mindest, reicht: frei === null || frei - (dokumente?.bytes ?? 0) >= mindest, rastern: await kannRastern() };
+  const anzahl = await dienst.mappenJeTyp();
+  const fehlen = nichtErzeugbar(typen, verteilung(typen.filter((t) => !t.system), o.anzahl), (id) => anzahl.get(id) ?? 0);
+  return { mappen, mappenMitRegister, dokumente, frei, mindest, reicht: frei === null || frei - (dokumente?.bytes ?? 0) >= mindest, rastern: await kannRastern(), nichtErzeugbar: fehlen };
 }
 
 /** Was eine Mappe zum Dokument beiträgt: Titel und Werte, damit die Volltextsuche das Dokument über sie findet. */
@@ -213,9 +219,13 @@ function inhaltVon(t: Mappentyp, werte: Werte, titel: string, titelVon: (id: str
   return { titel, typ: t.name, angaben, partner, betrag, datum };
 }
 
+/** „Versicherung: 85 übersprungen – Für das Pflichtfeld …“ (#711). */
+export const uebersprungenText = (x: { typ: string; grund: string; anzahl: number }) => `${x.typ}: ${x.anzahl.toLocaleString('de-DE')} übersprungen – ${x.grund}`;
+
 export interface DemoErgebnis {
   erzeugt: Record<string, number>;
-  uebersprungen: Array<{ typ: string; grund: string }>;
+  /** Mappentypen mit weniger als bestellt (#711): wie viele fehlen und warum. */
+  uebersprungen: Array<{ typ: string; grund: string; anzahl: number }>;
   gesamt: number;
   startwert: string;
   dauerMs: number;
@@ -266,7 +276,7 @@ export async function erzeugeDemo(dienst: Dienst, eingabe: unknown, benutzerId: 
   }
 
   const erzeugt: Record<string, number> = {};
-  const uebersprungen: Array<{ typ: string; grund: string }> = [];
+  const uebersprungen: DemoErgebnis['uebersprungen'] = [];
   const mitDokumenten: Array<{ id: string; t: Mappentyp; werte: Werte; titel: string }> = [];
   let fertig = 0;
   fortschritt(0, mappenZiel, 'mappen');
@@ -287,7 +297,7 @@ export async function erzeugeDemo(dienst: Dienst, eingabe: unknown, benutzerId: 
       for (const f of t.felder) {
         if (!f.pflicht && z.chance(0.2)) continue;
         const w = wertFuer(f, ok + 1, pools, vergeben.get(f.key) ?? new Set());
-        if (w === undefined) { if (f.pflicht) unmoeglich = `Für das Pflichtfeld „${f.label}“ lässt sich kein passender Wert erzeugen${f.typ === 'referenz' ? ' (es gibt noch keine Mappen des Zieltyps)' : f.typ === 'passwort' ? ' (Passwörter gibt es in Demo-Daten nie)' : ''}.`; continue; }
+        if (w === undefined) { if (f.pflicht) unmoeglich = pflichtGrund(f.label, f.typ === 'referenz' ? 'verweis' : f.typ === 'passwort' ? 'passwort' : f.eindeutig ? 'eindeutig' : 'sonst'); continue; }
         werte[f.key] = w;
       }
       if (unmoeglich) { letzterFehler = unmoeglich; break; }
@@ -314,9 +324,11 @@ export async function erzeugeDemo(dienst: Dienst, eingabe: unknown, benutzerId: 
       if (paket.length >= 250) await schreibe();
     }
     erzeugt[t.name] = ok;
-    if (ok < ziel.get(t.id)!) uebersprungen.push({ typ: t.name, grund: letzterFehler || 'unbekannt' });
+    if (ok < ziel.get(t.id)!) uebersprungen.push({ typ: t.name, grund: letzterFehler || 'unbekannt', anzahl: ziel.get(t.id)! - ok });
   }
   await schreibe();
+  // Weniger als bestellt (#711): sofort zeigen, nicht erst nach den Dokumenten – kein Haken, sondern „übersprungen“.
+  if (uebersprungen.length) fortschritt(fertig, mappenZiel, 'mappen', { uebersprungen: mappenZiel - fertig, gruende: uebersprungen.map(uebersprungenText) });
   const mappen = fertig;
   // Statistik nach dem Massen-Einfügen (#367), sonst plant PostgreSQL mit veralteten Zahlen.
   if (mappen) await dienst.aktualisiereStatistik();

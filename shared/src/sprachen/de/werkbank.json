@@ -159,5 +159,8 @@
   "sicherung.extern.zurueck": "vom Ziel außer Haus",
   "sicherung.extern.schlank": "Kopie außer Haus vom {datum} – Version und Umfang liest Ablago mit dem Schlüssel aus der Sicherung",
   "sicherung.extern.nurneueste": "Lokal nur die neueste behalten",
-  "sicherung.extern.nurneueste.hilfe": "Für knappen Platz, wenn eine Kopie außer Haus entsteht: Ältere automatische Sicherungen gibt es dann nur noch dort. Eine Sicherung, die gerade außer Haus kopiert wird, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage)."
+  "sicherung.extern.nurneueste.hilfe": "Für knappen Platz, wenn eine Kopie außer Haus entsteht: Ältere automatische Sicherungen gibt es dann nur noch dort. Eine Sicherung, die gerade außer Haus kopiert wird, bleibt stehen, bis sie angekommen ist (höchstens 2 Tage).",
+  "demo.nichtErzeugbar": "{anzahl} lassen sich nicht erzeugen",
+  "demo.warum": "Warum wurden Mappen übersprungen?",
+  "demo.tipp": "Tipp: Fehlt ein Ziel für einen Pflicht-Verweis, lege zuerst Mappen des Zieltyps an (oder erzeuge Demo-Mappen für ihn mit). Passwörter erzeugt Ablago nie; ein Pflicht-Passwort lässt sich nur von Hand füllen."
 }
