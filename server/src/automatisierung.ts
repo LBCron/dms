@@ -335,7 +335,7 @@ export class Automatisierungen {
   constructor(private d: AutomatisierungDeps) {
     d.dienst.automatisierungenVon = async (kontoId) => {
       const konto = await this.konto().catch(() => null);
-      return konto?.id === kontoId ? (await this.d.repo.liste()).filter((a) => a.herkunft !== 'paket').map((a) => ({ id: a.id, name: a.name })) : [];
+      return konto?.id === kontoId ? (await this.d.repo.liste()).filter((a) => a.herkunft !== 'paket').map((a) => ({ id: a.id, name: a.name, ...(a.aktiv && a.angehalten ? { angehalten: true } : {}) })) : [];
     };
     d.dienst.fristenUebernehmen = () => this.fristenUebernehmen();
     d.dienst.paketAutomatisierungen = (p, liste, ein) => this.ausPaket(p, liste, ein);

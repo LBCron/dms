@@ -9,6 +9,8 @@ import type { Archiv } from '../../shared/src/archiv';
 import type { WebhookAnsicht, WebhookEingabe, WebhookErgebnis, WebhookVerlauf, WebhookWerkbank } from '../../shared/src/webhook';
 import type { UeberfluessigeVariable } from '../../shared/src/umgebungsvariablen';
 import type { LasttestStand } from '../../shared/src/lasttest';
+import type { Akzeptiert, Schwere } from '../../shared/src/meldungen';
+import type { SystemkontoFehler } from '../../shared/src/systemkonten';
 import type { Abwesenheit, Aufgabe, Ausschnitt, FallOhneLeserecht, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
@@ -384,7 +386,7 @@ export interface Zusammenfassung {
   standard: { uhrzeit: string; tage: number[]; bundesland: string | null }; versand: boolean;
 }
 /** Ein Konto, das kein Mensch ist (#673): Systemkonto „Automatisierung“ oder Dienstkonto eines Pakets. */
-export interface Systemkonto { id: string; name: string; rolle: 'systemkonto' | 'paket'; aktiv: boolean; systemkonto?: string; paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string }> }
+export interface Systemkonto { id: string; name: string; rolle: 'systemkonto' | 'paket'; aktiv: boolean; systemkonto?: string; paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string; angehalten?: boolean }>; /** Auffälligkeiten (#817) */ fehler?: SystemkontoFehler; weitreichend?: boolean }
 export interface LinkErgebnis { benutzer: Benutzer; mailVerschickt: boolean; link?: string; mailFehler?: string }
 
 export const api = {
@@ -793,6 +795,8 @@ export const api = {
   /* E-Mail-Versand und Adresse des DMS (#37) */
   tresor: () => anfrage<TresorStatus>('GET', '/api/werkbank/tresor'),
   uebersicht: () => anfrage<WerkbankUebersicht>('GET', '/api/werkbank/uebersicht'),
+  meldungAkzeptieren: (schluessel: string, art: Schwere, grund?: string) => anfrage<Akzeptiert>('POST', '/api/werkbank/uebersicht/akzeptieren', { schluessel, art, grund }),
+  akzeptanzAufheben: (schluessel: string[], anlass: 'eingeblendet' | 'erledigt' | 'schwerer') => anfrage<Akzeptiert>('POST', '/api/werkbank/uebersicht/aufheben', { schluessel, anlass }),
   // Fehler melden (#70)
   diagnose: () => anfrage<Diagnose>('GET', '/api/konto/diagnose'),
   fehlerMelden: (e: { text: string; angaben: Record<string, unknown>; bilder: Array<{ name: string; daten: string }> }) => anfrage<{ id: string }>('POST', '/api/konto/fehlermeldung', e),
@@ -1112,6 +1116,8 @@ export interface WerkbankUebersicht {
   zahlen?: { nummernkreise: number | null; pakete: number | null; benutzer: number | null; postfaecher: number | null; darfWeg: number | null };
   /** Postfächer mit abgelaufener oder fehlender OAuth-Anmeldung (#358). */
   postfachAnmeldung?: Array<{ id: string; name: string; zustand: 'abgelaufen' | 'abgemeldet' }>;
+  /** Bewusst akzeptierte Meldungen (#816) je Schlüssel: Schwere beim Akzeptieren, wer, wann, Begründung. */
+  akzeptiert?: Akzeptiert;
 }
 /* Feste Ordner (#115) und Speicherplatz (#116) */
 export type OrdnerArt = 'dateien' | 'geheim' | 'sicherung';

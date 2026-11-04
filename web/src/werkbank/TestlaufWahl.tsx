@@ -5,6 +5,8 @@ import { api, type Bezuege, type Systemkonto } from '../api';
 import { t } from '../sprache';
 import { MappenWahl } from '../ablage/MappeFormular';
 import { useDaten } from '../daten';
+import { SystemkontenGruppe, SystemkontoKennzeichen } from './Systemkonten';
+import { SYSTEMKONTEN_AUF } from '../../../shared/src/systemkonten';
 
 /**
  * Auswahl für die Testläufe der Werkbank (#371): Benutzer und Testmappe werden mit derselben
@@ -20,8 +22,8 @@ function useBekannt() {
 
 /**
  * Benutzer wählen wie im Verweisfeld; Administratoren und deaktivierte Benutzer sind gekennzeichnet.
- * `mitKonten` (#710, nur im Testlauf am Mappentyp): darunter zusätzlich die Konten ohne Person – Systemkonten und
- * Paket-Benutzer –, gekennzeichnet und nach den Personen. Sonst bleiben sie überall ausgeblendet.
+ * `mitKonten` (#710, nur im Testlauf am Mappentyp): zusätzlich die Konten ohne Person – Systemkonten und
+ * Paket-Benutzer –, seit #817 als eingeklappte Gruppe über der Auswahl der Personen. Sonst bleiben sie überall ausgeblendet.
  */
 export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; wert: string; setze: (id: string) => void; mitKonten?: boolean }) {
   const d = useDaten();
@@ -40,23 +42,26 @@ export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; w
   return (
     <div className="feld">
       <label htmlFor={sonder ? `${id}-konto` : id}>Benutzer</label>
+      {/* Systemkonten als eingeklappte Gruppe oben (#817), wie in Werkbank → Benutzer. */}
+      {mitKonten && ohne.length > 0 && !sonder && (
+        <SystemkontenGruppe liste={ohne} auf={d.einstellungen[SYSTEMKONTEN_AUF] === true} setzeAuf={(x) => d.setzeEinstellung(SYSTEMKONTEN_AUF, x || null)} id={`${id}-konten`} kinder={
+          <div className="zeile klein">
+            <label htmlFor={`${id}-konto`} className="leise">{t('werkbank.testlauf.konto.label')}</label>
+            <select id={`${id}-konto`} value="" onChange={(e) => e.target.value && setze(e.target.value)}>
+              <option value="">{t('werkbank.testlauf.konto.leer')}</option>
+              {system.length > 0 && <optgroup label={t('werkbank.testlauf.konto.systemkonten')}>{system.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
+              {pakete.length > 0 && <optgroup label={t('werkbank.testlauf.konto.pakete')}>{pakete.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
+            </select>
+          </div>
+        } />
+      )}
       {sonder
-        ? <div className="mehrfach-gewaehlt"><span className="chip">{name(sonder)} <span className="chip klein">{t.frei(`werkbank.testlauf.konto.kennzeichen.${sonder.rolle}`)}</span>
+        ? <div className="mehrfach-gewaehlt"><span className="chip">{name(sonder)} <span className="chip klein">{t.frei(`werkbank.testlauf.konto.kennzeichen.${sonder.rolle}`)}</span><SystemkontoKennzeichen k={sonder} />
             <button type="button" className="textknopf klein" aria-label={t('werkbank.testlauf.konto.entfernen', { name: name(sonder) })} onClick={() => setze('')}>×</button></span></div>
         : <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
             setze={(v) => setze(typeof v === 'string' ? v : '')} />}
       {konto?.rolle === 'admin' && <span className="chip warn klein">Administrator – für ihn gelten die Regeln nicht</span>}
       {konto && !konto.aktiv && <span className="chip klein">deaktiviert</span>}
-      {mitKonten && ohne.length > 0 && !sonder && (
-        <div className="zeile klein">
-          <label htmlFor={`${id}-konto`} className="leise">{t('werkbank.testlauf.konto.label')}</label>
-          <select id={`${id}-konto`} value="" onChange={(e) => e.target.value && setze(e.target.value)}>
-            <option value="">{t('werkbank.testlauf.konto.leer')}</option>
-            {system.length > 0 && <optgroup label={t('werkbank.testlauf.konto.systemkonten')}>{system.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
-            {pakete.length > 0 && <optgroup label={t('werkbank.testlauf.konto.pakete')}>{pakete.map((k) => <option key={k.id} value={k.id}>{name(k)}</option>)}</optgroup>}
-          </select>
-        </div>
-      )}
     </div>
   );
 }

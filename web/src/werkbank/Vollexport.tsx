@@ -17,10 +17,10 @@ const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle:
 const tag = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'medium' });
 
 /** Hinweise zum Export-Ordner (#797) – oben auf der Seite und in der Übersicht der Werkbank. */
-export function exportHinweise(e: { pfad: string; imSicherungsordner: boolean; umzug: ExportUmzug | null }, tage = EXPORT_TAGE): Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean }> {
-  const h: Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean }> = [];
-  if (e.imSicherungsordner) h.push({ art: 'schlecht', text: <><strong>{t('werkbank.export.im-sicherungsordner')}</strong> {t('werkbank.export.im-sicherungsordner.text')}</> });
-  if (e.umzug) h.push({ art: e.umzug.uebrig ? 'schlecht' : 'info', umzug: true, text: <>
+export function exportHinweise(e: { pfad: string; imSicherungsordner: boolean; umzug: ExportUmzug | null }, tage = EXPORT_TAGE): Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean; schluessel: string }> {
+  const h: Array<{ art: 'schlecht' | 'info'; text: ReactNode; umzug?: boolean; schluessel: string }> = [];
+  if (e.imSicherungsordner) h.push({ schluessel: 'export.im-sicherungsordner', art: 'schlecht', text: <><strong>{t('werkbank.export.im-sicherungsordner')}</strong> {t('werkbank.export.im-sicherungsordner.text')}</> });
+  if (e.umzug) h.push({ schluessel: 'export.umzug', art: e.umzug.uebrig ? 'schlecht' : 'info', umzug: true, text: <>
     {e.umzug.anzahl > 0 && <><strong>{t('werkbank.export.umzug', { anzahl: e.umzug.anzahl })}</strong> {t('werkbank.export.umzug.text', { pfad: e.pfad, tage })}</>}
     {e.umzug.uebrig && <> {t('werkbank.export.umzug.uebrig')}</>}
   </> });

@@ -1,10 +1,20 @@
-import { pdfAus, type Absatz } from './pdf';
+import { notfallblattPdf } from './pdf';
 import { ohneZugangsdaten } from './sicherung';
+import { t } from './sprache';
+import { NOTFALL_HILFE, NOTFALL_HILFE_EN, NOTFALL_QR } from './notfallqr';
 import { zeitzone } from '../../shared/src/region';
 
 /**
- * Notfallblatt (#106): alles, um das DMS samt Sicherung auf einem neuen System wiederherzustellen.
- * Der Schlüssel steht nur hier (und in der Schlüsseldatei), nie in einer Sicherung.
+ * Notfallblatt (#106, neu gestaltet mit #814): eine Seite A4 in Ablago-Optik, auch in Schwarzweiß lesbar.
+ * Der Schlüssel steht nur hier (und in der Schlüsseldatei), nie in einer Sicherung – und nie als QR-Code.
+ *
+ * Aufbau: Kopf mit Logo, Name der Ablage, Datum und Version · Schlüssel groß mit Lesehilfe und Fingerabdruck ·
+ * Diese Ablage (Adresse, Ablage-Id, wo die Sicherungen liegen) · Wen fragen? · Etwas ist passiert? mit Links
+ * (immer https://) und QR-Code zur Hilfeseite. Keine Pfade oder Dateinamen aus Docker oder vom NAS: Die
+ * ausführliche Anleitung steht im Handbuch.
+ *
+ * `notfallblattPlan` stellt alle Texte zusammen (prüfbar ohne PDF); gezeichnet wird in der PDF-Stelle
+ * (`pdf/notfallblatt.ts`, im Arbeiter).
  */
 
 export interface Notfalldaten {
@@ -16,54 +26,85 @@ export interface Notfalldaten {
   /** Schlüssel als Text (base64url, 43 Zeichen). */
   schluessel: string;
   fingerabdruck: string;
-  /** Sicherungsordner im Container. */
-  sicherungsordner: string;
-  /** Ordner der Schlüsseldatei im Container. */
-  schluesselordner: string;
   /** Kopie außer Haus (#585): Paket und Adresse des Ziels – nie Zugangsdaten. */
   aussenziele?: Array<{ name: string; adresse: string | null; ziel?: string | null }>;
+  /** Notfallkontakte (#812), sobald es sie gibt: Name und wie erreichbar. Ohne: Zeilen zum Eintragen. */
+  kontakte?: Array<{ name: string; erreichbar: string }>;
 }
 
 /** In Vierergruppen, gut abschreibbar; Leerzeichen zählen bei der Eingabe nicht. */
 export const inGruppen = (s: string) => s.match(/.{1,4}/g)!.join(' ');
 
-export function notfallblatt(d: Notfalldaten): Buffer {
+/** Zeichen, die man vom Papier leicht verwechselt, und was darunter steht (Schlüssel: A–Z, a–z, 0–9, - und _). */
+export const VERWECHSELBAR: Readonly<Record<string, string>> = {
+  '0': 'null', O: 'gross-o', o: 'klein-o', l: 'klein-l', I: 'gross-i', '1': 'eins', '-': 'minus', _: 'unterstrich',
+};
+export const lesehilfe = (z: string): string | null => (VERWECHSELBAR[z] ? t.frei(`werkbank.notfallblatt.zeichen.${VERWECHSELBAR[z]}`) : null);
+
+/**
+ * Eine Adresse für das Blatt: https als Link; alles andere ohne „http://“ davor und nicht klickbar – auf dem
+ * Blatt steht nie http:// (#814). Zugangsdaten in der Adresse fallen immer weg.
+ */
+export function blattAdresse(a: string): { text: string; link?: string } {
+  const sauber = ohneZugangsdaten(a.trim());
+  if (/^https:\/\//i.test(sauber)) return { text: sauber, link: sauber };
+  return { text: sauber.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '') };
+}
+
+export interface NotfallblattPlan {
+  dokumenttitel: string;
+  kopf: { titel: string; name: string; unter: string };
+  einleitung: string;
+  schluessel: { titel: string; gruppen: Array<Array<{ zeichen: string; hilfe: string | null }>>; hinweis: string; fingerabdruckTitel: string; fingerabdruck: string; fingerabdruckHinweis: string };
+  ablage: { titel: string; zeilen: Array<{ marke: string; text: string; link?: string; mono?: boolean }>; warnung: string | null };
+  fragen: { titel: string; kontakte: Array<{ name: string; erreichbar: string }>; leer: string | null };
+  hilfe: { titel: string; text: string; links: Array<{ marke: string; url: string }>; qr: readonly string[]; qrText: string; handbuch: string };
+  fuss: string;
+}
+
+export function notfallblattPlan(d: Notfalldaten): NotfallblattPlan {
   const datum = d.erstellt.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
-  const zeile = (text: string, x: Partial<Absatz> = {}): Absatz => ({ text, ...x });
-  const absaetze: Absatz[] = [
-    zeile(`Notfallblatt – ${d.name}`, { schrift: 'fett', groesse: 18 }),
-    zeile(`Erstellt am ${datum} · Ablago ${d.version}`, { abstand: 2 }),
-    zeile('Bewahre dieses Blatt sicher auf – in einem Passwortsafe oder ausgedruckt an einem sicheren Ort, getrennt vom NAS. Wer es hat, kann deine Sicherungen lesen. Ohne den Schlüssel darauf ist keine Sicherung wiederherstellbar.', { abstand: 10 }),
+  const kurz = d.erstellt.toLocaleDateString('de-DE', { timeZone: zeitzone(), dateStyle: 'medium' });
+  const ziele = (d.aussenziele ?? []).map((z) => {
+    const ort = z.adresse ? blattAdresse(z.adresse).text : z.ziel ? blattAdresse(z.ziel).text : null;
+    return ort ? `${z.name} (${ort})` : z.name;
+  });
+  const adresse = d.adresse ? blattAdresse(d.adresse) : null;
+  return {
+    dokumenttitel: `${t('werkbank.notfallblatt.titel')} ${d.name}`,
+    kopf: { titel: t('werkbank.notfallblatt.titel'), name: d.name, unter: t('werkbank.notfallblatt.erstellt', { datum, version: d.version }) },
+    einleitung: t('werkbank.notfallblatt.einleitung'),
+    schluessel: {
+      titel: t('werkbank.notfallblatt.schluessel'),
+      gruppen: inGruppen(d.schluessel).split(' ').map((g) => [...g].map((zeichen) => ({ zeichen, hilfe: lesehilfe(zeichen) }))),
+      hinweis: t('werkbank.notfallblatt.schluessel.hinweis'),
+      fingerabdruckTitel: t('werkbank.notfallblatt.fingerabdruck'),
+      fingerabdruck: d.fingerabdruck,
+      fingerabdruckHinweis: t('werkbank.notfallblatt.fingerabdruck.hinweis'),
+    },
+    ablage: {
+      titel: t('werkbank.notfallblatt.ablage'),
+      zeilen: [
+        { marke: t('werkbank.notfallblatt.ablage.adresse'), ...(adresse ?? { text: t('werkbank.notfallblatt.ablage.adresse.keine') }) },
+        { marke: t('werkbank.notfallblatt.ablage.id'), text: d.haushaltId, mono: true },
+        { marke: t('werkbank.notfallblatt.ablage.sicherungen'), text: ziele.length ? t('werkbank.notfallblatt.ablage.sicherungen.aussen', { ziele: ziele.join(', ') }) : t('werkbank.notfallblatt.ablage.sicherungen.text') },
+      ],
+      warnung: ziele.length ? t('werkbank.notfallblatt.ablage.aussen.warnung') : null,
+    },
+    fragen: { titel: t('werkbank.notfallblatt.fragen'), kontakte: d.kontakte ?? [], leer: d.kontakte?.length ? null : t('werkbank.notfallblatt.fragen.leer') },
+    hilfe: {
+      titel: t('werkbank.notfallblatt.passiert'),
+      text: t('werkbank.notfallblatt.passiert.text'),
+      links: [{ marke: t('werkbank.notfallblatt.passiert.deutsch'), url: NOTFALL_HILFE }, { marke: t('werkbank.notfallblatt.passiert.englisch'), url: NOTFALL_HILFE_EN }],
+      qr: NOTFALL_QR,
+      qrText: t('werkbank.notfallblatt.passiert.qr'),
+      handbuch: t('werkbank.notfallblatt.passiert.handbuch'),
+    },
+    fuss: t('werkbank.notfallblatt.fuss', { name: d.name, datum: kurz }),
+  };
+}
 
-    zeile('Schlüssel', { schrift: 'fett', groesse: 13, abstand: 16 }),
-    zeile(inGruppen(d.schluessel), { schrift: 'mono', groesse: 14, abstand: 6 }),
-    zeile(`Fingerabdruck: ${d.fingerabdruck}`, { abstand: 6 }),
-    zeile('Groß- und Kleinschreibung zählen; die Leerzeichen zwischen den Gruppen nicht. Mögliche Zeichen: A–Z, a–z, 0–9, - und _.', { groesse: 9 }),
-
-    zeile('Diese Installation', { schrift: 'fett', groesse: 13, abstand: 16 }),
-    zeile(`Ablage-Id: ${d.haushaltId}`, { abstand: 4 }),
-    zeile(`Adresse: ${d.adresse || '–'}`),
-    zeile(`Sicherungen: Ordner ${d.sicherungsordner} im Container (in der Vorlage /volume1/docker/dms/sicherung auf dem NAS)`),
-    zeile(`Schlüsseldatei: Ordner ${d.schluesselordner} im Container (in der Vorlage /volume1/docker/dms/geheim)`),
-    zeile('Das Passwort der Datenbank steht in der Datei .env bzw. direkt in der docker-compose.yml (je nach Vorlage) – bewusst nicht auf diesem Blatt; bei dms-komplett gibt es keins. Für ein neues System genügt ein neues Passwort.'),
-    ...(d.aussenziele?.length ? [
-      zeile('Kopie außer Haus', { schrift: 'fett', groesse: 13, abstand: 16 }),
-      ...d.aussenziele.map((z, i) => zeile(`${z.name}: ${z.adresse ? ohneZugangsdaten(z.adresse) : z.ziel ?? 'Adresse in den Einstellungen des Pakets'}${z.ziel && z.adresse && z.ziel !== z.adresse ? ` – ${z.ziel}` : ''}`, i === 0 ? { abstand: 4 } : {})),
-      zeile('Benutzer und Passwort für das Ziel stehen bewusst nicht auf diesem Blatt – du findest sie im Passwortsafe bzw. beim Anbieter.'),
-      zeile('Der Schlüssel der Werkbank liegt nicht auf dem Ziel. Die Kopie öffnest du nur mit dem Schlüssel von diesem Blatt. Lege ihn nie „zur Sicherheit“ dazu.', { schrift: 'fett' }),
-    ] : []),
-
-    zeile('Wiederherstellen auf einem neuen System', { schrift: 'fett', groesse: 13, abstand: 16 }),
-    zeile('1. Auf dem neuen NAS die Ordner postgres, files, geheim und sicherung anlegen.', { abstand: 4 }),
-    zeile('2. Die Vorlage deploy/nas/docker-compose.yml von github.com/motom001/dms als Compose-Projekt anlegen, Pfade anpassen und daneben eine .env mit DB_PASSWORD=<neues langes Passwort> ablegen.', { einzug: 0 }),
-    zeile(`3. Die Sicherung – beide Dateien, .dms-sicherung und .json – in den Ordner sicherung kopieren${d.aussenziele?.length ? ' (fehlt das Gerät: beide vom Ziel außer Haus holen)' : ''}.`),
-    zeile('4. Ablago starten und im Browser öffnen. Der Einrichtungsassistent fragt nach dem Einrichtungscode (steht im Protokoll des Containers und in der Datei geheim/EINRICHTUNGSCODE). Dann „Aus einer Sicherung wiederherstellen“ wählen, die Sicherung auswählen und den Schlüssel von diesem Blatt eingeben.'),
-    zeile('5. Nach der Wiederherstellung startet Ablago neu; danach meldest du dich mit deinen bisherigen Zugangsdaten an.'),
-    zeile('Die Ablage-Id übernimmt Ablago beim Wiederherstellen aus der Sicherung.', { abstand: 6 }),
-    zeile(`Startet Ablago nicht mehr (z. B. nach einem Update), trage in der Compose-Datei ein älteres Image ein, etwa ghcr.io/motom001/dms:${d.version}, und starte neu.`),
-    zeile('Kommt kein Administrator mehr hinein: im Ordner geheim eine Datei RESCUE mit dem Inhalt NOTFALLZUGANG anlegen (siehe Administratorhandbuch, „Notfall: kein Admin mehr“).'),
-
-    zeile('Ausführlich im Administratorhandbuch: help.ablago.app/admin/ (Kapitel Sicherung und Wiederherstellen)', { abstand: 16, groesse: 9 }),
-  ];
-  return pdfAus(absaetze, `Notfallblatt ${d.name}`);
+/** Das Notfallblatt als PDF (eine Seite A4), gezeichnet im Arbeiter. */
+export async function notfallblatt(d: Notfalldaten): Promise<Buffer> {
+  return Buffer.from(await notfallblattPdf(notfallblattPlan(d)));
 }

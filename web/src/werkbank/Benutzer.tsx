@@ -12,6 +12,8 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
+import { SystemkontenGruppe, SystemkontoKennzeichen } from './Systemkonten';
+import { SYSTEMKONTEN_AUF } from '../../../shared/src/systemkonten';
 
 const datumZeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'noch nie');
 const status = (b: Benutzer) => (!b.aktiv ? { text: 'deaktiviert', art: '' } : !b.hatPasswort ? { text: 'eingeladen', art: 'warn' } : { text: 'aktiv', art: 'gut' });
@@ -68,6 +70,8 @@ export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[
         <label className="haken klein"><input type="checkbox" checked={zeigeDeaktivierte} onChange={(e) => d.setzeEinstellung('benutzer_deaktivierte', e.target.checked || null)} />
           <span>Deaktivierte zeigen ({deaktiviert.length})</span></label>
       )}
+      {/* Systemkonten über den Menschen, eingeklappt als Vorgabe (#817). */}
+      <SystemkontenListe offen={offen} />
       <ul className="mappenliste">
         {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neuer Benutzer</span><span className="unter">noch nicht angelegt</span></span></li>}
         {liste.map((b) => {
@@ -87,7 +91,6 @@ export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[
           );
         })}
       </ul>
-      <SystemkontenListe offen={offen} />
     </>
   );
 }
@@ -100,25 +103,30 @@ export function useSystemkonten() {
   return liste;
 }
 
+/**
+ * Systemkonten als eingeklappte Gruppe über den Benutzern (#817). Auf- oder zugeklappt merkt sich die Werkbank je
+ * Person; ist gerade ein Systemkonto geöffnet, steht die Gruppe offen.
+ */
 function SystemkontenListe({ offen }: { offen?: string }) {
   const liste = useSystemkonten();
+  const d = useDaten();
   if (!liste) return null;
+  if (!liste.length) return <p className="leise klein">{t('konten.systemkonten.leer')} <Hilfe ort="werkbank.systemkonten" /></p>;
+  const auf = d.einstellungen[SYSTEMKONTEN_AUF] === true || !!offen?.startsWith('konto-');
   return (
-    <>
-      <h3 className="h4 abschnitt">{t('konten.systemkonten.titel')} <Hilfe ort="werkbank.systemkonten" /></h3>
-      {!liste.length ? <p className="leise klein">{t('konten.systemkonten.leer')}</p> : (
-        <ul className="mappenliste">
-          {liste.map((k) => (
-            <li key={k.id}>
-              <Link to={`/werkbank/benutzer/konto-${k.id}`} className={`eintrag werk ${offen === `konto-${k.id}` ? 'an' : ''} ${k.aktiv ? '' : 'grau'}`}>
-                <span className="titel">{k.name}</span>
-                <span className="unter">{t(`konten.systemkonten.rolle.${k.rolle}`)} · {t('konten.systemkonten.nichtAnmeldbar')}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+    <SystemkontenGruppe liste={liste} auf={auf} setzeAuf={(x) => d.setzeEinstellung(SYSTEMKONTEN_AUF, x || null)} id="benutzer-systemkonten" kinder={<>
+      <p className="leise klein">{t('konten.systemkonten.beschreibung')} <Hilfe ort="werkbank.systemkonten" /></p>
+      <ul className="mappenliste">
+        {liste.map((k) => (
+          <li key={k.id}>
+            <Link to={`/werkbank/benutzer/konto-${k.id}`} className={`eintrag werk ${offen === `konto-${k.id}` ? 'an' : ''} ${k.aktiv ? '' : 'grau'}`}>
+              <span className="titel">{k.name}<SystemkontoKennzeichen k={k} /></span>
+              <span className="unter">{t(`konten.systemkonten.rolle.${k.rolle}`)} · {t('konten.systemkonten.nichtAnmeldbar')}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>} />
   );
 }
 
@@ -135,6 +143,8 @@ export function SystemkontoDetail({ id }: { id: string }) {
       <p className="leise">{t('konten.systemkonten.beschreibung')}</p>
       {k.rolle === 'paket' && <p>{k.paket ? t('konten.systemkonten.paket', { paket: k.paket }) : t('konten.systemkonten.paketEntfernt')}</p>}
       <p>{t('konten.systemkonten.rechte', { rolle })}</p>
+      {k.fehler && <div className="hinweis schlecht"><p><strong>{t.frei(`konten.systemkonten.fehler.${k.fehler}`)}</strong>{k.fehler === 'angehalten' && <> {t('konten.systemkonten.fehler.angehalten.text')}</>}</p></div>}
+      {k.weitreichend && <div className="hinweis warn"><p><strong>{t('konten.systemkonten.weitreichend')}:</strong> {t('konten.systemkonten.weitreichend.text')}</p>{k.paketId && <Link to={`/werkbank/pakete/${k.paketId}`} className="knopf klein">{t('konten.systemkonten.zum-paket')}</Link>}</div>}
       {k.rolle === 'systemkonto' && <p>{k.automatisierungen.length ? t('konten.systemkonten.automatisierungen', { liste: k.automatisierungen.map((a) => a.name).join(', ') }) : t('konten.systemkonten.keineAutomatisierungen')}</p>}
     </div>
   );

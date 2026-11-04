@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import type { Datenquelle } from '../src/datenbankabzug';
 import { speicherEinstellungen } from '../src/einstellungen';
-import { notfallblatt } from '../src/notfallblatt';
+import { notfallblatt, notfallblattPlan } from '../src/notfallblatt';
 import { schluesselRecht } from '../src/laeufer/verwaltung';
 import { ohneZugangsdaten, Sicherung, schlankeMetadaten, type ExternAnbindung, type SchlankeMetadaten } from '../src/sicherung';
 import { Tresor } from '../src/tresor';
@@ -291,16 +291,18 @@ describe('Sicherung außer Haus (#585)', () => {
   });
 
   it('Notfallblatt nennt das Ziel ohne Passwort und warnt, den Schlüssel dazuzulegen', async () => {
-    const pdf = notfallblatt({
-      name: 'Ablago', haushaltId: HAUSHALT, adresse: 'https://dms.example.org', version: '0.142.0', erstellt: new Date('2026-11-02T10:00:00Z'),
-      schluessel: 'A'.repeat(43), fingerabdruck: 'ab12', sicherungsordner: '/data/sicherung', schluesselordner: '/data/geheim',
+    const plan = notfallblattPlan({
+      name: 'Ablago', haushaltId: HAUSHALT, adresse: 'https://ablage.example.org', version: '0.142.0', erstellt: new Date('2026-11-02T10:00:00Z'),
+      schluessel: 'A'.repeat(43), fingerabdruck: 'ab12',
       aussenziele: [{ name: 'Sicherungsziel WebDAV', adresse: 'https://lena:geheim@cloud.example.org', ziel: null }],
     });
-    const hat = (t: string) => pdf.includes(Buffer.from(t, 'latin1'));
+    const alles = JSON.stringify(plan);
+    const hat = (t: string) => alles.includes(t);
     assert.ok(hat('Kopie außer Haus'));
-    assert.ok(hat('Sicherungsziel WebDAV: https://cloud.example.org'), 'Paket und Adresse');
+    assert.ok(hat('Sicherungsziel WebDAV (https://cloud.example.org)'), 'Paket und Adresse');
     assert.ok(!hat('geheim@') && !hat('lena:'), 'kein Benutzer, kein Passwort');
     assert.ok(hat('liegt nicht auf dem Ziel'));
+    assert.equal((await notfallblatt({ name: 'Ablago', haushaltId: HAUSHALT, adresse: '', version: '0.142.0', erstellt: new Date(), schluessel: 'A'.repeat(43), fingerabdruck: 'ab12' })).subarray(0, 5).toString('latin1'), '%PDF-');
   });
 
   it('Recht und Ereignis: nur zusammen, im Manifest lesbar, in der Rückfrage verständlich, Schlüssel darf nur lesen', () => {

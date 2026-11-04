@@ -202,9 +202,20 @@ describe('Anbindung und Mandant gegen PostgreSQL (#119)', { skip: !process.env.T
       try {
         await migriere(sql, new URL('../migrations', import.meta.url).pathname, () => {});
         const gemerkt: Anbindung[] = [];
+        const [{ n: designsVorher }] = await sql`SELECT count(*)::int AS n FROM designs WHERE haushalt_id = ${STANDARD_MANDANT}`;
         const neu = await bestimmeMandant(sql, { ...a }, {}, async (x) => { gemerkt.push(x); });
-        assert.deepEqual([neu.id, neu.quelle], [STANDARD_MANDANT, 'neu']);
-        assert.equal(gemerkt[0].mandant, STANDARD_MANDANT);
+        // #814: Eine neue Installation bekommt eine zufällige Ablage-Id, nicht die feste aus der ersten Migration.
+        assert.equal(neu.quelle, 'neu');
+        assert.notEqual(neu.id, STANDARD_MANDANT);
+        assert.match(neu.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        assert.equal(gemerkt[0].mandant, neu.id);
+        // Was die Migrationen für den Standard-Mandanten angelegt haben, gehört jetzt der neuen Ablage.
+        assert.ok(designsVorher > 0);
+        assert.equal((await sql`SELECT count(*)::int AS n FROM designs WHERE haushalt_id = ${neu.id}`)[0].n, designsVorher);
+        assert.equal((await sql`SELECT count(*)::int AS n FROM haushalte WHERE id = ${STANDARD_MANDANT}`)[0].n, 0);
+        // Mit der Id in der Anbindung bleibt sie beim nächsten Start dieselbe.
+        const nochmal = await bestimmeMandant(sql, { ...a, mandant: neu.id }, {}, async () => { throw new Error('nichts zu merken'); });
+        assert.deepEqual([nochmal.id, nochmal.quelle], [neu.id, 'datei']);
         // Bisherige Installation mit eigener HAUSHALT_ID: wird übernommen, Hinweis zum Entfernen
         const id = '11111111-1111-4111-8111-111111111111';
         const env = await bestimmeMandant(sql, { ...a }, { HAUSHALT_ID: id }, async () => {});

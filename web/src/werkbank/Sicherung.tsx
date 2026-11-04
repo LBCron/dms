@@ -63,22 +63,23 @@ export function useSicherung(offen: boolean) {
 export type SicherungZustand = ReturnType<typeof useSicherung>;
 
 /** Hinweise zur Sicherung – auch für die Übersicht der Werkbank (#105). */
-export function sicherungsHinweise(z: SicherungsZustand): Array<{ art: 'schlecht' | 'warn' | 'info'; text: ReactNode }> {
-  const h: Array<{ art: 'schlecht' | 'warn' | 'info'; text: ReactNode }> = [];
+/** Hinweise zur Sicherung; `schluessel` und `datum` für die Übersicht (#816: Sortierung, Akzeptieren). */
+export function sicherungsHinweise(z: SicherungsZustand): Array<{ art: 'schlecht' | 'warn' | 'info'; text: ReactNode; schluessel: string; datum?: string | null }> {
+  const h: Array<{ art: 'schlecht' | 'warn' | 'info'; text: ReactNode; schluessel: string; datum?: string | null }> = [];
   if (!z.schluessel) return h; // Ohne Schlüssel weist schon die Verschlüsselung darauf hin.
-  if (z.fehler) h.push({ art: 'schlecht', text: <><strong>Die letzte Sicherung ist fehlgeschlagen</strong> ({zeit(z.fehler.am)}): {z.fehler.grund}</> });
-  if (!z.letzte) h.push({ art: 'warn', text: <><strong>Es gibt noch keine Sicherung.</strong> Lege eine an und schalte den Zeitplan ein.</> });
-  else if (z.zuAlt) h.push({ art: 'warn', text: <><strong>Die letzte Sicherung ist älter als 2 Tage</strong> ({zeit(z.letzte.ende)}).</> });
-  if (!z.notfallblatt.aktuell && (z.letzte || z.planAktiv || z.notfallblatt.am)) h.push({ art: 'warn', text: <><strong>{z.notfallblatt.am ? 'Das Notfallblatt gehört zu einem früheren Schlüssel.' : 'Das Notfallblatt fehlt.'}</strong> Ohne den Schlüssel darauf lassen sich die Sicherungen nicht wiederherstellen.</> });
+  if (z.fehler) h.push({ schluessel: 'sicherung.fehler', datum: z.fehler.am, art: 'schlecht', text: <><strong>Die letzte Sicherung ist fehlgeschlagen</strong> ({zeit(z.fehler.am)}): {z.fehler.grund}</> });
+  if (!z.letzte) h.push({ schluessel: 'sicherung.keine', art: 'warn', text: <><strong>Es gibt noch keine Sicherung.</strong> Lege eine an und schalte den Zeitplan ein.</> });
+  else if (z.zuAlt) h.push({ schluessel: 'sicherung.alt', datum: z.letzte.ende, art: 'warn', text: <><strong>Die letzte Sicherung ist älter als 2 Tage</strong> ({zeit(z.letzte.ende)}).</> });
+  if (!z.notfallblatt.aktuell && (z.letzte || z.planAktiv || z.notfallblatt.am)) h.push({ schluessel: 'sicherung.notfallblatt', art: 'warn', text: <><strong>{z.notfallblatt.am ? 'Das Notfallblatt gehört zu einem früheren Schlüssel.' : 'Das Notfallblatt fehlt.'}</strong> Ohne den Schlüssel darauf lassen sich die Sicherungen nicht wiederherstellen.</> });
   // Probe-Wiederherstellung (#109): Ampel.
-  if (z.probe?.ampel === 'rot') h.push({ art: 'schlecht', text: <><strong>Die letzte Probe-Wiederherstellung ist fehlgeschlagen</strong> ({zeit(z.probe.letzte!.am)}): {z.probe.letzte!.info}</> });
-  else if (z.probe?.ampel === 'gelb' && z.letzte) h.push({ art: 'info', text: <><strong>{z.probe.letzte ? `Die letzte Probe-Wiederherstellung ist vom ${zeit(z.probe.letzte.am)}.` : 'Noch keine Sicherung wurde probeweise wiederhergestellt.'}</strong> Erst eine Probe zeigt, dass sich eine Sicherung im Ernstfall einspielen lässt.</> });
-  if (z.ort.volume === false) h.push({ art: 'warn', text: <><strong>Der Sicherungsordner ist kein eigenes Volume.</strong> Die Sicherungen liegen im Container und sind beim nächsten Update weg.</> });
-  else if (z.ort.gleichePlatte) h.push({ art: 'info', text: <><strong>Die Sicherungen liegen auf derselben Platte wie die Dokumente.</strong> Fällt sie aus, sind beide weg – kopiere den Sicherungsordner auf eine andere Platte oder außer Haus.</> });
+  if (z.probe?.ampel === 'rot') h.push({ schluessel: 'sicherung.probe-fehler', datum: z.probe.letzte?.am, art: 'schlecht', text: <><strong>Die letzte Probe-Wiederherstellung ist fehlgeschlagen</strong> ({zeit(z.probe.letzte!.am)}): {z.probe.letzte!.info}</> });
+  else if (z.probe?.ampel === 'gelb' && z.letzte) h.push({ schluessel: 'sicherung.probe', art: 'info', text: <><strong>{z.probe.letzte ? `Die letzte Probe-Wiederherstellung ist vom ${zeit(z.probe.letzte.am)}.` : 'Noch keine Sicherung wurde probeweise wiederhergestellt.'}</strong> Erst eine Probe zeigt, dass sich eine Sicherung im Ernstfall einspielen lässt.</> });
+  if (z.ort.volume === false) h.push({ schluessel: 'sicherung.volume', art: 'warn', text: <><strong>Der Sicherungsordner ist kein eigenes Volume.</strong> Die Sicherungen liegen im Container und sind beim nächsten Update weg.</> });
+  else if (z.ort.gleichePlatte) h.push({ schluessel: 'sicherung.gleiche-platte', art: 'info', text: <><strong>Die Sicherungen liegen auf derselben Platte wie die Dokumente.</strong> Fällt sie aus, sind beide weg – kopiere den Sicherungsordner auf eine andere Platte oder außer Haus.</> });
   // Sicherung außer Haus (#585): fehlgeschlagen bzw. mehr als 2 Tage im Rückstand.
   const x = z.extern;
-  if (x?.fehler) h.push({ art: 'schlecht', text: <><strong>{t('werkbank.sicherung.extern.hinweis.fehler', { datum: zeit(x.fehler.beginn) })}</strong> {zielName(x, x.fehler.paket)}: {x.fehler.stand.grund ?? '–'}</> });
-  else if (x?.zuAlt) h.push({ art: 'warn', text: <><strong>{t('werkbank.sicherung.extern.hinweis.alt')}</strong> {x.letzte ? t('werkbank.sicherung.extern.hinweis.letzte', { datum: zeit(x.letzte.beginn) }) : t('werkbank.sicherung.extern.hinweis.nie')}</> });
+  if (x?.fehler) h.push({ schluessel: 'sicherung.extern-fehler', datum: x.fehler.beginn, art: 'schlecht', text: <><strong>{t('werkbank.sicherung.extern.hinweis.fehler', { datum: zeit(x.fehler.beginn) })}</strong> {zielName(x, x.fehler.paket)}: {x.fehler.stand.grund ?? '–'}</> });
+  else if (x?.zuAlt) h.push({ schluessel: 'sicherung.extern-alt', art: 'warn', text: <><strong>{t('werkbank.sicherung.extern.hinweis.alt')}</strong> {x.letzte ? t('werkbank.sicherung.extern.hinweis.letzte', { datum: zeit(x.letzte.beginn) }) : t('werkbank.sicherung.extern.hinweis.nie')}</> });
   return h;
 }
 
@@ -317,7 +318,7 @@ export function Notfallblatt({ stand, schluessel, geladen }: { stand: Sicherungs
   return (
     <section className="blatt" id="notfallblatt">
       <h2 className="h3">Notfallblatt <Hilfe ort="sicherung.notfallblatt" /></h2>
-      <p>Ein PDF mit allem, was du nach einem Ausfall brauchst: den <strong>Schlüssel</strong> (in Vierergruppen zum Abschreiben), seinen Fingerabdruck, die Ablage-Id, wo die Sicherungen liegen, und die Schritte zur Wiederherstellung. Der Schlüssel steht in keiner Sicherung – bewahre das Blatt in einem Passwortsafe oder ausgedruckt an einem sicheren Ort auf, getrennt vom NAS.</p>
+      <p>{t('werkbank.notfallblatt.ui.text')}</p>
       {stand?.am && <p className="leise klein">Zuletzt heruntergeladen {zeit(stand.am)}{stand.von ? ` von ${stand.von}` : ''}.</p>}
       {stand && !stand.aktuell && stand.am && <div className="hinweis warn"><p><strong>Der Schlüssel hat sich seitdem geändert.</strong> Lade ein neues Notfallblatt herunter. Bewahre das alte auf, solange du ältere Sicherungen hast – sie brauchen den alten Schlüssel.</p></div>}
       <div className="knoepfe">

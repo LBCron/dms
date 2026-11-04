@@ -1,6 +1,5 @@
 {
   "fehler.kontorolle": "Systemkonto und Paket sind Rollen für Konten, die kein Mensch sind – sie lassen sich nicht an Benutzer vergeben.",
-  "systemkonten.titel": "Systemkonten",
   "systemkonten.beschreibung": "Konten, unter denen Ablago selbst und Pakete mit Code arbeiten. Sie melden sich nie an, haben kein Passwort und keinen API-Schlüssel und stehen in keiner Auswahl. Was sie an Mappen dürfen, legst du in den Regeln am Mappentyp mit den Rollen „Systemkonto“ und „Paket“ fest.",
   "systemkonten.leer": "Noch keine Systemkonten.",
   "systemkonten.rolle.systemkonto": "Systemkonto",
@@ -16,5 +15,23 @@
   "deaktiviert.titel": "deaktiviert",
   "deaktiviert.titel.seit": "deaktiviert seit {datum}",
   "verwaltung.hinweis": "Für die Verwaltung liegt etwas an. Melde dich als Administrator an.",
-  "verwaltung.anmelden": "Als Administrator anmelden"
+  "verwaltung.anmelden": "Als Administrator anmelden",
+  "systemkonten.gruppe_one": "Systemkonten ({anzahl})",
+  "systemkonten.gruppe_other": "Systemkonten ({anzahl})",
+  "systemkonten.gruppe.pakete_one": "{anzahl} Paket",
+  "systemkonten.gruppe.pakete_other": "{anzahl} Pakete",
+  "systemkonten.gruppe.automatisierung_one": "{anzahl} Automatisierung",
+  "systemkonten.gruppe.automatisierung_other": "{anzahl} Automatisierung",
+  "systemkonten.gruppe.fehler_one": "{anzahl} mit Fehler",
+  "systemkonten.gruppe.fehler_other": "{anzahl} mit Fehler",
+  "systemkonten.gruppe.weitreichend_one": "{anzahl} mit weitreichenden Rechten",
+  "systemkonten.gruppe.weitreichend_other": "{anzahl} mit weitreichenden Rechten",
+  "systemkonten.gruppe.auf": "Systemkonten einklappen",
+  "systemkonten.gruppe.zu": "Systemkonten aufklappen",
+  "systemkonten.fehler.deaktiviert": "deaktiviert",
+  "systemkonten.fehler.angehalten": "Automatisierung angehalten",
+  "systemkonten.fehler.angehalten.text": "Mindestens eine Automatisierung dieses Kontos ist angehalten. Unter Werkbank → Automatisierungen steht, warum.",
+  "systemkonten.weitreichend": "weitreichende Rechte",
+  "systemkonten.weitreichend.text": "Dieses Paket darf alle Mappentypen ändern oder alle lesen und dazu ins Netz. Prüfe beim Paket, ob du das so willst.",
+  "systemkonten.zum-paket": "Zum Paket"
 }

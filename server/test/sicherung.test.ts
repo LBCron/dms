@@ -244,7 +244,7 @@ describe('Sicherung mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE_URL ni
 
 describe('Notfallblatt (#106)', () => {
   it('liefert ein PDF mit Schlüssel und Fingerabdruck und merkt sich den Download', async () => {
-    const { notfallblatt, inGruppen } = await import('../src/notfallblatt');
+    const { notfallblatt, notfallblattPlan, inGruppen } = await import('../src/notfallblatt');
     const { routen } = await import('../src/routen');
     const { Dienst } = await import('../src/dienst');
     const { speicherRepo } = await import('../src/repo-speicher');
@@ -253,10 +253,12 @@ describe('Notfallblatt (#106)', () => {
     const { speicherKontoRepo } = await import('../src/konto-repo');
     assert.equal(inGruppen('abcdefghij'), 'abcd efgh ij');
     const { s, tresor } = await aufbau();
-    const pdf = notfallblatt({ name: 'Familie Muster', haushaltId: HAUSHALT, adresse: 'http://nas:8080', version: '0.20.0', erstellt: new Date(), schluessel: tresor.alsText()!, fingerabdruck: tresor.fingerabdruck!, sicherungsordner: '/data/sicherung', schluesselordner: '/data/geheim' });
+    const daten = { name: 'Familie Muster', haushaltId: HAUSHALT, adresse: 'http://nas:8080', version: '0.20.0', erstellt: new Date(), schluessel: tresor.alsText()!, fingerabdruck: tresor.fingerabdruck! };
+    const pdf = await notfallblatt(daten);
     assert.equal(pdf.subarray(0, 5).toString('latin1'), '%PDF-');
-    assert.ok(pdf.includes(Buffer.from(inGruppen(tresor.alsText()!), 'latin1')), 'Schlüssel in Vierergruppen');
-    assert.ok(pdf.includes(Buffer.from(tresor.fingerabdruck!, 'latin1')));
+    const plan = notfallblattPlan(daten);
+    assert.equal(plan.schluessel.gruppen.map((g) => g.map((z) => z.zeichen).join('')).join(' '), inGruppen(tresor.alsText()!), 'Schlüssel in Vierergruppen');
+    assert.equal(plan.schluessel.fingerabdruck, tresor.fingerabdruck);
 
     const konten = new Konten(speicherKontoRepo(), null, 'x');
     const { benutzer } = await konten.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });

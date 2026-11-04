@@ -96,14 +96,15 @@ Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das [Not
 
 ## Notfallblatt
 
-**Notfallblatt herunterladen** (hier und unter *Verschlüsselung*) erzeugt ein PDF mit allem, was du nach einem Ausfall brauchst:
+**Notfallblatt herunterladen** (hier und unter *Verschlüsselung*) erzeugt ein PDF mit allem, was du nach einem Ausfall brauchst – auf **einer Seite A4** in Ablago-Optik, auch in Schwarzweiß gut lesbar:
 
-- Name deiner Ablage, **Ablage-Id**, Adresse, Ablago-Version und Datum,
-- den **Schlüssel** in Vierergruppen zum Abschreiben und seinen **Fingerabdruck**,
-- wo die Sicherungen und die Schlüsseldatei liegen,
-- die Schritte zur Wiederherstellung auf einem neuen System – auch: „Startet Ablago nicht mehr, ein älteres Image ziehen“,
-- den Hinweis auf das Datenbank-Passwort (ohne den Wert),
-- seit 0.142 das Ziel der [Kopie außer Haus](sicherung-ausser-haus.md) (Paket und Adresse, ohne Passwort).
+1. **Kopf:** Logo, Name deiner Ablage, Datum und Ablago-Version.
+2. **Schlüssel:** groß in Vierergruppen zum Abtippen, dazu sein **Fingerabdruck**. Die Null ist durchgestrichen, und unter leicht verwechselbaren Zeichen (`0` und `O`, `l`, `I` und `1`, `-` und `_`) steht klein, welches gemeint ist. Einen QR-Code mit dem Schlüssel gibt es bewusst nicht – das wäre ein Weg mehr, an ihn zu kommen.
+3. **Diese Ablage:** Adresse, **Ablage-Id** und in einem Satz, wo die Sicherungen liegen – seit 0.142 auch das Ziel der [Kopie außer Haus](sicherung-ausser-haus.md) (Paket und Adresse, ohne Benutzer und Passwort).
+4. **Wen fragen?** Zeilen, in die du einträgst, wer dir im Ernstfall hilft.
+5. **Etwas ist passiert?** Die Links zur Hilfeseite [Was ist dir passiert?](was-ist-passiert.md) – klickbar und immer mit `https://` ausgeschrieben: `https://help.ablago.app/notfall` (Englisch `https://help.ablago.app/emergency`) – und ein **QR-Code** dazu. Scanne ihn mit dem Handy, lies dort und arbeite parallel am Computer.
+
+Ordner, Dateinamen und die Schritte zum Wiederherstellen stehen nicht auf dem Blatt, sondern hier im Handbuch unter [Wiederherstellen](wiederherstellen.md) – dort bleiben sie aktuell. Eine Adresse ohne `https://` steht ohne `http://` davor auf dem Blatt und ist nicht klickbar.
 
 ![Notfallblatt](bilder/notfallblatt.png)
 
@@ -115,7 +116,7 @@ Wo das Datenbank-Passwort steht, hängt von der Vorlage ab:
 | Synology, UGREEN, QNAP, TrueNAS, Unraid | oben in der Compose-Datei (`x-passwort`) |
 | dms-komplett | keins – die Datenbank ist nur im Container erreichbar |
 
-Das Blatt selbst nennt immer die `.env`. Für ein neues System genügt ohnehin ein neues Passwort.
+Auf dem Notfallblatt steht es nicht. Für ein neues System genügt ohnehin ein neues Passwort.
 
 **Aufbewahren:** ausgedruckt an einem sicheren Ort (z. B. bei den Familienunterlagen oder im Tresor des Betriebs) oder als PDF in einem Passwortsafe – auf jeden Fall **getrennt vom NAS** und nicht neben den Sicherungen. Wer das Blatt hat, kann die Sicherungen lesen.
 

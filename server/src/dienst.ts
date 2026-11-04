@@ -70,6 +70,7 @@ import { liesPdfA, textebeneWoerter } from './pdf';
 import { INFO_VOLLTEXT_DURCH, INFO_VOLLTEXT_PAKET, infoVolltextPaket, katalogVolltext, VOLLTEXT_ZEICHEN_MAX } from '../../shared/src/paketvolltext';
 import { jeMappe, liesModell, liesVektor, SCHWELLE_STANDARD, Vektorindex, type Treffer } from './vektoren';
 import type { PaketEntwurf } from '../../shared/src/paketerstellung';
+import { systemkontoAuffaellig, type SystemkontoFehler } from '../../shared/src/systemkonten';
 import { abfrageAus, liesSuche } from '../../shared/src/erweitertesuche';
 import type { Lesefilter } from '../../shared/src/rechte';
 import { liesAusDokument, liesFeldErkennung, type AusDokument } from '../../shared/src/erkennung';
@@ -164,7 +165,13 @@ function mitAufZeit(f: Lesefilter | null, typen: Mappentyp[], aufZeit: Array<{ m
 /** Ein Konto, das kein Mensch ist (#673), für Werkbank → Benutzer. */
 export interface SystemkontoEintrag {
   id: string; name: string; rolle: Kontorolle; aktiv: boolean; systemkonto?: string;
-  paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string }>;
+  paketId?: string; paket?: string | null; automatisierungen: Array<{ id: string; name: string; angehalten?: boolean }>;
+  /**
+   * Auffälligkeiten (#817), auch eingeklappt in der Kopfzeile sichtbar: `fehler` – Konto deaktiviert (obwohl sein
+   * Paket noch da ist) oder eine seiner Automatisierungen angehalten; `weitreichend` – das Paket darf alle Mappentypen ändern oder alle
+   * lesen und dazu ins Netz (`systemkontoAuffaellig` in shared/src/systemkonten.ts).
+   */
+  fehler?: SystemkontoFehler; weitreichend?: boolean;
 }
 export const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
 
@@ -5596,13 +5603,19 @@ export class Dienst {
    * Pakete mit ihrer Systemrolle; je Konto, welche Automatisierungen es ausführt (kommt mit #674 über `automatisierungenVon`).
    */
   async systemkontenUebersicht(system: Benutzer[], dienst: Benutzer[]): Promise<SystemkontoEintrag[]> {
-    const pakete = new Map((await this.repo.listePakete()).map((p) => [p.id, p.name]));
-    const eintrag = async (b: Benutzer, rolle: Kontorolle): Promise<SystemkontoEintrag> => ({
-      id: b.id, name: b.name, rolle, aktiv: b.aktiv,
-      ...(b.systemkonto ? { systemkonto: b.systemkonto } : {}),
-      ...(b.paketId ? { paketId: b.paketId, paket: pakete.get(b.paketId) ?? null } : {}),
-      automatisierungen: (await this.automatisierungenVon?.(b.id)) ?? [],
-    });
+    const pakete = new Map((await this.repo.listePakete()).map((p) => [p.id, p]));
+    const eintrag = async (b: Benutzer, rolle: Kontorolle): Promise<SystemkontoEintrag> => {
+      const paket = b.paketId ? pakete.get(b.paketId) ?? null : undefined;
+      const automatisierungen = (await this.automatisierungenVon?.(b.id)) ?? [];
+      const a = systemkontoAuffaellig({ aktiv: b.aktiv, rolle, paket: paket === undefined ? undefined : paket ? paket.name : null, automatisierungen, rechte: paket?.laeufer });
+      return {
+        id: b.id, name: b.name, rolle, aktiv: b.aktiv,
+        ...(b.systemkonto ? { systemkonto: b.systemkonto } : {}),
+        ...(b.paketId ? { paketId: b.paketId, paket: paket?.name ?? null } : {}),
+        automatisierungen,
+        ...(a.fehler ? { fehler: a.fehler } : {}), ...(a.weitreichend ? { weitreichend: true } : {}),
+      };
+    };
     return [...await Promise.all(system.map((b) => eintrag(b, 'systemkonto'))), ...await Promise.all(dienst.map((b) => eintrag(b, 'paket')))];
   }
   /** Systemkonten des DMS (#673), vom Start gesetzt (Konten legen sie bei Bedarf an). */
@@ -5613,7 +5626,7 @@ export class Dienst {
     return this.zugriff(await this.systemkonten(kennung));
   }
   /** Automatisierungen, die ein Konto ausführt (#674 setzt das); bis dahin keine. */
-  automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string }>>;
+  automatisierungenVon?: (kontoId: string) => Promise<Array<{ id: string; name: string; angehalten?: boolean }>>;
   /** Tägliche Zusammenfassung an einen Benutzer (#678, Dann-Karte); setzt der Server aus der Aufgaben-Mail. */
   zusammenfassungAn?: (benutzerId: string, trocken: boolean) => Promise<{ gesendet: boolean; grund: string }>;
   /** Anmeldeschutz melden (#678, Dann-Karte): Sammelmeldung bzw. Kontosperre; setzt der Server aus dem Anmeldeschutz. */
