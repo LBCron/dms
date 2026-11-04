@@ -90,7 +90,7 @@ describe('Notfallblatt (#814): Links und Inhalt', () => {
   it('Links klickbar und mit https:// – Deutsch /notfall, Englisch /emergency, die eigene Adresse', async () => {
     const pdf = await notfallblatt(daten());
     const l = await links(pdf);
-    assert.ok(l.includes(NOTFALL_HILFE) && l.includes(NOTFALL_HILFE_EN) && l.includes('https://ablage.example.org'), l.join(', '));
+    assert.ok(l.includes(NOTFALL_HILFE) && l.includes(NOTFALL_HILFE_EN) && l.some((x) => x === 'https://ablage.example.org'), l.join(', '));
     assert.ok(l.every((x) => x.startsWith('https://')));
     assert.deepEqual([NOTFALL_HILFE, NOTFALL_HILFE_EN], ['https://help.ablago.app/notfall', 'https://help.ablago.app/emergency']);
   });
@@ -101,7 +101,7 @@ describe('Notfallblatt (#814): Links und Inhalt', () => {
     const d = daten({ adresse: 'http://nas.home.arpa:8080', aussenziele: [{ name: 'Sicherungsziel SFTP', adresse: 'sftp://sicherung.example.net', ziel: null }] });
     assert.ok(!JSON.stringify(notfallblattPlan(d)).includes('http://'));
     const pdf = await notfallblatt(d);
-    assert.ok(!(await links(pdf)).includes('http://nas.home.arpa:8080'));
+    assert.ok(!(await links(pdf)).some((x) => x === 'http://nas.home.arpa:8080'));
     if (hatPdftotext) assert.ok(!textAus(pdf).includes('http://'));
   });
 
