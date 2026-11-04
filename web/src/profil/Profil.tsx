@@ -12,6 +12,7 @@ import { Link } from '../ort';
 import { FehlerMelden } from './FehlerMelden';
 import { ZweifaktorBlatt } from './Zweifaktor';
 import { MeinExport } from './MeinExport';
+import { LaufwerkBereich } from './Laufwerk';
 import { Farbfelder } from '../werkbank/Designs';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
@@ -58,10 +59,12 @@ function useFormular(fn: () => Promise<string>) {
 
 /** Bereiche der Profilseite (#69); jeder mit eigener Adresse, /profil führt zu „Konto“. */
 const BEREICHE = { konto: 'Konto', sicherheit: 'Sicherheit', darstellung: 'Darstellung', benachrichtigungen: 'Benachrichtigungen' } as const;
-type Bereich = keyof typeof BEREICHE | 'fehler-melden' | 'abwesenheit';
+type Bereich = keyof typeof BEREICHE | 'fehler-melden' | 'abwesenheit' | 'laufwerk';
 
 export function Profil({ teile = [] }: { teile?: string[] }) {
-  const b = (teile[1] && (teile[1] in BEREICHE || teile[1] === 'fehler-melden' || teile[1] === 'abwesenheit') ? teile[1] : 'konto') as Bereich;
+  const { laufwerk } = useKonto();
+  // Laufwerk (#720) nur, wenn eingeschaltet; sonst führt /profil/laufwerk zum Konto.
+  const b = (teile[1] && (teile[1] in BEREICHE || teile[1] === 'fehler-melden' || teile[1] === 'abwesenheit' || (teile[1] === 'laufwerk' && laufwerk)) ? teile[1] : 'konto') as Bereich;
   return (
     <div className="zweispaltig profil">
       <aside className="leiste" aria-label="Bereiche des Profils">
@@ -70,10 +73,11 @@ export function Profil({ teile = [] }: { teile?: string[] }) {
             <Link key={k} to={`/profil/${k}`} className={`typeintrag ${b === k ? 'an' : ''}`}><span className="nm">{BEREICHE[k]}</span></Link>
           ))}
           <Link to="/profil/abwesenheit" className={`typeintrag ${b === 'abwesenheit' ? 'an' : ''}`}><span className="nm">Abwesenheit</span></Link>
+          {laufwerk && <Link to="/profil/laufwerk" className={`typeintrag ${b === 'laufwerk' ? 'an' : ''}`}><span className="nm">{t('profil.laufwerk.bereich')}</span></Link>}
         </nav>
       </aside>
       <div className="inhalt">
-        {b === 'fehler-melden' ? <FehlerMelden /> : b === 'abwesenheit' ? <MeineAbwesenheit /> : <ProfilBereich bereich={b} />}
+        {b === 'fehler-melden' ? <FehlerMelden /> : b === 'abwesenheit' ? <MeineAbwesenheit /> : b === 'laufwerk' ? <LaufwerkBereich /> : <ProfilBereich bereich={b} />}
       </div>
     </div>
   );

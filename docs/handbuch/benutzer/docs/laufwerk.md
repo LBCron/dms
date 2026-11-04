@@ -3,13 +3,17 @@
 Du arbeitest lieber mit dem Explorer, dem Finder oder der Dateien-App? Dann binde die Ablage von Ablago als **Laufwerk** ein. Du blätterst durch Ansichten, Mappen und Register wie durch Ordner, öffnest Dokumente mit jedem Programm und legst neue Post einfach hinein – per Ziehen oder „Sichern unter“.
 
 !!! note "Erst einschalten lassen"
-    Das Laufwerk ist in Ablago zunächst **ausgeschaltet**. Dein Administrator schaltet es in der Werkbank ein und nennt dir die Adresse, etwa `https://dms.example.org/webdav/`.
+    Das Laufwerk ist in Ablago zunächst **ausgeschaltet**; dein Administrator schaltet es in der Werkbank ein. Ist es eingeschaltet, findest du alles Nötige selbst: Klick oben rechts auf deinen Namen → **Als Laufwerk einbinden**. Ist es aus, gibt es diesen Eintrag nicht.
 
 ## Was du brauchst
 
-1. **Die Adresse:** die Adresse deines Ablago mit `/webdav/` am Ende, z. B. `https://dms.example.org/webdav/`.
-2. **Einen API-Schlüssel:** Unter **Profil → Sicherheit → API-Schlüssel** erzeugst du einen neuen Schlüssel, z. B. „Laptop“. Wähle **lesen und schreiben**, wenn du Dateien ablegen willst. Kopiere den Schlüssel gleich – er ist nur jetzt ganz zu sehen.
-3. Beim Verbinden ist der **Benutzername deine E-Mail-Adresse** und das **Passwort der Schlüssel** (beginnt mit `dms_`). Dein normales Passwort funktioniert hier absichtlich nicht.
+Unter **Mein Konto → Laufwerk** (Klick oben rechts auf deinen Namen → **Als Laufwerk einbinden**) steht alles beisammen:
+
+1. **Die Adresse** deines Ablago mit `/webdav/` am Ende, z. B. `https://dms.example.org/webdav/` – mit **Kopieren** übernimmst du sie.
+2. **Der Benutzername:** deine E-Mail-Adresse.
+3. **Ein Schlüssel:** **Schlüssel für das Laufwerk anlegen** erzeugt einen API-Schlüssel, der lesen und schreiben darf. Kopiere ihn gleich – er ist nur jetzt ganz zu sehen. Er erscheint danach auch unter **Mein Konto → Sicherheit → API-Schlüssel**. Beim Verbinden ist er das **Passwort** (beginnt mit `dms_`); dein normales Passwort funktioniert hier absichtlich nicht.
+
+Darunter steht für Windows, Mac und iPhone/iPad eine kurze Anleitung zum Aufklappen – dieselbe wie hier.
 
 !!! tip "Ein Schlüssel je Gerät"
     Erzeuge für jedes Gerät einen eigenen Schlüssel. Geht ein Gerät verloren, löschst du nur dessen Schlüssel – alle anderen arbeiten weiter.

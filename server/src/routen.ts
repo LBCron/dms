@@ -477,7 +477,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       hinweise: a.benutzer && !a.sitzungsDaten?.vertretungId ? await konten.hinweise(a.benutzer.id) : [],
       // Favoriten benachrichtigen (#506): von der Werkbank für diesen Benutzer erlaubt? Sonst kein Schalter.
       favoritenBenachrichtigung: a.benutzer ? await dienst.favoritenBenachrichtigungErlaubt(a.benutzer.id) : null,
+      // Laufwerk (#720): eingeschaltet? Nur dann zeigt die Oberfläche „Als Laufwerk einbinden“.
+      laufwerk: a.benutzer && x.webdav ? (await x.webdav.einstellung()).aktiv : false,
     }) },
+    // Laufwerk für Benutzer (#720): Adresse und Benutzername; ausgeschaltet gibt es nichts.
+    { methode: 'GET', pfad: '/api/konto/laufwerk', zugang: 'angemeldet', handler: async (a) => {
+      if (!x.webdav || !(await x.webdav.einstellung()).aktiv) throw new Fachfehler(404, 'Das Laufwerk ist nicht eingeschaltet.');
+      const s = await x.webdav.stand();
+      return ok({ adresse: s.adresse, https: s.https, benutzername: ich(a).email });
+    } },
     { methode: 'POST', pfad: '/api/konto/hinweise/gesehen', zugang: 'angemeldet', handler: async (a) => {
       if (!a.sitzungsDaten?.vertretungId) await konten.hinweiseGesehen(ich(a).id);
       return leer;

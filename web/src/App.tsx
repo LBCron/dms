@@ -20,6 +20,7 @@ import { useHandbuch } from './Hilfe';
 import { Pikto } from './piktogramme';
 import { UeberDms } from './UeberDms';
 import { ADMIN_START, startseiteVon } from '../../shared/src/startseite';
+import { t } from './sprache';
 
 export function App() {
   const { pfad, suche } = useOrt();
@@ -138,7 +139,7 @@ function Hinweise() {
 
 /** Menü unter dem eigenen Namen (#69): Konto, Einstellungen, Hilfe, Fehler melden, Über das DMS (#430), Abmelden. */
 function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<void> }) {
-  const { ich, vertretung } = useKonto();
+  const { ich, vertretung, laufwerk } = useKonto();
   const handbuch = useHandbuch();
   const [offen, setOffen] = useState(false);
   const [ueber, setUeber] = useState(false);
@@ -170,6 +171,7 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
               „Mein Konto“ das Konto des vertretenen Benutzers; damit es nicht verwechselt wird, heißt es dann so. */}
           {/* Jeder Weg nur einmal (#175): Darstellung, Abwesenheit usw. sind Reiter unter „Mein Konto“. */}
           <Link to="/profil/konto" className="menuepunkt"><Pikto name="person" />{vertretung ? `Konto von ${ich.name || ich.email}` : 'Mein Konto'}</Link>
+          {laufwerk && <Link to="/profil/laufwerk" className="menuepunkt"><Pikto name="laufwerk" />{t('profil.laufwerk.menue')}</Link>}
           <a href={handbuch('benutzer')} target="_blank" rel="noreferrer" className="menuepunkt" onClick={() => setOffen(false)}><Pikto name="hilfe" />Hilfe <span aria-hidden="true">↗</span></a>
           <Link to="/profil/fehler-melden" className="menuepunkt"><Pikto name="fehler" />Fehler melden</Link>
           <button type="button" className="menuepunkt" onClick={() => { setOffen(false); setUeber(true); }}><Pikto name="info" />Über Ablago</button>

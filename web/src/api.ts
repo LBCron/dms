@@ -273,6 +273,8 @@ export interface KontoStatus {
   passwoerterMoeglich?: boolean;
   /** Zeitzone der Region (#726), z. B. Europe/Berlin. */
   zeitzone?: string;
+  /** Laufwerk eingeschaltet (#720)? */
+  laufwerk?: boolean;
   /** Ein Administrator agiert gerade als dieser Benutzer. */
   vertretung?: { adminName: string; beginn: string } | null;
   /** Wer hat als dieser Benutzer agiert (noch nicht gesehen)? */
@@ -379,6 +381,7 @@ export interface LinkErgebnis { benutzer: Benutzer; mailVerschickt: boolean; lin
 
 export const api = {
   status: () => anfrage<KontoStatus>('GET', '/api/konto/status'),
+  laufwerk: () => anfrage<{ adresse: string; https: boolean; benutzername: string }>('GET', '/api/konto/laufwerk'),
   /* Lasttest-Modus (#612) */
   lasttest: () => anfrage<LasttestStand>('GET', '/api/lasttest'),
   lasttestAngaben: (angaben: Partial<LasttestStand['angaben']>) => anfrage<LasttestStand>('POST', '/api/lasttest/angaben', angaben),
