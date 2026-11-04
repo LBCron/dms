@@ -4,15 +4,16 @@
 
 ## Aktualisieren
 
-1. Lies unter [Releases](https://github.com/motom001/dms/releases), was sich geändert hat.
-2. Schalte den [Wartungsmodus](wartungsmodus.md) ein, damit niemand mitten im Update arbeitet.
-3. Image neu ziehen und das Projekt neu starten – auf der Kommandozeile:
+1. **Vorher sichern:** **Werkbank → [Sicherung](sicherung.md) → Jetzt sichern.** Das ist dein Rückweg, falls nach dem Update etwas nicht stimmt – dauert meist nur Minuten.
+2. Lies unter [Releases](https://github.com/motom001/dms/releases), was sich geändert hat.
+3. Schalte den [Wartungsmodus](wartungsmodus.md) ein, damit niemand mitten im Update arbeitet.
+4. Image neu ziehen und das Projekt neu starten – auf der Kommandozeile:
    ```sh
    docker compose pull && docker compose up -d
    ```
    oder in der Container-Verwaltung des NAS „Projekt neu erstellen“. Bei [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) ist es nur ein Container; Datenbank und Ablago kommen mit demselben Image. Bringt ein neues Image eine neue Hauptversion von PostgreSQL mit, siehe [Wachsen und umziehen](wachsen.md#neue-hauptversion-von-postgresql).
-4. Datenbank-Migrationen laufen beim Start automatisch und in einer Transaktion: Schlägt eine fehl, bleibt die Datenbank unverändert, und der Container startet nicht. Im Container-Log steht dann der Grund.
-5. Kurz prüfen, ob alles läuft, dann den Wartungsmodus beenden.
+5. Datenbank-Migrationen laufen beim Start automatisch und in einer Transaktion: Schlägt eine fehl, bleibt die Datenbank unverändert, und der Container startet nicht. Im Container-Log steht dann der Grund.
+6. Kurz prüfen, ob alles läuft, dann den Wartungsmodus beenden.
 
 Während des Neustarts ist Ablago kurz nicht erreichbar. Offene Seiten zeigen dann oben „Ablago ist gerade nicht erreichbar“ und fragen mit wachsendem Abstand (2 bis 30 Sekunden) nach, bis es wieder antwortet. Eingaben bleiben stehen; gespeichert wird nichts automatisch. Läuft danach eine andere Version, bittet die Leiste darum, die Seite neu zu laden – sonst arbeitet der Browser mit der alten Oberfläche gegen den neuen Server weiter. Erkannt wird das an `/api/gesundheit`, das neben `ok` eine Kennung des laufenden Stands liefert (ein Hash aus Version, Commit und Build-Zeit, damit ohne Anmeldung keine Version sichtbar ist).
 
@@ -79,6 +80,8 @@ Jede Version von Ablago hat eine Nummer wie `0.8.1`. Sobald auf `main` eine neue
 ## Sichern
 
 Am einfachsten sichert Ablago sich selbst: **Werkbank → [Sicherung](sicherung.md)** – Datenbank und Dateien zum selben Zeitpunkt, verschlüsselt, auf Wunsch nach Zeitplan. Der Rest dieses Abschnitts beschreibt den Weg von Hand, z. B. für eine zusätzliche Kopie.
+
+Die Sicherung ist ein eigenes, verschlüsseltes Format – zum Wiederherstellen brauchst du Ablago. Eine Kopie, die du **auch ohne Ablago** lesen kannst, ist der [Vollexport](export.md) in offenen Formaten (CSV, JSON, Dateien in Ordnern).
 
 Von Hand zu sichern sind diese Ordner aus der Compose-Vorlage:
 

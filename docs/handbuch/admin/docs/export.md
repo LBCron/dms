@@ -1,6 +1,6 @@
 # Daten exportieren
 
-**Deine Daten gehören dir.** Unter **Werkbank → Vollexport** schreibt Ablago alle Daten in offenen Formaten in einen Ordner, den du ohne Ablago lesen und mit anderen Programmen weiterverarbeiten kannst – kein Vendor-Lock-in.
+**Deine Daten gehören dir.** Unter **Werkbank → Vollexport** schreibt Ablago alle Daten in offenen Formaten in einen Ordner, den du ohne Ablago lesen und mit anderen Programmen weiterverarbeiten kannst – du bist nie an Ablago gebunden.
 
 | | Wofür | Format |
 | --- | --- | --- |
