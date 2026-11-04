@@ -2986,7 +2986,7 @@
 <p>Der Schlüssel verschlüsselt gespeicherte Passwörter und alle Sicherungen (siehe <a href="../verschluesselung/">Verschlüsselung</a>); das <a href="../sicherung/#notfallblatt">Notfallblatt</a> enthält ihn zum Ausdrucken. Druck es aus und leg es zu deinen wichtigen Unterlagen – ohne Schlüssel lässt sich keine Sicherung zurückholen.</p>
 <h3 id="pakete-dazuholen">Pakete dazuholen<a class="headerlink" href="#pakete-dazuholen" title="Permanent link">&para;</a></h3>
 <p><img alt="Pakete dazuholen" src="../bilder/einrichtung-pakete.png" /></p>
-<p>Erst in diesem Schritt fragt Ablago den <a href="../pakete/">offiziellen Paketkatalog</a> ab – vorher baut es keine Verbindung dafür auf. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.</p>
+<p>Erst in diesem Schritt fragt Ablago den <a href="../pakete/">offiziellen Paketkatalog</a> ab – vorher baut es keine Verbindung dafür auf. Die Anfrage geht an catalog.ablago.app (ausgeliefert von GitHub Pages); dabei geht nur die Anfrage selbst hinaus, keine Daten aus deiner Ablage. Die Liste zeigt je Paket Name, Beschreibung und was es anlegt; Pakete mit Code tragen „mit Code“.</p>
 <ul>
 <li><strong>Texterkennung ist vorausgewählt</strong> – ohne sie werden gescannte Dokumente nicht durchsuchbar. Darunter fragt <strong>Weitere Sprachen?</strong> nach Zusatzsprachen (Deutsch und Englisch sind immer dabei). Alles andere kreuzt du an.</li>
 <li><strong>Abhängigkeiten kommen mit</strong>, z. B. „Basis“ für „Haushalt“; sie sind mit „kommt mit – gebraucht von …“ markiert.</li>
@@ -3024,6 +3024,7 @@
 <p>Die Abfragen, die gerade in der Datenbank laufen, mit Dauer, Zustand und Prozess – alle fünf Sekunden aktualisiert. Laufen welche schon länger als die Schwelle, weist ein Hinweis darauf hin.</p>
 <h2 id="e-mail-und-adresse">E-Mail und Adresse<a class="headerlink" href="#e-mail-und-adresse" title="Permanent link">&para;</a></h2>
 <p>Unter <strong>Werkbank → E-Mail und Adresse</strong> stellst du ein, was früher Umgebungsvariablen waren. Änderungen gelten sofort, ohne Neustart.</p>
+<p>Über den Mailserver gehen nur Mails, die jemand auslöst oder einschaltet: versandte Mappen samt Dokumenten, die <a href="../aufgaben/#tagliche-zusammenfassung">Tägliche Zusammenfassung</a> (Mappentitel und Links), Einladungen und Passwort-Links sowie <a href="../datenschutz/">Auskünfte</a> und Abruf-Links. Eine Übersicht aller Wege steht unter <a href="../datenschutz/#was-deine-ablage-verlasst">Was deine Ablage verlässt</a>.</p>
 <p><img alt="E-Mail und Adresse in der Werkbank" src="../bilder/werkbank-betrieb.png" /></p>
 <ul>
 <li><strong>Adresse von Ablago</strong> – unter dieser Adresse öffnen die Benutzer Ablago, z. B. <code>http://nas.local:8080</code> oder <code>https://dms.example.org</code>. Sie steht in den Links der E-Mails. Solange keine gepflegt ist, nimmt Ablago die Adresse, unter der es gerade aufgerufen wird; <strong>Diese Adresse übernehmen</strong> speichert sie. Beginnt sie mit <code>https://</code>, gilt die Anmeldung nur noch über HTTPS.</li>

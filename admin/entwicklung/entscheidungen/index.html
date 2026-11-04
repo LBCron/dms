@@ -3094,7 +3094,7 @@
 <li><strong>Texterkennung als Paket (#458, #459, seit 0.134):</strong> Tesseract steckt nicht mehr im Image. Der Kern liest nur die Textebene und meldet jedes Dokument mit dem Ereignis „Volltext fertig“; Scans und Fotos erkennt das Paket <strong>Texterkennung</strong> (Tesseract als WebAssembly im Paket-Läufer). Gründe: ein schlankeres Image für alle, die keine Scans haben, Updates von Tesseract und Sprachdaten unabhängig von Ablago, weitere Sprachen als Zusatzpakete statt eigener Images. Der Preis: Das Paket ist etwa ein Drittel langsamer als Tesseract nativ (ein Thread) (siehe <a href="../texterkennung/#texterkennung-als-paket">Texterkennung</a>). Schwärzen findet Wörter nur noch in der Textebene; gescannte Seiten schwärzt man mit Bereichen.</li>
 <li><strong>Gleicher Inhalt, gleicher Text</strong>: Dateien sind über ihren Prüfwert bekannt; ein schon erkannter Text wird übernommen.</li>
 <li><strong>Deutsche Volltextsuche von PostgreSQL</strong> (<code>to_tsvector('german', …)</code>, GIN-Index, <code>websearch_to_tsquery</code>): findet Wortformen; die Fundstelle kommt aus <code>ts_headline</code> mit Steuerzeichen als Markierung – nie als HTML.</li>
-<li>Office-Dokumente und externe Dienste kommen später.</li>
+<li>Office-Dokumente lesen inzwischen Pakete wie „Office und E-Mail“. Die Texterkennung läuft weiter nur auf dem eigenen Gerät – ein externer Dienst ist nicht geplant („Denkt mit, auf deinem Gerät“).</li>
 </ul>
 <h2 id="sprache-automatisch-erkennen-395">Sprache automatisch erkennen (#395)<a class="headerlink" href="#sprache-automatisch-erkennen-395" title="Permanent link">&para;</a></h2>
 <ul>
