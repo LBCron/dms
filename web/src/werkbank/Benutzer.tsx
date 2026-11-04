@@ -75,7 +75,7 @@ export function BenutzerListe({ liste: alle, offen }: { liste: Benutzer[]; offen
           return (
             <li key={b.id}>
               <Link to={`/werkbank/benutzer/${b.id}`} className={`eintrag werk ${offen === b.id ? 'an' : ''} ${b.aktiv ? '' : 'grau'}`}>
-                <span className="titel">{b.name || b.email}{b.id === ich.id && <span className="chip">du</span>}</span>
+                <span className="titel">{b.aktiv ? b.name || b.email : <span className="person-ehemalig">{b.name || b.email}</span>}{b.id === ich.id && <span className="chip">du</span>}</span>
                 <span className="unter">{b.email} · {ROLLEN[b.rolle]}</span>
                 <span className="unter">Letzte Anmeldung: {datumZeit(b.letzteAnmeldung)}</span>
                 <span><span className={`chip ${s.art}`}>{s.text}</span>{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
@@ -248,7 +248,7 @@ function ZugangSperren({ b, selbst, loeschbar, aktion }: { b: Benutzer; selbst: 
       <h2 className="h3">Zugang sperren <Hilfe ort="benutzer.sperren" /></h2>
       <ul className="leise">
         <li>Der Zugang ist sofort gesperrt, alle Sitzungen werden beendet.</li>
-        <li>Die Mappe bleibt erhalten und heißt „{name} (ehemalig)“; Verweise und „angelegt von“ bleiben gültig.</li>
+        <li>Die Mappe bleibt erhalten; der Name erscheint überall durchgestrichen. Verweise und „angelegt von“ bleiben gültig.</li>
         <li>Der Vertreter bleibt hinterlegt und bekommt dauerhaft, was noch für {name} entsteht (z. B. „passt nicht“ an Mappen, die {name} angelegt hat).</li>
         <li><strong>Aktivieren</strong> macht es jederzeit rückgängig.</li>
       </ul>

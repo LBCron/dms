@@ -136,7 +136,7 @@ describe('Mappentyp Benutzer (#26)', () => {
     assert.equal(neu.werte.telefon, '0351 123');
   });
 
-  it('deaktiviert statt zu löschen; Verweise bleiben, der Titel sagt „ehemalig“', async () => {
+  it('deaktiviert statt zu löschen; Verweise bleiben, der Titel bleibt der Name (#663)', async () => {
     const { dienst, konten, admin, benutzerTyp } = await aufbau();
     const vertrag = await dienst.legeTypAn({ name: 'Vertrag', felder: [
       { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true },
@@ -154,11 +154,34 @@ describe('Mappentyp Benutzer (#26)', () => {
     await konten.aendereBenutzer(admin, r.benutzer.id, { aktiv: false });
     const paul = (await dienst.holeMappe(r.benutzer.id)).mappe;
     assert.equal(paul.werte.aktiv, false);
-    assert.equal(paul.titel, 'Paul (ehemalig)');
-    assert.equal((await dienst.holeMappe(v.id)).bezuege[r.benutzer.id].titel, 'Paul (ehemalig)');
+    assert.equal(paul.titel, 'Paul');
+    assert.equal((await dienst.holeMappe(v.id)).bezuege[r.benutzer.id].titel, 'Paul');
     await wirft(konten.loescheBenutzer(admin, r.benutzer.id), 409, /deaktiviert statt gelöscht/);
     await konten.aendereBenutzer(admin, r.benutzer.id, { aktiv: true });
     assert.equal((await dienst.holeMappe(r.benutzer.id)).mappe.titel, 'Paul');
+  });
+
+  it('setzt alte Titel „… (ehemalig)“ beim Start zurück, auch in verweisenden Mappen (#663)', async () => {
+    const repo = speicherRepo();
+    const dienst = new Dienst(repo, speicherDateien());
+    const konten = new Konten(speicherKontoRepo(), null, 'http://nas:3000', dienst.benutzerspiegel());
+    const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Anna Admin', passwort: 'ein-langes-passwort' });
+    const benutzerTyp = (await dienst.listeTypen()).find((t) => t.system === 'benutzer')!;
+    const notiz = await dienst.legeTypAn({ name: 'Notiz', titelVorlage: 'Notiz für {an}', felder: [{ key: 'an', label: 'An', typ: 'referenz', zielTyp: benutzerTyp.id }] });
+    const r = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, admin.id);
+    const echt = await konten.legeBenutzerAn({ email: 'petra@example.org', name: 'Petra (ehemalig)', rolle: 'mitglied' }, admin.id);
+    const n = await dienst.legeMappeAn({ typId: notiz.id, werte: { an: r.benutzer.id } }, admin.id);
+    await konten.passwortSetzen({ schluessel: linkSchluessel(r.link!), passwort: 'passwort-von-jonas' });
+    await konten.setzeAbwesenheit(admin, r.benutzer.id, { an: false, vertreterId: admin.id });
+    await konten.aendereBenutzer(admin, r.benutzer.id, { aktiv: false });
+    // Stand einer älteren Version nachbauen: gespeicherte Titel mit Zusatz.
+    await repo.setzeTitel([{ id: r.benutzer.id, titel: 'Jonas (ehemalig)' }, { id: n.id, titel: 'Notiz für Jonas (ehemalig)' }]);
+    assert.equal(await dienst.ehemaligZuruecksetzen(), 1);
+    assert.equal((await dienst.holeMappe(r.benutzer.id)).mappe.titel, 'Jonas');
+    assert.equal((await dienst.holeMappe(n.id)).mappe.titel, 'Notiz für Jonas');
+    // Wer wirklich so heißt und aktiv ist, bleibt unberührt; ein zweiter Lauf findet nichts mehr.
+    assert.equal((await dienst.holeMappe(echt.benutzer.id)).mappe.titel, 'Petra (ehemalig)');
+    assert.equal(await dienst.ehemaligZuruecksetzen(), 0);
   });
 
   it('löscht eine nie angenommene Einladung samt Mappe', async () => {
@@ -233,10 +256,10 @@ describe('Mappentyp Rolle (#27)', () => {
     assert.deepEqual(steuerDetails.rueckverweise.map((x) => [x.titel, x.feldKey]), [['Bea', 'rollen']]);
     const adminRolle = await dienst.holeMappe(sys.admin);
     assert.deepEqual(adminRolle.rueckverweise.map((x) => x.titel).sort(), ['Anna Admin', 'Bea']);
-    // Deaktiviert: bleibt in der Rolle sichtbar, als ehemalig.
+    // Deaktiviert: bleibt in der Rolle sichtbar, unter seinem Namen (#663).
     await konten.setzeAbwesenheit(admin, r.benutzer.id, { vertreterId: admin.id });
     await konten.aendereBenutzer(admin, r.benutzer.id, { aktiv: false });
-    assert.deepEqual((await dienst.holeMappe(steuer.id)).rueckverweise.map((x) => x.titel), ['Bea (ehemalig)']);
+    assert.deepEqual((await dienst.holeMappe(steuer.id)).rueckverweise.map((x) => x.titel), ['Bea']);
   });
 
   it('Rolle mit Benutzern löschen: Zuordnungen fallen weg; Verweise aus Feldern blockieren', async () => {

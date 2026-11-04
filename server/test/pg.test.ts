@@ -523,7 +523,8 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     assert.equal(aus.status, 200, JSON.stringify(aus.body));
     assert.ok(aus.body.deaktiviert, 'Datum der Deaktivierung (Migration 025)');
     assert.equal((await anfrage('GET', `/api/mappen/${mitglied.id}`)).body.mappe.werte.vertreter, admin.id);
-    assert.match((await anfrage('GET', `/api/mappen/${mitglied.id}`)).body.mappe.titel, /\(ehemalig\)$/);
+    assert.doesNotMatch((await anfrage('GET', `/api/mappen/${mitglied.id}`)).body.mappe.titel, /ehemalig/, 'Titel bleibt der Name (#663)');
+    assert.ok((await anfrage('GET', '/api/personen')).body.find((p: { id: string; deaktiviert?: string }) => p.id === mitglied.id)?.deaktiviert, 'Datum für den Tooltip (#663)');
     assert.equal((await anfrage('PUT', `/api/benutzer/${mitglied.id}`, { aktiv: true })).status, 200);
     const doc = JSON.parse((await app.inject({ method: 'GET', url: '/api/openapi.json' })).body);
     assert.ok(doc.paths['/rollen'].get);

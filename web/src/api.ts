@@ -361,7 +361,7 @@ export interface WhAbgleich {
 export interface ProbeStand { ampel: 'gruen' | 'gelb' | 'rot' | null; letzte: { name: string; am: string; ok: boolean; info: string } | null; plan: { aktiv: boolean; wochentag: number; uhrzeit: string } }
 export interface WartungWerkbank extends WartungOeffentlich { beginn: string | null; von: string | null; sitzungen: WartungSitzung[]; /** „Jetzt sofort gesperrt“ (#402) */ sofort?: boolean }
 /** Benutzer für Namen und Empfängerauswahl; abwesend, solange die Abwesenheit an ist (#78). */
-export interface Person { id: string; name: string; aktiv?: boolean; /** Dienstkonto eines Pakets (#338) bzw. Systemkonto (#673) */ art?: 'dienst' | 'system'; abwesend?: { wirkt: boolean; von: string | null; bis: string | null; vertreter: string } }
+export interface Person { id: string; name: string; aktiv?: boolean; /** Datum der Deaktivierung (#663) */ deaktiviert?: string | null; /** Dienstkonto eines Pakets (#338) bzw. Systemkonto (#673) */ art?: 'dienst' | 'system'; abwesend?: { wirkt: boolean; von: string | null; bis: string | null; vertreter: string } }
 /** Werkbank: tägliche Zusammenfassung (#54, #92, #94). */
 export interface MailEinstellung { aktiv: boolean; uhrzeit: string; bundesland: string | null }
 export interface Zusammenfassung {

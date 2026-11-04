@@ -22,7 +22,7 @@ import { Aktionsmenue, Druckansicht, EmailMaske } from './Aktionen';
 import { LoeschBaum } from './LoeschBaum';
 import { PostLeiste } from './Post';
 import { linkZuMappe } from '../../../shared/src/direktlink';
-import { Person } from '../Person';
+import { Ehemalig, Person } from '../Person';
 import { Dokumente, type NeueDatei } from './Dokumente';
 import { AehnlicheDokumente } from './Aehnlich';
 import { hinweis, rueckfrage } from '../rueckfrage';
@@ -112,7 +112,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
       <div className="mappenkopf">
         <p className="ueber">{typ.name}</p>
         {/* Kopfzeile (#427): „Mappe ▾“ neben dem Stern – gehört sichtbar zur Mappe, nicht zum Aufgaben-Banner. */}
-        <div className="titelzeile"><h1>{titelOder(mappe.titel)}</h1>
+        <div className="titelzeile"><h1><Ehemalig id={mappe.id}>{titelOder(mappe.titel)}</Ehemalig></h1>
           <div className="mappenkopf-knoepfe">
             <Stern mappeId={mappe.id} an={!!details.favorit} />
             <Aktionsmenue aufgabe={() => setAufgabeOffen(true)} erinnern={() => setErinnernOffen(true)} email={details.exportierbar === false ? undefined : () => setEmailOffen(true)} drucken={details.exportierbar === false ? undefined : () => setDrucken(true)}
@@ -701,7 +701,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
     const ids = f.typ === 'referenz' ? (Array.isArray(roh) ? roh as string[] : roh ? [String(roh)] : []) : [];
     ctl = <div className="festwert" title={gesperrt}>{
       f.typ === 'referenz'
-        ? <ul>{ids.map((x) => <li key={x}>{bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis">{titelOder(bekannt[x].titel)}</Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : ''}>{titelOder(bekannt[x]?.titel)}</span>}</li>)}</ul>
+        ? <ul>{ids.map((x) => <li key={x}>{bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis"><Ehemalig id={x}>{titelOder(bekannt[x].titel)}</Ehemalig></Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : ''}>{titelOder(bekannt[x]?.titel)}</span>}</li>)}</ul>
         : f.typ === 'janein' ? (roh ? 'Ja' : 'Nein') : f.typ === 'formatiert' ? <Formatiert text={String(roh ?? '')} />
         : f.typ === 'datum' ? formatiere(f, String(roh ?? '')) : f.typ === 'langtext' ? <span className="mehrzeilig">{String(roh ?? '')}</span>
         : f.typ === 'text' && f.format ? <FormatWert f={f} wert={String(roh ?? '')} /> : String(roh ?? '')
@@ -925,7 +925,7 @@ function LoeschKnopf({ sperre, loeschen, wege }: { sperre?: Loeschsperre; loesch
         <div className="loeschwahl-begruendung klein" id="loeschwahl-begruendung" role="region" aria-label="Warum sich die Mappe nicht löschen lässt">
           <p><strong>Löschen nicht möglich:</strong> {sperre.grund}</p>
           {zeige.length > 0 && <ul>{zeige.map((r) => (
-            <li key={r.quelleId}>{r.verborgen ? <span className="verborgen-titel">{r.titel}</span> : <Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis">{titelOder(r.titel)}</Link>} <span className="leise">({d.typ(r.quelleTypId)?.name ?? 'Mappe'})</span></li>
+            <li key={r.quelleId}>{r.verborgen ? <span className="verborgen-titel">{r.titel}</span> : <Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link>} <span className="leise">({d.typ(r.quelleTypId)?.name ?? 'Mappe'})</span></li>
           ))}{quellen.length > zeige.length && <li className="leise">und {quellen.length - zeige.length} weitere</li>}</ul>}
           {wege && <div className="loeschwahl-wege"><p className="leise">Stattdessen:</p>{wege}</div>}
         </div>
@@ -992,7 +992,7 @@ function Trefferliste({ treffer }: { treffer: Rueckverweis[] }) {
   const sichtbar = alle ? treffer : treffer.slice(0, 100);
   return (
     <>
-      <ul>{sichtbar.map((r) => <li key={r.quelleId + r.feldKey}><Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis">{titelOder(r.titel)}</Link></li>)}</ul>
+      <ul>{sichtbar.map((r) => <li key={r.quelleId + r.feldKey}><Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link></li>)}</ul>
       {sichtbar.length < treffer.length && <button type="button" className="textknopf" onClick={() => setAlle(true)}>Alle {treffer.length.toLocaleString('de-DE')} zeigen</button>}
     </>
   );
@@ -1070,7 +1070,7 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
       waehle={(mid) => { const m = auswahl.find((x) => x.id === mid); if (m) waehle(m); }}
       gewaehlt={gewaehlt.map((x) => ({
         id: x,
-        inhalt: bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis">{titelOder(bekannt[x].titel)}</Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : 'leise'}>{bekannt[x]?.titel ?? t('felder.auswahl.lade')}</span>,
+        inhalt: bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis"><Ehemalig id={x}>{titelOder(bekannt[x].titel)}</Ehemalig></Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : 'leise'}>{bekannt[x]?.titel ?? t('felder.auswahl.lade')}</span>,
         zusatz: unpassend.includes(x) && <span className="chip warn" title={t('felder.verweis.unpassend.titel')}>{t('felder.verweis.unpassend')}</span>,
         aktionen: !mehrfach && !aendern && <button type="button" className="textknopf klein" onClick={() => { setAendern(true); setOffen(true); }}>{t('felder.verweis.aendern')}</button>,
         entfernenText: bekannt[x] ? t('felder.verweis.entfernen', { titel: titelOder(bekannt[x].titel) }) : t('felder.verweis.entfernen.ohne'),

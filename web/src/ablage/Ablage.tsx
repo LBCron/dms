@@ -30,6 +30,7 @@ import { mitGrund } from './Loeschgrund';
 import { rueckfrage } from '../rueckfrage';
 import { ZahlWarte } from './ZahlWarte';
 import { AnstehendSicht, useAnstehend, useAnstehendAnsicht } from './Anstehend';
+import { Ehemalig } from '../Person';
 
 /**
  * Ablage in drei Spalten, von groß nach klein:
@@ -479,7 +480,7 @@ function Liste(p: {
                     {wahl && !m.verborgen && <Wahlhaken an={wahl.gewaehlt.has(m.id)} titel={k.titel} waehle={(an, bereich) => wahl.waehle(i, an, bereich)} />}
                     {m.verborgen ? <span /> : <Stern mappeId={m.id} an={s.favoriten.has(m.id)} titel={k.titel} klein />}
                     <Link to={`/ablage/${p.sicht}/${m.id}${anhang}`} className={`eintrag ${p.offen === m.id ? 'an' : ''}`}>
-                      <span className={`titel ${m.verborgen ? 'verborgen-titel' : ''}`}>{s.geaendert.has(m.id) && <GeaendertPunkt />}{m.verborgen ? 'Nicht sichtbare Mappe' : k.titel}
+                      <span className={`titel ${m.verborgen ? 'verborgen-titel' : ''}`}>{s.geaendert.has(m.id) && <GeaendertPunkt />}{m.verborgen ? 'Nicht sichtbare Mappe' : <Ehemalig id={m.id}>{k.titel}</Ehemalig>}
                         {/* Archivmodus (#212): Hinweis, solange die Frist läuft. */}
                         {!m.verborgen && typ?.archiv && inFrist(aufbewahrenBis(typ.archiv, m)) && <> <span className="chip archiv klein" title={`Archiv – aufbewahren bis ${datumText(aufbewahrenBis(typ.archiv, m)!)}`}>Archiv</span></>}</span>
                       <Unter text={k.unter} />
@@ -575,7 +576,7 @@ function Tabelle(p: {
                   const text = zelle(k, m, typ, p.bezuege, d.person);
                   // Post ohne Absender (#494): „–“ als Hinweis zum Ergänzen beim Zuordnen.
                   const fehlt = i > 0 && k === 'absender' && absenderFehlt(typ, m);
-                  return <td key={k} className={rechts(k) ? 'rechts' : kurz(k) ? 'kurz' : ''}>{i === 0 ? <>{p.geaendert?.has(m.id) && <GeaendertPunkt />}<Link to={ziel}>{text || titelOder(m.titel)}</Link>{p.ausschnitte?.[m.id] && <Fundstelle a={p.ausschnitte[m.id]} />}</> : fehlt ? <span className="leise" title="Absender fehlt – trag ihn beim Zuordnen ein">–</span> : text}</td>;
+                  return <td key={k} className={rechts(k) ? 'rechts' : kurz(k) ? 'kurz' : ''}>{i === 0 ? <>{p.geaendert?.has(m.id) && <GeaendertPunkt />}<Link to={ziel}><Ehemalig id={m.id}>{text || titelOder(m.titel)}</Ehemalig></Link>{p.ausschnitte?.[m.id] && <Fundstelle a={p.ausschnitte[m.id]} />}</> : fehlt ? <span className="leise" title="Absender fehlt – trag ihn beim Zuordnen ein">–</span> : text}</td>;
                 })}
                 {p.sicht === 'eingang' && <td className="problemzelle">{p.aufgaben?.[m.id] ?? m.problem}</td>}
               </tr>

@@ -453,7 +453,7 @@ export class Konten {
       const a = b.abwesenheit;
       const abwesend = a?.an && (!a.bis || a.bis >= heute)
         ? { wirkt: abwesenheitWirkt(a, heute), von: a.von, bis: a.bis, vertreter: name(a.vertreterId) } : undefined;
-      return { id: b.id, name: b.name || b.email, aktiv: b.aktiv, ...(abwesend ? { abwesend } : {}) };
+      return { id: b.id, name: b.name || b.email, aktiv: b.aktiv, ...(!b.aktiv && b.deaktiviert ? { deaktiviert: b.deaktiviert } : {}), ...(abwesend ? { abwesend } : {}) };
     }).concat(
       // Dienstkonten der Pakete (#338): nur für Namen in Historie und „angelegt von“ – nie auswählbar (aktiv: false).
       (await this.repo.listeDienstkonten()).map((b) => ({ id: b.id, name: b.name, aktiv: false, art: 'dienst' as const })),

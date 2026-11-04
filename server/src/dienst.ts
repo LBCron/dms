@@ -1605,7 +1605,7 @@ export class Dienst {
 
   private async name(benutzerId: string | null): Promise<string> {
     if (!benutzerId) return 'Administratoren';
-    return (await this.repo.titelVon([benutzerId])).get(benutzerId)?.replace(/ \(ehemalig\)$/, '') || 'unbekannt';
+    return (await this.repo.titelVon([benutzerId])).get(benutzerId) || 'unbekannt';
   }
 
   /** Ein aktiver Benutzer (seine Benutzer-Mappe), sonst 422. */
@@ -4116,6 +4116,18 @@ export class Dienst {
   async titelNachziehen(): Promise<number> {
     const ids = await this.repo.ohneTitel();
     await this.aktualisiereTitel(ids);
+    return ids.length;
+  }
+
+  /**
+   * Beim Start (#663): Bis 0.159 hieß die Mappe eines deaktivierten Benutzers „… (ehemalig)“. Diese Titel
+   * aus der Vorlage neu berechnen – samt Mappen, deren Titel den Namen enthält. Danach findet sich nichts mehr.
+   */
+  async ehemaligZuruecksetzen(): Promise<number> {
+    const typ = (await this.repo.listeTypen()).find((t) => t.system === 'benutzer');
+    if (!typ) return 0;
+    const ids = (await this.repo.listeMappen(typ.id)).filter((m) => m.werte.aktiv === false && / \(ehemalig\)$/.test(m.titel ?? '')).map((m) => m.id);
+    if (ids.length) await this.aktualisiereTitel(ids);
     return ids.length;
   }
 

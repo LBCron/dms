@@ -457,6 +457,9 @@ const nachgezogen = await dienst.titelNachziehen();
 if (nachgezogen) log.info(`Titel von ${nachgezogen} Mappen berechnet`);
 // Systemtypen Benutzer und Rolle anlegen und jedem Benutzer seine Mappe geben (auch nach einem Update).
 await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
+// Titel „… (ehemalig)“ aus älteren Versionen zurücksetzen (#663); deaktiviert zeigt die Oberfläche durchgestrichen.
+const ehemalig = await dienst.ehemaligZuruecksetzen();
+if (ehemalig) log.info(`Titel von ${ehemalig} deaktivierten Benutzern ohne „(ehemalig)“ neu berechnet`);
 // Systemkonto „Automatisierung“ (#673): sichtbar, nie anmeldbar; Automatisierungen (#674) laufen darunter.
 await konten.systemkonto('automatisierung');
 dienst.systemkonten = (k) => konten.systemkonto(k);
