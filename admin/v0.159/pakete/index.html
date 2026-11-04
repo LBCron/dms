@@ -3762,7 +3762,7 @@
 </tr>
 </tbody>
 </table>
-<p>Schlägt ein <strong>Update</strong> fehl, bleibt die alte Version mit ihrem alten Code installiert. Den Code aller Dateien unter <code>code/</code> begrenzt Ablago auf <strong>32 MB je Paket</strong>.</p>
+<p>Schlägt ein <strong>Update</strong> fehl, bleibt die alte Version mit ihrem alten Code installiert. Ein Paket darf höchstens <strong>128 MB</strong> groß sein – das gilt für das Archiv beim Herunterladen, Hochladen und in der Sammeldatei ebenso wie für alle Dateien unter <code>code/</code> zusammen. Ist ein Paket größer, nennt Ablago Größe und Grenze und lädt es gar nicht erst herunter.</p>
 <p><strong>Entfernen</strong> beendet den Code, löscht seine offenen Ereignisse und seinen Speicher und schaltet das Dienstkonto ab.</p>
 <div class="admonition note">
 <p class="admonition-title">Volltext aus einem Paket</p>
@@ -3972,7 +3972,7 @@
 <p>Im Expertenmodus kannst du:</p>
 <ul>
 <li><strong>Weitere Quellen</strong> – Katalogadressen hinzufügen, abschalten und entfernen, höchstens 20. Erlaubt ist nur HTTPS, das Format ist dasselbe wie beim offiziellen Katalog (<code>katalog.json</code> der Registry). Wie ein Katalog mit <strong>eigenem Schlüssel</strong> behandelt wird, steht <a href="#katalog-mit-eigenem-schlussel">unten</a>. <strong>Katalog abrufen</strong> fragt neben dem offiziellen Katalog alle <strong>eingeschalteten</strong> weiteren Kataloge ab – egal, ob der Abschnitt gerade auf- oder zugeklappt ist; ihre Pakete tragen die Adresse als Kennzeichen. Willst du eine Quelle nicht mehr nutzen, schalte sie ab oder entferne sie. Ohne weitere Quellen gibt es nur den offiziellen Katalog.</li>
-<li>Ein <strong>Paket als Datei hochladen</strong> (<code>.zip</code> im Format der Registry, z. B. der Paketordner gepackt, höchstens 10 MB). Ablago prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau. Eine <a href="#pakete-ohne-internet-installieren">Sammeldatei</a> erkennt es selbst.</li>
+<li>Ein <strong>Paket als Datei hochladen</strong> (<code>.zip</code> im Format der Registry, z. B. der Paketordner gepackt, höchstens 128 MB). Ablago prüft es genauso wie ein Katalogpaket, nur ohne Prüfsumme aus dem Katalog, und zeigt die Vorschau. Eine <a href="#pakete-ohne-internet-installieren">Sammeldatei</a> erkennt es selbst.</li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Nicht vom Ablago-Projekt geprüft</p>
@@ -4010,7 +4010,7 @@
 <ul>
 <li>Jedes Archiv muss genau die <strong>Größe und Prüfsumme (SHA-256)</strong> aus dem Verzeichnis haben. Hat Ablago den offiziellen Katalog in dieser Sitzung schon abgerufen, muss die Prüfsumme <strong>auch zum Katalog</strong> passen – sonst lehnt es die Datei ab.</li>
 <li>Es dürfen <strong>keine anderen Dateien</strong> darin liegen; Dateinamen mit <code>..</code> oder <code>/</code> am Anfang, verschlüsselte Einträge und doppelte Namen lehnt es ab.</li>
-<li><strong>Grenzen gegen ZIP-Bomben:</strong> höchstens 64 MB je Datei, 50 Pakete, 10 MB je Paket-Archiv, entpackt 20 MB je Paket (plus 32 MB für Code) und 256 MB für alle Pakete zusammen. Ablago entpackt nie mehr, als im Archiv angegeben ist.</li>
+<li><strong>Grenzen gegen ZIP-Bomben:</strong> höchstens 256 MB je Sammeldatei, 50 Pakete, 128 MB je Paket-Archiv, entpackt 20 MB je Paket (plus 128 MB für Code) und 512 MB für alle Pakete zusammen. Ein großes Paket braucht beim Installieren etwa doppelt so viel Arbeitsspeicher, wie es groß ist. Ablago entpackt nie mehr, als im Archiv angegeben ist.</li>
 <li>Jedes Paket durchläuft <strong>dieselben Prüfungen wie ein einzeln hochgeladenes</strong>; Id und Version im Paket müssen zum Verzeichnis passen. Ist eins ungültig, wird nichts übernommen.</li>
 <li>Enthält die Datei den <strong>signierten Katalog</strong>, prüft Ablago die Signatur – ohne Internet – und vergleicht jedes Archiv mit der Prüfsumme darin. Passt eines nicht dazu, lehnt es die ganze Datei ab.</li>
 </ul>
