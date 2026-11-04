@@ -123,6 +123,11 @@ describe('Herunterladen braucht E (#723)', () => {
     const mitSchluessel = { params: { id: pdf.id }, apiSchluessel: { id: 'k', name: 'Skript', recht: 'lesen' } } as unknown as Partial<Anfrage>;
     await assert.rejects(rufe(lena, 'GET', '/api/dokumente/:id/inhalt', mitSchluessel), status(403));
     await assert.rejects(rufe(lena, 'GET', '/api/dokumente/:id/archivfassung', mitSchluessel), status(403));
+    // Seitenbilder über den API-Schlüssel sind Herausgeben (#799): ebenfalls Exportrecht; in der Oberfläche weiter mit R.
+    for (const pfad of ['/api/dokumente/:id/seiten/:nr/bild', '/api/dokumente/:id/schwaerzen/seiten/:nr', '/api/dokumente/:id/vorschau']) {
+      await assert.rejects(rufe(lena, 'GET', pfad, { ...mitSchluessel, params: { id: pdf.id, nr: '1' } }), status(403), pfad);
+    }
+    assert.ok(await rufe(lena, 'GET', '/api/dokumente/:id/schwaerzen/seiten/:nr', { params: { id: pdf.id, nr: '1' } }));
     const r = await rufe(admin, 'GET', '/api/dokumente/:id/inhalt', { params: { id: pdf.id }, query: { herunterladen: '1' } }) as { datei: { anzeigen: boolean } };
     assert.equal(r.datei.anzeigen, false);
   });

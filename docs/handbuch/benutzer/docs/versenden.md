@@ -60,8 +60,8 @@ So gehst du vor:
 
 1. Wähle eine **Vorlage**, z. B. „Kopie für …“, „Nur zur Vorlage bei …“, „Entwurf“ oder „Vertraulich“. Die Vorlagen legt der Administrator fest.
 2. Trage den **Empfänger** ein – er steht dort, wo im Text `{empfänger}` steht. Beim Versenden per E-Mail sind ohne Angabe die Adressen unter **An** der Empfänger.
-3. Bei Bedarf änderst du den **Text**, die **Lage** (diagonal über die Seite als Wasserzeichen, Kopfzeile, Fußzeile oder Ecke oben rechts), die **Deckkraft** und ob der Stempel auf **alle Seiten** oder **nur die erste** kommt.
-4. Auf Wunsch kommen **Seitenzahlen** („Seite 3 von 12“) und die **Archivnummer** des Dokuments als Fußzeile dazu – auch ohne Stempeltext.
+3. Bei Bedarf änderst du den **Text** (auch mehrzeilig), die **Lage** (diagonal über die Seite als Wasserzeichen, Kopfzeile, Fußzeile, Ecke oben rechts oder ein kleiner **Stempel** mit Rahmen), die **Deckkraft** und ob der Stempel auf **alle Seiten** oder **nur die erste** kommt. Ab 80 % Deckkraft weist Ablago darauf hin, dass der Stempel Inhalt verdecken kann.
+4. **Wie Tinte – Schrift darunter bleibt lesbar** (meist schon eingeschaltet): Der Stempel färbt nur ein, Schwarzes bleibt schwarz – so bleiben Beträge und Daten darunter lesbar. Seitenzahlen und Archivnummer fügst du als Platzhalter in den Text ein, z. B. „Seite {seite} von {seiten}“ oder „{archivnummer}“.
 5. **Herunterladen** (bzw. **Senden**, **Exportieren**).
 
 Platzhalter im Text:
@@ -72,6 +72,9 @@ Platzhalter im Text:
 | `{empfänger}` | der Empfänger, den du angibst |
 | `{benutzer}` | dein Name |
 | `{mappe}` | Titel der Mappe |
+| `{seite}` | Nummer der Seite, auf der der Stempel steht |
+| `{seiten}` | Anzahl der Seiten des Dokuments |
+| `{archivnummer}` | Archivnummer des Dokuments (leer, wenn es keine hat) |
 
 Gut zu wissen:
 

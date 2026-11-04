@@ -57,7 +57,7 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
         <label className="eigenschaft"><span>{t('werkbank.webdav.stempel')} <Hilfe ort="webdav.stempel" /></span>
           <select id="webdav-stempel" value={e.stempel ?? ''} onChange={(x) => setE({ ...e, stempel: x.target.value || null })}>
             <option value="">{t('werkbank.webdav.stempel.aus')}</option>
-            {s.vorlagen.map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text}</option>)}
+            {s.vorlagen.map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text.split('\n').join(' / ')}</option>)}
           </select>
           <small className="leise">{t('werkbank.webdav.stempel.hinweis')}</small></label>
         <label className="haken"><input id="webdav-nur-lesend" type="checkbox" checked={e.nurLesend} onChange={(x) => setE({ ...e, nurLesend: x.target.checked })} />

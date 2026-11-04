@@ -1493,19 +1493,34 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .stempelwahl { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
 .stempelfelder { margin-top: 8px; padding: 10px; border: 1px solid var(--linie); border-radius: var(--r); background: var(--senke); display: flex; flex-direction: column; gap: 10px; }
 .stempelzeile { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
-.stempelzeile > div:not(.stempelbild) { flex: 1 1 220px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.stempelzeile > div:not(.stempelvorschau-klein) { flex: 1 1 220px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .stempeltext { color: var(--schlecht); overflow-wrap: anywhere; }
-.stempelbild { position: relative; flex: 0 0 auto; width: 96px; height: 136px; background: #fff; border: 1px solid var(--linie-stark); border-radius: 2px; padding: 16px 10px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.stempelbild .zeile { display: block; height: 3px; background: #d5d9df; border-radius: 2px; }
-.stempelbild .zeile:nth-child(3n) { width: 70%; }
-.stempelbild .stempel { position: absolute; color: #bf1414; font-weight: 700; font-size: 8px; line-height: 1.1; white-space: nowrap; max-width: 88px; overflow: hidden; text-overflow: ellipsis; }
-.stempelbild.diagonal .stempel { left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-55deg); font-size: 7px; max-width: 160px; }
-.stempelbild.kopf .stempel { top: 4px; left: 50%; transform: translateX(-50%); }
-.stempelbild.fuss .stempel { bottom: 12px; left: 50%; transform: translateX(-50%); }
-.stempelbild.ecke .stempel { top: 4px; right: 4px; border: 1px solid #bf1414; padding: 1px 2px; max-width: 60px; }
-.stempelbild .fuss { position: absolute; right: 4px; bottom: 3px; font-size: 5px; color: #333; }
 .stempelvorlagen .stempeleditor { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
 .stempelvorlagen .stempeleditor form { display: flex; flex-direction: column; gap: 10px; }
+.warntext { color: var(--warn); font-size: calc(12.5px * var(--skala, 1)); font-weight: 500; }
+.zeile-mit-zahl { display: flex; gap: 8px; align-items: center; }
+.zeile-mit-zahl input[type="range"] { flex: 1 1 auto; min-width: 0; }
+.zeile-mit-zahl input[type="number"] { width: 5.5em; flex: 0 0 auto; }
+.platzhalterknoepfe { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+/* Live-Vorschau des Stempels (#799): vier Beispielbelege nebeneinander, am Handy untereinander. */
+.stempelvorschau { display: flex; flex-direction: column; gap: 8px; }
+.stempelvorschau-raster { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .stempelvorschau-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .stempelvorschau-raster { grid-template-columns: minmax(0, 1fr); } }
+.stempelvorschau-klein { flex: 0 0 150px; }
+.stempelvorschau-klein .stempelvorschau-raster { grid-template-columns: minmax(0, 1fr); }
+.stempelbeleg { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stempelbeleg svg { display: block; width: 100%; height: auto; border: 1px solid var(--linie-stark); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.12); background: #fff; touch-action: none; user-select: none; }
+.stempelgriff { cursor: move; outline: none; }
+.stempelgriff.fest { cursor: default; }
+.stempelgriff .stempelflaeche { fill: transparent; stroke: transparent; stroke-width: 3; stroke-dasharray: 10 6; }
+.stempelgriff:hover .stempelflaeche, .stempelgriff:focus-visible .stempelflaeche { stroke: var(--akzent); }
+.stempelgriff .drehgriff { cursor: grab; opacity: 0; }
+.stempelgriff:hover .drehgriff, .stempelgriff:focus-visible .drehgriff, .stempelgriff:active .drehgriff { opacity: 1; }
+.stempelgriff .drehgriff line { stroke: var(--akzent); stroke-width: 3; }
+.stempelgriff .drehgriff circle { fill: #fff; stroke: var(--akzent); stroke-width: 5; }
+@media (hover: none) { .stempelgriff .drehgriff { opacity: 1; } }
+.stempelvorschau-text { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--linie); border-radius: var(--r); background: var(--senke); }
 /* Werkbank → Datenschutz: Auskunft nach Art. 15 DSGVO (#396). Eigene Klassen – nichts Globales umdefinieren. */
 .auskunft-baum { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 1px solid var(--linie); }
 .auskunft-baum.wurzel { padding-left: 0; border-left: 0; margin: 8px 0; }

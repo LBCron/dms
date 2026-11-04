@@ -53,7 +53,7 @@ import { mitnehmbar, pruefeAlle, sichtVerboten, verboten, type Ausgang, type Aus
 import { analysiere as schwaerzAnalyse, schwaerze, seitenbild as schwaerzSeitenbild, type Analyse as SchwaerzAnalyse } from './schwaerzen';
 import { bereicheVon, findeBegriff, findeMuster, geschwaerztName, istMuster, kannSchwaerzen, MUSTER, pruefeBegriffe, pruefeBereiche, SCHWAERZEN_MAX_SEITEN, stellenText, type Bereich } from '../../shared/src/schwaerzen';
 import { analysiere, ergebnisText, istStufe, MIN_ERSPARNIS, STANDARD_STUFE, stufeAus, STUFEN, verkleinere, type Analyse, type Stufe } from './verkleinern';
-import { geltenderStempel, liesStempelTyp, liesVorlagen, WEBDAV_VORLAGE, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
+import { geltenderStempel, liesStempelTyp, liesVorlagen, NEUER_STEMPEL, WEBDAV_VORLAGE, pruefeVorlage, stempelAus, StempelFehler, STEMPEL_MODI, STEMPEL_NAME_MAX, STEMPEL_VORLAGEN_MAX, stempelDatum, wunschAus, type GeltenderStempel, type StempelTyp, type StempelVorlage, type StempelWunsch } from '../../shared/src/stempel';
 import { alleSichtRechte, bereinigeSichtRegelwerk, sichtRegelProblem, sichtTestlauf, type SichtRegelwerk } from '../../shared/src/sichtrechte';
 import { liesDirektlink } from '../../shared/src/direktlink';
 import { erkenneSprache, istTextsprache, SPRACHE_MARKE, sprachname, spracheZuInfo, TEXTSPRACHEN } from '../../shared/src/textsprache';
@@ -96,6 +96,8 @@ function inReihenfolge<T extends { id: string }>(liste: T[], ids: string[]): T[]
 /* ---------- Eingaben bereinigen: nur bekannte Eigenschaften übernehmen ---------- */
 
 const text = (v: unknown) => (v == null ? '' : String(v)).trim();
+/** Empfänger aus Abfrageparametern (API v1) – gilt auch für den Pflicht-Stempel ohne eigenen Wunsch (#799). */
+const empfaengerAus = (q: unknown) => { const o = (q && typeof q === 'object' ? q : {}) as Record<string, unknown>; const e = o.empfaenger ?? o['empfänger']; const s = Array.isArray(e) ? e[0] : e; return typeof s === 'string' ? s.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 120) : ''; };
 
 /* Löschprotokoll (#470) */
 /** Grund und Auslöser einer Löschung (aus Oberfläche/Schnittstelle) und wie gelöscht wurde. */
@@ -6395,7 +6397,8 @@ export class Dienst {
     if (!id && d.vorlagen.length >= STEMPEL_VORLAGEN_MAX) throw new Fachfehler(422, `Höchstens ${STEMPEL_VORLAGEN_MAX} Stempel-Vorlagen.`);
     const o = (eingabe ?? {}) as Record<string, unknown>;
     const name = String(o.name ?? alt?.name ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, STEMPEL_NAME_MAX);
-    const v: StempelVorlage = { id: alt?.id ?? randomUUID(), name, ...stempelAus(o, alt) };
+    // Neue Vorlagen beginnen mit 70 % und „wie Tinte“ (#799); gespeichert ist eine Umstellung erledigt (ohne `umgestellt`).
+    const v: StempelVorlage = { id: alt?.id ?? randomUUID(), name, ...stempelAus(o, alt ?? NEUER_STEMPEL) };
     const fehler = pruefeVorlage(v, d.vorlagen.filter((x) => x.id !== v.id).map((x) => x.name));
     if (Object.keys(fehler).length) throw new Fachfehler(422, Object.values(fehler).join(' '), { felder: fehler });
     d.vorlagen = alt ? d.vorlagen.map((x) => (x.id === v.id ? v : x)) : [...d.vorlagen, v];
@@ -6541,7 +6544,7 @@ export class Dienst {
     if (!dokument) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     const datei = o.version != null ? (await this.versionInhalt(id, o.version)).version : await this.ausgabeQuelle(dokument, o.fassung);
     const m = await this.repo.holeMappe(dokument.mappeId);
-    const plan = m ? await this.stempelPlan(m.typId, wunschAus(o.stempel)) : null;
+    const plan = m ? await this.stempelPlan(m.typId, wunschAus(o.stempel), empfaengerAus(o.stempel)) : null;
     // Verkleinert herunterladen (#393): nur PDFs; das gespeicherte Dokument bleibt, wie es ist.
     const klein = stufeAus(o.verkleinern);
     if (klein && datei.mime !== 'application/pdf' && !plan) throw new Fachfehler(422, `„${datei.name}“ ist kein PDF – verkleinern lassen sich nur PDFs.`);
@@ -6553,6 +6556,65 @@ export class Dienst {
     if (plan) protokoll.modul('dokumente').info('Dokument mit Stempel heruntergeladen', { id, mappe: m!.id, pflicht: plan.pflicht });
     if (a.verkleinert) protokoll.modul('dokumente').info('Dokument verkleinert heruntergeladen', { id, mappe: m!.id, vorher: a.verkleinert.vorher, nachher: a.verkleinert.nachher });
     return { name: a.name, mime: a.mime, anzeigbar: true, groesse: a.inhalt.length, inhalt: a.inhalt as Buffer | Readable, gestempelt: !!a.gestempelt, verkleinert: a.verkleinert ?? null };
+  }
+
+  /**
+   * Abruf mit API-Schlüssel ist Herausgeben (#799): die Archivfassung (#631) oder die umgewandelte Fassung (#577) mit
+   * dem Stempel, den der Abruf wünscht oder der Mappentyp verlangt – auf den Seiten des Dokuments selbst, ohne eigenes
+   * Deckblatt. Die gespeicherte Fassung bleibt unverändert. Ohne geltenden Stempel `null`: Dann geht die Fassung so
+   * hinaus, wie sie gespeichert ist.
+   */
+  async fassungFuerAusgabe(id: string, art: 'archiv' | 'umgewandelt', o: { stempel?: unknown; ich: { id: string | null; name: string } }) {
+    const f = art === 'archiv' ? await this.archivfassungVon(id) : await this.fassungVon(id);
+    const m = await this.repo.holeMappe(f.d.mappeId);
+    const wunsch = wunschAus(o.stempel);
+    const plan = m ? await this.stempelPlan(m.typId, wunsch, empfaengerAus(o.stempel)) : null;
+    if (!plan) return null;
+    const punkt = f.d.name.lastIndexOf('.');
+    const name = art === 'archiv' ? ((f.info as { imOriginal?: boolean }).imOriginal ? f.d.name : archivfassungName(f.d.name)) : `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (umgewandelt).pdf`;
+    const mime = art === 'archiv' ? 'application/pdf' : (f.info as FassungInfo).mime;
+    const a = await fuerAusgabe({ name, mime, inhalt: f.inhalt }, { stempel: plan }, { benutzer: o.ich.name, mappe: m!.titel || 'Ohne Titel', archivnummer: f.d.archivnummer ?? null }, true);
+    await this.notiereWeitergabe(m!.id, o.ich.id, art === 'archiv' ? 'über die API (Archivfassung)' : 'über die API (umgewandelte Fassung)', plan, [a]);
+    protokoll.modul('dokumente').info('Fassung mit Stempel über die API ausgegeben', { id, mappe: m!.id, art, pflicht: plan.pflicht });
+    return a;
+  }
+
+  /** Gestempelte Kopien für Seitenbilder über die API (#799), kurz im Arbeitsspeicher: Seite für Seite wird nur einmal gestempelt. */
+  private readonly apiKopien = new Map<string, Promise<Buffer>>();
+  /**
+   * Seitenbilder bei einem Abruf mit API-Schlüssel (#799): Gilt ein Stempel (Pflicht des Mappentyps oder gewünscht),
+   * entstehen die Bilder aus der gestempelten Kopie – als PDF, auch bei Bildern und umgewandelten Dateien. Ohne
+   * Stempel `null` (dann die üblichen Seitenbilder). Die Weitergabe steht einmal je Kopie in der Historie.
+   */
+  async gestempelteSeiten(id: string, o: { stempel?: unknown; ich: { id: string | null; name: string } }): Promise<{ schluessel: string; pdf: Buffer } | null> {
+    const d = await this.repo.holeDokument(id);
+    if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
+    const m = await this.repo.holeMappe(d.mappeId);
+    if (!m) return null;
+    const wunsch = wunschAus(o.stempel);
+    const plan = await this.stempelPlan(m.typId, wunsch, empfaengerAus(o.stempel));
+    if (!plan) return null;
+    const kontext = { benutzer: o.ich.name, mappe: m.titel || 'Ohne Titel', archivnummer: d.archivnummer ?? null, datum: stempelDatum() };
+    const schluessel = `stempel:${d.sha256}:${createHash('sha256').update(JSON.stringify([plan, kontext])).digest('hex')}`;
+    let p = this.apiKopien.get(schluessel);
+    if (!p) {
+      p = (async () => {
+        let quelle: { name: string; mime: string; inhalt: Buffer };
+        if (kernTyp(d.mime)) quelle = { name: d.name, mime: d.mime, inhalt: await this.liesGanz(d.sha256) };
+        else {
+          const f = await this.umwandlung?.lies(d.sha256);
+          if (!f) throw new Fachfehler(422, `„${d.name}“ ist weder PDF noch JPEG oder PNG, und es gibt keine umgewandelte Fassung – davon gibt es kein Seitenbild.`);
+          quelle = { name: d.name, mime: f.info.mime, inhalt: f.inhalt };
+        }
+        const a = await fuerAusgabe(quelle, { stempel: plan }, kontext, true);
+        await this.notiereWeitergabe(m.id, o.ich.id, 'über die API (Seitenbilder)', plan, [a]);
+        return a.inhalt;
+      })();
+      this.apiKopien.set(schluessel, p);
+      p.catch(() => this.apiKopien.delete(schluessel));
+      while (this.apiKopien.size > 8) this.apiKopien.delete(this.apiKopien.keys().next().value!);
+    }
+    return { schluessel, pdf: await p };
   }
 
   async loescheDokument(id: string, benutzerId: string | null = null, anlass: Anlass = { weg: 'ersetzt' }) {
@@ -6596,7 +6658,9 @@ export class Dienst {
    * gerastert – kein zusätzliches Bildwerkzeug im Image. Bilder kommen in Originalgröße, dpi zählt dort nicht.
    * `farbe` (#716): als Farbbild (PPM) statt Graustufen, z. B. für die Archivfassung.
    */
-  async seiteAlsGraubild(id: string, nr: number, dpi: number, farbe = false): Promise<Buffer> {
+  async seiteAlsGraubild(id: string, nr: number, dpi: number, farbe = false, gestempelt?: { pdf: Buffer } | null): Promise<Buffer> {
+    // Abruf mit API-Schlüssel und Stempel (#799): aus der gestempelten Kopie.
+    if (gestempelt) return graubild(gestempelt.pdf, nr, dpi, farbe);
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     // Andere Dateitypen (#577): die Seiten der umgewandelten Fassung (PDF, PNG oder JPEG) eines Pakets.
@@ -6626,7 +6690,8 @@ export class Dienst {
   }
 
   /** Bild einer Seite (Seitenansicht); null, wenn es keins gibt. */
-  async pdfSeitenbild(id: string, nr: number): Promise<Buffer | null> {
+  async pdfSeitenbild(id: string, nr: number, gestempelt?: { schluessel: string; pdf: Buffer } | null): Promise<Buffer | null> {
+    if (gestempelt) return Number.isInteger(nr) && nr >= 1 && nr <= SEITENBILDER_MAX ? this.seitenbilder.bild(gestempelt.schluessel, nr, async () => gestempelt.pdf) : null;
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     if (d.mime !== 'application/pdf' || !Number.isInteger(nr) || nr < 1 || nr > SEITENBILDER_MAX) return null;
@@ -7074,7 +7139,8 @@ export class Dienst {
 
   /** Seitenbild für den Dialog (größer als die Seitenansicht; Bilder in derselben Ausrichtung wie beim Schwärzen). */
   private readonly schwaerzBilder = new Map<string, Promise<Buffer | null>>();
-  async schwaerzSeitenbild(id: string, nr: number): Promise<Buffer | null> {
+  async schwaerzSeitenbild(id: string, nr: number, gestempelt?: { pdf: Buffer } | null): Promise<Buffer | null> {
+    if (gestempelt) return Number.isInteger(nr) && nr >= 1 && nr <= SCHWAERZEN_MAX_SEITEN ? schwaerzSeitenbild(gestempelt.pdf, 'application/pdf', nr) : null;
     const d = await this.repo.holeDokument(id);
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     if (!kannSchwaerzen(d.mime) || !Number.isInteger(nr) || nr < 1 || nr > SCHWAERZEN_MAX_SEITEN) return null;
