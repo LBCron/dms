@@ -16,6 +16,7 @@ import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFObject, PDFRa
 import type { SchwaerzSeite } from '../../../shared/src/schwaerzen';
 import { liesBbox, popplerDrehungen } from './schwaerzen';
 import { eigenerPuffer } from './puffer';
+import { ladePdf } from './laden';
 
 /** Was der Kern an einem PDF findet – Bewertung und Meldungen macht archivfassung.ts. */
 export interface PdfaBefund {
@@ -51,7 +52,7 @@ const text = (o: PDFObject | undefined): string | null => (o instanceof PDFStrin
 export async function liesPdfA(inhalt: Uint8Array): Promise<PdfaBefund> {
   const leer: PdfaBefund = { lesbar: false, verschluesselt: false, seiten: 0, metadaten: null, gefiltert: false, signiert: false, erechnung: false, formular: false, javascript: false, aktionen: [], extern: [] };
   let doc: PDFDocument;
-  try { doc = await PDFDocument.load(eigenerPuffer(inhalt), { updateMetadata: false, ignoreEncryption: true, throwOnInvalidObject: false }); } catch { return leer; }
+  try { doc = await ladePdf(inhalt, { updateMetadata: false, ignoreEncryption: true, throwOnInvalidObject: false }); } catch { return leer; }
   const b: PdfaBefund = { ...leer, lesbar: true, verschluesselt: doc.isEncrypted, seiten: doc.getPageCount() };
   if (b.verschluesselt) return b;
   const strom = doc.catalog.lookup(PDFName.of('Metadata'));
@@ -125,7 +126,7 @@ function starte(befehl: string, args: string[]): Promise<string> {
 export async function textebeneWoerter(inhalt: Uint8Array): Promise<SchwaerzSeite[] | null> {
   let drehungen: number[];
   try {
-    const doc = await PDFDocument.load(eigenerPuffer(inhalt), { updateMetadata: false, ignoreEncryption: true });
+    const doc = await ladePdf(inhalt, { updateMetadata: false, ignoreEncryption: true });
     if (doc.isEncrypted) return null;
     drehungen = doc.getPages().map((p) => ((p.getRotation().angle % 360) + 360) % 360);
   } catch { return null; }

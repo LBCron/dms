@@ -10,6 +10,7 @@
  */
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFObject, PDFRef, PDFStream } from 'pdf-lib';
 import { eigenerPuffer } from './puffer';
+import { ladePdf } from './laden';
 
 /** Aktionen, die beim Ansehen etwas ausführen, nachladen oder senden. URI, GoTo, Named u. a. bleiben. */
 const GEFAEHRLICHE_AKTIONEN = new Set(['JavaScript', 'Launch', 'SubmitForm', 'ImportData', 'GoToR', 'GoToE', 'GoToDp', 'Rendition', 'Sound', 'Movie', 'RichMediaExecute', 'GoTo3DView']);
@@ -28,7 +29,7 @@ const name = (o: PDFObject | undefined) => (o instanceof PDFName ? o.decodeText(
 
 /** Bereinigte Kopie; wirft bei verschlüsselten oder unlesbaren PDFs. entfernt: was es gefunden hat (fürs Protokoll). */
 export async function bereinigePdf(inhalt: Uint8Array): Promise<Bereinigt> {
-  const doc = await PDFDocument.load(eigenerPuffer(inhalt), { updateMetadata: false, ignoreEncryption: true });
+  const doc = await ladePdf(inhalt, { updateMetadata: false, ignoreEncryption: true });
   if (doc.isEncrypted) throw new Error('Das PDF ist verschlüsselt.');
   const entfernt = new Set<string>();
   const ctx = doc.context;

@@ -14,6 +14,7 @@ import type { Stempel } from '../../../shared/src/stempel';
 import { Fachfehler } from '../fehler';
 import { eigenerPuffer } from './puffer';
 import { pdfSicher } from './text';
+import { ladePdf } from './laden';
 
 export interface StempelAuftrag {
   /** Name (nur für Meldungen), Art und Inhalt der Datei: PDF, JPEG oder PNG. */
@@ -30,7 +31,7 @@ export interface StempelAuftrag {
 export async function stempelePdf(a: StempelAuftrag): Promise<Buffer> {
   let doc: PDFDocument;
   try {
-    doc = a.mime === 'application/pdf' ? await PDFDocument.load(a.inhalt, { updateMetadata: false }) : await bildDokument(a.inhalt, a.mime === 'image/png');
+    doc = a.mime === 'application/pdf' ? await ladePdf(a.inhalt, { updateMetadata: false }) : await bildDokument(a.inhalt, a.mime === 'image/png');
   } catch (x) {
     const verschluesselt = /encrypt/i.test((x as Error).message);
     throw new Fachfehler(422, verschluesselt ? `„${a.name}“ ist verschlüsselt und lässt sich darum nicht stempeln.` : `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);

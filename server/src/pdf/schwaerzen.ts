@@ -31,6 +31,7 @@ import { Fachfehler } from '../fehler';
 import { SCHWAERZEN_MAX_SEITEN, wortIn, type Bereich, type SchwaerzSeite, type Wort } from '../../../shared/src/schwaerzen';
 import { exifAusrichtung, jpegMasse } from './bild';
 import { eigenerPuffer } from './puffer';
+import { ladePdf } from './laden';
 
 /** Auflösung des Ergebnisses (PDF). */
 export const SCHWAERZEN_DPI = 150;
@@ -105,7 +106,7 @@ export async function arbeitsPdf(inhalt: Buffer, mime: string): Promise<Buffer> 
 async function seitenlage(pdf: Buffer): Promise<number[]> {
   let doc: PDFDocument, drehungen: number[];
   try {
-    doc = await PDFDocument.load(pdf, { updateMetadata: false });
+    doc = await ladePdf(pdf, { updateMetadata: false });
     drehungen = doc.getPages().map((p) => ((p.getRotation().angle % 360) + 360) % 360);
   } catch (e) {
     if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht schwärzen.');
