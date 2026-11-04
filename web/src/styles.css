@@ -1493,7 +1493,8 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .stempelwahl { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
 .stempelfelder { margin-top: 8px; padding: 10px; border: 1px solid var(--linie); border-radius: var(--r); background: var(--senke); display: flex; flex-direction: column; gap: 10px; }
 .stempelzeile { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
-.stempelzeile > div:not(.stempeltext { color: var(--schlecht); overflow-wrap: anywhere; }
+.stempelzeile > div:not(.stempelvorschau-klein) { flex: 1 1 220px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.stempeltext { color: var(--schlecht); overflow-wrap: anywhere; }
 .stempelvorlagen .stempeleditor { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
 .stempelvorlagen .stempeleditor form { display: flex; flex-direction: column; gap: 10px; }
 .warntext { color: var(--warn); font-size: calc(12.5px * var(--skala, 1)); font-weight: 500; }
