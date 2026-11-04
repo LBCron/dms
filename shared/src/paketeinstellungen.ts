@@ -13,6 +13,8 @@ export const EINSTELLUNG_TYPEN = {
 } as const;
 export type EinstellungTyp = keyof typeof EINSTELLUNG_TYPEN;
 const VERWEISE: EinstellungTyp[] = ['mappentyp', 'feld', 'benutzer', 'rolle', 'sicht'];
+/** Verweise, die es auch als Mehrfachauswahl gibt (#658): gespeichert als Liste von Ids. */
+export const MEHRFACH_VERWEISE: EinstellungTyp[] = ['mappentyp', 'benutzer', 'rolle', 'sicht'];
 
 export interface EinstellungFeld {
   schluessel: string; name: string; typ: EinstellungTyp;
@@ -21,6 +23,10 @@ export interface EinstellungFeld {
   mappentyp?: string;
   /** Beim Typ adresse (#444): Beispiel im leeren Feld, z. B. „http://ollama:11434/v1“ – nie ein gespeicherter Wert. */
   beispiel?: string;
+  /** Verweis als Mehrfachauswahl wie bei Verweisfeldern (#658): Wert ist eine Liste von Ids. */
+  mehrfach?: true;
+  /** Gegenseitiger Ausschluss (#658): Was in diesem Feld gewählt ist, steht im genannten Feld nicht zur Wahl (und umgekehrt). */
+  schliesstAus?: string;
 }
 
 /**
@@ -74,6 +80,8 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
     // Dienst-Adresse (#444): nie voreingestellt – der Administrator trägt sie selbst ein und bestätigt sie.
     if (typ === 'adresse' && f.standard !== undefined) fehler.push(`${wo}/${str(f.schluessel)}: adresse hat keine Vorgabe (höchstens ein beispiel, das im leeren Feld steht).`);
     if (typ === 'adresse' && f.beispiel !== undefined && (typeof f.beispiel !== 'string' || pruefeAdresse(f.beispiel))) fehler.push(`${wo}/${str(f.schluessel)}: beispiel ist keine gültige Adresse.`);
+    if (f.mehrfach !== undefined && (f.mehrfach !== true || !MEHRFACH_VERWEISE.includes(typ))) fehler.push(`${wo}/${str(f.schluessel)}: mehrfach: true gibt es nur bei ${MEHRFACH_VERWEISE.join(', ')}.`);
+    if (f.schliesst_aus !== undefined && !SCHLUESSEL.test(str(f.schliesst_aus))) fehler.push(`${wo}/${str(f.schluessel)}: schliesst_aus nennt keinen gültigen Schlüssel.`);
     return {
       schluessel: str(f.schluessel), name: str(f.name) || str(f.schluessel), typ,
       ...(f.hilfe ? { hilfe: str(f.hilfe) } : {}), ...(f.pflicht === true ? { pflicht: true } : {}),
@@ -82,6 +90,8 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
       ...(Array.isArray(f.optionen) ? { optionen: f.optionen.map(str) } : {}),
       ...(typeof f.min === 'number' ? { min: f.min } : {}), ...(typeof f.max === 'number' ? { max: f.max } : {}),
       ...(typ === 'feld' && f.mappentyp ? { mappentyp: str(f.mappentyp) } : {}),
+      ...(f.mehrfach === true && MEHRFACH_VERWEISE.includes(typ) ? { mehrfach: true as const } : {}),
+      ...(f.schliesst_aus !== undefined && SCHLUESSEL.test(str(f.schliesst_aus)) ? { schliesstAus: str(f.schliesst_aus) } : {}),
     };
   };
   const bloecke: EinstellungBlock[] = [];
@@ -103,6 +113,13 @@ export function liesBeschreibung(code: unknown): { beschreibung: Einstellungsbes
     }
   }
   if (bloecke.flatMap((x) => (x.art === 'abschnitt' ? x.felder : [])).filter((f) => f.typ === 'adresse').length > 1) fehler.push('einstellungen: höchstens eine Einstellung vom Typ adresse je Paket.');
+  // schliesst_aus (#658): nur zwischen Feldern eines Abschnitts mit demselben Verweistyp.
+  const oberste = bloecke.flatMap((x) => (x.art === 'abschnitt' ? x.felder : []));
+  for (const x of bloecke) for (const f of x.felder) {
+    if (!f.schliesstAus) continue;
+    const g = oberste.find((y) => y.schluessel === f.schliesstAus);
+    if (x.art !== 'abschnitt' || !g || g === f || g.typ !== f.typ || !MEHRFACH_VERWEISE.includes(f.typ)) fehler.push(`einstellungen/${f.schluessel}: schliesst_aus „${f.schliesstAus}“ muss ein anderes Feld eines Abschnitts mit demselben Verweistyp (${MEHRFACH_VERWEISE.join(', ')}) sein.`);
+  }
   const aktionen: PaketAktion[] = [];
   const ak = new Set<string>();
   for (const a of Array.isArray(code.aktionen) ? code.aktionen : []) {
@@ -136,6 +153,12 @@ export function ueberfuehre(b: Einstellungsbeschreibung, alt: Record<string, unk
   for (const [k, v] of Object.entries(alt)) {
     if (!oben.has(k)) { weg.push(k); continue; }
     const l = listen(b).find((x) => x.schluessel === k);
+    // Aus einer Liste mit einem Verweisfeld wird eine Mehrfachauswahl (#658): Einträge → Ids, nichts geht verloren.
+    const mf = abschnittsfelder(b).find((f) => f.schluessel === k && f.mehrfach);
+    if (!l && mf && Array.isArray(v) && v.some(istObjekt)) {
+      werte[k] = [...new Set(v.flatMap((e) => (istObjekt(e) ? Object.entries(e).filter(([ek, ev]) => ek !== EINTRAG_ID && typeof ev === 'string' && ev).map(([, ev]) => String(ev)).slice(0, 1) : typeof e === 'string' ? [e] : [])))];
+      continue;
+    }
     if (!l) { werte[k] = v; continue; }
     const keys = new Set([EINTRAG_ID, ...l.felder.map((f) => f.schluessel)]);
     werte[k] = (Array.isArray(v) ? v : []).filter(istObjekt).map((e) => {
@@ -196,7 +219,14 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
       if (typeof v !== 'string') { fehler[pfad] = 'Ungültiger Wert.'; return null; }
       return v;
     }
-    if (leer(v)) { if (f.pflicht) fehler[pfad] = 'Pflichtfeld.'; return f.typ === 'mehrfachauswahl' ? [] : null; }
+    if (leer(v)) { if (f.pflicht) fehler[pfad] = 'Pflichtfeld.'; return f.typ === 'mehrfachauswahl' || f.mehrfach ? [] : null; }
+    // Verweise als Mehrfachauswahl (#658): jede Id muss es geben.
+    if (f.mehrfach) {
+      const l = [...new Set((Array.isArray(v) ? v : [v]).map(String))].slice(0, 500);
+      const gibt = (x: string) => (f.typ === 'mappentyp' ? q.typen.some((t) => t.id === x) : f.typ === 'benutzer' ? q.benutzer.includes(x) : f.typ === 'rolle' ? q.rollen.includes(x) : q.sichten.includes(x));
+      if (l.some((x) => !gibt(x))) { fehler[pfad] = { mappentyp: 'Einen der Mappentypen gibt es nicht.', benutzer: 'Einen der Benutzer gibt es nicht.', rolle: 'Eine der Rollen gibt es nicht.', sicht: 'Eine der Ansichten gibt es nicht.' }[f.typ as 'mappentyp'] ?? 'Ungültiger Wert.'; return []; }
+      return l;
+    }
     switch (f.typ) {
       case 'text': case 'mehrzeilig': {
         if (typeof v !== 'string') { fehler[pfad] = 'Text erwartet.'; return null; }
@@ -240,6 +270,13 @@ export function pruefeWerte(b: Einstellungsbeschreibung, eingabe: unknown, q: Ve
     return null;
   };
   for (const f of abschnittsfelder(b)) werte[f.schluessel] = eins(f, e[f.schluessel], f.schluessel);
+  // Gegenseitiger Ausschluss (#658): dieselbe Kennung nicht in beiden Feldern.
+  const ids = (v: unknown) => (Array.isArray(v) ? v.map(String) : v == null || v === '' ? [] : [String(v)]);
+  for (const f of abschnittsfelder(b)) {
+    const g = f.schliesstAus ? abschnittsfelder(b).find((x) => x.schluessel === f.schliesstAus) : undefined;
+    if (!g || fehler[f.schluessel]) continue;
+    if (ids(werte[f.schluessel]).some((x) => ids(werte[g.schluessel]).includes(x))) fehler[f.schluessel] = `Steht auch in „${g.name}“ – beides zugleich geht nicht.`;
+  }
   for (const l of listen(b)) {
     const roh = Array.isArray(e[l.schluessel]) ? (e[l.schluessel] as unknown[]).filter(istObjekt).slice(0, 500) : [];
     werte[l.schluessel] = roh.map((x, i) => {
