@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Arbeiten mit Ablago – Mappen, Dokumente, Suche und Profil">
+        <meta name="description" content="Arbeiten mit Ablago – Mappen, Dokumente, Suche und Mein Konto">
       
       
       
@@ -805,7 +805,7 @@
   <span class="md-ellipsis">
     
   
-    Profil und Einstellungen
+    Mein Konto und Einstellungen
   
 
     
@@ -1320,8 +1320,8 @@ Siehe auch: <a href="#ablageort">Ablageort</a>, <a href="#nummernkreis">Nummernk
 <p><a id="bedingung"></a><strong>Bedingung</strong> · ~ mit Erklärung · Administratoren<br />
 Ein Filter einer Ansicht auf Feldwerte, Anzahlen, Fristen oder Persönliches, z. B. ein Feld gleich „aktueller Benutzer“ oder „ist mein Favorit“.</p>
 <p><a id="darstellung"></a><strong>Darstellung</strong> · ✓ Alltagswort · alle<br />
-Der Bereich im Profil, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).<br />
-Siehe auch: <a href="#design">Design</a>, <a href="#profil">Profil</a>.</p>
+Der Bereich unter Mein Konto, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).<br />
+Siehe auch: <a href="#design">Design</a>, <a href="#mein-konto">Mein Konto</a>.</p>
 <p><a id="dokument"></a><strong>Dokument</strong> · ✓ Alltagswort · alle<br />
 Eine Datei, die in Ablago in einem Dokumentenregister einer Mappe liegt. Hochgeladen wird eine Datei; in Ablago ist sie ein Dokument. An einer E-Mail heißt sie Anhang.<br />
 Siehe auch: <a href="#version">Version</a>.</p>
@@ -1348,6 +1348,8 @@ Siehe auch: <a href="#mappentyp">Mappentyp</a>, <a href="#register">Register</a>
 <p><a id="mappentyp"></a><strong>Mappentyp</strong> · ~ mit Erklärung · Administratoren<br />
 Der Bauplan einer Mappe – welche Felder und Register sie hat, wie ihr Titel entsteht und wer was darf.<br />
 Siehe auch: <a href="#mappe">Mappe</a>, <a href="#feld">Feld</a>, <a href="#systemmappentyp">Systemmappentyp</a>.</p>
+<p><a id="mein-konto"></a><strong>Mein Konto</strong> · ✓ Alltagswort · alle<br />
+Die persönlichen Einstellungen des angemeldeten Benutzers – ein Klick oben rechts auf den eigenen Namen, dann „Mein Konto“. Wege beschreiben wir so, wie man klickt, z. B. „Mein Konto → Sicherheit → API-Schlüssel“.</p>
 <p><a id="niederlassung"></a><strong>Niederlassung</strong> · ✓ Alltagswort · alle<br />
 Filiale, Zweigstelle, Praxis oder Außenstelle einer Organisation – mit eigener Anschrift und eigenem Telefon. Mappentyp aus dem Paket Basis (ab 1.1.0); gehört zu genau einer Organisation.<br />
 Siehe auch: <a href="#organisation">Organisation</a>, <a href="#person">Person</a>.</p>
@@ -1362,8 +1364,6 @@ Siehe auch: <a href="#benutzer">Benutzer</a>, <a href="#organisation">Organisati
 <p><a id="pflichtfeld"></a><strong>Pflichtfeld</strong> · ✓ Alltagswort · alle<br />
 Ein Feld, das ausgefüllt sein muss, bevor die Mappe gespeichert werden kann.<br />
 Siehe auch: <a href="#eindeutig">Eindeutig</a>.</p>
-<p><a id="profil"></a><strong>Profil</strong> · ✓ Alltagswort · alle<br />
-Die persönlichen Einstellungen des angemeldeten Benutzers, erreichbar über das Benutzermenü → „Mein Konto“.</p>
 <p><a id="register"></a><strong>Register</strong> · ~ mit Erklärung · alle<br />
 Ein Trennblatt in einer Mappe, z. B. Allgemein (mit Feldern), Dokumente, Verknüpfungen oder Historie. Notizen und Historie sind feste Register jeder Mappe.</p>
 <p><a id="standardwert"></a><strong>Standardwert</strong> · ~ mit Erklärung · Administratoren<br />
@@ -1472,7 +1472,7 @@ Siehe auch: <a href="#werkbank-anpassen">Werkbank anpassen</a>, <a href="#hausha
 <p><a id="darf-weg"></a><strong>Darf weg</strong> · ✓ Alltagswort · Administratoren<br />
 Die Liste der Mappen, deren Aufbewahrungsfrist abgelaufen ist.</p>
 <p><a id="design"></a><strong>Design</strong> · ✓ Alltagswort · Administratoren<br />
-Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines im Profil unter „Darstellung“.<br />
+Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines unter Mein Konto unter „Darstellung“.<br />
 Siehe auch: <a href="#darstellung">Darstellung</a>.</p>
 <p><a id="dienstkonto"></a><strong>Dienstkonto</strong> · ~ mit Erklärung · Administratoren<br />
 Das Konto, mit dem ein Paket mit Code in Ablago arbeitet, z. B. „Paket Texterkennung“. Es meldet sich nie an, steht nicht unter Benutzer, löscht nie und hat nur die Rechte aus dem Paket. In der Historie steht es dort, wo das Paket etwas geändert hat.<br />
@@ -1513,7 +1513,7 @@ Prüft, welche Rechte ein bestimmter Benutzer am Ende hat.</p>
 <p><a id="texterkennung"></a><strong>Texterkennung</strong> · ~ mit Erklärung · Administratoren<br />
 Erkennt Text in Bildern und gescannten PDFs, damit er durchsuchbar wird.</p>
 <p><a id="tagliche-zusammenfassung"></a><strong>Tägliche Zusammenfassung</strong> · ✓ Alltagswort · alle<br />
-Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder im Profil.<br />
+Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.<br />
 Siehe auch: <a href="#aufgabe">Aufgabe</a>, <a href="#anstehend">Anstehend</a>.</p>
 <p><a id="werkbank-anpassen"></a><strong>Werkbank anpassen</strong> · ~ mit Erklärung · Administratoren<br />
 Legt fest, welche Bereiche links in der Werkbank stehen – nach einer Vorlage („Haushalt“, „Betrieb“ oder „Alles“) und mit Abweichungen. Ausblenden schaltet nichts ab. Neue Installationen starten mit „Haushalt“; Installationen von vor dieser Einstellung zeigen alles.<br />
@@ -1546,7 +1546,7 @@ Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installati
 <p><a id="konsole"></a><strong>Konsole</strong> · ✗ Fachwort · Fortgeschrittene<br />
 Der Befehl „dms“ im Container für Notfall und Betrieb.</p>
 <p><a id="meine-daten-exportieren"></a><strong>Meine Daten exportieren</strong> · ✓ Alltagswort · alle<br />
-Ein Benutzer lädt im Profil seine eigenen Daten herunter.</p>
+Ein Benutzer lädt unter Mein Konto seine eigenen Daten herunter.</p>
 <p><a id="notfallblatt"></a><strong>Notfallblatt</strong> · ✓ Alltagswort · Administratoren<br />
 Ein PDF mit dem Schlüssel und einer Anleitung zur Wiederherstellung.</p>
 <p><a id="probe-wiederherstellung"></a><strong>Probe-Wiederherstellung</strong> · ~ mit Erklärung · Administratoren<br />
@@ -1800,6 +1800,11 @@ Die Aufgabenart heißt „Post für dich“; die Ansicht „Neue Post“ bleibt.
 <td>Mappentyp</td>
 <td>Typ (allein), Vorlage, Klasse</td>
 <td><code>Mappentyp</code></td>
+</tr>
+<tr>
+<td>Mein Konto</td>
+<td>Profil</td>
+<td>–</td>
 </tr>
 <tr>
 <td>Meine Daten exportieren</td>
