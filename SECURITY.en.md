@@ -6,6 +6,8 @@
 
 Please **do not open a public issue** for security vulnerabilities. Report them confidentially via GitHub: **Security → Report a vulnerability** in this repository ([private vulnerability reporting](https://github.com/motom001/dms/security/advisories/new)). Reports in German or English are welcome.
 
+If that does not work for you (e.g. without a GitHub account), write to **[security@ablago.app](mailto:security@ablago.app)**. Our RFC 9116 details are at [ablago.app/.well-known/security.txt](https://ablago.app/.well-known/security.txt).
+
 Helpful details: the affected version (Werkbank → Technik), steps to reproduce, and what an attacker could achieve with it. We get back to you as soon as we have seen the report, and publish a fix as a patch release with a note in the release notes.
 
 ## Supported versions
