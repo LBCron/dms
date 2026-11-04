@@ -52,7 +52,7 @@ Du brauchst **keine Konsole, keine Ordner und keine Befehle** – nur einen neue
 
     ![Seite Lasttest mit dem Ergebnis zum Kopieren](bilder/lasttest-ergebnis.png)
 
-6. **Test beenden** – **Test beenden und Container herunterfahren** und die Rückfrage („Hast du das Ergebnis kopiert? Danach ist es weg.“) bestätigen. Der Container stoppt. Lösche ihn danach in der Docker-Oberfläche und bei Bedarf auch das Image.
+6. **Test beenden** – **Test beenden und Container herunterfahren**. Hast du das Ergebnis noch nicht kopiert oder heruntergeladen, fragt die Seite an dieser Stelle nach und bietet **Ergebnis kopieren** oder **Trotzdem herunterfahren** an. Danach steht dort „Danke, dass du mitgemessen hast!“: Der Container fährt herunter, du kannst die Seite schließen; das Ergebnis bleibt auf der Seite sichtbar und kopierbar. Mit `--rm` gestartet, ist der Container danach weg; sonst löschst du ihn in der Docker-Oberfläche und bei Bedarf auch das Image.
 
 ??? note "So sieht die Seite dunkel und am Handy aus"
     ![Seite Lasttest, dunkle Darstellung](bilder/lasttest-seite-dunkel.png)

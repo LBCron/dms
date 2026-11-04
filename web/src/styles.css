@@ -1871,6 +1871,7 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .lasttest-bericht { font-family: var(--mono); font-size: calc(11.5px * var(--skala, 1)); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; background: var(--senke); padding: 10px; border-radius: 6px; }
 .lasttest-ergebnis .knoepfe, .lasttest-ende { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .lasttest-ende { justify-content: space-between; border-top: 1px solid var(--linie); padding-top: 14px; }
+.lasttest .hinweis .knoepfe .knopf.primaer { width: auto; padding: 7px 12px; }
 .lasttest-auto { margin: 0; }
 @media (max-width: 560px) {
   .lasttest-ergebnis .knoepfe .knopf, .lasttest-ende .knopf { width: 100%; white-space: normal; }
