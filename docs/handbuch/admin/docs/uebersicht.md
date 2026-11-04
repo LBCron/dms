@@ -69,7 +69,7 @@ Nicht jeder braucht jeden Bereich. Ein Haushalt fasst Nummernkreise, Postfächer
 
 **Vorlagen** für alle Administratoren:
 
-- **Haushalt**: schlank, nur was ein Haushalt zum Einrichten und Sichern braucht. Neue Installationen beginnen damit.
+- **Haushalt**: schlank, nur was eine Familie zum Einrichten und Sichern braucht. Neue Installationen beginnen damit. **Selbständige und kleine Betriebe** wählen gleich nach der Einrichtung **Betrieb**.
 <!-- bereiche:organisation -->
 - **Betrieb**: zusätzlich Nummernkreise, Automatisierungen, Suche, Darf weg, Datenschutz, Postfächer, Eingangsordner, Texterkennung, Anmeldeschutz, Designs, Protokoll, Gemeldete Fehler, Wartungsmodus.
 <!-- /bereiche:organisation -->

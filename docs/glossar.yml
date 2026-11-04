@@ -36,9 +36,11 @@ begriffe:
     verwandt: [Ablage, Werkbank]
   - begriff: Ablage
     bereich: grundbegriffe
-    beschreibung: Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen.
+    beschreibung: Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen. Zugleich das Wort für die ganze Installation, zu Hause wie im Betrieb („Name deiner Ablage“, „Ablage-Id“); eine Installation ist eine Ablage.
     einsteiger: alltag
     begegnet: alle
+    nicht_verwenden: [Haushalt (für die Installation), Mandant (in der Oberfläche)]
+    code: mandant, haushalt_id
     verwandt: [Werkbank, Ansicht]
   - begriff: Werkbank
     bereich: grundbegriffe
@@ -208,7 +210,7 @@ begriffe:
     begegnet: alle
   - begriff: Archivnummer
     bereich: grundbegriffe
-    beschreibung: Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.
+    beschreibung: Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Ablage; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.
     einsteiger: alltag
     begegnet: alle
     verwandt: [Ablageort, Nummernkreis, Dokument]
@@ -529,7 +531,7 @@ begriffe:
     code: WerkbankAnsicht, VORLAGEN
   - begriff: Betrieb
     bereich: werkbank
-    beschreibung: Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Geplant ist „Betrieb“ auch als Sprachprofil für Firmen (Gegenstück zu „Haushalt“).
+    beschreibung: Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Gegenstück ist die Vorlage „Haushalt“.
     einsteiger: alltag
     begegnet: admin
     nicht_verwenden: [Organisation (für die Vorlage)]
@@ -604,12 +606,10 @@ begriffe:
   # ---------- Betrieb und Sicherheit ----------
   - begriff: Haushalt
     bereich: betrieb
-    beschreibung: Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch.
+    beschreibung: Die Vorlage unter „Werkbank anpassen“ für zu Hause – schlank, nur was eine Familie zum Einrichten und Sichern braucht. Für die ganze Installation heißt es seit 04.11.2026 neutral „Ablage“; „Mandant“ steht nur im Code.
     einsteiger: alltag
     begegnet: admin
-    nicht_verwenden: [Mandant (in der Oberfläche)]
-    code: mandant, haushalt_id
-    profile: {privat: Haushalt, betrieb: Betrieb}
+    verwandt: [Betrieb, Werkbank anpassen, Ablage]
   - begriff: Einrichtungsassistent
     bereich: betrieb
     beschreibung: Die Schritte beim ersten Start von Ablago.
@@ -802,7 +802,7 @@ konflikte:
     titel: Mandant, Haushalt, Organisation, Firma
     vorschlag: In der Oberfläche „Haushalt“ bzw. „Organisation“ je Sprachprofil, „Mandant“ nur technisch.
     entschieden: '2026-10-31'
-    entscheidung: „Haushalt“ in allem, was Benutzer sehen; „Mandant“ nur im Code und wo technisch nötig.
+    entscheidung: „Haushalt“ in allem, was Benutzer sehen; „Mandant“ nur im Code und wo technisch nötig. **Neu am 04.11.2026:** Die Installation heißt neutral „Ablage“ („Name deiner Ablage“, „Ablage-Id“), zu Hause wie im Betrieb; „Haushalt“ und „Betrieb“ bleiben die Namen der Werkbank-Vorlagen.
   - nr: 14
     titel: Benutzer und Person
     vorschlag: „Benutzer“ ist ein Konto, „Person“ ein Kontakt (Paket Basis) – im Glossar getrennt.

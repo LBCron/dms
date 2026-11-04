@@ -210,7 +210,7 @@ Nur für Auskünfte **mit Passwort** – unverschlüsselt geht keine Auskunft pe
 3. **Abrufcode:** Am besten **von Ablago erzeugen** (8 Zeichen ohne Verwechsler wie 0/O und 1/I). Alternativ ein **eigener Code**, den nur die Person kennt – z. B. die Vertragsnummer (mindestens 6 Zeichen). Eine **Kundennummer allein ist schwach**: Sie steht oft auf Briefen und Rechnungen.
 4. **Abruf-Link erstellen:** Link und Code stehen **nur jetzt** auf dem Bildschirm. Teile den Code auf einem anderen Weg mit – per Brief, Telefon oder SMS, **nie in derselben E-Mail wie den Link**. Geht er verloren, erstelle einen neuen Link; der alte gilt dann nicht mehr.
 
-Die Person öffnet den Link und sieht nur: „Du hast eine Auskunft nach Art. 15 DSGVO über die hier gespeicherten Daten angefordert. Zur Sicherheit gib bitte deinen Abrufcode ein.“ (mit der [Anrede](#anrede) „Sie“: „Sie haben … Zur Sicherheit geben Sie bitte Ihren Abrufcode ein.“) – kein Menü, kein Logo, kein Name des Haushalts, keine Anmeldung. Mit dem richtigen Code startet der Download.
+Die Person öffnet den Link und sieht nur: „Du hast eine Auskunft nach Art. 15 DSGVO über die hier gespeicherten Daten angefordert. Zur Sicherheit gib bitte deinen Abrufcode ein.“ (mit der [Anrede](#anrede) „Sie“: „Sie haben … Zur Sicherheit geben Sie bitte Ihren Abrufcode ein.“) – kein Menü, kein Logo, kein Name der Ablage, keine Anmeldung. Mit dem richtigen Code startet der Download.
 
 ![Öffentliche Abrufseite einer Auskunft](bilder/abrufseite.png)
 

@@ -1,6 +1,6 @@
 # Willkommen bei Ablago
 
-Ablago ordnet die Unterlagen eines Haushalts: Verträge, Rechnungen, Zahlungen, Versicherungen, Geräte – und die Dokumente dazu. Dieses Handbuch zeigt dir, wie du damit arbeitest. Wofür sich das lohnt – mit einem kleinen Selbstcheck –, steht unter [Wofür ein DMS?](wofuer.md).
+Ablago ordnet deine Unterlagen, zu Hause oder im Betrieb: Verträge, Rechnungen, Zahlungen, Versicherungen, Geräte – und die Dokumente dazu. Dieses Handbuch zeigt dir, wie du damit arbeitest. Wofür sich das lohnt – mit einem kleinen Selbstcheck –, steht unter [Wofür ein DMS?](wofuer.md).
 
 ![Die Ablage mit Ansichten, Liste und geöffneter Mappe](bilder/ablage.png)
 

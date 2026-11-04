@@ -31,7 +31,7 @@ describe('Überflüssige Umgebungsvariablen (#478)', () => {
 
   it('nur HAUSHALT_ID: Grund Kennung gespeichert', () => {
     const h = variablenHinweis(ueberfluessigeVariablen({ haushalt: true }))!;
-    assert.deepEqual(h.zeilen, [{ name: 'HAUSHALT_ID', grund: 'die Kennung des Haushalts ist gespeichert' }]);
+    assert.deepEqual(h.zeilen, [{ name: 'HAUSHALT_ID', grund: 'die Ablage-Id ist gespeichert' }]);
     assert.match(h.schluss, /^Entferne die Variable /);
     assert.equal(h.ziel, '/werkbank/technik');
   });
@@ -42,7 +42,7 @@ describe('Überflüssige Umgebungsvariablen (#478)', () => {
     const h = variablenHinweis(v)!;
     assert.equal(h.zeilen.length, 4);
     assert.match(h.zeilen[2].grund, /Datenbank-Anbindung/);
-    assert.match(h.zeilen[3].grund, /Kennung des Haushalts/);
+    assert.match(h.zeilen[3].grund, /Ablage-Id ist gespeichert/);
     assert.equal(h.schluss, 'Entferne diese Variablen beim nächsten Update aus der Compose-Datei.');
     assert.doesNotMatch(h.schluss, /\bsie\b/);
     assert.equal(h.ziel, '/werkbank/technik');

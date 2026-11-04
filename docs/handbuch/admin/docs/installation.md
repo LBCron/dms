@@ -40,11 +40,11 @@ Server (in der Vorlage `db`), Port `5432`, Datenbank und Benutzer `dms` und das 
 
 Bei einer leeren Datenbank fragt Ablago, ob du neu anfängst oder eine Sicherung zurückholst. **Wiederherstellen** führt in den Ablauf unter [Wiederherstellen](wiederherstellen.md#neues-nas-alte-sicherung) und endet bei der Anmeldung mit den bisherigen Zugangsdaten.
 
-### Haushalt
+### Name deiner Ablage { #haushalt }
 
-![Haushalt](bilder/einrichtung-mandant.png)
+![Name deiner Ablage](bilder/einrichtung-mandant.png)
 
-Der Name von Ablago, meist der Name der Familie („Familie Mustermann“) oder der Firma. Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite (änderbar unter **Werkbank → [Designs](designs.md)**).
+Der Name deiner Ablage, meist der Name der Familie („Familie Mustermann“) oder deines Betriebs („Büro Mustermann“). Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite (änderbar unter **Werkbank → [Designs](designs.md)**).
 
 ### Administrator
 
@@ -91,6 +91,8 @@ Mit Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-
 
 Danach: unter **Werkbank → [Sicherung](sicherung.md)** den Zeitplan einschalten, eigene [Mappentypen](mappentypen.md) anlegen und weitere [Benutzer einladen](benutzer.md).
 
+**Für Selbständige und kleine Betriebe:** Die Werkbank startet mit der schlanken Vorlage *Haushalt*. Stell unter **Werkbank → Werkbank anpassen** die Vorlage **Betrieb** ein – dann siehst du auch Nummernkreise, Archivmodus, Postfächer, Datenschutz und die übrigen Bereiche, die ein Betrieb braucht (siehe [Übersicht](uebersicht.md)).
+
 ## Datenbank-Anbindung
 
 Die Anbindung an PostgreSQL steht in der Datei `datenbank.json` im Ordner `/data/geheim` (nur für den Container lesbar, mit Passwort). Sie ist **führend**:
@@ -102,7 +104,7 @@ Die Anbindung an PostgreSQL steht in der Datei `datenbank.json` im Ordner `/data
 
 Unter **Werkbank → Datenbank-Anbindung** siehst und änderst du die Anbindung. Im Abschnitt *Verbindung* steht, womit Ablago gerade verbunden ist („Aktuell verbunden: dms@postgres:5432/dms · in Betrieb“). Ändern: erst **Verbindung prüfen**, dann **Übernehmen**. Die neue Anbindung gilt nach einem Neustart (**Jetzt neu starten** – im Container startet Docker Ablago gleich wieder). Die Daten wandern dabei nicht mit; für einen Umzug in eine andere Datenbank nimm eine [Sicherung](sicherung.md).
 
-In der Datei steht auch die interne Id des **Haushalts** (früher die Umgebungsvariable `HAUSHALT_ID`). Bisherige Installationen übernehmen sie beim ersten Start; die Variable kann danach entfernt werden.
+In der Datei steht auch die **Ablage-Id** (früher die Umgebungsvariable `HAUSHALT_ID`). Bisherige Installationen übernehmen sie beim ersten Start; die Variable kann danach entfernt werden.
 
 Unter der Verbindung zeigt die Seite, wie es der Datenbank im Betrieb geht: die **langen Datenbankzugriffe** und **was gerade läuft**. Früher stand das unter *Wartung und Fehlersuche → Datenbank*; alte Links und Lesezeichen führen hierher.
 

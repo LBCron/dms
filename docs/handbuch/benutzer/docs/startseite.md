@@ -49,7 +49,7 @@ Darunter stehen die **zuletzt geöffneten** Mappen – die letzten fünf, die du
 In einem neuen Ablago gibt es noch nichts zu zählen. Dann zeigt die Startseite drei Einstiege:
 
 - **Erste Post ablegen** – Datei wählen oder am Handy fotografieren; daraus wird eine [Post](post.md).
-- **Paket Haushalt installieren** – nur für Administratoren: fertige Mappentypen für Konten, Verträge, Versicherungen und mehr.
+- **Paket Haushalt installieren** – nur für Administratoren: fertige Mappentypen für Konten, Verträge, Versicherungen und mehr. Für Selbständige und kleine Betriebe gibt es weitere Pakete im [Paketkatalog](https://catalog.ablago.app/).
 - **Hilfe: so fängst du an** – die [Ersten Schritte](erste-schritte.md).
 
 ## Einstellen

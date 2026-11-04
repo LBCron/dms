@@ -15,7 +15,7 @@ Außerdem steht dort, wer dem Begriff begegnet: alle, nur Administratoren oder n
 ## Grundbegriffe
 
 <a id="ablage"></a>**Ablage** · ✓ Alltagswort · alle  
-Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen.  
+Der Arbeitsbereich für alle Benutzer – mit Ansichten, Listen und Mappen. Zugleich das Wort für die ganze Installation, zu Hause wie im Betrieb („Name deiner Ablage“, „Ablage-Id“); eine Installation ist eine Ablage.  
 Siehe auch: [Werkbank](#werkbank), [Ansicht](#ansicht).
 
 <a id="ablageort"></a>**Ablageort** · ✓ Alltagswort · alle  
@@ -31,7 +31,7 @@ Eine gespeicherte Auswahl von Mappen – welche Mappentypen, mit welchen Bedingu
 Siehe auch: [Unteransicht](#unteransicht), [Bedingung](#bedingung), [Trefferliste](#trefferliste).
 
 <a id="archivnummer"></a>**Archivnummer** · ✓ Alltagswort · alle  
-Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Haushalt; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.  
+Nummer auf einem Aufkleber am Papieroriginal (z. B. A-000123), dieselbe steht am Dokument in Ablago. Eindeutig je Ablage; kommt aus dem Nummernkreis „Archivnummer“. Verbindet Papier und Dokument in beide Richtungen.  
 Siehe auch: [Ablageort](#ablageort), [Nummernkreis](#nummernkreis), [Dokument](#dokument).
 
 <a id="bedingung"></a>**Bedingung** · ~ mit Erklärung · Administratoren  
@@ -246,7 +246,7 @@ Ein Konto, mit dem sich jemand anmeldet. Liegt als Systemmappe in Ablago. Person
 Wer was darf. Am Mappentyp – Anlegen, Lesen, Bearbeiten, Löschen, Passwörter sehen – mit einem Standard plus Regeln; an der Ansicht – Sehen, Anlegen, Exportieren – mit Vererbung an die Unteransichten. Für Administratoren gelten sie nicht.
 
 <a id="betrieb"></a>**Betrieb** · ✓ Alltagswort · Administratoren  
-Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Geplant ist „Betrieb“ auch als Sprachprofil für Firmen (Gegenstück zu „Haushalt“).  
+Die Vorlage unter „Werkbank anpassen“ für Selbständige und kleine Betriebe – mit Nummernkreisen, Archivmodus, Postfächern und weiteren Bereichen. Gegenstück ist die Vorlage „Haushalt“.  
 Siehe auch: [Werkbank anpassen](#werkbank-anpassen), [Haushalt](#haushalt).
 
 <a id="darf-weg"></a>**Darf weg** · ✓ Alltagswort · Administratoren  
@@ -352,7 +352,8 @@ Eine kurze Prüfkennung, an der man einen Schlüssel wiedererkennt.
 Fehler, die Benutzer über „Fehler melden“ eingereicht haben (Werkbank → Gemeldete Fehler).
 
 <a id="haushalt"></a>**Haushalt** · ✓ Alltagswort · Administratoren  
-Der Haushalt (oder die Firma), für den Ablago eingerichtet ist. Eine Installation ist ein Haushalt. „Mandant“ steht nur im Code und, wo technisch nötig, im Administratorhandbuch. Geplant: Je nach Sprachprofil soll es „Haushalt“ oder „Betrieb“ heißen.
+Die Vorlage unter „Werkbank anpassen“ für zu Hause – schlank, nur was eine Familie zum Einrichten und Sichern braucht. Für die ganze Installation heißt es seit 04.11.2026 neutral „Ablage“; „Mandant“ steht nur im Code.  
+Siehe auch: [Betrieb](#betrieb), [Werkbank anpassen](#werkbank-anpassen), [Ablage](#ablage).
 
 <a id="konsole"></a>**Konsole** · ✗ Fachwort · Fortgeschrittene  
 Der Befehl „dms“ im Container für Notfall und Betrieb.
@@ -447,7 +448,7 @@ Kein neues Wort. Der Mappentyp legt seine Trefferlisten fest, eine davon ist der
 Beide Wörter bleiben. „Aufgabe“ ist Arbeit für Menschen, „Auftrag“ Arbeit, die Ablago im Hintergrund erledigt.
 
 <a id="offen-13"></a>**13. Mandant, Haushalt, Organisation, Firma** (31.10.2026)  
-„Haushalt“ in allem, was Benutzer sehen; „Mandant“ nur im Code und wo technisch nötig.
+„Haushalt“ in allem, was Benutzer sehen; „Mandant“ nur im Code und wo technisch nötig. **Neu am 04.11.2026:** Die Installation heißt neutral „Ablage“ („Name deiner Ablage“, „Ablage-Id“), zu Hause wie im Betrieb; „Haushalt“ und „Betrieb“ bleiben die Namen der Werkbank-Vorlagen.
 
 <a id="offen-14"></a>**14. Benutzer und Person** (31.10.2026)  
 „Benutzer“ ist ein Konto zum Anmelden. Kontakte – Personen, Firmen, Behörden – sind gewöhnliche Mappen und keine Benutzer.
@@ -482,6 +483,7 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 
 | Begriff | nicht verwenden | im Code |
 |---|---|---|
+| Ablage | Haushalt (für die Installation), Mandant (in der Oberfläche) | `mandant, haushalt_id` |
 | Ablageort | – | `ablageort` |
 | Ablago | Ablago DMS, ABLAGO, „das DMS“ für das eigene Programm | – |
 | Abwesenheit | – | `Abwesenheit` |
@@ -509,7 +511,6 @@ Wer Oberfläche, Handbuch, Hilfetexte oder Release-Notizen schreibt, verwendet d
 | Feldart | Feldtyp, Datentyp, Art (allein) | `Feldtyp, FELDTYPEN, Feld.typ` |
 | Format | Validierung, Datentyp | `Feld.format, Feld.landFeld, FELDFORMATE, shared/src/feldformate.ts` |
 | Gemeldete Fehler | Fehlermeldungen | – |
-| Haushalt | Mandant (in der Oberfläche) | `mandant, haushalt_id` |
 | Historie | Protokoll (an der Mappe), Verlauf | `Historieneintrag` |
 | Kennung | Schlüssel (für Felder), Key | `key, schluessel` |
 | Link | Direktlink, sprechender Link | `Direktlink` |

@@ -157,7 +157,7 @@ def karte(datei, stufe, name, wer, fokus, szene, braucht, satz):
     inhalt += t(rechts + 106, 43, fokustext, 13, farbe, 700)
     inhalt += t(rechts, 80, name, 21, TINTE, 700)
     inhalt += t(rechts, 104, wer, 13.5, LEISE)
-    inhalt += t(rechts, 140, 'Braucht vom DMS', 12, LEISE, 700)
+    inhalt += t(rechts, 140, 'Braucht von Ablago', 12, LEISE, 700)
     c, ende = chips(rechts, 150, braucht, farbe)
     inhalt += c
     for i, zeile in enumerate(satz):
@@ -172,7 +172,7 @@ def alle_karten():
           boden(24, 330, B) + haus(190, B, 120, 86) + person(110, B, 1.45, '#ec407a') + kind_auf_arm(110, B, 1.45)
           + papiere(42, 80) + sprechblase(150, 36, 'Wo ist der Kaufbeleg?'),
           ['fertige Pakete', 'Fristen-Erinnerung', 'Sicherung ohne Mühe', 'App-Store-Installation', 'Hilfe mit Bildern'],
-          ['Erfolg: Nach einer Stunde liegt die erste Mappe mit', 'Dokument im DMS – ohne ins Handbuch zu schauen.'])
+          ['Erfolg: Nach einer Stunde liegt die erste Mappe mit', 'Dokument in Ablago – ohne ins Handbuch zu schauen.'])
     karte('persona-2-jonas.svg', 2, 'Familienmitglied · Jonas', 'Jonas (16) oder Tom, der „nur mal nachschaut“ · fast nur am Handy', 'kern',
           boden(24, 330, B) + person(140, B, 1.5, '#26a69a', '#3e2723') + handy(160, B - 120, 1.6)
           + sprechblase(196, 70, 'Zeugnis gefunden!', 128) + schild(270, 150, 1.4, '#43a047'),
@@ -182,7 +182,7 @@ def alle_karten():
           boden(24, 330, B) + haus(196, B, 110, 80) + person(110, B, 1.45, '#5c6bc0') + tisch(30, B - 70, 150)
           + nas(42, B - 126, 1.0) + laptop(120, B - 70, 1.0) + sprechblase(150, 32, 'Haus › Heizung › Wartung', 172),
           ['eigene Mappentypen', 'Berechtigungen', 'Postfach und Scanner', 'Sicherung 3-2-1', 'Expertenmodus', 'API und Konsole', 'Vollexport'],
-          ['Wichtig: Markus richtet das DMS für Lena und Jonas ein –', 'die beiden müssen verstehen, was er baut.'])
+          ['Wichtig: Markus richtet Ablago für Lena und Jonas ein –', 'die beiden müssen verstehen, was er baut.'])
     karte('persona-4-petra.svg', 4, 'Für die Eltern sorgen · Petra', 'Petra (52) und zwei Brüder · Mutter (81) lebt allein · drei Städte', 'fokus',
           boden(24, 330, B) + person(80, B, 1.25, '#8e24aa') + person(160, B, 1.2, '#78909c', alt=True)
           + stecknadel(240, 120, '#e53935') + stecknadel(286, 160, '#1e88e5') + stecknadel(258, 214, '#43a047')
@@ -195,26 +195,26 @@ def alle_karten():
           + sprechblase(30, 30, 'Belege fürs Steuerjahr', 160),
           ['Paket Vermietung', 'Export für den Steuerberater', 'Fristen (Abrechnung)', 'Zählerstände', 'Vorlagen'],
           ['Nebenkosten, Mieterwechsel, Handwerker und Anlage V –', 'je Objekt und Steuerjahr wiederzufinden.'])
-    karte('persona-6-katrin.svg', 6, 'Selbständige · Katrin', 'Grafikdesignerin · Einzelunternehmerin · eine Teilzeitkraft', 'unterstuetzt',
+    karte('persona-6-katrin.svg', 6, 'Selbständige · Katrin', 'Grafikdesignerin · Einzelunternehmerin · eine Teilzeitkraft', 'fokus',
           boden(24, 330, B) + tisch(120, B - 70, 190) + laptop(150, B - 70, 1.1) + papiere(236, B - 112, 3)
           + person(80, B, 1.45, '#00838f', '#4e342e') + sprechblase(150, 40, 'E-Rechnung im Original', 168),
           ['Archivmodus (GoBD)', 'Versionen', 'Nummernkreise', 'Verfahrensdokumentation', 'Privat und Geschäft getrennt'],
           ['Wir versprechen kein Zertifikat – wir liefern Werkzeuge', 'und ehrliche Doku.'])
-    karte('persona-7-brandt.svg', 7, 'Kleinbetrieb · Tischlerei Brandt', '12 Mitarbeitende · Büroleiterin · externer IT-Dienstleister', 'unterstuetzt',
+    karte('persona-7-brandt.svg', 7, 'Kleinbetrieb · Tischlerei Brandt', '12 Mitarbeitende · Büroleiterin · externer IT-Dienstleister', 'fokus',
           boden(24, 330, B) + buero(180, B, 140, 110, 3, '#d7ccc8') + person(70, B, 1.35, '#ef6c00') + person(130, B, 1.35, '#546e7a', '#263238')
           + laptop(150, B - 62, 0.8) + sprechblase(30, 34, 'Anmeldung mit Microsoft 365', 196),
           ['Anmeldung über einen Anbieter', 'Zwei-Faktor', 'Archivmodus', 'Rechte je Rolle', 'Postfächer', 'Vertretung'],
-          ['Lücke heute: abgestufte Administratorrechte – bewusst', 'zurückgestellt, bis KMU in den Fokus rückt.'])
-    karte('persona-8-mittelstand.svg', 8, 'Mittelstand · Steuerkanzlei-Verbund', '120 Mitarbeitende · 3 Standorte · eigene IT · Datenschutz', 'nicht',
+          ['Lücke heute: abgestufte Administratorrechte –', 'seit Kleinbetriebe zum Fokus gehören, ein offener Punkt.'])
+    karte('persona-8-mittelstand.svg', 8, 'Mittelstand · Steuerkanzlei-Verbund', '120 Mitarbeitende · 3 Standorte · eigene IT · Datenschutz', 'unterstuetzt',
           boden(24, 330, B) + buero(160, B, 160, 150, 5) + person(60, B, 1.25, '#3949ab') + person(112, B, 1.25, '#5d4037', '#212121')
           + schild(86, 74, 1.1, '#3949ab') + sprechblase(30, 26, 'Datenschutzbeauftragter', 176),
           ['Single Sign-on mit Gruppen', 'abgestufte Admin-Rechte', 'Vier-Augen-Prinzip', 'Protokoll-Export (SIEM)', 'Mehrsprachigkeit', 'Support'],
-          ['Bewusst nicht im Fokus: Vieles davon würde die Einrichtung', 'für Haushalte schwerer machen.'])
+          ['Unterstützt: Was ohne Nachteil für Familien geht, darf rein –', 'vieles würde die Einrichtung aber schwerer machen.'])
     karte('persona-9-konzern.svg', 9, 'Großunternehmen · Konzernbereich', '2.000+ Mitarbeitende · IT-Abteilung · Compliance', 'nicht',
           boden(24, 330, B) + buero(40, B, 120, 240, 9, '#b0bec5') + buero(180, B, 140, 190, 7)
           + ''.join(person(200 + i * 28, B, 0.55, ['#3949ab', '#00897b', '#6d4c41', '#8e24aa', '#546e7a'][i]) for i in range(5)),
           ['Hochverfügbarkeit', 'mehrere Mandanten', 'Verzeichnisdienst', 'Legal Hold', 'Zertifizierungen', 'ERP/CRM'],
-          ['Open Source (Apache-2.0): darf das DMS einsetzen und erweitern.', 'Wir gestalten aber nicht dafür.'])
+          ['Open Source (Apache-2.0): darf Ablago einsetzen und erweitern.', 'Wir gestalten aber nicht dafür.'])
 
 
 # ---------- Übersicht der Skala ----------
@@ -224,30 +224,30 @@ def alle_karten():
 TEXTE = {
     'de': {
         'datei': 'personas-skala.svg',
-        'ueberschrift': 'Für wen wir das DMS bauen – Stand 31.10.2026',
+        'ueberschrift': 'Für wen wir Ablago bauen – Stand 03.11.2026',
         'links': 'privat', 'rechts': 'Unternehmen',
         'stufen': [('Einsteiger-', 'Familie'), ('Familien-', 'mitglied'), ('Haushalts-', 'Admin'), ('Für die', 'Eltern sorgen'),
                    ('Vermieter', ''), ('Selbständige', ''), ('Kleinbetrieb', ''), ('Mittelstand', ''), ('Groß-', 'unternehmen')],
         'baender': {'kern': 'Kernfokus', 'fokus': 'Fokus', 'unterstuetzt': 'unterstützt', 'nicht': 'nicht im Fokus'},
         'fuss': 'Im Zweifel gewinnt die Einfachheit für Stufe 1–3. Den Fokus verschieben wir nur bewusst.',
         'titel': ('Skala vom Haushalt bis zum Konzern: Kernfokus Stufe 1–3 (Einsteiger-Familie, Familienmitglied, Haushalts-Admin), '
-                  'Fokus 4–5 (Für die Eltern sorgen, Vermieter), unterstützt 6–7 (Selbständige, Kleinbetrieb), nicht im Fokus 8–9 (Mittelstand, Großunternehmen).'),
+                  'Fokus 4–7 (Für die Eltern sorgen, Vermieter, Selbständige, Kleinbetrieb), unterstützt 8 (Mittelstand), nicht im Fokus 9 (Großunternehmen).'),
         'ziele': [ZIEL, ZIEL_BENUTZER],
     },
     'en': {
         'datei': 'personas-skala.en.svg',
-        'ueberschrift': 'Who we build the DMS for – as of 31 Oct 2026',
+        'ueberschrift': 'Who we build Ablago for – as of 3 Nov 2026',
         'links': 'private', 'rechts': 'business',
         'stufen': [('Beginner', 'family'), ('Family', 'member'), ('Household', 'admin'), ('Looking after', 'parents'),
                    ('Landlord', ''), ('Self-', 'employed'), ('Small', 'business'), ('Mid-sized', 'company'), ('Large', 'enterprise')],
         'baender': {'kern': 'core focus', 'fokus': 'focus', 'unterstuetzt': 'supported', 'nicht': 'not in focus'},
         'fuss': 'When in doubt, simplicity for levels 1–3 wins. We only shift the focus deliberately.',
         'titel': ('Scale from household to large enterprise: core focus levels 1–3 (beginner family, family member, household admin), '
-                  'focus 4–5 (looking after parents, landlord), supported 6–7 (self-employed, small business), not in focus 8–9 (mid-sized company, large enterprise).'),
+                  'focus 4–7 (looking after parents, landlord, self-employed, small business), supported 8 (mid-sized company), not in focus 9 (large enterprise).'),
         'ziele': [ZIEL_BENUTZER],
     },
 }
-FOKUS_JE_STUFE = ['kern', 'kern', 'kern', 'fokus', 'fokus', 'unterstuetzt', 'unterstuetzt', 'nicht', 'nicht']
+FOKUS_JE_STUFE = ['kern', 'kern', 'kern', 'fokus', 'fokus', 'fokus', 'fokus', 'unterstuetzt', 'nicht']
 
 
 def uebersicht(sprache='de'):
@@ -269,11 +269,18 @@ def uebersicht(sprache='de'):
             r = 5 if koepfe > 1 else 9
             inhalt += f'<circle cx="{px}" cy="{py - (6 if koepfe > 3 else 0)}" r="{r}" fill="{farbe}"/>'
         inhalt += t(cx, 186, f'{nr}', 13, farbe, 700, 'middle') + t(cx, 204, a, 12.5, TINTE, 600, 'middle') + t(cx, 220, b, 12.5, TINTE, 600, 'middle')
-    for von, bis, f in [(1, 3, 'kern'), (4, 5, 'fokus'), (6, 7, 'unterstuetzt'), (8, 9, 'nicht')]:
+    for von, bis, f in [(1, 3, 'kern'), (4, 7, 'fokus'), (8, 8, 'unterstuetzt'), (9, 9, 'nicht')]:
         farbe, hell, _ = FOKUS[f]
         xa, xb = x0 + (von - 1) * dx - 34, x0 + (bis - 1) * dx + 46
-        inhalt += f'<rect x="{xa}" y="238" width="{xb - xa}" height="28" rx="14" fill="{hell}" stroke="{farbe}"/>' + t((xa + xb) / 2, 257, tx['baender'][f], 13, farbe, 700, 'middle')
-    inhalt += t(w / 2, 288, tx['fuss'], 12.5, LEISE, 400, 'middle')
+        inhalt += f'<rect x="{xa}" y="236" width="{xb - xa}" height="34" rx="14" fill="{hell}" stroke="{farbe}"/>'
+        text = tx['baender'][f]
+        if von == bis and ' ' in text and len(text) > 11:
+            # Band über nur eine Stufe (#700): zweizeilig und kleiner, damit nichts über den Rand läuft
+            a, b = text.rsplit(' ', 1)
+            inhalt += t((xa + xb) / 2, 250, a, 11, farbe, 700, 'middle') + t((xa + xb) / 2, 264, b, 11, farbe, 700, 'middle')
+        else:
+            inhalt += t((xa + xb) / 2, 258, text, 13 if von != bis else 11.5, farbe, 700, 'middle')
+    inhalt += t(w / 2, 290, tx['fuss'], 12.5, LEISE, 400, 'middle')
     inhalt_svg = svg(w, h + 10, tx['titel'], inhalt)
     for ziel in tx['ziele']:
         (ziel / tx['datei']).write_text(inhalt_svg, encoding='utf-8')

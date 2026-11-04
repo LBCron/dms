@@ -2,7 +2,7 @@
 
 Ablago soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Begriffe, Voreinstellungen und neue Funktionen zusammenpassen, richten wir uns nach **neun Personas**: erfundene, aber typische Menschen, vom kleinen Haushalt bis zum Konzern. Die Namen sind nur Merkhilfen.
 
-**Stand:** 31.10.2026 (Ablago 0.73.6). Der Fokus ist eine bewusste Entscheidung des Maintainers. Er kann sich verschieben, zum Beispiel in Richtung Kleinbetrieb, und wird regelmäßig geprüft. Änderungen stehen unten unter [Fokus-Entscheidungen](#fokus-entscheidungen).
+**Stand:** 03.11.2026 (Ablago 0.158). Der Fokus ist eine bewusste Entscheidung des Maintainers. Seit dem 03.11.2026 gehören Selbständige und kleine Betriebe dazu; der Fokus wird regelmäßig geprüft. Änderungen stehen unten unter [Fokus-Entscheidungen](#fokus-entscheidungen).
 
 ## Die Skala
 
@@ -15,9 +15,9 @@ Ablago soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Beg
 | 3 | Haushalts-Admin (Markus) | 2–5 Personen | er selbst, gern | **Kernfokus** |
 | 4 | Für die Eltern sorgen (Petra) | 3–6 Personen in mehreren Haushalten | eine Person aus der Familie | **Fokus** |
 | 5 | Vermieter (Herr Özdemir) | 1–2 Personen, 2–6 Wohnungen | er selbst | **Fokus** |
-| 6 | Selbständige (Katrin) | 1–3 Personen | sie selbst oder ein Bekannter | unterstützt |
-| 7 | Kleinbetrieb (Tischlerei Brandt) | 5–50 Personen | externer IT-Dienstleister oder Büroleitung | unterstützt |
-| 8 | Mittelstand (Steuerkanzlei-Verbund) | 50–250 Personen | eigene IT | nicht im Fokus |
+| 6 | Selbständige (Katrin) | 1–3 Personen | sie selbst oder ein Bekannter | **Fokus** |
+| 7 | Kleinbetrieb (Tischlerei Brandt) | 5–50 Personen | externer IT-Dienstleister oder Büroleitung | **Fokus** |
+| 8 | Mittelstand (Steuerkanzlei-Verbund) | 50–250 Personen | eigene IT | unterstützt |
 | 9 | Großunternehmen (Konzernbereich) | 250+ Personen | IT-Abteilung | nicht im Fokus |
 
 **So ist das gemeint:**
@@ -30,8 +30,8 @@ Ablago soll Menschen helfen, die Informationen ihres Lebens zu ordnen. Damit Beg
 **Warum dieser Schnitt?**
 
 - Ablago ist als **Haushalts-DMS** entstanden: Mappen statt Ordner, Sicherung mit Notfallblatt, Installation über die App-Stores von Heimservern.
-- Für Kleinbetriebe gibt es schon einiges (Archivmodus, Vorlage Verfahrensdokumentation, Zwei-Faktor, Anmeldung über einen Anbieter, Konsole). Das soll nutzbar sein, aber **nicht die Richtung bestimmen**.
-- Mittelstand und Konzern setzen Dinge voraus, die Ablago heute nicht hat. Viele davon würden die Einrichtung für Stufe 1 schwerer machen.
+- Für Selbständige und kleine Betriebe ist schon viel da (Archivmodus, Verfahrensdokumentation, Rechte je Rolle, Postfächer, Vertretung, Zwei-Faktor, Anmeldung über einen Anbieter, Automatisierungen). Deshalb gehören sie seit dem 03.11.2026 zum **Fokus** – die Richtung für Stufe 1–3 bestimmen sie aber nicht.
+- Den Mittelstand **unterstützen** wir: Was ohne Nachteil für Stufe 1–3 geht, darf rein. Konzerne setzen Dinge voraus, die Ablago heute nicht hat und die die Einrichtung für Stufe 1 schwerer machen würden.
 
 ## Die Entscheidungsregel
 
@@ -112,7 +112,7 @@ Markus richtet Ablago **für Lena und Jonas** ein. Was er baut, müssen die beid
 - **Stolpersteine:** der Aufbau der Mappentypen (Objekt → Wohnung → Mietvertrag → Mieter), der Export im richtigen Format.
 - **Braucht:** ein Paket „Vermietung“, Export für den Steuerberater, Fristen, Vorlagen.
 
-### 6 · Selbständige – Katrin (unterstützt)
+### 6 · Selbständige – Katrin (Fokus)
 
 ![Katrin am Schreibtisch mit Rechnungen](grafiken/persona-6-katrin.svg)
 
@@ -122,7 +122,7 @@ Markus richtet Ablago **für Lena und Jonas** ein. Was er baut, müssen die beid
 - **Braucht:** Archivmodus, Versionen, Nummernkreise, Vorlage Verfahrensdokumentation, Trennung von Privat und Geschäft über Ansichten und Rechte.
 - **Stolperstein:** „Ist das GoBD-konform?“ Wir versprechen kein Zertifikat, sondern liefern Werkzeuge und ehrliche Doku.
 
-### 7 · Kleinbetrieb – Tischlerei Brandt (unterstützt)
+### 7 · Kleinbetrieb – Tischlerei Brandt (Fokus)
 
 ![Büroleiterin und IT-Dienstleister vor der Tischlerei](grafiken/persona-7-brandt.svg)
 
@@ -130,15 +130,15 @@ Markus richtet Ablago **für Lena und Jonas** ein. Was er baut, müssen die beid
 - **Ziele:** Aufträge, Rechnungen, Lieferanten, Personalakten (streng getrennt), Urlaubsvertretung, Post per E-Mail und Scanner.
 - **Administration:** Der IT-Dienstleister installiert und aktualisiert, die Büroleiterin pflegt Benutzer und Mappentypen.
 - **Braucht:** Anmeldung über Microsoft 365, Zwei-Faktor, Archivmodus, Rechte je Rolle, Postfächer, Vertretung.
-- **Lücke heute:** abgestufte Administratorrechte. Bewusst zurückgestellt, bis Kleinbetriebe in den Fokus rücken.
+- **Lücke heute:** abgestufte Administratorrechte ([#282](https://github.com/motom001/dms/issues/282)) – seit Kleinbetriebe zum Fokus gehören, ein offener Punkt.
 
-### 8 · Mittelstand – Steuerkanzlei-Verbund (nicht im Fokus)
+### 8 · Mittelstand – Steuerkanzlei-Verbund (unterstützt)
 
 ![Zwei Mitarbeitende mit Datenschutz-Schild vor einem großen Bürogebäude](grafiken/persona-8-mittelstand.svg)
 
 - **Wer:** 120 Mitarbeitende, drei Standorte, eigene IT, ein Datenschutzbeauftragter.
 - **Erwartet:** Single Sign-on mit Gruppen, abgestufte Administratorrechte, Vier-Augen-Prinzip, Protokoll-Export (SIEM), Test- und Produktivsystem, Mehrsprachigkeit, Support mit Reaktionszeiten.
-- **Warum nicht im Fokus:** Vieles davon würde Oberfläche und Einrichtung für Stufe 1–3 schwerer machen. Support mit Reaktionszeiten passt nicht zu einem kleinen Open-Source-Projekt.
+- **Warum nur unterstützt:** Was davon ohne Nachteil für Stufe 1–3 geht, darf rein – vieles würde Oberfläche und Einrichtung aber schwerer machen. Support mit Reaktionszeiten passt nicht zu einem kleinen Open-Source-Projekt.
 
 ### 9 · Großunternehmen – Konzernbereich (nicht im Fokus)
 
@@ -156,5 +156,7 @@ Markus richtet Ablago **für Lena und Jonas** ein. Was er baut, müssen die beid
 | 31.10.2026 | Abgestufte Administratorrechte zurückgestellt ([#282](https://github.com/motom001/dms/issues/282)) | betrifft Stufe 7–9, erst wenn Kleinbetriebe in den Fokus rücken |
 | 31.10.2026 | Zielgruppen als Labels an den Issues | alle, die mitentwickeln, arbeiten mit demselben Fokus |
 | 31.10.2026 | Werkbank anpassen: neue Installationen starten mit der Vorlage „Haushalt“ ([#281](https://github.com/motom001/dms/issues/281)) | Stufe 1–3 sehen nur, was sie brauchen; bestehende Installationen zeigen weiter alles |
+| 03.11.2026 | Kernfokus Stufe 1–3, **Fokus 4–7** (Selbständige und Kleinbetrieb neu), **unterstützt 8**, nicht im Fokus 9 | (1) Die Funktionen sind schon da: Archivmodus, Verfahrensdokumentation, Rechte je Rolle, Postfächer, Vertretung, Anmeldung über einen Anbieter und Automatisierungen helfen genau Selbständigen und kleinen Betrieben. (2) Die Lasttests haben es gezeigt: Nach der Optimierung verkraftet Ablago deutlich größere Installationen ([Was Ablago verkraftet](https://help.ablago.app/admin/aktuell/verkraftet/), [#576](https://github.com/motom001/dms/issues/576)). (3) Deshalb öffnen wir den Bereich bewusst und treiben die Leistung weiter voran. Im Zweifel gewinnt weiter die Einfachheit für Stufe 1–3. |
+| 04.11.2026 | Die Installation heißt neutral „Ablage“ statt „Haushalt“ ([#700](https://github.com/motom001/dms/issues/700)) | passt für zu Hause wie für Betriebe; „Haushalt“ und „Betrieb“ bleiben die Namen der Werkbank-Vorlagen |
 
 Die Grafiken entstehen mit `docs/handbuch/werkzeuge/personas_grafiken.py`. Wer eine Persona ändert, ändert dort die Karte mit.

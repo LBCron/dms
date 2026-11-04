@@ -16,14 +16,14 @@ export interface UeberfluessigeVariable {
 export const VARIABLEN_GRUND: Record<VariablenArt, string> = {
   ordner: 'Die Ordner im Container sind fest; welcher Ordner des NAS dahinter liegt, bestimmen die Volumes.',
   datenbank: 'Die Datenbank-Anbindung steht jetzt in einer Datei im Datenordner (Werkbank → Datenbank-Anbindung).',
-  haushalt: 'Die Kennung des Haushalts ist gespeichert.',
+  haushalt: 'Die Ablage-Id ist gespeichert.',
 };
 
 /** Kurzform für den Hinweis („… – die Datenbank-Anbindung steht jetzt in einer Datei“). */
 const KURZ: Record<VariablenArt, string> = {
   ordner: 'die Ordner im Container sind fest, welcher Ordner des NAS dahinter liegt, bestimmen die Volumes',
   datenbank: 'die Datenbank-Anbindung steht jetzt in einer Datei im Datenordner',
-  haushalt: 'die Kennung des Haushalts ist gespeichert',
+  haushalt: 'die Ablage-Id ist gespeichert',
 };
 
 /** Liste der überflüssigen Variablen in fester Reihenfolge: Ordner, DATABASE_URL, HAUSHALT_ID. */

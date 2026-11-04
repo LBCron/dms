@@ -15,7 +15,7 @@ Jede Sicherung besteht aus zwei Dateien im Sicherungsordner, z. B.:
 | Datei | Inhalt |
 | --- | --- |
 | `2026-10-29_0200-automatisch.dms-sicherung` | Datenbank und alle Dateien (Dokumente, [umgewandelte Fassungen](texterkennung.md#andere-dateitypen), Logos, Bilder gemeldeter Fehler), gepackt und **verschlüsselt** |
-| `2026-10-29_0200-automatisch.json` | Metadaten, lesbar: Haushalts-Id (Feld `haushaltId`), Versionen (Ablago, Datenbank-Stand, PostgreSQL, Node.js, Betriebssystem, Architektur), Art, Beginn und Dauer, Anzahl Mappen, Dokumente, Benutzer und umgewandelter Fassungen (Feld `anzahl.fassungen`), Größen, Verschlüsselung mit Fingerabdruck des Schlüssels und die **SHA-256-Prüfsumme** der Sicherungsdatei |
+| `2026-10-29_0200-automatisch.json` | Metadaten, lesbar: Ablage-Id (Feld `haushaltId`), Versionen (Ablago, Datenbank-Stand, PostgreSQL, Node.js, Betriebssystem, Architektur), Art, Beginn und Dauer, Anzahl Mappen, Dokumente, Benutzer und umgewandelter Fassungen (Feld `anzahl.fassungen`), Größen, Verschlüsselung mit Fingerabdruck des Schlüssels und die **SHA-256-Prüfsumme** der Sicherungsdatei |
 
 - Verschlüsselt wird mit AES-256-GCM. Der Schlüssel dafür wird aus dem Schlüssel unter **Werkbank → [Verschlüsselung](verschluesselung.md)** abgeleitet – derselbe wie für Passwortfelder. **Ohne diesen Schlüssel ist eine Sicherung nicht lesbar.** Er steht nie in der Sicherung, nur in der Schlüsseldatei und auf dem [Notfallblatt](#notfallblatt).
 - Angemeldete Sitzungen gehören nicht dazu: Nach einer Wiederherstellung meldet sich jeder neu an.
@@ -96,7 +96,7 @@ Da die Sicherungen verschlüsselt sind, dürfen sie auch in eine Cloud. Das [Not
 
 **Notfallblatt herunterladen** (hier und unter *Verschlüsselung*) erzeugt ein PDF mit allem, was du nach einem Ausfall brauchst:
 
-- Name des Haushalts, **Haushalts-Id**, Adresse, Ablago-Version und Datum,
+- Name deiner Ablage, **Ablage-Id**, Adresse, Ablago-Version und Datum,
 - den **Schlüssel** in Vierergruppen zum Abschreiben und seinen **Fingerabdruck**,
 - wo die Sicherungen und die Schlüsseldatei liegen,
 - die Schritte zur Wiederherstellung auf einem neuen System – auch: „Startet Ablago nicht mehr, ein älteres Image ziehen“,
@@ -115,7 +115,7 @@ Wo das Datenbank-Passwort steht, hängt von der Vorlage ab:
 
 Das Blatt selbst nennt immer die `.env`. Für ein neues System genügt ohnehin ein neues Passwort.
 
-**Aufbewahren:** ausgedruckt an einem sicheren Ort (z. B. bei den Familienunterlagen) oder als PDF in einem Passwortsafe – auf jeden Fall **getrennt vom NAS** und nicht neben den Sicherungen. Wer das Blatt hat, kann die Sicherungen lesen.
+**Aufbewahren:** ausgedruckt an einem sicheren Ort (z. B. bei den Familienunterlagen oder im Tresor des Betriebs) oder als PDF in einem Passwortsafe – auf jeden Fall **getrennt vom NAS** und nicht neben den Sicherungen. Wer das Blatt hat, kann die Sicherungen lesen.
 
 Jeder Download steht im Protokoll (ohne den Schlüssel). Ändert sich der Schlüssel ([Schlüssel wechseln](verschluesselung.md#schlussel-wechseln)), weist die Werkbank darauf hin, ein neues Notfallblatt zu erstellen; ältere Sicherungen brauchen weiterhin das alte – bewahre es auf, solange es solche Sicherungen gibt. In der Liste tragen sie den Hinweis „früherer Schlüssel“; mit **Sicherungen mit früherem Schlüssel löschen** entfernst du sie alle auf einmal. Die [Probe-Wiederherstellung](wiederherstellen.md#probe-wiederherstellung) braucht den aktuellen Schlüssel – Sicherungen mit früherem Schlüssel lassen sich nicht probeweise einspielen.
 

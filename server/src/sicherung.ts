@@ -71,7 +71,7 @@ export const PLAN_STANDARD: Plan = { aktiv: false, uhrzeit: '02:00', haeufigkeit
 
 /**
  * Was ein Paket mit `dms:sicherung-lesen` über eine Sicherung erfährt – und was es neben die Datei auf das Ziel legt
- * (`<name>.json`). Bewusst ohne Person (ausgeloestVon), Umgebung (Versionen, System), Zähler und Haushalts-Id.
+ * (`<name>.json`). Bewusst ohne Person (ausgeloestVon), Umgebung (Versionen, System), Zähler und Ablage-Id.
  * Die Wiederherstellung kommt damit aus: Was fehlt, steht verschlüsselt im Kopf der Sicherung (#585).
  */
 export interface SchlankeMetadaten {
