@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CODE_MAX, PAKET_MAX, auswahlMitAbhaengigkeiten, nachAbhaengigkeiten, passt, vergleicheVersion, type Katalog } from '../../shared/src/pakete';
+import { CODE_MAX, PAKET_MAX, legtEtwasAn, auswahlMitAbhaengigkeiten, nachAbhaengigkeiten, passt, vergleicheVersion, type Katalog } from '../../shared/src/pakete';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
@@ -518,6 +518,17 @@ describe('Pakete: eine Größengrenze überall (#644)', () => {
       await assert.rejects(holeDaten(`${url}/zu-gross`, max), /4 MB groß, höchstens 3 MB/);
       await assert.rejects(holeDaten(`${url}/zu-gross?ohne-laenge`, max), /höchstens 3 MB/);
     } finally { server.close(); }
+  });
+});
+
+describe('Paket-Vorschau: „Das wird angelegt“ nur, wenn etwas angelegt wird (#643)', () => {
+  it('Paket nur mit Code legt nichts an, Pakete mit Typen, Ansichten oder Beispielen schon', () => {
+    assert.equal(legtEtwasAn({ typen: [], sichten: [], beispiele: 0 }), false, 'z. B. Texterkennung, Bildformate, Zusatzsprachen');
+    assert.equal(legtEtwasAn({ typen: [{ vorhanden: true }], sichten: [{ vorhanden: true }], beispiele: 0 }), false, 'alles schon da');
+    assert.equal(legtEtwasAn({ typen: [{ vorhanden: false, geloescht: true }], sichten: [], beispiele: 0 }), false, 'selbst gelöscht – bleibt weg');
+    assert.equal(legtEtwasAn({ typen: [{ vorhanden: false }], sichten: [], beispiele: 0 }), true);
+    assert.equal(legtEtwasAn({ typen: [], sichten: [{ vorhanden: false }], beispiele: 0 }), true);
+    assert.equal(legtEtwasAn({ typen: [], sichten: [], beispiele: 2 }), true);
   });
 });
 

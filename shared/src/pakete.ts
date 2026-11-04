@@ -481,6 +481,14 @@ export const CODE_MAX = PAKET_MAX;
 export const inMB = (bytes: number): string => (Math.round(bytes / 104857.6) / 10).toString().replace('.', ',');
 
 /**
+ * Legt eine Neuinstallation sichtbar etwas an – Mappentypen, Ansichten oder Beispiele (#643)? Nur dann zeigt die
+ * Vorschau „Das wird angelegt“; Pakete nur mit Code (z. B. Texterkennung) beschreiben stattdessen, was sie tun.
+ */
+export function legtEtwasAn(v: { typen: Array<{ vorhanden: boolean; geloescht?: boolean }>; sichten: Array<{ vorhanden: boolean }>; beispiele: number }): boolean {
+  return v.typen.some((t) => !t.vorhanden && !t.geloescht) || v.sichten.some((s) => !s.vorhanden) || v.beispiele > 0;
+}
+
+/**
  * Liest code: aus dem Manifest (ohne einstellungen/aktionen – die liest paketeinstellungen.ts).
  * dateien: Dateien unter code/ des Pakets (Name, Größe in Bytes) für die Größengrenze.
  */
