@@ -75,12 +75,14 @@ const DEMO_JE_LAUF = 50_000;
  * zu einem Folge-Issue „Beschleunigen“, macht den Lauf aber nicht rot.
  * `ciGrenze`: p95, ab dem `--grenzen` mit Exit-Code 1 endet (Entscheidung Thomas, #563): erster Lauf auf den
  * Rechnern von GitHub + 20 %, danach nur strenger, höchstens bis zum Ziel. Erster Lauf (Run 41448183378,
- * DMS 0.139.0): klein p95 95 ms → bleibt beim Ziel 300 ms; mittel p95 2384 ms → 2860 ms.
+ * DMS 0.139.0): klein p95 95 ms → bleibt beim Ziel 300 ms; mittel p95 2384 ms → 2860 ms. Nach dem Beschleunigen
+ * (#615; Run 41549943703, DMS 0.146.0): mittel p95 586 ms, + 20 % = 703 ms liegt unter dem Ziel → CI-Grenze = Ziel 1000 ms
+ * (Frage 53). Damit sind Ziel und CI-Grenze bei klein und mittel gleich.
  * Fehlerquote, 503 und Export gelten unverändert als Grenze.
  */
 export const STUFEN = {
   klein: { bildet: 'Haushalt (2–5 Personen)', gleichzeitig: 25, mappen: 5_000, export: false, ziel: { p95Ms: 300, fehlerquote: 0 }, ciGrenze: { p95Ms: 300 } },
-  mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, ziel: { p95Ms: 1000, fehlerquote: 0.001 }, ciGrenze: { p95Ms: 2860 } },
+  mittel: { bildet: 'Kleinbetrieb (10–15 Personen)', gleichzeitig: 100, mappen: 50_000, export: true, ziel: { p95Ms: 1000, fehlerquote: 0.001 }, ciGrenze: { p95Ms: 1000 } },
   gross: { bildet: 'Belastungsgrenze', mappen: 200_000, vorstufen: [5, 10], start: 25, schritt: 25, schrittSekunden: 120, hoechstens: 2000, abbruch: { p95Ms: 3000, fehlerquote: 0.01 }, ueberlast: 1000, verschlechterung: 0.2 },
 };
 /** Pflichten der großen Stufe (wie „Überlast“ in #544): kein Absturz, begrenzter Speicher, Erholung, Anmeldeschutz. */
@@ -492,7 +494,7 @@ async function festeStufe(v, name, dauer, lauf) {
   return pruefeFesteStufe(name, await lauf({ name, n: s.gleichzeitig, dauer, mitExport: s.export && !hat('--ohne-export') }));
 }
 
-/** Ziel und CI-Grenze in einem Satz, z. B. „Ziel p95 < 1000 ms, CI-Grenze 2860 ms, Fehler < 0,10 %“. */
+/** Ziel und CI-Grenze in einem Satz, z. B. „Ziel p95 < 1000 ms, CI-Grenze 1000 ms, Fehler < 0,10 %“. */
 export function zielText(name) {
   const s = STUFEN[name];
   return `Ziel p95 < ${s.ziel.p95Ms} ms, CI-Grenze ${s.ciGrenze.p95Ms} ms, ${s.ziel.fehlerquote === 0 ? 'keine Fehler' : `Fehler < ${prozent(s.ziel.fehlerquote)}`}`;

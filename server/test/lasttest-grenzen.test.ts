@@ -22,24 +22,23 @@ describe('Lasttest: Ziel und CI-Grenze (#563)', () => {
     assert.equal(lt.STUFEN.klein.ziel.p95Ms, 300);
     assert.equal(lt.STUFEN.mittel.ziel.p95Ms, 1000);
     assert.equal(lt.STUFEN.klein.ciGrenze.p95Ms, 300);
-    assert.equal(lt.STUFEN.mittel.ciGrenze.p95Ms, 2860);
-    // Nur strenger: nie lockerer als 2384 ms + 20 %, nie strenger als das Ziel.
+    assert.equal(lt.STUFEN.mittel.ciGrenze.p95Ms, 1000);
+    // Nur strenger: nie lockerer als der letzte GitHub-Lauf + 20 % (586 ms → 703 ms), nie strenger als das Ziel – also das Ziel selbst.
     for (const s of [lt.STUFEN.klein, lt.STUFEN.mittel]) assert.ok(s.ciGrenze.p95Ms >= s.ziel.p95Ms);
-    assert.ok(lt.STUFEN.mittel.ciGrenze.p95Ms <= Math.round(2384 * 1.2));
+    assert.equal(lt.STUFEN.mittel.ciGrenze.p95Ms, Math.max(lt.STUFEN.mittel.ziel.p95Ms, Math.round(586 * 1.2)));
     assert.equal(lt.PFLICHT.speicherMb, 1536, 'Arbeitsspeicher: entscheidet der Maintainer noch');
   });
 
-  it('p95 über dem Ziel, unter der CI-Grenze: nur Hinweis, kein Exit-Code', () => {
-    const r = lt.pruefeFesteStufe('mittel', lauf(2384));
+  it('knapp unter Ziel und CI-Grenze: eingehalten', () => {
+    const r = lt.pruefeFesteStufe('mittel', lauf(999));
     assert.deepEqual(r.verfehlt, []);
-    assert.equal(r.zielVerfehlt.length, 1);
-    assert.match(r.zielVerfehlt[0], /p95 2384 ms ≥ Ziel 1000 ms/);
+    assert.deepEqual(r.zielVerfehlt, []);
   });
 
   it('p95 über der CI-Grenze: verfehlt', () => {
-    const r = lt.pruefeFesteStufe('mittel', lauf(2860));
+    const r = lt.pruefeFesteStufe('mittel', lauf(1000));
     assert.equal(r.verfehlt.length, 1);
-    assert.match(r.verfehlt[0], /CI-Grenze 2860 ms \(Ziel < 1000 ms\)/);
+    assert.match(r.verfehlt[0], /CI-Grenze 1000 ms \(Ziel < 1000 ms\)/);
     assert.deepEqual(lt.pruefeFesteStufe('klein', lauf(301)).verfehlt.length, 1);
   });
 
@@ -51,7 +50,7 @@ describe('Lasttest: Ziel und CI-Grenze (#563)', () => {
   });
 
   it('Bericht nennt Ziel und CI-Grenze', () => {
-    assert.equal(lt.zielText('mittel'), 'Ziel p95 < 1000 ms, CI-Grenze 2860 ms, Fehler < 0,10 %');
+    assert.equal(lt.zielText('mittel'), 'Ziel p95 < 1000 ms, CI-Grenze 1000 ms, Fehler < 0,10 %');
     assert.equal(lt.zielText('klein'), 'Ziel p95 < 300 ms, CI-Grenze 300 ms, keine Fehler');
   });
 });
