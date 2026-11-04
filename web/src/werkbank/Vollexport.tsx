@@ -94,7 +94,7 @@ export function VollexportPanel({ z }: { z: VollexportZustand }) {
       <div className="blatt">
         <h2 className="h3">Meine Daten exportieren</h2>
         <label className="haken"><input type="checkbox" checked={s.persoenlich} onChange={(e) => void tu(async () => { await api.persoenlicherExport(e.target.checked); await z.laden(); return e.target.checked ? 'Benutzer dürfen ihre Daten exportieren.' : 'Meine Daten exportieren abgeschaltet.'; })} />
-          <span>Benutzer dürfen ihre eigenen Daten exportieren<small className="hilfe">Profil → Konto → Meine Daten exportieren: Mappen, die sie lesen dürfen, ihre Aufgaben und Erinnerungen – im selben Format (Recht auf Datenübertragbarkeit, DSGVO Art. 20).</small></span></label>
+          <span>Benutzer dürfen ihre eigenen Daten exportieren<small className="hilfe">Mein Konto → Konto → Meine Daten exportieren: Mappen, die sie lesen dürfen, ihre Aufgaben und Erinnerungen – im selben Format (Recht auf Datenübertragbarkeit, DSGVO Art. 20).</small></span></label>
       </div>
       <div className="blatt" id="exporte">
         <h2 className="h3">Vorhandene Exporte</h2>

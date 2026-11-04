@@ -25,7 +25,7 @@ Eine **Rolle** fasst Benutzer zusammen, die für etwas zuständig sind – zum B
 **Administrator** und **Mitglied** sind die **Systemrollen**: Sie ergeben sich aus dem Zugang des Benutzers und lassen sich weder umbenennen noch löschen.
 
 !!! info "Rollen und Rechte"
-    Eine Rolle gibt von sich aus keine Rechte. Ein Administrator kann aber in den Berechtigungen festlegen, was eine Rolle darf – zum Beispiel, dass nur die „Eltern“ die Gehaltsabrechnungen sehen. Was für dich gilt, steht in deinem Profil unter [Meine Rechte](profil.md#meine-rechte).
+    Eine Rolle gibt von sich aus keine Rechte. Ein Administrator kann aber in den Berechtigungen festlegen, was eine Rolle darf – zum Beispiel, dass nur die „Eltern“ die Gehaltsabrechnungen sehen. Was für dich gilt, steht unter Mein Konto unter [Meine Rechte](profil.md#meine-rechte).
 
 ## Verantwortliche eintragen
 

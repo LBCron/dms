@@ -13,7 +13,7 @@ Oben in der Mitte unter **Aufbewahrung** stellst du ein, wie viele Tage gelösch
 
 **0 Tage schaltet den Papierkorb aus:** Löschen ist dann sofort endgültig, wie vor Version 0.11. Was gerade im Papierkorb liegt, wird beim Speichern endgültig gelöscht – die Werkbank fragt vorher nach.
 
-Jeder Benutzer kann in seinem Profil einstellen, dass sein Papierkorb **beim Abmelden geleert** wird.
+Jeder Benutzer kann unter Mein Konto einstellen, dass sein Papierkorb **beim Abmelden geleert** wird.
 
 ### Historie endgültig gelöschter Mappen
 

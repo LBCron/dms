@@ -8,7 +8,7 @@ Du arbeitest lieber mit dem Explorer, dem Finder oder der Dateien-App? Dann bind
 ## Was du brauchst
 
 1. **Die Adresse:** die Adresse deines Ablago mit `/webdav/` am Ende, z. B. `https://dms.example.org/webdav/`.
-2. **Einen API-Schlüssel:** Unter **Profil → Sicherheit → API-Schlüssel** erzeugst du einen neuen Schlüssel, z. B. „Laptop“. Wähle **lesen und schreiben**, wenn du Dateien ablegen willst. Kopiere den Schlüssel gleich – er ist nur jetzt ganz zu sehen.
+2. **Einen API-Schlüssel:** Unter **Mein Konto → Sicherheit → API-Schlüssel** (oben rechts auf deinen Namen klicken) erzeugst du einen neuen Schlüssel, z. B. „Laptop“. Wähle **lesen und schreiben**, wenn du Dateien ablegen willst. Kopiere den Schlüssel gleich – er ist nur jetzt ganz zu sehen.
 3. Beim Verbinden ist der **Benutzername deine E-Mail-Adresse** und das **Passwort der Schlüssel** (beginnt mit `dms_`). Dein normales Passwort funktioniert hier absichtlich nicht.
 
 !!! tip "Ein Schlüssel je Gerät"

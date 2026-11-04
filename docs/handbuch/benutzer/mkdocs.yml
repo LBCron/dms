@@ -1,5 +1,5 @@
 site_name: Ablago – Benutzerhandbuch
-site_description: Arbeiten mit Ablago – Mappen, Dokumente, Suche und Profil
+site_description: Arbeiten mit Ablago – Mappen, Dokumente, Suche und Mein Konto
 site_url: !ENV [SITE_URL, 'https://help.ablago.app/benutzer/aktuell/']
 repo_url: https://github.com/motom001/dms
 repo_name: motom001/dms
@@ -87,7 +87,7 @@ nav:
       - Als Laufwerk einbinden: laufwerk.md
       - In die Hausautomatisierung einbinden: hausautomatisierung.md
       - Benutzer und Rollen: benutzer-und-rollen.md
-  - Profil und Einstellungen: profil.md
+  - Mein Konto und Einstellungen: profil.md
   - Häufige Fragen: fragen.md
   - Begriffe: begriffe.md
   - Weiteres:

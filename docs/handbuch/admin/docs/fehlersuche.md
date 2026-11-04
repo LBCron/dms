@@ -50,7 +50,7 @@ Einträge, die mit **Anfrage:** beginnen, betreffen eine ganze Anfrage; aufgekla
 
 ## Zeitmessung (Entwicklermodus)
 
-Wirkt eine Seite langsam, schalte im **Profil** den **Entwicklermodus** ein. Dann zeigt Ablago unten rechts bei jedem Seitenaufruf je Anfrage, wo die Zeit geblieben ist, oben die Summe über alle Anfragen der Seite. Er gilt nur für dein Konto.
+Wirkt eine Seite langsam, schalte unter **Mein Konto** den **Entwicklermodus** ein. Dann zeigt Ablago unten rechts bei jedem Seitenaufruf je Anfrage, wo die Zeit geblieben ist, oben die Summe über alle Anfragen der Seite. Er gilt nur für dein Konto.
 
 | Abschnitt | Was es ist |
 |---|---|

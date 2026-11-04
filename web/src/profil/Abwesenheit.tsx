@@ -86,7 +86,7 @@ export function MeineAbwesenheit() {
   return (
     <div className="einspaltig schmal">
       <div className="mappenkopf">
-        <p className="ueber">Profil · Abwesenheit</p>
+        <p className="ueber">Mein Konto · Abwesenheit</p>
         <h1>{ich.name || ich.email}</h1>
       </div>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}

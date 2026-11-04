@@ -46,9 +46,10 @@ begriffe:
     einsteiger: erklaeren
     begegnet: admin
     verwandt: [Ablage, Administrator, Werkbank anpassen]
-  - begriff: Profil
+  - begriff: Mein Konto
     bereich: grundbegriffe
-    beschreibung: Die persönlichen Einstellungen des angemeldeten Benutzers, erreichbar über das Benutzermenü → „Mein Konto“.
+    beschreibung: Die persönlichen Einstellungen des angemeldeten Benutzers – ein Klick oben rechts auf den eigenen Namen, dann „Mein Konto“. Wege beschreiben wir so, wie man klickt, z. B. „Mein Konto → Sicherheit → API-Schlüssel“.
+    nicht_verwenden: [Profil]
     einsteiger: alltag
     begegnet: alle
   - begriff: Mappe
@@ -468,18 +469,18 @@ begriffe:
     code: Nummernkreis
   - begriff: Design
     bereich: werkbank
-    beschreibung: Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines im Profil unter „Darstellung“.
+    beschreibung: Wie die Oberfläche aussieht – Logo, Schriftzug, Farben (hell, dunkel, hoher Kontrast oder nach Gerät) und eigenes CSS. Administratoren legen Designs unter Werkbank → Designs an und bestimmen den Standard; jeder Benutzer wählt seines unter Mein Konto unter „Darstellung“.
     einsteiger: alltag
     begegnet: admin
     nicht_verwenden: [Theme]
     verwandt: [Darstellung]
   - begriff: Darstellung
     bereich: grundbegriffe
-    beschreibung: Der Bereich im Profil, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).
+    beschreibung: Der Bereich unter Mein Konto, in dem jeder einstellt, wie Ablago für ihn aussieht – das Design (für sein Konto), die Schriftgröße und die Breite der Bereiche (je Gerät).
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Theme, Ansicht (für das Aussehen)]
-    verwandt: [Design, Profil]
+    verwandt: [Design, Mein Konto]
   - begriff: Paket
     bereich: werkbank
     beschreibung: Ein installierbares Bündel aus Mappentypen, Ansichten und Beispielen aus einem Paketkatalog, z. B. „Basis“. Ein Update ergänzt nur; es entfernt und ändert nichts.
@@ -542,7 +543,7 @@ begriffe:
     verwandt: [Werkbank]
   - begriff: Tägliche Zusammenfassung
     bereich: werkbank
-    beschreibung: Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder im Profil.
+    beschreibung: Eine E-Mail, die einmal am Tag die offenen Aufgaben eines Benutzers auflistet – nur, wenn er welche hat und nicht abwesend ist. Administratoren schalten sie unter Werkbank → Einstellungen → Benachrichtigungen und Aufgaben ein; Uhrzeit und Wochentage wählt jeder unter Mein Konto.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Übersicht per E-Mail, Digest]
@@ -660,7 +661,7 @@ begriffe:
     begegnet: admin
   - begriff: Meine Daten exportieren
     bereich: betrieb
-    beschreibung: Ein Benutzer lädt im Profil seine eigenen Daten herunter.
+    beschreibung: Ein Benutzer lädt unter Mein Konto seine eigenen Daten herunter.
     einsteiger: alltag
     begegnet: alle
     nicht_verwenden: [Persönlicher Export]

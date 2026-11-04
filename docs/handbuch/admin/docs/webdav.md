@@ -17,7 +17,7 @@ Unter **Werkbank → WebDAV-Laufwerk**:
 !!! warning "Nur über HTTPS"
     Schalte das Laufwerk nur ein, wenn Ablago über **HTTPS** erreichbar ist. Benutzername und API-Schlüssel gehen bei jeder Anfrage mit (HTTP Basic) – ohne HTTPS offen lesbar im Netz. **Windows** bindet ein Laufwerk mit Anmeldung über reines HTTP ohnehin nicht ein. Die Werkbank warnt, wenn die Adresse von Ablago nicht mit `https://` beginnt.
 
-- **Anmeldung mit API-Schlüssel:** Jeder Benutzer erzeugt sich unter **Profil → Sicherheit → API-Schlüssel** einen eigenen Schlüssel, am besten einen je Gerät („Laptop Thomas“). Benutzername ist die E-Mail-Adresse, Passwort der Schlüssel. Das **Passwort des Benutzers wird nie angenommen** – so bleibt die Zwei-Faktor-Anmeldung wirksam, und ein verlorenes Gerät sperrst du, indem du nur seinen Schlüssel löschst.
+- **Anmeldung mit API-Schlüssel:** Jeder Benutzer erzeugt sich unter **Mein Konto → Sicherheit → API-Schlüssel** (oben rechts auf deinen Namen klicken) einen eigenen Schlüssel, am besten einen je Gerät („Laptop Thomas“). Benutzername ist die E-Mail-Adresse, Passwort der Schlüssel. Das **Passwort des Benutzers wird nie angenommen** – so bleibt die Zwei-Faktor-Anmeldung wirksam, und ein verlorenes Gerät sperrst du, indem du nur seinen Schlüssel löschst.
 - Zum **Ablegen** braucht der Schlüssel das Recht **lesen und schreiben**; mit **nur lesen** kann man blättern und öffnen, aber nichts hineinlegen.
 - **Administratoren** bekommen keine API-Schlüssel und können das Laufwerk darum nicht benutzen. Für die tägliche Arbeit haben sie ohnehin ein normales Benutzerkonto.
 

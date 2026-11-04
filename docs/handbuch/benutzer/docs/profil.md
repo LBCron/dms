@@ -1,4 +1,4 @@
-# Profil und Einstellungen
+# Mein Konto und Einstellungen
 
 ## Das Menü unter deinem Namen
 
@@ -7,7 +7,7 @@ Ein Klick auf deinen Namen oben rechts öffnet ein Menü:
 ![Benutzermenü](bilder/benutzermenue.png)
 
 - Oben stehen dein Name, deine E-Mail-Adresse und deine Rolle.
-- **Mein Konto** – dein [Profil](#profil) mit allen Bereichen: Konto, Sicherheit, Darstellung (Design, Schriftgröße, Startseite, Anstehend, Spaltenbreiten), Benachrichtigungen, [Abwesenheit](#abwesenheit).
+- **Mein Konto** – alle deine Einstellungen ([siehe unten](#profil)): Konto, Sicherheit, Darstellung (Design, Schriftgröße, Startseite, Anstehend, Spaltenbreiten), Benachrichtigungen, [Abwesenheit](#abwesenheit).
 - Solange eine Abwesenheit wirkt, steht oben im Menü „Du bist abwesend“ – ein Klick darauf führt direkt dorthin –, und neben deinem Namen ist ein Punkt.
 - **Hilfe** – öffnet dieses Handbuch.
 - **Fehler melden** – siehe [Fehler melden](#fehler-melden).
@@ -24,11 +24,11 @@ Schließen kannst du das Fenster mit **Schließen**, mit der Esc-Taste oder mit 
 
 ![Über Ablago](bilder/ueber-dms.png){ loading=lazy }
 
-## Profil
+## Mein Konto { #profil }
 
-Das Profil hat links fünf Bereiche (am Smartphone oben als Knöpfe):
+Mein Konto hat links fünf Bereiche (am Smartphone oben als Knöpfe):
 
-![Profil](bilder/profil.png){ loading=lazy }
+![Mein Konto](bilder/profil.png){ loading=lazy }
 
 ### Konto
 
@@ -80,7 +80,7 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
 
 Mit der Zwei-Faktor-Anmeldung fragt Ablago nach dem Passwort zusätzlich einen sechsstelligen Code ab, den eine App auf deinem Handy alle 30 Sekunden neu erzeugt. Wer nur dein Passwort kennt, kommt dann nicht hinein.
 
-1. Unter **Profil → Sicherheit** auf **Einrichten** klicken.
+1. Unter **Mein Konto → Sicherheit** (oben rechts auf deinen Namen klicken) auf **Einrichten** klicken.
 2. In einer Authenticator-App (z. B. Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, Bitwarden oder den Passwörtern auf dem iPhone) den QR-Code scannen. Geht das nicht, tippst du den Schlüssel darunter ab.
 3. Den Code aus der App eingeben und **Bestätigen**.
 4. Du bekommst **zehn Wiederherstellungscodes**. Speichere oder drucke sie und bewahre sie getrennt vom Handy auf – sie werden nur dieses eine Mal angezeigt.
@@ -101,7 +101,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 - **Darstellung auf diesem Gerät** – die Breite der Spalten und eingeklappte Bereiche merkt sich jedes Gerät. Ist etwas nicht mehr zu finden, stellt **Standard-Darstellung wiederherstellen** die ursprüngliche Aufteilung her.
 - **Entwicklermodus** – zeigt unten rechts, wie lange ein Seitenaufruf gedauert hat.
 
-![Profil → Darstellung](bilder/profil-darstellung.png){ loading=lazy }
+![Mein Konto → Darstellung](bilder/profil-darstellung.png){ loading=lazy }
 
 ### Benachrichtigungen { #benachrichtigungen }
 
@@ -116,7 +116,7 @@ Auch ein Link zum Zurücksetzen des Passworts fragt danach den Code ab. Handy ve
 
 - **Sofort melden (Webhooks)** – Ablago meldet an eine Adresse, sobald sich deine Zahlen ändern (neue Post, Zu erledigen, Fristen), z. B. an Homey oder Node-RED. Nur Zahlen, keine Inhalte; nur an Ziele, die ein Administrator freigegeben hat. **Probe senden**, **Ein-/Ausschalten**, **Neues Geheimnis**, **Löschen** und die **letzten Meldungen** stehen an jedem Webhook. Wie du ihn einrichtest: [In die Hausautomatisierung einbinden](hausautomatisierung.md#sofort-melden-webhook).
 
-![Profil → Benachrichtigungen](bilder/profil-benachrichtigungen.png){ loading=lazy }
+![Mein Konto → Benachrichtigungen](bilder/profil-benachrichtigungen.png){ loading=lazy }
 
 ### Abwesenheit
 

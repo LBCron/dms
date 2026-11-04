@@ -23,7 +23,7 @@ Dieses Handbuch ist für alle, die Ablago **installieren, einrichten und betreib
 | Daten sichern und wiederherstellen | Werkbank → Sicherung, Wiederherstellen | [Sicherung](sicherung.md), [Wiederherstellen](wiederherstellen.md) |
 | Alle Daten mitnehmen, lesbar auch ohne Ablago | Werkbank → Vollexport | [Daten exportieren](export.md) |
 | Fehler finden, Meldungen der Benutzer bearbeiten | Werkbank → Wartung und Fehlersuche | [Fehlersuche](fehlersuche.md) |
-| Andere Programme anbinden | eigenen Benutzer für das Programm anlegen, als dieser anmelden, dann Profil → Sicherheit → API-Schlüssel (Administratoren bekommen keine Schlüssel) | [Schnittstelle](api.md) |
+| Andere Programme anbinden | eigenen Benutzer für das Programm anlegen, als dieser anmelden, dann Mein Konto → Sicherheit → API-Schlüssel (Administratoren bekommen keine Schlüssel) | [Schnittstelle](api.md) |
 
 Wie Ablago technisch aufgebaut ist und warum, beschreiben [Technik](technik.md) und [Entscheidungen](entscheidungen.md).
 
@@ -39,7 +39,7 @@ Das ist die **Systemrolle** eines Benutzers. Daneben gibt es frei anlegbare **Ro
     - **Je Mappentyp** legst du in den [Berechtigungen](berechtigungen.md) fest, wer Mappen anlegen, lesen, bearbeiten, löschen und Passwörter sehen darf – mit Regeln, z. B. über Rollen, und einem Testlauf.
     - **Je Ansicht** legst du an der Ansicht fest, wer sie sieht, dort anlegen und aus ihr exportieren darf ([Ansichten → Berechtigungen](sichten.md#berechtigungen)).
     - **Für Administratoren gelten die Regeln nicht:** Sie sehen und dürfen in der Ablage immer alles.
-    - Was für einen Benutzer am Ende gilt, zeigt ihm sein Profil unter **Meine Rechte**.
+    - Was für einen Benutzer am Ende gilt, zeigt ihm „Mein Konto“ unter **Meine Rechte**.
 
 ## Neue Versionen
 

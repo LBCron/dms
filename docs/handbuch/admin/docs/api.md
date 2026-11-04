@@ -6,7 +6,7 @@ Andere Programme – ein Scanner, ein Skript, eine Haushalts-App – greifen üb
 
 Die vollständige Beschreibung im **OpenAPI-Format** (Version 3.1):
 
-- **Lesbar** in jeder Installation unter **Profil → Sicherheit → API-Schlüssel** über den Link **API-Dokumentation** – passend zur installierten Version.
+- **Lesbar** in jeder Installation unter **Mein Konto → Sicherheit → API-Schlüssel** (oben rechts auf deinen Namen klicken) über den Link **API-Dokumentation** – passend zur installierten Version.
 - **Maschinenlesbar** unter `/api/openapi.json` oder `/api/v1/openapi.json` der eigenen Installation, z. B. `http://<NAS>:8080/api/openapi.json`. Das lässt sich in Werkzeuge wie Swagger UI, Postman oder einen Code-Generator laden.
 - Die Beschreibung der aktuellen Version liegt auch hier: [openapi.json](api/openapi.json).
 
@@ -14,7 +14,7 @@ Die vollständige Beschreibung im **OpenAPI-Format** (Version 3.1):
 
 ## API-Schlüssel
 
-Jeder Benutzer erzeugt seine Schlüssel selbst unter **Profil → Sicherheit → API-Schlüssel**, höchstens 50 je Benutzer – **außer Administratoren** (ab 0.26): Über die Schnittstelle arbeitet immer ein normaler Benutzer. Lege für ein Programm am besten einen eigenen Benutzer an (z. B. „Scanner“), melde dich als dieser an und erzeuge den Schlüssel dort. Schlüssel, die Administratoren schon vorher hatten, funktionieren weiter; die Werkbank-Übersicht erinnert daran, sie so zu ersetzen.
+Jeder Benutzer erzeugt seine Schlüssel selbst unter **Mein Konto → Sicherheit → API-Schlüssel**, höchstens 50 je Benutzer – **außer Administratoren** (ab 0.26): Über die Schnittstelle arbeitet immer ein normaler Benutzer. Lege für ein Programm am besten einen eigenen Benutzer an (z. B. „Scanner“), melde dich als dieser an und erzeuge den Schlüssel dort. Schlüssel, die Administratoren schon vorher hatten, funktionieren weiter; die Werkbank-Übersicht erinnert daran, sie so zu ersetzen.
 
 - **Name** – wofür der Schlüssel ist, z. B. „Scanner Arbeitszimmer“.
 - **Recht** (Stufe) – eine von dreien:
@@ -88,7 +88,7 @@ curl -i -H "Authorization: Bearer dms_…" -H 'If-None-Match: "z42-mJ3x0Qe7Kq9VZ
 
 ### Sofort statt abfragen: Webhooks { #webhooks }
 
-Statt den Zähler regelmäßig abzufragen, kann sich Ablago auch selbst melden: Ein **Webhook** schickt dieselben Zahlen per `POST` an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks im Profil an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: [Webhooks](webhooks.md); Prüfen der Signatur mit Beispielcode im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.
+Statt den Zähler regelmäßig abzufragen, kann sich Ablago auch selbst melden: Ein **Webhook** schickt dieselben Zahlen per `POST` an eine Adresse, wenige Sekunden nachdem sie sich geändert haben – signiert mit HMAC-SHA256, ohne Inhalte, mit Ereignis-Id gegen Doppeltes. Benutzer legen Webhooks unter Mein Konto an, nur an Ziele, die ein Administrator freigegeben hat. Einrichten, Zustellung und Köpfe: [Webhooks](webhooks.md); Prüfen der Signatur mit Beispielcode im [Entwicklerhandbuch](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). Den Zähler-Endpunkt braucht es weiterhin: zum Start, nach längerer Pause und als Rückfall, falls eine Meldung verloren ging.
 
 ### Mappe ändern, auch gleichzeitig mit anderen { #mappe-aendern }
 

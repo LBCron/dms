@@ -34,7 +34,7 @@ export function App() {
   const marke = schriftzugVon(d.meinDesign) || 'Ablago';
   const symbol = logoUrl(d.meinDesign);
   useEffect(() => {
-    document.title = `${marke} – ${{ ablage: 'Ablage', werkbank: 'Werkbank', profil: 'Profil' }[bereich]}`;
+    document.title = `${marke} – ${{ ablage: 'Ablage', werkbank: 'Werkbank', profil: 'Mein Konto' }[bereich]}`;
     setzeSymbol(symbol);
   }, [marke, symbol, bereich]);
   // Schriftgröße dieses Geräts (#69: gewählt in Profil → Darstellung).

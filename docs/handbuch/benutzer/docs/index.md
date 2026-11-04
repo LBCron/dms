@@ -25,7 +25,7 @@ Welche Mappentypen es gibt und welche Angaben sie haben, richtet ein Administrat
 | einen Brief oder eine Mail ablegen und später zuordnen willst | [Post](post.md) |
 | wissen willst, was unter „Zu erledigen“ liegt | [Zu erledigen](eingang.md) |
 | jemanden als verantwortlich eintragen willst | [Benutzer und Rollen](benutzer-und-rollen.md) |
-| Passwort, Design oder Schriftgröße ändern willst | [Profil und Einstellungen](profil.md) |
+| Passwort, Design oder Schriftgröße ändern willst | [Mein Konto und Einstellungen](profil.md) |
 
 !!! info "Deine Daten bleiben bei dir"
     Ablago läuft bei deinem Haushalt oder Betrieb, nicht in einer fremden Cloud. Es sendet keine Nutzungsdaten – auch keine anonymen – und ist auf Datenschutz ausgelegt. Was das für dich heißt, steht unter [Meine Daten](profil.md#meine-daten); was Ablago dafür mitbringt, im Administratorhandbuch unter [Datenschutz in Ablago](https://help.ablago.app/admin/aktuell/datenschutz/).
