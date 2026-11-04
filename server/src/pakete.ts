@@ -8,6 +8,7 @@
  * - Scheitert etwas, wird zurückgerollt: Es bleibt nichts halb angelegt.
  * - Ein Update ergänzt nur (neue Typen, Felder, Register, Sichten); es löscht und überschreibt nichts.
  */
+import { ansichtSymbol } from '../../shared/src/ansichtsymbole';
 import { liesFeldErkennung, type FeldErkennung } from '../../shared/src/erkennung';
 import { istDatumsgrenze, istFeldformat } from '../../shared/src/feldformate';
 import { createHash, randomUUID } from 'node:crypto';
@@ -112,7 +113,7 @@ export interface PaketTyp { schluessel: string; name: string; beschreibung: stri
  * sonst wird die Ansicht ohne ihn angelegt bzw. ganz übersprungen.
  */
 export interface FremderTyp { kennung: string; name: string }
-export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; fremdeTypen?: FremderTyp[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string }
+export interface PaketSicht { schluessel: string; name: string; beschreibung?: string; eltern?: string; typen?: string[]; fremdeTypen?: FremderTyp[]; bedingungen?: Array<{ feld: string; operator: string; wert?: unknown }>; trefferliste?: string; symbol?: string }
 /** Ab dieser Version verstehen DMS Ansichten mit `fremde_typen` (#656). */
 export const FREMDE_TYPEN_AB = '0.178.0';
 /** Beispiel-Mappe (#347): optional mit Schlüssel; Verweisfelder dürfen { beispiel: schluessel } bzw. { beispiel: paket:schluessel } sein. */
@@ -253,6 +254,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
         if (!SCHLUESSEL.test(k)) fehler.push(`sichten[${i + 1}]: fremde_typen[${j + 1}]: ungültige Kennung „${k}“.`);
         return { kennung: k, name: istObjekt(f) ? str(f.name).trim() || k : k };
       }) } : {}),
+      // Symbol (#428): unbekannte Namen (Paket für eine neuere Version) heißen „ohne Symbol“, kein Fehler.
+      symbol: ansichtSymbol(s.symbol) ?? undefined,
       bedingungen: Array.isArray(s.bedingungen) ? s.bedingungen.filter(istObjekt).map((b) => ({ feld: str(b.feld), operator: str(b.operator), wert: b.wert })) : [],
     };
   });
@@ -1301,7 +1304,7 @@ export class Paketverwaltung {
         const typen = [...new Set([...(s.typen ?? []).map((x) => ziel(x, false)!).filter(Boolean), ...fremd])];
         if (!typen.length && (s.fremdeTypen ?? []).length) continue;
         try {
-          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}) });
+          const neu = await this.d.legeSichtAn({ name: sp.name, beschreibung: s.beschreibung ?? '', elternId, position, typen, bedingungen: (s.bedingungen ?? []).map(bedingungAus), ...(s.trefferliste ? { trefferliste: s.trefferliste } : {}), ...(s.symbol ? { symbol: s.symbol } : {}) });
           neueSichten.push(neu.id);
           sichtMap[s.schluessel] = neu.id;
         } catch (f) { throw new Fachfehler(422, `Ansicht „${sp.name}“: ${meldungen(f)}`); }

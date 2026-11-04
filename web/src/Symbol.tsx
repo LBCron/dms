@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { ANSICHT_FORMEN } from './ansichtsymbol-formen';
 
 /**
  * Einheitliche Symbole (#425): einfarbig in Textfarbe (`currentColor`), so groß wie die Schrift,
@@ -61,6 +62,17 @@ export function Symbol({ name, className }: { name: SymbolName; className?: stri
   return (
     <svg className={`sym${className ? ` ${className}` : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       {SYMBOLE[name].map(([tag, attrs], i) => createElement(tag, { key: i, ...attrs }))}
+    </svg>
+  );
+}
+
+/** Symbol einer Ansicht (#428): Lucide-Name aus der festen Auswahl; unbekannt oder leer = nichts. */
+export function AnsichtSymbol({ name, className }: { name?: string | null; className?: string }) {
+  const teile = name ? ANSICHT_FORMEN[name] : undefined;
+  if (!teile) return null;
+  return (
+    <svg className={`sym ansicht-sym${className ? ` ${className}` : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      {teile.map(([tag, attrs], i) => createElement(tag, { key: i, ...attrs }))}
     </svg>
   );
 }

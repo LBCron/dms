@@ -115,6 +115,8 @@ export interface SichtDaten {
   trefferliste?: string | null;
   /** Berechtigungen an der Sicht (#148); null/fehlt = keine eigenen Regeln. */
   berechtigungen?: SichtRegelwerk | null;
+  /** Symbol (#428): Lucide-Name aus `ANSICHT_SYMBOLE` (ansichtsymbole.ts); null/fehlt = ohne Symbol. */
+  symbol?: string | null;
 }
 export interface Sicht extends SichtDaten {
   id: string; erstellt: string; geaendert: string;

@@ -10,7 +10,7 @@ Name und Logo von Ablago (web/public/, docs/marke/ und die Handbücher, übernom
 motom001/dms-website, Ordner marke/) sind von der Apache-2.0-Lizenz nicht erfasst
 (Abschnitt 6 der Lizenz). Ein Fork verwendet einen eigenen Namen und ein eigenes Logo.
 
-Die Symbole der Oberfläche (web/src/Symbol.tsx) stammen aus Lucide
+Die Symbole der Oberfläche (web/src/Symbol.tsx, web/src/ansichtsymbol-formen.ts) stammen aus Lucide
 (https://lucide.dev), ISC-Lizenz:
 Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part
 of Feather (MIT). All other copyright (c) for Lucide are held by Lucide
