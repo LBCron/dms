@@ -15,17 +15,29 @@ Schön, dass du mitmachen möchtest! Ablago ist ein kleines Projekt mit einem Ma
 5. **Gemergt wird nur vom Maintainer.** Danach entstehen Release, Image, Handbuch und die Einträge in den App-Stores von selbst (siehe [Release](release.md)).
 
 !!! info "Warum das Label nur vom Maintainer kommt"
-    Ablago verwaltet Verträge, Ausweise und Steuerunterlagen von Familien. Jede Funktion muss dauerhaft gepflegt, dokumentiert und in Sicherung und Wiederherstellung bedacht werden. Die Freigabe ist der Moment, in dem der Maintainer sagt: Das passt ins Produkt, und ich kann es langfristig tragen. Ein Workflow entfernt das Label wieder, falls es jemand anderes setzt.
+    Ablago verwaltet Verträge, Ausweise und Steuerunterlagen von Familien und kleinen Betrieben. Jede Funktion muss dauerhaft gepflegt, dokumentiert und in Sicherung und Wiederherstellung bedacht werden. Die Freigabe ist der Moment, in dem der Maintainer sagt: Das passt ins Produkt, und ich kann es langfristig tragen. Ein Workflow entfernt das Label wieder, falls es jemand anderes setzt.
 
 !!! note "Für wen wir bauen"
-    Im Kern baut Ablago für Haushalte: Lena, die Einsteigerin, Jonas mit dem Handy und Markus mit seinem NAS. Steht eine Funktion für Firmen im Konflikt mit Einfachheit für diese drei, gewinnen die drei. Mehr dazu, und wie sich das ändern kann: [Für wen wir bauen](personas.md).
+    Ablago ist die Dokumentenablage für zu Hause und kleine Betriebe. Im Kern baut es für Lena, die Einsteigerin, Jonas mit dem Handy und Markus mit seinem NAS; zum Fokus gehören auch Petra, Herr Özdemir, Selbständige wie Katrin und kleine Betriebe. Steht eine Funktion im Konflikt mit Einfachheit für die ersten drei, gewinnen die drei. Mehr dazu: [Für wen wir bauen](personas.md).
+
+## Was jeder Beitrag einhält { #was-jeder-beitrag-einhalt }
+
+Diese Leitplanken kommen aus der Mission von Ablago und gelten für Kern, Pakete und Clients gleichermaßen:
+
+- **Nichts verlässt das Gerät ohne ausdrückliche Zustimmung.** Jeder Weg nach draußen ist abgeschaltet, bis ein Mensch ihn auslöst oder ein Administrator ihn einschaltet – und das Handbuch sagt, was hinausgeht und wohin (siehe [Wege nach draußen](aufbau.md#wege-nach-draussen)).
+- **Keine Telemetrie,** auch nicht anonym, keine Absturzberichte, nichts von fremden Servern in Oberfläche und Handbuch.
+- **Offene Formate:** Was hineinkommt, muss in offenen Formaten wieder herauskommen (Vollexport, Archivfassung).
+- **Updates ändern nichts heimlich:** Jede Änderung hat eine Version und Release-Notizen; Daten werden nur mit Migration und nachvollziehbar umgebaut.
+- **Denkt mit, auf deinem Gerät:** Erkennen, Erinnern und Suchen laufen lokal; ein fremder Dienst nur, wenn jemand ihn ausdrücklich einrichtet.
+- **Einfach zuerst:** Neues darf Lena, Jonas und Markus nicht komplizierter machen.
 
 ## Wo du helfen kannst
 
 - **Fehler melden**, am besten mit **Werkbank → Technik → Übersicht für GitHub kopieren**.
 - **Anleitungen prüfen und bebildern**, z. B. für [Synology, QNAP, UGREEN, TrueNAS oder Unraid](https://help.ablago.app/installieren/aktuell/), wenn du so ein Gerät hast.
 - **Issues mit dem Label `good first issue`**: kleine, gut abgegrenzte Aufgaben.
-- **Übersetzungen** sind noch nicht geplant. Oberfläche und Handbuch sind deutsch.
+- **Clients** für Hausautomatisierung, Handy oder Büro im Repository [dms-clients](https://github.com/motom001/dms-clients) – siehe [Clients entwickeln](clients.md).
+- **Übersetzungen** kommen mit der Etappe Mehrsprachigkeit ([#357](https://github.com/motom001/dms/issues/357)); bis dahin sind Oberfläche und Handbuch deutsch.
 
 ## Lizenz
 

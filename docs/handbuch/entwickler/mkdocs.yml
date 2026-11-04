@@ -74,12 +74,16 @@ nav:
   - Mitmachen: index.md
   - Für wen wir bauen: personas.md
   - Loslegen: loslegen.md
-  - Aufbau: aufbau.md
   - Beitrag einreichen: beitrag.md
   - Release: release.md
-  - Pakete entwickeln: pakete.md
-  - Leistung: leistung.md
-  - Pakete mit Code: pakete-code.md
+  - Kern:
+      - Aufbau: aufbau.md
+      - Leistung: leistung.md
+  - Pakete:
+      - Pakete entwickeln: pakete.md
+      - Pakete mit Code: pakete-code.md
+  - Clients:
+      - Clients entwickeln: clients.md
   - Weiteres:
       - Begriffe (Glossar): https://help.ablago.app/benutzer/aktuell/begriffe/
       - Issues auf GitHub: https://github.com/motom001/dms/issues

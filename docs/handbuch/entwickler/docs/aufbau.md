@@ -304,6 +304,23 @@ Kleine Abläufe ohne Code: **Wenn · Und · Dann** (Sonst kommt mit Stufe 2). Mo
 - Demo-Daten und Beispiele lösen nichts aus (`ohneEreignisse`), in Wartung und Wiederherstellung ruht der Verteiler. Nach einer Wiederherstellung sind alle eingeschalteten Automatisierungen angehalten, bis ein Admin sie wieder einschaltet.
 - Speichern mit `version` (veralteter Stand → 409); jede Fassung steht in `automatisierung_fassungen` und lässt sich wiederherstellen. Im Vollexport: `struktur/automatisierungen.json` mit Änderungsverlauf; in der Sicherung alle Tabellen.
 
+## Wege nach draußen { #wege-nach-draussen }
+
+Ablago baut **von sich aus keine Verbindung** ins Internet auf. Jeder Weg nach draußen ist abgeschaltet, bis ein Mensch ihn auslöst oder ein Administrator ihn einschaltet. Die Übersicht für Nutzer steht im Administratorhandbuch unter [Was deine Ablage verlässt](https://help.ablago.app/admin/aktuell/datenschutz/#was-deine-ablage-verlasst).
+
+| Weg | Wer schaltet ihn ein | Was geht hinaus | Wo im Code |
+| --- | --- | --- | --- |
+| Paketkatalog | Administrator auf Knopfdruck, Einrichtungsassistent im Schritt „Pakete“ | nur die Anfrage an den Katalog | `server/src/pakete.ts`, `katalogsignatur.ts` |
+| Versionsabgleich | Administrator auf Knopfdruck (Werkbank → Technik) | Commit-Kennung, keine Daten der Ablage | `server/src/system.ts` |
+| E-Mail | Administrator richtet den Mailserver ein; Benutzer versenden | versandte Mappen und Dokumente, Tägliche Zusammenfassung (Titel, Links), Einladungen, Auskünfte | `server/src/mail.ts`, `aufgabenmail.ts` |
+| Postfach | Administrator richtet es ein | Abruf beim eigenen Mailserver | `server/src/postfach.ts`, `postfach-oauth.ts` |
+| Anmeldung über einen Anbieter | Administrator | Anmeldevorgang beim Anbieter | `server/src/oidc.ts` |
+| Webhooks | Administrator gibt Ziel frei, Benutzer legt an | nur Zahlen, signiert | `server/src/webhook.ts` |
+| Paket-Netz | Administrator bestätigt bei der Installation | nur an die Adressen aus Manifest bzw. Dienst-Adresse | Paket-Läufer, Recht `netzwerk` |
+| Abruf-Links (Auskunft) | Administrator erzeugt den Link | die Auskunft, nur nach Abrufcode | `server/src/abruf.ts` |
+
+**Regel für neue Wege:** Ein neuer Weg nach draußen braucht ein freigegebenes Issue, ist **ausgeschaltet**, bis ihn jemand ausdrücklich einschaltet, schickt so wenig wie möglich (Zahlen statt Inhalte, wo es reicht), steht in dieser Tabelle und in der Übersicht im Administratorhandbuch und wird von Sicherheit geprüft.
+
 ## Zähler-Endpunkt und Schlüssel-Stufen (#625) { #zaehler-endpunkt }
 
 Andere Programme (Hausautomatisierung, Wand-Tablet, Clients) wollen oft nur wissen, **ob etwas Neues da ist**. Dafür gibt es `GET /api/v1/ich/zaehler` (intern `/api/ich/zaehler`, `Dienst.zaehlerAbruf`):
