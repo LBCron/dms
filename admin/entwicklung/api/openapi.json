@@ -8246,7 +8246,7 @@
           "Werkbank"
         ],
         "summary": "Schlanke Metadaten einer Sicherung (Pakete)",
-        "description": "Für Pakete mit dem Recht „dms:sicherung-lesen“ (#585), z. B. „Sicherungsziel WebDAV“: Dateiname, Größe, SHA-256, Beginn und Fingerabdruck des Schlüssels der Sicherung aus dem Ereignis sicherung.fertig – ohne Person, Umgebung, Zähler und Haushalts-Id. Genau diese Angaben legt das Paket als <name>.json neben die Datei auf das Ziel; die Wiederherstellung kommt damit aus. 403 ohne das Recht oder für eine Sicherung, die dem Paket nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung).",
+        "description": "Für Pakete mit dem Recht „dms:sicherung-lesen“ (#585), z. B. „Sicherungsziel WebDAV“: Dateiname, Größe, SHA-256, Beginn und Fingerabdruck des Schlüssels der Sicherung aus dem Ereignis sicherung.fertig – ohne Person, Umgebung, Zähler und Ablage-Id. Genau diese Angaben legt das Paket als <name>.json neben die Datei auf das Ziel; die Wiederherstellung kommt damit aus. 403 ohne das Recht oder für eine Sicherung, die dem Paket nicht gemeldet wurde; 404, wenn sie nicht mehr da ist (Aufbewahrung).",
         "operationId": "getSicherungenMitname",
         "parameters": [
           {

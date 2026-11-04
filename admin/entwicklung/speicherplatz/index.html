@@ -2721,7 +2721,7 @@
 <li><strong>Texterkennung</strong> arbeitet viele neue Scans ab – das geht vorbei; die Warteschlange steht unter <a href="../texterkennung/">Texterkennung</a>.</li>
 <li><strong>Demo-Daten</strong> werden angelegt oder entfernt – ebenfalls vorübergehend.</li>
 <li>Ein <strong>Paket mit Code</strong> rechnet viel – der Anteil <em>Paket-Läufer</em> zeigt das; die Auslastung je Paket folgt in einer späteren Version.</li>
-<li>Der Arbeitsspeicher ist dauerhaft knapp – erhöhe <code>mem_limit</code> in der Compose-Datei (für einen Haushalt reichen meist 1–2 GB, mit Texterkennung eher 2 GB) oder gib dem NAS mehr Speicher.</li>
+<li>Der Arbeitsspeicher ist dauerhaft knapp – erhöhe <code>mem_limit</code> in der Compose-Datei (zu Hause und in kleinen Betrieben reichen meist 1–2 GB, mit Texterkennung eher 2 GB; Messwerte unter <a href="../verkraftet/">Was Ablago verkraftet</a>) oder gib dem NAS mehr Speicher.</li>
 <li>Die Systemlast des Rechners ist hoch, die CPU von Ablago aber nicht – dann bremst ein anderer Dienst auf dem NAS.</li>
 <li>Die <strong>Wartezeit des Servers</strong> ist hoch, obwohl CPU und Arbeitsspeicher frei sind – dann rechnet Ablago etwas Großes im Hauptfaden. Melde das bitte als <a href="https://github.com/motom001/dms/issues">Issue</a> mit dem Eintrag aus dem Protokoll; schwere Arbeit gehört in einen <a href="#arbeiter-fur-pdf-und-exporte">Arbeiter</a>.</li>
 </ul>

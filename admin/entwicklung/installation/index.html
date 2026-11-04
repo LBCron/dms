@@ -486,7 +486,7 @@
   <a href="#haushalt" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Haushalt
+        Name deiner Ablage
       
     </span>
   </a>
@@ -2726,7 +2726,7 @@
   <a href="#haushalt" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Haushalt
+        Name deiner Ablage
       
     </span>
   </a>
@@ -2975,9 +2975,9 @@
 <h3 id="neu-einrichten-oder-wiederherstellen">Neu einrichten oder wiederherstellen<a class="headerlink" href="#neu-einrichten-oder-wiederherstellen" title="Permanent link">&para;</a></h3>
 <p><img alt="Neu einrichten oder wiederherstellen" src="../bilder/einrichtung-wahl.png" /></p>
 <p>Bei einer leeren Datenbank fragt Ablago, ob du neu anfängst oder eine Sicherung zurückholst. <strong>Wiederherstellen</strong> führt in den Ablauf unter <a href="../wiederherstellen/#neues-nas-alte-sicherung">Wiederherstellen</a> und endet bei der Anmeldung mit den bisherigen Zugangsdaten.</p>
-<h3 id="haushalt">Haushalt<a class="headerlink" href="#haushalt" title="Permanent link">&para;</a></h3>
-<p><img alt="Haushalt" src="../bilder/einrichtung-mandant.png" /></p>
-<p>Der Name von Ablago, meist der Name der Familie („Familie Mustermann“) oder der Firma. Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite (änderbar unter <strong>Werkbank → <a href="../designs/">Designs</a></strong>).</p>
+<h3 id="haushalt">Name deiner Ablage<a class="headerlink" href="#haushalt" title="Permanent link">&para;</a></h3>
+<p><img alt="Name deiner Ablage" src="../bilder/einrichtung-mandant.png" /></p>
+<p>Der Name deiner Ablage, meist der Name der Familie („Familie Mustermann“) oder deines Betriebs („Büro Mustermann“). Er erscheint als Schriftzug in der Kopfzeile, im Browser-Tab und auf der Anmeldeseite (änderbar unter <strong>Werkbank → <a href="../designs/">Designs</a></strong>).</p>
 <h3 id="administrator">Administrator<a class="headerlink" href="#administrator" title="Permanent link">&para;</a></h3>
 <p><img alt="Administrator" src="../bilder/einrichtung-administrator.png" /></p>
 <p>Name, E-Mail-Adresse und Passwort des Administrators. Danach bist du als Administrator angemeldet.</p>
@@ -3004,6 +3004,7 @@
 <p><img alt="Fertig" src="../bilder/einrichtung-fertig.png" /></p>
 <p>Mit Links zu beiden Handbüchern, „Problem melden“ als vorbereitetes GitHub-Issue und dem Hinweis auf GitHub Sponsors.</p>
 <p>Danach: unter <strong>Werkbank → <a href="../sicherung/">Sicherung</a></strong> den Zeitplan einschalten, eigene <a href="../mappentypen/">Mappentypen</a> anlegen und weitere <a href="../benutzer/">Benutzer einladen</a>.</p>
+<p><strong>Für Selbständige und kleine Betriebe:</strong> Die Werkbank startet mit der schlanken Vorlage <em>Haushalt</em>. Stell unter <strong>Werkbank → Werkbank anpassen</strong> die Vorlage <strong>Betrieb</strong> ein – dann siehst du auch Nummernkreise, Archivmodus, Postfächer, Datenschutz und die übrigen Bereiche, die ein Betrieb braucht (siehe <a href="../uebersicht/">Übersicht</a>).</p>
 <h2 id="datenbank-anbindung">Datenbank-Anbindung<a class="headerlink" href="#datenbank-anbindung" title="Permanent link">&para;</a></h2>
 <p>Die Anbindung an PostgreSQL steht in der Datei <code>datenbank.json</code> im Ordner <code>/data/geheim</code> (nur für den Container lesbar, mit Passwort). Sie ist <strong>führend</strong>:</p>
 <ul>
@@ -3013,7 +3014,7 @@
 <li><strong>Gibt es beides nicht</strong> – oder klappt die Verbindung nicht –, startet Ablago im <strong>Einrichtungsmodus</strong>: Es liefert nur den Assistenten aus und fragt die Anbindung ab (mit Einrichtungscode). Alle anderen Schnittstellen antworten bis dahin mit 503. Eine gespeicherte Anbindung, deren Datenbank nur noch nicht erreichbar ist (der Datenbank-Container startet noch), versucht es alle zehn Sekunden weiter.</li>
 </ul>
 <p>Unter <strong>Werkbank → Datenbank-Anbindung</strong> siehst und änderst du die Anbindung. Im Abschnitt <em>Verbindung</em> steht, womit Ablago gerade verbunden ist („Aktuell verbunden: dms@postgres:5432/dms · in Betrieb“). Ändern: erst <strong>Verbindung prüfen</strong>, dann <strong>Übernehmen</strong>. Die neue Anbindung gilt nach einem Neustart (<strong>Jetzt neu starten</strong> – im Container startet Docker Ablago gleich wieder). Die Daten wandern dabei nicht mit; für einen Umzug in eine andere Datenbank nimm eine <a href="../sicherung/">Sicherung</a>.</p>
-<p>In der Datei steht auch die interne Id des <strong>Haushalts</strong> (früher die Umgebungsvariable <code>HAUSHALT_ID</code>). Bisherige Installationen übernehmen sie beim ersten Start; die Variable kann danach entfernt werden.</p>
+<p>In der Datei steht auch die <strong>Ablage-Id</strong> (früher die Umgebungsvariable <code>HAUSHALT_ID</code>). Bisherige Installationen übernehmen sie beim ersten Start; die Variable kann danach entfernt werden.</p>
 <p>Unter der Verbindung zeigt die Seite, wie es der Datenbank im Betrieb geht: die <strong>langen Datenbankzugriffe</strong> und <strong>was gerade läuft</strong>. Früher stand das unter <em>Wartung und Fehlersuche → Datenbank</em>; alte Links und Lesezeichen führen hierher.</p>
 <p><img alt="Datenbank-Anbindung: lange Datenbankzugriffe" src="../bilder/werkbank-datenbank.png" /></p>
 <h3 id="lange-datenbankzugriffe">Lange Datenbankzugriffe<a class="headerlink" href="#lange-datenbankzugriffe" title="Permanent link">&para;</a></h3>
