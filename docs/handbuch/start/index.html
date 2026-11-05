@@ -9,6 +9,7 @@
   <link rel="icon" href="favicon.ico" sizes="48x48">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="alternate" hreflang="en" href="en/">
   <style>
     /* Erscheinungsbild wie ablago.app (#699): Farben aus marke/, Schrift nur angegeben, nie geladen (#698).
        Jedes Handbuch trägt seinen Ton aus der Familie des Ablago-Blaus, wie in seiner Kopfzeile. */
@@ -37,6 +38,9 @@
     @media (prefers-color-scheme: dark) { .kopf .hell { display: none; } .kopf .dunkel { display: block; } }
     .kopf .zurueck { margin-left: auto; font-size: 16px; text-decoration: none; color: var(--text-leise); }
     .kopf .zurueck:hover { color: var(--blau); }
+    /* Sprachumschalter (#730): die Startseite gibt es auf Deutsch und Englisch. */
+    .kopf .sprache { font-size: 16px; font-weight: 600; text-decoration: none; color: var(--blau); border: 1px solid var(--linie); border-radius: 8px; padding: 2px 10px; }
+    .kopf .sprache:hover { border-color: var(--blau); }
     main { padding-block: 44px 40px; }
     h1 { font-size: clamp(30px, 4.5vw, 40px); line-height: 1.2; margin: 0 0 10px; color: var(--blau-tief); letter-spacing: -.5px; text-wrap: balance; }
     .vorspann { font-size: 13px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--akzent-text); margin: 0 0 8px; }
@@ -70,6 +74,7 @@
     <div class="innen">
       <a href="https://ablago.app/"><img class="hell" src="ablago-logo-mit-schriftzug.svg" alt="Ablago"><img class="dunkel" src="ablago-logo-mit-schriftzug-dunkel.svg" alt="Ablago"></a>
       <a class="zurueck" href="https://ablago.app/">Zurück zu ablago.app</a>
+      <a class="sprache" href="en/" hreflang="en" lang="en">English</a>
     </div>
   </header>
   <main class="innen">

@@ -3,6 +3,8 @@ INHERIT: mkdocs.yml
 site_url: https://dms.local/hilfe/entwickler/
 # Ohne Repository-Angabe (#698): Material fragt sonst beim Öffnen jeder Seite api.github.com nach Sternen und Version.
 repo_url: ''
+# Ohne Repository auch kein „Bearbeiten“-Link (sonst warnt mkdocs je Seite, und --strict bricht ab).
+edit_uri: ''
 theme:
   font: false
 hooks:

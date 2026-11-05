@@ -1,0 +1,508 @@
+# Packages {#pakete}
+
+A **package** brings ready-made folder types, views and, if you like, sample folders – for instance the Basis package with the folder type "Organisation" for companies, authorities, doctors and insurers. Instead of building field by field in the Workbench, you install it with a few clicks under **Workbench → Packages**.
+
+Packages come from the **official catalogue** of the Ablago project ([dms-registry](https://github.com/motom001/dms-registry)). Every package there is open source and has been approved by the maintainer. Most are **configuration packages** (folder types, views, examples). Packages with code can be installed and configured, but their code only runs with the package runner.
+
+## Fetching the catalogue { #katalog-abrufen }
+
+Ablago only queries the catalogue **at the push of a button**, never in the background: click **Fetch catalogue**. The page then shows two lists:
+
+- **Installed** – packages in this installation, with version and origin
+- **Available** – packages from the catalogue that aren't installed yet
+
+A click on a package shows name, description, version, licence, author, the required Ablago version, dependencies, the folder types and views it contains as well as links to the README and the changes.
+
+Ablago loads the catalogue from `https://catalog.ablago.app/katalog.json` and checks its **signature** (see [Origin](#herkunft-signiert-oder-nicht)). It only follows redirects to `https://` addresses. For this, Ablago itself must be able to reach the internet. Ablago can't configure a proxy for outgoing requests. Without internet access you upload a package as a file (see [Expert mode](#expertenmodus-weitere-kataloge-und-hochladen)).
+
+## Installing { #installieren }
+
+1. Choose a package under **Available** and, if needed, an older version.
+2. Click **Install …**. The [common process](#mehrere-pakete-in-einem-schritt-installieren) opens: at the top the package, below it what it needs ("Needs: …"), and its **add-ons** as ticks – for text recognition, for instance, **Further languages?** with French, Spanish, Turkish …
+3. Click **Continue with … packages**. On **one page**, Ablago now asks everything that is necessary, and only that:
+    - for packages with code **what the code may do** – per package as a list, events as a sub-list, with **?** for an explanation (see [A package's permissions](#rechte-eines-pakets)). Below it **one** tick for all, otherwise **Install** stays grey
+    - **names** that already exist: if there is already a folder type or a view (at the top level) with the same name, Ablago suggests another, e.g. "Organisation (Basis)". Everything else gets the name from the package, without asking
+    - **sample folders** – only if you set the tick
+    - **settings** without which a package doesn't run – or **Fill in later** (see [Settings](#einstellungen))
+4. At the bottom is the **summary**: which packages in which order, how many folder types and views, examples, packages with code. Below that the package's notes, e.g. whether it brings **synonyms** for the search (word lists, see [Search](suche.md#gleichbedeutende-worter)) or uses folder types from Ablago.
+5. Click **Install**.
+
+Before creating anything, Ablago checks:
+
+- whether **its own version** fits (otherwise [update](aktualisieren.md) Ablago first),
+- whether all **dependencies** are installed and in a fitting version,
+- whether the downloaded archive matches the **checksum (SHA-256)** in the catalogue. If it doesn't, Ablago installs nothing.
+
+Creation uses the same functions as in the Workbench, with all validation rules. The keys get the package prefix (`<package>_<key>`) so that packages don't get in each other's way; Ablago resolves links to other packages' folder types. **If something fails, Ablago undoes everything** – nothing is left half-created.
+
+### Installing several packages in one step { #mehrere-pakete-in-einem-schritt-installieren }
+
+Whether a package with its dependencies, text recognition with three languages or ten packages in the [setup assistant](installation.md#pakete-dazuholen) or from a [bundle file](#pakete-ohne-internet-installieren): Ablago installs everything in **one process** – without a chain of questions per package.
+
+1. **Selection:** the packages as tiles like in the catalogue – with icon, short description and download size; at the top you can filter by **category** (what you have already chosen stays visible). The selection looks the same in the setup assistant. What a package needs comes along automatically and is marked "comes along – needed by …" – **also packages with code**. A package's **add-ons** (packages that extend it, e.g. the additional languages of text recognition) appear as ticks directly below it as soon as you choose the package; every add-on stays a package of its own with its own version and its own update.
+2. **Every question once, with an exception per package:**
+    - **Origin** (only outside the official catalogue or without a valid signature): one tick for all.
+    - **Permissions:** all packages with code one below the other, each with its permissions, and **one** tick "I allow these packages these permissions respectively". Every package still only gets its **own** permissions and its own service account.
+    - **Names:** only folder types and views whose name is already taken.
+    - **Sample folders:** one tick for all packages with examples; under **Deselect per package** you take out individual ones.
+    - **Settings:** the required fields of all packages, one box per package. A service address is never preset – **Take over example** enters the package's example, and you confirm the addresses with a tick. With **Fill in later** the package is still installed but shows **Settings needed**, and the [Workbench overview](uebersicht.md) shows you the task "… still needs settings" until you have filled them in.
+3. **Summary** and **one** button "Install … packages".
+
+Ablago checks everything **before the first package**: origin, permissions, names, settings and service addresses. If anything is missing, it installs **nothing**. Then it proceeds package by package, dependencies first. If a package still fails (e.g. an invalid example), **this package is completely undone**; the others continue to be installed. Only packages that need the failed one drop out, with a reason. If a package can't be loaded at all (e.g. no connection), Ablago shows this before installing, with **Try again** – you can still install the others. At the end the result names what is installed and what isn't, each with a reason; you add what is missing later under **Workbench → Packages**.
+
+Your confirmation only applies to **exactly the permissions you saw**. If they change before the click (e.g. because the catalogue now has a new version with more permissions), Ablago shows the new permissions and asks again. While an installation is running, other installations, updates and removing packages wait – also on a second server with the same database.
+
+**Later on:** under **Workbench → Packages → *package*** are the add-ons that exist for it in the catalogue (e.g. **Further languages** for text recognition), with **Choose …** – then the same process. The [text recognition](texterkennung.md#weitere-sprachen) page suggests languages that occur in your documents.
+
+Folder types from packages carry the notice **Package …** in **Workbench → Folder types**. You can then adjust them like any other folder type.
+
+### Via the catalogue website { #uber-die-katalog-webseite }
+
+The catalogue also exists as a website: [Package catalogue](https://catalog.ablago.app/) (also on the manuals' start page). There you see per package the description, what is created, permissions, changes and older versions.
+
+1. Click **Install in my Ablago** at the package.
+2. The first time, the page asks for the **address of your Ablago**, e.g. `https://dms.example.org`. It only remembers it in your browser; you change it via **Ablago address** at the top. The website sends nothing to your Ablago and stores no credentials.
+3. Your Ablago opens **Workbench → Packages** with the **preview** of exactly this package (address `…/werkbank/pakete?installieren=<package>@<version>`). If you aren't signed in, you sign in first and then land there again. Other users see a notice that only administrators install packages.
+4. Ablago fetches package and checksum **itself from the official catalogue** – details in the link pointing to other sources don't count. If the package or the version doesn't exist there, Ablago says so.
+5. Installation only happens **when you click "Install"**. The link alone changes nothing. If the package is already installed, the preview shows this; it offers an update if the link names a newer version.
+
+### Viewing in the catalogue { #im-katalog-ansehen }
+
+Under **Workbench → Packages**, above the list **Available**, is the link **View in catalogue**; for every package from the official catalogue it is additionally under **More** for exactly this package's page. The link opens the catalogue website in a new tab and gives it **your Ablago's version**. The website then immediately shows which packages fit your Ablago and filters by this if you like – you don't have to look up and type in the version.
+
+**What is transmitted:** nothing except the page request itself, as with any other website. The version is in the address's **fragment**, i.e. after the `#`, e.g. `https://catalog.ablago.app/#dms=0.146.0`. The browser never sends this part to the server; it is in no access log. Only the catalogue page's script reads it in your browser, remembers the version there and immediately removes the fragment from the address again, so that it doesn't travel along with a shared link.
+
+- The fragment contains **only the version** – no address of your Ablago, no household name, no list of your packages, no identifier.
+- The link opens without a **referrer** (`rel="noopener noreferrer"`): the catalogue page doesn't learn which address you come from and has no access to your Ablago's tab.
+- If the official catalogue can't be reached right now (after **Fetch catalogue**), instead of the link there is a notice about [packages without internet](#pakete-ohne-internet-installieren).
+- Further catalogues from [expert mode](#expertenmodus-weitere-kataloge-und-hochladen) have no known website; the link only exists for the official catalogue.
+
+## Origin: signed or not { #herkunft-signiert-oder-nicht }
+
+The Ablago project **signs** the official catalogue (from Ablago 0.141.0). Because the catalogue contains every package's checksum, a single signature proves that all packages in it come from the Ablago project. The **preview** therefore shows a line **Origin** before every installation:
+
+| Origin | Meaning | What you do |
+| --- | --- | --- |
+| **signed by the Ablago project** (catalogue of …) | Catalogue and package demonstrably come from the Ablago project and are unchanged. | Nothing – install. |
+| **signed by the provider of this catalogue** | A [further catalogue](#expertenmodus-weitere-kataloge-und-hochladen) with its own key whose fingerprint you have confirmed. | Nothing – you trusted the provider when adding it. |
+| **not signed** | Nobody proves where the package comes from. | Only install if you know the source; you confirm the origin with a tick. |
+| **Signature invalid** | The catalogue has been changed or isn't from the Ablago project. Ablago records this in the log. | In case of doubt don't install, and fetch again later. Installing only works with explicit confirmation. |
+
+**Transition:** in this version, for the official catalogue **without** a signature there is only a notice. One minor version later Ablago requires the signature; packages from further sources, uploaded packages and bundle files without a signature then still work with confirmation.
+
+**Older catalogue:** Ablago remembers which state of the catalogue it last saw signed. If it then gets an **older** signed catalogue online, it doesn't accept it – that way nobody can slip in an old catalogue with a package version that has since been corrected. The message names both times. Usually fetching again later helps; if it stays like this, report it to the Ablago project.
+
+**Older versions:** Ablago 0.141.0 to 0.144.1 only know test keys. As soon as the Ablago project signs the catalogue with its real keys, they show "Signature invalid" for the official catalogue – then update Ablago. The fingerprints of the real keys are in the [security policy](https://github.com/motom001/dms/blob/main/SECURITY.md).
+
+## Installed packages { #installierte-pakete }
+
+Per package Ablago remembers version, **origin** (the catalogue), when and by whom it was installed or updated and which folder types and views belong to it. These details are part of the [backup](sicherung.md) and of the [full export](export.md) (`struktur/pakete.json`). Installing, updating and removing are in the log.
+
+## Updating { #aktualisieren }
+
+**Check for new versions** queries the catalogue (at the push of a button) and marks packages for which there is something newer. In the package, **Update to … …** shows a preview of what is added and a link to the changes.
+
+An update **only adds**:
+
+- new folder types and views,
+- new fields and tabs on existing folder types.
+
+It **deletes nothing** and **overwrites nothing** you have changed yourself: if you renamed a folder type, added fields or deleted a view, that stays so.
+
+## Converting text into links { #text-in-verweise-umwandeln }
+
+Some packages used to have a **text field** where a **link** really belongs – for example "Keeper: Lena Muster" on the vehicle instead of a link to the **person** Lena Muster. A newer version of the package brings a link field for this and says from which text field it can be filled. **Updates change nothing secretly:**
+
+- The update creates the link field **in addition**. The old text field stays with all values; nothing is rewritten. The update's preview already says how many entries can be converted afterwards.
+- Afterwards the package shows under **Convert text into links** what is open, for instance "Vehicle – Keeper: 3 entries in "Keeper" (text) can become links to Person".
+
+**Preview …** shows a suggestion per name that you can change in every line:
+
+- **existing person:** same name, ignoring upper and lower case and spaces ("lena muster" = "Lena Muster", also "Muster Lena"). If several fit, that is noted – then choose the right one.
+- **Create new:** creates a person with first and last name. Suggested if the text looks like a name.
+- **Skip:** the text stays, e.g. for "Family" or "Car MU-ST 123".
+
+If a field may have several links (holders of an account, insured persons), Ablago splits the text at "and", comma, slash or "&" (also the German "und"): "Lena and Tom Muster" becomes "Lena Muster" and "Tom Muster". A folder is only converted if **each** of its names gets a person.
+
+**Left out** are folders you may not edit, folders in [archive mode](archiv.md) within the retention period and folders whose link is already set. The preview names each with the reason.
+
+**Convert** sets the link and clears the text field. Every change is in the folder's **history** ("Package update: text converted into link"). In addition:
+
+- The old text field is no longer required. If it is empty, the Library no longer shows it in the folder.
+- Title template and result lists show the link instead of the text; the link field moves into the text field's place. Folders you skipped still show their text there.
+
+**Undo …** under "Previous conversions" takes back a whole operation: text back, link empty, newly created people into the bin, provided nothing else links to them any more, folder type as before. What someone has changed since the conversion stays and is named. The operations are part of the [backup](sicherung.md).
+
+For package authors, the format (`aus_text`) is in the [registry's rules](https://github.com/motom001/dms-registry/blob/main/REGELN.md#text-in-verweis-umwandeln).
+
+## Removing { #entfernen }
+
+**Remove** deletes the package's folder types, views and word lists and its entry. That only works
+
+- as long as there are **no folders** of these folder types (not in the bin either) and
+- **no other package** depends on it.
+
+Otherwise Ablago names the reasons. You delete sample folders beforehand like other folders.
+
+If the package supplies full text or converts files (e.g. **Office and email**, **Image formats**), no documents wait for it any more afterwards: without text, the document again says that there is no package for this file type; if it already had text, the text stays.
+
+## Settings { #einstellungen }
+
+Some packages need settings – for instance rules by which they assign post, or an access key for a service. The package only **describes** them; Ablago builds a form from them, checks the values and stores them. You find it under **Workbench → Packages → *package* → tab "Settings"** – the tab only exists for packages that have settings.
+
+- **Sections** with fields and **lists** of entries with the same structure (e.g. one rule per entry) with **+ Entry**, deleting and – if the package allows it – sorting with ↑/↓.
+- **Fields** as with folder types: text, multi-line text, number, yes/no, date, choice, multiple choice and **links** to a folder type, a field of a folder type, a user, a role or a view. You choose links from lists; the fixed id is stored, not the name – so renaming does no harm.
+- **Service address** (e.g. of an AI service): the only address, apart from the fixed addresses from its manifest, to which the package may go on the network – see [Service address](#dienst-adresse). It is never preset; the empty field at most shows an example. When saving a new or changed address, Ablago asks and shows where data goes.
+- **Secrets** (e.g. credentials) Ablago encrypts with its key (see [Encryption](verschluesselung.md)). After saving it never shows them again, only **set** with **Change** and **Delete**.
+- On **saving**, Ablago checks folder type, required fields, choice values and whether links exist, and shows errors at the field.
+- The package's **actions** appear as buttons (e.g. "Apply rules now"); the package's answer is shown above. A time limit prevents a button from hanging.
+- The **status** (last run, messages) comes from the package itself and is read-only.
+
+**Life cycle:**
+
+- **Installing** sets the defaults. Required fields without a default are asked for directly in the [process](#mehrere-pakete-in-einem-schritt-installieren); if you choose **Fill in later**, the package shows **Settings needed**, the Workbench overview names it as a task, and it only runs afterwards.
+- **Updating:** new fields get their default, existing values stay. Fields that the new version no longer knows are removed – the preview before the update names them.
+- **Removing** asks whether the settings are to **stay** for a later reinstallation (default: no).
+
+The settings are **part of the backup**; secrets stay encrypted in it and are re-encrypted on a key change. They can't be read via API v1; the package itself gets them via the package runner. The log records "Settings of package … changed (fields …)" – never the values of secrets. Only administrators see and change settings.
+
+## Packages with code { #pakete-mit-code }
+
+Some packages bring **code** – for instance their own text recognition or rules that assign new post. The code reacts to events (new post, uploaded document, finished text recognition, finished full text, changed settings) and to the **actions** in the tab "Settings". Ablago runs it in the **package runner**:
+
+- **Sealed off:** the code is WebAssembly and runs in a separate process of Ablago, without access to files, keys or database. It only reaches the network and the internet at the addresses the package states and at the [service address](#dienst-adresse) you enter in its settings – usually not at all.
+- **Only confirmed permissions:** before installation Ablago shows what the code may do – which folder types it may read or create and change, whether it may read or write documents, whether it may access the network or internet and which events it reacts to (see [A package's permissions](#rechte-eines-pakets) and [Events](#ereignisse)). Only once you confirm this does Ablago install. If several packages with code come together (for instance an additional language together with text recognition), all permissions of all packages are on one page and you confirm them **once** (see [Several packages in one step](#mehrere-pakete-in-einem-schritt-installieren)). If an **update** wants more permissions or other addresses, Ablago asks again.
+- **Service account:** for every package with code Ablago creates a service account "Package *name*". The code works via the API with it; the history therefore shows what a package has changed. Service accounts don't appear under **Users**, never sign in and can **never delete** – not even with permissions on all folder types. They don't see users and passwords.
+- **Limits:** every call has at most 256 MB of memory and 2 minutes of time; at most two calls run at the same time. Whatever breaks the limits is cancelled without disturbing Ablago.
+- **Retrying:** Ablago remembers events. If a call fails, the runner tries again after 1, 5, 30, 120 and 360 minutes and then gives up. During maintenance (e.g. when restoring) the runner rests.
+
+**Workbench → Packages → *package*** shows in the section **Package runner** the state, the latest calls with duration and memory, open and given-up events and the package's log. Messages are additionally in Ablago's [log](fehlersuche.md#protokoll). The **state** is one of these:
+
+| State | Meaning |
+|---|---|
+| **starting …** | The runner is starting or loading the package's module – for instance directly after installation. The page asks again by itself. |
+| **ready – waiting for the first event** | The module is loaded, but the package has never been called yet. It runs as soon as an event comes that it reacts to, or you trigger an action. |
+| **ready** | The module is loaded and has already been called. |
+| **crashed at … – restarting …** | The runner process has crashed. Ablago restarts it by itself after a short pause (with repeated crashes it waits longer, at most one minute). Events aren't lost in the process. |
+| **restarted after crash at …** | The runner is running again; the time names the last crash. The cause is in Ablago's log. |
+| **paused (maintenance mode)** | During maintenance the runner rests. |
+| *error message in red* | The module couldn't be loaded (e.g. the code is missing after a restore) – reinstall the package. |
+
+If an **update** fails, the old version stays installed with its old code. A package may be at most **128 MB** in size – that applies to the archive when downloading, uploading and in the bundle file as well as to all files under `code/` together. If a package is larger, Ablago names size and limit and doesn't even download it.
+
+**Removing** ends the code, deletes its open events and its storage and switches off the service account.
+
+!!! note "Full text from a package"
+    If a package sets a document's full text (e.g. the package **Text recognition**), the history records "Full text set" with the package's name, and Ablago doesn't overwrite this text.
+
+### A package's permissions { #rechte-eines-pakets }
+
+Before installation, the preview shows a list of the permissions under **"The package contains code."**. Behind every item a **?** leads to the matching place here. **Below the list**, on the left, is the tick **"I allow the package these permissions."** – first read the list, then set the tick. Without it **Install** stays locked. With an **update** with changed permissions the tick is called **"The permissions have changed. I allow them."**; if the permissions have stayed the same, it only says "The permissions are the same as before."
+
+What isn't on the list, the code may not do. A package never sees users and passwords, and it may delete nothing.
+
+#### Reading folders { #recht-mappen-lesen }
+
+**"Read folders: *folder types*"** – the code may read folders of these folder types, with all fields and links. **"all folder types"** means every folder (except users). If a folder type comes from another package, its identifier is in brackets after it, e.g. "Organisation (basis)"; **Post**, **Storage location** and **Role** are brought by Ablago itself.
+
+#### Creating and changing folders { #recht-mappen-anlegen-und-andern }
+
+**"Create and change folders: *folder types*"** – the code may create folders of these folder types and change their fields; with this it may also read them. A package may never delete. Every change is in the folder's history with the service account "Package *name*".
+
+#### Reading documents or writing full text { #recht-dokumente }
+
+- **"Read documents"** – the code may read the documents in the folders it may read: the file, the full text and the pages as images.
+- **"Read documents and write full text"** – additionally it may upload and replace documents there and set the full text, for instance for its own text recognition.
+
+If a package only needs the full text of certain file types (e.g. Word or emails), since version 0.145 **"Read documents"** together with the permission [Supply full text](#recht-volltext) is enough – without write permission on documents.
+
+If neither is on the list, the code sees no documents.
+
+#### Vectors for documents { #recht-vektoren }
+
+**"Store vectors for documents and find similar documents (dms:vektoren)"** – the code may store a **vector** for documents it may read: a list of numbers that describes the content of the full text. Ablago compares these vectors and with them shows [similar documents](#aehnlichkeit) on the folder and in the search. In addition, the search asks the package for the vector of the search term. Ablago itself computes nothing in the process – it only stores and compares what the package supplies. With this permission the code may not change documents, folders and full text; everyone only sees similar documents from folders they may read.
+
+#### Access to network and internet { #recht-netzwerk-und-internet }
+
+- **"no access to network and internet"** – the code reaches neither devices in your home network nor the internet. That is the normal case: the data stays in Ablago.
+- **"Access to network/internet only to: *addresses*"** – the code may only reach these addresses (always `https://`, also paths below), e.g. a service on the internet or a device in your network. The package runner blocks everything else, including redirects. What the package needs the addresses for is explained in its README – what you send there leaves your Ablago.
+
+If an update wants other addresses, Ablago asks again.
+
+- **"… to: the address from the setting "*name*" (you enter and confirm it)"** – the package brings no fixed address but asks for a [service address](#dienst-adresse), for instance that of your AI service. Only once you enter and confirm it in the settings does the code reach exactly this address.
+
+#### Answering questions about the Library { #recht-antworten }
+
+**"Answer questions about the Library ("Ask your library") – only from excerpts that Ablago passes along (dms:antworten)"** – with this permission the field [Ask your library](#frag-deine-ablage) appears in the Library. Per question the package only gets the question, the chat so far and a few excerpts that Ablago itself has picked out – **with the permissions of the person asking**. It reads nothing from the Library itself (for that it would need the permissions above) and can't change anything: Ablago only shows its text and checks the sources.
+
+#### Suggesting fields from documents { #recht-erkennen }
+
+**"Suggest fields from documents ("Fill in from document") – only from the text that Ablago passes along (dms:erkennen)"** – instead of the built-in recognition, the package can suggest the fields for the button **Fill in from document** if you choose it (see [Recognition by a package](#erkennung-durch-ein-paket)). It only gets the document's text and the description of the fields – no permissions on folders or documents. Ablago checks what it supplies and only shows it as a suggestion.
+
+#### Taking over text recognition { #recht-texterkennung }
+
+**"Take over text recognition for scans and images – Ablago reports documents without text and shows "waiting for text recognition" until the package writes the full text (dms:texterkennung)"** – the package is then Ablago's [text recognition](texterkennung.md): the core itself only reads the text layer of PDFs and gives scans and images to the package. Meanwhile the document says "waiting for text recognition (package …)". The permission alone gives no access to documents; the package may only write the full text with [Read documents and write full text](#recht-dokumente).
+
+#### Converting files { #recht-umwandeln }
+
+**"Convert files that Ablago can't read itself – the package reads the original file and supplies a version (PDF, PNG or JPEG) for thumbnail and full text; the original stays unchanged (dms:umwandeln): TIFF, WebP, …"** – since version 0.137, Ablago itself only reads PDF, JPEG and PNG. For other file types – the permission is followed by those the package wants to be responsible for – the package gets the file (event [Convert file](#ereignis-datei-umwandeln)) and returns a **converted version**, e.g. a multi-page TIFF as a PDF. From it Ablago makes the thumbnail and the full text as with a PDF or photo (see [Other file types](texterkennung.md#andere-dateitypen)). The document itself stays the original file; the package can't change, replace or delete anything with this. For this it additionally needs [Read documents](#recht-dokumente) (the original file).
+
+#### Supplying full text { #recht-volltext }
+
+**"Supply full text for files that Ablago can't read itself – the package reads the file and only writes its full text; it can't change, replace or delete documents (dms:volltext): Word, Excel, email, …"** – since version 0.145. The permission is followed by the file types for which the package supplies the full text. For every such file it gets the event [File needs full text](#ereignis-datei-volltext), reads the file and writes its text – for **exactly these file types**, not for other documents. Meanwhile the document says **"waiting for full text (package …)"**; if the package can't read a file (e.g. because it is encrypted with a password), its reason is shown on the document. For this it additionally needs [Read documents](#recht-dokumente); it doesn't need write permission on documents. The package **Office and email** uses this permission (from 1.1.0). Ablago reads PDF, JPEG and PNG itself; scans are recognised via the permission [Take over text recognition](#recht-texterkennung).
+
+#### Storing an archive version { #recht-archivfassung }
+
+**"Store archive version (PDF/A) – the package reads documents with their full text and word positions and stores a searchable PDF/A next to them; the original stays unchanged, it can't change, replace or delete anything (dms:archivfassung): PDF, JPEG, PNG, TIFF, …"** – since version 0.149. The permission is followed by the file types for which the package makes an archive version. For every such document it gets the event [Create archive version](#ereignis-datei-archivfassung) – **only once the full text is settled** –, reads the file (for TIFF and co. the readable version from [Converting files](#recht-umwandeln)), the full text and the **word positions** (where each word is on the page) and stores a PDF/A. Ablago only accepts a PDF with a PDF/A identifier that loads nothing from the network (no JavaScript, no actions, no external links); otherwise the reason is shown on the document and under [Workbench → Search and full text → Archive version](texterkennung.md#archivfassung-pdfa). For this it additionally needs [Read documents](#recht-dokumente). The archive version goes into backup and full export (see [Backup](sicherung.md)).
+
+#### Reading the backup { #recht-sicherung-lesen }
+
+**"Read the encrypted backup in order to copy it off-site – can't open it (no key, no content) (dms:sicherung-lesen)"** – since version 0.142. After every backup the package gets the event [Backup finished](#ereignis-sicherung-fertig) and may read **exactly this** backup file in pieces – encrypted, as it is in the backup folder – and its slim metadata (size, checksum, time, fingerprint of the key). It never gets the key, the content or other files of the backup folder. Per backup it reports back whether the copy has arrived and been checked; **Workbench → Backup** shows this. Since version 0.158.1 its API key may only read – it reports the state in its answer to the event. It doesn't see folders and documents with this permission. See [Off-site backup](sicherung-ausser-haus.md).
+
+### Service address { #dienst-adresse }
+
+A package such as **AI assistant** doesn't compute itself but asks a service that you run or choose – e.g. **Ollama** on your home server (ready-made example and guide: [Running AI locally](ki-lokal.md)). You enter this service's address in the package's **settings** (Workbench → Packages → *package* → tab "Settings"):
+
+- **Never preset.** The empty field at most shows an example such as `http://ollama:11434/v1` – nothing is stored until you enter an address.
+- **Confirm.** When saving a new or changed address, Ablago asks **"Send data to this address?"** and names it. Only with **Confirm address and save** does it apply; the log records "Service address of package … confirmed" with the address.
+- **Only there.** The package runner only allows network access to this address and paths below it (same computer, same port), without redirects. Because services in the home network rarely speak HTTPS, `http://` is also allowed here. Credentials don't belong in the address but in a field of their own (secret).
+- **Operating and hosting this service is outside Ablago.** If it runs at your place in your own network, the data doesn't leave the house. If it belongs to another provider, that is a **relationship of trust with this service provider** – as with hosting Ablago itself: location, data processing, storage, use for training. You make this decision by entering and confirming; Ablago has no further switch for it. It already shows the notice in the preview before installation.
+
+### Recognition by a package { #erkennung-durch-ein-paket }
+
+**Fill in from document** (button in the folder) normally uses the **built-in recognition** – patterns for email, phone, date, amount and the like, without AI. A package with the permission [Suggest fields from documents](#recht-erkennen) – for instance an AI assistant via Ollama – also recognises free text, letterheads and difficult receipts. The package **Read QR code** takes over the details from the QR code (vCard) on business cards and, without a code, lets the built-in recognition work; for this it reads the page images of documents that have already been filed (permission *Read documents*) and needs no network.
+
+- **Default for all folder types:** Workbench → Packages → *package* → section **Fill in from document** → **Use this package as the default for all folder types**. Without the tick, the built-in recognition stays the default.
+- **Per folder type:** in the [folder type's recognition](mappentypen.md#erkennung) you choose *Default from the Workbench*, *built in* or a specific package.
+- **Data outflow:** if the package may go on the network (fixed address or [service address](#dienst-adresse)), it sends the documents' text there. This choice only works explicitly: Ablago asks **"Send the documents' text to a service?"**, and only with **Confirm and choose** does it apply.
+
+**What the package gets:** the text from which it fills in (at most 50,000 characters), the name of the folder type and a description of the fields as JSON Schema – **never password fields** and never fields the user may not edit. Ablago itself still matches **links** (e.g. *Organisation*) with existing folders.
+
+**What Ablago does with the answer:** it checks every value against the field kind as with the built-in recognition. Wrong types, unknown fields and values outside a choice it discards and records in the [log](fehlersuche.md#protokoll) (field and reason, without values). The values only appear as a **suggestion**; they are only saved with *Save folder*. Below the result it says "Recognised with "*package*"."
+
+**If the package doesn't answer** (not running, service can't be reached, no answer after 60 seconds, answer unusable), the built-in recognition takes over; the user sees a notice about this. If it answers, but without any value that passes the check, the notice says "*package* returned nothing usable" – then too the built-in recognition takes over.
+
+**Shortened text:** if the package only reads part of the text – because Ablago passes at most 50,000 characters or the package shortens for its AI service (with the AI assistant: setting *Context length*, see [Running AI locally](ki-lokal.md#kontext-speicher)) –, below the result it says "Document text shortened". Details further back in the document may then be missing.
+
+### Ask your library { #frag-deine-ablage }
+
+If a package with the permission [Answer questions about the Library](#recht-antworten) is installed and loaded, the Library's start page shows the field **"Ask your library"** (see [User manual](https://help.ablago.app/benutzer/aktuell/en/startseite/#frag-deine-ablage)). This is how a question runs:
+
+1. The browser sends the question and the chat so far to Ablago.
+2. Ablago **itself** looks for matching passages – in the documents' full text, in the folders' titles and fields and, if a package with [vectors](#recht-vektoren) is there, by similarity –, **only in folders the person asking may read**. Password fields and users are never included.
+3. It cuts out at most as many **excerpts** as set below and gives them with the question to the package – **marked as data**, with the instruction to the AI service not to follow any instructions in them.
+4. The package asks the service at the [service address](#dienst-adresse) and returns the answer piece by piece.
+5. Ablago shows the answer as **text** (nothing of it is executed or stored) and below it the named **sources** – only folders from the excerpts passed along, checked once more for readability. Below every answer there is an expandable **"Sent to the AI: n excerpts from m folders"** with exactly these passages.
+
+**Workbench → Packages → *package*** shows in the section **Ask your library** the **maximum per question**:
+
+| Setting | Range | Default |
+|---|---|---|
+| **Excerpts per question at most** | 1 to 20 | 8 |
+| **Characters per question at most** (all excerpts together) | 500 to 30,000 | 6,000 |
+
+A single excerpt is at most 1,500 characters long. Less means: less data to the service and faster answers, but more often "isn't in the excerpts".
+
+**No log of the content:** only the browser keeps the chat (until reloading); the server stores neither questions nor excerpts nor answers. Ablago's log only records "Question about the Library asked" with the number of excerpts and duration, the Workbench at the package only "Question answered" with the length of the answer. One question runs per user at a time, at most four in the whole of Ablago.
+
+### Events { #ereignisse }
+
+Under **"Reacts to these events:"** the preview names when the code runs by itself – one line per event with **?**. Without events it only runs when you trigger an action in the tab **Settings**. An event gives the package no further permissions: it only learns *that* something has happened (e.g. the id of the new post) and then works with the permissions above. If an update only adds events, Ablago therefore doesn't ask again. What a package changes itself isn't reported back to it.
+
+#### New post has been created { #ereignis-post-angelegt }
+
+**When:** as soon as new post arises – with **+ Post** in the Library, via the API, from an intake folder or mailbox and, with **Split post**, for every new post.
+
+**Typical:** checking, assigning or counting post – the sample package **Hello post**, for instance, counts new post.
+
+#### A document has been uploaded { #ereignis-dokument-hochgeladen }
+
+**When:** with every new document – uploading in the interface or via the API, from intake folder and mailbox, and for the new documents when **splitting a PDF**, **merging**, **splitting post** and **redacting** (as a copy). A new version of an existing document is not a new document.
+
+**Typical:** looking at the document and doing something with it – the package **Separator sheet** splits post at separator sheets, **Text recognition** recognises text in scans.
+
+#### A document's text recognition is finished { #ereignis-texterkennung-fertig }
+
+**Deprecated** – still exists for packages created before version 0.133. **When:** at the same time as [Full text ready](#ereignis-volltext-fertig), when Ablago has read a document itself (text layer).
+
+**Typical:** older versions of the package **Text recognition** (1.x) recognise scans without text with it. Since version 0.134 there is no built-in text recognition any more – update the package to 2.0 so that Ablago knows it as text recognition.
+
+#### A document's full text is ready { #ereignis-volltext-fertig }
+
+**When:** as soon as a document's full text is settled – no matter where it comes from: from a PDF's text layer, from a package such as **Text recognition** or via the API. Since version 0.133 also when Ablago has found **no text** (e.g. with a scan) – exactly what a package that [takes over text recognition](#recht-texterkennung) needs. Packages from before 0.133 still only get it with text. For a package with the permission [Vectors for documents](#recht-vektoren), Ablago also sends this event afterwards for the **existing stock** (see [Similarity](#aehnlichkeit)).
+
+**Typical:** recognising scans – the package **Text recognition** (from 2.0); computing something from the full text – the package **Local AI – similarity** computes the document's vector from it.
+
+#### A file is to be converted { #ereignis-datei-umwandeln }
+
+**When:** since version 0.137 for every file of a type that Ablago doesn't read itself and for which the package with the permission [Convert files](#recht-umwandeln) is responsible – on upload and with a new version, when the package is newly installed (for the existing files), with **Catch up thumbnails** and with **Regenerate full text** (for files without a version). Ablago doesn't report files over 50 MB. Only the responsible package gets it (with several for the same type, the first by id).
+
+**Typical:** the package **Image formats** makes a PDF from a TIFF scan, a JPEG from WebP and a PNG from GIF and BMP.
+
+#### A file needs its full text { #ereignis-datei-volltext }
+
+**When:** since version 0.145 for every file of a type that Ablago doesn't read itself and for which the package with the permission [Supply full text](#recht-volltext) is responsible – on **upload**, with a **new version**, when the package is **newly installed** (for the existing files without text), with **Regenerate full text** and with **Try again** or **Regenerate** on the document. Ablago doesn't report files over 50 MB. Only the responsible package gets it (with several for the same type, the first by id). Until the package writes, an existing text remains for the search.
+
+**Typical:** the package **Office and email** reads the text from Word, Excel and PowerPoint files, OpenDocument, RTF, text files and emails.
+
+#### Create archive version { #ereignis-datei-archivfassung }
+
+**When:** since version 0.149 for every document of a type for which the package with the permission [Store archive version](#recht-archivfassung) is responsible – **as soon as its full text is settled**: after upload (with scans, therefore, only after text recognition), with a **new version** or a change to the PDF (rotating, deleting pages, splitting, redacting), with **Regenerate full text** and when the package is **newly installed** (for all existing documents with finished full text). Which documents get one you tick in the package's settings: **PDFs with text** (online invoices, bank statements), **scanned PDFs** and **photos and images** – default all. What you deselect is shown on the document as "skipped – according to settings"; if you tick a kind later, Ablago catches up the matching documents. Not reported are: encrypted PDFs (reason on the document), PDFs that are already valid PDF/A (the original then counts as the archive version), and files over 50 MB. Only the responsible package gets it (with several, the first by id).
+
+**Typical:** the package **PDF/A** stores a searchable PDF/A-2b for every scan, photo and PDF.
+
+#### A backup is finished { #ereignis-sicherung-fertig }
+
+**When:** since version 0.142 after every successful backup – by hand, automatically or before a restore –, as soon as it is completely in the backup folder. Only packages with the permission [Read the backup](#recht-sicherung-lesen) get it. If the copy fails, Ablago repeats the event (after 1, 5, 30 minutes, 2 and 6 hours); afterwards it counts as failed and the administrators get an email.
+
+**Typical:** the package **Backup target WebDAV** uploads the encrypted backup to Nextcloud, a NAS or the hoster and checks it there.
+
+#### The package's settings have been changed { #ereignis-einstellungen-geandert }
+
+**When:** when an administrator saves the [package's settings](#einstellungen). Only the package itself gets this event.
+
+**Typical:** taking over the new values, e.g. checking a connection again or updating the status.
+
+#### Events about folders { #ereignis-mappe }
+
+**When:** since version 0.153 – a folder has been **created**, **saved** (and changed in the process), **deleted** (into the bin) or **restored**. A package only gets these events for the folder types it names in its manifest – its own and, since version 0.166, also folder types of other packages or "all it may read"; the preview shows them as "– to: *types*" (other packages' types with the package in brackets). Only what the package **may read right now** is delivered: if you have denied it a folder type under [Packages on the folder type](berechtigungen.md#pakete-am-mappentyp) or a rule for the role *Package* restricts it, it gets nothing about it – the reason is in the log. Many quick changes to the same folder come as **one** event (within about 5 seconds), with the keys of all changed fields. The package only learns id, type and field keys – never values – and reads up with its permissions. Sample folders, demo data and a restore trigger nothing.
+
+**Typical:** recalculating something from a changed folder or passing a state on to another service.
+
+#### Deadline reached { #ereignis-frist-erreicht }
+
+**When:** since version 0.153 for every date field with a [deadline](mappentypen.md#fristen-erinnerungen-an-datumsfeldern) – at the **reminder time** (as many days before as the deadline provides) and **on the day itself**, **exactly once** per folder, field, date and time, also with several servers and after a restart. As with the folder events, only for the folder types from the manifest. If someone changes the date, the new day counts as open again.
+
+**Typical:** preparing something for a notice period, sending a reminder to another service.
+
+### Similarity { #aehnlichkeit }
+
+A package with the permission [Vectors for documents](#recht-vektoren) – for instance **Local AI – similarity** – computes a vector for every document with full text. With it Ablago shows:
+
+- on the folder below the documents **"Similar documents"** from other folders,
+- in the search on the [start page](https://help.ablago.app/benutzer/aktuell/en/startseite/#schnell-finden) with **"also in documents"** additionally **similar results** – folders without a matching word whose document is similar to the search term, marked **"similar"**.
+
+Everyone only sees folders they may read. The package supplies the vector of the search term; if it doesn't answer within 1.5 seconds, Ablago searches as before without similarity.
+
+**Workbench → Packages → *package*** shows in the section **Similarity**:
+
+| Detail | Meaning |
+|---|---|
+| **Model** | what the package computes with (reported by the package itself) |
+| **State** | for how many documents with full text there is already a vector |
+| **Cache** | how much memory the vectors occupy in Ablago |
+| **Show similar results in the search** | setting, default: on. Off: the search no longer asks the package; "Similar documents" on the folder remain. |
+| **Recalculate** | deletes all vectors; the package recalculates them in the background |
+
+**Existing stock and change of model:** after installation the package first only computes new documents. Ablago catches up the existing stock at a throttled pace: when the package has nothing open any more, it gets up to 50 documents without a vector every 30 seconds (event [Full text ready](#ereignis-volltext-fertig)). If the package reports **another model** after an update, the old vectors are invalid: Ablago deletes them and has them recalculated in the same way. Until then, similar documents are missing for the documents still open.
+
+**Data:** vectors are derived. They are in the database (table `vektoren`), not in the [full export](export.md), and disappear with their document. After a restore the package recalculates them.
+
+**Memory and response time** (256 numbers per vector, measured on a computer with 2 cores, PostgreSQL 16):
+
+| Documents | Database | Cache | first load | Similar documents | for comparison: cosine in SQL |
+|---|---|---|---|---|---|
+| 10,000 | 12 MB | 4 MB | 0.4 s | 4 ms | 0.3 s |
+| 100,000 | 118 MB | 33 MB | 3.2 s | 37 ms | 3.0 s |
+
+Ablago needs no database extension for this (such as pgvector, which is missing in the image `postgres:17`). It compares in its own memory with 8 bits per number; it loads the cache in the background after the start – until it is there, the search works without similarity. Measured with `server/test/vektoren-messen.ts`.
+
+## Expert mode: further catalogues and uploading { #expertenmodus-weitere-kataloge-und-hochladen }
+
+For package developers and for Ablago without internet access, under **Workbench → Packages**, directly below the buttons, there is the section **Expert mode**. It is collapsed; a click on **▸ Expert mode** (or Enter or space) expands it in place. Your browser remembers for you whether it is expanded or collapsed – that is only a convenience, not a permission: all administrators may use what is there.
+
+![Workbench → Packages with expanded expert mode](bilder/werkbank-pakete.png)
+
+In expert mode you can:
+
+- **Further sources** – add, switch off and remove catalogue addresses, at most 20. Only HTTPS is allowed; the format is the same as for the official catalogue (the registry's `katalog.json`). How a catalogue with **its own key** is treated is described [below](#katalog-mit-eigenem-schlussel). **Fetch catalogue** queries all **switched-on** further catalogues besides the official one – no matter whether the section is currently expanded or collapsed; their packages carry the address as a mark. If you no longer want to use a source, switch it off or remove it. Without further sources there is only the official catalogue.
+- **Upload a package as a file** (`.zip` in the registry's format, e.g. the package folder zipped, at most 128 MB). Ablago checks it just like a catalogue package, only without a checksum from the catalogue, and shows the preview. It recognises a [bundle file](#pakete-ohne-internet-installieren) by itself.
+
+!!! warning "Not checked by the Ablago project"
+    Nobody from the Ablago project has looked at packages from a source other than the official catalogue. Before installation Ablago therefore clearly shows the origin, and you must confirm explicitly that you know where the package comes from.
+
+The list of installed packages shows the **origin** for each: "official catalogue", the catalogue address or "uploaded by … on …". **Ablago only looks for updates in the source the package comes from.** You update an uploaded package by uploading a higher version; then the same rules apply as with every update (only add). If a package's source is switched off or removed, there are no updates for it.
+
+If you upload a single package whose checksum is exactly like this in the (already fetched) official catalogue, the preview shows "matches catalogue version …". You still confirm the origin, as with every uploaded package.
+
+The log records who added, switched off or removed which source and who uploaded which package.
+
+### Catalogue with its own key { #katalog-mit-eigenem-schlussel }
+
+A further catalogue can have **its own key** (file `katalog.schluessel` next to `katalog.json`; how a provider sets this up is in the [Developer manual](https://help.ablago.app/entwickler/aktuell/en/pakete/#eigener-katalog-mit-eigenem-schluessel)). Ablago handles it like SSH on first contact:
+
+1. **Adding:** if the catalogue has a key, Ablago shows its **fingerprint** – 64 characters in groups of four, e.g. `3f9a 0c12 …`. Compare it with the one the provider names on their website. Only when you click **Fingerprint matches** does Ablago remember the key. If even a single character doesn't match, click **Cancel**.
+2. **Afterwards** every fetch of this catalogue must be validly signed; in return Ablago no longer asks about the origin when installing. If the signature is missing or doesn't fit, Ablago doesn't accept the catalogue and records it in the log.
+3. **Orderly key change:** if the provider has signed their new key with the old one, Ablago takes it over by itself. The preview shows a notice, the log the change.
+4. **Key changed without this proof:** Ablago **locks** the catalogue. The list of sources says "Locked since …" with the new fingerprint, and the log records it. Packages from it can't be installed or updated.
+
+**What to do with a locked catalogue?**
+
+- Ask the provider (not via a link from the catalogue itself) whether they really changed the key, and compare the new fingerprint with their website.
+- If it matches, click **Check key …** at the source and confirm the fingerprint. The lock is then lifted.
+- If it doesn't match or you can't reach the provider: switch the source off or remove it. Packages already installed stay but no longer get updates.
+
+A catalogue **without** a key works as before: with every installation you confirm the origin. If the provider later publishes a key, you take it over with **Check key …**.
+
+## Installing packages without internet { #pakete-ohne-internet-installieren }
+
+If your Ablago can't reach the internet, you fetch several packages at once as a **bundle file**:
+
+1. On a device with internet, open the catalogue's page **[Packages without internet](https://catalog.ablago.app/sammeldatei.html)**. Fastest via **Workbench → Packages → Without internet …** and the link there – then your Ablago's version is already filled in. As with [View in catalogue](#im-katalog-ansehen), it is only in the address's **fragment** (`…/sammeldatei.html#dms=0.147.0`): the browser sends it to no server; the page only remembers it in your browser and immediately removes the fragment from the address again.
+2. Tick the packages. The **Ablago version** determines which package versions fit (default: the version your browser has remembered, otherwise the newest). **Dependencies** such as "Basis" come along automatically and are marked "comes along – needed by …". Text recognition and Notifications are preselected.
+3. **Download bundle file.** The page fetches the packages from the catalogue, checks each against its checksum and packs them together – with a copy of the signed catalogue. It shows the **SHA-256** of the finished file.
+4. Take the file to Ablago (USB stick, network drive) and upload it under **Workbench → Packages → Without internet …** – or in the [setup assistant](installation.md#pakete-dazuholen) if the catalogue can't be reached there. **Upload package** in expert mode also accepts a single package or a bundle file.
+5. Ablago shows the content: per package the version and whether it is **new**, an **update**, **already installed** or **older than installed** and whether it fits the Ablago version. Add-ons (e.g. additional languages) are under their package. If the file contains the signed catalogue, it says **Origin: from the official catalogue of …**; otherwise you confirm once in the process that you know where the file comes from. You can deselect every package that no other chosen package needs. Then it continues as under [Several packages in one step](#mehrere-pakete-in-einem-schritt-installieren): one permission confirmation, names only in case of conflicts, examples, settings, one button.
+
+### How Ablago trusts a bundle file { #wie-das-dms-einer-sammeldatei-traut }
+
+The bundle file is a ZIP with the directory `sammeldatei.json` (per package id, version, size and SHA-256), a short `LIESMICH.txt`, the package archives from the catalogue, byte for byte unchanged, and – with bundle files from the signed catalogue – a copy of `katalog.json` with `katalog.sig`. Ablago only accepts it **completely or not at all**:
+
+- Every archive must have exactly the **size and checksum (SHA-256)** from the directory. If Ablago has already fetched the official catalogue in this session, the checksum must **also match the catalogue** – otherwise it rejects the file.
+- There must be **no other files** in it; Ablago rejects file names with `..` or `/` at the start, encrypted entries and duplicate names.
+- **Limits against ZIP bombs:** at most 256 MB per bundle file, 50 packages, 128 MB per package archive, unpacked 20 MB per package (plus 128 MB for code) and 512 MB for all packages together. A large package needs about twice as much memory as its size when installing. Ablago never unpacks more than is stated in the archive.
+- Every package goes through **the same checks as a single uploaded one**; id and version in the package must match the directory. If one is invalid, nothing is taken over.
+- If the file contains the **signed catalogue**, Ablago checks the signature – without internet – and compares every archive with the checksum in it. If one doesn't match, it rejects the whole file.
+
+**With a validly signed catalogue** in which every archive is listed with its checksum, Ablago shows "from the official catalogue of …, signed by the Ablago project", and you **don't need to confirm** the origin. If the catalogue state is older than **90 days**, Ablago points this out: newer package versions may be missing from it – put together a new bundle file when you get the chance. If a package isn't in the signed catalogue, Ablago names it; for this one you confirm the origin as before.
+
+**Without a signature** (older bundle files) or with an **invalid signature**, the checksums only prove that the file is complete and **unchanged** since it was put together – not **who** put it together. Then, like an uploaded package, it counts as "not checked by the Ablago project": you confirm the origin. An invalid signature is also in the log. In every case the installed packages carry the origin "uploaded by … on …". In case of doubt, compare the SHA-256 that Ablago shows after uploading with the one on the catalogue page. You get updates of these packages with a new bundle file; a bundle file doesn't update packages installed from the catalogue.
+
+## Creating a package from your Ablago { #paket-aus-deinem-dms-erstellen }
+
+If you have built your own folder types and views – for instance for contracts with payments –, you take them as a package into another Library, for instance to another family or another business, without writing YAML by hand. Under **Workbench → Packages → Create package** an assistant guides you in four steps – **Choose · Check · Details · Create**; at the bottom are **Back** and **Next**, at the end **Create package** and **Create and download as ZIP**.
+
+If you have already created packages, the first step first asks: **New package** (without a selection, without details) or **New version of …** (takes over selection and details of an earlier package and suggests the next version; folder types and views that no longer exist drop out with a notice, your own types created since then you add yourself).
+
+1. **Choose** – folder types, views and **word lists** (your own groups of synonyms from Workbench → Search) with ticks, a search at the top. Word lists from installed packages are greyed out and don't come along; a package with only word lists works too (from Ablago 0.127.0 at the recipient, there under "from packages"). Optionally **sample folders**: without a choice the package contains not a single folder. If you choose folders of the chosen types, their field values come along as examples – only take folders with invented data, e.g. demo folders.
+2. **Check** – Ablago checks automatically and says what it makes of it:
+    - **From a package:** a folder type or a view that an installed package brought (for instance "Organisation" from *Basis*) is **not copied** but entered as a **dependency**, e.g. `basis: ">=1.1.0"` with the version installed here. If you have changed such a type here afterwards, Ablago points this out: your changes don't belong to your package – create a type of your own for them. The type then shows **"changed"** with a summary (e.g. "+2 fields · 1 field changed"); expanded you see every field and tab that differs from the package's state. Saving without a change doesn't count. For packages installed before this version, Ablago only knows the details after the package's next update.
+    - **User, role, storage location:** links to them become `dms:benutzer`, `dms:rolle`, `dms:ablageort` – every Ablago installation brings these.
+    - **Not chosen:** if a chosen type (field, links tab) links to a type **of your own** that you haven't chosen, it is listed under "Not chosen but needed" with **Include**. Until then the export doesn't work. A view whose parent view is missing goes to the top level.
+    - **Only views** you may export explicitly – for instance views for someone who already has the folder types. If a view points to a type of your own that doesn't go into the package, the check says "Caution" and offers **Include**; the export still works. The type stays in the view via its key. At the recipient, Ablago assigns it to the type with the same key; if it doesn't exist there, the view is skipped and the preview says so beforehand – the rest of the package is installed. If the type comes from a package, it is listed as a dependency in the check.
+    - **What doesn't fit into the package** the check names as a notice: further result lists (only the default result list comes along), permissions, archive mode, number sequences on fields, conditions on counts, favourites or deadlines and everything that points to specific folders or users of this installation.
+3. **Details** – name, id (lower-case letters, digits and `_`, suggested from the name), description (one or two sentences; the README is also made from it), author and optionally your GitHub name. Under "What's new" is what goes into the CHANGELOG. Plus:
+    - **Version** – you choose it instead of typing it. A new package starts with **1.0.0**. For every further version you choose the kind of change: **Small fix** (e.g. 1.0.1 – texts, descriptions), **New content** (e.g. 1.1.0 – new fields, views, folder types) or **Bigger change** (e.g. 2.0.0 – fields removed or rebuilt). Ablago suggests the kind if it recognises it, and says why. A version that isn't higher than the one last passed on can't be chosen – otherwise the recipient doesn't recognise an update. If you created the package on another device, use **Upload the package's latest version**: Ablago only reads id, name and version from it and counts on from there.
+    - **Required Ablago version** – Ablago determines the **minimum version** from what the package uses (e.g. field formats from 0.121.0) and suggests it. You can choose versions from there up to your own ("only from my version"); lower isn't possible. It is always stored as `>=X.Y.0`.
+    - **Licence** – three ways: a **free licence** from the list (default Apache-2.0 like Ablago itself; type abbreviation or name, e.g. "apa" or "gnu", the list is alphabetical, one sentence per licence on what it requires), **your own licence** (name and text, e.g. for packages that an IT service provider only gives to its customers – the text goes into the package as LICENSE) or **no licence** (then all rights stay with you). With your own licence or none, the package can be installed anywhere but doesn't get into the official catalogue – only free licences apply there. The installation preview always shows the licence, with your own or a missing one with a notice.
+    - **Expert mode** (under **Workbench → Customise workbench**): version and Ablago version can then also be entered by hand – Ablago still checks that the version is higher and the minimum version is enough. For a package that isn't finished yet, 0.1.0 is also available there.
+4. **Create** – Ablago checks the finished archive just as when uploading. **Create package** then creates it: it is listed under **Workbench → Packages → Installed** with the mark **self-made**. **Create and download as ZIP** additionally gives you the file `<id>-<version>.zip` straight away (registry format with `manifest.yaml`, `inhalt/…`, README, CHANGELOG, LICENSE).
+
+In the other Ablago installation you first install the dependencies (e.g. *Basis* from the catalogue) and then upload the file under **Expert mode → Upload package**.
+
+**Self-made packages** are shown by package management under **Installed** with the mark **self-made** and the most recently created version. A click shows what was created then – folder types, views, examples, details, version and date –, and marks folder types you have changed since. There you have:
+
+- **Create new version** – opens "Create package" with this selection and suggests the next version,
+- **Download as ZIP** – every stored version exactly as it was created (the last ten, each up to 5 MB; they are part of the backup),
+- **Remove from list** – only forgets the details and the stored archives. A **Remove** that deletes folder types or views doesn't exist: they are the original in this Ablago, stay types of your own and can be exported again.
+
+There are no updates from a catalogue for self-made packages. If a catalogue has a package with the same id, package management points this out.
+
+**Next version:** Ablago remembers id, version, author, licence, selection and the fields of every created package. With **New version of …** the assistant suggests the same id with a higher version (default according to the recognised kind of change). If the other Library uploads the higher version, its Ablago **updates** the package like every update: it adds new fields, tabs and views and deletes nothing.
+
+!!! note "No data in the package"
+    A package only contains the structure – folder types and views. Folders, documents, notes, users and passwords never come along; from explicitly chosen sample folders only field values without passwords. Only administrators may create packages; the log records every export.
+
+## Your own packages { #eigene-pakete }
+
+You can also submit a self-made package to the registry. How a package is built and how it gets into the catalogue is in the [Developer manual](https://help.ablago.app/entwickler/aktuell/en/pakete/).

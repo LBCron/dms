@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { HANDBUCH_BASIS, HANDBUCH_ONLINE_ORDNER } from '../../shared/src/hilfe';
+import { HANDBUCH_BASIS, HANDBUCH_ONLINE_ORDNER, HANDBUCH_SPRACHEN } from '../../shared/src/hilfe';
 import { t } from './sprache';
 
 /**
@@ -10,7 +10,8 @@ import { t } from './sprache';
  *  - Seite ohne Schrägstrich am Ende → Umleitung mit Schrägstrich (wie bei GitHub Pages),
  *  - Ordner mit index.html → diese Datei,
  *  - unbekannt → 404 (nicht die Oberfläche),
- *  - ohne Offline-Hilfe (Entwicklung ohne gebaute Handbücher) → dieselbe Seite online, passende Version.
+ *  - ohne Offline-Hilfe (Entwicklung ohne gebaute Handbücher) → dieselbe Seite online, passende Version;
+ *    Übersetzungen (#730) liegen dabei wie offline unter /hilfe/<handbuch>/<sprache>/.
  */
 export type HilfeAntwort = { umleiten: string; status: 301 | 302 } | { datei: string } | { fehlt: true };
 
@@ -24,6 +25,8 @@ export function hilfeAntwort(url: string, webDir: string | undefined): HilfeAntw
   if (!lokal) {
     const [handbuch, ...seite] = teile;
     if (!handbuch) return { umleiten: `${HANDBUCH_BASIS}/`, status: 302 };
+    // Startseite einer weiteren Sprache (#730): /hilfe/en/ → help.ablago.app/en/
+    if (handbuch !== 'de' && (HANDBUCH_SPRACHEN as readonly string[]).includes(handbuch) && !seite.length) return { umleiten: `${HANDBUCH_BASIS}/${handbuch}/`, status: 302 };
     const rest = seite.join('/');
     const schluss = rest && !rest.includes('.') ? '/' : '';
     return { umleiten: `${HANDBUCH_BASIS}/${handbuch}/${HANDBUCH_ONLINE_ORDNER}/${rest}${schluss}`, status: 302 };

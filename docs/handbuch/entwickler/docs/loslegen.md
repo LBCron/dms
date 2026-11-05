@@ -70,6 +70,7 @@ Das Dockerfile baut im Abschnitt `hilfe` alle vier Handbücher und die Startseit
 
 - Bildschirmfotos (`bilder/…`) werden zu einem Hinweis mit Link auf dieselbe Seite online (`/dms/<handbuch>/vX.Y/…`).
 - Verweise `https://help.ablago.app/<handbuch>/aktuell/…` zeigen auf `/hilfe/<handbuch>/…`; Vorlagen bleiben online, `api/openapi.json` zeigt auf die eigene Installation.
-- Keine Versionsauswahl, keine Schriften aus dem Internet, keine Quellkarten, Suche nur auf Deutsch.
+- Keine Versionsauswahl, keine Schriften aus dem Internet, keine Quellkarten.
+- Englisch (#730): `mkdocs.en.offline.yml` baut die englische Fassung aus `docs-en/` nach `/hilfe/<handbuch>/en/`, mit englischer Suche. Fehlende englische Seiten und Bilder kommen über `werkzeuge/sprache_hook.py` aus dem deutschen Ordner.
 
 Lokal: `python3 docs/handbuch/werkzeuge/offline.py /tmp/hilfe`. Das Skript prüft am Ende, dass jeder Verweis auf `/hilfe/…` eine Seite trifft; die CI prüft zusätzlich alle Ziele der kontextbezogenen Hilfe. Ohne gebaute Handbücher (`npm run dev`) leitet der Server `/hilfe/…` auf die Online-Fassung der Version um.

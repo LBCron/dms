@@ -1,0 +1,2 @@
+!!! tip "Area not in the sidebar?"
+    This area belongs to the workbench template **Business**. In the template *Household*, which new installations start with, it is hidden. You can show it under [Customise the workbench](https://help.ablago.app/admin/aktuell/en/uebersicht/#werkbank-anpassen), for everyone or just for you. **Hidden does not mean switched off:** the area keeps working, and its notices always appear in the overview.

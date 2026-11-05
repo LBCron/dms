@@ -4,8 +4,9 @@ Handbücher für die Offline-Hilfe im Image bauen (#219).
 
     python3 docs/handbuch/werkzeuge/offline.py <ziel>
 
-Baut alle vier Handbücher ohne Screenshots nach <ziel>/<handbuch>/ und die Startseite nach
-<ziel>/index.html – für die Auslieferung unter /hilfe/ im DMS. Arbeitet auf einer Kopie von
+Baut alle vier Handbücher ohne Screenshots nach <ziel>/<handbuch>/, ihre Übersetzungen (#730) nach
+<ziel>/<handbuch>/<sprache>/ und die Startseiten nach <ziel>/index.html und <ziel>/<sprache>/index.html –
+für die Auslieferung unter /hilfe/ im DMS. Arbeitet auf einer Kopie von
 docs/, damit „Neu in dieser Version“ das Arbeitsverzeichnis nicht verändert. Prüft danach,
 dass jeder lokale Verweis (/hilfe/…) auf eine vorhandene Seite zeigt.
 """
@@ -14,6 +15,8 @@ from pathlib import Path
 
 WURZEL = Path(__file__).resolve().parents[3]
 HANDBUECHER = ['benutzer', 'admin', 'installieren', 'entwickler']
+# Weitere Sprachen (#730): je Handbuch mkdocs.<sprache>.offline.yml, Startseite start/<sprache>/index.html.
+SPRACHEN = ['en']
 
 
 def main():
@@ -32,15 +35,25 @@ def main():
         subprocess.run([sys.executable, str(kopie / 'docs/handbuch/werkzeuge/neu.py'), ordner], check=True)
         for h in HANDBUECHER:
             env = {**os.environ, 'DMS_HILFE_HANDBUCH': h, 'DMS_HILFE_VERSION': ordner}
-            subprocess.run(['mkdocs', 'build', '--strict', '--quiet', '-f', str(kopie / 'docs/handbuch' / h / 'mkdocs.offline.yml'), '-d', str(ziel / h)], check=True, env=env)
-            (ziel / h / 'sitemap.xml').unlink(missing_ok=True)
-            (ziel / h / 'sitemap.xml.gz').unlink(missing_ok=True)
-            schlanker(ziel / h)
+            # Erst Deutsch (räumt <ziel>/<handbuch>/ leer), dann jede Übersetzung in ihren Unterordner.
+            fassungen = [('mkdocs.offline.yml', ziel / h)] + [(f'mkdocs.{s}.offline.yml', ziel / h / s) for s in SPRACHEN]
+            for datei, aus in fassungen:
+                if not (kopie / 'docs/handbuch' / h / datei).is_file():
+                    continue
+                subprocess.run(['mkdocs', 'build', '--strict', '--quiet', '-f', str(kopie / 'docs/handbuch' / h / datei), '-d', str(aus)], check=True, env=env)
+                (aus / 'sitemap.xml').unlink(missing_ok=True)
+                (aus / 'sitemap.xml.gz').unlink(missing_ok=True)
+                schlanker(aus)
 
-    # Startseite: „aktuell“ gibt es offline nicht – die Handbücher liegen direkt unter /hilfe/<handbuch>/.
-    start = (WURZEL / 'docs/handbuch/start/index.html').read_text(encoding='utf-8')
-    start = re.sub(rf'href="({"|".join(HANDBUECHER)})/aktuell/', r'href="\1/', start)
-    (ziel / 'index.html').write_text(start, encoding='utf-8')
+    # Startseiten: „aktuell“ gibt es offline nicht – die Handbücher liegen direkt unter /hilfe/<handbuch>/.
+    for unter in [''] + [f'{s}/' for s in SPRACHEN]:
+        quelle = WURZEL / 'docs/handbuch/start' / unter / 'index.html'
+        if not quelle.is_file():
+            continue
+        start = quelle.read_text(encoding='utf-8')
+        start = re.sub(rf'href="((?:\.\./)*)({"|".join(HANDBUECHER)})/aktuell/', r'href="\1\2/', start)
+        (ziel / unter).mkdir(parents=True, exist_ok=True)
+        (ziel / unter / 'index.html').write_text(start, encoding='utf-8')
     for f in (WURZEL / 'docs/handbuch/start').iterdir():  # Logo und Favicon der Startseite (#689)
         if f.is_file() and f.name != 'index.html':
             shutil.copy(f, ziel / f.name)

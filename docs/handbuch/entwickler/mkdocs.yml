@@ -5,6 +5,9 @@ repo_url: https://github.com/motom001/dms
 repo_name: motom001/dms
 edit_uri: edit/main/docs/handbuch/entwickler/docs/
 docs_dir: docs
+# Bildschirmfotos anderer Sprachen gehören nur in deren Fassung (#730, werkzeuge/sprache_hook.py).
+exclude_docs: |
+  bilder/en/
 copyright: Der Quellcode von Ablago steht unter der Apache-2.0; Name und Logo sind davon nicht erfasst · <a href="https://github.com/sponsors/motom001">Projekt unterstützen</a> · Das Handbuch lädt nichts von Dritten (<a href="https://help.ablago.app/admin/aktuell/datenschutz/#keine-telemetrie">Datenschutz</a>)
 
 theme:
@@ -57,6 +60,10 @@ markdown_extensions:
   - pymdownx.keys
 
 extra:
+  # Sprachumschalter (#730): dieselbe Seite auf Englisch unter …/en/ (overrides/partials/alternate.html).
+  alternate:
+    - { name: Deutsch, link: ./, lang: de }
+    - { name: English, link: en/, lang: en }
   social:
     - icon: fontawesome/solid/heart
       link: https://github.com/sponsors/motom001

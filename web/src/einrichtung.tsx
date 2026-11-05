@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { INSTALLIEREN_URL } from '../../shared/src/hilfe';
+import { installierenUrl } from '../../shared/src/hilfe';
 import { api, ApiFehler, hatEinrichtungscode, setzeEinrichtungscode, type AnbindungEingabe, type AnbindungPruefung, type KontoStatus } from './api';
 import { WiederherstellungsAssistent } from './wiederherstellen';
 import { useKonto } from './konto';
@@ -116,7 +116,7 @@ function CodeSchritt({ ok }: { ok: () => void }) {
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
         <button className="knopf primaer" disabled={s.sendet || !code.trim()}>{s.sendet ? t('einrichtung.assistent.pruefe') : t('einrichtung.assistent.weiter')}</button>
       </form>
-      <p className="klein">{tn('einrichtung.assistent.wo-das-bei-deinem', { link: <a className="verweis" href={INSTALLIEREN_URL} target="_blank" rel="noreferrer">{t('einrichtung.assistent.wie-komme-ich-an')}</a> })}</p>
+      <p className="klein">{tn('einrichtung.assistent.wo-das-bei-deinem', { link: <a className="verweis" href={installierenUrl()} target="_blank" rel="noreferrer">{t('einrichtung.assistent.wie-komme-ich-an')}</a> })}</p>
       <p className="leise klein">{t('einrichtung.assistent.nach-der-einrichtung-ist')}</p>
     </Rahmen>
   );

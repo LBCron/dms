@@ -6,6 +6,8 @@
  * (docs/handbuch/werkzeuge/hilfe-pruefen.ts) – eine umbenannte Überschrift fällt sofort auf.
  */
 
+import { sprache as oberflaechensprache } from './sprache';
+
 export const HANDBUCH_BASIS = 'https://help.ablago.app';
 export type Handbuch = 'admin' | 'benutzer';
 export interface Hilfeziel { handbuch: Handbuch; /** Seite mit Schrägstrich am Ende, z. B. „aufgaben/“. */ seite: string; anker?: string; /** „Hilfe zu …“ */ titel: string }
@@ -219,30 +221,60 @@ export type Hilfeort = keyof typeof HILFE;
 export const HANDBUCH_ONLINE_ORDNER = 'aktuell';
 
 /**
- * Handbuch im DMS selbst (#219): Das Image bringt die Handbücher seiner Version mit, ohne Internet
- * lesbar unter /hilfe/. Ohne gebaute Handbücher (Entwicklung) leitet der Server auf die Online-Fassung um.
+ * Sprachen der Handbücher (#730). Deutsch liegt direkt unter /hilfe/<handbuch>/, jede weitere Sprache
+ * mit denselben Seiten und Ankern unter /hilfe/<handbuch>/<sprache>/ (online …/<handbuch>/aktuell/<sprache>/).
  */
-export function handbuchUrl(handbuch: Handbuch, _version: string | null | undefined, seite = ''): string {
-  return `/hilfe/${handbuch}/${seite}`;
+export const HANDBUCH_SPRACHEN = ['de', 'en'] as const;
+export type Handbuchsprache = (typeof HANDBUCH_SPRACHEN)[number];
+
+/**
+ * Handbuchsprache zu einer Sprache der Oberfläche: „en“ und „en-GB“ → Englisch; eine Sprache ohne eigenes
+ * Handbuch → Deutsch. Ohne Angabe gilt die Sprache der Oberfläche bzw. des Servers (`setzeSprache`, #729).
+ */
+export function handbuchsprache(sprache?: string | null): Handbuchsprache {
+  const kurz = (sprache ?? oberflaechensprache()).toLowerCase().split(/[-_]/)[0];
+  return (HANDBUCH_SPRACHEN as readonly string[]).includes(kurz) ? (kurz as Handbuchsprache) : 'de';
 }
 
-/** Dieselbe Seite online, immer in der aktuellen Fassung (#846). */
-export function handbuchOnlineUrl(handbuch: Handbuch, seite = ''): string {
-  return `${HANDBUCH_BASIS}/${handbuch}/${HANDBUCH_ONLINE_ORDNER}/${seite}`;
+/** „“ für Deutsch, sonst „en/“ – der Unterordner der Sprache in jedem Handbuch. */
+export function sprachordner(sprache?: string | null): string {
+  const s = handbuchsprache(sprache);
+  return s === 'de' ? '' : `${s}/`;
+}
+
+/**
+ * Handbuch im DMS selbst (#219): Das Image bringt die Handbücher seiner Version mit, ohne Internet
+ * lesbar unter /hilfe/. Ohne gebaute Handbücher (Entwicklung) leitet der Server auf die Online-Fassung um.
+ * `sprache` (#730): ohne Angabe die Sprache der Oberfläche.
+ */
+export function handbuchUrl(handbuch: Handbuch, _version: string | null | undefined, seite = '', sprache?: string | null): string {
+  return `/hilfe/${handbuch}/${sprachordner(sprache)}${seite}`;
+}
+
+/** Dieselbe Seite online, immer in der aktuellen Fassung (#846), in der Sprache der Person (#730). */
+export function handbuchOnlineUrl(handbuch: Handbuch, seite = '', sprache?: string | null): string {
+  return `${HANDBUCH_BASIS}/${handbuch}/${HANDBUCH_ONLINE_ORDNER}/${sprachordner(sprache)}${seite}`;
 }
 
 /**
  * Hilfe im Einrichtungsassistenten (#278): immer das Online-Handbuch der aktuellen Version –
  * ob ein lokales Handbuch erreichbar ist, steht dort noch nicht fest.
  */
-export function hilfeOnlineUrl(ziel: Hilfeziel): string {
-  return `${handbuchOnlineUrl(ziel.handbuch, ziel.seite)}${ziel.anker ? `#${ziel.anker}` : ''}`;
+export function hilfeOnlineUrl(ziel: Hilfeziel, sprache?: string | null): string {
+  return `${handbuchOnlineUrl(ziel.handbuch, ziel.seite, sprache)}${ziel.anker ? `#${ziel.anker}` : ''}`;
 }
-/** Anleitungen je Plattform: „Wie komme ich an ein DMS?“ */
+/** Anleitungen je Plattform: „Wie komme ich an ein DMS?“ (Deutsch; in der Sprache der Person: installierenUrl). */
 export const INSTALLIEREN_URL = `${HANDBUCH_BASIS}/installieren/${HANDBUCH_ONLINE_ORDNER}/`;
+export function installierenUrl(sprache?: string | null): string {
+  return `${INSTALLIEREN_URL}${sprachordner(sprache)}`;
+}
+/** Startseite aller Handbücher (help.ablago.app bzw. help.ablago.app/en/). */
+export function handbuchStartUrl(sprache?: string | null): string {
+  return `${HANDBUCH_BASIS}/${sprachordner(sprache)}`;
+}
 
-export function hilfeUrl(ziel: Hilfeziel, version: string | null | undefined): string {
-  return `${handbuchUrl(ziel.handbuch, version, ziel.seite)}${ziel.anker ? `#${ziel.anker}` : ''}`;
+export function hilfeUrl(ziel: Hilfeziel, version: string | null | undefined, sprache?: string | null): string {
+  return `${handbuchUrl(ziel.handbuch, version, ziel.seite, sprache)}${ziel.anker ? `#${ziel.anker}` : ''}`;
 }
 
 export const HANDBUCH_NAME: Record<Handbuch, string> = { admin: 'Administratorhandbuch', benutzer: 'Benutzerhandbuch' };

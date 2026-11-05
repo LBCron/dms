@@ -1,3 +1,11 @@
 {% extends "base.html" %}
 
 {# Online gibt es nur noch „aktuell“ (#846) – kein Hinweis auf andere Versionen mehr. #}
+
+{#- Maschinelle Übersetzung (#730): Steht extra.maschinell in mkdocs.<sprache>.yml, trägt jede Seite oben diesen Satz. -#}
+{% block content %}
+  {% if config.extra.maschinell %}
+    <p class="ablago-maschinell">{{ config.extra.maschinell.text }} <a href="{{ config.extra.maschinell.link }}">{{ config.extra.maschinell.verweis }}</a></p>
+  {% endif %}
+  {{ super() }}
+{% endblock %}

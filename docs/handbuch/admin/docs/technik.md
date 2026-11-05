@@ -66,7 +66,7 @@ So arbeiten die Prozesse zusammen:
 
 ## Hilfe ohne Internet
 
-Das Image bringt die Handbücher seiner Version mit: Startseite, Wie komme ich an ein DMS?, Benutzer-, Administrator- und Entwicklerhandbuch, erreichbar unter `/hilfe/` der eigenen Installation (z. B. `http://<NAS>:8080/hilfe/`), ohne Anmeldung und schon im Einrichtungsassistenten. Das Fragezeichen neben einer Überschrift und die Links auf das Handbuch öffnen diese Version. Sie kommt ohne Internet aus; nur die Bildschirmfotos fehlen – an ihrer Stelle steht ein Link auf dieselbe Seite online. Im Fuß jeder Seite geht es zur Online-Hilfe und zur neuesten Version.
+Das Image bringt die Handbücher seiner Version mit, auf Deutsch und Englisch: Startseite, Wie komme ich an ein DMS?, Benutzer-, Administrator- und Entwicklerhandbuch, erreichbar unter `/hilfe/` der eigenen Installation (z. B. `http://<NAS>:8080/hilfe/`, auf Englisch unter `/hilfe/en/`), ohne Anmeldung und schon im Einrichtungsassistenten. Das Fragezeichen neben einer Überschrift und die Links auf das Handbuch öffnen diese Version, in der Sprache der angemeldeten Person. Sie kommt ohne Internet aus; nur die Bildschirmfotos fehlen – an ihrer Stelle steht ein Link auf dieselbe Seite online. Im Fuß jeder Seite geht es zur Online-Hilfe und zur neuesten Version.
 
 ## Module
 

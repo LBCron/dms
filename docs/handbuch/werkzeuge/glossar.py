@@ -6,6 +6,11 @@ Seite „Begriffe“ im Benutzerhandbuch (#276) aus docs/glossar.yml.
     python3 docs/handbuch/werkzeuge/glossar.py --pruefen  # meldet Fehler im Glossar, schreibt nichts
 
 Die Seite ist eingecheckt, damit das Handbuch auch lokal vollständig ist; die CI erzeugt sie vor dem Bauen neu.
+
+Englisch (#730): docs/glossar.en.yml ordnet jedem deutschen Begriff Wort und Beschreibung auf Englisch zu;
+daraus entsteht benutzer/docs-en/begriffe.md mit denselben Ankern wie die deutsche Seite. Fehlt ein Begriff
+dort, steht er auf Englisch mit seiner deutschen Beschreibung. Offene Fragen und „nicht verwenden“ betreffen
+die deutschen Wörter und stehen nur auf der deutschen Seite.
 """
 import re, sys, unicodedata
 from pathlib import Path
@@ -15,6 +20,8 @@ import yaml
 WURZEL = Path(__file__).resolve().parents[3]
 QUELLE = WURZEL / 'docs' / 'glossar.yml'
 ZIEL = WURZEL / 'docs' / 'handbuch' / 'benutzer' / 'docs' / 'begriffe.md'
+QUELLE_EN = WURZEL / 'docs' / 'glossar.en.yml'
+ZIEL_EN = WURZEL / 'docs' / 'handbuch' / 'benutzer' / 'docs-en' / 'begriffe.md'
 
 BEREICHE = {
     'grundbegriffe': 'Grundbegriffe',
@@ -155,6 +162,59 @@ def seite(g: dict) -> str:
     return '\n'.join(z)
 
 
+BEREICHE_EN = {'grundbegriffe': 'Basic terms', 'ablage': 'Working in the Library', 'werkbank': 'Administration (workbench)', 'betrieb': 'Operation and security'}
+EINSTEIGER_EN = {'alltag': ('✓', 'everyday word'), 'erklaeren': ('~', 'with explanation'), 'fachwort': ('✗', 'technical term')}
+BEGEGNET_EN = {'alle': 'everyone', 'admin': 'administrators', 'fortgeschritten': 'advanced users'}
+
+
+def seite_en(g: dict, en: dict) -> str:
+    """Englische Seite „Terms“ (#730): englisches Wort, deutsches Wort der Oberfläche, Beschreibung."""
+    uebersetzt = en.get('begriffe', {})
+    wort = lambda n: (uebersetzt.get(n) or {}).get('begriff') or n
+    namen = {b['begriff'] for b in g['begriffe']}
+    z = [
+        '# Terms',
+        '',
+        '<!-- Erzeugt aus docs/glossar.yml und docs/glossar.en.yml mit docs/handbuch/werkzeuge/glossar.py – bitte dort ändern. -->',
+        '',
+        'This page explains what the words in Ablago mean. Each term is followed by the German word in *italics* – that is how it appears in the German interface and on the screenshots in this manual.',
+        '',
+        'Each term also says how well someone understands it who is working with a DMS for the first time:',
+        '',
+        '- **✓ everyday word**: understood straight away.',
+        '- **~ with explanation**: the interface explains it briefly, for example with **?**.',
+        '- **✗ technical term**: there is no better word, or it only concerns advanced users.',
+        '',
+        'It also says who comes across the term: everyone, only administrators or only advanced users (expert mode, technology).',
+        '',
+    ]
+    for schluessel, titel in BEREICHE_EN.items():
+        z += [f'## {titel} {{#{anker(BEREICHE[schluessel])}}}', '']
+        for b in sorted((b for b in g['begriffe'] if b['bereich'] == schluessel), key=lambda b: wort(b['begriff']).lower()):
+            e = uebersetzt.get(b['begriff']) or {}
+            zeichen, art = EINSTEIGER_EN[b['einsteiger']]
+            kopf = f'<a id="{anker(b["begriff"])}"></a>**{wort(b["begriff"])}**'
+            if wort(b['begriff']) != b['begriff']:
+                kopf += f' (*{b["begriff"]}*)'
+            z.append(f'{kopf} · {zeichen} {art} · {BEGEGNET_EN[b["begegnet"]]}  ')
+            text = (e.get('beschreibung') or b['beschreibung']).strip()
+            if not e.get('beschreibung'):
+                text += ' *(Description in German only.)*'
+            z.append(text + ('  ' if b.get('verwandt') else ''))
+            if b.get('verwandt'):
+                z.append('See also: ' + ', '.join(f'[{wort(v)}](#{anker(v)})' for v in b['verwandt'] if v in namen) + '.')
+            z.append('')
+    z += [
+        '## Open questions and words to avoid {#noch-offen}',
+        '',
+        'Which German words are still being discussed, which questions have been decided and which words the German texts avoid is listed on the [German page](../../begriffe/). It concerns the German wording.',
+        '',
+        f'*As of: {g["stand"]}*' if isinstance(g.get('stand'), str) else '',
+        '',
+    ]
+    return '\n'.join(z)
+
+
 def main():
     g = lies()
     fehler = pruefe(g)
@@ -166,6 +226,11 @@ def main():
         return
     ZIEL.write_text(seite(g), encoding='utf-8')
     print(f'Geschrieben: {ZIEL.relative_to(WURZEL)}')
+    if ZIEL_EN.parent.is_dir():
+        en = yaml.safe_load(QUELLE_EN.read_text(encoding='utf-8')) if QUELLE_EN.is_file() else {}
+        ZIEL_EN.write_text(seite_en(g, en or {}), encoding='utf-8')
+        fehlt = [b['begriff'] for b in g['begriffe'] if b['begriff'] not in (en or {}).get('begriffe', {})]
+        print(f'Geschrieben: {ZIEL_EN.relative_to(WURZEL)}' + (f' ({len(fehlt)} Begriffe ohne englische Beschreibung)' if fehlt else ''))
 
 
 if __name__ == '__main__':
