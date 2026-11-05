@@ -71,7 +71,7 @@ export class Nachlauf {
 interface Optionen {
   /** Paketverwaltung mit Paket-Läufer (#338); ohne: Paketverwaltung ohne Läufer. */
   pakete?: import('./pakete').Paketverwaltung;
-  paketlaeufer?: import('./laeufer/verwaltung').Paketlaeufer;
+  paketlaeufer?: import('./laeufer/fern').LaeuferSicht;
   /** Verzeichnis der gebauten Weboberfläche; fehlt es, gibt es nur die API. */
   webDir?: string;
   /** @deprecated Protokoll läuft immer über protokoll.ts; bleibt für ältere Aufrufer. */
@@ -116,6 +116,9 @@ interface Optionen {
   speicherplatz?: Speicherplatz;
   /** Systemzustand → Auslastung (#409). */
   systemlast?: import('./systemlast').Systemlast;
+  /** Mehrere Prozesse (#745). */
+  verbund?: import('./prozesse').Verbund;
+  prozessEinstellung?: import('./prozesse').ProzessEinstellung;
   eingangsordner?: import('./eingangsordner').Eingangsordner;
   postfaecher?: import('./postfach').Postfaecher;
   postfachOAuth?: import('./postfach-oauth').PostfachOAuth;

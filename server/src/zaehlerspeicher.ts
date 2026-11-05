@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { heuteIn } from '../../shared/src/sichten';
 import { merkeAenderung } from './lesespeicher';
+import type { Kurzzustand } from './kurzzustand';
 import { kontext, protokoll } from './protokoll';
 
 /**
@@ -39,6 +40,9 @@ export const ZEITABHAENGIG_MS = 5 * 60_000;
 export const HOECHSTENS_MS = 30 * 60_000;
 /** Mindestgültigkeit nach Änderungen anderer (#742, Vorschlag im Issue 2–5 s). */
 export const MINDESTENS_MS = 3_000;
+/** Kurzzustand der eigenen Änderungen (#745): Art und Gültigkeit (länger als die Mindestgültigkeit). */
+const EIGENE = 'eigene-aenderung';
+const EIGENE_MS = 10 * MINDESTENS_MS;
 /** Höchstens so viele Einträge (je Benutzer und Rechte einer); danach fliegt der älteste. */
 const MAX_EINTRAEGE = 500;
 /** Letzte eigene Änderung je Person (#742) für so viele Personen; danach fliegt die älteste. */
@@ -105,6 +109,9 @@ export class Haushaltsstand {
   /** Letzte eigene Änderung je Person (Zahl der Änderungen in diesem Prozess danach). */
   private eigene = new Map<string, number>();
   private geplant = false;
+  /** Mehrere Prozesse (#745): eigene Änderungen auch im Kurzzustand, damit ein anderer Prozess sie kennt. */
+  private geteilt: Kurzzustand | null = null;
+  private wer = new Set<string>();
   /** Änderungen in diesem Prozess (ohne Datenbank zugleich der Stand). */
   get stand() { return this.n; }
   /** Stand in der Datenbank verwenden (#742). */
@@ -112,6 +119,19 @@ export class Haushaltsstand {
 
   /** Gültiger Stand: aus der Datenbank (in einer Anfrage einmal mit der Sitzung gelesen), sonst der dieses Prozesses. */
   async aktuell(): Promise<number> { return this.quelle ? this.quelle.lies() : this.n; }
+
+  /**
+   * Mehrere Prozesse (#745): Nach einer eigenen Änderung steht der neue Stand (aus der Datenbank) je Person kurz im
+   * Kurzzustand – landet die nächste Anfrage bei einem anderen Prozess, zeigt auch er die Zahlen sofort neu.
+   */
+  teileEigene(z: Kurzzustand) { this.geteilt = z; }
+
+  /** Hat diese Person nach Stand `stand` selbst etwas geändert – in irgendeinem Prozess (#745)? */
+  async eigeneNach(benutzerId: string | undefined, stand: number): Promise<boolean> {
+    if (!benutzerId || !this.geteilt) return false;
+    const e = await this.geteilt.lies(EIGENE, benutzerId).catch(() => null);
+    return !!e && Number(e.wert) > stand;
+  }
 
   /** `stand` nach der letzten eigenen Änderung dieser Person in diesem Prozess (0 = keine). */
   eigeneAenderung(benutzerId: string | undefined): number { return (benutzerId && this.eigene.get(benutzerId)) || 0; }
@@ -125,6 +145,7 @@ export class Haushaltsstand {
     this.n++;
     const wer = kontext.getStore()?.benutzerId;
     if (wer) {
+      if (this.geteilt) this.wer.add(wer);
       this.eigene.delete(wer);
       this.eigene.set(wer, this.n);
       if (this.eigene.size > MAX_PERSONEN) this.eigene.delete(this.eigene.keys().next().value!);
@@ -134,8 +155,13 @@ export class Haushaltsstand {
       const q = this.quelle;
       kontext.exit(() => setImmediate(() => {
         this.geplant = false;
+        const wer = [...this.wer];
+        this.wer.clear();
         // Fehlt das Hochzählen, merken andere Prozesse die Änderung spätestens nach HOECHSTENS_MS.
-        q.erhoehe().catch((e) => log.warn('Haushaltsstand nicht hochgezählt', { fehler: (e as Error).message }));
+        q.erhoehe().then(async (n) => {
+          const z = this.geteilt;
+          if (z) for (const w of wer) await z.setze(EIGENE, w, n, Date.now() + EIGENE_MS);
+        }).catch((e) => log.warn('Haushaltsstand nicht hochgezählt', { fehler: (e as Error).message }));
       }));
     }
     // Außerhalb der Anfrage (#742): Was der Hörer anstößt (Webhooks zählen nach 3 s), ist Hintergrund und zählt frisch.
@@ -206,7 +232,8 @@ export class Zaehlerspeicher<T> {
       if (da.stand === stand) return { wert: await da.wert, art: 'treffer' };
       // Mindestgültigkeit (#742): Änderungen anderer erst nach kurzer Zeit; eigene sofort.
       const kurz = (g.mindestensMs ?? 0) > 0 && t - da.seit < g.mindestensMs! && this.stand.eigeneAenderung(g.wer) <= da.lokal;
-      if (kurz && da.stand < stand) return { wert: await da.wert, art: 'treffer' };
+      // Eigene Änderung in einem anderen Prozess (#745)? Nur in diesem seltenen Fall eine kleine Abfrage mehr.
+      if (kurz && da.stand < stand && !(await this.stand.eigeneNach(g.wer, da.stand))) return { wert: await da.wert, art: 'treffer' };
     }
     const e: Eintrag<T> = { stand, lokal: this.stand.stand, heute, seit: t, bis: t + HOECHSTENS_MS, wert: Promise.resolve(null as T) };
     e.wert = zaehle().then((z) => { if (z.zeitabhaengig) e.bis = Math.min(e.bis, t + ZEITABHAENGIG_MS); return z.wert; });

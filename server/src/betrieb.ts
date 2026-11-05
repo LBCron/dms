@@ -239,6 +239,13 @@ export class Betrieb {
     this.baueMailer();
   }
 
+  /** Mehrere Prozesse (#745): Einstellungen neu lesen, nachdem ein anderer Prozess sie geändert hat. */
+  async nachladen() {
+    this.mail = { ...LEER, ...((await this.speicher.lies('mail')) as Partial<MailEinstellungen> | null ?? {}) };
+    this.adresse = String((await this.speicher.lies('adresse')) ?? '');
+    this.baueMailer();
+  }
+
   /**
    * Einmalige Übernahme der früheren Umgebungsvariablen (SMTP_*, APP_URL), damit der Versand
    * nach dem Update nicht ausfällt. Übernommen wird nur, was noch nicht gespeichert ist.

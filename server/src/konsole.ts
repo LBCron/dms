@@ -34,8 +34,9 @@ export function istLoopback(ip: string | undefined): boolean {
 }
 
 export class Konsolenzugang {
-  private readonly schluessel = randomBytes(32).toString('base64url');
-  constructor(readonly datei: string = konsolenDatei()) {}
+  private readonly schluessel: string;
+  /** `schluessel` (#745): bei mehreren Prozessen der gemeinsame vom Hauptprozess – der Befehl landet bei irgendeinem. */
+  constructor(readonly datei: string = konsolenDatei(), schluessel?: string) { this.schluessel = schluessel ?? randomBytes(32).toString('base64url'); }
 
   async schreibe(url: string) {
     const inhalt: KonsolenDatei = { schluessel: this.schluessel, url, pid: process.pid };

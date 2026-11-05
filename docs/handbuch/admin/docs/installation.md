@@ -199,9 +199,10 @@ Diese Einstellungen sind Umgebungsvariablen im Compose-Projekt:
 | `DMS_EINBETTEN` | Seiten, die Ablago einbetten dürfen (z. B. ein Dashboard), etwa `https://ha.example.org http://nas.home.arpa:8123`. Nicht gesetzt: nur Ablago selbst. Siehe [Sicherheits-Header](#sicherheits-header) |
 | `LOG_LEVEL` | Grundstufe des Protokolls: `debug`, `info` (Standard), `warn`, `error` |
 | `PORT`, `HOST` | Port (Standard `3000`) und Adresse (Standard `0.0.0.0`, alle), auf denen Ablago im Container lauscht. Normalerweise änderst du **nicht** `PORT`, sondern den Port nach außen in der Compose-Datei (in der Vorlage `8080:3000`, z. B. `8090:3000`). Die eingebaute Gesundheitsprüfung des Images folgt `PORT`; setzt du `HOST` auf eine einzelne Adresse, muss sie `127.0.0.1` mit einschließen, sonst gilt der Container als *unhealthy* |
-| `DMS_DB_VERBINDUNGEN` | Höchstzahl der Verbindungen zur Datenbank, 2–100 (Vorgabe 10). Nur für größere Installationen mit mehr Kernen, siehe [Technik → Viele gleichzeitige Anfragen](technik.md#last) |
-| `DMS_MAX_ANFRAGEN` | Ab so vielen gleichzeitigen Anfragen antwortet Ablago sofort mit „gerade sehr beschäftigt“ (HTTP 503), 20–10.000 (Vorgabe 250), siehe [Technik](technik.md#last) |
-| `DMS_ARBEITER` | Zahl der [Arbeiter für PDF und Exporte](speicherplatz.md#arbeiter-fur-pdf-und-exporte), 1–16. Nicht gesetzt: die Hälfte der Kerne des Containers, mindestens 1, höchstens 4. `0` schaltet sie aus (nur zur Fehlersuche) |
+| `DMS_PROZESSE` | Zahl der Prozesse für Anfragen, 1–16 oder `auto` (Kerne − 1, höchstens 4; unter 2 GB Arbeitsspeicher 1). Vorgabe 1 wie bisher. Empfohlen ab etwa 4 Kernen, siehe [Technik → Mehrere Prozesse](technik.md#mehrere-prozesse) |
+| `DMS_DB_VERBINDUNGEN` | Höchstzahl der Verbindungen zur Datenbank **je Prozess**, 2–100 (Vorgabe 10). Nur für größere Installationen mit mehr Kernen, siehe [Technik → Viele gleichzeitige Anfragen](technik.md#last) |
+| `DMS_MAX_ANFRAGEN` | Ab so vielen gleichzeitigen Anfragen (**je Prozess**) antwortet Ablago sofort mit „gerade sehr beschäftigt“ (HTTP 503), 20–10.000 (Vorgabe 250), siehe [Technik](technik.md#last) |
+| `DMS_ARBEITER` | Zahl der [Arbeiter für PDF und Exporte](speicherplatz.md#arbeiter-fur-pdf-und-exporte) **je Prozess**, 1–16. Nicht gesetzt: die Hälfte der Kerne des Containers, mindestens 1, höchstens 4 – mit mehreren Prozessen aufgeteilt. `0` schaltet sie aus (nur zur Fehlersuche) |
 | `DMS_EINGANG` | Nur für Sonderfälle: anderer Ort des [Eingangsordners](eingangsordner.md) im Container (Standard `/eingang`). Üblich ist, den Ordner des NAS auf `/eingang` einzubinden |
 
 ## Hinter einem Reverse-Proxy

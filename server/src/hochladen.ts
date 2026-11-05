@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
@@ -27,11 +27,18 @@ let einstellung: { ordner: string; vorher?: () => Promise<void> } = { ordner: jo
 export function richteHochladenEin(o: { ordner: string; vorher?: () => Promise<void> }) { einstellung = o; }
 export const hochladeOrdner = () => einstellung.ordner;
 
-/** Übrig gebliebene temporäre Uploads (Absturz) löschen; liefert die Anzahl. */
-export async function raeumeHochladenAuf(ordner = einstellung.ordner): Promise<number> {
+/**
+ * Übrig gebliebene temporäre Uploads (Absturz) löschen; liefert die Anzahl. `aelterAlsMs` (#745): Laufen noch andere
+ * Prozesse, gehören frische Dateien vielleicht einem Upload, der gerade läuft – dann nur ältere.
+ */
+export async function raeumeHochladenAuf(ordner = einstellung.ordner, aelterAlsMs = 0): Promise<number> {
   let n = 0;
   for (const name of await readdir(ordner).catch(() => [] as string[])) {
     if (!name.endsWith('.tmp')) continue;
+    if (aelterAlsMs > 0) {
+      const s = await stat(join(ordner, name)).catch(() => null);
+      if (!s || Date.now() - s.mtimeMs < aelterAlsMs) continue;
+    }
     await rm(join(ordner, name), { force: true });
     n++;
   }

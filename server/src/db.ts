@@ -27,6 +27,20 @@ export function verbindungenAus(env: Record<string, string | undefined>): Verbin
   return { max: n, quelle: 'umgebung' };
 }
 
+/** Für Superuser und andere Programme bleiben so viele Verbindungen der Datenbank frei (#745). */
+export const VERBINDUNGEN_RESERVE = 10;
+
+/**
+ * Mehrere Prozesse (#745): `DMS_DB_VERBINDUNGEN` gilt **je Prozess**. Zusammen (mit {@link VERBINDUNGEN_RESERVE})
+ * dürfen es nicht mehr sein, als die Datenbank erlaubt (`max_connections`); sonst bekommt jeder Prozess weniger,
+ * mindestens {@link VERBINDUNGEN_MIN}.
+ */
+export function verbindungenJeProzess(gewuenscht: number, prozesse: number, erlaubt: number | null): { max: number; gekuerzt: boolean } {
+  if (prozesse <= 1 || !erlaubt) return { max: gewuenscht, gekuerzt: false };
+  const frei = Math.floor((erlaubt - VERBINDUNGEN_RESERVE) / prozesse);
+  return gewuenscht <= frei ? { max: gewuenscht, gekuerzt: false } : { max: Math.max(VERBINDUNGEN_MIN, frei), gekuerzt: true };
+}
+
 /**
  * postgres.js 4 (#236): `infer: true` behält die Parametertypen von v3 (Date als timestamptz, boolean, bytea …),
  * damit Abfragen ohne ausdrücklichen Typ unverändert laufen.

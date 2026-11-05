@@ -1168,6 +1168,8 @@ export interface DatenbankStand {
   einstellungen: MessEinstellungen | null; langlaeufer: Langlaeufer[]; laufend: LaufendeAbfrage[]; auslastung?: { aktuell: Schleifenverzoegerung | null; vorher: Schleifenverzoegerung | null } | null;
   /** Verbindungen zur Datenbank und Warten auf eine freie (#544). */
   verbindungen?: { max: number; quelle: 'vorgabe' | 'umgebung'; messungen: number; median: number | null; p95: number | null; hoechstens: number | null } | null;
+  /** Mehrere Prozesse (#745): je Prozess; fehlt mit einem. */
+  prozesse?: import('../../shared/src/systemlast').ProzessZeile[];
 }
 export interface WerkbankUebersicht {
   tresor: { zustand: string; eingebunden: boolean | null; betroffen: number } | null;
