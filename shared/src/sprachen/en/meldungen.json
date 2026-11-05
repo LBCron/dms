@@ -180,6 +180,8 @@
   "dienst.mappe-ohne-titel": "Untitled folder",
   "dienst.in-der-ablage-neu": "enter again in the library",
   "dienst.diese-mappe-gibt-es": "This folder doesn’t exist.",
+  "dienst.historie-max": "“max” is a whole number from 1 to {max}.",
+  "dienst.historie-vor": "“vor” is the number of a history entry.",
   "dienst.dieses-passwortfeld-gibt-es": "This password field doesn’t exist.",
   "dienst.in-diesem-feld-ist": "No password is saved in this field.",
   "dienst.dieses-passwort-ist-nicht": "This password can’t be read: the key it was saved with is missing. Please enter it again.",

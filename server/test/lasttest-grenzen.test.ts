@@ -12,6 +12,7 @@ interface Lasttest {
   PFLICHT: { speicherMb: number };
   PROFIL: Array<[string, number]>;
   PROFIL_SPEICHERN: Array<[string, number]>;
+  HISTORIE_LESEN: Array<[string, number]>;
   SCHREIBEN: Array<[string, number]>;
   mappenFuer(stufe: string, wert?: string): number;
   pruefeFesteStufe(name: string, e: Durchgang): { verfehlt: string[]; zielVerfehlt: string[] };
@@ -72,12 +73,13 @@ describe('Lasttest: mit Speichern und extrem (#739) – alte Stufen bleiben verg
     assert.deepEqual(lt.PROFIL, [['Startseite', 15], ['Liste', 25], ['Mappe öffnen', 25], ['Suche', 15], ['Vorschaubild', 10], ['Herunterladen', 10]]);
   });
 
-  it('Mischung mit Speichern: 10 % schreibend, Lesen im selben Verhältnis wie bisher', () => {
+  it('Mischung mit Speichern: 10 % schreibend, 5 % Historie (#800), Lesen im selben Verhältnis wie bisher', () => {
     const summe = (p: Array<[string, number]>) => p.reduce((a, [, g]) => a + g, 0);
     assert.equal(Math.round(summe(lt.PROFIL_SPEICHERN) * 1000) / 1000, 100);
     assert.equal(summe(lt.SCHREIBEN), 10);
     assert.deepEqual(lt.SCHREIBEN.map(([a]) => a), ['Mappe ändern', 'Stern', 'Notiz', 'Aufgabe']);
-    for (const [a, g] of lt.PROFIL) assert.equal(lt.PROFIL_SPEICHERN.find(([b]) => b === a)![1], g * 0.9);
+    assert.deepEqual(lt.HISTORIE_LESEN, [['Historie', 5]]);
+    for (const [a, g] of lt.PROFIL) assert.equal(lt.PROFIL_SPEICHERN.find(([b]) => b === a)![1], g * 0.85);
   });
 
   it('extrem: 500.000 als Vorgabe, 1 Mio. wählbar; sonst feste Bestände', () => {

@@ -17,7 +17,7 @@ Jeder Benutzer kann unter Mein Konto einstellen, dass sein Papierkorb **beim Abm
 
 ### Historie endgültig gelöschter Mappen
 
-Jede Mappe hat eine **Historie** (wer wann was geändert hat). Wird eine Mappe endgültig gelöscht, bleibt ihre Historie noch eine Weile in der Datenbank, damit sich nachvollziehen lässt, was mit ihr geschah. Wie lange, stellst du darunter unter **Historie endgültig gelöschter Mappen behalten** ein (Standard: 365 Tage; 0 löscht es sofort mit). Die Historie lebender Mappen bleibt immer.
+Jede Mappe hat eine **Historie** (wer wann was geändert hat). Wird eine Mappe endgültig gelöscht, bleibt ihre Historie noch eine Weile in der Datenbank, damit sich nachvollziehen lässt, was mit ihr geschah. Wie lange, stellst du darunter unter **Historie endgültig gelöschter Mappen behalten** ein (Standard: 365 Tage; 0 löscht es sofort mit). Die Historie lebender Mappen bleibt immer – mit allen Arten von Einträgen, auch den Abrufen; keine Art wird früher gelöscht (#800).
 
 ## Was im Papierkorb gilt
 

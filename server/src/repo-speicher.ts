@@ -838,7 +838,20 @@ export function speicherRepo(): Repo {
     async historieSchreibe(e) {
       for (const x of e) historie.push({ id: ++historieNr, mappeId: x.mappeId, zeit: jetzt(), benutzerId: x.benutzerId, art: x.art, daten: kopie(x.daten ?? {}) });
     },
-    async historie(mappeId) { return historie.filter((h) => h.mappeId === mappeId).map(kopie).reverse(); },
+    async historie(mappeId, o = {}) {
+      let x = historie.filter((h) => h.mappeId === mappeId && (!o.arten || o.arten.includes(h.art))).reverse();
+      if (o.vor !== undefined) { const i = x.findIndex((h) => h.id === o.vor); x = i < 0 ? [] : x.slice(i + 1); }
+      return (o.max ? x.slice(0, o.max) : x).map(kopie);
+    },
+    async letzterAbruf(mappeId, art, benutzerId, dokumentId, fassung, version, seit) {
+      for (let i = historie.length - 1; i >= 0; i--) {
+        const h = historie[i];
+        if (h.zeit < seit) break;
+        if (h.mappeId === mappeId && h.art === art && h.benutzerId === benutzerId && h.daten.dokumentId === dokumentId
+          && String(h.daten.fassung ?? '') === fassung && String(h.daten.version ?? '') === (version === null ? '' : String(version))) return h.zeit;
+      }
+      return null;
+    },
     async historieVon(mappeIds) { const ids = new Set(mappeIds); return historie.filter((h) => ids.has(h.mappeId)).map(kopie).reverse(); },
     async historieArt(art, max) { return historie.filter((h) => h.art === art).map(kopie).reverse().slice(0, max); },
     async historieAufraeumen(vor) {

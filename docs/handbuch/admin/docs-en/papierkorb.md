@@ -17,7 +17,7 @@ Every user can set under My account that their bin is **emptied on sign-out**.
 
 ### History of permanently deleted folders {#historie-endgultig-geloschter-mappen}
 
-Every folder has a **history** (who changed what when). If a folder is deleted permanently, its history stays in the database for a while, so that it can be traced what happened to it. How long you set below under **Keep history of permanently deleted folders** (default: 365 days; 0 deletes it immediately too). The history of living folders always stays.
+Every folder has a **history** (who changed what when). If a folder is deleted permanently, its history stays in the database for a while, so that it can be traced what happened to it. How long you set below under **Keep history of permanently deleted folders** (default: 365 days; 0 deletes it immediately too). The history of living folders always stays – with all kinds of entries, including retrievals; no kind is deleted earlier (#800).
 
 ## What applies in the bin {#was-im-papierkorb-gilt}
 

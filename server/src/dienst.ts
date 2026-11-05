@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
-  REGISTERARTEN, REGISTERNAMEN, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemBeschriftung, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
+  REGISTERARTEN, REGISTERNAMEN, ABRUF_ART, type Abrufweg, type Abruffassung, historienartenVon, historiengruppenVon, istHistoriengruppe, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemBeschriftung, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
@@ -86,7 +86,7 @@ import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
 import { Ereignisverteiler } from './ereignisse';
-import { zeitzone } from '../../shared/src/region';
+import { tagIn, zeitzone } from '../../shared/src/region';
 import { Eingang, shaVon } from './hochladen';
 import { EREIGNISKATALOG, mischeFelder, VERALTETE_EREIGNISSE, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
 import { bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Erinnerung, type Termin, type TermineAntwort } from '../../shared/src/fristen';
@@ -315,6 +315,8 @@ export function bereinigeRegister(e: unknown, felder: Feld[]): Register[] {
     }
     // Volltext (#45): nur das Abschalten wird gespeichert; Standard ist an.
     if (art === 'dokumente' && x?.volltext === false) r.volltext = false;
+    // Historie (#800): welche Gruppen das Register zeigt – nur bekannte, jede einmal; fehlt = Vorauswahl.
+    if (art === 'protokoll' && Array.isArray(x?.zeigt)) r.zeigt = [...new Set(x.zeigt.filter(istHistoriengruppe))];
     // Versionierung (#194): Standard aus; „nur die letzten N“ ab 2, leer = alle.
     if (art === 'dokumente' && x?.versionierung === true) {
       r.versionierung = true;
@@ -648,6 +650,8 @@ export const taugtAlsAufgabenEmpfaenger = (b: Benutzer) => b.aktiv && !b.art;
 export const MODUSSPUR_MINUTEN = 10;
 /** Arten im Kurzzustand (#744). */
 const MODUSSPUR = 'modusspur';
+/** Höchstens so viele Einträge der Historie auf einer Seite (#800). */
+export const HISTORIE_SEITE_MAX = 1000;
 const ABRUF_PRUEFUNG = 'abruf-pruefung';
 /** Belegung einer Code-Prüfung am Abruf-Link: endet spätestens nach dieser Zeit (scrypt dauert Bruchteile davon). */
 const ABRUF_PRUEFUNG_MS = 60_000;
@@ -3004,10 +3008,58 @@ export class Dienst {
       : { feld: f.key, label: label(f), alt: lesbar(f, alt[f.key]), neu: lesbar(f, neu[f.key]) }));
   }
 
-  /** Historie einer Mappe (auch im Papierkorb). */
-  async historie(mappeId: string): Promise<Historieneintrag[]> {
-    if (!(await this.repo.holeMappe(mappeId)) && !(await this.repo.holeAusPapierkorb(mappeId))) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
-    return this.repo.historie(mappeId);
+  /**
+   * Historie einer Mappe (auch im Papierkorb). Ohne Angaben alle Einträge (wie bisher, auch für die API). #800: Mit
+   * `register` nur, was dieses Register „Historie“ zeigt (seine Einstellung, sonst die Vorauswahl; ein unbekanntes
+   * Register zeigt alles); mit `max` (1–1000) eine Seite, mit `vor` (Id des letzten Eintrags) die nächste.
+   */
+  async historie(mappeId: string, o: { register?: unknown; max?: unknown; vor?: unknown } = {}): Promise<Historieneintrag[]> {
+    const m = (await this.repo.holeMappe(mappeId)) ?? (await this.repo.holeAusPapierkorb(mappeId));
+    if (!m) throw new Fachfehler(404, t('meldungen.dienst.diese-mappe-gibt-es'));
+    const zahl = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : Number(v));
+    const max = zahl(o.max), vor = zahl(o.vor);
+    if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > HISTORIE_SEITE_MAX)) throw new Fachfehler(422, t('meldungen.dienst.historie-max', { max: HISTORIE_SEITE_MAX }));
+    if (vor !== undefined && !Number.isSafeInteger(vor)) throw new Fachfehler(422, t('meldungen.dienst.historie-vor'));
+    let arten: string[] | undefined;
+    if (typeof o.register === 'string' && o.register) {
+      const reg = (await this.repo.holeTyp(m.typId))?.register.find((r) => r.key === o.register && r.art === 'protokoll');
+      if (reg) arten = historienartenVon(historiengruppenVon(reg));
+    }
+    return this.repo.historie(mappeId, { ...(arten ? { arten } : {}), ...(max ? { max } : {}), ...(vor !== undefined ? { vor } : {}) });
+  }
+
+  /** Rauschen unterdrücken (#800): derselbe Abruf wird nacheinander geprüft und geschrieben, nicht gleichzeitig doppelt. */
+  private readonly abrufeLaufend = new Map<string, Promise<boolean>>();
+
+  /**
+   * Abruf einer Datei in die Historie (#800): in der Oberfläche heruntergeladen, mit einem API-Schlüssel oder über das
+   * WebDAV-Laufwerk abgerufen – mit Wer, Wann, Weg, Datei und Fassung. Ruft dieselbe Person dieselbe Datei (und
+   * Fassung) auf demselben Weg am selben Kalendertag (Zeitzone der Ablage) noch einmal ab, bleibt es bei einem
+   * Eintrag: Vorschaubilder und das mehrfache Lesen durch Explorer oder Office zählen so nur einmal. Ein Abruf an
+   * einem späteren Tag bekommt einen eigenen Eintrag. Liefert, ob ein Eintrag geschrieben wurde.
+   */
+  async notiereAbruf(x: { dokumentId: string; benutzerId: string | null; weg: Abrufweg; fassung?: Abruffassung; version?: number | null; gestempelt?: boolean; schluessel?: string | null; datei?: string }): Promise<boolean> {
+    const art = ABRUF_ART[x.weg];
+    const fassung = x.fassung ?? 'original';
+    const version = x.version ?? null;
+    const k = [x.dokumentId, x.benutzerId ?? '', art, fassung, version ?? ''].join('|');
+    const vorher = this.abrufeLaufend.get(k);
+    const lauf = (vorher ?? Promise.resolve(false)).catch(() => false).then(async () => {
+      const d = await this.repo.holeDokument(x.dokumentId);
+      if (!d) return false;
+      const jetzt = new Date();
+      // Seit 26 Stunden über den Index der Mappe; „derselbe Tag“ entscheidet dann der Kalendertag in der Zeitzone.
+      const letzter = await this.repo.letzterAbruf(d.mappeId, art, x.benutzerId, d.id, fassung, version, new Date(jetzt.getTime() - 26 * 3600_000).toISOString());
+      if (letzter && tagIn(new Date(letzter)) === tagIn(jetzt)) return false;
+      await this.notiere(d.mappeId, x.benutzerId, art, {
+        dokument: d.name, dokumentId: d.id, weg: x.weg, fassung,
+        ...(version !== null ? { version } : {}), ...(x.gestempelt ? { gestempelt: true } : {}),
+        ...(x.schluessel ? { schluessel: x.schluessel } : {}), ...(x.datei && x.datei !== d.name ? { datei: x.datei } : {}),
+      });
+      return true;
+    });
+    this.abrufeLaufend.set(k, lauf);
+    try { return await lauf; } finally { if (this.abrufeLaufend.get(k) === lauf) this.abrufeLaufend.delete(k); }
   }
 
   /** Wie lange die Historie endgültig gelöschter Mappen bleibt (Tage). */
@@ -5037,7 +5089,7 @@ export class Dienst {
    * Export mehrerer Mappen (#152, #153): Tabelle (csv, xlsx), ZIP mit Dokumenten oder ein PDF.
    * Recht E an der Sicht, Lesen je Mappe; Reihenfolge wie in der Liste. Passwörter nie.
    */
-  async exportiere(ich: { id: string; rolle: string; name?: string }, e: unknown, z: Zugriff, spur?: (ids: string[]) => Promise<unknown>): Promise<{ name: string; mime: string; inhalt: Buffer | Readable; groesse: number; mappen: number; ausgelassen: number }> {
+  async exportiere(ich: { id: string; rolle: string; name?: string }, e: unknown, z: Zugriff, spur?: (ids: string[]) => Promise<unknown>, weg: Abrufweg = 'oberflaeche'): Promise<{ name: string; mime: string; inhalt: Buffer | Readable; groesse: number; mappen: number; ausgelassen: number }> {
     const x = (e ?? {}) as Record<string, unknown>;
     const format = String(x.format ?? '');
     if (!['csv', 'xlsx', 'zip', 'pdf'].includes(format)) throw new Fachfehler(422, t('meldungen.dienst.unbekanntes-format'));
@@ -5110,7 +5162,15 @@ export class Dienst {
       gestempelt.set(m.id, [...(gestempelt.get(m.id) ?? []), a]);
       return a;
     };
-    const historie = async () => { for (const [id, a] of gestempelt) await this.notiereWeitergabe(id, ich.id, wie, plaene.get(id) ?? null, a); };
+    const historie = async () => {
+      for (const [id, a] of gestempelt) await this.notiereWeitergabe(id, ich.id, wie, plaene.get(id) ?? null, a);
+      // #800: Ein Export mit Dokumenten ist Herunterladen – je Mappe ein Eintrag mit ihren Dateien. Nicht zusammengefasst:
+      // Ein Export ist eine bewusste Handlung, kein Rauschen. In Teilen zu 500, damit große Exporte nicht eine Riesenabfrage schicken.
+      const abrufe = mappen.filter((m) => (dokJe.get(m.id) ?? []).length).map((m) => ({ mappeId: m.id, benutzerId: ich.id, art: ABRUF_ART[weg], daten: {
+        dokumente: (dokJe.get(m.id) ?? []).map((d) => d.name), weg, fassung: 'export', format, ...(plaene.has(m.id) ? { gestempelt: true } : {}),
+      } }));
+      for (let i = 0; i < abrufe.length; i += 500) await this.repo.historieSchreibe(abrufe.slice(i, i + 500));
+    };
     const bearbeiten = (m: Mappe) => plaene.has(m.id) || (!!klein && (dokJe.get(m.id) ?? []).some((d) => d.mime === 'application/pdf'));
     if (format === 'pdf') {
       const b = await mappenPdf(titel, await Promise.all(mappen.map(async (m) => {

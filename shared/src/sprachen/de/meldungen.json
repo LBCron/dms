@@ -180,6 +180,8 @@
   "dienst.mappe-ohne-titel": "Mappe ohne Titel",
   "dienst.in-der-ablage-neu": "in der Ablage neu eingeben",
   "dienst.diese-mappe-gibt-es": "Diese Mappe gibt es nicht.",
+  "dienst.historie-max": "„max“ ist eine ganze Zahl von 1 bis {max}.",
+  "dienst.historie-vor": "„vor“ ist die Nummer eines Eintrags der Historie.",
   "dienst.dieses-passwortfeld-gibt-es": "Dieses Passwortfeld gibt es nicht.",
   "dienst.in-diesem-feld-ist": "In diesem Feld ist kein Passwort gespeichert.",
   "dienst.dieses-passwort-ist-nicht": "Dieses Passwort ist nicht lesbar: Der Schlüssel, mit dem es gespeichert wurde, fehlt. Bitte neu eingeben.",

@@ -760,6 +760,7 @@ input.kurz { width: 7em; }
 .historie .vergleich { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .historie .mehrzeilig { white-space: pre-wrap; }
 .historie-kopf { display: flex; gap: 12px; justify-content: flex-end; margin-bottom: 4px; }
+.historie-alles { margin-bottom: 4px; }
 .historie .wann { color: var(--leise); font-variant-numeric: tabular-nums; font-size: calc(12.5px * var(--skala, 1)); min-width: 8.5em; }
 .historie .wer { color: var(--leise); font-size: calc(12.5px * var(--skala, 1)); min-width: 8em; }
 .historie .was { flex: 1 1 14em; min-width: 0; overflow-wrap: anywhere; }

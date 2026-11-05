@@ -203,6 +203,28 @@ describe('WebDAV-Laufwerk (#346, Stufe 1)', () => {
     assert.equal((await rufe('PROPFIND', '/webdav/ablage/verträge/', { auth: A, depth: '0' })).status, 207);
   });
 
+  it('Abrufe in der Historie (#800): einmal je Person, Datei und Tag; Ordner, HEAD und 304 zählen nicht', async () => {
+    const { d, wd, rufe, A, B, anna, bert, v1a } = await aufbau();
+    await wd.speichere({ aktiv: true }, 'admin');
+    const mappe = `/webdav/Ablage/Verträge/V-1 (${v1a.id.replace(/-/g, '').slice(0, 6)})`;
+    const pfad = `${mappe}/Belege/Rechnung.pdf`;
+    const abrufe = async () => (await d.historie(v1a.id)).filter((e) => e.art === 'abruf_webdav');
+    assert.equal((await rufe('PROPFIND', `${mappe}/Belege/`, { auth: A, depth: '1' })).status, 207);
+    assert.equal((await rufe('HEAD', pfad, { auth: A })).status, 200);
+    assert.equal((await abrufe()).length, 0, 'Ordnerabfragen und HEAD sind keine Abrufe');
+    // Explorer und Office lesen dieselbe Datei viele Male – auch gleichzeitig.
+    const r = await rufe('GET', pfad, { auth: A });
+    await Promise.all([1, 2, 3].map(() => rufe('GET', pfad, { auth: A })));
+    assert.equal((await rufe('GET', pfad, { auth: A, kopf: { 'if-none-match': r.koepfe.etag } })).status, 304);
+    let h = await abrufe();
+    assert.equal(h.length, 1);
+    assert.equal(h[0].benutzerId, anna.id);
+    assert.deepEqual({ ...h[0].daten }, { dokument: 'Rechnung.pdf', dokumentId: h[0].daten.dokumentId, weg: 'webdav', fassung: 'original', schluessel: 'Laufwerk' });
+    assert.equal((await rufe('GET', pfad, { auth: B })).status, 200);
+    h = await abrufe();
+    assert.deepEqual(h.map((e) => e.benutzerId), [bert.id, anna.id], 'andere Person: eigener Eintrag');
+  });
+
   it('Herunterladen nur mit Exportrecht E; ETag und If-None-Match', async () => {
     const { d, wd, rufe, A, anna, v1a, sicht, vt } = await aufbau();
     await wd.speichere({ aktiv: true }, 'admin');

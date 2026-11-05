@@ -35,4 +35,10 @@ Hat der Mappentyp ein Register **Historie**, zeigt es die Geschichte der Mappe, 
 
 Einträge mit einem **▸** davor lassen sich aufklappen; hinten steht, was dahinter steckt (z. B. „3 Felder“, „vorher/nachher“, „2 Anhänge“). **Alle aufklappen** öffnet alle auf einmal. Namen führen zur Mappe des Benutzers.
 
+**Abrufe:** Ablago schreibt außerdem mit, wer eine Datei wann **heruntergeladen** hat – in der Oberfläche (mit und ohne Stempel, auch als Export), mit einem **API-Schlüssel** oder über das [Laufwerk](laufwerk.md) –, mit Weg, Datei und Fassung (Original, ältere Version, Archivfassung …). Ansehen im Browser zählt nicht. Ruft dieselbe Person dieselbe Datei auf demselben Weg am selben Tag mehrmals ab – Explorer und Office lesen eine Datei oft viele Male –, steht das einmal da; ein Abruf an einem späteren Tag bekommt einen eigenen Eintrag.
+
+**Was das Register zeigt**, stellt der Administrator am Mappentyp ein. Ohne Einstellung zeigt die Historie alles außer den Abrufen; manche Mappentypen haben dafür ein eigenes Register, z. B. *Abrufe*. Mit **Alles anzeigen** oben siehst du trotzdem alle Einträge der Mappe. Mitgeschrieben wird immer alles.
+
+Die Historie lädt erst, wenn du das Register öffnest, und zeigt die neuesten 100 Einträge; **Weitere laden** holt die nächsten.
+
 Einträge lassen sich nicht ändern oder löschen. Die Historie beginnt mit Version 0.12; ältere Änderungen sind nicht erfasst, und Einträge vor Version 0.12.1 haben teils weniger Einzelheiten.

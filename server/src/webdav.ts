@@ -642,6 +642,15 @@ export class Webdav {
     }
     if (nurKopf) return { status: 200, koepfe, lesend: true };
     const inhalt = await aus.inhalt();
+    // #800: Ein echter Inhaltsabruf (GET mit Inhalt – kein PROPFIND, HEAD oder „nicht geändert“) kommt in die Historie.
+    // Explorer, Finder und Office lesen dieselbe Datei oft viele Male (auch für Vorschaubilder): Je Person, Datei und
+    // Tag bleibt es bei einem Eintrag. Scheitert das Schreiben, geht die Datei nicht hinaus.
+    try {
+      await this.d.dienst.notiereAbruf({ dokumentId: d.id, benutzerId: ctx.b.id, weg: 'webdav', schluessel: ctx.s.name, gestempelt: aus.gestempelt, datei: aus.name });
+    } catch (e) {
+      if (!Buffer.isBuffer(inhalt)) (inhalt as Readable).destroy();
+      throw e;
+    }
     log.debug(aus.gestempelt ? 'Dokument über WebDAV mit Stempel heruntergeladen' : 'Dokument über WebDAV heruntergeladen', { name: d.name, id: d.id, von: ctx.b.email });
     return { status: 200, koepfe, body: inhalt, lesend: true };
   }

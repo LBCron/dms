@@ -307,7 +307,7 @@ export function baue(e: PaketErstellenEingabe, d: ErstellenDaten): Bau {
     });
     const register = mappentyp.register.map((r: Register) => {
       const quellen = r.quellen?.map((q) => ({ typ: ziel(q.typId, wo(`Register „${r.name}“`)), feld: q.feldKey })).filter((q): q is { typ: string; feld: string } => !!q.typ);
-      return ohneLeere({ key: r.key, name: r.name, art: r.art, felder: r.art === 'felder' ? (r.felder ?? []).filter((k) => felder.some((f) => f.key === k)) : undefined, quellen, versionierung: r.versionierung, versionenBehalten: r.versionenBehalten, beschriftungen: r.beschriftungen });
+      return ohneLeere({ key: r.key, name: r.name, art: r.art, felder: r.art === 'felder' ? (r.felder ?? []).filter((k) => felder.some((f) => f.key === k)) : undefined, quellen, versionierung: r.versionierung, versionenBehalten: r.versionenBehalten, zeigt: r.art === 'protokoll' ? r.zeigt : undefined, beschriftungen: r.beschriftungen });
     });
     // volltext: false ausdrücklich behalten (Standard ist ja); ohneLeere ließe es weg.
     mappentyp.register.forEach((r, i) => { if (r.volltext === false) (register[i] as Record<string, unknown>).volltext = false; });

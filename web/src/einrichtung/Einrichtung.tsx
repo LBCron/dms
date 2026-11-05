@@ -3,7 +3,7 @@ import { kreisImStandard } from '../../../shared/src/nummernkreis';
 import { useEffect, useRef, useState } from 'react';
 import { Ansage, umgestellt, useZiehen, ziehTasten } from '../ziehen';
 import {
-  FELDTYPEN, freierSchluessel, INDEXPLATZHALTER, istIndexplatzhalter, REGISTERARTEN, SYSTEMSPALTEN, type Systemspalte, schluesselAus, standardRegister, titelAus, trefferlistenVon, VERWEISARTEN, vorlageFelder, wirksameVorlage, pruefeTitelFilter,
+  FELDTYPEN, freierSchluessel, INDEXPLATZHALTER, istIndexplatzhalter, REGISTERARTEN, HISTORIENGRUPPEN, historiengruppeName, historiengruppenVon, type Historiengruppe, SYSTEMSPALTEN, type Systemspalte, schluesselAus, standardRegister, titelAus, trefferlistenVon, VERWEISARTEN, vorlageFelder, wirksameVorlage, pruefeTitelFilter,
   type Feld, type Mappe, type Mappentyp, type Register, type Registerart, type Trefferliste, type Werte,
 } from '../../../shared/src/model';
 import { FILTER } from '../../../shared/src/titelfilter';
@@ -858,7 +858,19 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
                 {r.versionierung && <label className="eigenschaft klein einzug"><span>{tn('mappentypen.editor.nur-die-letzten-versionen', { klein: <small>{t('mappentypen.editor.leer-alle')}</small> })}</span>
                   <input type="number" min={2} className="kurz" value={r.versionenBehalten ?? ''} onChange={(ev) => setzeReg(i, { versionenBehalten: ev.target.value === '' ? undefined : Math.max(2, Math.trunc(Number(ev.target.value))) })} /></label>}
               </>}
-              {r.art === 'protokoll' && <p className="leise klein">{t('mappentypen.editor.zeigt-wer-wann-was')}</p>}
+              {r.art === 'protokoll' && <>
+                <p className="leise klein">{t('mappentypen.editor.zeigt-wer-wann-was')}</p>
+                {/* #800: Geschrieben wird immer alles – hier steht nur, was dieses Register zeigt. */}
+                <fieldset className="wahl"><legend className="klein">{tn('mappentypen.editor.historie-zeigt', { span: <span className="leise">{t('mappentypen.editor.historie-zeigt-hinweis')}</span> })}</legend>
+                  {(Object.keys(HISTORIENGRUPPEN) as Historiengruppe[]).map((g) => {
+                    const an = historiengruppenVon(r).includes(g);
+                    return <label key={g} className="haken"><input type="checkbox" checked={an}
+                      onChange={() => { const alt = historiengruppenVon(r); setzeReg(i, { zeigt: an ? alt.filter((x) => x !== g) : [...alt, g] }); }} />
+                      <span>{historiengruppeName(g)}</span></label>;
+                  })}
+                  {r.zeigt && <button type="button" className="textknopf klein" onClick={() => setzeReg(i, { zeigt: undefined })}>{t('mappentypen.editor.historie-vorauswahl')}</button>}
+                </fieldset>
+              </>}
               {r.art === 'verknuepfungen' && (
                 quellen.length === 0
                   ? <p className="leise klein">{t('mappentypen.editor.noch-verweist-kein-verweisfeld')}</p>
@@ -897,7 +909,8 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
         <button type="button" className="knopf klein" onClick={() => hinzufuegen('felder')}>{t('mappentypen.editor.feldregister')}</button>
         <button type="button" className="knopf klein" onClick={() => hinzufuegen('dokumente')}>{t('mappentypen.editor.dokumentenregister')}</button>
         <button type="button" className="knopf klein" onClick={() => hinzufuegen('verknuepfungen')}>{t('mappentypen.editor.verknuepfungsregister-2')}</button>
-        {!e.register.some((r) => r.art === 'protokoll') && <button type="button" className="knopf klein" onClick={() => hinzufuegen('protokoll')}>{t('mappentypen.editor.historie-2')}</button>}
+        {/* #800: mehrere Register „Historie“ möglich, z. B. „Verlauf“ und „Abrufe“. */}
+        <button type="button" className="knopf klein" onClick={() => hinzufuegen('protokoll')}>{t('mappentypen.editor.historie-2')}</button>
       </div>
     </Bereich>
   );
