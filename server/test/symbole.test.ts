@@ -42,6 +42,7 @@ const ERSATZ_ERLAUBT: Record<string, string> = {
 const ERSATZ_ERLAUBT_SCHLUESSEL: Record<string, string[]> = {
   '../../shared/src/sprachen/de/werkbank.json': ['berechtigungen.', 'sichtrechte.', 'sichten.'],
   '../../shared/src/sprachen/de/oberflaeche.json': ['wiederherstellen.'],
+  '../../shared/src/sprachen/de/gemeinsam.json': ['sichtrechte.'],
 };
 const erlaubterSchluessel = (rel: string, zeile: string) => (ERSATZ_ERLAUBT_SCHLUESSEL[rel] ?? []).some((a) => zeile.trimStart().startsWith(`"${a}`));
 
