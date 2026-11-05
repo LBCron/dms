@@ -86,7 +86,7 @@ def auf_englisch(teile, minor, ziel, gibt_es, vergleich, frueher, benutzer) -> s
     z += ['- All versions with their changes: [releases on GitHub](https://github.com/motom001/dms/releases)']
     if not benutzer:
         z += ['- What your installation has missed since its version is linked under **Workbench → Technology**.']
-    return '\n'.join(z).rstrip() + '\n'
+    return re.sub(r'\n{3,}', '\n\n', '\n'.join(z)).rstrip() + '\n'
 
 
 if __name__ == '__main__':

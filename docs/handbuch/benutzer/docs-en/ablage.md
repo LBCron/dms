@@ -1,0 +1,207 @@
+# Views and lists {#ansichten-und-listen}
+
+## Views {#ansichten}
+
+On the left are the **views**. At the very top are fixed entries, each with an icon: [Advanced search](#erweiterte-suche), [Start](startseite.md), [To do](eingang.md), [New post](post.md), your [favourites](#favoriten) and the [recycle bin](#papierkorb) (as long as it is on or something is in it). Below the divider – without icons – are the views an administrator has set up, for example *Contract*, *Invoice*, *Contract partner* or *Notice within the next 12 months*. The number after it says how many Mappen the view currently shows. The filing view doesn't wait for the numbers: until they're there, "…" briefly appears in their place.
+
+A click on a view shows its Mappen in the list. An administrator can set which views you see; a view that is hidden for you is also missing, together with its Mappen, from the parent view. You still find Mappen via the search if you may read them.
+
+![Views as a tree: Finances with sub-views](bilder/sichten-baum.png)
+
+If there are many views, the small field **Search views …** above the list filters by name.
+
+### Choosing a view on the phone {#ansicht-wahlen-am-handy}
+
+On the phone, instead of the list there is a button with the current view, e.g. **View Invoice ▾**. It opens a sheet from the bottom:
+
+- at the top a search field **Search views …** – it filters as you type (including views you have hidden);
+- the fixed entries in the same order as on the computer, with icons;
+- **My views**: views you have pinned with the star;
+- **Recently used**: the last five views you opened (also on the computer);
+- then all views by group – one group per top-level view with sub-views (e.g. *Vehicles*, *House*), the rest under *More views*. You expand and collapse groups with a tap; the group of the current view is open. The number on the right says how many Mappen the view shows.
+
+**Hide views …** at the very bottom: remove the tick for views you rarely need. This only applies to you and only to this selection; the view itself remains for everyone, and you still find it via the search.
+
+The list is also more compact on the phone: the header fits in one line, the search field stays at the top when scrolling, and *Search full text*, *Notes*, *Advanced search* and *Export …* are behind **Filter ▾**.
+
+- **Views can have sub-views.** An arrow ▸ in front shows this; a click on it expands or collapses them. Your device remembers what is collapsed.
+- **A view with sub-views shows everything together:** *Finances*, for example, shows all open invoices *and* this year's payments.
+- **Some views filter:** *Open invoices* only shows invoices that are not yet paid. Ablago recalculates values like "today" or "yourself" every time it is opened – so a view *Notice within the next 12 months* is always up to date.
+- **If a view shows several Mappe types**, *Title* and *Mappe type* are in front, and there is no **+ New**. You then create new Mappen in the view of the individual Mappe type.
+
+Which views exist is set by an administrator. If you'd like one, let them know.
+
+## The list {#die-liste}
+
+The list shows the view's Mappen, sorted by title. It first loads 100 Mappen and automatically the next ones when you scroll down.
+
+With **+ New** at the top right you create a new Mappe of this Mappe type (see [Mappen](mappen.md)). If the button is missing, Mappen of this Mappe type may not be created in the filing view – that is the case for *User*, for example.
+
+### Compact or as a table {#kompakt-oder-als-tabelle}
+
+What the list looks like depends on its width:
+
+- **Narrow:** every Mappe is a compact entry – the first detail in bold, two more below it.
+- **Wide:** the list becomes a **table** with one column per detail.
+
+Simply drag the list wider at the handle between list and Mappe, or collapse the Mappe with a short click on the handle. When collapsed, a narrow bar with the Mappe's title remains on the right; a click on it brings it back (see [Adjusting columns](erste-schritte.md#spalten-anpassen)).
+
+![Wide list as a table](bilder/tabelle.png)
+
+Which details appear as columns is set by the administrator – per Mappe type, and a view can show its own selection (e.g. a short list).
+
+### Sorting { #sortieren }
+
+In the table, a click on a column heading sorts by this column, a second click reverses the order (↑ ascending, ↓ descending). Empty values are always at the end.
+
+Ablago remembers your sorting per view – on all devices. Above the list it says what it is currently sorted by; **by title** restores the default.
+
+Links and long texts can't be sorted by; these columns have no arrow.
+
+## Search { #suchen }
+
+Above the list of every view with Mappen there is a search field. The search finds Mappen whose **title or details** contain the text entered – upper and lower case don't matter, and neither do umlauts and hyphens: "Gebuhr" finds "Gebühr", "Strasse" finds "Straße", "Kfzversicherung" finds "Kfz-Versicherung".
+
+![Search in the contracts](bilder/suche.png)
+
+Above the list it says how many hits there are. If the search field is empty, you see all Mappen again.
+
+### Searching in the text of documents {#im-text-der-dokumente-suchen}
+
+If you tick **Search full text** next to the search field, Ablago also searches the text of uploaded documents – in PDFs and, thanks to text recognition, also in scans and photos. Below each hit it says in which document the passage is, with the word found highlighted. Ablago remembers the tick for you.
+
+![Full-text search: hit in a document](bilder/volltext-suche.png)
+
+The full-text search understands word forms in the document's language: "invoices" also finds "invoice", in a German letter "Rechnungen" also "Rechnung" – Ablago recognises the language itself with text recognition. Several words must all occur. It also finds a term **as part of a word**: "oven" finds "ovenproof" and "microwave oven" – without you having to enter an asterisk or similar. This applies to terms of three letters or more.
+
+With quotation marks you only search for **whole words** or an exact phrase, e.g. `"oven"` or `"Musterstadt public utilities"`; a minus excludes a word, e.g. `electricity -gas`.
+
+### Typos and other words {#tippfehler-und-andere-worter}
+
+If the search finds **nothing**, it continues with similarly spelled words from your filing system – "washing machien" then finds the washing machine. Above the hits there is a notice about this, plus **Did you mean "washing machine"?** – a click searches for exactly this word. If there are exact hits, you only see those.
+
+If an administrator has set up **synonyms** (e.g. *car, auto, vehicle* – some packages bring such lists), searching for one word also finds the others. With quotation marks or a minus, on the other hand, you search for exactly what you entered.
+
+### Searching in notes {#in-notizen-suchen}
+
+With the tick **Notes**, Ablago also searches the Mappen's [notes](zusammenarbeit.md#notizen). Below a hit, the passage from the note is then shown.
+
+!!! note "What the search can't do (yet)"
+    - It only finds freshly uploaded documents once their text has been recognised – usually after seconds, for long scans after a few minutes (see [Documents](dokumente.md#volltext)).
+    - Links are not searched by the name of the other Mappe: you don't find the local utility's invoices by searching for "utility" in the invoices. Instead, open the utility – its tab *Invoices* shows all of them – or use the [advanced search](#erweiterte-suche).
+
+## Advanced search {#erweiterte-suche}
+
+If you can only roughly describe a Mappe, the **advanced search** helps. You find it at the very top of the views and as the link **Advanced search** next to the search field of a list (then the list's Mappe type is already chosen).
+
+The search form is **at the top in the middle**, the hits below it; the views stay on the left. As long as you haven't opened a Mappe, the search uses the full width up to the right edge. When you open a hit, it appears on the right and the middle becomes narrower.
+
+![Advanced search: form at the top in the middle](bilder/erweiterte-suche.png)
+
+**An example:** you are looking for an invoice for an oven. It arrived between March and November last year, probably from Musterstadt Kitchen World, Sommer Electrics or the Nordlicht mail-order company.
+
+1. Under **Mappe types**, type "Inv" and choose "Invoice".
+2. Choose **+ Condition** → "Invoice date" and enter 01.03. to 30.11. of last year.
+3. Choose **+ Condition** → "Contract partner" (or issuer) and there Musterstadt Kitchen World, Sommer Electrics and Nordlicht.
+4. Under **Full text**, enter "oven".
+5. Click **Search**.
+
+This is how the form works:
+
+- **Mappe types**: you choose them in the same way as several Mappen in a [link field](mappen.md#auf-andere-mappen-verweisen) – type, choose a suggestion (or **Enter** for the first one). The chosen Mappe types appear **below** the search field, each with **Remove**; the search field stays level with *Full text* next to it. Only Mappe types you may read are offered. If you choose none, Ablago searches all of them – then there are only the general fields (created on/by, changed on/by).
+- **Conditions**: at first there is no field. With **+ Condition** you choose a field; the fields that **all chosen Mappe types have in common** are offered. The cross on the right removes the condition again. Each field gets the matching input:
+    - **Date**: from–to in one line; either may stay empty. Under **Period …** there are "this year", "last year", "last 12 months", "this month" and "last month".
+    - **Number, amount**: from–to.
+    - **Link** (e.g. contract partner): several Mappen – the Mappe must point to **one of them**.
+    - **Selection list**: several values – one of them must match.
+    - **Yes/no**: yes, no or either.
+    - **Text**: the value contains the text entered.
+    - Next to the field name you can choose **is empty** or **is not empty** instead of a value.
+- Conditions without input don't apply. **Between fields AND applies, within a field OR.**
+- If you change the Mappe types, values in fields that still exist are kept. For the others, a notice says that they are dropped.
+
+### Full text in documents and notes { #volltext-in-dokumenten-und-notizen }
+
+Under **Full text** you enter a term that should appear in the Mappe's documents or notes. With the ticks **in documents** and **in notes** (both preselected) you set where: if the term appears in one of the two places, the Mappe counts as a hit. The search in the text understands word forms in the document's language and finds parts of words like the [full-text search](#im-text-der-dokumente-suchen). Below each hit is the passage found.
+
+### The result {#das-ergebnis}
+
+After **Search**, the form collapses. Above the hits there is then the **summary** of the conditions as chips, e.g. "Invoice · Invoice date 01.03.2025–30.11.2025 · "oven" in documents or notes", plus the number of hits. A click on a chip opens the form exactly at this condition; **Change search** opens it fully. The **cross** on a chip removes the condition and searches again straight away – handy if there are no hits. Sorting, selecting several Mappen and [exporting](#exportieren) work as in a view.
+
+![Advanced search: summary and hits](bilder/erweiterte-suche-treffer.png)
+
+**On the phone** the form is a separate step: first you set the conditions, after **Search** you see the hits. With **Filter** you return to the form – your entries are kept.
+
+The search is in the browser's **address**: back and forward work, you can save it as a bookmark or pass on the link. Whoever opens the link only sees the Mappen they may read.
+
+On the phone, the form comes first, after **Search** the list of hits; with **← Change search** you return to the form with your entries.
+
+## Selecting several Mappen { #mehrere-mappen-auswahlen }
+
+In a view's list you select several Mappen to handle them in one step.
+
+- Tick the box in front of a Mappe; holding the **Shift** key, the next tick selects everything in between too. In the table, the tick in the header selects all loaded Mappen.
+- As soon as something is selected, an **action bar** appears above the list: "3 of 120 selected", the actions and **Clear selection**.
+- **Select all 120** takes all hits of the view – including those not loaded yet, and with your search.
+- The selection stays while you open Mappen; if you change the view or the search, it's gone.
+- **On the phone** you hold a Mappe briefly to start the selection; after that, tapping toggles the tick.
+
+### Deleting several Mappen {#mehrere-mappen-loschen}
+
+**Delete** in the action bar asks first, e.g. "Put 12 Mappen with 30 documents in the recycle bin?", including a [reason](mappen.md#loschen), and then puts them into the [recycle bin](#papierkorb) – with one entry each in the Mappe's history. Mappen you may not delete or that another Mappe still links to are skipped and listed afterwards with the reason. If selected Mappen only link to each other, that doesn't stop it.
+
+### Send by e-mail {#per-e-mail-versenden}
+
+**By e-mail …** in the action bar sends the selected Mappen in **one** e-mail – with their details as PDF and, if you want, their documents. How that works: [Several Mappen by e-mail](versenden.md#mehrere-mappen-per-e-mail).
+
+### Export { #exportieren }
+
+**Export …** passes Mappen out of the view – the selection or, without a selection or if you wish, all hits (with your search and sorting):
+
+- **Excel (.xlsx)** – a table in which dates and amounts are real values: Excel can sort and calculate with them afterwards.
+- **CSV** – the same table for any spreadsheet program, in German format (semicolon, date DD.MM.YYYY, amounts with a decimal comma).
+- **ZIP with documents** – the table as Excel and CSV and one folder per Mappe with its documents.
+- **PDF** – one page per Mappe with its fields and the list of documents, optionally with an overview table at the front. PDF documents are then included, images (JPEG, PNG) as a separate page; other files are only named.
+
+As columns you take those of the list or all fields. Links appear with the Mappe's title. **Passwords are never exported.** Every export is recorded in the log. Whether you may export from a view is set by the administrator; without the permission, the button isn't there. In the advanced search and with **Export as PDF** on a Mappe, the same applies: only Mappen you would see in at least one view with the export permission are exported. The export leaves out hits without this permission and names their number.
+
+## Favourites { #favoriten }
+
+You mark Mappen you need often with the **star** – at the top right of the Mappe or directly in the list (on the right of the entry or at the front of the table row). The star is filled yellow, and the Mappe appears in the view **Favourites** at the top among the fixed entries; the number after it shows how many there are. A second click removes it again.
+
+![The view Favourites with an open Mappe](bilder/favoriten.png)
+
+- Favourites are **personal**: every user has their own. Marking changes neither "last changed" nor the Mappe's history.
+- *Favourites* is a **built-in view** across all Mappe types with the condition **is my favourite** – like *New post*, it is at the top among the fixed entries. An administrator can rename it like any view, give it columns or delete it; then the simple list of your favourites appears there again.
+- If you delete a Mappe, it disappears from the favourites; if you restore it from the recycle bin, it is a favourite again.
+- An administrator can set up views with the condition **is my favourite**, such as *My important contracts*. Everyone sees their own favourites in them.
+
+### Favourites as a subscription { #favoriten-als-abo }
+
+A star also means: **tell me when something happens here.** If someone else changes one of your favourites – fields, documents, notes, tabs or tasks –, you get **one** notification of the kind **Changed** under [To do](eingang.md), such as "3 changes by Anna and Paul since 01.11.". Further changes only count up as long as you haven't seen them. As soon as you open the Mappe (or click **Done** on the notification), it's gone; the next change brings a new one. Your own changes never notify you.
+
+- **Highlighting:** in all lists, a **dot** appears in front of the title of favourites and of Mappen you created yourself if others have changed them since you last opened them – like "unread" in your e-mail program. Your own Mappen are only highlighted; you only get a notification for them if they are also favourites. Above the list it then says "2 changed · **Mark all as seen**".
+- **Muting:** in the view *Favourites*, below each entry, there is **Notify on changes**. Remove the tick for Mappen you need often but which change constantly – the star stays. If the switch is missing, an administrator has switched off the notification for your role; your setting stays saved.
+- **Switching off completely:** under My account → [Notifications](profil.md#benachrichtigungen) – notification and highlighting separately.
+- Only those who may read the Mappe are notified; the notification reveals nothing you may not see. If someone has retrieved an [access copy](https://help.ablago.app/admin/aktuell/en/datenschutz/) for a person whose Mappe is your favourite, you get a separate notification *Access request* about it – likewise only as long as the notification for this favourite is on.
+
+![Favourites: changed Mappe with a dot, switch per favourite](bilder/favoriten-geaendert.png){ loading=lazy }
+
+## Opening a Mappe {#eine-mappe-offnen}
+
+A click on an entry opens the Mappe on the right. Every Mappe has its own address – you can save it as a bookmark or send it to another user.
+
+## Recycle bin { #papierkorb }
+
+Deleted Mappen and individually deleted documents go into the **recycle bin** below "To do". You only see there what **you** deleted – Mappen with their documents and links, and below under **Documents** the individually deleted ones with Mappe and tab.
+
+![Recycle bin](bilder/papierkorb.png)
+
+- **Restore** brings a Mappe back into its view. If another Mappe has meanwhile got the same unique value (e.g. the same invoice number), it lands under [To do](eingang.md); there you see what to change.
+- **Documents:** *Restore* puts a document with all versions back into the same tab of the same Mappe – for this you must be allowed to edit the Mappe. If the Mappe itself is in the recycle bin, restore the Mappe first. If a Mappe is deleted permanently, its individually deleted documents go too.
+- **Deleted with linked Mappen** ([how it works](mappen.md#mit-verknupften-mappen-loschen)): these Mappen carry the note *with … linked* or *linked*. If you open one of them, **Restore all** brings back the whole operation – including the links that were removed from other Mappen in the process. **Restore only this one** brings back only that one Mappe.
+- **Delete permanently** removes it forever, **Empty recycle bin** all at once – Mappen and documents.
+- After a period set by the administrator (usually 30 days), Ablago permanently deletes deleted Mappen by itself. How long is shown above the list.
+- Under My account you can set that your recycle bin is **emptied on sign-out**.
+
+If the recycle bin is switched off, it is missing on the left, and deleting is permanent immediately.
