@@ -14,7 +14,7 @@ Helpful details: the affected version (Werkbank → Technik), steps to reproduce
 
 Fixes are provided for the **latest version**. Please update first before reporting – see [Updating](https://help.ablago.app/admin/aktuell/aktualisieren/) (German).
 
-The templates use the image tag **`:stabil`** (“stable”, #714). It only moves with a release – version number, release notes, both images built with provenance, update test from the previous `:stabil` passed – and only in the workflow *Prüfen und Image bauen* on `main`. If a stable version has a serious bug, the maintainer resets `:stabil` to an earlier published version with the workflow *:stabil zurücksetzen*; only people with write access to the repository can run it.
+The templates use the image tag **`:stabil`** (“stable”, #714). It only moves to a release – version number, release notes, both images built with provenance, update test from the previous `:stabil` passed – once a week in the workflow *:stabil befördern* (#907). Security fixes don't have to wait for that: with the label `sofort-stabil` on the pull request, `:stabil` moves right after the release, with the same checks. If a stable version has a serious bug, the maintainer sets `:stabil` to another published version with the workflow *:stabil zurücksetzen*; only people with write access to the repository can run it.
 
 ## What is checked automatically
 

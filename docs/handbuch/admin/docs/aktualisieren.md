@@ -37,16 +37,20 @@ Die Vorlagen nutzen **`:stabil`**. So bekommst du beim Aktualisieren nur Version
 
 | Tag | Was du bekommst | Für wen |
 |---|---|---|
-| `ghcr.io/motom001/dms:stabil` (bzw. `dms-komplett:stabil`) | die neueste geprüfte Version mit Nummer und Release-Notes | **Empfehlung** für alle |
+| `ghcr.io/motom001/dms:stabil` (bzw. `dms-komplett:stabil`) | einmal pro Woche die neueste geprüfte Version mit Nummer und Release-Notes | **Empfehlung** für alle |
 | `ghcr.io/motom001/dms:0.158.0` (eine feste Nummer) | genau diese Version, bis du die Nummer selbst erhöhst | wer jedes Update selbst anstoßen möchte |
-| `ghcr.io/motom001/dms:main` | jeden Stand auf `main`, auch Unveröffentlichtes ohne Nummer und Release-Notes | nur zum Testen |
+| `ghcr.io/motom001/dms:main` | jeden Stand auf `main`, sofort nach jeder Änderung – auch Unveröffentlichtes ohne Nummer und Release-Notes | für Neugierige und zum Testen |
 
-`:stabil` wandert automatisch weiter, wenn eine neue Version veröffentlicht ist und alle Prüfungen bestanden hat: Release mit Nummer und Release-Notes, beide Images für amd64 und arm64 gebaut und mit Herkunftsnachweis, und ein **Update-Test** vom bisherigen `:stabil` auf die neue Version (mit Probedaten, allen Migrationen und einer Probe-Wiederherstellung der alten Sicherung). Fehlerbehebungen und neue Funktionen wandern gleich. Der Maintainer kann eine Version zurückhalten; dann bleibt `:stabil` auf der vorigen.
+`:stabil` wandert **einmal pro Woche** weiter, dienstags früh: auf die neueste Version, die seit mindestens 24 Stunden veröffentlicht ist und alle Prüfungen bestanden hat – Release mit Nummer und Release-Notes, beide Images für amd64 und arm64 gebaut und mit Herkunftsnachweis, und ein **Update-Test** vom bisherigen `:stabil` auf die neue Version (mit Probedaten, allen Migrationen und einer Probe-Wiederherstellung der alten Sicherung). Neue Versionen erscheinen weiter mit jeder neuen Nummer auf `main`; bei `:stabil` kommen sie gesammelt, und das Release der neuen stabilen Version nennt unter *Seit der letzten stabilen Version* alle Versionen, die seitdem dazugekommen sind – die Änderungen der Woche auf einen Blick. Der Maintainer kann eine Version zurückhalten; dann wandert `:stabil` auf die vorige.
+
+**Dringende Fehlerbehebungen** (etwa bei einer Sicherheitslücke) warten nicht auf die Woche: Mit dem Label `sofort-stabil` am Pull Request wandert `:stabil` direkt nach dem Release mit – mit denselben Prüfungen.
+
+Wer neue Funktionen früher sehen möchte, nimmt `:main`. Der Hinweis auf eine neue Version unter **Werkbank → Systemzustand → Version und Updates** richtet sich nach der stabilen Version: Mit `:stabil` erscheint er einmal pro Woche; mit `:main` nennt er wie bisher neuere Stände auf `main`.
 
 Bei zwei Containern bleibt `postgres:17` für Sicherheits-Updates der Reihe 17 offen – unabhängig vom Tag von Ablago.
 
 !!! note "Wenn eine stabile Version einen schweren Fehler hat"
-    Der Maintainer setzt `:stabil` dann auf die vorige Version zurück (Workflow *:stabil zurücksetzen*). Was passiert ist, steht in den [Releases](https://github.com/motom001/dms/releases).
+    Der Maintainer setzt `:stabil` dann auf die vorige Version zurück (Workflow *:stabil zurücksetzen*, geht auch vorwärts) und hält die fehlerhafte Version zurück, damit der nächste Wochenlauf sie nicht wieder nimmt. Was passiert ist, steht in den [Releases](https://github.com/motom001/dms/releases).
 
     - **Noch nicht aktualisiert:** Du bekommst beim nächsten Aktualisieren die vorige, bewährte Version.
     - **Schon aktualisiert:** Bleib auf der neueren Version und warte auf die Korrektur – trag dafür die feste Nummer im Tag ein (z. B. `:0.160.0`). Eine ältere Version startet auf deiner Datenbank nicht: Ablago merkt, dass schon eine neuere Version die Datenbank eingerichtet hat, und bricht mit einem Hinweis ab, statt neue Daten zu übersehen. Zurück geht es nur über die Sicherung von vor dem Update (siehe [Sichern](#sichern)).
@@ -106,7 +110,7 @@ Jede Version von Ablago hat eine Nummer wie `0.8.1`. Sobald auf `main` eine neue
 
 - ein **Release** auf GitHub mit dem Changelog – [Releases](https://github.com/motom001/dms/releases),
 - ein **Image** mit dieser Nummer, z. B. `ghcr.io/motom001/dms:0.8.1`,
-- danach, wenn der Update-Test bestanden ist, das Tag **`:stabil`** auf dieser Version.
+- beim nächsten Wochenlauf (dienstags früh), wenn der Update-Test bestanden ist, das Tag **`:stabil`** auf der neuesten Version, die mindestens 24 Stunden alt ist – bei einer dringenden Fehlerbehebung (Label `sofort-stabil`) gleich nach dem Release.
 
 Änderungen ohne neue Nummer (kleine Korrekturen, Doku) landen nur im Image `main`, nie in `:stabil`. Mehrere Wünsche lassen sich so zu einem Release bündeln: Die Nummer wird erst mit dem letzten erhöht.
 

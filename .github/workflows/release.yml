@@ -7,6 +7,8 @@ name: Release
 #  - bei einem von Hand auf GitHub veröffentlichten Release (nur der Text wird gesetzt).
 # Liegt docs/releases/<tag>.md vor, wird es als Text übernommen; sonst die
 # Commit-Überschriften seit dem vorigen Tag.
+# Neue Releases sind nicht „Latest“ (#907): das wird erst die Version, auf die :stabil wandert
+# (stabil.yml, im Wochentakt) – danach richtet sich der Hinweis „neue Version“ in Ablago.
 
 on:
   push:
@@ -72,7 +74,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --title "Ablago ${TAG}" --notes-file notizen.md
           else
-            gh release create "$TAG" --title "Ablago ${TAG}" --notes-file notizen.md --target "$ZIEL"
+            gh release create "$TAG" --title "Ablago ${TAG}" --notes-file notizen.md --target "$ZIEL" --latest=false
           fi
         env:
           GH_TOKEN: ${{ github.token }}

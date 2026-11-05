@@ -219,12 +219,15 @@ async function mainStand(abruf: Abruf, commit: string | null) {
 const datumDe = (iso: string) => new Intl.DateTimeFormat(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
 
 /**
- * Das DMS selbst (#206): mit dem neuesten Release auf GitHub vergleichen (Versionsnummer); Änderungen auf main,
- * die noch in keinem Release sind, nennt der Hinweis. Ohne Release-Abfrage wie bisher der Vergleich mit main.
+ * Das DMS selbst (#206): mit dem neuesten Release auf GitHub vergleichen (Versionsnummer). Seit #907 ist „Latest“
+ * die stabile Version (`:stabil`, im Wochentakt) – Releases dazwischen sind nicht „Latest“. So heißt es nur bei
+ * einer neuen stabilen Version „neuer“. Wer neuer als die stabile Version ist (`:main` oder eine feste neuere
+ * Nummer), bekommt wie bisher den Hinweis auf neuere Stände auf main. Ohne Release-Abfrage wie bisher der
+ * Vergleich mit main.
  */
 async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
   const installiert = u.dms.commit ? `${u.dms.version} (${u.dms.commit.slice(0, 7)})` : u.dms.version;
-  type Release = { tag_name?: string; published_at?: string; html_url?: string };
+  type Release = { tag_name?: string; published_at?: string; html_url?: string; target_commitish?: string };
   const release = await abruf(`https://api.github.com/repos/${REPO}/releases/latest`).then((x) => x as Release, () => null);
   const version = release?.tag_name?.replace(/^v/, '');
   if (version && /^\d+\.\d+/.test(version)) {
@@ -236,14 +239,21 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
       try {
         const liste = (await abruf(`https://api.github.com/repos/${REPO}/releases?per_page=100`)) as Array<{ tag_name?: string; draft?: boolean; prerelease?: boolean }>;
         const dazwischen = liste.map((r) => (r.draft || r.prerelease ? '' : (r.tag_name ?? '').replace(/^v/, '')))
-          .filter((v) => /^\d+\.\d+/.test(v) && vergleicheVersion(v, u.dms.version) > 0);
+          // Nur bis zur stabilen Version: neuere Releases sind noch nicht stabil.
+          .filter((v) => /^\d+\.\d+/.test(v) && vergleicheVersion(v, u.dms.version) > 0 && vergleicheVersion(v, version) <= 0);
         if (dazwischen.length > 1) hinweise.push(t('meldungen.system.neuere-versionen-bis', { dazwischen: dazwischen.length, version }));
       } catch { /* nur Zusatzinfo */ }
       hinweise.push(t('meldungen.system.was-neu-ist-steht'));
     }
-    try {
-      const m = await mainStand(abruf, u.dms.commit ?? null);
-      if (!neuer && u.dms.commit && !m.gleich) {
+    // Stände auf main nur für alle, die schon über der stabilen Version sind (#907): höhere Nummer, oder dieselbe
+    // Nummer aus einem anderen Commit als dem des Releases (`:main` nach einem Merge ohne neue Nummer).
+    const ziel = release!.target_commitish ?? '';
+    const c = u.dms.commit ?? '';
+    const ueberStabil = vergleicheVersion(u.dms.version, version) > 0
+      || (!neuer && vergleicheVersion(u.dms.version, version) === 0 && /^[0-9a-f]{7,40}$/.test(ziel) && !!c && !ziel.startsWith(c) && !c.startsWith(ziel));
+    if (c && ueberStabil) try {
+      const m = await mainStand(abruf, c);
+      if (!m.gleich) {
         hinweise.push(m.voraus ? t('meldungen.system.auf-main-anzahl', { anzahl: m.voraus, sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }) : t('meldungen.system.auf-main', { sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }));
       }
     } catch { /* nur Zusatzinfo */ }

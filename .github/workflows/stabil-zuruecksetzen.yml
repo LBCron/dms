@@ -4,6 +4,11 @@ name: ":stabil zurücksetzen"
 # :stabil von Hand auf eine frühere Version zurück (Actions → „:stabil zurücksetzen“ → Run workflow).
 # Starten können nur Personen mit Schreibrecht am Repository. Erlaubt sind nur veröffentlichte
 # Releases X.Y.Z, die es für beide Images gibt. Beschrieben im Admin-Handbuch „Aktualisieren“ und in SECURITY.md.
+# Geht in beide Richtungen (#907): zurück auf eine frühere Version oder vor auf eine neuere, ohne den
+# Wochenlauf (stabil.yml) abzuwarten. Das Release dieser Version wird „Latest“, damit der Hinweis
+# „neue Version“ in Ablago und der nächste Wochenlauf von ihr ausgehen. Nach einem Zurücksetzen
+# das Label „nicht-stabil“ an den Pull Request der fehlerhaften Version setzen – sonst befördert
+# der nächste Wochenlauf sie wieder.
 
 on:
   workflow_dispatch:
@@ -23,7 +28,8 @@ jobs:
   zuruecksetzen:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # Release auf „Latest“ setzen (#907)
+      contents: write
       packages: write
     steps:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -48,3 +54,5 @@ jobs:
             docker buildx imagetools create -t "$ref:stabil" "$ref:$VERSION"
             echo "::notice title=:stabil zurückgesetzt::$image:stabil → $VERSION (von ${{ github.actor }})"
           done
+          gh release edit "v$VERSION" -R "${{ github.repository }}" --latest
+          echo "::notice title=Release::v$VERSION ist jetzt „Latest“"

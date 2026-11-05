@@ -118,10 +118,26 @@ describe('Versionsübersicht', () => {
     assert.equal(d.aktuell, `${neu} (Release vom 30.10.2026)`);
     assert.equal(d.status, 'neuer');
     assert.match(d.hinweis!, /neuere Versionen \(bis/);
-    const gleich = async (url: string): Promise<unknown> => (url.endsWith('/releases/latest') ? { tag_name: `v${u.dms.version}`, published_at: '2026-10-29T10:00:00Z' } : abruf(url));
+    // #907: Releases über der stabilen Version („Latest“) zählen nicht mit – sie sind noch nicht stabil.
+    const mitVorschau = async (url: string): Promise<unknown> => (url.includes('/releases?')
+      ? [{ tag_name: `v${ma}.${mi + 3}.0` }, { tag_name: `v${ma}.${mi + 2}.0` }, { tag_name: `v${neu}` }, { tag_name: `v${ma}.${mi}.${pa + 1}` }, { tag_name: `v${u.dms.version}` }]
+      : mitRelease(url));
+    const vorschau = (await versionsabgleich(u, {}, mitVorschau)).find((x) => x.komponente === 'Ablago')!;
+    assert.equal(vorschau.status, 'neuer');
+    assert.match(vorschau.hinweis!, new RegExp(`^2 neuere Versionen \\(bis ${neu.replace(/\./g, '\\.')}\\)`));
+    // Genau auf der stabilen Version (Commit des Releases): „aktuell“, kein Hinweis auf main – auch wenn main weiter ist.
+    const gleich = async (url: string): Promise<unknown> => (url.endsWith('/releases/latest') ? { tag_name: `v${u.dms.version}`, published_at: '2026-10-29T10:00:00Z', target_commitish: 'aaaaaaa1111111' } : abruf(url));
     const g = (await versionsabgleich(u, {}, gleich)).find((x) => x.komponente === 'Ablago')!;
     assert.equal(g.status, 'aktuell');
-    assert.match(g.hinweis!, /Auf main gibt es 3 neuere Änderungen, die noch in keinem Release sind/);
+    assert.equal(g.hinweis, undefined);
+    // Neuer als die stabile Version (`:main`): „aktuell“, mit dem Hinweis auf neuere Stände auf main.
+    const vorStabil = async (url: string): Promise<unknown> => (url.endsWith('/releases/latest') ? { tag_name: 'v0.1.0', published_at: '2026-10-29T10:00:00Z', target_commitish: 'ccccccc3333333' } : abruf(url));
+    const m = (await versionsabgleich(u, {}, vorStabil)).find((x) => x.komponente === 'Ablago')!;
+    assert.equal(m.status, 'aktuell');
+    assert.match(m.hinweis!, /Auf main gibt es 3 neuere Änderungen, die noch in keiner stabilen Version sind/);
+    // Dieselbe Nummer wie die stabile, aber aus einem anderen Commit (`:main` nach einem Merge ohne neue Nummer).
+    const andererCommit = async (url: string): Promise<unknown> => (url.endsWith('/releases/latest') ? { tag_name: `v${u.dms.version}`, target_commitish: 'ddddddd4444444' } : abruf(url));
+    assert.match((await versionsabgleich(u, {}, andererCommit)).find((x) => x.komponente === 'Ablago')!.hinweis!, /Auf main gibt es 3/);
     assert.equal(v('Node.js').status, 'veraltet');
     // #216: Gruppen und Bezeichnungen; PostgreSQL bei zwei Containern „selbst“, mit Hinweis aufs Image.
     assert.equal(v('Ablago').gruppe, 'selbst');

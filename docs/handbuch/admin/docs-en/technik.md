@@ -116,12 +116,12 @@ Sign-in and sign-in protection deliberately stay in one module: a block results 
 
 ## Versions and updating {#versionen-und-aktualisierung}
 
-The image contains Node.js, Alpine Linux and all libraries; you update by pulling `ghcr.io/motom001/dms:stabil` again and restarting (see [Which image tag?](aktualisieren.md#image-tag)).
+The image contains Node.js, Alpine Linux and all libraries; you update by pulling `ghcr.io/motom001/dms:stabil` again and restarting (see [Which image tag?](aktualisieren.md#image-tag)). `:stabil` moves once a week (early on Tuesday) to the newest tested version, urgent fixes (label `sofort-stabil`) right after the release; `:main` gets every state at once.
 
 - **Two containers (recommended):** PostgreSQL is an image of its own (`postgres:17`): minor versions (17.x) by pulling again, independently of Ablago.
-- **dms-komplett:** PostgreSQL (Alpine package) is in the image `ghcr.io/motom001/dms-komplett` and comes with its updates. Both images are rebuilt with every change and at least every week, with the Alpine packages of the same day (tag `main`); `:stabil` and fixed version numbers get new Alpine packages with the next release.
+- **dms-komplett:** PostgreSQL (Alpine package) is in the image `ghcr.io/motom001/dms-komplett` and comes with its updates. Both images are rebuilt with every change and at least every week, with the Alpine packages of the same day (tag `main`); fixed version numbers get new Alpine packages with the next release, `:stabil` with the next stable version (once a week).
 - Changing the major version (e.g. 17 → 18) needs a backup and restore in both cases, see [Growing and moving](wachsen.md#neue-hauptversion-von-postgresql).
 
-The version check in the workbench only asks at the push of a button: GitHub for Ablago's state, [endoflife.date](https://endoflife.date) for Node.js, PostgreSQL and Alpine, the npm registry for the libraries. It separates what you **update yourself** (Ablago image, with two containers PostgreSQL) from what **comes with Ablago** (Node.js, Alpine, libraries – with dms-komplett also PostgreSQL).
+The version check in the workbench only asks at the push of a button: GitHub for Ablago's state, [endoflife.date](https://endoflife.date) for Node.js, PostgreSQL and Alpine, the npm registry for the libraries. It separates what you **update yourself** (Ablago image, with two containers PostgreSQL) from what **comes with Ablago** (Node.js, Alpine, libraries – with dms-komplett also PostgreSQL). For Ablago itself, the yardstick is the stable version – the release marked “Latest” on GitHub, which moves with `:stabil` once a week; the releases in between are not “Latest”.
 
 The decisions behind the design are in [entscheidungen.md](entscheidungen.md).
