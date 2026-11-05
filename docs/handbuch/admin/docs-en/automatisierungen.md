@@ -1,0 +1,132 @@
+# Automations {#automatisierungen}
+
+With an **automation**, Ablago does something by itself: **if** something happens (an event or a date) **and** the conditions are right, **then** it sets fields or gives someone a task. You find them under **Workbench → Build filing system → Automations**. In a household the area appears in **expert mode** (Workbench → Customise workbench), in businesses always.
+
+![Workbench → Automations: list and editor](bilder/werkbank-automatisierungen.png)
+
+On the left are all automations with name, short form ("If Contract: Cancel by in 30 days → task to Responsible"), on/off, number in the order and the last run. On the right you build them from cards – three areas one below the other, connected with arrows:
+
+| Area | What goes in |
+|---|---|
+| **If** | exactly one card: an event (Mappe created, saved, note, document uploaded, favourite changed, account block …), **Date reached** or **Schedule** |
+| **And** | none, one or several conditions: field values as in [views](sichten.md), "Mappe is in view …", "Mappe is a favourite of …", groups with "all" or "one is enough"; every condition can be reversed with **not** |
+| **Then** | one or more cards, in order: **Change field**, **Task / notification**, **Send daily summary**, **Report favourite changes**, **Report sign-in protection**, **No further automations afterwards** |
+
+## Example: reminding of the notice period {#beispiel-an-die-kundigungsfrist-erinnern}
+
+Petra is to get a task 30 days before the notice period of a contract runs out – but only if someone is entered as responsible in the contract.
+
+1. **+ New**, name "Check cancellation".
+2. **If:** **Date reached**, Mappe type *Contract*, date field *Cancel by*, **advance notice** 30 *days*, time 07:00.
+3. **And:** **+ Card → Field condition**, field *Responsible* "is not empty".
+4. **Then:** **+ Card → Task / notification**, as *Task*, recipient *Person in the field "Responsible"*, text `Please check {titel} – can be cancelled until {kuendigung_bis}.`
+5. **Save**. For a new automation, the switch at the top next to the name is set to **on** – with saving it is switched on. If it shouldn't work yet, set it to **off** beforehand.
+
+![Expanded Then card with recipient and placeholders](bilder/werkbank-automatisierung-karte.png)
+
+You **expand** a card with a click on its name (settings) and **collapse** it again (short line like "Task → Person in the field "Responsible""). Below the text are the **placeholders** that match the If card: the fields of the Mappe type as well as `{titel}`, `{mappentyp}`, `{heute}`, `{automatisierung}` and with a date `{datum}` and `{tage}`. A click inserts the placeholder.
+
+## Date reached {#datum-erreicht}
+
+The card **Date reached** checks once a day at the chosen time for which Mappen a date field is reached after the **advance notice**.
+
+- **Advance notice** in **days, weeks or months**. 3 months are three calendar months, not 90 days: for an end on 31 May the card applies on the last day of February. 0 means "on the day itself", a negative number "that long afterwards".
+- **Recurring** (monthly, quarterly, half-yearly, yearly): whoever completes the task gets the next date suggested.
+- A **task** from it is a **deadline** for the Mappe's date. It completes itself if the date is changed or cleared. The same person only gets one deadline per Mappe, field and date.
+- If, when a Mappe is **saved**, a date is already within the advance notice, the automation runs immediately – a date entered late still reminds.
+- For a date field to appear under *To do* and in the calendar, it needs the tick [Is a deadline](mappentypen.md#fristen-erinnerungen-an-datumsfeldern) on the Mappe type.
+- If Ablago was off at the time, it catches up missed days (up to 31 days back). A newly switched-on automation starts today.
+
+The earlier cards "Date in N days" and "Deadline reached" have merged into **Date reached**. "Date in N days" becomes the same card with advance notice in days the next time it is opened. With "Deadline reached" the date field is missing: the automation is shown in red until you choose it.
+
+## On, off and paused {#an-aus-und-angehalten}
+
+Whether an automation works you see and change in **one** place: at the switch at the top next to the name; the list shows the same state (**on**, **off**, **paused**).
+
+- For a saved automation the switch takes effect immediately; in its place it briefly says "Switched on." or "Switched off.".
+- If it is **paused** (red, see below), the reason is shown there and the button **Switch on again**.
+- Next to it is the button **Copy**: it creates a copy of your own and opens it.
+
+## Schedule {#zeitplan}
+
+The card **Schedule** triggers on the chosen **weekdays** at the chosen **time** (in the time zone of the [region](region.md)), if you like **not on public holidays** – you set the state for this under [Region](region.md).
+
+- **For every user:** the automation runs exactly once a day per active user – if you like only for the members of a **role**. The cards then see the person's user Mappe; the placeholder `{benutzer}` stands for their name.
+- **Time from My account:** with this tick, the time, weekdays and public holidays apply that someone has chosen under My account for the daily summary; whoever has chosen nothing gets the card's time and Monday to Friday.
+- If Ablago was off at the time, the automation still runs later the same day – not on following days. Even with several servers, every day (per person) runs exactly once.
+
+## Adding, re-ordering, removing cards {#karten-hinzufugen-umsortieren-entfernen}
+
+- **With the mouse or on the phone:** expand the **card stock**, search for a card and **drag** it into its area (long-press on the phone) – or simply click it.
+- **With the keyboard:** in every area **+ Card** – open the selection, choose a card. You re-order Then cards by their handle `⠿` with **Alt+↑/↓**, with the mouse by dragging.
+- **Remove** is on every card.
+
+The stock only shows what matches the If card: **Change field**, for instance, only if the If card has a Mappe type.
+
+## What the Then cards do {#was-die-dann-karten-tun}
+
+- **Change field** only sets the chosen fields and leaves all others unchanged. Text with placeholders; for date fields `heute`, `heute+7` or `heute-3`. Ablago checks the value as in the form (required fields, selection lists, archive mode). The Mappe's history says "by automation '…'".
+- **Task / notification** goes to people, to **all active members of a role**, to the **person in a field** of the Mappe (optionally "otherwise whoever created the Mappe"), to **whoever created the Mappe** or to a **person from the event** (e.g. the deputy for *Absence set*). A *task* can have a due date; Ablago bundles *notifications* so that nobody is flooded by many runs in a row.
+- **Placeholders with the recipient's permissions:** Ablago fills in the text for every recipient individually – for a role per person, for a deputy with the deputy's permissions. What the person may not see appears as "(not visible)", for instance the title of a linked contact. That way the daily summary doesn't give anything away either. The **test run** in the editor says who may not see something ("Jonas may not see everything …").
+- **Without read permission on the Mappe**, the task still arrives. But the person only sees "Task on a Mappe you may not see – ask …" and the due date. You find the case under [Tasks with people without read permission](aufgaben.md#aufgaben-bei-personen-ohne-leserecht).
+- Tasks from automations behave like the built-in ones: if someone is **absent or deactivated**, the task goes to their **deputy** (the history says "passed on because of absence …"). If there is none, the administrators get it – the run doesn't stop.
+- A task **completes itself** when its reason goes away: with **Date reached** when the date is changed or cleared; with **New post** when the post is assigned or completed; with **Absence set** when the absence ends.
+- **Send daily summary** (only with *Schedule for every user*) sends the person their open tasks by e-mail – the same content as before. Whoever has unsubscribed under My account, is absent or has nothing open gets none; the run history names the reason.
+- **Report favourite changes** (only with *Favourite changed*) gives everyone who has the Mappe as a favourite the bundled notification "Changed" – as before. The [approval for favourites](aufgaben.md#favoriten-benachrichtigen) and the switch under My account still apply; one's own changes are never reported.
+- **Report sign-in protection** sends everyone who manages sign-in protection either the **summary** of the blocks (with *Schedule*, not per user) or immediately an e-mail when a **user account was blocked** (with *User account blocked*, at most once a day per account). See [Sign-in protection](anmeldeschutz.md#mail-an-die-administratoren).
+- **No further automations afterwards** ends the sequence: automations with a higher number no longer run for this event (in the run history "Skipped by …").
+
+Automations work with the **system account "Automation"** (Workbench → Users). What this account may not read, the automation skips; placeholders then show "(not visible)". For tasks, the recipient's permissions apply additionally (see above).
+
+If the account "Automation" may **not see** Mappen of the If card's type **at all** – for example because a rule "System and package roles forbidden" applies on the Mappe type –, the automation can never run. The editor and the list then show a notice "This automation can't run …". Via **View permissions on the Mappe type** you get to the [test run](berechtigungen.md#testlauf) of this Mappe type, with the account "Automation" already chosen; there you see which rule decided. Saving still remains possible.
+
+## Order {#reihenfolge}
+
+If there are several automations for the same trigger, they run by their **order** (1–99, smaller first; your own start at 50). The editor then says "runs as 2nd of 3 for the same trigger". In the list, **By trigger** shows all automations of an event together; there you re-order them by dragging or with **Alt+↑/↓** on the handle, and the numbers adjust.
+
+## Trying out, run history and change history {#ausprobieren-verlauf-und-anderungsverlauf}
+
+![Run history with the steps of a run](bilder/werkbank-automatisierung-verlauf.png)
+
+- **Try out:** choose a Mappe and **Run** – as if the event had happened. You choose the Mappe as in a link field: type part of the title and click a hit. Only Mappen of the If card's Mappe type that the account "Automation" may see are offered – with all others the automation couldn't run anyway. With **Dry run**, Ablago only shows what would happen ("Would send task to 1 person: …") and changes nothing.
+- **Run history:** looks like a Mappe's history: per run one line with date and time, the trigger (e.g. "Mappe created", "Dry run", "Repetition"), a summary, the result (*completed*, *doesn't apply*, *skipped*, *failed*) and the number of cards. Expanded, a table **Card · Result · Details** shows what every card did; if something went wrong, the reason is at the card that failed. With **Expand all** / **Collapse all** you see everything at once. If the automation is running right now while the editor is open, this run is expanded and the cards are ticked off **live**; cards not yet reached show "waiting".
+- **Failed runs** remain. Above the list of automations it then says, for example, "1 run has failed: Report new users, 04.11.26, 04:48"; with several runs, **Show** only shows the affected automations. **Repeat all** runs them again, **Don't repeat** removes them from the notice – in the run history they remain as "failed – not repeated (who, when)"; nothing is deleted. You have the same choice per run in the expanded run history. **Dry runs** don't count; their result is only in the run history. The [Workbench overview](uebersicht.md) also reports failed runs.
+- **Change history:** every saved **version** with time, who and what changed ("changed: Name, Then: Task / notification"); the current one is marked "current". Expanded, a table **What · before · after** shows the differences to the version before. **Restore** brings back an earlier state – after a confirmation it becomes a new version; the current state is kept.
+
+## When something no longer fits {#wenn-etwas-nicht-mehr-passt}
+
+Ablago doesn't block your work: Mappe types, fields and views can still be changed and deleted. If an automation is then missing something (field deleted, view gone), it is **marked red and paused** – with the reason in the list and a notice in the overview. Correct, save, switch on again.
+
+Ablago also pauses an automation if it runs **more than 30 times in one minute**, and after a [restore](wiederherstellen.md) all switched-on ones – so that imported data doesn't immediately trigger a wave of tasks. Automations that trigger each other run at most three levels deep.
+
+## From packages {#aus-paketen}
+
+Packages bring **ready-made automations**, for example "MOT due soon" (package Vehicles) or "Cancellation due soon" (package Household). When installing – in the setup assistant as in the workbench – Ablago lists them by name: **"Should they be switched on straight away?"**, all preselected. What stays ticked is switched on after installation, the rest off.
+
+- In the list you recognise them by the origin **from package …**. You can switch them on, adjust and copy them.
+- On an **update** of the package, the new version replaces the old as long as you haven't changed it; on/off stays. A changed one stays as it is. New automations from the update are offered again when updating.
+- If you remove the package, its automations go with it if they are off and unchanged.
+
+### Deputy {#vertretung}
+
+If an **absence with a deputy** is entered for someone, the deputy gets a task – that is done by the automation **Deputy entered** (If *Absence set*, recipient *Deputy from the event*, placeholders `{benutzer}`, `{vertreter}`, `{von}`, `{bis}`, `{zeitraum}`). It completes itself as soon as the absence ends or period or deputy change. For the previous deputy there is the If card **Deputy withdrawn** (absence ended, another or no deputy any more). The package **Notifications** brings both; in existing filing systems the update took over *Deputy entered* switched on. If the event names no person (absence without a deputy), nothing happens – that is not an error.
+
+### Notifications {#benachrichtigungen}
+
+The **daily summary**, reporting changed **favourites** and the e-mails of **sign-in protection** are automations. The package **Notifications** brings them; in the setup assistant it is preselected. Without an automation with *Send daily summary*, the Workbench overview points this out: "No automatic notifications" with **Install package**.
+
+On the update to this version, Ablago created four automations **once** in existing filing systems with the previous values: *Daily summary* (time from My account, on or off as before), *Report favourite changes*, *Sign-in protection summary* and *Report account block immediately* (on if the ticks in sign-in protection were set). Nothing changes for users. If you install the package, they merge into its automations as long as you haven't changed them.
+
+### Reminders from earlier versions {#erinnerungen-aus-fruheren-versionen}
+
+Up to version 0.176, advance notice, recipient and text of a reminder were set directly on the date field, and the deputy task was built in. On the update, Ablago took over each of these reminders **once** as a switched-on automation *Reminder: field (Mappe type)* – with the same behaviour. The Workbench overview points this out once (*Got it* hides the notice). If a package later brings its own automation for the same field, it replaces the taken-over one as long as you haven't changed it. That way nothing ever reminds twice.
+
+## Examples {#beispiele}
+
+Ablago brings a few **switched-off examples** (origin "from Ablago"): *Remind of the notice period*, *Report account block* and *Report new documents*. Examples can be switched on and adjusted but not deleted; with **Copy** you make one of your own from them (the copy is off at first).
+
+![Editor in dark appearance](bilder/werkbank-automatisierung-dunkel.png)
+
+On the phone, the list comes first, the editor after tapping; there you add cards most easily with **+ Card**.
+
+![Automation on the phone](bilder/werkbank-automatisierung-handy.png){ width="320" }
