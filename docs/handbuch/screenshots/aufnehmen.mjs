@@ -53,13 +53,45 @@ const ohnePlatzhalter = (s) => s.replace(/\{[A-Za-z0-9_]+\}/g, '…');
  */
 function w(text) {
   if (SPRACHE === 'de') return text;
-  const passt = (v) => (text instanceof RegExp ? text.test(v) || text.test(ohnePlatzhalter(v)) : v === text || v.trim() === text);
+  if (!(text instanceof RegExp)) return wText(text);
   const ziele = new Set();
-  for (const [k, v] of DEUTSCH) if (passt(v) && ZIELTEXTE.has(k)) ziele.add(ZIELTEXTE.get(k));
+  for (const [k, v] of DEUTSCH) if ((text.test(v) || text.test(ohnePlatzhalter(v))) && ZIELTEXTE.has(k)) ziele.add(ZIELTEXTE.get(k));
   if (ziele.size === 0) { fehlendeTexte.add(String(text)); return text; }
-  const muster = [...ziele].map((z) => maskiert(z).replace(/\\\{[A-Za-z0-9_]+\\\}/g, '.*'));
-  if (!(text instanceof RegExp) && ziele.size === 1 && !/\{[A-Za-z0-9_]+\}/.test([...ziele][0])) return [...ziele][0];
-  return new RegExp(muster.map((m) => `(?:${m})`).join('|'), text instanceof RegExp ? text.flags : '');
+  // Platzhalter samt Leerzeichen daneben: „{symbol} Link kopieren“ passt auch auf „Copy link“ ohne Symbol.
+  const muster = [...ziele].map((z) => maskiert(z).replace(/\s*\\\{[A-Za-z0-9_]+\\\}\s*/g, '.*'));
+  return new RegExp(muster.map((m) => `(?:${m})`).join('|'), text.flags);
+}
+/**
+ * w für einen festen Text: zuerst Texte, die genau so lauten; sonst Vorlagen mit Platzhaltern, auf die er passt
+ * („Seite 2 nach rechts drehen“ → „Seite {nr} nach rechts drehen“) – deren Werte kommen in die Übersetzung.
+ * Gibt es denselben Text groß und klein („Mappe“ → „Folder“/„folder“), gilt die Schreibung des deutschen Texts;
+ * bleiben mehrere, passt der reguläre Ausdruck auf jeden davon.
+ */
+function wText(text) {
+  const genau = new Set();
+  let vorlagen = new Set();
+  let bestes = 0;
+  for (const [k, v] of DEUTSCH) {
+    if (!ZIELTEXTE.has(k)) continue;
+    const z = ZIELTEXTE.get(k);
+    if (v === text || v.trim() === text) { genau.add(z); continue; }
+    // Vorlage mit den meisten festen Zeichen gewinnt („Seite {nr} nach rechts drehen“ vor „Seite {nr}“).
+    const fest = v.replace(/\{[A-Za-z0-9_]+\}/g, '').trim().length;
+    if (!/\{[A-Za-z0-9_]+\}/.test(v) || fest < 3 || fest < bestes) continue;
+    const namen = [];
+    const m = new RegExp(`^${maskiert(v.trim()).replace(/\\\{([A-Za-z0-9_]+)\\\}/g, (_, n) => { namen.push(n); return '(.*?)'; })}$`, 's').exec(text);
+    if (!m) continue;
+    const werte = Object.fromEntries(namen.map((n, i) => [n, m[i + 1]]));
+    if (fest > bestes) { bestes = fest; vorlagen = new Set(); }
+    vorlagen.add(z.replace(/\{([A-Za-z0-9_]+)\}/g, (a, n) => werte[n] ?? a));
+  }
+  let ziele = [...(genau.size ? genau : vorlagen)];
+  if (ziele.length === 0) { fehlendeTexte.add(String(text)); return text; }
+  const gross = (s) => s.charAt(0) !== s.charAt(0).toLowerCase();
+  if (ziele.length > 1 && ziele.some((z) => gross(z) === gross(text))) ziele = ziele.filter((z) => gross(z) === gross(text));
+  const muster = [...new Set(ziele)].map((z) => maskiert(z).replace(/\s*\\\{[A-Za-z0-9_]+\\\}\s*/g, '.*'));
+  if (muster.length === 1 && !/\{[A-Za-z0-9_]+\}/.test(ziele[0])) return ziele[0];
+  return new RegExp(muster.map((m) => `(?:${m})`).join('|'));
 }
 // Persona-Namen (Lena: Einsteigerin, richtet ein; Jonas: Familienmitglied) und nur Beispiel-Domains (example.org).
 const ADMIN = { email: 'lena@example.org', name: 'Lena Beispiel', passwort: 'handbuch-passwort-1' };
@@ -309,7 +341,8 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('heading', { name: w('Dein Konto') }).waitFor();
   await s.getByLabel(w('Name'), { exact: true }).fill(ADMIN.name);
   await s.getByLabel(w(/E-Mail-Adresse/)).fill(ADMIN.email);
-  await s.getByLabel(w(/^Passwort mindestens/)).fill(ADMIN.passwort);
+  // Das Feld heißt „Passwort mindestens … Zeichen“ – zwei Texte (#730), darum über den Hinweis im Feldnamen.
+  await s.locator('label').filter({ has: s.getByText(w(/^mindestens .* Zeichen$/)) }).locator('input').fill(ADMIN.passwort);
   await s.getByLabel(w('Passwort wiederholen')).fill(ADMIN.passwort);
   await bild(s, 'einrichtung-konto');
   await s.getByRole('button', { name: w('Weiter') }).click();
@@ -388,7 +421,7 @@ async function lasttestSeite(browser, bild) {
     await k.route('**/api/lasttest/angaben', (r) => r.fulfill({ json: stand }));
     const s = await k.newPage();
     await s.goto(BASIS + '/');
-    await s.getByRole('heading', { name: w(/^Lasttest/) }).waitFor();
+    await s.getByRole('heading', { name: w(/^Lasttest/), level: 1 }).waitFor();
     await s.getByLabel(w('Beschreibe dein Gerät')).fill('Beispiel-NAS mit Intel N100, 16 GB RAM');
     await bild(s, name, { fullPage: fertig || handy });
     await k.close();
@@ -457,7 +490,7 @@ async function main() {
 
   // Ablage: drei Spalten mit geöffneter Mappe
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
+  await s.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
   await bild(s, 'ablage');
   // README (#290): breiter, doppelte Auflösung, hell und dunkel – feste Namen, die README holt sie vom Handbuch.
   for (const [schema, name] of [['light', 'readme'], ['dark', 'readme-dunkel']]) {
@@ -467,13 +500,13 @@ async function main() {
     await kr.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.verwaltungsbalken{display:none!important}'; document.head.appendChild(st); }));
     const sr = await kr.newPage();
     await geheZu(sr, `/ablage/${vertrag.id}/${d.strom.id}`);
-    await sr.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
+    await sr.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
     await bild(sr, name);
     await kr.close();
   }
 
-  // Register mit Dokumenten
-  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
+  // Register mit Dokumenten. Namen von Registern, Feldern und Mappen sind Daten der Beispiele – die bleiben deutsch, ohne w (#730).
+  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
   // Vorschaubilder der ersten Seite (#332) entstehen im Hintergrund – kurz warten, bis sie geladen sind.
   await s.waitForFunction(() => [...document.querySelectorAll('img.vorschaubild')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 15_000 }).catch(() => {});
   // Erstes anzeigbares Dokument öffnen: die Anzeige steht direkt unter seiner Zeile (#85).
@@ -485,8 +518,8 @@ async function main() {
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Scan Vertragsunterlagen.pdf')}&typ=application/pdf`,
     beispielPdf(['Vertrag Seite 1', 'Vertrag Seite 2', 'Preisblatt', 'Widerrufsbelehrung']), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
-  const scan = s.locator('.dokumentliste li', { hasText: w('Scan Vertragsunterlagen.pdf') });
+  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
+  const scan = s.locator('.dokumentliste li', { hasText: 'Scan Vertragsunterlagen.pdf' });
   await scan.getByRole('button', { name: w('Seiten'), exact: true }).click();
   await s.waitForFunction(() => [...document.querySelectorAll('.seitenbild img')].length > 0 && [...document.querySelectorAll('.seitenbild img')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 20_000 }).catch(() => {});
   await s.getByRole('button', { name: w('Seite 2 nach rechts drehen') }).click();
@@ -509,8 +542,8 @@ async function main() {
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Foto Zählerstand.pdf')}&typ=application/pdf`,
     fotoPdf(['Zählerstand 12.345 kWh', 'Ablesekarte Rückseite']), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
-  const foto = s.locator('.dokumentliste li', { hasText: w('Foto Zählerstand.pdf') });
+  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
+  const foto = s.locator('.dokumentliste li', { hasText: 'Foto Zählerstand.pdf' });
   await foto.getByRole('button', { name: w('Verkleinern'), exact: true }).click();
   const klein = s.locator('.pdfseiten.verkleinern');
   await klein.locator('.stufenwahl').waitFor({ timeout: 30_000 });
@@ -523,8 +556,8 @@ async function main() {
   await api('POST', `/api/mappen/${d.strom.id}/dokumente?register=dokumente&name=${encodeURIComponent('Kontoauszug.pdf')}&typ=application/pdf`,
     beispielPdf('Lena Beispiel - IBAN DE89 3704 0044 0532 0130 00 - Telefon 0351 1234567'), true);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
-  const auszug = s.locator('.dokumentliste li', { hasText: w(/^Kontoauszug\.pdf/) }).first();
+  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
+  const auszug = s.locator('.dokumentliste li', { hasText: /^Kontoauszug\.pdf/ }).first();
   await auszug.getByRole('button', { name: w('Schwärzen'), exact: true }).click();
   const schwarz = s.locator('.pdfseiten.schwaerzen');
   await schwarz.locator('.schwarz-seite img').first().waitFor({ timeout: 30_000 });
@@ -543,7 +576,7 @@ async function main() {
 
   // Verknüpfungsregister beim Vertragspartner
   await geheZu(s, `/ablage/${partner.id}/${d.stadtwerke.id}`);
-  await s.getByRole('tab', { name: w('Verträge') }).click();
+  await s.getByRole('tab', { name: 'Verträge' }).click();
   await bild(s, 'verknuepfungen');
 
   // Neue Mappe
@@ -552,14 +585,14 @@ async function main() {
 
   // Suche in einer Liste
   await geheZu(s, `/ablage/${vertrag.id}`);
-  await s.getByPlaceholder('Suchen in Titel und Werten …').fill('Haus');
+  await s.getByPlaceholder(w('Suchen in Titel und Werten …')).fill('Haus');
   await s.waitForTimeout(600);
   await bild(s, 'suche');
 
   // Volltextsuche (#45): Treffer im Text eines Dokuments
   await api('PUT', '/api/konto/einstellungen/suche_volltext', { wert: true });
   await geheZu(s, `/ablage/${vertrag.id}`);
-  await s.getByPlaceholder('Suchen in Titel, Werten und Dokumenten …').fill('Preisanpassung');
+  await s.getByPlaceholder(w('Suchen in Titel, Werten und Dokumenten …')).fill('Preisanpassung');
   await s.locator('.fundstelle').first().waitFor();
   await bild(s, 'volltext-suche');
   await api('PUT', '/api/konto/einstellungen/suche_volltext', { wert: null });
@@ -585,22 +618,22 @@ async function main() {
   await bild(s, 'formatiert');
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
   // Notizen als Register vor der Historie, „Mappe ▾“ neben dem Stern (#427)
-  await s.getByRole('tab', { name: w(/Notizen/) }).click();
+  await s.getByRole('tab', { name: /Notizen/ }).click();
   await s.locator('.notizliste li').first().waitFor();
   await bild(s, 'notizen');
-  await s.getByRole('tab', { name: w('Vertrag'), exact: true }).click();
+  await s.getByRole('tab', { name: 'Vertrag', exact: true }).click();
   await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
   await s.getByRole('menuitem', { name: w(/Aufgabe vergeben/) }).click();
   const neueAufgabe = s.getByRole('region', { name: w('Aufgabe vergeben') });
   await neueAufgabe.getByLabel(w('Empfänger')).selectOption({ label: MITGLIED.name });
-  await neueAufgabe.getByPlaceholder(/Rechnung/).fill('Sonderkündigung vorbereiten');
+  await neueAufgabe.getByPlaceholder(w('z. B. Bitte Rechnung prüfen und bezahlen')).fill('Sonderkündigung vorbereiten');
   await bild(s, 'aufgabe-vergeben');
   await neueAufgabe.getByRole('button', { name: w('Schließen') }).click();
   // Erinnern (#131) und Termine in „Zu erledigen“ (#528, #725)
   await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
   await s.getByRole('menuitem', { name: w(/Erinnern/) }).click();
   const erinnern = s.getByRole('region', { name: w('Erinnern') });
-  await erinnern.getByPlaceholder(/Angebote/).fill('Angebote der anderen Stromanbieter vergleichen');
+  await erinnern.getByPlaceholder(w('z. B. Angebote vergleichen')).fill('Angebote der anderen Stromanbieter vergleichen');
   await erinnern.getByRole('button', { name: w('Erinnern') }).click();
   await s.locator('.erinnerungen').waitFor();
   await bild(s, 'erinnerung');
@@ -646,14 +679,14 @@ async function main() {
     await kh.close();
   }
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: w('Historie') }).click();
+  await s.getByRole('tab', { name: 'Historie' }).click();
   await s.locator('.historie details').first().click();
   await bild(s, 'protokoll');
   await s.getByRole('button', { name: w('Mappe'), exact: true }).click();
   await bild(s, 'aktionen');
   await s.getByRole('menuitem', { name: w(/E-Mail/) }).click();
   const email = s.getByRole('region', { name: w('Per E-Mail versenden') });
-  await email.getByLabel(w(/^An/)).fill('steuerberater@example.org');
+  await email.getByPlaceholder('name@example.org').fill('steuerberater@example.org');
   await email.getByLabel(w('Nachricht')).fill('Hallo Frau Berger,\n\nanbei der Stromvertrag und die Preisanpassung.\n\nViele Grüße');
   await bild(s, 'email');
   await email.getByRole('button', { name: w('Schließen') }).click();
@@ -676,7 +709,7 @@ async function main() {
   await s.getByRole('button', { name: w(/Zuordnen/) }).click();
   const zu = s.getByRole('region', { name: w('Zuordnen') });
   await zu.getByLabel(w('Mappentyp')).selectOption({ value: vertrag.id });
-  await zu.getByPlaceholder(/suchen/).fill('Strom');
+  await zu.getByRole('searchbox').fill('Strom');
   await zu.locator('.zuordnen-treffer button').first().click();
   await bild(s, 'post-zuordnen');
 
@@ -700,7 +733,7 @@ async function main() {
   if (neu.dokumente.length !== 2) throw new Error(`Ablegen (#193): ${neu.dokumente.length} statt 2 Dokumente in der neuen Post`);
   // Auf einer Mappe mit Dokumentenregister: zwei Ziele.
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.getByRole('tab', { name: w('Vertragsunterlagen') }).click();
+  await s.getByRole('tab', { name: 'Vertragsunterlagen' }).click();
   dateien = await neueDateien();
   await s.dispatchEvent('body', 'dragenter', { dataTransfer: dateien });
   await s.locator('.ablageflaeche.zwei').waitFor();
@@ -740,7 +773,7 @@ async function main() {
   // Eingeklappte Spalten (#536): links die Leiste „Ansichten“, rechts der Titel der geöffneten Mappe.
   await s.evaluate(([key]) => localStorage.setItem(key, JSON.stringify({ l: 220, m: 340, linksZu: true, rechtsZu: true })), [breitSchluessel]);
   await geheZu(s, `/ablage/${vertrag.id}/${d.strom.id}`);
-  await s.locator('.spl-lasche-rechts').getByText(w('Stromvertrag Haus')).waitFor();
+  await s.locator('.spl-lasche-rechts').getByText('Stromvertrag Haus').waitFor();
   await bild(s, 'spalten-eingeklappt');
   await s.evaluate(([key]) => localStorage.removeItem(key), [breitSchluessel]);
 
@@ -748,7 +781,7 @@ async function main() {
   await api('PUT', `/api/mappen/${d.strom.id}/favorit`);
   await api('PUT', `/api/mappen/${d.stadtwerke.id}/favorit`);
   await geheZu(s, `/ablage/favoriten/${d.strom.id}`);
-  await s.getByRole('heading', { name: w('Stromvertrag Haus') }).waitFor();
+  await s.getByRole('heading', { name: 'Stromvertrag Haus' }).waitFor();
   await bild(s, 'favoriten');
   // Favorit = Abo (#422): Jonas ändert einen Favoriten von Lena – Punkt in der Liste, „Geändert“ unter Zu erledigen.
   {
@@ -771,7 +804,7 @@ async function main() {
   await s.locator('.trefferlistenblock').nth(1).scrollIntoViewIfNeeded();
   await bild(s, 'werkbank-trefferlisten');
   await geheZu(s, `/ablage/${partner.id}/${d.stadtwerke.id}`);
-  await s.getByRole('tab', { name: w(/Rechnungen/) }).click();
+  await s.getByRole('tab', { name: /Rechnungen/ }).click();
   await s.locator('.verweistabelle table').waitFor();
   await bild(s, 'verknuepfungen-tabelle');
   // Mappe löschen (#423): Auf die Stadtwerke verweisen Verträge – „Warum ist Löschen gesperrt?“ am gesperrten Knopf (#648).
@@ -808,12 +841,12 @@ async function main() {
   await bild(s, 'sichten-baum');
   await geheZu(s, `/werkbank/sichten/${d.fristen.id}#bedingungen`);
   await s.getByRole('heading', { name: w('Bedingungen') }).waitFor();
-  await s.getByText(w('Diese Ansicht zeigt zurzeit')).waitFor();
+  await s.getByText(w(/^Diese Ansicht zeigt zurzeit/)).waitFor();
   await bild(s, 'werkbank-sichten');
 
   // Benutzer und Rollen in der Ablage
   await geheZu(s, `/ablage/${d.rolleTyp.id}`);
-  await s.locator('.mappenliste .eintrag').filter({ hasText: w('Steuern und Finanzen') }).click();
+  await s.locator('.mappenliste .eintrag').filter({ hasText: 'Steuern und Finanzen' }).click();
   await s.getByRole('tab', { name: w('Benutzer') }).click();
   await bild(s, 'rolle');
   await geheZu(s, `/ablage/${d.benutzerTyp.id}/${d.mitglied.id}`);
@@ -847,7 +880,7 @@ async function main() {
     await km.addCookies([{ name, value: wert, url: BASIS }]);
     const sm = await km.newPage();
     await geheZu(sm, '/profil/konto');
-    const blatt = sm.locator('.blatt', { hasText: w('Meine Rechte') });
+    const blatt = sm.locator('.blatt', { hasText: w(/^Meine Rechte/) });
     await blatt.locator('table').waitFor();
     await blatt.scrollIntoViewIfNeeded();
     const box = await blatt.boundingBox();
@@ -921,7 +954,7 @@ async function main() {
   await s.getByRole('heading', { name: w(/Aufgaben/) }).waitFor();
   await bild(s, 'profil-benachrichtigungen', { fullPage: true });
   await geheZu(s, '/profil/fehler-melden');
-  await s.getByPlaceholder(/Beim Speichern/).fill('Beim Speichern einer Rechnung kam „Fehler 500“, nachdem ich ein Dokument hinzugefügt hatte.');
+  await s.getByPlaceholder(w(/^z\. B\. Beim Speichern/)).fill('Beim Speichern einer Rechnung kam „Fehler 500“, nachdem ich ein Dokument hinzugefügt hatte.');
   await s.getByText(w('Technische Angaben ansehen')).click();
   await bild(s, 'fehler-melden');
   await s.getByRole('button', { name: w('Meldung senden') }).click();
@@ -949,7 +982,7 @@ async function main() {
   await geheZu(s, `/werkbank/typen/${vertrag.id}`);
   await bild(s, 'werkbank-mappentyp');
   await s.locator('.sprungleiste').getByRole('button', { name: w('Felder') }).click();
-  await s.locator('button.feldkopfknopf').filter({ hasText: w('Kündigung bis') }).click();
+  await s.locator('button.feldkopfknopf').filter({ hasText: 'Kündigung bis' }).click();
   await s.locator('.feldzeile.offen').scrollIntoViewIfNeeded();
   await bild(s, 'werkbank-feld');
   // Fristen (#129): Erinnerung am Datumsfeld
@@ -988,7 +1021,7 @@ async function main() {
     await s.getByRole('heading', { name: w('Verlauf'), exact: true }).evaluate((e) => e.scrollIntoView({ block: 'start' }));
     await s.locator('.automatisierung-schritte').first().waitFor({ state: 'attached' }).catch(() => null);
     // Verlauf wie die Historie (#707): den Probelauf aufklappen, damit Karte · Ergebnis · Einzelheiten zu sehen ist.
-    await s.locator('.blatt:has(> h2:text-is("Verlauf")) .historie summary').first().click().catch(() => null);
+    await s.locator(`.blatt:has(> h2:text-is("${w('Verlauf')}")) .historie summary`).first().click().catch(() => null);
     await bild(s, 'werkbank-automatisierung-verlauf');
     for (const [name, schema, viewport] of [['werkbank-automatisierung-dunkel', 'dark', { width: 1440, height: 860 }], ['werkbank-automatisierung-handy', 'light', { width: 393, height: 852 }]]) {
       const handy = viewport.width < 500;
@@ -1123,7 +1156,8 @@ async function main() {
   // Sicherung (#103–#106): jetzt sichern, Notfallblatt herunterladen (als Bild fürs Handbuch), Zeitplan
   await geheZu(s, '/werkbank/sicherung');
   await s.getByRole('button', { name: w('Jetzt sichern') }).click();
-  await s.getByText(w(/Sicherung fertig/)).waitFor({ timeout: 120_000 });
+  // „{titel} fertig ({wert}).“ – der Titel ist ein eigener Text, darum die Meldung selbst (#730).
+  await s.locator('p.gutertext[role="status"]').waitFor({ timeout: 120_000 });
   const download = s.waitForEvent('download');
   await s.locator('#notfallblatt').getByRole('link', { name: w(/Notfallblatt herunterladen/) }).click();
   const pdf = join(ZIEL, 'notfallblatt.pdf');
@@ -1174,13 +1208,13 @@ async function main() {
   // Rückfragen sind eigene Dialoge (#355), keine Browser-Fenster.
   await s.getByRole('button', { name: w('Alle jetzt abmelden') }).click();
   await s.getByRole('alertdialog').getByRole('button', { name: w('Alle abmelden') }).click();
-  await s.getByText(w('Wartungsmodus aktiv'), { exact: false }).first().waitFor();
+  await s.getByText(w('Wartungsmodus aktiv.'), { exact: false }).first().waitFor();
   await geheZu(s, '/werkbank/sicherung#wiederherstellen');
   await s.locator('.auswahlliste input[type=radio]').first().check();
   await s.getByRole('heading', { name: w(/Abgleich/) }).waitFor();
   await bild(s, 'werkbank-wiederherstellen');
   await geheZu(s, '/werkbank/wartung');
-  await s.getByRole('button', { name: w('Wartung beenden') }).click();
+  await s.getByRole('button', { name: w('Wartung beenden'), exact: true }).click();
   await s.locator('.wartungsbanner').waitFor({ state: 'detached' });
 
   // Schlüssel wechseln (#47) – ganz am Ende, weil danach Notfallblatt und Sicherungen auf den alten Schlüssel zeigen.
