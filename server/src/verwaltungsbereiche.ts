@@ -97,7 +97,7 @@ const REGELN: Regel[] = [
   R('*', '/api/werkbank/system*', 'systemzustand'),
   R('*', '/api/werkbank/speicherplatz', 'systemzustand'),
   R('*', '/api/werkbank/datenbank', 'systemzustand'),
-  R('*', '/api/werkbank/last', 'systemzustand'),
+  R('*', '/api/werkbank/last*', 'systemzustand'),
   R('*', '/api/werkbank/protokoll', 'protokoll'),
   R('*', '/api/werkbank/debug', 'protokoll'),
   R('*', '/api/werkbank/fehlermeldungen*', 'fehlermeldungen'),
