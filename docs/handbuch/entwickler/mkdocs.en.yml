@@ -56,7 +56,7 @@ extra:
     - { name: English, link: ./, lang: en }
   # Hinweis oben auf jeder Seite (#730, overrides/main.html). Entfällt, sobald jemand die Übersetzung durchgesehen hat.
   maschinell:
-    text: Machine translated – improvements welcome.
+    text: Machine-translated – improvements welcome.
     verweis: Suggest an improvement
     link: https://github.com/motom001/dms/issues/new
   social:
