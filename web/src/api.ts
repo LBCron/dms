@@ -17,6 +17,7 @@ import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten'
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
 import type { AblaufEingabe, AblaufErgebnis, AblaufInstallation, AblaufPlan, Ergaenzung, HerkunftPruefung, InstalliertesPaket, Katalog, LaeuferZustand, RechtePunkt } from '../../shared/src/pakete';
 import type { Einstellungsbeschreibung } from '../../shared/src/paketeinstellungen';
+import type { DateiFehler, Einrichtungsplan, Planprobleme } from '../../shared/src/einrichtungsplan';
 import type { ErstellenStand, PaketErstellenEingabe, PaketPruefung, SelbstErstellt, SelbstErstelltDetail } from '../../shared/src/paketerstellung';
 import type { EigeneAnsicht, WerkbankAnsicht } from '../../shared/src/werkbankansicht';
 import type { FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
@@ -402,6 +403,15 @@ export const api = {
   einrichtungDbPruefen: (anbindung: AnbindungEingabe) => anfrage<AnbindungPruefung>('POST', '/api/einrichtung/datenbank/pruefen', { anbindung }),
   einrichtungDbAnlegen: (anbindung: AnbindungEingabe) => anfrage<AnbindungPruefung>('POST', '/api/einrichtung/datenbank/anlegen', { anbindung }),
   einrichtungDbUebernehmen: (anbindung: AnbindungEingabe) => anfrage<{ ok: true }>('POST', '/api/einrichtung/datenbank/uebernehmen', { anbindung }),
+  // Sammeln vor „Jetzt einrichten“ (#804) und Konfigurationsdatei (#806) – mit Einrichtungscode.
+  einrichtungPruefen: (plan: Einrichtungsplan, passwort?: string) => anfrage<{ probleme: Planprobleme }>('POST', '/api/einrichtung/pruefen', { plan, passwort }),
+  einrichtungDateiLesen: (text: string) => anfrage<{ plan: Einrichtungsplan | null; fehler: DateiFehler[]; hinweise: string[] }>('POST', '/api/einrichtung/datei/lesen', { text }),
+  einrichtungDateiSchreiben: (plan: Einrichtungsplan) => anfrage<{ text: string; name: string }>('POST', '/api/einrichtung/datei/schreiben', { plan }),
+  einrichtungPakete: () => anfrage<{ installiert: InstalliertesPaket[]; dms: string }>('GET', '/api/einrichtung/pakete'),
+  einrichtungPaketKatalog: () => anfrage<{ kataloge: Array<{ url: string; offiziell: boolean; katalog: Katalog | null; fehler: string | null }>; abgerufen: string }>('POST', '/api/einrichtung/pakete/katalog', {}),
+  einrichtungPaketPlan: (e: AblaufEingabe) => anfrage<AblaufPlan<PaketVorschau>>('POST', '/api/einrichtung/pakete/plan', { pakete: e.pakete ?? [] }),
+  /** Server zur Adresse finden (#813) im Assistenten, bevor es einen Administrator gibt. */
+  einrichtungMailFinden: (email: string, thunderbird = false) => anfrage<MailSuche>('POST', '/api/einrichtung/mail/finden', { email, thunderbird }),
   einrichtungStand: () => anfrage<EinrichtungStand>('GET', '/api/werkbank/einrichtung'),
   einrichtungSchritt: (schritt: EinrichtungSchritt, uebersprungen = false) => anfrage<EinrichtungStand>('POST', '/api/werkbank/einrichtung/schritt', { schritt, uebersprungen }),
   anbindung: () => anfrage<AnbindungStand>('GET', '/api/werkbank/anbindung'),

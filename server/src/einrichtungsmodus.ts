@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import { existsSync } from 'node:fs';
 import { ansicht, anbindungAus, legeDatenbankAn, pruefeAnbindung, schreibeAnbindung, type Anbindung, type Pruefung } from './anbindung';
 import type { Einrichtungscode } from './einrichtungscode';
+import { liesEinrichtungsdatei } from './einrichtungsdatei';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { standKennung } from './system';
@@ -111,6 +112,8 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
     await uebernehmen({ ...a, ...(vorbelegt?.mandant ? { mandant: vorbelegt.mandant } : {}) }, 'Assistent');
     return { ok: true, pruefung: p };
   });
+  // Konfigurationsdatei (#806) schon vor der Datenbank: füllt die Anbindung vor, angelegt wird nichts.
+  app.post('/api/einrichtung/datei/lesen', async (req) => { schutz(req); return { ...liesEinrichtungsdatei((req.body as { text?: unknown } | null)?.text), hinweise: [] }; });
   // Alles andere: Verweis auf den Assistenten.
   app.all('/api/*', async (_req, reply) => reply.code(503).header('retry-after', '30').send({ fehler: 'Ablago ist noch nicht eingerichtet: Es fehlt die Verbindung zur Datenbank. Öffne Ablago im Browser, um den Einrichtungsassistenten zu starten.' }));
 

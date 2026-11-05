@@ -11,6 +11,8 @@ import { absenderVorschlag, anbieterFuerAdresse, anbieterFuerMx, MAIL_ANBIETER }
 import { Betrieb, mailFehler, speicherBetrieb, type transport } from '../src/betrieb';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
+import { Einrichtung } from '../src/einrichtung';
+import { Einrichtungscode } from '../src/einrichtungscode';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
 import { Konten } from '../src/konten';
@@ -319,5 +321,32 @@ describe('Versand über OAuth (#813)', () => {
   it('Routen: nur für Administratoren', async () => {
     const t = routen(new Dienst(speicherRepo(), speicherDateien()), new Konten(speicherKontoRepo(), null, 'http://nas'), {});
     for (const r of t.filter((x) => x.pfad.startsWith('/api/werkbank/betrieb/mail/'))) assert.equal(r.zugang, 'admin', r.pfad);
+  });
+});
+
+describe('E-Mail-Versand im Einrichtungsassistenten (#813, #804)', () => {
+  it('Server-Suche vor der Einrichtung nur mit gültigem Code; danach nur für den Administrator bei offenem Assistenten', async () => {
+    const code = new Einrichtungscode(await mkdtemp(join(tmpdir(), 'dms-a803-')));
+    const c = await code.bereitstellen();
+    const d = new Dienst(speicherRepo(), speicherDateien());
+    const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
+    const einrichtung = new Einrichtung({ konten, code, einstellungen: speicherEinstellungen(), mandant: { name: async () => null, umbenennen: async () => {} }, datenbank: () => ({ host: 'db', port: 5432, datenbank: 'dms', benutzer: 'dms' }) });
+    const { d: suche, gefragt } = netz({ srv: { '_submissions._tcp.example.org': [{ name: 'smtp.example.org', port: 465 }] } });
+    const betrieb = new Betrieb(speicherBetrieb(), 'http://nas', undefined, { suche });
+    await betrieb.laden();
+    const tabelle = routen(d, konten, { einrichtung, betrieb });
+    const route = tabelle.find((r) => r.methode === 'POST' && r.pfad === '/api/einrichtung/mail/finden')!;
+    assert.equal(route.zugang, 'offen');
+    assert.equal(route.lesend, true);
+    const rufe = (x: Partial<Anfrage>) => route.handler({ body: { email: 'lena@example.org' }, params: {}, query: {}, ip: '1', ...x });
+    await assert.rejects(rufe({}), status(403));
+    await assert.rejects(rufe({ einrichtungscode: 'AAAA-AAAA-AAAA' }), status(403));
+    assert.deepEqual(gefragt, [], 'ohne Code fragt Ablago niemanden');
+    const r = (await rufe({ einrichtungscode: c })).body as { fund: { host: string; port: number; quelle: string } | null };
+    assert.deepEqual([r.fund?.host, r.fund?.port, r.fund?.quelle], ['smtp.example.org', 465, 'dns']);
+    // Gespeichert ist dabei nichts (#804).
+    assert.equal(betrieb.ansicht().mail.host, '');
+    await einrichtung.einrichten({ mandant: 'Familie Beispiel', name: 'Lena', email: 'lena@example.org', passwort: 'ein-langes-passwort' }, c, { ip: '1', geraet: '' });
+    await assert.rejects(rufe({ einrichtungscode: c }), status(409));
   });
 });

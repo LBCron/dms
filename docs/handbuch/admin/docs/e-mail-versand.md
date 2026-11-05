@@ -1,6 +1,6 @@
 # E-Mail-Versand
 
-Ablago verschickt Einladungen, Passwort-Links, die [Tägliche Zusammenfassung](aufgaben.md#tagliche-zusammenfassung) und Mappen, die jemand [per E-Mail versendet](https://help.ablago.app/benutzer/versenden/). Dafür braucht es ein Postfach, über dessen Mailserver (SMTP) Ablago schreibt. Den Versand richtest du im [Einrichtungsassistenten](installation.md#optionales) ein oder später unter **Werkbank → E-Mail und Adresse**. Beide Stellen sind gleich aufgebaut.
+Ablago verschickt Einladungen, Passwort-Links, die [Tägliche Zusammenfassung](aufgaben.md#tagliche-zusammenfassung) und Mappen, die jemand [per E-Mail versendet](https://help.ablago.app/benutzer/versenden/). Dafür braucht es ein Postfach, über dessen Mailserver (SMTP) Ablago schreibt. Den Versand richtest du im [Einrichtungsassistenten](installation.md#optionales) ein oder später unter **Werkbank → E-Mail und Adresse**. Beide Stellen sind gleich aufgebaut; nur **Verbindung prüfen** und die Testmail gibt es erst in der Werkbank, weil sie eine Anmeldung brauchen.
 
 Was dabei hinausgeht, steht unter [Was deine Ablage verlässt](datenschutz.md#was-deine-ablage-verlasst): nur Mails, die jemand auslöst oder einschaltet, über deinen Mailserver.
 
@@ -8,9 +8,9 @@ Was dabei hinausgeht, steht unter [Was deine Ablage verlässt](datenschutz.md#wa
 
 ![E-Mail-Versand im Einrichtungsassistenten](bilder/einrichtung-mail.png)
 
-1. **Mit welcher E-Mail-Adresse soll Ablago schreiben?** Vorbelegt ist die Adresse deines Kontos. Am besten nimmst du eine eigene Adresse für Ablago, etwa `ablage@example.org`.
+1. **Mit welcher E-Mail-Adresse soll Ablago schreiben?** Vorbelegt ist die Adresse deines Kontos (im Assistenten die des Administrators). Am besten nimmst du eine eigene Adresse für Ablago, etwa `ablage@example.org`.
 2. **Passwort** bzw. **App-Passwort** des Postfachs eintragen.
-3. **Verbindung prüfen.** Ablago meldet sich am Server an, ohne etwas zu senden.
+3. **Verbindung prüfen** (in der Werkbank). Ablago meldet sich am Server an, ohne etwas zu senden.
 
 Den Rest schlägt der Assistent aus der Adresse vor und kennzeichnet ihn mit **vorgeschlagen vom Assistenten**:
 
@@ -21,7 +21,7 @@ Den Rest schlägt der Assistent aus der Adresse vor und kennzeichnet ihn mit **v
 | Absender | `Ablago – {Name der Ablage} <adresse>`, z. B. `Ablago – Familie Beispiel <lena@example.org>` |
 | Testmail an | dieselbe Adresse |
 
-Übernommen wird nur, was sichtbar dasteht. Änderst du ein Feld selbst, ist es kein Vorschlag mehr und bleibt, wie du es eingetragen hast. Im Assistenten übernimmt **Weiter** die Angaben, eigene Speichern-Knöpfe gibt es dort nicht. Ohne Passwort und ohne eigene Eingaben bleibt der Versand aus. In der Werkbank speicherst du wie überall über die Leiste unten.
+Übernommen wird nur, was sichtbar dasteht. Änderst du ein Feld selbst, ist es kein Vorschlag mehr und bleibt, wie du es eingetragen hast. Im Assistenten setzt du zuerst das Häkchen **E-Mail-Versand jetzt einrichten**; ohne Häkchen bleibt der Versand aus. **Weiter** übernimmt die Angaben in die Zusammenfassung, eigene Speichern-Knöpfe gibt es dort nicht. Gespeichert wird erst mit **Jetzt einrichten**. Das Passwort behält der Assistent bis dahin nur, solange die Seite offen ist; nach dem Neuladen fragt er es erneut ab. In der Werkbank speicherst du wie überall über die Leiste unten.
 
 ## Server und Port finden
 

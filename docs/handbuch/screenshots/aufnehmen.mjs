@@ -252,6 +252,7 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('heading', { name: 'Neu einrichten oder wiederherstellen?' }).waitFor({ timeout: 90_000 });
   await bild(s, 'einrichtung-wahl');
   await s.getByRole('button', { name: /^Neu einrichten/ }).click();
+  // Erst sammeln, dann Zusammenfassung, dann einrichten (#804): bis „Jetzt einrichten“ legt Ablago nichts an.
   await s.getByLabel(/Name deiner Ablage/).fill('Familie Beispiel');
   await bild(s, 'einrichtung-mandant');
   await s.getByRole('button', { name: 'Weiter' }).click();
@@ -260,17 +261,14 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByLabel(/^Passwort mindestens/).fill(ADMIN.passwort);
   await s.getByLabel('Passwort wiederholen').fill(ADMIN.passwort);
   await bild(s, 'einrichtung-administrator');
-  await s.getByRole('button', { name: 'Administrator anlegen' }).click();
-  // Den ersten normalen Benutzer legt das Skript danach mit Rolle an.
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  // Den ersten normalen Benutzer legt das Skript danach mit Rolle an – hier nur fürs Bild ausfüllen, dann leeren.
   await s.getByRole('heading', { name: 'Erster Benutzer' }).waitFor();
   await s.getByLabel('Name', { exact: true }).fill(MITGLIED.name);
   await s.getByLabel(/E-Mail-Adresse/).fill(MITGLIED.email);
   await bild(s, 'einrichtung-benutzer');
-  await s.getByRole('button', { name: 'Überspringen' }).click();
-  await s.getByRole('heading', { name: 'Schlüssel und Notfallblatt' }).waitFor();
-  await s.getByRole('button', { name: 'Schlüssel erzeugen' }).click();
-  await s.getByText(/Erledigt – Fingerabdruck/).waitFor();
-  await bild(s, 'einrichtung-schluessel');
+  await s.getByLabel('Name', { exact: true }).fill('');
+  await s.getByLabel(/E-Mail-Adresse/).fill('');
   await s.getByRole('button', { name: 'Weiter' }).click();
   // Pakete dazuholen (#460): Katalog abrufen (ohne Internet: Hinweis), dann überspringen.
   await s.getByRole('heading', { name: 'Pakete dazuholen' }).waitFor();
@@ -279,17 +277,28 @@ async function einrichtenImBrowser(browser, bild) {
   await s.getByRole('button', { name: 'Überspringen' }).click();
   await s.getByRole('heading', { name: 'Optionales' }).waitFor();
   await bild(s, 'einrichtung-optional', { fullPage: true });
-  // E-Mail-Versand im Assistenten (#813): Adresse vorbelegt; beim Verlassen des Felds sucht Ablago den Server.
+  // E-Mail-Versand im Assistenten (#813, #804): Häkchen setzen, Adresse ist die des Administrators; beim Verlassen
+  // des Felds sucht Ablago den Server. Fürs Bild nur ausgefüllt, danach wieder abgewählt – gespeichert wird nichts.
+  await s.getByLabel('E-Mail-Versand jetzt einrichten').check();
   await s.locator('#mail-adresse').focus();
   await s.locator('#mail-passwort').focus();
   await s.locator('#mail .mail-vorschlag').waitFor({ timeout: 20_000 });
   await s.getByText('Suche den Server …').waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {});
   await s.locator('#mail').evaluate((e) => e.scrollIntoView({ block: 'start' }));
   await bild(s, 'einrichtung-mail');
-  await s.getByRole('button', { name: 'Überspringen' }).click();
-  await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor();
-  await bild(s, 'einrichtung-fertig');
-  await s.getByRole('button', { name: 'Zur Werkbank' }).click();
+  await s.getByLabel('E-Mail-Versand jetzt einrichten').uncheck();
+  await s.getByRole('button', { name: 'Weiter' }).click();
+  await s.getByRole('heading', { name: 'Zusammenfassung' }).waitFor();
+  await bild(s, 'einrichtung-zusammenfassung', { fullPage: true });
+  await s.getByRole('button', { name: 'Jetzt einrichten' }).click();
+  await s.getByRole('heading', { name: /ist eingerichtet/ }).waitFor({ timeout: 60_000 });
+  await bild(s, 'einrichtung-fertig', { fullPage: true });
+  // Das Notfallblatt muss heruntergeladen sein, bevor „Einrichtung abschließen“ geht (#804).
+  const download = s.waitForEvent('download');
+  await s.getByRole('link', { name: 'Notfallblatt herunterladen' }).click();
+  await (await download).cancel().catch(() => {});
+  await s.getByText(/Notfallblatt heruntergeladen/).waitFor({ timeout: 15_000 });
+  await s.getByRole('button', { name: 'Einrichtung abschließen' }).click();
   await s.waitForURL(/\/werkbank/);
   const sitzung = (await k.cookies()).find((c) => c.name === 'dms_sitzung');
   if (!sitzung) throw new Error('Nach der Einrichtung keine Sitzung im Browser.');

@@ -1,0 +1,42 @@
+# Einrichtung von Ablago – zum Laden im Einrichtungsassistenten („Aus Konfigurationsdatei laden“).
+# Ohne Passwörter und ohne Schlüssel: Passwörter fragt der Assistent ab, den Schlüssel erzeugt Ablago immer neu.
+# Aufbau: https://help.ablago.app/admin/aktuell/einrichtungsdatei/ablago-einrichtung-1.schema.json
+
+ablago-einrichtung: 1
+# Verbindung zu PostgreSQL (gilt nur, solange Ablago noch keine Datenbank hat).
+datenbank:
+  rechner: db
+  port: 5432
+  name: dms
+  benutzer: dms
+  passwort: ${DMS_DB_PASSWORT}
+# Name der Ablage – Schriftzug in Kopfzeile und Browser-Tab.
+ablage: Familie Beispiel
+# Richtet Ablago ein, arbeitet aber nicht in der Ablage.
+administrator:
+  name: Admin
+  email: admin@example.org
+  passwort: ${DMS_ADMIN_PASSWORT}
+# Das Konto für die Arbeit in der Ablage.
+erster-benutzer:
+  name: Lena Beispiel
+  email: lena@example.org
+  aufgaben-ohne-empfaenger: true
+# Aus dem offiziellen Katalog, je die neueste passende Version; Automatisierungen: true = eingeschaltet.
+pakete:
+  - id: texterkennung
+  - id: benachrichtigungen
+# Adresse für Links, Bundesland für Feiertage, Beispiele, E-Mail-Versand (ohne Passwort).
+optionales:
+  adresse: https://ablago.example.org
+  bundesland: SN
+  beispiele: false
+  e-mail:
+    aktiv: true
+    server: smtp.example.org
+    port: 587
+    verbindung: starttls
+    benutzer: ablago@example.org
+    absender: Ablago <ablago@example.org>
+    selbstsigniert: false
+    passwort: ${DMS_MAIL_PASSWORT}

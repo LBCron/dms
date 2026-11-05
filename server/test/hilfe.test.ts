@@ -16,7 +16,7 @@ describe('Offline-Hilfe (#219)', () => {
 
   it('Einrichtungsassistent (#278): immer das Online-Handbuch, aktuelle Version, mit Anker', () => {
     assert.equal(hilfeOnlineUrl(HILFE['einrichtung.code']), 'https://help.ablago.app/admin/aktuell/installation/#einrichtungscode');
-    assert.equal(hilfeOnlineUrl(HILFE['einrichtung.schluessel']), 'https://help.ablago.app/admin/aktuell/installation/#schlussel-und-notfallblatt');
+    assert.equal(hilfeOnlineUrl(HILFE['einrichtung.fertig']), 'https://help.ablago.app/admin/aktuell/installation/#fertig');
   });
 
   it('liefert Seiten, ergänzt den Schrägstrich und meldet Unbekanntes', async () => {

@@ -547,8 +547,6 @@
   "mail.fehler.sonst": "Der Server hat abgelehnt. Die Antwort steht darunter.",
   "mail.titel": "E-Mail-Versand",
   "mail.unter": "Für Einladungen, „Passwort vergessen“, die tägliche Zusammenfassung und Hinweise bei geänderter E-Mail-Adresse oder geändertem Passwort. Ohne E-Mail-Versand zeigt die Benutzerverwaltung die Links zum Kopieren an.",
-  "mail.titel.assistent": "E-Mail-Versand",
-  "mail.unter.assistent": "Für Einladungen, Passwort-Links und die tägliche Zusammenfassung. Meist genügen deine Adresse und dein Passwort, den Rest schlägt der Assistent vor. „Weiter“ übernimmt die Angaben; ohne Passwort bleibt der Versand aus.",
   "mail.gegenstand": "E-Mail-Einstellungen",
   "mail.gespeichert": "Gespeichert – gilt ab sofort.",
   "mail.aktiv": "E-Mails verschicken",

@@ -4,6 +4,7 @@
  * `t('<bereich>.<schluessel>', { platzhalter })` abgerufen; ein neuer Bereich wird unten ergänzt.
  */
 import { uebersetzer } from '../../shared/src/sprache';
+import einrichtung from '../../shared/src/sprachen/de/einrichtung.json';
 import anmeldung from '../../shared/src/sprachen/de/anmeldung.json';
 import mail from '../../shared/src/sprachen/de/mail.json';
 import konten from '../../shared/src/sprachen/de/konten.json';
@@ -15,6 +16,6 @@ import api from '../../shared/src/sprachen/de/api.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import automatisierung from '../../shared/src/sprachen/de/automatisierung.json';
 
-export const t = uebersetzer({ api, anmeldung, konten, mail, mappen, pakete, systemzustand, webhook, werkbank });
+export const t = uebersetzer({ api, anmeldung, einrichtung, konten, mail, mappen, pakete, systemzustand, webhook, werkbank });
 /** Texte der Automatisierungen (#678: Ergebnis der Dann-Karten, die der Server bereitstellt). */
 export const tAuto = uebersetzer({ automatisierung });

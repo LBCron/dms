@@ -74,6 +74,7 @@ nav:
   - Installation und Betrieb:
       - Einrichtung und Betrieb: installation.md
       - E-Mail-Versand: e-mail-versand.md
+      - Einrichtung als Datei: einrichtungsdatei.md
       - "Wie komme ich an ein DMS?": https://help.ablago.app/installieren/aktuell/
       - Aktualisieren und Sichern: aktualisieren.md
       - Wachsen und umziehen: wachsen.md

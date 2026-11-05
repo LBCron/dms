@@ -38,6 +38,9 @@ async function einrichten() {
   const [email, passwort] = BENUTZER.admin;
   await api('POST', '/api/konto/einrichten', { mandant: 'Familie Messung', email, name: 'Anna Admin', passwort });
   const admin = cookie;
+  // Den Assistenten schließen (#804): erst mit Schlüssel und heruntergeladenem Notfallblatt.
+  await api('POST', '/api/werkbank/tresor/erzeugen').catch(() => {});
+  await fetch(`${BASIS}/api/werkbank/notfallblatt`, { headers: { cookie } }).then((r) => r.arrayBuffer()).catch(() => {});
   await api('POST', '/api/werkbank/einrichtung/schritt', { schritt: 'fertig' }).catch(() => {});
   await api('POST', '/api/beispiele');
   await api('POST', '/api/werkbank/demo', { anzahl: Number(arg('--mappen') ?? 10000), startwert: 'ladezeit-477' });
