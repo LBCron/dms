@@ -570,7 +570,7 @@ export function pruefeMappentyp(t: MappentypDaten, ctx: TypKontext): Pruefergebn
 export interface MappenKontext {
   /** Typ-Id der Mappe mit dieser Id, oder undefined, wenn es sie nicht gibt. */
   typVon: (mappeId: string) => string | undefined;
-  /** Titel einer anderen Mappe desselben Typs mit gleichem Wert, sonst undefined. */
+  /** Titel einer anderen Mappe desselben Typs mit gleichem Wert ('' = vorhanden, aber nicht lesbar), sonst undefined. */
   doppelt: (feldKey: string, wert: string | number) => string | undefined;
 }
 
@@ -638,7 +638,8 @@ export function pruefeMappe(t: Pick<Mappentyp, 'felder'>, werte: Werte, ctx: Map
     }
     if (!p.felder[f.key] && f.eindeutig && (f.typ === 'text' || f.typ === 'zahl')) {
       const titel = ctx.doppelt(f.key, v as string | number);
-      if (titel !== undefined) fehler(f.key, `Bereits vergeben in „${titel}“.`);
+      // Leer: die andere Mappe darf der Benutzer nicht sehen – dann ohne ihren Titel (#743).
+      if (titel !== undefined) fehler(f.key, titel ? `Bereits vergeben in „${titel}“.` : 'Bereits vergeben.');
     }
   }
   return p;

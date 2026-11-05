@@ -34,9 +34,9 @@ export const OHNE_FOLGEN = new Set<string>([
   // lesen
   'listeTypen', 'holeTyp', 'zaehleMappen', 'listeMappen', 'mappenMitDatum', 'mappenKurz', 'feldwerte', 'holeMappe',
   'listePakete', 'paketCode', 'faelligeEreignisse', 'ereignisStand', 'listeNummernkreise', 'findeArchivnummer', 'holeSystemMappe',
-  'holeMappen', 'titelVon', 'quellenVon', 'bezuege', 'seite', 'zaehler', 'alleFavoriten', 'auskunftLinkPerSchluessel', 'auskunftLinks',
+  'holeMappen', 'titelVon', 'quellenVon', 'bezuege', 'seite', 'gibtTreffer', 'zaehler', 'alleFavoriten', 'auskunftLinkPerSchluessel', 'auskunftLinks',
   'favoritenVon', 'favoritenDerMappe', 'gibtMappen', 'stummeFavoriten', 'geaendertVonAnderen', 'zaehleKlauseln', 'lesbare', 'inKlauseln',
-  'zaehleAusdruck', 'listeSichten', 'unpassende', 'typenOhnePassung', 'belegung', 'ohneTitel', 'typenVon', 'findeDoppelt',
+  'zaehleAusdruck', 'listeSichten', 'unpassende', 'typenOhnePassung', 'belegung', 'ohneTitel', 'typenVon', 'findeDoppelt', 'findeDoppelte',
   'rueckverweise', 'kantenVon', 'listeDokumente', 'dokumenteVon', 'zaehleDokumente', 'holeDokument', 'versionenVon',
   'versionenVonDokumenten', 'holeVersion', 'alleDateien', 'dokumenteMitSha', 'dokumenteMitTyp', 'dokumentTypen', 'grossePdfs', 'dokumenteJeRegister', 'zaehleDemo',
   'echteVerweiseAufDemo', 'papierkorb', 'zaehlePapierkorb', 'dateiBenutzt', 'papierkorbDokumente', 'holeAusPapierkorb', 'holeDokumentAusPapierkorb',
@@ -61,7 +61,7 @@ export const OHNE_FOLGEN = new Set<string>([
   // Der Verteiler fragt alle 2 Sekunden nach (`holeKatalogEreignisse`) – zählte das, wären Zahlen und Termine
   // nie länger als 2 Sekunden gültig (Lasttest: Speicher und Ereignisschleife, seit #725 die Termine eines ganzen
   // Jahres für die Startseite rechnen).
-  'legeKatalogEreignisAn', 'holeKatalogEreignisse', 'katalogEreignisVerteilt', 'katalogEreignisFehlgeschlagen',
+  'legeKatalogEreignisAn', 'holeKatalogEreignisse', 'katalogEreignisseVerteilt', 'katalogEreignisFehlgeschlagen',
   'raeumeKatalogEreignisseAuf', 'katalogEreignisStand', 'merkeFristMeldung',
 ]);
 

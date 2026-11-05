@@ -1,7 +1,7 @@
 /**
  * Suche unter Last (#615): gefalteter Suchtext der Mappen als gespeicherte Spalte (Migration 055), „Zuletzt
  * geöffnet“ und „gesehen“ in einem Zugriff und ohne Warten auf die Platte, Spalten der Mappen ohne Suchtext.
- * Die Treffer der Suche bleiben dieselben – mit und ohne Suchtext. PostgreSQL nur mit TEST_DATABASE_URL.
+ * Die Treffer der Suche bleiben dieselben; seit #740 ist der Suchtext nie leer. PostgreSQL nur mit TEST_DATABASE_URL.
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
@@ -73,13 +73,14 @@ describe('Suchtext der Mappen (#615) – PostgreSQL', { skip: !process.env.TEST_
     assert.doesNotMatch(y.suchtext as string, /geheimwort|dms1/);
     assert.deepEqual(await suche('geheimwort'), []);
 
-    // Ohne Suchtext (NULL) sucht es wie bisher: dieselben Treffer.
+    // Seit #740 nie leer (Migration 075): NOT NULL, auch an einem abgeschalteten Trigger vorbei nicht.
     await sql`ALTER TABLE mappen DISABLE TRIGGER mappen_suchtext`;
-    await sql`UPDATE mappen SET suchtext = NULL`;
+    await assert.rejects(sql`UPDATE mappen SET suchtext = NULL`, /null value|NOT NULL|not-null/i);
     await sql`ALTER TABLE mappen ENABLE TRIGGER mappen_suchtext`;
-    for (const [s, erwartet] of [...faelle.filter(([w]) => !['Strasse', 'gebuhr'].includes(w)), ['wasser', ['Stromvertrag']] as [string, string[]]]) {
-      assert.deepEqual(await suche(s), erwartet, `ohne Suchtext: ${s}`);
-    }
+    // Ohne Trigger angelegt: leer statt NULL – der Trigger füllt ihn beim nächsten Schreiben.
+    const [z] = await sql`SELECT column_default, is_nullable FROM information_schema.columns WHERE table_name = 'mappen' AND column_name = 'suchtext'`;
+    assert.equal(z.is_nullable, 'NO');
+    assert.match(String(z.column_default), /''/);
   });
 
   it('Mappen lesen den Suchtext nie mit; Sicherung und Papierkorb lassen ihn weg, Wiederherstellen füllt ihn neu', async () => {

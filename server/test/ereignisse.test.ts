@@ -130,7 +130,8 @@ describe('Ereigniskatalog (#670): Ausgangskorb und Verteiler', () => {
     await d.legeMappeAn({ typId: notiz.id, werte: { name: 'Zettel' } }, admin.id);
     await verteile();
     await spaeter(2 * 60_000, () => d.ereignisse.verteile());
-    const beimPaket = (await repo.faelligeEreignisse(50)).filter((e) => e.paketId === 'fristen');
+    // Verteilt wird erst nach dem Speichern (#743: Anlegen in einer Transaktion) – im Test also mit vorgestellter Uhr.
+    const beimPaket = (await spaeter(2 * 60_000, () => repo.faelligeEreignisse(50))).filter((e) => e.paketId === 'fristen');
     assert.equal(beimPaket.length, 1, 'nur der Vertrag, und nur einmal');
     assert.equal(beimPaket[0].art, 'mappe.angelegt');
     assert.equal(beimPaket[0].daten.mappe, m.id);

@@ -93,6 +93,7 @@ export const V1_TABELLE: V1[] = [
       { name: 'volltext', wo: 'query', typ: 'boolean', beschreibung: 'true = auch im Volltext der Dokumente suchen (Wortstämme in der Sprache jedes Dokuments, #400, z. B. „Rechnungen“ findet „Rechnung“, „invoices“ findet „invoice“); Fundstellen stehen in ausschnitte. Umlaute, ß und Bindestriche gleicht die Suche aus, gleichbedeutende Wörter aus der Werkbank zählen mit (#356).' },
       { name: 'sortierung', wo: 'query', typ: 'string', beschreibung: 'Feldschlüssel oder _titel, _typ, _erstellt, _erstelltVon, _geaendert, _geaendertVon; Standard _titel' },
       { name: 'absteigend', wo: 'query', typ: 'boolean', beschreibung: 'true = absteigend' },
+      { name: 'gesamt', wo: 'query', typ: 'integer', beschreibung: 'Beim Blättern ohne suche (von > 0): gesamt aus der Antwort zum ersten Blatt. Dann zählt der Server nicht noch einmal und gibt diese Zahl zurück (#740); ohne Angabe wird gezählt.' },
       passwoerter,
     ],
     antwort: 'Seite',

@@ -19,7 +19,14 @@ export interface Verweis { feldKey: string; zielId: string }
  * `verweise` berechnet die Verweise aus dem Ergebnis. Mit `stand` (Zeitpunkt „zuletzt geändert“ als ISO-Text)
  * schreibt die Datenbank nur, wenn die Mappe noch genau diesen Stand hat, sonst kommt `StandVeraltet`.
  */
-export interface FeldweiseSchreiben { basis: Werte; verweise: (werte: Werte) => Verweis[]; stand?: string }
+export interface FeldweiseSchreiben {
+  basis: Werte; verweise: (werte: Werte) => Verweis[]; stand?: string;
+  /**
+   * Titel zu den Werten, die tatsächlich geschrieben werden (#743): im selben UPDATE gesetzt. undefined = nicht
+   * bekannt (z. B. ein Verweis, dessen Titel nicht vorab gelesen wurde) – dann bleibt der Titel, wie er ist.
+   */
+  titel?: (werte: Werte) => string | undefined;
+}
 
 /** Die Mappe hat sich zwischen Lesen und Schreiben geändert (#609) – neu lesen und noch einmal versuchen. */
 export class StandVeraltet extends Error {
@@ -78,6 +85,11 @@ export interface SeitenAnfrage {
   lesen?: Lesefilter | null;
   von: number;
   anzahl: number;
+  /**
+   * Gesamtzahl vom ersten Blatt (#740): Ohne Suche zählt das Repo beim Blättern (von > 0) nicht noch einmal, sondern
+   * gibt diese Zahl zurück (mindestens so viele, wie bis hier geliefert sind). Fehlt sie, wird gezählt.
+   */
+  gesamt?: number;
 }
 /** Gruppe gleichbedeutender Wörter (#356); quelle „werkbank“ oder die Id eines Pakets. */
 export interface Synonymgruppe { id: string; woerter: string[]; quelle: string }
@@ -214,7 +226,8 @@ export interface Repo {
   legeKatalogEreignisAn(e: NeuesKatalogEreignis, mische?: (alt: Record<string, unknown>) => Record<string, unknown>): Promise<string>;
   /** Fällige Ereignisse holen und für `sperreS` Sekunden für diesen Server sperren (mehrere Server); älteste zuerst. */
   holeKatalogEreignisse(anzahl: number, sperreS: number): Promise<GespeichertesKatalogEreignis[]>;
-  katalogEreignisVerteilt(id: string): Promise<void>;
+  /** Diese Ereignisse sind an alle Abnehmer verteilt (#743: gesammelt in einer Anweisung). */
+  katalogEreignisseVerteilt(ids: string[]): Promise<void>;
   /** Fehlschlag merken; naechster null = aufgeben (gilt als verteilt, Fehler bleibt stehen). */
   katalogEreignisFehlgeschlagen(id: string, fehler: string, naechster: Date | null): Promise<void>;
   /** Verteiltes nach `tage` Tagen löschen, alte Fristmeldungen nach einem Jahr. */
@@ -267,6 +280,8 @@ export interface Repo {
   bezuege(ids: string[]): Promise<Map<string, MappenBezug>>;
   /** Eine Seite einer Sicht, sortiert nach Titel. */
   seite(o: SeitenAnfrage): Promise<{ gesamt: number; mappen: Mappe[]; ausschnitte?: Record<string, Ausschnitt> }>;
+  /** Ob die Anfrage mindestens eine Mappe findet (#740, „Meintest du …?“) – ohne zu zählen und ohne Seite. */
+  gibtTreffer(o: SeitenAnfrage): Promise<boolean>;
   /** Zähler für die Sichten. `lesen` gilt für typen und favoriten; eingang zählt immer ohne Lesefilter (#127: auch Aufgaben zu nicht lesbaren Mappen, #477: eigene schnelle Abfrage). */
   /** Gibt es mindestens eine Mappe dieser Typen? (Startseite, #334 – ohne alle zu zählen, #615) */
   gibtMappen(typIds: string[]): Promise<boolean>;
@@ -341,6 +356,12 @@ export interface Repo {
   typenVon(ids: string[]): Promise<Map<string, string>>;
   /** Eine andere Mappe desselben Typs mit gleichem Wert (Groß-/Kleinschreibung egal). */
   findeDoppelt(typId: string, feldKey: string, wert: string, ausser?: string): Promise<Mappe | undefined>;
+  /**
+   * Viele Prüfungen „Bereits vergeben“ auf einmal (#743), über den Index der Feldwerte: je Eintrag (Mappe, Feld, Wert)
+   * eine andere Mappe desselben Typs mit gleichem Wert (ohne Groß-/Kleinschreibung und Leerzeichen am Rand).
+   * Schlüssel des Ergebnisses: `${mappeId}|${feldKey}`.
+   */
+  findeDoppelte(typId: string, liste: Array<{ mappeId: string | null; feldKey: string; wert: string }>): Promise<Map<string, { id: string; titel: string }>>;
   rueckverweise(zielId: string): Promise<Rueckverweis[]>;
   /** Baum-Sammlung (#396, #424): alle Verweise, deren Quelle oder Ziel eine dieser Mappen ist (beide Richtungen). */
   kantenVon(ids: string[]): Promise<Kante[]>;

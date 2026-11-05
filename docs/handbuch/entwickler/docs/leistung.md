@@ -192,6 +192,28 @@ Ausgabe je Durchgang: Anfragen, je Sekunde, Median, p95, p99, Fehlerquote (5xx u
 
 Lasttest mittel auf dem Testrechner (2 Kerne, Lasttest auf demselben Rechner, PostgreSQL 16): p95 vorher 3,9 s, nachher 0,75 s (120 s je Lauf); Zahlen je Aktion in den Release-Notes von #615. Danach ist der eine Faden von Node.js der Engpass (Antworten in JSON wandeln, Masken für Passwörter, Socket-Schreiben von postgres.js), nicht mehr die Datenbank.
 
+**Beschleunigt in #740 und #743** (Suche, Listen, Speichern; Migration 075):
+
+1. **Suche über Indizes.** `mappen.suchtext` ist nie leer (NOT NULL) und hat einen Trigramm-Index. Die Treffer kommen als eine Id-Menge (`UNION` aus Mappe, Notizen und Dokumenten, je über ihren Index), erst danach prüft die Abfrage Typ, Bedingungen und Lesefilter; Gesamtzahl und Seite in einer Abfrage (`count(*) OVER ()`). Ob „Meintest du …?“ etwas findet, fragt `gibtTreffer` (`EXISTS … LIMIT 1`).
+2. **Sortieren über Indizes.** `(haushalt_id, lower(titel), id)` für Ansichten über mehrere Typen, `(haushalt_id, typ_id, erstellt|geaendert)` und `(haushalt_id, erstellt|geaendert)`. Absteigend liest PostgreSQL denselben Index rückwärts; dafür steht bei Titel, Erstellt und Geändert kein `NULLS LAST` in der Abfrage (die Spalten sind NOT NULL, ein Titel fehlt nur kurz vor dem ersten Berechnen). Ohne Suche zählt nur das erste Blatt; beim Blättern schickt die Oberfläche die Zahl mit (`gesamt`).
+3. **Dublettenprüfung über einen Index.** `dms_gleichwerte(werte)` liefert je Text- und Zahlwert einen Fingerabdruck aus Feldschlüssel und `lower(trim(wert))` (md5 als uuid); der GIN-Index darüber findet gleiche Werte, danach wird genau verglichen. `findeDoppelte` prüft viele Mappen in einer Abfrage (Passung nach dem Speichern).
+4. **Speichern in einem Zug.** Anlegen und Ändern laufen in einer Transaktion (bei Verklemmung von vorn), der Titel steht im selben UPDATE wie die Werte. Der Ereignisverteiler setzt „verteilt“ je Abholung in einer Anweisung.
+
+Gemessen mit 50.000 Demo-Mappen und 25.000 Dokumenten (Mess-Skript, Median aus 7 Läufen, `Dienst.seite` bzw. `aendereMappe`, 2 Kerne, PostgreSQL 16):
+
+| Fall | vorher | nachher |
+|---|---:|---:|
+| Alle Typen, Titel ↑ | 98 ms | 14 ms |
+| Alle Typen, erstellt ↓ | 141 ms | 9 ms |
+| Rechnung, Titel ↓ | 61 ms | 8 ms |
+| Rechnung, erstellt ↓ | 50 ms | 7 ms |
+| Suche „Strom“ über alle Typen | 88 ms | 14 ms |
+| Suche „Strom“ mit Notizen und Volltext | 381 ms | 164 ms |
+| Suche ohne Treffer | 56 ms | 2 ms |
+| Vertrag speichern (eindeutiges Feld) | 33 ms | 12 ms |
+
+Einzelne Abfragen (`EXPLAIN ANALYZE`): Seite über alle Typen nach Titel 49 → 0,6 ms, nach Erstellt absteigend 54 → 0,5 ms, Rechnung nach Erstellt absteigend 33 → 0,3 ms, Dublette Vertragsnummer 17 → 0,2 ms. Lasttest mittel (30 s je Durchgang, Lasttest auf demselben Rechner): p95 1274 → 693 ms; mit Speichern p95 3,8 → 3,2 s, schreibende Anfragen p50 2,3 → 1,7 s. Die Tabelle `mappen` wächst mit den Indizes von 46 auf 76 MB; die Migration dauerte 4 s.
+
 **Messung zu #542** (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.
 
 ## Regeln

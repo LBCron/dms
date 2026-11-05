@@ -539,9 +539,11 @@ export const api = {
   typAendern: (id: string, t: unknown) => anfrage<Mappentyp>('PUT', `/api/typen/${id}`, t),
   typLoeschen: (id: string) => anfrage<null>('DELETE', `/api/typen/${id}`),
   /** Eine Seite einer Sicht („eingang“, Sicht- oder Typ-Id; „link“ mit den Parametern eines sprechenden Links, #98). */
-  seite: (sicht: string, von = 0, anzahl = 100, suche = '', sortierung?: Sortierung | null, volltext = false, notizen = false, link?: string, eigene?: Werte) =>
+  seite: (sicht: string, von = 0, anzahl = 100, suche = '', sortierung?: Sortierung | null, volltext = false, notizen = false, link?: string, eigene?: Werte, gesamt?: number) =>
     anfrage<Seite>('GET', `/api/mappen?${new URLSearchParams({
       sicht, ...(link !== undefined ? { link } : {}), ...(eigene ? { eigene: JSON.stringify(eigene) } : {}), von: String(von), anzahl: String(anzahl), ...(suche ? { suche } : {}), ...(suche && volltext ? { volltext: 'true' } : {}), ...(suche && notizen ? { notizen: 'true' } : {}),
+      // Beim Blättern (#740): die Zahl vom ersten Blatt – der Server zählt dann nicht noch einmal.
+      ...(gesamt !== undefined && von > 0 ? { gesamt: String(gesamt) } : {}),
       ...(sortierung ? { sortierung: sortierung.spalte, absteigend: String(sortierung.absteigend) } : {}),
     })}`),
   /** Alle Treffer einer Sicht als Ids (#149) – mit derselben Suche wie die Liste. */

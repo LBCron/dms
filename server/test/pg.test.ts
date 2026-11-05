@@ -1083,7 +1083,7 @@ describe('PostgreSQL: Ereigniskatalog (#670)', { skip: url ? false : 'TEST_DATAB
     assert.equal(wieder[0].versuche, 1);
     // Ein fehlgeschlagenes Ereignis wird nicht mehr gebündelt – die nächste Änderung ist ein neues.
     await neu('00000000-0000-4000-8000-000000006703', ['notiz']);
-    await r.katalogEreignisVerteilt(e.id);
+    await r.katalogEreignisseVerteilt([e.id]);
     const stand = await r.katalogEreignisStand();
     assert.equal(stand.offen, 1);
     assert.equal(stand.verteilt, 1);

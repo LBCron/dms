@@ -33,12 +33,12 @@ export function useSeiten(sicht: string | undefined, suche: string, stand: numbe
   const lauf = useRef(0);
   const geladen = useRef(0);
 
-  const lade = useCallback(async (von: number, anzahl: number, ersetzen: boolean) => {
+  const lade = useCallback(async (von: number, anzahl: number, ersetzen: boolean, bekannt?: number) => {
     if (!sicht) return;
     const nr = ++lauf.current;
     setLaedt(true);
     try {
-      const s = await api.seite(sicht, von, anzahl, suche, sortierung, volltext, notizen, link);
+      const s = await api.seite(sicht, von, anzahl, suche, sortierung, volltext, notizen, link, undefined, bekannt);
       if (nr !== lauf.current) return; // überholt
       setGesamt(s.gesamt);
       if (ersetzen) setUnscharf(s.unscharf ?? null);
@@ -69,7 +69,7 @@ export function useSeiten(sicht: string | undefined, suche: string, stand: numbe
 
   const mehr = useCallback(() => {
     if (laedt || gesamt === null || mappen.length >= gesamt) return;
-    void lade(mappen.length, SEITE, false);
+    void lade(mappen.length, SEITE, false, gesamt);
   }, [laedt, gesamt, mappen.length, lade]);
 
   /** Gesehen (geöffnet oder „Alle als gesehen markieren“): Hervorhebung sofort weg. */
