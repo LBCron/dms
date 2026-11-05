@@ -4,7 +4,6 @@
  * ein Fehler als einfaches Objekt und wird wieder zum Fachfehler.
  */
 import { Fachfehler } from '../fehler';
-import { t } from '../sprache';
 
 export interface Auftrag { id: number; vorgang: string; args: unknown[] }
 export type Antwort = { id: number; ok: true; ergebnis: unknown } | { id: number; ok: false; fehler: FehlerDaten };
@@ -30,6 +29,6 @@ export function fehlerDaten(e: unknown): FehlerDaten {
 
 export function fehlerAus(d: FehlerDaten): Error {
   const e = d.status ? new Fachfehler(d.status, d.message, d.details) : new Error(d.message);
-  if (d.stack) e.stack = t('meldungen.nachricht.im-arbeiter', { stack: String(e.stack), stack2: d.stack });
+  if (d.stack) e.stack = `${e.stack}\n--- im Arbeiter ---\n${d.stack}`;
   return e;
 }
