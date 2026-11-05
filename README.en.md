@@ -23,7 +23,7 @@
 
 Instead of loose files in folders, you create **folders with structure** ("Mappen"): for the contract, the invoice, the heating system, the tradesperson. Mappen link to each other. From the heating system you find the maintenance contract, from there every invoice and the tradesperson who issued it. And Ablago reminds you of the notice period in good time.
 
-> Ablago itself, its user interface and its manuals are in **German**. An English user interface is planned ([#357](https://github.com/motom001/dms/issues/357)). Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
+> Ablago itself and its user interface are in **German**; the manuals are also available in **English**. An English user interface is planned ([#357](https://github.com/motom001/dms/issues/357)). Issues and pull requests are welcome in German or English – see [CONTRIBUTING.en.md](CONTRIBUTING.en.md).
 
 <!-- Screenshot from the manual workflow (#290): retaken with every release, sample data only. The user interface
      exists in German only, so the screenshot is German and marked as such (#574); readme.en.png follows with #357. -->
@@ -38,9 +38,9 @@ Instead of loose files in folders, you create **folders with structure** ("Mappe
 
 <img alt="Who we build Ablago for, on a scale from private to business: core focus on beginner families, family members and household admins; focus on looking after parents, landlords, the self-employed and small businesses; supported for mid-sized companies; not in focus for large enterprises" src="docs/handbuch/benutzer/docs/grafiken/personas-skala.en.svg" width="100%">
 
-Ablago is built for **families** and for **self-employed people and small businesses**. It also fits well if you **look after your parents** or **rent out a few flats**. We **support** mid-sized companies; Ablago is not made for **large enterprises**. Why the self-employed and small businesses joined the focus in November 2026: many features already help exactly them (archive mode, procedure documentation, rights per role, mailboxes, deputies, sign-in via a provider, automations), and the load tests show that Ablago copes with much larger installations ([what Ablago can handle](https://help.ablago.app/admin/aktuell/verkraftet/)). When in doubt, simplicity for families still wins.
+Ablago is built for **families** and for **self-employed people and small businesses**. It also fits well if you **look after your parents** or **rent out a few flats**. We **support** mid-sized companies; Ablago is not made for **large enterprises**. Why the self-employed and small businesses joined the focus in November 2026: many features already help exactly them (archive mode, procedure documentation, rights per role, mailboxes, deputies, sign-in via a provider, automations), and the load tests show that Ablago copes with much larger installations ([what Ablago can handle](https://help.ablago.app/admin/aktuell/en/verkraftet/)). When in doubt, simplicity for families still wins.
 
-Whether it suits you is shown in [Is Ablago right for me?](https://help.ablago.app/benutzer/aktuell/wofuer/#ist-das-dms-etwas-fur-mich) – with the [5-minute test](https://help.ablago.app/benutzer/aktuell/wofuer/#der-5-minuten-test) (German).
+Whether it suits you is shown in [Is Ablago right for me?](https://help.ablago.app/benutzer/aktuell/en/wofuer/#ist-das-dms-etwas-fur-mich) – with the [5-minute test](https://help.ablago.app/benutzer/aktuell/en/wofuer/#der-5-minuten-test).
 
 ## What you get
 
@@ -61,18 +61,18 @@ Ablago is designed for data protection (Art. 25 GDPR) – for your family's data
 - **Retain, lock, delete:** Archive mode with deletion lock until the retention period ends, the list "May go" and a recycle bin – building blocks for your deletion concept, with a template.
 - **Take your data with you:** Every user exports their own data, administrators everything – in open formats.
 
-Software alone does not make data protection – your processes are part of it. What Ablago offers and what you handle yourself: **[Data protection in Ablago](https://help.ablago.app/admin/aktuell/datenschutz/)** (German).
+Software alone does not make data protection – your processes are part of it. What Ablago offers and what you handle yourself: **[Data protection in Ablago](https://help.ablago.app/admin/aktuell/en/datenschutz/)**.
 
 ## How to get a DMS
 
-| You have … | This is how (guides in German) |
+| You have … | This is how |
 | --- | --- |
-| a home server with **umbrelOS, ZimaOS or CasaOS** | from the [Ablago App Store](https://github.com/motom001/dms-appstore) with one click: [umbrelOS](https://help.ablago.app/installieren/aktuell/umbrel/), [ZimaOS](https://help.ablago.app/installieren/aktuell/zimaos/), [CasaOS](https://help.ablago.app/installieren/aktuell/casaos/) |
-| a **NAS** from Synology, UGREEN, QNAP, TrueNAS or Unraid | paste a ready-made template into the Docker interface: [guides](https://help.ablago.app/installieren/aktuell/) |
-| a **PC, Raspberry Pi or server with Docker** | [Docker Compose](https://help.ablago.app/installieren/aktuell/docker/) or, to try it out, [a single container](https://help.ablago.app/installieren/aktuell/komplett/) |
-| **no server of your own** | [Without your own server: Ablago at a provider](https://help.ablago.app/installieren/aktuell/anbieter/) – three ways and a checklist of what to look for in a provider |
+| a home server with **umbrelOS, ZimaOS or CasaOS** | from the [Ablago App Store](https://github.com/motom001/dms-appstore) with one click: [umbrelOS](https://help.ablago.app/installieren/aktuell/en/umbrel/), [ZimaOS](https://help.ablago.app/installieren/aktuell/en/zimaos/), [CasaOS](https://help.ablago.app/installieren/aktuell/en/casaos/) |
+| a **NAS** from Synology, UGREEN, QNAP, TrueNAS or Unraid | paste a ready-made template into the Docker interface: [guides](https://help.ablago.app/installieren/aktuell/en/) |
+| a **PC, Raspberry Pi or server with Docker** | [Docker Compose](https://help.ablago.app/installieren/aktuell/en/docker/) or, to try it out, [a single container](https://help.ablago.app/installieren/aktuell/en/komplett/) |
+| **no server of your own** | [Without your own server: Ablago at a provider](https://help.ablago.app/installieren/aktuell/en/anbieter/) – three ways and a checklist of what to look for in a provider |
 
-All ways at a glance: **[How do I get a DMS?](https://help.ablago.app/installieren/aktuell/)** (German)
+All ways at a glance: **[How do I get a DMS?](https://help.ablago.app/installieren/aktuell/en/)**
 
 ## What Ablago is not
 
@@ -92,13 +92,13 @@ All ways at a glance: **[How do I get a DMS?](https://help.ablago.app/installier
 
 ## Manuals
 
-All manuals are in German.
+All manuals are available in German and English; the English pages are marked as machine-translated, improvements welcome.
 
-- **[What is a DMS for?](https://help.ablago.app/benutzer/aktuell/wofuer/)** – when it helps in everyday life, with a self-check.
-- **[How do I get a DMS?](https://help.ablago.app/installieren/aktuell/)** – installing on a home server, NAS or any computer with Docker.
-- **[User manual](https://help.ablago.app/benutzer/aktuell/)** – working in the filing view: Mappen, documents, search, tasks, profile.
-- **[Administrator manual](https://help.ablago.app/admin/aktuell/)** – setup and operation, updating and backing up, workbench, troubleshooting, API.
-- **[Developer manual](https://help.ablago.app/entwickler/aktuell/)** – contributing: way of working, architecture, packages and release.
+- **[What is a DMS for?](https://help.ablago.app/benutzer/aktuell/en/wofuer/)** – when it helps in everyday life, with a self-check.
+- **[How do I get a DMS?](https://help.ablago.app/installieren/aktuell/en/)** – installing on a home server, NAS or any computer with Docker.
+- **[User manual](https://help.ablago.app/benutzer/aktuell/en/)** – working in the Library: folders, documents, search, tasks, profile.
+- **[Administrator manual](https://help.ablago.app/admin/aktuell/en/)** – setup and operation, updating and backing up, workbench, troubleshooting, API.
+- **[Developer manual](https://help.ablago.app/entwickler/aktuell/en/)** – contributing: way of working, architecture, packages and release.
 
 Inside Ablago, **Hilfe** (help) in the menu under your own name leads there. What was added in which version is listed in the **[releases](https://github.com/motom001/dms/releases)**.
 
@@ -110,7 +110,7 @@ The image `ghcr.io/motom001/dms` is public – you do not need to sign in to the
 2. Next to it, put a file `.env` with `DB_PASSWORD=<long random password>`.
 3. Start it and open `http://<NAS>:8080`. A wizard guides you through the setup: setup code (shown in the container log and in `geheim/EINRICHTUNGSCODE`), database, then **set up new** or **restore from a backup**, name of your filing system, administrator, first user, key and emergency sheet.
 
-`ghcr.io/motom001/dms:stabil` (used by all templates) follows the tested releases; `:main` follows every state of `main` and is for testing only; with a version number, i.e. `ghcr.io/motom001/dms:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on a release. Everything else is in the administrator manual under [Setup and operation](https://help.ablago.app/admin/aktuell/installation/) and [Updating and backing up](https://help.ablago.app/admin/aktuell/aktualisieren/) (German).
+`ghcr.io/motom001/dms:stabil` (used by all templates) follows the tested releases; `:main` follows every state of `main` and is for testing only; with a version number, i.e. `ghcr.io/motom001/dms:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on a release. Everything else is in the administrator manual under [Setup and operation](https://help.ablago.app/admin/aktuell/en/installation/) and [Updating and backing up](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
 
 ## Security and openness
 
@@ -118,7 +118,7 @@ Ablago manages personal documents – which is why everything can be checked ope
 
 ## Requests and bugs
 
-As an [issue](https://github.com/motom001/dms/issues/new/choose) in the form of a user story with acceptance criteria – in German or English. What gets implemented is what the maintainer labels `freigegeben` (approved). What comes next and in which order is in the [roadmap](ROADMAP.md) (German). How contributing works is described in [CONTRIBUTING.en.md](CONTRIBUTING.en.md) and in the [developer manual](https://help.ablago.app/entwickler/aktuell/) (German).
+As an [issue](https://github.com/motom001/dms/issues/new/choose) in the form of a user story with acceptance criteria – in German or English. What gets implemented is what the maintainer labels `freigegeben` (approved). What comes next and in which order is in the [roadmap](ROADMAP.md) (German). How contributing works is described in [CONTRIBUTING.en.md](CONTRIBUTING.en.md) and in the [developer manual](https://help.ablago.app/entwickler/aktuell/en/).
 
 ## Join in
 
@@ -135,7 +135,7 @@ DATABASE_URL=postgres://dms:dms@localhost:5432/dms npm run dev -w server
 npm run dev -w web              # user interface at http://localhost:5173
 ```
 
-Tests: `npm test`. Architecture, tests against PostgreSQL, packages and the way to a release are described in the [developer manual](https://help.ablago.app/entwickler/aktuell/) (German).
+Tests: `npm test`. Architecture, tests against PostgreSQL, packages and the way to a release are described in the [developer manual](https://help.ablago.app/entwickler/aktuell/en/).
 
 **New version:** Increase the version number in the three `package.json` files and write `docs/releases/v<version>.md` – release, image, manual and the screenshot above are created automatically after the merge. While doing so, briefly check whether "What you get", "For tinkerers and administrators" and the quick start are still correct – in both language versions of this README; everything detailed belongs in the manual, not here.
 

@@ -2,7 +2,7 @@
 
 [Deutsch](CONTRIBUTING.md) · **English**
 
-Thank you for your interest in Ablago! **Issues and pull requests are welcome in German or English.** How contributing works here is described in detail in the **[developer manual](https://help.ablago.app/entwickler/aktuell/)** (German). The essentials in brief:
+Thank you for your interest in Ablago! **Issues and pull requests are welcome in German or English.** How contributing works here is described in detail in the **[developer manual](https://help.ablago.app/entwickler/aktuell/en/)**. The essentials in brief:
 
 1. **Start with an issue**, written as a user story ("As a … I want …, so that …") with acceptance criteria. This applies to feature requests and bugs alike.
 2. **Discussion happens in the issue** until it is clear what will be built.
@@ -19,7 +19,7 @@ Ablago gets by with very little third-party code – this protects against suppl
 - **Maintenance** – latest release, number of maintainers?
 - **Its own dependencies** – what else does it bring into the image?
 
-The pull request template asks for this; the "Abhängigkeiten" (dependencies) check points out new dependencies in the PR. The current list with the purpose of each is in the [developer manual](https://help.ablago.app/entwickler/aktuell/aufbau/#abhaengigkeiten) (German).
+The pull request template asks for this; the "Abhängigkeiten" (dependencies) check points out new dependencies in the PR. The current list with the purpose of each is in the [developer manual](https://help.ablago.app/entwickler/aktuell/en/aufbau/#abhaengigkeiten).
 
 ## Graphics and images per language
 
@@ -27,7 +27,7 @@ Graphics containing text exist per language: `name.svg` in German, `name.en.svg`
 
 By contributing, you license your contribution under the [Apache-2.0](LICENSE). Please do not commit real documents or personal data.
 
-Ablago itself, its user interface and its manuals are in German; an English user interface and manual are planned (#357). You do not need to speak German to report a bug, suggest a feature or send a pull request.
+Ablago itself and its user interface are in German, an English user interface is planned (#357); the manuals are also available in English (#730). You do not need to speak German to report a bug, suggest a feature or send a pull request.
 
 ## Code of conduct
 
