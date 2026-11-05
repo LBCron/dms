@@ -4,6 +4,9 @@
  * Zahl der Arbeiter: Umgebungsvariable `DMS_ARBEITER` (1–16); nicht gesetzt: die Hälfte der Kerne, die der
  * Container nutzen darf, mindestens 1, höchstens 4. `DMS_ARBEITER=0` schaltet den Pool aus: Dann läuft alles
  * wie vor #542 im Hauptfaden (nur zur Fehlersuche gedacht).
+ *
+ * Mehrere Prozesse (#745): Der Pool gilt je Prozess. Die Vorgabe teilt sich auf die Prozesse auf (mindestens 1 je
+ * Prozess), damit zusammen nicht mehr Fäden rechnen als mit einem Prozess; `DMS_ARBEITER` gilt je Prozess.
  */
 import { availableParallelism } from 'node:os';
 import { ladeArgumente } from '../laeufer/modul';
@@ -23,12 +26,15 @@ export const vorgabeArbeiter = (kerne: number) => Math.max(1, Math.min(4, Math.f
 
 export interface ArbeiterEinstellung { groesse: number; quelle: 'vorgabe' | 'umgebung'; kerne: number; fehler?: string }
 
-export function arbeiterAus(env: Record<string, string | undefined>, kerne = liesCgroup(dateiLeser).kerne ?? availableParallelism()): ArbeiterEinstellung {
+/** Vorgabe je Prozess bei mehreren Prozessen (#745). */
+export const vorgabeJeProzess = (kerne: number, prozesse: number) => Math.max(1, Math.floor(vorgabeArbeiter(kerne) / Math.max(1, prozesse)));
+
+export function arbeiterAus(env: Record<string, string | undefined>, kerne = liesCgroup(dateiLeser).kerne ?? availableParallelism(), prozesse = 1): ArbeiterEinstellung {
   const k = Math.max(1, Math.round(kerne * 100) / 100);
   const roh = env.DMS_ARBEITER?.trim();
-  if (!roh) return { groesse: vorgabeArbeiter(k), quelle: 'vorgabe', kerne: k };
+  if (!roh) return { groesse: vorgabeJeProzess(k, prozesse), quelle: 'vorgabe', kerne: k };
   const n = Number(roh);
-  if (!Number.isInteger(n) || n < 0 || n > ARBEITER_MAX) return { groesse: vorgabeArbeiter(k), quelle: 'vorgabe', kerne: k, fehler: t('meldungen.index.dms-arbeiter-ist-keine', { roh, ARBEITER_MAX }) };
+  if (!Number.isInteger(n) || n < 0 || n > ARBEITER_MAX) return { groesse: vorgabeJeProzess(k, prozesse), quelle: 'vorgabe', kerne: k, fehler: t('meldungen.index.dms-arbeiter-ist-keine', { roh, ARBEITER_MAX }) };
   return { groesse: n, quelle: 'umgebung', kerne: k };
 }
 
@@ -38,8 +44,8 @@ let pool: Arbeiterpool | null = null;
 const datei = () => new URL(import.meta.url.endsWith('.ts') ? './arbeitsfaden.ts' : './arbeitsfaden.mjs', import.meta.url);
 
 /** Einstellung lesen und den Pool anlegen (beim Start des Servers; sonst beim ersten Auftrag). */
-export function richteArbeiterEin(env: Record<string, string | undefined> = process.env, o: { vorwaermen?: boolean } = {}): ArbeiterEinstellung {
-  einstellung = arbeiterAus(env);
+export function richteArbeiterEin(env: Record<string, string | undefined> = process.env, o: { vorwaermen?: boolean; prozesse?: number } = {}): ArbeiterEinstellung {
+  einstellung = arbeiterAus(env, undefined, o.prozesse);
   pool = einstellung.groesse > 0 ? new Arbeiterpool({ datei: datei(), groesse: einstellung.groesse, zeitMs: ARBEIT_ZEIT_MS, warteschlangeMax: WARTESCHLANGE_MAX, execArgv: ladeArgumente(process.execArgv) }) : null;
   if (o.vorwaermen) pool?.vorwaermen();
   return einstellung;

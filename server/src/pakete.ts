@@ -28,6 +28,8 @@ import type { Projektschluessel } from './projektschluessel';
 import { t } from './sprache';
 import { crc32 } from './zip';
 import { gebietsschema } from '../../shared/src/sprache';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const log = protokoll.modul('werkbank');
 
@@ -488,6 +490,12 @@ export interface PaketOptionen {
    * wenn mehrere Server dieselbe Datenbank nutzen. Ohne (Tests): keine.
    */
   sperre?: <T>(f: () => Promise<T>) => Promise<T>;
+  /**
+   * Mehrere Prozesse (#745): Ordner für hochgeladene Pakete bis zur Installation (30 Minuten) – die Installation landet
+   * vielleicht bei einem anderen Prozess als das Hochladen. Je Upload das Archiv und seine Angaben, nur für den
+   * Dienstbenutzer lesbar, Name aus dem Hash der Kennung. Ohne: nur im Arbeitsspeicher (ein Prozess, Tests).
+   */
+  uploadOrdner?: string;
 }
 
 /** Schnittstelle zum Paket-Läufer (#197); kommt mit den Paketen mit Code. */
@@ -560,6 +568,8 @@ export interface Abruf { url: string; offiziell: boolean; katalog: Katalog | nul
 
 /** Ein hochgeladenes, geprüftes Paket, bis es installiert wird (höchstens 30 Minuten). */
 interface Hochgeladen { paket: Paket; von: Handelnder; am: string; zeit: number; pruefung: HerkunftPruefung }
+/** Woher ein Upload stammt: einzeln hochgeladen oder aus einer Sammeldatei; das Archiv liest beides gleich (PAKET_GRENZEN). */
+type UploadArt = 'einzeln' | 'sammel';
 
 const TAG_MS = 86_400_000;
 /** Datei neben einem Katalog, z. B. katalog.sig neben katalog.json. */
@@ -897,9 +907,8 @@ export class Paketverwaltung {
     const sha256 = createHash('sha256').update(daten).digest('hex');
     const kv = this.kataloge.get(this.katalogUrl)?.katalog.pakete.find((p) => p.id === paket.manifest.id)?.versionen.find((v) => v.sha256 === sha256);
     const pruefung: HerkunftPruefung = { art: 'datei', offiziell: false, ...(kv ? { katalogversion: kv.version } : {}), bestaetigen: true };
-    for (const [k, u] of this.uploads) if (Date.now() - u.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
     const upload = randomUUID();
-    this.uploads.set(upload, { paket, von, am: new Date().toISOString(), zeit: Date.now(), pruefung });
+    await this.merkeUpload(upload, { paket, von, am: new Date().toISOString(), zeit: Date.now(), pruefung }, daten, 'einzeln');
     log.warn('Paket hochgeladen', { von: von.email, paket: paket.manifest.id, version: paket.manifest.version, bytes: daten.length, sha256, katalog: kv ? `entspricht ${kv.version}` : 'nicht abgeglichen' });
     return { upload, vorschau: mitPruefung(await this.plane(paket, undefined, await this.offiziell().catch(() => undefined)), pruefung) };
   }
@@ -974,7 +983,6 @@ export class Paketverwaltung {
     if (!reihenfolge) throw new Fachfehler(422, t('meldungen.pakete.die-abhaengigkeiten-der-pakete'));
     // Gültig signierter Stand: merken, wenn er neuer ist (ohne Internet wird nichts abgelehnt, nur angezeigt).
     if (signiert.katalog) await this.stand(this.katalogUrl, signiert.katalog, false);
-    for (const [k, u] of this.uploads) if (Date.now() - u.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
     const am = new Date().toISOString();
     const installierte = await this.d.listePakete();
     const pakete: SammelPaket[] = [];
@@ -985,7 +993,7 @@ export class Paketverwaltung {
       const drin = !!version(signiert.katalog, e);
       if (signiert.katalog && !drin) nichtImKatalog.push(`${paket.manifest.name} ${e.version}`);
       const pruefung: HerkunftPruefung = drin ? signiert.pruefung : signiert.katalog ? { art: 'datei', offiziell: false, bestaetigen: true } : signiert.pruefung;
-      this.uploads.set(upload, { paket, von, am, zeit: Date.now(), pruefung });
+      await this.merkeUpload(upload, { paket, von, am, zeit: Date.now(), pruefung }, dateien.get(e.archiv)!, 'sammel');
       const da = installierte.find((p) => p.id === e.id)?.version ?? null;
       const c = da ? vergleicheVersion(e.version, da) : 1;
       pakete.push({
@@ -1005,10 +1013,48 @@ export class Paketverwaltung {
     return { datei: { sha256, groesse: daten.length, erstellt: vz.erstellt, quelle: vz.quelle, katalog: vz.katalog, dms: vz.dms, pruefung, nichtImKatalog }, pakete };
   }
 
-  private hochgeladen(token: unknown): Hochgeladen {
-    const u = this.uploads.get(String(token ?? ''));
-    if (!u || Date.now() - u.zeit > UPLOAD_GUELTIG) throw new Fachfehler(410, t('meldungen.pakete.das-hochgeladene-paket-ist'));
-    return u;
+  /** Datei eines Uploads (#745): Name aus dem Hash der Kennung – die Kennung selbst steht nirgends. */
+  private uploadDatei(token: string, endung: 'zip' | 'json') { return join(this.o.uploadOrdner!, `${createHash('sha256').update(token).digest('hex')}.${endung}`); }
+
+  /** Upload merken: im Arbeitsspeicher und – bei mehreren Prozessen – im Upload-Ordner; Abgelaufenes fliegt dabei raus. */
+  private async merkeUpload(token: string, u: Hochgeladen, archiv: Buffer, art: UploadArt) {
+    for (const [k, x] of this.uploads) if (Date.now() - x.zeit > UPLOAD_GUELTIG) this.uploads.delete(k);
+    this.uploads.set(token, u);
+    const ordner = this.o.uploadOrdner;
+    if (!ordner) return;
+    await mkdir(ordner, { recursive: true, mode: 0o700 });
+    for (const n of await readdir(ordner).catch(() => [] as string[])) {
+      const s = await stat(join(ordner, n)).catch(() => null);
+      if (s && Date.now() - s.mtimeMs > UPLOAD_GUELTIG) await rm(join(ordner, n), { force: true });
+    }
+    await writeFile(this.uploadDatei(token, 'zip'), archiv, { mode: 0o600 });
+    await writeFile(this.uploadDatei(token, 'json'), JSON.stringify({ von: u.von, am: u.am, zeit: u.zeit, pruefung: u.pruefung, art }), { mode: 0o600 });
+  }
+
+  /** Upload vergessen (installiert): auch die Dateien. */
+  private async vergissUpload(token: string) {
+    this.uploads.delete(token);
+    if (this.o.uploadOrdner) for (const e of ['zip', 'json'] as const) await rm(this.uploadDatei(token, e), { force: true }).catch(() => {});
+  }
+
+  private async hochgeladen(token: unknown): Promise<Hochgeladen> {
+    const k = String(token ?? '');
+    const abgelaufen = () => new Fachfehler(410, t('meldungen.pakete.das-hochgeladene-paket-ist'));
+    const u = this.uploads.get(k);
+    if (u) { if (Date.now() - u.zeit > UPLOAD_GUELTIG) throw abgelaufen(); return u; }
+    // Bei einem anderen Prozess hochgeladen (#745): Archiv neu lesen – mit denselben Prüfungen wie beim Hochladen.
+    if (!this.o.uploadOrdner || !/^[0-9a-f-]{36}$/.test(k)) throw abgelaufen();
+    let angaben: { von: Handelnder; am: string; zeit: number; pruefung: HerkunftPruefung; art: UploadArt };
+    let archiv: Buffer;
+    try {
+      angaben = JSON.parse(await readFile(this.uploadDatei(k, 'json'), 'utf8'));
+      archiv = await readFile(this.uploadDatei(k, 'zip'));
+    } catch { throw abgelaufen(); }
+    if (Date.now() - angaben.zeit > UPLOAD_GUELTIG) throw abgelaufen();
+    const paket = liesPaket(liesZip(archiv, PAKET_GRENZEN));
+    const neu: Hochgeladen = { paket, von: angaben.von, am: angaben.am, zeit: angaben.zeit, pruefung: angaben.pruefung };
+    this.uploads.set(k, neu);
+    return neu;
   }
 
   /** Abhängigkeiten eines hochgeladenen Pakets kommen aus dem offiziellen Katalog (wenn schon abgerufen). */
@@ -1018,7 +1064,7 @@ export class Paketverwaltung {
 
   /** Vorschau: was angelegt bzw. ergänzt wird, Namenskonflikte, Version und Abhängigkeiten, Herkunft (#594). */
   async vorschau(e: { id?: string; version?: string; quelle?: string; upload?: string }): Promise<Vorschau> {
-    if (e.upload) { const u = this.hochgeladen(e.upload); return mitPruefung(await this.plane(u.paket, undefined, await this.offiziell()), u.pruefung); }
+    if (e.upload) { const u = await this.hochgeladen(e.upload); return mitPruefung(await this.plane(u.paket, undefined, await this.offiziell()), u.pruefung); }
     const { paket, v, katalog, pruefung } = await this.lade(String(e.id), e.version ? String(e.version) : undefined, e.quelle ? String(e.quelle) : undefined);
     return mitPruefung(await this.plane(paket, v, katalog), pruefung);
   }
@@ -1156,7 +1202,7 @@ export class Paketverwaltung {
    * Nicht aus dem offiziellen Katalog nur mit ausdrücklicher Bestätigung (#189).
    */
   async installiere(e: InstallierenEingabe, von: Handelnder): Promise<InstalliertesPaket> {
-    const hoch = e.upload ? this.hochgeladen(e.upload) : null;
+    const hoch = e.upload ? await this.hochgeladen(e.upload) : null;
     const quelle = hoch ? null : await this.erlaubt(e.quelle ? String(e.quelle) : undefined);
     const geladen = hoch ? { paket: hoch.paket, v: undefined, katalog: await this.offiziell(), pruefung: hoch.pruefung } : await this.lade(String(e.id ?? ''), e.version ? String(e.version) : undefined, quelle!);
     // Herkunft (#189, #594): bestätigen, wenn keine gültige Signatur sie belegt.
@@ -1192,7 +1238,7 @@ export class Paketverwaltung {
     const konflikte = [...vorschau.typen, ...vorschau.sichten].filter((x) => x.konflikt);
     if (konflikte.length) throw new Fachfehler(409, t('meldungen.pakete.einige-namen-gibt-es'), { gruende: konflikte.map((x) => `${x.konflikt} Vorschlag: „${x.vorschlag}“.`), konflikte: true });
     const datensatz = await this.lege(paket, herkunft, v, vorschau, e.beispiele === true && !alt, von, alt, schluesselListe(e.automatisierungen));
-    if (hoch) this.uploads.delete(String(e.upload));
+    if (hoch) await this.vergissUpload(String(e.upload));
     log.info(alt ? 'Paket aktualisiert (hochgeladen)' : 'Paket installiert', { von: von.email, paket: id, version: paket.manifest.version, ...(alt ? { vorher: alt.version } : {}), herkunft: hoch ? 'hochgeladen' : quelle, pruefung: geladen.pruefung.art + (geladen.pruefung.stand ? ` (Katalog vom ${geladen.pruefung.stand})` : ''), typen: Object.keys(datensatz.typen).length, sichten: Object.keys(datensatz.sichten).length });
     return datensatz;
   }
@@ -1481,7 +1527,7 @@ export class Paketverwaltung {
     if (uploads.length) {
       // Sammeldatei (#461): die hochgeladenen Pakete; Abhängigkeiten müssen installiert oder in der Datei sein.
       if (uploads.length > SAMMEL_PAKETE_MAX) throw new Fachfehler(422, t('pakete.ablauf.fehler.zuviele', { max: SAMMEL_PAKETE_MAX }));
-      const gelesen = uploads.map((token) => { const u = this.hochgeladen(token); return { token, u, id: u.paket.manifest.id, abhaengigkeiten: u.paket.manifest.abhaengigkeiten }; });
+      const gelesen = await Promise.all(uploads.map(async (token) => { const u = await this.hochgeladen(token); return { token, u, id: u.paket.manifest.id, abhaengigkeiten: u.paket.manifest.abhaengigkeiten }; }));
       for (const g of gelesen) if (gelesen.filter((x) => x.id === g.id).length > 1) throw new Fachfehler(422, t('pakete.ablauf.fehler.doppelt', { name: g.u.paket.manifest.name }));
       const ordnung = nachAbhaengigkeiten(gelesen);
       if (!ordnung) probleme.push(t('pakete.ablauf.fehler.kreis'));
@@ -1662,7 +1708,7 @@ export class Paketverwaltung {
         const k = [...vorschau.typen, ...vorschau.sichten].filter((y) => y.konflikt);
         if (k.length) throw new Fachfehler(409, t('meldungen.pakete.einige-namen-gibt-es'), { gruende: k.map((y) => `${y.konflikt} Vorschlag: „${y.vorschlag}“.`), konflikte: true });
         const ds = await this.lege(x.paket, x.herkunft, x.v, vorschau, beispiele.has(p.id) && !alt, von, alt, schluesselListe(ein[p.id]));
-        if (x.upload) this.uploads.delete(x.upload);
+        if (x.upload) await this.vergissUpload(x.upload);
         log.info(alt ? 'Paket aktualisiert (Ablauf)' : 'Paket installiert (Ablauf)', { von: von.email, paket: p.id, version: ds.version, ...(alt ? { vorher: alt.version } : {}), herkunft: x.herkunft.art === 'katalog' ? x.herkunft.url : 'hochgeladen', pruefung: x.pruefung.art, gebrauchtVon: p.fuer.join(', ') || '–' });
         let einst: AblaufErgebnis['installiert'][number]['einstellungen'] = p.einstellungen.length ? (spaeter.has(p.id) ? 'spaeter' : 'fertig') : 'keine';
         const w = zuSpeichern.get(p.id);

@@ -274,13 +274,13 @@ describe('Volltext-Ablauf mit Texterkennung als Paket (#458)', () => {
   it('Auftrag abbrechen: nur abbrechbare, die Arbeit endet von selbst', async () => {
     const a = new Auftraege();
     a.starte('x', 'Nicht abbrechbar', async () => { await new Promise((r) => setTimeout(r, 30)); });
-    assert.throws(() => a.abbrechen(), /lässt sich nicht abbrechen/);
+    await assert.rejects(() => a.abbrechen(), /lässt sich nicht abbrechen/);
     await a.warte();
     let schritte = 0;
     const b = a.starte('y', 'Abbrechbar', async (_f, signal) => { while (!signal!.aborted) { schritte++; await new Promise((r) => setTimeout(r, 5)); } return { schritte }; }, [], { abbrechbar: true });
     await new Promise((r) => setTimeout(r, 30));
-    assert.throws(() => a.abbrechen('falsch'), /kein Auftrag/);
-    assert.equal(a.abbrechen(b.id).abgebrochen, true);
+    await assert.rejects(() => a.abbrechen('falsch'), /kein Auftrag/);
+    assert.equal((await a.abbrechen(b.id)).abgebrochen, true);
     const ende = (await a.warte())!;
     assert.equal(ende.status, 'fertig');
     assert.ok(schritte > 0);

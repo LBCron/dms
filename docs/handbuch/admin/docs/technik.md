@@ -34,8 +34,31 @@ Ein Haushalt hat 2–6 Benutzer, ein Kleinbetrieb 10–20. Ein Benutzer löst se
 - **Überlastschutz:** Laufen schon **250** Anfragen gleichzeitig (`DMS_MAX_ANFRAGEN`), bekommt jede weitere sofort die Antwort „Ablago ist gerade sehr beschäftigt. Bitte versuche es in ein paar Sekunden noch einmal.“ (HTTP 503 mit `Retry-After: 5`) – statt in einer immer längeren Warteschlange zu hängen, bis Browser und Programme aufgeben. So bleiben Antwortzeiten und Arbeitsspeicher begrenzt, und Ablago erholt sich von selbst, sobald die Last nachlässt. Die Gesundheitsprüfung des Containers wird nie abgewiesen. Greift der Schutz, steht höchstens einmal je Minute „Überlast: …“ im [Protokoll](fehlersuche.md#protokoll).
 - **Verbindungen zur Datenbank:** höchstens **10** gleichzeitig. Im Lasttest mit 100 gleichzeitigen Anfragen lagen 5, 10 und 20 Verbindungen gleichauf: Der Engpass ist die Rechenzeit, die sich Server und PostgreSQL teilen, nicht die Zahl der Verbindungen. Jede Verbindung kostet PostgreSQL etwa 5–10 MB Arbeitsspeicher. Erst mit deutlich mehr Kernen (oder PostgreSQL auf einem eigenen Rechner) können mehr helfen: `DMS_DB_VERBINDUNGEN` (2–100; PostgreSQL erlaubt in der Vorgabe 100 Verbindungen insgesamt). Wie lange Abfragen auf eine freie Verbindung warten, zeigt **Werkbank → Datenbank-Anbindung** unter *Auslastung des Servers*.
 - **Schwere Arbeit** wie PDF-Bearbeitung und große Exporte läuft in eigenen [Arbeitern](speicherplatz.md#arbeiter-fur-pdf-und-exporte), damit andere Benutzer nicht warten.
-- Die aktuellen Werte von `DMS_ARBEITER`, `DMS_DB_VERBINDUNGEN` und `DMS_MAX_ANFRAGEN` und woher sie stammen, zeigt **Werkbank → Systemzustand**; wird etwas knapp, nennt der Hinweis dort die Variable, die helfen kann ([Einstellungen und Engpässe](speicherplatz.md#einstellungen-und-engpasse)).
+- **Mehrere Prozesse** ([unten](#mehrere-prozesse)): Mit `DMS_PROZESSE` beantworten mehrere Prozesse die Anfragen gemeinsam und nutzen so mehrere Kerne. Vorgabe ist ein Prozess wie bisher.
+- Die aktuellen Werte von `DMS_PROZESSE`, `DMS_ARBEITER`, `DMS_DB_VERBINDUNGEN` und `DMS_MAX_ANFRAGEN` und woher sie stammen, zeigt **Werkbank → Systemzustand**; wird etwas knapp, nennt der Hinweis dort die Variable, die helfen kann ([Einstellungen und Engpässe](speicherplatz.md#einstellungen-und-engpasse)).
 - Der **Anmeldeschutz** zählt auch unter Last jeden Fehlversuch; eine abgewiesene Anmeldung (503) prüft kein Passwort und zählt darum nicht.
+
+### Mehrere Prozesse { #mehrere-prozesse }
+
+Ablago beantwortet Anfragen mit Node.js in **einem** Faden je Prozess. Mit einem Prozess arbeitet für die Anfragen also ein Kern, auch wenn der Server mehr hat. Mit `DMS_PROZESSE` (#745) beantworten mehrere Prozesse die Anfragen gemeinsam:
+
+| Wert | Bedeutung |
+| --- | --- |
+| nicht gesetzt oder `1` | ein Prozess – wie bisher (Vorgabe; ein Update ändert daran nichts) |
+| `2` bis `16` | so viele Prozesse |
+| `auto` | Kerne des Containers − 1, höchstens 4; bei weniger als 2 GB Arbeitsspeicher (Grenze des Containers, sonst des Rechners) 1 |
+
+**Empfehlung:** Anzahl Kerne − 1, höchstens 4 (das macht `auto`). Ein Kern bleibt für PostgreSQL und das System. Für einen Haushalt, einen Raspberry Pi oder ein kleines NAS bleibt es bei einem Prozess – dort bringt ein zweiter nichts, kostet aber Arbeitsspeicher. Mehrere Prozesse lohnen sich ab etwa 4 Kernen und vielen gleichzeitigen Personen (Kleinbetrieb, Mittelstand); Messwerte unter [Was Ablago verkraftet](verkraftet.md).
+
+So arbeiten die Prozesse zusammen:
+
+- Ein schlanker **Hauptprozess** startet die Prozesse, verteilt die Verbindungen reihum auf sie und startet einen abgestürzten Prozess nach 1 Sekunde neu (bei wiederholtem Absturz mit wachsender Pause bis 1 Minute). Anmeldungen bleiben dabei erhalten; sie stehen in der Datenbank.
+- **Prozess 1 leitet:** Er zeigt beim Start die Seite „Ablago startet …“, bringt die Datenbank auf den neuen Stand und erledigt die gesamte **Arbeit im Hintergrund** – Texterkennung, Vorschaubilder, Zeitpläne, Automatisierungen, den Paket-Läufer (genau einmal), Eingangsordner, Postfächer, Sicherung und Wiederherstellung. Daneben beantwortet er Anfragen wie alle anderen. Die übrigen Prozesse starten erst, wenn er bereit ist.
+- **Wartungsmodus, Anmeldeschutz, Werkbank-Aufträge** und Einstellungen gelten in allen Prozessen (spätestens nach wenigen Sekunden). Die Sperre gegen ein Downgrade hält Ablago an wie mit einem Prozess. Die Gesundheitsprüfung des Containers bleibt unverändert, der Befehl `dms` im Container funktioniert wie bisher.
+- **Arbeitsspeicher:** Jeder Prozess braucht eigenen Arbeitsspeicher und eigene Zwischenspeicher. Im Lasttest (Stufe mittel, 100 gleichzeitig) brauchte Ablago mit zwei Prozessen 300–700 MB mehr als mit einem, mit Speichern auch über 1,5 GB; der Hauptprozess selbst braucht nur wenige MB über Node.js hinaus. Plane je weiteren Prozess etwa **500 MB** ein und passe `mem_limit` an.
+- **Wann es sich lohnt:** Erst mit freien Kernen. Auf einem Rechner mit 2 Kernen (Ablago, PostgreSQL und die Last teilen sie) war ein zweiter Prozess in der Stufe mittel langsamer als einer; in der Stufe groß verschob er die Grenze von 100 auf 150 gleichzeitige Anfragen. Darum nimmt `auto` bei 2 Kernen einen Prozess. Einzelheiten: Entwicklerhandbuch → Leistung.
+
+**Was je Prozess gilt:** `DMS_DB_VERBINDUNGEN`, `DMS_MAX_ANFRAGEN` und `DMS_ARBEITER` gelten **je Prozess**. Mit 3 Prozessen und der Vorgabe 10 öffnet Ablago also bis zu 30 Verbindungen zur Datenbank. Wären es zusammen mehr, als die Datenbank erlaubt (`max_connections`, abzüglich 10 für andere), bekommt jeder Prozess weniger – das steht dann im Protokoll. Die Vorgabe der Arbeiter teilt sich auf die Prozesse auf (mindestens 1 je Prozess), damit zusammen nicht mehr Fäden rechnen als mit einem Prozess. **Werkbank → Systemzustand** zeigt die Werte mit „je Prozess, zusammen …“ und darunter eine Zeile je Prozess mit Arbeitsspeicher, Rechenzeit, Wartezeit und laufenden Anfragen.
 
 ## Schnittstelle
 

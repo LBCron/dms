@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import { ENGPASS_MINUTEN, ENGPASS_VARIABLE, VERBINDUNG_WARTEN_MS, type Einstellbar, type Messpunkt } from '../../../shared/src/systemlast';
+import { ENGPASS_MINUTEN, ENGPASS_VARIABLE, VERBINDUNG_WARTEN_MS, type Einstellbar, type Messpunkt, type ProzessZeile } from '../../../shared/src/systemlast';
 import { api, type ErweiterungStand, type Schleifenverzoegerung, type SystemlastAntwort } from '../api';
 import { Link } from '../ort';
 import { Hilfe } from '../Hilfe';
@@ -118,9 +118,41 @@ export function ErweiterungenHinweis({ liste }: { liste?: ErweiterungStand[] | n
   );
 }
 
-/** Arbeiter, Verbindungen, Überlastgrenze (#544): Wert und Herkunft, nur zum Ansehen. */
+/**
+ * Mehrere Prozesse (#745): je Prozess Rolle, Arbeitsspeicher, Rechenzeit, Wartezeit der Ereignisschleife und laufende
+ * Anfragen. Auch unter Einstellungen → Datenbank-Anbindung (Auslastung des Servers).
+ */
+export function ProzessTabelle({ zeilen }: { zeilen?: ProzessZeile[] | null }) {
+  if (!zeilen || zeilen.length < 2) return null;
+  return (
+    <div className="az-prozesse" id="prozesse">
+      <h3 className="az-titel">{t('systemzustand.prozesse.titel')}</h3>
+      <div className="tabellenrahmen">
+        <table className="tabelle klein">
+          <thead><tr>
+            <th>{t('systemzustand.prozesse.nr')}</th><th>{t('systemzustand.prozesse.rolle')}</th><th>{t('systemzustand.prozesse.speicher')}</th>
+            <th>{t('systemzustand.prozesse.cpu')}</th><th>{t('systemzustand.prozesse.schleife')}</th><th>{t('systemzustand.prozesse.anfragen')}</th>
+          </tr></thead>
+          <tbody>{zeilen.map((z) => (
+            <tr key={`${z.nr}-${z.pid}`}>
+              <td>{z.rolle === 'haupt' ? '–' : z.nr}</td>
+              <td>{t.frei(`systemzustand.prozesse.rolle.${z.rolle}`)}</td>
+              <td>{z.speicher === null ? <NV /> : platz(z.speicher)}</td>
+              <td>{z.cpu === null ? '–' : prozent(z.cpu)}</td>
+              <td>{z.schleifeP99 === null ? '–' : ms(z.schleifeP99)}</td>
+              <td>{z.anfragen === null ? '–' : z.anfragen.toLocaleString(gebietsschema())}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <p className="leise klein">{t('systemzustand.prozesse.text')}</p>
+    </div>
+  );
+}
+
+/** Prozesse (#745), Arbeiter, Verbindungen, Überlastgrenze (#544): Wert und Herkunft, nur zum Ansehen. */
 function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
-  const zeilen = (['arbeiter', 'verbindungen', 'anfragen'] as Einstellbar[]).filter((k) => g[k]);
+  const zeilen = (['prozesse', 'arbeiter', 'verbindungen', 'anfragen'] as Einstellbar[]).filter((k) => g[k]);
   if (!zeilen.length) return null;
   return (
     <div className="az-grenzen" id="grenzen">
@@ -130,7 +162,8 @@ function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
           const w = g[k]!;
           return (<Fragment key={k}>
             <dt>{t.frei(`systemzustand.grenzen.${k}`)}</dt>
-            <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString(gebietsschema()) })}
+            <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : w.quelle === 'auto' ? 'systemzustand.grenzen.auto' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString(gebietsschema()) })}
+              {w.prozesse && w.prozesse > 1 && w.wert > 0 ? <>{' '}{t('systemzustand.grenzen.je-prozess', { gesamt: (w.wert * w.prozesse).toLocaleString(gebietsschema()), prozesse: w.prozesse })}</> : null}
               {' '}<span className="leise">· <span className="mono">{t('systemzustand.grenzen.bereich', { variable: w.variable, min: w.min.toLocaleString(gebietsschema()), max: w.max.toLocaleString(gebietsschema()) })}</span></span></dd>
           </Fragment>);
         })}
@@ -200,6 +233,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
           <Schleife s={s.schleife} />
           <Arbeiter a={s.arbeiter} />
         </div>
+        <ProzessTabelle zeilen={s.prozesse} />
         {s.grenzen && <Grenzen g={s.grenzen} />}
       </>}
     </section>

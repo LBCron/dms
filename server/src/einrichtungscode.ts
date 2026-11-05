@@ -60,6 +60,18 @@ export class Einrichtungscode {
     return this.code;
   }
 
+  /**
+   * Weitere Prozesse (#745): den Code, den der Leiter bereitgestellt hat, still aus der Datei übernehmen – ohne ihn neu
+   * zu erzeugen oder ins Protokoll zu schreiben. Die Fehlversuche zählt jeder Prozess für sich.
+   */
+  async uebernimm(): Promise<void> {
+    if (this.abgeschaltet || this.code) return;
+    try {
+      const alt = (await readFile(this.datei, 'utf8')).trim();
+      if (norm(alt).length === 12) this.code = alt;
+    } catch { /* kein Code bereitgestellt */ }
+  }
+
   /** Stimmt der Code? Ohne Zählen der Fehlversuche – nur, um Angaben im Status mitzuliefern. */
   stimmt(eingabe: unknown): boolean {
     if (this.abgeschaltet) return true;

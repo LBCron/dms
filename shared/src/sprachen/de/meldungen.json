@@ -1575,5 +1575,11 @@
   "zweifaktor.bitte-die-einrichtung-neu": "Bitte die Einrichtung neu beginnen (nach 10 Minuten verfällt der QR-Code).",
   "zweifaktor.der-code-stimmt-nicht": "Der Code stimmt nicht. Uhrzeit von Handy und Ablago prüfen und den aktuellen Code eingeben.",
   "zweifaktor.die-zwei-faktor-anmeldung": "Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.",
-  "apiv1.sicht-angeben": "Bitte „sicht“ angeben: die Id eines Mappentyps oder „eingang“."
+  "apiv1.sicht-angeben": "Bitte „sicht“ angeben: die Id eines Mappentyps oder „eingang“.",
+  "auftrag.anderer": "ein anderer Auftrag",
+  "auftrag.unterbrochen": "Unterbrochen: Der Prozess, in dem der Auftrag lief, wurde beendet.",
+  "prozesse.ungueltig": "DMS_PROZESSE={roh} ist weder „auto“ noch eine Zahl von 1 bis {max} und wird ignoriert: Ablago läuft in einem Prozess.",
+  "prozesse.leiter-startet": "Ablago startet gerade den Prozess für die Arbeit im Hintergrund neu. Bitte gleich noch einmal versuchen.",
+  "prozesse.leiter-neu": "Der Prozess für die Arbeit im Hintergrund wurde neu gestartet. Bitte noch einmal versuchen.",
+  "prozesse.keine-antwort": "Ein anderer Prozess von Ablago hat nicht rechtzeitig geantwortet."
 }

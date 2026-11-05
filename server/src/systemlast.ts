@@ -111,6 +111,12 @@ export function liesPss(lies: Leser, pid: number): number | null {
   return kb ? Number(kb) * 1024 : null;
 }
 
+/** Belegter Arbeitsspeicher (RSS) eines Prozesses in Byte (#745, z. B. des Hauptprozesses). */
+export function liesRss(lies: Leser, pid: number): number | null {
+  const kb = lies(`/proc/${pid}/status`)?.match(/^VmRSS:\s+(\d+)\s+kB/m)?.[1];
+  return kb ? Number(kb) * 1024 : null;
+}
+
 export function liesAnteile(lies: Leser, o: { eigen: number; laeufer: number | null; postgres: boolean; pids?: () => number[] }): Anteile {
   let datenbank: number | null = null;
   if (o.postgres) {

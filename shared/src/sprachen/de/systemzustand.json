@@ -72,6 +72,9 @@
   "grenzen.arbeiter": "Arbeiter für PDF und Exporte",
   "grenzen.verbindungen": "Verbindungen zur Datenbank",
   "grenzen.anfragen": "Gleichzeitige Anfragen höchstens",
+  "grenzen.prozesse": "Prozesse für Anfragen",
+  "grenzen.auto": "{wert} – automatisch (auto)",
+  "grenzen.je-prozess": "je Prozess, zusammen {gesamt} in {prozesse} Prozessen",
   "grenzen.vorgabe": "{wert} – Vorgabe",
   "grenzen.umgebung": "{wert} – aus der Umgebung",
   "grenzen.aus": "0 – ausgeschaltet, aus der Umgebung",
@@ -90,5 +93,16 @@
   "erweiterung.unaccent.abhilfe": "Die Suche funktioniert trotzdem. Die Images postgres:17 und dms-komplett bringen unaccent mit; bei einer eigenen Datenbank gehört sie zum Paket postgresql-contrib.",
   "erweiterung.gefaehrdet": "Die Erweiterung {name} liegt im Schema {schema}. Eine Wiederherstellung würde sie mitlöschen, danach wäre die Suche schlechter.",
   "erweiterung.gefaehrdet.abhilfe": "Ablago zieht sie bei jedem Start ins Schema erweiterungen_dms um. Klappt das nicht, gehört sie einem anderen Datenbank-Benutzer – dann zieht sie die Verwaltung der Datenbank um (siehe Handbuch).",
-  "erweiterung.uebersicht": "Eine Erweiterung der Datenbank fehlt oder ist gefährdet – die Suche arbeitet schlechter als möglich."
+  "erweiterung.uebersicht": "Eine Erweiterung der Datenbank fehlt oder ist gefährdet – die Suche arbeitet schlechter als möglich.",
+  "prozesse.titel": "Prozesse",
+  "prozesse.nr": "Nr.",
+  "prozesse.rolle": "Aufgabe",
+  "prozesse.speicher": "Arbeitsspeicher",
+  "prozesse.cpu": "Rechenzeit",
+  "prozesse.schleife": "Wartezeit (99 %)",
+  "prozesse.anfragen": "Anfragen jetzt",
+  "prozesse.rolle.haupt": "Verteilt nur",
+  "prozesse.rolle.leiter": "Leitet: Anfragen und Arbeit im Hintergrund",
+  "prozesse.rolle.anfragen": "Anfragen",
+  "prozesse.text": "Mit DMS_PROZESSE beantworten mehrere Prozesse die Anfragen. Prozess 1 erledigt zusätzlich die Arbeit im Hintergrund (Texterkennung, Vorschaubilder, Zeitpläne, Paket-Läufer, Sicherung). Ein abgestürzter Prozess startet von selbst neu; angemeldet bleibt man dabei. Rechenzeit in Prozent eines Kerns seit der letzten Abfrage."
 }

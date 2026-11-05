@@ -265,6 +265,29 @@ Einzelne Abfragen (`EXPLAIN ANALYZE`): Seite über alle Typen nach Titel 49 → 
 
 **Messung zu #542** (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.
 
+## Mehrere Prozesse (#745) { #mehrere-prozesse }
+
+`DMS_PROZESSE` (Vorgabe 1, `auto` = Kerne − 1, höchstens 4, unter 2 GB Arbeitsspeicher 1) verteilt die Anfragen mit `node:cluster` reihum auf mehrere Prozesse; Prozess 1 leitet und erledigt die Arbeit im Hintergrund (Aufbau: [Mehrere Prozesse](aufbau.md#mehrere-prozesse)). `GET /api/werkbank/last` meldet dann den Arbeitsspeicher **aller** Prozesse zusammen (Pss, damit geteilter Code nicht mehrfach zählt; die Summe der RSS steht unter `rssMb`), die Wartezeit der Ereignisschleife des langsamsten Prozesses und je Prozess eine Zeile unter `prozesse`; die Verbindungen zur Datenbank zusammen. So bleibt die Pflicht „Arbeitsspeicher von Ablago ≤ 1,5 GB“ eine für ganz Ablago. Der Ergebnisblock nennt `DMS_PROZESSE` bei den Einstellungen.
+
+**Messung zu #745** (lokal, 2 Kerne, PostgreSQL 16, Lasttest auf demselben Rechner, Server aus `dist/`; je Durchgang 30 s bzw. 20 s je Schritt von groß; abwechselnd 1 und 2 Prozesse):
+
+| Durchgang | 1 Prozess | 2 Prozesse |
+|---|---|---|
+| mittel (50.000 Mappen), p95 | 963 / 1.049 ms | 1.338 / 1.320 ms |
+| mittel, Anfragen je s | 178 / 160 | 152 / 150 |
+| mittel + Speichern, p95 | 3.568 / 3.237 ms | 4.592 / 5.502 ms |
+| mittel + Speichern, Anfragen je s | 56 / 55 | 50 / 39 |
+| mittel, Ereignisschleife p99 höchstens | 156 / 161 ms | 303 / 274 ms |
+| mittel, Arbeitsspeicher höchstens (2 Prozesse: Summe RSS) | 944 / 953 MB | 1.217 / 1.229 MB |
+| mittel + Speichern, Arbeitsspeicher höchstens | 1.219 / 1.156 MB | 1.819 / 1.874 MB |
+| mittel auf 200.000 Mappen, p95 (Speichern) | 4.741 ms (11.208 ms) | 6.023 ms (19.362 ms) |
+| mittel auf 200.000 Mappen, Arbeitsspeicher Pss (Speichern) | 908 MB (1.573 MB) | 1.324 MB (2.300 MB) |
+| groß (200.000 Mappen): Grenze | 100 gleichzeitig, 67/s, p95 2.476 ms | 150 gleichzeitig, 88/s, p95 2.564 ms |
+| groß: Arbeitsspeicher höchstens (2 Prozesse: Pss) | 1.010 MB | 1.134 MB |
+| groß: Erholung nach 1000 gleichzeitig | 0,3 s | 0,3 s |
+
+**Ergebnis:** Mit 2 Kernen, auf denen auch PostgreSQL und der Lasttest rechnen, gibt es keinen freien Kern für einen zweiten Prozess: In der Stufe mittel wird es langsamer (mehr Wechsel zwischen Prozessen, zwei Ereignisschleifen kämpfen um denselben Kern), nur die Grenze der Stufe groß steigt (100 → 150 gleichzeitig). Der Arbeitsspeicher steigt um 30–50 %: Jeder Prozess hat eigene Zwischenspeicher, Puffer und Halde. Daher die Empfehlung Kerne − 1 und `auto` = 1 bei 2 Kernen; eine aussagekräftige Messung mit 3 und 4 Prozessen braucht einen Rechner mit mindestens 4–6 Kernen (für #576 vom NAS des Maintainers bzw. vom Workflow nachzutragen). Die Überlast-Probe mit 1000 gleichzeitig ließ lokal Anfragen ohne Antwort (1 Prozess 211, 2 Prozesse 551) – wie unter „Überlastschutz“ beschrieben kommt der Lasttest auf demselben Rechner mit dem Verbindungsaufbau nicht nach.
+
 ## Regeln
 
 - **Kein `SELECT *` auf Tabellen mit großen Spalten.** Dokumente immer mit `DOKUMENT_SPALTEN`, Mappen mit `MAPPEN_SPALTEN` (ohne `suchtext`, #615); den Volltext nur über `volltext(id)` oder gebündelt über `volltexte(ids)` lesen. EXPLAIN zeigt das nicht: Der Volltext liegt ausgelagert (TOAST) und wird erst beim Senden an den Server entpackt.

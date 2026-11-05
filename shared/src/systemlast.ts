@@ -26,6 +26,18 @@ export interface SystemlastStand {
   /** PostgreSQL läuft im selben Container (dms-komplett)? Sonst sieht das DMS dessen Auslastung nicht. */
   datenbankImContainer: boolean;
   warnung: Warnung[];
+  /** Mehrere Prozesse (#745): je Prozess; fehlt mit einem Prozess. */
+  prozesse?: ProzessZeile[];
+}
+
+/**
+ * Ein Prozess von Ablago (#745): Hauptprozess (verteilt nur), Leiter (Anfragen und Arbeit im Hintergrund) oder
+ * Prozess für Anfragen. `speicher` in Byte (Pss, sonst RSS), `cpu` in Prozent eines Kerns, Wartezeit der
+ * Ereignisschleife (p99) in ms, `anfragen` gerade in Arbeit; null = nicht verfügbar (z. B. keine Antwort).
+ */
+export interface ProzessZeile {
+  nr: number; pid: number; rolle: 'haupt' | 'leiter' | 'anfragen';
+  speicher: number | null; cpu: number | null; schleifeP99: number | null; anfragen: number | null;
 }
 
 /** Woran der Systemzustand warnt: CPU, Arbeitsspeicher (#409) und Wartezeit der Ereignisschleife (#542). */
@@ -53,9 +65,13 @@ export type ArbeiterStand =
  * Einstellungen für viele gleichzeitige Anfragen (#544): nur per Umgebungsvariable, im Systemzustand zum Ansehen –
  * mit ihrem Wert und ob er aus der Umgebung oder der Vorgabe stammt.
  */
-export const VARIABLE = { arbeiter: 'DMS_ARBEITER', verbindungen: 'DMS_DB_VERBINDUNGEN', anfragen: 'DMS_MAX_ANFRAGEN' } as const;
+export const VARIABLE = { prozesse: 'DMS_PROZESSE', arbeiter: 'DMS_ARBEITER', verbindungen: 'DMS_DB_VERBINDUNGEN', anfragen: 'DMS_MAX_ANFRAGEN' } as const;
 export type Einstellbar = keyof typeof VARIABLE;
-export interface Grenzwert { wert: number; quelle: 'vorgabe' | 'umgebung'; variable: (typeof VARIABLE)[Einstellbar]; min: number; max: number }
+/**
+ * `quelle` 'auto': DMS_PROZESSE=auto (#745). `prozesse` (#745): Mit mehreren Prozessen gelten Arbeiter, Verbindungen
+ * und gleichzeitige Anfragen **je Prozess** – dann steht hier ihre Zahl, die Oberfläche zeigt auch die Summe.
+ */
+export interface Grenzwert { wert: number; quelle: 'vorgabe' | 'umgebung' | 'auto'; variable: (typeof VARIABLE)[Einstellbar]; min: number; max: number; prozesse?: number }
 export type Grenzwerte = Partial<Record<Einstellbar, Grenzwert>>;
 
 /**

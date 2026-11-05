@@ -41,7 +41,7 @@ import { ARCHIV_MAX, Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } fro
 import { hatSchnittstelle, type AblaufEingabe, type AblaufInstallation } from '../../shared/src/pakete';
 import { Paketerstellung } from './paketerstellung';
 import { Umwandlung } from './umwandlung';
-import type { Paketlaeufer } from './laeufer/verwaltung';
+import type { LaeuferSicht } from './laeufer/fern';
 import { eigeneVersion, standKennung, uebersicht, versionsabgleich, type SystemQuelle } from './system';
 import type { Fehlermeldungen } from './fehlermeldungen';
 import type { Verwaltung } from './verwaltung';
@@ -55,11 +55,14 @@ import type { Notfallzugang } from './notfall';
 import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import type { Speicherplatz } from './speicherplatz';
-import type { Systemlast } from './systemlast';
+import { dateiLeser, liesPss, liesRss, type Systemlast } from './systemlast';
+import type { ProzessEinstellung, Verbund } from './prozesse';
+import { PROZESSE_MAX } from './prozesse';
+import type { Prozessstand } from './aufteilung';
 import { ARBEITER_MAX, arbeiterStand } from './arbeit';
 import { VERBINDUNGEN_MAX, VERBINDUNGEN_MIN } from './db';
 import { MAX_ANFRAGEN_MAX, MAX_ANFRAGEN_MIN } from './ueberlast';
-import { engpaesseAus, VARIABLE, type Grenzwerte } from '../../shared/src/systemlast';
+import { engpaesseAus, VARIABLE, type Grenzwerte, type ProzessZeile } from '../../shared/src/systemlast';
 import type { Eingangsordner } from './eingangsordner';
 import type { Webdav } from './webdav';
 import type { Postfaecher } from './postfach';
@@ -212,10 +215,14 @@ function grenzenUndEngpaesse(x: RoutenExtras) {
   const a = arbeiterStand();
   const v = x.verbindungen?.stand();
   const u = x.ueberlast?.stand();
+  // Mehrere Prozesse (#745): Arbeiter, Verbindungen und Anfragen gelten je Prozess.
+  const p = x.verbund?.mehrere ? { prozesse: x.verbund.anzahl } : {};
+  const pe = x.prozessEinstellung;
   const grenzen: Grenzwerte = {
-    arbeiter: { wert: a.aus ? 0 : a.groesse, quelle: a.quelle, variable: VARIABLE.arbeiter, min: 0, max: ARBEITER_MAX },
-    ...(v ? { verbindungen: { wert: v.max, quelle: v.quelle, variable: VARIABLE.verbindungen, min: VERBINDUNGEN_MIN, max: VERBINDUNGEN_MAX } } : {}),
-    ...(u ? { anfragen: { wert: u.max, quelle: u.quelle, variable: VARIABLE.anfragen, min: MAX_ANFRAGEN_MIN, max: MAX_ANFRAGEN_MAX } } : {}),
+    ...(pe ? { prozesse: { wert: x.verbund?.anzahl ?? pe.anzahl, quelle: pe.quelle, variable: VARIABLE.prozesse, min: 1, max: PROZESSE_MAX } } : {}),
+    arbeiter: { wert: a.aus ? 0 : a.groesse, quelle: a.quelle, variable: VARIABLE.arbeiter, min: 0, max: ARBEITER_MAX, ...p },
+    ...(v ? { verbindungen: { wert: v.max, quelle: v.quelle, variable: VARIABLE.verbindungen, min: VERBINDUNGEN_MIN, max: VERBINDUNGEN_MAX, ...p } } : {}),
+    ...(u ? { anfragen: { wert: u.max, quelle: u.quelle, variable: VARIABLE.anfragen, min: MAX_ANFRAGEN_MIN, max: MAX_ANFRAGEN_MAX, ...p } } : {}),
   };
   const engpaesse = engpaesseAus({
     schleife: !!x.messung?.auslastung.warnung(),
@@ -226,7 +233,37 @@ function grenzenUndEngpaesse(x: RoutenExtras) {
   return { grenzen, engpaesse };
 }
 
+/**
+ * Mehrere Prozesse (#745): Stand jedes Prozesses – Arbeitsspeicher (Pss aus /proc, sonst RSS), Rechenzeit, Wartezeit der
+ * Ereignisschleife und laufende Anfragen; dazu der Hauptprozess. null mit einem Prozess.
+ */
+async function prozessZeilen(x: RoutenExtras): Promise<{ zeilen: ProzessZeile[]; staende: Array<Prozessstand | null>; rssMb: number; speicherMb: number } | null> {
+  const v = x.verbund;
+  if (!v?.mehrere) return null;
+  const alle = await v.frageAlle<Prozessstand>('prozess.stand');
+  const zeilen: ProzessZeile[] = [];
+  let rss = 0;
+  if (v.primaer) {
+    const r = liesRss(dateiLeser, v.primaer);
+    rss += r ?? 0;
+    zeilen.push({ nr: 0, pid: v.primaer, rolle: 'haupt', speicher: liesPss(dateiLeser, v.primaer) ?? r, cpu: null, schleifeP99: null, anfragen: null });
+  }
+  for (const p of alle) {
+    rss += p.wert ? p.wert.rssMb * 1024 ** 2 : liesRss(dateiLeser, p.pid) ?? 0;
+    zeilen.push({
+      nr: p.nr, pid: p.pid, rolle: p.leiter ? 'leiter' : 'anfragen', speicher: liesPss(dateiLeser, p.pid) ?? (p.wert ? p.wert.rssMb * 1024 ** 2 : null),
+      cpu: p.wert?.cpu ?? null, schleifeP99: p.wert?.schleife?.p99 ?? null, anfragen: p.wert?.anfragen.laufend ?? null,
+    });
+  }
+  // Summe für den Lasttest: Pss (geteilte Seiten anteilig – die Summe der RSS zählte den Code jedes Prozesses voll).
+  const pss = zeilen.every((z) => z.speicher !== null) ? zeilen.reduce((n, z) => n + z.speicher!, 0) : rss;
+  return { zeilen, staende: alle.map((p) => p.wert), rssMb: Math.round(rss / 1024 ** 2), speicherMb: Math.round(pss / 1024 ** 2) };
+}
+
 export interface RoutenExtras {
+  /** Mehrere Prozesse (#745): Verbund dieses Prozesses und die Einstellung DMS_PROZESSE. */
+  verbund?: Verbund;
+  prozessEinstellung?: ProzessEinstellung;
   /** Fotos vom Handy bis „Fertig“ (#490); Standard: Arbeitsordner im Temp-Verzeichnis. */
   fotostapel?: Fotostapel;
   messung?: Messung;
@@ -299,7 +336,7 @@ export interface RoutenExtras {
   /** Paketverwaltung (#188); ohne Angabe: offizieller Katalog über das Netz. */
   pakete?: Paketverwaltung;
   /** Paket-Läufer (#338): Stand für die Werkbank. */
-  paketlaeufer?: Paketlaeufer;
+  paketlaeufer?: LaeuferSicht;
   /** Einrichtungsassistent und Datenbank-Anbindung (#119). */
   einrichtung?: Einrichtung;
   anbindung?: AnbindungVerwaltung;
@@ -1015,19 +1052,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const benutzerId = ich(a).id;
       L.werkbank.info('Demo-Mappen werden erzeugt', { anzahl: o.anzahl, dokumente: !!o.dokumente, startwert: o.startwert ?? null });
       const titel = t('meldungen.routen.demo-mappen-erzeugen', { zahl: o.anzahl.toLocaleString(gebietsschema()), wert: o.dokumente ? t('meldungen.routen.mit-dokumenten') : '' });
-      return ok(dienst.auftraege.starte('demo-erzeugen', titel, async (f) => {
+      return ok(await dienst.auftraege.angemeldet(dienst.auftraege.starte('demo-erzeugen', titel, async (f) => {
         const r = await dienst.ohneEreignisse(() => erzeugeDemo(dienst, o, benutzerId, f, demoPlatz));
         L.werkbank.info('Demo-Daten erzeugt', { mappen: r.gesamt, dokumente: r.dokumente?.anzahl ?? 0, bytes: r.dokumente?.bytes ?? 0, dauerMs: r.dauerMs, startwert: r.startwert, abgebrochen: r.abgebrochen ?? null });
         return r;
-      }, demoPhasen(!!o.dokumente)), 202);
+      }, demoPhasen(!!o.dokumente))), 202);
     } },
     // Abschätzung vor dem Start (#248): Mappen, Dokumente, Größe, Seiten für die Texterkennung, freier Platz.
     { methode: 'POST', pfad: '/api/werkbank/demo/abschaetzung', zugang: 'admin', lesend: true, handler: async (a) => ok(await schaetzeDemo(dienst, pruefeDemoOptionen(b(a)), demoPlatz)) },
     { methode: 'DELETE', pfad: '/api/werkbank/demo', zugang: 'admin', handler: async () =>
-      ok(dienst.auftraege.starte('demo-entfernen', 'Demo-Mappen entfernen', (f) => dienst.ohneEreignisse(() => dienst.entferneDemo(f)), [{ key: 'mappen', name: 'Demo-Mappen entfernen', einheit: 'Mappen' }]), 202) },
-    { methode: 'GET', pfad: '/api/werkbank/auftrag', zugang: 'admin', handler: async () => ok(dienst.auftraege.aktuell()) },
+      ok(await dienst.auftraege.angemeldet(dienst.auftraege.starte('demo-entfernen', 'Demo-Mappen entfernen', (f) => dienst.ohneEreignisse(() => dienst.entferneDemo(f)), [{ key: 'mappen', name: 'Demo-Mappen entfernen', einheit: 'Mappen' }])), 202) },
+    { methode: 'GET', pfad: '/api/werkbank/auftrag', zugang: 'admin', handler: async () => ok(await dienst.auftraege.stand()) },
     // Abbrechen (#458) – nur Aufträge, die das erlauben (z. B. „Volltext neu erzeugen“).
-    { methode: 'POST', pfad: '/api/werkbank/auftrag/abbrechen', zugang: 'admin', handler: async (a) => ok(dienst.auftraege.abbrechen((b(a) as { id?: unknown }).id)) },
+    { methode: 'POST', pfad: '/api/werkbank/auftrag/abbrechen', zugang: 'admin', handler: async (a) => ok(await dienst.auftraege.abbrechen((b(a) as { id?: unknown }).id)) },
 
     /* ---------- Protokoll und Debug-Modus ---------- */
     { methode: 'GET', pfad: '/api/werkbank/protokoll', zugang: 'admin', handler: async (a) => {
@@ -1121,11 +1158,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const von = ich(a).email;
       if (e.passwoerter === true) L.werkbank.warn('Vollexport mit Passwörtern im Klartext gestartet', { von });
       else L.werkbank.info('Vollexport gestartet', { von, protokolle: e.protokolle === true });
-      return ok(dienst.auftraege.starte('vollexport', 'Vollexport', async (f) => {
+      return ok(await dienst.auftraege.angemeldet(dienst.auftraege.starte('vollexport', 'Vollexport', async (f) => {
         const r = await vollexport(quelle, ziel, { passwoerter: e.passwoerter === true, protokolle: e.protokolle === true, kontakte }, f);
         L.werkbank.info('Vollexport fertig', { von, name: r.name, dateien: r.dateien, mb: Math.round(r.bytes / 1024 ** 2), mappen: r.mappen });
         return r;
-      }, VOLLEXPORT_PHASEN), 202);
+      }, VOLLEXPORT_PHASEN)), 202);
     } },
     // #797: Hinweis „Exporte aus dem Sicherungsordner verschoben“ gelesen.
     { methode: 'POST', pfad: '/api/werkbank/export/umzug-gesehen', zugang: 'admin', handler: async () => { await umzugGesehen(dienst.einstellungenSpeicher); return ok(null); } },
@@ -1197,7 +1234,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     /* ---------- Datenschutz: Auskunft nach Art. 15 DSGVO (#396), nur Administratoren ---------- */
     { methode: 'GET', pfad: '/api/werkbank/datenschutz', zugang: 'admin', handler: async () => {
       const bereit = await auskuenfteIn(auskunftZiel());
-      const auftrag = dienst.auftraege.aktuell();
+      const auftrag = await dienst.auftraege.stand();
       const laufend = auftrag?.art === 'auskunft' && auftrag.status === 'laeuft' ? { id: auftrag.id, titel: auftrag.titel, gestartet: auftrag.gestartet } : null;
       return ok({
       einstellung: await dienst.datenschutz(), auskuenfte: bereit, tage: AUSKUNFT_TAGE,
@@ -1237,11 +1274,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await auskuenfteIn(ziel);
       const von = { id: ich(a).id, name: ich(a).name, email: ich(a).email };
       L.datenschutz.info('Auskunft gestartet', { mappeId: daten.start.id, mappen: daten.anzahl.mappen, dokumente: daten.anzahl.dokumente, von: von.email });
-      return ok(dienst.auftraege.starte('auskunft', `Auskunft für ${daten.start.titel || 'Ohne Titel'}`, async (f) => {
+      return ok(await dienst.auftraege.angemeldet(dienst.auftraege.starte('auskunft', `Auskunft für ${daten.start.titel || 'Ohne Titel'}`, async (f) => {
         const r = await erzeugeAuskunft(daten, ziel, { von, mandant }, f);
         await dienst.auskunftNachweis(daten, von, r);
         return r;
-      }, AUSKUNFT_PHASEN), 202);
+      }, AUSKUNFT_PHASEN)), 202);
     } },
     { methode: 'GET', pfad: '/api/werkbank/auskunft/:id/zip', zugang: 'admin', handler: async (a) => {
       const ziel = auskunftZiel();
@@ -1354,7 +1391,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     /* ---------- Archivmodus (#212) ---------- */
     { methode: 'POST', pfad: '/api/werkbank/archiv/vorschau', zugang: 'admin', lesend: true, handler: async (a) => ok(await dienst.archivVorschau(String((a.body as { typId?: unknown })?.typId ?? ''), (a.body as { archiv?: unknown })?.archiv)) },
     { methode: 'GET', pfad: '/api/werkbank/darf-weg', zugang: 'admin', handler: async () => ok(await dienst.darfWeg()) },
-    { methode: 'POST', pfad: '/api/werkbank/wartung/dateien', zugang: 'admin', handler: async (a) => ok(dienst.pruefeDateien(ich(a).email), 202) },
+    { methode: 'POST', pfad: '/api/werkbank/wartung/dateien', zugang: 'admin', handler: async (a) => ok(await dienst.auftraege.angemeldet(dienst.pruefeDateien(ich(a).email)), 202) },
     /* ---------- Auswahlfilter am Referenzfeld (#172, #173) ---------- */
     { methode: 'POST', pfad: '/api/mappen/auswahl-pruefen', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.auswahlPruefen(a.body, ich(a).id, await zg(a))) },
     { methode: 'POST', pfad: '/api/werkbank/auswahlfilter/zaehlen', zugang: 'admin', lesend: true, handler: async (a) => ok(await dienst.zaehleAuswahl(a.body, ich(a).id)) },
@@ -1458,7 +1495,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'GET', pfad: '/api/werkbank/wartung/nummern', zugang: 'admin', handler: async (a) => ok(await dienst.nummernVorschau(a.query.typ ?? '', a.query.feld ?? '')) },
     { methode: 'POST', pfad: '/api/werkbank/wartung/nummern', zugang: 'admin', handler: async (a) =>
-      ok(dienst.nummernNachtragen(String((a.body as { typId?: unknown })?.typId ?? ''), String((a.body as { feldKey?: unknown })?.feldKey ?? ''), ich(a).email), 202) },
+      ok(await dienst.auftraege.angemeldet(dienst.nummernNachtragen(String((a.body as { typId?: unknown })?.typId ?? ''), String((a.body as { feldKey?: unknown })?.feldKey ?? ''), ich(a).email)), 202) },
     // Absender bereinigen (#494): Vorschau, dann nur die gewählten Posts.
     { methode: 'GET', pfad: '/api/werkbank/wartung/absender', zugang: 'admin', handler: async () => ok(await dienst.absenderVorschau()) },
     // Angaben, die nicht zum Format passen (#535): je Mappentyp und Feld, mit Sprung zur Mappe.
@@ -1468,7 +1505,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/werkbank/wartung/volltext', zugang: 'admin', handler: async () => ok({ eingereiht: await dienst.volltextNachholen() }) },
     // „Volltext neu erzeugen“ (#458): erst die Anzahl für die Rückfrage, dann als Auftrag mit Fortschritt (abbrechbar).
     { methode: 'GET', pfad: '/api/werkbank/wartung/volltext-neu', zugang: 'admin', handler: async (a) => ok({ ...(await dienst.volltextNeuAnzahl(a.query.umfang)), paket: await dienst.texterkennungPaket() }) },
-    { methode: 'POST', pfad: '/api/werkbank/wartung/volltext-neu', zugang: 'admin', handler: async (a) => ok(dienst.volltextNeu((b(a) as { umfang?: unknown }).umfang, ich(a).email), 202) },
+    { methode: 'POST', pfad: '/api/werkbank/wartung/volltext-neu', zugang: 'admin', handler: async (a) => ok(await dienst.auftraege.angemeldet(dienst.volltextNeu((b(a) as { umfang?: unknown }).umfang, ich(a).email)), 202) },
     { methode: 'POST', pfad: '/api/werkbank/wartung/vorschau', zugang: 'admin', handler: async () => ok({ eingereiht: await dienst.vorschauNachholen() }) },
 
     /* ---------- Verschlüsselung (#39) ---------- */
@@ -1513,7 +1550,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/sicherung/lauf', zugang: 'admin', handler: async () => ok(sicherung().aktuellerLauf()) },
     { methode: 'POST', pfad: '/api/werkbank/sicherung/jetzt', zugang: 'admin', handler: async (a) => ok((await sicherung().starte('manuell', ich(a).email)).lauf) },
     { methode: 'PUT', pfad: '/api/werkbank/sicherung/plan', zugang: 'admin', handler: async (a) => ok(await sicherung().speicherePlan(a.body, ich(a).email)) },
-    { methode: 'POST', pfad: '/api/werkbank/sicherung/:name/pruefen', zugang: 'admin', handler: async (a) => ok(sicherung().pruefe(a.params.name, ich(a).email)) },
+    { methode: 'POST', pfad: '/api/werkbank/sicherung/:name/pruefen', zugang: 'admin', handler: async (a) => ok(await sicherung().pruefe(a.params.name, ich(a).email)) },
     { methode: 'DELETE', pfad: '/api/werkbank/sicherung/:name', zugang: 'admin', handler: async (a) => { await sicherung().loesche(a.params.name, ich(a).email); return leer; } },
     // Sicherung außer Haus (#585): nur Pakete mit dms:sicherung-lesen, nur die Sicherungen aus ihrem Ereignis sicherung.fertig –
     // die verschlüsselte Datei in Stücken, schlanke Metadaten und die Rückmeldung. Nie Schlüssel, nie andere Dateien.
@@ -1855,7 +1892,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/systemlast', zugang: 'admin', handler: async () => {
       if (!x.systemlast) throw new Fachfehler(404, t('meldungen.routen.die-messung-der-auslastung'));
       const erweiterungen = x.erweiterungen ? await x.erweiterungen().catch(() => null) : null;
-      return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x) });
+      const stand = x.systemlast.stand();
+      // Mehrere Prozesse (#745): Anteil von Ablago = alle Prozesse zusammen, dazu die Liste je Prozess.
+      const p = await prozessZeilen(x).catch(() => null);
+      const dms = p && p.zeilen.every((z) => z.speicher !== null) ? p.zeilen.reduce((n, z) => n + z.speicher!, 0) : stand.anteile.dms;
+      return ok({ ...stand, anteile: { ...stand.anteile, dms }, ...(p ? { prozesse: p.zeilen } : {}), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x) });
     } },
     { methode: 'POST', pfad: '/api/werkbank/system/abgleich', zugang: 'admin', handler: async (a) => {
       const browser = Object.fromEntries(Object.entries((b(a).browser ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]));
@@ -1871,7 +1912,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!messung) return ok({ einstellungen: null, langlaeufer: [], laufend: [], auslastung: null, verbindungen });
       const [langlaeufer, laufend] = await Promise.all([messung.speicher.liste(500), messung.speicher.laufende()]);
       // Verzögerung der Ereignisschleife (#477): wie lange Anfragen auf den Server warten.
-      return ok({ einstellungen: messung.einstellungen, langlaeufer, laufend, auslastung: messung.auslastung.stand(), verbindungen });
+      const p = await prozessZeilen(x).catch(() => null);
+      return ok({ einstellungen: messung.einstellungen, langlaeufer, laufend, auslastung: messung.auslastung.stand(), verbindungen, ...(p ? { prozesse: p.zeilen } : {}) });
     } },
     // Messwerte für den Lasttest (#544): Ereignisschleife, Arbeitsspeicher, Warten auf Verbindungen, Überlastschutz,
     // Arbeiter. Wird vom Überlastschutz nie abgewiesen.
@@ -1881,12 +1923,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const m = process.memoryUsage();
       const jetzt = x.verbindungen ? await x.verbindungen.probe() : null;
       const v = x.verbindungen?.stand();
+      // Mehrere Prozesse (#745): Arbeitsspeicher aller Prozesse zusammen (auch des Hauptprozesses; Pss, die Summe der
+      // RSS unter `rssMb`), Wartezeit des langsamsten; je Prozess unter `prozesse`.
+      const p = await prozessZeilen(x).catch(() => null);
+      const schlimmste = p?.staende.filter((z): z is Prozessstand => !!z?.schleife).sort((a, b) => b.schleife!.p99 - a.schleife!.p99)[0];
       return ok({
-        schleife: w ? { median: w.median, p99: w.p99, max: w.max } : null, schleifeWarnung: s?.warnungSeit ?? null,
-        speicherMb: Math.round(m.rss / 1024 ** 2), heapMb: Math.round(m.heapUsed / 1024 ** 2),
+        schleife: schlimmste?.schleife ?? (w ? { median: w.median, p99: w.p99, max: w.max } : null), schleifeWarnung: s?.warnungSeit ?? null,
+        speicherMb: p ? p.speicherMb : Math.round(m.rss / 1024 ** 2), ...(p ? { rssMb: p.rssMb } : {}), heapMb: Math.round(m.heapUsed / 1024 ** 2),
+        ...(p ? { prozesse: p.zeilen } : {}),
         // Ganzer Container (#696): so viel zeigt die NAS an – mit PostgreSQL (dms-komplett) und Dateizwischenspeicher.
         container: (() => { const c = x.systemlast?.container(); const mb = (v: number | null | undefined) => (v == null ? null : Math.round(v / 1024 ** 2)); return c && c.aktuell !== null ? { mb: mb(c.aktuell), spitzeMb: mb(c.spitze), programmeMb: mb(c.programme), zwischenspeicherMb: mb(c.zwischenspeicher), datenbankMb: mb(c.datenbank) } : null; })(),
-        datenbank: v ? { verbindungen: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
+        datenbank: v ? { verbindungen: v.max * (x.verbund?.anzahl ?? 1), jeProzess: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
         anfragen: x.ueberlast?.stand() ?? null,
         arbeiter: arbeiterStand(),
       });
@@ -2479,7 +2526,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(r, r.unveraendert ? 200 : 201);
     } },
     { methode: 'GET', pfad: '/api/werkbank/verkleinern', zugang: 'admin', handler: async (a) => ok(await dienst.grosseDokumente(a.query)) },
-    { methode: 'POST', pfad: '/api/werkbank/verkleinern', zugang: 'admin', handler: async (a) => ok(dienst.verkleinereViele(a.body, { id: ich(a).id, email: ich(a).email }), 202) },
+    { methode: 'POST', pfad: '/api/werkbank/verkleinern', zugang: 'admin', handler: async (a) => ok(await dienst.auftraege.angemeldet(dienst.verkleinereViele(a.body, { id: ich(a).id, email: ich(a).email })), 202) },
     { methode: 'GET', pfad: '/api/werkbank/verkleinern/einstellung', zugang: 'admin', handler: async () => ok(await dienst.verkleinernEinstellung()) },
     { methode: 'PUT', pfad: '/api/werkbank/verkleinern/einstellung', zugang: 'admin', handler: async (a) => ok(await dienst.setzeVerkleinernEinstellung(a.body)) },
     /* Archivnummer (#345): setzen mit „Bearbeiten“, suchen mit „Lesen“, Aufkleber in der Werkbank. */

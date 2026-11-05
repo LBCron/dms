@@ -5,6 +5,7 @@ import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { ProzessTabelle } from './Auslastung';
 
 /**
  * Lange Datenbankzugriffe (#12) und was gerade in der Datenbank läuft – seit #407 unter
@@ -145,6 +146,7 @@ function Auslastung({ z }: { z: DatenbankZustand }) {
           </>}
       <p className="leise klein">{t('werkbank.datenbank.verzoegerung-der-ereignisschleife-in')}</p>
       <Verbindungen z={z} />
+      <ProzessTabelle zeilen={z.stand?.prozesse} />
     </div>
   );
 }

@@ -188,6 +188,21 @@ export class Tresor {
     else log.warn('Noch kein Schlüssel für Zugangsdaten – Passwörter lassen sich erst nach dem Erzeugen in der Werkbank speichern.');
   }
 
+  /**
+   * Mehrere Prozesse (#745): Schlüssel und Fingerabdruck neu lesen, nachdem ein anderer Prozess sie geändert hat
+   * (erzeugt, gewechselt, wiederhergestellt) – ohne die Nacharbeiten von `laden`. Liefert false, solange Datei und
+   * Fingerabdruck nicht zusammenpassen (z. B. mitten in einem Wechsel); dann versucht es der Aufrufer bald noch einmal.
+   */
+  async nachladen(): Promise<boolean> {
+    if (this.wechselLaeuft) return true;
+    this.gespeichert = ((await this.einstellungen.lies('tresor')) as Gespeichert | null) ?? null;
+    try {
+      const k = Buffer.from((await readFile(this.datei, 'utf8')).trim(), 'base64url');
+      this.schluessel = k.length === 32 ? k : null;
+    } catch { this.schluessel = null; }
+    return this.zustand !== 'falsch';
+  }
+
   get fingerabdruck() { return this.schluessel ? fingerabdruck(this.schluessel) : null; }
 
   get zustand(): Zustand {
