@@ -15,8 +15,8 @@ import { t, tn } from '../sprache';
 const groesse = (b: number) => (b < 1024 ** 2 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(1).replace('.', ',')} MB` : `${(b / 1024 ** 3).toFixed(2).replace('.', ',')} GB`);
 const zeit = (iso: string | null) => (iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 const STATUS: Record<Vergleich['status'], { text: string; art: string }> = {
-  aktuell: { text: 'aktuell', art: 'gut' }, neuer: { text: t('werkbank.technik.neueres-verfuegbar'), art: 'warn' },
-  veraltet: { text: t('werkbank.technik.nicht-mehr-unterstuetzt'), art: 'stufe-error' }, unbekannt: { text: 'unbekannt', art: '' },
+  aktuell: { text: t('werkbank.technik.aktuell-2'), art: 'gut' }, neuer: { text: t('werkbank.technik.neueres-verfuegbar'), art: 'warn' },
+  veraltet: { text: t('werkbank.technik.nicht-mehr-unterstuetzt'), art: 'stufe-error' }, unbekannt: { text: t('werkbank.technik.unbekannt'), art: '' },
 };
 
 type Zeilen = Array<[string, Array<[string, string]>]>;

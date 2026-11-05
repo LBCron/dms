@@ -18,7 +18,7 @@ const GB = 1024 ** 3;
 export const platz = (b: number) => (b < GB ? `${Math.round(b / 1024 ** 2).toLocaleString('de-DE')} MB` : `${(b / GB).toFixed(1).replace('.', ',')} GB`);
 const schwelleText = (s: Schwelle) => `${String(s.wert).replace('.', ',')} ${s.einheit === 'prozent' ? '%' : 'GB'}`;
 const ORDNERNAME: Record<string, string> = { dateien: t('werkbank.speicherplatz.dateien'), geheim: t('werkbank.speicherplatz.schluessel'), sicherung: t('werkbank.speicherplatz.sicherungen') };
-const ZUSTAND = { ok: { text: 'ausreichend', art: 'gut' }, warnung: { text: 'knapp', art: 'warn' }, grenze: { text: t('werkbank.speicherplatz.grenze-erreicht'), art: 'schlecht' } } as const;
+const ZUSTAND = { ok: { text: t('werkbank.speicherplatz.ausreichend'), art: 'gut' }, warnung: { text: t('werkbank.speicherplatz.knapp'), art: 'warn' }, grenze: { text: t('werkbank.speicherplatz.grenze-erreicht'), art: 'schlecht' } } as const;
 
 export function useSpeicherplatz(offen: boolean) {
   const [stand, setStand] = useState<SpeicherplatzStand | null>(null);

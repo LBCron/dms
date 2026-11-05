@@ -2984,5 +2984,12 @@
   "nummernkreise.muster.erklaerung": "{jjjj} {jj} {mm} {tt} – Datum des Ziehens; {zaehler} oder {zaehler:7} mit führenden Nullen",
   "sicherung.erledigt": "erledigt",
   "sichten.entfernen-2": "entfernen",
-  "uebersicht.offen": "offen"
+  "uebersicht.offen": "offen",
+  "anmeldeschutz.freigegeben": "{ip} freigegeben.",
+  "demo.unvollstaendig": "{typ} unvollständig: {grund}",
+  "speicherplatz.ausreichend": "ausreichend",
+  "speicherplatz.knapp": "knapp",
+  "technik.aktuell-2": "aktuell",
+  "technik.unbekannt": "unbekannt",
+  "vollexport.veraendert": "verändert {x}"
 }

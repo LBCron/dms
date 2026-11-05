@@ -13,6 +13,7 @@ import { istTouch, postFotografieren } from './PostKamera';
 import { Symbol } from '../Symbol';
 import { istVersendet } from '../../../shared/src/model';
 import { rueckfrage } from '../rueckfrage';
+import { t, tn } from '../sprache';
 
 /**
  * Post (#192): „+ Post“ in den Sichten mit Post, die Leiste an einer Post-Mappe (Stand, Zuordnen,
@@ -20,16 +21,15 @@ import { rueckfrage } from '../rueckfrage';
  */
 
 const ohneEndung = (n: string) => n.replace(/\.[^.]{1,8}$/, '').trim() || n;
-const dokumentenRegister = (t: Mappentyp | undefined) => (t?.register ?? []).filter((r) => r.art === 'dokumente');
+const dokumentenRegister = (eintrag: Mappentyp | undefined) => (eintrag?.register ?? []).filter((r) => r.art === 'dokumente');
 
 /** „+ Post“ in den Sichten mit Post: Dateien wählen → eine Post-Mappe (#193, wie Ablegen und „+ Neu“). */
 export function PostKnopf() {
   const eingabe = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button type="button" className="knopf gruen klein" onClick={() => eingabe.current?.click()} title="Dateien auswählen – sie kommen zusammen in eine neue Post">
-        + Post
-      </button>
+      <button type="button" className="knopf gruen klein" onClick={() => eingabe.current?.click()} title={t('ablage.post.dateien-auswaehlen-sie-kommen')}>
+        {t('ablage.post.post')}</button>
       {/* Am Handy bietet die Auswahl auch die Kamera an. */}
       <input ref={eingabe} type="file" multiple hidden onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ''; neuePost(f); }} />
     </>
@@ -69,21 +69,21 @@ export function PostLeiste({ typ, details, neuLaden }: { typ: Mappentyp; details
       <div className="postleiste">
         <span className={`chip stand-${stand.toLowerCase()}`}>{stand}</span>
         {zugeordnet.length > 0 && (
-          <span className="klein">zugeordnet zu {zugeordnet.map((id, i) => {
+          <span className="klein">{t('ablage.post.zugeordnet-zu')}{' '}{zugeordnet.map((id, i) => {
             const b = details.bezuege[id];
             return <span key={id}>{i > 0 && ', '}{b && !b.verborgen ? <Link to={`/ablage/${b.typId}/${id}`} className="verweis">{titelOder(b.titel)}</Link> : titelOder(b?.titel)}</span>;
           })}</span>
         )}
         <span className="luecke" aria-hidden="true" />
-        {darf && <button type="button" className={`knopf klein ${offen ? 'an' : 'primaer'}`} aria-expanded={offen} onClick={() => setOffen(!offen)}>Zuordnen …</button>}
-        {darf && stand !== POST_STAND.erledigt && <button type="button" className="knopf klein" onClick={() => void setzeStand(POST_STAND.erledigt)} title="Nichts mehr zu tun, z. B. Werbung oder schon erledigt">Erledigt</button>}
-        {darf && stand !== POST_STAND.neu && <button type="button" className="textknopf klein" onClick={() => void setzeStand(POST_STAND.neu)}>Wieder neu</button>}
+        {darf && <button type="button" className={`knopf klein ${offen ? 'an' : 'primaer'}`} aria-expanded={offen} onClick={() => setOffen(!offen)}>{t('ablage.post.zuordnen')}</button>}
+        {darf && stand !== POST_STAND.erledigt && <button type="button" className="knopf klein" onClick={() => void setzeStand(POST_STAND.erledigt)} title={t('ablage.post.nichts-mehr-zu-tun')}>{t('ablage.post.erledigt')}</button>}
+        {darf && stand !== POST_STAND.neu && <button type="button" className="textknopf klein" onClick={() => void setzeStand(POST_STAND.neu)}>{t('ablage.post.wieder-neu')}</button>}
         <Hilfe ort="post.zuordnen" />
         {/* #490: Rückseite vergessen? Seite mit der Kamera anhängen (Handy) bzw. eine zweite Post anhängen. */}
         {darf && !versendet && <div className="pk-postzeile">
           {istTouch() && <button type="button" className="knopf klein" onClick={() => postFotografieren({ mappeId: m.id, dokumentId: pdf?.id, titel: titelOder(m.titel), fertig: () => { void neuLaden(); void d.neuLaden(); } })}
-            title={pdf ? `Foto als weitere Seite an „${pdf.name}“ anhängen` : 'Fotos als PDF an diese Post'}><Symbol name="kamera" /> Seite hinzufügen</button>}
-          <button type="button" className={`textknopf klein ${zusammen ? 'an' : ''}`} aria-expanded={zusammen} onClick={() => setZusammen(!zusammen)} title="Die Seiten einer anderen Post hier anhängen – z. B. die Rückseite desselben Briefs">Mit anderer Post zusammenlegen …</button>
+            title={pdf ? t('ablage.post.foto-als-weitere-seite', { name: pdf.name }) : t('ablage.post.fotos-als-pdf-an')}>{tn('ablage.post.seite-hinzufuegen', { symbol: <Symbol name="kamera" /> })}</button>}
+          <button type="button" className={`textknopf klein ${zusammen ? 'an' : ''}`} aria-expanded={zusammen} onClick={() => setZusammen(!zusammen)} title={t('ablage.post.die-seiten-einer-anderen')}>{t('ablage.post.mit-anderer-post-zusammenlegen')}</button>
         </div>}
       </div>
       {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
@@ -109,18 +109,18 @@ function Zusammenlegen({ typ, post, neuLaden, schliessen }: { typ: Mappentyp; po
       .catch((e) => setFehler((e as Error).message));
   }, [typ.id, post.id]);
   async function legen(q: Mappe) {
-    if (!(await rueckfrage({ titel: `„${titelOder(q.titel)}“ hier anhängen?`, text: `Ihre Seiten kommen ans Ende des PDFs von „${titelOder(post.titel)}“. „${titelOder(q.titel)}“ kommt danach in den Papierkorb.`, ja: 'Zusammenlegen' }))) return;
+    if (!(await rueckfrage({ titel: t('ablage.post.hier-anhaengen', { titelOder: titelOder(q.titel) }), text: t('ablage.post.ihre-seiten-kommen-ans', { titelOder: titelOder(post.titel), titelOder2: titelOder(q.titel) }), ja: t('ablage.post.zusammenlegen') }))) return;
     setLaeuft(true); setFehler(undefined);
     try { await api.postZusammenlegen(post.id, q.id); schliessen(); await neuLaden(); await d.neuLaden(); }
     catch (e) { setFehler((e as Error).message); } finally { setLaeuft(false); }
   }
   const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
   return (
-    <section className="blatt pk-zusammen" aria-label="Mit anderer Post zusammenlegen">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Mit anderer Post zusammenlegen</h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
-      <p className="leise">Welche Post gehört zu diesem Brief? Ihre Seiten kommen hier ans Ende, sie selbst in den Papierkorb.</p>
+    <section className="blatt pk-zusammen" aria-label={t('ablage.post.mit-anderer-post-zusammenlegen-2')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.mit-anderer-post-zusammenlegen-2')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>
+      <p className="leise">{t('ablage.post.welche-post-gehoert-zu')}</p>
       {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-      {liste === null ? !fehler && <p className="leise">Lade …</p> : !liste.length ? <p className="leise">Keine andere neue Post da.</p> : (
+      {liste === null ? !fehler && <p className="leise">{t('ablage.post.lade')}</p> : !liste.length ? <p className="leise">{t('ablage.post.keine-andere-neue-post')}</p> : (
         <ul className="pk-postliste">{liste.map((q) => (
           <li key={q.id}><button type="button" className="knopf" disabled={laeuft} onClick={() => void legen(q)}>
             <span className="pk-postname">{titelOder(q.titel)}</span><span className="leise klein">{zeit(q.erstellt)}</span>
@@ -178,47 +178,47 @@ function Erkannt({ post, e, darf, neuLaden, neu }: { post: Mappe; e: PostErkennu
     catch (x) { setFehler((x as Error).message); } finally { setLaeuft(false); }
   };
   const orgTyp = e.neuerAbsender ? d.typ(e.neuerAbsender.typId) : undefined;
-  const neuLink = e.neuerAbsender && orgTyp ? `/ablage/${orgTyp.id}/neu?vorbelegen=${encodeURIComponent(JSON.stringify(e.neuerAbsender.werte))}` : null;
+  const neuLink = e.neuerAbsender && orgTyp ? t('ablage.post.ablage-neu-vorbelegen', { id: orgTyp.id, encodeURIComponent: encodeURIComponent(JSON.stringify(e.neuerAbsender.werte)) }) : null;
   const betragText = e.angaben.betrag ? formatiere({ key: 'b', label: '', typ: 'betrag' } as Feld, e.angaben.betrag.wert) : '';
   return (
-    <section className="er-blatt" aria-label="Erkannt">
+    <section className="er-blatt" aria-label={t('ablage.post.erkannt')}>
       <div className="er-kopf">
-        <strong>Erkannt</strong>
-        <span className="leise klein">Vorschläge aus dem Text – nichts ist eingetragen, bis du es übernimmst</span>
+        <strong>{t('ablage.post.erkannt')}</strong>
+        <span className="leise klein">{t('ablage.post.vorschlaege-aus-dem-text')}</span>
         <span className="luecke" aria-hidden="true" />
-        <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => { setLaeuft(true); void neu().finally(() => setLaeuft(false)); }} title="Nach einer neuen Organisation oder Änderungen an Kundennummern noch einmal suchen">Neu erkennen</button>
+        <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => { setLaeuft(true); void neu().finally(() => setLaeuft(false)); }} title={t('ablage.post.nach-einer-neuen-organisation')}>{t('ablage.post.neu-erkennen')}</button>
         <Hilfe ort="post.erkennung" />
       </div>
-      {e.auto && <p className="klein er-auto">{e.auto.rueckgaengig ? 'Die automatische Zuordnung wurde rückgängig gemacht' : 'Automatisch zugeordnet'}
-        {e.bezuege[e.auto.ziel] && <> {e.auto.rueckgaengig ? 'von' : 'zu'} <Link to={`/ablage/${e.bezuege[e.auto.ziel].typId}/${e.auto.ziel}`} className="verweis">{titelOder(e.bezuege[e.auto.ziel].titel)}</Link></>}
+      {e.auto && <p className="klein er-auto">{e.auto.rueckgaengig ? t('ablage.post.die-automatische-zuordnung-wurde') : t('ablage.post.automatisch-zugeordnet')}
+        {e.bezuege[e.auto.ziel] && <> {e.auto.rueckgaengig ? t('ablage.post.von') : t('ablage.post.zu')} <Link to={`/ablage/${e.bezuege[e.auto.ziel].typId}/${e.auto.ziel}`} className="verweis">{titelOder(e.bezuege[e.auto.ziel].titel)}</Link></>}
         {!e.auto.rueckgaengig && <span className="leise"> – {e.auto.grund}</span>}</p>}
-      {leer ? <p className="leise klein">Im Text dieser Post hat die Erkennung nichts gefunden.</p> : (
+      {leer ? <p className="leise klein">{t('ablage.post.im-text-dieser-post')}</p> : (
         <dl className="er-liste">
           {absender && <div className="er-paar">
-            <dt>Absender</dt>
+            <dt>{t('ablage.post.absender')}</dt>
             <dd>
-              <span className="chip">Vorschlag</span>{' '}
+              <span className="chip">{t('ablage.post.vorschlag')}</span>{' '}
               <Link to={`/ablage/${absender.typId}/${absender.mappeId}`} className="verweis">{titelOder(absender.titel)}</Link>
-              <span className="leise klein"> – gefunden: {absender.gruende.join(', ')}{!absender.stark || !e.eindeutig ? ' (unsicher)' : ''}</span>
-              {darf && auswahlText(post.werte.absender) !== absender.titel && <> <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => void eintragen({ absender: absender.titel })}>Als Absender eintragen</button></>}
-              {weitere.length > 0 && <span className="leise klein er-weitere"> Auch möglich: {weitere.map((x, i) => <span key={x.mappeId}>{i > 0 && ', '}<Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{titelOder(x.titel)}</Link></span>)}</span>}
+              <span className="leise klein"> {' '}{t('ablage.post.gefunden', { gruende: absender.gruende.join(', '), wert: !absender.stark || !e.eindeutig ? t('ablage.post.unsicher') : '' })}</span>
+              {darf && auswahlText(post.werte.absender) !== absender.titel && <> <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => void eintragen({ absender: absender.titel })}>{t('ablage.post.als-absender-eintragen')}</button></>}
+              {weitere.length > 0 && <span className="leise klein er-weitere"> {' '}{t('ablage.post.auch-moeglich')}{' '}{weitere.map((x, i) => <span key={x.mappeId}>{i > 0 && ', '}<Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{titelOder(x.titel)}</Link></span>)}</span>}
             </dd>
           </div>}
           {!absender && e.neuerAbsender && <div className="er-paar">
-            <dt>Absender</dt>
+            <dt>{t('ablage.post.absender')}</dt>
             <dd>
-              <span className="chip">neu</span>{' '}
+              <span className="chip">{t('ablage.post.neu')}</span>{' '}
               {Object.values(e.neuerAbsender.werte).join(', ')}
-              <span className="leise klein"> – aus dem Briefkopf; noch keine passende {orgTyp?.name ?? 'Mappe'}</span>
-              {neuLink && darfErstellen(orgTyp) && <> <Link to={neuLink} className="textknopf klein">Als neue {orgTyp!.name} anlegen</Link></>}
+              <span className="leise klein"> {' '}{t('ablage.post.aus-dem-briefkopf-noch', { wert: orgTyp?.name ?? t('ablage.post.mappe') })}</span>
+              {neuLink && darfErstellen(orgTyp) && <> <Link to={neuLink} className="textknopf klein">{t('ablage.post.als-neue-anlegen', { name: orgTyp!.name })}</Link></>}
             </dd>
           </div>}
           {datum && <div className="er-paar">
-            <dt>Datum</dt>
+            <dt>{t('ablage.post.datum')}</dt>
             <dd>{formatiere({ key: 'd', label: '', typ: 'datum' } as Feld, datum)}<span className="leise klein"> – {e.angaben.datum!.fundstelle}</span>
-              {darf && auswahlText(post.werte.datum) !== datum && <> <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => void eintragen({ datum })}>Als Datum der Post eintragen</button></>}</dd>
+              {darf && auswahlText(post.werte.datum) !== datum && <> <button type="button" className="textknopf klein" disabled={laeuft} onClick={() => void eintragen({ datum })}>{t('ablage.post.als-datum-der-post')}</button></>}</dd>
           </div>}
-          {e.angaben.betrag && <div className="er-paar"><dt>Betrag</dt><dd>{betragText}<span className="leise klein"> – {e.angaben.betrag.fundstelle}</span></dd></div>}
+          {e.angaben.betrag && <div className="er-paar"><dt>{t('ablage.post.betrag')}</dt><dd>{betragText}<span className="leise klein"> – {e.angaben.betrag.fundstelle}</span></dd></div>}
           {e.angaben.nummern.slice(0, 4).map((n) => <div key={`${n.label}:${n.wert}`} className="er-paar"><dt>{n.label}</dt><dd className="mono">{n.wert}</dd></div>)}
         </dl>
       )}
@@ -230,12 +230,12 @@ function Erkannt({ post, e, darf, neuLaden, neu }: { post: Mappe; e: PostErkennu
 function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ: Mappentyp; details: MappeDetails; neuLaden: () => Promise<void>; schliessen(): void; erkennung?: PostErkennung | null }) {
   const d = useDaten();
   const post = details.mappe;
-  const ziele = d.typen.filter((t) => t.system !== 'post');
+  const ziele = d.typen.filter((mappentyp) => mappentyp.system !== 'post');
   // Vorschläge der Erkennung (#336) für Mappen, die man bearbeiten könnte; der beste ist vorausgewählt.
-  const vorschlaege = (erkennung?.ziele ?? []).filter((z) => ziele.some((t) => t.id === z.typId));
+  const vorschlaege = (erkennung?.ziele ?? []).filter((z) => ziele.some((mappentyp) => mappentyp.id === z.typId));
   const erster = vorschlaege[0];
   const [art, setArt] = useState<'vorhanden' | 'neu'>('vorhanden');
-  const [typId, setTypId] = useState(() => erster?.typId ?? ziele.find((t) => dokumentenRegister(t).length)?.id ?? ziele[0]?.id ?? '');
+  const [typId, setTypId] = useState(() => erster?.typId ?? ziele.find((mappentyp) => dokumentenRegister(mappentyp).length)?.id ?? ziele[0]?.id ?? '');
   const zielTyp = d.typ(typId);
   const regs = dokumentenRegister(zielTyp);
   const [register, setRegister] = useState('');
@@ -263,10 +263,10 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
   useEffect(() => {
     if (art !== 'vorhanden' || !typId) return;
     let aktuell = true;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api.seite(`typ:${typId}`, 0, 20, suche.trim()).then((s) => { if (aktuell) setTreffer(s.mappen); }).catch(() => aktuell && setTreffer([]));
     }, 200);
-    return () => { aktuell = false; clearTimeout(t); };
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [art, typId, suche]);
   useEffect(() => { setZiel((z) => (z && z.typId === typId && art === 'vorhanden' ? z : undefined)); }, [typId, art]);
   const waehleVorschlag = (z: (typeof vorschlaege)[number]) => { setArt('vorhanden'); setTypId(z.typId); setZiel(alsMappe(z)); setVorgeschlagen(true); };
@@ -290,31 +290,31 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
     const q = new URLSearchParams({ zuordnen: post.id, dokumente: [...gewaehlt].join(','), vorschlag: JSON.stringify(vorschlagFuer(zielTyp, post.werte, erkennung)) });
     if (mitDokumenten && register) q.set('register', register);
     if (kopieren) q.set('kopieren', '1');
-    geheZu(`/ablage/${zielTyp.id}/neu?${q.toString()}`);
+    geheZu(t('ablage.post.ablage-neu', { id: zielTyp.id, q: q.toString() }));
   }
 
   if (fertig) {
     return (
-      <section className="blatt" aria-label="Zuordnen">
-        <div className="blattkopf zeile-zwischen"><h2 className="h3">Zugeordnet</h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
-        <p className="gutertext" role="status">Die Post gehört jetzt zu „{titelOder(fertig.titel)}“.</p>
-        <div className="knoepfe"><Link to={`/ablage/${fertig.typId}/${fertig.id}`} className="knopf">Mappe öffnen</Link><button type="button" className="textknopf" onClick={() => setFertig(undefined)}>Weitere Mappe zuordnen</button></div>
+      <section className="blatt" aria-label={t('ablage.post.zuordnen-2')}>
+        <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.zugeordnet')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>
+        <p className="gutertext" role="status">{t('ablage.post.die-post-gehoert-jetzt', { titelOder: titelOder(fertig.titel) })}</p>
+        <div className="knoepfe"><Link to={`/ablage/${fertig.typId}/${fertig.id}`} className="knopf">{t('ablage.post.mappe-oeffnen')}</Link><button type="button" className="textknopf" onClick={() => setFertig(undefined)}>{t('ablage.post.weitere-mappe-zuordnen')}</button></div>
       </section>
     );
   }
 
   return (
-    <section className="blatt" aria-label="Zuordnen">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Zuordnen</h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
-      <p className="leise">Zu welcher Mappe gehört diese Post? Die Dokumente kommen in ein Register dieser Mappe, die Post verweist auf sie.</p>
+    <section className="blatt" aria-label={t('ablage.post.zuordnen-2')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.post.zuordnen-2')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.post.schliessen')}</button></div>
+      <p className="leise">{t('ablage.post.zu-welcher-mappe-gehoert')}</p>
       {vorschlaege.length > 0 && (
-        <div className="er-ziele" role="group" aria-label="Vorschläge">
-          <p className="klein"><strong>Vorschläge</strong> <span className="leise">aus dem Text der Post</span></p>
+        <div className="er-ziele" role="group" aria-label={t('ablage.post.vorschlaege')}>
+          <p className="klein"><strong>{t('ablage.post.vorschlaege')}</strong> <span className="leise">{t('ablage.post.aus-dem-text-der')}</span></p>
           <ul>{vorschlaege.slice(0, 5).map((z) => {
             const an = vorgeschlagen && ziel?.id === z.mappeId;
             return (
               <li key={z.mappeId}><button type="button" className={an ? 'an' : ''} aria-pressed={an} onClick={() => waehleVorschlag(z)}>
-                <span className="er-zieltitel">{titelOder(z.titel)} <span className="leise klein">{d.typ(z.typId)?.name}</span>{an && <span className="chip">Vorschlag</span>}</span>
+                <span className="er-zieltitel">{titelOder(z.titel)} <span className="leise klein">{d.typ(z.typId)?.name}</span>{an && <span className="chip">{t('ablage.post.vorschlag')}</span>}</span>
                 <span className="leise klein">{z.gruende.join(' · ')}</span>
               </button></li>
             );
@@ -322,25 +322,25 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
         </div>
       )}
       <div className="raster">
-        <label className="eigenschaft"><span>Mappentyp</span>
+        <label className="eigenschaft"><span>{t('ablage.post.mappentyp')}</span>
           <select value={typId} onChange={(e) => setTypId(e.target.value)}>
-            {ziele.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            {ziele.map((mappentyp) => <option key={mappentyp.id} value={mappentyp.id}>{mappentyp.name}</option>)}
           </select>
         </label>
         <fieldset className="eigenschaft wahl">
-          <legend>Mappe</legend>
-          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'vorhanden'} onChange={() => setArt('vorhanden')} /><span>vorhandene wählen</span></label>
-          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'neu'} onChange={() => setArt('neu')} disabled={!darfErstellen(zielTyp)} /><span>neue anlegen</span></label>
+          <legend>{t('ablage.post.mappe')}</legend>
+          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'vorhanden'} onChange={() => setArt('vorhanden')} /><span>{t('ablage.post.vorhandene-waehlen')}</span></label>
+          <label className="haken"><input type="radio" name="zuordnen-art" checked={art === 'neu'} onChange={() => setArt('neu')} disabled={!darfErstellen(zielTyp)} /><span>{t('ablage.post.neue-anlegen')}</span></label>
         </fieldset>
       </div>
 
       {art === 'vorhanden' && (
         <div className="zuordnen-suche">
-          <label className="suche"><span className="sr">Mappe suchen</span>
-            <input type="search" placeholder={`${zielTyp?.name ?? 'Mappe'} suchen …`} value={suche} onChange={(e) => setSuche(e.target.value)} autoFocus />
+          <label className="suche"><span className="sr">{t('ablage.post.mappe-suchen')}</span>
+            <input type="search" placeholder={t('ablage.post.suchen', { wert: zielTyp?.name ?? t('ablage.post.mappe') })} value={suche} onChange={(e) => setSuche(e.target.value)} autoFocus />
           </label>
-          {treffer === null ? <p className="leise klein">Lade …</p>
-            : !treffer.length ? <p className="leise klein">Keine Mappe gefunden.</p>
+          {treffer === null ? <p className="leise klein">{t('ablage.post.lade')}</p>
+            : !treffer.length ? <p className="leise klein">{t('ablage.post.keine-mappe-gefunden')}</p>
             : <ul className="zuordnen-treffer">{treffer.map((x) => (
                 <li key={x.id}><button type="button" className={ziel?.id === x.id ? 'an' : ''} aria-pressed={ziel?.id === x.id} onClick={() => { setZiel(x); setVorgeschlagen(false); }}>{titelOder(x.titel)}</button></li>
               ))}</ul>}
@@ -349,7 +349,7 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
 
       {details.dokumente.length > 0 && (
         <fieldset className="eigenschaft">
-          <legend>Dokumente</legend>
+          <legend>{t('ablage.post.dokumente')}</legend>
           {details.dokumente.map((x) => (
             <div key={x.id} className="mitdoppelt">
               <label className="haken mitvorschau"><input type="checkbox" checked={gewaehlt.has(x.id)} onChange={() => umschalten(x.id)} /><Vorschaubild d={x} /><span>{x.name}</span></label>
@@ -357,20 +357,20 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
             </div>
           ))}
           {mitDokumenten && regs.length > 1 && (
-            <label className="eigenschaft"><span>in das Register</span>
+            <label className="eigenschaft"><span>{t('ablage.post.in-das-register')}</span>
               <select value={register} onChange={(e) => setRegister(e.target.value)}>{regs.map((r) => <option key={r.key} value={r.key}>{r.name}</option>)}</select>
             </label>
           )}
-          {mitDokumenten && regs.length === 1 && <p className="leise klein">kommen ins Register „{regs[0].name}“</p>}
-          {mitDokumenten && <label className="haken klein"><input type="checkbox" checked={kopieren} onChange={(e) => setKopieren(e.target.checked)} /><span>Kopie in der Post behalten (gleiche Datei, kein zusätzlicher Platz)</span></label>}
+          {mitDokumenten && regs.length === 1 && <p className="leise klein">{t('ablage.post.kommen-ins-register', { name: regs[0].name })}</p>}
+          {mitDokumenten && <label className="haken klein"><input type="checkbox" checked={kopieren} onChange={(e) => setKopieren(e.target.checked)} /><span>{t('ablage.post.kopie-in-der-post')}</span></label>}
         </fieldset>
       )}
-      {fehltRegister && <div className="hinweis warn"><p>„{zielTyp?.name}“ hat kein Dokumentenregister. Wähle die Dokumente ab oder einen anderen Mappentyp.</p></div>}
+      {fehltRegister && <div className="hinweis warn"><p>{tn('ablage.post.hat-kein-dokumentenregister-waehle', { name: zielTyp?.name })}</p></div>}
       {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
       <div className="knoepfe">
         {art === 'vorhanden'
-          ? <button type="button" className="knopf primaer" disabled={!ziel || laeuft || fehltRegister} onClick={() => void zuordnen()}>{laeuft ? 'Ordne zu …' : ziel ? `Zu „${titelOder(ziel.titel)}“ zuordnen` : 'Mappe wählen'}</button>
-          : <button type="button" className="knopf primaer" disabled={fehltRegister || !darfErstellen(zielTyp)} onClick={zumFormular}>Weiter: neue Mappe ausfüllen</button>}
+          ? <button type="button" className="knopf primaer" disabled={!ziel || laeuft || fehltRegister} onClick={() => void zuordnen()}>{laeuft ? t('ablage.post.ordne-zu') : ziel ? t('ablage.post.zu-zuordnen', { titelOder: titelOder(ziel.titel) }) : t('ablage.post.mappe-waehlen')}</button>
+          : <button type="button" className="knopf primaer" disabled={fehltRegister || !darfErstellen(zielTyp)} onClick={zumFormular}>{t('ablage.post.weiter-neue-mappe-ausfuellen')}</button>}
       </div>
     </section>
   );

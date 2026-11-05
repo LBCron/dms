@@ -74,7 +74,7 @@ export function VektorStandBlock() {
       {meldung && <div className={`hinweis ${meldung.art}`} role="status"><p>{meldung.text}</p></div>}
       <dl className="eigenschaften">
         <dt>{t('aehnlich.werkbank.modell')}</dt><dd>{s.modell ?? t('aehnlich.werkbank.modell.unbekannt')}</dd>
-        <dt>Stand</dt><dd>{s.mitVolltext ? <><progress className="aehnl-fortschritt" max={s.mitVolltext} value={Math.min(s.mitVektor, s.mitVolltext)} /> {t('aehnlich.werkbank.stand', { mit: s.mitVektor.toLocaleString('de-DE'), gesamt: s.mitVolltext.toLocaleString('de-DE') })}</> : t('aehnlich.werkbank.stand.leer')}</dd>
+        <dt>{t('ablage.aehnlich.stand')}</dt><dd>{s.mitVolltext ? <><progress className="aehnl-fortschritt" max={s.mitVolltext} value={Math.min(s.mitVektor, s.mitVolltext)} /> {t('aehnlich.werkbank.stand', { mit: s.mitVektor.toLocaleString('de-DE'), gesamt: s.mitVolltext.toLocaleString('de-DE') })}</> : t('aehnlich.werkbank.stand.leer')}</dd>
         {s.zwischenspeicherMB !== null && <><dt>{t('aehnlich.werkbank.speicher')}</dt><dd>{t('aehnlich.werkbank.speicher.wert', { mb: s.zwischenspeicherMB.toLocaleString('de-DE') })}</dd></>}
       </dl>
       <label className="haken"><input type="checkbox" checked={s.suche} disabled={laeuft} onChange={(e) => void suche(e.target.checked)} /><span>{t('aehnlich.werkbank.suche')}</span></label>

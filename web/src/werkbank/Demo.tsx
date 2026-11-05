@@ -55,7 +55,7 @@ function meldungAus(a: Auftrag): Meldung {
       ] : []),
       ...(r.ohneRastern ? [t('werkbank.demo.ohne-pdftoppm-scans-und')] : []),
       ...(r.abgebrochen ? [t('werkbank.demo.vorzeitig-beendet', { abgebrochen: r.abgebrochen })] : []),
-      ...r.uebersprungen.map((x) => `${x.typ} unvollständig: ${x.grund}`),
+      ...r.uebersprungen.map((x) => t('werkbank.demo.unvollstaendig', { typ: x.typ, grund: x.grund })),
     ],
   };
 }

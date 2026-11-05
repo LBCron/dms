@@ -31,12 +31,12 @@ import { AusDokument, type AusDokumentErgebnis } from './AusDokument';
 import { ausDokumentKnopf, type Sicherheit } from '../../../shared/src/erkennung';
 import type { TypVorschlaege } from '../api';
 import { altesFeldAusblenden } from '../../../shared/src/umwandlung';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 
 /** Register des Typs; ältere Typen ohne Register bekommen die Standardregister. */
-const registerVon = (t: Mappentyp): Register[] => (t.register?.length ? t.register : standardRegister(t.felder));
+const registerVon = (mappentyp: Mappentyp): Register[] => (mappentyp.register?.length ? mappentyp.register : standardRegister(mappentyp.felder));
 
 /** Neue Mappe als Ziel von „Zuordnen“ (#192): danach wird die Post ihr zugeordnet. */
 export interface ZuordnenNachher { post: string; register?: string; dokumente: string[]; kopieren: boolean; vorschlag: Record<string, Wert> }
@@ -73,9 +73,9 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
     <>
       <div className="mappenkopf">
         <p className="ueber">{typ.name}</p>
-        <h1>Neue Mappe</h1>
+        <h1>{t('ablage.mappeformular.neue-mappe')}</h1>
       </div>
-      {zuordnen && <div className="hinweis info"><p>Nach dem Speichern wird die Post dieser Mappe zugeordnet{zuordnen.dokumente.length ? `, ${zuordnen.dokumente.length === 1 ? 'ihr Dokument kommt' : `ihre ${zuordnen.dokumente.length} Dokumente kommen`} hierher` : ''}.{vorbelegt.length > 0 && <> Als Vorschlag aus der Post eingetragen: {vorbelegt.join(', ')} – bitte prüfen.</>}</p></div>}
+      {zuordnen && <div className="hinweis info"><p>{t('ablage.mappeformular.nach-dem-speichern-wird', { wert: zuordnen.dokumente.length ? t('ablage.mappeformular.ihre-dokumente-kommen-hierher', { anzahl: zuordnen.dokumente.length }) : '' })}{vorbelegt.length > 0 && <> {' '}{t('ablage.mappeformular.als-vorschlag-aus-der', { vorbelegt: vorbelegt.join(', ') })}</>}</p></div>}
       <Formular typ={typ} start={start} sicht={sicht} zuordnen={zuordnen} />
     </>
   );
@@ -87,7 +87,7 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
  */
 function NurImModus({ mappeId }: { mappeId: string }) {
   const [erstes] = useState(() => {
-    try { const k = `dms:nur-im-modus:${mappeId}`; const da = sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); return !da; } catch { return true; }
+    try { const k = t('ablage.mappeformular.dms-nur-im-modus', { mappeId }); const da = sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); return !da; } catch { return true; }
   });
   return <div className={erstes ? 'hinweis warn' : 'leise klein'} role={erstes ? 'alert' : undefined} id="nur-im-verwaltungsmodus"><p>{t('mappen.verwaltungsmodus.hinweis')}</p></div>;
 }
@@ -128,21 +128,21 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
             <Stern mappeId={mappe.id} an={!!details.favorit} />
             <Aktionsmenue aufgabe={() => setAufgabeOffen(true)} erinnern={() => setErinnernOffen(true)} email={details.exportierbar === false ? undefined : () => setEmailOffen(true)} drucken={details.exportierbar === false ? undefined : () => setDrucken(true)}
               link={direktlink ? () => { const l = location.origin + direktlink; void kopiere(l).then((ok) => setKopiert({ link: l, ok })); } : undefined}
-              auskunft={details.auskunft ? () => geheZu(`/werkbank/auskuenfte/neu?mappe=${encodeURIComponent(details.mappe.id)}`) : undefined}
+              auskunft={details.auskunft ? () => geheZu(t('ablage.mappeformular.werkbank-auskuenfte-neu-mappe', { encodeURIComponent: encodeURIComponent(details.mappe.id) })) : undefined}
               loeschwege={[
-                ...(loeschbarHier ? [{ text: 'Mappe löschen …', tu: () => setLoeschWunsch((n) => n + 1), nurSchmal: true }] : []),
-                ...(mitVerknuepften ? [{ text: 'Mit verknüpften Mappen löschen …', titel: 'Diese Mappe samt allen Mappen, die zu ihr gehören – nach einer Vorschau als Baum', tu: mitVerknuepften }] : []),
+                ...(loeschbarHier ? [{ text: t('ablage.mappeformular.mappe-loeschen'), tu: () => setLoeschWunsch((n) => n + 1), nurSchmal: true }] : []),
+                ...(mitVerknuepften ? [{ text: t('ablage.mappeformular.mit-verknuepften-mappen-loeschen'), titel: t('ablage.mappeformular.diese-mappe-samt-allen'), tu: mitVerknuepften }] : []),
               ]} />
           </div>
         </div>
         <dl className="index">
-          <div><dt>Angelegt</dt><dd>{zeit(mappe.erstellt)} von <Person id={mappe.erstelltVon} /></dd></div>
-          <div><dt>Zuletzt geändert</dt><dd>{zeit(mappe.geaendert)} von <Person id={mappe.geaendertVon} /></dd></div>
+          <div><dt>{t('ablage.mappeformular.angelegt')}</dt><dd>{t('ablage.mappeformular.von', { zeit: zeit(mappe.erstellt) })}{' '}<Person id={mappe.erstelltVon} /></dd></div>
+          <div><dt>{t('ablage.mappeformular.zuletzt-geaendert')}</dt><dd>{t('ablage.mappeformular.von', { zeit: zeit(mappe.geaendert) })}{' '}<Person id={mappe.geaendertVon} /></dd></div>
           {/* Archivmodus (#212) */}
-          {details.aufbewahrenBis && <div><dt><span className="chip archiv" title="Archivmodus: vor Fristende nicht löschbar">Archiv</span></dt><dd>{inFrist(details.aufbewahrenBis) ? 'aufbewahren bis' : 'Frist abgelaufen am'} {datumText(details.aufbewahrenBis)}</dd></div>}
+          {details.aufbewahrenBis && <div><dt><span className="chip archiv" title={t('ablage.mappeformular.archivmodus-vor-fristende-nicht')}>{t('ablage.mappeformular.archiv')}</span></dt><dd>{inFrist(details.aufbewahrenBis) ? t('ablage.mappeformular.aufbewahren-bis') : t('ablage.mappeformular.frist-abgelaufen-am')} {datumText(details.aufbewahrenBis)}</dd></div>}
         </dl>
-        {typ.system === 'benutzer' && ich.rolle === 'admin' && <p className="leise klein"><Link to={`/werkbank/benutzer/${mappe.id}`} className="verweis">In der Benutzerverwaltung öffnen →</Link></p>}
-        {mappe.systemKennung && <p className="leise klein"><span className="chip">Systemrolle</span> {t('mappen.systemrolle.hinweis')}</p>}
+        {typ.system === 'benutzer' && ich.rolle === 'admin' && <p className="leise klein"><Link to={`/werkbank/benutzer/${mappe.id}`} className="verweis">{t('ablage.mappeformular.in-der-benutzerverwaltung-oeffnen')}</Link></p>}
+        {mappe.systemKennung && <p className="leise klein"><span className="chip">{t('ablage.mappeformular.systemrolle')}</span> {t('mappen.systemrolle.hinweis')}</p>}
         {kopiert && <LinkKopiert {...kopiert} schliessen={() => setKopiert(null)} />}
       </div>
       {details.nurImVerwaltungsmodus && <NurImModus mappeId={mappe.id} />}
@@ -155,13 +155,13 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
       {emailOffen && <EmailMaske key={mappe.id} typ={typ} details={details} neuLaden={neuLaden} schliessen={() => setEmailOffen(false)} />}
       {drucken && <Druckansicht typ={typ} details={details} fertig={druckEnde} />}
       {mappe.passt === false && (
-        <div className="hinweis warn"><p>Diese Mappe passt nicht mehr zur aktuellen Definition von „{typ.name}“{mappe.problem ? ` (${mappe.problem})` : ''}. Beim nächsten Speichern müssen die markierten Felder stimmen.</p></div>
+        <div className="hinweis warn"><p>{t('ablage.mappeformular.diese-mappe-passt-nicht', { name: typ.name, wert: mappe.problem ? ` (${mappe.problem})` : '' })}</p></div>
       )}
       <Formular typ={typ} mappe={mappe} start={rohAusWerten(typ, mappe.werte)} sicht={sicht} anhang={anhang} details={details} neuLaden={neuLaden} registerWunsch={registerWunsch} mitVerknuepften={mitVerknuepften} loeschWunsch={loeschWunsch} />
       {verwaist.length > 0 && (
         <section className="blatt">
-          <h2 className="h3">Werte ohne Felddefinition</h2>
-          <p className="leise">Diese Werte stammen aus Feldern, die es im Mappentyp nicht mehr gibt. Sie bleiben erhalten.</p>
+          <h2 className="h3">{t('ablage.mappeformular.werte-ohne-felddefinition')}</h2>
+          <p className="leise">{t('ablage.mappeformular.diese-werte-stammen-aus')}</p>
           <ul className="verwaist">{verwaist.map(([k, v]) => <li key={k}><code>{k}</code>: {typeof v === 'object' ? JSON.stringify(v) : String(v)}</li>)}</ul>
         </section>
       )}
@@ -191,16 +191,16 @@ function RegisterReihe({ aktiv, children }: { aktiv?: string; children: ReactNod
     return () => ro?.disconnect();
   }, [messe]);
   useEffect(() => {
-    const e = ref.current, t = e?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (!e || !t || e.scrollWidth <= e.clientWidth) return;
+    const e = ref.current, eintrag = e?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!e || !eintrag || e.scrollWidth <= e.clientWidth) return;
     // Nur waagerecht rollen – scrollIntoView würde auch die Seite verschieben.
-    if (t.offsetLeft < e.scrollLeft) e.scrollLeft = t.offsetLeft - 16;
-    else if (t.offsetLeft + t.offsetWidth > e.scrollLeft + e.clientWidth) e.scrollLeft = t.offsetLeft + t.offsetWidth - e.clientWidth + 16;
+    if (eintrag.offsetLeft < e.scrollLeft) e.scrollLeft = eintrag.offsetLeft - 16;
+    else if (eintrag.offsetLeft + eintrag.offsetWidth > e.scrollLeft + e.clientWidth) e.scrollLeft = eintrag.offsetLeft + eintrag.offsetWidth - e.clientWidth + 16;
     messe();
   }, [aktiv, messe]);
   return (
     <div className={`registerreihe${rand.links ? ' registerreihe-links' : ''}${rand.rechts ? ' registerreihe-rechts' : ''}`}>
-      <div className="registertaben" role="tablist" aria-label="Register" ref={ref} onScroll={messe}>{children}</div>
+      <div className="registertaben" role="tablist" aria-label={t('ablage.mappeformular.register')} ref={ref} onScroll={messe}>{children}</div>
     </div>
   );
 }
@@ -208,19 +208,19 @@ function RegisterReihe({ aktiv, children }: { aktiv?: string; children: ReactNod
 /** In die Zwischenablage; ohne HTTPS (z. B. http://nas:8080) über ein unsichtbares Textfeld. */
 async function kopiere(text: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { /* weiter mit dem Rückfall */ }
-  const t = document.createElement('textarea');
-  t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
-  document.body.appendChild(t); t.select();
-  try { return document.execCommand('copy'); } catch { return false; } finally { t.remove(); }
+  const hTMLTextAreaElement = document.createElement('textarea');
+  hTMLTextAreaElement.value = text; hTMLTextAreaElement.setAttribute('readonly', ''); hTMLTextAreaElement.style.position = 'fixed'; hTMLTextAreaElement.style.opacity = '0';
+  document.body.appendChild(hTMLTextAreaElement); hTMLTextAreaElement.select();
+  try { return document.execCommand('copy'); } catch { return false; } finally { hTMLTextAreaElement.remove(); }
 }
 
 /** Rückmeldung zu „Link kopieren“ (#98); klappt das Kopieren nicht, steht der Link markiert zum Kopieren da. */
 function LinkKopiert({ link, ok, schliessen }: { link: string; ok: boolean; schliessen(): void }) {
   return (
     <div className={`hinweis ${ok ? 'gut' : 'warn'} linkkopiert`} role="status">
-      <p>{ok ? 'Link kopiert:' : 'Kopieren ging nicht – markiere den Link und kopiere ihn selbst:'}</p>
-      <input type="text" readOnly value={link} aria-label="Link auf diese Mappe" onFocus={(e) => e.target.select()} autoFocus={!ok} />
-      <button type="button" className="textknopf" onClick={schliessen}>Schließen</button>
+      <p>{ok ? t('ablage.mappeformular.link-kopiert') : t('ablage.mappeformular.kopieren-ging-nicht-markiere')}</p>
+      <input type="text" readOnly value={link} aria-label={t('ablage.mappeformular.link-auf-diese-mappe')} onFocus={(e) => e.target.select()} autoFocus={!ok} />
+      <button type="button" className="textknopf" onClick={schliessen}>{t('ablage.mappeformular.schliessen')}</button>
     </div>
   );
 }
@@ -230,14 +230,14 @@ let zaehler = 0;
 /** Mappen, die laut Register hierher verweisen (alle oder nur gewählte Quellen). */
 function verknuepfungsGruppen(d: ReturnType<typeof useDaten>, mappe: Mappe | undefined, typId: string, register: Register, details?: MappeDetails | null) {
   const gewaehlt = register.quellen ?? [];
-  return d.typen.flatMap((t) => t.felder
+  return d.typen.flatMap((mappentyp) => mappentyp.felder
     .filter((f) => f.typ === 'referenz' && (f.zielTyp === typId || f.zielTyp === '*'))
-    .filter((f) => !gewaehlt.length || gewaehlt.some((q) => q.typId === t.id && q.feldKey === f.key))
+    .filter((f) => !gewaehlt.length || gewaehlt.some((q) => q.typId === mappentyp.id && q.feldKey === f.key))
     .map((f) => ({
-      t, f,
+      t: mappentyp, f,
       // Trefferliste dieser Quelle (#75); fehlt sie (mehr), einfache Liste.
-      liste: trefferlistenVon(t).find((l) => l.key === gewaehlt.find((q) => q.typId === t.id && q.feldKey === f.key)?.trefferliste),
-      treffer: !mappe || !details ? [] as Rueckverweis[] : details.rueckverweise.filter((r) => r.quelleTypId === t.id && r.feldKey === f.key),
+      liste: trefferlistenVon(mappentyp).find((l) => l.key === gewaehlt.find((q) => q.typId === mappentyp.id && q.feldKey === f.key)?.trefferliste),
+      treffer: !mappe || !details ? [] as Rueckverweis[] : details.rueckverweise.filter((r) => r.quelleTypId === mappentyp.id && r.feldKey === f.key),
     })));
 }
 
@@ -263,12 +263,12 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   // „Mappe löschen“ (#423): nie kommentarlos grau – warum nicht, steht auf Klick direkt am Knopf.
   const loeschenZeigen = !!mappe && darfLoeschen(typ, mappe);
   const loeschSperre: Loeschsperre | undefined = !loeschenZeigen ? undefined
-    : !darfLoeschenHier ? { grund: 'Mappen dieses Mappentyps darfst du nach den Berechtigungen nicht löschen. Das legt fest, wer Ablago verwaltet.' }
-    : details?.loeschbar?.ok === false ? { grund: details.loeschbar.grund ?? 'Diese Mappe lässt sich gerade nicht löschen.', rueckverweise: details.loeschbar.rueckverweise }
+    : !darfLoeschenHier ? { grund: t('ablage.mappeformular.mappen-dieses-mappentyps-darfst') }
+    : details?.loeschbar?.ok === false ? { grund: details.loeschbar.grund ?? t('ablage.mappeformular.diese-mappe-laesst-sich'), rueckverweise: details.loeschbar.rueckverweise }
     : undefined;
   // Weitere Löschwege trotz Sperre (z. B. „Mit verknüpften Mappen löschen …“, #424) kommen über `wege` dazu.
   const loeschKnopf = loeschenZeigen ? <LoeschKnopf sperre={loeschSperre} loeschen={() => void loeschen()}
-    wege={mitVerknuepften && <button type="button" className="textknopf gefahr klein" onClick={mitVerknuepften}>Mit verknüpften Mappen löschen …</button>} /> : <span />;
+    wege={mitVerknuepften && <button type="button" className="textknopf gefahr klein" onClick={mitVerknuepften}>{t('ablage.mappeformular.mit-verknuepften-mappen-loeschen')}</button>} /> : <span />;
   // Sprung aus der Suche nach einer Archivnummer (#345): ?register=… öffnet das Register.
   // Erwähnung in einer Notiz (#427): gleich den Register „Notizen“.
   const [aktiv, setAktiv] = useState(() => startRegister(register, new URLSearchParams(location.search).get('register'), details?.aufgaben, ich.id));
@@ -350,11 +350,11 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     if (ablegen && dateien.length) setNeueDateien((x) => [...x, ...dateien.map((datei) => ({ uid: `n${++zaehler}`, datei, register: ablegen }))]);
     const n = Object.values(neu).filter((v) => v.art === 'eingetragen').length;
     const alt = Object.values(neu).filter((v) => v.art === 'alternative').length;
-    const teile = [n ? `${n === 1 ? '1 Feld' : `${n} Felder`} als Vorschlag eingetragen` : '', alt ? `${alt === 1 ? '1 Alternative' : `${alt} Alternativen`} zu ausgefüllten Feldern` : ''].filter(Boolean);
+    const teile = [n ? t('ablage.mappeformular.felder-als-vorschlag-eingetragen', { anzahl: n }) : '', alt ? t('ablage.mappeformular.alternativen-zu-ausgefuellten', { anzahl: alt }) : ''].filter(Boolean);
     // Erkennung per Paket (#511): womit erkannt wurde bzw. warum die eingebaute übernahm.
     // Gekürzt (#564): Der KI-Dienst hat nur einen Teil des Texts gelesen – das sagen, nie still abschneiden.
     const herkunft = [r.engine?.art === 'paket' ? t('erkennung.ergebnis.paket', { name: r.engine.name }) : '', r.gekuerzt ? t('erkennung.ergebnis.gekuerzt') : '', r.hinweis ?? ''].filter(Boolean).join(' ');
-    setAdMeldung(`${teile.length ? `Verstanden – ${teile.join(', ')}. Bitte prüfen und speichern.` : 'Gelesen, aber keine passenden Angaben für diese Felder gefunden.'}${herkunft ? ` ${herkunft}` : ''}`);
+    setAdMeldung(`${teile.length ? t('ablage.mappeformular.verstanden-bitte-pruefen-und', { teile: teile.join(', ') }) : t('ablage.mappeformular.gelesen-aber-keine-passenden')}${herkunft ? ` ${herkunft}` : ''}`);
     setAdOffen(false);
     // Zum ersten Feldregister mit einem Vorschlag.
     const ziel = register.find((x) => x.art === 'felder' && felderAuf(x).some((f) => neu[f.key]));
@@ -376,16 +376,16 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const n = adNeu[k]; const f = typ.felder.find((x) => x.key === k); const ziel = d.typ(n?.typId);
     if (!n || !f || !ziel) return;
     const liste = Object.entries(n.werte).map(([key, w]) => `${ziel.felder.find((x) => x.key === key)?.label ?? key}: ${w}`).join(' · ');
-    if (!(await rueckfrage({ titel: `Neue Mappe „${ziel.name}“ anlegen?`, text: `Mit diesen Angaben: ${liste}. Du kannst sie danach dort ändern.`, ja: 'Anlegen' }))) return;
+    if (!(await rueckfrage({ titel: t('ablage.mappeformular.neue-mappe-anlegen', { name: ziel.name }), text: t('ablage.mappeformular.mit-diesen-angaben-du', { liste }), ja: t('ablage.mappeformular.anlegen') }))) return;
     try {
       const m = await api.mappeAnlegen({ typId: ziel.id, werte: n.werte });
       merke(m.id, { titel: m.titel ?? '', typId: m.typId });
       const vorher = roh[k];
       setze(k, f.mehrfach ? [m.id] : m.id);
-      setVorschlaege((x) => ({ ...x, [k]: { wert: m.id, sicherheit: 'mittel', fundstelle: `neu angelegt: ${titelOder(m.titel)}`, art: 'eingetragen', vorher } }));
+      setVorschlaege((x) => ({ ...x, [k]: { wert: m.id, sicherheit: 'mittel', fundstelle: t('ablage.mappeformular.neu-angelegt', { titelOder: titelOder(m.titel) }), art: 'eingetragen', vorher } }));
       setAdNeu((x) => Object.fromEntries(Object.entries(x).filter(([y]) => y !== k)));
       await d.neuLaden();
-    } catch (e) { await hinweis({ titel: 'Nicht angelegt', text: (e as Error).message }); }
+    } catch (e) { await hinweis({ titel: t('ablage.mappeformular.nicht-angelegt'), text: (e as Error).message }); }
   }
   /** Hinweis am Feld: Vorschlag (solange der Wert noch so ist) bzw. Alternative aus dem Dokument. */
   function vorschlagAm(f: Feld): ReactNode {
@@ -394,10 +394,10 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const sicher = v.sicherheit === 'hoch' ? 'sicher' : v.sicherheit === 'mittel' ? 'wahrscheinlich' : 'unsicher';
     if (v.art === 'eingetragen') {
       if (JSON.stringify(roh[f.key]) !== JSON.stringify(zuRoh(f, v.wert))) return null;
-      return <p className="ad-hinweis"><span className="chip">Vorschlag</span> <span className="leise">{sicher}{v.fundstelle ? <> – „{v.fundstelle}“</> : null}</span> <button type="button" className="textknopf klein" onClick={() => vorschlagZuruecknehmen(f.key)}>Zurücknehmen</button></p>;
+      return <p className="ad-hinweis"><span className="chip">{t('ablage.mappeformular.vorschlag')}</span> <span className="leise">{sicher}{v.fundstelle ? <> – „{v.fundstelle}“</> : null}</span> <button type="button" className="textknopf klein" onClick={() => vorschlagZuruecknehmen(f.key)}>{t('ablage.mappeformular.zuruecknehmen')}</button></p>;
     }
     const text = f.typ === 'referenz' ? titelOder(bekannt[String(Array.isArray(v.wert) ? v.wert[0] : v.wert)]?.titel) : formatiere(f, v.wert);
-    return <p className="ad-hinweis"><span className="chip">Im Dokument</span> <strong>{text}</strong> <span className="leise">({sicher})</span> <button type="button" className="textknopf klein" onClick={() => alternativeUebernehmen(f.key)}>Übernehmen</button> <button type="button" className="textknopf klein" onClick={() => vorschlagZuruecknehmen(f.key)}>Verwerfen</button></p>;
+    return <p className="ad-hinweis"><span className="chip">{t('ablage.mappeformular.im-dokument')}</span> <strong>{text}</strong> <span className="leise">({sicher})</span> <button type="button" className="textknopf klein" onClick={() => alternativeUebernehmen(f.key)}>{t('ablage.mappeformular.uebernehmen')}</button> <button type="button" className="textknopf klein" onClick={() => vorschlagZuruecknehmen(f.key)}>{t('ablage.mappeformular.verwerfen')}</button></p>;
   }
   const alternativen = Object.entries(vorschlaege).filter(([, v]) => v.art === 'alternative').map(([k]) => k);
   /** Altes Textfeld nach einem Paket-Update (#534): leer ausgeblendet, sonst mit Hinweis auf die Umwandlung. */
@@ -435,12 +435,12 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const p = d.pruefe(typ, werte, (id) => bekannt[id]?.typId);
     // Formate und Datumsgrenzen (#535): neue Mappe ganz, sonst nur, was sich ändert.
     for (const [k, m] of Object.entries(pruefeFormate(typ, werte, mappe?.werte))) p.felder[k] ??= m;
-    if (!istOk(p)) { zeigeFehler(p); setMeldung('Bitte die markierten Felder prüfen.'); return; }
+    if (!istOk(p)) { zeigeFehler(p); setMeldung(t('ablage.mappeformular.bitte-die-markierten-felder')); return; }
     // Würde man sich mit diesen Werten selbst das Lesen oder Bearbeiten entziehen? Dann erst fragen (#126).
     if (mappe && werteGeaendert && ich.rolle !== 'admin') {
       const r = await api.rechteVorschau(mappe.id, werte).catch(() => null);
-      if (r && !r.R && !(await rueckfrage({ titel: 'Trotzdem speichern?', text: 'Nach dem Speichern kannst du diese Mappe nach den Berechtigungen nicht mehr sehen.', ja: 'Trotzdem speichern', gefahr: true }))) return;
-      if (r && r.R && !r.U && !(await rueckfrage({ titel: 'Trotzdem speichern?', text: 'Nach dem Speichern kannst du diese Mappe nach den Berechtigungen nicht mehr bearbeiten.', ja: 'Trotzdem speichern', gefahr: true }))) return;
+      if (r && !r.R && !(await rueckfrage({ titel: t('ablage.mappeformular.trotzdem-speichern'), text: t('ablage.mappeformular.nach-dem-speichern-kannst'), ja: t('ablage.mappeformular.trotzdem-speichern-2'), gefahr: true }))) return;
+      if (r && r.R && !r.U && !(await rueckfrage({ titel: t('ablage.mappeformular.trotzdem-speichern'), text: t('ablage.mappeformular.nach-dem-speichern-kannst-2'), ja: t('ablage.mappeformular.trotzdem-speichern-2'), gefahr: true }))) return;
     }
     setSendet(true); setHinweise([]);
     let gespeichert: (Mappe & { hinweis?: string }) | undefined = mappe;
@@ -473,16 +473,16 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         const versioniert = !!typ.register.find((r) => r.key === n.register)?.versionierung;
         const r = await api.ladeHoch(gespeichert!.id, n.register, n.datei, gleich ? n.gleicherName ?? (versioniert ? 'version' : 'zaehler') : undefined);
         const anderswo = r.gleicherInhalt.filter((g) => g.mappeId !== gespeichert!.id);
-        if (anderswo.length) neu.push({ art: 'warn', text: <>„{n.datei.name}“ hat denselben Inhalt wie {anderswo.map((g, j) => { return <span key={j}>{j > 0 && ', '}„{g.name}“ in {g.typId ? <Link to={`/ablage/${g.typId}/${g.mappeId}`} className="verweis">{titelOder(g.titel)}</Link> : 'einer anderen Mappe'}</span>; })}. Gespeichert ist die Datei nur einmal.</> });
+        if (anderswo.length) neu.push({ art: 'warn', text: <>{t('ablage.mappeformular.hat-denselben-inhalt-wie', { name: n.datei.name })}{' '}{anderswo.map((g, j) => { return <span key={j}>{tn('ablage.mappeformular.in', { wert: j > 0 && ', ', name: g.name, wert2: g.typId ? <Link to={`/ablage/${g.typId}/${g.mappeId}`} className="verweis">{titelOder(g.titel)}</Link> : t('ablage.mappeformular.einer-anderen-mappe') })}</span>; })}{t('ablage.mappeformular.gespeichert-ist-die-datei')}</> });
       } catch (e) {
         offen.push(n);
-        neu.push({ art: 'schlecht', text: `„${n.datei.name}“ wurde nicht hochgeladen: ${(e as Error).message}` });
+        neu.push({ art: 'schlecht', text: t('ablage.mappeformular.wurde-nicht-hochgeladen', { name: n.datei.name, message: (e as Error).message }) });
       }
     }
     // Zuordnen (#192): Die Post gehört jetzt zu dieser neuen Mappe.
     if (!mappe && zuordnen) {
       try { await api.zuordnen(zuordnen.post, { ziel: gespeichert!.id, register: zuordnen.register, dokumente: zuordnen.dokumente, kopieren: zuordnen.kopieren }); }
-      catch (e) { await hinweis({ titel: 'Post nicht zugeordnet', text: `Die Mappe ist angelegt, aber das Zuordnen der Post ging nicht: ${(e as Error).message}` }); }
+      catch (e) { await hinweis({ titel: t('ablage.mappeformular.post-nicht-zugeordnet'), text: t('ablage.mappeformular.die-mappe-ist-angelegt', { message: (e as Error).message }) }); }
     }
     const nichtEntfernt: string[] = [];
     for (const id of entfernt) {
@@ -493,12 +493,12 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     if (!offen.length && !nichtEntfernt.length) loeseWache();
     // Lesen verloren (#126): zurück zur Liste, mit Hinweis.
     const verloren = gespeichert?.hinweis?.includes('nicht mehr sehen');
-    if (verloren) { loeseWache(); await hinweis({ titel: 'Gespeichert', text: gespeichert!.hinweis }); await d.neuLaden(); geheZu(`/ablage/${sicht}${anhang}`); return; }
+    if (verloren) { loeseWache(); await hinweis({ titel: t('ablage.mappeformular.gespeichert'), text: gespeichert!.hinweis }); await d.neuLaden(); geheZu(`/ablage/${sicht}${anhang}`); return; }
     await d.neuLaden();
     await neuLaden?.();
     setSendet(false);
     if (!mappe) geheZu(`/ablage/${sicht}/${gespeichert!.id}`);
-    else setMeldung(gespeichert?.hinweis ?? (offen.length || nichtEntfernt.length ? 'Teilweise gespeichert.' : 'Gespeichert.'));
+    else setMeldung(gespeichert?.hinweis ?? (offen.length || nichtEntfernt.length ? t('ablage.mappeformular.teilweise-gespeichert') : t('ablage.mappeformular.gespeichert-2')));
   }
 
   /** Rückfrage beantwortet (#609): „meins“ geht mit dem neuen Stand noch einmal mit, „seins“ wird übernommen. */
@@ -519,8 +519,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     const korb = d.zaehler.papierkorbTage ?? 0;
     // Grund fürs Löschprotokoll (#470).
     const anlass = await mitGrund(korb
-      ? { titel: `Mappe „${titelOder(mappe.titel)}“ in den Papierkorb legen?`, text: `${n ? `Ihre ${n} Dokument${n === 1 ? '' : 'e'} kommen mit. ` : ''}Dort lässt sie sich ${korb === 1 ? 'einen Tag' : `${korb} Tage`} lang wiederherstellen.`, ja: 'In den Papierkorb', gefahr: true }
-      : { titel: `Mappe „${titelOder(mappe.titel)}“ endgültig löschen?`, text: `${n ? `Ihre ${n} Dokument${n === 1 ? '' : 'e'} werden mitgelöscht. ` : ''}Das lässt sich nicht rückgängig machen.`, ja: 'Endgültig löschen', gefahr: true });
+      ? { titel: t('ablage.mappeformular.mappe-in-den-papierkorb', { titelOder: titelOder(mappe.titel) }), text: t('ablage.mappeformular.dort-laesst-sie-sich', { anzahl: korb, wert: n ? t('ablage.mappeformular.ihre-dokumente-kommen-mit', { anzahl: n }) : '' }), ja: t('ablage.mappeformular.in-den-papierkorb'), gefahr: true }
+      : { titel: t('ablage.mappeformular.mappe-endgueltig-loeschen', { titelOder: titelOder(mappe.titel) }), text: t('ablage.mappeformular.das-laesst-sich-nicht', { wert: n ? t('ablage.mappeformular.ihre-dokumente-werden-mitgeloescht', { anzahl: n }) : '' }), ja: t('ablage.mappeformular.endgueltig-loeschen'), gefahr: true });
     if (!anlass) return;
     try {
       await api.mappeLoeschen(mappe.id, anlass);
@@ -534,21 +534,21 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   useEffect(() => {
     if (loeschWunsch === ersterLoeschWunsch.current) return;
     const { loeschen: tu, loeschSperre: sperre } = loeschenRef.current;
-    if (sperre) void hinweis({ titel: 'Löschen nicht möglich', text: sperre.grund });
+    if (sperre) void hinweis({ titel: t('ablage.mappeformular.loeschen-nicht-moeglich'), text: sperre.grund });
     else void tu();
   }, [loeschWunsch]);
 
   let inhalt: ReactNode = null;
-  if (!reg) inhalt = <p className="leise">Dieser Mappentyp hat keine Register.</p>;
+  if (!reg) inhalt = <p className="leise">{t('ablage.mappeformular.dieser-mappentyp-hat-keine')}</p>;
   else if (reg.art === 'felder') {
     const felder = felderAuf(reg).filter(sichtbar);
     inhalt = felder.length
       ? <div className="formular">{felder.map((f) => <FeldEingabe key={f.key} feld={f} roh={roh[f.key]} fehler={fehler?.felder[f.key]?.[0]} setze={(v) => setze(f.key, v)} eigeneId={mappe?.id} bekannt={bekannt} merke={merke}
           typId={typ.id} unpassend={details?.unpassend?.[f.key]} eigene={eigeneWerte(f)}
           gesperrt={geschuetzt[f.key] ?? (nurLesen && f.typ !== 'passwort' ? '' : undefined)} nurLesen={nurLesen} plzDeutsch={f.format === 'plz' ? deutschePlz(f, typ.felder, roh as Werte) : undefined} passwortSehen={!rechte || rechte.P} zusatz={hinweisAm(f)} />)}</div>
-      : <p className="leise">Auf diesem Register liegen keine Felder.</p>;
+      : <p className="leise">{t('ablage.mappeformular.auf-diesem-register-liegen')}</p>;
   } else if (reg.art === 'dokumente') {
-    inhalt = mappe && !details ? <p className="leise">Lade …</p> : (
+    inhalt = mappe && !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p> : (
       <Dokumente key={reg.key} register={reg} dokumente={dokumenteIn(reg.key)} neue={neueDateien.filter((n) => n.register === reg.key)} entfernt={entfernt}
         hinzufuegen={(dateien) => setNeueDateien((x) => [...x, ...dateien.map((datei) => ({ uid: `n${++zaehler}`, datei, register: reg.key }))])}
         entferne={(id) => setEntfernt((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))}
@@ -561,15 +561,15 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     // Ähnliche Dokumente (#442): nur mit einem Paket mit dms:vektoren und wenn hier Dokumente liegen.
     if (mappe && details && dokumenteIn(reg.key).length > 0) inhalt = <>{inhalt}<AehnlicheDokumente mappeId={mappe.id} /></>;
   } else if (reg.art === 'notizen') {
-    inhalt = !mappe ? <p className="leise">Notizen gehen nach dem ersten Speichern.</p>
-      : !details ? <p className="leise">Lade …</p>
+    inhalt = !mappe ? <p className="leise">{t('ablage.mappeformular.notizen-gehen-nach-dem')}</p>
+      : !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p>
       : <Notizen mappeId={mappe.id} notizen={details.notizen ?? []} neuLaden={async () => { await neuLaden?.(); }} />;
   } else if (reg.art === 'protokoll') {
-    inhalt = mappe ? <Historie mappeId={mappe.id} stand={mappe.geaendert} /> : <p className="leise">Die Historie beginnt mit dem ersten Speichern.</p>;
+    inhalt = mappe ? <Historie mappeId={mappe.id} stand={mappe.geaendert} /> : <p className="leise">{t('ablage.mappeformular.die-historie-beginnt-mit')}</p>;
   } else if (!mappe) {
-    inhalt = <p className="leise">Verknüpfungen entstehen, sobald andere Mappen auf diese verweisen – also nach dem ersten Speichern.</p>;
+    inhalt = <p className="leise">{t('ablage.mappeformular.verknuepfungen-entstehen-sobald')}</p>;
   } else if (!details) {
-    inhalt = <p className="leise">Lade …</p>;
+    inhalt = <p className="leise">{t('ablage.mappeformular.lade')}</p>;
   } else {
     inhalt = <Verknuepfungen mappe={mappe} gruppen={verknuepfungsGruppen(d, mappe, typ.id, reg, details)} />;
   }
@@ -584,12 +584,11 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         {adMeldung && <p>{adMeldung}</p>}
         {Object.entries(adNeu).map(([k, n]) => {
           const f = typ.felder.find((x) => x.key === k); const ziel = d.typ(n.typId);
-          return f && ziel ? <p key={k}>Für „{f.label}“ gibt es noch keine passende Mappe: {Object.values(n.werte).slice(0, 3).join(', ')}{' '}
-            {darfErstellen(ziel) && <button type="button" className="textknopf" onClick={() => void neuAnlegen(k)}>„{ziel.name}“ mit diesen Angaben anlegen</button>}</p> : null;
+          return f && ziel ? <p key={k}>{t('ablage.mappeformular.fuer-gibt-es-noch', { label: f.label, values: Object.values(n.werte).slice(0, 3).join(', ') })}{' '}{darfErstellen(ziel) && <button type="button" className="textknopf" onClick={() => void neuAnlegen(k)}>{t('ablage.mappeformular.mit-diesen-angaben-anlegen', { name: ziel.name })}</button>}</p> : null;
         })}
         {(alternativen.length > 0 || Object.keys(vorschlaege).length > 0) && <div className="knoepfe">
-          {alternativen.length > 0 && <button type="button" className="knopf klein" onClick={() => alternativen.forEach(alternativeUebernehmen)}>Alle Alternativen übernehmen</button>}
-          <button type="button" className="textknopf klein" onClick={() => { Object.keys(vorschlaege).forEach(vorschlagZuruecknehmen); setAdMeldung(undefined); setAdNeu({}); }}>Alle Vorschläge zurücknehmen</button>
+          {alternativen.length > 0 && <button type="button" className="knopf klein" onClick={() => alternativen.forEach(alternativeUebernehmen)}>{t('ablage.mappeformular.alle-alternativen-uebernehmen')}</button>}
+          <button type="button" className="textknopf klein" onClick={() => { Object.keys(vorschlaege).forEach(vorschlagZuruecknehmen); setAdMeldung(undefined); setAdNeu({}); }}>{t('ablage.mappeformular.alle-vorschlaege-zuruecknehmen')}</button>
         </div>}
       </div>
     )}
@@ -602,7 +601,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
             <button key={r.key} type="button" role="tab" aria-selected={r.key === reg?.key} className={`registertab art-${r.art} ${r.key === reg?.key ? 'an' : ''}`}
               onClick={() => setAktiv(r.key)}>
               {r.name}
-              {n > 0 && <span className="fehlerpunkt" title={`${n} Feld${n === 1 ? '' : 'er'} mit Fehler`}>{n}</span>}
+              {n > 0 && <span className="fehlerpunkt" title={t('ablage.mappeformular.felder-mit-fehler', { anzahl: n })}>{n}</span>}
               {zahl !== undefined && <span className="anzahl">{zahl}</span>}
             </button>
           );
@@ -616,16 +615,16 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
         speichern={konfliktEntscheiden} abbrechen={() => { setKonflikt(undefined); setMeldung(undefined); }} />}
       {nurLesen ? <div className="speicherleiste">
         <span className="hy-nur-breit">{loeschKnopf}</span>
-        <span className="status" role="status">{meldung ?? 'Nur lesen – bearbeiten darfst du diese Mappe nach den Berechtigungen nicht.'}</span>
+        <span className="status" role="status">{meldung ?? t('ablage.mappeformular.nur-lesen-bearbeiten-darfst')}</span>
         <span />
       </div> : <div className={`speicherleiste${mappe && !werteGeaendert && !dokumenteGeaendert && !sendet && !meldung ? ' hy-ruhig' : ''}`}>
         <span className="hy-nur-breit">{loeschKnopf}</span>
-        <span className={`status ${meldung && fehler ? 'schlecht' : ''}`} role="status">{sendet ? 'Speichere …' : meldung ?? (mappe && (werteGeaendert || dokumenteGeaendert) ? 'Ungespeicherte Änderungen' : '')}</span>
+        <span className={`status ${meldung && fehler ? 'schlecht' : ''}`} role="status">{sendet ? t('ablage.mappeformular.speichere') : meldung ?? (mappe && (werteGeaendert || dokumenteGeaendert) ? t('ablage.mappeformular.ungespeicherte-aenderungen') : '')}</span>
         <div className="knoepfe">
           {mappe
-            ? <button type="button" className="knopf" disabled={!(werteGeaendert || dokumenteGeaendert) || sendet} onClick={verwerfen}><span className="hy-nur-breit">Änderungen verwerfen</span><span className="hy-nur-schmal">Verwerfen</span></button>
-            : <Link to={`/ablage/${sicht}`} className="knopf">Abbrechen</Link>}
-          <button type="submit" className="knopf gruen" disabled={sendet}>{sendet ? 'Speichere …' : <><span className="hy-nur-breit">Mappe speichern</span><span className="hy-nur-schmal">Speichern</span></>}</button>
+            ? <button type="button" className="knopf" disabled={!(werteGeaendert || dokumenteGeaendert) || sendet} onClick={verwerfen}><span className="hy-nur-breit">{t('ablage.mappeformular.aenderungen-verwerfen')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.verwerfen')}</span></button>
+            : <Link to={`/ablage/${sicht}`} className="knopf">{t('ablage.mappeformular.abbrechen')}</Link>}
+          <button type="submit" className="knopf gruen" disabled={sendet}>{sendet ? t('ablage.mappeformular.speichere') : <><span className="hy-nur-breit">{t('ablage.mappeformular.mappe-speichern')}</span><span className="hy-nur-schmal">{t('ablage.mappeformular.speichern')}</span></>}</button>
         </div>
       </div>}
     </form>
@@ -715,7 +714,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
     ctl = <div className="festwert" title={gesperrt}>{
       f.typ === 'referenz'
         ? <ul>{ids.map((x) => <li key={x}>{bekannt[x]?.typId && !bekannt[x].verborgen ? <Link to={`/ablage/${bekannt[x].typId}/${x}`} className="verweis"><Ehemalig id={x}>{titelOder(bekannt[x].titel)}</Ehemalig></Link> : <span className={bekannt[x]?.verborgen ? 'verborgen-titel' : ''}>{titelOder(bekannt[x]?.titel)}</span>}</li>)}</ul>
-        : f.typ === 'janein' ? (roh ? 'Ja' : 'Nein') : f.typ === 'formatiert' ? <Formatiert text={String(roh ?? '')} />
+        : f.typ === 'janein' ? (roh ? t('ablage.mappeformular.ja') : t('ablage.mappeformular.nein')) : f.typ === 'formatiert' ? <Formatiert text={String(roh ?? '')} />
         : f.typ === 'datum' ? formatiere(f, String(roh ?? '')) : f.typ === 'langtext' ? <span className="mehrzeilig">{String(roh ?? '')}</span>
         : f.typ === 'text' && f.format ? <FormatWert f={f} wert={String(roh ?? '')} /> : String(roh ?? '')
     }</div>;
@@ -742,7 +741,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
       ctl = (
         <div className="betrag">
           <input id={id} inputMode="decimal" placeholder="0,00" value={b.betrag} onChange={(e) => setze({ ...b, betrag: e.target.value })} />
-          <input aria-label="Währung" className="mono" maxLength={3} value={b.waehrung} onChange={(e) => setze({ ...b, waehrung: e.target.value.toUpperCase() })} />
+          <input aria-label={t('ablage.mappeformular.waehrung')} className="mono" maxLength={3} value={b.waehrung} onChange={(e) => setze({ ...b, waehrung: e.target.value.toUpperCase() })} />
         </div>
       );
       break;
@@ -752,7 +751,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
       break;
     case 'janein':
       mitLabelFor = false;
-      ctl = <label className="haken"><input id={id} type="checkbox" checked={!!roh} onChange={(e) => setze(e.target.checked)} /><span>Ja</span></label>;
+      ctl = <label className="haken"><input id={id} type="checkbox" checked={!!roh} onChange={(e) => setze(e.target.checked)} /><span>{t('ablage.mappeformular.ja')}</span></label>;
       break;
     case 'auswahl': {
       const optionen = f.optionen ?? [];
@@ -765,7 +764,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
       } else {
         const r = String(roh ?? '');
         ctl = <select id={id} value={r} onChange={(e) => setze(e.target.value)}>
-          <option value="">– keine Angabe –</option>
+          <option value="">{t('ablage.mappeformular.keine-angabe')}</option>
           {optionen.map((o) => <option key={o}>{o}</option>)}
           {r && !optionen.includes(r) && <option>{r}</option>}
         </select>;
@@ -774,7 +773,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
     }
     case 'referenz': {
       const ziel = d.typ(f.zielTyp);
-      if (!ziel) { ctl = <p className="leise">Der Ziel-Mappentyp existiert nicht mehr.</p>; break; }
+      if (!ziel) { ctl = <p className="leise">{t('ablage.mappeformular.der-ziel-mappentyp-existiert')}</p>; break; }
       mitLabelFor = !f.mehrfach;
       ctl = <MappenWahl id={id} ziel={ziel} mehrfach={!!f.mehrfach} wert={roh as string | string[] | undefined} eigeneId={eigeneId}
         bekannt={bekannt} merke={merke} setze={setze}
@@ -850,12 +849,12 @@ function PasswortEingabe({ id, feld: f, roh: p, setze, mappeId, nurLesen, sehen 
 
   if (p.entfernen) return (
     <div className="passwort">
-      <span className="festwert leise">wird beim Speichern entfernt</span>
-      <button type="button" className="knopf klein" onClick={() => setze({ ...p, entfernen: false })}>Rückgängig</button>
+      <span className="festwert leise">{t('ablage.mappeformular.wird-beim-speichern-entfernt')}</span>
+      <button type="button" className="knopf klein" onClick={() => setze({ ...p, entfernen: false })}>{t('ablage.mappeformular.rueckgaengig')}</button>
     </div>
   );
 
-  if (nurLesen && !p.gesetzt) return <span id={id} className="festwert leise">kein Passwort gespeichert</span>;
+  if (nurLesen && !p.gesetzt) return <span id={id} className="festwert leise">{t('ablage.mappeformular.kein-passwort-gespeichert')}</span>;
   if (p.gesetzt && (!aendern || nurLesen) && !p.neu) {
     async function umschalten() {
       if (klartext !== null) { setKlartext(null); return; }
@@ -866,31 +865,31 @@ function PasswortEingabe({ id, feld: f, roh: p, setze, mappeId, nurLesen, sehen 
     return (
       <>
         <div className="passwort">
-          <span id={id} className={`festwert mono ${p.lesbar ? '' : 'leise'}`} aria-live="polite">{!p.lesbar ? 'nicht lesbar – bitte neu eingeben' : klartext ?? '••••••••'}</span>
-          {p.lesbar && mappeId && sehen && <button type="button" className="knopf klein" disabled={laedt} onClick={() => void umschalten()} title={klartext === null ? 'Passwort anzeigen (wird protokolliert)' : 'Passwort verbergen'} aria-label={klartext === null ? 'Passwort anzeigen' : 'Passwort verbergen'}>{auge(klartext !== null)}</button>}
-          {!nurLesen && <button type="button" className="knopf klein" disabled={!passwoerterMoeglich} onClick={() => { setKlartext(null); setAendern(true); }}>Ändern</button>}
-          {!nurLesen && <button type="button" className="knopf klein" onClick={() => { setKlartext(null); setze({ ...p, entfernen: true }); }} title="Wird erst mit „Mappe speichern“ wirksam">Passwort entfernen</button>}
+          <span id={id} className={`festwert mono ${p.lesbar ? '' : 'leise'}`} aria-live="polite">{!p.lesbar ? t('ablage.mappeformular.nicht-lesbar-bitte-neu') : klartext ?? '••••••••'}</span>
+          {p.lesbar && mappeId && sehen && <button type="button" className="knopf klein" disabled={laedt} onClick={() => void umschalten()} title={klartext === null ? t('ablage.mappeformular.passwort-anzeigen-wird-protokolliert') : t('ablage.mappeformular.passwort-verbergen')} aria-label={klartext === null ? t('ablage.mappeformular.passwort-anzeigen') : t('ablage.mappeformular.passwort-verbergen')}>{auge(klartext !== null)}</button>}
+          {!nurLesen && <button type="button" className="knopf klein" disabled={!passwoerterMoeglich} onClick={() => { setKlartext(null); setAendern(true); }}>{t('ablage.mappeformular.aendern')}</button>}
+          {!nurLesen && <button type="button" className="knopf klein" onClick={() => { setKlartext(null); setze({ ...p, entfernen: true }); }} title={t('ablage.mappeformular.wird-erst-mit-mappe')}>{t('ablage.mappeformular.passwort-entfernen')}</button>}
         </div>
         {fehler && <p className="fehlertext">{fehler}</p>}
-        {!sehen && p.lesbar && <span className="hilfe">Passwörter dieser Mappe darfst du nach den Berechtigungen nicht sehen.</span>}
-        {!passwoerterMoeglich && !nurLesen && <span className="hilfe">Ändern geht erst wieder, wenn der Schlüssel bereitsteht (Werkbank → Verschlüsselung).</span>}
+        {!sehen && p.lesbar && <span className="hilfe">{t('ablage.mappeformular.passwoerter-dieser-mappe-darfst')}</span>}
+        {!passwoerterMoeglich && !nurLesen && <span className="hilfe">{t('ablage.mappeformular.aendern-geht-erst-wieder')}</span>}
       </>
     );
   }
 
   if (!passwoerterMoeglich) return (
     <>
-      <input id={id} type="password" disabled placeholder="nicht möglich" />
-      <span className="hilfe">Passwörter lassen sich erst speichern, wenn in der Werkbank unter „Verschlüsselung“ ein Schlüssel erzeugt ist.</span>
+      <input id={id} type="password" disabled placeholder={t('ablage.mappeformular.nicht-moeglich')} />
+      <span className="hilfe">{t('ablage.mappeformular.passwoerter-lassen-sich-erst')}</span>
     </>
   );
 
   return (
     <div className="passwort">
       <input id={id} type={zeigen ? 'text' : 'password'} value={p.neu} autoComplete="new-password" spellCheck={false}
-        placeholder={p.gesetzt ? 'neues Passwort' : ''} onChange={(e) => setze({ ...p, neu: e.target.value })} />
-      <button type="button" className="knopf klein" onClick={() => setZeigen(!zeigen)} aria-label={zeigen ? 'Eingabe verbergen' : 'Eingabe anzeigen'} title={zeigen ? 'Eingabe verbergen' : 'Eingabe anzeigen'}>{auge(zeigen)}</button>
-      {p.gesetzt && <button type="button" className="knopf klein" onClick={() => { setze({ ...p, neu: '' }); setAendern(false); setZeigen(false); }}>Abbrechen</button>}
+        placeholder={p.gesetzt ? t('ablage.mappeformular.neues-passwort') : ''} onChange={(e) => setze({ ...p, neu: e.target.value })} />
+      <button type="button" className="knopf klein" onClick={() => setZeigen(!zeigen)} aria-label={zeigen ? t('ablage.mappeformular.eingabe-verbergen') : t('ablage.mappeformular.eingabe-anzeigen')} title={zeigen ? t('ablage.mappeformular.eingabe-verbergen') : t('ablage.mappeformular.eingabe-anzeigen')}>{auge(zeigen)}</button>
+      {p.gesetzt && <button type="button" className="knopf klein" onClick={() => { setze({ ...p, neu: '' }); setAendern(false); setZeigen(false); }}>{t('ablage.mappeformular.abbrechen')}</button>}
     </div>
   );
 }
@@ -921,7 +920,7 @@ function LoeschKnopf({ sperre, loeschen, wege }: { sperre?: Loeschsperre; loesch
     return () => { document.removeEventListener('mousedown', zu); document.removeEventListener('keydown', zu); };
   }, [offen]);
   useEffect(() => { if (!sperre) setOffen(false); }, [sperre]);
-  if (!sperre) return <button type="button" className="textknopf gefahr" onClick={loeschen}>Mappe löschen</button>;
+  if (!sperre) return <button type="button" className="textknopf gefahr" onClick={loeschen}>{t('ablage.mappeformular.mappe-loeschen-2')}</button>;
   const quellen = [...new Map((sperre.rueckverweise ?? []).map((r) => [r.quelleId, r])).values()];
   const zeige = quellen.slice(0, 8);
   return (
@@ -935,12 +934,12 @@ function LoeschKnopf({ sperre, loeschen, wege }: { sperre?: Loeschsperre; loesch
         <Symbol name="info" /> {t('mappen.loeschen.warum')}
       </button>
       {offen && (
-        <div className="loeschwahl-begruendung klein" id="loeschwahl-begruendung" role="region" aria-label="Warum sich die Mappe nicht löschen lässt">
-          <p><strong>Löschen nicht möglich:</strong> {sperre.grund}</p>
+        <div className="loeschwahl-begruendung klein" id="loeschwahl-begruendung" role="region" aria-label={t('ablage.mappeformular.warum-sich-die-mappe')}>
+          <p><strong>{t('ablage.mappeformular.loeschen-nicht-moeglich-2')}</strong> {sperre.grund}</p>
           {zeige.length > 0 && <ul>{zeige.map((r) => (
-            <li key={r.quelleId}>{r.verborgen ? <span className="verborgen-titel">{r.titel}</span> : <Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link>} <span className="leise">({d.typ(r.quelleTypId)?.name ?? 'Mappe'})</span></li>
-          ))}{quellen.length > zeige.length && <li className="leise">und {quellen.length - zeige.length} weitere</li>}</ul>}
-          {wege && <div className="loeschwahl-wege"><p className="leise">Stattdessen:</p>{wege}</div>}
+            <li key={r.quelleId}>{r.verborgen ? <span className="verborgen-titel">{r.titel}</span> : <Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link>} <span className="leise">({d.typ(r.quelleTypId)?.name ?? t('ablage.mappeformular.mappe')})</span></li>
+          ))}{quellen.length > zeige.length && <li className="leise">{t('ablage.mappeformular.und-weitere', { wert: quellen.length - zeige.length })}</li>}</ul>}
+          {wege && <div className="loeschwahl-wege"><p className="leise">{t('ablage.mappeformular.stattdessen')}</p>{wege}</div>}
         </div>
       )}
     </div>
@@ -949,17 +948,17 @@ function LoeschKnopf({ sperre, loeschen, wege }: { sperre?: Loeschsperre; loesch
 
 function Verknuepfungen({ mappe, gruppen }: { mappe: Mappe; gruppen: ReturnType<typeof verknuepfungsGruppen> }) {
   const d = useDaten();
-  if (!gruppen.length) return <p className="leise">Kein Mappentyp verweist auf „{d.typ(mappe.typId)?.name}“. Lege dafür in der Werkbank ein Verweisfeld an.</p>;
+  if (!gruppen.length) return <p className="leise">{tn('ablage.mappeformular.kein-mappentyp-verweist-auf', { name: d.typ(mappe.typId)?.name })}</p>;
   return (
     <div className="gruppen">
-      {gruppen.map(({ t, f, treffer, liste }) => (
-        <section key={`${t.id}-${f.key}`} className="gruppe">
+      {gruppen.map(({ t: mappentyp, f, treffer, liste }) => (
+        <section key={`${mappentyp.id}-${f.key}`} className="gruppe">
           <header>
-            <span><strong>{t.name}</strong> <span className="leise">über „{f.label}“</span> <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span> <span className="anzahl">{treffer.length}</span></span>
-            {darfErstellen(t) && <Link to={`/ablage/${t.id}/neu?verweis=${encodeURIComponent(`${f.key}:${mappe.id}`)}`} className="knopf klein">+ {t.name} anlegen</Link>}
+            <span><strong>{mappentyp.name}</strong> <span className="leise">{t('ablage.mappeformular.ueber', { label: f.label })}</span> <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span> <span className="anzahl">{treffer.length}</span></span>
+            {darfErstellen(mappentyp) && <Link to={`/ablage/${mappentyp.id}/neu?verweis=${encodeURIComponent(`${f.key}:${mappe.id}`)}`} className="knopf klein">{t('ablage.mappeformular.anlegen-2', { name: mappentyp.name })}</Link>}
           </header>
-          {!treffer.length ? <p className="leise">Noch keine.</p>
-            : liste?.spalten.length ? <VerweisTabelle mappeId={mappe.id} typ={t} feldKey={f.key} spalten={liste.spalten} anzahl={treffer.length} />
+          {!treffer.length ? <p className="leise">{t('ablage.mappeformular.noch-keine')}</p>
+            : liste?.spalten.length ? <VerweisTabelle mappeId={mappe.id} typ={mappentyp} feldKey={f.key} spalten={liste.spalten} anzahl={treffer.length} />
             : <Trefferliste treffer={treffer} />}
         </section>
       ))}
@@ -974,7 +973,7 @@ function VerweisTabelle({ mappeId, typ, feldKey, spalten, anzahl }: { mappeId: s
   const [fehler, setFehler] = useState<string>();
   useEffect(() => { api.verweisende(mappeId, typ.id, feldKey).then(setDaten, (e: Error) => setFehler(e.message)); }, [mappeId, typ.id, feldKey, anzahl, d.stand]);
   if (fehler) return <p className="fehlertext klein">{fehler}</p>;
-  if (!daten) return <p className="leise klein">Lade …</p>;
+  if (!daten) return <p className="leise klein">{t('ablage.mappeformular.lade')}</p>;
   const rechts = (k: string) => { const f = typ.felder.find((x) => x.key === k); return f?.typ === 'zahl' || f?.typ === 'betrag'; };
   return (
     <div className="trefferliste verweistabelle">
@@ -994,7 +993,7 @@ function VerweisTabelle({ mappeId, typ, feldKey, spalten, anzahl }: { mappeId: s
           })}
         </tbody>
       </table>
-      {daten.gesamt > daten.mappen.length && <p className="leise klein">Die ersten {daten.mappen.length.toLocaleString('de-DE')} von {daten.gesamt.toLocaleString('de-DE')}.</p>}
+      {daten.gesamt > daten.mappen.length && <p className="leise klein">{t('ablage.mappeformular.die-ersten-von', { mappen: daten.mappen.length.toLocaleString('de-DE'), gesamt: daten.gesamt.toLocaleString('de-DE') })}</p>}
     </div>
   );
 }
@@ -1006,7 +1005,7 @@ function Trefferliste({ treffer }: { treffer: Rueckverweis[] }) {
   return (
     <>
       <ul>{sichtbar.map((r) => <li key={r.quelleId + r.feldKey}><Link to={`/ablage/${r.quelleTypId}/${r.quelleId}`} className="verweis"><Ehemalig id={r.quelleId}>{titelOder(r.titel)}</Ehemalig></Link></li>)}</ul>
-      {sichtbar.length < treffer.length && <button type="button" className="textknopf" onClick={() => setAlle(true)}>Alle {treffer.length.toLocaleString('de-DE')} zeigen</button>}
+      {sichtbar.length < treffer.length && <button type="button" className="textknopf" onClick={() => setAlle(true)}>{t('ablage.mappeformular.alle-zeigen', { treffer: treffer.length.toLocaleString('de-DE') })}</button>}
     </>
   );
 }
@@ -1040,17 +1039,17 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
   const fehlend = gewaehlt.filter((x) => !bekannt[x]).join(',');
   useEffect(() => {
     for (const x of fehlend ? fehlend.split(',') : []) {
-      api.mappe(x).then((r) => merke(x, { titel: r.mappe.titel ?? '', typId: r.mappe.typId })).catch(() => merke(x, { titel: '(gelöschte Mappe)', typId: '' }));
+      api.mappe(x).then((r) => merke(x, { titel: r.mappe.titel ?? '', typId: r.mappe.typId })).catch(() => merke(x, { titel: t('ablage.mappeformular.geloeschte-mappe'), typId: '' }));
     }
   }, [fehlend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!offen) return;
     let aktuell = true;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       (quelle ? quelle(eingabe.trim()) as Promise<{ mappen: Mappe[]; gesamt: number }> : api.seite(sicht ?? `typ:${ziel.id}`, 0, 20, eingabe.trim(), undefined, false, false, undefined, eigeneText ? JSON.parse(eigeneText) as Werte : undefined)).then((s) => { if (aktuell) { setTreffer(s.mappen); setGesamt(s.gesamt); } }).catch(() => aktuell && setTreffer([]));
     }, 200);
-    return () => { aktuell = false; clearTimeout(t); };
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [offen, eingabe, ziel.id, sicht, eigeneText, quelle]);
 
   // Passen die gewählten Mappen noch zu den Werten dieser Mappe (#173)? Hinweis schon vor dem Speichern.
@@ -1060,8 +1059,8 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
     if (!sicht || !gewaehltText) { setLive(null); return; }
     const [, typId, feldKey] = sicht.split(':');
     let aktuell = true;
-    const t = setTimeout(() => { api.auswahlPruefen(typId, feldKey, gewaehltText.split(','), eigeneText ? JSON.parse(eigeneText) as Werte : {}).then((r) => aktuell && setLive(r.unpassend)).catch(() => {}); }, 300);
-    return () => { aktuell = false; clearTimeout(t); };
+    const timer = setTimeout(() => { api.auswahlPruefen(typId, feldKey, gewaehltText.split(','), eigeneText ? JSON.parse(eigeneText) as Werte : {}).then((r) => aktuell && setLive(r.unpassend)).catch(() => {}); }, 300);
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [sicht, gewaehltText, eigeneText]);
   const unpassend = live ?? vomServer;
 
@@ -1072,7 +1071,7 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
   }
   const auswahl = (treffer ?? []).filter((m) => m.id !== eigeneId && !gewaehlt.includes(m.id));
   const vor = vorbelegen && Object.keys(vorbelegen).length ? `?vorbelegen=${encodeURIComponent(JSON.stringify(vorbelegen))}` : '';
-  const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">+ {ziel.name} anlegen</Link> : null;
+  const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">{t('ablage.mappeformular.anlegen-2', { name: ziel.name })}</Link> : null;
 
   return (
     <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={platzhalter ?? t('felder.verweis.suchen', { typ: ziel.name })}

@@ -24,7 +24,7 @@ function Hervor({ text, woerter }: { text: string; woerter: string[] }) {
   const kurz = text.length > 120 ? `${text.slice(0, 117)} …` : text;
   if (!woerter.length) return <>{kurz}</>;
   const muster = new RegExp(`(${woerter.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-  return <>{kurz.split(muster).map((t, i) => (i % 2 ? <mark key={i} className="ss-mark">{t}</mark> : t))}</>;
+  return <>{kurz.split(muster).map((text2, i) => (i % 2 ? <mark key={i} className="ss-mark">{text2}</mark> : text2))}</>;
 }
 
 /** `sonst`: was ohne Suchbegriff darunter steht (Kacheln, zuletzt geöffnet). */
@@ -42,13 +42,13 @@ export function StartSuche({ sonst, ohneSuche = false }: { sonst?: ReactNode; oh
     if (such.length < 2) { setStand(null); setLaeuft(false); return; }
     const meine = ++nr.current;
     setLaeuft(true);
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api.seite('suche', 0, MAX, such, null, volltext, false, '')
         .then((s) => { if (meine === nr.current) { setStand({ such, gesamt: s.gesamt, mappen: s.mappen.filter((m) => !m.verborgen), bezuege: s.bezuege, aehnlich: s.aehnlich ?? [], unscharf: s.unscharf ?? null }); setFehler(undefined); } })
         .catch((e) => { if (meine === nr.current) setFehler((e as Error).message); })
         .finally(() => { if (meine === nr.current) setLaeuft(false); });
     }, 200);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [such, volltext]);
 
   // Unscharfe Suche (#356): auch die ähnlichen Wörter hervorheben, mit denen gefunden wurde.
@@ -68,30 +68,30 @@ export function StartSuche({ sonst, ohneSuche = false }: { sonst?: ReactNode; oh
   }
 
   return (
-    <section className="ss-suche" aria-label="Schnell finden">
+    <section className="ss-suche" aria-label={t('ablage.startsuche.schnell-finden')}>
       <form role="search" onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur?.(); void absenden(); }}>
-        <label className="sr-only" htmlFor="ss-feld">Alle Mappen durchsuchen</label>
+        <label className="sr-only" htmlFor="ss-feld">{t('ablage.startsuche.alle-mappen-durchsuchen')}</label>
         <input id="ss-feld" className="ss-feld" type="search" enterKeyHint="search" autoComplete="off" spellCheck={false}
-          placeholder="Suchen – Name, Nummer, Kennzeichen …" value={eingabe} onChange={(e) => setEingabe(e.target.value)} />
-        <label className="haken klein ss-volltext"><input type="checkbox" checked={volltext} onChange={(e) => setVolltext(e.target.checked)} /><span>auch in Dokumenten</span></label>
+          placeholder={t('ablage.startsuche.suchen-name-nummer-kennzeichen')} value={eingabe} onChange={(e) => setEingabe(e.target.value)} />
+        <label className="haken klein ss-volltext"><input type="checkbox" checked={volltext} onChange={(e) => setVolltext(e.target.checked)} /><span>{t('ablage.startsuche.auch-in-dokumenten')}</span></label>
       </form>
       {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-      {such.length > 0 && such.length < 2 && <p className="leise klein">Noch ein Zeichen …</p>}
+      {such.length > 0 && such.length < 2 && <p className="leise klein">{t('ablage.startsuche.noch-ein-zeichen')}</p>}
       {stand && (
         <div className="ss-treffer" aria-live="polite" aria-busy={laeuft}>
           {stand.unscharf && <UnscharfHinweis u={stand.unscharf} suchen={setEingabe} />}
-          <p className="leise klein">{stand.gesamt === 0 && !stand.aehnlich.length ? `Nichts gefunden für „${stand.such}“.` : stand.gesamt === 0 ? '' : stand.gesamt === 1 ? 'Ein Treffer' : `${stand.gesamt} Treffer${stand.gesamt > stand.mappen.length ? ` – die ersten ${stand.mappen.length}; genauer suchen oder die ` : ''}`}
-            {stand.gesamt > stand.mappen.length && <Link to="/ablage/suche" className="verweis">Erweiterte Suche</Link>}{laeuft ? ' · suche …' : ''}</p>
+          <p className="leise klein">{stand.gesamt === 0 && !stand.aehnlich.length ? t('ablage.startsuche.nichts-gefunden-fuer', { such: stand.such }) : stand.gesamt === 0 ? '' : t('ablage.startsuche.treffer', { anzahl: stand.gesamt, wert: stand.gesamt > stand.mappen.length ? t('ablage.startsuche.die-ersten-genauer-suchen', { mappen: stand.mappen.length }) : '' })}
+            {stand.gesamt > stand.mappen.length && <Link to="/ablage/suche" className="verweis">{t('ablage.startsuche.erweiterte-suche')}</Link>}{laeuft ? t('ablage.startsuche.suche') : ''}</p>
           {gruppen.map((g) => (
             <div key={g.typId} className="ss-gruppe">
               <h2 className="ueber">{g.name} <span className="anzahl">{g.treffer.length}</span></h2>
               <ul className="mappenliste">
-                {g.treffer.map((t) => (
-                  <li key={t.m.id}>
-                    <Link to={`/ablage/start/${t.m.id}`} className="eintrag">
-                      <span className="titel"><Ehemalig id={t.m.id}><Hervor text={titelOder(t.m.titel)} woerter={woerter} /></Ehemalig></span>
-                      {t.grund && !t.titelTreffer && <span className="unter">{t.grund.feld}: <Hervor text={t.grund.wert} woerter={woerter} /></span>}
-                      {t.grund && t.titelTreffer && t.grund.wert !== t.m.titel && <span className="unter leise">{t.grund.feld}: <Hervor text={t.grund.wert} woerter={woerter} /></span>}
+                {g.treffer.map((suchtreffer) => (
+                  <li key={suchtreffer.m.id}>
+                    <Link to={`/ablage/start/${suchtreffer.m.id}`} className="eintrag">
+                      <span className="titel"><Ehemalig id={suchtreffer.m.id}><Hervor text={titelOder(suchtreffer.m.titel)} woerter={woerter} /></Ehemalig></span>
+                      {suchtreffer.grund && !suchtreffer.titelTreffer && <span className="unter">{suchtreffer.grund.feld}: <Hervor text={suchtreffer.grund.wert} woerter={woerter} /></span>}
+                      {suchtreffer.grund && suchtreffer.titelTreffer && suchtreffer.grund.wert !== suchtreffer.m.titel && <span className="unter leise">{suchtreffer.grund.feld}: <Hervor text={suchtreffer.grund.wert} woerter={woerter} /></span>}
                     </Link>
                   </li>
                 ))}

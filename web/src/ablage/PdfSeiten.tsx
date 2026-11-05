@@ -3,6 +3,7 @@ import type { Dokument, Mappe } from '../../../shared/src/model';
 import { api, seitenbildUrl, type PdfSeiten as Info } from '../api';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
+import { t } from '../sprache';
 
 /**
  * PDF bearbeiten (#335): Seiten mit kleinen Bildern; drehen, löschen, verschieben (Ziehen oder
@@ -35,8 +36,8 @@ export function PdfSeiten({ d, post, versioniert, papierkorb, teilAb, schliessen
   useEffect(() => { if (teilAb && seiten.length >= teilAb) kacheln.current[teilAb - 1]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [teilAb, seiten.length]);
   useEffect(() => { if (fokus !== undefined) kacheln.current[fokus]?.focus(); }, [fokus, seiten]);
 
-  if (fehler && !info) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>;
-  if (!info) return <p className="leise pdfseiten">Lade Seiten …</p>;
+  if (fehler && !info) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.pdfseiten.schliessen')}</button></div>;
+  if (!info) return <p className="leise pdfseiten">{t('ablage.pdfseiten.lade-seiten')}</p>;
 
   const aendere = (i: number, p: Partial<Seite>) => setSeiten((s) => s.map((x, k) => (k === i ? { ...x, ...p } : x)));
   const verschiebe = (von: number, nach: number) => {
@@ -58,14 +59,14 @@ export function PdfSeiten({ d, post, versioniert, papierkorb, teilAb, schliessen
   const anzahlTeile = teile.length + 1;
 
   async function uebernehmen() {
-    if (!bleiben.length) { setFehler('Mindestens eine Seite muss bleiben.'); return; }
+    if (!bleiben.length) { setFehler(t('ablage.pdfseiten.mindestens-eine-seite-muss')); return; }
     const postTeilen = post && anzahlTeile > 1;
     let bestaetigt = false;
     if (!versioniert && !postTeilen) {
-      if (!(await rueckfrage({ titel: `„${d.name}“ ersetzen?`, text: `Für dieses Register ist die Versionierung ausgeschaltet: Das bearbeitete PDF ersetzt das bisherige. ${papierkorb ? 'Das bisherige kommt in den Papierkorb.' : 'Das bisherige ist danach weg.'}`, ja: 'Ersetzen', gefahr: !papierkorb }))) return;
+      if (!(await rueckfrage({ titel: t('ablage.pdfseiten.ersetzen', { name: d.name }), text: t('ablage.pdfseiten.fuer-dieses-register-ist', { wert: papierkorb ? t('ablage.pdfseiten.das-bisherige-kommt-in') : t('ablage.pdfseiten.das-bisherige-ist-danach') }), ja: t('ablage.pdfseiten.ersetzen-2'), gefahr: !papierkorb }))) return;
       bestaetigt = true;
     }
-    if (postTeilen && !(await rueckfrage({ titel: `In ${anzahlTeile} Posts teilen?`, text: `Aus dieser Post entstehen ${anzahlTeile} neue Posts, je Teil eine. Diese Post behält das ganze PDF und wird erledigt.`, ja: 'Teilen' }))) return;
+    if (postTeilen && !(await rueckfrage({ titel: t('ablage.pdfseiten.in-posts-teilen', { anzahlTeile }), text: t('ablage.pdfseiten.aus-dieser-post-entstehen', { anzahlTeile }), ja: t('ablage.pdfseiten.teilen') }))) return;
     setLaeuft(true); setFehler(undefined);
     try {
       fertig(await api.bearbeitePdf(d.id, { seiten: bleiben.map((s) => ({ nr: s.nr, drehung: s.drehung })), teile, bestaetigt }));
@@ -73,16 +74,16 @@ export function PdfSeiten({ d, post, versioniert, papierkorb, teilAb, schliessen
   }
 
   const zusammenfassung = [
-    `${bleiben.length} von ${info.anzahl} ${info.anzahl === 1 ? 'Seite' : 'Seiten'}`,
+    t('ablage.pdfseiten.von-seiten', { anzahl: info.anzahl, bleiben: bleiben.length }),
     ...(seiten.some((s) => s.drehung && !s.weg) ? [`${seiten.filter((s) => s.drehung && !s.weg).length} gedreht`] : []),
-    ...(anzahlTeile > 1 ? [post ? `${anzahlTeile} neue Posts` : `${anzahlTeile} Teile`] : []),
+    ...(anzahlTeile > 1 ? [post ? t('ablage.pdfseiten.neue-posts', { anzahlTeile }) : t('ablage.pdfseiten.teile', { anzahlTeile })] : []),
   ].join(' · ');
 
   return (
-    <div className="pdfseiten" role="region" aria-label={`Seiten von ${d.name}`}>
+    <div className="pdfseiten" role="region" aria-label={t('ablage.pdfseiten.seiten-von', { name: d.name })}>
       <div className="pdfseiten-kopf">
-        <strong>Seiten bearbeiten</strong>
-        <span className="leise klein">Ziehen oder Alt + Pfeiltaste zum Verschieben</span>
+        <strong>{t('ablage.pdfseiten.seiten-bearbeiten')}</strong>
+        <span className="leise klein">{t('ablage.pdfseiten.ziehen-oder-alt-pfeiltaste')}</span>
         <Hilfe ort="dokumente.seiten" />
       </div>
       <ol className="seitenraster">
@@ -92,40 +93,40 @@ export function PdfSeiten({ d, post, versioniert, papierkorb, teilAb, schliessen
           return (
             <li key={s.nr} ref={(el) => { kacheln.current[i] = el; }} tabIndex={0}
               className={`seite ${s.weg ? 'weg' : ''} ${neuerTeil ? 'teilab' : ''} ${gezogen === i ? 'zieht' : ''}`}
-              aria-label={`Seite ${s.nr}${s.weg ? ', gelöscht' : ''}${s.drehung ? `, gedreht um ${s.drehung} Grad` : ''}${neuerTeil ? ', neuer Teil beginnt hier' : ''}`}
+              aria-label={t('ablage.pdfseiten.seite', { nr: s.nr, wert: s.weg ? t('ablage.pdfseiten.geloescht') : '', wert2: s.drehung ? t('ablage.pdfseiten.gedreht-um-grad', { drehung: s.drehung }) : '', wert3: neuerTeil ? t('ablage.pdfseiten.neuer-teil-beginnt-hier') : '' })}
               draggable onDragStart={() => setGezogen(i)} onDragEnd={() => setGezogen(undefined)}
               onDragOver={(e) => e.preventDefault()} onDrop={(e) => fallen(i, e)} onKeyDown={(e) => taste(i, e)}>
-              {neuerTeil && <span className="teilmarke">Teil {teile.indexOf(pos) + 2}</span>}
+              {neuerTeil && <span className="teilmarke">{t('ablage.pdfseiten.teil', { wert: teile.indexOf(pos) + 2 })}</span>}
               <div className="seitenbild">
                 {s.nr <= info.bilderBis
                   ? <img src={seitenbildUrl(info, s.nr)} alt="" loading="lazy" style={{ transform: `rotate(${s.drehung}deg)` }} draggable={false} />
                   : <span className="leise">{s.nr}</span>}
               </div>
-              <span className="klein">Seite {s.nr}</span>
+              <span className="klein">{t('ablage.pdfseiten.seite-2', { nr: s.nr })}</span>
               <div className="seitenknoepfe">
-                <button type="button" className="symbolknopf" title="Nach links drehen" aria-label={`Seite ${s.nr} nach links drehen`} disabled={s.weg} onClick={() => aendere(i, { drehung: (s.drehung + 270) % 360 })}>↺</button>
-                <button type="button" className="symbolknopf" title="Nach rechts drehen" aria-label={`Seite ${s.nr} nach rechts drehen`} disabled={s.weg} onClick={() => aendere(i, { drehung: (s.drehung + 90) % 360 })}>↻</button>
-                <button type="button" className="symbolknopf" title="Nach vorn" aria-label={`Seite ${s.nr} nach vorn`} disabled={i === 0} onClick={() => verschiebe(i, i - 1)}>←</button>
-                <button type="button" className="symbolknopf" title="Nach hinten" aria-label={`Seite ${s.nr} nach hinten`} disabled={i === seiten.length - 1} onClick={() => verschiebe(i, i + 1)}>→</button>
+                <button type="button" className="symbolknopf" title={t('ablage.pdfseiten.nach-links-drehen')} aria-label={t('ablage.pdfseiten.seite-nach-links-drehen', { nr: s.nr })} disabled={s.weg} onClick={() => aendere(i, { drehung: (s.drehung + 270) % 360 })}>↺</button>
+                <button type="button" className="symbolknopf" title={t('ablage.pdfseiten.nach-rechts-drehen')} aria-label={t('ablage.pdfseiten.seite-nach-rechts-drehen', { nr: s.nr })} disabled={s.weg} onClick={() => aendere(i, { drehung: (s.drehung + 90) % 360 })}>↻</button>
+                <button type="button" className="symbolknopf" title={t('ablage.pdfseiten.nach-vorn')} aria-label={t('ablage.pdfseiten.seite-nach-vorn', { nr: s.nr })} disabled={i === 0} onClick={() => verschiebe(i, i - 1)}>←</button>
+                <button type="button" className="symbolknopf" title={t('ablage.pdfseiten.nach-hinten')} aria-label={t('ablage.pdfseiten.seite-nach-hinten', { nr: s.nr })} disabled={i === seiten.length - 1} onClick={() => verschiebe(i, i + 1)}>→</button>
               </div>
               <div className="seitenknoepfe">
-                <button type="button" className={`textknopf klein ${s.weg ? '' : 'gefahr'}`} onClick={() => aendere(i, { weg: !s.weg })}>{s.weg ? 'Behalten' : 'Löschen'}</button>
-                {pos > 0 && <button type="button" className="textknopf klein" aria-pressed={s.teilAb} onClick={() => aendere(i, { teilAb: !s.teilAb })}>{s.teilAb ? 'Nicht teilen' : 'Teilen ab hier'}</button>}
+                <button type="button" className={`textknopf klein ${s.weg ? '' : 'gefahr'}`} onClick={() => aendere(i, { weg: !s.weg })}>{s.weg ? t('ablage.pdfseiten.behalten') : t('ablage.pdfseiten.loeschen')}</button>
+                {pos > 0 && <button type="button" className="textknopf klein" aria-pressed={s.teilAb} onClick={() => aendere(i, { teilAb: !s.teilAb })}>{s.teilAb ? t('ablage.pdfseiten.nicht-teilen') : t('ablage.pdfseiten.teilen-ab-hier')}</button>}
               </div>
             </li>
           );
         })}
       </ol>
       {anzahlTeile > 1 && <p className="leise klein">{post
-        ? 'Beim Übernehmen entsteht je Teil eine neue Post. Diese Post behält das ganze PDF, wird erledigt und verweist auf die neuen.'
-        : `Teil 1 ersetzt „${d.name}“${versioniert ? ' als neue Version' : ''}, die weiteren Teile werden eigene Dokumente in diesem Register.`}</p>}
+        ? t('ablage.pdfseiten.beim-uebernehmen-entsteht-je')
+        : t('ablage.pdfseiten.teil-1-ersetzt-die', { name: d.name, wert: versioniert ? t('ablage.pdfseiten.als-neue-version') : '' })}</p>}
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
       <div className="pdfseiten-fuss">
         <span className="leise klein">{zusammenfassung}</span>
-        <button type="button" className="knopf primaer klein" disabled={!geaendert || !bleiben.length || laeuft} onClick={() => void uebernehmen()}>{laeuft ? 'Wird übernommen …' : 'Übernehmen'}</button>
-        <button type="button" className="knopf klein" disabled={laeuft} onClick={schliessen}>Abbrechen</button>
+        <button type="button" className="knopf primaer klein" disabled={!geaendert || !bleiben.length || laeuft} onClick={() => void uebernehmen()}>{laeuft ? t('ablage.pdfseiten.wird-uebernommen') : t('ablage.pdfseiten.uebernehmen')}</button>
+        <button type="button" className="knopf klein" disabled={laeuft} onClick={schliessen}>{t('ablage.pdfseiten.abbrechen')}</button>
       </div>
-      {versioniert && <p className="leise klein">Das bisherige PDF bleibt als ältere Version erhalten.</p>}
+      {versioniert && <p className="leise klein">{t('ablage.pdfseiten.das-bisherige-pdf-bleibt')}</p>}
     </div>
   );
 }

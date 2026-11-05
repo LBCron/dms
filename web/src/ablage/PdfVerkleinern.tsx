@@ -4,6 +4,7 @@ import { ergebnisText, mb, STUFEN, STUFEN_LISTE, type Stufe } from '../../../sha
 import { api, type VerkleinernVorschau } from '../api';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
+import { t, tn } from '../sprache';
 
 /**
  * PDF verkleinern (#393): drei Stufen mit geschätzter Größe. „Verkleinern“ speichert das Ergebnis als neue
@@ -22,61 +23,60 @@ export function PdfVerkleinern({ d, bearbeitbar, mitnehmen = true, schliessen, f
   const [laeuft, setLaeuft] = useState<'speichern' | 'laden'>();
   useEffect(() => { api.verkleinernVorschau(d.id).then(setV, (e: Error) => setFehler(e.message)); }, [d.id, d.sha256]);
 
-  if (fehler && !v) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>;
-  if (!v) return <p className="leise pdfseiten" role="status">Sehe mir die Bilder im PDF an …</p>;
+  if (fehler && !v) return <div className="hinweis schlecht pdfseiten"><p>{fehler}</p><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.pdfverkleinern.schliessen')}</button></div>;
+  if (!v) return <p className="leise pdfseiten" role="status">{t('ablage.pdfverkleinern.sehe-mir-die-bilder')}</p>;
   const s = v.stufen[stufe];
 
   async function verkleinern() {
     let bestaetigt = false;
     if (!v!.versioniert) {
-      if (!(await rueckfrage({ titel: `„${d.name}“ ersetzen?`, text: `Für dieses Register ist die Versionierung ausgeschaltet: Das verkleinerte PDF ersetzt das bisherige. ${v!.papierkorb ? 'Das bisherige kommt in den Papierkorb.' : 'Das bisherige ist danach weg.'}`, ja: 'Ersetzen', gefahr: !v!.papierkorb }))) return;
+      if (!(await rueckfrage({ titel: t('ablage.pdfverkleinern.ersetzen', { name: d.name }), text: t('ablage.pdfverkleinern.fuer-dieses-register-ist', { wert: v!.papierkorb ? t('ablage.pdfverkleinern.das-bisherige-kommt-in') : t('ablage.pdfverkleinern.das-bisherige-ist-danach') }), ja: t('ablage.pdfverkleinern.ersetzen-2'), gefahr: !v!.papierkorb }))) return;
       bestaetigt = true;
     }
     setLaeuft('speichern'); setFehler(undefined);
     try {
       const r = await api.verkleinern(d.id, { stufe, bestaetigt });
-      fertig(r.unveraendert ? r.meldung : `„${d.name}“ verkleinert ${ergebnisText(r.vorher, r.nachher)}${v!.versioniert ? ` – Version ${r.dokument.version ?? 1}, das Original bleibt als ältere Version` : ''}.`, !r.unveraendert);
+      fertig(r.unveraendert ? r.meldung : t('ablage.pdfverkleinern.verkleinert', { name: d.name, ergebnisText: ergebnisText(r.vorher, r.nachher), wert: v!.versioniert ? t('ablage.pdfverkleinern.version-das-original-bleibt', { wert: r.dokument.version ?? 1 }) : '' }), !r.unveraendert);
     } catch (e) { setFehler((e as Error).message); setLaeuft(undefined); }
   }
   async function herunterladen() {
     setLaeuft('laden'); setFehler(undefined);
     try {
       const r = await api.herunterladenMitStempel(d.id, null, d.name, undefined, stufe);
-      fertig(r.bytes < v!.groesse * 0.9 ? `Verkleinerte Kopie heruntergeladen (${ergebnisText(v!.groesse, r.bytes)}); „${d.name}“ bleibt unverändert.` : `„${d.name}“ lässt sich kaum verkleinern – heruntergeladen wurde das Original.`, false);
+      fertig(r.bytes < v!.groesse * 0.9 ? t('ablage.pdfverkleinern.verkleinerte-kopie-heruntergeladen', { ergebnisText: ergebnisText(v!.groesse, r.bytes), name: d.name }) : t('ablage.pdfverkleinern.laesst-sich-kaum-verkleinern', { name: d.name }), false);
     } catch (e) { setFehler((e as Error).message); setLaeuft(undefined); }
   }
 
   return (
-    <div className="pdfseiten verkleinern" role="region" aria-label={`${d.name} verkleinern`}>
+    <div className="pdfseiten verkleinern" role="region" aria-label={t('ablage.pdfverkleinern.verkleinern', { name: d.name })}>
       <div className="pdfseiten-kopf">
-        <strong>PDF verkleinern</strong>
-        <span className="leise klein">{mb(v.groesse)} · {v.seiten} {v.seiten === 1 ? 'Seite' : 'Seiten'}{v.hoechsteDpi ? ` · Bilder bis ${v.hoechsteDpi} dpi` : ' · ohne Bilder'}</span>
+        <strong>{t('ablage.pdfverkleinern.pdf-verkleinern')}</strong>
+        <span className="leise klein">{mb(v.groesse)} · {v.seiten} {t('ablage.pdfverkleinern.seiten', { anzahl: v.seiten })}{v.hoechsteDpi ? t('ablage.pdfverkleinern.bilder-bis-dpi', { hoechsteDpi: v.hoechsteDpi }) : t('ablage.pdfverkleinern.ohne-bilder')}</span>
         <Hilfe ort="dokumente.verkleinern" />
       </div>
       <fieldset className="stufenwahl">
-        <legend className="sr-only">Stufe</legend>
+        <legend className="sr-only">{t('ablage.pdfverkleinern.stufe')}</legend>
         {STUFEN_LISTE.map((k) => {
           const x = v.stufen[k];
           return (
             <label key={k} className={`stufe ${stufe === k ? 'gewaehlt' : ''}`}>
               <input type="radio" name={`stufe-${d.id}`} checked={stufe === k} onChange={() => setStufe(k)} />
               <span className="stufe-text">
-                <strong>{STUFEN[k].name}</strong> <span className="leise klein">≈ {x.dpi} dpi{k === 'standard' ? ' · Vorgabe' : ''}</span>
+                <strong>{STUFEN[k].name}</strong> <span className="leise klein">{t('ablage.pdfverkleinern.dpi', { dpi: x.dpi, wert: k === 'standard' ? t('ablage.pdfverkleinern.vorgabe') : '' })}</span>
                 <span className="klein leise">{STUFEN[k].text}</span>
               </span>
-              <span className={`stufe-groesse ${x.lohnt ? '' : 'leise'}`}>{x.lohnt ? <>≈ {mb(x.geschaetzt)} <span className="klein">(−{Math.round((1 - x.geschaetzt / v.groesse) * 100)} %)</span></> : <span className="klein">bringt kaum etwas</span>}</span>
+              <span className={`stufe-groesse ${x.lohnt ? '' : 'leise'}`}>{x.lohnt ? <>≈ {mb(x.geschaetzt)} <span className="klein">(−{Math.round((1 - x.geschaetzt / v.groesse) * 100)} %)</span></> : <span className="klein">{t('ablage.pdfverkleinern.bringt-kaum-etwas')}</span>}</span>
             </label>
           );
         })}
       </fieldset>
-      <p className="leise klein">Die Bilder werden heruntergerechnet und neu komprimiert; Text, Textebene und Volltext bleiben, wie sie sind. Die Größe danach ist geschätzt.
-        {!s.lohnt && ' Bringt das Verkleinern weniger als 10 %, bleibt das Dokument unverändert.'}</p>
+      <p className="leise klein">{tn('ablage.pdfverkleinern.die-bilder-werden-heruntergerechnet', { wert: !s.lohnt && t('ablage.pdfverkleinern.bringt-das-verkleinern-weniger') })}</p>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
       <div className="pdfseiten-fuss">
-        <span className="leise klein">{s.lohnt ? `${mb(v.groesse)} → ≈ ${mb(s.geschaetzt)}` : 'lohnt sich kaum'}</span>
-        {bearbeitbar && <button type="button" className="knopf primaer klein" disabled={!!laeuft} onClick={() => void verkleinern()}>{laeuft === 'speichern' ? 'Wird verkleinert …' : v.versioniert ? 'Als neue Version speichern' : 'Verkleinern und ersetzen'}</button>}
-        {mitnehmen && <button type="button" className="knopf klein" disabled={!!laeuft} onClick={() => void herunterladen()} title="Nur eine verkleinerte Kopie herunterladen; das Dokument bleibt unverändert">{laeuft === 'laden' ? 'Wird vorbereitet …' : 'Verkleinert herunterladen'}</button>}
-        <button type="button" className="knopf klein" disabled={!!laeuft} onClick={schliessen}>Abbrechen</button>
+        <span className="leise klein">{s.lohnt ? `${mb(v.groesse)} → ≈ ${mb(s.geschaetzt)}` : t('ablage.pdfverkleinern.lohnt-sich-kaum')}</span>
+        {bearbeitbar && <button type="button" className="knopf primaer klein" disabled={!!laeuft} onClick={() => void verkleinern()}>{laeuft === 'speichern' ? t('ablage.pdfverkleinern.wird-verkleinert') : v.versioniert ? t('ablage.pdfverkleinern.als-neue-version-speichern') : t('ablage.pdfverkleinern.verkleinern-und-ersetzen')}</button>}
+        {mitnehmen && <button type="button" className="knopf klein" disabled={!!laeuft} onClick={() => void herunterladen()} title={t('ablage.pdfverkleinern.nur-eine-verkleinerte-kopie')}>{laeuft === 'laden' ? t('ablage.pdfverkleinern.wird-vorbereitet') : t('ablage.pdfverkleinern.verkleinert-herunterladen')}</button>}
+        <button type="button" className="knopf klein" disabled={!!laeuft} onClick={schliessen}>{t('ablage.pdfverkleinern.abbrechen')}</button>
       </div>
     </div>
   );

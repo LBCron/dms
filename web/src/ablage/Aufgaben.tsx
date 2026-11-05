@@ -10,7 +10,7 @@ import { useKonto } from '../konto';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /** Aufgaben an einer Mappe (#54): offene als Hinweis über der Mappe; eigene erledigen oder weitergeben. */
 const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { dateStyle: 'short' });
@@ -19,7 +19,7 @@ export function BenutzerWahl({ wert, setze, ohne, label, fokus }: { wert: string
   const d = useDaten();
   return (
     <select aria-label={label} value={wert} autoFocus={fokus} onChange={(e) => setze(e.target.value)}>
-      <option value="">– Benutzer wählen –</option>
+      <option value="">{t('ablage.aufgaben.benutzer-waehlen')}</option>
       {d.personen.filter((p) => p.aktiv !== false && p.id !== ohne).map((p) => <option key={p.id} value={p.id}>{nameMitAbwesenheit(p)}</option>)}
     </select>
   );
@@ -37,7 +37,7 @@ export async function trotzdemZuweisen(mappeId: string, an: string, name: string
   return rueckfrage({ titel: t('mappen.aufgabe.zuweisen.titel', { name }), text: t('mappen.aufgabe.zuweisen.text', { name }), ja: t('mappen.aufgabe.zuweisen.trotzdem'), nein: t('mappen.aufgabe.zuweisen.abbrechen') });
 }
 
-function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe; neuLaden: () => Promise<void>; setBestaetigt: (t: string) => void; setFolge: (f: Folge) => void; zuNotizen?: () => void }) {
+function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe; neuLaden: () => Promise<void>; setBestaetigt: (text: string) => void; setFolge: (f: Folge) => void; zuNotizen?: () => void }) {
   const d = useDaten();
   const { ich, ohneEmpfaenger } = useKonto();
   const [weiter, setWeiter] = useState(false);
@@ -63,29 +63,29 @@ function Zeile({ a, neuLaden, setBestaetigt, setFolge, zuNotizen }: { a: Aufgabe
       <div className="aufgabentext">
         {/* „Deine Aufgabe:“ (#427) – damit klar ist, dass Erledigt/Weitergeben rechts zur Aufgabe gehören. */}
         <strong>{meine ? aufgabenBeschriftung(a.art, true) : <>{aufgabenBeschriftung(a.art, false)} {a.empfaengerId ? <Person id={a.empfaengerId} /> : t('konten.verwaltende.ohneEmpfaenger')}</>}:</strong> {a.text}
-        {a.art === 'frist' && a.datum && <span className={`chip ${a.datum <= heuteIn() ? 'schlecht' : 'warn'}`} title="Frist">{noch(a.datum)}</span>}
-        <span className="leise klein"> · {AUFGABENARTEN[a.art]} seit {datum(a.erstellt)}{a.erstelltVon && <> von <Person id={a.erstelltVon} /></>}</span>
+        {a.art === 'frist' && a.datum && <span className={`chip ${a.datum <= heuteIn() ? 'schlecht' : 'warn'}`} title={t('ablage.aufgaben.frist')}>{noch(a.datum)}</span>}
+        <span className="leise klein"> {' '}{t('ablage.aufgaben.seit', { AUFGABENARTEN: AUFGABENARTEN[a.art], datum: datum(a.erstellt) })}{a.erstelltVon && <> {' '}{t('ablage.aufgaben.von')}{' '}<Person id={a.erstelltVon} /></>}</span>
       </div>
       {darf && !weiter && (
         <div className="aufgabenaktionen">
-          {zuNotizen && ausNotiz(a) && <button type="button" className="textknopf klein" onClick={zuNotizen}>Zur Notiz</button>}
+          {zuNotizen && ausNotiz(a) && <button type="button" className="textknopf klein" onClick={zuNotizen}>{t('ablage.aufgaben.zur-notiz')}</button>}
           {/* Automatisch zugeordnet (#337): „Passt“ bestätigt, „Rückgängig“ nimmt die Zuordnung zurück. */}
           {a.art === 'zugeordnet' && <button type="button" className="knopf klein" onClick={() => void (async () => {
-            if (await rueckfrage({ titel: 'Zuordnung rückgängig machen?', text: 'Die Dokumente kommen zurück in die Post, der Verweis fällt weg, und die Post ist wieder neu. Automatisch zugeordnet wird sie danach nicht mehr.', ja: 'Rückgängig machen' })) {
-              await tu(() => api.zuordnungRueckgaengig(a.id), 'Zuordnung rückgängig gemacht – die Post ist wieder neu.');
+            if (await rueckfrage({ titel: t('ablage.aufgaben.zuordnung-rueckgaengig-machen'), text: t('ablage.aufgaben.die-dokumente-kommen-zurueck'), ja: t('ablage.aufgaben.rueckgaengig-machen') })) {
+              await tu(() => api.zuordnungRueckgaengig(a.id), t('ablage.aufgaben.zuordnung-rueckgaengig-gemacht-die'));
             }
-          })()}>Rückgängig</button>}
-          {a.art !== 'passung' && <button type="button" className={`knopf klein ${a.art === 'zugeordnet' ? 'primaer' : ''}`} onClick={() => void tu(() => api.aufgabeErledigt(a.id))}>{a.art === 'zugeordnet' ? 'Passt' : 'Erledigt'}</button>}
-          <button type="button" className="knopf klein" onClick={() => setWeiter(true)}>Weitergeben</button>
+          })()}>{t('ablage.aufgaben.rueckgaengig')}</button>}
+          {a.art !== 'passung' && <button type="button" className={`knopf klein ${a.art === 'zugeordnet' ? 'primaer' : ''}`} onClick={() => void tu(() => api.aufgabeErledigt(a.id))}>{a.art === 'zugeordnet' ? t('ablage.aufgaben.passt') : t('ablage.aufgaben.erledigt')}</button>}
+          <button type="button" className="knopf klein" onClick={() => setWeiter(true)}>{t('ablage.aufgaben.weitergeben')}</button>
         </div>
       )}
       {darf && weiter && (
-        <form className="weitergeben" onSubmit={(e) => { e.preventDefault(); if (an) void (async () => { if (await trotzdemZuweisen(a.mappeId, an, d.person(an))) await tu(() => api.aufgabeDelegieren(a.id, an), `An ${d.person(an)} weitergegeben.`); })(); }}
+        <form className="weitergeben" onSubmit={(e) => { e.preventDefault(); if (an) void (async () => { if (await trotzdemZuweisen(a.mappeId, an, d.person(an))) await tu(() => api.aufgabeDelegieren(a.id, an), t('ablage.aufgaben.an-weitergegeben', { person: d.person(an) })); })(); }}
           onKeyDown={(e) => { if (e.key === 'Escape') { setWeiter(false); setAn(''); } }}>
-          <span className="leise klein">Weitergeben an</span>
-          <BenutzerWahl label="Weitergeben an" wert={an} setze={setAn} ohne={a.empfaengerId} fokus />
-          <button className="knopf klein primaer" disabled={!an}>Weitergeben</button>
-          <button type="button" className="textknopf" onClick={() => { setWeiter(false); setAn(''); }}>Abbrechen</button>
+          <span className="leise klein">{t('ablage.aufgaben.weitergeben-an')}</span>
+          <BenutzerWahl label={t('ablage.aufgaben.weitergeben-an')} wert={an} setze={setAn} ohne={a.empfaengerId} fokus />
+          <button className="knopf klein primaer" disabled={!an}>{t('ablage.aufgaben.weitergeben')}</button>
+          <button type="button" className="textknopf" onClick={() => { setWeiter(false); setAn(''); }}>{t('ablage.aufgaben.abbrechen')}</button>
         </form>
       )}
       {fehler && <p className="fehlertext">{fehler}</p>}
@@ -98,8 +98,8 @@ export function AufgabenHinweis({ aufgaben, neuLaden, zuNotizen }: { aufgaben: A
   const offen = aufgaben.filter((a) => !a.erledigt);
   const [bestaetigt, setBestaetigt] = useState<string>();
   const [folge, setFolge] = useState<Folge>();
-  useEffect(() => { if (!bestaetigt) return; const t = window.setTimeout(() => setBestaetigt(undefined), 6000); return () => window.clearTimeout(t); }, [bestaetigt]);
-  const vorschlag = folge && <Folgetermin f={folge} neuLaden={neuLaden} fertig={(t) => { setFolge(undefined); if (t) setBestaetigt(t); }} />;
+  useEffect(() => { if (!bestaetigt) return; const timer = window.setTimeout(() => setBestaetigt(undefined), 6000); return () => window.clearTimeout(timer); }, [bestaetigt]);
+  const vorschlag = folge && <Folgetermin f={folge} neuLaden={neuLaden} fertig={(eintrag) => { setFolge(undefined); if (eintrag) setBestaetigt(eintrag); }} />;
   if (!offen.length) return bestaetigt || vorschlag ? <>{vorschlag}{bestaetigt && <div className="hinweis gut" role="status"><p>{bestaetigt}</p></div>}</> : null;
   return (
     <>
@@ -115,7 +115,7 @@ export function AufgabenHinweis({ aufgaben, neuLaden, zuNotizen }: { aufgaben: A
 /** „noch 12 Tage“, „heute“, „seit 3 Tagen“ bis zur Frist. */
 function noch(iso: string): string {
   const tage = Math.round((Date.parse(iso) - Date.parse(heuteIn())) / 86_400_000);
-  return tage === 0 ? 'heute' : tage === 1 ? 'morgen' : tage > 0 ? `noch ${tage} Tage` : tage === -1 ? 'seit gestern' : `seit ${-tage} Tagen`;
+  return tage === 0 ? t('ablage.aufgaben.heute') : tage === 1 ? t('ablage.aufgaben.morgen') : tage > 0 ? t('ablage.aufgaben.noch-tage', { tage }) : tage === -1 ? t('ablage.aufgaben.seit-gestern') : t('ablage.aufgaben.seit-tagen', { wert: -tage });
 }
 
 /** Wiederkehrende Frist erledigt (#130): „Datum auf … setzen“ – nie automatisch. */
@@ -123,15 +123,15 @@ function Folgetermin({ f, neuLaden, fertig }: { f: Folge; neuLaden: () => Promis
   const d = useDaten();
   const [fehler, setFehler] = useState<string>();
   async function setzen() {
-    try { const r = await api.folgetermin(f.aufgabe.id); await neuLaden(); await d.neuLaden(); fertig(r.hinweis ?? `Nächster Termin eingetragen: ${datumDe(f.datum)}.`); }
+    try { const r = await api.folgetermin(f.aufgabe.id); await neuLaden(); await d.neuLaden(); fertig(r.hinweis ?? t('ablage.aufgaben.naechster-termin-eingetragen', { datumDe: datumDe(f.datum) })); }
     catch (e) { setFehler((e as Error).message); }
   }
   return (
     <div className="hinweis info folgetermin" role="status">
-      <p>Erledigt. Der Termin wiederholt sich – <strong>nächsten Termin auf {datumDe(f.datum)} setzen?</strong></p>
+      <p>{tn('ablage.aufgaben.erledigt-der-termin-wiederholt', { b: <strong>{t('ablage.aufgaben.naechsten-termin-auf-setzen', { datumDe: datumDe(f.datum) })}</strong> })}</p>
       <div className="knoepfe">
-        <button type="button" className="knopf klein primaer" onClick={() => void setzen()}>Datum auf {datumDe(f.datum)} setzen</button>
-        <button type="button" className="textknopf" onClick={() => fertig()}>Nein, danke</button>
+        <button type="button" className="knopf klein primaer" onClick={() => void setzen()}>{t('ablage.aufgaben.datum-auf-setzen', { datumDe: datumDe(f.datum) })}</button>
+        <button type="button" className="textknopf" onClick={() => fertig()}>{t('ablage.aufgaben.nein-danke')}</button>
       </div>
       {fehler && <p className="fehlertext">{fehler}</p>}
     </div>
@@ -145,7 +145,7 @@ export function Erinnerungen({ liste, neuLaden }: { liste: Erinnerung[]; neuLade
   const [fehler, setFehler] = useState<string>();
   if (!liste.length) return null;
   async function loeschen(e: Erinnerung) {
-    if (!(await rueckfrage({ titel: 'Erinnerung löschen?', text: `„${e.text}“`, ja: 'Löschen', gefahr: true }))) return;
+    if (!(await rueckfrage({ titel: t('ablage.aufgaben.erinnerung-loeschen'), text: `„${e.text}“`, ja: t('ablage.aufgaben.loeschen'), gefahr: true }))) return;
     try { await api.erinnerungLoeschen(e.id); await neuLaden(); } catch (x) { setFehler((x as Error).message); }
   }
   return (
@@ -156,10 +156,10 @@ export function Erinnerungen({ liste, neuLaden }: { liste: Erinnerung[]; neuLade
           ? <li key={e.id}><ErinnerungFormular mappeId={e.mappeId} e={e} neuLaden={neuLaden} schliessen={() => setBearbeiten(undefined)} eingebettet /></li>
           : (
             <li key={e.id}>
-              <div className="aufgabentext"><Symbol name="erinnern" />{' '}<strong>{datumDe(e.datum)}</strong> für {e.empfaengerId === ich.id ? 'dich' : <Person id={e.empfaengerId} />}: {e.text}</div>
+              <div className="aufgabentext">{tn('ablage.aufgaben.fuer', { symbol: <Symbol name="erinnern" />, b: <strong>{datumDe(e.datum)}</strong> })}{' '}{e.empfaengerId === ich.id ? t('ablage.aufgaben.dich') : <Person id={e.empfaengerId} />}: {e.text}</div>
               {darf && <div className="aufgabenaktionen">
-                <button type="button" className="knopf klein" onClick={() => setBearbeiten(e.id)}>Ändern</button>
-                <button type="button" className="textknopf gefahr klein" onClick={() => void loeschen(e)}>Löschen</button>
+                <button type="button" className="knopf klein" onClick={() => setBearbeiten(e.id)}>{t('ablage.aufgaben.aendern')}</button>
+                <button type="button" className="textknopf gefahr klein" onClick={() => void loeschen(e)}>{t('ablage.aufgaben.loeschen')}</button>
               </div>}
             </li>
           );
@@ -190,23 +190,23 @@ export function ErinnerungFormular({ mappeId, e, neuLaden, schliessen, eingebett
   const inhalt = (
     <>
       <div className="raster">
-        <label className="eigenschaft"><span>Am</span><input type="date" value={datum} onChange={(x) => setDatum(x.target.value)} /></label>
-        <label className="eigenschaft"><span>Für</span><BenutzerWahl label="Erinnerung für" wert={an} setze={setAn} /></label>
-        <label className="eigenschaft breit"><span>Woran?</span><input value={text} maxLength={500} onChange={(x) => setText(x.target.value)} placeholder="z. B. Angebote vergleichen" autoFocus /></label>
+        <label className="eigenschaft"><span>{t('ablage.aufgaben.am')}</span><input type="date" value={datum} onChange={(x) => setDatum(x.target.value)} /></label>
+        <label className="eigenschaft"><span>{t('ablage.aufgaben.fuer-2')}</span><BenutzerWahl label={t('ablage.aufgaben.erinnerung-fuer')} wert={an} setze={setAn} /></label>
+        <label className="eigenschaft breit"><span>{t('ablage.aufgaben.woran')}</span><input value={text} maxLength={500} onChange={(x) => setText(x.target.value)} placeholder={t('ablage.aufgaben.z-b-angebote-vergleichen')} autoFocus /></label>
       </div>
-      <p className="leise klein">Am gewählten Tag steht die Mappe unter „Zu erledigen“{an === ich.id ? '' : ' des Empfängers'}; bis dahin im Kalender von „Zu erledigen“.</p>
+      <p className="leise klein">{t('ablage.aufgaben.am-gewaehlten-tag-steht', { wert: an === ich.id ? '' : t('ablage.aufgaben.des-empfaengers') })}</p>
       {fehler && <p className="fehlertext">{fehler}</p>}
       {hinweis && <div className="hinweis warn"><p>{hinweis}</p></div>}
       <div className="knoepfe">
-        {eingebettet && <button type="button" className="textknopf" onClick={schliessen}>Abbrechen</button>}
-        <button type="button" className="knopf primaer" disabled={!datum || !text.trim() || !an} onClick={() => void senden()}>{e ? 'Erinnerung ändern' : 'Erinnern'}</button>
+        {eingebettet && <button type="button" className="textknopf" onClick={schliessen}>{t('ablage.aufgaben.abbrechen')}</button>}
+        <button type="button" className="knopf primaer" disabled={!datum || !text.trim() || !an} onClick={() => void senden()}>{e ? t('ablage.aufgaben.erinnerung-aendern') : t('ablage.aufgaben.erinnern')}</button>
       </div>
     </>
   );
   if (eingebettet) return <div className="erinnerungformular">{inhalt}</div>;
   return (
-    <section className="blatt" aria-label="Erinnern">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Erinnern <Hilfe ort="ablage.erinnern" /></h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
+    <section className="blatt" aria-label={t('ablage.aufgaben.erinnern')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{tn('ablage.aufgaben.erinnern-2', { hilfe: <Hilfe ort="ablage.erinnern" /> })}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.aufgaben.schliessen')}</button></div>
       {inhalt}
     </section>
   );
@@ -230,16 +230,16 @@ export function NeueAufgabe({ mappeId, neuLaden, schliessen }: { mappeId: string
     } catch (e) { setFehler((e as Error).message); }
   }
   return (
-    <section className="blatt" aria-label="Aufgabe vergeben">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Aufgabe vergeben</h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
+    <section className="blatt" aria-label={t('ablage.aufgaben.aufgabe-vergeben')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.aufgaben.aufgabe-vergeben')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.aufgaben.schliessen')}</button></div>
       <div className="raster">
-        <label className="eigenschaft"><span>Für</span><BenutzerWahl label="Empfänger" wert={an} setze={setAn} /></label>
-        <label className="eigenschaft breit"><span>Was ist zu tun?</span><input value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="z. B. Bitte Rechnung prüfen und bezahlen" /></label>
+        <label className="eigenschaft"><span>{t('ablage.aufgaben.fuer-2')}</span><BenutzerWahl label={t('ablage.aufgaben.empfaenger')} wert={an} setze={setAn} /></label>
+        <label className="eigenschaft breit"><span>{t('ablage.aufgaben.was-ist-zu-tun')}</span><input value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder={t('ablage.aufgaben.z-b-bitte-rechnung')} /></label>
       </div>
-      <p className="leise klein">Die Mappe erscheint beim Empfänger unter „Zu erledigen“, bis er die Aufgabe erledigt oder weitergibt.</p>
+      <p className="leise klein">{t('ablage.aufgaben.die-mappe-erscheint-beim')}</p>
       {fehler && <p className="fehlertext">{fehler}</p>}
       {hinweis && <div className="hinweis warn" role="status"><p>{hinweis}</p></div>}
-      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!an || !text.trim()} onClick={() => void senden()}>Aufgabe vergeben</button></div>
+      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!an || !text.trim()} onClick={() => void senden()}>{t('ablage.aufgaben.aufgabe-vergeben')}</button></div>
     </section>
   );
 }

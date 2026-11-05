@@ -188,7 +188,7 @@ function Eintrag({ x, heute, offen, mitDatum = true }: { x: Termin; heute: strin
 /** Höchstens so viele Zeilen je Tag im breiten Monat; danach „+n weitere“. */
 const JE_TAG = 3;
 
-function MonatAnsicht({ monat, tag, setTag, offen, blaettern, schmal, favoriten }: { monat: string; tag: string | null; setTag(t: string | null): void; offen?: string; blaettern(n: number): void; schmal: boolean; favoriten: boolean }) {
+function MonatAnsicht({ monat, tag, setTag, offen, blaettern, schmal, favoriten }: { monat: string; tag: string | null; setTag(eintrag: string | null): void; offen?: string; blaettern(n: number): void; schmal: boolean; favoriten: boolean }) {
   const { von, bis } = monatsZeitraum(monat);
   const { daten, alt, fehler } = useZeitraum(von, bis, favoriten);
   const [ref, breite] = useBreite<HTMLDivElement>();

@@ -38,7 +38,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
     try { const n = await api.anmeldeschutzSetzen({ ...e!, ausnahmen: e!.ausnahmen.split(/[\s,;]+/).filter(Boolean) }); z.setStand(n); setE(sperrFormular(n.einstellung)); setMeldung({ art: 'gut', text: t('werkbank.anmeldeschutz.gespeichert') }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
   async function entsperren(ip: string) {
-    try { z.setStand(await api.entsperren(ip)); setMeldung({ art: 'gut', text: `${ip} freigegeben.` }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
+    try { z.setStand(await api.entsperren(ip)); setMeldung({ art: 'gut', text: t('werkbank.anmeldeschutz.freigegeben', { ip }) }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
   const zahl = (wert: number, f: (n: number) => void, min: number, id: string) => <input id={id} type="number" min={min} value={wert} onChange={(x) => f(Number(x.target.value))} />;
   return (

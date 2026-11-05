@@ -4,7 +4,7 @@ import {
   DECKKRAFT_HINWEIS_AB, NEUER_STEMPEL, platzhalterIn, STEMPEL_LAGEN, STEMPEL_SEITEN, STEMPEL_TEXT_MAX,
   type Stempel, type StempelLage, type StempelSeiten, type StempelTyp, type StempelVorlage, type StempelWunsch,
 } from '../../../shared/src/stempel';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { beispielWerte, PlatzhalterKnoepfe, StempelVorschau } from './StempelVorschau';
 import { api } from '../api';
 import { Hilfe } from '../Hilfe';
@@ -51,14 +51,14 @@ export function alsWunsch(w: StempelWahl | null): StempelWunsch | null {
 /** Fehler, bevor man abschickt; `ersatz` = Empfänger, wenn keiner eingegeben ist (z. B. E-Mail-Adressen). */
 export function stempelFehler(w: StempelWahl | null, ersatz = ''): string | null {
   if (!w?.an) return null;
-  if (!w.text.trim()) return 'Gib einen Text für den Stempel ein.';
-  if (platzhalterIn(w.text).includes('empfaenger') && !w.empfaenger.trim() && !ersatz.trim()) return 'Gib den Empfänger an – der Stempel nennt ihn.';
+  if (!w.text.trim()) return t('ablage.stempel.gib-einen-text-fuer');
+  if (platzhalterIn(w.text).includes('empfaenger') && !w.empfaenger.trim() && !ersatz.trim()) return t('ablage.stempel.gib-den-empfaenger-an');
   return null;
 }
 
 /** Strengster Stempel mehrerer Mappentypen: Pflicht vor Vorschlag. */
 export function stempelVon(typen: Array<Mappentyp | undefined>): StempelTyp | null {
-  const s = typen.map((t) => t?.stempel).filter((x): x is StempelTyp => !!x);
+  const s = typen.map((eintrag) => eintrag?.stempel).filter((x): x is StempelTyp => !!x);
   return s.find((x) => x.modus === 'pflicht') ?? s[0] ?? null;
 }
 
@@ -81,22 +81,22 @@ export function StempelFelder({ wahl, setze, vorlagen, pflicht, mappe, empfaenge
   const textfeld = useRef<HTMLTextAreaElement>(null);
   return (
     <fieldset className="stempelwahl">
-      <legend className="sr">Stempel</legend>
-      {immer ? <p className="leise klein">{pflicht ? 'Der Mappentyp verlangt beim Weitergeben einen Stempel. ' : ''}Nur die Kopie bekommt den Stempel, das gespeicherte Original bleibt unverändert. Bilder werden dabei zum PDF. <Hilfe ort="stempel.weitergeben" /></p>
+      <legend className="sr">{t('ablage.stempel.stempel')}</legend>
+      {immer ? <p className="leise klein">{tn('ablage.stempel.nur-die-kopie-bekommt', { wert: pflicht ? t('ablage.stempel.der-mappentyp-verlangt-beim') : '', hilfe: <Hilfe ort="stempel.weitergeben" /> })}</p>
       : <label className="haken"><input id={`${id}-an`} type="checkbox" checked={wahl.an || !!pflicht} disabled={pflicht} onChange={(e) => s({ an: e.target.checked })} />
-        <span><span className="haken-titel">Mit Stempel&nbsp;<Hilfe ort="stempel.weitergeben" /></span>
-          <small className="hilfe">{pflicht ? 'Der Mappentyp verlangt beim Weitergeben einen Stempel.' : 'Nur die Kopie bekommt den Stempel, das gespeicherte Original bleibt unverändert. Bilder werden dabei zum PDF.'}</small></span></label>}
+        <span><span className="haken-titel">{tn('ablage.stempel.mit-stempel', { hilfe: <Hilfe ort="stempel.weitergeben" /> })}</span>
+          <small className="hilfe">{pflicht ? t('ablage.stempel.der-mappentyp-verlangt-beim-2') : t('ablage.stempel.nur-die-kopie-bekommt-2')}</small></span></label>}
       {(wahl.an || pflicht || immer) && (
         <div className="stempelfelder">
           <div className="raster">
-            <label className="eigenschaft"><span>Vorlage</span>
+            <label className="eigenschaft"><span>{t('ablage.stempel.vorlage')}</span>
               <select id={`${id}-vorlage`} value={wahl.vorlage} onChange={(e) => setze({ ...wahl, ...ausVorlage(vorlagen.find((v) => v.id === e.target.value)), vorlage: e.target.value })}>
-                <option value="">– eigener Text –</option>
+                <option value="">{t('ablage.stempel.eigener-text')}</option>
                 {vorlagen.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select></label>
-            <label className="eigenschaft"><span>Empfänger {!nutztEmpfaenger && <small>nur für {'{empfänger}'}</small>}</span>
+            <label className="eigenschaft"><span>{tn('ablage.stempel.empfaenger', { wert: !nutztEmpfaenger && <small>{t('ablage.stempel.nur-fuer-empfaenger')}</small> })}</span>
               <input id={`${id}-empfaenger`} value={wahl.empfaenger} maxLength={120} onChange={(e) => s({ empfaenger: e.target.value })}
-                placeholder={empfaengerErsatz ? `ohne Angabe: ${empfaengerErsatz}` : 'z. B. Hausverwaltung Müller'} required={nutztEmpfaenger && !empfaengerErsatz} /></label>
+                placeholder={empfaengerErsatz ? t('ablage.stempel.ohne-angabe', { empfaengerErsatz }) : t('ablage.stempel.z-b-hausverwaltung-mueller')} required={nutztEmpfaenger && !empfaengerErsatz} /></label>
             <div className="eigenschaft breit"><label htmlFor={`${id}-text`}><span>{t('werkbank.stempel.text')}</span></label>
               <textarea id={`${id}-text`} ref={textfeld} rows={2} value={wahl.text} maxLength={STEMPEL_TEXT_MAX} onChange={(e) => s({ text: e.target.value, vorlage: '' })} />
               <PlatzhalterKnoepfe feld={() => textfeld.current} text={wahl.text} setze={(text) => s({ text, vorlage: '' })} /></div>
@@ -144,15 +144,15 @@ export function StempelDialog({ d, typ, mappe, version, schliessen }: { d: Dokum
     setLaeuft(true); setMeldung(undefined);
     try {
       const r = await api.herunterladenMitStempel(d.id, alsWunsch({ ...wahl, an: true }), d.name, version, d.mime === 'application/pdf' || (mitArchiv && fassung === 'archiv') ? klein : null, mitArchiv ? fassung : undefined);
-      setMeldung({ art: 'gut', text: `„${r.name}“ gespeichert. Die Historie der Mappe vermerkt die Weitergabe.` });
+      setMeldung({ art: 'gut', text: t('ablage.stempel.gespeichert-die-historie-der', { name: r.name }) });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setLaeuft(false); }
   }
   return (
-    <div className="exportdialog blatt stempeldialog" role="dialog" aria-label="Herunterladen mit Stempel">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Herunterladen mit Stempel</h2>
-        <button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
-      <p className="leise klein">{d.name}{version ? ` · Version ${version}` : ''}</p>
-      {!wahl || !vorlagen ? <p className="leise">Lade …</p> : (
+    <div className="exportdialog blatt stempeldialog" role="dialog" aria-label={t('ablage.stempel.herunterladen-mit-stempel')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.stempel.herunterladen-mit-stempel')}</h2>
+        <button type="button" className="textknopf" onClick={schliessen}>{t('ablage.stempel.schliessen')}</button></div>
+      <p className="leise klein">{d.name}{version ? t('ablage.stempel.version', { version }) : ''}</p>
+      {!wahl || !vorlagen ? <p className="leise">{t('ablage.stempel.lade')}</p> : (
         // Kein eigenes <form>: Der Dialog steht im Formular der Mappe; Enter lädt herunter statt die Mappe zu speichern.
         <div onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') { e.preventDefault(); if (!fehler && !laeuft) void los(); } }}>
           <StempelFelder wahl={{ ...wahl, an: true }} setze={setWahl} vorlagen={vorlagen} pflicht={pflicht} mappe={mappe} id={`stempel-${d.id}`} immer />
@@ -161,8 +161,8 @@ export function StempelDialog({ d, typ, mappe, version, schliessen }: { d: Dokum
           {fehler && <p className="leise klein">{fehler}</p>}
           {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
           <div className="knoepfe">
-            <button type="button" className="knopf primaer" disabled={laeuft || !!fehler} onClick={() => void los()}>{laeuft ? 'Wird gestempelt …' : 'Herunterladen'}</button>
-            <button type="button" className="knopf" onClick={schliessen}>Abbrechen</button>
+            <button type="button" className="knopf primaer" disabled={laeuft || !!fehler} onClick={() => void los()}>{laeuft ? t('ablage.stempel.wird-gestempelt') : t('ablage.stempel.herunterladen')}</button>
+            <button type="button" className="knopf" onClick={schliessen}>{t('ablage.stempel.abbrechen')}</button>
           </div>
         </div>
       )}

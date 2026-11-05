@@ -13,6 +13,7 @@ import { alsWunsch, stempelFehler, StempelFelder, stempelStart, useStempelVorlag
 import { VerkleinertWahl } from './VerkleinertWahl';
 import type { Stufe } from '../../../shared/src/verkleinern';
 import { FassungWahl, hatArchivfassung, type Fassung } from './FassungWahl';
+import { t, tn } from '../sprache';
 
 /** Aktionen an der Mappe (#58): per E-Mail versenden, als PDF exportieren, Link kopieren (#98). */
 
@@ -43,18 +44,17 @@ export function Aktionsmenue({ aufgabe, erinnern, email, drucken, link, auskunft
   const waehle = (f: () => void) => () => { setOffen(false); f(); };
   return (
     <div className="aktionsmenue" ref={ref}>
-      <button type="button" className={`knopf klein ${offen ? 'an' : ''}`} aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)} title="Was du mit dieser Mappe tun kannst">
-        Mappe <span aria-hidden="true">▾</span>
-      </button>
+      <button type="button" className={`knopf klein ${offen ? 'an' : ''}`} aria-haspopup="menu" aria-expanded={offen} onClick={() => setOffen(!offen)} title={t('ablage.aktionen.was-du-mit-dieser')}>
+        {tn('ablage.aktionen.mappe', { span: <span aria-hidden="true">▾</span> })}</button>
       {offen && <div className="hy-schleier" aria-hidden="true" onClick={() => setOffen(false)} />}
       {offen && (
         <div className="menue" role="menu">
-          <button type="button" role="menuitem" onClick={waehle(aufgabe)}><Symbol name="aufgabe" /> Aufgabe vergeben</button>
-          {erinnern && <button type="button" role="menuitem" onClick={waehle(erinnern)} title="Zu einem Datum an diese Mappe erinnern – dich oder jemand anderen"><Symbol name="erinnern" /> Erinnern</button>}
-          {email && <button type="button" role="menuitem" onClick={waehle(email)}><Symbol name="email" /> Per E-Mail versenden</button>}
-          {drucken && <button type="button" role="menuitem" onClick={waehle(drucken)}><Symbol name="pdf" /> Als PDF exportieren</button>}
-          {link && <button type="button" role="menuitem" onClick={waehle(link)} title="Link über Mappentyp und Feldwerte, z. B. zum Weitergeben per Mail oder Chat"><Symbol name="link" /> Link kopieren</button>}
-          {auskunft && <button type="button" role="menuitem" onClick={waehle(auskunft)} title="Alles zu dieser Person sammeln, prüfen und als ZIP ausgeben (Werkbank → Datenschutz)"><Symbol name="auskunft" /> Auskunft erstellen …</button>}
+          <button type="button" role="menuitem" onClick={waehle(aufgabe)}>{tn('ablage.aktionen.aufgabe-vergeben', { symbol: <Symbol name="aufgabe" /> })}</button>
+          {erinnern && <button type="button" role="menuitem" onClick={waehle(erinnern)} title={t('ablage.aktionen.zu-einem-datum-an')}>{tn('ablage.aktionen.erinnern', { symbol: <Symbol name="erinnern" /> })}</button>}
+          {email && <button type="button" role="menuitem" onClick={waehle(email)}>{tn('ablage.aktionen.per-e-mail-versenden', { symbol: <Symbol name="email" /> })}</button>}
+          {drucken && <button type="button" role="menuitem" onClick={waehle(drucken)}>{tn('ablage.aktionen.als-pdf-exportieren', { symbol: <Symbol name="pdf" /> })}</button>}
+          {link && <button type="button" role="menuitem" onClick={waehle(link)} title={t('ablage.aktionen.link-ueber-mappentyp-und')}>{tn('ablage.aktionen.link-kopieren', { symbol: <Symbol name="link" /> })}</button>}
+          {auskunft && <button type="button" role="menuitem" onClick={waehle(auskunft)} title={t('ablage.aktionen.alles-zu-dieser-person')}>{tn('ablage.aktionen.auskunft-erstellen', { symbol: <Symbol name="auskunft" /> })}</button>}
           {loeschwege.length > 0 && <div role="separator" className={`aktionsmenue-trenner${loeschwege.every((w) => w.nurSchmal) ? ' hy-nur-schmal' : ''}`} />}
           {loeschwege.map((w) => <button key={w.text} type="button" role="menuitem" className={`aktionsmenue-gefahr${w.nurSchmal ? ' hy-nur-schmal' : ''}`} onClick={waehle(w.tu)} title={w.titel}>{w.text}</button>)}
         </div>
@@ -99,26 +99,26 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
   }
 
   return (
-    <section className="blatt" aria-label="Per E-Mail versenden">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Per E-Mail versenden</h2><button type="button" className="textknopf" onClick={schliessen}>Schließen</button></div>
+    <section className="blatt" aria-label={t('ablage.aktionen.per-e-mail-versenden-2')}>
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('ablage.aktionen.per-e-mail-versenden-2')}</h2><button type="button" className="textknopf" onClick={schliessen}>{t('ablage.aktionen.schliessen')}</button></div>
       {fertig ? (
         <>
-          <p className="gutertext" role="status">Die E-Mail ist verschickt.</p>
-          <p className="leise">Sie ist als Post abgelegt (Post → Versendet) und steht in der Historie dieser Mappe.</p>
-          <div className="knoepfe"><Link to={`/ablage/${fertig.typId}/${fertig.id}`} className="knopf">E-Mail öffnen</Link></div>
+          <p className="gutertext" role="status">{t('ablage.aktionen.die-e-mail-ist')}</p>
+          <p className="leise">{t('ablage.aktionen.sie-ist-als-post')}</p>
+          <div className="knoepfe"><Link to={`/ablage/${fertig.typId}/${fertig.id}`} className="knopf">{t('ablage.aktionen.e-mail-oeffnen')}</Link></div>
         </>
       ) : bereit === false ? (
-        <div className="hinweis warn"><p>Der E-Mail-Versand ist nicht eingerichtet.{ich?.rolle === 'admin' ? <> Das geht unter <Link to="/werkbank/betrieb" className="verweis">Werkbank → E-Mail und Adresse</Link>.</> : ' Bitte einen Administrator, ihn in der Werkbank einzurichten.'}</p></div>
+        <div className="hinweis warn"><p>{t('ablage.aktionen.der-e-mail-versand')}{ich?.rolle === 'admin' ? <> {' '}{tn('ablage.aktionen.das-geht-unter', { link: <Link to="/werkbank/betrieb" className="verweis">{t('ablage.aktionen.werkbank-e-mail-und')}</Link> })}</> : t('ablage.aktionen.bitte-einen-administrator-ihn')}</p></div>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); void senden(); }}>
           <div className="raster">
-            <label className="eigenschaft breit"><span>An <small>mehrere durch Komma getrennt</small></span><input type="text" inputMode="email" autoComplete="email" value={an} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" required /></label>
-            <label className="eigenschaft breit"><span>Betreff</span><input value={betreff} maxLength={250} onChange={(e) => setBetreff(e.target.value)} required /></label>
-            <label className="eigenschaft breit"><span>Nachricht</span><textarea rows={5} value={nachricht} onChange={(e) => setNachricht(e.target.value)} /></label>
+            <label className="eigenschaft breit"><span>{tn('ablage.aktionen.an', { klein: <small>{t('ablage.aktionen.mehrere-durch-komma-getrennt')}</small> })}</span><input type="text" inputMode="email" autoComplete="email" value={an} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" required /></label>
+            <label className="eigenschaft breit"><span>{t('ablage.aktionen.betreff')}</span><input value={betreff} maxLength={250} onChange={(e) => setBetreff(e.target.value)} required /></label>
+            <label className="eigenschaft breit"><span>{t('ablage.aktionen.nachricht')}</span><textarea rows={5} value={nachricht} onChange={(e) => setNachricht(e.target.value)} /></label>
           </div>
           <fieldset className="anhaenge">
-            <legend>Anhänge</legend>
-            {!details.dokumente.length ? <p className="leise klein">Diese Mappe hat keine Dokumente.</p> : (
+            <legend>{t('ablage.aktionen.anhaenge')}</legend>
+            {!details.dokumente.length ? <p className="leise klein">{t('ablage.aktionen.diese-mappe-hat-keine')}</p> : (
               <ul>
                 {details.dokumente.map((x) => (
                   <li key={x.id}><label className="haken"><input type="checkbox" checked={gewaehlt.has(x.id)} onChange={() => umschalten(x.id)} /><span>{x.name} <small className="leise">{groesse(x.groesse)}</small></span></label></li>
@@ -126,16 +126,15 @@ export function EmailMaske({ typ, details, neuLaden, schliessen }: { typ: Mappen
               </ul>
             )}
             {details.dokumente.length > 0 && stempel && vorlagen && <StempelFelder wahl={stempel} setze={setStempel} vorlagen={vorlagen} pflicht={typ.stempel?.modus === 'pflicht'}
-              mappe={titelOder(mappe.titel)} empfaengerErsatz={an.trim() || 'die Adressen unter „An“'} id="email-stempel" />}
+              mappe={titelOder(mappe.titel)} empfaengerErsatz={an.trim() || t('ablage.aktionen.die-adressen-unter-an')} id="email-stempel" />}
             {gewaehlt.size > 0 && <FassungWahl wert={fassung} setze={setFassung} dokumente={details.dokumente.filter((x) => gewaehlt.has(x.id))} id="email-fassung" />}
             {mitPdf && <VerkleinertWahl wert={klein} setze={setKlein} id="email-verkleinert" />}
             {details.dokumente.length > 0 && <p className={`klein ${summe > EMAIL_WARNUNG && !(klein && mitPdf) ? 'fehlertext' : 'leise'}`}>
-              Zusammen {groesse(summe)}{klein && mitPdf ? ' vor dem Verkleinern' : ''}.{zuGross ? ' Das ist zu groß zum Versenden; bitte weniger auswählen.' : summe > EMAIL_WARNUNG && !(klein && mitPdf) ? ` Viele Mailserver nehmen E-Mails über 20 MB nicht an.${mitPdf ? ' Tipp: PDFs verkleinert senden.' : ''}` : ''}
-            </p>}
+              {t('ablage.aktionen.zusammen', { groesse: groesse(summe), wert: klein && mitPdf ? t('ablage.aktionen.vor-dem-verkleinern') : '', wert2: zuGross ? t('ablage.aktionen.das-ist-zu-gross') : summe > EMAIL_WARNUNG && !(klein && mitPdf) ? t('ablage.aktionen.viele-mailserver-nehmen-e', { wert: mitPdf ? t('ablage.aktionen.tipp-pdfs-verkleinert-senden') : '' }) : '' })}</p>}
           </fieldset>
-          <p className="leise klein">Absender ist die Adresse von Ablago. Antworten gehen an dich ({ich?.email}).</p>
+          <p className="leise klein">{t('ablage.aktionen.absender-ist-die-adresse', { email: ich?.email })}</p>
           {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-          <div className="knoepfe">{stempelProblem && <p className="leise klein">{stempelProblem}</p>}<button className="knopf primaer" disabled={laeuft || bereit === null || !an.trim() || !betreff.trim() || zuGross || !!stempelProblem}>{laeuft ? 'Wird verschickt …' : 'Senden'}</button></div>
+          <div className="knoepfe">{stempelProblem && <p className="leise klein">{stempelProblem}</p>}<button className="knopf primaer" disabled={laeuft || bereit === null || !an.trim() || !betreff.trim() || zuGross || !!stempelProblem}>{laeuft ? t('ablage.aktionen.wird-verschickt') : t('ablage.aktionen.senden')}</button></div>
         </form>
       )}
     </section>
@@ -153,8 +152,8 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
     document.body.classList.add('druckt');
     const ende = () => fertig();
     window.addEventListener('afterprint', ende);
-    const t = window.setTimeout(() => window.print(), 50);
-    return () => { window.clearTimeout(t); window.removeEventListener('afterprint', ende); document.body.classList.remove('druckt'); };
+    const timer = window.setTimeout(() => window.print(), 50);
+    return () => { window.clearTimeout(timer); window.removeEventListener('afterprint', ende); document.body.classList.remove('druckt'); };
   }, [fertig]);
   const titelVon = (id: string) => titelOder(details.bezuege[id]?.titel);
   const register = typ.register?.length ? typ.register : standardRegister(typ.felder);
@@ -163,7 +162,7 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
     <NamenOhneLinks><article className="druckansicht">
       <p className="ueber">{typ.name}</p>
       <h1>{titelOder(mappe.titel)}</h1>
-      <p className="klein">Angelegt {zeit(mappe.erstellt)} von {d.person(mappe.erstelltVon)} · zuletzt geändert {zeit(mappe.geaendert)} von {d.person(mappe.geaendertVon)}</p>
+      <p className="klein">{t('ablage.aktionen.angelegt-von-zuletzt-geaendert', { zeit: zeit(mappe.erstellt), person: d.person(mappe.erstelltVon), zeit2: zeit(mappe.geaendert), person2: d.person(mappe.geaendertVon) })}</p>
       {register.filter((r) => r.art === 'felder').map((r) => {
         const felder = (r.felder ?? []).map((k) => typ.felder.find((f) => f.key === k)).filter((f) => !!f);
         return (
@@ -177,9 +176,9 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
           </section>
         );
       })}
-      {details.dokumente.length > 0 && <section><h2>Dokumente</h2><ul>{details.dokumente.map((x) => <li key={x.id}>{x.name} ({groesse(x.groesse)})</li>)}</ul></section>}
-      {(details.notizen ?? []).length > 0 && <section><h2>Notizen</h2>{details.notizen.map((n) => <div key={n.id} className="notiz"><p className="klein">{zeit(n.erstellt)} · {d.person(n.erstelltVon)}</p><Formatiert text={n.text} /></div>)}</section>}
-      <p className="klein fuss">Gedruckt am {new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+      {details.dokumente.length > 0 && <section><h2>{t('ablage.aktionen.dokumente')}</h2><ul>{details.dokumente.map((x) => <li key={x.id}>{x.name} ({groesse(x.groesse)})</li>)}</ul></section>}
+      {(details.notizen ?? []).length > 0 && <section><h2>{t('ablage.aktionen.notizen')}</h2>{details.notizen.map((n) => <div key={n.id} className="notiz"><p className="klein">{zeit(n.erstellt)} · {d.person(n.erstelltVon)}</p><Formatiert text={n.text} /></div>)}</section>}
+      <p className="klein fuss">{t('ablage.aktionen.gedruckt-am', { wert: new Date().toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) })}</p>
     </article></NamenOhneLinks>,
     document.body,
   );
