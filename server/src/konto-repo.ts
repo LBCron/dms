@@ -3,6 +3,7 @@ import type postgres from 'postgres';
 import { KEINE_ABWESENHEIT, type Abwesenheit, type Benutzer, type Rolle, type Sitzung, type Vertretung } from '../../shared/src/model';
 import { istUuid } from './repo';
 import { ohneWarten } from './repo-pg';
+import { staendeAusZeile, standSpalten } from './lesespeicher';
 
 /** Adresse eines Dienstkontos: nie zustellbar (.invalid, RFC 2606). */
 /** Adresse eines Dienstkontos – mit Haushalt, weil die Adresse über alle Haushalte eindeutig ist (benutzer_email_uq). */
@@ -68,6 +69,11 @@ export interface KontoRepo {
 
   legeSitzungAn(hash: string, benutzerId: string, ablauf: Date, info: SitzungsInfo): Promise<void>;
   holeSitzung(hash: string): Promise<SitzungIntern | undefined>;
+  /**
+   * Sitzung und Person in **einer** Abfrage (#741): nur eine noch gültige Sitzung einer aktiven Person (kein
+   * Systemkonto), sonst undefined. Nie aus einem Zwischenspeicher. Liest den Haushaltsstand für die Anfrage mit.
+   */
+  holeAnmeldung?(hash: string): Promise<{ sitzung: SitzungIntern; benutzer: Benutzer } | undefined>;
   /** Letzte Aktivität auf jetzt setzen. */
   beruehreSitzung(hash: string): Promise<void>;
   /** Verwaltungsmodus der Sitzung ändern (#819); nur die angegebenen Felder. */
@@ -193,6 +199,11 @@ export function speicherKontoRepo(): KontoRepo {
       sitzungen.set(hash, { id: randomUUID(), benutzerId, ablauf, zuletztAktiv: new Date(), erstellt: new Date(), geraet: info.geraet, ip: info.ip, vertretungId: info.vertretungId ?? null, anmeldungVoll: info.voll ? new Date() : null, ...OHNE_MODUS });
     },
     async holeSitzung(hash) { const x = sitzungen.get(hash); return x && { ...x }; },
+    async holeAnmeldung(hash) {
+      const x = sitzungen.get(hash);
+      const b = x && x.ablauf.getTime() > Date.now() ? benutzer.get(x.benutzerId) : undefined;
+      return x && b && b.aktiv && b.art !== 'system' ? { sitzung: { ...x }, benutzer: ohneHash(b) } : undefined;
+    },
     async beruehreSitzung(hash) { const x = sitzungen.get(hash); if (x) x.zuletztAktiv = new Date(); },
     async setzeSitzungsVerwaltung(hash, d) { const x = sitzungen.get(hash); if (x) Object.assign(x, d); },
     async vergissVerwaltungVon(id) { for (const x of sitzungen.values()) if (x.benutzerId === id) Object.assign(x, OHNE_MODUS); },
@@ -275,6 +286,15 @@ const tag = (v: unknown): string | null => {
   if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
   return String(v).slice(0, 10);
 };
+
+const zeitOderNull = (v: unknown) => (v ? new Date(v as string) : null);
+const alsSitzung = (r: Zeile): SitzungIntern => ({
+  id: r.id as string, benutzerId: r.benutzer_id as string, ablauf: new Date(r.ablauf as string),
+  zuletztAktiv: new Date(r.zuletzt_aktiv as string), vertretungId: (r.vertretung_id as string | null) ?? null,
+  erstellt: r.erstellt ? new Date(r.erstellt as string) : undefined,
+  anmeldungVoll: zeitOderNull(r.anmeldung_voll), verwaltungSeit: zeitOderNull(r.verwaltung_seit), verwaltungAktiv: zeitOderNull(r.verwaltung_aktiv),
+  verwaltungBestaetigt: zeitOderNull(r.verwaltung_bestaetigt), frisch: zeitOderNull(r.frisch),
+});
 
 const alsVertretung = (r: Zeile): Vertretung => ({
   id: r.id as string, benutzerId: r.benutzer_id as string, adminId: (r.admin_id as string | null) ?? null,
@@ -389,14 +409,22 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
     },
     async holeSitzung(hash) {
       const [r] = await sql`SELECT id, benutzer_id, ablauf, zuletzt_aktiv, vertretung_id, erstellt, anmeldung_voll, verwaltung_seit, verwaltung_aktiv, verwaltung_bestaetigt, frisch FROM sitzungen WHERE schluessel_hash = ${hash}`;
-      const zeit = (v: unknown) => (v ? new Date(v as string) : null);
-      return r ? {
-        id: r.id as string, benutzerId: r.benutzer_id as string, ablauf: new Date(r.ablauf as string),
-        zuletztAktiv: new Date(r.zuletzt_aktiv as string), vertretungId: (r.vertretung_id as string | null) ?? null,
-        erstellt: r.erstellt ? new Date(r.erstellt as string) : undefined,
-        anmeldungVoll: zeit(r.anmeldung_voll), verwaltungSeit: zeit(r.verwaltung_seit), verwaltungAktiv: zeit(r.verwaltung_aktiv),
-        verwaltungBestaetigt: zeit(r.verwaltung_bestaetigt), frisch: zeit(r.frisch),
-      } : undefined;
+      return r ? alsSitzung(r) : undefined;
+    },
+    async holeAnmeldung(hash) {
+      // Gültigkeit der Sitzung, Haushalt, „aktiv“ und Art der Person in derselben Abfrage (Bedingung Sicherheit, #747);
+      // dazu der Haushaltsstand für die Zwischenspeicher dieser Anfrage (#741).
+      const [r] = await sql`
+        SELECT b.*, s.id AS s_id, s.benutzer_id AS s_benutzer_id, s.ablauf AS s_ablauf, s.zuletzt_aktiv AS s_zuletzt_aktiv,
+          s.vertretung_id AS s_vertretung_id, s.erstellt AS s_erstellt, s.anmeldung_voll AS s_anmeldung_voll,
+          s.verwaltung_seit AS s_verwaltung_seit, s.verwaltung_aktiv AS s_verwaltung_aktiv,
+          s.verwaltung_bestaetigt AS s_verwaltung_bestaetigt, s.frisch AS s_frisch, ${standSpalten(sql, haushaltId)}
+        FROM sitzungen s JOIN benutzer b ON b.id = s.benutzer_id AND b.haushalt_id = ${haushaltId}
+        WHERE s.schluessel_hash = ${hash} AND s.ablauf > now() AND b.aktiv AND b.art IS DISTINCT FROM 'system'`;
+      if (!r) return undefined;
+      staendeAusZeile(sql, haushaltId, r);
+      const s = Object.fromEntries(Object.entries(r).filter(([k]) => k.startsWith('s_')).map(([k, v]) => [k.slice(2), v]));
+      return { sitzung: alsSitzung(s), benutzer: alsBenutzer(r) };
     },
     async beruehreSitzung(hash) { await sql`UPDATE sitzungen SET zuletzt_aktiv = now() WHERE schluessel_hash = ${hash}`; },
     async setzeSitzungsVerwaltung(hash, d) {

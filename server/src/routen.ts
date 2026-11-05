@@ -141,6 +141,11 @@ export interface Antwort {
   strom?: Readable;
   /** Zusätzliche Köpfe einer JSON-Antwort, z. B. ETag (#625); gehen den Standardköpfen vor. */
   koepfe?: Record<string, string>;
+  /**
+   * Erst nach der Antwort (#741), z. B. „zuletzt geöffnet“ und „gesehen“ beim Öffnen einer Mappe (http.ts, `Nachlauf`).
+   * Nur für Merkposten, die einen Augenblick später ankommen dürfen. Fehler nur im Protokoll.
+   */
+  danach?: Array<() => Promise<unknown>>;
 }
 export interface Route {
   methode: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -1944,19 +1949,27 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/mappen/:id', zugang: 'angemeldet', handler: async (a) => {
       const klartext = passwoerterAnzeigen(a);
       const z = await zg(a);
-      const d = { ...await dienst.holeMappe(a.params.id, z), favorit: await dienst.istFavorit(ich(a), a.params.id), exportierbar: false };
+      // Unabhängiges gleichzeitig (#741): Der Stern ist nur ein Ja/Nein der Person und geht nur mit der Mappe hinaus.
+      const [m, favorit] = await Promise.all([dienst.holeMappe(a.params.id, z), dienst.istFavorit(ich(a), a.params.id)]);
+      const d = { ...m, favorit, exportierbar: false };
+      if (klartext && !d.rechte.P) throw new Fachfehler(403, 'Passwörter dieser Mappe darfst du nicht sehen.');
       // Exportrecht (#294, #723): Herunterladen, Versenden, „Als PDF exportieren“ nur für lesbare Mappen, die in einer
       // Sicht mit Recht E liegen – dieselbe Prüfstelle wie beim Herunterladen selbst.
-      d.exportierbar = d.rechte?.R !== false && (await dienst.mitnehmbar(ich(a), z, [a.params.id])).has(a.params.id);
-      if (klartext && !d.rechte.P) throw new Fachfehler(403, 'Passwörter dieser Mappe darfst du nicht sehen.');
-      // Startseite (#334): „Zuletzt geöffnet“ – nur in der Oberfläche, nicht über API-Schlüssel.
-      if (!a.apiSchluessel && a.benutzer) await konten.merkeGeoeffnet(a.benutzer, a.params.id).catch(() => {});
-      // Favorit = Abo (#422): geöffnet = gesehen – Hervorhebung weg, offene „Geändert“-Benachrichtigung erledigt.
-      if (!a.apiSchluessel && a.benutzer && !a.sitzungsDaten?.vertretungId) await dienst.gesehen(a.benutzer, a.params.id, d.aufgaben).catch(() => {});
       // Verwaltungsmodus (#820): ohne Modus nicht lesbar → Historie und Hinweis in der Oberfläche.
-      const nurImVerwaltungsmodus = (await modusSpur(a, [a.params.id], 'angesehen')).has(a.params.id);
+      const [mitnehmbar, spur] = await Promise.all([
+        d.rechte?.R !== false ? dienst.mitnehmbar(ich(a), z, [a.params.id]) : Promise.resolve(new Set<string>()),
+        modusSpur(a, [a.params.id], 'angesehen'),
+      ]);
+      d.exportierbar = mitnehmbar.has(a.params.id);
+      const nurImVerwaltungsmodus = spur.has(a.params.id);
       const antwort = { ...d, ...(nurImVerwaltungsmodus ? { nurImVerwaltungsmodus } : {}) };
-      return ok(klartext ? { ...antwort, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : antwort);
+      const danach: Array<() => Promise<unknown>> = [];
+      // Startseite (#334): „Zuletzt geöffnet“ – nur in der Oberfläche, nicht über API-Schlüssel. Nach der Antwort (#741).
+      const b = a.benutzer;
+      if (!a.apiSchluessel && b) danach.push(() => konten.merkeGeoeffnet(b, a.params.id));
+      // Favorit = Abo (#422): geöffnet = gesehen – Hervorhebung weg, offene „Geändert“-Benachrichtigung erledigt.
+      if (!a.apiSchluessel && b && !a.sitzungsDaten?.vertretungId) danach.push(() => dienst.gesehen(b, a.params.id, d.aufgaben));
+      return { ...ok(klartext ? { ...antwort, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : antwort), danach };
     } },
     // Startseite (#334): zuletzt geöffnete Mappen (nur lesbare, höchstens 5) und ob es schon eigene Mappen gibt.
     { methode: 'GET', pfad: '/api/startseite', zugang: 'angemeldet', handler: async (a) => {

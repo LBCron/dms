@@ -13,6 +13,7 @@ import type { Quelle } from '../../shared/src/model';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
 import { beiVerklemmungWiederholen } from './db';
 import { protokoll } from './protokoll';
+import { erhoeheZahlenstand, lesespeicherFuer, liesStand } from './lesespeicher';
 import { feldweise, istUuid, StandVeraltet, WOERTER_JE_LAUF, type AuskunftLinkIntern, type DokumentImPapierkorb, type PapierkorbEintrag, type Repo, type SeitenAnfrage, type Verweis } from './repo';
 import { istSha, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 import { zeitzone } from '../../shared/src/region';
@@ -429,7 +430,13 @@ export function realArray(b: Buffer): Float32Array {
   return v;
 }
 
-export function pgRepo(sql: Sql, haushaltId: string): Repo {
+/**
+ * `imTx`: Repo innerhalb einer Transaktion – dort nie aus dem Lesespeicher (#741), denn die Transaktion sieht ihre
+ * eigenen, noch nicht abgeschlossenen Änderungen, der Haushaltsstand zählt aber erst beim Abschluss.
+ */
+export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
+  /** Mappentypen, Ansichten und Pakete (#741): für alle gleich, gültig bei gleichem Haushaltsstand `lesen`. */
+  const gemerkt = <T>(schluessel: string, lade: () => Promise<T>): Promise<T> => (imTx ? lade() : lesespeicherFuer(sql, haushaltId).hole(schluessel, lade));
   // Dokumente immer mit ausdrücklichen Spalten, nie `d.*` (#367): sonst kommt der Volltext mit.
   const DOK = sql.unsafe(DOKUMENT_SPALTEN.map((c) => `d.${c}`).join(', '));
   const DOK_RUECK = sql.unsafe(DOKUMENT_SPALTEN.join(', '));
@@ -643,11 +650,10 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
 
   return {
     transaktion(f) {
-      return sql.begin((tx) => f(pgRepo(inTransaktion(tx), haushaltId))) as Promise<Awaited<ReturnType<typeof f>>>;
+      return sql.begin((tx) => f(pgRepo(inTransaktion(tx), haushaltId, true))) as Promise<Awaited<ReturnType<typeof f>>>;
     },
     async listeTypen() {
-      const r = await sql`SELECT * FROM mappentypen WHERE haushalt_id = ${haushaltId} ORDER BY lower(name)`;
-      return r.map(alsTyp);
+      return gemerkt('typen', async () => (await sql`SELECT * FROM mappentypen WHERE haushalt_id = ${haushaltId} ORDER BY lower(name)`).map(alsTyp));
     },
     async holeTyp(id) {
       if (!istUuid(id)) return undefined;
@@ -748,7 +754,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       });
     },
     async listePakete() {
-      return (await sql`SELECT daten FROM pakete WHERE haushalt_id = ${haushaltId} ORDER BY id`).map((r) => r.daten as InstalliertesPaket);
+      return gemerkt('pakete', async () => (await sql`SELECT daten FROM pakete WHERE haushalt_id = ${haushaltId} ORDER BY id`).map((r) => r.daten as InstalliertesPaket));
     },
     async speicherePaket(p) {
       await sql`
@@ -1080,6 +1086,47 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
         eingang: e.n as number,
       };
     },
+    async zaehleBestand(liste, lesefilter) {
+      // Ein Lauf (#742): je Typ gruppiert, die Sichten als count(*) FILTER je Gruppe – danach über die Typen summiert.
+      const lesen = lesefilter ? sql`AND ${lesefilterSql(sql, lesefilter)}` : sql``;
+      const spalten = liste.map((k, i) => sql`, count(*) FILTER (WHERE ${klauselnSql(sql, k)})::int AS ${sql(`s${i}`)}`);
+      const sel = spalten.reduce((acc, t) => sql`${acc}${t}`, sql``);
+      const r = await sql`
+        SELECT typ_id, count(*)::int AS anzahl,
+          count(*) FILTER (WHERE passt IS NOT TRUE)::int AS unpassend,
+          count(*) FILTER (WHERE demo)::int AS demo ${sel}
+        FROM mappen WHERE haushalt_id = ${haushaltId} ${lesen} GROUP BY typ_id`;
+      return {
+        typen: new Map(r.map((z) => [z.typ_id as string, { anzahl: z.anzahl as number, unpassend: z.unpassend as number, demo: z.demo as number }])),
+        sichten: liste.map((_, i) => r.reduce((n, z) => n + (z[`s${i}`] as number), 0)),
+      };
+    },
+    async zaehlePersoenlich(benutzerId, ohneEmpfaenger, lesefilter, liste = []) {
+      const ich = istUuid(benutzerId) ? benutzerId : null;
+      const lesen = lesefilter ? sql`AND ${lesefilterSql(sql, lesefilter)}` : sql``;
+      // Ansichten mit Bezug auf die Person: ein Lauf nur über die Typen dieser Ansichten.
+      const typIds = [...new Set(liste.flat().flatMap((k) => k.typen))].filter(istUuid);
+      const spalten = liste.map((k) => sql`count(*) FILTER (WHERE ${klauselnSql(sql, k)})::int`);
+      const sichten = spalten.length && typIds.length
+        ? sql`, (SELECT ARRAY[${spalten.slice(1).reduce((acc, t) => sql`${acc}, ${t}`, spalten[0])}] FROM mappen
+            WHERE haushalt_id = ${haushaltId} AND typ_id = ANY(${typIds}::uuid[]) ${lesen}) AS sichten`
+        : sql``;
+      // Drei kleine Zählungen über Indizes in einer Abfrage (#742); Eingang wie in `zaehler` (#477), Papierkorb wie in
+      // `zaehlePapierkorb` (eigene Mappen und Dokumente, #344).
+      const [r] = await sql`SELECT
+        (SELECT count(DISTINCT a.mappe_id)::int FROM aufgaben a JOIN mappen m ON m.id = a.mappe_id
+          WHERE m.haushalt_id = ${haushaltId} AND a.erledigt IS NULL
+            AND (a.empfaenger_id = ${ich}::uuid OR (${ohneEmpfaenger} AND a.empfaenger_id IS NULL))) AS eingang,
+        (SELECT count(*)::int FROM favoriten f JOIN mappen ON mappen.id = f.mappe_id
+          WHERE f.haushalt_id = ${haushaltId} AND f.benutzer_id = ${ich}::uuid ${lesen}) AS favoriten,
+        (SELECT count(*)::int FROM papierkorb WHERE haushalt_id = ${haushaltId} AND geloescht_von = ${ich}::uuid)
+          + (SELECT count(*)::int FROM papierkorb_dokumente WHERE haushalt_id = ${haushaltId} AND geloescht_von = ${ich}::uuid) AS papierkorb
+        ${sichten}`;
+      const n = (r.sichten as number[] | undefined) ?? [];
+      return { eingang: r.eingang as number, favoriten: r.favoriten as number, papierkorb: r.papierkorb as number, sichten: liste.map((_, i) => Number(n[i] ?? 0)) };
+    },
+    async haushaltsstand() { return liesStand(sql, haushaltId, 'zahlen'); },
+    async erhoeheHaushaltsstand() { return erhoeheZahlenstand(sql); },
     async zaehleKlauseln(liste, lesefilter) {
       if (!liste.length) return [];
       const spalten = liste.map((k, i) => sql`count(*) FILTER (WHERE ${klauselnSql(sql, k)})::int AS ${sql(`s${i}`)}`);
@@ -1090,7 +1137,7 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
     },
 
     async listeSichten() {
-      return (await sql`SELECT * FROM sichten WHERE haushalt_id = ${haushaltId} ORDER BY position, lower(name)`).map(alsSicht);
+      return gemerkt('sichten', async () => (await sql`SELECT * FROM sichten WHERE haushalt_id = ${haushaltId} ORDER BY position, lower(name)`).map(alsSicht));
     },
     async legeSichtAn(id, d: SichtDaten) {
       const [r] = await sql`

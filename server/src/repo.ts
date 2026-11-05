@@ -326,6 +326,21 @@ export interface Repo {
   geaendertVonAnderen(benutzerId: string, mappeIds: string[], arten: readonly string[]): Promise<Set<string>>;
   /** Anzahl Mappen je Klauselliste (eine je Sicht), in derselben Reihenfolge. */
   zaehleKlauseln(liste: Klausel[][], lesen?: Lesefilter | null): Promise<number[]>;
+  /**
+   * Zahlen der Ablage in **einem** Lauf über alle Mappen (#742): je Typ (davon unpassend, Demo) und je Klauselliste
+   * (eine je Sicht, gleiche Reihenfolge). Hängt nur von den Klauseln und vom Lesefilter ab, nicht von der Person.
+   */
+  zaehleBestand(liste: Klausel[][], lesen?: Lesefilter | null): Promise<{ typen: Map<string, { anzahl: number; unpassend: number; demo: number }>; sichten: number[] }>;
+  /**
+   * Zahlen einer Person (#742) in einer Abfrage: Eingang (offene Aufgaben für sie, mit `ohneEmpfaenger` auch die ohne
+   * Empfänger; ohne Lesefilter, #127), lesbare Favoriten, eigene Einträge im Papierkorb und die Ansichten, deren
+   * Bedingungen die Person selbst meinen (`liste`, z. B. „ist mein Favorit“; gleiche Reihenfolge).
+   */
+  zaehlePersoenlich(benutzerId: string, ohneEmpfaenger: boolean, lesen?: Lesefilter | null, liste?: Klausel[][]): Promise<{ eingang: number; favoriten: number; papierkorb: number; sichten: number[] }>;
+  /** Haushaltsstand `zahlen` aus der Datenbank (#742, Migration 077); fehlt ohne Datenbank (nur dieser Prozess). */
+  haushaltsstand?(): Promise<number>;
+  /** Haushaltsstand `zahlen` hochzählen; liefert den neuen Stand. */
+  erhoeheHaushaltsstand?(): Promise<number>;
   /** Berechtigungen (#124): welche dieser Mappen der Filter durchlässt. */
   lesbare(ids: string[], lesen: Lesefilter | null): Promise<Set<string>>;
   /** Exportrecht (#294): welche dieser Mappen zu mindestens einer der Klauseln passen. */
