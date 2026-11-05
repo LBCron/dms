@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { Fachfehler } from './fehler';
 import type { SeitenWahl } from './pdf';
 import { t } from './sprache';
+import { anteilVon } from './zwischenspeicher';
 
 /**
  * PDF bearbeiten (#335): Seiten drehen, löschen, umsortieren, teilen, zusammenfügen – im Server, ohne
@@ -67,7 +68,8 @@ export class Seitenbilder {
       p = inhalt().then((b) => this.erzeuge(b));
       this.cache.set(sha, p);
       p.catch(() => this.cache.delete(sha));
-      while (this.cache.size > this.max) this.cache.delete(this.cache.keys().next().value!);
+      // Mit mehreren Prozessen teilen sie sich die Dokumente (#874), jeder behält mindestens eins.
+      while (this.cache.size > anteilVon(this.max)) this.cache.delete(this.cache.keys().next().value!);
     } else {
       // zuletzt benutzt ans Ende
       this.cache.delete(sha); this.cache.set(sha, p);

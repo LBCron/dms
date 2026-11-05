@@ -14,15 +14,34 @@ import { t } from './sprache';
 export const VERBINDUNGEN_VORGABE = 10;
 export const VERBINDUNGEN_MIN = 2;
 export const VERBINDUNGEN_MAX = 100;
+/**
+ * Mehrere Prozesse (#874): Vorgabe der Verbindungen **zusammen** – 10 wie bisher mit einem Prozess, je weiteren Prozess
+ * 4 mehr (2 Prozesse 14, 4 Prozesse 22). Vorher (#745) hatte jeder Prozess 10; auf dem NAS mit PostgreSQL im selben
+ * Container wurden 4 Prozesse dadurch nur im Median schneller, p95 nicht (#576): 40 Verbindungen auf eine Datenbank,
+ * die sich die Kerne mit Ablago teilt, rechnen nicht schneller, sie warten nur länger auf Sperren und Rechenzeit.
+ */
+export const VERBINDUNGEN_JE_WEITEREM = 4;
+/**
+ * Der Leiter hält dauerhaft eigene Verbindungen für Sitzungssperren (Lebenszeichen, Eingangsordner, Postfächer,
+ * Webhooks – je eine, `sql.reserve()`); dazu kommen Zeitpläne (`exklusiv`) und Anfragen. Ohne genug darüber hinaus
+ * warten seine Abfragen endlos auf eine freie Verbindung – und mit ihnen alles, was die anderen Prozesse bei ihm aufrufen.
+ */
+export const VERBINDUNGEN_LEITER_RESERVIERT = 4;
+/** Mindestens so viele für den Leiter: die dauerhaft gehaltenen und 2 für Arbeit. */
+export const VERBINDUNGEN_LEITER_MIN = VERBINDUNGEN_LEITER_RESERVIERT + 2;
+
+export const verbindungenVorgabe = (prozesse = 1) => VERBINDUNGEN_VORGABE + VERBINDUNGEN_JE_WEITEREM * Math.max(0, prozesse - 1);
 
 export interface VerbindungsEinstellung { max: number; quelle: 'vorgabe' | 'umgebung'; fehler?: string }
 
-export function verbindungenAus(env: Record<string, string | undefined>): VerbindungsEinstellung {
+/** `DMS_DB_VERBINDUNGEN`: seit #874 die Zahl für **alle** Prozesse zusammen (mit einem Prozess wie bisher). */
+export function verbindungenAus(env: Record<string, string | undefined>, prozesse = 1): VerbindungsEinstellung {
+  const vorgabe = verbindungenVorgabe(prozesse);
   const roh = env.DMS_DB_VERBINDUNGEN?.trim();
-  if (!roh) return { max: VERBINDUNGEN_VORGABE, quelle: 'vorgabe' };
+  if (!roh) return { max: vorgabe, quelle: 'vorgabe' };
   const n = Number(roh);
   if (!Number.isInteger(n) || n < VERBINDUNGEN_MIN || n > VERBINDUNGEN_MAX) {
-    return { max: VERBINDUNGEN_VORGABE, quelle: 'vorgabe', fehler: t('meldungen.db.dms-db-verbindungen-ist', { roh, VERBINDUNGEN_MIN, VERBINDUNGEN_MAX }) };
+    return { max: vorgabe, quelle: 'vorgabe', fehler: t('meldungen.db.dms-db-verbindungen-ist', { roh, VERBINDUNGEN_MIN, VERBINDUNGEN_MAX }) };
   }
   return { max: n, quelle: 'umgebung' };
 }
@@ -30,16 +49,39 @@ export function verbindungenAus(env: Record<string, string | undefined>): Verbin
 /** Für Superuser und andere Programme bleiben so viele Verbindungen der Datenbank frei (#745). */
 export const VERBINDUNGEN_RESERVE = 10;
 
-/**
- * Mehrere Prozesse (#745): `DMS_DB_VERBINDUNGEN` gilt **je Prozess**. Zusammen (mit {@link VERBINDUNGEN_RESERVE})
- * dürfen es nicht mehr sein, als die Datenbank erlaubt (`max_connections`); sonst bekommt jeder Prozess weniger,
- * mindestens {@link VERBINDUNGEN_MIN}.
- */
-export function verbindungenJeProzess(gewuenscht: number, prozesse: number, erlaubt: number | null): { max: number; gekuerzt: boolean } {
-  if (prozesse <= 1 || !erlaubt) return { max: gewuenscht, gekuerzt: false };
-  const frei = Math.floor((erlaubt - VERBINDUNGEN_RESERVE) / prozesse);
-  return gewuenscht <= frei ? { max: gewuenscht, gekuerzt: false } : { max: Math.max(VERBINDUNGEN_MIN, frei), gekuerzt: true };
+/** Aufteilung der Verbindungen auf die Prozesse (#874). */
+export interface Verbindungsaufteilung {
+  /** Zusammen für alle Prozesse (nach Anheben bzw. Kürzen). */
+  gesamt: number;
+  /** Anteil des Leiters (Prozess 1) und jedes weiteren Prozesses. */
+  leiter: number;
+  andere: number;
+  /** Gewünscht war weniger als mindestens nötig (Leiter 4, jeder weitere 2) – angehoben. */
+  angehoben: boolean;
+  /** Gewünscht war mehr, als die Datenbank erlaubt (`max_connections` − Reserve) – gekürzt. */
+  gekuerzt: boolean;
 }
+
+/**
+ * Mehrere Prozesse (#874): `gewuenscht` gilt für **alle** Prozesse zusammen. Der Leiter behält zuerst seine dauerhaft
+ * gehaltenen ({@link VERBINDUNGEN_LEITER_RESERVIERT}); den Rest teilen sich alle Prozesse gleich (abgerundet, mindestens
+ * {@link VERBINDUNGEN_MIN}), der Leiter bekommt, was übrig bleibt, insgesamt mindestens {@link VERBINDUNGEN_LEITER_MIN}.
+ * Zusammen nie mehr, als die Datenbank erlaubt (`erlaubt` − {@link VERBINDUNGEN_RESERVE}). Mit einem Prozess bekommt er
+ * alles – wie bisher.
+ */
+export function verbindungsaufteilung(gewuenscht: number, prozesse: number, erlaubt: number | null): Verbindungsaufteilung {
+  let gesamt = gewuenscht, gekuerzt = false, angehoben = false;
+  if (erlaubt && gesamt > erlaubt - VERBINDUNGEN_RESERVE) { gesamt = Math.max(VERBINDUNGEN_MIN, erlaubt - VERBINDUNGEN_RESERVE); gekuerzt = true; }
+  if (prozesse <= 1) return { gesamt, leiter: gesamt, andere: 0, angehoben, gekuerzt };
+  const mindestens = VERBINDUNGEN_LEITER_MIN + VERBINDUNGEN_MIN * (prozesse - 1);
+  if (gesamt < mindestens) { gesamt = mindestens; angehoben = true; }
+  let andere = Math.max(VERBINDUNGEN_MIN, Math.floor((gesamt - VERBINDUNGEN_LEITER_RESERVIERT) / prozesse));
+  if (gesamt - andere * (prozesse - 1) < VERBINDUNGEN_LEITER_MIN) andere = Math.max(VERBINDUNGEN_MIN, Math.floor((gesamt - VERBINDUNGEN_LEITER_MIN) / (prozesse - 1)));
+  return { gesamt, leiter: gesamt - andere * (prozesse - 1), andere, angehoben, gekuerzt };
+}
+
+/** Anteil dieses Prozesses (`nr` 1 = Leiter). */
+export const verbindungenFuer = (a: Verbindungsaufteilung, nr: number) => (nr <= 1 ? a.leiter : a.andere);
 
 /**
  * postgres.js 4 (#236): `infer: true` behält die Parametertypen von v3 (Date als timestamptz, boolean, bytea …),
@@ -59,7 +101,8 @@ export function verbinde(url: string, max = VERBINDUNGEN_VORGABE) {
 export class Verbindungswarten {
   private werte: Array<{ t: number; ms: number }> = [];
   private zeitgeber?: NodeJS.Timeout;
-  constructor(private sql: postgres.Sql, readonly max: number, readonly quelle: VerbindungsEinstellung['quelle'] = 'vorgabe') {}
+  /** `aufteilung` (#874): mit mehreren Prozessen die Zahl zusammen und die Anteile; `max` ist der eigene Anteil. */
+  constructor(private sql: postgres.Sql, readonly max: number, readonly quelle: VerbindungsEinstellung['quelle'] = 'vorgabe', readonly aufteilung: Verbindungsaufteilung | null = null) {}
 
   start(intervallMs = 5000) {
     if (this.zeitgeber) return;

@@ -21,6 +21,7 @@ import {
   ABLAGE, basic, davFehler, eindeutig, istHilfsdatei, kurzId, multistatus, NEUE_POST, proppatchAntwort, proppatchNamen,
   Ratenbegrenzung, schluessel, sperrAntwort, VERKNUEPFT, WEBDAV_PFAD, zerlege, type Eintrag,
 } from './webdav-baum';
+import { anteilVon } from './zwischenspeicher';
 
 /**
  * WebDAV-Laufwerk (#346), Stufe 1: lesen und ablegen.
@@ -149,8 +150,12 @@ interface Auslieferung {
 /** Methoden, die etwas ändern würden (#722: bei „nur lesend“ und in schreibgeschützten Registern 403). */
 const SCHREIBEND = new Set(['PUT', 'PROPPATCH', 'MKCOL', 'DELETE', 'COPY', 'MOVE', 'LOCK']);
 const LESEMETHODEN = ['OPTIONS', 'GET', 'HEAD', 'PROPFIND'];
-/** Gestempelte Fassungen im Speicher: höchstens so viele Bytes; Größe und Stand bleiben länger gemerkt. */
+/**
+ * Gestempelte Fassungen im Speicher: höchstens so viele Bytes; Größe und Stand bleiben länger gemerkt. Mit mehreren
+ * Prozessen teilen sie sich die Bytes (#874, `anteilVon`); die Einträge (nur Größe und Stand) bleiben je Prozess.
+ */
 const STEMPEL_SPEICHER = 64 * 1024 * 1024;
+const stempelSpeicher = () => anteilVon(STEMPEL_SPEICHER);
 const STEMPEL_EINTRAEGE = 2000;
 
 const text = (status: number, t: string, extra: Record<string, string> = {}): WebdavAntwort => ({ status, koepfe: { 'content-type': 'text/plain; charset=utf-8', ...extra }, body: `${t}\n` });
@@ -473,11 +478,11 @@ export class Webdav {
     const alt = this.gestempelt.get(schluessel);
     if (alt?.inhalt) this.stempelBytes -= alt.inhalt.length;
     this.gestempelt.delete(schluessel);
-    if (e.inhalt && e.inhalt.length > STEMPEL_SPEICHER / 4) e = { ...e, inhalt: null };
+    if (e.inhalt && e.inhalt.length > stempelSpeicher() / 4) e = { ...e, inhalt: null };
     this.gestempelt.set(schluessel, e);
     if (e.inhalt) this.stempelBytes += e.inhalt.length;
     for (const [k, v] of this.gestempelt) {
-      if (this.stempelBytes <= STEMPEL_SPEICHER && this.gestempelt.size <= STEMPEL_EINTRAEGE) break;
+      if (this.stempelBytes <= stempelSpeicher() && this.gestempelt.size <= STEMPEL_EINTRAEGE) break;
       if (k === schluessel) continue;
       if (this.gestempelt.size > STEMPEL_EINTRAEGE) { this.gestempelt.delete(k); if (v.inhalt) this.stempelBytes -= v.inhalt.length; continue; }
       if (v.inhalt) { this.stempelBytes -= v.inhalt.length; v.inhalt = null; }

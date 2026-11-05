@@ -55,6 +55,7 @@ import type { Notfallzugang } from './notfall';
 import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import type { Speicherplatz } from './speicherplatz';
+import { KLASSEN_MS, poolZusammen, type PoolStand } from './poolmessung';
 import { dateiLeser, liesPss, liesRss, type Systemlast } from './systemlast';
 import type { ProzessEinstellung, Verbund } from './prozesse';
 import { PROZESSE_MAX } from './prozesse';
@@ -217,13 +218,14 @@ function grenzenUndEngpaesse(x: RoutenExtras) {
   const a = arbeiterStand();
   const v = x.verbindungen?.stand();
   const u = x.ueberlast?.stand();
-  // Mehrere Prozesse (#745): Arbeiter, Verbindungen und Anfragen gelten je Prozess.
+  // Mehrere Prozesse (#745): Arbeiter und Anfragen gelten je Prozess, Verbindungen seit #874 zusammen.
   const p = x.verbund?.mehrere ? { prozesse: x.verbund.anzahl } : {};
   const pe = x.prozessEinstellung;
   const grenzen: Grenzwerte = {
     ...(pe ? { prozesse: { wert: x.verbund?.anzahl ?? pe.anzahl, quelle: pe.quelle, variable: VARIABLE.prozesse, min: 1, max: PROZESSE_MAX } } : {}),
     arbeiter: { wert: a.aus ? 0 : a.groesse, quelle: a.quelle, variable: VARIABLE.arbeiter, min: 0, max: ARBEITER_MAX, ...p },
-    ...(v ? { verbindungen: { wert: v.max, quelle: v.quelle, variable: VARIABLE.verbindungen, min: VERBINDUNGEN_MIN, max: VERBINDUNGEN_MAX, ...p } } : {}),
+    // #874: Verbindungen gelten für alle Prozesse zusammen – Wert ist die Summe, dazu die Anteile.
+    ...(v ? { verbindungen: { wert: x.verbindungen?.aufteilung?.gesamt ?? v.max, quelle: v.quelle, variable: VARIABLE.verbindungen, min: VERBINDUNGEN_MIN, max: VERBINDUNGEN_MAX, ...(x.verbund?.mehrere && x.verbindungen?.aufteilung ? { aufteilung: { leiter: x.verbindungen.aufteilung.leiter, andere: x.verbindungen.aufteilung.andere, prozesse: x.verbund.anzahl } } : {}) } } : {}),
     ...(u ? { anfragen: { wert: u.max, quelle: u.quelle, variable: VARIABLE.anfragen, min: MAX_ANFRAGEN_MIN, max: MAX_ANFRAGEN_MAX, ...p } } : {}),
   };
   const engpaesse = engpaesseAus({
@@ -239,10 +241,10 @@ function grenzenUndEngpaesse(x: RoutenExtras) {
  * Mehrere Prozesse (#745): Stand jedes Prozesses – Arbeitsspeicher (Pss aus /proc, sonst RSS), Rechenzeit, Wartezeit der
  * Ereignisschleife und laufende Anfragen; dazu der Hauptprozess. null mit einem Prozess.
  */
-async function prozessZeilen(x: RoutenExtras): Promise<{ zeilen: ProzessZeile[]; staende: Array<Prozessstand | null>; rssMb: number; speicherMb: number } | null> {
+async function prozessZeilen(x: RoutenExtras, frage: 'prozess.stand' | 'prozess.last' = 'prozess.stand'): Promise<{ zeilen: ProzessZeile[]; staende: Array<Prozessstand | null>; halde: Record<number, number | null>; rssMb: number; speicherMb: number } | null> {
   const v = x.verbund;
   if (!v?.mehrere) return null;
-  const alle = await v.frageAlle<Prozessstand>('prozess.stand');
+  const alle = await v.frageAlle<Prozessstand>(frage);
   const zeilen: ProzessZeile[] = [];
   let rss = 0;
   if (v.primaer) {
@@ -259,7 +261,31 @@ async function prozessZeilen(x: RoutenExtras): Promise<{ zeilen: ProzessZeile[];
   }
   // Summe für den Lasttest: Pss (geteilte Seiten anteilig – die Summe der RSS zählte den Code jedes Prozesses voll).
   const pss = zeilen.every((z) => z.speicher !== null) ? zeilen.reduce((n, z) => n + z.speicher!, 0) : rss;
-  return { zeilen, staende: alle.map((p) => p.wert), rssMb: Math.round(rss / 1024 ** 2), speicherMb: Math.round(pss / 1024 ** 2) };
+  return { zeilen, staende: alle.map((p) => p.wert), halde: Object.fromEntries(alle.map((p) => [p.nr, p.wert?.heapMb ?? null])), rssMb: Math.round(rss / 1024 ** 2), speicherMb: Math.round(pss / 1024 ** 2) };
+}
+
+/**
+ * Wo es unter Last hakt (#874), für den Lasttest über alle Prozesse: Wartezeit auf eine freie Verbindung (Klassen
+ * fortlaufend, Höchstwert der letzten 10 s), belegte und erlaubte Verbindungen, Sitzungen der Datenbank mit Sperren,
+ * Rechenzeit von PostgreSQL, Ablago und Container (fortlaufend in Sekunden) und der Arbeitsspeicher je Prozess.
+ */
+async function engpassStand(x: RoutenExtras, p: Awaited<ReturnType<typeof prozessZeilen>>) {
+  let pool: PoolStand | null;
+  if (p) pool = poolZusammen(p.staende.map((z) => z?.pool));
+  else { x.poolmessung?.an(); pool = x.poolmessung?.stand() ?? null; }
+  const pids = p ? p.zeilen.map((z) => z.pid) : [process.pid];
+  // Je Prozess: Pss (sonst RSS) und davon die Halde von V8 (heapUsed) – zeigt, ob Daten oder Puffer wachsen.
+  const speicher = p ? p.zeilen.map((z) => ({ nr: z.nr, rolle: z.rolle, mb: z.speicher === null ? null : Math.round(z.speicher / 1024 ** 2), haldeMb: p.halde[z.nr] ?? null }))
+    : [{ nr: 1, rolle: 'leiter' as const, mb: Math.round((liesPss(dateiLeser, process.pid) ?? process.memoryUsage().rss) / 1024 ** 2), haldeMb: Math.round(process.memoryUsage().heapUsed / 1024 ** 2) }];
+  return {
+    pool, klassenMs: KLASSEN_MS,
+    verbindungen: x.verbindungen?.aufteilung ? { gesamt: x.verbindungen.aufteilung.gesamt, leiter: x.verbindungen.aufteilung.leiter, andere: x.verbindungen.aufteilung.andere } : null,
+    sitzungen: (await x.sitzungen?.().catch(() => null)) ?? null,
+    cpu: x.systemlast?.cpuJeArt(pids) ?? null,
+    speicher,
+    // Abgestürzte und neu gestartete Prozesse seit dem Start: der Lasttest zählt den Unterschied je Durchgang.
+    neustarts: x.verbund?.neustarts() ?? { anzahl: 0, letzte: [] },
+  };
 }
 
 export interface RoutenExtras {
@@ -275,6 +301,10 @@ export interface RoutenExtras {
   ueberlast?: import('./ueberlast').Ueberlastschutz;
   /** Warten auf eine freie Verbindung zur Datenbank (#544). */
   verbindungen?: import('./db').Verbindungswarten;
+  /** Wartezeit auf Verbindungen für den Lasttest (#874), in diesem Prozess. */
+  poolmessung?: import('./poolmessung').Poolmessung;
+  /** Sitzungen der Datenbank mit Sperren (#874). */
+  sitzungen?: () => Promise<import('./poolmessung').Sitzungsstand | null>;
   /** Erweiterungen der Suche, pg_trgm und unaccent (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Datenbankangaben für die Versionsübersicht. */
@@ -1983,7 +2013,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const v = x.verbindungen?.stand();
       // Mehrere Prozesse (#745): Arbeitsspeicher aller Prozesse zusammen (auch des Hauptprozesses; Pss, die Summe der
       // RSS unter `rssMb`), Wartezeit des langsamsten; je Prozess unter `prozesse`.
-      const p = await prozessZeilen(x).catch(() => null);
+      const p = await prozessZeilen(x, 'prozess.last').catch(() => null);
       const schlimmste = p?.staende.filter((z): z is Prozessstand => !!z?.schleife).sort((a, b) => b.schleife!.p99 - a.schleife!.p99)[0];
       return ok({
         schleife: schlimmste?.schleife ?? (w ? { median: w.median, p99: w.p99, max: w.max } : null), schleifeWarnung: s?.warnungSeit ?? null,
@@ -1991,9 +2021,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         ...(p ? { prozesse: p.zeilen } : {}),
         // Ganzer Container (#696): so viel zeigt die NAS an – mit PostgreSQL (dms-komplett) und Dateizwischenspeicher.
         container: (() => { const c = x.systemlast?.container(); const mb = (v: number | null | undefined) => (v == null ? null : Math.round(v / 1024 ** 2)); return c && c.aktuell !== null ? { mb: mb(c.aktuell), spitzeMb: mb(c.spitze), programmeMb: mb(c.programme), zwischenspeicherMb: mb(c.zwischenspeicher), datenbankMb: mb(c.datenbank) } : null; })(),
-        datenbank: v ? { verbindungen: v.max * (x.verbund?.anzahl ?? 1), jeProzess: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
+        datenbank: v ? { verbindungen: x.verbindungen?.aufteilung?.gesamt ?? v.max, jeProzess: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
         anfragen: x.ueberlast?.stand() ?? null,
         arbeiter: arbeiterStand(),
+        engpass: await engpassStand(x, p),
       });
     } },
     { methode: 'PUT', pfad: '/api/werkbank/datenbank', zugang: 'admin', handler: async (a) => {

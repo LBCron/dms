@@ -75,6 +75,7 @@
   "grenzen.prozesse": "Processes for requests",
   "grenzen.auto": "{wert} – automatic (auto)",
   "grenzen.je-prozess": "per process, together {gesamt} in {prozesse} processes",
+  "grenzen.aufgeteilt": "together for {prozesse} processes: leader {leiter}, each further one {andere}",
   "grenzen.vorgabe": "{wert} – default",
   "grenzen.umgebung": "{wert} – from the environment",
   "grenzen.aus": "0 – switched off, from the environment",

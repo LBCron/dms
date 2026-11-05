@@ -17,7 +17,9 @@ import { erkenneSpeicherart, geraeteNummer } from '../src/speicherart';
 
 const WURZEL = new URL('../..', import.meta.url).pathname;
 const tmp = mkdtempSync(join(tmpdir(), 'dms-lasttest-'));
-after(() => rmSync(tmp, { recursive: true, force: true }));
+// Der letzte Lauf der Seite speichert seinen Stand nach dem Ende noch (ohne darauf zu warten): erst kurz warten, sonst
+// legt er den Ergebnisordner während des Aufräumens neu an (ENOTEMPTY).
+after(async () => { await new Promise((r) => setTimeout(r, 500)); rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); });
 
 async function freierPort(): Promise<number> {
   return new Promise((r) => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const a = s.address(); s.close(() => r(typeof a === 'object' && a ? a.port : 0)); }); });
@@ -120,6 +122,10 @@ interface Skript {
   ergebnisblock(e: unknown[], x: unknown, u: unknown, a?: { geraet?: string; speicher?: string }): string;
   containerZeile(laeufe: unknown[]): string;
   speichernZeile(d: unknown): string;
+  engpassAus(staende: unknown[]): Record<string, unknown> | null;
+  engpassText(g: unknown): string;
+  fehlerText(l: unknown): string | null;
+  quantilAusKlassen(zaehler: number[], grenzen: number[], q: number): number | null;
 }
 const skript = (await import(new URL('./lasttest.mjs', import.meta.url).href)) as Skript;
 const umgebung = { version: '0.144.0', image: 'dms-komplett', datenbank: 'im Container', architektur: 'x64', cpu: 'Beispiel-CPU', kerne: 4, kerneBegrenzt: false, rechnerKerne: 4, ramGb: 15.5, ramBegrenzt: false, grenzen: null };
@@ -171,6 +177,54 @@ describe('Lasttest-Modus (#612): Ergebnisblock', () => {
     assert.match(b, /\nextrem Demo-Daten: 1\.000\.000 Demo-Mappen in 45 min angelegt \(20 Läufe\), danach 6 min Arbeit im Hintergrund; Datenbank 5,0 GB, Dokumente 300 MB\.\n/);
     // groß wie bisher.
     assert.match(skript.ergebnisblock([{ ...extrem, stufe: 'gross', daten: undefined }], x, umgebung, {}), /\ngroß   Grenze: 10 gleichzeitig/);
+  });
+
+  it('Engpass je Durchgang (#874): Wartezeit über alle Prozesse, Verbindungen, Sperren, CPU, Speicher je Prozess', () => {
+    const grenzen = [1, 2, 5, 10, 20, 50];
+    assert.equal(skript.quantilAusKlassen([90, 5, 3, 2, 0, 0, 0], grenzen, 0.95), 2);
+    assert.equal(skript.quantilAusKlassen([0, 0, 0, 0, 0, 0, 0], grenzen, 0.95), null);
+    assert.equal(skript.quantilAusKlassen([0, 0, 0, 0, 0, 0, 10], grenzen, 0.95), null, 'über der letzten Klasse');
+    const stand = (t: number, klassen: number[], o: { warten: number; belegt: number; schlange: number; sperren: number; sperreMs: number; pg: number; ab: number; c: number; mb: number[] }) => ({
+      t, engpass: {
+        klassenMs: grenzen,
+        pool: { klassen, wartenMax: o.warten, belegtMax: o.belegt, warteschlangeMax: o.schlange, max: 12 },
+        verbindungen: { gesamt: 12, leiter: 6, andere: 6 },
+        sitzungen: { sperren: o.sperren, sperreMs: o.sperreMs, aktiv: 5, offen: 12 },
+        cpu: { postgres: o.pg, ablago: o.ab, container: o.c },
+        speicher: o.mb.map((mb, i) => ({ nr: i, rolle: i === 0 ? 'haupt' : i === 1 ? 'leiter' : 'anfragen', mb })),
+        neustarts: { anzahl: t > 5000 ? 3 : 2, letzte: [{ nr: 2, code: null, signal: 'SIGKILL', zeit: new Date(t > 5000 ? 5500 : 0).toISOString() }] },
+      },
+    });
+    const g = skript.engpassAus([
+      { t: 0, speicherMb: 1 },
+      stand(1000, [100, 0, 0, 0, 0, 0, 0], { warten: 3, belegt: 4, schlange: 0, sperren: 0, sperreMs: 0, pg: 10, ab: 20, c: 40, mb: [60, 500, 400] }),
+      stand(6000, [150, 30, 10, 5, 4, 1, 0], { warten: 45, belegt: 12, schlange: 7, sperren: 2, sperreMs: 130, pg: 15, ab: 30, c: 56, mb: [61, 650, 420] }),
+      stand(11000, [190, 40, 10, 5, 4, 1, 0], { warten: 8, belegt: 9, schlange: 0, sperren: 1, sperreMs: 20, pg: 20, ab: 35, c: 60, mb: [60, 600, 480] }),
+    ])!;
+    // Unterschied der Klassen: [90, 40, 10, 5, 4, 1, 0] = 150 Wartezeiten, p95 liegt in der Klasse ≤ 10 ms.
+    assert.equal(g.wartenAnzahl, 150);
+    assert.equal(g.wartenP95, 10);
+    assert.equal(g.wartenMax, 45);
+    assert.deepEqual([g.belegtMax, g.verbindungen, g.warteschlangeMax, g.sperrenMax, g.sperreMsMax], [12, 12, 7, 2, 130]);
+    // 10 s: PostgreSQL 10 s Rechenzeit = 100 %, Ablago 15 s = 150 %, Container 20 s = 200 %.
+    assert.deepEqual([g.cpuPostgres, g.cpuAblago, g.cpuContainer], [100, 150, 200]);
+    assert.deepEqual(g.speicherJeProzess, [{ nr: 0, rolle: 'haupt', mb: 61, haldeMb: null }, { nr: 1, rolle: 'leiter', mb: 650, haldeMb: null }, { nr: 2, rolle: 'anfragen', mb: 480, haldeMb: null }]);
+    assert.equal(g.neustarts, 1, 'nur die im Durchgang');
+    assert.equal(skript.engpassText(g), 'Warten auf DB-Verbindung p95 ≤ 10 ms, höchstens 45 ms · Verbindungen belegt bis 12 von 12 (Warteschlange bis 7) · Sperren: bis 2 Sitzungen, längste 130 ms · CPU (% eines Kerns): PostgreSQL 100 %, Ablago 150 %, Container 200 % · Neustarts von Prozessen: 1 (2 SIGKILL) · Speicher je Prozess: Haupt 61 MB, 1 650 MB, 2 480 MB');
+    assert.equal(skript.fehlerText({ status: { 200: 10, 502: 3, 503: 4 }, fehlerJe: { ECONNRESET: 2 }, ohneAntwortJe: { Suche: 1 } }), '502 × 3, ECONNRESET × 2, ohne Antwort (Suche) × 1', '503 zählt als abgewiesen, nicht als Fehler');
+    assert.equal(skript.fehlerText({ status: { 200: 10 }, fehlerJe: {}, ohneAntwortJe: {} }), null);
+    const gross = { stufe: 'gross', art: 'messung', verfehlt: [], grenze: { gleichzeitig: 25, jeSekunde: 50, p95: 900 }, grund: 'Fehlerquote 1,10 % > 1 %', erholung: { ms: 100, p95: 300 },
+      schritte: [{ name: 'groß 25', n: 25, engpass: g, status: { 200: 5 } }, { name: 'groß 50', n: 50, engpass: g, status: { 200: 90, 502: 2 }, fehlerJe: { ECONNRESET: 9 } }] };
+    const bg = skript.ergebnisblock([gross], x, umgebung, {});
+    assert.match(bg, /\ngroß   Grenze: 25 gleichzeitig[^\n]*\n  Engpass groß 25: [^\n]*\n  Engpass groß 50 \(Abbruch\): [^\n]*\n  Fehler groß 50 \(Abbruch\): 502 × 2, ECONNRESET × 9\n/);
+    assert.equal(skript.engpassAus([{ t: 0, speicherMb: 1 }]), null, 'ältere Fassung ohne engpass');
+    // Im Ergebnisblock: eigene Zeile unter dem Durchgang; die bisherigen Zeilen bleiben.
+    const alt = skript.ergebnisblock(ergebnisse, x, umgebung, {});
+    const neu = skript.ergebnisblock([{ ...ergebnisse[0], durchgang: { ...ergebnisse[0].durchgang, name: 'klein', engpass: g } }], x, umgebung, {});
+    for (const z of alt.split('\n').filter((l) => !l.startsWith('Gemessen'))) assert.ok(neu.split('\n').includes(z), `fehlt: ${z}`);
+    assert.match(neu, /\nklein    25 gleichzeitig: [^\n]*\n  Engpass klein: Warten auf DB-Verbindung p95 ≤ 10 ms/);
+    const ohne = skript.engpassText({ ...g, wartenP95: null, wartenAnzahl: 0, sperrenMax: 0, cpuPostgres: null, warteschlangeMax: 0, speicherJeProzess: [], neustarts: 0, neustartGruende: [] });
+    assert.match(ohne, /p95 –, höchstens 45 ms · Verbindungen belegt bis 12 von 12 · Sperren: keine · CPU \(% eines Kerns\): PostgreSQL –, Ablago 150 %, Container 200 % · Neustarts von Prozessen: 0 · Speicher je Prozess: –$/);
   });
 
   it('Gerät: eine Zeile, ohne Backticks, höchstens 120 Zeichen', () => {

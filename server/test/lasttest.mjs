@@ -678,8 +678,95 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
     // Nur Abfragen ohne Antwort (#873); Antworten ohne Werte stehen getrennt.
     serverAusfaelle: server.filter((s) => s.unerreichbar).length, zustandOhneWerte: server.filter((s) => s.fehler && !s.unerreichbar).length,
     exporte: exporte.map((e) => ({ ...e, ms: Math.round(e.ms), mb: Math.round(e.mb * 10) / 10 })),
+    // Wo es hakt (#874): Verbindungen, Sperren, CPU, Speicher je Prozess – über alle Prozesse; null bei älteren Fassungen.
+    engpass: engpassAus(sv),
   };
   return ergebnis;
+}
+
+/** Quantil aus Klassen (Obergrenze der Klasse, #874); über der letzten Klasse null. */
+export function quantilAusKlassen(zaehler, grenzen, q) {
+  const n = zaehler.reduce((a, b) => a + b, 0);
+  if (!n) return null;
+  const ziel = Math.ceil(q * n);
+  let summe = 0;
+  for (let i = 0; i < zaehler.length; i++) { summe += zaehler[i]; if (summe >= ziel) return i < grenzen.length ? grenzen[i] : null; }
+  return null;
+}
+
+/**
+ * Engpass eines Durchgangs (#874) aus den Ständen von `/api/werkbank/last` (alle 2 s, `engpass`): Wartezeit auf eine
+ * freie Verbindung (p95 aus dem Unterschied der Klassen zwischen erstem und letztem Stand, höchstens aus den Fenstern),
+ * belegte und erlaubte Verbindungen, Sitzungen mit Sperren, Rechenzeit von PostgreSQL, Ablago und Container (in % eines
+ * Kerns über den Durchgang) und der Arbeitsspeicher je Prozess (höchstens). null, wenn der Server das nicht meldet.
+ */
+export function engpassAus(staende) {
+  const e = staende.filter((s) => s.engpass);
+  if (!e.length) return null;
+  const a = e[0], z = e.at(-1);
+  const hoechstens = (k) => { const w = e.map(k).filter((x) => typeof x === 'number'); return w.length ? Math.max(...w) : null; };
+  const grenzen = z.engpass.klassenMs ?? [];
+  const k0 = a.engpass.pool?.klassen, k1 = z.engpass.pool?.klassen;
+  const klassen = k0 && k1 && k0.length === k1.length ? k1.map((n, i) => Math.max(0, n - k0[i])) : null;
+  const sek = (z.t - a.t) / 1000;
+  const cpu = (k) => {
+    const x = a.engpass.cpu?.[k], y = z.engpass.cpu?.[k];
+    return sek >= 1 && typeof x === 'number' && typeof y === 'number' && y >= x ? Math.round(((y - x) / sek) * 100) : null;
+  };
+  const speicher = {};
+  for (const s of e) {
+    for (const p of s.engpass.speicher ?? []) {
+      if (typeof p.mb !== 'number') continue;
+      const alt = speicher[p.nr];
+      speicher[p.nr] = { rolle: p.rolle, mb: Math.max(p.mb, alt?.mb ?? 0), haldeMb: typeof p.haldeMb === 'number' ? Math.max(p.haldeMb, alt?.haldeMb ?? 0) : alt?.haldeMb ?? null };
+    }
+  }
+  return {
+    wartenP95: klassen ? quantilAusKlassen(klassen, grenzen, 0.95) : null, wartenMax: hoechstens((s) => s.engpass.pool?.wartenMax),
+    wartenAnzahl: klassen ? klassen.reduce((x, y) => x + y, 0) : null,
+    belegtMax: hoechstens((s) => s.engpass.pool?.belegtMax), verbindungen: z.engpass.pool?.max ?? z.engpass.verbindungen?.gesamt ?? null,
+    warteschlangeMax: hoechstens((s) => s.engpass.pool?.warteschlangeMax),
+    sperrenMax: hoechstens((s) => s.engpass.sitzungen?.sperren), sperreMsMax: hoechstens((s) => s.engpass.sitzungen?.sperreMs),
+    aktivMax: hoechstens((s) => s.engpass.sitzungen?.aktiv), sitzungenMax: hoechstens((s) => s.engpass.sitzungen?.offen),
+    cpuPostgres: cpu('postgres'), cpuAblago: cpu('ablago'), cpuContainer: cpu('container'),
+    // Abgestürzte Prozesse (#874): Unterschied der Zählung des Hauptprozesses, dazu Nummer und Code bzw. Signal.
+    neustarts: typeof a.engpass.neustarts?.anzahl === 'number' && typeof z.engpass.neustarts?.anzahl === 'number' ? Math.max(0, z.engpass.neustarts.anzahl - a.engpass.neustarts.anzahl) : null,
+    neustartGruende: (z.engpass.neustarts?.letzte ?? []).filter((x) => Date.parse(x.zeit) >= a.t - 2000).map((x) => `${x.nr} ${x.signal ?? `Code ${x.code}`}`),
+    speicherJeProzess: Object.entries(speicher).map(([nr, p]) => ({ nr: Number(nr), rolle: p.rolle, mb: p.mb, haldeMb: p.haldeMb ?? null })).sort((x, y) => x.nr - y.nr),
+  };
+}
+
+/**
+ * Fehlerarten eines Durchgangs (#874): Status 5xx, abgebrochene Verbindungen (Code von Node.js, z. B. ECONNRESET) und
+ * Anfragen ohne Antwort je Art – null, wenn es keine gab. Zeigt, ob der Server Fehler meldet oder Verbindungen wegbrechen
+ * (z. B. weil ein Prozess abstürzt).
+ */
+export function fehlerText(l) {
+  const teile = [
+    ...Object.entries(l.status ?? {}).filter(([k]) => Number(k) >= 500 && k !== '503').map(([k, n]) => `${k} × ${n}`),
+    ...Object.entries(l.fehlerJe ?? {}).map(([k, n]) => `${k} × ${n}`),
+    ...Object.entries(l.ohneAntwortJe ?? {}).map(([k, n]) => `ohne Antwort (${k}) × ${n}`),
+  ];
+  return teile.length ? teile.join(', ') : null;
+}
+
+/**
+ * „Engpass: Warten auf eine DB-Verbindung p95 ≤ 20 ms, höchstens 340 ms · Verbindungen belegt bis 16 von 16 (Warteschlange
+ * bis 35) · Sperren: bis 2 Sitzungen, längste 120 ms · CPU (% eines Kerns): PostgreSQL 140 %, Ablago 210 %, Container
+ * 360 % · Speicher je Prozess: 1 420 MB, 2 380 MB“ (#874). Was fehlt, steht als „–“.
+ */
+export function engpassText(g) {
+  const ms = (x) => (x === null || x === undefined ? '–' : `${String(x).replace('.', ',')} ms`);
+  const pz = (x) => (x === null || x === undefined ? '–' : `${x} %`);
+  const teile = [
+    `Warten auf DB-Verbindung p95 ${g.wartenP95 === null && g.wartenAnzahl ? '> 30 s' : g.wartenP95 === null ? '–' : `≤ ${ms(g.wartenP95)}`}, höchstens ${ms(g.wartenMax)}`,
+    `Verbindungen belegt bis ${f(g.belegtMax)} von ${f(g.verbindungen)}${g.warteschlangeMax ? ` (Warteschlange bis ${g.warteschlangeMax})` : ''}`,
+    `Sperren: ${g.sperrenMax === null ? '–' : g.sperrenMax === 0 ? 'keine' : `bis ${g.sperrenMax} ${g.sperrenMax === 1 ? 'Sitzung' : 'Sitzungen'}, längste ${ms(g.sperreMsMax)}`}`,
+    `CPU (% eines Kerns): PostgreSQL ${pz(g.cpuPostgres)}, Ablago ${pz(g.cpuAblago)}, Container ${pz(g.cpuContainer)}`,
+    `Neustarts von Prozessen: ${g.neustarts === null || g.neustarts === undefined ? '–' : g.neustarts}${g.neustartGruende?.length ? ` (${g.neustartGruende.join(', ')})` : ''}`,
+    `Speicher je Prozess: ${g.speicherJeProzess.length ? g.speicherJeProzess.map((p) => `${p.nr === 0 ? 'Haupt' : p.nr} ${p.mb} MB${typeof p.haldeMb === 'number' ? ` (Halde ${p.haldeMb})` : ''}`).join(', ') : '–'}`,
+  ];
+  return teile.join(' · ');
 }
 
 /** Nach der Überlast: wie schnell antwortet das DMS wieder normal? */
@@ -884,6 +971,12 @@ function bericht(ergebnisse, x) {
   for (const l of x.laeufe) {
     z.push(`| ${l.name} | ${l.n} | ${l.anfragen} | ${l.jeSekunde} | ${f(l.median)} | ${f(l.p95)} | ${f(l.p99)} | ${prozent(l.fehlerquote)} | ${l.abgewiesen}${l.abgewiesen ? ` (${l.retryAfter} mit Retry-After)` : ''} | ${l.ohneAntwort} | ${f(rund(l.schleifeP99))} / ${f(rund(l.schleifeMax))} | ${f(rund(l.dbWartenP95))} / ${f(rund(l.dbWartenMax))} | ${f(l.speicherMbStart)} / ${f(l.speicherMbMax)} / ${f(l.speicherMbEnde)} |`);
   }
+  // Wo es hakt (#874): je Durchgang über alle Prozesse.
+  const mitEngpass = x.laeufe.filter((l) => l.engpass);
+  if (mitEngpass.length) {
+    z.push('', 'Engpass je Durchgang (#874, über alle Prozesse; CPU in % eines Kerns):', '');
+    for (const l of mitEngpass) z.push(`- ${l.name}: ${engpassText(l.engpass)}${fehlerText(l) ? ` · Fehler: ${fehlerText(l)}` : ''}`);
+  }
   for (const l of x.laeufe.filter((y) => y.exporte.length)) {
     z.push('', `Exporte im Durchgang „${l.name}“: ${l.exporte.map((e) => `${e.art.toUpperCase()} ${e.status} ${(e.ms / 1000).toFixed(1)} s ${e.mb} MB`).join(' · ')}`);
   }
@@ -960,8 +1053,20 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
     } else {
       kz.push(`${(e.stufe === 'gross' ? 'groß' : e.stufe).padEnd(6)} Grenze: ${e.grenze.unter ? `unter ${e.grenze.unter}` : e.grenze.gleichzeitig} gleichzeitig (${e.grenze.jeSekunde}/s, p95 ${f(e.grenze.p95)} ms), Abbruch: ${e.grund}; Erholung ${e.erholung.ms === null ? 'keine' : `${sek(e.erholung.ms)} s`}`);
     }
+    // #874: Engpass des Durchgangs (bei groß: der Schritt an der Grenze) – eigene Zeile, die bisherige bleibt.
+    const haupt = e.art === 'zusage' ? e.durchgang : e.schritte?.find((d) => d.n === e.grenze.gleichzeitig);
+    if (haupt?.engpass) kz.push(`  Engpass ${haupt.name}: ${engpassText(haupt.engpass)}`);
+    // Fehlerarten (#874): beim Durchgang selbst und – bei groß – beim Schritt, an dem es abbrach.
+    const abbruch = e.art === 'messung' ? e.schritte?.at(-1) : null;
+    if (haupt && fehlerText(haupt)) kz.push(`  Fehler ${haupt.name}: ${fehlerText(haupt)}`);
+    if (abbruch && abbruch !== haupt) {
+      if (abbruch.engpass) kz.push(`  Engpass ${abbruch.name} (Abbruch): ${engpassText(abbruch.engpass)}`);
+      if (fehlerText(abbruch)) kz.push(`  Fehler ${abbruch.name} (Abbruch): ${fehlerText(abbruch)}`);
+    }
     // #739: neue Zeilen unter der bisherigen – die bisherige bleibt genau so.
     if (e.speichern) kz.push(speichernZeile(e.speichern));
+    if (e.speichern?.engpass) kz.push(`  Engpass ${e.speichern.name}: ${engpassText(e.speichern.engpass)}`);
+    if (e.speichern && fehlerText(e.speichern)) kz.push(`  Fehler ${e.speichern.name}: ${fehlerText(e.speichern)}`);
     if (e.stufe === 'extrem' && e.daten) kz.push(`extrem Demo-Daten: ${datenText(e).replace(/^Demo-Daten \(extrem\): /, '')}`);
   }
   // Wie bisher nur über die bisherigen Durchgänge; „mit Speichern“ in einer eigenen Zeile (#739).

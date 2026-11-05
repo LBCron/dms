@@ -88,14 +88,26 @@ describe('Mehrere Prozesse, ganzes Ablago (#745)', { skip: !URL_DB && 'TEST_DATA
     const holen = async (pfad: string, o: RequestInit = {}) => fetch(`${x.basis}${pfad}`, { ...o, headers: { cookie, 'x-dms': '1', 'content-type': 'application/json', ...(o.headers ?? {}) } });
 
     // Systemzustand: Hauptprozess, Leiter, ein weiterer; Einstellungen je Prozess.
-    const sl = await (await holen('/api/werkbank/systemlast')).json() as { prozesse: ProzessZeile[]; grenzen: Record<string, { wert: number; prozesse?: number; variable: string }>; anteile: { dms: number } };
+    const sl = await (await holen('/api/werkbank/systemlast')).json() as { prozesse: ProzessZeile[]; grenzen: Record<string, { wert: number; prozesse?: number; variable: string; aufteilung?: { leiter: number; andere: number; prozesse: number } }>; anteile: { dms: number } };
     assert.deepEqual(sl.prozesse.map((p) => p.rolle), ['haupt', 'leiter', 'anfragen']);
     assert.ok(sl.prozesse.every((p) => p.speicher === null || p.speicher > 0));
     assert.equal(sl.grenzen.prozesse.wert, 2);
-    assert.equal(sl.grenzen.verbindungen.prozesse, 2, 'Verbindungen gelten je Prozess');
-    const last = await (await holen('/api/werkbank/last')).json() as { speicherMb: number; prozesse: ProzessZeile[]; datenbank: { verbindungen: number; jeProzess: number } };
+    // #874: Verbindungen gelten für alle zusammen (Vorgabe 10 + 4 je weiteren Prozess), aufgeteilt.
+    assert.equal(sl.grenzen.verbindungen.wert, 14);
+    assert.equal(sl.grenzen.verbindungen.prozesse, undefined);
+    assert.deepEqual(sl.grenzen.verbindungen.aufteilung, { leiter: 9, andere: 5, prozesse: 2 });
+    assert.equal(sl.grenzen.anfragen.prozesse, 2, 'Anfragen gelten je Prozess');
+    type Engpass = { neustarts: { anzahl: number; letzte: unknown[] }; pool: { max: number; klassen: number[]; an: boolean } | null; speicher: Array<{ nr: number; mb: number | null }>; cpu: { ablago: number | null } | null; sitzungen: { offen: number } | null };
+    const last = await (await holen('/api/werkbank/last')).json() as { speicherMb: number; prozesse: ProzessZeile[]; datenbank: { verbindungen: number; jeProzess: number }; engpass: Engpass };
     assert.equal(last.prozesse.length, 3);
-    assert.equal(last.datenbank.verbindungen, 2 * last.datenbank.jeProzess, 'Lasttest: Verbindungen zusammen');
+    assert.equal(last.datenbank.verbindungen, 14, 'Lasttest: Verbindungen zusammen');
+    assert.ok([9, 5].includes(last.datenbank.jeProzess), 'Anteil des Prozesses, der antwortet');
+    // Engpass (#874) über beide Prozesse: Verbindungen zusammen, Speicher je Prozess (mit Hauptprozess), Sitzungen.
+    assert.equal(last.engpass.pool?.max, 14);
+    assert.deepEqual(last.engpass.neustarts, { anzahl: 0, letzte: [] });
+    assert.equal(last.engpass.pool?.an, true);
+    assert.deepEqual(last.engpass.speicher.map((z) => z.nr), [0, 1, 2]);
+    assert.ok((last.engpass.sitzungen?.offen ?? 0) >= 2);
 
     // Befehl dms: ein Schlüssel für alle Prozesse (Verteilung reihum – mehrere Anfragen treffen beide).
     const k = JSON.parse(readFileSync(konsoleDatei, 'utf8')) as { schluessel: string; url: string };

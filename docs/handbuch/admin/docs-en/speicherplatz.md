@@ -66,10 +66,10 @@ Below the values is **Settings for many simultaneous requests** – only for vie
 | --- | --- | --- | --- |
 | Processes for requests | `DMS_PROZESSE` | 1–16 or `auto` | 1 |
 | Workers for PDF and exports | `DMS_ARBEITER` | 0–16 | half of the cores, 1 to 4 |
-| Database connections | `DMS_DB_VERBINDUNGEN` | 2–100 | 10 |
+| Database connections (all processes together) | `DMS_DB_VERBINDUNGEN` | 2–100 | 10, 4 more for each further process |
 | Simultaneous requests at most | `DMS_MAX_ANFRAGEN` | 20–10,000 | 250 |
 
-With [several processes](technik.md#mehrere-prozesse), workers, connections and simultaneous requests apply **per process**; the value is then followed by "per process, together …". Above it, the table **Processes** shows per process its task (process 1 leads and does the background work), memory, computing time, waiting time and running requests; *Ablago* under memory is then the sum of all processes.
+With [several processes](technik.md#mehrere-prozesse), workers and simultaneous requests apply **per process**; the value is then followed by "per process, together …". The connections apply to all processes together (#874); after them it says how they are divided ("leader 9, each further one 5"). Above it, the table **Processes** shows per process its task (process 1 leads and does the background work), memory, computing time, waiting time and running requests; *Ablago* under memory is then the sum of all processes.
 
 They can only be changed as an environment variable in the Compose file (see [Installation](installation.md#einstellungen)); they apply as soon as the container has been recreated. An invalid value is ignored at start-up (notice in the log); then the default is shown here. Why the defaults are as they are is under [Technology → Many simultaneous requests](technik.md#last).
 

@@ -75,6 +75,7 @@
   "grenzen.prozesse": "Prozesse für Anfragen",
   "grenzen.auto": "{wert} – automatisch (auto)",
   "grenzen.je-prozess": "je Prozess, zusammen {gesamt} in {prozesse} Prozessen",
+  "grenzen.aufgeteilt": "zusammen für {prozesse} Prozesse: Leiter {leiter}, jeder weitere {andere}",
   "grenzen.vorgabe": "{wert} – Vorgabe",
   "grenzen.umgebung": "{wert} – aus der Umgebung",
   "grenzen.aus": "0 – ausgeschaltet, aus der Umgebung",

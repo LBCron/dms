@@ -132,6 +132,46 @@ export function liesAnteile(lies: Leser, o: { eigen: number; laeufer: number | n
   return { dms: liesPss(lies, o.eigen), pakete: o.laeufer ? liesPss(lies, o.laeufer) : null, datenbank };
 }
 
+/** Takte je Sekunde in /proc/<pid>/stat (USER_HZ ist unter Linux für Programme immer 100). */
+const USER_HZ = 100;
+
+/**
+ * Verbrauchte Rechenzeit eines Prozesses in Sekunden (#874): utime + stime, dazu cutime + cstime seiner beendeten
+ * Kinder (bei PostgreSQL die beendeten Verbindungen, bei Ablago z. B. pdftoppm). null, wenn nicht lesbar.
+ */
+export function liesCpuSekunden(lies: Leser, pid: number): number | null {
+  const text = lies(`/proc/${pid}/stat`);
+  if (!text) return null;
+  // Der Name in Klammern darf Leerzeichen enthalten: erst nach der letzten Klammer zählen.
+  const f = text.slice(text.lastIndexOf(')') + 2).trim().split(/\s+/);
+  // f[0] ist Feld 3 (state); utime … cstime sind die Felder 14–17.
+  const t = [11, 12, 13, 14].map((i) => Number(f[i]));
+  return t.every(Number.isFinite) ? t.reduce((a, b) => a + b, 0) / USER_HZ : null;
+}
+
+/**
+ * Rechenzeit seit dem Start in Sekunden, fortlaufend (#874): PostgreSQL (alle Prozesse namens `postgres`, nur wenn es
+ * im selben Container läuft), Ablago (die genannten Prozesse: Hauptprozess und alle Prozesse für Anfragen) und der
+ * ganze Container (cgroup). Den Anteil in Prozent eines Kerns bildet der Lasttest aus zwei Ständen.
+ */
+export interface CpuJeArt { postgres: number | null; ablago: number | null; container: number | null }
+export function liesCpuJeArt(lies: Leser, o: { ablago: number[]; postgres: boolean; pids?: () => number[] }): CpuJeArt {
+  let ablago = 0, ablagoOk = o.ablago.length > 0;
+  for (const pid of o.ablago) { const c = liesCpuSekunden(lies, pid); if (c === null) ablagoOk = false; else ablago += c; }
+  let postgres: number | null = null;
+  if (o.postgres) {
+    let summe = 0, ok = false;
+    for (const pid of (o.pids ?? alleProzesse)()) {
+      if (lies(`/proc/${pid}/comm`)?.trim() !== 'postgres') continue;
+      const c = liesCpuSekunden(lies, pid);
+      if (c !== null) { summe += c; ok = true; }
+    }
+    postgres = ok ? Math.round(summe * 100) / 100 : null;
+  }
+  const us = liesCgroup(lies).cpuUs;
+  return { postgres, ablago: ablagoOk ? Math.round(ablago * 100) / 100 : null, container: us === null ? null : Math.round(us / 1e4) / 100 };
+}
+
 function alleProzesse(): number[] {
   try { return readdirSync('/proc').filter((n) => /^\d+$/.test(n)).map(Number); } catch { return []; }
 }
@@ -208,6 +248,9 @@ export class Systemlast {
     const datenbank = this.o.postgres ? liesAnteile(this.lies, { eigen: process.pid, laeufer: null, postgres: true }).datenbank : null;
     return { ...c, datenbank };
   }
+
+  /** Rechenzeit von PostgreSQL, Ablago und Container (#874), fortlaufend in Sekunden. */
+  cpuJeArt(ablago: number[]): CpuJeArt { return liesCpuJeArt(this.lies, { ablago, postgres: !!this.o.postgres }); }
 
   stand(): SystemlastStand {
     const c = liesCgroup(this.lies);
