@@ -258,6 +258,8 @@ describe('Export-Ordner (#797): Werkbank und Herunterladen', () => {
     const dl = await rufe(katrin, 'GET', '/api/werkbank/export/:name/zip', { params: { name: s.exporte[0].name } });
     assert.ok(await da(ordner), 'erst nach dem vollständigen Lesen gelöscht');
     await leer(dl.datei!.inhalt);
+    // Gelöscht wird nach dem Ende des Stroms – unter Last kann das ein paar Millisekunden dauern.
+    for (let i = 0; i < 100 && (await da(ordner)); i++) await new Promise((r) => setTimeout(r, 20));
     assert.equal(await da(ordner), false);
   });
 
