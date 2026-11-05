@@ -1227,6 +1227,8 @@ export interface WerkbankUebersicht {
   aufgaben: { offen: number; ohneEmpfaenger: number };
   /** #798: offene Fälle – Aufgaben bei Personen ohne Leserecht. */
   ohneLeserecht?: number;
+  /** #877: Dokumentdateien, die beim Lesen fehlten und noch fehlen. */
+  dateienFehlen?: number;
   /** #719: Alltags-Benutzer für Aufgaben ohne Empfänger; `moeglich` = aktive Benutzer ohne Admin-Rechte. */
   aufgabenEmpfaenger?: { benutzerId: string | null; moeglich: number } | null;
   unpassend: number;

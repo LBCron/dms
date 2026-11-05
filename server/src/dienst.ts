@@ -5,7 +5,7 @@ import {
   REGISTERARTEN, REGISTERNAMEN, ABRUF_ART, type Abrufweg, type Abruffassung, historienartenVon, historiengruppenVon, istHistoriengruppe, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemBeschriftung, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
-import type { Dateispeicher } from './dateispeicher';
+import { DateiFehlt, type Dateispeicher } from './dateispeicher';
 import type { Mailer } from './mail';
 import { Auftraege } from './auftrag';
 import { kontext, protokoll } from './protokoll';
@@ -655,6 +655,9 @@ export const HISTORIE_SEITE_MAX = 1000;
 const ABRUF_PRUEFUNG = 'abruf-pruefung';
 /** Belegung einer Code-Prüfung am Abruf-Link: endet spätestens nach dieser Zeit (scrypt dauert Bruchteile davon). */
 const ABRUF_PRUEFUNG_MS = 60_000;
+/** Fehlende Dateien (#877), die beim Lesen auffielen: für den Hinweis der Werkbank-Übersicht (höchstens so viele). */
+const FEHLENDE_DATEIEN = 'dateien_fehlen';
+const FEHLENDE_DATEIEN_MAX = 1000;
 
 export class Dienst {
   /**
@@ -5197,6 +5200,7 @@ export class Dienst {
       { name: 'Mappen.xlsx', daten: eintrag.xlsx }, { name: 'Mappen.csv', daten: eintrag.csv },
     ].map((d) => ({ name: d.name, groesse: d.daten.length, inhalt: async () => d.daten }));
     const ordner = eindeutig(mappen.map((m) => sichererName(m.titel || t('meldungen.dienst.ohne-titel'))));
+    const ausDatei: Dokument[] = [];
     for (const [i, m] of mappen.entries()) {
       const docs = dokJe.get(m.id) ?? [];
       // Gestempelte Kopien entstehen vorab: das ZIP braucht die Größen im Voraus.
@@ -5204,9 +5208,12 @@ export class Dienst {
       const namen = eindeutig(docs.map((d, j) => sichererName(aus?.[j].name ?? d.name, 120)));
       docs.forEach((d, j) => {
         const a = aus?.[j];
+        if (!a && !fw.archiv(d)) ausDatei.push(d);
         eintraege.push(a ? { name: `${ordner[i]}/${namen[j]}`, groesse: a.inhalt.length, inhalt: async () => a.inhalt } : { name: `${ordner[i]}/${namen[j]}`, groesse: d.groesse, inhalt: () => fw.strom(d) });
       });
     }
+    // Fehlende Datei (#877): vorher melden – im ZIP wäre der Kopf schon unterwegs, die Antwort bräche nur ab.
+    await this.pruefeVorhanden(ausDatei);
     const groesse = zipGroesse(eintraege);
     if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.dienst.der-export-waere-groesser'));
     await historie();
@@ -6958,7 +6965,7 @@ export class Dienst {
     };
     const lies = async (d: Dokument): Promise<Buffer> => (original.has(d.id) ? (await this.ausgabeQuelle(original.get(d.id)!, 'archiv', true)).inhalt() : this.liesGanz(d.sha256));
     const strom = async (d: Dokument): Promise<Buffer | Readable> => (original.has(d.id) ? lies(d) : this.dateien.lies(d.sha256) as Promise<Buffer | Readable>);
-    return { waehle, lies, strom, anzahl: () => original.size };
+    return { waehle, lies, strom, anzahl: () => original.size, archiv: (d: Dokument) => original.has(d.id) };
   }
 
   /**
@@ -8226,7 +8233,7 @@ export class Dienst {
    * Weg 1 (#455): die ZIP als Anhang über den E-Mail-Versand des DMS – nur verschlüsselt; das Passwort
    * kennt das DMS nicht und schickt es darum auch nie mit. Zu groß für E-Mail → Abruf-Link.
    */
-  async auskunftPerEmail(stand: AuskunftStand & { name: string }, datei: () => Readable, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null) {
+  async auskunftPerEmail(stand: AuskunftStand & { name: string }, datei: () => Promise<Readable>, eingabe: unknown, ich: { id: string; name: string; email: string }, mailer: Mailer | null) {
     if (!mailer) throw new Fachfehler(409, t('meldungen.dienst.der-e-mail-versand-2'));
     if (!stand.verschluesselt) throw new Fachfehler(422, t('meldungen.dienst.per-e-mail-geht'));
     if (stand.bytes > EMAIL_MAX_ANHAENGE) throw new Fachfehler(413, t('meldungen.dienst.die-auskunft-ist-mit', { round: Math.round(stand.bytes / 1e6), round2: Math.round(EMAIL_MAX_ANHAENGE / 1e6) }));
@@ -8235,7 +8242,7 @@ export class Dienst {
     const { an, betreff, nachricht } = Dienst.emailKopf({ betreff: vorlage.betreff, nachricht: vorlage.nachricht, ...e });
     const antwortAn = ich.name ? `"${ich.name.replace(/["\\]/g, '')}" <${ich.email}>` : ich.email;
     try {
-      await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge: [{ name: `${stand.name}.zip`, mime: 'application/zip', inhalt: datei() }] });
+      await mailer.sende(an.join(', '), betreff, nachricht, { antwortAn, anhaenge: [{ name: `${stand.name}.zip`, mime: 'application/zip', inhalt: await datei() }] });
     } catch (x) {
       throw new Fachfehler(502, t('meldungen.dienst.die-e-mail-wurde', { message: (x as Error).message }));
     }
@@ -8431,6 +8438,7 @@ export class Dienst {
       const alle = await this.repo.alleDateien();
       const shas = [...new Set(alle.map((x) => x.sha256))];
       const abweichungen: Array<{ sha256: string; grund: string; dokumente: typeof alle }> = [];
+      const fehlend: string[] = [];
       for (const [i, sha] of shas.entries()) {
         let grund: string | null = null;
         try {
@@ -8438,15 +8446,89 @@ export class Dienst {
           const h = createHash('sha256');
           if (Buffer.isBuffer(s)) h.update(s); else for await (const teil of s) h.update(teil as Buffer);
           if (h.digest('hex') !== sha) grund = t('meldungen.dienst.inhalt-veraendert');
-        } catch { grund = t('meldungen.dienst.datei-fehlt'); }
+        } catch { grund = t('meldungen.dienst.datei-fehlt'); fehlend.push(sha); }
         if (grund) abweichungen.push({ sha256: sha, grund, dokumente: alle.filter((x) => x.sha256 === sha) });
         fortschritt(i + 1, shas.length);
       }
+      // Hinweis der Übersicht (#877): Die Prüfung kennt jetzt alle fehlenden Dateien.
+      await this.schreibeFehlendeDateien(fehlend).catch(() => {});
       const log = protokoll.modul('werkbank');
       if (abweichungen.length) log.error('Dateien prüfen: Abweichungen gefunden', { von, dateien: shas.length, abweichungen: abweichungen.length, erste: abweichungen[0].dokumente[0]?.name });
       else log.info('Dateien prüfen: alle in Ordnung', { von, dateien: shas.length });
       return { dateien: shas.length, abweichungen };
     }, [{ key: 'dateien', name: 'Dateien prüfen', einheit: 'Dateien' }]);
+  }
+
+  /* ---------- Fehlende Dateien (#877) ---------- */
+
+  /**
+   * Eine Datei fehlt im Ablageordner (beim ersten Lesen in diesem Prozess): einmal ins Protokoll – mit Prüfwert, Pfad
+   * und den Mappen, nur dort – und für den Hinweis der Werkbank-Übersicht merken.
+   */
+  async merkeFehlendeDatei(f: { sha256: string; pfad: string; ablage: string }) {
+    const doks = await this.repo.dokumenteMitSha(f.sha256).catch(() => [] as Dokument[]);
+    protokoll.modul('dokumente').error('Datei eines Dokuments fehlt im Ablageordner', {
+      sha256: f.sha256, pfad: f.pfad, ablage: f.ablage,
+      ...(doks.length ? { dokumente: doks.slice(0, 5).map((d) => d.id).join(', '), mappen: [...new Set(doks.map((d) => d.mappeId))].slice(0, 5).join(', ') } : {}),
+    });
+    const alt = await this.gemerkteFehlendeDateien();
+    if (!alt.includes(f.sha256)) await this.schreibeFehlendeDateien([...alt, f.sha256]);
+  }
+
+  private async gemerkteFehlendeDateien(): Promise<string[]> {
+    const w = (await this.einstellungen?.lies(FEHLENDE_DATEIEN)) as { shas?: unknown } | null;
+    return Array.isArray(w?.shas) ? w.shas.filter((x): x is string => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x)) : [];
+  }
+
+  private async schreibeFehlendeDateien(shas: string[]) {
+    if (!this.einstellungen) return;
+    const liste = [...new Set(shas)].slice(-FEHLENDE_DATEIEN_MAX);
+    await this.einstellungen.schreibe(FEHLENDE_DATEIEN, liste.length ? { shas: liste, am: new Date().toISOString() } : null);
+  }
+
+  /**
+   * Zahl der fehlenden Dateien für die Übersicht: die gemerkten, die noch gebraucht werden und immer noch fehlen.
+   * Ist eine wieder da (Volume wieder eingebunden) oder kein Dokument zeigt mehr darauf, verschwindet sie aus der Liste.
+   */
+  async fehlendeDateien(): Promise<number> {
+    const alt = await this.gemerkteFehlendeDateien();
+    if (!alt.length) return 0;
+    const noch: string[] = [];
+    for (const sha of alt) if ((await this.repo.dateiBenutzt(sha)) && !(await this.dateiVorhanden(sha))) noch.push(sha);
+    if (noch.length !== alt.length) await this.schreibeFehlendeDateien(noch);
+    return noch.length;
+  }
+
+  private async dateiVorhanden(sha: string): Promise<boolean> {
+    if (this.dateien.vorhanden) return this.dateien.vorhanden(sha);
+    try { const s = await this.dateien.lies(sha); if (!Buffer.isBuffer(s)) s.destroy(); return true; } catch { return false; }
+  }
+
+  /**
+   * Alle Dateien nur auf Vorhandensein prüfen (Lasttest #877: schnell, ohne zu lesen): Dokumente ohne Datei. Je
+   * Datei ein `stat`, 32 gleichzeitig.
+   */
+  async dokumenteOhneDatei(): Promise<{ dateien: number; fehlend: number; dokumente: number }> {
+    const alle = await this.repo.alleDateien();
+    const shas = [...new Set(alle.map((x) => x.sha256))];
+    const fehlt = new Set<string>();
+    let i = 0;
+    await Promise.all(Array.from({ length: Math.min(32, shas.length) }, async () => {
+      while (i < shas.length) { const sha = shas[i++]; if (!(await this.dateiVorhanden(sha))) fehlt.add(sha); }
+    }));
+    if (fehlt.size) await this.schreibeFehlendeDateien([...(await this.gemerkteFehlendeDateien()), ...fehlt]).catch(() => {});
+    return { dateien: shas.length, fehlend: fehlt.size, dokumente: new Set(alle.filter((x) => fehlt.has(x.sha256)).map((x) => x.dokumentId)).size };
+  }
+
+  /** Vor einem Strom, dessen Kopf schon unterwegs wäre (ZIP): fehlt eine Datei, gleich ein sauberer Fehler. */
+  private async pruefeVorhanden(docs: Array<Pick<Dokument, 'sha256' | 'name'>>) {
+    if (!this.dateien.vorhanden) return;
+    for (const d of docs) {
+      if (await this.dateien.vorhanden(d.sha256)) continue;
+      // Lesen meldet das Fehlen wie überall (einmal ins Protokoll, Hinweis der Übersicht).
+      await this.dateien.lies(d.sha256).then((x) => { if (!Buffer.isBuffer(x)) x.destroy(); }, () => {});
+      throw new DateiFehlt(d.sha256, d.name);
+    }
   }
 
   /* ---------- Versionierung (#194) ---------- */

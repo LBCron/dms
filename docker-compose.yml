@@ -5,6 +5,7 @@
 services:
   db:
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_DB: dms
       POSTGRES_USER: dms
@@ -20,6 +21,8 @@ services:
 
   app:
     build: .
+    # Nach einem Absturz (#877: Ablago beendet sich bei einem unerwarteten Fehler) startet Docker neu.
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy

@@ -11,6 +11,7 @@ import { t } from './sprache';
 import type { Dienst, Zugriff } from './dienst';
 import { MIME } from './eingangsordner';
 import type { Einstellungen } from './einstellungen';
+import { DateiFehlt } from './dateispeicher';
 import { Fachfehler } from './fehler';
 import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import type { Konten } from './konten';
@@ -449,6 +450,8 @@ export class Webdav {
       const neu = await this.stemple(d, m.mappe, plan, ctx, schluessel);
       return fertig(neu.inhalt, neu.groesse);
     } catch (e) {
+      // Datei fehlt (#877): nichts merken, nichts ausliefern – GET antwortet 404, PROPFIND zeigt das Dokument weiter.
+      if (e instanceof DateiFehlt) return { ...original, inhalt: async () => { throw e; } };
       // Beschädigte PDFs scheitern auch unterwegs im PDF-Leser (kein Fachfehler) – das Laufwerk bleibt dabei ruhig.
       const grund = e instanceof Fachfehler ? e.message : t('api.webdav.nicht-stempelbar', { name: d.name });
       if (!(e instanceof Fachfehler)) log.debug('WebDAV: Stempeln fehlgeschlagen', { id: d.id, fehler: (e as Error).message });

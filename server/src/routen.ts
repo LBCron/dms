@@ -18,7 +18,7 @@ import { NUR_ZAEHLER, ZAEHLER_PFAD, type ApiSchluessel, type ApiSchluesselDienst
 import type { Designs } from './designs';
 import type { Oidc } from './oidc';
 import { exportDateien, exporteIn, exportOrdner, freierPlatz, loescheExport, pruefeExport, vollexport, VOLLEXPORT_PHASEN, type ExportOptionen, type KontaktZuordnung } from './vollexport';
-import { createReadStream } from 'node:fs';
+import { oeffneStrom } from './dateispeicher';
 import { mkdir } from 'node:fs/promises';
 import { AUSKUNFT_PHASEN, auskuenfteIn, auskunftDatei, auskunftOrdner, erzeugeAuskunft, haltenBis, loescheAuskunft } from './auskunft';
 import { AUSKUNFT_TAGE, EXPORT_TAGE, linkStatus, oeffentlichErreichbar } from '../../shared/src/auskunft';
@@ -1229,7 +1229,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/export/:name/zip', zugang: 'admin', handler: async (a) => {
       const ordner = exportOrdner(exportZiel(), a.params.name);
       const dateien = await exportDateien(ordner).catch(() => { throw new Fachfehler(404, t('meldungen.routen.diesen-export-gibt-es')); });
-      const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${a.params.name}/${d.name}`, groesse: d.groesse, inhalt: async () => createReadStream(d.pfad) }));
+      const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${a.params.name}/${d.name}`, groesse: d.groesse, inhalt: () => oeffneStrom(d.pfad) }));
       const groesse = zipGroesse(eintraege);
       if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.routen.der-export-ist-groesser'));
       L.werkbank.info('Vollexport heruntergeladen', { name: a.params.name, von: ich(a).email });
@@ -1276,7 +1276,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!fertig) throw new Fachfehler(404, t('meldungen.routen.es-gibt-noch-keinen-2'));
       const ordner = exportOrdner(ziel, fertig.name);
       const dateien = await exportDateien(ordner);
-      const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${fertig.name}/${d.name}`, groesse: d.groesse, inhalt: async () => createReadStream(d.pfad) }));
+      const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${fertig.name}/${d.name}`, groesse: d.groesse, inhalt: () => oeffneStrom(d.pfad) }));
       const groesse = zipGroesse(eintraege);
       if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.routen.dein-export-ist-groesser'));
       L.konto.info('„Meine Daten exportieren“ heruntergeladen', {});
@@ -1340,7 +1340,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Nach dem Herunterladen gelöscht (#396): erst, wenn die Datei ganz gelesen ist – außer, ein Abruf-Link
       // gilt noch (#455): Dann bleibt sie, bis die Person sie abgerufen hat oder der Link abläuft.
       const halten = await dienst.auskunftLinkAktiv(stand.id);
-      const strom = createReadStream(pfad);
+      const strom = await oeffneStrom(pfad);
       strom.on('end', () => void dienst.auskunftNotiz(stand, ich(a).id, 'download').catch(() => {}));
       strom.on('end', () => (halten ? L.datenschutz.info('Auskunft heruntergeladen (bleibt für den Abruf-Link)', { mappeId: stand.mappeId, von: ich(a).email })
         : void loescheAuskunft(ziel, stand.id).then(() => L.datenschutz.info('Auskunft heruntergeladen und gelöscht', { mappeId: stand.mappeId, von: ich(a).email }))));
@@ -1361,7 +1361,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/werkbank/auskunft/:id/email', zugang: 'admin', handler: async (a) => {
       const { stand, pfad } = await auskunftDatei(auskunftZiel(), a.params.id);
       const i = ich(a);
-      return ok(await dienst.auskunftPerEmail(stand, () => createReadStream(pfad), a.body, { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null));
+      return ok(await dienst.auskunftPerEmail(stand, () => oeffneStrom(pfad), a.body, { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null));
     } },
     { methode: 'POST', pfad: '/api/werkbank/auskunft/:id/link', zugang: 'admin', handler: async (a) => {
       const ziel = auskunftZiel();
@@ -1427,7 +1427,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const nr = await dienst.auskunftAbrufZaehlen(link.id);
       if (nr === null) throw new Fachfehler(410, await abrufText('abruf.fehler.ungueltig'));
       const { stand, pfad, groesse } = datei;
-      const strom = createReadStream(pfad);
+      const strom = await oeffneStrom(pfad);
       let fertig = false;
       strom.on('end', () => {
         fertig = true;
@@ -1446,6 +1446,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/werkbank/archiv/vorschau', zugang: 'admin', lesend: true, handler: async (a) => ok(await dienst.archivVorschau(String((a.body as { typId?: unknown })?.typId ?? ''), (a.body as { archiv?: unknown })?.archiv)) },
     { methode: 'GET', pfad: '/api/werkbank/darf-weg', zugang: 'admin', handler: async () => ok(await dienst.darfWeg()) },
     { methode: 'POST', pfad: '/api/werkbank/wartung/dateien', zugang: 'admin', handler: async (a) => ok(await dienst.auftraege.angemeldet(dienst.pruefeDateien(ich(a).email)), 202) },
+    // Nur Vorhandensein (#877), ohne zu lesen: für den Lasttest („Dokumente ohne Datei: n“) und Skripte.
+    { methode: 'GET', pfad: '/api/werkbank/wartung/dateien/fehlend', zugang: 'admin', handler: async () => ok(await dienst.dokumenteOhneDatei()) },
     /* ---------- Auswahlfilter am Referenzfeld (#172, #173) ---------- */
     { methode: 'POST', pfad: '/api/mappen/auswahl-pruefen', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.auswahlPruefen(a.body, ich(a).id, await zg(a))) },
     { methode: 'POST', pfad: '/api/werkbank/auswahlfilter/zaehlen', zugang: 'admin', lesend: true, handler: async (a) => ok(await dienst.zaehleAuswahl(a.body, ich(a).id)) },
@@ -1704,6 +1706,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         aufgaben: { offen: aufgaben.length, ohneEmpfaenger: aufgaben.filter((y) => !y.empfaengerId).length },
         // #798: Aufgaben bei Personen ohne Leserecht (offene Fälle, abgeglichen alle fünf Minuten und beim Öffnen).
         ohneLeserecht: (await sicher(async () => (await dienst.offeneFaelle()).length)) ?? 0,
+        // #877: Dokumentdateien, die beim Lesen fehlten (und noch fehlen) – Volume vergessen, Datei gelöscht, Platte defekt.
+        dateienFehlen: (await sicher(() => dienst.fehlendeDateien())) ?? 0,
         // #719: Wer im Alltag die Aufgaben ohne Empfänger bekommt; `moeglich` = aktive Benutzer ohne Admin-Rechte.
         aufgabenEmpfaenger: await sicher(async () => ({ benutzerId: (await dienst.alltagsEmpfaenger()).wirksam, moeglich: (await konten.listeBenutzer()).filter(taugtAlsAufgabenEmpfaenger).length })),
         unpassend: Object.values(z.typen).reduce((s, t) => s + (t.unpassend ?? 0), 0),
@@ -2810,6 +2814,8 @@ export function passtEtag(kopf: string | undefined, etag: string): boolean {
 const UEBERSICHT_BEREICHE: Record<string, { bereich: string; leer: unknown }> = {
   tresor: { bereich: 'verschluesselung', leer: null }, mail: { bereich: 'betrieb', leer: true }, adresse: { bereich: 'betrieb', leer: true },
   texterkennung: { bereich: 'texterkennung', leer: null }, texterkennungPaket: { bereich: 'texterkennung', leer: true },
+  // Fehlende Dateien (#877): Der Knopf führt zu „Alle Dateien prüfen“ unter Texterkennung.
+  dateienFehlen: { bereich: 'texterkennung', leer: 0 },
   aufgaben: { bereich: 'aufgaben', leer: { offen: 0, ohneEmpfaenger: 0 } }, ohneLeserecht: { bereich: 'aufgaben', leer: 0 },
   aufgabenEmpfaenger: { bereich: 'benutzer', leer: null }, unpassend: { bereich: 'typen', leer: 0 },
   papierkorb: { bereich: 'papierkorb', leer: { anzahl: 0, aeltester: null, tage: 0 } }, fehlermeldungen: { bereich: 'fehlermeldungen', leer: null },

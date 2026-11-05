@@ -13,7 +13,8 @@
  * AUSKUNFT_TAGE Tage bereit und wird nach dem Herunterladen gelöscht. Optional AES-256 (zip.ts).
  */
 import { randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createWriteStream } from 'node:fs';
+import { oeffneStrom } from './dateispeicher';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -253,7 +254,7 @@ export async function erzeugeAuskunft(d: AuskunftDaten, ordner: string, x: { von
     const dateien = await exportDateien(r.ordner);
     const eintraege: ZipEintrag[] = [
       ...zusatz.map((z) => ({ name: `${name}/${z.name}`, groesse: z.daten.length, inhalt: async () => z.daten })),
-      ...dateien.map((f) => ({ name: `${name}/${f.name}`, groesse: f.groesse, inhalt: async () => createReadStream(f.pfad) })),
+      ...dateien.map((f) => ({ name: `${name}/${f.name}`, groesse: f.groesse, inhalt: () => oeffneStrom(f.pfad) })),
     ];
     let fertig = 0;
     const gezaehlt = eintraege.map((e) => ({ ...e, inhalt: async () => { fortschritt(++fertig, eintraege.length, 'zip'); return e.inhalt(); } }));
@@ -270,7 +271,7 @@ export async function erzeugeAuskunft(d: AuskunftDaten, ordner: string, x: { von
       const innenGroesse = zipGroesse(eintraege);
       if (innenGroesse > ZIP_MAX) throw zuGross();
       await pipeline(zipStrom(gezaehlt, jetzt), createWriteStream(innen));
-      const aussen: ZipEintrag[] = [{ name: 'Auskunft.zip', groesse: innenGroesse, inhalt: async () => createReadStream(innen) }];
+      const aussen: ZipEintrag[] = [{ name: 'Auskunft.zip', groesse: innenGroesse, inhalt: () => oeffneStrom(innen) }];
       groesse = zipGroesse(aussen, true);
       await pipeline(zipStrom(aussen, jetzt, d.passwort), createWriteStream(zipDatei));
     }

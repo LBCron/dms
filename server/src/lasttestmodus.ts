@@ -127,7 +127,8 @@ type Meldung =
   | { art: 'durchgang'; name: string; n: number; dauer: number; zeit: number }
   | { art: 'durchgang-fertig'; name: string; n: number; p95: number | null; fehlerquote: number }
   | { art: 'ergebnis'; bericht: string; vorlage: string; verfehlt: boolean }
-  | { art: 'abbruch' | 'fehler'; text: string };
+  | { art: 'abbruch' | 'fehler'; text: string }
+  | { art: 'warnung'; ohneDatei: number };
 
 const SPEICHERWAHL: readonly Speicherwahl[] = ['HDD', 'SSD', 'NVMe', 'unbekannt'];
 const STAND_DATEI = 'stand.json';
@@ -192,6 +193,7 @@ export class Lasttestmodus {
         break;
       case 'abbruch': s.zustand = 'abbruch'; s.meldung = m.text; break;
       case 'fehler': s.meldung = m.text; break;
+      case 'warnung': s.ohneDatei = Number(m.ohneDatei) || 0; break;
     }
   }
 

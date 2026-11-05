@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
-import type { Dateispeicher } from './dateispeicher';
+import { oeffneStrom, type Dateispeicher } from './dateispeicher';
 import { Fachfehler } from './fehler';
 import { t } from './sprache';
 
@@ -56,7 +56,8 @@ export class Hochgeladen {
     return p;
   }
   lies(): Promise<Buffer> { return readFile(this.sicher()); }
-  strom(): Readable { return createReadStream(this.sicher()); }
+  /** Erst geöffnet, dann als Strom (#877): Fehlt die Datei, lehnt das Promise ab. */
+  strom(): Promise<Readable> { return oeffneStrom(this.sicher()); }
   /** Löschen (auch, wenn sie schon in den Dateispeicher umbenannt wurde: dann gibt es nichts mehr zu tun). */
   async entferne() { await rm(this.sicher(), { force: true }); }
 }

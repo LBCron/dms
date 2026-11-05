@@ -115,6 +115,7 @@ Zwei Hinweise schließt du stattdessen mit einem eigenen Knopf ab – sie kommen
 | Offene gemeldete Fehler | gelb | `fehlermeldungen` |
 | Texterkennung ist jetzt ein Paket | Hinweis (gelb, sobald Scans warten) | `texterkennung.paket` |
 | Dokumente mit Fehler in der Texterkennung | gelb | `texterkennung.fehler` |
+| Dateien zu Dokumenten fehlen im Ablageordner (z. B. `/data/files` ohne Volume) – Einzelheiten im Protokoll, Modul *Dokumente* | rot | `dateien.fehlen` |
 | Niemand bekommt die Aufgaben ohne Empfänger | Hinweis | `aufgabenempfaenger` |
 | Aufgaben bei Personen ohne Leserecht | gelb | `aufgaben.ohne-leserecht` |
 | Aufgaben ohne Empfänger | Hinweis | `aufgaben.ohne-empfaenger` |
