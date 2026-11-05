@@ -105,7 +105,7 @@ export interface PostfachOAuthDeps {
   entschluessele: (wert: string) => string | null;
   abruf?: Abruf;
   jetzt?: () => number;
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   /** Zustand zwischen Anfragen (#744); ohne Angabe im Arbeitsspeicher. */
   zustand?: Kurzzustand;
 }
@@ -434,8 +434,8 @@ export class PostfachOAuth {
     log.warn('Postfach: OAuth-Anmeldung abgelaufen oder entzogen', { postfach: p.name, grund });
     // Versand (#813): Die Mail ginge über genau diese Anmeldung – dafür warnt die Werkbank.
     if (melden && zweckVon(p.id) === 'abruf') {
-      await this.d.anAdmins?.(t('meldungen.postfachoauth.ablago-postfach-anmeldung-abgelaufen', { name: p.name }),
-        t('meldungen.postfachoauth.die-anmeldung-oauth-2', { name: p.name, benutzer: p.benutzer, grund })).catch(() => {});
+      await this.d.anAdmins?.(() => t('meldungen.postfachoauth.ablago-postfach-anmeldung-abgelaufen', { name: p.name }),
+        () => t('meldungen.postfachoauth.die-anmeldung-oauth-2', { name: p.name, benutzer: p.benutzer, grund })).catch(() => {});
     }
     throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.die-anmeldung-ist-abgelaufen-3', { grund }));
   }

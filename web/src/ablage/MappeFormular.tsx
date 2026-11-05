@@ -377,8 +377,8 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   async function neuAnlegen(k: string) {
     const n = adNeu[k]; const f = typ.felder.find((x) => x.key === k); const ziel = d.typ(n?.typId);
     if (!n || !f || !ziel) return;
-    const liste = Object.entries(n.werte).map(([key, w]) => `${ziel.felder.find((x) => x.key === key)?.label ?? key}: ${w}`).join(' · ');
-    if (!(await rueckfrage({ titel: t('ablage.mappeformular.neue-mappe-anlegen', { name: ziel.name }), text: t('ablage.mappeformular.mit-diesen-angaben-du', { liste }), ja: t('ablage.mappeformular.anlegen') }))) return;
+    const liste = Object.entries(n.werte).map(([key, w]) => `${((f2) => (f2 ? feldLabel(f2) : key))(ziel.felder.find((x) => x.key === key))}: ${w}`).join(' · ');
+    if (!(await rueckfrage({ titel: t('ablage.mappeformular.neue-mappe-anlegen', { name: typName(ziel) }), text: t('ablage.mappeformular.mit-diesen-angaben-du', { liste }), ja: t('ablage.mappeformular.anlegen') }))) return;
     try {
       const m = await api.mappeAnlegen({ typId: ziel.id, werte: n.werte });
       merke(m.id, { titel: m.titel ?? '', typId: m.typId });
@@ -567,7 +567,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
       : !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p>
       : <Notizen mappeId={mappe.id} notizen={details.notizen ?? []} neuLaden={async () => { await neuLaden?.(); }} />;
   } else if (reg.art === 'protokoll') {
-    inhalt = mappe ? <Historie mappeId={mappe.id} stand={mappe.geaendert} /> : <p className="leise">{t('ablage.mappeformular.die-historie-beginnt-mit')}</p>;
+    inhalt = mappe ? <Historie mappeId={mappe.id} stand={mappe.geaendert} typ={typ} /> : <p className="leise">{t('ablage.mappeformular.die-historie-beginnt-mit')}</p>;
   } else if (!mappe) {
     inhalt = <p className="leise">{t('ablage.mappeformular.verknuepfungen-entstehen-sobald')}</p>;
   } else if (!details) {
@@ -1074,13 +1074,13 @@ export function MappenWahl({ id, ziel, mehrfach, wert, eigeneId, bekannt, merke,
   }
   const auswahl = (treffer ?? []).filter((m) => m.id !== eigeneId && !gewaehlt.includes(m.id));
   const vor = vorbelegen && Object.keys(vorbelegen).length ? `?vorbelegen=${encodeURIComponent(JSON.stringify(vorbelegen))}` : '';
-  const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">{t('ablage.mappeformular.anlegen-2', { name: ziel.name })}</Link> : null;
+  const anlegen = !ohneAnlegen && darfErstellen(ziel) ? <Link to={`/ablage/${ziel.id}/neu${vor}`} className="verweis klein">{t('ablage.mappeformular.anlegen-2', { name: typName(ziel) })}</Link> : null;
 
   return (
-    <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={platzhalter ?? t('felder.verweis.suchen', { typ: ziel.name })}
+    <Mehrfachauswahl id={id} name={t('felder.verweis.gewaehlt')} platzhalter={platzhalter ?? t('felder.verweis.suchen', { typ: typName(ziel) })}
       eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen} schliessen={() => setAendern(false)} ohneSuche={!zeigeSuche}
       vorschlaege={treffer === null ? null : auswahl.map((m) => ({ id: m.id, text: titelOder(m.titel) }))}
-      leerText={eingabe ? t('felder.verweis.nichts') : leer ?? t('felder.verweis.leer', { typ: ziel.name })}
+      leerText={eingabe ? t('felder.verweis.nichts') : leer ?? t('felder.verweis.leer', { typ: typName(ziel) })}
       fuss={gesamt > (treffer?.length ?? 0) && <p className="leise klein">{t('felder.verweis.mehr', { zahl: gesamt.toLocaleString(gebietsschema()) })}</p>}
       waehle={(mid) => { const m = auswahl.find((x) => x.id === mid); if (m) waehle(m); }}
       gewaehlt={gewaehlt.map((x) => ({

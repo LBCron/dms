@@ -57,6 +57,8 @@ export interface Sammlung {
 }
 
 export interface Assistentenstand {
+  /** Sprache im ersten Schritt bestätigt (#729). */
+  spracheGewaehlt?: boolean;
   /** Neu einrichten gewählt (sonst Wahl Neu/Sicherung). */
   neu: boolean;
   sammlung: Sammlung;

@@ -1,7 +1,6 @@
 {
   "auskunft.rechte": "Sie haben das Recht auf Berichtigung (Art. 16 DSGVO), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77). Die Daten im Ordner „daten“ sind maschinenlesbar (CSV und JSON) und lassen sich in andere Systeme übernehmen.",
   "auskunft.deckblatt.einleitung": "Ja, wir verarbeiten personenbezogene Daten zu Ihrer Person. Diese Datei enthält eine Kopie dieser Daten und die Angaben nach Art. 15 Abs. 1 DSGVO.",
-  "auskunft.deckblatt.erwaehnungen": "Außerdem sind Sie in {anzahl} genannt (gespeichert ist dort nur der Verweis auf Sie):",
   "auskunft.deckblatt.herkunft.uebrige": "Alle übrigen Daten wurden bei uns im Rahmen unserer Geschäftsbeziehung mit Ihnen erfasst.",
   "auskunft.deckblatt.herkunft.alle": "Die Daten wurden bei uns im Rahmen unserer Geschäftsbeziehung mit Ihnen erfasst.",
   "auskunft.deckblatt.rechte": "6. Ihre Rechte",
@@ -35,5 +34,7 @@
   "abruf.fehler.falsch": "Das hat nicht geklappt: Der Link oder der Abrufcode stimmt nicht, oder der Link gilt nicht mehr. Prüfen Sie den Code (Groß- und Kleinschreibung sind egal). Nach mehreren falschen Eingaben wird der Link gesperrt – wenden Sie sich dann an den Absender der Auskunft.",
   "abruf.fehler.ungueltig": "Dieser Link gilt nicht mehr – er ist abgelaufen, wurde so oft abgerufen wie vorgesehen oder zurückgezogen. Bitte wenden Sie sich an den Absender der Auskunft.",
   "abruf.fehler.zuviele": "Zu viele falsche Eingaben von Ihrem Anschluss. Bitte versuchen Sie es später noch einmal.",
-  "abruf.fehler.ticket": "Dieser Download ist abgelaufen. Geben Sie Ihren Abrufcode bitte noch einmal ein."
+  "abruf.fehler.ticket": "Dieser Download ist abgelaufen. Geben Sie Ihren Abrufcode bitte noch einmal ein.",
+  "auskunft.deckblatt.erwaehnungen_one": "Außerdem sind Sie in {anzahl} weiterem Eintrag genannt (gespeichert ist dort nur der Verweis auf Sie):",
+  "auskunft.deckblatt.erwaehnungen_other": "Außerdem sind Sie in {anzahl} weiteren Einträgen genannt (gespeichert ist dort nur der Verweis auf Sie):"
 }

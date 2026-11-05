@@ -24,7 +24,8 @@ import { PdfVerkleinern } from './PdfVerkleinern';
 import { Schwaerzen } from './Schwaerzen';
 import { kannSchwaerzen } from '../../../shared/src/schwaerzen';
 import { kannStempeln } from '../../../shared/src/stempel';
-import { gebietsschema } from '../../../shared/src/sprache';
+import { gebietsschema, sprache } from '../../../shared/src/sprache';
+import { registerName } from '../../../shared/src/beschriftung';
 
 /** „Verkleinern“ (#393) erst ab dieser Größe anbieten – kleinere PDFs lohnen die Mühe kaum. */
 const VERKLEINERN_AB = 500 * 1024;
@@ -245,7 +246,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
   }
   const fallen = (e: DragEvent) => { e.preventDefault(); setZiehen(false); nimm(e.dataTransfer.files); };
   // Ablegen irgendwo im Fenster (#193): diese Mappe ist dann ein Ziel neben „als neue Post“.
-  useMappenZiel(nurLesen ? null : { name: register.name, nimm });
+  useMappenZiel(nurLesen ? null : { name: registerName(register), nimm });
   const alleAn = waehlbar.length > 0 && auswahl.length === waehlbar.length;
 
   return (
@@ -260,7 +261,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
       <input ref={ersetzFeld} type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void ersetze(f); else setErsetzeId(undefined); }} />
       {versionFehler && <div className="hinweis schlecht"><p>{versionFehler}</p></div>}
       {dokumente.length + neue.length === 0
-        ? <p className="leise">{t('ablage.dokumente.noch-keine-dokumente-in', { name: register.name })}</p>
+        ? <p className="leise">{t('ablage.dokumente.noch-keine-dokumente-in', { name: registerName(register) })}</p>
         : <>
             {dokumente.length > 0 && (
               <div className="dokleiste">
@@ -492,7 +493,7 @@ function DokTeilen({ d }: { d: Dokument }) {
     try {
       if (!f) {
         setLaeuft(true);
-        const r = await fetch(dokumentUrl(d.id, true), { credentials: 'same-origin', headers: { 'x-dms': '1' } });
+        const r = await fetch(dokumentUrl(d.id, true), { credentials: 'same-origin', headers: { 'x-dms': '1', 'x-sprache': sprache() } });
         if (!r.ok) throw new Error(t('ablage.dokumente.das-dokument-liess-sich'));
         f = new File([await r.blob()], d.name, { type: d.mime });
         setDatei(f);

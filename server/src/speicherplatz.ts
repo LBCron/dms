@@ -41,7 +41,7 @@ interface Gemerkt { zustand: SpZustand; seit: string; gewarnt: boolean; ausgeloe
 export interface SpeicherplatzDeps {
   einstellungen: Einstellungen;
   wartung?: Wartung;
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   messer?: Messer;
   jetzt?: () => Date;
   /**

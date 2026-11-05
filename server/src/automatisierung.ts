@@ -22,6 +22,7 @@ import { feiertagAm, istBundesland } from '../../shared/src/feiertage';
 import { wirksameZeit } from './aufgabenmail';
 import { istUuid } from './repo';
 import { datumsformat } from '../../shared/src/region';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Motor der Automatisierungen (#674): Wenn · Und · Dann, ausgeführt unter dem Systemkonto „Automatisierung“ (#673).
@@ -307,7 +308,7 @@ export interface AutomatisierungDeps {
 interface Anlass { id: string; art: string; daten: Record<string, unknown>; kette: number; ausloeser?: KatalogEreignis['ausloeser'] }
 
 const uuidAus = (s: string) => { const h = createHash('sha256').update(s).digest('hex'); return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`; };
-const UHR_FORMAT = () => datumsformat('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const UHR_FORMAT = () => datumsformat(gebietsschema(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 /** Feste Id der beim Update übernommenen Vertretungs-Aufgabe (#712/#678). */
 const UMZUG_VERTRETUNG = uuidAus('umzug|vertretung');

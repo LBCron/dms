@@ -1,4 +1,4 @@
-import { optionText } from '../../../shared/src/beschriftung';
+import { optionText, typName } from '../../../shared/src/beschriftung';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { abfrageAus, alsParameter, chipsVon, eingabeart, istGesetzt, kannLeer, liesSuche, ohneChip, suchfelder, SUCHE_PFAD, zeitraumVon, ZEITRAEUME, type Feldeingabe, type Suchformular, type Zeitraum } from '../../../shared/src/erweitertesuche';
 import { heuteIn, type Bedingungsfeld } from '../../../shared/src/sichten';
@@ -149,13 +149,13 @@ function TypWahl({ lesbar, gewaehlt, setze }: { lesbar: Mappentyp[]; gewaehlt: M
   const [eingabe, setEingabe] = useState('');
   const [offen, setOffen] = useState(false);
   const q = eingabe.trim().toLowerCase();
-  const auswahl = lesbar.filter((x) => !gewaehlt.some((y) => y.id === x.id) && (!q || x.name.toLowerCase().includes(q)));
+  const auswahl = lesbar.filter((x) => !gewaehlt.some((y) => y.id === x.id) && (!q || typName(x).toLowerCase().includes(q)));
   const waehle = (id: string) => { const x = auswahl.find((y) => y.id === id); if (!x) return; setze([...gewaehlt, x]); setEingabe(''); setOffen(false); };
   return (
     <Mehrfachauswahl id="such-typen" name={t('suche.typen')} platzhalter={t('suche.typen.suchen')} eingabeLabel={t('suche.typen.suchen')}
       eingabe={eingabe} setEingabe={setEingabe} offen={offen} setOffen={setOffen}
-      vorschlaege={auswahl.map((x) => ({ id: x.id, text: x.name }))} leerText={t('suche.typen.keine')} waehle={waehle}
-      gewaehlt={gewaehlt.map((x) => ({ id: x.id, inhalt: x.name, entfernenText: t('suche.typen.entfernen', { name: x.name }) }))}
+      vorschlaege={auswahl.map((x) => ({ id: x.id, text: typName(x) }))} leerText={t('suche.typen.keine')} waehle={waehle}
+      gewaehlt={gewaehlt.map((x) => ({ id: x.id, inhalt: typName(x), entfernenText: t('suche.typen.entfernen', { name: typName(x) }) }))}
       entferne={(id) => setze(gewaehlt.filter((y) => y.id !== id))} />
   );
 }

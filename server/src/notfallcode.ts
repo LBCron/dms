@@ -13,7 +13,7 @@ import type { Mailer } from './mail';
 import { mailtexte } from './mail';
 import { protokoll } from './protokoll';
 import type { ProxyVertrauen } from './proxy';
-import { t } from './sprache';
+import { mitSpracheVon, t } from './sprache';
 import { gebietsschema } from '../../shared/src/sprache';
 
 /**
@@ -195,8 +195,7 @@ export class Notfallcode {
     // Über alle Prozesse gezählt (#744), festes Fenster von einer Stunde; die Meldung höchstens einmal je Stunde.
     const { anzahl } = await this.zustand.zaehle(FEHLVERSUCHE, 'alle', STUNDE);
     if (anzahl >= FEHLVERSUCHE_MELDEN && (await this.zustand.belege(GEMELDET, 'alle', STUNDE))) {
-      const m = mailtexte.notfallFehlversuche(anzahl, kuerzeIp(a.ip));
-      await this.anVerwaltende(m).catch((e) => log.warn('Meldung zu Fehlversuchen am Notfallzugang nicht verschickt', { fehler: (e as Error).message }));
+      await this.anVerwaltende(() => mailtexte.notfallFehlversuche(anzahl, kuerzeIp(a.ip))).catch((e) => log.warn('Meldung zu Fehlversuchen am Notfallzugang nicht verschickt', { fehler: (e as Error).message }));
       log.warn('Notfallzugang: viele Fehlversuche gemeldet', { anzahl });
     }
     throw new Fachfehler(403, t('konten.notfall.fehler.falsch'), { warten: NOTFALL_SPERRE_SEKUNDEN });
@@ -242,22 +241,24 @@ export class Notfallcode {
 
   private async meldeBenutzung(konto: Benutzer, am: Date, ip: string) {
     const api = (await this.d.apiSchluessel?.(konto.id).catch(() => 0)) ?? 0;
-    const m = mailtexte.notfallBenutzt(konto.name || konto.email, konto.email, datumText(am), kuerzeIp(ip), api);
+    // Je Empfänger in seiner Sprache (#729).
+    const m = (b: Benutzer) => mitSpracheVon(b, () => mailtexte.notfallBenutzt(konto.name || konto.email, konto.email, datumText(am), kuerzeIp(ip), api));
     const mailer = this.d.mailer();
     if (!mailer) { log.warn('Notfallzugang: kein E-Mail-Versand eingerichtet – niemand wurde benachrichtigt', { konto: konto.email }); return; }
-    const an = new Set<string>();
-    if (konto.email && !konto.email.endsWith('.invalid')) an.add(konto.email.toLowerCase());
-    for (const b of await this.d.konten.listeBenutzer()) if (istPerson(b) && b.aktiv && darfVerwalten(b) && b.email && !b.email.endsWith('.invalid')) an.add(b.email.toLowerCase());
-    for (const x of an) {
-      try { await mailer.sende(x, m.betreff, m.text); } catch (err) { log.warn('Mail zum Notfallzugang nicht verschickt', { an: x, fehler: (err as Error).message }); }
+    const an = new Map<string, Benutzer>();
+    if (konto.email && !konto.email.endsWith('.invalid')) an.set(konto.email.toLowerCase(), konto);
+    for (const b of await this.d.konten.listeBenutzer()) if (istPerson(b) && b.aktiv && darfVerwalten(b) && b.email && !b.email.endsWith('.invalid') && !an.has(b.email.toLowerCase())) an.set(b.email.toLowerCase(), b);
+    for (const [x, b] of an) {
+      const text = m(b);
+      try { await mailer.sende(x, text.betreff, text.text); } catch (err) { log.warn('Mail zum Notfallzugang nicht verschickt', { an: x, fehler: (err as Error).message }); }
     }
   }
 
-  private async anVerwaltende(m: { betreff: string; text: string }) {
+  private async anVerwaltende(m: (b: Benutzer) => { betreff: string; text: string }) {
     const mailer = this.d.mailer();
     if (!mailer) return;
     for (const b of await this.d.konten.listeBenutzer()) {
-      if (istPerson(b) && b.aktiv && darfVerwalten(b) && b.email && !b.email.endsWith('.invalid')) await mailer.sende(b.email, m.betreff, m.text);
+      if (istPerson(b) && b.aktiv && darfVerwalten(b) && b.email && !b.email.endsWith('.invalid')) { const x = mitSpracheVon(b, () => m(b)); await mailer.sende(b.email, x.betreff, x.text); }
     }
   }
 

@@ -1,0 +1,10 @@
+{
+  "notfall.oeffne-diesen-link-bis": "Open this link in your browser before {bis} and set your own password:",
+  "notfall.der-link-gilt-nur": "The link works only once. Ablago deletes this file by itself after 15 minutes.",
+  "notfall.benenne-den-notfall-admin": "Afterwards, rename the emergency admin in the Workbench or deactivate it.",
+  "notfall.ablago-notfallzugang-angelegt": "Ablago: emergency access created",
+  "notfall.auf-dem-nas-wurde": "A RESCUE file was created on the NAS. Ablago then created “{name}” with “Full administration”; the sign-in link is only in this file and is valid until {bis}.\n\n",
+  "notfall.warst-du-das-nicht": "{wert}If this wasn’t you, deactivate the user right away in the Workbench under “Users” and check who has access to the NAS.",
+  "rescue.fuer": "{kennung} for “{name}”",
+  "rescue.erstellt": "Created: {zeit}"
+}

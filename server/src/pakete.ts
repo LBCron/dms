@@ -454,6 +454,8 @@ export interface Vorschau {
   typen: TypPlan[]; sichten: SichtPlan[]; beispiele: number;
   /** Was die Installation verhindert. */
   probleme: string[];
+  /** Feste Kennungen zu `probleme` für die Oberfläche (#729: nicht am Text erkennen), z. B. „schon-installiert“. */
+  fehlercodes: string[];
   /** Hinweise, die nicht verhindern (z. B. Code läuft noch nicht). */
   hinweise: string[];
   /** Mitgelieferte Automatisierungen (#712); neu = kommt mit dieser Installation bzw. diesem Update dazu (nur die stehen zur Wahl). */
@@ -1126,13 +1128,14 @@ export class Paketverwaltung {
     const typen = await this.d.listeTypen();
     const sichten = await this.d.listeSichten();
     const probleme: string[] = [];
+    const fehlercodes: string[] = [];
     const dmsVersion = this.o.version();
     const dmsOk = dmsPasst(dmsVersion, m.dms);
     if (!dmsOk) probleme.push(t('meldungen.pakete.das-paket-braucht-ablago', { dms: m.dms, dmsVersion }));
     const hinweise: string[] = [];
     // Code läuft erst mit dem Paket-Läufer; Einstellungen lassen sich schon pflegen (#197).
     if (m.code !== undefined && !paket.code) hinweise.push(t('meldungen.pakete.das-paket-enthaelt-code'));
-    if (ich && vergleicheVersion(m.version, ich.version) <= 0) probleme.push(t('meldungen.pakete.version-ist-schon-installiert', { version: ich.version }));
+    if (ich && vergleicheVersion(m.version, ich.version) <= 0) { probleme.push(t('meldungen.pakete.version-ist-schon-installiert', { version: ich.version })); fehlercodes.push('schon-installiert'); }
     // Verweise auf Mappentypen des DMS (#310), z. B. dms:ablageort.
     const dmsTypen = await this.dmsTypen();
     const genutzt = [...new Set(typverweise(paket.typen, paket.sichten).filter(istDmsVerweis).map((vw) => vw.slice(DMS_PRAEFIX.length)))];
@@ -1221,7 +1224,7 @@ export class Paketverwaltung {
       dmsVersion, dmsOk, installiert: ich?.version ?? null, update: !!ich,
       herkunft: ich?.herkunft ?? null,
       pruefung: null,
-      abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, probleme, hinweise,
+      abhaengigkeiten, typen: typPlaene, sichten: sichtPlaene, beispiele: paket.beispiele.length, probleme, fehlercodes, hinweise,
       automatisierungen: paket.automatisierungen.map((a) => ({ schluessel: a.schluessel, name: a.name, beschreibung: a.beschreibung, neu: !ich?.automatisierungen?.includes(a.schluessel) })),
       einstellungen: paket.einstellungen || ich?.einstellungen ? einstellungsAenderung(ich?.einstellungen ?? null, paket.einstellungen) : null,
       laeufer: paket.code ? { rechte: rechtePunkte(paket.code.info, (vw) => this.typName(vw, paket, installierte, typen)), bestaetigen: !ich || !gleicheRechte(ich.laeufer, paket.code.info) } : null,

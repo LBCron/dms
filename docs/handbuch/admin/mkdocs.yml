@@ -115,6 +115,7 @@ nav:
       - Einstellungen:
           - Benachrichtigungen und Aufgaben: aufgaben.md
           - Region: region.md
+          - Sprachen: sprachen.md
           - Anmeldeschutz: anmeldeschutz.md
           - Designs: designs.md
       - Wartung und Fehlersuche:

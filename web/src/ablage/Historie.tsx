@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { t, tn } from '../sprache';
-import { AUFGABENARTEN, HISTORIENARTEN, type Aufgabenart, type Feldaenderung, type Historieneintrag } from '../../../shared/src/model';
+import { AUFGABENARTEN, HISTORIENARTEN, type Aufgabenart, type Feldaenderung, type Historieneintrag, type Mappentyp } from '../../../shared/src/model';
+import { feldLabel } from '../../../shared/src/beschriftung';
 import { api } from '../api';
 import { useDaten } from '../daten';
 import { Link } from '../ort';
@@ -13,9 +14,15 @@ const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { da
 const groesse = (b: number) => (b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
 
-function kurz(e: Historieneintrag): string {
+/**
+ * Bezeichnung eines geänderten Felds in der Sprache des Lesers (#729): aus dem Mappentyp, solange es das Feld gibt;
+ * sonst die beim Ändern gespeicherte.
+ */
+const beschrifte = (a: Feldaenderung, typ?: Pick<Mappentyp, 'felder'>) => { const f = typ?.felder.find((x) => x.key === a.feld); return f && f.label === a.label ? feldLabel(f) : a.label; };
+
+function kurz(e: Historieneintrag, typ?: Pick<Mappentyp, 'felder'>): string {
   const d = e.daten;
-  if (d.aenderungen?.length) return d.aenderungen.map((a) => a.label).join(', ');
+  if (d.aenderungen?.length) return d.aenderungen.map((a) => beschrifte(a, typ)).join(', ');
   if (e.art === 'post_geteilt' && typeof d.text === 'string') return d.text;
   // #820: im Verwaltungsmodus geöffnet, heruntergeladen … – nie ausgeblendet.
   if (e.art === 'verwaltungsmodus') return t.frei(`mappen.historie.verwaltungsmodus.${typeof d.was === 'string' ? d.was : 'angesehen'}`);
@@ -26,7 +33,7 @@ function kurz(e: Historieneintrag): string {
 }
 
 /** Einzelheiten eines Eintrags und ein kurzer Hinweis, wie viel dahintersteckt; null = nichts aufzuklappen. */
-function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinweis: string; inhalt: ReactNode } | null {
+function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: Pick<Mappentyp, 'felder'>): { hinweis: string; inhalt: ReactNode } | null {
   const d = e.daten;
   if (d.aenderungen?.length) {
     const n = d.aenderungen.length;
@@ -39,7 +46,7 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinw
         <table className="aenderungen">
           <thead><tr><th>{t('ablage.historie.feld')}</th><th>{t('ablage.historie.vorher')}</th><th>{t('ablage.historie.nachher')}</th></tr></thead>
           <tbody>{d.aenderungen.map((a: Feldaenderung) => (
-            <tr key={a.feld}><td>{a.label}</td>{a.geheim ? <td colSpan={2} className="leise">{t('ablage.historie.geaendert-passwort-ohne-werte')}</td> : <><td className={a.alt ? '' : 'leise'}>{a.alt || '–'}</td><td className={a.neu ? '' : 'leise'}>{a.neu || '–'}</td></>}</tr>
+            <tr key={a.feld}><td>{beschrifte(a, typ)}</td>{a.geheim ? <td colSpan={2} className="leise">{t('ablage.historie.geaendert-passwort-ohne-werte')}</td> : <><td className={a.alt ? '' : 'leise'}>{a.alt || '–'}</td><td className={a.neu ? '' : 'leise'}>{a.neu || '–'}</td></>}</tr>
           ))}</tbody>
         </table>
         </>
@@ -226,7 +233,7 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinw
   }
 }
 
-export function Historie({ mappeId, stand }: { mappeId: string; stand?: string }) {
+export function Historie({ mappeId, stand, typ }: { mappeId: string; stand?: string; typ?: Pick<Mappentyp, 'felder'> }) {
   const d = useDaten();
   const [liste, setListe] = useState<Historieneintrag[] | null>(null);
   const [fehler, setFehler] = useState<string>();
@@ -238,11 +245,11 @@ export function Historie({ mappeId, stand }: { mappeId: string; stand?: string }
   if (!liste) return <p className="leise">{t('ablage.historie.lade')}</p>;
   if (!liste.length) return <p className="leise">{t('ablage.historie.noch-keine-eintraege-die')}</p>;
   const eintraege: Listeneintrag[] = liste.map((e) => {
-    const x = einzelheiten(e, emailTyp);
+    const x = einzelheiten(e, emailTyp, typ);
     return {
       id: e.id, wann: zeit(e.zeit),
       wer: <Person id={e.benutzerId} ersatz={typeof e.daten.system === 'string' ? e.daten.system : undefined} />,
-      was: <><strong>{HISTORIENARTEN[e.art] ?? e.art}</strong>{kurz(e) ? `: ${kurz(e)}` : ''}
+      was: <><strong>{HISTORIENARTEN[e.art] ?? e.art}</strong>{kurz(e, typ) ? `: ${kurz(e, typ)}` : ''}
         {e.art === 'email' && typeof e.daten.email === 'string' && emailTyp && <> · <Link to={`/ablage/${emailTyp}/${e.daten.email}`} className="verweis">{t('ablage.historie.oeffnen')}</Link></>}</>,
       ...(x ? { mehr: x.hinweis, inhalt: x.inhalt, label: t('ablage.historie.aufklappbar', { wert: HISTORIENARTEN[e.art] ?? e.art, hinweis: x.hinweis }) } : {}),
     };

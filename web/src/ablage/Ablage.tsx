@@ -92,7 +92,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   if (dritt === 'neu' && !typ) {
     rechts = <div className="leer"><p>{t('ablage.ablage.diese-ansicht-zeigt-mehrere')}</p></div>;
   } else if (dritt === 'neu' && typ && verwaltet?.rechte?.C === false) {
-    rechts = <div className="leer"><p>{t('ablage.ablage.in-der-ansicht-lassen', { name: verwaltet.name })}</p></div>;
+    rechts = <div className="leer"><p>{t('ablage.ablage.in-der-ansicht-lassen', { name: sichtName(verwaltet) })}</p></div>;
   } else if (dritt === 'neu' && typ && !darfErstellen(typ)) {
     rechts = <div className="leer"><p>{t('ablage.ablage.von-lassen-sich-in', { name: typ.name, wert: typ.system === 'benutzer' ? t('ablage.ablage.benutzer-legt-in-der') : '' })}</p></div>;
   } else if (dritt === 'neu' && typ) {
@@ -116,10 +116,10 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
     { pfad: '/ablage/suche', name: t('ablage.ablage.erweiterte-suche'), symbol: 'suche', titel: t('ablage.ablage.mappentypen-waehlen-in-feldern'), an: istSuche },
     ...(mitStart ? [{ pfad: '/ablage/start', name: t('ablage.ablage.start'), symbol: 'haus' as const, an: sicht === 'start' }] : []),
     { pfad: '/ablage/eingang', name: t('ablage.ablage.zu-erledigen'), symbol: 'erledigen', zahl: d.zaehler.eingang, warte, hervor: true, an: sicht === 'eingang' },
-    ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: neuePost.name, symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
+    ...(neuePost ? [{ pfad: `/ablage/${neuePost.id}`, name: sichtName(neuePost), symbol: 'posteingang' as const, titel: neuePost.beschreibung || undefined, zahl: d.zaehler.sichten?.[neuePost.id], warte, hervor: true, an: sicht === neuePost.id }] : []),
     // Favoriten (#725): die mitgelieferte Ansicht oben wie „Neue Post“; die feste Liste nur, wenn der Administrator sie gelöscht hat.
     favSicht
-      ? { pfad: `/ablage/${favSicht.id}`, name: favSicht.name, symbol: 'stern', titel: favSicht.beschreibung || undefined, zahl: d.zaehler.sichten?.[favSicht.id] ?? d.zaehler.favoriten, warte, an: sicht === favSicht.id }
+      ? { pfad: `/ablage/${favSicht.id}`, name: sichtName(favSicht), symbol: 'stern', titel: favSicht.beschreibung || undefined, zahl: d.zaehler.sichten?.[favSicht.id] ?? d.zaehler.favoriten, warte, an: sicht === favSicht.id }
       : { pfad: '/ablage/favoriten', name: t('ablage.ablage.favoriten'), symbol: 'stern', zahl: d.zaehler.favoriten, warte, an: sicht === 'favoriten' },
     // Papierkorb (#43): sichtbar, solange er an ist oder noch etwas darin liegt.
     ...(!!d.zaehler.papierkorbTage || !!d.zaehler.papierkorb ? [{ pfad: '/ablage/papierkorb', name: t('ablage.ablage.papierkorb'), symbol: 'geloescht' as const, zahl: d.zaehler.papierkorb, warte, an: sicht === 'papierkorb' }] : []),
@@ -540,7 +540,7 @@ function kompakt(liste: string[], einTyp: boolean, typ: Mappentyp | undefined, m
     if (absenderFehlt(typ, m) && liste.includes('absender')) rest.push(t('ablage.ablage.absender-fehlt'));
     return { titel: a || titelOder(m.titel), unter: rest.filter(Boolean).join(' · ') };
   }
-  return { titel: titelOder(m.titel), unter: einTyp ? (typ ? unterzeile(typ, m, bezuege) : '') : typ?.name ?? '' };
+  return { titel: titelOder(m.titel), unter: einTyp ? (typ ? unterzeile(typ, m, bezuege) : '') : typ ? typName(typ) : '' };
 }
 
 function Tabelle(p: {

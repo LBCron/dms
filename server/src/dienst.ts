@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
-  REGISTERARTEN, REGISTERNAMEN, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
+  REGISTERARTEN, REGISTERNAMEN, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemBeschriftung, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
@@ -25,7 +25,8 @@ import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
 import { istUuid, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
-import { ausgangAus, bereinigeBeschriftungen, optionsGruppen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
+import { ausgangAus, bereinigeBeschriftungen, ergaenzeBeschriftungen, optionsGruppen, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
+import { inSprache } from '../../shared/src/sprache';
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
 import {
@@ -236,6 +237,18 @@ const NAMENS_TEILE = ['name'] as const satisfies ReadonlyArray<keyof NamensTeile
 const TYP_TEILE = ['name', 'beschreibung'] as const satisfies ReadonlyArray<keyof TypTeile>;
 /** Beschriftungen oder nichts – leere Angaben werden nicht gespeichert. */
 const mitBeschriftungen = <T extends object>(b: T | undefined): { beschriftungen?: T } => (b ? { beschriftungen: b } : {});
+/**
+ * Standard-Beschriftungen eines Systemfelds ergänzen (#729): Was der Administrator schon beschriftet hat, bleibt; Bezeichnung
+ * und Hilfetext anderer Sprachen nur, solange der deutsche Text der Standard ist.
+ */
+function mitSystemBeschriftung(f: Feld, s: Feld): { beschriftungen?: Beschriftungen<FeldTeile> } {
+  const std = structuredClone(s.beschriftungen ?? {}) as Record<string, FeldTeile>;
+  for (const e of Object.values(std)) {
+    if (f.label && f.label !== s.label) delete e.label;
+    if (f.hilfe && f.hilfe !== s.hilfe) delete e.hilfe;
+  }
+  return mitBeschriftungen(ergaenzeBeschriftungen(f.beschriftungen, std));
+}
 
 export function bereinigeFeld(e: unknown): Feld {
   const f = (e ?? {}) as Record<string, unknown>;
@@ -3151,7 +3164,7 @@ export class Dienst {
     const felder = d.felder.map((f) => {
       const s = soll.find((x) => x.key === f.key);
       // Beschriftungen je Sprache (#728) darf der Administrator wie Bezeichnung und Hilfetext setzen.
-      return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe, ...mitBeschriftungen(f.beschriftungen) } : f;
+      return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe, ...mitSystemBeschriftung(f, s) } : f;
     });
     return { ...d, felder, ...(system === 'benutzer' ? { erstellenErlaubt: false, loeschenErlaubt: false } : system === 'post' ? { erstellenErlaubt: false } : {}) };
   }
@@ -5405,7 +5418,37 @@ export class Dienst {
     }
     await this.loeseFruehereAdminrolle(benutzer);
     await this.sichereAblageort();
+    rolle = await this.beschrifteSystemtyp(rolle, rolle.id, benutzer.id);
+    benutzer = await this.beschrifteSystemtyp(benutzer, rolle.id, benutzer.id);
+    post = await this.beschrifteSystemtyp(post, rolle.id, benutzer.id);
     return { benutzer, rolle, post, systemrollen, kontorollen };
+  }
+
+  /**
+   * Beschriftungen der Systemmappentypen (#729): Name, Beschreibung, Register und Systemfelder auf Englisch (und in
+   * installierten Sprachen) – bei jedem Start ergänzt, nie überschrieben. Eigene Namen des Administrators bleiben ohne
+   * fremde Beschriftung, damit dort nicht plötzlich der Standardname erscheint.
+   */
+  private async beschrifteSystemtyp(typ: Mappentyp, rolleId: string, benutzerId: string): Promise<Mappentyp> {
+    const system = typ.system;
+    if (!system) return typ;
+    const soll = systemfelder(system, rolleId, benutzerId);
+    const felder = typ.felder.map((f) => { const x = f.system ? soll.find((y) => y.key === f.key) : undefined; return x ? { ...f, ...mitSystemBeschriftung(f, x) } : f; });
+    const BESCHREIBUNG: Record<string, string> = { rolle: 'meldungen.dienst.rollen-die-benutzer-haben', benutzer: 'meldungen.dienst.die-benutzer-dieser-installation', post: 'meldungen.dienst.alles-was-in-ablago' };
+    const tb = systemBeschriftung<TypTeile>({
+      ...(typ.name === SYSTEMTYPEN[system] ? { name: `gemeinsam.model.systemtyp.${system}` } : {}),
+      ...(typ.beschreibung === inSprache('de', () => t.frei(BESCHREIBUNG[system])) ? { beschreibung: BESCHREIBUNG[system] } : {}),
+    });
+    const REG: Record<string, keyof typeof REGISTERNAMEN> = { allgemein: 'allgemein', dokumente: 'dokumente', verknuepfungen: 'verknuepfungen', benutzer: 'benutzer', protokoll: 'historie' };
+    const register = typ.register.map((r) => {
+      const k = REG[r.key];
+      const b = k && r.name === REGISTERNAMEN[k] ? systemBeschriftung<NamensTeile>({ name: `gemeinsam.model.register.${k}` }) : undefined;
+      return b ? { ...r, ...mitBeschriftungen(ergaenzeBeschriftungen(r.beschriftungen, b)) } : r;
+    });
+    const beschriftungen = ergaenzeBeschriftungen(typ.beschriftungen, tb);
+    const neu = { ...typ, felder, register, ...mitBeschriftungen(beschriftungen) };
+    if (JSON.stringify(neu) === JSON.stringify(typ)) return typ;
+    return this.repo.aendereTyp(typ.id, { ...neu, trefferlisten: trefferlistenVon(neu), trefferliste: undefined });
   }
 
   /**
@@ -5473,7 +5516,7 @@ export class Dienst {
       if (!s || !f.system) return f;
       const label = alteNamen[f.key]?.includes(f.label) ? s.label : f.label || s.label;
       const hilfe = !f.hilfe || alteHilfen.includes(f.hilfe) ? s.hilfe : f.hilfe;
-      const neu: Feld = { ...s, label, ...(hilfe ? { hilfe } : {}), ...mitBeschriftungen(f.beschriftungen) };
+      const neu: Feld = { ...s, label, ...(hilfe ? { hilfe } : {}), ...mitSystemBeschriftung({ ...f, label, hilfe }, s) };
       if (!hilfe) delete neu.hilfe;
       if (JSON.stringify(neu) !== JSON.stringify(f)) geaendert = true;
       return neu;

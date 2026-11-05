@@ -31,14 +31,64 @@ export type Werte = Readonly<Record<string, string | number>>;
 
 /** Ausgangssprache. Sie ist immer vollständig; andere Sprachen fallen auf sie zurück. */
 export const AUSGANGSSPRACHE = 'de';
-let aktuell = AUSGANGSSPRACHE;
-/** Sprache der Oberfläche bzw. des Servers. Bis zur Sprachwahl (#357, Stufe 3) immer Deutsch. */
-export const setzeSprache = (sprache: string) => { aktuell = sprache; };
-export const sprache = () => aktuell;
+/**
+ * Rückfallsprache (#729): Fehlt ein Text in einer weiteren Sprache (z. B. aus einem Sprachpaket), erscheint er auf
+ * Englisch, sonst auf Deutsch. Ablago zeigt nie eine leere Stelle.
+ */
+export const RUECKFALLSPRACHE = 'en';
+/** Fest eingebaute Sprachen (#729); weitere kommen als Sprachpaket (#731). */
+export const EINGEBAUTE_SPRACHEN = [AUSGANGSSPRACHE, RUECKFALLSPRACHE] as const;
 
-/** Gebietsschema der Sprache für Datum, Zahlen und Beträge (#727) – statt `'de-DE'` fest im Code. */
+let aktuell = AUSGANGSSPRACHE;
+/** Vorrang für einen kurzen, synchronen Abschnitt (`inSprache`), z. B. Beschriftungen in allen Sprachen bilden. */
+let vorrang: string | null = null;
+/** Woher die Sprache kommt: in der Oberfläche fest gesetzt, auf dem Server je Anfrage (siehe `setzeSprachquelle`). */
+let quelle: () => string = () => aktuell;
+/** Sprache der Oberfläche bzw. die Vorgabe des Servers (Sprache der Installation, #729). */
+export const setzeSprache = (sprache: string) => { aktuell = sprache; };
+/**
+ * Der Server liest die Sprache je Anfrage (#729): die der angemeldeten Person, sonst die der Installation. Die Quelle
+ * liefert die Sprache der laufenden Anfrage oder `undefined`, dann gilt `setzeSprache`.
+ */
+export const setzeSprachquelle = (f: () => string | undefined) => { quelle = () => f() ?? aktuell; };
+export const sprache = () => vorrang ?? quelle();
+/** Die gesetzte Sprache ohne Anfrage: in der Oberfläche die gewählte, auf dem Server die der Installation. */
+export const grundsprache = () => aktuell;
+/** Führt `f` in einer bestimmten Sprache aus (nur synchron). */
+export function inSprache<T>(spr: string, f: () => T): T {
+  const alt = vorrang;
+  vorrang = spr;
+  try { return f(); } finally { vorrang = alt; }
+}
+
+/** Gebietsschema der Sprache für Datum, Zahlen und Beträge (#727, #729) – statt `'de-DE'` fest im Code. */
 const GEBIET: Readonly<Record<string, string>> = { de: 'de-DE', en: 'en-GB' };
-export const gebietsschema = () => GEBIET[aktuell] ?? aktuell;
+export const gebietsschemaVon = (spr: string) => GEBIET[spr] ?? spr;
+export const gebietsschema = () => gebietsschemaVon(sprache());
+
+/**
+ * Weitere Sprachen (#729): Sprache → Bereich → Texte. Eingebaut ist Englisch; Sprachpakete (#731) kommen dazu.
+ * Jeder Übersetzer sieht alle hier eingetragenen Sprachen, auch wenn er vorher gebildet wurde.
+ */
+const SPRACHEN: Record<string, Record<string, Sprachdatei>> = {};
+/** Angaben zu einer Sprache: maschinell übersetzt (dann der Hinweis in Mein Konto, #729/#731). */
+export interface Sprachangaben { maschinell?: boolean }
+const ANGABEN: Record<string, Sprachangaben> = {};
+export function registriereSprache(spr: string, bereiche: Readonly<Record<string, Sprachdatei>>, angaben: Sprachangaben = {}) {
+  SPRACHEN[spr] = { ...SPRACHEN[spr], ...bereiche };
+  ANGABEN[spr] = { ...ANGABEN[spr], ...angaben };
+}
+export const sprachangaben = (spr: string): Sprachangaben => ANGABEN[spr] ?? {};
+/** Ein Text genau in dieser Sprache, ohne Rückfall – z. B. für Beschriftungen, die gespeichert werden. */
+export function textNur(spr: string, voll: string, werte: Werte = {}): string | undefined {
+  const punkt = voll.indexOf('.');
+  const v = SPRACHEN[spr]?.[voll.slice(0, punkt)]?.[voll.slice(punkt + 1)];
+  return typeof v === 'string' && v.trim() ? fuelle(v, werte) : undefined;
+}
+/** Sprachen mit eingetragenen Texten (ohne die Ausgangssprache). */
+export const registrierteSprachen = () => Object.keys(SPRACHEN);
+/** Reihenfolge beim Suchen eines Textes: gewählte Sprache, Englisch, Deutsch. */
+export const sprachfolge = (spr: string): string[] => [...new Set([spr, RUECKFALLSPRACHE, AUSGANGSSPRACHE])];
 
 /** Platzhalter eines Textes, sortiert und ohne Doppelte – für die Prüfung zwischen Sprachen. */
 export function platzhalter(text: string): string[] {
@@ -67,6 +117,11 @@ function suche(datei: Sprachdatei | undefined, schluessel: string, spr: string, 
   }
   return Object.hasOwn(datei, schluessel) ? datei[schluessel] : undefined;
 }
+/** Wie `suche`, aber leere Texte zählen als fehlend (#729: nie eine leere Stelle). */
+function sucheText(datei: Sprachdatei | undefined, schluessel: string, spr: string, anzahl: unknown): string | undefined {
+  const v = suche(datei, schluessel, spr, anzahl);
+  return typeof v === 'string' && v.trim() ? v : undefined;
+}
 
 export interface Uebersetzer<B extends Bereiche> {
   /** Text zum Schlüssel; `werte` füllt die Platzhalter, `werte.anzahl` wählt die Mehrzahlform. */
@@ -81,17 +136,21 @@ export interface Uebersetzer<B extends Bereiche> {
 }
 
 /**
- * Übersetzer für die übergebenen Bereiche der Ausgangssprache. `weitere` enthält andere Sprachen
- * (auch unvollständig); was dort fehlt, kommt aus der Ausgangssprache. Fehlt ein Schlüssel ganz,
- * erscheint der Schlüssel selbst – die Typprüfung und die Prüfung in der CI verhindern das.
+ * Übersetzer für die übergebenen Bereiche der Ausgangssprache. `weitere` enthält andere Sprachen (auch unvollständig),
+ * dazu kommen die mit `registriereSprache` eingetragenen. Was in der gewählten Sprache fehlt, kommt aus Englisch, sonst
+ * aus der Ausgangssprache (#729). Fehlt ein Schlüssel ganz, erscheint der Schlüssel selbst – die Typprüfung und die
+ * Prüfung in der CI verhindern das.
  */
 export function uebersetzer<B extends Bereiche>(ausgang: B, weitere: Readonly<Record<string, Partial<Record<keyof B, Sprachdatei>>>> = {}): Uebersetzer<B> {
   const finde = (voll: string, werte: Werte) => {
     const punkt = voll.indexOf('.');
     const bereich = voll.slice(0, punkt), schluessel = voll.slice(punkt + 1);
-    const spr = aktuell;
-    return suche(weitere[spr]?.[bereich as keyof B], schluessel, spr, werte.anzahl)
-      ?? suche((ausgang as Bereiche)[bereich], schluessel, AUSGANGSSPRACHE, werte.anzahl);
+    for (const spr of sprachfolge(sprache())) {
+      const datei = spr === AUSGANGSSPRACHE ? (ausgang as Bereiche)[bereich] : weitere[spr]?.[bereich as keyof B] ?? SPRACHEN[spr]?.[bereich];
+      const text = sucheText(datei, schluessel, spr, werte.anzahl);
+      if (text !== undefined) return text;
+    }
+    return undefined;
   };
   const frei = (voll: string, werte: Werte = {}) => {
     const text = finde(voll, werte);

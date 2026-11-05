@@ -12,7 +12,9 @@ import { Fachfehler } from './fehler';
 import type { KontoRepo, Schutzpruefung, SitzungIntern, SitzungsInfo, Zweck } from './konto-repo';
 import type { Benutzerspiegel } from './dienst';
 import { mailtexte, type Mailer } from './mail';
-import { t } from './sprache';
+import { mitSpracheVon, t } from './sprache';
+import { inSprache } from '../../shared/src/sprache';
+import { erlaubteSprachen } from '../../shared/src/beschriftung';
 import { hashePasswort, hasheSchluessel, neuerSchluessel, pruefePasswort } from './passwort';
 import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { zeitzone } from '../../shared/src/region';
@@ -563,8 +565,14 @@ export class Konten {
     try { await this.mailer.sende(an, m.betreff, m.text); } catch (e) { log(`Hinweis-Mail an ${an} fehlgeschlagen: ${(e as Error).message}`); }
   }
 
-  async aendereProfil(ich: Benutzer, e: { name?: unknown; entwicklermodus?: unknown }) {
-    const d: { name?: string; entwicklermodus?: boolean } = {};
+  async aendereProfil(ich: Benutzer, e: { name?: unknown; entwicklermodus?: unknown; sprache?: unknown }) {
+    const d: { name?: string; entwicklermodus?: boolean; sprache?: string | null } = {};
+    // Sprache (#729): nur eine erlaubte; leer = wie die Installation.
+    if (e.sprache !== undefined) {
+      if (e.sprache === null || e.sprache === '') d.sprache = null;
+      else if (typeof e.sprache === 'string' && erlaubteSprachen().includes(e.sprache)) d.sprache = e.sprache;
+      else throw new Fachfehler(422, t('meldungen.konten.sprache-nicht-erlaubt'));
+    }
     if (e.name !== undefined) {
       const name = text(e.name);
       if (!name) throw new Fachfehler(422, t('meldungen.konten.bitte-einen-namen-angeben'));
@@ -731,10 +739,14 @@ export class Konten {
     const vorher = b.verwaltung ?? [];
     const entzogen = vorher.some((x) => !neu.includes(x)) && !neu.includes(GESAMT);
     if (entzogen) await this.repo.vergissVerwaltungVon(id);
-    const daten = { person: b.email, vorher: verwaltungText(vorher), nachher: verwaltungText(neu), von: ich.email, imVerwaltungsmodus: ich.rolle === 'admin' };
+    // Protokoll deutsch, die Mail in der Sprache der Person, die sie bekommt (#729).
+    const daten = inSprache('de', () => ({ person: b.email, vorher: verwaltungText(vorher), nachher: verwaltungText(neu), von: ich.email, imVerwaltungsmodus: ich.rolle === 'admin' }));
     log.warn(!neu.length ? 'Verwaltungsrecht entzogen' : !vorher.length ? 'Verwaltungsrecht vergeben' : 'Verwaltungsrecht geändert', daten);
-    const m = mailtexte.verwaltungsrecht(b.name || b.email, daten.vorher, daten.nachher, ich.name || ich.email);
-    for (const x of await this.repo.listeBenutzer()) if (zaehltAlsGesamt(x) && !x.email.endsWith('.invalid')) await this.benachrichtige(x.email, m, mailLog);
+    for (const x of await this.repo.listeBenutzer()) {
+      if (!zaehltAlsGesamt(x) || x.email.endsWith('.invalid')) continue;
+      const m = mitSpracheVon(x, () => mailtexte.verwaltungsrecht(b.name || b.email, verwaltungText(vorher), verwaltungText(neu), ich.name || ich.email));
+      await this.benachrichtige(x.email, m, mailLog);
+    }
     return r.benutzer;
   }
 
@@ -891,9 +903,10 @@ export class Konten {
     await this.repo.legeLinkAn(hasheSchluessel(schluessel), b.id, zweck, new Date(Date.now() + dauer));
     const link = `${this.appUrl.replace(/\/$/, '')}/passwort/${schluessel}`;
     if (!this.mailer) return { benutzer: b, mailVerschickt: false, link };
-    const m = zweck === 'einladung'
+    // In der Sprache der Person (#729); eine neue Person hat noch keine Wahl – dann die der Installation.
+    const m = mitSpracheVon(b, () => (zweck === 'einladung'
       ? mailtexte.einladung(b.name, b.email, link, EINLADUNG_TAGE)
-      : mailtexte.zuruecksetzen(b.name, b.email, link, ZURUECKSETZEN_STUNDEN);
+      : mailtexte.zuruecksetzen(b.name, b.email, link, ZURUECKSETZEN_STUNDEN)));
     try {
       await this.mailer.sende(b.email, m.betreff, m.text);
       return { benutzer: b, mailVerschickt: true };

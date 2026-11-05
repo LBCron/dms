@@ -83,6 +83,8 @@ const EINTRAEGE: Eintrag[] = [
   { pfad: 'betrieb', gruppe: 'einstellungen', in: H },
   // Region (#726): Land, Bundesland, Zeitzone an einer Stelle.
   { pfad: 'region', gruppe: 'einstellungen', in: H },
+  // Sprachen (#729): erlaubte Sprachen und Sprache der Installation.
+  { pfad: 'sprachen', gruppe: 'einstellungen', in: H },
   { pfad: 'aufgaben', gruppe: 'einstellungen', in: H },
   { pfad: 'anmeldeschutz', gruppe: 'einstellungen', in: O },
   { pfad: 'designs', gruppe: 'einstellungen', in: O },

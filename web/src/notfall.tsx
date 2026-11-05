@@ -4,6 +4,7 @@ import { PASSWORT_MINDESTLAENGE } from '../../shared/src/model';
 import { Marke } from './Marke';
 import { t } from './sprache';
 import { Symbol } from './Symbol';
+import { sprache } from '../../shared/src/sprache';
 
 /**
  * Notfallzugang mit dem Notfallcode vom Notfallblatt (#815), auf `/notfall` – ohne Anmeldung, zuerst fürs Handy gebaut.
@@ -21,7 +22,7 @@ async function sende<T>(url: string, body?: unknown): Promise<{ ok: true; daten:
   try {
     const r = await fetch(url, {
       method: body === undefined ? 'GET' : 'POST', credentials: 'omit', cache: 'no-store',
-      headers: { 'x-dms': '1', ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+      headers: { 'x-dms': '1', 'x-sprache': sprache(), ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const d = await r.json().catch(() => null) as (T & { fehler?: string; details?: { warten?: number } }) | null;

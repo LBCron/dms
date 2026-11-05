@@ -11,6 +11,7 @@
 import { istLeer, type Mappe, type Mappentyp } from './model';
 import { bedingungsProblem, bereinigeBedingungen, erfuellt, filterFuer, type Aufloesung, type Bedingung, type Filter, type Zaehlquelle } from './sichten';
 import { t } from './texte';
+import { gebietsschema } from './sprache';
 
 export const RECHTE = { C: 'Anlegen', R: 'Lesen', U: 'Bearbeiten', D: 'Löschen', P: t('gemeinsam.rechte.passwoerter-sehen') } as const;
 export type Recht = keyof typeof RECHTE;
@@ -337,15 +338,19 @@ export function kopiereRegel(r: Regel, ziel: Mappentyp): { regel: Regel; ausgela
   return { regel: { ...r, id: neueId(), wenn }, ausgelassen };
 }
 
+/** „A oder B“ in der Sprache der Oberfläche; leer → „…“. */
+const oderListe = (x: string[]) => (x.length ? new Intl.ListFormat(gebietsschema(), { type: 'disjunction' }).format(x) : '…');
+
 /** Lesbarer Text einer Bedingung für Listen und den Testlauf. */
 export function beschreibeRegelBedingung(b: RegelBedingung, namen: { benutzer(id: string): string; rolle(id: string): string; feld(b: Extract<Bedingung, { art: 'feld' }>): string }): string {
   const n = b.nicht;
   switch (b.art) {
-    case 'benutzer': return t('gemeinsam.rechte.benutzer', { wert: n ? t('gemeinsam.rechte.ist-nicht') : 'ist', wert2: b.benutzer.map(namen.benutzer).join(' oder ') || '…' });
-    case 'rolle': return t('gemeinsam.rechte.benutzer-rolle', { wert: n ? t('gemeinsam.rechte.hat-nicht') : 'hat', wert2: b.rollen.map(namen.rolle).join(' oder ') || '…' });
-    case 'aufgabe': return t('gemeinsam.rechte.mappe-hat-offene-aufgabe', { wert: n ? 'keine' : 'eine' });
-    case 'eigeneMappe': return t('gemeinsam.rechte.mappe-ist-die-des-2', { wert: n ? 'nicht ' : '' });
-    case 'feld': return `${n ? 'nicht: ' : ''}${namen.feld(b.bedingung)}`;
+    // Ganze Sätze je Fall (#729), die Aufzählung „A oder B“ nach der Sprache (Intl.ListFormat).
+    case 'benutzer': { const wer = oderListe(b.benutzer.map(namen.benutzer)); return n ? t('gemeinsam.rechte.benutzer-nicht', { wer }) : t('gemeinsam.rechte.benutzer-ist', { wer }); }
+    case 'rolle': { const rolle = oderListe(b.rollen.map(namen.rolle)); return n ? t('gemeinsam.rechte.rolle-nicht', { rolle }) : t('gemeinsam.rechte.rolle-hat', { rolle }); }
+    case 'aufgabe': return n ? t('gemeinsam.rechte.aufgabe-keine') : t('gemeinsam.rechte.aufgabe-eine');
+    case 'eigeneMappe': return n ? t('gemeinsam.rechte.eigene-nicht') : t('gemeinsam.rechte.eigene');
+    case 'feld': return n ? t('gemeinsam.rechte.feld-nicht', { bedingung: namen.feld(b.bedingung) }) : namen.feld(b.bedingung);
   }
 }
 

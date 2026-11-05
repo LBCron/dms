@@ -71,6 +71,7 @@ import { merkeAnfrage } from './diagnose';
 import { erreichbarkeit, NICHT_ERREICHBAR } from './erreichbar';
 import { istAusfall } from '../../shared/src/erreichbarkeit';
 import { t } from './sprache';
+import { sprache } from '../../shared/src/sprache';
 
 export class ApiFehler extends Error {
   constructor(public status: number, message: string, public details?: unknown) { super(message); }
@@ -100,7 +101,7 @@ export const hatEinrichtungscode = () => !!einrichtungscode;
 export async function speichereDatei(url: string, body: unknown, ersatzname: string): Promise<{ name: string; bytes: number; ausgelassen: number }> {
   let r: Response;
   try {
-    r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'x-dms': '1', 'x-sprache': sprache(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
   } catch { throw new ApiFehler(0, NICHT_ERREICHBAR); }
   if (!r.ok) {
     const d = await r.json().catch(() => null) as { fehler?: string; details?: unknown } | null;
@@ -151,7 +152,7 @@ async function anfrage<T>(methode: string, url: string, body?: unknown, nochmal 
 export async function heikleDatei(url: string, ersatzname: string, rueckfragen = 2): Promise<void> {
   let r: Response;
   try {
-    r = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'x-dms': '1', ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}) } });
+    r = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'x-dms': '1', 'x-sprache': sprache(), ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}) } });
   } catch { erreichbarkeit.ausfall(); throw new ApiFehler(0, NICHT_ERREICHBAR); }
   if (!r.ok) {
     const d = await r.json().catch(() => null) as { fehler?: string; details?: { verwaltungsmodus?: boolean; frisch?: boolean; heuteBestaetigt?: boolean; handlung?: string } } | null;
@@ -177,7 +178,7 @@ async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): P
       credentials: 'same-origin',
       // X-DMS kennzeichnet Anfragen der eigenen Oberfläche (Schutz vor fremden Seiten).
       headers: {
-        'x-dms': '1',
+        'x-dms': '1', 'x-sprache': sprache(),
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(einrichtungscode ? { 'x-einrichtungscode': einrichtungscode } : {}),
         ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}),
@@ -226,7 +227,7 @@ export interface FragenStand { verfuegbar: boolean; paket: string | null; grenze
 export async function frageStellen(frage: string, verlauf: VerlaufEintrag[], zeile: (z: FrageZeile) => void, signal?: AbortSignal): Promise<void> {
   let r: Response;
   try {
-    r = await fetch('/api/fragen', { method: 'POST', credentials: 'same-origin', signal, headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ frage, verlauf }) });
+    r = await fetch('/api/fragen', { method: 'POST', credentials: 'same-origin', signal, headers: { 'x-dms': '1', 'x-sprache': sprache(), 'content-type': 'application/json' }, body: JSON.stringify({ frage, verlauf }) });
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
     erreichbarkeit.ausfall();
@@ -317,6 +318,11 @@ export type AnbieterStand = Omit<AnbieterEingabe, 'clientSecret' | 'clientSecret
 /** Zwei-Faktor-Anmeldung (#242). */
 export interface ZweifaktorStand { aktiv: boolean; seit: string | null; codesUebrig: number; pflicht: boolean }
 export interface ZweifaktorPflicht { admin: boolean; mitglied: boolean }
+/** Sprache für die Oberfläche (#729). */
+export interface SprachStatus { sprache: string; standard: string; erlaubt: string[]; maschinell: string[] }
+/** Werkbank → Sprachen (#729). */
+export interface SprachenStand { einstellung: { standard: string; erlaubt: string[] }; verfuegbar: string[] }
+
 /** Region der Ablage (#726). */
 export interface Region { land: string; bundesland: string | null; zeitzone: string }
 export interface RegionStand { region: Region; laender: Record<string, string>; bundeslaender: Record<string, string>; zeitzonen: string[]; feiertage: Array<{ datum: string; name: string }> }
@@ -333,6 +339,8 @@ export interface KontoStatus {
   passwoerterMoeglich?: boolean;
   /** Zeitzone der Region (#726), z. B. Europe/Berlin. */
   zeitzone?: string;
+  /** Sprachen (#729): wirksame Sprache, Sprache der Installation, erlaubte und maschinell übersetzte Sprachen. */
+  sprachen?: SprachStatus;
   /** Laufwerk eingeschaltet (#720)? */
   laufwerk?: boolean;
   /** Ein Administrator agiert gerade als dieser Benutzer. */
@@ -510,7 +518,7 @@ export const api = {
   wartungEin: (d: { text: string; ende: string | null; vorlauf?: number; beginn?: string; sofort?: boolean }) => anfrage<unknown>('POST', '/api/werkbank/wartung/ein', d),
   wartungJetzt: () => anfrage<unknown>('POST', '/api/werkbank/wartung/jetzt'),
   wartungAus: () => anfrage<unknown>('POST', '/api/werkbank/wartung/aus'),
-  einrichten: (d: { mandant?: string; email: string; name: string; passwort: string }) => anfrage<{ benutzer: Benutzer }>('POST', '/api/konto/einrichten', d),
+  einrichten: (d: { mandant?: string; email: string; name: string; passwort: string; sprache?: string }) => anfrage<{ benutzer: Benutzer }>('POST', '/api/konto/einrichten', d),
   /** Mit Zwei-Faktor (#242) kommt statt des Benutzers eine Kennung für den zweiten Schritt. */
   anmelden: (d: { email: string; passwort: string }) => anfrage<{ benutzer?: Benutzer; zweiterSchritt?: string }>('POST', '/api/konto/anmelden', d),
   anmeldenCode: (kennung: string, code: string) => anfrage<{ benutzer: Benutzer; wiederherstellung: boolean }>('POST', '/api/konto/anmelden/code', { kennung, code }),
@@ -605,7 +613,7 @@ export const api = {
   designAendern: (id: string, d: Omit<Design, 'id'>) => anfrage<Design>('PUT', `/api/designs/${id}`, d),
   designLoeschen: (id: string) => anfrage<null>('DELETE', `/api/designs/${id}`),
   designLogo: async (id: string, f: File) => {
-    const r = await fetch(`/api/designs/${id}/logo`, { method: 'PUT', credentials: 'same-origin', headers: { 'x-dms': '1', 'content-type': 'application/octet-stream' }, body: f });
+    const r = await fetch(`/api/designs/${id}/logo`, { method: 'PUT', credentials: 'same-origin', headers: { 'x-dms': '1', 'x-sprache': sprache(), 'content-type': 'application/octet-stream' }, body: f });
     const daten = await r.json().catch(() => null);
     if (istAusfall(r.status, daten)) { erreichbarkeit.ausfall(); throw new ApiFehler(r.status, NICHT_ERREICHBAR); }
     if (!r.ok) throw new ApiFehler(r.status, daten?.fehler ?? t('oberflaeche.api.fehler', { status: r.status }));
@@ -865,6 +873,8 @@ export const api = {
   postfaecher: () => anfrage<PostfachAnsicht[]>('GET', '/api/werkbank/postfaecher'),
   region: () => anfrage<RegionStand>('GET', '/api/werkbank/region'),
   regionSetzen: (e: Partial<Region>) => anfrage<RegionStand>('PUT', '/api/werkbank/region', e),
+  sprachen: () => anfrage<SprachenStand>('GET', '/api/werkbank/sprachen'),
+  sprachenSetzen: (e: Partial<SprachenStand['einstellung']>) => anfrage<SprachenStand>('PUT', '/api/werkbank/sprachen', e),
   anmeldeschutz: () => anfrage<AnmeldeschutzStand>('GET', '/api/werkbank/anmeldeschutz'),
   anmeldeschutzSetzen: (e: Partial<SperrEinstellung>) => anfrage<AnmeldeschutzStand>('PUT', '/api/werkbank/anmeldeschutz', e),
   notfallzugang: () => anfrage<NotfallzugangStand>('GET', '/api/werkbank/anmeldeschutz/notfallzugang'),
@@ -922,6 +932,8 @@ export const api = {
   mailOAuthAbmelden: () => anfrage<BetriebAnsicht>('POST', '/api/werkbank/betrieb/mail/oauth/abmelden'),
   profil: (name: string) => anfrage<Benutzer>('PUT', '/api/konto/profil', { name }),
   entwicklermodus: (an: boolean) => anfrage<Benutzer>('PUT', '/api/konto/profil', { entwicklermodus: an }),
+  /** Eigene Sprache (#729); null = wie die Installation. */
+  eigeneSprache: (sprache: string | null) => anfrage<Benutzer>('PUT', '/api/konto/profil', { sprache }),
   emailAendern: (email: string, passwort: string) => anfrage<Benutzer>('PUT', '/api/konto/email', { email, passwort }),
   passwortAendern: (passwortAlt: string, passwortNeu: string) => anfrage<{ benutzer: Benutzer }>('PUT', '/api/konto/passwort', { passwortAlt, passwortNeu }),
   dokumentLoeschen: (id: string, anlass?: LoeschAnlass) => anfrage<null>('DELETE', `/api/dokumente/${id}${anlassQuery(anlass)}`),
@@ -1004,7 +1016,7 @@ async function sendeDatei(url: string, datei: Blob): Promise<unknown> {
     try {
       r = await fetch(url, {
         method: 'POST', credentials: 'same-origin', body: datei,
-        headers: { 'x-dms': '1', 'content-type': 'application/octet-stream' },
+        headers: { 'x-dms': '1', 'x-sprache': sprache(), 'content-type': 'application/octet-stream' },
       });
     } catch { erreichbarkeit.ausfall(); throw new ApiFehler(0, NICHT_ERREICHBAR); }
     const d = await r.json().catch(() => null);
@@ -1038,7 +1050,7 @@ export interface PaketVorschau {
   abhaengigkeiten: Array<{ id: string; bereich: string; installiert: string | null; ok: boolean; verfuegbar: string | null }>;
   typen: Array<{ schluessel: string; dmsSchluessel: string; name: string; felder: number; vorhanden: boolean; neueFelder: string[]; neueRegister: string[]; erkennung?: string[]; formate?: string[]; beschriftungen?: number; umwandeln?: Array<{ feld: string; aus: string; anzahl: number }>; konflikt: string | null; vorschlag: string | null; geloescht?: boolean }>;
   sichten: Array<{ schluessel: string; name: string; eltern: string | null; vorhanden: boolean; konflikt: string | null; vorschlag: string | null; ausgelassen?: string | null; ohne?: string[] }>;
-  beispiele: number; probleme: string[]; hinweise: string[]; einstellungen: { neu: string[]; weg: string[] } | null;
+  beispiele: number; probleme: string[]; fehlercodes?: string[]; hinweise: string[]; einstellungen: { neu: string[]; weg: string[] } | null;
   /** Mitgelieferte Automatisierungen (#712); neu = steht beim Installieren zur Wahl. */
   automatisierungen?: Array<{ schluessel: string; name: string; beschreibung: string; neu: boolean }>;
   /** Paket mit Code (#338): Rechte, Netzwerkzugriff und Ereignisse (#449); bestaetigen = muss ausdrücklich erlaubt werden. */

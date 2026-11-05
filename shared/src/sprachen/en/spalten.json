@@ -1,0 +1,10 @@
+{
+  "name.ablage.links": "Views",
+  "name.ablage.rechts": "Folder",
+  "name.werkbank.links": "Areas",
+  "name.werkbank.rechts": "Editing",
+  "griff.einklappen": "Collapse {name}",
+  "griff.ziehen": "Collapse {name}. Drag to change the width; the Home key restores the default width.",
+  "lasche.aufklappen": "Expand {name}",
+  "lasche.aufklappen.titel": "Expand {name} “{titel}”"
+}

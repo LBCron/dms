@@ -7,6 +7,7 @@ import { Fachfehler } from '../src/fehler';
 import { ordnerUnter, pruefeOrdner } from '../src/ordner';
 import { inBytes, LIMIT_TEXT, Speicherplatz } from '../src/speicherplatz';
 import { Wartung } from '../src/wartung';
+import { mailText } from '../src/mail';
 
 const GB = 1024 ** 3;
 
@@ -41,7 +42,7 @@ function aufbau(freiGB: number, gesamtGB = 100) {
   let jetzt = new Date('2026-10-29T10:00:00Z');
   const wartung = new Wartung(einstellungen, konten, () => jetzt);
   const sp = new Speicherplatz(ordnerUnter('/data'), {
-    einstellungen, wartung, anAdmins: async (b) => { mails.push(b); },
+    einstellungen, wartung, anAdmins: async (b) => { mails.push(mailText(b)); },
     messer: async () => ({ gesamt: gesamtGB * GB, frei }), jetzt: () => jetzt,
   });
   return { sp, wartung, mails, setzeFrei: (gb: number) => { frei = gb * GB; }, spaeter: (min: number) => { jetzt = new Date(jetzt.getTime() + min * 60_000); } };

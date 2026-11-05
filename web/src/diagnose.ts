@@ -1,5 +1,5 @@
 import { t } from './sprache';
-import { gebietsschema } from '../../shared/src/sprache';
+import { gebietsschema, sprache } from '../../shared/src/sprache';
 /**
  * Sammler für „Fehler melden“ (#70): die letzten Fehler im Browser, fehlgeschlagene Anfragen
  * und besuchte Seiten dieser Sitzung – nur im Speicher, nur Pfade (ohne Suchbegriffe).
@@ -36,31 +36,34 @@ export function geraeteAngaben(skala: string): Record<string, unknown> {
   const mq = (q: string) => matchMedia(q).matches;
   let speicher = false;
   try { localStorage.setItem('dms:probe', '1'); localStorage.removeItem('dms:probe'); speicher = true; } catch { /* privates Fenster o. Ä. */ }
+  // Bezeichnungen aus der Sprachdatei (#729): Wer den Bericht liest, sieht sie in der Sprache der meldenden Person.
+  const L = (k: string) => t.frei(`oberflaeche.diagnose.${k}`);
   return {
-    Browser: {
+    [L('browser')]: {
       'User-Agent': navigator.userAgent,
-      ...(n.userAgentData ? { Marken: n.userAgentData.brands?.map((b) => `${b.brand} ${b.version}`).join(', '), Plattform: n.userAgentData.platform, Mobil: n.userAgentData.mobile } : {}),
-      Sprachen: navigator.languages?.join(', ') || navigator.language,
+      ...(n.userAgentData ? { [L('marken')]: n.userAgentData.brands?.map((b) => `${b.brand} ${b.version}`).join(', '), [L('plattform')]: n.userAgentData.platform, [L('mobil')]: n.userAgentData.mobile } : {}),
+      [L('sprachen')]: navigator.languages?.join(', ') || navigator.language,
+      [L('oberflaeche')]: sprache(),
       Cookies: navigator.cookieEnabled, localStorage: speicher,
-      'Als App installiert': mq('(display-mode: standalone)'),
+      [L('app')]: mq('(display-mode: standalone)'),
     },
-    Bildschirm: {
-      Bildschirm: `${screen.width} × ${screen.height}`, Fenster: `${innerWidth} × ${innerHeight}`,
-      Pixeldichte: devicePixelRatio, Ausrichtung: screen.orientation?.type ?? (innerWidth > innerHeight ? 'quer' : 'hoch'),
+    [L('bildschirm')]: {
+      [L('bildschirm')]: `${screen.width} × ${screen.height}`, [L('fenster')]: `${innerWidth} × ${innerHeight}`,
+      [L('pixeldichte')]: devicePixelRatio, [L('ausrichtung')]: screen.orientation?.type ?? (innerWidth > innerHeight ? L('quer') : L('hoch')),
       Touch: navigator.maxTouchPoints > 0, Zoom: typeof visualViewport !== 'undefined' && visualViewport ? Math.round(visualViewport.scale * 100) / 100 : null,
-      'Seite breiter als Fenster': document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      [L('breiter')]: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     },
-    Darstellung: {
-      Schriftgröße: skala, 'System dunkel': mq('(prefers-color-scheme: dark)'), 'Weniger Bewegung': mq('(prefers-reduced-motion: reduce)'),
+    [L('darstellung')]: {
+      [L('schriftgroesse')]: skala, [L('dunkel')]: mq('(prefers-color-scheme: dark)'), [L('bewegung')]: mq('(prefers-reduced-motion: reduce)'),
     },
-    Zeit: { 'Lokale Zeit': new Date().toString(), Zeitzone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-    Verbindung: {
-      Online: navigator.onLine, HTTPS: location.protocol === 'https:', Adresse: location.origin,
-      ...(n.connection ? { Typ: n.connection.effectiveType, 'Mbit/s': n.connection.downlink } : {}),
+    [L('zeit')]: { [L('lokale-zeit')]: new Date().toString(), [L('zeitzone')]: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    [L('verbindung')]: {
+      Online: navigator.onLine, HTTPS: location.protocol === 'https:', [L('adresse')]: location.origin,
+      ...(n.connection ? { [L('typ')]: n.connection.effectiveType, 'Mbit/s': n.connection.downlink } : {}),
     },
-    'Aktuelle Seite': location.pathname,
-    'Zuletzt besucht': seiten.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
-    'Fehler im Browser': fehler.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
-    'Fehlgeschlagene Anfragen': anfragen.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
+    [L('seite')]: location.pathname,
+    [L('besucht')]: seiten.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
+    [L('fehler')]: fehler.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
+    [L('anfragen')]: anfragen.map((s) => `${new Date(s.zeit).toLocaleTimeString(gebietsschema())} ${s.text}`),
   };
 }

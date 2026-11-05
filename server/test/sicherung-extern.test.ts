@@ -16,6 +16,7 @@ import { ohneZugangsdaten, Sicherung, schlankeMetadaten, type ExternAnbindung, t
 import { Tresor } from '../src/tresor';
 import { EREIGNISSE, liesCode, rechteText, SCHNITTSTELLEN } from '../../shared/src/pakete';
 import { HILFE } from '../../shared/src/hilfe';
+import { mailText } from '../src/mail';
 
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
 const TAG = 24 * 3600_000;
@@ -50,7 +51,7 @@ async function aufbau(o: { pakete?: Array<{ id: string; name: string; adresse: s
   const s = new Sicherung(join(wurzel, 'sicherung'), join(wurzel, 'files'), HAUSHALT, {
     tresor, einstellungen, daten: daten(), mountinfo: '/gibt-es-nicht', jetzt: () => jetzt,
     umgebung: async () => ({ dms: '0.142.0', node: '24', system: 'Linux', architektur: 'x64' }),
-    anAdmins: async (betreff, text) => { mails.push({ betreff, text }); },
+    anAdmins: async (betreff, text) => { mails.push({ betreff: mailText(betreff), text: mailText(text) }); },
   });
   const gemeldet: Array<SchlankeMetadaten & { name: string }> = [];
   const pakete = o.pakete ?? [{ id: 'sicherung_webdav', name: 'Sicherungsziel WebDAV', adresse: 'https://cloud.example.org' }];

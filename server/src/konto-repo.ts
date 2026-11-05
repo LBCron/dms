@@ -47,7 +47,7 @@ export interface KontoRepo {
   holeBenutzer(id: string): Promise<Benutzer | undefined>;
   holeHash(email: string): Promise<{ benutzer: Benutzer; hash: string | null } | undefined>;
   legeBenutzerAn(b: NeuerBenutzer): Promise<Benutzer>;
-  aendereBenutzer(id: string, d: Partial<Pick<Benutzer, 'name' | 'aktiv' | 'email' | 'entwicklermodus'>>): Promise<Benutzer>;
+  aendereBenutzer(id: string, d: Partial<Pick<Benutzer, 'name' | 'aktiv' | 'email' | 'entwicklermodus' | 'sprache'>>): Promise<Benutzer>;
   /**
    * Verwaltungsrecht setzen oder (de)aktivieren mit Schutzregel (#818): in einer Transaktion mit Sperre über alle
    * Personen; liefert die Prüfung einen Grund, ändert sich nichts und er kommt als Fehler zurück.
@@ -166,7 +166,7 @@ export function speicherKontoRepo(): KontoRepo {
     async listeSystemkonten() { return [...benutzer.values()].filter((b) => b.art === 'system').map(ohneHash); },
     async legeBenutzerAn(n) {
       if ([...benutzer.values()].some((x) => x.email.toLowerCase() === n.email.toLowerCase())) throw Object.assign(new Error('doppelt'), { code: '23505' });
-      const b = { id: n.id, email: n.email, name: n.name, rolle: 'mitglied' as Rolle, verwaltung: [...(n.verwaltung ?? [])], aktiv: true, hatPasswort: !!n.passwortHash, erstellt: new Date().toISOString(), letzteAnmeldung: null, entwicklermodus: false, hash: n.passwortHash, abwesenheit: { ...KEINE_ABWESENHEIT }, deaktiviert: null };
+      const b = { id: n.id, email: n.email, name: n.name, rolle: 'mitglied' as Rolle, verwaltung: [...(n.verwaltung ?? [])], aktiv: true, hatPasswort: !!n.passwortHash, erstellt: new Date().toISOString(), letzteAnmeldung: null, entwicklermodus: false, sprache: null, hash: n.passwortHash, abwesenheit: { ...KEINE_ABWESENHEIT }, deaktiviert: null };
       benutzer.set(n.id, b);
       return ohneHash(b);
     },
@@ -275,6 +275,7 @@ const alsBenutzer = (r: Zeile): Benutzer => ({
   erstellt: iso(r.erstellt)!,
   letzteAnmeldung: iso(r.letzte_anmeldung),
   entwicklermodus: !!r.entwicklermodus,
+  sprache: (r.sprache as string | null | undefined) ?? null,
   abwesenheit: { an: !!r.abwesend, von: tag(r.abwesend_von), bis: tag(r.abwesend_bis), vertreterId: (r.vertreter_id as string | null) ?? null },
   deaktiviert: iso(r.deaktiviert),
   ...(r.art === 'dienst' ? { art: 'dienst' as const, paketId: r.paket_id as string } : {}),
@@ -362,6 +363,7 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
           email = coalesce(${d.email ?? null}, email),
           aktiv = coalesce(${d.aktiv ?? null}::boolean, aktiv),
           entwicklermodus = coalesce(${d.entwicklermodus ?? null}::boolean, entwicklermodus),
+          sprache = CASE WHEN ${d.sprache !== undefined}::boolean THEN ${d.sprache ?? null}::text ELSE sprache END,
           deaktiviert = CASE WHEN ${d.aktiv ?? null}::boolean IS NULL THEN deaktiviert
             WHEN ${d.aktiv ?? null}::boolean THEN NULL WHEN aktiv THEN now() ELSE deaktiviert END
         WHERE id = ${id} AND haushalt_id = ${haushaltId}

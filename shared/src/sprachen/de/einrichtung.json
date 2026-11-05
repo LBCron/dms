@@ -265,5 +265,10 @@
   "assistent.datenbank-anlegen": "Datenbank „{datenbank}“ anlegen",
   "assistent.uebernehmen-und-weiter": "Übernehmen und weiter",
   "assistent.dieser-benutzer-darf-keine": "Dieser Benutzer darf keine Datenbanken anlegen. Lege sie in PostgreSQL an oder nimm den Benutzer aus der Compose-Vorlage.",
-  "assistent.lade": "Lade …"
+  "assistent.lade": "Lade …",
+  "schritt.sprache": "Sprache",
+  "sprache.titel": "Sprache",
+  "sprache.unter": "In welcher Sprache möchtest du Ablago einrichten? Sie gilt danach für alle, die nichts anderes wählen.",
+  "sprache.spaeter": "Weitere Sprachen erlaubst du später in der Werkbank unter Sprachen. Jede Person wählt ihre Sprache in Mein Konto.",
+  "gesperrt.sprache": "Wähle zuerst die Sprache."
 }

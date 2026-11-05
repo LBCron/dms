@@ -34,7 +34,9 @@ import type { Wiederherstellung } from './wiederherstellung';
 import { MAX_DATEIGROESSE } from '../../shared/src/model';
 import { WEBDAV_METHODEN, WEBDAV_ZUSATZMETHODEN, type Webdav } from './webdav';
 import { anfrageStufe, dateiKoepfe, leseCookie, modulAus, pruefeZugang, routen, SITZUNG_COOKIE, sitzungsCookie, type Anfrage, type Route } from './routen';
-import { t } from './sprache';
+import { mitSprache, setzeAnfrageSprache, t, tDe } from './sprache';
+import { erlaubteSprachen } from '../../shared/src/beschriftung';
+import { spracheAusKopf } from '../../shared/src/sprachwahl';
 
 /** zeit (#477): Zeitpunkte der Anfrage (performance.now()) für Server-Timing. */
 type MitKontext = FastifyRequest & { dms?: Kontext; lesend?: boolean; zeit?: { eingang: number; start?: number; ende?: number; senden?: number }; nachher?: () => void };
@@ -57,7 +59,7 @@ export class Nachlauf {
     const p: Promise<void> = gesendet.then(() => kontext.run(k, async () => {
       clearTimeout(zeitgeber);
       for (const f of arbeit) {
-        try { await f(); } catch (e) { protokoll.schreibe('warn', 'http', t('meldungen.http.arbeit-nach-der-antwort'), { fehler: (e as Error).message }); }
+        try { await f(); } catch (e) { protokoll.schreibe('warn', 'http', tDe('meldungen.http.arbeit-nach-der-antwort'), { fehler: (e as Error).message }); }
       }
     }));
     this.laufend.add(p);
@@ -97,6 +99,8 @@ interface Optionen {
   aufgabenmail?: Aufgabenmail;
   /** Region (#726): Land, Bundesland, Zeitzone. */
   region?: import('./region').RegionDienst;
+  /** Sprachen der Ablage (#729). */
+  sprachen?: import('./sprachwahl').SprachDienst;
   fehlermeldungen?: Fehlermeldungen;
   /** Technische Aufgaben des Admin-Kontos (#719): Hinweis ohne Einzelheiten beim Alltags-Benutzer. */
   verwaltung?: Verwaltung;
@@ -170,7 +174,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     const err = fehler as Error & { statusCode?: number };
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ fehler: err.message });
     const k = (req as MitKontext).dms;
-    const schreibe = () => protokoll.schreibe('error', modulAus(req.url), t('meldungen.http.interner-fehler-bei', { method: req.method, split: req.url.split('?')[0] }), { fehler: err.stack ?? String(err) });
+    const schreibe = () => protokoll.schreibe('error', modulAus(req.url), tDe('meldungen.http.interner-fehler-bei', { method: req.method, split: req.url.split('?')[0] }), { fehler: err.stack ?? String(err) });
     if (k) kontext.run(k, schreibe); else schreibe();
     return reply.code(500).send({ fehler: t('meldungen.http.interner-fehler-anfrage-details', { id: req.id }) });
   });
@@ -246,17 +250,20 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         if (r.lesend) (req as MitKontext).lesend = true;
         const k: Kontext = { anfrage: req.id, pfad: `${req.method} ${req.url.split('?')[0]}`, db: { anzahl: 0, ms: 0 }, ursprung: `${req.protocol}://${req.host}` };
         (req as MitKontext).dms = k;
-        const antwort = await kontext.run(k, async () => {
+        // Sprache (#729): erst die, die die Oberfläche mitschickt, dann die der angemeldeten Person.
+        const kopfSprache = spracheAusKopf(a.kopf?.('x-sprache'), erlaubteSprachen());
+        const antwort = await mitSprache(kopfSprache, () => kontext.run(k, async () => {
           await pruefeZugang(r, a, (n) => req.headers[n] as string | undefined, konten, opt.apiSchluessel, opt.konsole);
+          if (a.benutzer?.sprache && erlaubteSprachen().includes(a.benutzer.sprache)) setzeAnfrageSprache(a.benutzer.sprache);
           // Eigene Änderungen zeigen die Zahlen sofort (#742).
           k.benutzerId = a.benutzer?.id;
           // Protokoll (#819): jede Anfrage im Verwaltungsmodus mit Person und „im Verwaltungsmodus“.
-          k.benutzer = a.konsole ? `${a.benutzer?.email ?? t('meldungen.http.ohne-verwaltungsrecht')} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? t('meldungen.http.im-verwaltungsmodus') : ''}`;
+          k.benutzer = a.konsole ? `${a.benutzer?.email ?? tDe('meldungen.http.ohne-verwaltungsrecht')} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? tDe('meldungen.http.im-verwaltungsmodus') : ''}`;
           // Wartungsmodus (#102): API 503, in der aktiven Stufe nur Administratoren.
           // Die Konsole (#244) arbeitet auch im Wartungsmodus – etwa um ihn zu beenden.
           if (!a.konsole) opt.wartung?.pruefeAnfrage(r, a.benutzer);
           return r.handler(a);
-        });
+        }));
         // Für den Entwicklermodus: Server-Timing setzt der onSend-Hook (#477), dann mit JSON und gesamt.
         zeit.ende = performance.now();
         if (antwort.danach?.length) (req as MitKontext).nachher = nachlauf.melde(k, antwort.danach);

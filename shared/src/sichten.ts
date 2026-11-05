@@ -234,7 +234,8 @@ export function bedingungsProblem(b: Bedingung, typen: Mappentyp[]): string | nu
   // Bei mehreren Typen: gleicher Schlüssel und gleiche Art in allen (#66).
   const art = b.art === 'dokumente' ? 'dokumente' : 'verknuepfungen';
   if (typen.some((t) => t.register.find((x) => x.key === b.register)?.art !== art)) {
-    return t('gemeinsam.sichten.das-register-gibt-es', { wert: art === 'dokumente' ? 'Dokumenten' : 'Verknüpfungs', register: b.register, wert2: typen.length > 1 ? t('gemeinsam.sichten.nicht-in-allen-mappentypen') : t('gemeinsam.sichten.nicht-mehr') });
+    const wert = typen.length > 1 ? t('gemeinsam.sichten.nicht-in-allen-mappentypen') : t('gemeinsam.sichten.nicht-mehr');
+    return art === 'dokumente' ? t('gemeinsam.sichten.dokumentenregister-gibt-es', { register: b.register, wert }) : t('gemeinsam.sichten.verknuepfungsregister-gibt-es', { register: b.register, wert });
   }
   return null;
 }

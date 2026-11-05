@@ -335,5 +335,10 @@
   "zweifaktor.einrichten": "Einrichten",
   "profil.stufe.immer": "ja",
   "profil.stufe.nie": "nein",
-  "apidoku.beliebig": "beliebig"
+  "apidoku.beliebig": "beliebig",
+  "sprache.titel": "Sprache {hilfe}",
+  "sprache.wahl": "In dieser Sprache zeigt dir Ablago Oberfläche, Meldungen und E-Mails.",
+  "sprache.wie-ablage": "Wie die Ablage ({sprache})",
+  "sprache.maschinell": "Maschinell übersetzt – {link}",
+  "sprache.mitmachen": "Verbesserungen willkommen"
 }

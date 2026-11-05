@@ -1,4 +1,5 @@
 import { t } from './texte';
+import { gebietsschema } from './sprache';
 /**
  * Filter für Platzhalter in der Titel-Vorlage (#170): `{feld|filter|filter:argument}`.
  *
@@ -84,7 +85,7 @@ export function wendeFilterAn(text: string, roh: unknown, art: string | undefine
       case 'datum': s = s && typeof roh === 'string' ? datumNach(roh, f.arg ?? 'TT.MM.JJJJ') || s : s; break;
       case 'ohne_waehrung': {
         const b = roh as { betrag?: unknown } | null;
-        if (s && art === 'betrag' && b && typeof b.betrag === 'number') s = b.betrag.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (s && art === 'betrag' && b && typeof b.betrag === 'number') s = b.betrag.toLocaleString(gebietsschema(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         break;
       }
       case 'gross': s = s.toLocaleUpperCase('de-DE'); break;

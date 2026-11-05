@@ -27,7 +27,7 @@ export interface NotfallQuelle {
   listeBenutzer(): Promise<Benutzer[]>;
 }
 /** Mail an alle mit „Gesamte Verwaltung“; darf fehlschlagen (kein Versand eingerichtet). */
-export type AnAdmins = (betreff: string, text: string) => Promise<void>;
+export type AnAdmins = (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
 
 interface Eintrag { benutzerId: string; name: string; erstellt: string }
 
@@ -99,8 +99,9 @@ export class Notfallzugang {
     await this.einstellungen.schreibe('notfallzugaenge', liste.slice(-20));
     log.warn('Notfallzugang angelegt (RESCUE-Datei)', { benutzer: benutzer.name, gueltigBis: ablauf.toISOString(), datei: this.datei });
     try {
-      await this.anAdmins(t('notfall.notfall.ablago-notfallzugang-angelegt'),
-        t('notfall.notfall.warst-du-das-nicht', { wert: t('notfall.notfall.auf-dem-nas-wurde', { name: benutzer.name, bis }) }));
+      // Je Empfänger in seiner Sprache (#729).
+      await this.anAdmins(() => t('notfall.notfall.ablago-notfallzugang-angelegt'),
+        () => t('notfall.notfall.warst-du-das-nicht', { wert: t('notfall.notfall.auf-dem-nas-wurde', { name: benutzer.name, bis }) }));
     } catch (e) { log.warn('Mail zum Notfallzugang nicht verschickt', { fehler: (e as Error).message }); }
     return 'angelegt';
   }

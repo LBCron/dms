@@ -3,6 +3,7 @@ import { SuchePanel } from './SucheEinstellungen';
 import { Symbol } from '../Symbol';
 import { AnmeldeschutzPanel, useAnmeldeschutz } from './Anmeldeschutz';
 import { RegionPanel, useRegion } from './Region';
+import { SprachenPanel, useSprachen } from './Sprachen';
 import { NummernkreisEditor, NummernkreiseListe, useNummernkreise } from './Nummernkreise';
 import { StempelPanel, useStempelVorlagenWerkbank } from './Stempel';
 import { DarfWegPanel, useDarfWeg } from './Archiv';
@@ -132,6 +133,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const pakete = usePakete(bereich === 'pakete' || bereich === 'typen');
   const anmeldeschutz = useAnmeldeschutz(bereich === 'anmeldeschutz');
   const region = useRegion(bereich === 'region');
+  const sprachen = useSprachen(bereich === 'sprachen');
   const anbindung = useAnbindung(bereich === 'anbindung');
   const ansicht = useWerkbankAnsicht();
   // Zahlen links (#375): die des geladenen Bereichs, sonst die aus der Übersicht; nur > 0 anzeigen.
@@ -229,6 +231,8 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = <AnbindungPanel z={anbindung} nachAenderung={() => void uebersicht.laden()} />;
   } else if (bereich === 'region') {
     rechts = <RegionPanel z={region} />;
+  } else if (bereich === 'sprachen') {
+    rechts = <SprachenPanel z={sprachen} />;
   } else if (bereich === 'anmeldeschutz') {
     rechts = <AnmeldeschutzPanel z={anmeldeschutz} />;
   } else if (bereich === 'pakete') {
@@ -306,6 +310,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     // Einstellungen
     { pfad: 'betrieb', name: n('betrieb'), gruppe: 'einstellungen', warn: uebersicht.stand && !uebersicht.stand.mail ? t('werkbank.leiste.aus') : undefined, warnTitel: t('werkbank.leiste.mail') },
     { pfad: 'region', name: n('region'), gruppe: 'einstellungen' },
+    { pfad: 'sprachen', name: n('sprachen'), gruppe: 'einstellungen' },
     { pfad: 'aufgaben', name: n('aufgaben'), gruppe: 'einstellungen', zahl: zahl(aufgaben.liste?.filter((a) => !a.erledigt).length, uebersicht.stand?.aufgaben.offen),
       // #798: Aufgaben bei Personen ohne Leserecht.
       warn: uebersicht.stand?.ohneLeserecht ? '!' : undefined, warnTitel: t('werkbank.ohne-leserecht.titel') },

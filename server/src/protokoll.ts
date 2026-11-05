@@ -18,7 +18,7 @@ export const STUFEN = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as co
 export type Stufe = (typeof STUFEN)[number];
 const RANG: Record<Stufe, number> = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, fatal: 60 };
 import { MODULE, type Modul } from '../../shared/src/protokollmodule';
-import { t } from './sprache';
+import { tDe } from './sprache';
 export { MODULE, type Modul };
 
 export const AUFBEWAHRUNG_MS = 24 * 60 * 60 * 1000;
@@ -91,7 +91,7 @@ export class Protokoll {
     clearTimeout(this.abschalten);
     this.debugBis = an ? Date.now() + DEBUG_DAUER_MS : 0;
     if (an) {
-      this.abschalten = setTimeout(() => this.schreibe('info', 'system', t('meldungen.protokoll.debug-modus-nach-einer')), DEBUG_DAUER_MS);
+      this.abschalten = setTimeout(() => this.schreibe('info', 'system', tDe('meldungen.protokoll.debug-modus-nach-einer')), DEBUG_DAUER_MS);
       this.abschalten.unref?.();
     }
     return this.debugStand;
@@ -172,7 +172,7 @@ export class Protokoll {
       }
       const modul = (daten.modul as string) ?? (bindungen.reqId ? 'http' : 'system');
       delete daten.modul;
-      self.schreibe(stufe, modul, text || t('meldungen.protokoll.ohne-text'), daten);
+      self.schreibe(stufe, modul, text || tDe('meldungen.protokoll.ohne-text'), daten);
     };
     const log: FastifyLog = {
       level: this.stufe,

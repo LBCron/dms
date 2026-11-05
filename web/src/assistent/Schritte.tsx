@@ -7,7 +7,9 @@ import { api, heikleDatei } from '../api';
 import { Marke } from '../Marke';
 import { geheZu } from '../ort';
 import { rueckfrage } from '../rueckfrage';
-import { t } from '../sprache';
+import { t, wechsleSprache } from '../sprache';
+import { EINGEBAUTE_SPRACHEN, sprache } from '../../../shared/src/sprache';
+import { sprachname } from '../../../shared/src/beschriftung';
 import { Symbol } from '../Symbol';
 import { PaketApiKontext, type PaketApi, type PaketWahl } from '../werkbank/PaketAblauf';
 import { PaketeDazuholen } from '../werkbank/PaketeDazuholen';
@@ -31,16 +33,18 @@ import { geheim, holeStand, planAus, setzeSammlung, setzeStand, STUFEN, useAssis
  * steht – auch Vorschläge, die man nicht geändert hat. Die Knöpfe stehen in jedem Schritt unten an derselben Stelle.
  */
 export const SCHRITTE = [
-  t('einrichtung.schritt.code'), t('einrichtung.schritt.datenbank'), t('einrichtung.schritt.wahl'), t('einrichtung.schritt.ablage'),
+  t('einrichtung.schritt.sprache'), t('einrichtung.schritt.code'), t('einrichtung.schritt.datenbank'), t('einrichtung.schritt.wahl'), t('einrichtung.schritt.ablage'),
   t('einrichtung.schritt.konto'), t('einrichtung.schritt.pakete'), t('einrichtung.schritt.optional'),
   t('einrichtung.schritt.zusammenfassung'), t('einrichtung.schritt.fertig'),
 ] as const;
-export const NR: Record<Ansicht | 'fertig', number> = { ablage: 3, konto: 4, pakete: 5, optional: 6, zusammenfassung: 7, fertig: 8 };
+/** Feste Schritte vor dem Sammeln (#729: Sprache zuerst). */
+export const VOR = { sprache: 0, code: 1, datenbank: 2, wahl: 3 } as const;
+export const NR: Record<Ansicht | 'fertig', number> = { ablage: 4, konto: 5, pakete: 6, optional: 7, zusammenfassung: 8, fertig: 9 };
 const REIHE: Ansicht[] = ['ablage', 'konto', 'pakete', 'optional', 'zusammenfassung'];
 const REPO = 'https://github.com/motom001/dms';
 
 /** Hilfe je Schritt (#278): der passende Abschnitt im Online-Handbuch, mit Bildern. */
-const HILFE_JE_SCHRITT: Hilfeort[] = ['einrichtung.code', 'einrichtung.datenbank', 'einrichtung.wahl', 'einrichtung.mandant', 'einrichtung.konto', 'einrichtung.pakete', 'einrichtung.optional', 'einrichtung.zusammenfassung', 'einrichtung.fertig'];
+const HILFE_JE_SCHRITT: Hilfeort[] = ['einrichtung.sprache', 'einrichtung.code', 'einrichtung.datenbank', 'einrichtung.wahl', 'einrichtung.mandant', 'einrichtung.konto', 'einrichtung.pakete', 'einrichtung.optional', 'einrichtung.zusammenfassung', 'einrichtung.fertig'];
 
 /** Schrittleiste: welche Schritte anklickbar sind, welche gesperrt (mit Grund). */
 export interface Leiste { erledigt(i: number): boolean; klick?(i: number): (() => void) | null; gesperrt?(i: number): string | null }
@@ -133,14 +137,45 @@ export function Rahmen({ aktiv, titel, unter, children, leiste, datei }: {
   );
 }
 
+/* ---------- Sprache (#729) ---------- */
+
+/** Zurück zum ersten Schritt: Sprache wählen. */
+export const zurSprache = () => setzeStand((x) => ({ ...x, spracheGewaehlt: false }));
+
+/**
+ * Erster Schritt (#729): In welcher Sprache richtest du ein? Sie wird die Sprache der Installation und deine eigene;
+ * weitere Sprachen erlaubst du danach in der Werkbank. Ein Wechsel lädt die Seite neu – Gesammeltes bleibt erhalten.
+ */
+export function SprachSchritt({ leiste }: { leiste: Leiste }) {
+  const [wahl, setWahl] = useState(EINGEBAUTE_SPRACHEN.includes(sprache() as never) ? sprache() : 'de');
+  const weiter = () => { setzeStand((x) => ({ ...x, spracheGewaehlt: true })); wechsleSprache(wahl); };
+  return (
+    <Rahmen aktiv={VOR.sprache} titel={t('einrichtung.sprache.titel')} unter={t('einrichtung.sprache.unter')} leiste={leiste}>
+      <form className="stapel" onSubmit={(e) => { e.preventDefault(); weiter(); }}>
+        <fieldset className="wahlkarten" aria-label={t('einrichtung.sprache.titel')}>
+          {EINGEBAUTE_SPRACHEN.map((s) => (
+            <label key={s} className={`wahlkarte${wahl === s ? ' gewaehlt' : ''}`} lang={s}>
+              <input type="radio" name="sprache" value={s} checked={wahl === s} onChange={() => setWahl(s)} />
+              <strong>{sprachname(s, s)}</strong>
+            </label>
+          ))}
+        </fieldset>
+        <p className="leise klein">{t('einrichtung.sprache.spaeter')}</p>
+        <div className="knoepfe"><button type="submit" className="knopf primaer">{t('einrichtung.weiter')}</button></div>
+      </form>
+    </Rahmen>
+  );
+}
+
 /* ---------- Sammeln ---------- */
 
 /** Schrittleiste beim Sammeln: Code und Datenbank sind erledigt, alles ab „Neu oder Sicherung“ jederzeit anklickbar. */
 function sammelLeiste(s: Sammlung, zurWahl: () => void): Leiste {
+  // Sprache ändern beim Sammeln: zurück zum ersten Schritt (Gesammeltes bleibt).
   return {
-    erledigt: (i) => i < 3 || REIHE.some((a) => NR[a] === i && s.besucht.includes(a)),
-    klick: (i) => (i === 2 ? zurWahl : i >= NR.ablage && i <= NR.zusammenfassung ? () => setzeSammlung((x) => ({ ...x, ansicht: REIHE[i - NR.ablage] })) : null),
-    gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : i === 1 ? t('einrichtung.gesperrt.datenbank') : i === NR.fertig ? t('einrichtung.gesperrt.fertig') : null),
+    erledigt: (i) => i < VOR.wahl + 1 || REIHE.some((a) => NR[a] === i && s.besucht.includes(a)),
+    klick: (i) => (i === VOR.sprache ? zurSprache : i === VOR.wahl ? zurWahl : i >= NR.ablage && i <= NR.zusammenfassung ? () => setzeSammlung((x) => ({ ...x, ansicht: REIHE[i - NR.ablage] })) : null),
+    gesperrt: (i) => (i === VOR.code ? t('einrichtung.gesperrt.code') : i === VOR.datenbank ? t('einrichtung.gesperrt.datenbank') : i === NR.fertig ? t('einrichtung.gesperrt.fertig') : null),
   };
 }
 

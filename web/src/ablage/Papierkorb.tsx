@@ -10,6 +10,7 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { hinweis, rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { typName, feldLabel } from '../../../shared/src/beschriftung';
 
 /**
  * Papierkorb (#43). In der Ablage sieht jeder, was er selbst gelöscht hat; in der Werkbank
@@ -258,7 +259,7 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">{t('ablage.papierkorb.im-papierkorb', { wert: typ?.name ?? t('ablage.papierkorb.mappe') })}</p>
+        <p className="ueber">{t('ablage.papierkorb.im-papierkorb', { wert: typ ? typName(typ) : t('ablage.papierkorb.mappe') })}</p>
         <h1>{titelOder(e.titel)}</h1>
         <dl className="index">
           <div><dt>{t('ablage.papierkorb.geloescht')}</dt><dd>{datumZeit(e.geloescht)}{werkbank && <> {' '}{t('ablage.papierkorb.von-2')}{' '}<Person id={e.geloeschtVon} /></>}</dd></div>
@@ -271,16 +272,16 @@ export function PapierkorbDetail({ id, werkbank }: { id: string; werkbank: boole
           {felder.map((f) => {
             const v = e.werte[f.key];
             const text = f.typ === 'referenz'
-              ? (Array.isArray(v) ? v.length : v ? 1 : 0) ? t('ablage.papierkorb.verknuepfte-mappe', { wert: Array.isArray(v) ? v.length : 1, wert2: Array.isArray(v) && v.length !== 1 ? 'n' : '' }) : ''
+              ? (Array.isArray(v) ? v.length : v ? 1 : 0) ? t('ablage.papierkorb.verknuepfte-mappen', { anzahl: Array.isArray(v) ? v.length : 1 }) : ''
               : formatiere(f, v);
-            return <div key={f.key} style={{ display: 'contents' }}><dt>{f.label}</dt><dd>{text || <span className="leise">–</span>}</dd></div>;
+            return <div key={f.key} style={{ display: 'contents' }}><dt>{feldLabel(f)}</dt><dd>{text || <span className="leise">–</span>}</dd></div>;
           })}
           <dt>{t('ablage.papierkorb.dokumente-2')}</dt><dd>{e.dokumente || <span className="leise">{t('ablage.papierkorb.keine')}</span>}</dd>
         </dl>
       </section>
       {zusammen.length > 1 && (
         <div className="hinweis info"><p>
-          {t('ablage.papierkorb.zusammen-mit-weiteren-geloescht', { wert: zusammen.length - 1, wert2: zusammen.length === 2 ? t('ablage.papierkorb.mappe') : t('ablage.papierkorb.mappen-2') })}{zusammen.some((x) => x.id === x.vorgang) ? <>{t('ablage.papierkorb.ausgehend-von')}{titelOder(zusammen.find((x) => x.id === x.vorgang)!.titel)}“</> : null}{tn('ablage.papierkorb.holt-alle-zurueck-samt', { b: <strong>{t('ablage.papierkorb.alle-wiederherstellen')}</strong> })}</p></div>
+          {zusammen.some((x) => x.id === x.vorgang) ? t('ablage.papierkorb.zusammen-geloescht-von', { anzahl: zusammen.length - 1, titel: titelOder(zusammen.find((x) => x.id === x.vorgang)!.titel) }) : t('ablage.papierkorb.zusammen-geloescht', { anzahl: zusammen.length - 1 })}{tn('ablage.papierkorb.holt-alle-zurueck-samt', { b: <strong>{t('ablage.papierkorb.alle-wiederherstellen')}</strong> })}</p></div>
       )}
       <p className="leise klein">{t('ablage.papierkorb.beim-wiederherstellen-kommen')}</p>
       {meldung && <div className="hinweis schlecht"><p>{meldung}</p></div>}

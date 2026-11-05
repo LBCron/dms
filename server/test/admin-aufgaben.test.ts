@@ -150,7 +150,7 @@ describe('Technische Aufgaben (#719)', () => {
     let p: Verwaltungspunkt[] = [{ schluessel: 'paket:geheim', bereich: 'pakete', text: 'Das Paket „Geheimprojekt“ braucht noch Einstellungen.' }];
     const v = new Verwaltung({ quellen: [async () => p], einstellungen: speicherEinstellungen(), personen: async () => [], sende: async () => {} });
     const r = routen(d, konten, { verwaltung: v }).find((x) => x.methode === 'GET' && x.pfad === '/api/konto/status')!;
-    const fuer = async (b: unknown) => (await r.handler({ benutzer: b, sitzungsDaten: {}, query: {}, params: {}, body: undefined, kopf: {} } as never)) as { body: Record<string, unknown> };
+    const fuer = async (b: unknown) => (await r.handler({ benutzer: b, sitzungsDaten: {}, query: {}, params: {}, body: undefined, kopf: () => undefined } as never)) as { body: Record<string, unknown> };
     const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
     const s = (await fuer(await ich(admin.id))).body;
     assert.equal(s.verwaltung, true, 'Markus außerhalb des Modus: Hinweis, keine Einzelheiten');

@@ -217,13 +217,16 @@ server/src/arbeit/nachricht.ts    Nachrichten, Buffer und Fehler über die Grenz
 
 ## Texte und Sprachdateien { #texte-und-sprachdateien }
 
-Texte für Benutzer stehen nicht im Code, sondern in **Sprachdateien** (#473, #727, Teil von #357). Sichtbar ist bisher nur Deutsch mit **du** – Ablago duzt überall, auch in jeder späteren Sprache gilt die vertraute Anrede. Seit #727 sind alle Bereiche umgestellt: Oberfläche, Fehlermeldungen und Hinweise des Servers, E-Mails, Historie und Notfallblatt.
+Texte für Benutzer stehen nicht im Code, sondern in **Sprachdateien** (#473, #727, Teil von #357). Eingebaut sind Deutsch (Ausgangssprache) und Englisch (seit #729); Ablago duzt überall, und jede Sprache nimmt die vertraute Anrede (Englisch schlicht „you“). Seit #727 sind alle Bereiche umgestellt: Oberfläche, Fehlermeldungen und Hinweise des Servers, E-Mails, Historie und Notfallblatt.
 
 **Regel:** Ein Text, den Menschen lesen, gehört in die Sprachdatei – nie als Wort im Code. Die CI lässt neue feste Texte in der Oberfläche nicht durch (siehe unten).
 
 ```
 shared/src/sprachen/de/<bereich>.json         Ausgangssprache Deutsch (du), immer vollständig
 shared/src/sprachen/de-formal/dritte.json     Texte für Dritte mit „Sie“ (siehe unten)
+shared/src/sprachen/en/<bereich>.json         Englisch, britische Schreibweise, vollständig
+shared/src/englisch.ts                        lädt alle englischen Dateien (eigener Chunk in der Oberfläche)
+shared/src/sprachwahl.ts                      Einstellung „sprachen“, wirksame Sprache, Kopf X-Sprache
 shared/src/sprache.ts                         uebersetzer(), Platzhalter, Mehrzahl, gebietsschema()
 web/src/sprache.ts                            t() und tn() mit den Bereichen der Oberfläche
 server/src/sprache.ts                         t() mit den Bereichen des Servers
@@ -273,7 +276,7 @@ Daneben gibt es Fachbereiche aus früheren Issues (`anmeldung`, `automatisierung
 
 `t('mail.dauer.stunden', { anzahl: 2 })` ergibt „2 Stunden“. Die Formen richten sich nach `Intl.PluralRules` der Sprache (Englisch braucht `one`/`other`, andere Sprachen auch `few`, `many` …); fehlt eine, gilt `_other`. Ein Text für genau eins darf ohne Zahl auskommen („Eine Mappe“).
 
-**Datum, Zahlen, Beträge** nie mit festem `'de-DE'` formatieren, sondern mit `gebietsschema()` aus `shared/src/sprache.ts` (heute `de-DE`, später die Sprache des Benutzers), z. B. `n.toLocaleString(gebietsschema())`. Feste Formate bleiben nur dort, wo eine Datei ein Format verlangt (ISO-Datum, CSV für Tabellen).
+**Datum, Zahlen, Beträge** nie mit festem `'de-DE'` formatieren, sondern mit `gebietsschema()` aus `shared/src/sprache.ts` (`de-DE` bzw. `en-GB`, je nach Sprache der Anfrage), z. B. `n.toLocaleString(gebietsschema())`. Feste Formate bleiben nur dort, wo eine Datei ein Format verlangt (ISO-Datum, CSV für Tabellen).
 
 **Zusammengesetzte Schlüssel** (`werkbank.gruppe.${g}`) gehen mit `t.frei(…)` statt `t(…)`. Sie entgehen der Typprüfung; die Prüfung in der CI zählt alle Schlüssel mit dem festen Anfang (`werkbank.gruppe.`) als benutzt. Wo es geht, ganze Schlüssel ausschreiben.
 
@@ -290,9 +293,18 @@ Daneben gibt es Fachbereiche aus früheren Issues (`anmeldung`, `automatisierung
 - **Vergleichen immer mit dem festen Wert** – Bedingungen, Automatisierungen, API, Vollexport (CSV, JSON), Prüfung der Mappe. Eingaben, die eine Beschriftung sein können (Direktlink, erweiterte Suche, Antwort einer Erkennungs-Engine), gehen über `wertZuOption()`. Die einfache Suche findet einen Wert auch über seine Beschriftung (`optionsGruppen()` wie gleichbedeutende Wörter).
 - **Zeigen immer die Beschriftung:** `formatiere()` gibt bei Auswahlfeldern die Beschriftung zurück (Trefferliste, Titel, Export als Excel und PDF, Historie); Namen über `feldLabel()`, `feldHilfe()`, `typName()`, `registerName()`, `listenName()`, `sichtName()`, Optionen über `optionText()`.
 - **Speichern:** Der Server bereinigt `beschriftungen` (gültige Sprachkennungen, nur bekannte Teile, Optionen nur für vorhandene Werte). Fehlt die Angabe beim Speichern ganz, bleiben die bisherigen – ein älteres Programm über die API löscht so nichts; `null` oder `{}` entfernt sie. Mappentypen und Ansichten speichern Name und Beschreibung je Sprache in der Spalte `beschriftungen` (Migration 080), Felder, Register und Trefferlisten im JSON des Mappentyps.
-- **Erlaubte Sprachen** liefert `erlaubteSprachen()` – bis zur Sprachwahl in der Werkbank (#729) Deutsch und Englisch. Beschriftungen anderer Sprachen (etwa aus einem Paket) bleiben gespeichert.
+- **Erlaubte Sprachen** liefert `erlaubteSprachen()` aus der Einstellung `sprachen` (Werkbank → Sprachen, #729); der Server setzt sie mit `setzeErlaubteSprachen()` beim Start und jede Minute neu. Beschriftungen anderer Sprachen (etwa aus einem Paket) bleiben gespeichert.
 
-**Übersetzen:** Eine neue Sprache bekommt einen Ordner `shared/src/sprachen/<sprache>/` mit denselben Dateien und Schlüsseln wie `de`, z. B. `en/ablage.json`. Platzhalter bleiben gleich (die CI vergleicht sie), Mehrzahlformen richten sich nach der Sprache. Fehlt ein Text, erscheint vorerst Deutsch. Sprachwahl (#729) und Sprachpakete (#731) bauen darauf auf.
+**Übersetzen:** Eine neue Sprache bekommt einen Ordner `shared/src/sprachen/<sprache>/` mit denselben Dateien und Schlüsseln wie `de`, z. B. `en/ablage.json`. Platzhalter bleiben gleich (die CI vergleicht sie), Mehrzahlformen richten sich nach der Sprache. Wer einen deutschen Text ändert oder anlegt, pflegt den englischen mit – die CI meldet fehlende Schlüssel in `en`. Sprachpakete (#731) melden ihre Texte über `registriereSprache()` an.
+
+**Sprache wählen** (#729):
+
+- **Rückfall:** `t()` sucht in der gewählten Sprache, dann in Englisch, dann in Deutsch; ein leerer Text zählt als fehlend. So bleibt nie eine Stelle leer.
+- **Welche Sprache gilt:** die der angemeldeten Person (`benutzer.sprache`, Migration 081), wenn erlaubt; sonst die, die die Oberfläche im Kopf `X-Sprache` mitschickt (zuletzt benutzte bzw. die des Browsers); sonst die der Installation (`sprachen.standard`). `GET /api/sprache` nennt sie, die Oberfläche lädt sie vor allen anderen Modulen (`web/src/main.tsx`) und lädt nach einem Wechsel neu.
+- **Server:** Jede Anfrage läuft in `mitSprache()` (AsyncLocalStorage in `server/src/sprache.ts`); Fehlermeldungen kommen so in der Sprache der Person. E-Mails an eine Person baut `mitSpracheVon(person, …)` in ihrer Sprache; Mails an alle Administratoren (`anVerwaltende`) übergeben Betreff und Text als Funktion (`MailText`), damit jeder Empfänger seine Sprache bekommt.
+- **Protokollzeilen** gehen mit `tDe()` – immer Deutsch, unabhängig von der Anfrage.
+- **Texte für Dritte** (`textDritte`, Auskunft, Abruf-Link) und Werte, die der Server einmal für alle bildet (Konstanten auf Modulebene, Titel und Namen der Systemmappentypen, Texte der Verwaltungspunkte), stehen in der Sprache der Installation – beim Start bzw. beim Anlegen berechnet. Systemmappentypen und Systemfelder tragen zusätzlich `beschriftungen` aus den Sprachdateien (`systemBeschriftung()`), damit die Oberfläche sie in jeder Sprache zeigt.
+- **Maschinell übersetzte Sprachen** (später aus Paketen) zeigen in Mein Konto den Hinweis „Maschinell übersetzt – Verbesserungen willkommen“; der Link führt hierher.
 
 **Bibliothek:** eine eigene, kleine Umsetzung in `shared/src/sprache.ts` statt i18next – keine neue Abhängigkeit, offline, dieselben Regeln in Oberfläche und Server. Das Format (flaches JSON, `_one`/`_other`) entspricht i18next; ein späterer Wechsel bleibt möglich.
 

@@ -155,7 +155,7 @@ export interface SicherungsQuellen {
   /** Läuft der Wartungsmodus (#102)? Dann pausiert die automatische Sicherung. */
   wartungAktiv?: () => boolean;
   /** Mail an alle Administratoren (#105). */
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   /** Für Tests: Einhängepunkte. */
   mountinfo?: string;
   jetzt?: () => Date;
@@ -820,7 +820,7 @@ export class Sicherung {
     if ((await this.q.einstellungen.lies(schluessel)) === vorfall) return null;
     await this.q.einstellungen.schreibe(schluessel, vorfall);
     log.warn(betreff.replace('Ablago: ', ''), { vorfall });
-    try { await this.q.anAdmins?.(betreff, t('meldungen.sicherung.details-stehen-in-der', { text })); }
+    try { await this.q.anAdmins?.(betreff, () => t('meldungen.sicherung.details-stehen-in-der', { text })); }
     catch (e) { log.warn('Mail zur Sicherung nicht verschickt', { fehler: (e as Error).message }); }
     return vorfall;
   }
