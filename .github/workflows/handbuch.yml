@@ -50,6 +50,8 @@ jobs:
   bilder:
     name: bilder (${{ matrix.teil }})
     runs-on: ubuntu-latest
+    # Ein hängender Browser-Schritt soll den PR nicht stundenlang blockieren (sonst läuft der Job bis 6 h).
+    timeout-minutes: 20
     strategy:
       # Alle drei zu Ende laufen lassen: Fehlerbilder der iPhone-Prüfung auch dann, wenn ein anderer Teil scheitert.
       fail-fast: false
@@ -218,6 +220,7 @@ jobs:
     needs: bilder
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     concurrency:
       group: handbuch-bauen-${{ inputs.version || github.ref }}
       cancel-in-progress: true
