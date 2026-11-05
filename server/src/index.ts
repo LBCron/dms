@@ -73,6 +73,8 @@ import { createServer, type Server } from 'node:http';
 import { Lasttestmodus, lasttestAus, lasttestSkript, pruefeZiel } from './lasttestmodus';
 import { erkenneSpeicherart } from './speicherart';
 import { alterExportOrdner, exportOrdnerVon, exportOrt, merkeUmzug, raeumeExporteAuf, zieheExporteUm } from './exportordner';
+import { Startmodus } from './startmodus';
+import { raeumeHochladenAuf, richteHochladenEin } from './hochladen';
 
 const pfad = (rel: string) => fileURLToPath(new URL(rel, import.meta.url));
 const env = process.env;
@@ -117,6 +119,25 @@ for (const o of Object.values(ordner)) await mkdir(o, { recursive: true });
 // Export-Ordner (#797): neben files/, nie im Sicherungsordner; einstellbar nur über ein eigenes Volume.
 await mkdir(exportOrdnerVon(ordner), { recursive: true });
 
+// Startseite „Ablago startet …“ (#802): Der Port ist sofort offen. Bis Ablago bereit ist, zeigt er nur Schritte und
+// Zahlen; API und WebDAV antworten mit 503, /api/gesundheit meldet „startet“ (Docker und Proxy warten). Scheitert der
+// Start, steht der Grund dort und im Protokoll. Nach einem Fehler beendet sich Ablago nach FEHLER_NEUSTART_MS, damit
+// der Container neu startet – außer bei der Sperre gegen ein Downgrade (#714): Da hilft kein Neustart.
+const FEHLER_NEUSTART_MS = 5 * 60_000;
+const start = new Startmodus({ port: cfg.port, host: cfg.host, webDir: cfg.web, proxy: cfg.proxy.trust, einbetten: cfg.einbetten });
+await start.oeffne();
+let fehlerNeustart: NodeJS.Timeout | null = null;
+const beimStartfehler = (e: unknown) => {
+  const f = start.fehler(e);
+  log.error(`Start abgebrochen: ${(e as Error)?.message ?? String(e)}`, {
+    schritt: start.stand.schritt, ...(e instanceof NeuereDatenbankFehler ? { unbekannt: e.unbekannt.join(', ') } : { fehler: (e as Error)?.stack ?? String(e) }),
+  });
+  // Ohne offene Startseite (Einrichtungsmodus, kurz vor dem Port von Ablago) zeigt niemand den Grund: gleich beenden wie bisher.
+  if (!start.offen) process.exit(1);
+  if (f.art !== 'neuere-datenbank' && !fehlerNeustart) fehlerNeustart = setTimeout(() => process.exit(1), FEHLER_NEUSTART_MS);
+};
+process.on('uncaughtException', beimStartfehler);
+
 // Datenbank-Anbindung (#119): Datei unter /data/geheim, führend; sonst DATABASE_URL übernehmen;
 // sonst (oder wenn sie nicht funktioniert) der Einrichtungsassistent im Browser.
 // App-Stores (#176): DMS_EINRICHTUNGSCODE=aus – ohne Code einrichten.
@@ -150,10 +171,13 @@ if (verbunden && !anbindung && umgebung) {
   else log.info(`Datenbank-Anbindung aus DMS_DB_PASSWORT in ${ANBINDUNG_DATEI} übernommen`);
 }
 if (!verbunden) {
+  // Der Einrichtungsmodus braucht den Port selbst; danach geht es mit der Startseite weiter.
+  await start.schliesse();
   anbindung = await einrichtungsmodus({
     geheim: ordner.geheim, code: einrichtungscode, vorbelegt: kandidat, quelle, fehler: startfehler,
     port: cfg.port, host: cfg.host, webDir: cfg.web, proxy: cfg.proxy.trust, einbetten: cfg.einbetten, wiederholenMs: kandidat ? 10_000 : undefined,
   });
+  await start.oeffne();
 }
 const db = anbindung!;
 const datenbankUrl = alsUrl(db);
@@ -161,14 +185,9 @@ const datenbankUrl = alsUrl(db);
 const verbindungsZahl = verbindungenAus(env);
 if (verbindungsZahl.fehler) log.warn(verbindungsZahl.fehler);
 const sql = verbinde(datenbankUrl, verbindungsZahl.max);
-try {
-  await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m));
-} catch (e) {
-  // Datenbank von einer neueren Version (#714): klar melden und nicht starten.
-  if (!(e instanceof NeuereDatenbankFehler)) throw e;
-  log.error(`Start abgebrochen: ${e.message}`, { unbekannt: e.unbekannt.join(', ') });
-  process.exit(1);
-}
+// Datenbank von einer neueren Version (#714) oder fehlgeschlagene Migration: Grund auf der Startseite (beimStartfehler).
+await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m), (nr, von, datei) => start.schritt('migration', { nr, von, datei }));
+start.schritt('schluessel');
 const [{ server_version: pgVersion }] = await sql`SHOW server_version`;
 protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank, verbindungen: `${verbindungsZahl.max}${verbindungsZahl.quelle === 'umgebung' ? ' (DMS_DB_VERBINDUNGEN)' : ''}` });
 const verbindungswarten = new Verbindungswarten(sql, verbindungsZahl.max, verbindungsZahl.quelle);
@@ -206,6 +225,10 @@ region.starte();
 const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt) };
 const speicherplatz = new Speicherplatz(ordner, spDeps);
 const hochladen = () => speicherplatz.pruefeHochladen();
+// Hochladen als Strom (#746): temporäre Dateien neben der Ablage (gleiches Laufwerk, nicht in der Sicherung).
+richteHochladenEin({ ordner: join(ordner.dateien, 'hochladen'), vorher: hochladen });
+const uebrig = await raeumeHochladenAuf();
+if (uebrig) log.info('Übrig gebliebene temporäre Uploads gelöscht', { anzahl: uebrig });
 const dienst = new Dienst(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'mappen'), mitPruefung(ordnerSpeicher(ordner.dateien, cfg.haushalt), hochladen), {
   tresor, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt),
 });
@@ -255,10 +278,12 @@ const wiederherstellung = new Wiederherstellung({
 });
 sicherung.sperre = () => wiederherstellung.laeuft();
 await wiederherstellung.raeumeAuf();
+start.schritt('suchindex');
 // Erweiterungen der Suche (#562): pg_trgm anlegen bzw. umziehen, wenn sie fehlt; sonst Hinweis im Protokoll.
 await sichereErweiterungen(sql, protokoll.modul('datenbank')).catch((e) => log.warn('Erweiterungen der Datenbank nicht geprüft', { fehler: (e as Error).message }));
 const abschluss = await pgEinstellungen(sql, cfg.haushalt).lies('wiederherstellung_abschluss') as { sicherung?: string } | null;
 if (abschluss) log.warn('Gestartet nach einer Wiederherstellung', { sicherung: abschluss.sicherung });
+start.schritt('ordner');
 const texterkennung = new Texterkennung(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'texterkennung'), ordnerSpeicher(ordner.dateien, cfg.haushalt), pgBetriebSpeicher(sql, cfg.haushalt));
 dienst.verbindeTexterkennung(texterkennung);
 texterkennung.pause = () => wartung.aktiv;
@@ -530,10 +555,12 @@ const app = await baueApp(dienst, konten, {
 const kurz = betrieb.kurz();
 log.info(`E-Mail-Versand: ${kurz.mail === 'aus' ? 'aus – Links werden in der Benutzerverwaltung angezeigt (einrichten in Werkbank → E-Mail und Adresse)' : kurz.mail}`);
 log.info(`Adresse für Links: ${kurz.adresse}`);
+start.schritt('titel');
 const nachgezogen = await dienst.titelNachziehen();
 if (nachgezogen) log.info(`Titel von ${nachgezogen} Mappen berechnet`);
 // Systemtypen Benutzer und Rolle anlegen und jedem Benutzer seine Mappe geben (auch nach einem Update).
-await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
+start.schritt('benutzer');
+await dienst.gleicheBenutzerAb(await konten.listeBenutzer(), (f, g) => start.menge(f, g));
 // Titel „… (ehemalig)“ aus älteren Versionen zurücksetzen (#663); deaktiviert zeigt die Oberfläche durchgestrichen.
 const ehemalig = await dienst.ehemaligZuruecksetzen();
 if (ehemalig) log.info(`Titel von ${ehemalig} deaktivierten Benutzern ohne „(ehemalig)“ neu berechnet`);
@@ -546,21 +573,20 @@ dienst.ereignisse.starte();
 automatisierungen.start();
 wartung.beimAusschalten(() => dienst.ereignisse.wecke());
 // Schlüssel für Mappentypen (#145), einmalig nach dem Update.
+start.schritt('typen');
 await dienst.typSchluesselNachziehen();
 // Haken „Neue Mappen/Löschen erlauben“ → Berechtigungen (#146), einmalig nach dem Update.
 await dienst.hakenUeberfuehren();
-const geprueft = await dienst.passungNachziehen();
+const geprueft = await dienst.passungNachziehen((f, g) => start.menge(f, g));
 if (geprueft) log.info(`Mappen von ${geprueft} Mappentypen gegen ihre Definition geprüft`);
 // Papierkorb (#43): Abgelaufenes stündlich endgültig löschen.
 // Auskünfte (#396): nach 7 Tagen weg – im selben stündlichen Lauf.
 // Exporte (#797): nach dem Herunterladen bzw. nach 7 Tagen weg – derselbe Lauf wie für die Auskünfte.
 const papierkorb = async () => { if (!wartung.aktiv) await dienst.raeumePapierkorbAuf(); await raeumeExporteAuf(exporte.pfad); };
 const papierkorbLauf = () => papierkorb().catch((e) => log.error('Papierkorb aufräumen fehlgeschlagen', { fehler: (e as Error).message }));
-await papierkorbLauf();
 setInterval(papierkorbLauf, 60 * 60 * 1000).unref();
 // Abwesenheit (#78): Abgelaufenes beenden, „abwesend“ an den Benutzer-Mappen nachziehen.
 const abwesenheiten = () => konten.abwesenheitenPruefen().catch((e) => log.error('Abwesenheiten prüfen fehlgeschlagen', { fehler: (e as Error).message }));
-await abwesenheiten();
 setInterval(abwesenheiten, 60 * 60 * 1000).unref();
 // Anmeldeschutz (#368) und Tägliche Zusammenfassung (#54): Wann gemeldet wird, entscheiden seit #678 die
 // Automatisierungen (Wenn-Karte „Zeitplan“, Paket „Benachrichtigungen“); die Dann-Karten rufen das hier auf.
@@ -578,6 +604,7 @@ dienst.anmeldeschutzMelden = async (was, daten, trocken) => {
   return { gesendet: ok && !trocken, grund: tAuto(ok ? (trocken ? 'automatisierung.karte.anmeldeschutz.trocken' : 'automatisierung.karte.anmeldeschutz.gesendet') : 'automatisierung.karte.anmeldeschutz.nichts') };
 };
 // Fristen und Erinnerungen (#129, #131): einmal am Tag – gleich nach Mitternacht bzw. beim Start –, vor der Zusammenfassung.
+// Der erste Lauf beim Start (bei vielen Mappen lang) kommt seit #802 erst, wenn Ablago erreichbar ist (unten).
 let fristenTag = '';
 const fristen = async () => {
   const heute = heuteIn();
@@ -586,11 +613,11 @@ const fristen = async () => {
   fristenTag = heute;
   if (r.angelegt || r.erledigt || r.erinnerungen) log.info('Fristen und Erinnerungen geprüft', r);
 };
-await fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 setInterval(() => void fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message })), 5 * 60 * 1000).unref();
 if (einrichtungNoetig) log.warn(`Noch kein Benutzer vorhanden: Öffne Ablago im Browser (Port ${cfg.port}) und richte es mit dem Einrichtungscode ein.`);
 
 appFuerPakete = app;
+start.schritt('dienste');
 await texterkennung.start();
 await paketlaeufer.start().catch((e: unknown) => log.error('Paket-Läufer startet nicht', { fehler: (e as Error).message }));
 notfall.start();
@@ -624,6 +651,7 @@ setInterval(() => void wiederherstellung.tick().catch((e) => log.error('Zeitplan
 let lasttestSeite: Lasttestmodus | null = null;
 let intern: Server | null = null;
 if (lasttest.wahl) {
+  start.schritt('lasttest');
   const skript = lasttestSkript(env, [pfad('../../lasttest/lasttest.mjs'), pfad('../test/lasttest.mjs')]);
   if (!skript) lasttestAbbruch = 'Das Skript des Lasttests (dms-lasttest) fehlt in diesem Image.';
   else {
@@ -655,6 +683,7 @@ if (lasttest.wahl) {
 
 const beenden = async () => {
   log.info('Ablago wird beendet');
+  await start.schliesse();
   await lasttestSeite?.stop();
   if (intern) { const s = intern; await new Promise<void>((r) => { s.closeAllConnections(); s.close(() => r()); }); }
   texterkennung.stop();
@@ -676,10 +705,19 @@ const beenden = async () => {
 process.on('SIGTERM', beenden);
 process.on('SIGINT', beenden);
 
+// Startseite (#802) weg, Ablago selbst an den Port – die Lücke dazwischen ist nur ein Augenblick.
+await start.schliesse();
 // Warteschlange für neue Verbindungen (#544): Bei Überlast nimmt der Server sie verzögert an; mit 511 (Vorgabe von Node)
 // bekamen einzelne Programme gar keine Verbindung mehr.
 if (lasttestSeite) await lasttestSeite.start();
 else await app.listen({ port: cfg.port, host: cfg.host, backlog: 2048 });
+// Ab jetzt läuft Ablago: Unerwartete Fehler beenden den Prozess wieder wie gewohnt.
+process.off('uncaughtException', beimStartfehler);
+log.info('Ablago ist bereit', { sekunden: Math.round((Date.now() - start.stand.seit) / 100) / 10 });
+// Lange Läufe erst jetzt im Hintergrund (#802, #724): Papierkorb, Abwesenheiten und der erste Fristenabgleich.
+void papierkorbLauf();
+void abwesenheiten();
+void fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 const konsolenAdresse = lasttestSeite && intern ? (() => { const a = intern.address(); return `http://127.0.0.1:${typeof a === 'object' && a ? a.port : cfg.port}`; })() : lokaleUrl(cfg.port, cfg.host);
 await konsole.schreibe(konsolenAdresse)
   .catch((e) => log.warn('Konsolenzugang nicht angelegt – der Befehl dms geht nicht', { datei: konsole.datei, fehler: (e as Error).message }));

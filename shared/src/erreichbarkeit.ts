@@ -18,7 +18,11 @@ export interface ErreichbarkeitsZustand {
   neueVersion: boolean;
 }
 
-export interface Gesundheit { ok?: boolean; stand?: string }
+/**
+ * GET /api/gesundheit. `zustand` (#802): „startet“ und „fehler“ (Startseite, HTTP 503), „laeuft“, dazu
+ * „einrichtung“ (Einrichtungsmodus) und „lasttest“ (Lasttest-Modus).
+ */
+export interface Gesundheit { ok?: boolean; stand?: string; zustand?: 'startet' | 'fehler' | 'laeuft' | 'einrichtung' | 'lasttest' }
 export interface Umgebung {
   /** GET /api/gesundheit; null, wenn das DMS nicht geantwortet hat. */
   gesundheit(): Promise<Gesundheit | null>;
@@ -36,11 +40,13 @@ export const wartezeit = (versuch: number) => Math.min(30_000, 2000 * 2 ** versu
 
 /**
  * Kam die Antwort nicht vom DMS? Status 0 heißt: keine Verbindung. 502/503/504 ohne die
- * JSON-Antwort des DMS ({ fehler }) kommen vom Proxy – die 503 des Wartungsmodus bringt eine mit.
+ * JSON-Antwort des DMS ({ fehler }) kommen vom Proxy – die 503 des Wartungsmodus bringt eine mit. Die 503 der
+ * Startseite (#802, `startet: true`) zählt als Ausfall: Ablago ist gleich wieder da, die Leiste wartet darauf.
  */
 export function istAusfall(status: number, daten: unknown): boolean {
   if (status === 0) return true;
   if (status !== 502 && status !== 503 && status !== 504) return false;
+  if (daten && typeof daten === 'object' && (daten as { startet?: unknown }).startet === true) return true;
   return !(daten && typeof daten === 'object' && 'fehler' in daten);
 }
 

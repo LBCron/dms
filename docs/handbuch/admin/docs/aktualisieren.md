@@ -12,10 +12,22 @@
    docker compose pull && docker compose up -d
    ```
    oder in der Container-Verwaltung des NAS „Projekt neu erstellen“. Bei [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) ist es nur ein Container; Datenbank und Ablago kommen mit demselben Image. Bringt ein neues Image eine neue Hauptversion von PostgreSQL mit, siehe [Wachsen und umziehen](wachsen.md#neue-hauptversion-von-postgresql).
-5. Datenbank-Migrationen laufen beim Start automatisch und in einer Transaktion: Schlägt eine fehl, bleibt die Datenbank unverändert, und der Container startet nicht. Im Container-Log steht dann der Grund.
+5. Datenbank-Migrationen laufen beim Start automatisch und in einer Transaktion: Schlägt eine fehl, bleibt die Datenbank unverändert, und Ablago startet nicht. Den Grund zeigt die Seite unter der gewohnten Adresse (siehe unten), die genaue Meldung steht im Container-Log.
 6. Kurz prüfen, ob alles läuft, dann den Wartungsmodus beenden.
 
-Während des Neustarts ist Ablago kurz nicht erreichbar. Offene Seiten zeigen dann oben „Ablago ist gerade nicht erreichbar“ und fragen mit wachsendem Abstand (2 bis 30 Sekunden) nach, bis es wieder antwortet. Eingaben bleiben stehen; gespeichert wird nichts automatisch. Läuft danach eine andere Version, bittet die Leiste darum, die Seite neu zu laden – sonst arbeitet der Browser mit der alten Oberfläche gegen den neuen Server weiter. Erkannt wird das an `/api/gesundheit`, das neben `ok` eine Kennung des laufenden Stands liefert (ein Hash aus Version, Commit und Build-Zeit, damit ohne Anmeldung keine Version sichtbar ist).
+### Was du nach dem Start siehst { #nach-dem-start }
+
+Wenige Sekunden nach dem Start des Containers ist die Adresse erreichbar. Solange Ablago noch Migrationen ausführt oder sich vorbereitet, zeigt sie die Seite **„Ablago startet …“** mit dem aktuellen Schritt, z. B. „Datenbank wird auf den neuen Stand gebracht – Schritt 3 von 5“. Du hast dann nichts falsch gemacht: Bei großen Ablagen dauert das einige Minuten. Die Seite lädt sich von selbst neu und zeigt danach die Anmeldung (bzw. den Einrichtungsassistenten).
+
+![Die Seite „Ablago startet …“ mit dem Schritt der Migration, einem Fortschrittsbalken und dem Hinweis, dass man nichts falsch gemacht hat](grafiken/ablago-startet.svg){ .grafik }
+
+- Die Seite zeigt nur Schritte und Zahlen, keine Daten aus der Ablage. Anmeldung, API und WebDAV antworten bis dahin mit `503` und `Retry-After`; Programme und Pakete warten also einfach.
+- `/api/gesundheit` meldet bis zum Ende `503` mit `"zustand": "startet"`, danach `200` mit `"zustand": "laeuft"`. Der Healthcheck im Image, eine NAS oder ein Reverse-Proxy sehen den Container so erst als bereit, wenn Ablago es ist.
+- **Geht beim Start etwas schief**, steht auf derselben Seite „Ablago konnte nicht starten“ mit dem Grund in Klartext, z. B. welcher Schritt der Migration scheiterte, und der Hinweis auf das Container-Log und die [Fehlersuche](fehlersuche.md#container-logs). `/api/gesundheit` meldet dann `"zustand": "fehler"`. Nach einigen Minuten beendet sich Ablago, damit Docker den Container neu startet und es noch einmal versucht.
+- **Stammt die Datenbank von einer neueren Version** (Sperre gegen ein Zurückgehen), nennt die Seite das ebenfalls und bleibt stehen – ein Neustart hilft da nicht. Stell das Image wieder auf die neuere Version.
+- Den ersten Abgleich der Fristen macht Ablago erst nach dem Start im Hintergrund; die Adresse wartet nicht darauf.
+
+Während des Neustarts ist Ablago kurz nicht erreichbar bzw. noch nicht bereit. Offene Seiten zeigen dann oben „Ablago ist gerade nicht erreichbar“ und fragen mit wachsendem Abstand (2 bis 30 Sekunden) nach, bis es wieder antwortet. Eingaben bleiben stehen; gespeichert wird nichts automatisch. Läuft danach eine andere Version, bittet die Leiste darum, die Seite neu zu laden – sonst arbeitet der Browser mit der alten Oberfläche gegen den neuen Server weiter. Erkannt wird das an `/api/gesundheit`, das neben `ok` eine Kennung des laufenden Stands liefert (ein Hash aus Version, Commit und Build-Zeit, damit ohne Anmeldung keine Version sichtbar ist).
 
 Welche Version läuft und ob es neuere gibt, zeigt **Werkbank → Systemzustand → Version und Updates** (siehe [Fehlersuche](fehlersuche.md#technik)).
 

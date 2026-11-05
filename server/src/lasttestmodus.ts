@@ -257,7 +257,7 @@ export class Lasttestmodus {
 
     app.get('/api/konto/status', async () => ({ einrichtungNoetig: false, mail: false, benutzer: null, marke: null, wartung: null, lasttest: true }));
     const stand = standKennung();
-    app.get('/api/gesundheit', async () => ({ ok: true, lasttest: true, stand }));
+    app.get('/api/gesundheit', async () => ({ ok: true, zustand: 'lasttest', lasttest: true, stand }));
     app.get('/api/lasttest', async () => this.ansicht());
     app.post('/api/lasttest/angaben', async (req) => {
       schutz(req);

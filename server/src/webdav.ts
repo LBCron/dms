@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import type { Readable } from 'node:stream';
+import { Hochgeladen, nimmAuf } from './hochladen';
 import { MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Dokument, type Mappe, type Register } from '../../shared/src/model';
 import { kinderVon, type Sicht } from '../../shared/src/sichten';
 import { ersetzePlatzhalter, kannStempeln, WEBDAV_VORLAGE, type GeltenderStempel } from '../../shared/src/stempel';
@@ -54,7 +55,7 @@ const XML_MAX = 64 * 1024;
 const SCHWEBEND_MS = 10 * 60_000;
 const SPERRE_SEKUNDEN = 3600;
 const ZUGRIFFE = 50;
-/** Gleichzeitige Uploads (PUT) je Benutzer – jeder wird bis zu 100 MB im Speicher gehalten. */
+/** Gleichzeitige Uploads (PUT) je Benutzer – jeder belegt bis zu 100 MB (seit #746 als temporäre Datei, nicht im Speicher). */
 export const MAX_UPLOADS = 3;
 /** Längste E-Mail-Adresse (RFC 5321); längere Eingaben werden für Protokoll und Anmeldeschutz gekürzt. */
 const EMAIL_MAX = 254;
@@ -666,7 +667,7 @@ export class Webdav {
     if (teile.length && istHilfsdatei(teile[teile.length - 1])) { await leere(a.koerper, MAX_DATEIGROESSE); return { status: 201, koepfe: { 'content-length': '0' } }; }
     const z = await this.ablageZiel(teile, ctx);
     if (z.eltern.art === 'register') await this.d.dienst.pruefeRecht(ctx.z, z.eltern.mappeId, 'U');
-    // Jeder Upload liegt bis zu 100 MB im Speicher: nur wenige gleichzeitig je Benutzer.
+    // Jeder Upload belegt bis zu 100 MB (temporäre Datei, #746): nur wenige gleichzeitig je Benutzer.
     const laufend = this.uploads.get(ctx.b.id) ?? 0;
     if (laufend >= MAX_UPLOADS) {
       verwerfe(a.koerper);
@@ -681,9 +682,15 @@ export class Webdav {
   }
 
   private async legeAb(z: Awaited<ReturnType<Webdav['ablageZiel']>>, a: WebdavAnfrage, ctx: Ctx): Promise<WebdavAntwort> {
-    const inhalt = await lies(a.koerper, MAX_DATEIGROESSE);
+    // Hochladen als Strom (#746): in eine temporäre Datei, Prüfsumme beim Lesen; danach ist sie wieder weg.
+    const inhalt = a.koerper && !Buffer.isBuffer(a.koerper) ? await nimmAuf(a.koerper, MAX_DATEIGROESSE, Number(a.kopf('content-length') ?? NaN)) : await lies(a.koerper, MAX_DATEIGROESSE);
+    try { return await this.legeInhaltAb(z, inhalt, ctx); } finally { if (inhalt instanceof Hochgeladen) await inhalt.entferne(); }
+  }
+
+  private async legeInhaltAb(z: Awaited<ReturnType<Webdav['ablageZiel']>>, inhalt: Buffer | Hochgeladen, ctx: Ctx): Promise<WebdavAntwort> {
+    const groesse = Buffer.isBuffer(inhalt) ? inhalt.length : inhalt.groesse;
     // Leere Datei: Explorer und Finder legen erst eine leere Datei an und schreiben dann den Inhalt.
-    if (inhalt.length === 0) {
+    if (groesse === 0) {
       if (z.k?.art === 'dokument') return { status: 204, koepfe: {} };
       this.merkeSchwebend(ctx, z.ort, z.name, 0);
       return { status: 201, koepfe: { 'content-length': '0' } };
@@ -693,8 +700,8 @@ export class Webdav {
       const post = await this.d.dienst.legePostAn({ betreff: z.name.replace(/\.[^.]{1,8}$/, '').slice(0, 250) || z.name }, { id: ctx.b.id, name: ctx.b.name }, ctx.z, POST_KANAL.webdav);
       const register = (await this.d.dienst.postTyp()).register.find((r) => r.art === 'dokumente')?.key;
       await this.d.dienst.ladeHoch(post.id, { register, name: z.name, typ, herkunft: 'webdav' }, inhalt, ctx.b.id);
-      log.info('Post über WebDAV abgelegt', { datei: z.name, groesse: inhalt.length, mappe: post.id, von: ctx.b.email });
-      this.merkeSchwebend(ctx, z.ort, z.name, inhalt.length);
+      log.info('Post über WebDAV abgelegt', { datei: z.name, groesse, mappe: post.id, von: ctx.b.email });
+      this.merkeSchwebend(ctx, z.ort, z.name, groesse);
       return { status: 201, koepfe: { 'content-length': '0' } };
     }
     if (z.eltern.art !== 'register') throw new Fachfehler(403, 'Hier lässt sich nichts ablegen.');
@@ -705,12 +712,12 @@ export class Webdav {
       // Per Dokument-Id, nicht per Name: Laufwerksnamen sind bereinigt und eindeutig gemacht („X (2).pdf“),
       // im DMS können zwei Dokumente gleich (oder nach dem Bereinigen gleich) heißen.
       const neu = await this.d.dienst.ersetzeDokument(z.k.dok.id, { name: z.k.dok.name, typ, herkunft: 'webdav' }, inhalt, ctx.b.id);
-      log.info('Neue Version über WebDAV abgelegt', { datei: neu.name, id: neu.id, groesse: inhalt.length, mappe: z.eltern.mappeId, von: ctx.b.email });
+      log.info('Neue Version über WebDAV abgelegt', { datei: neu.name, id: neu.id, groesse, mappe: z.eltern.mappeId, von: ctx.b.email });
       return { status: 204, koepfe: {} };
     }
     const r = await this.d.dienst.ladeHoch(z.eltern.mappeId, { register: reg.key, name: z.name, typ, gleicherName: 'zaehler', herkunft: 'webdav' }, inhalt, ctx.b.id);
     this.vergiss(ctx, z.ort, z.name);
-    log.info('Dokument über WebDAV abgelegt', { datei: r.dokument.name, groesse: inhalt.length, mappe: z.eltern.mappeId, von: ctx.b.email });
+    log.info('Dokument über WebDAV abgelegt', { datei: r.dokument.name, groesse, mappe: z.eltern.mappeId, von: ctx.b.email });
     return { status: 201, koepfe: { 'content-length': '0' } };
   }
 

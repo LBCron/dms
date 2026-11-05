@@ -89,8 +89,11 @@ export async function verbinde(env: NodeJS.ProcessEnv, als: string | undefined, 
     if (fehlt) {
       // Läuft der Server, aber ohne Konsolenzugang? Dann ist es der Einrichtungsmodus.
       const url = lokaleUrl(Number(env.PORT ?? 3000), env.HOST);
-      const antwort = await holen(`${url}/api/gesundheit`).then((r) => r.ok).catch(() => false);
-      if (antwort) throw new KonsolenFehler('Ablago läuft im Einrichtungsmodus (noch keine Datenbank angebunden). Richte es zuerst im Browser ein; danach geht der Befehl dms.', 3);
+      const g = await holen(`${url}/api/gesundheit`).then(async (r) => ({ ok: r.ok, zustand: (JSON.parse(await r.text()) as { zustand?: string }).zustand })).catch(() => null);
+      if (g?.ok) throw new KonsolenFehler('Ablago läuft im Einrichtungsmodus (noch keine Datenbank angebunden). Richte es zuerst im Browser ein; danach geht der Befehl dms.', 3);
+      // Startseite (#802): Ablago ist erreichbar, aber noch nicht bereit.
+      if (g?.zustand === 'startet') throw new KonsolenFehler('Ablago startet gerade (Migrationen und Vorbereitungen). Den Fortschritt zeigt die Seite im Browser; versuche es danach noch einmal.', 3);
+      if (g?.zustand === 'fehler') throw new KonsolenFehler('Ablago konnte nicht starten. Der Grund steht auf der Seite im Browser und im Protokoll des Containers.', 3);
       throw new KonsolenFehler('Ablago läuft nicht (oder startet gerade). Prüfe das Protokoll des Containers und versuche es in einer Minute noch einmal.', 3);
     }
     if ((e as NodeJS.ErrnoException).code === 'EACCES') throw new KonsolenFehler(`Keine Berechtigung für ${datei}. Rufe dms als derselbe Benutzer auf wie Ablago (z. B. docker exec ohne --user).`, 3);

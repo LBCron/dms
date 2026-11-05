@@ -54,6 +54,10 @@ Ablago gibt es in zwei Varianten. **Wir empfehlen zwei Container** – so laufen
 
 ## Nach der Installation
 
+Rufe die Adresse gleich nach dem Start auf. Bereitet sich Ablago noch vor (beim ersten Start legt es die Datenbank an), siehst du für einen Moment die Seite **„Ablago startet …“** mit dem aktuellen Schritt. Sie lädt sich von selbst neu und führt danach zum Einrichtungsassistenten. Du musst nichts tun. Mehr dazu unter [Was du nach dem Start siehst](https://help.ablago.app/admin/aktuell/aktualisieren/#nach-dem-start).
+
+![Die Seite „Ablago startet …“ mit dem aktuellen Schritt und einem Fortschrittsbalken](grafiken/ablago-startet.svg){ .grafik }
+
 1. **Einrichten.** Beim ersten Aufruf führt ein Assistent durch die Einrichtung: je nach Weg Einrichtungscode und Datenbank, dann **Neu einrichten** oder **Aus einer Sicherung wiederherstellen**, Name deiner Ablage, Administrator, erster Benutzer, Schlüssel und Notfallblatt. Die Schritte im Einzelnen beschreibt das [Administratorhandbuch](https://help.ablago.app/admin/aktuell/installation/#der-einrichtungsassistent).
 2. **Sichern.** Unter **Werkbank → Sicherung** den Zeitplan einschalten und das Notfallblatt ausdrucken. Kopiere die Sicherungen ab und zu an einen anderen Ort, z. B. auf einen USB-Stick oder in einen Cloudspeicher. Fällt das Gerät aus, sind sonst auch die Sicherungen weg. Die Sicherungen sind verschlüsselt, ein Cloudspeicher sieht also nur unlesbare Dateien. Exporte sind nicht darin: Ein [Vollexport](https://help.ablago.app/admin/aktuell/export/) ist unverschlüsselt und liegt deshalb im eigenen [Export-Ordner](https://help.ablago.app/admin/aktuell/export/#export-ordner), nie bei den Sicherungen. Mehr unter [Sicherung](https://help.ablago.app/admin/aktuell/sicherung/).
 3. **Loslegen.** Wie man mit Mappen, Dokumenten und Aufgaben arbeitet, steht im [Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/).

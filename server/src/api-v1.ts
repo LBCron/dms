@@ -324,6 +324,7 @@ export function v1Routen(intern: Route[]): Route[] {
       // Werkbank (#818): derselbe Bereich wie die interne Route.
       ...(basis?.zugang === 'admin' ? { bereichVon: { methode: basis.methode, pfad: basis.pfad } } : {}),
       roh: basis?.roh,
+      strom: basis?.strom,
       api: true,
       handler: e.handler ? (a: Anfrage) => e.handler!(a, finde) : basis!.handler,
     } satisfies Route;
