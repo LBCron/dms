@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fuelleErgebnis, GERAET_MAX, PLATZHALTER, restMinuten, type LasttestStand, type Speicherwahl } from '../../shared/src/lasttest';
+import { fuelleErgebnis, GERAET_MAX, PLATZHALTER, restMinuten, type LasttestLiveStand, type LasttestStand, type Speicherwahl } from '../../shared/src/lasttest';
+import type { Messpunkt } from '../../shared/src/systemlast';
 import { handbuchUrl } from '../../shared/src/hilfe';
 import { api } from './api';
 import { rueckfrage } from './rueckfrage';
 import { t } from './sprache';
 import { Symbol } from './Symbol';
 import { gebietsschema } from '../../shared/src/sprache';
+import { CpuKachel, SpeicherKachel } from './werkbank/Auslastung';
+import { platz } from './werkbank/Speicherplatz';
 
 /**
  * Lasttest-Modus (#612): die einzige Seite, die ein mit DMS_LASTTEST gestartetes DMS zeigt. Fortschritt und Restdauer,
@@ -32,6 +35,75 @@ function herunterladen(name: string, text: string) {
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const MB = 1024 ** 2;
+const uhr = (iso: string) => new Date(iso).toLocaleTimeString(gebietsschema(), { timeStyle: 'medium' });
+
+/**
+ * Live während des Laufs (#895): CPU und Arbeitsspeicher wie Werkbank → Systemzustand → Auslastung (dieselben Kacheln),
+ * dazu Durchgang, Gleichzeitigkeit, p95 der letzten Sekunden, Warteschlange an der Datenbank, CPU je Gruppe und die
+ * neuesten Warnungen und Fehler. Alles aus der Messung, die der Test ohnehin alle 2 Sekunden macht.
+ */
+function Live({ l, stufe }: { l: LasttestLiveStand; stufe: LasttestStand['stufe'] }) {
+  const j = l.jetzt;
+  const verlauf: Messpunkt[] = l.verlauf.map((p) => ({ zeit: p.zeit, cpu: p.cpu, speicher: p.speicher, rx: null, tx: null }));
+  const nv = t('systemzustand.auslastung.nicht-verfuegbar');
+  const gruppe = (g: NonNullable<typeof j.gruppen>[number]) => (g.art !== 'ablago' ? t.frei(`lasttest.gruppe.${g.art}`)
+    : g.nr === 0 ? t('lasttest.gruppe.haupt') : g.rolle === 'leiter' ? t('lasttest.gruppe.leiter', { nr: g.nr ?? 1 }) : t('lasttest.gruppe.prozess', { nr: g.nr ?? 0 }));
+  return (
+    <section className="lasttest-live" aria-labelledby="lasttest-live">
+      <h2 id="lasttest-live">{t('lasttest.live.titel')}</h2>
+      <p className="klein leise">{t('lasttest.live.text', { zeit: uhr(j.zeit) })}</p>
+      <div className="az-raster">
+        <CpuKachel jetzt={j.cpu} verlauf={verlauf} art="live">
+          <p className="leise klein">{j.kerne === null ? nv : j.kerneBegrenzt ? t('systemzustand.cpu.kerne', { anzahl: j.kerne }) : t('systemzustand.cpu.kerne.ohne', { anzahl: j.kerne })}</p>
+        </CpuKachel>
+        <SpeicherKachel jetzt={j.speicher} verlauf={verlauf} art="live">
+          <p className="leise klein">{j.speicherMb === null || j.grenzeMb === null ? nv
+            : j.ohneGrenze ? t('systemzustand.speicher.ohne-grenze', { belegt: platz(j.speicherMb * MB), grenze: platz(j.grenzeMb * MB) })
+              : t('systemzustand.speicher.belegt', { belegt: platz(j.speicherMb * MB), grenze: platz(j.grenzeMb * MB) })}</p>
+        </SpeicherKachel>
+        <div className="az-wert">
+          <h3 className="az-titel">{t('lasttest.live.messung')}</h3>
+          <dl className="eigenschaften klein">
+            {stufe && <><dt>{t('lasttest.live.stufe')}</dt><dd>{t.frei(`lasttest.stufe.${stufe}`)}</dd></>}
+            <dt>{t('lasttest.live.durchgang')}</dt><dd>{t('lasttest.live.durchgang.wert', { name: j.name, n: zahl(j.n) })}</dd>
+            <dt>{t('lasttest.live.p95')}</dt><dd>{j.p95 === null ? '–' : t('lasttest.live.p95.wert', { ms: zahl(j.p95), anfragen: zahl(j.anfragen) })}</dd>
+            <dt>{t('lasttest.live.warteschlange')}</dt><dd>{j.warteschlange === null ? nv : t('lasttest.live.warteschlange.wert', { wartend: zahl(j.warteschlange), belegt: zahl(j.belegt ?? 0), von: zahl(j.verbindungen ?? 0) })}</dd>
+          </dl>
+        </div>
+      </div>
+      <h3 className="az-titel">{t('lasttest.live.gruppen')}</h3>
+      {!j.gruppen ? <p className="klein leise">{t('lasttest.live.gruppen.nicht')}</p> : (
+        <div className="tabellenrahmen">
+          <table className="tabelle klein">
+            <thead><tr><th>{t('lasttest.live.gruppe')}</th><th>{t('lasttest.live.prozesse')}</th><th>{t('lasttest.live.cpu')}</th><th>{t('lasttest.live.speicher')}</th></tr></thead>
+            <tbody>
+              {j.gruppen.map((g) => (
+                <tr key={`${g.art}-${g.nr ?? ''}`}>
+                  <td>{gruppe(g)}</td><td>{zahl(g.anzahl)}</td><td>{g.cpu === null ? '–' : `${zahl(g.cpu)} %`}</td><td>{platz(g.mb * MB)}</td>
+                </tr>
+              ))}
+              {j.postgresExtern && !j.gruppen.some((g) => g.art === 'postgres') && <tr><td>{t('lasttest.gruppe.postgres')}</td><td colSpan={3} className="leise">{t('lasttest.live.postgres-extern')}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="klein leise">{t('lasttest.live.gruppen.text')}</p>
+      <h3 className="az-titel">{t('lasttest.live.meldungen')}</h3>
+      {!j.meldungen.length ? <p className="klein leise">{t('lasttest.live.meldungen.keine')}</p> : (
+        <ul className="klein lasttest-meldungen">
+          {j.meldungen.map((m, i) => (
+            <li key={i}>
+              <span className={`lasttest-art ${m.stufe === 'warn' ? 'warn' : 'fehler'}`}>{t.frei(`lasttest.live.art.${m.stufe}`)}</span>{' '}
+              {t('lasttest.live.meldung', { anzahl: zahl(m.anzahl), modul: m.modul, text: m.text, zeit: uhr(m.letzte) })}{m.ausnahme ? ` (${m.ausnahme})` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 export function LasttestSeite() {
@@ -123,6 +195,7 @@ export function LasttestSeite() {
             </ul>
           )}
         </div>
+        {zustand === 'laeuft' && stand.live && <Live l={stand.live} stufe={stand.stufe} />}
         {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
 
         <div className="formular">

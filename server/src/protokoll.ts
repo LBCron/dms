@@ -73,6 +73,8 @@ export class Protokoll {
   private nr = 0;
   private debugBis = 0;
   private abschalten?: ReturnType<typeof setTimeout>;
+  /** Wer Warnungen und Fehler mitbekommt (#895, Sammlung für den Lasttest). */
+  private beobachter: Array<(e: Eintrag) => void> = [];
 
   constructor(
     private grund: Stufe = 'info',
@@ -107,6 +109,13 @@ export class Protokoll {
     this.puffer.push(e);
     this.aufraeumen();
     try { this.ausgabe(zeile(e)); } catch { /* Ausgabe darf nie die Anwendung stören */ }
+    if (RANG[stufe] >= RANG.warn) for (const f of this.beobachter) { try { f(e); } catch { /* s. o. */ } }
+  }
+
+  /** Warnungen und Fehler mitbekommen (#895); gibt eine Funktion zum Abmelden zurück. */
+  beobachte(f: (e: Eintrag) => void): () => void {
+    this.beobachter.push(f);
+    return () => { this.beobachter = this.beobachter.filter((x) => x !== f); };
   }
 
   private aufraeumen() {

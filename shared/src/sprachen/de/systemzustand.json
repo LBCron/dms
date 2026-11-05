@@ -7,6 +7,8 @@
   "auslastung.jetzt": "jetzt {wert}",
   "auslastung.keine-kurve": "Die Kurve erscheint nach zwei Minuten.",
   "auslastung.kurve": "{titel} der letzten {anzahl} Minuten, höchstens {hoechst}",
+  "auslastung.kurve.live": "{titel} der letzten {anzahl} Messungen (alle 2 Sekunden), höchstens {hoechst}",
+  "auslastung.keine-kurve.live": "Die Kurve erscheint nach der zweiten Messung.",
   "auslastung.punkt": "{zeit} Uhr: {wert}",
   "cpu.titel": "CPU",
   "cpu.kerne_one": "Anteil an {anzahl} erlaubten Kern des Containers",

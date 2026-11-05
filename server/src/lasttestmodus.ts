@@ -4,7 +4,7 @@ import { fork, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { bereinigeGeraet, EXTREM_MAPPEN, fuelleErgebnis, LASTTEST_WAHL, stufenVon, type LasttestStand, type LasttestStufe, type LasttestWahl, type Speicherwahl } from '../../shared/src/lasttest';
+import { bereinigeGeraet, EXTREM_MAPPEN, fuelleErgebnis, LASTTEST_WAHL, LIVE_VERLAUF, stufenVon, type LasttestLive, type LasttestStand, type LasttestStufe, type LasttestWahl, type LiveGruppenArt, type Speicherwahl } from '../../shared/src/lasttest';
 import { Fachfehler } from './fehler';
 import { hilfeAntwort, hilfeSenden } from './hilfe';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
@@ -128,7 +128,40 @@ type Meldung =
   | { art: 'durchgang-fertig'; name: string; n: number; p95: number | null; fehlerquote: number }
   | { art: 'ergebnis'; bericht: string; vorlage: string; verfehlt: boolean }
   | { art: 'abbruch' | 'fehler'; text: string }
-  | { art: 'warnung'; ohneDatei: number };
+  | { art: 'warnung'; ohneDatei: number }
+  | ({ art: 'live' } & Record<string, unknown>);
+
+const GRUPPEN_ARTEN: readonly LiveGruppenArt[] = ['ablago', 'lastgenerator', 'postgres', 'texterkennung', 'bilder', 'rest'];
+const zahlOderNull = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+const kurz = (x: unknown, n: number) => String(x ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, n);
+
+/**
+ * Werte der laufenden Messung aus der Meldung des Skripts (#895) übernehmen – nur die bekannten Felder, Zahlen als
+ * Zahlen, Texte gekürzt. Die Texte der Meldungen kommen schon ohne Einzelheiten vom Server (protokollsammlung.ts).
+ */
+export function liveAus(m: Record<string, unknown>): LasttestLive | null {
+  if (typeof m.name !== 'string') return null;
+  const gruppen = Array.isArray(m.gruppen)
+    ? (m.gruppen as Array<Record<string, unknown>>).filter((g) => GRUPPEN_ARTEN.includes(g?.art as LiveGruppenArt)).slice(0, 40).map((g) => ({
+      art: g.art as LiveGruppenArt, ...(typeof g.nr === 'number' ? { nr: g.nr } : {}),
+      ...(g.rolle === 'haupt' || g.rolle === 'leiter' || g.rolle === 'anfragen' ? { rolle: g.rolle as 'haupt' | 'leiter' | 'anfragen' } : {}),
+      anzahl: zahlOderNull(g.anzahl) ?? 0, cpu: zahlOderNull(g.cpu), mb: zahlOderNull(g.mb) ?? 0,
+    }))
+    : null;
+  const meldungen = Array.isArray(m.meldungen)
+    ? (m.meldungen as Array<Record<string, unknown>>).filter((x) => x && ['warn', 'error', 'fatal'].includes(String(x.stufe))).slice(0, 10).map((x) => ({
+      stufe: x.stufe as 'warn' | 'error' | 'fatal', modul: kurz(x.modul, 30), text: kurz(x.text, 200), ausnahme: x.ausnahme ? kurz(x.ausnahme, 60) : null,
+      anzahl: zahlOderNull(x.anzahl) ?? 0, letzte: kurz(x.letzte, 30),
+    }))
+    : [];
+  return {
+    name: kurz(m.name, 80), n: zahlOderNull(m.n) ?? 0, p95: zahlOderNull(m.p95), anfragen: zahlOderNull(m.anfragen) ?? 0,
+    cpu: zahlOderNull(m.cpu), speicher: zahlOderNull(m.speicher), speicherMb: zahlOderNull(m.speicherMb), grenzeMb: zahlOderNull(m.grenzeMb), ohneGrenze: m.ohneGrenze === true,
+    kerne: zahlOderNull(m.kerne), kerneBegrenzt: m.kerneBegrenzt === true,
+    warteschlange: zahlOderNull(m.warteschlange), belegt: zahlOderNull(m.belegt), verbindungen: zahlOderNull(m.verbindungen),
+    gruppen, postgresExtern: m.postgresExtern === true, meldungen,
+  };
+}
 
 const SPEICHERWAHL: readonly Speicherwahl[] = ['HDD', 'SSD', 'NVMe', 'unbekannt'];
 const STAND_DATEI = 'stand.json';
@@ -194,6 +227,15 @@ export class Lasttestmodus {
       case 'abbruch': s.zustand = 'abbruch'; s.meldung = m.text; break;
       case 'fehler': s.meldung = m.text; break;
       case 'warnung': s.ohneDatei = Number(m.ohneDatei) || 0; break;
+      case 'live': {
+        // #895: Werte der ohnehin laufenden Messung – die Seite fragt nichts zusätzlich.
+        const l = liveAus(m);
+        if (!l) break;
+        const zeit = new Date(this.jetzt()).toISOString();
+        const verlauf = [...(s.live?.verlauf ?? []), { zeit, cpu: l.cpu, speicher: l.speicher }].slice(-LIVE_VERLAUF);
+        s.live = { jetzt: { ...l, zeit }, verlauf };
+        break;
+      }
     }
   }
 
@@ -225,6 +267,7 @@ export class Lasttestmodus {
       if (s.zustand === 'beendet') return;
       if (s.stufe && !s.fertigeStufen.includes(s.stufe)) s.fertigeStufen.push(s.stufe);
       s.durchgang = null;
+      s.live = null;
       if (s.zustand !== 'abbruch') {
         if (code === 0 && s.ergebnis) s.zustand = 'fertig';
         else { s.zustand = 'fehler'; s.meldung ??= this.fehlerText.trim().split('\n').filter(Boolean).slice(-1)[0] ?? `Code ${code}`; }
@@ -297,6 +340,9 @@ export class Lasttestmodus {
     }
     await app.listen({ port: this.o.port, host: this.o.host });
   }
+
+  /** Prozess-Id des Skripts (Lastgenerator, #895), solange es läuft. */
+  lastgenerator(): number | null { return this.kind?.pid ?? null; }
 
   /** Skript beenden (falls es noch läuft) und die Seite schließen. */
   async stop(): Promise<void> {

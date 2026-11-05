@@ -22,6 +22,7 @@ import { randomBytes } from 'node:crypto';
 import { availableParallelism, totalmem } from 'node:os';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { ausnahmeArt, Buendel, Protokollsammlung, rohAus, type Rohmeldung, type Sammelstand } from './protokollsammlung';
 import { dateiLeser, liesCgroup, type Leser } from './systemlast';
 
 export const PROZESSE_MAX = 16;
@@ -134,7 +135,7 @@ export interface ProzessInfo { nr: number; pid: number; leiter: boolean }
  * Abgestürzte und neu gestartete Prozesse seit dem Start (#874), für Lasttest und Systemzustand: Anzahl und die letzten
  * zehn mit Nummer, Code bzw. Signal (z. B. SIGKILL vom Kernel bei zu wenig Arbeitsspeicher, SIGABRT bei voller Halde).
  */
-export interface Neustarts { anzahl: number; letzte: Array<{ nr: number; code: number | null; signal: string | null; zeit: string }> }
+export interface Neustarts { anzahl: number; letzte: Array<{ nr: number; code: number | null; signal: string | null; zeit: string; ausnahme?: string | null }> }
 const KEINE_NEUSTARTS: Neustarts = { anzahl: 0, letzte: [] };
 
 /** Bearbeitet einen Aufruf; `teil` schickt Zwischenstände (z. B. Teile einer Antwort) an den Aufrufer. */
@@ -164,8 +165,12 @@ export interface Verbund {
   hoere(name: string, f: (daten: unknown) => void): void;
   frageAlle<T>(name: string, ms?: number): Promise<Array<ProzessInfo & { wert: T | null }>>;
   prozesse(): ProzessInfo[];
-  /** Neustarts abgestürzter Prozesse seit dem Start (#874). */
+  /** Neustarts abgestürzter Prozesse seit dem Start (#874); mit der Art der Ausnahme, wenn der Prozess sie meldete (#895). */
   neustarts(): Neustarts;
+  /** Warnungen und Fehler aller Prozesse, zusammengefasst (#895); null, wenn der Hauptprozess nicht antwortet. */
+  meldungen(): Promise<Sammelstand | null>;
+  /** Vor dem Beenden nach einem unerwarteten Fehler (#895): Art der Ausnahme an den Hauptprozess (für die Neustarts). */
+  absturz(e: unknown): void;
   /** Dieser Prozess lauscht am Port. */
   bereit(): void;
   /** Ganz Ablago beenden (z. B. Neustart nach einer Wiederherstellung). false: nur ein Prozess – der Aufrufer beendet sich selbst. */
@@ -206,6 +211,17 @@ abstract class Grund {
   }
 }
 
+/** Sammlung im eigenen Prozess (ein Prozess oder Hauptprozess): einmal angelegt, meldet sich beim Protokoll an. */
+let eigeneSammlung: Protokollsammlung | null = null;
+function sammlungHier(nr: number): Protokollsammlung {
+  if (!eigeneSammlung) {
+    const s = new Protokollsammlung();
+    eigeneSammlung = s;
+    protokoll.beobachte((e) => { const m = rohAus(e); if (m) s.nimm(m, nr); });
+  }
+  return eigeneSammlung;
+}
+
 /** Ein Prozess (Vorgabe): Aufrufe und Meldungen bleiben im eigenen Prozess. */
 class Einzeln extends Grund implements Verbund {
   readonly mehrere = false;
@@ -223,6 +239,9 @@ class Einzeln extends Grund implements Verbund {
   }
   prozesse(): ProzessInfo[] { return [{ nr: 1, pid: process.pid, leiter: true }]; }
   neustarts(): Neustarts { return KEINE_NEUSTARTS; }
+  constructor() { super(); sammlungHier(1); }
+  async meldungen() { return sammlungHier(1).stand(); }
+  absturz() {}
   bereit() {}
   beendeAlle() { return false; }
 }
@@ -252,6 +271,9 @@ class Teil extends Grund implements Verbund {
     this.nr = r.nr; this.leiter = r.leiter; this.erster = r.erster; this.konsole = r.konsole; this.anzahl = r.anzahl; this.primaer = r.primaer;
     this.liste = [{ nr: r.nr, pid: process.pid, leiter: r.leiter }];
     process.on('message', (m: Nachricht) => { if (m?.dms === KANAL) void this.empfange(m); });
+    // Warnungen und Fehler (#895) gebündelt an den Hauptprozess – er sammelt für alle, auch über einen Absturz hinaus.
+    const b = new Buendel((eintraege: Rohmeldung[]) => this.sende({ art: 'protokoll', eintraege }));
+    protokoll.beobachte((e) => { const m = rohAus(e); if (m) b.nimm(m); });
     // Ohne Hauptprozess (abgestürzt, beendet) gibt es keine Anfragen mehr: geordnet beenden.
     process.on('disconnect', () => process.kill(process.pid, 'SIGTERM'));
   }
@@ -308,6 +330,8 @@ class Teil extends Grund implements Verbund {
 
   prozesse() { return this.liste; }
   neustarts() { return this.abstuerze; }
+  meldungen(): Promise<Sammelstand | null> { return this.warte<Sammelstand>({ art: 'meldungen' }, 3000).catch(() => null); }
+  absturz(e: unknown) { this.sende({ art: 'absturz', ausnahme: ausnahmeArt(e) }); }
   bereit() { this.sende({ art: 'bereit' }); }
   beendeAlle(grund: string) { this.sende({ art: 'beenden', grund }); return true; }
 }
@@ -359,6 +383,10 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   const neustarts: Neustarts = { anzahl: 0, letzte: [] };
   let leiterWarBereit = false;
   let ende: number | null = null;
+  // Warnungen und Fehler aller Prozesse (#895): die eigenen direkt, die der anderen gebündelt per Nachricht.
+  const sammlung = sammlungHier(0);
+  /** Art der Ausnahme, die ein Prozess vor seinem Absturz meldete (#895) – für den Eintrag unter den Neustarts. */
+  const ausnahmen = new Map<number, string | null>();
 
   const sende = (w: Worker, m: Record<string, unknown>) => { if (w.isConnected()) w.send({ dms: KANAL, ...m }); };
   const liste = (): ProzessInfo[] => [...plaetze].filter(([, p]) => p.w.process.pid).map(([nr, p]) => ({ nr, pid: p.w.process.pid!, leiter: nr === 1 }));
@@ -437,6 +465,15 @@ export function leite(e: ProzessEinstellung): Promise<never> {
         sammlungFertig(s);
         return;
       }
+      case 'protokoll':
+        for (const x of Array.isArray(m.eintraege) ? m.eintraege as Rohmeldung[] : []) sammlung.nimm(x, nr);
+        return;
+      case 'meldungen':
+        sende(w, { art: 'antwort', id: m.id, ok: true, wert: sammlung.stand() });
+        return;
+      case 'absturz':
+        ausnahmen.set(nr, typeof m.ausnahme === 'string' ? m.ausnahme : null);
+        return;
       case 'beenden':
         log.warn(`Ablago wird ganz beendet: ${String(m.grund ?? '')}`);
         beendeAlle(0);
@@ -457,7 +494,8 @@ export function leite(e: ProzessEinstellung): Promise<never> {
     if (ende !== null) { if (!plaetze.size) process.exit(ende); return; }
     // Für Lasttest und Systemzustand (#874): Wer stürzt ab, mit welchem Code bzw. Signal?
     neustarts.anzahl++;
-    neustarts.letzte = [...neustarts.letzte, { nr, code, signal, zeit: new Date().toISOString() }].slice(-10);
+    neustarts.letzte = [...neustarts.letzte, { nr, code, signal, zeit: new Date().toISOString(), ausnahme: ausnahmen.get(nr) ?? null }].slice(-10);
+    ausnahmen.delete(nr);
     verteileListe();
     if (nr === 1 && !leiterWarBereit) {
       // Start gescheitert: wie mit einem Prozess beenden – Docker startet den Container neu.

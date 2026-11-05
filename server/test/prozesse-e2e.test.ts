@@ -112,6 +112,14 @@ describe('Mehrere Prozesse, ganzes Ablago (#745)', { skip: !URL_DB && 'TEST_DATA
     assert.equal(last.engpass.pool?.an, true);
     assert.deepEqual(last.engpass.speicher.map((z) => z.nr), [0, 1, 2]);
     assert.ok((last.engpass.sitzungen?.offen ?? 0) >= 2);
+    // #895: Warnungen aller Prozesse sammelt der Hauptprozess (ohne Einzelheiten), CPU je Gruppe misst der Leiter.
+    type Mit895 = { engpass: Engpass & { protokoll: { eintraege: Array<{ text: string; prozesse: number[] }> } | null; gruppen: { verfuegbar: boolean; gruppen?: Array<{ art: string; nr?: number }> } | null } };
+    const last895 = async () => (await (await holen('/api/werkbank/last')).json()) as Mit895;
+    await warte(async () => !!(await last895()).engpass.protokoll?.eintraege.some((e) => e.text === 'Verwaltungsmodus begonnen' && e.prozesse.some((n) => n >= 1)), 'Warnung eines Prozesses beim Hauptprozess', x.log, 10_000);
+    const l895 = await last895();
+    assert.doesNotMatch(JSON.stringify(l895.engpass.protokoll), /lena@example\.org/, 'ohne Kontextobjekt');
+    assert.equal(l895.engpass.gruppen?.verfuegbar, true);
+    assert.deepEqual(l895.engpass.gruppen?.gruppen?.filter((g) => g.art === 'ablago').map((g) => g.nr), [0, 1, 2]);
 
     // Befehl dms: ein Schlüssel für alle Prozesse (Verteilung reihum – mehrere Anfragen treffen beide).
     const k = JSON.parse(readFileSync(konsoleDatei, 'utf8')) as { schluessel: string; url: string };
@@ -135,6 +143,10 @@ describe('Mehrere Prozesse, ganzes Ablago (#745)', { skip: !URL_DB && 'TEST_DATA
       const s = await (await holen('/api/werkbank/systemlast')).json() as { prozesse?: ProzessZeile[] };
       return !!s.prozesse?.some((p) => p.rolle === 'anfragen' && p.pid !== alt.pid && p.schleifeP99 !== undefined) && /Prozess 2 ist bereit[\s\S]*Prozess 2 ist bereit/.test(x.log());
     }, 'Neustart von Prozess 2', x.log);
+    // #895: der Neustart mit Grund, die Meldung des Hauptprozesses in der Sammlung.
+    await warte(async () => !!(await last895()).engpass.protokoll?.eintraege.some((e) => e.text === 'Prozess # beendet (SIGKILL) – startet in # s neu' && e.prozesse.includes(0)), 'Meldung des Hauptprozesses', x.log, 10_000);
+    const n895 = (await last895()).engpass.neustarts as { letzte: Array<{ nr: number; signal: string | null; ausnahme?: string | null }> };
+    assert.deepEqual(n895.letzte.map((z) => [z.nr, z.signal, z.ausnahme]), [[2, 'SIGKILL', null]]);
     for (let i = 0; i < 8; i++) {
       const st = await (await holen('/api/konto/status')).json() as { benutzer?: { email: string } | null };
       assert.equal(st.benutzer?.email, 'lena@example.org', `angemeldet in Anfrage ${i + 1}`);

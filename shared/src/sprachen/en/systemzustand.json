@@ -7,6 +7,8 @@
   "auslastung.jetzt": "now {wert}",
   "auslastung.keine-kurve": "The curve appears after two minutes.",
   "auslastung.kurve": "{titel} of the last {anzahl} minutes, at most {hoechst}",
+  "auslastung.kurve.live": "{titel} of the last {anzahl} measurements (every 2 seconds), at most {hoechst}",
+  "auslastung.keine-kurve.live": "The curve appears after the second measurement.",
   "auslastung.punkt": "{zeit}: {wert}",
   "cpu.titel": "CPU",
   "cpu.kerne_one": "Share of {anzahl} allowed core of the container",

@@ -289,6 +289,9 @@ async function engpassStand(x: RoutenExtras, p: Awaited<ReturnType<typeof prozes
     speicher,
     // Abgestürzte und neu gestartete Prozesse seit dem Start: der Lasttest zählt den Unterschied je Durchgang.
     neustarts: x.verbund?.neustarts() ?? { anzahl: 0, letzte: [] },
+    // #895: Warnungen und Fehler aller Prozesse (zusammengefasst, ohne Einzelheiten) und CPU/Speicher je Prozessgruppe.
+    protokoll: (await x.verbund?.meldungen().catch(() => null)) ?? null,
+    gruppen: (await x.prozessgruppen?.().catch(() => null)) ?? null,
   };
 }
 
@@ -311,6 +314,8 @@ export interface RoutenExtras {
   sitzungen?: () => Promise<import('./poolmessung').Sitzungsstand | null>;
   /** Teuerste Abfragen aus pg_stat_statements für den Lasttest (#894). */
   abfragen?: Abfragestatistik;
+  /** CPU und Speicher je Prozessgruppe für den Lasttest (#895), gemessen im Leiter. */
+  prozessgruppen?: () => Promise<import('./prozessgruppen').GruppenStand | null>;
   /** Erweiterungen der Suche, pg_trgm und unaccent (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Datenbankangaben für die Versionsübersicht. */
@@ -2026,7 +2031,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         speicherMb: p ? p.speicherMb : Math.round(m.rss / 1024 ** 2), ...(p ? { rssMb: p.rssMb } : {}), heapMb: Math.round(m.heapUsed / 1024 ** 2),
         ...(p ? { prozesse: p.zeilen } : {}),
         // Ganzer Container (#696): so viel zeigt die NAS an – mit PostgreSQL (dms-komplett) und Dateizwischenspeicher.
-        container: (() => { const c = x.systemlast?.container(); const mb = (v: number | null | undefined) => (v == null ? null : Math.round(v / 1024 ** 2)); return c && c.aktuell !== null ? { mb: mb(c.aktuell), spitzeMb: mb(c.spitze), programmeMb: mb(c.programme), zwischenspeicherMb: mb(c.zwischenspeicher), datenbankMb: mb(c.datenbank) } : null; })(),
+        // #895: dazu Grenze und Kerne – die Lasttest-Seite zeigt CPU und Speicher in Prozent wie die Auslastung.
+        container: (() => { const c = x.systemlast?.container(); const r = x.systemlast?.rahmen(); const mb = (v: number | null | undefined) => (v == null ? null : Math.round(v / 1024 ** 2)); return c && c.aktuell !== null ? { mb: mb(c.aktuell), spitzeMb: mb(c.spitze), programmeMb: mb(c.programme), zwischenspeicherMb: mb(c.zwischenspeicher), datenbankMb: mb(c.datenbank), ...(r ? { grenzeMb: mb(r.grenze), ohneGrenze: r.ohneGrenze, kerne: r.kerne, kerneBegrenzt: r.kerneBegrenzt } : {}) } : null; })(),
         datenbank: v ? { verbindungen: x.verbindungen?.aufteilung?.gesamt ?? v.max, jeProzess: v.max, wartenJetzt: jetzt === null ? null : Math.round(jetzt * 10) / 10, wartenP95: v.p95, wartenMax: v.hoechstens } : null,
         anfragen: x.ueberlast?.stand() ?? null,
         arbeiter: arbeiterStand(),

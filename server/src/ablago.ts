@@ -80,6 +80,7 @@ import { heuteIn } from '../../shared/src/sichten';
 import { VARIABLEN_GRUND } from '../../shared/src/umgebungsvariablen';
 import { createServer, type Server } from 'node:http';
 import { Lasttestmodus, lasttestAus, lasttestSkript, pruefeZiel } from './lasttestmodus';
+import { Prozessgruppen, type GruppenStand } from './prozessgruppen';
 import { erkenneSpeicherart } from './speicherart';
 import { alterExportOrdner, exportOrdnerVon, exportOrt, merkeUmzug, raeumeExporteAuf, zieheExporteUm } from './exportordner';
 import { Startmodus } from './startmodus';
@@ -642,6 +643,8 @@ const app = await baueApp(dienst, konten, {
   poolmessung,
   sitzungen: () => sitzungsstand(sql),
   abfragen: { stand: (n: number) => teuersteAbfragen(sql, n), zuruecksetzen: () => abfragenZuruecksetzen(sql) },
+  // #895: gemessen im Leiter – er kennt das Skript des Lasttests; so zählt die Rechenzeit an einer Stelle fortlaufend.
+  prozessgruppen: () => verbund.rufe<GruppenStand>('prozessgruppen.stand', [], { ms: 5000 }),
   erweiterungen: () => liesErweiterungen(sql),
   eingangsordner,
   postfaecher,
@@ -816,6 +819,14 @@ if (lasttest.wahl) {
 }
 
 verbund.bediene('lasttest.intern', () => !!lasttestSeite);
+// CPU und Speicher je Prozessgruppe (#895): nur im Leiter, nur wenn jemand fragt (der Lasttest alle 2 Sekunden).
+if (leiter) {
+  const gruppen = new Prozessgruppen({ postgresImContainer: env.DMS_VARIANTE === 'komplett' });
+  verbund.bediene('prozessgruppen.stand', () => gruppen.stand({
+    ablago: [...(verbund.primaer ? [{ nr: 0, pid: verbund.primaer, rolle: 'haupt' as const }] : []), ...verbund.prozesse().map((p) => ({ nr: p.nr, pid: p.pid, rolle: p.leiter ? 'leiter' as const : 'anfragen' as const }))],
+    lastgenerator: lasttestSeite?.lastgenerator() ?? null,
+  }));
+}
 
 /** Ganz Ablago beenden – bei mehreren Prozessen alle (über den Hauptprozess), sonst diesen. */
 function ganzBeenden(grund: string) { if (!verbund.beendeAlle(grund)) void beenden(); }
@@ -865,6 +876,8 @@ process.on('uncaughtException', (e, herkunft) => {
   protokoll.schreibe('error', 'system', tDe('meldungen.index.unerwarteter-fehler'), {
     fehler: e instanceof Error ? e.stack ?? e.message : String(e), herkunft, pid: process.pid, ...(verbund.mehrere ? { prozess: verbund.nr } : {}),
   });
+  // Art der Ausnahme (#895, ohne Nachricht) an den Hauptprozess – sie steht dann beim Neustart (Lasttest, Systemzustand).
+  verbund.absturz(e);
   process.exitCode = 1;
   setTimeout(() => process.exit(1), ABSTURZ_MS);
   void app.close().catch(() => {}).finally(() => process.exit(1));

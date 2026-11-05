@@ -86,8 +86,11 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     // dort prüft deploy/komplett-probe.sh die Seite im echten Container).
     if (existsSync(join(WEB_DIST, 'index.html'))) assert.match(await (await fetch(`${d.basis}/`)).text(), /<div id="root">/, 'Seite der Oberfläche');
     let s: LasttestStand;
+    /** #895: Werte der laufenden Messung, wie sie die Seite zeigt. */
+    let live: LasttestStand['live'] = null;
     for (let i = 0; ; i++) {
       s = await json<LasttestStand>(fetch(`${d.basis}/api/lasttest`));
+      if (s.live?.verlauf.length && s.live.verlauf.length >= (live?.verlauf.length ?? 0)) live = s.live;
       if (s.zustand !== 'laeuft') break;
       if (i > 600) throw new Error(`Lasttest nicht fertig:\n${d.log()}`);
       await new Promise((r) => setTimeout(r, 500));
@@ -96,7 +99,14 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     assert.deepEqual(s.fertigeStufen, ['klein']);
     // Der bisherige Durchgang und danach „mit Speichern“ (#739) als eigene Zeile.
     assert.deepEqual(s.durchgaenge.map((x) => x.name), ['klein', 'klein + Speichern']);
-    assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50[^\n]*\n  Engpass klein: Warten auf DB-Verbindung p95 [^\n]*\n(?:  Teuerste Abfragen klein: [^\n]*\n)?klein \+ Speichern\s+25 gleichzeitig: p50/);
+    assert.match(s.ergebnis!.vorlage, /Messergebnis Lasttest[\s\S]*Gerät\/Modell: \{\{geraet\}\}[\s\S]*klein\s+25 gleichzeitig: p50[^\n]*\n  Engpass klein: Warten auf DB-Verbindung p95 [^\n]*\n(?:  Teuerste Abfragen klein: [^\n]*\n)?(?:  CPU je Gruppe klein [^\n]*\n)?klein \+ Speichern\s+25 gleichzeitig: p50/);
+    // #895: CPU je Gruppe unter der Stufe, Protokoll als Zeile; im Bericht ausführlich; live auf der Seite.
+    assert.match(s.ergebnis!.vorlage, /\n  CPU je Gruppe klein \(% eines Kerns, Speicher RSS höchstens\): Ablago Prozess 1 \d+ % \d+ MB · Lastgenerator \d+ % /);
+    assert.match(s.ergebnis!.vorlage, /\nProtokoll: (keine Warnungen und Fehler|[\d.]+ Warnungen und Fehler, \d+ Arten? – )/);
+    assert.match(s.ergebnis!.bericht, /CPU und Speicher je Gruppe „klein“[\s\S]*Warnungen und Fehler im Protokoll \(#895/);
+    assert.ok(live && live.jetzt.name.startsWith('klein') && live.jetzt.n === 25, 'Werte der laufenden Messung auf der Seite');
+    assert.ok(live.jetzt.gruppen?.some((g) => g.art === 'lastgenerator'), 'Lastgenerator erkannt');
+    assert.equal(s.live, null, 'nach dem Lauf weg');
     // Engpass (#874): eigene Zeile je Durchgang, über alle Prozesse.
     assert.match(s.ergebnis!.vorlage, /\n  Engpass klein \+ Speichern: [^\n]*Speicher je Prozess: Prozess 1: \d+ MB \(Halde \d+\)/);
     assert.ok(!/Abgelehnt \(4xx\)/.test(s.ergebnis!.bericht), 'alle schreibenden Anfragen gehen durch');

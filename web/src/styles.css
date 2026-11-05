@@ -2005,6 +2005,14 @@ ul.sitzungsliste.festhoehe { border: 1px solid var(--linie); border-radius: var(
 .lasttest-ende { justify-content: space-between; border-top: 1px solid var(--linie); padding-top: 14px; }
 .lasttest .hinweis .knoepfe .knopf.primaer { width: auto; padding: 7px 12px; }
 .lasttest-auto { margin: 0; }
+/* Live während des Laufs (#895): Kacheln der Auslastung, Gruppen und neueste Meldungen. */
+.lasttest-live { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--linie); padding-top: 14px; }
+.lasttest-live p { margin: 0; }
+.lasttest-live .az-titel { margin-top: 4px; }
+.lasttest-meldungen { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+.lasttest-art { font-weight: 600; }
+.lasttest-art.warn { color: var(--warn); }
+.lasttest-art.fehler { color: var(--schlecht); }
 @media (max-width: 560px) {
   .lasttest-ergebnis .knoepfe .knopf, .lasttest-ende .knopf { width: 100%; white-space: normal; }
 }
