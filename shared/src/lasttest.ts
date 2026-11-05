@@ -58,6 +58,8 @@ export interface LasttestStand {
   ergebnis: { bericht: string; vorlage: string; verfehlt: boolean } | null;
   /** Grund für Abbruch oder Fehler (ohne Zugangsdaten). */
   meldung: string | null;
+  /** #877: Dokumente des Bestands ohne Datei (z. B. `/data` ohne Volume, die Datenbank blieb) – Warnung auf der Seite. */
+  ohneDatei?: number;
   angaben: { geraet: string; speicher: Speicherwahl | null };
   speicherErkannt: 'HDD' | 'SSD' | 'NVMe' | null;
   /** Wo das Ergebnis im Container liegt (z. B. /data/ergebnis/lasttest-klein.md). */

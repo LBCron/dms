@@ -300,7 +300,23 @@ async function sicherstellen(mappen) {
   }
   const t1 = Date.now();
   if (neu) await ruhe(c);
-  return { ...z, anlegen: neu ? { mappen: z.demo - anfang, laeufe, sekunden: Math.round((t1 - t0) / 1000), hintergrundSekunden: Math.round((Date.now() - t1) / 1000) } : null };
+  // Bestand übernommen (#877): Fehlen Dateien, misst der Test Fehler statt Last – also gleich am Anfang warnen.
+  const ohneDatei = p.frisch ? 0 : await dokumenteOhneDatei(c);
+  return { ...z, ohneDatei, anlegen: neu ? { mappen: z.demo - anfang, laeufe, sekunden: Math.round((t1 - t0) / 1000), hintergrundSekunden: Math.round((Date.now() - t1) / 1000) } : null };
+}
+
+/**
+ * Dokumente ohne Datei (#877): Lag die Datenbank in einem eigenen Container (oder Volume) und `/data` nicht, ist der
+ * Bestand noch da, die Dateien aber weg – Herunterladen, Vorschau und Export schlagen dann fehl und verfälschen die
+ * Messung. Nur eine Warnung (der Test misst trotzdem); im Bericht und auf der Seite des Lasttest-Modus.
+ */
+async function dokumenteOhneDatei(c) {
+  const { daten } = await json('GET', '/api/werkbank/wartung/dateien/fehlend', { ...c, zeit: 300_000 }).catch(() => ({ daten: null }));
+  const n = daten?.dokumente ?? 0;
+  if (!n) return 0;
+  console.log(`WARNUNG: Dokumente ohne Datei: ${n} – ist /data als Volume eingebunden? Ohne Volumes vor jedem Lauf beide Container neu anlegen (docker compose down, dann up -d).`);
+  melde({ art: 'warnung', ohneDatei: n });
+  return n;
 }
 
 /** Größe der Datenbank und der Dokumente (Werkbank → System); null, wenn nicht lesbar. */
@@ -861,6 +877,7 @@ function bericht(ergebnisse, x) {
   const z = [];
   z.push(`## Lasttest (${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC)`, '');
   // Ohne Adresse des Ziels: Der Bericht soll sich ohne Netzadressen weitergeben lassen (#563).
+  if (x.bestand.ohneDatei) z.push(`**Warnung:** Dokumente ohne Datei: ${x.bestand.ohneDatei} – ist \`/data\` als Volume eingebunden? Herunterladen, Vorschau und Export dieser Dokumente schlagen fehl; die Messung ist so nicht vergleichbar.`, '');
   z.push(`Bestand: ${x.bestand.gesamt} Mappen (${x.bestand.demo} Demo-Mappen), in den Listen ${x.mappen}, Dokumente ${x.dokumente}.${x.exportPdf ? ` Export nebenher (mittel), einer nach dem anderen: PDF von ${x.exportPdf} Mappen mit Übersicht, PDF von ${x.exportDok} Mappen mit ihren Dokumenten, ZIP der größten Ansicht (${x.exportZip} Mappen).` : ''}`, '');
   z.push('| Durchgang | Gleichzeitig | Anfragen | je s | Median ms | p95 ms | p99 ms | Fehlerquote | abgewiesen (503) | ohne Antwort | Schleife p99/max ms | DB warten p95/max ms | Speicher MB Start/max/Ende |');
   z.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|');

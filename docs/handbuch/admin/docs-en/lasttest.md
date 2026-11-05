@@ -122,6 +122,52 @@ Options: `--geraet "…"` and `--speicher HDD|SSD|NVMe` enter device and storage
 
 Running the load test on another computer against the test installation also works (`--ziel http://…:8099`); then the CPU model is missing in the result, and the network is measured too.
 
+### With a separate database (Compose) {#mit-getrennter-datenbank-compose}
+
+In load test mode with `dms-komplett`, Ablago, PostgreSQL and the load generator run in the same container and share cores and memory – so the limit measured is not purely the limit of the device. With a separate database, PostgreSQL runs in a container of its own (on the same device). An example as a project of its own, e.g. `dms-test` – with its own port and **a volume for `/data`** and one for the database:
+
+```yaml
+# Load test with a separate database – only as a test project of its own, never next to your real Library.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dms
+      POSTGRES_USER: dms
+      POSTGRES_PASSWORD: lasttest
+    volumes:
+      - lasttest-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dms -d dms"]
+      interval: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/motom001/dms:stabil
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://dms:lasttest@db:5432/dms
+      DMS_LASTTEST: klein
+    volumes:
+      # Documents, keys, result – belongs to the database above and must stay or go together with it.
+      - lasttest-data:/data
+    ports:
+      - "8099:3000"
+
+volumes:
+  lasttest-postgres:
+  lasttest-data:
+```
+
+Start with `docker compose up -d`, then continue with step 2 above (page in the browser). `restart: unless-stopped` restarts Ablago after a crash; after **End test and shut down container** the container also restarts and shows the result again. Clean up with `docker compose down -v` – that also deletes both volumes.
+
+!!! warning "Database and files belong together"
+    With the volumes, the database **and** the documents are kept between two runs; the next run reuses the demo folders. If you leave out the volumes, **both** containers have to be recreated before every run – `docker compose down`, then `docker compose up -d`. If only the `app` container is recreated, the database stays but the documents' files are missing. Ablago keeps running (the affected documents answer with “The file for this document is missing”), but the measurement counts errors instead of load. The load test checks this at the start and warns with “Documents without a file: n – is `/data` mounted as a volume?”.
+
 ## Reading the result {#ergebnis-lesen}
 
 - **p50, p95, p99:** half, 95 % or 99 % of the answers came faster than this value. p95 is the most important: it shows what it feels like when things are sluggish.

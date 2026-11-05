@@ -122,6 +122,52 @@ Optionen: `--geraet "…"` und `--speicher HDD|SSD|NVMe` tragen Gerät und Speic
 
 Den Lasttest auf einem anderen Rechner gegen die Test-Installation laufen zu lassen geht auch (`--ziel http://…:8099`); dann fehlt im Ergebnis das CPU-Modell, und das Netzwerk misst mit.
 
+### Mit getrennter Datenbank (Compose)
+
+Im Lasttest-Modus mit `dms-komplett` laufen Ablago, PostgreSQL und der Lastgenerator im selben Container und teilen sich Kerne und Arbeitsspeicher – die gemessene Grenze ist also nicht die reine Grenze des Geräts. Mit getrennter Datenbank läuft PostgreSQL in einem eigenen Container (auf demselben Gerät). Ein Beispiel als eigenes Projekt, z. B. `dms-test` – mit eigenem Port und **einem Volume für `/data`** und einem für die Datenbank:
+
+```yaml
+# Lasttest mit getrennter Datenbank – nur als eigenes Test-Projekt, nie neben der echten Ablage.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dms
+      POSTGRES_USER: dms
+      POSTGRES_PASSWORD: lasttest
+    volumes:
+      - lasttest-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dms -d dms"]
+      interval: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/motom001/dms:stabil
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://dms:lasttest@db:5432/dms
+      DMS_LASTTEST: klein
+    volumes:
+      # Dokumente, Schlüssel, Ergebnis – gehört zur Datenbank oben und muss mit ihr zusammen bleiben oder gehen.
+      - lasttest-data:/data
+    ports:
+      - "8099:3000"
+
+volumes:
+  lasttest-postgres:
+  lasttest-data:
+```
+
+Starten mit `docker compose up -d`, dann weiter mit Schritt 2 oben (Seite im Browser). `restart: unless-stopped` startet Ablago nach einem Absturz neu; nach **Test beenden und Container herunterfahren** startet der Container ebenfalls neu und zeigt das Ergebnis wieder an. Aufräumen mit `docker compose down -v` – das löscht auch beide Volumes.
+
+!!! warning "Datenbank und Dateien gehören zusammen"
+    Mit den Volumes bleiben Datenbank **und** Dokumente zwischen zwei Läufen erhalten; der nächste Lauf nimmt die Demo-Mappen wieder. Lässt du die Volumes weg, müssen vor jedem Lauf **beide** Container neu entstehen – `docker compose down`, dann `docker compose up -d`. Entsteht nur der Container `app` neu, bleibt die Datenbank stehen, die Dateien der Dokumente aber fehlen. Ablago läuft dann zwar weiter (die betroffenen Dokumente antworten mit „Die Datei zu diesem Dokument fehlt“), die Messung zählt aber Fehler statt Last. Der Lasttest prüft das am Anfang und warnt mit „Dokumente ohne Datei: n – ist `/data` als Volume eingebunden?“.
+
 ## Ergebnis lesen
 
 - **p50, p95, p99:** Die Hälfte, 95 % bzw. 99 % der Antworten kamen schneller als dieser Wert. p95 ist der wichtigste: Er zeigt, wie es sich anfühlt, wenn es gerade hakt.

@@ -112,6 +112,7 @@ export function LasttestSeite() {
               <p className="lasttest-rest"><Symbol name="stoppuhr" /> {rest ? (rest[0] === rest[1] ? t('lasttest.rest.eine', { bis: rest[1] }) : t('lasttest.rest', { von: rest[0], bis: rest[1] })) : t('lasttest.rest.gleich')}</p>
             </>
           )}
+          {!!stand.ohneDatei && <div className="hinweis warn"><p><Symbol name="warnung" /> <strong>{t('lasttest.ohne-datei', { anzahl: stand.ohneDatei, zahl: zahl(stand.ohneDatei) })}</strong> {t('lasttest.ohne-datei.text')}</p></div>}
           {zustand === 'fertig' && <div className="hinweis gut"><p><Symbol name="haken" /> <strong>{t('lasttest.fertig')}</strong>{stand.ergebnis?.verfehlt ? ` ${t('lasttest.fertig.verfehlt')}` : ''}</p></div>}
           {(zustand === 'abbruch' || zustand === 'fehler') && (
             <div className="hinweis schlecht"><p><Symbol name="warnung" /> <strong>{t(zustand === 'abbruch' ? 'lasttest.abbruch' : 'lasttest.fehler')}</strong> {stand.meldung} {zustand === 'fehler' ? t('lasttest.fehler.protokoll') : ''}</p></div>

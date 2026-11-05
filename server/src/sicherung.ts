@@ -1,4 +1,4 @@
-import { createReadStream } from 'node:fs';
+import { oeffneStrom } from './dateispeicher';
 import { mkdir, open, readdir, readFile, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { OHNE_INHALT, type Datenquelle, type Zaehler } from './datenbankabzug';
@@ -520,7 +520,7 @@ export class Sicherung {
             dateien++;
             if (f.pfad.endsWith('.fassung') && FASSUNG_PFAD.test(f.pfad)) fassungen++;
             if (f.pfad.endsWith('.fassung') && ARCHIV_PFAD.test(f.pfad)) archivfassungen++;
-            yield { art: 'D', kopf: { pfad: f.pfad, groesse: f.groesse }, daten: createReadStream(f.voll) as AsyncIterable<Buffer> };
+            yield { art: 'D', kopf: { pfad: f.pfad, groesse: f.groesse }, daten: (await oeffneStrom(f.voll)) as AsyncIterable<Buffer> };
           }
           yield { art: 'E', kopf: { tabellen: tabellen.length, dateien } };
         }

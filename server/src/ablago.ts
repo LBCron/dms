@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migriere, NeuereDatenbankFehler, verbinde, verbindungenAus, verbindungenJeProzess, Verbindungswarten } from './db';
 import { Dienst } from './dienst';
-import { mitPruefung, ordnerSpeicher } from './dateispeicher';
+import { beiFehlenderDatei, mitPruefung, ordnerSpeicher } from './dateispeicher';
 import { Speicherplatz, type SpeicherplatzDeps } from './speicherplatz';
 import { baueApp } from './http';
 import { Konten } from './konten';
@@ -140,6 +140,8 @@ await mkdir(exportOrdnerVon(ordner), { recursive: true });
 // Start, steht der Grund dort und im Protokoll. Nach einem Fehler beendet sich Ablago nach FEHLER_NEUSTART_MS, damit
 // der Container neu startet – außer bei der Sperre gegen ein Downgrade (#714): Da hilft kein Neustart.
 const FEHLER_NEUSTART_MS = 5 * 60_000;
+/** Nach einem unerwarteten Fehler (#877): so lange dürfen offene Anfragen noch zu Ende laufen. */
+const ABSTURZ_MS = 3000;
 // Mehrere Prozesse (#745): nur beim ersten Start des Leiters – danach beantworten die anderen Prozesse schon Anfragen.
 const start = new Startmodus({ port: cfg.port, host: cfg.host, webDir: cfg.web, proxy: cfg.proxy.trust, einbetten: cfg.einbetten });
 if (verbund.erster) await start.oeffne();
@@ -279,6 +281,8 @@ if (uebrig) log.info('Übrig gebliebene temporäre Uploads gelöscht', { anzahl:
 const dienst = new Dienst(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'mappen'), mitPruefung(ordnerSpeicher(ordner.dateien, cfg.haushalt), hochladen), {
   tresor, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt), zustand: zustandDb,
 });
+// Fehlende Dokumentdatei (#877): einmal je Datei mit Mappe ins Protokoll und als Hinweis in die Werkbank-Übersicht.
+beiFehlenderDatei((f) => { void dienst.merkeFehlendeDatei(f).catch((e) => log.warn('Fehlende Datei nicht vermerkt', { fehler: (e as Error).message })); });
 // Benutzer erscheinen als Mappen (#26); die Konten halten sie auf dem neuesten Stand.
 const konten = new Konten(messung.umhuelle(pgKontoRepo(sql, cfg.haushalt), 'konto'), () => betrieb.mailer(), () => betrieb.adresseFuerLinks(), dienst.benutzerspiegel());
 dienst.verbindeKonten(konten.papierkorbHaken());
@@ -829,8 +833,23 @@ await start.schliesse();
 // bekamen einzelne Programme gar keine Verbindung mehr.
 if (lasttestSeite) await lasttestSeite.start();
 else if (!lasttestIntern) await app.listen({ port: cfg.port, host: cfg.host, backlog: 2048 });
-// Ab jetzt läuft Ablago: Unerwartete Fehler beenden den Prozess wieder wie gewohnt.
+// Ab jetzt läuft Ablago. Sicherheitsnetz (#877): Ein unerwarteter Fehler (etwa ein 'error'-Ereignis ohne Empfänger)
+// lässt den Prozess in ungewissem Zustand zurück – darum nicht weiterlaufen, sondern mit Zusammenhang ins Protokoll,
+// offene Anfragen kurz zu Ende bringen und mit Code 1 beenden. Bei mehreren Prozessen (DMS_PROZESSE) startet der
+// Hauptprozess ihn neu, sonst Docker (restart: unless-stopped). Abgelehnte Promises ohne Empfänger (oben) stehen
+// weiter nur im Protokoll: Sie lassen den Prozess heil, und ein Neustart beendete auch alle anderen Anfragen.
 process.off('uncaughtException', beimStartfehler);
+let absturz = false;
+process.on('uncaughtException', (e, herkunft) => {
+  if (absturz) return;
+  absturz = true;
+  protokoll.schreibe('error', 'system', tDe('meldungen.index.unerwarteter-fehler'), {
+    fehler: e instanceof Error ? e.stack ?? e.message : String(e), herkunft, pid: process.pid, ...(verbund.mehrere ? { prozess: verbund.nr } : {}),
+  });
+  process.exitCode = 1;
+  setTimeout(() => process.exit(1), ABSTURZ_MS);
+  void app.close().catch(() => {}).finally(() => process.exit(1));
+});
 verbund.bereit();
 // Bei mehreren Prozessen meldet der Hauptprozess jeden bereiten Prozess.
 if (leiter) log.info('Ablago ist bereit', { sekunden: Math.round((Date.now() - start.stand.seit) / 100) / 10 });
