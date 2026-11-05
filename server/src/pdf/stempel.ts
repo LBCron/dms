@@ -36,8 +36,15 @@ export async function stempelePdf(a: StempelAuftrag): Promise<Buffer> {
     const verschluesselt = /encrypt/i.test((x as Error).message);
     throw new Fachfehler(422, verschluesselt ? `„${a.name}“ ist verschlüsselt und lässt sich darum nicht stempeln.` : `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);
   }
-  await stempele(doc, a.stempel, a.text);
-  return Buffer.from(await doc.save({ useObjectStreams: !!a.objektstroeme }));
+  // Kaputte Seiten (z. B. kreisförmiger Seitenbaum, falsche Inhalte) zeigen sich erst beim Zeichnen oder Speichern (#823):
+  // dann dieselbe verständliche Meldung statt eines Fehlers aus pdf-lib.
+  try {
+    await stempele(doc, a.stempel, a.text);
+    return Buffer.from(await doc.save({ useObjectStreams: !!a.objektstroeme }));
+  } catch (x) {
+    if (x instanceof Fachfehler) throw x;
+    throw new Fachfehler(422, `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);
+  }
 }
 
 /** Ein Bild (JPEG/PNG) als PDF-Seite in A4, Hoch- oder Querformat nach dem Bild. */

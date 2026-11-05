@@ -253,6 +253,11 @@ export class Archivfassung {
   /** Quelle der Archivfassung: PDF, JPEG, PNG im Original, sonst die Lesefassung (#577) – oder null. */
   private async quelle(d: Pick<Dokument, 'mime' | 'sha256'>): Promise<Quelle | null> {
     const m = d.mime.toLowerCase();
+    // Geschütztes PDF mit entsperrter Fassung (#827): die ist die Quelle – das Paket liest sie über /fassung.
+    if (m === 'application/pdf') {
+      const e = await this.o.lesefassung(d.sha256).catch(() => null);
+      if (e?.info.entsperrt) return { art: 'lesefassung', mime: e.info.mime, inhalt: async () => e.inhalt, fassung: e.info };
+    }
     if (kernTyp(m)) return { art: 'original', mime: m, inhalt: () => this.o.datei(d.sha256) };
     const f = await this.o.lesefassung(d.sha256).catch(() => null);
     return f ? { art: 'lesefassung', mime: f.info.mime, inhalt: async () => f.inhalt, fassung: f.info } : null;

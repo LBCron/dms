@@ -25,6 +25,7 @@ import { AUSKUNFT_TAGE, EXPORT_TAGE, linkStatus, oeffentlichErreichbar } from '.
 import { persoenlicherOrdner, umzugGesehen, umzugHinweis, type ExportOrt } from './exportordner';
 import { textDritte, type TextDritte } from '../../shared/src/anrede';
 import { t } from './sprache';
+import { GEMERKT_MAX } from '../../shared/src/entsperren';
 import { loeschkonzept, luecken, type LoeschkonzeptQuelle } from '../../shared/src/loeschkonzept';
 import { DOCX_MIME, schriftstueckDocx, schriftstueckPdf } from './schriftstueck';
 import { liesAnlass, type Ausloeser } from '../../shared/src/loeschprotokoll';
@@ -345,6 +346,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     return { datei: { inhalt: r.inhalt, name: r.name, mime: r.anzeigbar ? r.mime : 'application/octet-stream', anzeigen: false, groesse: r.groesse, ...(Object.keys(koepfe).length ? { koepfe } : {}) } };
   };
   const typName = async (id: string) => (await dienst.listeTypen()).find((t) => t.id === id)?.name ?? id;
+  /** Passwörter für Dokumente (#827): nur die Person selbst im Browser – kein API-Schlüssel, keine Vertretung. */
+  const nurSelbst = (a: Anfrage) => {
+    if (a.apiSchluessel || !a.sitzungsDaten?.id) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.nur-browser'));
+    if (a.sitzungsDaten.vertretungId) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.vertretung'));
+    const e = dienst.pdfEntsperren;
+    if (!e) throw new Fachfehler(404, t('mappen.entsperren.gemerkt.aus'));
+    return e;
+  };
   const betrieb = () => { if (!x.betrieb) throw new Fachfehler(404, 'Betriebseinstellungen sind nicht eingerichtet.'); return x.betrieb; };
   const mail = () => { if (!x.aufgabenmail) throw new Fachfehler(404, 'Die Aufgaben-Mail ist nicht eingerichtet.'); return x.aufgabenmail; };
   const region = () => { if (!x.region) throw new Fachfehler(404, 'Die Region ist nicht eingerichtet.'); return x.region; };
@@ -744,6 +753,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/rollen', zugang: 'admin', handler: async () => ok(await dienst.listeRollen()) },
     { methode: 'DELETE', pfad: '/api/benutzer/:id', zugang: 'admin', handler: async (a) => {
       await konten.loescheBenutzer(ich(a), a.params.id);
+      // Gemerkte Passwörter für Dokumente (#827) gehören nur dieser Person: mit weg.
+      await dienst.pdfEntsperren?.vergiss(a.params.id).catch(() => {});
       L.konto.info('Benutzer gelöscht', { id: a.params.id });
       return leer;
     } },
@@ -752,6 +763,36 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.konto.info('Passwort-Link erzeugt', { email: r.benutzer.email, mail: r.mailVerschickt });
       return ok(r);
     } },
+    /*
+     * Passwörter für Dokumente (#827, Mein Konto → Sicherheit): gehören nur der Person – nicht mit API-Schlüssel, nicht
+     * in einer Vertretung. Anzeigen und Ändern des Passworts nur nach erneuter Bestätigung (5 Minuten je Sitzung).
+     */
+    { methode: 'GET', pfad: '/api/konto/dokument-passwoerter', zugang: 'angemeldet', handler: async (a) => {
+      const e = nurSelbst(a);
+      return ok({ eintraege: await e.liste(ich(a).id), bestaetigtBis: e.bestaetigtBis(a.sitzungsDaten?.id), max: GEMERKT_MAX, zweifaktor: (await zf().status(ich(a).id)).aktiv });
+    } },
+    { methode: 'POST', pfad: '/api/konto/dokument-passwoerter', zugang: 'angemeldet', handler: async (a) => ok(await nurSelbst(a).merke(ich(a).id, b(a).name, b(a).passwort), 201) },
+    { methode: 'POST', pfad: '/api/konto/dokument-passwoerter/bestaetigen', zugang: 'angemeldet', handler: async (a) => {
+      const e = nurSelbst(a);
+      const bis = await e.bestaetige(ich(a).id, a.sitzungsDaten?.id, async () => {
+        // Ein Code der Zwei-Faktor-Anmeldung (nur sechs Ziffern: kein Wiederherstellungscode wird verbraucht) oder das Passwort.
+        const code = String(b(a).code ?? '').replace(/\s/g, '');
+        if (/^\d{6}$/.test(code)) { if ((await zf().pruefe(ich(a).id, code)) !== 'totp') throw new Fachfehler(403, t('mappen.entsperren.gemerkt.code-falsch')); return; }
+        await konten.pruefeEigenesPasswort(ich(a), b(a).passwort);
+      });
+      return ok({ bestaetigtBis: bis });
+    } },
+    { methode: 'GET', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => {
+      const e = nurSelbst(a);
+      e.pruefeBestaetigt(a.sitzungsDaten?.id);
+      return { status: 200, body: { passwort: await e.zeige(ich(a).id, a.params.id) }, koepfe: { 'cache-control': 'no-store' } };
+    } },
+    { methode: 'PUT', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => {
+      const e = nurSelbst(a);
+      if (b(a).passwort !== undefined) e.pruefeBestaetigt(a.sitzungsDaten?.id);
+      return ok(await e.aendere(ich(a).id, a.params.id, { name: b(a).name, passwort: b(a).passwort }));
+    } },
+    { methode: 'DELETE', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => { await nurSelbst(a).loesche(ich(a).id, a.params.id); return leer; } },
     // Eigene angemeldete Geräte (#69): ansehen und beenden – nicht während einer Vertretung.
     { methode: 'GET', pfad: '/api/konto/sitzungen', zugang: 'angemeldet', handler: async (a) => ok(await konten.sitzungenVon(ich(a).id, a.sitzungsDaten?.id)) },
     { methode: 'DELETE', pfad: '/api/konto/sitzungen/:sitzung', zugang: 'angemeldet', handler: async (a) => {
@@ -2003,6 +2044,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Was der Browser nicht anzeigen kann (Word, Excel …), kommt nur zum Abspeichern: auch das ist Mitnehmen (#723).
       if (!d0.anzeigbar) await mitnehmen(a, mappeId);
       const { dokument: d, inhalt } = await dienst.dokumentInhalt(a.params.id);
+      // Geschütztes PDF (#827): Angezeigt wird die entsperrte Fassung (bereinigt); Herunterladen liefert das Original.
+      const frei = d.mime === 'application/pdf' && d.anzeigbar && !a.apiSchluessel ? await dienst.pdfEntsperren?.fassung(d.sha256).catch(() => null) : null;
+      if (frei) return fuerAnzeige(a, { inhalt: frei.inhalt, name: d.name, mime: 'application/pdf', anzeigen: true, groesse: frei.inhalt.length, koepfe: { 'x-dms-entsperrt': '1' } });
       const anzeigen = d.anzeigbar;
       L.dokumente.debug(anzeigen ? 'Dokument angezeigt' : 'Dokument heruntergeladen', { name: d.name, id: d.id });
       return fuerAnzeige(a, { inhalt, name: d.name, mime: d.anzeigbar ? d.mime : 'application/octet-stream', anzeigen, groesse: d.groesse });
@@ -2043,6 +2087,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
       return ok(await dienst.setzeVorschaubild(await zg(a), a.params.id, a.query.sha256, a.body));
     } },
+    // Geschützte PDFs (#827): mit dem Passwort eine entsperrte Fassung anlegen. Das Passwort geht nur an qpdf (über die
+    // Standardeingabe), nie in Datenbank, Protokoll oder Historie – außer mit „merken“ verschlüsselt im eigenen Konto.
+    { methode: 'POST', pfad: '/api/dokumente/:id/entsperren', zugang: 'angemeldet', handler: async (a) => {
+      await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
+      return ok(await dienst.entsperreDokument(a.params.id, ich(a).id, b(a), !a.apiSchluessel && !a.sitzungsDaten?.vertretungId));
+    } },
     { methode: 'GET', pfad: '/api/dokumente/:id/fassung', zugang: 'angemeldet', handler: async (a) => {
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
@@ -2052,7 +2102,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const f = await dienst.fassungVon(a.params.id);
       const punkt = f.d.name.lastIndexOf('.');
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
-      const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (umgewandelt).${endung}`;
+      const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (${f.info.entsperrt ? 'entsperrt' : 'umgewandelt'}).${endung}`;
       return fuerAnzeige(a, { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
         koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': 'private, max-age=60' } });
     } },

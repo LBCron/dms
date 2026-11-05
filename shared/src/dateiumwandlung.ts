@@ -101,4 +101,9 @@ export interface FassungInfo {
   /** Welches Paket sie geliefert hat (Id, Name, Version). */
   paket: { id: string; name: string; version: string };
   erstellt: string;
+  /**
+   * Entsperrte Fassung eines geschützten PDFs (#827): kein Paket, sondern Ablago selbst (qpdf). Wie und von wem –
+   * nie das Passwort.
+   */
+  entsperrt?: import('./entsperren').Entsperrt;
 }

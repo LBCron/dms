@@ -13,7 +13,7 @@ const istVerschluesselt = (v: unknown): v is string => typeof v === 'string' && 
 
 export type GeheimArt =
   | 'passwortfeld' | 'papierkorb' | 'mail' | 'postfach' | 'postfach_oauth_app' | 'postfach_oauth'
-  | 'oidc' | 'zweifaktor' | 'paket' | 'webhook' | 'pruefwort' | 'sonstige';
+  | 'oidc' | 'zweifaktor' | 'dokpasswort' | 'paket' | 'webhook' | 'pruefwort' | 'sonstige';
 
 /** Wo ein verschlüsselter Wert liegt; `wert` ist der ganze gespeicherte JSON-Wert. */
 export interface Fundstelle {
@@ -37,6 +37,7 @@ export const GEHEIM_ARTEN: Record<GeheimArt, { name: string; bereich: string; wo
   postfach_oauth: { name: 'Postfächer (OAuth-Anmeldung)', bereich: 'Postfächer', wo: 'in der Werkbank unter „Postfächer“ neu anmelden' },
   oidc: { name: 'Anmeldung über einen Anbieter (OIDC: Client-Secret)', bereich: 'Anmeldeschutz', wo: 'in der Werkbank unter „Anmeldeschutz“ neu eingeben' },
   zweifaktor: { name: 'Zwei-Faktor-Anmeldung', bereich: 'Benutzer', wo: 'unter „Benutzer“ zurücksetzen; der Benutzer richtet sie neu ein' },
+  dokpasswort: { name: 'Gemerkte Passwörter für Dokumente', bereich: 'Benutzer', wo: 'der Benutzer löscht sie unter „Mein Konto → Sicherheit“ und merkt sie sich neu' },
   paket: { name: 'Paket-Einstellungen (Geheimnisse)', bereich: 'Pakete', wo: 'in den Einstellungen des Pakets neu eingeben' },
   webhook: { name: 'Webhooks (Geheimnis für die Signatur)', bereich: 'Webhooks', wo: 'im Profil des Benutzers unter „Webhooks“ ein neues Geheimnis erzeugen' },
   pruefwort: { name: 'Prüfwort (zeigt, ob der Schlüssel passt)', bereich: 'Verschlüsselung', wo: 'wird mit einem neuen Schlüssel neu gesetzt', intern: true },
@@ -55,6 +56,7 @@ export function artVon(f: Pick<Fundstelle, 'quelle' | 'schluessel'>): GeheimArt 
   if (k.startsWith('postfach_oauth_')) return 'postfach_oauth';
   if (k === 'oidc') return 'oidc';
   if (k.startsWith('zweifaktor_') && k !== 'zweifaktor_pflicht' && k !== 'zweifaktor_pflicht_seit') return 'zweifaktor';
+  if (k.startsWith('dokpasswoerter_')) return 'dokpasswort';
   if (k.startsWith('paket:')) return 'paket';
   if (k === 'pruefwort') return 'pruefwort';
   return 'sonstige';
@@ -97,6 +99,7 @@ export function bestandAus(funde: Fundstelle[], lesbar: (v: string) => boolean, 
       else if (art === 'postfach_oauth') was = `Postfach „${postfachName(f.schluessel.slice('postfach_oauth_'.length)) || 'ohne Namen'}“: Anmeldung beim Anbieter`;
       else if (art === 'oidc') was = 'Client-Secret des Anbieters';
       else if (art === 'zweifaktor') was = `Zwei-Faktor-Anmeldung von ${f.titel || 'einem Benutzer'}`;
+      else if (art === 'dokpasswort') was = `Gemerktes Passwort für Dokumente von ${f.titel || 'einem Benutzer'}`;
       else if (art === 'paket') was = `Paket „${f.schluessel.slice('paket:'.length)}“: ${String(w.pfad.filter((x) => typeof x === 'string' && x !== 'werte').join('.') || 'Geheimnis')}`;
       else if (art === 'webhook') was = `Webhook „${f.titel || 'ohne Namen'}“: Geheimnis`;
       else if (art === 'mail') was = 'Passwort des Mailservers';

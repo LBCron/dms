@@ -55,6 +55,22 @@ Ist ein Paket wie **PDF/A** installiert (das macht ein Administrator), bekommt j
   - „Das Original ist schon PDF/A und gilt selbst als Archivfassung.“
 - **Nach Änderungen** am Original (neue Version, Seiten drehen oder löschen, teilen, schwärzen) zeigt Ablago das Original, bis die neue Archivfassung da ist. Die Historie der Mappe vermerkt jede neue Archivfassung.
 
+### Passwortgeschützte PDFs { #passwortgeschuetzte-pdfs }
+
+Lohnabrechnungen, Arztbefunde oder Kontoauszüge kommen oft als PDF mit Passwort. Ablago legt sie ab wie jedes andere Dokument und erkennt den Schutz – egal ob die Post hochgeladen wurde, aus dem Postfach, dem Eingangsordner oder über das Laufwerk kam.
+
+- **Am Dokument** steht dann: „Dieses PDF ist mit einem Passwort geschützt. Passwort eingeben, damit Ablago es anzeigen und durchsuchen kann.“ Darunter gibst du das Passwort ein und klickst **Entsperren**.
+- Ablago legt daraufhin eine **entsperrte Fassung** an. Aus ihr entstehen Vorschau und Volltext; Stempel und Archivfassung nehmen ebenfalls sie. Über der Anzeige steht „Ansicht: entsperrte Fassung“, am Dokument „Passwortschutz entfernt“.
+- Das **Original bleibt unverändert** erhalten – mit seinem Passwort. **Herunterladen** liefert weiter das Original. Die Historie der Mappe vermerkt „Passwortschutz entfernt“ mit Person und Zeit.
+- **Dein Passwort speichert Ablago nicht**, weder in der Datenbank noch im Protokoll noch in der Sicherung. Es geht nur für diesen einen Vorgang an das Programm qpdf. Außer du setzt den Haken **Für weitere Dokumente merken** (siehe unten).
+- **Falsches Passwort:** Ablago sagt, wie viele Versuche noch bleiben. Nach fünf falschen Versuchen wartest du 15 Minuten.
+- **Nur Drucken oder Kopieren gesperrt:** Manche PDFs öffnen sich ohne Passwort, verbieten aber Drucken oder Kopieren. Solche PDFs behandelt Ablago ohne Rückfrage wie normale PDFs für Vorschau und Volltext. Auch hier bleibt das Original unverändert.
+
+**Für weitere Dokumente merken:** Kommen solche PDFs regelmäßig mit demselben Passwort (etwa jeden Monat die Gehaltsabrechnung), setzt du beim Entsperren den Haken und gibst dem Passwort einen kurzen Namen. Ablago schlägt dafür den Betreff vor. Kommt danach neue Post **für dich** (aus deinem Postfach oder mit dir unter „Für“), probiert Ablago deine gemerkten Passwörter selbst durch. Passt eins, ist das Dokument gleich entsperrt, und die Historie nennt den Namen („entsperrt mit gemerktem Passwort ‚Gehaltsabrechnung‘“). Bei Post für alle probiert Ablago nichts, dann gibt das Passwort ein, wer das Dokument öffnet. Deine gemerkten Passwörter findest du unter [Mein Konto → Sicherheit](profil.md#passwoerter-fuer-dokumente).
+
+!!! warning "Was danach schützt"
+    Nach dem Entsperren schützt nicht mehr das PDF-Passwort das Dokument, sondern Ablago: die Rechte an der Mappe und die Verschlüsselung der Ablage und der Sicherung. Wer die Mappe lesen darf, sieht das Dokument ohne Passwort – bei Arztbriefen der Eltern zum Beispiel die Geschwister, soweit ihre Rechte das erlauben. Überlege also vorher, wo das Dokument liegt und wer es lesen darf. Die entsperrte Fassung geht mit in die Sicherung und in den Vollexport.
+
 ### Am Handy: Dokument vorzeigen
 
 Am Handy zeigt Ablago Dokumente **nicht eingebettet** in der Mappe – so bleibt die Seite beim Wischen nicht im Dokument hängen. Jede Karte hat stattdessen große Knöpfe:

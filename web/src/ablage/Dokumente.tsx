@@ -3,7 +3,7 @@ import { PdfSeiten } from './PdfSeiten';
 import { Link } from '../ort';
 import { Fundstellen, fundstellenFuer } from './Doppelt';
 import { useMappenZiel } from './NeuePost';
-import { useEffect, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import { HERKUNFT, MAX_DATEIGROESSE, OCR_STAENDE, type Mappentyp, type Mappe, type Dokument, type DokumentVersion, type Herkunft, type OcrStand, type Register } from '../../../shared/src/model';
 import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
 import { herkunftText } from '../volltext';
@@ -12,10 +12,12 @@ import { fassungAusInfo } from '../../../shared/src/dateiumwandlung';
 import { t } from '../sprache';
 import { api, archivfassungUrl, dokumentUrl, fassungUrl, versionUrl, type Fundstelle } from '../api';
 import { pdfaName, type ArchivStand } from '../../../shared/src/archivfassung';
+import { namensvorschlag } from '../../../shared/src/entsperren';
 import { useDaten } from '../daten';
 import { Person } from '../Person';
 import { Hilfe } from '../Hilfe';
 import { Symbol } from '../Symbol';
+import { useKonto } from '../konto';
 import { rueckfrage } from '../rueckfrage';
 import { StempelDialog } from './Stempel';
 import { PdfVerkleinern } from './PdfVerkleinern';
@@ -359,6 +361,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                           mitStempel={stempelPflicht && kannStempeln(x.mime) ? (n) => setStempelOffen({ id: x.id, version: n }) : undefined} />}
                         {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && <ArchivAnzeige s={x.archivfassung} />}
+                        {!weg && x.pdfSchutz && <PdfSchutzAnzeige x={x} betreff={mappeTitel} fertig={() => void neuLaden?.()} />}
                         {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? 'Kein Volltext vorhanden.'}</pre>}
                       </div>
                       {handy ? (
@@ -514,15 +517,19 @@ function DokTeilen({ d }: { d: Dokument }) {
  * (#577) für Dateitypen, die der Browser nicht zeigt – sonst das Original. Mit `original` immer das Original. null:
  * nichts anzuzeigen.
  */
-export function ansichtVon(x: Dokument, original: boolean): { art: 'archiv' | 'lesefassung' | 'original'; url: string; pdf: boolean } | null {
+export function ansichtVon(x: Dokument, original: boolean): { art: Ansichtsart; url: string; pdf: boolean } | null {
   if (!original && x.archivfassung?.stand === 'fertig') return { art: 'archiv', url: archivfassungUrl(x.id), pdf: true };
+  // Geschütztes PDF (#827): Der Server zeigt die entsperrte Fassung; ohne sie gibt es nichts anzuzeigen.
+  if (x.pdfSchutz?.art === 'passwort') return x.pdfSchutz.entsperrt ? { art: 'entsperrt', url: dokumentUrl(x.id), pdf: true } : null;
   if (!x.anzeigbar && x.ocr?.stand === 'fertig' && fassungAusInfo(x.ocr.info)) return { art: 'lesefassung', url: fassungUrl(x.id), pdf: true };
   if (!x.anzeigbar) return null;
   return { art: 'original', url: dokumentUrl(x.id), pdf: x.mime === 'application/pdf' };
 }
 
 /** Über der Anzeige (#631): was man sieht, und der Wechsel zwischen Archivfassung und Original. */
-function AnsichtKopf({ x, art, umschalten }: { x: Dokument; art: 'archiv' | 'lesefassung' | 'original'; umschalten(): void }) {
+type Ansichtsart = 'archiv' | 'lesefassung' | 'entsperrt' | 'original';
+
+function AnsichtKopf({ x, art, umschalten }: { x: Dokument; art: Ansichtsart; umschalten(): void }) {
   const a = x.archivfassung;
   const mitArchiv = a?.stand === 'fertig';
   return (
@@ -597,6 +604,60 @@ function ArchivAnzeige({ s }: { s?: ArchivStand | null }) {
       {f?.weggelassen && <span className="leise">{t('volltext.archiv.weggelassen')}</span>}
       {f?.erechnung && <span className="leise">{t('volltext.archiv.erechnung')}</span>}
     </span>
+  );
+}
+
+/**
+ * Geschütztes PDF (#827): Hinweis mit Passwortfeld, solange es gesperrt ist; danach ein kurzer Vermerk. Mit
+ * „Für weitere Dokumente merken“ kommt das Passwort verschlüsselt in das eigene Konto (Mein Konto → Sicherheit).
+ */
+function PdfSchutzAnzeige({ x, betreff, fertig }: { x: Dokument; betreff: string; fertig(): void }) {
+  const s = x.pdfSchutz!;
+  const { vertretung } = useKonto();
+  const [passwort, setPasswort] = useState('');
+  const [zeigen, setZeigen] = useState(false);
+  const [merken, setMerken] = useState(false);
+  const [name, setName] = useState(() => namensvorschlag(betreff));
+  const [sendet, setSendet] = useState(false);
+  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
+  if (s.entsperrt) return (
+    <span className="ocrstand klein">
+      <span className="chip">{t.frei(`mappen.entsperren.chip.${s.art}`)}</span>
+      <span className="leise">{s.art === 'rechte' ? t('mappen.entsperren.rechte') : s.entsperrt.art === 'gemerkt' ? t('mappen.entsperren.entsperrt-gemerkt', { name: s.entsperrt.name ?? '' }) : t('mappen.entsperren.entsperrt')}</span>
+      <Hilfe ort="dokumente.entsperren" />
+    </span>
+  );
+  if (s.art !== 'passwort') return null;
+  async function absenden(e: FormEvent) {
+    e.preventDefault();
+    setSendet(true); setMeldung(undefined);
+    try {
+      const r = await api.dokumentEntsperren(x.id, passwort, merken ? { name } : undefined);
+      setPasswort('');
+      setMeldung({ art: 'gut', text: r.hinweis ? t('mappen.entsperren.fertig-ohne-merken', { grund: r.hinweis }) : r.gemerkt ? t('mappen.entsperren.fertig-gemerkt') : t('mappen.entsperren.fertig') });
+      fertig();
+    } catch (f) { setMeldung({ art: 'schlecht', text: (f as Error).message }); } finally { setSendet(false); }
+  }
+  return (
+    <form className="hinweis info entsperren" onSubmit={(e) => void absenden(e)} onClick={(e) => e.stopPropagation()}>
+      <p><Symbol name="schloss" /> {t('mappen.entsperren.hinweis')} <Hilfe ort="dokumente.entsperren" /></p>
+      <div className="passwort">
+        <label className="sr" htmlFor={`entsperren-${x.id}`}>{t('mappen.entsperren.passwort')}</label>
+        <input id={`entsperren-${x.id}`} type={zeigen ? 'text' : 'password'} value={passwort} autoComplete="off" spellCheck={false}
+          placeholder={t('mappen.entsperren.passwort')} onChange={(e) => setPasswort(e.target.value)} />
+        <button type="button" className="knopf klein" onClick={() => setZeigen(!zeigen)} aria-label={zeigen ? t('mappen.entsperren.verbergen') : t('mappen.entsperren.anzeigen')} title={zeigen ? t('mappen.entsperren.verbergen') : t('mappen.entsperren.anzeigen')}><Symbol name={zeigen ? 'auge-aus' : 'auge'} /></button>
+        <button className="knopf klein primaer" disabled={sendet || !passwort || (merken && !name.trim())}>{t('mappen.entsperren.knopf')}</button>
+      </div>
+      {!vertretung && (
+        <label className="haken"><input type="checkbox" checked={merken} onChange={(e) => setMerken(e.target.checked)} />
+          <span>{t('mappen.entsperren.merken')}<small className="hilfe">{t('mappen.entsperren.merken.hilfe')}</small></span></label>
+      )}
+      {merken && (
+        <label className="eigenschaft"><span>{t('mappen.entsperren.name')}</span>
+          <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder={t('mappen.entsperren.name.beispiel')} /></label>
+      )}
+      {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
+    </form>
   );
 }
 

@@ -54,3 +54,67 @@ describe('Gemeinsame PDF-Stelle (#541)', () => {
     }
   });
 });
+
+/*
+ * Grenzen prüfen (#823, Teil 2): Jede Stelle, die ein fremdes PDF öffnet, läuft im Arbeiter-Pool (#542) und lädt über
+ * `ladePdf()` mit der Entpack-Grenze (0.164.2). Diese Prüfung hält beides fest – auch für neuen Code.
+ */
+const PDF_ORDNER = join(WURZEL, 'server/src/pdf');
+const quelle = (n: string) => readFileSync(join(PDF_ORDNER, n), 'utf8');
+
+/** Rumpf einer exportierten Funktion bzw. Konstante (bis zur nächsten Zeile, die mit `export`, `}` oder `/**` beginnt). */
+export function rumpf(text: string, name: string): string | null {
+  const m = new RegExp(`^export (?:async )?(?:function|const) ${name}\\b`, 'm').exec(text);
+  if (!m) return null;
+  const rest = text.slice(m.index);
+  const ende = rest.slice(1).search(/\n(?:export |\/\*\*|\}\n)/);
+  return ende < 0 ? rest : rest.slice(0, ende + 3);
+}
+
+/** Lädt dieser Code ein PDF (direkt oder über den eigenen Lade-Helfer eines Moduls)? */
+export const laedtPdf = (code: string) => /\bladePdf\(|\blade\(|PDFDocument\.load\(/.test(code);
+
+describe('Lesestellen nur im Arbeiter und über ladePdf() (#823)', () => {
+  it('erkennt Laden und findet Rümpfe', () => {
+    assert.ok(laedtPdf('const d = await ladePdf(x);'));
+    assert.ok(laedtPdf('await PDFDocument.load(b)'));
+    assert.ok(!laedtPdf('PDFDocument.create()'));
+    assert.match(rumpf('export function a() {\n  return ladePdf(x);\n}\nexport function b() {}\n', 'a') ?? '', /ladePdf/);
+    assert.ok(!(rumpf('export function a() {\n  return 1;\n}\nexport function b() { ladePdf(); }\n', 'a') ?? '').includes('ladePdf'));
+  });
+
+  it('PDFDocument.load nur in pdf/laden.ts – alle anderen laden über ladePdf()', () => {
+    const funde = dateien(join(WURZEL, 'server/src')).filter((p) => !p.endsWith('/pdf/laden.ts') && /PDFDocument\s*\.\s*load\s*\(/.test(readFileSync(p, 'utf8')));
+    assert.deepEqual(funde.map((p) => relative(WURZEL, p)), [], 'PDFs bitte nur über ladePdf() laden (#823): Es prüft vorher die Entpack-Grenze.');
+  });
+
+  it('außerhalb der PDF-Stelle nur Typen aus ihren Modulen – Vorgänge gehen über pdf/index.ts in den Arbeiter', () => {
+    const MODUL = /(?:^|\n)\s*import\s+(?!type\b)[^;]*?from\s*['"](?:\.\.?\/)+(?:[\w-]+\/)*pdf\/(?!index['"])[\w-]+['"]/;
+    const erlaubt = new Set([join(WURZEL, 'server/src/arbeit/vorgaenge.ts')]);
+    const funde = dateien(join(WURZEL, 'server/src')).filter((p) => !p.startsWith(STELLE) && !erlaubt.has(p) && MODUL.test(readFileSync(p, 'utf8')));
+    assert.deepEqual(funde.map((p) => relative(WURZEL, p)), [], 'Bitte Vorgänge der PDF-Stelle über ./pdf aufrufen (Arbeiter-Pool, #542), nicht direkt aus pdf/<modul>.');
+  });
+
+  it('pdf/index.ts gibt direkt nur Helfer weiter, die kein PDF laden; alles andere über arbeite()', () => {
+    const index = quelle('index.ts');
+    const weiter = [...index.matchAll(/^export \{([^}]*)\} from '\.\/([\w-]+)';/gm)];
+    assert.ok(weiter.length > 3, 'Weitergaben gefunden');
+    const funde: string[] = [];
+    for (const [, namen, modul] of weiter) {
+      const text = quelle(`${modul}.ts`);
+      for (const roh of namen.split(',').map((x) => x.trim()).filter(Boolean)) {
+        if (roh.startsWith('type ')) continue;
+        const name = roh.split(/\s+as\s+/)[0].trim();
+        const r = rumpf(text, name);
+        if (r && laedtPdf(r)) funde.push(`${modul}.${name}`);
+      }
+    }
+    assert.deepEqual(funde, [], 'Diese Funktionen laden ein PDF und laufen damit im Hauptfaden – bitte als Vorgang über arbeite() (#542).');
+    // Jede Ladestelle der PDF-Stelle gehört zu einem Modul, das der Arbeiter kennt.
+    const vorgaenge = readFileSync(join(WURZEL, 'server/src/arbeit/vorgaenge.ts'), 'utf8');
+    const lader = readdirSync(PDF_ORDNER).filter((n) => n.endsWith('.ts') && n !== 'laden.ts' && n !== 'index.ts' && /\bladePdf\(/.test(quelle(n)));
+    assert.ok(lader.length >= 6, `Ladestellen gefunden: ${lader.join(', ')}`);
+    for (const n of lader) assert.ok(vorgaenge.includes(`'../pdf/${n.replace(/\.ts$/, '')}'`), `${n} lädt PDFs, kommt aber nicht in arbeit/vorgaenge.ts vor`);
+  });
+});
+

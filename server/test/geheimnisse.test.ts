@@ -44,6 +44,7 @@ describe('Geheimnisse je Art (#410)', () => {
       { quelle: 'einstellung', schluessel: 'postfach_oauth_p2', wert: { zugriff: g(6), aktualisierung: g(7) } },
       { quelle: 'einstellung', schluessel: 'oidc', wert: { clientSecret: g(8) } },
       { quelle: 'einstellung', schluessel: 'zweifaktor_u1', wert: { geheimnis: g('kaputt-2') }, titel: 'Anna' },
+      { quelle: 'einstellung', schluessel: 'dokpasswoerter_u1', wert: { eintraege: [{ id: 'd1', name: 'Lohn', passwort: g('kaputt-5') }, { id: 'd2', name: 'Arzt', passwort: g(10) }] }, titel: 'Anna' },
       { quelle: 'einstellung', schluessel: 'paket:konten', wert: { werte: { token: g(9) } } },
       { quelle: 'einstellung', schluessel: 'pruefwort', wert: g('kaputt-3') },
       { quelle: 'webhook', schluessel: 'w1', wert: g('kaputt-4'), titel: 'Homey' },
@@ -53,10 +54,10 @@ describe('Geheimnisse je Art (#410)', () => {
     const je = Object.fromEntries(b.arten.map((a) => [a.art, [a.anzahl, a.unlesbar]]));
     assert.deepEqual(je, {
       passwortfeld: [1, 0], papierkorb: [1, 1], mail: [1, 0], postfach: [1, 1], postfach_oauth_app: [1, 0],
-      postfach_oauth: [2, 0], oidc: [1, 0], zweifaktor: [1, 1], paket: [1, 0], webhook: [1, 1],
+      postfach_oauth: [2, 0], oidc: [1, 0], zweifaktor: [1, 1], dokpasswort: [2, 1], paket: [1, 0], webhook: [1, 1],
     });
     assert.ok(!b.arten.some((a) => a.art === 'pruefwort' || a.art === 'sonstige'), 'Prüfwort intern, „Weitere“ nur mit Funden');
-    assert.deepEqual(b.betroffen.map((x) => x.was), ['Alt: pw', 'Postfach „Privat“: Passwort', 'Zwei-Faktor-Anmeldung von Anna', 'Webhook „Homey“: Geheimnis']);
+    assert.deepEqual(b.betroffen.map((x) => x.was), ['Alt: pw', 'Postfach „Privat“: Passwort', 'Zwei-Faktor-Anmeldung von Anna', 'Gemerktes Passwort für Dokumente von Anna', 'Webhook „Homey“: Geheimnis']);
     assert.equal(b.betroffen[1].wo, GEHEIM_ARTEN.postfach.wo);
     // Ohne Funde: alle bekannten Arten mit 0.
     assert.equal(bestandAus([], () => true).arten.length, Object.keys(GEHEIM_ARTEN).length - 2);
@@ -136,6 +137,8 @@ describe('Schlüssel wechseln mit allen Geheimnissen in PostgreSQL (#410)', { sk
     // Zwei-Faktor am Benutzerkonto (wie Zweifaktor.bestaetige).
     const [anna] = await sql`INSERT INTO benutzer (id, haushalt_id, email, name, rolle) VALUES (gen_random_uuid(), ${HAUSHALT}, 'anna@example.org', 'Anna', 'admin') RETURNING id`;
     await einst.schreibe(`zweifaktor_${anna.id}`, { geheimnis: v('JBSWY3DPEHPK3PXP'), seit: new Date().toISOString(), letzterSchritt: 0, codes: [] });
+    // Gemerktes Passwort für Dokumente (#827, wie PdfEntsperren.merke).
+    await einst.schreibe(`dokpasswoerter_${anna.id}`, { eintraege: [{ id: 'd1', name: 'Gehaltsabrechnung', passwort: v('lohn-geheim'), erstellt: new Date().toISOString(), zuletzt: null }] });
     // Paket-Einstellung vom Typ Geheimnis.
     await dienst.setzePaketEinstellungen('konten', { werte: { token: dienst.verschluesselePaketGeheimnis('paket-geheim'), liste: [{ id: 'e1', pw: dienst.verschluesselePaketGeheimnis('listen-geheim') }] } });
 
@@ -145,7 +148,7 @@ describe('Schlüssel wechseln mit allen Geheimnissen in PostgreSQL (#410)', { sk
     // (a) Bestand: jede Art mit ihrer Anzahl, nichts unbekannt, nichts unlesbar.
     const vorher = await tresor.status();
     const je = Object.fromEntries(vorher.arten.map((a) => [a.art, a.anzahl]));
-    assert.deepEqual(je, { passwortfeld: 1, papierkorb: 1, mail: 1, postfach: 1, postfach_oauth_app: 1, postfach_oauth: 2, oidc: 1, zweifaktor: 1, paket: 2, webhook: 1 });
+    assert.deepEqual(je, { passwortfeld: 1, papierkorb: 1, mail: 1, postfach: 1, postfach_oauth_app: 1, postfach_oauth: 2, oidc: 1, zweifaktor: 1, dokpasswort: 1, paket: 2, webhook: 1 });
     assert.deepEqual(vorher.betroffen, []);
     const alleVorher = await alleGeheimnisse();
     const gezaehlt = vorher.arten.reduce((n, a) => n + a.anzahl, 0) + 1; // + Prüfwort
@@ -176,6 +179,7 @@ describe('Schlüssel wechseln mit allen Geheimnissen in PostgreSQL (#410)', { sk
     oidc.vergiss();
     assert.equal(e((await oidc.einstellung()).clientSecret), 'oidc-geheim');
     assert.equal(e(((await einst.lies(`zweifaktor_${anna.id}`)) as { geheimnis: string }).geheimnis), 'JBSWY3DPEHPK3PXP');
+    assert.equal(e(((await einst.lies(`dokpasswoerter_${anna.id}`)) as { eintraege: Array<{ passwort: string }> }).eintraege[0].passwort), 'lohn-geheim');
     const paket = (await dienst.paketEinstellungen('konten'))!.werte as { token: string; liste: Array<{ pw: string }> };
     assert.equal(e(paket.token), 'paket-geheim');
     assert.equal(e(paket.liste[0].pw), 'listen-geheim');

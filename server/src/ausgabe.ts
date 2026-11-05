@@ -18,7 +18,14 @@ import { mb, verkleinere, type Stufe } from './verkleinern';
 export interface Ausgabedatei { name: string; mime: string; inhalt: Buffer }
 /** Was mit der Kopie geschehen soll. Später: `schwaerzen` (#392). */
 export interface Ausgabewunsch { stempel?: GeltenderStempel | null; verkleinern?: Stufe | null }
-export interface Ausgabekontext { benutzer: string; mappe: string; archivnummer?: string | null; datum?: string }
+export interface Ausgabekontext {
+  benutzer: string; mappe: string; archivnummer?: string | null; datum?: string;
+  /**
+   * Geschützte PDFs (#827): entsperrte Fassung zu diesem Inhalt (null: keine). Stempeln und Verkleinern arbeiten dann
+   * mit ihr; ohne Bearbeitung geht das Original hinaus.
+   */
+  entsperrt?: (inhalt: Buffer) => Promise<Buffer | null>;
+}
 export interface Ausgabe extends Ausgabedatei {
   /** Der Stempeltext mit ersetzten Platzhaltern (wie auf Seite 1, in einer Zeile), wenn gestempelt wurde. */
   stempeltext: string | null;
@@ -59,6 +66,11 @@ export function pdfName(name: string): string {
  */
 export async function fuerAusgabe(d: Ausgabedatei, w: Ausgabewunsch | null | undefined, k: Ausgabekontext, streng = false): Promise<Ausgabe> {
   const g = w?.stempel;
+  // 0. Geschütztes PDF (#827): Bearbeitet wird die entsperrte Fassung, falls es eine gibt.
+  if ((g || w?.verkleinern) && d.mime === 'application/pdf' && k.entsperrt) {
+    const frei = await k.entsperrt(d.inhalt).catch(() => null);
+    if (frei) d = { ...d, inhalt: frei };
+  }
   // 1. Verkleinern (#393): nur PDFs; bringt es weniger als 10 %, bleibt die Datei, wie sie ist.
   let verkleinert: Ausgabe['verkleinert'] = null;
   if (w?.verkleinern && d.mime === 'application/pdf') {
