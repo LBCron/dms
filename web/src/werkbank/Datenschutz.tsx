@@ -101,7 +101,7 @@ export function AuskunftRechts({ z, id }: { z: DatenschutzZustand; id?: string }
   const s = z.stand;
   // Alte Links aus der Mappe der Person (/werkbank/datenschutz?mappe=…) führen in den Assistenten.
   const mappe = new URLSearchParams(location.search).get('mappe');
-  useEffect(() => { if (!id && mappe) geheZu(t('werkbank.datenschutz.werkbank-auskuenfte-neu-mappe', { encodeURIComponent: encodeURIComponent(mappe) }), true); }, [id, mappe]);
+  useEffect(() => { if (!id && mappe) geheZu(`/werkbank/auskuenfte/neu?mappe=${encodeURIComponent(mappe)}`, true); }, [id, mappe]);
   if (!s) return <p className="leise">{z.fehler ?? t('werkbank.datenschutz.lade')}</p>;
   if (id === 'neu') return (
     <div className="einspaltig">

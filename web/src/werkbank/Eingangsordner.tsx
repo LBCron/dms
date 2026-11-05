@@ -39,7 +39,7 @@ export function EingangsordnerPanel({ z }: { z: EingangZustand }) {
   if (!s.vorhanden || !e) {
     return (
       <div className="einspaltig"><div className="mappenkopf"><p className="ueber">{t('werkbank.eingangsordner.werkbank')}</p><h1>{t('werkbank.eingangsordner.eingangsordner')}</h1>
-        <p className="leise">{tn('werkbank.eingangsordner.es-ist-kein-eingangsordner', { code: <code>{t('werkbank.eingangsordner.eingang')}</code>, hilfe: <Hilfe ort="werkbank.eingangsordner" /> })}</p></div></div>
+        <p className="leise">{tn('werkbank.eingangsordner.es-ist-kein-eingangsordner', { code: <code>{'/eingang'}</code>, hilfe: <Hilfe ort="werkbank.eingangsordner" /> })}</p></div></div>
     );
   }
   async function speichern() {

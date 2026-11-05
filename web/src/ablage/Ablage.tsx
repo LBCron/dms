@@ -644,7 +644,7 @@ function useAuswahl(mappen: Mappe[], gesamt: number | null, abhaengig: unknown[]
     onTouchEnd: () => window.clearTimeout(lang.current.t),
     onClickCapture: (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest('input, button')) return;
-      const beruehrung = window.matchMedia?.(t('ablage.ablage.pointer-coarse')).matches;
+      const beruehrung = window.matchMedia?.('(pointer: coarse)').matches;
       if (lang.current.ausgeloest || (beruehrung && gewaehlt.size > 0)) {
         e.preventDefault(); e.stopPropagation();
         if (!lang.current.ausgeloest) { const m = mappen[i]; if (m) waehle(i, !gewaehlt.has(m.id), false); }
@@ -679,7 +679,7 @@ function Fundstelle({ a }: { a: Ausschnitt }) {
 function SichtBaum({ aktiv, ohne = [] }: { aktiv?: string; ohne?: string[] }) {
   const d = useDaten();
   const { ich } = useKonto();
-  const schluessel = t('ablage.ablage.dms-sichten-zu', { id: ich.id });
+  const schluessel = `dms:sichten-zu:${ich.id}`;
   const [zu, setZu] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(schluessel) ?? '[]') as string[]); } catch { return new Set(); }
   });

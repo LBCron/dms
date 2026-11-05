@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { t } from '../sprache';
 
 /** Auf- und Zuklappen eines Bereichs im Mappentyp-Editor (#144). */
 export interface Klappe { offen: boolean; umschalten(): void; fehler?: boolean }
@@ -17,7 +18,7 @@ export function Bereich({ id, titel, hilfe, kurz, beschreibung, klappe, children
         <h2 className="h3">
           <button type="button" id={`${id}-kopf`} className="bereichknopf" aria-expanded={offen} aria-controls={`${id}-inhalt`} onClick={umschalten}>
             <span className="pfeil" aria-hidden="true">▸</span>{titel}
-            {fehler && <span className="chip schlecht">Fehler</span>}
+            {fehler && <span className="chip schlecht">{t('mappentypen.bereich.fehler')}</span>}
           </button>
           {hilfe}
         </h2>
@@ -32,14 +33,14 @@ export function Bereich({ id, titel, hilfe, kurz, beschreibung, klappe, children
 }
 
 export const TYP_BEREICHE = [
-  ['grunddaten', 'Grunddaten'], ['felder', 'Felder'], ['titel', 'Titel'], ['trefferlisten', 'Trefferlisten'],
-  ['register', 'Register'], ['archiv', 'Archivmodus'], ['stempel', 'Stempel beim Weitergeben'], ['erkennung', 'Erkennung'], ['berechtigungen', 'Berechtigungen'], ['testlauf', 'Testlauf'], ['pakete', 'Pakete'],
+  ['grunddaten', t('mappentypen.bereich.grunddaten')], ['felder', t('mappentypen.bereich.felder')], ['titel', t('mappentypen.bereich.titel')], ['trefferlisten', t('mappentypen.bereich.trefferlisten')],
+  ['register', t('mappentypen.bereich.register')], ['archiv', t('mappentypen.bereich.archivmodus')], ['stempel', t('mappentypen.bereich.stempel-beim-weitergeben')], ['erkennung', t('mappentypen.bereich.erkennung')], ['berechtigungen', t('mappentypen.bereich.berechtigungen')], ['testlauf', t('mappentypen.bereich.testlauf')], ['pakete', t('mappentypen.bereich.pakete')],
 ] as const;
 export type TypBereich = (typeof TYP_BEREICHE)[number][0];
 
 export const SICHT_BEREICHE = [
-  ['grunddaten', 'Grunddaten'], ['mappentypen', 'Mappentypen'], ['trefferliste', 'Trefferliste'], ['bedingungen', 'Bedingungen'],
-  ['berechtigungen', 'Berechtigungen'], ['testlauf', 'Testlauf'],
+  ['grunddaten', t('mappentypen.bereich.grunddaten')], ['mappentypen', t('mappentypen.bereich.mappentypen')], ['trefferliste', t('mappentypen.bereich.trefferliste')], ['bedingungen', t('mappentypen.bereich.bedingungen')],
+  ['berechtigungen', t('mappentypen.bereich.berechtigungen')], ['testlauf', t('mappentypen.bereich.testlauf')],
 ] as const;
 export type SichtBereich = (typeof SICHT_BEREICHE)[number][0];
 
@@ -89,15 +90,15 @@ export function useBereiche<K extends string>(liste: ReadonlyArray<readonly [K, 
     umschalten: () => setAuf((x) => { const n = new Set(x); if (n.has(k)) n.delete(k); else n.add(k); return stelle(n); }),
   });
   const alle = auf.size === liste.length;
-  const leiste = (fehler: (k: K) => boolean = () => false, label = 'Bereiche') => (
+  const leiste = (fehler: (k: K) => boolean = () => false, label = t('mappentypen.bereich.bereiche')) => (
     <nav className="sprungleiste" aria-label={label}>
       {liste.map(([k, name]) => (
         <button key={k} type="button" className={`sprung${auf.has(k) ? ' an' : ''}${fehler(k) ? ' fehler' : ''}`} onClick={() => oeffne([k])}
-          title={fehler(k) ? `${name}: Fehler` : name}>{name}{fehler(k) && <span className="fehlerpunkt" aria-label="mit Fehler">!</span>}</button>
+          title={fehler(k) ? t('mappentypen.bereich.fehler-2', { name }) : name}>{name}{fehler(k) && <span className="fehlerpunkt" aria-label={t('mappentypen.bereich.mit-fehler')}>!</span>}</button>
       ))}
       <span className="luecke" aria-hidden="true" />
       <button type="button" className="textknopf klein" onClick={() => setAuf(stelle(alle ? new Set() : new Set(liste.map(([k]) => k))))}>
-        {alle ? 'Alle zuklappen' : 'Alle aufklappen'}</button>
+        {alle ? t('mappentypen.bereich.alle-zuklappen') : t('mappentypen.bereich.alle-aufklappen')}</button>
     </nav>
   );
   return { auf, klappe, oeffne, leiste, merke: (neueId: string) => merkeOffen(neueId, auf, art) };

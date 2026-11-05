@@ -85,7 +85,7 @@ function Langlaeufer({ z, offen }: { z: DatenbankZustand; offen?: string }) {
               );
             })}
           </ul>}
-      <p className="leise klein">{tn('werkbank.datenbank.ein-datenbankzugriff-ist-eine', { span: <span className="mono">{t('werkbank.datenbank.mappen-seite')}</span>, link: <Link to="/werkbank/protokoll" className="verweis">{t('werkbank.datenbank.protokoll')}</Link> })}</p>
+      <p className="leise klein">{tn('werkbank.datenbank.ein-datenbankzugriff-ist-eine', { span: <span className="mono">{'mappen.seite'}</span>, link: <Link to="/werkbank/protokoll" className="verweis">{t('werkbank.datenbank.protokoll')}</Link> })}</p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { INSTALLIEREN_URL } from '../../shared/src/hilfe';
 import { api, ApiFehler, hatEinrichtungscode, setzeEinrichtungscode, type AnbindungEingabe, type AnbindungPruefung, type KontoStatus } from './api';
 import { WiederherstellungsAssistent } from './wiederherstellen';
 import { useKonto } from './konto';
-import { t } from './sprache';
+import { t, tn } from './sprache';
 import { nachDemLaden, nimmDatei, ladeDatei } from './assistent/datei';
 import { Rahmen, Sammelassistent, unterbrochenerLauf, type Leiste } from './assistent/Schritte';
 import { setzeStand, useAssistent } from './assistent/stand';
@@ -70,7 +70,7 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
     if (phase === 'konto' && st.sammlung.pruefungOffen) void nachDemLaden().catch(() => {});
   }, [codeOk, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (phase === 'startet') return <Rahmen aktiv={1} titel="Ablago startet …" leiste={VORHER}><p className="leise">Die Datenbank ist verbunden. Jetzt legt Ablago seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
+  if (phase === 'startet') return <Rahmen aktiv={1} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
   if (e?.code && !codeOk) return <CodeSchritt ok={() => { setCodeOk(true); void fertig(); }} />;
   // Bisherige Anbindung und Fehler liefert der Server erst mit Code – dann neu vorbelegen.
   if (phase === 'datenbank') return <DatenbankSchritt key={`${e?.anbindung ? 'mit' : 'ohne'}-${st.sammlung.datenbank ? 'datei' : ''}`} status={status} weiter={fertig} />;
@@ -78,18 +78,18 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
   // Läuft „Jetzt einrichten“ schon, bleibt es bei dieser Oberfläche – auch wenn das eigene Konto schon angelegt ist.
   if (st.neu || st.lauf) return <Sammelassistent zurWahl={zurWahl} abschliessen={fertig} />;
   if (sicherung) return (
-    <Rahmen aktiv={2} titel="Aus Sicherung wiederherstellen" leiste={VORHER} unter="Wähle eine Sicherung aus dem Sicherungsordner. Danach meldest du dich mit den Zugangsdaten an, die zur Zeit der Sicherung galten – ein neues Konto ist nicht nötig.">
+    <Rahmen aktiv={2} titel={t('einrichtung.assistent.aus-sicherung-wiederherstellen')} leiste={VORHER} unter={t('einrichtung.assistent.waehle-eine-sicherung-aus')}>
       <WiederherstellungsAssistent frisch gestartet={() => void fertig()} abbrechen={() => setSicherung(false)} />
     </Rahmen>
   );
   return (
-    <Rahmen aktiv={2} titel="Neu einrichten oder wiederherstellen?" unter="Die Datenbank ist verbunden und noch leer." leiste={VORHER} datei={{}}>
+    <Rahmen aktiv={2} titel={t('einrichtung.assistent.neu-einrichten-oder-wiederherstellen')} unter={t('einrichtung.assistent.die-datenbank-ist-verbunden-2')} leiste={VORHER} datei={{}}>
       <div className="wahlkarten">
         <button type="button" className="wahlkarte" onClick={() => setzeStand((x) => ({ ...x, neu: true }))}>
-          <strong>Neu einrichten</strong><span className="leise">{t('einrichtung.wahl.neu')}</span>
+          <strong>{t('einrichtung.assistent.neu-einrichten')}</strong><span className="leise">{t('einrichtung.wahl.neu')}</span>
         </button>
         <button type="button" className="wahlkarte" onClick={() => setSicherung(true)}>
-          <strong>Aus einer Sicherung wiederherstellen</strong><span className="leise">Neues NAS, alte Sicherung: Lege sie in den Sicherungsordner und halte das Notfallblatt bereit. Danach meldest du dich mit den bisherigen Zugangsdaten an.</span>
+          <strong>{t('einrichtung.assistent.aus-einer-sicherung-wiederherstellen')}</strong><span className="leise">{t('einrichtung.assistent.neues-nas-alte-sicherung')}</span>
         </button>
       </div>
     </Rahmen>
@@ -100,21 +100,21 @@ function CodeSchritt({ ok }: { ok: () => void }) {
   const [code, setCode] = useState('');
   const s = useSenden();
   return (
-    <Rahmen aktiv={0} titel="Einrichtungscode" leiste={{ erledigt: () => false }} datei={{ ohneCode: true }} unter="Damit niemand sonst im Netz dein Ablago einrichtet, fragt es zuerst nach einem Code. Den hat Ablago beim Start an zwei Stellen hinterlegt:">
+    <Rahmen aktiv={0} titel={t('einrichtung.assistent.einrichtungscode')} leiste={{ erledigt: () => false }} datei={{ ohneCode: true }} unter={t('einrichtung.assistent.damit-niemand-sonst-im')}>
       <ol className="anleitung">
-        <li><strong>Im Protokoll des Containers.</strong> In der Docker-Oberfläche des NAS den Container <span className="mono">app</span> des Projekts öffnen (bei UGREEN: <em>Docker → Container → dms-app → Protokoll</em>, bei Synology: <em>Container Manager → Container → Details → Protokoll</em>) oder auf der Kommandozeile <span className="mono">docker compose logs app</span>. Gesucht ist die Zeile <span className="mono">Einrichtungscode für Ablago: XXXX-XXXX-XXXX</span>.</li>
-        <li><strong>In einer Datei</strong> namens <span className="mono">EINRICHTUNGSCODE</span> im Ordner für den Schlüssel, in der Vorlage <span className="mono">/volume1/docker/dms/geheim</span>.</li>
+        <li>{tn('einrichtung.assistent.in-der-docker-oberflaeche', { b: <strong>{t('einrichtung.assistent.im-protokoll-des-containers')}</strong>, span: <span className="mono">{t('einrichtung.assistent.app')}</span>, i: <em>{t('einrichtung.assistent.docker-container-dms-app')}</em>, i2: <em>{t('einrichtung.assistent.container-manager-container-details')}</em>, span2: <span className="mono">{t('einrichtung.assistent.docker-compose-logs-app')}</span>, span3: <span className="mono">{t('einrichtung.assistent.einrichtungscode-fuer-ablago-xxxx')}</span> })}</li>
+        <li>{tn('einrichtung.assistent.namens-im-ordner-fuer', { b: <strong>{t('einrichtung.assistent.in-einer-datei')}</strong>, span: <span className="mono">{t('einrichtung.assistent.einrichtungscode-2')}</span>, span2: <span className="mono">{'/volume1/docker/dms/geheim'}</span> })}</li>
       </ol>
       <form className="stapel" onSubmit={(ev) => { ev.preventDefault(); void s.los(async () => {
         setzeEinrichtungscode(code.trim());
         try { await api.einrichtungCode(); ok(); } catch (x) { setzeEinrichtungscode(null); throw x; }
       }); }}>
-        <label className="eigenschaft"><span>Einrichtungscode</span><input className="mono" value={code} onChange={(x) => setCode(x.target.value)} placeholder="XXXX-XXXX-XXXX" autoComplete="off" autoCapitalize="characters" spellCheck={false} autoFocus required /></label>
+        <label className="eigenschaft"><span>{t('einrichtung.assistent.einrichtungscode')}</span><input className="mono" value={code} onChange={(x) => setCode(x.target.value)} placeholder="XXXX-XXXX-XXXX" autoComplete="off" autoCapitalize="characters" spellCheck={false} autoFocus required /></label>
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
-        <button className="knopf primaer" disabled={s.sendet || !code.trim()}>{s.sendet ? 'Prüfe …' : 'Weiter'}</button>
+        <button className="knopf primaer" disabled={s.sendet || !code.trim()}>{s.sendet ? t('einrichtung.assistent.pruefe') : t('einrichtung.assistent.weiter')}</button>
       </form>
-      <p className="klein">Wo das bei deinem Gerät ist, zeigt die Anleitung deiner Plattform mit Bildern: <a className="verweis" href={INSTALLIEREN_URL} target="_blank" rel="noreferrer">Wie komme ich an ein DMS? ↗</a></p>
-      <p className="leise klein">Nach der Einrichtung ist der Code wertlos; Ablago löscht die Datei.</p>
+      <p className="klein">{tn('einrichtung.assistent.wo-das-bei-deinem', { link: <a className="verweis" href={INSTALLIEREN_URL} target="_blank" rel="noreferrer">{t('einrichtung.assistent.wie-komme-ich-an')}</a> })}</p>
+      <p className="leise klein">{t('einrichtung.assistent.nach-der-einrichtung-ist')}</p>
     </Rahmen>
   );
 }
@@ -132,18 +132,18 @@ export function AnbindungFormular({ wert, setWert, passwortGesetzt, felder }: { 
   );
   return (
     <div className="raster">
-      {feld('host', 'Server', 'Name des Datenbank-Containers, meist „db“')}
-      {feld('port', 'Port', 'meist 5432', 'number')}
-      {feld('datenbank', 'Datenbank', 'meist „dms“')}
-      {feld('benutzer', 'Benutzer', 'meist „dms“')}
-      {feld('passwort', 'Passwort', passwortGesetzt ? 'leer lassen = bisheriges behalten' : 'DB_PASSWORD aus der .env', 'password')}
+      {feld('host', t('einrichtung.assistent.server'), t('einrichtung.assistent.name-des-datenbank-containers'))}
+      {feld('port', t('einrichtung.assistent.port'), 'meist 5432', 'number')}
+      {feld('datenbank', t('einrichtung.assistent.datenbank'), t('einrichtung.assistent.meist-dms'))}
+      {feld('benutzer', t('einrichtung.assistent.benutzer'), t('einrichtung.assistent.meist-dms'))}
+      {feld('passwort', t('einrichtung.assistent.passwort'), passwortGesetzt ? t('einrichtung.assistent.leer-lassen-bisheriges-behalten') : t('einrichtung.assistent.db-password-aus-der'), 'password')}
     </div>
   );
 }
 
 export function PruefungAnzeige({ p }: { p: AnbindungPruefung }) {
-  if (p.ok) return <div className="hinweis gut"><p><strong>Verbindung klappt.</strong> PostgreSQL {p.postgres.split(' ')[0]}{p.eingerichtet ? ` – darin gibt es schon ein DMS (${p.benutzer} ${p.benutzer === 1 ? 'Benutzer' : 'Benutzer'}).` : ' – die Datenbank ist leer; Ablago legt seine Tabellen selbst an.'}</p></div>;
-  return <div className="hinweis schlecht"><p><strong>{p.text}</strong></p><details><summary className="leise klein">Technische Meldung</summary><p className="mono klein">{p.technisch}</p></details></div>;
+  if (p.ok) return <div className="hinweis gut"><p>{tn('einrichtung.assistent.postgresql', { b: <strong>{t('einrichtung.assistent.verbindung-klappt')}</strong>, split: p.postgres.split(' ')[0], wert: p.eingerichtet ? t('einrichtung.assistent.darin-gibt-es-schon', { anzahl: p.benutzer }) : t('einrichtung.assistent.die-datenbank-ist-leer') })}</p></div>;
+  return <div className="hinweis schlecht"><p><strong>{p.text}</strong></p><details><summary className="leise klein">{t('einrichtung.assistent.technische-meldung')}</summary><p className="mono klein">{p.technisch}</p></details></div>;
 }
 
 function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () => Promise<void> }) {
@@ -161,21 +161,21 @@ function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () 
     setFelder(undefined);
     try { await f(); } catch (x) { if (x instanceof ApiFehler) setFelder((x.details as { felder?: Record<string, string> })?.felder); throw x; }
   });
-  if (startet) return <Rahmen aktiv={1} titel="Ablago startet …" leiste={VORHER}><p className="leise">Die Datenbank ist verbunden. Jetzt legt Ablago seine Tabellen an – das dauert einen Moment.</p></Rahmen>;
+  if (startet) return <Rahmen aktiv={1} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
   return (
-    <Rahmen aktiv={1} titel="Datenbank" leiste={{ erledigt: (i) => i < 1, gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : null) }} datei={{ imEinrichtungsmodus: true }} unter="Ablago speichert alles außer den Dateien in PostgreSQL. In der Compose-Vorlage läuft die Datenbank als eigener Container „db“; das Passwort steht in der Datei .env daneben.">
-      {e.fehler && <div className="hinweis warn"><p><strong>{e.quelle === 'umgebung' ? 'Mit DATABASE_URL aus der Compose-Datei' : e.quelle === 'datei' ? 'Mit der gespeicherten Anbindung' : 'Die Verbindung'} klappt es nicht:</strong> {e.fehler}</p><p className="leise klein">Korrigiere die Angaben hier – sie werden in /data/geheim gespeichert und gelten ab dann, auch wenn DATABASE_URL anders lautet.</p></div>}
+    <Rahmen aktiv={1} titel={t('einrichtung.assistent.datenbank')} leiste={{ erledigt: (i) => i < 1, gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : null) }} datei={{ imEinrichtungsmodus: true }} unter={t('einrichtung.assistent.ablago-speichert-alles-ausser')}>
+      {e.fehler && <div className="hinweis warn"><p><strong>{t('einrichtung.assistent.klappt-es-nicht', { wert: e.quelle === 'umgebung' ? t('einrichtung.assistent.mit-database-url-aus') : e.quelle === 'datei' ? t('einrichtung.assistent.mit-der-gespeicherten-anbindung') : t('einrichtung.assistent.die-verbindung') })}</strong> {e.fehler}</p><p className="leise klein">{t('einrichtung.assistent.korrigiere-die-angaben-hier')}</p></div>}
       <form className="stapel" onSubmit={(ev: FormEvent) => { ev.preventDefault(); void tu(async () => setP(await api.einrichtungDbPruefen(a))); }}>
         {datei && <p className="leise klein">{t('einrichtung.datenbank.datei')}</p>}
         <AnbindungFormular wert={a} setWert={(x) => { setA(x); setP(null); }} passwortGesetzt={!!v?.passwortGesetzt} felder={felder} />
         {p && <PruefungAnzeige p={p} />}
         {s.fehler && <p className="fehlertext">{s.fehler}</p>}
         <div className="knoepfe">
-          <button className="knopf" disabled={s.sendet}>{s.sendet ? 'Prüfe …' : 'Verbindung prüfen'}</button>
-          {p && !p.ok && p.art === 'datenbank_fehlt' && p.anlegenMoeglich && <button type="button" className="knopf" disabled={s.sendet} onClick={() => void tu(async () => setP(await api.einrichtungDbAnlegen(a)))}>Datenbank „{a.datenbank}“ anlegen</button>}
-          {p?.ok && <button type="button" className="knopf primaer" disabled={s.sendet} onClick={() => void tu(async () => { await api.einrichtungDbUebernehmen(a); setStartet(true); await warteBisGestartet(); await weiter(); })}>Übernehmen und weiter</button>}
+          <button className="knopf" disabled={s.sendet}>{s.sendet ? t('einrichtung.assistent.pruefe') : t('einrichtung.assistent.verbindung-pruefen')}</button>
+          {p && !p.ok && p.art === 'datenbank_fehlt' && p.anlegenMoeglich && <button type="button" className="knopf" disabled={s.sendet} onClick={() => void tu(async () => setP(await api.einrichtungDbAnlegen(a)))}>{t('einrichtung.assistent.datenbank-anlegen', { datenbank: a.datenbank })}</button>}
+          {p?.ok && <button type="button" className="knopf primaer" disabled={s.sendet} onClick={() => void tu(async () => { await api.einrichtungDbUebernehmen(a); setStartet(true); await warteBisGestartet(); await weiter(); })}>{t('einrichtung.assistent.uebernehmen-und-weiter')}</button>}
         </div>
-        {p && !p.ok && p.art === 'datenbank_fehlt' && !p.anlegenMoeglich && <p className="leise klein">Dieser Benutzer darf keine Datenbanken anlegen. Lege sie in PostgreSQL an oder nimm den Benutzer aus der Compose-Vorlage.</p>}
+        {p && !p.ok && p.art === 'datenbank_fehlt' && !p.anlegenMoeglich && <p className="leise klein">{t('einrichtung.assistent.dieser-benutzer-darf-keine')}</p>}
       </form>
     </Rahmen>
   );
@@ -193,6 +193,6 @@ export function AssistentAngemeldet() {
   const { aktualisieren, version } = useKonto();
   const st = useAssistent();
   useEffect(() => { if (!st.lauf) unterbrochenerLauf(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!st.lauf) return <p className="leise mittig">Lade …</p>;
+  if (!st.lauf) return <p className="leise mittig">{t('einrichtung.assistent.lade')}</p>;
   return <Sammelassistent zurWahl={() => {}} abschliessen={aktualisieren} version={version} />;
 }

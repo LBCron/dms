@@ -133,7 +133,7 @@ export function PaketeListe({ z, offen }: { z: PaketeZustand; offen?: string }) 
             <h2 className="ueber">{t('werkbank.pakete.weitere-quellen')}</h2>
             <Quellen z={z} />
             <h2 className="ueber">{t('werkbank.pakete.paket-hochladen')}</h2>
-            <p className="leise klein">{tn('werkbank.pakete.eine-datei-im-format', { code: <code>{t('werkbank.pakete.zip')}</code> })}</p>
+            <p className="leise klein">{tn('werkbank.pakete.eine-datei-im-format', { code: <code>{'.zip'}</code> })}</p>
             <input type="file" accept=".zip,application/zip" aria-label={t('werkbank.pakete.paket-oder-sammeldatei-als')} onChange={(e) => { void hochladen(e.target.files?.[0]); e.target.value = ''; }} />
             {hochFehler && <p className="fehlertext klein">{hochFehler}</p>}
           </div>
@@ -302,7 +302,7 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
     api.paketKatalog(false).then((k) => { const o = k.kataloge.find((x) => x.offiziell); if (aktuell && o?.katalog) setKatalog(o.katalog); else if (aktuell) setMeldung({ art: 'schlecht', text: o?.fehler ?? t('werkbank.pakete.der-katalog-laesst-sich') }); }, (e) => aktuell && setMeldung(alsMeldung(e)));
     return () => { aktuell = false; };
   }, [vorschau]);
-  if (!gueltig) return <div className="leer"><p>{tn('werkbank.pakete.dieser-link-ist-ungueltig', { code: <code>{t('werkbank.pakete.installieren-paket-1-0')}</code> })}</p></div>;
+  if (!gueltig) return <div className="leer"><p>{tn('werkbank.pakete.dieser-link-ist-ungueltig', { code: <code>{'?installieren=paket@1.0.0'}</code> })}</p></div>;
   const schon = !!vorschau?.installiert && vorschau.probleme.some((p) => p.includes('schon installiert'));
   return (
     <div className="einspaltig">

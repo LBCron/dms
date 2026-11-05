@@ -110,7 +110,7 @@ export function Dreiteilung({ ort, ebene, offen, mitte = true, rechts = true, ch
   const gesamt = rahmen.current?.clientWidth ?? innerWidth;
   const l = s.linksZu ? LASCHE : Math.min(MAX_L, Math.max(MIN_L, s.l));
   const m = Math.max(MIN_M, Math.min(s.m, gesamt - l - MIN_RECHTS));
-  const spalten = !mitte || !rechts ? `${l}px minmax(0, 1fr)` : rechtsZu ? `${l}px minmax(0, 1fr) ${LASCHE}px` : `${l}px ${m}px minmax(0, 1fr)`;
+  const spalten = !mitte || !rechts ? t('oberflaeche.bereiche.px-minmax-0-1fr', { l }) : rechtsZu ? t('oberflaeche.bereiche.px-minmax-0-1fr-2', { l, LASCHE }) : t('oberflaeche.bereiche.px-px-minmax-0', { l, m });
   const style = breit ? ({ gridTemplateColumns: spalten } as CSSProperties) : undefined;
   const name = (seite: 'links' | 'rechts') => t.frei(`spalten.name.${ort}.${seite}`);
 

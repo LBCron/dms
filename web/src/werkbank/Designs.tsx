@@ -135,8 +135,8 @@ export function DesignEditor({ id }: { id: string }) {
       </div>
       <div className="blatt">
         <h2 className="h3">{t('werkbank.designs.eigenes-css-2')}</h2>
-        <p className="leise">{tn('werkbank.designs.fuer-alles-was-farben', { span: <span className="mono">{t('werkbank.designs.design-standard')}</span> })}</p>
-        <textarea className="mono" rows={8} value={e.css} onChange={(x) => setze({ css: x.target.value })} placeholder={t('werkbank.designs.kopf-border-bottom-width')} spellCheck={false} />
+        <p className="leise">{tn('werkbank.designs.fuer-alles-was-farben', { span: <span className="mono">{'?design=standard'}</span> })}</p>
+        <textarea className="mono" rows={8} value={e.css} onChange={(x) => setze({ css: x.target.value })} placeholder={'.kopf { border-bottom-width: 3px; }'} spellCheck={false} />
         <details><summary className="leise klein">{t('werkbank.designs.verfuegbare-farbwerte')}</summary><pre className="protokolldaten">{designCss({ ...e, css: '' })}</pre></details>
       </div>
       <Speicherleiste ent={ent} gegenstand={t('werkbank.designs.design')} sendet={sendet}

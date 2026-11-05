@@ -50,9 +50,9 @@ function Adresse({ b }: { b: BetriebZustand }) {
   return (
     <form className="blatt" id="adresse" onSubmit={speichern} onKeyDown={ent.tasten}>
       <h2 className="h3">{t('werkbank.betrieb.adresse-von-ablago')}</h2>
-      <p className="leise">{tn('werkbank.betrieb.unter-dieser-adresse-oeffnen', { span: <span className="mono">{t('werkbank.betrieb.https')}</span> })}</p>
+      <p className="leise">{tn('werkbank.betrieb.unter-dieser-adresse-oeffnen', { span: <span className="mono">{'https://'}</span> })}</p>
       <label className="eigenschaft"><span>{tn('werkbank.betrieb.adresse', { klein: <small>{t('werkbank.betrieb.z-b-http-nas')}</small> })}</span>
-        <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder={s.vorschlag ?? t('werkbank.betrieb.http-nas-home-arpa')} inputMode="url" autoComplete="off" /></label>
+        <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder={s.vorschlag ?? 'http://nas.home.arpa:8080'} inputMode="url" autoComplete="off" /></label>
       {!s.adresse && (
         <div className="hinweis info"><p>{t('werkbank.betrieb.noch-keine-adresse-gepflegt')}{s.vorschlag ? <> {' '}{tn('werkbank.betrieb.hier', { span: <span className="mono">{s.vorschlag}</span> })}</> : ''}.</p>
           {s.vorschlag && <button type="button" className="knopf klein" onClick={() => { setAdresse(s.vorschlag!); void speichern(undefined, s.vorschlag!); }}>{t('werkbank.betrieb.diese-adresse-uebernehmen')}</button>}

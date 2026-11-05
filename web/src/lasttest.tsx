@@ -135,7 +135,7 @@ export function LasttestSeite() {
             <select value={angaben.speicher ?? ''} disabled={zustand === 'beendet'}
               onChange={(e) => { const w = (e.target.value || null) as Speicherwahl | null; setSpeicher(w); merke({ speicher: w }); }}>
               {!angaben.speicher && <option value="">{t('lasttest.speicher.waehlen')}</option>}
-              {(['HDD', 'SSD', 'NVMe'] as const).map((a) => <option key={a} value={a}>{a === stand.speicherErkannt ? t('lasttest.speicher.erkannt', { art: a }) : a}</option>)}
+              {(['HDD', 'SSD', t('oberflaeche.lasttest.nvme')] as const).map((a) => <option key={a} value={a}>{a === stand.speicherErkannt ? t('lasttest.speicher.erkannt', { art: a }) : a}</option>)}
               <option value="unbekannt">{t('lasttest.speicher.unbekannt')}</option>
             </select>
             <span className="klein leise">{stand.speicherErkannt ? t('lasttest.speicher.hinweis.erkannt', { art: stand.speicherErkannt }) : t('lasttest.speicher.hinweis.offen')}</span>

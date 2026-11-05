@@ -1,3 +1,4 @@
+import { t } from './sprache';
 /**
  * Sammler für „Fehler melden“ (#70): die letzten Fehler im Browser, fehlgeschlagene Anfragen
  * und besuchte Seiten dieser Sitzung – nur im Speicher, nur Pfade (ohne Suchbegriffe).
@@ -25,7 +26,7 @@ export function starteSammler() {
 
 /** Aus api.ts: eine Anfrage ist fehlgeschlagen (Methode, Pfad ohne Abfrage, Status, Meldung). */
 export function merkeAnfrage(methode: string, url: string, status: number, meldung: string) {
-  merke(anfragen, { art: 'anfrage', text: `${methode} ${url.split('?')[0]} → ${status || 'nicht erreichbar'}: ${meldung}`.slice(0, 300) });
+  merke(anfragen, { art: 'anfrage', text: `${methode} ${url.split('?')[0]} → ${status || t('oberflaeche.diagnose.nicht-erreichbar')}: ${meldung}`.slice(0, 300) });
 }
 
 /** Alles, was der Browser ohne Rückfrage über Gerät und Darstellung verrät. */

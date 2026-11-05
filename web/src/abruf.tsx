@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { liesAnrede, textDritte, type Anrede, type TextDritte } from '../../shared/src/anrede';
 import { CODE_LAENGE } from '../../shared/src/auskunft';
+import {  } from './sprache';
 
 /**
  * Öffentliche Abrufseite einer Auskunft (#455): ohne Anmeldung, ohne Menü, ohne Logo oder Namen des
@@ -26,7 +27,7 @@ export function Abrufseite() {
   const [fertig, setFertig] = useState<{ groesse: number; verschluesselt: boolean; rest: number } | null>(null);
   // Anrede (#474): bis sie da ist, bleibt die Karte leer (kein Wechsel von „du“ zu „Sie“ vor den Augen).
   const [anrede, setAnrede] = useState<Anrede | null>(null);
-  const t = (k: TextDritte, w?: Record<string, string | number>) => textDritte(anrede ?? 'du', k, w);
+  const eintrag = (k: TextDritte, w?: Record<string, string | number>) => textDritte(anrede ?? 'du', k, w);
   useEffect(() => {
     fetch('/api/abruf/anrede', { credentials: 'omit', cache: 'no-store' }).then((r) => r.json()).then((d: { anrede?: unknown }) => setAnrede(liesAnrede(d?.anrede)), () => setAnrede('du'));
   }, []);
@@ -49,13 +50,13 @@ export function Abrufseite() {
         body: JSON.stringify({ schluessel, code }),
       });
       const d = await r.json().catch(() => null) as { fehler?: string; ticket?: string; groesse?: number; verschluesselt?: boolean; abrufe?: number; maxAbrufe?: number } | null;
-      if (!r.ok || !d?.ticket) { setFehler(d?.fehler ?? t('abruf.fehler')); return; }
+      if (!r.ok || !d?.ticket) { setFehler(d?.fehler ?? eintrag('abruf.fehler')); return; }
       setFertig({ groesse: d.groesse ?? 0, verschluesselt: !!d.verschluesselt, rest: Math.max(0, (d.maxAbrufe ?? 1) - (d.abrufe ?? 0) - 1) });
       setCode('');
       // Download über ein Einmal-Ticket (zwei Minuten gültig); die Seite bleibt stehen.
       location.assign(`/api/abruf/datei?ticket=${encodeURIComponent(d.ticket)}`);
     } catch {
-      setFehler(t('abruf.fehler.verbindung'));
+      setFehler(eintrag('abruf.fehler.verbindung'));
     } finally { setLaeuft(false); }
   }
 
@@ -64,28 +65,28 @@ export function Abrufseite() {
   return (
     <main className="kartenseite abruf-seite">
       <div className="karte abruf-karte">
-        <h1>{t('abruf.titel')}</h1>
+        <h1>{eintrag('abruf.titel')}</h1>
         {!anrede ? (
           <p className="leise" aria-busy="true">…</p>
         ) : !schluessel ? (
-          <p className="hinweis schlecht">{t('abruf.unvollstaendig')}</p>
+          <p className="hinweis schlecht">{eintrag('abruf.unvollstaendig')}</p>
         ) : fertig ? (
           <div className="abruf-fertig" role="status">
-            <p className="hinweis gut">{t('abruf.download', { groesse: mb(fertig.groesse) })}</p>
-            {fertig.verschluesselt && <p>{t('abruf.passwort')}</p>}
-            <p className="leise">{fertig.rest > 0 ? t('abruf.rest', { wieOft: ['', 'einmal', 'zweimal', 'dreimal'][fertig.rest] ?? `${fertig.rest}-mal` }) : t('abruf.aufgebraucht')} {t('abruf.startet.nicht')}</p>
-            {fertig.rest > 0 && <button type="button" className="knopf" onClick={() => setFertig(null)}>{t('abruf.nochmal')}</button>}
+            <p className="hinweis gut">{eintrag('abruf.download', { groesse: mb(fertig.groesse) })}</p>
+            {fertig.verschluesselt && <p>{eintrag('abruf.passwort')}</p>}
+            <p className="leise">{fertig.rest > 0 ? eintrag('abruf.rest', { wieOft: ['', 'einmal', 'zweimal', 'dreimal'][fertig.rest] ?? `${fertig.rest}-mal` }) : eintrag('abruf.aufgebraucht')} {eintrag('abruf.startet.nicht')}</p>
+            {fertig.rest > 0 && <button type="button" className="knopf" onClick={() => setFertig(null)}>{eintrag('abruf.nochmal')}</button>}
           </div>
         ) : (
           <form onSubmit={(e) => void abrufen(e)} className="abruf-form">
-            <p>{t('abruf.einleitung')}</p>
-            <p className="leise klein">{t('abruf.code.herkunft')}</p>
-            <label className="eigenschaft"><span>{t('abruf.code')}</span>
+            <p>{eintrag('abruf.einleitung')}</p>
+            <p className="leise klein">{eintrag('abruf.code.herkunft')}</p>
+            <label className="eigenschaft"><span>{eintrag('abruf.code')}</span>
               <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" autoCapitalize="characters" spellCheck={false} required
                 maxLength={64} placeholder={'XXXX-XXXX'.slice(0, CODE_LAENGE + 1)} className="mono abruf-code" autoFocus aria-describedby="abruf-schreibweise" /></label>
-            <p className="leise klein" id="abruf-schreibweise">{t('abruf.code.schreibweise')}</p>
+            <p className="leise klein" id="abruf-schreibweise">{eintrag('abruf.code.schreibweise')}</p>
             {fehler && <p className="hinweis schlecht" role="alert">{fehler}</p>}
-            <button className="knopf primaer" disabled={laeuft || !code.trim()}>{laeuft ? t('abruf.knopf.laeuft') : t('abruf.knopf')}</button>
+            <button className="knopf primaer" disabled={laeuft || !code.trim()}>{laeuft ? eintrag('abruf.knopf.laeuft') : eintrag('abruf.knopf')}</button>
           </form>
         )}
       </div>

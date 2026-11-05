@@ -3,6 +3,7 @@ import { pruefeMappe, type Mappentyp, type Pruefergebnis, type Werte } from '../
 import { wirksameTypen, type Sicht } from '../../shared/src/sichten';
 import { api, type Person, type Zaehler } from './api';
 import { rettungsweg, wendeAn, type Design } from './design';
+import { t } from './sprache';
 
 /**
  * Gemeinsame Daten der Oberfläche: Mappentypen, Personen und die Zähler der Sichten.
@@ -35,7 +36,7 @@ interface Daten {
   /** Alle Benutzer (für Erwähnungen und Aufgaben). */
   personen: Person[];
   /** Prüft Werte gegen die Definition (wie der Server; eindeutige Werte prüft nur der Server). */
-  pruefe(t: Mappentyp, werte: Werte, typVon: (mappeId: string) => string | undefined): Pruefergebnis;
+  pruefe(mappentyp: Mappentyp, werte: Werte, typVon: (mappeId: string) => string | undefined): Pruefergebnis;
   /** Persönliche Einstellungen (vom Server, für alle Geräte). */
   einstellungen: Record<string, unknown>;
   setzeEinstellung(schluessel: string, wert: unknown): void;
@@ -81,8 +82,8 @@ export function DatenProvider({ children }: { children: ReactNode }) {
     const zahlen = api.sichten().then((z) => { if (nr === zahlenNr.current) { setZaehler(z); setZahlenDa(true); } });
     zahlen.catch(() => {});
     try {
-      const [t, r, p, s] = await Promise.all([api.typen(), api.sichtenRahmen(), api.personen(), api.sichtDefinitionen()]);
-      setTypen(t); setZaehler((z) => ({ ...z, ...r })); setPersonen(p); setSichten(s); setFehler(undefined);
+      const [eintrag, r, p, s] = await Promise.all([api.typen(), api.sichtenRahmen(), api.personen(), api.sichtDefinitionen()]);
+      setTypen(eintrag); setZaehler((z) => ({ ...z, ...r })); setPersonen(p); setSichten(s); setFehler(undefined);
     } catch (e) {
       setFehler((e as Error).message);
     } finally {
@@ -92,7 +93,7 @@ export function DatenProvider({ children }: { children: ReactNode }) {
   useEffect(() => { void neuLaden(); }, [neuLaden]);
 
   const wert = useMemo<Daten>(() => {
-    const typNachId = new Map<string, Mappentyp>(typen.map((t) => [t.id, t] as const));
+    const typNachId = new Map<string, Mappentyp>(typen.map((mappentyp) => [mappentyp.id, mappentyp] as const));
     const sichtNachId = new Map<string, Sicht>(sichten.map((s) => [s.id, s] as const));
     return {
       typen, sichten, zaehler, zahlenDa,
@@ -107,8 +108,8 @@ export function DatenProvider({ children }: { children: ReactNode }) {
       typ: (id) => (id ? typNachId.get(id) : undefined),
       anzahl: (typId) => zaehler.typen[typId]?.anzahl ?? 0,
       personen,
-      person: (id) => (id ? personen.find((p) => p.id === id)?.name ?? 'gelöschter Benutzer' : 'unbekannt'),
-      pruefe: (t, werte, typVon) => pruefeMappe(t, werte, { typVon, doppelt: () => undefined }),
+      person: (id) => (id ? personen.find((p) => p.id === id)?.name ?? t('oberflaeche.daten.geloeschter-benutzer') : 'unbekannt'),
+      pruefe: (mappentyp, werte, typVon) => pruefeMappe(mappentyp, werte, { typVon, doppelt: () => undefined }),
     };
   }, [typen, sichten, zaehler, zahlenDa, personen, geladen, fehler, stand, neuLaden, einstellungen, setzeEinstellung, designs, meinDesign, designsLaden]);
 
@@ -117,16 +118,16 @@ export function DatenProvider({ children }: { children: ReactNode }) {
 
 export function useDaten(): Daten {
   const d = useContext(Ctx);
-  if (!d) throw new Error('DatenProvider fehlt');
+  if (!d) throw new Error(t('oberflaeche.daten.datenprovider-fehlt'));
   return d;
 }
 
-const tag = (t: string) => { const [, m, d] = t.split('-'); return `${d}.${m}.`; };
+const tag = (text: string) => { const [, m, d] = text.split('-'); return `${d}.${m}.`; };
 /** „abwesend bis 15.11., vertreten durch Thomas“ – für Empfängerauswahl und Namen (#78). */
 export function abwesenheitText(p: Person | undefined): string {
   const a = p?.abwesend;
   if (!a) return '';
-  const wann = a.wirkt ? (a.bis ? `abwesend bis ${tag(a.bis)}` : 'abwesend') : `abwesend ab ${tag(a.von ?? '')}${a.bis ? ` bis ${tag(a.bis)}` : ''}`;
+  const wann = a.wirkt ? (a.bis ? t('oberflaeche.daten.abwesend-bis', { tag: tag(a.bis) }) : 'abwesend') : t('oberflaeche.daten.abwesend-ab', { tag: tag(a.von ?? ''), wert: a.bis ? t('oberflaeche.daten.bis', { tag: tag(a.bis) }) : '' });
   return `${wann}${a.vertreter ? `, vertreten durch ${a.vertreter}` : ''}`;
 }
 /** Name mit Abwesenheit, z. B. „Lena – abwesend bis 15.11., vertreten durch Jonas“. */

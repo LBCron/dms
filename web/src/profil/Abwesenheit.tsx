@@ -10,14 +10,14 @@ import { api } from '../api';
 import { useDaten } from '../daten';
 import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import type { Hilfeort } from '../../../shared/src/hilfe';
 
 /** Abwesenheit mit Vertreter (#78): Formular für das eigene Profil und für Administratoren in der Werkbank. */
-const datum = (t: string | null) => (t ? t.split('-').reverse().join('.') : '');
+const datum = (eintrag: string | null) => (eintrag ? eintrag.split('-').reverse().join('.') : '');
 
 export function zeitraumText(a: Abwesenheit): string {
-  return a.von && a.bis ? `vom ${datum(a.von)} bis ${datum(a.bis)}` : a.von ? `ab ${datum(a.von)}` : a.bis ? `bis ${datum(a.bis)}` : 'ohne Enddatum';
+  return a.von && a.bis ? t('profil.abwesenheit.vom-bis', { datum: datum(a.von), datum2: datum(a.bis) }) : a.von ? t('profil.abwesenheit.ab', { datum: datum(a.von) }) : a.bis ? t('profil.abwesenheit.bis', { datum: datum(a.bis) }) : t('profil.abwesenheit.ohne-enddatum');
 }
 
 export function AbwesenheitFormular({ benutzerId, wer, wert, offeneAufgaben, speichern, uebergeben, nachSpeichern, hilfe = 'profil.abwesenheit' }: {
@@ -43,34 +43,33 @@ export function AbwesenheitFormular({ benutzerId, wer, wert, offeneAufgaben, spe
   }
 
   return (
-    <form className="blatt" onSubmit={(e) => { e.preventDefault(); void tu(async () => { await speichern(a); return a.an ? 'Abwesenheit gespeichert.' : 'Abwesenheit ausgeschaltet.'; }); }}>
-      <h2 className="h3">Abwesenheit <Hilfe ort={hilfe} /></h2>
-      <p className="leise">Solange {du ? 'du' : wer} abwesend {du ? 'bist' : 'ist'}, gehen neue Aufgaben – von Hand vergebene, Erwähnungen und „passt nicht“ – an den Vertreter. Er bekommt dazu einen Hinweis unter „Zu erledigen“. Mit Zeitraum wirkt sie nur von–bis (jeweils einschließlich) und endet danach von selbst; ohne Datum, bis du sie ausschaltest.</p>
-      {wert.an && <div className={`hinweis ${wirkt ? 'warn' : 'info'}`}><p>{du ? 'Du bist' : `${wer} ist`} {wirkt ? 'abwesend' : 'demnächst abwesend'} – {zeitraumText(wert)}, vertreten durch {vertreter?.name ?? '–'}.</p></div>}
-      <label className="haken"><input type="checkbox" checked={a.an} onChange={(e) => setA({ ...a, an: e.target.checked })} /><span>Abwesend</span></label>
+    <form className="blatt" onSubmit={(e) => { e.preventDefault(); void tu(async () => { await speichern(a); return a.an ? t('profil.abwesenheit.abwesenheit-gespeichert') : t('profil.abwesenheit.abwesenheit-ausgeschaltet'); }); }}>
+      <h2 className="h3">{tn('profil.abwesenheit.abwesenheit', { hilfe: <Hilfe ort={hilfe} /> })}</h2>
+      <p className="leise">{t('profil.abwesenheit.solange-abwesend-gehen-neue', { wert: du ? t('profil.abwesenheit.du') : wer, wert2: du ? t('profil.abwesenheit.bist') : t('profil.abwesenheit.ist') })}</p>
+      {wert.an && <div className={`hinweis ${wirkt ? 'warn' : 'info'}`}><p>{t('profil.abwesenheit.vertreten-durch', { wert: du ? t('profil.abwesenheit.du-bist') : t('profil.abwesenheit.ist-2', { wer }), wert2: wirkt ? t('profil.abwesenheit.abwesend') : t('profil.abwesenheit.demnaechst-abwesend'), zeitraumText: zeitraumText(wert), wert3: vertreter?.name ?? '–' })}</p></div>}
+      <label className="haken"><input type="checkbox" checked={a.an} onChange={(e) => setA({ ...a, an: e.target.checked })} /><span>{t('profil.abwesenheit.abwesend-2')}</span></label>
       {/* #419: Die Abwesenheit leitet nur neue Aufgaben um – auf die vorhandenen hinweisen. */}
       {du && a.an && !wert.an && offeneAufgaben > 0 && (
-        <div className="hinweis info hinweiszeile"><p>Du hast {offeneAufgaben === 1 ? 'eine offene Aufgabe' : `${offeneAufgaben} offene Aufgaben`}. Neue Aufgaben gehen an den Vertreter – die bestehenden bleiben bei dir, bis du sie weitergibst.</p>
-          <Link to="/ablage/eingang/weitergeben" className="knopf klein">Zu meinen Aufgaben</Link></div>
+        <div className="hinweis info hinweiszeile"><p>{t('profil.abwesenheit.du-hast-offene-aufgaben', { anzahl: offeneAufgaben })}</p>
+          <Link to="/ablage/eingang/weitergeben" className="knopf klein">{t('profil.abwesenheit.zu-meinen-aufgaben')}</Link></div>
       )}
       <div className="raster">
-        <label className="eigenschaft"><span>Von <small>optional</small></span><input type="date" value={a.von ?? ''} onChange={(e) => setA({ ...a, von: e.target.value || null })} /></label>
-        <label className="eigenschaft"><span>Bis <small>optional, einschließlich</small></span><input type="date" value={a.bis ?? ''} min={a.von ?? undefined} onChange={(e) => setA({ ...a, bis: e.target.value || null })} /></label>
-        <label className="eigenschaft"><span>Vertreter <small>{a.an ? 'Pflicht' : 'bleibt für das nächste Mal hinterlegt'}</small></span>
+        <label className="eigenschaft"><span>{tn('profil.abwesenheit.von', { klein: <small>{t('profil.abwesenheit.optional')}</small> })}</span><input type="date" value={a.von ?? ''} onChange={(e) => setA({ ...a, von: e.target.value || null })} /></label>
+        <label className="eigenschaft"><span>{tn('profil.abwesenheit.bis-2', { klein: <small>{t('profil.abwesenheit.optional-einschliesslich')}</small> })}</span><input type="date" value={a.bis ?? ''} min={a.von ?? undefined} onChange={(e) => setA({ ...a, bis: e.target.value || null })} /></label>
+        <label className="eigenschaft"><span>{tn('profil.abwesenheit.vertreter', { klein: <small>{a.an ? t('profil.abwesenheit.pflicht') : t('profil.abwesenheit.bleibt-fuer-das-naechste')}</small> })}</span>
           <select value={a.vertreterId ?? ''} onChange={(e) => setA({ ...a, vertreterId: e.target.value || null })}>
-            <option value="">– wählen –</option>
-            {kandidaten.map((p) => <option key={p.id} value={p.id}>{p.name}{p.abwesend ? ` (${p.abwesend.wirkt ? 'abwesend' : 'demnächst abwesend'})` : ''}</option>)}
+            <option value="">{t('profil.abwesenheit.waehlen')}</option>
+            {kandidaten.map((p) => <option key={p.id} value={p.id}>{p.name}{p.abwesend ? ` (${p.abwesend.wirkt ? 'abwesend' : t('profil.abwesenheit.demnaechst-abwesend')})` : ''}</option>)}
           </select></label>
       </div>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">
         {wert.vertreterId && offeneAufgaben > 0 && (
-          <button type="button" className="knopf" disabled={sendet || geaendert} title={geaendert ? 'Erst speichern' : undefined}
-            onClick={() => void tu(async () => { const r = await uebergeben(); return `${r.uebergeben} ${r.uebergeben === 1 ? 'Aufgabe' : 'Aufgaben'} an ${vertreter?.name ?? 'den Vertreter'} gegeben.`; })}>
-            Alle {offeneAufgaben} offenen Aufgaben an {vertreter?.name ?? 'Vertreter'} geben
-          </button>
+          <button type="button" className="knopf" disabled={sendet || geaendert} title={geaendert ? t('profil.abwesenheit.erst-speichern') : undefined}
+            onClick={() => void tu(async () => { const r = await uebergeben(); return t('profil.abwesenheit.aufgaben-an-gegeben', { anzahl: r.uebergeben, wert: vertreter?.name ?? t('profil.abwesenheit.den-vertreter') }); })}>
+            {t('profil.abwesenheit.alle-offenen-aufgaben-an', { offeneAufgaben, wert: vertreter?.name ?? t('profil.abwesenheit.vertreter-2') })}</button>
         )}
-        <button className="knopf primaer" disabled={sendet || !geaendert}>{sendet ? 'Speichere …' : 'Speichern'}</button>
+        <button className="knopf primaer" disabled={sendet || !geaendert}>{sendet ? t('profil.abwesenheit.speichere') : t('profil.abwesenheit.speichern')}</button>
       </div>
     </form>
   );
@@ -87,17 +86,17 @@ export function MeineAbwesenheit() {
   return (
     <div className="einspaltig schmal">
       <div className="mappenkopf">
-        <p className="ueber">Mein Konto · Abwesenheit</p>
+        <p className="ueber">{t('profil.abwesenheit.mein-konto-abwesenheit')}</p>
         <h1>{ich.name || ich.email}</h1>
       </div>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
-      {!stand ? <p className="leise">Lade …</p> : (
+      {!stand ? <p className="leise">{t('profil.abwesenheit.lade')}</p> : (
         <AbwesenheitFormular benutzerId={ich.id} wer="du" wert={stand.abwesenheit ?? KEINE_ABWESENHEIT} offeneAufgaben={stand.offeneAufgaben}
           speichern={(a) => api.abwesenheitSetzen(a)} uebergeben={() => api.aufgabenAnVertreter()}
           nachSpeichern={async () => { await laden(); await aktualisieren(); setNeu((n) => n + 1); }} />
       )}
       {/* #725: Die Liste der eigenen Aufgaben steht jetzt unter „Zu erledigen“. */}
-      {stand && stand.offeneAufgaben > 0 && <p className="leise" key={neu}>Einzelne Aufgaben oder Gruppen gibst du unter <Link to="/ablage/eingang/weitergeben" className="verweis">Zu erledigen → Mehrere Aufgaben weitergeben</Link> weiter.</p>}
+      {stand && stand.offeneAufgaben > 0 && <p className="leise" key={neu}>{tn('profil.abwesenheit.einzelne-aufgaben-oder-gruppen', { link: <Link to="/ablage/eingang/weitergeben" className="verweis">{t('profil.abwesenheit.zu-erledigen-mehrere-aufgaben')}</Link> })}</p>}
     </div>
   );
 }
@@ -111,7 +110,7 @@ export function AufgabenWeitergeben() {
   return (
     <div className="einspaltig">
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
-      {!stand ? <p className="leise">Lade …</p> : <MeineOffenenAufgaben vertreter={stand.abwesenheit?.vertreterId ?? null} geaendert={laden} />}
+      {!stand ? <p className="leise">{t('profil.abwesenheit.lade')}</p> : <MeineOffenenAufgaben vertreter={stand.abwesenheit?.vertreterId ?? null} geaendert={laden} />}
     </div>
   );
 }
@@ -134,7 +133,7 @@ function MeineOffenenAufgaben({ vertreter, geaendert }: { vertreter: string | nu
   useEffect(() => { void laden(); }, [laden]);
   const liste = filtereAufgaben(alle ?? [], f, { jetzt: new Date(), ohneVertretung: () => false });
   const wahl = useSammelauswahl(liste.map((a) => a.id));
-  const titelVon = (id: string) => { const a = alle?.find((x) => x.id === id); return a ? `${titelOder(a.mappeTitel)} – ${a.text}` : 'Aufgabe'; };
+  const titelVon = (id: string) => { const a = alle?.find((x) => x.id === id); return a ? `${titelOder(a.mappeTitel)} – ${a.text}` : t('profil.abwesenheit.aufgabe'); };
   const nachher = async () => { await laden(); await geaendert(); await d.neuLaden(); };
   async function einzeln(a: Aufgabe, an: string) {
     setFehler(undefined);
@@ -144,35 +143,35 @@ function MeineOffenenAufgaben({ vertreter, geaendert }: { vertreter: string | nu
     <section className="blatt" id="meine-aufgaben">
       <h2 className="h3">{t('termine.weitergeben.titel')}</h2>
       <p className="leise">{t('termine.weitergeben.text')}</p>
-      {alle === null ? <p className="leise">Lade …</p> : !alle.length ? <p className="leise">Du hast keine offenen Aufgaben.</p> : <>
+      {alle === null ? <p className="leise">{t('profil.abwesenheit.lade')}</p> : !alle.length ? <p className="leise">{t('profil.abwesenheit.du-hast-keine-offenen')}</p> : <>
         <div className="aufgabenfilter stapel">
-          <input type="search" aria-label="Im Titel suchen" placeholder="Im Titel suchen …" value={f.text ?? ''} onChange={(e) => setF({ ...f, text: e.target.value || undefined })} />
+          <input type="search" aria-label={t('profil.abwesenheit.im-titel-suchen')} placeholder={t('profil.abwesenheit.im-titel-suchen-2')} value={f.text ?? ''} onChange={(e) => setF({ ...f, text: e.target.value || undefined })} />
           <div className="filterraster">
-            <label className="eigenschaft klein"><span>Art</span>
+            <label className="eigenschaft klein"><span>{t('profil.abwesenheit.art')}</span>
               <select value={f.art ?? ''} onChange={(e) => setF({ ...f, art: (e.target.value || undefined) as Aufgabenart | undefined })}>
-                <option value="">alle</option>
+                <option value="">{t('profil.abwesenheit.alle')}</option>
                 {Object.entries(AUFGABENARTEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select></label>
-            <label className="eigenschaft klein"><span>Mappentyp</span>
+            <label className="eigenschaft klein"><span>{t('profil.abwesenheit.mappentyp')}</span>
               <select value={f.typ ?? ''} onChange={(e) => setF({ ...f, typ: e.target.value || undefined })}>
-                <option value="">alle</option>
-                {d.typen.filter((t) => alle.some((a) => a.typId === t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <option value="">{t('profil.abwesenheit.alle')}</option>
+                {d.typen.filter((mappentyp) => alle.some((a) => a.typId === mappentyp.id)).map((mappentyp) => <option key={mappentyp.id} value={mappentyp.id}>{mappentyp.name}</option>)}
               </select></label>
-            <label className="eigenschaft klein"><span>Fälligkeit</span>
+            <label className="eigenschaft klein"><span>{t('profil.abwesenheit.faelligkeit')}</span>
               <select value={f.faellig ?? ''} onChange={(e) => setF({ ...f, faellig: (e.target.value || undefined) as Faelligkeit | undefined })}>
-                <option value="">alle</option>
+                <option value="">{t('profil.abwesenheit.alle')}</option>
                 {Object.entries(FAELLIGKEITEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select></label>
           </div>
           <p className="listenzahl leise klein" role="status">
-            {filterAktiv(f) ? `${liste.length} von ${alle.length}` : alle.length} {alle.length === 1 ? 'Aufgabe' : 'Aufgaben'}
-            {filterAktiv(f) && <> · <button type="button" className="verweis" onClick={() => setF({})}>Filter zurücksetzen</button></>}
+            {filterAktiv(f) ? t('profil.abwesenheit.von-2', { liste: liste.length, alle: alle.length }) : alle.length} {t('profil.abwesenheit.aufgaben', { anzahl: alle.length })}
+            {filterAktiv(f) && <> · <button type="button" className="verweis" onClick={() => setF({})}>{t('profil.abwesenheit.filter-zuruecksetzen')}</button></>}
           </p>
           <SammelKopf s={wahl} />
         </div>
         <SammelLeiste s={wahl} titel={titelVon} vorschlag={vertreter} ohne={ich.id} nachher={nachher} />
         {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
-        {!liste.length ? <p className="leise">Keine Aufgabe passt zum Filter.</p> : (
+        {!liste.length ? <p className="leise">{t('profil.abwesenheit.keine-aufgabe-passt-zum')}</p> : (
           <ul className="mappenliste sammel-liste">
             {liste.map((a) => (
               <li key={a.id} className={`mit-haken${wahl.ist(a.id) ? ' gewaehlt' : ''}`}>
@@ -183,8 +182,8 @@ function MeineOffenenAufgaben({ vertreter, geaendert }: { vertreter: string | nu
                   <span className="unter">{a.text}</span>
                 </Link>
                 <div className="aufgabenzeile">
-                  <span className="leise klein">weitergeben an</span>
-                  <BenutzerWahl label={`Aufgabe „${a.text}“ weitergeben an`} wert="" setze={(an) => { if (an) void einzeln(a, an); }} ohne={ich.id} />
+                  <span className="leise klein">{t('profil.abwesenheit.weitergeben-an')}</span>
+                  <BenutzerWahl label={t('profil.abwesenheit.aufgabe-weitergeben-an', { text: a.text })} wert="" setze={(an) => { if (an) void einzeln(a, an); }} ohne={ich.id} />
                 </div>
               </li>
             ))}

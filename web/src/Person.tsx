@@ -33,15 +33,15 @@ export function Ehemalig({ id, children }: { id: string | null | undefined; chil
 export function Person({ id, ersatz, vor = '', className }: { id: string | null | undefined; ersatz?: string; vor?: string; className?: string }) {
   const d = useDaten();
   const ohneLinks = useContext(OhneLinks);
-  if (!id) return <span className={className}>{vor}{ersatz ?? 'unbekannt'}</span>;
+  if (!id) return <span className={className}>{vor}{ersatz ?? t('oberflaeche.person.unbekannt')}</span>;
   const p = d.personen.find((x) => x.id === id);
-  if (!p) return <span className={`person weg ${className ?? ''}`} title="Diesen Benutzer gibt es nicht mehr">{vor}{ersatz ?? 'gelöschter Benutzer'}</span>;
+  if (!p) return <span className={`person weg ${className ?? ''}`} title={t('oberflaeche.person.diesen-benutzer-gibt-es')}>{vor}{ersatz ?? t('oberflaeche.person.geloeschter-benutzer')}</span>;
   // Dienstkonto eines Pakets (#338): Name ohne Link, es gibt keine Benutzer-Mappe dazu.
-  if (p.art === 'dienst') return <span className={`person paket ${className ?? ''}`} title="Paket mit Code (Dienstkonto)">{vor}{p.name}</span>;
+  if (p.art === 'dienst') return <span className={`person paket ${className ?? ''}`} title={t('oberflaeche.person.paket-mit-code-dienstkonto')}>{vor}{p.name}</span>;
   // Systemkonto (#673), z. B. „Automatisierung“: ebenso ohne Mappe.
   if (p.art === 'system') return <span className={`person paket ${className ?? ''}`} title={t('konten.systemkonten.rolle.systemkonto')}>{vor}{p.name}</span>;
-  const typ = d.typen.find((t) => t.system === 'benutzer');
+  const typ = d.typen.find((mappentyp) => mappentyp.system === 'benutzer');
   const name = istDeaktiviert(p) ? <span className="person-ehemalig" title={deaktiviertTitel(p)}>{p.name}<span className="sr-only">{t('konten.deaktiviert.vorlesen')}</span></span> : p.name;
   if (!typ || ohneLinks) return <span className={className}>{vor}{name}</span>;
-  return <Link to={`/ablage/${typ.id}/${id}`} className={`person ${className ?? ''}`} title={`Mappe von ${p.name} öffnen${istDeaktiviert(p) ? ` – ${deaktiviertTitel(p)}` : p.abwesend ? ` – ${abwesenheitText(p)}` : ''}`}>{vor}{name}</Link>;
+  return <Link to={`/ablage/${typ.id}/${id}`} className={`person ${className ?? ''}`} title={t('oberflaeche.person.mappe-von-oeffnen', { name: p.name, wert: istDeaktiviert(p) ? ` – ${deaktiviertTitel(p)}` : p.abwesend ? ` – ${abwesenheitText(p)}` : '' })}>{vor}{name}</Link>;
 }

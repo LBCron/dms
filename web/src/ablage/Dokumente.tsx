@@ -462,7 +462,7 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
 
 /** Schmaler Bildschirm (Handy, #505) – wie die Blätter von unten in styles.css (bis 600 px). */
 function useHandy() {
-  const abfrage = t('ablage.dokumente.max-width-600px');
+  const abfrage = '(max-width: 600px)';
   const [an, setAn] = useState(() => typeof matchMedia === 'function' && matchMedia(abfrage).matches);
   useEffect(() => {
     if (typeof matchMedia !== 'function') return;

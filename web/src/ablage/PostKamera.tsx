@@ -29,7 +29,7 @@ export function postFotografieren(ziel?: KameraZiel) {
 }
 
 /** Gerät mit Fingerbedienung (Handy, Tablet): dort gibt es die Kamera-Einstiege. */
-export const istTouch = () => typeof matchMedia === 'function' && matchMedia(t('ablage.postkamera.pointer-coarse')).matches;
+export const istTouch = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 const LAENGSTE = 2400;
 export async function verkleinere(f: File): Promise<Blob> {

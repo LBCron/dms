@@ -50,7 +50,7 @@ const Ctx = createContext<Konto | null>(null);
 
 export function useKonto(): Konto {
   const k = useContext(Ctx);
-  if (!k) throw new Error('KontoProvider fehlt');
+  if (!k) throw new Error(t('oberflaeche.konto.kontoprovider-fehlt'));
   return k;
 }
 

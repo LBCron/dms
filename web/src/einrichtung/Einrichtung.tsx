@@ -17,7 +17,7 @@ import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { titelOder } from '../seiten';
 import { Hilfe } from '../Hilfe';
-import { t, t as tx } from '../sprache';
+import { t, t as tx, tn } from '../sprache';
 import { FRISTEN, JAHRE_MAX, type Archiv } from '../../../shared/src/archiv';
 import { STEMPEL_MODI, type StempelModus, type StempelTyp } from '../../../shared/src/stempel';
 import { useStempelVorlagen } from '../ablage/Stempel';
@@ -29,7 +29,7 @@ import type { ErkennungStand } from '../api';
 import { artenFuer, artVon, AUS_DOKUMENT_STANDARD, BESCHRIFTUNG_MAX, ENGINE_EINGEBAUT, ERKENNUNG_FELDTYPEN, ERKENNUNG_HINWEIS_MAX, ERKENNUNGSARTEN, merkmalsfelder, type AusDokument, type Erkennungsart } from '../../../shared/src/erkennung';
 
 /** Entfernen im Editor wirkt erst beim Speichern (#136). */
-const ERST_BEIM_SPEICHERN = ' Das wird erst mit „Mappentyp speichern“ wirksam.';
+const ERST_BEIM_SPEICHERN = t('mappentypen.editor.das-wird-erst-mit');
 
 /* ---------------------------------------------------------------- */
 
@@ -69,25 +69,25 @@ function neueId(): string {
 
 const alsEntwurfRegister = ({ felder: _f, ...r }: Register): EntwurfRegister => ({ ...r, _uid: neueId() });
 
-function entwurfAus(t?: Mappentyp): Entwurf {
-  if (!t) return { id: neueId(), name: '', schluessel: '', beschreibung: '', titelVorlage: '', felder: [], register: standardRegister([]).map(alsEntwurfRegister), trefferlisten: [{ _uid: neueId(), key: 'standard', name: 'Standard', spalten: [], standard: true }], berechtigungen: structuredClone(OFFENES_REGELWERK), archiv: null, stempel: null, ausDokument: null, autoZuordnen: false };
-  const erstes = t.register.find((r) => r.art === 'felder')?.key ?? '';
+function entwurfAus(eintrag?: Mappentyp): Entwurf {
+  if (!eintrag) return { id: neueId(), name: '', schluessel: '', beschreibung: '', titelVorlage: '', felder: [], register: standardRegister([]).map(alsEntwurfRegister), trefferlisten: [{ _uid: neueId(), key: 'standard', name: t('mappentypen.editor.standard'), spalten: [], standard: true }], berechtigungen: structuredClone(OFFENES_REGELWERK), archiv: null, stempel: null, ausDokument: null, autoZuordnen: false };
+  const erstes = eintrag.register.find((r) => r.art === 'felder')?.key ?? '';
   const e: Entwurf = {
-    id: t.id, name: t.name, schluessel: t.schluessel ?? '', beschreibung: t.beschreibung, titelVorlage: t.titelVorlage ?? '',
-    berechtigungen: structuredClone(regelwerkVon(t)),
-    archiv: t.archiv ?? null,
-    stempel: t.stempel ?? null,
-    ausDokument: t.ausDokument ?? null,
-    autoZuordnen: !!t.autoZuordnen,
-    register: t.register.map(alsEntwurfRegister),
-    felder: t.felder.map((f) => ({
+    id: eintrag.id, name: eintrag.name, schluessel: eintrag.schluessel ?? '', beschreibung: eintrag.beschreibung, titelVorlage: eintrag.titelVorlage ?? '',
+    berechtigungen: structuredClone(regelwerkVon(eintrag)),
+    archiv: eintrag.archiv ?? null,
+    stempel: eintrag.stempel ?? null,
+    ausDokument: eintrag.ausDokument ?? null,
+    autoZuordnen: !!eintrag.autoZuordnen,
+    register: eintrag.register.map(alsEntwurfRegister),
+    felder: eintrag.felder.map((f) => ({
       ...f, _uid: neueId(),
-      _register: t.register.find((r) => r.art === 'felder' && r.felder?.includes(f.key))?.key ?? erstes,
+      _register: eintrag.register.find((r) => r.art === 'felder' && r.felder?.includes(f.key))?.key ?? erstes,
       ...Object.fromEntries(ZAHLEN.map((p) => [p, f[p] == null ? '' : String(f[p]).replace('.', ',')])),
     }) as unknown as EntwurfFeld),
     trefferlisten: [],
   };
-  e.trefferlisten = trefferlistenVon(t).map((l) => ({
+  e.trefferlisten = trefferlistenVon(eintrag).map((l) => ({
     _uid: neueId(), key: l.key, name: l.name, standard: !!l.standard,
     spalten: l.spalten.flatMap((k) => {
       if (k.startsWith('_')) return [k];
@@ -99,14 +99,14 @@ function entwurfAus(t?: Mappentyp): Entwurf {
 }
 
 /** Mappentyp kopieren (#147): neuer, ungespeicherter Entwurf mit Feldern, Titel, Trefferlisten, Registern und Berechtigungen. */
-function kopieVon(t: Mappentyp, typen: Mappentyp[]): Entwurf {
-  const e = entwurfAus(t);
+function kopieVon(mappentyp: Mappentyp, typen: Mappentyp[]): Entwurf {
+  const e = entwurfAus(mappentyp);
   const id = neueId();
   const namen = new Set(typen.map((x) => x.name.trim().toLowerCase()));
-  let name = `Kopie von ${t.name}`; let n = 2;
-  while (namen.has(name.toLowerCase())) name = `Kopie von ${t.name} (${n++})`;
+  let name = t('mappentypen.editor.kopie-von', { name: mappentyp.name }); let n = 2;
+  while (namen.has(name.toLowerCase())) name = t('mappentypen.editor.kopie-von-2', { name: mappentyp.name, wert: n++ });
   // Verweise auf sich selbst zeigen in der Kopie auf die Kopie.
-  const selbst = (x?: string) => (x === t.id ? id : x);
+  const selbst = (x?: string) => (x === mappentyp.id ? id : x);
   return {
     ...e, id, name, schluessel: freierSchluessel(name, typen.map((x) => x.schluessel ?? '')),
     felder: e.felder.map((f) => ({ ...f, zielTyp: selbst(f.zielTyp) ?? '', _neu: true, _schluesselGetippt: true })),
@@ -167,7 +167,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
         const key = ziel.slice(4);
         setE((x) => ({ ...x, felder: x.felder.map((f) => (f._uid === quelle ? { ...f, _register: key } : f)) }));
         const f = e.felder.find((x) => x._uid === quelle);
-        setAnsage(`${f?.label || 'Feld'} liegt jetzt auf Register „${e.register.find((r) => r.key === key)?.name ?? key}“.`);
+        setAnsage(t('mappentypen.editor.liegt-jetzt-auf-register', { wert: f?.label || t('mappentypen.editor.feld'), wert2: e.register.find((r) => r.key === key)?.name ?? key }));
         return;
       }
       setE((x) => {
@@ -217,7 +217,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
   function feldHinzufuegen() {
     const i = e.felder.length;
     const f: EntwurfFeld = {
-      key: eindeutigerSchluessel('neues_feld', i), label: 'Neues Feld', typ: 'text', pflicht: false, eindeutig: false, hilfe: '', standard: '',
+      key: eindeutigerSchluessel('neues_feld', i), label: t('mappentypen.editor.neues-feld'), typ: 'text', pflicht: false, eindeutig: false, hilfe: '', standard: '',
       minLen: '', maxLen: '', min: '', max: '', nachkomma: '', muster: '', optionen: [], mehrfach: false, zielTyp: '', verweisart: 'bezug', waehrung: 'EUR', _uid: neueId(), _neu: true,
       _register: e.register.find((r) => r.art === 'felder')?.key ?? '',
     };
@@ -236,9 +236,9 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
     // Ohne Zahlen (#512, kommen noch) lieber nachsehen.
     const n = gespeichert && (!d.zahlenDa || d.anzahl(gespeichert.id)) ? (await api.belegung(gespeichert.id).catch(() => ({} as Record<string, number>)))[f.key] ?? 0 : 0;
     const text = n
-      ? `${n} ${n === 1 ? 'Mappe hat' : 'Mappen haben'} in „${f.label}“ einen Wert. Die Werte bleiben gespeichert, werden aber nicht mehr angezeigt.${ERST_BEIM_SPEICHERN}`
+      ? t('mappentypen.editor.mappen-haben-in-einen', { anzahl: n, label: f.label, ERST_BEIM_SPEICHERN })
       : ERST_BEIM_SPEICHERN.trim();
-    if (!(await rueckfrage({ titel: `Feld „${f.label}“ entfernen?`, text, ja: 'Entfernen', gefahr: n > 0 }))) return;
+    if (!(await rueckfrage({ titel: t('mappentypen.editor.feld-entfernen', { label: f.label }), text, ja: t('mappentypen.editor.entfernen'), gefahr: n > 0 }))) return;
     setE((x) => ({ ...x, titelVorlage: x.titelVorlage.replace(new RegExp(`\\{${f.key}(\\|[^{}]*)?\\}`, 'g'), '').trim(), felder: x.felder.filter((_, j) => j !== i) }));
     setOffen(null); setFehler(null);
   }
@@ -256,19 +256,19 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       })),
     };
     try {
-      const t = neu ? await api.typAnlegen({ ...daten, sichtAnlegen }) : await api.typAendern(e.id, { ...daten, bestaetigt });
-      const sauber = entwurfAus(t);
+      const mappentyp = neu ? await api.typAnlegen({ ...daten, sichtAnlegen }) : await api.typAendern(e.id, { ...daten, bestaetigt });
+      const sauber = entwurfAus(mappentyp);
       setE(sauber); setBasis(JSON.stringify(sauber)); setFehler(null); setOffen(null); setFehlerOrte(new Set());
       // Ein neuer Typ bleibt nach dem Anlegen aufgeklappt wie gerade.
-      if (neu) merkeOffen(t.id, auf);
+      if (neu) merkeOffen(mappentyp.id, auf);
       loeseWache();
       await d.neuLaden();
-      if (neu) geheZu(`/werkbank/typen/${t.id}`);
-      else setMeldung('Mappentyp gespeichert.');
+      if (neu) geheZu(`/werkbank/typen/${mappentyp.id}`);
+      else setMeldung(t('mappentypen.editor.mappentyp-gespeichert'));
     } catch (err) {
       const f = err as ApiFehler;
       // Berechtigungen (#142): Danach könnte niemand mehr Mappen dieses Typs lesen – nachfragen.
-      if (f.status === 409 && (f.details as { niemand?: number } | undefined)?.niemand && !bestaetigt && await rueckfrage({ titel: 'Trotzdem speichern?', text: f.message, ja: 'Trotzdem speichern', gefahr: true })) { setSendet(false); await speichern(true); return; }
+      if (f.status === 409 && (f.details as { niemand?: number } | undefined)?.niemand && !bestaetigt && await rueckfrage({ titel: t('mappentypen.editor.trotzdem-speichern'), text: f.message, ja: t('mappentypen.editor.trotzdem-speichern-2'), gefahr: true })) { setSendet(false); await speichern(true); return; }
       // Bereiche mit Fehler markieren und aufklappen (#144).
       const orte = new Set<TypBereich>();
       if (f.pruefung) {
@@ -287,7 +287,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
 
   async function loeschen() {
     if (neu) { loeseWache(); geheZu('/werkbank/typen'); return; }
-    if (!(await rueckfrage({ titel: `Mappentyp „${e.name}“ endgültig löschen?`, text: 'Das lässt sich nicht rückgängig machen.', ja: 'Endgültig löschen', gefahr: true }))) return;
+    if (!(await rueckfrage({ titel: t('mappentypen.editor.mappentyp-endgueltig-loeschen', { name: e.name }), text: t('mappentypen.editor.das-laesst-sich-nicht'), ja: t('mappentypen.editor.endgueltig-loeschen'), gefahr: true }))) return;
     try {
       await api.typLoeschen(e.id);
       loeseWache(); await d.neuLaden(); geheZu('/werkbank/typen');
@@ -302,63 +302,63 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
   return (
     <form className="editorform" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten} noValidate>
       <div className="seitenkopf"><div>
-        <p className="ueber">Mappentyp</p>
-        <h1>{e.name || (neu ? 'Neuer Mappentyp' : 'Ohne Namen')}{system && <span className="chip">System</span>}</h1>
-        {gespeichert && d.zahlenDa && <p className="leise"><Link to={`/ablage/${gespeichert.id}`} className="verweis">{d.anzahl(gespeichert.id).toLocaleString('de-DE')} {d.anzahl(gespeichert.id) === 1 ? 'Mappe' : 'Mappen'} in der Ablage →</Link></p>}
-        {vorlage && neu && <p className="leise">Kopie von „{vorlage.name}“ – noch nicht gespeichert. Mappen werden nicht kopiert.</p>}
+        <p className="ueber">{t('mappentypen.editor.mappentyp')}</p>
+        <h1>{e.name || (neu ? t('mappentypen.editor.neuer-mappentyp') : t('mappentypen.editor.ohne-namen'))}{system && <span className="chip">{t('mappentypen.editor.system')}</span>}</h1>
+        {gespeichert && d.zahlenDa && <p className="leise"><Link to={`/ablage/${gespeichert.id}`} className="verweis">{t('mappentypen.editor.mappen-in-der-ablage', { anzahl: d.anzahl(gespeichert.id), zahl: d.anzahl(gespeichert.id).toLocaleString('de-DE') })}</Link></p>}
+        {vorlage && neu && <p className="leise">{t('mappentypen.editor.kopie-von-noch-nicht', { name: vorlage.name })}</p>}
       </div>
-      {gespeichert && !system && <div className="knoepfe"><Link to={`/werkbank/typen/neu?kopie=${gespeichert.id}`} className="knopf klein" title="Neuen Mappentyp mit Feldern, Titel, Trefferlisten, Registern und Berechtigungen dieses Mappentyps anlegen">Mappentyp kopieren</Link></div>}
+      {gespeichert && !system && <div className="knoepfe"><Link to={`/werkbank/typen/neu?kopie=${gespeichert.id}`} className="knopf klein" title={t('mappentypen.editor.neuen-mappentyp-mit-feldern')}>{t('mappentypen.editor.mappentyp-kopieren')}</Link></div>}
       </div>
 
-      <nav className="sprungleiste" aria-label="Bereiche des Mappentyps">
+      <nav className="sprungleiste" aria-label={t('mappentypen.editor.bereiche-des-mappentyps')}>
         {TYP_BEREICHE.map(([k, name]) => (
           <button key={k} type="button" className={`sprung${auf.has(k) ? ' an' : ''}${hatFehler(k) ? ' fehler' : ''}`} onClick={() => oeffne([k])}
-            title={hatFehler(k) ? `${name}: Fehler` : name}>{name}{hatFehler(k) && <span className="fehlerpunkt" aria-label="mit Fehler">!</span>}</button>
+            title={hatFehler(k) ? t('mappentypen.editor.fehler', { name }) : name}>{name}{hatFehler(k) && <span className="fehlerpunkt" aria-label={t('mappentypen.editor.mit-fehler')}>!</span>}</button>
         ))}
         <span className="luecke" aria-hidden="true" />
         <button type="button" className="textknopf klein" onClick={() => setAuf(stelle(auf.size === TYP_BEREICHE.length ? new Set() : new Set(TYP_BEREICHE.map(([k]) => k))))}>
-          {auf.size === TYP_BEREICHE.length ? 'Alle zuklappen' : 'Alle aufklappen'}</button>
+          {auf.size === TYP_BEREICHE.length ? t('mappentypen.editor.alle-zuklappen') : t('mappentypen.editor.alle-aufklappen')}</button>
       </nav>
 
       {system && (
         <div className="hinweis info"><p>{system === 'benutzer'
-          ? 'Systemmappentyp: Jeder Benutzer hat hier seine Mappe. Du kannst Felder und Register ergänzen; die Systemfelder sind fest und werden im Profil und in der Benutzerverwaltung gepflegt. Anlegen und Löschen geschieht nur in der Benutzerverwaltung.'
-          : 'Systemmappentyp: Rollen, die Benutzer haben können. Du kannst Felder und Register ergänzen; das Systemfeld ist fest. Administrator und Mitglied sind Systemrollen und lassen sich nicht löschen.'}</p></div>
+          ? t('mappentypen.editor.systemmappentyp-jeder-benutzer-hat')
+          : t('mappentypen.editor.systemmappentyp-rollen-die-benutzer')}</p></div>
       )}
       {unpassend > 0 && (
-        <div className="hinweis warn"><p>{unpassend} {unpassend === 1 ? 'Mappe passt' : 'Mappen passen'} nicht zur aktuellen Definition. Sie sind in der Ablage markiert.</p></div>
+        <div className="hinweis warn"><p>{t('mappentypen.editor.mappen-passen-nicht-zur', { anzahl: unpassend })}</p></div>
       )}
       {fehler?.allgemein.length ? <div className="hinweis schlecht"><p>{fehler.allgemein.join(' ')}</p></div> : null}
       {gruende.length > 0 && <div className="hinweis warn"><ul>{gruende.map((g) => <li key={g}>{g}</li>)}</ul></div>}
 
-      <Bereich id="grunddaten" titel="Grunddaten" klappe={klappe('grunddaten')}
-        kurz={<>Kennung <code className="mono">{e.schluessel || '–'}</code>{e.beschreibung ? <> · {e.beschreibung}</> : null}</>}>
+      <Bereich id="grunddaten" titel={t('mappentypen.editor.grunddaten')} klappe={klappe('grunddaten')}
+        kurz={<>{tn('mappentypen.editor.kennung', { code: <code className="mono">{e.schluessel || '–'}</code> })}{e.beschreibung ? <> · {e.beschreibung}</> : null}</>}>
         <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={e.name} placeholder="z. B. Vertrag" autoFocus={neu}
+          <label className="eigenschaft"><span>{t('mappentypen.editor.name')}</span><input value={e.name} placeholder={t('mappentypen.editor.z-b-vertrag')} autoFocus={neu}
             onChange={(ev) => setE({ ...e, name: ev.target.value, ...(neu && !e._schluesselGetippt ? { schluessel: schluesselAus(ev.target.value) } : {}) })} /></label>
-          <label className="eigenschaft"><span>Kennung <small>{neu || !gespeichert?.schluessel ? 'wird nach dem Speichern fest' : 'fest – Name lässt sich ändern, Links bleiben gültig'}</small></span>
-            <input className="mono" value={e.schluessel} placeholder="z. B. vertrag" disabled={!neu && !!gespeichert?.schluessel}
+          <label className="eigenschaft"><span>{tn('mappentypen.editor.kennung-2', { klein: <small>{neu || !gespeichert?.schluessel ? t('mappentypen.editor.wird-nach-dem-speichern') : t('mappentypen.editor.fest-name-laesst-sich')}</small> })}</span>
+            <input className="mono" value={e.schluessel} placeholder={t('mappentypen.editor.z-b-vertrag-2')} disabled={!neu && !!gespeichert?.schluessel}
               onChange={(ev) => setE({ ...e, schluessel: ev.target.value, _schluesselGetippt: true })} /></label>
         </div>
-        <label className="eigenschaft"><span>Beschreibung</span><input value={e.beschreibung} placeholder="Wofür ist dieser Mappentyp?" onChange={(ev) => setE({ ...e, beschreibung: ev.target.value })} /></label>
+        <label className="eigenschaft"><span>{t('mappentypen.editor.beschreibung')}</span><input value={e.beschreibung} placeholder={t('mappentypen.editor.wofuer-ist-dieser-mappentyp')} onChange={(ev) => setE({ ...e, beschreibung: ev.target.value })} /></label>
         {neu && <label className="haken"><input type="checkbox" checked={sichtAnlegen} onChange={(ev) => setSichtAnlegen(ev.target.checked)} />
-          <span>Eigene Ansicht in der Ablage anlegen<small className="hilfe">Abwählen, wenn die Mappen in einer bestehenden Ansicht erscheinen sollen – das stellst du unter Werkbank → Ansichten ein.</small></span></label>}
+          <span>{tn('mappentypen.editor.eigene-ansicht-in-der', { klein: <small className="hilfe">{t('mappentypen.editor.abwaehlen-wenn-die-mappen')}</small> })}</span></label>}
         {gespeichert && <VerwendetIn typ={gespeichert} />}
       </Bereich>
 
-      <Bereich id="felder" titel="Felder" hilfe={<Hilfe ort="mappentyp.felder" />} klappe={klappe('felder')} kurz={feldKurz(e.felder)}
-        beschreibung={<>Feld anklicken, um Feldart und Eigenschaften festzulegen. Die Reihenfolge gilt auch im Formular; ändern per Pfeil oder am Griff ⠿ ziehen. <Hilfe ort="mappentyp.ziehen" /></>}>
+      <Bereich id="felder" titel={t('mappentypen.editor.felder')} hilfe={<Hilfe ort="mappentyp.felder" />} klappe={klappe('felder')} kurz={feldKurz(e.felder)}
+        beschreibung={<>{tn('mappentypen.editor.feld-anklicken-um-feldart', { hilfe: <Hilfe ort="mappentyp.ziehen" /> })}</>}>
         <div className="feldliste">
-          {e.felder.length === 0 && <div className="leer"><p>Noch keine Felder. Füge das erste hinzu, etwa „Bezeichnung“ als Text.</p></div>}
+          {e.felder.length === 0 && <div className="leer"><p>{t('mappentypen.editor.noch-keine-felder-fuege')}</p></div>}
           {e.felder.map((f, i) => (
             <FeldZeile key={f._uid} f={f} i={i} anzahl={e.felder.length} offen={offen === i} fehler={fehler?.felder[String(i)]}
-              zieh={zf.eintrag(f._uid)} griff={<button {...zf.griff(f._uid, f.label || 'Feld')} onKeyDown={(ev) => ziehTasten(ev, {
-                hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(`${f.label || 'Feld'} steht jetzt an Stelle ${i}.`); } : undefined,
-                runter: i < e.felder.length - 1 ? () => { verschiebe(i, 1); setAnsage(`${f.label || 'Feld'} steht jetzt an Stelle ${i + 2}.`); } : undefined,
+              zieh={zf.eintrag(f._uid)} griff={<button {...zf.griff(f._uid, f.label || t('mappentypen.editor.feld'))} onKeyDown={(ev) => ziehTasten(ev, {
+                hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle', { wert: f.label || t('mappentypen.editor.feld'), i })); } : undefined,
+                runter: i < e.felder.length - 1 ? () => { verschiebe(i, 1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-2', { wert: f.label || t('mappentypen.editor.feld'), wert2: i + 2 })); } : undefined,
               })}><span aria-hidden="true">⠿</span></button>}
               eigeneId={e.id} eigenerName={e.name} typen={d.typen} feldregister={feldregister}
               alleFelder={e.felder.map((x) => ({ key: x.key, label: x.label || x.key, typ: x.typ, optionen: x.optionen, zielTyp: x.zielTyp, mehrfach: x.mehrfach }) as Feld)}
-              benutzerFelder={e.felder.filter((x) => x.typ === 'referenz' && !x.mehrfach && x.zielTyp && x.zielTyp === d.typen.find((t) => t.system === 'benutzer')?.id).map((x) => ({ key: x.key, label: x.label || x.key }))}
+              benutzerFelder={e.felder.filter((x) => x.typ === 'referenz' && !x.mehrfach && x.zielTyp && x.zielTyp === d.typen.find((mappentyp) => mappentyp.system === 'benutzer')?.id).map((x) => ({ key: x.key, label: x.label || x.key }))}
               umschalten={() => setOffen(offen === i ? null : i)}
               verschiebe={(r) => verschiebe(i, r)} entferne={() => void entferne(i)}
               setze={(patch) => {
@@ -370,7 +370,7 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
               }} />
           ))}
         </div>
-        <div><button type="button" className="knopf" onClick={feldHinzufuegen}>+ Feld hinzufügen</button></div>
+        <div><button type="button" className="knopf" onClick={feldHinzufuegen}>{t('mappentypen.editor.feld-hinzufuegen')}</button></div>
         <Ansage text={ansage} />
       </Bereich>
 
@@ -379,25 +379,25 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       <TrefferlisteEditor e={e} setE={setE} klappe={klappe('trefferlisten')} />
 
       <RegisterEditor e={e} setE={setE} feldAblage={(key) => zf.ablage(`reg:${key}`)} klappe={klappe('register')} />
-      <Bereich id="archiv" titel="Archivmodus" hilfe={<Hilfe ort="mappentyp.archiv" />} klappe={klappe('archiv')}
-        kurz={e.archiv ? <>an · {e.archiv.jahre} Jahre ab {e.archiv.stichtag ? e.felder.find((f) => f.key === e.archiv!.stichtag)?.label ?? e.archiv.stichtag : 'Anlagedatum'}</> : 'aus'}>
+      <Bereich id="archiv" titel={t('mappentypen.editor.archivmodus')} hilfe={<Hilfe ort="mappentyp.archiv" />} klappe={klappe('archiv')}
+        kurz={e.archiv ? <>{t('mappentypen.editor.an-jahre-ab', { jahre: e.archiv.jahre })}{' '}{e.archiv.stichtag ? e.felder.find((f) => f.key === e.archiv!.stichtag)?.label ?? e.archiv.stichtag : t('mappentypen.editor.anlagedatum')}</> : t('mappentypen.editor.aus')}>
         <ArchivEinstellung archiv={e.archiv} setze={(archiv) => setE({ ...e, archiv })} datumsfelder={e.felder.filter((f) => f.typ === 'datum' && f.key).map((f) => ({ key: f.key, label: f.label || f.key }))} typId={gespeichert?.id} />
       </Bereich>
 
-      <Bereich id="stempel" titel="Stempel beim Weitergeben" hilfe={<Hilfe ort="mappentyp.stempel" />} klappe={klappe('stempel')}
-        kurz={e.stempel ? STEMPEL_MODI[e.stempel.modus] : 'aus'}>
+      <Bereich id="stempel" titel={t('mappentypen.editor.stempel-beim-weitergeben')} hilfe={<Hilfe ort="mappentyp.stempel" />} klappe={klappe('stempel')}
+        kurz={e.stempel ? STEMPEL_MODI[e.stempel.modus] : t('mappentypen.editor.aus')}>
         <StempelEinstellung stempel={e.stempel} setze={(stempel) => setE({ ...e, stempel })} />
       </Bereich>
 
-      {!system && <Bereich id="erkennung" titel="Erkennung" hilfe={<Hilfe ort="mappentyp.erkennungstyp" />} klappe={klappe('erkennung')}
-        kurz={[e.ausDokument?.aus ? 'Knopf aus' : `„${e.ausDokument?.beschriftung || AUS_DOKUMENT_STANDARD}“`, `${e.felder.filter((f) => f.erkennung).length} Felder markiert`, ...(e.autoZuordnen && !e.archiv ? ['Post automatisch zuordnen'] : [])].join(' · ')}>
+      {!system && <Bereich id="erkennung" titel={t('mappentypen.editor.erkennung')} hilfe={<Hilfe ort="mappentyp.erkennungstyp" />} klappe={klappe('erkennung')}
+        kurz={[e.ausDokument?.aus ? t('mappentypen.editor.knopf-aus') : `„${e.ausDokument?.beschriftung || AUS_DOKUMENT_STANDARD}“`, t('mappentypen.editor.felder-markiert', { zahl: e.felder.filter((f) => f.erkennung).length }), ...(e.autoZuordnen && !e.archiv ? [t('mappentypen.editor.post-automatisch-zuordnen')] : [])].join(' · ')}>
         <ErkennungTyp ad={e.ausDokument} setze={(ausDokument) => setE((x) => ({ ...x, ausDokument }))} markiert={merkmalsfelder({ felder: e.felder as unknown as Feld[] }).length} felder={e.felder.filter((f) => f.erkennung).map((f) => f.label || f.key)} />
         <div className="raster">
           <div className="eigenschaft unten">
             <label className="haken"><input type="checkbox" checked={e.autoZuordnen && !e.archiv} disabled={!!e.archiv} onChange={(ev) => setE((x) => ({ ...x, autoZuordnen: ev.target.checked }))} />
-              <span>Post automatisch zuordnen, wenn die Erkennung sicher ist<small className="hilfe">{e.archiv
-                ? 'Im Archivmodus nicht möglich – Post für diesen Typ wird nur von Hand zugeordnet.'
-                : 'Sicher heißt: Absender eindeutig erkannt (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Der Empfänger bekommt die Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig. Neue Mappen legt Ablago nie selbst an.'}</small></span></label>
+              <span>{tn('mappentypen.editor.post-automatisch-zuordnen-wenn', { klein: <small className="hilfe">{e.archiv
+                ? t('mappentypen.editor.im-archivmodus-nicht-moeglich')
+                : t('mappentypen.editor.sicher-heisst-absender-eindeutig')}</small> })}</span></label>
           </div>
         </div>
       </Bereich>}
@@ -407,38 +407,38 @@ export function TypEditor({ typ, vorlage }: { typ?: Mappentyp; vorlage?: Mappent
       <TestlaufBlatt typId={gespeichert?.id ?? ''} entwurf={e.berechtigungen} klappe={klappe('testlauf')} />
       {typ?.system !== 'benutzer' && <PaketeAmTyp typId={gespeichert?.id ?? ''} klappe={klappe('pakete')} />}
 
-      <Speicherleiste ent={ent} gegenstand="Mappentyp" sendet={sendet} meldung={meldung ? { art: fehler ? 'schlecht' : 'gut', text: meldung } : undefined}
+      <Speicherleiste ent={ent} gegenstand={t('mappentypen.editor.mappentyp')} sendet={sendet} meldung={meldung ? { art: fehler ? 'schlecht' : 'gut', text: meldung } : undefined}
         links={neu || system ? undefined : typ?.schluessel === 'ablageort'
-          ? <span className="leise klein">Gehört zum Standard (Ablageorte) – lässt sich erweitern, aber nicht löschen.</span>
-          : <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>Mappentyp löschen</button>} />
+          ? <span className="leise klein">{t('mappentypen.editor.gehoert-zum-standard-ablageorte')}</span>
+          : <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>{t('mappentypen.editor.mappentyp-loeschen')}</button>} />
     </form>
   );
 }
 
 /** Kurzinfo der Felder (#144), z. B. „8 Felder, 2 Pflicht, 1 Frist“. */
 function feldKurz(felder: EntwurfFeld[]): string {
-  if (!felder.length) return 'noch keine Felder';
+  if (!felder.length) return t('mappentypen.editor.noch-keine-felder');
   const pflicht = felder.filter((f) => f.pflicht).length;
   const frist = felder.filter((f) => f.typ === 'datum' && f.frist).length;
-  return [`${felder.length} ${felder.length === 1 ? 'Feld' : 'Felder'}`, pflicht && `${pflicht} Pflicht`, frist && `${frist} ${frist === 1 ? 'Frist' : 'Fristen'}`].filter(Boolean).join(', ');
+  return [t('mappentypen.editor.felder-2', { anzahl: felder.length }), pflicht && t('mappentypen.editor.pflicht', { pflicht }), frist && t('mappentypen.editor.fristen', { anzahl: frist })].filter(Boolean).join(', ');
 }
 
 /** „Verwendet in“ (#147): Sichten, Referenzfelder und Verknüpfungsregister, die diesen Typ nutzen. */
 function VerwendetIn({ typ }: { typ: Mappentyp }) {
   const d = useDaten();
   const sichten = d.sichten.filter((s) => s.typen.includes(typ.id));
-  const felder = d.typen.filter((t) => t.id !== typ.id).flatMap((t) => t.felder.filter((f) => f.typ === 'referenz' && f.zielTyp === typ.id).map((f) => ({ t, f })));
-  const register = d.typen.filter((t) => t.id !== typ.id)
-    .flatMap((t) => t.register.filter((r) => r.art === 'verknuepfungen' && r.quellen?.some((q) => q.typId === typ.id)).map((r) => ({ t, r })));
+  const felder = d.typen.filter((mappentyp) => mappentyp.id !== typ.id).flatMap((mappentyp) => mappentyp.felder.filter((f) => f.typ === 'referenz' && f.zielTyp === typ.id).map((f) => ({ t: mappentyp, f })));
+  const register = d.typen.filter((mappentyp) => mappentyp.id !== typ.id)
+    .flatMap((mappentyp) => mappentyp.register.filter((r) => r.art === 'verknuepfungen' && r.quellen?.some((q) => q.typId === typ.id)).map((r) => ({ t: mappentyp, r })));
   const leer = !sichten.length && !felder.length && !register.length;
   return (
     <div className="verwendet">
-      <h3 className="zwischen">Verwendet in</h3>
-      {leer ? <p className="leise klein">Nirgends verwendet – keine Ansicht zeigt ihn, kein anderer Mappentyp verweist auf ihn.</p> : (
+      <h3 className="zwischen">{t('mappentypen.editor.verwendet-in')}</h3>
+      {leer ? <p className="leise klein">{t('mappentypen.editor.nirgends-verwendet-keine-ansicht')}</p> : (
         <ul className="verwendetliste klein">
-          {sichten.map((s) => <li key={s.id}>Ansicht <Link to={`/werkbank/sichten/${s.id}`} className="verweis">{s.name}</Link></li>)}
-          {felder.map(({ t, f }) => <li key={`${t.id}-${f.key}`}>Feld <Link to={`/werkbank/typen/${t.id}#felder`} className="verweis">{t.name} › {f.label || f.key}</Link></li>)}
-          {register.map(({ t, r }) => <li key={`${t.id}-${r.key}`}>Verknüpfungsregister <Link to={`/werkbank/typen/${t.id}#register`} className="verweis">{t.name} › {r.name}</Link></li>)}
+          {sichten.map((s) => <li key={s.id}>{tn('mappentypen.editor.ansicht', { link: <Link to={`/werkbank/sichten/${s.id}`} className="verweis">{s.name}</Link> })}</li>)}
+          {felder.map(({ t: mappentyp, f }) => <li key={`${mappentyp.id}-${f.key}`}>{tn('mappentypen.editor.feld-2', { link: <Link to={`/werkbank/typen/${mappentyp.id}#felder`} className="verweis">{mappentyp.name} › {f.label || f.key}</Link> })}</li>)}
+          {register.map(({ t: mappentyp, r }) => <li key={`${mappentyp.id}-${r.key}`}>{tn('mappentypen.editor.verknuepfungsregister', { link: <Link to={`/werkbank/typen/${mappentyp.id}#register`} className="verweis">{mappentyp.name} › {r.name}</Link> })}</li>)}
         </ul>
       )}
     </div>
@@ -457,16 +457,16 @@ function FeldZeile(p: {
 }) {
   const { f, i, offen, fehler, setze } = p;
   const id = (x: string) => `f${i}-${x}`;
-  const zielName = f.zielTyp === p.eigeneId ? (p.eigenerName || 'dieser Mappentyp') : f.zielTyp === '*' ? 'jede Mappe' : p.typen.find((t) => t.id === f.zielTyp)?.name ?? '–';
+  const zielName = f.zielTyp === p.eigeneId ? (p.eigenerName || t('mappentypen.editor.dieser-mappentyp')) : f.zielTyp === '*' ? t('mappentypen.editor.jede-mappe') : p.typen.find((mappentyp) => mappentyp.id === f.zielTyp)?.name ?? '–';
 
   const chips: string[] = [];
-  if (f.system) chips.push('System');
+  if (f.system) chips.push(t('mappentypen.editor.system'));
   if (f.eindeutig && (f.typ === 'text' || f.typ === 'zahl')) chips.push('eindeutig');
   if (f.typ === 'referenz') chips.push(`→ ${zielName}`, VERWEISARTEN[f.verweisart ?? 'bezug']);
-  if (f.typ === 'auswahl') chips.push(`${(f.optionen ?? []).length} Werte`);
+  if (f.typ === 'auswahl') chips.push(t('mappentypen.editor.werte', { zahl: (f.optionen ?? []).length }));
   if (f.mehrfach && (f.typ === 'auswahl' || f.typ === 'referenz')) chips.push('mehrfach');
-  if (p.feldregister.length > 1) chips.push(`Register: ${p.feldregister.find((r) => r.key === f._register)?.name ?? '–'}`);
-  if (f.erkennung && ERKENNUNG_FELDTYPEN.includes(f.typ)) chips.push('Erkennung');
+  if (p.feldregister.length > 1) chips.push(t('mappentypen.editor.register', { wert: p.feldregister.find((r) => r.key === f._register)?.name ?? '–' }));
+  if (f.erkennung && ERKENNUNG_FELDTYPEN.includes(f.typ)) chips.push(t('mappentypen.editor.erkennung'));
   // Paket-Update (#534): Verweisfeld, das sich aus einem alten Textfeld füllen lässt.
   if (f.typ === 'referenz' && f.ausText) chips.push(tx('pakete.typ.austext', { aus: p.alleFelder.find((x) => x.key === f.ausText)?.label ?? f.ausText }));
   // Format und Datumsgrenzen (#535).
@@ -486,80 +486,80 @@ function FeldZeile(p: {
 
   let besonders = null;
   if (f.typ === 'text' || f.typ === 'langtext' || f.typ === 'formatiert') besonders = <div className="raster">
-    {zahl('minLen', 'Mindestlänge', 'keine')}{zahl('maxLen', 'Höchstlänge', 'keine')}
-    {f.typ === 'text' && <label className="eigenschaft" htmlFor={id('muster')}><span>Muster <small>regulärer Ausdruck</small></span><input id={id('muster')} className="mono" placeholder="z. B. [A-Z]{2}-\d+" value={f.muster ?? ''} onChange={(e) => setze({ muster: e.target.value })} /></label>}
+    {zahl('minLen', t('mappentypen.editor.mindestlaenge'), t('mappentypen.editor.leer.keine'))}{zahl('maxLen', t('mappentypen.editor.hoechstlaenge'), t('mappentypen.editor.leer.keine'))}
+    {f.typ === 'text' && <label className="eigenschaft" htmlFor={id('muster')}><span>{tn('mappentypen.editor.muster', { klein: <small>{t('mappentypen.editor.regulaerer-ausdruck')}</small> })}</span><input id={id('muster')} className="mono" placeholder="z. B. [A-Z]{2}-\d+" value={f.muster ?? ''} onChange={(e) => setze({ muster: e.target.value })} /></label>}
     {f.typ === 'text' && <FormatEditor f={f} id={id} setze={setze} alleFelder={p.alleFelder} />}
   </div>;
-  else if (f.typ === 'zahl') besonders = <div className="raster">{zahl('min', 'Minimum', 'keins')}{zahl('max', 'Maximum', 'keins')}{zahl('nachkomma', 'Nachkommastellen', 'beliebig')}</div>;
-  else if (f.typ === 'betrag') besonders = <div className="raster">{zahl('min', 'Minimum', 'keins')}{zahl('max', 'Maximum', 'keins')}
-    <label className="eigenschaft" htmlFor={id('waehrung')}><span>Standardwährung</span><input id={id('waehrung')} className="mono" maxLength={3} value={f.waehrung ?? 'EUR'} onChange={(e) => setze({ waehrung: e.target.value.toUpperCase() })} /></label></div>;
+  else if (f.typ === 'zahl') besonders = <div className="raster">{zahl('min', t('mappentypen.editor.minimum'), t('mappentypen.editor.leer.keins'))}{zahl('max', t('mappentypen.editor.maximum'), t('mappentypen.editor.leer.keins'))}{zahl('nachkomma', t('mappentypen.editor.nachkommastellen'), t('mappentypen.editor.leer.beliebig'))}</div>;
+  else if (f.typ === 'betrag') besonders = <div className="raster">{zahl('min', t('mappentypen.editor.minimum'), t('mappentypen.editor.leer.keins'))}{zahl('max', t('mappentypen.editor.maximum'), t('mappentypen.editor.leer.keins'))}
+    <label className="eigenschaft" htmlFor={id('waehrung')}><span>{t('mappentypen.editor.standardwaehrung')}</span><input id={id('waehrung')} className="mono" maxLength={3} value={f.waehrung ?? 'EUR'} onChange={(e) => setze({ waehrung: e.target.value.toUpperCase() })} /></label></div>;
   else if (f.typ === 'auswahl') besonders = <div className="raster">
-    <label className="eigenschaft" htmlFor={id('optionen')}><span>Auswahlwerte <small>einer pro Zeile</small></span>
+    <label className="eigenschaft" htmlFor={id('optionen')}><span>{tn('mappentypen.editor.auswahlwerte', { klein: <small>{t('mappentypen.editor.einer-pro-zeile')}</small> })}</span>
       <textarea id={id('optionen')} rows={4} defaultValue={(f.optionen ?? []).join('\n')} onBlur={(e) => setze({ optionen: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })} /></label>
-    <div className="eigenschaft unten">{haken('mehrfach', 'Mehrfachauswahl', 'Mehrere Werte gleichzeitig wählbar')}</div>
+    <div className="eigenschaft unten">{haken('mehrfach', t('mappentypen.editor.mehrfachauswahl'), t('mappentypen.editor.mehrere-werte-gleichzeitig-waehlbar'))}</div>
   </div>;
   else if (f.typ === 'datum') besonders = <><DatumGrenzen f={f} id={id} setze={setze} /><FristEditor f={f} id={id} setze={setze} benutzerFelder={p.benutzerFelder} /></>;
-  else if (f.typ === 'passwort') besonders = <p className="leise klein">Wird verschlüsselt gespeichert und erscheint nie im Titel, in der Trefferliste, in der Suche oder in Demo-Daten. Anzeigen lässt es sich nur einzeln über das Auge; das steht in der Historie.</p>;
+  else if (f.typ === 'passwort') besonders = <p className="leise klein">{t('mappentypen.editor.wird-verschluesselt-gespeichert-und')}</p>;
   else if (f.typ === 'referenz') besonders = <><div className="raster">
-    <label className="eigenschaft" htmlFor={id('ziel')}><span>Verweist auf Mappen vom Mappentyp</span>
+    <label className="eigenschaft" htmlFor={id('ziel')}><span>{t('mappentypen.editor.verweist-auf-mappen-vom')}</span>
       <select id={id('ziel')} value={f.zielTyp ?? ''} onChange={(e) => setze({ zielTyp: e.target.value })}>
-        <option value="">– bitte wählen –</option>
-        {f.zielTyp === '*' && <option value="*">jede Mappe</option>}
-        {p.typen.filter((t) => t.id !== p.eigeneId).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        <option value={p.eigeneId}>{p.eigenerName || 'Dieser Mappentyp'} (dieser Mappentyp)</option>
+        <option value="">{t('mappentypen.editor.bitte-waehlen')}</option>
+        {f.zielTyp === '*' && <option value="*">{t('mappentypen.editor.jede-mappe')}</option>}
+        {p.typen.filter((mappentyp) => mappentyp.id !== p.eigeneId).map((mappentyp) => <option key={mappentyp.id} value={mappentyp.id}>{mappentyp.name}</option>)}
+        <option value={p.eigeneId}>{t('mappentypen.editor.dieser-mappentyp-3', { wert: p.eigenerName || t('mappentypen.editor.dieser-mappentyp-2') })}</option>
       </select>
-      <small className="hilfe">„Dieser Mappentyp“ ergibt eine Hierarchie, z. B. Heizung → Haus.</small></label>
-    <fieldset className="wahl"><legend>Art des Verweises</legend>
-      <label className="haken"><input type="radio" name={id('va')} checked={f.verweisart === 'zugehoerigkeit'} onChange={() => setze({ verweisart: 'zugehoerigkeit' })} /><span>Zugehörigkeit<small className="hilfe">„gehört zu“ – zählt bei „alles zu X“ mit</small></span></label>
-      <label className="haken"><input type="radio" name={id('va')} checked={f.verweisart !== 'zugehoerigkeit'} onChange={() => setze({ verweisart: 'bezug' })} /><span>Bezug<small className="hilfe">nur verknüpft, z. B. Aussteller</small></span></label>
+      <small className="hilfe">{t('mappentypen.editor.dieser-mappentyp-ergibt-eine')}</small></label>
+    <fieldset className="wahl"><legend>{t('mappentypen.editor.art-des-verweises')}</legend>
+      <label className="haken"><input type="radio" name={id('va')} checked={f.verweisart === 'zugehoerigkeit'} onChange={() => setze({ verweisart: 'zugehoerigkeit' })} /><span>{tn('mappentypen.editor.zugehoerigkeit', { klein: <small className="hilfe">{t('mappentypen.editor.gehoert-zu-zaehlt-bei')}</small> })}</span></label>
+      <label className="haken"><input type="radio" name={id('va')} checked={f.verweisart !== 'zugehoerigkeit'} onChange={() => setze({ verweisart: 'bezug' })} /><span>{tn('mappentypen.editor.bezug', { klein: <small className="hilfe">{t('mappentypen.editor.nur-verknuepft-z-b')}</small> })}</span></label>
     </fieldset>
-    <div className="eigenschaft unten">{haken('mehrfach', 'Mehrere Mappen erlaubt', 'z. B. eine Zahlung für mehrere Rechnungen')}</div>
+    <div className="eigenschaft unten">{haken('mehrfach', t('mappentypen.editor.mehrere-mappen-erlaubt'), t('mappentypen.editor.z-b-eine-zahlung'))}</div>
   </div>
   {/* Auswahlfilter (#172): nicht für „jede Mappe“. Eigene Zeile in voller Breite (#372) – Bedingungen brauchen Platz. */}
   {f.zielTyp && f.zielTyp !== '*' && (() => {
-    const ziel = p.typen.find((t) => t.id === f.zielTyp);
+    const ziel = p.typen.find((mappentyp) => mappentyp.id === f.zielTyp);
     return ziel ? <div><AuswahlFilter ziel={ziel} bedingungen={f.auswahlFilter ?? []} setze={(b) => setze({ auswahlFilter: b })} eigeneFelder={p.alleFelder} feldKey={f.key} /></div>
-      : f.zielTyp === p.eigeneId ? <p className="leise klein">Einen Auswahlfilter auf diesen Mappentyp selbst kannst du nach dem ersten Speichern festlegen.</p> : null;
+      : f.zielTyp === p.eigeneId ? <p className="leise klein">{t('mappentypen.editor.einen-auswahlfilter-auf-diesen')}</p> : null;
   })()}
   </>;
 
   let standard = null;
   if (f.typ === 'text' || f.typ === 'langtext' || f.typ === 'formatiert' || f.typ === 'zahl' || f.typ === 'betrag')
-    standard = <label className="eigenschaft" htmlFor={id('std')}><span>Standardwert {f.typ === 'text' && <small>{kreisImStandard(f.standard) ? 'Nummernkreis – das Feld wird schreibgeschützt' : 'oder {nummernkreis:schlüssel}'}</small>}</span><input id={id('std')} placeholder="leer" value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })} /></label>;
+    standard = <label className="eigenschaft" htmlFor={id('std')}><span>{tn('mappentypen.editor.standardwert', { wert: f.typ === 'text' && <small>{kreisImStandard(f.standard) ? t('mappentypen.editor.nummernkreis-das-feld-wird') : t('mappentypen.editor.oder-nummernkreis-schluessel')}</small> })}</span><input id={id('std')} placeholder={t('mappentypen.editor.leer')} value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })} /></label>;
   else if (f.typ === 'datum')
-    standard = <label className="eigenschaft" htmlFor={id('std')}><span>Standardwert</span><input id={id('std')} type="date" value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })} /></label>;
+    standard = <label className="eigenschaft" htmlFor={id('std')}><span>{t('mappentypen.editor.standardwert-2')}</span><input id={id('std')} type="date" value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })} /></label>;
   else if (f.typ === 'janein')
-    standard = <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={f.standard === true} onChange={(e) => setze({ standard: e.target.checked })} /><span><span className="haken-titel">Standardmäßig „Ja“</span></span></label></div>;
+    standard = <div className="eigenschaft unten"><label className="haken"><input type="checkbox" checked={f.standard === true} onChange={(e) => setze({ standard: e.target.checked })} /><span><span className="haken-titel">{t('mappentypen.editor.standardmaessig-ja')}</span></span></label></div>;
   else if (f.typ === 'auswahl' && !f.mehrfach)
-    standard = <label className="eigenschaft" htmlFor={id('std')}><span>Standardwert</span><select id={id('std')} value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })}>
-      <option value="">– keiner –</option>{(f.optionen ?? []).map((o) => <option key={o}>{o}</option>)}</select></label>;
+    standard = <label className="eigenschaft" htmlFor={id('std')}><span>{t('mappentypen.editor.standardwert-2')}</span><select id={id('std')} value={String(f.standard ?? '')} onChange={(e) => setze({ standard: e.target.value })}>
+      <option value="">{t('mappentypen.editor.keiner')}</option>{(f.optionen ?? []).map((o) => <option key={o}>{o}</option>)}</select></label>;
 
   return (
     <div {...p.zieh} className={`feldzeile ${offen ? 'offen' : ''} ${fehler ? 'fehlerhaft' : ''} ${p.zieh.className}`}>
       <div className="feldsumme">
         {p.griff}
         <button type="button" className="feldkopfknopf" aria-expanded={offen} onClick={p.umschalten}>
-          <span className="flabel">{f.label || 'Ohne Bezeichnung'}{f.pflicht && <span className="pflicht">*</span>}</span>
+          <span className="flabel">{f.label || t('mappentypen.editor.ohne-bezeichnung')}{f.pflicht && <span className="pflicht">*</span>}</span>
           <code className="fkey">{f.key}</code>
           <span className="ftyp">{FELDTYPEN[f.typ]}</span>
           {chips.length > 0 && <span className="chips">{chips.map((c) => <span key={c} className="chip">{c}</span>)}</span>}
         </button>
         <div className="feldaktionen">
-          <button type="button" className="symbol" disabled={i === 0} onClick={() => p.verschiebe(-1)} aria-label="Feld nach oben">↑</button>
-          <button type="button" className="symbol" disabled={i === p.anzahl - 1} onClick={() => p.verschiebe(1)} aria-label="Feld nach unten">↓</button>
+          <button type="button" className="symbol" disabled={i === 0} onClick={() => p.verschiebe(-1)} aria-label={t('mappentypen.editor.feld-nach-oben')}>↑</button>
+          <button type="button" className="symbol" disabled={i === p.anzahl - 1} onClick={() => p.verschiebe(1)} aria-label={t('mappentypen.editor.feld-nach-unten')}>↓</button>
         </div>
       </div>
       {fehler && !offen && <p className="fehlertext eingerueckt">{fehler.join(' ')}</p>}
       {offen && (
         <div className="feldeditor">
           {fehler && <div className="hinweis schlecht"><p>{fehler.join(' ')}</p></div>}
-          {f.system && <p className="leise klein">Systemfeld: Bezeichnung, Hilfetext und Register lassen sich ändern, Feldart und Eigenschaften sind fest.</p>}
+          {f.system && <p className="leise klein">{t('mappentypen.editor.systemfeld-bezeichnung-hilfetext-und')}</p>}
           <div className="raster">
-            <label className="eigenschaft" htmlFor={id('label')}><span>Bezeichnung</span><input id={id('label')} value={f.label} placeholder="z. B. Kündigung bis" onChange={(e) => setze({ label: e.target.value })} autoFocus={f._neu} /></label>
+            <label className="eigenschaft" htmlFor={id('label')}><span>{t('mappentypen.editor.bezeichnung')}</span><input id={id('label')} value={f.label} placeholder={t('mappentypen.editor.z-b-kuendigung-bis')} onChange={(e) => setze({ label: e.target.value })} autoFocus={f._neu} /></label>
             {/* Hilfetext neben der Bezeichnung, bei allen Feldarten an derselben Stelle (#372). */}
-            <label className="eigenschaft" htmlFor={id('hilfe')}><span>Hilfetext</span><input id={id('hilfe')} placeholder="Erklärung, die beim Ausfüllen erscheint" value={f.hilfe ?? ''} onChange={(e) => setze({ hilfe: e.target.value })} /></label>
+            <label className="eigenschaft" htmlFor={id('hilfe')}><span>{t('mappentypen.editor.hilfetext')}</span><input id={id('hilfe')} placeholder={t('mappentypen.editor.erklaerung-die-beim-ausfuellen')} value={f.hilfe ?? ''} onChange={(e) => setze({ hilfe: e.target.value })} /></label>
             {p.feldregister.length > 1 && (
-              <label className="eigenschaft" htmlFor={id('reg')}><span>Register</span>
+              <label className="eigenschaft" htmlFor={id('reg')}><span>{t('mappentypen.editor.register-2')}</span>
                 <select id={id('reg')} value={f._register} onChange={(e) => setze({ _register: e.target.value })}>
                   {p.feldregister.map((r) => <option key={r._uid} value={r.key}>{r.name || r.key}</option>)}
                 </select></label>
@@ -568,24 +568,24 @@ function FeldZeile(p: {
           {/* Bei Systemfeldern sind Schlüssel, Datentyp und Eigenschaften fest. */}
           <fieldset className="ohnerahmen" disabled={f.system}>
           <div className="raster">
-            <label className="eigenschaft" htmlFor={id('key')}><span>Kennung <small>{f._neu ? 'wird nach dem Speichern fest' : 'fest – schützt gespeicherte Werte'}</small></span>
+            <label className="eigenschaft" htmlFor={id('key')}><span>{tn('mappentypen.editor.kennung-2', { klein: <small>{f._neu ? t('mappentypen.editor.wird-nach-dem-speichern') : t('mappentypen.editor.fest-schuetzt-gespeicherte-werte')}</small> })}</span>
               <input id={id('key')} className="mono" value={f.key} disabled={!f._neu} onChange={(e) => setze({ key: e.target.value })} /></label>
-            <label className="eigenschaft" htmlFor={id('typ')}><span>Feldart</span>
+            <label className="eigenschaft" htmlFor={id('typ')}><span>{t('mappentypen.editor.feldart')}</span>
               <select id={id('typ')} value={f.typ} onChange={(e) => setze({ typ: e.target.value as Feld['typ'] })}>
                 {Object.entries(FELDTYPEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select></label>
           </div>
           <div className="raster">
-            <div className="eigenschaft unten">{haken('pflicht', 'Pflichtfeld', 'Mappe lässt sich ohne Wert nicht speichern')}</div>
-            {(f.typ === 'text' || f.typ === 'zahl') && <div className="eigenschaft unten">{haken('eindeutig', 'Eindeutig', 'Wert darf je Mappentyp nur einmal vorkommen')}</div>}
+            <div className="eigenschaft unten">{haken('pflicht', t('mappentypen.editor.pflichtfeld'), t('mappentypen.editor.mappe-laesst-sich-ohne'))}</div>
+            {(f.typ === 'text' || f.typ === 'zahl') && <div className="eigenschaft unten">{haken('eindeutig', t('mappentypen.editor.eindeutig'), t('mappentypen.editor.wert-darf-je-mappentyp'))}</div>}
             {standard}
           </div>
-          {besonders && <><h3 className="zwischen">Eigenschaften für {FELDTYPEN[f.typ]}</h3>{besonders}</>}
+          {besonders && <><h3 className="zwischen">{t('mappentypen.editor.eigenschaften-fuer', { FELDTYPEN: FELDTYPEN[f.typ] })}</h3>{besonders}</>}
           {ERKENNUNG_FELDTYPEN.includes(f.typ) && <ErkennungEditor f={f} id={id} setze={setze} />}
           </fieldset>
           <div className="feldfuss">
-            {f.system ? <span className="leise klein">Systemfelder lassen sich nicht entfernen.</span> : <button type="button" className="textknopf gefahr" onClick={p.entferne}>Feld entfernen</button>}
-            <button type="button" className="knopf klein" onClick={p.umschalten}>Zuklappen</button>
+            {f.system ? <span className="leise klein">{t('mappentypen.editor.systemfelder-lassen-sich-nicht')}</span> : <button type="button" className="textknopf gefahr" onClick={p.entferne}>{t('mappentypen.editor.feld-entfernen-2')}</button>}
+            <button type="button" className="knopf klein" onClick={p.umschalten}>{t('mappentypen.editor.zuklappen')}</button>
           </div>
         </div>
       )}
@@ -646,17 +646,17 @@ function ErkennungEditor({ f, id, setze }: { f: EntwurfFeld; id: (x: string) => 
     <div className="raster">
       <div className="eigenschaft unten">
         <label className="haken"><input type="checkbox" checked={an} onChange={(e) => setze({ erkennung: e.target.checked ? {} : null })} />
-          <span><span className="haken-titel">Für die Erkennung nutzen&nbsp;<Hilfe ort="mappentyp.erkennung" /></span><small className="hilfe">Die Erkennung sucht diesen Wert im Text neuer Post (z. B. Kundennummer, IBAN, E-Mail) und füllt das Feld bei „Aus Dokument ausfüllen“.</small></span></label>
+          <span><span className="haken-titel">{tn('mappentypen.editor.fuer-die-erkennung-nutzen', { hilfe: <Hilfe ort="mappentyp.erkennung" /> })}</span><small className="hilfe">{t('mappentypen.editor.die-erkennung-sucht-diesen')}</small></span></label>
       </div>
       {an && artenFuer(f.typ).length > 1 && (
-        <label className="eigenschaft" htmlFor={id('erkart')}><span>Was steht im Feld?</span>
+        <label className="eigenschaft" htmlFor={id('erkart')}><span>{t('mappentypen.editor.was-steht-im-feld')}</span>
           <select id={id('erkart')} value={f.erkennung?.art ?? ''} onChange={(e) => setze({ erkennung: { ...f.erkennung, art: (e.target.value || undefined) as Erkennungsart | undefined } })}>
-            <option value="">automatisch{geschaetzt ? ` – ${ERKENNUNGSARTEN[geschaetzt]}` : ' – nichts erkannt'}</option>
+            <option value="">{t('mappentypen.editor.automatisch', { wert: geschaetzt ? ` – ${ERKENNUNGSARTEN[geschaetzt]}` : t('mappentypen.editor.nichts-erkannt') })}</option>
             {artenFuer(f.typ).map((a) => <option key={a} value={a}>{ERKENNUNGSARTEN[a]}</option>)}
           </select></label>
       )}
-      {an && <label className="eigenschaft" htmlFor={id('erkhinweis')}><span>Erkennungshinweis <small>optional</small></span>
-        <input id={id('erkhinweis')} maxLength={ERKENNUNG_HINWEIS_MAX} placeholder="z. B. Kundennummer oben rechts, Muster 100-####" value={f.erkennung?.hinweis ?? ''} onChange={(e) => setze({ erkennung: { ...f.erkennung, hinweis: e.target.value } })} /></label>}
+      {an && <label className="eigenschaft" htmlFor={id('erkhinweis')}><span>{tn('mappentypen.editor.erkennungshinweis', { klein: <small>{t('mappentypen.editor.optional')}</small> })}</span>
+        <input id={id('erkhinweis')} maxLength={ERKENNUNG_HINWEIS_MAX} placeholder={t('mappentypen.editor.z-b-kundennummer-oben')} value={f.erkennung?.hinweis ?? ''} onChange={(e) => setze({ erkennung: { ...f.erkennung, hinweis: e.target.value } })} /></label>}
     </div>
   );
 }
@@ -696,7 +696,7 @@ function TitelEditor({ e, setze, klappe }: { e: Entwurf; setze: (v: string) => v
   const beispiel = mappen.find((m) => m.id === beispielId);
   const werte = beispiel ? beispiel.werte : beispielWerte(felder);
   const jetzt = new Date().toISOString();
-  const vorschau = titelAus({ felder, titelVorlage: v }, werte, (id) => (id === 'beispiel' ? '‹verwiesene Mappe›' : titelOder(bezuege[id]?.titel)),
+  const vorschau = titelAus({ felder, titelVorlage: v }, werte, (id) => (id === 'beispiel' ? t('mappentypen.editor.verwiesene-mappe') : titelOder(bezuege[id]?.titel)),
     beispiel ?? { erstellt: jetzt, geaendert: jetzt });
   const automatisch = wirksameVorlage({ felder, titelVorlage: '' });
 
@@ -710,38 +710,37 @@ function TitelEditor({ e, setze, klappe }: { e: Entwurf; setze: (v: string) => v
   }
 
   return (
-    <Bereich id="titel" titel="Titel einer Mappe" klappe={klappe}
+    <Bereich id="titel" titel={t('mappentypen.editor.titel-einer-mappe')} klappe={klappe}
       kurz={<><code className="mono">{v || automatisch || '–'}</code>{vorschau ? <> · z. B. „{vorschau}“</> : null}</>}
-      beschreibung="So heißt eine Mappe in Listen und Verweisen. Felder in geschweiften Klammern werden eingesetzt, alles andere bleibt stehen.">
-      <label className="eigenschaft" htmlFor="titel-vorlage"><span>Vorlage</span>
+      beschreibung={t('mappentypen.editor.so-heisst-eine-mappe')}>
+      <label className="eigenschaft" htmlFor="titel-vorlage"><span>{t('mappentypen.editor.vorlage')}</span>
         <input id="titel-vorlage" ref={feld} className="mono" value={v} onChange={(ev) => setze(ev.target.value)}
-          placeholder={automatisch ? `leer = ${automatisch}` : 'z. B. {verwendungszweck} vom {zahlungsdatum}'} /></label>
+          placeholder={automatisch ? t('mappentypen.editor.leer-2', { automatisch }) : t('mappentypen.editor.titel-beispiel')} /></label>
       <div className="chipwahl">
-        <span className="leise klein">Einsetzen:</span>
+        <span className="leise klein">{t('mappentypen.editor.einsetzen')}</span>
         {/* Passwörter nie im Titel (#46). */}
         {felder.filter((f) => f.typ !== 'passwort').map((f) => <button key={f.key} type="button" className="chipknopf" onClick={() => einsetzen(f.key)}>{f.label || f.key}</button>)}
         {Object.entries(INDEXPLATZHALTER).map(([k, name]) => (
-          <button key={k} type="button" className="chipknopf index" title={`Indexwert {${k}}: Datum, an dem die Mappe ${k === 'angelegt' ? 'angelegt' : 'zuletzt geändert'} wurde`} onClick={() => einsetzen(k)}>{name}</button>
+          <button key={k} type="button" className="chipknopf index" title={t('mappentypen.editor.indexwert-datum-an-dem', { k, wert: k === 'angelegt' ? t('mappentypen.editor.angelegt') : t('mappentypen.editor.zuletzt-geaendert') })} onClick={() => einsetzen(k)}>{name}</button>
         ))}
       </div>
-      {unbekannt.length > 0 && <p className="fehlertext">Diese Platzhalter passen zu keinem Feld: {unbekannt.map((k) => `{${k}}`).join(', ')}</p>}
+      {unbekannt.length > 0 && <p className="fehlertext">{t('mappentypen.editor.diese-platzhalter-passen-zu')}{' '}{unbekannt.map((k) => `{${k}}`).join(', ')}</p>}
       {filterFehler.map((x) => <p key={x} className="fehlertext">{x}</p>)}
       <details className="filterhilfe">
-        <summary className="klein">Platzhalter formatieren mit Filtern <Hilfe ort="werkbank.titelfilter" /></summary>
-        <p className="leise klein">Hinter einem senkrechten Strich, auch mehrere hintereinander: <code className="mono">{'{betreff|kurz:30|gross}'}</code>. Ist ein Feld leer, fällt es samt Trenner wie „ – “ oder „ · “ weg.</p>
+        <summary className="klein">{tn('mappentypen.editor.platzhalter-formatieren-mit-filtern', { hilfe: <Hilfe ort="werkbank.titelfilter" /> })}</summary>
+        <p className="leise klein">{tn('mappentypen.editor.hinter-einem-senkrechten-strich', { code: <code className="mono">{t('mappentypen.editor.betreff-kurz-30-gross')}</code> })}</p>
         <table className="klein filtertabelle"><tbody>
           {Object.entries(FILTER).map(([k, f]) => <tr key={k}><td><code className="mono">{k}{'arg' in f ? (f.arg === 'zahl' ? ':30' : ':"…"') : ''}</code></td><td>{f.text}</td></tr>)}
         </tbody></table>
       </details>
       <div className="vorschau">
-        <span className="ueber">Vorschau</span>
-        <strong className="vorschautitel">{vorschau || 'Ohne Titel'}</strong>
+        <span className="ueber">{t('mappentypen.editor.vorschau')}</span>
+        <strong className="vorschautitel">{vorschau || t('mappentypen.editor.ohne-titel')}</strong>
         {mappen.length > 0
-          ? <label className="klein leise">mit den Werten von&nbsp;
-              <select value={beispielId} onChange={(ev) => setBeispielId(ev.target.value)}>
+          ? <label className="klein leise">{t('mappentypen.editor.mit-den-werten-von')}<select value={beispielId} onChange={(ev) => setBeispielId(ev.target.value)}>
                 {mappen.map((m) => <option key={m.id} value={m.id}>{titelOder(m.titel)}</option>)}
               </select></label>
-          : <span className="klein leise">mit Beispielwerten</span>}
+          : <span className="klein leise">{t('mappentypen.editor.mit-beispielwerten')}</span>}
       </div>
     </Bereich>
   );
@@ -766,7 +765,7 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
   };
 
   function hinzufuegen(art: Registerart) {
-    const name = { felder: 'Weitere Angaben', dokumente: 'Dokumente', verknuepfungen: 'Verknüpfungen', protokoll: 'Historie' }[art];
+    const name = { felder: t('mappentypen.editor.weitere-angaben'), dokumente: t('mappentypen.editor.dokumente'), verknuepfungen: t('mappentypen.editor.verknuepfungen'), protokoll: t('mappentypen.editor.historie') }[art];
     const r: EntwurfRegister = { key: eindeutig(schluesselAus(name), -1), name, art, _uid: neueId(), _neu: true, ...(art === 'verknuepfungen' ? { quellen: [] } : {}) };
     setE((x) => ({ ...x, register: [...x.register, r] }));
   }
@@ -780,25 +779,25 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
     if (r.art === 'felder') {
       const ziel = e.register.find((x, j) => j !== i && x.art === 'felder');
       const betroffen = e.felder.filter((f) => f._register === r.key);
-      if (betroffen.length && !ziel) { await hinweis({ titel: 'Register lässt sich nicht entfernen', text: 'Auf diesem Register liegen Felder, und es gibt kein anderes Feldregister. Lege zuerst ein weiteres an.' }); return; }
-      if (!(await rueckfrage({ titel: `Register „${r.name}“ entfernen?`, text: `${betroffen.length ? `Seine ${betroffen.length} Felder wandern auf „${ziel!.name}“.` : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: 'Entfernen' }))) return;
+      if (betroffen.length && !ziel) { await hinweis({ titel: t('mappentypen.editor.register-laesst-sich-nicht'), text: t('mappentypen.editor.auf-diesem-register-liegen') }); return; }
+      if (!(await rueckfrage({ titel: t('mappentypen.editor.register-entfernen', { name: r.name }), text: `${betroffen.length ? t('mappentypen.editor.seine-felder-wandern-auf', { betroffen: betroffen.length, name: ziel!.name }) : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: t('mappentypen.editor.entfernen') }))) return;
       setE((x) => ({ ...x, register: x.register.filter((_, j) => j !== i), felder: x.felder.map((f) => (f._register === r.key ? { ...f, _register: ziel!.key } : f)) }));
       return;
     }
-    if (!(await rueckfrage({ titel: `Register „${r.name}“ entfernen?`, text: `${r.art === 'dokumente' ? 'Enthält es noch Dokumente, lässt sich der Mappentyp nicht speichern.' : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: 'Entfernen' }))) return;
+    if (!(await rueckfrage({ titel: t('mappentypen.editor.register-entfernen', { name: r.name }), text: `${r.art === 'dokumente' ? t('mappentypen.editor.enthaelt-es-noch-dokumente') : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: t('mappentypen.editor.entfernen') }))) return;
     setE((x) => ({ ...x, register: x.register.filter((_, j) => j !== i) }));
   }
 
   // Mögliche Quellen: jedes Referenzfeld, das auf diesen Mappentyp zeigt (auch aus ihm selbst).
   const quellen = [
-    ...d.typen.filter((t) => t.id !== e.id).flatMap((t) => t.felder.filter((f) => f.typ === 'referenz' && (f.zielTyp === e.id || f.zielTyp === '*')).map((f) => ({ typId: t.id, feldKey: f.key, text: `${t.name} › ${f.label}` }))),
-    ...e.felder.filter((f) => f.typ === 'referenz' && f.zielTyp === e.id).map((f) => ({ typId: e.id, feldKey: f.key, text: `${e.name || 'Dieser Mappentyp'} › ${f.label}` })),
+    ...d.typen.filter((mappentyp) => mappentyp.id !== e.id).flatMap((mappentyp) => mappentyp.felder.filter((f) => f.typ === 'referenz' && (f.zielTyp === e.id || f.zielTyp === '*')).map((f) => ({ typId: mappentyp.id, feldKey: f.key, text: `${mappentyp.name} › ${f.label}` }))),
+    ...e.felder.filter((f) => f.typ === 'referenz' && f.zielTyp === e.id).map((f) => ({ typId: e.id, feldKey: f.key, text: `${e.name || t('mappentypen.editor.dieser-mappentyp-2')} › ${f.label}` })),
   ];
 
   return (
-    <Bereich id="register" titel="Register" hilfe={<Hilfe ort="mappentyp.register" />} klappe={klappe}
-      kurz={e.register.map((r) => r.name || r.key).join(' · ') || 'keine'}
-      beschreibung="Die Trennblätter einer Mappe, in dieser Reihenfolge. Welche Felder auf welchem Feldregister liegen, stellst du am Feld ein.">
+    <Bereich id="register" titel={t('mappentypen.editor.register-2')} hilfe={<Hilfe ort="mappentyp.register" />} klappe={klappe}
+      kurz={e.register.map((r) => r.name || r.key).join(' · ') || t('mappentypen.editor.keine')}
+      beschreibung={t('mappentypen.editor.die-trennblaetter-einer-mappe')}>
       <div className="registerliste">
         {e.register.map((r, i) => {
           const anzahl = e.felder.filter((f) => f._register === r.key).length;
@@ -807,11 +806,11 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
             <div key={r._uid} {...zr.eintrag(r._uid)}>
               <div {...(r.art === 'felder' ? feldAblage(r.key) : {})} className={`registerzeile art-${r.art} ${r.art === 'felder' ? feldAblage(r.key).className : ''}`}>
               <div className="registerkopf">
-                <span className="registerchip"><button {...zr.griff(r._uid, r.name || 'Register')} onKeyDown={(ev) => ziehTasten(ev, {
-                  hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(`${r.name} steht jetzt an Stelle ${i}.`); } : undefined,
-                  runter: i < e.register.length - 1 ? () => { verschiebe(i, 1); setAnsage(`${r.name} steht jetzt an Stelle ${i + 2}.`); } : undefined,
+                <span className="registerchip"><button {...zr.griff(r._uid, r.name || t('mappentypen.editor.register-2'))} onKeyDown={(ev) => ziehTasten(ev, {
+                  hoch: i > 0 ? () => { verschiebe(i, -1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-3', { name: r.name, i })); } : undefined,
+                  runter: i < e.register.length - 1 ? () => { verschiebe(i, 1); setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-4', { name: r.name, wert: i + 2 })); } : undefined,
                 })}><span aria-hidden="true">⠿</span></button><span className="chip">{REGISTERARTEN[r.art]}</span></span>
-                <input aria-label="Name des Registers" value={r.name} onChange={(ev) => {
+                <input aria-label={t('mappentypen.editor.name-des-registers')} value={r.name} onChange={(ev) => {
                   const name = ev.target.value;
                   if (!r._neu) { setzeReg(i, { name }); return; }
                   const key = eindeutig(schluesselAus(name), i);
@@ -822,29 +821,29 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
                     felder: x.felder.map((f) => (f._register === r.key ? { ...f, _register: key } : f)),
                   }));
                 }} />
-                <code className="fkey" title="Kennung">{r.key}</code>
+                <code className="fkey" title={t('mappentypen.editor.kennung-3')}>{r.key}</code>
                 <div className="feldaktionen">
-                  <button type="button" className="symbol" disabled={i === 0} onClick={() => verschiebe(i, -1)} aria-label="Register nach vorn">↑</button>
-                  <button type="button" className="symbol" disabled={i === e.register.length - 1} onClick={() => verschiebe(i, 1)} aria-label="Register nach hinten">↓</button>
-                  <button type="button" className="symbol" onClick={() => entferne(i)} aria-label={`Register ${r.name} entfernen`} title={`Register entfernen –${ERST_BEIM_SPEICHERN}`}>×</button>
+                  <button type="button" className="symbol" disabled={i === 0} onClick={() => verschiebe(i, -1)} aria-label={t('mappentypen.editor.register-nach-vorn')}>↑</button>
+                  <button type="button" className="symbol" disabled={i === e.register.length - 1} onClick={() => verschiebe(i, 1)} aria-label={t('mappentypen.editor.register-nach-hinten')}>↓</button>
+                  <button type="button" className="symbol" onClick={() => entferne(i)} aria-label={t('mappentypen.editor.register-entfernen-2', { name: r.name })} title={t('mappentypen.editor.register-entfernen-3', { ERST_BEIM_SPEICHERN })}>×</button>
                 </div>
               </div>
-              {r.art === 'felder' && <p className="leise klein">{anzahl ? `${anzahl} Feld${anzahl === 1 ? '' : 'er'}: ${e.felder.filter((f) => f._register === r.key).map((f) => f.label).join(', ')}` : 'Noch keine Felder.'}</p>}
+              {r.art === 'felder' && <p className="leise klein">{anzahl ? t('mappentypen.editor.felder-3', { anzahl, map: e.felder.filter((f) => f._register === r.key).map((f) => f.label).join(', ') }) : t('mappentypen.editor.noch-keine-felder-2')}</p>}
               {r.art === 'dokumente' && <>
-                <p className="leise klein">Hier werden Dateien hochgeladen; PDFs und Bilder sind direkt ansehbar.</p>
+                <p className="leise klein">{t('mappentypen.editor.hier-werden-dateien-hochgeladen')}</p>
                 <label className="haken"><input type="checkbox" checked={r.volltext !== false} onChange={(ev) => setzeReg(i, { volltext: ev.target.checked ? undefined : false })} />
-                  <span>Volltext erzeugen<small className="hilfe">Textebene von PDFs lesen und gescannte Seiten und Bilder durch die Texterkennung schicken, damit die Volltextsuche sie findet.</small></span></label>
+                  <span>{tn('mappentypen.editor.volltext-erzeugen', { klein: <small className="hilfe">{t('mappentypen.editor.textebene-von-pdfs-lesen')}</small> })}</span></label>
                 {/* Versionierung (#194) */}
                 <label className="haken"><input type="checkbox" checked={!!r.versionierung} onChange={(ev) => setzeReg(i, { versionierung: ev.target.checked || undefined, ...(ev.target.checked ? {} : { versionenBehalten: undefined }) })} />
-                  <span>Versionierung einschalten<small className="hilfe">Beim Ersetzen bleibt die alte Version erhalten und lässt sich wieder hervorholen.</small></span></label>
-                {r.versionierung && <label className="eigenschaft klein einzug"><span>Nur die letzten … Versionen behalten <small>leer = alle</small></span>
+                  <span>{tn('mappentypen.editor.versionierung-einschalten', { klein: <small className="hilfe">{t('mappentypen.editor.beim-ersetzen-bleibt-die')}</small> })}</span></label>
+                {r.versionierung && <label className="eigenschaft klein einzug"><span>{tn('mappentypen.editor.nur-die-letzten-versionen', { klein: <small>{t('mappentypen.editor.leer-alle')}</small> })}</span>
                   <input type="number" min={2} className="kurz" value={r.versionenBehalten ?? ''} onChange={(ev) => setzeReg(i, { versionenBehalten: ev.target.value === '' ? undefined : Math.max(2, Math.trunc(Number(ev.target.value))) })} /></label>}
               </>}
-              {r.art === 'protokoll' && <p className="leise klein">Zeigt, wer wann was an der Mappe geändert hat – je Speichern ein Eintrag mit allen geänderten Feldern, dazu Dokumente, Papierkorb, Notizen, Aufgaben und E-Mails. Einträge lassen sich nicht ändern.</p>}
+              {r.art === 'protokoll' && <p className="leise klein">{t('mappentypen.editor.zeigt-wer-wann-was')}</p>}
               {r.art === 'verknuepfungen' && (
                 quellen.length === 0
-                  ? <p className="leise klein">Noch verweist kein Verweisfeld auf diesen Mappentyp. Das Register zeigt alle Verweise, sobald es welche gibt.</p>
-                  : <fieldset className="wahl"><legend className="klein">Zeigt Mappen, die so hierher verweisen <span className="leise">(keine Auswahl = alle, als einfache Liste; für eine Tabelle die Quelle auswählen und eine Trefferliste wählen)</span></legend>
+                  ? <p className="leise klein">{t('mappentypen.editor.noch-verweist-kein-verweisfeld')}</p>
+                  : <fieldset className="wahl"><legend className="klein">{tn('mappentypen.editor.zeigt-mappen-die-so', { span: <span className="leise">{t('mappentypen.editor.keine-auswahl-alle-als')}</span> })}</legend>
                       {quellen.map((q) => {
                         const an = gewaehlt.some((g) => g.typId === q.typId && g.feldKey === q.feldKey);
                         const g = gewaehlt.find((x) => x.typId === q.typId && x.feldKey === q.feldKey);
@@ -857,12 +856,12 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
                               onChange={() => setzeReg(i, { quellen: an ? gewaehlt.filter((x) => !(x.typId === q.typId && x.feldKey === q.feldKey)) : [...gewaehlt, { typId: q.typId, feldKey: q.feldKey }] })} />
                               <span>{q.text}</span></label>
                             {/* Immer da, bis zum Anhaken unsichtbar: so springt beim An- und Abhaken keine Zeile (#372). */}
-                            <select aria-label={`Trefferliste für ${q.text}`} className={`klein ${fehlt ? 'fehlerhaft' : ''} ${an ? '' : 'platzhalter'}`} value={g?.trefferliste ?? ''}
+                            <select aria-label={t('mappentypen.editor.trefferliste-fuer', { text: q.text })} className={`klein ${fehlt ? 'fehlerhaft' : ''} ${an ? '' : 'platzhalter'}`} value={g?.trefferliste ?? ''}
                               disabled={!an}
                               onChange={(ev) => setzeReg(i, { quellen: gewaehlt.map((x) => (x === g ? { typId: x.typId, feldKey: x.feldKey, ...(ev.target.value ? { trefferliste: ev.target.value } : {}) } : x)) })}>
-                              <option value="">einfache Liste (Titel)</option>
-                              {fehlt && <option value={g!.trefferliste}>– {g!.trefferliste} (fehlt, einfache Liste) –</option>}
-                              {listen.map((l) => <option key={l.key} value={l.key}>Tabelle: {l.name}</option>)}
+                              <option value="">{t('mappentypen.editor.einfache-liste-titel')}</option>
+                              {fehlt && <option value={g!.trefferliste}>{tn('mappentypen.editor.fehlt-einfache-liste', { trefferliste: g!.trefferliste })}</option>}
+                              {listen.map((l) => <option key={l.key} value={l.key}>{t('mappentypen.editor.tabelle', { name: l.name })}</option>)}
                             </select>
                           </div>
                         );
@@ -876,10 +875,10 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
       </div>
       <Ansage text={ansage} />
       <div className="knoepfe">
-        <button type="button" className="knopf klein" onClick={() => hinzufuegen('felder')}>+ Feldregister</button>
-        <button type="button" className="knopf klein" onClick={() => hinzufuegen('dokumente')}>+ Dokumentenregister</button>
-        <button type="button" className="knopf klein" onClick={() => hinzufuegen('verknuepfungen')}>+ Verknüpfungsregister</button>
-        {!e.register.some((r) => r.art === 'protokoll') && <button type="button" className="knopf klein" onClick={() => hinzufuegen('protokoll')}>+ Historie</button>}
+        <button type="button" className="knopf klein" onClick={() => hinzufuegen('felder')}>{t('mappentypen.editor.feldregister')}</button>
+        <button type="button" className="knopf klein" onClick={() => hinzufuegen('dokumente')}>{t('mappentypen.editor.dokumentenregister')}</button>
+        <button type="button" className="knopf klein" onClick={() => hinzufuegen('verknuepfungen')}>{t('mappentypen.editor.verknuepfungsregister-2')}</button>
+        {!e.register.some((r) => r.art === 'protokoll') && <button type="button" className="knopf klein" onClick={() => hinzufuegen('protokoll')}>{t('mappentypen.editor.historie-2')}</button>}
       </div>
     </Bereich>
   );
@@ -890,7 +889,7 @@ function RegisterEditor({ e, setE, feldAblage, klappe }: { e: Entwurf; setE: (f:
 /** Trefferlisten (#75): mehrere je Typ, eine ist Standard; je Liste Spalten auswählen und anordnen (#19). */
 function TrefferlisteEditor({ e, setE, klappe }: { e: Entwurf; setE: (f: (x: Entwurf) => Entwurf) => void; klappe: Klappe }) {
   const d = useDaten();
-  const name = (k: string) => (k.startsWith('feld:') ? e.felder.find((f) => `feld:${f._uid}` === k)?.label || '(Feld ohne Namen)' : SYSTEMSPALTEN[k as Systemspalte] ?? k);
+  const name = (k: string) => (k.startsWith('feld:') ? e.felder.find((f) => `feld:${f._uid}` === k)?.label || t('mappentypen.editor.feld-ohne-namen') : SYSTEMSPALTEN[k as Systemspalte] ?? k);
   const setzeListe = (i: number, patch: Partial<EntwurfListe>) => setE((x) => ({ ...x, trefferlisten: x.trefferlisten.map((l, j) => (j === i ? { ...l, ...patch } : l)) }));
   const eindeutig = (basis: string, i: number) => {
     let k = basis || 'liste'; let n = 2;
@@ -898,14 +897,14 @@ function TrefferlisteEditor({ e, setE, klappe }: { e: Entwurf; setE: (f: (x: Ent
     return k;
   };
   function hinzufuegen() {
-    const nm = `Liste ${e.trefferlisten.length + 1}`;
+    const nm = t('mappentypen.editor.liste', { wert: e.trefferlisten.length + 1 });
     const vorlage = e.trefferlisten.find((l) => l.standard)?.spalten ?? [];
     setE((x) => ({ ...x, trefferlisten: [...x.trefferlisten, { _uid: neueId(), _neu: true, key: eindeutig(schluesselAus(nm), -1), name: nm, spalten: [...vorlage], standard: false }] }));
   }
   async function entferne(i: number) {
     const l = e.trefferlisten[i];
     const n = verwendung(l.key).length;
-    if (!(await rueckfrage({ titel: `Trefferliste „${l.name}“ entfernen?`, text: `${n ? `Sie wird ${n === 1 ? 'an einer Stelle' : `an ${n} Stellen`} verwendet; dort gilt danach die Standardliste.` : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: 'Entfernen' }))) return;
+    if (!(await rueckfrage({ titel: t('mappentypen.editor.trefferliste-entfernen', { name: l.name }), text: `${n ? t('mappentypen.editor.sie-wird-an-stellen', { anzahl: n }) : ''}${ERST_BEIM_SPEICHERN}`.trim(), ja: t('mappentypen.editor.entfernen') }))) return;
     setE((x) => {
       const rest = x.trefferlisten.filter((_, j) => j !== i);
       if (l.standard && rest.length) rest[0] = { ...rest[0], standard: true };
@@ -914,49 +913,48 @@ function TrefferlisteEditor({ e, setE, klappe }: { e: Entwurf; setE: (f: (x: Ent
   }
   // Wo eine Liste verwendet wird: Sichten mit diesem Typ und Verknüpfungsregister mit diesem Typ als Quelle.
   function verwendung(key: string): string[] {
-    const sichten = d.sichten.filter((s) => s.trefferliste === key && wirksameTypen(d.sichten, s.id).includes(e.id)).map((s) => `Ansicht „${s.name}“`);
+    const sichten = d.sichten.filter((s) => s.trefferliste === key && wirksameTypen(d.sichten, s.id).includes(e.id)).map((s) => t('mappentypen.editor.ansicht-2', { name: s.name }));
     const register = [
-      ...d.typen.filter((t) => t.id !== e.id).map((t) => ({ typ: t.name, register: t.register })),
+      ...d.typen.filter((mappentyp) => mappentyp.id !== e.id).map((mappentyp) => ({ typ: mappentyp.name, register: mappentyp.register })),
       { typ: e.name || 'dieser Mappentyp', register: e.register as Register[] },
-    ].flatMap(({ typ, register }) => register.filter((r) => r.quellen?.some((q) => q.typId === e.id && q.trefferliste === key)).map((r) => `Register „${r.name}“ (${typ})`));
+    ].flatMap(({ typ, register }) => register.filter((r) => r.quellen?.some((q) => q.typId === e.id && q.trefferliste === key)).map((r) => t('mappentypen.editor.register-3', { name: r.name, typ })));
     return [...sichten, ...register];
   }
   return (
-    <Bereich id="trefferlisten" titel="Trefferlisten" hilfe={<Hilfe ort="mappentyp.trefferlisten" />} klappe={klappe}
-      kurz={`${e.trefferlisten.length === 1 ? '1 Liste' : `${e.trefferlisten.length} Listen`}, Standard: ${e.trefferlisten.find((l) => l.standard)?.name ?? '–'}`}
-      beschreibung={<>Spalten, wenn die Liste breit genug ist, in dieser Reihenfolge. In schmalen Fenstern bilden die ersten drei den kompakten Eintrag: die erste fett, die zweite und dritte darunter. Ohne Spalten: Titel und zwei Felder.
-          Eine Liste ist Standard; Ansichten und Verknüpfungsregister können eine andere wählen.</>}>
+    <Bereich id="trefferlisten" titel={t('mappentypen.editor.trefferlisten')} hilfe={<Hilfe ort="mappentyp.trefferlisten" />} klappe={klappe}
+      kurz={t('mappentypen.editor.listen-standard', { anzahl: e.trefferlisten.length, wert: e.trefferlisten.find((l) => l.standard)?.name ?? '–' })}
+      beschreibung={<>{t('mappentypen.editor.spalten-wenn-die-liste')}</>}>
       <div className="trefferlisten">
         {e.trefferlisten.map((l, i) => {
           const wo = verwendung(l.key);
           return (
-            <section key={l._uid} className={`trefferlistenblock ${l.standard ? 'standard' : ''}`} aria-label={`Trefferliste ${l.name}`}>
+            <section key={l._uid} className={`trefferlistenblock ${l.standard ? 'standard' : ''}`} aria-label={t('mappentypen.editor.trefferliste', { name: l.name })}>
               <div className="registerkopf">
-                <input aria-label="Name der Trefferliste" value={l.name} onChange={(ev) => {
+                <input aria-label={t('mappentypen.editor.name-der-trefferliste')} value={l.name} onChange={(ev) => {
                   const nm = ev.target.value;
                   setzeListe(i, l._neu ? { name: nm, key: eindeutig(schluesselAus(nm), i) } : { name: nm });
                 }} />
-                <code className="fkey" title="Kennung">{l.key}</code>
+                <code className="fkey" title={t('mappentypen.editor.kennung-3')}>{l.key}</code>
                 <label className="haken klein"><input type="radio" name="standardliste" checked={l.standard}
-                  onChange={() => setE((x) => ({ ...x, trefferlisten: x.trefferlisten.map((y, j) => ({ ...y, standard: j === i })) }))} /><span>Standard</span></label>
+                  onChange={() => setE((x) => ({ ...x, trefferlisten: x.trefferlisten.map((y, j) => ({ ...y, standard: j === i })) }))} /><span>{t('mappentypen.editor.standard')}</span></label>
                 <div className="feldaktionen">
-                  <button type="button" className="symbol" disabled={e.trefferlisten.length < 2} title={e.trefferlisten.length < 2 ? 'Eine Trefferliste braucht der Mappentyp immer' : `Trefferliste entfernen –${ERST_BEIM_SPEICHERN}`}
-                    onClick={() => entferne(i)} aria-label={`Trefferliste ${l.name} entfernen`}>×</button>
+                  <button type="button" className="symbol" disabled={e.trefferlisten.length < 2} title={e.trefferlisten.length < 2 ? t('mappentypen.editor.eine-trefferliste-braucht-der') : t('mappentypen.editor.trefferliste-entfernen-2', { ERST_BEIM_SPEICHERN })}
+                    onClick={() => entferne(i)} aria-label={t('mappentypen.editor.trefferliste-entfernen-3', { name: l.name })}>×</button>
                 </div>
               </div>
               <Spaltenwahl e={e} spalten={l.spalten} name={name} setze={(spalten) => setzeListe(i, { spalten })} />
-              <p className="leise klein">{wo.length ? `Verwendet in: ${wo.join(', ')}` : l.standard ? 'Gilt überall, wo keine andere Liste gewählt ist.' : 'Noch nirgends verwendet.'}</p>
+              <p className="leise klein">{wo.length ? t('mappentypen.editor.verwendet-in-2', { wo: wo.join(', ') }) : l.standard ? t('mappentypen.editor.gilt-ueberall-wo-keine') : t('mappentypen.editor.noch-nirgends-verwendet')}</p>
             </section>
           );
         })}
       </div>
-      <div className="knoepfe"><button type="button" className="knopf klein" onClick={hinzufuegen}>+ Trefferliste</button></div>
+      <div className="knoepfe"><button type="button" className="knopf klein" onClick={hinzufuegen}>{t('mappentypen.editor.trefferliste-2')}</button></div>
     </Bereich>
   );
 }
 
 /** Spalten einer Trefferliste: auswählen und anordnen. */
-function Spaltenwahl({ e, spalten, name, setze }: { e: Entwurf; spalten: string[]; name: (k: string) => string; setze: (t: string[]) => void }) {
+function Spaltenwahl({ e, spalten, name, setze }: { e: Entwurf; spalten: string[]; name: (k: string) => string; setze: (eintrag: string[]) => void }) {
   // Spalten gelöschter Felder und Passwortfelder (#46) fallen weg.
   const liste = spalten.filter((k) => !k.startsWith('feld:') || e.felder.some((f) => `feld:${f._uid}` === k && f.typ !== 'passwort'));
   const verfuegbar = [
@@ -968,7 +966,7 @@ function Spaltenwahl({ e, spalten, name, setze }: { e: Entwurf; spalten: string[
     const j = i + r;
     if (j < 0 || j >= liste.length) return;
     const n = [...liste]; [n[i], n[j]] = [n[j], n[i]]; setze(n);
-    setAnsage(`${name(liste[i])} steht jetzt an Stelle ${j + 1}.`);
+    setAnsage(t('mappentypen.editor.steht-jetzt-an-stelle-4', { name: name(liste[i]), wert: j + 1 }));
   };
   // Drag & Drop (#74)
   const zs = useZiehen({ fertig: (quelle, ziel, ort) => setze(umgestellt(liste, liste.indexOf(quelle), liste.indexOf(ziel), ort === 'vor' ? 'vor' : 'nach')) });
@@ -981,21 +979,21 @@ function Spaltenwahl({ e, spalten, name, setze }: { e: Entwurf; spalten: string[
             <li key={k} {...zs.eintrag(k)} className={`${i < 3 ? 'kompakt' : ''} ${zs.eintrag(k).className}`}>
               <button {...zs.griff(k, name(k))} onKeyDown={(ev) => ziehTasten(ev, { hoch: () => schiebe(i, -1), runter: () => schiebe(i, 1) })}><span aria-hidden="true">⠿</span></button>
               <span className="nr">{i + 1}</span>
-              <span className="nm">{name(k)}{k.startsWith('_') && <span className="chip">System</span>}</span>
+              <span className="nm">{name(k)}{k.startsWith('_') && <span className="chip">{t('mappentypen.editor.system')}</span>}</span>
               <span className="aktionen">
-                <button type="button" className="symbol" disabled={i === 0} onClick={() => schiebe(i, -1)} aria-label={`${name(k)} nach vorn`}>↑</button>
-                <button type="button" className="symbol" disabled={i === liste.length - 1} onClick={() => schiebe(i, 1)} aria-label={`${name(k)} nach hinten`}>↓</button>
-                <button type="button" className="symbol" onClick={() => setze(liste.filter((x) => x !== k))} aria-label={`${name(k)} entfernen`}>×</button>
+                <button type="button" className="symbol" disabled={i === 0} onClick={() => schiebe(i, -1)} aria-label={t('mappentypen.editor.nach-vorn', { name: name(k) })}>↑</button>
+                <button type="button" className="symbol" disabled={i === liste.length - 1} onClick={() => schiebe(i, 1)} aria-label={t('mappentypen.editor.nach-hinten', { name: name(k) })}>↓</button>
+                <button type="button" className="symbol" onClick={() => setze(liste.filter((x) => x !== k))} aria-label={t('mappentypen.editor.entfernen-2', { name: name(k) })}>×</button>
               </span>
             </li>
           ))}
         </ol>
       )}
       {verfuegbar.length > 0 && (
-        <label className="eigenschaft schmal"><span>Spalte hinzufügen</span>
+        <label className="eigenschaft schmal"><span>{t('mappentypen.editor.spalte-hinzufuegen')}</span>
           <select value="" onChange={(ev) => { if (ev.target.value) setze([...liste, ev.target.value]); }}>
-            <option value="">– wählen –</option>
-            {verfuegbar.map((x) => <option key={x.k} value={x.k}>{x.n}{x.k.startsWith('_') ? ' (System)' : ''}</option>)}
+            <option value="">{t('mappentypen.editor.waehlen')}</option>
+            {verfuegbar.map((x) => <option key={x.k} value={x.k}>{x.n}{x.k.startsWith('_') ? t('mappentypen.editor.system-2') : ''}</option>)}
           </select>
         </label>
       )}
@@ -1016,26 +1014,26 @@ function ArchivEinstellung({ archiv, setze, datumsfelder, typId }: { archiv: Arc
   const vorschlag = FRISTEN.some((f) => f.jahre === archiv?.jahre);
   return (
     <div className="stapel">
-      <p className="leise">Für Belege mit Aufbewahrungspflicht: Bis zum Ende der Frist lässt sich keine Mappe und kein Dokument löschen – auch nicht von Administratoren; Dokumente ändern sich nur als neue Version. Danach stehen die Mappen unter Werkbank → Aufbewahrung abgelaufen. Gelöscht wird nie automatisch. Das unterstützt eine GoBD-gerechte Aufbewahrung, ersetzt aber keine Verfahrensdokumentation und keine Steuerberatung.</p>
+      <p className="leise">{t('mappentypen.editor.fuer-belege-mit-aufbewahrungspflicht')}</p>
       <label className="haken"><input type="checkbox" checked={!!archiv} onChange={async (ev) => {
         if (ev.target.checked) setze({ jahre: 8, stichtag: datumsfelder[0]?.key ?? null });
-        else if (await rueckfrage({ titel: 'Archivmodus ausschalten?', text: 'Danach lassen sich Mappen und Dokumente dieses Mappentyps wieder vor Fristende löschen. Das steht im Protokoll.', ja: 'Ausschalten', gefahr: true })) setze(null);
-      }} /><span>Archivmodus einschalten<small className="hilfe">Gilt auch für vorhandene Mappen. Die Versionierung der Dokumentenregister ist dann Pflicht.</small></span></label>
+        else if (await rueckfrage({ titel: t('mappentypen.editor.archivmodus-ausschalten'), text: t('mappentypen.editor.danach-lassen-sich-mappen'), ja: t('mappentypen.editor.ausschalten'), gefahr: true })) setze(null);
+      }} /><span>{tn('mappentypen.editor.archivmodus-einschalten', { klein: <small className="hilfe">{t('mappentypen.editor.gilt-auch-fuer-vorhandene')}</small> })}</span></label>
       {archiv && <>
         <div className="raster">
-          <label className="eigenschaft"><span>Aufbewahrungsfrist</span>
+          <label className="eigenschaft"><span>{t('mappentypen.editor.aufbewahrungsfrist')}</span>
             <select value={vorschlag ? String(archiv.jahre) : 'eigen'} onChange={(ev) => setze({ ...archiv, jahre: ev.target.value === 'eigen' ? 3 : Number(ev.target.value) })}>
-              {FRISTEN.map((f) => <option key={f.jahre} value={f.jahre}>{f.jahre} Jahre – {f.text}</option>)}
-              <option value="eigen">eigene Zahl</option>
+              {FRISTEN.map((f) => <option key={f.jahre} value={f.jahre}>{t('mappentypen.editor.jahre', { jahre: f.jahre, text: f.text })}</option>)}
+              <option value="eigen">{t('mappentypen.editor.eigene-zahl')}</option>
             </select></label>
-          {!vorschlag && <label className="eigenschaft"><span>Jahre</span><input type="number" min={1} max={JAHRE_MAX} value={archiv.jahre} onChange={(ev) => setze({ ...archiv, jahre: Math.max(1, Math.min(JAHRE_MAX, Math.trunc(Number(ev.target.value) || 1))) })} /></label>}
-          <label className="eigenschaft"><span>Stichtag <small>Frist bis Ende des Kalenderjahres + Jahre</small></span>
+          {!vorschlag && <label className="eigenschaft"><span>{t('mappentypen.editor.jahre-2')}</span><input type="number" min={1} max={JAHRE_MAX} value={archiv.jahre} onChange={(ev) => setze({ ...archiv, jahre: Math.max(1, Math.min(JAHRE_MAX, Math.trunc(Number(ev.target.value) || 1))) })} /></label>}
+          <label className="eigenschaft"><span>{tn('mappentypen.editor.stichtag', { klein: <small>{t('mappentypen.editor.frist-bis-ende-des')}</small> })}</span>
             <select value={archiv.stichtag ?? ''} onChange={(ev) => setze({ ...archiv, stichtag: ev.target.value || null })}>
               {datumsfelder.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-              <option value="">Anlagedatum der Mappe</option>
+              <option value="">{t('mappentypen.editor.anlagedatum-der-mappe')}</option>
             </select></label>
         </div>
-        {vorschau && <p className="hinweis info">{vorschau.mappen === 1 ? '1 Mappe ist' : `${vorschau.mappen} Mappen sind`} betroffen{vorschau.darfWeg ? `, davon ${vorschau.darfWeg === 1 ? 'wäre 1' : `wären ${vorschau.darfWeg}`} schon „darf weg“` : ''}.</p>}
+        {vorschau && <p className="hinweis info">{t('mappentypen.editor.mappen-sind-betroffen', { anzahl: vorschau.mappen, wert: vorschau.darfWeg ? t('mappentypen.editor.davon-waeren-schon-darf', { anzahl: vorschau.darfWeg }) : '' })}</p>}
       </>}
     </div>
   );
@@ -1060,10 +1058,10 @@ function ErkennungTyp({ ad, setze, markiert, felder }: { ad: AusDokument | null;
     <div className="raster">
       <div className="eigenschaft unten">
         <label className="haken"><input type="checkbox" checked={an} onChange={(ev) => setze(neu({ ...ad, aus: ev.target.checked ? undefined : true }))} />
-          <span>Knopf „Aus Dokument ausfüllen“ zeigen<small className="hilfe">In jeder Mappe dieses Typs: Foto machen oder Datei wählen, die Erkennung trägt die Angaben als Vorschlag in die Felder ein.</small></span></label>
+          <span>{tn('mappentypen.editor.knopf-aus-dokument-ausfuellen', { klein: <small className="hilfe">{t('mappentypen.editor.in-jeder-mappe-dieses')}</small> })}</span></label>
       </div>
-      {an && <label className="eigenschaft" htmlFor="typ-ad-beschriftung"><span>Beschriftung <small>optional</small></span>
-        <input id="typ-ad-beschriftung" maxLength={BESCHRIFTUNG_MAX} placeholder={`${AUS_DOKUMENT_STANDARD} – z. B. „Visitenkarte scannen“`} value={ad?.beschriftung ?? ''} onChange={(ev) => setze(neu({ ...ad, beschriftung: ev.target.value || undefined }))} /></label>}
+      {an && <label className="eigenschaft" htmlFor="typ-ad-beschriftung"><span>{tn('mappentypen.editor.beschriftung', { klein: <small>{t('mappentypen.editor.optional')}</small> })}</span>
+        <input id="typ-ad-beschriftung" maxLength={BESCHRIFTUNG_MAX} placeholder={t('mappentypen.editor.z-b-visitenkarte-scannen', { AUS_DOKUMENT_STANDARD })} value={ad?.beschriftung ?? ''} onChange={(ev) => setze(neu({ ...ad, beschriftung: ev.target.value || undefined }))} /></label>}
       {an && stand && (stand.pakete.length > 0 || engine) && (
         <label className="eigenschaft" htmlFor="typ-ad-engine"><span>{tx('erkennung.typ.engine')}</span>
           <select id="typ-ad-engine" value={engine} onChange={(ev) => void waehle(ev.target.value)}>
@@ -1075,8 +1073,8 @@ function ErkennungTyp({ ad, setze, markiert, felder }: { ad: AusDokument | null;
           <small className="hilfe">{tx('erkennung.typ.engine.hilfe')}</small></label>
       )}
       <p className="leise klein" style={{ gridColumn: '1 / -1' }}>{felder.length
-        ? `Für die Erkennung markiert: ${felder.join(', ')}${markiert ? '' : ' (keines taugt zum Wiedererkennen von Absendern)'}. Nur diese Felder füllt „Aus Dokument ausfüllen“.`
-        : 'Kein Feld ist für die Erkennung markiert – dann füllt „Aus Dokument ausfüllen“ alle Felder, deren Art sich aus der Bezeichnung ergibt (z. B. „E-Mail“, „Telefon“, „PLZ“). Markieren lässt es sich an jedem Feld unter „Für die Erkennung nutzen“.'}</p>
+        ? t('mappentypen.editor.fuer-die-erkennung-markiert', { felder: felder.join(', '), wert: markiert ? '' : t('mappentypen.editor.keines-taugt-zum-wiedererkennen') })
+        : t('mappentypen.editor.kein-feld-ist-fuer')}</p>
     </div>
   );
 }
@@ -1087,22 +1085,22 @@ function StempelEinstellung({ stempel, setze }: { stempel: StempelTyp | null; se
   const modus: StempelModus = stempel?.modus ?? 'aus';
   return (
     <div className="raster">
-      <label className="eigenschaft"><span>Beim Herunterladen, Exportieren und Versenden</span>
+      <label className="eigenschaft"><span>{t('mappentypen.editor.beim-herunterladen-exportieren-und')}</span>
         <select id="typ-stempel-modus" value={modus} onChange={(ev) => {
           const m = ev.target.value as StempelModus;
           setze(m === 'aus' ? null : { modus: m, vorlage: stempel?.vorlage ?? vorlagen?.[0]?.id ?? null });
         }}>
           {Object.entries(STEMPEL_MODI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select></label>
-      {stempel && <label className="eigenschaft"><span>Vorlage <small><Link to="/werkbank/stempel" className="verweis">Vorlagen bearbeiten</Link></small></span>
+      {stempel && <label className="eigenschaft"><span>{tn('mappentypen.editor.vorlage-2', { klein: <small><Link to="/werkbank/stempel" className="verweis">{t('mappentypen.editor.vorlagen-bearbeiten')}</Link></small> })}</span>
         <select id="typ-stempel-vorlage" value={stempel.vorlage ?? ''} onChange={(ev) => setze({ ...stempel, vorlage: ev.target.value || null })}>
-          {!vorlagen?.some((v) => v.id === stempel.vorlage) && <option value={stempel.vorlage ?? ''}>{stempel.vorlage ? 'unbekannte Vorlage' : '– Standard: „Kopie – {datum}“ –'}</option>}
+          {!vorlagen?.some((v) => v.id === stempel.vorlage) && <option value={stempel.vorlage ?? ''}>{stempel.vorlage ? t('mappentypen.editor.unbekannte-vorlage') : t('mappentypen.editor.stempel-standard')}</option>}
           {(vorlagen ?? []).map((v) => <option key={v.id} value={v.id}>{v.name} – {v.text.split('\n').join(' / ')}</option>)}
         </select></label>}
       <p className="leise klein" style={{ gridColumn: "1 / -1" }}>{modus === 'pflicht'
-        ? 'Pflicht: Dokumente dieses Mappentyps verlassen Ablago nur gestempelt – beim Herunterladen, im Export (PDF, ZIP), per E-Mail und über die API. Dokumente, die keine PDFs oder Bilder sind, lassen sich dann nicht weitergeben.'
-        : modus === 'vorschlag' ? 'Vorschlag: Beim Weitergeben ist „Mit Stempel“ schon angehakt, mit dieser Vorlage; man kann ihn abwählen.'
-        : 'Kein Stempel vorgegeben; Benutzer können beim Weitergeben trotzdem einen wählen.'}</p>
+        ? t('mappentypen.editor.pflicht-dokumente-dieses-mappentyps')
+        : modus === 'vorschlag' ? t('mappentypen.editor.vorschlag-beim-weitergeben-ist')
+        : t('mappentypen.editor.kein-stempel-vorgegeben-benutzer')}</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { HANDBUCH_NAME, HILFE, handbuchUrl, hilfeUrl, type Handbuch, type Hilfeort } from '../../shared/src/hilfe';
 import { useKonto } from './konto';
+import { t } from './sprache';
 
 /**
  * Kontextbezogene Hilfe (#110): ein dezentes „?“, das den passenden Abschnitt im Handbuch
@@ -9,9 +10,9 @@ import { useKonto } from './konto';
 export function Hilfe({ ort }: { ort: Hilfeort }) {
   const { version } = useKonto();
   const z = HILFE[ort];
-  const text = `Hilfe zu ${z.titel} im ${HANDBUCH_NAME[z.handbuch]}`;
+  const text = t('oberflaeche.hilfe.hilfe-zu-im', { titel: z.titel, HANDBUCH_NAME: HANDBUCH_NAME[z.handbuch] });
   return (
-    <a className="hilfesymbol" href={hilfeUrl(z, version)} target="_blank" rel="noreferrer" title={text} aria-label={`${text} (öffnet in neuem Tab)`}>
+    <a className="hilfesymbol" href={hilfeUrl(z, version)} target="_blank" rel="noreferrer" title={text} aria-label={t('oberflaeche.hilfe.oeffnet-in-neuem-tab', { text })}>
       <span aria-hidden="true">?</span>
     </a>
   );

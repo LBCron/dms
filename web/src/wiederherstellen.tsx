@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type SicherungSchlank, type SicherungsMeta, type WhAbgleich, type WhAbschluss, type WhLauf, type WhSchritt } from './api';
-import { t } from './sprache';
+import { t, tn } from './sprache';
 import { rueckfrage } from './rueckfrage';
 
 /**
@@ -12,7 +12,7 @@ import { rueckfrage } from './rueckfrage';
 
 const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
 const groesse = (b: number) => (b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(0)} MB` : `${(b / 1024 ** 3).toFixed(1).replace('.', ',')} GB`);
-const ART: Record<string, string> = { manuell: 'von Hand', automatisch: 'automatisch', 'vor-wiederherstellung': 'vor einer Wiederherstellung' };
+const ART: Record<string, string> = { manuell: t('oberflaeche.wiederherstellen.von-hand'), automatisch: t('oberflaeche.wiederherstellen.art.automatisch'), 'vor-wiederherstellung': t('oberflaeche.wiederherstellen.vor-einer-wiederherstellung') };
 const ZEICHEN: Record<WhSchritt['status'], string> = { offen: '○', laeuft: '◐', ok: '✓', fehler: '✕', hinweis: '!', ausgelassen: '–' };
 
 export function Schritte({ schritte }: { schritte: WhSchritt[] }) {
@@ -37,36 +37,36 @@ export function Wiederherstellungsbildschirm({ fertig }: { fertig: () => void })
     let aus = false;
     const hole = () => api.whStatus().then((s) => { if (aus) return; setWeg(false); setLauf(s.lauf); setAbschluss(s.abschluss); }, () => { if (!aus) setWeg(true); });
     void hole();
-    const t = setInterval(hole, 1000);
-    return () => { aus = true; clearInterval(t); };
+    const timer = setInterval(hole, 1000);
+    return () => { aus = true; clearInterval(timer); };
   }, []);
   const prozent = lauf && lauf.gesamt ? Math.min(100, Math.round((lauf.bytes / lauf.gesamt) * 100)) : null;
   const erledigt = lauf ? lauf.schritte.filter((s) => s.status === 'ok' || s.status === 'hinweis').length : 0;
   return (
     <div className="kartenseite">
       <div className="karte breit" role="status" aria-live="polite">
-        <h1>{abschluss && !lauf ? 'Wiederherstellung abgeschlossen' : lauf?.status === 'fehler' ? 'Wiederherstellung abgebrochen' : 'Wiederherstellung läuft'}</h1>
+        <h1>{abschluss && !lauf ? t('oberflaeche.wiederherstellen.wiederherstellung-abgeschlossen') : lauf?.status === 'fehler' ? t('oberflaeche.wiederherstellen.wiederherstellung-abgebrochen') : t('oberflaeche.wiederherstellen.wiederherstellung-laeuft')}</h1>
         {abschluss && !lauf ? (
           <>
-            <p>Die Sicherung <strong>{abschluss.sicherung}</strong> ist eingespielt ({zeit(abschluss.am)}). Melde dich mit deinen bisherigen Zugangsdaten an – die aus der Zeit der Sicherung.</p>
+            <p>{tn('oberflaeche.wiederherstellen.die-sicherung-ist-eingespielt', { b: <strong>{abschluss.sicherung}</strong>, zeit: zeit(abschluss.am) })}</p>
             <Schritte schritte={abschluss.schritte} />
             {abschluss.hinweise.map((h) => <div key={h} className="hinweis warn"><p>{h}</p></div>)}
-            <button className="knopf primaer" onClick={() => void api.whAbschlussGesehen().finally(fertig)}>Weiter zur Anmeldung</button>
+            <button className="knopf primaer" onClick={() => void api.whAbschlussGesehen().finally(fertig)}>{t('oberflaeche.wiederherstellen.weiter-zur-anmeldung')}</button>
           </>
         ) : lauf?.status === 'fehler' ? (
           <>
             <div className="hinweis schlecht"><p><strong>{lauf.fehler}</strong></p></div>
-            <p>Der bisherige Stand ist unverändert. Details stehen im Protokoll (Modul sicherung).</p>
+            <p>{t('oberflaeche.wiederherstellen.der-bisherige-stand-ist')}</p>
             <Schritte schritte={lauf.schritte} />
-            <button className="knopf" onClick={fertig}>Zurück</button>
+            <button className="knopf" onClick={fertig}>{t('oberflaeche.wiederherstellen.zurueck')}</button>
           </>
         ) : (
           <>
-            <p>Sicherung <strong>{lauf?.sicherung ?? '…'}</strong>. Bitte lass dieses Fenster offen; Ablago startet am Ende einmal neu.</p>
+            <p>{tn('oberflaeche.wiederherstellen.sicherung-bitte-lass-dieses', { b: <strong>{lauf?.sicherung ?? '…'}</strong> })}</p>
             <progress max={lauf?.schritte.length ?? 1} value={erledigt} />
             {weg || lauf?.status === 'neustart'
-              ? <p className="leise">Ablago startet neu … gleich geht es weiter.</p>
-              : prozent !== null && <p className="leise klein">Aktueller Schritt: {prozent} %</p>}
+              ? <p className="leise">{t('oberflaeche.wiederherstellen.ablago-startet-neu-gleich')}</p>
+              : prozent !== null && <p className="leise klein">{t('oberflaeche.wiederherstellen.aktueller-schritt', { prozent })}</p>}
             {lauf && <Schritte schritte={lauf.schritte} />}
           </>
         )}
@@ -98,7 +98,7 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
   }
   async function starten() {
     if (!abgleich) return;
-    if (!frisch && !(await rueckfrage({ titel: 'Wirklich wiederherstellen?', text: 'Der jetzige Stand von Ablago wird durch die Sicherung ersetzt. Vorher wird er selbst gesichert.', ja: 'Wiederherstellen', gefahr: true, bestaetigeMit: 'wiederherstellen' }))) return;
+    if (!frisch && !(await rueckfrage({ titel: t('oberflaeche.wiederherstellen.wirklich-wiederherstellen'), text: t('oberflaeche.wiederherstellen.der-jetzige-stand-von'), ja: t('oberflaeche.wiederherstellen.wiederherstellen'), gefahr: true, bestaetigeMit: 'wiederherstellen' }))) return;
     setLaeuft(true); setFehler(undefined);
     try { await api.whStart({ name: abgleich.name, ...(schluessel.trim() ? { schluessel } : {}), bestaetigt: !frisch && verstanden }); gestartet(); }
     catch (e) { setFehler((e as Error).message); setLaeuft(false); }
@@ -109,17 +109,17 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
   return (
     <div className="stapel wiederherstellen">
       <div className="zeile-zwischen">
-        <p className="leise klein">Gesucht im Sicherungsordner <span className="mono">{ordner || '…'}</span>. Lege dort beide Dateien ab (<span className="mono">.dms-sicherung</span> und <span className="mono">.json</span>).</p>
-        <button type="button" className="knopf klein" onClick={() => { setAbgleich(null); setGewaehlt(null); void laden(); }}>Sicherungsordner neu prüfen</button>
+        <p className="leise klein">{tn('oberflaeche.wiederherstellen.gesucht-im-sicherungsordner-lege', { span: <span className="mono">{ordner || '…'}</span>, span2: <span className="mono">.dms-sicherung</span>, span3: <span className="mono">.json</span> })}</p>
+        <button type="button" className="knopf klein" onClick={() => { setAbgleich(null); setGewaehlt(null); void laden(); }}>{t('oberflaeche.wiederherstellen.sicherungsordner-neu-pruefen')}</button>
       </div>
       {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-      {liste === null ? <p className="leise">Lade …</p> : !liste.length ? <p className="leise">Keine Sicherung im Ordner gefunden.</p> : (
+      {liste === null ? <p className="leise">{t('oberflaeche.wiederherstellen.lade')}</p> : !liste.length ? <p className="leise">{t('oberflaeche.wiederherstellen.keine-sicherung-im-ordner')}</p> : (
         <ul className="auswahlliste">
           {liste.map((x) => (
             <li key={x.name}>
               <label className="haken">
                 <input type="radio" name="sicherung" checked={gewaehlt === x.name} onChange={() => { setSchluessel(''); void waehle(x.name); }} />
-                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> · {ART[x.meta.art] ?? x.meta.art} · Ablago {x.meta.umgebung.dms} · {x.meta.anzahl.mappen.toLocaleString('de-DE')} Mappen · {groesse(x.bytes)}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> – Metadaten (.json) fehlen</span>}</span>
+                <span><strong>{x.meta ? zeit(x.meta.beginn) : x.name}</strong>{x.meta && <span className="leise klein"> {' '}{t('oberflaeche.wiederherstellen.ablago-mappen', { wert: ART[x.meta.art] ?? x.meta.art, dms: x.meta.umgebung.dms, mappen: x.meta.anzahl.mappen.toLocaleString('de-DE'), groesse: groesse(x.bytes) })}</span>}{!x.meta && x.schlank && <span className="leise klein"> · {t('werkbank.sicherung.extern.schlank', { datum: zeit(x.schlank.beginn) })} · {groesse(x.bytes)}</span>}{!x.meta && !x.schlank && <span className="fehlertext klein"> {' '}{t('oberflaeche.wiederherstellen.metadaten-json-fehlen')}</span>}</span>
               </label>
             </li>
           ))}
@@ -128,34 +128,34 @@ export function WiederherstellungsAssistent({ frisch, gestartet, abbrechen }: { 
 
       {abgleich && (
         <>
-          <h3 className="h3">Abgleich: damals ↔ heute</h3>
+          <h3 className="h3">{t('oberflaeche.wiederherstellen.abgleich-damals-heute')}</h3>
           {abgleich.vergleich.length > 0 && <div className="trefferliste"><table>
-            <thead><tr><th /><th>In der Sicherung</th><th>Diese Installation</th><th /></tr></thead>
+            <thead><tr><th /><th>{t('oberflaeche.wiederherstellen.in-der-sicherung')}</th><th>{t('oberflaeche.wiederherstellen.diese-installation')}</th><th /></tr></thead>
             <tbody>{abgleich.vergleich.map((v) => (
               <tr key={v.was}><th>{v.was}</th><td className="mono">{v.damals}</td><td className="mono">{v.heute}</td>
-                <td><span className={`chip ${v.urteil === 'fehler' ? 'schlecht' : v.urteil === 'hinweis' ? 'warn' : 'gut'}`}>{v.urteil === 'gleich' ? 'gleich' : v.urteil === 'ok' ? 'passt' : v.urteil === 'hinweis' ? 'Hinweis' : 'geht nicht'}</span>{v.info && <span className="leise klein"> {v.info}</span>}</td></tr>
+                <td><span className={`chip ${v.urteil === 'fehler' ? 'schlecht' : v.urteil === 'hinweis' ? 'warn' : 'gut'}`}>{v.urteil === 'gleich' ? t('oberflaeche.wiederherstellen.gleich') : v.urteil === 'ok' ? t('oberflaeche.wiederherstellen.passt') : v.urteil === 'hinweis' ? t('oberflaeche.wiederherstellen.hinweis') : t('oberflaeche.wiederherstellen.geht-nicht')}</span>{v.info && <span className="leise klein"> {v.info}</span>}</td></tr>
             ))}</tbody>
           </table></div>}
           {abgleich.probleme.map((p) => <div key={p} className="hinweis schlecht"><p>{p}</p></div>)}
           {abgleich.hinweise.filter((h) => !/Notfallblatt ein/.test(h) || brauchtSchluessel).map((h) => <div key={h} className="hinweis warn"><p>{h}</p></div>)}
           {(brauchtSchluessel || schluessel) && (
             <form className="stapel" onSubmit={(e) => { e.preventDefault(); void waehle(abgleich.name, schluessel); }}>
-              <label className="eigenschaft"><span>Schlüssel vom Notfallblatt <small>Fingerabdruck {abgleich.meta.verschluesselung.fingerabdruck}; Leerzeichen zählen nicht</small></span>
+              <label className="eigenschaft"><span>{tn('oberflaeche.wiederherstellen.schluessel-vom-notfallblatt', { klein: <small>{t('oberflaeche.wiederherstellen.fingerabdruck-leerzeichen-zaehlen', { fingerabdruck: abgleich.meta.verschluesselung.fingerabdruck })}</small> })}</span>
                 <textarea className="mono" rows={2} value={schluessel} spellCheck={false} autoComplete="off" onChange={(e) => setSchluessel(e.target.value)} /></label>
-              <div className="knoepfe"><button className="knopf" disabled={laeuft || !schluessel.trim()}>Schlüssel prüfen</button></div>
+              <div className="knoepfe"><button className="knopf" disabled={laeuft || !schluessel.trim()}>{t('oberflaeche.wiederherstellen.schluessel-pruefen')}</button></div>
             </form>
           )}
           {!frisch && (
             <label className="haken"><input type="checkbox" checked={verstanden} onChange={(e) => setVerstanden(e.target.checked)} />
-              <span>Mir ist klar: Der jetzige Stand wird durch die Sicherung ersetzt. Vorher sichert Ablago ihn selbst; Änderungen seit der Sicherung sind danach nur noch in dieser Sicherung.</span></label>
+              <span>{t('oberflaeche.wiederherstellen.mir-ist-klar-der')}</span></label>
           )}
           <div className="knoepfe">
-            <button className="knopf primaer" disabled={!startbar} onClick={() => void starten()}>{laeuft ? 'Starte …' : 'Wiederherstellen'}</button>
-            {abbrechen && <button type="button" className="textknopf" onClick={abbrechen}>Abbrechen</button>}
+            <button className="knopf primaer" disabled={!startbar} onClick={() => void starten()}>{laeuft ? t('oberflaeche.wiederherstellen.starte') : t('oberflaeche.wiederherstellen.wiederherstellen')}</button>
+            {abbrechen && <button type="button" className="textknopf" onClick={abbrechen}>{t('oberflaeche.wiederherstellen.abbrechen')}</button>}
           </div>
         </>
       )}
-      {!abgleich && abbrechen && <button type="button" className="textknopf" onClick={abbrechen}>← Zurück</button>}
+      {!abgleich && abbrechen && <button type="button" className="textknopf" onClick={abbrechen}>{t('oberflaeche.wiederherstellen.zurueck-2')}</button>}
     </div>
   );
 }

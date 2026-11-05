@@ -37,7 +37,7 @@ export function Schwaerzen({ d, schliessen, fertig }: { d: Dokument; schliessen(
   const [vorschau, setVorschau] = useState(false);
   const [woerterZeigen, setWoerterZeigen] = useState(false);
   // Am Handy blättert ein Finger die Seite; Aufziehen erst nach Umschalten. Mit Maus geht beides.
-  const [zeichnen, setZeichnen] = useState(() => !window.matchMedia?.(t('ablage.schwaerzen.pointer-coarse')).matches);
+  const [zeichnen, setZeichnen] = useState(() => !window.matchMedia?.('(pointer: coarse)').matches);
   const [ziehen, setZiehen] = useState<Ziehen | null>(null);
   const [laeuft, setLaeuft] = useState(false);
   useEffect(() => { api.schwaerzenVorschau(d.id).then(setV, (e: Error) => setFehler(e.message)); }, [d.id, d.sha256]);

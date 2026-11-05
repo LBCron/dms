@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Link } from '../ort';
+import { t, tn } from '../sprache';
 
 /**
  * Lesbare API-Dokumentation (#20), erzeugt aus /api/openapi.json der
@@ -13,22 +14,22 @@ export function ApiDoku() {
   const [fehler, setFehler] = useState<string>();
   useEffect(() => { api.openapi().then(setDoc).catch((e) => setFehler((e as Error).message)); }, []);
   if (fehler) return <div className="hinweis schlecht"><p>{fehler}</p></div>;
-  if (!doc) return <p className="leise">Lade …</p>;
+  if (!doc) return <p className="leise">{t('profil.apidoku.lade')}</p>;
   const basis = `${location.origin}${doc.servers?.[0]?.url ?? '/api/v1'}`;
-  const gruppen = (doc.tags as Array<{ name: string; description: string }>).map((t) => ({
-    ...t,
-    ops: Object.entries(doc.paths as J).flatMap(([pfad, ms]) => Object.entries(ms as J).filter(([, op]) => (op as J).tags?.includes(t.name)).map(([m, op]) => ({ pfad, m, op: op as J }))),
+  const gruppen = (doc.tags as Array<{ name: string; description: string }>).map((eintrag) => ({
+    ...eintrag,
+    ops: Object.entries(doc.paths as J).flatMap(([pfad, ms]) => Object.entries(ms as J).filter(([, op]) => (op as J).tags?.includes(eintrag.name)).map(([m, op]) => ({ pfad, m, op: op as J }))),
   }));
   return (
     <div className="einspaltig apidoku">
       <div className="mappenkopf">
-        <p className="ueber"><Link to="/profil/sicherheit" className="verweis">Profil</Link> › API</p>
-        <h1>{doc.info.title} <span className="chip">Version {doc.info.version}</span></h1>
+        <p className="ueber">{tn('profil.apidoku.api', { link: <Link to="/profil/sicherheit" className="verweis">{t('profil.apidoku.profil')}</Link> })}</p>
+        <h1>{doc.info.title} <span className="chip">{tn('profil.apidoku.version', { version: doc.info.version })}</span></h1>
         <p className="leise">{doc.info.description}</p>
-        <p className="klein">Adresse: <span className="mono">{basis}</span> · Beschreibung als Datei: <a className="verweis" href="/api/openapi.json" target="_blank" rel="noreferrer">openapi.json</a> (OpenAPI {doc.openapi}) – lässt sich z. B. in Postman oder Bruno importieren.</p>
+        <p className="klein">{tn('profil.apidoku.adresse-beschreibung-als-datei', { span: <span className="mono">{basis}</span>, link: <a className="verweis" href="/api/openapi.json" target="_blank" rel="noreferrer">{'openapi.json'}</a>, openapi: doc.openapi })}</p>
       </div>
       <div className="blatt">
-        <h2 className="h3">Erster Aufruf</h2>
+        <h2 className="h3">{t('profil.apidoku.erster-aufruf')}</h2>
         <pre className="protokolldaten">{`curl -H "Authorization: Bearer dms_…" ${basis}/ich`}</pre>
       </div>
       {gruppen.map((g) => (
@@ -41,12 +42,12 @@ export function ApiDoku() {
               <div className="apiinhalt">
                 {op.description && <p>{op.description}</p>}
                 {op.parameters?.length > 0 && (
-                  <table><thead><tr><th>Parameter</th><th>Ort</th><th>Typ</th><th>Beschreibung</th></tr></thead>
-                    <tbody>{(op.parameters as J[]).map((p) => <tr key={p.name}><td className="mono">{p.name}{p.required && <span className="pflicht">*</span>}</td><td>{p.in === 'path' ? 'Pfad' : 'Abfrage'}</td><td className="mono">{p.schema.type}</td><td>{p.description}</td></tr>)}</tbody>
+                  <table><thead><tr><th>{t('profil.apidoku.parameter')}</th><th>{t('profil.apidoku.ort')}</th><th>{t('profil.apidoku.typ')}</th><th>{t('profil.apidoku.beschreibung')}</th></tr></thead>
+                    <tbody>{(op.parameters as J[]).map((p) => <tr key={p.name}><td className="mono">{p.name}{p.required && <span className="pflicht">*</span>}</td><td>{p.in === 'path' ? t('profil.apidoku.pfad') : t('profil.apidoku.abfrage')}</td><td className="mono">{p.schema.type}</td><td>{p.description}</td></tr>)}</tbody>
                   </table>
                 )}
-                {op.requestBody && <><h3 className="klein ueber">Inhalt der Anfrage</h3><Schema s={inhaltSchema(op.requestBody)} doc={doc} /></>}
-                <h3 className="klein ueber">Antworten</h3>
+                {op.requestBody && <><h3 className="klein ueber">{t('profil.apidoku.inhalt-der-anfrage')}</h3><Schema s={inhaltSchema(op.requestBody)} doc={doc} /></>}
+                <h3 className="klein ueber">{t('profil.apidoku.antworten')}</h3>
                 <ul className="antworten">
                   {Object.entries(op.responses as J).map(([code, r]) => (
                     <li key={code}><span className={`chip ${code.startsWith('2') ? 'gut' : 'warn'}`}>{code}</span> {(r as J).description}
@@ -77,8 +78,8 @@ function Schema({ s, doc, tiefe = 0 }: { s: J; doc: J; tiefe?: number }) {
     return <details className="schema" open={tiefe === 0}><summary className="mono">{n}</summary><Schema s={doc.components.schemas[n]} doc={doc} tiefe={tiefe + 1} /></details>;
   }
   if (s.allOf) return <>{(s.allOf as J[]).map((x, i) => <Schema key={i} s={x} doc={doc} tiefe={tiefe} />)}</>;
-  if (s.type === 'array') return <div className="klein">Liste von <Schema s={s.items} doc={doc} tiefe={tiefe} /></div>;
-  if (s.format === 'binary') return <p className="klein mono">Datei (Bytes)</p>;
+  if (s.type === 'array') return <div className="klein">{t('profil.apidoku.liste-von')}{' '}<Schema s={s.items} doc={doc} tiefe={tiefe} /></div>;
+  if (s.format === 'binary') return <p className="klein mono">{t('profil.apidoku.datei-bytes')}</p>;
   if (s.type === 'object' && s.properties) {
     return (
       <ul className="schemafelder">
@@ -96,16 +97,16 @@ function Schema({ s, doc, tiefe = 0 }: { s: J; doc: J; tiefe?: number }) {
 
 function typText(v: J): string {
   if (v.$ref) return name(v.$ref);
-  if (v.type === 'array') return `Liste von ${v.items?.$ref ? name(v.items.$ref) : v.items?.type ?? '…'}`;
+  if (v.type === 'array') return t('profil.apidoku.liste-von-2', { wert: String(v.items?.$ref ? name(v.items.$ref) : v.items?.type ?? '…') });
   if (v.enum) return v.enum.join(' | ');
-  return [v.type, v.format].filter(Boolean).join(', ') || 'beliebig';
+  return [v.type, v.format].filter(Boolean).join(', ') || t('profil.apidoku.beliebig');
 }
 
 function beispiel(m: string, pfad: string, op: J, basis: string) {
   const ziel = `${basis}${pfad.replace('{id}', '<id>')}${op.parameters?.some((p: J) => p.name === 'sicht') ? '?sicht=<typ-id>' : ''}`;
-  const zeilen = [`curl -X ${m.toUpperCase()} "${ziel}"`, '  -H "Authorization: Bearer dms_…"'];
+  const zeilen = [`curl -X ${m.toUpperCase()} "${ziel}"`, t('profil.apidoku.h-authorization-bearer-dms')];
   const body = op.requestBody?.content;
-  if (body?.['application/json']) zeilen.push('  -H "Content-Type: application/json"', `  -d '${JSON.stringify(m === 'post' && pfad === '/mappen' ? { typId: '<typ-id>', werte: { name: 'Beispiel' } } : { werte: {} })}'`);
-  if (body?.['application/octet-stream']) zeilen.push('  -H "Content-Type: application/octet-stream"', '  --data-binary @rechnung.pdf');
+  if (body?.['application/json']) zeilen.push(t('profil.apidoku.h-content-type-application'), `  -d '${JSON.stringify(m === 'post' && pfad === '/mappen' ? { typId: '<typ-id>', werte: { name: t('profil.apidoku.beispiel') } } : { werte: {} })}'`);
+  if (body?.['application/octet-stream']) zeilen.push(t('profil.apidoku.h-content-type-application-2'), '  --data-binary @rechnung.pdf');
   return zeilen.join(' \\\n');
 }

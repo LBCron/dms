@@ -178,7 +178,7 @@ function Erkannt({ post, e, darf, neuLaden, neu }: { post: Mappe; e: PostErkennu
     catch (x) { setFehler((x as Error).message); } finally { setLaeuft(false); }
   };
   const orgTyp = e.neuerAbsender ? d.typ(e.neuerAbsender.typId) : undefined;
-  const neuLink = e.neuerAbsender && orgTyp ? t('ablage.post.ablage-neu-vorbelegen', { id: orgTyp.id, encodeURIComponent: encodeURIComponent(JSON.stringify(e.neuerAbsender.werte)) }) : null;
+  const neuLink = e.neuerAbsender && orgTyp ? `/ablage/${orgTyp.id}/neu?vorbelegen=${encodeURIComponent(JSON.stringify(e.neuerAbsender.werte))}` : null;
   const betragText = e.angaben.betrag ? formatiere({ key: 'b', label: '', typ: 'betrag' } as Feld, e.angaben.betrag.wert) : '';
   return (
     <section className="er-blatt" aria-label={t('ablage.post.erkannt')}>
@@ -290,7 +290,7 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
     const q = new URLSearchParams({ zuordnen: post.id, dokumente: [...gewaehlt].join(','), vorschlag: JSON.stringify(vorschlagFuer(zielTyp, post.werte, erkennung)) });
     if (mitDokumenten && register) q.set('register', register);
     if (kopieren) q.set('kopieren', '1');
-    geheZu(t('ablage.post.ablage-neu', { id: zielTyp.id, q: q.toString() }));
+    geheZu(`/ablage/${zielTyp.id}/neu?${q.toString()}`);
   }
 
   if (fertig) {

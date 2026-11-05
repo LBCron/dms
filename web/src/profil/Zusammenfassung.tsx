@@ -1,4 +1,4 @@
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useEffect, useState } from 'react';
 import { BUNDESLAENDER, type Bundesland } from '../../../shared/src/feiertage';
 import { api, type Zusammenfassung } from '../api';
@@ -19,31 +19,31 @@ export function ZusammenfassungEinstellen() {
     try { setZ(await api.zusammenfassungSetzen({ aktiv: neu.aktiv, uhrzeit: neu.uhrzeit, tage: neu.tage, feiertage: neu.feiertage })); setGespeichert(true); }
     catch (e) { setFehler((e as Error).message); setZ(z); }
   }
-  if (!z) return fehler ? <p className="fehlertext">{fehler}</p> : <p className="leise">Lade …</p>;
+  if (!z) return fehler ? <p className="fehlertext">{fehler}</p> : <p className="leise">{t('profil.zusammenfassung.lade')}</p>;
   const land = z.standard.bundesland ? BUNDESLAENDER[z.standard.bundesland as Bundesland] : null;
   return (
     <>
       <label className="haken"><input type="checkbox" checked={z.aktiv} onChange={(e) => void setze({ aktiv: e.target.checked })} />
-        <span>Tägliche Zusammenfassung meiner Aufgaben per E-Mail</span></label>
+        <span>{t('profil.zusammenfassung.taegliche-zusammenfassung-meiner')}</span></label>
       {z.aktiv && <div className="zusammenfassung">
-        <label className="eigenschaft schmal"><span>Uhrzeit</span>
+        <label className="eigenschaft schmal"><span>{t('profil.zusammenfassung.uhrzeit')}</span>
           <select value={z.uhrzeit ?? ''} onChange={(e) => void setze({ uhrzeit: e.target.value || null })}>
-            <option value="">Standard ({z.standard.uhrzeit} Uhr)</option>
-            {UHRZEITEN.map((u) => <option key={u} value={u}>{u} Uhr</option>)}
+            <option value="">{t('profil.zusammenfassung.standard-uhr', { uhrzeit: z.standard.uhrzeit })}</option>
+            {UHRZEITEN.map((u) => <option key={u} value={u}>{t('profil.zusammenfassung.uhr', { u })}</option>)}
           </select></label>
-        <fieldset className="wahl tagewahl"><legend>Wochentage</legend>
-          <div className="tage">{TAGE.map((t, i) => (
-            <label key={t} className="haken"><input type="checkbox" checked={z.tage.includes(i + 1)}
-              onChange={(e) => void setze({ tage: e.target.checked ? [...z.tage, i + 1].sort() : z.tage.filter((x) => x !== i + 1) })} /><span>{t}</span></label>
+        <fieldset className="wahl tagewahl"><legend>{t('profil.zusammenfassung.wochentage')}</legend>
+          <div className="tage">{TAGE.map((text, i) => (
+            <label key={text} className="haken"><input type="checkbox" checked={z.tage.includes(i + 1)}
+              onChange={(e) => void setze({ tage: e.target.checked ? [...z.tage, i + 1].sort() : z.tage.filter((x) => x !== i + 1) })} /><span>{text}</span></label>
           ))}</div>
         </fieldset>
-        {!z.tage.length && <p className="hinweis warn klein">Kein Wochentag gewählt – die Zusammenfassung kommt dann nie.</p>}
+        {!z.tage.length && <p className="hinweis warn klein">{t('profil.zusammenfassung.kein-wochentag-gewaehlt-die')}</p>}
         <label className={`haken ${land ? '' : 'aus'}`}><input type="checkbox" disabled={!land} checked={!!land && z.feiertage} onChange={(e) => void setze({ feiertage: e.target.checked })} />
-          <span>Nicht an Feiertagen<small className="hilfe">{land ? `Gesetzliche Feiertage in ${land}.` : 'Dafür muss in der Werkbank das Bundesland gewählt sein.'}</small></span></label>
-        {!z.versand && <p className="leise klein">Der E-Mail-Versand ist gerade nicht eingerichtet oder ausgeschaltet; deine Einstellung gilt, sobald er läuft.</p>}
+          <span>{tn('profil.zusammenfassung.nicht-an-feiertagen', { klein: <small className="hilfe">{land ? t('profil.zusammenfassung.gesetzliche-feiertage-in', { land }) : t('profil.zusammenfassung.dafuer-muss-in-der')}</small> })}</span></label>
+        {!z.versand && <p className="leise klein">{t('profil.zusammenfassung.der-e-mail-versand')}</p>}
       </div>}
       {fehler && <p className="fehlertext">{fehler}</p>}
-      {gespeichert && <p className="gutertext" role="status">Gespeichert.</p>}
+      {gespeichert && <p className="gutertext" role="status">{t('profil.zusammenfassung.gespeichert')}</p>}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useEffect, useState, type ClipboardEvent } from 'react';
 import { api, type Diagnose } from '../api';
 import { useDaten } from '../daten';
@@ -26,7 +26,7 @@ function alsText(text: string, angaben: Record<string, unknown>): string {
     else zeilen.push(`${ein}${schluessel}: ${typeof v === 'boolean' ? (v ? 'ja' : 'nein') : v ?? '–'}`);
   };
   gehe(angaben, 0);
-  return `Fehlermeldung Ablago\n\n${text.trim()}\n\n--- Technische Angaben ---\n${zeilen.join('\n')}\n`;
+  return t('profil.fehlermelden.fehlermeldung-ablago-technische', { text: text.trim(), zeilen: zeilen.join('\n') });
 }
 
 export function FehlerMelden() {
@@ -41,16 +41,16 @@ export function FehlerMelden() {
   useEffect(() => { api.diagnose().then(setServer, (e: Error) => setServer({ fehler: e.message })); }, []);
 
   const design = d.designs.find((x) => x.id === (d.einstellungen.design ?? d.standardDesign))?.name ?? null;
-  const angaben = { Server: server ?? 'wird geladen', Gerät: { ...geraeteAngaben(SCHRIFTEN[leseSchrift(ich.id)].name), Design: design } };
+  const angaben = { Server: server ?? t('profil.fehlermelden.wird-geladen'), Gerät: { ...geraeteAngaben(SCHRIFTEN[leseSchrift(ich.id)].name), Design: design } };
 
   async function nimm(dateien: File[]) {
     setMeldung(undefined);
     const neu = [...bilder];
     for (const f of dateien) {
-      if (neu.length >= MAX_BILDER) { setMeldung({ art: 'schlecht', text: `Höchstens ${MAX_BILDER} Bilder.` }); break; }
-      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { setMeldung({ art: 'schlecht', text: `„${f.name}“ ist kein PNG, JPEG oder WebP.` }); continue; }
-      if (f.size > MAX_BYTES) { setMeldung({ art: 'schlecht', text: `„${f.name}“ ist größer als 10 MB.` }); continue; }
-      neu.push({ name: f.name || `Bild ${neu.length + 1}.png`, daten: await alsDataUrl(f), groesse: f.size });
+      if (neu.length >= MAX_BILDER) { setMeldung({ art: 'schlecht', text: t('profil.fehlermelden.hoechstens-bilder', { MAX_BILDER }) }); break; }
+      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { setMeldung({ art: 'schlecht', text: t('profil.fehlermelden.ist-kein-png-jpeg', { name: f.name }) }); continue; }
+      if (f.size > MAX_BYTES) { setMeldung({ art: 'schlecht', text: t('profil.fehlermelden.ist-groesser-als-10', { name: f.name }) }); continue; }
+      neu.push({ name: f.name || t('profil.fehlermelden.bild-png', { wert: neu.length + 1 }), daten: await alsDataUrl(f), groesse: f.size });
     }
     setBilder(neu);
   }
@@ -66,48 +66,48 @@ export function FehlerMelden() {
     } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); } finally { setSendet(false); }
   }
   async function kopieren() {
-    try { await navigator.clipboard.writeText(alsText(text, angaben)); setMeldung({ art: 'gut', text: 'In die Zwischenablage kopiert.' }); }
-    catch { setMeldung({ art: 'schlecht', text: 'Kopieren ging nicht – bitte die Angaben unten markieren und kopieren.' }); }
+    try { await navigator.clipboard.writeText(alsText(text, angaben)); setMeldung({ art: 'gut', text: t('profil.fehlermelden.in-die-zwischenablage-kopiert') }); }
+    catch { setMeldung({ art: 'schlecht', text: t('profil.fehlermelden.kopieren-ging-nicht-bitte') }); }
   }
 
   if (gesendet) return (
     <div className="einspaltig schmal">
-      <div className="mappenkopf"><p className="ueber">Hilfe</p><h1>Fehler melden</h1></div>
-      <div className="hinweis gut"><p><strong>Deine Meldung ist angekommen.</strong> Sie melden sich bei dir, falls sie Fragen haben.</p></div>
-      <div className="knoepfe"><button type="button" className="knopf" onClick={() => { setGesendet(false); setText(''); setBilder([]); }}>Noch eine Meldung</button></div>
+      <div className="mappenkopf"><p className="ueber">{t('profil.fehlermelden.hilfe')}</p><h1>{t('profil.fehlermelden.fehler-melden')}</h1></div>
+      <div className="hinweis gut"><p>{tn('profil.fehlermelden.sie-melden-sich-bei', { b: <strong>{t('profil.fehlermelden.deine-meldung-ist-angekommen')}</strong> })}</p></div>
+      <div className="knoepfe"><button type="button" className="knopf" onClick={() => { setGesendet(false); setText(''); setBilder([]); }}>{t('profil.fehlermelden.noch-eine-meldung')}</button></div>
     </div>
   );
 
   return (
     <div className="einspaltig schmal">
       <div className="mappenkopf">
-        <p className="ueber">Hilfe</p>
-        <h1>Fehler melden</h1>
-        <p className="leise">Beschreibe kurz, was passiert ist und was du erwartet hättest. Die technischen Angaben unten helfen beim Nachstellen. Passwörter, Inhalte von Mappen und Dokumente gehen nicht mit.</p>
+        <p className="ueber">{t('profil.fehlermelden.hilfe')}</p>
+        <h1>{t('profil.fehlermelden.fehler-melden')}</h1>
+        <p className="leise">{t('profil.fehlermelden.beschreibe-kurz-was-passiert')}</p>
       </div>
       <section className="blatt">
-        <label className="eigenschaft"><span>Was ist passiert?</span>
+        <label className="eigenschaft"><span>{t('profil.fehlermelden.was-ist-passiert')}</span>
           <textarea rows={6} value={text} maxLength={5000} onChange={(e) => setText(e.target.value)} onPaste={einfuegen}
-            placeholder="z. B. Beim Speichern einer Rechnung kam „Fehler 500“, nachdem ich ein Dokument hinzugefügt hatte." /></label>
+            placeholder={t('profil.fehlermelden.z-b-beim-speichern')} /></label>
         <div className="eigenschaft">
-          <span>Screenshots <small>bis zu zwei, PNG/JPEG/WebP, je höchstens 10 MB – auch per Einfügen (Strg+V) ins Textfeld</small></span>
+          <span>{tn('profil.fehlermelden.screenshots', { klein: <small>{t('profil.fehlermelden.bis-zu-zwei-png')}</small> })}</span>
           {bilder.length > 0 && <ul className="bildliste">{bilder.map((b, i) => (
             <li key={i}><img src={b.daten} alt={b.name} /><span className="leise klein">{b.name}</span>
-              <button type="button" className="textknopf gefahr" onClick={() => setBilder(bilder.filter((_, j) => j !== i))}>Entfernen</button></li>
+              <button type="button" className="textknopf gefahr" onClick={() => setBilder(bilder.filter((_, j) => j !== i))}>{t('profil.fehlermelden.entfernen')}</button></li>
           ))}</ul>}
           {bilder.length < MAX_BILDER && <input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={(e) => { void nimm([...(e.target.files ?? [])]); e.target.value = ''; }} />}
         </div>
       </section>
       <section className="blatt">
         <details>
-          <summary>Technische Angaben ansehen</summary>
+          <summary>{t('profil.fehlermelden.technische-angaben-ansehen')}</summary>
           <pre className="angabentext">{alsText('', angaben).split('--- Technische Angaben ---\n')[1]}</pre>
         </details>
       </section>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">
-        <button type="button" className="knopf" disabled={!text.trim()} onClick={() => void kopieren()}>In die Zwischenablage kopieren</button>
-        <button type="button" className="knopf primaer" disabled={!text.trim() || sendet || server === null} onClick={() => void senden()}>{sendet ? 'Wird gesendet …' : 'Meldung senden'}</button>
+        <button type="button" className="knopf" disabled={!text.trim()} onClick={() => void kopieren()}>{t('profil.fehlermelden.in-die-zwischenablage-kopieren')}</button>
+        <button type="button" className="knopf primaer" disabled={!text.trim() || sendet || server === null} onClick={() => void senden()}>{sendet ? t('profil.fehlermelden.wird-gesendet') : t('profil.fehlermelden.meldung-senden')}</button>
       </div>
     </div>
   );

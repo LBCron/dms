@@ -1,4 +1,4 @@
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import QRCode from 'qrcode';
 import { api, type ZweifaktorStand } from '../api';
@@ -15,18 +15,18 @@ const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE', { day: 
 /** Zehn Einmalcodes – nur jetzt sichtbar; zum Ausdrucken oder Abspeichern. */
 export function Wiederherstellungscodes({ codes, weiter }: { codes: string[]; weiter: () => void }) {
   const [gesichert, setGesichert] = useState(false);
-  const text = `Wiederherstellungscodes (je einmal verwendbar)\n\n${codes.join('\n')}\n`;
+  const text = t('profil.zweifaktor.wiederherstellungscodes-je-einmal', { codes: codes.join('\n') });
   return (
     <div className="stapel">
-      <p className="hinweis warn">Bewahre diese Codes sicher auf – getrennt vom Handy. Ohne Handy kommst du nur mit einem davon wieder hinein. Jeder Code gilt einmal. Sie werden nur jetzt angezeigt.</p>
-      <ol className="codes" aria-label="Wiederherstellungscodes">{codes.map((c) => <li key={c}><code>{c}</code></li>)}</ol>
+      <p className="hinweis warn">{t('profil.zweifaktor.bewahre-diese-codes-sicher')}</p>
+      <ol className="codes" aria-label={t('profil.zweifaktor.wiederherstellungscodes')}>{codes.map((c) => <li key={c}><code>{c}</code></li>)}</ol>
       <div className="knoepfe">
-        <button type="button" className="knopf" onClick={() => { void navigator.clipboard?.writeText(text); setGesichert(true); }}>Kopieren</button>
-        <a className="knopf" href={`data:text/plain;charset=utf-8,${encodeURIComponent(text)}`} download="wiederherstellungscodes.txt" onClick={() => setGesichert(true)}>Als Datei speichern</a>
-        <button type="button" className="knopf" onClick={() => { print(); setGesichert(true); }}>Drucken</button>
+        <button type="button" className="knopf" onClick={() => { void navigator.clipboard?.writeText(text); setGesichert(true); }}>{t('profil.zweifaktor.kopieren')}</button>
+        <a className="knopf" href={`data:text/plain;charset=utf-8,${encodeURIComponent(text)}`} download="wiederherstellungscodes.txt" onClick={() => setGesichert(true)}>{t('profil.zweifaktor.als-datei-speichern')}</a>
+        <button type="button" className="knopf" onClick={() => { print(); setGesichert(true); }}>{t('profil.zweifaktor.drucken')}</button>
       </div>
-      <label className="haken"><input type="checkbox" checked={gesichert} onChange={(e) => setGesichert(e.target.checked)} /><span>Ich habe die Codes gesichert.</span></label>
-      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!gesichert} onClick={weiter}>Fertig</button></div>
+      <label className="haken"><input type="checkbox" checked={gesichert} onChange={(e) => setGesichert(e.target.checked)} /><span>{t('profil.zweifaktor.ich-habe-die-codes')}</span></label>
+      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={!gesichert} onClick={weiter}>{t('profil.zweifaktor.fertig')}</button></div>
     </div>
   );
 }
@@ -54,23 +54,23 @@ export function ZweifaktorEinrichten({ fertig, abbrechen }: { fertig: () => void
   if (codes) return <Wiederherstellungscodes codes={codes} weiter={fertig} />;
   return (
     <form className="stapel" onSubmit={bestaetigen}>
-      <p>1. Öffne eine Authenticator-App auf deinem Handy (z. B. Google Authenticator, Microsoft Authenticator, Aegis, 2FAS, Bitwarden oder den Passwort-Manager deines Geräts) und scanne den Code.</p>
+      <p>{t('profil.zweifaktor.1-oeffne-eine-authenticator')}</p>
       {entwurf ? (
         <div className="qr">
-          <img src={entwurf.bild} width={200} height={200} alt="QR-Code für die Authenticator-App" />
+          <img src={entwurf.bild} width={200} height={200} alt={t('profil.zweifaktor.qr-code-fuer-die')} />
           <div>
-            <p className="leise klein">Scannen geht nicht? Gib diesen Schlüssel von Hand ein:</p>
+            <p className="leise klein">{t('profil.zweifaktor.scannen-geht-nicht-gib')}</p>
             <code className="geheimnis">{entwurf.geheimnis}</code>
           </div>
         </div>
-      ) : !fehler && <p className="leise">Erzeuge Schlüssel …</p>}
-      <label className="eigenschaft"><span>2. Sechsstelligen Code aus der App eingeben</span>
+      ) : !fehler && <p className="leise">{t('profil.zweifaktor.erzeuge-schluessel')}</p>}
+      <label className="eigenschaft"><span>{t('profil.zweifaktor.2-sechsstelligen-code-aus')}</span>
         <input id="zweifaktor-code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} required />
       </label>
       {fehler && <p className="fehlertext">{fehler}</p>}
       <div className="knoepfe">
-        {abbrechen && <button type="button" className="knopf" onClick={abbrechen}>Abbrechen</button>}
-        <button className="knopf primaer" disabled={sendet || !entwurf}>Bestätigen</button>
+        {abbrechen && <button type="button" className="knopf" onClick={abbrechen}>{t('profil.zweifaktor.abbrechen')}</button>}
+        <button className="knopf primaer" disabled={sendet || !entwurf}>{t('profil.zweifaktor.bestaetigen')}</button>
       </div>
     </form>
   );
@@ -91,42 +91,42 @@ export function ZweifaktorBlatt() {
     e.preventDefault(); setMeldung(undefined);
     try {
       if (modus === 'codes') { setNeueCodes((await api.zweifaktorCodes(pw)).codes); }
-      else { await api.zweifaktorEntfernen(pw); setModus('ruhe'); setMeldung({ art: 'gut', text: 'Zwei-Faktor-Anmeldung abgeschaltet.' }); await laden(); }
+      else { await api.zweifaktorEntfernen(pw); setModus('ruhe'); setMeldung({ art: 'gut', text: t('profil.zweifaktor.zwei-faktor-anmeldung-abgeschaltet') }); await laden(); }
       setPw('');
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
 
   return (
     <div className="blatt" id="zweifaktor">
-      <h2 className="h3">Zwei-Faktor-Anmeldung <Hilfe ort="profil.zweifaktor" /></h2>
-      <p className="leise">Neben dem Passwort fragt Ablago bei der Anmeldung einen Code aus einer App auf deinem Handy ab. Wer nur dein Passwort kennt, kommt dann nicht hinein.</p>
-      {!stand ? <p className="leise">Lade …</p> : modus === 'einrichten' ? (
-        <ZweifaktorEinrichten fertig={() => { setModus('ruhe'); setMeldung({ art: 'gut', text: 'Zwei-Faktor-Anmeldung eingerichtet.' }); void laden(); void aktualisieren(); }} abbrechen={() => setModus('ruhe')} />
+      <h2 className="h3">{tn('profil.zweifaktor.zwei-faktor-anmeldung', { hilfe: <Hilfe ort="profil.zweifaktor" /> })}</h2>
+      <p className="leise">{t('profil.zweifaktor.neben-dem-passwort-fragt')}</p>
+      {!stand ? <p className="leise">{t('profil.zweifaktor.lade')}</p> : modus === 'einrichten' ? (
+        <ZweifaktorEinrichten fertig={() => { setModus('ruhe'); setMeldung({ art: 'gut', text: t('profil.zweifaktor.zwei-faktor-anmeldung-eingerichtet') }); void laden(); void aktualisieren(); }} abbrechen={() => setModus('ruhe')} />
       ) : neueCodes ? (
         <Wiederherstellungscodes codes={neueCodes} weiter={() => { setNeueCodes(null); setModus('ruhe'); void laden(); }} />
       ) : stand.aktiv ? (
         <>
-          <p><span className="chip gut punkt">eingerichtet</span>{stand.seit && <> seit {datum(stand.seit)}</>} · {stand.codesUebrig} von 10 Wiederherstellungscodes übrig</p>
-          {stand.codesUebrig <= 3 && <p className="hinweis warn">Nur noch {stand.codesUebrig} Wiederherstellungscodes. Erzeuge neue.</p>}
+          <p><span className="chip gut punkt">{t('profil.zweifaktor.eingerichtet')}</span>{stand.seit && <> {' '}{t('profil.zweifaktor.seit', { datum: datum(stand.seit) })}</>} {' '}{t('profil.zweifaktor.von-10-wiederherstellungscodes', { codesUebrig: stand.codesUebrig })}</p>
+          {stand.codesUebrig <= 3 && <p className="hinweis warn">{t('profil.zweifaktor.nur-noch-wiederherstellungscodes', { codesUebrig: stand.codesUebrig })}</p>}
           {modus === 'ruhe' ? (
             <div className="knoepfe">
-              <button type="button" className="knopf" onClick={() => setModus('codes')}>Neue Wiederherstellungscodes</button>
-              {!stand.pflicht && <button type="button" className="knopf gefahr-rand" onClick={() => setModus('aus')}>Abschalten</button>}
+              <button type="button" className="knopf" onClick={() => setModus('codes')}>{t('profil.zweifaktor.neue-wiederherstellungscodes')}</button>
+              {!stand.pflicht && <button type="button" className="knopf gefahr-rand" onClick={() => setModus('aus')}>{t('profil.zweifaktor.abschalten')}</button>}
             </div>
           ) : (
             <form className="stapel" onSubmit={mitPasswort}>
-              <p className="leise">{modus === 'codes' ? 'Die bisherigen Codes gelten danach nicht mehr.' : 'Danach reicht wieder das Passwort allein.'} Bitte mit deinem Passwort bestätigen.</p>
-              <label className="eigenschaft"><span>Aktuelles Passwort</span><input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" autoFocus required /></label>
+              <p className="leise">{t('profil.zweifaktor.bitte-mit-deinem-passwort', { wert: modus === 'codes' ? t('profil.zweifaktor.die-bisherigen-codes-gelten') : t('profil.zweifaktor.danach-reicht-wieder-das') })}</p>
+              <label className="eigenschaft"><span>{t('profil.zweifaktor.aktuelles-passwort')}</span><input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" autoFocus required /></label>
               <div className="knoepfe">
-                <button type="button" className="knopf" onClick={() => { setModus('ruhe'); setPw(''); }}>Abbrechen</button>
-                <button className={`knopf ${modus === 'aus' ? 'gefahr' : 'primaer'}`} disabled={!pw}>{modus === 'codes' ? 'Neue Codes erzeugen' : 'Abschalten'}</button>
+                <button type="button" className="knopf" onClick={() => { setModus('ruhe'); setPw(''); }}>{t('profil.zweifaktor.abbrechen')}</button>
+                <button className={`knopf ${modus === 'aus' ? 'gefahr' : 'primaer'}`} disabled={!pw}>{modus === 'codes' ? t('profil.zweifaktor.neue-codes-erzeugen') : t('profil.zweifaktor.abschalten')}</button>
               </div>
             </form>
           )}
-          {stand.pflicht && <p className="leise klein">Für dich ist die Zwei-Faktor-Anmeldung vorgeschrieben. Neues Handy? Wer Ablago verwaltet, kann sie zurücksetzen; dann richtest du sie neu ein.</p>}
+          {stand.pflicht && <p className="leise klein">{t('profil.zweifaktor.fuer-dich-ist-die')}</p>}
         </>
       ) : (
-        <div className="knoepfe"><button type="button" className="knopf primaer" onClick={() => { setMeldung(undefined); setModus('einrichten'); }}>Einrichten</button></div>
+        <div className="knoepfe"><button type="button" className="knopf primaer" onClick={() => { setMeldung(undefined); setModus('einrichten'); }}>{t('profil.zweifaktor.einrichten')}</button></div>
       )}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
     </div>

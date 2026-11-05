@@ -87,7 +87,7 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
  */
 function NurImModus({ mappeId }: { mappeId: string }) {
   const [erstes] = useState(() => {
-    try { const k = t('ablage.mappeformular.dms-nur-im-modus', { mappeId }); const da = sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); return !da; } catch { return true; }
+    try { const k = `dms:nur-im-modus:${mappeId}`; const da = sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); return !da; } catch { return true; }
   });
   return <div className={erstes ? 'hinweis warn' : 'leise klein'} role={erstes ? 'alert' : undefined} id="nur-im-verwaltungsmodus"><p>{t('mappen.verwaltungsmodus.hinweis')}</p></div>;
 }
@@ -128,7 +128,7 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
             <Stern mappeId={mappe.id} an={!!details.favorit} />
             <Aktionsmenue aufgabe={() => setAufgabeOffen(true)} erinnern={() => setErinnernOffen(true)} email={details.exportierbar === false ? undefined : () => setEmailOffen(true)} drucken={details.exportierbar === false ? undefined : () => setDrucken(true)}
               link={direktlink ? () => { const l = location.origin + direktlink; void kopiere(l).then((ok) => setKopiert({ link: l, ok })); } : undefined}
-              auskunft={details.auskunft ? () => geheZu(t('ablage.mappeformular.werkbank-auskuenfte-neu-mappe', { encodeURIComponent: encodeURIComponent(details.mappe.id) })) : undefined}
+              auskunft={details.auskunft ? () => geheZu(`/werkbank/auskuenfte/neu?mappe=${encodeURIComponent(details.mappe.id)}`) : undefined}
               loeschwege={[
                 ...(loeschbarHier ? [{ text: t('ablage.mappeformular.mappe-loeschen'), tu: () => setLoeschWunsch((n) => n + 1), nurSchmal: true }] : []),
                 ...(mitVerknuepften ? [{ text: t('ablage.mappeformular.mit-verknuepften-mappen-loeschen'), titel: t('ablage.mappeformular.diese-mappe-samt-allen'), tu: mitVerknuepften }] : []),

@@ -48,11 +48,11 @@ export function WebdavPanel({ z }: { z: WebdavZustand }) {
         <p className="leise">{tn('werkbank.webdav.die-ablage-als-laufwerk', { hilfe: <Hilfe ort="werkbank.webdav" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
-      {!s.https && <div className="hinweis warn"><p>{tn('werkbank.webdav.die-adresse-von-ablago', { code: <code>{t('werkbank.webdav.https')}</code> })}</p></div>}
+      {!s.https && <div className="hinweis warn"><p>{tn('werkbank.webdav.die-adresse-von-ablago', { code: <code>{'https://'}</code> })}</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <h2 className="h3">{t('werkbank.webdav.einstellungen')}</h2>
         <label className="haken"><input id="webdav-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} />
-          <span>{tn('werkbank.webdav.webdav-laufwerk-einschalten', { klein: <small className="leise">{tn('werkbank.webdav.ausgeschaltet-antwortet-mit-nicht', { code: <code>{t('werkbank.webdav.webdav')}</code> })}</small> })}</span></label>
+          <span>{tn('werkbank.webdav.webdav-laufwerk-einschalten', { klein: <small className="leise">{tn('werkbank.webdav.ausgeschaltet-antwortet-mit-nicht', { code: <code>{'/webdav/'}</code> })}</small> })}</span></label>
         {/* Stempel beim Lesen (#722): Vorgabe ist die mitgelieferte Vorlage; Pflicht-Stempel der Mappentypen gelten immer. */}
         <label className="eigenschaft"><span>{t('werkbank.webdav.stempel')} <Hilfe ort="webdav.stempel" /></span>
           <select id="webdav-stempel" value={e.stempel ?? ''} onChange={(x) => setE({ ...e, stempel: x.target.value || null })}>

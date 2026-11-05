@@ -1,5 +1,6 @@
 import { kreisVon } from '../../shared/src/nummernkreis';
 import { istPasswortWert, leseZahl, type Betrag, type Feld, type Mappentyp, type Wert, type Werte } from '../../shared/src/model';
+import {  } from './sprache';
 
 /**
  * Formulare arbeiten mit Rohwerten (Texten, wie getippt). Erst beim Speichern
@@ -58,15 +59,15 @@ export function ausRoh(f: Feld, r: Roh | undefined): Wert {
   }
 }
 
-export function rohAusWerten(t: Mappentyp, werte: Werte): RohWerte {
+export function rohAusWerten(mappentyp: Mappentyp, werte: Werte): RohWerte {
   const r: RohWerte = {};
-  for (const f of t.felder) r[f.key] = zuRoh(f, werte[f.key]);
+  for (const f of mappentyp.felder) r[f.key] = zuRoh(f, werte[f.key]);
   return r;
 }
 
-export function standardRoh(t: Mappentyp): RohWerte {
+export function standardRoh(mappentyp: Mappentyp): RohWerte {
   const r: RohWerte = {};
-  for (const f of t.felder) {
+  for (const f of mappentyp.felder) {
     const s = f.standard;
     if (f.typ === 'janein') r[f.key] = s === true || s === 'true';
     else if (f.typ === 'passwort') r[f.key] = leeresPasswort;
@@ -78,8 +79,8 @@ export function standardRoh(t: Mappentyp): RohWerte {
   return r;
 }
 
-export function werteAusRoh(t: Mappentyp, r: RohWerte): Werte {
+export function werteAusRoh(mappentyp: Mappentyp, r: RohWerte): Werte {
   const w: Werte = {};
-  for (const f of t.felder) w[f.key] = ausRoh(f, r[f.key]);
+  for (const f of mappentyp.felder) w[f.key] = ausRoh(f, r[f.key]);
   return w;
 }
