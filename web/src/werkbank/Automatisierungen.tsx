@@ -1,3 +1,4 @@
+import { feldLabel, optionText } from '../../../shared/src/beschriftung';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   AUTOMATISIERUNG_GRENZEN, automatisierungsProbleme, EREIGNIS_PERSON, PERSONEN_IM_EREIGNIS, kontextTyp, kurzform, platzhalterFuer, REIHENFOLGE, WENN_EREIGNISSE, WOCHENTAGE, zeitplanText,
@@ -614,8 +615,8 @@ function DannEditor({ karte, typ, wenn, k, setze }: { karte: DannKarte; typ: Map
             const v = karte.werte[key];
             return (
               <li key={key} className="bedingungszeile">
-                <strong>{f?.label ?? key}</strong>
-                {f?.typ === 'auswahl' ? <select value={String(v ?? '')} onChange={(x) => setze({ ...karte, werte: { ...karte.werte, [key]: x.target.value } })}><option value="">–</option>{(f.optionen ?? []).map((o) => <option key={o}>{o}</option>)}</select>
+                <strong>{f ? feldLabel(f) : key}</strong>
+                {f?.typ === 'auswahl' ? <select value={String(v ?? '')} onChange={(x) => setze({ ...karte, werte: { ...karte.werte, [key]: x.target.value } })}><option value="">–</option>{(f.optionen ?? []).map((o) => <option key={o} value={o}>{optionText(f, o)}</option>)}</select>
                   : f?.typ === 'janein' ? <select value={v === true ? 'ja' : v === false ? 'nein' : ''} onChange={(x) => setze({ ...karte, werte: { ...karte.werte, [key]: x.target.value === 'ja' } })}><option value="ja">{t('automatisierung.ui.ja')}</option><option value="nein">{t('automatisierung.ui.nein')}</option></select>
                     : <input value={String(v ?? '')} placeholder={f?.typ === 'datum' ? t('automatisierung.ui.karte.dann.feld.datum') : ''} onChange={(x) => setze({ ...karte, werte: { ...karte.werte, [key]: x.target.value } })} />}
                 <button type="button" className="textknopf gefahr klein" onClick={() => { const w = { ...karte.werte }; delete w[key]; setze({ ...karte, werte: w }); }}>{t('automatisierung.ui.entfernen')}</button>
@@ -625,7 +626,7 @@ function DannEditor({ karte, typ, wenn, k, setze }: { karte: DannKarte; typ: Map
         </ul>
         {typ && <select value="" aria-label={t('automatisierung.ui.karte.dann.feld.waehlen')} onChange={(x) => { if (x.target.value) setze({ ...karte, werte: { ...karte.werte, [x.target.value]: '' } }); }}>
           <option value="">{t('automatisierung.ui.karte.dann.feld.waehlen')}</option>
-          {felder.filter((f) => !gewaehlt.includes(f.key)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+          {felder.filter((f) => !gewaehlt.includes(f.key)).map((f) => <option key={f.key} value={f.key}>{feldLabel(f)}</option>)}
         </select>}
         <Platzhalter wenn={wenn} typ={typ} einfuegen={(x) => { const letzt = gewaehlt[gewaehlt.length - 1]; if (letzt) setze({ ...karte, werte: { ...karte.werte, [letzt]: `${String(karte.werte[letzt] ?? '')}${x}` } }); }} />
       </div>

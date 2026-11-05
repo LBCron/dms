@@ -12,7 +12,8 @@ import { alsText } from './markdown';
 import { kreisImStandard, kreisVon } from './nummernkreis';
 import { ibanGruppen, pruefeFormatDefinition } from './feldformate';
 import { datumsformat } from './region';
-import { t } from './texte';
+import { t, t as tx } from './texte';
+import { optionText, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from './beschriftung';
 export { zeitzone } from './region';
 
 export const FELDTYPEN = {
@@ -56,6 +57,7 @@ export interface Feld {
   max?: number | string | null;
   nachkomma?: number | null;
   waehrung?: string;
+  /** Auswahl: die festen Werte (#728) – gespeichert wird der Wert, gezeigt die Beschriftung (`beschriftungen`). */
   optionen?: string[];
   mehrfach?: boolean;
   /** Referenz: Id des Ziel-Mappentyps (darf der eigene sein → Hierarchie). */
@@ -78,6 +80,8 @@ export interface Feld {
   format?: import('./feldformate').Feldformat | null;
   /** Format PLZ (#535): Kennung des Felds mit dem Land; Deutschland (oder leer) heißt genau 5 Ziffern. */
   landFeld?: string | null;
+  /** Bezeichnung, Hilfetext und Optionen in weiteren Sprachen (#728); fehlt etwas, gilt der Ausgangstext. */
+  beschriftungen?: Beschriftungen<FeldTeile>;
 }
 
 export const REGISTERARTEN = {
@@ -112,6 +116,8 @@ export interface Register {
   versionierung?: boolean;
   /** Nur die letzten N Versionen behalten (mit der aktuellen); leer = alle. */
   versionenBehalten?: number | null;
+  /** Name in weiteren Sprachen (#728). */
+  beschriftungen?: Beschriftungen<NamensTeile>;
 }
 
 export interface MappentypDaten {
@@ -145,6 +151,8 @@ export interface MappentypDaten {
   ausDokument?: import('./erkennung').AusDokument | null;
   /** Erkannte Post automatisch zuordnen (#337), Standard aus; wie der Stempel in den Einstellungen. */
   autoZuordnen?: boolean;
+  /** Name und Beschreibung in weiteren Sprachen (#728). */
+  beschriftungen?: Beschriftungen<TypTeile>;
 }
 export interface Mappentyp extends MappentypDaten {
   id: string;
@@ -160,7 +168,7 @@ export interface Mappentyp extends MappentypDaten {
 
 /* ---------- Systemmappentypen: Benutzer und Rollen (#26, #27) ---------- */
 
-export const SYSTEMTYPEN = { benutzer: 'Benutzer', rolle: 'Rolle', post: 'Post' } as const;
+export const SYSTEMTYPEN = { benutzer: t('gemeinsam.model.systemtyp.benutzer'), rolle: t('gemeinsam.model.systemtyp.rolle'), post: t('gemeinsam.model.systemtyp.post') } as const;
 export type Systemtyp = keyof typeof SYSTEMTYPEN;
 
 /** Kennung der Mappe einer Systemrolle, z. B. rolle:mitglied. */
@@ -174,7 +182,10 @@ export const BELIEBIGER_TYP = '*';
 
 /* ---------- Post (#192): alles, was hinein- oder hinausgeht ---------- */
 
-/** Werte der Auswahlfelder von Post; gespeichert wird der Text. */
+/**
+ * Feste Werte der Auswahlfelder von Post (#728): So stehen sie in jeder Mappe und bleiben unverändert – sie sind keine
+ * Anzeigetexte. Die Beschriftung je Sprache kommt aus den Beschriftungen des Felds (siehe beschriftung.ts).
+ */
 export const POST_KANAL = { hochgeladen: 'Hochgeladen', email: 'E-Mail', scan: 'Scan', ordner: 'Ordner', import: 'Import', api: 'API', webdav: 'WebDAV' } as const;
 export const POST_RICHTUNG = { eingehend: 'Eingehend', ausgehend: 'Ausgehend' } as const;
 export const POST_STAND = { neu: 'Neu', zugeordnet: 'Zugeordnet', erledigt: 'Erledigt' } as const;
@@ -185,31 +196,34 @@ export const istVersendet = (w: Werte | undefined) => !!w && auswahlText(w.kanal
 
 /** Systemfelder je Systemtyp. Bezeichnung und Hilfetext darf der Administrator ändern, alles andere ist fest. */
 export function systemfelder(s: Systemtyp, rolleTypId: string, benutzerTypId = ''): Feld[] {
+  // Bezeichnungen und Hilfetexte aus der Sprachdatei (#728); die festen Werte der Optionen bleiben, wie sie sind.
+  const l = (k: string) => t.frei(`gemeinsam.model.systemfeld.${s}.${k.replace(/_/g, '-')}`);
+  const h = (k: string) => t.frei(`gemeinsam.model.systemhilfe.${s}.${k.replace(/_/g, '-')}`);
   if (s === 'post') return [
-    { key: 'betreff', label: 'Betreff', typ: 'text', pflicht: true, maxLen: 250, system: true },
-    { key: 'stand', label: 'Stand', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_STAND), system: true, hilfe: 'Neu: noch nicht bearbeitet. Zugeordnet: liegt bei einer passenden Mappe. Erledigt: nichts mehr zu tun.' },
-    { key: 'kanal', label: 'Kanal', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_KANAL), system: true, hilfe: 'Wie die Post in Ablago kam bzw. hinausging' },
-    { key: 'richtung', label: 'Richtung', typ: 'auswahl', pflicht: true, optionen: Object.values(POST_RICHTUNG), system: true },
-    { key: 'datum', label: 'Datum', typ: 'datum', system: true },
-    { key: 'absender', label: 'Absender', typ: 'text', system: true },
-    { key: 'an', label: 'Empfänger', typ: 'text', system: true },
-    { key: 'fuer', label: 'Für', typ: 'referenz', zielTyp: benutzerTypId, verweisart: 'bezug', system: true, hilfe: 'Wer sich darum kümmern soll; solange die Post neu ist, steht sie bei ihm unter „Zu erledigen“' },
-    { key: 'bezug', label: 'Zugeordnet zu', typ: 'referenz', mehrfach: true, zielTyp: BELIEBIGER_TYP, verweisart: 'bezug', system: true, hilfe: 'Die Mappen, zu denen diese Post gehört; gesetzt über „Zuordnen“' },
-    { key: 'nachricht', label: 'Nachricht', typ: 'langtext', system: true },
+    { key: 'betreff', label: l('betreff'), typ: 'text', pflicht: true, maxLen: 250, system: true },
+    { key: 'stand', label: l('stand'), typ: 'auswahl', pflicht: true, optionen: Object.values(POST_STAND), system: true, hilfe: h('stand') },
+    { key: 'kanal', label: l('kanal'), typ: 'auswahl', pflicht: true, optionen: Object.values(POST_KANAL), system: true, hilfe: h('kanal') },
+    { key: 'richtung', label: l('richtung'), typ: 'auswahl', pflicht: true, optionen: Object.values(POST_RICHTUNG), system: true },
+    { key: 'datum', label: l('datum'), typ: 'datum', system: true },
+    { key: 'absender', label: l('absender'), typ: 'text', system: true },
+    { key: 'an', label: l('an'), typ: 'text', system: true },
+    { key: 'fuer', label: l('fuer'), typ: 'referenz', zielTyp: benutzerTypId, verweisart: 'bezug', system: true, hilfe: h('fuer') },
+    { key: 'bezug', label: l('bezug'), typ: 'referenz', mehrfach: true, zielTyp: BELIEBIGER_TYP, verweisart: 'bezug', system: true, hilfe: h('bezug') },
+    { key: 'nachricht', label: l('nachricht'), typ: 'langtext', system: true },
   ];
   if (s === 'rolle') return [
-    { key: 'name', label: 'Name', typ: 'text', pflicht: true, eindeutig: true, maxLen: 80, system: true },
+    { key: 'name', label: l('name'), typ: 'text', pflicht: true, eindeutig: true, maxLen: 80, system: true },
   ];
   return [
-    { key: 'name', label: 'Name', typ: 'text', pflicht: true, system: true },
-    { key: 'email', label: 'E-Mail-Adresse', typ: 'text', pflicht: true, eindeutig: true, system: true },
-    { key: 'rollen', label: 'Rollen', typ: 'referenz', mehrfach: true, zielTyp: rolleTypId, verweisart: 'bezug', system: true, hilfe: 'Systemrolle und weitere Rollen; vergeben in der Benutzerverwaltung' },
-    { key: 'aktiv', label: 'Aktiv', typ: 'janein', system: true },
+    { key: 'name', label: l('name'), typ: 'text', pflicht: true, system: true },
+    { key: 'email', label: l('email'), typ: 'text', pflicht: true, eindeutig: true, system: true },
+    { key: 'rollen', label: l('rollen'), typ: 'referenz', mehrfach: true, zielTyp: rolleTypId, verweisart: 'bezug', system: true, hilfe: h('rollen') },
+    { key: 'aktiv', label: l('aktiv'), typ: 'janein', system: true },
     // Abwesenheit (#78): gespiegelt aus Profil bzw. Benutzerverwaltung; „Abwesend“ = wirkt gerade.
-    { key: 'abwesend', label: 'Abwesend', typ: 'janein', system: true, hilfe: 'Ob die Abwesenheit gerade wirkt' },
-    { key: 'abwesend_von', label: 'Abwesend von', typ: 'datum', system: true },
-    { key: 'abwesend_bis', label: 'Abwesend bis', typ: 'datum', system: true },
-    { key: 'vertreter', label: 'Vertreter', typ: 'referenz', zielTyp: benutzerTypId, verweisart: 'bezug', system: true, hilfe: 'Bekommt die Aufgaben, solange die Abwesenheit wirkt oder der Benutzer deaktiviert ist' },
+    { key: 'abwesend', label: l('abwesend'), typ: 'janein', system: true, hilfe: h('abwesend') },
+    { key: 'abwesend_von', label: l('abwesend_von'), typ: 'datum', system: true },
+    { key: 'abwesend_bis', label: l('abwesend_bis'), typ: 'datum', system: true },
+    { key: 'vertreter', label: l('vertreter'), typ: 'referenz', zielTyp: benutzerTypId, verweisart: 'bezug', system: true, hilfe: h('vertreter') },
   ];
 }
 
@@ -259,11 +273,13 @@ export interface Trefferliste {
   /** Spalten in ihrer Reihenfolge: Feldschlüssel oder Systemspalten (_titel, _erstellt, …). Leer = einfache Liste. */
   spalten: string[];
   standard?: boolean;
+  /** Name in weiteren Sprachen (#728). */
+  beschriftungen?: Beschriftungen<NamensTeile>;
 }
 
 /** Trefferlisten eines Typs; Typen aus der Zeit vor #75 haben genau eine („Standard“). */
 export function trefferlistenVon(t: Pick<MappentypDaten, 'trefferlisten' | 'trefferliste'>): Trefferliste[] {
-  return t.trefferlisten?.length ? t.trefferlisten : [{ key: 'standard', name: 'Standard', spalten: t.trefferliste ?? [], standard: true }];
+  return t.trefferlisten?.length ? t.trefferlisten : [{ key: 'standard', name: tx('gemeinsam.model.trefferliste-standard'), spalten: t.trefferliste ?? [], standard: true }];
 }
 /** Die Standard-Trefferliste eines Typs. */
 export function standardliste(t: Pick<MappentypDaten, 'trefferlisten' | 'trefferliste'>): Trefferliste {
@@ -760,12 +776,18 @@ export function pruefeTitelFilter(t: Pick<Mappentyp, 'felder' | 'titelVorlage'>)
   return m;
 }
 
+/** Namen der Register, die Ablago selbst anlegt (#728: aus der Sprachdatei; gespeichert wie jeder andere Name). */
+export const REGISTERNAMEN = {
+  allgemein: t('gemeinsam.model.register.allgemein'), dokumente: t('gemeinsam.model.register.dokumente'), verknuepfungen: t('gemeinsam.model.register.verknuepfungen'),
+  historie: t('gemeinsam.model.register.historie'), benutzer: t('gemeinsam.model.register.benutzer'),
+} as const;
+
 /** Register für einen neuen oder alten Mappentyp ohne Register. */
 export function standardRegister(felder: Feld[]): Register[] {
   return [
-    { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: felder.map((f) => f.key) },
-    { key: 'dokumente', name: 'Dokumente', art: 'dokumente' },
-    { key: 'verknuepfungen', name: 'Verknüpfungen', art: 'verknuepfungen', quellen: [] },
+    { key: 'allgemein', name: REGISTERNAMEN.allgemein, art: 'felder', felder: felder.map((f) => f.key) },
+    { key: 'dokumente', name: REGISTERNAMEN.dokumente, art: 'dokumente' },
+    { key: 'verknuepfungen', name: REGISTERNAMEN.verknuepfungen, art: 'verknuepfungen', quellen: [] },
   ];
 }
 
@@ -944,7 +966,7 @@ export const MAX_DATEIGROESSE = 100 * 1024 * 1024;
 /** Höchstens so viele Mappen in einer Auswahl (#149). */
 export const MAX_AUSWAHL = 5000;
 
-/** Wert lesbar formatieren (deutsch). `titelVon` löst Referenzen auf. */
+/** Wert lesbar formatieren (deutsch; Auswahl als Beschriftung, #728). `titelVon` löst Referenzen auf. */
 export function formatiere(f: Feld, v: Wert | undefined, titelVon: (id: string) => string = (id) => id): string {
   if (v == null || v === '') return '';
   switch (f.typ) {
@@ -960,7 +982,8 @@ export function formatiere(f: Feld, v: Wert | undefined, titelVon: (id: string) 
     }
     case 'janein': return v ? 'Ja' : 'Nein';
     case 'zahl': return typeof v === 'number' ? v.toLocaleString('de-DE', { maximumFractionDigits: f.nachkomma ?? 10 }) : String(v);
-    case 'auswahl': return Array.isArray(v) ? v.join(', ') : String(v);
+    // Fester Wert → Beschriftung in der Sprache des Benutzers (#728); gespeichert bleibt der Wert.
+    case 'auswahl': return (Array.isArray(v) ? v : [v]).map((x) => optionText(f, String(x))).join(', ');
     case 'referenz': return (Array.isArray(v) ? v : [String(v)]).map(titelVon).join(', ');
     case 'passwort': return istPasswortWert(v) && !v.gesetzt && !v.neu ? '' : '••••••••';
     case 'formatiert': return alsText(String(v));

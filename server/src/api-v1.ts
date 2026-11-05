@@ -337,6 +337,11 @@ export function v1Routen(intern: Route[]): Route[] {
 const ref = (n: string) => ({ $ref: `#/components/schemas/${n}` });
 const liste = (n: string) => ({ type: 'array', items: ref(n) });
 const uuid = { type: 'string', format: 'uuid' };
+/**
+ * Beschriftungen je Sprache (#728): Sprache (z. B. „en“) → Texte. Fehlt eine Angabe, gilt der Ausgangstext (Deutsch).
+ * Ohne die Eigenschaft bleiben beim Speichern die bisherigen Beschriftungen; null oder {} entfernt sie.
+ */
+const beschriftungen = (teile: Record<string, unknown>) => ({ type: 'object', nullable: true, description: 'Beschriftungen je Sprache (#728): Sprache → Texte; fehlt etwas, gilt der Ausgangstext. Ohne die Angabe bleiben die bisherigen; null entfernt sie.', additionalProperties: { type: 'object', properties: teile } });
 const zeit = { type: 'string', format: 'date-time' };
 const weitereRollen = { type: 'array', items: uuid, description: 'Weitere (fachliche) Rollen: Ids von Rollen-Mappen, ohne die Systemrolle Mitglied' };
 
@@ -349,21 +354,23 @@ const SCHEMAS: Record<string, Schema> = {
       key: { type: 'string', pattern: '^[a-z][a-z0-9_]{0,39}$' }, label: { type: 'string' }, typ: { type: 'string', enum: Object.keys(FELDTYPEN) },
       pflicht: { type: 'boolean' }, eindeutig: { type: 'boolean' }, hilfe: { type: 'string' }, minLen: { type: 'integer' }, maxLen: { type: 'integer' },
       min: { oneOf: [{ type: 'number' }, { type: 'string' }], description: 'Zahl und Betrag: Zahl. Datum (#535): „heute“ oder JJJJ-MM-TT – frühestes erlaubtes Datum' },
-      max: { oneOf: [{ type: 'number' }, { type: 'string' }], description: 'Zahl und Betrag: Zahl. Datum (#535): „heute“ oder JJJJ-MM-TT – spätestes erlaubtes Datum, z. B. heute für einen Geburtstag' }, nachkomma: { type: 'integer' }, muster: { type: 'string' }, optionen: { type: 'array', items: { type: 'string' } },
+      max: { oneOf: [{ type: 'number' }, { type: 'string' }], description: 'Zahl und Betrag: Zahl. Datum (#535): „heute“ oder JJJJ-MM-TT – spätestes erlaubtes Datum, z. B. heute für einen Geburtstag' }, nachkomma: { type: 'integer' }, muster: { type: 'string' }, optionen: { type: 'array', items: { type: 'string' }, description: 'Bei typ=auswahl: die festen Werte (#728). In der Mappe steht immer der feste Wert – auch über die API lesen und schreiben; die Beschriftung je Sprache steht in beschriftungen.<sprache>.optionen.' },
       system: { type: 'boolean', readOnly: true, description: 'Systemfeld eines Systemmappentyps: nicht entfernbar, nur Bezeichnung und Hilfetext änderbar' },
       mehrfach: { type: 'boolean' }, zielTyp: { ...uuid, description: 'Bei typ=referenz: Id des Ziel-Mappentyps' }, verweisart: { type: 'string', enum: ['zugehoerigkeit', 'bezug'] }, waehrung: { type: 'string' },
       erkennung: { type: 'object', nullable: true, description: 'Für die Erkennung nutzen (#336, #391); vorhanden = an. Nur bei Text, Langtext, Zahl, Betrag, Datum, Auswahl und Verweis. art: was im Feld steht (fehlt = aus Feldart und Bezeichnung), hinweis: Erkennungshinweis, z. B. „Muster 100-####“ (# = Ziffer).', properties: { art: { type: 'string', enum: Object.keys(ERKENNUNGSARTEN) }, hinweis: { type: 'string', maxLength: 300 } } },
       format: { type: 'string', nullable: true, enum: [...FELDFORMATE], description: 'Nur bei typ=text (#535): Format der Angabe. Neue und geänderte Werte müssen passen, gespeicherte bleiben gültig.' },
       landFeld: { type: 'string', nullable: true, description: 'Bei format=plz (#535): Kennung des Felds mit dem Land. Steht dort Deutschland (oder nichts), hat die PLZ genau 5 Ziffern.' },
+      beschriftungen: beschriftungen({ label: { type: 'string' }, hilfe: { type: 'string' }, optionen: { type: 'object', additionalProperties: { type: 'string' }, description: 'Fester Wert → Beschriftung; auch für de (sonst gilt der feste Wert)' } }),
     },
   },
-  Register: { type: 'object', required: ['key', 'name', 'art'], properties: { key: { type: 'string' }, name: { type: 'string' }, art: { type: 'string', enum: Object.keys(REGISTERARTEN) }, felder: { type: 'array', items: { type: 'string' } }, quellen: { type: 'array', items: { type: 'object', properties: { typId: uuid, feldKey: { type: 'string' }, trefferliste: { type: 'string', description: 'Kennung einer Trefferliste des Quelltyps; das Register zeigt dann deren Spalten' } } } } } },
+  Register: { type: 'object', required: ['key', 'name', 'art'], properties: { key: { type: 'string' }, name: { type: 'string' }, art: { type: 'string', enum: Object.keys(REGISTERARTEN) }, beschriftungen: beschriftungen({ name: { type: 'string' } }), felder: { type: 'array', items: { type: 'string' } }, quellen: { type: 'array', items: { type: 'object', properties: { typId: uuid, feldKey: { type: 'string' }, trefferliste: { type: 'string', description: 'Kennung einer Trefferliste des Quelltyps; das Register zeigt dann deren Spalten' } } } } } },
   MappentypEingabe: {
     type: 'object', required: ['name', 'felder'],
     properties: { autoZuordnen: { type: 'boolean', description: 'Post automatisch zuordnen, wenn die Erkennung sicher ist (#337): Absender eindeutig (z. B. Kundennummer, IBAN) und genau eine passende Mappe dieses Typs. Standard false; bei Archivmodus wirkungslos. Der Empfänger bekommt eine Aufgabe „Automatisch zugeordnet – bitte prüfen“ mit Rückgängig.' },
       ausDokument: { type: 'object', nullable: true, description: '„Aus Dokument ausfüllen“ (#391): eigene Beschriftung des Knopfs (höchstens 40 Zeichen) oder aus = true blendet ihn aus; null = Standard. Systemtypen haben den Knopf nie.', properties: { aus: { type: 'boolean' }, beschriftung: { type: 'string', example: 'Visitenkarte scannen' } } },
+      beschriftungen: beschriftungen({ name: { type: 'string' }, beschreibung: { type: 'string' } }),
       name: { type: 'string' }, schluessel: { type: 'string', example: 'rechnung', description: 'Feste Kennung; beim Anlegen frei wählbar (sonst aus dem Namen), danach unveränderlich' }, beschreibung: { type: 'string' }, titelVorlage: { type: 'string', example: '{rechnungsnummer} vom {rechnungsdatum}' }, felder: liste('Feld'), register: liste('Register'),
-      trefferlisten: { type: 'array', description: 'Trefferlisten; genau eine ist Standard', items: { type: 'object', required: ['key', 'name', 'spalten'], properties: { key: { type: 'string' }, name: { type: 'string' }, spalten: { type: 'array', items: { type: 'string' }, description: 'Feldschlüssel oder _titel, _erstellt, _erstelltVon, _geaendert, _geaendertVon' }, standard: { type: 'boolean' } } } },
+      trefferlisten: { type: 'array', description: 'Trefferlisten; genau eine ist Standard', items: { type: 'object', required: ['key', 'name', 'spalten'], properties: { key: { type: 'string' }, name: { type: 'string' }, beschriftungen: beschriftungen({ name: { type: 'string' } }), spalten: { type: 'array', items: { type: 'string' }, description: 'Feldschlüssel oder _titel, _erstellt, _erstelltVon, _geaendert, _geaendertVon' }, standard: { type: 'boolean' } } } },
       trefferliste: { type: 'array', items: { type: 'string' }, description: 'Spalten der Standard-Trefferliste (ältere Form); wenn angegeben, ersetzt sie deren Spalten' },
       archiv: { type: 'object', nullable: true, description: 'Archivmodus (#212); null = aus. Frist bis Ende des Kalenderjahres des Stichtags + jahre; vorher kein Löschen (409). Die Versionierung der Dokumentenregister ist dann Pflicht.', properties: { jahre: { type: 'integer', minimum: 1, maximum: 30 }, stichtag: { type: 'string', nullable: true, description: 'Kennung eines Datumsfelds; null = Anlagedatum' } } },
       erstellenErlaubt: { type: 'boolean', default: true, deprecated: true, description: 'Ohne Wirkung seit 0.32 – wer anlegen darf, regeln die Berechtigungen (Recht C)' },
@@ -530,7 +537,7 @@ const SCHEMAS: Record<string, Schema> = {
   Sicht: {
     type: 'object',
     properties: {
-      id: uuid, name: { type: 'string' }, beschreibung: { type: 'string' }, elternId: { ...uuid, nullable: true }, position: { type: 'integer' },
+      id: uuid, name: { type: 'string' }, beschreibung: { type: 'string' }, beschriftungen: beschriftungen({ name: { type: 'string' }, beschreibung: { type: 'string' } }), elternId: { ...uuid, nullable: true }, position: { type: 'integer' },
       typen: { type: 'array', items: uuid, description: 'Mappentypen, deren Mappen die Ansicht selbst zeigt; dazu kommen die ihrer Unteransichten' },
       bedingungen: { type: 'array', items: { type: 'object', additionalProperties: true }, description: 'Gelten zusammen (UND): {art:"feld", feld, op, wert?, bis?}, {art:"dokumente"|"verknuepfungen", register, vergleich, anzahl}, {art:"dokumenteGesamt"|"verknuepfungenGesamt", vergleich, anzahl}, {art:"favorit"}' },
       trefferliste: { type: 'string', nullable: true, description: 'Kennung der Trefferliste; null = Standard' },

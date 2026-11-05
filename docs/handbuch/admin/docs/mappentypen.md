@@ -44,13 +44,21 @@ Jedes Feld hat eine **Bezeichnung** (änderbar), eine **Kennung** (fest, sobald 
 | Betrag | Minimum, Maximum, Standardwährung |
 | Datum | [Frühestens, Spätestens](#formate-und-datumsgrenzen) (fest oder „heute“), Ist eine Frist |
 | Ja/Nein | – |
-| Auswahlliste | die Auswahlwerte (einer pro Zeile), Mehrfachauswahl |
+| Auswahlliste | die Auswahlwerte (einer pro Zeile), Mehrfachauswahl, [Beschriftung der Werte](#beschriftungen-je-sprache) |
 | Verweis | Ziel-Mappentyp, Art des Verweises, mehrere Mappen erlaubt |
 | Passwort | – (wird verschlüsselt gespeichert, siehe unten) |
 
 Für alle gilt: **Pflichtfeld** und ein **Hilfetext**, der beim Ausfüllen unter dem Feld steht (im Feld-Editor gleich neben der Bezeichnung); die meisten Mappentypen haben außerdem einen **Standardwert** für neue Mappen. **Eindeutig** heißt: Den Wert darf es in diesem Mappentyp nur einmal geben – Groß- und Kleinschreibung zählen dabei nicht.
 
 Steht im Standardwert eines Textfelds `{nummernkreis:<kennung>}`, bekommt jede neue Mappe eine fortlaufende Nummer aus diesem [Nummernkreis](nummernkreise.md); das Feld ist dann schreibgeschützt.
+
+### Beschriftungen je Sprache { #beschriftungen-je-sprache }
+
+Name und Beschreibung des Mappentyps, Bezeichnung und Hilfetext jedes Felds sowie die Namen von Registern und Trefferlisten kannst du in mehreren Sprachen pflegen. Neben jedem dieser Texte steht ein kleiner Sprachumschalter (**DE · EN**). Unter **DE** bearbeitest du den Ausgangstext, unter einer anderen Sprache die Beschriftung dafür. Bleibt sie leer, sieht man dort den deutschen Text. Ein Punkt am Umschalter zeigt, dass eine Beschriftung noch fehlt. Unter dem Namen steht zum Beispiel „12 von 14 Beschriftungen auf Englisch“ – das ist nur ein Hinweis, gespeichert wird trotzdem.
+
+Bei einer **Auswahlliste** sind die Auswahlwerte die **festen Werte**: Genau sie stehen in jeder Mappe. Unter **Beschriftung der Werte** gibst du je Sprache an, wie ein Wert angezeigt wird, zum Beispiel „Electricity“ für „Strom“. Ändern der Beschriftung lässt alle gespeicherten Mappen, Ansichten und Automatisierungen unverändert – sie arbeiten mit dem festen Wert. Ändern oder entfernen des Werts selbst wirkt dagegen wie bisher: Mappen mit dem alten Wert passen dann nicht mehr. Die Suche findet einen Wert auch über seine Beschriftung. Auch die Werte von Systemfeldern wie **Stand** oder **Kanal** der Post lassen sich so beschriften.
+
+Ansichten haben dasselbe für Name und Beschreibung. Welche Sprachen es gibt, legt später die Werkbank fest; bis dahin sind es Deutsch und Englisch.
 
 ### Formate und Datumsgrenzen
 

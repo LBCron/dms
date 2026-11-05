@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
-  REGISTERARTEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
+  REGISTERARTEN, REGISTERNAMEN, SYSTEMTYPEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
@@ -25,6 +25,7 @@ import { istVerschluesselt, type Betroffen, type Tresor } from './tresor';
 import type { Einstellungen } from './einstellungen';
 import { istUuid, StandVeraltet, WOERTER_JE_LAUF, type DokumentImPapierkorb, type NeueMappe, type PapierkorbEintrag, type Repo, type Rueckverweis, type SeitenAnfrage, type SortierungIntern } from './repo';
 import { liesWortgruppe, suchbegriffe, variantenVon, vorschlagAus, type Varianten } from '../../shared/src/suche';
+import { ausgangAus, bereinigeBeschriftungen, optionsGruppen, type FeldTeile, type NamensTeile, type TypTeile } from '../../shared/src/beschriftung';
 /** Höchstens so viele eigene Gruppen gleichbedeutender Wörter (#356). */
 const SYNONYM_GRUPPEN_MAX = 2000;
 import {
@@ -229,17 +230,27 @@ function zahlOderNull(v: unknown): number | null {
   return n == null || Number.isNaN(n) ? null : n;
 }
 
+/** Teile, die sich je Sprache beschriften lassen (#728). */
+const FELD_TEILE = ['label', 'hilfe', 'optionen'] as const satisfies ReadonlyArray<keyof FeldTeile>;
+const NAMENS_TEILE = ['name'] as const satisfies ReadonlyArray<keyof NamensTeile>;
+const TYP_TEILE = ['name', 'beschreibung'] as const satisfies ReadonlyArray<keyof TypTeile>;
+/** Beschriftungen oder nichts – leere Angaben werden nicht gespeichert. */
+const mitBeschriftungen = <T extends object>(b: T | undefined): { beschriftungen?: T } => (b ? { beschriftungen: b } : {});
+
 export function bereinigeFeld(e: unknown): Feld {
   const f = (e ?? {}) as Record<string, unknown>;
   const typ = (text(f.typ) in FELDTYPEN ? text(f.typ) : 'text') as Feld['typ'];
   const std = f.standard;
+  // Auswahl (#728): die festen Werte, jeder einmal; gespeicherte Mappen behalten ihren Wert.
+  const optionen = Array.isArray(f.optionen) ? [...new Set(f.optionen.map(text).filter(Boolean))] : [];
   return {
     key: text(f.key),
-    label: text(f.label),
+    // Deutsch ist der Ausgangstext; `beschriftungen.de.label` (z. B. aus einem Paket) gilt als Bezeichnung.
+    label: ausgangAus(f.beschriftungen, 'label', text(f.label)),
     typ,
     pflicht: !!f.pflicht,
     eindeutig: !!f.eindeutig && (typ === 'text' || typ === 'zahl'),
-    hilfe: text(f.hilfe),
+    hilfe: ausgangAus(f.beschriftungen, 'hilfe', text(f.hilfe)),
     standard: std == null || std === '' || typ === 'passwort' ? null : typeof std === 'boolean' ? std : String(std),
     minLen: zahlOderNull(f.minLen),
     maxLen: zahlOderNull(f.maxLen),
@@ -249,7 +260,7 @@ export function bereinigeFeld(e: unknown): Feld {
     max: typ === 'datum' ? datumsgrenze(f.max) : zahlOderNull(f.max),
     nachkomma: zahlOderNull(f.nachkomma),
     waehrung: typ === 'betrag' ? (text(f.waehrung) || 'EUR').toUpperCase().slice(0, 3) : undefined,
-    optionen: Array.isArray(f.optionen) ? f.optionen.map(text).filter(Boolean) : [],
+    optionen,
     mehrfach: !!f.mehrfach && (typ === 'auswahl' || typ === 'referenz'),
     zielTyp: typ === 'referenz' ? text(f.zielTyp) : '',
     // Auswahlfilter (#172): nur an Referenzfeldern mit festem Zieltyp.
@@ -264,6 +275,8 @@ export function bereinigeFeld(e: unknown): Feld {
     // Feldformat (#535): nur an Textfeldern; das Land-Feld nur beim Format PLZ.
     ...(typ === 'text' && text(f.format) ? { format: text(f.format) as Feldformat } : {}),
     ...(typ === 'text' && text(f.format) === 'plz' && text(f.landFeld) ? { landFeld: text(f.landFeld) } : {}),
+    // Beschriftungen je Sprache (#728): Bezeichnung, Hilfetext und – bei Auswahl – die Optionen.
+    ...mitBeschriftungen(bereinigeBeschriftungen<FeldTeile>(f.beschriftungen, FELD_TEILE, typ === 'auswahl' ? optionen : undefined)),
   };
 }
 
@@ -278,7 +291,8 @@ export function bereinigeRegister(e: unknown, felder: Feld[]): Register[] {
   const bekannt = new Set(felder.map((f) => f.key));
   const reg = e.map((x: Record<string, unknown>): Register => {
     const art = (String(x?.art) in REGISTERARTEN ? x.art : 'felder') as Register['art'];
-    const r: Register = { key: text(x?.key) || schluesselAus(text(x?.name)), name: text(x?.name), art };
+    const name = ausgangAus(x?.beschriftungen, 'name', text(x?.name));
+    const r: Register = { key: text(x?.key) || schluesselAus(name), name, art, ...mitBeschriftungen(bereinigeBeschriftungen<NamensTeile>(x?.beschriftungen, NAMENS_TEILE)) };
     if (art === 'felder') r.felder = (Array.isArray(x?.felder) ? x.felder.map(text) : []).filter((k) => bekannt.has(k));
     if (art === 'verknuepfungen') {
       r.quellen = (Array.isArray(x?.quellen) ? x.quellen : [])
@@ -318,10 +332,10 @@ export function bereinigeTrefferlisten(t: Record<string, unknown>, felder: Feld[
   const roh = Array.isArray(t.trefferlisten) ? (t.trefferlisten as Array<Record<string, unknown>>) : [];
   const listen: Trefferliste[] = [];
   for (const x of roh) {
-    const name = text(x?.name).slice(0, 80) || 'Trefferliste';
+    const name = ausgangAus(x?.beschriftungen, 'name', text(x?.name)).slice(0, 80) || 'Trefferliste';
     let key = (text(x?.key) || schluesselAus(name) || 'liste').slice(0, 40);
     for (let i = 2; listen.some((l) => l.key === key); i++) key = `${(text(x?.key) || schluesselAus(name) || 'liste').slice(0, 36)}_${i}`;
-    listen.push({ key, name, spalten: bereinigeSpalten(x?.spalten, felder), ...(x?.standard === true ? { standard: true } : {}) });
+    listen.push({ key, name, spalten: bereinigeSpalten(x?.spalten, felder), ...(x?.standard === true ? { standard: true } : {}), ...mitBeschriftungen(bereinigeBeschriftungen<NamensTeile>(x?.beschriftungen, NAMENS_TEILE)) });
   }
   if (!listen.length) listen.push({ key: 'standard', name: 'Standard', spalten: [], standard: true });
   const std = listen.find((l) => l.standard) ?? listen[0];
@@ -344,9 +358,11 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
   // Im Archivmodus ist die Versionierung Pflicht, und ältere Versionen bleiben bis zum Fristende.
   if (archiv) for (const r of register) if (r.art === 'dokumente') { r.versionierung = true; delete r.versionenBehalten; }
   return {
-    name: text(t.name),
+    name: ausgangAus(t.beschriftungen, 'name', text(t.name)),
     ...(text(t.schluessel) ? { schluessel: text(t.schluessel) } : {}),
-    beschreibung: text(t.beschreibung),
+    beschreibung: ausgangAus(t.beschriftungen, 'beschreibung', text(t.beschreibung)),
+    // Name und Beschreibung je Sprache (#728); undefined = keine (die Datenbank speichert NULL).
+    beschriftungen: bereinigeBeschriftungen<TypTeile>(t.beschriftungen, TYP_TEILE),
     // Altes Format: titelFeld → Vorlage {feld}
     titelVorlage: text(t.titelVorlage) || (text(t.titelFeld) ? `{${text(t.titelFeld)}}` : ''),
     felder,
@@ -356,6 +372,39 @@ export function bereinigeTyp(e: unknown): MappentypDaten {
     // Die Haken „Neue Mappen/Löschen erlauben“ gibt es nicht mehr (#146): das regeln die Berechtigungen.
     erstellenErlaubt: true,
     loeschenErlaubt: true,
+  };
+}
+
+/**
+ * Beschriftungen behalten (#728): Wer einen Mappentyp ohne die Angabe `beschriftungen` speichert (z. B. ein älteres
+ * Programm über die API), löscht damit keine – je Typ, Feld, Register und Trefferliste bleiben dann die bisherigen.
+ * Wer sie mitgibt (auch leer oder null), setzt sie neu.
+ */
+export function behalteBeschriftungen(roh: unknown, d: MappentypDaten, alt: Pick<MappentypDaten, 'beschriftungen' | 'felder' | 'register' | 'trefferlisten'>): MappentypDaten {
+  const r = (roh ?? {}) as Record<string, unknown>;
+  const hat = (x: unknown) => !!x && typeof x === 'object' && 'beschriftungen' in x;
+  const nachKey = <T extends { key: string; beschriftungen?: unknown }>(neu: T[], rohe: unknown, vorher: T[] | undefined): T[] => {
+    const liste = Array.isArray(rohe) ? rohe : [];
+    return neu.map((x) => {
+      const quelle = liste.find((y) => !!y && typeof y === 'object' && text((y as Record<string, unknown>).key) === x.key);
+      if (hat(quelle)) return x;
+      const a = vorher?.find((y) => y.key === x.key);
+      return a?.beschriftungen ? { ...x, beschriftungen: a.beschriftungen } : x;
+    });
+  };
+  const felder = nachKey(d.felder, r.felder, alt.felder).map((f) => {
+    // Beschriftungen entfernter Optionen fallen weg.
+    if (!f.beschriftungen) return f;
+    const b = bereinigeBeschriftungen<FeldTeile>(f.beschriftungen, FELD_TEILE, f.typ === 'auswahl' ? f.optionen : undefined);
+    const { beschriftungen: _b, ...rest } = f;
+    return b ? { ...rest, beschriftungen: b } : rest;
+  });
+  return {
+    ...d,
+    ...(hat(r) ? {} : { beschriftungen: alt.beschriftungen }),
+    felder,
+    register: nachKey(d.register, r.register, alt.register),
+    ...(d.trefferlisten ? { trefferlisten: nachKey(d.trefferlisten, r.trefferlisten, alt.trefferlisten) } : {}),
   };
 }
 
@@ -726,7 +775,8 @@ export class Dienst {
   async suchVarianten(texte: Array<string | undefined>): Promise<Varianten> {
     const begriffe = texte.flatMap((t) => (t ? suchbegriffe(t) ?? [] : []));
     if (!begriffe.length) return {};
-    return variantenVon(begriffe, await this.synonymGruppen());
+    // Beschriftungen der Auswahlwerte (#728) gelten wie gleichbedeutende Wörter: „Electricity“ findet den Wert „strom“.
+    return variantenVon(begriffe, [...await this.synonymGruppen(), ...optionsGruppen((await this.repo.listeTypen()).flatMap((x) => x.felder))]);
   }
   /** Tippfehler-Suche an (Werkbank → Suche)? Standard: an. */
   async unscharfAn(): Promise<boolean> {
@@ -3058,7 +3108,7 @@ export class Dienst {
   private async aendereTypIntern(id: string, eingabe: unknown): Promise<Mappentyp> {
     const alt = await this.repo.holeTyp(id);
     if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diesen-mappentyp-gibt-es'));
-    let d = bereinigeTyp(eingabe);
+    let d = behalteBeschriftungen(eingabe, bereinigeTyp(eingabe), alt);
     if (alt.system) d = await this.mitSystemfeldern(d, alt.system);
     // Der Schlüssel ist fest (#145); fehlt er noch, gilt der eingegebene bzw. einer aus dem Namen.
     d.schluessel = alt.schluessel ?? d.schluessel ?? freierSchluessel(d.name || 'mappentyp', (await this.repo.listeTypen()).filter((t) => t.id !== id).map((t) => t.schluessel ?? ''));
@@ -3100,7 +3150,8 @@ export class Dienst {
     if (fehlen.length) throw new Fachfehler(422, t('meldungen.dienst.systemfelder-lassen-sich-nicht', { map: fehlen.map((f) => f.label).join(', ') }));
     const felder = d.felder.map((f) => {
       const s = soll.find((x) => x.key === f.key);
-      return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe } : f;
+      // Beschriftungen je Sprache (#728) darf der Administrator wie Bezeichnung und Hilfetext setzen.
+      return s ? { ...s, label: f.label || s.label, hilfe: f.hilfe || s.hilfe, ...mitBeschriftungen(f.beschriftungen) } : f;
     });
     return { ...d, felder, ...(system === 'benutzer' ? { erstellenErlaubt: false, loeschenErlaubt: false } : system === 'post' ? { erstellenErlaubt: false } : {}) };
   }
@@ -3904,7 +3955,7 @@ export class Dienst {
 
   private async bereinigeSicht(e: unknown, id: string, alle: Sicht[]): Promise<SichtDaten> {
     const x = (e ?? {}) as Record<string, unknown>;
-    const name = text(x.name).slice(0, 80);
+    const name = ausgangAus(x.beschriftungen, 'name', text(x.name)).slice(0, 80);
     if (!name) throw new Fachfehler(422, t('meldungen.dienst.bitte-einen-namen-fuer'));
     const elternId = istUuid(x.elternId) ? x.elternId : null;
     if (elternId && !alle.some((s) => s.id === elternId)) throw new Fachfehler(422, t('meldungen.dienst.die-gewaehlte-elternsicht-gibt'));
@@ -3925,7 +3976,9 @@ export class Dienst {
     if (probleme.length) throw new Fachfehler(422, t('meldungen.dienst.berechtigungen', { probleme: probleme.join(' ') }), { gruende: probleme, berechtigungen: true });
     // Symbol (#428): nur Namen aus der festen Auswahl; fehlt die Angabe, bleibt es, wie es ist.
     const symbol = 'symbol' in x ? ansichtSymbol(x.symbol) : alle.find((s) => s.id === id)?.symbol ?? null;
-    return { name, beschreibung: text(x.beschreibung).slice(0, 500), elternId, position, typen, bedingungen: bereinigeBedingungen(x.bedingungen), trefferliste, berechtigungen, symbol };
+    // Beschriftungen je Sprache (#728): fehlt die Angabe, bleiben sie, wie sie sind.
+    const beschriftungen = 'beschriftungen' in x ? bereinigeBeschriftungen<TypTeile>(x.beschriftungen, TYP_TEILE) : alle.find((s) => s.id === id)?.beschriftungen;
+    return { name, beschreibung: ausgangAus(x.beschriftungen, 'beschreibung', text(x.beschreibung)).slice(0, 500), elternId, position, typen, bedingungen: bereinigeBedingungen(x.bedingungen), trefferliste, berechtigungen, symbol, beschriftungen };
   }
 
   async legeSichtAn(e: unknown): Promise<Sicht> {
@@ -5285,11 +5338,11 @@ export class Dienst {
     const ids = { rolle: rolle?.id ?? randomUUID(), benutzer: benutzer?.id ?? randomUUID() };
     if (!rolle) {
       rolle = await this.repo.legeTypAn(ids.rolle, {
-        name: frei('Rolle'), schluessel: sk('rolle'), beschreibung: t('meldungen.dienst.rollen-die-benutzer-haben'), titelVorlage: '{name}',
+        name: frei(SYSTEMTYPEN.rolle), schluessel: sk('rolle'), beschreibung: t('meldungen.dienst.rollen-die-benutzer-haben'), titelVorlage: '{name}',
         felder: systemfelder('rolle', ids.rolle),
         register: [
-          { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name'] },
-          { key: 'benutzer', name: 'Benutzer', art: 'verknuepfungen', quellen: [{ typId: ids.benutzer, feldKey: 'rollen' }] },
+          { key: 'allgemein', name: REGISTERNAMEN.allgemein, art: 'felder', felder: ['name'] },
+          { key: 'benutzer', name: REGISTERNAMEN.benutzer, art: 'verknuepfungen', quellen: [{ typId: ids.benutzer, feldKey: 'rollen' }] },
         ],
         trefferliste: [], erstellenErlaubt: true, loeschenErlaubt: true,
       }, 'rolle');
@@ -5298,12 +5351,12 @@ export class Dienst {
     }
     if (!benutzer) {
       benutzer = await this.repo.legeTypAn(ids.benutzer, {
-        name: frei('Benutzer'), schluessel: sk('benutzer'), beschreibung: t('meldungen.dienst.die-benutzer-dieser-installation'), titelVorlage: '{name}',
+        name: frei(SYSTEMTYPEN.benutzer), schluessel: sk('benutzer'), beschreibung: t('meldungen.dienst.die-benutzer-dieser-installation'), titelVorlage: '{name}',
         felder: systemfelder('benutzer', rolle.id, ids.benutzer),
         register: [
-          { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['name', 'email', 'rollen', 'aktiv', 'abwesend', 'abwesend_von', 'abwesend_bis', 'vertreter'] },
-          { key: 'dokumente', name: 'Dokumente', art: 'dokumente' },
-          { key: 'verknuepfungen', name: 'Verknüpfungen', art: 'verknuepfungen', quellen: [] },
+          { key: 'allgemein', name: REGISTERNAMEN.allgemein, art: 'felder', felder: ['name', 'email', 'rollen', 'aktiv', 'abwesend', 'abwesend_von', 'abwesend_bis', 'vertreter'] },
+          { key: 'dokumente', name: REGISTERNAMEN.dokumente, art: 'dokumente' },
+          { key: 'verknuepfungen', name: REGISTERNAMEN.verknuepfungen, art: 'verknuepfungen', quellen: [] },
         ],
         trefferliste: ['name', 'email', 'rollen', 'aktiv'], erstellenErlaubt: false, loeschenErlaubt: false,
       }, 'benutzer');
@@ -5313,12 +5366,12 @@ export class Dienst {
     if (!post) {
       // Post (#192): alles, was hinein- oder hinausgeht; ersetzt den früheren Typ E-Mail (#58).
       post = await this.repo.legeTypAn(randomUUID(), {
-        name: frei('Post'), schluessel: sk('post'), beschreibung: POST_BESCHREIBUNG, titelVorlage: '{betreff}',
+        name: frei(SYSTEMTYPEN.post), schluessel: sk('post'), beschreibung: POST_BESCHREIBUNG, titelVorlage: '{betreff}',
         felder: systemfelder('post', rolle.id, benutzer.id),
         register: [
-          { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: systemfelder('post', rolle.id, benutzer.id).map((f) => f.key) },
-          { key: 'dokumente', name: 'Dokumente', art: 'dokumente' },
-          { key: 'protokoll', name: 'Historie', art: 'protokoll' },
+          { key: 'allgemein', name: REGISTERNAMEN.allgemein, art: 'felder', felder: systemfelder('post', rolle.id, benutzer.id).map((f) => f.key) },
+          { key: 'dokumente', name: REGISTERNAMEN.dokumente, art: 'dokumente' },
+          { key: 'protokoll', name: REGISTERNAMEN.historie, art: 'protokoll' },
         ],
         trefferliste: POST_SPALTEN, erstellenErlaubt: false, loeschenErlaubt: true,
       }, 'post');
@@ -5420,7 +5473,7 @@ export class Dienst {
       if (!s || !f.system) return f;
       const label = alteNamen[f.key]?.includes(f.label) ? s.label : f.label || s.label;
       const hilfe = !f.hilfe || alteHilfen.includes(f.hilfe) ? s.hilfe : f.hilfe;
-      const neu: Feld = { ...s, label, ...(hilfe ? { hilfe } : {}) };
+      const neu: Feld = { ...s, label, ...(hilfe ? { hilfe } : {}), ...mitBeschriftungen(f.beschriftungen) };
       if (!hilfe) delete neu.hilfe;
       if (JSON.stringify(neu) !== JSON.stringify(f)) geaendert = true;
       return neu;

@@ -49,6 +49,8 @@ const alsTyp = (r: Zeile): Mappentyp => ({
   system: (r.system as Mappentyp['system']) ?? null,
   berechtigungen: (r.berechtigungen as Mappentyp['berechtigungen']) ?? null,
   archiv: (r.archiv as Mappentyp['archiv']) ?? null,
+  // Beschriftungen je Sprache (#728, Migration 080): nur, wenn es welche gibt.
+  ...(r.beschriftungen ? { beschriftungen: r.beschriftungen as Mappentyp['beschriftungen'] } : {}),
   erstellt: iso(r.erstellt),
   geaendert: iso(r.geaendert),
 });
@@ -241,6 +243,7 @@ const alsSicht = (r: Zeile): Sicht => ({
   trefferliste: (r.trefferliste as string | null) ?? null,
   berechtigungen: (r.berechtigungen as Sicht['berechtigungen']) ?? null,
   symbol: (r.symbol as string | null) ?? null,
+  ...(r.beschriftungen ? { beschriftungen: r.beschriftungen as Sicht['beschriftungen'] } : {}),
   erstellt: iso(r.erstellt),
   geaendert: iso(r.geaendert),
 });
@@ -663,9 +666,9 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     },
     async legeTypAn(id, d: MappentypDaten, system) {
       const [r] = await sql`
-        INSERT INTO mappentypen (id, haushalt_id, name, schluessel, beschreibung, titel_vorlage, felder, register, trefferliste, trefferlisten, erstellen_erlaubt, loeschen_erlaubt, system, archiv)
+        INSERT INTO mappentypen (id, haushalt_id, name, schluessel, beschreibung, titel_vorlage, felder, register, trefferliste, trefferlisten, erstellen_erlaubt, loeschen_erlaubt, system, archiv, beschriftungen)
         VALUES (${id}, ${haushaltId}, ${d.name}, ${d.schluessel ?? null}, ${d.beschreibung}, ${d.titelVorlage}, ${json(sql, d.felder)}, ${json(sql, d.register)}, ${json(sql, standardliste(d).spalten)}, ${json(sql, trefferlistenVon(d))},
-          ${d.erstellenErlaubt !== false}, ${d.loeschenErlaubt !== false}, ${system ?? null}, ${d.archiv ? json(sql, d.archiv) : null})
+          ${d.erstellenErlaubt !== false}, ${d.loeschenErlaubt !== false}, ${system ?? null}, ${d.archiv ? json(sql, d.archiv) : null}, ${d.beschriftungen ? json(sql, d.beschriftungen) : null})
         RETURNING *`;
       return alsTyp(r);
     },
@@ -674,7 +677,8 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         const [r] = await tx`
           UPDATE mappentypen SET name = ${d.name}, schluessel = coalesce(schluessel, ${d.schluessel ?? null}), beschreibung = ${d.beschreibung}, titel_vorlage = ${d.titelVorlage},
             felder = ${json(sql, d.felder)}, register = ${json(sql, d.register)}, trefferliste = ${json(sql, standardliste(d).spalten)}, trefferlisten = ${json(sql, trefferlistenVon(d))},
-            erstellen_erlaubt = ${d.erstellenErlaubt !== false}, loeschen_erlaubt = ${d.loeschenErlaubt !== false}, archiv = ${d.archiv ? json(sql, d.archiv) : null}, geaendert = now()
+            erstellen_erlaubt = ${d.erstellenErlaubt !== false}, loeschen_erlaubt = ${d.loeschenErlaubt !== false}, archiv = ${d.archiv ? json(sql, d.archiv) : null},
+            beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = now()
           WHERE haushalt_id = ${haushaltId} AND id = ${id}
           RETURNING *`;
         const refKeys = d.felder.filter((f) => f.typ === 'referenz').map((f) => f.key);
@@ -1142,8 +1146,8 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
     },
     async legeSichtAn(id, d: SichtDaten) {
       const [r] = await sql`
-        INSERT INTO sichten (id, haushalt_id, name, beschreibung, eltern_id, position, typen, bedingungen, trefferliste, berechtigungen, symbol)
-        VALUES (${id}, ${haushaltId}, ${d.name}, ${d.beschreibung}, ${d.elternId}, ${d.position}, ${json(sql, d.typen)}, ${json(sql, d.bedingungen)}, ${d.trefferliste ?? null}, ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, ${d.symbol ?? null})
+        INSERT INTO sichten (id, haushalt_id, name, beschreibung, eltern_id, position, typen, bedingungen, trefferliste, berechtigungen, symbol, beschriftungen)
+        VALUES (${id}, ${haushaltId}, ${d.name}, ${d.beschreibung}, ${d.elternId}, ${d.position}, ${json(sql, d.typen)}, ${json(sql, d.bedingungen)}, ${d.trefferliste ?? null}, ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, ${d.symbol ?? null}, ${d.beschriftungen ? json(sql, d.beschriftungen) : null})
         RETURNING *`;
       return alsSicht(r);
     },
@@ -1151,7 +1155,7 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
       const [r] = await sql`
         UPDATE sichten SET name = ${d.name}, beschreibung = ${d.beschreibung}, eltern_id = ${d.elternId}, position = ${d.position},
           typen = ${json(sql, d.typen)}, bedingungen = ${json(sql, d.bedingungen)}, trefferliste = ${d.trefferliste ?? null},
-          berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, symbol = ${d.symbol ?? null}, geaendert = now()
+          berechtigungen = ${d.berechtigungen ? json(sql, d.berechtigungen) : null}, symbol = ${d.symbol ?? null}, beschriftungen = ${d.beschriftungen ? json(sql, d.beschriftungen) : null}, geaendert = now()
         WHERE haushalt_id = ${haushaltId} AND id = ${id} RETURNING *`;
       return alsSicht(r);
     },

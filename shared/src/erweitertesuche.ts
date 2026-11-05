@@ -12,6 +12,7 @@
  * - volltext=…, in=dokumente / in=notizen (ohne „in“: beide)
  * Zwischen den Feldern gilt UND, innerhalb eines Feldes ODER. Server und Oberfläche teilen diese Datei.
  */
+import { wertZuOption } from './beschriftung';
 import { typImLink } from './direktlink';
 import type { Mappentyp } from './model';
 import { bedingungsfelder, bedingungsProblem, OPERATOREN_JE_ART, verschiebe, type Bedingung, type Bedingungsfeld } from './sichten';
@@ -226,9 +227,10 @@ export function abfrageAus(f: Suchformular, alleTypen: Mappentyp[]): Abfrage {
       if (!werte.length) continue;
       if (art === 'verweis' || art === 'person') b = { art: 'feld', feld: key, op: 'zeigtAuf', wert: { art: 'fest', wert: werte } };
       else if (art === 'auswahl') {
-        const optionen = feld.feld?.optionen ?? [];
-        const gueltig = werte.map((w) => optionen.find((o) => o.toLowerCase() === w.toLowerCase())).filter((o): o is string => !!o);
-        const falsch = werte.filter((w) => !optionen.some((o) => o.toLowerCase() === w.toLowerCase()));
+        // Fester Wert oder seine Beschriftung (#728) – gesucht wird immer mit dem festen Wert.
+        const f = feld.feld ?? { optionen: [] };
+        const gueltig = werte.map((w) => wertZuOption(f, w)).filter((o): o is string => !!o);
+        const falsch = werte.filter((w) => !wertZuOption(f, w));
         if (falsch.length) { fehler.push(t('gemeinsam.erweitertesuche.gibt-es-in-der', { falsch: falsch[0], name })); continue; }
         b = { art: 'feld', feld: key, op: 'einerVon', wert: { art: 'fest', wert: gueltig } };
       } else if (art === 'janein') {

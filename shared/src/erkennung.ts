@@ -12,6 +12,7 @@
  * `pruefeVorschlaege` prüft jede Antwort gegen die Feldtypen, bevor etwas angezeigt wird.
  */
 
+import { optionTexte, wertZuOption } from './beschriftung';
 import type { Betrag, Feld, Feldtyp, Mappentyp, Wert } from './model';
 import { formatFehler, type Feldformat } from './feldformate';
 import { t } from './texte';
@@ -580,8 +581,14 @@ export function vorschlaegeAus(t: Pick<Mappentyp, 'felder'>, text: string, a: An
         break;
       }
       case 'auswahl': {
-        const o = (f.optionen ?? []).find((x) => x.length >= 3 && new RegExp(`(?<![\\wÄÖÜäöüß])${esc(x)}(?![\\wÄÖÜäöüß])`, 'i').test(text));
-        if (o) { const m = new RegExp(esc(o), 'i').exec(text)!; setze(f, f.mehrfach ? [o] : o, { sicherheit: 'niedrig', fundstelle: ausschnitt(text, m.index, o.length) }); }
+        // Fester Wert oder eine seiner Beschriftungen (#728) im Text; gesetzt wird immer der feste Wert.
+        const wort = (x: string) => new RegExp(`(?<![\\wÄÖÜäöüß])${esc(x)}(?![\\wÄÖÜäöüß])`, 'i');
+        let treffer: { wert: string; text: string } | undefined;
+        for (const o of f.optionen ?? []) {
+          const x = [o, ...optionTexte(f, o)].find((y) => y.length >= 3 && wort(y).test(text));
+          if (x) { treffer = { wert: o, text: x }; break; }
+        }
+        if (treffer) { const m = wort(treffer.text).exec(text)!; setze(f, f.mehrfach ? [treffer.wert] : treffer.wert, { sicherheit: 'niedrig', fundstelle: ausschnitt(text, m.index, treffer.text.length) }); }
         break;
       }
       default: break;
@@ -665,8 +672,9 @@ export function pruefeVorschlaege(pick: Pick<Mappentyp, 'felder'>, antwort: unkn
       case 'zahl': gut = typeof w === 'number' && Number.isFinite(w) && (typeof f.min !== 'number' || w >= f.min) && (typeof f.max !== 'number' || w <= f.max) ? w : undefined; break;
       case 'janein': gut = typeof w === 'boolean' ? w : undefined; break;
       case 'auswahl': {
-        const liste = Array.isArray(w) ? w : [w];
-        const ok = liste.length > 0 && liste.every((x) => typeof x === 'string' && (f.optionen ?? []).includes(x)) && (f.mehrfach || liste.length === 1);
+        // Eine Engine darf auch die Beschriftung nennen (#728); übernommen wird der feste Wert.
+        const liste = (Array.isArray(w) ? w : [w]).map((x) => (typeof x === 'string' ? wertZuOption(f, x) : undefined));
+        const ok = liste.length > 0 && liste.every((x) => x !== undefined) && (f.mehrfach || liste.length === 1);
         gut = ok ? (f.mehrfach ? liste as string[] : liste[0] as string) : undefined;
         break;
       }

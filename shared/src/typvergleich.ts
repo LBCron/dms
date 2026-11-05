@@ -9,16 +9,18 @@ import { t } from './texte';
 /** Was vom Mappentyp verglichen wird – ohne Ids anderer Typen (Verweisziele bleiben als Id, die bleibt im selben DMS gleich). */
 export interface TypBild {
   name: string; beschreibung: string; titelVorlage: string;
+  /** Name und Beschreibung je Sprache (#728); fehlt in älteren Ständen. */
+  beschriftungen?: Mappentyp['beschriftungen'];
   felder: Array<{ key: string; label: string; werte: Record<string, unknown> }>;
   register: Array<{ key: string; name: string; werte: Record<string, unknown> }>;
 }
 
 /** Eigenschaften eines Felds, die eine inhaltliche Änderung sind (Name extra, damit „umbenannt“ lesbar wird). */
-const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'maxLen', 'muster', 'min', 'max', 'nachkomma', 'waehrung', 'optionen', 'mehrfach', 'zielTyp', 'verweisart', 'frist', 'auswahlFilter', 'erkennung', 'format', 'landFeld'] as const;
+const FELD = ['typ', 'pflicht', 'eindeutig', 'hilfe', 'standard', 'minLen', 'maxLen', 'muster', 'min', 'max', 'nachkomma', 'waehrung', 'optionen', 'mehrfach', 'zielTyp', 'verweisart', 'frist', 'auswahlFilter', 'erkennung', 'format', 'landFeld', 'beschriftungen'] as const;
 const NAMEN: Record<string, string> = {
   typ: 'Art', pflicht: 'Pflicht', eindeutig: 'eindeutig', hilfe: t('gemeinsam.typvergleich.hilfetext'), standard: 'Vorgabe', minLen: 'Mindestlänge', maxLen: 'Höchstlänge', muster: 'Muster',
   min: 'Untergrenze', max: 'Obergrenze', nachkomma: 'Nachkommastellen', waehrung: 'Währung', optionen: 'Auswahlwerte', mehrfach: 'Mehrfachauswahl', zielTyp: 'Ziel',
-  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Erkennung', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'),
+  verweisart: 'Verweisart', frist: 'Frist', auswahlFilter: 'Auswahlfilter', erkennung: 'Erkennung', format: 'Format', landFeld: t('gemeinsam.typvergleich.land-feld'), beschriftungen: t('gemeinsam.typvergleich.beschriftungen'),
   name: 'Name', art: 'Art', felder: 'Felder', quellen: 'Quellen',
 };
 /** Leere Werte (undefined, null, false, '', []) gelten als „nicht gesetzt“ – Speichern ohne Änderung zählt nicht. */
@@ -30,8 +32,9 @@ export function typBild(t: Mappentyp): TypBild {
   const feld = (f: Feld) => ({ key: f.key, label: f.label, werte: sauber(Object.fromEntries(FELD.map((k) => [k, (f as unknown as Record<string, unknown>)[k]]))) });
   return {
     name: t.name, beschreibung: t.beschreibung ?? '', titelVorlage: t.titelVorlage ?? '',
+    ...(t.beschriftungen ? { beschriftungen: t.beschriftungen } : {}),
     felder: t.felder.filter((f) => !f.system).map(feld),
-    register: t.register.map((r) => ({ key: r.key, name: r.name, werte: sauber({ art: r.art, felder: r.felder, quellen: r.quellen }) })),
+    register: t.register.map((r) => ({ key: r.key, name: r.name, werte: sauber({ art: r.art, felder: r.felder, quellen: r.quellen, beschriftungen: r.beschriftungen }) })),
   };
 }
 
@@ -70,6 +73,7 @@ export function typUnterschiede(alt: TypBild, neu: TypBild): TypUnterschiede | n
   if (alt.name !== neu.name) liste.push(t('gemeinsam.typvergleich.name', { name: alt.name, name2: neu.name }));
   if (alt.beschreibung !== neu.beschreibung) liste.push(t('gemeinsam.typvergleich.beschreibung-geaendert'));
   if (alt.titelVorlage !== neu.titelVorlage) liste.push(t('gemeinsam.typvergleich.titel-geaendert'));
+  if (!gleich(alt.beschriftungen, neu.beschriftungen)) liste.push(t('gemeinsam.typvergleich.beschriftungen-geaendert'));
   if (!liste.length) return null;
   const teile = [
     plus ? `+${plus} ${t('gemeinsam.typvergleich.felder', { anzahl: plus })}` : '',
