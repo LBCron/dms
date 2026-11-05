@@ -117,6 +117,8 @@ export interface Register {
   versionierung?: boolean;
   /** Nur die letzten N Versionen behalten (mit der aktuellen); leer = alle. */
   versionenBehalten?: number | null;
+  /** Historie (#800): welche Gruppen von Einträgen das Register zeigt; fehlt = HISTORIE_VORAUSWAHL. */
+  zeigt?: Historiengruppe[];
   /** Name in weiteren Sprachen (#728). */
   beschriftungen?: Beschriftungen<NamensTeile>;
 }
@@ -949,10 +951,55 @@ export const HISTORIENARTEN = {
   entsperrt: t('gemeinsam.model.passwortschutz-entfernt'),
   /** #820: im Verwaltungsmodus geöffnet, heruntergeladen, geändert … – nicht löschbar, nie ausgeblendet. */
   verwaltungsmodus: t('gemeinsam.model.im-verwaltungsmodus'),
+  /** #800: Abrufe einer Datei – in der Oberfläche heruntergeladen, mit einem API-Schlüssel, über das WebDAV-Laufwerk. */
+  heruntergeladen: t('gemeinsam.model.heruntergeladen'),
+  abruf_api: t('gemeinsam.model.abruf-api'),
+  abruf_webdav: t('gemeinsam.model.abruf-webdav'),
 } as const;
 /** Was im Verwaltungsmodus mit einer fremden Mappe geschah (#820). */
 export type Modusspur = 'angesehen' | 'heruntergeladen' | 'geaendert' | 'exportiert' | 'versendet';
 export type Historienart = keyof typeof HISTORIENARTEN;
+
+/**
+ * Was ein Register „Historie“ zeigt (#800): die Arten von Einträgen in Gruppen. Geschrieben wird immer alles – welche
+ * Gruppen ein Register zeigt, ist nur eine Frage der Anzeige. „verwaltungsmodus“ (#820) gehört zu keiner Gruppe und
+ * steht immer da. Jede andere Art liegt in genau einer Gruppe.
+ */
+export const HISTORIENGRUPPEN = {
+  anlegen: ['angelegt', 'papierkorb', 'wiederhergestellt', 'endgueltig', 'uebernommen', 'zugeordnet', 'post_geteilt', 'archivnummer'],
+  felder: ['geaendert', 'passwort_angezeigt'],
+  dokumente: ['dokument_hochgeladen', 'dokument_geloescht', 'dokument_version', 'dokument_papierkorb', 'dokument_wiederhergestellt', 'pdf_bearbeitet',
+    'volltext', 'geschwaerzt', 'umgewandelt', 'archivfassung', 'entsperrt'],
+  notizen: ['notiz'],
+  aufgaben: ['aufgabe', 'abwesenheit'],
+  weitergeben: ['email', 'weitergegeben', 'auskunft'],
+  rechte: ['leserecht'],
+  herunterladen: ['heruntergeladen'],
+  api: ['abruf_api'],
+  webdav: ['abruf_webdav'],
+} as const satisfies Record<string, readonly Historienart[]>;
+export type Historiengruppe = keyof typeof HISTORIENGRUPPEN;
+/** Arten, die jedes Register „Historie“ zeigt, gleich wie es eingestellt ist (#820). */
+export const HISTORIE_IMMER: readonly Historienart[] = ['verwaltungsmodus'];
+/**
+ * Vorauswahl eines Registers „Historie“ ohne eigene Einstellung (#800): alles wie bisher, ohne die Abrufe – die
+ * interessieren im Alltag selten. Ein weiteres Register (z. B. „Abrufe“) oder „Alles anzeigen“ zeigt sie.
+ */
+export const HISTORIE_VORAUSWAHL: readonly Historiengruppe[] = ['anlegen', 'felder', 'dokumente', 'notizen', 'aufgaben', 'weitergeben', 'rechte'];
+export const istHistoriengruppe = (g: unknown): g is Historiengruppe => typeof g === 'string' && Object.hasOwn(HISTORIENGRUPPEN, g);
+/** Name einer Gruppe in der Sprache des Lesers. */
+export const historiengruppeName = (g: Historiengruppe) => t.frei(`gemeinsam.model.historiengruppe.${g}`);
+/** Die Gruppen, die ein Register „Historie“ zeigt: seine Einstellung, sonst die Vorauswahl. */
+export const historiengruppenVon = (r: Pick<Register, 'zeigt'> | undefined): Historiengruppe[] => [...(r?.zeigt ?? HISTORIE_VORAUSWAHL)];
+/** Die Arten zu diesen Gruppen – immer mit HISTORIE_IMMER. */
+export function historienartenVon(gruppen: readonly Historiengruppe[]): Historienart[] {
+  return [...new Set<Historienart>([...gruppen.flatMap((g) => HISTORIENGRUPPEN[g] ?? []), ...HISTORIE_IMMER])];
+}
+/** Wege eines Abrufs (#800) und die Art des Eintrags dazu. */
+export type Abrufweg = 'oberflaeche' | 'api' | 'webdav';
+export const ABRUF_ART: Record<Abrufweg, Historienart> = { oberflaeche: 'heruntergeladen', api: 'abruf_api', webdav: 'abruf_webdav' };
+/** Welche Fassung abgerufen wurde: das Original, eine ältere Version, die Archivfassung, die umgewandelte Fassung, Seitenbilder. */
+export type Abruffassung = 'original' | 'version' | 'archiv' | 'umgewandelt' | 'seiten' | 'export';
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */
 export interface Feldaenderung { feld: string; label: string; alt?: string; neu?: string; geheim?: boolean }
 /**

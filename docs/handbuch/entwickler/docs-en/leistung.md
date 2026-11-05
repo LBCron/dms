@@ -208,7 +208,7 @@ You start a matching Ablago from `server/` with an own, empty database (e.g. `dm
 
 **Profile:** every "person" sends one request after another, mixed as in everyday life – start page (`/api/startseite`, `/api/sichten`, `/api/termine/naechster`, `/api/typen`) 15 %, list of a view 25 %, opening a folder 25 %, search 15 %, thumbnail 10 %, downloading a document 10 %; one third as an administrator, the rest as a member (with read filter). "100 at once" means: 100 requests are constantly under way. If a person gets 503, they wait as `Retry-After` says.
 
-**With saving** (#739): after the previous run of each level follows a second one with the same concurrency (and with mittel with an export alongside) according to `PROFIL_SPEICHERN`: the read shares × 0.9, plus 10 % writing (`SCHREIBEN`) – changing a folder 4 % (`PUT /api/mappen/:id` on a text or long text field, not unique, without pattern), star 2 % (`PUT`/`DELETE …/favorit`), note 2 % (create or delete one's own), task 2 % (create for oneself, complete it next time). Targets are, per view, up to 50 of the first 200 folders that the member without a role sees – all three accounts may read and change them; the run fetches the targets itself, so the previous one starts unchanged. With gross and extrem it runs after recovery with as many at once as the limit (otherwise like the first step). Afterwards `aufraeumen`: stars and notes gone, values back, open tasks from the run completed (own ones and "Changed" for favourites, #422); what remains are entries in the history and completed tasks. Measurement without target and without CI limit; writing requests with 4xx are in the report ("Rejected") – then the test isn't right. The old lines of the result block (also memory and event loop) only count the previous runs; new are `… + Speichern` per level and `Mit Speichern: Arbeitsspeicher …`.
+**With saving** (#739): after the previous run of each level follows a second one with the same concurrency (and with mittel with an export alongside) according to `PROFIL_SPEICHERN`: the read shares × 0.85, plus 5 % history (`HISTORIE_LESEN`, #800: first page with 100 entries, `GET /api/mappen/:id/historie?max=100`, as administrator; with its own p50/p95 in the report) and 10 % writing (`SCHREIBEN`) – changing a folder 4 % (`PUT /api/mappen/:id` on a text or long text field, not unique, without pattern), star 2 % (`PUT`/`DELETE …/favorit`), note 2 % (create or delete one's own), task 2 % (create for oneself, complete it next time). Targets are, per view, up to 50 of the first 200 folders that the member without a role sees – all three accounts may read and change them; the run fetches the targets itself, so the previous one starts unchanged. With gross and extrem it runs after recovery with as many at once as the limit (otherwise like the first step). Afterwards `aufraeumen`: stars and notes gone, values back, open tasks from the run completed (own ones and "Changed" for favourites, #422); what remains are entries in the history and completed tasks. Measurement without target and without CI limit; writing requests with 4xx are in the report ("Rejected") – then the test isn't right. The old lines of the result block (also memory and event loop) only count the previous runs; new are `… + Speichern` per level and `Mit Speichern: Arbeitsspeicher …`.
 
 **Levels** (#563; the levels "normal" and "Überlast" from #544 are merged into them; `--stufe normal` and `ueberlast` run as `mittel` and `gross` respectively)
 
@@ -264,6 +264,28 @@ Measured with 50,000 demo folders and 25,000 documents (measuring script, median
 Individual queries (`EXPLAIN ANALYZE`): page over all types by title 49 → 0.6 ms, by created descending 54 → 0.5 ms, invoice by created descending 33 → 0.3 ms, duplicate contract number 17 → 0.2 ms. Load test mittel (30 s per run, load test on the same computer): p95 1274 → 693 ms; with saving p95 3.8 → 3.2 s, writing requests p50 2.3 → 1.7 s. With the indexes, the table `mappen` grows from 46 to 76 MB; the migration took 4 s.
 
 **Measurement for #542** (worker pool, measured alternately before/after): with 10 simultaneous requests with export, p95 fell from 2,172 to 786 ms and the event loop delay (p99) from 1,373 to 135 ms; details in the release notes of #542.
+
+## History with large amounts (#800) { #historie }
+
+Since #800 retrievals also go into the history (download, API, WebDAV). So that it stays fast with many folders and years:
+
+- **Only when the tab is opened** and **page by page**: the interface loads 100 entries (`?max=100`), "Load more" the next ones after the last (`?vor=<id>`, keyset over `(zeit, id)`, no `OFFSET`). Opening a folder doesn't read the history. Without `max` the interface delivers everything as before.
+- **Index** `historie_mappe_idx (mappe_id, zeit DESC, id DESC)` (since #57) carries both: the pages and the look "same retrieval already today?" (only the folder's entries of the last 26 hours). An index of its own for the kinds isn't worth it (see measurement); #800 needs no migration.
+- **Suppressing noise:** the same retrieval (person, file, version, route) once per calendar day in the installation's time zone; simultaneous retrievals of the same file are checked and written one after the other within a process. A day instead of a "WebDAV session", because Explorer, Finder and Office have no recognisable session (they keep connections open and read again in the background) and because a day is equally understandable for all routes – "on Tuesday Jonas retrieved the contract".
+- **No partitions per year:** reading is always per folder via the index – partitions by time don't help there (every query would have to look into every partition), and deletion never happens by age, only with the folder according to the deletion concept. Only if retention by time came would this need checking again.
+
+**Measurement** (development machine, PostgreSQL 16, warm, 2.1 million entries across 200,000 folders, plus one folder with 100,000 entries – retrievals every 26 minutes for five years):
+
+| Query | Time |
+| --- | --- |
+| First page (100) of an ordinary folder | 0.4 ms |
+| First page of the folder with 100,000 entries | 2.6 ms |
+| … WebDAV only, second page | 2.5 ms |
+| … preselection when only 200 of the 100,000 entries match (worst case: the index reads all) | 54 ms |
+| "Same retrieval already today?" in this folder | 0.3 ms |
+| Whole history of this folder without pages (interface without `max`) | 964 ms |
+
+**Storage:** about 320 bytes per entry including the indexes (table 230 bytes, `historie_mappe_idx` 65 bytes, primary key 22 bytes). For estimating: 1 million folders with 20 entries each are about 6 GB; 50 people who retrieve 200 different files each on 250 days a year reach 12.5 million retrievals in five years, about 4 GB. Without combining the same retrievals on the same day it would easily be a hundred times that with Explorer and Office. Under load the first page is measured in the "with saving" run of every level of the [load test](#lasttest), also in *extrem*.
 
 ## Several processes (#745) { #mehrere-prozesse }
 

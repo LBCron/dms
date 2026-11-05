@@ -769,7 +769,15 @@ export const api = {
   uebersetzung: (quelle: Uebersetzungsquelle, teil: number) => anfrage<Uebersetzt>('POST', '/api/uebersetzung', { quelle, teil }),
   eigenesUebersetzen: (uebersetzen: boolean) => anfrage<Benutzer>('PUT', '/api/konto/profil', { uebersetzen }),
   notizLoeschen: (id: string) => anfrage<null>('DELETE', `/api/notizen/${id}`),
-  historie: (mappeId: string) => anfrage<Historieneintrag[]>('GET', `/api/mappen/${mappeId}/historie`),
+  /** #800: `register` – nur, was dieses Register „Historie“ zeigt; `max`/`vor` – seitenweise. */
+  historie: (mappeId: string, o: { register?: string; max?: number; vor?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (o.register) q.set('register', o.register);
+    if (o.max) q.set('max', String(o.max));
+    if (o.vor !== undefined) q.set('vor', String(o.vor));
+    const qs = q.toString();
+    return anfrage<Historieneintrag[]>('GET', `/api/mappen/${mappeId}/historie${qs ? `?${qs}` : ''}`);
+  },
   /** Passwortfeld anzeigen (#46); steht im Protokoll. */
   passwortAnzeigen: (mappeId: string, feld: string) => anfrage<{ wert: string }>('POST', `/api/mappen/${mappeId}/passwoerter/${encodeURIComponent(feld)}`),
   beispiele: () => anfrage<null>('POST', '/api/beispiele'),

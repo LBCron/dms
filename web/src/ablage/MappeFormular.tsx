@@ -568,7 +568,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
       : !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p>
       : <Notizen mappeId={mappe.id} notizen={details.notizen ?? []} neuLaden={async () => { await neuLaden?.(); }} />;
   } else if (reg.art === 'protokoll') {
-    inhalt = mappe ? <Historie mappeId={mappe.id} stand={mappe.geaendert} typ={typ} /> : <p className="leise">{t('ablage.mappeformular.die-historie-beginnt-mit')}</p>;
+    inhalt = mappe ? <Historie key={reg.key} mappeId={mappe.id} stand={mappe.geaendert} typ={typ} register={reg} /> : <p className="leise">{t('ablage.mappeformular.die-historie-beginnt-mit')}</p>;
   } else if (!mappe) {
     inhalt = <p className="leise">{t('ablage.mappeformular.verknuepfungen-entstehen-sobald')}</p>;
   } else if (!details) {

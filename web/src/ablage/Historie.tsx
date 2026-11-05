@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { t, tn } from '../sprache';
-import { AUFGABENARTEN, HISTORIENARTEN, type Aufgabenart, type Feldaenderung, type Historieneintrag, type Mappentyp } from '../../../shared/src/model';
+import { AUFGABENARTEN, HISTORIENARTEN, HISTORIENGRUPPEN, historiengruppenVon, type Aufgabenart, type Feldaenderung, type Historieneintrag, type Mappentyp, type Register } from '../../../shared/src/model';
 import { feldLabel } from '../../../shared/src/beschriftung';
 import { api } from '../api';
 import { useDaten } from '../daten';
@@ -224,6 +224,25 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: P
       if (str(d.post)) return { hinweis: t('ablage.historie.oeffnen-2'), inhalt: <p className="einzeln"><Link to={`/ablage/${typ}/${str(d.post)}`} className="verweis">{t('ablage.historie.ausgangspost-oeffnen')}</Link></p> };
       return null;
     }
+    case 'heruntergeladen': case 'abruf_api': case 'abruf_webdav': {
+      // Abrufe (#800): Weg, Datei bzw. Fassung; beim Export die Dateien der Mappe.
+      const dateien = Array.isArray(d.dokumente) ? (d.dokumente as unknown[]).filter((x): x is string => typeof x === 'string') : [];
+      const fassung = str(d.fassung);
+      const weg = str(d.weg) ?? (e.art === 'abruf_webdav' ? 'webdav' : e.art === 'abruf_api' ? 'api' : 'oberflaeche');
+      return {
+        hinweis: dateien.length ? t('ablage.historie.abruf-dateien', { anzahl: dateien.length }) : t.frei(`ablage.historie.abruf-fassung.${fassung ?? 'original'}`),
+        inhalt: (
+          <dl className="eigenschaften einzeln">
+            <dt>{t('ablage.historie.weg')}</dt><dd>{t.frei(`ablage.historie.abruf-weg.${weg}`)}{str(d.schluessel) && <> {t('ablage.historie.abruf-schluessel', { name: str(d.schluessel)! })}</>}</dd>
+            {dateien.length > 0
+              ? <><dt>{t('ablage.historie.dateien')}</dt><dd>{dateien.join(', ')}</dd></>
+              : <><dt>{t('ablage.historie.datei')}</dt><dd>{d.dokument}{str(d.datei) && <> {t('ablage.historie.abruf-als', { name: str(d.datei)! })}</>}</dd></>}
+            {fassung && <><dt>{t('ablage.historie.fassung')}</dt><dd>{t.frei(`ablage.historie.abruf-fassung.${fassung}`)}{typeof d.version === 'number' && <> {d.version}</>}</dd></>}
+            <dt>{t('ablage.historie.stempel')}</dt><dd>{d.gestempelt ? t('ablage.historie.mit-stempel') : t('ablage.historie.ohne-stempel')}</dd>
+          </dl>
+        ),
+      };
+    }
     case 'wiederhergestellt': {
       const n = typeof d.verweiseEntfallen === 'number' ? d.verweiseEntfallen : 0;
       if (!n) return null;
@@ -233,17 +252,42 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined, typ?: P
   }
 }
 
-export function Historie({ mappeId, stand, typ }: { mappeId: string; stand?: string; typ?: Pick<Mappentyp, 'felder'> }) {
+/** So viele Einträge lädt die Historie auf einmal (#800); „Weitere laden“ holt die nächsten. */
+export const HISTORIE_SEITE = 100;
+
+/**
+ * Historie einer Mappe (#57). Seit #800 lädt sie erst, wenn man das Register öffnet, und seitenweise; sie zeigt, was
+ * das Register „Historie“ zeigen soll (`register`, sonst die Vorauswahl). „Alles anzeigen“ zeigt jedem, der die Mappe
+ * lesen darf, alle Einträge.
+ */
+export function Historie({ mappeId, stand, typ, register }: { mappeId: string; stand?: string; typ?: Pick<Mappentyp, 'felder'>; register?: Pick<Register, 'key' | 'zeigt'> }) {
   const d = useDaten();
   const [liste, setListe] = useState<Historieneintrag[] | null>(null);
+  const [weitere, setWeitere] = useState(false);
+  const [laedt, setLaedt] = useState(false);
+  const [alles, setAlles] = useState(false);
   const [fehler, setFehler] = useState<string>();
+  const lauf = useRef(0);
   const emailTyp = d.typen.find((mappentyp) => mappentyp.system === 'post')?.id;
-  useEffect(() => {
-    api.historie(mappeId).then((h) => { setListe(h); setFehler(undefined); }, (e: Error) => setFehler(e.message));
-  }, [mappeId, stand]);
+  // Blendet das Register etwas aus? Dann gibt es „Alles anzeigen“.
+  const gefiltert = !!register && historiengruppenVon(register).length < Object.keys(HISTORIENGRUPPEN).length;
+  const filter = gefiltert && !alles ? register!.key : undefined;
+  const lade = (vor?: number) => {
+    const nr = ++lauf.current;
+    setLaedt(true);
+    api.historie(mappeId, { register: filter, max: HISTORIE_SEITE, vor }).then((h) => {
+      if (nr !== lauf.current) return;
+      setListe((x) => (vor !== undefined && x ? [...x, ...h] : h)); setWeitere(h.length === HISTORIE_SEITE); setFehler(undefined); setLaedt(false);
+    }, (e: Error) => { if (nr === lauf.current) { setFehler(e.message); setLaedt(false); } });
+  };
+  useEffect(() => { lade(); }, [mappeId, stand, filter]);
   if (fehler) return <div className="hinweis schlecht"><p>{fehler}</p></div>;
   if (!liste) return <p className="leise">{t('ablage.historie.lade')}</p>;
-  if (!liste.length) return <p className="leise">{t('ablage.historie.noch-keine-eintraege-die')}</p>;
+  const schalter = gefiltert && (
+    <label className="haken klein historie-alles"><input type="checkbox" checked={alles} onChange={(e) => setAlles(e.target.checked)} />
+      <span>{t('ablage.historie.alles-anzeigen')}</span></label>
+  );
+  if (!liste.length) return <>{schalter}<p className="leise">{t('ablage.historie.noch-keine-eintraege-die')}</p></>;
   const eintraege: Listeneintrag[] = liste.map((e) => {
     const x = einzelheiten(e, emailTyp, typ);
     return {
@@ -254,7 +298,13 @@ export function Historie({ mappeId, stand, typ }: { mappeId: string; stand?: str
       ...(x ? { mehr: x.hinweis, inhalt: x.inhalt, label: t('ablage.historie.aufklappbar', { wert: HISTORIENARTEN[e.art] ?? e.art, hinweis: x.hinweis }) } : {}),
     };
   });
-  return <Eintragsliste eintraege={eintraege} />;
+  return (
+    <>
+      {schalter}
+      <Eintragsliste eintraege={eintraege} />
+      {weitere && <p><button type="button" className="knopf klein" disabled={laedt} onClick={() => lade(liste[liste.length - 1].id)}>{laedt ? t('ablage.historie.lade') : t('ablage.historie.weitere-laden')}</button></p>}
+    </>
+  );
 }
 
 /** Ein Eintrag der Liste im Stil der Historie (#707): Zeile mit Zeit, wer, was, rechts Zähler; Einzelheiten zum Aufklappen. */

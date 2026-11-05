@@ -12,6 +12,9 @@ import type { Varianten } from '../../shared/src/suche';
 import type { Seitensprache } from '../../shared/src/seitensprachen';
 import { t } from './sprache';
 
+/** Seitenweises Lesen der Historie (#800). */
+export interface HistorieAbfrage { arten?: readonly string[]; max?: number; vor?: number }
+
 export interface Verweis { feldKey: string; zielId: string }
 /** Texte und Beschriftungen eines Sprachpakets (#731). */
 export interface SprachpaketDaten { kennung: string; texte: Sprachtexte; beschriftungen: Record<string, SprachBeschriftung> }
@@ -636,7 +639,16 @@ export interface Repo {
 
   /* ---------- Änderungshistorie (#57) ---------- */
   historieSchreibe(e: Array<{ mappeId: string; benutzerId: string | null; art: Historienart; daten?: Historieneintrag['daten'] }>): Promise<void>;
-  historie(mappeId: string): Promise<Historieneintrag[]>;
+  /**
+   * Historie einer Mappe, neueste zuerst. Mit `arten` nur diese Arten (#800: was ein Register zeigt), mit `max`
+   * höchstens so viele, mit `vor` (Id eines Eintrags) nur die Einträge danach in dieser Reihenfolge – zum seitenweisen Laden.
+   */
+  historie(mappeId: string, o?: HistorieAbfrage): Promise<Historieneintrag[]>;
+  /**
+   * Letzter Abruf derselben Datei durch dieselbe Person auf demselben Weg seit `seit` (#800, Rauschen unterdrücken):
+   * Zeitpunkt oder null. `fassung`/`version` wie in den Daten des Eintrags.
+   */
+  letzterAbruf(mappeId: string, art: Historienart, benutzerId: string | null, dokumentId: string, fassung: string, version: number | null, seit: string): Promise<string | null>;
   /** Historie mehrerer Mappen (#367), je Mappe neueste zuerst. */
   historieVon(mappeIds: string[]): Promise<Historieneintrag[]>;
   /** Alle Einträge einer Art, neueste zuerst (#668: Verzeichnis der Auskünfte). */

@@ -13,7 +13,8 @@
  * | extrem | sehr großer Bestand (#739)    | wie gross                                    | 500.000 oder 1.000.000 Mappen (--mappen) | wie gross; nur von Hand, nicht in „alle“ und nicht im Zeitplan |
  *
  * Mit Speichern (#739): Nach dem bisherigen Durchgang jeder Stufe folgt ein zweiter mit gleicher Gleichzeitigkeit,
- * in dem rund 10 % der Anfragen schreiben (Mappe ändern, Stern, Notiz, Aufgabe anlegen und erledigen; PROFIL_SPEICHERN).
+ * in dem rund 10 % der Anfragen schreiben (Mappe ändern, Stern, Notiz, Aufgabe anlegen und erledigen; PROFIL_SPEICHERN)
+ * und 5 % die erste Seite der Historie einer Mappe öffnen (#800).
  * Bei gross und extrem läuft er nach der Erholung mit so vielen gleichzeitig, wie die Grenze war. Er ist eine Messung
  * ohne Ziel und ohne CI-Grenze und steht als eigene Zeile im Ergebnis („klein + Speichern“). Die bisherigen
  * Durchgänge, ihre Reihenfolge und ihre Grenzen bleiben unverändert; Arbeitsspeicher und Ereignisschleife der alten
@@ -319,10 +320,13 @@ export const PROFIL = [
 
 /**
  * Schreibanteil des Durchgangs „mit Speichern“ (#739): zusammen 10 % – Mappe ändern, Stern setzen oder entfernen,
- * Notiz anlegen oder löschen, Aufgabe anlegen oder erledigen. Die Leseanfragen behalten ihr Verhältnis aus PROFIL.
+ * Notiz anlegen oder löschen, Aufgabe anlegen oder erledigen. Dazu 5 % Historie (#800): die erste Seite (100 Einträge)
+ * der Historie einer Mappe – sie wächst im Durchgang durch das Schreiben und die Abrufe. Die übrigen Leseanfragen
+ * behalten ihr Verhältnis aus PROFIL.
  */
 export const SCHREIBEN = [['Mappe ändern', 4], ['Stern', 2], ['Notiz', 2], ['Aufgabe', 2]];
-export const PROFIL_SPEICHERN = [...PROFIL.map(([a, g]) => [a, g * 0.9]), ...SCHREIBEN];
+export const HISTORIE_LESEN = [['Historie', 5]];
+export const PROFIL_SPEICHERN = [...PROFIL.map(([a, g]) => [a, g * 0.85]), ...HISTORIE_LESEN, ...SCHREIBEN];
 const SCHREIBARTEN = new Set(SCHREIBEN.map(([a]) => a));
 
 /**
@@ -343,6 +347,8 @@ function naechsteAnfrage(v, p = null) {
     case 'Startseite': return { art, cookie, pfad: zufall(['/api/startseite', '/api/sichten', '/api/termine/naechster', '/api/typen']) };
     case 'Liste': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=${50 * Math.floor(Math.random() * 10)}&anzahl=50` };
     case 'Mappe öffnen': return { art, cookie, pfad: `/api/mappen/${zufall(v.mappen)}` };
+    // Historie (#800): wie das Register – erste Seite; als Administrator (Mitglieder sehen manche Mappen nicht).
+    case 'Historie': return { art, cookie: v.sitzungen.admin, pfad: `/api/mappen/${zufall(v.mappen)}/historie?max=100` };
     case 'Suche': return { art, cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&suche=${encodeURIComponent(zufall(WOERTER))}&von=0&anzahl=50` };
     // Dokumente: als Administrator (Mitglieder sehen manche Mappen nicht – das wäre ein 404, kein Fehler des Servers).
     case 'Vorschaubild': return doc ? { art, cookie: v.sitzungen.admin, pfad: `/api/dokumente/${doc.id}/vorschau` } : { art: 'Liste', cookie, pfad: `/api/mappen?sicht=${zufall(v.ansichten)}&von=0&anzahl=50` };
@@ -778,7 +784,7 @@ function speichernBericht(e) {
   const abgelehnt = Object.entries(d.abgelehnt ?? {});
   const a = e.aufgeraeumt;
   return [
-    `**${d.name}** (${d.n} gleichzeitig, rund 10 % schreibend: Mappe ändern, Stern, Notiz, Aufgabe): p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehlerquote ${prozent(d.fehlerquote)}; schreibende Anfragen: ${d.schreiben.anfragen}, p50 ${f(d.schreiben.median)} ms, p95 ${f(d.schreiben.p95)} ms – Messung ohne Ziel und ohne CI-Grenze.`,
+    `**${d.name}** (${d.n} gleichzeitig, rund 10 % schreibend: Mappe ändern, Stern, Notiz, Aufgabe; 5 % Historie): p50 ${f(d.median)} ms, p95 ${f(d.p95)} ms, p99 ${f(d.p99)} ms, Fehlerquote ${prozent(d.fehlerquote)}; schreibende Anfragen: ${d.schreiben.anfragen}, p50 ${f(d.schreiben.median)} ms, p95 ${f(d.schreiben.p95)} ms${d.jeArt?.Historie ? `; Historie (erste Seite, #800): ${d.jeArt.Historie.anzahl}, p50 ${f(d.jeArt.Historie.median)} ms, p95 ${f(d.jeArt.Historie.p95)} ms` : ''} – Messung ohne Ziel und ohne CI-Grenze.`,
     '', `Median und p95 je Art (${d.name}):`, '', ...Object.entries(d.jeArt).map(([k, w]) => `- ${k}: ${w.anzahl} Anfragen, Median ${w.median} ms, p95 ${w.p95} ms`),
     ...(abgelehnt.length ? ['', `Abgelehnt (4xx): ${abgelehnt.map(([k, n]) => `${k} × ${n}`).join(', ')}.`] : []),
     ...(a ? ['', `Aufgeräumt in ${a.sekunden} s: ${a.werte} Werte zurück, ${a.sterne} Sterne und ${a.notizen} Notizen entfernt, ${a.aufgaben} Aufgaben erledigt${a.fehler ? ` – ${a.fehler} Fehler` : ''}.`] : []),

@@ -68,7 +68,7 @@ export const OHNE_FOLGEN = new Set<string>([
   'aufgabenZurPassung', 'holeAufgabe', 'aufgabenVon', 'aufgabenVonMappen', 'offeneAufgaben', 'erledigteAufgaben', 'fristAufgaben',
   // Aufgaben bei Personen ohne Leserecht (#798): Lesen und neue Fälle ändern keine Zahl; Leserecht auf Zeit und Ende schon.
   'faelleOhneLeserecht', 'leserechteAufZeit', 'legeFallAn',
-  'verschluesselteFundstellen', 'erinnerungen', 'holeErinnerung', 'notizen', 'notizenVon', 'holeNotiz', 'historie', 'historieVon',
+  'verschluesselteFundstellen', 'erinnerungen', 'holeErinnerung', 'notizen', 'notizenVon', 'holeNotiz', 'historie', 'historieVon', 'letzterAbruf',
   // schreiben, ohne Folgen für die Zahlen
   'legeEreignisseAn', 'ereignisZugestellt', 'ereignisDaten', 'ereignisFehlgeschlagen', 'loescheEreignisse', 'loescheOffeneEreignisse', 'speicherePaketCode', 'loeschePaketCode',
   // Sprachpakete (#731): nur Texte.

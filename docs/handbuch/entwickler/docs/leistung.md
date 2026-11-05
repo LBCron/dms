@@ -208,7 +208,7 @@ Ein passendes Ablago startet man aus `server/` mit eigener, leerer Datenbank (z.
 
 **Profil:** Jede „Person“ schickt eine Anfrage nach der anderen, gemischt wie im Alltag – Startseite (`/api/startseite`, `/api/sichten`, `/api/termine/naechster`, `/api/typen`) 15 %, Liste einer Ansicht 25 %, Mappe öffnen 25 %, Suche 15 %, Vorschaubild 10 %, Dokument herunterladen 10 %; ein Drittel als Administrator, der Rest als Mitglied (mit Lesefilter). „100 gleichzeitig“ heißt: 100 Anfragen sind ständig unterwegs. Bekommt eine Person 503, wartet sie, wie `Retry-After` sagt.
 
-**Mit Speichern** (#739): Nach dem bisherigen Durchgang jeder Stufe folgt ein zweiter mit derselben Gleichzeitigkeit (und bei mittel mit Export nebenher) nach `PROFIL_SPEICHERN`: die Leseanteile × 0,9, dazu 10 % schreibend (`SCHREIBEN`) – Mappe ändern 4 % (`PUT /api/mappen/:id` auf ein Text- oder Langtextfeld, nicht eindeutig, ohne Muster), Stern 2 % (`PUT`/`DELETE …/favorit`), Notiz 2 % (anlegen oder eine eigene löschen), Aufgabe 2 % (an sich selbst anlegen, beim nächsten Mal erledigen). Ziele sind je Ansicht bis zu 50 der ersten 200 Mappen, die das Mitglied ohne Rolle sieht – alle drei Konten dürfen sie lesen und ändern; die Ziele holt der Durchgang selbst, der bisherige startet also unverändert. Bei groß und extrem läuft er nach der Erholung mit so vielen gleichzeitig wie die Grenze (sonst wie der erste Schritt). Danach `aufraeumen`: Sterne und Notizen weg, Werte zurück, offene Aufgaben aus dem Durchgang erledigt (eigene und „Geändert“ zu Favoriten, #422); übrig bleiben Einträge in der Historie und erledigte Aufgaben. Messung ohne Ziel und ohne CI-Grenze; schreibende Anfragen mit 4xx stehen im Bericht („Abgelehnt“) – dann stimmt der Test nicht. Die alten Zeilen des Ergebnisblocks (auch Arbeitsspeicher und Ereignisschleife) zählen nur die bisherigen Durchgänge; neu sind `… + Speichern` je Stufe und `Mit Speichern: Arbeitsspeicher …`.
+**Mit Speichern** (#739): Nach dem bisherigen Durchgang jeder Stufe folgt ein zweiter mit derselben Gleichzeitigkeit (und bei mittel mit Export nebenher) nach `PROFIL_SPEICHERN`: die Leseanteile × 0,85, dazu 5 % Historie (`HISTORIE_LESEN`, #800: erste Seite mit 100 Einträgen, `GET /api/mappen/:id/historie?max=100`, als Administrator; im Bericht mit eigener p50/p95) und 10 % schreibend (`SCHREIBEN`) – Mappe ändern 4 % (`PUT /api/mappen/:id` auf ein Text- oder Langtextfeld, nicht eindeutig, ohne Muster), Stern 2 % (`PUT`/`DELETE …/favorit`), Notiz 2 % (anlegen oder eine eigene löschen), Aufgabe 2 % (an sich selbst anlegen, beim nächsten Mal erledigen). Ziele sind je Ansicht bis zu 50 der ersten 200 Mappen, die das Mitglied ohne Rolle sieht – alle drei Konten dürfen sie lesen und ändern; die Ziele holt der Durchgang selbst, der bisherige startet also unverändert. Bei groß und extrem läuft er nach der Erholung mit so vielen gleichzeitig wie die Grenze (sonst wie der erste Schritt). Danach `aufraeumen`: Sterne und Notizen weg, Werte zurück, offene Aufgaben aus dem Durchgang erledigt (eigene und „Geändert“ zu Favoriten, #422); übrig bleiben Einträge in der Historie und erledigte Aufgaben. Messung ohne Ziel und ohne CI-Grenze; schreibende Anfragen mit 4xx stehen im Bericht („Abgelehnt“) – dann stimmt der Test nicht. Die alten Zeilen des Ergebnisblocks (auch Arbeitsspeicher und Ereignisschleife) zählen nur die bisherigen Durchgänge; neu sind `… + Speichern` je Stufe und `Mit Speichern: Arbeitsspeicher …`.
 
 **Stufen** (#563; die Stufen „normal“ und „Überlast“ aus #544 gehen darin auf, `--stufe normal` bzw. `ueberlast` laufen als `mittel` bzw. `gross`)
 
@@ -264,6 +264,28 @@ Gemessen mit 50.000 Demo-Mappen und 25.000 Dokumenten (Mess-Skript, Median aus 7
 Einzelne Abfragen (`EXPLAIN ANALYZE`): Seite über alle Typen nach Titel 49 → 0,6 ms, nach Erstellt absteigend 54 → 0,5 ms, Rechnung nach Erstellt absteigend 33 → 0,3 ms, Dublette Vertragsnummer 17 → 0,2 ms. Lasttest mittel (30 s je Durchgang, Lasttest auf demselben Rechner): p95 1274 → 693 ms; mit Speichern p95 3,8 → 3,2 s, schreibende Anfragen p50 2,3 → 1,7 s. Die Tabelle `mappen` wächst mit den Indizes von 46 auf 76 MB; die Migration dauerte 4 s.
 
 **Messung zu #542** (Arbeiter-Pool, vorher/nachher abwechselnd gemessen): Bei 10 gleichzeitigen Anfragen mit Export sank p95 von 2.172 auf 786 ms und die Verzögerung der Ereignisschleife (p99) von 1.373 auf 135 ms; Einzelheiten in den Release-Notes von #542.
+
+## Historie bei großen Mengen (#800) { #historie }
+
+Seit #800 kommen auch Abrufe in die Historie (Herunterladen, API, WebDAV). Damit sie bei vielen Mappen und Jahren schnell bleibt:
+
+- **Erst beim Öffnen des Registers** und **seitenweise**: Die Oberfläche lädt 100 Einträge (`?max=100`), „Weitere laden“ die nächsten ab dem letzten (`?vor=<id>`, Keyset über `(zeit, id)`, kein `OFFSET`). Mappe öffnen liest die Historie nicht. Ohne `max` liefert die Schnittstelle wie bisher alles.
+- **Index** `historie_mappe_idx (mappe_id, zeit DESC, id DESC)` (seit #57) trägt beides: die Seiten und den Blick „gleicher Abruf heute schon?“ (nur die Einträge der Mappe seit 26 Stunden). Ein eigener Index für die Arten lohnt nicht (siehe Messung); eine Migration braucht #800 nicht.
+- **Rauschen unterdrücken:** derselbe Abruf (Person, Datei, Fassung, Weg) einmal je Kalendertag in der Zeitzone der Ablage; gleichzeitige Abrufe derselben Datei prüft und schreibt ein Prozess nacheinander. Ein Tag statt einer „WebDAV-Sitzung“, weil Explorer, Finder und Office keine erkennbare Sitzung haben (sie halten Verbindungen offen und lesen im Hintergrund nach) und weil ein Tag für alle Wege gleich verständlich ist – „am Dienstag hat Jonas den Vertrag abgerufen“.
+- **Keine Partitionen je Jahr:** Gelesen wird immer je Mappe über den Index – Partitionen nach Zeit helfen dabei nicht (jede Abfrage müsste in jede Partition schauen), und gelöscht wird nie nach Alter, sondern nur mit der Mappe nach dem Löschkonzept. Erst wenn eine Aufbewahrung nach Zeit käme, wäre das neu zu prüfen.
+
+**Messung** (Entwicklungsrechner, PostgreSQL 16, warm, 2,1 Mio. Einträge über 200.000 Mappen, dazu eine Mappe mit 100.000 Einträgen – fünf Jahre lang Abrufe alle 26 Minuten):
+
+| Abfrage | Zeit |
+| --- | --- |
+| Erste Seite (100) einer gewöhnlichen Mappe | 0,4 ms |
+| Erste Seite der Mappe mit 100.000 Einträgen | 2,6 ms |
+| … nur WebDAV, zweite Seite | 2,5 ms |
+| … Vorauswahl, wenn nur 200 der 100.000 Einträge passen (ungünstigster Fall: der Index liest alle) | 54 ms |
+| „Gleicher Abruf heute schon?“ in dieser Mappe | 0,3 ms |
+| Ganze Historie dieser Mappe ohne Seiten (Schnittstelle ohne `max`) | 964 ms |
+
+**Speicher:** rund 320 Byte je Eintrag einschließlich der Indizes (Tabelle 230 Byte, `historie_mappe_idx` 65 Byte, Primärschlüssel 22 Byte). Zum Abschätzen: 1 Mio. Mappen mit je 20 Einträgen sind etwa 6 GB; 50 Personen, die an 250 Tagen im Jahr je 200 verschiedene Dateien abrufen, kommen in fünf Jahren auf 12,5 Mio. Abrufe, also etwa 4 GB. Ohne das Zusammenfassen gleicher Abrufe am selben Tag wäre es bei Explorer und Office leicht das Hundertfache. Gemessen unter Last wird die erste Seite im Durchgang „mit Speichern“ jeder Stufe des [Lasttests](#lasttest), auch in *extrem*.
 
 ## Mehrere Prozesse (#745) { #mehrere-prozesse }
 

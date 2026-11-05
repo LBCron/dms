@@ -86,6 +86,7 @@ Ablage/
 - **Only one level per request:** Ablago refuses requests across the whole tree (`Depth: infinity`).
 - **Locks:** Windows and macOS "lock" a file before they upload it, and macOS only connects a drive without locks read-only. Ablago only pretends to answer such locks in stage 1 – and only where filing is allowed. Real locks against simultaneous overwriting come with editing Office files.
 - **Log:** filed files and new post are recorded at level *Info* in the [log](fehlersuche.md#protokoll), as are refused sign-ins; pure read accesses only at level *Debug*.
+- **History** (#800): every read of a file via the drive is recorded in the folder's history – as *retrieved via the drive* with person, file and the key's name. Explorer, Finder and Office often read a file many times (also for thumbnails); per person, file and day it stays one entry. Folder queries, `HEAD` and "not modified" (304) don't count. Which [history tab](mappentypen.md#register) shows the retrievals is set on the folder type.
 - Documents are always delivered as a **download** (never executed in the browser). A document's **ETag** is not the checksum of its content – whoever may only read can't use it to check whether a file has a particular content. For stamped documents it belongs to the stamped version.
 
 !!! warning "An expired or deleted key can block the IP address"

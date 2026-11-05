@@ -1,7 +1,7 @@
 import { PassThrough, type Readable } from 'node:stream';
 import { buffer as alsPuffer } from 'node:stream/consumers';
 import { pdfFuerAnzeige } from './pdfanzeige';
-import { istPerson, MAX_DATEIGROESSE, POST_KANAL, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
+import { istPerson, MAX_DATEIGROESSE, POST_KANAL, type Abruffassung, type Benutzer, type Mappe, type Mappentyp } from '../../shared/src/model';
 import { type Recht } from '../../shared/src/rechte';
 import { ladeBeispiele } from './beispiele';
 import { demoPhasen, erzeugeDemo, pruefeDemoOptionen, schaetzeDemo, type DemoPlatz } from './demo';
@@ -387,6 +387,23 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     if (a.benutzer?.art === 'dienst') return;
     await dienst.pruefeAusgang(ich(a), await zg(a), 'herunterladen', [mappeId]);
     await modusSpur(a, [mappeId], 'heruntergeladen');
+  };
+  /**
+   * Abruf in die Historie (#800): in der Oberfläche heruntergeladen oder mit einem API-Schlüssel abgerufen – erst wenn
+   * die Datei fertig zum Ausliefern ist (Rechte geprüft, Stempel und Fassung gebildet), nie bei einem Fehler. Pakete
+   * (Dienstkonten) lesen Dateien zur Verarbeitung in Ablago; das ist kein Abruf. Gleiche Abrufe am selben Tag fasst
+   * `notiereAbruf` zu einem Eintrag zusammen. Scheitert das Schreiben, geht die Datei nicht hinaus.
+   */
+  const abgerufen = async <T extends Antwort>(a: Anfrage, dokumentId: string, o: { fassung?: Abruffassung; version?: number | null; gestempelt?: boolean; datei?: string }, antwort: T): Promise<T> => {
+    if (a.benutzer?.art === 'dienst') return antwort;
+    try {
+      await dienst.notiereAbruf({ dokumentId, benutzerId: ich(a).id, weg: a.apiSchluessel ? 'api' : 'oberflaeche', schluessel: a.apiSchluessel?.name ?? null, ...o });
+    } catch (e) {
+      const inhalt = antwort.datei?.inhalt;
+      if (inhalt && !Buffer.isBuffer(inhalt)) (inhalt as Readable).destroy();
+      throw e;
+    }
+    return antwort;
   };
   /** Abruf mit dem API-Schlüssel eines Menschen (nicht eines Pakets): gilt als Herausgeben (#394, #799). */
   const herausgeben = (a: Anfrage) => !!a.apiSchluessel && a.benutzer?.art !== 'dienst';
@@ -2236,7 +2253,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'DELETE', pfad: '/api/notizen/:id', zugang: 'angemeldet', handler: async (a) => { await darf(a, await dienst.mappeVon('notiz', a.params.id), 'R'); await dienst.loescheNotiz(a.params.id, ich(a).id); return leer; } },
     // Änderungshistorie (#57)
     { methode: 'GET', pfad: '/api/mappen/:id/verweisende', zugang: 'angemeldet', handler: async (a) => ok(await dienst.verweisende(a.params.id, String(a.query.typ ?? ''), String(a.query.feld ?? ''), await zg(a))) },
-    { methode: 'GET', pfad: '/api/mappen/:id/historie', zugang: 'angemeldet', handler: async (a) => { await darf(a, a.params.id, 'R'); return ok(await dienst.historie(a.params.id)); } },
+    { methode: 'GET', pfad: '/api/mappen/:id/historie', zugang: 'angemeldet', handler: async (a) => {
+      await darf(a, a.params.id, 'R');
+      // #800: ?register=… zeigt, was dieses Register „Historie“ zeigt; ?max=…&vor=… seitenweise. Ohne Angaben alles.
+      return ok(await dienst.historie(a.params.id, { register: a.query.register, max: a.query.max, vor: a.query.vor }));
+    } },
     // Passwortfeld anzeigen (#46): einzeln, mit Protokolleintrag (ohne den Wert).
     { methode: 'POST', pfad: '/api/mappen/:id/passwoerter/:feld', zugang: 'angemeldet', handler: async (a) => { await darf(a, a.params.id, 'P'); return ok(await dienst.zeigePasswort(a.params.id, a.params.feld, ich(a).id)); } },
     // Vor dem Speichern (#126): Rechte mit den neuen Werten – für die Warnung beim Selbst-Entziehen.
@@ -2254,7 +2275,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Export (#152, #153): Tabelle, ZIP mit Dokumenten oder PDF – Recht E an der Sicht, Lesen je Mappe.
     { methode: 'POST', pfad: '/api/export', zugang: 'angemeldet', handler: async (a) => {
-      const r = await dienst.exportiere(ich(a), b(a), await zg(a), (ids) => modusSpur(a, ids, 'exportiert'));
+      const r = await dienst.exportiere(ich(a), b(a), await zg(a), (ids) => modusSpur(a, ids, 'exportiert'), a.apiSchluessel ? 'api' : 'oberflaeche');
       L.ablage.info('Mappen exportiert', { von: ich(a).email, sicht: b(a).sicht, format: b(a).format, mappen: r.mappen, ausgelassen: r.ausgelassen, auswahl: Array.isArray(b(a).ids) });
       return { datei: { inhalt: r.inhalt, name: r.name, mime: r.mime, anzeigen: false, groesse: r.groesse, koepfe: { 'x-dms-ausgelassen': String(r.ausgelassen) } } };
     } },
@@ -2340,12 +2361,18 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Herunterladen ist Weitergeben (#394): mit Stempel-Parametern oder Pflicht des Mappentyps gestempelt – und Mitnehmen (#723, Recht E).
       if (weitergabe(a) || a.query.fassung !== undefined) {
         await mitnehmen(a, mappeId);
-        return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { stempel: a.query, verkleinern: a.query.verkleinern, fassung: a.query.fassung, ich: ich(a) }));
+        const r = await dienst.dokumentFuerAusgabe(a.params.id, { stempel: a.query, verkleinern: a.query.verkleinern, fassung: a.query.fassung, ich: ich(a) });
+        return abgerufen(a, a.params.id, { fassung: a.query.fassung === 'archiv' ? 'archiv' : 'original', gestempelt: r.gestempelt, datei: r.name }, ausgabeDatei(r));
       }
       const d0 = await dienst.holeDokument(a.params.id);
       // Was der Browser nicht anzeigen kann (Word, Excel …), kommt nur zum Abspeichern: auch das ist Mitnehmen (#723).
       if (!d0.anzeigbar) await mitnehmen(a, mappeId);
       const { dokument: d, inhalt } = await dienst.dokumentInhalt(a.params.id);
+      // Abspeichern ist Herunterladen (#800); Anzeigen in der Oberfläche nicht.
+      if (!d.anzeigbar) {
+        L.dokumente.debug('Dokument heruntergeladen', { name: d.name, id: d.id });
+        return abgerufen(a, d.id, {}, { datei: { inhalt, name: d.name, mime: 'application/octet-stream', anzeigen: false, groesse: d.groesse } });
+      }
       // Geschütztes PDF (#827): Angezeigt wird die entsperrte Fassung (bereinigt); Herunterladen liefert das Original.
       const frei = d.mime === 'application/pdf' && d.anzeigbar && !a.apiSchluessel ? await dienst.pdfEntsperren?.fassung(d.sha256).catch(() => null) : null;
       if (frei) return fuerAnzeige(a, { inhalt: frei.inhalt, name: d.name, mime: 'application/pdf', anzeigen: true, groesse: frei.inhalt.length, koepfe: { 'x-dms-entsperrt': '1' } });
@@ -2360,7 +2387,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await mitnehmen(a, mappeId);
       const e = (a.body ?? {}) as { stempel?: unknown; version?: unknown; verkleinern?: unknown; fassung?: unknown };
       const version = e.version == null ? undefined : Number(e.version);
-      return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { stempel: e.stempel, verkleinern: e.verkleinern, fassung: e.fassung, version: Number.isInteger(version) ? version : undefined, ich: ich(a) }));
+      const r = await dienst.dokumentFuerAusgabe(a.params.id, { stempel: e.stempel, verkleinern: e.verkleinern, fassung: e.fassung, version: Number.isInteger(version) ? version : undefined, ich: ich(a) });
+      return abgerufen(a, a.params.id, { fassung: Number.isInteger(version) ? 'version' : e.fassung === 'archiv' ? 'archiv' : 'original', version: Number.isInteger(version) ? version : null, gestempelt: r.gestempelt, datei: r.name }, ausgabeDatei(r));
     } },
     // Vorschaubild der ersten Seite (#332): gleiche Rechte wie das Dokument; 404, solange es keins gibt.
     { methode: 'GET', pfad: '/api/dokumente/:id/vorschau', zugang: 'angemeldet', handler: async (a) => {
@@ -2371,13 +2399,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (q) {
         const s1 = await dienst.pdfSeitenbild(a.params.id, 1, q);
         if (!s1) throw new Fachfehler(404, t('meldungen.routen.fuer-dieses-dokument-gibt'));
-        return { datei: { inhalt: s1, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: s1.length, koepfe: { 'cache-control': 'no-store' } } };
+        return abgerufen(a, a.params.id, { fassung: 'seiten', gestempelt: true }, { datei: { inhalt: s1, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: s1.length, koepfe: { 'cache-control': 'no-store' } } });
       }
       const d = await dienst.holeDokument(a.params.id);
       const bild = x.vorschau ? await x.vorschau.bild(d) : null;
       if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-dieses-dokument-gibt'));
       // Die Adresse trägt den Prüfwert (?v=…): ein neues Bild hat eine neue Adresse, das Bild darf im Browser bleiben.
-      return { datei: { inhalt: bild, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-604800') } } };
+      const antwort: Antwort = { datei: { inhalt: bild, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-604800') } } };
+      // Über einen API-Schlüssel ist auch das Vorschaubild ein Abruf (#800) – in der Oberfläche nicht.
+      return herausgeben(a) ? abgerufen(a, a.params.id, { fassung: 'seiten' }, antwort) : antwort;
     } },
     // Dateien umwandeln (#577): Fassung und Vorschaubild schreiben nur Pakete mit dms:umwandeln, die das Dokument lesen
     // dürfen (das Original bleibt unverändert, deshalb genügt Lesen); ansehen darf die Fassung, wer das Dokument liest.
@@ -2400,13 +2430,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await darf(a, mappeId, 'R');
       if (zumAbspeichern(a)) await mitnehmen(a, mappeId);
       const g = herausgeben(a) ? await dienst.fassungFuerAusgabe(a.params.id, 'umgewandelt', { stempel: a.query, ich: ich(a) }) : null;
-      if (g) return ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true });
+      if (g) return abgerufen(a, a.params.id, { fassung: 'umgewandelt', gestempelt: true, datei: g.name }, ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true }));
       const f = await dienst.fassungVon(a.params.id);
       const punkt = f.d.name.lastIndexOf('.');
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
       const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (${f.info.entsperrt ? 'entsperrt' : 'umgewandelt'}).${endung}`;
-      return fuerAnzeige(a, { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
+      const antwort = await fuerAnzeige(a, { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
         koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': t('meldungen.routen.private-max-age-60') } });
+      return zumAbspeichern(a) ? abgerufen(a, a.params.id, { fassung: 'umgewandelt', datei: name }, antwort) : antwort;
     } },
     // Archivfassung (PDF/A, #631): ablegen nur Pakete mit dms:archivfassung, die das Dokument lesen dürfen (das Original
     // bleibt unverändert); ansehen, wer das Dokument liest. Wortpositionen ebenso mit Lesen (ohne weiteres Recht).
@@ -2421,10 +2452,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Mit API-Schlüssel ist das Herausgeben (#799): mit Pflicht- oder gewünschtem Stempel eine gestempelte Kopie.
       // Die gespeicherte Archivfassung bleibt unverändert; Pakete bekommen sie immer, wie sie ist.
       const g = herausgeben(a) ? await dienst.fassungFuerAusgabe(a.params.id, 'archiv', { stempel: a.query, ich: ich(a) }) : null;
-      if (g) return ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true });
+      if (g) return abgerufen(a, a.params.id, { fassung: 'archiv', gestempelt: true, datei: g.name }, ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true }));
       const f = await dienst.archivfassungVon(a.params.id);
-      return fuerAnzeige(a, { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
+      const name = f.info.imOriginal ? f.d.name : archivfassungName(f.d.name);
+      const antwort = await fuerAnzeige(a, { inhalt: f.inhalt, name, mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
         koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': t('meldungen.routen.private-max-age-60') } });
+      return zumAbspeichern(a) ? abgerufen(a, a.params.id, { fassung: 'archiv', datei: name }, antwort) : antwort;
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/wortpositionen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
@@ -2488,8 +2521,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const dpi = a.query.dpi === undefined ? 300 : Number(a.query.dpi);
       const farbe = a.query.farbe === '1' || a.query.farbe === 'true';
       // Mit API-Schlüssel und Stempel (#799): die Seite der gestempelten Kopie.
-      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe, await seitenquelle(a, mappeId));
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.${farbe ? 'ppm' : 'pgm'}`, mime: farbe ? 'image/x-portable-pixmap' : 'image/x-portable-graymap', anzeigen: false, groesse: bild.length } };
+      const q = await seitenquelle(a, mappeId);
+      const bild = await dienst.seiteAlsGraubild(a.params.id, Number(a.params.nr), dpi, farbe, q);
+      return abgerufen(a, a.params.id, { fassung: 'seiten', gestempelt: !!q }, { datei: { inhalt: bild, name: `seite-${a.params.nr}.${farbe ? 'ppm' : 'pgm'}`, mime: farbe ? 'image/x-portable-pixmap' : 'image/x-portable-graymap', anzeigen: false, groesse: bild.length } });
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/texterkennung', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2505,16 +2539,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/dokumente/:id/versionen/:nummer/inhalt', zugang: 'angemeldet', handler: async (a) => {
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
+      const nummer = Number(a.params.nummer);
       if (weitergabe(a)) {
         await mitnehmen(a, mappeId);
-        return ausgabeDatei(await dienst.dokumentFuerAusgabe(a.params.id, { version: Number(a.params.nummer), stempel: a.query, verkleinern: a.query.verkleinern, ich: ich(a) }));
+        const r = await dienst.dokumentFuerAusgabe(a.params.id, { version: nummer, stempel: a.query, verkleinern: a.query.verkleinern, ich: ich(a) });
+        return abgerufen(a, a.params.id, { fassung: 'version', version: nummer, gestempelt: r.gestempelt, datei: r.name }, ausgabeDatei(r));
       }
-      const { version: v, inhalt } = await dienst.versionInhalt(a.params.id, Number(a.params.nummer));
+      const { version: v, inhalt } = await dienst.versionInhalt(a.params.id, nummer);
       if (!v.anzeigbar) {
         try { await mitnehmen(a, mappeId); } catch (e) { if (!Buffer.isBuffer(inhalt)) (inhalt as Readable).destroy(); throw e; }
       }
       const anzeigen = v.anzeigbar;
-      return fuerAnzeige(a, { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse });
+      const antwort = await fuerAnzeige(a, { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse });
+      return anzeigen ? antwort : abgerufen(a, a.params.id, { fassung: 'version', version: nummer, datei: v.name }, antwort);
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/ersetzen', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, strom: true, handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2536,9 +2573,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/dokumente/:id/seiten/:nr/bild', zugang: 'angemeldet', handler: async (a) => {
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
-      const bild = await dienst.pdfSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
+      const q = await seitenquelle(a, mappeId);
+      const bild = await dienst.pdfSeitenbild(a.params.id, Number(a.params.nr), q);
       if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-diese-seite-gibt'));
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
+      const antwort: Antwort = { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
+      // Seitenbilder über einen API-Schlüssel sind ein Abruf (#799, #800); in der Oberfläche nur Anzeige.
+      return herausgeben(a) ? abgerufen(a, a.params.id, { fassung: 'seiten', gestempelt: !!q }, antwort) : antwort;
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/seiten', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2553,9 +2593,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/dokumente/:id/schwaerzen/seiten/:nr', zugang: 'angemeldet', handler: async (a) => {
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
-      const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
+      const q = await seitenquelle(a, mappeId);
+      const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), q);
       if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-diese-seite-gibt'));
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
+      const antwort: Antwort = { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
+      return herausgeben(a) ? abgerufen(a, a.params.id, { fassung: 'seiten', gestempelt: !!q }, antwort) : antwort;
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/schwaerzen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');

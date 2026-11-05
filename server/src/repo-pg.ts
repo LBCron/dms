@@ -2173,9 +2173,23 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
         haushalt_id: haushaltId, mappe_id: x.mappeId, benutzer_id: istUuid(x.benutzerId) ? x.benutzerId : null, art: x.art, daten: json(sql, x.daten ?? {}),
       })), 'haushalt_id', 'mappe_id', 'benutzer_id', 'art', 'daten')}`;
     },
-    async historie(mappeId) {
+    async historie(mappeId, o = {}) {
       if (!istUuid(mappeId)) return [];
-      return (await sql`SELECT * FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id = ${mappeId} ORDER BY zeit DESC, id DESC`).map(alsHistorie);
+      const vor = Number.isSafeInteger(o.vor) ? o.vor! : null;
+      // #800: Seiten über den Index historie (mappe_id, zeit DESC, id DESC) – ab dem Eintrag `vor`, nicht mit OFFSET.
+      return (await sql`SELECT * FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id = ${mappeId}
+        ${o.arten ? sql`AND art = ANY(${[...o.arten]}::text[])` : sql``}
+        ${vor !== null ? sql`AND (zeit, id) < (SELECT v.zeit, v.id FROM historie v WHERE v.id = ${vor} AND v.mappe_id = ${mappeId})` : sql``}
+        ORDER BY zeit DESC, id DESC ${o.max ? sql`LIMIT ${o.max}` : sql``}`).map(alsHistorie);
+    },
+    async letzterAbruf(mappeId, art, benutzerId, dokumentId, fassung, version, seit) {
+      if (!istUuid(mappeId)) return null;
+      // #800: nur die Einträge der Mappe seit `seit` (Index historie_mappe_idx), darin dieselbe Person, Datei und Fassung.
+      const [r] = await sql`SELECT zeit FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id = ${mappeId} AND zeit >= ${seit} AND art = ${art}
+        AND benutzer_id IS NOT DISTINCT FROM ${istUuid(benutzerId) ? benutzerId : null}::uuid AND daten->>'dokumentId' = ${dokumentId}
+        AND coalesce(daten->>'fassung', '') = ${fassung} AND coalesce(daten->>'version', '') = ${version === null ? '' : String(version)}
+        ORDER BY zeit DESC LIMIT 1`;
+      return r ? iso(r.zeit) : null;
     },
     async historieVon(mappeIds) {
       const gueltig = [...new Set(mappeIds.filter(istUuid))];

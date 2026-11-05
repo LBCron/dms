@@ -86,6 +86,7 @@ Ablage/
 - **Nur eine Ebene je Abruf:** Anfragen über den ganzen Baum (`Depth: infinity`) lehnt das Ablago ab.
 - **Sperren:** Windows und macOS „sperren“ eine Datei, bevor sie sie hochladen, und macOS bindet ein Laufwerk ohne Sperren nur lesend ein. Ablago beantwortet solche Sperren in Stufe 1 nur zum Schein – und nur dort, wo Ablegen erlaubt ist. Echte Sperren gegen gleichzeitiges Überschreiben kommen mit dem Bearbeiten von Office-Dateien.
 - **Protokoll:** Abgelegte Dateien und neue Post stehen auf Stufe *Info* im [Protokoll](fehlersuche.md#protokoll), abgelehnte Anmeldungen ebenfalls; reine Lesezugriffe nur auf Stufe *Debug*.
+- **Historie** (#800): Jedes Lesen einer Datei über das Laufwerk steht in der Historie der Mappe – als *über das Laufwerk abgerufen* mit Person, Datei und Name des Schlüssels. Explorer, Finder und Office lesen eine Datei oft viele Male (auch für Vorschaubilder); je Person, Datei und Tag bleibt es bei einem Eintrag. Ordnerabfragen, `HEAD` und „nicht geändert“ (304) zählen nicht. Welches [Historienregister](mappentypen.md#register) die Abrufe zeigt, stellst du am Mappentyp ein.
 - Dokumente werden immer als **Download** ausgeliefert (nie im Browser ausgeführt). Der **ETag** eines Dokuments ist nicht der Prüfwert seines Inhalts – wer nur lesen darf, kann darüber nicht prüfen, ob eine Datei einen bestimmten Inhalt hat. Bei gestempelten Dokumenten gehört er zur gestempelten Fassung.
 
 !!! warning "Abgelaufener oder gelöschter Schlüssel kann die IP-Adresse sperren"
