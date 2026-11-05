@@ -23,6 +23,7 @@ import { endpunkte, PostfachOAuth, VERSAND_OAUTH_ID } from '../src/postfach-oaut
 import { speicherRepo } from '../src/repo-speicher';
 import { POSTFACH_BINDUNG_COOKIE, routen, type Anfrage } from '../src/routen';
 import { Tresor } from '../src/tresor';
+import { wieImModus } from './hilfen';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 
@@ -218,7 +219,7 @@ async function aufbau() {
   const tabelle = routen(d, konten, { postfachOAuth: oauth, betrieb });
   const ich = async () => (await konten.listeBenutzer()).find((b) => b.id === admin.id)!;
   const rufe = async (m: string, pfad: string, x: Partial<Anfrage> = {}) =>
-    tabelle.find((t) => t.methode === m && t.pfad === pfad)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich() });
+    tabelle.find((t) => t.methode === m && t.pfad === pfad)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich()) });
   await betrieb.speichereAdresse('https://dms.example.org');
   await rufe('PUT', '/api/werkbank/postfaecher-oauth/:anbieter', { params: { anbieter: 'microsoft' }, body: { clientId: 'app-1', clientSecret: 'app-geheimnis', tenant: 'common' } });
   return { betrieb, oauth, ms, rufe, versand, einstellungen, weiter: (x: number) => { jetzt += x; } };

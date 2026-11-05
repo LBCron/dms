@@ -1700,7 +1700,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Ziel der Rückkehr ist immer ein fester Pfad in der Werkbank – das Postfach stammt aus dem gespeicherten state.
     { methode: 'GET', pfad: '/api/oauth/postfach/rueckruf', zugang: 'offen', handler: async (a) => {
       const raus = [kurzCookie(POSTFACH_BINDUNG_COOKIE, '', 0, '/api/oauth/postfach')];
-      const admin = a.benutzer?.rolle === 'admin' && darfBereich(a.benutzer, 'postfaecher') ? { id: a.benutzer.id } : null;
+      // Im Verwaltungsmodus mit Recht auf Postfächer oder – für den Versand (#813) – auf E-Mail und Adresse. Welches der
+      // beiden gemeint war, steht erst nach dem Rückruf fest; die Bindung an den Start (Cookie, Person) prüft PostfachOAuth.
+      const admin = a.benutzer?.rolle === 'admin' && (darfBereich(a.benutzer, 'postfaecher') || darfBereich(a.benutzer, 'betrieb')) ? { id: a.benutzer.id } : null;
       try {
         const r = await pfOAuth().rueckruf(a.query, admin, leseCookie(a.cookieKopf, POSTFACH_BINDUNG_COOKIE));
         // E-Mail-Versand (#813): zurück zu E-Mail und Adresse.

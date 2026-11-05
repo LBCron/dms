@@ -20,7 +20,9 @@ import { speicherKontoRepo } from '../src/konto-repo';
 import { protokoll } from '../src/protokoll';
 import { speicherRepo } from '../src/repo-speicher';
 import { pruefeVerwaltung, routen, type Anfrage } from '../src/routen';
-import { bereicheDerRoute, JEDER, NUR_GESAMT } from '../src/verwaltungsbereiche';
+import { bereicheDerRoute, heikleHandlung, JEDER, NUR_GESAMT } from '../src/verwaltungsbereiche';
+import { speicherFassungen } from '../src/dateiumwandlung';
+import { PdfEntsperren } from '../src/entsperren';
 import { ausBase32, totp, Zweifaktor } from '../src/zweifaktor';
 import { imModus } from './hilfen';
 
@@ -303,6 +305,44 @@ describe('Verwaltungsmodus (#819)', () => {
     const st = (await x.rufe(als, 'GET', '/api/konto/status')).json();
     assert.deepEqual([st.benutzer.id, st.verwaltungsmodus.darf, st.verwaltungsmodus.aktiv], [x.jonas.id, false, false]);
     assert.equal((await x.verwalten(als)).statusCode, 403);
+  });
+});
+
+describe('Neues seit 0.188 im Modell von #818', () => {
+  const offen: Array<() => Promise<unknown>> = [];
+  after(async () => { for (const f of offen) await f(); });
+
+  it('Passwörter für Dokumente (#827) bleiben auch im Verwaltungsmodus bei ihrer Person', async () => {
+    const x = await aufbau();
+    offen.push(() => x.app.close());
+    const e = new PdfEntsperren(x.d.entsperrenAnbindung({ ablage: speicherFassungen(), speicher: speicherEinstellungen(), verschluessele: (k) => `v:${k}`, entschluessele: (w) => (w.startsWith('v:') ? w.slice(2) : null) }));
+    x.d.verbindeEntsperren(e);
+    const fremd = await e.merke(x.petra.id, 'Gehaltsabrechnung', 'petras-geheimnis');
+    const c = await x.anmelden('lena@example.org');
+    assert.equal((await x.verwalten(c)).statusCode, 200);
+    assert.equal((await x.rufe(c, 'GET', '/api/konto/status')).json().verwaltungsmodus.aktiv, true);
+    const liste = await x.rufe(c, 'GET', '/api/konto/dokument-passwoerter');
+    assert.equal(liste.statusCode, 200, liste.body);
+    assert.deepEqual(liste.json().eintraege, [], 'nur die eigenen – keine fremden, auch im Modus nicht');
+    assert.equal((await x.rufe(c, 'POST', '/api/konto/dokument-passwoerter/bestaetigen', { passwort: PW })).statusCode, 200);
+    const zeige = await x.rufe(c, 'GET', `/api/konto/dokument-passwoerter/${fremd.id}`);
+    assert.ok(zeige.statusCode >= 400 && !zeige.body.includes('petras-geheimnis'), zeige.body);
+    assert.ok((await x.rufe(c, 'PUT', `/api/konto/dokument-passwoerter/${fremd.id}`, { name: 'Umbenannt' })).statusCode >= 400);
+    assert.ok((await x.rufe(c, 'DELETE', `/api/konto/dokument-passwoerter/${fremd.id}`)).statusCode >= 400);
+    assert.equal((await e.liste(x.petra.id)).length, 1, 'Petras Eintrag bleibt unberührt');
+    // In Petras Namen (Vertretung) auch nicht.
+    const v = await x.rufe(c, 'POST', `/api/benutzer/${x.petra.id}/vertreten`);
+    assert.equal(v.statusCode, 200, v.body);
+    const als = ([] as string[]).concat(v.headers['set-cookie'] as string | string[])[0].split(';')[0];
+    assert.equal((await x.rufe(als, 'GET', '/api/konto/dokument-passwoerter')).statusCode, 403);
+  });
+
+  it('E-Mail-Versand über OAuth (#813) an- und abmelden braucht eine frische Anmeldung', () => {
+    for (const p of ['/api/werkbank/betrieb/mail/oauth/start', '/api/werkbank/betrieb/mail/oauth/geraet', '/api/werkbank/betrieb/mail/oauth/abmelden']) {
+      assert.equal(heikleHandlung('POST', p, {}), 'mailversand', p);
+      assert.deepEqual(bereicheDerRoute('POST', p), ['betrieb'], p);
+    }
+    assert.equal(heikleHandlung('POST', '/api/werkbank/betrieb/mail/oauth/geraet/pruefen', {}), null, 'nur nachsehen');
   });
 });
 
