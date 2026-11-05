@@ -152,6 +152,8 @@ interface Optionen {
   sitzungen?: () => Promise<import('./poolmessung').Sitzungsstand | null>;
   /** Teuerste Abfragen für den Lasttest (#894). */
   abfragen?: import('./routen').Abfragestatistik;
+  /** CPU und Speicher je Prozessgruppe für den Lasttest (#895), gemessen im Leiter. */
+  prozessgruppen?: () => Promise<import('./prozessgruppen').GruppenStand | null>;
   /** Erweiterungen der Suche (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Arbeit nach der Antwort (#741); Tests geben einen eigenen, um darauf zu warten (`alle`). */

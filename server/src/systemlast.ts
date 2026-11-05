@@ -252,6 +252,12 @@ export class Systemlast {
   /** Rechenzeit von PostgreSQL, Ablago und Container (#874), fortlaufend in Sekunden. */
   cpuJeArt(ablago: number[]): CpuJeArt { return liesCpuJeArt(this.lies, { ablago, postgres: !!this.o.postgres }); }
 
+  /** Kerne und Grenze des Arbeitsspeichers (#895, für den Lasttest) – wie in `stand()`. */
+  rahmen(): { kerne: number; kerneBegrenzt: boolean; grenze: number | null; ohneGrenze: boolean } {
+    const c = liesCgroup(this.lies);
+    return { kerne: Math.round(this.kerne(c) * 100) / 100, kerneBegrenzt: c.kerne !== null, grenze: c.grenze ?? (c.speicher !== null ? totalmem() : null), ohneGrenze: c.grenze === null };
+  }
+
   stand(): SystemlastStand {
     const c = liesCgroup(this.lies);
     const jetztRoh = this.roh();

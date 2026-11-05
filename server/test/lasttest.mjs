@@ -185,6 +185,10 @@ export async function anmelden([email, passwort]) {
 }
 
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+/** #895: Start des Skripts – Meldungen von davor (Start von Ablago) zeigt die Lasttest-Seite nicht. */
+const SKRIPT_START = new Date().toISOString();
+/** #895: p95 „der letzten Sekunden“ auf der Lasttest-Seite. */
+export const LIVE_FENSTER_MS = 10_000;
 
 /**
  * Schritt an den Lasttest-Modus melden (#612): nur mit IPC-Kanal (Kindprozess des DMS), sonst nichts. Nie mit
@@ -605,6 +609,8 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
   const exporte = [];
   /** Nur „mit Speichern“: Zeiten der schreibenden Anfragen und abgelehnte (4xx) je Art und Status. */
   const schreibZeiten = []; const abgelehnt = {};
+  /** #895: Antworten der letzten Sekunden (Zeitpunkt, Dauer) für p95 auf der Lasttest-Seite. */
+  const fenster = { t: [], ms: [] };
   let laeuft = true;
 
   async function person() {
@@ -631,6 +637,7 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
           continue;
         }
         zeiten.push(ms); (jeArt[a.art] ??= []).push(ms);
+        fenster.t.push(Date.now()); fenster.ms.push(ms);
         if (r.status >= 500) z.fehler++; else if (r.status >= 400) z.client++; else z.ok++;
       } catch (e) {
         z.anfragen++;
@@ -644,6 +651,13 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
   async function messen() {
     while (laeuft) {
       server.push({ t: Date.now(), ...(await serverStand(v.sitzungen.admin)) });
+      // #895: dieselben Werte an die Lasttest-Seite (nur im Lasttest-Modus) – keine zusätzliche Abfrage.
+      if (process.send) {
+        const grenze = Date.now() - LIVE_FENSTER_MS;
+        const weg = fenster.t.findIndex((t) => t >= grenze);
+        if (weg !== 0) { const n = weg < 0 ? fenster.t.length : weg; fenster.t.splice(0, n); fenster.ms.splice(0, n); }
+        void melde({ art: 'live', ...liveAus(server.filter((x) => !x.fehler), fenster.ms, { name, n, seit: SKRIPT_START }) });
+      }
       await warte(2000);
     }
   }
@@ -669,6 +683,7 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
 
   const zurueck = await abfragenZuruecksetzen(v.sitzungen.admin);
   const start = Date.now();
+  melde({ art: 'live', ...liveAus([], [], { name, n, seit: SKRIPT_START }) });
   const mess = messen();
   const ex = mitExport ? exportieren() : Promise.resolve();
   await Promise.all(Array.from({ length: n }, person));
@@ -701,6 +716,10 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
     engpass: engpassAus(sv),
     // Teuerste Abfragen (#894) dieses Durchgangs; null bei älteren Fassungen.
     abfragen,
+    // #895: CPU und Speicher je Gruppe, Warnungen und Fehler aus dem Protokoll dieses Durchgangs; null bei älteren Fassungen.
+    gruppen: gruppenAus(sv),
+    protokoll: protokollAus(sv),
+    beginn: start, ende: Date.now(),
   };
   return ergebnis;
 }
@@ -789,6 +808,200 @@ export function engpassText(g) {
     `Speicher je Prozess: ${g.speicherJeProzess.length ? g.speicherJeProzess.map((p) => `${p.nr === 0 ? 'Hauptprozess' : `Prozess ${p.nr}:`} ${p.mb} MB${typeof p.haldeMb === 'number' ? ` (Halde ${p.haldeMb})` : ''}`).join(', ') : '–'}`,
   ];
   return teile.join(' · ');
+}
+
+/* ---------- Wer belegt die CPU, Protokoll (#895) ---------- */
+
+const GRUPPEN_FOLGE = ['ablago', 'lastgenerator', 'postgres', 'texterkennung', 'bilder', 'rest'];
+const GRUPPEN_NAME = { lastgenerator: 'Lastgenerator', postgres: 'PostgreSQL', texterkennung: 'Texterkennung', bilder: 'Seiten-/Vorschaubilder', rest: 'andere Programme' };
+const gruppeSchluessel = (g) => (g.art === 'ablago' ? `ablago:${g.nr}` : g.art);
+export const gruppenName = (g) => (g.art === 'ablago' ? (g.nr === 0 ? 'Ablago Hauptprozess' : `Ablago Prozess ${g.nr}`) : GRUPPEN_NAME[g.art] ?? g.art);
+const prozentKern = (dSek, sek) => (sek >= 1 && dSek >= 0 ? Math.round((dSek / sek) * 100) : null);
+
+/**
+ * CPU und Speicher je Gruppe eines Durchgangs (#895) aus den Ständen von `/api/werkbank/last` (`engpass.gruppen`):
+ * Rechenzeit in % eines Kerns über den Durchgang (Unterschied zwischen erstem und letztem Stand), Speicher (RSS) und
+ * Zahl der Prozesse höchstens. `{ verfuegbar: false }` ohne /proc (nicht Linux), null bei älteren Fassungen.
+ */
+export function gruppenAus(staende) {
+  const mit = staende.filter((s) => s.engpass && 'gruppen' in s.engpass && s.engpass.gruppen);
+  if (!mit.length) return null;
+  const e = mit.filter((s) => s.engpass.gruppen.verfuegbar);
+  if (!e.length) return { verfuegbar: false };
+  const a = e[0].engpass.gruppen, z = e.at(-1).engpass.gruppen;
+  const sek = (z.zeit - a.zeit) / 1000;
+  const anfang = new Map(a.gruppen.map((g) => [gruppeSchluessel(g), g.cpuSekunden]));
+  const hoch = new Map();
+  for (const s of e) {
+    for (const g of s.engpass.gruppen.gruppen) {
+      const k = gruppeSchluessel(g); const h = hoch.get(k) ?? { mb: 0, anzahl: 0 };
+      hoch.set(k, { mb: Math.max(h.mb, g.mb ?? 0), anzahl: Math.max(h.anzahl, g.anzahl ?? 0) });
+    }
+  }
+  const gruppen = z.gruppen.map((g) => {
+    const k = gruppeSchluessel(g);
+    return { art: g.art, ...(g.art === 'ablago' ? { nr: g.nr, rolle: g.rolle } : {}), cpu: prozentKern(g.cpuSekunden - (anfang.get(k) ?? 0), sek), mbMax: hoch.get(k)?.mb ?? g.mb, anzahlMax: hoch.get(k)?.anzahl ?? g.anzahl };
+  }).sort((x, y) => GRUPPEN_FOLGE.indexOf(x.art) - GRUPPEN_FOLGE.indexOf(y.art) || (x.nr ?? 0) - (y.nr ?? 0));
+  return { verfuegbar: true, postgresImContainer: !!z.postgresImContainer, sekunden: Math.round(sek), gruppen };
+}
+
+/**
+ * Knapp für den Ergebnisblock (#895): „CPU je Gruppe (% eines Kerns, Speicher RSS höchstens): Ablago Hauptprozess 1 %
+ * 40 MB, Ablago Prozess 1 120 % 450 MB · Lastgenerator 60 % 120 MB · PostgreSQL 140 % 600 MB (12 Prozesse) ·
+ * Texterkennung 0 % · Seiten-/Vorschaubilder 0 % · andere Programme 2 % 30 MB“. null: keine Angabe (ältere Fassung).
+ */
+export function gruppenText(g) {
+  if (!g) return null;
+  if (!g.verfuegbar) return 'CPU je Gruppe: nicht verfügbar (nur unter Linux messbar)';
+  const pz = (x) => (x === null || x === undefined ? '–' : `${x} %`);
+  const eins = (x) => `${gruppenName(x)} ${pz(x.cpu)}${x.mbMax ? ` ${x.mbMax} MB` : ''}${x.art === 'postgres' || (x.art !== 'ablago' && x.anzahlMax > 1) ? ` (${x.anzahlMax} ${x.anzahlMax === 1 ? 'Prozess' : 'Prozesse'})` : ''}`;
+  const ablago = g.gruppen.filter((x) => x.art === 'ablago');
+  const teile = [ablago.length ? ablago.map(eins).join(', ') : null];
+  for (const art of GRUPPEN_FOLGE.slice(1)) {
+    const x = g.gruppen.find((y) => y.art === art);
+    if (x) teile.push(eins(x));
+    else if (art === 'postgres') teile.push(g.postgresImContainer ? 'PostgreSQL –' : 'PostgreSQL im eigenen Container – nicht messbar');
+    else teile.push(`${GRUPPEN_NAME[art]} 0 %`);
+  }
+  return `CPU je Gruppe (% eines Kerns, Speicher RSS höchstens): ${teile.filter(Boolean).join(' · ')}`;
+}
+
+/** Ausführlich für den Bericht (#895): je Durchgang eine Tabelle mit Gruppe, Prozessen, CPU und Speicher. */
+export function gruppenBericht(name, g) {
+  if (!g) return [];
+  if (!g.verfuegbar) return [`CPU und Speicher je Gruppe „${name}“: nicht verfügbar (nur unter Linux messbar).`];
+  const zeilen = [`CPU und Speicher je Gruppe „${name}“ (über ${g.sekunden} s; aus /proc im Container):`, '', '| Gruppe | Prozesse höchstens | CPU (% eines Kerns) | Speicher MB (RSS) höchstens |', '|---|---:|---:|---:|'];
+  for (const x of g.gruppen) zeilen.push(`| ${gruppenName(x)} | ${x.anzahlMax} | ${f(x.cpu)} | ${f(x.mbMax)} |`);
+  if (!g.gruppen.some((x) => x.art === 'postgres')) zeilen.push(`| PostgreSQL | – | ${g.postgresImContainer ? '–' : 'im eigenen Container – nicht messbar'} | – |`);
+  return zeilen;
+}
+
+const meldungsSchluessel = (m) => `${m.stufe}\u0000${m.modul}\u0000${m.text}\u0000${m.ausnahme ?? ''}`;
+const protokollVon = (s) => s?.engpass?.protokoll ?? null;
+
+/**
+ * Warnungen und Fehler eines Durchgangs (#895): Unterschied der Sammlung aller Prozesse (`engpass.protokoll`) zwischen
+ * erstem und letztem Stand. Erster Zeitpunkt: bei neuen Arten wie gesammelt, sonst der erste Stand mit mehr. null ohne Angabe.
+ */
+export function protokollAus(staende) {
+  const e = staende.filter((s) => protokollVon(s));
+  if (!e.length) return null;
+  return protokollZwischen(protokollVon(e[0]), protokollVon(e.at(-1)), e);
+}
+
+function protokollZwischen(a, z, staende = []) {
+  const vorher = new Map((a?.eintraege ?? []).map((m) => [meldungsSchluessel(m), m.anzahl]));
+  const eintraege = [];
+  for (const m of z.eintraege ?? []) {
+    const k = meldungsSchluessel(m);
+    const n = m.anzahl - (vorher.get(k) ?? 0);
+    if (n <= 0) continue;
+    let erste = vorher.has(k) ? null : m.erste;
+    if (!erste) {
+      const s = staende.find((x) => (protokollVon(x)?.eintraege ?? []).some((y) => meldungsSchluessel(y) === k && y.anzahl > vorher.get(k)));
+      erste = s ? new Date(s.t).toISOString() : m.letzte;
+    }
+    eintraege.push({ stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: n, erste, prozesse: m.prozesse ?? [] });
+  }
+  eintraege.sort((x, y) => y.anzahl - x.anzahl || (x.erste < y.erste ? -1 : 1));
+  return { gesamt: Math.max(0, (z.gesamt ?? 0) - (a?.gesamt ?? 0)), weitere: Math.max(0, (z.weitere ?? 0) - (a?.weitere ?? 0)), eintraege };
+}
+
+/**
+ * Warnungen und Fehler des ganzen Laufs (#895): vom ersten Stand (nach dem Vorbereiten der ersten Stufe) bis zum Ende –
+ * mit dem Durchgang, in dem eine Art zuerst auftrat (sonst „zwischen den Durchgängen“), dazu Abstürze und Neustarts mit
+ * Grund (Code bzw. Signal, Art der Ausnahme). null ohne Angabe (ältere Fassung).
+ */
+export function protokollGesamt(anfang, ende, laeufe) {
+  const a = protokollVon(anfang), z = protokollVon(ende);
+  if (!z) return null;
+  const g = protokollZwischen(a, z);
+  const ort = (k, zeit) => {
+    for (const l of laeufe) {
+      const m = l.protokoll?.eintraege?.find((x) => meldungsSchluessel(x) === k);
+      if (m) return { erste: m.erste, durchgang: l.name };
+    }
+    const t = Date.parse(zeit);
+    const l = laeufe.find((x) => t >= x.beginn - 2000 && t <= x.ende + 2000);
+    return { erste: zeit, durchgang: l ? l.name : 'zwischen den Durchgängen' };
+  };
+  g.eintraege = g.eintraege.map((m) => ({ ...m, ...ort(meldungsSchluessel(m), m.erste) }));
+  const n0 = anfang?.engpass?.neustarts?.anzahl, n1 = ende?.engpass?.neustarts?.anzahl;
+  const seit = (anfang?.t ?? 0) - 2000;
+  g.neustarts = typeof n1 === 'number' ? Math.max(0, n1 - (typeof n0 === 'number' ? n0 : 0)) : null;
+  g.neustartListe = (ende?.engpass?.neustarts?.letzte ?? []).filter((x) => Date.parse(x.zeit) >= seit).map((x) => {
+    const t = Date.parse(x.zeit);
+    const l = laeufe.find((y) => t >= y.beginn - 2000 && t <= y.ende + 2000);
+    return { nr: x.nr, grund: `${x.signal ?? `Code ${x.code}`}${x.ausnahme ? `, ${x.ausnahme}` : ''}`, zeit: x.zeit, durchgang: l ? l.name : 'zwischen den Durchgängen' };
+  });
+  return g;
+}
+
+const STUFE_NAME = { warn: 'Warnung', error: 'Fehler', fatal: 'Schwerer Fehler' };
+const meldungText = (m) => `${STUFE_NAME[m.stufe] ?? m.stufe} [${m.modul}] ${m.text}${m.ausnahme ? ` (${m.ausnahme})` : ''}`;
+const neustartText = (x) => `Prozess ${x.nr} ${x.grund}`;
+
+/**
+ * Eine Zeile für den Ergebnisblock (#895): „Protokoll: 1.234 Warnungen und Fehler, 3 Arten – 1.200× Warnung [http] …
+ * · 30× Fehler [dokumente] … (Error ENOENT) · …; Neustarts: Prozess 2 SIGKILL“ bzw. „Protokoll: keine Warnungen und
+ * Fehler“. null ohne Angabe.
+ */
+export function protokollZeile(g) {
+  if (!g) return null;
+  const neu = g.neustartListe?.length ? `; Neustarts: ${g.neustartListe.map(neustartText).join(', ')}` : g.neustarts ? `; Neustarts: ${g.neustarts}` : '';
+  if (!g.gesamt) return `Protokoll: keine Warnungen und Fehler${neu}`;
+  const arten = g.eintraege.length + (g.weitere ? 1 : 0);
+  return `Protokoll: ${zahl(g.gesamt)} Warnungen und Fehler, ${arten} ${arten === 1 ? 'Art' : 'Arten'} – ${g.eintraege.slice(0, 3).map((m) => `${zahl(m.anzahl)}× ${meldungText(m)}`).join(' · ')}${neu}`;
+}
+
+/** Ausführlich für den Bericht (#895): die 20 häufigsten als Tabelle, dazu Abstürze und Neustarts. */
+export function protokollBericht(g) {
+  if (!g) return [];
+  const zelle = (t) => String(t ?? '').replace(/[\\|]/g, (z) => `\\${z}`);
+  const uhr = (iso) => (iso ? `${String(iso).slice(11, 19)} UTC` : '–');
+  const z = ['Warnungen und Fehler im Protokoll (#895, alle Prozesse; nur Art und Text der Meldung, ohne Einzelheiten):', ''];
+  if (!g.gesamt) z.push('Keine Warnungen und Fehler.');
+  else {
+    z.push('| # | Anzahl | Stufe | Modul | Meldung | Ausnahme | erstmals | Durchgang | Prozesse |', '|---:|---:|---|---|---|---|---|---|---|');
+    g.eintraege.slice(0, PROTOKOLL_ANZAHL).forEach((m, i) => z.push(`| ${i + 1} | ${zahl(m.anzahl)} | ${STUFE_NAME[m.stufe] ?? m.stufe} | ${zelle(m.modul)} | ${zelle(m.text)} | ${zelle(m.ausnahme ?? '–')} | ${uhr(m.erste)} | ${zelle(m.durchgang ?? '–')} | ${(m.prozesse ?? []).map((n) => (n === 0 ? 'Haupt' : n)).join(', ') || '–'} |`));
+    const rest = g.eintraege.length - PROTOKOLL_ANZAHL;
+    if (rest > 0 || g.weitere) z.push('', `Dazu ${rest > 0 ? `${rest} weitere Arten` : ''}${rest > 0 && g.weitere ? ' und ' : ''}${g.weitere ? `${zahl(g.weitere)} Meldungen ohne eigene Zeile (Sammlung voll)` : ''}.`);
+  }
+  z.push('', `Abstürze und Neustarts von Prozessen: ${g.neustarts === null ? '–' : g.neustarts === 0 ? 'keine' : g.neustarts}`);
+  for (const x of g.neustartListe ?? []) z.push(`- ${neustartText(x)} um ${uhr(x.zeit)} (${x.durchgang})`);
+  return z;
+}
+export const PROTOKOLL_ANZAHL = 20;
+
+/**
+ * Werte für die Lasttest-Seite (#895) aus den Ständen, die der Durchgang ohnehin alle 2 s holt: CPU und Speicher des
+ * Containers in Prozent (wie Werkbank → Systemzustand → Auslastung), p95 der letzten Sekunden, Warteschlange an der
+ * Datenbank, CPU je Gruppe (aus den letzten beiden Ständen) und die neuesten Warnungen und Fehler seit `seit`.
+ */
+export function liveAus(staende, letzteMs, { name, n, seit }) {
+  const e = staende.filter((s) => s.engpass);
+  const z = e.at(-1), a = e.at(-2);
+  const c = z?.container ?? null;
+  const sek = a && z ? (z.t - a.t) / 1000 : 0;
+  const x0 = a?.engpass?.cpu?.container, x1 = z?.engpass?.cpu?.container;
+  const cpu = sek >= 1 && typeof x0 === 'number' && typeof x1 === 'number' && c?.kerne ? Math.min(100, Math.max(0, Math.round(((x1 - x0) / sek / c.kerne) * 1000) / 10)) : null;
+  const ga = a?.engpass?.gruppen, gz = z?.engpass?.gruppen;
+  let gruppen = null;
+  if (gz?.verfuegbar) {
+    const vorher = new Map((ga?.verfuegbar ? ga.gruppen : []).map((g) => [gruppeSchluessel(g), g.cpuSekunden]));
+    const gs = ga?.verfuegbar ? (gz.zeit - ga.zeit) / 1000 : 0;
+    gruppen = gz.gruppen.map((g) => ({ art: g.art, ...(g.art === 'ablago' ? { nr: g.nr, rolle: g.rolle } : {}), anzahl: g.anzahl, mb: g.mb, cpu: vorher.has(gruppeSchluessel(g)) ? prozentKern(g.cpuSekunden - vorher.get(gruppeSchluessel(g)), gs) : null }));
+  }
+  const meldungen = (protokollVon(z)?.eintraege ?? []).filter((m) => m.letzte >= seit).sort((x, y) => (x.letzte < y.letzte ? 1 : -1)).slice(0, 5)
+    .map((m) => ({ stufe: m.stufe, modul: m.modul, text: m.text, ausnahme: m.ausnahme ?? null, anzahl: m.anzahl, letzte: m.letzte }));
+  const pool = z?.engpass?.pool;
+  return {
+    name, n, p95: rund(quantil(letzteMs, 0.95)), anfragen: letzteMs.length,
+    cpu, speicher: c?.mb != null && c.grenzeMb ? Math.min(100, Math.round((c.mb / c.grenzeMb) * 1000) / 10) : null,
+    speicherMb: c?.mb ?? null, grenzeMb: c?.grenzeMb ?? null, ohneGrenze: !!c?.ohneGrenze, kerne: c?.kerne ?? null, kerneBegrenzt: !!c?.kerneBegrenzt,
+    warteschlange: pool ? pool.warteschlangeMax : null, belegt: pool ? pool.belegt : null, verbindungen: pool ? pool.max : null,
+    gruppen, postgresExtern: !!gz?.verfuegbar && !gz.postgresImContainer, meldungen,
+  };
 }
 
 const komma = (x, n = 1) => (x === null || x === undefined ? '–' : Number(x).toLocaleString('de-DE', { maximumFractionDigits: n }));
@@ -1028,6 +1241,10 @@ function bericht(ergebnisse, x) {
   }
   // Teuerste Abfragen (#894): je Durchgang die zehn teuersten.
   for (const l of x.laeufe.filter((y) => y.abfragen)) z.push('', ...abfragenBericht(l.name, l.abfragen));
+  // Wer belegt die CPU (#895): je Durchgang nach Gruppen.
+  for (const l of x.laeufe.filter((y) => y.gruppen)) z.push('', ...gruppenBericht(l.name, l.gruppen));
+  // Warnungen und Fehler aus dem Protokoll (#895): die 20 häufigsten des ganzen Laufs, Abstürze und Neustarts.
+  if (x.protokoll) z.push('', ...protokollBericht(x.protokoll));
   for (const l of x.laeufe.filter((y) => y.exporte.length)) {
     z.push('', `Exporte im Durchgang „${l.name}“: ${l.exporte.map((e) => `${e.art.toUpperCase()} ${e.status} ${(e.ms / 1000).toFixed(1)} s ${e.mb} MB`).join(' · ')}`);
   }
@@ -1117,6 +1334,8 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
     // #894: je Stufe die drei teuersten Abfragen (bei groß: an der Grenze, sonst beim ersten Schritt); ausführlich im Bericht.
     const mitAbfragen = haupt ?? e.schritte?.[0];
     if (abfragenZeile(mitAbfragen?.abfragen)) kz.push(`  ${abfragenZeile(mitAbfragen.abfragen).replace(/^Teuerste Abfragen/, `Teuerste Abfragen ${mitAbfragen.name}`)}`);
+    // #895: CPU und Speicher je Gruppe – eigene Zeile beim selben Durchgang; ausführlich im Bericht.
+    if (gruppenText(mitAbfragen?.gruppen)) kz.push(`  ${gruppenText(mitAbfragen.gruppen).replace(/^CPU je Gruppe/, `CPU je Gruppe ${mitAbfragen.name}`)}`);
     // #739: neue Zeilen unter der bisherigen – die bisherige bleibt genau so.
     if (e.speichern) kz.push(speichernZeile(e.speichern));
     if (e.speichern?.engpass) kz.push(`  Engpass ${e.speichern.name}: ${engpassText(e.speichern.engpass)}`);
@@ -1131,6 +1350,8 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
   kz.push(containerZeile(alle));
   const mit = x.laeufe.filter((l) => l.speichern);
   if (mit.length) kz.push(`Mit Speichern: Arbeitsspeicher Ablago höchstens: ${Math.max(0, ...mit.map((l) => l.speicherMbMax ?? 0))} MB · Ereignisschleife p99 höchstens: ${Math.round(Math.max(0, ...mit.map((l) => l.schleifeP99 ?? 0)))} ms`);
+  // #895: Warnungen und Fehler des ganzen Laufs – eine Zeile, die 20 häufigsten im Bericht.
+  if (protokollZeile(x.protokoll)) kz.push(protokollZeile(x.protokoll));
   kz.push(`Gemessen: ${new Date().toISOString().slice(0, 10)}`, '```');
   return kz.join('\n');
 }
@@ -1168,10 +1389,13 @@ async function messen(stufen) {
   };
   const ergebnisse = [];
   let v = null; let bestand = null; let x = null;
+  /** #895: Stand des Protokolls aller Prozesse vor dem ersten Durchgang – gezählt wird, was danach dazukommt. */
+  let protokollAnfang = null;
   for (const s of stufen) {
     melde({ art: 'stufe', stufe: s, nr: stufen.indexOf(s) + 1, von: stufen.length });
     bestand = await sicherstellen(mappenFuer(s));
     v = await vorbereiten();
+    protokollAnfang ??= { t: Date.now(), ...(await serverStand(v.sitzungen.admin)) };
     // „mit Speichern“ (#739): Die Ziele holt erst der Durchgang selbst – der bisherige startet genau wie vorher.
     v.speichern = !hat('--ohne-speichern');
     console.log(`Stufe ${s}: ${bestand.gesamt} Mappen; vorbereitet: ${v.mappen.length} Mappen, ${v.dokumente.length} Dokumente, ${v.ansichten.length} Ansichten.`);
@@ -1182,6 +1406,8 @@ async function messen(stufen) {
     ergebnisse.push(e);
   }
   x = { ...x, bestand, laeufe, geprueft: hat('--grenzen') };
+  // #895: Warnungen und Fehler des ganzen Laufs, Abstürze und Neustarts mit Grund.
+  x.protokoll = protokollGesamt(protokollAnfang, { t: Date.now(), ...(await serverStand(v.sitzungen.admin)) }, laeufe);
   x.vergleich = await vergleiche(ergebnisse.find((e) => e.stufe === 'gross'));
   const u = await umgebung(v.sitzungen.admin);
   const text = `${bericht(ergebnisse, x)}\n\n### Ergebnis zum Kopieren\n\nOhne Namen und Adressen – zum Einfügen in das Formular „Messergebnis Lasttest“.\n\n${ergebnisblock(ergebnisse, x, u)}`;
@@ -1193,7 +1419,7 @@ async function messen(stufen) {
   }
   for (const z of ergebnisse.flatMap((e) => e.zielVerfehlt ?? [])) console.log(process.env.GITHUB_ACTIONS ? `::notice title=Lasttest Ziel verfehlt::${z}` : `HINWEIS: Ziel verfehlt – ${z}`);
   if (arg('--bericht')) await writeFile(arg('--bericht'), `${text}\n`);
-  if (arg('--json')) await writeFile(arg('--json'), JSON.stringify({ stufen: ergebnisse.map(({ durchgang: _d, schritte: _s, ueberlast: _u, speichern: _sp, ...r }) => r), laeufe, umgebung: u, bestand, vergleich: x.vergleich }, null, 2));
+  if (arg('--json')) await writeFile(arg('--json'), JSON.stringify({ stufen: ergebnisse.map(({ durchgang: _d, schritte: _s, ueberlast: _u, speichern: _sp, ...r }) => r), laeufe, umgebung: u, bestand, vergleich: x.vergleich, protokoll: x.protokoll }, null, 2));
   if (x.geprueft && ergebnisse.some((e) => e.verfehlt.length)) process.exitCode = 1;
 }
 

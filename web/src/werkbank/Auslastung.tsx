@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ENGPASS_MINUTEN, ENGPASS_VARIABLE, VERBINDUNG_WARTEN_MS, type Einstellbar, type Messpunkt, type ProzessZeile } from '../../../shared/src/systemlast';
 import { api, type ErweiterungStand, type Schleifenverzoegerung, type SystemlastAntwort } from '../api';
 import { Link } from '../ort';
@@ -33,16 +33,19 @@ const prozent = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFra
 const rate = (b: number) => t('systemzustand.netz.je-sekunde', { wert: b < 1024 ** 2 ? `${(b / 1024).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} KB` : `${(b / 1024 ** 2).toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} MB` });
 const ms = (x: number) => `${x.toLocaleString(gebietsschema(), { maximumFractionDigits: 1 })} ms`;
 const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString(gebietsschema(), { timeStyle: 'short' });
+const uhrzeitSekunden = (iso: string) => new Date(iso).toLocaleTimeString(gebietsschema(), { timeStyle: 'medium' });
+/** Kurve je Minute (Systemzustand) oder alle paar Sekunden (Lasttest-Seite, #895). */
+type KurvenArt = 'minuten' | 'live';
 const NV = () => <span className="leise" title={t('systemzustand.auslastung.nicht-verfuegbar.hilfe')}>{t('systemzustand.auslastung.nicht-verfuegbar')}</span>;
 
 /**
  * Kleine Kurve (eine Reihe, daher ohne Legende – die Überschrift nennt sie). Lücken bei fehlenden Werten;
  * jede Minute ist ein Ziel für den Tooltip mit Uhrzeit und Wert.
  */
-function Kurve({ titel, punkte, wert, format, max }: { titel: string; punkte: Messpunkt[]; wert: (p: Messpunkt) => number | null; format: (x: number) => string; max?: number }) {
+function Kurve({ titel, punkte, wert, format, max, art = 'minuten' }: { titel: string; punkte: Messpunkt[]; wert: (p: Messpunkt) => number | null; format: (x: number) => string; max?: number; art?: KurvenArt }) {
   const werte = punkte.map(wert);
   const gemessen = werte.filter((x): x is number => x !== null);
-  if (gemessen.length < 2) return <p className="leise klein">{t('systemzustand.auslastung.keine-kurve')}</p>;
+  if (gemessen.length < 2) return <p className="leise klein">{art === 'live' ? t('systemzustand.auslastung.keine-kurve.live') : t('systemzustand.auslastung.keine-kurve')}</p>;
   const B = 240, H = 40, n = punkte.length;
   const hoechst = Math.max(...gemessen);
   const oben = max ?? Math.max(hoechst * 1.15, 1);
@@ -55,15 +58,38 @@ function Kurve({ titel, punkte, wert, format, max }: { titel: string; punkte: Me
   if (akt.length) stuecke.push(akt.join(' '));
   return (
     <svg className="az-kurve" viewBox={`0 0 ${B} ${H}`} preserveAspectRatio="none" role="img"
-      aria-label={t('systemzustand.auslastung.kurve', { titel, anzahl: n, hoechst: format(hoechst) })}>
+      aria-label={art === 'live' ? t('systemzustand.auslastung.kurve.live', { titel, anzahl: n, hoechst: format(hoechst) }) : t('systemzustand.auslastung.kurve', { titel, anzahl: n, hoechst: format(hoechst) })}>
       <line className="az-grund" x1={0} x2={B} y1={H - 2} y2={H - 2} />
       {stuecke.map((s, i) => <polyline key={i} points={s} />)}
       {werte.map((v, i) => (
         <rect key={i} className="az-ziel" x={x(i) - B / n / 2} width={B / n} y={0} height={H}>
-          <title>{t('systemzustand.auslastung.punkt', { zeit: uhrzeit(punkte[i].zeit), wert: v === null ? t('systemzustand.auslastung.nicht-verfuegbar') : format(v) })}</title>
+          <title>{t('systemzustand.auslastung.punkt', { zeit: art === 'live' ? uhrzeitSekunden(punkte[i].zeit) : uhrzeit(punkte[i].zeit), wert: v === null ? t('systemzustand.auslastung.nicht-verfuegbar') : format(v) })}</title>
         </rect>
       ))}
     </svg>
+  );
+}
+
+/**
+ * CPU und Arbeitsspeicher als Kachel mit Kurve (#409) – auch auf der Lasttest-Seite (#895), dort mit den Werten der
+ * laufenden Messung. `jetzt` in Prozent; darunter, was die Seite dazu sagt.
+ */
+export function CpuKachel({ jetzt, verlauf, art, children }: { jetzt: number | null; verlauf: Messpunkt[]; art?: KurvenArt; children?: ReactNode }) {
+  return (
+    <div className="az-wert">
+      <h3 className="az-titel">{t('systemzustand.cpu.titel')} <span className="az-jetzt">{jetzt === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(jetzt) })}</span></h3>
+      <Kurve titel={t('systemzustand.cpu.titel')} punkte={verlauf} wert={(p) => p.cpu} format={prozent} max={100} art={art} />
+      {children}
+    </div>
+  );
+}
+export function SpeicherKachel({ jetzt, verlauf, art, children }: { jetzt: number | null; verlauf: Messpunkt[]; art?: KurvenArt; children?: ReactNode }) {
+  return (
+    <div className="az-wert">
+      <h3 className="az-titel">{t('systemzustand.speicher.titel')} <span className="az-jetzt">{jetzt === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(jetzt) })}</span></h3>
+      <Kurve titel={t('systemzustand.speicher.titel')} punkte={verlauf} wert={(p) => p.speicher} format={prozent} max={100} art={art} />
+      {children}
+    </div>
   );
 }
 
@@ -207,15 +233,11 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
         )}
         <Engpaesse s={s} />
         <div className="az-raster">
-          <div className="az-wert">
-            <h3 className="az-titel">{t('systemzustand.cpu.titel')} <span className="az-jetzt">{s.jetzt.cpu === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(s.jetzt.cpu) })}</span></h3>
-            <Kurve titel={t('systemzustand.cpu.titel')} punkte={s.verlauf} wert={(p) => p.cpu} format={prozent} max={100} />
+          <CpuKachel jetzt={s.jetzt.cpu} verlauf={s.verlauf}>
             <p className="leise klein">{s.kerneBegrenzt ? t('systemzustand.cpu.kerne', { anzahl: s.kerne }) : t('systemzustand.cpu.kerne.ohne', { anzahl: s.kerne })}</p>
             <p className="leise klein">{t('systemzustand.cpu.last', { eins: s.last[0].toLocaleString(gebietsschema()), fuenf: s.last[1].toLocaleString(gebietsschema()), fuenfzehn: s.last[2].toLocaleString(gebietsschema()), kerne: s.hostKerne })}</p>
-          </div>
-          <div className="az-wert">
-            <h3 className="az-titel">{t('systemzustand.speicher.titel')} <span className="az-jetzt">{s.jetzt.speicher === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: prozent(s.jetzt.speicher) })}</span></h3>
-            <Kurve titel={t('systemzustand.speicher.titel')} punkte={s.verlauf} wert={(p) => p.speicher} format={prozent} max={100} />
+          </CpuKachel>
+          <SpeicherKachel jetzt={s.jetzt.speicher} verlauf={s.verlauf}>
             {s.speicher.belegt !== null && s.speicher.grenze !== null
               ? <p className="leise klein">{s.speicher.ohneGrenze ? t('systemzustand.speicher.ohne-grenze', { belegt: platz(s.speicher.belegt), grenze: platz(s.speicher.grenze) }) : t('systemzustand.speicher.belegt', { belegt: platz(s.speicher.belegt), grenze: platz(s.speicher.grenze) })}</p>
               : <p className="leise klein"><NV /></p>}
@@ -225,7 +247,7 @@ export function AuslastungAbschnitt({ z }: { z: SystemlastZustand }) {
               {s.datenbankImContainer && <><dt>{t('systemzustand.speicher.datenbank')}</dt><dd>{s.anteile.datenbank === null ? <NV /> : platz(s.anteile.datenbank)}</dd></>}
             </dl>
             {!s.datenbankImContainer && <p className="leise klein">{t('systemzustand.speicher.datenbank.extern')}</p>}
-          </div>
+          </SpeicherKachel>
           <div className="az-wert">
             <h3 className="az-titel">{t('systemzustand.netz.titel')} <span className="az-jetzt">{s.jetzt.rx === null || s.jetzt.tx === null ? <NV /> : t('systemzustand.auslastung.jetzt', { wert: rate(s.jetzt.rx + s.jetzt.tx) })}</span></h3>
             <Kurve titel={t('systemzustand.netz.titel')} punkte={s.verlauf} wert={(p) => (p.rx === null || p.tx === null ? null : p.rx + p.tx)} format={rate} />

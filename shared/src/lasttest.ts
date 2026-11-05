@@ -64,7 +64,48 @@ export interface LasttestStand {
   speicherErkannt: 'HDD' | 'SSD' | 'NVMe' | null;
   /** Wo das Ergebnis im Container liegt (z. B. /data/ergebnis/lasttest-klein.md). */
   datei: string | null;
+  /** #895: Werte der laufenden Messung (das Skript schickt sie bei jeder Abfrage, alle 2 s) – null außerhalb der Durchgänge. */
+  live?: LasttestLiveStand | null;
 }
+
+/** Gruppen der Rechenzeit (#895), in dieser Reihenfolge. */
+export type LiveGruppenArt = 'ablago' | 'lastgenerator' | 'postgres' | 'texterkennung' | 'bilder' | 'rest';
+
+/** Ein Wert der laufenden Messung (#895), wie ihn das Skript meldet. */
+export interface LasttestLive {
+  /** Durchgang und Gleichzeitigkeit. */
+  name: string;
+  n: number;
+  /** p95 der Antworten der letzten Sekunden (ms) und wie viele es waren. */
+  p95: number | null;
+  anfragen: number;
+  /** Container: CPU in % der erlaubten Kerne, Arbeitsspeicher in % der Grenze (wie Werkbank → Systemzustand → Auslastung). */
+  cpu: number | null;
+  speicher: number | null;
+  speicherMb: number | null;
+  grenzeMb: number | null;
+  ohneGrenze: boolean;
+  kerne: number | null;
+  kerneBegrenzt: boolean;
+  /** Warteschlange an der Datenbank: wartende Abfragen, belegte und erlaubte Verbindungen. */
+  warteschlange: number | null;
+  belegt: number | null;
+  verbindungen: number | null;
+  /** CPU in % eines Kerns und Speicher (RSS, MB) je Gruppe; null: nicht messbar (nicht Linux). */
+  gruppen: Array<{ art: LiveGruppenArt; nr?: number; rolle?: 'haupt' | 'leiter' | 'anfragen'; anzahl: number; cpu: number | null; mb: number }> | null;
+  /** PostgreSQL in einem eigenen Container: von hier aus nicht messbar. */
+  postgresExtern: boolean;
+  /** Neueste Warnungen und Fehler aus dem Protokoll (ohne Einzelheiten). */
+  meldungen: Array<{ stufe: 'warn' | 'error' | 'fatal'; modul: string; text: string; ausnahme: string | null; anzahl: number; letzte: string }>;
+}
+
+export interface LasttestLiveStand {
+  jetzt: LasttestLive & { zeit: string };
+  /** CPU und Speicher der letzten Minuten (für die Kurven). */
+  verlauf: Array<{ zeit: string; cpu: number | null; speicher: number | null }>;
+}
+/** So viele Werte behält die Lasttest-Seite für die Kurven (alle 2 s: 3 Minuten). */
+export const LIVE_VERLAUF = 90;
 
 /** Platzhalter im Ergebnisblock – wie PLATZHALTER in server/test/lasttest.mjs. */
 export const PLATZHALTER = { geraet: '{{geraet}}', speicher: '{{speicher}}' } as const;

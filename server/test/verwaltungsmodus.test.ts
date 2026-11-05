@@ -27,6 +27,11 @@ import { ausBase32, totp, Zweifaktor } from '../src/zweifaktor';
 import { imModus } from './hilfen';
 
 const PW = 'ein-langes-passwort';
+const stundeBerlin = (t: number) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(t));
+// Die Tests zum Tagesmerker rücken die Uhr bis zu 40 Minuten vor; „heute“ zählt in Europe/Berlin, die Anmeldung selbst
+// läuft mit der echten Uhr. Kurz vor Mitternacht würde mitten im Test das Datum wechseln – dann werden sie übersprungen.
+const minuteBerlin = (t: number) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', minute: '2-digit' }).format(t));
+const kurzVorMitternacht = () => stundeBerlin(Date.now()) === 23 && minuteBerlin(Date.now()) >= 15;
 const MIN = 60_000;
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 /** Letzte Nummer im Protokoll – danach Geschriebenes finden. */
@@ -225,7 +230,8 @@ describe('Verwaltungsmodus (#819)', () => {
     assert.ok(protokoll.eintraege({ seit }).some((e) => e.text === 'Verwaltungsmodus beendet' && e.daten?.imVerwaltungsmodus === true));
   });
 
-  it('endet nach 15 Minuten ohne Aktivität; Abfragen im Hintergrund verlängern nicht; Wiedereinstieg heute mit einem Klick', async () => {
+  it('endet nach 15 Minuten ohne Aktivität; Abfragen im Hintergrund verlängern nicht; Wiedereinstieg heute mit einem Klick', async (t) => {
+    if (kurzVorMitternacht()) return t.skip('kurz vor Mitternacht (Europe/Berlin)');
     const x = await aufbau();
     offen.push(() => x.app.close());
     const c = await x.anmelden('lena@example.org');
@@ -250,7 +256,8 @@ describe('Verwaltungsmodus (#819)', () => {
     assert.equal((await x.verwalten(c)).statusCode, 401);
   });
 
-  it('Tagesmerker hängt an der Sitzung: neue Sitzung, Zwei-Faktor geändert oder Recht entzogen heben ihn auf', async () => {
+  it('Tagesmerker hängt an der Sitzung: neue Sitzung, Zwei-Faktor geändert oder Recht entzogen heben ihn auf', async (t) => {
+    if (kurzVorMitternacht()) return t.skip('kurz vor Mitternacht (Europe/Berlin)');
     const x = await aufbau();
     offen.push(() => x.app.close());
     const c = await x.anmelden('jonas@example.org');

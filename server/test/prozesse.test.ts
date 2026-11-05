@@ -211,7 +211,7 @@ function mitschreiber(antworten: Record<string, unknown> = {}) {
     bediene() {}, hoere(n, f) { hoerer.set(n, f); },
     async rufe<T>(n: string, a: unknown[] = []) { gerufen.push([n, a]); return antworten[n] as T; },
     melde(n, d) { gemeldet.push([n, d]); },
-    async frageAlle() { return []; }, prozesse: () => [], neustarts: () => ({ anzahl: 0, letzte: [] }), bereit() {}, beendeAlle: () => true,
+    async frageAlle() { return []; }, prozesse: () => [], neustarts: () => ({ anzahl: 0, letzte: [] }), async meldungen() { return null; }, absturz() {}, bereit() {}, beendeAlle: () => true,
   };
   return { v, gemeldet, gerufen, hoerer };
 }
