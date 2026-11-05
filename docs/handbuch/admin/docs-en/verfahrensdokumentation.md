@@ -18,7 +18,7 @@ It is structured into:
 2. **Receipt intake** – paper, intake folder, mailbox, electronic receipts and e-invoices in their original format, assigning
 3. **Replacement scanning** – device, checks, when the paper is destroyed, exceptions
 4. **Filing and order** – folder types, required fields, views, retention periods, [archive mode](archiv.md) and "Retention expired"
-5. **Traceability and immutability** – history of the folders, checksums, [versions](https://help.ablago.app/benutzer/aktuell/versionen/), Check all files, bin
+5. **Traceability and immutability** – history of the folders, checksums, [versions](https://help.ablago.app/benutzer/aktuell/en/versionen/), Check all files, bin
 6. **Access protection** – accounts, two-factor sign-in, sign-in protection, roles, permissions, read access for auditors
 7. **Data backup and restore** – schedule, off-site copy, emergency sheet, test
 8. **Operation** – updates, maintenance mode, log

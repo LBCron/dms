@@ -34,7 +34,7 @@ More: [Packages](pakete.md)
 
 ## 4. Bring in post {#4-post-hereinholen}
 
-For a start, **one** way is enough: on your phone you photograph a letter directly into Ablago (**+ File**), an **Intake folder** takes scans from the scanner, a **mailbox** fetches invoices from your e-mails. Everything lands as [post](https://help.ablago.app/benutzer/aktuell/post/) and is assigned to a folder from there.
+For a start, **one** way is enough: on your phone you photograph a letter directly into Ablago (**+ File**), an **Intake folder** takes scans from the scanner, a **mailbox** fetches invoices from your e-mails. Everything lands as [post](https://help.ablago.app/benutzer/aktuell/en/post/) and is assigned to a folder from there.
 
 ![Assigning post](bilder/post-zuordnen.png)
 

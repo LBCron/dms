@@ -1,6 +1,6 @@
 # Intake folder {#eingangsordner}
 
-Ablago can watch a folder and **take over every file that lands there as new [post](https://help.ablago.app/benutzer/aktuell/post/)**. That way scanners ("Scan to Folder"), the NAS or any other program bring documents into Ablago without anyone opening the browser.
+Ablago can watch a folder and **take over every file that lands there as new [post](https://help.ablago.app/benutzer/aktuell/en/post/)**. That way scanners ("Scan to Folder"), the NAS or any other program bring documents into Ablago without anyone opening the browser.
 
 --8<-- "ausgeblendet-organisation.md"
 

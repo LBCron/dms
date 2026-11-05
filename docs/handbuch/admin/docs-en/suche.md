@@ -1,6 +1,6 @@
 # Search {#suche}
 
-The Library's search forgives typos and other spellings. What it does in the process you set under **Workbench → Search and full text → Search** (group *Building your Library*; in the template *Household* only in [expert mode](uebersicht.md#werkbank-anpassen), in *Business* and *Everything* always). How users search is described in the [User manual](https://help.ablago.app/benutzer/aktuell/ablage/#suchen).
+The Library's search forgives typos and other spellings. What it does in the process you set under **Workbench → Search and full text → Search** (group *Building your Library*; in the template *Household* only in [expert mode](uebersicht.md#werkbank-anpassen), in *Business* and *Everything* always). How users search is described in the [User manual](https://help.ablago.app/benutzer/aktuell/en/ablage/#suchen).
 
 ## What always applies {#was-immer-gilt}
 
@@ -22,7 +22,7 @@ Similar-sounding names (Meier, Mayer, Maier) are only found if they are also spe
 
 A **group** of synonyms, e.g. *car, auto, vehicle* or *service charges, operating costs*, makes sure that searching for one of the words also finds the others. Under **Synonyms** you enter a group separated by commas and click **Add group**; **Change** and **Remove** are on every group. A group has 2 to 20 words.
 
-Groups apply to simple searches. Whoever uses quotation marks or a minus (see [search syntax](https://help.ablago.app/benutzer/aktuell/ablage/#im-text-der-dokumente-suchen)) searches for exactly what was entered.
+Groups apply to simple searches. Whoever uses quotation marks or a minus (see [search syntax](https://help.ablago.app/benutzer/aktuell/en/ablage/#im-text-der-dokumente-suchen)) searches for exactly what was entered.
 
 **Word lists from packages:** [packages](pakete.md) can bring ready-made groups, e.g. for vehicles or letting. They are listed under **Word lists from packages** for viewing, change with an update of the package and disappear when you remove the package. Without such a package, the list is empty.
 

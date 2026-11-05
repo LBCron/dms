@@ -1,6 +1,6 @@
 # Tasks {#aufgaben}
 
-A **task** says that someone should do something on a folder. Every folder with an open task appears for its recipient under **To do** – "To do" is thus the list of one's own tasks. How users work with it is described in the [User manual](https://help.ablago.app/benutzer/zusammenarbeit/).
+A **task** says that someone should do something on a folder. Every folder with an open task appears for its recipient under **To do** – "To do" is thus the list of one's own tasks. How users work with it is described in the [User manual](https://help.ablago.app/benutzer/aktuell/en/zusammenarbeit/).
 
 Tasks arise in these ways:
 
@@ -12,13 +12,13 @@ Tasks arise in these ways:
 | **Deadline** | before the date of a date field that is a [deadline](mappentypen.md#fristen-erinnerungen-an-datumsfeldern) – created by an automation *Date reached* | as set in the automation, e.g. the user in a field, otherwise whoever created the folder | with the button *Done*, or by itself if the date changes |
 | **Reminder** | on the chosen day after *Folder ▾ →* **Remind** on the folder | the chosen user | with the button *Done* |
 | **Stand-in** | when an [absence](benutzer.md#abwesenheit) with a stand-in is entered for a user – since version 0.177 via the [automation](automatisierungen.md) *Stand-in entered* (package Notifications or taken over on the update) | the stand-in (*Stand-in from the event*); the task is attached to the absent person's user folder | by itself as soon as the absence ends or the period or stand-in changes; or with the button *Done* |
-| **Post for you** | when a user is under *For* on new [post](https://help.ablago.app/benutzer/aktuell/post/) | the user under *For* | by itself as soon as the post is assigned, completed or passed on |
+| **Post for you** | when a user is under *For* on new [post](https://help.ablago.app/benutzer/aktuell/en/post/) | the user under *For* | by itself as soon as the post is assigned, completed or passed on |
 | **Access request** | when a person has downloaded their [access copy](datenschutz.md#auskunft-zustellen) via the retrieval link or the link was blocked after failed attempts | whoever created the link or the access copy, and whoever has the person's folder as a favourite (if the notification for the favourite is on) | with the button *Done*; as long as it is open, no second one comes for the same link |
-| **Changed** | when someone changes a folder that others have as a favourite ([favourite = subscription](https://help.ablago.app/benutzer/aktuell/ablage/#favoriten-als-abo)) | whoever has the folder as a favourite, may read it and hasn't switched off the notification – never whoever made the change | by itself on opening the folder, or with the button *Done*; until then it only counts up |
+| **Changed** | when someone changes a folder that others have as a favourite ([favourite = subscription](https://help.ablago.app/benutzer/aktuell/en/ablage/#favoriten-als-abo)) | whoever has the folder as a favourite, may read it and hasn't switched off the notification – never whoever made the change | by itself on opening the folder, or with the button *Done*; until then it only counts up |
 
 - Recipients are always **users**, not roles – a task for everyone otherwise tends to be left lying.
 - Whoever mentions themselves gets no task; saving again creates no second one. If a mention is removed again, the task stays open; the folder's history records that it was removed.
-- The recipient themselves and administrators may **pass on**; this is recorded in the folder's history. Several at once work in [Workbench → Notifications and tasks](#mehrere-aufgaben-auf-einmal-weitergeben) and for one's own under My account → [Absence](https://help.ablago.app/benutzer/aktuell/profil/#abwesenheit).
+- The recipient themselves and administrators may **pass on**; this is recorded in the folder's history. Several at once work in [Workbench → Notifications and tasks](#mehrere-aufgaben-auf-einmal-weitergeben) and for one's own under My account → [Absence](https://help.ablago.app/benutzer/aktuell/en/profil/#abwesenheit).
 
 ## Workbench → Notifications and tasks { #werkbank-aufgaben }
 
@@ -80,7 +80,7 @@ Instead of sending an email with every new task, Ablago sends an overview **once
 
 ## Notifying favourites { #favoriten-benachrichtigen }
 
-Whoever marks a folder as a **favourite** gets a notification "Changed" under *To do* when someone else changes it (see User manual, [Favourites as a subscription](https://help.ablago.app/benutzer/aktuell/ablage/#favoriten-als-abo)). Below the Daily summary you set for whom this exists:
+Whoever marks a folder as a **favourite** gets a notification "Changed" under *To do* when someone else changes it (see User manual, [Favourites as a subscription](https://help.ablago.app/benutzer/aktuell/en/ablage/#favoriten-als-abo)). Below the Daily summary you set for whom this exists:
 
 - **Allowed** – *for everyone* (default), *only for certain roles* or *for nobody*.
 - **Only for certain roles:** at the top the system roles **Administrator** and **Member**, below them the further roles from [user management](benutzer.md). A user gets the notification if they have at least one of the chosen roles. At least one role must be chosen.

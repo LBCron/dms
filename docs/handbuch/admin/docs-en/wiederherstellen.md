@@ -19,7 +19,7 @@ You restore a [backup](sicherung.md) in the workbench – without a command line
 You need: the two backup files (`.dms-sicherung` and `.json`) and the [emergency sheet](sicherung.md#notfallblatt).
 
 1. On the new NAS, create the folder for Ablago, inside it `postgres`, `files`, `geheim` and `sicherung` (see [Installation](installation.md)).
-2. Install Ablago anew, as described under [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/) – recommended with two containers (e.g. the [Compose template](https://github.com/motom001/dms/blob/main/deploy/nas/docker-compose.yml) with a `.env` with a new `DB_PASSWORD`), or with [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) without a password.
+2. Install Ablago anew, as described under [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/en/) – recommended with two containers (e.g. the [Compose template](https://github.com/motom001/dms/blob/main/deploy/nas/docker-compose.yml) with a `.env` with a new `DB_PASSWORD`), or with [dms-komplett](https://help.ablago.app/installieren/aktuell/en/komplett/) without a password.
 3. Copy the two backup files into the `sicherung` folder.
 4. Start the project and open Ablago in the browser. The [setup wizard](installation.md#der-einrichtungsassistent) asks for the **setup code** and – if needed – the database. Then choose **Restore from a backup**; you don't need a "throwaway admin".
 5. Choose the backup. The **comparison** shows which version it was made with and what is running today (Ablago, database state, PostgreSQL, architecture, Library id). If the backup belongs to another tenant, Ablago takes over its id.

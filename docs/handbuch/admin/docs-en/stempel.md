@@ -1,6 +1,6 @@
 # Stamps when sharing {#stempel-beim-weitergeben}
 
-When downloading, exporting (ZIP, PDF) and sending by email, users can have a **stamp** or a **watermark** put on the copy, e.g. "Copy for Müller Property Management – 01.11.2026", "Only for presentation to the tax office" or "DRAFT". The **stored original always stays unchanged**, as does its [archive version](#archivfassung-bleibt-unverandert); the stamp only arises in the copy passed out – on the pages of the document itself, never on a separate cover sheet. How users do this is described in the [User manual](https://help.ablago.app/benutzer/aktuell/versenden/#weitergeben-mit-stempel).
+When downloading, exporting (ZIP, PDF) and sending by email, users can have a **stamp** or a **watermark** put on the copy, e.g. "Copy for Müller Property Management – 01.11.2026", "Only for presentation to the tax office" or "DRAFT". The **stored original always stays unchanged**, as does its [archive version](#archivfassung-bleibt-unverandert); the stamp only arises in the copy passed out – on the pages of the document itself, never on a separate cover sheet. How users do this is described in the [User manual](https://help.ablago.app/benutzer/aktuell/en/versenden/#weitergeben-mit-stempel).
 
 You set two things: the **templates** users choose from, and per folder type whether a stamp is **suggested** or **required**.
 

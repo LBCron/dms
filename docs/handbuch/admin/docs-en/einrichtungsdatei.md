@@ -31,7 +31,7 @@ The keys of the file are German; they stay the same in every language.
 ```yaml
 # Setup of Ablago – for loading in the setup wizard ("Load from configuration file").
 # Without passwords and without a key: the wizard asks for passwords, Ablago always creates the key anew.
-# Structure: https://help.ablago.app/admin/aktuell/einrichtungsdatei/ablago-einrichtung-1.schema.json
+# Structure: https://help.ablago.app/admin/aktuell/en/einrichtungsdatei/ablago-einrichtung-1.schema.json
 
 ablago-einrichtung: 1
 # Connection to PostgreSQL (only applies as long as Ablago has no database yet).

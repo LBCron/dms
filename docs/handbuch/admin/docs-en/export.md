@@ -5,7 +5,7 @@
 | | What for | Format |
 | --- | --- | --- |
 | [Backup](sicherung.md) | restoring *into a DMS* | its own format, encrypted |
-| Export of a view ([Library](https://help.ablago.app/benutzer/aktuell/ablage/)) | passing on selected folders | Excel, CSV, ZIP, PDF |
+| Export of a view ([Library](https://help.ablago.app/benutzer/aktuell/en/ablage/)) | passing on selected folders | Excel, CSV, ZIP, PDF |
 | **Full export** | taking everything along, leaving, further processing | open formats, readable without Ablago |
 
 ## Starting the export {#export-starten}

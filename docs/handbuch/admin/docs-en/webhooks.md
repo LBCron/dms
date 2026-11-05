@@ -2,7 +2,7 @@
 
 With a **webhook**, Ablago reports to another system by itself as soon as a user's numbers change: new post, *To do* and overdue items. Home automation (Homey, Node-RED, ioBroker, openHAB) and your own scripts then react immediately instead of asking every few minutes.
 
-Users create their webhooks themselves (**My account → Notifications → Report instantly** (click your name at the top right)); they always apply to their own numbers and within their own permissions. You as an administrator determine under **Workbench → Webhooks** **where** reports may go, see all webhooks and switch them off if needed. How users set up a webhook (with an example for Node-RED) is described in the User manual under [Connecting to home automation](https://help.ablago.app/benutzer/aktuell/hausautomatisierung/#sofort-melden-webhook).
+Users create their webhooks themselves (**My account → Notifications → Report instantly** (click your name at the top right)); they always apply to their own numbers and within their own permissions. You as an administrator determine under **Workbench → Webhooks** **where** reports may go, see all webhooks and switch them off if needed. How users set up a webhook (with an example for Node-RED) is described in the User manual under [Connecting to home automation](https://help.ablago.app/benutzer/aktuell/en/hausautomatisierung/#sofort-melden-webhook).
 
 ## What is reported – and what never is {#was-gemeldet-wird-und-was-nie}
 
@@ -61,7 +61,7 @@ Every webhook has its own **secret** (`whsec_…`). Ablago only shows it in full
 | `X-DMS-Versuch` | 1 on the first attempt, then 2, 3 … |
 | `X-DMS-Webhook` | id of the webhook |
 
-The receiver recalculates the signature with the secret and discards messages whose time deviates by more than 5 minutes. Examples in JavaScript and Python are in the [Developer manual](https://help.ablago.app/entwickler/aktuell/aufbau/#webhooks). If a secret is lost, the user creates a new one under My account with **New secret**; the old one stops working immediately.
+The receiver recalculates the signature with the secret and discards messages whose time deviates by more than 5 minutes. Examples in JavaScript and Python are in the [Developer manual](https://help.ablago.app/entwickler/aktuell/en/aufbau/#webhooks). If a secret is lost, the user creates a new one under My account with **New secret**; the old one stops working immediately.
 
 ## Backup and export {#sicherung-und-export}
 

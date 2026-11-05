@@ -69,7 +69,7 @@ If a backup fails, all administrators get an email – also without a schedule, 
 
 ## Storage location { #speicherort }
 
-The backup folder is a separate volume in the [Compose templates](https://github.com/motom001/dms/tree/main/deploy) – with two containers as with [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/):
+The backup folder is a separate volume in the [Compose templates](https://github.com/motom001/dms/tree/main/deploy) – with two containers as with [dms-komplett](https://help.ablago.app/installieren/aktuell/en/komplett/):
 
 ```yaml
 volumes:

@@ -25,7 +25,7 @@ Every folder has a **history** (who changed what when). If a folder is deleted p
 - They don't block **unique values**: a new folder may get the same invoice number.
 - As before, a folder that others still link to can't be deleted in the first place.
 - **Restore** brings back documents and links. Links to folders that no longer exist in the meantime are dropped. If a unique value has been taken in the meantime, the folder lands under **To do** for whoever created it.
-- **Delete with linked folders** ([User manual](https://help.ablago.app/benutzer/aktuell/mappen/#mit-verknupften-mappen-loschen)) puts all folders into the bin as **one operation**. They can be restored together (**Restore all**) – with the links between them (also in a circle) and the links that were removed from folders that stay. Individually works too; then only this one folder's links come back.
+- **Delete with linked folders** ([User manual](https://help.ablago.app/benutzer/aktuell/en/mappen/#mit-verknupften-mappen-loschen)) puts all folders into the bin as **one operation**. They can be restored together (**Restore all**) – with the links between them (also in a circle) and the links that were removed from folders that stay. Individually works too; then only this one folder's links come back.
 - A folder type can't be deleted as long as folders of it are in the bin.
 - Folders of a folder type in [archive mode](archiv.md) stay in the bin until their retention period ends – even if the bin's retention expires earlier. They can't be deleted permanently before that, not even as an administrator.
 - The files stay in the file folder until the bin is emptied.

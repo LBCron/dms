@@ -6,7 +6,7 @@ Since #739, every level additionally measures **with saving** (same load, about 
 
 The rows "GitHub machine" are measured by the project every week on GitHub's machines (workflow *Lasttest*); there Ablago, PostgreSQL and the load test run on the same machine. The other rows are reports from operators – collected in the issue [Load test results (#576)](https://github.com/motom001/dms/issues/576) and in [separate reports](https://github.com/motom001/dms/issues?q=label%3Amessergebnis-lasttest), each with version and date, because new versions can be faster or slower.
 
-On which devices the project tests Ablago itself – and until when it expects to – is shown in the installation manual under [Tested platforms](https://help.ablago.app/installieren/aktuell/plattformen/).
+On which devices the project tests Ablago itself – and until when it expects to – is shown in the installation manual under [Tested platforms](https://help.ablago.app/installieren/aktuell/en/plattformen/).
 
 | Device | CPU / cores | RAM | Storage | Image | Ablago | small p95 | medium p95 | large: limit | As of |
 | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |

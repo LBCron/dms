@@ -1,6 +1,6 @@
 # Administrator manual {#administratorhandbuch}
 
-This manual is for everyone who **installs, sets up and runs** Ablago. How to work with folders day to day is described in the [User manual](https://help.ablago.app/benutzer/) – this manual refers to it instead of repeating it.
+This manual is for everyone who **installs, sets up and runs** Ablago. How to work with folders day to day is described in the [User manual](https://help.ablago.app/benutzer/aktuell/en/) – this manual refers to it instead of repeating it.
 
 !!! tip "Just installed?"
     What you should still do now is summarised under [Set up in five steps](fuenf-schritte.md). The table below is the reference for later.
@@ -11,7 +11,7 @@ This manual is for everyone who **installs, sets up and runs** Ablago. How to wo
 
 | Task | Where | Chapter |
 | --- | --- | --- |
-| Install Ablago | NAS, home server, app store | [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/) |
+| Install Ablago | NAS, home server, app store | [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/en/) |
 | Set up after the installation | setup wizard, database, reverse proxy | [Setup and operation](installation.md) |
 | Install a new version, back up data | NAS | [Updating and backing up](aktualisieren.md) |
 | Set which folders exist and what's in them | Workbench → folder types | [Folder types](mappentypen.md) |

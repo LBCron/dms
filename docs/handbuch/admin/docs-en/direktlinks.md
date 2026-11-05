@@ -6,7 +6,7 @@ A link via folder type and field values finds a folder by its **folder type** an
 http://<NAS>:8080/ablage/link?typ=rechnung&rechnungsnummer=A-2020-11380
 ```
 
-Nothing needs to be set up for this: every link that follows the structure below works immediately. In every folder, **Folder ▾ → Copy link** creates a matching link (see [User manual](https://help.ablago.app/benutzer/versenden/#link-kopieren)).
+Nothing needs to be set up for this: every link that follows the structure below works immediately. In every folder, **Folder ▾ → Copy link** creates a matching link (see [User manual](https://help.ablago.app/benutzer/aktuell/en/versenden/#link-kopieren)).
 
 ## What the link shows {#was-der-link-zeigt}
 

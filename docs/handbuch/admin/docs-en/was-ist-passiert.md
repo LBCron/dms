@@ -18,7 +18,7 @@ For example after an update. Your data is still on the device – an update dele
 You set up Ablago anew and restore the backup.
 
 1. Have ready: the **emergency sheet** with the key and the **two files of a backup** – from the old disk or from the [off-site copy](sicherung-ausser-haus.md).
-2. Install Ablago anew, as described under [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/).
+2. Install Ablago anew, as described under [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/en/).
 3. Copy the two files into the backup folder of the new installation.
 4. Open Ablago in the browser. In the setup wizard, choose **Restore from a backup** and type in the **key from the emergency sheet**. Spaces don't count; below easily confused characters, the sheet says which one is meant.
 5. Then sign in with your previous credentials.

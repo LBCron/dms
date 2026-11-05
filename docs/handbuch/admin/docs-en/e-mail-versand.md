@@ -1,6 +1,6 @@
 # Sending email {#e-mail-versand}
 
-Ablago sends invitations, password links, the [Daily summary](aufgaben.md#tagliche-zusammenfassung) and folders that someone [sends by email](https://help.ablago.app/benutzer/versenden/). For this it needs a mailbox through whose mail server (SMTP) Ablago writes. You set up sending in the [setup wizard](installation.md#optionales) or later under **Workbench → email and address**. Both places are built the same way; only **Check connection** and the test email exist only in the workbench, because they need a sign-in.
+Ablago sends invitations, password links, the [Daily summary](aufgaben.md#tagliche-zusammenfassung) and folders that someone [sends by email](https://help.ablago.app/benutzer/aktuell/en/versenden/). For this it needs a mailbox through whose mail server (SMTP) Ablago writes. You set up sending in the [setup wizard](installation.md#optionales) or later under **Workbench → email and address**. Both places are built the same way; only **Check connection** and the test email exist only in the workbench, because they need a sign-in.
 
 What goes out in the process is listed under [What leaves your Library](datenschutz.md#was-deine-ablage-verlasst): only emails that someone triggers or switches on, via your mail server.
 

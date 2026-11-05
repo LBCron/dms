@@ -1,6 +1,6 @@
 # Mailboxes {#postfacher}
 
-Ablago can **fetch one or more email mailboxes via IMAP** and take over **every email as new [post](https://help.ablago.app/benutzer/aktuell/post/)**. Invoices, notices and scans ("Scan to email") that arrive by email thus land in Ablago without downloading and uploading.
+Ablago can **fetch one or more email mailboxes via IMAP** and take over **every email as new [post](https://help.ablago.app/benutzer/aktuell/en/post/)**. Invoices, notices and scans ("Scan to email") that arrive by email thus land in Ablago without downloading and uploading.
 
 --8<-- "ausgeblendet-organisation.md"
 
