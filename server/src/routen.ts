@@ -147,6 +147,11 @@ export interface Route {
   zugang: Zugang;
   /** Rohdaten statt JSON (Datei-Upload) mit dieser Obergrenze in Bytes. */
   roh?: number;
+  /**
+   * Mit `roh`: Der Körper kommt als Strom in eine temporäre Datei (#746), `body` ist dann ein `Hochgeladen` statt eines
+   * Puffers – für Dokumente bis 100 MB, die nicht ganz im Arbeitsspeicher liegen sollen.
+   */
+  strom?: boolean;
   /** Teil der öffentlichen API (/api/v1): API-Schlüssel erlaubt. */
   api?: boolean;
   /** Nur über den Befehl `dms` im Container (#244). */
@@ -517,7 +522,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     throw new WartungFehler(x.wartung.meldung(), x.wartung.retryAfter());
   };
   const intern: Route[] = [
-    { methode: 'GET', pfad: '/api/gesundheit', zugang: 'offen', handler: async () => ok({ ok: true, stand: standKennung() }) },
+    { methode: 'GET', pfad: '/api/gesundheit', zugang: 'offen', handler: async () => ok({ ok: true, zustand: 'laeuft', stand: standKennung() }) },
     // Wartungsmodus (#102): für Banner und Anmeldeseite, auch ohne Anmeldung.
     { methode: 'GET', pfad: '/api/wartung', zugang: 'offen', handler: async () => ok(x.wartung?.oeffentlich() ?? { stufe: 'aus', text: '', ende: null, aktivAb: null, sekunden: null }) },
 
@@ -2138,7 +2143,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'DELETE', pfad: '/api/werkbank/papierkorb/:id', zugang: 'admin', handler: async (a) => ok({ geloescht: await dienst.loescheEndgueltig([a.params.id], ich(a), true, quelle(a)) }) },
 
     /* ---------- Dokumente ---------- */
-    { methode: 'POST', pfad: '/api/mappen/:id/dokumente', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, handler: async (a) => {
+    { methode: 'POST', pfad: '/api/mappen/:id/dokumente', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, strom: true, handler: async (a) => {
       await darf(a, a.params.id, 'U');
       const r = await dienst.ladeHoch(a.params.id, { register: a.query.register, name: a.query.name, typ: a.query.typ, gleicherName: a.query.gleicherName, herkunft: a.apiSchluessel ? 'api' : 'hochgeladen' }, a.body, ich(a).id);
       // Gleicher Inhalt (#333): nur Mappen, die der Benutzer lesen darf.
@@ -2337,7 +2342,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const anzeigen = v.anzeigbar;
       return fuerAnzeige(a, { inhalt, name: v.name, mime: v.anzeigbar ? v.mime : 'application/octet-stream', anzeigen, groesse: v.groesse });
     } },
-    { methode: 'POST', pfad: '/api/dokumente/:id/ersetzen', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, handler: async (a) => {
+    { methode: 'POST', pfad: '/api/dokumente/:id/ersetzen', zugang: 'angemeldet', roh: MAX_DATEIGROESSE, strom: true, handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
       const d = await dienst.ersetzeDokument(a.params.id, { name: a.query.name, typ: a.query.typ, herkunft: a.apiSchluessel ? 'api' : 'hochgeladen' }, a.body, ich(a).id);
       L.dokumente.info('Neue Version eines Dokuments', { name: d.name, id: d.id, version: d.version });

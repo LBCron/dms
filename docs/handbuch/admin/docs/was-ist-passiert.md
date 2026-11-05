@@ -8,9 +8,10 @@ Diese Seite erreichst du immer unter **https://help.ablago.app/notfall** (Englis
 
 Zum Beispiel nach einem Update. Deine Daten liegen weiter auf dem Gerät – ein Update löscht nichts.
 
-1. Öffne die Verwaltung deines Geräts (z. B. den Container Manager auf dem NAS) und sieh dir das Protokoll des Ablago-Containers an. Meist steht dort in einer Zeile, was fehlt.
-2. Kam das nach einem Update: Trag die vorige Version als Image-Tag ein und starte neu. Wie das geht, steht unter [Welches Image-Tag?](aktualisieren.md#image-tag).
-3. Hilft das nicht, führt dich die [Fehlersuche](fehlersuche.md) weiter.
+1. Ruf die gewohnte Adresse auf. Steht dort „Ablago startet …“, warte einfach – die Seite zeigt, was gerade passiert, und lädt sich selbst neu. Steht dort „Ablago konnte nicht starten“, nennt sie den Grund.
+2. Öffne die Verwaltung deines Geräts (z. B. den Container Manager auf dem NAS) und sieh dir das Protokoll des Ablago-Containers an. Meist steht dort in einer Zeile, was fehlt.
+3. Kam das nach einem Update: Trag die vorige Version als Image-Tag ein und starte neu. Wie das geht, steht unter [Welches Image-Tag?](aktualisieren.md#image-tag).
+4. Hilft das nicht, führt dich die [Fehlersuche](fehlersuche.md) weiter.
 
 ## Mein Gerät ist kaputt { #geraet-kaputt }
 

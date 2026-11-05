@@ -7,7 +7,8 @@ import type { OrdnerPruefung } from './ordner';
 import { existsSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
 import { randomBytes } from 'node:crypto';
-import Fastify, { type FastifyBaseLogger, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyBaseLogger, type FastifyInstance, type FastifyRequest } from 'fastify';
+import { Hochgeladen, nimmAuf } from './hochladen';
 import type { Dienst } from './dienst';
 import { Fachfehler } from './fehler';
 import type { Konten } from './konten';
@@ -32,7 +33,7 @@ import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import { MAX_DATEIGROESSE } from '../../shared/src/model';
 import { WEBDAV_METHODEN, WEBDAV_ZUSATZMETHODEN, type Webdav } from './webdav';
-import { anfrageStufe, dateiKoepfe, leseCookie, modulAus, pruefeZugang, routen, SITZUNG_COOKIE, sitzungsCookie, type Anfrage } from './routen';
+import { anfrageStufe, dateiKoepfe, leseCookie, modulAus, pruefeZugang, routen, SITZUNG_COOKIE, sitzungsCookie, type Anfrage, type Route } from './routen';
 
 /** zeit (#477): Zeitpunkte der Anfrage (performance.now()) für Server-Timing. */
 type MitKontext = FastifyRequest & { dms?: Kontext; lesend?: boolean; zeit?: { eingang: number; start?: number; ende?: number; senden?: number } };
@@ -187,8 +188,8 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     einrichtungscode: typeof req.headers['x-einrichtungscode'] === 'string' ? req.headers['x-einrichtungscode'] : undefined,
     kopf: (n) => { const v = req.headers[n]; return Array.isArray(v) ? v.join(', ') : v; },
   });
-  for (const r of routen(dienst, konten, opt)) {
-    app.route({
+  const definiere = (ziel: FastifyInstance, r: Route) => {
+    ziel.route({
       method: r.methode,
       url: r.pfad,
       ...(r.roh ? { bodyLimit: r.roh } : {}),
@@ -243,7 +244,23 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         return antwort.status === 204 || antwort.status === 304 || antwort.body === undefined ? reply.send() : reply.send(antwort.body);
       },
     });
-  }
+  };
+  const alle = routen(dienst, konten, opt);
+  for (const r of alle) if (!r.strom) definiere(app, r);
+  // Hochladen als Strom (#746): eigener Bereich mit eigenem Parser für application/octet-stream – der Körper geht in
+  // eine temporäre Datei (Prüfsumme beim Lesen), nicht in den Arbeitsspeicher. Anmeldung und Rolle prüft weiterhin
+  // onRequest, bevor ein Byte gelesen wird (#683). Nach der Antwort (oder einem Abbruch) ist die Datei wieder weg.
+  await app.register(async (bereich) => {
+    bereich.removeContentTypeParser('application/octet-stream');
+    bereich.addContentTypeParser('application/octet-stream', (req, nutzlast, fertig) => {
+      const laenge = req.headers['content-length'] === undefined ? undefined : Number(req.headers['content-length']);
+      nimmAuf(nutzlast, req.routeOptions.bodyLimit ?? MAX_DATEIGROESSE, laenge).then((h) => fertig(null, h), (e) => fertig(e as Error, undefined));
+    });
+    const aufraeumen = async (req: FastifyRequest) => { if (req.body instanceof Hochgeladen) await req.body.entferne().catch(() => {}); };
+    bereich.addHook('onResponse', aufraeumen);
+    bereich.addHook('onRequestAbort', aufraeumen);
+    for (const r of alle) if (r.strom) definiere(bereich, r);
+  });
 
   // WebDAV-Laufwerk (#346): eigene Methoden (PROPFIND, LOCK …) und rohe Körper beliebigen Typs.
   // Eigener Plugin-Bereich, damit der Parser für „alles“ nur hier gilt.

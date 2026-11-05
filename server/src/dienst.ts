@@ -82,6 +82,7 @@ import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type Fav
 import { t } from './sprache';
 import { Ereignisverteiler } from './ereignisse';
 import { zeitzone } from '../../shared/src/region';
+import { Eingang, shaVon } from './hochladen';
 import { EREIGNISKATALOG, mischeFelder, VERALTETE_EREIGNISSE, type Ausloeser as EreignisAusloeser, type KatalogArt, type KatalogEreignis, type Katalogeintrag } from '../../shared/src/ereignisse';
 import { bereinigeFrist, datumDe, empfaengerFelder, ERINNERUNG_TEXT_MAX, fristAb, fristEmpfaenger, fristFelder, fristText, folgetermine, istDatum, naechsterTermin, type Erinnerung, type Termin, type TermineAntwort } from '../../shared/src/fristen';
 import { tageZwischen, zeitraumProblem } from '../../shared/src/kalender';
@@ -4016,9 +4017,10 @@ export class Dienst {
   }
 
   /** Beim Start: Passung für Typen nachholen, deren Mappen noch nie geprüft wurden. */
-  async passungNachziehen(): Promise<number> {
+  async passungNachziehen(fortschritt: (fertig: number, gesamt: number) => void = () => {}): Promise<number> {
     const typen = await this.repo.typenOhnePassung();
-    for (const t of typen) await this.pruefePassung(t);
+    // Fortschritt für die Startseite (#802).
+    for (const [i, t] of typen.entries()) { fortschritt(i, typen.length); await this.pruefePassung(t); }
     return typen.length;
   }
 
@@ -4932,7 +4934,7 @@ export class Dienst {
         text.push(z.text); werte.push(z.werte);
         if (i % 1000 === 999) await new Promise<void>((r) => setImmediate(r));
       }
-      const r = await arbeite('exportTabellen', { titel, kopf, ...(art.csv ? { text } : {}), ...(art.xlsx ? { werte } : {}) });
+      const r = await arbeite('exportTabellen', { titel, kopf, ...(art.csv ? { text } : {}), ...(art.xlsx ? { werte } : {}), zeitzone: zeitzone() });
       return { xlsx: r.xlsx!, csv: r.csv! };
     };
     if (format === 'csv') { const b = (await tabelle({ csv: true })).csv; return { name: `${datei}.csv`, mime: 'text/csv; charset=utf-8', inhalt: b, groesse: b.length, mappen: mappen.length, ausgelassen }; }
@@ -5739,9 +5741,10 @@ export class Dienst {
   }
 
   /** Beim Start: alle Benutzer haben ihre Mappe, und sie stimmt mit dem Konto überein. */
-  async gleicheBenutzerAb(liste: Benutzer[]) {
+  async gleicheBenutzerAb(liste: Benutzer[], fortschritt: (fertig: number, gesamt: number) => void = () => {}) {
     await this.sichereSystem();
-    for (const b of liste) await this.spiegleBenutzer(b);
+    // Fortschritt für die Startseite (#802).
+    for (const [i, b] of liste.entries()) { fortschritt(i, liste.length); await this.spiegleBenutzer(b); }
   }
 
   /** Prüft eine Auswahl weiterer Rollen, bevor etwas geändert wird; liefert die bereinigten Ids. */
@@ -6479,22 +6482,24 @@ export class Dienst {
     const typ = await this.repo.holeTyp(m.typId);
     const reg = typ?.register.find((r) => r.key === e.register && r.art === 'dokumente');
     if (!reg) throw new Fachfehler(422, 'Dieses Dokumentenregister gibt es an der Mappe nicht.');
-    if (!Buffer.isBuffer(inhalt) || inhalt.length === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
-    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
+    // Upload als temporäre Datei (#746) oder Puffer; ganz gelesen wird er nur, wo es nötig ist (PDF verkleinern).
+    let ein = Eingang.aus(inhalt);
+    if (!ein || ein.groesse === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
+    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
     // Automatisch verkleinern (#393): neue PDFs von außen (Hochladen, Eingangsordner, Postfach, API, WebDAV) ab einer Größe.
     let automatisch: { vorher: number; nachher: number; stufe: Stufe } | null = null;
     if (AUTOMATISCH_VERKLEINERN.has(e.herkunft ?? 'hochgeladen') && !e.volltext) {
-      const r = await this.automatischVerkleinert(inhalt, e.name ?? '');
-      if (r) { automatisch = { vorher: r.vorher, nachher: r.nachher, stufe: r.stufe }; inhalt = r.inhalt; }
+      const r = await this.automatischVerkleinert(ein, e.name ?? '');
+      if (r) { automatisch = { vorher: r.vorher, nachher: r.nachher, stufe: r.stufe }; ein = Eingang.aus(r.inhalt)!; }
     }
-    if (!Buffer.isBuffer(inhalt)) throw new Fachfehler(422, 'Die Datei ist leer.');
+    const groesse = ein.groesse;
     const art = e.gleicherName ?? 'zaehler';
     if (!['zaehler', 'version', 'ersetzen'].includes(art)) throw new Fachfehler(422, 'gleicherName: zaehler, version oder ersetzen.');
     const vorhanden = (await this.repo.listeDokumente(mappeId)).filter((d) => d.registerKey === reg.key);
     const gleich = vorhanden.find((d) => d.name.toLowerCase() === dateiname(e.name).toLowerCase());
     if (gleich && art === 'version') {
       if (!reg.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – eine neue Version ist nicht möglich.');
-      return { dokument: await this.ersetzeDokument(gleich.id, { name: e.name, typ: e.typ, herkunft: e.herkunft }, inhalt, benutzerId), gleicherInhalt: [], version: true };
+      return { dokument: await this.ersetzeDokument(gleich.id, { name: e.name, typ: e.typ, herkunft: e.herkunft }, ein, benutzerId), gleicherInhalt: [], version: true };
     }
     if (gleich && art === 'ersetzen') {
       if (reg.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung eingeschaltet – lade das Dokument als neue Version hoch.');
@@ -6508,20 +6513,20 @@ export class Dienst {
       for (let i = 2; namen.has(name.toLowerCase()); i++) name = `${stamm} (${i})${endung}`;
     }
 
-    const sha256 = createHash('sha256').update(inhalt).digest('hex');
-    const erkannt = erkenneAnzeigbar(inhalt);
+    const sha256 = await ein.sha256();
+    const erkannt = erkenneAnzeigbar(ein.kopf);
     // TIFF, BMP, HEIC … am Inhalt (#577): Browser schicken sie oft ohne oder mit falschem Typ.
-    const angegeben = erkenneBildtyp(inhalt) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
+    const angegeben = erkenneBildtyp(ein.kopf) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
     const gleicherInhalt = await this.repo.dokumenteMitSha(sha256);
-    await this.dateien.schreibe(sha256, inhalt);
+    await ein.lege(this.dateien, sha256);
     // Dokument, Historie und Ereignis in einer Transaktion (#404); die Datei liegt schon (bleibt sie übrig, räumt die Wartung auf).
     const neu = await this.inTransaktion(async () => {
-      await this.notiere(mappeId, benutzerId, 'dokument_hochgeladen', { dokument: name, groesse: inhalt.length, mime: erkannt ?? angegeben, register: reg.name,
+      await this.notiere(mappeId, benutzerId, 'dokument_hochgeladen', { dokument: name, groesse, mime: erkannt ?? angegeben, register: reg.name,
         ...(automatisch ? { verkleinert: `automatisch ${ergebnisText(automatisch.vorher, automatisch.nachher)} (${STUFEN[automatisch.stufe].name})` } : {}) });
       await this.beruehre(mappeId, typ, benutzerId);
       const dokument = await this.repo.legeDokumentAn({
         id: randomUUID(), mappeId, registerKey: reg.key, name, mime: erkannt ?? angegeben,
-        groesse: inhalt.length, sha256, anzeigbar: !!erkannt, erstellt: new Date().toISOString(), erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
+        groesse, sha256, anzeigbar: !!erkannt, erstellt: new Date().toISOString(), erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
       });
       this.danach(() => this.neueDateien([dokument]));
       // Volltext (#45): neues Dokument in die Warteschlange, wenn das Register das will.
@@ -6536,7 +6541,7 @@ export class Dienst {
         neu = (await this.repo.holeDokument(dokument.id)) ?? dokument;
         this.danach(() => this.ocr?.anstossen());
       }
-      await this.ereignis('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, typ: await this.typVon(mappeId), mime: dokument.mime, groesse: inhalt.length, volltextGeplant: neu.ocr?.stand === 'wartet' }, benutzerId);
+      await this.ereignis('dokument.hochgeladen', { dokument: dokument.id, mappe: mappeId, typ: await this.typVon(mappeId), mime: dokument.mime, groesse, volltextGeplant: neu.ocr?.stand === 'wartet' }, benutzerId);
       return neu;
     });
     const bezuege = await this.repo.bezuege(gleicherInhalt.map((d) => d.mappeId));
@@ -7203,7 +7208,8 @@ export class Dienst {
   }
 
   private async legeDateiAb(inhalt: Buffer): Promise<string> {
-    const sha256 = createHash('sha256').update(inhalt).digest('hex');
+    // Prüfsumme in Stücken (#746): PDFs nach dem Bearbeiten sind bis zu 100 MB groß.
+    const sha256 = await shaVon(inhalt);
     await this.dateien.schreibe(sha256, inhalt);
     return sha256;
   }
@@ -7230,12 +7236,12 @@ export class Dienst {
   }
 
   /** Verkleinert ein neues PDF, wenn das eingeschaltet ist und es groß genug ist; null = unverändert lassen. */
-  private async automatischVerkleinert(inhalt: Buffer, name: string) {
-    if (erkenneAnzeigbar(inhalt) !== 'application/pdf') return null;
+  private async automatischVerkleinert(ein: Eingang, name: string) {
+    if (erkenneAnzeigbar(ein.kopf) !== 'application/pdf') return null;
     const e = await this.verkleinernEinstellung();
-    if (!e.automatisch || inhalt.length < e.abMb * 1024 * 1024) return null;
+    if (!e.automatisch || ein.groesse < e.abMb * 1024 * 1024) return null;
     try {
-      const r = await verkleinere(inhalt, e.stufe);
+      const r = await verkleinere(await ein.puffer(), e.stufe);
       if (!r.lohnt) return null;
       protokoll.modul('dokumente').info('Neues PDF automatisch verkleinert', { name, vorher: r.vorher, nachher: r.nachher, stufe: e.stufe });
       return r;
@@ -8219,14 +8225,16 @@ export class Dienst {
     if (!d) throw new Fachfehler(404, 'Dieses Dokument gibt es nicht.');
     const { typ, reg } = await this.registerVon(d);
     if (!reg?.versionierung) throw new Fachfehler(409, 'Für dieses Register ist die Versionierung ausgeschaltet – Ersetzen ist nicht möglich.');
-    if (!Buffer.isBuffer(inhalt) || inhalt.length === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
-    if (inhalt.length > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
-    const sha256 = createHash('sha256').update(inhalt).digest('hex');
-    const erkannt = erkenneAnzeigbar(inhalt);
-    const angegeben = erkenneBildtyp(inhalt) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
-    await this.dateien.schreibe(sha256, inhalt);
+    // Upload als temporäre Datei (#746) oder Puffer.
+    const ein = Eingang.aus(inhalt);
+    if (!ein || ein.groesse === 0) throw new Fachfehler(422, 'Die Datei ist leer.');
+    if (ein.groesse > MAX_DATEIGROESSE) throw new Fachfehler(413, 'Die Datei ist zu groß.');
+    const sha256 = await ein.sha256();
+    const erkannt = erkenneAnzeigbar(ein.kopf);
+    const angegeben = erkenneBildtyp(ein.kopf) ?? (/^[\w.+-]+\/[\w.+-]+$/.test(e.typ ?? '') ? e.typ! : 'application/octet-stream');
+    await ein.lege(this.dateien, sha256);
     const neu = await this.repo.ersetzeDokument(id, {
-      name: e.name ? dateiname(e.name) : d.name, mime: erkannt ?? angegeben, groesse: inhalt.length, sha256, anzeigbar: !!erkannt,
+      name: e.name ? dateiname(e.name) : d.name, mime: erkannt ?? angegeben, groesse: ein.groesse, sha256, anzeigbar: !!erkannt,
       erstelltVon: benutzerId, herkunft: e.herkunft ?? 'hochgeladen',
     });
     this.neueDateien([neu]);

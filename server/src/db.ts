@@ -116,9 +116,10 @@ export class NeuereDatenbankFehler extends Error {
  * Führt alle noch nicht ausgeführten SQL-Dateien aus `verzeichnis` in
  * Namensreihenfolge aus. Alles läuft in einer Transaktion: scheitert eine
  * Migration, bleibt die Datenbank unverändert. Die Transaktionssperre
- * verhindert, dass zwei Instanzen gleichzeitig migrieren.
+ * verhindert, dass zwei Instanzen gleichzeitig migrieren. `fortschritt` (#802) bekommt vor jeder offenen
+ * Migration Schritt, Anzahl und Datei – für die Startseite „Ablago startet …“.
  */
-export async function migriere(sql: postgres.Sql, verzeichnis: string, log: (m: string) => void = console.log) {
+export async function migriere(sql: postgres.Sql, verzeichnis: string, log: (m: string) => void = console.log, fortschritt: (nr: number, von: number, datei: string) => void = () => {}) {
   const dateien = (await readdir(verzeichnis)).filter((f) => f.endsWith('.sql')).sort();
   await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(4711001)`;
@@ -134,8 +135,9 @@ export async function migriere(sql: postgres.Sql, verzeichnis: string, log: (m: 
     const bekannt = new Set(dateien);
     const unbekannt = [...erledigt].filter((n) => !bekannt.has(n)).sort();
     if (unbekannt.length > 0) throw new NeuereDatenbankFehler(unbekannt);
-    for (const datei of dateien) {
-      if (erledigt.has(datei)) continue;
+    const offen = dateien.filter((d) => !erledigt.has(d));
+    for (const [i, datei] of offen.entries()) {
+      fortschritt(i + 1, offen.length, datei);
       await tx.unsafe(await readFile(join(verzeichnis, datei), 'utf8'));
       await tx`INSERT INTO schema_migrationen (name) VALUES (${datei})`;
       log(`Migration ausgeführt: ${datei}`);

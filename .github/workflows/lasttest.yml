@@ -3,6 +3,7 @@ name: Lasttest
 # Lasttest in drei Stufen (#544, #563): klein (25 gleichzeitig, 5.000 Mappen), mittel (100 gleichzeitig mit Export,
 # 50.000 Mappen), groß (Last steigern bis zur Grenze, 200.000 Mappen). Je Stufe folgt ein Durchgang „mit Speichern“
 # (#739, rund 10 % schreibend) – eine Messung ohne Ziel und ohne CI-Grenze; die bisherigen Durchgänge bleiben gleich.
+# Danach (groß, alle, extrem) ein Neustart mit dem ganzen Bestand: Zeit bis „erreichbar“ und bis „bereit“ (#802).
 # Die Stufe extrem (500.000 oder 1 Mio. Mappen, Ablauf wie groß) nur von Hand und ohne --grenzen – nicht im
 # Zeitplan und nicht in „alle“. klein und mittel sind eine Qualitätszusage:
 # über der CI-Grenze (erster GitHub-Lauf + 20 %, nur strenger) wird der Lauf rot; ein verfehltes Ziel (p95 < 0,3 s
@@ -77,6 +78,8 @@ jobs:
           NODE_ENV=production DMS_DATENWURZEL="$RUNNER_TEMP/daten" DMS_EINRICHTUNGSCODE=aus \
             DATABASE_URL=postgres://dms:dms@127.0.0.1:5432/dmslast PORT=3100 HOST=127.0.0.1 LOG_LEVEL=warn \
             nohup node --enable-source-maps dist/index.js > "$RUNNER_TEMP/dms.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/dms.pid"
+          # Bis „bereit“: /api/gesundheit antwortet während des Starts mit 503 (#802), curl -f wartet weiter.
           timeout 120 bash -c 'until curl -sf http://127.0.0.1:3100/api/gesundheit >/dev/null; do sleep 1; done'
       # Grenze der Stufe groß vom letzten Lauf (für die Warnung bei mehr als 20 % Verschlechterung).
       - name: Letzten Lauf holen
@@ -105,6 +108,16 @@ jobs:
               --vorher "$RUNNER_TEMP/vorher/lasttest.json" \
               --bericht "$RUNNER_TEMP/bericht.md" --json "$RUNNER_TEMP/lasttest.json" --grenzen
           fi
+      # Zeit bis „erreichbar“ und bis „bereit“ (#802) mit dem Bestand der Stufe groß (bzw. extrem): Ablago neu starten.
+      - name: Startzeit messen
+        if: success() && (inputs.stufe == '' || inputs.stufe == 'alle' || inputs.stufe == 'gross' || inputs.stufe == 'extrem')
+        run: |
+          kill "$(cat "$RUNNER_TEMP/dms.pid")" && timeout 60 bash -c 'while curl -s -o /dev/null http://127.0.0.1:3100/api/gesundheit; do sleep 1; done'
+          cd server
+          NODE_ENV=production DMS_DATENWURZEL="$RUNNER_TEMP/daten" DMS_EINRICHTUNGSCODE=aus \
+            DATABASE_URL=postgres://dms:dms@127.0.0.1:5432/dmslast PORT=3100 HOST=127.0.0.1 LOG_LEVEL=warn \
+            node test/startzeit.mjs --ziel http://127.0.0.1:3100 --bericht "$RUNNER_TEMP/bericht.md" --json "$RUNNER_TEMP/startzeit.json" \
+              --log "$RUNNER_TEMP/dms.log" -- node --enable-source-maps dist/index.js
       - name: Grenze für den nächsten Lauf merken
         if: success() && (inputs.stufe == '' || inputs.stufe == 'alle' || inputs.stufe == 'gross')
         run: mkdir -p "$RUNNER_TEMP/vorher" && cp "$RUNNER_TEMP/lasttest.json" "$RUNNER_TEMP/vorher/lasttest.json"
@@ -128,5 +141,6 @@ jobs:
           path: |
             ${{ runner.temp }}/bericht.md
             ${{ runner.temp }}/lasttest.json
+            ${{ runner.temp }}/startzeit.json
             ${{ runner.temp }}/dms.log
           retention-days: 30

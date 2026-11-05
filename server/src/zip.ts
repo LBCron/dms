@@ -72,9 +72,18 @@ const AES_EXTRA = (() => {
 export const AES_ZUSATZ = 16 + 2 + 10;
 export const ZIP_PASSWORT_MIN = 10;
 
+/**
+ * Schlüsselstrom und Prüfwert rechnet node:crypto (AES-256 auf den Zählerblöcken, HMAC-SHA1). Fertiges `aes-256-ctr`
+ * passt nicht: WinZip zählt den Block little-endian hoch, OpenSSL big-endian. Übrig bleibt das XOR mit dem
+ * Schlüsselstrom – seit #746 in 32-Bit-Worten statt Byte für Byte (rund viermal schneller), in Stücken von höchstens
+ * STUECK Bytes, damit ein großes Stück den Faden nicht lange hält.
+ */
+const STUECK = 256 * 1024;
+/** Uint32Array schreibt in der Byte-Reihenfolge des Rechners; WinZip braucht little-endian (x86, ARM: ja). */
+const KLEIN_ZUERST = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
 class AesStrom {
   private zaehler = 1;
-  private rest = Buffer.alloc(0);
+  private rest: Buffer = Buffer.alloc(0);
   private readonly ecb;
   private readonly hmac;
   readonly kopf: Buffer;
@@ -86,18 +95,43 @@ class AesStrom {
     this.hmac = createHmac('sha1', k.subarray(32, 64));
     this.kopf = Buffer.concat([salz, k.subarray(64, 66)]);
   }
-  verschluessele(b: Buffer): Buffer {
-    const fehlt = b.length - this.rest.length;
-    let strom = this.rest;
-    if (fehlt > 0) {
-      const bloecke = Math.ceil(fehlt / 16);
-      const z = Buffer.alloc(bloecke * 16);
-      for (let i = 0; i < bloecke; i++) { z.writeUInt32LE(this.zaehler % 0x100000000, i * 16); z.writeUInt32LE(Math.floor(this.zaehler / 0x100000000), i * 16 + 4); this.zaehler++; }
-      strom = Buffer.concat([strom, this.ecb.update(z)]);
+  /** Zählerblöcke (little-endian, ab 1) als Schlüsselstrom; `n` Bytes, Vielfaches von 16. */
+  private schluesselstrom(n: number): Buffer {
+    const w = new Uint32Array(n >>> 2);
+    if (KLEIN_ZUERST) {
+      for (let o = 0; o < w.length; o += 4) { w[o] = this.zaehler % 0x100000000; w[o + 1] = Math.floor(this.zaehler / 0x100000000); this.zaehler++; }
+      return this.ecb.update(Buffer.from(w.buffer));
     }
-    const r = Buffer.alloc(b.length);
-    for (let i = 0; i < b.length; i++) r[i] = b[i] ^ strom[i];
-    this.rest = strom.subarray(b.length);
+    const z = Buffer.from(w.buffer);
+    for (let o = 0; o < n; o += 16) { z.writeUInt32LE(this.zaehler % 0x100000000, o); z.writeUInt32LE(Math.floor(this.zaehler / 0x100000000), o + 4); this.zaehler++; }
+    return this.ecb.update(z);
+  }
+  verschluessele(b: Buffer): Buffer {
+    // Eigener, ausgerichteter Speicher: darin XOR in 32-Bit-Worten (Buffer aus dem Pool liegen oft unausgerichtet).
+    const r = Buffer.from(new ArrayBuffer(b.length));
+    b.copy(r);
+    let i = 0;
+    // Erst den Rest des letzten Blocks verbrauchen.
+    for (; i < b.length && i < this.rest.length; i++) r[i] ^= this.rest[i];
+    this.rest = this.rest.subarray(i);
+    while (i < b.length) {
+      const n = Math.min(STUECK, b.length - i);
+      const strom = this.schluesselstrom(Math.ceil(n / 16) * 16);
+      // Bis zur nächsten durch 4 teilbaren Stelle Byte für Byte, dann in Worten, den Rest wieder Byte für Byte.
+      let j = 0;
+      for (; j < n && ((i + j) & 3) !== 0; j++) r[i + j] ^= strom[j];
+      const worte = (n - j) >>> 2;
+      if (worte > 0) {
+        const quelle = new Uint32Array(worte); // ausgerichtete Kopie des Schlüsselstroms
+        Buffer.from(quelle.buffer).set(strom.subarray(j, j + worte * 4));
+        const ziel = new Uint32Array(r.buffer, r.byteOffset + i + j, worte);
+        for (let w = 0; w < worte; w++) ziel[w] ^= quelle[w];
+        j += worte * 4;
+      }
+      for (; j < n; j++) r[i + j] ^= strom[j];
+      this.rest = strom.subarray(n);
+      i += n;
+    }
     this.hmac.update(r);
     return r;
   }

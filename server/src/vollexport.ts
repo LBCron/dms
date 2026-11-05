@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, type WriteStream } from 'node:fs';
 import { mkdir, readFile, readdir, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { arbeite } from './arbeit';
+import { zeitzone } from '../../shared/src/region';
+import type { Zelle } from './xlsx';
 import { aufbewahrenBis } from '../../shared/src/archiv';
 import { EXPORT_TAGE } from '../../shared/src/auskunft';
 import { kernTyp } from '../../shared/src/dateiumwandlung';
@@ -14,7 +17,6 @@ import type { Sicht } from '../../shared/src/sichten';
 import { exportSpalten, sichererName, spaltenKopf, zeile } from './export';
 import { Fachfehler } from './fehler';
 import type { PapierkorbEintrag } from './repo';
-import { xlsxAus } from './xlsx';
 import { alsZeile, LOESCH_SPALTEN, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
 
 /**
@@ -140,12 +142,28 @@ export interface ExportQuelle {
 
 /* ---------- Formate ---------- */
 
+const feld = (s: string) => (/[",\r\n]/.test(s) || /^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+/** Eine Zeile CSV mit CRLF. */
+const csvZeile = (z: string[]) => `${z.map(feld).join(',')}\r\n`;
+const BOM = '\ufeff';
 /** CSV nach RFC 4180: Komma, CRLF, Anführungszeichen bei Bedarf, UTF-8 mit BOM. */
 export function csv(kopf: string[], zeilen: string[][]): Buffer {
-  const feld = (s: string) => (/[",\r\n]/.test(s) || /^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-  return Buffer.from('\ufeff' + [kopf, ...zeilen].map((z) => z.map(feld).join(',')).join('\r\n') + '\r\n', 'utf8');
+  return Buffer.from(BOM + [kopf, ...zeilen].map(csvZeile).join(''), 'utf8');
 }
 const jsonl = (zeilen: unknown[]) => Buffer.from(zeilen.map((z) => JSON.stringify(z)).join('\n') + (zeilen.length ? '\n' : ''), 'utf8');
+/**
+ * Kurz die Ereignisschleife freigeben (#746), damit andere Anfragen drankommen: spätestens nach TAKT_MS Rechenzeit.
+ * Nach der Zeit statt nach einer festen Zahl von Zeilen – eine Zeile für Excel kostet ein Vielfaches einer Zeile CSV.
+ */
+const TAKT_MS = 10;
+let letztePause = performance.now();
+async function pause() {
+  if (performance.now() - letztePause < TAKT_MS) return;
+  await new Promise<void>((r) => setImmediate(r));
+  letztePause = performance.now();
+}
+/** So viele Zeichen, dann ein Stück an den Schreibstrom. */
+const STUECK_ZEICHEN = 64 * 1024;
 const json = (x: unknown) => Buffer.from(JSON.stringify(x, null, 2) + '\n', 'utf8');
 
 /** iCalendar: Text maskieren und Zeilen auf 75 Oktette falten. */
@@ -180,10 +198,71 @@ function ohnePasswoerter(t: Mappentyp | undefined, w: Werte): Werte {
 
 interface Eintrag { pfad: string; bytes: number; sha256: string }
 
+/**
+ * Eine Datei Zeile für Zeile (#746): Text in Stücken an den Schreibstrom, mit Gegendruck (drain), Prüfwert beim
+ * Schreiben und Pausen (TAKT_MS) – statt die ganze Datei als einen Text im Speicher zu bauen.
+ */
+class Zeilen {
+  private readonly h = createHash('sha256');
+  private n = 0;
+  private stueck: string[] = [];
+  private zeichen = 0;
+  private fehler: Error | null = null;
+  private readonly strom: WriteStream;
+  /** `modus`: Rechte der Datei, z. B. 0o600 für Arbeitsdateien (nur der Dienstbenutzer). */
+  constructor(readonly rel: string, pfad: string, modus?: number) {
+    this.strom = createWriteStream(pfad, modus === undefined ? {} : { mode: modus, flags: 'wx' });
+    this.strom.on('error', (e) => { this.fehler ??= e; });
+  }
+  async schreibe(text: string) {
+    this.stueck.push(text);
+    this.zeichen += text.length;
+    if (this.zeichen >= STUECK_ZEICHEN) await this.leere();
+    await pause();
+  }
+  private async leere() {
+    if (this.fehler) throw this.fehler;
+    if (!this.stueck.length) return;
+    const b = Buffer.from(this.stueck.join(''), 'utf8');
+    this.stueck = []; this.zeichen = 0;
+    this.h.update(b); this.n += b.length;
+    if (!this.strom.write(b)) {
+      await new Promise<void>((r, f) => {
+        const weiter = () => { this.strom.off('error', fehler); r(); };
+        const fehler = (e: Error) => { this.strom.off('drain', weiter); f(e); };
+        this.strom.once('drain', weiter); this.strom.once('error', fehler);
+      });
+    }
+  }
+  async ende(): Promise<Eintrag> {
+    await this.leere();
+    await new Promise<void>((r, f) => this.strom.end((e?: Error | null) => (e ?? this.fehler ? f(e ?? this.fehler) : r())));
+    return { pfad: this.rel, bytes: this.n, sha256: this.h.digest('hex') };
+  }
+  abbrechen() { this.strom.destroy(); }
+}
+
 class Schreiber {
   readonly dateien: Eintrag[] = [];
   bytes = 0;
+  private readonly offen = new Set<Zeilen>();
   constructor(readonly ordner: string) {}
+  /** Datei zum zeilenweisen Schreiben öffnen; ins Manifest kommt sie mit `schliesse` (Reihenfolge wie bisher). */
+  async oeffne(rel: string): Promise<Zeilen> {
+    const pfad = join(this.ordner, ...rel.split('/'));
+    await mkdir(dirname(pfad), { recursive: true });
+    const z = new Zeilen(rel, pfad);
+    this.offen.add(z);
+    return z;
+  }
+  async schliesse(z: Zeilen) {
+    const e = await z.ende();
+    this.offen.delete(z);
+    this.dateien.push(e);
+    this.bytes += e.bytes;
+  }
+  /** Bei einem Fehler: offene Dateien schließen (der Ordner wird danach gelöscht). */
+  abbrechen() { for (const z of this.offen) z.abbrechen(); this.offen.clear(); }
   async schreibe(rel: string, inhalt: Buffer | Readable | (() => Promise<Buffer | Readable>)) {
     const pfad = join(this.ordner, ...rel.split('/'));
     await mkdir(dirname(pfad), { recursive: true });
@@ -240,6 +319,18 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   const ordner = join(ziel, name);
   await mkdir(ordner, { recursive: true });
   const w = new Schreiber(ordner);
+  try {
+    return await schreibeExport(q, w, name, opt, fortschritt, jetzt);
+  } catch (e) {
+    // Abgebrochen (#746, Sicherheit): Nichts Halbes liegen lassen – der Ordner ist unverschlüsselt.
+    w.abbrechen();
+    await rm(ordner, { recursive: true, force: true }).catch(() => {});
+    throw e;
+  }
+}
+
+async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: ExportOptionen, fortschritt: (fertig: number, gesamt: number, phase?: string) => void, jetzt: Date): Promise<ExportErgebnis> {
+  const ordner = w.ordner;
   const typen = await q.typen();
   const typVon = new Map(typen.map((t) => [t.id, t] as const));
   const alleMappen = new Map<string, Mappe>();
@@ -267,9 +358,18 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
 
   // Daten je Mappentyp
   const ordnerTyp = namen();
-  const verweise: string[][] = [];
-  const dokZeilen: string[][] = [];
-  const notizen: unknown[] = [], aufgaben: Aufgabe[] = [], historie: unknown[] = [];
+  // Listen über alle Mappen (#746): gleich beim Durchgang Zeile für Zeile schreiben, nicht erst sammeln.
+  // Ins Manifest kommen sie unten in der bisherigen Reihenfolge.
+  const verweise = await w.oeffne('daten/verweise.csv');
+  await verweise.schreibe(BOM + csvZeile(['quelle_id', 'feld', 'feld_schluessel', 'ziel_id', 'ziel_titel']));
+  const dokListe = await w.oeffne('daten/dokumente.csv');
+  await dokListe.schreibe(BOM + csvZeile(['dokument_id', 'mappe_id', 'register', 'dateiname', 'typ', 'groesse', 'sha256', 'erstellt', 'erstellt_von', 'version', 'stand', 'pfad', 'fassung', 'archivfassung']));
+  const notizDatei = await w.oeffne('daten/notizen.jsonl');
+  const aufgabeDatei = await w.oeffne('daten/aufgaben.jsonl');
+  const historieDatei = await w.oeffne('daten/historie.jsonl');
+  const zahl = { verweise: 0, notizen: 0, aufgaben: 0, historie: 0 };
+  /** Für den Kalender: nur offene Aufgaben mit Datum. */
+  const termine: Array<{ id: string; datum: string; text: string; mappeId: string }> = [];
   const passwoerter: string[][] = [];
   const pfade: ExportErgebnis['pfade'] = { mappen: new Map(), dokumente: new Map() };
   let dokumente = 0;
@@ -298,18 +398,36 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
     // CSV und JSON Lines: alle Felder, Verweise als Id und Titel.
     const kopf = ['id', 'titel', 'angelegt', 'angelegt_von', 'geaendert', 'geaendert_von', ...(t.archiv ? ['aufbewahren_bis'] : []),
       ...t.felder.flatMap((f) => (f.typ === 'referenz' ? [f.key, `${f.key}_titel`] : f.typ === 'betrag' ? [f.key, `${f.key}_waehrung`] : [f.key]))];
-    const zeilen = ms.map((m) => [m.id, m.titel ?? '', m.erstellt, m.erstelltVon ?? '', m.geaendert, m.geaendertVon ?? '', ...(t.archiv ? [aufbewahrenBis(t.archiv, m) ?? ''] : []),
+    const csvZeileVon = (m: Mappe) => [m.id, m.titel ?? '', m.erstellt, m.erstelltVon ?? '', m.geaendert, m.geaendertVon ?? '', ...(t.archiv ? [aufbewahrenBis(t.archiv, m) ?? ''] : []),
       ...t.felder.flatMap((f) => {
         const v = m.werte[f.key];
         if (f.typ === 'passwort') return [istLeer(v) ? '' : '(gesetzt)'];
         if (f.typ === 'referenz') { const ids = Array.isArray(v) ? v.map(String) : v ? [String(v)] : []; return [ids.join(' | '), ids.map(titel).join(' | ')]; }
         if (f.typ === 'betrag') { const x = v && typeof v === 'object' ? v as { betrag?: unknown; waehrung?: unknown } : {}; return [x.betrag == null ? '' : String(x.betrag), String(x.waehrung ?? '')]; }
         return [zelle(v)];
-      })]);
-    await w.schreibe(`daten/${dateiname}.csv`, csv(kopf, zeilen));
-    await w.schreibe(`daten/${dateiname}.jsonl`, jsonl(ms.map((m) => ({ ...m, werte: ohnePasswoerter(t, m.werte) }))));
+      })];
+    // CSV und JSON Lines Zeile für Zeile als Strom (#746).
+    const c = await w.oeffne(`daten/${dateiname}.csv`);
+    await c.schreibe(BOM + csvZeile(kopf));
+    for (const m of ms) await c.schreibe(csvZeile(csvZeileVon(m)));
+    await w.schliesse(c);
+    const j = await w.oeffne(`daten/${dateiname}.jsonl`);
+    for (const m of ms) await j.schreibe(`${JSON.stringify({ ...m, werte: ohnePasswoerter(t, m.werte) })}\n`);
+    await w.schliesse(j);
+    // Excel wie beim normalen Export (#542) im Arbeiter: Zeilen mit Pausen aufbereiten und als Strom in eine Arbeitsdatei
+    // schreiben, die der Arbeiter liest; sie liegt nur kurz im Export-Ordner, nur für den Dienstbenutzer lesbar (0600),
+    // und wird danach gelöscht (bei einem Abbruch geht sie mit dem Ordner).
     const spalten = exportSpalten([t], 'alle');
-    await w.schreibe(`daten/${dateiname}.xlsx`, xlsxAus(t.name, spalten.map((k) => spaltenKopf(k, [t])), ms.map((m) => zeile({ ...m, werte: ohnePasswoerter(t, m.werte) }, spalten, quelle).werte)));
+    const arbeitsdatei = join(ordner, `.tabelle-${dateiname}.jsonl`);
+    const tab = new Zeilen('', arbeitsdatei, 0o600);
+    try {
+      for (const m of ms) await tab.schreibe(`${JSON.stringify(zeile({ ...m, werte: ohnePasswoerter(t, m.werte) }, spalten, quelle).werte satisfies Zelle[])}\n`);
+      await tab.ende();
+      await w.schreibe(`daten/${dateiname}.xlsx`, await arbeite('exportTabelleAusDatei', { titel: t.name, kopf: spalten.map((k) => spaltenKopf(k, [t])), datei: arbeitsdatei, zeitzone: zeitzone() }));
+    } finally {
+      tab.abbrechen();
+      await rm(arbeitsdatei, { force: true });
+    }
     if (ms.length) await w.schreibe(`uebersicht/${dateiname}.pdf`, () => q.pdf(t.name, ms.map((m) => ({ ...m, werte: ohnePasswoerter(t, m.werte) })), t, true));
 
     // Ablage: je Mappe ein Ordner. Dokumente, Volltexte, Versionen, Notizen, Aufgaben und Historie
@@ -333,7 +451,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
         pfade.mappen.set(m.id, pfad);
         await w.schreibe(`${pfad}/mappe.json`, json({ ...m, werte: ohnePasswoerter(t, m.werte), typ: t.name, ...(t.archiv ? { aufbewahrenBis: aufbewahrenBis(t.archiv, m) } : {}) }));
         await w.schreibe(`${pfad}/mappe.pdf`, () => q.pdf(m.titel || t.name, [{ ...m, werte: ohnePasswoerter(t, m.werte) }], t, false));
-        for (const v of verweiseVon(t, m.werte)) verweise.push([m.id, t.felder.find((f) => f.key === v.feldKey)?.label ?? v.feldKey, v.feldKey, v.zielId, titel(v.zielId)]);
+        for (const v of verweiseVon(t, m.werte)) { await verweise.schreibe(csvZeile([m.id, t.felder.find((f) => f.key === v.feldKey)?.label ?? v.feldKey, v.feldKey, v.zielId, titel(v.zielId)])); zahl.verweise++; }
         const dateiNamen = new Map<string, ReturnType<typeof namen>>();
         for (const d of dokJe.get(m.id) ?? []) {
           const reg = t.register.find((r) => r.key === d.registerKey)?.name ?? d.registerKey;
@@ -345,18 +463,21 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
           pfade.dokumente.set(d.id, rel);
           const text = texte.get(d.id);
           if (text) await w.schreibe(`${rel}.txt`, Buffer.from(text, 'utf8'));
-          dokZeilen.push([d.id, m.id, d.registerKey, d.name, d.mime, String(d.groesse), d.sha256, d.erstellt, d.erstelltVon ?? '', String(d.version ?? 1), 'aktuell', rel, await fassung(d, rel), await archiv(d, rel)]);
+          await dokListe.schreibe(csvZeile([d.id, m.id, d.registerKey, d.name, d.mime, String(d.groesse), d.sha256, d.erstellt, d.erstelltVon ?? '', String(d.version ?? 1), 'aktuell', rel, await fassung(d, rel), await archiv(d, rel)]));
           dokumente++;
           const vn = namen();
           for (const v of versionJe.get(d.id) ?? []) {
             const vrel = `${pfad}/${regName}/Versionen/${vn(`v${v.nummer} ${v.name}`)}`;
             await w.schreibe(vrel, () => q.datei(v.sha256));
-            dokZeilen.push([d.id, m.id, d.registerKey, v.name, v.mime, String(v.groesse), v.sha256, v.erstellt, v.erstelltVon ?? '', String(v.nummer), 'aelter', vrel, await fassung(v, vrel), await archiv(v, vrel)]);
+            await dokListe.schreibe(csvZeile([d.id, m.id, d.registerKey, v.name, v.mime, String(v.groesse), v.sha256, v.erstellt, v.erstelltVon ?? '', String(v.nummer), 'aelter', vrel, await fassung(v, vrel), await archiv(v, vrel)]));
           }
         }
-        notizen.push(...notizJe.get(m.id) ?? []);
-        aufgaben.push(...aufgabeJe.get(m.id) ?? []);
-        historie.push(...historieJe.get(m.id) ?? []);
+        for (const n of notizJe.get(m.id) ?? []) { await notizDatei.schreibe(`${JSON.stringify(n)}\n`); zahl.notizen++; }
+        for (const a of aufgabeJe.get(m.id) ?? []) {
+          await aufgabeDatei.schreibe(`${JSON.stringify(a)}\n`); zahl.aufgaben++;
+          if (a.datum && !a.erledigt) termine.push({ id: a.id, datum: a.datum, text: a.text, mappeId: a.mappeId });
+        }
+        for (const h of historieJe.get(m.id) ?? []) { await historieDatei.schreibe(`${JSON.stringify(h)}\n`); zahl.historie++; }
         if (opt.passwoerter) for (const f of t.felder.filter((x) => x.typ === 'passwort' && typeof m.werte[x.key] === 'string' && m.werte[x.key] !== '')) {
           const klar = q.passwort(m.werte[f.key]);
           if (klar === null) continue;
@@ -386,13 +507,13 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
     }
   }
 
-  await w.schreibe('daten/verweise.csv', csv(['quelle_id', 'feld', 'feld_schluessel', 'ziel_id', 'ziel_titel'], verweise));
-  await w.schreibe('daten/dokumente.csv', csv(['dokument_id', 'mappe_id', 'register', 'dateiname', 'typ', 'groesse', 'sha256', 'erstellt', 'erstellt_von', 'version', 'stand', 'pfad', 'fassung', 'archivfassung'], dokZeilen));
-  await w.schreibe('daten/notizen.jsonl', jsonl(notizen));
-  await w.schreibe('daten/aufgaben.jsonl', jsonl(aufgaben));
+  await w.schliesse(verweise);
+  await w.schliesse(dokListe);
+  await w.schliesse(notizDatei);
+  await w.schliesse(aufgabeDatei);
   const erinnerungen = await q.erinnerungen();
   await w.schreibe('daten/erinnerungen.jsonl', jsonl(erinnerungen));
-  await w.schreibe('daten/historie.jsonl', jsonl(historie));
+  await w.schliesse(historieDatei);
   await w.schreibe('daten/favoriten.csv', csv(['benutzer_id', 'mappe_id'], (await q.favoriten()).map((f) => [f.benutzerId, f.mappeId])));
   await w.schreibe('daten/papierkorb.jsonl', jsonl((await q.papierkorb()).map((p) => ({ ...p, werte: ohnePasswoerter(typVon.get(p.typId), p.werte) }))));
   await w.schreibe('daten/papierkorb-dokumente.jsonl', jsonl(q.papierkorbDokumente ? await q.papierkorbDokumente() : []));
@@ -404,7 +525,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   const tag = (d: string) => d.slice(0, 10).replace(/-/g, '');
   const stempel = jetzt.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
   const ereignisse = [
-    ...aufgaben.filter((a) => a.datum && !a.erledigt).map((a) => ({ id: a.id, datum: a.datum!, titel: `${a.text}${titel(a.mappeId) ? ` – ${titel(a.mappeId)}` : ''}` })),
+    ...termine.map((a) => ({ id: a.id, datum: a.datum, titel: `${a.text}${titel(a.mappeId) ? ` – ${titel(a.mappeId)}` : ''}` })),
     ...erinnerungen.map((e) => ({ id: e.id, datum: e.datum, titel: `${e.text || 'Erinnerung'}${titel(e.mappeId) ? ` – ${titel(e.mappeId)}` : ''}` })),
   ];
   await w.schreibe('kalender/fristen.ics', Buffer.from(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DMS//Vollexport//DE', 'CALSCALE:GREGORIAN',
@@ -417,7 +538,7 @@ export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptio
   if (opt.protokolle) await w.schreibe('protokolle/protokoll.jsonl', jsonl(q.protokoll()));
   abschluss();
 
-  const anzahlen = { mappentypen: typen.length, mappen: alleMappen.size, dokumente, verweise: verweise.length, notizen: notizen.length, aufgaben: aufgaben.length, erinnerungen: erinnerungen.length, historie: historie.length };
+  const anzahlen = { mappentypen: typen.length, mappen: alleMappen.size, dokumente, verweise: zahl.verweise, notizen: zahl.notizen, aufgaben: zahl.aufgaben, erinnerungen: erinnerungen.length, historie: zahl.historie };
   await w.schreibe('LIESMICH.md', Buffer.from(opt.liesmich ?? liesmich(q, jetzt, anzahlen, opt), 'utf8'));
   // Manifest zuletzt; es nennt alle anderen Dateien mit Größe und Prüfwert.
   const manifest = { format: 'dms-vollexport', formatversion: FORMATVERSION, erstellt: jetzt.toISOString(), dms: q.version, mandant: q.mandant, anzahlen, passwoerter: !!opt.passwoerter, protokolle: !!opt.protokolle, ...(opt.zweck ? { zweck: opt.zweck } : {}), tabellen: EXPORT_TABELLEN, dateien: w.dateien };
