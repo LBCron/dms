@@ -4,6 +4,7 @@ import { Link } from '../ort';
 import { useWartung } from '../wartung';
 import { WiederherstellungsAssistent } from '../wiederherstellen';
 import { Hilfe } from '../Hilfe';
+import { t, tn } from '../sprache';
 
 /** Werkbank → Wiederherstellen (#107): nur im aktiven Wartungsmodus. */
 
@@ -12,13 +13,13 @@ export function WiederherstellungPanel({ abschnitt }: { abschnitt?: boolean } = 
   const { stand } = useWartung();
   return (
     <div className="einspaltig">
-      <Kopf titel="Wiederherstellen" abschnitt={abschnitt} id="wiederherstellen">
-        <p className="leise">Ersetzt den jetzigen Stand durch eine Sicherung. Vorher sichert Ablago den jetzigen Stand selbst. Eingespielt wird erst in einen eigenen Bereich; umgeschaltet wird nur, wenn alles geklappt hat – bricht etwas ab, bleibt alles, wie es ist. Danach startet Ablago neu, und alle melden sich neu an. <Hilfe ort="werkbank.wiederherstellung" /></p>
+      <Kopf titel={t('werkbank.wiederherstellung.wiederherstellen')} abschnitt={abschnitt} id="wiederherstellen">
+        <p className="leise">{tn('werkbank.wiederherstellung.ersetzt-den-jetzigen-stand', { hilfe: <Hilfe ort="werkbank.wiederherstellung" /> })}</p>
       </Kopf>
       {stand && stand.stufe !== 'aktiv' ? (
         <div className="hinweis warn stapel">
-          <p><strong>Wiederherstellen geht nur im aktiven Wartungsmodus</strong>, damit niemand gleichzeitig arbeitet.</p>
-          <div><Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link></div>
+          <p>{tn('werkbank.wiederherstellung.damit-niemand-gleichzeitig-arbeitet', { b: <strong>{t('werkbank.wiederherstellung.wiederherstellen-geht-nur-im')}</strong> })}</p>
+          <div><Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">{t('werkbank.wiederherstellung.zum-wartungsmodus')}</Link></div>
         </div>
       ) : (
         <section className="blatt">

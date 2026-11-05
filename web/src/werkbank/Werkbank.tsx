@@ -22,7 +22,7 @@ import { useDaten } from '../daten';
 import { TypEditor } from '../einrichtung/Einrichtung';
 import { geheZu, Link } from '../ort';
 import { bereichName, hatMitte, wartungsPlakette, werkbankEbene, werkbankUmleitung, werkbankZurueck } from '../../../shared/src/werkbankansicht';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { BenutzerDetail, BenutzerListe, BenutzerNeu, SystemkontoDetail, useBenutzer } from './Benutzer';
 import { BetriebPanel, useBetrieb } from './Betrieb';
 import { SichtEditor, SichtenListe } from './Sichten';
@@ -170,14 +170,14 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const wartungAn = wartungsPlakette(wartungsmodus.stand?.stufe ?? 'aus', wartungsmodus.stand?.aktivAb ?? null) === 'an';
 
   let liste: ReactNode = null;
-  let rechts: ReactNode = <div className="platzhalter"><p>Wähle in der Liste ein Element aus.</p></div>;
+  let rechts: ReactNode = <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-in-der-liste')}</p></div>;
 
   if (bereich === 'uebersicht') {
     liste = <UebersichtListe u={uebersicht} />;
     rechts = <UebersichtPanel u={uebersicht} />;
   } else if (bereich === 'fehlermeldungen') {
     liste = <FehlermeldungenListe z={meldungen} offen={id} />;
-    rechts = id ? <FehlermeldungDetail key={id} id={id} z={meldungen} neuLaden={async () => { await meldungen.laden(); await uebersicht.laden(); }} /> : <div className="platzhalter"><p>Wähle links eine Meldung.</p></div>;
+    rechts = id ? <FehlermeldungDetail key={id} id={id} z={meldungen} neuLaden={async () => { await meldungen.laden(); await uebersicht.laden(); }} /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-links-eine-meldung')}</p></div>;
   } else if (bereich === 'typen') {
     liste = <TypenListe offen={id} pakete={pakete.stand?.installiert ?? []} />;
     if (id === 'neu') {
@@ -187,14 +187,14 @@ export function Werkbank({ teile }: { teile: string[] }) {
       rechts = <TypEditor key={`neu-${vorlage?.id ?? ''}`} vorlage={vorlage && !vorlage.system ? vorlage : undefined} />;
     }
     else if (id) {
-      const t = d.typ(id);
-      rechts = t ? <TypEditor key={t.id} typ={t} /> : <div className="leer"><p>Diesen Mappentyp gibt es nicht (mehr).</p></div>;
+      const eintrag = d.typ(id);
+      rechts = eintrag ? <TypEditor key={eintrag.id} typ={eintrag} /> : <div className="leer"><p>{t('werkbank.werkbank.diesen-mappentyp-gibt-es')}</p></div>;
     } else if (!d.typen.length) {
-      rechts = <div className="platzhalter"><p>Noch keine Mappentypen. Lege mit „+ Neu“ einen an oder lade unter <Link to="/werkbank/demo" className="verweis">Demo-Daten</Link> die Beispiele.</p></div>;
+      rechts = <div className="platzhalter"><p>{tn('werkbank.werkbank.noch-keine-mappentypen-lege', { link: <Link to="/werkbank/demo" className="verweis">{t('werkbank.werkbank.demo-daten')}</Link> })}</p></div>;
     }
   } else if (bereich === 'sichten') {
     liste = <SichtenListe offen={id} />;
-    rechts = id ? <SichtEditor key={`${id}-${d.sicht(id)?.geaendert ?? ''}`} id={id} /> : <div className="platzhalter"><p>Wähle links eine Ansicht oder lege mit „+ Neu“ eine an.</p></div>;
+    rechts = id ? <SichtEditor key={`${id}-${d.sicht(id)?.geaendert ?? ''}`} id={id} /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-links-eine-ansicht')}</p></div>;
   } else if (bereich === 'benutzer') {
     liste = <BenutzerListe liste={benutzer.liste} offen={id} alltag={aufgabenEmpfaenger.stand?.benutzerId ?? null} />;
     // Ohne Auswahl (#719): wer im Alltag die Aufgaben ohne Empfänger bekommt.
@@ -203,13 +203,13 @@ export function Werkbank({ teile }: { teile: string[] }) {
     else if (id?.startsWith('konto-')) rechts = <SystemkontoDetail key={id} id={id.slice(6)} />;
     else if (id) {
       const b = benutzer.liste.find((x) => x.id === id);
-      rechts = b ? <BenutzerDetail key={b.id} b={b} neuLaden={benutzer.laden} /> : benutzer.geladen ? <div className="leer"><p>Diesen Benutzer gibt es nicht (mehr).</p></div> : <p className="leise">Lade …</p>;
+      rechts = b ? <BenutzerDetail key={b.id} b={b} neuLaden={benutzer.laden} /> : benutzer.geladen ? <div className="leer"><p>{t('werkbank.werkbank.diesen-benutzer-gibt-es')}</p></div> : <p className="leise">{t('werkbank.werkbank.lade')}</p>;
     }
   } else if (bereich === 'demo') {
     rechts = <DemoPanel />;
   } else if (bereich === 'designs') {
     liste = <DesignListe offen={id} />;
-    rechts = id ? <DesignEditor key={id} id={id} /> : <div className="platzhalter"><p>Wähle ein Design zum Bearbeiten oder lege mit „+ Neu“ ein eigenes an.</p></div>;
+    rechts = id ? <DesignEditor key={id} id={id} /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-ein-design-zum')}</p></div>;
   } else if (bereich === 'betrieb') {
     rechts = <BetriebPanel b={betrieb} />;
   } else if (bereich === 'aufgaben') {
@@ -245,7 +245,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = <LoeschkonzeptPanel z={datenschutz} />;
   } else if (bereich === 'nummernkreise') {
     liste = <NummernkreiseListe z={nummernkreise} offen={id} />;
-    rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>Wähle links einen Nummernkreis oder lege mit „+ Neu“ einen an.</p></div>;
+    rechts = id ? <NummernkreisEditor key={`${id}-${nummernkreise.liste ? 1 : 0}`} z={nummernkreise} schluessel={id} /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-links-einen-nummernkreis')}</p></div>;
   } else if (bereich === 'automatisierungen') {
     liste = <AutomatisierungenListe z={automatisierungen} offen={id} />;
     rechts = id ? <AutomatisierungEditor key={`${id}-${automatisierungen.stand ? 1 : 0}`} z={automatisierungen} id={id} /> : <div className="platzhalter"><p>{t('automatisierung.ui.waehlen')}</p></div>;
@@ -253,7 +253,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
     rechts = <StempelPanel z={stempel} />;
   } else if (bereich === 'postfaecher') {
     liste = <PostfaecherListe z={postfaecher} offen={id} />;
-    rechts = id ? <PostfachEditor key={`${id}-${postfaecher.liste ? 1 : 0}`} z={postfaecher} id={id} /> : <div className="platzhalter"><p>Wähle links ein Postfach oder lege mit „+ Neu“ eines an.</p></div>;
+    rechts = id ? <PostfachEditor key={`${id}-${postfaecher.liste ? 1 : 0}`} z={postfaecher} id={id} /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-links-ein-postfach')}</p></div>;
   } else if (bereich === 'eingangsordner') {
     rechts = <EingangsordnerPanel z={eingang} />;
   } else if (bereich === 'webdav') {
@@ -266,7 +266,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
       unten={<><div id="datenbank"><DatenbankAbschnitte z={datenbank} offen={new URLSearchParams(location.search).get('offen') ?? undefined} /></div><TechnikPanel t={technik} abschnitt /></>} />;
   } else if (bereich === 'papierkorb') {
     liste = <PapierkorbListe z={papierkorb} werkbank offen={id} />;
-    rechts = id ? <PapierkorbDetail key={id} id={id} werkbank /> : <div className="platzhalter"><p>Wähle links eine gelöschte Mappe aus, um sie anzusehen oder wiederherzustellen.</p></div>;
+    rechts = id ? <PapierkorbDetail key={id} id={id} werkbank /> : <div className="platzhalter"><p>{t('werkbank.werkbank.waehle-links-eine-geloeschte')}</p></div>;
   } else if (bereich === 'verschluesselung') {
     rechts = <TresorPanel t={tresor} />;
   } else if (bereich === 'protokoll') {
@@ -334,18 +334,16 @@ export function Werkbank({ teile }: { teile: string[] }) {
 
   return (
     <Dreiteilung ort="werkbank" ebene={werkbankEbene(bereich, id, !!installieren)} mitte={hatMitte(bereich)} offen={id}>
-      <aside className="spalte sichten" aria-label="Bereiche">
+      <aside className="spalte sichten" aria-label={t('werkbank.werkbank.bereiche')}>
         <WerkbankNavigation bereich={bereich} eintraege={eigene} zeigen={ansicht.zeigen} benutzt={ansicht.stand?.benutzt} />
         {/* Freiwillig, ohne Gebühren für beide Seiten (GitHub Sponsors von persönlichen Konten). */}
         <a className="unterstuetzen" href="https://github.com/sponsors/motom001" target="_blank" rel="noreferrer">
-          <Symbol name="herz" /> Projekt unterstützen
-          <span className="leise klein">freiwillig, Betrag frei wählbar</span>
-        </a>
+          {tn('werkbank.werkbank.projekt-unterstuetzen', { symbol: <Symbol name="herz" />, span: <span className="leise klein">{t('werkbank.werkbank.freiwillig-betrag-frei-waehlbar')}</span> })}</a>
         <a className="unterstuetzen handbuchlink" href={handbuch('admin')} target="_blank" rel="noreferrer">{t('werkbank.handbuch.link')} ↗</a>
       </aside>
-      <section className="spalte liste" aria-label="Elemente">{liste}</section>
-      <section className="spalte mappe" aria-label="Bearbeitung">
-        <Link to={werkbankZurueck(bereich)} className="verweis nur-schmal">{hatMitte(bereich) ? '← Zur Liste' : '← Bereiche'}</Link>
+      <section className="spalte liste" aria-label={t('werkbank.werkbank.elemente')}>{liste}</section>
+      <section className="spalte mappe" aria-label={t('werkbank.werkbank.bearbeitung')}>
+        <Link to={werkbankZurueck(bereich)} className="verweis nur-schmal">{hatMitte(bereich) ? t('werkbank.werkbank.zur-liste') : t('werkbank.werkbank.bereiche-2')}</Link>
         {rechts}
       </section>
     </Dreiteilung>
@@ -356,24 +354,24 @@ function TypenListe({ offen, pakete }: { offen?: string; pakete: InstalliertesPa
   const d = useDaten();
   return (
     <>
-      <Listenkopf titel="Mappentypen" hilfe="werkbank.typen" beschreibung="Welche Arten von Mappen es gibt, mit Feldern, Registern und Titel.">
-        <Link to="/werkbank/typen/neu" className="knopf primaer klein">+ Neu</Link>
+      <Listenkopf titel={t('werkbank.werkbank.mappentypen')} hilfe="werkbank.typen" beschreibung={t('werkbank.werkbank.welche-arten-von-mappen')}>
+        <Link to="/werkbank/typen/neu" className="knopf primaer klein">{t('werkbank.werkbank.neu')}</Link>
       </Listenkopf>
       {!d.typen.length
-        ? <p className="leise leerliste">Noch keine Mappentypen.</p>
+        ? <p className="leise leerliste">{t('werkbank.werkbank.noch-keine-mappentypen')}</p>
         : <ul className="mappenliste">
-            {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neuer Mappentyp</span><span className="unter">noch nicht gespeichert</span></span></li>}
-            {d.typen.map((t) => {
-              const z = d.zaehler.typen[t.id];
+            {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">{t('werkbank.werkbank.neuer-mappentyp')}</span><span className="unter">{t('werkbank.werkbank.noch-nicht-gespeichert')}</span></span></li>}
+            {d.typen.map((mappentyp) => {
+              const z = d.zaehler.typen[mappentyp.id];
               const anzahl = z?.anzahl ?? 0;
               const unpassend = z?.unpassend ?? 0;
               return (
-                <li key={t.id}>
-                  <Link to={`/werkbank/typen/${t.id}`} className={`eintrag werk ${offen === t.id ? 'an' : ''}`}>
-                    <span className="titel">{t.name}{t.system && <span className="chip" title="Systemmappentyp: lässt sich erweitern, aber nicht löschen">System</span>}
-                      {(() => { const p = pakete.find((x) => Object.values(x.typen).includes(t.id)); return p ? <> <span className="chip" title={`Aus dem Paket „${p.name}“ ${p.version}`}>Paket {p.name}</span></> : null; })()}</span>
-                    <span className="unter">{t.felder.length} Felder · {t.register.length} Register{d.zahlenDa && <> · {anzahl.toLocaleString('de-DE')} {anzahl === 1 ? 'Mappe' : 'Mappen'}</>}</span>
-                    {unpassend > 0 && <span className="problem">{unpassend} passen nicht zur Definition</span>}
+                <li key={mappentyp.id}>
+                  <Link to={`/werkbank/typen/${mappentyp.id}`} className={`eintrag werk ${offen === mappentyp.id ? 'an' : ''}`}>
+                    <span className="titel">{mappentyp.name}{mappentyp.system && <span className="chip" title={t('werkbank.werkbank.systemmappentyp-laesst-sich')}>{t('werkbank.werkbank.system')}</span>}
+                      {(() => { const p = pakete.find((x) => Object.values(x.typen).includes(mappentyp.id)); return p ? <> <span className="chip" title={t('werkbank.werkbank.aus-dem-paket', { name: p.name, version: p.version })}>{t('werkbank.werkbank.paket', { name: p.name })}</span></> : null; })()}</span>
+                    <span className="unter">{t('werkbank.werkbank.felder-register', { felder: mappentyp.felder.length, register: mappentyp.register.length })}{d.zahlenDa && <> · {anzahl.toLocaleString('de-DE')} {t('werkbank.werkbank.mappen', { anzahl })}</>}</span>
+                    {unpassend > 0 && <span className="problem">{t('werkbank.werkbank.passen-nicht-zur-definition', { unpassend })}</span>}
                   </Link>
                 </li>
               );

@@ -555,7 +555,7 @@ export function AblaufErgebnisAnsicht({ e, weiter }: { e: AblaufErgebnis; weiter
           <ul>{e.nichtInstalliert.map((x) => <li key={x.id}><strong>{x.name}</strong> {x.version}{x.grund ? `: ${x.grund}` : ''}</li>)}</ul>
         </div>
       )}
-      {(e.nichtInstalliert.length > 0 || !!e.fehler) && <p className="leise">{t('pakete.ablauf.ergebnis.nachholen')} <Link to="/werkbank/pakete" className="verweis">Werkbank → Pakete</Link></p>}
+      {(e.nichtInstalliert.length > 0 || !!e.fehler) && <p className="leise">{t('pakete.ablauf.ergebnis.nachholen')} <Link to="/werkbank/pakete" className="verweis">{t('werkbank.paketablauf.werkbank-pakete')}</Link></p>}
       {!e.installiert.length && !e.fehler && !e.nichtInstalliert.length && <p className="leise">{t('pakete.ablauf.ergebnis.nichts')}</p>}
       <div className="knoepfe"><button type="button" className="knopf primaer" onClick={weiter}>{t('pakete.ablauf.ergebnis.weiter')}</button></div>
     </div>

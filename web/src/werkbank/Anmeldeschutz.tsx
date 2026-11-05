@@ -3,7 +3,7 @@ import { api, type AnbieterEingabe, type AnbieterStand, type AnmeldeschutzStand,
 import { Hilfe } from '../Hilfe';
 import { useKonto } from '../konto';
 import { geheZu, Link } from '../ort';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 import { rueckfrage } from '../rueckfrage';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 
@@ -19,7 +19,7 @@ export function useAnmeldeschutz(offen: boolean) {
   const [fehler, setFehler] = useState<string>();
   const laden = useCallback(async () => { try { setStand(await api.anmeldeschutz()); setFehler(undefined); } catch (e) { setFehler((e as Error).message); } }, []);
   useEffect(() => { void laden(); }, [laden]);
-  useEffect(() => { if (!offen) return; const t = setInterval(() => void laden(), 30_000); return () => clearInterval(t); }, [offen, laden]);
+  useEffect(() => { if (!offen) return; const timer = setInterval(() => void laden(), 30_000); return () => clearInterval(timer); }, [offen, laden]);
   return { stand, fehler, laden, setStand };
 }
 export type AnmeldeschutzZustand = ReturnType<typeof useAnmeldeschutz>;
@@ -32,10 +32,10 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
   useEffect(() => { if (s && !e) setE(sperrFormular(s.einstellung)); }, [s, e]);
   const gespeichert = s ? sperrFormular(s.einstellung) : null;
   const ent = useEntwurf(gespeichert, e, { aus: !e, zuruecksetzen: () => { setE(gespeichert); setMeldung(undefined); } });
-  if (!s || !e) return <p className="leise">{z.fehler ?? 'Lade …'}</p>;
+  if (!s || !e) return <p className="leise">{z.fehler ?? t('werkbank.anmeldeschutz.lade')}</p>;
   async function speichern() {
     setSendet(true);
-    try { const n = await api.anmeldeschutzSetzen({ ...e!, ausnahmen: e!.ausnahmen.split(/[\s,;]+/).filter(Boolean) }); z.setStand(n); setE(sperrFormular(n.einstellung)); setMeldung({ art: 'gut', text: 'Gespeichert.' }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
+    try { const n = await api.anmeldeschutzSetzen({ ...e!, ausnahmen: e!.ausnahmen.split(/[\s,;]+/).filter(Boolean) }); z.setStand(n); setE(sperrFormular(n.einstellung)); setMeldung({ art: 'gut', text: t('werkbank.anmeldeschutz.gespeichert') }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
   async function entsperren(ip: string) {
     try { z.setStand(await api.entsperren(ip)); setMeldung({ art: 'gut', text: `${ip} freigegeben.` }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
@@ -44,42 +44,42 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Anmeldeschutz</h1>
-        <p className="leise">Nach zu vielen falschen Passwörtern sperrt Ablago die Anmeldung – je E-Mail-Adresse und IP und zusätzlich je IP über alle Adressen. Sperren überstehen einen Neustart. Deine Adresse gerade: <code>{s.deineIp}</code> <Hilfe ort="werkbank.anmeldeschutz" /></p>
+        <p className="ueber">{t('werkbank.anmeldeschutz.werkbank')}</p>
+        <h1>{t('werkbank.anmeldeschutz.anmeldeschutz')}</h1>
+        <p className="leise">{tn('werkbank.anmeldeschutz.nach-zu-vielen-falschen', { code: <code>{s.deineIp}</code>, hilfe: <Hilfe ort="werkbank.anmeldeschutz" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-        <h2 className="h3">Je E-Mail-Adresse und IP</h2>
+        <h2 className="h3">{t('werkbank.anmeldeschutz.je-e-mail-adresse')}</h2>
         <div className="raster">
-          <label className="eigenschaft"><span>Fehlversuche</span>{zahl(e.konto.versuche, (n) => setE({ ...e, konto: { ...e.konto, versuche: n } }), 1, 'as-konto-versuche')}</label>
-          <label className="eigenschaft"><span>Sperre <small>in Minuten</small></span>{zahl(e.konto.minuten, (n) => setE({ ...e, konto: { ...e.konto, minuten: n } }), 1, 'as-konto-minuten')}</label>
+          <label className="eigenschaft"><span>{t('werkbank.anmeldeschutz.fehlversuche')}</span>{zahl(e.konto.versuche, (n) => setE({ ...e, konto: { ...e.konto, versuche: n } }), 1, 'as-konto-versuche')}</label>
+          <label className="eigenschaft"><span>{tn('werkbank.anmeldeschutz.sperre', { klein: <small>{t('werkbank.anmeldeschutz.in-minuten')}</small> })}</span>{zahl(e.konto.minuten, (n) => setE({ ...e, konto: { ...e.konto, minuten: n } }), 1, 'as-konto-minuten')}</label>
         </div>
-        <h2 className="h3">Je IP-Adresse, über alle E-Mail-Adressen</h2>
+        <h2 className="h3">{t('werkbank.anmeldeschutz.je-ip-adresse-ueber')}</h2>
         <div className="raster">
-          <label className="eigenschaft"><span>Fehlversuche</span>{zahl(e.ip.versuche, (n) => setE({ ...e, ip: { ...e.ip, versuche: n } }), 1, 'as-ip-versuche')}</label>
-          <label className="eigenschaft"><span>Sperre <small>in Minuten, 0 = dauerhaft bis entsperrt</small></span>{zahl(e.ip.minuten, (n) => setE({ ...e, ip: { ...e.ip, minuten: n } }), 0, 'as-ip-minuten')}</label>
+          <label className="eigenschaft"><span>{t('werkbank.anmeldeschutz.fehlversuche')}</span>{zahl(e.ip.versuche, (n) => setE({ ...e, ip: { ...e.ip, versuche: n } }), 1, 'as-ip-versuche')}</label>
+          <label className="eigenschaft"><span>{tn('werkbank.anmeldeschutz.sperre', { klein: <small>{t('werkbank.anmeldeschutz.in-minuten-0-dauerhaft')}</small> })}</span>{zahl(e.ip.minuten, (n) => setE({ ...e, ip: { ...e.ip, minuten: n } }), 0, 'as-ip-minuten')}</label>
         </div>
-        <label className="eigenschaft"><span>Nie sperren <small>Adressen oder Netze, z. B. 192.168.0.0/16 – dein Heimnetz</small></span>
+        <label className="eigenschaft"><span>{tn('werkbank.anmeldeschutz.nie-sperren', { klein: <small>{t('werkbank.anmeldeschutz.adressen-oder-netze-z')}</small> })}</span>
           <input id="as-ausnahmen" value={e.ausnahmen} placeholder="192.168.0.0/16, 10.0.0.0/8" onChange={(x) => setE({ ...e, ausnahmen: x.target.value })} /></label>
         <h2 className="h3">{t('konten.verwaltende.anmeldeschutz.mail')}</h2>
-        <p className="leise klein">Angriffsversuche aus dem Internet sind normal; Sperren passieren automatisch. Gesperrte Adressen siehst du jederzeit hier und im Protokoll.</p>
+        <p className="leise klein">{t('werkbank.anmeldeschutz.angriffsversuche-aus-dem-internet')}</p>
         {/* #678: Sammelmeldung und Sofortmeldung sind jetzt Automatisierungen (Paket „Benachrichtigungen“). */}
         <div className="hinweis info hinweiszeile"><p>{t('werkbank.anmeldeschutz.automatisierung')}</p><Link to="/werkbank/automatisierungen" className="knopf klein">{t('werkbank.zusammenfassung.automatisierung.knopf')}</Link></div>
-        <Speicherleiste ent={ent} gegenstand="Anmeldeschutz" sendet={sendet} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.anmeldeschutz.anmeldeschutz')} sendet={sendet} />
       </form>
       <ZweifaktorPflichtBlatt />
       <AnbieterBlatt />
       <NotfallzugangBlatt />
       {/* #366: früher die mittlere Spalte; ganz unten, mit fester Höhe – bei Dauerangriffen kommen viele zusammen. */}
       <div className="blatt" id="gesperrt">
-        <h2 className="h3">Gesperrte Adressen{s.gesperrt.length > 0 && <> <span className="chip">{s.gesperrt.length}</span></>}</h2>
-        {!s.gesperrt.length ? <p className="leise">Gerade ist keine Adresse gesperrt.</p> : (
+        <h2 className="h3">{t('werkbank.anmeldeschutz.gesperrte-adressen')}{s.gesperrt.length > 0 && <> <span className="chip">{s.gesperrt.length}</span></>}</h2>
+        {!s.gesperrt.length ? <p className="leise">{t('werkbank.anmeldeschutz.gerade-ist-keine-adresse')}</p> : (
           <ul className="sitzungsliste festhoehe">
             {s.gesperrt.map((g) => (
               <li key={g.ip}>
-                <span><strong className="mono">{g.ip}</strong> <span className="leise klein">– {g.grund}; seit {zeit(g.seit)}, {g.bis ? `bis ${zeit(g.bis)}` : 'bis entsperrt'}</span></span>
-                <button type="button" className="knopf klein" onClick={() => void entsperren(g.ip)}>Freigeben</button>
+                <span><strong className="mono">{g.ip}</strong> <span className="leise klein">{t('werkbank.anmeldeschutz.seit', { grund: g.grund, zeit: zeit(g.seit), wert: g.bis ? t('werkbank.anmeldeschutz.bis', { zeit: zeit(g.bis) }) : t('werkbank.anmeldeschutz.bis-entsperrt') })}</span></span>
+                <button type="button" className="knopf klein" onClick={() => void entsperren(g.ip)}>{t('werkbank.anmeldeschutz.freigeben')}</button>
               </li>
             ))}
           </ul>
@@ -133,26 +133,26 @@ function ZweifaktorPflichtBlatt() {
     // #416: Pflicht für die eigene Rolle ohne eigenes Zwei-Faktor – vorher fragen, mit Weg zur Einrichtung.
     if (neu[ich.rolle] && !p[ich.rolle] && !zweifaktor.aktiv) {
       const trotzdem = await rueckfrage({
-        titel: 'Selbst noch ohne Zwei-Faktor-Anmeldung',
-        text: <>Du hast die Zwei-Faktor-Anmeldung selbst noch nicht eingerichtet. Schreibst du sie vor, arbeitest du jetzt weiter – richtest sie aber bei deiner <strong>nächsten Anmeldung</strong> ein, bevor es weitergeht. Ohne Handy hilft dann nur noch ein anderer Administrator oder <code>dms zweifaktor-zuruecksetzen</code>.</>,
-        ja: 'Trotzdem vorschreiben', nein: 'Jetzt einrichten', gefahr: true,
+        titel: t('werkbank.anmeldeschutz.selbst-noch-ohne-zwei'),
+        text: <>{tn('werkbank.anmeldeschutz.du-hast-die-zwei', { b: <strong>{t('werkbank.anmeldeschutz.naechsten-anmeldung')}</strong>, code: <code>{t('werkbank.anmeldeschutz.dms-zweifaktor-zuruecksetzen')}</code> })}</>,
+        ja: t('werkbank.anmeldeschutz.trotzdem-vorschreiben'), nein: t('werkbank.anmeldeschutz.jetzt-einrichten'), gefahr: true,
       });
       if (!trotzdem) { geheZu('/profil/sicherheit'); return; }
     }
     // Sofort sichtbar; bei einem Fehler zurück auf den gespeicherten Stand.
     const alt = p;
     setP({ ...p, ...neu }); setSendet(true); setMeldung(undefined);
-    try { setP(await api.zweifaktorPflichtSetzen(neu)); setMeldung({ art: 'gut', text: 'Gespeichert.' }); void aktualisieren(); }
+    try { setP(await api.zweifaktorPflichtSetzen(neu)); setMeldung({ art: 'gut', text: t('werkbank.anmeldeschutz.gespeichert') }); void aktualisieren(); }
     catch (x) { setP(alt); setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setSendet(false); }
   }
   return (
     <div className="blatt">
-      <h2 className="h3">Zwei-Faktor-Anmeldung <Hilfe ort="werkbank.zweifaktor" /></h2>
-      <p className="leise">Jeder kann sie unter Mein Konto → Sicherheit für sich einrichten. Hier schreibst du sie für eine Rolle vor: Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein, bevor es weitergeht – wer gerade angemeldet ist, arbeitet weiter und sieht einen Hinweis. Ein verlorenes Handy setzt du unter Benutzer zurück.</p>
-      {!p ? !meldung && <p className="leise">Lade …</p> : <>
+      <h2 className="h3">{tn('werkbank.anmeldeschutz.zwei-faktor-anmeldung', { hilfe: <Hilfe ort="werkbank.zweifaktor" /> })}</h2>
+      <p className="leise">{t('werkbank.anmeldeschutz.jeder-kann-sie-unter')}</p>
+      {!p ? !meldung && <p className="leise">{t('werkbank.anmeldeschutz.lade')}</p> : <>
         <label className="haken"><input id="zf-admin" type="checkbox" checked={p.admin} disabled={sendet} onChange={(x) => void setze({ admin: x.target.checked })} /><span>{t('konten.verwaltende.zweifaktor.pflicht')}</span></label>
-        <label className="haken"><input id="zf-mitglied" type="checkbox" checked={p.mitglied} disabled={sendet} onChange={(x) => void setze({ mitglied: x.target.checked })} /><span>Für Mitglieder vorschreiben</span></label>
+        <label className="haken"><input id="zf-mitglied" type="checkbox" checked={p.mitglied} disabled={sendet} onChange={(x) => void setze({ mitglied: x.target.checked })} /><span>{t('werkbank.anmeldeschutz.fuer-mitglieder-vorschreiben')}</span></label>
       </>}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
     </div>
@@ -174,47 +174,45 @@ function AnbieterBlatt() {
     setSendet(true); setMeldung(undefined);
     try { setMeldung({ art: 'gut', text: await f() }); } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setSendet(false); }
   }
-  const speichern = () => tu(async () => { uebernehmen(await api.anbieterSetzen({ ...e!, clientSecret: e!.clientSecret || undefined })); return 'Gespeichert.'; });
+  const speichern = () => tu(async () => { uebernehmen(await api.anbieterSetzen({ ...e!, clientSecret: e!.clientSecret || undefined })); return t('werkbank.anmeldeschutz.gespeichert'); });
   const pruefen = () => tu(async () => {
     uebernehmen(await api.anbieterSetzen({ ...e!, aktiv: stand!.aktiv, clientSecret: e!.clientSecret || undefined }));
     const r = await api.anbieterPruefen();
-    return `Verbindung klappt: ${r.aussteller}, ${r.schluessel} ${r.schluessel === 1 ? 'Schlüssel' : 'Schlüssel'}${r.abmelden ? ', Abmelden beim Anbieter möglich' : ', ohne Abmelden beim Anbieter'}.`;
+    return t('werkbank.anmeldeschutz.verbindung-klappt-schluessel', { anzahl: r.schluessel, aussteller: r.aussteller, wert: r.abmelden ? t('werkbank.anmeldeschutz.abmelden-beim-anbieter-moeglich') : t('werkbank.anmeldeschutz.ohne-abmelden-beim-anbieter') });
   });
-  if (!stand || !e) return <div className="blatt"><h2 className="h3">Anmeldung über einen Anbieter</h2>{meldung ? <p className="fehlertext">{meldung.text}</p> : <p className="leise">Lade …</p>}</div>;
+  if (!stand || !e) return <div className="blatt"><h2 className="h3">{t('werkbank.anmeldeschutz.anmeldung-ueber-einen-anbieter')}</h2>{meldung ? <p className="fehlertext">{meldung.text}</p> : <p className="leise">{t('werkbank.anmeldeschutz.lade')}</p>}</div>;
   const feld = (k: 'aussteller' | 'clientId' | 'knopf' | 'adminGruppe' | 'gruppenClaim', titel: ReactNode, platzhalter = '') => (
     <label className="eigenschaft"><span>{titel}</span><input id={`oidc-${k}`} value={e[k]} placeholder={platzhalter} onChange={(x) => setE({ ...e, [k]: x.target.value })} /></label>
   );
   return (
     <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-      <h2 className="h3">Anmeldung über einen Anbieter <Hilfe ort="werkbank.anbieter" /></h2>
-      <p className="leise">Anmelden mit dem Konto eines Identitätsanbieters per OpenID Connect – z. B. Microsoft Entra ID (Microsoft 365), Google Workspace, Keycloak, Authentik oder Authelia. Zugeordnet wird über die E-Mail-Adresse.</p>
-      <p className="klein">Beim Anbieter als Weiterleitungs-URI eintragen: <code className="mono">{stand.rueckkehr}</code><br />
-        Nach dem Abmelden zurück zu: <code className="mono">{stand.abmeldenZurueck}</code></p>
+      <h2 className="h3">{tn('werkbank.anmeldeschutz.anmeldung-ueber-einen-anbieter-2', { hilfe: <Hilfe ort="werkbank.anbieter" /> })}</h2>
+      <p className="leise">{t('werkbank.anmeldeschutz.anmelden-mit-dem-konto')}</p>
+      <p className="klein">{tn('werkbank.anmeldeschutz.beim-anbieter-als-weiterleitungs', { code: <code className="mono">{stand.rueckkehr}</code>, umbruch: <br />, code2: <code className="mono">{stand.abmeldenZurueck}</code> })}</p>
       <div className="raster">
-        {feld('aussteller', <>Adresse des Anbieters <small>Issuer, z. B. https://login.microsoftonline.com/&lt;Tenant&gt;/v2.0</small></>, 'https://…')}
-        {feld('clientId', 'Client-ID')}
-        <label className="eigenschaft"><span>Client-Secret <small>{stand.secretGesetzt ? 'gespeichert – leer lassen, um es zu behalten' : 'leer für öffentliche Clients'}</small></span>
+        {feld('aussteller', <>{tn('werkbank.anmeldeschutz.adresse-des-anbieters', { klein: <small>{t('werkbank.anmeldeschutz.issuer-z-b-https')}</small> })}</>, 'https://…')}
+        {feld('clientId', t('werkbank.anmeldeschutz.client-id'))}
+        <label className="eigenschaft"><span>{tn('werkbank.anmeldeschutz.client-secret', { klein: <small>{stand.secretGesetzt ? t('werkbank.anmeldeschutz.gespeichert-leer-lassen-um') : t('werkbank.anmeldeschutz.leer-fuer-oeffentliche-clients')}</small> })}</span>
           <input id="oidc-secret" type="password" autoComplete="new-password" value={e.clientSecret} onChange={(x) => setE({ ...e, clientSecret: x.target.value })} /></label>
-        {feld('knopf', 'Beschriftung des Knopfes')}
+        {feld('knopf', t('werkbank.anmeldeschutz.beschriftung-des-knopfes'))}
       </div>
-      <label className="haken"><input id="oidc-anlegen" type="checkbox" checked={e.anlegen} onChange={(x) => setE({ ...e, anlegen: x.target.checked })} /><span>Unbekannte Adressen als neue Benutzer anlegen
-        <small className="leise">sonst nur Benutzer, die es in Ablago schon gibt</small></span></label>
+      <label className="haken"><input id="oidc-anlegen" type="checkbox" checked={e.anlegen} onChange={(x) => setE({ ...e, anlegen: x.target.checked })} /><span>{tn('werkbank.anmeldeschutz.unbekannte-adressen-als-neue', { klein: <small className="leise">{t('werkbank.anmeldeschutz.sonst-nur-benutzer-die')}</small> })}</span></label>
       {e.anlegen && <label className="eigenschaft"><span>{t('konten.verwaltende.oidc.neu')}</span>
         <select id="oidc-rolle" value={e.standardrolle} onChange={(x) => setE({ ...e, standardrolle: x.target.value === 'admin' ? 'admin' : 'mitglied' })}><option value="mitglied">{t('konten.verwaltende.oidc.neu.ohne')}</option><option value="admin">{t('konten.verwaltende.oidc.neu.gesamt')}</option></select></label>}
       <div className="raster">
-        {feld('adminGruppe', <>{t('konten.verwaltende.oidc.gruppe')} <small>{t('konten.verwaltende.oidc.gruppe.leer')}</small></>, 'z. B. dms-admins oder Objekt-ID')}
-        {feld('gruppenClaim', <>Claim mit den Gruppen <small>meist groups</small></>, 'groups')}
+        {feld('adminGruppe', <>{t('konten.verwaltende.oidc.gruppe')} <small>{t('konten.verwaltende.oidc.gruppe.leer')}</small></>, t('werkbank.anmeldeschutz.z-b-dms-admins'))}
+        {feld('gruppenClaim', <>{tn('werkbank.anmeldeschutz.claim-mit-den-gruppen', { klein: <small>{t('werkbank.anmeldeschutz.meist-groups')}</small> })}</>, 'groups')}
       </div>
       <label className="haken"><input id="oidc-lokal" type="checkbox" checked={e.lokalNurAdmins} onChange={(x) => setE({ ...e, lokalNurAdmins: x.target.checked })} /><span>{t('konten.verwaltende.oidc.lokal')}
-        <small className="leise">als Notzugang, falls der Anbieter ausfällt</small></span></label>
-      <label className="haken"><input id="oidc-abmelden" type="checkbox" checked={e.abmeldenBeimAnbieter} onChange={(x) => setE({ ...e, abmeldenBeimAnbieter: x.target.checked })} /><span>Beim Abmelden auch beim Anbieter abmelden</span></label>
-      <label className="haken"><input id="oidc-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Eingeschaltet – Knopf auf der Anmeldeseite</span></label>
+        <small className="leise">{t('werkbank.anmeldeschutz.als-notzugang-falls-der')}</small></span></label>
+      <label className="haken"><input id="oidc-abmelden" type="checkbox" checked={e.abmeldenBeimAnbieter} onChange={(x) => setE({ ...e, abmeldenBeimAnbieter: x.target.checked })} /><span>{t('werkbank.anmeldeschutz.beim-abmelden-auch-beim')}</span></label>
+      <label className="haken"><input id="oidc-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>{t('werkbank.anmeldeschutz.eingeschaltet-knopf-auf-der')}</span></label>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">
-        <button type="button" className="knopf" disabled={sendet || !e.aussteller} onClick={() => void pruefen()}>Verbindung prüfen</button>
+        <button type="button" className="knopf" disabled={sendet || !e.aussteller} onClick={() => void pruefen()}>{t('werkbank.anmeldeschutz.verbindung-pruefen')}</button>
       </div>
-      <Speicherleiste ent={ent} gegenstand="Anbieter" sendet={sendet}
-        links={stand.secretGesetzt && <button type="button" className="textknopf gefahr" disabled={sendet} onClick={() => void tu(async () => { uebernehmen(await api.anbieterSetzen({ clientSecretLoeschen: true })); return 'Client-Secret gelöscht.'; })}>Secret löschen</button>} />
+      <Speicherleiste ent={ent} gegenstand={t('werkbank.anmeldeschutz.anbieter')} sendet={sendet}
+        links={stand.secretGesetzt && <button type="button" className="textknopf gefahr" disabled={sendet} onClick={() => void tu(async () => { uebernehmen(await api.anbieterSetzen({ clientSecretLoeschen: true })); return t('werkbank.anmeldeschutz.client-secret-geloescht'); })}>{t('werkbank.anmeldeschutz.secret-loeschen')}</button>} />
     </form>
   );
 }

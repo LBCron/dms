@@ -7,6 +7,7 @@ import { api, type DatenschutzStand } from '../api';
 import { Link } from '../ort';
 import { rueckfrage } from '../rueckfrage';
 import { titelOder } from '../seiten';
+import { t, tn } from '../sprache';
 
 /**
  * Auskunft zustellen (#455) – an einer bereitliegenden Auskunft:
@@ -29,17 +30,17 @@ export function Zustellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzS
   const [weg, setWeg] = useState<'link' | 'email'>(s.oeffentlich || !mailGeht ? 'link' : 'email');
   const links = s.links.filter((l) => l.auskunftId === a.id);
   return (
-    <div className="auskunft-zustellen" role="group" aria-label="Auskunft zustellen">
-      <div className="auskunft-wege" role="radiogroup" aria-label="Weg">
+    <div className="auskunft-zustellen" role="group" aria-label={t('werkbank.zustellen.auskunft-zustellen')}>
+      <div className="auskunft-wege" role="radiogroup" aria-label={t('werkbank.zustellen.weg')}>
         <label className={`auskunft-weg${weg === 'link' ? ' gewaehlt' : ''}`}>
           <input type="radio" name={`weg-${a.id}`} checked={weg === 'link'} onChange={() => setWeg('link')} />
-          <span><span className="auskunft-weg-titel"><strong>Abruf-Link mit Abrufcode</strong>{s.oeffentlich && <span className="chip gut">empfohlen</span>}</span>
-            <small>Die Person lädt die Datei auf einer schlichten Seite deines Ablago herunter – nachweisbar, mit Ablaufdatum. Den Code bekommt sie auf einem anderen Weg.</small></span>
+          <span><span className="auskunft-weg-titel"><strong>{t('werkbank.zustellen.abruf-link-mit-abrufcode')}</strong>{s.oeffentlich && <span className="chip gut">{t('werkbank.zustellen.empfohlen')}</span>}</span>
+            <small>{t('werkbank.zustellen.die-person-laedt-die')}</small></span>
         </label>
         <label className={`auskunft-weg${weg === 'email' ? ' gewaehlt' : ''}${a.verschluesselt ? '' : ' aus'}`}>
           <input type="radio" name={`weg-${a.id}`} checked={weg === 'email'} disabled={!a.verschluesselt} onChange={() => setWeg('email')} />
-          <span><span className="auskunft-weg-titel"><strong>ZIP per E-Mail</strong>{!s.oeffentlich && mailGeht && <span className="chip gut">empfohlen</span>}</span>
-            <small>{a.verschluesselt ? 'Als Anhang, verschlüsselt. Das Passwort teilst du getrennt mit (Telefon, Brief).' : 'Nur für Auskünfte mit Passwort – erzeuge sie dafür mit Passwort neu.'}</small></span>
+          <span><span className="auskunft-weg-titel"><strong>{t('werkbank.zustellen.zip-per-e-mail')}</strong>{!s.oeffentlich && mailGeht && <span className="chip gut">{t('werkbank.zustellen.empfohlen')}</span>}</span>
+            <small>{a.verschluesselt ? t('werkbank.zustellen.als-anhang-verschluesselt-das') : t('werkbank.zustellen.nur-fuer-auskuenfte-mit')}</small></span>
         </label>
       </div>
       {weg === 'link' ? <LinkErstellen a={a} s={s} nachher={nachher} /> : <PerEmail a={a} s={s} nachher={nachher} />}
@@ -64,7 +65,7 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
   const codeKurz = eigen && normiereCode(code).length < CODE_EIGEN_MIN;
 
   async function erstellen() {
-    if (aktiv && !(await rueckfrage({ titel: 'Neuen Abruf-Link erstellen?', text: 'Der bisherige Link dieser Auskunft gilt dann nicht mehr – auch sein Abrufcode nicht.', ja: 'Neuen Link erstellen' }))) return;
+    if (aktiv && !(await rueckfrage({ titel: t('werkbank.zustellen.neuen-abruf-link-erstellen'), text: t('werkbank.zustellen.der-bisherige-link-dieser'), ja: t('werkbank.zustellen.neuen-link-erstellen') }))) return;
     setLaeuft(true); setFehler(undefined); setNeu(null);
     try {
       const r = await api.auskunftLink(a.id, { tage, abrufe, senden: senden && s.mail, ...(an.trim() ? { an: an.trim() } : {}), ...(eigen ? { code } : {}) });
@@ -76,40 +77,40 @@ function LinkErstellen({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStan
 
   return (
     <div className="auskunft-weg-inhalt">
-      {!s.oeffentlich && <div className="hinweis warn"><p><strong>Ist dein Ablago aus dem Internet erreichbar?</strong> Die Adresse {s.adresse ? <code>{s.adresse}</code> : 'von Ablago'} sieht nach einem Heimnetz aus. Den Link kann die Person nur öffnen, wenn dein Ablago von außen erreichbar ist (Reverse Proxy, Tunnel oder Hosting). Sonst nimm den Weg per E-Mail. Die Adresse stellst du unter <Link to="/werkbank/betrieb" className="verweis">E-Mail und Adresse</Link> ein.</p></div>}
+      {!s.oeffentlich && <div className="hinweis warn"><p>{tn('werkbank.zustellen.die-adresse-sieht-nach', { b: <strong>{t('werkbank.zustellen.ist-dein-ablago-aus')}</strong>, wert: s.adresse ? <code>{s.adresse}</code> : t('werkbank.zustellen.von-ablago'), link: <Link to="/werkbank/betrieb" className="verweis">{t('werkbank.zustellen.e-mail-und-adresse')}</Link> })}</p></div>}
       {neu ? (
         <div className="hinweis gut auskunft-neu" role="status"><div className="auskunft-neu-inhalt">
-          <p>{neu.gesendet ? <>Link per E-Mail an <strong>{neu.an}</strong> gesendet (ohne Code).</> : <>Nicht per E-Mail gesendet – kopiere den Link und schicke ihn selbst.</>}</p>
-          <label className="eigenschaft"><span>Link</span>
+          <p>{neu.gesendet ? <>{tn('werkbank.zustellen.link-per-e-mail', { b: <strong>{neu.an}</strong> })}</> : <>{t('werkbank.zustellen.nicht-per-e-mail')}</>}</p>
+          <label className="eigenschaft"><span>{t('werkbank.zustellen.link')}</span>
             <span className="zeile-umbruch"><input readOnly value={neu.url} className="mono auskunft-url" onFocus={(e) => e.currentTarget.select()} />
-              <button type="button" className="knopf klein" onClick={() => void kopieren('link', neu.url)}>{kopiert === 'link' ? 'Kopiert' : 'Kopieren'}</button></span></label>
-          <p className="auskunft-code-zeile"><span>Abrufcode</span> <strong className="mono auskunft-code">{neu.eigen ? neu.code : zeigeCode(neu.code)}</strong>
-            <button type="button" className="knopf klein" onClick={() => void kopieren('code', neu.code)}>{kopiert === 'code' ? 'Kopiert' : 'Kopieren'}</button></p>
-          <p><strong>Teile den Abrufcode auf einem anderen Weg mit</strong> – per Brief, Telefon oder SMS, nie in derselben E-Mail wie den Link. Er wird nur jetzt angezeigt; geht er verloren, erstelle einen neuen Link.</p>
+              <button type="button" className="knopf klein" onClick={() => void kopieren('link', neu.url)}>{kopiert === 'link' ? t('werkbank.zustellen.kopiert') : t('werkbank.zustellen.kopieren')}</button></span></label>
+          <p className="auskunft-code-zeile"><span>{t('werkbank.zustellen.abrufcode')}</span> <strong className="mono auskunft-code">{neu.eigen ? neu.code : zeigeCode(neu.code)}</strong>
+            <button type="button" className="knopf klein" onClick={() => void kopieren('code', neu.code)}>{kopiert === 'code' ? t('werkbank.zustellen.kopiert') : t('werkbank.zustellen.kopieren')}</button></p>
+          <p>{tn('werkbank.zustellen.per-brief-telefon-oder', { b: <strong>{t('werkbank.zustellen.teile-den-abrufcode-auf')}</strong> })}</p>
         </div></div>
       ) : (
         <>
           <div className="raster">
-            <label className="eigenschaft"><span>E-Mail-Adresse der Person {senden ? '' : '(optional)'} <small>{s.mail ? 'nur für den Nachweis in der Historie; mit Haken bekommt sie den Link (ohne Code)' : 'nur für den Nachweis in der Historie; der E-Mail-Versand ist nicht eingerichtet'}</small></span>
+            <label className="eigenschaft"><span>{tn('werkbank.zustellen.e-mail-adresse-der', { wert: senden ? '' : t('werkbank.zustellen.optional'), klein: <small>{s.mail ? t('werkbank.zustellen.nur-fuer-den-nachweis') : t('werkbank.zustellen.nur-fuer-den-nachweis-2')}</small> })}</span>
               <input type="email" value={an} required={senden && s.mail} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" /></label>
-            <label className="eigenschaft"><span>Gültig <small>Tage, höchstens {LINK_TAGE_MAX}</small></span>
+            <label className="eigenschaft"><span>{tn('werkbank.zustellen.gueltig', { klein: <small>{t('werkbank.zustellen.tage-hoechstens', { LINK_TAGE_MAX })}</small> })}</span>
               <input type="number" min={1} max={LINK_TAGE_MAX} value={tage} onChange={(e) => setTage(Number(e.target.value))} /></label>
-            <label className="eigenschaft"><span>Abrufe <small>höchstens so oft herunterladen</small></span>
+            <label className="eigenschaft"><span>{tn('werkbank.zustellen.abrufe', { klein: <small>{t('werkbank.zustellen.hoechstens-so-oft-herunterladen')}</small> })}</span>
               <input type="number" min={1} max={LINK_ABRUFE_MAX} value={abrufe} onChange={(e) => setAbrufe(Number(e.target.value))} /></label>
           </div>
-          {s.mail && <label className="haken"><input type="checkbox" checked={senden} onChange={(e) => setSenden(e.target.checked)} /><span>Link per E-Mail schicken</span></label>}
+          {s.mail && <label className="haken"><input type="checkbox" checked={senden} onChange={(e) => setSenden(e.target.checked)} /><span>{t('werkbank.zustellen.link-per-e-mail-2')}</span></label>}
           <fieldset className="auskunft-codewahl">
-            <legend>Abrufcode</legend>
-            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={!eigen} onChange={() => setEigen(false)} /><span>Von Ablago erzeugen (empfohlen) – 8 Zeichen, nur jetzt sichtbar</span></label>
-            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={eigen} onChange={() => setEigen(true)} /><span>Eigener Code, den nur die Person kennt – z. B. die Vertragsnummer</span></label>
+            <legend>{t('werkbank.zustellen.abrufcode')}</legend>
+            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={!eigen} onChange={() => setEigen(false)} /><span>{t('werkbank.zustellen.von-ablago-erzeugen-empfohlen')}</span></label>
+            <label className="haken"><input type="radio" name={`code-${a.id}`} checked={eigen} onChange={() => setEigen(true)} /><span>{t('werkbank.zustellen.eigener-code-den-nur')}</span></label>
             {eigen && <>
-              <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} className="mono" aria-label="Eigener Abrufcode" />
-              <p className="leise klein">Mindestens {CODE_EIGEN_MIN} Zeichen. Er wird genau so angezeigt, wie du ihn eingibst. Groß-/Kleinschreibung, Leerzeichen und Bindestriche spielen beim Abruf keine Rolle – „KD-12345“ und „kd12345“ gelten als gleich. <strong>Eine Kundennummer allein ist schwach</strong> – sie steht oft auf Briefen und Rechnungen.</p>
+              <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} className="mono" aria-label={t('werkbank.zustellen.eigener-abrufcode')} />
+              <p className="leise klein">{tn('werkbank.zustellen.mindestens-zeichen-er-wird', { CODE_EIGEN_MIN, b: <strong>{t('werkbank.zustellen.eine-kundennummer-allein-ist')}</strong> })}</p>
             </>}
           </fieldset>
-          <p className="leise klein">Nach {LINK_FEHLVERSUCHE_MAX} falschen Codes ist der Link gesperrt; zusätzlich greift der Anmeldeschutz je Internetanschluss.</p>
+          <p className="leise klein">{t('werkbank.zustellen.nach-falschen-codes-ist', { LINK_FEHLVERSUCHE_MAX })}</p>
           {fehler && <p className="fehlertext" role="alert">{fehler}</p>}
-          <div className="knoepfe"><button type="button" className="knopf primaer" disabled={laeuft || codeKurz || (senden && s.mail && !an.trim())} onClick={() => void erstellen()}>{laeuft ? 'Wird erstellt …' : senden && s.mail ? 'Link erstellen und senden' : 'Abruf-Link erstellen'}</button></div>
+          <div className="knoepfe"><button type="button" className="knopf primaer" disabled={laeuft || codeKurz || (senden && s.mail && !an.trim())} onClick={() => void erstellen()}>{laeuft ? t('werkbank.zustellen.wird-erstellt') : senden && s.mail ? t('werkbank.zustellen.link-erstellen-und-senden') : t('werkbank.zustellen.abruf-link-erstellen')}</button></div>
         </>
       )}
     </div>
@@ -127,22 +128,22 @@ function PerEmail({ a, s, nachher }: { a: AuskunftStand; s: DatenschutzStand; na
   const zuGross = a.bytes > MAIL_MAX;
   async function senden() {
     setLaeuft(true); setMeldung(undefined);
-    try { const r = await api.auskunftEmail(a.id, { an, betreff, nachricht }); setMeldung({ art: 'gut', text: `Gesendet an ${r.an.join(', ')}. Teile jetzt das Passwort auf einem anderen Weg mit.` }); await nachher(); }
+    try { const r = await api.auskunftEmail(a.id, { an, betreff, nachricht }); setMeldung({ art: 'gut', text: t('werkbank.zustellen.gesendet-an-teile-jetzt', { an: r.an.join(', ') }) }); await nachher(); }
     catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); } finally { setLaeuft(false); }
   }
   return (
     <div className="auskunft-weg-inhalt">
-      {!s.mail && <div className="hinweis warn"><p>Der E-Mail-Versand ist nicht eingerichtet (<Link to="/werkbank/betrieb" className="verweis">E-Mail und Adresse</Link>).</p></div>}
-      {zuGross ? <div className="hinweis schlecht"><p>Mit {groesse(a.bytes)} ist die Auskunft zu groß für eine E-Mail. Nimm den Abruf-Link.</p></div>
-        : a.bytes > EMAIL_WARNUNG_BYTES && <div className="hinweis warn"><p>{groesse(a.bytes)} – viele Mailserver nehmen nur 10 bis 25 MB an. Kommt die E-Mail nicht an, nimm den Abruf-Link.</p></div>}
+      {!s.mail && <div className="hinweis warn"><p>{tn('werkbank.zustellen.der-e-mail-versand', { link: <Link to="/werkbank/betrieb" className="verweis">{t('werkbank.zustellen.e-mail-und-adresse')}</Link> })}</p></div>}
+      {zuGross ? <div className="hinweis schlecht"><p>{t('werkbank.zustellen.mit-ist-die-auskunft', { groesse: groesse(a.bytes) })}</p></div>
+        : a.bytes > EMAIL_WARNUNG_BYTES && <div className="hinweis warn"><p>{t('werkbank.zustellen.viele-mailserver-nehmen-nur', { groesse: groesse(a.bytes) })}</p></div>}
       <div className="raster">
-        <label className="eigenschaft"><span>An</span><input type="email" multiple value={an} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" /></label>
-        <label className="eigenschaft breit"><span>Betreff</span><input value={betreff} onChange={(e) => setBetreff(e.target.value)} /></label>
-        <label className="eigenschaft breit"><span>Nachricht <small>Schreib das Passwort nicht hinein.</small></span><textarea rows={8} value={nachricht} onChange={(e) => setNachricht(e.target.value)} /></label>
+        <label className="eigenschaft"><span>{t('werkbank.zustellen.an')}</span><input type="email" multiple value={an} onChange={(e) => setAn(e.target.value)} placeholder="name@example.org" /></label>
+        <label className="eigenschaft breit"><span>{t('werkbank.zustellen.betreff')}</span><input value={betreff} onChange={(e) => setBetreff(e.target.value)} /></label>
+        <label className="eigenschaft breit"><span>{tn('werkbank.zustellen.nachricht', { klein: <small>{t('werkbank.zustellen.schreib-das-passwort-nicht')}</small> })}</span><textarea rows={8} value={nachricht} onChange={(e) => setNachricht(e.target.value)} /></label>
       </div>
-      <p className="leise klein">Anhang: {groesse(a.bytes)}, mit Passwort verschlüsselt (AES-256). <strong>Das Passwort steht nicht in der E-Mail</strong> – teile es per Telefon, SMS oder Brief mit.</p>
+      <p className="leise klein">{tn('werkbank.zustellen.anhang-mit-passwort-verschluesselt', { groesse: groesse(a.bytes), b: <strong>{t('werkbank.zustellen.das-passwort-steht-nicht')}</strong> })}</p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={laeuft || zuGross || !s.mail || !an.trim()} onClick={() => void senden()}>{laeuft ? 'Wird gesendet …' : 'Per E-Mail senden'}</button></div>
+      <div className="knoepfe"><button type="button" className="knopf primaer" disabled={laeuft || zuGross || !s.mail || !an.trim()} onClick={() => void senden()}>{laeuft ? t('werkbank.zustellen.wird-gesendet') : t('werkbank.zustellen.per-e-mail-senden')}</button></div>
     </div>
   );
 }
@@ -153,12 +154,11 @@ export function LinkZeile({ l, nachher, mitTitel }: { l: AuskunftLink; nachher()
   return (
     <li className={`auskunft-link status-${st}`}>
       <span>{mitTitel && <><strong>{titelOder(l.titel)}</strong> · </>}<span className={`chip auskunft-status-${st}`}>{LINK_STATUS[st]}</span>{' '}
-        <span className="leise klein">erstellt {zeit(l.erstellt)}{l.empfaenger ? ` für ${l.empfaenger}` : ''} · gültig bis {tag(l.ablauf)} · {l.abrufe} von {l.maxAbrufe} abgerufen
-          {l.abgerufen ? ` · zuletzt abgerufen am ${zeit(l.abgerufen)}` : ''}{l.fehlversuche ? ` · ${l.fehlversuche === 1 ? 'ein falscher Code' : `${l.fehlversuche} falsche Codes`}` : ''}{l.codeArt === 'eigen' ? ' · eigener Code' : ''}</span></span>
+        <span className="leise klein">{t('werkbank.zustellen.erstellt-gueltig-bis-von', { zeit: zeit(l.erstellt), wert: l.empfaenger ? t('werkbank.zustellen.fuer', { empfaenger: l.empfaenger }) : '', tag: tag(l.ablauf), abrufe: l.abrufe, maxAbrufe: l.maxAbrufe, wert2: l.abgerufen ? t('werkbank.zustellen.zuletzt-abgerufen-am', { zeit: zeit(l.abgerufen) }) : '', wert3: l.fehlversuche ? t('werkbank.zustellen.falsche-codes', { anzahl: l.fehlversuche }) : '', wert4: l.codeArt === 'eigen' ? t('werkbank.zustellen.eigener-code') : '' })}</span></span>
       {st === 'aktiv' && <button type="button" className="knopf klein gefahr-rand" onClick={async () => {
-        if (!(await rueckfrage({ titel: 'Abruf-Link zurückziehen?', text: 'Der Link gilt sofort nicht mehr. Der Eintrag bleibt als Nachweis; die ZIP-Datei wird nach den üblichen 7 Tagen gelöscht.', ja: 'Zurückziehen', gefahr: true }))) return;
+        if (!(await rueckfrage({ titel: t('werkbank.zustellen.abruf-link-zurueckziehen'), text: t('werkbank.zustellen.der-link-gilt-sofort'), ja: t('werkbank.zustellen.zurueckziehen'), gefahr: true }))) return;
         try { await api.auskunftLinkWiderrufen(l.id); await nachher(); } catch (e) { setFehler((e as Error).message); }
-      }}>Zurückziehen</button>}
+      }}>{t('werkbank.zustellen.zurueckziehen')}</button>}
       {fehler && <span className="fehlertext klein">{fehler}</span>}
     </li>
   );

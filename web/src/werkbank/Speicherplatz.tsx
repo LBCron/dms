@@ -6,6 +6,7 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { WARTUNG_GEAENDERT } from '../wartung';
 import { einDatentraeger } from '../../../shared/src/werkbankansicht';
 import { GrossePdfsVerkleinern } from './Verkleinern';
+import { t, tn } from '../sprache';
 
 /**
  * Werkbank → Wartung und Fehlersuche → Systemzustand (#408, früher Einstellungen → Speicherplatz, #116):
@@ -16,8 +17,8 @@ import { GrossePdfsVerkleinern } from './Verkleinern';
 const GB = 1024 ** 3;
 export const platz = (b: number) => (b < GB ? `${Math.round(b / 1024 ** 2).toLocaleString('de-DE')} MB` : `${(b / GB).toFixed(1).replace('.', ',')} GB`);
 const schwelleText = (s: Schwelle) => `${String(s.wert).replace('.', ',')} ${s.einheit === 'prozent' ? '%' : 'GB'}`;
-const ORDNERNAME: Record<string, string> = { dateien: 'Dateien', geheim: 'Schlüssel', sicherung: 'Sicherungen' };
-const ZUSTAND = { ok: { text: 'ausreichend', art: 'gut' }, warnung: { text: 'knapp', art: 'warn' }, grenze: { text: 'Grenze erreicht', art: 'schlecht' } } as const;
+const ORDNERNAME: Record<string, string> = { dateien: t('werkbank.speicherplatz.dateien'), geheim: t('werkbank.speicherplatz.schluessel'), sicherung: t('werkbank.speicherplatz.sicherungen') };
+const ZUSTAND = { ok: { text: 'ausreichend', art: 'gut' }, warnung: { text: 'knapp', art: 'warn' }, grenze: { text: t('werkbank.speicherplatz.grenze-erreicht'), art: 'schlecht' } } as const;
 
 export function useSpeicherplatz(offen: boolean) {
   const [stand, setStand] = useState<SpeicherplatzStand | null>(null);
@@ -28,8 +29,8 @@ export function useSpeicherplatz(offen: boolean) {
   useEffect(() => {
     if (!offen) return;
     void laden();
-    const t = setInterval(() => void laden(), 30_000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void laden(), 30_000);
+    return () => clearInterval(timer);
   }, [offen, laden]);
   return { stand, fehler, laden, setStand };
 }
@@ -44,16 +45,16 @@ function datentraeger(o: OrdnerStand[]) {
 
 /** Belegt/frei mit Warnschwelle und Grenze. */
 function Balken({ o }: { o: OrdnerStand }) {
-  if (o.gesamt === null || o.frei === null) return <p className="leise klein">nicht messbar (Ordner fehlt oder ist nicht lesbar)</p>;
+  if (o.gesamt === null || o.frei === null) return <p className="leise klein">{t('werkbank.speicherplatz.nicht-messbar-ordner-fehlt')}</p>;
   const anteil = o.belegt !== null ? Math.min(100, (o.belegt / o.gesamt) * 100) : 0;
   return (
     <>
-      <div className="platzbalken" role="img" aria-label={`${Math.round(anteil)} Prozent belegt`}>
+      <div className="platzbalken" role="img" aria-label={t('werkbank.speicherplatz.prozent-belegt', { round: Math.round(anteil) })}>
         <span className={o.zustand ?? ''} style={{ width: `${anteil}%` }} />
-        {o.warnBytes != null && <i className="marke warn" style={{ left: `${100 - (o.warnBytes / o.gesamt) * 100}%` }} title="Warnschwelle" />}
-        {o.grenzBytes != null && <i className="marke grenze" style={{ left: `${100 - (o.grenzBytes / o.gesamt) * 100}%` }} title="Grenze" />}
+        {o.warnBytes != null && <i className="marke warn" style={{ left: `${100 - (o.warnBytes / o.gesamt) * 100}%` }} title={t('werkbank.speicherplatz.warnschwelle')} />}
+        {o.grenzBytes != null && <i className="marke grenze" style={{ left: `${100 - (o.grenzBytes / o.gesamt) * 100}%` }} title={t('werkbank.speicherplatz.grenze')} />}
       </div>
-      <p className="leise klein">{platz(o.belegt ?? 0)} belegt · <strong>{platz(o.frei)} frei</strong> von {platz(o.gesamt)}</p>
+      <p className="leise klein">{tn('werkbank.speicherplatz.belegt-von', { platz: platz(o.belegt ?? 0), b: <strong>{t('werkbank.speicherplatz.frei', { platz: platz(o.frei) })}</strong>, platz2: platz(o.gesamt) })}</p>
     </>
   );
 }
@@ -63,9 +64,9 @@ function SchwelleFeld({ name, wert, aendern, hilfe }: { name: string; wert: Schw
     <label className="eigenschaft"><span>{name} <small>{hilfe}</small></span>
       <span className="schwellenfeld">
         <input type="number" min={0} step={0.5} max={wert.einheit === 'prozent' ? 90 : 100000} value={wert.wert} onChange={(e) => aendern({ ...wert, wert: Number(e.target.value) })} />
-        <select value={wert.einheit} onChange={(e) => aendern({ ...wert, einheit: e.target.value as Schwelle['einheit'] })} aria-label={`${name}: Einheit`}>
-          <option value="prozent">% frei</option>
-          <option value="gb">GB frei</option>
+        <select value={wert.einheit} onChange={(e) => aendern({ ...wert, einheit: e.target.value as Schwelle['einheit'] })} aria-label={t('werkbank.speicherplatz.einheit', { name })}>
+          <option value="prozent">{t('werkbank.speicherplatz.frei-2')}</option>
+          <option value="gb">{t('werkbank.speicherplatz.gb-frei')}</option>
         </select>
       </span>
     </label>
@@ -79,19 +80,19 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung, unten }: { z:
   const [laeuft, setLaeuft] = useState(false);
   useEffect(() => { if (s && !e) setE(s.einstellung); }, [s, e]);
   const ent = useEntwurf(s?.einstellung ?? null, e, { aus: !s || !e, zuruecksetzen: () => { if (s) setE(s.einstellung); setMeldung(undefined); } });
-  if (!s || !e) return <p className="leise">{z.fehler ?? 'Lade …'}</p>;
+  if (!s || !e) return <p className="leise">{z.fehler ?? t('werkbank.speicherplatz.lade')}</p>;
   const gleicherTraeger = datentraeger(s.ordner);
   const ein = einDatentraeger(s.ordner);
 
   async function speichern() {
     setLaeuft(true); setMeldung(undefined);
-    try { const neu = await api.speicherplatzSetzen(e!); z.setStand(neu); setE(neu.einstellung); setMeldung({ art: 'gut', text: 'Gespeichert und neu gemessen.' }); nachAenderung?.(); }
+    try { const neu = await api.speicherplatzSetzen(e!); z.setStand(neu); setE(neu.einstellung); setMeldung({ art: 'gut', text: t('werkbank.speicherplatz.gespeichert-und-neu-gemessen') }); nachAenderung?.(); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setLaeuft(false); }
   }
   async function wartungBeenden() {
     setLaeuft(true); setMeldung(undefined);
-    try { await api.wartungAus(); dispatchEvent(new Event(WARTUNG_GEAENDERT)); await z.laden(); nachAenderung?.(); setMeldung({ art: 'gut', text: 'Wartungsmodus beendet – alle können wieder arbeiten.' }); }
+    try { await api.wartungAus(); dispatchEvent(new Event(WARTUNG_GEAENDERT)); await z.laden(); nachAenderung?.(); setMeldung({ art: 'gut', text: t('werkbank.speicherplatz.wartungsmodus-beendet-alle-koennen') }); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setLaeuft(false); }
   }
@@ -100,51 +101,51 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung, unten }: { z:
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Systemzustand</h1>
-        <p className="leise">Wie es dem Server gerade geht. <strong>Speicherplatz:</strong> Ablago misst jede Minute und vor jedem Hochladen, wie viel Platz in seinen Ordnern frei ist. Unter der <strong>Warnschwelle</strong> gibt es einen Hinweis hier und in der Übersicht sowie eine Mail an alle Administratoren. Unter der <strong>Grenze</strong> ist das Hochladen sofort gesperrt, und nach 5 Minuten Vorlauf beginnt der Wartungsmodus („Speicherplatzlimit erreicht“). <Hilfe ort="werkbank.speicherplatz" /></p>
+        <p className="ueber">{t('werkbank.speicherplatz.werkbank')}</p>
+        <h1>{t('werkbank.speicherplatz.systemzustand')}</h1>
+        <p className="leise">{tn('werkbank.speicherplatz.wie-es-dem-server', { b: <strong>{t('werkbank.speicherplatz.speicherplatz')}</strong>, b2: <strong>{t('werkbank.speicherplatz.warnschwelle')}</strong>, b3: <strong>{t('werkbank.speicherplatz.grenze')}</strong>, hilfe: <Hilfe ort="werkbank.speicherplatz" /> })}</p>
       </div>
 
-      {s.zustand === 'grenze' && <div className="hinweis schlecht"><p><strong>Speicherplatzlimit erreicht.</strong> Hochladen ist gesperrt. Schaffe Platz – alte <Link to="/werkbank/sicherung" className="verweis">Sicherungen</Link> löschen, den <Link to="/werkbank/papierkorb" className="verweis">Papierkorb</Link> leeren, <a href="#verkleinern" className="verweis">große PDFs verkleinern</a> – oder vergrößere den Speicher des NAS. Danach beendest du den <Link to="/werkbank/wartung#wartungsmodus" className="verweis">Wartungsmodus</Link> selbst.</p></div>}
-      {s.zustand === 'warnung' && <div className="hinweis warn"><p><strong>Der Speicherplatz wird knapp.</strong> Noch arbeiten alle normal. Schaffe rechtzeitig Platz, bevor die Grenze ({schwelleText(s.einstellung.grenze)} frei) erreicht ist.</p></div>}
+      {s.zustand === 'grenze' && <div className="hinweis schlecht"><p>{tn('werkbank.speicherplatz.hochladen-ist-gesperrt-schaffe', { b: <strong>{t('werkbank.speicherplatz.speicherplatzlimit-erreicht')}</strong>, link: <Link to="/werkbank/sicherung" className="verweis">{t('werkbank.speicherplatz.sicherungen')}</Link>, link2: <Link to="/werkbank/papierkorb" className="verweis">{t('werkbank.speicherplatz.papierkorb')}</Link>, link3: <a href="#verkleinern" className="verweis">{t('werkbank.speicherplatz.grosse-pdfs-verkleinern')}</a>, link4: <Link to="/werkbank/wartung#wartungsmodus" className="verweis">{t('werkbank.speicherplatz.wartungsmodus')}</Link> })}</p></div>}
+      {s.zustand === 'warnung' && <div className="hinweis warn"><p>{tn('werkbank.speicherplatz.noch-arbeiten-alle-normal', { b: <strong>{t('werkbank.speicherplatz.der-speicherplatz-wird-knapp')}</strong>, schwelleText: schwelleText(s.einstellung.grenze) })}</p></div>}
       {s.wartungBeenden && (
         <div className="hinweis gut hinweiszeile">
-          <p><strong>Wieder {Number.isFinite(minFrei) ? platz(minFrei) : 'genug Platz'} frei.</strong> Der Wartungsmodus wegen des Speicherplatzes läuft noch – er endet nicht von selbst. Wartung beenden?</p>
-          <button type="button" className="knopf primaer klein" disabled={laeuft} onClick={() => void wartungBeenden()}>Wartung beenden</button>
+          <p>{tn('werkbank.speicherplatz.der-wartungsmodus-wegen-des', { b: <strong>{t('werkbank.speicherplatz.wieder-frei', { wert: Number.isFinite(minFrei) ? platz(minFrei) : t('werkbank.speicherplatz.genug-platz') })}</strong> })}</p>
+          <button type="button" className="knopf primaer klein" disabled={laeuft} onClick={() => void wartungBeenden()}>{t('werkbank.speicherplatz.wartung-beenden')}</button>
         </div>
       )}
 
       {z.fehler && <div className="hinweis schlecht"><p>{z.fehler}</p></div>}
       <form className="blatt" id="schwellen" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
-        <h2 className="h3">Schwellen für den Speicherplatz</h2>
+        <h2 className="h3">{t('werkbank.speicherplatz.schwellen-fuer-den-speicherplatz')}</h2>
         <div className="raster">
-          <SchwelleFeld name="Warnschwelle" hilfe="Hinweis und Mail" wert={e.warnung} aendern={(w) => setE({ ...e, warnung: w })} />
-          <SchwelleFeld name="Grenze" hilfe="Hochladen gesperrt, Wartungsmodus" wert={e.grenze} aendern={(g) => setE({ ...e, grenze: g })} />
+          <SchwelleFeld name={t('werkbank.speicherplatz.warnschwelle')} hilfe={t('werkbank.speicherplatz.hinweis-und-mail')} wert={e.warnung} aendern={(w) => setE({ ...e, warnung: w })} />
+          <SchwelleFeld name={t('werkbank.speicherplatz.grenze')} hilfe={t('werkbank.speicherplatz.hochladen-gesperrt-wartungsmodus')} wert={e.grenze} aendern={(g) => setE({ ...e, grenze: g })} />
         </div>
-        <p className="leise klein">Gilt für jeden Ordner einzeln; Prozent beziehen sich auf die Größe seines Datenträgers. Standard: Warnung unter 10 % frei, Grenze unter 2 GB frei.</p>
+        <p className="leise klein">{t('werkbank.speicherplatz.gilt-fuer-jeden-ordner')}</p>
         {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-        <Speicherleiste ent={ent} gegenstand="Schwellen" sendet={laeuft} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.speicherplatz.schwellen')} sendet={laeuft} />
       </form>
 
       {/* Auslastung (#409): unter den Schwellen, über den Ordnern. */}
       {auslastung}
 
       <section className="blatt" id="ordner">
-        <h2 className="h3">Ordner</h2>
-        <p className="leise klein">Die Ordner im Container sind fest; auf welchen Ordner des NAS sie zeigen, bestimmen die Volumes der Compose-Datei. Die Datenbank liegt in ihrem eigenen Container und lässt sich von hier nicht messen – liegt alles auf derselben Platte (üblich auf dem NAS), genügt diese Messung.</p>
+        <h2 className="h3">{t('werkbank.speicherplatz.ordner')}</h2>
+        <p className="leise klein">{t('werkbank.speicherplatz.die-ordner-im-container')}</p>
         {ein ? (
           <div className="ordnerzeile">
             <div className="zeile-zwischen">
-              <strong>Ein Datenträger für {s.ordner.map((o) => ORDNERNAME[o.art] ?? o.pfad).join(', ').replace(/, ([^,]*)$/, ' und $1')}</strong>
+              <strong>{t('werkbank.speicherplatz.ein-datentraeger-fuer')}{' '}{s.ordner.map((o) => ORDNERNAME[o.art] ?? o.pfad).join(', ').replace(/, ([^,]*)$/, ' und $1')}</strong>
               {s.ordner[0].zustand && <span className={`chip ${ZUSTAND[s.ordner[0].zustand].art}`}>{ZUSTAND[s.ordner[0].zustand].text}</span>}
             </div>
             <Balken o={s.ordner[0]} />
             <ul className="stapel klein">
               {s.ordner.map((o) => (
-                <li key={o.art} id={`ordner-${o.art}`}><span className="mono">{o.pfad}</span> <span className="leise">{o.text}</span>{o.volume === false && <span className="fehlertext"> · kein eigenes Volume – geht beim Neuerstellen des Containers verloren!</span>}</li>
+                <li key={o.art} id={`ordner-${o.art}`}><span className="mono">{o.pfad}</span> <span className="leise">{o.text}</span>{o.volume === false && <span className="fehlertext"> {' '}{t('werkbank.speicherplatz.kein-eigenes-volume-geht')}</span>}</li>
               ))}
             </ul>
-            {s.ordner.some((o) => o.art === 'sicherung') && <div className="hinweis info"><p><strong>Die Sicherungen liegen auf derselben Platte wie die Dokumente.</strong> Fällt sie aus, sind beide weg – kopiere den Sicherungsordner auf eine andere Platte oder außer Haus.</p></div>}
+            {s.ordner.some((o) => o.art === 'sicherung') && <div className="hinweis info"><p>{tn('werkbank.speicherplatz.faellt-sie-aus-sind', { b: <strong>{t('werkbank.speicherplatz.die-sicherungen-liegen-auf')}</strong> })}</p></div>}
           </div>
         ) : s.ordner.map((o) => {
           const wie = gleicherTraeger(o);
@@ -155,14 +156,14 @@ export function SpeicherplatzPanel({ z, nachAenderung, auslastung, unten }: { z:
                 {o.zustand && <span className={`chip ${ZUSTAND[o.zustand].art}`}>{ZUSTAND[o.zustand].text}</span>}
               </div>
               <Balken o={o} />
-              {o.gesamt !== null && o.frei !== null && <p className="leise klein">{wie && wie.art !== o.art ? `gleicher Datenträger wie ${wie.pfad}` : ''}{o.volume === false ? `${wie && wie.art !== o.art ? ' · ' : ''}kein eigenes Volume – geht beim Neuerstellen des Containers verloren!` : ''}</p>}
+              {o.gesamt !== null && o.frei !== null && <p className="leise klein">{wie && wie.art !== o.art ? t('werkbank.speicherplatz.gleicher-datentraeger-wie', { pfad: wie.pfad }) : ''}{o.volume === false ? t('werkbank.speicherplatz.kein-eigenes-volume-geht-2', { wert: wie && wie.art !== o.art ? ' · ' : '' }) : ''}</p>}
             </div>
           );
         })}
-        {s.vorschau && s.vorschau.anzahl > 0 && <p className="leise klein">Davon Vorschaubilder: {s.vorschau.anzahl.toLocaleString('de-DE')} mit {platz(s.vorschau.bytes)}. Sie werden nicht gesichert und entstehen bei Bedarf neu.</p>}
+        {s.vorschau && s.vorschau.anzahl > 0 && <p className="leise klein">{t('werkbank.speicherplatz.davon-vorschaubilder-mit-sie', { zahl: s.vorschau.anzahl.toLocaleString('de-DE'), platz: platz(s.vorschau.bytes) })}</p>}
         <div className="zeile-zwischen">
-          <p className="leise klein">Gemessen {new Date(s.gemessen).toLocaleTimeString('de-DE', { timeStyle: 'short' })} Uhr.</p>
-          <button type="button" className="knopf klein" onClick={() => void z.laden()}>Neu messen</button>
+          <p className="leise klein">{t('werkbank.speicherplatz.gemessen-uhr', { toLocaleTimeString: new Date(s.gemessen).toLocaleTimeString('de-DE', { timeStyle: 'short' }) })}</p>
+          <button type="button" className="knopf klein" onClick={() => void z.laden()}>{t('werkbank.speicherplatz.neu-messen')}</button>
         </div>
       </section>
 

@@ -6,7 +6,7 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import {
   ansichtAus, BEREICHE, expertenBereiche, fuerAlle, GRUPPEN, inVorlage, nurImExpertenmodus, OHNE_EINSTELLUNG, sichtbar, VORLAGEN, type Gruppe, type Vorlage,
 } from '../../../shared/src/werkbankansicht';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /**
  * Werkbank anpassen (#281): welche Bereiche in der Leiste stehen.
@@ -59,7 +59,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
   const ent = useEntwurf(false, geaendert, { zuruecksetzen: () => { zuruecksetzen(); setMeldung(undefined); } });
 
   if (z.fehler) return <div className="hinweis schlecht"><p>{z.fehler}</p></div>;
-  if (!s) return <p className="leise">Lade …</p>;
+  if (!s) return <p className="leise">{t('werkbank.ansicht.lade')}</p>;
 
   function waehleVorlage(v: Vorlage) {
     setVorlage(v);
@@ -75,18 +75,18 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
     try {
       const neu = await api.setzeWerkbankAnsicht({ installation: ansichtAus(vorlage, alle), eigene: { ein: [...ich].filter((p) => !alle.has(p)), experte } });
       z.setStand({ ...neu, benutzt: s?.benutzt });
-      setMeldung({ art: 'gut', text: 'Gespeichert. Die Leiste links zeigt jetzt diese Bereiche.' });
+      setMeldung({ art: 'gut', text: t('werkbank.ansicht.gespeichert-die-leiste-links') });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); } finally { setLaeuft(false); }
   }
 
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Werkbank anpassen</h1>
-        <p className="leise">Blende aus, was du nicht brauchst. <strong>Ausblenden schaltet nichts ab:</strong> Alles läuft weiter, Links und Hilfe führen weiter hin, und Hinweise wie „Sicherung zu alt“ erscheinen immer in der <Link to="/werkbank" className="verweis">Übersicht</Link>. <Hilfe ort="werkbank.ansicht" /></p>
+        <p className="ueber">{t('werkbank.ansicht.werkbank')}</p>
+        <h1>{t('werkbank.ansicht.werkbank-anpassen')}</h1>
+        <p className="leise">{tn('werkbank.ansicht.blende-aus-was-du', { b: <strong>{t('werkbank.ansicht.ausblenden-schaltet-nichts-ab')}</strong>, link: <Link to="/werkbank" className="verweis">{t('werkbank.ansicht.uebersicht')}</Link>, hilfe: <Hilfe ort="werkbank.ansicht" /> })}</p>
       </div>
-      {!s.eingestellt && <div className="hinweis"><p>Noch nicht eingestellt – bisher siehst du alle Bereiche. Zu Hause reicht meist die Vorlage <strong>Haushalt</strong>, für Selbständige und kleine Betriebe die Vorlage <strong>Betrieb</strong>.</p></div>}
+      {!s.eingestellt && <div className="hinweis"><p>{tn('werkbank.ansicht.noch-nicht-eingestellt-bisher', { b: <strong>{t('werkbank.ansicht.haushalt')}</strong>, b2: <strong>{t('werkbank.ansicht.betrieb')}</strong> })}</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <fieldset className="wahl">
           <legend className="h3">{t('konten.verwaltende.ansicht.vorlage')}</legend>
@@ -103,7 +103,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
               ? t('werkbank.experte.text', { bereiche: expertenBereiche(vorlage).map((b) => b.name).join(', ') })
               : t('werkbank.experte.keine', { vorlage: VORLAGEN[vorlage].name })}</span></span></label>
         </fieldset>
-        <h2 className="h3">Bereiche</h2>
+        <h2 className="h3">{t('werkbank.ansicht.bereiche')}</h2>
         <p className="leise klein">{t('konten.verwaltende.ansicht.text')}</p>
         {(Object.keys(GRUPPEN) as Gruppe[]).map((g) => (
           <div key={g} className="ansichtgruppe">
@@ -117,10 +117,10 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
                   <li key={b.pfad} className="ansichtzeile">
                     <span className="ansichtname"><strong>{b.name}</strong> <span className="leise klein">{b.wann}</span>
                       {!fuerAlleAn && nurImExpertenmodus(vorlage, b.pfad) ? <span className="chip" title={t('werkbank.experte.chip.titel')}>{t('werkbank.experte.chip')}</span> : null}
-                      {benutzt ? <span className="chip warn" title="Bleibt aktiv – nur die Leiste zeigt ihn nicht.">{zst.warn ? 'mit Hinweis' : 'eingerichtet'}, aber ausgeblendet</span> : null}</span>
+                      {benutzt ? <span className="chip warn" title={t('werkbank.ansicht.bleibt-aktiv-nur-die')}>{t('werkbank.ansicht.aber-ausgeblendet', { wert: zst.warn ? t('werkbank.ansicht.mit-hinweis') : t('werkbank.ansicht.eingerichtet') })}</span> : null}</span>
                     <span className="ansichtwahl">
-                      <label className="haken"><input type="checkbox" checked={fuerAlleAn} aria-label={`${b.name} für alle zeigen`} onChange={(x) => schalte(alle, setAlle, b.pfad, x.target.checked)} /><span>für alle</span></label>
-                      <label className="haken"><input type="checkbox" checked={fuerAlleAn || ich.has(b.pfad)} disabled={fuerAlleAn} aria-label={`${b.name} nur für mich zeigen`} onChange={(x) => schalte(ich, setIch, b.pfad, x.target.checked)} /><span>nur für mich</span></label>
+                      <label className="haken"><input type="checkbox" checked={fuerAlleAn} aria-label={t('werkbank.ansicht.fuer-alle-zeigen', { name: b.name })} onChange={(x) => schalte(alle, setAlle, b.pfad, x.target.checked)} /><span>{t('werkbank.ansicht.fuer-alle')}</span></label>
+                      <label className="haken"><input type="checkbox" checked={fuerAlleAn || ich.has(b.pfad)} disabled={fuerAlleAn} aria-label={t('werkbank.ansicht.nur-fuer-mich-zeigen', { name: b.name })} onChange={(x) => schalte(ich, setIch, b.pfad, x.target.checked)} /><span>{t('werkbank.ansicht.nur-fuer-mich')}</span></label>
                     </span>
                   </li>
                 );
@@ -129,7 +129,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
           </div>
         ))}
         {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
-        <Speicherleiste ent={ent} gegenstand="Auswahl" sendet={laeuft} speicherbar={!s.eingestellt} />
+        <Speicherleiste ent={ent} gegenstand={t('werkbank.ansicht.auswahl')} sendet={laeuft} speicherbar={!s.eingestellt} />
       </form>
     </div>
   );

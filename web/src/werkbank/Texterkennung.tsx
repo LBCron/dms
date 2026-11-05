@@ -14,7 +14,7 @@ import { sprachname, sprachvorschlaege } from '../../../shared/src/textsprache';
 import { TEXTERKENNUNG_PAKET } from '../../../shared/src/volltext';
 import { fortschrittText } from '../../../shared/src/auftrag';
 import type { Auftrag as HintergrundAuftrag } from '../api';
-import { t as tx } from '../sprache';
+import { t as tx, t, tn } from '../sprache';
 
 /**
  * Werkbank → Texterkennung (#45, #459): Übersicht – welches Paket die Texterkennung übernimmt, woher der Text der
@@ -37,8 +37,8 @@ export function useTexterkennung(aktiv: boolean) {
   }, [aktiv, laden]);
   useEffect(() => {
     if (!aktiv || !offen) return;
-    const t = setInterval(() => void laden(), 3000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => void laden(), 3000);
+    return () => clearInterval(timer);
   }, [aktiv, offen, laden]);
   return { stand, setStand, fehler, laden };
 }
@@ -50,7 +50,7 @@ const REIHENFOLGE: OcrStandArt[] = ['wartet', 'laeuft', 'paket', 'fertig', 'fehl
 function Warteschlange({ s }: { s: OcrStatus }) {
   return (
     <dl className="eigenschaften">
-      {REIHENFOLGE.map((k) => <div key={k} style={{ display: 'contents' }}><dt>{k === 'keiner' ? 'ohne Volltext (noch nie erkannt)' : OCR_STAENDE[k]}</dt><dd>{zahl(s.zaehler[k])}</dd></div>)}
+      {REIHENFOLGE.map((k) => <div key={k} style={{ display: 'contents' }}><dt>{k === 'keiner' ? t('werkbank.texterkennung.ohne-volltext-noch-nie') : OCR_STAENDE[k]}</dt><dd>{zahl(s.zaehler[k])}</dd></div>)}
     </dl>
   );
 }
@@ -59,46 +59,46 @@ function Warteschlange({ s }: { s: OcrStatus }) {
  * Warum die Warteschlange steht (#366): ausgeschaltet oder Wartungsmodus – mit dem Knopf, der es behebt.
  * Steht bei der Texterkennung und bei „Volltext neu erzeugen“.
  */
-function PauseHinweis({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
-  const s = t.stand!;
+function PauseHinweis({ t: eintrag, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
+  const s = eintrag.stand!;
   const [meldung, setMeldung] = useState<string>();
   const offen = s.zaehler.wartet + s.zaehler.laeuft;
-  const warten = offen ? ` ${zahl(offen)} ${offen === 1 ? 'Dokument wartet' : 'Dokumente warten'}.` : '';
+  const warten = offen ? t('werkbank.texterkennung.dokumente-warten', { anzahl: offen, zahl: zahl(offen) }) : '';
   async function einschalten() {
-    try { t.setStand(await api.texterkennungSpeichern({ ...s.einstellungen, aktiv: true })); } catch (e) { setMeldung((e as Error).message); }
+    try { eintrag.setStand(await api.texterkennungSpeichern({ ...s.einstellungen, aktiv: true })); } catch (e) { setMeldung((e as Error).message); }
   }
   async function wartungBeenden() {
-    if (!(await rueckfrage({ titel: 'Wartungsmodus beenden?', text: 'Alle können sich wieder anmelden, die Hintergrundarbeit läuft weiter.', ja: 'Wartung beenden' }))) return;
-    try { await api.wartungAus(); dispatchEvent(new Event(WARTUNG_GEAENDERT)); await t.laden(); } catch (e) { setMeldung((e as Error).message); }
+    if (!(await rueckfrage({ titel: t('werkbank.texterkennung.wartungsmodus-beenden'), text: t('werkbank.texterkennung.alle-koennen-sich-wieder'), ja: t('werkbank.texterkennung.wartung-beenden') }))) return;
+    try { await api.wartungAus(); dispatchEvent(new Event(WARTUNG_GEAENDERT)); await eintrag.laden(); } catch (e) { setMeldung((e as Error).message); }
   }
   if (!s.einstellungen.aktiv) return (
     <div className="hinweis warn hinweiszeile" role="status">
-      <p><strong>Die Texterkennung ist ausgeschaltet.</strong>{warten} Neue Dokumente bleiben in der Warteschlange, bis du sie einschaltest.{meldung && <span className="fehlertext blockzeile">{meldung}</span>}</p>
-      <button type="button" className="knopf primaer klein" onClick={() => void einschalten()}>Einschalten</button>
+      <p>{tn('werkbank.texterkennung.neue-dokumente-bleiben-in', { b: <strong>{t('werkbank.texterkennung.die-texterkennung-ist-ausgeschaltet')}</strong>, warten, wert: meldung && <span className="fehlertext blockzeile">{meldung}</span> })}</p>
+      <button type="button" className="knopf primaer klein" onClick={() => void einschalten()}>{t('werkbank.texterkennung.einschalten')}</button>
     </div>
   );
   if (wartungAn) return (
     <div className="hinweis warn hinweiszeile" role="status">
-      <p><strong>Pausiert, solange der Wartungsmodus an ist.</strong>{warten}{meldung && <span className="fehlertext blockzeile">{meldung}</span>}</p>
-      <button type="button" className="knopf klein" onClick={() => void wartungBeenden()}>Wartungsmodus beenden</button>
+      <p><strong>{t('werkbank.texterkennung.pausiert-solange-der-wartungsmodus')}</strong>{warten}{meldung && <span className="fehlertext blockzeile">{meldung}</span>}</p>
+      <button type="button" className="knopf klein" onClick={() => void wartungBeenden()}>{t('werkbank.texterkennung.wartungsmodus-beenden-2')}</button>
     </div>
   );
   return null;
 }
 
-export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
-  if (t.fehler) return <div className="hinweis schlecht"><p>{t.fehler}</p></div>;
-  if (!t.stand) return <p className="leise">Lade …</p>;
-  const s = t.stand;
+export function TexterkennungPanel({ t: eintrag, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
+  if (eintrag.fehler) return <div className="hinweis schlecht"><p>{eintrag.fehler}</p></div>;
+  if (!eintrag.stand) return <p className="leise">{t('werkbank.texterkennung.lade')}</p>;
+  const s = eintrag.stand;
   const w = s.werkzeuge;
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
+        <p className="ueber">{t('werkbank.texterkennung.werkbank')}</p>
         <h1>{tx('volltext.werkbank.titel')}</h1>
         <p className="leise">{tx('volltext.werkbank.einleitung')} <Hilfe ort="werkbank.texterkennung" /></p>
       </div>
-      <PauseHinweis t={t} wartungAn={wartungAn} />
+      <PauseHinweis t={eintrag} wartungAn={wartungAn} />
 
       <PaketBlock s={s} />
 
@@ -111,21 +111,21 @@ export function TexterkennungPanel({ t, wartungAn }: { t: TexterkennungZustand; 
       <ErkannteSprachen s={s} />
 
       <section className="blatt" id="warteschlange">
-        <h2 className="h3">Warteschlange</h2>
-        <p><strong>{zahl(s.zaehler.wartet + s.zaehler.laeuft)} offen</strong> · {zahl(s.zaehler.fehler)} mit Fehler{!s.einstellungen.aktiv ? ' · ausgeschaltet' : wartungAn ? ' · pausiert (Wartungsmodus)' : ''}</p>
+        <h2 className="h3">{t('werkbank.texterkennung.warteschlange')}</h2>
+        <p>{tn('werkbank.texterkennung.mit-fehler', { b: <strong>{t('werkbank.texterkennung.offen', { zahl: zahl(s.zaehler.wartet + s.zaehler.laeuft) })}</strong>, zahl: zahl(s.zaehler.fehler), wert: !s.einstellungen.aktiv ? t('werkbank.texterkennung.ausgeschaltet') : wartungAn ? t('werkbank.texterkennung.pausiert-wartungsmodus') : '' })}</p>
         <Warteschlange s={s} />
         <p className="leise klein">{tx('volltext.werkbank.neu')} <Link to="/werkbank/wartung#operationen" className="verweis">{tx('volltext.werkbank.neu.link')}</Link></p>
       </section>
 
       <section className="blatt" id="werkzeuge">
-        <h2 className="h3">Werkzeuge</h2>
+        <h2 className="h3">{t('werkbank.texterkennung.werkzeuge')}</h2>
         <dl className="eigenschaften">
           <dt>{tx('volltext.werkbank.poppler')}</dt><dd>{w.pdftotext && w.pdftoppm ? tx('volltext.werkbank.poppler.da') : <span className="fehlertext">{tx('volltext.werkbank.poppler.fehlt')}</span>}</dd>
         </dl>
-        <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => void t.laden(true)}>Erneut prüfen</button></div>
+        <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => void eintrag.laden(true)}>{t('werkbank.texterkennung.erneut-pruefen')}</button></div>
       </section>
 
-      <Auftraege t={t} />
+      <Auftraege t={eintrag} />
     </div>
   );
 }
@@ -245,10 +245,10 @@ function ErkannteSprachen({ s }: { s: OcrStatus }) {
   const vorschlaege = da ? sprachvorschlaege(erkannt, da) : [];
   return (
     <section className="blatt" id="sprachen">
-      <h2 className="h3">Erkannte Sprachen</h2>
-      {!liste.length ? <p className="leise">Noch keine – die Sprache steht an jedem Dokument, sobald es einen Volltext hat.</p> : (
+      <h2 className="h3">{t('werkbank.texterkennung.erkannte-sprachen')}</h2>
+      {!liste.length ? <p className="leise">{t('werkbank.texterkennung.noch-keine-die-sprache')}</p> : (
         <table className="tabelle klein">
-          <thead><tr><th>Sprache</th><th className="zahlzelle">Dokumente</th>{da && <th>{tx('volltext.werkbank.sprachdaten')}</th>}</tr></thead>
+          <thead><tr><th>{t('werkbank.texterkennung.sprache')}</th><th className="zahlzelle">{t('werkbank.texterkennung.dokumente')}</th>{da && <th>{tx('volltext.werkbank.sprachdaten')}</th>}</tr></thead>
           <tbody>{liste.map(([k, n]) => (
             <tr key={k}><td>{sprachname(k)} <span className="leise mono">{k}</span></td><td className="zahlzelle">{zahl(n)}</td>
               {da && <td>{da.includes(k) ? tx('volltext.werkbank.sprachdaten.da') : <span className="fehlertext">{tx('volltext.werkbank.sprachdaten.fehlt')}</span>}</td>}</tr>
@@ -267,13 +267,13 @@ function ErkannteSprachen({ s }: { s: OcrStatus }) {
 
 /* ---------- Wartungsoperationen ---------- */
 
-export function WartungPanel({ t, wartungAn, abschnitt }: { t: TexterkennungZustand; wartungAn?: boolean; abschnitt?: boolean }) {
+export function WartungPanel({ t: eintrag, wartungAn, abschnitt }: { t: TexterkennungZustand; wartungAn?: boolean; abschnitt?: boolean }) {
   return (
     <div className="einspaltig">
-      <Kopf titel="Wartungsoperationen" abschnitt={abschnitt} id="operationen">
-        <p className="leise">Arbeiten am ganzen Bestand, die du bei Bedarf anstößt. Sie laufen im Hintergrund; Ablago bleibt benutzbar. <Hilfe ort="werkbank.wartung" /></p>
+      <Kopf titel={t('werkbank.texterkennung.wartungsoperationen')} abschnitt={abschnitt} id="operationen">
+        <p className="leise">{tn('werkbank.texterkennung.arbeiten-am-ganzen-bestand', { hilfe: <Hilfe ort="werkbank.wartung" /> })}</p>
       </Kopf>
-      <VolltextNeu t={t} wartungAn={wartungAn} />
+      <VolltextNeu t={eintrag} wartungAn={wartungAn} />
       <VorschauNachholen />
       <DateienPruefen />
       <NummernNachtragen />
@@ -287,9 +287,9 @@ export function WartungPanel({ t, wartungAn, abschnitt }: { t: TexterkennungZust
  * „Volltext neu erzeugen“ (#458): für Dokumente ohne Text oder für alle (mit Rückfrage und Anzahl), als Auftrag mit
  * Fortschritt, abbrechbar. Ersetzt „Volltext nachholen“ (das sind die Dokumente ohne Text).
  */
-function VolltextNeu({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
-  const s = t.stand;
-  const laden = t.laden;
+function VolltextNeu({ t: eintrag, wartungAn }: { t: TexterkennungZustand; wartungAn?: boolean }) {
+  const s = eintrag.stand;
+  const laden = eintrag.laden;
   const [auftrag, setAuftrag] = useState<HintergrundAuftrag | null>(null);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   // Läuft schon einer (z. B. nach dem Neuladen der Seite)? Dann seinen Stand zeigen.
@@ -324,9 +324,9 @@ function VolltextNeu({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: bo
           <Link to={`/werkbank/pakete/${TEXTERKENNUNG_PAKET}`} className="knopf klein">{tx('volltext.werkbank.paket.installieren')}</Link>
         </div>
       )}
-      {s && <PauseHinweis t={t} wartungAn={wartungAn} />}
+      {s && <PauseHinweis t={eintrag} wartungAn={wartungAn} />}
       {s && <Warteschlange s={s} />}
-      {laeuft && <p className="leise" role="status">{fortschrittText(auftrag, 'Dokumente')}{auftrag.abgebrochen ? ` · ${tx('volltext.neu.abgebrochen', { erledigt: auftrag.fertig, dokumente: auftrag.gesamt })}` : ''}</p>}
+      {laeuft && <p className="leise" role="status">{fortschrittText(auftrag, t('werkbank.texterkennung.dokumente'))}{auftrag.abgebrochen ? ` · ${tx('volltext.neu.abgebrochen', { erledigt: auftrag.fertig, dokumente: auftrag.gesamt })}` : ''}</p>}
       {e && <p className="gutertext" role="status">{e.abgebrochen ? tx('volltext.neu.abgebrochen', { erledigt: e.erledigt, dokumente: e.dokumente }) : tx('volltext.neu.fertig', { erledigt: e.erledigt, dokumente: e.dokumente })}</p>}
       {auftrag?.status === 'fehler' && <p className="fehlertext">{auftrag.fehler}</p>}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
@@ -343,8 +343,8 @@ function VolltextNeu({ t, wartungAn }: { t: TexterkennungZustand; wartungAn?: bo
 const STAENDE_LISTE: OcrStandArt[] = ['fehler', 'wartet', 'laeuft', 'paket', 'ausgelassen', 'fertig'];
 type Auftrag = Awaited<ReturnType<typeof api.ocrAuftraege>>['eintraege'][number];
 
-function Auftraege({ t }: { t: TexterkennungZustand }) {
-  const s = t.stand!;
+function Auftraege({ t: eintrag }: { t: TexterkennungZustand }) {
+  const s = eintrag.stand!;
   const [stand, setStand] = useState<OcrStandArt>(s.zaehler.fehler ? 'fehler' : s.zaehler.wartet || s.zaehler.laeuft ? 'wartet' : 'fehler');
   const [liste, setListe] = useState<{ gesamt: number; eintraege: Auftrag[] } | null>(null);
   const [auswahl, setAuswahl] = useState<Set<string>>(new Set());
@@ -357,17 +357,17 @@ function Auftraege({ t }: { t: TexterkennungZustand }) {
   const ids = [...auswahl];
   async function tu(f: () => Promise<string>) {
     setMeldung(undefined);
-    try { const text = await f(); setMeldung({ art: 'gut', text }); setAuswahl(new Set()); await t.laden(); await laden(); } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
+    try { const text = await f(); setMeldung({ art: 'gut', text }); setAuswahl(new Set()); await eintrag.laden(); await laden(); } catch (e) { setMeldung({ art: 'schlecht', text: (e as Error).message }); }
   }
   const umschalten = (id: string) => setAuswahl((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const alle = liste?.eintraege ?? [];
   const abbrechbar = stand === 'wartet' || stand === 'laeuft' || stand === 'paket';
   return (
     <section className="blatt" id="auftraege">
-      <div className="blattkopf zeile-zwischen"><h2 className="h3">Aufträge</h2>
-        {s.zaehler.fehler > 0 && <button type="button" className="knopf klein" onClick={() => void tu(async () => { const r = await api.ocrFehlerNeu(); return `${zahl(r.eingereiht)} ${r.eingereiht === 1 ? 'Dokument steht' : 'Dokumente stehen'} wieder in der Warteschlange.`; })}>Alle Fehler neu starten</button>}
+      <div className="blattkopf zeile-zwischen"><h2 className="h3">{t('werkbank.texterkennung.auftraege')}</h2>
+        {s.zaehler.fehler > 0 && <button type="button" className="knopf klein" onClick={() => void tu(async () => { const r = await api.ocrFehlerNeu(); return t('werkbank.texterkennung.dokumente-stehen-wieder-in', { anzahl: r.eingereiht, zahl: zahl(r.eingereiht) }); })}>{t('werkbank.texterkennung.alle-fehler-neu-starten')}</button>}
       </div>
-      <div className="registertaben klein" role="tablist" aria-label="Stand">
+      <div className="registertaben klein" role="tablist" aria-label={t('werkbank.texterkennung.stand')}>
         {STAENDE_LISTE.map((k) => (
           <button key={k} type="button" role="tab" aria-selected={stand === k} className={`registertab ${stand === k ? 'an' : ''}`} onClick={() => setStand(k)}>
             {OCR_STAENDE[k]} <span className="anzahl">{zahl(s.zaehler[k])}</span>
@@ -375,21 +375,21 @@ function Auftraege({ t }: { t: TexterkennungZustand }) {
         ))}
       </div>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-      {liste === null ? <p className="leise">Lade …</p> : !alle.length ? <p className="leise">Keine Dokumente in diesem Stand.</p> : (
+      {liste === null ? <p className="leise">{t('werkbank.texterkennung.lade')}</p> : !alle.length ? <p className="leise">{t('werkbank.texterkennung.keine-dokumente-in-diesem')}</p> : (
         <>
           <div className="tabellenrahmen festhoehe">
             <table className="auftraege">
               <thead><tr>
-                <th><input type="checkbox" aria-label="Alle wählen" checked={auswahl.size === alle.length} onChange={(e) => setAuswahl(e.target.checked ? new Set(alle.map((a) => a.dokument.id)) : new Set())} /></th>
-                <th>Dokument</th><th>Mappe</th><th>Größe</th><th>{stand === 'fertig' ? 'Seiten' : 'Grund / Stand'}</th><th>seit</th>
+                <th><input type="checkbox" aria-label={t('werkbank.texterkennung.alle-waehlen')} checked={auswahl.size === alle.length} onChange={(e) => setAuswahl(e.target.checked ? new Set(alle.map((a) => a.dokument.id)) : new Set())} /></th>
+                <th>{t('werkbank.texterkennung.dokument')}</th><th>{t('werkbank.texterkennung.mappe')}</th><th>{t('werkbank.texterkennung.groesse')}</th><th>{stand === 'fertig' ? t('werkbank.texterkennung.seiten') : t('werkbank.texterkennung.grund-stand')}</th><th>{t('werkbank.texterkennung.seit')}</th>
               </tr></thead>
               <tbody>{alle.map((a) => {
                 const o = a.dokument.ocr;
                 return (
                   <tr key={a.dokument.id} className={auswahl.has(a.dokument.id) ? 'an' : ''}>
-                    <td><input type="checkbox" aria-label={`${a.dokument.name} wählen`} checked={auswahl.has(a.dokument.id)} onChange={() => umschalten(a.dokument.id)} /></td>
+                    <td><input type="checkbox" aria-label={t('werkbank.texterkennung.waehlen', { name: a.dokument.name })} checked={auswahl.has(a.dokument.id)} onChange={() => umschalten(a.dokument.id)} /></td>
                     <td>{a.dokument.name}</td>
-                    <td><Link to={`/ablage/${a.typId}/${a.dokument.mappeId}`} className="verweis">{a.mappeTitel || 'Ohne Titel'}</Link></td>
+                    <td><Link to={`/ablage/${a.typId}/${a.dokument.mappeId}`} className="verweis">{a.mappeTitel || t('werkbank.texterkennung.ohne-titel')}</Link></td>
                     <td className="zahlzelle">{groesse(a.dokument.groesse)}</td>
                     <td>{stand === 'fertig' ? (o?.seiten ?? '–') : (o?.info || OCR_STAENDE[o?.stand ?? 'keiner'])}</td>
                     <td className="leise">{o?.zeit ? new Date(o.zeit).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–'}</td>
@@ -398,10 +398,10 @@ function Auftraege({ t }: { t: TexterkennungZustand }) {
               })}</tbody>
             </table>
           </div>
-          {liste.gesamt > alle.length && <p className="leise klein">Gezeigt werden die neuesten {zahl(alle.length)} von {zahl(liste.gesamt)}.</p>}
+          {liste.gesamt > alle.length && <p className="leise klein">{t('werkbank.texterkennung.gezeigt-werden-die-neuesten', { zahl: zahl(alle.length), zahl2: zahl(liste.gesamt) })}</p>}
           <div className="knoepfe">
-            {abbrechbar && <button type="button" className="knopf gefahr-rand" disabled={!ids.length} onClick={() => void tu(async () => { const r = await api.ocrAbbrechen(ids); return `${zahl(r.abgebrochen)} abgebrochen.`; })}>{stand === 'laeuft' ? 'Abbrechen' : 'Aus der Warteschlange nehmen'}</button>}
-            <button type="button" className="knopf primaer" disabled={!ids.length} onClick={() => void tu(async () => { const r = await api.ocrNeu(ids); return `${zahl(r.eingereiht)} neu gestartet.`; })}>Neu starten{ids.length ? ` (${ids.length})` : ''}</button>
+            {abbrechbar && <button type="button" className="knopf gefahr-rand" disabled={!ids.length} onClick={() => void tu(async () => { const r = await api.ocrAbbrechen(ids); return `${zahl(r.abgebrochen)} abgebrochen.`; })}>{stand === 'laeuft' ? t('werkbank.texterkennung.abbrechen') : t('werkbank.texterkennung.aus-der-warteschlange-nehmen')}</button>}
+            <button type="button" className="knopf primaer" disabled={!ids.length} onClick={() => void tu(async () => { const r = await api.ocrNeu(ids); return t('werkbank.texterkennung.neu-gestartet', { zahl: zahl(r.eingereiht) }); })}>{t('werkbank.texterkennung.neu-starten', { wert: ids.length ? ` (${ids.length})` : '' })}</button>
           </div>
         </>
       )}
@@ -418,16 +418,16 @@ function VorschauNachholen() {
     setLaeuft(true); setMeldung(undefined);
     try {
       const r = await api.vorschauNachholen();
-      setMeldung({ art: 'gut', text: r.eingereiht ? `Für ${zahl(r.eingereiht)} ${r.eingereiht === 1 ? 'Datei entsteht' : 'Dateien entstehen'} jetzt im Hintergrund ein Vorschaubild.` : 'Nichts nachzuholen – alle PDFs und Bilder haben schon ein Vorschaubild.' });
+      setMeldung({ art: 'gut', text: r.eingereiht ? t('werkbank.texterkennung.fuer-dateien-entstehen-jetzt', { anzahl: r.eingereiht, zahl: zahl(r.eingereiht) }) : t('werkbank.texterkennung.nichts-nachzuholen-alle-pdfs') });
     } catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setLaeuft(false); }
   }
   return (
     <section className="blatt" id="vorschau">
-      <h2 className="h3">Vorschaubilder nachholen</h2>
-      <p className="leise">Neben jedem PDF und Bild zeigt die Ablage ein kleines Bild der ersten Seite. Für neue Dokumente entsteht es gleich nach dem Hochladen, für ältere beim ersten Anzeigen. Das hier erzeugt die fehlenden auf einmal – eins nach dem anderen im Hintergrund.</p>
+      <h2 className="h3">{t('werkbank.texterkennung.vorschaubilder-nachholen')}</h2>
+      <p className="leise">{t('werkbank.texterkennung.neben-jedem-pdf-und')}</p>
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
-      <div className="knoepfe"><button type="button" className="knopf" disabled={laeuft} onClick={() => void nachholen()}>{laeuft ? 'Stelle ein …' : 'Vorschaubilder nachholen'}</button></div>
+      <div className="knoepfe"><button type="button" className="knopf" disabled={laeuft} onClick={() => void nachholen()}>{laeuft ? t('werkbank.texterkennung.stelle-ein') : t('werkbank.texterkennung.vorschaubilder-nachholen')}</button></div>
     </section>
   );
 }

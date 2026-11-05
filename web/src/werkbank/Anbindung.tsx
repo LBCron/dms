@@ -3,6 +3,7 @@ import { api, ApiFehler, type AnbindungEingabe, type AnbindungPruefung, type Anb
 import { AnbindungFormular, PruefungAnzeige } from '../einrichtung';
 import { Hilfe } from '../Hilfe';
 import { Link } from '../ort';
+import { t, tn } from '../sprache';
 
 /**
  * Werkbank → Datenbank-Anbindung (#119): ansehen und ändern – erst testen, dann übernehmen.
@@ -28,7 +29,7 @@ export function AnbindungPanel({ z, nachAenderung, unten }: { z: AnbindungZustan
   const [laeuft, setLaeuft] = useState(false);
   const [neustart, setNeustart] = useState(false);
   useEffect(() => { if (s && !a) setA({ host: s.anbindung.host, port: s.anbindung.port, datenbank: s.anbindung.datenbank, benutzer: s.anbindung.benutzer, passwort: '' }); }, [s, a]);
-  if (!s || !a) return <div className="einspaltig"><p className="leise">{z.fehler ?? 'Lade …'}</p>{unten}</div>;
+  if (!s || !a) return <div className="einspaltig"><p className="leise">{z.fehler ?? t('werkbank.anbindung.lade')}</p>{unten}</div>;
 
   async function tu(f: () => Promise<void>) {
     setLaeuft(true); setMeldung(undefined); setFelder(undefined);
@@ -54,36 +55,35 @@ export function AnbindungPanel({ z, nachAenderung, unten }: { z: AnbindungZustan
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Datenbank-Anbindung</h1>
-        <p className="leise">Die Anbindung steht in der Datei <span className="mono">{s.datei}</span> und ist führend – auch wenn in der Compose-Datei <span className="mono">DATABASE_URL</span> gesetzt ist. Das Passwort zeigt Ablago nie an. Darunter siehst du lange Datenbankzugriffe und was gerade in der Datenbank läuft. <Hilfe ort="werkbank.anbindung" /></p>
+        <p className="ueber">{t('werkbank.anbindung.werkbank')}</p>
+        <h1>{t('werkbank.anbindung.datenbank-anbindung')}</h1>
+        <p className="leise">{tn('werkbank.anbindung.die-anbindung-steht-in', { span: <span className="mono">{s.datei}</span>, span2: <span className="mono">{t('werkbank.anbindung.database-url')}</span>, hilfe: <Hilfe ort="werkbank.anbindung" /> })}</p>
       </div>
-      {s.umgebung === 'abweichend' && <div className="hinweis warn"><p><strong>DATABASE_URL weicht von dieser Anbindung ab und wird ignoriert.</strong> Entferne die Variable aus der Compose-Datei, damit es nicht zu Verwechslungen kommt.</p></div>}
-      {s.imContainer && <div className="hinweis info"><p><strong>Die Datenbank läuft in diesem Container (dms-komplett).</strong> Hier ist nichts einzustellen. Zum Umzug auf eine eigene Datenbank: Sicherung hier anlegen und dort wiederherstellen – siehe „Wachsen und umziehen“ im Administratorhandbuch.</p></div>}
-      {s.umgebung === 'gleich' && <div className="hinweis info"><p><strong>DATABASE_URL ist nicht mehr nötig.</strong> Die Anbindung steht in der Datei; du kannst die Variable beim nächsten Update aus der Compose-Datei entfernen.</p></div>}
+      {s.umgebung === 'abweichend' && <div className="hinweis warn"><p>{tn('werkbank.anbindung.entferne-die-variable-aus', { b: <strong>{t('werkbank.anbindung.database-url-weicht-von')}</strong> })}</p></div>}
+      {s.imContainer && <div className="hinweis info"><p>{tn('werkbank.anbindung.hier-ist-nichts-einzustellen', { b: <strong>{t('werkbank.anbindung.die-datenbank-laeuft-in')}</strong> })}</p></div>}
+      {s.umgebung === 'gleich' && <div className="hinweis info"><p>{tn('werkbank.anbindung.die-anbindung-steht-in-2', { b: <strong>{t('werkbank.anbindung.database-url-ist-nicht')}</strong> })}</p></div>}
       {s.neustartNoetig && (
         <div className="hinweis warn hinweiszeile">
-          <p><strong>Die Anbindung ist geändert und gilt nach dem Neustart.</strong> Im Container startet Docker Ablago gleich wieder (restart: unless-stopped).</p>
-          <button type="button" className="knopf primaer klein" disabled={neustart} onClick={() => void neuStarten()}>{neustart ? 'Startet neu …' : 'Jetzt neu starten'}</button>
+          <p>{tn('werkbank.anbindung.im-container-startet-docker', { b: <strong>{t('werkbank.anbindung.die-anbindung-ist-geaendert')}</strong> })}</p>
+          <button type="button" className="knopf primaer klein" disabled={neustart} onClick={() => void neuStarten()}>{neustart ? t('werkbank.anbindung.startet-neu') : t('werkbank.anbindung.jetzt-neu-starten')}</button>
         </div>
       )}
       <form id="anbindung" className="blatt" onSubmit={(ev) => { ev.preventDefault(); void tu(async () => setP(await api.anbindungPruefen(a))); }}>
-        <h2 className="h3">Verbindung</h2>
-        <p className="klein">Aktuell verbunden: <span className="mono">{s.anbindung.benutzer}@{s.anbindung.host}:{s.anbindung.port}/{s.anbindung.datenbank}</span>{' '}
-          {s.neustartNoetig ? <span className="chip warn">geändert – gilt nach dem Neustart</span> : <span className="chip gut">in Betrieb</span>}</p>
+        <h2 className="h3">{t('werkbank.anbindung.verbindung')}</h2>
+        <p className="klein">{tn('werkbank.anbindung.aktuell-verbunden', { span: <span className="mono">{s.anbindung.benutzer}@{s.anbindung.host}:{s.anbindung.port}/{s.anbindung.datenbank}</span>, wert: s.neustartNoetig ? <span className="chip warn">{t('werkbank.anbindung.geaendert-gilt-nach-dem')}</span> : <span className="chip gut">{t('werkbank.anbindung.in-betrieb')}</span> })}</p>
         <AnbindungFormular wert={a} setWert={(x) => { setA(x); setP(null); setLeer(false); }} passwortGesetzt={s.anbindung.passwortGesetzt} felder={felder} />
         {p && <PruefungAnzeige p={p} />}
-        {leer && <div className="hinweis warn"><p><strong>Diese Datenbank ist leer.</strong> Nach dem Neustart beginnt dort die Einrichtung von vorn (mit Einrichtungscode); die bisherigen Daten bleiben in der alten Datenbank.</p></div>}
+        {leer && <div className="hinweis warn"><p>{tn('werkbank.anbindung.nach-dem-neustart-beginnt', { b: <strong>{t('werkbank.anbindung.diese-datenbank-ist-leer')}</strong> })}</p></div>}
         {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
         <div className="knoepfe">
-          <button className="knopf" disabled={laeuft}>{laeuft ? 'Prüfe …' : 'Verbindung prüfen'}</button>
+          <button className="knopf" disabled={laeuft}>{laeuft ? t('werkbank.anbindung.pruefe') : t('werkbank.anbindung.verbindung-pruefen')}</button>
           <button type="button" className="knopf primaer" disabled={laeuft || !p?.ok}
             onClick={() => void tu(async () => {
               const neu = await api.anbindungSpeichern(a, leer);
-              z.setStand(neu); setMeldung({ art: 'gut', text: 'Gespeichert. Die neue Anbindung gilt nach dem Neustart.' }); nachAenderung?.();
-            })}>{leer ? 'Trotzdem übernehmen' : 'Übernehmen'}</button>
+              z.setStand(neu); setMeldung({ art: 'gut', text: t('werkbank.anbindung.gespeichert-die-neue-anbindung') }); nachAenderung?.();
+            })}>{leer ? t('werkbank.anbindung.trotzdem-uebernehmen') : t('werkbank.anbindung.uebernehmen')}</button>
         </div>
-        <p className="leise klein">Übernehmen geht erst nach erfolgreicher Prüfung. Die Daten wandern dabei nicht mit – für einen Umzug in eine andere Datenbank nimm eine <Link to="/werkbank/sicherung" className="verweis">Sicherung</Link> und spiele sie dort ein.</p>
+        <p className="leise klein">{tn('werkbank.anbindung.uebernehmen-geht-erst-nach', { link: <Link to="/werkbank/sicherung" className="verweis">{t('werkbank.anbindung.sicherung')}</Link> })}</p>
       </form>
       {unten}
     </div>

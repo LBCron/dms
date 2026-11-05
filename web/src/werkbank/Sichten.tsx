@@ -18,7 +18,7 @@ import { sichtRegelProblem, sichtRegelwerkVon } from '../../../shared/src/sichtr
 import { rueckfrage } from '../rueckfrage';
 import { ANSICHT_SYMBOLE } from '../../../shared/src/ansichtsymbole';
 import { AnsichtSymbol } from '../Symbol';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /**
  * Sichten verwalten (#38) mit Bedingungen (#40, #41): Baum links, Bearbeitung rechts.
@@ -36,18 +36,18 @@ function baumzeilen(alle: Sicht[]): Zeile[] {
 export function SichtenListe({ offen }: { offen?: string }) {
   const d = useDaten();
   const zeilen = baumzeilen(d.sichten);
-  const typen = (s: Sicht) => typenDerSicht(s, d.typen.map((t) => t.id)).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
+  const typen = (s: Sicht) => typenDerSicht(s, d.typen.map((mappentyp) => mappentyp.id)).map((text) => d.typ(text)).filter((eintrag): eintrag is Mappentyp => !!eintrag);
   const [ansage, setAnsage] = useState('');
   const [fehler, setFehler] = useState<string>();
   const [hinweis, setHinweis] = useState<string>();
   const name = (id: string | null) => (id ? d.sicht(id)?.name ?? '' : '');
   /** „Heizung erbt jetzt von „Haus“: Standard R, 2 Regeln.“ bzw. „… erbt keine Regeln mehr.“ */
   const vererbtHinweis = (n: string, elternId: string | null) => {
-    if (!elternId) return `„${n}“ liegt jetzt auf der obersten Ebene und erbt keine Berechtigungen mehr; es gelten nur ihre eigenen.`;
+    if (!elternId) return t('werkbank.sichten.liegt-jetzt-auf-der', { n });
     const kette = elternkette(d.sichten, elternId);
     const regeln = kette.reduce((x, s) => x + sichtRegelwerkVon(s).regeln.length, 0);
     const standard = sichtRegelwerkVon(kette[0]).grund;
-    return `„${n}“ erbt jetzt die Berechtigungen von „${name(elternId)}“: Standard ${Object.entries(standard).filter(([, v]) => v).map(([k]) => k).join('') || '–'}${regeln ? `, ${regeln} Regel${regeln === 1 ? '' : 'n'}` : ', keine Regeln'}. Ihr eigener Standard und ✓ in ihren Regeln wirken jetzt nicht mehr.`;
+    return t('werkbank.sichten.erbt-jetzt-die-berechtigungen', { n, name: name(elternId), wert: Object.entries(standard).filter(([, v]) => v).map(([k]) => k).join('') || '–', wert2: regeln ? t('werkbank.sichten.regeln', { anzahl: regeln }) : t('werkbank.sichten.keine-regeln') });
   };
 
   // Drag & Drop (#73): sofort gespeichert; Untersichten wandern mit, Kreise sind unmöglich.
@@ -57,7 +57,7 @@ export function SichtenListe({ offen }: { offen?: string }) {
       const vorher = d.sicht(id)?.elternId ?? null;
       await api.sichtVerschieben(id, elternId, stelle);
       await d.neuLaden();
-      setAnsage(`${name(id)} liegt jetzt ${elternId ? `unter „${name(elternId)}“` : 'auf der obersten Ebene'} an Stelle ${stelle + 1}.`);
+      setAnsage(t('werkbank.sichten.liegt-jetzt-an-stelle', { name: name(id), wert: elternId ? t('werkbank.sichten.unter', { name: name(elternId) }) : t('werkbank.sichten.auf-der-obersten-ebene'), wert2: stelle + 1 }));
       // Berechtigungen (#148): Mit der neuen Elternsicht gelten sofort deren Regeln.
       if (vorher !== elternId) setHinweis(vererbtHinweis(name(id), elternId));
     } catch (x) { setFehler((x as Error).message); }
@@ -91,21 +91,21 @@ export function SichtenListe({ offen }: { offen?: string }) {
   };
   return (
     <>
-      <Listenkopf titel="Ansichten" hilfe="werkbank.sichten" beschreibung="Was die Ablage links anbietet: Mappentypen, Bedingungen und die Ordnung als Baum.">
-        <Link to="/werkbank/sichten/neu" className="knopf primaer klein">+ Neu</Link>
+      <Listenkopf titel={t('werkbank.sichten.ansichten')} hilfe="werkbank.sichten" beschreibung={t('werkbank.sichten.was-die-ablage-links')}>
+        <Link to="/werkbank/sichten/neu" className="knopf primaer klein">{t('werkbank.sichten.neu')}</Link>
       </Listenkopf>
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
-      {hinweis && <div className="hinweis info"><p>{hinweis}</p><button type="button" className="textknopf klein" onClick={() => setHinweis(undefined)}>Ausblenden</button></div>}
+      {hinweis && <div className="hinweis info"><p>{hinweis}</p><button type="button" className="textknopf klein" onClick={() => setHinweis(undefined)}>{t('werkbank.sichten.ausblenden')}</button></div>}
       <Ansage text={ansage} />
-      {zeilen.length > 1 && <p className="leise klein">Zum Ordnen am Griff ⠿ ziehen: zwischen zwei Ansichten oder auf eine Ansicht (wird Unteransicht).</p>}
+      {zeilen.length > 1 && <p className="leise klein">{t('werkbank.sichten.zum-ordnen-am-griff')}</p>}
       {!zeilen.length && offen !== 'neu'
-        ? <p className="leise leerliste">Noch keine Ansichten. Ohne Ansicht erscheinen Mappen nur unter „Zu erledigen“ und über Verweise.</p>
+        ? <p className="leise leerliste">{t('werkbank.sichten.noch-keine-ansichten-ohne')}</p>
         : <ul className="mappenliste">
-            {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neue Ansicht</span><span className="unter">noch nicht gespeichert</span></span></li>}
+            {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">{t('werkbank.sichten.neue-ansicht')}</span><span className="unter">{t('werkbank.sichten.noch-nicht-gespeichert')}</span></span></li>}
             {zeilen.map(({ s, tiefe }) => {
               const e = z.eintrag(s.id);
-              const t = typen(s);
-              const probleme = s.bedingungen.filter((b) => bedingungsProblem(b, t)).length;
+              const eintrag2 = typen(s);
+              const probleme = s.bedingungen.filter((b) => bedingungsProblem(b, eintrag2)).length;
               const listenProblem = trefferlistenProblem(s.trefferliste, wirksameTypen(d.sichten, s.id, d.typen.map((x) => x.id)).map((x) => d.typ(x)).filter((x): x is Mappentyp => !!x));
               const kinder = kinderVon(d.sichten, s.id).length;
               return (
@@ -114,14 +114,14 @@ export function SichtenListe({ offen }: { offen?: string }) {
                   <Link to={`/werkbank/sichten/${s.id}`} className={`eintrag werk ${offen === s.id ? 'an' : ''}`}>
                     <span className="titel">{tiefe > 0 && <span className="leise" aria-hidden="true">└ </span>}{s.name}</span>
                     <span className="unter">
-                      {zeigtAlleTypen(s) ? 'alle Mappentypen' : t.length ? t.map((x) => x.name).join(', ') : 'nur zum Gruppieren'}
-                      {s.bedingungen.length > 0 && ` · ${s.bedingungen.length} Bedingung${s.bedingungen.length === 1 ? '' : 'en'}`}
-                      {kinder > 0 && ` · ${kinder} Unteransicht${kinder === 1 ? '' : 'en'}`}
-                      {d.zahlenDa && ` · ${(d.zaehler.sichten?.[s.id] ?? 0).toLocaleString('de-DE')} Mappen`}
-                      {s.berechtigungen?.regeln.length ? ` · ${s.berechtigungen.regeln.length} Regel${s.berechtigungen.regeln.length === 1 ? '' : 'n'}` : ''}
+                      {zeigtAlleTypen(s) ? t('werkbank.sichten.alle-mappentypen') : eintrag2.length ? eintrag2.map((x) => x.name).join(', ') : t('werkbank.sichten.nur-zum-gruppieren')}
+                      {s.bedingungen.length > 0 && t('werkbank.sichten.bedingungen', { anzahl: s.bedingungen.length })}
+                      {kinder > 0 && t('werkbank.sichten.unteransichten', { anzahl: kinder })}
+                      {d.zahlenDa && t('werkbank.sichten.mappen', { wert: (d.zaehler.sichten?.[s.id] ?? 0).toLocaleString('de-DE') })}
+                      {s.berechtigungen?.regeln.length ? t('werkbank.sichten.regeln-2', { anzahl: s.berechtigungen.regeln.length }) : ''}
                     </span>
-                    {probleme > 0 && <span className="problem">{probleme} Bedingung{probleme === 1 ? '' : 'en'} ohne Wirkung – bitte prüfen</span>}
-                    {listenProblem && <span className="problem">Trefferliste fehlt – zeigt die Standardliste</span>}
+                    {probleme > 0 && <span className="problem">{t('werkbank.sichten.bedingungen-ohne-wirkung-bitte', { anzahl: probleme })}</span>}
+                    {listenProblem && <span className="problem">{t('werkbank.sichten.trefferliste-fehlt-zeigt-die')}</span>}
                   </Link>
                 </li>
               );
@@ -150,13 +150,13 @@ export function SichtEditor({ id }: { id: string }) {
   const [fehlerOrte, setFehlerOrte] = useState<Set<SichtBereich>>(new Set());
   const untersicht = !!e.elternId;
   const liveFehler = (k: SichtBereich) => (k === 'berechtigungen' && (e.berechtigungen?.regeln ?? []).some((r) => !!sichtRegelProblem(r, untersicht)))
-    || (k === 'bedingungen' && e.bedingungen.some((x) => !!bedingungsProblem(x, typenDerSicht(e, d.typen.map((t) => t.id)).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t))));
+    || (k === 'bedingungen' && e.bedingungen.some((x) => !!bedingungsProblem(x, typenDerSicht(e, d.typen.map((mappentyp) => mappentyp.id)).map((text) => d.typ(text)).filter((eintrag): eintrag is Mappentyp => !!eintrag))));
   const hatFehler = (k: SichtBereich) => fehlerOrte.has(k) || liveFehler(k);
   const klappe = (k: SichtBereich): Klappe => b.klappe(k, hatFehler(k));
 
-  const alleIds = d.typen.map((t) => t.id);
+  const alleIds = d.typen.map((mappentyp) => mappentyp.id);
   const alleTypen = zeigtAlleTypen(e);
-  const eigeneTypen = typenDerSicht(e, alleIds).map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
+  const eigeneTypen = typenDerSicht(e, alleIds).map((text) => d.typ(text)).filter((eintrag): eintrag is Mappentyp => !!eintrag);
   // Eine neue Sicht ist im Baum noch nicht da; für die Auswahl der Elternsicht zählt sie als Blatt.
   const ausgeschlossen = new Set(neu ? [] : mitNachkommen(d.sichten, id).map((s) => s.id));
   const elternWahl = baumzeilen(d.sichten).filter(({ s }) => !ausgeschlossen.has(s.id));
@@ -165,19 +165,19 @@ export function SichtEditor({ id }: { id: string }) {
   const untersichten = neu ? 0 : mitNachkommen(d.sichten, id).length - 1;
   // Wirksame Typen: eigene und die der Untersichten – sie bestimmen, welche Trefferlisten es gibt (#75).
   const wirksam = [...new Set([...typenDerSicht(e, alleIds), ...(neu ? [] : mitNachkommen(d.sichten, id).filter((s) => s.id !== id).flatMap((s) => typenDerSicht(s, alleIds)))])]
-    .map((t) => d.typ(t)).filter((t): t is Mappentyp => !!t);
+    .map((text) => d.typ(text)).filter((eintrag): eintrag is Mappentyp => !!eintrag);
 
   // Vorschau: Anzahl Treffer mit dem aktuellen Entwurf (kurz nach dem Tippen).
   const entwurf = JSON.stringify(e);
   useEffect(() => {
     let aktuell = true;
-    const t = setTimeout(() => {
-      api.sichtVorschau(neu ? null : id, { ...e, name: e.name || 'Vorschau' }).then((r) => aktuell && setVorschau(r.anzahl)).catch(() => aktuell && setVorschau(null));
+    const timer = setTimeout(() => {
+      api.sichtVorschau(neu ? null : id, { ...e, name: e.name || t('werkbank.sichten.vorschau') }).then((r) => aktuell && setVorschau(r.anzahl)).catch(() => aktuell && setVorschau(null));
     }, 350);
-    return () => { aktuell = false; clearTimeout(t); };
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [entwurf, d.stand]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!neu && !vorhanden) return <div className="leer"><p>Diese Ansicht gibt es nicht (mehr).</p></div>;
+  if (!neu && !vorhanden) return <div className="leer"><p>{t('werkbank.sichten.diese-ansicht-gibt-es')}</p></div>;
 
   async function speichern() {
     setSendet(true); setMeldung(undefined);
@@ -188,7 +188,7 @@ export function SichtEditor({ id }: { id: string }) {
       loeseWache();
       if (neu) b.merke(s.id);
       await d.neuLaden();
-      if (neu) geheZu(`/werkbank/sichten/${s.id}`); else setMeldung({ art: 'gut', text: 'Ansicht gespeichert.' });
+      if (neu) geheZu(`/werkbank/sichten/${s.id}`); else setMeldung({ art: 'gut', text: t('werkbank.sichten.ansicht-gespeichert') });
     } catch (x) {
       setMeldung({ art: 'schlecht', text: (x as Error).message });
       // Fehler in den Berechtigungen (#148): Bereich markieren und aufklappen; sonst die Grunddaten.
@@ -198,8 +198,8 @@ export function SichtEditor({ id }: { id: string }) {
     finally { setSendet(false); }
   }
   async function loeschen() {
-    const hinweis = untersichten ? ` Ihre ${untersichten} Unteransicht${untersichten === 1 ? '' : 'en'} rücken eine Ebene nach oben.` : '';
-    if (!(await rueckfrage({ titel: `Ansicht „${vorhanden!.name}“ löschen?`, text: `Mappen werden nicht gelöscht.${hinweis}`, ja: 'Löschen', gefahr: true }))) return;
+    const hinweis = untersichten ? t('werkbank.sichten.ihre-unteransichten-ruecken-eine', { anzahl: untersichten }) : '';
+    if (!(await rueckfrage({ titel: t('werkbank.sichten.ansicht-loeschen', { name: vorhanden!.name }), text: t('werkbank.sichten.mappen-werden-nicht-geloescht', { hinweis }), ja: t('werkbank.sichten.loeschen'), gefahr: true }))) return;
     try { await api.sichtLoeschen(id); loeseWache(); await d.neuLaden(); geheZu('/werkbank/sichten'); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
   }
@@ -210,50 +210,50 @@ export function SichtEditor({ id }: { id: string }) {
     try { await api.sichtenOrdnen(vorhanden!.elternId, ids); await d.neuLaden(); }
     catch (z) { setMeldung({ art: 'schlecht', text: (z as Error).message }); }
   }
-  const setzeTyp = (t: string, an: boolean) => setE((x) => ({ ...x, typen: an ? [...x.typen, t] : x.typen.filter((y) => y !== t) }));
+  const setzeTyp = (text: string, an: boolean) => setE((x) => ({ ...x, typen: an ? [...x.typen, text] : x.typen.filter((y) => y !== text) }));
 
   return (
     <form className="editorform" onSubmit={(ev) => { ev.preventDefault(); void speichern(); }} onKeyDown={ent.tasten} noValidate>
       <div className="seitenkopf"><div>
-        <p className="ueber">Ansicht</p>
-        <h1>{e.name || (neu ? 'Neue Ansicht' : 'Ohne Namen')}</h1>
-        {!neu && <p className="leise"><Link to={`/ablage/${id}`} className="verweis">In der Ablage öffnen →</Link></p>}
+        <p className="ueber">{t('werkbank.sichten.ansicht')}</p>
+        <h1>{e.name || (neu ? t('werkbank.sichten.neue-ansicht') : t('werkbank.sichten.ohne-namen'))}</h1>
+        {!neu && <p className="leise"><Link to={`/ablage/${id}`} className="verweis">{t('werkbank.sichten.in-der-ablage-oeffnen')}</Link></p>}
       </div></div>
 
-      {b.leiste(hatFehler, 'Bereiche der Ansicht')}
+      {b.leiste(hatFehler, t('werkbank.sichten.bereiche-der-ansicht'))}
 
-      <Bereich id="grunddaten" titel="Grunddaten" klappe={klappe('grunddaten')}
-        kurz={e.elternId ? `unter „${d.sicht(e.elternId)?.name ?? '…'}“` : 'oberste Ebene'}>
+      <Bereich id="grunddaten" titel={t('werkbank.sichten.grunddaten')} klappe={klappe('grunddaten')}
+        kurz={e.elternId ? t('werkbank.sichten.unter-2', { wert: d.sicht(e.elternId)?.name ?? '…' }) : t('werkbank.sichten.oberste-ebene')}>
         <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={e.name} placeholder="z. B. Verträge mit Kündigungsfrist" onChange={(x) => setE({ ...e, name: x.target.value })} autoFocus={neu} /></label>
-          <label className="eigenschaft"><span>Liegt unter <small>Elternsicht im Baum</small></span>
+          <label className="eigenschaft"><span>{t('werkbank.sichten.name')}</span><input value={e.name} placeholder={t('werkbank.sichten.z-b-vertraege-mit')} onChange={(x) => setE({ ...e, name: x.target.value })} autoFocus={neu} /></label>
+          <label className="eigenschaft"><span>{tn('werkbank.sichten.liegt-unter', { klein: <small>{t('werkbank.sichten.elternsicht-im-baum')}</small> })}</span>
             <select value={e.elternId ?? ''} onChange={(x) => setE({ ...e, elternId: x.target.value || null })}>
-              <option value="">– oberste Ebene –</option>
+              <option value="">{t('werkbank.sichten.oberste-ebene-2')}</option>
               {elternWahl.map(({ s, tiefe }) => <option key={s.id} value={s.id}>{'  '.repeat(tiefe)}{s.name}</option>)}
             </select></label>
         </div>
-        <label className="eigenschaft"><span>Beschreibung <small>steht in der Ablage über der Liste</small></span><input value={e.beschreibung} onChange={(x) => setE({ ...e, beschreibung: x.target.value })} /></label>
+        <label className="eigenschaft"><span>{tn('werkbank.sichten.beschreibung', { klein: <small>{t('werkbank.sichten.steht-in-der-ablage')}</small> })}</span><input value={e.beschreibung} onChange={(x) => setE({ ...e, beschreibung: x.target.value })} /></label>
         <SymbolWahl wert={e.symbol ?? null} setze={(symbol) => setE({ ...e, symbol })} />
         {!neu && geschwister.length > 1 && (
           <div className="knoepfe">
-            <span className="leise klein">Reihenfolge auf dieser Ebene: {stelle + 1} von {geschwister.length}</span>
-            <button type="button" className="knopf klein" disabled={stelle <= 0 || geaendert} title={geaendert ? 'Erst speichern' : undefined} onClick={() => void verschiebe(-1)}>↑ nach oben</button>
-            <button type="button" className="knopf klein" disabled={stelle >= geschwister.length - 1 || geaendert} title={geaendert ? 'Erst speichern' : undefined} onClick={() => void verschiebe(1)}>↓ nach unten</button>
+            <span className="leise klein">{t('werkbank.sichten.reihenfolge-auf-dieser-ebene', { wert: stelle + 1, geschwister: geschwister.length })}</span>
+            <button type="button" className="knopf klein" disabled={stelle <= 0 || geaendert} title={geaendert ? t('werkbank.sichten.erst-speichern') : undefined} onClick={() => void verschiebe(-1)}>{t('werkbank.sichten.nach-oben')}</button>
+            <button type="button" className="knopf klein" disabled={stelle >= geschwister.length - 1 || geaendert} title={geaendert ? t('werkbank.sichten.erst-speichern') : undefined} onClick={() => void verschiebe(1)}>{t('werkbank.sichten.nach-unten')}</button>
           </div>
         )}
         {!neu && vorhanden && e.elternId !== vorhanden.elternId && (
-          <p className="hinweis info klein">{e.elternId ? `Nach dem Speichern erbt die Ansicht die Berechtigungen von „${d.sicht(e.elternId)?.name ?? '…'}“.` : 'Nach dem Speichern erbt die Ansicht keine Berechtigungen mehr.'}</p>
+          <p className="hinweis info klein">{e.elternId ? t('werkbank.sichten.nach-dem-speichern-erbt', { wert: d.sicht(e.elternId)?.name ?? '…' }) : t('werkbank.sichten.nach-dem-speichern-erbt-2')}</p>
         )}
       </Bereich>
 
-      <Bereich id="mappentypen" titel="Mappentypen" klappe={klappe('mappentypen')}
-        kurz={alleTypen ? 'alle Mappentypen' : eigeneTypen.length ? `${eigeneTypen.length}: ${eigeneTypen.map((t) => t.name).join(', ')}` : 'nur zum Gruppieren'}
-        beschreibung={<>Mappen dieser Mappentypen zeigt die Ansicht selbst. {untersichten > 0 ? `Dazu kommen die Mappen ihrer ${untersichten} Unteransicht${untersichten === 1 ? '' : 'en'}.` : 'Ohne Mappentyp dient sie nur zum Gruppieren von Unteransichten.'} Zeigt sie mehrere Mappentypen, gibt es kein „+ Neu“; als Spalten bietet sie nur an, was alle Mappentypen gemeinsam haben.</>}>
+      <Bereich id="mappentypen" titel={t('werkbank.sichten.mappentypen')} klappe={klappe('mappentypen')}
+        kurz={alleTypen ? t('werkbank.sichten.alle-mappentypen') : eigeneTypen.length ? `${eigeneTypen.length}: ${eigeneTypen.map((mappentyp) => mappentyp.name).join(', ')}` : t('werkbank.sichten.nur-zum-gruppieren')}
+        beschreibung={<>{t('werkbank.sichten.mappen-dieser-mappentypen-zeigt', { wert: untersichten > 0 ? t('werkbank.sichten.dazu-kommen-die-mappen', { anzahl: untersichten }) : t('werkbank.sichten.ohne-mappentyp-dient-sie') })}</>}>
         <label className="haken"><input type="checkbox" checked={alleTypen} onChange={(x) => setE((y) => ({ ...y, typen: x.target.checked ? [ALLE_TYPEN] : [] }))} />
-          <span>Alle Mappentypen <span className="leise klein">– auch künftige, z. B. für „Favoriten“ mit der Bedingung „ist mein Favorit“</span></span></label>
+          <span>{tn('werkbank.sichten.alle-mappentypen-2', { span: <span className="leise klein">{t('werkbank.sichten.auch-kuenftige-z-b')}</span> })}</span></label>
         <div className="typwahl">
-          {d.typen.map((t) => (
-            <label key={t.id} className="haken"><input type="checkbox" disabled={alleTypen} checked={alleTypen || e.typen.includes(t.id)} onChange={(x) => setzeTyp(t.id, x.target.checked)} /><span>{t.name}</span></label>
+          {d.typen.map((mappentyp) => (
+            <label key={mappentyp.id} className="haken"><input type="checkbox" disabled={alleTypen} checked={alleTypen || e.typen.includes(mappentyp.id)} onChange={(x) => setzeTyp(mappentyp.id, x.target.checked)} /><span>{mappentyp.name}</span></label>
           ))}
         </div>
       </Bereich>
@@ -267,11 +267,11 @@ export function SichtEditor({ id }: { id: string }) {
       <SichtTestlauf id={neu ? null : id} e={e} klappe={klappe('testlauf')} />
 
       <div className="hinweis info" role="status">
-        <p>{vorschau === null ? 'Vorschau wird berechnet …' : <>Diese Ansicht zeigt zurzeit <strong>{vorschau.toLocaleString('de-DE')} {vorschau === 1 ? 'Mappe' : 'Mappen'}</strong>{untersichten > 0 ? ' (mit Unteransichten)' : ''}.</>}</p>
+        <p>{vorschau === null ? t('werkbank.sichten.vorschau-wird-berechnet') : <>{tn('werkbank.sichten.diese-ansicht-zeigt-zurzeit', { b: <strong>{vorschau.toLocaleString('de-DE')} {t('werkbank.sichten.mappen-2', { anzahl: vorschau })}</strong>, wert: untersichten > 0 ? t('werkbank.sichten.mit-unteransichten') : '' })}</>}</p>
       </div>
 
-      <Speicherleiste ent={ent} gegenstand="Ansicht" sendet={sendet} meldung={meldung}
-        links={!neu && <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>Ansicht löschen</button>} />
+      <Speicherleiste ent={ent} gegenstand={t('werkbank.sichten.ansicht')} sendet={sendet} meldung={meldung}
+        links={!neu && <button type="button" className="textknopf gefahr" onClick={() => void loeschen()}>{t('werkbank.sichten.ansicht-loeschen-2')}</button>} />
     </form>
   );
 }
@@ -327,22 +327,21 @@ function TrefferlistenWahl({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f
   const name = (k: string) => (istSystemspalte(k) ? SYSTEMSPALTEN[k] : typen[0]?.felder.find((f) => f.key === k)?.label ?? k);
   const standard = listen.find((l) => l.standard);
   return (
-    <Bereich id="trefferliste" titel="Trefferliste" hilfe={<Hilfe ort="sicht.trefferliste" />} klappe={klappe}
-      kurz={!typen.length ? 'Systemspalten' : problem ? 'Trefferliste fehlt – Standard' : (listen.find((l) => l.key === e.trefferliste)?.name ?? (standard ? `Standard („${standard.name}“)` : 'Standard'))}>
+    <Bereich id="trefferliste" titel={t('werkbank.sichten.trefferliste')} hilfe={<Hilfe ort="sicht.trefferliste" />} klappe={klappe}
+      kurz={!typen.length ? t('werkbank.sichten.systemspalten') : problem ? t('werkbank.sichten.trefferliste-fehlt-standard') : (listen.find((l) => l.key === e.trefferliste)?.name ?? (standard ? t('werkbank.sichten.standard', { name: standard.name }) : t('werkbank.sichten.standard-2')))}>
       {!typen.length
-        ? <p className="leise">Ohne Mappentypen zeigt die Ansicht die Systemspalten (Titel, Typ, angelegt, geändert).</p>
+        ? <p className="leise">{t('werkbank.sichten.ohne-mappentypen-zeigt-die')}</p>
         : <>
-            <p className="leise">Welche Spalten die Liste in der Ablage zeigt. Die Trefferlisten richtest du am Mappentyp ein.
-              {typen.length > 1 && ' Bei mehreren Mappentypen gibt es nur Listen, die alle Mappentypen haben, und darin nur die gemeinsamen Spalten; Titel und Typ stehen immer vorn.'}</p>
-            <label className="eigenschaft schmal"><span>Trefferliste</span>
+            <p className="leise">{tn('werkbank.sichten.welche-spalten-die-liste', { wert: typen.length > 1 && t('werkbank.sichten.bei-mehreren-mappentypen-gibt') })}</p>
+            <label className="eigenschaft schmal"><span>{t('werkbank.sichten.trefferliste')}</span>
               <select value={e.trefferliste ?? ''} onChange={(x) => setE((y) => ({ ...y, trefferliste: x.target.value || null }))}>
-                <option value="">{standard ? `Standard („${standard.name}“)` : 'Standard (Systemspalten)'}</option>
-                {problem && <option value={e.trefferliste!}>– {e.trefferliste} (fehlt) –</option>}
-                {listen.map((l) => <option key={l.key} value={l.key}>{l.name}{l.standard ? ' – Standard' : ''}</option>)}
+                <option value="">{standard ? t('werkbank.sichten.standard', { name: standard.name }) : t('werkbank.sichten.standard-systemspalten')}</option>
+                {problem && <option value={e.trefferliste!}>{tn('werkbank.sichten.fehlt', { trefferliste: e.trefferliste })}</option>}
+                {listen.map((l) => <option key={l.key} value={l.key}>{l.name}{l.standard ? t('werkbank.sichten.standard-3') : ''}</option>)}
               </select></label>
             {problem
               ? <p className="fehlertext klein">{problem}</p>
-              : <p className="leise klein">Spalten: {wahl.spalten.length ? wahl.spalten.map(name).join(', ') : 'keine – einfache Liste mit Titel und zwei Feldern'}</p>}
+              : <p className="leise klein">{t('werkbank.sichten.spalten')}{' '}{wahl.spalten.length ? wahl.spalten.map(name).join(', ') : t('werkbank.sichten.keine-einfache-liste-mit')}</p>}
           </>}
     </Bereich>
   );
@@ -353,17 +352,17 @@ function TrefferlistenWahl({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f
 type Ziel = { wert: 'feld'; feld: Bedingungsfeld } | { wert: 'dokumente' | 'verknuepfungen'; register: string; name: string }
   | { wert: 'dokumenteGesamt' | 'verknuepfungenGesamt' | 'favorit' | 'frist' };
 const ZIEL_GESAMT: Record<'dokumenteGesamt' | 'verknuepfungenGesamt' | 'favorit' | 'frist', string> = {
-  dokumenteGesamt: 'Dokumente insgesamt', verknuepfungenGesamt: 'Verknüpfungen insgesamt', favorit: 'ist mein Favorit', frist: 'hat Frist in den nächsten Tagen',
+  dokumenteGesamt: t('werkbank.sichten.dokumente-insgesamt'), verknuepfungenGesamt: t('werkbank.sichten.verknuepfungen-insgesamt'), favorit: t('werkbank.sichten.ist-mein-favorit'), frist: t('werkbank.sichten.hat-frist-in-den'),
 };
 
 /** Register, die alle Typen der Sicht mit gleichem Schlüssel und gleicher Art haben (#66). */
 function gemeinsameRegister(typen: Mappentyp[]): Array<{ wert: 'dokumente' | 'verknuepfungen'; register: string; name: string }> {
   if (!typen.length) return [];
   return typen[0].register.filter((r) => (r.art === 'dokumente' || r.art === 'verknuepfungen')
-    && typen.every((t) => t.register.some((x) => x.key === r.key && x.art === r.art)))
+    && typen.every((mappentyp) => mappentyp.register.some((x) => x.key === r.key && x.art === r.art)))
     .map((r) => ({
       wert: r.art as 'dokumente' | 'verknuepfungen', register: r.key,
-      name: [...new Set(typen.map((t) => t.register.find((x) => x.key === r.key)!.name))].join(' / '),
+      name: [...new Set(typen.map((mappentyp) => mappentyp.register.find((x) => x.key === r.key)!.name))].join(' / '),
     }));
 }
 
@@ -379,7 +378,7 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
   ];
   const zielKey = (z: Ziel) => (z.wert === 'feld' ? `feld:${z.feld.key}` : 'register' in z ? `${z.wert}:${z.register}` : z.wert);
   const bKey = (b: Bedingung) => (b.art === 'feld' ? `feld:${b.feld}` : b.art === 'dokumente' || b.art === 'verknuepfungen' ? `${b.art}:${b.register}` : b.art);
-  const zielName = (z: Ziel) => (z.wert === 'feld' ? z.feld.label : 'register' in z ? `${z.wert === 'dokumente' ? 'Dokumente' : 'Verknüpfungen'} in „${z.name}“` : ZIEL_GESAMT[z.wert]);
+  const zielName = (z: Ziel) => (z.wert === 'feld' ? z.feld.label : 'register' in z ? t('werkbank.sichten.in', { wert: z.wert === 'dokumente' ? t('werkbank.sichten.dokumente') : t('werkbank.sichten.verknuepfungen'), name: z.name }) : ZIEL_GESAMT[z.wert]);
   const setze = (i: number, b: Bedingung) => setE((x) => ({ ...x, bedingungen: x.bedingungen.map((y, j) => (j === i ? b : y)) }));
   const weg = (i: number) => setE((x) => ({ ...x, bedingungen: x.bedingungen.filter((_, j) => j !== i) }));
   const neu = (z: Ziel): Bedingung => (z.wert === 'feld'
@@ -389,16 +388,15 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
     : 'register' in z ? { art: z.wert, register: z.register, vergleich: z.wert === 'dokumente' ? 'gleich' : 'mehr', anzahl: 0 }
     : { art: z.wert, vergleich: z.wert === 'dokumenteGesamt' ? 'gleich' : 'mehr', anzahl: 0 });
   const [titel, setTitel] = useState<Record<string, string>>({});
-  const merke = (mid: string, t: string) => setTitel((x) => ({ ...x, [mid]: t }));
+  const merke = (mid: string, text: string) => setTitel((x) => ({ ...x, [mid]: text }));
 
   return (
-    <Bereich id="bedingungen" titel="Bedingungen" hilfe={<Hilfe ort="sicht.bedingungen" />} klappe={klappe}
-      kurz={e.bedingungen.length ? `${e.bedingungen.length} Bedingung${e.bedingungen.length === 1 ? '' : 'en'}` : 'keine'}>
+    <Bereich id="bedingungen" titel={t('werkbank.sichten.bedingungen-2')} hilfe={<Hilfe ort="sicht.bedingungen" />} klappe={klappe}
+      kurz={e.bedingungen.length ? t('werkbank.sichten.bedingungen-3', { anzahl: e.bedingungen.length }) : t('werkbank.sichten.keine')}>
       {!typen.length
-        ? <p className="leise">Bedingungen gelten für die eigenen Mappentypen der Ansicht – wähle oben mindestens einen.</p>
+        ? <p className="leise">{t('werkbank.sichten.bedingungen-gelten-fuer-die')}</p>
         : <>
-            <p className="leise">Die Ansicht zeigt nur Mappen, die <strong>alle</strong> Bedingungen erfüllen. Werte wie „heute“ oder „aktueller Benutzer“ werden bei jedem Öffnen neu berechnet.
-              {typen.length > 1 && ' Bei mehreren Mappentypen gibt es nur Felder und Register, die alle Mappentypen gleich haben, und die Systemwerte. Ein gemeinsames Register zählt je Typ über dessen eigene Quellen.'}</p>
+            <p className="leise">{tn('werkbank.sichten.die-ansicht-zeigt-nur', { b: <strong>{t('werkbank.sichten.alle')}</strong>, wert: typen.length > 1 && t('werkbank.sichten.bei-mehreren-mappentypen-gibt-2') })}</p>
             {e.bedingungen.length > 0 && (
               <ol className="bedingungen">
                 {e.bedingungen.map((b, i) => {
@@ -407,24 +405,24 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
                   return (
                     <li key={i} className={problem ? 'fehlerhaft' : ''}>
                       <div className="bedingungszeile">
-                        <select aria-label="Feld oder Register" value={ziel ? zielKey(ziel) : ''} onChange={(x) => { const z = ziele.find((y) => zielKey(y) === x.target.value); if (z) setze(i, neu(z)); }}>
-                          {!ziel && <option value="">– {b.art === 'feld' ? b.feld : 'register' in b ? b.register : b.art} (fehlt) –</option>}
-                          <optgroup label="Felder">{ziele.filter((z) => z.wert === 'feld' && !z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
-                          <optgroup label="Systemwerte">{ziele.filter((z) => z.wert === 'feld' && z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
-                          <optgroup label="Anzahl">{ziele.filter((z) => z.wert !== 'feld' && z.wert !== 'favorit' && z.wert !== 'frist').map((z) => <option key={zielKey(z)} value={zielKey(z)}>{zielName(z)}</option>)}</optgroup>
-                          <optgroup label="Fristen"><option value="frist">{ZIEL_GESAMT.frist}</option></optgroup>
-                          <optgroup label="Persönlich"><option value="favorit">{ZIEL_GESAMT.favorit}</option></optgroup>
+                        <select aria-label={t('werkbank.sichten.feld-oder-register')} value={ziel ? zielKey(ziel) : ''} onChange={(x) => { const z = ziele.find((y) => zielKey(y) === x.target.value); if (z) setze(i, neu(z)); }}>
+                          {!ziel && <option value="">{t('werkbank.sichten.fehlt-2', { wert: b.art === 'feld' ? b.feld : 'register' in b ? b.register : b.art })}</option>}
+                          <optgroup label={t('werkbank.sichten.felder')}>{ziele.filter((z) => z.wert === 'feld' && !z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
+                          <optgroup label={t('werkbank.sichten.systemwerte')}>{ziele.filter((z) => z.wert === 'feld' && z.feld.key.startsWith('_')).map((z) => <option key={zielKey(z)} value={zielKey(z)}>{(z as { feld: Bedingungsfeld }).feld.label}</option>)}</optgroup>
+                          <optgroup label={t('werkbank.sichten.anzahl')}>{ziele.filter((z) => z.wert !== 'feld' && z.wert !== 'favorit' && z.wert !== 'frist').map((z) => <option key={zielKey(z)} value={zielKey(z)}>{zielName(z)}</option>)}</optgroup>
+                          <optgroup label={t('werkbank.sichten.fristen')}><option value="frist">{ZIEL_GESAMT.frist}</option></optgroup>
+                          <optgroup label={t('werkbank.sichten.persoenlich')}><option value="favorit">{ZIEL_GESAMT.favorit}</option></optgroup>
                         </select>
                         {b.art === 'feld' && ziel?.wert === 'feld'
                           ? <FeldBedingung b={b} feld={ziel.feld} setze={(n) => setze(i, n)} titel={titel} merke={merke} />
                           : b.art === 'frist' ? <FristBedingung b={b} typen={typen} setze={(n) => setze(i, n)} />
                           : b.art !== 'feld' && b.art !== 'favorit' && <>
-                              <select aria-label="Vergleich" value={b.vergleich} onChange={(x) => setze(i, { ...b, vergleich: x.target.value as Zaehlvergleich })}>
+                              <select aria-label={t('werkbank.sichten.vergleich')} value={b.vergleich} onChange={(x) => setze(i, { ...b, vergleich: x.target.value as Zaehlvergleich })}>
                                 {Object.entries(ZAEHLVERGLEICHE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                               </select>
-                              <input aria-label="Anzahl" type="number" min={0} className="kurz" value={b.anzahl} onChange={(x) => setze(i, { ...b, anzahl: Math.max(0, Math.trunc(Number(x.target.value) || 0)) })} />
+                              <input aria-label={t('werkbank.sichten.anzahl')} type="number" min={0} className="kurz" value={b.anzahl} onChange={(x) => setze(i, { ...b, anzahl: Math.max(0, Math.trunc(Number(x.target.value) || 0)) })} />
                             </>}
-                        <button type="button" className="textknopf gefahr klein" onClick={() => weg(i)}>Bedingung entfernen</button>
+                        <button type="button" className="textknopf gefahr klein" onClick={() => weg(i)}>{t('werkbank.sichten.bedingung-entfernen')}</button>
                       </div>
                       <p className={problem ? 'fehlertext klein' : 'leise klein'}>{problem ?? beschreibeBedingung(b, typen, (mid) => titel[mid] ?? d.person(mid))}</p>
                     </li>
@@ -432,7 +430,7 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
                 })}
               </ol>
             )}
-            <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setE((x) => ({ ...x, bedingungen: [...x.bedingungen, neu(ziele[0])] }))}>+ Bedingung</button></div>
+            <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setE((x) => ({ ...x, bedingungen: [...x.bedingungen, neu(ziele[0])] }))}>{t('werkbank.sichten.bedingung')}</button></div>
           </>}
     </Bereich>
   );
@@ -440,18 +438,18 @@ function Bedingungen({ e, setE, typen, klappe }: { e: SichtDaten; setE: (f: (x: 
 
 /** „hat Frist in den nächsten n Tagen“ (#133): ein Datumsfeld oder alle mit Erinnerung, optional nur meine. */
 function FristBedingung({ b, typen, setze }: { b: Extract<Bedingung, { art: 'frist' }>; typen: Mappentyp[]; setze: (b: Bedingung) => void }) {
-  const datumsfelder = typen.length ? typen[0].felder.filter((f) => f.typ === 'datum' && typen.every((t) => t.felder.some((g) => g.key === f.key && g.typ === 'datum'))) : [];
+  const datumsfelder = typen.length ? typen[0].felder.filter((f) => f.typ === 'datum' && typen.every((mappentyp) => mappentyp.felder.some((g) => g.key === f.key && g.typ === 'datum'))) : [];
   return (
     <span className="wertgruppe umbruch">
-      <select aria-label="Datumsfeld" value={b.feld ?? ''} onChange={(x) => setze({ ...b, feld: x.target.value || null })}>
-        <option value="">alle Datumsfelder, die eine Frist sind</option>
-        {datumsfelder.map((f) => <option key={f.key} value={f.key}>{f.label}{f.frist ? ' (erinnert)' : ''}</option>)}
-        {b.feld && !datumsfelder.some((f) => f.key === b.feld) && <option value={b.feld}>{b.feld} (fehlt)</option>}
+      <select aria-label={t('werkbank.sichten.datumsfeld')} value={b.feld ?? ''} onChange={(x) => setze({ ...b, feld: x.target.value || null })}>
+        <option value="">{t('werkbank.sichten.alle-datumsfelder-die-eine')}</option>
+        {datumsfelder.map((f) => <option key={f.key} value={f.key}>{f.label}{f.frist ? t('werkbank.sichten.erinnert') : ''}</option>)}
+        {b.feld && !datumsfelder.some((f) => f.key === b.feld) && <option value={b.feld}>{t('werkbank.sichten.fehlt-3', { feld: b.feld })}</option>}
       </select>
-      <span className="leise">in den nächsten</span>
-      <input aria-label="Tage" type="number" min={0} max={3650} className="kurz" value={b.tage} onChange={(x) => setze({ ...b, tage: Math.max(0, Math.min(3650, Math.trunc(Number(x.target.value) || 0))) })} />
-      <span className="leise">Tagen</span>
-      <label className="haken klein"><input type="checkbox" checked={!!b.nurMeine} onChange={(x) => setze({ ...b, nurMeine: x.target.checked || undefined })} /><span>nur meine</span></label>
+      <span className="leise">{t('werkbank.sichten.in-den-naechsten')}</span>
+      <input aria-label={t('werkbank.sichten.tage')} type="number" min={0} max={3650} className="kurz" value={b.tage} onChange={(x) => setze({ ...b, tage: Math.max(0, Math.min(3650, Math.trunc(Number(x.target.value) || 0))) })} />
+      <span className="leise">{t('werkbank.sichten.tagen')}</span>
+      <label className="haken klein"><input type="checkbox" checked={!!b.nurMeine} onChange={(x) => setze({ ...b, nurMeine: x.target.checked || undefined })} /><span>{t('werkbank.sichten.nur-meine')}</span></label>
     </span>
   );
 }
@@ -460,7 +458,7 @@ type WertArt = WertAngabe['art'];
 
 export function FeldBedingung({ b, feld, setze, titel, merke }: {
   b: Extract<Bedingung, { art: 'feld' }>; feld: Bedingungsfeld; setze: (b: Bedingung) => void;
-  titel: Record<string, string>; merke: (id: string, t: string) => void;
+  titel: Record<string, string>; merke: (id: string, text: string) => void;
 }) {
   const d = useDaten();
   const ops = OPERATOREN_JE_ART[feld.art];
@@ -486,7 +484,7 @@ export function FeldBedingung({ b, feld, setze, titel, merke }: {
 
   return (
     <>
-      <select aria-label="Vergleich" value={b.op} onChange={(x) => wechsleOp(x.target.value as Operator)}>
+      <select aria-label={t('werkbank.sichten.vergleich')} value={b.op} onChange={(x) => wechsleOp(x.target.value as Operator)}>
         {ops.map((o) => <option key={o} value={o}>{OPERATOREN[o]}</option>)}
       </select>
       {!ohneWert && b.op === 'imZeitraum' && <Zeitraum w={b.wert} setze={(w) => setze({ ...b, wert: w })} />}
@@ -494,7 +492,7 @@ export function FeldBedingung({ b, feld, setze, titel, merke }: {
       {!ohneWert && b.op === 'zeigtAuf' && <Verweisziel feld={feld} w={b.wert} setze={(w) => setze({ ...b, wert: w })} titel={titel} merke={merke} system={zielSystem(feld)} />}
       {!ohneWert && !['imZeitraum', 'einerVon', 'zeigtAuf'].includes(b.op) && <>
         <Einzelwert feld={feld} w={b.wert} setze={(w) => setze({ ...b, wert: w })} />
-        {zwei && <><span className="leise">und</span><Einzelwert feld={feld} w={b.bis} setze={(w) => setze({ ...b, bis: w })} /></>}
+        {zwei && <><span className="leise">{t('werkbank.sichten.und')}</span><Einzelwert feld={feld} w={b.bis} setze={(w) => setze({ ...b, bis: w })} /></>}
       </>}
     </>
   );
@@ -507,17 +505,17 @@ function Einzelwert({ feld, w, setze }: { feld: Bedingungsfeld; w?: WertAngabe; 
     const art: WertArt = w?.art === 'fest' ? 'fest' : 'heute';
     return (
       <span className="wertgruppe">
-        <select aria-label="Art des Werts" value={art} onChange={(x) => setze(x.target.value === 'fest' ? { art: 'fest', wert: new Date().toISOString().slice(0, 10) } : { art: 'heute', versatz: 0, einheit: 'tage' })}>
-          <option value="heute">{DYNAMISCH.heute}</option><option value="fest">festes Datum</option>
+        <select aria-label={t('werkbank.sichten.art-des-werts')} value={art} onChange={(x) => setze(x.target.value === 'fest' ? { art: 'fest', wert: new Date().toISOString().slice(0, 10) } : { art: 'heute', versatz: 0, einheit: 'tage' })}>
+          <option value="heute">{DYNAMISCH.heute}</option><option value="fest">{t('werkbank.sichten.festes-datum')}</option>
         </select>
         {w?.art === 'fest'
-          ? <input aria-label="Datum" type="date" value={String(w.wert)} onChange={(x) => setze({ art: 'fest', wert: x.target.value })} />
+          ? <input aria-label={t('werkbank.sichten.datum')} type="date" value={String(w.wert)} onChange={(x) => setze({ art: 'fest', wert: x.target.value })} />
           : <Versatz w={w?.art === 'heute' ? w : { art: 'heute' }} setze={setze} einheiten />}
       </span>
     );
   }
   const v = w?.art === 'fest' ? w.wert : '';
-  return <input aria-label="Wert" className={zahl ? 'kurz' : ''} inputMode={zahl ? 'decimal' : undefined} value={String(v)}
+  return <input aria-label={t('werkbank.sichten.wert')} className={zahl ? 'kurz' : ''} inputMode={zahl ? 'decimal' : undefined} value={String(v)}
     onChange={(x) => setze({ art: 'fest', wert: zahl ? (x.target.value === '' ? '' : Number(x.target.value.replace(',', '.'))) as number : x.target.value })} />;
 }
 
@@ -525,13 +523,13 @@ function Versatz({ w, setze, einheiten }: { w: WertAngabe; setze: (w: WertAngabe
   const versatz = 'versatz' in w ? Number(w.versatz) || 0 : 0;
   return (
     <>
-      <select aria-label="Richtung" value={versatz < 0 ? '-' : '+'} onChange={(x) => setze({ ...w, versatz: Math.abs(versatz) * (x.target.value === '-' ? -1 : 1) } as WertAngabe)}>
+      <select aria-label={t('werkbank.sichten.richtung')} value={versatz < 0 ? '-' : '+'} onChange={(x) => setze({ ...w, versatz: Math.abs(versatz) * (x.target.value === '-' ? -1 : 1) } as WertAngabe)}>
         <option value="+">+</option><option value="-">−</option>
       </select>
-      <input aria-label="Anzahl" type="number" min={0} className="kurz" value={Math.abs(versatz)} onChange={(x) => setze({ ...w, versatz: Math.abs(Math.trunc(Number(x.target.value) || 0)) * (versatz < 0 ? -1 : 1) } as WertAngabe)} />
+      <input aria-label={t('werkbank.sichten.anzahl')} type="number" min={0} className="kurz" value={Math.abs(versatz)} onChange={(x) => setze({ ...w, versatz: Math.abs(Math.trunc(Number(x.target.value) || 0)) * (versatz < 0 ? -1 : 1) } as WertAngabe)} />
       {einheiten && w.art === 'heute' && (
-        <select aria-label="Einheit" value={w.einheit ?? 'tage'} onChange={(x) => setze({ ...w, einheit: x.target.value as Einheit })}>
-          {Object.entries(EINHEITEN).map(([k, t]) => <option key={k} value={k}>{t}</option>)}
+        <select aria-label={t('werkbank.sichten.einheit')} value={w.einheit ?? 'tage'} onChange={(x) => setze({ ...w, einheit: x.target.value as Einheit })}>
+          {Object.entries(EINHEITEN).map(([k, eintrag]) => <option key={k} value={k}>{eintrag}</option>)}
         </select>
       )}
     </>
@@ -543,10 +541,10 @@ function Zeitraum({ w, setze }: { w?: WertAngabe; setze: (w: WertAngabe) => void
   const aktuell: WertAngabe = w && (w.art === 'jahr' || w.art === 'monat') ? w : { art: 'jahr', versatz: 0 };
   return (
     <span className="wertgruppe">
-      <select aria-label="Zeitraum" value={art} onChange={(x) => setze({ art: x.target.value as 'jahr' | 'monat', versatz: 'versatz' in aktuell ? aktuell.versatz : 0 })}>
-        <option value="jahr">Jahr</option><option value="monat">Monat</option>
+      <select aria-label={t('werkbank.sichten.zeitraum')} value={art} onChange={(x) => setze({ art: x.target.value as 'jahr' | 'monat', versatz: 'versatz' in aktuell ? aktuell.versatz : 0 })}>
+        <option value="jahr">{t('werkbank.sichten.jahr')}</option><option value="monat">{t('werkbank.sichten.monat')}</option>
       </select>
-      <span className="leise klein">aktuell</span>
+      <span className="leise klein">{t('werkbank.sichten.aktuell')}</span>
       <Versatz w={aktuell} setze={setze} />
     </span>
   );
@@ -566,17 +564,17 @@ function Auswahl({ feld, w, setze }: { feld: Bedingungsfeld; w?: WertAngabe; set
 
 /** Ziel eines Verweises: bestimmte Mappen, aktueller Benutzer (bei Benutzer-Verweisen) oder seine Rollen (bei Rollen-Verweisen). */
 function Verweisziel({ feld, w, setze, titel, merke, system }: {
-  feld: Bedingungsfeld; w?: WertAngabe; setze: (w: WertAngabe) => void; titel: Record<string, string>; merke: (id: string, t: string) => void; system: string | null;
+  feld: Bedingungsfeld; w?: WertAngabe; setze: (w: WertAngabe) => void; titel: Record<string, string>; merke: (id: string, text: string) => void; system: string | null;
 }) {
   const d = useDaten();
   const person = feld.art === 'person';
   const art = w?.art ?? 'fest';
   const gewaehlt = w?.art === 'fest' && Array.isArray(w.wert) ? w.wert : [];
-  const zielTyp = person ? d.typen.find((t) => t.system === 'benutzer')?.id : feld.feld?.zielTyp;
+  const zielTyp = person ? d.typen.find((mappentyp) => mappentyp.system === 'benutzer')?.id : feld.feld?.zielTyp;
   return (
     <span className="wertgruppe umbruch">
-      <select aria-label="Ziel" value={art} onChange={(x) => setze(x.target.value === 'fest' ? { art: 'fest', wert: [] } : { art: x.target.value as 'ich' | 'meineRollen' })}>
-        <option value="fest">{person ? 'bestimmter Benutzer' : 'bestimmte Mappe'}</option>
+      <select aria-label={t('werkbank.sichten.ziel')} value={art} onChange={(x) => setze(x.target.value === 'fest' ? { art: 'fest', wert: [] } : { art: x.target.value as 'ich' | 'meineRollen' })}>
+        <option value="fest">{person ? t('werkbank.sichten.bestimmter-benutzer') : t('werkbank.sichten.bestimmte-mappe')}</option>
         {(person || system === 'benutzer') && <option value="ich">{DYNAMISCH.ich}</option>}
         {!person && system === 'rolle' && <option value="meineRollen">{DYNAMISCH.meineRollen}</option>}
       </select>
@@ -585,7 +583,7 @@ function Verweisziel({ feld, w, setze, titel, merke, system }: {
   );
 }
 
-export function MappenSuche({ typId, gewaehlt, titel, merke, setze }: { typId: string; gewaehlt: string[]; titel: Record<string, string>; merke: (id: string, t: string) => void; setze: (ids: string[]) => void }) {
+export function MappenSuche({ typId, gewaehlt, titel, merke, setze }: { typId: string; gewaehlt: string[]; titel: Record<string, string>; merke: (id: string, text: string) => void; setze: (ids: string[]) => void }) {
   const [eingabe, setEingabe] = useState('');
   const [treffer, setTreffer] = useState<Mappe[]>([]);
   const fehlend = gewaehlt.filter((x) => !titel[x]).join(',');
@@ -595,14 +593,14 @@ export function MappenSuche({ typId, gewaehlt, titel, merke, setze }: { typId: s
   useEffect(() => {
     if (!eingabe.trim()) { setTreffer([]); return; }
     let aktuell = true;
-    const t = setTimeout(() => api.seite(`typ:${typId}`, 0, 8, eingabe.trim()).then((s) => aktuell && setTreffer(s.mappen)).catch(() => {}), 200);
-    return () => { aktuell = false; clearTimeout(t); };
+    const timer = setTimeout(() => api.seite(`typ:${typId}`, 0, 8, eingabe.trim()).then((s) => aktuell && setTreffer(s.mappen)).catch(() => {}), 200);
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [eingabe, typId]);
   return (
     <span className="mappensuche">
-      {gewaehlt.map((x) => <span key={x} className="chip">{titel[x] ?? '…'} <button type="button" className="textknopf klein" aria-label="entfernen" onClick={() => setze(gewaehlt.filter((y) => y !== x))}>×</button></span>)}
+      {gewaehlt.map((x) => <span key={x} className="chip">{titel[x] ?? '…'} <button type="button" className="textknopf klein" aria-label={t('werkbank.sichten.entfernen-2')} onClick={() => setze(gewaehlt.filter((y) => y !== x))}>×</button></span>)}
       <span className="wahl">
-        <input aria-label="Mappe suchen" placeholder="suchen …" value={eingabe} onChange={(x) => setEingabe(x.target.value)} />
+        <input aria-label={t('werkbank.sichten.mappe-suchen')} placeholder={t('werkbank.sichten.suchen')} value={eingabe} onChange={(x) => setEingabe(x.target.value)} />
         {treffer.length > 0 && (
           <span className="wahlliste" role="listbox">
             {treffer.filter((m) => !gewaehlt.includes(m.id)).map((m) => (
@@ -628,19 +626,19 @@ export function AuswahlFilter({ ziel, bedingungen, setze, eigeneFelder = [], fel
   const d = useDaten();
   const felder = useMemo(() => bedingungsfelder([ziel]), [ziel]);
   const [titel, setTitel] = useState<Record<string, string>>({});
-  const merke = (mid: string, t: string) => setTitel((x) => ({ ...x, [mid]: t }));
+  const merke = (mid: string, text: string) => setTitel((x) => ({ ...x, [mid]: text }));
   const [zahl, setZahl] = useState<{ passen: number; gesamt: number } | null>(null);
   const schluessel = JSON.stringify(bedingungen);
   useEffect(() => {
     let aktuell = true;
-    const t = setTimeout(() => { api.auswahlZaehlen(ziel.id, bedingungen).then((z) => aktuell && setZahl(z)).catch(() => aktuell && setZahl(null)); }, 300);
-    return () => { aktuell = false; clearTimeout(t); };
+    const timer = setTimeout(() => { api.auswahlZaehlen(ziel.id, bedingungen).then((z) => aktuell && setZahl(z)).catch(() => aktuell && setZahl(null)); }, 300);
+    return () => { aktuell = false; clearTimeout(timer); };
   }, [ziel.id, schluessel]); // eslint-disable-line react-hooks/exhaustive-deps
   const neu = (f: Bedingungsfeld): Feldbedingung => ({ art: 'feld', feld: f.key, op: OPERATOREN_JE_ART[f.art][0] });
   const aendere = (i: number, b: Bedingung) => { if (b.art === 'feld') setze(bedingungen.map((x, j) => (j === i ? b : x))); };
   return (
     <div className="auswahlfilter">
-      <p className="klein"><strong>Nur Mappen, die …</strong> <span className="leise">alle Bedingungen erfüllen; leer: alle „{ziel.name}“. <Hilfe ort="werkbank.auswahlfilter" /></span></p>
+      <p className="klein"><strong>{t('werkbank.sichten.nur-mappen-die')}</strong> <span className="leise">{tn('werkbank.sichten.alle-bedingungen-erfuellen-leer', { name: ziel.name, hilfe: <Hilfe ort="werkbank.auswahlfilter" /> })}</span></p>
       {bedingungen.length > 0 && (
         <ol className="bedingungen">
           {bedingungen.map((b, i) => {
@@ -651,38 +649,38 @@ export function AuswahlFilter({ ziel, bedingungen, setze, eigeneFelder = [], fel
             return (
               <li key={i} className={problem ? 'fehlerhaft' : ''}>
                 <div className="bedingungszeile">
-                  <select aria-label="Feld des Zieltyps" value={feld ? b.feld : ''} onChange={(x) => { const f = felder.find((y) => y.key === x.target.value); if (f) aendere(i, neu(f)); }}>
-                    {!feld && <option value="">– {b.feld} (fehlt) –</option>}
-                    <optgroup label="Felder">{felder.filter((f) => !f.key.startsWith('_')).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</optgroup>
-                    <optgroup label="Systemwerte">{felder.filter((f) => f.key.startsWith('_')).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</optgroup>
+                  <select aria-label={t('werkbank.sichten.feld-des-zieltyps')} value={feld ? b.feld : ''} onChange={(x) => { const f = felder.find((y) => y.key === x.target.value); if (f) aendere(i, neu(f)); }}>
+                    {!feld && <option value="">{t('werkbank.sichten.fehlt-4', { feld: b.feld })}</option>}
+                    <optgroup label={t('werkbank.sichten.felder')}>{felder.filter((f) => !f.key.startsWith('_')).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</optgroup>
+                    <optgroup label={t('werkbank.sichten.systemwerte')}>{felder.filter((f) => f.key.startsWith('_')).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</optgroup>
                   </select>
                   {feld && (eigen === null
                     ? <FeldBedingung b={b} feld={feld} setze={(n) => aendere(i, n)} titel={titel} merke={merke} />
                     : <>
-                        <select aria-label="Vergleich" value={b.op} onChange={(x) => aendere(i, { ...b, op: x.target.value as Operator })}>
+                        <select aria-label={t('werkbank.sichten.vergleich')} value={b.op} onChange={(x) => aendere(i, { ...b, op: x.target.value as Operator })}>
                           {OPERATOREN_JE_ART[feld.art].filter((o) => OPS_EIGENES_FELD.includes(o)).map((o) => <option key={o} value={o}>{OPERATOREN[o]}</option>)}
                         </select>
-                        <select aria-label="Feld dieser Mappe" value={eigen} onChange={(x) => aendere(i, { ...b, wert: { art: 'eigenesFeld', feld: x.target.value } })}>
-                          {!moeglich.some((m) => m.key === eigen) && <option value={eigen}>{eigeneNamen[eigen] ?? eigen} (passt nicht)</option>}
-                          {moeglich.map((m) => <option key={m.key} value={m.key}>{m.label} dieser Mappe</option>)}
+                        <select aria-label={t('werkbank.sichten.feld-dieser-mappe')} value={eigen} onChange={(x) => aendere(i, { ...b, wert: { art: 'eigenesFeld', feld: x.target.value } })}>
+                          {!moeglich.some((m) => m.key === eigen) && <option value={eigen}>{t('werkbank.sichten.passt-nicht', { wert: eigeneNamen[eigen] ?? eigen })}</option>}
+                          {moeglich.map((m) => <option key={m.key} value={m.key}>{t('werkbank.sichten.dieser-mappe', { label: m.label })}</option>)}
                         </select>
                       </>)}
                   {feld && (moeglich.length > 0 || eigen !== null) && (
                     <label className="haken klein"><input type="checkbox" checked={eigen !== null} onChange={(x) => aendere(i, x.target.checked
                       ? { art: 'feld', feld: b.feld, op: OPS_EIGENES_FELD.includes(b.op) ? b.op : (OPERATOREN_JE_ART[feld.art].find((o) => OPS_EIGENES_FELD.includes(o)) ?? b.op), wert: { art: 'eigenesFeld', feld: moeglich[0]?.key ?? '' } }
-                      : neu(feld))} /><span>Wert aus dieser Mappe</span></label>
+                      : neu(feld))} /><span>{t('werkbank.sichten.wert-aus-dieser-mappe')}</span></label>
                   )}
-                  <button type="button" className="textknopf gefahr klein" onClick={() => setze(bedingungen.filter((_, j) => j !== i))}>Entfernen</button>
+                  <button type="button" className="textknopf gefahr klein" onClick={() => setze(bedingungen.filter((_, j) => j !== i))}>{t('werkbank.sichten.entfernen')}</button>
                 </div>
-                <p className={problem ? 'fehlertext klein' : 'leise klein'}>{problem ?? beschreibeBedingung(b, [ziel], (mid) => titel[mid] ?? d.person(mid), eigeneNamen)}{eigen && !problem && <span> – ist dieses Feld leer, gilt die Bedingung nicht.</span>}</p>
+                <p className={problem ? 'fehlertext klein' : 'leise klein'}>{problem ?? beschreibeBedingung(b, [ziel], (mid) => titel[mid] ?? d.person(mid), eigeneNamen)}{eigen && !problem && <span> {' '}{t('werkbank.sichten.ist-dieses-feld-leer')}</span>}</p>
               </li>
             );
           })}
         </ol>
       )}
       <div className="zeile">
-        <button type="button" className="knopf klein" disabled={!felder.length} onClick={() => setze([...bedingungen, neu(felder[0])])}>+ Bedingung</button>
-        {zahl && bedingungen.length > 0 && <span className="leise klein">{zahl.passen.toLocaleString('de-DE')} von {zahl.gesamt.toLocaleString('de-DE')} „{ziel.name}“ passen</span>}
+        <button type="button" className="knopf klein" disabled={!felder.length} onClick={() => setze([...bedingungen, neu(felder[0])])}>{t('werkbank.sichten.bedingung')}</button>
+        {zahl && bedingungen.length > 0 && <span className="leise klein">{t('werkbank.sichten.von-passen', { passen: zahl.passen.toLocaleString('de-DE'), gesamt: zahl.gesamt.toLocaleString('de-DE'), name: ziel.name })}</span>}
       </div>
     </div>
   );

@@ -27,13 +27,13 @@ function useBekannt() {
  */
 export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; wert: string; setze: (id: string) => void; mitKonten?: boolean }) {
   const d = useDaten();
-  const ziel = d.typen.find((t) => t.system === 'benutzer');
+  const ziel = d.typen.find((mappentyp) => mappentyp.system === 'benutzer');
   const { bekannt, merke } = useBekannt();
   const [konten, setKonten] = useState<Benutzer[]>([]);
   const [ohne, setOhne] = useState<Systemkonto[]>([]);
   useEffect(() => { api.benutzer().then(setKonten).catch(() => {}); }, []);
   useEffect(() => { if (mitKonten) api.systemkonten().then(setOhne).catch(() => {}); }, [mitKonten]);
-  if (!ziel) return <p className="leise klein">Der Mappentyp Benutzer fehlt.</p>;
+  if (!ziel) return <p className="leise klein">{t('werkbank.testlaufwahl.der-mappentyp-benutzer-fehlt')}</p>;
   const konto = konten.find((k) => k.id === wert);
   const sonder = ohne.find((k) => k.id === wert);
   const name = (k: Systemkonto) => (k.rolle === 'paket' ? t('werkbank.testlauf.konto.paket', { name: k.paket ?? k.name }) : k.name);
@@ -41,7 +41,7 @@ export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; w
   const pakete = ohne.filter((k) => k.rolle === 'paket');
   return (
     <div className="feld">
-      <label htmlFor={sonder ? `${id}-konto` : id}>Benutzer</label>
+      <label htmlFor={sonder ? `${id}-konto` : id}>{t('werkbank.testlaufwahl.benutzer')}</label>
       {/* Systemkonten als eingeklappte Gruppe oben (#817), wie in Werkbank → Benutzer. */}
       {mitKonten && ohne.length > 0 && !sonder && (
         <SystemkontenGruppe liste={ohne} auf={d.einstellungen[SYSTEMKONTEN_AUF] === true} setzeAuf={(x) => d.setzeEinstellung(SYSTEMKONTEN_AUF, x || null)} id={`${id}-konten`} kinder={
@@ -60,7 +60,7 @@ export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; w
             <button type="button" className="textknopf klein" aria-label={t('werkbank.testlauf.konto.entfernen', { name: name(sonder) })} onClick={() => setze('')}>×</button></span></div>
         : <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
             setze={(v) => setze(typeof v === 'string' ? v : '')} />}
-      {konto && !konto.aktiv && <span className="chip klein">deaktiviert</span>}
+      {konto && !konto.aktiv && <span className="chip klein">{t('werkbank.testlaufwahl.deaktiviert')}</span>}
     </div>
   );
 }
@@ -73,7 +73,7 @@ export function TestMappeWahl({ id, typId, wert, setze }: { id: string; typId: s
   if (!ziel) return null;
   return (
     <div className="feld">
-      <label htmlFor={id}>Testmappe</label>
+      <label htmlFor={id}>{t('werkbank.testlaufwahl.testmappe')}</label>
       <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
         platzhalter={t('werkbank.testlauf.mappe.suchen')} setze={(v) => setze(typeof v === 'string' ? v : '')} />
     </div>

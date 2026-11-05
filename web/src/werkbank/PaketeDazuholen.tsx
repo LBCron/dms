@@ -5,7 +5,7 @@ import { Hilfe } from '../Hilfe';
 import { Symbol } from '../Symbol';
 import { HerkunftZeile } from './Herkunft';
 import { PaketAblauf, PaketApiKontext, sammelStand, type PaketVorgabe, type PaketWahl } from './PaketAblauf';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /**
  * Pakete dazuholen (#460): Auswahl aus dem offiziellen Katalog mit Abhängigkeiten und Ergänzungen (#405, z. B. weitere
@@ -54,7 +54,7 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
         // Nur der offizielle Katalog – und erst jetzt, weil der Schritt angezeigt wird (keine Verbindung ohne Anlass).
         const k = (await pa.katalog()).kataloge.find((x) => x.offiziell);
         if (!aktuell) return;
-        if (!k?.katalog) throw new Error(k?.fehler ?? 'Der Katalog lässt sich nicht abrufen.');
+        if (!k?.katalog) throw new Error(k?.fehler ?? t('werkbank.paketedazuholen.der-katalog-laesst-sich'));
         setKatalog(k.katalog);
       } catch (e) { if (aktuell) setFehler((e as Error).message); }
     })();
@@ -67,33 +67,33 @@ export function PaketeDazuholen({ weiter, ueberspringen, geaendert, erneut, zuru
   if (fehler) return (
     <>
       <div className="hinweis warn" role="status">
-        <p><strong>Der Paketkatalog ist gerade nicht erreichbar.</strong> Ohne Internet fehlen die Pakete – etwa die Texterkennung, ohne die gescannte Dokumente nicht durchsuchbar sind.</p>
+        <p>{tn('werkbank.paketedazuholen.ohne-internet-fehlen-die', { b: <strong>{t('werkbank.paketedazuholen.der-paketkatalog-ist-gerade')}</strong> })}</p>
         <p className="leise klein">{fehler}</p>
       </div>
       {/* Im Assistenten gibt es noch keinen Administrator, der eine Sammeldatei hochladen dürfte (#804). */}
-      {sammeln ? <p className="leise">{t('einrichtung.pakete.offline')}</p> : <section className="stapel" aria-label="Ohne Internet">
-        <h2 className="h3">Ohne Internet: Sammeldatei hochladen</h2>
-        <p className="leise">Stell die Pakete an einem Gerät mit Internet auf der <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>Katalog-Webseite <Symbol name="extern" /></a> zusammen (Texterkennung und Benachrichtigungen sind dort vorausgewählt) und lade die heruntergeladene Datei hier hoch. Oder überspring den Schritt und hol die Pakete später unter Werkbank → Pakete. <Hilfe ort="werkbank.pakete.sammeldatei" /></p>
+      {sammeln ? <p className="leise">{t('einrichtung.pakete.offline')}</p> : <section className="stapel" aria-label={t('werkbank.paketedazuholen.ohne-internet')}>
+        <h2 className="h3">{t('werkbank.paketedazuholen.ohne-internet-sammeldatei-hochladen')}</h2>
+        <p className="leise">{tn('werkbank.paketedazuholen.stell-die-pakete-an', { link: <a className="verweis" href={sammelSeiteMitVersion(stand?.dms ?? '')} target="_blank" rel={KATALOG_LINK_REL}>{tn('werkbank.paketedazuholen.katalog-webseite', { symbol: <Symbol name="extern" /> })}</a>, hilfe: <Hilfe ort="werkbank.pakete.sammeldatei" /> })}</p>
         <p className="leise klein">{t('pakete.katalog.hinweis')}</p>
         {stand && <SammeldateiWahl geladen={(x, datei) => setSammel({ s: x, datei })} />}
       </section>}
       <div className="knoepfe">
-        <button type="button" className="knopf" onClick={ueberspringen}>Überspringen</button>
-        <button type="button" className="knopf" onClick={() => setVersuch((n) => n + 1)}>Nochmal versuchen</button>
+        <button type="button" className="knopf" onClick={ueberspringen}>{t('werkbank.paketedazuholen.ueberspringen')}</button>
+        <button type="button" className="knopf" onClick={() => setVersuch((n) => n + 1)}>{t('werkbank.paketedazuholen.nochmal-versuchen')}</button>
       </div>
     </>
   );
-  if (!katalog || !stand) return <p className="leise">Frage den offiziellen Paketkatalog ab …</p>;
-  const zurueckKnopf = zurueck ? <button type="button" className="knopf" onClick={zurueck}><Symbol name="pfeil-links" /> Zurück</button> : null;
+  if (!katalog || !stand) return <p className="leise">{t('werkbank.paketedazuholen.frage-den-offiziellen-paketkatalog')}</p>;
+  const zurueckKnopf = zurueck ? <button type="button" className="knopf" onClick={zurueck}>{tn('werkbank.paketedazuholen.zurueck', { symbol: <Symbol name="pfeil-links" /> })}</button> : null;
   const schonDa = erneut && stand.installiert.length > 0
-    ? <div className="hinweis gut klein" role="status"><p><strong>Schon installiert:</strong> {stand.installiert.map((p) => p.name).join(', ')}. Wähle weitere Pakete oder versuch ein gescheitertes erneut.</p></div> : null;
+    ? <div className="hinweis gut klein" role="status"><p><strong>{t('werkbank.paketedazuholen.schon-installiert')}</strong> {stand.installiert.map((p) => p.name).join(', ')}{t('werkbank.paketedazuholen.waehle-weitere-pakete-oder')}</p></div> : null;
   // Vorauswahl: Texterkennung, wenn sie hier passt und noch fehlt; empfohlene oben, sonst wie im Katalog nach Namen.
   const sortiert: Katalog = { ...katalog, pakete: [...katalog.pakete].sort((a, b) => Number(VORAUSWAHL.includes(b.id)) - Number(VORAUSWAHL.includes(a.id))) };
   return (
     <>
       {schonDa}
       <PaketAblauf quelle={{ art: 'katalog', katalog: sortiert, dms: stand.dms, installiert: stand.installiert }} start={start ?? (erneut ? [] : VORAUSWAHL)} empfohlen={VORAUSWAHL} sammeln={sammeln} vorgabe={vorgabe}
-        aktionen={<>{zurueckKnopf}<button type="button" className="knopf" onClick={ueberspringen}>{erneut ? 'Weiter ohne weitere Pakete' : 'Überspringen'}</button></>}
+        aktionen={<>{zurueckKnopf}<button type="button" className="knopf" onClick={ueberspringen}>{erneut ? t('werkbank.paketedazuholen.weiter-ohne-weitere-pakete') : t('werkbank.paketedazuholen.ueberspringen')}</button></>}
         geaendert={geaendert} fertig={weiter} />
     </>
   );
@@ -112,15 +112,15 @@ export function SammeldateiWahl({ geladen, einzeln }: { geladen(s: Sammeldatei, 
       const r = await api.paketHochladen(f);
       if ('sammeldatei' in r) geladen(r.sammeldatei, f.name);
       else if (einzeln) einzeln(r, f.name);
-      else setFehler('Das ist ein einzelnes Paket, keine Sammeldatei. Einzelne Pakete lädst du unter Werkbank → Pakete → Expertenmodus hoch.');
+      else setFehler(t('werkbank.paketedazuholen.das-ist-ein-einzelnes'));
     } catch (e) { setFehler([(e as Error).message, ...(e instanceof ApiFehler ? e.gruende : [])].join(' ')); }
     finally { setLaedt(false); }
   }
   return (
     <div className="stapel">
       <label className="pd-datei">
-        <span className="knopf">{laedt ? 'Prüfe …' : 'Sammeldatei wählen …'}</span>
-        <input type="file" accept=".zip,application/zip" disabled={laedt} aria-label="Sammeldatei (.zip) hochladen" onChange={(e) => { void hochladen(e.target.files?.[0]); e.target.value = ''; }} />
+        <span className="knopf">{laedt ? t('werkbank.paketedazuholen.pruefe') : t('werkbank.paketedazuholen.sammeldatei-waehlen')}</span>
+        <input type="file" accept=".zip,application/zip" disabled={laedt} aria-label={t('werkbank.paketedazuholen.sammeldatei-zip-hochladen')} onChange={(e) => { void hochladen(e.target.files?.[0]); e.target.value = ''; }} />
       </label>
       {fehler && <p className="fehlertext klein" role="alert">{fehler}</p>}
     </div>
@@ -138,19 +138,18 @@ export function SammeldateiAnsicht({ s, datei, dms, installiert, fertig, abbrech
   const datum = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? iso || '–' : d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }); };
   const herkunftNoetig = s.pakete.some((p) => sammelStand(p).installierbar && p.vorschau.pruefung?.bestaetigen !== false);
   return (
-    <section className="blatt stapel" aria-label="Sammeldatei">
-      <h2 className="h3">Sammeldatei „{datei}“</h2>
+    <section className="blatt stapel" aria-label={t('werkbank.paketedazuholen.sammeldatei')}>
+      <h2 className="h3">{t('werkbank.paketedazuholen.sammeldatei-2', { datei })}</h2>
       <dl className="eigenschaften">
-        <dt>Zusammengestellt</dt><dd>{datum(s.datei.erstellt)}{s.datei.dms ? ` für Ablago ${s.datei.dms}` : ''} (dieser Installation: {dms})</dd>
-        <dt>Prüfwert der Datei</dt><dd><code className="pd-pruefwert" title={s.datei.sha256}>SHA-256 {s.datei.sha256}</code></dd>
+        <dt>{t('werkbank.paketedazuholen.zusammengestellt')}</dt><dd>{t('werkbank.paketedazuholen.dieser-installation', { datum: datum(s.datei.erstellt), wert: s.datei.dms ? t('werkbank.paketedazuholen.fuer-ablago', { dms: s.datei.dms }) : '', dms })}</dd>
+        <dt>{t('werkbank.paketedazuholen.pruefwert-der-datei')}</dt><dd><code className="pd-pruefwert" title={s.datei.sha256}>{t('werkbank.paketedazuholen.sha-256', { sha256: s.datei.sha256 })}</code></dd>
       </dl>
       <HerkunftZeile p={s.datei.pruefung} sammel />
-      <div className="hinweis gut klein"><p><strong>Geprüft:</strong> Jedes Archiv hat genau die Größe und Prüfsumme aus dem Verzeichnis der Sammeldatei, jedes Paket ist gültig, und es liegt nichts anderes darin.
-        {abgeglichen ? ' Alle Prüfsummen stimmen außerdem mit dem offiziellen Katalog überein.' : ' Mit dem offiziellen Katalog konnte Ablago sie nicht abgleichen (nicht abgerufen oder ohne Internet).'}</p></div>
+      <div className="hinweis gut klein"><p>{tn('werkbank.paketedazuholen.jedes-archiv-hat-genau', { b: <strong>{t('werkbank.paketedazuholen.geprueft')}</strong>, wert: abgeglichen ? t('werkbank.paketedazuholen.alle-pruefsummen-stimmen-ausserdem') : t('werkbank.paketedazuholen.mit-dem-offiziellen-katalog') })}</p></div>
       {!herkunftNoetig && <div className="hinweis gut klein"><p>{t('pakete.herkunft.sammel.ok')}</p></div>}
       {herkunftNoetig && s.datei.nichtImKatalog.length > 0 && <div className="hinweis info klein"><p>{t('pakete.herkunft.sammel.fehlen', { namen: s.datei.nichtImKatalog.join(', ') })}</p></div>}
       <PaketAblauf quelle={{ art: 'sammel', sammeldatei: s, dms, installiert }} start={s.pakete.filter((p) => p.gewaehlt).map((p) => p.upload)}
-        aktionen={<button type="button" className="textknopf" onClick={abbrechen}>Abbrechen</button>}
+        aktionen={<button type="button" className="textknopf" onClick={abbrechen}>{t('werkbank.paketedazuholen.abbrechen')}</button>}
         geaendert={geaendert} fertig={fertig} />
     </section>
   );

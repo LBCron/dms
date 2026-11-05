@@ -16,7 +16,7 @@ export function SelbstErstelltAnsicht({ id, konflikt, onGeaendert }: { id: strin
   const [fehler, setFehler] = useState<string>();
   useEffect(() => { setD(null); api.selbstErstelltDetail(id).then(setD, (e) => setFehler((e as Error).message)); }, [id]);
   if (fehler) return <div className="einspaltig"><div className="hinweis schlecht"><p>{fehler}</p></div></div>;
-  if (!d) return <div className="leer"><p>Lade …</p></div>;
+  if (!d) return <div className="leer"><p>{t('werkbank.selbsterstellt.lade')}</p></div>;
   const datum = (iso: string) => new Date(iso).toLocaleDateString('de-DE');
   async function ausListe() {
     if (!d) return;
@@ -51,11 +51,11 @@ export function SelbstErstelltAnsicht({ id, konflikt, onGeaendert }: { id: strin
       <section className="blatt">
         <h2 className="h3">{t('pakete.selbst.angaben')}</h2>
         <dl className="eigenschaften">
-          <dt>Id</dt><dd><code>{d.id}</code></dd>
-          <dt>Version</dt><dd>{d.version} · {datum(d.erstellt)}{d.von ? ` · ${d.von}` : ''}</dd>
-          <dt>Lizenz</dt><dd>{d.lizenz}</dd>
-          <dt>Nötige Ablago-Version</dt><dd>{d.dms}</dd>
-          <dt>Autor</dt><dd>{d.autor.name}{d.autor.github ? ` (@${d.autor.github})` : ''}</dd>
+          <dt>{t('werkbank.selbsterstellt.id')}</dt><dd><code>{d.id}</code></dd>
+          <dt>{t('werkbank.selbsterstellt.version')}</dt><dd>{d.version} · {datum(d.erstellt)}{d.von ? ` · ${d.von}` : ''}</dd>
+          <dt>{t('werkbank.selbsterstellt.lizenz')}</dt><dd>{d.lizenz}</dd>
+          <dt>{t('werkbank.selbsterstellt.noetige-ablago-version')}</dt><dd>{d.dms}</dd>
+          <dt>{t('werkbank.selbsterstellt.autor')}</dt><dd>{d.autor.name}{d.autor.github ? ` (@${d.autor.github})` : ''}</dd>
         </dl>
       </section>
       <section className="blatt">

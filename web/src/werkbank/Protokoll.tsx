@@ -4,7 +4,7 @@ import { useKonto } from '../konto';
 import { Link } from '../ort';
 import { Listenkopf } from '../Listenkopf';
 import { istWeg } from '../erreichbar';
-import { t } from '../sprache';
+import { t, tn } from '../sprache';
 
 /**
  * Protokoll in der Werkbank: Mitte die Einträge (neueste oben, mit Filtern und
@@ -13,10 +13,10 @@ import { t } from '../sprache';
  */
 const ANZEIGE_MAX = 2000;
 const STUFEN: Array<{ wert: Stufe; name: string }> = [
-  { wert: 'trace', name: 'Alles' }, { wert: 'debug', name: 'ab Debug' }, { wert: 'info', name: 'ab Info' },
-  { wert: 'warn', name: 'Warnungen und Fehler' }, { wert: 'error', name: 'nur Fehler' },
+  { wert: 'trace', name: t('werkbank.protokoll.alles') }, { wert: 'debug', name: t('werkbank.protokoll.ab-debug') }, { wert: 'info', name: t('werkbank.protokoll.ab-info') },
+  { wert: 'warn', name: t('werkbank.protokoll.warnungen-und-fehler') }, { wert: 'error', name: t('werkbank.protokoll.nur-fehler') },
 ];
-const STUFENNAME: Record<Stufe, string> = { trace: 'Trace', debug: 'Debug', info: 'Info', warn: 'Warnung', error: 'Fehler', fatal: 'Fatal' };
+const STUFENNAME: Record<Stufe, string> = { trace: t('werkbank.protokoll.trace'), debug: t('werkbank.protokoll.debug'), info: t('werkbank.protokoll.info'), warn: t('werkbank.protokoll.warnung'), error: t('werkbank.protokoll.fehler'), fatal: t('werkbank.protokoll.fatal') };
 const uhr = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const datumUhr = (iso: string) => new Date(iso).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'medium' });
 
@@ -36,7 +36,7 @@ export function useProtokoll(sichtbar = true) {
   const [fehler, setFehler] = useState<string>();
   const letzte = useRef(0);
   const [suche, setSuche] = useState('');
-  useEffect(() => { const t = setTimeout(() => setSuche(filter.suche.trim()), 250); return () => clearTimeout(t); }, [filter.suche]);
+  useEffect(() => { const timer = setTimeout(() => setSuche(filter.suche.trim()), 250); return () => clearTimeout(timer); }, [filter.suche]);
   const params = useMemo(() => ({ stufe: filter.stufe, modul: filter.modul, benutzer: filter.benutzer, anfrage: filter.anfrage, suche }), [filter.stufe, filter.modul, filter.benutzer, filter.anfrage, suche]);
 
   const laden = useCallback(async (nurNeue: boolean) => {
@@ -52,8 +52,8 @@ export function useProtokoll(sichtbar = true) {
   useEffect(() => { if (sichtbar) void laden(false); }, [laden, sichtbar]);
   useEffect(() => {
     if (!live || !sichtbar) return;
-    const t = setInterval(() => { if (!istWeg()) void laden(true); }, 2000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => { if (!istWeg()) void laden(true); }, 2000);
+    return () => clearInterval(timer);
   }, [live, laden, sichtbar]);
 
   return { filter, setFilter, eintraege, module, jeModul, debug, setDebug, gespeichert, live, setLive, fehler, neu: () => laden(false) };
@@ -66,21 +66,21 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
   const benutzer = useMemo(() => [...new Set(p.eintraege.map((e) => e.benutzer).filter(Boolean) as string[])].sort(), [p.eintraege]);
   return (
     <>
-      <Listenkopf titel="Protokoll" hilfe="werkbank.protokoll" beschreibung={<>Letzte 24 Stunden, höchstens 10.000 Einträge ({p.gespeichert.toLocaleString('de-DE')} gespeichert). Neueste oben.</>} />
+      <Listenkopf titel={t('werkbank.protokoll.protokoll')} hilfe="werkbank.protokoll" beschreibung={<>{t('werkbank.protokoll.letzte-24-stunden-hoechstens', { gespeichert: p.gespeichert.toLocaleString('de-DE') })}</>} />
       <div className="protokollfilter">
-        <label><span className="sr">Stufe</span>
+        <label><span className="sr">{t('werkbank.protokoll.stufe')}</span>
           <select value={f.stufe} onChange={(e) => setze({ stufe: e.target.value as Stufe })}>{STUFEN.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}</select></label>
-        <label><span className="sr">Modul</span>
-          <select value={f.modul} onChange={(e) => setze({ modul: e.target.value })}><option value="">Alle Module</option>{p.module.map((m) => <option key={m} value={m}>{modulName(m)}{p.jeModul[m] ? '' : ` ${t('werkbank.protokoll.modul.leer')}`}</option>)}</select></label>
-        <label><span className="sr">Benutzer</span>
-          <select value={f.benutzer} onChange={(e) => setze({ benutzer: e.target.value })}><option value="">Alle Benutzer</option>{benutzer.map((b) => <option key={b}>{b}</option>)}{f.benutzer && !benutzer.includes(f.benutzer) && <option>{f.benutzer}</option>}</select></label>
-        <label className="suche"><span className="sr">Text</span><input type="search" placeholder="Text …" value={f.suche} onChange={(e) => setze({ suche: e.target.value })} /></label>
-        <label className="haken klein"><input type="checkbox" checked={p.live} onChange={(e) => p.setLive(e.target.checked)} /><span>Live</span></label>
+        <label><span className="sr">{t('werkbank.protokoll.modul')}</span>
+          <select value={f.modul} onChange={(e) => setze({ modul: e.target.value })}><option value="">{t('werkbank.protokoll.alle-module')}</option>{p.module.map((m) => <option key={m} value={m}>{modulName(m)}{p.jeModul[m] ? '' : ` ${t('werkbank.protokoll.modul.leer')}`}</option>)}</select></label>
+        <label><span className="sr">{t('werkbank.protokoll.benutzer')}</span>
+          <select value={f.benutzer} onChange={(e) => setze({ benutzer: e.target.value })}><option value="">{t('werkbank.protokoll.alle-benutzer')}</option>{benutzer.map((b) => <option key={b}>{b}</option>)}{f.benutzer && !benutzer.includes(f.benutzer) && <option>{f.benutzer}</option>}</select></label>
+        <label className="suche"><span className="sr">{t('werkbank.protokoll.text')}</span><input type="search" placeholder={t('werkbank.protokoll.text-2')} value={f.suche} onChange={(e) => setze({ suche: e.target.value })} /></label>
+        <label className="haken klein"><input type="checkbox" checked={p.live} onChange={(e) => p.setLive(e.target.checked)} /><span>{t('werkbank.protokoll.live')}</span></label>
       </div>
-      {f.anfrage && <div className="hinweis info"><p>Nur Anfrage <span className="mono">{f.anfrage}</span></p><button className="textknopf" onClick={() => setze({ anfrage: '' })}>Alle zeigen</button></div>}
+      {f.anfrage && <div className="hinweis info"><p>{tn('werkbank.protokoll.nur-anfrage', { span: <span className="mono">{f.anfrage}</span> })}</p><button className="textknopf" onClick={() => setze({ anfrage: '' })}>{t('werkbank.protokoll.alle-zeigen')}</button></div>}
       {p.fehler && <div className="hinweis schlecht"><p>{p.fehler}</p></div>}
       {!p.eintraege.length
-        ? <p className="leise leerliste">Keine Einträge{f.modul || f.benutzer || f.suche ? ' für diesen Filter' : ''}.</p>
+        ? <p className="leise leerliste">{t('werkbank.protokoll.keine-eintraege', { wert: f.modul || f.benutzer || f.suche ? t('werkbank.protokoll.fuer-diesen-filter') : '' })}</p>
         : <ul className="mappenliste protokoll">
             {p.eintraege.map((e) => (
               <li key={e.nr}>
@@ -99,27 +99,27 @@ export function ProtokollListe({ p, offen }: { p: ProtokollZustand; offen?: stri
 export function ProtokollDetail({ p, nr }: { p: ProtokollZustand; nr?: string }) {
   const e = nr ? p.eintraege.find((x) => String(x.nr) === nr) : undefined;
   const [kopiert, setKopiert] = useState(false);
-  if (nr && !e) return <div className="leer"><p>Dieser Eintrag ist nicht (mehr) in der Liste.</p><Link to="/werkbank/protokoll" className="verweis">Zum Debug-Modus</Link></div>;
+  if (nr && !e) return <div className="leer"><p>{t('werkbank.protokoll.dieser-eintrag-ist-nicht')}</p><Link to="/werkbank/protokoll" className="verweis">{t('werkbank.protokoll.zum-debug-modus')}</Link></div>;
   if (!e) return <><DebugPanel p={p} /><ImVerwaltungsmodus /></>;
   const text = JSON.stringify(e, null, 2);
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Protokolleintrag {e.nr}</p>
+        <p className="ueber">{t('werkbank.protokoll.protokolleintrag', { nr: e.nr })}</p>
         <h1>{e.text}</h1>
         <dl className="index">
-          <div><dt>Zeit</dt><dd>{datumUhr(e.zeit)}</dd></div>
-          <div><dt>Stufe</dt><dd><span className={`chip stufe-${e.stufe}`}>{STUFENNAME[e.stufe]}</span></dd></div>
-          <div><dt>Modul</dt><dd>{modulName(e.modul)} <span className="mono leise klein">{e.modul}</span></dd></div>
-          {e.benutzer && <div><dt>Benutzer</dt><dd>{e.benutzer}</dd></div>}
-          {e.anfrage && <div><dt>Anfrage</dt><dd className="mono">{e.anfrage}</dd></div>}
+          <div><dt>{t('werkbank.protokoll.zeit')}</dt><dd>{datumUhr(e.zeit)}</dd></div>
+          <div><dt>{t('werkbank.protokoll.stufe')}</dt><dd><span className={`chip stufe-${e.stufe}`}>{STUFENNAME[e.stufe]}</span></dd></div>
+          <div><dt>{t('werkbank.protokoll.modul')}</dt><dd>{modulName(e.modul)} <span className="mono leise klein">{e.modul}</span></dd></div>
+          {e.benutzer && <div><dt>{t('werkbank.protokoll.benutzer')}</dt><dd>{e.benutzer}</dd></div>}
+          {e.anfrage && <div><dt>{t('werkbank.protokoll.anfrage')}</dt><dd className="mono">{e.anfrage}</dd></div>}
         </dl>
       </div>
-      {e.anfrage && <p><button type="button" className="textknopf" onClick={() => p.setFilter({ stufe: 'trace', modul: '', benutzer: '', anfrage: e.anfrage!, suche: '' })}>Alle Einträge dieser Anfrage zeigen</button></p>}
-      {e.daten && <div className="blatt"><h2 className="h3">Daten</h2><pre className="protokolldaten">{Object.entries(e.daten).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v, null, 2)}`).join('\n')}</pre></div>}
+      {e.anfrage && <p><button type="button" className="textknopf" onClick={() => p.setFilter({ stufe: 'trace', modul: '', benutzer: '', anfrage: e.anfrage!, suche: '' })}>{t('werkbank.protokoll.alle-eintraege-dieser-anfrage')}</button></p>}
+      {e.daten && <div className="blatt"><h2 className="h3">{t('werkbank.protokoll.daten')}</h2><pre className="protokolldaten">{Object.entries(e.daten).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v, null, 2)}`).join('\n')}</pre></div>}
       <div className="knoepfe">
-        <button type="button" className="knopf" onClick={() => void navigator.clipboard?.writeText(text).then(() => setKopiert(true))}>{kopiert ? 'Kopiert' : 'Als Text kopieren'}</button>
-        <Link to="/werkbank/protokoll" className="knopf">Schließen</Link>
+        <button type="button" className="knopf" onClick={() => void navigator.clipboard?.writeText(text).then(() => setKopiert(true))}>{kopiert ? t('werkbank.protokoll.kopiert') : t('werkbank.protokoll.als-text-kopieren')}</button>
+        <Link to="/werkbank/protokoll" className="knopf">{t('werkbank.protokoll.schliessen')}</Link>
       </div>
     </div>
   );
@@ -135,20 +135,20 @@ function DebugPanel({ p }: { p: ProtokollZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Protokoll</h1>
-        <p className="leise">Wähle links einen Eintrag, um alle Angaben zu sehen. Jede Zeile steht auch in den Container-Logs des NAS; dort bleiben sie auch nach einem Neustart.</p>
+        <p className="ueber">{t('werkbank.protokoll.werkbank')}</p>
+        <h1>{t('werkbank.protokoll.protokoll')}</h1>
+        <p className="leise">{t('werkbank.protokoll.waehle-links-einen-eintrag')}</p>
       </div>
       <div className="blatt">
-        <h2 className="h3">Debug-Modus</h2>
+        <h2 className="h3">{t('werkbank.protokoll.debug-modus')}</h2>
         {d?.an
-          ? <div className="hinweis warn"><p>Eingeschaltet bis {new Date(d.bis!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr. Danach schaltet er sich selbst ab.</p></div>
-          : <p className="leise">Aus. Protokolliert wird ab Stufe „{d?.grundstufe ?? 'info'}“.</p>}
-        <p className="leise">Im Debug-Modus kommen ausführliche Einträge dazu: jede Anfrage mit Dauer und Anzahl der Datenbankzugriffe, geladene Ansichten, angezeigte Dokumente. Gut zum Nachstellen eines Fehlers; er schaltet sich nach einer Stunde selbst wieder ab.</p>
+          ? <div className="hinweis warn"><p>{t('werkbank.protokoll.eingeschaltet-bis-uhr-danach', { toLocaleTimeString: new Date(d.bis!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) })}</p></div>
+          : <p className="leise">{t('werkbank.protokoll.aus-protokolliert-wird-ab', { wert: d?.grundstufe ?? t('werkbank.protokoll.info-2') })}</p>}
+        <p className="leise">{t('werkbank.protokoll.im-debug-modus-kommen')}</p>
         <div className="knoepfe">
           {d?.an
-            ? <><button className="knopf" disabled={laeuft} onClick={() => void schalte(true)}>Um eine Stunde verlängern</button><button className="knopf" disabled={laeuft} onClick={() => void schalte(false)}>Ausschalten</button></>
-            : <button className="knopf primaer" disabled={laeuft} onClick={() => void schalte(true)}>Für eine Stunde einschalten</button>}
+            ? <><button className="knopf" disabled={laeuft} onClick={() => void schalte(true)}>{t('werkbank.protokoll.um-eine-stunde-verlaengern')}</button><button className="knopf" disabled={laeuft} onClick={() => void schalte(false)}>{t('werkbank.protokoll.ausschalten')}</button></>
+            : <button className="knopf primaer" disabled={laeuft} onClick={() => void schalte(true)}>{t('werkbank.protokoll.fuer-eine-stunde-einschalten')}</button>}
         </div>
       </div>
     </div>

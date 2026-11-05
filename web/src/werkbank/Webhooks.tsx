@@ -41,7 +41,7 @@ export function WebhooksPanel({ z }: { z: WebhooksZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
+        <p className="ueber">{t('werkbank.webhooks.werkbank')}</p>
         <h1>{t('webhook.werkbank.titel')}</h1>
         <p className="leise">{t('webhook.werkbank.text')} <Hilfe ort="werkbank.webhooks" /></p>
       </div>
@@ -50,7 +50,7 @@ export function WebhooksPanel({ z }: { z: WebhooksZustand }) {
         <h2 className="h3">{t('webhook.werkbank.ziele')}</h2>
         <p className="leise">{t('webhook.werkbank.ziele.text')}</p>
         <label className="eigenschaft"><span>{t('webhook.werkbank.ziele.feld')}</span>
-          <textarea className="mono" rows={4} value={ziele ?? ''} onChange={(e) => setZiele(e.target.value)} placeholder={'http://homey.home.arpa\nhttps://nodered.example.org'} aria-invalid={!!problem} /></label>
+          <textarea className="mono" rows={4} value={ziele ?? ''} onChange={(e) => setZiele(e.target.value)} placeholder={t('werkbank.webhooks.http-homey-home-arpa')} aria-invalid={!!problem} /></label>
         {problem && <p className="fehlertext">{problem}</p>}
         <div className="knoepfe"><button className="knopf primaer" disabled={!!problem}>{t('webhook.werkbank.ziele.speichern')}</button></div>
       </form>

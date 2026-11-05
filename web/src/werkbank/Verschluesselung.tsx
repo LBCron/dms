@@ -6,6 +6,7 @@ import { Erledigt, Notfallblatt, NOTFALLBLATT_URL, meldeSicherung } from './Sich
 import { heikelHerunterladen } from '../verwaltungsmodus';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
+import { t, tn } from '../sprache';
 
 /**
  * Schlüssel für verschlüsselte Zugangsdaten (#39): Status, Fingerabdruck, Erzeugen
@@ -35,7 +36,7 @@ const TEXT: Record<TresorStatus['zustand'], string> = {
   vorhanden: 'vorhanden',
   fehlt: 'fehlt',
   verloren: 'verloren',
-  falsch: 'passt nicht',
+  falsch: t('werkbank.verschluesselung.passt-nicht'),
 };
 
 /** Banner über der ganzen Werkbank, solange etwas mit dem Schlüssel nicht stimmt. */
@@ -43,42 +44,42 @@ export function TresorBanner() {
   const { stand } = useTresor();
   if (!stand || (stand.zustand === 'vorhanden' && stand.eingebunden !== false && !stand.betroffen.length)) return null;
   let text;
-  if (stand.zustand === 'fehlt') text = <><strong>Es gibt noch keinen Schlüssel für Passwörter.</strong> Bis dahin lassen sich keine Passwörter speichern (E-Mail-Versand, Postfächer, Passwortfelder).</>;
-  else if (stand.zustand === 'verloren') text = <><strong>Der Schlüssel für Passwörter fehlt.</strong> Gespeicherte Passwörter sind nicht lesbar. Lege die Schlüsseldatei zurück oder erzeuge einen neuen Schlüssel und gib die Passwörter neu ein.</>;
-  else if (stand.zustand === 'falsch') text = <><strong>Die Schlüsseldatei passt nicht zu den gespeicherten Passwörtern.</strong> Passwörter lassen sich erst wieder lesen und speichern, wenn die richtige Datei da ist.</>;
-  else if (stand.eingebunden === false) text = <><strong>Die Schlüsseldatei liegt nicht auf einem eigenen Volume.</strong> Wird der Container neu erstellt (z. B. beim Update), ist sie weg.</>;
-  else text = <><strong>{stand.betroffen.length === 1 ? 'Ein Passwort ist' : `${stand.betroffen.length} Passwörter sind`} nicht lesbar oder unverschlüsselt.</strong></>;
+  if (stand.zustand === 'fehlt') text = <>{tn('werkbank.verschluesselung.bis-dahin-lassen-sich', { b: <strong>{t('werkbank.verschluesselung.es-gibt-noch-keinen')}</strong> })}</>;
+  else if (stand.zustand === 'verloren') text = <>{tn('werkbank.verschluesselung.gespeicherte-passwoerter-sind-nicht', { b: <strong>{t('werkbank.verschluesselung.der-schluessel-fuer-passwoerter')}</strong> })}</>;
+  else if (stand.zustand === 'falsch') text = <>{tn('werkbank.verschluesselung.passwoerter-lassen-sich-erst', { b: <strong>{t('werkbank.verschluesselung.die-schluesseldatei-passt-nicht')}</strong> })}</>;
+  else if (stand.eingebunden === false) text = <>{tn('werkbank.verschluesselung.wird-der-container-neu', { b: <strong>{t('werkbank.verschluesselung.die-schluesseldatei-liegt-nicht')}</strong> })}</>;
+  else text = <><strong>{t('werkbank.verschluesselung.passwoerter-sind-nicht-lesbar', { anzahl: stand.betroffen.length })}</strong></>;
   return (
     <div className="hinweisbanner" role="alert">
       <p>{text}</p>
-      <Link to="/werkbank/verschluesselung" className="knopf klein">Zur Verschlüsselung</Link>
+      <Link to="/werkbank/verschluesselung" className="knopf klein">{t('werkbank.verschluesselung.zur-verschluesselung')}</Link>
     </div>
   );
 }
 
-export function TresorPanel({ t }: { t: TresorZustand }) {
+export function TresorPanel({ t: eintrag }: { t: TresorZustand }) {
   const { aktualisieren } = useKonto();
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
   const [wechsel, setWechsel] = useState<{ alt: string; neu: string; umgeschluesselt: number; unlesbar: number; alteSicherungen: number }>();
   const [gesichert, setGesichert] = useState<{ ok: boolean; text: string }>();
   const [blattGeladen, setBlattGeladen] = useState(false);
-  if (t.fehler) return <div className="hinweis schlecht"><p>{t.fehler}</p></div>;
-  const s = t.stand;
-  if (!s) return <p className="leise">Lade …</p>;
+  if (eintrag.fehler) return <div className="hinweis schlecht"><p>{eintrag.fehler}</p></div>;
+  const s = eintrag.stand;
+  if (!s) return <p className="leise">{t('werkbank.verschluesselung.lade')}</p>;
 
   async function erzeugen() {
     setLaeuft(true); setMeldung(undefined);
-    try { t.setStand(await api.tresorErzeugen()); melde(); await aktualisieren(); setMeldung({ art: 'gut', text: 'Schlüssel erzeugt. Passwörter lassen sich jetzt speichern.' }); }
+    try { eintrag.setStand(await api.tresorErzeugen()); melde(); await aktualisieren(); setMeldung({ art: 'gut', text: t('werkbank.verschluesselung.schluessel-erzeugt-passwoerter') }); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setLaeuft(false); }
   }
   const erzeugbar = s.zustand === 'fehlt' || s.zustand === 'verloren';
 
   async function wechseln() {
-    if (!(await rueckfrage({ titel: 'Schlüssel jetzt wechseln?', text: 'Alle gespeicherten Passwörter und Geheimnisse (siehe „Was verschlüsselt ist“) werden mit einem neuen Schlüssel verschlüsselt – ganz oder gar nicht. Danach brauchst du ein neues Notfallblatt.\n\nÄltere Sicherungen bleiben mit dem bisherigen Schlüssel verschlüsselt: Bewahre das alte Notfallblatt auf, solange du sie brauchst.', ja: 'Schlüssel wechseln', gefahr: true, bestaetigeMit: 'wechseln' }))) return;
+    if (!(await rueckfrage({ titel: t('werkbank.verschluesselung.schluessel-jetzt-wechseln'), text: t('werkbank.verschluesselung.alle-gespeicherten-passwoerter-und'), ja: t('werkbank.verschluesselung.schluessel-wechseln'), gefahr: true, bestaetigeMit: 'wechseln' }))) return;
     setLaeuft(true); setMeldung(undefined); setWechsel(undefined);
-    try { const r = await api.tresorWechseln(); t.setStand(r); setWechsel(r); melde(); await aktualisieren(); }
+    try { const r = await api.tresorWechseln(); eintrag.setStand(r); setWechsel(r); melde(); await aktualisieren(); }
     catch (x) { setMeldung({ art: 'schlecht', text: (x as Error).message }); }
     finally { setLaeuft(false); }
   }
@@ -86,88 +87,84 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
   return (
     <div className="einspaltig">
       <div className="mappenkopf">
-        <p className="ueber">Werkbank</p>
-        <h1>Verschlüsselung</h1>
-        <p className="leise">Passwörter und andere Geheimnisse – E-Mail-Versand, Postfächer, Anmeldung über einen Anbieter, Zwei-Faktor, Paket-Einstellungen, Passwortfelder in Mappen – speichert Ablago verschlüsselt; welche es gerade sind, steht unten unter „Was verschlüsselt ist“. Den Schlüssel dazu hält es in einer eigenen Datei, nie in der Datenbank. <Hilfe ort="werkbank.verschluesselung" /></p>
+        <p className="ueber">{t('werkbank.verschluesselung.werkbank')}</p>
+        <h1>{t('werkbank.verschluesselung.verschluesselung')}</h1>
+        <p className="leise">{tn('werkbank.verschluesselung.passwoerter-und-andere-geheimnisse', { hilfe: <Hilfe ort="werkbank.verschluesselung" /> })}</p>
       </div>
 
       <section className="blatt" id="schluessel">
-        <h2 className="h3">Schlüssel <Hilfe ort="verschluesselung.schluessel" /></h2>
+        <h2 className="h3">{tn('werkbank.verschluesselung.schluessel', { hilfe: <Hilfe ort="verschluesselung.schluessel" /> })}</h2>
         <dl className="eigenschaften">
-          <dt>Zustand</dt><dd><span className={`chip ${s.zustand === 'vorhanden' ? 'gut' : 'schlecht'}`}>{TEXT[s.zustand]}</span></dd>
-          <dt>Fingerabdruck</dt><dd className="mono">{s.fingerabdruck ?? '–'}</dd>
-          {s.erwartet && s.erwartet !== s.fingerabdruck && <><dt>Erwartet</dt><dd className="mono">{s.erwartet}</dd></>}
-          {s.erstellt && <><dt>Erzeugt am</dt><dd>{new Date(s.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</dd></>}
-          <dt>Datei</dt><dd className="mono">{s.datei}</dd>
-          <dt>Eigenes Volume</dt><dd>{s.eingebunden === null ? 'nicht feststellbar (läuft nicht im Container)' : s.eingebunden ? 'ja' : 'nein'}</dd>
+          <dt>{t('werkbank.verschluesselung.zustand')}</dt><dd><span className={`chip ${s.zustand === 'vorhanden' ? 'gut' : 'schlecht'}`}>{TEXT[s.zustand]}</span></dd>
+          <dt>{t('werkbank.verschluesselung.fingerabdruck')}</dt><dd className="mono">{s.fingerabdruck ?? '–'}</dd>
+          {s.erwartet && s.erwartet !== s.fingerabdruck && <><dt>{t('werkbank.verschluesselung.erwartet')}</dt><dd className="mono">{s.erwartet}</dd></>}
+          {s.erstellt && <><dt>{t('werkbank.verschluesselung.erzeugt-am')}</dt><dd>{new Date(s.erstellt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</dd></>}
+          <dt>{t('werkbank.verschluesselung.datei')}</dt><dd className="mono">{s.datei}</dd>
+          <dt>{t('werkbank.verschluesselung.eigenes-volume')}</dt><dd>{s.eingebunden === null ? t('werkbank.verschluesselung.nicht-feststellbar-laeuft-nicht') : s.eingebunden ? t('werkbank.verschluesselung.ja') : t('werkbank.verschluesselung.nein')}</dd>
         </dl>
 
-        {s.zustand === 'fehlt' && <div className="hinweis warn"><p>Noch kein Schlüssel. Solange er fehlt, lassen sich keine Passwörter speichern (E-Mail-Versand, Postfächer, Passwortfelder).</p></div>}
+        {s.zustand === 'fehlt' && <div className="hinweis warn"><p>{t('werkbank.verschluesselung.noch-kein-schluessel-solange')}</p></div>}
         {s.zustand === 'verloren' && (
           <div className="hinweis schlecht stapel">
-            <p><strong>Der Schlüssel mit dem Fingerabdruck <span className="mono">{s.erwartet}</span> fehlt.</strong> Liegt die Datei noch in einer Sicherung, lege sie wieder unter <span className="mono">{s.datei}</span> ab und starte Ablago neu – dann sind alle Passwörter wieder lesbar.</p>
-            <p>Erzeugst du stattdessen einen neuen Schlüssel, sind die bisher gespeicherten Passwörter verloren und müssen neu eingegeben werden (Liste unten).</p>
+            <p>{tn('werkbank.verschluesselung.liegt-die-datei-noch', { b: <strong>{tn('werkbank.verschluesselung.der-schluessel-mit-dem', { span: <span className="mono">{s.erwartet}</span> })}</strong>, span: <span className="mono">{s.datei}</span> })}</p>
+            <p>{t('werkbank.verschluesselung.erzeugst-du-stattdessen-einen')}</p>
           </div>
         )}
         {s.zustand === 'falsch' && (
-          <div className="hinweis schlecht"><p>Unter <span className="mono">{s.datei}</span> liegt ein anderer Schlüssel (<span className="mono">{s.fingerabdruck}</span>) als der, mit dem die Passwörter verschlüsselt sind (<span className="mono">{s.erwartet}</span>). Lege die richtige Datei ab und starte Ablago neu. Ist sie verloren, entferne die falsche Datei, starte neu und erzeuge hier einen neuen Schlüssel.</p></div>
+          <div className="hinweis schlecht"><p>{tn('werkbank.verschluesselung.unter-liegt-ein-anderer', { span: <span className="mono">{s.datei}</span>, span2: <span className="mono">{s.fingerabdruck}</span>, span3: <span className="mono">{s.erwartet}</span> })}</p></div>
         )}
         {s.eingebunden === false && (
-          <div className="hinweis warn"><p>Der Ordner <span className="mono">{s.datei.replace(/\/[^/]+$/, '')}</span> ist kein eigenes Volume. Ergänze in der docker-compose.yml unter <span className="mono">volumes</span> z. B. <span className="mono">- /volume1/docker/dms/geheim:{s.datei.replace(/\/[^/]+$/, '')}</span>, sonst geht der Schlüssel beim nächsten Update verloren.</p></div>
+          <div className="hinweis warn"><p>{tn('werkbank.verschluesselung.der-ordner-ist-kein', { span: <span className="mono">{s.datei.replace(/\/[^/]+$/, '')}</span>, span2: <span className="mono">{t('werkbank.verschluesselung.volumes')}</span>, span3: <span className="mono">{t('werkbank.verschluesselung.volume1-docker-dms-geheim', { replace: s.datei.replace(/\/[^/]+$/, '') })}</span> })}</p></div>
         )}
         <div className="hinweis info stapel">
-          <p><strong>Sichere die Schlüsseldatei getrennt von der Datenbank.</strong> Eine Datenbanksicherung lässt sich nur mit diesem Schlüssel vollständig wiederherstellen; ohne ihn sind die Passwörter darin nicht lesbar. Liegen beide zusammen, schützt die Verschlüsselung die Sicherung nicht.</p>
+          <p>{tn('werkbank.verschluesselung.eine-datenbanksicherung-laesst-sich', { b: <strong>{t('werkbank.verschluesselung.sichere-die-schluesseldatei-getrennt')}</strong> })}</p>
         </div>
         {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
         {erzeugbar && (
           <div className="knoepfe">
             <button className="knopf primaer" disabled={laeuft} onClick={async () => {
-              if (s.zustand === 'verloren' && !(await rueckfrage({ titel: 'Neuen Schlüssel erzeugen?', text: 'Die bisher gespeicherten Passwörter werden damit endgültig unlesbar.', ja: 'Neuen Schlüssel erzeugen', gefahr: true }))) return;
+              if (s.zustand === 'verloren' && !(await rueckfrage({ titel: t('werkbank.verschluesselung.neuen-schluessel-erzeugen'), text: t('werkbank.verschluesselung.die-bisher-gespeicherten-passwoerter'), ja: t('werkbank.verschluesselung.neuen-schluessel-erzeugen-2'), gefahr: true }))) return;
               void erzeugen();
-            }}>{laeuft ? 'Erzeuge …' : s.zustand === 'verloren' ? 'Neuen Schlüssel erzeugen' : 'Schlüssel erzeugen'}</button>
+            }}>{laeuft ? t('werkbank.verschluesselung.erzeuge') : s.zustand === 'verloren' ? t('werkbank.verschluesselung.neuen-schluessel-erzeugen-2') : t('werkbank.verschluesselung.schluessel-erzeugen')}</button>
           </div>
         )}
       </section>
 
       {s.zustand === 'vorhanden' && (
         <section className="blatt" id="wechseln">
-          <h2 className="h3">Schlüssel wechseln <Hilfe ort="verschluesselung.wechseln" /></h2>
-          <p className="leise">Wenn der Schlüssel bekannt geworden sein könnte – etwa weil ein ausgedrucktes Notfallblatt verloren ging – oder du ihn turnusmäßig erneuern willst. Alle Passwörter und Geheimnisse (siehe „Was verschlüsselt ist“) werden mit einem neuen Schlüssel verschlüsselt, ganz oder gar nicht; bricht etwas ab, gilt weiter der bisherige. Der alte Schlüssel wird nicht aufbewahrt.</p>
-          {!wechsel && <div className="knoepfe"><button type="button" className="knopf gefahr-rand" disabled={laeuft} onClick={() => void wechseln()}>{laeuft ? 'Wechsle …' : 'Schlüssel wechseln'}</button></div>}
+          <h2 className="h3">{tn('werkbank.verschluesselung.schluessel-wechseln-2', { hilfe: <Hilfe ort="verschluesselung.wechseln" /> })}</h2>
+          <p className="leise">{t('werkbank.verschluesselung.wenn-der-schluessel-bekannt')}</p>
+          {!wechsel && <div className="knoepfe"><button type="button" className="knopf gefahr-rand" disabled={laeuft} onClick={() => void wechseln()}>{laeuft ? t('werkbank.verschluesselung.wechsle') : t('werkbank.verschluesselung.schluessel-wechseln')}</button></div>}
           {wechsel && (
             <div className="hinweis gut stapel" role="status">
-              <p><strong>Schlüssel gewechselt:</strong> <span className="mono">{wechsel.alt}</span> → <span className="mono">{wechsel.neu}</span>. {wechsel.umgeschluesselt === 1 ? 'Ein Wert wurde' : `${wechsel.umgeschluesselt} Werte wurden`} neu verschlüsselt{wechsel.unlesbar ? `; ${wechsel.unlesbar} waren schon vorher nicht lesbar und bleiben es` : ''}.</p>
-              <p><strong>Jetzt noch zwei Schritte:</strong></p>
+              <p>{tn('werkbank.verschluesselung.werte-wurden-neu-verschluesselt', { anzahl: wechsel.umgeschluesselt, b: <strong>{t('werkbank.verschluesselung.schluessel-gewechselt')}</strong>, span: <span className="mono">{wechsel.alt}</span>, span2: <span className="mono">{wechsel.neu}</span>, wert: wechsel.unlesbar ? t('werkbank.verschluesselung.waren-schon-vorher-nicht', { unlesbar: wechsel.unlesbar }) : '' })}</p>
+              <p><strong>{t('werkbank.verschluesselung.jetzt-noch-zwei-schritte')}</strong></p>
               <ol className="anleitung">
                 <li className={blattGeladen ? 'erledigt' : ''}>
-                  {blattGeladen && <Erledigt />}Das neue Notfallblatt herunterladen und sicher aufbewahren.{' '}
-                  {/* #414: lädt direkt herunter – wie der Knopf im Abschnitt „Notfallblatt“ darunter. */}
-                  <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setBlattGeladen(true); setTimeout(() => void t.laden(), 1500); setTimeout(meldeSicherung, 1500); })}>Notfallblatt herunterladen</a>
-                </li>
+                  {blattGeladen && <Erledigt />}{tn('werkbank.verschluesselung.das-neue-notfallblatt-herunterladen', { link: <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setBlattGeladen(true); setTimeout(() => void eintrag.laden(), 1500); setTimeout(meldeSicherung, 1500); })}>{t('werkbank.verschluesselung.notfallblatt-herunterladen')}</a> })}</li>
                 <li className={gesichert?.ok ? 'erledigt' : ''}>
-                  {gesichert?.ok && <Erledigt />}Eine neue Sicherung anlegen – sie ist mit dem neuen Schlüssel verschlüsselt.{' '}
-                  <button type="button" className="knopf klein" disabled={gesichert?.ok} onClick={() => void api.sicherungJetzt().then(() => setGesichert({ ok: true, text: 'Sicherung läuft – den Stand siehst du unter Sicherung.' })).catch((x) => setGesichert({ ok: false, text: (x as Error).message }))}>Jetzt sichern</button>
-                  {gesichert && <span className={gesichert.ok ? 'leise klein' : 'fehlertext klein'}> {gesichert.text} <Link to="/werkbank/sicherung" className="verweis">Zur Sicherung</Link></span>}
+                  {gesichert?.ok && <Erledigt />}{t('werkbank.verschluesselung.eine-neue-sicherung-anlegen')}{' '}<button type="button" className="knopf klein" disabled={gesichert?.ok} onClick={() => void api.sicherungJetzt().then(() => setGesichert({ ok: true, text: t('werkbank.verschluesselung.sicherung-laeuft-den-stand') })).catch((x) => setGesichert({ ok: false, text: (x as Error).message }))}>{t('werkbank.verschluesselung.jetzt-sichern')}</button>
+                  {gesichert && <span className={gesichert.ok ? 'leise klein' : 'fehlertext klein'}> {gesichert.text} <Link to="/werkbank/sicherung" className="verweis">{t('werkbank.verschluesselung.zur-sicherung')}</Link></span>}
                 </li>
               </ol>
-              {wechsel.alteSicherungen > 0 && <p>{wechsel.alteSicherungen === 1 ? 'Eine ältere Sicherung ist' : `${wechsel.alteSicherungen} ältere Sicherungen sind`} noch mit dem alten Schlüssel verschlüsselt. Bewahre das alte Notfallblatt auf, solange du sie brauchst – oder lösche sie unter <Link to="/werkbank/sicherung" className="verweis">Sicherung</Link>.</p>}
+              {wechsel.alteSicherungen > 0 && <p>{tn('werkbank.verschluesselung.aeltere-sicherungen-sind-noch', { anzahl: wechsel.alteSicherungen, link: <Link to="/werkbank/sicherung" className="verweis">{t('werkbank.verschluesselung.sicherung')}</Link> })}</p>}
             </div>
           )}
         </section>
       )}
 
-      <Notfallblatt stand={s.notfallblatt} schluessel={s.zustand === 'vorhanden'} geladen={() => void t.laden()} />
+      <Notfallblatt stand={s.notfallblatt} schluessel={s.zustand === 'vorhanden'} geladen={() => void eintrag.laden()} />
 
       {s.arten && s.arten.length > 0 && (
         <section className="blatt" id="arten">
-          <h2 className="h3">Was verschlüsselt ist <Hilfe ort="verschluesselung.arten" /></h2>
-          <p className="leise klein">Alles hier verschlüsselt Ablago mit diesem Schlüssel und nimmt es beim Schlüsselwechsel mit. Die Sicherungen verschlüsselt es mit einem Schlüssel, der daraus abgeleitet ist.</p>
+          <h2 className="h3">{tn('werkbank.verschluesselung.was-verschluesselt-ist', { hilfe: <Hilfe ort="verschluesselung.arten" /> })}</h2>
+          <p className="leise klein">{t('werkbank.verschluesselung.alles-hier-verschluesselt-ablago')}</p>
           <table className="vs-arten">
-            <thead><tr><th>Art</th><th className="vs-zahl">Anzahl</th></tr></thead>
+            <thead><tr><th>{t('werkbank.verschluesselung.art')}</th><th className="vs-zahl">{t('werkbank.verschluesselung.anzahl')}</th></tr></thead>
             <tbody>{s.arten.map((a) => (
               <tr key={a.art}>
                 <td>{a.name}</td>
-                <td className="vs-zahl">{a.anzahl.toLocaleString('de-DE')}{a.unlesbar > 0 && <> <span className="chip schlecht" title="mit dem vorhandenen Schlüssel nicht lesbar – siehe unten">{a.unlesbar} nicht lesbar</span></>}</td>
+                <td className="vs-zahl">{a.anzahl.toLocaleString('de-DE')}{a.unlesbar > 0 && <> <span className="chip schlecht" title={t('werkbank.verschluesselung.mit-dem-vorhandenen-schluessel')}>{t('werkbank.verschluesselung.nicht-lesbar', { unlesbar: a.unlesbar })}</span></>}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -175,9 +172,9 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
       )}
 
       <section className="blatt" id="betroffen">
-        <h2 className="h3">Nicht lesbare oder unverschlüsselte Werte</h2>
+        <h2 className="h3">{t('werkbank.verschluesselung.nicht-lesbare-oder-unverschluesselte')}</h2>
         {!s.betroffen.length
-          ? <p className="leise">Keine – alle gespeicherten Passwörter und Geheimnisse sind mit dem vorhandenen Schlüssel lesbar.</p>
+          ? <p className="leise">{t('werkbank.verschluesselung.keine-alle-gespeicherten-passwoerter')}</p>
           : <ul className="liste-einfach">{s.betroffen.map((b, i) => <li key={i}><strong>{b.bereich}:</strong> {b.was}{b.wo ? <span className="leise"> – {b.wo}</span> : null}</li>)}</ul>}
       </section>
     </div>

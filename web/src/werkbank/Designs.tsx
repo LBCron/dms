@@ -7,6 +7,7 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { logoUrl, Marke } from '../Marke';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
+import { t, tn } from '../sprache';
 
 /**
  * Designs in der Werkbank (#21): Mitte die Designs, rechts Bearbeiten mit Vorschau.
@@ -17,16 +18,16 @@ export function DesignListe({ offen }: { offen?: string }) {
   const d = useDaten();
   return (
     <>
-      <Listenkopf titel="Designs" hilfe="werkbank.designs" beschreibung="Farben und eigenes CSS der Oberfläche. Jeder Benutzer wählt sein Design unter Mein Konto.">
-        <Link to="/werkbank/designs/neu" className="knopf primaer klein">+ Neu</Link>
+      <Listenkopf titel={t('werkbank.designs.designs')} hilfe="werkbank.designs" beschreibung={t('werkbank.designs.farben-und-eigenes-css')}>
+        <Link to="/werkbank/designs/neu" className="knopf primaer klein">{t('werkbank.designs.neu')}</Link>
       </Listenkopf>
       <ul className="mappenliste">
-        {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">Neues Design</span><span className="unter">noch nicht gespeichert</span></span></li>}
+        {offen === 'neu' && <li><span className="eintrag an werk"><span className="titel">{t('werkbank.designs.neues-design')}</span><span className="unter">{t('werkbank.designs.noch-nicht-gespeichert')}</span></span></li>}
         {d.designs.map((x) => (
           <li key={x.id}>
             <Link to={`/werkbank/designs/${x.id}`} className={`eintrag werk ${offen === x.id ? 'an' : ''}`}>
-              <span className="titel">{x.name}{x.id === d.standardDesign && <span className="chip">Standard</span>}</span>
-              <span className="unter"><Farbfelder d={x} /> {GRUNDLAGEN[x.grundlage]}{x.css.trim() ? ' · eigenes CSS' : ''}</span>
+              <span className="titel">{x.name}{x.id === d.standardDesign && <span className="chip">{t('werkbank.designs.standard')}</span>}</span>
+              <span className="unter"><Farbfelder d={x} /> {GRUNDLAGEN[x.grundlage]}{x.css.trim() ? t('werkbank.designs.eigenes-css') : ''}</span>
             </Link>
           </li>
         ))}
@@ -65,7 +66,7 @@ export function DesignEditor({ id }: { id: string }) {
   mein.current = d.meinDesign;
   useEffect(() => () => { wendeAn(mein.current, !rettungsweg()); }, []);
 
-  if (!neu && !vorhanden) return <div className="leer"><p>Dieses Design gibt es nicht (mehr).</p></div>;
+  if (!neu && !vorhanden) return <div className="leer"><p>{t('werkbank.designs.dieses-design-gibt-es')}</p></div>;
   const standard = !neu && id === d.standardDesign;
   async function aktion(fn: () => Promise<unknown>, gut: string) {
     setMeldung(undefined);
@@ -81,71 +82,71 @@ export function DesignEditor({ id }: { id: string }) {
         const r = neu ? await api.designAnlegen(e) : await api.designAendern(id, e);
         loeseWache(); await d.designsLaden();
         if (neu) geheZu(`/werkbank/designs/${r.id}`);
-      }, 'Design gespeichert.').finally(() => setSendet(false));
+      }, t('werkbank.designs.design-gespeichert')).finally(() => setSendet(false));
     }}>
       <div className="mappenkopf">
-        <p className="ueber">Design</p>
-        <h1>{e.name || (neu ? 'Neues Design' : 'Ohne Namen')}{standard && <span className="chip">Standard</span>}</h1>
-        <p className="leise">Die Vorschau gilt schon jetzt für deine Darstellung; gespeichert wird mit „{neu ? 'Design anlegen' : 'Design speichern'}“.</p>
+        <p className="ueber">{t('werkbank.designs.design')}</p>
+        <h1>{e.name || (neu ? t('werkbank.designs.neues-design') : t('werkbank.designs.ohne-namen'))}{standard && <span className="chip">{t('werkbank.designs.standard')}</span>}</h1>
+        <p className="leise">{t('werkbank.designs.die-vorschau-gilt-schon', { wert: neu ? t('werkbank.designs.design-anlegen') : t('werkbank.designs.design-speichern') })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       <div className="blatt">
         <div className="raster">
-          <label className="eigenschaft"><span>Name</span><input value={e.name} onChange={(x) => setze({ name: x.target.value })} placeholder="z. B. Waldgrün" required /></label>
-          <label className="eigenschaft"><span>Grundlage</span>
+          <label className="eigenschaft"><span>{t('werkbank.designs.name')}</span><input value={e.name} onChange={(x) => setze({ name: x.target.value })} placeholder={t('werkbank.designs.z-b-waldgruen')} required /></label>
+          <label className="eigenschaft"><span>{t('werkbank.designs.grundlage')}</span>
             <select value={e.grundlage} onChange={(x) => setze({ grundlage: x.target.value as Grundlage })}>
               {Object.entries(GRUNDLAGEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select></label>
-          <Farbwahl name="Primärfarbe" hilfe="Links, Hauptknöpfe, Markierungen" wert={e.primaer} setze={(primaer) => setze({ primaer })} />
-          <Farbwahl name="Sekundärfarbe" hilfe="Speichern, „+ Neu“, geöffnete Mappe" wert={e.sekundaer} setze={(sekundaer) => setze({ sekundaer })} />
+          <Farbwahl name={t('werkbank.designs.primaerfarbe')} hilfe={t('werkbank.designs.links-hauptknoepfe-markierungen')} wert={e.primaer} setze={(primaer) => setze({ primaer })} />
+          <Farbwahl name={t('werkbank.designs.sekundaerfarbe')} hilfe={t('werkbank.designs.speichern-neu-geoeffnete-mappe')} wert={e.sekundaer} setze={(sekundaer) => setze({ sekundaer })} />
         </div>
-        <p className="leise klein">Aus beiden Farben werden Abstufungen abgeleitet (zarte Hintergründe, lesbare Schrift auf der Farbe). Auf dunklen Grundlagen werden zu dunkle Farben automatisch aufgehellt, damit sie lesbar bleiben.</p>
+        <p className="leise klein">{t('werkbank.designs.aus-beiden-farben-werden')}</p>
       </div>
       <div className="blatt">
-        <h2 className="h3">Logo und Schriftzug</h2>
-        <p className="leise">Stehen oben links in der Kopfzeile, im Titel und Symbol des Browser-Tabs und – beim Standard-Design – auf der Anmeldeseite. Wähle zu jedem Design ein Logo, das auf seinem Hintergrund gut zu sehen ist. In E-Mails erscheinen sie nicht.</p>
+        <h2 className="h3">{t('werkbank.designs.logo-und-schriftzug')}</h2>
+        <p className="leise">{t('werkbank.designs.stehen-oben-links-in')}</p>
         <div className="raster">
-          <label className="eigenschaft"><span>Schriftzug <small>höchstens 30 Zeichen; leer = nur das Logo</small></span>
+          <label className="eigenschaft"><span>{tn('werkbank.designs.schriftzug', { klein: <small>{t('werkbank.designs.hoechstens-30-zeichen-leer')}</small> })}</span>
             <input value={e.schriftzug ?? 'Ablago'} maxLength={30} onChange={(x) => setze({ schriftzug: x.target.value === 'Ablago' ? null : x.target.value })} /></label>
-          <div className="eigenschaft"><span>Vorschau</span>
+          <div className="eigenschaft"><span>{t('werkbank.designs.vorschau')}</span>
             <div className="markenvorschau marke"><Marke logo={logoUrl(vorhanden)} schriftzug={e.schriftzug === null || e.schriftzug === undefined ? 'Ablago' : e.schriftzug} /></div></div>
         </div>
-        {neu ? <p className="leise klein">Ein Logo lässt sich hochladen, sobald das Design gespeichert ist.</p> : (
+        {neu ? <p className="leise klein">{t('werkbank.designs.ein-logo-laesst-sich')}</p> : (
           <div className="knoepfe links">
-            <label className="knopf klein">{vorhanden?.logo ? 'Anderes Logo wählen' : 'Logo hochladen'}
+            <label className="knopf klein">{vorhanden?.logo ? t('werkbank.designs.anderes-logo-waehlen') : t('werkbank.designs.logo-hochladen')}
               <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={(x) => {
                 const f = x.target.files?.[0]; x.target.value = '';
-                if (f) void aktion(async () => { await api.designLogo(id, f); await d.designsLaden(); }, 'Logo gespeichert.');
+                if (f) void aktion(async () => { await api.designLogo(id, f); await d.designsLaden(); }, t('werkbank.designs.logo-gespeichert'));
               }} /></label>
-            {vorhanden?.logo && <button type="button" className="textknopf" onClick={() => void aktion(async () => { await api.designLogoEntfernen(id); await d.designsLaden(); }, 'Standard-Logo wiederhergestellt.')}>Standard wiederherstellen</button>}
-            <span className="leise klein">PNG, JPEG, WebP oder SVG, höchstens 1 MB</span>
+            {vorhanden?.logo && <button type="button" className="textknopf" onClick={() => void aktion(async () => { await api.designLogoEntfernen(id); await d.designsLaden(); }, t('werkbank.designs.standard-logo-wiederhergestellt'))}>{t('werkbank.designs.standard-wiederherstellen')}</button>}
+            <span className="leise klein">{t('werkbank.designs.png-jpeg-webp-oder')}</span>
           </div>
         )}
       </div>
       <div className="blatt">
-        <h2 className="h3">Vorschau</h2>
+        <h2 className="h3">{t('werkbank.designs.vorschau')}</h2>
         <div className="designvorschau">
-          <a className="verweis" href="#vorschau" onClick={(x) => x.preventDefault()}>Ein Verweis</a>
-          <span className="chip gut">bezahlt</span>
-          <button type="button" className="knopf primaer klein">Hauptknopf</button>
-          <button type="button" className="knopf gruen klein">Mappe speichern</button>
-          <span className="eintrag an vorschaueintrag"><span className="titel">Geöffnete Mappe</span><span className="unter">Nebenzeile</span></span>
+          <a className="verweis" href="#vorschau" onClick={(x) => x.preventDefault()}>{t('werkbank.designs.ein-verweis')}</a>
+          <span className="chip gut">{t('werkbank.designs.bezahlt')}</span>
+          <button type="button" className="knopf primaer klein">{t('werkbank.designs.hauptknopf')}</button>
+          <button type="button" className="knopf gruen klein">{t('werkbank.designs.mappe-speichern')}</button>
+          <span className="eintrag an vorschaueintrag"><span className="titel">{t('werkbank.designs.geoeffnete-mappe')}</span><span className="unter">{t('werkbank.designs.nebenzeile')}</span></span>
         </div>
       </div>
       <div className="blatt">
-        <h2 className="h3">Eigenes CSS</h2>
-        <p className="leise">Für alles, was Farben allein nicht abdecken. Macht ein CSS die Oberfläche unbedienbar: an die Adresse <span className="mono">?design=standard</span> anhängen – dann lädt das Standard-Design ohne eigenes CSS.</p>
-        <textarea className="mono" rows={8} value={e.css} onChange={(x) => setze({ css: x.target.value })} placeholder={'.kopf { border-bottom-width: 3px; }'} spellCheck={false} />
-        <details><summary className="leise klein">Verfügbare Farbwerte</summary><pre className="protokolldaten">{designCss({ ...e, css: '' })}</pre></details>
+        <h2 className="h3">{t('werkbank.designs.eigenes-css-2')}</h2>
+        <p className="leise">{tn('werkbank.designs.fuer-alles-was-farben', { span: <span className="mono">{t('werkbank.designs.design-standard')}</span> })}</p>
+        <textarea className="mono" rows={8} value={e.css} onChange={(x) => setze({ css: x.target.value })} placeholder={t('werkbank.designs.kopf-border-bottom-width')} spellCheck={false} />
+        <details><summary className="leise klein">{t('werkbank.designs.verfuegbare-farbwerte')}</summary><pre className="protokolldaten">{designCss({ ...e, css: '' })}</pre></details>
       </div>
-      <Speicherleiste ent={ent} gegenstand="Design" sendet={sendet}
+      <Speicherleiste ent={ent} gegenstand={t('werkbank.designs.design')} sendet={sendet}
         links={!neu && !standard && <button type="button" className="textknopf gefahr" onClick={async () => {
-          if (await rueckfrage({ titel: `Design „${vorhanden!.name}“ löschen?`, text: 'Wer es nutzt, bekommt das Standard-Design.', ja: 'Löschen', gefahr: true })) {
-            void aktion(async () => { await api.designLoeschen(id); loeseWache(); await d.designsLaden(); geheZu('/werkbank/designs'); }, 'Gelöscht.');
+          if (await rueckfrage({ titel: t('werkbank.designs.design-loeschen', { name: vorhanden!.name }), text: t('werkbank.designs.wer-es-nutzt-bekommt'), ja: t('werkbank.designs.loeschen'), gefahr: true })) {
+            void aktion(async () => { await api.designLoeschen(id); loeseWache(); await d.designsLaden(); geheZu('/werkbank/designs'); }, t('werkbank.designs.geloescht'));
           }
-        }}>Design löschen</button>}
-        weitere={!neu && !standard && <button type="button" className="knopf" disabled={geaendert} title={geaendert ? 'Erst speichern' : undefined}
-          onClick={() => void aktion(async () => { await api.designStandard(id); await d.designsLaden(); }, 'Als Standard festgelegt.')}>Als Standard festlegen</button>} />
+        }}>{t('werkbank.designs.design-loeschen-2')}</button>}
+        weitere={!neu && !standard && <button type="button" className="knopf" disabled={geaendert} title={geaendert ? t('werkbank.designs.erst-speichern') : undefined}
+          onClick={() => void aktion(async () => { await api.designStandard(id); await d.designsLaden(); }, t('werkbank.designs.als-standard-festgelegt'))}>{t('werkbank.designs.als-standard-festlegen')}</button>} />
     </form>
   );
 }
@@ -156,7 +157,7 @@ function Farbwahl({ name, hilfe, wert, setze }: { name: string; hilfe: string; w
   return (
     <label className="eigenschaft"><span>{name} <small>{hilfe}</small></span>
       <span className="farbwahl">
-        <input type="color" value={wert} onChange={(x) => setze(x.target.value.toUpperCase())} aria-label={`${name} wählen`} />
+        <input type="color" value={wert} onChange={(x) => setze(x.target.value.toUpperCase())} aria-label={t('werkbank.designs.waehlen', { name })} />
         <input className="mono" value={text} maxLength={7} onChange={(x) => { setText(x.target.value); if (/^#[0-9a-f]{6}$/i.test(x.target.value)) setze(x.target.value.toUpperCase()); }} />
       </span>
     </label>
