@@ -813,7 +813,7 @@ export function abfragenBericht(name, a) {
   if (!a.verfuegbar) return [`Teuerste Abfragen „${name}“: – (${a.hinweis ?? 'pg_stat_statements nicht verfügbar'})`];
   const kopf = `Teuerste Abfragen „${name}“ (pg_stat_statements, normalisiert; Rechenzeit aller Abfragen ${komma(a.gesamtMs / 1000)} s${a.zurueckgesetzt ? '' : ` – nicht zurückgesetzt, Werte seit dem letzten Zurücksetzen${a.hinweis ? `: ${a.hinweis}` : ''}`}):`;
   if (!a.liste.length) return [kopf, '', 'Keine Abfragen gezählt.'];
-  const zelle = (q) => `\`${kurzeAbfrage(q).replace(/[\\`]/g, "'").replace(/\|/g, '\\|')}\``;
+  const zelle = (q) => `\`${kurzeAbfrage(q).replace(/`/g, "'").replace(/[\\|]/g, (z) => `\\${z}`)}\``;
   return [kopf, '', '| # | Abfrage | Gesamt ms | Anzahl | Mittel ms | Zeilen | Anteil |', '|---:|---|---:|---:|---:|---:|---:|',
     ...a.liste.slice(0, ABFRAGEN_ANZAHL).map((q, i) => `| ${i + 1} | ${zelle(q.abfrage)} | ${zahl(Math.round(q.gesamtMs))} | ${zahl(q.anzahl)} | ${komma(q.mittelMs, 2)} | ${zahl(q.zeilen)} | ${anteilText(q.anteil)} |`)];
 }
