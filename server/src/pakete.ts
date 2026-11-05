@@ -28,6 +28,8 @@ import { liesSchluessel, nurTestschluessel, projektSchluessel, pruefeSignatur, S
 import type { Projektschluessel } from './projektschluessel';
 import { t } from './sprache';
 import { crc32 } from './zip';
+import { DEUTSCH } from '../../shared/src/deutsch';
+import { abdeckung, anzahlTexte, BESCHRIFTUNGEN_ORDNER, liesSprachangabe, liesSprachBeschriftung, pruefeSprachtexte, TEXTE_ORDNER, type Abdeckung, type Sprachangabe, type SprachBeschriftung, type Sprachtexte } from '../../shared/src/sprachpaket';
 import { gebietsschema } from '../../shared/src/sprache';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -164,7 +166,45 @@ export function ordneBeispiele(beispiele: PaketBeispiel[]): PaketBeispiel[] | nu
 export interface PaketCodeTeil { info: PaketCode; dateien: Array<{ name: string; inhalt: Buffer }> }
 export interface Paket { manifest: Manifest; typen: PaketTyp[]; sichten: PaketSicht[]; beispiele: PaketBeispiel[]; /** Gleichbedeutende Wörter für die Suche (#356). */ wortlisten: string[][];
   /** Mitgelieferte Automatisierungen (#712, dms-registry #108), roh aus inhalt/automatisierungen.yaml; Typen als Paket-Schlüssel. */
-  automatisierungen: PaketAutomatisierung[]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null }
+  automatisierungen: PaketAutomatisierung[]; readme: string; einstellungen: Einstellungsbeschreibung | null; code: PaketCodeTeil | null;
+  /** Sprachpaket (#731): Angaben, Texte und Beschriftungen der Standardpakete; null bei allen anderen Paketen. */
+  sprache?: PaketSprache | null }
+/** Inhalt eines Sprachpakets (#731), geprüft gegen das Deutsche dieser Version. */
+export interface PaketSprache { angabe: Sprachangabe; texte: Sprachtexte; uebergangen: string[]; beschriftungen: Record<string, SprachBeschriftung> }
+
+/**
+ * Dateien, die ein Sprachpaket enthalten darf (#731): nur Texte. Alles andere – Code, Programme, Bilder, Inhalte – lehnt
+ * Ablago ab, damit ein Sprachpaket nie mehr kann, als Texte zu liefern.
+ */
+const SPRACHPAKET_DATEI = /^(manifest\.yaml|README(\.[a-z]{2})?\.md|LICENSE(\.[A-Za-z]{1,10})?|NOTICE|CHANGELOG\.md|tests\/[A-Za-z0-9._-]{1,80}\.(ya?ml|json|md)|texte\/[a-z][a-z0-9-]{0,40}\.json|beschriftungen\/[a-z][a-z0-9_]{1,19}\.yaml)$/;
+
+/** Liest den Teil „Sprache“ eines Pakets (#731); Fehler landen in `fehler`. */
+function liesSprachteil(m: Record<string, unknown>, dateien: Map<string, Buffer>, fehler: string[]): PaketSprache | null {
+  const la = liesSprachangabe(m.sprache);
+  fehler.push(...la.fehler.map((f) => `manifest.yaml: ${f}`));
+  if (m.code !== undefined) fehler.push(t('meldungen.sprachpakete.kein-code'));
+  if (istObjekt(m.inhalt) && Object.keys(m.inhalt).length) fehler.push(t('meldungen.sprachpakete.kein-inhalt'));
+  if (m.ergaenzt !== undefined || (istObjekt(m.abhaengigkeiten) && Object.keys(m.abhaengigkeiten).length)) fehler.push(t('meldungen.sprachpakete.keine-abhaengigkeiten'));
+  for (const name of dateien.keys()) if (!SPRACHPAKET_DATEI.test(name)) fehler.push(t('meldungen.sprachpakete.fremde-datei', { name }));
+  const roh: Record<string, unknown> = {};
+  const beschriftungen: Record<string, SprachBeschriftung> = {};
+  for (const [name, d] of dateien) {
+    if (!SPRACHPAKET_DATEI.test(name)) continue;
+    if (name.startsWith(TEXTE_ORDNER)) {
+      try { roh[name.slice(TEXTE_ORDNER.length, -'.json'.length)] = JSON.parse(d.toString('utf8')); } catch { fehler.push(t('meldungen.sprachpakete.kein-json', { name })); }
+    } else if (name.startsWith(BESCHRIFTUNGEN_ORDNER)) {
+      let y: unknown;
+      try { y = yamlLesen(d.toString('utf8'), { maxAliasCount: 50 }); } catch (e) { fehler.push(`${name}: kein gültiges YAML (${(e as Error).message.split('\n')[0]}).`); continue; }
+      const b = liesSprachBeschriftung(y, name);
+      fehler.push(...b.fehler);
+      beschriftungen[name.slice(BESCHRIFTUNGEN_ORDNER.length, -'.yaml'.length)] = b.beschriftung;
+    }
+  }
+  const p = pruefeSprachtexte(DEUTSCH, roh);
+  fehler.push(...p.fehler);
+  if (!Object.keys(p.texte).length && !Object.keys(beschriftungen).length) fehler.push(t('meldungen.sprachpakete.leer'));
+  return la.angabe ? { angabe: la.angabe, texte: p.texte, uebergangen: p.uebergangen, beschriftungen } : null;
+}
 /** WebAssembly-Magie und Version 1. */
 const WASM_KOPF = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
 const CODE_DATEI = /^code\/(modul\.wasm|daten\/[A-Za-z0-9._-]{1,80})$/;
@@ -220,6 +260,8 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
   // Ergänzung eines anderen Pakets (#405): steht auch unter abhaengigkeiten.
   const erg = liesErgaenzt(m.ergaenzt, abh);
   fehler.push(...erg.fehler.map((f) => `manifest.yaml: ${f}`));
+  // Sprachpaket (#731): nur Texte – kein Code, keine Mappentypen, keine anderen Dateien.
+  const sprache = m.sprache !== undefined ? liesSprachteil(m, dateien, fehler) : null;
   const inhalt = istObjekt(m.inhalt) ? m.inhalt : {};
   const liste = (art: string): Record<string, unknown>[] => {
     if (!inhalt[art]) return [];
@@ -350,6 +392,7 @@ export function liesPaket(roh: Map<string, Buffer>): Paket {
       ...(erg.ergaenzt ? { ergaenzt: erg.ergaenzt } : {}),
     },
     typen, sichten, beispiele, wortlisten, automatisierungen, readme: dateien.get('README.md')?.toString('utf8') ?? '', einstellungen: einst.beschreibung, code,
+    sprache,
   };
 }
 
@@ -464,6 +507,8 @@ export interface Vorschau {
   einstellungen: { neu: string[]; weg: string[] } | null;
   /** Code (#338): Rechte, Netzwerkzugriff, Ereignisse (#449) – muss bestätigt werden (bei einem Update nur, wenn sie sich ändern). */
   laeufer: { rechte: RechtePunkt[]; bestaetigen: boolean } | null;
+  /** Sprachpaket (#731): Sprache, Abdeckung gegen diese Version, übergangene Texte, Pakete mit Beschriftungen. */
+  sprache?: (Sprachangabe & { abdeckung: Abdeckung; uebergangen: number; pakete: string[] }) | null;
 }
 export interface InstallierenEingabe {
   id?: string; version?: string; namen?: Record<string, string>; sichtNamen?: Record<string, string>; beispiele?: boolean; mitAbhaengigkeiten?: boolean;
@@ -544,6 +589,21 @@ export interface PaketOptionen {
    * Dienstbenutzer lesbar, Name aus dem Hash der Kennung. Ohne: nur im Arbeitsspeicher (ein Prozess, Tests).
    */
   uploadOrdner?: string;
+  /**
+   * Sprachpakete (#731): nach dem Installieren, Aktualisieren und Entfernen die Sprachen dieses Prozesses neu laden;
+   * wie viele Personen eine Sprache gewählt haben und ob sie die Sprache der Installation ist (Entfernen mit Hinweis);
+   * nach dem Entfernen die Sprache aus der Einstellung „sprachen“ nehmen. Ohne (Tests): nichts davon.
+   */
+  sprachen?: SprachpaketHaken;
+}
+
+/** Was die Paketverwaltung für Sprachpakete vom Rest braucht (#731). */
+export interface SprachpaketHaken {
+  geaendert(): Promise<void>;
+  nutzung(kennung: string): Promise<{ personen: number; standard: boolean }>;
+  entfernt(kennung: string): Promise<void>;
+  /** Abdeckung einer geladenen Sprache in Prozent (Werkbank → Pakete). */
+  abdeckung?(kennung: string): number | null;
 }
 
 /** Schnittstelle zum Paket-Läufer (#197); kommt mit den Paketen mit Code. */
@@ -920,9 +980,13 @@ export class Paketverwaltung {
 
   /** Installierte Pakete; mit „Einstellungen nötig“, wenn Pflichtfelder fehlen (#197). */
   async installierte(): Promise<Array<InstalliertesPaket & { einstellungenNoetig?: boolean }>> {
+    const mitSprache = (p: InstalliertesPaket): InstalliertesPaket => {
+      const a = p.sprache ? this.o.sprachen?.abdeckung?.(p.sprache.kennung) : null;
+      return a == null ? p : { ...p, spracheAbdeckung: a };
+    };
     return Promise.all((await this.d.listePakete()).map(async (p) => (p.einstellungen
       ? { ...p, einstellungenNoetig: fehlendePflicht(p.einstellungen, (await this.d.paketEinstellungen(p.id))?.werte ?? {}).length > 0 }
-      : p)));
+      : mitSprache(p))));
   }
 
   /** Paket einer Version aus einem Katalog holen und gegen die Prüfsumme prüfen. */
@@ -1136,6 +1200,14 @@ export class Paketverwaltung {
     // Code läuft erst mit dem Paket-Läufer; Einstellungen lassen sich schon pflegen (#197).
     if (m.code !== undefined && !paket.code) hinweise.push(t('meldungen.pakete.das-paket-enthaelt-code'));
     if (ich && vergleicheVersion(m.version, ich.version) <= 0) { probleme.push(t('meldungen.pakete.version-ist-schon-installiert', { version: ich.version })); fehlercodes.push('schon-installiert'); }
+    // Sprachpaket (#731): je Sprache ein Paket; was zu dieser Version nicht passt, fällt weg (Hinweis).
+    const sp = paket.sprache;
+    if (sp) {
+      const anderes = installierte.find((p) => p.id !== m.id && p.sprache?.kennung === sp.angabe.kennung);
+      if (anderes) { probleme.push(t('meldungen.sprachpakete.schon-da', { name: anderes.name, kennung: sp.angabe.kennung })); fehlercodes.push('sprache-schon-da'); }
+      if (sp.uebergangen.length) hinweise.push(t('meldungen.sprachpakete.uebergangen', { anzahl: sp.uebergangen.length }));
+      if (VERSION.test(dmsVersion) && vergleicheVersion(sp.angabe.ablago, dmsVersion) < 0) hinweise.push(t('meldungen.sprachpakete.aelter', { ablago: sp.angabe.ablago, version: dmsVersion }));
+    }
     // Verweise auf Mappentypen des DMS (#310), z. B. dms:ablageort.
     const dmsTypen = await this.dmsTypen();
     const genutzt = [...new Set(typverweise(paket.typen, paket.sichten).filter(istDmsVerweis).map((vw) => vw.slice(DMS_PRAEFIX.length)))];
@@ -1228,6 +1300,7 @@ export class Paketverwaltung {
       automatisierungen: paket.automatisierungen.map((a) => ({ schluessel: a.schluessel, name: a.name, beschreibung: a.beschreibung, neu: !ich?.automatisierungen?.includes(a.schluessel) })),
       einstellungen: paket.einstellungen || ich?.einstellungen ? einstellungsAenderung(ich?.einstellungen ?? null, paket.einstellungen) : null,
       laeufer: paket.code ? { rechte: rechtePunkte(paket.code.info, (vw) => this.typName(vw, paket, installierte, typen)), bestaetigen: !ich || !gleicheRechte(ich.laeufer, paket.code.info) } : null,
+      sprache: sp ? { ...sp.angabe, abdeckung: abdeckung(DEUTSCH, sp.texte), uebergangen: sp.uebergangen.length, pakete: Object.keys(sp.beschriftungen) } : null,
     };
   }
 
@@ -1350,6 +1423,9 @@ export class Paketverwaltung {
     // Code (#403): Der alte Code kommt bei einem Fehler zurück – sonst liefe das alte Paket mit dem neuen Modul.
     const alterCode = alt?.laeufer ? await this.d.paketCode(m.id) : [];
     let codeGeschrieben = false;
+    // Sprachpaket (#731): Die alten Texte kommen bei einem Fehler zurück.
+    const alteSprache = alt?.sprache ? (await this.d.sprachpakete()).find((x) => x.paketId === m.id) ?? null : null;
+    let spracheGeschrieben = false;
     const typMap: Record<string, string> = { ...(alt?.typen ?? {}) };
     const sichtMap: Record<string, string> = { ...(alt?.sichten ?? {}) };
     try {
@@ -1479,18 +1555,27 @@ export class Paketverwaltung {
         ...(paket.automatisierungen.length ? { automatisierungen: paket.automatisierungen.map((a) => a.schluessel) } : {}),
         ...(paket.code ? { laeufer: { ...paket.code.info, modul: modulInfo(paket.code), daten: paket.code.dateien.filter((d) => d.name !== 'modul.wasm').map((d) => d.name) } } : {}),
         ...(v ? { links: { readme: v.readme, changelog: v.changelog, quelle: v.quelle } } : alt?.links ? { links: alt.links } : {}),
+        ...(paket.sprache ? { sprache: { ...paket.sprache.angabe, texte: anzahlTexte(paket.sprache.texte), uebergangen: paket.sprache.uebergangen.length, beschriftungen: Object.keys(paket.sprache.beschriftungen) } } : {}),
         typStand,
       };
       // Code (#338): ersetzt den bisherigen; ohne Code im neuen Paket fällt er weg.
       if (paket.code || alt?.laeufer) codeGeschrieben = true;
       if (paket.code) await this.d.speicherePaketCode(m.id, paket.code.dateien);
       else if (alt?.laeufer) await this.d.loeschePaketCode(m.id);
+      // Sprachpaket (#731): Texte und Beschriftungen neben dem Eintrag; ersetzt die der alten Version.
+      if (paket.sprache || alt?.sprache) spracheGeschrieben = true;
+      if (paket.sprache) await this.d.speichereSprachpaket(m.id, { kennung: paket.sprache.angabe.kennung, texte: paket.sprache.texte, beschriftungen: paket.sprache.beschriftungen });
+      else if (alt?.sprache) await this.d.loescheSprachpaket(m.id);
       await this.d.speicherePaket(datensatz);
       // #712: mitgelieferte Automatisierungen – aus, außer denen, die beim Installieren angehakt wurden (nach dem
       // Speichern, damit Typen und Herkunft stimmen).
       await Promise.resolve(this.d.paketAutomatisierungen?.(datensatz, paket.automatisierungen, ein))
         .catch((e: Error) => log.warn('Automatisierungen des Pakets nicht angelegt', { paket: m.id, fehler: e.message }));
       if (paket.code || alt?.laeufer) await Promise.resolve(this.o.laeufer?.codeGeaendert?.()).catch(() => {});
+      // Sprachpaket (#731): Sprache sofort in diesem Prozess (die anderen lesen sie binnen einer Minute), dann Beschriftungen
+      // der Standardpakete – beim Sprachpaket für alle installierten Pakete, sonst die installierten Sprachen für dieses.
+      if (paket.sprache || alt?.sprache) await Promise.resolve(this.o.sprachen?.geaendert()).catch((e: Error) => log.warn('Sprachpaket nicht geladen', { paket: m.id, fehler: e.message }));
+      await this.sprachBeschriftungen(paket.sprache ? undefined : [m.id]).catch((e: Error) => log.warn('Beschriftungen aus Sprachpaketen nicht übernommen', { paket: m.id, fehler: e.message }));
       // Texterkennung als Paket (#459): Was ohne Paket wartete, geht jetzt an das neue Paket.
       if (hatSchnittstelle(datensatz.laeufer, 'dms:texterkennung') && !hatSchnittstelle(alt?.laeufer, 'dms:texterkennung')) {
         void this.d.texterkennungPaketDa().catch((e: Error) => log.warn('Wartende Dokumente nicht an die Texterkennung gegeben', { paket: m.id, fehler: e.message }));
@@ -1514,6 +1599,7 @@ export class Paketverwaltung {
     } catch (f) {
       await zurueck();
       if (codeGeschrieben) await (alterCode.length ? this.d.speicherePaketCode(m.id, alterCode) : this.d.loeschePaketCode(m.id)).catch((e) => log.error('Paket: alten Code nicht wiederhergestellt', { paket: m.id, fehler: (e as Error).message }));
+      if (spracheGeschrieben) await (alteSprache ? this.d.speichereSprachpaket(m.id, alteSprache) : this.d.loescheSprachpaket(m.id)).catch((e) => log.error('Sprachpaket: alte Texte nicht wiederhergestellt', { paket: m.id, fehler: (e as Error).message }));
       if (einstellungenGeschrieben) await this.d.setzePaketEinstellungen(m.id, alteEinstellungen).catch(() => {});
       if (wortlistenGeschrieben) await this.d.setzePaketSynonyme(m.id, alteWortlisten).catch(() => {});
       throw f;
@@ -1908,11 +1994,70 @@ export class Paketverwaltung {
     finally { clearTimeout(uhr); }
   }
 
-  /** Entfernen: nur ohne Mappen der Typen des Pakets und wenn kein anderes Paket davon abhängt. */
-  async entferne(id: string, von: Handelnder, behalten = false): Promise<void> {
+  /**
+   * Beschriftungen aus Sprachpaketen (#731) an die Mappentypen und Ansichten installierter Pakete: je Sprache, Teil und
+   * Option nur, was noch fehlt – was der Administrator oder das Paket selbst beschriftet hat, bleibt. `nur`: nur diese
+   * Pakete (z. B. das gerade installierte); ohne: alle. Liefert die Zahl ergänzter Texte.
+   */
+  async sprachBeschriftungen(nur?: string[]): Promise<number> {
+    const sprachen = (await this.d.sprachpakete()).filter((s) => Object.keys(s.beschriftungen).length);
+    if (!sprachen.length) return 0;
+    const pakete = (await this.d.listePakete()).filter((p) => !nur || nur.includes(p.id));
+    let anzahl = 0;
+    for (const s of sprachen) {
+      for (const p of pakete) {
+        const b = s.beschriftungen[p.id];
+        if (!b) continue;
+        const typen = await this.d.listeTypen();
+        for (const [schluessel, x] of Object.entries(b.mappentypen ?? {})) {
+          const typ = typen.find((y) => y.id === p.typen[schluessel]);
+          if (!typ) continue;
+          // Als Paket-Typ in dieser einen Sprache – dieselbe Regel wie beim Update eines Pakets (#728).
+          const pt: PaketTyp = {
+            schluessel, name: typ.name, beschreibung: '', felder: Object.entries(x.felder ?? {}).map(([key, f]) => ({ key, label: '', typ: 'text', beschriftungen: { [s.kennung]: f } })),
+            register: Object.entries(x.register ?? {}).map(([key, r]) => ({ key, name: '', art: 'felder', beschriftungen: { [s.kennung]: r } })),
+            beschriftungen: { [s.kennung]: { ...(x.name ? { name: x.name } : {}), ...(x.beschreibung ? { beschreibung: x.beschreibung } : {}) } },
+          };
+          const neu = beschriftungenNeu(pt, typ);
+          if (!neu.anzahl) continue;
+          await this.d.aendereTyp(typ.id, { ...typ, felder: neu.typ.felder, register: neu.typ.register, beschriftungen: neu.typ.beschriftungen ?? null });
+          anzahl += neu.anzahl;
+        }
+        const sichten = await this.d.listeSichten();
+        for (const [schluessel, x] of Object.entries(b.sichten ?? {})) {
+          const sicht = sichten.find((y) => y.id === p.sichten[schluessel]);
+          if (!sicht) continue;
+          const vorher = JSON.stringify(sicht.beschriftungen ?? {});
+          const erg = ergaenzeBeschriftungen(sicht.beschriftungen ?? undefined, { [s.kennung]: x });
+          if (JSON.stringify(erg ?? {}) === vorher) continue;
+          await this.d.aendereSicht(sicht.id, { ...sicht, beschriftungen: erg });
+          anzahl++;
+        }
+      }
+    }
+    if (anzahl) log.info('Beschriftungen aus Sprachpaketen übernommen', { anzahl, pakete: nur?.join(', ') ?? 'alle' });
+    return anzahl;
+  }
+
+  /**
+   * Entfernen: nur ohne Mappen der Typen des Pakets und wenn kein anderes Paket davon abhängt. Ein Sprachpaket (#731)
+   * nutzt vielleicht jemand: dann nur mit `spracheBestaetigt` – die Betroffenen sehen danach die Sprache der
+   * Installation (Deutsch, wenn es deren Sprache war), ihre Wahl bleibt gespeichert und Mein Konto sagt es ihnen.
+   */
+  async entferne(id: string, von: Handelnder, behalten = false, spracheBestaetigt = false): Promise<void> {
     const alle = await this.d.listePakete();
     const p = alle.find((x) => x.id === id);
     if (!p) throw new Fachfehler(404, t('meldungen.pakete.ist-nicht-installiert', { id }));
+    if (p.sprache && !spracheBestaetigt) {
+      const n = await this.o.sprachen?.nutzung(p.sprache.kennung) ?? { personen: 0, standard: false };
+      if (n.personen || n.standard) {
+        const gruende = [
+          ...(n.personen ? [t('meldungen.sprachpakete.entfernen.personen', { anzahl: n.personen })] : []),
+          ...(n.standard ? [t('meldungen.sprachpakete.entfernen.standard')] : []),
+        ];
+        throw new Fachfehler(409, t('meldungen.sprachpakete.entfernen.frage', { name: p.name }), { gruende, sprache: { kennung: p.sprache.kennung, ...n } });
+      }
+    }
     const gruende: string[] = alle.filter((x) => x.id !== id && id in x.abhaengigkeiten).map((x) => t('meldungen.pakete.das-paket-braucht', { name: x.name, name2: p.name }));
     const typIds = Object.values(p.typen);
     gruende.push(...await this.d.belegteTypen(typIds));
@@ -1945,6 +2090,12 @@ export class Paketverwaltung {
     }
     await this.d.loeschePaket(id);
     await this.d.setzePaketSynonyme(id, []);
+    // Sprachpaket (#731): Texte weg, Sprache aus der Einstellung, alle Prozesse laden neu. Beschriftungen an Mappentypen
+    // bleiben – wie andere Beschriftungen einer nicht erlaubten Sprache stören sie nicht und gelten bei einer Neuinstallation.
+    if (p.sprache) {
+      await this.d.loescheSprachpaket(id);
+      await Promise.resolve(this.o.sprachen?.entfernt(p.sprache.kennung)).catch((e: Error) => log.warn('Sprache nicht aus der Einstellung genommen', { paket: id, fehler: e.message }));
+    }
     // #712: mitgelieferte Automatisierungen, die aus und unverändert sind, gehen mit; geänderte bleiben (rot, wenn ihr Typ fehlt).
     await this.d.paketAutomatisierungen?.(p, []).catch((e: Error) => log.warn('Automatisierungen des Pakets nicht entfernt', { paket: id, fehler: e.message }));
     if (p.laeufer) { await this.d.loeschePaketCode(id); await this.d.loescheEreignisse(id); await this.d.setzePaketSpeicher(id, null).catch(() => {}); await this.o.laeufer?.codeGeaendert?.(); }

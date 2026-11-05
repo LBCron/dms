@@ -42,8 +42,8 @@ export function wirksameSprache(gewaehlt: string | null | undefined, e: Sprachei
 /** Maschinell übersetzt (aus dem Sprachpaket, #731)? Dann zeigt Mein Konto „Maschinell übersetzt – Verbesserungen willkommen“. */
 export const istMaschinell = (spr: string) => !!sprachangaben(spr).maschinell;
 
-/** Wo man bei einer Übersetzung mitmachen kann (Entwicklerhandbuch, Texte und Sprachdateien). */
-export const MITMACHEN_URL = 'https://help.ablago.app/entwickler/aktuell/aufbau/#texte-und-sprachdateien';
+/** Wo man bei einer Übersetzung mitmachen kann (Entwicklerhandbuch → Pakete → Sprachpakete, #731). */
+export const MITMACHEN_URL = 'https://help.ablago.app/entwickler/aktuell/pakete/#sprachpakete';
 
 /** Sprache aus einer Kopfzeile wie `Accept-Language: en-GB,en;q=0.9` bzw. `X-Sprache: en` – die erste verfügbare. */
 export function spracheAusKopf(kopf: string | undefined, erlaubt: readonly string[]): string | undefined {

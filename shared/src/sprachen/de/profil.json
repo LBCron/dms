@@ -340,5 +340,6 @@
   "sprache.wahl": "In dieser Sprache zeigt dir Ablago Oberfläche, Meldungen und E-Mails.",
   "sprache.wie-ablage": "Wie die Ablage ({sprache})",
   "sprache.maschinell": "Maschinell übersetzt – {link}",
-  "sprache.mitmachen": "Verbesserungen willkommen"
+  "sprache.mitmachen": "Verbesserungen willkommen",
+  "sprache.weg": "Deine Sprache „{sprache}“ gibt es in dieser Ablage nicht mehr. Du siehst Ablago jetzt in der Sprache der Ablage ({ablage})."
 }

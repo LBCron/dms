@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setzeErlaubteSprachen, sprachname } from '../../../shared/src/beschriftung';
-import { AUSGANGSSPRACHE, EINGEBAUTE_SPRACHEN } from '../../../shared/src/sprache';
+import { AUSGANGSSPRACHE, EINGEBAUTE_SPRACHEN, sprache } from '../../../shared/src/sprache';
+import { Link } from '../ort';
 import { api, type SprachenStand } from '../api';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
@@ -70,7 +71,26 @@ export function SprachenPanel({ z }: { z: SprachenZustand }) {
       </form>
       <section className="blatt">
         <h2 className="h3">{t('werkbank.sprachen.weitere')}</h2>
-        <p className="leise">{t('werkbank.sprachen.weitere.text')}</p>
+        {/* Installierte Sprachpakete (#731): Abdeckung gegen diese Version, für welche Version gemacht, maschinell/geprüft. */}
+        {(s.pakete ?? []).length > 0 ? (
+          <ul className="stapel" aria-label={t('werkbank.sprachen.pakete')}>
+            {(s.pakete ?? []).map((p) => (
+              <li key={p.paket}>
+                <strong lang={p.kennung}>{sprachname(p.kennung, p.kennung)}</strong>{p.kennung !== sprache() && <span className="leise"> · {sprachname(p.kennung)}</span>}
+                {' '}<Link to={`/werkbank/pakete/${p.paket}`} className="verweis klein">{t('werkbank.sprachen.paket.name', { name: p.name, version: p.version })}</Link>
+                <div className="leise klein">
+                  {[
+                    t('werkbank.sprachen.paket.abdeckung', { prozent: p.abdeckung.prozent }),
+                    t('werkbank.sprachen.paket.fuer', { ablago: p.ablago }),
+                    p.geprueftVon ? t('werkbank.sprachen.paket.geprueft', { wer: p.geprueftVon }) : p.maschinell ? t('werkbank.sprachen.paket.maschinell') : t('werkbank.sprachen.paket.menschlich'),
+                    t('werkbank.sprachen.paket.personen', { anzahl: p.personen }),
+                  ].join(' · ')}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="leise">{t('werkbank.sprachen.weitere.text')}</p>}
+        <p><Link to="/werkbank/pakete" className="verweis">{t('werkbank.sprachen.pakete.holen')}</Link></p>
         <p className="leise klein">{t('werkbank.sprachen.rueckfall')}</p>
       </section>
     </div>

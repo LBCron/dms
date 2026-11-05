@@ -1606,5 +1606,21 @@
   "auskunft.speicher.archiv_one": "{typ}: gesetzliche Aufbewahrung {anzahl} Jahr ab {ab} (bis zum Jahresende)",
   "auskunft.speicher.archiv_other": "{typ}: gesetzliche Aufbewahrung {anzahl} Jahre ab {ab} (bis zum Jahresende)",
   "auskunft.speicher.archiv-bis_one": "{typ}: gesetzliche Aufbewahrung {anzahl} Jahr ab {ab} (bis zum Jahresende), längstens bis {bis}",
-  "auskunft.speicher.archiv-bis_other": "{typ}: gesetzliche Aufbewahrung {anzahl} Jahre ab {ab} (bis zum Jahresende), längstens bis {bis}"
+  "auskunft.speicher.archiv-bis_other": "{typ}: gesetzliche Aufbewahrung {anzahl} Jahre ab {ab} (bis zum Jahresende), längstens bis {bis}",
+  "sprachpakete.kein-code": "Ein Sprachpaket enthält nur Texte – manifest.yaml: code gibt es darin nicht.",
+  "sprachpakete.kein-inhalt": "Ein Sprachpaket enthält nur Texte – manifest.yaml: inhalt bleibt leer (keine Mappentypen, Ansichten, Beispiele, Wortlisten oder Automatisierungen).",
+  "sprachpakete.keine-abhaengigkeiten": "Ein Sprachpaket hängt von keinem anderen Paket ab und ergänzt keins (abhaengigkeiten, ergaenzt).",
+  "sprachpakete.fremde-datei": "{name}: gehört nicht in ein Sprachpaket – erlaubt sind texte/<bereich>.json, beschriftungen/<paket>.yaml, README, LICENSE, CHANGELOG und tests/.",
+  "sprachpakete.kein-json": "{name}: kein gültiges JSON.",
+  "sprachpakete.leer": "Das Sprachpaket enthält keine Texte und keine Beschriftungen, die zu dieser Ablago-Version passen.",
+  "sprachpakete.schon-da": "Für die Sprache „{kennung}“ ist schon das Sprachpaket „{name}“ installiert. Entferne es zuerst.",
+  "sprachpakete.uebergangen_one": "Ein Text passt nicht zu dieser Ablago-Version und wird übergangen; an seiner Stelle erscheint Englisch.",
+  "sprachpakete.uebergangen_other": "{anzahl} Texte passen nicht zu dieser Ablago-Version und werden übergangen; an ihrer Stelle erscheint Englisch.",
+  "sprachpakete.aelter": "Die Texte sind für Ablago {ablago} gemacht, diese Installation hat {version}. Neuere Texte erscheinen auf Englisch.",
+  "sprachpakete.entfernen.frage": "„{name}“ wird noch genutzt.",
+  "sprachpakete.entfernen.personen_one": "Eine Person hat diese Sprache gewählt. Sie sieht Ablago danach in der Sprache der Installation; Mein Konto weist sie darauf hin.",
+  "sprachpakete.entfernen.personen_other": "{anzahl} Personen haben diese Sprache gewählt. Sie sehen Ablago danach in der Sprache der Installation; Mein Konto weist sie darauf hin.",
+  "sprachpakete.entfernen.standard": "Sie ist die Sprache der Installation. Danach gilt wieder Deutsch.",
+  "sprachpakete.keine-texte": "Für diese Sprache gibt es hier kein Sprachpaket.",
+  "vollexport.nicht-enthalten-sprachpakete": "nicht enthalten: Texte installierter Sprachpakete (#731, stehen im Paket selbst)"
 }

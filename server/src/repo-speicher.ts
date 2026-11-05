@@ -27,6 +27,7 @@ export function speicherRepo(): Repo {
   const links = new Map<string, AuskunftLinkIntern>();
   const pakete = new Map<string, InstalliertesPaket>();
   const paketCode = new Map<string, Array<{ name: string; inhalt: Buffer }>>();
+  const sprachpakete = new Map<string, import('./repo').SprachpaketDaten>();
   const ereignisse = new Map<string, { id: string; paketId: string; art: string; daten: Record<string, unknown>; erstellt: string; faellig: number; versuche: number; zugestellt: string | null; fehler: string | null }>();
   // Ereigniskatalog (#670)
   const katalog = new Map<string, { id: string; nr: number; art: string; daten: Record<string, unknown>; ausloeser: Record<string, unknown>; buendel: string | null; erstellt: string; faellig: number; gesperrtBis: number; versuche: number; fehler: string | null; verteilt: string | null }>();
@@ -217,6 +218,9 @@ export function speicherRepo(): Repo {
     async speicherePaketCode(id, dateien) { paketCode.set(id, dateien.map((d) => ({ name: d.name, inhalt: Buffer.from(d.inhalt) }))); },
     async paketCode(id) { return (paketCode.get(id) ?? []).map((d) => ({ name: d.name, inhalt: Buffer.from(d.inhalt) })); },
     async loeschePaketCode(id) { paketCode.delete(id); },
+    async speichereSprachpaket(id, d) { sprachpakete.set(id, structuredClone(d)); },
+    async sprachpakete() { return [...sprachpakete].sort(([a], [b]) => a.localeCompare(b)).map(([paketId, d]) => ({ paketId, ...structuredClone(d) })); },
+    async loescheSprachpaket(id) { sprachpakete.delete(id); },
     async legeEreignisseAn(liste) {
       // Gleiche Id = schon angelegt (#670: Ereignisse aus dem Katalog kommen mindestens einmal).
       for (const e of liste) if (!ereignisse.has(e.id)) ereignisse.set(e.id, { ...e, daten: kopie(e.daten), erstellt: jetzt(), faellig: Date.now(), versuche: 0, zugestellt: null, fehler: null });

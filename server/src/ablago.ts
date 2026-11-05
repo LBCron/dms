@@ -56,6 +56,7 @@ import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
 import { RegionDienst } from './region';
 import { SprachDienst } from './sprachwahl';
+import { Sprachpakete } from './sprachpakete';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
 import { Fachfehler } from './fehler';
 import { mitSpracheVon, t, tAuto, tDe } from './sprache';
@@ -282,6 +283,11 @@ const dienst = new Dienst(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'mappen'),
 const konten = new Konten(messung.umhuelle(pgKontoRepo(sql, cfg.haushalt), 'konto'), () => betrieb.mailer(), () => betrieb.adresseFuerLinks(), dienst.benutzerspiegel());
 dienst.verbindeKonten(konten.papierkorbHaken());
 konten.verbindeZustand(zustandDb);
+// Sprachpakete (#731): ihre Sprachen kommen dazu, sobald die Pakete lesbar sind; danach lädt der SprachDienst sie mit.
+const personenMitSprache = async (k: string) => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false && b.sprache === k).length;
+const sprachpakete = new Sprachpakete({ pakete: () => dienst.listePakete(), sprachpakete: () => dienst.sprachpakete(), personen: personenMitSprache });
+sprachen.pakete = sprachpakete;
+await sprachen.lade().catch((e) => log.warn(`Sprachpakete nicht lesbar: ${(e as Error).message}`));
 // Texterkennung im Hintergrund (#45); dieselbe Datenbank, eigener Messbereich.
 // Wartungsmodus (#102): überdauert einen Neustart; pausiert die Hintergrundarbeiten.
 const wartung = new Wartung(pgBetriebSpeicher(sql, cfg.haushalt), konten);
@@ -467,6 +473,13 @@ const pakete: Paketverwaltung = new Paketverwaltung(dienst, {
   laeufer: laeufer as PaketLaeufer,
   // Mehrere Prozesse (#745): hochgeladene Pakete bis zur Installation neben den temporären Uploads (nicht in der Sicherung).
   ...(verbund.mehrere ? { uploadOrdner: join(ordner.dateien, 'hochladen', 'pakete') } : {}),
+  // Sprachpakete (#731): sofort laden, Nutzung vor dem Entfernen, danach aus der Einstellung nehmen.
+  sprachen: {
+    geaendert: async () => { await sprachpakete.lade(true); await sprachen.lade(); },
+    nutzung: async (k) => ({ personen: await personenMitSprache(k), standard: (await sprachen.lies()).standard === k }),
+    entfernt: async (k) => { await sprachen.ohne(k); },
+    abdeckung: (k) => sprachpakete.abdeckung(k),
+  },
   // Installieren, Aktualisieren, Entfernen (#405): nacheinander über alle Instanzen – Sperre in PostgreSQL, solange es läuft.
   sperre: async (f) => {
     const v = await sql.reserve();

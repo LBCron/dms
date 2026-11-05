@@ -4,6 +4,7 @@ import type { Ausdruck, Lesefilter, Regelwerk } from '../../shared/src/rechte';
 import type { Erinnerung } from '../../shared/src/fristen';
 import type { Nummernkreis } from '../../shared/src/nummernkreis';
 import type { InstalliertesPaket } from '../../shared/src/pakete';
+import type { SprachBeschriftung, Sprachtexte } from '../../shared/src/sprachpaket';
 import type { AuskunftLink } from '../../shared/src/auskunft';
 import type { Fundstelle } from './geheimnisse';
 import type { LoeschDokument, LoeschEintrag, LoeschFilter } from '../../shared/src/loeschprotokoll';
@@ -12,6 +13,8 @@ import type { Seitensprache } from '../../shared/src/seitensprachen';
 import { t } from './sprache';
 
 export interface Verweis { feldKey: string; zielId: string }
+/** Texte und Beschriftungen eines Sprachpakets (#731). */
+export interface SprachpaketDaten { kennung: string; texte: Sprachtexte; beschriftungen: Record<string, SprachBeschriftung> }
 
 /**
  * Gleichzeitig bearbeiten (#609): Mappe feldweise schreiben. `basis` sind die Werte, auf denen die neuen
@@ -203,6 +206,10 @@ export interface Repo {
   speicherePaketCode(paketId: string, dateien: Array<{ name: string; inhalt: Buffer }>): Promise<void>;
   paketCode(paketId: string): Promise<Array<{ name: string; inhalt: Buffer }>>;
   loeschePaketCode(paketId: string): Promise<void>;
+  /** Sprachpakete (#731): Texte und Beschriftungen je Paket; ersetzt die bisherigen ganz. */
+  speichereSprachpaket(paketId: string, d: SprachpaketDaten): Promise<void>;
+  sprachpakete(): Promise<Array<SprachpaketDaten & { paketId: string }>>;
+  loescheSprachpaket(paketId: string): Promise<void>;
   /** Ereignisse für Pakete (#338): Ausgangskorb mit Wiederholung. */
   legeEreignisseAn(e: Array<{ id: string; paketId: string; art: string; daten: Record<string, unknown> }>): Promise<void>;
   /** Fällige, noch nicht zugestellte Ereignisse, älteste zuerst. */

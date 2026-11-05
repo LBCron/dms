@@ -4,7 +4,7 @@
  * abgerufen; ein neuer Bereich wird unten ergänzt. Anleitung: Entwicklerhandbuch → Aufbau → Texte.
  */
 import { createElement, Fragment, type ReactNode } from 'react';
-import { setzeSprache, sprache, uebersetzer, type Schluessel } from '../../shared/src/sprache';
+import { AUSGANGSSPRACHE, registriereSprache, RUECKFALLSPRACHE, setzeSprache, sprache, uebersetzer, type Schluessel } from '../../shared/src/sprache';
 import ablage from '../../shared/src/sprachen/de/ablage.json';
 import mappentypen from '../../shared/src/sprachen/de/mappentypen.json';
 import notfall from '../../shared/src/sprachen/de/notfall.json';
@@ -70,12 +70,27 @@ export const browserSprache = () => (typeof navigator === 'undefined' ? '' : (na
 /**
  * Lädt die Texte einer Sprache und stellt die Oberfläche darauf um. Englisch ist ein eigener Teil des Bundles und kommt
  * erst, wenn jemand es braucht. Texte, die Module beim Laden bilden, entstehen erst danach (main.tsx lädt App später).
+ *
+ * Sprachpakete (#731): Ihre Texte holt die Oberfläche vom Server (nur Texte, nie HTML – React setzt sie als Text). Dazu
+ * kommt immer Englisch, denn was im Sprachpaket fehlt, erscheint auf Englisch, sonst auf Deutsch. Geht das Laden schief,
+ * bleibt es bei Englisch bzw. Deutsch – Ablago zeigt nie eine leere Stelle.
  */
 export async function ladeSprache(spr: string) {
-  if (spr === 'en') { const { registriereEnglisch } = await import('../../shared/src/englisch'); registriereEnglisch(); }
+  if (spr !== AUSGANGSSPRACHE) { const { registriereEnglisch } = await import('../../shared/src/englisch'); registriereEnglisch(); }
+  if (spr !== AUSGANGSSPRACHE && spr !== RUECKFALLSPRACHE) await ladeSprachpaket(spr);
   setzeSprache(spr);
   merkeSprache(spr);
   if (typeof document !== 'undefined') document.documentElement.lang = spr;
+}
+
+/** Texte eines Sprachpakets vom Server eintragen (#731); ohne Antwort bleibt der Rückfall. */
+async function ladeSprachpaket(spr: string) {
+  try {
+    const r = await fetch(`/api/sprache/texte/${encodeURIComponent(spr)}`, { credentials: 'same-origin', headers: { 'x-dms': '1' } });
+    if (!r.ok) return;
+    const d = await r.json() as { kennung: string; gebietsschema: string; maschinell: boolean; texte: Record<string, Record<string, string>> };
+    registriereSprache(spr, d.texte, { maschinell: d.maschinell, gebietsschema: d.gebietsschema });
+  } catch { /* nicht erreichbar: Rückfall Englisch, sonst Deutsch */ }
 }
 
 /** Andere Sprache gewählt (Mein Konto, Anmeldung, Assistent): merken und neu laden – alle Texte entstehen neu. */

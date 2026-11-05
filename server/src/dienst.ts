@@ -4273,6 +4273,10 @@ export class Dienst {
   speicherePaketCode(id: string, dateien: Array<{ name: string; inhalt: Buffer }>) { return this.repo.speicherePaketCode(id, dateien); }
   paketCode(id: string) { return this.repo.paketCode(id); }
   loeschePaketCode(id: string) { return this.repo.loeschePaketCode(id); }
+  /** Sprachpakete (#731): Texte und Beschriftungen. */
+  speichereSprachpaket(id: string, d: import('./repo').SprachpaketDaten) { return this.repo.speichereSprachpaket(id, d); }
+  sprachpakete() { return this.repo.sprachpakete(); }
+  loescheSprachpaket(id: string) { return this.repo.loescheSprachpaket(id); }
   loescheEreignisse(id: string) { return this.repo.loescheEreignisse(id); }
   /** Ereignisse für Pakete (#338). */
   faelligeEreignisse(n: number) { return this.repo.faelligeEreignisse(n); }

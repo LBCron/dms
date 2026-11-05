@@ -165,6 +165,74 @@ code:
 
 Was das Paket mit den Einstellungen macht und welche Rechte es braucht, beschreibt [Pakete mit Code](pakete-code.md).
 
+## Sprachpakete { #sprachpakete }
+
+Weitere Sprachen für Ablago kommen als **Sprachpaket** (#731, ab Ablago 0.203.0): aus dem Katalog, über die Sammeldatei oder hochgeladen – wie jedes andere Paket, mit derselben Signatur und Herkunftsprüfung und derselben Größengrenze (128 MB, #644). Ein Sprachpaket bringt **nur Texte**: kein Code, keine Mappentypen, kein HTML.
+
+```
+sprache_fr/
+  manifest.yaml
+  README.md  LICENSE  CHANGELOG.md  tests/erwartung.yaml
+  texte/<bereich>.json          Texte der Oberfläche, Meldungen und E-Mails – wie shared/src/sprachen/<sprache>/
+  beschriftungen/<paket>.yaml   Beschriftungen der Standardpakete (optional)
+```
+
+```yaml
+schema: 1
+id: sprache_fr
+name: Français
+version: 1.0.0
+beschreibung: Ablago auf Französisch.
+autor: { name: Thomas Meissner, github: motom001 }
+lizenz: Apache-2.0
+dms: ">=0.203.0"
+sprache:
+  kennung: fr               # Sprachkennung wie fr oder pt-BR; Deutsch und Englisch sind eingebaut
+  gebietsschema: fr-FR      # Datum, Zahlen, Beträge (fehlt: die Kennung)
+  ablago: 0.203.0           # Ablago-Version, für die die Texte gemacht sind
+  maschinell: true          # maschinell übersetzt → Hinweis in Mein Konto und im Katalog
+  # geprueft_von: "@github-name"   # wer die Übersetzung geprüft hat (statt des Hinweises)
+inhalt: {}
+```
+
+**Texte** (`texte/<bereich>.json`): flach wie die eingebauten Sprachdateien, dieselben Bereiche, Schlüssel und Platzhalter wie `shared/src/sprachen/de/` – am bequemsten übersetzt man die englischen Dateien (`en/`). Mehrzahl nach den Regeln der Sprache (`_one`, `_few`, `_many`, `_other` …); immer die vertraute Anrede (du, tu, je, ty …), eine förmliche Fassung gibt es nicht. Beim Installieren prüft Ablago jeden Text:
+
+- **abgelehnt** wird das Paket bei Texten, die keine Zeichenkette sind, bei Steuerzeichen, bei mehr als 4000 Zeichen je Text oder 4 MB für alle Texte und bei **spitzen Klammern**, wo der deutsche Text keine hat – also bei HTML. Ablago setzt Texte nie als HTML, die Prüfung ist eine zweite Sicherung.
+- **übergangen** werden Bereiche und Schlüssel, die es in dieser Version nicht gibt, und Texte mit Platzhaltern, die der deutsche Text nicht hat. An ihrer Stelle erscheint Englisch, die Vorschau nennt die Zahl. So bleibt ein Paket für eine ältere Version installierbar.
+- **Dateien:** Nur `manifest.yaml`, README, LICENSE, NOTICE, CHANGELOG, `tests/`, `texte/*.json` und `beschriftungen/*.yaml`. Alles andere (`code/`, Bilder, Skripte) lehnt Ablago ab, ebenso `code`, `inhalt`-Einträge, `abhaengigkeiten` und `ergaenzt` im Manifest.
+
+**Rückfall:** Fehlt ein Text, erscheint er auf Englisch, sonst auf Deutsch. Werkbank → Sprachen zeigt je Sprachpaket „Übersetzung 94 % vollständig“ (Anteil der deutschen Schlüssel dieser Version, Mehrzahlformen zählen einmal), für welche Version es gemacht ist und wie viele Personen es gewählt haben.
+
+**Beschriftungen der Standardpakete** (`beschriftungen/<paket>.yaml`) – in der Sprache des Pakets, mit den Schlüsseln des Pakets (ohne Präfix):
+
+```yaml
+mappentypen:
+  organisation:
+    name: Organisme
+    beschreibung: Entreprise, administration, cabinet médical …
+    felder:
+      name: { label: Nom }
+      art: { label: Type, optionen: { Bank: Banque, Versicherung: Assurance } }   # fester Wert → Text
+    register:
+      stammdaten: { name: Données de base }
+sichten:
+  organisationen: { name: Organismes }
+```
+
+Ablago übernimmt sie beim Installieren des Sprachpakets für alle installierten Pakete und später beim Installieren oder Aktualisieren eines Pakets – nur, was dort in dieser Sprache noch fehlt (wie beim [Update eines Pakets](#paketformat-verbindlich), #728). Was der Administrator selbst beschriftet hat, bleibt. Ein Paket darf seine Beschriftungen auch selbst mitbringen (`beschriftungen` an Typ, Feld, Register und Ansicht); dann ergänzt das Sprachpaket nur, was fehlt.
+
+**Im Kern:** `liesPaket()` liest den Abschnitt `sprache` (`server/src/pakete.ts`), die Regeln stehen in `shared/src/sprachpaket.ts`. Texte und Beschriftungen stehen in der Tabelle `paket_sprachen` (Migration 082, Spalten `texte` und `paketbeschriftungen`), der Paketeintrag in `pakete` mit `daten.sprache`. `server/src/sprachpakete.ts` trägt sie in jedem Prozess ein (beim Start, nach dem Installieren sofort, sonst mit der Einstellung `sprachen` jede Minute); die Oberfläche holt sie mit `GET /api/sprache/texte/<sprache>` (nur erlaubte Sprachen, auch vor der Anmeldung). **Entfernen** fragt nach, wenn jemand die Sprache gewählt hat oder sie die Sprache der Installation ist: Die Betroffenen sehen danach die Sprache der Installation (Deutsch, wenn es deren Sprache war); ihre Wahl bleibt gespeichert, Mein Konto weist sie darauf hin.
+
+### Eine Sprache beitragen { #eine-sprache-beitragen }
+
+Sprachpakete liegen wie alle Pakete in [motom001/dms-registry](https://github.com/motom001/dms-registry) unter `pakete/sprache_<kennung>/`. Die erste Welle ist **maschinell übersetzt** (`maschinell: true`) – jede Verbesserung hilft:
+
+1. Issue „Übersetzung verbessern“ in der Registry öffnen (Vorlage) oder gleich einen Pull Request: Text in `texte/<bereich>.json` ändern, Version erhöhen (Patch), Eintrag im `CHANGELOG.md`.
+2. Hast du eine Sprache durchgesehen, trägst du dich unter `sprache.geprueft_von` ein (GitHub-Name). Dann zeigen Ablago und der Katalog „Geprüft von …“ statt des Hinweises auf die maschinelle Übersetzung.
+3. Neue Texte einer neuen Ablago-Version: `python3 werkzeuge/sprachen.py` in der Registry nennt je Sprache, was fehlt; `sprache.ablago` auf die neue Version setzen, wenn alles übersetzt ist.
+
+Die CI der Registry prüft Schlüssel, Platzhalter und HTML wie Ablago und meldet je Sprache die Abdeckung gegen die neueste Ablago-Version.
+
 ## Prüfen
 
 ```sh

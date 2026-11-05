@@ -1606,5 +1606,21 @@
   "auskunft.speicher.archiv_one": "{typ}: statutory retention {anzahl} year from {ab} (until the end of the year)",
   "auskunft.speicher.archiv_other": "{typ}: statutory retention {anzahl} years from {ab} (until the end of the year)",
   "auskunft.speicher.archiv-bis_one": "{typ}: statutory retention {anzahl} year from {ab} (until the end of the year), at the latest until {bis}",
-  "auskunft.speicher.archiv-bis_other": "{typ}: statutory retention {anzahl} years from {ab} (until the end of the year), at the latest until {bis}"
+  "auskunft.speicher.archiv-bis_other": "{typ}: statutory retention {anzahl} years from {ab} (until the end of the year), at the latest until {bis}",
+  "sprachpakete.kein-code": "A language package contains only texts – manifest.yaml: code isn’t allowed in it.",
+  "sprachpakete.kein-inhalt": "A language package contains only texts – manifest.yaml: inhalt stays empty (no folder types, views, examples, word lists or automations).",
+  "sprachpakete.keine-abhaengigkeiten": "A language package doesn’t depend on or extend another package (abhaengigkeiten, ergaenzt).",
+  "sprachpakete.fremde-datei": "{name}: doesn’t belong in a language package – allowed are texte/<bereich>.json, beschriftungen/<paket>.yaml, README, LICENSE, CHANGELOG and tests/.",
+  "sprachpakete.kein-json": "{name}: not valid JSON.",
+  "sprachpakete.leer": "The language package contains no texts and no labels that fit this Ablago version.",
+  "sprachpakete.schon-da": "The language package “{name}” is already installed for the language “{kennung}”. Remove it first.",
+  "sprachpakete.uebergangen_one": "One text doesn’t fit this Ablago version and is skipped; English appears in its place.",
+  "sprachpakete.uebergangen_other": "{anzahl} texts don’t fit this Ablago version and are skipped; English appears in their place.",
+  "sprachpakete.aelter": "The texts were made for Ablago {ablago}, this installation has {version}. Newer texts appear in English.",
+  "sprachpakete.entfernen.frage": "“{name}” is still in use.",
+  "sprachpakete.entfernen.personen_one": "One person has chosen this language. Afterwards they see Ablago in the installation’s language; My account tells them.",
+  "sprachpakete.entfernen.personen_other": "{anzahl} people have chosen this language. Afterwards they see Ablago in the installation’s language; My account tells them.",
+  "sprachpakete.entfernen.standard": "It is the installation’s language. Afterwards German applies again.",
+  "sprachpakete.keine-texte": "There is no language package for this language here.",
+  "vollexport.nicht-enthalten-sprachpakete": "not included: texts of installed language packages (#731, they are in the package itself)"
 }

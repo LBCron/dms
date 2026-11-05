@@ -72,6 +72,7 @@ import { erreichbarkeit, NICHT_ERREICHBAR } from './erreichbar';
 import { istAusfall } from '../../shared/src/erreichbarkeit';
 import { t } from './sprache';
 import { sprache } from '../../shared/src/sprache';
+import type { Abdeckung, Sprachangabe, SprachpaketInfo } from '../../shared/src/sprachpaket';
 
 export class ApiFehler extends Error {
   constructor(public status: number, message: string, public details?: unknown) { super(message); }
@@ -321,7 +322,11 @@ export interface ZweifaktorPflicht { admin: boolean; mitglied: boolean }
 /** Sprache für die Oberfläche (#729). */
 export interface SprachStatus { sprache: string; standard: string; erlaubt: string[]; maschinell: string[] }
 /** Werkbank → Sprachen (#729). */
-export interface SprachenStand { einstellung: { standard: string; erlaubt: string[] }; verfuegbar: string[] }
+export interface SprachenStand {
+  einstellung: { standard: string; erlaubt: string[] }; verfuegbar: string[];
+  /** Installierte Sprachpakete (#731) mit Abdeckung und wie viele Personen sie gewählt haben. */
+  pakete?: Array<SprachpaketInfo & { paket: string; name: string; version: string; abdeckung: Abdeckung; personen: number }>;
+}
 
 /** Region der Ablage (#726). */
 export interface Region { land: string; bundesland: string | null; zeitzone: string }
@@ -806,7 +811,12 @@ export const api = {
   fragenStand: () => anfrage<FragenStand>('GET', '/api/werkbank/fragen'),
   fragenGrenzen: (g: FragenGrenzen) => anfrage<FragenStand>('PUT', '/api/werkbank/fragen', g),
   aehnlicheZurMappe: (id: string) => anfrage<{ verfuegbar: boolean; berechnet: boolean; mappen: AehnlicheMappe[] }>('GET', `/api/mappen/${id}/aehnliche`),
-  paketEntfernen: (id: string, einstellungenBehalten = false) => anfrage<void>('DELETE', `/api/werkbank/pakete/${encodeURIComponent(id)}${einstellungenBehalten ? '?einstellungenBehalten=1' : ''}`),
+  paketEntfernen: (id: string, einstellungenBehalten = false, spracheBestaetigt = false) => {
+    const q = [einstellungenBehalten ? 'einstellungenBehalten=1' : '', spracheBestaetigt ? 'spracheBestaetigt=1' : ''].filter(Boolean).join('&');
+    return anfrage<void>('DELETE', `/api/werkbank/pakete/${encodeURIComponent(id)}${q ? `?${q}` : ''}`);
+  },
+  /** Texte eines Sprachpakets (#731), auch vor der Anmeldung. */
+  sprachTexte: (kennung: string) => anfrage<{ kennung: string; gebietsschema: string; maschinell: boolean; texte: Record<string, Record<string, string>> }>('GET', `/api/sprache/texte/${encodeURIComponent(kennung)}`),
   paketEinstellungen: (id: string) => anfrage<PaketEinstellungenStand>('GET', `/api/werkbank/pakete/${encodeURIComponent(id)}/einstellungen`),
   /** adresseBestaetigt (#444): Hinweis zur Dienst-Adresse bestätigt – sonst 409, wenn sich eine Adresse ändert. */
   paketEinstellungenSpeichern: (id: string, werte: Record<string, unknown>, adresseBestaetigt = false) => anfrage<PaketEinstellungenStand>('PUT', `/api/werkbank/pakete/${encodeURIComponent(id)}/einstellungen`, { werte, ...(adresseBestaetigt ? { adresseBestaetigt: true } : {}) }),
@@ -1055,6 +1065,8 @@ export interface PaketVorschau {
   automatisierungen?: Array<{ schluessel: string; name: string; beschreibung: string; neu: boolean }>;
   /** Paket mit Code (#338): Rechte, Netzwerkzugriff und Ereignisse (#449); bestaetigen = muss ausdrücklich erlaubt werden. */
   laeufer?: { rechte: RechtePunkt[]; bestaetigen: boolean } | null;
+  /** Sprachpaket (#731): Sprache, Abdeckung gegen diese Version, übergangene Texte, Pakete mit Beschriftungen. */
+  sprache?: (Sprachangabe & { abdeckung: Abdeckung; uebergangen: number; pakete: string[] }) | null;
 }
 /** Sammeldatei (#461): geprüft, Pakete in der Reihenfolge zum Installieren (Abhängigkeiten zuerst). */
 export interface SammelPaket {
