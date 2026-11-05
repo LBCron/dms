@@ -50,7 +50,7 @@ export class Hochgeladen {
   lies(): Promise<Buffer> { return readFile(this.sicher()); }
   strom(): Readable { return createReadStream(this.sicher()); }
   /** Löschen (auch, wenn sie schon in den Dateispeicher umbenannt wurde: dann gibt es nichts mehr zu tun). */
-  async entferne() { await rm(this.pfad, { force: true }); }
+  async entferne() { await rm(this.sicher(), { force: true }); }
 }
 
 /**
