@@ -872,8 +872,8 @@ async function main() {
   await s.getByPlaceholder(/Beim Speichern/).fill('Beim Speichern einer Rechnung kam „Fehler 500“, nachdem ich ein Dokument hinzugefügt hatte.');
   await s.getByText('Technische Angaben ansehen').click();
   await bild(s, 'fehler-melden');
-  await s.getByRole('button', { name: 'An die Administratoren senden' }).click();
-  await s.getByText('Deine Meldung ist bei den Administratoren angekommen.').waitFor();
+  await s.getByRole('button', { name: 'Meldung senden' }).click();
+  await s.getByText('Deine Meldung ist angekommen.').waitFor();
   await geheZu(s, '/api-doku');
   await bild(s, 'api-doku');
 

@@ -156,7 +156,7 @@ Funktioniert etwas nicht, wähle im Menü **Fehler melden**:
 1. Beschreibe kurz, was passiert ist und was du erwartet hättest.
 2. Füge bei Bedarf bis zu zwei **Screenshots** hinzu (PNG, JPEG oder WebP, je höchstens 10 MB) – auch direkt mit Strg+V ins Textfeld.
 3. Unter **Technische Angaben ansehen** steht, was mitgeschickt wird: Version von Ablago, Browser und Gerät, Bildschirm- und Fenstergröße, Sprache und Zeitzone, die zuletzt besuchten Seiten (bis zu 25) und die letzten Fehler im Browser (bis zu 10). Passwörter, Inhalte von Mappen und Dokumente gehen nicht mit.
-4. **An die Administratoren senden** – oder **In die Zwischenablage kopieren**, um es z. B. per E-Mail zu schicken.
+4. **Meldung senden** (geht an alle, die Ablago verwalten) – oder **In die Zwischenablage kopieren**, um es z. B. per E-Mail zu schicken.
 
 Wer Ablago verwaltet, sieht deine Meldung in der Werkbank und meldet sich, falls es Fragen gibt.
 
