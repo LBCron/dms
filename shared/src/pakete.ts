@@ -59,6 +59,23 @@ export interface KatalogVersion {
   quelle: string; readme: string; changelog: string;
   /** Ergänzung eines anderen Pakets (#405, Manifest `ergaenzt`), z. B. eine Zusatzsprache der Texterkennung. */
   ergaenzt?: Ergaenzung;
+  /** Sprachpaket (#731): Sprache, maschinell übersetzt oder geprüft – für den Hinweis im Katalog. */
+  sprache?: KatalogSprache;
+}
+/** Angaben eines Sprachpakets im Katalog (#731, dms-registry #116). */
+export interface KatalogSprache { kennung: string; maschinell: boolean; geprueftVon?: string; ablago?: string }
+
+/** Liest `sprache` einer Katalogversion; Ungültiges zählt nicht (das Paket bleibt sichtbar, nur ohne Hinweis). */
+export function liesKatalogSprache(v: unknown): KatalogSprache | undefined {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const o = v as Record<string, unknown>;
+  if (typeof o.kennung !== 'string' || !/^[a-z]{2,3}(-[A-Z]{2})?$/.test(o.kennung)) return undefined;
+  const gv = typeof o.geprueft_von === 'string' ? o.geprueft_von : typeof o.geprueftVon === 'string' ? o.geprueftVon : '';
+  return {
+    kennung: o.kennung, maschinell: o.maschinell === true,
+    ...(gv.trim() && gv.length <= 200 && !/[<>]/.test(gv) ? { geprueftVon: gv.trim() } : {}),
+    ...(typeof o.ablago === 'string' && VERSION.test(o.ablago) ? { ablago: o.ablago } : {}),
+  };
 }
 
 /**
@@ -169,6 +186,8 @@ export interface InstalliertesPaket {
   einstellungen?: import('./paketeinstellungen').Einstellungsbeschreibung | null;
   /** Nur in der Antwort der Werkbank: Pflichtfelder der Einstellungen fehlen (#197). */
   einstellungenNoetig?: boolean;
+  /** Nur in der Antwort der Werkbank: Sprachpaket (#731) – Übersetzung zu so viel Prozent vollständig (diese Version). */
+  spracheAbdeckung?: number;
   /** Das Paket enthält Code (#338: läuft im Paket-Läufer). */
   code?: boolean;
   /** Code des Pakets (#338): Ereignisse, bestätigte Rechte und erlaubte Adressen im Netzwerk/Internet, Prüfwert des Moduls. */
@@ -179,6 +198,8 @@ export interface InstalliertesPaket {
   dms?: string;
   /** Stand der Mappentypen, wie das Paket sie gebracht hat (#653), je Id – für „geändert“ mit Unterschieden. */
   typStand?: Record<string, import('./typvergleich').TypBild>;
+  /** Sprachpaket (#731): Sprache, Gebietsschema, Ablago-Version der Texte, maschinell/geprüft; die Texte selbst stehen extra. */
+  sprache?: import('./sprachpaket').SprachpaketInfo;
 }
 
 /* ---------- Versionen ---------- */
@@ -325,6 +346,7 @@ export function liesKatalog(j: unknown): Katalog {
         code: !!v.code,
         // Ergänzung (#405): ungültige Angaben zählen nicht (das Paket bleibt installierbar, nur ohne Häkchen).
         ergaenzt: liesErgaenzt(v.ergaenzt, v.abhaengigkeiten && typeof v.abhaengigkeiten === 'object' ? v.abhaengigkeiten : {}).ergaenzt ?? undefined,
+        sprache: liesKatalogSprache(v.sprache),
       }))
       .sort((a, b) => vergleicheVersion(b.version, a.version));
     if (!versionen.length) continue;

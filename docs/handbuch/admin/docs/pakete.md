@@ -144,6 +144,8 @@ Für Paket-Autoren steht das Format (`aus_text`) in den [Regeln der Registry](ht
 
 Sonst nennt Ablago die Gründe. Beispiel-Mappen löschst du vorher wie andere Mappen.
 
+Ein **Sprachpaket** hat keine Mappentypen. Hat jemand seine Sprache gewählt oder ist sie die Sprache der Installation, fragt Ablago nach, bevor es entfernt – siehe [Sprachen → Sprachpakete](sprachen.md#sprachpakete).
+
 Liefert das Paket Volltext oder wandelt es Dateien um (z. B. **Office und E-Mail**, **Bildformate**), warten danach keine Dokumente mehr darauf: Ohne Text steht am Dokument wieder, dass es für diesen Dateityp kein Paket gibt; hatte es schon Text, bleibt der Text stehen.
 
 ## Einstellungen

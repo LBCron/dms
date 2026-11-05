@@ -71,6 +71,8 @@ export const OHNE_FOLGEN = new Set<string>([
   'verschluesselteFundstellen', 'erinnerungen', 'holeErinnerung', 'notizen', 'notizenVon', 'holeNotiz', 'historie', 'historieVon',
   // schreiben, ohne Folgen für die Zahlen
   'legeEreignisseAn', 'ereignisZugestellt', 'ereignisDaten', 'ereignisFehlgeschlagen', 'loescheEreignisse', 'loescheOffeneEreignisse', 'speicherePaketCode', 'loeschePaketCode',
+  // Sprachpakete (#731): nur Texte.
+  'sprachpakete', 'speichereSprachpaket', 'loescheSprachpaket',
   'speichereNummernkreis', 'loescheNummernkreis', 'setzeZaehler', 'zieheNummern', 'aktualisiereStatistik',
   'legeAuskunftLinkAn', 'auskunftLinkFehlversuch', 'auskunftLinkAbruf', 'widerrufeAuskunftLink', 'setzeFavoritBenachrichtigen',
   'merkeGesehen', 'ocrEinreihen', 'ocrSetze', 'ocrZurueckstellen', 'legeErinnerungAn', 'aendereErinnerung', 'loescheErinnerung',

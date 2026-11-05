@@ -354,6 +354,10 @@ function SpracheWaehlen() {
           <option value="">{t('profil.sprache.wie-ablage', { sprache: name(sprachen.standard) })}</option>
           {sprachen.erlaubt.map((s) => <option key={s} value={s} lang={s}>{name(s)}</option>)}
         </select></label>
+      {/* Sprachpaket entfernt (#731): Die Wahl bleibt gespeichert, es gilt die Sprache der Ablage – das sagen wir. */}
+      {ich.sprache && !sprachen.erlaubt.includes(ich.sprache) && (
+        <div className="hinweis info"><p>{t('profil.sprache.weg', { sprache: name(ich.sprache), ablage: name(sprachen.standard) })}</p></div>
+      )}
       {sprachen.maschinell.includes(gilt) && (
         <p className="leise klein">{tn('profil.sprache.maschinell', { link: <a href={MITMACHEN_URL} target="_blank" rel="noreferrer">{t('profil.sprache.mitmachen')}</a> })}</p>
       )}

@@ -777,6 +777,16 @@ export function pgRepo(sql: Sql, haushaltId: string, imTx = false): Repo {
       return (await sql`SELECT name, inhalt FROM paket_code WHERE haushalt_id = ${haushaltId} AND paket_id = ${id} ORDER BY name`).map((r) => ({ name: r.name as string, inhalt: Buffer.from(r.inhalt as Uint8Array) }));
     },
     async loeschePaketCode(id) { await sql`DELETE FROM paket_code WHERE haushalt_id = ${haushaltId} AND paket_id = ${id}`; },
+    async speichereSprachpaket(id, d) {
+      await sql`
+        INSERT INTO paket_sprachen (haushalt_id, paket_id, kennung, texte, paketbeschriftungen) VALUES (${haushaltId}, ${id}, ${d.kennung}, ${json(sql, d.texte)}, ${json(sql, d.beschriftungen)})
+        ON CONFLICT (haushalt_id, paket_id) DO UPDATE SET kennung = EXCLUDED.kennung, texte = EXCLUDED.texte, paketbeschriftungen = EXCLUDED.paketbeschriftungen`;
+    },
+    async sprachpakete() {
+      return (await sql`SELECT paket_id, kennung, texte, paketbeschriftungen FROM paket_sprachen WHERE haushalt_id = ${haushaltId} ORDER BY paket_id`)
+        .map((r) => ({ paketId: r.paket_id as string, kennung: r.kennung as string, texte: r.texte as import('../../shared/src/sprachpaket').Sprachtexte, beschriftungen: r.paketbeschriftungen as Record<string, import('../../shared/src/sprachpaket').SprachBeschriftung> }));
+    },
+    async loescheSprachpaket(id) { await sql`DELETE FROM paket_sprachen WHERE haushalt_id = ${haushaltId} AND paket_id = ${id}`; },
     async legeEreignisseAn(liste) {
       if (!liste.length) return;
       // Gleiche Id = schon angelegt (#670: Ereignisse aus dem Katalog kommen mindestens einmal).

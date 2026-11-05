@@ -22,6 +22,8 @@ import { KEINE_LIZENZ, lizenzArtVon, type SelbstErstellt } from '../../../shared
 import { HerkunftZeile } from './Herkunft';
 import { EREIGNISKATALOG, ereignisSchluessel, istKatalogArt, KATALOG_ARTEN } from '../../../shared/src/ereignisse';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { sprachname } from '../../../shared/src/beschriftung';
+import { MITMACHEN_URL } from '../../../shared/src/sprachwahl';
 
 /**
  * Werkbank → Pakete (#188): Konfigurationspakete aus dem offiziellen Katalog.
@@ -452,7 +454,17 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
     // Mit Einstellungen (#197): fragen, ob sie für eine spätere Neuinstallation bleiben sollen (Standard: nein).
     if (inst.einstellungen) { setEntfernenOffen(true); return; }
     if (!(await rueckfrage({ titel: t('werkbank.pakete.entfernen-2', { name: inst.name }), text: t('werkbank.pakete.seine-mappentypen-und-ansichten'), ja: t('werkbank.pakete.entfernen'), gefahr: true }))) return;
-    void tu(async () => { await api.paketEntfernen(id); geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt', { name: inst.name }); });
+    void tu(async () => {
+      let bestaetigt = false;
+      try { await api.paketEntfernen(id); } catch (e) {
+        // Sprachpaket in Gebrauch (#731): sagen, wen es betrifft, und nur auf ausdrücklichen Wunsch entfernen.
+        const s = e instanceof ApiFehler && e.status === 409 ? (e.details as { sprache?: unknown } | undefined)?.sprache : undefined;
+        if (!s || !(await rueckfrage({ titel: (e as Error).message, text: (e as ApiFehler).gruende.join(' '), ja: t('werkbank.pakete.sprache.entfernen'), gefahr: true }))) throw e;
+        bestaetigt = true;
+      }
+      if (bestaetigt) await api.paketEntfernen(id, false, true);
+      geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt', { name: inst.name });
+    });
   };
   const entfernenBestaetigt = () => void tu(async () => { await api.paketEntfernen(id, behalten); setEntfernenOffen(false); geheZu('/werkbank/pakete', true); return t('werkbank.pakete.ist-entfernt-2', { name: inst!.name, wert: behalten ? t('werkbank.pakete.die-einstellungen-bleiben-fuer') : '' }); });
 
@@ -488,6 +500,11 @@ function PaketDetail({ z, id, quelle }: { z: PaketeZustand; id: string; quelle?:
           <dt>{t('werkbank.pakete.lizenz')}</dt><dd><LizenzAngabe lizenz={inst?.lizenz ?? kp?.lizenz ?? ''} /></dd>
           <dt>{t('werkbank.pakete.autor')}</dt><dd>{autor?.name}{autor?.github && <> (<a className="verweis" href={`https://github.com/${autor.github}`} target="_blank" rel="noreferrer">@{autor.github}</a>)</>}</dd>
           {v && <><dt>{t('werkbank.pakete.noetige-ablago-version')}</dt><dd>{tn('werkbank.pakete.dieser-installation-2', { dms: v.dms, dms2: z.stand?.dms })}</dd></>}
+          {/* Sprachpaket (#731): Sprache und wie übersetzt – aus dem Katalog bzw. vom installierten Paket. */}
+          {(inst?.sprache || v?.sprache) && <><dt>{t('werkbank.pakete.sprache')}</dt><dd>
+            {inst?.sprache ? t('werkbank.pakete.sprache.info', { sprache: sprachname(inst.sprache.kennung), prozent: inst.spracheAbdeckung ?? '–', ablago: inst.sprache.ablago }) : sprachname(v!.sprache!.kennung)}
+            <SprachHerkunft maschinell={(inst?.sprache ?? v!.sprache!).maschinell} geprueftVon={(inst?.sprache ?? v!.sprache!).geprueftVon} />
+          </dd></>}
           {v && <><dt>{t('werkbank.pakete.abhaengigkeiten')}</dt><dd>{Object.keys(v.abhaengigkeiten).length ? Object.entries(v.abhaengigkeiten).map(([k, b]) => `${k} ${b}`).join(', ') : t('werkbank.pakete.keine')}</dd></>}
           {v && (v.inhalt.mappentypen.length > 0 || v.inhalt.sichten.length > 0 || v.inhalt.beispiele > 0) && <><dt>{t('werkbank.pakete.inhalt')}</dt><dd>{t('werkbank.pakete.mappentypen')}{' '}{v.inhalt.mappentypen.map((benannt) => benannt.name).join(', ') || '–'}{tn('werkbank.pakete.ansichten', { umbruch: <br /> })}{' '}{v.inhalt.sichten.map((s) => s.name).join(', ') || '–'}{v.inhalt.beispiele ? <>{tn('werkbank.pakete.beispiel-mappen-optional', { umbruch: <br />, beispiele: v.inhalt.beispiele })}</> : null}</dd></>}
           {(v?.readme || inst?.links?.readme || imKatalog) && <><dt>{t('werkbank.pakete.mehr')}</dt><dd>{(v?.readme || inst?.links?.readme) && <a className="verweis" href={v?.readme || inst!.links!.readme} target="_blank" rel="noreferrer">{t('werkbank.pakete.readme')}</a>}{(v?.changelog || inst?.links?.changelog) && <> · <a className="verweis" href={v?.changelog || inst!.links!.changelog} target="_blank" rel="noreferrer">{t('werkbank.pakete.aenderungen')}</a></>}
@@ -708,6 +725,7 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       )}
       {v.probleme.length > 0 && <div className="hinweis schlecht"><ul>{v.probleme.map((p) => <li key={p}>{p}</li>)}</ul></div>}
       {v.hinweise?.length > 0 && <div className="hinweis info"><ul>{v.hinweise.map((p) => <li key={p}>{p}</li>)}</ul></div>}
+      {v.sprache && <SprachVorschau s={v.sprache} />}
       {v.einstellungen && (v.einstellungen.neu.length > 0 || v.einstellungen.weg.length > 0) && (
         <div className="hinweis info"><p>{t('werkbank.pakete.einstellungen-2')}{v.update && v.einstellungen.neu.length > 0 && <> {' '}{t('werkbank.pakete.neu-mit-vorgabe', { neu: v.einstellungen.neu.join(', ') })}</>}{!v.update && <> {' '}{t('werkbank.pakete.das-paket-hat-einstellungen')}</>}{v.einstellungen.weg.length > 0 && <> {' '}{tn('werkbank.pakete.ihre-werte-werden-entfernt', { b: <strong>{t('werkbank.pakete.fallen-weg')}</strong>, weg: v.einstellungen.weg.join(', ') })}</>}</p></div>
       )}
@@ -772,6 +790,24 @@ export function VorschauBlock({ v, warnung, los, abbrechen, titel, abbrechenText
       </div>
     </section>
   );
+}
+
+/** Sprachpaket in der Vorschau (#731): Sprache, Abdeckung, maschinell/geprüft, Beschriftungen für andere Pakete. */
+function SprachVorschau({ s }: { s: NonNullable<PaketVorschau['sprache']> }) {
+  return (
+    <div className="hinweis info stapel">
+      <p>{t('werkbank.pakete.sprache.vorschau', { sprache: sprachname(s.kennung), prozent: s.abdeckung.prozent, vorhanden: s.abdeckung.vorhanden, gesamt: s.abdeckung.gesamt, ablago: s.ablago })}</p>
+      <SprachHerkunft maschinell={s.maschinell} geprueftVon={s.geprueftVon} />
+      {s.pakete.length > 0 && <p>{t('werkbank.pakete.sprache.beschriftungen', { pakete: s.pakete.join(', ') })}</p>}
+      <p className="leise klein">{t('werkbank.pakete.sprache.erlauben')}</p>
+    </div>
+  );
+}
+/** „Maschinell übersetzt – Verbesserungen willkommen“ bzw. „Geprüft von …“ (#731) – wie in Mein Konto. */
+function SprachHerkunft({ maschinell, geprueftVon }: { maschinell: boolean; geprueftVon?: string }) {
+  if (geprueftVon) return <p className="leise klein">{t('werkbank.pakete.sprache.geprueft', { wer: geprueftVon })}</p>;
+  if (!maschinell) return null;
+  return <p className="leise klein">{tn('werkbank.pakete.sprache.maschinell', { link: <a href={MITMACHEN_URL} target="_blank" rel="noreferrer">{t('werkbank.pakete.sprache.mitmachen')}</a> })}</p>;
 }
 
 /** Lizenz eines Pakets (#651): bei eigener oder fehlender Lizenz mit sachlichem Hinweis. */

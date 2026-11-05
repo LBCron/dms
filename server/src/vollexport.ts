@@ -64,6 +64,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   einstellungen: t('meldungen.vollexport.nicht-enthalten'),
   api_schluessel: t('meldungen.vollexport.nicht-enthalten-geheimnisse'),
   paket_code: t('meldungen.vollexport.nicht-enthalten-code-installierter'),
+  paket_sprachen: t('meldungen.vollexport.nicht-enthalten-sprachpakete'),
   paket_ereignisse: t('meldungen.vollexport.nicht-enthalten-ereignisse-fuer'),
   passwort_links: t('meldungen.vollexport.nicht-enthalten-geheimnisse'),
   notfallcode: t('meldungen.vollexport.nicht-enthalten-notfallcode-vom'),

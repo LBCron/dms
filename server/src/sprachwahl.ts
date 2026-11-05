@@ -1,10 +1,11 @@
 import { setzeErlaubteSprachen } from '../../shared/src/beschriftung';
 import { setzeSprache } from '../../shared/src/sprache';
-import { istVerfuegbar, liesSpracheinstellung, verfuegbareSprachen, type Spracheinstellung } from '../../shared/src/sprachwahl';
+import { istVerfuegbar, liesSpracheinstellung, SPRACHEN_STANDARD, verfuegbareSprachen, type Spracheinstellung } from '../../shared/src/sprachwahl';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { t } from './sprache';
+import type { Sprachpakete, SprachpaketStand } from './sprachpakete';
 
 /**
  * Sprachen der Ablage (#729): erlaubte Sprachen und Sprache der Installation – Einstellung „sprachen“ (Werkbank →
@@ -16,12 +17,16 @@ export const SPRACHEN_NEU_LESEN_MS = 60_000;
 
 export class SprachDienst {
   private uhr: ReturnType<typeof setInterval> | null = null;
+  /** Sprachpakete (#731): kommen dazu, sobald die Datenbank-Dienste stehen; danach lädt `lade` sie mit. */
+  pakete: Sprachpakete | null = null;
   constructor(private einstellungen: Einstellungen) {}
 
   async lies(): Promise<Spracheinstellung> { return liesSpracheinstellung(await this.einstellungen.lies('sprachen')); }
 
-  /** Liest die Einstellung und setzt Sprache und erlaubte Sprachen dieses Prozesses. */
+  /** Liest die Sprachpakete und die Einstellung und setzt Sprache und erlaubte Sprachen dieses Prozesses. */
   async lade(): Promise<Spracheinstellung> {
+    // Erst die Sprachpakete: Nur eingetragene Sprachen gelten als verfügbar.
+    if (this.pakete) await this.pakete.lade().catch((e: Error) => protokoll.modul('werkbank').warn('Sprachpakete nicht lesbar', { fehler: e.message }));
     const e = await this.lies();
     uebernimm(e);
     return e;
@@ -33,8 +38,26 @@ export class SprachDienst {
   }
   stoppe() { if (this.uhr) clearInterval(this.uhr); this.uhr = null; }
 
-  /** Stand für die Werkbank: Einstellung und alle Sprachen, die es gibt. */
-  async stand() { return { einstellung: await this.lies(), verfuegbar: verfuegbareSprachen() }; }
+  /** Stand für die Werkbank: Einstellung, alle Sprachen, die es gibt, und die installierten Sprachpakete (#731). */
+  async stand(): Promise<{ einstellung: Spracheinstellung; verfuegbar: string[]; pakete: SprachpaketStand[] }> {
+    return { einstellung: await this.lies(), verfuegbar: verfuegbareSprachen(), pakete: (await this.pakete?.stand()) ?? [] };
+  }
+
+  /**
+   * Sprachpaket entfernt (#731): Sprache aus der Einstellung nehmen – war sie die Sprache der Installation, gilt wieder
+   * Deutsch. Personen, die sie gewählt hatten, behalten ihre Wahl (gilt bei einer Neuinstallation wieder).
+   */
+  async ohne(kennung: string): Promise<Spracheinstellung> {
+    if (this.pakete) await this.pakete.lade(true);
+    const gespeichert = await this.einstellungen.lies('sprachen');
+    const roh = (gespeichert && typeof gespeichert === 'object' ? gespeichert : SPRACHEN_STANDARD) as Partial<Spracheinstellung>;
+    const erlaubt = Array.isArray(roh.erlaubt) ? roh.erlaubt : SPRACHEN_STANDARD.erlaubt;
+    const neu = liesSpracheinstellung({ standard: roh.standard === kennung ? SPRACHEN_STANDARD.standard : roh.standard, erlaubt: erlaubt.filter((x) => x !== kennung) });
+    await this.einstellungen.schreibe('sprachen', neu);
+    uebernimm(neu);
+    protokoll.modul('werkbank').info('Sprache entfernt', { sprache: kennung, standard: neu.standard, erlaubt: neu.erlaubt.join(', ') });
+    return neu;
+  }
 
   async speichere(e: unknown): Promise<Spracheinstellung> {
     const x = (e ?? {}) as Record<string, unknown>;

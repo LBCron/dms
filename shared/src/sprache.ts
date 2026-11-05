@@ -63,7 +63,8 @@ export function inSprache<T>(spr: string, f: () => T): T {
 
 /** Gebietsschema der Sprache für Datum, Zahlen und Beträge (#727, #729) – statt `'de-DE'` fest im Code. */
 const GEBIET: Readonly<Record<string, string>> = { de: 'de-DE', en: 'en-GB' };
-export const gebietsschemaVon = (spr: string) => GEBIET[spr] ?? spr;
+/** Sprachpakete (#731) nennen ihr Gebietsschema selbst (`sprache.gebietsschema`, z. B. „fr-FR“). */
+export const gebietsschemaVon = (spr: string) => GEBIET[spr] ?? ANGABEN[spr]?.gebietsschema ?? spr;
 export const gebietsschema = () => gebietsschemaVon(sprache());
 
 /**
@@ -71,12 +72,20 @@ export const gebietsschema = () => gebietsschemaVon(sprache());
  * Jeder Übersetzer sieht alle hier eingetragenen Sprachen, auch wenn er vorher gebildet wurde.
  */
 const SPRACHEN: Record<string, Record<string, Sprachdatei>> = {};
-/** Angaben zu einer Sprache: maschinell übersetzt (dann der Hinweis in Mein Konto, #729/#731). */
-export interface Sprachangaben { maschinell?: boolean }
+/**
+ * Angaben zu einer Sprache: maschinell übersetzt (dann der Hinweis in Mein Konto, #729/#731) und das Gebietsschema für
+ * Datum, Zahlen und Beträge (Sprachpakete, #731).
+ */
+export interface Sprachangaben { maschinell?: boolean; gebietsschema?: string }
 const ANGABEN: Record<string, Sprachangaben> = {};
 export function registriereSprache(spr: string, bereiche: Readonly<Record<string, Sprachdatei>>, angaben: Sprachangaben = {}) {
   SPRACHEN[spr] = { ...SPRACHEN[spr], ...bereiche };
   ANGABEN[spr] = { ...ANGABEN[spr], ...angaben };
+}
+/** Sprache wieder austragen (Sprachpaket entfernt oder ersetzt, #731); danach gilt für sie der Rückfall. */
+export function entferneSprache(spr: string) {
+  delete SPRACHEN[spr];
+  delete ANGABEN[spr];
 }
 export const sprachangaben = (spr: string): Sprachangaben => ANGABEN[spr] ?? {};
 /** Ein Text genau in dieser Sprache, ohne Rückfall – z. B. für Beschriftungen, die gespeichert werden. */

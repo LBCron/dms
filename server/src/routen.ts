@@ -627,6 +627,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
 
     // Sprache vor dem ersten Bild (#729): Die Oberfläche lädt damit ihre Texte, bevor sie etwas zeigt.
     { methode: 'GET', pfad: '/api/sprache', zugang: 'offen', handler: async (a) => ok(await spracheFuer(a)) },
+    // Texte eines Sprachpakets (#731) für die Oberfläche – nur erlaubte Sprachen; Texte sind nichts Geheimes (auch die
+    // Anmeldeseite braucht sie). Die Oberfläche setzt sie nie als HTML.
+    { methode: 'GET', pfad: '/api/sprache/texte/:kennung', zugang: 'offen', handler: async (a) => {
+      const e = x.sprachen ? await x.sprachen.lies() : liesSpracheinstellung(null);
+      const texte = e.erlaubt.includes(a.params.kennung) ? x.sprachen?.pakete?.texte(a.params.kennung) : null;
+      if (!texte) throw new Fachfehler(404, t('meldungen.sprachpakete.keine-texte'));
+      return ok(texte);
+    } },
 
     /* ---------- Konto ---------- */
     { methode: 'GET', pfad: '/api/konto/status', zugang: 'offen', handler: async (a) => ok({
@@ -1492,7 +1500,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!x.paketlaeufer) throw new Fachfehler(404, t('meldungen.routen.pakete-mit-code-laufen'));
       try { return ok(await x.paketlaeufer.vektorenNeu()); } catch (e) { throw e instanceof Fachfehler ? e : new Fachfehler(409, (e as Error).message); }
     } },
-    { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.mitSperre(() => pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1')); return leer; } },
+    { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.mitSperre(() => pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1', a.query.spracheBestaetigt === '1')); return leer; } },
     // Paket-Einstellungen (#197): nur Administratoren, nicht über die API v1.
     // Paket-Update: Text in Verweis umwandeln (#534) – Vorschau, Umwandeln, Rückgängig.
     { methode: 'GET', pfad: '/api/werkbank/pakete/:id/umwandlungen', zugang: 'admin', handler: async (a) => ok(await umwandlung.liste(a.params.id)) },
