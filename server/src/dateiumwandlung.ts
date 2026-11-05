@@ -16,7 +16,7 @@
  * - Mit der Fassung entstehen Vorschaubild (vorschau.ts) und Volltext (texterkennung.ts: Textebene bzw. Paket
  *   Texterkennung) wie bei einem PDF oder Foto.
  */
-import { execFile } from 'node:child_process';
+import { execFile } from './hintergrund';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, rmdir, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

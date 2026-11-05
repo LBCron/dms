@@ -52,6 +52,7 @@ import { Paketlaeufer } from './laeufer/verwaltung';
 import { hatSchnittstelle } from '../../shared/src/pakete';
 import { adressfelder } from '../../shared/src/paketeinstellungen';
 import { beendeArbeiter, richteArbeiterEin } from './arbeit';
+import { richteHintergrundEin } from './hintergrund';
 import { maxAnfragenAus, Ueberlastschutz } from './ueberlast';
 import { Systemlast } from './systemlast';
 import { liesErweiterungen, sichereErweiterungen } from './erweiterungen';
@@ -266,6 +267,10 @@ if (leiter) await betrieb.uebernimmAlteVariablen(env);
 const messung = new Messung(pgMessSpeicher(sql, cfg.haushalt));
 await messung.start();
 messung.auslastung.start();
+// Arbeit im Hintergrund mit niedrigerer Priorität (#893): Arbeiter, Paket-Läufer und gestartete Programme.
+const hintergrund = richteHintergrundEin(env);
+if (hintergrund.fehler && leiter) log.warn(hintergrund.fehler);
+if (leiter) log.info(hintergrund.wert ? tDe('meldungen.hintergrund.start', { wert: hintergrund.wert }) : tDe('meldungen.hintergrund.aus'));
 // Arbeiter für PDF und große Exporte (#542): ein kleiner Pool von Fäden neben dem Hauptfaden.
 // Mehrere Prozesse (#745): Der Pool gilt je Prozess; die Vorgabe teilt sich auf die Prozesse auf.
 const arbeiter = richteArbeiterEin(env, { vorwaermen: true, prozesse: verbund.anzahl });

@@ -354,6 +354,27 @@ In addition, with the default and `NODE_OPTIONS=--max-old-space-size=1024`, one 
 
 **Measuring again on the NAS** (≥ 4 cores, for #576): load test mode with `DMS_LASTTEST=alle` once each with `DMS_PROZESSE=1`, `2` and `4` (fixed number, not `auto`), without `DMS_DB_VERBINDUNGEN` – once with `dms-komplett`, once `dms` with PostgreSQL in a container of its own; plus once 4 processes with `DMS_DB_VERBINDUNGEN=40` (as before #874). The lines "Engpass …" and "Fehler …" matter: if there are restarts (SIGKILL: too little memory for the container), less memory per process or a larger `mem_limit` helps; if PostgreSQL's CPU is close to the number of cores, the database is the bottleneck; if queries wait long for connections although PostgreSQL has room, connections are missing; if locks appear, saves are waiting for each other.
 
+## Background work at lower priority (#893) { #hintergrund }
+
+In everyday use, what slows Ablago down is rarely many people at once but large batches of scans: text recognition and page images occupy the cores. So background work computes with a higher nice value (`server/src/hintergrund.ts`, `DMS_HINTERGRUND_NICE`, default 10, `0` = off; on top of the main thread's priority, at most 19):
+
+- **Worker threads** (`arbeit/arbeitsfaden.ts`): each thread lowers itself on start with `os.setPriority(0, n)` – on Linux the priority applies per thread (TID), the main thread keeps its own.
+- **Package runner** (`laeufer/verwaltung.ts`, where e.g. text recognition runs): right after `fork` its main thread, on "ready" all threads from `/proc/<pid>/task` (the runner itself may not read `/proc` because of the permission model). The threads of the calls inherit the priority.
+- **Programs** (`pdftoppm`, `pdftotext`, `pdfinfo`, `qpdf`, Ghostscript …): `execFile` and `spawn` come from `hintergrund.ts` instead of `node:child_process` and lower the priority right after the start. Otherwise a child process inherits the priority of the thread that starts it – in Ablago usually the main thread.
+- Ablago never sets a higher priority than the current one (needs no rights). If it fails (EACCES, ENOSYS, e.g. with seccomp), the log says so once (`meldungen.hintergrund.ohne-nice`) and everything carries on normally. `nice` as a program in front of the command would leave no gap, but would need `nice` in the image; the gap between start and lowering is shorter than a program takes to start its first child of its own.
+
+**Measurement for #893** (local, 2 cores, PostgreSQL 16 and the load test on the same computer, server from `dist/`, level small with 5,013 folders, `--dauer 30 --ohne-speichern`, three runs each, alternating): as text recognition alongside, two loops "page images with `pdftoppm -r 300`, then `tesseract` per page" ran – started via `hintergrund.ts` in the **same session** as the server, like Ablago's child processes.
+
+| Run | p50 | p95 | p99 | CPU Ablago | Container |
+|---|---|---|---|---|---|
+| without text recognition | 107 / 102 / 81 ms | 206 / 211 / 145 ms | 270 / 300 / 176 ms | 69–84 % | 167–193 % |
+| text recognition at nice 0 (as before) | 229 / 163 / 135 ms | **441 / 371 / 232 ms** | 557 / 509 / 276 ms | 37–50 % | 199 % |
+| text recognition at nice 10 (new) | 102 / 105 / 89 ms | **196 / 202 / 156 ms** | 260 / 262 / 189 ms | 63–74 % | 198 % |
+
+**Result:** at nice 0, text recognition took half of the server's computing time; p95 doubled and missed the CI limit of 300 ms twice. At nice 10, p95 is as good as without text recognition, and text recognition still gets everything that is left (the container stays fully loaded). A load-test run of its own "with text recognition alongside" is still missing: it would need a text recognition package in the test Library; the measurement above covers the criterion.
+
+**Note – autogroup:** Linux with `kernel.sched_autogroup_enabled=1` (many desktop systems, this computer too) first divides computing time between sessions (`setsid`) and only within them by nice. When the load ran in a session of its own, there was no difference between nice 0 and 10 (p95 204 / 167 and 204 / 170 ms, without load 243 / 127 ms) – the session only got its share anyway. For Ablago that makes no difference: child processes and threads are in the server's session, exactly where nice works. PostgreSQL in a container (or session) of its own, on the other hand, shares the cores according to the host's rules.
+
 ## Rules { #regeln }
 
 - **No `SELECT *` on tables with large columns.** Documents always with `DOKUMENT_SPALTEN`, folders with `MAPPEN_SPALTEN` (without `suchtext`, #615); read the full text only via `volltext(id)` or in bundles via `volltexte(ids)`. EXPLAIN doesn't show this: the full text is stored out of line (TOAST) and only unpacked when it is sent to the server.

@@ -19,7 +19,7 @@
  *   nur nach erneuter Bestätigung (`BESTAETIGUNG_MS`, je Sitzung). Kommt neue Post für diese Person („Für“), probiert
  *   Ablago die gemerkten Passwörter still durch – jedes als eigener qpdf-Prozess mit Zeitgrenze.
  */
-import { spawn } from 'node:child_process';
+import { spawn } from './hintergrund';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

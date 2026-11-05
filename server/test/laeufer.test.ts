@@ -3,6 +3,8 @@
 import { imModus } from './hilfen';
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
+import { getPriority } from 'node:os';
+import { faedenVon, hintergrundNice } from '../src/hintergrund';
 import { PDFDocument } from 'pdf-lib';
 import { speicherApiSchluesselRepo, ApiSchluesselDienst } from '../src/apischluessel';
 import { speicherDateien } from '../src/dateispeicher';
@@ -518,6 +520,21 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     assert.deepEqual(await d.faelligeEreignisse(10), [], 'Nr. 2 wartet auf die Wiederholung von Nr. 1');
     await d.ereignisFehlgeschlagen(e1.id, 'x', null);
     assert.deepEqual((await d.faelligeEreignisse(10)).map((e) => e.daten.n), [2], 'aufgegeben: Nr. 2 ist dran');
+  });
+
+  it('läuft mit niedrigerer Priorität, auch die Fäden der Aufrufe (#893)', async () => {
+    const { d, l } = await aufbau();
+    await installiere(d, 'eins', ECHO);
+    await l.start();
+    await warte(async () => (await l.uebersicht()).pakete.every((p) => p.geladen));
+    const pid = (l as unknown as { kind: { pid: number } }).kind.pid;
+    const ziel = Math.min(19, getPriority(process.pid) + hintergrundNice());
+    assert.ok(faedenVon(pid).length > 1, 'mehrere Fäden im Läufer');
+    assert.deepEqual([...new Set(faedenVon(pid).map((tid) => getPriority(tid)))], [ziel], 'alle Fäden des Läufers');
+    await d.ereignis('dokument.hochgeladen', { dokument: 'd1' }); await d.ereignisse.verteile();
+    await warte(async () => (await d.ereignisStand()).eins?.zugestellt === 1);
+    assert.deepEqual([...new Set(faedenVon(pid).map((tid) => getPriority(tid)))], [ziel], 'auch nach einem Aufruf');
+    assert.equal(getPriority(process.pid), ziel - hintergrundNice(), 'der Hauptfaden des DMS bleibt');
   });
 
   it('lädt bei einer Änderung nur das geänderte Modul; Zustand nach Installation und nach Absturz (#403)', async () => {
