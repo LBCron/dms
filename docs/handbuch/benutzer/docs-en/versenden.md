@@ -1,44 +1,44 @@
-# E-mail, PDF, link and stamp {#e-mail-pdf-link-und-stempel}
+# Email, PDF, link and stamp {#e-mail-pdf-link-und-stempel}
 
-To the right of a Mappe's title, next to the star, is the menu **Mappe ▾** (formerly "Actions").
+To the right of a folder's title, next to the star, is the menu **Folder ▾** (formerly "Actions").
 
-![The Mappe menu](bilder/aktionen.png)
+![The folder menu](bilder/aktionen.png)
 
-## Send by e-mail {#per-e-mail-versenden}
+## Send by email {#per-e-mail-versenden}
 
-1. **Mappe ▾ → Send by e-mail**.
+1. **Folder ▾ → Send by email**.
 2. Under **To**, enter one or more addresses (separated by commas).
-3. Check the **subject** – Mappe type and title are suggested – and write a **message** if needed.
-4. Under **Attachments**, choose which documents of the Mappe go along. Below it, it says how large they are together; from 20 MB Ablago warns, because many mail servers don't accept larger e-mails; more than 50 MB cannot be sent.
+3. Check the **subject** – folder type and title are suggested – and write a **message** if needed.
+4. Under **Attachments**, choose which documents of the folder go along. Below it, it says how large they are together; from 20 MB Ablago warns, because many mail servers don't accept larger emails; more than 50 MB cannot be sent.
 5. **Send**.
 
-![E-mail from a Mappe](bilder/email.png)
+![Email from a folder](bilder/e-mail.png)
 
-The sender is Ablago's address; the recipient's **replies** go to your e-mail address.
+The sender is Ablago's address; the recipient's **replies** go to your email address.
 
-Ablago files every e-mail sent as [post](post.md#versendete-e-mails) – with recipients, subject, message, date and the attachments, assigned to the Mappe it came from. You find it under **Post → Sent**. The Mappe's [history](zusammenarbeit.md#historie) lists it with a link. The attachments don't take up any extra storage space.
+Ablago files every email sent as [post](post.md#versendete-e-mails) – with recipients, subject, message, date and the attachments, assigned to the folder it came from. You find it under **Post → Sent**. The folder's [history](zusammenarbeit.md#historie) lists it with a link. The attachments don't take up any extra storage space.
 
-If it says "Sending e-mail is not set up", an administrator first has to set it up in the workbench.
+If it says "Sending email is not set up", an administrator first has to set it up in the workbench.
 
-Sending passes data out of Ablago like an export or a download. That's why **Send by e-mail** and **Export as PDF** are only available for Mappen you see in at least one view with the export permission. If both are missing from the menu, the administrator hasn't given you this permission – then you can't download the documents either (see [Without the export permission](dokumente.md#ohne-exportrecht)).
+Sending passes data out of Ablago like an export or a download. That's why **Send by email** and **Export as PDF** are only available for folders you see in at least one view with the export permission. If both are missing from the menu, the administrator hasn't given you this permission – then you can't download the documents either (see [Without the export permission](dokumente.md#ohne-exportrecht)).
 
-## Several Mappen by e-mail {#mehrere-mappen-per-e-mail}
+## Several folders by email {#mehrere-mappen-per-e-mail}
 
 All receipts of a year to the tax adviser, the car documents to the insurance: that works in **one** e-mail.
 
-1. Select the Mappen in a view – with the boxes in the list or **Select all …** (see [Selecting several Mappen](ablage.md#mehrere-mappen-auswahlen)).
-2. In the bar above the list: **By e-mail …**.
-3. **To**, **Subject** and **Message** as for one Mappe.
+1. Select the folders in a view – with the boxes in the list or **Select all …** (see [Selecting several folders](ablage.md#mehrere-mappen-auswahlen)).
+2. In the bar above the list: **By email …**.
+3. **To**, **Subject** and **Message** as for one folder.
 4. Under **Attachments** you choose:
-    - **Details per Mappe as PDF** – one file "Title.pdf" per Mappe with all fields (never passwords). Preselected. If the Mappe type requires a stamp, this PDF is stamped too.
-    - **Documents:** **all** documents of the Mappen, **none** or **Choose …** – then the documents are listed per Mappe with boxes.
+    - **Details per folder as PDF** – one file "Title.pdf" per folder with all fields (never passwords). Preselected. If the folder type requires a stamp, this PDF is stamped too.
+    - **Documents:** **all** documents of the folders, **none** or **Choose …** – then the documents are listed per folder with boxes.
 5. **Send**.
 
-Below it, it again says how large the attachments are together (warning from 20 MB, at most 50 MB – the PDFs with the details count too). The same rules as for one Mappe apply to stamps, archive versions and shrinking. At most 100 Mappen fit in one e-mail.
+Below it, it again says how large the attachments are together (warning from 20 MB, at most 50 MB – the PDFs with the details count too). The same rules as for one folder apply to stamps, archive versions and shrinking. At most 100 folders fit in one e-mail.
 
-Afterwards there is **one** [post](post.md#versendete-e-mails) under **Post → Sent**. Under "Assigned to" it links to all Mappen sent and contains what was sent – the documents and the PDFs with the details. The [history](zusammenarbeit.md#historie) of **every** Mappe sent lists the e-mail with a link.
+Afterwards there is **one** [post](post.md#versendete-e-mails) under **Post → Sent**. Under "Assigned to" it links to all folders sent and contains what was sent – the documents and the PDFs with the details. The [history](zusammenarbeit.md#historie) of **every** folder sent lists the email with a link.
 
-The permission is the same as for a single Mappe: you must see **every** Mappe in a view with the export permission. If it is missing for one, Ablago sends nothing at all and says for how many Mappen it is missing – there is no e-mail with silent gaps. That's why the button **By e-mail …** only exists in views you may export from.
+The permission is the same as for a single folder: you must see **every** folder in a view with the export permission. If it is missing for one, Ablago sends nothing at all and says for how many folders it is missing – there is no email with silent gaps. That's why the button **By email …** only exists in views you may export from.
 
 ## Sharing with a stamp {#weitergeben-mit-stempel}
 
@@ -49,7 +49,7 @@ A copy of your ID for the landlord, documents for the property management, an of
 The stamp is available in three places:
 
 - **Download:** in the list of documents, next to **Download**, the button **With stamp …**.
-- **Send by e-mail** (one or several Mappen): below the attachments, the box **With stamp**.
+- **Send by email** (one or several folders): below the attachments, the box **With stamp**.
 - **Export** as ZIP or PDF: in the export dialog, the box **With stamp**.
 
 In all these places you can additionally [share PDFs shrunk](#verkleinert-weitergeben).
@@ -59,7 +59,7 @@ In all these places you can additionally [share PDFs shrunk](#verkleinert-weiter
 This is how you do it:
 
 1. Choose a **template**, e.g. "Copy for …", "Only for presentation to …", "Draft" or "Confidential". The administrator sets the templates.
-2. Enter the **recipient** – they appear where `{empfänger}` is in the text. When sending by e-mail without this, the addresses under **To** are the recipient.
+2. Enter the **recipient** – they appear where `{empfänger}` is in the text. When sending by email without this, the addresses under **To** are the recipient.
 3. If needed, change the **text** (also multi-line), the **position** (diagonally across the page as a watermark, header, footer, top right corner or a small **stamp** with a frame), the **opacity** and whether the stamp goes on **all pages** or **only the first**. From 80 % opacity, Ablago points out that the stamp may cover content.
 4. **Like ink – text underneath stays readable** (usually already switched on): the stamp only tints, black stays black – so amounts and dates underneath stay readable. You add page numbers and the archive number as placeholders in the text, e.g. "Page {seite} of {seiten}" or "{archivnummer}".
 5. **Download** (or **Send**, **Export**).
@@ -71,7 +71,7 @@ Placeholders in the text:
 | `{datum}` | today's date, e.g. 01.11.2026 |
 | `{empfänger}` | the recipient you enter |
 | `{benutzer}` | your name |
-| `{mappe}` | the Mappe's title |
+| `{mappe}` | the folder's title |
 | `{seite}` | number of the page the stamp is on |
 | `{seiten}` | number of pages of the document |
 | `{archivnummer}` | the document's archive number (empty if it has none) |
@@ -80,8 +80,8 @@ Good to know:
 
 - **PDFs** and **images** (JPEG, PNG) can be stamped. An image becomes a PDF with one page ("ID.jpg" → "ID.pdf"). Other files (e.g. Word) go along unstamped when sending and in the export; downloading them individually with a stamp is not possible.
 - Encrypted PDFs cannot be stamped.
-- The Mappe's [history](zusammenarbeit.md#historie) records every sharing with a stamp, e.g. "shared: with stamp "Copy for Müller Property Management – 01.11.2026" to Müller Property Management (downloaded: ID.pdf)". That way you can later prove who received which copy. For e-mails, the stamp is noted in the e-mail's entry; the stamped copy is in the [post](post.md#versendete-e-mails).
-- **Suggestion and requirement:** for some Mappe types the administrator suggests a stamp – then **With stamp** is already ticked. If the stamp is **required**, it can't be deselected: documents of this Mappe type are then only available via **Download with stamp**; downloading several documents at once is switched off there.
+- The folder's [history](zusammenarbeit.md#historie) records every sharing with a stamp, e.g. "shared: with stamp "Copy for Müller Property Management – 01.11.2026" to Müller Property Management (downloaded: ID.pdf)". That way you can later prove who received which copy. For emails, the stamp is noted in the email's entry; the stamped copy is in the [post](post.md#versendete-e-mails).
+- **Suggestion and requirement:** for some folder types the administrator suggests a stamp – then **With stamp** is already ticked. If the stamp is **required**, it can't be deselected: documents of this folder type are then only available via **Download with stamp**; downloading several documents at once is switched off there.
 - **Viewing** in Ablago always shows the original.
 
 !!! note "How safe is the stamp?"
@@ -89,23 +89,23 @@ Good to know:
 
 ## Share shrunk { #verkleinert-weitergeben }
 
-Many e-mail providers don't accept attachments over 10 to 25 MB. When sending by e-mail (one or several Mappen), when **exporting** as ZIP or PDF and when **downloading with a stamp**, there is therefore the box **Send PDFs shrunk** (or *export*, *download*) with the level **Screen**, **Standard** (default) or **Print** – the same levels as for [Shrink PDF](dokumente.md#pdf-verkleinern).
+Many email providers don't accept attachments over 10 to 25 MB. When sending by email (one or several folders), when **exporting** as ZIP or PDF and when **downloading with a stamp**, there is therefore the box **Send PDFs shrunk** (or *export*, *download*) with the level **Screen**, **Standard** (default) or **Print** – the same levels as for [Shrink PDF](dokumente.md#pdf-verkleinern).
 
 - Only the **copy** that goes out is shrunk. **The stored document stays unchanged.**
 - Only PDFs are shrunk; images and other files go along unchanged. If it saves less than 10 % for a PDF, the original goes.
 - With a stamp, it is **shrunk first, then stamped** – the stamp stays sharp.
-- The size of the attachments shown is that before shrinking; whether the e-mail is small enough afterwards, Ablago checks when sending. If the box is ticked, the selection may therefore be larger than 50 MB.
-- The [history](zusammenarbeit.md#historie) records it, e.g. "shared: shrunk (18.4 MB → 2.1 MB) (downloaded: Scan.pdf)" or "…, shrunk (…)" in the e-mail's entry. The shrunk copy is in the [post](post.md#versendete-e-mails).
+- The size of the attachments shown is that before shrinking; whether the email is small enough afterwards, Ablago checks when sending. If the box is ticked, the selection may therefore be larger than 50 MB.
+- The [history](zusammenarbeit.md#historie) records it, e.g. "shared: shrunk (18.4 MB → 2.1 MB) (downloaded: Scan.pdf)" or "…, shrunk (…)" in the email's entry. The shrunk copy is in the [post](post.md#versendete-e-mails).
 
 ## Export as PDF {#als-pdf-exportieren}
 
-**Mappe ▾ → Export as PDF** opens the browser's print dialog with the Mappe's **print view**: title, all details, the list of documents and the notes. As the printer, choose **Save as PDF** (or "Microsoft Print to PDF" on Windows) – or print it straight onto paper.
+**Folder ▾ → Export as PDF** opens the browser's print dialog with the folder's **print view**: title, all details, the list of documents and the notes. As the printer, choose **Save as PDF** (or "Microsoft Print to PDF" on Windows) – or print it straight onto paper.
 
 Passwords only appear as "••••••••" there too.
 
 ## Copy link {#link-kopieren}
 
-**Mappe ▾ → Copy link** puts a link to the Mappe on the clipboard, which you can send by e-mail or chat to someone with their own access to Ablago. The link doesn't name the Mappe by a number but by its details, e.g.
+**Folder ▾ → Copy link** puts a link to the folder on the clipboard, which you can send by email or chat to someone with their own access to Ablago. The link doesn't name the folder by a number but by its details, e.g.
 
 ```
 http://nas.home.arpa:8080/ablage/link?typ=vertrag&vertragsnummer=SV-4711
@@ -113,9 +113,9 @@ http://nas.home.arpa:8080/ablage/link?typ=vertrag&vertragsnummer=SV-4711
 
 ![Link copied](bilder/link-kopieren.png)
 
-- Ablago uses a detail for this that exists only once (e.g. the contract number). If there is none, it uses the details the title is made from. If several Mappen then match, the link shows the list and opens the first one.
+- Ablago uses a detail for this that exists only once (e.g. the contract number). If there is none, it uses the details the title is made from. If several folders then match, the link shows the list and opens the first one.
 - If copying isn't possible (some browsers don't allow it without HTTPS), the link is shown for selecting.
-- Whoever opens the link and isn't signed in signs in and then lands directly at the Mappe.
-- If the menu item is missing, the Mappe has no detail from which a link can be built. The address in the browser always works.
+- Whoever opens the link and isn't signed in signs in and then lands directly at the folder.
+- If the menu item is missing, the folder has no detail from which a link can be built. The address in the browser always works.
 
 You can also write such links yourself, for instance for "all open invoices". How is described in the [Administrator manual](https://help.ablago.app/admin/aktuell/en/direktlinks/).

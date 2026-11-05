@@ -25,8 +25,8 @@ Under **Apps** (Community Applications), search for *Docker Compose Manager* and
 !!! warning "Change the password before the first start"
     The database takes over the password only on the very first start.
 
-!!! tip "Optional: inbox folder for the scanner"
-    The template mounts `/mnt/user/appdata/dms/eingang` as the [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner puts there becomes new post. Share the folder as an SMB share for the scanner. Without it, everything works as usual.
+!!! tip "Optional: intake folder for the scanner"
+    The template mounts `/mnt/user/appdata/dms/eingang` as the [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner puts there becomes new post. Share the folder as an SMB share for the scanner. Without it, everything works as usual.
 
 ## 3. Set up {#3-einrichten}
 

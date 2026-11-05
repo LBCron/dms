@@ -13,7 +13,7 @@ On the left in the sidebar, next to maintenance mode, it says **announced** as l
 ## Switching on {#einschalten}
 
 1. Optionally enter a **text for everyone**, e.g. "Update to the new version".
-2. Choose the **start** – preset is *now + 30 minutes*; with **+15 min**, **+30 min** and **+1 hr** you quickly set it from now. At this time everyone else is signed out. It may not be in the past and at most 24 hours in the future, because from the announcement onwards only administrators can sign in.
+2. Choose the **start** – template is *now + 30 minutes*; with **+15 min**, **+30 min** and **+1 hr** you quickly set it from now. At this time everyone else is signed out. It may not be in the past and at most 24 hours in the future, because from the announcement onwards only administrators can sign in.
 3. Optionally the **expected end** – it must be after the start.
 4. **Announce maintenance**.
 
@@ -49,9 +49,9 @@ At the chosen start – or immediately with **Sign everyone out now** or [Lock r
 - The background work pauses:
     - text recognition,
     - deadlines and reminders and the daily summary of tasks,
-    - tidying up the recycle bin,
+    - tidying up the bin,
     - the scheduled [backup](sicherung.md) and the test restore,
-    - fetching from the [mailboxes](postfaecher.md) and the [inbox folder](eingangsordner.md).
+    - fetching from the [mailboxes](postfaecher.md) and the [Intake folder](eingangsordner.md).
 
 Under **Signed-in sessions** you see who is currently signed in with which device and when they were last active.
 
@@ -60,7 +60,7 @@ Under **Signed-in sessions** you see who is currently signed in with which devic
 **End maintenance** switches the mode off; everyone can sign in again, and the background work continues. The mode survives a restart of Ablago – so after an update it is still on until you end it.
 
 !!! note "Automatically when storage is full"
-    If free space reaches the set limit, Ablago switches maintenance mode on itself – with 5 minutes' notice and the text "Storage space limit reached". You have to end it yourself as soon as there is space again (see [System status](speicherplatz.md#im-ernstfall)).
+    If free space reaches the set limit, Ablago switches maintenance mode on itself – with 5 minutes' notice and the text "Storage space limit reached". You have to end it yourself as soon as there is space again (see [System health](speicherplatz.md#im-ernstfall)).
 
 On, off and signing out are recorded in the [log](fehlersuche.md#protokoll) (module *system*).
 

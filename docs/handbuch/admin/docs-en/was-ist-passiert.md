@@ -27,13 +27,13 @@ All details are under [New NAS, old backup](wiederherstellen.md#neues-nas-alte-s
 
 ## I can't get in any more { #kein-zugang }
 
-- **Forgotten password:** on the sign-in page, choose **Forgot your password?** – this works if e-mail sending is set up. Otherwise another person who may administer Ablago creates a password link for you under **Workbench → Users**.
+- **Forgotten password:** on the sign-in page, choose **Forgot your password?** – this works if email sending is set up. Otherwise another person who may administer Ablago creates a password link for you under **Workbench → Users**.
 - **Nobody who may administer can get in any more:** use the **emergency code** from the emergency sheet – see below. Without an emergency sheet, the [RESCUE file on the device](notfall.md) helps.
 - **Lost the phone for two-factor sign-in:** another person with "Full administration" resets it, you use a recovery code – or the emergency code (it resets two-factor sign-in).
 
 ### Getting back in with the emergency code { #notfallcode }
 
-At the bottom of the emergency sheet, in the box **Locked out?**, there is a long code in groups of four and the address of your filing system with `/notfall` at the end. It works on the phone just as on the computer.
+At the bottom of the emergency sheet, in the box **Locked out?**, there is a long code in groups of four and the address of your Library with `/notfall` at the end. It works on the phone just as on the computer.
 
 1. Open the address **on your home network**, i.e. with a device on the Wi-Fi at home, e.g. `http://nas.home.arpa:8080/notfall`. From the internet it only works if it is allowed under [Sign-in protection](anmeldeschutz.md#notfallzugang).
 2. Type in the **emergency code**. Upper and lower case, spaces and hyphens don't count. **Not the key** from the emergency sheet – that never belongs in the browser.
@@ -41,9 +41,9 @@ At the bottom of the emergency sheet, in the box **Locked out?**, there is a lon
 4. If the code is correct, you choose the **account** for which you set a new password. Only people who may administer Ablago are offered.
 5. Set the **new password**. Ablago ends all sign-ins of this account and resets two-factor sign-in – set it up anew afterwards. The account's API keys remain valid.
 6. Download the **new emergency sheet**. The old code only works once – the new sheet has a new one. Print it and destroy the old one.
-7. **Sign in** – with the account's e-mail address and the new password.
+7. **Sign in** – with the account's email address and the new password.
 
-Everyone who may administer Ablago and the account's previous e-mail address immediately get an e-mail: "Your filing system's emergency access was used …" – even before anything changes. Many failed attempts are reported bundled. In the workbench there is a red notice until someone chooses **Read**, and the [log](fehlersuche.md#protokoll) records everything.
+Everyone who may administer Ablago and the account's previous email address immediately get an email: "Your Library's emergency access was used …" – even before anything changes. Many failed attempts are reported bundled. In the workbench there is a red notice until someone chooses **Read**, and the [log](fehlersuche.md#protokoll) records everything.
 
 !!! warning "Emergency sheet lost or stolen?"
     Whoever has the sheet can take over an account with the administration permission via the emergency code – not unnoticed, because all administrators then get an e-mail. Download a new emergency sheet immediately under **Workbench → Encryption**: then the old code no longer works. Also change the key, because it was on the sheet too.

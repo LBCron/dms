@@ -17,7 +17,7 @@ docker compose up -d
 docker compose logs dms | grep -A1 Einrichtungscode
 ```
 
-Docker creates the folders `files`, `geheim`, `sicherung`, `postgres` and – optionally for the scanner – `eingang` ([inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/)) next to the file. On a NAS, replace `./` with the path of your folder, e.g. `/volume1/docker/dms/`.
+Docker creates the folders `files`, `geheim`, `sicherung`, `postgres` and – optionally for the scanner – `eingang` ([Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/)) next to the file. On a NAS, replace `./` with the path of your folder, e.g. `/volume1/docker/dms/`.
 
 ## With `docker run` {#mit-docker-run}
 
@@ -36,7 +36,7 @@ Synology (Container Manager), UGREEN (Docker), QNAP (Container Station) and Unra
 
 1. Download the image **`ghcr.io/motom001/dms-komplett:stabil`** or create a container from it.
 2. **Port:** local `8080` → container `3000`.
-3. **Folders:** create four folders on the NAS and map them – `files` → `/data/files`, `geheim` → `/data/geheim`, `sicherung` → `/data/sicherung`, `postgres` → `/data/postgres`. Optionally a fifth one for the scanner: `eingang` → `/eingang` ([inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/)).
+3. **Folders:** create four folders on the NAS and map them – `files` → `/data/files`, `geheim` → `/data/geheim`, `sicherung` → `/data/sicherung`, `postgres` → `/data/postgres`. Optionally a fifth one for the scanner: `eingang` → `/eingang` ([Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/)).
 4. **Restart policy:** "always" or "unless-stopped".
 5. Start it.
 
@@ -53,7 +53,7 @@ If you already have a DMS with two containers, choose **Restore from a backup** 
 - **No password:** the database can only be reached inside the container. There is no database port to the outside.
 - **Folders:** all four must be on the device (volumes), otherwise they are gone with the next update. The container sets the permissions of `postgres` itself on start.
 - **Stopping:** when stopping, the container first shuts down Ablago and then the database cleanly. Give it up to a minute for this (`stop_grace_period` or `--stop-timeout`). If one of the two parts ends unexpectedly, the whole container ends, and Docker restarts it.
-- **Updates:** `docker compose pull && docker compose up -d`, or pull the image again and recreate the container. PostgreSQL updates come with the Ablago image; **Workbench → System status → Version and updates** shows whether there is one. With a version number instead of `main`, i.e. `ghcr.io/motom001/dms-komplett:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on that release. With `main`, PostgreSQL is rebuilt weekly; with a fixed version only with the next release.
+- **Updates:** `docker compose pull && docker compose up -d`, or pull the image again and recreate the container. PostgreSQL updates come with the Ablago image; **Workbench → system health → Version and updates** shows whether there is one. With a version number instead of `main`, i.e. `ghcr.io/motom001/dms-komplett:<version>` with a number from the [releases](https://github.com/motom001/dms/releases), the installation stays on that release. With `main`, PostgreSQL is rebuilt weekly; with a fixed version only with the next release.
 - **New major version of PostgreSQL:** if a future image brings a new major version (e.g. 18), the container deliberately does not start with the old database and says so in the log. The switch then works via backup and restore, see [Growing and moving](https://help.ablago.app/admin/aktuell/en/wachsen/#neue-hauptversion-von-postgresql).
-- **Workbench → System status → Version and updates** shows "dms-komplett (with PostgreSQL in the container)" for the image and "in the container (dms-komplett)" as the location of the database.
+- **Workbench → system health → Version and updates** shows "dms-komplett (with PostgreSQL in the container)" for the image and "in the container (dms-komplett)" as the location of the database.
 - **Console:** for emergencies and operation, the container has the command `dms`, e.g. `docker compose exec dms dms hilfe`. See [Console](https://help.ablago.app/admin/aktuell/en/konsole/).

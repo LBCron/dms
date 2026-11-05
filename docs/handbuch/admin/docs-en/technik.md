@@ -6,22 +6,22 @@ An overview for operation and support. Which versions actually run on a system i
 
 ```
 Browser ── HTTP ──▶ Ablago container (Node.js) ──▶ PostgreSQL container
-   React interface         Fastify API              Mappen, types, users,
+   React interface         Fastify API              Folders, types, users,
    (included in image)     files under /data/…      sessions, logs
 ```
 
 | Building block | Technology | What for |
 | --- | --- | --- |
-| Interface | React 19, built with Vite | Filing view, workbench, My account – everything in the browser |
+| Interface | React 19, built with Vite | Library, workbench, My account – everything in the browser |
 | Server | Node.js 24, Fastify 5, TypeScript (bundled with esbuild) | Interface under `/api`, also delivers the user interface |
 | Database | PostgreSQL 17, access with postgres.js, SQL migrations in `server/migrations` | All data except the files |
-| Files | Fixed folders `/data/files`, `/data/geheim`, `/data/sicherung` (volumes, see [Installation](installation.md#ordner-und-volumes)); each file named by its SHA-256; optionally the [inbox folder](eingangsordner.md) `/eingang` | Uploaded documents, the same content only once; key; backups; scans to collect |
-| E-mail | nodemailer via SMTP for sending; imapflow and mailparser via IMAP for collecting (both optional, set in the workbench) | Invitations, password links, notices, sending Mappen; collecting e-mails from [mailboxes](postfaecher.md) as post |
+| Files | Fixed folders `/data/files`, `/data/geheim`, `/data/sicherung` (volumes, see [Installation](installation.md#ordner-und-volumes)); each file named by its SHA-256; optionally the [Intake folder](eingangsordner.md) `/eingang` | Uploaded documents, the same content only once; key; backups; scans to collect |
+| Email | nodemailer via SMTP for sending; imapflow and mailparser via IMAP for collecting (both optional, set in the workbench) | Invitations, password links, notices, sending folders; collecting emails from [mailboxes](postfaecher.md) as post |
 | Full text and text recognition | poppler (pdftotext, pdftoppm) in the image for the text layer of PDFs; text recognition of scans and images as the package **Text recognition** (Tesseract as WebAssembly in the package runner, #459); PostgreSQL's full-text search | Full text of PDFs, scans and images (#45, #458) |
 | Shrinking PDFs | pdf-lib, pdftoppm (poppler) for the images and qpdf (Apache-2.0) for the structure, both in the image; no Ghostscript | Making large scans smaller (#393) |
 | Redacting | pdftoppm and pdftotext (poppler) for rendering and word positions (text layer only, #459), pdf-lib for rebuilding; no MuPDF, no Ghostscript (both AGPL) | Removing passages for good, the original stays (#392) |
 | Editing PDFs | pdf-lib (MIT), encapsulated only via one shared place in the server (#541); evaluation of the alternatives in the [Developer manual](https://help.ablago.app/entwickler/aktuell/en/aufbau/#pdf-stelle) | Stamps, export, editing pages, redacting, shrinking, preview, access copy, labels |
-| Workers | `node:worker_threads`, without an additional library: a small pool next to the main thread (#542), see [System status](speicherplatz.md#arbeiter-fur-pdf-und-exporte) | PDF work and large exports without other users waiting |
+| Workers | `node:worker_threads`, without an additional library: a small pool next to the main thread (#542), see [System health](speicherplatz.md#arbeiter-fur-pdf-und-exporte) | PDF work and large exports without other users waiting |
 | Encryption | AES-256-GCM (Node.js crypto), key as a file under `/data/geheim` | Stored passwords (#39, #46) |
 | Image | `node:24-alpine`, multi-stage build, for amd64 and arm64 – each architecture on its own matching GitHub machine (without emulation), then merged into one image | Runs on the NAS next to the PostgreSQL image |
 | dms-komplett | The same image with PostgreSQL 17 (Alpine package) in the same container; database in the folder `/data/postgres` | Ablago and database in one container |
@@ -29,13 +29,13 @@ Browser ── HTTP ──▶ Ablago container (Node.js) ──▶ PostgreSQL co
 
 ## Many simultaneous requests { #last }
 
-A household has 2–6 users, a small business 10–20. A single user already triggers several requests at once (opening the filing view is 6–10), plus WebDAV programs, packages and scripts. **100 simultaneous requests** – about 10–15 people clicking at the same moment – are the realistic upper limit; Ablago is designed for this and it is measured regularly (load test in three levels, #544, #563). What each device copes with is under [What Ablago copes with](verkraftet.md); you can measure yourself with the [load test](lasttest.md). More hardly ever happens in operation, for instance with a wrongly configured WebDAV program.
+A household has 2–6 users, a small business 10–20. A single user already triggers several requests at once (opening the Library is 6–10), plus WebDAV programs, packages and scripts. **100 simultaneous requests** – about 10–15 people clicking at the same moment – are the realistic upper limit; Ablago is designed for this and it is measured regularly (load test in three levels, #544, #563). What each device copes with is under [What Ablago copes with](verkraftet.md); you can measure yourself with the [load test](lasttest.md). More hardly ever happens in operation, for instance with a wrongly configured WebDAV program.
 
 - **Overload protection:** if **250** requests are already running at once (`DMS_MAX_ANFRAGEN`), every further one immediately gets the answer "Ablago is very busy right now. Please try again in a few seconds." (HTTP 503 with `Retry-After: 5`) – instead of hanging in an ever longer queue until browsers and programs give up. That keeps response times and memory limited, and Ablago recovers by itself as soon as the load eases. The container's health check is never rejected. When the protection kicks in, "Overload: …" appears in the [log](fehlersuche.md#protokoll) at most once a minute.
 - **Database connections:** at most **10** at once. In the load test with 100 simultaneous requests, 5, 10 and 20 connections were level: the bottleneck is the computing time that server and PostgreSQL share, not the number of connections. Each connection costs PostgreSQL about 5–10 MB of memory. Only with clearly more cores (or PostgreSQL on a computer of its own) can more help: `DMS_DB_VERBINDUNGEN` (2–100; PostgreSQL allows 100 connections in total by default). How long queries wait for a free connection is shown by **Workbench → Database connection** under *Server load*.
 - **Heavy work** such as PDF editing and large exports runs in separate [workers](speicherplatz.md#arbeiter-fur-pdf-und-exporte) so that other users don't wait.
 - **Several processes** ([below](#mehrere-prozesse)): with `DMS_PROZESSE`, several processes answer the requests together and so use several cores. The default is one process as before.
-- The current values of `DMS_PROZESSE`, `DMS_ARBEITER`, `DMS_DB_VERBINDUNGEN` and `DMS_MAX_ANFRAGEN` and where they come from are shown by **Workbench → System status**; if something gets tight, the notice there names the variable that can help ([Settings and bottlenecks](speicherplatz.md#einstellungen-und-engpasse)).
+- The current values of `DMS_PROZESSE`, `DMS_ARBEITER`, `DMS_DB_VERBINDUNGEN` and `DMS_MAX_ANFRAGEN` and where they come from are shown by **Workbench → system health**; if something gets tight, the notice there names the variable that can help ([Settings and bottlenecks](speicherplatz.md#einstellungen-und-engpasse)).
 - **Sign-in protection** counts every failed attempt even under load; a rejected sign-in (503) checks no password and therefore doesn't count.
 
 ### Several processes {#mehrere-prozesse}
@@ -53,12 +53,12 @@ Ablago answers requests with Node.js in **one** thread per process. With one pro
 This is how the processes work together:
 
 - A slim **main process** starts the processes, distributes the connections to them in turn and restarts a crashed process after 1 second (with repeated crashes with a growing pause up to 1 minute). Sign-ins are kept; they are in the database.
-- **Process 1 leads:** at start-up it shows the page "Ablago is starting …", brings the database up to date and does all the **background work** – text recognition, thumbnails, schedules, automations, the package runner (exactly once), inbox folders, mailboxes, backup and restore. Besides that, it answers requests like all the others. The remaining processes only start once it is ready.
+- **Process 1 leads:** at start-up it shows the page "Ablago is starting …", brings the database up to date and does all the **background work** – text recognition, thumbnails, schedules, automations, the package runner (exactly once), intake folders, mailboxes, backup and restore. Besides that, it answers requests like all the others. The remaining processes only start once it is ready.
 - **Maintenance mode, sign-in protection, workbench jobs** and settings apply in all processes (after a few seconds at the latest). The lock against a downgrade stops Ablago as with one process. The container's health check stays unchanged; the command `dms` in the container works as before.
 - **Memory:** every process needs its own memory and its own caches. In the load test (level medium, 100 at once), Ablago needed 300–700 MB more with two processes than with one, with saves even over 1.5 GB; the main process itself only needs a few MB beyond Node.js. Plan about **500 MB** per additional process and adjust `mem_limit`.
 - **When it is worth it:** only with free cores. On a computer with 2 cores (Ablago, PostgreSQL and the load share them), a second process was slower than one at level medium; at level large it moved the limit from 100 to 150 simultaneous requests. That's why `auto` takes one process with 2 cores. Details: Developer manual → Performance.
 
-**What applies per process:** `DMS_DB_VERBINDUNGEN`, `DMS_MAX_ANFRAGEN` and `DMS_ARBEITER` apply **per process**. With 3 processes and the default 10, Ablago thus opens up to 30 database connections. If together they would be more than the database allows (`max_connections`, minus 10 for others), each process gets fewer – that is then in the log. The default number of workers is divided among the processes (at least 1 per process) so that together no more threads compute than with one process. **Workbench → System status** shows the values with "per process, together …" and below them one line per process with memory, computing time, waiting time and running requests.
+**What applies per process:** `DMS_DB_VERBINDUNGEN`, `DMS_MAX_ANFRAGEN` and `DMS_ARBEITER` apply **per process**. With 3 processes and the default 10, Ablago thus opens up to 30 database connections. If together they would be more than the database allows (`max_connections`, minus 10 for others), each process gets fewer – that is then in the log. The default number of workers is divided among the processes (at least 1 per process) so that together no more threads compute than with one process. **Workbench → system health** shows the values with "per process, together …" and below them one line per process with memory, computing time, waiting time and running requests.
 
 ## Interface {#schnittstelle}
 
@@ -70,7 +70,7 @@ The image brings the manuals of its version with it, in German and English: star
 
 ## Modules {#module}
 
-Every line in the [log](fehlersuche.md#protokoll) belongs to a module. For every request to the server, Ablago writes a line with method, path, status, duration and database accesses – in the module of the area the request belongs to (e.g. `ablage` for Mappen). Requests that only read – including previews, counts and test runs that the interface sends by POST – are only at level `debug`, i.e. only in debug mode.
+Every line in the [log](fehlersuche.md#protokoll) belongs to a module. For every request to the server, Ablago writes a line with method, path, status, duration and database accesses – in the module of the area the request belongs to (e.g. `ablage` for folders). Requests that only read – including previews, counts and test runs that the interface sends by POST – are only at level `debug`, i.e. only in debug mode.
 
 The filter of **Workbench → Log** lists all modules with their name – including those for which nothing is in the log right now ("(no entries)").
 
@@ -78,17 +78,17 @@ The filter of **Workbench → Log** lists all modules with their name – includ
 | --- | --- | --- |
 | System | `system` | Start, settings, debug mode |
 | Requests (HTTP) | `http` | Requests that belong to no other module (e.g. pages of the interface) |
-| User accounts and sign-in | `konto` | Sign-in, **sign-in protection** (blocked accounts and IP addresses), sessions, users, roles, deputies |
-| Filing system | `ablage` | Creating, changing, deleting Mappen; views, recycle bin, notes, tasks |
+| User accounts and sign-in | `konto` | Sign-in, **sign-in protection** (blocked accounts and IP addresses), sessions, users, roles, stand-ins |
+| Library | `ablage` | Creating, changing, deleting folders; views, bin, notes, tasks |
 | Documents | `dokumente` | Uploading, displaying, deleting |
-| Workbench | `werkbank` | Mappe types, packages, demo data, settings, version check |
+| Workbench | `werkbank` | Folder types, packages, demo data, settings, version check |
 | Data protection | `datenschutz` | Access requests, retrieval links, deletion concept |
 | Text recognition | `texterkennung` | completed, skipped, failed, restarted, cancelled; settings |
 | Converting files | `umwandlung` | Versions from packages (e.g. TIFF → PDF) |
 | Archive version | `archivfassung` | PDF/A from packages |
 | Thumbnails | `vorschau` | Creating thumbnails |
 | Database | `datenbank` | Migrations, connection, long accesses |
-| E-mail | `mail` | Sending and errors when sending |
+| Email | `mail` | Sending and errors when sending |
 | Backup | `sicherung` | Backup, emergency sheet, restore and test |
 | Events | `ereignisse` | Distributing events to packages and automations |
 | Automations | `automatisierung` | Runs of the automations |

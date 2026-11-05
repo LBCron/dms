@@ -15,7 +15,7 @@ Every backup consists of two files in the backup folder, e.g.:
 | File | Content |
 | --- | --- |
 | `2026-10-29_0200-automatisch.dms-sicherung` | database and all files (documents, [converted versions](texterkennung.md#andere-dateitypen), logos, images of reported problems), packed and **encrypted** |
-| `2026-10-29_0200-automatisch.json` | metadata, readable: filing system id (field `haushaltId`), versions (Ablago, database state, PostgreSQL, Node.js, operating system, architecture), kind, start and duration, number of Mappen, documents, users and converted versions (field `anzahl.fassungen`), sizes, encryption with the key's fingerprint and the **SHA-256 checksum** of the backup file |
+| `2026-10-29_0200-automatisch.json` | metadata, readable: Library id (field `haushaltId`), versions (Ablago, database state, PostgreSQL, Node.js, operating system, architecture), kind, start and duration, number of folders, documents, users and converted versions (field `anzahl.fassungen`), sizes, encryption with the key's fingerprint and the **SHA-256 checksum** of the backup file |
 
 - Encryption uses AES-256-GCM. The key for it is derived from the key under **Workbench → [Encryption](verschluesselung.md)** – the same as for password fields. **Without this key, a backup can't be read.** It is never in the backup, only in the key file and on the [emergency sheet](#notfallblatt).
 - Signed-in sessions don't belong to it: after a restore, everyone signs in anew.
@@ -53,7 +53,7 @@ In the container this also works without a browser with the [command `dms`](kons
 
 ## Storage space { #speicherplatz }
 
-The page shows how large documents and database are today, a **projection** for the chosen retention (every backup is complete; the database packs well, documents hardly), how much the backups take up and how much is free in the folder. If it gets tight – less free than the minimum storage space or than two more backups –, it warns. Independently of this, **Workbench → [System status](speicherplatz.md)** monitors all of Ablago's folders with a warning threshold and limit.
+The page shows how large documents and database are today, a **projection** for the chosen retention (every backup is complete; the database packs well, documents hardly), how much the backups take up and how much is free in the folder. If it gets tight – less free than the minimum storage space or than two more backups –, it warns. Independently of this, **Workbench → [System health](speicherplatz.md)** monitors all of Ablago's folders with a warning threshold and limit.
 
 ## Notices on problems { #hinweise-bei-problemen }
 
@@ -65,7 +65,7 @@ The workbench overview shows a notice if
 - the backup folder isn't a separate volume or is on the same disk as the documents,
 - the [off-site copy](sicherung-ausser-haus.md#anzeige-und-hinweise) failed or no newer backup has arrived there for more than 2 days.
 
-If a backup fails, all administrators get an e-mail – also without a schedule, for instance with **Back up now**. If the last successful backup is too old, the e-mail only comes if the schedule is on. **One** e-mail comes per incident (not hourly) – if [e-mail sending](installation.md#e-mail-und-adresse) is set up. Everything is also recorded in the [log](fehlersuche.md#protokoll), module *sicherung*.
+If a backup fails, all administrators get an email – also without a schedule, for instance with **Back up now**. If the last successful backup is too old, the email only comes if the schedule is on. **One** email comes per incident (not hourly) – if [Email sending](installation.md#e-mail-und-adresse) is set up. Everything is also recorded in the [log](fehlersuche.md#protokoll), module *sicherung*.
 
 ## Storage location { #speicherort }
 
@@ -98,12 +98,12 @@ As the backups are encrypted, they may also go into a cloud. The [emergency shee
 
 **Download emergency sheet** (here and under *Encryption*) creates a PDF with everything you need after a failure – on **one A4 page** in Ablago's look, easily readable in black and white too. The sheet is in German:
 
-1. **Header:** logo, name of your filing system, date and Ablago version.
+1. **Header:** logo, name of your Library, date and Ablago version.
 2. **Key:** large in groups of four for typing, plus its **fingerprint**. The zero is struck through, and below easily confused characters (`0` and `O`, `l`, `I` and `1`, `-` and `_`) it says in small print which one is meant. There is deliberately no QR code with the key – that would be one more way to get at it.
-3. **This filing system:** address, **filing system id** and, in one sentence, where the backups are – since 0.142 also the target of the [off-site copy](sicherung-ausser-haus.md) (package and address, without user and password).
+3. **This Library:** address, **Library id** and, in one sentence, where the backups are – since 0.142 also the target of the [off-site copy](sicherung-ausser-haus.md) (package and address, without user and password).
 4. **Whom to ask?** Lines in which you enter who helps you in an emergency.
 5. **Something has happened?** The links to the help page [What has happened to you?](was-ist-passiert.md) – clickable and always written out with `https://`: `https://help.ablago.app/notfall` (English `https://help.ablago.app/emergency`) – and a **QR code** for it. Scan it with your phone, read there and work on the computer at the same time.
-6. **Locked out?** The **emergency code**: 28 characters in groups of four and your filing system's address with `/notfall`. With it you get back in if you have locked yourself out – see [Getting back in with the emergency code](was-ist-passiert.md#notfallcode). It isn't the key and opens no backup.
+6. **Locked out?** The **emergency code**: 28 characters in groups of four and your Library's address with `/notfall`. With it you get back in if you have locked yourself out – see [Getting back in with the emergency code](was-ist-passiert.md#notfallcode). It isn't the key and opens no backup.
 
 **Every emergency sheet has a new emergency code.** Ablago only stores a hash of it; the code of a sheet downloaded earlier no longer works afterwards. So always print the most recently downloaded sheet. If the code has been used, it no longer works either – the overview then reminds you of a new sheet, as it does for a sheet from the time before the emergency code.
 

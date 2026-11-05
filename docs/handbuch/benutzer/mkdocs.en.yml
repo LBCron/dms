@@ -2,7 +2,7 @@
 # Alles außer Seiten (Stile, Logo, Bilder) holt werkzeuge/sprache_hook.py aus docs/; Grafiken mit Text als *.en.svg.
 INHERIT: mkdocs.yml
 site_name: Ablago – User manual
-site_description: Working with Ablago – Mappen, documents, search and My account
+site_description: Working with Ablago – folders, documents, search and My account
 site_url: !ENV [SITE_URL, 'https://help.ablago.app/benutzer/aktuell/en/']
 edit_uri: edit/main/docs/handbuch/benutzer/docs-en/
 docs_dir: docs-en
@@ -72,16 +72,16 @@ nav:
   - Keep or destroy the original?: original.md
   - New in this version: neu.md
   - First steps: erste-schritte.md
-  - Working in the filing view:
+  - Working in the Library:
       - Home page: startseite.md
       - Views and lists: ablage.md
       - Post: post.md
-      - Mappen: mappen.md
+      - Folders: mappen.md
       - Documents: dokumente.md
       - Understanding versions: versionen.md
       - To do and tasks: eingang.md
       - Notes, mentions, history: zusammenarbeit.md
-      - E-mail, PDF, link and stamp: versenden.md
+      - Email, PDF, link and stamp: versenden.md
       - Connect as a network drive: laufwerk.md
       - Connect to home automation: hausautomatisierung.md
       - Users and roles: benutzer-und-rollen.md

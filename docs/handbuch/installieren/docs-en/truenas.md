@@ -10,14 +10,14 @@ This is how you set up Ablago on **TrueNAS Community Edition 24.10 or newer**. T
 
 ## 1. Create a dataset and folders {#1-datensatz-und-ordner-anlegen}
 
-1. **Datasets:** in the pool that holds your apps (`tank` in the template), create a dataset `apps/dms` with the preset *Apps*.
+1. **Datasets:** in the pool that holds your apps (`tank` in the template), create a dataset `apps/dms` with the template *Apps*.
 2. In this dataset, create four folders: `postgres`, `files`, `geheim`, `sicherung`. You can do this e.g. via an SMB share or the shell under **System → Shell**:
    ```sh
    mkdir -p /mnt/tank/apps/dms/{postgres,files,geheim,sicherung}
    ```
 
-!!! tip "Inbox folder for the scanner"
-    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
+!!! tip "Intake folder for the scanner"
+    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
 
 ## 2. Create the app {#2-app-anlegen}
 

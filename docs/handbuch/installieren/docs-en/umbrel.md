@@ -33,7 +33,7 @@ In the **Ablago App Store**, open the app **Ablago** and choose **Install**. umb
     Set up Ablago straight away – then you are the first to create the administrator.
 
 !!! info "No Umbrel sign-in in front of Ablago"
-    umbrelOS puts **no** Umbrel sign-in in front of Ablago, because only the owner of the device has one. Family members sign in with their own Ablago account. Links from e-mails and the [interface (API)](https://help.ablago.app/admin/aktuell/en/api/) work this way too.
+    umbrelOS puts **no** Umbrel sign-in in front of Ablago, because only the owner of the device has one. Family members sign in with their own Ablago account. Links from emails and the [interface (API)](https://help.ablago.app/admin/aktuell/en/api/) work this way too.
 
 ## Data {#daten}
 
@@ -46,8 +46,8 @@ The data is stored under `~/umbrel/app-data/motom001-dms/data/`:
 | `sicherung` | Ablago's backups |
 | `postgres` | the database |
 
-!!! note "No inbox folder"
-    When installed from the app store, there is no [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/) for scanners. Documents arrive by uploading in the filing view, by e-mail via a [mailbox](https://help.ablago.app/admin/aktuell/en/postfaecher/) or via Ablago's interface.
+!!! note "No intake folder"
+    When installed from the app store, there is no [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/) for scanners. Documents arrive by uploading in the Library, by email via a [mailbox](https://help.ablago.app/admin/aktuell/en/postfaecher/) or via Ablago's interface.
 
 ## Back up {#sichern}
 
@@ -57,7 +57,7 @@ The data is stored under `~/umbrel/app-data/motom001-dms/data/`:
 
 ## Update {#aktualisieren}
 
-When there is a new version, the App Store shows an update for **Ablago**. One click is enough; the data is kept. What's new is shown under **Workbench → System status → Version and updates**.
+When there is a new version, the App Store shows an update for **Ablago**. One click is enough; the data is kept. What's new is shown under **Workbench → system health → Version and updates**.
 
 ## Moving to a new device {#auf-ein-neues-gerat-umziehen}
 

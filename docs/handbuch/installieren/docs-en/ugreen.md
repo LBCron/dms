@@ -21,8 +21,8 @@ Install and open the app **Docker** in the **App Center**.
 
 In the app **Files**, create a folder `dms` in the folder `docker` (created by the Docker app). Inside it, four folders: `postgres`, `files`, `geheim` and `sicherung`.
 
-!!! tip "Inbox folder for the scanner"
-    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
+!!! tip "Intake folder for the scanner"
+    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
 
 ## 3. Create the project {#3-projekt-anlegen}
 

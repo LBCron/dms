@@ -46,8 +46,8 @@ The data is stored under `/DATA/AppData/dms/`:
 | `sicherung` | Ablago's backups |
 | `postgres` | the database |
 
-!!! note "No inbox folder"
-    When installed from the app store, there is no [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/) for scanners. Documents arrive by uploading in the filing view, by e-mail via a [mailbox](https://help.ablago.app/admin/aktuell/en/postfaecher/) or via Ablago's interface.
+!!! note "No intake folder"
+    When installed from the app store, there is no [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/) for scanners. Documents arrive by uploading in the Library, by email via a [mailbox](https://help.ablago.app/admin/aktuell/en/postfaecher/) or via Ablago's interface.
 
 ## Back up {#sichern}
 
@@ -56,7 +56,7 @@ The data is stored under `/DATA/AppData/dms/`:
 
 ## Update {#aktualisieren}
 
-When there is a new version, the App Store shows an update for **Ablago**. The data is kept. What's new is shown under **Workbench → System status → Version and updates**.
+When there is a new version, the App Store shows an update for **Ablago**. The data is kept. What's new is shown under **Workbench → system health → Version and updates**.
 
 !!! warning "Still installed with two containers?"
     If you installed Ablago from the store before version 0.73.10, you have two containers: Ablago and the database. Your data is still there. After the update to the single container, Ablago first starts with an empty database – this is how you get it back:

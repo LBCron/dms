@@ -1,6 +1,6 @@
 # Search {#suche}
 
-The filing view's search forgives typos and other spellings. What it does in the process you set under **Workbench → Search and full text → Search** (group *Building your filing system*; in the preset *Household* only in [expert mode](uebersicht.md#werkbank-anpassen), in *Business* and *Everything* always). How users search is described in the [User manual](https://help.ablago.app/benutzer/aktuell/ablage/#suchen).
+The Library's search forgives typos and other spellings. What it does in the process you set under **Workbench → Search and full text → Search** (group *Building your Library*; in the template *Household* only in [expert mode](uebersicht.md#werkbank-anpassen), in *Business* and *Everything* always). How users search is described in the [User manual](https://help.ablago.app/benutzer/aktuell/ablage/#suchen).
 
 ## What always applies {#was-immer-gilt}
 
@@ -12,9 +12,9 @@ Without any setting, the search evens out:
 
 ## Typos and "Did you mean …?" { #tippfehler-und-meintest-du }
 
-If the search finds **nothing**, it continues with similar words from your filing system (similarity via letter groups, pg_trgm) and says so above the hits: "No exact hits for 'washing machien'. Similar spellings are shown." It also suggests **"Did you mean 'washing machine'?"**; a click searches for exactly this word. If there are exact hits, it stays with them – exact hits always come first.
+If the search finds **nothing**, it continues with similar words from your Library (similarity via letter groups, pg_trgm) and says so above the hits: "No exact hits for 'washing machien'. Similar spellings are shown." It also suggests **"Did you mean 'washing machine'?"**; a click searches for exactly this word. If there are exact hits, it stays with them – exact hits always come first.
 
-The similar words come from the **word index**: all words of four letters or more from titles, details and full texts. It grows by itself – new words are added in the background every few seconds, so that simultaneous saving doesn't block each other; words of deleted Mappen remain until you count afresh with **Rebuild** (that takes a few seconds for large filing systems). With the tick **If there are no hits, show similar spellings …** you switch the typo search off.
+The similar words come from the **word index**: all words of four letters or more from titles, details and full texts. It grows by itself – new words are added in the background every few seconds, so that simultaneous saving doesn't block each other; words of deleted folders remain until you count afresh with **Rebuild** (that takes a few seconds for large libraries). With the tick **If there are no hits, show similar spellings …** you switch the typo search off.
 
 Similar-sounding names (Meier, Mayer, Maier) are only found if they are also spelled similarly.
 
@@ -29,8 +29,8 @@ Groups apply to simple searches. Whoever uses quotation marks or a minus (see [s
 ## Technology { #technik }
 
 - **PostgreSQL:** the extension `unaccent` folds umlauts, `pg_trgm` finds typos and parts of words – more under [Database extensions](#erweiterungen-der-datenbank).
-- **Search index:** the update to 0.127.0 rebuilds the documents' search index once (document language, umlauts, hyphens) and fills the word index. Depending on the filing system this takes a few seconds to minutes; during that time Ablago doesn't start yet. Measurements are in the release notes.
-- **Backup:** the word index doesn't belong in the backup; on restoring it is recreated from Mappen and documents. The synonyms are in the backup and the [full export](export.md) (`struktur/synonyme.json`).
+- **Search index:** the update to 0.127.0 rebuilds the documents' search index once (document language, umlauts, hyphens) and fills the word index. Depending on the Library this takes a few seconds to minutes; during that time Ablago doesn't start yet. Measurements are in the release notes.
+- **Backup:** the word index doesn't belong in the backup; on restoring it is recreated from folders and documents. The synonyms are in the backup and the [full export](export.md) (`struktur/synonyme.json`).
 
 ## Database extensions { #erweiterungen-der-datenbank }
 
@@ -43,7 +43,7 @@ The search uses two PostgreSQL extensions:
 
 Both are "trusted" from PostgreSQL 13: the owner of the database creates them without superuser rights – also with [your own database](installation.md#datenbank-anbindung). `postgres:17` and `dms-komplett` include them. Ablago creates them in its own schema **`erweiterungen_dms`**. That matters for [restoring](wiederherstellen.md): it swaps the schema `public` and deletes the old one including its content – an extension there would disappear with it. Up to 0.131.0, `pg_trgm` was still in `public`; after a restore the typo search was then silently off. The update to 0.131.1 moves it and creates it anew if it is already missing.
 
-**Check:** on every start, Ablago creates a missing `pg_trgm` anew and moves extensions from `public` to `erweiterungen_dms` (the indexes for them are then created in the background). If that doesn't work, there is a notice with a remedy under **Workbench → System status**, plus a notice in the overview and in the [log](fehlersuche.md#protokoll) (module *datenbank*). The [test restore](wiederherstellen.md#probe-wiederherstellung) also reports missing extensions.
+**Check:** on every start, Ablago creates a missing `pg_trgm` anew and moves extensions from `public` to `erweiterungen_dms` (the indexes for them are then created in the background). If that doesn't work, there is a notice with a remedy under **Workbench → system health**, plus a notice in the overview and in the [log](fehlersuche.md#protokoll) (module *datenbank*). The [test restore](wiederherstellen.md#probe-wiederherstellung) also reports missing extensions.
 
 **Remedy**, if the notice stays:
 

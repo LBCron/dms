@@ -17,11 +17,11 @@
 
 ### What you see after the start { #nach-dem-start }
 
-A few seconds after the container starts, the address can be reached. As long as Ablago is still running migrations or getting ready, it shows the page **"Ablago is starting …"** with the current step, e.g. "Bringing the database up to date – step 3 of 5". You haven't done anything wrong: with large filing systems this takes a few minutes. The page reloads by itself and then shows the sign-in (or the setup assistant).
+A few seconds after the container starts, the address can be reached. As long as Ablago is still running migrations or getting ready, it shows the page **"Ablago is starting …"** with the current step, e.g. "Bringing the database up to date – step 3 of 5". You haven't done anything wrong: with large libraries this takes a few minutes. The page reloads by itself and then shows the sign-in (or the setup assistant).
 
 ![The page "Ablago is starting …" with the migration step, a progress bar and the note that you haven't done anything wrong](grafiken/ablago-startet.en.svg){ .grafik }
 
-- The page only shows steps and numbers, no data from the filing system. Until then, sign-in, API and WebDAV answer with `503` and `Retry-After`; programs and packages simply wait.
+- The page only shows steps and numbers, no data from the Library. Until then, sign-in, API and WebDAV answer with `503` and `Retry-After`; programs and packages simply wait.
 - `/api/gesundheit` reports `503` with `"zustand": "startet"` until the end, then `200` with `"zustand": "laeuft"`. The image's health check, a NAS or a reverse proxy thus only see the container as ready when Ablago is.
 - **If something goes wrong at start-up**, the same page says "Ablago could not start" with the reason in plain language, e.g. which migration step failed, and the pointer to the container log and [Troubleshooting](fehlersuche.md#container-logs). `/api/gesundheit` then reports `"zustand": "fehler"`. After a few minutes Ablago exits so that Docker restarts the container and tries again.
 - **If the database comes from a newer version** (lock against going back), the page says so too and stays there – a restart doesn't help. Set the image back to the newer version.
@@ -29,7 +29,7 @@ A few seconds after the container starts, the address can be reached. As long as
 
 During the restart, Ablago is briefly unreachable or not yet ready. Open pages then show "Ablago can't be reached right now" at the top and ask again at growing intervals (2 to 30 seconds) until it answers again. Entries stay; nothing is saved automatically. If another version runs afterwards, the bar asks you to reload the page – otherwise the browser keeps working with the old interface against the new server. This is recognised via `/api/gesundheit`, which returns, besides `ok`, an identifier of the running build (a hash of version, commit and build time, so that no version is visible without signing in).
 
-Which version is running and whether there are newer ones is shown in **Workbench → System status → Version and updates** (see [Troubleshooting](fehlersuche.md#technik)).
+Which version is running and whether there are newer ones is shown in **Workbench → system health → Version and updates** (see [Troubleshooting](fehlersuche.md#technik)).
 
 ### Which image tag? { #image-tag }
 
@@ -50,7 +50,7 @@ With two containers, `postgres:17` stays open for security updates of the 17 ser
 
     - **Not yet updated:** on the next update you get the previous, proven version.
     - **Already updated:** stay on the newer version and wait for the fix – enter the fixed number in the tag for that (e.g. `:0.160.0`). An older version doesn't start on your database: Ablago notices that a newer version has already set up the database and stops with a notice instead of overlooking new data. The only way back is the backup from before the update (see [Backing up](#sichern)).
-    - **Newly set up from 0.158.3:** such filing systems and their backups can't be opened with versions up to 0.158.2 – not via a backup either.
+    - **Newly set up from 0.158.3:** such libraries and their backups can't be opened with versions up to 0.158.2 – not via a backup either.
 
     If the container starts with *This database comes from a newer version of Ablago*, the tag contains an older version than last time – or `:stabil` was set back. Enter the number used last.
 
@@ -82,7 +82,7 @@ The folders in the container are now fixed: `/data/files`, `/data/geheim` and `/
 
 - **If your Compose file contains `FILES_DIR: /data/files`** (as in the template), everything keeps running. Remove the line on the next update; until then the Workbench overview reminds you.
 - **If one of the variables pointed to another folder**, Ablago doesn't start and names in the container's log the volume that must point to the fixed folder instead. Example: if it previously said `FILES_DIR: /dokumente` with the volume `/volume1/dms-daten:/dokumente`, this becomes `/volume1/dms-daten:/data/files` – and the variable goes. The files themselves stay where they are.
-- After the start, check under **Workbench → System status → Version and updates** that all three folders are on a volume of their own.
+- After the start, check under **Workbench → system health → Version and updates** that all three folders are on a volume of their own.
 
 ### Updating to 0.11 { #auf-011-aktualisieren }
 
@@ -120,7 +120,7 @@ These folders from the Compose template are to be backed up by hand:
 
 | Folder | Content |
 | --- | --- |
-| `postgres` | the database: Mappe types, Mappen, users, settings (with dms-komplett in the container under `/data/postgres`) |
+| `postgres` | the database: folder types, folders, users, settings (with dms-komplett in the container under `/data/postgres`) |
 | `files` | the uploaded files, each under its SHA-256 checksum |
 | `geheim` | the key `dms.schluessel` for all stored secrets (see [Encryption](verschluesselung.md)) and backups, the database connection `datenbank.json` (with password), until setup the setup code, and if needed the [RESCUE file](notfall.md) – keep it **separate** from the others |
 | `sicherung` | Ablago's backups (encrypted) |

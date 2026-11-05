@@ -1,8 +1,8 @@
 # WebDAV drive {#webdav-laufwerk}
 
-With the **WebDAV drive**, users connect Ablago's filing system like a network drive – in Windows Explorer, in the Finder on the Mac and in the Files app on iPhone and iPad. They browse through views, Mappen and tabs, open documents and simply put new files into it. How users connect the drive is described in the User manual under [Connect as a network drive](https://help.ablago.app/benutzer/aktuell/laufwerk/). Once it is switched on, users find the address, username, a suitable key and a short guide themselves – their name at the top right → **Connect as a network drive** (under My account → Network drive). When it is switched off, their interface doesn't mention the drive anywhere.
+With the **WebDAV drive**, users connect Ablago's Library like a network drive – in Windows Explorer, in the Finder on the Mac and in the Files app on iPhone and iPad. They browse through views, folders and tabs, open documents and simply put new files into it. How users connect the drive is described in the User manual under [Connect as a network drive](https://help.ablago.app/benutzer/aktuell/laufwerk/). Once it is switched on, users find the address, username, a suitable key and a short guide themselves – their name at the top right → **Connect as a network drive** (under My account → Network drive). When it is switched off, their interface doesn't mention the drive anywhere.
 
-This is **stage 1: reading and filing**. Deleting, renaming, moving and editing Office files directly come later. The drive is a way out like downloading, export and e-mail: opening needs the export permission **E**, and documents come out stamped if you wish.
+This is **stage 1: reading and filing**. Deleting, renaming, moving and editing Office files directly come later. The drive is a way out like downloading, export and email: opening needs the export permission **E**, and documents come out stamped if you wish.
 
 ## Switching on {#einschalten}
 
@@ -11,7 +11,7 @@ Under **Workbench → WebDAV drive**:
 - **Switch on WebDAV drive** – default: **off**. When switched off, Ablago answers under `/webdav/` with "not found", as if the drive didn't exist.
 - **Stamp when reading** – *No stamp* or a [stamp template](stempel.md). Default: the built-in template *From Ablago (drive)*. See [below](#stempel-beim-lesen).
 - **Read only** – for all users: browsing and opening yes, filing, changing and deleting no. See [below](#nur-lesend).
-- **Status** – the address for connecting (Ablago's address from *E-mail and address* plus `/webdav/`), the number of requests since the start and the limit per user.
+- **Status** – the address for connecting (Ablago's address from *Email and address* plus `/webdav/`), the number of requests since the start and the limit per user.
 - **Recent accesses** – at the very bottom of the page the last 50 requests with method, path, time, user and result (HTTP status, errors in red), newest at the top. The section has a fixed height for about ten entries; you reach older ones by scrolling. The accesses are only held in memory; after a restart the list is empty.
 
 ## Stamp when reading { #stempel-beim-lesen }
@@ -20,7 +20,7 @@ As when downloading in the interface, documents can also come out of the drive w
 
 - **Default:** Ablago brings the template **From Ablago (drive)** – a quiet footer "From Ablago · 04.11.2026" on every page. It is switched on for new and existing installations. Whoever doesn't want a stamp chooses **No stamp**; any other template works too. `{empfänger}` and `{benutzer}` are, for the drive, the user who opens the file.
 - The chosen template stamps **PDFs**. Other files (images, Word …) come unchanged, as does a PDF that can't be stamped (e.g. encrypted).
-- **A requirement always wins:** if a Mappe type requires a stamp, every one of its files comes out with the Mappe type's stamp – even with *No stamp*. Details under [Requirement also applies to the drive](stempel.md#pflicht-gilt-auch-fur-das-laufwerk).
+- **A requirement always wins:** if a folder type requires a stamp, every one of its files comes out with the folder type's stamp – even with *No stamp*. Details under [Requirement also applies to the drive](stempel.md#pflicht-gilt-auch-fur-das-laufwerk).
 - **Size and ETag** in the drive refer to the stamped version. If the stamp changes (such as the date the next day), Explorer and Finder see a changed file and reload it.
 - **Documents delivered stamped can't be overwritten via the drive** (*suggestion implemented*, issue #722): otherwise the stamp would arrive in Ablago as a new version when saving back. Putting new files into the same folder still works; you upload a new version of such a document in Ablago itself. Explorer and Finder show these files as read-only.
 
@@ -37,7 +37,7 @@ There is no distinction per user or role in this stage.
 !!! warning "Only via HTTPS"
     Only switch on the drive if Ablago can be reached via **HTTPS**. Username and API key go along with every request (HTTP Basic) – without HTTPS, readable in the open on the network. **Windows** doesn't connect a drive with sign-in via plain HTTP anyway. The workbench warns if Ablago's address doesn't begin with `https://`.
 
-- **Sign-in with an API key:** every user creates their own key under **My account → Security → API keys** (click your name at the top right), ideally one per device ("Thomas's laptop"). The username is the e-mail address, the password the key. The **user's password is never accepted** – that way two-factor sign-in stays effective, and you lock out a lost device by deleting only its key.
+- **Sign-in with an API key:** every user creates their own key under **My account → Security → API keys** (click your name at the top right), ideally one per device ("Thomas's laptop"). The username is the email address, the password the key. The **user's password is never accepted** – that way two-factor sign-in stays effective, and you lock out a lost device by deleting only its key.
 - For **filing**, the key needs the permission **read and write**; with **read only** you can browse and open, but not put anything in.
 - **Administrators** don't get API keys and therefore can't use the drive. For daily work they have a normal user account anyway.
 
@@ -55,24 +55,24 @@ Besides GET and PUT, WebDAV uses its own HTTP methods: **OPTIONS, PROPFIND, PROP
 Neue Post/                      putting something in = new post
 Ablage/
   <view>/
-    <Mappe>/
+    <folder>/
       <tab>/                    the tab's documents; putting something in = new document
       Verknüpft/
-        <linked Mappe>/         with its tabs, but without a further "Verknüpft"
+        <linked folder>/         with its tabs, but without a further "Verknüpft"
 ```
 
-- **Permissions as in the interface:** only views and Mappen the user may read. **Downloading** (opening a document) only with the **export permission E** on a view that shows the Mappe – exactly like downloading in the interface, exporting and sending; the same place checks all ways. Without the export permission, you see the file with size and date but can't open it.
-- **Mappe types with a required stamp** can only be read via the drive; their files come out stamped – see [Requirement also applies to the drive](stempel.md#pflicht-gilt-auch-fur-das-laufwerk).
+- **Permissions as in the interface:** only views and folders the user may read. **Downloading** (opening a document) only with the **export permission E** on a view that shows the folder – exactly like downloading in the interface, exporting and sending; the same place checks all ways. Without the export permission, you see the file with size and date but can't open it.
+- **Folder types with a required stamp** can only be read via the drive; their files come out stamped – see [Requirement also applies to the drive](stempel.md#pflicht-gilt-auch-fur-das-laufwerk).
 - **All views** are side by side under `Ablage/`, including sub-views.
-- **Folder and file names** come from the Mappen's titles and the names of tabs and documents. Characters that Windows or macOS don't like (`\ / : * ? " < > |`, control characters, a dot or space at the end) become `_`. If a title occurs several times, every Mappe gets its short code added, e.g. `V-1 (3fa85f)` – so the name stays stable even when further Mappen are added.
-- **At most 1000 Mappen** per view folder. For very large views better create a narrower sub-view.
-- **"Verknüpft"** (linked) shows Mappen the Mappe links to and that link to it – only **one level** deep. That way search and backup programs don't run endlessly in circles.
+- **Folder and file names** come from the folders' titles and the names of tabs and documents. Characters that Windows or macOS don't like (`\ / : * ? " < > |`, control characters, a dot or space at the end) become `_`. If a title occurs several times, every folder gets its short code added, e.g. `V-1 (3fa85f)` – so the name stays stable even when further folders are added.
+- **At most 1000 folders** per view folder. For very large views better create a narrower sub-view.
+- **"Verknüpft"** (linked) shows folders the folder links to and that link to it – only **one level** deep. That way search and backup programs don't run endlessly in circles.
 
 ## What happens when filing { #was-beim-ablegen-passiert }
 
 - **Into "New post":** every file becomes a separate post with channel *WebDAV*, direction incoming, status *New*. The subject is the file name without the extension; the user created it. Whether they may create post is governed by the [permissions](berechtigungen.md).
-- **Into a tab folder:** the file becomes a document in this tab (permission *Change* on the Mappe needed). Not in tabs of Mappe types with a required stamp and not with *Read only* switched on. If there is already a document with the **same name** there, a **new version** is created when [versioning](mappentypen.md) is switched on – always of exactly the document behind the file name in the drive, even if two documents have similar names; without versioning Ablago refuses, so that nothing is overwritten. If the document comes out stamped, it can't be overwritten via the drive (see [Stamp when reading](#stempel-beim-lesen)).
-- **Elsewhere** (e.g. directly into a Mappe or under `Ablage/`) nothing can be filed. Creating new folders isn't possible.
+- **Into a tab folder:** the file becomes a document in this tab (permission *Change* on the folder needed). Not in tabs of folder types with a required stamp and not with *Read only* switched on. If there is already a document with the **same name** there, a **new version** is created when [versioning](mappentypen.md) is switched on – always of exactly the document behind the file name in the drive, even if two documents have similar names; without versioning Ablago refuses, so that nothing is overwritten. If the document comes out stamped, it can't be overwritten via the drive (see [Stamp when reading](#stempel-beim-lesen)).
+- **Elsewhere** (e.g. directly into a folder or under `Ablage/`) nothing can be filed. Creating new folders isn't possible.
 - **Helper files** of the operating systems (`desktop.ini`, `Thumbs.db`, `.DS_Store`, `._…`, `~$…`) are silently accepted and discarded by Ablago without caching them – except with *Read only*.
 - **At most three uploads at the same time** per user; on the fourth Ablago briefly answers with 503, and Explorer or Finder try again straight away.
 - Size up to **100 MB** per file; the [storage space](speicherplatz.md) limit applies as when uploading.
@@ -80,7 +80,7 @@ Ablage/
 
 ## Protection { #schutz }
 
-- **Failed attempts** when signing in count in [sign-in protection](anmeldeschutz.md) like wrong passwords: too many, and account or IP address are locked. If the e-mail address belongs to a user, an account lock also triggers the instant notification by e-mail.
+- **Failed attempts** when signing in count in [sign-in protection](anmeldeschutz.md) like wrong passwords: too many, and account or IP address are locked. If the email address belongs to a user, an account lock also triggers the instant notification by e-mail.
 - **Service accounts** of packages do have API keys, but never get into the drive.
 - **Rate limit:** at most 600 requests per user per minute; above that Ablago briefly answers with 429. Explorer and Finder ask a lot when browsing, preview and search services even more – the limit only slows down outliers.
 - **Only one level per request:** Ablago refuses requests across the whole tree (`Depth: infinity`).

@@ -1,43 +1,43 @@
-# Links via Mappe type and field values {#links-uber-mappentyp-und-feldwerte}
+# Links via folder type and field values {#links-uber-mappentyp-und-feldwerte}
 
-A link via Mappe type and field values finds a Mappe by its **Mappe type** and its **details** instead of its technical id. You can send the link to a colleague with their own account by e-mail or chat, or store it in other programs. The field values (such as a contract number or a name) appear readably in the link – whoever sees it sees them; only those who may open the Mappe itself. For example:
+A link via folder type and field values finds a folder by its **folder type** and its **details** instead of its technical id. You can send the link to a colleague with their own account by email or chat, or store it in other programs. The field values (such as a contract number or a name) appear readably in the link – whoever sees it sees them; only those who may open the folder itself. For example:
 
 ```
 http://<NAS>:8080/ablage/link?typ=rechnung&rechnungsnummer=A-2020-11380
 ```
 
-Nothing needs to be set up for this: every link that follows the structure below works immediately. In every Mappe, **Mappe ▾ → Copy link** creates a matching link (see [User manual](https://help.ablago.app/benutzer/versenden/#link-kopieren)).
+Nothing needs to be set up for this: every link that follows the structure below works immediately. In every folder, **Folder ▾ → Copy link** creates a matching link (see [User manual](https://help.ablago.app/benutzer/versenden/#link-kopieren)).
 
 ## What the link shows {#was-der-link-zeigt}
 
-- **One hit:** the Mappe opens.
-- **Several hits:** the result list appears as a temporary view "Link: Invoice" – with the conditions below it –, and the first Mappe is open. This view doesn't appear in the view tree.
+- **One hit:** the folder opens.
+- **Several hits:** the result list appears as a temporary view "Link: Invoice" – with the conditions below it –, and the first folder is open. This view doesn't appear in the view tree.
 - **No hit:** the empty list names the conditions searched for.
-- **Error in the link** (unknown Mappe type, typo in a field's identifier, unsuitable operator, invalid value): Ablago shows what is wrong – never silently all Mappen.
+- **Error in the link** (unknown folder type, typo in a field's identifier, unsuitable operator, invalid value): Ablago shows what is wrong – never silently all folders.
 
-![Result list of a link via Mappe type and field values](bilder/direktlink.png)
+![Result list of a link via folder type and field values](bilder/direktlink.png)
 
-The address in the browser stays the link, even when a Mappe is open or the list is re-sorted. Whoever isn't signed in signs in and then lands directly at the link – administrators only for links into the workbench; a link into the filing view leads them to the workbench overview (the filing view is one click away from there). The recipient's permissions apply: they only see what they also see in the filing view.
+The address in the browser stays the link, even when a folder is open or the list is re-sorted. Whoever isn't signed in signs in and then lands directly at the link – administrators only for links into the workbench; a link into the Library leads them to the workbench overview (the Library is one click away from there). The recipient's permissions apply: they only see what they also see in the Library.
 
 ## Structure { #aufbau }
 
 ```
-/ablage/link?typ=<Mappe type>&<field>=<value>&<field>.<operator>=<value>&sortierung=<field>
+/ablage/link?typ=<folder type>&<field>=<value>&<field>.<operator>=<value>&sortierung=<field>
 ```
 
 | Part | Meaning |
 | --- | --- |
-| `typ=rechnung` | **identifier** of the Mappe type (see [Mappe types](mappentypen.md#grunddaten)). The **name** works too (upper and lower case don't matter) – but only the identifier stays valid if the Mappe type is renamed. "Copy link" uses the identifier. |
+| `typ=rechnung` | **identifier** of the folder type (see [Folder types](mappentypen.md#grunddaten)). The **name** works too (upper and lower case don't matter) – but only the identifier stays valid if the folder type is renamed. "Copy link" uses the identifier. |
 | `rechnungsnummer=A-2020-11380` | **identifier** of a field and the value: "is equal". |
 | `betrag.groesser=100` | field with an **operator**. |
 | `sortierung=-rechnungsdatum` | order of the result list; `-` = descending. Without: by title. |
 
 Several conditions apply **together** (AND), as in a [view](sichten.md). You write special characters in the value as browsers encode them: space as `+` or `%20`, `&` as `%26`, `+` as `%2B`.
 
-!!! warning "Renaming a Mappe type"
-    If a link names the Mappe type by its **identifier** (`typ=rechnung`, as "Copy link" creates it), it stays valid even if you rename the Mappe type. Only links that name the Mappe type by its **name** (`typ=Rechnung`) no longer find it after renaming and show an error message. Fields always appear in the link with their **identifier**, which never changes (see [Mappe types](mappentypen.md#die-kennung)) – you can rename labels without risk.
+!!! warning "Renaming a folder type"
+    If a link names the folder type by its **identifier** (`typ=rechnung`, as "Copy link" creates it), it stays valid even if you rename the folder type. Only links that name the folder type by its **name** (`typ=Rechnung`) no longer find it after renaming and show an error message. Fields always appear in the link with their **identifier**, which never changes (see [Folder types](mappentypen.md#die-kennung)) – you can rename labels without risk.
 
-You see a field's identifier in the workbench on the Mappe type, in the field under **Identifier**. The system values work too: `_erstellt`, `_geaendert` (date) as well as `_erstelltVon`, `_geaendertVon` (only with `ich`).
+You see a field's identifier in the workbench on the folder type, in the field under **Identifier**. The system values work too: `_erstellt`, `_geaendert` (date) as well as `_erstelltVon`, `_geaendertVon` (only with `ich`).
 
 ### Without an operator {#ohne-operator}
 
@@ -46,7 +46,7 @@ You see a field's identifier in the workbench on the Mappe type, in the field un
 | Text, number, amount, date | is equal (text regardless of case) | `rechnungsnummer=a-2020-11380` |
 | Long text, formatted text | contains | `notiz=Kündigung` |
 | Yes/no | yes or no | `bezahlt=nein` |
-| Selection list | is one of; several values with commas | `zahlungszyklus=monatlich,jährlich` |
+| Choice list | is one of; several values with commas | `zahlungszyklus=monatlich,jährlich` |
 
 ### Operators {#operatoren}
 
@@ -59,7 +59,7 @@ There are the same operators as for the conditions of a view – the same choice
 | `kleiner`, `groesser` | less/greater than | `betrag.groesser=1.000,00` |
 | `zwischen`, `ausserhalb` | two values with `..` in between | `rechnungsdatum.zwischen=2026-01-01..2026-03-31` |
 | `imZeitraum` | year or month | `rechnungsdatum.imZeitraum=jahr-1` |
-| `einerVon` | is one of (selection list) | `zahlungszyklus.einerVon=monatlich` |
+| `einerVon` | is one of (choice list) | `zahlungszyklus.einerVon=monatlich` |
 | `ja`, `nein` | yes/no, without a value | `bezahlt.nein` |
 | `leer`, `nichtLeer` | is (not) empty, without a value | `vertragsnummer.nichtLeer` |
 | `zeigtAuf` | only with `ich` (see below) | `verantwortlich.zeigtAuf=ich` |
@@ -74,7 +74,7 @@ Upper and lower case of the operators don't matter (`nichtleer` works too).
 - **Period** (with `imZeitraum`): `jahr` (current), `jahr-1` (last), `monat`, `monat+1` (next).
 - **Me:** `ich` is the signed-in user – for links to users and for `_erstelltVon`/`_geaendertVon`, e.g. `verantwortlich=ich`.
 
-Links to other Mappen (such as "contract = …"), password fields as well as conditions on documents and links don't work in the link. For that, set up a [view](sichten.md).
+Links to other folders (such as "contract = …"), password fields as well as conditions on documents and links don't work in the link. For that, set up a [view](sichten.md).
 
 ### Fields called "typ" or "sortierung" { #felder-namens-typ-oder-sortierung }
 

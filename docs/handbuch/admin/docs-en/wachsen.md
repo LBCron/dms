@@ -24,10 +24,10 @@ This applies to every move: from two containers to `dms-komplett` and back, from
 2. Copy the two backup files (`.dms-sicherung` and `.json`) from the `sicherung` folder.
 3. Start **the new system**, e.g. [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) or one of the [templates](https://help.ablago.app/installieren/aktuell/). Put the two files into its `sicherung` folder.
 4. Open the setup wizard in the browser, choose **Restore from a backup** and follow the steps under [Restoring → New NAS, old backup](wiederherstellen.md#neues-nas-alte-sicherung).
-5. Sign in with the previous credentials and check briefly: Mappen, documents, **Workbench → System status → Version and updates**.
+5. Sign in with the previous credentials and check briefly: folders, documents, **Workbench → system health → Version and updates**.
 6. Only switch off the old system once the new one is running. Keep the old system's folders until you're sure.
 
-If the address changes (new device, new port), enter it anew under **Workbench → E-mail and address** so that links in e-mails are correct.
+If the address changes (new device, new port), enter it anew under **Workbench → email and address** so that links in emails are correct.
 
 ## New major version of PostgreSQL {#neue-hauptversion-von-postgresql}
 
@@ -42,7 +42,7 @@ A database of an older major version (e.g. 17) can't simply be started with a ne
 
 ## When it grows {#wenn-es-mehr-wird}
 
-- **Many documents:** the `files` folder grows with the documents, the database much more slowly. Put `files` and `sicherung` where there is space. The folders can be moved individually, as long as the volume afterwards points to the same folder in the container again. **Workbench → System status** shows what takes up how much.
+- **Many documents:** the `files` folder grows with the documents, the database much more slowly. Put `files` and `sicherung` where there is space. The folders can be moved individually, as long as the volume afterwards points to the same folder in the container again. **Workbench → system health** shows what takes up how much.
 - **More performance:** text recognition and full-text search benefit from more processor cores and memory. A move to a more powerful computer works as above.
 - **Database on its own server:** move from `dms-komplett` to the lean image `dms` with its own database, as described above.
 

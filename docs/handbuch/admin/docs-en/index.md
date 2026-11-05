@@ -1,11 +1,11 @@
 # Administrator manual {#administratorhandbuch}
 
-This manual is for everyone who **installs, sets up and runs** Ablago. How to work with Mappen day to day is described in the [User manual](https://help.ablago.app/benutzer/) – this manual refers to it instead of repeating it.
+This manual is for everyone who **installs, sets up and runs** Ablago. How to work with folders day to day is described in the [User manual](https://help.ablago.app/benutzer/) – this manual refers to it instead of repeating it.
 
 !!! tip "Just installed?"
     What you should still do now is summarised under [Set up in five steps](fuenf-schritte.md). The table below is the reference for later.
 
-![Workbench: editing a Mappe type](bilder/werkbank-mappentyp.png)
+![Workbench: editing a folder type](bilder/werkbank-mappentyp.png)
 
 ## An administrator's tasks {#aufgaben-eines-administrators}
 
@@ -14,15 +14,15 @@ This manual is for everyone who **installs, sets up and runs** Ablago. How to wo
 | Install Ablago | NAS, home server, app store | [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/) |
 | Set up after the installation | setup wizard, database, reverse proxy | [Setup and operation](installation.md) |
 | Install a new version, back up data | NAS | [Updating and backing up](aktualisieren.md) |
-| Set which Mappen exist and what's in them | Workbench → Mappe types | [Mappe types](mappentypen.md) |
-| Set which views the filing view offers | Workbench → Views | [Views](sichten.md) |
+| Set which folders exist and what's in them | Workbench → folder types | [Folder types](mappentypen.md) |
+| Set which views the Library offers | Workbench → Views | [Views](sichten.md) |
 | Invite users, assign roles, block accounts | Workbench → Users | [Users and roles](benutzer.md) |
-| Adjust colours, logo and lettering | Workbench → Designs | [Designs](designs.md) |
+| Adjust colours, logo and lettering | Workbench → Designs | [Themes](designs.md) |
 | Try things out with sample data | Workbench → Demo data | [Demo data](demo.md) |
 | Overview of what needs doing | Workbench → Overview | [Workbench and overview](uebersicht.md) |
 | Set which areas the workbench shows | Workbench → Customise the workbench (at the bottom of the sidebar) | [Customise the workbench](uebersicht.md#werkbank-anpassen) |
-| Set who may see and change what | Workbench → Mappe types → Permissions, Workbench → Views | [Permissions](berechtigungen.md) |
-| Provide access copies, delete on request, keep periods (GDPR) | Workbench → Data protection access requests, Retention expired, Recycle bin | [Data protection in Ablago](datenschutz.md) |
+| Set who may see and change what | Workbench → folder types → Permissions, Workbench → Views | [Permissions](berechtigungen.md) |
+| Provide access copies, delete on request, keep periods (GDPR) | Workbench → Data protection requests, Retention expired, bin | [Data protection in Ablago](datenschutz.md) |
 | Back up and restore data | Workbench → Backup, Restore | [Backup](sicherung.md), [Restoring](wiederherstellen.md) |
 | Take all data along, readable even without Ablago | Workbench → Full export | [Exporting data](export.md) |
 | Find errors, handle users' reports | Workbench → Maintenance and troubleshooting | [Troubleshooting](fehlersuche.md) |
@@ -33,15 +33,15 @@ How Ablago is built technically and why is described in [Technology](technik.md)
 ## Roles in Ablago { #rollen-im-dms }
 
 - **Administrator** – additionally sees the **workbench** and may set up everything. There is always at least one active administrator.
-- **Member** – works in the filing view.
+- **Member** – works in the Library.
 
 This is a user's **system role**. In addition there are freely creatable **roles** (such as "Parents" or "Taxes and finances"). They give no permissions by themselves – but via rules in the [permissions](berechtigungen.md) they do. See [Users and roles](benutzer.md).
 
 !!! info "Who may see what?"
     - **Without rules, everyone may do everything.** Every Ablago installation starts this way; for a family that is often enough.
-    - **Per Mappe type**, you set in the [permissions](berechtigungen.md) who may create, read, edit and delete Mappen and see passwords – with rules, e.g. via roles, and a test run.
+    - **Per folder type**, you set in the [permissions](berechtigungen.md) who may create, read, edit and delete folders and see passwords – with rules, e.g. via roles, and a test run.
     - **Per view**, you set on the view who sees it, may create there and may export from it ([Views → Permissions](sichten.md#berechtigungen)).
-    - **The rules don't apply to administrators:** they always see and may do everything in the filing view.
+    - **The rules don't apply to administrators:** they always see and may do everything in the Library.
     - What applies to a user in the end is shown to them under "My account" in **My permissions**.
 
 ## New versions {#neue-versionen}

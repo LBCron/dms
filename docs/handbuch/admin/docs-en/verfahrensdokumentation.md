@@ -15,10 +15,10 @@ The template describes in ready-made wording what Ablago does, and marks everyth
 It is structured into:
 
 1. **General** – who, which activity, which version and variant of Ablago
-2. **Receipt intake** – paper, inbox folder, mailbox, electronic receipts and e-invoices in their original format, assigning
+2. **Receipt intake** – paper, intake folder, mailbox, electronic receipts and e-invoices in their original format, assigning
 3. **Replacement scanning** – device, checks, when the paper is destroyed, exceptions
-4. **Filing and order** – Mappe types, required fields, views, retention periods, [archive mode](archiv.md) and "Retention expired"
-5. **Traceability and immutability** – history of the Mappen, checksums, [versions](https://help.ablago.app/benutzer/aktuell/versionen/), Check all files, recycle bin
+4. **Filing and order** – folder types, required fields, views, retention periods, [archive mode](archiv.md) and "Retention expired"
+5. **Traceability and immutability** – history of the folders, checksums, [versions](https://help.ablago.app/benutzer/aktuell/versionen/), Check all files, bin
 6. **Access protection** – accounts, two-factor sign-in, sign-in protection, roles, permissions, read access for auditors
 7. **Data backup and restore** – schedule, off-site copy, emergency sheet, test
 8. **Operation** – updates, maintenance mode, log
@@ -28,7 +28,7 @@ It is structured into:
 ## Good to know {#gut-zu-wissen}
 
 - **No tax or legal advice, no certificate.** You create the procedure documentation yourself; the template is a starting point. Agree it with your tax adviser, especially periods and replacement scanning.
-- **The procedure documentation is kept too** – with its earlier versions. File it e.g. as a Mappe in Ablago and enter every change in the table at the end.
+- **The procedure documentation is kept too** – with its earlier versions. File it e.g. as a folder in Ablago and enter every change in the table at the end.
 - **It describes Ablago as it is today.** When new functions you use are added, extend the sections. The template here is updated with every version.
 - Background: GoBD (letter from the German Federal Ministry of Finance, last amended on 14.07.2025); retention periods currently 8 years for accounting receipts, 10 years for books, 6 years for business letters, each from the end of the calendar year.
 

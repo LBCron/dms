@@ -1,11 +1,11 @@
 # Mailboxes {#postfacher}
 
-Ablago can **fetch one or more e-mail mailboxes via IMAP** and take over **every e-mail as new [post](https://help.ablago.app/benutzer/aktuell/post/)**. Invoices, notices and scans ("Scan to e-mail") that arrive by e-mail thus land in Ablago without downloading and uploading.
+Ablago can **fetch one or more email mailboxes via IMAP** and take over **every email as new [post](https://help.ablago.app/benutzer/aktuell/post/)**. Invoices, notices and scans ("Scan to email") that arrive by email thus land in Ablago without downloading and uploading.
 
 --8<-- "ausgeblendet-organisation.md"
 
 !!! tip "A separate mailbox"
-    Use a **separate mailbox** (e.g. `dms@…`) or a forwarding – not your private main mailbox. Ablago moves or deletes e-mails it has taken over.
+    Use a **separate mailbox** (e.g. `dms@…`) or a forwarding – not your private main mailbox. Ablago moves or deletes emails it has taken over.
 
 ## Setting up a mailbox { #postfach-einrichten }
 
@@ -17,18 +17,18 @@ Ablago can **fetch one or more e-mail mailboxes via IMAP** and take over **every
 | Name | e.g. "Invoices"; appears in the post's history |
 | Server, encryption, port | usually SSL/TLS and port 993; STARTTLS usually port 143. Without encryption only after explicit confirmation |
 | Sign-in | **Password (or app password)** – default, as with all older mailboxes – or **OAuth 2.0** with the provider *Microsoft 365 / Outlook.com*, *Gmail / Google Workspace* or *other provider*, see [Sign-in with OAuth](#anmeldung-mit-oauth) |
-| Username, password | the password is stored encrypted with the [key](verschluesselung.md) and never shown again; leaving it empty keeps it. With OAuth there is no password; the username is the account's e-mail address |
+| Username, password | the password is stored encrypted with the [key](verschluesselung.md) and never shown again; leaving it empty keeps it. With OAuth there is no password; the username is the account's email address |
 | Folder | default `INBOX` |
 | Fetch interval | in minutes, 1 to 1440 (one day), default 5 |
 | For | optional: this user appears on every post and has it under "To do" |
 | Only from these senders | optional: addresses (`rechnung@stadtwerke.example`) or domains (`bank.example`, including subdomains) |
 | After taking over | **move to a folder** (default `DMS`, created), **only mark as read** or **delete** |
-| Only e-mails with attachments | others stay unchanged in the mailbox |
-| Original e-mail as .eml | default on: the whole e-mail is additionally attached to the post as a document |
+| Only emails with attachments | others stay unchanged in the mailbox |
+| Original email as .eml | default on: the whole email is additionally attached to the post as a document |
 
-**Test connection** signs in, names the number of e-mails in the folder and says in case of errors what the cause is: sign-in refused, server unreachable, certificate invalid. A stored password (or the OAuth sign-in) only goes to the stored server, port and encryption: if you change one of them, enter the password anew (or save and sign in anew). **Fetch now** fetches immediately. **Remove** deletes the mailbox from Ablago after a confirmation; the e-mails in the mailbox stay as they are.
+**Test connection** signs in, names the number of emails in the folder and says in case of errors what the cause is: sign-in refused, server unreachable, certificate invalid. A stored password (or the OAuth sign-in) only goes to the stored server, port and encryption: if you change one of them, enter the password anew (or save and sign in anew). **Fetch now** fetches immediately. **Remove** deletes the mailbox from Ablago after a confirmation; the emails in the mailbox stay as they are.
 
-Under *Status* are the last fetch, the e-mails taken over most recently with a link to the post, and errors. If fetching fails several times in a row, Ablago waits longer and longer between attempts (up to 6 hours) and writes an e-mail to the administrators after the third error.
+Under *Status* are the last fetch, the emails taken over most recently with a link to the post, and errors. If fetching fails several times in a row, Ablago waits longer and longer between attempts (up to 6 hours) and writes an email to the administrators after the third error.
 
 ## App passwords { #app-passworter }
 
@@ -39,8 +39,8 @@ Many providers don't let programs like Ablago into the mailbox with the normal p
 | Gmail | `imap.gmail.com`, 993 | Google account → Security → switch on 2-Step Verification → **App passwords** |
 | GMX | `imap.gmx.net`, 993 | allow access in the settings under *POP3/IMAP retrieval*; with two-factor an app password |
 | WEB.DE | `imap.web.de`, 993 | allow *POP3/IMAP retrieval* in the settings; with two-factor an app password |
-| T-Online | `secureimap.t-online.de`, 993 | create a separate **e-mail password** in the customer centre (not the login password) |
-| iCloud | `imap.mail.me.com`, 993 | create an **app-specific password** at account.apple.com; the username is the iCloud e-mail address |
+| T-Online | `secureimap.t-online.de`, 993 | create a separate **Email password** in the customer centre (not the login password) |
+| iCloud | `imap.mail.me.com`, 993 | create an **app-specific password** at account.apple.com; the username is the iCloud email address |
 | Outlook.com / Hotmail, Microsoft 365 | `outlook.office365.com`, 993 | Microsoft no longer accepts username and password for IMAP – use [sign-in with OAuth](#anmeldung-mit-oauth) |
 
 ## Sign-in with OAuth { #anmeldung-mit-oauth }
@@ -51,9 +51,9 @@ For this you need **your own app registration** at the provider – the Ablago p
 
 ### How it works { #so-geht-es }
 
-1. Under [E-mail and address](installation.md#e-mail-und-adresse), enter **Ablago's address** (e.g. `https://dms.example.org`). From it the **redirect URI** `https://dms.example.org/api/oauth/postfach/rueckruf` results; the workbench shows it. Signing in in the browser needs an **https address** (http only via `localhost`); without one, the **device code** works with Microsoft (see below).
+1. Under [Email and address](installation.md#e-mail-und-adresse), enter **Ablago's address** (e.g. `https://dms.example.org`). From it the **redirect URI** `https://dms.example.org/api/oauth/postfach/rueckruf` results; the workbench shows it. Signing in in the browser needs an **https address** (http only via `localhost`); without one, the **device code** works with Microsoft (see below).
 2. Create the app at the provider (guides below).
-3. **Workbench → Mailboxes → + New**: *Sign-in* **OAuth 2.0**, choose the *provider* – server, port and encryption are prefilled (`outlook.office365.com` or `imap.gmail.com`, 993, SSL/TLS). The *username* is the mailbox's e-mail address. **Save**.
+3. **Workbench → Mailboxes → + New**: *Sign-in* **OAuth 2.0**, choose the *provider* – server, port and encryption are prefilled (`outlook.office365.com` or `imap.gmail.com`, 993, SSL/TLS). The *username* is the mailbox's email address. **Save**.
 4. Under *App at the provider*, enter **client ID** and **client secret**, for Microsoft the **tenant**, **Save app**.
 5. **Sign in in the browser**: Ablago redirects you to the provider; after signing in and consenting you come back to the workbench. Or **Sign in with device code**: Ablago shows a code and an address; there you sign in on any device, and the workbench waits meanwhile.
 6. **Test connection**.
@@ -71,7 +71,7 @@ Ablago renews the sign-in itself before it expires. If the provider refuses – 
 
 - the mailbox shows *expired or revoked* with the reason,
 - the **overview** and the workbench sidebar warn (*Mailboxes* with "!"),
-- the administrators get **one** e-mail (not again with every attempt),
+- the administrators get **one** email (not again with every attempt),
 - fetching this mailbox rests until you **sign in anew**.
 
 ### Microsoft Entra (Microsoft 365, Outlook.com)
@@ -103,10 +103,10 @@ For other providers with IMAP and OAuth 2.0 you enter the *authorization endpoin
 
 ## What happens when taking over { #was-beim-ubernehmen-passiert }
 
-- **Every e-mail becomes a post**: channel *E-mail*, direction incoming, status *New*; subject, date and sender (name and address) from the e-mail; *For* from the mailbox. It was created by the *mailbox*, not by a user. The history names mailbox, sender and time.
-- **Attachments** become individual documents. Small embedded images (logos, signatures) are skipped; attached e-mails stay an `.eml` document.
-- **Duplicate attachments:** if an attachment is already in Ablago (same checksum), it is taken over anyway; the post's history says "Duplicate: "Invoice.pdf" is already in Ablago – check before assigning." Where, **Assign** shows to everyone who may read the other Mappe.
-- The **e-mail's text** appears as plain text on the post. HTML is converted into text; Ablago never loads images or other content from the internet.
-- The same limits as for uploading apply. A too-large attachment is recorded with the reason in the history; the others are taken over. If the [storage space](speicherplatz.md) limit is reached, the e-mail stays in the mailbox.
-- **No double takeover** – not even after a restart, a crash in the middle of fetching or if the server starts its numbering anew (UIDVALIDITY). The e-mail is only moved, marked or deleted once the post is saved.
+- **Every email becomes a post**: channel *Email*, direction incoming, status *New*; subject, date and sender (name and address) from the email; *For* from the mailbox. It was created by the *mailbox*, not by a user. The history names mailbox, sender and time.
+- **Attachments** become individual documents. Small embedded images (logos, signatures) are skipped; attached emails stay an `.eml` document.
+- **Duplicate attachments:** if an attachment is already in Ablago (same checksum), it is taken over anyway; the post's history says "Duplicate: "Invoice.pdf" is already in Ablago – check before assigning." Where, **Assign** shows to everyone who may read the other folder.
+- The **Email's text** appears as plain text on the post. HTML is converted into text; Ablago never loads images or other content from the internet.
+- The same limits as for uploading apply. A too-large attachment is recorded with the reason in the history; the others are taken over. If the [storage space](speicherplatz.md) limit is reached, the email stays in the mailbox.
+- **No double takeover** – not even after a restart, a crash in the middle of fetching or if the server starts its numbering anew (UIDVALIDITY). The email is only moved, marked or deleted once the post is saved.
 - In [maintenance mode](wartungsmodus.md) and during a [restore](wiederherstellen.md), fetching rests. If several instances run, only one fetches. The settings are part of the [backup](sicherung.md); password and tokens stay encrypted.

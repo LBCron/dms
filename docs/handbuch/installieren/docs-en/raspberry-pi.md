@@ -353,7 +353,7 @@ Done – your Ablago is running. How to continue (switch on backup, get going) i
 ## 7. Good to know { #gut-zu-wissen }
 
 - **Backup to another device:** under **Workbench → Backup**, switch on the schedule and print the **emergency sheet**. The backups end up in `~/dms/sicherung` – i.e. on the same SSD. If it breaks, they are gone too. So copy them elsewhere regularly, e.g. to a NAS or a USB disk. More under [Backup](https://help.ablago.app/admin/aktuell/en/sicherung/).
-- **Update Ablago:** **Workbench → System status → Version and updates** shows whether there is a new version. To update: `cd ~/dms && docker compose pull && docker compose up -d` – or simply run `bash einrichten.sh` again. More under [Updating](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
+- **Update Ablago:** **Workbench → system health → Version and updates** shows whether there is a new version. To update: `cd ~/dms && docker compose pull && docker compose up -d` – or simply run `bash einrichten.sh` again. More under [Updating](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
 - **Update the system:** about once a month `sudo apt update && sudo apt full-upgrade -y` (step 5.1) – that also brings Docker up to date. If you don't want to forget, let security updates be installed automatically, see [PC with Linux](linux.md#4-den-rechner-zum-server-machen).
 - **Heat:** with `vcgencmd measure_temp` the Pi shows its temperature. Up to about 70 °C everything is fine; from 80 °C it slows itself down. Then a fan or a more airy place helps (not in a closed cupboard).
 - **Switching off:** never just pull the plug while it's running – the database could be damaged. Shut down cleanly with `sudo shutdown -h now`, wait until the green light is off, then pull the plug.
@@ -379,7 +379,7 @@ If none of this helps, write an [issue on GitHub](https://github.com/motom001/dm
 How well Ablago runs on a Raspberry Pi has **not been measured yet** by the project – the machines for the measurements have Intel or AMD processors. With about **half an hour** you can help. This is **voluntary**, and Ablago itself reports nothing on its own – you decide what you send.
 
 !!! warning "Only with a test installation"
-    Measuring happens in a **separate test installation** next to your Ablago, with made-up data. Your real filing system stays untouched. So that the two don't slow each other down, you pause your Ablago meanwhile – do this when nobody is working with it.
+    Measuring happens in a **separate test installation** next to your Ablago, with made-up data. Your real Library stays untouched. So that the two don't slow each other down, you pause your Ablago meanwhile – do this when nobody is working with it.
 
 ### Prepare {#vorbereiten}
 
@@ -401,30 +401,30 @@ The test installation is [dms-komplett](komplett.md) (Ablago and the database in
 
 ### Measurement 1: load test, level small {#messung-1-lasttest-stufe-klein}
 
-The [load test](https://help.ablago.app/admin/aktuell/en/lasttest/) pretends that 2 to 5 people are working with Ablago at the same time, with 5,000 made-up Mappen. Enter your model and memory at `--geraet` and the type of storage (`SSD`, `NVMe` or `SD-Karte`) at `--speicher`:
+The [load test](https://help.ablago.app/admin/aktuell/en/lasttest/) pretends that 2 to 5 people are working with Ablago at the same time, with 5,000 made-up folders. Enter your model and memory at `--geraet` and the type of storage (`SSD`, `NVMe` or `SD-Karte`) at `--speicher`:
 
 ```sh
 docker exec -it dms-test dms-lasttest klein --geraet "Raspberry Pi 5 (8 GB)" --speicher SSD
 ```
 
-On the Pi this takes **about 10 to 20 minutes** (first creating the Mappen, then measuring for 2 minutes). At the end there is a report and below it the block **Messergebnis Lasttest** (load test result). Select the block in the terminal with the mouse, copy it (Windows and Linux: ++ctrl+shift+c++ or right-click → *Copy*; macOS: ++cmd+c++) and paste it into a text file.
+On the Pi this takes **about 10 to 20 minutes** (first creating the folders, then measuring for 2 minutes). At the end there is a report and below it the block **Messergebnis Lasttest** (load test result). Select the block in the terminal with the mouse, copy it (Windows and Linux: ++ctrl+shift+c++ or right-click → *Copy*; macOS: ++cmd+c++) and paste it into a text file.
 
 ### Measurement 2: text recognition {#messung-2-texterkennung}
 
 Here you measure how long the **Text recognition** package needs per page on the Pi. Everything in the browser, in the **test installation**:
 
-1. Open `http://dms.local:8099` and sign in with the account the load test created: e-mail `lena@example.org`, password `lasttest-passwort-1`. (Both only apply to this test installation, which you delete afterwards.)
+1. Open `http://dms.local:8099` and sign in with the account the load test created: email `lena@example.org`, password `lasttest-passwort-1`. (Both only apply to this test installation, which you delete afterwards.)
 2. **Workbench → Packages** → **Fetch catalogue** → at **Text recognition**, click **Install** and confirm the permissions.
 3. **Workbench → Demo data** – the area is hidden in the sidebar; the hidden areas are listed at the bottom of the sidebar, and one click shows them. Set there:
     - **Number:** `20`
     - **Seed:** `pi-probe-1` – this way everyone who measures gets **the same** documents, and the times can be compared.
-    - Tick **Create documents**, **Mappen with documents** at 100 %, **Documents per Mappe** from 1 to 1.
+    - Tick **Create documents**, **Folders with documents** at 100 %, **Documents per folder** from 1 to 1.
     - Under **Mix**, move the slider **"Scanned" PDF** all the way to the right to 100 % (the others go to 0 % by themselves).
     - Write down the number from the **estimate**: "≈ … pages for text recognition".
 
     ![Workbench → Demo data](bilder/werkbank-demo.png)
 
-4. Click **Create demo data**. As soon as "… demo Mappen and … documents created" appears below, **note the time**.
+4. Click **Create demo data**. As soon as "… demo folders and … documents created" appears below, **note the time**.
 5. Open **Workbench → Search and full text** and reload now and then. When **nothing is waiting any more** under *Text recognition for scans and images*, **note the time** again.
 6. **Calculate:** minutes × 60 ÷ pages = **seconds per page**. Example: 6 minutes for 45 pages → 360 ÷ 45 = 8 seconds per page.
 
@@ -440,7 +440,7 @@ Open the form **[Load test result](https://github.com/motom001/dms/issues/new?te
 - **Remarks:** the text recognition, e.g. like this:
 
     ```text
-    Text recognition: seed pi-probe-1, 20 Mappen, ≈ 45 pages according to the estimate,
+    Text recognition: seed pi-probe-1, 20 folders, ≈ 45 pages according to the estimate,
     duration 6 minutes → about 8 seconds per page. Package Text recognition, version per Workbench → Packages: …
     ```
 

@@ -2,7 +2,7 @@
 
 ## Getting an account {#zugang-bekommen}
 
-An administrator creates an account for you. You then receive an **invitation** – by e-mail or, if Ablago doesn't send e-mails, as a link from the administrator. Via the link you set your password (at least 10 characters) and are signed in straight away.
+An administrator creates an account for you. You then receive an **invitation** – by email or, if Ablago doesn't send emails, as a link from the administrator. Via the link you set your password (at least 10 characters) and are signed in straight away.
 
 An invitation is valid for 7 days and works only once. If it has expired, ask the administrator for a new one.
 
@@ -10,32 +10,32 @@ An invitation is valid for 7 days and works only once. If it has expired, ask th
 
 ![Sign-in](bilder/anmelden.png)
 
-Sign in with your e-mail address and your password. The sign-in lasts **30 days** on this device – or until you sign out.
+Sign in with your email address and your password. The sign-in lasts **30 days** on this device – or until you sign out.
 
 After several wrong attempts, Ablago waits briefly before allowing another one – this protects your account against passwords being tried out.
 
 ### Forgotten password {#passwort-vergessen}
 
-Below the sign-in, click **Forgot your password?** and enter your e-mail address. You receive a link with which you set a new password. The link is valid for one hour and works once.
+Below the sign-in, click **Forgot your password?** and enter your email address. You receive a link with which you set a new password. The link is valid for one hour and works once.
 
-If your Ablago doesn't send e-mails, it says so there. Then an administrator creates the link for you.
+If your Ablago doesn't send emails, it says so there. Then an administrator creates the link for you.
 
 ## The interface {#die-oberflache}
 
 At the top you see the areas:
 
-- **Filing** – this is where you work with Mappen. For most users it is the only area.
+- **Filing** – this is where you work with folders. For most users it is the only area.
 - **Workbench** – for administrators only; this is where Ablago is set up.
-- **+ New** – creates new [post](post.md) from anywhere (choose files or take a photo with your phone) or a new Mappe of a Mappe type you may create.
+- **+ New** – creates new [post](post.md) from anywhere (choose files or take a photo with your phone) or a new folder of a folder type you may create.
 - **Your name** – opens a menu with *My account* (also appearance and absence), the help, *Report a problem* and sign-out.
 
-The filing view is divided into **three columns**, from large to small:
+The Library is divided into **three columns**, from large to small:
 
-1. **Views** on the left – which kind of Mappen you want to see, for example all contracts.
-2. **List** in the middle – the Mappen of this view.
-3. **Mappe** on the right – the open Mappe with its tabs.
+1. **Views** on the left – which kind of folders you want to see, for example all contracts.
+2. **List** in the middle – the folders of this view.
+3. **Folder** on the right – the open folder with its tabs.
 
-![Three columns: views, list, Mappe](bilder/ablage.png)
+![Three columns: views, list, folder](bilder/ablage.png)
 
 A click on **Ablago** at the top left brings you back to the home page, the list [To do](eingang.md), from anywhere.
 
@@ -43,15 +43,15 @@ If there is a small **?** next to a heading, it opens exactly the matching secti
 
 ### Adjusting columns {#spalten-anpassen}
 
-Between the columns there are handles with an arrow. The arrow shows where the column disappears when collapsed; when you hover over it, it says for example "Collapse Mappe".
+Between the columns there are handles with an arrow. The arrow shows where the column disappears when collapsed; when you hover over it, it says for example "Collapse folder".
 
 - **Dragging** changes the width.
-- **A short click** collapses the views or the Mappe.
-- **When collapsed**, a narrow, labelled bar remains at the edge: **Views** on the left, **Mappe** or the title of the open Mappe on the right. A click on it opens the column again.
-- When you open a Mappe from the list, the right column always expands – even if it was collapsed before.
+- **A short click** collapses the views or the folder.
+- **When collapsed**, a narrow, labelled bar remains at the edge: **Views** on the left, **Folder** or the title of the open folder on the right. A click on it opens the column again.
+- When you open a folder from the list, the right column always expands – even if it was collapsed before.
 - With the keyboard: select the handle or bar, ++enter++ or ++space++ collapses or expands; at the handle, ++arrow-left++ and ++arrow-right++ change the width, ++home++ resets it.
 
-![Views and Mappe collapsed: narrow bars at the edge, on the right with the title of the Mappe](bilder/spalten-eingeklappt.png)
+![Views and folder collapsed: narrow bars at the edge, on the right with the title of the folder](bilder/spalten-eingeklappt.png)
 
 The handles work the same way in the workbench; the bars are called **Areas** and **Editing** there.
 

@@ -12,7 +12,7 @@ A message contains **only** the kind, an event id, a time and the numbers – th
 {"art":"zaehler.geaendert","id":"7c0e6a8e-3d1f-4f0a-9c55-2b8f0d3e4a11","zeit":"2026-11-03T07:15:02.000Z","daten":{"neuePost":2,"zuErledigen":5,"ueberfaellig":1,"stand":42,"geaendert":"2026-11-03T07:15:00.000Z"}}
 ```
 
-**No** titles, senders, names, e-mail addresses or contents. Whoever wants to know more fetches it via the [interface](api.md) with their own key and their own permissions. Ablago only reports to addresses you have approved – never to the project or other servers.
+**No** titles, senders, names, email addresses or contents. Whoever wants to know more fetches it via the [interface](api.md) with their own key and their own permissions. Ablago only reports to addresses you have approved – never to the project or other servers.
 
 ## Approving targets {#ziele-freigeben}
 
@@ -44,7 +44,7 @@ Below that are **all webhooks** with user, address, last delivery (time, result,
 - **Time limit:** 5 seconds per delivery. Any `2xx` answer counts as arrived.
 - **No redirects:** if the receiver answers with `301`, `302` etc., Ablago doesn't follow and reports an error. Enter the final address.
 - **Retrying:** on an error, Ablago tries again at increasing intervals (30 seconds, 1, 2, 5, 10, 30 minutes, 1, 2, 4, 6, 8 hours) – together about 22 hours, 12 attempts. If new numbers come in the meantime, the next attempt sends the new state.
-- **Switching off after many failures:** if the last attempt doesn't work either, Ablago switches the webhook off, shows the reason under My account and here and sends an e-mail to the administrators and to the user who owns the webhook (if [e-mail sending](installation.md#e-mail-und-adresse) is set up). The user switches it on again after the repair; then a message with the current state comes straight away.
+- **Switching off after many failures:** if the last attempt doesn't work either, Ablago switches the webhook off, shows the reason under My account and here and sends an email to the administrators and to the user who owns the webhook (if [Email sending](installation.md#e-mail-und-adresse) is set up). The user switches it on again after the repair; then a message with the current state comes straight away.
 - **At least once:** the messages wait in the database. After a restart or an interruption, a message may go out a second time – with the same **event id**, by which the receiver recognises the repeat.
 - In **maintenance mode** and during a **restore**, delivery rests and catches up afterwards.
 

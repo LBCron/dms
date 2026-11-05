@@ -75,7 +75,7 @@ nav:
   - New in this version: neu.md
   - Installation and operation:
       - Setup and operation: installation.md
-      - Sending e-mail: e-mail-versand.md
+      - Sending email: e-mail-versand.md
       - Setup as a file: einrichtungsdatei.md
       - "How do I get a DMS?": https://help.ablago.app/installieren/aktuell/en/
       - Updating and backing up: aktualisieren.md
@@ -86,10 +86,10 @@ nav:
       - Encryption: verschluesselung.md
   - Workbench:
       - Workbench and overview: uebersicht.md
-      - Building your filing system:
-          - Mappe types: mappentypen.md
+      - Building your Library:
+          - Folder types: mappentypen.md
           - Views: sichten.md
-          - Number ranges: nummernkreise.md
+          - Number sequences: nummernkreise.md
           - Stamps when sharing: stempel.md
           - Automations: automatisierungen.md
           - Packages: pakete.md
@@ -104,7 +104,7 @@ nav:
           - Deletion concept (template): loeschkonzept.md
       - Post and incoming:
           - Mailboxes: postfaecher.md
-          - Inbox folder: eingangsordner.md
+          - Intake folder: eingangsordner.md
           - WebDAV drive: webdav.md
           - Webhooks: webhooks.md
           - Text recognition and maintenance: texterkennung.md
@@ -113,14 +113,14 @@ nav:
           - Off-site backup: sicherung-ausser-haus.md
           - Restoring: wiederherstellen.md
           - Exporting data: export.md
-          - Recycle bin: papierkorb.md
+          - Bin: papierkorb.md
       - Settings:
           - Notifications and tasks: aufgaben.md
           - Region: region.md
           - Sign-in protection: anmeldeschutz.md
           - Designs: designs.md
       - Maintenance and troubleshooting:
-          - System status: speicherplatz.md
+          - System health: speicherplatz.md
           - Log, database, technology: fehlersuche.md
           - Maintenance mode: wartungsmodus.md
           - Demo data: demo.md

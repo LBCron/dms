@@ -12,7 +12,7 @@ Ablago runs on a **UGREEN DXP4800 Plus** with the **Docker app of UGOS**. There,
 
 A second container, **[Nginx Proxy Manager](https://nginxproxymanager.com/)** (`jc21/nginx-proxy-manager`), publishes Ablago to the outside, with an HTTPS certificate. This way I use Ablago fully from my phone, also on the go. The data still stays on the NAS at home.
 
-In Ablago, all that's needed is the public address entered under **Workbench → E-mail and address**. Ablago recognises by itself that the requests come via the proxy. What's behind this is described in the Administrator manual under [Behind a reverse proxy](https://help.ablago.app/admin/aktuell/en/installation/#hinter-einem-reverse-proxy).
+In Ablago, all that's needed is the public address entered under **Workbench → email and address**. Ablago recognises by itself that the requests come via the proxy. What's behind this is described in the Administrator manual under [Behind a reverse proxy](https://help.ablago.app/admin/aktuell/en/installation/#hinter-einem-reverse-proxy).
 
 !!! tip "Set up first, then publish"
     Only make Ablago reachable from outside once the setup is complete.

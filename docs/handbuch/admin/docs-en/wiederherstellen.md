@@ -7,7 +7,7 @@ You restore a [backup](sicherung.md) in the workbench – without a command line
 ## How Ablago proceeds { #so-geht-das-dms-vor }
 
 - The backup is first restored into a **separate, empty area** of the database and a folder next to the documents. It only switches over once everything has worked. If something aborts – error, wrong key, too little space –, the previous state stays **unchanged**.
-- Checked are: the file's checksum, the decryption (at the end of the file there is a check value; if the file has been changed, Ablago notices), the [check word](sicherung.md#was-eine-sicherung-enthalt), the number of Mappen, documents, users and files.
+- Checked are: the file's checksum, the decryption (at the end of the file there is a check value; if the file has been changed, Ablago notices), the [check word](sicherung.md#was-eine-sicherung-enthalt), the number of folders, documents, users and files.
 - An **older** backup in a newer Ablago works: afterwards the missing database changes run. Ablago refuses a **newer** backup in an older Ablago with a clear message – then update Ablago first.
 - Finally Ablago checks the **database extensions** the search needs (`pg_trgm` for typos and parts of words, `unaccent` for umlauts). They are in their own schema `erweiterungen_dms`, which a restore doesn't touch. If one is missing, this appears as a **notice** in the process and in the final message – the data is complete anyway; remedy under [Search → Database extensions](suche.md#erweiterungen-der-datenbank).
 - A switch to a new **major version of PostgreSQL** also works this way: start the new PostgreSQL empty, restore the backup.
@@ -22,7 +22,7 @@ You need: the two backup files (`.dms-sicherung` and `.json`) and the [emergency
 2. Install Ablago anew, as described under [How do I get a DMS?](https://help.ablago.app/installieren/aktuell/) – recommended with two containers (e.g. the [Compose template](https://github.com/motom001/dms/blob/main/deploy/nas/docker-compose.yml) with a `.env` with a new `DB_PASSWORD`), or with [dms-komplett](https://help.ablago.app/installieren/aktuell/komplett/) without a password.
 3. Copy the two backup files into the `sicherung` folder.
 4. Start the project and open Ablago in the browser. The [setup wizard](installation.md#der-einrichtungsassistent) asks for the **setup code** and – if needed – the database. Then choose **Restore from a backup**; you don't need a "throwaway admin".
-5. Choose the backup. The **comparison** shows which version it was made with and what is running today (Ablago, database state, PostgreSQL, architecture, filing system id). If the backup belongs to another tenant, Ablago takes over its id.
+5. Choose the backup. The **comparison** shows which version it was made with and what is running today (Ablago, database state, PostgreSQL, architecture, Library id). If the backup belongs to another tenant, Ablago takes over its id.
 6. Enter the **key from the emergency sheet** (spaces don't count) and **Check key** – Ablago compares it with the fingerprint from the metadata.
 7. **Restore**. The screen shows every step; you can reload the page. At the end Ablago restarts.
 8. **Continue to sign-in** and sign in with the previous credentials. Ablago created the key file itself in the process.
@@ -31,7 +31,7 @@ This way is only open as long as there is no user yet, and only with the setup c
 
 ### From an off-site copy { #aus-einer-kopie-ausser-haus }
 
-If the device is gone, you fetch both files from the [off-site target](sicherung-ausser-haus.md) – the `.dms-sicherung` and the `.json` next to it – and put them into the `sicherung` folder. The `.json` there is the **slim** version (without versions, counters and filing system id). The list shows the backup as *Off-site copy*; as soon as you enter the **key from the emergency sheet**, Ablago reads database state, filing system id and the number of Mappen, documents and users from the backup itself. The Ablago version it was made with is then shown as "unknown" in the comparison – the database state is what counts. When restoring, Ablago checks every file against its checksum and at the end the whole backup (GCM check value); only then does it switch over.
+If the device is gone, you fetch both files from the [off-site target](sicherung-ausser-haus.md) – the `.dms-sicherung` and the `.json` next to it – and put them into the `sicherung` folder. The `.json` there is the **slim** version (without versions, counters and Library id). The list shows the backup as *Off-site copy*; as soon as you enter the **key from the emergency sheet**, Ablago reads database state, Library id and the number of folders, documents and users from the backup itself. The Ablago version it was made with is then shown as "unknown" in the comparison – the database state is what counts. When restoring, Ablago checks every file against its checksum and at the end the whole backup (GCM check value); only then does it switch over.
 
 ## On the running system {#auf-dem-laufenden-system}
 
@@ -57,4 +57,4 @@ The result is shown per backup in the list and as a traffic light in the overvie
 
 ## Not provided for {#nicht-vorgesehen}
 
-Getting individual Mappen or documents back from a backup isn't possible directly. The way for this: restore the backup on a second, temporary Ablago (its own Compose project with another port) and pick them out there. A restore by command on the NAS deliberately doesn't exist.
+Getting individual folders or documents back from a backup isn't possible directly. The way for this: restore the backup on a second, temporary Ablago (its own Compose project with another port) and pick them out there. A restore by command on the NAS deliberately doesn't exist.

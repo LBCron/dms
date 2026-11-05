@@ -33,7 +33,7 @@ The command `dms` also works in [maintenance mode](wartungsmodus.md). So you end
 
 | Command | What it does |
 | --- | --- |
-| `dms passwort <email>` | Set a password directly, without e-mail and link. Asks for the new password twice; all of the user's sessions end. Without a terminal: `--passwort <new>`. |
+| `dms passwort <email>` | Set a password directly, without email and link. Asks for the new password twice; all of the user's sessions end. Without a terminal: `--passwort <new>`. |
 | `dms zweifaktor-zuruecksetzen <email>` | Remove [two-factor sign-in](anmeldeschutz.md#zwei-faktor-anmeldung) (phone lost). |
 | `dms gesperrt` | blocked IP addresses ([sign-in protection](anmeldeschutz.md)) |
 | `dms entsperren <ip>` | unblock an IP address |
@@ -63,7 +63,7 @@ If there is no active person with "Full administration" at all any more, `dms pa
 | Command | What it does |
 | --- | --- |
 | `dms benutzer` | users with role, status and last sign-in |
-| `dms benutzer anlegen <email> <name> [--admin]` | create a user; the invitation goes by e-mail or the link is in the output |
+| `dms benutzer anlegen <email> <name> [--admin]` | create a user; the invitation goes by email or the link is in the output |
 | `dms benutzer deaktivieren <email>` / `aktivieren <email>` | block or unblock an account |
 
 ## Everything else: `dms api` { #alles-andere-dms-api }

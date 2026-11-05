@@ -28,8 +28,8 @@ docker/dms/sicherung
 !!! tip "Backups on another disk"
     If your NAS has several storage pools, it is better to put `sicherung` on another one. Then later change only this one line in the template, e.g. to `/volume2/sicherung/dms`.
 
-!!! tip "Inbox folder for the scanner"
-    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [inbox folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
+!!! tip "Intake folder for the scanner"
+    Also create a fifth folder `eingang` next to them. The template mounts it, and some NAS abort on start if a mounted folder is missing. It becomes the [Intake folder](https://help.ablago.app/admin/aktuell/en/eingangsordner/): every file your scanner or the NAS puts there becomes new post. Share it on the NAS for the scanner. If you don't need a scanner, it simply stays empty.
 
 ## 3. Create the project {#3-projekt-anlegen}
 
@@ -54,7 +54,7 @@ docker/dms/sicherung
 
 ## Updates
 
-**Container Manager → Project → `dms` → Action → Build**. This downloads the latest image and restarts Ablago. The data stays in the folders. What has changed is shown under **Workbench → System status → Version and updates**. Beforehand you can switch on maintenance mode, see [Updating](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
+**Container Manager → Project → `dms` → Action → Build**. This downloads the latest image and restarts Ablago. The data stays in the folders. What has changed is shown under **Workbench → system health → Version and updates**. Beforehand you can switch on maintenance mode, see [Updating](https://help.ablago.app/admin/aktuell/en/aktualisieren/).
 
 ## Off-site backup {#sicherung-auer-haus}
 
@@ -62,7 +62,7 @@ Ablago backs itself up into the `sicherung` folder (**Workbench → Backup**). W
 
 ## Reachable on the go {#von-unterwegs-erreichbar}
 
-Only **after** the setup: in DSM under **Control Panel → Login Portal → Advanced → Reverse Proxy**, create an entry from `https://dms.<your-domain>` to `http://localhost:8080`. You get a certificate under **Security → Certificate**. Then, in Ablago under **Workbench → E-mail and address**, enter the public address. Background: [Behind a reverse proxy](https://help.ablago.app/admin/aktuell/en/installation/#hinter-einem-reverse-proxy).
+Only **after** the setup: in DSM under **Control Panel → Login Portal → Advanced → Reverse Proxy**, create an entry from `https://dms.<your-domain>` to `http://localhost:8080`. You get a certificate under **Security → Certificate**. Then, in Ablago under **Workbench → email and address**, enter the public address. Background: [Behind a reverse proxy](https://help.ablago.app/admin/aktuell/en/installation/#hinter-einem-reverse-proxy).
 
 !!! info "Pictures to follow"
     This guide has no screenshots yet. The menu items correspond to DSM 7.2. If something looks different for you, feel free to write it in an [issue](https://github.com/motom001/dms/issues).

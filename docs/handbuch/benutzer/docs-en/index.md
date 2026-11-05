@@ -2,27 +2,27 @@
 
 Ablago organises your paperwork, at home or at work: contracts, invoices, payments, insurance policies, appliances – and the documents that go with them. This manual shows you how to work with it. What it is worth – with a small self-check – is described under [What is a DMS for?](wofuer.md).
 
-![The filing view with views, list and an open Mappe](bilder/ablage.png)
+![The Library with views, list and an open folder](bilder/ablage.png)
 
-## The idea: Mappen instead of folders {#die-idee-mappen-statt-ordner}
+## The idea: folders that know what's in them {#die-idee-mappen-statt-ordner}
 
-In Ablago there are no folders into which you sort files. Instead there are **Mappen** – like the cardboard folder on the shelf:
+In Ablago you don't sort files into a tree of directories. Instead there are **folders** – like the cardboard folder on the shelf, but with a label that knows what's in them:
 
-- A Mappe has a **Mappe type**, for example *Contract*, *Invoice* or *Contract partner*. The Mappe type determines which details belong in the Mappe (contract number, notice period, amount …).
-- A Mappe has **tabs** – like the dividers in a real folder: one with the details, one with the documents, one with everything that belongs to it.
-- Mappen **link to each other**: an invoice belongs to a contract, the contract to a contract partner. From every Mappe you find everything connected to it – the local utility shows you its contracts and invoices without you filing anything twice.
+- A folder has a **folder type**, for example *Contract*, *Invoice* or *Contract partner*. The folder type determines which details belong in the folder (contract number, notice period, amount …).
+- A folder has **tabs** – like the dividers in a cardboard folder: one with the details, one with the documents, one with everything that belongs to it.
+- Folders **link to each other**: an invoice belongs to a contract, the contract to a contract partner. From every folder you find everything connected to it – the local utility shows you its contracts and invoices without you filing anything twice.
 
-An administrator sets up which Mappe types exist and which details they have. You work in the **filing view**.
+An administrator sets up which folder types exist and which details they have. You work in the **Library**.
 
 ## What you'll find here {#was-du-hier-findest}
 
 | If you … | then read |
 | --- | --- |
 | are signing in for the first time | [First steps](erste-schritte.md) |
-| are looking for a Mappe or want to sort lists | [Views and lists](ablage.md) |
-| want to create or change a Mappe | [Mappen](mappen.md) |
+| are looking for a folder or want to sort lists | [Views and lists](ablage.md) |
+| want to create or change a folder | [Folders](mappen.md) |
 | want to file or view files | [Documents](dokumente.md) |
-| want to file a letter or an e-mail and assign it later | [Post](post.md) |
+| want to file a letter or an email and assign it later | [Post](post.md) |
 | want to know what is under "To do" | [To do](eingang.md) |
 | want to enter someone as responsible | [Users and roles](benutzer-und-rollen.md) |
 | want to change your password, design or font size | [My account and settings](profil.md) |

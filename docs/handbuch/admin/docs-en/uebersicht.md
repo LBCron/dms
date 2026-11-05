@@ -1,33 +1,33 @@
 # Workbench and overview {#werkbank-und-ubersicht}
 
-The **workbench** only exists in [admin mode](verwalten.md#der-verwaltungsmodus): user menu → **Manage Ablago**. Afterwards you land on the **overview** – it shows the messages of your own areas. If a link leads you into the workbench (e.g. from an e-mail "Backup failed"), you land exactly there after "Manage Ablago". You can reach the **filing view** in this mode at any time via **Filing view** at the top, for instance to check what a Mappe contains. On the left are the areas you may manage, in six groups, ordered by what you want to do right now – build the filing system, manage users, bring in post, back up data, change basic settings or track down an error. Which areas you see depends on the [preset](#werkbank-anpassen):
+The **workbench** only exists in [Administration mode](verwalten.md#der-verwaltungsmodus): user menu → **Administer Ablago**. Afterwards you land on the **overview** – it shows the messages of your own areas. If a link leads you into the workbench (e.g. from an email "Backup failed"), you land exactly there after "Administer Ablago". You can reach the **Library** in this mode at any time via **Library** at the top, for instance to check what a folder contains. On the left are the areas you may manage, in six groups, ordered by what you want to do right now – build the Library, manage users, bring in post, back up data, change basic settings or track down an error. Which areas you see depends on the [Template](#werkbank-anpassen):
 
 <!-- bereiche:gruppen -->
 | Group | Areas |
 | --- | --- |
-| **Build filing system** | [Packages](pakete.md), [Mappe types](mappentypen.md), [Views](sichten.md), [Number ranges](nummernkreise.md), [Automations](automatisierungen.md) |
-| **Users and security** | [Users](benutzer.md), [Encryption](verschluesselung.md), [Data protection access requests](datenschutz.md#auskunft-erteilen), [Deletion concept](loeschkonzept.md#aus-dem-dms-erzeugen), [Retention expired](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) (only with archive mode), [Stamps](stempel.md) |
-| **Post and inboxes** | [Mailboxes](postfaecher.md), [Inbox folder](eingangsordner.md) (only if the folder is mounted), [WebDAV drive](webdav.md), [Webhooks](webhooks.md), [Search and full text](texterkennung.md) |
-| **Back up data** | [Backup](sicherung.md), [Full export](export.md), [Recycle bin](papierkorb.md) |
-| **Settings** | [E-mail and address](installation.md#e-mail-und-adresse), [Region](region.md), [Tasks](aufgaben.md), [Sign-in protection](anmeldeschutz.md), [Designs](designs.md), [Database connection](installation.md#datenbank-anbindung) |
-| **Maintenance and troubleshooting** | [System status](speicherplatz.md), [Log](fehlersuche.md#protokoll), [Reported errors](fehlersuche.md#gemeldete-fehler), [Maintenance](wartungsmodus.md), [Demo data](demo.md) |
+| **Build the Library** | [Packages](pakete.md), [Folder types](mappentypen.md), [Views](sichten.md), [Number sequences](nummernkreise.md), [Automations](automatisierungen.md) |
+| **Users and security** | [Users](benutzer.md), [Encryption](verschluesselung.md), [Data protection requests](datenschutz.md#auskunft-erteilen), [Deletion concept](loeschkonzept.md#aus-dem-dms-erzeugen), [Retention expired](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) (only with archive mode), [Stamps](stempel.md) |
+| **Post and intake** | [Mailboxes](postfaecher.md), [Intake folder](eingangsordner.md) (only if the folder is mounted), [WebDAV drive](webdav.md), [Webhooks](webhooks.md), [Search and full text](texterkennung.md) |
+| **Back up data** | [Backup](sicherung.md), [Full export](export.md), [Bin](papierkorb.md) |
+| **Settings** | [Email and address](installation.md#e-mail-und-adresse), [Region](region.md), [Tasks](aufgaben.md), [Sign-in protection](anmeldeschutz.md), [Themes](designs.md), [Database connection](installation.md#datenbank-anbindung) |
+| **Maintenance and troubleshooting** | [System health](speicherplatz.md), [Log](fehlersuche.md#protokoll), [Reported errors](fehlersuche.md#gemeldete-fehler), [Maintenance](wartungsmodus.md), [Demo data](demo.md) |
 <!-- /bereiche:gruppen -->
 
 Every setting has exactly one place. The areas' addresses (`/werkbank/sicherung` …) stayed the same when they were re-sorted in version 0.116; bookmarks and a saved selection under *Customise workbench* still apply.
 
-When the workbench was tidied up, some areas were merged: **Restore** is a section under *Backup*, **Technology** is *Version and updates* and the long database accesses are under *System status*, **Maintenance mode** and **Maintenance operations** together under *Maintenance*, **Search** under *Search and full text*, and "Can go" is now called **Retention expired**. Old addresses such as `/werkbank/darfweg`, `/werkbank/technik` or `/werkbank/wartungsmodus` lead to the new place. The search field at the top of the bar also finds an area by its old name.
+When the workbench was tidied up, some areas were merged: **Restore** is a section under *Backup*, **Technology** is *Version and updates* and the long database accesses are under *System health*, **Maintenance mode** and **Maintenance operations** together under *Maintenance*, **Search** under *Search and full text*, and "Can go" is now called **Retention expired**. Old addresses such as `/werkbank/darfweg`, `/werkbank/technik` or `/werkbank/wartungsmodus` lead to the new place. The search field at the top of the bar also finds an area by its old name.
 
 Which areas are there you decide under [Customise workbench](#werkbank-anpassen). On a smartphone you go in steps: choose the group at the top, below it the area, with large collections then the entry – with **← Areas** or **← To the list** you go back. At the very bottom of the bar are *Support the project* and the link to this manual.
 
-Next to the areas it says how much is set up there – for instance the number of Mappe types, number ranges, installed packages, active users or open tasks. The numbers are there immediately when you open the workbench and change as soon as you create or delete something in the area. If nothing is set up, no number is shown.
+Next to the areas it says how much is set up there – for instance the number of folder types, number sequences, installed packages, active users or open tasks. The numbers are there immediately when you open the workbench and change as soon as you create or delete something in the area. If nothing is set up, no number is shown.
 
 ## How you work in the workbench {#so-arbeitest-du-in-der-werkbank}
 
-Areas with many entries that you edit – Mappe types, views, number ranges, packages, users, tasks, designs, recycle bin, mailboxes, log and reported errors – have **three parts**: if you choose an area on the left, its list is in the middle and the form of the chosen entry on the right; with **+ New** you create one.
+Areas with many entries that you edit – folder types, views, number sequences, packages, users, tasks, designs, bin, mailboxes, log and reported errors – have **three parts**: if you choose an area on the left, its list is in the middle and the form of the chosen entry on the right; with **+ New** you create one.
 
 All other areas have **two parts**: the areas on the left, the whole page on the right. Small or read-only lists – for instance the long database accesses, the blocked addresses, the existing exports or the latest accesses to the WebDAV drive – are there as a section of their own with a fixed height that you scroll. On a smartphone, **← Areas** leads from such a page directly back to the choice of areas.
 
-Every form ends with the same bar, which stays visible at the bottom when scrolling: on the right the main button with the subject in its name – for instance **Create number range** or **Save mailbox** –, to its left **Discard**:
+Every form ends with the same bar, which stays visible at the bottom when scrolling: on the right the main button with the subject in its name – for instance **Create number sequence** or **Save mailbox** –, to its left **Discard**:
 
 - **Creating:** **Discard draft** closes the form without creating anything, and you are back in the list.
 - **Editing:** **Discard changes** resets all fields to the saved state. Both buttons only work once you have changed something; until then the bar says "Unsaved changes".
@@ -38,9 +38,9 @@ Buttons such as **Test connection** or **Check now** are above it in the form; o
 
 ## Overview {#ubersicht}
 
-The workbench begins with the **overview**. At the top are the **tiles**: open tasks, text recognition queue, recycle bin, reported errors, stock (Mappen, documents, storage, users) and version. That way you first see everything that is pending.
+The workbench begins with the **overview**. At the top are the **tiles**: open tasks, text recognition queue, bin, reported errors, stock (folders, documents, storage, users) and version. That way you first see everything that is pending.
 
-Below them are the **messages**, each with a button into the matching area. **This also applies to areas that are hidden in your preset.** They are sorted by severity:
+Below them are the **messages**, each with a button into the matching area. **This also applies to areas that are hidden in your template.** They are sorted by severity:
 
 1. **Red – critical:** something isn't working here or data is at risk. You have to deal with it.
 2. **Yellow – warning:** something is missing or set up in a risky way.
@@ -63,7 +63,7 @@ Some warnings you accept deliberately, for instance "The backup folder is not a 
 
 Accepted messages apply to everyone who manages this installation.
 
-Two notices you close with a button of their own instead – they don't come back afterwards (both only with "Full management", in the log with your name):
+Two notices you close with a button of their own instead – they don't come back afterwards (both only with "Full administration", in the log with your name):
 
 - **"Good if someone else can manage, in case you're not around."** After setup, Ablago recommends a second person with management permission as long as only one person may manage. **Invite person** leads to *Users → New*; the person gets an invitation link, then you tick **May manage Ablago** for them (see [Who may manage Ablago?](verwalten.md)). If you don't want that, choose **No, thanks** – then the notice stays away for good.
 - **"Emergency access was used …"** is shown in red at the top after someone set a new password with the emergency code from the emergency sheet ([I can't get in any more](was-ist-passiert.md#kein-zugang)). With **Read** it disappears.
@@ -111,29 +111,29 @@ Two notices you close with a button of their own instead – they don't come bac
 | Skipped during setup | notice | `einrichtung` |
 | Good if someone else can manage – only one person may manage | notice | `verwaltung.zweite-person` |
 | Environment variables that are no longer needed (each with a reason) | notice | `variablen` |
-| E-mail sending is not set up | yellow | `mail` |
+| Email sending is not set up | yellow | `mail` |
 | Open reported errors | yellow | `fehlermeldungen` |
 | Text recognition is now a package | notice (yellow as soon as scans are waiting) | `texterkennung.paket` |
 | Documents with an error in text recognition | yellow | `texterkennung.fehler` |
 | Nobody gets the tasks without a recipient | notice | `aufgabenempfaenger` |
 | Tasks with people without read permission | yellow | `aufgaben.ohne-leserecht` |
 | Tasks without a recipient | notice | `aufgaben.ohne-empfaenger` |
-| Mappen that don't fit the definition | notice | `mappen.unpassend` |
+| Folders that don't fit the definition | notice | `mappen.unpassend` |
 
 For messages that exist per mailbox, package, emergency access, used emergency code or skipped step, the identifier in the log is followed by a colon and the id, e.g. `postfach.anmelden:…`.
 
 ## Customising the workbench { #werkbank-anpassen }
 
-Not everyone needs every area. A household may never touch number ranges, mailboxes or the technical log. Under **Customise workbench** (at the very bottom of the bar) you decide which areas are on the left.
+Not everyone needs every area. A household may never touch number sequences, mailboxes or the technical log. Under **Customise workbench** (at the very bottom of the bar) you decide which areas are on the left.
 
 !!! info "Hiding doesn't switch anything off"
     A hidden area keeps running. A mailbox keeps collecting post, the backup keeps running. Direct links, the help and the overview's buttons still lead there. **Notices always get through:** if a hidden area has a problem, for example "Backup too old", it is in the overview, and the area appears with its notice in the bar.
 
-**Presets** for everyone who manages:
+**Templates** for everyone who manages:
 
 - **Household**: slim, only what a family needs for setting up and backing up. New installations start with it. **The self-employed and small businesses** choose **Business** right after setup.
 <!-- bereiche:organisation -->
-- **Business**: additionally Number ranges, Automations, Data protection access requests, Deletion concept, Retention expired, Mailboxes, Inbox folder, Search and full text, Sign-in protection, Designs, Log, Reported errors, Maintenance.
+- **Business**: additionally number sequences, Automations, Data protection requests, Deletion concept, Retention expired, Mailboxes, intake folder, Search and full text, Sign-in protection, Designs, Log, Reported errors, Maintenance.
 <!-- /bereiche:organisation -->
 - **Everything**: every area. It stays like this for installations set up before version 0.70 until you choose something else.
 
@@ -142,7 +142,7 @@ Afterwards you can deviate per area:
 - **for everyone**: the area is in the bar for every person who may manage it.
 - **only for me**: the area is additionally only in your bar, for example *Log* if you like to check it but the others don't.
 
-**Expert mode:** a household rarely needs some areas, but they are useful if you want to dig deeper – currently the [search](suche.md) with typos and synonyms. The preset **Household** hides them; with the tick **Expert mode – only for me** they appear in your bar. That only applies to you and is not a permission – the others who manage see their own bar. In the list of areas they are marked "in expert mode". With **Business** and **Everything** they are visible anyway.
+**Expert mode:** a household rarely needs some areas, but they are useful if you want to dig deeper – currently the [search](suche.md) with typos and synonyms. The template **Household** hides them; with the tick **Expert mode – only for me** they appear in your bar. That only applies to you and is not a permission – the others who manage see their own bar. In the list of areas they are marked "in expert mode". With **Business** and **Everything** they are visible anyway.
 
 If a hidden area is set up, for instance a mailbox or sign-in via a provider, it says "set up, but hidden". At the bottom of the bar it says how many areas are hidden. A click on it shows them all temporarily.
 
@@ -151,36 +151,36 @@ If a hidden area is set up, for instance a mailbox or sign-in via a provider, it
 ### Which area do I need for what? {#welchen-bereich-brauche-ich-wofur}
 
 <!-- bereiche:wofuer -->
-| Area | What for | In the preset |
+| Area | What for | In the template |
 | --- | --- | --- |
-| [Packages](pakete.md) | Installing ready-made Mappe types and views | Household, Business |
-| [Mappe types](mappentypen.md) | Building your own kinds of Mappen | Household, Business |
-| [Views](sichten.md) | Arranging the collections on the left of the filing view | Household, Business |
-| [Number ranges](nummernkreise.md) | Consecutive numbers, e.g. for invoices | Business |
+| [Packages](pakete.md) | Installing ready-made folder types and views | Household, Business |
+| [Folder types](mappentypen.md) | Building your own kinds of folders | Household, Business |
+| [Views](sichten.md) | Arranging the collections on the left of the Library | Household, Business |
+| [Number sequences](nummernkreise.md) | Consecutive numbers, e.g. for invoices | Business |
 | [Automations](automatisierungen.md) | Setting up processes following the pattern If – And – Then: setting fields or giving someone a task on an event or date | Business, Household in expert mode |
 | [Users](benutzer.md) | Creating users and roles | Household, Business |
 | [Encryption](verschluesselung.md) | The key for passwords and backups | Household, Business |
-| [Data protection access requests](datenschutz.md#auskunft-erteilen) | Access under Art. 15 GDPR for customers, tenants and contacts: request, create, deliver, proof | Business |
-| [Deletion concept](loeschkonzept.md#aus-dem-dms-erzeugen) | Creating the deletion concept, deletion log and which Mappe types contain personal data | Business |
-| [Retention expired](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) | Checking and deleting Mappen whose retention period has expired (only with archive mode) | Business |
+| [Data protection requests](datenschutz.md#auskunft-erteilen) | Access under Art. 15 GDPR for customers, tenants and contacts: request, create, deliver, proof | Business |
+| [Deletion concept](loeschkonzept.md#aus-dem-dms-erzeugen) | Creating the deletion concept, deletion log and which folder types contain personal data | Business |
+| [Retention expired](archiv.md#nach-der-frist-aufbewahrung-abgelaufen) | Checking and deleting folders whose retention period has expired (only with archive mode) | Business |
 | [Stamps](stempel.md) | Templates for stamps and watermarks when passing on | Household, Business |
-| [Mailboxes](postfaecher.md) | Collecting post from an e-mail account | Business |
-| [Inbox folder](eingangsordner.md) | Taking over scans from a folder | Business |
-| [WebDAV drive](webdav.md) | Mounting the filing system in Explorer, Finder or the Files app and putting files into it | Household, Business |
+| [Mailboxes](postfaecher.md) | Collecting post from an email account | Business |
+| [Intake folder](eingangsordner.md) | Taking over scans from a folder | Business |
+| [WebDAV drive](webdav.md) | Mounting the Library in Explorer, Finder or the Files app and putting files into it | Household, Business |
 | [Webhooks](webhooks.md) | Seeing and switching off where Ablago reports new post, tasks and deadlines (home automation), and approving targets | Household, Business |
 | [Search and full text](texterkennung.md) | Recognising text in scanned documents, archive version, shrinking PDFs, typos and synonyms (e.g. car, vehicle) for the search | Business, Household in expert mode |
 | [Backup](sicherung.md) | Setting up, checking and restoring backups | Household, Business |
 | [Full export](export.md) | Taking all data along in open formats | Household, Business |
-| [Recycle bin](papierkorb.md) | Bringing back deleted Mappen | Household, Business |
-| [E-mail and address](installation.md#e-mail-und-adresse) | E-mail sending and Ablago's address | Household, Business |
+| [Bin](papierkorb.md) | Bringing back deleted folders | Household, Business |
+| [Email and address](installation.md#e-mail-und-adresse) | Email sending and Ablago's address | Household, Business |
 | [Region](region.md) | Country, state and time zone – for public holidays, "today" and the times of reminders and summaries | Household, Business |
 | [Tasks](aufgaben.md) | Keeping an eye on all open tasks of all users | Household, Business |
 | [Sign-in protection](anmeldeschutz.md) | Requiring two-factor, sign-in via a provider, blocked addresses | Business |
-| [Designs](designs.md) | Logo, colours and your own CSS | Business |
+| [Themes](designs.md) | Logo, colours and your own CSS | Business |
 | [Database connection](installation.md#datenbank-anbindung) | The connection to the database | Everything only |
-| [System status](speicherplatz.md) | Seeing how the server is doing: storage space, load of CPU, memory, network and database, version and updates | Household, Business |
+| [System health](speicherplatz.md) | Seeing how the server is doing: storage space, load of CPU, memory, network and database, version and updates | Household, Business |
 | [Log](fehlersuche.md#protokoll) | Reading the technical log | Business |
 | [Reported errors](fehlersuche.md#gemeldete-fehler) | Errors that users have reported | Business |
 | [Maintenance](wartungsmodus.md) | Temporarily locking out users (maintenance mode) and one-off maintenance work | Business |
-| [Demo data](demo.md) | Sample Mappen for trying out | Everything only |
+| [Demo data](demo.md) | Sample folders for trying out | Everything only |
 <!-- /bereiche:wofuer -->

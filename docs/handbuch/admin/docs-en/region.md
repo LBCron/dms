@@ -1,10 +1,10 @@
 # Region
 
-**Workbench → Settings → Region** sets in one place where your filing system is at home. The following depend on it:
+**Workbench → Settings → Region** sets in one place where your Library is at home. The following depend on it:
 
 - the **public holidays** in the calendar and for the [Daily summary](aufgaben.md#tagliche-zusammenfassung),
-- "**today**" – for deadlines, lead times, filters like "created today", number ranges with a year and retention periods,
-- all **times**: Daily summary, automations with "date reached" and schedules, backups, dates in e-mails, access copies, stamps and exports.
+- "**today**" – for deadlines, lead times, filters like "created today", number sequences with a year and retention periods,
+- all **times**: Daily summary, automations with "date reached" and schedules, backups, dates in emails, access copies, stamps and exports.
 
 ## Settings {#einstellungen}
 

@@ -36,7 +36,7 @@ Ablago is more than a folder full of PDFs. In Ablago things are connected, as in
 
 ![House, boiler, maintenance contract, invoice and specialist firm are connected with each other](grafiken/zusammenhang.en.svg){ .grafik }
 
-When the specialist firm calls, one click shows you everything you have had to do with them. When the boiler breaks down, you find the instructions, maintenance contract and guarantee in one place. What this is called in Ablago is described under [The idea: Mappen instead of folders](index.md#die-idee-mappen-statt-ordner).
+When the specialist firm calls, one click shows you everything you have had to do with them. When the boiler breaks down, you find the instructions, maintenance contract and guarantee in one place. What this is called in Ablago is described under [The idea: folders that know what's in them](index.md#die-idee-mappen-statt-ordner).
 
 ## What you get from it – without any emergency {#was-du-davon-hast-ganz-ohne-notfall}
 
@@ -55,7 +55,7 @@ And your paperwork is **with you**, on your own device – not at a provider who
 
 | Situation | What Ablago does there |
 |---|---|
-| **Couples and families** | The knowledge doesn't depend on the one person who is "the filing system". |
+| **Couples and families** | The knowledge doesn't depend on the one person who is "the Library". |
 | **Own home** | Maintenance, tradespeople, guarantees and proof over decades – for the house and every appliance. |
 | **Letting** | Service charges, tenant changes and receipts for the tax in one place. |
 | **Caring for your parents** | Powers of attorney, doctors' letters, care insurance and your parents' contracts – visible to all siblings. |
@@ -74,7 +74,7 @@ And your paperwork is **with you**, on your own device – not at a provider who
 
 Ablago is **built for home and for small businesses**. We have these people in mind:
 
-- **Lena**, who does the paperwork in her family and has no technical knowledge. After an hour, her first Mappe should be created and the backup running.
+- **Lena**, who does the paperwork in her family and has no technical knowledge. After an hour, her first folder should be created and the backup running.
 - **Jonas**, her son, who finds his school report on his phone without asking.
 - **Markus**, who likes tinkering, runs Ablago on his NAS and sets it up for his family.
 - **Petra**, who looks after her mother with her brothers. Everyone sees the same paperwork, even from another city.
@@ -82,7 +82,7 @@ Ablago is **built for home and for small businesses**. We have these people in m
 - **Katrin**, who is self-employed and needs invoices, contracts and receipts for her tax adviser in one place.
 - **a small team** of a few people who share mailboxes, deadlines and cover and must keep paperwork according to the rules.
 
-For the self-employed and small businesses, Ablago already brings a lot: archive mode, procedure documentation, permissions per role, mailboxes, deputies, sign-in via a provider such as Microsoft 365, and automations. When in doubt, though, the rule is: what confuses a family, we don't build.
+For the self-employed and small businesses, Ablago already brings a lot: archive mode, procedure documentation, permissions per role, mailboxes, stand-ins, sign-in via a provider such as Microsoft 365, and automations. When in doubt, though, the rule is: what confuses a family, we don't build.
 
 !!! note "What Ablago doesn't want to be"
     We **support** mid-sized companies, but don't build specifically for them. Ablago is not made for **large enterprises**: there you need things like approvals under the four-eyes principle, high availability or support with fixed response times. Ablago doesn't have them, and they aren't planned either.
@@ -102,15 +102,15 @@ Ten questions, answered honestly. There is no "pass" – only hints where a DMS 
 <div class="selbstcheck" markdown>
 
 1. Can you find the receipt for your most expensive household appliance within two minutes?
-   *In Ablago the receipt is on the appliance's Mappe – with the purchase date and guarantee. A guarantee claim is then a matter of seconds.*
+   *In Ablago the receipt is on the appliance's folder – with the purchase date and guarantee. A guarantee claim is then a matter of seconds.*
 2. Do you know by when you can cancel your mobile phone or electricity contract?
    *If you enter the notice period on the contract, Ablago reminds you in good time – not to cancel, but so you can compare in peace.*
 3. Does anyone besides you know which insurance policies you have and where they are?
    *In Ablago the people in your household look it up themselves – each exactly what they are meant to see.*
 4. Do you know exactly what your home contents or liability insurance covers?
-   *The policy with its terms is on the insurance's Mappe; the full-text search finds e.g. "bicycle" or "glass" in it.*
+   *The policy with its terms is on the insurance's folder; the full-text search finds e.g. "bicycle" or "glass" in it.*
 5. Are the receipts for the last tax year – tradespeople, donations, medical costs – in one place?
-   *A view like "Tax 2025" collects all matching Mappen by itself, without you filing them twice.*
+   *A view like "Tax 2025" collects all matching folders by itself, without you filing them twice.*
 6. Could you say when the boiler or the car was last serviced – and by whom?
    *Boiler, maintenance contract, invoices and specialist firm are connected in Ablago; the next service is in it as a deadline.*
 7. Can you find important proof such as the vehicle registration, school reports, certificates or vaccination record immediately?
@@ -118,10 +118,10 @@ Ten questions, answered honestly. There is no "pass" – only hints where a DMS 
 8. Do the people involved know where the powers of attorney or important agreements in your family are?
    *Ablago can make such documents visible specifically for certain people – for example for your siblings, if you look after your parents together.*
 9. When moving, would you know whom you have to tell about the new address?
-   *All contract partners are separate Mappen in Ablago – with customer number and contact. The list is already there.*
-10. Can you name the customer number and contact person of your contracts without searching your e-mail inbox?
+   *All contract partners are separate folders in Ablago – with customer number and contact. The list is already there.*
+10. Can you name the customer number and contact person of your contracts without searching your email inbox?
     *Customer number, contact person and the last correspondence are right on the contract partner.*
 
 </div>
 
-If you chose "After searching" or "No" in several places, that's no failing – it's the same for almost everyone. A good start is usually **one** area: the insurance policies, the car or the tax receipts. How to create your first Mappe is described under [First steps](erste-schritte.md).
+If you chose "After searching" or "No" in several places, that's no failing – it's the same for almost everyone. A good start is usually **one** area: the insurance policies, the car or the tax receipts. How to create your first folder is described under [First steps](erste-schritte.md).

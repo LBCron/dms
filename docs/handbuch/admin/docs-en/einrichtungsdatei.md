@@ -4,7 +4,7 @@ What you put together in the [setup wizard](installation.md#der-einrichtungsassi
 
 ## Saving {#speichern}
 
-In the wizard's [summary](installation.md#zusammenfassung), **Save as file** saves the file `ablago-einrichtung.yaml` to your download folder. It contains the database (host, port, name, user), the name of the filing system, your account (name, e-mail address), the packages including automations switched on and off, and the optional things (address, state, examples, e-mail sending). Short comments explain every section.
+In the wizard's [summary](installation.md#zusammenfassung), **Save as file** saves the file `ablago-einrichtung.yaml` to your download folder. It contains the database (host, port, name, user), the name of the Library, your account (name, email address), the packages including automations switched on and off, and the optional things (address, state, examples, email sending). Short comments explain every section.
 
 !!! info "Not in the file: passwords and key"
     The file contains **no passwords** and **no key**. The wizard asks for passwords when loading. Ablago creates the key anew with every setup, and the [emergency sheet](sicherung.md#notfallblatt) remains mandatory. If a file contains a password in plain text anyway, Ablago rejects it.
@@ -17,7 +17,7 @@ Ablago checks the file step by step:
 
 - **Structure:** against the [schema](#schema). Errors are shown with line and field, for example "Line 5, konto.passwort: passwords don't belong in the file". Then nothing changes.
 - **Database:** without a database, the file prefills the step "Database"; you enter the password there. If Ablago is already connected, it stays with this connection, and a notice names the difference.
-- **Content:** e-mail address of your account, address of Ablago.
+- **Content:** email address of your account, address of Ablago.
 - **Packages:** do they exist in the catalogue? You always confirm permissions, origin, name conflicts and required settings yourself, even with a file.
 
 If everything fits, it goes straight to the **summary**, which you confirm as usual with **Set up now**. If a step doesn't fit, the wizard shows exactly this step with the reason; the rest stays prefilled. Because passwords are never in the file, you usually land on the step "Your account" first.
@@ -41,9 +41,9 @@ datenbank:
   name: dms
   benutzer: dms
   passwort: ${DMS_DB_PASSWORT}
-# Name of the filing system – lettering in the header and browser tab.
+# Name of the Library – lettering in the header and browser tab.
 ablage: Familie Beispiel
-# Your account: sets up Ablago, may administer it and also works in the filing view.
+# Your account: sets up Ablago, may administer it and also works in the Library.
 konto:
   name: Lena Beispiel
   email: lena@example.org
@@ -52,12 +52,12 @@ konto:
 pakete:
   - id: texterkennung
   - id: benachrichtigungen
-# Address for links, state for public holidays, examples, e-mail sending (without password).
+# Address for links, state for public holidays, examples, email sending (without password).
 optionales:
   adresse: https://ablago.example.org
   bundesland: SN
   beispiele: false
-  e-mail:
+  Email:
     aktiv: true
     server: smtp.example.org
     port: 587
@@ -70,7 +70,7 @@ optionales:
 
 [Download the example file](einrichtungsdatei/beispiel.yaml)
 
-- `konto` is the person who sets up: they get "Full administration" and also work in the filing view. You invite further people after the setup under Workbench → Users.
+- `konto` is the person who sets up: they get "Full administration" and also work in the Library. You invite further people after the setup under Workbench → Users.
 - Without a list `pakete` you choose the packages in the wizard; `pakete: []` means "none".
 - **Files from version 0.191 and 0.192** are still loaded: the section `administrator` counts as `konto`. Ablago skips a section `erster-benutzer` with a notice – the first user no longer exists in the wizard. When saving, only `konto` is in the file.
 - A package's automations are keys with `true` (switched on) or `false` (off); if one is missing, it is switched on as in the wizard.

@@ -46,7 +46,7 @@ So the rule is: **When in doubt, keep it.** With the [box per year](#die-kiste-j
 
 ## Caution {#achtung}
 
-- **Invoices from tradespeople for work on a house or flat** must be kept by private individuals for **two years** ([§ 14b UStG](https://www.gesetze-im-internet.de/ustg_1980/__14b.html)). The period begins at the end of the year in which the invoice was issued. The invoice, a payment record or another conclusive document is allowed. So file **the scan and the bank statement together** in the same Mappe. For construction defects, a limitation period of five years usually applies. The state archives therefore recommend that owners and private landlords keep tradespeople's invoices for **six years**. With the [box per year](#die-kiste-je-jahr) that costs hardly anything.
+- **Invoices from tradespeople for work on a house or flat** must be kept by private individuals for **two years** ([§ 14b UStG](https://www.gesetze-im-internet.de/ustg_1980/__14b.html)). The period begins at the end of the year in which the invoice was issued. The invoice, a payment record or another conclusive document is allowed. So file **the scan and the bank statement together** in the same folder. For construction defects, a limitation period of five years usually applies. The state archives therefore recommend that owners and private landlords keep tradespeople's invoices for **six years**. With the [box per year](#die-kiste-je-jahr) that costs hardly anything.
 - **Guarantee and warranty:** some manufacturers require the **original receipt** for the guarantee. Keep it for at least two years for the statutory warranty, and correspondingly longer for a longer guarantee.
 - **Check the backup before destroying anything.** A scan is only useful if it isn't lost with the hard disk. Ask your administrator whether [Ablago's backup](https://help.ablago.app/admin/aktuell/en/sicherung/) is running and when it was last checked.
 - **Readable for a long time:** if there is an [archive version (PDF/A)](dokumente.md#archivfassung-pdfa) of a document, any program will still open it in many years. And under [Export my data](profil.md#meine-daten-exportieren) you can get a copy in open formats at any time, which you can read without Ablago.
@@ -73,13 +73,13 @@ If you do need an original after all, you'll find it in Ablago. The date tells y
 
 ### Recording where the original is {#festhalten-wo-das-original-liegt}
 
-Every Ablago installation has the view **Storage location**. A storage location is a small Mappe for a place where paper is kept – and it can be inside another one: "at home › study cupboard › red binder", "Box 2026", "bank safe deposit box", "at the notary's" or simply "destroyed".
+Every Ablago installation has the view **Storage location**. A storage location is a small folder for a place where paper is kept – and it can be inside another one: "at home › study cupboard › red binder", "Box 2026", "bank safe deposit box", "at the notary's" or simply "destroyed".
 
 1. In the view *Storage location*, create a location with **+ New**: enter the *Name* and, under *Located in*, choose the location it is in (e.g. the cupboard for the binder). At the very top, *Located in* stays empty.
-2. In the Mappe whose paper you keep, choose the location in the field **Whereabouts of original documents** – if your administrator has set up the field.
-3. If the binder moves, you only change *Located in* on the binder. All Mappen in it then show the new location.
+2. In the folder whose paper you keep, choose the location in the field **Whereabouts of original documents** – if your administrator has set up the field.
+3. If the binder moves, you only change *Located in* on the binder. All folders in it then show the new location.
 
-At the storage location itself, the tab **Kept here** shows which Mappen are there, and **Contains** which locations are inside it.
+At the storage location itself, the tab **Kept here** shows which folders are there, and **Contains** which locations are inside it.
 
 ## For the self-employed and businesses {#fur-selbstandige-und-unternehmen}
 

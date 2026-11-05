@@ -8,28 +8,28 @@ After too many wrong passwords, Ablago blocks sign-in. Under **Workbench → Set
 
 | Block | Default | What for |
 | --- | --- | --- |
-| **Per e-mail address and IP** | 5 failed attempts → 1 minute | someone mistypes or tries out passwords for one account |
-| **Per IP address**, across all e-mail addresses | 30 failed attempts → 60 minutes | someone tries out many accounts from one address |
+| **Per email address and IP** | 5 failed attempts → 1 minute | someone mistypes or tries out passwords for one account |
+| **Per IP address**, across all email addresses | 30 failed attempts → 60 minutes | someone tries out many accounts from one address |
 
 The block duration per IP may also be **0**: then the address stays blocked until someone who manages sign-in protection releases it. Failed attempts per IP count within the block duration (with "permanent", within one hour).
 
 Failed attempts and blocks are stored in the database: they survive a restart and apply to all Ablago processes on the same database. A restore from a backup brings no blocks with it. Every block and every unblocking is in the [log](fehlersuche.md#protokoll).
 
-## E-mail to the administrators { #mail-an-die-administratoren }
+## Email to the administrators { #mail-an-die-administratoren }
 
-If Ablago can be reached from the internet, strangers constantly try out passwords. That is normal, and the blocks happen automatically. So by default Ablago sends **no e-mail** when it blocks. What is blocked you can see at any time under **Workbench → Sign-in protection** and in the log.
+If Ablago can be reached from the internet, strangers constantly try out passwords. That is normal, and the blocks happen automatically. So by default Ablago sends **no email** when it blocks. What is blocked you can see at any time under **Workbench → Sign-in protection** and in the log.
 
-If you want to know anyway, switch on one or both automations under **Workbench → Build filing system → [Automations](automatisierungen.md#benachrichtigungen)** (the package **Notifications** brings them switched off; after the update they are set as the earlier ticks here were):
+If you want to know anyway, switch on one or both automations under **Workbench → Build the Library → [Automations](automatisierungen.md#benachrichtigungen)** (the package **Notifications** brings them switched off; after the update they are set as the earlier ticks here were):
 
 | Automation | What comes |
 | --- | --- |
-| **Sign-in protection summary** (schedule daily 0:00 → *Report sign-in protection: summary*) | At most one e-mail a day, shortly after midnight, about the previous day's blocks: how many IP addresses and user accounts were blocked, plus the five addresses with the most failed attempts. If Ablago was off, the report comes at the next start and combines the missed days. On days without a block nothing comes. |
-| **Report account block immediately** (*User account blocked* → *Report sign-in protection: account block*) | An e-mail as soon as too many wrong passwords or codes came for an existing account. That is rarer and more important than a blocked IP: perhaps someone has the password of this account in their sights. At most one e-mail a day per account; failed attempts with unknown addresses trigger no e-mail. |
+| **Sign-in protection summary** (schedule daily 0:00 → *Report sign-in protection: summary*) | At most one email a day, shortly after midnight, about the previous day's blocks: how many IP addresses and user accounts were blocked, plus the five addresses with the most failed attempts. If Ablago was off, the report comes at the next start and combines the missed days. On days without a block nothing comes. |
+| **Report account block immediately** (*User account blocked* → *Report sign-in protection: account block*) | An email as soon as too many wrong passwords or codes came for an existing account. That is rarer and more important than a blocked IP: perhaps someone has the password of this account in their sights. At most one email a day per account; failed attempts with unknown addresses trigger no e-mail. |
 
-The e-mails go to all active people with the management permission for *Sign-in protection* (or "Full management") and an e-mail address, and need a set-up [e-mail sending](installation.md#e-mail-und-adresse).
+The emails go to all active people with the management permission for *Sign-in protection* (or "Full administration") and an email address, and need a set-up [Email sending](installation.md#e-mail-und-adresse).
 
 !!! note "Up to version 0.84.7"
-    Previously, by default an e-mail came immediately for every blocked IP. With 0.84.8 the e-mail is off by default – also in existing installations in which nobody changed the tick themselves. Whoever switches it on since 0.84.8 gets the daily summary instead of one e-mail per block.
+    Previously, by default an email came immediately for every blocked IP. With 0.84.8 the email is off by default – also in existing installations in which nobody changed the tick themselves. Whoever switches it on since 0.84.8 gets the daily summary instead of one email per block.
 
 ## Blocked addresses {#gesperrte-adressen}
 
@@ -59,7 +59,7 @@ Whoever has locked themselves out gets back in with the **emergency code** from 
 
 - **Default: only from the home network.** The page `/notfall` only works from devices in private networks (e.g. `192.168.…`, `10.…`, `fd…`), not from the internet.
 - **Allow emergency access from the internet:** with this tick it works from anywhere – for everyone who knows the address and has the code. Ablago warns against it and requires a [fresh sign-in](verwalten.md#frische-anmeldung) for it. Going back to "only home network" works without.
-- Every wrong entry blocks input for 30 seconds – per address range (IPv4 individually, IPv6 per /64). Failed attempts also count towards sign-in protection above; many failed attempts are reported to the administrators bundled by e-mail, at most once an hour.
+- Every wrong entry blocks input for 30 seconds – per address range (IPv4 individually, IPv6 per /64). Failed attempts also count towards sign-in protection above; many failed attempts are reported to the administrators bundled by email, at most once an hour.
 
 !!! info "Behind a reverse proxy"
     Whether a request comes from the home network, Ablago decides by the browser's real address. For that the proxy must set `X-Forwarded-For` (all common ones do) and Ablago must trust it ([What the proxy tells Ablago](installation.md#was-der-proxy-dem-dms-mitteilt)). If such information arrives although `TRUST_PROXY=false` applies, or if `TRUST_PROXY=true` is set (then anyone could forge the information), the request counts as "not from the home network". A proxy that passes on no address at all makes all requests look as if from the home network – set it up so that it sets `X-Forwarded-For`.
@@ -116,8 +116,8 @@ Under **Workbench → Sign-in protection → Sign-in via a provider** you enter:
 
 Then click **Check connection**. Afterwards tick **Switched on – button on the sign-in page** and save. The client secret is stored in the database encrypted with [Ablago's key](verschluesselung.md).
 
-- **Matching:** via the e-mail address. If it doesn't exist in Ablago, Ablago refuses – unless **Create unknown addresses as new users** is on; then a user is created – with "Full management" or without management permission, depending on **Manage new users**. With Entra ID, the sign-in name (UPN) also serves as the address.
-- **Group for "Full management":** if it is set, "Full management" follows the group at every sign-in: whoever is in the group gets it, whoever no longer belongs loses it. The last person with "Full management" keeps it. A selection of individual areas stays untouched (see [Who may manage Ablago?](verwalten.md)).
+- **Matching:** via the email address. If it doesn't exist in Ablago, Ablago refuses – unless **Create unknown addresses as new users** is on; then a user is created – with "Full administration" or without management permission, depending on **Manage new users**. With Entra ID, the sign-in name (UPN) also serves as the address.
+- **Group for "Full administration":** if it is set, "Full administration" follows the group at every sign-in: whoever is in the group gets it, whoever no longer belongs loses it. The last person with "Full administration" keeps it. A selection of individual areas stays untouched (see [Who may manage Ablago?](verwalten.md)).
 - **Password sign-in only for people who may manage:** everyone else only signs in via the provider. Whoever may manage keeps their password as emergency access in case the provider can't be reached.
 - **On signing out, also sign out at the provider:** whoever signed in via the provider is also signed out there on signing out (if the provider offers this).
 - A set-up [two-factor sign-in](#zwei-faktor-anmeldung) in Ablago also applies here. If the provider already requires a second factor, don't additionally require it in Ablago for these roles.

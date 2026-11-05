@@ -34,12 +34,12 @@ Under **Workbench → Backup**, the column **Where** shows per backup what exist
 | local · external uploaded, size confirmed | The target only confirms the size; reading back isn't possible (e.g. a [file drop](#loschschutz)). |
 | local · external failed | With a reason in the title, e.g. "password wrong" or "storage full". |
 
-The section **Off site** names the target and the last copy. The workbench overview shows a notice, and all administrators get **one e-mail per incident** if
+The section **Off site** names the target and the last copy. The workbench overview shows a notice, and all administrators get **one email per incident** if
 
 - a copy has **finally failed** (checksum at the target wrong, sign-in refused, given up after all retries) or
 - no newer backup has arrived off site for more than **2 days**.
 
-The e-mail only names the target, never credentials. A single failed attempt that the next retry fixes is only shown in the workbench.
+The email only names the target, never credentials. A single failed attempt that the next retry fixes is only shown in the workbench.
 
 The [emergency sheet](sicherung.md#notfallblatt) names the target (package and address) **without a password**, plus the sentence: *The workbench's key is not on the target. You only open the copy with the key from this sheet.* Download it anew after setting up.
 
@@ -56,7 +56,7 @@ Details on Nextcloud, hosting providers and NAS are in the package's README.
 
 If someone takes over your Ablago, they also know the stored credentials of the target. So that they **can't delete or overwrite** the off-site copies, give Ablago as few permissions as possible – and tidy up at the target itself:
 
-- **Nextcloud – file drop (recommended):** create a folder and share it as a **file drop** (*Share link → Upload only / File drop*). A file drop can upload, but not list, read or delete. Enter the link as the address and the share's password (if set) as the password. Disadvantage: reading back isn't possible – the display then honestly says "uploaded" instead of "checked". The recycle bin and versions of a normal Nextcloud, on the other hand, **don't** protect: the same account can empty them.
+- **Nextcloud – file drop (recommended):** create a folder and share it as a **file drop** (*Share link → Upload only / File drop*). A file drop can upload, but not list, read or delete. Enter the link as the address and the share's password (if set) as the password. Disadvantage: reading back isn't possible – the display then honestly says "uploaded" instead of "checked". The bin and versions of a normal Nextcloud, on the other hand, **don't** protect: the same account can empty them.
 - **Normal WebDAV account (Nextcloud user, hosting provider, NAS):** can always delete too. Use a **separate user** just for the backups, with access only to this folder, and activate at the target – where available – **versioning or snapshots** that this user can't delete (e.g. NAS snapshots, snapshots at the hosting provider).
 - **Delete old backups externally** is **off** in the package. If you switch it on, the account needs delete permissions – and that is exactly what removes the protection. Better: set up retention at the target (lifecycle rule, the NAS's clean-up rule) or tidy up by hand now and then.
 - **S3-compatible storage (once the package exists):** a separate access key with only `PutObject` (and `HeadObject`/`GetObjectAttributes` for checking), **without** `DeleteObject`; on the bucket **Object Lock** with a retention time and a **lifecycle rule** for tidying up. Checking is done via `x-amz-checksum-sha256` – the target recalculates itself. That is the cleanest deletion protection.

@@ -162,7 +162,7 @@ def seite(g: dict) -> str:
     return '\n'.join(z)
 
 
-BEREICHE_EN = {'grundbegriffe': 'Basic terms', 'ablage': 'Working in the filing view', 'werkbank': 'Administration (workbench)', 'betrieb': 'Operation and security'}
+BEREICHE_EN = {'grundbegriffe': 'Basic terms', 'ablage': 'Working in the Library', 'werkbank': 'Administration (workbench)', 'betrieb': 'Operation and security'}
 EINSTEIGER_EN = {'alltag': ('✓', 'everyday word'), 'erklaeren': ('~', 'with explanation'), 'fachwort': ('✗', 'technical term')}
 BEGEGNET_EN = {'alle': 'everyone', 'admin': 'administrators', 'fortgeschritten': 'advanced users'}
 

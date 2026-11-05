@@ -1,6 +1,6 @@
-# System status {#systemzustand}
+# System health {#systemzustand}
 
-How is the server doing right now? That is shown by **Workbench → Maintenance and troubleshooting → System status**: the **storage space** and the **load** of CPU, memory and network. (The area used to be called *Storage space* and was under *Settings*; old links and bookmarks lead here.)
+How is the server doing right now? That is shown by **Workbench → Maintenance and troubleshooting → system health**: the **storage space** and the **load** of CPU, memory and network. (The area used to be called *Storage space* and was under *Settings*; old links and bookmarks lead here.)
 
 Since the workbench was tidied up, the same page also shows the **long database accesses** and what is running in the database right now (formerly under *Database connection*) as well as **Version and updates** (formerly an area of its own, *Technology*, see [Troubleshooting](fehlersuche.md#technik)).
 
@@ -8,7 +8,7 @@ So that nothing ever gets lost when saving and uploading, Ablago measures itself
 
 --8<-- "ausgeblendet-schritt.md"
 
-![Workbench → System status](bilder/werkbank-speicherplatz.png)
+![Workbench → system health](bilder/werkbank-speicherplatz.png)
 
 ## Warning threshold and limit {#warnschwelle-und-grenze}
 
@@ -16,8 +16,8 @@ At the very top of the page. You set both in **GB free** or **% free**; percenta
 
 | Level | Default | What happens |
 | --- | --- | --- |
-| **Warning threshold** | below 10 % free | Notice in the [overview](uebersicht.md) and on this page, **one e-mail** to all administrators (once per dropping below – only when enough was free again is there a new one next time). Everyone keeps working normally. |
-| **Limit** | below 2 GB free | **Uploading blocked immediately** (new documents, logos); saving values still works. E-mail to all administrators, and [maintenance mode](wartungsmodus.md) starts with **5 minutes' notice** and the text **"Storage limit reached"**. |
+| **Warning threshold** | below 10 % free | Notice in the [overview](uebersicht.md) and on this page, **one email** to all administrators (once per dropping below – only when enough was free again is there a new one next time). Everyone keeps working normally. |
+| **Limit** | below 2 GB free | **Uploading blocked immediately** (new documents, logos); saving values still works. Email to all administrators, and [maintenance mode](wartungsmodus.md) starts with **5 minutes' notice** and the text **"Storage limit reached"**. |
 
 The warning threshold must require more free space than the limit – otherwise the warning would only come afterwards.
 
@@ -25,7 +25,7 @@ The warning threshold must require more free space than the limit – otherwise 
 
 If Ablago is slow, you see here what the cause is – without the NAS's console. Ablago measures the load of **its container** **every minute**; the small curves show the last hour, next to them is the value **now**. The values are only in memory; after a restart the curves begin anew.
 
-![Workbench → System status → Load](bilder/werkbank-auslastung.png)
+![Workbench → system health → Load](bilder/werkbank-auslastung.png)
 
 | Value | What it means |
 | --- | --- |
@@ -35,7 +35,7 @@ If Ablago is slow, you see here what the cause is – without the NAS's console.
 | **Server waiting time** | How long a request had to wait because Ablago was computing something else (event loop). The details are under **Settings → [Database connection](installation.md#lange-datenbankzugriffe)**, together with the long database accesses. |
 | **Workers for PDF and exports** | How many [workers](#arbeiter-fur-pdf-und-exporte) are busy right now, how many jobs are waiting, how long a job takes and waits on average, what failed. |
 
-**Warning:** if CPU or memory is **above 90 % for 5 minutes**, a notice is shown here, in the [overview](uebersicht.md) and as **high** next to *System status* in the bar – even if the area is hidden. Ablago warns in the same way when the **server waiting time** is **above 100 ms** for 99 % of measurements (p99) in **5 consecutive minute windows**; then there is additionally an entry in the [log](fehlersuche.md#protokoll) (module `datenbank`, "High server waiting time") and one as soon as it is normal again. You just about notice 100 ms when clicking; if almost every request waits that long in the queue, Ablago is noticeably sluggish.
+**Warning:** if CPU or memory is **above 90 % for 5 minutes**, a notice is shown here, in the [overview](uebersicht.md) and as **high** next to *System health* in the bar – even if the area is hidden. Ablago warns in the same way when the **server waiting time** is **above 100 ms** for 99 % of measurements (p99) in **5 consecutive minute windows**; then there is additionally an entry in the [log](fehlersuche.md#protokoll) (module `datenbank`, "High server waiting time") and one as soon as it is normal again. You just about notice 100 ms when clicking; if almost every request waits that long in the queue, Ablago is noticeably sluggish.
 
 **Typical causes and what helps:**
 
@@ -94,7 +94,7 @@ The three fixed folders in the container are measured (see [Folders and volumes]
 | `/data/geheim` | Key and emergency access |
 | `/data/sicherung` | Backups |
 
-Per folder, the page shows used, free and the size of the disk, as a bar with marks for warning threshold and limit. If all three are on the same disk (the usual case on the NAS), the page shows **one** bar "One disk for files, key and backups" with the folders below it – and the notice that the backups are thus on the same disk as the documents. If only some are on the same disk, that is noted at the respective folder. Below it, it says how much of it the documents' **thumbnails** occupy (folder `/data/files/vorschau`, usually a few kilobytes per document). They are **not backed up** – after a restore they are created anew on display or via **Maintenance operations → Catch up thumbnails**. **Workbench → System status → Version and updates** shows the same numbers in the overview for support.
+Per folder, the page shows used, free and the size of the disk, as a bar with marks for warning threshold and limit. If all three are on the same disk (the usual case on the NAS), the page shows **one** bar "One disk for files, key and backups" with the folders below it – and the notice that the backups are thus on the same disk as the documents. If only some are on the same disk, that is noted at the respective folder. Below it, it says how much of it the documents' **thumbnails** occupy (folder `/data/files/vorschau`, usually a few kilobytes per document). They are **not backed up** – after a restore they are created anew on display or via **Maintenance operations → Catch up thumbnails**. **Workbench → system health → Version and updates** shows the same numbers in the overview for support.
 
 !!! note "The database is not measured"
     With two containers, PostgreSQL runs in a container of its own; Ablago can't see its volume. With [dms-komplett](https://help.ablago.app/installieren/aktuell/en/komplett/) the database is in the fourth folder `/data/postgres` – Ablago doesn't measure that either. If all folders are on the same disk of the NAS (the usual case), the measurement is still enough. If the database is on another disk, keep an eye on its space in the NAS's storage manager.
@@ -110,25 +110,25 @@ Scanned and photographed PDFs are often much larger than necessary: a scanner at
 
 Every document is shrunk as with [Shrink PDF](https://help.ablago.app/benutzer/aktuell/en/dokumente/#pdf-verkleinern) on the document:
 
-- **With versioning**, the result becomes the new version, the original stays as an older version. **Space is only freed when the older version goes** – hence the box **Don't keep originals as an older version**: it removes exactly this one version again straight away (older versions before it stay). In Mappe types with [archive mode](archiv.md) the original still stays during the retention period.
-- **Without versioning**, the shrunk PDF replaces the previous one; the previous one goes to the [recycle bin](papierkorb.md) and frees its space when the recycle bin is emptied.
+- **With versioning**, the result becomes the new version, the original stays as an older version. **Space is only freed when the older version goes** – hence the box **Don't keep originals as an older version**: it removes exactly this one version again straight away (older versions before it stay). In folder types with [archive mode](archiv.md) the original still stays during the retention period.
+- **Without versioning**, the shrunk PDF replaces the previous one; the previous one goes to the [Bin](papierkorb.md) and frees its space when the bin is emptied.
 - Text layer and full text stay; text recognition doesn't run again. If it brings less than 10 % for a document, it stays unchanged. PDFs that can't be read (e.g. encrypted) are listed in the result with the reason.
 
-Every shrunk document has the entry "PDF edited: shrunk from … to …" in its Mappe's history, the [log](fehlersuche.md#protokoll) (module *werkbank*) the summary.
+Every shrunk document has the entry "PDF edited: shrunk from … to …" in its folder's history, the [log](fehlersuche.md#protokoll) (module *werkbank*) the summary.
 
 ### Shrinking new PDFs automatically {#neue-pdfs-automatisch-verkleinern}
 
-Below it: **Shrink new PDFs when filing** above a size (default 5 MB) at a level. **The default is off.** Switched on, it applies to new PDFs from outside – uploading, [inbox folder](eingangsordner.md), [mailboxes](postfaecher.md), interface and [WebDAV](webdav.md) –, not to PDFs edited in Ablago. Then **only the shrunk PDF** is stored; the original doesn't go into Ablago. If it brings less than 10 % or the file can't be read, it is filed as it came. The entry "Document uploaded" in the history then says "Shrunk: automatically from … to …".
+Below it: **Shrink new PDFs when filing** above a size (default 5 MB) at a level. **The default is off.** Switched on, it applies to new PDFs from outside – uploading, [Intake folder](eingangsordner.md), [mailboxes](postfaecher.md), interface and [WebDAV](webdav.md) –, not to PDFs edited in Ablago. Then **only the shrunk PDF** is stored; the original doesn't go into Ablago. If it brings less than 10 % or the file can't be read, it is filed as it came. The entry "Document uploaded" in the history then says "Shrunk: automatically from … to …".
 
 !!! note "Technology: no Ghostscript"
     Ablago shrinks without Ghostscript (whose licence is AGPL). The images are recalculated by **pdftoppm** from poppler (in the image anyway for text recognition and thumbnails), the PDF's structure is optimised by **qpdf** (Apache-2.0, in the image since version 0.93.0). Whoever builds their own image includes `apk add qpdf` – without qpdf shrinking also works, the files just get a little less small.
 
 ## In an emergency {#im-ernstfall}
 
-1. The e-mail "Storage limit reached" arrives; after 5 minutes everyone except the administrators is signed out.
+1. The email "Storage limit reached" arrives; after 5 minutes everyone except the administrators is signed out.
 2. As an administrator you stay able to act in the workbench and make space:
     - delete old backups under **Workbench → [Backup](sicherung.md)** or reduce retention,
-    - empty the **[recycle bin](papierkorb.md)** or shorten its retention,
+    - empty the **[Bin](papierkorb.md)** or shorten its retention,
     - [shrink large PDFs](#grosse-pdfs-verkleinern) (with "Don't keep originals as an older version"),
     - tidy up other data on the NAS or enlarge the volume.
 3. **Measure again** (in the section *Folders*, next to the time of the last measurement). If the space is enough again, this page and the overview show: "… free again – end maintenance?"

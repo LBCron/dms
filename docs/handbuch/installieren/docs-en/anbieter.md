@@ -58,7 +58,7 @@ Tick these off before you decide:
 
 **Trust**
 
-- [ ] **On the market for years**, with a complete **legal notice** and reachable **support** (e-mail or phone, answers in reasonable time – try it with a question before ordering).
+- [ ] **On the market for years**, with a complete **legal notice** and reachable **support** (email or phone, answers in reasonable time – try it with a question before ordering).
 - [ ] **Reviews** on portals (e.g. hosttest, Trustpilot) are mostly good and describe how the provider deals with problems. **Few reviews say little**, as do nothing but gushing ones.
 
 **Technology**
@@ -81,7 +81,7 @@ Hosting at a provider means putting your paperwork in their hands – as with a 
 - **Encrypted** are the [secrets in Ablago](https://help.ablago.app/admin/aktuell/en/verschluesselung/) – password fields, credentials for the mail server and mailboxes – and the backups. The key, however, is in the `geheim` folder on the same server. That doesn't protect you against a provider who is determined to read your data; it protects backups and database copies that end up elsewhere.
 - **Your own off-site backups:** copy the `sicherung` folder to another place regularly – with a vServer e.g. using `rsync` or `scp`, with platforms and apps via their file access –, and keep the [emergency sheet](https://help.ablago.app/admin/aktuell/en/sicherung/#notfallblatt) separately. A **full export** now and then gives you everything in open formats – also in case the provider ever disappears.
 - **Two-factor sign-in:** your Ablago can be reached from the internet. Require [two-factor sign-in](https://help.ablago.app/admin/aktuell/en/anmeldeschutz/#zwei-faktor-anmeldung) at least for administrators; [sign-in protection](https://help.ablago.app/admin/aktuell/en/anmeldeschutz/) blocks guessing attempts.
-- **HTTPS only:** never open Ablago via `http://` from the internet. Enter the `https://` address under [E-mail and address](https://help.ablago.app/admin/aktuell/en/installation/#e-mail-und-adresse).
+- **HTTPS only:** never open Ablago via `http://` from the internet. Enter the `https://` address under [Email and address](https://help.ablago.app/admin/aktuell/en/installation/#e-mail-und-adresse).
 - **Set up right away:** at a provider, Ablago can usually be reached from the internet immediately. The [setup code](https://help.ablago.app/admin/aktuell/en/installation/#einrichtungscode) prevents a stranger from setting it up before you – still, set it up directly after starting.
 - **Keep it up to date:** install Ablago updates promptly ([Updating](https://help.ablago.app/admin/aktuell/en/aktualisieren/)); with a vServer, those of the operating system too.
 

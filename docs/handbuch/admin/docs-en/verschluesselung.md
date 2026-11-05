@@ -12,9 +12,9 @@ The section **What is encrypted** counts every kind of encrypted value – also 
 
 | Kind | Where you enter it |
 | --- | --- |
-| **Password fields in Mappen** | [password fields](mappentypen.md#passwortfelder) in the filing view |
-| **Password fields in the recycle bin** | deleted Mappen in the [recycle bin](papierkorb.md) |
-| **E-mail sending** (password of the mail server) | **Workbench → E-mail and address** |
+| **Password fields in folders** | [password fields](mappentypen.md#passwortfelder) in the Library |
+| **Password fields in the bin** | deleted folders in the [Bin](papierkorb.md) |
+| **Email sending** (password of the mail server) | **Workbench → email and address** |
 | **Mailboxes (IMAP password)** | [mailboxes](postfaecher.md) with password sign-in |
 | **Mailboxes (OAuth: app secret)** | the client secret of the app at the provider, under [Mailboxes](postfaecher.md) |
 | **Mailboxes (OAuth sign-in)** | access and refresh tokens after signing in at the provider |
@@ -50,7 +50,7 @@ If the key could have become known – for instance because a printed emergency 
 After a confirmation – for safety you type the word **wechseln** there –
 
 1. Ablago creates a new key,
-2. re-encrypts all secrets in the database **completely or not at all**; if something aborts, the previous key stays valid. This includes everything under [What is encrypted](#was-verschlusselt-ist): password fields in Mappen and in the recycle bin, mail server, mailboxes (IMAP password, OAuth app and OAuth sign-in), the provider's client secret, two-factor secrets and package secrets,
+2. re-encrypts all secrets in the database **completely or not at all**; if something aborts, the previous key stays valid. This includes everything under [What is encrypted](#was-verschlusselt-ist): password fields in folders and in the bin, mail server, mailboxes (IMAP password, OAuth app and OAuth sign-in), the provider's client secret, two-factor secrets and package secrets,
 3. sets the check word anew and
 4. replaces the key file. The old key is not kept.
 
@@ -80,7 +80,7 @@ Under **Unreadable or unencrypted values**, the page lists which passwords and s
 
 ## Key lost { #schlussel-verloren }
 
-Your Mappen and documents aren't affected – only stored secrets such as mailbox passwords can no longer be read by Ablago without the key file. If you create a new key, you enter them again like this:
+Your folders and documents aren't affected – only stored secrets such as mailbox passwords can no longer be read by Ablago without the key file. If you create a new key, you enter them again like this:
 
 - **Password fields and mail server:** the values are listed under *Unreadable or unencrypted values*. Enter them anew.
 - **Mailboxes:** fetching fails until you enter the password anew under **Workbench → Mailboxes**. With OAuth you enter the app's client secret anew and sign the mailboxes in again at the provider.

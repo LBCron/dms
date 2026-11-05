@@ -1,6 +1,6 @@
-# Number ranges {#nummernkreise}
+# Number sequences {#nummernkreise}
 
-A number range assigns sequential numbers, e.g. invoice numbers like `202610-R0000001`. You create it under **Workbench → Number ranges** and use it in a text field of a Mappe type.
+A number sequence assigns sequential numbers, e.g. invoice numbers like `202610-R0000001`. You create it under **Workbench → number sequences** and use it in a text field of a folder type.
 
 --8<-- "ausgeblendet-organisation.md"
 
@@ -29,32 +29,32 @@ Everything else stays as it is. The date is the day on which the number is assig
 
 A changed pattern only applies to new numbers. The counters are part of the [backup](sicherung.md).
 
-## Using it in the Mappe type {#im-mappentyp-verwenden}
+## Using it in the folder type {#im-mappentyp-verwenden}
 
 Enter `{nummernkreis:rechnungsnummer}` in the **default value** of a text field. Then:
 
-- every new Mappe gets the next number on the **first save** – also via the [interface](api.md). When creating, the form shows "Assigned on saving".
+- every new folder gets the next number on the **first save** – also via the [interface](api.md). When creating, the form shows "Assigned on saving".
 - the field is **read-only**: nobody can change the number, not even via the interface.
 - a save that fails (e.g. because a required field is missing) doesn't use up a number. Saving at the same time never results in the same number.
-- a deleted Mappe keeps its number, also in the recycle bin; it is not assigned again.
+- a deleted folder keeps its number, also in the bin; it is not assigned again.
 
 **Unique** on the field doesn't hurt and is an additional safeguard.
 
 ## Status and counter {#stand-und-zahlerstand}
 
-The number range shows the **next number**, the numbers assigned last and the fields that use it. With **Set counter** you set the counter of the next number in the current period – for instance when switching from another program. This is recorded in the [log](fehlersuche.md#protokoll).
+The number sequence shows the **next number**, the numbers assigned last and the fields that use it. With **Set counter** you set the counter of the next number in the current period – for instance when switching from another program. This is recorded in the [log](fehlersuche.md#protokoll).
 
-Deleting only works if no field uses the number range any more.
+Deleting only works if no field uses the number sequence any more.
 
 ## Assigning numbers retrospectively { #nummern-nachtraglich-vergeben }
 
-Mappen that existed before the field got the number range have no number. Under **Workbench → Maintenance → Maintenance operations → Assign numbers retrospectively** you choose the field; Ablago shows how many Mappen are affected and which numbers will result (from … to …), and then assigns them in the order of creation. Today's date applies. The work runs in the background and is recorded in the log.
+Folders that existed before the field got the number sequence have no number. Under **Workbench → Maintenance → Maintenance operations → Assign numbers retrospectively** you choose the field; Ablago shows how many folders are affected and which numbers will result (from … to …), and then assigns them in the order of creation. Today's date applies. The work runs in the background and is recorded in the log.
 
 ## Archive numbers and stickers {#archivnummern-und-aufkleber}
 
-The number range **Archive number** exists in every Ablago installation. It assigns the numbers for stickers on paper originals (pattern at the start `A-{zaehler:6}`, i.e. `A-000001`). How users enter the number on the document and find it again is described in the User manual under *Documents → Archive number*.
+The number sequence **Archive number** exists in every Ablago installation. It assigns the numbers for stickers on paper originals (pattern at the start `A-{zaehler:6}`, i.e. `A-000001`). How users enter the number on the document and find it again is described in the User manual under *Documents → Archive number*.
 
-Under **Workbench → Number ranges → Archive number → Print stickers**:
+Under **Workbench → number sequences → Archive number → Print stickers**:
 
 1. **Number** (up to 500).
 2. **Label format** (A4): 48.5 × 25.4 mm (40 per sheet), 38.1 × 21.2 mm (65 per sheet) or 70 × 37 mm (24 per sheet).
@@ -65,6 +65,6 @@ Under **Workbench → Number ranges → Archive number → Print stickers**:
 
 Every sticker carries a **barcode (Code 128)** with `DMS-ASN:` in front of the number and the number below it for reading. Print at **100 %**, not "fit to page", otherwise the stickers won't fit the labels.
 
-**Printed numbers count as assigned** – even if you don't use the sheet. The range simply keeps counting; gaps are no problem. You may change pattern and start value (e.g. `ASN-{jjjj}-{zaehler:4}`); this number range can't be deleted.
+**Printed numbers count as assigned** – even if you don't use the sheet. The range simply keeps counting; gaps are no problem. You may change pattern and start value (e.g. `ASN-{jjjj}-{zaehler:4}`); this number sequence can't be deleted.
 
 The log records who created which numbers when.

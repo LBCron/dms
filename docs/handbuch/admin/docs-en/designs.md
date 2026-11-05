@@ -31,7 +31,7 @@ Every design has its own **logo** (default: the Ablago symbol) and a **lettering
 
 They don't appear in e-mails.
 
-- **Upload logo:** PNG, JPEG, WebP or SVG, at most 1 MB. **Restore default** brings back the Mappe symbol. Ablago rejects SVGs with scripts, events or references to other files.
+- **Upload logo:** PNG, JPEG, WebP or SVG, at most 1 MB. **Restore default** brings back the folder symbol. Ablago rejects SVGs with scripts, events or references to other files.
 - **Lettering:** at most 30 characters; empty = logo only.
 
 Because logo and lettering belong to the design, choose a logo for every design that is easy to see on its background – such as a light logo for *Dark*.

@@ -4,127 +4,126 @@
 #     python3 docs/handbuch/werkzeuge/glossar.py
 #
 # Schlüssel ist der deutsche Begriff genau wie in glossar.yml. Fehlt ein Begriff, zeigt die Seite ihn mit
-# deutscher Beschreibung. Die Wörter sind die des englischen Handbuchs; die englische Oberfläche (#729)
-# kann eigene festlegen – dann hier angleichen.
+# deutscher Beschreibung. Die Wörter folgen der englischen Oberfläche (shared/src/sprachen/en, #729).
 
 begriffe:
   Ablago:
     begriff: Ablago
     beschreibung: The name of the program – document filing for home and small businesses. One word, only the A in capitals. When the kind of program is meant, it is still called a "DMS" (document management system).
   Ablage:
-    begriff: Filing (filing system)
-    beschreibung: The work area for all users – with views, lists and Mappen. At the same time the word for the whole installation, at home as at work ("name of your filing system", "filing system id"); one installation is one filing system.
+    begriff: Library
+    beschreibung: The work area for all users – with views, lists and folders. At the same time the word for the whole installation, at home as at work ("name of your Library", "Library id"); one installation is one Library.
   Werkbank:
     begriff: Workbench
-    beschreibung: The administrators' work area. Mappe types, views, users and settings are maintained and Ablago is operated here.
+    beschreibung: The administrators' work area. Folder types, views, users and settings are maintained and Ablago is operated here.
   Mein Konto:
     begriff: My account
     beschreibung: The personal settings of the signed-in user – one click on your own name at the top right, then "My account". We describe paths the way you click, e.g. "My account → Security → API keys".
   Mappe:
-    begriff: Mappe
-    beschreibung: The basic unit of Ablago, like a cardboard folder on the shelf. It brings together details, documents and links about one thing, e.g. a contract, an invoice or a contract partner. The English manual keeps the German word (plural Mappen).
+    begriff: Folder
+    beschreibung: The basic unit of Ablago, like a cardboard folder on the shelf. It brings together details, documents and links about one thing, e.g. a contract, an invoice or a contract partner. A folder in Ablago is not a directory on a disk – it has fields and tabs, and other folders can link to it.
   Mappentyp:
-    begriff: Mappe type
-    beschreibung: The blueprint of a Mappe – which fields and tabs it has, how its title is formed and who may do what.
+    begriff: Folder type
+    beschreibung: The blueprint of a folder – which fields and tabs it has, how its title is formed and who may do what.
   Systemmappentyp:
-    begriff: System Mappe type
-    beschreibung: A Mappe type that Ablago brings itself – User, Role and Post.
+    begriff: System folder type
+    beschreibung: A folder type that Ablago brings itself – User, Role and Post.
   Feld:
     begriff: Field
-    beschreibung: A detail in a Mappe, e.g. the contract number. Every field has a field kind – text, long text, formatted text, number, amount, date, yes/no, selection list, link or password.
+    beschreibung: A detail in a folder, e.g. the contract number. Every field has a field kind – text, long text, formatted text, number, amount, date, yes/no, choice list, link or password.
   Feldart:
     begriff: Field kind
     beschreibung: What kind of detail a field takes, e.g. date or amount.
   Format:
     begriff: Format
-    beschreibung: What may be in a text field – e-mail, phone, website, IBAN or postcode. New and changed details must match; on the phone the matching keyboard appears; e-mail and phone can be tapped. Saved details remain valid. Date fields have limits instead (earliest, latest, also "today").
+    beschreibung: What may be in a text field – email, phone, website, IBAN or postcode. New and changed details must match; on the phone the matching keyboard appears; email and phone can be tapped. Saved details remain valid. Date fields have limits instead (earliest, latest, also "today").
   Kennung:
     begriff: Identifier
-    beschreibung: The fixed, technical name of a field, tab, Mappe type or number range, e.g. vertragsnummer. After saving it stays the same, so that saved values, links and packages fit.
+    beschreibung: The fixed, technical name of a field, tab, folder type or number sequence, e.g. vertragsnummer. After saving it stays the same, so that saved values, links and packages fit.
   Pflichtfeld:
     begriff: Required field
-    beschreibung: A field that must be filled in before the Mappe can be saved.
+    beschreibung: A field that must be filled in before the folder can be saved.
   Eindeutig:
     begriff: Unique
-    beschreibung: A field value that may occur only once in this Mappe type, e.g. an invoice number.
+    beschreibung: A field value that may occur only once in this folder type, e.g. an invoice number.
   Standardwert:
     begriff: Default value
-    beschreibung: The prefilled value of a field when creating a Mappe, also with placeholders such as a number range.
+    beschreibung: The prefilled value of a field when creating a folder, also with placeholders such as a number sequence.
   Register:
     begriff: Tab
-    beschreibung: A divider in a Mappe, e.g. General (with fields), Documents, Links or History. Notes and History are fixed tabs of every Mappe.
+    beschreibung: A divider in a folder, e.g. General (with fields), Documents, Links or History. Notes and History are fixed tabs of every folder.
   Dokument:
     begriff: Document
-    beschreibung: A file that lies in a document tab of a Mappe in Ablago. A file is uploaded; in Ablago it is a document. On an e-mail it is called an attachment.
+    beschreibung: A file that lies in a document tab of a folder in Ablago. A file is uploaded; in Ablago it is a document. On an email it is called an attachment.
   Version:
     begriff: Version
     beschreibung: A document can have several versions. Replacing creates a new version; the older ones stay underneath and can be restored. Only in tabs with versioning. Not to be confused with the version of Ablago.
   Verweis:
     begriff: Link (field)
-    beschreibung: A field that points to other Mappen, e.g. from an invoice to the contract.
+    beschreibung: A field that points to other folders, e.g. from an invoice to the contract.
   Verknüpfungen:
     begriff: Links (tab)
-    beschreibung: The tab that shows all Mappen linking to this Mappe – the opposite direction of the link.
+    beschreibung: The tab that shows all folders linking to this folder – the opposite direction of the link.
   Verweisart:
     begriff: Link kind
-    beschreibung: Whether a link is a belonging ("belongs to", e.g. an invoice to the contract) or only a reference (e.g. the issuer). The Mappe shows the kind on the link and in the links tab.
+    beschreibung: Whether a link is a belonging ("belongs to", e.g. an invoice to the contract) or only a reference (e.g. the issuer). The folder shows the kind on the link and in the links tab.
   Titel:
     begriff: Title
-    beschreibung: The display name of a Mappe. It is formed from a template with field values.
+    beschreibung: The display name of a folder. It is formed from a template with field values.
   Filter (Titel):
     begriff: Filter (title)
     beschreibung: Formats a placeholder in the title template, e.g. only the year of a date or shortened text. Comes after a vertical bar, e.g. {datum|jahr}.
   Ansicht:
     begriff: View
-    beschreibung: A saved selection of Mappen – which Mappe types, with which conditions. Views are in the tree on the left of the filing view. How something looks, on the other hand, is called "appearance".
+    beschreibung: A saved selection of folders – which folder types, with which conditions. Views are in the tree on the left of the Library. How something looks, on the other hand, is called "appearance".
   Unteransicht:
     begriff: Sub-view
     beschreibung: A view below another one. It inherits its permissions.
   Trefferliste:
     begriff: Result list
-    beschreibung: Sets which columns a list shows. A Mappe type has one or more result lists; one of them is the default. A view or a links tab chooses one of them, otherwise the default applies. If a view shows several Mappe types, only result lists with the same identifier in all of them can be chosen, with the common columns.
+    beschreibung: Sets which columns a list shows. A folder type has one or more result lists; one of them is the default. A view or a links tab chooses one of them, otherwise the default applies. If a view shows several folder types, only result lists with the same identifier in all of them can be chosen, with the common columns.
   Bedingung:
     begriff: Condition
     beschreibung: A view's filter on field values, counts, deadlines or personal things, e.g. a field equal to "current user" or "is my favourite".
   Favoriten:
     begriff: Favourites
-    beschreibung: Mappen a user has marked with the star. The view "Favourites" shows them. A favourite is also a subscription – if others change the Mappe, there is a bundled notification "Changed" (can be switched off per favourite).
+    beschreibung: Folders a user has marked with the star. The view "Favourites" shows them. A favourite is also a subscription – if others change the folder, there is a bundled notification "Changed" (can be switched off per favourite).
   Archivnummer:
     begriff: Archive number
-    beschreibung: The number on a sticker on the paper original (e.g. A-000123); the same number is on the document in Ablago. Unique per filing system; comes from the number range "Archive number". Connects paper and document in both directions.
+    beschreibung: The number on a sticker on the paper original (e.g. A-000123); the same number is on the document in Ablago. Unique per Library; comes from the number sequence "Archive number". Connects paper and document in both directions.
   Ablageort:
     begriff: Storage location
-    beschreibung: A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). Every DMS has this Mappe type; it can be extended but not deleted.
+    beschreibung: A place where paper is kept – e.g. a binder, a box, a safe deposit box or "destroyed". Storage locations lie inside each other ("at home › study cupboard › red binder"). Every DMS has this folder type; it can be extended but not deleted.
   Verbleib Originaldokumente:
     begriff: Whereabouts of original documents
-    beschreibung: The field on a Mappe that points to the paper's storage location. In all Mappe types with the same identifier, so that common lists and views work.
+    beschreibung: The field on a folder that points to the paper's storage location. In all folder types with the same identifier, so that common lists and views work.
   Papierkorb:
-    begriff: Recycle bin
-    beschreibung: Deleted Mappen. They can be restored until the set number of days has passed.
+    begriff: Bin
+    beschreibung: Deleted folders. They can be restored until the set number of days has passed.
   Post:
     begriff: Post
-    beschreibung: Everything that comes into Ablago or goes out – scan, upload, e-mail. Post is a system Mappe type with channel, direction and status.
+    beschreibung: Everything that comes into Ablago or goes out – scan, upload, email. Post is a system folder type with channel, direction and status.
   Neue Post:
     begriff: New post
     beschreibung: The view with post that has not yet been assigned or completed. Whoever is given post additionally has the task "Post for you".
   Zuordnen:
     begriff: Assign
-    beschreibung: Assigning post to an existing or new Mappe. The documents move into the Mappe's tab in the process.
+    beschreibung: Assigning post to an existing or new folder. The documents move into the folder's tab in the process.
   Kanal:
     begriff: Channel
-    beschreibung: How post came into Ablago or went out. Ablago sets Uploaded, E-mail, Folder (inbox folder) and API itself; Scan, Import and WebDAV can be chosen by hand in the list.
+    beschreibung: How post came into Ablago or went out. Ablago sets Uploaded, email, Folder (intake folder) and API itself; Scan, Import and WebDAV can be chosen by hand in the list.
   Richtung (Post):
     begriff: Direction (post)
-    beschreibung: Whether post is incoming or outgoing. "Send by e-mail" creates outgoing post.
+    beschreibung: Whether post is incoming or outgoing. "Send by email" creates outgoing post.
   Stand (Post):
     begriff: Status (post)
-    beschreibung: How far post has been handled – New (not yet handled), Assigned (is with a matching Mappe) or Done (nothing more to do).
+    beschreibung: How far post has been handled – New (not yet handled), Assigned (is with a matching folder) or Done (nothing more to do).
   Zu erledigen:
     begriff: To do
-    beschreibung: The top view – as a list, the Mappen where I should do something (my open tasks); as month and year, my dates in a calendar.
+    beschreibung: The top view – as a list, the folders where I should do something (my open tasks); as month and year, my dates in a calendar.
   Aufgabe:
     begriff: Task
-    beschreibung: Something a person should do on a Mappe. Kinds are Doesn't fit, Mention, Assigned (given by hand), Post for you, Deadline, Reminder, Deputy and Access request.
+    beschreibung: Something a person should do on a folder. Kinds are Doesn't fit, Mention, Assigned (given by hand), Post for you, Deadline, Reminder, stand-in and Access request.
   Erwähnung:
     begriff: Mention
     beschreibung: Naming a user with @ in formatted text. It creates a task for them.
@@ -133,25 +132,25 @@ begriffe:
     beschreibung: A task that arises from a date field with a lead time, e.g. "Cancel by …".
   Erinnerung:
     begriff: Reminder
-    beschreibung: A task set by hand for a particular day (Mappe ▾ → Remind).
+    beschreibung: A task set by hand for a particular day (folder ▾ → Remind).
   Weitergeben:
     begriff: Pass on
     beschreibung: Transferring a task to another user.
   Abwesenheit:
     begriff: Absence
-    beschreibung: A period in which a user is not there – with a deputy who takes over their tasks.
+    beschreibung: A period in which a user is not there – with a stand-in who takes over their tasks.
   Vertretung:
-    begriff: Deputy
-    beschreibung: A user takes over another's tasks during an absence. The deputy gets a task of the kind "Deputy" for this.
+    begriff: Stand-in
+    beschreibung: A user takes over another's tasks during an absence. The stand-in gets a task of the kind "Stand-in" for this.
   Notiz:
     begriff: Note
-    beschreibung: A comment on a Mappe.
+    beschreibung: A comment on a folder.
   Formatierter Text:
     begriff: Formatted text
     beschreibung: Text with headings, lists and emphasis (Markdown) – as a field kind and in notes.
   Historie:
     begriff: History
-    beschreibung: The story of a Mappe – changes before and after, documents, recycle bin, notes, tasks. The technical operating log, on the other hand, is called "log".
+    beschreibung: The story of a folder – changes before and after, documents, bin, notes, tasks. The technical operating log, on the other hand, is called "log".
   Volltext:
     begriff: Full text
     beschreibung: The searchable text in the documents – from the file's text layer or from text recognition.
@@ -160,28 +159,28 @@ begriffe:
     beschreibung: A small image of the first page next to a PDF or image in the document list; created in the background and not backed up.
   Erweiterte Suche:
     begriff: Advanced search
-    beschreibung: A search form across the fields of several Mappe types and the text in documents.
+    beschreibung: A search form across the fields of several folder types and the text in documents.
   Link:
     begriff: Link (address)
-    beschreibung: An address of a view or Mappe, e.g. via "Copy link" – also readable via Mappe type and field values. In the German interface, "Link" only stands for addresses; fields that point to Mappen are called Verweis.
+    beschreibung: An address of a view or folder, e.g. via "Copy link" – also readable via folder type and field values. In the German interface, "Link" only stands for addresses; fields that point to folders are called Verweis.
   Export:
     begriff: Export
-    beschreibung: Downloading selected Mappen of a view as Excel, CSV, ZIP or PDF.
+    beschreibung: Downloading selected folders of a view as Excel, CSV, ZIP or PDF.
   Aktionen:
     begriff: Actions
-    beschreibung: The menu "Mappe ▾" next to a Mappe's title – assign task, remind, send, export and more. It used to be called "Actions" itself.
+    beschreibung: The menu "Folder ▾" next to a folder's title – assign task, remind, send, export and more. It used to be called "Actions" itself.
   Benutzer:
     begriff: User
-    beschreibung: An account with which someone signs in. Stored as a system Mappe in Ablago. People and companies you deal with (contacts) are not users, but ordinary Mappen of the Mappe type "Person" or "Organisation" from the package Basis.
+    beschreibung: An account with which someone signs in. Stored as a system folder in Ablago. People and companies you deal with (contacts) are not users, but ordinary folders of the folder type "Person" or "Organisation" from the package Basis.
   Person:
     begriff: Person
-    beschreibung: A human you deal with – contact person, doctor, landlord, relatives. Mappe type from the package Basis (from 1.1.0). A person is **not a user** and can't sign in.
+    beschreibung: A human you deal with – contact person, doctor, landlord, relatives. Folder type from the package Basis (from 1.1.0). A person is **not a user** and can't sign in.
   Organisation:
     begriff: Organisation
-    beschreibung: A company, authority, bank, practice, club or other body you deal with. Mappe type from the package Basis; other packages link to it (contract partner, insurer, bank …).
+    beschreibung: A company, authority, bank, practice, club or other body you deal with. Folder type from the package Basis; other packages link to it (contract partner, insurer, bank …).
   Niederlassung:
     begriff: Branch
-    beschreibung: A branch, office, practice or outpost of an organisation – with its own address and phone. Mappe type from the package Basis (from 1.1.0); belongs to exactly one organisation.
+    beschreibung: A branch, office, practice or outpost of an organisation – with its own address and phone. Folder type from the package Basis (from 1.1.0); belongs to exactly one organisation.
   Administrator:
     begriff: Administrator
     beschreibung: A user with access to the workbench. Permissions don't restrict them.
@@ -193,7 +192,7 @@ begriffe:
     beschreibung: Whether a user is an administrator or a member. Only administrators get into the workbench.
   Berechtigungen:
     begriff: Permissions
-    beschreibung: Who may do what. On the Mappe type – create, read, edit, delete, see passwords – with a default plus rules; on the view – see, create, export – inherited by the sub-views. They don't apply to administrators.
+    beschreibung: Who may do what. On the folder type – create, read, edit, delete, see passwords – with a default plus rules; on the view – see, create, export – inherited by the sub-views. They don't apply to administrators.
   Regel:
     begriff: Rule
     beschreibung: An if-then building block of the permissions – a condition, then grant or withdraw a permission, optionally with stop.
@@ -202,9 +201,9 @@ begriffe:
     beschreibung: Checks which permissions a particular user ends up with.
   Probelauf:
     begriff: Trial run
-    beschreibung: Trying out an automation with a chosen Mappe without anything being changed or anyone being notified – Ablago only shows what would happen.
+    beschreibung: Trying out an automation with a chosen folder without anything being changed or anyone being notified – Ablago only shows what would happen.
   Nummernkreis:
-    begriff: Number range
+    begriff: Number sequence
     beschreibung: Sequential numbers following a pattern such as {jjjj}-R{zaehler:4} (giving e.g. 2026-R0001), for instance for invoice numbers.
   Design:
     begriff: Design
@@ -214,7 +213,7 @@ begriffe:
     beschreibung: The area under My account in which everyone sets how Ablago looks for them – the design (for their account), the font size and the width of the areas (per device).
   Paket:
     begriff: Package
-    beschreibung: An installable bundle of Mappe types, views and examples from a package catalogue, e.g. "Basis". An update only adds; it removes and changes nothing.
+    beschreibung: An installable bundle of folder types, views and examples from a package catalogue, e.g. "Basis". An update only adds; it removes and changes nothing.
   Paketkatalog:
     begriff: Package catalogue
     beschreibung: The list of packages a DMS can install (a file katalog.json on the internet). Ablago only queries the official catalogue at the push of a button ("Fetch catalogue"). Further catalogues are entered in expert mode under "Further sources".
@@ -229,33 +228,33 @@ begriffe:
     beschreibung: The account with which a package with code works in Ablago, e.g. "Package Text recognition". It never signs in, isn't listed under Users, never deletes and only has the permissions from the package. In the history it appears where the package changed something.
   Werkbank anpassen:
     begriff: Customise the workbench
-    beschreibung: Sets which areas are on the left of the workbench – following a preset ("Household", "Business" or "Everything") and with exceptions. Hiding doesn't switch anything off. New installations start with "Household"; installations from before this setting show everything.
+    beschreibung: Sets which areas are on the left of the workbench – following a template ("Household", "Business" or "Everything") and with exceptions. Hiding doesn't switch anything off. New installations start with "Household"; installations from before this setting show everything.
   Betrieb:
     begriff: Business
-    beschreibung: The preset under "Customise the workbench" for the self-employed and small businesses – with number ranges, archive mode, mailboxes and further areas. Its counterpart is the preset "Household".
+    beschreibung: The template under "Customise the workbench" for the self-employed and small businesses – with number sequences, archive mode, mailboxes and further areas. Its counterpart is the template "Household".
   Übersicht:
     begriff: Overview
     beschreibung: The first page of the workbench – what needs doing in Ablago right now, with notices, status and inventory.
   Tägliche Zusammenfassung:
     begriff: Daily summary
-    beschreibung: An e-mail that lists a user's open tasks once a day – only if they have some and aren't absent. Administrators switch it on under Workbench → Settings → Notifications and tasks; everyone chooses the time and weekdays under My account.
+    beschreibung: An email that lists a user's open tasks once a day – only if they have some and aren't absent. Administrators switch it on under Workbench → Settings → Notifications and tasks; everyone chooses the time and weekdays under My account.
   Region:
     begriff: Region
-    beschreibung: Where the filing system is at home – country, state and time zone (Workbench → Settings → Region). Public holidays, "today" for deadlines and all times of reminders, schedules and the Daily summary follow it.
+    beschreibung: Where the Library is at home – country, state and time zone (Workbench → Settings → Region). Public holidays, "today" for deadlines and all times of reminders, schedules and the Daily summary follow it.
   Archivmodus:
     begriff: Archive mode
-    beschreibung: A setting per Mappe type for retention obligations – with versions and a deletion lock until the end of the period.
+    beschreibung: A setting per folder type for retention obligations – with versions and a deletion lock until the end of the period.
   Aufbewahrung abgelaufen:
     begriff: Retention expired
-    beschreibung: The list of Mappen whose retention period has expired (Workbench → Users and security). Formerly "May go".
+    beschreibung: The list of folders whose retention period has expired (Workbench → Users and security). Formerly "May go".
   Suche und Volltext:
     begriff: Search and full text
     beschreibung: The workbench area under Post and incoming for text recognition, archive version, automatic shrinking, typos and synonyms. Combines the former areas "Text recognition" and "Search".
   Postfach:
     begriff: Mailbox
-    beschreibung: A connected e-mail account (IMAP) from which Ablago fetches post.
+    beschreibung: A connected email account (IMAP) from which Ablago fetches post.
   Eingangsordner:
-    begriff: Inbox folder
+    begriff: Intake folder
     beschreibung: A folder that Ablago watches, e.g. for "Scan to Folder". Every file in it becomes post.
   Texterkennung:
     begriff: Text recognition
@@ -274,7 +273,7 @@ begriffe:
     beschreibung: An administrator temporarily works under another user's account to see a problem. "Back to your own account" returns.
   Haushalt:
     begriff: Household
-    beschreibung: The preset under "Customise the workbench" for home – lean, only what a family needs for setting up and backing up. Since 04.11.2026 the whole installation is neutrally called "filing system" (Ablage); "Mandant" only appears in the code.
+    beschreibung: The template under "Customise the workbench" for home – lean, only what a family needs for setting up and backing up. Since 04.11.2026 the whole installation is neutrally called "Library" (Ablage); "Mandant" only appears in the code.
   Einrichtungsassistent:
     begriff: Setup wizard
     beschreibung: The steps when Ablago is started for the first time.
@@ -313,7 +312,7 @@ begriffe:
     beschreibung: One-off upkeep work, e.g. assigning numbers retrospectively.
   Protokoll:
     begriff: Log
-    beschreibung: The server's running operating log with modules and levels (Workbench → Log). A Mappe's story, on the other hand, is called history.
+    beschreibung: The server's running operating log with modules and levels (Workbench → Log). A folder's story, on the other hand, is called history.
   Debug-Modus:
     begriff: Debug mode
     beschreibung: A more detailed technical log for troubleshooting.
@@ -321,14 +320,14 @@ begriffe:
     begriff: Reported problems
     beschreibung: Problems that users have submitted via "Report a problem" (Workbench → Reported problems).
   Systemzustand:
-    begriff: System status
-    beschreibung: How the server is doing right now – storage space with warning thresholds and the load of CPU, memory and network (Workbench → Maintenance and troubleshooting → System status). It means the state in operation, not the configuration.
+    begriff: System health
+    beschreibung: How the server is doing right now – storage space with warning thresholds and the load of CPU, memory and network (Workbench → Maintenance and troubleshooting → system health). It means the state in operation, not the configuration.
   Speicherplatz:
     begriff: Storage space
-    beschreibung: How full the data folders are, with thresholds for warnings (under System status).
+    beschreibung: How full the data folders are, with thresholds for warnings (under system health).
   Demo-Daten:
     begriff: Demo data
-    beschreibung: Generated sample Mappen for trying out and for load tests.
+    beschreibung: Generated sample folders for trying out and for load tests.
   API:
     begriff: API
     beschreibung: The interface through which programs work with Ablago. Access with a personal API key.
