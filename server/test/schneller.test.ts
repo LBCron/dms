@@ -3,6 +3,7 @@
  * Gleiche Treffer und gleiche Reihenfolge wie vorher; Speichern ganz oder gar nicht; „Bereits vergeben“ über einen
  * Index und ohne Titel fremder Mappen; „verteilt“ gesammelt. PostgreSQL-Teile nur mit TEST_DATABASE_URL.
  */
+import { imModus } from './hilfen';
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import type postgres from 'postgres';
@@ -240,7 +241,7 @@ describe('Schneller (#743) – ohne Datenbank', () => {
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
     d.verbindeKonten(konten.papierkorbHaken());
     const { benutzer: admin } = await konten.einrichten({ email: 'lena@example.org', name: 'Lena', passwort: 'ein-langes-passwort' });
-    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, admin.id)).benutzer;
+    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, admin.id)).benutzer;
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     const ALLES = { C: true, R: true, U: true, D: true, P: true };
     // Vertrauliche Verträge darf nur der Administrator lesen.
@@ -249,7 +250,8 @@ describe('Schneller (#743) – ohne Datenbank', () => {
     ], berechtigungen: { grund: ALLES, regeln: [{ id: 'v', name: 'Vertraulich', wenn: [{ art: 'feld', bedingung: { art: 'feld', feld: 'vertraulich', op: 'ja' } }], dann: { R: 'entziehen' }, stopp: false }] } } as never);
     await d.legeMappeAn({ typId: typ.id, werte: { name: 'Geheimer Vertrag', nr: 'A-1', vertraulich: true } }, admin.id);
     await d.legeMappeAn({ typId: typ.id, werte: { name: 'Offener Vertrag', nr: 'B-1', vertraulich: false } }, admin.id);
-    const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
+    // Lena darf verwalten; die vertrauliche Mappe sieht sie wie jeder andere erst im Verwaltungsmodus (#819).
+    const ich = async (id: string) => { const b = (await konten.listeBenutzer()).find((x) => x.id === id)!; return id === admin.id ? imModus(b) : b; };
     const tabelle = routen(d, konten, {});
     const anlegen = async (b: { id: string }, werte: Record<string, unknown>) => tabelle.find((t) => t.methode === 'POST' && t.pfad === '/api/mappen')!
       .handler({ body: { typId: typ.id, werte }, params: {}, query: {}, ip: '1', benutzer: await ich(b.id) } as Anfrage);
