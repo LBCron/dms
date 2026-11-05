@@ -164,6 +164,7 @@ function Grenzen({ g }: { g: NonNullable<SystemlastAntwort['grenzen']> }) {
             <dt>{t.frei(`systemzustand.grenzen.${k}`)}</dt>
             <dd>{k === 'arbeiter' && w.wert === 0 ? t('systemzustand.grenzen.aus') : t(w.quelle === 'umgebung' ? 'systemzustand.grenzen.umgebung' : w.quelle === 'auto' ? 'systemzustand.grenzen.auto' : 'systemzustand.grenzen.vorgabe', { wert: w.wert.toLocaleString(gebietsschema()) })}
               {w.prozesse && w.prozesse > 1 && w.wert > 0 ? <>{' '}{t('systemzustand.grenzen.je-prozess', { gesamt: (w.wert * w.prozesse).toLocaleString(gebietsschema()), prozesse: w.prozesse })}</> : null}
+              {w.aufteilung ? <>{' '}{t('systemzustand.grenzen.aufgeteilt', { prozesse: w.aufteilung.prozesse, leiter: w.aufteilung.leiter, andere: w.aufteilung.andere })}</> : null}
               {' '}<span className="leise">· <span className="mono">{t('systemzustand.grenzen.bereich', { variable: w.variable, min: w.min.toLocaleString(gebietsschema()), max: w.max.toLocaleString(gebietsschema()) })}</span></span></dd>
           </Fragment>);
         })}

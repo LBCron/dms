@@ -25,6 +25,7 @@ import { bedieneLaeufer, type Fernlaeufer } from './laeufer/fern';
 import type { Paketlaeufer } from './laeufer/verwaltung';
 import type { Messung } from './messung';
 import type { Oidc } from './oidc';
+import type { Poolmessung, PoolStand } from './poolmessung';
 import type { Postfaecher } from './postfach';
 import { protokoll } from './protokoll';
 import type { Verbund } from './prozesse';
@@ -55,6 +56,8 @@ export interface Prozessstand {
   schleife: { median: number; p99: number; max: number } | null; schleifeWarnung: string | null;
   anfragen: ReturnType<Ueberlastschutz['stand']>;
   verbindungen: { max: number; median: number | null; p95: number | null };
+  /** Nur für den Lasttest (`prozess.last`, #874): Wartezeit auf Verbindungen und belegte Verbindungen dieses Prozesses. */
+  pool?: PoolStand;
 }
 
 /** Für ein Dokument genügt dem Leiter, was die Vorschaubilder brauchen. */
@@ -80,6 +83,8 @@ export interface TeilungsDeps {
   haushalt: string;
   ueberlast: Ueberlastschutz;
   verbindungen: Verbindungswarten;
+  /** Wartezeit auf eine freie Verbindung (#874), nur für den Lasttest. */
+  pool?: Poolmessung;
   einstellungen?: unknown;
 }
 
@@ -109,6 +114,8 @@ export function prozessstand(o: Pick<TeilungsDeps, 'messung' | 'ueberlast' | 've
 export function teileArbeit(v: Verbund, o: TeilungsDeps): { start(): Promise<void>; stop(): void } {
   const uhren: NodeJS.Timeout[] = [];
   v.bediene('prozess.stand', () => prozessstand(o));
+  // Lasttest (#874): schaltet die Messung der Wartezeit auf Verbindungen ein (für einige Minuten) und liefert sie mit.
+  v.bediene('prozess.last', () => { o.pool?.an(); return { ...prozessstand(o), ...(o.pool ? { pool: o.pool.stand() } : {}) }; });
   cpuJetzt();
 
   // Zustand, der über die Prozesse geteilt werden muss (nur mit mehreren; ein Prozess bleibt wie bisher).

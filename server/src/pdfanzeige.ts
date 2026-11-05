@@ -6,10 +6,12 @@
 import { createHash } from 'node:crypto';
 import { bereinigePdf } from './pdf';
 import { protokoll } from './protokoll';
+import { anteilVon } from './zwischenspeicher';
 
 const L = protokoll.modul('dokumente');
-/** Zwischenspeicher insgesamt: 256 MB. */
+/** Zwischenspeicher insgesamt: 256 MB – mit mehreren Prozessen geteilt (#874, `anteilVon`). */
 export const CACHE_BYTES = 256 << 20;
+const grenze = () => anteilVon(CACHE_BYTES);
 
 const cache = new Map<string, Buffer>();
 let belegt = 0;
@@ -17,12 +19,12 @@ const laufend = new Map<string, Promise<Buffer | null>>();
 
 /** Nur gelungene Kopien: Ein Fehlschlag kann vorübergehend sein (Pool voll, Zeitgrenze). */
 const merke = (sha: string, b: Buffer | null) => {
-  if (!b || b.length > CACHE_BYTES / 4) return; // sehr große PDFs nicht behalten
+  if (!b || b.length > grenze() / 4) return; // sehr große PDFs nicht behalten
   cache.set(sha, b);
   belegt += b.length;
   // Älteste zuerst hinaus (Map behält die Einfügereihenfolge; ein Treffer stellt den Eintrag nach hinten).
   for (const [k, v] of cache) {
-    if (belegt <= CACHE_BYTES) break;
+    if (belegt <= grenze()) break;
     cache.delete(k);
     belegt -= v.length;
   }

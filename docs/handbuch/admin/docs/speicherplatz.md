@@ -66,10 +66,10 @@ Unter den Werten steht **Einstellungen für viele gleichzeitige Anfragen** – n
 | --- | --- | --- | --- |
 | Prozesse für Anfragen | `DMS_PROZESSE` | 1–16 oder `auto` | 1 |
 | Arbeiter für PDF und Exporte | `DMS_ARBEITER` | 0–16 | Hälfte der Kerne, 1 bis 4 |
-| Verbindungen zur Datenbank | `DMS_DB_VERBINDUNGEN` | 2–100 | 10 |
+| Verbindungen zur Datenbank (alle Prozesse zusammen) | `DMS_DB_VERBINDUNGEN` | 2–100 | 10, je weiteren Prozess 4 mehr |
 | Gleichzeitige Anfragen höchstens | `DMS_MAX_ANFRAGEN` | 20–10.000 | 250 |
 
-Mit [mehreren Prozessen](technik.md#mehrere-prozesse) gelten Arbeiter, Verbindungen und gleichzeitige Anfragen **je Prozess**; hinter dem Wert steht dann „je Prozess, zusammen …“. Darüber zeigt die Tabelle **Prozesse** je Prozess seine Aufgabe (Prozess 1 leitet und erledigt die Arbeit im Hintergrund), Arbeitsspeicher, Rechenzeit, Wartezeit und laufende Anfragen; *Ablago* beim Arbeitsspeicher ist dann die Summe aller Prozesse.
+Mit [mehreren Prozessen](technik.md#mehrere-prozesse) gelten Arbeiter und gleichzeitige Anfragen **je Prozess**; hinter dem Wert steht dann „je Prozess, zusammen …“. Die Verbindungen gelten für alle Prozesse zusammen (#874); dahinter steht, wie sie sich aufteilen („Leiter 9, jeder weitere 5“). Darüber zeigt die Tabelle **Prozesse** je Prozess seine Aufgabe (Prozess 1 leitet und erledigt die Arbeit im Hintergrund), Arbeitsspeicher, Rechenzeit, Wartezeit und laufende Anfragen; *Ablago* beim Arbeitsspeicher ist dann die Summe aller Prozesse.
 
 Ändern lassen sie sich nur als Umgebungsvariable in der Compose-Datei (siehe [Installation](installation.md#einstellungen)); sie gelten, sobald der Container neu erstellt ist. Ein ungültiger Wert wird beim Start ignoriert (Hinweis im Protokoll), dann steht hier die Vorgabe. Warum die Vorgaben so sind, steht unter [Technik → Viele gleichzeitige Anfragen](technik.md#last).
 

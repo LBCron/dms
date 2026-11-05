@@ -1,6 +1,7 @@
 /**
  * Mehrere Prozesse für Anfragen (#745): `DMS_PROZESSE` (Vorgabe 1 = wie bisher ein Prozess; `auto` = Kerne − 1,
- * höchstens 4, unter 2 GB Arbeitsspeicher 1).
+ * höchstens 2 (#874), mit PostgreSQL im selben Container ebenfalls höchstens 2, und nur so viele, wie Arbeitsspeicher und Verbindungen
+ * hergeben – {@link empfohleneProzesse}, #874).
  *
  * Aufbau mit `node:cluster`:
  * - Der **Hauptprozess** ist schlank (lädt nur diese Datei): Er startet die Prozesse, startet einen abgestürzten neu,
@@ -24,10 +25,24 @@ import { protokoll } from './protokoll';
 import { dateiLeser, liesCgroup, type Leser } from './systemlast';
 
 export const PROZESSE_MAX = 16;
-/** Höchstens so viele empfiehlt Ablago (und nimmt `auto`). */
-export const PROZESSE_EMPFOHLEN_MAX = 4;
-/** Darunter (Arbeitsspeicher des Containers bzw. Rechners) empfiehlt Ablago einen Prozess. */
-export const SPEICHER_FUER_MEHRERE = 2 * 1024 ** 3;
+/**
+ * Höchstens so viele nimmt `auto` (#874). Vorher 4: Auf dem NAS (#576) wurde mit 4 Prozessen nur der Median schneller –
+ * mit PostgreSQL im selben Container wie in einem eigenen sank die Grenze der Stufe groß, der Arbeitsspeicher stieg auf
+ * 3,5 GB (mit Speichern 5,8 GB). Bis eine Messung zeigt, dass mehr hilft, bleibt es bei 2.
+ */
+export const PROZESSE_EMPFOHLEN_MAX = 2;
+/**
+ * Mit PostgreSQL im selben Container (dms-komplett) nimmt `auto` höchstens so viele (#874): Auf dem NAS (Pentium Gold
+ * 8505, #576) wurde mit 4 Prozessen nur der Median schneller, p95 nicht – Ablago und PostgreSQL teilen sich die Kerne.
+ * Bis eine Messung zeigt, dass mehr hilft, bleibt es bei 2.
+ */
+export const PROZESSE_MIT_DATENBANK_MAX = 2;
+/**
+ * Richtwert Arbeitsspeicher je Prozess (#874) und Reserve für PostgreSQL, Dateizwischenspeicher und System. NAS (#576):
+ * ein Prozess bis 1,3 GB, vier Prozesse bis 3,3 GB (mit Speichern 3,7 GB) – rund 1 GB je Prozess ist großzügig gerechnet.
+ */
+export const SPEICHER_JE_PROZESS = 1024 ** 3;
+export const SPEICHER_RESERVE = 1024 ** 3;
 
 export interface ProzessEinstellung {
   anzahl: number;
@@ -35,32 +50,81 @@ export interface ProzessEinstellung {
   /** Nutzbare Kerne und Arbeitsspeicher (Grenze des Containers, sonst des Rechners) – Grundlage der Empfehlung. */
   kerne: number;
   speicher: number | null;
+  /** PostgreSQL im selben Container (dms-komplett)? */
+  datenbankImContainer?: boolean;
+  /** Was `auto` begrenzt hat (für das Protokoll): Kerne, Speicher, Datenbank im Container, Verbindungen. */
+  begrenzt?: 'kerne' | 'speicher' | 'datenbank' | 'verbindungen' | 'hoechstens';
   /** Ungültiger Wert von DMS_PROZESSE (dann gilt 1); den Hinweis schreibt der Leiter ins Protokoll. */
   ungueltig?: string;
 }
 
-/** Empfehlung: Kerne − 1 (einer bleibt für PostgreSQL und das System), höchstens 4; bei wenig Arbeitsspeicher 1. */
-export function empfohleneProzesse(kerne: number, speicher: number | null): number {
-  if (speicher !== null && speicher < SPEICHER_FUER_MEHRERE) return 1;
-  return Math.max(1, Math.min(PROZESSE_EMPFOHLEN_MAX, Math.floor(kerne) - 1));
+/**
+ * Obergrenze der Halde der weiteren Prozesse in MB (#874, `--max-old-space-size`): Node.js richtet die Halde nach dem
+ * Speicher des ganzen Containers aus – jeder Prozess für sich. Mit mehreren Prozessen rechnet so jeder, er hätte den
+ * Container allein; unter Last wächst die Halde (vor allem Abfall, den V8 spät einsammelt) in allen zugleich. Darum
+ * bekommt jeder weitere Prozess 60 % seines Anteils (Speicher − Reserve, geteilt durch die Prozesse), mindestens 1024 MB,
+ * höchstens 1536 MB. Gemessen (2 Kerne, 2 Prozesse, mittel + Speichern): mit 1024 MB je Prozess 650–770 MB statt
+ * 990–1060 MB, die Halde höchstens 330 statt 690 MB; im Leerlauf belegt ein Prozess rund 190 MB Halde. Der Leiter bleibt
+ * ohne Grenze wie ein einzelner Prozess – er erledigt die Arbeit im Hintergrund (Sicherung, Texterkennung, Pakete).
+ * null: ein Prozess oder schon von Hand gesetzt (`NODE_OPTIONS` bzw. Argumente von Node.js) – dann bleibt es dabei.
+ */
+export const HALDE_MIN_MB = 1024;
+export const HALDE_MAX_MB = 1536;
+export function haldeJeProzess(e: Pick<ProzessEinstellung, 'anzahl' | 'speicher'>, gesetzt: string[] = [...process.execArgv, process.env.NODE_OPTIONS ?? '']): number | null {
+  if (e.anzahl <= 1 || gesetzt.some((a) => a.includes('--max-old-space-size'))) return null;
+  if (e.speicher === null) return HALDE_MAX_MB;
+  const anteil = (e.speicher - SPEICHER_RESERVE) / e.anzahl / 1024 ** 2;
+  return Math.max(HALDE_MIN_MB, Math.min(HALDE_MAX_MB, Math.floor(anteil * 0.6)));
+}
+
+/** So viele Prozesse tragen die Verbindungen (`DMS_DB_VERBINDUNGEN` zusammen): Leiter 6, jeder weitere 2 (#874). */
+export const prozesseFuerVerbindungen = (gesamt: number) => Math.max(1, 1 + Math.floor((gesamt - 6) / 2));
+
+/**
+ * Empfehlung (`auto`, #874): Kerne − 1 (einer bleibt für PostgreSQL und das System), höchstens 2; mit PostgreSQL im
+ * selben Container höchstens 2; nur so viele, wie Arbeitsspeicher (Reserve + je Prozess rund 1 GB) und Verbindungen
+ * (wenn `DMS_DB_VERBINDUNGEN` gesetzt ist) hergeben.
+ */
+export function empfohleneProzesse(kerne: number, speicher: number | null, o: { datenbankImContainer?: boolean; verbindungen?: number | null } = {}): { anzahl: number; begrenzt: NonNullable<ProzessEinstellung['begrenzt']> } {
+  const grenzen: Array<[number, NonNullable<ProzessEinstellung['begrenzt']>]> = [
+    [Math.floor(kerne) - 1, 'kerne'],
+    [PROZESSE_EMPFOHLEN_MAX, 'hoechstens'],
+    ...(o.datenbankImContainer ? [[PROZESSE_MIT_DATENBANK_MAX, 'datenbank'] as [number, 'datenbank']] : []),
+    ...(speicher !== null ? [[Math.floor((speicher - SPEICHER_RESERVE) / SPEICHER_JE_PROZESS), 'speicher'] as [number, 'speicher']] : []),
+    ...(o.verbindungen ? [[prozesseFuerVerbindungen(o.verbindungen), 'verbindungen'] as [number, 'verbindungen']] : []),
+  ];
+  const [n, begrenzt] = grenzen.reduce((a, b) => (b[0] < a[0] ? b : a));
+  return { anzahl: Math.max(1, n), begrenzt };
 }
 
 export function prozesseAus(env: Record<string, string | undefined>, lies: Leser = dateiLeser): ProzessEinstellung {
   const c = liesCgroup(lies);
   const kerne = Math.max(1, Math.round((c.kerne ?? availableParallelism()) * 100) / 100);
   const speicher = c.grenze ?? totalmem();
+  const datenbankImContainer = env.DMS_VARIANTE === 'komplett';
   const roh = env.DMS_PROZESSE?.trim();
-  if (!roh) return { anzahl: 1, quelle: 'vorgabe', kerne, speicher };
-  if (roh.toLowerCase() === 'auto') return { anzahl: empfohleneProzesse(kerne, speicher), quelle: 'auto', kerne, speicher };
+  if (!roh) return { anzahl: 1, quelle: 'vorgabe', kerne, speicher, datenbankImContainer };
+  if (roh.toLowerCase() === 'auto') {
+    const v = Number(env.DMS_DB_VERBINDUNGEN?.trim());
+    const verbindungen = Number.isInteger(v) && v >= 2 && v <= 100 ? v : null;
+    return { ...empfohleneProzesse(kerne, speicher, { datenbankImContainer, verbindungen }), quelle: 'auto', kerne, speicher, datenbankImContainer };
+  }
   const n = Number(roh);
   if (!Number.isInteger(n) || n < 1 || n > PROZESSE_MAX) {
-    return { anzahl: 1, quelle: 'vorgabe', kerne, speicher, ungueltig: roh };
+    return { anzahl: 1, quelle: 'vorgabe', kerne, speicher, datenbankImContainer, ungueltig: roh };
   }
-  return { anzahl: n, quelle: 'umgebung', kerne, speicher };
+  return { anzahl: n, quelle: 'umgebung', kerne, speicher, datenbankImContainer };
 }
 
 /** Ein Prozess von Ablago, wie der Hauptprozess ihn kennt. */
 export interface ProzessInfo { nr: number; pid: number; leiter: boolean }
+
+/**
+ * Abgestürzte und neu gestartete Prozesse seit dem Start (#874), für Lasttest und Systemzustand: Anzahl und die letzten
+ * zehn mit Nummer, Code bzw. Signal (z. B. SIGKILL vom Kernel bei zu wenig Arbeitsspeicher, SIGABRT bei voller Halde).
+ */
+export interface Neustarts { anzahl: number; letzte: Array<{ nr: number; code: number | null; signal: string | null; zeit: string }> }
+const KEINE_NEUSTARTS: Neustarts = { anzahl: 0, letzte: [] };
 
 /** Bearbeitet einen Aufruf; `teil` schickt Zwischenstände (z. B. Teile einer Antwort) an den Aufrufer. */
 export type Bediener = (args: unknown[], teil: (wert: unknown) => void) => unknown;
@@ -89,6 +153,8 @@ export interface Verbund {
   hoere(name: string, f: (daten: unknown) => void): void;
   frageAlle<T>(name: string, ms?: number): Promise<Array<ProzessInfo & { wert: T | null }>>;
   prozesse(): ProzessInfo[];
+  /** Neustarts abgestürzter Prozesse seit dem Start (#874). */
+  neustarts(): Neustarts;
   /** Dieser Prozess lauscht am Port. */
   bereit(): void;
   /** Ganz Ablago beenden (z. B. Neustart nach einer Wiederherstellung). false: nur ein Prozess – der Aufrufer beendet sich selbst. */
@@ -145,6 +211,7 @@ class Einzeln extends Grund implements Verbund {
     return [{ nr: 1, pid: process.pid, leiter: true, wert }];
   }
   prozesse(): ProzessInfo[] { return [{ nr: 1, pid: process.pid, leiter: true }]; }
+  neustarts(): Neustarts { return KEINE_NEUSTARTS; }
   bereit() {}
   beendeAlle() { return false; }
 }
@@ -165,6 +232,7 @@ class Teil extends Grund implements Verbund {
   readonly konsole: string;
   readonly primaer: number;
   private liste: ProzessInfo[] = [];
+  private abstuerze: Neustarts = KEINE_NEUSTARTS;
   private offen = new Map<number, { ok: (w: unknown) => void; nein: (e: Error) => void; teil?: (w: unknown) => void; uhr: NodeJS.Timeout }>();
   private naechste = 1;
 
@@ -199,7 +267,7 @@ class Teil extends Grund implements Verbund {
       }
       case 'teil': this.offen.get(Number(m.id))?.teil?.(m.wert); return;
       case 'meldung': this.verteile(String(m.name), m.daten); return;
-      case 'prozesse': this.liste = m.liste as ProzessInfo[]; return;
+      case 'prozesse': this.liste = m.liste as ProzessInfo[]; if (m.neustarts) this.abstuerze = m.neustarts as Neustarts; return;
     }
   }
 
@@ -228,6 +296,7 @@ class Teil extends Grund implements Verbund {
   }
 
   prozesse() { return this.liste; }
+  neustarts() { return this.abstuerze; }
   bereit() { this.sende({ art: 'bereit' }); }
   beendeAlle(grund: string) { this.sende({ art: 'beenden', grund }); return true; }
 }
@@ -264,6 +333,7 @@ const BEENDEN_MS = 20_000;
  */
 export function leite(e: ProzessEinstellung): Promise<never> {
   const log = protokoll.modul('system');
+  const halde = haldeJeProzess(e);
   cluster.setupPrimary({ serialization: 'advanced' });
   const konsole = randomBytes(32).toString('base64url');
   const plaetze = new Map<number, { w: Worker; bereit: boolean; seit: number }>();
@@ -274,12 +344,13 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   const fragen = new Map<number, { s: Sammlung; info: ProzessInfo }>();
   interface Sammlung { w: Worker; id: unknown; offen: Set<number>; werte: Array<ProzessInfo & { wert: unknown }>; uhr: NodeJS.Timeout }
   let naechste = 1;
+  const neustarts: Neustarts = { anzahl: 0, letzte: [] };
   let leiterWarBereit = false;
   let ende: number | null = null;
 
   const sende = (w: Worker, m: Record<string, unknown>) => { if (w.isConnected()) w.send({ dms: KANAL, ...m }); };
   const liste = (): ProzessInfo[] => [...plaetze].filter(([, p]) => p.w.process.pid).map(([nr, p]) => ({ nr, pid: p.w.process.pid!, leiter: nr === 1 }));
-  const verteileListe = () => { const l = liste(); for (const p of plaetze.values()) sende(p.w, { art: 'prozesse', liste: l }); };
+  const verteileListe = () => { const l = liste(); for (const p of plaetze.values()) sende(p.w, { art: 'prozesse', liste: l, neustarts }); };
   const sammlungFertig = (s: Sammlung, k?: number) => {
     if (k !== undefined) s.offen.delete(k);
     if (s.offen.size) return;
@@ -372,6 +443,9 @@ export function leite(e: ProzessEinstellung): Promise<never> {
     }
     for (const [k, f] of fragen) if (f.info.nr === nr) { fragen.delete(k); f.s.werte.push({ ...f.info, wert: null }); sammlungFertig(f.s, k); }
     if (ende !== null) { if (!plaetze.size) process.exit(ende); return; }
+    // Für Lasttest und Systemzustand (#874): Wer stürzt ab, mit welchem Code bzw. Signal?
+    neustarts.anzahl++;
+    neustarts.letzte = [...neustarts.letzte, { nr, code, signal, zeit: new Date().toISOString() }].slice(-10);
     verteileListe();
     if (nr === 1 && !leiterWarBereit) {
       // Start gescheitert: wie mit einem Prozess beenden – Docker startet den Container neu.
@@ -387,6 +461,8 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   };
 
   const starte = (nr: number) => {
+    // Halde (#874): nur die weiteren Prozesse begrenzt, der Leiter wie ein einzelner Prozess.
+    cluster.setupPrimary({ execArgv: halde && nr > 1 ? [...process.execArgv, `--max-old-space-size=${halde}`] : process.execArgv });
     const w = cluster.fork();
     plaetze.set(nr, { w, bereit: false, seit: Date.now() });
     w.on('message', (m: Nachricht) => nachricht(nr, w, m));
@@ -403,7 +479,7 @@ export function leite(e: ProzessEinstellung): Promise<never> {
   process.on('SIGTERM', () => beendeAlle(0));
   process.on('SIGINT', () => beendeAlle(0));
 
-  log.info(`Ablago startet mit ${e.anzahl} Prozessen (DMS_PROZESSE${e.quelle === 'auto' ? '=auto' : ''}): Prozess 1 leitet und erledigt die Arbeit im Hintergrund, alle beantworten Anfragen`, { kerne: e.kerne });
+  log.info(`Ablago startet mit ${e.anzahl} Prozessen (DMS_PROZESSE${e.quelle === 'auto' ? '=auto' : ''}): Prozess 1 leitet und erledigt die Arbeit im Hintergrund, alle beantworten Anfragen`, { kerne: e.kerne, ...(e.quelle === 'auto' ? { begrenzt: e.begrenzt } : {}), ...(halde ? { haldeMb: halde } : {}) });
   starte(1);
   return new Promise<never>(() => {});
 }

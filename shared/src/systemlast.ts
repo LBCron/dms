@@ -68,10 +68,14 @@ export type ArbeiterStand =
 export const VARIABLE = { prozesse: 'DMS_PROZESSE', arbeiter: 'DMS_ARBEITER', verbindungen: 'DMS_DB_VERBINDUNGEN', anfragen: 'DMS_MAX_ANFRAGEN' } as const;
 export type Einstellbar = keyof typeof VARIABLE;
 /**
- * `quelle` 'auto': DMS_PROZESSE=auto (#745). `prozesse` (#745): Mit mehreren Prozessen gelten Arbeiter, Verbindungen
- * und gleichzeitige Anfragen **je Prozess** – dann steht hier ihre Zahl, die Oberfläche zeigt auch die Summe.
+ * `quelle` 'auto': DMS_PROZESSE=auto (#745). `prozesse` (#745): Mit mehreren Prozessen gelten Arbeiter und gleichzeitige
+ * Anfragen **je Prozess** – dann steht hier ihre Zahl, die Oberfläche zeigt auch die Summe. Verbindungen gelten seit #874
+ * für alle Prozesse zusammen: `wert` ist die Summe, `aufteilung` der Anteil des Leiters und jedes weiteren Prozesses.
  */
-export interface Grenzwert { wert: number; quelle: 'vorgabe' | 'umgebung' | 'auto'; variable: (typeof VARIABLE)[Einstellbar]; min: number; max: number; prozesse?: number }
+export interface Grenzwert {
+  wert: number; quelle: 'vorgabe' | 'umgebung' | 'auto'; variable: (typeof VARIABLE)[Einstellbar]; min: number; max: number; prozesse?: number;
+  aufteilung?: { leiter: number; andere: number; prozesse: number };
+}
 export type Grenzwerte = Partial<Record<Einstellbar, Grenzwert>>;
 
 /**

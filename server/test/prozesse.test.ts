@@ -16,7 +16,7 @@ import { arbeiterAus } from '../src/arbeit';
 import { teileArbeit } from '../src/aufteilung';
 import { Auftraege } from '../src/auftrag';
 import { speicherDateien } from '../src/dateispeicher';
-import { verbindungenJeProzess } from '../src/db';
+import { VERBINDUNGEN_LEITER_MIN, verbindungenAus, verbindungenFuer, verbindungenVorgabe, verbindungsaufteilung } from '../src/db';
 import { Dienst } from '../src/dienst';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
@@ -26,7 +26,7 @@ import { bedieneLaeufer, Fernlaeufer } from '../src/laeufer/fern';
 import type { Paketlaeufer } from '../src/laeufer/verwaltung';
 import { Paketverwaltung } from '../src/pakete';
 import { kontext } from '../src/protokoll';
-import { einzeln, empfohleneProzesse, prozesseAus, type Verbund } from '../src/prozesse';
+import { einzeln, empfohleneProzesse, haldeJeProzess, prozesseAus, type Verbund } from '../src/prozesse';
 import { speicherRepo } from '../src/repo-speicher';
 import { Tresor } from '../src/tresor';
 import { Haushaltsstand, MINDESTENS_MS, Zaehlerspeicher } from '../src/zaehlerspeicher';
@@ -48,25 +48,68 @@ describe('Einstellung DMS_PROZESSE (#745)', () => {
     assert.equal(prozesseAus({ DMS_PROZESSE: 'AUTO' }, ohneCgroup).quelle, 'auto');
   });
 
-  it('Empfehlung: Kerne − 1, höchstens 4; bei wenig Arbeitsspeicher (Raspberry Pi, kleines NAS) 1', () => {
+  it('Empfehlung: Kerne − 1, höchstens 2 (#874); bei wenig Arbeitsspeicher (Raspberry Pi, kleines NAS) 1', () => {
     const GB = 1024 ** 3;
-    assert.equal(empfohleneProzesse(1, 8 * GB), 1);
-    assert.equal(empfohleneProzesse(2, 8 * GB), 1);
-    assert.equal(empfohleneProzesse(4, 8 * GB), 3);
-    assert.equal(empfohleneProzesse(6, 16 * GB), 4);
-    assert.equal(empfohleneProzesse(32, 64 * GB), 4);
-    assert.equal(empfohleneProzesse(4, 1 * GB), 1, 'Raspberry Pi mit 1 GB');
+    const n = (k: number, s: number | null, o?: Parameters<typeof empfohleneProzesse>[2]) => empfohleneProzesse(k, s, o).anzahl;
+    assert.equal(n(1, 8 * GB), 1);
+    assert.equal(n(2, 8 * GB), 1);
+    assert.equal(n(3, 8 * GB), 2);
+    assert.equal(n(6, 16 * GB), 2);
+    assert.equal(n(32, 64 * GB), 2);
+    assert.equal(n(4, 1 * GB), 1, 'Raspberry Pi mit 1 GB');
     // Grenze des Containers (cgroup v2): 4 Kerne, 1,5 GB → auto = 1.
     const cg = (p: string) => (p.endsWith('cpu.max') ? '400000 100000' : p.endsWith('memory.max') ? String(1.5 * GB) : p.endsWith('memory.current') ? '1000' : p.endsWith('cpu.stat') ? 'usage_usec 1' : null);
     assert.equal(prozesseAus({ DMS_PROZESSE: 'auto' }, cg).anzahl, 1);
   });
 
-  it('Verbindungen je Prozess: zusammen nie über max_connections (mit Reserve)', () => {
-    assert.deepEqual(verbindungenJeProzess(10, 1, 20), { max: 10, gekuerzt: false }, 'ein Prozess: wie bisher');
-    assert.deepEqual(verbindungenJeProzess(10, 4, 100), { max: 10, gekuerzt: false });
-    assert.deepEqual(verbindungenJeProzess(30, 4, 100), { max: 22, gekuerzt: true });
-    assert.deepEqual(verbindungenJeProzess(10, 8, 20), { max: 2, gekuerzt: true }, 'mindestens 2');
-    assert.deepEqual(verbindungenJeProzess(10, 4, null), { max: 10, gekuerzt: false });
+  it('auto (#874): höchstens 2, mit PostgreSQL im selben Container höchstens 2, Speicher je Prozess rund 1 GB, Verbindungen müssen reichen', () => {
+    const GB = 1024 ** 3;
+    assert.deepEqual(empfohleneProzesse(6, 16 * GB, { datenbankImContainer: true }), { anzahl: 2, begrenzt: 'hoechstens' }, 'NAS mit dms-komplett');
+    assert.deepEqual(empfohleneProzesse(6, 16 * GB), { anzahl: 2, begrenzt: 'hoechstens' }, 'PostgreSQL getrennt: vorerst auch 2');
+    assert.deepEqual(empfohleneProzesse(8, 3 * GB), { anzahl: 2, begrenzt: 'hoechstens' }, '3 GB: Reserve 1 GB + 2 × 1 GB');
+    assert.deepEqual(empfohleneProzesse(8, 2.5 * GB), { anzahl: 1, begrenzt: 'speicher' }, 'unter 3 GB ein Prozess (vorher: unter 2 GB)');
+    assert.deepEqual(empfohleneProzesse(8, 16 * GB, { verbindungen: 7 }), { anzahl: 1, begrenzt: 'verbindungen' }, 'DMS_DB_VERBINDUNGEN=7: Leiter braucht 6, ein weiterer 2');
+    assert.equal(empfohleneProzesse(8, 16 * GB, { verbindungen: 8 }).anzahl, 2);
+    assert.deepEqual(empfohleneProzesse(2, 16 * GB, { datenbankImContainer: true }), { anzahl: 1, begrenzt: 'kerne' });
+    const cg = (p: string) => (p.endsWith('cpu.max') ? '600000 100000' : p.endsWith('memory.max') ? String(16 * GB) : p.endsWith('memory.current') ? '1000' : p.endsWith('cpu.stat') ? 'usage_usec 1' : null);
+    assert.equal(prozesseAus({ DMS_PROZESSE: 'auto', DMS_VARIANTE: 'komplett' }, cg).anzahl, 2);
+    assert.equal(prozesseAus({ DMS_PROZESSE: 'auto' }, cg).anzahl, 2);
+    assert.equal(prozesseAus({ DMS_PROZESSE: '4', DMS_VARIANTE: 'komplett' }, cg).anzahl, 4, 'eine feste Zahl gilt, wie sie ist');
+    assert.equal(prozesseAus({ DMS_PROZESSE: 'auto', DMS_DB_VERBINDUNGEN: '6' }, cg).anzahl, 1);
+  });
+
+  it('Verbindungen (#874): DMS_DB_VERBINDUNGEN gilt für alle Prozesse zusammen; Leiter behält 4 für Sperren, mindestens 6, jeder weitere 2', () => {
+    assert.deepEqual(verbindungsaufteilung(10, 1, 20), { gesamt: 10, leiter: 10, andere: 0, angehoben: false, gekuerzt: false }, 'ein Prozess: wie bisher');
+    assert.deepEqual(verbindungsaufteilung(10, 1, null), { gesamt: 10, leiter: 10, andere: 0, angehoben: false, gekuerzt: false });
+    assert.deepEqual(verbindungsaufteilung(14, 2, 100), { gesamt: 14, leiter: 9, andere: 5, angehoben: false, gekuerzt: false });
+    assert.deepEqual(verbindungsaufteilung(22, 4, 100), { gesamt: 22, leiter: 10, andere: 4, angehoben: false, gekuerzt: false });
+    assert.deepEqual(verbindungsaufteilung(12, 4, 100), { gesamt: 12, leiter: 6, andere: 2, angehoben: false, gekuerzt: false });
+    assert.deepEqual(verbindungsaufteilung(10, 4, 100), { gesamt: 12, leiter: 6, andere: 2, angehoben: true, gekuerzt: false }, 'zu wenig: angehoben');
+    assert.deepEqual(verbindungsaufteilung(100, 4, 50), { gesamt: 40, leiter: 13, andere: 9, angehoben: false, gekuerzt: true }, 'max_connections − 10');
+    for (const n of [1, 2, 3, 4, 8, 16]) {
+      for (const g of [2, 10, 13, 22, 40, 100]) {
+        const a = verbindungsaufteilung(g, n, 200);
+        assert.equal(a.leiter + (n - 1) * a.andere, a.gesamt, `Summe ${g}/${n}`);
+        if (n > 1) { assert.ok(a.leiter >= VERBINDUNGEN_LEITER_MIN, `Leiter ${g}/${n}`); assert.ok(a.andere >= 2); }
+      }
+      const a = verbindungsaufteilung(verbindungenVorgabe(n), n, 100);
+      assert.equal(verbindungenFuer(a, 1), a.leiter);
+      if (n > 1) assert.equal(verbindungenFuer(a, 2), a.andere);
+    }
+    assert.deepEqual([1, 2, 4].map((n) => verbindungenVorgabe(n)), [10, 14, 22], 'Vorgabe: 10, je weiteren Prozess 4 mehr');
+    assert.deepEqual(verbindungenAus({}, 4), { max: 22, quelle: 'vorgabe' });
+    assert.deepEqual(verbindungenAus({ DMS_DB_VERBINDUNGEN: '20' }, 4), { max: 20, quelle: 'umgebung' }, 'gesetzt: zusammen, nicht je Prozess');
+  });
+
+  it('Halde der weiteren Prozesse (#874): 60 % des Anteils, 1024–1536 MB; ein Prozess oder von Hand gesetzt: nichts', () => {
+    const GB = 1024 ** 3;
+    assert.equal(haldeJeProzess({ anzahl: 1, speicher: 16 * GB }, []), null);
+    assert.equal(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, []), 1536);
+    assert.equal(haldeJeProzess({ anzahl: 2, speicher: 5 * GB }, []), 1228);
+    assert.equal(haldeJeProzess({ anzahl: 4, speicher: 4 * GB }, []), 1024, 'mindestens 1024');
+    assert.equal(haldeJeProzess({ anzahl: 2, speicher: null }, []), 1536);
+    assert.equal(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, ['--max-old-space-size=3000']), null, 'von Hand gesetzt');
+    assert.equal(haldeJeProzess({ anzahl: 2, speicher: 16 * GB }, ['', '--enable-source-maps --max-old-space-size=512']), null, 'NODE_OPTIONS');
   });
 
   it('Arbeiter: Vorgabe teilt sich auf die Prozesse auf, DMS_ARBEITER gilt je Prozess', () => {
@@ -135,6 +178,11 @@ describe('Verbund mit node:cluster (#745)', () => {
       // Absturz: Prozess 2 hart beenden – der Hauptprozess startet ihn neu, er läuft wieder durch.
       process.kill(Number(e2.pid), 'SIGKILL');
       await warte(() => ergebnisse().some((e) => e.nr === 2 && e.pid !== e2.pid), 'Neustart von Prozess 2');
+      // #874: Der Neustart ist gezählt, mit Nummer und Signal (für Lasttest und Systemzustand).
+      assert.deepEqual(e2.neustarts, { anzahl: 0, letzte: [] });
+      const neu = ergebnisse().find((e) => e.nr === 2 && e.pid !== e2.pid)!.neustarts as { anzahl: number; letzte: Array<{ nr: number; signal: string | null }> };
+      assert.equal(neu.anzahl, 1);
+      assert.deepEqual(neu.letzte.map((x) => [x.nr, x.signal]), [[2, 'SIGKILL']]);
       // Beenden: SIGTERM an den Hauptprozess beendet alle.
       p.kill('SIGTERM');
       const code = await new Promise((r) => p.once('exit', (c) => r(c)));
@@ -154,7 +202,7 @@ function mitschreiber(antworten: Record<string, unknown> = {}) {
     bediene() {}, hoere(n, f) { hoerer.set(n, f); },
     async rufe<T>(n: string, a: unknown[] = []) { gerufen.push([n, a]); return antworten[n] as T; },
     melde(n, d) { gemeldet.push([n, d]); },
-    async frageAlle() { return []; }, prozesse: () => [], bereit() {}, beendeAlle: () => true,
+    async frageAlle() { return []; }, prozesse: () => [], neustarts: () => ({ anzahl: 0, letzte: [] }), bereit() {}, beendeAlle: () => true,
   };
   return { v, gemeldet, gerufen, hoerer };
 }

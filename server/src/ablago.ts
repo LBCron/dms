@@ -17,7 +17,9 @@ import { proxyVertrauen } from './proxy';
 import { mkdir, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { migriere, NeuereDatenbankFehler, verbinde, verbindungenAus, verbindungenJeProzess, Verbindungswarten } from './db';
+import { migriere, NeuereDatenbankFehler, verbinde, VERBINDUNGEN_LEITER_MIN, VERBINDUNGEN_MIN, VERBINDUNGEN_RESERVE, verbindungenAus, verbindungenFuer, verbindungsaufteilung, Verbindungswarten } from './db';
+import { Poolmessung, sitzungsstand } from './poolmessung';
+import { teileZwischenspeicher } from './zwischenspeicher';
 import { Dienst } from './dienst';
 import { beiFehlenderDatei, mitPruefung, ordnerSpeicher } from './dateispeicher';
 import { Speicherplatz, type SpeicherplatzDeps } from './speicherplatz';
@@ -109,6 +111,8 @@ const version = env.DMS_VERSION ?? 'Entwicklung';
 const prozessEinstellung = prozesseAus(env);
 const verbund = await verbundFuerProzess();
 const { leiter } = verbund;
+// Zwischenspeicher (#874): mit mehreren Prozessen bekommt jeder seinen Anteil, zusammen wie mit einem.
+teileZwischenspeicher(verbund.anzahl);
 if (leiter) log.info(`Ablago startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text, ...(verbund.mehrere ? { prozesse: verbund.anzahl } : {}) });
 else log.info(`Prozess ${verbund.nr} für Anfragen startet`, { pid: process.pid });
 if (prozessEinstellung.ungueltig && leiter) log.warn(tDe('meldungen.prozesse.ungueltig', { roh: prozessEinstellung.ungueltig, max: PROZESSE_MAX }));
@@ -206,25 +210,30 @@ if (!verbunden) {
 const db = anbindung!;
 const datenbankUrl = alsUrl(db);
 // Verbindungen zur Datenbank (#544): Vorgabe 10, für größere Installationen DMS_DB_VERBINDUNGEN.
-// Mehrere Prozesse (#745): je Prozess; zusammen nie mehr, als die Datenbank erlaubt (verbindungenJeProzess).
-const verbindungsZahl = verbindungenAus(env);
+// Mehrere Prozesse (#874): DMS_DB_VERBINDUNGEN gilt für alle zusammen und wird aufgeteilt (verbindungsaufteilung);
+// zusammen nie mehr, als die Datenbank erlaubt.
+const verbindungsZahl = verbindungenAus(env, verbund.anzahl);
 if (verbindungsZahl.fehler && leiter) log.warn(verbindungsZahl.fehler);
 let erlaubteVerbindungen: number | null = null;
 if (verbund.mehrere) {
   const probe = verbinde(datenbankUrl, 1);
   try { erlaubteVerbindungen = Number((await probe`SHOW max_connections`)[0].max_connections) || null; } catch { /* dann ohne Abgleich */ } finally { await probe.end({ timeout: 5 }); }
 }
-const jeProzess = verbindungenJeProzess(verbindungsZahl.max, verbund.anzahl, erlaubteVerbindungen);
-if (jeProzess.gekuerzt && leiter) log.warn(`Verbindungen zur Datenbank: ${verbindungsZahl.max} je Prozess wären mit ${verbund.anzahl} Prozessen mehr, als die Datenbank erlaubt (max_connections ${erlaubteVerbindungen}) – jeder Prozess nimmt ${jeProzess.max}`);
-const sql = verbinde(datenbankUrl, jeProzess.max);
+const verbindungsteile = verbindungsaufteilung(verbindungsZahl.max, verbund.anzahl, erlaubteVerbindungen);
+const eigeneVerbindungen = verbindungenFuer(verbindungsteile, verbund.nr);
+if (verbindungsteile.gekuerzt && leiter) log.warn(`Verbindungen zur Datenbank: ${verbindungsZahl.max} wären mehr, als die Datenbank erlaubt (max_connections ${erlaubteVerbindungen}, ${VERBINDUNGEN_RESERVE} bleiben frei) – Ablago nimmt zusammen ${verbindungsteile.gesamt}`);
+if (verbindungsteile.angehoben && leiter) log.warn(`Verbindungen zur Datenbank: ${verbindungsZahl.max} sind für ${verbund.anzahl} Prozesse zu wenig (der Leiter braucht ${VERBINDUNGEN_LEITER_MIN}, jeder weitere ${VERBINDUNGEN_MIN}) – Ablago nimmt zusammen ${verbindungsteile.gesamt}`);
+const sql = verbinde(datenbankUrl, eigeneVerbindungen);
 // Datenbank von einer neueren Version (#714) oder fehlgeschlagene Migration: Grund auf der Startseite (beimStartfehler).
 // Mehrere Prozesse (#745): nur der Leiter – die anderen starten erst, wenn er fertig ist.
 if (leiter) await migriere(sql, cfg.migrationen, (m) => protokoll.modul('datenbank').info(m), (nr, von, datei) => start.schritt('migration', { nr, von, datei }));
 start.schritt('schluessel');
 const [{ server_version: pgVersion }] = await sql`SHOW server_version`;
-if (leiter) protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank, verbindungen: `${jeProzess.max}${verbindungsZahl.quelle === 'umgebung' ? ' (DMS_DB_VERBINDUNGEN)' : ''}${verbund.mehrere ? ` je Prozess, ${jeProzess.max * verbund.anzahl} zusammen` : ''}` });
-const verbindungswarten = new Verbindungswarten(sql, jeProzess.max, verbindungsZahl.quelle);
+if (leiter) protokoll.modul('datenbank').info('Datenbank verbunden', { postgres: pgVersion, host: db.host, datenbank: db.datenbank, verbindungen: `${verbindungsteile.gesamt}${verbindungsZahl.quelle === 'umgebung' ? ' (DMS_DB_VERBINDUNGEN)' : ''}${verbund.mehrere ? ` zusammen: Leiter ${verbindungsteile.leiter}, jeder weitere Prozess ${verbindungsteile.andere}` : ''}` });
+const verbindungswarten = new Verbindungswarten(sql, eigeneVerbindungen, verbindungsZahl.quelle, verbindungsteile);
 verbindungswarten.start();
+// Wo es unter Last hakt (#874): Wartezeit auf eine freie Verbindung, nur während der Lasttest fragt.
+const poolmessung = new Poolmessung(sql, eigeneVerbindungen);
 // Überlastschutz (#544): mehr als DMS_MAX_ANFRAGEN gleichzeitig (Vorgabe 250) → sofort 503 mit Retry-After.
 // Mehrere Prozesse (#745): je Prozess – jeder hat seine eigene Ereignisschleife.
 const ueberlastZahl = maxAnfragenAus(env);
@@ -624,6 +633,8 @@ const app = await baueApp(dienst, konten, {
   systemlast,
   ueberlast,
   verbindungen: verbindungswarten,
+  poolmessung,
+  sitzungen: () => sitzungsstand(sql),
   erweiterungen: () => liesErweiterungen(sql),
   eingangsordner,
   postfaecher,
@@ -712,7 +723,7 @@ start.schritt('dienste');
 const aufteilung = teileArbeit(verbund, {
   dienst, texterkennung, vorschau, sicherung, wiederherstellung, postfaecher, eingangsordner, paketlaeufer, fernlaeufer,
   tresor, betrieb, oidc, messung, einstellungen: pgEinstellungen(sql, cfg.haushalt), zustand: zustandDb, sql, haushalt: cfg.haushalt,
-  ueberlast, verbindungen: verbindungswarten,
+  ueberlast, verbindungen: verbindungswarten, pool: poolmessung,
 });
 if (leiter) {
   await texterkennung.start({ zurueckstellen: lebt.allein });
@@ -819,6 +830,7 @@ const beenden = async () => {
   await app.close();
   await beendeArbeiter();
   verbindungswarten.stop();
+  poolmessung.aus();
   aufteilung.stop();
   await lebt.ende();
   await sql.end({ timeout: 5 });

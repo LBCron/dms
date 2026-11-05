@@ -34,6 +34,7 @@ if (cluster.isPrimary) {
       teile: { wert: await v.rufe('teile', [], { teil: (x) => teile.push(x) }), teile },
       puffer: String(await v.rufe<Uint8Array>('puffer', [Buffer.from('ab')]).then((b) => Buffer.from(b))),
       alle: (await v.frageAlle<{ nr: number }>('stand')).map((p) => ({ nr: p.nr, leiter: p.leiter, wert: p.wert })),
+      neustarts: v.neustarts(),
     };
     v.melde('gruss', { von: v.nr });
     zeige(erg);
