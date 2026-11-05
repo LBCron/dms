@@ -18,6 +18,7 @@ Besides events and the [API v1](#nutzliche-endpunkte-der-api-v1), the core offer
 | `dms:volltext` | 0.145.0 | supplying full text for files the core doesn't read (Word, Excel, emails …) – only with "read documents" | **[Supplying full text](#volltext-liefern)** – event, writing, limits |
 | `dms:archivfassung` | 0.149.0 | storing a searchable PDF/A for documents with finished full text – with word positions, only with "read documents" | **[Storing an archive version](#archivfassung)** – event, word positions, acceptance, limits |
 | `dms:sicherung-lesen` | 0.142.0 | reading every backup encrypted and copying it off-site, reporting the state in the answer (read-only key) | **[Off-site backup](#sicherung-ausser-haus)** – event, reading in pieces, feedback |
+| `dms:uebersetzen` | 0.204.0 | translating one text (field, note, full text) at the press of a button – the core reads it with the person's permissions | **[Translate content](#inhalte-ubersetzen)** – call, sections, answer, cache |
 
 ## How code runs in Ablago { #so-lauft-code-im-dms }
 
@@ -55,7 +56,7 @@ code:
   ```
 
 - **Documents:** `lesen` allows reading documents (file, full text, pages as images), `schreiben` additionally uploading, replacing and setting the full text. Documents only exist in folders the package may read.
-- **The core's interfaces (`schnittstellen`):** additional permissions for interfaces at which the core only stores, compares or passes on (overview: [The core's interfaces](#schnittstellen)). There are `dms:vektoren` (since 0.120.0, needs `dokumente: lesen`) – see [Vectors and similarity](#vektoren-und-ahnlichkeit) –, `dms:antworten` (since 0.124.0) – see [Answering questions](#fragen-beantworten) –, `dms:erkennen` (since 0.125.0) – see [Recognition: field description and answer](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (since 0.133.0, needs `dokumente: schreiben`) – see [Taking over text recognition](#texterkennung) –, `dms:umwandeln` (since 0.137.0, needs `dokumente: lesen`, `code.umwandeln` and the event `datei.umwandeln`) – see [Converting files](#dateien-umwandeln) –, `dms:sicherung-lesen` (since 0.142.0, needs the event `sicherung.fertig`) – see [Off-site backup](#sicherung-ausser-haus) – and `dms:volltext` (since 0.145.0, needs `dokumente: lesen`, `code.volltext` and the event `datei.volltext`) – see [Supplying full text](#volltext-liefern).
+- **The core's interfaces (`schnittstellen`):** additional permissions for interfaces at which the core only stores, compares or passes on (overview: [The core's interfaces](#schnittstellen)). There are `dms:vektoren` (since 0.120.0, needs `dokumente: lesen`) – see [Vectors and similarity](#vektoren-und-ahnlichkeit) –, `dms:antworten` (since 0.124.0) – see [Answering questions](#fragen-beantworten) –, `dms:erkennen` (since 0.125.0) – see [Recognition: field description and answer](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (since 0.133.0, needs `dokumente: schreiben`) – see [Taking over text recognition](#texterkennung) –, `dms:umwandeln` (since 0.137.0, needs `dokumente: lesen`, `code.umwandeln` and the event `datei.umwandeln`) – see [Converting files](#dateien-umwandeln) –, `dms:sicherung-lesen` (since 0.142.0, needs the event `sicherung.fertig`) – see [Off-site backup](#sicherung-ausser-haus) – `dms:volltext` (since 0.145.0, needs `dokumente: lesen`, `code.volltext` and the event `datei.volltext`) – see [Supplying full text](#volltext-liefern) – and `dms:uebersetzen` (since 0.204.0, needs nothing else) – see [Translate content](#inhalte-ubersetzen).
 - **File types for converting (`code.umwandeln`, since 0.137.0):** only with `dms:umwandeln` – the MIME types the package is responsible for, e.g. `[image/tiff, image/webp]`. The core reads PDF, JPEG and PNG itself; they aren't allowed here. At most 20.
 - **File types for the full text (`code.volltext`, since 0.145.0):** only with `dms:volltext` – the MIME types for which the package supplies the full text, e.g. `[message/rfc822, text/plain]`. PDF, JPEG and PNG aren't allowed. At most 40.
 - **Folder types for events (`code.mappentypen`, since 0.153.0):** required as soon as the package subscribes to one of the folder events `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` or `frist.erreicht` – and only allowed then. It contains the keys of **its own** folder types (without prefix, e.g. `[vertrag]`) and – since 0.166.0 – links to **other** folder types as in `code.rechte` (`basis:organisation`, `dms:post`) or `*` for all the package may read (only with `code.rechte.lesen: ["*"]`). The package must be allowed to read every type named. A package with this states `dms: ">=0.153.0"`, with other packages' types or `*` `dms: ">=0.166.0"`.
@@ -753,6 +754,58 @@ The endpoints' answers: 403 if the package doesn't have the permission or the ba
 ### Deletion protection { #sicherung-loeschschutz }
 
 Whoever takes over Ablago knows the stored credentials. A package should therefore get by with **as few permissions as possible**: only upload (S3: `PutObject` without `DeleteObject`, plus Object Lock on the bucket; Nextcloud: file drop), list nothing and delete nothing on the target. "Delete old backups off-site" exists at most as a setting with default **off** and the notice that deletion permissions are needed for it. More in the [Administrator manual](https://help.ablago.app/admin/aktuell/en/sicherung-ausser-haus/#loschschutz).
+
+## Translate content { #inhalte-ubersetzen }
+
+Since 0.204.0 (#732) a package with the permission `dms:uebersetzen` translates texts when a person presses **Show translation** – on long text fields, notes and a document's full text. Never in the background. The package needs no further permissions, no events and no network access:
+
+```yaml
+dms: ">=0.204.0"
+code:
+  sprache: c
+  quelle: code/
+  rechte:
+    schnittstellen: ["dms:uebersetzen"]
+```
+
+That is the whole change to the package format: a new value for `code.rechte.schnittstellen`. There is no section of its own in the manifest (the package says in its answer which language pairs it can do; it brings models as files of its own, read with `dms.datei`).
+
+### Flow { #uebersetzen-ablauf }
+
+1. The interface sends `POST /api/uebersetzung` with `{ "quelle": { "art": "feld", "mappe": "<id>", "feld": "inhalt" }, "teil": 0 }` (or `{ "art": "notiz", "notiz": "<id>" }`, `{ "art": "volltext", "dokument": "<id>" }`) – **only ids, never text**.
+2. The core checks the person's read permission, reads the text itself and splits it into sections of at most **4,000 characters** (preferably at page breaks, paragraphs, line ends, sentence ends). It doesn't translate more than 400,000 characters (`gekuerzt: true`).
+3. For each section it calls the package's `dms_aktion` – time limit **60 s**, like every action in the runner.
+4. If the text is already in the person's language (built-in language detection, unambiguous and not mixed), the core doesn't call the package at all.
+
+**Call:**
+
+```json
+{ "aktion": "dms:uebersetzen",
+  "text": "Sehr geehrte Frau Beispiel, …",
+  "nach": "en", "von": "de",
+  "art": "feld", "format": "text",
+  "teil": 0, "teile": 3,
+  "paket": { … }, "einstellungen": { … } }
+```
+
+- `nach` is the person's language (as in the interface: `de`, `en`, `tr` …). `von` is the source language if the core knows it (for full text from text recognition, otherwise from the built-in detection), otherwise `null` – then the package detects it itself.
+- `format` is `markdown` for notes and formatted fields (please keep the Markdown characters), otherwise `text`.
+- The package gets nothing more: no folder, no ids, no field name.
+
+**Answer:** `ergebnis` with `{ "text": "Dear Mrs Example, …", "von": "de" }` (`von` optional, the detected source language). If the package can't translate, it answers `{ "fehler": "No model for Turkish → German." }`; the person then sees "*Package* couldn't translate the text: …". An error code, no answer or no JSON counts as an error too. The workbench only shows "Text translated" and the length for the package, never the content.
+
+### Cache and original { #uebersetzen-speicher }
+
+- Only the **original** is ever stored; there is no way to write the translation.
+- Every translation is kept for 30 days in the short-term state (kind `uebersetzung`, the same for all processes, not in the backup) under folder, source, **SHA-256 of the section**, target language, package and **version**. If the original changes, the checksum no longer matches; a new version of the package translates afresh. The core deletes outdated entries on the next request, when a note is changed or deleted, via the events "folder changed" and "full text ready", and when the folder is deleted.
+
+### Network and notice { #uebersetzen-netz }
+
+A package that translates on the device (e.g. with a WebAssembly model) needs no `code.netz`. If a package may access the network (a fixed address in `code.netz` or a service address as a setting, see [In the manifest](#im-manifest)), Ablago **never** uses it automatically: the administrator chooses it under **Workbench → Languages → Translate content** and confirms the data transfer. Then every translation and My account say where the text goes.
+
+### Trying it out { #uebersetzen-ausprobieren }
+
+A small test package is in `server/test/uebersetzung.test.ts`: a WebAssembly module following ABI 1 that answers `dms:uebersetzen` with a fixed translation, with its manifest. The test loads it into the real package runner.
 
 ## Trying it out { #ausprobieren }
 

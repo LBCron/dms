@@ -36,6 +36,7 @@ Mein Konto hat links fünf Bereiche (am Smartphone oben als Knöpfe):
 - **Name** – so erscheinst du bei „angelegt von“ und „zuletzt geändert von“ – und als Titel deiner Benutzer-Mappe.
 - **E-Mail-Adresse** – damit meldest du dich an. Zum Ändern brauchst du dein aktuelles Passwort. Verschickt Ablago E-Mails, bekommt die bisherige Adresse einen Hinweis – falls jemand anderes die Adresse geändert hat, merkst du es so.
 - <span id="sprache"></span>**Sprache** – in welcher Sprache Ablago mit dir spricht: Oberfläche, Meldungen und E-Mails an dich. **Wie die Ablage** folgt der Sprache, die der Administrator für alle eingestellt hat. Zur Wahl stehen die Sprachen, die er erlaubt hat. Die Seite lädt nach dem Wechsel neu. Bei maschinell übersetzten Sprachen steht ein Hinweis mit einem Link, wie du Verbesserungen beitragen kannst. Datumsangaben und Zahlen richten sich nach der Sprache. Nimmt der Administrator deine Sprache wieder heraus (z. B. weil er ihr Sprachpaket entfernt), siehst du Ablago in der Sprache der Ablage; ein Hinweis hier sagt es dir, und deine Wahl gilt wieder, sobald es die Sprache wieder gibt.
+- <span id="ubersetzung-anzeigen"></span>**„Übersetzung anzeigen“ anbieten** – gibt es nur, wenn deine Ablage ein Paket zum Übersetzen hat. Mit dem Haken siehst du an langen Texten, Notizen und Volltexten den Knopf [Übersetzung anzeigen](mappen.md#inhalte-ubersetzen); ohne Haken nicht. Darunter steht, womit übersetzt wird und ob der Text dafür das Gerät deiner Ablage verlässt.
 
 #### Meine Daten { #meine-daten }
 

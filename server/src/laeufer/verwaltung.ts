@@ -143,6 +143,11 @@ export class Paketlaeufer implements PaketLaeufer {
         .map((x) => ({ id: x.id, name: x.name, netz: hatNetz(x.laeufer) })),
       erkenne: (paket, eingang, ms) => this.schnittstelle(paket, 'dms:erkennen', eingang, { bezeichnung: t('meldungen.verwaltung.felder-erkannt'), ms }),
     };
+    // Inhalte übersetzen (#732): Pakete mit dms:uebersetzen, je Abschnitt ein Aufruf mit Zeitlimit; kein Inhalt in der Werkbank.
+    o.dienst.uebersetzung.anbieter = {
+      pakete: () => this.uebersetzPakete(),
+      uebersetze: (paket, eingang, ms) => this.schnittstelle(paket, 'dms:uebersetzen', eingang, { bezeichnung: t('meldungen.verwaltung.text-uebersetzt'), ms }),
+    };
   }
 
   /** Startet den Läufer, wenn es Pakete mit Code gibt; sonst erst, wenn eins installiert wird. */
@@ -431,6 +436,12 @@ export class Paketlaeufer implements PaketLaeufer {
 
   /* ---------- Antworten (#444) und Erkennen (#511) ---------- */
 
+  /** Geladene Pakete mit dms:uebersetzen (#732). */
+  uebersetzPakete(): Array<{ id: string; name: string; version: string; netz: boolean }> {
+    return this.pakete.filter((x) => hatSchnittstelle(x.laeufer, 'dms:uebersetzen') && this.ladefehler.has(x.id) && !this.ladefehler.get(x.id))
+      .map((x) => ({ id: x.id, name: x.name, version: x.version, netz: hatNetz(x.laeufer) }));
+  }
+
   /** Das Paket mit dieser Schnittstelle (bei mehreren das erste nach Id), sobald der Läufer es fehlerfrei geladen hat. */
   paketMit(s: Schnittstelle): { id: string; name: string } | null {
     const p = this.pakete.filter((x) => hatSchnittstelle(x.laeufer, s) && this.ladefehler.has(x.id) && !this.ladefehler.get(x.id)).sort((a, b) => a.id.localeCompare(b.id))[0];
@@ -438,7 +449,7 @@ export class Paketlaeufer implements PaketLaeufer {
   }
 
   /**
-   * Ruft eine Schnittstelle eines Pakets auf (Aktion `dms:antworten` bzw. `dms:erkennen`): Eingang als JSON, Teile
+   * Ruft eine Schnittstelle eines Pakets auf (Aktion `dms:antworten`, `dms:erkennen` bzw. `dms:uebersetzen`): Eingang als JSON, Teile
    * der Antwort an `teil`, Ergebnis als Text. Ohne Inhalt in der Werkbank. Wirft mit verständlicher Meldung.
    */
   async schnittstelle(paket: string, aktion: string, eingang: Record<string, unknown>, opt: { bezeichnung: string; teil?: (text: string) => void; ms?: number }): Promise<{ text: string; ms: number }> {

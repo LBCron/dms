@@ -5,6 +5,7 @@
 import { dateitypName, DMS_UMWANDELN_AB, kernTyp, MIME, UMWANDELN_TYPEN_MAX } from './dateiumwandlung';
 import { DMS_PAKET_VOLLTEXT_AB, VOLLTEXT_TYPEN_MAX } from './paketvolltext';
 import { ARCHIV_TYPEN_MAX, DMS_ARCHIVFASSUNG_AB } from './archivfassung';
+import { DMS_UEBERSETZEN_AB } from './uebersetzung';
 import type { Hilfeort } from './hilfe';
 import type { PaketKatalogArt, VERALTETE_EREIGNISSE } from './ereignisse';
 import { t } from './texte';
@@ -419,6 +420,7 @@ export const SCHNITTSTELLEN = {
   'dms:sicherung-lesen': t('gemeinsam.pakete.die-verschluesselte-sicherung-lesen'),
   'dms:volltext': t('gemeinsam.pakete.volltext-fuer-dateien-liefern'),
   'dms:archivfassung': t('gemeinsam.pakete.archivfassung-pdf-a-ablegen'),
+  'dms:uebersetzen': t('gemeinsam.pakete.inhalte-uebersetzen'),
 } as const;
 export type Schnittstelle = keyof typeof SCHNITTSTELLEN;
 /** Ab dieser Version kennt das DMS `code.rechte.schnittstellen` und das Ereignis `volltext.fertig` (#442). */
@@ -430,7 +432,7 @@ export const DMS_VEKTOREN_AB = '0.120.0';
  */
 export const DMS_ANTWORTEN_AB = '0.124.0';
 /** Hilfe-Ort je Schnittstelle (Administratorhandbuch, Pakete mit Code). */
-export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln', 'dms:sicherung-lesen': 'pakete.recht.sicherung', 'dms:volltext': 'pakete.recht.volltext', 'dms:archivfassung': 'pakete.recht.archivfassung' };
+export const SCHNITTSTELLE_HILFE: Record<Schnittstelle, Hilfeort> = { 'dms:vektoren': 'pakete.recht.vektoren', 'dms:antworten': 'pakete.recht.antworten', 'dms:erkennen': 'pakete.recht.erkennen', 'dms:texterkennung': 'pakete.recht.texterkennung', 'dms:umwandeln': 'pakete.recht.umwandeln', 'dms:sicherung-lesen': 'pakete.recht.sicherung', 'dms:volltext': 'pakete.recht.volltext', 'dms:archivfassung': 'pakete.recht.archivfassung', 'dms:uebersetzen': 'pakete.recht.uebersetzen' };
 /**
  * Ab dieser Version (#585) kennt das DMS das Ereignis `sicherung.fertig` und die Schnittstelle `dms:sicherung-lesen`:
  * Ein Paket liest die verschlüsselte Sicherung in Stücken, kopiert sie außer Haus und meldet je Sicherung zurück.
@@ -752,6 +754,8 @@ export { DMS_UMWANDELN_AB };
 export { DMS_PAKET_VOLLTEXT_AB };
 /** Ab dieser Version (#631) kennt das DMS die Archivfassung; siehe shared/src/archivfassung.ts. */
 export { DMS_ARCHIVFASSUNG_AB };
+/** Ab dieser Version (#732) kennt das DMS Inhalte übersetzen; siehe shared/src/uebersetzung.ts. */
+export { DMS_UEBERSETZEN_AB };
 /** Darf das Paket diese Schnittstelle des Kerns nutzen (#442)? */
 export const hatSchnittstelle = (c: PaketCode | undefined, s: Schnittstelle) => !!c?.rechte.schnittstellen?.includes(s);
 

@@ -415,6 +415,8 @@ export interface Benutzer {
   entwicklermodus?: boolean;
   /** Gewählte Sprache (#729, Mein Konto); leer = die der Installation. Gilt nur, solange sie erlaubt ist. */
   sprache?: string | null;
+  /** „Übersetzung anzeigen“ anbieten (#732, Mein Konto); false = für sich abgeschaltet. Vorgabe an. */
+  uebersetzen?: boolean;
   /** Weitere (fachliche) Rollen: Ids der Rollen-Mappen (nur in der Benutzerverwaltung). */
   rollen?: string[];
   /** Abwesenheit mit Vertreter (#78). Der Vertreter bleibt nach dem Deaktivieren hinterlegt und wirkt dann dauerhaft. */

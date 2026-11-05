@@ -12,6 +12,7 @@ import type { LasttestStand } from '../../shared/src/lasttest';
 import type { Akzeptiert, Schwere } from '../../shared/src/meldungen';
 import type { SystemkontoFehler } from '../../shared/src/systemkonten';
 import type { GemerktesPasswort, PdfSchutz } from '../../shared/src/entsperren';
+import type { UebersetzenAngebot, UebersetzenEinstellung, Uebersetzt, Uebersetzungsquelle } from '../../shared/src/uebersetzung';
 import type { Abwesenheit, Aufgabe, Ausschnitt, FallOhneLeserecht, Benutzer, Dokument, DokumentVersion, Historieneintrag, Notiz, Mappe, MappenBezug, Mappentyp, OcrStandArt, Pruefergebnis, Rolle, Sitzung, Sortierung, Vertretung, Wert, Werte } from '../../shared/src/model';
 import type { Feldbedingung, Sicht, SichtDaten } from '../../shared/src/sichten';
 import type { Ergebnis, Recht, Rechte, Regelwerk } from '../../shared/src/rechte';
@@ -328,6 +329,13 @@ export interface SprachenStand {
   pakete?: Array<SprachpaketInfo & { paket: string; name: string; version: string; abdeckung: Abdeckung; personen: number }>;
 }
 
+/** Werkbank → Sprachen → Inhalte übersetzen (#732). */
+export interface UebersetzenStand {
+  einstellung: UebersetzenEinstellung;
+  pakete: Array<{ id: string; name: string; version: string; laeuft: boolean; netz: string[] | null }>;
+  wirksam: { id: string; name: string } | null;
+}
+
 /** Region der Ablage (#726). */
 export interface Region { land: string; bundesland: string | null; zeitzone: string }
 export interface RegionStand { region: Region; laender: Record<string, string>; bundeslaender: Record<string, string>; zeitzonen: string[]; feiertage: Array<{ datum: string; name: string }> }
@@ -348,6 +356,8 @@ export interface KontoStatus {
   sprachen?: SprachStatus;
   /** Laufwerk eingeschaltet (#720)? */
   laufwerk?: boolean;
+  /** Inhalte übersetzen (#732): null = kein Knopf (aus für alle oder kein Paket). */
+  uebersetzen?: UebersetzenAngebot | null;
   /** Ein Administrator agiert gerade als dieser Benutzer. */
   vertretung?: { adminName: string; beginn: string } | null;
   /** Wer hat als dieser Benutzer agiert (noch nicht gesehen)? */
@@ -755,6 +765,9 @@ export const api = {
   favoritenVorgabeAnwenden: () => anfrage<{ benutzer: number }>('POST', '/api/werkbank/favoriten-freigabe/anwenden'),
   notizAnlegen: (mappeId: string, text: string) => anfrage<Notiz>('POST', `/api/mappen/${mappeId}/notizen`, { text }),
   notizAendern: (id: string, text: string) => anfrage<Notiz>('PUT', `/api/notizen/${id}`, { text }),
+  /** Übersetzung anzeigen (#732): ein Abschnitt; den Text liest der Server selbst. */
+  uebersetzung: (quelle: Uebersetzungsquelle, teil: number) => anfrage<Uebersetzt>('POST', '/api/uebersetzung', { quelle, teil }),
+  eigenesUebersetzen: (uebersetzen: boolean) => anfrage<Benutzer>('PUT', '/api/konto/profil', { uebersetzen }),
   notizLoeschen: (id: string) => anfrage<null>('DELETE', `/api/notizen/${id}`),
   historie: (mappeId: string) => anfrage<Historieneintrag[]>('GET', `/api/mappen/${mappeId}/historie`),
   /** Passwortfeld anzeigen (#46); steht im Protokoll. */
@@ -885,6 +898,8 @@ export const api = {
   regionSetzen: (e: Partial<Region>) => anfrage<RegionStand>('PUT', '/api/werkbank/region', e),
   sprachen: () => anfrage<SprachenStand>('GET', '/api/werkbank/sprachen'),
   sprachenSetzen: (e: Partial<SprachenStand['einstellung']>) => anfrage<SprachenStand>('PUT', '/api/werkbank/sprachen', e),
+  uebersetzenStand: () => anfrage<UebersetzenStand>('GET', '/api/werkbank/uebersetzen'),
+  uebersetzenSetzen: (e: Partial<UebersetzenEinstellung>) => anfrage<UebersetzenStand>('PUT', '/api/werkbank/uebersetzen', e),
   anmeldeschutz: () => anfrage<AnmeldeschutzStand>('GET', '/api/werkbank/anmeldeschutz'),
   anmeldeschutzSetzen: (e: Partial<SperrEinstellung>) => anfrage<AnmeldeschutzStand>('PUT', '/api/werkbank/anmeldeschutz', e),
   notfallzugang: () => anfrage<NotfallzugangStand>('GET', '/api/werkbank/anmeldeschutz/notfallzugang'),

@@ -1622,5 +1622,19 @@
   "sprachpakete.entfernen.personen_other": "{anzahl} people have chosen this language. Afterwards they see Ablago in the installation’s language; My account tells them.",
   "sprachpakete.entfernen.standard": "It is the installation’s language. Afterwards German applies again.",
   "sprachpakete.keine-texte": "There is no language package for this language here.",
-  "vollexport.nicht-enthalten-sprachpakete": "not included: texts of installed language packages (#731, they are in the package itself)"
+  "vollexport.nicht-enthalten-sprachpakete": "not included: texts of installed language packages (#731, they are in the package itself)",
+  "uebersetzung.quelle-unbekannt": "What should be translated is missing or unknown (field of a folder, note or full text of a document).",
+  "uebersetzung.dienst-adresse": "service address “{name}”",
+  "uebersetzung.kein-paket": "“{paket}” is not an installed package with the permission “Translate content”.",
+  "uebersetzung.abfluss-bestaetigen": "“{name}” sends the texts to {ziele} for translation. Please confirm this explicitly.",
+  "uebersetzung.feld-nicht": "This field can’t be translated (only text without a format, long text and formatted text).",
+  "uebersetzung.nur-personen": "Translation is only available to people, not to packages.",
+  "uebersetzung.selbst-aus": "You have switched off “Show translation” in My account.",
+  "uebersetzung.kein-angebot": "Translation isn’t available right now: it is switched off, or no package for it is running.",
+  "uebersetzung.leer": "There is no text to translate here.",
+  "uebersetzung.abschnitt-unbekannt": "This section doesn’t exist (the text has {teile}).",
+  "uebersetzung.paket-fehler": "“{name}” couldn’t translate the text: {grund}",
+  "uebersetzung.kein-json": "The answer is not a JSON object.",
+  "uebersetzung.ohne-text": "The answer has no “text”.",
+  "verwaltung.text-uebersetzt": "Text translated"
 }

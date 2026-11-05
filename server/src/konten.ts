@@ -565,8 +565,8 @@ export class Konten {
     try { await this.mailer.sende(an, m.betreff, m.text); } catch (e) { log(`Hinweis-Mail an ${an} fehlgeschlagen: ${(e as Error).message}`); }
   }
 
-  async aendereProfil(ich: Benutzer, e: { name?: unknown; entwicklermodus?: unknown; sprache?: unknown }) {
-    const d: { name?: string; entwicklermodus?: boolean; sprache?: string | null } = {};
+  async aendereProfil(ich: Benutzer, e: { name?: unknown; entwicklermodus?: unknown; sprache?: unknown; uebersetzen?: unknown }) {
+    const d: { name?: string; entwicklermodus?: boolean; sprache?: string | null; uebersetzen?: boolean } = {};
     // Sprache (#729): nur eine erlaubte; leer = wie die Installation.
     if (e.sprache !== undefined) {
       if (e.sprache === null || e.sprache === '') d.sprache = null;
@@ -579,6 +579,8 @@ export class Konten {
       d.name = name.slice(0, 120);
     }
     if (e.entwicklermodus !== undefined) d.entwicklermodus = !!e.entwicklermodus;
+    // „Übersetzung anzeigen“ anbieten (#732): jede Person für sich, Vorgabe an.
+    if (e.uebersetzen !== undefined) d.uebersetzen = e.uebersetzen !== false;
     const neu = await this.repo.aendereBenutzer(ich.id, d);
     return d.name !== undefined ? this.spiegle(neu, ich.id) : neu;
   }

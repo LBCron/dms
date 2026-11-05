@@ -15,6 +15,7 @@ import { ausRoh, leeresPasswort, rohAusWerten, standardRoh, werteAusRoh, zuRoh, 
 import { titelOder } from '../seiten';
 import { Mehrfachauswahl } from './Mehrfachauswahl';
 import { Formatiert, FormatiertEingabe } from './Formatiert';
+import { Uebersetzbar } from './Uebersetzung';
 import { Historie } from './Historie';
 import { mitNotizen, NOTIZEN_REGISTER, startRegister, type AnsichtsRegister } from '../../../shared/src/mappenansicht';
 import { Notizen } from './Notizen';
@@ -547,7 +548,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
     inhalt = felder.length
       ? <div className="formular">{felder.map((f) => <FeldEingabe key={f.key} feld={f} roh={roh[f.key]} fehler={fehler?.felder[f.key]?.[0]} setze={(v) => setze(f.key, v)} eigeneId={mappe?.id} bekannt={bekannt} merke={merke}
           typId={typ.id} unpassend={details?.unpassend?.[f.key]} eigene={eigeneWerte(f)}
-          gesperrt={geschuetzt[f.key] ?? (nurLesen && f.typ !== 'passwort' ? '' : undefined)} nurLesen={nurLesen} plzDeutsch={f.format === 'plz' ? deutschePlz(f, typ.felder, roh as Werte) : undefined} passwortSehen={!rechte || rechte.P} zusatz={hinweisAm(f)} />)}</div>
+          gesperrt={geschuetzt[f.key] ?? (nurLesen && f.typ !== 'passwort' ? '' : undefined)} nurLesen={nurLesen} plzDeutsch={f.format === 'plz' ? deutschePlz(f, typ.felder, roh as Werte) : undefined} passwortSehen={!rechte || rechte.P} zusatz={hinweisAm(f)} gespeichert={mappe ? mappe.werte[f.key] : undefined} />)}</div>
       : <p className="leise">{t('ablage.mappeformular.auf-diesem-register-liegen')}</p>;
   } else if (reg.art === 'dokumente') {
     inhalt = mappe && !details ? <p className="leise">{t('ablage.mappeformular.lade')}</p> : (
@@ -688,8 +689,10 @@ function Konfliktfrage({ konflikt, ich, sendet, waehle, speichern, abbrechen }: 
 /** Ein Vorschlag aus „Aus Dokument ausfüllen“ (#391) am Feld. */
 interface FeldVorschlag { wert: Wert; sicherheit: Sicherheit; fundstelle: string; art: 'eingetragen' | 'alternative'; vorher?: Roh }
 
-function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, gesperrt, nurLesen, passwortSehen = true, typId, unpassend, eigene, zusatz, plzDeutsch }: {
+function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, gesperrt, nurLesen, passwortSehen = true, typId, unpassend, eigene, zusatz, plzDeutsch, gespeichert }: {
   feld: Feld; roh: Roh | undefined; fehler?: string; setze: (v: Roh) => void; eigeneId?: string;
+  /** Gespeicherter Wert (#732): Übersetzt wird immer nur er, nie die Eingabe. */
+  gespeichert?: Wert;
   /** Format PLZ (#535): gilt die deutsche Regel? Dann am Handy die Zifferntastatur. */
   plzDeutsch?: boolean;
   /** Unter dem Feld, z. B. ein Vorschlag aus „Aus Dokument ausfüllen“ (#391). */
@@ -706,6 +709,11 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
 }) {
   const d = useDaten();
   const id = `feld-${f.key}`;
+  // Übersetzung anzeigen (#732): unter dem Feld, nur lesbar – bearbeitet wird weiter das Original im Feld.
+  const uebersetzung = eigeneId && typeof gespeichert === 'string' && feldUebersetzbar(f, gespeichert)
+    ? <Uebersetzbar quelle={{ art: 'feld', mappe: eigeneId, feld: f.key }} original={gespeichert} ersetzen={false}
+        darstellen={(x) => (f.typ === 'formatiert' ? <Formatiert text={x} /> : <span className="mehrzeilig">{x}</span>)}>{null}</Uebersetzbar>
+    : null;
   let ctl: ReactNode;
   let breit = false;
   let mitLabelFor = true;
@@ -724,6 +732,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
       <div className={`feld ${f.typ === 'langtext' || f.typ === 'formatiert' ? 'breit' : ''}`}>
         <div className="feldkopf"><span className="label">{feldLabel(f)}</span></div>
         {ctl}
+        {uebersetzung}
         <span className="hilfe">{gesperrt}</span>
         {fehler && <p className="fehlertext">{fehler}</p>}
       </div>
@@ -810,6 +819,7 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
         {f.typ === 'referenz' && <span className="chip">{VERWEISARTEN[f.verweisart ?? 'bezug']}</span>}
       </div>
       {ctl}
+      {uebersetzung}
       {zusatz}
       {f.hilfe && <span className="hilfe">{feldHilfe(f)}</span>}
       {fehler && <p className="fehlertext">{fehler}</p>}
@@ -817,6 +827,16 @@ function FeldEingabe({ feld: f, roh, fehler, setze, eigeneId, bekannt, merke, ge
   );
 }
 
+
+/**
+ * Lohnt eine Übersetzung (#732)? Lange Texte und formatierte Texte immer; einzeilige Textfelder nur ohne Format (keine
+ * E-Mail, IBAN, Telefonnummer) und erst ab vier Wörtern – Namen und Nummern übersetzt niemand.
+ */
+function feldUebersetzbar(f: Feld, wert: string): boolean {
+  if (!wert.trim()) return false;
+  if (f.typ === 'langtext' || f.typ === 'formatiert') return true;
+  return f.typ === 'text' && !f.format && wert.trim().split(/\s+/).length >= 4;
+}
 
 /** Link zu einer Angabe mit Format (#535): mailto:, tel: oder die Internetseite (neuer Tab). */
 function FormatLink({ f, wert, nurSymbol }: { f: Feld; wert: string; nurSymbol?: boolean }) {

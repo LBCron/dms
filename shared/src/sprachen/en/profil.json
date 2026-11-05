@@ -341,5 +341,8 @@
   "sprache.wie-ablage": "Like the library ({sprache})",
   "sprache.maschinell": "Machine-translated – {link}",
   "sprache.mitmachen": "Improvements welcome",
-  "sprache.weg": "Your language “{sprache}” is no longer available in this library. You now see Ablago in the library’s language ({ablage})."
+  "sprache.weg": "Your language “{sprache}” is no longer available in this library. You now see Ablago in the library’s language ({ablage}).",
+  "uebersetzen.anbieten": "Offer “Show translation” on fields, notes and full texts {hilfe}",
+  "uebersetzen.lokal": "Translation uses “{paket}” on your library’s device – the text doesn’t leave it.",
+  "uebersetzen.netz": "Translation uses “{paket}”: the text is sent to {ziele} for this."
 }

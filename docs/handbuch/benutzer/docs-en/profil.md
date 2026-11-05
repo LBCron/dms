@@ -36,6 +36,7 @@ My account has five areas on the left (on a smartphone as buttons at the top):
 - **Name** – this is how you appear under "created by" and "last changed by" – and as the title of your user folder.
 - **Email address** – you sign in with it. To change it you need your current password. If Ablago sends emails, the previous address gets a notice – so if someone else changed the address, you'll notice.
 - <span id="sprache"></span>**Language** – in which language Ablago talks to you: interface, messages and emails to you. **Like the library** follows the language the administrator has set for everyone. You can choose from the languages they have allowed. The page reloads after the change. For machine-translated languages there is a notice with a link to how you can contribute improvements. Dates and numbers follow the language.
+- <span id="ubersetzung-anzeigen"></span>**Offer "Show translation"** – only exists if your library has a translation package. When ticked, you see the button [Show translation](mappen.md#inhalte-ubersetzen) on long texts, notes and full texts; when unticked, you don't. Below it you can read what translates and whether the text leaves your library's device for this.
 
 #### My data { #meine-daten }
 

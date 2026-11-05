@@ -898,5 +898,8 @@
   "sprachpaket.beschriftung-text": "{wo}: ein Text mit höchstens {max} Zeichen, ohne spitze Klammern.",
   "sprachpaket.beschriftung-unbekannt": "{wo} gibt es in Beschriftungen nicht.",
   "sprachpaket.beschriftung-objekt": "{wo}: erwartet ein Objekt.",
-  "sprachpaket.beschriftung-schluessel": "{wo}: ungültige Kennung."
+  "sprachpaket.beschriftung-schluessel": "{wo}: ungültige Kennung.",
+  "uebersetzung.kennzeichnung": "Maschinell übersetzt – nicht verbindlich",
+  "uebersetzung.kennzeichnung-aus": "Maschinell übersetzt (Original auf {sprache}) – nicht verbindlich",
+  "pakete.inhalte-uebersetzen": "Inhalte übersetzen – auf Knopfdruck bekommt das Paket einen einzelnen Text (Feld, Notiz oder Volltext), den die Person lesen darf, und gibt die Übersetzung zurück; ändern oder speichern kann es nichts"
 }

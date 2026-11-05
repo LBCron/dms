@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent, type Mouse
 import { HERKUNFT, MAX_DATEIGROESSE, OCR_STAENDE, type Mappentyp, type Mappe, type Dokument, type DokumentVersion, type Herkunft, type OcrStand, type Register } from '../../../shared/src/model';
 import { spracheAusInfo, sprachname } from '../../../shared/src/textsprache';
 import { herkunftText } from '../volltext';
+import { Uebersetzbar } from './Uebersetzung';
 import { volltextHerkunft } from '../../../shared/src/volltext';
 import { fassungAusInfo } from '../../../shared/src/dateiumwandlung';
 import { t, tn } from '../sprache';
@@ -363,7 +364,9 @@ export function Dokumente({ register, dokumente: roh, neue, entfernt, hinzufuege
                         {!weg && <OcrAnzeige id={x.id} s={standVon(x)} sprache={x.sprache} weitere={x.weitereSprachen} erneut={() => void erneut(x.id)} neu={nurLesen ? undefined : () => void erneut(x.id)} text={() => void zeigeText(x.id)} textOffen={text?.id === x.id} />}
                         {!weg && <ArchivAnzeige s={x.archivfassung} />}
                         {!weg && x.pdfSchutz && <PdfSchutzAnzeige x={x} betreff={mappeTitel} fertig={() => void neuLaden?.()} />}
-                        {!weg && text?.id === x.id && <pre className="volltext">{text.text ?? t('ablage.dokumente.kein-volltext-vorhanden')}</pre>}
+                        {!weg && text?.id === x.id && (text.text
+                          ? <Uebersetzbar quelle={{ art: 'volltext', dokument: x.id }} original={text.text} darstellen={(v) => <pre className="volltext">{v}</pre>}><pre className="volltext">{text.text}</pre></Uebersetzbar>
+                          : <pre className="volltext">{t('ablage.dokumente.kein-volltext-vorhanden')}</pre>)}
                       </div>
                       {handy ? (
                         <div className="zeilenaktionen dk-handy">

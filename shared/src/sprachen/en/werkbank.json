@@ -3017,5 +3017,19 @@
   "pakete.sprache.vorschau": "Language package for {sprache}: texts only, no code. Translation {prozent} % complete ({vorhanden} of {gesamt} texts), made for Ablago {ablago}. Anything missing appears in English.",
   "pakete.sprache.beschriftungen": "Brings labels for these packages: {pakete}. They go on their folder types and views where nothing is there in this language yet.",
   "pakete.sprache.erlauben": "After installing, you allow the language under Workbench → Languages.",
-  "pakete.sprache.entfernen": "Remove anyway"
+  "pakete.sprache.entfernen": "Remove anyway",
+  "uebersetzen.titel": "Translate content",
+  "uebersetzen.einleitung": "With a translation package, everyone can read letters, notes and fields in another language in their own at the press of a button. Only the original is ever stored.",
+  "uebersetzen.kein-paket": "This needs a package with the permission “Translate content”, for example from the package catalogue. Without a package there is no button.",
+  "uebersetzen.an": "Offer “Show translation” to everyone",
+  "uebersetzen.paket": "Package",
+  "uebersetzen.automatisch": "Automatic – a package that translates on the device",
+  "uebersetzen.mit-netz": "{name} (sends texts to {ziele})",
+  "uebersetzen.wirksam": "Translation currently uses “{name}”.",
+  "uebersetzen.keins-wirksam": "No package is translating right now: it isn’t running yet, or it needs the network and hasn’t been chosen explicitly.",
+  "uebersetzen.aus": "Switched off – nobody sees the button.",
+  "uebersetzen.gespeichert": "Saved.",
+  "uebersetzen.abfluss.titel": "Send texts to a service?",
+  "uebersetzen.abfluss.text": "“{paket}” doesn’t translate on the device: every text someone has translated is sent to {ziele}. Whoever translates sees this on the result.",
+  "uebersetzen.abfluss.ja": "Confirm and choose"
 }

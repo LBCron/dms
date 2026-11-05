@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { setzeErlaubteSprachen, sprachname } from '../../../shared/src/beschriftung';
 import { AUSGANGSSPRACHE, EINGEBAUTE_SPRACHEN, sprache } from '../../../shared/src/sprache';
 import { Link } from '../ort';
-import { api, type SprachenStand } from '../api';
+import { api, ApiFehler, type SprachenStand, type UebersetzenStand } from '../api';
+import { rueckfrage } from '../rueckfrage';
 import { Hilfe } from '../Hilfe';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t } from '../sprache';
@@ -69,6 +70,7 @@ export function SprachenPanel({ z }: { z: SprachenZustand }) {
           </select></label>
         <Speicherleiste ent={ent} gegenstand={t('werkbank.bereich.sprachen.name')} sendet={sendet} />
       </form>
+      <InhalteUebersetzen />
       <section className="blatt">
         <h2 className="h3">{t('werkbank.sprachen.weitere')}</h2>
         {/* Installierte Sprachpakete (#731): Abdeckung gegen diese Version, für welche Version gemacht, maschinell/geprüft. */}
@@ -94,5 +96,51 @@ export function SprachenPanel({ z }: { z: SprachenZustand }) {
         <p className="leise klein">{t('werkbank.sprachen.rueckfall')}</p>
       </section>
     </div>
+  );
+}
+
+/**
+ * Inhalte übersetzen (#732): an oder aus für alle und welches Paket übersetzt. Ohne Paket mit dem Recht
+ * „Inhalte übersetzen“ nur ein Hinweis. Ein Paket mit Netz gilt erst nach der ausdrücklichen Bestätigung, dass Texte an
+ * seinen Dienst gehen (#701); ohne Wahl nimmt Ablago nur ein Paket, das auf dem Gerät übersetzt.
+ */
+function InhalteUebersetzen() {
+  const [s, setS] = useState<UebersetzenStand | null>(null);
+  const [meldung, setMeldung] = useState<{ art: 'gut' | 'schlecht'; text: string }>();
+  const [sendet, setSendet] = useState(false);
+  useEffect(() => { void api.uebersetzenStand().then(setS, (e) => setMeldung({ art: 'schlecht', text: (e as Error).message })); }, []);
+  async function setze(e: Partial<UebersetzenStand['einstellung']>) {
+    setSendet(true); setMeldung(undefined);
+    try { setS(await api.uebersetzenSetzen(e)); setMeldung({ art: 'gut', text: t('werkbank.uebersetzen.gespeichert') }); }
+    catch (x) {
+      const d = x instanceof ApiFehler && x.status === 409 ? x.details as { abfluss?: boolean; paket?: string; ziele?: string[] } | undefined : undefined;
+      if (d?.abfluss && await rueckfrage({ titel: t('werkbank.uebersetzen.abfluss.titel'), text: t('werkbank.uebersetzen.abfluss.text', { paket: d.paket ?? '', ziele: (d.ziele ?? []).join(', ') }), ja: t('werkbank.uebersetzen.abfluss.ja') })) {
+        await setze({ ...e, abfluss: true });
+        return;
+      }
+      if (!d?.abfluss) setMeldung({ art: 'schlecht', text: (x as Error).message });
+    } finally { setSendet(false); }
+  }
+  return (
+    <section className="blatt" aria-labelledby="uebersetzen-titel">
+      <h2 className="h3" id="uebersetzen-titel">{t('werkbank.uebersetzen.titel')} <Hilfe ort="werkbank.uebersetzen" /></h2>
+      <p className="leise">{t('werkbank.uebersetzen.einleitung')}</p>
+      {meldung && <div className={`hinweis ${meldung.art}`} role="status"><p>{meldung.text}</p></div>}
+      {s && !s.pakete.length && <p className="leise">{t('werkbank.uebersetzen.kein-paket')}</p>}
+      {s && s.pakete.length > 0 && <>
+        <label className="haken">
+          <input type="checkbox" id="uebersetzen-an" checked={s.einstellung.an} disabled={sendet} onChange={(x) => void setze({ an: x.target.checked })} />
+          <span>{t('werkbank.uebersetzen.an')}</span>
+        </label>
+        <label className="eigenschaft"><span>{t('werkbank.uebersetzen.paket')}</span>
+          <select id="uebersetzen-paket" value={s.einstellung.paket ?? ''} disabled={sendet || !s.einstellung.an} onChange={(x) => void setze({ paket: x.target.value || null, abfluss: false })}>
+            <option value="">{t('werkbank.uebersetzen.automatisch')}</option>
+            {s.pakete.map((p) => <option key={p.id} value={p.id}>{p.netz ? t('werkbank.uebersetzen.mit-netz', { name: p.name, ziele: p.netz.join(', ') }) : p.name}</option>)}
+          </select></label>
+        <p className="leise klein">{s.wirksam
+          ? t('werkbank.uebersetzen.wirksam', { name: s.wirksam.name })
+          : s.einstellung.an ? t('werkbank.uebersetzen.keins-wirksam') : t('werkbank.uebersetzen.aus')}</p>
+      </>}
+    </section>
   );
 }

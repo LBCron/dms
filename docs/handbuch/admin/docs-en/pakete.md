@@ -239,6 +239,10 @@ If an update wants other addresses, Ablago asks again.
 
 **"Suggest fields from documents ("Fill in from document") – only from the text that Ablago passes along (dms:erkennen)"** – instead of the built-in recognition, the package can suggest the fields for the button **Fill in from document** if you choose it (see [Recognition by a package](#erkennung-durch-ein-paket)). It only gets the document's text and the description of the fields – no permissions on folders or documents. Ablago checks what it supplies and only shows it as a suggestion.
 
+#### Translate content { #recht-uebersetzen }
+
+**"Translate content – at the press of a button the package gets a single text (field, note or full text) the person may read and returns the translation; it can’t change or store anything (dms:uebersetzen)"** – since version 0.204. The package translates when someone presses **Show translation** (see [Languages → Translate content](sprachen.md#inhalte-ubersetzen)). It only gets this one text and the languages – no permissions on folders or documents. If the package may also access the network, Ablago only uses it if you choose it explicitly and confirm the data transfer.
+
 #### Taking over text recognition { #recht-texterkennung }
 
 **"Take over text recognition for scans and images – Ablago reports documents without text and shows "waiting for text recognition" until the package writes the full text (dms:texterkennung)"** – the package is then Ablago's [text recognition](texterkennung.md): the core itself only reads the text layer of PDFs and gives scans and images to the package. Meanwhile the document says "waiting for text recognition (package …)". The permission alone gives no access to documents; the package may only write the full text with [Read documents and write full text](#recht-dokumente).

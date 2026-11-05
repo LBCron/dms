@@ -123,6 +123,16 @@ For each field choose **Take mine** or **Keep Jonas's value** and click **Save l
 
 This applies to all fields, including links and multiple selections (there the whole field counts) and the fields the title is made from. There is no lock ("being edited"); Ablago only asks when two changes really concern the same field. Automatic processes such as automatically assigning post or packages don't reset fields you have changed in the meantime either.
 
+## Translate content { #inhalte-ubersetzen }
+
+If a letter, a note or a field is in another language, press **Show translation** below it – the button appears on long text fields (on single-line ones only from a few words on), on notes and on a document's full text as soon as your library has a translation package. It translates into your language from [My account](profil.md#sprache), only when you press the button.
+
+- **Marked:** Above the translation it says **Machine-translated – not binding** (with the original's language, if known). For long texts you see the progress section by section.
+- **Original:** If you move the mouse over the translation or tap it on your phone, the stored original text appears. With the keyboard you reach it via **Show original**. **Back to the original** hides the translation.
+- **For reading only:** Only the original is ever stored and edited. The translation can't be taken over as a value; the field still contains the original.
+- **Where the text goes:** If the package translates on your library's device, the text doesn't leave it. If your administrator uses a service on the network, the translation says where the text went.
+- Only what you may read is translated. If you don't need the button, switch it off under [My account](profil.md#ubersetzung-anzeigen).
+
 ## Links { #verknupfungen }
 
 The tab **Links** shows all folders that link to this folder. For the contract partner you thus see their contracts and invoices, for the contract its invoices – without having to enter them there.

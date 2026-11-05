@@ -24,6 +24,19 @@ If you take a language off the list, people who had chosen it see Ablago in the 
 
 Labels you give yourself – folder types, fields, tabs, views – you translate per language on the respective element (tab **Languages**).
 
+## Translate content { #inhalte-ubersetzen }
+
+With a package that has the permission [Translate content](pakete.md#recht-uebersetzen), everyone can read letters, notes and fields in another language in their own language **at the press of a button** – with the button **Show translation** on long text fields, on notes and on a document's full text. Without such a package there is no button. Nothing is ever translated in the background, only when someone presses the button; the target language is the person's language.
+
+You find the section **Translate content** on this page:
+
+- **Offer "Show translation" to everyone** – on as soon as a package is installed. If you untick it, nobody sees the button. Everyone can also switch it off for themselves under [My account → Language](https://help.ablago.app/benutzer/aktuell/en/profil/#ubersetzung-anzeigen).
+- **Package** – *Automatic* takes a package that translates **on the device** (if there are several, the first by id). Ablago never takes a package with network access on its own: you choose it explicitly, and Ablago asks **"Send texts to a service?"**. Only with **Confirm and choose** does the choice apply; from then on every translation says where the text went.
+
+**What the package gets:** only the one text the person has translated – in sections of at most 4,000 characters – the target language and, if known, the source language (for full text from text recognition). No folder, no ids, no permissions on folders or documents. Only what the person may read is translated; password fields and fields with a format (email, IBAN, phone …) never.
+
+**What is stored:** only ever the original. The translation can't be taken over as a value. Ablago keeps it for 30 days in a cache (checksum of the text section, language, package and version) – not on the folder and not in the [backup](sicherung.md). If the original changes, the old translation no longer applies; when a note or folder is changed or deleted it is gone at once. Each person's choice is stored on their account, the setting for everyone in the setting `uebersetzen`.
+
 ## Good to know {#gut-zu-wissen}
 
 - If a text is missing in a language, it appears in English, otherwise in German – a place never stays empty.

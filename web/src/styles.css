@@ -782,6 +782,14 @@ input.kurz { width: 7em; }
 .zeile-zwischen { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .notizliste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .notizliste li { border-left: 3px solid var(--warn); background: var(--warn-zart); padding: 8px 12px; border-radius: 0 6px 6px 0; display: flex; flex-direction: column; gap: 4px; }
+/* Inhalte übersetzen (#732): Knopf unter dem Text, Übersetzung deutlich gekennzeichnet, Original beim Darüberfahren oder Antippen. */
+.uebersetzen-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 2px; }
+.uebersetzen-knopf .sym { margin-right: 2px; }
+.uebersetzt { position: relative; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 8px 10px; border: 1px dashed var(--linie-stark); border-left: 3px solid var(--akzent); border-radius: 0 6px 6px 0; background: var(--akzent-zart); min-width: 0; }
+.uebersetzt-kennzeichnung { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: calc(12px * var(--skala, 1)); font-weight: 600; color: var(--akzent); }
+.uebersetzt-text { cursor: help; min-width: 0; overflow-wrap: anywhere; }
+.uebersetzt-original { border-top: 1px solid var(--linie); padding-top: 6px; min-width: 0; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+.uebersetzt-original p { margin: 0 0 4px; }
 .notizkopf { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; }
 .neuenotiz { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--linie); padding-top: 10px; }
 /* Aufgaben (#54) */

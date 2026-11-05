@@ -361,7 +361,35 @@ function SpracheWaehlen() {
       {sprachen.maschinell.includes(gilt) && (
         <p className="leise klein">{tn('profil.sprache.maschinell', { link: <a href={MITMACHEN_URL} target="_blank" rel="noreferrer">{t('profil.sprache.mitmachen')}</a> })}</p>
       )}
+      <UebersetzenWahl />
       {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
     </div>
+  );
+}
+
+/**
+ * Übersetzung anzeigen (#732): Jede Person kann den Knopf an Feldern, Notizen und Volltexten für sich abschalten.
+ * Den Schalter gibt es nur, wenn der Administrator das Übersetzen anbietet und ein Paket dafür läuft.
+ */
+function UebersetzenWahl() {
+  const { uebersetzen, aktualisieren } = useKonto();
+  const [sendet, setSendet] = useState(false);
+  const [fehler, setFehler] = useState<string>();
+  if (!uebersetzen) return null;
+  async function schalte(an: boolean) {
+    setSendet(true); setFehler(undefined);
+    try { await api.eigenesUebersetzen(an); await aktualisieren(); } catch (e) { setFehler((e as Error).message); } finally { setSendet(false); }
+  }
+  return (
+    <>
+      <label className="haken">
+        <input type="checkbox" id="profil-uebersetzen" checked={!uebersetzen.aus} disabled={sendet} onChange={(e) => void schalte(e.target.checked)} />
+        <span>{tn('profil.uebersetzen.anbieten', { hilfe: <Hilfe ort="profil.uebersetzen" /> })}</span>
+      </label>
+      <p className="leise klein">{uebersetzen.netz
+        ? t('profil.uebersetzen.netz', { paket: uebersetzen.paket.name, ziele: uebersetzen.netz.join(', ') })
+        : t('profil.uebersetzen.lokal', { paket: uebersetzen.paket.name })}</p>
+      {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
+    </>
   );
 }

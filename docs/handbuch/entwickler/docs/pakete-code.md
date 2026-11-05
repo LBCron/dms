@@ -18,6 +18,7 @@ Neben Ereignissen und der [API v1](#nutzliche-endpunkte-der-api-v1) bietet der K
 | `dms:volltext` | 0.145.0 | Volltext für Dateien liefern, die der Kern nicht liest (Word, Excel, E-Mails …) – nur mit „Dokumente lesen“ | **[Volltext liefern](#volltext-liefern)** – Ereignis, Schreiben, Grenzen |
 | `dms:archivfassung` | 0.149.0 | Zu Dokumenten mit fertigem Volltext ein durchsuchbares PDF/A ablegen – mit Wortpositionen, nur mit „Dokumente lesen“ | **[Archivfassung ablegen](#archivfassung)** – Ereignis, Wortpositionen, Annahme, Grenzen |
 | `dms:sicherung-lesen` | 0.142.0 | Jede Sicherung verschlüsselt lesen und außer Haus kopieren, Stand in der Antwort melden (nur Leseschlüssel) | **[Sicherung außer Haus](#sicherung-ausser-haus)** – Ereignis, Lesen in Stücken, Rückmeldung |
+| `dms:uebersetzen` | 0.204.0 | Einen Text (Feld, Notiz, Volltext) auf Knopfdruck übersetzen – der Kern liest ihn mit den Rechten der Person | **[Inhalte übersetzen](#inhalte-ubersetzen)** – Aufruf, Abschnitte, Antwort, Zwischenspeicher |
 
 ## So läuft Code in Ablago { #so-lauft-code-im-dms }
 
@@ -55,7 +56,7 @@ code:
   ```
 
 - **Dokumente:** `lesen` erlaubt Dokumente zu lesen (Datei, Volltext, Seiten als Bild), `schreiben` zusätzlich hochzuladen, zu ersetzen und den Volltext zu setzen. Dokumente gibt es nur in Mappen, die das Paket lesen darf.
-- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) – und `dms:volltext` (seit 0.145.0, braucht `dokumente: lesen`, `code.volltext` und das Ereignis `datei.volltext`) – siehe [Volltext liefern](#volltext-liefern).
+- **Schnittstellen des Kerns (`schnittstellen`):** zusätzliche Rechte für Schnittstellen, bei denen der Kern nur speichert, vergleicht oder weitergibt (Übersicht: [Schnittstellen des Kerns](#schnittstellen)). Es gibt `dms:vektoren` (seit 0.120.0, braucht `dokumente: lesen`) – siehe [Vektoren und Ähnlichkeit](#vektoren-und-ahnlichkeit) –, `dms:antworten` (seit 0.124.0) – siehe [Fragen beantworten](#fragen-beantworten) – `dms:erkennen` (seit 0.125.0) – siehe [Erkennung: Feldbeschreibung und Antwort](#erkennung-feldbeschreibung-und-antwort) –, `dms:texterkennung` (seit 0.133.0, braucht `dokumente: schreiben`) – siehe [Texterkennung übernehmen](#texterkennung) – `dms:umwandeln` (seit 0.137.0, braucht `dokumente: lesen`, `code.umwandeln` und das Ereignis `datei.umwandeln`) – siehe [Dateien umwandeln](#dateien-umwandeln) – `dms:sicherung-lesen` (seit 0.142.0, braucht das Ereignis `sicherung.fertig`) – siehe [Sicherung außer Haus](#sicherung-ausser-haus) – `dms:volltext` (seit 0.145.0, braucht `dokumente: lesen`, `code.volltext` und das Ereignis `datei.volltext`) – siehe [Volltext liefern](#volltext-liefern) – und `dms:uebersetzen` (seit 0.204.0, braucht sonst nichts) – siehe [Inhalte übersetzen](#inhalte-ubersetzen).
 - **Dateitypen zum Umwandeln (`code.umwandeln`, seit 0.137.0):** nur mit `dms:umwandeln` – die MIME-Typen, für die das Paket zuständig ist, z. B. `[image/tiff, image/webp]`. PDF, JPEG und PNG liest der Kern selbst; die sind hier nicht erlaubt. Höchstens 20.
 - **Dateitypen für den Volltext (`code.volltext`, seit 0.145.0):** nur mit `dms:volltext` – die MIME-Typen, für die das Paket den Volltext liefert, z. B. `[message/rfc822, text/plain]`. PDF, JPEG und PNG sind nicht erlaubt. Höchstens 40.
 - **Mappentypen für Ereignisse (`code.mappentypen`, seit 0.153.0):** Pflicht, sobald das Paket eines der Mappen-Ereignisse `mappe.angelegt`, `mappe.geaendert`, `mappe.geloescht`, `mappe.wiederhergestellt` oder `frist.erreicht` abonniert – und nur dann erlaubt. Darin stehen die Kennungen **eigener** Mappentypen (ohne Präfix, z. B. `[vertrag]`) und – seit 0.166.0 – Verweise auf **fremde** Mappentypen wie in `code.rechte` (`basis:organisation`, `dms:post`) oder `*` für alle, die das Paket lesen darf (nur mit `code.rechte.lesen: ["*"]`). Das Paket muss jeden genannten Typ lesen dürfen. Ein Paket damit gibt `dms: ">=0.153.0"` an, mit fremden Typen oder `*` `dms: ">=0.166.0"`.
@@ -753,6 +754,58 @@ Antworten der Endpunkte: 403, wenn das Paket das Recht nicht hat oder die Sicher
 ### Löschschutz { #sicherung-loeschschutz }
 
 Wer Ablago übernimmt, kennt die gespeicherten Zugangsdaten. Ein Paket soll deshalb mit **so wenig Rechten wie möglich** auskommen: nur hochladen (S3: `PutObject` ohne `DeleteObject`, dazu Object Lock am Bucket; Nextcloud: Dateiablage), am Ziel nichts auflisten und nichts löschen. „Alte Sicherungen extern löschen“ gibt es höchstens als Einstellung mit Vorgabe **aus** und dem Hinweis, dass dafür Löschrechte nötig sind. Mehr im [Administratorhandbuch](https://help.ablago.app/admin/aktuell/sicherung-ausser-haus/#loschschutz).
+
+## Inhalte übersetzen { #inhalte-ubersetzen }
+
+Seit 0.204.0 (#732) übersetzt ein Paket mit dem Recht `dms:uebersetzen` Texte, wenn eine Person **Übersetzung anzeigen** drückt – an langen Textfeldern, Notizen und am Volltext eines Dokuments. Nie im Hintergrund. Das Paket braucht keine weiteren Rechte, keine Ereignisse und keinen Netzzugriff:
+
+```yaml
+dms: ">=0.204.0"
+code:
+  sprache: c
+  quelle: code/
+  rechte:
+    schnittstellen: ["dms:uebersetzen"]
+```
+
+Das ist die ganze Änderung am Paketformat: ein neuer Wert für `code.rechte.schnittstellen`. Es gibt keinen eigenen Abschnitt im Manifest (welche Sprachpaare ein Paket kann, sagt es in der Antwort; Modelle bringt es als eigene Dateien mit, gelesen mit `dms.datei`).
+
+### Ablauf { #uebersetzen-ablauf }
+
+1. Die Oberfläche schickt `POST /api/uebersetzung` mit `{ "quelle": { "art": "feld", "mappe": "<id>", "feld": "inhalt" }, "teil": 0 }` (oder `{ "art": "notiz", "notiz": "<id>" }`, `{ "art": "volltext", "dokument": "<id>" }`) – **nur Kennungen, nie Text**.
+2. Der Kern prüft das Leserecht der Person, liest den Text selbst und teilt ihn in Abschnitte von höchstens **4 000 Zeichen** (bevorzugt an Seitenvorschub, Absatz, Zeilenende, Satzende). Mehr als 400 000 Zeichen übersetzt er nicht (`gekuerzt: true`).
+3. Je Abschnitt ruft er `dms_aktion` des Pakets auf – Zeitlimit **60 s**, wie jede Aktion im Läufer.
+4. Ist der Text schon in der Sprache der Person (eingebaute Spracherkennung, eindeutig und nicht gemischt), ruft der Kern das Paket gar nicht auf.
+
+**Aufruf:**
+
+```json
+{ "aktion": "dms:uebersetzen",
+  "text": "Sehr geehrte Frau Beispiel, …",
+  "nach": "en", "von": "de",
+  "art": "feld", "format": "text",
+  "teil": 0, "teile": 3,
+  "paket": { … }, "einstellungen": { … } }
+```
+
+- `nach` ist die Sprache der Person (wie in der Oberfläche: `de`, `en`, `tr` …). `von` ist die Ausgangssprache, wenn der Kern sie kennt (beim Volltext aus der Texterkennung, sonst aus der eingebauten Erkennung), sonst `null` – dann erkennt das Paket sie selbst.
+- `format` ist `markdown` bei Notizen und formatierten Feldern (Markdown-Zeichen bitte stehen lassen), sonst `text`.
+- Mehr bekommt das Paket nicht: keine Mappe, keine Kennungen, keinen Feldnamen.
+
+**Antwort:** `ergebnis` mit `{ "text": "Dear Mrs Example, …", "von": "de" }` (`von` optional, erkannte Ausgangssprache). Kann das Paket nicht übersetzen, antwortet es mit `{ "fehler": "Für Türkisch → Deutsch fehlt das Modell." }`; die Person sieht dann „*Paket* konnte den Text nicht übersetzen: …“. Ein Fehlercode, keine Antwort oder kein JSON zählt ebenso als Fehler. Die Werkbank zeigt beim Paket nur „Text übersetzt“ und die Länge, nie den Inhalt.
+
+### Zwischenspeicher und Original { #uebersetzen-speicher }
+
+- Gespeichert wird **immer nur das Original**; für die Übersetzung gibt es keinen Schreibweg.
+- Jede Übersetzung liegt 30 Tage im Kurzzustand (Art `uebersetzung`, für alle Prozesse gleich, nicht in der Sicherung) unter Mappe, Quelle, **SHA-256 des Abschnitts**, Zielsprache, Paket und **Version**. Ändert sich das Original, passt der Prüfwert nicht mehr; eine neue Version des Pakets übersetzt neu. Veraltete Einträge löscht der Kern beim nächsten Abruf, beim Ändern oder Löschen einer Notiz, über das Ereignis „Mappe geändert“ bzw. „Volltext fertig“ und beim Löschen der Mappe.
+
+### Netz und Hinweis { #uebersetzen-netz }
+
+Ein Paket, das auf dem Gerät übersetzt (z. B. mit einem WebAssembly-Modell), braucht kein `code.netz`. Darf ein Paket ins Netz (feste Adresse in `code.netz` oder eine Dienst-Adresse als Einstellung, siehe [Im Manifest](#im-manifest)), nimmt Ablago es **nie automatisch**: Der Administrator wählt es unter **Werkbank → Sprachen → Inhalte übersetzen** und bestätigt den Datenabfluss. Dann steht an jeder Übersetzung und in Mein Konto, wohin der Text geht.
+
+### Ausprobieren { #uebersetzen-ausprobieren }
+
+Ein kleines Test-Paket steht in `server/test/uebersetzung.test.ts`: ein WebAssembly-Modul nach ABI 1, das auf `dms:uebersetzen` mit einer festen Übersetzung antwortet, samt Manifest. Der Test lädt es in den echten Paket-Läufer.
 
 ## Ausprobieren
 

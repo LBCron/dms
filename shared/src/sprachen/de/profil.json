@@ -341,5 +341,8 @@
   "sprache.wie-ablage": "Wie die Ablage ({sprache})",
   "sprache.maschinell": "Maschinell übersetzt – {link}",
   "sprache.mitmachen": "Verbesserungen willkommen",
-  "sprache.weg": "Deine Sprache „{sprache}“ gibt es in dieser Ablage nicht mehr. Du siehst Ablago jetzt in der Sprache der Ablage ({ablage})."
+  "sprache.weg": "Deine Sprache „{sprache}“ gibt es in dieser Ablage nicht mehr. Du siehst Ablago jetzt in der Sprache der Ablage ({ablage}).",
+  "uebersetzen.anbieten": "„Übersetzung anzeigen“ an Feldern, Notizen und Volltexten anbieten {hilfe}",
+  "uebersetzen.lokal": "Übersetzt wird mit „{paket}“ auf dem Gerät deiner Ablage – der Text verlässt sie nicht.",
+  "uebersetzen.netz": "Übersetzt wird mit „{paket}“: Der Text geht dafür an {ziele}."
 }
