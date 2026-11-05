@@ -1,5 +1,6 @@
 /** Zahlen der Ansichten zwischenspeichern (#512): Stand des Haushalts, je Benutzer und Rechte, Ablauf. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { ALLES, type Regelwerk } from '../../shared/src/rechte';
 import { speicherDateien } from '../src/dateispeicher';
@@ -87,7 +88,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max', rolle: 'mitglied' }, admin.id)).benutzer;
+  const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const rolleTyp = (await d.listeTypen()).find((t) => t.system === 'rolle')!;
   const fibu = (await d.legeMappeAn({ typId: rolleTyp.id, werte: { name: 'FiBu' } }, admin.id)).id;
@@ -103,7 +104,7 @@ async function aufbau() {
   const alle = await d.legeSichtAn({ name: 'Alle Rechnungen', typen: [rechnung.id], bedingungen: [] });
   const privat = await d.legeSichtAn({ name: 'Privat', typen: [rechnung.id], bedingungen: [{ art: 'feld', feld: 'privat', op: 'ja' }] });
   const faellig = await d.legeSichtAn({ name: 'Fällig bis heute', typen: [rechnung.id], bedingungen: [{ art: 'feld', feld: 'faellig', op: 'kleiner', wert: { art: 'heute', versatz: 1, einheit: 'tage' } }] });
-  const ich = async (id: string) => { const b = (await konten.listeBenutzer()).find((x) => x.id === id)!; return { id: b.id, rolle: b.rolle }; };
+  const ich = async (id: string) => { const b = wieImModus((await konten.listeBenutzer()).find((x) => x.id === id)!); return { id: b.id, rolle: b.rolle }; };
   /** Zahlen wie der Server sie liefert, und ob der Zwischenspeicher traf. */
   const zahlen = async (id: string) => {
     const k: Kontext = { anfrage: 't', db: { anzahl: 0, ms: 0 } };

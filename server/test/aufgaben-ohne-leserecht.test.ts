@@ -8,6 +8,7 @@
  * Der Kern läuft im Arbeitsspeicher und – mit TEST_DATABASE_URL – gegen PostgreSQL.
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import type { KatalogEreignis } from '../../shared/src/ereignisse';
@@ -51,7 +52,7 @@ async function aufbau(repos?: { repo: Repo; konto: KontoRepo }) {
   const konten = new Konten(repos?.konto ?? speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: markus } = await konten.einrichten({ email: 'markus@example.org', name: 'Markus', passwort: 'ein-langes-passwort' });
-  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name, rolle: 'mitglied' }, markus.id)).benutzer;
+  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name }, markus.id)).benutzer;
   const lena = await neu('Lena'); const jonas = await neu('Jonas'); const petra = await neu('Petra');
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   await konten.systemkonto('automatisierung');
@@ -75,7 +76,7 @@ async function aufbau(repos?: { repo: Repo; konto: KontoRepo }) {
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
   const route = (mt: string, p: string) => tabelle.find((r) => r.methode === mt && r.pfad === p)!;
-  const rufe = async (b: { id: string }, mt: string, p: string, x: Partial<Anfrage> = {}) => route(mt, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, mt: string, p: string, x: Partial<Anfrage> = {}) => route(mt, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   const mitglied = (await d.listeRollen()).find((r) => r.system && r.name === 'Mitglied')!.id;
   return { d, konten, markus, lena, jonas, petra, kontakt, vertrag, stadtwerke, m, motor, ereignis, ich, rufe, lesen, mitglied };
 }
@@ -95,7 +96,8 @@ describe('Platzhalter mit den Rechten des Empfängers (#795)', () => {
     const p = await fuer(petra.id);
     assert.equal(p.text, 'Vertrag (nicht sichtbar) mit (nicht sichtbar) ((nicht sichtbar), (nicht sichtbar))');
     assert.equal(p.datum, verschiebe(heuteIn(), 3));
-    assert.match(l.schritte[2].text!, /1 davon darf die Mappe nicht sehen/);
+    // Markus verwaltet, ist im Alltag aber Mitglied wie alle (#818): auch er darf den Vertrag nicht lesen.
+    assert.match(l.schritte[2].text!, /2 davon dürfen die Mappe nicht sehen/);
   });
 
   it('Testlauf im Editor nennt, wer etwas nicht sehen darf; der Trockenlauf legt nichts an', async () => {

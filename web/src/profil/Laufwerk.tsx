@@ -40,7 +40,6 @@ function KopierFeld({ wert, beschriftung, id }: { wert: string; beschriftung: st
 export function LaufwerkBereich() {
   const { ich } = useKonto();
   const handbuch = useHandbuch();
-  const admin = ich.rolle === 'admin';
   const [s, setS] = useState<{ adresse: string; https: boolean; benutzername: string } | null>(null);
   const [fehler, setFehler] = useState<string>();
   const [neu, setNeu] = useState<(ApiSchluessel & { schluessel: string }) | null>(null);
@@ -64,15 +63,12 @@ export function LaufwerkBereich() {
       </section>
       <section className="blatt" aria-labelledby="laufwerk-schluessel">
         <h2 className="h3" id="laufwerk-schluessel">{t('profil.laufwerk.schluessel')}</h2>
-        {admin
-          ? <div className="hinweis warn"><p>{t('profil.laufwerk.admin')} <Link to="/werkbank/benutzer/neu" className="verweis">{t('profil.laufwerk.admin.link')}</Link></p></div>
-          : <>
-              <p className="leise">{t('profil.laufwerk.schluessel.text')}</p>
-              {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
-              {neu ? <NeuerSchluessel s={neu} schliessen={() => setNeu(null)} />
-                : <div className="knoepfe"><button type="button" className="knopf primaer" disabled={sendet} onClick={() => void schluessel()}>{t('profil.laufwerk.schluessel.anlegen')}</button>
-                    <Link to="/profil/sicherheit" className="knopf">{t('profil.laufwerk.schluessel.alle')}</Link></div>}
-            </>}
+        {/* #818: Auch wer verwaltet, nutzt das Laufwerk – der Schlüssel bekommt nie Verwaltungsrechte. */}
+        <p className="leise">{t('profil.laufwerk.schluessel.text')}</p>
+        {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
+        {neu ? <NeuerSchluessel s={neu} schliessen={() => setNeu(null)} />
+          : <div className="knoepfe"><button type="button" className="knopf primaer" disabled={sendet} onClick={() => void schluessel()}>{t('profil.laufwerk.schluessel.anlegen')}</button>
+              <Link to="/profil/sicherheit" className="knopf">{t('profil.laufwerk.schluessel.alle')}</Link></div>}
       </section>
       <section className="blatt" aria-labelledby="laufwerk-geraete">
         <h2 className="h3" id="laufwerk-geraete">{t('profil.laufwerk.geraete')}</h2>

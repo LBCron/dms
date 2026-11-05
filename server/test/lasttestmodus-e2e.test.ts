@@ -136,6 +136,8 @@ describe('Lasttest-Modus Ende zu Ende (#612)', { skip: !URL_DB && 'TEST_DATABASE
     const an = await post(d.basis, '/api/konto/anmelden', { email: 'katrin@example.org', passwort: 'echtes-passwort-123' });
     assert.equal(an.status, 200);
     const cookie = an.headers.get('set-cookie')!.split(';')[0];
+    // Werkbank nur im Verwaltungsmodus (#819); die Anmeldung ist frisch.
+    assert.equal((await fetch(`${d.basis}/api/konto/verwaltung`, { method: 'POST', headers: { cookie, 'x-dms': '1', 'content-type': 'application/json' }, body: '{}' })).status, 200);
     const u = await json<{ lasttestAbbruch: string | null }>(fetch(`${d.basis}/api/werkbank/uebersicht`, { headers: { cookie, 'x-dms': '1' } }));
     assert.match(u.lasttestAbbruch ?? '', /schon eingerichtet, aber nicht vom Lasttest/);
     const demo = await json<Array<{ demo: number }>>(fetch(`${d.basis}/api/werkbank/demo`, { headers: { cookie, 'x-dms': '1' } }));

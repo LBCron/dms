@@ -1,6 +1,8 @@
 import { WasSiehtBlatt } from './Berechtigungen';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { abwesenheitWirkt, AKTIV_MINUTEN, geraetText, istGeradeAktiv, KEINE_ABWESENHEIT, ROLLEN, type Benutzer, type Rolle, type Sitzung } from '../../../shared/src/model';
+import { abwesenheitWirkt, AKTIV_MINUTEN, geraetText, istGeradeAktiv, KEINE_ABWESENHEIT, type Benutzer, type Sitzung } from '../../../shared/src/model';
+import { darfVerwalten, GESAMT, hatGesamt, verwaltungsbaum } from '../../../shared/src/verwaltungsrecht';
+import { bereichName } from '../../../shared/src/werkbankansicht';
 import { heuteIn } from '../../../shared/src/sichten';
 import { AbwesenheitFormular, zeitraumText } from '../profil/Abwesenheit';
 import { api, type LinkErgebnis, type Systemkonto } from '../api';
@@ -10,6 +12,7 @@ import { useKonto } from '../konto';
 import { geheZu, Link, loeseWache } from '../ort';
 import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
+import { Symbol } from '../Symbol';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
 import { SystemkontenGruppe, SystemkontoKennzeichen } from './Systemkonten';
@@ -20,7 +23,7 @@ const status = (b: Benutzer) => (!b.aktiv ? { text: 'deaktiviert', art: '' } : !
 
 type RolleEintrag = { id: string; name: string; system: boolean };
 
-/** Rollen für die Auswahl; „weitere“ sind die selbst angelegten (ohne Administrator und Mitglied). */
+/** Rollen für die Auswahl; „weitere“ sind die selbst angelegten (ohne die Systemrolle Mitglied). */
 function useRollen() {
   const d = useDaten();
   const [rollen, setRollen] = useState<RolleEintrag[] | null>(null);
@@ -28,7 +31,7 @@ function useRollen() {
   return { weitere: (rollen ?? []).filter((r) => !r.system), geladen: rollen !== null, typ: d.typen.find((t) => t.system === 'rolle') };
 }
 
-/** Rollen als Haken; Administrator und Mitglied stehen in der Auswahl „Rolle“. */
+/** Rollen als Haken; die Systemrolle Mitglied hat jeder. Verwalten ist keine Rolle (#818), sondern ein Recht. */
 function WeitereRollen({ gewaehlt, setze, sperre }: { gewaehlt: string[]; setze: (ids: string[]) => void; sperre?: boolean }) {
   const r = useRollen();
   return (
@@ -63,7 +66,7 @@ export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[
   const heute = heuteIn();
   return (
     <>
-      <Listenkopf titel="Benutzer" hilfe="werkbank.benutzer" beschreibung={<>Wer sich anmelden darf und mit welcher Systemrolle. {aktiv} gerade aktiv (in den letzten {AKTIV_MINUTEN} Minuten).</>}>
+      <Listenkopf titel="Benutzer" hilfe="werkbank.benutzer" beschreibung={<>{t('werkbank.verwaltungsrecht.liste')} {aktiv} gerade aktiv (in den letzten {AKTIV_MINUTEN} Minuten).</>}>
         <Link to="/werkbank/benutzer/neu" className="knopf primaer klein">+ Neu</Link>
       </Listenkopf>
       {deaktiviert.length > 0 && (
@@ -81,7 +84,7 @@ export function BenutzerListe({ liste: alle, offen, alltag }: { liste: Benutzer[
               <Link to={`/werkbank/benutzer/${b.id}`} className={`eintrag werk ${offen === b.id ? 'an' : ''} ${b.aktiv ? '' : 'grau'}`}>
                 <span className="titel">{b.aktiv ? b.name || b.email : <span className="person-ehemalig">{b.name || b.email}</span>}{b.id === ich.id && <span className="chip">du</span>}</span>
                 {b.id === alltag && <span className="unter"><span className="chip info">{t('werkbank.aufgabenempfaenger.chip')}</span></span>}
-                <span className="unter">{b.email} · {ROLLEN[b.rolle]}</span>
+                <span className="unter">{b.email}{darfVerwalten(b) && <> · <span className="chip">{hatGesamt(b) ? t('werkbank.verwaltungsrecht.chip.gesamt') : t('werkbank.verwaltungsrecht.chip.teil')}</span></>}</span>
                 <span className="unter">Letzte Anmeldung: {datumZeit(b.letzteAnmeldung)}</span>
                 <span><span className={`chip ${s.art}`}>{s.text}</span>{istGeradeAktiv(b.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
                   {b.aktiv && b.abwesenheit?.an && <> <span className="chip warn">{abwesenheitWirkt(b.abwesenheit, heute) ? 'abwesend' : 'demnächst abwesend'}{b.abwesenheit.bis ? ` bis ${b.abwesenheit.bis.split('-').reverse().join('.')}` : ''}</span></>}</span>
@@ -190,14 +193,12 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
         <div className="raster">
           <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
           <label className="eigenschaft"><span>E-Mail-Adresse <small>{selbst ? 'änderst du unter Mein Konto' : 'ändert der Benutzer selbst'}</small></span><input value={b.email} readOnly disabled /></label>
-          <label className="eigenschaft"><span>Systemrolle</span>
-            <select value={b.rolle} onChange={(e) => void aktion(() => api.benutzerAendern(b.id, { rolle: e.target.value as Rolle }), 'Systemrolle geändert.')}>
-              {Object.entries(ROLLEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select></label>
         </div>
         <WeitereRollen gewaehlt={b.rollen ?? []} setze={(rollen) => void aktion(() => api.benutzerAendern(b.id, { rollen }), 'Rollen gespeichert.')} />
         <Speicherleiste ent={ent} gegenstand="Name" sendet={sendet} />
       </form>
+
+      <Verwaltungsrecht key={`${b.id}-${(b.verwaltung ?? []).join(',')}`} b={b} aktion={aktion} />
 
       <div className="blatt">
         <h2 className="h3">Zugang</h2>
@@ -217,7 +218,7 @@ export function BenutzerDetail({ b, neuLaden }: { b: Benutzer; neuLaden: () => P
       <ZweifaktorVon b={b} />
       <Sitzungen b={b} neuLaden={neuLaden} />
 
-      <WasSiehtBlatt key={b.id} benutzerId={b.id} admin={b.rolle === 'admin'} />
+      <WasSiehtBlatt key={b.id} benutzerId={b.id} admin={false} />
 
       {!selbst && b.aktiv && (
         <div className="blatt">
@@ -323,7 +324,7 @@ function Sitzungen({ b, neuLaden }: { b: Benutzer; neuLaden: () => Promise<void>
               <div>
                 <strong>{geraetText(s.geraet)}</strong>
                 {s.aktuell && <> <span className="chip">diese Sitzung</span></>}
-                {s.vertretungId && <> <span className="chip warn">Administrator agiert als Benutzer</span></>}
+                {s.vertretungId && <> <span className="chip warn">{t('werkbank.verwaltungsrecht.vertretung')}</span></>}
                 {istGeradeAktiv(s.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
                 <span className="leise klein blockzeile">Zuletzt aktiv {datumZeit(s.zuletztAktiv)} · angemeldet seit {datumZeit(s.erstellt)}{s.ip ? ` · ${s.ip}` : ''}</span>
               </div>
@@ -345,17 +346,16 @@ export function BenutzerNeu({ neuLaden }: { neuLaden: () => Promise<void> }) {
   const { mail } = useKonto();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [rolle, setRolle] = useState<Rolle>('mitglied');
   const [rollen, setRollen] = useState<string[]>([]);
   const [sendet, setSendet] = useState(false);
   const [fehler, setFehler] = useState<string>();
   const [ergebnis, setErgebnis] = useState<LinkErgebnis>();
-  const ent = useEntwurf({ email: '', name: '', rolle: 'mitglied', rollen: [] as string[] }, { email, name, rolle, rollen }, { neu: true, aus: !!ergebnis, liste: '/werkbank/benutzer', zuruecksetzen: () => undefined });
+  const ent = useEntwurf({ email: '', name: '', rollen: [] as string[] }, { email, name, rollen }, { neu: true, aus: !!ergebnis, liste: '/werkbank/benutzer', zuruecksetzen: () => undefined });
 
   async function anlegen(e: FormEvent) {
     e.preventDefault();
     setSendet(true); setFehler(undefined);
-    try { setErgebnis(await api.benutzerAnlegen({ email, name, rolle, rollen })); await neuLaden(); }
+    try { setErgebnis(await api.benutzerAnlegen({ email, name, rollen })); await neuLaden(); }
     catch (err) { setFehler((err as Error).message); }
     finally { setSendet(false); }
   }
@@ -376,16 +376,60 @@ export function BenutzerNeu({ neuLaden }: { neuLaden: () => Promise<void> }) {
         <div className="raster">
           <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
           <label className="eigenschaft"><span>E-Mail-Adresse</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-          <label className="eigenschaft"><span>Systemrolle</span>
-            <select value={rolle} onChange={(e) => setRolle(e.target.value as Rolle)}>
-              {Object.entries(ROLLEN).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select></label>
         </div>
+        <p className="leise klein">{t('werkbank.verwaltungsrecht.neu')}</p>
         <WeitereRollen gewaehlt={rollen} setze={setRollen} />
         {fehler && <p className="fehlertext">{fehler}</p>}
         <Speicherleiste ent={ent} gegenstand="Benutzer" sendet={sendet} haupttext={mail ? 'Benutzer anlegen und einladen' : undefined} />
       </div>
     </form>
+  );
+}
+
+/**
+ * Verwaltungsrecht an der Person (#818): Haken „Darf Ablago verwalten“, darunter der Baum der Werkbank-Bereiche aus
+ * `BEREICHE`, ganz oben „Gesamte Verwaltung“ (auch künftige Bereiche). Ändern darf nur, wer selbst „Gesamte
+ * Verwaltung“ hat – der Server verlangt dafür eine frische Anmeldung (der Dialog fragt sie ab).
+ */
+function Verwaltungsrecht({ b, aktion }: { b: Benutzer; aktion: (fn: () => Promise<unknown>, gut?: string) => Promise<void> }) {
+  const { verwaltungsmodus } = useKonto();
+  const darfAendern = verwaltungsmodus.bereiche === null;
+  const [wahl, setWahl] = useState<string[]>(b.verwaltung ?? []);
+  const [sendet, setSendet] = useState(false);
+  const an = wahl.length > 0;
+  const gesamt = wahl.includes(GESAMT);
+  const geaendert = [...wahl].sort().join(',') !== [...(b.verwaltung ?? [])].sort().join(',');
+  const baum = verwaltungsbaum();
+  const umschalten = (pfad: string, x: boolean) => setWahl((w) => (x ? [...w.filter((y) => y !== GESAMT), pfad] : w.filter((y) => y !== pfad)));
+  if (b.art) return null;
+  return (
+    <div className="blatt verwaltungsrecht" id="verwaltungsrecht">
+      <h2 className="h3">{t('werkbank.verwaltungsrecht.titel')} <Hilfe ort="werkbank.verwaltungsrecht" /></h2>
+      <p className="leise">{t('werkbank.verwaltungsrecht.text')}</p>
+      {!darfAendern && <p className="hinweis info"><span>{t('werkbank.verwaltungsrecht.nurGesamt')}</span></p>}
+      <fieldset disabled={!darfAendern || sendet} className="wahl">
+        <legend className="sr-only">{t('werkbank.verwaltungsrecht.titel')}</legend>
+        <label className="haken"><input id="darf-verwalten" type="checkbox" checked={an} onChange={(e) => setWahl(e.target.checked ? [GESAMT] : [])} /><span><strong>{t('werkbank.verwaltungsrecht.darf')}</strong></span></label>
+        {an && <div className="verwaltungsbaum">
+          <label className="haken"><input id="gesamte-verwaltung" type="checkbox" checked={gesamt} onChange={(e) => setWahl(e.target.checked ? [GESAMT] : baum.flatMap((a) => a.bereiche.map((x) => x.pfad)))} />
+            <span><strong>{t('werkbank.verwaltungsrecht.gesamt')}</strong> <small className="leise">{t('werkbank.verwaltungsrecht.gesamt.text')}</small></span></label>
+          {baum.map((a) => (
+            <fieldset key={a.gruppe} className="verwaltungsast">
+              <legend>{a.name}</legend>
+              {a.bereiche.map((x) => (
+                <label key={x.pfad} className="haken"><input type="checkbox" checked={gesamt || wahl.includes(x.pfad)} disabled={gesamt} onChange={(e) => umschalten(x.pfad, e.target.checked)} />
+                  <span>{bereichName(x.pfad)}{x.heikel && <> <span className="chip warn klein" title={t('werkbank.verwaltungsrecht.heikel.titel')}><Symbol name="warnung" /> {t('werkbank.verwaltungsrecht.heikel')}</span></>}</span></label>
+              ))}
+            </fieldset>
+          ))}
+        </div>}
+      </fieldset>
+      {an && !gesamt && <p className="leise klein">{t('werkbank.verwaltungsrecht.ordnung')}</p>}
+      {darfAendern && geaendert && <div className="knoepfe">
+        <button type="button" className="knopf" onClick={() => setWahl(b.verwaltung ?? [])}>{t('werkbank.verwaltungsrecht.verwerfen')}</button>
+        <button type="button" id="verwaltungsrecht-speichern" className="knopf primaer" disabled={sendet || (an && !wahl.length)} onClick={() => { setSendet(true); void aktion(() => api.verwaltungSetzen(b.id, wahl), t('werkbank.verwaltungsrecht.gespeichert')).finally(() => setSendet(false)); }}>{t('werkbank.verwaltungsrecht.speichern')}</button>
+      </div>}
+    </div>
   );
 }
 

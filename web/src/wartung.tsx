@@ -1,3 +1,4 @@
+import { t } from './sprache';
 import { useEffect, useState } from 'react';
 import { api, type WartungOeffentlich } from './api';
 import { Link } from './ort';
@@ -63,7 +64,7 @@ export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeld
       <div className="vertretungsbanner wartungsbanner" role="alert">
         <p>
           <strong>Wartung – {admin ? 'alle anderen werden' : 'du wirst'} in {dauerText(rest ?? 0)} abgemeldet.</strong>{' '}
-          {admin ? 'Neue Anmeldungen gehen nur noch für Administratoren.' : 'Bitte speichere deine Arbeit.'}{zusatz}
+          {admin ? t('konten.verwaltende.wartung.neu') : 'Bitte speichere deine Arbeit.'}{zusatz}
         </p>
         {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
       </div>
@@ -71,7 +72,7 @@ export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeld
   }
   return (
     <div className="vertretungsbanner wartungsbanner" role="status">
-      <p><strong>Wartungsmodus aktiv.</strong> Nur Administratoren sind angemeldet; Schnittstelle und Hintergrundarbeiten pausieren.{zusatz}</p>
+      <p><strong>Wartungsmodus aktiv.</strong> Nur Personen, die verwalten dürfen, sind angemeldet; Schnittstelle und Hintergrundarbeiten pausieren.{zusatz}</p>
       {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">Zum Wartungsmodus</Link>}
     </div>
   );
@@ -83,7 +84,7 @@ export function WartungsHinweis({ start }: { start?: WartungOeffentlich | null }
   if (!stand || stand.stufe === 'aus') return null;
   return (
     <div className="hinweis warn stapel" role="status">
-      <p><strong>{stand.stufe === 'aktiv' ? 'Ablago wird gerade gewartet.' : 'Gleich beginnt eine Wartung.'}</strong> Anmelden können sich {stand.stufe === 'aktiv' ? 'nur' : 'bis dahin nur noch'} Administratoren.</p>
+      <p><strong>{stand.stufe === 'aktiv' ? 'Ablago wird gerade gewartet.' : 'Gleich beginnt eine Wartung.'}</strong> Anmelden können sich {stand.stufe === 'aktiv' ? 'nur' : 'bis dahin nur noch'} Personen, die Ablago verwalten dürfen.</p>
       {(stand.text || stand.ende) && <p>{stand.text}{stand.text && stand.ende ? ' – ' : ''}{stand.ende && <>voraussichtlich bis {zeitpunkt(stand.ende)} Uhr</>}</p>}
     </div>
   );

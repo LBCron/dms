@@ -273,7 +273,7 @@ export class PostfachOAuth {
     const o = state ? this.codes.get(state) : undefined;
     if (state) this.codes.delete(state);
     if (!o || o.bis < this.jetzt) throw new RueckrufFehler('', 400, 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte in der Werkbank noch einmal beginnen.', 'abgelaufen');
-    if (!admin || admin.id !== o.adminId) throw new RueckrufFehler(o.postfachId, 403, 'Die Anmeldung wurde von einem anderen Administrator begonnen.', 'admin');
+    if (!admin || admin.id !== o.adminId) throw new RueckrufFehler(o.postfachId, 403, 'Die Anmeldung hat eine andere Person begonnen, die Ablago verwaltet.', 'admin');
     if (!bindung || !gleich(bindung, o.bindung)) throw new RueckrufFehler(o.postfachId, 400, 'Die Anmeldung wurde in einem anderen Browser begonnen. Bitte noch einmal beginnen.', 'browser');
     if (q.error) throw new RueckrufFehler(o.postfachId, 401, `Der Anbieter hat die Anmeldung abgelehnt: ${kurz(q.error_description || q.error)}`, 'abgelehnt');
     if (!q.code) throw new RueckrufFehler(o.postfachId, 400, 'Der Anbieter hat keinen Code geliefert.', 'ohnecode');

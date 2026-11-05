@@ -41,6 +41,9 @@ warte() {
 anmelden() {
   curl -fsS -c "$jar" -X POST "$U/api/konto/anmelden" -H 'x-dms: 1' -H 'content-type: application/json' \
     -d "{\"email\":\"$EMAIL\",\"passwort\":\"$PASS\"}" >/dev/null || fehler "Anmeldung scheitert ($1)"
+  # Seit 0.192.0 (#819) braucht die Werkbank den Verwaltungsmodus; direkt nach der Anmeldung ohne erneute Abfrage.
+  # Ältere Stände kennen die Route nicht (404) – das ist in Ordnung.
+  curl -sS -b "$jar" -X POST "$U/api/konto/verwaltung" -H 'x-dms: 1' -H 'content-type: application/json' -d '{}' >/dev/null || true
 }
 api() { curl -fsS -b "$jar" -H 'x-dms: 1' -H 'content-type: application/json' "$@"; }
 version() { docker exec "$NAME" dms status --json | jq -r '.dms.version // "?"'; }

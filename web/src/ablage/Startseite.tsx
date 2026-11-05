@@ -1,3 +1,4 @@
+import { darfVerwalten } from '../../../shared/src/verwaltungsrecht';
 import { useEffect, useRef, useState } from 'react';
 import { datumDe, type Termin } from '../../../shared/src/fristen';
 import { t } from '../sprache';
@@ -103,7 +104,8 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
               <span className="kacheltitel">Erste Post ablegen</span><span className="kachelunter">Brief scannen oder fotografieren, Datei wählen – daraus wird eine Post</span>
             </button>
             <input ref={datei} type="file" multiple hidden accept="application/pdf,image/*" onChange={(e) => { neuePost([...(e.target.files ?? [])]); e.target.value = ''; }} />
-            {ich.rolle === 'admin' && (
+            {/* #818: Wer verwalten darf, kommt darüber in den Verwaltungsmodus. */}
+            {(ich.rolle === 'admin' || darfVerwalten(ich)) && (
               <Link to="/werkbank/pakete" className="kachel ruhig">
                 <span className="kacheltitel">Paket Haushalt installieren</span><span className="kachelunter">Fertige Mappentypen für Konten, Verträge, Versicherungen und mehr – mit Beispielen</span>
               </Link>

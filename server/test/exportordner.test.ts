@@ -3,6 +3,7 @@
  * Löschen nach dem Herunterladen bzw. nach 7 Tagen, Warnung, wenn der Ordner doch im Sicherungsordner liegt.
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { mkdir, mkdtemp, readdir, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -229,13 +230,13 @@ describe('Export-Ordner (#797): Werkbank und Herunterladen', () => {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen });
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
     const { benutzer: katrin } = await konten.einrichten({ email: 'katrin@example.org', name: 'Katrin', passwort: 'ein-langes-passwort' });
-    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, katrin.id)).benutzer;
+    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, katrin.id)).benutzer;
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     const pfad = join(await mkdtemp(join(tmpdir(), 'dms-797-routen-')), 'export');
     const tabelle = routen(d, konten, { exporte: { pfad, imSicherungsordner, volume: false } });
     const route = (m: string, p: string) => tabelle.find((x) => x.methode === m && x.pfad === p)!;
     const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
-    const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) } as Anfrage);
+    const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) } as Anfrage);
     return { einstellungen, katrin, jonas, pfad, rufe };
   }
   const leer = async (inhalt: unknown) => { for await (const _ of inhalt as AsyncIterable<Buffer>) { /* lesen */ } await new Promise((r) => setTimeout(r, 20)); };

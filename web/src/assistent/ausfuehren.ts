@@ -62,12 +62,15 @@ const AUSFUEHREN: Record<Stufe, () => Promise<string | void | 'ausgelassen'>> = 
     // Wiederholen ohne Doppeltes: Gibt es ihn schon, ist nichts mehr zu tun.
     const da = (await api.benutzer()).find((x) => x.email.toLowerCase() === email.toLowerCase());
     const id = da ? da.id : await (async () => {
-      const r = await api.benutzerAnlegen({ name: b.name.trim(), email, rolle: 'mitglied' });
+      const r = await api.benutzerAnlegen({ name: b.name.trim(), email });
       setzeLauf((l) => ({ ...l, einladung: { name: r.benutzer.name || r.benutzer.email, link: r.link ?? null, mailVerschickt: r.mailVerschickt } }));
       return r.benutzer.id;
     })();
-    // #719: Ablago trägt den ersten Benutzer als Empfänger ein – nur, wenn das Häkchen sichtbar gesetzt war (#803).
-    if (!b.aufgabenOhneEmpfaenger && (await api.aufgabenEmpfaenger()).benutzerId === id) await api.aufgabenEmpfaengerSpeichern(null);
+    // #719, #803: Mit Häkchen bekommt der erste Benutzer die Aufgaben ohne Empfänger. Seit #818 ist die Vorgabe die
+    // Person, die einrichtet – darum hier ausdrücklich eintragen; ohne Häkchen bleibt es bei ihr.
+    const jetzt = (await api.aufgabenEmpfaenger()).benutzerId;
+    if (b.aufgabenOhneEmpfaenger && jetzt !== id) await api.aufgabenEmpfaengerSpeichern(id);
+    else if (!b.aufgabenOhneEmpfaenger && jetzt === id) await api.aufgabenEmpfaengerSpeichern(null);
     if (da) return t('einrichtung.lauf.benutzer.da');
   },
   async beispiele() {

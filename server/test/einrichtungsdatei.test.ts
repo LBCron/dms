@@ -225,7 +225,18 @@ describe('Schnittstellen des Assistenten über HTTP (#804, #806)', { skip: echte
       assert.equal(e.statusCode, 201);
       const cookie = String(e.headers['set-cookie']).split(';')[0];
       assert.equal((await post('/api/einrichtung/pruefen', { plan: BEISPIEL })).statusCode, 409, 'Code allein reicht nicht mehr');
-      assert.equal((await post('/api/einrichtung/pruefen', { plan: BEISPIEL }, { cookie })).statusCode, 200, 'Administrator, Assistent offen (Ändern nach Fehler)');
+      assert.equal((await post('/api/einrichtung/pruefen', { plan: BEISPIEL }, { cookie })).statusCode, 200, 'Gesamte Verwaltung, Assistent offen (Ändern nach Fehler)');
+      // #818: „Jetzt einrichten“ beginnt gleich im Verwaltungsmodus; die Person hat „Gesamte Verwaltung“.
+      const st = JSON.parse((await app.inject({ method: 'GET', url: '/api/konto/status', headers: { 'x-dms': '1', cookie } })).body);
+      assert.deepEqual([st.verwaltungsmodus.aktiv, st.benutzer.rolle, st.benutzer.verwaltung, st.einrichtung.assistent], [true, 'admin', ['*'], true]);
+      // Wer nur einzelne Bereiche verwaltet, ist für den Assistenten kein „Administrator“ – auch im Verwaltungsmodus nicht.
+      const ich = (await konten.listeBenutzer())[0];
+      const teil = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', verwaltung: ['benutzer'] }, ich.id);
+      await konten.passwortSetzen({ schluessel: teil.link!.split('/passwort/')[1], passwort: 'ein-langes-passwort' });
+      const an = await post('/api/konto/anmelden', { email: 'jonas@example.org', passwort: 'ein-langes-passwort' }, {});
+      const jonas = String(an.headers['set-cookie']).split(';')[0];
+      assert.equal((await post('/api/konto/verwaltung', {}, { cookie: jonas })).statusCode, 200);
+      assert.equal((await post('/api/einrichtung/pruefen', { plan: BEISPIEL }, { cookie: jonas })).statusCode, 409, 'nur „Gesamte Verwaltung“');
       await einrichtung.merke('fertig', false, 'admin');
       assert.equal((await post('/api/einrichtung/datei/lesen', { text: geschrieben.text }, { cookie })).statusCode, 409);
     } finally { await app.close(); }

@@ -17,8 +17,8 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' });
-  const { benutzer: carl } = await konten.legeBenutzerAn({ email: 'carl@example.org', name: 'Carl', rolle: 'mitglied' });
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' });
+  const { benutzer: carl } = await konten.legeBenutzerAn({ email: 'carl@example.org', name: 'Carl' });
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = await d.legeTypAn({ name: 'Vorgang', felder: [{ key: 'nr', label: 'Nummer', typ: 'text' }] });
   const B = { id: ben.id, rolle: 'mitglied' };
@@ -119,8 +119,8 @@ describe('Favorit = Abo (#422)', () => {
     const geaendertC = async () => { await d.ereignisse.verteile(); return (await d.meineAufgaben(C)).filter((a) => a.art === 'aenderung'); };
     const rollen = await d.listeRollen();
     const mitglied = rollen.find((r) => r.system && r.name === 'Mitglied')!;
-    const admin = rollen.find((r) => r.system && r.name !== 'Mitglied')!;
-    assert.ok(mitglied && admin, 'Systemrollen stehen in der Auswahl');
+    assert.ok(mitglied, 'die Systemrolle steht in der Auswahl');
+    assert.equal(rollen.some((r) => r.name === 'Administrator'), false, 'keine Systemrolle „Administrator“ mehr (#818)');
     // Standard: für alle, wie bisher.
     assert.deepEqual(await d.favoritenFreigabe(), { erlaubt: 'alle', rollen: [], vorgabe: true });
     assert.equal(await d.favoritenBenachrichtigungErlaubt(ben.id), true);
@@ -131,13 +131,13 @@ describe('Favorit = Abo (#422)', () => {
     await d.aendereMappe(m.id, { werte: { nr: '2' } }, anna.id);
     assert.equal((await geaendert()).length, 0);
     assert.equal(await d.favoritenBenachrichtigungErlaubt(ben.id), false);
-    // Je Rolle – fachliche Rolle „Buchhaltung“ nur für Carl; Systemrolle Administrator.
+    // Je Rolle – fachliche Rolle „Buchhaltung“ nur für Carl.
     const rolle = await d.legeMappeAn({ typId: (await d.listeTypen()).find((x) => x.system === 'rolle')!.id, werte: { name: 'Buchhaltung' } }, anna.id);
     await d.setzeRollen(carl.id, [rolle.id], anna.id);
-    await d.setzeFavoritenFreigabe({ erlaubt: 'rollen', rollen: [rolle.id, admin.id, 'gibt-es-nicht'], vorgabe: true }, 'anna@example.org');
-    assert.deepEqual((await d.favoritenFreigabe()).rollen, [rolle.id, admin.id], 'unbekannte Rollen fallen weg');
+    await d.setzeFavoritenFreigabe({ erlaubt: 'rollen', rollen: [rolle.id, 'gibt-es-nicht'], vorgabe: true }, 'anna@example.org');
+    assert.deepEqual((await d.favoritenFreigabe()).rollen, [rolle.id], 'unbekannte Rollen fallen weg');
     assert.equal(await d.favoritenBenachrichtigungErlaubt(carl.id), true);
-    assert.equal(await d.favoritenBenachrichtigungErlaubt(anna.id), true, 'Administrator über die Systemrolle');
+    assert.equal(await d.favoritenBenachrichtigungErlaubt(anna.id), false, 'Verwalten ist keine Rolle (#818)');
     assert.equal(await d.favoritenBenachrichtigungErlaubt(ben.id), false);
     await kurz();
     await d.aendereMappe(m.id, { werte: { nr: '3' } }, anna.id);
@@ -157,7 +157,7 @@ describe('Favorit = Abo (#422)', () => {
     await konten.setzeEinstellung(ben, 'favoriten_benachrichtigen', null);
     await d.setzeFavoritenFreigabe({ erlaubt: 'alle', vorgabe: false }, 'anna@example.org');
     assert.equal((await konten.einstellungen(ben)).favoriten_benachrichtigen, undefined, 'bestehender Benutzer unverändert');
-    const { benutzer: dora } = await konten.legeBenutzerAn({ email: 'dora@example.org', name: 'Dora', rolle: 'mitglied' });
+    const { benutzer: dora } = await konten.legeBenutzerAn({ email: 'dora@example.org', name: 'Dora' });
     assert.equal((await konten.einstellungen(dora)).favoriten_benachrichtigen, false, 'neuer Benutzer bekommt die Vorgabe');
     assert.equal(await d.favoritenVorgabeAnwenden('anna@example.org'), 4);
     assert.equal((await konten.einstellungen(ben)).favoriten_benachrichtigen, false);

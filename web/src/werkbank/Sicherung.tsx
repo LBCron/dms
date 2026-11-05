@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { heikelHerunterladen } from '../verwaltungsmodus';
 import { Symbol } from '../Symbol';
 import { api, type ExternStand, type ExternZustand, type ProbeStand, type SicherungEintrag, type SicherungsPlan, type SicherungStand, type SicherungsZustand, type WhLauf } from '../api';
 import { t } from '../sprache';
@@ -289,7 +290,7 @@ function Zeitplan({ plan, notfallblatt, gespeichert }: { plan: SicherungsPlan; n
     <form className="blatt" id="zeitplan" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
       <h2 className="h3">Zeitplan und Aufbewahrung <Hilfe ort="sicherung.zeitplan" /></h2>
       <label className="haken"><input type="checkbox" checked={p.aktiv} disabled={!p.aktiv && !notfallblatt} onChange={(e) => setP({ ...p, aktiv: e.target.checked })} /><span>Automatisch sichern</span></label>
-      {!notfallblatt && !p.aktiv && <p className="leise klein">Erst einschaltbar, wenn du das Notfallblatt heruntergeladen hast – denn nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen. <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={() => { setTimeout(gespeichert, 1500); setTimeout(meldeSicherung, 1500); }}>Notfallblatt herunterladen</a></p>}
+      {!notfallblatt && !p.aktiv && <p className="leise klein">Erst einschaltbar, wenn du das Notfallblatt heruntergeladen hast – denn nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen. <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setTimeout(gespeichert, 1500); setTimeout(meldeSicherung, 1500); })}>Notfallblatt herunterladen</a></p>}
       <div className="raster">
         <label className="eigenschaft"><span>Häufigkeit</span>
           <select value={p.haeufigkeit} onChange={(e) => setP({ ...p, haeufigkeit: e.target.value as SicherungsPlan['haeufigkeit'] })}><option value="taeglich">täglich</option><option value="woechentlich">wöchentlich</option></select></label>
@@ -323,7 +324,7 @@ export function Notfallblatt({ stand, schluessel, geladen }: { stand: Sicherungs
       {stand && !stand.aktuell && stand.am && <div className="hinweis warn"><p><strong>Der Schlüssel hat sich seitdem geändert.</strong> Lade ein neues Notfallblatt herunter. Bewahre das alte auf, solange du ältere Sicherungen hast – sie brauchen den alten Schlüssel.</p></div>}
       <div className="knoepfe">
         {schluessel
-          ? <a className="knopf primaer" href={NOTFALLBLATT_URL} download onClick={() => { setTimeout(geladen, 1500); setTimeout(meldeSicherung, 1500); }}>Notfallblatt herunterladen (PDF)</a>
+          ? <a className="knopf primaer" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setTimeout(geladen, 1500); setTimeout(meldeSicherung, 1500); })}>Notfallblatt herunterladen (PDF)</a>
           : <span className="leise">Erst möglich, wenn es einen Schlüssel gibt.</span>}
       </div>
     </section>

@@ -73,11 +73,11 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
 
   it('Pflicht je Rolle', async () => {
     const z = new Zweifaktor(speicherEinstellungen(), ver, ent);
-    assert.equal(await z.fehlt({ id: 'a', rolle: 'admin' }), false);
+    assert.equal(await z.fehlt({ id: 'a', verwaltung: ['*'] }), false);
     await z.setzePflicht({ admin: true }, 'test');
     assert.deepEqual(await z.pflicht(), { admin: true, mitglied: false });
-    assert.equal(await z.fehlt({ id: 'a', rolle: 'admin' }), true);
-    assert.equal(await z.fehlt({ id: 'm', rolle: 'mitglied' }), false);
+    assert.equal(await z.fehlt({ id: 'a', verwaltung: ['*'] }), true);
+    assert.equal(await z.fehlt({ id: 'm', verwaltung: [] }), false);
   });
 
   it('Pflicht gilt erst für Sitzungen ab dem Einschalten (#416)', async () => {
@@ -86,11 +86,11 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     const z = new Zweifaktor(speicher, ver, ent, () => t);
     const vorher = new Date(t - 1000), nachher = new Date(t + 1000);
     await z.setzePflicht({ admin: true }, 'test');
-    const a = { id: 'a', rolle: 'admin' as const };
+    const a = { id: 'a', verwaltung: ['*'] };
     assert.equal(await z.lage(a, vorher), 'ausstehend', 'laufende Sitzung arbeitet weiter');
     assert.equal(await z.lage(a, nachher), 'fehlt', 'neue Sitzung: erst einrichten');
     assert.equal(await z.fehlt(a), true, 'ohne Sitzungsbeginn streng');
-    assert.equal(await z.lage({ id: 'm', rolle: 'mitglied' }, vorher), 'ok');
+    assert.equal(await z.lage({ id: 'm', verwaltung: [] }, vorher), 'ok');
     // Erneutes Speichern ohne Änderung verschiebt den Zeitpunkt nicht.
     t += 60_000;
     await z.setzePflicht({ admin: true, mitglied: false }, 'test');
@@ -119,6 +119,9 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     const anmelden = async () => {
       const r = await konten.anmelden({ email: 'anna@example.org', passwort: 'ein-langes-passwort' }, '1.1.1.1', '');
       assert.ok('schluessel' in r && r.schluessel, 'ohne eigenes Zwei-Faktor reicht das Passwort');
+      // Gleich in den Verwaltungsmodus (#819): Die Anmeldung ist frisch, also ohne erneute Abfrage.
+      const an = (await konten.anmeldungZu(r.schluessel))!;
+      await konten.beginneVerwaltung(an.benutzer, r.schluessel, an.sitzung, {}, '1.1.1.1');
       return r.schluessel;
     };
     const alle = routen(d, konten);
@@ -162,7 +165,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     assert.deepEqual(await statusVon(neu), { aktiv: false, fehlt: false, ausstehend: false });
   });
 
-  it('pflichtZuruecknehmen: nur für Administratoren, nur lesen oder ausschalten (#416)', () => {
+  it('pflichtZuruecknehmen: nur im Verwaltungsmodus, nur lesen oder ausschalten (#416, #819)', () => {
     const admin = { rolle: 'admin' } as Anfrage['benutzer'], mitglied = { rolle: 'mitglied' } as Anfrage['benutzer'];
     const r = (methode: Route['methode'], pfad = '/api/werkbank/zweifaktor') => ({ methode, pfad });
     assert.equal(pflichtZuruecknehmen(r('GET'), { body: undefined, benutzer: admin }), true);

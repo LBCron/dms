@@ -3,6 +3,7 @@ import { api, type TresorStatus } from '../api';
 import { useKonto } from '../konto';
 import { Link } from '../ort';
 import { Erledigt, Notfallblatt, NOTFALLBLATT_URL, meldeSicherung } from './Sicherung';
+import { heikelHerunterladen } from '../verwaltungsmodus';
 import { Hilfe } from '../Hilfe';
 import { rueckfrage } from '../rueckfrage';
 
@@ -141,7 +142,7 @@ export function TresorPanel({ t }: { t: TresorZustand }) {
                 <li className={blattGeladen ? 'erledigt' : ''}>
                   {blattGeladen && <Erledigt />}Das neue Notfallblatt herunterladen und sicher aufbewahren.{' '}
                   {/* #414: lädt direkt herunter – wie der Knopf im Abschnitt „Notfallblatt“ darunter. */}
-                  <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={() => { setBlattGeladen(true); setTimeout(() => void t.laden(), 1500); setTimeout(meldeSicherung, 1500); }}>Notfallblatt herunterladen</a>
+                  <a className="knopf klein" href={NOTFALLBLATT_URL} download onClick={(e) => void heikelHerunterladen(e, NOTFALLBLATT_URL, () => { setBlattGeladen(true); setTimeout(() => void t.laden(), 1500); setTimeout(meldeSicherung, 1500); })}>Notfallblatt herunterladen</a>
                 </li>
                 <li className={gesichert?.ok ? 'erledigt' : ''}>
                   {gesichert?.ok && <Erledigt />}Eine neue Sicherung anlegen – sie ist mit dem neuen Schlüssel verschlüsselt.{' '}

@@ -3,6 +3,7 @@
  * Angaben, Zielmappe, nur lesbare Mappen. Alle Briefe, Namen, Nummern und Adressen sind erfunden.
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { artVon, eindeutigerTreffer, findeAngaben, findeMappen, istAbsenderTyp, istIban, liesFeldErkennung, vorschlaegeAus } from '../../shared/src/erkennung';
 import { NICHTS, type Regelwerk } from '../../shared/src/rechte';
@@ -127,7 +128,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' }, anna.id);
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, anna.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const organisation = await d.legeTypAn({ name: 'Organisation', schluessel: 'organisation', felder: [
     { key: 'name', label: 'Name', typ: 'text', pflicht: true, erkennung: {} },
@@ -149,7 +150,7 @@ async function aufbau() {
   const gas = await d.legeMappeAn({ typId: vertrag.id, werte: { titel: 'Gas Haus', vertragsnummer: 'GV-998877' } }, anna.id);
   const tabelle = routen(d, konten, {});
   const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) =>
-    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: (await konten.listeBenutzer()).find((u) => u.id === b.id)! });
+    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus((await konten.listeBenutzer()).find((u) => u.id === b.id)!) });
   const A = { id: anna.id, rolle: 'admin' }; const B = { id: ben.id, rolle: 'mitglied' };
   /** Post mit einem Dokument und gegebenem Volltext (wie von einem Paket oder der API). */
   const post = async (text: string, betreff = 'Brief') => {

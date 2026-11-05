@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { abwesenheitWirkt, ROLLEN } from '../../shared/src/model';
+import { abwesenheitWirkt } from '../../shared/src/model';
 import { heuteIn } from '../../shared/src/sichten';
 import { leseSchrift, setzeSchrift } from './design';
 import { api } from './api';
@@ -25,10 +25,11 @@ import { t } from './sprache';
 export function App() {
   const { pfad, suche } = useOrt();
   const d = useDaten();
-  const { ich, abmelden, vertretung, hinweise, aktualisieren, version, zweifaktor, verwaltung } = useKonto();
+  const { ich, abmelden, vertretung, hinweise, aktualisieren, version, zweifaktor, verwaltung, verwaltungsmodus, verwalten, verwaltungBeenden } = useKonto();
   // Nach einem Ausfall (#122): gemeinsame Daten neu holen; „Ansicht neu laden“ baut den Inhalt neu auf.
   const [ansicht, setAnsicht] = useState(0);
   useBeiWiederErreichbar(() => void d.neuLaden());
+  // Verwaltungsmodus (#819): Der Server liefert `rolle: 'admin'` nur, solange er läuft.
   const admin = ich.rolle === 'admin';
   const teile = pfad.split('/').filter(Boolean);
   const bereich = teile[0] === 'werkbank' || teile[0] === 'profil' ? teile[0] : teile[0] === 'api-doku' ? 'profil' : 'ablage';
@@ -43,8 +44,10 @@ export function App() {
   useEffect(() => { setzeSchrift(ich.id, leseSchrift(ich.id)); }, [ich.id]);
 
   useEffect(() => {
-    // Startseite (#721): Administratoren in die Werkbank, alle anderen in die Ablage.
+    // Startseite (#721, #819): im Verwaltungsmodus die Werkbank, sonst die Ablage.
     if (pfad === '/' || pfad.startsWith('/passwort/')) geheZu(admin && !vertretung ? ADMIN_START : '/ablage', true);
+    // Zurück von der erneuten Anmeldung beim Anbieter (#241): Die Anmeldung ist frisch, der Modus beginnt ohne Abfrage.
+    else if (teile[0] === 'werkbank' && new URLSearchParams(location.search).has('verwalten') && !admin && verwaltungsmodus.darf) void verwalten();
     // Frühere Adressen
     else if (teile[0] === 'einrichtung') geheZu(`/werkbank/typen${teile[1] ? `/${teile[1]}` : ''}`, true);
     else if (teile[0] === 'benutzer') geheZu('/werkbank/benutzer', true);
@@ -52,7 +55,7 @@ export function App() {
 
   let inhalt;
   if (!d.geladen) inhalt = <p className="leise">Lade …</p>;
-  else if (bereich === 'werkbank' && !admin) inhalt = <div className="leer"><p>{teile[1] === 'pakete' && new URLSearchParams(location.search).has('installieren') ? 'Pakete installieren nur Administratoren. Schick den Link an einen Administrator deines Ablago.' : 'Die Werkbank ist Administratoren vorbehalten.'}</p></div>;
+  else if (bereich === 'werkbank' && !admin) inhalt = <OhneModus paket={teile[1] === 'pakete' && new URLSearchParams(location.search).has('installieren')} />;
   else if (bereich === 'werkbank') inhalt = <Werkbank teile={teile} />;
   else if (teile[0] === 'api-doku') inhalt = <ApiDoku />;
   else if (bereich === 'profil') inhalt = <Profil teile={teile} />;
@@ -67,11 +70,11 @@ export function App() {
         </div>
       )}
       {!vertretung && hinweise.length > 0 && <Hinweise />}
-      {/* Technische Aufgaben (#719): beim Alltags-Benutzer nur, dass etwas anliegt – keine Einzelheiten. */}
-      {!vertretung && verwaltung && (
+      {/* Technische Aufgaben (#719, #819): außerhalb des Modus nur, dass etwas anliegt – keine Einzelheiten. */}
+      {!vertretung && verwaltung && !admin && (
         <div className="hinweisbanner" role="status" id="verwaltung-hinweis">
           <p>{t('konten.verwaltung.hinweis')}</p>
-          <button className="knopf klein" onClick={() => void abmelden()}>{t('konten.verwaltung.anmelden')}</button>
+          <button className="knopf klein" onClick={() => void verwalten()}>{t('konten.verwaltung.anmelden')}</button>
         </div>
       )}
       {/* #416: Pflicht eingeschaltet, während diese Sitzung lief – weiterarbeiten, aber deutlich darauf hinweisen. */}
@@ -83,20 +86,22 @@ export function App() {
       )}
       <ErreichbarkeitsBanner version={version} ansichtNeuLaden={() => { setAnsicht((n) => n + 1); void d.neuLaden(); }} />
       <WartungsBanner admin={admin} abgemeldet={() => void aktualisieren()} />
-      {/* #128: Administratoren richten ein, arbeiten aber nicht in der Ablage. */}
-      {admin && !vertretung && bereich === 'ablage' && (
-        <div className="adminbanner" role="alert">
-          <p><strong>Du bist als Administrator in der Ablage.</strong> Ein Administrator sollte nicht für die tägliche Arbeit verwendet werden – du siehst hier alle Mappen, auch solche, die für andere gesperrt sind. Für den Alltag ist ein normaler Benutzer schnell angelegt.</p>
-          <Link to="/werkbank/benutzer/neu" className="knopf klein">Benutzer anlegen</Link>
-        </div>
+      {/* Verwaltungsmodus (#819): roter Balken in Werkbank und Ablage, vorgelesen beim Erscheinen. */}
+      {admin && !vertretung && (
+        <section className="verwaltungsbalken" aria-labelledby="verwaltungsbalken-titel">
+          <p role="status"><strong id="verwaltungsbalken-titel">{t('konten.verwaltung.balken.titel')}</strong> {t('konten.verwaltung.balken.text')}</p>
+          <button type="button" id="verwaltung-beenden" className="knopf klein" onClick={() => void verwaltungBeenden()}>{t('konten.verwaltung.beenden')}</button>
+        </section>
       )}
       <header className="kopf">
         <Link to={startseiteVon(vertretung ? undefined : ich.rolle, d.einstellungen.startseite === false)} className="marke" title="Zur Startseite">
           <Marke logo={logoUrl(d.meinDesign)} schriftzug={schriftzugVon(d.meinDesign)} /><span className="sr-only">{schriftzugVon(d.meinDesign) ? '' : schriftzugVon(null)} – Startseite</span>
         </Link>
+        {/* #819: Kein Weg in die Werkbank aus der Ablage-Navigation – nur über das Benutzermenü („Ablago verwalten“).
+            Im Verwaltungsmodus führt der Reiter zurück in die Werkbank. */}
         <nav className="bereiche" aria-label="Bereiche">
           <Link to="/ablage" className={bereich === 'ablage' ? 'an' : ''}>Ablage</Link>
-          {admin && <Link to="/werkbank/typen" className={bereich === 'werkbank' ? 'an' : ''}>Werkbank</Link>}
+          {admin && !vertretung && <Link to="/werkbank" className={bereich === 'werkbank' ? 'an' : ''}>Werkbank</Link>}
         </nav>
         {/* #649: „+ Neu“ nur in der Ablage – in der Werkbank wird eingerichtet, nicht abgelegt. */}
         {bereich === 'ablage' && <NeuKnopf />}
@@ -112,6 +117,18 @@ export function App() {
       <PostAblage werkbank={bereich === 'werkbank'} />
       <PostKamera />
       {ich.entwicklermodus && <Messpanel />}
+    </div>
+  );
+}
+
+/** Werkbank ohne Verwaltungsmodus (#819): der Weg hinein, für alle anderen ein klarer Satz. */
+function OhneModus({ paket }: { paket: boolean }) {
+  const { verwaltungsmodus, verwalten } = useKonto();
+  if (!verwaltungsmodus.darf) return <div className="leer"><p>{paket ? t('konten.verwaltung.werkbank.paket') : t('konten.verwaltung.werkbank.nicht')}</p></div>;
+  return (
+    <div className="leer">
+      <p>{t('konten.verwaltung.werkbank.text')}</p>
+      <button type="button" className="knopf primaer" onClick={() => void verwalten()}>{t('konten.verwaltung.menue.verwalten')}</button>
     </div>
   );
 }
@@ -136,7 +153,7 @@ function Hinweise() {
   return (
     <div className="hinweisbanner" role="status">
       <div>
-        <p><strong>{hinweise.length === 1 ? 'Ein Administrator hat' : 'Administratoren haben'} in deinem Namen gearbeitet</strong>, um einen Fehler nachzustellen:</p>
+        <p><strong>{t('konten.verwaltende.vertretung', { anzahl: hinweise.length })}</strong>, um einen Fehler nachzustellen:</p>
         <ul>{hinweise.map((h) => <li key={h.id}>{h.adminName}: {uhrzeit(h.beginn)} bis {h.ende ? uhrzeit(h.ende) : 'jetzt (noch nicht beendet)'}</li>)}</ul>
       </div>
       <button className="knopf klein" onClick={() => { setWeg(true); void api.hinweiseGesehen().then(aktualisieren); }}>Verstanden</button>
@@ -146,7 +163,7 @@ function Hinweise() {
 
 /** Menü unter dem eigenen Namen (#69): Konto, Einstellungen, Hilfe, Fehler melden, Über das DMS (#430), Abmelden. */
 function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<void> }) {
-  const { ich, vertretung, laufwerk } = useKonto();
+  const { ich, vertretung, laufwerk, verwaltungsmodus, verwalten, verwaltungBeenden } = useKonto();
   const handbuch = useHandbuch();
   const [offen, setOffen] = useState(false);
   const [ueber, setUeber] = useState(false);
@@ -170,7 +187,7 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
         <div className="menue" role="menu">
           <div className="menuekopf">
             <strong>{ich.name || ich.email}</strong>
-            <span className="leise klein">{ich.email} · {ROLLEN[ich.rolle]}</span>
+            <span className="leise klein">{ich.email}{verwaltungsmodus.darf ? ` · ${t(verwaltungsmodus.aktiv ? 'konten.verwaltung.menue.aktiv' : 'konten.verwaltung.menue.darf')}` : ''}</span>
             {vertretung && <span className="chip warn">Als {ich.name || ich.email} angemeldet</span>}
             {abwesend && <Link to="/profil/abwesenheit" className="chip warn">Du bist abwesend{ich.abwesenheit?.bis ? ` (bis ${ich.abwesenheit.bis.split('-').reverse().join('.')})` : ''}</Link>}
           </div>
@@ -178,6 +195,10 @@ function Benutzermenue({ an, abmelden }: { an: boolean; abmelden: () => Promise<
               „Mein Konto“ das Konto des vertretenen Benutzers; damit es nicht verwechselt wird, heißt es dann so. */}
           {/* Jeder Weg nur einmal (#175): Darstellung, Abwesenheit usw. sind Reiter unter „Mein Konto“. */}
           <Link to="/profil/konto" className="menuepunkt"><Pikto name="person" />{vertretung ? `Konto von ${ich.name || ich.email}` : 'Mein Konto'}</Link>
+          {/* #819: direkt unter „Mein Konto“, nur für Personen mit Verwaltungsrecht; im Modus „Verwaltung beenden“. */}
+          {verwaltungsmodus.darf && !vertretung && (verwaltungsmodus.aktiv
+            ? <button type="button" id="menue-verwaltung-beenden" className="menuepunkt" onClick={() => { setOffen(false); void verwaltungBeenden(); }}><Pikto name="beenden" />{t('konten.verwaltung.beenden')}</button>
+            : <button type="button" id="menue-verwalten" className="menuepunkt" onClick={() => { setOffen(false); void verwalten(); }}><Pikto name="verwalten" />{t('konten.verwaltung.menue.verwalten')}</button>)}
           {laufwerk && <Link to="/profil/laufwerk" className="menuepunkt"><Pikto name="laufwerk" />{t('profil.laufwerk.menue')}</Link>}
           <a href={handbuch('benutzer')} target="_blank" rel="noreferrer" className="menuepunkt" onClick={() => setOffen(false)}><Pikto name="hilfe" />Hilfe <span aria-hidden="true">↗</span></a>
           <Link to="/profil/fehler-melden" className="menuepunkt"><Pikto name="fehler" />Fehler melden</Link>

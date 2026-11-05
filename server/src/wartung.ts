@@ -1,3 +1,4 @@
+import { darfVerwalten } from '../../shared/src/verwaltungsrecht';
 import { Fachfehler } from './fehler';
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
@@ -139,7 +140,7 @@ export class Wartung {
       beginn = Date.parse(String(e.beginn));
       if (!Number.isFinite(beginn)) throw new Fachfehler(422, 'Der Beginn ist kein gültiger Zeitpunkt.');
       if (beginn <= jetzt.getTime()) throw new Fachfehler(422, 'Der Beginn liegt in der Vergangenheit. Für sofort bitte „Jetzt sofort sperren“ nutzen.');
-      if (beginn > jetzt.getTime() + 24 * 3600_000) throw new Fachfehler(422, 'Der Beginn darf höchstens 24 Stunden in der Zukunft liegen – ab der Ankündigung können sich nur noch Administratoren anmelden.');
+      if (beginn > jetzt.getTime() + 24 * 3600_000) throw new Fachfehler(422, 'Der Beginn darf höchstens 24 Stunden in der Zukunft liegen – ab der Ankündigung können sich nur noch Personen anmelden, die verwalten dürfen.');
       if (ende && Date.parse(ende) <= beginn) throw new Fachfehler(422, 'Das erwartete Ende muss nach dem Beginn liegen.');
     }
     const vorlauf = sofort ? 0 : beginn !== null ? Math.max(1, Math.round((beginn - jetzt.getTime()) / 60_000))
@@ -199,14 +200,15 @@ export class Wartung {
 
   /**
    * Prüft eine Anfrage während der Wartung. Öffentliche API: immer 503.
-   * Oberfläche: in der aktiven Stufe nur Administratoren (und alles ohne Anmeldung).
+   * Oberfläche: in der aktiven Stufe nur Personen mit Verwaltungsrecht (#818) – sie müssen sich anmelden und den
+   * Verwaltungsmodus beginnen können – und alles ohne Anmeldung.
    */
-  pruefeAnfrage(r: { pfad: string; zugang: string }, benutzer: { rolle: string } | undefined) {
+  pruefeAnfrage(r: { pfad: string; zugang: string }, benutzer: { verwaltung?: string[]; art?: string } | undefined) {
     if (this.s.stufe !== 'aktiv') return;
     if (r.pfad.startsWith('/api/v1/')) throw new WartungFehler(this.meldung(), this.retryAfter());
-    if (r.zugang !== 'offen' && benutzer && benutzer.rolle !== 'admin') throw new WartungFehler(this.meldung(), this.retryAfter());
+    if (r.zugang !== 'offen' && benutzer && !darfVerwalten(benutzer)) throw new WartungFehler(this.meldung(), this.retryAfter());
   }
 
-  /** Nach einer Anmeldung: Nicht-Admins kommen ab der Ankündigung nicht mehr hinein. */
-  sperrtAnmeldung(benutzer: { rolle: string }) { return this.an && benutzer.rolle !== 'admin'; }
+  /** Nach einer Anmeldung: Wer nicht verwalten darf, kommt ab der Ankündigung nicht mehr hinein. */
+  sperrtAnmeldung(benutzer: { verwaltung?: string[]; art?: string }) { return this.an && !darfVerwalten(benutzer); }
 }

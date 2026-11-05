@@ -19,7 +19,7 @@ async function aufbau() {
   const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' });
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' });
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = await d.legeTypAn({ name: 'Vorgang', felder: [{ key: 'nr', label: 'Nummer', typ: 'text' }] });
   const m = await d.legeMappeAn({ typId: t.id, werte: { nr: '1' } }, anna.id);

@@ -20,7 +20,7 @@ async function aufbau(pause: () => string | null = () => null) {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna Muster', passwort: 'ein-langes-passwort' });
-  const { benutzer: thomas } = await konten.legeBenutzerAn({ email: 'thomas.m@example.org', name: 'Thomas Meißner', rolle: 'mitglied' }, anna.id);
+  const { benutzer: thomas } = await konten.legeBenutzerAn({ email: 'thomas.m@example.org', name: 'Thomas Meißner' }, anna.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const ordner = await mkdtemp(join(tmpdir(), 'dms-eingang-'));
   const einstellungen = speicherEinstellungen();

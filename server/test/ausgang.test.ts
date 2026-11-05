@@ -4,6 +4,7 @@
  * auch auf dem PDF „Angaben“, gleiche Wahl der Fassung, gleiche Größenprüfung).
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import type { Readable } from 'node:stream';
 import { describe, it } from 'node:test';
 import { inflateSync } from 'node:zlib';
@@ -43,7 +44,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const lena = (await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena', rolle: 'mitglied' }, admin.id)).benutzer;
+  const lena = (await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const vertrag = await d.legeTypAn({ name: 'Vertrag', titelVorlage: '{nr}', felder: [{ key: 'nr', label: 'Nummer', typ: 'text', pflicht: true }],
     register: [{ key: 'daten', name: 'Daten', art: 'felder' }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente', versionierung: true }] } as never);
@@ -58,7 +59,7 @@ async function aufbau() {
   const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => {
     const r = tabelle.find((t) => t.methode === m && t.pfad === pf);
     assert.ok(r, `${m} ${pf}`);
-    return r.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+    return r.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   };
   /** Recht E an allen Ansichten mit Verträgen für Lena entziehen (Lesen bleibt). */
   const ohneE = async () => {
@@ -134,7 +135,7 @@ describe('Herunterladen braucht E (#723)', () => {
 
   it('ohne Leserecht weiterhin 404 (nicht 403)', async () => {
     const { d, konten, admin, pdf, rufe, vertrag } = await aufbau();
-    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, admin.id)).benutzer;
+    const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, admin.id)).benutzer;
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     await d.aendereTyp(vertrag.id, { ...vertrag, berechtigungen: { grund: { C: true, R: true, U: true, D: true, P: true }, regeln: [{ id: 'x', name: 'nicht Jonas', wenn: [{ art: 'benutzer', benutzer: [jonas.id] }], dann: { R: 'entziehen' }, stopp: false }] } } as never);
     await assert.rejects(rufe(jonas, 'GET', '/api/dokumente/:id/inhalt', { params: { id: pdf.id }, query: { herunterladen: '1' } }), status(404));

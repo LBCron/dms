@@ -147,7 +147,7 @@ export class Speicherplatz {
         await this.mail(LIMIT_TEXT,
           `Der freie Speicherplatz von Ablago liegt unter der Grenze (${schwelleText(s.einstellung.grenze)}):\n\n${knapp.join('\n')}\n\n`
           + 'Das Hochladen ist ab sofort gesperrt. '
-          + (an ? `In ${VORLAUF_MIN} Minuten startet der Wartungsmodus; danach können nur Administratoren arbeiten. ` : 'Der Wartungsmodus ist bereits an. ')
+          + (an ? `In ${VORLAUF_MIN} Minuten startet der Wartungsmodus; danach können nur Personen arbeiten, die verwalten dürfen. ` : 'Der Wartungsmodus ist bereits an. ')
           + 'Schaffe in der Werkbank Platz (alte Sicherungen löschen, Papierkorb leeren) und beende danach den Wartungsmodus selbst – er endet nicht von allein.');
       }
     }
@@ -165,7 +165,7 @@ export class Speicherplatz {
     if (s.zustand === 'grenze') {
       if (vorher !== 'grenze') void this.pruefe().catch(() => {});
       const o = s.ordner.find((x) => x.zustand === 'grenze');
-      throw new Fachfehler(507, `${LIMIT_TEXT}: Hochladen ist gesperrt${o?.frei != null ? ` (${gbText(o.frei)} frei)` : ''}. Bitte wende dich an deinen Administrator.`);
+      throw new Fachfehler(507, `${LIMIT_TEXT}: Hochladen ist gesperrt${o?.frei != null ? ` (${gbText(o.frei)} frei)` : ''}. Bitte wende dich an die Person, die Ablago verwaltet.`);
     }
   }
 

@@ -5,9 +5,9 @@ import { protokoll } from './protokoll';
 import { zeitzone } from '../../shared/src/region';
 
 /**
- * Notfallzugang über eine RESCUE-Datei (#108): Kommt kein Administrator mehr hinein, legt der
+ * Notfallzugang über eine RESCUE-Datei (#108): Kommt niemand mit Verwaltungsrecht mehr hinein, legt der
  * Betreiber neben der Schlüsseldatei eine Datei RESCUE mit dem Wort NOTFALLZUGANG an. Das DMS
- * legt dann einen neuen Administrator an und schreibt einen Einmal-Link in die Datei, der
+ * legt dann eine neue Person mit „Gesamte Verwaltung“ an (#818) und schreibt einen Einmal-Link in die Datei, der
  * 15 Minuten gilt. Nach spätestens 15 Minuten löscht es die Datei.
  *
  * Wer in dieses Volume schreiben kann, hat ohnehin vollen Zugriff auf die Daten – es entsteht
@@ -24,7 +24,7 @@ export interface NotfallQuelle {
   notfallzugang(minuten: number, jetzt?: Date): Promise<{ benutzer: Benutzer; link: string; ablauf: Date }>;
   listeBenutzer(): Promise<Benutzer[]>;
 }
-/** Mail an alle Administratoren; darf fehlschlagen (kein Versand eingerichtet). */
+/** Mail an alle mit „Gesamte Verwaltung“; darf fehlschlagen (kein Versand eingerichtet). */
 export type AnAdmins = (betreff: string, text: string) => Promise<void>;
 
 interface Eintrag { benutzerId: string; name: string; erstellt: string }
@@ -98,7 +98,7 @@ export class Notfallzugang {
     log.warn('Notfallzugang angelegt (RESCUE-Datei)', { benutzer: benutzer.name, gueltigBis: ablauf.toISOString(), datei: this.datei });
     try {
       await this.anAdmins('Ablago: Notfallzugang angelegt',
-        `Auf dem NAS wurde eine RESCUE-Datei angelegt. Ablago hat daraufhin den Administrator „${benutzer.name}“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis ${bis} Uhr.\n\n`
+        `Auf dem NAS wurde eine RESCUE-Datei angelegt. Ablago hat daraufhin „${benutzer.name}“ mit „Gesamte Verwaltung“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis ${bis} Uhr.\n\n`
         + 'Warst du das nicht, deaktiviere den Benutzer sofort in der Werkbank unter „Benutzer“ und prüfe, wer Zugriff auf das NAS hat.');
     } catch (e) { log.warn('Mail zum Notfallzugang nicht verschickt', { fehler: (e as Error).message }); }
     return 'angelegt';

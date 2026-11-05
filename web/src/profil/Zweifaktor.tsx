@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import QRCode from 'qrcode';
 import { api, type ZweifaktorStand } from '../api';
@@ -122,7 +123,7 @@ export function ZweifaktorBlatt() {
               </div>
             </form>
           )}
-          {stand.pflicht && <p className="leise klein">Für deine Rolle ist die Zwei-Faktor-Anmeldung vorgeschrieben. Neues Handy? Ein Administrator kann sie zurücksetzen; dann richtest du sie neu ein.</p>}
+          {stand.pflicht && <p className="leise klein">Für dich ist die Zwei-Faktor-Anmeldung vorgeschrieben. Neues Handy? Wer Ablago verwaltet, kann sie zurücksetzen; dann richtest du sie neu ein.</p>}
         </>
       ) : (
         <div className="knoepfe"><button type="button" className="knopf primaer" onClick={() => { setMeldung(undefined); setModus('einrichten'); }}>Einrichten</button></div>

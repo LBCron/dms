@@ -81,6 +81,17 @@ export function NeueMappe({ typ, verweis, sicht, zuordnen, vorbelegen }: { typ: 
   );
 }
 
+/**
+ * Verwaltungsmodus (#820): Diese Mappe dürfte die Person ohne Modus nicht lesen. Beim ersten Öffnen im Modus ein
+ * deutlicher Hinweis (danach klein), dass es in der Historie der Mappe steht.
+ */
+function NurImModus({ mappeId }: { mappeId: string }) {
+  const [erstes] = useState(() => {
+    try { const k = `dms:nur-im-modus:${mappeId}`; const da = sessionStorage.getItem(k); sessionStorage.setItem(k, '1'); return !da; } catch { return true; }
+  });
+  return <div className={erstes ? 'hinweis warn' : 'leise klein'} role={erstes ? 'alert' : undefined} id="nur-im-verwaltungsmodus"><p>{t('mappen.verwaltungsmodus.hinweis')}</p></div>;
+}
+
 export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { typ: Mappentyp; details: MappeDetails; sicht: string; anhang?: string; neuLaden: () => Promise<void> }) {
   const d = useDaten();
   const { ich } = useKonto();
@@ -131,9 +142,10 @@ export function MappeAnsicht({ typ, details, sicht, anhang = '', neuLaden }: { t
           {details.aufbewahrenBis && <div><dt><span className="chip archiv" title="Archivmodus: vor Fristende nicht löschbar">Archiv</span></dt><dd>{inFrist(details.aufbewahrenBis) ? 'aufbewahren bis' : 'Frist abgelaufen am'} {datumText(details.aufbewahrenBis)}</dd></div>}
         </dl>
         {typ.system === 'benutzer' && ich.rolle === 'admin' && <p className="leise klein"><Link to={`/werkbank/benutzer/${mappe.id}`} className="verweis">In der Benutzerverwaltung öffnen →</Link></p>}
-        {mappe.systemKennung && <p className="leise klein"><span className="chip">Systemrolle</span> Wer sie hat, ergibt sich aus der Rolle in der Benutzerverwaltung.</p>}
+        {mappe.systemKennung && <p className="leise klein"><span className="chip">Systemrolle</span> {t('mappen.systemrolle.hinweis')}</p>}
         {kopiert && <LinkKopiert {...kopiert} schliessen={() => setKopiert(null)} />}
       </div>
+      {details.nurImVerwaltungsmodus && <NurImModus mappeId={mappe.id} />}
       {typ.system === 'post' && <PostLeiste typ={typ} details={details} neuLaden={neuLaden} />}
       <AufgabenHinweis aufgaben={details.aufgaben ?? []} neuLaden={neuLaden} zuNotizen={() => setRegisterWunsch((w) => ({ key: NOTIZEN_REGISTER, n: (w?.n ?? 0) + 1 }))} />
       <Erinnerungen liste={details.erinnerungen ?? []} neuLaden={neuLaden} />
@@ -251,7 +263,7 @@ function Formular({ typ, mappe, start, sicht, anhang = '', details, neuLaden, zu
   // „Mappe löschen“ (#423): nie kommentarlos grau – warum nicht, steht auf Klick direkt am Knopf.
   const loeschenZeigen = !!mappe && darfLoeschen(typ, mappe);
   const loeschSperre: Loeschsperre | undefined = !loeschenZeigen ? undefined
-    : !darfLoeschenHier ? { grund: 'Mappen dieses Mappentyps darfst du nach den Berechtigungen nicht löschen. Das legt ein Administrator fest.' }
+    : !darfLoeschenHier ? { grund: 'Mappen dieses Mappentyps darfst du nach den Berechtigungen nicht löschen. Das legt fest, wer Ablago verwaltet.' }
     : details?.loeschbar?.ok === false ? { grund: details.loeschbar.grund ?? 'Diese Mappe lässt sich gerade nicht löschen.', rueckverweise: details.loeschbar.rueckverweise }
     : undefined;
   // Weitere Löschwege trotz Sperre (z. B. „Mit verknüpften Mappen löschen …“, #424) kommen über `wege` dazu.
@@ -861,7 +873,7 @@ function PasswortEingabe({ id, feld: f, roh: p, setze, mappeId, nurLesen, sehen 
         </div>
         {fehler && <p className="fehlertext">{fehler}</p>}
         {!sehen && p.lesbar && <span className="hilfe">Passwörter dieser Mappe darfst du nach den Berechtigungen nicht sehen.</span>}
-        {!passwoerterMoeglich && !nurLesen && <span className="hilfe">Ändern geht erst wieder, wenn ein Administrator den Schlüssel bereitstellt (Werkbank → Verschlüsselung).</span>}
+        {!passwoerterMoeglich && !nurLesen && <span className="hilfe">Ändern geht erst wieder, wenn der Schlüssel bereitsteht (Werkbank → Verschlüsselung).</span>}
       </>
     );
   }
@@ -869,7 +881,7 @@ function PasswortEingabe({ id, feld: f, roh: p, setze, mappeId, nurLesen, sehen 
   if (!passwoerterMoeglich) return (
     <>
       <input id={id} type="password" disabled placeholder="nicht möglich" />
-      <span className="hilfe">Passwörter lassen sich erst speichern, wenn ein Administrator in der Werkbank unter „Verschlüsselung“ einen Schlüssel erzeugt hat.</span>
+      <span className="hilfe">Passwörter lassen sich erst speichern, wenn in der Werkbank unter „Verschlüsselung“ ein Schlüssel erzeugt ist.</span>
     </>
   );
 

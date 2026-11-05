@@ -8,7 +8,8 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { t } from '../sprache';
 
 /** Wer im Alltag Aufgaben ohne Empfänger bekommen darf (#719): aktive Menschen ohne Admin-Rechte. */
-export const taugt = (b: Benutzer) => b.aktiv && b.rolle !== 'admin' && !b.art;
+/** Jede aktive Person – seit #818 auch, wer verwaltet (ein Konto für Alltag und Verwaltung). */
+export const taugt = (b: Benutzer) => b.aktiv && !b.art;
 
 /** Einstellung laden (Werkbank → Benutzer). */
 export function useAufgabenEmpfaenger(aktiv: boolean) {
@@ -24,7 +25,7 @@ export type AufgabenEmpfaengerZustand = ReturnType<typeof useAufgabenEmpfaenger>
 
 /**
  * Werkbank → Benutzer und Sicherheit → Benutzer (#719): „Aufgaben ohne Empfänger gehen an …“. Auswahl wie ein
- * Verweisfeld, nur aktive Benutzer ohne Admin-Rechte. Die Administratoren sehen die Aufgaben weiterhin.
+ * Verweisfeld, nur aktive Benutzer. Im Verwaltungsmodus sieht man die Aufgaben weiterhin.
  */
 export function AufgabenEmpfaengerBlock({ z, benutzer }: { z: AufgabenEmpfaengerZustand; benutzer: Benutzer[] }) {
   const d = useDaten();
@@ -42,7 +43,7 @@ export function AufgabenEmpfaengerBlock({ z, benutzer }: { z: AufgabenEmpfaenger
   const vorschlaege = passend.filter((b) => b.id !== wahl && (!such || name(b).toLocaleLowerCase('de').includes(such) || b.email.toLocaleLowerCase('de').includes(such)))
     .map((b) => ({ id: b.id, text: <>{name(b)} <span className="leise klein">{b.email}</span></> }));
   const gewaehlt = wahl ? benutzer.find((b) => b.id === wahl) : undefined;
-  // Gespeichert, aber inzwischen deaktiviert oder Administrator: Hinweis, bis jemand anderes gewählt ist.
+  // Gespeichert, aber inzwischen deaktiviert: Hinweis, bis jemand anderes gewählt ist.
   const ungueltig = z.stand && !z.stand.benutzerId && z.stand.gespeichert ? z.stand.gespeichert : null;
 
   async function speichern() {

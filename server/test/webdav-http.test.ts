@@ -39,7 +39,7 @@ describe('WebDAV über HTTP (#346)', { skip: echtesFastify ? false : 'Fastify ni
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', dienst.benutzerspiegel());
     dienst.verbindeKonten(konten.papierkorbHaken());
     const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-    const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
+    const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
     annaId = anna.id;
     await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
     const schluessel = new ApiSchluesselDienst(speicherApiSchluesselRepo());

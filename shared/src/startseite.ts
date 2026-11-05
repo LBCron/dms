@@ -1,9 +1,10 @@
 /**
- * Wohin nach der Anmeldung (#721): Administratoren landen in der Werkbank, alle anderen in der Ablage.
+ * Wohin nach der Anmeldung (#721, angepasst an den Verwaltungsmodus #819): `rolle` ist die wirksame Rolle – `admin`
+ * nur im Verwaltungsmodus. Im Modus ist die Startseite die Werkbank, ohne Modus die Ablage. Nach einer Anmeldung läuft
+ * nie ein Modus, also führt sie immer in die Ablage (oder zum Link, von dem sie ausging).
  *
- * Ein Konto mit Administrator-Rechten arbeitet im Alltag nicht in der Ablage – deshalb gibt es keine Wahl.
- * Ein Link in die Werkbank (oder nach „Mein Konto“) hat Vorrang; ein Link in die Ablage führt Admins in die
- * Werkbank-Übersicht. Die Ablage bleibt über die Leiste oben jederzeit erreichbar (z. B. für die Fehlersuche).
+ * Im Modus hat ein Link in die Werkbank (oder nach „Mein Konto“) Vorrang; die Ablage bleibt über die Leiste oben
+ * erreichbar (Fehlersuche).
  */
 export const ADMIN_START = '/werkbank';
 

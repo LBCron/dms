@@ -92,7 +92,7 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
   } else if (dritt === 'neu' && typ && verwaltet?.rechte?.C === false) {
     rechts = <div className="leer"><p>In der Ansicht „{verwaltet.name}“ lassen sich keine neuen Mappen anlegen.</p></div>;
   } else if (dritt === 'neu' && typ && !darfErstellen(typ)) {
-    rechts = <div className="leer"><p>Von „{typ.name}“ lassen sich in der Ablage keine neuen Mappen anlegen.{typ.system === 'benutzer' ? ' Benutzer legt ein Administrator in der Werkbank unter „Benutzer“ an.' : ''}</p></div>;
+    rechts = <div className="leer"><p>Von „{typ.name}“ lassen sich in der Ablage keine neuen Mappen anlegen.{typ.system === 'benutzer' ? ' Benutzer legt in der Werkbank unter „Benutzer“ an, wer Ablago verwaltet.' : ''}</p></div>;
   } else if (dritt === 'neu' && typ) {
     rechts = <NeueMappe key={`${typ.id}-${suche.get('verweis') ?? ''}-${suche.get('zuordnen') ?? ''}-${suche.get('vorbelegen') ?? ''}`} typ={typ} sicht={sicht} verweis={suche.get('verweis') ?? undefined} zuordnen={zuordnenAus(suche)} vorbelegen={suche.get('vorbelegen') ?? undefined} />;
   } else if (dritt === 'weitergeben' && sicht === 'eingang') {
@@ -142,8 +142,8 @@ export function Ablage({ teile, suche }: { teile: string[]; suche: URLSearchPara
           {d.sichten.length > 0 && <hr />}
           <AnsichtFilter aktiv={sicht} baum={<SichtBaum aktiv={sicht} ohne={[neuePost, favSicht].filter((x): x is Sicht => !!x && !kinderVon(d.sichten, x.id).length).map((x) => x.id)} />} />
         </nav>
-        {!d.typen.length && <p className="leise klein">Noch keine Mappentypen. {ich.rolle === 'admin' ? <Link to="/werkbank/typen" className="verweis">Zur Werkbank</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
-        {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">Noch keine Ansichten. {ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">Ansichten einrichten</Link> : 'Ein Administrator muss sie zuerst einrichten.'}</p>}
+        {!d.typen.length && <p className="leise klein">Noch keine Mappentypen. {ich.rolle === 'admin' ? <Link to="/werkbank/typen" className="verweis">Zur Werkbank</Link> : 'Wer Ablago verwaltet, muss sie zuerst einrichten.'}</p>}
+        {d.typen.length > 0 && !d.sichten.length && <p className="leise klein">Noch keine Ansichten. {ich.rolle === 'admin' ? <Link to="/werkbank/sichten" className="verweis">Ansichten einrichten</Link> : 'Wer Ablago verwaltet, muss sie zuerst einrichten.'}</p>}
       </aside>
 
       <section className={`spalte liste${istSuche ? ` suchmitte${formular ? ' sm-formular' : ''}` : ''}${kalender ? ' ka-mitte' : ''}`} aria-label="Mappen">

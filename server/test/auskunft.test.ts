@@ -27,7 +27,7 @@ import { speicherRepo } from '../src/repo-speicher';
 import { routen, type Anfrage } from '../src/routen';
 import { Tresor } from '../src/tresor';
 import { zipStrom } from '../src/zip';
-import { pdfMitText } from './hilfen';
+import { pdfMitText, wieImModus } from './hilfen';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 
@@ -98,7 +98,7 @@ async function aufbau(pg: boolean) {
   const konten = new Konten(r.konto, null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'verwalter@example.org', name: 'Vera Verwalter', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const reg = [{ key: 'daten', name: 'Daten', art: 'felder' as const }, { key: 'dok', name: 'Unterlagen', art: 'dokumente' as const, versionierung: true }];
   const wohnungTyp = await d.legeTypAn({ name: 'Wohnung', titelVorlage: '{lage}', felder: [{ key: 'lage', label: 'Lage', typ: 'text' }] });
@@ -139,7 +139,7 @@ async function aufbau(pg: boolean) {
   const tabelle = routen(d, konten, {});
   const route = (m: string, p: string) => tabelle.find((x) => x.methode === m && x.pfad === p)!;
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
-  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) } as Anfrage);
+  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) } as Anfrage);
   return { d, konten, admin, anna, typen: { mieterTyp, wohnungTyp, vertragTyp, nkTyp, hinweisTyp }, m: { wohnung, max, bea, v1, v2, vBea, nk1, nk2, hinweis, post }, doks: { nkPdf, nkGeschwaerzt, vertragPdf }, notizen: { notizOk, notizIntern }, rufe };
 }
 

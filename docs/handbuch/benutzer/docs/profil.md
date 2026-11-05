@@ -6,8 +6,9 @@ Ein Klick auf deinen Namen oben rechts öffnet ein Menü:
 
 ![Benutzermenü](bilder/benutzermenue.png)
 
-- Oben stehen dein Name, deine E-Mail-Adresse und deine Rolle.
+- Oben stehen dein Name, deine E-Mail-Adresse und – falls du Ablago verwalten darfst – „darf Ablago verwalten“ bzw. „im Verwaltungsmodus“.
 - **Mein Konto** – dein [Profil](#profil) mit allen Bereichen: Konto, Sicherheit, Darstellung (Design, Schriftgröße, Startseite, geänderte Mappen hervorheben, Spaltenbreiten), Benachrichtigungen, [Abwesenheit](#abwesenheit).
+- **Ablago verwalten** – nur, wenn du verwalten darfst: wechselt in den [Verwaltungsmodus](#ablago-verwalten). Im Modus steht hier **Verwaltung beenden**.
 - Solange eine Abwesenheit wirkt, steht oben im Menü „Du bist abwesend“ – ein Klick darauf führt direkt dorthin –, und neben deinem Namen ist ein Punkt.
 - **Hilfe** – öffnet dieses Handbuch.
 - **Fehler melden** – siehe [Fehler melden](#fehler-melden).
@@ -52,7 +53,7 @@ Unter **Konto → Meine Daten exportieren** bekommst du eine Kopie von allem, wa
 
 Was dem ganzen Haushalt gehört – Löschprotokoll, gleichbedeutende Wörter der Suche, Automatisierungen –, steht nur im Vollexport des Administrators. Verweist eine Mappe auf eine, die du nicht lesen darfst, steht dort statt des Titels „nicht sichtbare Mappe“.
 
-**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. **Nach dem Herunterladen wird er gelöscht**, spätestens nach 7 Tagen; bis wann er bereitliegt, steht neben dem Knopf. Brauchst du ihn länger, bewahre die ZIP-Datei auf. Solange ein Administrator [in deinem Namen arbeitet](#hinweis-ein-administrator-hat-in-deinem-namen-gearbeitet), lässt sich kein Export starten. Hat ein Administrator den Export abgeschaltet, steht das an dieser Stelle.
+**Der Export ist unverschlüsselt** – bewahre die Datei sicher auf. Passwortfelder stehen nur dabei, wenn du sie sehen darfst und das ausdrücklich bestätigst; sie liegen dann im Klartext in der Datei `passwoerter.csv`. Der Export läuft im Hintergrund; ist er fertig, lädst du ihn als ZIP herunter. Es gibt immer nur deinen letzten Export – ein neuer ersetzt den alten. **Nach dem Herunterladen wird er gelöscht**, spätestens nach 7 Tagen; bis wann er bereitliegt, steht neben dem Knopf. Brauchst du ihn länger, bewahre die ZIP-Datei auf. Solange jemand [in deinem Namen arbeitet](#in-deinem-namen), lässt sich kein Export starten. Ist der Export in der Werkbank abgeschaltet, steht das an dieser Stelle.
 
 ### Meine Rechte
 
@@ -67,7 +68,7 @@ Unten im Bereich *Konto*, unter Name und E-Mail-Adresse, steht, was du je Mappen
 - **Meine angemeldeten Geräte** – überall, wo du gerade angemeldet bist, mit Browser, Gerät und letzter Aktivität; *dieses Gerät* ist markiert. **Abmelden** beendet eine einzelne Anmeldung, **Alle anderen abmelden** alle außer dieser – etwa wenn du ein Handy verloren hast. Ändere dann am besten auch dein Passwort.
 - <span id="passwoerter-fuer-dokumente"></span>**Passwörter für Dokumente** – die Passwörter geschützter PDFs, die du beim [Entsperren](dokumente.md#passwortgeschuetzte-pdfs) mit **Für weitere Dokumente merken** abgelegt hast. Je Passwort siehst du den Namen, das Passwort verdeckt und wann Ablago es zuletzt benutzt hat. Mit dem Auge zeigst du es an, mit **Ändern** gibst du einen neuen Namen oder ein neues Passwort ein, und das kleine rote **×** löscht es. Bereits entsperrte Dokumente bleiben dabei entsperrt.
     - **Anzeigen und Ändern** des Passworts geht erst, nachdem du dich noch einmal bestätigt hast: mit deinem Ablago-Passwort oder, mit Zwei-Faktor-Anmeldung, auch mit einem Code aus der App. Die Bestätigung gilt fünf Minuten für diesen Bereich.
-    - Die Passwörter gehören **nur dir**: Ablago speichert sie in deinem Konto, verschlüsselt mit dem Schlüssel von Ablago. In Ablago sieht sie niemand sonst, auch Administratoren nicht, auch nicht in einer Vertretung. Über API-Schlüssel oder Pakete kommen sie nie heraus; im Vollexport fehlen sie, in der Sicherung stehen sie nur verschlüsselt. Ehrlich gesagt: Wer den Server selbst und den Schlüssel von Ablago in der Hand hat, könnte sie technisch entschlüsseln – wie jedes Passwortfeld in einer Mappe.
+    - Die Passwörter gehören **nur dir**: Ablago speichert sie in deinem Konto, verschlüsselt mit dem Schlüssel von Ablago. In Ablago sieht sie niemand sonst, auch nicht, wer Ablago verwaltet (auch nicht im Verwaltungsmodus), und auch nicht in einer Vertretung. Über API-Schlüssel oder Pakete kommen sie nie heraus; im Vollexport fehlen sie, in der Sicherung stehen sie nur verschlüsselt. Ehrlich gesagt: Wer den Server selbst und den Schlüssel von Ablago in der Hand hat, könnte sie technisch entschlüsseln – wie jedes Passwortfeld in einer Mappe.
     - Du kannst höchstens 20 Passwörter merken.
     - Das ist **keine Passwortverwaltung**: Ablago nutzt diese Passwörter nur, um geschützte Dokumente zu öffnen, die du ablegst. Für deine Zugänge zu Websites und Apps nimm bitte einen Passwort-Manager.
 - **API-Schlüssel** – damit können andere Programme in deinem Namen auf Ablago zugreifen, etwa ein Scanner. Brauchst du das nicht, kannst du diesen Abschnitt übergehen. Passwortfelder liefert ein Schlüssel nur, wenn du beim Erzeugen **Passwörter lesen** ankreuzt. Unter **Rechte** wählst du eine von drei Stufen:
@@ -155,10 +156,20 @@ Funktioniert etwas nicht, wähle im Menü **Fehler melden**:
 1. Beschreibe kurz, was passiert ist und was du erwartet hättest.
 2. Füge bei Bedarf bis zu zwei **Screenshots** hinzu (PNG, JPEG oder WebP, je höchstens 10 MB) – auch direkt mit Strg+V ins Textfeld.
 3. Unter **Technische Angaben ansehen** steht, was mitgeschickt wird: Version von Ablago, Browser und Gerät, Bildschirm- und Fenstergröße, Sprache und Zeitzone, die zuletzt besuchten Seiten (bis zu 25) und die letzten Fehler im Browser (bis zu 10). Passwörter, Inhalte von Mappen und Dokumente gehen nicht mit.
-4. **An die Administratoren senden** – oder **In die Zwischenablage kopieren**, um es z. B. per E-Mail zu schicken.
+4. **Meldung senden** (geht an alle, die Ablago verwalten) – oder **In die Zwischenablage kopieren**, um es z. B. per E-Mail zu schicken.
 
-Die Administratoren sehen deine Meldung in der Werkbank und melden sich, falls sie Fragen haben.
+Wer Ablago verwaltet, sieht deine Meldung in der Werkbank und meldet sich, falls es Fragen gibt.
 
-## Hinweis „Ein Administrator hat in deinem Namen gearbeitet“
+## Ablago verwalten { #ablago-verwalten }
 
-Um einen Fehler nachzustellen, kann sich ein Administrator als du anmelden. Er sieht dann genau, was du siehst. Danach zeigt dir Ablago beim nächsten Mal oben einen Hinweis, wer das wann getan hat. Mit **Verstanden** blendest du ihn aus. Solange er als du arbeitet, steht bei dieser Anmeldung unter *Meine angemeldeten Geräte* der Hinweis **Administrator agiert als du**.
+Darfst du Ablago verwalten, arbeitest du im Alltag trotzdem wie alle anderen – mit deinen normalen Rechten. Für die Werkbank wechselst du bewusst in den **Verwaltungsmodus**:
+
+1. Menü unter deinem Namen → **Ablago verwalten**.
+2. Melde dich **erneut an** (Passwort, dazu der Code, falls du die Zwei-Faktor-Anmeldung eingerichtet hast). Hast du dich gerade erst angemeldet, entfällt das.
+3. Oben steht jetzt ein **roter Balken**: „Du verwaltest gerade Ablago.“ Solange er da ist, siehst du in der Ablage alle Mappen, auch gesperrte – öffnest du eine, die du sonst nicht sehen dürftest, steht das in ihrer Historie.
+
+Mit **Verwaltung beenden** (im Balken oder im Menü) bist du zurück im Alltag. Nach 15 Minuten ohne Eingabe endet der Modus von selbst; was du gerade bearbeitest, bleibt erhalten – Ablago fragt nur erneut nach der Anmeldung. Am selben Tag geht es dann mit einem Klick weiter (**Wieder verwalten**). Für besonders heikle Handlungen – etwa das Notfallblatt herunterladen – fragt Ablago das Passwort immer noch einmal ab.
+
+## Hinweis „… hat in deinem Namen gearbeitet“ { #in-deinem-namen }
+
+Um einen Fehler nachzustellen, kann sich jemand, der Ablago verwaltet, als du anmelden. Er sieht dann genau, was du siehst – mit deinen Rechten, nicht im Verwaltungsmodus. Danach zeigt dir Ablago beim nächsten Mal oben einen Hinweis, wer das wann getan hat. Mit **Verstanden** blendest du ihn aus. Solange jemand als du arbeitet, steht bei dieser Anmeldung unter *Meine angemeldeten Geräte* der Hinweis **jemand arbeitet in deinem Namen**.

@@ -1,5 +1,6 @@
 /** Fristen (#129–#133): Erinnerungen an Datumsfeldern, wiederkehrend, freie Erinnerungen, Termine im Kalender (#725), Sichtbedingung. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { after, describe, it } from 'node:test';
 import { bereinigeFrist, fristAb, fristText, naechsterTermin } from '../../shared/src/fristen';
 import { bedingungsProblem, beschreibeBedingung, erfuellt, filterFuer, heuteIn, verschiebe } from '../../shared/src/sichten';
@@ -39,7 +40,7 @@ export async function aufbauFristen(pg = false) {
   const konten = new Konten(r?.konto ?? speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name, rolle: 'mitglied' }, admin.id)).benutzer;
+  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name }, admin.id)).benutzer;
   const anna = await neu('Anna'); const ben = await neu('Ben');
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const benutzerTyp = (await d.listeTypen()).find((t) => t.system === 'benutzer')!;
@@ -52,7 +53,7 @@ export async function aufbauFristen(pg = false) {
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
   const route = (m: string, p: string) => tabelle.find((r) => r.methode === m && r.pfad === p)!;
-  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   return { d, konten, admin, anna, ben, vertrag, benutzerTyp, rufe };
 }
 

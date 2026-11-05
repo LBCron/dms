@@ -17,8 +17,8 @@ async function aufbau() {
   const uhr = { stelle: (iso: string) => { jetzt = new Date(iso); } };
   const konten = new Konten(speicherKontoRepo(), null, 'http://dms');
   const admin = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const { benutzer: mitglied } = await konten.legeBenutzerAn({ email: 'mitglied@example.org', name: 'Mitglied', rolle: 'mitglied' });
-  await konten.legeBenutzerAn({ email: 'admin2@example.org', name: 'Admin 2', rolle: 'admin' });
+  const { benutzer: mitglied } = await konten.legeBenutzerAn({ email: 'mitglied@example.org', name: 'Mitglied' });
+  await konten.legeBenutzerAn({ email: 'admin2@example.org', name: 'Admin 2', verwaltung: ['*'] });
   // Mitglied hat ein Passwort und zwei Geräte.
   const repo = (konten as unknown as { repo: ReturnType<typeof speicherKontoRepo> }).repo;
   const { hashePasswort } = await import('../src/passwort');
@@ -45,7 +45,7 @@ describe('Wartungsmodus (#102)', () => {
     assert.equal(wartung.stand.stufe, 'angekuendigt');
     assert.deepEqual(wartung.oeffentlich(), { stufe: 'angekuendigt', text: 'Wiederherstellung', ende: '2026-10-29T12:00:00.000Z', aktivAb: '2026-10-29T10:30:00.000Z', sekunden: 1800, ausloeser: null });
     assert.ok(await konten.anmeldungZu(m1.schluessel), 'angekündigt: Arbeiten und Speichern gehen weiter');
-    wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { rolle: 'mitglied' });
+    wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { verwaltung: [] });
 
     uhr.stelle('2026-10-29T10:29:00Z');
     await wartung.pruefe();
@@ -64,13 +64,13 @@ describe('Wartungsmodus (#102)', () => {
     const { admin, adminSitzung, wartung } = await aufbau();
     await wartung.einschalten({ vorlauf: 0, ende: '2026-10-29T11:00:00Z' }, admin.benutzer, adminSitzung.id);
     assert.equal(wartung.stand.stufe, 'aktiv');
-    assert.throws(() => wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { rolle: 'admin' }),
+    assert.throws(() => wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { verwaltung: ['*'] }),
       (e: unknown) => e instanceof WartungFehler && e.status === 503 && e.retryAfter === 3600);
-    assert.throws(() => wartung.pruefeAnfrage({ pfad: '/api/mappen', zugang: 'angemeldet' }, { rolle: 'mitglied' }), WartungFehler);
-    wartung.pruefeAnfrage({ pfad: '/api/mappen', zugang: 'angemeldet' }, { rolle: 'admin' });
+    assert.throws(() => wartung.pruefeAnfrage({ pfad: '/api/mappen', zugang: 'angemeldet' }, { verwaltung: [] }), WartungFehler);
+    wartung.pruefeAnfrage({ pfad: '/api/mappen', zugang: 'angemeldet' }, { verwaltung: ['*'] });
     wartung.pruefeAnfrage({ pfad: '/api/konto/status', zugang: 'offen' }, undefined);
     await wartung.ausschalten('admin@example.org');
-    wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { rolle: 'mitglied' });
+    wartung.pruefeAnfrage({ pfad: '/api/v1/mappen', zugang: 'angemeldet' }, { verwaltung: [] });
   });
 
   it('lässt ab der Ankündigung nur Administratoren anmelden', async () => {

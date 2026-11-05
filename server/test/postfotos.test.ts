@@ -1,5 +1,6 @@
 /** Post fotografieren (#490): Fotos → ein PDF → eine Post, Seite anhängen, zwei Posts zusammenlegen. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { mkdtemp, readdir, rm, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,7 +44,7 @@ async function aufbau() {
   const stapel = new Fotostapel(wurzel);
   const tabelle = routen(d, konten, { fotostapel: stapel });
   const rufe = async (m: string, p: string, x: Partial<Anfrage> = {}) =>
-    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: (await konten.listeBenutzer()).find((u) => u.id === anna.id)! }) as Promise<{ status: number; body: Record<string, unknown> }>;
+    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus((await konten.listeBenutzer()).find((u) => u.id === anna.id)!) }) as Promise<{ status: number; body: Record<string, unknown> }>;
   const foto = async (b: Buffer) => (await rufe('POST', '/api/fotostapel', { body: b })).body.id as string;
   const pdfVon = async (id: string) => { const s = await dateien.lies((await d.holeMappe(id)).dokumente[0].sha256); return Buffer.isBuffer(s) ? s : Buffer.concat(await s.toArray() as Buffer[]); };
   return { d, anna, rufe, foto, pdfVon, stapel, wurzel, aufraeumen: () => rm(wurzel, { recursive: true, force: true }) };

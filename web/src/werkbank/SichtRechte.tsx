@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { useEffect, useState, type ReactNode } from 'react';
 import { beschreibeRegelBedingung, type Wirkung } from '../../../shared/src/rechte';
 import {
@@ -88,7 +89,7 @@ export function SichtBerechtigungen({ e, setE, alle, klappe }: {
 
   return (
     <Bereich id="berechtigungen" titel="Berechtigungen" hilfe={<Hilfe ort="sicht.berechtigungen" />} klappe={klappe} kurz={sichtRechteKurz(e, alle)}
-      beschreibung={<>Wer die Ansicht in der Ablage sieht (R) und dort „+ Neu“ bekommt (C). Ob eine Mappe lesbar ist, regelt weiter der <strong>Mappentyp</strong>. Für Administratoren gelten die Regeln nicht.</>}>
+      beschreibung={<>Wer die Ansicht in der Ablage sieht (R) und dort „+ Neu“ bekommt (C). Ob eine Mappe lesbar ist, regelt weiter der <strong>Mappentyp</strong>. Im Verwaltungsmodus gelten die Regeln nicht.</>}>
       {untersicht ? (
         <>
           <h3 className="zwischen">Geerbt</h3>

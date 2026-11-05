@@ -331,7 +331,7 @@ export class Tresor {
   private fehlt(): never {
     throw new Fachfehler(409, this.zustand === 'falsch'
       ? 'Die Schlüsseldatei passt nicht zu den gespeicherten Passwörtern. Passwörter lassen sich erst wieder speichern, wenn das geklärt ist (Werkbank → Verschlüsselung).'
-      : 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Ein Administrator erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
+      : 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Wer Ablago verwaltet, erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
   }
 
   verschluessele(klartext: string): string {

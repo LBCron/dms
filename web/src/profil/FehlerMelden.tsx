@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { useEffect, useState, type ClipboardEvent } from 'react';
 import { api, type Diagnose } from '../api';
 import { useDaten } from '../daten';
@@ -72,7 +73,7 @@ export function FehlerMelden() {
   if (gesendet) return (
     <div className="einspaltig schmal">
       <div className="mappenkopf"><p className="ueber">Hilfe</p><h1>Fehler melden</h1></div>
-      <div className="hinweis gut"><p><strong>Deine Meldung ist bei den Administratoren angekommen.</strong> Sie melden sich bei dir, falls sie Fragen haben.</p></div>
+      <div className="hinweis gut"><p><strong>Deine Meldung ist angekommen.</strong> Sie melden sich bei dir, falls sie Fragen haben.</p></div>
       <div className="knoepfe"><button type="button" className="knopf" onClick={() => { setGesendet(false); setText(''); setBilder([]); }}>Noch eine Meldung</button></div>
     </div>
   );
@@ -82,7 +83,7 @@ export function FehlerMelden() {
       <div className="mappenkopf">
         <p className="ueber">Hilfe</p>
         <h1>Fehler melden</h1>
-        <p className="leise">Beschreibe kurz, was passiert ist und was du erwartet hättest. Die technischen Angaben unten helfen den Administratoren beim Nachstellen. Passwörter, Inhalte von Mappen und Dokumente gehen nicht mit.</p>
+        <p className="leise">Beschreibe kurz, was passiert ist und was du erwartet hättest. Die technischen Angaben unten helfen beim Nachstellen. Passwörter, Inhalte von Mappen und Dokumente gehen nicht mit.</p>
       </div>
       <section className="blatt">
         <label className="eigenschaft"><span>Was ist passiert?</span>
@@ -106,7 +107,7 @@ export function FehlerMelden() {
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
       <div className="knoepfe">
         <button type="button" className="knopf" disabled={!text.trim()} onClick={() => void kopieren()}>In die Zwischenablage kopieren</button>
-        <button type="button" className="knopf primaer" disabled={!text.trim() || sendet || server === null} onClick={() => void senden()}>{sendet ? 'Wird gesendet …' : 'An die Administratoren senden'}</button>
+        <button type="button" className="knopf primaer" disabled={!text.trim() || sendet || server === null} onClick={() => void senden()}>{sendet ? 'Wird gesendet …' : 'Meldung senden'}</button>
       </div>
     </div>
   );

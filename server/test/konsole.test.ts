@@ -41,14 +41,17 @@ describe('Befehl dms im Container (#244)', () => {
     assert.equal(lokaleUrl(8080, '::'), 'http://127.0.0.1:8080');
     assert.equal(lokaleUrl(8080, '10.0.0.5'), 'http://10.0.0.5:8080');
     const liste = [
-      benutzer({ email: 'neu@x.example', rolle: 'admin', erstellt: '2026-05-01' }),
-      benutzer({ email: 'alt@x.example', rolle: 'admin', erstellt: '2026-02-01' }),
-      benutzer({ email: 'aus@x.example', rolle: 'admin', erstellt: '2026-01-01', aktiv: false }),
+      benutzer({ email: 'neu@x.example', verwaltung: ['*'], erstellt: '2026-05-01' }),
+      benutzer({ email: 'alt@x.example', verwaltung: ['*'], erstellt: '2026-02-01' }),
+      benutzer({ email: 'aus@x.example', verwaltung: ['*'], erstellt: '2026-01-01', aktiv: false }),
+      // Nur Teilrechte (#818): die Konsole handelt nur als „Gesamte Verwaltung“.
+      benutzer({ email: 'teil@x.example', verwaltung: ['benutzer'], erstellt: '2025-01-01' }),
       benutzer({ email: 'm@x.example' }),
     ];
     assert.equal(konsolenBenutzer(liste, undefined).email, 'alt@x.example');
     assert.equal(konsolenBenutzer(liste, 'NEU@x.example').email, 'neu@x.example');
     assert.throws(() => konsolenBenutzer(liste, 'm@x.example'), status(404));
+    assert.throws(() => konsolenBenutzer(liste, 'teil@x.example'), status(404));
     assert.throws(() => konsolenBenutzer(liste, 'aus@x.example'), status(404));
     assert.throws(() => konsolenBenutzer([], undefined), status(409));
   });
@@ -146,7 +149,7 @@ describe('Befehl dms im Container (#244)', () => {
     await lauf(['wartung', 'aus']);
     assert.equal(aufrufe.pop(), 'POST /api/werkbank/wartung/aus');
     await lauf(['benutzer', 'anlegen', 'c@x.example', 'Carl', 'C.', '--admin']);
-    assert.equal(aufrufe.pop(), 'POST /api/benutzer {"email":"c@x.example","name":"Carl C.","rolle":"admin"}');
+    assert.equal(aufrufe.pop(), 'POST /api/benutzer {"email":"c@x.example","name":"Carl C.","verwaltung":["*"]}');
     await lauf(['api', 'put', '/api/werkbank/zweifaktor', '{"admin":true}']);
     assert.equal(aufrufe.pop(), 'PUT /api/werkbank/zweifaktor {"admin":true}');
     await assert.rejects(lauf(['api', 'GET', 'werkbank']), /Aufruf/);

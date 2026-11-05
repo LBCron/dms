@@ -1,5 +1,6 @@
 /** Auswahl mehrerer Mappen (#149) und Mehrfach-Löschen (#150). */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { speicherDateien } from '../src/dateispeicher';
 import { Dienst } from '../src/dienst';
@@ -18,8 +19,8 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
-  const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
+  const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const partner = await d.legeTypAn({ name: 'Partner', felder: [{ key: 'name', label: 'Name', typ: 'text', pflicht: true }] });
   // Max darf Rechnungen nicht löschen.
@@ -32,7 +33,7 @@ async function aufbau() {
   for (const nr of ['R-1', 'R-2', 'R-3']) r.push(await d.legeMappeAn({ typId: rechnung.id, werte: { nr, partner: nr === 'R-1' ? p1.id : null } }, anna.id));
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
-  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   const loesche = async (b: { id: string }, ids: string[], probe = false) => (await rufe(b, 'POST', '/api/mappen/loeschen', { body: { ids, probe } })).body as Ergebnis;
   return { d, anna, max, partner, rechnung, p1, r, rufe, loesche };
 }

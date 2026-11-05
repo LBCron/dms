@@ -65,6 +65,8 @@ echo "::group::2b. Eingangsordner (#195)"
 jar=$(mktemp)
 curl -fsS -c "$jar" -X POST "http://127.0.0.1:$PORT/api/konto/anmelden" -H 'x-dms: 1' -H 'content-type: application/json' \
   -d '{"email":"admin@probe.invalid","passwort":"ein-langes-probe-passwort"}' >/dev/null || fehler "Anmeldung für den Eingangsordner"
+# Die Werkbank braucht seit #819 den Verwaltungsmodus; direkt nach der Anmeldung ohne erneute Abfrage.
+curl -fsS -b "$jar" -X POST "http://127.0.0.1:$PORT/api/konto/verwaltung" -H 'x-dms: 1' -H 'content-type: application/json' -d '{}' >/dev/null || fehler "Verwaltungsmodus beginnen"
 curl -fsS -b "$jar" -X PUT "http://127.0.0.1:$PORT/api/werkbank/eingangsordner" -H 'x-dms: 1' -H 'content-type: application/json' -d '{"abstand":5}' >/dev/null || fehler "Eingangsordner einstellen"
 printf '%%PDF-1.4\n%% Probe Eingangsordner\n' | sudo tee "$arbeit/eingang/Probe Scan.pdf" >/dev/null
 uebernommen=""

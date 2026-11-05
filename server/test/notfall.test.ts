@@ -8,7 +8,7 @@ import { describe, it } from 'node:test';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Konten } from '../src/konten';
 import { speicherKontoRepo } from '../src/konto-repo';
-import { anAlleAdmins } from '../src/mail';
+import { anVerwaltende } from '../src/mail';
 import { Notfallzugang } from '../src/notfall';
 import { protokoll } from '../src/protokoll';
 
@@ -22,7 +22,7 @@ async function aufbau() {
   const mailer = { async sende(an: string, betreff: string) { mails.push({ an, betreff }); } };
   const datei = join(await mkdtemp(join(tmpdir(), 'dms-rescue-')), 'RESCUE');
   const n = new Notfallzugang(datei, konten, speicherEinstellungen(),
-    async (b, t) => { await anAlleAdmins(await konten.listeBenutzer(), mailer, b, t); }, () => jetzt);
+    async (b, t) => { await anVerwaltende(await konten.listeBenutzer(), mailer, b, t); }, () => jetzt);
   return { konten, n, datei, mails, start, stelle: (iso: string) => { jetzt = new Date(iso); } };
 }
 
@@ -38,7 +38,7 @@ describe('Notfallzugang (#108)', () => {
     assert.ok(link, inhalt);
     assert.ok(!/passwort:/i.test(inhalt.replace(/\/passwort\//, '')), 'kein Passwort in der Datei');
     const admin = (await konten.listeBenutzer()).find((b) => b.name.startsWith('Notfall-Admin'))!;
-    assert.equal(admin.rolle, 'admin');
+    assert.deepEqual(admin.verwaltung, ['*']);
     assert.match(admin.name, /^Notfall-Admin \d\d\.\d\d\.\d{4} \d\d:\d\d$/);
     assert.equal((await konten.linkPruefen(link[1])).zweck, 'einladung');
     assert.deepEqual(mails.map((m) => m.an), ['admin@example.org'], 'Mail an die Administratoren (nicht an die .invalid-Adresse)');

@@ -1,3 +1,4 @@
+import { darfBereich } from '../../shared/src/verwaltungsrecht';
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type postgres from 'postgres';
 import type { Benutzer } from '../../shared/src/model';
@@ -373,7 +374,7 @@ export class Webhooks {
     if (e.ok) { if (!(await this.d.repo.zugestellt(m, e, this.abstandS))) this.planeZustellung(); return; }
     const warten = this.wartenS[m.versuch - 1];
     if (warten !== undefined) { await this.d.repo.fehlgeschlagen(m, e, warten, null); return; }
-    // Aufgeben: Webhook abschalten, mit Hinweis (Profil, Werkbank, Protokoll, Mail an die Administratoren).
+    // Aufgeben: Webhook abschalten, mit Hinweis (Profil, Werkbank, Protokoll, Mail an alle, die Webhooks verwalten).
     const ab: WebhookAbgeschaltet = { grund: 'fehler', zeit: jetzt(), text: e.fehler ?? '' };
     await this.d.repo.fehlgeschlagen(m, e, null, ab);
     log.warn('Webhook nach vielen Fehlschlägen abgeschaltet', { id: m.webhookId, versuche: m.versuch, fehler: e.fehler });
@@ -381,7 +382,8 @@ export class Webhooks {
     await this.d.anAdmins?.(t('webhook.abgeschaltet.betreff', { name: m.name }),
       t('webhook.abgeschaltet.text', { name: m.name, benutzer: b ? b.name || b.email : '–', versuche: m.versuch, fehler: e.fehler ?? '' }))
       .catch((f) => log.warn('Webhooks: Hinweis an die Administratoren nicht gesendet', { fehler: (f as Error).message }));
-    if (b && b.aktiv && b.rolle !== 'admin') {
+    // Wer Webhooks verwaltet, hat die Mail an die Verwaltenden schon bekommen (#818).
+    if (b && b.aktiv && !darfBereich(b, 'webhooks')) {
       await this.d.anBesitzer?.(b, t('webhook.abgeschaltet.betreff', { name: m.name }),
         t('webhook.abgeschaltet.besitzer', { name: b.name || b.email, webhook: m.name, versuche: m.versuch, fehler: e.fehler ?? '' }))
         .catch((f) => log.warn('Webhooks: Hinweis an den Besitzer nicht gesendet', { fehler: (f as Error).message }));

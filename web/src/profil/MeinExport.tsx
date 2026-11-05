@@ -18,7 +18,7 @@ export function MeinExport() {
   return (
     <div className="blatt" id="export">
       <h2 className="h3">Meine Daten exportieren <Hilfe ort="profil.export" /></h2>
-      {!s.erlaubt ? <p className="leise">Ein Administrator hat den persönlichen Export abgeschaltet.</p> : <>
+      {!s.erlaubt ? <p className="leise">Der persönliche Export ist in der Werkbank abgeschaltet.</p> : <>
         <p className="leise">Alle Mappen, die du lesen darfst, mit ihren Dokumenten, dazu deine Aufgaben, Erinnerungen, Favoriten und dein Profil – in offenen Formaten (CSV, JSON, Excel, PDF), lesbar ohne Ablago. Der Export ist unverschlüsselt.</p>
         <label className="haken"><input type="checkbox" checked={pw} onChange={(e) => { setPw(e.target.checked); if (!e.target.checked) setPwOk(false); }} /><span>Passwortfelder, die ich sehen darf, im Klartext mitnehmen<small className="hilfe">als passwoerter.csv für einen Passwortmanager</small></span></label>
         {pw && <label className="haken einzug"><input type="checkbox" checked={pwOk} onChange={(e) => setPwOk(e.target.checked)} /><span className="fehlertext">Mir ist klar: Die Passwörter stehen unverschlüsselt in der Datei.</span></label>}

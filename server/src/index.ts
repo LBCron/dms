@@ -59,7 +59,7 @@ import { Fachfehler } from './fehler';
 import { t, tAuto } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
-import { anAlleAdmins } from './mail';
+import { anVerwaltende } from './mail';
 import { Verwaltung } from './verwaltung';
 import { arch, release, type } from 'node:os';
 import { pgDatenquelle } from './datenbankabzug';
@@ -218,11 +218,13 @@ const wartung = new Wartung(pgBetriebSpeicher(sql, cfg.haushalt), konten);
 await wartung.laden();
 wartung.start();
 // Notfallzugang über eine RESCUE-Datei neben der Schlüsseldatei (#108).
-const anAdmins = async (betreff: string, text: string) => { await anAlleAdmins(await konten.listeBenutzer(), betrieb.mailer(), betreff, text); };
+// Hinweise an die Verwaltenden (#818, statt „an die Administratoren“): je Werkbank-Bereich an alle, die ihn verwalten
+// dürfen (auch „Gesamte Verwaltung“); ohne Bereich an „Gesamte Verwaltung“.
+const anVerwaltendeVon = (bereich?: string) => async (betreff: string, text: string) => { await anVerwaltende(await konten.listeBenutzer(), betrieb.mailer(), betreff, text, bereich); };
 spDeps.wartung = wartung;
-spDeps.anAdmins = anAdmins;
+spDeps.anAdmins = anVerwaltendeVon('systemzustand');
 // Anmeldeschutz (#240): Sperren in der Datenbank, einstellbar in der Werkbank.
-const anmeldesperre = new Anmeldesperre(pgEinstellungen(sql, cfg.haushalt), anAdmins);
+const anmeldesperre = new Anmeldesperre(pgEinstellungen(sql, cfg.haushalt), anVerwaltendeVon('anmeldeschutz'));
 konten.verbindeSperre(anmeldesperre);
 // Ereigniskatalog (#670): Kontosperre als Ereignis (Id des Benutzers, Zeitpunkt, Fehlversuche, IP gekürzt).
 anmeldesperre.beiKontosperre = async (x) => {
@@ -231,12 +233,12 @@ anmeldesperre.beiKontosperre = async (x) => {
 };
 // Zwei-Faktor-Anmeldung (#242): Geheimnis verschlüsselt mit dem Schlüssel des DMS.
 konten.verbindeZweifaktor(new Zweifaktor(pgEinstellungen(sql, cfg.haushalt), (k) => tresor.verschluessele(k), (w) => tresor.entschluessele(w)));
-const notfall = new Notfallzugang(join(dirname(tresor.datei), 'RESCUE'), konten, pgBetriebSpeicher(sql, cfg.haushalt), anAdmins);
+const notfall = new Notfallzugang(join(dirname(tresor.datei), 'RESCUE'), konten, pgBetriebSpeicher(sql, cfg.haushalt), anVerwaltendeVon());
 // Sicherungen (#103–#105): eigenes Volume, verschlüsselt mit dem Schlüssel der Werkbank.
 const sicherung = new Sicherung(ordner.sicherung, ordner.dateien, cfg.haushalt, {
   tresor, einstellungen: pgEinstellungen(sql, cfg.haushalt), daten: pgDatenquelle(sql),
   umgebung: async () => ({ dms: eigeneVersion(), node: process.versions.node, system: `${type()} ${release()}`, architektur: arch() }),
-  wartungAktiv: () => wartung.aktiv, anAdmins,
+  wartungAktiv: () => wartung.aktiv, anAdmins: anVerwaltendeVon('sicherung'),
 });
 // Wiederherstellen und Probe (#107, #109): eigenes Schema, erst nach allen Prüfungen umschalten.
 const wiederherstellung = new Wiederherstellung({
@@ -249,7 +251,7 @@ const wiederherstellung = new Wiederherstellung({
   // Gehört die Sicherung zu einem anderen Mandanten, gilt nach dem Neustart dessen Id (#119).
   mandantUebernehmen: async (id) => { await schreibeAnbindung(ordner.geheim, { ...db, mandant: id }); },
   pruefeCode: (c) => einrichtungscode.pruefe(c),
-  anAdmins,
+  anAdmins: anVerwaltendeVon('sicherung'),
 });
 sicherung.sperre = () => wiederherstellung.laeuft();
 await wiederherstellung.raeumeAuf();
@@ -334,7 +336,7 @@ const eingangsordner = new Eingangsordner(env.DMS_EINGANG ?? '/eingang', {
 // Postfächer (#196): Mails per IMAP abholen; nur eine Instanz ruft ab.
 let postSperre: Promise<boolean> | null = null;
 // Anmeldung per OAuth 2.0 (#358): Token verschlüsselt mit dem Schlüssel des DMS.
-const postfachOAuth = new PostfachOAuth({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), anAdmins });
+const postfachOAuth = new PostfachOAuth({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), anAdmins: anVerwaltendeVon('postfaecher') });
 // E-Mail-Versand über OAuth (#813): dieselbe Anmeldung wie bei den Postfächern.
 betrieb.verbindeOAuth(postfachOAuth);
 const postfaecher = new Postfaecher({
@@ -342,7 +344,7 @@ const postfaecher = new Postfaecher({
   verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
   pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
   platz: () => speicherplatz.pruefeHochladen(),
-  anAdmins,
+  anAdmins: anVerwaltendeVon('postfaecher'),
   sperre: () => (postSperre ??= (async () => {
     const v = await sql.reserve();
     const [r] = await v`SELECT pg_try_advisory_lock(4711196) AS ok`;
@@ -423,7 +425,7 @@ const webhooks = new Webhooks({
   zahlen: async (b) => { const r = await dienst.zaehlerAbruf(await dienst.zugriff(b)); return { ...r.zahlen, stand: r.stand, geaendert: r.geaendert }; },
   benutzer: (id) => konten.benutzerMitId(id),
   pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
-  anAdmins,
+  anAdmins: anVerwaltendeVon('webhooks'),
   anBesitzer: async (b, betreff, text) => { const m = betrieb.mailer(); if (m && b.email && !b.email.endsWith('.invalid')) await m.sende(b.email, betreff, text); },
   sperre: () => (webhookSperre ??= (async () => {
     const v = await sql.reserve();
@@ -440,40 +442,41 @@ const automatisierungen = new Automatisierungen({
 });
 // Fehlermeldungen der Benutzer (#70) – Screenshots getrennt von den Dokumenten.
 const fehlermeldungen = new Fehlermeldungen(pgFehlerRepo(sql, cfg.haushalt), ordnerSpeicher(ordner.dateien, `${cfg.haushalt}/fehlermeldungen`));
-// Technische Aufgaben des Admin-Kontos (#719): gebündelte Mail an die Administratoren, Hinweis ohne Einzelheiten
-// beim Alltags-Benutzer. Jede Quelle liefert Punkte mit festem Schlüssel; die Texte gehen nur an Administratoren.
+// Technische Aufgaben (#719, #818): gebündelte Mail an die Verwaltenden je Bereich, Hinweis ohne Einzelheiten außerhalb
+// des Verwaltungsmodus. Jede Quelle liefert Punkte mit festem Schlüssel und Bereich; die Texte nur in der Mail.
 const verwaltung = new Verwaltung({
   einstellungen: pgEinstellungen(sql, cfg.haushalt),
-  anAdmins,
+  personen: () => konten.listeBenutzer(),
+  sende: async (an, betreff, text) => { await betrieb.mailer()?.sende(an, betreff, text); },
   adresse: () => betrieb.adresseFuerLinks(),
   quellen: [
     async () => {
       const z = await sicherung.zustand();
       return [
-        ...(z.fehler ? [{ schluessel: `sicherung-fehler:${z.fehler.am}`, text: t('werkbank.verwaltung.sicherung.fehler'), eigeneMail: true }] : []),
-        ...(!z.fehler && z.planAktiv && z.zuAlt ? [{ schluessel: `sicherung-alt:${z.letzte?.ende ?? 'nie'}`, text: t('werkbank.verwaltung.sicherung.alt'), eigeneMail: true }] : []),
-        ...(z.probe.ampel === 'rot' ? [{ schluessel: `probe:${z.probe.letzte?.am ?? ''}`, text: t('werkbank.verwaltung.probe') }] : []),
+        ...(z.fehler ? [{ bereich: 'sicherung', schluessel: `sicherung-fehler:${z.fehler.am}`, text: t('werkbank.verwaltung.sicherung.fehler'), eigeneMail: true }] : []),
+        ...(!z.fehler && z.planAktiv && z.zuAlt ? [{ bereich: 'sicherung', schluessel: `sicherung-alt:${z.letzte?.ende ?? 'nie'}`, text: t('werkbank.verwaltung.sicherung.alt'), eigeneMail: true }] : []),
+        ...(z.probe.ampel === 'rot' ? [{ bereich: 'sicherung', schluessel: `probe:${z.probe.letzte?.am ?? ''}`, text: t('werkbank.verwaltung.probe') }] : []),
       ];
     },
-    async () => (tresor.zustand === 'vorhanden' ? [] : [{ schluessel: `tresor:${tresor.zustand}`, text: t('werkbank.verwaltung.tresor') }]),
+    async () => (tresor.zustand === 'vorhanden' ? [] : [{ bereich: 'verschluesselung', schluessel: `tresor:${tresor.zustand}`, text: t('werkbank.verwaltung.tresor') }]),
     // #797: Unverschlüsselte Exporte gingen mit jeder Kopie der Sicherung mit.
-    async () => (exporte.imSicherungsordner ? [{ schluessel: 'export-im-sicherungsordner', text: t('werkbank.verwaltung.export') }] : []),
-    async () => (await pakete.installierte()).filter((p) => p.einstellungenNoetig).map((p) => ({ schluessel: `paket:${p.id}`, text: t('werkbank.verwaltung.paket', { name: p.name }) })),
+    async () => (exporte.imSicherungsordner ? [{ bereich: 'vollexport', schluessel: 'export-im-sicherungsordner', text: t('werkbank.verwaltung.export') }] : []),
+    async () => (await pakete.installierte()).filter((p) => p.einstellungenNoetig).map((p) => ({ bereich: 'pakete', schluessel: `paket:${p.id}`, text: t('werkbank.verwaltung.paket', { name: p.name }) })),
     async () => {
       const w = await automatisierungen.warnungen();
       return [
-        ...w.angehalten.map((a) => ({ schluessel: `automatisierung:${a.id}:${a.grund}`, text: t('werkbank.verwaltung.automatisierung', { name: a.name }) })),
-        ...(w.fehlgeschlagen ? [{ schluessel: `automatisierung-fehler:${w.fehlgeschlagen}`, text: t('werkbank.verwaltung.automatisierung.fehler', { anzahl: w.fehlgeschlagen }) }] : []),
+        ...w.angehalten.map((a) => ({ bereich: 'automatisierungen', schluessel: `automatisierung:${a.id}:${a.grund}`, text: t('werkbank.verwaltung.automatisierung', { name: a.name }) })),
+        ...(w.fehlgeschlagen ? [{ bereich: 'automatisierungen', schluessel: `automatisierung-fehler:${w.fehlgeschlagen}`, text: t('werkbank.verwaltung.automatisierung.fehler', { anzahl: w.fehlgeschlagen }) }] : []),
       ];
     },
-    async () => { const z = (await speicherplatz.stand()).zustand; return z === 'ok' ? [] : [{ schluessel: `speicher:${z}`, text: t('werkbank.verwaltung.speicher'), eigeneMail: true }]; },
-    async () => (await postfaecher.anmeldungFehlt()).map((p) => ({ schluessel: `postfach:${p.id}:${p.zustand}`, text: t('werkbank.verwaltung.postfach', { name: p.name }) })),
-    async () => { const n = await fehlermeldungen.offen(); return n ? [{ schluessel: `fehlermeldungen:${n}`, text: t('werkbank.verwaltung.fehlermeldungen', { anzahl: n }) }] : []; },
+    async () => { const z = (await speicherplatz.stand()).zustand; return z === 'ok' ? [] : [{ bereich: 'systemzustand', schluessel: `speicher:${z}`, text: t('werkbank.verwaltung.speicher'), eigeneMail: true }]; },
+    async () => (await postfaecher.anmeldungFehlt()).map((p) => ({ bereich: 'postfaecher', schluessel: `postfach:${p.id}:${p.zustand}`, text: t('werkbank.verwaltung.postfach', { name: p.name }) })),
+    async () => { const n = await fehlermeldungen.offen(); return n ? [{ bereich: 'fehlermeldungen', schluessel: `fehlermeldungen:${n}`, text: t('werkbank.verwaltung.fehlermeldungen', { anzahl: n }) }] : []; },
     async () => (await notfall.offen()).map((e) => ({ schluessel: `notfall:${e.id}`, text: t('werkbank.verwaltung.notfall'), eigeneMail: true })),
-    async () => { const n = (await texterkennung.zaehler()).fehler; return n ? [{ schluessel: `texterkennung:${n}`, text: t('werkbank.verwaltung.texterkennung', { anzahl: n }) }] : []; },
-    async () => ((await liesErweiterungen(sql)).some((e) => e.zustand !== 'ok') ? [{ schluessel: 'erweiterungen', text: t('werkbank.verwaltung.erweiterungen') }] : []),
+    async () => { const n = (await texterkennung.zaehler()).fehler; return n ? [{ bereich: 'texterkennung', schluessel: `texterkennung:${n}`, text: t('werkbank.verwaltung.texterkennung', { anzahl: n }) }] : []; },
+    async () => ((await liesErweiterungen(sql)).some((e) => e.zustand !== 'ok') ? [{ bereich: 'systemzustand', schluessel: 'erweiterungen', text: t('werkbank.verwaltung.erweiterungen') }] : []),
     // Aufgaben bei Personen ohne Leserecht (#798): je Fall einmal gemeldet; der Alltags-Benutzer sieht nur „etwas liegt an“.
-    async () => Promise.all((await dienst.offeneFaelle()).map(async (f) => ({ schluessel: `ohne-leserecht:${f.id}`, text: t('werkbank.verwaltung.ohne-leserecht', { name: await dienst.name(f.benutzerId) }) }))),
+    async () => Promise.all((await dienst.offeneFaelle()).map(async (f) => ({ bereich: 'aufgaben', schluessel: `ohne-leserecht:${f.id}`, text: t('werkbank.verwaltung.ohne-leserecht', { name: await dienst.name(f.benutzerId) }) }))),
   ],
 });
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).

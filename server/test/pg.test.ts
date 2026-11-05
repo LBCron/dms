@@ -309,6 +309,9 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     assert.notEqual(cookie, alt);
     assert.equal((await app.inject({ method: 'GET', url: '/api/typen', headers: { cookie: alt } })).statusCode, 401);
     assert.equal((await anfrage('GET', '/api/typen')).status, 200);
+    // Passwortwechsel beendet den Verwaltungsmodus (#819); die neue Anmeldung ist frisch – Wiedereinstieg ohne Abfrage.
+    assert.equal((await anfrage('GET', '/api/benutzer')).status, 403);
+    assert.equal((await anfrage('POST', '/api/konto/verwaltung', {})).status, 200);
   });
 
   it('zeigt Sitzungen, beendet sie und lässt den Admin als Mitglied agieren', async () => {
@@ -335,6 +338,10 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     assert.equal((await anfrage('GET', '/api/benutzer')).status, 403, 'nur die Rechte des Mitglieds');
     const z = await anfrage('POST', '/api/konto/vertretung-beenden');
     assert.equal(z.body.benutzer.email, 'admin@example.org');
+    // Zurück im eigenen Konto, aber nicht im Verwaltungsmodus (#819): erst erneut anmelden.
+    assert.equal((await anfrage('GET', '/api/benutzer')).status, 403);
+    assert.equal((await anfrage('POST', '/api/konto/verwaltung', {})).status, 401);
+    assert.equal((await anfrage('POST', '/api/konto/verwaltung', { passwort: 'neues-admin-passwort' })).status, 200);
     assert.equal((await anfrage('GET', '/api/benutzer')).status, 200);
 
     const wieder = await app.inject({ method: 'POST', url: '/api/konto/anmelden', headers: { 'x-dms': '1' }, payload: { email: 'mitglied@example.org', passwort: 'mitglied-passwort' } });
@@ -349,10 +356,10 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
 
   it('protokolliert Anfragen und Aktionen und schaltet den Debug-Modus', async () => {
     const r = (await anfrage('GET', '/api/werkbank/protokoll?modul=ablage&suche=Titeltest')).body;
-    assert.ok(r.eintraege.some((e: { text: string; benutzer?: string }) => e.text === 'Mappe angelegt' && e.benutzer === 'admin@example.org'));
+    assert.ok(r.eintraege.some((e: { text: string; benutzer?: string }) => e.text === 'Mappe angelegt' && e.benutzer === 'admin@example.org (im Verwaltungsmodus)'), 'im Verwaltungsmodus mit Vermerk (#819)');
     assert.ok(r.module.includes('konto'));
     const fehl = (await anfrage('GET', '/api/werkbank/protokoll?modul=konto&stufe=warn')).body.eintraege;
-    assert.ok(fehl.some((e: { text: string }) => e.text === 'Administrator agiert als anderer Benutzer'));
+    assert.ok(fehl.some((e: { text: string }) => e.text === 'Im Namen eines anderen Benutzers angemeldet'));
     const d = (await anfrage('PUT', '/api/werkbank/debug', { an: true })).body;
     assert.equal(d.an, true);
     await anfrage('GET', '/api/sichten');
@@ -417,8 +424,10 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
       const r = await app.inject({ method: methode, url: `/api/v1${pfad}`, payload, headers: { authorization: `Bearer ${schluessel}` } });
       return { status: r.statusCode as number, body: r.body && r.headers['content-type']?.toString().includes('json') ? JSON.parse(r.body) : r.body };
     };
-    // #128: Administratoren bekommen keine API-Schlüssel – das Programm arbeitet als normaler Benutzer.
-    assert.equal((await anfrage('POST', '/api/konto/api-schluessel', { name: 'Admin' })).status, 403);
+    // #818: Auch wer verwaltet, hat eigene Schlüssel – sie bekommen aber nie Verwaltungsrechte.
+    const eigener = await anfrage('POST', '/api/konto/api-schluessel', { name: 'Admin' });
+    assert.equal(eigener.status, 201);
+    assert.equal((await v1('GET', '/benutzer', eigener.body.schluessel)).status, 403);
     const programm = (await anfrage('POST', '/api/benutzer', { email: 'api-programm@example.org', name: 'Scanner', rolle: 'mitglied' })).body.benutzer;
     const lesen = await schluesselDienst.lege(programm, { name: 'Nur lesen' });
     const schreiben = await schluesselDienst.lege(programm, { name: 'Scanner', recht: 'schreiben' });
@@ -469,12 +478,13 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     const admin = benutzer.find((x: { email: string }) => x.email === 'admin@example.org');
     const mitglied = benutzer.find((x: { email: string }) => x.email === 'mitglied@example.org');
     const rollen = (await anfrage('GET', '/api/rollen')).body;
-    const sys = { admin: rollen.find((r: { name: string }) => r.name === 'Administrator'), mitglied: rollen.find((r: { name: string }) => r.name === 'Mitglied') };
-    assert.ok(sys.admin.system && sys.mitglied.system);
+    const sys = { mitglied: rollen.find((r: { name: string }) => r.name === 'Mitglied') };
+    assert.ok(sys.mitglied.system);
+    assert.ok(!rollen.some((r: { name: string }) => r.name === 'Administrator'), 'keine Systemrolle „Administrator“ (#818)');
 
     // Jeder Benutzer hat seine Mappe; der Typ lässt sich erweitern, aber nicht löschen.
     const am = (await anfrage('GET', `/api/mappen/${admin.id}`)).body.mappe;
-    assert.deepEqual([am.typId, am.werte.email, am.werte.rollen], [benutzerTyp.id, 'admin@example.org', [sys.admin.id]]);
+    assert.deepEqual([am.typId, am.werte.email, am.werte.rollen], [benutzerTyp.id, 'admin@example.org', [sys.mitglied.id]]);
     assert.equal((await anfrage('DELETE', `/api/typen/${benutzerTyp.id}`)).status, 409);
     assert.equal((await anfrage('DELETE', `/api/typen/${rolleTyp.id}`)).status, 409);
     const ohneEmail = { ...benutzerTyp, felder: benutzerTyp.felder.filter((f: { key: string }) => f.key !== 'email') };
@@ -484,14 +494,14 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     assert.equal(erweitert.body.erstellenErlaubt, false, 'Benutzer-Mappen entstehen nur in der Benutzerverwaltung');
     assert.equal((await anfrage('POST', '/api/mappen', { typId: benutzerTyp.id, werte: { name: 'X', email: 'x@example.org' } })).status, 403);
     assert.equal((await anfrage('DELETE', `/api/mappen/${mitglied.id}`)).status, 403);
-    assert.equal((await anfrage('DELETE', `/api/mappen/${sys.admin.id}`)).status, 409, 'Systemrolle');
+    assert.equal((await anfrage('DELETE', `/api/mappen/${sys.mitglied.id}`)).status, 409, 'Systemrolle');
 
     // Rollen: jeder darf sie anlegen; die Zuordnung vergibt nur die Benutzerverwaltung.
     const steuern = await anfrage('POST', '/api/mappen', { typId: rolleTyp.id, werte: { name: 'Steuern' } });
     assert.equal(steuern.status, 201);
     assert.equal((await anfrage('PUT', `/api/benutzer/${mitglied.id}`, { name: 'Geändert', rollen: ['gibt-es-nicht'] })).status, 422);
     assert.equal((await anfrage('GET', '/api/benutzer')).body.find((x: { id: string }) => x.id === mitglied.id).name, 'Mitglied', 'ungültige Rollen ändern nichts');
-    assert.equal((await anfrage('PUT', `/api/benutzer/${mitglied.id}`, { rollen: [sys.admin.id] })).status, 422);
+    assert.equal((await anfrage('PUT', `/api/benutzer/${mitglied.id}`, { rollen: [sys.mitglied.id] })).status, 422);
     const zugeordnet = await anfrage('PUT', `/api/benutzer/${mitglied.id}`, { rollen: [steuern.body.id] });
     assert.deepEqual(zugeordnet.body.rollen, [steuern.body.id]);
     const mm = (await anfrage('GET', `/api/mappen/${mitglied.id}`)).body.mappe;
@@ -503,8 +513,8 @@ describe('PostgreSQL und HTTP', { skip: url ? false : 'TEST_DATABASE_URL nicht g
     const mc = String(login.headers['set-cookie']).split(';')[0];
     const alsMitglied = async (method: string, url: string, payload?: unknown) => (await app.inject({ method, url, payload, headers: { 'x-dms': '1', cookie: mc } })).statusCode;
     assert.equal(await alsMitglied('PUT', `/api/mappen/${admin.id}`, { werte: { ...am.werte, email: 'boese@example.org' } }), 403);
-    assert.equal(await alsMitglied('PUT', `/api/mappen/${mitglied.id}`, { werte: { ...mm.werte, rollen: [sys.admin.id, sys.mitglied.id] } }), 403);
-    assert.equal(await alsMitglied('PUT', `/api/mappen/${sys.admin.id}`, { werte: { name: 'Chef' } }), 403);
+    assert.equal(await alsMitglied('PUT', `/api/mappen/${mitglied.id}`, { werte: { ...mm.werte, rollen: [] } }), 403);
+    assert.equal(await alsMitglied('PUT', `/api/mappen/${sys.mitglied.id}`, { werte: { name: 'Chef' } }), 403);
     assert.equal(await alsMitglied('PUT', `/api/mappen/${mitglied.id}`, { werte: { ...mm.werte, telefon: '0351 123' } }), 200, 'eigene Felder bleiben bearbeitbar');
     assert.equal(await alsMitglied('POST', '/api/mappen', { typId: rolleTyp.id, werte: { name: 'Garten' } }), 201);
     assert.equal(await alsMitglied('GET', '/api/rollen'), 403);

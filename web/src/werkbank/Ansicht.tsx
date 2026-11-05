@@ -89,7 +89,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
       {!s.eingestellt && <div className="hinweis"><p>Noch nicht eingestellt – bisher siehst du alle Bereiche. Zu Hause reicht meist die Vorlage <strong>Haushalt</strong>, für Selbständige und kleine Betriebe die Vorlage <strong>Betrieb</strong>.</p></div>}
       <form className="blatt" onSubmit={(x) => { x.preventDefault(); void speichern(); }} onKeyDown={ent.tasten}>
         <fieldset className="wahl">
-          <legend className="h3">Vorlage für alle Administratoren</legend>
+          <legend className="h3">{t('konten.verwaltende.ansicht.vorlage')}</legend>
           {(Object.keys(VORLAGEN) as Vorlage[]).map((v) => (
             <label key={v} className="haken"><input type="radio" name="vorlage" value={v} checked={vorlage === v} onChange={() => waehleVorlage(v)} />
               <span><strong>{VORLAGEN[v].name}</strong> <span className="leise">– {VORLAGEN[v].text}</span></span></label>
@@ -104,7 +104,7 @@ export function AnsichtPanel({ z, zustand }: { z: WerkbankAnsichtZustand; zustan
               : t('werkbank.experte.keine', { vorlage: VORLAGEN[vorlage].name })}</span></span></label>
         </fieldset>
         <h2 className="h3">Bereiche</h2>
-        <p className="leise klein">„Für alle“ gilt für jeden Administrator. „Nur für mich“ blendet einen Bereich zusätzlich bei dir ein.</p>
+        <p className="leise klein">{t('konten.verwaltende.ansicht.text')}</p>
         {(Object.keys(GRUPPEN) as Gruppe[]).map((g) => (
           <div key={g} className="ansichtgruppe">
             <h3 className="gruppentitel">{GRUPPEN[g]}</h3>

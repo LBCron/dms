@@ -18,7 +18,7 @@ async function aufbau() {
   const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' });
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' });
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = await d.legeTypAn({ name: 'Vorgang', felder: [
     { key: 'nr', label: 'Nummer', typ: 'text', pflicht: true, eindeutig: true },
@@ -118,7 +118,7 @@ describe('Sammel-Weitergabe (#415, #419)', () => {
   it('gibt mehrere Aufgaben weiter, meldet was nicht geht, und bündelt die Benachrichtigung', async () => {
     const { d, konten, t, A, B, ben, anna } = await aufbau();
     d.verbindeKonten(konten.papierkorbHaken());
-    const { benutzer: carl } = await konten.legeBenutzerAn({ email: 'carl@example.org', name: 'Carl', rolle: 'mitglied' });
+    const { benutzer: carl } = await konten.legeBenutzerAn({ email: 'carl@example.org', name: 'Carl' });
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     const C = { id: carl.id, rolle: 'mitglied' };
     // „Privat“ darf Carl nicht lesen – auch nicht über eine Aufgabe.

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { t } from '../sprache';
 import { AUFGABENARTEN, HISTORIENARTEN, type Aufgabenart, type Feldaenderung, type Historieneintrag } from '../../../shared/src/model';
 import { api } from '../api';
 import { useDaten } from '../daten';
@@ -15,6 +16,8 @@ function kurz(e: Historieneintrag): string {
   const d = e.daten;
   if (d.aenderungen?.length) return d.aenderungen.map((a) => a.label).join(', ');
   if (e.art === 'post_geteilt' && typeof d.text === 'string') return d.text;
+  // #820: im Verwaltungsmodus geöffnet, heruntergeladen … – nie ausgeblendet.
+  if (e.art === 'verwaltungsmodus') return t.frei(`mappen.historie.verwaltungsmodus.${typeof d.was === 'string' ? d.was : 'angesehen'}`);
   if (d.dokument) return d.dokument;
   if (d.feld) return d.feld;
   if (typeof d.text === 'string') return d.text;
@@ -97,8 +100,8 @@ function einzelheiten(e: Historieneintrag, emailTyp: string | undefined): { hinw
           <dl className="eigenschaften einzeln">
             <dt>Aufgabe</dt><dd className="mehrzeilig">{text}</dd>
             {art && AUFGABENARTEN[art] && <><dt>Art</dt><dd>{AUFGABENARTEN[art]}</dd></>}
-            {d.fuer !== undefined && <><dt>Für</dt><dd>{d.fuer ? <Person id={str(d.fuer)} /> : 'Administratoren'}</dd></>}
-            {d.anId !== undefined && <><dt>Weitergegeben</dt><dd>{d.vonId ? <Person id={str(d.vonId)} /> : 'Administratoren'} → <Person id={str(d.anId)} /></dd></>}
+            {d.fuer !== undefined && <><dt>Für</dt><dd>{d.fuer ? <Person id={str(d.fuer)} /> : t('konten.verwaltende.ohneEmpfaenger')}</dd></>}
+            {d.anId !== undefined && <><dt>Weitergegeben</dt><dd>{d.vonId ? <Person id={str(d.vonId)} /> : t('konten.verwaltende.ohneEmpfaenger')} → <Person id={str(d.anId)} /></dd></>}
           </dl>
         ),
       };

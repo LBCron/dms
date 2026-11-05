@@ -130,7 +130,7 @@ export class Wiederherstellung {
       this.q.pruefeCode?.(einrichtungscode);
       return 'frisch' as const;
     }
-    if (!admin) throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
+    if (!admin) throw new Fachfehler(403, 'Das geht nur im Verwaltungsmodus mit dem Recht auf „Sicherung“.');
     if (!this.q.wartungAktiv()) throw new Fachfehler(409, 'Wiederherstellen geht nur im aktiven Wartungsmodus – schalte ihn unter Werkbank → Wartung ein und melde alle ab.');
     return 'laufend' as const;
   }

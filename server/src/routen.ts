@@ -11,7 +11,7 @@ import { ARCHIVFASSUNG_MAX_BYTES, archivfassungName, pdfaName } from '../../shar
 import { Fachfehler } from './fehler';
 import { SITZUNG_TAGE, type Konten } from './konten';
 import type { SitzungIntern } from './konto-repo';
-import type { Zweifaktor } from './zweifaktor';
+import { pflichtRolle, type Zweifaktor } from './zweifaktor';
 import { openapi, v1Routen } from './api-v1';
 import { wunschAus } from '../../shared/src/stempel';
 import { NUR_ZAEHLER, ZAEHLER_PFAD, type ApiSchluessel, type ApiSchluesselDienst } from './apischluessel';
@@ -33,6 +33,8 @@ import { AbrufBremse, AbrufTickets, ipBereich, kuerzeIp } from './abruf';
 import { zipGroesse, zipStrom, ZIP_MAX, type ZipEintrag } from './zip';
 import { join } from 'node:path';
 import { ALS_KOPF, KONSOLE_KOPF, istLoopback, konsolenBenutzer, type Konsolenzugang } from './konsole';
+import { bereicheDerRoute, heikleHandlung, JEDER, NUR_GESAMT } from './verwaltungsbereiche';
+import { darfBereich, darfVerwalten, hatGesamt } from '../../shared/src/verwaltungsrecht';
 import type { Messung } from './messung';
 import type { Vorschaubilder } from './vorschau';
 import { ARCHIV_MAX, Paketverwaltung, SAMMEL_MAX, type InstallierenEingabe } from './pakete';
@@ -86,7 +88,8 @@ const L = {
  * Alle Schnittstellen an einem Ort, jede mit ihrer Zugriffsstufe:
  *   offen      – ohne Anmeldung (Einrichtung, Anmeldung, Passwort-Links)
  *   angemeldet – jeder angemeldete Benutzer
- *   admin      – nur Administratoren
+ *   admin      – Werkbank: nur im Verwaltungsmodus (#819) und nur mit Recht auf den Bereich der Route (#818,
+ *                Zuordnung in verwaltungsbereiche.ts); nie mit einem API-Schlüssel
  * Der HTTP-Adapter (http.ts) setzt die Stufen durch.
  */
 export type Zugang = 'offen' | 'angemeldet' | 'admin';
@@ -112,6 +115,8 @@ export interface Anfrage {
   konsole?: boolean;
   /** Kopf X-Einrichtungscode (#119), solange das DMS nicht eingerichtet ist. */
   einrichtungscode?: string;
+  /** Läuft in dieser Sitzung der Verwaltungsmodus (#819)? Dann ist `benutzer.rolle` = `admin`. */
+  verwaltungsmodus?: boolean;
   /** Weitere Köpfe der Anfrage (klein geschrieben), z. B. If-None-Match beim Zähler-Endpunkt (#625). */
   kopf?: (name: string) => string | undefined;
 }
@@ -151,6 +156,8 @@ export interface Route {
    * dann nur auf Stufe „debug“ im Protokoll, wie bei GET (#373).
    */
   lesend?: boolean;
+  /** Öffentliche API (#818): Bereich der Werkbank wie bei dieser internen Route. */
+  bereichVon?: { methode: string; pfad: string };
   /** Keine automatische HEAD-Route (z. B. Einmal-Download: ein HEAD würde das Ticket verbrauchen). */
   ohneHead?: boolean;
   handler(a: Anfrage): Promise<Antwort>;
@@ -298,10 +305,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const paketerstellung = new Paketerstellung(dienst, { version: eigeneVersion });
   const umwandlung = new Umwandlung(dienst);
   const wer = (a: Anfrage) => ({ id: a.benutzer?.id ?? null, email: a.benutzer?.email ?? null });
-  /** Hilfen des Einrichtungsassistenten (#804, #806): Code vor der Einrichtung, danach der Administrator bei offenem Assistenten. */
+  /**
+   * Hilfen des Einrichtungsassistenten (#804, #806): Code vor der Einrichtung, danach bei offenem Assistenten eine
+   * Person mit „Gesamte Verwaltung“ (#818) – nicht in einer Vertretung und nicht mit API-Schlüssel.
+   */
   const einrichtungZugang = async (a: Anfrage) => {
     if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
-    await x.einrichtung.pruefeZugang(a.einrichtungscode, a.benutzer?.rolle === 'admin' && !a.sitzungsDaten?.vertretungId);
+    await x.einrichtung.pruefeZugang(a.einrichtungscode, !!a.benutzer && !a.apiSchluessel && hatGesamt(a.benutzer) && !a.sitzungsDaten?.vertretungId);
   };
   /**
    * Ist ein Abruf ein Weitergeben (#394)? Herunterladen (?herunterladen), Stempel-Parameter oder ein API-Schlüssel
@@ -316,6 +326,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const mitnehmen = async (a: Anfrage, mappeId: string) => {
     if (a.benutzer?.art === 'dienst') return;
     await dienst.pruefeAusgang(ich(a), await zg(a), 'herunterladen', [mappeId]);
+    await modusSpur(a, [mappeId], 'heruntergeladen');
   };
   /** Abruf mit dem API-Schlüssel eines Menschen (nicht eines Pakets): gilt als Herausgeben (#394, #799). */
   const herausgeben = (a: Anfrage) => !!a.apiSchluessel && a.benutzer?.art !== 'dienst';
@@ -395,13 +406,21 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     return a.apiSchluessel.name;
   };
   /**
-   * Technische Aufgaben (#719) für den Hinweis beim Alltags-Benutzer: nur, wer die Aufgaben ohne Empfänger bekommt und
-   * kein Administrator ist, nicht während ein Administrator als er agiert – und nur ja/nein.
+   * Technische Aufgaben (#719, #819): Hinweis ohne Einzelheiten für Personen mit Verwaltungsrecht außerhalb des
+   * Verwaltungsmodus, wenn in einem ihrer Bereiche etwas anliegt – nicht in einer Vertretung, und nur ja/nein.
    */
   const verwaltungHinweis = async (a: Anfrage): Promise<boolean> => {
-    if (!a.benutzer || a.benutzer.rolle === 'admin' || a.sitzungsDaten?.vertretungId || !x.verwaltung) return false;
-    if ((await dienst.alltagsEmpfaenger()).wirksam !== a.benutzer.id) return false;
-    try { return await x.verwaltung.offen(); } catch { return false; }
+    if (!a.benutzer || a.benutzer.rolle === 'admin' || !darfVerwalten(a.benutzer) || a.sitzungsDaten?.vertretungId || !x.verwaltung) return false;
+    try { return await x.verwaltung.offen(a.benutzer); } catch { return false; }
+  };
+  /**
+   * Spur im Verwaltungsmodus (#820): Öffnet, lädt herunter, ändert, exportiert oder versendet jemand im Modus eine
+   * Mappe, die er mit seinen Alltagsrechten nicht lesen dürfte, steht das dauerhaft in ihrer Historie. Liefert die
+   * Mappen, für die das gilt.
+   */
+  const modusSpur = async (a: Anfrage, ids: string[], was: 'angesehen' | 'heruntergeladen' | 'geaendert' | 'exportiert' | 'versendet'): Promise<Set<string>> => {
+    if (a.benutzer?.rolle !== 'admin' || a.konsole || !ids.length) return new Set();
+    return dienst.vermerkeVerwaltungsmodus({ ...a.benutzer, rolle: 'mitglied' }, ids, was);
   };
   /** Berechtigungen (#124): Zugriff des Benutzers, einmal je Anfrage. */
   const zg = (a: Anfrage) => dienst.zugriff(ich(a));
@@ -488,6 +507,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     };
   };
   const wartung = () => { if (!x.wartung) throw new Fachfehler(404, 'Der Wartungsmodus ist nicht eingerichtet.'); return x.wartung; };
+  /** Wiederherstellen im laufenden System (#107, #818): im Verwaltungsmodus mit Recht auf „Sicherung“. */
+  const darfWiederherstellen = (a: Anfrage) => a.benutzer?.rolle === 'admin' && darfBereich(a.benutzer, 'sicherung');
   /** Ab der Ankündigung kommen nur Administratoren hinein (#102): eine neue Sitzung gleich wieder beenden. */
   const nurAdminsInWartung = async (r: { benutzer: Benutzer; schluessel: string }) => {
     if (!x.wartung?.sperrtAnmeldung(r.benutzer)) return;
@@ -504,7 +525,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/konto/status', zugang: 'offen', handler: async (a) => ok({
       einrichtungNoetig: await konten.einrichtungNoetig(),
       // Einrichtungsassistent (#119): Code nötig? Weitere Schritte für den Administrator offen?
-      einrichtung: x.einrichtung ? { phase: 'konto', code: x.einrichtung.codeNoetig, assistent: a.benutzer?.rolle === 'admin' && !a.sitzungsDaten?.vertretungId ? (await x.einrichtung.stand()).offen : false } : null,
+      // #818: für Personen mit „Gesamte Verwaltung“; die Schritte selbst brauchen den Verwaltungsmodus.
+      einrichtung: x.einrichtung ? { phase: 'konto', code: x.einrichtung.codeNoetig, assistent: hatGesamt(a.benutzer) && !a.sitzungsDaten?.vertretungId ? (await x.einrichtung.stand()).offen : false } : null,
       mail: konten.mailAktiv,
       benutzer: a.benutzer ?? null,
       // Anmeldung über einen Anbieter (#241): Knopf auf der Anmeldeseite.
@@ -534,9 +556,23 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       laufwerk: a.benutzer && x.webdav ? (await x.webdav.einstellung()).aktiv : false,
       // Aufgaben ohne Empfänger (#719): Sieht dieser Benutzer sie (Administrator oder gewählter Alltags-Benutzer)?
       aufgabenOhneEmpfaenger: a.benutzer ? await dienst.siehtOhneEmpfaenger(a.benutzer) : false,
-      // Technische Aufgaben (#719): nur beim Alltags-Benutzer, nur ja/nein – nie, was genau anliegt.
+      // Technische Aufgaben (#719): nur außerhalb des Verwaltungsmodus, nur ja/nein – nie, was genau anliegt.
       verwaltung: await verwaltungHinweis(a),
+      // Verwaltungsmodus (#819): darf die Person verwalten, läuft er, bis wann, Wiedereinstieg mit einem Klick?
+      verwaltungsmodus: a.benutzer ? await konten.verwaltungsstand(a.benutzer, a.sitzungsDaten) : null,
     }) },
+    /* ---------- Verwaltungsmodus (#819) ---------- */
+    // Beginnen: ohne Angaben, wenn die Anmeldung frisch oder heute schon bestätigt ist; sonst mit Passwort und Code.
+    { methode: 'POST', pfad: '/api/konto/verwaltung', zugang: 'angemeldet', handler: async (a) => ok(await konten.beginneVerwaltung(ich(a), a.sitzung, a.sitzungsDaten, b(a), a.ip)) },
+    { methode: 'POST', pfad: '/api/konto/verwaltung/beenden', zugang: 'angemeldet', handler: async (a) => {
+      await konten.beendeVerwaltung(ich(a), a.sitzung, a.sitzungsDaten);
+      return ok(await konten.verwaltungsstand(ich(a), { ...a.sitzungsDaten!, verwaltungSeit: null, verwaltungAktiv: null }));
+    } },
+    // Frische Anmeldung für eine heikle Handlung (immer mit Passwort, gilt 10 Minuten).
+    { methode: 'POST', pfad: '/api/konto/verwaltung/bestaetigen', zugang: 'angemeldet', handler: async (a) => {
+      await konten.bestaetigeFrisch(ich(a), a.sitzung, a.sitzungsDaten, b(a), a.ip);
+      return ok({ frisch: true });
+    } },
     // Laufwerk für Benutzer (#720): Adresse und Benutzername; ausgeschaltet gibt es nichts.
     { methode: 'GET', pfad: '/api/konto/laufwerk', zugang: 'angemeldet', handler: async (a) => {
       if (!x.webdav || !(await x.webdav.einstellung()).aktiv) throw new Fachfehler(404, 'Das Laufwerk ist nicht eingeschaltet.');
@@ -591,7 +627,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'POST', pfad: '/api/konto/einrichten', zugang: 'offen', handler: async (a) => {
       const r = x.einrichtung ? await x.einrichtung.einrichten(b(a), a.einrichtungscode, info(a)) : await konten.einrichten(b(a), info(a));
-      L.konto.info('Administrator eingerichtet', { email: r.benutzer.email });
+      L.konto.info('Erste Person mit „Gesamte Verwaltung“ eingerichtet', { email: r.benutzer.email });
       return { status: 201, body: { benutzer: r.benutzer }, sitzungSetzen: r.schluessel };
     } },
     { methode: 'POST', pfad: '/api/konto/anmelden', zugang: 'offen', handler: async (a) => {
@@ -653,28 +689,36 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/konsole/passwort', zugang: 'offen', konsole: true, handler: async (a) => {
       const z = await konten.setzePasswortDirekt(b(a).email, b(a).passwort);
       L.konto.warn('Passwort über die Konsole gesetzt, alle Sitzungen beendet', { email: z.email, aktiv: z.aktiv });
-      return ok({ email: z.email, name: z.name, rolle: z.rolle, aktiv: z.aktiv, zweifaktor: konten.zweifaktor ? await konten.zweifaktor.aktiv(z.id) : false });
+      return ok({ email: z.email, name: z.name, verwaltung: z.verwaltung ?? [], aktiv: z.aktiv, zweifaktor: konten.zweifaktor ? await konten.zweifaktor.aktiv(z.id) : false });
     } },
     { methode: 'GET', pfad: '/api/konsole/ich', zugang: 'offen', konsole: true, handler: async (a) => ok({ als: a.benutzer?.email ?? null, version: eigeneVersion() }) },
     /* ---------- Zwei-Faktor-Anmeldung (#242) ---------- */
-    { methode: 'GET', pfad: '/api/konto/zweifaktor', zugang: 'angemeldet', handler: async (a) => ok({ ...(await zf().status(ich(a).id)), pflicht: (await zf().pflicht())[ich(a).rolle] }) },
+    { methode: 'GET', pfad: '/api/konto/zweifaktor', zugang: 'angemeldet', handler: async (a) => ok({ ...(await zf().status(ich(a).id)), pflicht: (await zf().pflicht())[pflichtRolle(ich(a))] }) },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/beginnen', zugang: 'angemeldet', handler: async (a) => ok(zf().beginne(ich(a), (await x.designs?.marke())?.schriftzug || 'Ablago')) },
-    { methode: 'POST', pfad: '/api/konto/zweifaktor/bestaetigen', zugang: 'angemeldet', handler: async (a) => ok({ codes: await zf().bestaetige(ich(a).id, b(a).code, ich(a).email) }) },
+    { methode: 'POST', pfad: '/api/konto/zweifaktor/bestaetigen', zugang: 'angemeldet', handler: async (a) => {
+      const codes = await zf().bestaetige(ich(a).id, b(a).code, ich(a).email);
+      // #819: Zwei-Faktor geändert – Verwaltungsmodus und Tagesmerker gelten nicht mehr.
+      await konten.zweifaktorGeaendert(ich(a).id);
+      return ok({ codes });
+    } },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/codes', zugang: 'angemeldet', handler: async (a) => {
       await konten.pruefeEigenesPasswort(ich(a), b(a).passwort);
       return ok({ codes: await zf().neueCodes(ich(a).id, ich(a).email) });
     } },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/entfernen', zugang: 'angemeldet', handler: async (a) => {
-      if ((await zf().pflicht())[ich(a).rolle]) throw new Fachfehler(409, 'Für deine Rolle ist die Zwei-Faktor-Anmeldung vorgeschrieben. Ein Administrator kann sie zurücksetzen, dann richtest du sie neu ein.');
+      if ((await zf().pflicht())[pflichtRolle(ich(a))]) throw new Fachfehler(409, 'Für dich ist die Zwei-Faktor-Anmeldung vorgeschrieben. Wer Ablago verwaltet, kann sie zurücksetzen, dann richtest du sie neu ein.');
       await konten.pruefeEigenesPasswort(ich(a), b(a).passwort);
       await zf().entferne(ich(a).id, ich(a).email);
+      await konten.zweifaktorGeaendert(ich(a).id);
       return leer;
     } },
     { methode: 'GET', pfad: '/api/werkbank/zweifaktor', zugang: 'admin', handler: async () => ok(await zf().pflicht()) },
     { methode: 'PUT', pfad: '/api/werkbank/zweifaktor', zugang: 'admin', handler: async (a) => ok(await zf().setzePflicht(a.body, ich(a).email)) },
     { methode: 'GET', pfad: '/api/benutzer/:id/zweifaktor', zugang: 'admin', handler: async (a) => ok(await zf().status(a.params.id)) },
     { methode: 'POST', pfad: '/api/benutzer/:id/zweifaktor/zuruecksetzen', zugang: 'admin', handler: async (a) => {
+      await konten.pruefeKontoVon(ich(a), a.params.id);
       if (!(await zf().entferne(a.params.id, ich(a).email))) throw new Fachfehler(404, 'Dieser Benutzer hat keine Zwei-Faktor-Anmeldung.');
+      await konten.zweifaktorGeaendert(a.params.id);
       return leer;
     } },
     { methode: 'POST', pfad: '/api/konto/abmelden', zugang: 'offen', handler: async (a) => {
@@ -770,9 +814,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'POST', pfad: '/api/benutzer', zugang: 'admin', handler: async (a) => {
       if (b(a).rollen !== undefined) await dienst.pruefeRollen(b(a).rollen);
-      const r = await konten.legeBenutzerAn(b(a), ich(a).id);
+      // Verwaltungsrecht beim Anlegen nur über den Befehl dms (`--admin`); in der Oberfläche danach mit frischer Anmeldung (#818).
+      const r = await konten.legeBenutzerAn({ email: b(a).email, name: b(a).name, verwaltung: a.konsole ? b(a).verwaltung : undefined }, ich(a).id);
       if (b(a).rollen !== undefined) await dienst.setzeRollen(r.benutzer.id, b(a).rollen, ich(a).id);
-      L.konto.info('Benutzer angelegt', { email: r.benutzer.email, rolle: r.benutzer.rolle, mail: r.mailVerschickt });
+      L.konto.info('Benutzer angelegt', { email: r.benutzer.email, verwaltung: r.benutzer.verwaltung?.join(', ') || '–', mail: r.mailVerschickt });
       if (r.mailFehler) L.mail.warn('Einladung nicht verschickt', { an: r.benutzer.email, fehler: r.mailFehler });
       return ok({ ...r, benutzer: await mitRollen(r.benutzer) }, 201);
     } },
@@ -787,6 +832,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       L.konto.info('Benutzer geändert', { email: r.email, aenderung: b(a) });
       return ok(await mitRollen(r));
     } },
+    // Verwaltungsrecht (#818): nur „Gesamte Verwaltung“, mit frischer Anmeldung (heikle Handlung „rechte“).
+    { methode: 'PUT', pfad: '/api/benutzer/:id/verwaltung', zugang: 'admin', handler: async (a) => {
+      const r = await konten.setzeVerwaltung(ich(a), a.params.id, b(a).verwaltung, (m) => L.mail.warn(m));
+      return ok(await mitRollen(r));
+    } },
     { methode: 'GET', pfad: '/api/rollen', zugang: 'admin', handler: async () => ok(await dienst.listeRollen()) },
     { methode: 'DELETE', pfad: '/api/benutzer/:id', zugang: 'admin', handler: async (a) => {
       await konten.loescheBenutzer(ich(a), a.params.id);
@@ -796,6 +846,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return leer;
     } },
     { methode: 'POST', pfad: '/api/benutzer/:id/link', zugang: 'admin', handler: async (a) => {
+      await konten.pruefeKontoVon(ich(a), a.params.id);
       const r = await konten.neuerLink(a.params.id);
       L.konto.info('Passwort-Link erzeugt', { email: r.benutzer.email, mail: r.mailVerschickt });
       return ok(r);
@@ -858,7 +909,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'POST', pfad: '/api/benutzer/:id/vertreten', zugang: 'admin', handler: async (a) => {
       const r = await konten.vertrete(ich(a), a.sitzung, a.params.id, info(a));
-      L.konto.warn('Administrator agiert als anderer Benutzer', { admin: ich(a).email, als: r.benutzer.email });
+      L.konto.warn('Im Namen eines anderen Benutzers angemeldet', { von: ich(a).email, als: r.benutzer.email, imVerwaltungsmodus: true });
       return { body: { benutzer: r.benutzer }, sitzungSetzen: r.schluessel };
     } },
 
@@ -1050,12 +1101,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({ erlaubt: await dienst.persoenlicherExportErlaubt(), laeuft: eigeneExporte.get(id)?.laeuft ?? false, fehler: eigeneExporte.get(id)?.fehler ?? null, fertig });
     } },
     { methode: 'POST', pfad: '/api/konto/export', zugang: 'angemeldet', handler: async (a) => {
-      if (!(await dienst.persoenlicherExportErlaubt())) throw new Fachfehler(403, 'Ein Administrator hat den persönlichen Export abgeschaltet.');
+      if (!(await dienst.persoenlicherExportErlaubt())) throw new Fachfehler(403, 'Der persönliche Export ist in der Werkbank abgeschaltet.');
       const e = (a.body ?? {}) as { passwoerter?: unknown; passwoerterBestaetigt?: unknown };
       if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, 'Passwörter im Klartext nur mit ausdrücklicher Bestätigung.');
       const id = ich(a).id;
       if (eigeneExporte.get(id)?.laeuft) throw new Fachfehler(409, 'Dein Export läuft schon.');
-      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'Während ein Administrator als dieser Benutzer arbeitet, gibt es keinen persönlichen Export.');
+      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'Während jemand in diesem Namen arbeitet, gibt es keinen persönlichen Export.');
       const ziel = persoenlicherOrdner(exportZiel(), id);
       const quelle = await dienst.persoenlicheQuelle(await zg(a), { mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(), ich: await konten.exportDatenVon(id) });
       const zustand = { laeuft: true, fehler: null as string | null };
@@ -1079,7 +1130,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const dateien = await exportDateien(ordner);
       const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${fertig.name}/${d.name}`, groesse: d.groesse, inhalt: async () => createReadStream(d.pfad) }));
       const groesse = zipGroesse(eintraege);
-      if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Dein Export ist größer als 4 GB. Bitte einen Administrator, ihn dir aus dem Ordner zu geben.');
+      if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Dein Export ist größer als 4 GB. Bitte die Person, die Ablago verwaltet, ihn dir aus dem Ordner zu geben.');
       L.konto.info('„Meine Daten exportieren“ heruntergeladen', {});
       const strom = danachLoeschen(zipStrom(eintraege), ordner, () => L.konto.info('„Meine Daten exportieren“ nach dem Herunterladen gelöscht', {}));
       return { datei: { inhalt: strom, name: `${fertig.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
@@ -1368,14 +1419,19 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return leer;
     } },
     { methode: 'GET', pfad: '/api/wiederherstellung/sicherungen', zugang: 'offen', handler: async (a) => {
-      const art = await wh().pruefeZugang(a.benutzer?.rolle === 'admin', a.einrichtungscode);
+      const art = await wh().pruefeZugang(darfWiederherstellen(a), a.einrichtungscode);
       return ok({ art, ordner: sicherung().ordner, liste: (await sicherung().liste()).map((e) => ({ name: e.name, bytes: e.bytes, meta: e.meta, ...(e.schlank ? { schlank: e.schlank } : {}) })) });
     } },
     { methode: 'POST', pfad: '/api/wiederherstellung/abgleich', zugang: 'offen', handler: async (a) => {
-      await wh().pruefeZugang(a.benutzer?.rolle === 'admin', a.einrichtungscode);
+      await wh().pruefeZugang(darfWiederherstellen(a), a.einrichtungscode);
       return ok(await wh().abgleich(String(b(a).name ?? ''), typeof b(a).schluessel === 'string' ? b(a).schluessel as string : undefined));
     } },
-    { methode: 'POST', pfad: '/api/wiederherstellung/start', zugang: 'offen', handler: async (a) => ok(await wh().starte(b(a), a.benutzer?.rolle === 'admin' ? a.benutzer : null, a.einrichtungscode)) },
+    { methode: 'POST', pfad: '/api/wiederherstellung/start', zugang: 'offen', handler: async (a) => {
+      // Wiederherstellen ist eine heikle Handlung (#819): im laufenden System nur mit frischer Anmeldung.
+      const admin = darfWiederherstellen(a);
+      if (admin && !a.konsole && !konten.istFrisch(a.sitzungsDaten)) throw new Fachfehler(403, t('konten.verwaltung.fehler.frisch'), { frisch: true, handlung: 'wiederherstellen' });
+      return ok(await wh().starte(b(a), admin ? a.benutzer! : null, a.einrichtungscode));
+    } },
     // Probe-Wiederherstellung (#109)
     { methode: 'POST', pfad: '/api/werkbank/sicherung/probe', zugang: 'admin', handler: async (a) => ok((await wh().starteProbe(typeof b(a).name === 'string' ? b(a).name as string : null, ich(a).email)).lauf) },
     { methode: 'GET', pfad: '/api/werkbank/sicherung/probe', zugang: 'admin', handler: async () => ok(x.wiederherstellung?.aktuellerLauf() ?? null) },
@@ -1495,7 +1551,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const aufgaben = await dienst.alleAufgaben(false);
       const korb = await dienst.papierkorb(ich(a), true);
       const sys = await uebersicht(system, x.betrieb?.kurz());
-      return ok({
+      return ok(nurEigeneBereiche(ich(a), {
         tresor: ts ? { zustand: ts.zustand, eingebunden: ts.eingebunden, betroffen: ts.betroffen.length } : null,
         mail: !!x.betrieb?.mailer(),
         adresse: x.betrieb ? !!x.betrieb.ansicht().adresse : true,
@@ -1527,12 +1583,6 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         engpaesse: grenzenUndEngpaesse(x).engpaesse,
         // Erweiterungen der Suche (#562): fehlend oder in einem Schema, das eine Wiederherstellung löscht.
         erweiterungen: x.erweiterungen ? (await sicher(() => x.erweiterungen!()))?.filter((e) => e.zustand !== 'ok') ?? [] : [],
-        // #128: Schlüssel, die Administratoren gehören (aus der Zeit vor 0.26), durch die eines normalen Benutzers ersetzen.
-        adminSchluessel: x.apiSchluessel ? await sicher(async () => {
-          let n = 0;
-          for (const b of (await konten.listeBenutzer()).filter((y) => y.rolle === 'admin')) n += (await x.apiSchluessel!.liste(b)).length;
-          return n;
-        }) ?? 0 : 0,
         // Je Variable mit Grund (#478).
         variablen: ueberfluessigeVariablen({ ordner: x.ordner?.ueberfluessig, datenbank: x.anbindung?.stand().umgebung === 'gleich', haushalt: !!(x.mandantHinweis && process.env.HAUSHALT_ID) }),
         // DATABASE_URL weicht von der Anbindung in /data/geheim ab und wird ignoriert (#119).
@@ -1556,7 +1606,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         postfachAnmeldung: x.postfaecher ? await sicher(() => x.postfaecher!.anmeldungFehlt()) ?? [] : [],
         // Bewusst akzeptierte Meldungen (#816): wer, wann, Begründung; die Übersicht stellt sie unten zusammen.
         akzeptiert: await sicher(() => akzeptierteMeldungen(dienst.einstellungenSpeicher)) ?? {},
-      });
+      }));
+    } },
+    // Im Verwaltungsmodus angesehen (#820): Person, Mappe, Zeit – nur für „Gesamte Verwaltung“ (verwaltungsbereiche.ts).
+    { methode: 'GET', pfad: '/api/werkbank/verwaltungsmodus', zugang: 'admin', handler: async () => {
+      const liste = await dienst.imVerwaltungsmodus();
+      const namen = new Map((await konten.personen()).map((p) => [p.id, p.name] as const));
+      return ok(liste.map((e) => ({ ...e, person: e.benutzerId ? namen.get(e.benutzerId) ?? '' : '' })));
     } },
     // „Zur Kenntnis genommen“ (#816): nur gelbe Warnungen und Hinweise, im Protokoll mit Benutzer und Begründung.
     { methode: 'POST', pfad: '/api/werkbank/uebersicht/akzeptieren', zugang: 'admin', handler: async (a) => ok(await meldungAkzeptieren(dienst.einstellungenSpeicher, b(a), ich(a).name || ich(a).email)) },
@@ -1644,7 +1700,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Ziel der Rückkehr ist immer ein fester Pfad in der Werkbank – das Postfach stammt aus dem gespeicherten state.
     { methode: 'GET', pfad: '/api/oauth/postfach/rueckruf', zugang: 'offen', handler: async (a) => {
       const raus = [kurzCookie(POSTFACH_BINDUNG_COOKIE, '', 0, '/api/oauth/postfach')];
-      const admin = a.benutzer?.rolle === 'admin' ? { id: a.benutzer.id } : null;
+      // Im Verwaltungsmodus mit Recht auf Postfächer oder – für den Versand (#813) – auf E-Mail und Adresse. Welches der
+      // beiden gemeint war, steht erst nach dem Rückruf fest; die Bindung an den Start (Cookie, Person) prüft PostfachOAuth.
+      const admin = a.benutzer?.rolle === 'admin' && (darfBereich(a.benutzer, 'postfaecher') || darfBereich(a.benutzer, 'betrieb')) ? { id: a.benutzer.id } : null;
       try {
         const r = await pfOAuth().rueckruf(a.query, admin, leseCookie(a.cookieKopf, POSTFACH_BINDUNG_COOKIE));
         // E-Mail-Versand (#813): zurück zu E-Mail und Adresse.
@@ -1834,7 +1892,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (!a.apiSchluessel && a.benutzer) await konten.merkeGeoeffnet(a.benutzer, a.params.id).catch(() => {});
       // Favorit = Abo (#422): geöffnet = gesehen – Hervorhebung weg, offene „Geändert“-Benachrichtigung erledigt.
       if (!a.apiSchluessel && a.benutzer && !a.sitzungsDaten?.vertretungId) await dienst.gesehen(a.benutzer, a.params.id, d.aufgaben).catch(() => {});
-      return ok(klartext ? { ...d, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : d);
+      // Verwaltungsmodus (#820): ohne Modus nicht lesbar → Historie und Hinweis in der Oberfläche.
+      const nurImVerwaltungsmodus = (await modusSpur(a, [a.params.id], 'angesehen')).has(a.params.id);
+      const antwort = { ...d, ...(nurImVerwaltungsmodus ? { nurImVerwaltungsmodus } : {}) };
+      return ok(klartext ? { ...antwort, mappe: (await dienst.entschluesselePasswoerter([d.mappe], klartext, ich(a).id))[0] } : antwort);
     } },
     // Startseite (#334): zuletzt geöffnete Mappen (nur lesbare, höchstens 5) und ob es schon eigene Mappen gibt.
     { methode: 'GET', pfad: '/api/startseite', zugang: 'angemeldet', handler: async (a) => {
@@ -1941,7 +2002,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/mappen/:id/email', zugang: 'angemeldet', handler: async (a) => {
       const i = ich(a);
       // Versenden gibt Daten hinaus wie ein Export (#330): Lesen und Exportrecht, gemeinsame Prüfstelle (#723).
-      return ok(await dienst.versendeMappe(a.params.id, b(a), { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null, await zg(a)), 201);
+      const r = await dienst.versendeMappe(a.params.id, b(a), { id: i.id, name: i.name, email: i.email }, x.betrieb?.mailer() ?? null, await zg(a));
+      await modusSpur(a, [a.params.id], 'versendet');
+      return ok(r, 201);
     } },
     // Post (#192): anlegen („+ Post“, Dokumente danach über das Hochladen) und einer Mappe zuordnen.
     { methode: 'POST', pfad: '/api/post', zugang: 'angemeldet', handler: async (a) => {
@@ -2006,12 +2069,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'PUT', pfad: '/api/mappen/:id', zugang: 'angemeldet', handler: async (a) => {
       const m = await dienst.aendereMappe(a.params.id, a.body, ich(a).id, await zg(a));
+      await modusSpur(a, [m.id], 'geaendert');
       L.ablage.info('Mappe geändert', { typ: await typName(m.typId), titel: m.titel, id: m.id });
       return ok(m);
     } },
     // Export (#152, #153): Tabelle, ZIP mit Dokumenten oder PDF – Recht E an der Sicht, Lesen je Mappe.
     { methode: 'POST', pfad: '/api/export', zugang: 'angemeldet', handler: async (a) => {
-      const r = await dienst.exportiere(ich(a), b(a), await zg(a));
+      const r = await dienst.exportiere(ich(a), b(a), await zg(a), (ids) => modusSpur(a, ids, 'exportiert'));
       L.ablage.info('Mappen exportiert', { von: ich(a).email, sicht: b(a).sicht, format: b(a).format, mappen: r.mappen, ausgelassen: r.ausgelassen, auswahl: Array.isArray(b(a).ids) });
       return { datei: { inhalt: r.inhalt, name: r.name, mime: r.mime, anzeigen: false, groesse: r.groesse, koepfe: { 'x-dms-ausgelassen': String(r.ausgelassen) } } };
     } },
@@ -2021,6 +2085,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/mappen/email', zugang: 'angemeldet', handler: async (a) => {
       const i = ich(a);
       const r = await dienst.versendeMappen(b(a), { id: i.id, name: i.name, email: i.email, rolle: i.rolle }, await zg(a), x.betrieb?.mailer() ?? null);
+      await modusSpur(a, (Array.isArray(b(a).ids) ? b(a).ids as unknown[] : []).map(String), 'versendet');
       L.ablage.info('Mehrere Mappen per E-Mail verschickt', { von: i.email, mappen: r.mappen, anhaenge: r.anhaenge });
       return ok(r, 201);
     } },
@@ -2517,13 +2582,41 @@ export function passtEtag(kopf: string | undefined, etag: string): boolean {
  * Prüft Zugang und Schutz vor fremden Seiten (CSRF): Ändernde Anfragen
  * müssen den Header X-DMS tragen, den nur die eigene Oberfläche setzt.
  */
+/**
+ * Übersicht der Werkbank (#818, Bauvorgabe Sicherheit): nur Meldungen der eigenen Bereiche. Was zu einem anderen
+ * Bereich gehört, kommt neutral zurück (keine Warnung), damit die Oberfläche dieselben Felder hat.
+ */
+const UEBERSICHT_BEREICHE: Record<string, { bereich: string; leer: unknown }> = {
+  tresor: { bereich: 'verschluesselung', leer: null }, mail: { bereich: 'betrieb', leer: true }, adresse: { bereich: 'betrieb', leer: true },
+  texterkennung: { bereich: 'texterkennung', leer: null }, texterkennungPaket: { bereich: 'texterkennung', leer: true },
+  aufgaben: { bereich: 'aufgaben', leer: { offen: 0, ohneEmpfaenger: 0 } }, ohneLeserecht: { bereich: 'aufgaben', leer: 0 },
+  aufgabenEmpfaenger: { bereich: 'benutzer', leer: null }, unpassend: { bereich: 'typen', leer: 0 },
+  papierkorb: { bereich: 'papierkorb', leer: { anzahl: 0, aeltester: null, tage: 0 } }, fehlermeldungen: { bereich: 'fehlermeldungen', leer: null },
+  notfallzugaenge: { bereich: NUR_GESAMT, leer: [] }, wartung: { bereich: 'wartung', leer: null }, sicherung: { bereich: 'sicherung', leer: null },
+  exporte: { bereich: 'vollexport', leer: null }, speicherplatz: { bereich: 'systemzustand', leer: null }, auslastung: { bereich: 'systemzustand', leer: [] },
+  engpaesse: { bereich: 'systemzustand', leer: [] }, erweiterungen: { bereich: 'systemzustand', leer: [] }, variablen: { bereich: 'systemzustand', leer: [] },
+  bestand: { bereich: 'systemzustand', leer: null }, lasttestAbbruch: { bereich: 'systemzustand', leer: null }, anbindung: { bereich: 'anbindung', leer: null },
+  einrichtung: { bereich: NUR_GESAMT, leer: null }, automatisierungen: { bereich: 'automatisierungen', leer: null },
+  paketeEinstellungen: { bereich: 'pakete', leer: [] }, postfachAnmeldung: { bereich: 'postfaecher', leer: [] },
+};
+export function nurEigeneBereiche<T extends Record<string, unknown>>(b: Benutzer, daten: T): T {
+  if (hatGesamt(b)) return daten;
+  const erg: Record<string, unknown> = { ...daten };
+  for (const [k, { bereich, leer }] of Object.entries(UEBERSICHT_BEREICHE)) {
+    if (!(k in erg)) continue;
+    if (bereich === NUR_GESAMT || !darfBereich(b, bereich)) erg[k] = leer;
+  }
+  return erg as T;
+}
+
 export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => string | undefined, konten: Konten, schluessel?: ApiSchluesselDienst, konsole?: Konsolenzugang) {
-  // Befehl `dms` im Container (#244): Schlüssel aus /tmp, nur über Loopback; handelt als Administrator.
+  // Befehl `dms` im Container (#244): Schlüssel aus /tmp, nur über Loopback; handelt als Person mit „Gesamte
+  // Verwaltung“ im Verwaltungsmodus (#818) – wer Zugang zum Container hat, hat ohnehin alles.
   const k = kopf(KONSOLE_KOPF);
   if (k !== undefined) {
     if (!konsole || !konsole.passt(k) || !istLoopback(a.peer)) throw new Fachfehler(401, 'Konsolenzugang ungültig. Der Befehl dms funktioniert nur im Container von Ablago.');
     a.konsole = true;
-    try { a.benutzer = konsolenBenutzer(await konten.listeBenutzer(), kopf(ALS_KOPF)); } catch (e) {
+    try { a.benutzer = { ...konsolenBenutzer(await konten.listeBenutzer(), kopf(ALS_KOPF)), rolle: 'admin' }; a.verwaltungsmodus = true; } catch (e) {
       // Nur die Konsolen-Befehle selbst gehen auch ohne Administrator (z. B. Passwort setzen).
       if (!r.konsole) throw e;
     }
@@ -2544,7 +2637,9 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     // mit dms:sicherung-lesen fragt). Fällt mit der übernächsten Fassung weg.
     const uebergang = r.methode === 'PUT' && r.pfad === SICHERUNG_EXTERN_PFAD;
     if (r.methode !== 'GET' && s.recht === 'lesen' && !uebergang) throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen.');
-    if (r.zugang === 'admin' && b.rolle !== 'admin') throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
+    // #818 (Frage 9 von Sicherheit): API-Schlüssel bekommen nie Verwaltungsrechte – auch nicht von Verwaltenden.
+    a.benutzer = { ...b, rolle: 'mitglied' };
+    if (r.zugang === 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.schluessel'));
     return;
   }
   // Interne Schnittstellen nehmen keine API-Schlüssel. Ein Schlüssel „nur Zähler“ bekommt hier trotzdem eine klare
@@ -2557,6 +2652,13 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
   a.benutzer = anmeldung?.benutzer;
   a.sitzungsDaten = anmeldung?.sitzung;
   if (r.methode !== 'GET' && kopf('x-dms') !== '1') throw new Fachfehler(403, 'Anfrage ohne Kennung der Oberfläche abgelehnt.');
+  // Verwaltungsmodus (#819): Zustand der Sitzung auf dem Server. Aktivität = jede ändernde Anfrage oder eine, die die
+  // Oberfläche nach einer Eingabe als „aktiv“ kennzeichnet – Abfragen im Hintergrund verlängern den Modus nicht.
+  if (a.benutzer) {
+    const aktiv = (r.methode !== 'GET' && !r.lesend && !r.pfad.startsWith('/api/konto/verwaltung')) || kopf('x-dms-aktiv') === '1';
+    a.verwaltungsmodus = await konten.modusPruefen(a.benutzer, a.sitzung, a.sitzungsDaten, aktiv);
+    a.benutzer = { ...a.benutzer, rolle: a.verwaltungsmodus ? 'admin' : 'mitglied' };
+  }
   if (r.zugang === 'offen') return;
   if (!a.benutzer) throw new Fachfehler(401, t('anmeldung.fehler.bitte-anmelden'));
   // Zwei-Faktor vorgeschrieben (#242), aber noch nicht eingerichtet: nur das eigene Konto.
@@ -2565,7 +2667,24 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     && (await konten.zweifaktor.fehlt(a.benutzer, a.sitzungsDaten?.erstellt))) {
     throw new Fachfehler(403, 'Bitte zuerst die Zwei-Faktor-Anmeldung einrichten (Mein Konto).');
   }
-  if (r.zugang === 'admin' && a.benutzer.rolle !== 'admin') throw new Fachfehler(403, 'Dafür sind Administratorrechte nötig.');
+  if (r.zugang === 'admin') pruefeVerwaltung(r, a, konten);
+}
+
+/**
+ * Werkbank (#818, #819): nur im Verwaltungsmodus, nur mit Recht auf den Bereich der Route (Vorgabe „nein“), und für
+ * die heikelsten Handlungen nur mit frischer Anmeldung. Die Antwort sagt der Oberfläche, was fehlt (`details`).
+ */
+export function pruefeVerwaltung(route: Pick<Route, 'methode' | 'pfad' | 'bereichVon'>, a: Anfrage, konten: Konten) {
+  const r = route.bereichVon ?? route;
+  const b = a.benutzer!;
+  if (a.konsole) return;
+  if (!darfVerwalten(b)) throw new Fachfehler(403, t('konten.verwaltung.fehler.recht'));
+  if (!a.verwaltungsmodus) throw new Fachfehler(403, t('konten.verwaltung.fehler.modus'), { verwaltungsmodus: true, heuteBestaetigt: konten.heuteBestaetigt(a.sitzungsDaten), frisch: konten.istFrisch(a.sitzungsDaten) });
+  const bereiche = bereicheDerRoute(r.methode, r.pfad);
+  const darf = bereiche === null ? hatGesamt(b) : bereiche.some((x) => (x === JEDER ? darfVerwalten(b) : x === NUR_GESAMT ? hatGesamt(b) : darfBereich(b, x)));
+  if (!darf) throw new Fachfehler(403, t('konten.verwaltung.fehler.bereich'), { bereich: bereiche?.[0] ?? null });
+  const heikel = heikleHandlung(r.methode, r.pfad, a.body);
+  if (heikel && !konten.istFrisch(a.sitzungsDaten)) throw new Fachfehler(403, t('konten.verwaltung.fehler.frisch'), { frisch: true, handlung: heikel });
 }
 
 /** Vollexport (#254): Vorschlag, welche Felder eines Typs einen Kontakt (vCard) ergeben – bestätigt der Administrator. */

@@ -1,6 +1,6 @@
 # Werkbank und Übersicht
 
-Die **Werkbank** sehen nur Administratoren. Nach der Anmeldung landest du als Administrator direkt in der **Übersicht** der Werkbank – ein Administrator-Konto arbeitet im Alltag nicht in der Ablage. Führt dich ein Link in die Werkbank (z. B. aus einer E-Mail „Sicherung fehlgeschlagen“), landest du genau dort; ein Link in die Ablage führt dich in die Übersicht. Die **Ablage** erreichst du jederzeit über **Ablage** oben, etwa um nachzusehen, was ein Benutzer sieht. Eine Einstellung dafür gibt es bewusst nicht. Links stehen ihre Bereiche in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
+Die **Werkbank** gibt es nur im [Verwaltungsmodus](verwalten.md#der-verwaltungsmodus): Benutzermenü → **Ablago verwalten**. Danach landest du in der **Übersicht** – sie zeigt die Meldungen deiner eigenen Bereiche. Führt dich ein Link in die Werkbank (z. B. aus einer E-Mail „Sicherung fehlgeschlagen“), landest du nach „Ablago verwalten“ genau dort. Die **Ablage** erreichst du im Modus jederzeit über **Ablage** oben, etwa um nachzusehen, was eine Mappe enthält. Links stehen die Bereiche, die du verwalten darfst, in sechs Gruppen, geordnet nach dem, was du gerade tun willst – die Ablage aufbauen, Benutzer verwalten, Post hereinholen, Daten sichern, Grundeinstellungen ändern oder einem Fehler nachgehen. Welche Bereiche du siehst, hängt von der [Vorlage](#werkbank-anpassen) ab:
 
 <!-- bereiche:gruppen -->
 | Gruppe | Bereiche |
@@ -61,7 +61,7 @@ Manche Warnung nimmst du bewusst in Kauf, etwa „Der Sicherungsordner ist kein 
 - **Ändert sich die Lage, steht die Meldung wieder oben:** wenn sie schwerer wird (aus einem Hinweis wird gelb, aus gelb wird rot) oder wenn sie behoben war und dieselbe Ursache erneut auftritt.
 - **Rote Meldungen lassen sich nicht akzeptieren.** Sie müssen erledigt werden.
 
-Akzeptierte Meldungen gelten für alle Administratoren dieser Installation.
+Akzeptierte Meldungen gelten für alle, die diese Installation verwalten.
 
 ### Alle Meldungen der Übersicht { #meldungen }
 
@@ -98,7 +98,6 @@ Akzeptierte Meldungen gelten für alle Administratoren dieser Installation.
 | Sicherung außer Haus mehr als 2 Tage im Rückstand | gelb | `sicherung.extern-alt` |
 | Der [Export-Ordner](export.md#export-ordner) liegt im Sicherungsordner | rot | `export.im-sicherungsordner` |
 | Exporte beim Update aus dem Sicherungsordner verschoben | Hinweis (rot, wenn etwas liegen blieb) | `export.umzug` |
-| API-Schlüssel eines Administrators | gelb | `api-schluessel-admin` |
 | DATABASE_URL weicht von der Datenbank-Anbindung ab | gelb | `anbindung.abweichend` |
 | Datenbank-Anbindung geändert, Neustart nötig | gelb | `anbindung.neustart` |
 | DMS_LASTTEST in einer echten Installation | gelb | `lasttest` |
@@ -111,7 +110,7 @@ Akzeptierte Meldungen gelten für alle Administratoren dieser Installation.
 | Dokumente mit Fehler in der Texterkennung | gelb | `texterkennung.fehler` |
 | Niemand bekommt die Aufgaben ohne Empfänger | Hinweis | `aufgabenempfaenger` |
 | Aufgaben bei Personen ohne Leserecht | gelb | `aufgaben.ohne-leserecht` |
-| Aufgaben für die Administratoren | Hinweis | `aufgaben.ohne-empfaenger` |
+| Aufgaben ohne Empfänger | Hinweis | `aufgaben.ohne-empfaenger` |
 | Mappen, die nicht zur Definition passen | Hinweis | `mappen.unpassend` |
 
 Bei Meldungen, die es je Postfach, Paket, Notfallzugang oder übersprungenem Schritt gibt, folgt im Protokoll hinter der Kennung ein Doppelpunkt und die Id, z. B. `postfach.anmelden:…`.
@@ -123,7 +122,7 @@ Nicht jeder braucht jeden Bereich. Ein Haushalt fasst Nummernkreise, Postfächer
 !!! info "Ausblenden schaltet nichts ab"
     Ein ausgeblendeter Bereich läuft weiter. Ein Postfach holt weiter Post ab, die Sicherung läuft weiter. Direkte Links, die Hilfe und die Knöpfe der Übersicht führen weiterhin hin. **Hinweise kommen immer durch:** Hat ein ausgeblendeter Bereich ein Problem, zum Beispiel „Sicherung zu alt“, steht es in der Übersicht, und der Bereich erscheint mit seinem Hinweis in der Leiste.
 
-**Vorlagen** für alle Administratoren:
+**Vorlagen** für alle, die verwalten:
 
 - **Haushalt**: schlank, nur was eine Familie zum Einrichten und Sichern braucht. Neue Installationen beginnen damit. **Selbständige und kleine Betriebe** wählen gleich nach der Einrichtung **Betrieb**.
 <!-- bereiche:organisation -->
@@ -133,10 +132,10 @@ Nicht jeder braucht jeden Bereich. Ein Haushalt fasst Nummernkreise, Postfächer
 
 Danach kannst du je Bereich abweichen:
 
-- **für alle**: Der Bereich steht bei jedem Administrator in der Leiste.
+- **für alle**: Der Bereich steht bei jeder Person in der Leiste, die ihn verwalten darf.
 - **nur für mich**: Der Bereich steht zusätzlich nur bei dir, zum Beispiel *Protokoll*, wenn du gern nachschaust, die anderen aber nicht.
 
-**Expertenmodus:** Manche Bereiche braucht ein Haushalt selten, sie sind aber nützlich, wenn man tiefer einsteigen will – derzeit die [Suche](suche.md) mit Tippfehlern und gleichbedeutenden Wörtern. Die Vorlage **Haushalt** blendet sie aus; mit dem Haken **Expertenmodus – nur für mich** erscheinen sie in deiner Leiste. Das gilt nur für dich und ist kein Recht – die anderen Administratoren sehen ihre eigene Leiste. In der Liste der Bereiche stehen sie mit „im Expertenmodus“. Bei **Betrieb** und **Alles** sind sie ohnehin zu sehen.
+**Expertenmodus:** Manche Bereiche braucht ein Haushalt selten, sie sind aber nützlich, wenn man tiefer einsteigen will – derzeit die [Suche](suche.md) mit Tippfehlern und gleichbedeutenden Wörtern. Die Vorlage **Haushalt** blendet sie aus; mit dem Haken **Expertenmodus – nur für mich** erscheinen sie in deiner Leiste. Das gilt nur für dich und ist kein Recht – die anderen, die verwalten, sehen ihre eigene Leiste. In der Liste der Bereiche stehen sie mit „im Expertenmodus“. Bei **Betrieb** und **Alles** sind sie ohnehin zu sehen.
 
 Ist ein ausgeblendeter Bereich eingerichtet, etwa ein Postfach oder die Anmeldung über einen Anbieter, steht dabei „eingerichtet, aber ausgeblendet“. Unten in der Leiste steht, wie viele Bereiche ausgeblendet sind. Ein Klick darauf zeigt sie vorübergehend alle.
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { imModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { Fachfehler } from '../src/fehler';
 import { Konten } from '../src/konten';
@@ -20,7 +21,8 @@ describe('Konten', () => {
     assert.equal(await k.einrichtungNoetig(), true);
     await wirft(k.einrichten({ email: 'admin@example.org', passwort: 'kurz' }), 422);
     const { benutzer, schluessel } = await k.einrichten({ email: 'admin@example.org', name: 'Thomas', passwort: 'ein-langes-passwort' });
-    assert.equal(benutzer.rolle, 'admin');
+    assert.deepEqual([benutzer.rolle, benutzer.verwaltung], ['mitglied', ['*']], 'kein Konto „Administrator“: eine Person mit „Gesamte Verwaltung“ (#818)');
+    assert.ok((await k.anmeldungZu(schluessel))?.sitzung.verwaltungSeit, 'gleich im Verwaltungsmodus für den Einrichtungsassistenten');
     assert.equal((await k.benutzerZu(schluessel))?.id, benutzer.id);
     await wirft(k.einrichten({ email: 'zweiter@example.org', passwort: 'ein-langes-passwort' }), 409);
   });
@@ -40,7 +42,7 @@ describe('Konten', () => {
   it('lädt ohne Mailserver per Link ein, der genau einmal funktioniert', async () => {
     const k = new Konten(speicherKontoRepo(), null, 'http://nas:3000/');
     await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });
-    const r = await k.legeBenutzerAn({ email: 'sabine@example.org', name: 'Sabine', rolle: 'mitglied' });
+    const r = await k.legeBenutzerAn({ email: 'sabine@example.org', name: 'Sabine' });
     assert.equal(r.mailVerschickt, false);
     assert.match(r.link!, /^http:\/\/nas:3000\/passwort\/[\w-]{40,}$/);
     await wirft(k.legeBenutzerAn({ email: 'SABINE@example.org' }), 409);
@@ -73,20 +75,22 @@ describe('Konten', () => {
     await wirft(k.anmelden({ email: 'admin@example.org', passwort: 'ein-langes-passwort' }, 'y'), 401);
   });
 
-  it('schützt den letzten Administrator und deaktiviert Sitzungen', async () => {
+  it('schützt die letzte Person mit „Gesamte Verwaltung“ und deaktiviert Sitzungen (#818)', async () => {
     const k = new Konten(speicherKontoRepo(), null, 'http://nas:3000');
-    const { benutzer: admin } = await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });
-    await wirft(k.aendereBenutzer(admin, admin.id, { rolle: 'mitglied' }), 409);
+    const admin = imModus((await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' })).benutzer);
+    await wirft(k.setzeVerwaltung(admin, admin.id, []), 409);
+    await wirft(k.setzeVerwaltung(admin, admin.id, ['benutzer']), 409);
     await wirft(k.loescheBenutzer(admin, admin.id), 409);
-    const r = await k.legeBenutzerAn({ email: 'b@example.org', rolle: 'mitglied' });
+    const r = await k.legeBenutzerAn({ email: 'b@example.org' });
     const { schluessel } = await k.passwortSetzen({ schluessel: linkSchluessel(r.link!), passwort: 'passwort-von-b' });
     assert.ok(await k.benutzerZu(schluessel));
     await wirft(k.aendereBenutzer(admin, r.benutzer.id, { aktiv: false }), 409);
     await k.setzeAbwesenheit(admin, r.benutzer.id, { vertreterId: admin.id });
     await k.aendereBenutzer(admin, r.benutzer.id, { aktiv: false });
     assert.equal(await k.benutzerZu(schluessel), undefined);
-    await k.aendereBenutzer(admin, r.benutzer.id, { aktiv: true, rolle: 'admin' });
-    await k.aendereBenutzer(admin, admin.id, { rolle: 'mitglied' }); // jetzt gibt es einen anderen Admin
+    await k.aendereBenutzer(admin, r.benutzer.id, { aktiv: true });
+    await k.setzeVerwaltung(admin, r.benutzer.id, ['*']);
+    await k.setzeVerwaltung(admin, admin.id, []); // jetzt hat eine andere Person „Gesamte Verwaltung“
   });
 });
 
@@ -143,7 +147,7 @@ describe('Sitzungen und Vertretung', () => {
   it('lässt den Admin als Benutzer agieren und zurückkehren; der Benutzer erfährt davon', async () => {
     const { k, admin, sabine } = await zwei();
     await wirft(k.vertrete(sabine.benutzer, sabine.schluessel, admin.benutzer.id, { ip: '', geraet: '' }), 403);
-    const v = await k.vertrete(admin.benutzer, admin.schluessel, sabine.benutzer.id, { ip: '10.0.0.1', geraet: 'Firefox' });
+    const v = await k.vertrete(imModus(admin.benutzer), admin.schluessel, sabine.benutzer.id, { ip: '10.0.0.1', geraet: 'Firefox' });
     assert.equal(await k.benutzerZu(admin.schluessel), undefined, 'Admin-Sitzung beendet');
     const a = (await k.anmeldungZu(v.schluessel))!;
     assert.equal(a.benutzer.id, sabine.benutzer.id);
@@ -196,9 +200,10 @@ describe('API-Schlüssel und OpenAPI', () => {
     const { ApiSchluesselDienst, speicherApiSchluesselRepo } = await import('../src/apischluessel');
     const k = new Konten(speicherKontoRepo(), null, 'http://nas:3000');
     const { benutzer: admin } = await k.einrichten({ email: 'admin@example.org', passwort: 'ein-langes-passwort' });
-    const { benutzer } = await k.legeBenutzerAn({ email: 'scanner@example.org', name: 'Scanner', rolle: 'mitglied' });
+    const { benutzer } = await k.legeBenutzerAn({ email: 'scanner@example.org', name: 'Scanner' });
     const d = new ApiSchluesselDienst(speicherApiSchluesselRepo());
-    await wirft(d.lege(admin, { name: 'Admin' }), 403); // #128: keine Schlüssel für Administratoren
+    // #818: Auch Personen mit Verwaltungsrecht haben Schlüssel – sie bekommen nie Verwaltungsrechte (pruefeZugang).
+    assert.ok((await d.lege(imModus(admin), { name: 'Eigener Scanner' })).schluessel);
     await wirft(d.lege(benutzer, { name: '' }), 422);
     await wirft(d.lege(benutzer, { name: 'Alt', ablauf: '2000-01-01' }), 422);
     const s = await d.lege(benutzer, { name: 'Scanner Büro', recht: 'schreiben' });

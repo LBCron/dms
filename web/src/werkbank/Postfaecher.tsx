@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type OAuthAnbieter, type OAuthAppEingabe, type OAuthAppsStand, type OAuthStatus, type PostfachAnsicht, type PostfachEingabe } from '../api';
 import { useDaten } from '../daten';
@@ -6,7 +7,6 @@ import { Speicherleiste, useEntwurf } from '../Speicherleiste';
 import { Hilfe } from '../Hilfe';
 import { Listenkopf } from '../Listenkopf';
 import { rueckfrage } from '../rueckfrage';
-import { t } from '../sprache';
 
 /**
  * Werkbank → Postfächer (#196): Mails per IMAP abholen, jede Mail wird neue Post.
@@ -29,7 +29,7 @@ export type Meldung = { art: 'gut' | 'schlecht' | 'info'; text: string };
 /** Feste Fehlercodes der Rückkehr (#358) – Text nie aus der Adresse übernehmen. */
 const RUECKRUF_FEHLER: Record<string, string> = {
   abgelaufen: 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte noch einmal beginnen.',
-  admin: 'Die Anmeldung wurde von einem anderen Administrator begonnen.',
+  admin: t('konten.verwaltende.postfach.andere'),
   browser: 'Die Anmeldung wurde in einem anderen Browser begonnen. Bitte noch einmal beginnen.',
   abgelehnt: 'Der Anbieter hat die Anmeldung abgelehnt oder sie wurde abgebrochen. Einzelheiten stehen im Protokoll.',
   ohnecode: 'Der Anbieter hat keinen Code geliefert. Bitte noch einmal beginnen.',

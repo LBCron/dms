@@ -76,7 +76,7 @@ export function AufgabenListe({ z, filter, offen, mailAn, favoriten }: { z: Aufg
           <label className="eigenschaft klein"><span>Empfänger</span>
             <select value={filter.empfaenger ?? ''} onChange={(e) => setze({ empfaenger: e.target.value || undefined })}>
               <option value="">alle</option>
-              <option value="admins">Administratoren</option>
+              <option value="admins">{t('konten.verwaltende.ohneEmpfaenger')}</option>
               <option value="ohne-vertretung">abwesend, ohne Vertretung</option>
               {d.personen.map((p) => <option key={p.id} value={p.id}>{p.name}{p.aktiv === false ? ' (deaktiviert)' : ''}</option>)}
             </select></label>
@@ -125,7 +125,7 @@ export function AufgabenListe({ z, filter, offen, mailAn, favoriten }: { z: Aufg
                 <div className="aufgabenzeile">
                   {z.erledigt
                     ? <span className="leise klein">erledigt von {a.erledigtVon ? <Person id={a.erledigtVon} /> : 'selbst (Mappe passt wieder)'}</span>
-                    : <><span className="leise klein">für {a.empfaengerId ? <Person id={a.empfaengerId} /> : 'Administratoren'} · weitergeben an</span>
+                    : <><span className="leise klein">für {a.empfaengerId ? <Person id={a.empfaengerId} /> : t('konten.verwaltende.ohneEmpfaenger')} · weitergeben an</span>
                         <BenutzerWahl label={`Aufgabe „${a.text}“ weitergeben an`} wert="" setze={(an) => { if (an) void weiter(a, an); }} ohne={a.empfaengerId} /></>}
                 </div>
               </li>
@@ -228,7 +228,7 @@ function AufgabeMappe({ a, z }: { a: Aufgabe; z: AufgabenZustand }) {
         <h1>{titelOder(a.mappeTitel)}</h1>
         <dl className="index">
           <div><dt>Art</dt><dd>{AUFGABENARTEN[a.art]}</dd></div>
-          <div><dt>Für</dt><dd>{a.empfaengerId ? <Person id={a.empfaengerId} /> : 'Administratoren'}</dd></div>
+          <div><dt>Für</dt><dd>{a.empfaengerId ? <Person id={a.empfaengerId} /> : t('konten.verwaltende.ohneEmpfaenger')}</dd></div>
           {a.datum && <div><dt>Datum</dt><dd>{tag(a.datum)}</dd></div>}
           <div><dt>Seit</dt><dd>{datum(a.erstellt)}{a.erstelltVon && <> von <Person id={a.erstelltVon} /></>}</dd></div>
           {a.erledigt && <div><dt>Erledigt</dt><dd>{datum(a.erledigt)}</dd></div>}

@@ -1,5 +1,6 @@
 /** Systemmappentyp Post (#192): anlegen, „Für“, Zuordnen, Sichten, Rechte, Umstellung vom Typ E-Mail. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { POST_KANAL, POST_STAND, systemfelder } from '../../shared/src/model';
 import { NICHTS, type Regelwerk } from '../../shared/src/rechte';
@@ -20,7 +21,7 @@ async function aufbau(repo = speicherRepo(), einstellungen = speicherEinstellung
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' }, anna.id);
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, anna.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const rechnung = await d.legeTypAn({ name: 'Rechnung', felder: [{ key: 'nr', label: 'Nummer', typ: 'text', pflicht: true }], register: [
     { key: 'allgemein', name: 'Allgemein', art: 'felder', felder: ['nr'] },
@@ -31,7 +32,7 @@ async function aufbau(repo = speicherRepo(), einstellungen = speicherEinstellung
   const post = (await d.listeTypen()).find((t) => t.system === 'post')!;
   const tabelle = routen(d, konten, {});
   const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) =>
-    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: (await konten.listeBenutzer()).find((u) => u.id === b.id)! });
+    tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus((await konten.listeBenutzer()).find((u) => u.id === b.id)!) });
   const A = { id: anna.id, rolle: 'admin' }; const B = { id: ben.id, rolle: 'mitglied' };
   return { d, konten, anna, ben, A, B, rechnung, r1, post, rufe, einstellungen };
 }

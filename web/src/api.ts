@@ -31,6 +31,7 @@ import type { LoeschAnlass, LoeschEintrag } from '../../shared/src/loeschprotoko
 import type { Sicherheit } from '../../shared/src/erkennung';
 import type { Entscheidung, UmwandlungsFeld, Umwandlungsvorgang, UmwandlungsVorschau } from '../../shared/src/umwandlung';
 import type { FrageZeile, FragenGrenzen, VerlaufEintrag } from '../../shared/src/fragen';
+import type { Verwaltungsstand } from '../../shared/src/verwaltungsrecht';
 
 /** Vorschläge beim Zuordnen (#336), wie GET /api/mappen/:id/erkennung sie liefert. */
 export interface ErkFund<T = string> { wert: T; sicherheit: Sicherheit; fundstelle: string }
@@ -114,7 +115,34 @@ export async function speichereDatei(url: string, body: unknown, ersatzname: str
   return { name, bytes: blob.size, ausgelassen: Number(r.headers.get('x-dms-ausgelassen')) || 0 };
 }
 
-async function anfrage<T>(methode: string, url: string, body?: unknown): Promise<T> {
+/**
+ * Verwaltungsmodus (#819): Aktivität für den Server. Nur eine Eingabe (Klick, Taste, Tippen) in der letzten Minute
+ * verlängert den Modus – Abfragen im Hintergrund (Fortschritt, Stand) nicht.
+ */
+let letzteEingabe = 0;
+if (typeof window !== 'undefined') for (const e of ['pointerdown', 'keydown']) addEventListener(e, () => { letzteEingabe = Date.now(); }, { capture: true, passive: true });
+const aktiv = () => Date.now() - letzteEingabe < 60_000;
+
+/**
+ * Endet der Verwaltungsmodus während der Arbeit oder braucht eine heikle Handlung eine frische Anmeldung (#819), fragt
+ * die Oberfläche nur erneut nach der Anmeldung und schickt dieselbe Anfrage danach noch einmal – nichts geht verloren.
+ * `true` = bestätigt, noch einmal versuchen.
+ */
+export type Bestaetigung = (art: 'modus' | 'frisch', details: { heuteBestaetigt?: boolean; frisch?: boolean; handlung?: string }) => Promise<boolean>;
+let bestaetigung: Bestaetigung | null = null;
+export function setzeBestaetigung(f: Bestaetigung | null) { bestaetigung = f; }
+const MODUS_URL = /^\/api\/konto\/verwaltung/;
+
+async function anfrage<T>(methode: string, url: string, body?: unknown, nochmal = true): Promise<T> {
+  try { return await anfrageEinmal<T>(methode, url, body); } catch (e) {
+    const d = e instanceof ApiFehler && e.status === 403 ? e.details as { verwaltungsmodus?: boolean; frisch?: boolean; heuteBestaetigt?: boolean; handlung?: string } | undefined : undefined;
+    if (!nochmal || !bestaetigung || !d || MODUS_URL.test(url) || !(d.verwaltungsmodus || d.frisch)) throw e;
+    if (!(await bestaetigung(d.verwaltungsmodus ? 'modus' : 'frisch', d))) throw e;
+    return anfrage<T>(methode, url, body, false);
+  }
+}
+
+async function anfrageEinmal<T>(methode: string, url: string, body?: unknown): Promise<T> {
   let r: Response;
   const start = performance.now();
   const seite = messung.seite;
@@ -127,6 +155,7 @@ async function anfrage<T>(methode: string, url: string, body?: unknown): Promise
         'x-dms': '1',
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         ...(einrichtungscode ? { 'x-einrichtungscode': einrichtungscode } : {}),
+        ...(aktiv() ? { 'x-dms-aktiv': '1' } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -301,9 +330,13 @@ export interface KontoStatus {
   lasttest?: boolean;
   /** Aufgaben ohne Empfänger (#719): Sieht dieser Benutzer sie (Administrator oder gewählter Alltags-Benutzer)? */
   aufgabenOhneEmpfaenger?: boolean;
-  /** Technische Aufgaben (#719): Für die Verwaltung liegt etwas an – nur ja/nein, beim Alltags-Benutzer. */
+  /** Technische Aufgaben (#719): Für die Verwaltung liegt etwas an – nur ja/nein, außerhalb des Verwaltungsmodus. */
   verwaltung?: boolean;
+  /** Verwaltungsmodus (#819): darf die Person verwalten, läuft er, Wiedereinstieg mit einem Klick? */
+  verwaltungsmodus?: Verwaltungsstand | null;
 }
+/** Im Verwaltungsmodus angesehen (#820): Werkbank-Liste für „Gesamte Verwaltung“. */
+export interface ModusEintrag { id: number; zeit: string; mappeId: string; typId: string | null; benutzerId: string | null; person: string; was: string; titel: string }
 /** #719: gewählter Alltags-Benutzer (null = nur Administratoren); `gespeichert` kann ein inzwischen ungeeigneter sein. */
 export type AufgabenEmpfaenger = { benutzerId: string | null; wirksam: string | null; gesetzt: boolean; gespeichert: string | null };
 type FreigabeStand = { freigabe: FavoritenFreigabe; rollen: Array<{ id: string; name: string; system: boolean }> };
@@ -393,6 +426,13 @@ export interface LinkErgebnis { benutzer: Benutzer; mailVerschickt: boolean; lin
 
 export const api = {
   status: () => anfrage<KontoStatus>('GET', '/api/konto/status'),
+  /** Verwaltungsmodus (#819): beginnen (ohne Angaben: Wiedereinstieg oder frische Anmeldung), beenden, frisch bestätigen. */
+  verwaltungBeginnen: (angaben: { passwort?: string; code?: string } = {}) => anfrage<Verwaltungsstand>('POST', '/api/konto/verwaltung', angaben),
+  verwaltungBeenden: () => anfrage<Verwaltungsstand>('POST', '/api/konto/verwaltung/beenden'),
+  verwaltungBestaetigen: (angaben: { passwort: string; code?: string }) => anfrage<{ frisch: true }>('POST', '/api/konto/verwaltung/bestaetigen', angaben),
+  /** Verwaltungsrecht einer Person (#818): nur mit „Gesamte Verwaltung“ und frischer Anmeldung. */
+  verwaltungSetzen: (id: string, verwaltung: string[]) => anfrage<Benutzer>('PUT', `/api/benutzer/${id}/verwaltung`, { verwaltung }),
+  imVerwaltungsmodus: () => anfrage<ModusEintrag[]>('GET', '/api/werkbank/verwaltungsmodus'),
   laufwerk: () => anfrage<{ adresse: string; https: boolean; benutzername: string }>('GET', '/api/konto/laufwerk'),
   /* Lasttest-Modus (#612) */
   lasttest: () => anfrage<LasttestStand>('GET', '/api/lasttest'),
@@ -468,8 +508,8 @@ export const api = {
   benutzerAbwesenheit: (id: string, a: Abwesenheit) => anfrage<Benutzer>('PUT', `/api/benutzer/${id}/abwesenheit`, a),
   benutzerAufgabenAnVertreter: (id: string) => anfrage<{ uebergeben: number }>('POST', `/api/benutzer/${id}/aufgaben-uebergeben`),
   benutzer: () => anfrage<Benutzer[]>('GET', '/api/benutzer'),
-  benutzerAnlegen: (d: { email: string; name: string; rolle: Rolle; rollen?: string[] }) => anfrage<LinkErgebnis>('POST', '/api/benutzer', d),
-  benutzerAendern: (id: string, d: Partial<Pick<Benutzer, 'name' | 'rolle' | 'aktiv' | 'rollen'>>) => anfrage<Benutzer>('PUT', `/api/benutzer/${id}`, d),
+  benutzerAnlegen: (d: { email: string; name: string; rollen?: string[] }) => anfrage<LinkErgebnis>('POST', '/api/benutzer', d),
+  benutzerAendern: (id: string, d: Partial<Pick<Benutzer, 'name' | 'aktiv' | 'rollen'>>) => anfrage<Benutzer>('PUT', `/api/benutzer/${id}`, d),
   /** Alle Rollen (Systemrollen zuerst) für die Benutzerverwaltung. */
   rollen: () => anfrage<Array<{ id: string; name: string; system: boolean }>>('GET', '/api/rollen'),
   /** Systemkonten und Dienstkonten der Pakete (#673). */
@@ -992,7 +1032,7 @@ export const verborgeneAufgaben = (x: unknown): Aufgabe[] | null => {
   const d = x instanceof ApiFehler && x.status === 404 ? x.details as { verborgen?: boolean; aufgaben?: Aufgabe[] } | undefined : undefined;
   return d?.verborgen ? d.aufgaben ?? [] : null;
 };
-export interface MappeDetails { /** Wirksame Rechte an der Mappe (#126). */ rechte?: Rechte; mappe: Mappe; favorit?: boolean; /** Noch nicht fällige Erinnerungen (#131). */ erinnerungen?: Erinnerung[]; rueckverweise: Rueckverweis[]; loeschbar?: { ok: boolean; grund?: string; rueckverweise?: Rueckverweis[] }; dokumente: Dokument[]; notizen: Notiz[]; aufgaben: Aufgabe[]; bezuege: Bezuege; /** Verweise, die nicht (mehr) zum Auswahlfilter passen (#172). */ unpassend?: Record<string, string[]>; /** Archivmodus (#212). */ aufbewahrenBis?: string | null; /** Exportrecht (#294): darf als PDF exportiert werden. */ exportierbar?: boolean; /** Auskunft nach Art. 15 DSGVO möglich (#396, Administratoren). */ auskunft?: boolean }
+export interface MappeDetails { /** #820: ohne Verwaltungsmodus nicht lesbar – steht in der Historie. */ nurImVerwaltungsmodus?: boolean; /** Wirksame Rechte an der Mappe (#126). */ rechte?: Rechte; mappe: Mappe; favorit?: boolean; /** Noch nicht fällige Erinnerungen (#131). */ erinnerungen?: Erinnerung[]; rueckverweise: Rueckverweis[]; loeschbar?: { ok: boolean; grund?: string; rueckverweise?: Rueckverweis[] }; dokumente: Dokument[]; notizen: Notiz[]; aufgaben: Aufgabe[]; bezuege: Bezuege; /** Verweise, die nicht (mehr) zum Auswahlfilter passen (#172). */ unpassend?: Record<string, string[]>; /** Archivmodus (#212). */ aufbewahrenBis?: string | null; /** Exportrecht (#294): darf als PDF exportiert werden. */ exportierbar?: boolean; /** Auskunft nach Art. 15 DSGVO möglich (#396, Administratoren). */ auskunft?: boolean }
 /** Werkbank → Datenschutz (#396, #455). */
 export interface DatenschutzStand { einstellung: Datenschutz; auskuenfte: AuskunftStand[]; /** #668 */ verzeichnis: AuskunftEintrag[]; tage: number; links: AuskunftLink[]; adresse: string; oeffentlich: boolean; mail: boolean; /** #469 */ loeschkonzept?: { luecken: Luecke[] } }
 export interface Hochgeladen { dokument: Dokument; gleicherInhalt: Array<{ mappeId: string; name: string; titel?: string; typId?: string }> }
@@ -1127,8 +1167,6 @@ export interface WerkbankUebersicht {
   erweiterungen?: ErweiterungStand[];
   /** Frühere Variablen, die aus der Compose-Datei entfernt werden können (#115), je mit Grund (#478). */
   variablen?: UeberfluessigeVariable[];
-  /** API-Schlüssel von Administratoren (#128). */
-  adminSchluessel?: number;
   /** Datenbank-Anbindung (#119): DATABASE_URL abweichend, Neustart nötig. */
   anbindung?: { umgebung: 'fehlt' | 'gleich' | 'abweichend'; neustartNoetig: boolean } | null;
   /** DMS_LASTTEST gesetzt, aber nicht gestartet, weil hier echte Daten liegen (#612). */

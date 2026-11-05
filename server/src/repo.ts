@@ -240,6 +240,8 @@ export interface Repo {
   findeArchivnummer(nummer: string): Promise<Dokument | undefined>;
   /** Die Mappe mit dieser Systemkennung (z. B. rolle:admin). */
   holeSystemMappe(kennung: string): Promise<Mappe | undefined>;
+  /** Kennung einer Systemmappe ändern oder (null) entfernen – #818: frühere Systemrolle „Administrator“. */
+  setzeSystemKennung(id: string, kennung: string | null): Promise<void>;
   /**
    * Werte ersetzen. Mit `feldweise` (#609) nur die Felder, die sich gegenüber dessen `basis` ändern – so
    * setzt ein Schreiber, der einen älteren Stand gelesen hat, keine Felder anderer zurück. „Zuletzt geändert“

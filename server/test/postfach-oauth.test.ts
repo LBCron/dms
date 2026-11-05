@@ -1,5 +1,6 @@
 /** Postfächer: Anmeldung per OAuth 2.0 (#358) – PKCE/state, Code-Tausch, Gerätecode, Erneuerung, Ablauf, keine Token nach außen. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { createHash } from 'node:crypto';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -76,7 +77,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const admin2 = (await konten.legeBenutzerAn({ email: 'zweit@example.org', name: 'Zweit', rolle: 'admin' }, admin.id)).benutzer;
+  const admin2 = (await konten.legeBenutzerAn({ email: 'zweit@example.org', name: 'Zweit', verwaltung: ['*'] }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const a = anbieter();
   const mails: string[] = [];
@@ -96,7 +97,7 @@ async function aufbau() {
   const tabelle = routen(d, konten, { postfaecher: pf, postfachOAuth: oauth, betrieb: { adresseFuerLinks: () => 'https://dms.example.org/' } as never });
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const rufe = async (b: { id: string } | null, m: string, pfad: string, x: Partial<Anfrage> = {}) =>
-    tabelle.find((t) => t.methode === m && t.pfad === pfad)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: b ? await ich(b.id) : undefined });
+    tabelle.find((t) => t.methode === m && t.pfad === pfad)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: b ? wieImModus(await ich(b.id)) : undefined });
   await rufe(admin, 'PUT', '/api/werkbank/postfaecher-oauth/:anbieter', { params: { anbieter: 'microsoft' }, body: { clientId: 'app-1', clientSecret: 'app-geheimnis', tenant: 'common' } });
   const [p] = await pf.speichere({ name: 'Firma', server: 'outlook.office365.com', benutzer: 'dms@firma.example', anmeldung: 'oauth', anbieter: 'microsoft' }, null, 'test');
   /** Ganzer Browser-Ablauf über die Routen; liefert die Rückkehr-Adresse. */
@@ -331,7 +332,7 @@ describe('Postfächer: OAuth 2.0 (#358)', () => {
     const neu = tabelle.filter((r) => /postfaecher-oauth|\/oauth\//.test(r.pfad));
     assert.ok(neu.length >= 7);
     for (const r of neu) assert.equal(r.zugang, r.pfad === '/api/oauth/postfach/rueckruf' ? 'offen' : 'admin', r.pfad);
-    const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' }, admin.id);
+    const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, admin.id);
     await konten.setzePasswortDirekt('ben@example.org', 'ein-langes-passwort-ben');
     const { schluessel } = (await konten.anmelden({ email: 'ben@example.org', passwort: 'ein-langes-passwort-ben' }, '1.1.1.1')) as { schluessel: string };
     for (const r of neu.filter((x) => x.zugang === 'admin')) {
