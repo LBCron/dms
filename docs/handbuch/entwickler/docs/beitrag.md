@@ -9,6 +9,7 @@
 - `npm test` und `npm run typecheck` laufen lokal durch.
 - **Keine neue Abhängigkeit ohne Begründung:** Wer ein npm-Paket unter `dependencies` oder ein Alpine-Paket im `Dockerfile` ergänzt, beantwortet in der PR-Beschreibung die Fragen unter [Aufbau → Abhängigkeiten](aufbau.md#abhaengigkeiten). Die Prüfung im PR weist darauf hin.
 - **Handbuch** angepasst, wo sich etwas Sichtbares ändert: Benutzer-, Administrator- oder Installationshandbuch. Neue ?-Symbole brauchen einen Eintrag in `shared/src/hilfe.ts`.
+- **Englisches Handbuch** mitgepflegt (#730): Jedes Handbuch hat neben `docs/` den Ordner `docs-en/` mit derselben Gliederung. Wer eine deutsche Seite ändert, ändert die englische mit – oder vermerkt im Pull Request, dass die Übersetzung noch fehlt. `python3 docs/handbuch/werkzeuge/anker.py en` trägt die deutschen Anker in neue englische Überschriften ein, `--pruefen` meldet Seiten, deren Gliederung abweicht.
 - **Release-Notizen:** Für eine neue Version die Nummer in den drei `package.json` erhöhen und `docs/releases/v<version>.md` schreiben, aus dem Blick der Nutzer. Kleine Korrekturen ohne neue Nummer landen nur im Image `main`. Mit dem Maintainer im Issue klären, welche Nummer passt.
 
 ## Der Pull Request

@@ -6,7 +6,8 @@ die sie braucht, und eine Übersicht der Skala vom Haushalt bis zum Konzern.
     python3 docs/handbuch/werkzeuge/personas_grafiken.py
 
 Schreibt nach docs/handbuch/entwickler/docs/grafiken/ (alle) und die Übersicht zusätzlich nach
-docs/handbuch/benutzer/docs/grafiken/ – dort auch auf Englisch für README.en.md (personas-skala.en.svg, #574). Stil wie die übrigen Grafiken der Handbücher: helle Karte mit
+docs/handbuch/benutzer/docs/grafiken/ – dort auch auf Englisch für README.en.md (personas-skala.en.svg, #574).
+Die Karten gibt es seit #730 auch auf Englisch (persona-*.en.svg) für das englische Entwicklerhandbuch. Stil wie die übrigen Grafiken der Handbücher: helle Karte mit
 Rand, gut lesbar im hellen und im dunklen Design. Gezeichnete Figuren, keine Fotos echter Menschen.
 """
 from pathlib import Path
@@ -149,24 +150,102 @@ def chips(x, y, liste, farbe, breite=430):
     return erg, cy + 26
 
 
-def karte(datei, stufe, name, wer, fokus, szene, braucht, satz):
+# Feste Wörter der Karten je Sprache (#730)
+KARTE_TEXT = {
+    'de': {'stufe': 'Stufe', 'braucht': 'Braucht von Ablago', 'titel_braucht': 'Braucht'},
+    'en': {'stufe': 'Level', 'braucht': 'What they need from Ablago', 'titel_braucht': 'Needs'},
+}
+
+
+def karte(datei, stufe, name, wer, fokus, szene, braucht, satz, sprache='de'):
     farbe, hell, fokustext = FOKUS[fokus]
+    kt = KARTE_TEXT[sprache]
+    if sprache != 'de':
+        fokustext = TEXTE[sprache]['baender'][fokus]
+        fokustext = fokustext[0].upper() + fokustext[1:]
+        datei = datei.replace('.svg', f'.{sprache}.svg')
     rechts = 360
     inhalt = f'<rect x="12" y="12" width="330" height="296" rx="10" fill="{hell}"/>' + szene
-    inhalt += f'<rect x="{rechts}" y="26" width="96" height="24" rx="12" fill="{farbe}"/>' + t(rechts + 48, 43, f'Stufe {stufe}', 12.5, '#fff', 700, 'middle')
+    inhalt += f'<rect x="{rechts}" y="26" width="96" height="24" rx="12" fill="{farbe}"/>' + t(rechts + 48, 43, f'{kt["stufe"]} {stufe}', 12.5, '#fff', 700, 'middle')
     inhalt += t(rechts + 106, 43, fokustext, 13, farbe, 700)
     inhalt += t(rechts, 80, name, 21, TINTE, 700)
     inhalt += t(rechts, 104, wer, 13.5, LEISE)
-    inhalt += t(rechts, 140, 'Braucht von Ablago', 12, LEISE, 700)
+    inhalt += t(rechts, 140, kt['braucht'], 12, LEISE, 700)
     c, ende = chips(rechts, 150, braucht, farbe)
     inhalt += c
     for i, zeile in enumerate(satz):
         inhalt += t(rechts, max(ende + 30, 262) + i * 18, zeile, 13, LEISE)
-    titel = f'Stufe {stufe}, {fokustext}: {name} – {wer}. Braucht: {", ".join(braucht)}.'
+    titel = f'{kt["stufe"]} {stufe}, {fokustext}: {name} – {wer}. {kt["titel_braucht"]}: {", ".join(braucht)}.'
     (ZIEL / datei).write_text(svg(800, 320, titel, inhalt), encoding='utf-8')
 
 
-def alle_karten():
+# Englische Texte der Karten (#730): je Datei Name, Wer, Sprechblase, Braucht, Satz.
+KARTEN_EN = {
+    'persona-1-lena.svg': ('Beginner family · Lena', 'Lena (38), Tom, two children · rented flat · no IT background', 'Where is the receipt?',
+                           ['ready-made packages', 'deadline reminders', 'effortless backup', 'app store install', 'help with pictures'],
+                           ['Success: after an hour the first folder with a', 'document is in Ablago – without opening the manual.']),
+    'persona-2-jonas.svg': ('Family member · Jonas', 'Jonas (16) or Tom, who "just has a look" · mostly on the phone', 'Found my report!',
+                            ['Library on the phone', 'plain language', 'only own folders', 'completing tasks', 'filing a photo'],
+                            ['Success: finds what he needs on his own', 'and doesn\'t have to ask.']),
+    'persona-3-markus.svg': ('Household admin · Markus', 'Markus (45) · own home, family, vehicles · NAS with Docker', 'House › Heating › Service',
+                             ['own folder types', 'permissions', 'mailbox and scanner', 'backup 3-2-1', 'expert mode', 'API and console', 'full export'],
+                             ['Important: Markus sets up Ablago for Lena and Jonas –', 'the two must understand what he builds.']),
+    'persona-4-petra.svg': ('Looking after parents · Petra', 'Petra (52), two brothers · mother (81) lives alone · three cities', None,
+                            ['views for a role', 'access on the go', 'two-factor sign-in', 'tasks for people', 'absence and stand-in'],
+                            ['Powers of attorney, doctors\' letters, care insurance in', 'one place – and all siblings see the same.']),
+    'persona-5-oezdemir.svg': ('Landlord · Mr Özdemir', 'employed · 2 apartment buildings, 6 flats · solar panels', 'Receipts for the tax year',
+                               ['package Letting', 'export for the tax adviser', 'deadlines (statement)', 'meter readings', 'templates'],
+                               ['Service charges, tenant changes, tradespeople and tax –', 'findable per property and tax year.']),
+    'persona-6-katrin.svg': ('Self-employed · Katrin', 'graphic designer · sole trader · one part-time employee', 'E-invoice in the original',
+                             ['archive mode (GoBD)', 'versions', 'number sequences', 'procedure documentation', 'private and business apart'],
+                             ['We don\'t promise a certificate – we provide tools', 'and honest documentation.']),
+    'persona-7-brandt.svg': ('Small business · Brandt joinery', '12 employees · office manager · external IT service provider', 'Sign in with Microsoft 365',
+                             ['sign-in via a provider', 'two-factor', 'archive mode', 'permissions per role', 'mailboxes', 'stand-ins'],
+                             ['Gap today: graded administrator permissions –', 'an open point since small businesses joined the focus.']),
+    'persona-8-mittelstand.svg': ('Mid-sized company · tax firm group', '120 employees · 3 locations · own IT · data protection', 'Data protection officer',
+                                  ['single sign-on with groups', 'graded admin permissions', 'four-eyes principle', 'log export (SIEM)', 'multilingual', 'support'],
+                                  ['Supported: what doesn\'t burden families may go in –', 'but much would make setup harder.']),
+    'persona-9-konzern.svg': ('Large enterprise · corporation', '2,000+ employees · IT department · compliance', None,
+                              ['high availability', 'several tenants', 'directory service', 'legal hold', 'certifications', 'ERP/CRM'],
+                              ['Open source (Apache-2.0): may use and extend Ablago.', 'But we don\'t design for it.']),
+}
+
+
+def alle_karten(sprache='de'):
+    if sprache != 'de':
+        # Dieselben Szenen, die Texte aus KARTEN_EN; Sprechblasen werden mit dem englischen Text neu gezeichnet.
+        global karte, sprechblase
+        de_karte, de_blase = karte, sprechblase
+        aktuell = {}
+
+        def sprechblase(x, y, text, w=None):  # noqa: F811 – nur für diesen Lauf
+            neu = aktuell.get('blase') or text
+            return de_blase(x, y, neu, None if aktuell.get('blase') else w)
+
+        def karte(datei, stufe, name, wer, fokus, szene, braucht, satz):  # noqa: F811
+            n, w, _, b, sz = KARTEN_EN[datei]
+            return de_karte(datei, stufe, n, w, fokus, szene, b, sz, sprache)
+
+        try:
+            for datei, (_, _, blase, _, _) in KARTEN_EN.items():
+                aktuell['blase'] = blase
+                _zeichne(datei)
+        finally:
+            karte, sprechblase = de_karte, de_blase
+        return
+    for datei in KARTEN_EN:
+        _zeichne(datei)
+
+
+def _zeichne(nur):
+    karte_ = karte
+    def karte_wenn(datei, *a):
+        if datei == nur:
+            karte_(datei, *a)
+    _alle_karten(karte_wenn)
+
+
+def _alle_karten(karte):
     B = 290  # Boden der Szene
     karte('persona-1-lena.svg', 1, 'Einsteiger-Familie · Lena', 'Lena (38), Tom, zwei Kinder · Mietwohnung · kein IT-Hintergrund', 'kern',
           boden(24, 330, B) + haus(190, B, 120, 86) + person(110, B, 1.45, '#ec407a') + kind_auf_arm(110, B, 1.45)
@@ -244,7 +323,7 @@ TEXTE = {
         'fuss': 'When in doubt, simplicity for levels 1–3 wins. We only shift the focus deliberately.',
         'titel': ('Scale from household to large enterprise: core focus levels 1–3 (beginner family, family member, household admin), '
                   'focus 4–7 (looking after parents, landlord, self-employed, small business), supported 8 (mid-sized company), not in focus 9 (large enterprise).'),
-        'ziele': [ZIEL_BENUTZER],
+        'ziele': [ZIEL, ZIEL_BENUTZER],
     },
 }
 FOKUS_JE_STUFE = ['kern', 'kern', 'kern', 'fokus', 'fokus', 'fokus', 'fokus', 'unterstuetzt', 'nicht']
@@ -288,7 +367,7 @@ def uebersicht(sprache='de'):
 
 if __name__ == '__main__':
     ZIEL.mkdir(parents=True, exist_ok=True)
-    alle_karten()
     for sprache in TEXTE:
+        alle_karten(sprache)
         uebersicht(sprache)
     print(f'Grafiken geschrieben nach {ZIEL}')
