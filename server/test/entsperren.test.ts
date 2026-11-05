@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { GEMERKT_MAX, namensvorschlag, VERSUCHE_MAX } from '../../shared/src/entsperren';
 import { HISTORIENARTEN } from '../../shared/src/model';
-import type { Stempel } from '../../shared/src/stempel';
+import { ERSATZ_STEMPEL, type Stempel } from '../../shared/src/stempel';
 import { fuerAusgabe } from '../src/ausgabe';
 import { speicherFassungen } from '../src/dateiumwandlung';
 import { speicherDateien } from '../src/dateispeicher';
@@ -28,7 +28,7 @@ import { entschluesseleMit, verschluesseleMit } from '../src/tresor';
 import { speicherAblage, Vorschaubilder } from '../src/vorschau';
 import { pdfMitText } from './hilfen';
 
-const stempelVorlage = (x: Partial<Stempel> = {}): Stempel => ({ text: 'KOPIE', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle', seitenzahlen: false, archivnummer: false, ...x });
+const stempelVorlage = (x: Partial<Stempel> = {}): Stempel => ({ ...ERSATZ_STEMPEL, text: 'KOPIE', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle', ...x });
 const TEXT = 'Gehaltsabrechnung Oktober fuer Lena Beispiel';
 const PW = 'Lena-2026!';
 

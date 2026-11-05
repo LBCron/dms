@@ -21,6 +21,7 @@ import { deflateSync } from 'node:zlib';
 import { after, before, describe, it } from 'node:test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { beendeArbeiter, richteArbeiterEin } from '../src/arbeit';
+import { ERSATZ_STEMPEL } from '../../shared/src/stempel';
 import { analysiereVerkleinern, bereinigePdf, liesPdfA, seitenInfo, stempelePdf, textebeneWoerter } from '../src/pdf';
 import { OBJEKTSTROM_MAX } from '../src/pdf/laden';
 import { pdfMitText } from './hilfen';
@@ -92,7 +93,7 @@ type Pruefung = { name: string; lauf: (pdf: Buffer) => Promise<unknown>; meldung
 const VORGAENGE: Pruefung[] = [
   { name: 'Seiten', lauf: (p) => seitenInfo(p), meldung: true },
   { name: 'Verkleinern (Schätzung)', lauf: (p) => analysiereVerkleinern(p), meldung: true },
-  { name: 'Stempel', lauf: (p) => stempelePdf({ name: 'kaputt.pdf', mime: 'application/pdf', inhalt: p, stempel: { text: 'KOPIE', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle', seitenzahlen: false, archivnummer: false }, text: 'KOPIE', archivnummer: null }), meldung: true },
+  { name: 'Stempel', lauf: (p) => stempelePdf({ name: 'kaputt.pdf', mime: 'application/pdf', inhalt: p, stempel: { ...ERSATZ_STEMPEL, text: 'KOPIE', lage: 'diagonal', deckkraft: 0.3, seiten: 'alle' }, text: 'KOPIE' }), meldung: true },
   // Anzeige und Archivprüfung fangen Fehler selbst ab (nur Herunterladen bzw. „nicht lesbar“) – es zählt nur: kein Absturz.
   { name: 'Anzeige', lauf: (p) => bereinigePdf(p), meldung: false },
   { name: 'Archivprüfung', lauf: (p) => liesPdfA(p), meldung: false },
