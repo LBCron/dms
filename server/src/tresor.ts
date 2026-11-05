@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { Fachfehler } from './fehler';
 import { bestandAus, type ArtStand, type Betroffen, type Fundstelle, type GeheimArt } from './geheimnisse';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Schlüssel für verschlüsselte Zugangsdaten (#39).
@@ -223,8 +224,8 @@ export class Tresor {
    * ältere Sicherungen brauchen das alte Notfallblatt.
    */
   async wechsle(speichere: Umschluesseln, von: string): Promise<Wechsel> {
-    if (this.zustand !== 'vorhanden' || !this.schluessel) throw new Fachfehler(409, 'Wechseln geht nur mit einem passenden Schlüssel. Siehe den Zustand unter Werkbank → Verschlüsselung.');
-    if (this.wechselLaeuft) throw new Fachfehler(409, 'Der Schlüssel wird gerade gewechselt.');
+    if (this.zustand !== 'vorhanden' || !this.schluessel) throw new Fachfehler(409, t('meldungen.tresor.wechseln-geht-nur-mit'));
+    if (this.wechselLaeuft) throw new Fachfehler(409, t('meldungen.tresor.der-schluessel-wird-gerade'));
     this.wechselLaeuft = true;
     const alt = this.schluessel;
     const k = randomBytes(32);
@@ -235,7 +236,7 @@ export class Tresor {
         await mkdir(dirname(this.datei), { recursive: true, mode: 0o700 });
         await writeFile(this.neueDatei, `${k.toString('base64url')}\n`, { mode: 0o600 });
         await chmod(this.neueDatei, 0o600).catch(() => {});
-      } catch (e) { throw new Fachfehler(500, `Der neue Schlüssel ließ sich nicht schreiben (${this.neueDatei}): ${(e as Error).message}. Es gilt weiter der bisherige Schlüssel.`); }
+      } catch (e) { throw new Fachfehler(500, t('meldungen.tresor.der-neue-schluessel-liess', { neueDatei: this.neueDatei, message: (e as Error).message })); }
       // 2. Alles umschlüsseln – ganz oder gar nicht.
       const um = (wert: string) => { const klar = entschluesseleMit(alt, wert); return klar === null ? null : verschluesseleMit(k, klar); };
       let r: { umgeschluesselt: number; unlesbar: number };
@@ -244,7 +245,7 @@ export class Tresor {
       } catch (e) {
         await rm(this.neueDatei, { force: true }).catch(() => {});
         log.error('Schlüsselwechsel abgebrochen – es gilt weiter der bisherige Schlüssel', { fehler: (e as Error).message });
-        throw new Fachfehler(500, `Der Schlüsselwechsel ist abgebrochen; es gilt weiter der bisherige Schlüssel. (${(e as Error).message})`);
+        throw new Fachfehler(500, t('meldungen.tresor.der-schluesselwechsel-ist', { message: (e as Error).message }));
       }
       // 3. Ab hier gilt der neue Schlüssel: Einstellungen (bei PostgreSQL schon in der Transaktion) und Datei.
       await this.einstellungen.schreibe('tresor', neu);
@@ -302,8 +303,8 @@ export class Tresor {
    * Fehlt der bisherige, sind die damit verschlüsselten Werte verloren und müssen neu eingegeben werden.
    */
   async erzeuge(): Promise<TresorStatus> {
-    if (this.zustand === 'vorhanden') throw new Fachfehler(409, 'Es gibt schon einen Schlüssel. Zum Austauschen gibt es „Schlüssel wechseln“.');
-    if (this.schluessel) throw new Fachfehler(409, `Die Schlüsseldatei ${this.datei} gehört nicht zu den gespeicherten Passwörtern. Lege die richtige Datei zurück oder entferne sie, um einen neuen Schlüssel zu erzeugen.`);
+    if (this.zustand === 'vorhanden') throw new Fachfehler(409, t('meldungen.tresor.es-gibt-schon-einen'));
+    if (this.schluessel) throw new Fachfehler(409, t('meldungen.tresor.die-schluesseldatei-gehoert-nicht', { datei: this.datei }));
     const k = randomBytes(32);
     try {
       await mkdir(dirname(this.datei), { recursive: true, mode: 0o700 });
@@ -312,8 +313,8 @@ export class Tresor {
       await chmod(this.datei, 0o600).catch(() => {});
     } catch (e) {
       const f = e as NodeJS.ErrnoException;
-      if (f.code === 'EEXIST') throw new Fachfehler(409, `Unter ${this.datei} liegt schon eine Datei. Lade die Seite neu oder starte Ablago neu, damit sie gelesen wird.`);
-      throw new Fachfehler(500, `Die Schlüsseldatei ließ sich nicht schreiben (${this.datei}): ${f.message}`);
+      if (f.code === 'EEXIST') throw new Fachfehler(409, t('meldungen.tresor.unter-liegt-schon-eine', { datei: this.datei }));
+      throw new Fachfehler(500, t('meldungen.tresor.die-schluesseldatei-liess-sich', { datei: this.datei, message: f.message }));
     }
     const vorher = this.gespeichert?.fingerabdruck ?? null;
     this.schluessel = k;
@@ -330,8 +331,8 @@ export class Tresor {
 
   private fehlt(): never {
     throw new Fachfehler(409, this.zustand === 'falsch'
-      ? 'Die Schlüsseldatei passt nicht zu den gespeicherten Passwörtern. Passwörter lassen sich erst wieder speichern, wenn das geklärt ist (Werkbank → Verschlüsselung).'
-      : 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Wer Ablago verwaltet, erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
+      ? t('meldungen.tresor.die-schluesseldatei-passt-nicht')
+      : t('meldungen.tresor.passwoerter-lassen-sich-erst'));
   }
 
   verschluessele(klartext: string): string {

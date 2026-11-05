@@ -5,6 +5,7 @@ import { arch, release, type } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type postgres from 'postgres';
+import { t } from './sprache';
 
 /**
  * Technik- und Versionsübersicht (#15): was ist installiert, und – nur auf
@@ -73,7 +74,7 @@ function lies(p: string) { try { return readFileSync(p, 'utf8').trim(); } catch 
 
 export async function uebersicht(quelle: SystemQuelle | undefined, betrieb: { mail: string; adresse: string } | undefined): Promise<Uebersicht> {
   let datenbank: Uebersicht['datenbank'];
-  try { datenbank = quelle ? await quelle.datenbank() : { fehler: 'keine Datenbank angebunden' }; }
+  try { datenbank = quelle ? await quelle.datenbank() : { fehler: t('meldungen.system.keine-datenbank-angebunden') }; }
   catch (e) { datenbank = { fehler: (e as Error).message }; }
   return {
     dms: { version: eigeneVersion(), commit: env.DMS_COMMIT || null, gebaut: env.DMS_GEBAUT || null, variante: env.DMS_VARIANTE === 'komplett' ? 'komplett' : 'dms' },
@@ -90,9 +91,9 @@ export async function uebersicht(quelle: SystemQuelle | undefined, betrieb: { ma
     bibliotheken: Object.fromEntries(BIBLIOTHEKEN.map((b) => [b, installierteVersion(b)])),
     // Nur unkritische Einstellungen – keine Passwörter, keine Verbindungsdaten.
     einstellungen: {
-      Adresse: betrieb?.adresse ?? '(nicht gepflegt)',
+      Adresse: betrieb?.adresse ?? t('meldungen.system.nicht-gepflegt'),
       'E-Mail': betrieb?.mail ?? 'aus',
-      TRUST_PROXY: `${env.TRUST_PROXY || 'nicht gesetzt'} → ${proxyVertrauen(env.TRUST_PROXY).text}`,
+      TRUST_PROXY: `${env.TRUST_PROXY || t('meldungen.system.nicht-gesetzt')} → ${proxyVertrauen(env.TRUST_PROXY).text}`,
       LOG_LEVEL: env.LOG_LEVEL ?? 'info',
     },
   };
@@ -139,21 +140,21 @@ export interface Vergleich {
 
 /** #216: Wofür die Bibliotheken da sind – „postgres“ ist der Treiber, nicht die Datenbank. */
 export const BEZEICHNUNGEN: Record<string, string> = {
-  fastify: 'fastify (Webserver)',
+  fastify: t('meldungen.system.fastify-webserver'),
   '@fastify/static': '@fastify/static (Auslieferung der Oberfläche)',
-  postgres: 'postgres.js (Datenbank-Treiber)',
-  nodemailer: 'nodemailer (E-Mail-Versand)',
-  imapflow: 'imapflow (Postfächer abrufen)',
-  mailparser: 'mailparser (Mails lesen)',
-  yaml: 'yaml (Pakete lesen)',
-  react: 'react (Oberfläche)',
+  postgres: t('meldungen.system.postgres-js-datenbank-treiber'),
+  nodemailer: t('meldungen.system.nodemailer-e-mail-versand'),
+  imapflow: t('meldungen.system.imapflow-postfaecher-abrufen'),
+  mailparser: t('meldungen.system.mailparser-mails-lesen'),
+  yaml: t('meldungen.system.yaml-pakete-lesen'),
+  react: t('meldungen.system.react-oberflaeche'),
 };
 
 type Abruf = (url: string) => Promise<unknown>;
 
 /** JSON von einer Adresse, mit Zeitlimit. */
 export async function holeJson(url: string, ms = 8000): Promise<unknown> {
-  const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { accept: 'application/json', 'user-agent': `dms-versionsabgleich (${REPO})` } });
+  const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { accept: 'application/json', 'user-agent': t('meldungen.system.dms-versionsabgleich', { REPO }) } });
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`.trim());
   return r.json();
 }
@@ -175,19 +176,19 @@ async function zyklus(abruf: Abruf, produkt: string, name: string, installiert: 
     const liste = (await abruf(quelle)) as EolZyklus[];
     const passend = liste.find((z) => installiert === z.cycle || installiert.startsWith(`${z.cycle}.`));
     const neueste = produkt === 'nodejs' ? liste.find((z) => z.lts) ?? liste[0] : liste[0];
-    if (!passend) return { komponente: name, installiert, aktuell: neueste?.latest ?? null, status: 'unbekannt', hinweis: 'Version nicht in der Liste gefunden.', quelle };
+    if (!passend) return { komponente: name, installiert, aktuell: neueste?.latest ?? null, status: 'unbekannt', hinweis: t('meldungen.system.version-nicht-in-der'), quelle };
     const hinweise: string[] = [];
     let status: Vergleich['status'] = vergleicheVersion(passend.latest, installiert) > 0 ? 'neuer' : 'aktuell';
-    if (status === 'neuer') hinweise.push(`Neuere Version in Reihe ${passend.cycle}: ${passend.latest}.`);
+    if (status === 'neuer') hinweise.push(t('meldungen.system.neuere-version-in-reihe', { cycle: passend.cycle, latest: passend.latest }));
     if (typeof passend.eol === 'string') {
       const ende = Date.parse(passend.eol);
-      if (ende < Date.now()) { status = 'veraltet'; hinweise.push(`Unterstützung endete am ${passend.eol}.`); }
-      else hinweise.push(`Unterstützt bis ${passend.eol}.`);
+      if (ende < Date.now()) { status = 'veraltet'; hinweise.push(t('meldungen.system.unterstuetzung-endete-am', { eol: passend.eol })); }
+      else hinweise.push(t('meldungen.system.unterstuetzt-bis', { eol: passend.eol }));
     }
-    if (neueste && neueste.cycle !== passend.cycle) hinweise.push(`Neueste ${produkt === 'nodejs' ? 'LTS-' : ''}Reihe: ${neueste.cycle} (${neueste.latest}).`);
+    if (neueste && neueste.cycle !== passend.cycle) hinweise.push(t('meldungen.system.neueste-reihe', { wert: produkt === 'nodejs' ? 'LTS-' : '', cycle: neueste.cycle, latest: neueste.latest }));
     return { komponente: name, installiert, aktuell: passend.latest, status, hinweis: hinweise.join(' '), quelle };
   } catch (e) {
-    return { komponente: name, installiert, aktuell: null, status: 'unbekannt', hinweis: `Abfrage fehlgeschlagen: ${(e as Error).message}`, quelle };
+    return { komponente: name, installiert, aktuell: null, status: 'unbekannt', hinweis: t('meldungen.system.abfrage-fehlgeschlagen', { message: (e as Error).message }), quelle };
   }
 }
 
@@ -198,7 +199,7 @@ async function npmPaket(abruf: Abruf, name: string, installiert: string | null):
     const status = !installiert ? 'unbekannt' : vergleicheVersion(version, installiert) > 0 ? 'neuer' : 'aktuell';
     return { komponente: name, installiert, aktuell: version, status, quelle };
   } catch (e) {
-    return { komponente: name, installiert, aktuell: null, status: 'unbekannt', hinweis: `Abfrage fehlgeschlagen: ${(e as Error).message}`, quelle };
+    return { komponente: name, installiert, aktuell: null, status: 'unbekannt', hinweis: t('meldungen.system.abfrage-fehlgeschlagen', { message: (e as Error).message }), quelle };
   }
 }
 
@@ -226,7 +227,7 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
   const version = release?.tag_name?.replace(/^v/, '');
   if (version && /^\d+\.\d+/.test(version)) {
     const quelle = release!.html_url || `https://github.com/${REPO}/releases/latest`;
-    const aktuell = `${version}${release!.published_at ? ` (Release vom ${datumDe(release!.published_at)})` : ''}`;
+    const aktuell = `${version}${release!.published_at ? t('meldungen.system.release-vom', { datumDe: datumDe(release!.published_at) }) : ''}`;
     const neuer = vergleicheVersion(version, u.dms.version) > 0;
     const hinweise: string[] = [];
     if (neuer) {
@@ -234,14 +235,14 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
         const liste = (await abruf(`https://api.github.com/repos/${REPO}/releases?per_page=100`)) as Array<{ tag_name?: string; draft?: boolean; prerelease?: boolean }>;
         const dazwischen = liste.map((r) => (r.draft || r.prerelease ? '' : (r.tag_name ?? '').replace(/^v/, '')))
           .filter((v) => /^\d+\.\d+/.test(v) && vergleicheVersion(v, u.dms.version) > 0);
-        if (dazwischen.length > 1) hinweise.push(`${dazwischen.length} neuere Versionen (bis ${version}).`);
+        if (dazwischen.length > 1) hinweise.push(t('meldungen.system.neuere-versionen-bis', { dazwischen: dazwischen.length, version }));
       } catch { /* nur Zusatzinfo */ }
-      hinweise.push('Was neu ist, steht in den Releases auf GitHub. Zum Aktualisieren das Image neu ziehen.');
+      hinweise.push(t('meldungen.system.was-neu-ist-steht'));
     }
     try {
       const m = await mainStand(abruf, u.dms.commit ?? null);
       if (!neuer && u.dms.commit && !m.gleich) {
-        hinweise.push(`Auf main gibt es ${m.voraus ? `${m.voraus} ` : ''}neuere Änderung${m.voraus === 1 ? '' : 'en'}, die noch in keinem Release ${m.voraus === 1 ? 'ist' : 'sind'} (Stand ${m.c.sha.slice(0, 7)} vom ${datumDe(m.c.commit.committer.date)}).`);
+        hinweise.push(t('meldungen.system.auf-main-gibt-es', { wert: m.voraus ? `${m.voraus} ` : '', wert2: m.voraus === 1 ? '' : t('meldungen.system.en'), wert3: m.voraus === 1 ? t('meldungen.system.ist') : t('meldungen.system.sind'), sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }));
       }
     } catch { /* nur Zusatzinfo */ }
     return { komponente: 'Ablago', installiert, aktuell, status: neuer ? 'neuer' : 'aktuell', ...(hinweise.length ? { hinweis: hinweise.join(' ') } : {}), quelle };
@@ -250,14 +251,14 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
   const quelle = `https://api.github.com/repos/${REPO}/commits/main`;
   try {
     const { c, gleich, voraus } = await mainStand(abruf, u.dms.commit ?? null);
-    const aktuell = `main (${c.sha.slice(0, 7)} vom ${c.commit.committer.date.slice(0, 10)})`;
-    if (!u.dms.commit) return { komponente: 'Ablago', installiert, aktuell, status: 'unbekannt', hinweis: 'Ohne Commit-Kennung im Image (DMS_COMMIT) lässt sich der Stand nicht vergleichen.', quelle };
+    const aktuell = t('meldungen.system.main-vom', { sha: c.sha.slice(0, 7), date: c.commit.committer.date.slice(0, 10) });
+    if (!u.dms.commit) return { komponente: 'Ablago', installiert, aktuell, status: 'unbekannt', hinweis: t('meldungen.system.ohne-commit-kennung-im'), quelle };
     if (gleich) return { komponente: 'Ablago', installiert, aktuell, status: 'aktuell', quelle };
-    let hinweis = `Neuester Stand: ${c.commit.message.split('\n')[0]}`;
-    if (voraus) hinweis = `${voraus} neuere Änderung${voraus === 1 ? '' : 'en'} auf main. ${hinweis}`;
+    let hinweis = t('meldungen.system.neuester-stand', { split: c.commit.message.split('\n')[0] });
+    if (voraus) hinweis = t('meldungen.system.neuere-aenderungen-auf-main', { anzahl: voraus, hinweis });
     return { komponente: 'Ablago', installiert, aktuell, status: 'neuer', hinweis: `${hinweis}. Zum Aktualisieren das Image neu ziehen.`, quelle };
   } catch (e) {
-    return { komponente: 'Ablago', installiert, aktuell: null, status: 'unbekannt', hinweis: `Abfrage fehlgeschlagen: ${(e as Error).message}`, quelle };
+    return { komponente: 'Ablago', installiert, aktuell: null, status: 'unbekannt', hinweis: t('meldungen.system.abfrage-fehlgeschlagen', { message: (e as Error).message }), quelle };
   }
 }
 
@@ -269,7 +270,7 @@ export async function versionsabgleich(u: Uebersicht, browser: Record<string, st
     dmsSelbst(abruf, u),
     zyklus(abruf, 'nodejs', 'Node.js', u.laufzeit.node),
     zyklus(abruf, 'postgresql', 'PostgreSQL', pg),
-    ...(u.laufzeit.alpine ? [zyklus(abruf, 'alpine', 'Alpine Linux (Container)', u.laufzeit.alpine)] : []),
+    ...(u.laufzeit.alpine ? [zyklus(abruf, 'alpine', t('meldungen.system.alpine-linux-container'), u.laufzeit.alpine)] : []),
     ...Object.entries(u.bibliotheken).map(([n, v]) => npmPaket(abruf, n, v)),
     ...Object.entries(browser).filter(([n]) => n === 'react').map(([n, v]) => npmPaket(abruf, n, v)),
   ]);
@@ -281,7 +282,7 @@ export async function versionsabgleich(u: Uebersicht, browser: Record<string, st
   }
   return [
     { ...dms, gruppe: 'selbst' as const },
-    { ...postgresql, gruppe: komplett ? 'dms' as const : 'selbst' as const, ...(komplett ? { bezeichnung: 'PostgreSQL (im Container dms-komplett)' } : {}) },
+    { ...postgresql, gruppe: komplett ? 'dms' as const : 'selbst' as const, ...(komplett ? { bezeichnung: t('meldungen.system.postgresql-im-container-dms') } : {}) },
     { ...node, gruppe: 'dms' as const },
     ...rest.map((v) => ({ ...v, gruppe: 'dms' as const, ...(BEZEICHNUNGEN[v.komponente] ? { bezeichnung: BEZEICHNUNGEN[v.komponente] } : {}) })),
   ];

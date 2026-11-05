@@ -4,6 +4,7 @@ import { Fachfehler } from './fehler';
 import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { pruefeAussteller, type Abruf } from './oidc';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Postfächer: Anmeldung per OAuth 2.0 (#358) – IMAP mit XOAUTH2/OAUTHBEARER statt Passwort.
@@ -136,8 +137,8 @@ export function endpunkte(anbieter: OAuthAnbieter, app: OAuthApp, zweck: OAuthZw
     return { autorisierung: 'https://accounts.google.com/o/oauth2/v2/auth', token: 'https://oauth2.googleapis.com/token', geraet: null, bereich: 'https://mail.google.com/', widerruf: 'https://oauth2.googleapis.com/revoke', extra: { access_type: 'offline', prompt: 'consent' } };
   }
   // Google: https://mail.google.com/ gilt für IMAP und SMTP. Für „anderer Anbieter“ gibt es keinen Versand per OAuth.
-  if (zweck === 'versand') throw new Fachfehler(422, 'Den E-Mail-Versand per OAuth gibt es für Microsoft 365 und Google.');
-  if (!app.autorisierung || !app.token || !app.bereich) throw new Fachfehler(422, 'Für „anderer Anbieter“ bitte Autorisierungs- und Token-Endpunkt sowie den Bereich eintragen.');
+  if (zweck === 'versand') throw new Fachfehler(422, t('meldungen.postfachoauth.den-e-mail-versand'));
+  if (!app.autorisierung || !app.token || !app.bereich) throw new Fachfehler(422, t('meldungen.postfachoauth.fuer-anderer-anbieter-bitte'));
   return { autorisierung: app.autorisierung, token: app.token, geraet: app.geraet || null, bereich: app.bereich, widerruf: null, extra: {} };
 }
 
@@ -175,7 +176,7 @@ export class PostfachOAuth {
     let r: Awaited<ReturnType<Abruf>>;
     try {
       r = await f(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams(felder).toString(), signal: AbortSignal.timeout(15_000) });
-    } catch (e) { throw new Fachfehler(502, `Der Anbieter ist nicht erreichbar (${new URL(url).host}): ${kurz((e as Error).message, 200)}`); }
+    } catch (e) { throw new Fachfehler(502, t('meldungen.postfachoauth.der-anbieter-ist-nicht', { host: new URL(url).host, kurz: kurz((e as Error).message, 200) })); }
     const daten = (await r.json().catch(() => null)) as Record<string, unknown> | null;
     return { ok: r.ok, status: r.status, daten: daten && typeof daten === 'object' ? daten : {} };
   }
@@ -195,28 +196,28 @@ export class PostfachOAuth {
    * an die neue Adresse.
    */
   async speichereApp(anbieter: unknown, x: unknown, von: string, betroffen?: (anbieter: OAuthAnbieter) => Promise<string[]>) {
-    if (!OAUTH_ANBIETER.includes(anbieter as OAuthAnbieter)) throw new Fachfehler(422, 'Anbieter: Microsoft, Google oder anderer Anbieter.');
+    if (!OAUTH_ANBIETER.includes(anbieter as OAuthAnbieter)) throw new Fachfehler(422, t('meldungen.postfachoauth.anbieter-microsoft-google-oder'));
     const an = anbieter as OAuthAnbieter;
     const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
     const alle = await this.apps();
     const alt: OAuthApp = alle[an] ?? { clientId: '', clientSecret: '' };
-    const t = (k: string, max = 500) => (o[k] === undefined ? undefined : String(o[k] ?? '').trim().slice(0, max));
+    const eintrag = (k: string, max = 500) => (o[k] === undefined ? undefined : String(o[k] ?? '').trim().slice(0, max));
     const neu: OAuthApp = {
-      clientId: t('clientId', 300) ?? alt.clientId,
+      clientId: eintrag('clientId', 300) ?? alt.clientId,
       clientSecret: o.clientSecretLoeschen === true ? '' : typeof o.clientSecret === 'string' && o.clientSecret.trim() ? this.d.verschluessele(o.clientSecret.trim().slice(0, 2000)) : alt.clientSecret,
     };
     if (an === 'microsoft') {
-      const tenant = t('tenant', 100) ?? alt.tenant ?? 'common';
-      if (tenant && !/^[a-z0-9.-]+$/i.test(tenant)) throw new Fachfehler(422, 'Mandant (Tenant): „common“, „consumers“, „organizations“, die Tenant-ID oder die Domain.');
+      const tenant = eintrag('tenant', 100) ?? alt.tenant ?? 'common';
+      if (tenant && !/^[a-z0-9.-]+$/i.test(tenant)) throw new Fachfehler(422, t('meldungen.postfachoauth.mandant-tenant-common-consumers'));
       neu.tenant = tenant || 'common';
     }
     if (an === 'andere') {
-      neu.autorisierung = o.autorisierung === undefined ? alt.autorisierung ?? '' : pruefeEndpunkt(o.autorisierung, 'Autorisierungs-Endpunkt');
-      neu.token = o.token === undefined ? alt.token ?? '' : pruefeEndpunkt(o.token, 'Token-Endpunkt');
-      neu.geraet = o.geraet === undefined ? alt.geraet ?? '' : pruefeEndpunkt(o.geraet, 'Gerätecode-Endpunkt');
-      neu.bereich = t('bereich', 500) ?? alt.bereich ?? '';
+      neu.autorisierung = o.autorisierung === undefined ? alt.autorisierung ?? '' : pruefeEndpunkt(o.autorisierung, t('meldungen.postfachoauth.autorisierungs-endpunkt'));
+      neu.token = o.token === undefined ? alt.token ?? '' : pruefeEndpunkt(o.token, t('meldungen.postfachoauth.token-endpunkt'));
+      neu.geraet = o.geraet === undefined ? alt.geraet ?? '' : pruefeEndpunkt(o.geraet, t('meldungen.postfachoauth.geraetecode-endpunkt'));
+      neu.bereich = eintrag('bereich', 500) ?? alt.bereich ?? '';
     }
-    if (!neu.clientId) throw new Fachfehler(422, 'Bitte die Client-ID (Anwendungs-ID) eintragen.');
+    if (!neu.clientId) throw new Fachfehler(422, t('meldungen.postfachoauth.bitte-die-client-id'));
     await this.d.einstellungen.schreibe('postfach_oauth_apps', { ...alle, [an]: neu });
     log.info('Postfächer: OAuth-App geändert', { von, anbieter: an });
     if (alle[an] && betroffen && tokenZiel(an, alle[an]!) !== tokenZiel(an, neu)) {
@@ -227,9 +228,9 @@ export class PostfachOAuth {
 
   private async app(anbieter: OAuthAnbieter, zweck: OAuthZweck = 'abruf'): Promise<{ app: OAuthApp; e: Endpunkte; secret: string }> {
     const app = (await this.apps())[anbieter];
-    if (!app?.clientId) throw new Fachfehler(409, 'Für diesen Anbieter ist noch keine App eingetragen (Client-ID). Siehe Handbuch „Postfächer“.');
+    if (!app?.clientId) throw new Fachfehler(409, t('meldungen.postfachoauth.fuer-diesen-anbieter-ist'));
     const secret = app.clientSecret ? this.d.entschluessele(app.clientSecret) : '';
-    if (secret === null) throw new Fachfehler(409, 'Das Client-Geheimnis ist mit dem aktuellen Schlüssel nicht lesbar. Bitte in der Werkbank neu eintragen.');
+    if (secret === null) throw new Fachfehler(409, t('meldungen.postfachoauth.das-client-geheimnis-ist'));
     return { app, e: endpunkte(anbieter, app, zweck), secret };
   }
 
@@ -263,13 +264,13 @@ export class PostfachOAuth {
 
   /** Schritt 1: Adresse beim Anbieter. `bindung` geht als Cookie an den Browser des Administrators. */
   async start(p: { id: string; anbieter: OAuthAnbieter; benutzer: string }, admin: { id: string; email: string }, rueckruf: string): Promise<{ url: string; bindung: string }> {
-    if (!/^https?:\/\//.test(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago seine Adresse (Werkbank → E-Mail und Adresse). Ohne öffentliche Adresse den Gerätecode nutzen.');
-    if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago eine https-Adresse (http nur für localhost). Ohne https den Gerätecode nutzen.');
+    if (!/^https?:\/\//.test(rueckruf)) throw new Fachfehler(409, t('meldungen.postfachoauth.fuer-die-anmeldung-im'));
+    if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, t('meldungen.postfachoauth.fuer-die-anmeldung-im-2'));
     const { app, e } = await this.app(p.anbieter, zweckVon(p.id));
-    const t = this.jetzt;
-    if ((await this.zustand.anzahl(CODE)) > CODES_MAX) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
+    const zahl = this.jetzt;
+    if ((await this.zustand.anzahl(CODE)) > CODES_MAX) throw new Fachfehler(429, t('meldungen.postfachoauth.zu-viele-offene-anmeldungen'));
     const state = b64url(randomBytes(32)), verifier = b64url(randomBytes(48)), bindung = b64url(randomBytes(24));
-    await this.zustand.setze(CODE, hashe(state), this.verpacke({ postfachId: p.id, anbieter: p.anbieter, adminId: admin.id, von: admin.email, verifier, bindung, rueckruf } satisfies OffenCode), t + CODE_MS);
+    await this.zustand.setze(CODE, hashe(state), this.verpacke({ postfachId: p.id, anbieter: p.anbieter, adminId: admin.id, von: admin.email, verifier, bindung, rueckruf } satisfies OffenCode), zahl + CODE_MS);
     const u = new URL(e.autorisierung);
     const q: Record<string, string> = {
       response_type: 'code', client_id: app.clientId, redirect_uri: rueckruf, scope: e.bereich, state,
@@ -288,11 +289,11 @@ export class PostfachOAuth {
     const state = typeof q.state === 'string' ? q.state : '';
     // Einmal einlösbar (#744): Von zwei gleichzeitigen Rückrufen mit demselben state kommt nur einer weiter.
     const o = state ? this.entpacke<OffenCode>((await this.zustand.nimm(CODE, hashe(state)))?.wert) : null;
-    if (!o) throw new RueckrufFehler('', 400, 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte in der Werkbank noch einmal beginnen.', 'abgelaufen');
-    if (!admin || admin.id !== o.adminId) throw new RueckrufFehler(o.postfachId, 403, 'Die Anmeldung hat eine andere Person begonnen, die Ablago verwaltet.', 'admin');
-    if (!bindung || !gleich(bindung, o.bindung)) throw new RueckrufFehler(o.postfachId, 400, 'Die Anmeldung wurde in einem anderen Browser begonnen. Bitte noch einmal beginnen.', 'browser');
-    if (q.error) throw new RueckrufFehler(o.postfachId, 401, `Der Anbieter hat die Anmeldung abgelehnt: ${kurz(q.error_description || q.error)}`, 'abgelehnt');
-    if (!q.code) throw new RueckrufFehler(o.postfachId, 400, 'Der Anbieter hat keinen Code geliefert.', 'ohnecode');
+    if (!o) throw new RueckrufFehler('', 400, t('meldungen.postfachoauth.die-anmeldung-ist-abgelaufen'), 'abgelaufen');
+    if (!admin || admin.id !== o.adminId) throw new RueckrufFehler(o.postfachId, 403, t('meldungen.postfachoauth.die-anmeldung-hat-eine'), 'admin');
+    if (!bindung || !gleich(bindung, o.bindung)) throw new RueckrufFehler(o.postfachId, 400, t('meldungen.postfachoauth.die-anmeldung-wurde-in'), 'browser');
+    if (q.error) throw new RueckrufFehler(o.postfachId, 401, t('meldungen.postfachoauth.der-anbieter-hat-die', { kurz: kurz(q.error_description || q.error) }), 'abgelehnt');
+    if (!q.code) throw new RueckrufFehler(o.postfachId, 400, t('meldungen.postfachoauth.der-anbieter-hat-keinen'), 'ohnecode');
     try {
       const { app, e, secret } = await this.app(o.anbieter, zweckVon(o.postfachId));
       const felder: Record<string, string> = { grant_type: 'authorization_code', code: q.code, redirect_uri: o.rueckruf, code_verifier: o.verifier, client_id: app.clientId, ...(secret ? { client_secret: secret } : {}) };
@@ -306,28 +307,28 @@ export class PostfachOAuth {
   /** Antwort des Token-Endpunkts speichern (verschlüsselt). */
   private async merke(id: string, anbieter: OAuthAnbieter, r: { ok: boolean; status: number; daten: Record<string, unknown> }, oeffentlich: boolean, von: string) {
     const z = r.daten.access_token;
-    if (!r.ok || typeof z !== 'string' || !z) throw new Fachfehler(502, `Der Anbieter hat keine Anmeldung ausgestellt: ${kurz(r.daten.error_description || r.daten.error || `HTTP ${r.status}`)}`);
+    if (!r.ok || typeof z !== 'string' || !z) throw new Fachfehler(502, t('meldungen.postfachoauth.der-anbieter-hat-keine', { kurz: kurz(r.daten.error_description || r.daten.error || `HTTP ${r.status}`) }));
     const a = typeof r.daten.refresh_token === 'string' ? r.daten.refresh_token : '';
     const sek = Number(r.daten.expires_in) > 0 ? Number(r.daten.expires_in) : 3600;
-    const t: OAuthToken = {
+    const oAuthToken: OAuthToken = {
       anbieter, zugriff: this.d.verschluessele(z), aktualisierung: a ? this.d.verschluessele(a) : '', ablauf: new Date(this.jetzt + sek * 1000).toISOString(),
       oeffentlich, angemeldet: new Date(this.jetzt).toISOString(), von, zustand: 'ok', fehler: null, gemeldet: false, kennung: b64url(randomBytes(12)),
     };
     // Neue Anmeldung: Eine noch laufende Erneuerung der alten schreibt nicht mehr darüber.
     this.macheUngueltig(id);
-    await this.d.einstellungen.schreibe(this.schluessel(id), t);
+    await this.d.einstellungen.schreibe(this.schluessel(id), oAuthToken);
   }
 
   /* ---------- Gerätecode (RFC 8628) ---------- */
 
   async geraetStart(p: { id: string; anbieter: OAuthAnbieter }, admin: { id: string; email: string }): Promise<{ code: string; adresse: string; bis: string; intervall: number }> {
     const { app, e } = await this.app(p.anbieter, zweckVon(p.id));
-    if (!e.geraet) throw new Fachfehler(409, 'Dieser Anbieter bietet keinen Gerätecode an. Bitte im Browser anmelden.');
+    if (!e.geraet) throw new Fachfehler(409, t('meldungen.postfachoauth.dieser-anbieter-bietet-keinen'));
     const r = await this.abruf(e.geraet, { client_id: app.clientId, scope: e.bereich });
     const d = r.daten;
-    if (!r.ok || typeof d.device_code !== 'string' || typeof d.user_code !== 'string') throw new Fachfehler(502, `Der Anbieter hat keinen Gerätecode ausgestellt: ${kurz(d.error_description || d.error || `HTTP ${r.status}`)}`);
+    if (!r.ok || typeof d.device_code !== 'string' || typeof d.user_code !== 'string') throw new Fachfehler(502, t('meldungen.postfachoauth.der-anbieter-hat-keinen-2', { kurz: kurz(d.error_description || d.error || `HTTP ${r.status}`) }));
     const adresse = String(d.verification_uri ?? d.verification_url ?? '');
-    if (!/^https:\/\//.test(adresse)) throw new Fachfehler(502, 'Der Anbieter nennt keine gültige Adresse für den Gerätecode.');
+    if (!/^https:\/\//.test(adresse)) throw new Fachfehler(502, t('meldungen.postfachoauth.der-anbieter-nennt-keine'));
     const intervall = Math.min(Math.max(Number(d.interval) || 5, 1), 60);
     const bis = this.jetzt + Math.min(Math.max(Number(d.expires_in) || 900, 60), 1800) * 1000;
     await this.zustand.setze(GERAET, p.id, this.verpacke({ anbieter: p.anbieter, adminId: admin.id, von: admin.email, deviceCode: d.device_code, intervall, naechste: 0, bis } satisfies OffenGeraet), bis);
@@ -338,21 +339,21 @@ export class PostfachOAuth {
   /** Einmal beim Anbieter nachfragen, ob der Code eingegeben ist. */
   async geraetPruefen(id: string, admin: { id: string }): Promise<{ fertig: boolean; text: string }> {
     const g = await this.geraet(id);
-    if (!g || g.adminId !== admin.id) throw new Fachfehler(404, 'Kein offener Gerätecode für dieses Postfach. Bitte neu anfordern.');
-    if (g.bis < this.jetzt) { await this.zustand.loesche(GERAET, id); throw new Fachfehler(410, 'Der Gerätecode ist abgelaufen. Bitte neu anfordern.'); }
-    if (g.naechste > this.jetzt) return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
+    if (!g || g.adminId !== admin.id) throw new Fachfehler(404, t('meldungen.postfachoauth.kein-offener-geraetecode-fuer'));
+    if (g.bis < this.jetzt) { await this.zustand.loesche(GERAET, id); throw new Fachfehler(410, t('meldungen.postfachoauth.der-geraetecode-ist-abgelaufen')); }
+    if (g.naechste > this.jetzt) return { fertig: false, text: t('meldungen.postfachoauth.warte-auf-die-anmeldung') };
     g.naechste = this.jetzt + g.intervall * 1000;
     await this.zustand.setze(GERAET, id, this.verpacke(g), g.bis);
     const { app, e } = await this.app(g.anbieter, zweckVon(id));
     const r = await this.abruf(e.token, { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: g.deviceCode, client_id: app.clientId });
     const fehler = String(r.daten.error ?? '');
-    if (!r.ok && fehler === 'authorization_pending') return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
-    if (!r.ok && fehler === 'slow_down') { g.intervall = Math.min(g.intervall + 5, 60); await this.zustand.setze(GERAET, id, this.verpacke(g), g.bis); return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' }; }
+    if (!r.ok && fehler === 'authorization_pending') return { fertig: false, text: t('meldungen.postfachoauth.warte-auf-die-anmeldung') };
+    if (!r.ok && fehler === 'slow_down') { g.intervall = Math.min(g.intervall + 5, 60); await this.zustand.setze(GERAET, id, this.verpacke(g), g.bis); return { fertig: false, text: t('meldungen.postfachoauth.warte-auf-die-anmeldung') }; }
     await this.zustand.loesche(GERAET, id);
-    if (!r.ok) throw new Fachfehler(fehler === 'expired_token' ? 410 : 401, `Anmeldung nicht abgeschlossen: ${kurz(r.daten.error_description || fehler || `HTTP ${r.status}`)}`);
+    if (!r.ok) throw new Fachfehler(fehler === 'expired_token' ? 410 : 401, t('meldungen.postfachoauth.anmeldung-nicht-abgeschlossen', { kurz: kurz(r.daten.error_description || fehler || `HTTP ${r.status}`) }));
     await this.merke(id, g.anbieter, r, true, g.von);
     log.info('Postfach: per Gerätecode angemeldet', { von: g.von, postfach: id, anbieter: g.anbieter });
-    return { fertig: true, text: 'Angemeldet.' };
+    return { fertig: true, text: t('meldungen.postfachoauth.angemeldet') };
   }
 
   /* ---------- Zugriffstoken für die Verbindung ---------- */
@@ -386,33 +387,33 @@ export class PostfachOAuth {
 
   /** Die Anmeldung hat sich während der Erneuerung geändert: abgemeldet → Fehler; neu angemeldet → einmal mit der neuen. */
   private async geaendert(p: { id: string; name: string; benutzer: string; anbieter: OAuthAnbieter }, jetzt: OAuthToken | null, versuch: number): Promise<string> {
-    if (!jetzt) throw new AnmeldungAbgelaufen('Das Postfach wurde inzwischen abgemeldet. Bitte in der Werkbank anmelden.');
-    if (versuch > 0) throw new Fachfehler(409, 'Die Anmeldung des Postfachs hat sich gerade geändert. Bitte noch einmal versuchen.');
+    if (!jetzt) throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.das-postfach-wurde-inzwischen'));
+    if (versuch > 0) throw new Fachfehler(409, t('meldungen.postfachoauth.die-anmeldung-des-postfachs'));
     return this.holeToken(p, versuch + 1);
   }
 
   private async holeToken(p: { id: string; name: string; benutzer: string; anbieter: OAuthAnbieter }, versuch = 0): Promise<string> {
     const g = this.gen(p.id);
-    const t = await this.token(p.id);
-    if (!t) throw new AnmeldungAbgelaufen('Das Postfach ist nicht per OAuth angemeldet. Bitte in der Werkbank anmelden.');
-    if (t.anbieter !== p.anbieter) throw new AnmeldungAbgelaufen('Die Anmeldung gehört zu einem anderen Anbieter. Bitte neu anmelden.');
-    if (t.zustand === 'abgelaufen') throw new AnmeldungAbgelaufen(`Die Anmeldung ist abgelaufen oder wurde entzogen – bitte in der Werkbank neu anmelden.${t.fehler ? ` (${t.fehler})` : ''}`);
-    if (Date.parse(t.ablauf) - 5 * 60_000 > this.jetzt) {
-      const z = this.d.entschluessele(t.zugriff);
+    const eintrag = await this.token(p.id);
+    if (!eintrag) throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.das-postfach-ist-nicht'));
+    if (eintrag.anbieter !== p.anbieter) throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.die-anmeldung-gehoert-zu'));
+    if (eintrag.zustand === 'abgelaufen') throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.die-anmeldung-ist-abgelaufen-2', { wert: eintrag.fehler ? ` (${eintrag.fehler})` : '' }));
+    if (Date.parse(eintrag.ablauf) - 5 * 60_000 > this.jetzt) {
+      const z = this.d.entschluessele(eintrag.zugriff);
       if (z) return z;
     }
-    const a = t.aktualisierung ? this.d.entschluessele(t.aktualisierung) : null;
-    if (!a) return this.abgelaufen(p, t, g, versuch, t.aktualisierung ? 'Das Aktualisierungstoken ist mit dem aktuellen Schlüssel nicht lesbar.' : 'Der Anbieter hat kein Aktualisierungstoken geliefert (offline_access fehlt?).');
+    const a = eintrag.aktualisierung ? this.d.entschluessele(eintrag.aktualisierung) : null;
+    if (!a) return this.abgelaufen(p, eintrag, g, versuch, eintrag.aktualisierung ? t('meldungen.postfachoauth.das-aktualisierungstoken-ist-mit') : t('meldungen.postfachoauth.der-anbieter-hat-kein'));
     const { app, e, secret } = await this.app(p.anbieter, zweckVon(p.id));
     const r = await this.abruf(e.token, {
       grant_type: 'refresh_token', refresh_token: a, client_id: app.clientId, scope: e.bereich,
-      ...(secret && !t.oeffentlich ? { client_secret: secret } : {}),
+      ...(secret && !eintrag.oeffentlich ? { client_secret: secret } : {}),
     });
     const z = r.daten.access_token;
     if (r.ok && typeof z === 'string' && z) {
       const sek = Number(r.daten.expires_in) > 0 ? Number(r.daten.expires_in) : 3600;
-      const neuA = typeof r.daten.refresh_token === 'string' && r.daten.refresh_token ? this.d.verschluessele(r.daten.refresh_token) : t.aktualisierung;
-      const w = await this.schreibeWennGleich(p.id, g, t, { ...t, zugriff: this.d.verschluessele(z), aktualisierung: neuA, ablauf: new Date(this.jetzt + sek * 1000).toISOString(), fehler: null });
+      const neuA = typeof r.daten.refresh_token === 'string' && r.daten.refresh_token ? this.d.verschluessele(r.daten.refresh_token) : eintrag.aktualisierung;
+      const w = await this.schreibeWennGleich(p.id, g, eintrag, { ...eintrag, zugriff: this.d.verschluessele(z), aktualisierung: neuA, ablauf: new Date(this.jetzt + sek * 1000).toISOString(), fehler: null });
       if (!w.ok) return this.geaendert(p, w.jetzt, versuch);
       log.info('Postfach: Zugriffstoken erneuert', { postfach: p.name });
       return z;
@@ -420,23 +421,23 @@ export class PostfachOAuth {
     const fehler = String(r.daten.error ?? '');
     // Endgültig: Aktualisierungstoken abgelaufen, entzogen, Zustimmung fehlt, App falsch. Sonst (Netz, 5xx) später erneut.
     if (['invalid_grant', 'interaction_required', 'consent_required', 'invalid_client', 'unauthorized_client'].includes(fehler)) {
-      return this.abgelaufen(p, t, g, versuch, kurz(r.daten.error_description || fehler, 200));
+      return this.abgelaufen(p, eintrag, g, versuch, kurz(r.daten.error_description || fehler, 200));
     }
-    throw new Fachfehler(502, `Der Anbieter hat die Anmeldung nicht erneuert: ${kurz(r.daten.error_description || fehler || `HTTP ${r.status}`)}`);
+    throw new Fachfehler(502, t('meldungen.postfachoauth.der-anbieter-hat-die-2', { kurz: kurz(r.daten.error_description || fehler || `HTTP ${r.status}`) }));
   }
 
   /** Nur dieselbe Anmeldung als abgelaufen markieren – eine inzwischen neuere bleibt unberührt. */
-  private async abgelaufen(p: { id: string; name: string; benutzer: string; anbieter: OAuthAnbieter }, t: OAuthToken, g: number, versuch: number, grund: string): Promise<string> {
-    const melden = !t.gemeldet;
-    const w = await this.schreibeWennGleich(p.id, g, t, { ...t, zustand: 'abgelaufen', fehler: grund, gemeldet: true });
+  private async abgelaufen(p: { id: string; name: string; benutzer: string; anbieter: OAuthAnbieter }, oAuthToken: OAuthToken, g: number, versuch: number, grund: string): Promise<string> {
+    const melden = !oAuthToken.gemeldet;
+    const w = await this.schreibeWennGleich(p.id, g, oAuthToken, { ...oAuthToken, zustand: 'abgelaufen', fehler: grund, gemeldet: true });
     if (!w.ok) return this.geaendert(p, w.jetzt, versuch);
     log.warn('Postfach: OAuth-Anmeldung abgelaufen oder entzogen', { postfach: p.name, grund });
     // Versand (#813): Die Mail ginge über genau diese Anmeldung – dafür warnt die Werkbank.
     if (melden && zweckVon(p.id) === 'abruf') {
-      await this.d.anAdmins?.(`Ablago: Postfach „${p.name}“ – Anmeldung abgelaufen`,
-        `Die Anmeldung (OAuth 2.0) des Postfachs „${p.name}“ (${p.benutzer}) ist abgelaufen oder wurde beim Anbieter entzogen:\n\n${grund}\n\nBis zur neuen Anmeldung holt Ablago keine Mails aus diesem Postfach ab. Bitte unter Werkbank → Postfächer → „${p.name}“ neu anmelden.`).catch(() => {});
+      await this.d.anAdmins?.(t('meldungen.postfachoauth.ablago-postfach-anmeldung-abgelaufen', { name: p.name }),
+        t('meldungen.postfachoauth.die-anmeldung-oauth-2', { name: p.name, benutzer: p.benutzer, grund })).catch(() => {});
     }
-    throw new AnmeldungAbgelaufen(`Die Anmeldung ist abgelaufen oder wurde entzogen – bitte in der Werkbank neu anmelden. (${grund})`);
+    throw new AnmeldungAbgelaufen(t('meldungen.postfachoauth.die-anmeldung-ist-abgelaufen-3', { grund }));
   }
 
   /** Postfach gelöscht: alles dazu vergessen. */

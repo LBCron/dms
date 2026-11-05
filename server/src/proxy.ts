@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import { t } from './sprache';
 
 /**
  * Wem das DMS die Angaben eines Reverse-Proxys glaubt (X-Forwarded-For/-Proto/-Host; #234).
@@ -24,13 +25,13 @@ const gueltig = (x: string) => {
 
 export function proxyVertrauen(wert: string | undefined): { trust: ProxyVertrauen; text: string; fehler?: string } {
   const w = (wert ?? '').trim();
-  if (!w || w.toLowerCase() === 'auto') return { trust: PRIVATE_NETZE, text: 'automatisch (eigener Rechner und private Netze)' };
-  if (w.toLowerCase() === 'false') return { trust: false, text: 'aus' };
-  if (w.toLowerCase() === 'true') return { trust: true, text: 'alle Absender' };
+  if (!w || w.toLowerCase() === 'auto') return { trust: PRIVATE_NETZE, text: t('meldungen.proxy.automatisch-eigener-rechner-und') };
+  if (w.toLowerCase() === 'false') return { trust: false, text: t('meldungen.proxy.aus') };
+  if (w.toLowerCase() === 'true') return { trust: true, text: t('meldungen.proxy.alle-absender') };
   const liste = w.split(',').map((x) => x.trim()).filter(Boolean);
   const falsch = liste.filter((x) => !gueltig(x));
   if (falsch.length || !liste.length) {
-    return { trust: PRIVATE_NETZE, text: 'automatisch (eigener Rechner und private Netze)', fehler: `TRUST_PROXY: „${falsch.join(', ') || w}“ ist keine Adresse und kein Netz – es gilt „auto“.` };
+    return { trust: PRIVATE_NETZE, text: t('meldungen.proxy.automatisch-eigener-rechner-und'), fehler: t('meldungen.proxy.trust-proxy-ist-keine', { wert: falsch.join(', ') || w }) };
   }
   return { trust: liste, text: liste.join(', ') };
 }

@@ -161,13 +161,13 @@ const ortVon = (k: Knoten): string | null => (k.art === 'post' ? 'post' : k.art 
 
 async function lies(koerper: WebdavAnfrage['koerper'], max: number): Promise<Buffer> {
   if (!koerper) return Buffer.alloc(0);
-  if (Buffer.isBuffer(koerper)) { if (koerper.length > max) throw new Fachfehler(413, 'Die Datei ist zu groß.'); return koerper; }
+  if (Buffer.isBuffer(koerper)) { if (koerper.length > max) throw new Fachfehler(413, t('meldungen.webdav.die-datei-ist-zu')); return koerper; }
   const teile: Buffer[] = [];
   let n = 0;
-  for await (const t of koerper) {
-    const b = Buffer.isBuffer(t) ? t : Buffer.from(t as string);
+  for await (const eintrag of koerper) {
+    const b = Buffer.isBuffer(eintrag) ? eintrag : Buffer.from(eintrag as string);
     n += b.length;
-    if (n > max) { koerper.destroy(); throw new Fachfehler(413, 'Die Datei ist zu groß.'); }
+    if (n > max) { koerper.destroy(); throw new Fachfehler(413, t('meldungen.webdav.die-datei-ist-zu')); }
     teile.push(b);
   }
   return Buffer.concat(teile);
@@ -175,11 +175,11 @@ async function lies(koerper: WebdavAnfrage['koerper'], max: number): Promise<Buf
 /** Körper lesen und wegwerfen, nur Bytes zählen (Hilfsdateien): nichts im Speicher, Grenze trotzdem. */
 async function leere(koerper: WebdavAnfrage['koerper'], max: number): Promise<void> {
   if (!koerper) return;
-  if (Buffer.isBuffer(koerper)) { if (koerper.length > max) throw new Fachfehler(413, 'Die Datei ist zu groß.'); return; }
+  if (Buffer.isBuffer(koerper)) { if (koerper.length > max) throw new Fachfehler(413, t('meldungen.webdav.die-datei-ist-zu')); return; }
   let n = 0;
-  for await (const t of koerper) {
-    n += Buffer.isBuffer(t) ? t.length : Buffer.byteLength(String(t));
-    if (n > max) { koerper.destroy(); throw new Fachfehler(413, 'Die Datei ist zu groß.'); }
+  for await (const eintrag of koerper) {
+    n += Buffer.isBuffer(eintrag) ? eintrag.length : Buffer.byteLength(String(eintrag));
+    if (n > max) { koerper.destroy(); throw new Fachfehler(413, t('meldungen.webdav.die-datei-ist-zu')); }
   }
 }
 /**
@@ -232,8 +232,8 @@ export class Webdav {
   async speichere(e: unknown, von: string): Promise<WebdavStand> {
     const x = (e && typeof e === 'object' ? e : {}) as Record<string, unknown>;
     const hat = (k: string) => k in x && x[k] !== undefined;
-    if (!hat('aktiv') && !hat('stempel') && !hat('nurLesend')) throw new Fachfehler(422, 'aktiv: true oder false.');
-    if (hat('aktiv') && typeof x.aktiv !== 'boolean') throw new Fachfehler(422, 'aktiv: true oder false.');
+    if (!hat('aktiv') && !hat('stempel') && !hat('nurLesend')) throw new Fachfehler(422, t('meldungen.webdav.aktiv-true-oder-false'));
+    if (hat('aktiv') && typeof x.aktiv !== 'boolean') throw new Fachfehler(422, t('meldungen.webdav.aktiv-true-oder-false'));
     if (hat('nurLesend') && typeof x.nurLesend !== 'boolean') throw new Fachfehler(422, t('api.webdav.nur-lesend-ungueltig'));
     if (hat('stempel') && x.stempel !== null && typeof x.stempel !== 'string') throw new Fachfehler(422, t('api.webdav.stempel-ungueltig'));
     if (hat('stempel') && x.stempel && !(await this.d.dienst.stempelVorlagen()).some((v) => v.id === x.stempel)) throw new Fachfehler(422, t('api.webdav.vorlage-fehlt'));
@@ -245,7 +245,7 @@ export class Webdav {
     };
     await this.d.einstellungen.schreibe('webdav', neu);
     this.cache = null;
-    if (vorher.aktiv !== neu.aktiv) (neu.aktiv ? logKonto.warn : logKonto.info)(neu.aktiv ? 'WebDAV-Laufwerk eingeschaltet' : 'WebDAV-Laufwerk ausgeschaltet', { von });
+    if (vorher.aktiv !== neu.aktiv) (neu.aktiv ? logKonto.warn : logKonto.info)(neu.aktiv ? t('meldungen.webdav.webdav-laufwerk-eingeschaltet') : t('meldungen.webdav.webdav-laufwerk-ausgeschaltet'), { von });
     if (vorher.stempel !== neu.stempel) logKonto.info('WebDAV-Laufwerk: Stempel beim Lesen eingestellt', { vorlage: neu.stempel ?? 'aus', von });
     if (vorher.nurLesend !== neu.nurLesend) logKonto.info(neu.nurLesend ? 'WebDAV-Laufwerk nur lesend' : 'WebDAV-Laufwerk wieder mit Ablegen', { von });
     return this.stand();
@@ -269,9 +269,9 @@ export class Webdav {
 
   async anfrage(a: WebdavAnfrage): Promise<WebdavAntwort> {
     const methode = a.methode.toUpperCase();
-    if (!(await this.einstellung()).aktiv) { verwerfe(a.koerper); return text(404, 'Nicht gefunden.'); }
+    if (!(await this.einstellung()).aktiv) { verwerfe(a.koerper); return text(404, t('meldungen.webdav.nicht-gefunden')); }
     const pfad = zerlege(a.url);
-    if (!pfad) { verwerfe(a.koerper); return text(400, 'Ungültiger Pfad.'); }
+    if (!pfad) { verwerfe(a.koerper); return text(400, t('meldungen.webdav.ungueltiger-pfad')); }
     if (methode === 'OPTIONS') {
       verwerfe(a.koerper);
       // Nur lesend (#722): ohne „DAV: 2“ (keine Sperren) bindet macOS das Laufwerk schreibgeschützt ein.
@@ -291,7 +291,7 @@ export class Webdav {
         if (!r.ok) {
           if (r.erstes) logKonto.warn('WebDAV: zu viele Anfragen, kurz gebremst', { benutzer: ctx.b.email, grenze: this.grenze.grenze });
           verwerfe(a.koerper);
-          antwort = text(429, 'Zu viele Anfragen. Bitte kurz warten.', { 'retry-after': String(r.sekunden) });
+          antwort = text(429, t('meldungen.webdav.zu-viele-anfragen-bitte'), { 'retry-after': String(r.sekunden) });
         } else {
           this.d.wartung?.pruefeAnfrage({ pfad: '/api/v1/webdav', zugang: 'angemeldet' }, ctx.b);
           antwort = await this.verarbeite(methode, pfad.teile, a, ctx);
@@ -309,9 +309,9 @@ export class Webdav {
 
   /** Basic mit E-Mail-Adresse und API-Schlüssel. Liefert den Kontext oder die Antwort (401/429). */
   private async anmelden(a: WebdavAnfrage): Promise<Ctx | { status: true; antwort: WebdavAntwort; wer: string }> {
-    const nein = (t: string) => text(401, t, { 'www-authenticate': 'Basic realm="Ablago", charset="UTF-8"' });
+    const nein = (text2: string) => text(401, text2, { 'www-authenticate': t('meldungen.webdav.basic-realm-ablago-charset') });
     const c = basic(a.kopf('authorization'));
-    if (!c) return { status: true, wer: '', antwort: nein('Bitte mit E-Mail-Adresse und API-Schlüssel anmelden.') };
+    if (!c) return { status: true, wer: '', antwort: nein(t('meldungen.webdav.bitte-mit-e-mail')) };
     const email = c.name.toLowerCase();
     // Für Protokoll, Zugriffsliste und Anmeldeschutz gekürzt – die Eingabe stammt vom Anfragenden.
     const kurz = email.slice(0, EMAIL_MAX);
@@ -330,7 +330,7 @@ export class Webdav {
       // Gehört die Adresse zu einem aktiven Konto, meldet der Anmeldeschutz eine Sperre sofort (#368).
       await this.d.konten.sperre.fehlschlag(kurz, a.ip, email.length <= EMAIL_MAX && await this.d.konten.istAktiveEmail(email));
       logKonto.info('WebDAV: Anmeldung abgelehnt', { email: kurz, ip: a.ip, grund: dienstkonto ? 'Dienstkonto' : c.passwort.startsWith(PRAEFIX) ? 'Schlüssel ungültig oder gehört nicht zu dieser Adresse' : 'kein API-Schlüssel' });
-      return { status: true, wer: kurz, antwort: nein('E-Mail-Adresse oder API-Schlüssel stimmen nicht. Das Laufwerk braucht einen API-Schlüssel (Mein Konto → API-Schlüssel), nicht dein Passwort.') };
+      return { status: true, wer: kurz, antwort: nein(t('meldungen.webdav.e-mail-adresse-oder')) };
     }
     await this.d.konten.sperre.erfolg(kurz, a.ip);
     // „Nur Zähler“ (#625): Schlüssel stimmt, öffnet aber das Laufwerk nicht.
@@ -358,16 +358,16 @@ export class Webdav {
       case 'PROPPATCH': {
         const body = (await lies(a.koerper, XML_MAX)).toString('utf8');
         const k = await this.finde(teile, ctx);
-        if (!k) return text(404, 'Nicht gefunden.');
+        if (!k) return text(404, t('meldungen.webdav.nicht-gefunden'));
         if (await this.istPflicht(k, ctx)) return text(403, t('api.webdav.pflicht'));
         if (k.art === 'dokument' && (await this.auslieferung(k, ctx))?.gestempelt) return text(403, t('api.webdav.gestempelt', { name: k.dok.name }));
         return xmlAntwort(207, proppatchAntwort(teile, istOrdner(k), proppatchNamen(body)));
       }
-      case 'MKCOL': verwerfe(a.koerper); return text(403, 'Ordner lassen sich über das Laufwerk nicht anlegen. Mappen legst du in der Ablage von Ablago an.');
-      case 'DELETE': verwerfe(a.koerper); return text(403, 'Löschen geht über das Laufwerk (noch) nicht. Bitte lösche in Ablago selbst.');
-      case 'MOVE': verwerfe(a.koerper); return text(403, 'Umbenennen und Verschieben gehen über das Laufwerk (noch) nicht. Bitte in Ablago selbst.');
-      case 'COPY': verwerfe(a.koerper); return text(403, 'Kopieren innerhalb des Laufwerks geht (noch) nicht. Lade die Datei herunter und lege sie neu ab.');
-      default: verwerfe(a.koerper); return text(405, 'Diese Methode unterstützt das Laufwerk nicht.', { allow: WEBDAV_METHODEN.join(', ') });
+      case 'MKCOL': verwerfe(a.koerper); return text(403, t('meldungen.webdav.ordner-lassen-sich-ueber'));
+      case 'DELETE': verwerfe(a.koerper); return text(403, t('meldungen.webdav.loeschen-geht-ueber-das'));
+      case 'MOVE': verwerfe(a.koerper); return text(403, t('meldungen.webdav.umbenennen-und-verschieben-gehen'));
+      case 'COPY': verwerfe(a.koerper); return text(403, t('meldungen.webdav.kopieren-innerhalb-des-laufwerks'));
+      default: verwerfe(a.koerper); return text(405, t('meldungen.webdav.diese-methode-unterstuetzt-das'), { allow: WEBDAV_METHODEN.join(', ') });
     }
   }
 
@@ -431,7 +431,7 @@ export class Webdav {
     if (!s.plan || (!s.pflicht && d.mime !== 'application/pdf')) return original;
     if (!kannStempeln(d.mime)) return { ...original, fehler: t('api.webdav.nicht-stempelbar', { name: d.name }) };
     const plan: GeltenderStempel = s.plan;
-    const text = ersetzePlatzhalter(plan.stempel.text, { empfaenger: plan.empfaenger, benutzer: this.leser(ctx), mappe: m.mappe.titel || 'Ohne Titel' });
+    const text = ersetzePlatzhalter(plan.stempel.text, { empfaenger: plan.empfaenger, benutzer: this.leser(ctx), mappe: m.mappe.titel || t('meldungen.webdav.ohne-titel') });
     const signatur = createHash('sha256').update(JSON.stringify([plan.stempel, text, d.archivnummer ?? null])).digest('hex');
     const schluessel = `${d.id}:${d.sha256}:${signatur}`;
     const name = d.mime === 'application/pdf' ? d.name : pdfName(d.name);
@@ -519,7 +519,7 @@ export class Webdav {
         const mappen = (r.mappen as Array<Mappe & { verborgen?: boolean }>).filter((m) => !m.verborgen)
           .sort((x, y) => (x.titel ?? '').localeCompare(y.titel ?? '', 'de') || x.erstellt.localeCompare(y.erstellt) || x.id.localeCompare(y.id));
         if (r.gesamt > MAX_EINTRAEGE) log.debug('WebDAV: Ansicht gekürzt', { sicht: k.sicht.name, gesamt: r.gesamt, gezeigt: MAX_EINTRAEGE });
-        const namen = eindeutig(mappen.map((m) => ({ name: m.titel || 'Ohne Titel', kurz: kurzId(m.id) })));
+        const namen = eindeutig(mappen.map((m) => ({ name: m.titel || t('meldungen.webdav.ohne-titel'), kurz: kurzId(m.id) })));
         return mappen.map((m, i) => ({ name: namen[i], k: { art: 'mappe', id: m.id, tiefe: 0, geaendert: m.geaendert, erstellt: m.erstellt } }));
       }
       case 'mappe': {
@@ -535,7 +535,7 @@ export class Webdav {
       case 'verknuepft': {
         const m = await this.mappe(k.id, ctx);
         const liste = [...m.verknuepft].sort((x, y) => x.titel.localeCompare(y.titel, 'de') || x.id.localeCompare(y.id));
-        const namen = eindeutig(liste.map((v) => ({ name: v.titel || 'Ohne Titel', kurz: kurzId(v.id) })));
+        const namen = eindeutig(liste.map((v) => ({ name: v.titel || t('meldungen.webdav.ohne-titel'), kurz: kurzId(v.id) })));
         return liste.map((v, i) => ({ name: namen[i], k: { art: 'mappe', id: v.id, tiefe: 1 } }));
       }
       case 'register': {
@@ -608,7 +608,7 @@ export class Webdav {
       return xmlAntwort(403, davFehler('propfind-finite-depth'));
     }
     const k = await this.finde(teile, ctx);
-    if (!k || k.art === 'hilfsdatei') return text(404, 'Nicht gefunden.');
+    if (!k || k.art === 'hilfsdatei') return text(404, t('meldungen.webdav.nicht-gefunden'));
     const name = teile.length ? teile[teile.length - 1] : 'Ablago';
     const liste = [await this.eintrag(teile, name, k, ctx)];
     if (tiefe === '1' && istOrdner(k)) for (const c of await this.kinder(k, ctx)) liste.push(await this.eintrag([...teile, c.name], c.name, c.k, ctx));
@@ -617,11 +617,11 @@ export class Webdav {
 
   private async hole(teile: string[], ctx: Ctx, nurKopf: boolean, a: WebdavAnfrage): Promise<WebdavAntwort> {
     const k = await this.finde(teile, ctx);
-    if (!k || k.art === 'hilfsdatei') return text(404, 'Nicht gefunden.');
+    if (!k || k.art === 'hilfsdatei') return text(404, t('meldungen.webdav.nicht-gefunden'));
     if (istOrdner(k)) {
-      return { ...text(200, 'Dies ist ein Ordner des Ablago-Laufwerks. Binde die Adresse im Explorer, im Finder oder in der Dateien-App ein – siehe Benutzerhandbuch „Als Laufwerk einbinden“.'), lesend: true };
+      return { ...text(200, t('meldungen.webdav.dies-ist-ein-ordner')), lesend: true };
     }
-    if (k.art !== 'dokument') return text(404, 'Diese Datei ist noch nicht fertig abgelegt.');
+    if (k.art !== 'dokument') return text(404, t('meldungen.webdav.diese-datei-ist-noch'));
     // Herunterladen gibt Daten hinaus wie ein Export (#294): gemeinsame Prüfstelle aller Wege nach draußen (#723).
     if (!(await this.darfRaus(k.mappeId, ctx))) return text(403, t('api.ausgang.webdav.eine'));
     const d = k.dok;
@@ -648,16 +648,16 @@ export class Webdav {
 
   /** Ziel eines Ablegens (PUT/LOCK): Ordner Neue Post oder Register, sonst Fehler. */
   private async ablageZiel(teile: string[], ctx: Ctx) {
-    if (!teile.length) throw new Fachfehler(405, 'Hier lässt sich nichts ablegen.');
+    if (!teile.length) throw new Fachfehler(405, t('meldungen.webdav.hier-laesst-sich-nichts'));
     const name = teile[teile.length - 1];
     const { k, eltern } = await this.loese(teile, ctx);
-    if (!eltern && !k) throw new Fachfehler(409, 'Diesen Ordner gibt es nicht.');
-    if (k && istOrdner(k)) throw new Fachfehler(405, 'Das ist ein Ordner.');
+    if (!eltern && !k) throw new Fachfehler(409, t('meldungen.webdav.diesen-ordner-gibt-es'));
+    if (k && istOrdner(k)) throw new Fachfehler(405, t('meldungen.webdav.das-ist-ein-ordner'));
     const ort = eltern ? ortVon(eltern) : null;
     if (!eltern || !ort) {
-      throw new Fachfehler(403, 'Hier lässt sich nichts ablegen. Lege Dateien in „Neue Post“ oder in den Register-Ordner einer Mappe.');
+      throw new Fachfehler(403, t('meldungen.webdav.hier-laesst-sich-nichts-2'));
     }
-    if (ctx.s.recht !== 'schreiben') throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen. Zum Ablegen braucht er „lesen und schreiben“.');
+    if (ctx.s.recht !== 'schreiben') throw new Fachfehler(403, t('meldungen.webdav.dieser-api-schluessel-darf'));
     // Pflicht-Stempel (#722): Register schreibgeschützt; gestempelt ausgelieferte Dokumente nicht überschreiben
     // (sonst käme der Stempel beim Zurückspeichern in eine neue Version) – neue Dateien ablegen geht.
     if (eltern.art === 'register' && await this.pflichtMappe(eltern.mappeId, ctx)) throw new Fachfehler(403, t('api.webdav.pflicht'));
@@ -667,7 +667,7 @@ export class Webdav {
 
   private async lege(teile: string[], a: WebdavAnfrage, ctx: Ctx): Promise<WebdavAntwort> {
     const laenge = Number(a.kopf('content-length'));
-    if (Number.isFinite(laenge) && laenge > MAX_DATEIGROESSE) { verwerfe(a.koerper); return text(413, 'Die Datei ist zu groß (höchstens 100 MB).'); }
+    if (Number.isFinite(laenge) && laenge > MAX_DATEIGROESSE) { verwerfe(a.koerper); return text(413, t('meldungen.webdav.die-datei-ist-zu-2')); }
     // Hilfsdateien der Betriebssysteme (desktop.ini, .DS_Store, ._*, ~$*): überall still annehmen und verwerfen.
     // Nur Bytes zählen, nichts puffern – und das vor jeder Prüfung des Ziels (geht auch mit Lese-Schlüssel).
     if (teile.length && istHilfsdatei(teile[teile.length - 1])) { await leere(a.koerper, MAX_DATEIGROESSE); return { status: 201, koepfe: { 'content-length': '0' } }; }
@@ -678,7 +678,7 @@ export class Webdav {
     if (laufend >= MAX_UPLOADS) {
       verwerfe(a.koerper);
       logKonto.info('WebDAV: zu viele gleichzeitige Uploads', { benutzer: ctx.b.email, laufend });
-      return text(503, 'Es laufen schon mehrere Uploads. Bitte kurz warten.', { 'retry-after': '5' });
+      return text(503, t('meldungen.webdav.es-laufen-schon-mehrere'), { 'retry-after': '5' });
     }
     this.uploads.set(ctx.b.id, laufend + 1);
     try { return await this.legeAb(z, a, ctx); } finally {
@@ -710,11 +710,11 @@ export class Webdav {
       await this.merkeSchwebend(ctx, z.ort, z.name, groesse);
       return { status: 201, koepfe: { 'content-length': '0' } };
     }
-    if (z.eltern.art !== 'register') throw new Fachfehler(403, 'Hier lässt sich nichts ablegen.');
+    if (z.eltern.art !== 'register') throw new Fachfehler(403, t('meldungen.webdav.hier-laesst-sich-nichts'));
     const reg = z.eltern.register;
     if (z.k?.art === 'dokument') {
       // Gleicher Name: neue Version – nur mit Versionierung; sonst nichts überschreiben.
-      if (!reg.versionierung) throw new Fachfehler(409, `Im Register „${reg.name}“ gibt es „${z.k.dok.name}“ schon, und es hat keine Versionierung. Gib der Datei einen anderen Namen.`);
+      if (!reg.versionierung) throw new Fachfehler(409, t('meldungen.webdav.im-register-gibt-es', { name: reg.name, name2: z.k.dok.name }));
       // Per Dokument-Id, nicht per Name: Laufwerksnamen sind bereinigt und eindeutig gemacht („X (2).pdf“),
       // im DMS können zwei Dokumente gleich (oder nach dem Bereinigen gleich) heißen.
       const neu = await this.d.dienst.ersetzeDokument(z.k.dok.id, { name: z.k.dok.name, typ, herkunft: 'webdav' }, inhalt, ctx.b.id);

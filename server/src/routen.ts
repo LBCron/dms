@@ -78,6 +78,7 @@ import { MAIL_STANDARD, pruefeZeit, STANDARD_TAGE, wirksameZeit, type Aufgabenma
 import { LAENDER, ZEITZONEN, zeitzone } from '../../shared/src/region';
 import { BUNDESLAENDER } from '../../shared/src/feiertage';
 import { RegionDienst } from './region';
+import { gebietsschema } from '../../shared/src/sprache';
 
 const L = {
   konto: protokoll.modul('konto'), ablage: protokoll.modul('ablage'), werkbank: protokoll.modul('werkbank'),
@@ -317,7 +318,7 @@ export const ZWEITE_ABGELEHNT = 'verwaltung_zweite_abgelehnt';
 export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Route[] {
   const fotostapel = x.fotostapel ?? new Fotostapel();
   const { messung, system } = x;
-  const designs = () => { if (!x.designs) throw new Fachfehler(404, 'Designs sind nicht eingerichtet.'); return x.designs; };
+  const designs = () => { if (!x.designs) throw new Fachfehler(404, t('meldungen.routen.designs-sind-nicht-eingerichtet')); return x.designs; };
   const log = x.log ?? ((m: string) => L.mail.warn(m));
   const pakete = x.pakete ?? new Paketverwaltung(dienst, { version: eigeneVersion, benutzer: async () => (await konten.listeBenutzer()).filter((b) => b.aktiv !== false).map((b) => ({ id: b.id, name: b.name || b.email })) });
   const paketerstellung = new Paketerstellung(dienst, { version: eigeneVersion });
@@ -328,7 +329,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
    * Person mit „Gesamte Verwaltung“ (#818) – nicht in einer Vertretung und nicht mit API-Schlüssel.
    */
   const einrichtungZugang = async (a: Anfrage) => {
-    if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
+    if (!x.einrichtung) throw new Fachfehler(404, t('meldungen.routen.kein-einrichtungsassistent'));
     await x.einrichtung.pruefeZugang(a.einrichtungscode, !!a.benutzer && !a.apiSchluessel && hatGesamt(a.benutzer) && !a.sitzungsDaten?.vertretungId);
   };
   /**
@@ -388,9 +389,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     if (!e) throw new Fachfehler(404, t('mappen.entsperren.gemerkt.aus'));
     return e;
   };
-  const betrieb = () => { if (!x.betrieb) throw new Fachfehler(404, 'Betriebseinstellungen sind nicht eingerichtet.'); return x.betrieb; };
-  const mail = () => { if (!x.aufgabenmail) throw new Fachfehler(404, 'Die Aufgaben-Mail ist nicht eingerichtet.'); return x.aufgabenmail; };
-  const region = () => { if (!x.region) throw new Fachfehler(404, 'Die Region ist nicht eingerichtet.'); return x.region; };
+  const betrieb = () => { if (!x.betrieb) throw new Fachfehler(404, t('meldungen.routen.betriebseinstellungen-sind-nicht')); return x.betrieb; };
+  const mail = () => { if (!x.aufgabenmail) throw new Fachfehler(404, t('meldungen.routen.die-aufgaben-mail-ist')); return x.aufgabenmail; };
+  const region = () => { if (!x.region) throw new Fachfehler(404, t('meldungen.routen.die-region-ist-nicht')); return x.region; };
   const regionStand = async (r: import('../../shared/src/region').Region) => ({
     region: r, laender: LAENDER, bundeslaender: BUNDESLAENDER, zeitzonen: ZEITZONEN, feiertage: RegionDienst.feiertageIm(r),
   });
@@ -407,20 +408,20 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       versand: !!x.betrieb?.mailer() && std.aktiv,
     };
   };
-  const ocr = () => { if (!x.texterkennung) throw new Fachfehler(404, 'Die Texterkennung ist nicht eingerichtet.'); return x.texterkennung; };
-  const meldungen = () => { if (!x.fehlermeldungen) throw new Fachfehler(404, 'Gemeldete Fehler sind nicht eingerichtet.'); return x.fehlermeldungen; };
-  const tresor = () => { if (!x.tresor) throw new Fachfehler(404, 'Die Verschlüsselung ist nicht eingerichtet.'); return x.tresor; };
-  const schluessel = () => { if (!x.apiSchluessel) throw new Fachfehler(404, 'API-Schlüssel sind nicht eingerichtet.'); return x.apiSchluessel; };
+  const ocr = () => { if (!x.texterkennung) throw new Fachfehler(404, t('meldungen.routen.die-texterkennung-ist-nicht')); return x.texterkennung; };
+  const meldungen = () => { if (!x.fehlermeldungen) throw new Fachfehler(404, t('meldungen.routen.gemeldete-fehler-sind-nicht')); return x.fehlermeldungen; };
+  const tresor = () => { if (!x.tresor) throw new Fachfehler(404, t('meldungen.routen.die-verschluesselung-ist-nicht')); return x.tresor; };
+  const schluessel = () => { if (!x.apiSchluessel) throw new Fachfehler(404, t('meldungen.routen.api-schluessel-sind-nicht')); return x.apiSchluessel; };
   const webhooks = () => { if (!x.webhooks) throw new Fachfehler(404, t('webhook.nicht-eingerichtet')); return x.webhooks; };
-  const autos = () => { if (!x.automatisierungen) throw new Fachfehler(404, 'Automatisierungen sind nicht eingerichtet.'); return x.automatisierungen; };
+  const autos = () => { if (!x.automatisierungen) throw new Fachfehler(404, t('meldungen.routen.automatisierungen-sind-nicht')); return x.automatisierungen; };
   /**
    * ?passwoerter=anzeigen (#46): nur mit einem API-Schlüssel, der das Recht „Passwörter lesen“ hat.
    * Liefert den Namen des Schlüssels fürs Protokoll, sonst null.
    */
   const passwoerterAnzeigen = (a: Anfrage): string | null => {
     if (a.query.passwoerter === undefined) return null;
-    if (a.query.passwoerter !== 'anzeigen') throw new Fachfehler(422, '„passwoerter“ kennt nur den Wert „anzeigen“.');
-    if (!a.apiSchluessel?.passwoerter) throw new Fachfehler(403, 'Passwörter liefert die API nur mit einem API-Schlüssel, der das Recht „Passwörter lesen“ hat.');
+    if (a.query.passwoerter !== 'anzeigen') throw new Fachfehler(422, t('meldungen.routen.passwoerter-kennt-nur-den'));
+    if (!a.apiSchluessel?.passwoerter) throw new Fachfehler(403, t('meldungen.routen.passwoerter-liefert-die-api'));
     return a.apiSchluessel.name;
   };
   /**
@@ -445,11 +446,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   /** #137: Empfänger von Aufgaben nur unter den Benutzern, die man sieht. */
   const empfaengerSichtbar = async (a: Anfrage, id: unknown) => {
     if (typeof id !== 'string' || !id) return;
-    if (!(await dienst.lesbare(await zg(a), [id])).has(id)) throw new Fachfehler(422, 'Diesen Benutzer gibt es nicht.');
+    if (!(await dienst.lesbare(await zg(a), [id])).has(id)) throw new Fachfehler(422, t('meldungen.routen.diesen-benutzer-gibt-es'));
   };
   /** #127: Darf der Empfänger die Mappe lesen? Sonst ein Hinweis in der Antwort. */
   const leseHinweis = async (empfaengerId: string | null, mappeId: string) =>
-    (empfaengerId && !(await dienst.kannLesen(empfaengerId, mappeId)) ? { hinweis: 'Gespeichert – der Empfänger darf diese Mappe nach den Berechtigungen aber nicht lesen.' } : {});
+    (empfaengerId && !(await dienst.kannLesen(empfaengerId, mappeId)) ? { hinweis: t('meldungen.routen.gespeichert-der-empfaenger-darf') } : {});
   const darf = async (a: Anfrage, mappeId: string, recht: Recht) => dienst.pruefeRecht(await zg(a), mappeId, recht);
   /** Klartext von Passwörtern nur für Mappen mit Recht P; die anderen bleiben verdeckt. */
   const entschluessele = async <T extends Mappe>(a: Anfrage, mappen: T[], klartext: string): Promise<T[]> => {
@@ -459,7 +460,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   };
   /** Benutzer mit ihren weiteren Rollen (#27). */
   const mitRollen = async (b: Benutzer) => ({ ...b, rollen: (await dienst.weitereRollen()).get(b.id) ?? [] });
-  const sicherung = () => { if (!x.sicherung) throw new Fachfehler(404, 'Sicherungen sind nicht eingerichtet.'); return x.sicherung; };
+  const sicherung = () => { if (!x.sicherung) throw new Fachfehler(404, t('meldungen.routen.sicherungen-sind-nicht-eingerichtet')); return x.sicherung; };
   /** Paket mit dms:sicherung-lesen (#585) – Menschen und andere Pakete bekommen 403. */
   const sicherungsPaket = async (a: Anfrage): Promise<string> => {
     const p = (await zg(a)).paket;
@@ -497,20 +498,20 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
    * mehr, gespeichert ist nur der Hash des neuen. Aus der Werkbank (frische Anmeldung) und nach dem Notfallzugang.
    */
   const notfallblattErzeugen = async (von: string): Promise<Buffer> => {
-    const t = tresor();
-    const text = t.alsText();
-    if (!text || !t.fingerabdruck) throw new Fachfehler(409, 'Es gibt noch keinen passenden Schlüssel. Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
+    const tresor2 = tresor();
+    const text = tresor2.alsText();
+    if (!text || !tresor2.fingerabdruck) throw new Fachfehler(409, t('meldungen.routen.es-gibt-noch-keinen'));
     // #814: keine Ordner oder Dateinamen aus Docker oder vom NAS auf dem Blatt – nur Verweise ins Handbuch.
     const inhalt = await notfallblatt({
       name: (x.designs ? (await x.designs.marke()).schriftzug : null) || 'Ablago',
       haushaltId: x.sicherung?.haushaltId ?? '–',
       adresse: x.betrieb ? x.betrieb.ansicht().adresse || x.betrieb.adresseFuerLinks() : '',
-      version: eigeneVersion(), erstellt: new Date(), schluessel: text, fingerabdruck: t.fingerabdruck,
+      version: eigeneVersion(), erstellt: new Date(), schluessel: text, fingerabdruck: tresor2.fingerabdruck,
       aussenziele: x.sicherung ? await x.sicherung.externZiele().catch(() => []) : [],
       notfallcode: await konten.neuerNotfallcode(),
     });
     if (x.sicherung) await x.sicherung.notfallblattErstellt(von);
-    else L.system.warn('Notfallblatt heruntergeladen', { von, fingerabdruck: t.fingerabdruck });
+    else L.system.warn('Notfallblatt heruntergeladen', { von, fingerabdruck: tresor2.fingerabdruck });
     return inhalt;
   };
   const notfallblattDatei = async (von: string): Promise<Antwort> => {
@@ -524,16 +525,16 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const exportZiel = () => { if (!x.exporte) throw new Fachfehler(404, t('werkbank.export.ohne-ordner')); return x.exporte.pfad; };
   /** Nach dem Herunterladen gelöscht (#797), wie die Auskunft: erst, wenn die ZIP ganz gelesen ist. */
   const danachLoeschen = (strom: Readable, ordner: string, melde: () => void) => strom.on('end', () => void loescheExport(ordner).then(melde, () => {}));
-  const oidc = () => { if (!x.oidc) throw new Fachfehler(404, 'Die Anmeldung über einen Anbieter ist nicht eingerichtet.'); return x.oidc; };
+  const oidc = () => { if (!x.oidc) throw new Fachfehler(404, t('meldungen.routen.die-anmeldung-ueber-einen')); return x.oidc; };
   const adresse = () => (x.betrieb?.adresseFuerLinks() ?? '').replace(/\/+$/, '');
-  const zf = () => { if (!konten.zweifaktor) throw new Fachfehler(404, 'Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.'); return konten.zweifaktor; };
-  const postfaecher = () => { if (!x.postfaecher) throw new Fachfehler(404, 'Postfächer sind nicht eingerichtet.'); return x.postfaecher; };
-  const pfOAuth = () => { if (!x.postfachOAuth) throw new Fachfehler(404, 'Die Anmeldung per OAuth ist nicht eingerichtet.'); return x.postfachOAuth; };
+  const zf = () => { if (!konten.zweifaktor) throw new Fachfehler(404, t('meldungen.routen.die-zwei-faktor-anmeldung')); return konten.zweifaktor; };
+  const postfaecher = () => { if (!x.postfaecher) throw new Fachfehler(404, t('meldungen.routen.postfaecher-sind-nicht-eingerichtet')); return x.postfaecher; };
+  const pfOAuth = () => { if (!x.postfachOAuth) throw new Fachfehler(404, t('meldungen.routen.die-anmeldung-per-oauth')); return x.postfachOAuth; };
   /** #358: Rückruf-Adresse fest aus der eingestellten Adresse des DMS – nie aus der Anfrage. */
   const pfRueckruf = () => (adresse() ? `${adresse()}/api/oauth/postfach/rueckruf` : '');
   const oauthPostfach = async (id: string) => {
     const p = await postfaecher().hole(id);
-    if (p.anmeldung !== 'oauth' || !p.anbieter) throw new Fachfehler(409, 'Dieses Postfach meldet sich mit Passwort an. Erst „OAuth 2.0“ wählen und speichern.');
+    if (p.anmeldung !== 'oauth' || !p.anbieter) throw new Fachfehler(409, t('meldungen.routen.dieses-postfach-meldet-sich'));
     return { id: p.id, anbieter: p.anbieter, benutzer: p.benutzer };
   };
   /** Demo-Dokumente (#248): freier Platz bei den Dateien; frei bleiben müssen Mindest-Speicherplatz der Sicherung bzw. die Speicherplatz-Grenze. */
@@ -545,9 +546,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return Math.max(grenze, sich);
     },
   } : undefined;
-  const wh = () => { if (!x.wiederherstellung) throw new Fachfehler(404, 'Die Wiederherstellung ist nicht eingerichtet.'); return x.wiederherstellung; };
-  const anbindung = () => { if (!x.anbindung) throw new Fachfehler(404, 'Die Datenbank-Anbindung ist hier nicht einstellbar.'); return x.anbindung; };
-  const speicherplatz = () => { if (!x.speicherplatz) throw new Fachfehler(404, 'Die Speicherplatz-Überwachung ist nicht eingerichtet.'); return x.speicherplatz; };
+  const wh = () => { if (!x.wiederherstellung) throw new Fachfehler(404, t('meldungen.routen.die-wiederherstellung-ist-nicht')); return x.wiederherstellung; };
+  const anbindung = () => { if (!x.anbindung) throw new Fachfehler(404, t('meldungen.routen.die-datenbank-anbindung-ist')); return x.anbindung; };
+  const speicherplatz = () => { if (!x.speicherplatz) throw new Fachfehler(404, t('meldungen.routen.die-speicherplatz-ueberwachung-ist')); return x.speicherplatz; };
   /** Stand für den Wiederherstellungsbildschirm: läuft etwas, oder gibt es eine Abschlussmeldung? */
   const whStand = async () => {
     const lauf = x.wiederherstellung?.aktuellerLauf();
@@ -558,7 +559,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       abschluss: abschluss ? { ...abschluss, von: '' } : null,
     };
   };
-  const wartung = () => { if (!x.wartung) throw new Fachfehler(404, 'Der Wartungsmodus ist nicht eingerichtet.'); return x.wartung; };
+  const wartung = () => { if (!x.wartung) throw new Fachfehler(404, t('meldungen.routen.der-wartungsmodus-ist-nicht')); return x.wartung; };
   /** Wiederherstellen im laufenden System (#107, #818): im Verwaltungsmodus mit Recht auf „Sicherung“. */
   const darfWiederherstellen = (a: Anfrage) => a.benutzer?.rolle === 'admin' && darfBereich(a.benutzer, 'sicherung');
   /** Ab der Ankündigung kommen nur Administratoren hinein (#102): eine neue Sitzung gleich wieder beenden. */
@@ -627,7 +628,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Laufwerk für Benutzer (#720): Adresse und Benutzername; ausgeschaltet gibt es nichts.
     { methode: 'GET', pfad: '/api/konto/laufwerk', zugang: 'angemeldet', handler: async (a) => {
-      if (!x.webdav || !(await x.webdav.einstellung()).aktiv) throw new Fachfehler(404, 'Das Laufwerk ist nicht eingeschaltet.');
+      if (!x.webdav || !(await x.webdav.einstellung()).aktiv) throw new Fachfehler(404, t('meldungen.routen.das-laufwerk-ist-nicht'));
       const s = await x.webdav.stand();
       return ok({ adresse: s.adresse, https: s.https, benutzername: ich(a).email });
     } },
@@ -641,7 +642,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return { body: { benutzer: r.benutzer }, sitzungSetzen: r.schluessel };
     } },
     { methode: 'POST', pfad: '/api/einrichtung/code', zugang: 'offen', handler: async (a) => {
-      if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
+      if (!x.einrichtung) throw new Fachfehler(404, t('meldungen.routen.kein-einrichtungsassistent'));
       await x.einrichtung.pruefeCode(a.einrichtungscode);
       return ok({ ok: true });
     } },
@@ -758,7 +759,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({ codes: await zf().neueCodes(ich(a).id, ich(a).email) });
     } },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/entfernen', zugang: 'angemeldet', handler: async (a) => {
-      if ((await zf().pflicht())[pflichtRolle(ich(a))]) throw new Fachfehler(409, 'Für dich ist die Zwei-Faktor-Anmeldung vorgeschrieben. Wer Ablago verwaltet, kann sie zurücksetzen, dann richtest du sie neu ein.');
+      if ((await zf().pflicht())[pflichtRolle(ich(a))]) throw new Fachfehler(409, t('meldungen.routen.fuer-dich-ist-die'));
       await konten.pruefeEigenesPasswort(ich(a), b(a).passwort);
       await zf().entferne(ich(a).id, ich(a).email);
       await konten.zweifaktorGeaendert(ich(a).id);
@@ -769,7 +770,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/benutzer/:id/zweifaktor', zugang: 'admin', handler: async (a) => ok(await zf().status(a.params.id)) },
     { methode: 'POST', pfad: '/api/benutzer/:id/zweifaktor/zuruecksetzen', zugang: 'admin', handler: async (a) => {
       await konten.pruefeKontoVon(ich(a), a.params.id);
-      if (!(await zf().entferne(a.params.id, ich(a).email))) throw new Fachfehler(404, 'Dieser Benutzer hat keine Zwei-Faktor-Anmeldung.');
+      if (!(await zf().entferne(a.params.id, ich(a).email))) throw new Fachfehler(404, t('meldungen.routen.dieser-benutzer-hat-keine'));
       await konten.zweifaktorGeaendert(a.params.id);
       return leer;
     } },
@@ -876,7 +877,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/benutzer/:id', zugang: 'admin', handler: async (a) => {
       // Weitere Rollen zuerst prüfen, damit eine ungültige Auswahl nichts halb ändert.
       if (b(a).rollen !== undefined) {
-        if (!(await konten.listeBenutzer()).some((x) => x.id === a.params.id)) throw new Fachfehler(404, 'Diesen Benutzer gibt es nicht.');
+        if (!(await konten.listeBenutzer()).some((x) => x.id === a.params.id)) throw new Fachfehler(404, t('meldungen.routen.diesen-benutzer-gibt-es'));
         await dienst.pruefeRollen(b(a).rollen);
       }
       const r = await konten.aendereBenutzer(ich(a), a.params.id, b(a));
@@ -936,14 +937,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Eigene angemeldete Geräte (#69): ansehen und beenden – nicht während einer Vertretung.
     { methode: 'GET', pfad: '/api/konto/sitzungen', zugang: 'angemeldet', handler: async (a) => ok(await konten.sitzungenVon(ich(a).id, a.sitzungsDaten?.id)) },
     { methode: 'DELETE', pfad: '/api/konto/sitzungen/:sitzung', zugang: 'angemeldet', handler: async (a) => {
-      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'In einer Vertretung lassen sich Sitzungen nicht beenden.');
-      if (a.params.sitzung === a.sitzungsDaten?.id) throw new Fachfehler(409, 'Das ist dieses Gerät. Zum Beenden bitte abmelden.');
+      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, t('meldungen.routen.in-einer-vertretung-lassen'));
+      if (a.params.sitzung === a.sitzungsDaten?.id) throw new Fachfehler(409, t('meldungen.routen.das-ist-dieses-geraet'));
       await konten.beendeSitzung(ich(a).id, a.params.sitzung);
       L.konto.info('Eigene Sitzung beendet', { sitzung: a.params.sitzung.slice(0, 8) });
       return leer;
     } },
     { methode: 'POST', pfad: '/api/konto/sitzungen/andere-beenden', zugang: 'angemeldet', handler: async (a) => {
-      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'In einer Vertretung lassen sich Sitzungen nicht beenden.');
+      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, t('meldungen.routen.in-einer-vertretung-lassen'));
       const r = await konten.beendeAndereSitzungen(ich(a).id, a.sitzungsDaten?.id);
       L.konto.info('Andere eigene Sitzungen beendet', { anzahl: r.beendet });
       return ok(r);
@@ -1013,7 +1014,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const o = pruefeDemoOptionen(b(a));
       const benutzerId = ich(a).id;
       L.werkbank.info('Demo-Mappen werden erzeugt', { anzahl: o.anzahl, dokumente: !!o.dokumente, startwert: o.startwert ?? null });
-      const titel = `${o.anzahl.toLocaleString('de-DE')} Demo-Mappen${o.dokumente ? ' mit Dokumenten' : ''} erzeugen`;
+      const titel = t('meldungen.routen.demo-mappen-erzeugen', { zahl: o.anzahl.toLocaleString(gebietsschema()), wert: o.dokumente ? t('meldungen.routen.mit-dokumenten') : '' });
       return ok(dienst.auftraege.starte('demo-erzeugen', titel, async (f) => {
         const r = await dienst.ohneEreignisse(() => erzeugeDemo(dienst, o, benutzerId, f, demoPlatz));
         L.werkbank.info('Demo-Daten erzeugt', { mappen: r.gesamt, dokumente: r.dokumente?.anzahl ?? 0, bytes: r.dokumente?.bytes ?? 0, dauerMs: r.dauerMs, startwert: r.startwert, abgebrochen: r.abgebrochen ?? null });
@@ -1103,12 +1104,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'POST', pfad: '/api/werkbank/export', zugang: 'admin', handler: async (a) => {
       const e = (a.body ?? {}) as { passwoerter?: unknown; passwoerterBestaetigt?: unknown; protokolle?: unknown; kontakte?: unknown };
-      if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, 'Passwörter im Klartext nur mit ausdrücklicher Bestätigung.');
+      if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, t('meldungen.routen.passwoerter-im-klartext-nur'));
       const ziel = exportZiel();
       const s = await dienst.exportAbschaetzung();
       const frei = await freierPlatz(ziel);
       // Grob: Dokumente plus ein Zuschlag für Tabellen und PDFs.
-      if (frei !== null && frei < s.bytes * 1.1 + 50 * 1024 ** 2) throw new Fachfehler(507, `Zu wenig Platz am Ziel: frei ${Math.round(frei / 1024 ** 2)} MB, nötig etwa ${Math.round((s.bytes * 1.1 + 50 * 1024 ** 2) / 1024 ** 2)} MB.`);
+      if (frei !== null && frei < s.bytes * 1.1 + 50 * 1024 ** 2) throw new Fachfehler(507, t('meldungen.routen.zu-wenig-platz-am', { round: Math.round(frei / 1024 ** 2), round2: Math.round((s.bytes * 1.1 + 50 * 1024 ** 2) / 1024 ** 2) }));
       const kontakte = e.kontakte && typeof e.kontakte === 'object' ? e.kontakte as ExportOptionen['kontakte'] : undefined;
       const quelle = dienst.vollexportQuelle({
         mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(),
@@ -1136,10 +1137,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'GET', pfad: '/api/werkbank/export/:name/zip', zugang: 'admin', handler: async (a) => {
       const ordner = exportOrdner(exportZiel(), a.params.name);
-      const dateien = await exportDateien(ordner).catch(() => { throw new Fachfehler(404, 'Diesen Export gibt es nicht.'); });
+      const dateien = await exportDateien(ordner).catch(() => { throw new Fachfehler(404, t('meldungen.routen.diesen-export-gibt-es')); });
       const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${a.params.name}/${d.name}`, groesse: d.groesse, inhalt: async () => createReadStream(d.pfad) }));
       const groesse = zipGroesse(eintraege);
-      if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Der Export ist größer als 4 GB – bitte direkt aus dem Ordner kopieren.');
+      if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.routen.der-export-ist-groesser'));
       L.werkbank.info('Vollexport heruntergeladen', { name: a.params.name, von: ich(a).email });
       const strom = danachLoeschen(zipStrom(eintraege), ordner, () => L.werkbank.info('Vollexport nach dem Herunterladen gelöscht', { name: a.params.name }));
       return { datei: { inhalt: strom, name: `${a.params.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
@@ -1153,18 +1154,18 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok({ erlaubt: await dienst.persoenlicherExportErlaubt(), ...(await eigenerExport(id)), fertig });
     } },
     { methode: 'POST', pfad: '/api/konto/export', zugang: 'angemeldet', handler: async (a) => {
-      if (!(await dienst.persoenlicherExportErlaubt())) throw new Fachfehler(403, 'Der persönliche Export ist in der Werkbank abgeschaltet.');
+      if (!(await dienst.persoenlicherExportErlaubt())) throw new Fachfehler(403, t('meldungen.routen.der-persoenliche-export-ist'));
       const e = (a.body ?? {}) as { passwoerter?: unknown; passwoerterBestaetigt?: unknown };
-      if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, 'Passwörter im Klartext nur mit ausdrücklicher Bestätigung.');
+      if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, t('meldungen.routen.passwoerter-im-klartext-nur'));
       const id = ich(a).id;
-      if ((await eigenerExport(id)).laeuft) throw new Fachfehler(409, 'Dein Export läuft schon.');
-      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'Während jemand in diesem Namen arbeitet, gibt es keinen persönlichen Export.');
+      if ((await eigenerExport(id)).laeuft) throw new Fachfehler(409, t('meldungen.routen.dein-export-laeuft-schon'));
+      if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, t('meldungen.routen.waehrend-jemand-in-diesem'));
       const ziel = persoenlicherOrdner(exportZiel(), id);
       const quelle = await dienst.persoenlicheQuelle(await zg(a), { mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(), ich: await konten.exportDatenVon(id) });
-      if (!(await dienst.kurzzustand.belege(EXPORT_LAEUFT, id, 12 * 3600_000))) throw new Fachfehler(409, 'Dein Export läuft schon.');
+      if (!(await dienst.kurzzustand.belege(EXPORT_LAEUFT, id, 12 * 3600_000))) throw new Fachfehler(409, t('meldungen.routen.dein-export-laeuft-schon'));
       await dienst.kurzzustand.loesche(EXPORT_FEHLER, id);
       const zustand = { fehler: null as string | null };
-      L.konto[e.passwoerter === true ? 'warn' : 'info'](e.passwoerter === true ? '„Meine Daten exportieren“ mit Passwörtern gestartet' : '„Meine Daten exportieren“ gestartet', {});
+      L.konto[e.passwoerter === true ? 'warn' : 'info'](e.passwoerter === true ? t('meldungen.routen.meine-daten-exportieren-mit') : t('meldungen.routen.meine-daten-exportieren-gestartet'), {});
       void (async () => {
         try {
           for (const alt of await exporteIn(ziel)) await loescheExport(exportOrdner(ziel, alt.name));
@@ -1181,12 +1182,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/konto/export/zip', zugang: 'angemeldet', handler: async (a) => {
       const ziel = persoenlicherOrdner(exportZiel(), ich(a).id);
       const fertig = (await exporteIn(ziel))[0];
-      if (!fertig) throw new Fachfehler(404, 'Es gibt noch keinen Export.');
+      if (!fertig) throw new Fachfehler(404, t('meldungen.routen.es-gibt-noch-keinen-2'));
       const ordner = exportOrdner(ziel, fertig.name);
       const dateien = await exportDateien(ordner);
       const eintraege: ZipEintrag[] = dateien.map((d) => ({ name: `${fertig.name}/${d.name}`, groesse: d.groesse, inhalt: async () => createReadStream(d.pfad) }));
       const groesse = zipGroesse(eintraege);
-      if (groesse > ZIP_MAX) throw new Fachfehler(422, 'Dein Export ist größer als 4 GB. Bitte die Person, die Ablago verwaltet, ihn dir aus dem Ordner zu geben.');
+      if (groesse > ZIP_MAX) throw new Fachfehler(422, t('meldungen.routen.dein-export-ist-groesser'));
       L.konto.info('„Meine Daten exportieren“ heruntergeladen', {});
       const strom = danachLoeschen(zipStrom(eintraege), ordner, () => L.konto.info('„Meine Daten exportieren“ nach dem Herunterladen gelöscht', {}));
       return { datei: { inhalt: strom, name: `${fertig.name}.zip`, mime: 'application/zip', anzeigen: false, groesse, koepfe: { 'cache-control': 'no-store' } } };
@@ -1425,7 +1426,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'PUT', pfad: '/api/werkbank/vektoren', zugang: 'admin', handler: async (a) => { await dienst.setzeVektorEinstellung(a.body); return ok(await dienst.vektorStand()); } },
     { methode: 'POST', pfad: '/api/werkbank/vektoren/neu', zugang: 'admin', handler: async () => {
-      if (!x.paketlaeufer) throw new Fachfehler(404, 'Pakete mit Code laufen in dieser Installation nicht.');
+      if (!x.paketlaeufer) throw new Fachfehler(404, t('meldungen.routen.pakete-mit-code-laufen'));
       try { return ok(await x.paketlaeufer.vektorenNeu()); } catch (e) { throw e instanceof Fachfehler ? e : new Fachfehler(409, (e as Error).message); }
     } },
     { methode: 'DELETE', pfad: '/api/werkbank/pakete/:id', zugang: 'admin', handler: async (a) => { await pakete.mitSperre(() => pakete.entferne(a.params.id, wer(a), a.query.einstellungenBehalten === '1')); return leer; } },
@@ -1528,8 +1529,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/werkbank/tresor/erzeugen', zugang: 'admin', handler: async () => ok(await tresor().erzeuge()) },
     // Schlüssel wechseln (#47): nur mit Bestätigung; danach neues Notfallblatt und neue Sicherung.
     { methode: 'POST', pfad: '/api/werkbank/tresor/wechseln', zugang: 'admin', handler: async (a) => {
-      if (b(a).bestaetigt !== true) throw new Fachfehler(400, 'Bitte den Wechsel bestätigen.');
-      if (x.sicherung?.laeuft()) throw new Fachfehler(409, 'Gerade läuft eine Sicherung. Bitte warten, bis sie fertig ist.');
+      if (b(a).bestaetigt !== true) throw new Fachfehler(400, t('meldungen.routen.bitte-den-wechsel-bestaetigen'));
+      if (x.sicherung?.laeuft()) throw new Fachfehler(409, t('meldungen.routen.gerade-laeuft-eine-sicherung'));
       const w = await dienst.schluesselWechseln(ich(a).email);
       const alte = x.sicherung ? (await x.sicherung.liste()).filter((s) => s.meta && s.meta.verschluesselung.fingerabdruck !== w.neu).length : 0;
       return ok({ ...w, alteSicherungen: alte, ...await tresor().status(), notfallblatt: x.sicherung ? await x.sicherung.notfallblatt() : null });
@@ -1719,11 +1720,11 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
 
     /* ---------- Einrichtungsassistent (#119) ---------- */
     { methode: 'GET', pfad: '/api/werkbank/einrichtung', zugang: 'admin', handler: async () => {
-      if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
+      if (!x.einrichtung) throw new Fachfehler(404, t('meldungen.routen.kein-einrichtungsassistent'));
       return ok(await x.einrichtung.stand());
     } },
     { methode: 'POST', pfad: '/api/werkbank/einrichtung/schritt', zugang: 'admin', handler: async (a) => {
-      if (!x.einrichtung) throw new Fachfehler(404, 'Kein Einrichtungsassistent.');
+      if (!x.einrichtung) throw new Fachfehler(404, t('meldungen.routen.kein-einrichtungsassistent'));
       return ok(await x.einrichtung.merke(b(a).schritt, b(a).uebersprungen === true, ich(a).email));
     } },
     /* ---------- Datenbank-Anbindung (#119) ---------- */
@@ -1740,7 +1741,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/werkbank/anmeldeschutz/notfallzugang', zugang: 'admin', handler: async (a) => ok({ ...await nf().setzeEinstellung(b(a), ich(a).email), code: await konten.notfallcodeStand(), heimnetz: istHeimnetz(a, x.proxy) }) },
     { methode: 'POST', pfad: '/api/werkbank/anmeldeschutz/entsperren', zugang: 'admin', handler: async (a) => {
       const ip = String((b(a) as { ip?: unknown }).ip ?? '');
-      if (!(await konten.sperre.entsperre(ip, ich(a).email))) throw new Fachfehler(404, 'Diese Adresse ist nicht gesperrt.');
+      if (!(await konten.sperre.entsperre(ip, ich(a).email))) throw new Fachfehler(404, t('meldungen.routen.diese-adresse-ist-nicht'));
       return ok({ einstellung: await konten.sperre.einstellung(), gesperrt: await konten.sperre.gesperrt(), deineIp: a.ip });
     } },
     // Postfächer (#196): nur Administratoren; Passwörter verlassen den Server nie.
@@ -1830,20 +1831,20 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'DELETE', pfad: '/api/werkbank/webhooks/:id', zugang: 'admin', handler: async (a) => { await webhooks().loescheWerkbank(a.params.id, ich(a).email); return leer; } },
     { methode: 'GET', pfad: '/api/werkbank/webdav', zugang: 'admin', handler: async () => {
-      if (!x.webdav) throw new Fachfehler(404, 'Das WebDAV-Laufwerk ist nicht eingerichtet.');
+      if (!x.webdav) throw new Fachfehler(404, t('meldungen.routen.das-webdav-laufwerk-ist'));
       return ok(await x.webdav.stand());
     } },
     { methode: 'PUT', pfad: '/api/werkbank/webdav', zugang: 'admin', handler: async (a) => {
-      if (!x.webdav) throw new Fachfehler(404, 'Das WebDAV-Laufwerk ist nicht eingerichtet.');
+      if (!x.webdav) throw new Fachfehler(404, t('meldungen.routen.das-webdav-laufwerk-ist'));
       return ok(await x.webdav.speichere(a.body, ich(a).email));
     } },
     { methode: 'GET', pfad: '/api/werkbank/eingangsordner', zugang: 'admin', handler: async () => ok(x.eingangsordner ? await x.eingangsordner.stand() : { vorhanden: false }) },
     { methode: 'PUT', pfad: '/api/werkbank/eingangsordner', zugang: 'admin', handler: async (a) => {
-      if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, 'Es ist kein Eingangsordner eingebunden.');
+      if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, t('meldungen.routen.es-ist-kein-eingangsordner'));
       return ok(await x.eingangsordner.speichere(a.body, ich(a).email));
     } },
     { methode: 'POST', pfad: '/api/werkbank/eingangsordner/pruefen', zugang: 'admin', handler: async () => {
-      if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, 'Es ist kein Eingangsordner eingebunden.');
+      if (!x.eingangsordner?.vorhanden) throw new Fachfehler(404, t('meldungen.routen.es-ist-kein-eingangsordner'));
       const n = await x.eingangsordner.pruefe(true);
       return ok({ uebernommen: n, stand: await x.eingangsordner.stand() });
     } },
@@ -1852,7 +1853,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'PUT', pfad: '/api/werkbank/speicherplatz', zugang: 'admin', handler: async (a) => ok(await speicherplatz().speichere(a.body, ich(a).email)) },
     // Auslastung (#409): CPU, Arbeitsspeicher, Netzwerk des Containers; dazu die Wartezeit der Ereignisschleife (#477).
     { methode: 'GET', pfad: '/api/werkbank/systemlast', zugang: 'admin', handler: async () => {
-      if (!x.systemlast) throw new Fachfehler(404, 'Die Messung der Auslastung ist nicht eingerichtet.');
+      if (!x.systemlast) throw new Fachfehler(404, t('meldungen.routen.die-messung-der-auslastung'));
       const erweiterungen = x.erweiterungen ? await x.erweiterungen().catch(() => null) : null;
       return ok({ ...x.systemlast.stand(), schleife: x.messung?.auslastung.stand() ?? null, arbeiter: arbeiterStand(), erweiterungen, ...grenzenUndEngpaesse(x) });
     } },
@@ -1891,7 +1892,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       });
     } },
     { methode: 'PUT', pfad: '/api/werkbank/datenbank', zugang: 'admin', handler: async (a) => {
-      if (!messung) throw new Fachfehler(404, 'Messung ist nicht aktiv.');
+      if (!messung) throw new Fachfehler(404, t('meldungen.routen.messung-ist-nicht-aktiv'));
       try {
         const e = await messung.setze({ schwelleMs: b(a).schwelleMs as number, tage: b(a).tage as number });
         L.werkbank.info('Einstellungen für lange Datenbankzugriffe geändert', { ...e });
@@ -1963,7 +1964,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       // Unabhängiges gleichzeitig (#741): Der Stern ist nur ein Ja/Nein der Person und geht nur mit der Mappe hinaus.
       const [m, favorit] = await Promise.all([dienst.holeMappe(a.params.id, z), dienst.istFavorit(ich(a), a.params.id)]);
       const d = { ...m, favorit, exportierbar: false };
-      if (klartext && !d.rechte.P) throw new Fachfehler(403, 'Passwörter dieser Mappe darfst du nicht sehen.');
+      if (klartext && !d.rechte.P) throw new Fachfehler(403, t('meldungen.routen.passwoerter-dieser-mappe-darfst'));
       // Exportrecht (#294, #723): Herunterladen, Versenden, „Als PDF exportieren“ nur für lesbare Mappen, die in einer
       // Sicht mit Recht E liegen – dieselbe Prüfstelle wie beim Herunterladen selbst.
       // Verwaltungsmodus (#820): ohne Modus nicht lesbar → Historie und Hinweis in der Oberfläche.
@@ -2040,7 +2041,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Startseite (#725): Kachel „Nächster Termin“.
     { methode: 'GET', pfad: '/api/termine/naechster', zugang: 'angemeldet', handler: async (a) => ok(await dienst.naechsterTermin(await zg(a))) },
     // Alte Adresse (#725): „Anstehend“ gibt es nicht mehr.
-    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async () => { throw new Fachfehler(410, '„Anstehend“ gibt es nicht mehr. Termine stehen unter „Zu erledigen“ → Monat und Jahr (GET /api/termine?von=…&bis=…).'); } },
+    { methode: 'GET', pfad: '/api/anstehend', zugang: 'angemeldet', handler: async () => { throw new Fachfehler(410, t('meldungen.routen.anstehend-gibt-es-nicht')); } },
     { methode: 'POST', pfad: '/api/mappen/:id/erinnerungen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, a.params.id, 'R');
       await empfaengerSichtbar(a, b(a).empfaengerId);
@@ -2120,7 +2121,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.erkennung.fuerTyp(a.params.id, b(a), await zg(a))) },
     { methode: 'POST', pfad: '/api/typen/:id/vorschlaege/datei', zugang: 'angemeldet', lesend: true, roh: 30 * 1024 * 1024, handler: async (a) => {
       const z = await zg(a);
-      if (!Buffer.isBuffer(a.body) || !a.body.length) throw new Fachfehler(422, 'Die Datei ist leer.');
+      if (!Buffer.isBuffer(a.body) || !a.body.length) throw new Fachfehler(422, t('meldungen.routen.die-datei-ist-leer'));
       // Erst Zugriff prüfen, dann die (teure) Texterkennung.
       await dienst.erkennung.fuerTyp(a.params.id, { mappe: a.query.mappe }, z);
       const { text, info } = await dienst.textAusDatei(a.body, String(a.query.name ?? ''), String(a.query.typ ?? ''));
@@ -2202,7 +2203,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const r = await dienst.stelleWiederHer(a.params.id, ich(a), false, quelle(a));
       // Eigener Papierkorb (#126): immer wiederherstellbar; danach gelten wieder die Regeln.
       const sichtbar = (await dienst.lesbare(await zg(a), [a.params.id])).has(a.params.id);
-      return ok(sichtbar ? r : { ...r, hinweis: 'Wiederhergestellt. Diese Mappe kannst du nach den Berechtigungen aber nicht mehr sehen.' });
+      return ok(sichtbar ? r : { ...r, hinweis: t('meldungen.routen.wiederhergestellt-diese-mappe-kannst') });
     } },
     { methode: 'DELETE', pfad: '/api/papierkorb/:id', zugang: 'angemeldet', handler: async (a) => ok({ geloescht: await dienst.loescheEndgueltig([a.params.id], ich(a), false, quelle(a)) }) },
     // Ein Vorgang (#424): alle Mappen, die zusammen gelöscht wurden.
@@ -2276,14 +2277,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const q = await seitenquelle(a, mappeId);
       if (q) {
         const s1 = await dienst.pdfSeitenbild(a.params.id, 1, q);
-        if (!s1) throw new Fachfehler(404, 'Für dieses Dokument gibt es (noch) kein Vorschaubild.');
+        if (!s1) throw new Fachfehler(404, t('meldungen.routen.fuer-dieses-dokument-gibt'));
         return { datei: { inhalt: s1, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: s1.length, koepfe: { 'cache-control': 'no-store' } } };
       }
       const d = await dienst.holeDokument(a.params.id);
       const bild = x.vorschau ? await x.vorschau.bild(d) : null;
-      if (!bild) throw new Fachfehler(404, 'Für dieses Dokument gibt es (noch) kein Vorschaubild.');
+      if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-dieses-dokument-gibt'));
       // Die Adresse trägt den Prüfwert (?v=…): ein neues Bild hat eine neue Adresse, das Bild darf im Browser bleiben.
-      return { datei: { inhalt: bild, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=604800' } } };
+      return { datei: { inhalt: bild, name: 'vorschau.jpg', mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-604800') } } };
     } },
     // Dateien umwandeln (#577): Fassung und Vorschaubild schreiben nur Pakete mit dms:umwandeln, die das Dokument lesen
     // dürfen (das Original bleibt unverändert, deshalb genügt Lesen); ansehen darf die Fassung, wer das Dokument liest.
@@ -2312,7 +2313,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const endung = f.info.mime === 'application/pdf' ? 'pdf' : f.info.mime === 'image/png' ? 'png' : 'jpg';
       const name = `${punkt > 0 ? f.d.name.slice(0, punkt) : f.d.name} (${f.info.entsperrt ? 'entsperrt' : 'umgewandelt'}).${endung}`;
       return fuerAnzeige(a, { inhalt: f.inhalt, name, mime: f.info.mime, anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
-        koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': 'private, max-age=60' } });
+        koepfe: { 'x-dms-fassung-paket': `${f.info.paket.id} ${f.info.paket.version}`, 'cache-control': t('meldungen.routen.private-max-age-60') } });
     } },
     // Archivfassung (PDF/A, #631): ablegen nur Pakete mit dms:archivfassung, die das Dokument lesen dürfen (das Original
     // bleibt unverändert); ansehen, wer das Dokument liest. Wortpositionen ebenso mit Lesen (ohne weiteres Recht).
@@ -2330,7 +2331,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       if (g) return ausgabeDatei({ name: g.name, mime: g.mime, anzeigbar: true, groesse: g.inhalt.length, inhalt: g.inhalt, gestempelt: true });
       const f = await dienst.archivfassungVon(a.params.id);
       return fuerAnzeige(a, { inhalt: f.inhalt, name: f.info.imOriginal ? f.d.name : archivfassungName(f.d.name), mime: 'application/pdf', anzeigen: a.query.herunterladen === undefined, groesse: f.inhalt.length,
-        koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': 'private, max-age=60' } });
+        koepfe: { 'x-dms-archivfassung': `${pdfaName(f.info.pdfa)}; ${f.info.paket.id} ${f.info.paket.version}${f.info.imOriginal ? '; original' : ''}`, 'cache-control': t('meldungen.routen.private-max-age-60') } });
     } },
     { methode: 'GET', pfad: '/api/dokumente/:id/wortpositionen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'R');
@@ -2348,7 +2349,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await darf(a, await dienst.mappeVon('dokument', a.params.id), a.benutzer?.art === 'dienst' ? 'R' : 'U');
       if (a.benutzer?.art === 'dienst') await dienst.pruefeVolltextRecht(await zg(a), a.params.id);
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
-      const herkunft = p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})`;
+      const herkunft = p ? `${p.name} ${p.version}` : t('meldungen.routen.ueber-die-api', { wert: ich(a).name || ich(a).email });
       const d = await dienst.schreibeVolltext(a.params.id, a.body, { id: ich(a).id, herkunft, paket: !!p, ausgelesen: !!p && hatSchnittstelle(p.laeufer, 'dms:volltext') && !hatSchnittstelle(p.laeufer, 'dms:texterkennung') });
       return ok({ id: d.id, name: d.name, ocr: d.ocr, sprache: d.sprache ?? null, weitereSprachen: d.weitereSprachen ?? [] });
     } },
@@ -2357,7 +2358,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       await darf(a, await dienst.mappeVon('dokument', a.params.id), a.benutzer?.art === 'dienst' ? 'R' : 'U');
       if (a.benutzer?.art === 'dienst') await dienst.pruefeVolltextRecht(await zg(a), a.params.id);
       const p = a.benutzer?.art === 'dienst' ? (await dienst.listePakete()).find((x) => x.id === a.benutzer!.paketId) : undefined;
-      const d = await dienst.setzeDokumentSprache(a.params.id, a.body, { id: ich(a).id, wer: p ? `${p.name} ${p.version}` : `über die API (${ich(a).name || ich(a).email})` });
+      const d = await dienst.setzeDokumentSprache(a.params.id, a.body, { id: ich(a).id, wer: p ? `${p.name} ${p.version}` : t('meldungen.routen.ueber-die-api', { wert: ich(a).name || ich(a).email }) });
       return ok({ id: d.id, name: d.name, sprache: d.sprache ?? null, weitereSprachen: d.weitereSprachen ?? [], ocr: d.ocr });
     } },
     // Hinweis „Post teilen?“ wegklicken (#579): wer teilen dürfte (Bearbeiten), darf ihn auch ausblenden.
@@ -2443,8 +2444,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
       const bild = await dienst.pdfSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
-      if (!bild) throw new Fachfehler(404, 'Für diese Seite gibt es kein Bild.');
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=3600' } } };
+      if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-diese-seite-gibt'));
+      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/seiten', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2460,8 +2461,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const mappeId = await dienst.mappeVon('dokument', a.params.id);
       await darf(a, mappeId, 'R');
       const bild = await dienst.schwaerzSeitenbild(a.params.id, Number(a.params.nr), await seitenquelle(a, mappeId));
-      if (!bild) throw new Fachfehler(404, 'Für diese Seite gibt es kein Bild.');
-      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': 'private, max-age=3600' } } };
+      if (!bild) throw new Fachfehler(404, t('meldungen.routen.fuer-diese-seite-gibt'));
+      return { datei: { inhalt: bild, name: `seite-${a.params.nr}.jpg`, mime: 'image/jpeg', anzeigen: true, groesse: bild.length, koepfe: { 'cache-control': t('meldungen.routen.private-max-age-3600') } } };
     } },
     { methode: 'POST', pfad: '/api/dokumente/:id/schwaerzen', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2489,7 +2490,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/archivnummern/:nr', zugang: 'angemeldet', handler: async (a) => ok(await dienst.findeArchivnummer(a.params.nr, await zg(a))) },
     { methode: 'POST', pfad: '/api/werkbank/archivnummern/aufkleber', zugang: 'admin', handler: async (a) => {
       const r = await dienst.archivAufkleber(a.body, ich(a).email);
-      return { datei: { inhalt: r.pdf, name: `Archivnummern ${r.erste} bis ${r.letzte}.pdf`, mime: 'application/pdf', anzeigen: false, groesse: r.pdf.length } };
+      return { datei: { inhalt: r.pdf, name: t('meldungen.routen.archivnummern-bis-pdf', { erste: r.erste, letzte: r.letzte }), mime: 'application/pdf', anzeigen: false, groesse: r.pdf.length } };
     } },
     { methode: 'DELETE', pfad: '/api/dokumente/:id', zugang: 'angemeldet', handler: async (a) => {
       await darf(a, await dienst.mappeVon('dokument', a.params.id), 'U');
@@ -2546,12 +2547,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const nurVolltext = (r: Route, s: readonly string[] | undefined) => r.methode === 'PUT' && /\/dokumente\/:id\/(volltext|sprache)$/.test(r.pfad) && !!s?.includes('dms:volltext');
   const dokumentRecht = async (r: Route, a: Anfrage): Promise<'keine' | 'lesen' | 'schreiben' | null> => {
     if (a.benutzer?.art !== 'dienst') return null;
-    if (nieFuerPakete(r)) throw new Fachfehler(403, 'Pakete dürfen keine E-Mails versenden.');
+    if (nieFuerPakete(r)) throw new Fachfehler(403, t('meldungen.routen.pakete-duerfen-keine-e'));
     const paket = (await zg(a)).paket;
     const recht = paket?.dokumente ?? 'keine';
     if (!dokumentRoute(r)) return recht;
     const schreibt = r.methode !== 'GET' && !lesendePost(r) && !nurVolltext(r, paket?.schnittstellen);
-    if (recht === 'keine' || (schreibt && recht !== 'schreiben')) throw new Fachfehler(403, 'Dieses Paket darf das mit Dokumenten nicht (Rechte aus dem Manifest).');
+    if (recht === 'keine' || (schreibt && recht !== 'schreiben')) throw new Fachfehler(403, t('meldungen.routen.dieses-paket-darf-das'));
     return recht;
   };
   /** Ohne Dokumentrecht sieht ein Paket an der Mappe auch die Liste der Dokumente nicht. */
@@ -2603,12 +2604,12 @@ export function dateiKoepfe(d: Datei): Record<string, string> {
   const k: Record<string, string> = {
     'content-type': d.mime,
     'content-length': String(d.groesse),
-    'content-disposition': `${d.anzeigen ? 'inline' : 'attachment'}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(d.name)}`,
+    'content-disposition': t('meldungen.routen.filename-filename-utf-8', { wert: d.anzeigen ? 'inline' : 'attachment', ascii, encodeURIComponent: encodeURIComponent(d.name) }),
     'x-content-type-options': 'nosniff',
-    'cache-control': 'private, max-age=0, must-revalidate',
+    'cache-control': t('meldungen.routen.private-max-age-0'),
   };
   // PDFs brauchen den eingebauten Betrachter des Browsers; alles andere läuft in einer Sandbox.
-  if (d.mime !== 'application/pdf') k['content-security-policy'] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox";
+  if (d.mime !== 'application/pdf') k['content-security-policy'] = t('meldungen.routen.default-src-none-img');
   return k;
 }
 
@@ -2699,7 +2700,7 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
   // Verwaltung“ im Verwaltungsmodus (#818) – wer Zugang zum Container hat, hat ohnehin alles.
   const k = kopf(KONSOLE_KOPF);
   if (k !== undefined) {
-    if (!konsole || !konsole.passt(k) || !istLoopback(a.peer)) throw new Fachfehler(401, 'Konsolenzugang ungültig. Der Befehl dms funktioniert nur im Container von Ablago.');
+    if (!konsole || !konsole.passt(k) || !istLoopback(a.peer)) throw new Fachfehler(401, t('meldungen.routen.konsolenzugang-ungueltig-der-befehl'));
     a.konsole = true;
     try { a.benutzer = { ...konsolenBenutzer(await konten.listeBenutzer(), kopf(ALS_KOPF)), rolle: 'admin' }; a.verwaltungsmodus = true; } catch (e) {
       // Nur die Konsolen-Befehle selbst gehen auch ohne Administrator (z. B. Passwort setzen).
@@ -2707,13 +2708,13 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     }
     return;
   }
-  if (r.konsole) throw new Fachfehler(404, 'Diese Schnittstelle gibt es nicht.');
+  if (r.konsole) throw new Fachfehler(404, t('meldungen.routen.diese-schnittstelle-gibt-es'));
   // Öffentliche API: Anmeldung per API-Schlüssel statt Sitzung; kein X-DMS nötig (kein Cookie im Spiel).
   const auth = kopf('authorization');
   if (r.api && auth && schluessel) {
     const s = await schluessel.pruefe(auth);
     const b = s ? await konten.benutzerMitId(s.benutzerId) : undefined;
-    if (!s || !b) throw new Fachfehler(401, 'Der Benutzer dieses Schlüssels ist deaktiviert oder gelöscht.');
+    if (!s || !b) throw new Fachfehler(401, t('meldungen.routen.der-benutzer-dieses-schluessels'));
     a.benutzer = b; a.apiSchluessel = s;
     // „Nur Zähler“ (#625): genau eine Adresse, alles andere 403.
     if (s.recht === NUR_ZAEHLER && !(r.methode === 'GET' && r.pfad === ZAEHLER_PFAD)) throw new Fachfehler(403, t('api.schluessel.nur-zaehler'));
@@ -2721,7 +2722,7 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
     // Stand in der Antwort auf das Ereignis. Ältere Fassungen dürfen noch per PUT melden (die Route prüft, ob ein Paket
     // mit dms:sicherung-lesen fragt). Fällt mit der übernächsten Fassung weg.
     const uebergang = r.methode === 'PUT' && r.pfad === SICHERUNG_EXTERN_PFAD;
-    if (r.methode !== 'GET' && s.recht === 'lesen' && !uebergang) throw new Fachfehler(403, 'Dieser API-Schlüssel darf nur lesen.');
+    if (r.methode !== 'GET' && s.recht === 'lesen' && !uebergang) throw new Fachfehler(403, t('meldungen.routen.dieser-api-schluessel-darf'));
     // #818 (Frage 9 von Sicherheit): API-Schlüssel bekommen nie Verwaltungsrechte – auch nicht von Verwaltenden.
     a.benutzer = { ...b, rolle: 'mitglied' };
     if (r.zugang === 'admin') throw new Fachfehler(403, t('konten.verwaltung.fehler.schluessel'));
@@ -2736,7 +2737,7 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
   const anmeldung = await konten.anmeldungZu(a.sitzung);
   a.benutzer = anmeldung?.benutzer;
   a.sitzungsDaten = anmeldung?.sitzung;
-  if (r.methode !== 'GET' && kopf('x-dms') !== '1') throw new Fachfehler(403, 'Anfrage ohne Kennung der Oberfläche abgelehnt.');
+  if (r.methode !== 'GET' && kopf('x-dms') !== '1') throw new Fachfehler(403, t('meldungen.routen.anfrage-ohne-kennung-der'));
   // Verwaltungsmodus (#819): Zustand der Sitzung auf dem Server. Aktivität = jede ändernde Anfrage oder eine, die die
   // Oberfläche nach einer Eingabe als „aktiv“ kennzeichnet – Abfragen im Hintergrund verlängern den Modus nicht.
   if (a.benutzer) {
@@ -2750,7 +2751,7 @@ export async function pruefeZugang(r: Route, a: Anfrage, kopf: (n: string) => st
   // #416: gilt erst für Sitzungen ab dem Einschalten der Pflicht; die Pflicht selbst lesen und ausschalten geht immer.
   if (konten.zweifaktor && !a.sitzungsDaten?.vertretungId && !r.pfad.startsWith('/api/konto/') && !pflichtZuruecknehmen(r, a)
     && (await konten.zweifaktor.fehlt(a.benutzer, a.sitzungsDaten?.erstellt))) {
-    throw new Fachfehler(403, 'Bitte zuerst die Zwei-Faktor-Anmeldung einrichten (Mein Konto).');
+    throw new Fachfehler(403, t('meldungen.routen.bitte-zuerst-die-zwei'));
   }
   if (r.zugang === 'admin') pruefeVerwaltung(r, a, konten);
 }

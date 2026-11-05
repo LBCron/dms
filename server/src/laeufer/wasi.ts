@@ -4,12 +4,13 @@
  * die Funktionen des DMS (Modul „dms“). Unbekannte WASI-Funktionen antworten mit ENOSYS.
  */
 import { randomFillSync } from 'node:crypto';
+import { t } from '../sprache';
 
 const ERFOLG = 0, EBADF = 8, EINVAL = 28, ENOSYS = 52, ESPIPE = 70, ENOTCAPABLE = 76;
 
 /** Wirft das Modul proc_exit, endet der Aufruf mit diesem Fehler. */
 export class WasiEnde extends Error {
-  constructor(public code: number) { super(`Das Modul hat sich mit Code ${code} beendet.`); }
+  constructor(public code: number) { super(t('meldungen.wasi.das-modul-hat-sich', { code })); }
 }
 
 /** Ausgaben auf stdout/stderr landen zeilenweise im Protokoll des Pakets (mit Obergrenze). */

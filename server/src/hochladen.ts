@@ -6,6 +6,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
 import type { Dateispeicher } from './dateispeicher';
 import { Fachfehler } from './fehler';
+import { t } from './sprache';
 
 /**
  * Hochladen als Strom (#746): Der Körper eines Uploads (bis 100 MB) geht Stück für Stück in eine temporäre Datei,
@@ -69,7 +70,7 @@ export async function nimmAuf(quelle: Readable, max: number, laenge?: number): P
     if (einstellung.vorher) await einstellung.vorher();
     await mkdir(einstellung.ordner, { recursive: true, mode: 0o700 });
   } finally { quelle.off('error', merke); }
-  if (frueh || (quelle.destroyed && !quelle.readableEnded)) throw new Fachfehler(400, 'Die Datei kam nicht vollständig an. Bitte noch einmal hochladen.');
+  if (frueh || (quelle.destroyed && !quelle.readableEnded)) throw new Fachfehler(400, t('meldungen.hochladen.die-datei-kam-nicht'));
   const pfad = join(einstellung.ordner, `${randomUUID()}.tmp`);
   const h = createHash('sha256');
   const kopf: Buffer[] = [];
@@ -104,12 +105,12 @@ export async function nimmAuf(quelle: Readable, max: number, laenge?: number): P
   } catch (e) {
     await rm(pfad, { force: true });
     if (e instanceof Fachfehler) throw e;
-    throw new Fachfehler(400, 'Die Datei kam nicht vollständig an. Bitte noch einmal hochladen.');
+    throw new Fachfehler(400, t('meldungen.hochladen.die-datei-kam-nicht'));
   }
   return new Hochgeladen(pfad, n, h.digest('hex'), Buffer.concat(kopf));
 }
 
-const zuGross = (max: number) => new Fachfehler(413, `Die Datei ist zu groß (höchstens ${Math.round(max / 1024 / 1024)} MB).`);
+const zuGross = (max: number) => new Fachfehler(413, t('meldungen.hochladen.die-datei-ist-zu', { round: Math.round(max / 1024 / 1024) }));
 
 /**
  * Inhalt beim Ablegen: ein Upload (temporäre Datei) oder ein Puffer (Postfach, Eingangsordner, PDF-Bearbeitung …).

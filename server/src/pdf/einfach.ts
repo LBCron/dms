@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 /**
  * Sehr kleiner PDF-Schreiber für Textseiten (Notfallblatt, #106) – ohne Bibliothek.
  * Standardschriften Helvetica und Courier mit WinAnsi-Kodierung (deutsche Umlaute, €, „“, –).
@@ -9,8 +10,8 @@ export interface Absatz { text: string; schrift?: Schrift; groesse?: number; /**
 
 const SCHRIFTEN: Record<Schrift, { name: string; breite: number }> = {
   normal: { name: 'Helvetica', breite: 0.52 },
-  fett: { name: 'Helvetica-Bold', breite: 0.56 },
-  mono: { name: 'Courier-Bold', breite: 0.6 },
+  fett: { name: t('meldungen.einfach.helvetica-bold'), breite: 0.56 },
+  mono: { name: t('meldungen.einfach.courier-bold'), breite: 0.6 },
 };
 const NR: Record<Schrift, string> = { normal: 'F1', fett: 'F2', mono: 'F3' };
 const BREITE = 595; const HOEHE = 842; const RAND = 56;

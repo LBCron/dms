@@ -32,6 +32,7 @@ import { SCHWAERZEN_MAX_SEITEN, wortIn, type Bereich, type SchwaerzSeite, type W
 import { exifAusrichtung, jpegMasse } from './bild';
 import { eigenerPuffer } from './puffer';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 /** Auflösung des Ergebnisses (PDF). */
 export const SCHWAERZEN_DPI = 150;
@@ -81,7 +82,7 @@ export function lagePasst(bildBreite: number, bildHoehe: number, seiteBreite: nu
 }
 
 function popplerFehler(e: unknown, was: string): never {
-  if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Fachfehler(503, 'poppler (pdftoppm/pdftotext) fehlt – hier lässt sich nicht schwärzen.');
+  if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Fachfehler(503, t('meldungen.schwaerzen.poppler-pdftoppm-pdftotext-fehlt'));
   throw new Fachfehler(422, `${was}: ${(e as Error).message}`);
 }
 
@@ -94,7 +95,7 @@ export async function arbeitsPdf(inhalt: Buffer, mime: string): Promise<Buffer> 
   if (mime === 'application/pdf') return inhalt;
   const doc = await PDFDocument.create({ updateMetadata: false });
   let bild;
-  try { bild = mime === 'image/png' ? await doc.embedPng(eigenerPuffer(inhalt)) : await doc.embedJpg(eigenerPuffer(inhalt)); } catch { throw new Fachfehler(422, 'Das Bild lässt sich nicht lesen.'); }
+  try { bild = mime === 'image/png' ? await doc.embedPng(eigenerPuffer(inhalt)) : await doc.embedJpg(eigenerPuffer(inhalt)); } catch { throw new Fachfehler(422, t('meldungen.schwaerzen.das-bild-laesst-sich')); }
   const seite = doc.addPage([bild.width, bild.height]);
   seite.drawImage(bild, { x: 0, y: 0, width: bild.width, height: bild.height });
   const d = mime === 'image/jpeg' ? DREHUNG_AUS_EXIF[exifAusrichtung(inhalt)] : undefined;
@@ -109,13 +110,13 @@ async function seitenlage(pdf: Buffer): Promise<number[]> {
     doc = await ladePdf(pdf, { updateMetadata: false });
     drehungen = doc.getPages().map((p) => ((p.getRotation().angle % 360) + 360) % 360);
   } catch (e) {
-    if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht schwärzen.');
-    throw new Fachfehler(422, 'Die Datei lässt sich nicht als PDF lesen.');
+    if (/encrypt/i.test((e as Error).message)) throw new Fachfehler(422, t('meldungen.schwaerzen.das-pdf-ist-mit'));
+    throw new Fachfehler(422, t('meldungen.schwaerzen.die-datei-laesst-sich'));
   }
-  if (doc.isEncrypted) throw new Fachfehler(422, 'Das PDF ist mit einem Passwort geschützt und lässt sich nicht schwärzen.');
+  if (doc.isEncrypted) throw new Fachfehler(422, t('meldungen.schwaerzen.das-pdf-ist-mit'));
   const n = drehungen.length;
-  if (!n) throw new Fachfehler(422, 'Das PDF hat keine Seiten.');
-  if (n > SCHWAERZEN_MAX_SEITEN) throw new Fachfehler(422, `Das PDF hat ${n} Seiten – schwärzen lassen sich höchstens ${SCHWAERZEN_MAX_SEITEN} auf einmal. Teile es vorher („Seiten“).`);
+  if (!n) throw new Fachfehler(422, t('meldungen.schwaerzen.das-pdf-hat-keine'));
+  if (n > SCHWAERZEN_MAX_SEITEN) throw new Fachfehler(422, t('meldungen.schwaerzen.das-pdf-hat-seiten', { n, SCHWAERZEN_MAX_SEITEN }));
   return drehungen;
 }
 
@@ -193,9 +194,9 @@ export async function analysiere(inhalt: Buffer, mime: string): Promise<Analyse>
     await writeFile(ein, pdf);
     const drehungen = await popplerDrehungen(ein, lage);
     let html: string;
-    try { html = await starte('pdftotext', ['-bbox', '-cropbox', '-enc', 'UTF-8', ein, '-']); } catch (e) { popplerFehler(e, 'Der Text ließ sich nicht lesen'); }
+    try { html = await starte('pdftotext', ['-bbox', '-cropbox', '-enc', 'UTF-8', ein, '-']); } catch (e) { popplerFehler(e, t('meldungen.schwaerzen.der-text-liess-sich')); }
     const seiten = liesBbox(html, drehungen);
-    if (seiten.length !== drehungen.length) throw new Fachfehler(422, 'Die Seiten des PDFs ließen sich nicht lesen.');
+    if (seiten.length !== drehungen.length) throw new Fachfehler(422, t('meldungen.schwaerzen.die-seiten-des-pdfs'));
     const mitText = seiten.filter((s) => !ohneText(s)).length;
     const quelle = !mitText ? 'keine' : mitText < seiten.length ? 'gemischt' : 'textebene';
     return { seiten, quelle };
@@ -213,7 +214,7 @@ export async function seitenbild(inhalt: Buffer, mime: string, nr: number, px = 
     await writeFile(ein, pdf);
     try {
       await starte('pdftoppm', ['-cropbox', '-f', String(nr), '-l', String(nr), '-scale-to', String(px), '-jpeg', '-jpegopt', 'quality=80', ein, join(dir, 's')]);
-    } catch (e) { popplerFehler(e, 'Die Seite ließ sich nicht anzeigen'); }
+    } catch (e) { popplerFehler(e, t('meldungen.schwaerzen.die-seite-liess-sich')); }
     const datei = (await readdir(dir)).find((n) => n.startsWith('s-') && n.endsWith('.jpg'));
     return datei ? await readFile(join(dir, datei)) : null;
   } finally {
@@ -270,10 +271,10 @@ async function kodiere(bilder: Roh[], format: 'jpeg' | 'png', grau: boolean, dir
   const endung = format === 'jpeg' ? '.jpg' : '.png';
   try {
     await starte('pdftoppm', ['-r', '72', ...(format === 'jpeg' ? ['-jpeg', '-jpegopt', `quality=${QUALITAET},optimize=y`] : ['-png']), '-aaVector', 'no', ...(grau ? ['-gray'] : []), ein, join(dir, tag)]);
-  } catch (e) { popplerFehler(e, 'Die Seiten ließen sich nicht neu aufbauen'); }
+  } catch (e) { popplerFehler(e, t('meldungen.schwaerzen.die-seiten-liessen-sich')); }
   const namen = (await readdir(dir)).filter((n) => n.startsWith(`${tag}-`) && n.endsWith(endung))
     .sort((a, b) => Number(a.slice(tag.length + 1, -endung.length)) - Number(b.slice(tag.length + 1, -endung.length)));
-  if (namen.length !== bilder.length) throw new Fachfehler(422, 'Die Seiten ließen sich nicht neu aufbauen.');
+  if (namen.length !== bilder.length) throw new Fachfehler(422, t('meldungen.schwaerzen.die-seiten-liessen-sich-2'));
   const r = await Promise.all(namen.map((n) => readFile(join(dir, n))));
   await Promise.all(namen.map((n) => rm(join(dir, n), { force: true })));
   await rm(ein, { force: true });
@@ -353,7 +354,7 @@ export async function schwaerze(inhalt: Buffer, mime: string, analyse: Analyse, 
   const pdf = await arbeitsPdf(inhalt, mime);
   const drehungen = await seitenlage(pdf);
   const n = drehungen.length;
-  if (analyse.seiten.length !== n) throw new Fachfehler(422, 'Die Seiten des Dokuments passen nicht zur Analyse.');
+  if (analyse.seiten.length !== n) throw new Fachfehler(422, t('meldungen.schwaerzen.die-seiten-des-dokuments'));
   const bild = mime !== 'application/pdf';
   const bleiben = verbleibende(analyse.seiten, bereiche);
   const dir = await mkdtemp(join(tmpdir(), 'dms-schwarz-'));
@@ -369,9 +370,9 @@ export async function schwaerze(inhalt: Buffer, mime: string, analyse: Analyse, 
       const e = Math.min(n, a + STAPEL - 1);
       try {
         await starte('pdftoppm', ['-cropbox', '-f', String(a), '-l', String(e), ...groessenArgs, ein, join(dir, 'r')]);
-      } catch (x) { popplerFehler(x, 'Die Seiten ließen sich nicht rendern'); }
+      } catch (x) { popplerFehler(x, t('meldungen.schwaerzen.die-seiten-liessen-sich-3')); }
       const namen = (await readdir(dir)).filter((x) => /^r-\d+\.ppm$/.test(x)).sort((p, q) => Number(p.slice(2, -4)) - Number(q.slice(2, -4)));
-      if (namen.length !== e - a + 1) throw new Fachfehler(422, 'Die Seiten ließen sich nicht rendern.');
+      if (namen.length !== e - a + 1) throw new Fachfehler(422, t('meldungen.schwaerzen.die-seiten-liessen-sich-4'));
       const roh: Roh[] = [];
       for (const [j, name] of namen.entries()) {
         const px = await readFile(join(dir, name));
@@ -381,7 +382,7 @@ export async function schwaerze(inhalt: Buffer, mime: string, analyse: Analyse, 
         // Liegt das Bild anders als die Seite der Analyse (hoch statt quer), lägen die Kästen daneben:
         // lieber abbrechen als eine Schwärzung ausgeben, unter der der Text sichtbar bleibt.
         const s = analyse.seiten[nr - 1];
-        if (!bild && !lagePasst(k.breite, k.hoehe, s.breite, s.hoehe)) throw new Fachfehler(422, `Seite ${nr}: Die Lage der Seite (Drehung) ist im PDF nicht eindeutig angegeben. Damit nichts sichtbar bleibt, wird nicht geschwärzt. Lade das PDF einmal neu gespeichert hoch (z. B. „Drucken als PDF“).`);
+        if (!bild && !lagePasst(k.breite, k.hoehe, s.breite, s.hoehe)) throw new Fachfehler(422, t('meldungen.schwaerzen.seite-die-lage-der', { nr }));
         maleSchwarz(px, k, bereiche.filter((x) => x.seite === nr));
         roh.push({ nr, px, k, grau: istGrau(px, k) });
       }
@@ -400,7 +401,7 @@ export async function schwaerze(inhalt: Buffer, mime: string, analyse: Analyse, 
     const zeichen = new Set(font.getCharacterSet());
     for (const [i, f] of fertig.entries()) {
       const m = jpegMasse(f.daten);
-      if (!m) throw new Fachfehler(422, 'Die Seiten ließen sich nicht neu aufbauen.');
+      if (!m) throw new Fachfehler(422, t('meldungen.schwaerzen.die-seiten-liessen-sich-2'));
       const b = (m.breite * 72) / dpi, h = (m.hoehe * 72) / dpi;
       const seite = doc.addPage([b, h]);
       const jpg = await doc.embedJpg(eigenerPuffer(f.daten));

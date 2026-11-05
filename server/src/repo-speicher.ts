@@ -14,6 +14,7 @@ import { aehnlichkeit, AEHNLICH_AB, falte, normal, suchbegriffe, teilwoerter, TI
 import { inSicht, type Sicht, type SichtDaten, type Zaehlquelle } from '../../shared/src/sichten';
 import { feldweise, StandVeraltet, type AuskunftLinkIntern, type PapierkorbEintrag, type Repo, type Rueckverweis, type SortierungIntern, type Synonymgruppe, type Verweis } from './repo';
 import { passt as passtLoesch, type LoeschDokument, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
+import { t } from './sprache';
 
 /** Trefferlisten (#75) immer in beiden Formen: Liste der Trefferlisten und Spalten der Standardliste. */
 const listen = (d: MappentypDaten) => ({ trefferlisten: structuredClone(trefferlistenVon(d)), trefferliste: [...standardliste(d).spalten] });
@@ -728,7 +729,7 @@ export function speicherRepo(): Repo {
       for (const { id, problem } of liste) {
         const offen = [...aufgaben.values()].find((a) => a.mappeId === id && a.art === 'passung' && !a.erledigt);
         if (problem) {
-          const text = `Passt nicht zur Definition: ${problem}`;
+          const text = t('meldungen.repospeicher.passt-nicht-zur-definition', { problem });
           if (offen) offen.text = text;
           else if (mappen.has(id)) {
             const nid = randomUUID();

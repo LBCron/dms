@@ -16,6 +16,7 @@ import type { Mappe, MappenBezug, Mappentyp } from '../../shared/src/model';
 import { NICHTS, type Rechte } from '../../shared/src/rechte';
 import { Fachfehler } from './fehler';
 import type { Kante } from './repo';
+import { t } from './sprache';
 
 export interface BaumQuelle {
   /** Mappentypen, die der Aufrufer überhaupt sehen darf (Zugriff.typen). */
@@ -48,7 +49,7 @@ async function setInPaketen(ids: string[], f: (teil: string[]) => Promise<Set<st
 }
 
 const kantenSchluessel = (k: Kante) => `${k.quelleId}|${k.feldKey}|${k.zielId}`;
-const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
+const NICHT_SICHTBAR = t('meldungen.baum.nicht-sichtbare-mappe');
 
 /**
  * Sammelt den Baum ab `startId`. 404, wenn es die Start-Mappe nicht gibt oder der Aufrufer sie nicht
@@ -57,7 +58,7 @@ const NICHT_SICHTBAR = 'nicht sichtbare Mappe';
 export async function sammleBaum(q: BaumQuelle, startId: string, opt: BaumOptionen): Promise<Baum> {
   const [start] = await q.mappen([startId]);
   if (!start || !q.typen.has(start.typId) || !(await q.lesbare([start.id])).has(start.id)) {
-    throw new Fachfehler(404, 'Diese Mappe gibt es nicht oder du darfst sie nicht sehen.', { verborgen: true });
+    throw new Fachfehler(404, t('meldungen.baum.diese-mappe-gibt-es'), { verborgen: true });
   }
   const ohne = new Set(opt.ohneTypen);
   const feldName = (typId: string | undefined, key: string) => (typId ? q.typen.get(typId)?.felder.find((f) => f.key === key)?.label : undefined) ?? key;

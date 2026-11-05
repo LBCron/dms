@@ -6,6 +6,8 @@ import { speicherEinstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
 import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Anmeldeschutz (#240): nach zu vielen Fehlversuchen sperren – je E-Mail-Adresse und IP (wie bisher)
@@ -54,25 +56,25 @@ const datum = (tag: string) => tag.split('-').reverse().join('.');
 /** Text der Sammelmeldung über die Sperren vor heute (#368). */
 export function sammelText(meldungen: Meldung[]): { betreff: string; text: string } {
   const tage = [...new Set(meldungen.map((m) => m.tag))].sort();
-  const zeitraum = tage.length === 1 ? `Am ${datum(tage[0])}` : `Vom ${datum(tage[0])} bis ${datum(tage[tage.length - 1])}`;
+  const zeitraum = t('meldungen.anmeldesperre.vom-bis', { anzahl: tage.length, datum: datum(tage[0]), datum2: datum(tage[tage.length - 1]) });
   const ips = meldungen.filter((m) => m.art === 'ip');
   const konten = meldungen.filter((m) => m.art === 'konto');
   const teile: string[] = [];
-  if (ips.length) teile.push(ips.length === 1 ? 'eine IP-Adresse' : `${ips.length} IP-Adressen`);
+  if (ips.length) teile.push(t('meldungen.anmeldesperre.ip-adressen', { anzahl: ips.length }));
   const kontenAnzahl = new Set(konten.map((m) => m.wer)).size;
-  if (kontenAnzahl) teile.push(kontenAnzahl === 1 ? 'ein Benutzerkonto' : `${kontenAnzahl} Benutzerkonten`);
-  const zeilen = [`${zeitraum} hat der Anmeldeschutz ${teile.join(' und ')} nach Fehlversuchen gesperrt.`, '', 'Angriffsversuche aus dem Internet sind normal; die Sperren passieren automatisch. Du musst nichts tun, solange du keine eigenen Adressen darunter findest.'];
+  if (kontenAnzahl) teile.push(t('meldungen.anmeldesperre.benutzerkonten', { anzahl: kontenAnzahl }));
+  const zeilen = [t('meldungen.anmeldesperre.hat-der-anmeldeschutz-nach', { zeitraum, teile: teile.join(' und ') }), '', t('meldungen.anmeldesperre.angriffsversuche-aus-dem-internet')];
   if (ips.length) {
     const top = [...ips].sort((a, b) => b.versuche - a.versuche).slice(0, 5);
-    zeilen.push('', ips.length > 5 ? 'Die fünf mit den meisten Fehlversuchen:' : 'Gesperrte Adressen:', ...top.map((m) => `- ${m.wer}: ${m.versuche} Fehlversuche (${datum(m.tag)})`));
+    zeilen.push('', ips.length > 5 ? t('meldungen.anmeldesperre.die-fuenf-mit-den') : t('meldungen.anmeldesperre.gesperrte-adressen'), ...top.map((m) => `- ${m.wer}: ${m.versuche} Fehlversuche (${datum(m.tag)})`));
   }
   if (konten.length) {
     const je = new Map<string, number>();
     for (const m of konten) je.set(m.wer, (je.get(m.wer) ?? 0) + 1);
-    zeilen.push('', 'Gesperrte Benutzerkonten (je E-Mail-Adresse und IP):', ...[...je].slice(0, 10).map(([wer, n]) => `- ${wer}${n > 1 ? ` (${n}×)` : ''}`));
+    zeilen.push('', t('meldungen.anmeldesperre.gesperrte-benutzerkonten-je-e'), ...[...je].slice(0, 10).map(([wer, n]) => `- ${wer}${n > 1 ? ` (${n}×)` : ''}`));
   }
-  zeilen.push('', 'Gesperrte Adressen entsperren: Werkbank → Anmeldeschutz.');
-  return { betreff: `Ablago: Anmeldeschutz – ${teile.join(' und ')} gesperrt`, text: zeilen.join('\n') };
+  zeilen.push('', t('meldungen.anmeldesperre.gesperrte-adressen-entsperren'));
+  return { betreff: t('meldungen.anmeldesperre.ablago-anmeldeschutz-gesperrt', { teile: teile.join(' und ') }), text: zeilen.join('\n') };
 }
 
 export interface IpSperre { ip: string; seit: string; bis: string | null; grund: string }
@@ -88,7 +90,7 @@ export function pruefeAusnahmen(liste: unknown): string[] {
   const roh = Array.isArray(liste) ? liste : String(liste ?? '').split(/[\s,;]+/);
   const aus = roh.map((x) => String(x).trim()).filter(Boolean);
   const schlecht = aus.filter((x) => { const [a, p] = x.split('/'); const f = isIP(a); return !f || (p !== undefined && !(Number.isInteger(Number(p)) && Number(p) >= 0 && Number(p) <= (f === 4 ? 32 : 128))); });
-  if (schlecht.length) throw new Fachfehler(422, `Ausnahmen: ${schlecht.join(', ')} ist keine IP-Adresse und kein Netz wie 192.168.0.0/16.`);
+  if (schlecht.length) throw new Fachfehler(422, t('meldungen.anmeldesperre.ausnahmen-ist-keine-ip', { schlecht: schlecht.join(', ') }));
   return aus.slice(0, 50);
 }
 
@@ -109,11 +111,11 @@ export function pruefeSperrEinstellung(x: unknown, alt: SperrEinstellung): Sperr
     const versuche = v.versuche === undefined ? a.versuche : Math.round(Number(v.versuche));
     const minuten = v.minuten === undefined ? a.minuten : Math.round(Number(v.minuten));
     if (!Number.isInteger(versuche) || versuche < 1 || versuche > 1000) throw new Fachfehler(422, `${name}: 1 bis 1000 Fehlversuche.`);
-    if (!Number.isInteger(minuten) || minuten < (dauerhaft ? 0 : 1) || minuten > 525_600) throw new Fachfehler(422, `${name}: Sperrdauer ${dauerhaft ? '0 (dauerhaft) ' : '1 '}bis 525.600 Minuten.`);
+    if (!Number.isInteger(minuten) || minuten < (dauerhaft ? 0 : 1) || minuten > 525_600) throw new Fachfehler(422, `${name}: Sperrdauer ${dauerhaft ? t('meldungen.anmeldesperre.0-dauerhaft') : '1 '}bis 525.600 Minuten.`);
     return { versuche, minuten };
   };
   return {
-    konto: grenze(o.konto, alt.konto, 'Je Konto und IP', false),
+    konto: grenze(o.konto, alt.konto, t('meldungen.anmeldesperre.je-konto-und-ip'), false),
     ip: grenze(o.ip, alt.ip, 'Je IP', true),
     ausnahmen: o.ausnahmen === undefined ? alt.ausnahmen : pruefeAusnahmen(o.ausnahmen),
     mail: o.mail === undefined ? alt.mail : o.mail === true,
@@ -204,13 +206,13 @@ export class Anmeldesperre {
     await this.lade();
     const a = norm(ip);
     if (this.ausgenommen(a)) return;
-    const t = this.jetzt();
+    const zahl = this.jetzt();
     const s = await this.zustand.lies(IP_SPERRE, a);
-    if (s) throw new Fachfehler(429, s.bis !== null ? `Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Gesperrt bis ${new Date(s.bis).toLocaleString('de-DE', { timeStyle: 'short', dateStyle: 'short' })}.` : 'Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Sie ist gesperrt, bis ein Administrator sie freigibt.');
+    if (s) throw new Fachfehler(429, s.bis !== null ? t('meldungen.anmeldesperre.von-dieser-adresse-kamen', { wert: new Date(s.bis).toLocaleString(gebietsschema(), { timeStyle: 'short', dateStyle: 'short' }) }) : t('meldungen.anmeldesperre.von-dieser-adresse-kamen-2'));
     const k = await this.zustand.lies(KONTO, `${a}|${email}`);
     if (k && k.anzahl >= this.e.konto.versuche && k.bis !== null) {
-      const min = Math.max(1, Math.ceil((k.bis - t) / MIN));
-      throw new Fachfehler(429, `Zu viele Fehlversuche. Bitte in ${min === 1 ? 'einer Minute' : `${min} Minuten`} erneut versuchen.`);
+      const min = Math.max(1, Math.ceil((k.bis - zahl) / MIN));
+      throw new Fachfehler(429, t('meldungen.anmeldesperre.zu-viele-fehlversuche-bitte', { anzahl: min }));
     }
   }
 
@@ -257,7 +259,7 @@ export class Anmeldesperre {
     await this.lade();
     const a = norm(ip);
     if (this.ausgenommen(a)) return;
-    const t = this.jetzt();
+    const zahl = this.jetzt();
     // Atomar gezählt (#744): Jeder Fehlversuch schiebt das Ende der Kontosperre hinaus (wie bisher).
     const { anzahl: n } = await this.zustand.zaehle(KONTO, `${a}|${email}`, this.e.konto.minuten * MIN, { gleitend: true });
     if (n === this.e.konto.versuche) {
@@ -268,11 +270,11 @@ export class Anmeldesperre {
     const fenster = (this.e.ip.minuten || 60) * MIN;
     const { anzahl: m } = await this.zustand.zaehle(IP_ZAEHLER, a, fenster);
     if (m < this.e.ip.versuche) return;
-    const grund = `${m} fehlgeschlagene Anmeldungen (zuletzt ${email || 'ohne E-Mail-Adresse'})`;
+    const grund = t('meldungen.anmeldesperre.fehlgeschlagene-anmeldungen-zuletzt', { m, wert: email || t('meldungen.anmeldesperre.ohne-e-mail-adresse') });
     // Nur einer legt die Sperre an (auch bei gleichzeitigen Anfragen in mehreren Prozessen).
-    if (!(await this.zustand.belege(IP_SPERRE, a, this.e.ip.minuten ? this.e.ip.minuten * MIN : null, { seit: new Date(t).toISOString(), grund }))) return;
+    if (!(await this.zustand.belege(IP_SPERRE, a, this.e.ip.minuten ? this.e.ip.minuten * MIN : null, { seit: new Date(zahl).toISOString(), grund }))) return;
     await this.zustand.loesche(IP_ZAEHLER, a);
-    log.warn('IP-Adresse gesperrt', { ip: a, versuche: m, bis: this.e.ip.minuten ? new Date(t + this.e.ip.minuten * MIN).toISOString() : 'bis entsperrt' });
+    log.warn('IP-Adresse gesperrt', { ip: a, versuche: m, bis: this.e.ip.minuten ? new Date(zahl + this.e.ip.minuten * MIN).toISOString() : 'bis entsperrt' });
     await this.vormerken({ art: 'ip', wer: a, versuche: m });
   }
 
@@ -296,7 +298,7 @@ export class Anmeldesperre {
     const schluessel = `${heute}|${email}`;
     if (trocken) return !(await this.zustand.lies(SOFORT, schluessel));
     if (!(await this.zustand.belege(SOFORT, schluessel, 2 * TAG_MS))) return false;
-    await this.anAdmins('Ablago: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Ablage aufbauen → Automatisierungen.`);
+    await this.anAdmins(t('meldungen.anmeldesperre.ablago-benutzerkonto-nach'), t('meldungen.anmeldesperre.fuer-kamen-von-falsche', { anzahl: this.e.konto.minuten, email, ip, versuche }));
     return true;
   }
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Benutzer } from '../../shared/src/model';
 import { Fachfehler } from './fehler';
+import { t } from './sprache';
 
 /**
  * Konsolenzugang (#244): Der Befehl `dms` im Container spricht mit dem laufenden Server – nicht mit
@@ -60,9 +61,9 @@ export function konsolenBenutzer(liste: Benutzer[], als: string | undefined): Be
   const admins = liste.filter((b) => b.aktiv && hatGesamt(b)).sort((x, y) => x.erstellt.localeCompare(y.erstellt));
   if (als) {
     const b = admins.find((x) => x.email.toLowerCase() === als.trim().toLowerCase());
-    if (!b) throw new Fachfehler(404, `Unter ${als} gibt es keine aktive Person mit „Gesamte Verwaltung“.`);
+    if (!b) throw new Fachfehler(404, t('meldungen.konsole.unter-gibt-es-keine', { als }));
     return b;
   }
-  if (!admins.length) throw new Fachfehler(409, 'Es gibt noch keine aktive Person mit „Gesamte Verwaltung“. Richte Ablago im Browser ein (oder nutze den Notfallzugang).');
+  if (!admins.length) throw new Fachfehler(409, t('meldungen.konsole.es-gibt-noch-keine'));
   return admins[0];
 }

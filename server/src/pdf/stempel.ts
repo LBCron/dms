@@ -16,6 +16,7 @@ import { Fachfehler } from '../fehler';
 import { eigenerPuffer } from './puffer';
 import { pdfSicher } from './text';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 export interface StempelAuftrag {
   /** Name (nur für Meldungen), Art und Inhalt der Datei: PDF, JPEG oder PNG. */
@@ -34,7 +35,7 @@ export async function stempelePdf(a: StempelAuftrag): Promise<Buffer> {
     doc = a.mime === 'application/pdf' ? await ladePdf(a.inhalt, { updateMetadata: false }) : await bildDokument(a.inhalt, a.mime === 'image/png');
   } catch (x) {
     const verschluesselt = /encrypt/i.test((x as Error).message);
-    throw new Fachfehler(422, verschluesselt ? `„${a.name}“ ist verschlüsselt und lässt sich darum nicht stempeln.` : `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);
+    throw new Fachfehler(422, verschluesselt ? t('meldungen.stempel.ist-verschluesselt-und-laesst', { name: a.name }) : t('meldungen.stempel.liess-sich-nicht-lesen', { name: a.name }));
   }
   // Kaputte Seiten (z. B. kreisförmiger Seitenbaum, falsche Inhalte) zeigen sich erst beim Zeichnen oder Speichern (#823):
   // dann dieselbe verständliche Meldung statt eines Fehlers aus pdf-lib.
@@ -43,7 +44,7 @@ export async function stempelePdf(a: StempelAuftrag): Promise<Buffer> {
     return Buffer.from(await doc.save({ useObjectStreams: !!a.objektstroeme }));
   } catch (x) {
     if (x instanceof Fachfehler) throw x;
-    throw new Fachfehler(422, `„${a.name}“ ließ sich nicht lesen und darum nicht stempeln.`);
+    throw new Fachfehler(422, t('meldungen.stempel.liess-sich-nicht-lesen', { name: a.name }));
   }
 }
 

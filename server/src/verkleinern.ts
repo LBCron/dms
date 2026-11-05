@@ -6,6 +6,7 @@ import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
 import { analysiereVerkleinern, verkleinerePdf, type VerkleinerErgebnis } from './pdf';
 import { ergebnisText, istStufe, mb, MIN_ERSPARNIS, STANDARD_STUFE, STUFEN, type Stufe } from '../../shared/src/verkleinern';
+import { t } from './sprache';
 
 const log = protokoll.modul('dokumente');
 
@@ -18,7 +19,7 @@ export function stufeAus(v: unknown): Stufe | null {
   if (v === true || v === 'true' || v === '1' || v === 'ja') return STANDARD_STUFE;
   if (istStufe(v)) return v;
   if (v === undefined || v === null || v === false || v === '' || v === 'false' || v === 'nein') return null;
-  throw new Fachfehler(422, 'verkleinern: bildschirm, standard oder druck.');
+  throw new Fachfehler(422, t('meldungen.verkleinern.verkleinern-bildschirm-standard-oder'));
 }
 
 /** Schätzung je Stufe – ohne etwas zu rechnen (schnell, für den Dialog). */

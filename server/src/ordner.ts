@@ -1,6 +1,7 @@
 import { statfs } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { aufVolume, geraetVon } from './tresor';
+import { t } from './sprache';
 
 /**
  * Feste Ordner im Container (#115). Wohin sie auf dem NAS zeigen, bestimmt allein das
@@ -20,8 +21,8 @@ export type OrdnerArt = keyof Ordner;
 
 export const ORDNER_NAMEN: Record<OrdnerArt, string> = { dateien: 'files', geheim: 'geheim', sicherung: 'sicherung' };
 export const ORDNER_TEXT: Record<OrdnerArt, string> = {
-  dateien: 'Dateien (Dokumente, Logos, Fehlerbilder)',
-  geheim: 'Schlüssel und Notfallzugang',
+  dateien: t('meldungen.ordner.dateien-dokumente-logos-fehlerbilder'),
+  geheim: t('meldungen.ordner.schluessel-und-notfallzugang'),
   sicherung: 'Sicherungen',
 };
 export const SCHLUESSELDATEI = 'dms.schluessel';
@@ -63,11 +64,11 @@ export function pruefeOrdner(env: Record<string, string | undefined>, standardWu
     const fest = v.datei ? join(ordner[v.art], v.datei) : ordner[v.art];
     if (gleich(wert, fest)) { ueberfluessig.push(v.name); continue; }
     const imContainer = v.datei ? join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art], v.datei) : join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art]);
-    const bisher = v.datei ? `den Ordner der Datei ${wert}` : wert;
+    const bisher = v.datei ? t('meldungen.ordner.den-ordner-der-datei', { wert }) : wert;
     fehler.push(
-      `${v.name}=${wert} wird nicht mehr unterstützt: Die Ordner im Container sind fest (${imContainer}). `
-      + `Ordne in der Compose-Datei das Volume, das bisher auf ${bisher} zeigte, dem Ordner ${join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art])} zu `
-      + `(z. B. - /volume1/docker/dms/${ORDNER_NAMEN[v.art]}:${join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art])}) und entferne ${v.name}.`,
+      t('meldungen.ordner.wird-nicht-mehr-unterstuetzt', { name: v.name, wert, imContainer })
+      + t('meldungen.ordner.ordne-in-der-compose', { bisher, CONTAINER_WURZEL: join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art]) })
+      + t('meldungen.ordner.z-b-volume1-docker', { ORDNER_NAMEN: ORDNER_NAMEN[v.art], CONTAINER_WURZEL: join(CONTAINER_WURZEL, ORDNER_NAMEN[v.art]), name: v.name }),
     );
   }
   return { ordner, ueberfluessig, fehler };

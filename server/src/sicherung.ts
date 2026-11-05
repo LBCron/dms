@@ -12,6 +12,8 @@ import { schreibeSicherung, sha256Von, ZWECK, type Eintrag } from './sicherungsf
 import { aufVolume, geraetVon } from './tresor';
 import type { EreignisAufruf } from './dienst';
 import { zeitzone } from '../../shared/src/region';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Sicherungen (#103–#105): Datenbank und Dateien zum selben Zeitpunkt, verschlüsselt mit dem
@@ -205,13 +207,13 @@ export function bereinigePlan(e: unknown, alt: Plan = PLAN_STANDARD): Plan {
   const zahl = (v: unknown, std: number, min: number, max: number) => {
     if (v === undefined || v === null || v === '') return std;
     const n = Number(v);
-    if (!Number.isFinite(n) || n < min || n > max) throw new Fachfehler(422, `Bitte eine Zahl zwischen ${min} und ${max} angeben.`);
+    if (!Number.isFinite(n) || n < min || n > max) throw new Fachfehler(422, t('meldungen.sicherung.bitte-eine-zahl-zwischen', { min, max }));
     return Math.trunc(n);
   };
   const uhrzeit = x.uhrzeit === undefined ? alt.uhrzeit : String(x.uhrzeit);
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, 'Die Uhrzeit bitte als HH:MM angeben, z. B. 02:00.');
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, t('meldungen.sicherung.die-uhrzeit-bitte-als'));
   const haeufigkeit = x.haeufigkeit === undefined ? alt.haeufigkeit : x.haeufigkeit === 'woechentlich' ? 'woechentlich' : x.haeufigkeit === 'taeglich' ? 'taeglich' : null;
-  if (!haeufigkeit) throw new Fachfehler(422, 'Häufigkeit: täglich oder wöchentlich.');
+  if (!haeufigkeit) throw new Fachfehler(422, t('meldungen.sicherung.haeufigkeit-taeglich-oder'));
   const a = (x.aufbewahrung ?? {}) as Record<string, unknown>;
   return {
     aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true,
@@ -271,8 +273,8 @@ export class Sicherung {
 
   /** Ein einziger Lauf zur Zeit (Sicherung, Prüfung, später Wiederherstellung). */
   belege(art: Lauf['art'], titel: string): Lauf {
-    if (this.laeuft()) throw new Fachfehler(409, `Es läuft bereits: ${this.lauf!.titel}. Bitte warten, bis das fertig ist.`);
-    if (titel !== 'Sicherung vor der Wiederherstellung' && this.sperre()) throw new Fachfehler(409, 'Gerade läuft eine Wiederherstellung oder Probe. Bitte warten, bis sie fertig ist.');
+    if (this.laeuft()) throw new Fachfehler(409, t('meldungen.sicherung.es-laeuft-bereits-bitte', { titel: this.lauf!.titel }));
+    if (titel !== 'Sicherung vor der Wiederherstellung' && this.sperre()) throw new Fachfehler(409, t('meldungen.sicherung.gerade-laeuft-eine-wiederherstellung'));
     this.lauf = { art, titel, status: 'laeuft', schritt: 'Vorbereiten', bytes: 0, gesamt: 0, gestartet: this.jetzt().toISOString() };
     return this.lauf;
   }
@@ -289,7 +291,7 @@ export class Sicherung {
     const neu = bereinigePlan({ ...(e as object), aktivSeit: undefined }, alt);
     neu.aktivSeit = neu.aktiv ? (alt.aktiv ? alt.aktivSeit : this.jetzt().toISOString()) : null;
     if (neu.aktiv && !alt.aktiv && !(await this.notfallblatt()).aktuell) {
-      throw new Fachfehler(409, 'Die automatische Sicherung lässt sich erst einschalten, wenn du das Notfallblatt heruntergeladen hast – denn nur mit dem Schlüssel darauf lässt sich eine Sicherung öffnen.');
+      throw new Fachfehler(409, t('meldungen.sicherung.die-automatische-sicherung-laesst'));
     }
     await this.q.einstellungen.schreibe('sicherung_plan', neu);
     log.info('Zeitplan der Sicherung geändert', { von, ...neu });
@@ -305,9 +307,9 @@ export class Sicherung {
     const x = (e ?? {}) as Record<string, unknown>;
     const alt = await this.probePlan();
     const uhrzeit = x.uhrzeit === undefined ? alt.uhrzeit : String(x.uhrzeit);
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, 'Die Uhrzeit bitte als HH:MM angeben, z. B. 04:00.');
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(uhrzeit)) throw new Fachfehler(422, t('meldungen.sicherung.die-uhrzeit-bitte-als-2'));
     const wochentag = x.wochentag === undefined ? alt.wochentag : Number(x.wochentag);
-    if (!Number.isInteger(wochentag) || wochentag < 1 || wochentag > 7) throw new Fachfehler(422, 'Wochentag: 1 (Montag) bis 7 (Sonntag).');
+    if (!Number.isInteger(wochentag) || wochentag < 1 || wochentag > 7) throw new Fachfehler(422, t('meldungen.sicherung.wochentag-1-montag-bis'));
     const neu: ProbePlan = { aktiv: x.aktiv === undefined ? alt.aktiv : x.aktiv === true, wochentag, uhrzeit };
     await this.q.einstellungen.schreibe('sicherung_probe_plan', neu);
     log.info('Zeitplan der Probe-Wiederherstellung geändert', { von, ...neu });
@@ -376,13 +378,13 @@ export class Sicherung {
   }
 
   private pfad(name: string) {
-    if (!/^[\w.-]+$/.test(name) || name.startsWith('.')) throw new Fachfehler(422, 'Ungültiger Name einer Sicherung.');
+    if (!/^[\w.-]+$/.test(name) || name.startsWith('.')) throw new Fachfehler(422, t('meldungen.sicherung.ungueltiger-name-einer-sicherung'));
     return join(this.ordner, `${name}${ENDUNG}`);
   }
 
   async loesche(name: string, von: string) {
     const p = this.pfad(name);
-    if (!(await stat(p).catch(() => null))) throw new Fachfehler(404, 'Diese Sicherung gibt es nicht (mehr).');
+    if (!(await stat(p).catch(() => null))) throw new Fachfehler(404, t('meldungen.sicherung.diese-sicherung-gibt-es'));
     await rm(p, { force: true });
     await rm(join(this.ordner, `${name}.json`), { force: true });
     await this.vergissExtern([name]);
@@ -392,13 +394,13 @@ export class Sicherung {
   /** Prüfsummen-Check: Ist die Datei unverändert seit dem Anlegen? */
   pruefe(name: string, von: string): Lauf {
     const p = this.pfad(name);
-    const lauf = this.belege('pruefsumme', `Prüfsumme von ${name}`);
+    const lauf = this.belege('pruefsumme', t('meldungen.sicherung.pruefsumme-von', { name }));
     void (async () => {
       try {
         const metaText = await readFile(join(this.ordner, `${name}.json`), 'utf8').catch(() => null);
         if (!metaText) throw new Error('Die Metadaten-Datei (.json) fehlt – ohne sie lässt sich die Prüfsumme nicht vergleichen.');
         const meta = JSON.parse(metaText) as { sha256: string };
-        lauf.schritt = 'Prüfsumme berechnen';
+        lauf.schritt = t('meldungen.sicherung.pruefsumme-berechnen');
         lauf.gesamt = (await stat(p)).size;
         const sha = await sha256Von(p, (n) => { lauf.bytes = n; });
         const ok = sha === meta.sha256;
@@ -458,19 +460,19 @@ export class Sicherung {
    */
   async starte(art: Sicherungsart, von: string): Promise<{ lauf: Lauf; fertig: Promise<Metadaten | null> }> {
     const schluessel = this.q.tresor.abgeleitet(ZWECK);
-    if (!schluessel || !this.q.tresor.fingerabdruck) throw new Fachfehler(409, 'Ohne Schlüssel keine Sicherung: Erzeuge ihn zuerst unter Werkbank → Verschlüsselung.');
+    if (!schluessel || !this.q.tresor.fingerabdruck) throw new Fachfehler(409, t('meldungen.sicherung.ohne-schluessel-keine-sicherung'));
     const plan = await this.plan();
     await mkdir(this.ordner, { recursive: true });
     try {
       const f = await statfs(this.ordner);
       const frei = f.bavail * f.bsize;
       if (frei < plan.mindestFreiGB * 1024 ** 3) {
-        const grund = `Zu wenig freier Speicherplatz im Sicherungsordner: ${(frei / 1024 ** 3).toFixed(1).replace('.', ',')} GB frei, mindestens ${plan.mindestFreiGB} GB eingestellt.`;
+        const grund = t('meldungen.sicherung.zu-wenig-freier-speicherplatz', { replace: (frei / 1024 ** 3).toFixed(1).replace('.', ','), mindestFreiGB: plan.mindestFreiGB });
         await this.merkeFehler(art, grund);
         throw new Fachfehler(507, grund);
       }
     } catch (e) { if (e instanceof Fachfehler) throw e; }
-    const lauf = this.belege('sicherung', art === 'automatisch' ? 'Automatische Sicherung' : art === 'vor-wiederherstellung' ? 'Sicherung vor der Wiederherstellung' : 'Sicherung');
+    const lauf = this.belege('sicherung', art === 'automatisch' ? t('meldungen.sicherung.automatische-sicherung') : art === 'vor-wiederherstellung' ? t('meldungen.sicherung.sicherung-vor-der-wiederherstellung') : 'Sicherung');
     const fertig = this.fuehreAus(lauf, art, von, schluessel);
     return { lauf, fertig };
   }
@@ -533,7 +535,7 @@ export class Sicherung {
         art, ausgeloestVon: von, beginn: beginn.toISOString(), ende: ende.toISOString(), dauerSekunden: Math.round((ende.getTime() - beginn.getTime()) / 1000),
         anzahl: { ...ergebnis.s.zaehler, dateien, tabellen: ergebnis.s.tabellen, fassungen, archivfassungen },
         groessen: { datenbankBytes, dateienBytes, sicherungBytes: ergebnis.g.bytes },
-        verschluesselung: { verfahren: 'AES-256-GCM, Schlüssel per HKDF-SHA256 aus dem Schlüssel der Werkbank abgeleitet, Inhalt gzip-komprimiert', fingerabdruck },
+        verschluesselung: { verfahren: t('meldungen.sicherung.aes-256-gcm-schluessel'), fingerabdruck },
         sha256: ergebnis.g.sha256,
         migrationen: ergebnis.s.migrationen,
       };
@@ -629,9 +631,9 @@ export class Sicherung {
   private async externZugang(paket: string, name: string): Promise<{ pfad: string; groesse: number; stand: ExternStand }> {
     const pfad = this.pfad(name);
     const s = await stat(pfad).catch(() => null);
-    if (!s?.isFile()) throw new Fachfehler(404, 'Diese Sicherung gibt es nicht (mehr) – sie wurde vermutlich von der Aufbewahrung entfernt.');
+    if (!s?.isFile()) throw new Fachfehler(404, t('meldungen.sicherung.diese-sicherung-gibt-es-2'));
     const stand = (await this.externStaende())[name]?.[paket];
-    if (!stand) throw new Fachfehler(403, 'Diese Sicherung wurde dem Paket nicht gemeldet (Ereignis sicherung.fertig) – lesen darf es nur diese.');
+    if (!stand) throw new Fachfehler(403, t('meldungen.sicherung.diese-sicherung-wurde-dem'));
     return { pfad, groesse: s.size, stand };
   }
 
@@ -639,7 +641,7 @@ export class Sicherung {
   async externMeta(paket: string, name: string): Promise<SchlankeMetadaten & { name: string }> {
     await this.externZugang(paket, name);
     const j = JSON.parse(await readFile(join(this.ordner, `${name}.json`), 'utf8').catch(() => 'null')) as unknown;
-    if (!j) throw new Fachfehler(404, 'Zu dieser Sicherung fehlen die Metadaten.');
+    if (!j) throw new Fachfehler(404, t('meldungen.sicherung.zu-dieser-sicherung-fehlen'));
     return { name, ...(istSchlank(j) ? j : schlankeMetadaten(j as Metadaten)) };
   }
 
@@ -648,8 +650,8 @@ export class Sicherung {
     const { pfad, groesse } = await this.externZugang(paket, name);
     const zahl = (v: unknown, std: number) => (v === undefined || v === '' ? std : Number(v));
     const ab = zahl(versatz, 0), n = zahl(laenge, STUECK_MAX);
-    if (!Number.isSafeInteger(ab) || ab < 0 || ab > groesse) throw new Fachfehler(422, `versatz: 0 bis ${groesse} (Größe der Datei).`);
-    if (!Number.isSafeInteger(n) || n < 1 || n > STUECK_MAX) throw new Fachfehler(422, `laenge: 1 bis ${STUECK_MAX} Bytes (8 MB).`);
+    if (!Number.isSafeInteger(ab) || ab < 0 || ab > groesse) throw new Fachfehler(422, t('meldungen.sicherung.versatz-0-bis-groesse', { groesse }));
+    if (!Number.isSafeInteger(n) || n < 1 || n > STUECK_MAX) throw new Fachfehler(422, t('meldungen.sicherung.laenge-1-bis-bytes', { STUECK_MAX }));
     const inhalt = Buffer.alloc(Math.min(n, groesse - ab));
     const f = await open(pfad, 'r');
     try { const { bytesRead } = await f.read(inhalt, 0, inhalt.length, ab); return { inhalt: inhalt.subarray(0, bytesRead), groesse }; }
@@ -664,11 +666,11 @@ export class Sicherung {
     if (!EXTERN_STATUS.includes(status)) throw new Fachfehler(422, `status: ${EXTERN_STATUS.join(', ')}.`);
     const pruefung = x.pruefung === undefined || x.pruefung === null ? undefined : x.pruefung as ExternPruefung;
     if (pruefung !== undefined && !EXTERN_PRUEFUNG.includes(pruefung)) throw new Fachfehler(422, `pruefung: ${EXTERN_PRUEFUNG.join(', ')}.`);
-    if (status === 'geprueft' && pruefung !== 'pruefsumme' && pruefung !== 'stichprobe') throw new Fachfehler(422, '„geprueft“ braucht pruefung: pruefsumme oder stichprobe. Nur die Größe bestätigt heißt „hochgeladen“ mit pruefung: groesse.');
-    if (status === 'hochgeladen' && (pruefung === 'pruefsumme' || pruefung === 'stichprobe')) throw new Fachfehler(422, 'Mit Prüfsumme oder Stichprobe geprüft heißt status: geprueft.');
+    if (status === 'geprueft' && pruefung !== 'pruefsumme' && pruefung !== 'stichprobe') throw new Fachfehler(422, t('meldungen.sicherung.geprueft-braucht-pruefung-pruefsumme'));
+    if (status === 'hochgeladen' && (pruefung === 'pruefsumme' || pruefung === 'stichprobe')) throw new Fachfehler(422, t('meldungen.sicherung.mit-pruefsumme-oder-stichprobe'));
     const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? ohneZugangsdaten(v.trim().replace(/\s+/g, ' ')).slice(0, max) : undefined);
     const grund = text(x.grund, 500);
-    if (status === 'fehlgeschlagen' && !grund) throw new Fachfehler(422, 'Bei „fehlgeschlagen“ bitte einen Grund angeben (grund).');
+    if (status === 'fehlgeschlagen' && !grund) throw new Fachfehler(422, t('meldungen.sicherung.bei-fehlgeschlagen-bitte-einen'));
     const zahl = (v: unknown) => (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : undefined);
     const neu: ExternStand = {
       status, ...(pruefung ? { pruefung } : {}), ...(grund ? { grund } : {}), ...(status === 'fehlgeschlagen' && x.endgueltig === true ? { endgueltig: true } : {}),
@@ -701,7 +703,7 @@ export class Sicherung {
     // Erfolg ohne Stand; schon erfolgreich; oder während des Aufrufs schon gemeldet (Pakete vor #636, PUT): nichts ändern.
     if (r.ok || erfolgreich(stand) || Date.parse(stand.am) >= r.beginn) return;
     const endgueltig = r.rc === 2;
-    const grund = ohneZugangsdaten((r.fehler ?? '').trim().replace(/\s+/g, ' ')).slice(0, 500) || 'Das Paket meldet einen Fehler ohne Text.';
+    const grund = ohneZugangsdaten((r.fehler ?? '').trim().replace(/\s+/g, ' ')).slice(0, 500) || t('meldungen.sicherung.das-paket-meldet-einen');
     await this.setzeExtern(name, paket, {
       status: endgueltig ? 'fehlgeschlagen' : 'laeuft', grund, ...(endgueltig ? { endgueltig: true } : {}),
       ...(stand.ziel ? { ziel: stand.ziel } : {}), ...(stand.bytes !== undefined ? { bytes: stand.bytes } : {}), ...(stand.gesamt !== undefined ? { gesamt: stand.gesamt } : {}),
@@ -715,7 +717,7 @@ export class Sicherung {
   async externAufgegeben(paket: string, name: string, fehler: string | null | undefined) {
     const stand = (await this.externStaende())[name]?.[paket];
     if (!stand || erfolgreich(stand)) return;
-    await this.setzeExtern(name, paket, { ...stand, status: 'fehlgeschlagen', endgueltig: true, grund: `Nach mehreren Versuchen aufgegeben: ${ohneZugangsdaten(stand.status === 'fehlgeschlagen' && stand.grund ? stand.grund : fehler ?? 'unbekannter Fehler').slice(0, 450)}`, am: this.jetzt().toISOString() });
+    await this.setzeExtern(name, paket, { ...stand, status: 'fehlgeschlagen', endgueltig: true, grund: t('meldungen.sicherung.nach-mehreren-versuchen-aufgegeben', { ohneZugangsdaten: ohneZugangsdaten(stand.status === 'fehlgeschlagen' && stand.grund ? stand.grund : fehler ?? t('meldungen.sicherung.unbekannter-fehler')).slice(0, 450) }), am: this.jetzt().toISOString() });
     log.error('Kopie außer Haus aufgegeben', { name, paket, fehler });
     void this.melde().catch(() => {});
   }
@@ -787,12 +789,12 @@ export class Sicherung {
     let vorfall: string | null = null; let betreff = ''; let text = '';
     if (z.fehler) {
       vorfall = `fehler:${z.fehler.am}`;
-      betreff = 'Ablago: Sicherung fehlgeschlagen';
-      text = `Die ${z.fehler.art === 'automatisch' ? 'automatische ' : ''}Sicherung am ${new Date(z.fehler.am).toLocaleString('de-DE', { timeZone: zeitzone() })} ist fehlgeschlagen:\n\n${z.fehler.grund}\n\n`;
+      betreff = t('meldungen.sicherung.ablago-sicherung-fehlgeschlagen');
+      text = t('meldungen.sicherung.die-sicherung-am-ist', { wert: z.fehler.art === 'automatisch' ? 'automatische ' : '', wert2: new Date(z.fehler.am).toLocaleString(gebietsschema(), { timeZone: zeitzone() }), grund: z.fehler.grund });
     } else if (z.planAktiv && z.zuAlt) {
       vorfall = `alt:${z.letzte?.ende ?? 'nie'}`;
-      betreff = 'Ablago: Die letzte Sicherung ist zu alt';
-      text = z.letzte ? `Die letzte erfolgreiche Sicherung ist vom ${new Date(z.letzte.ende).toLocaleString('de-DE', { timeZone: zeitzone() })} – älter als ${ZU_ALT_TAGE} Tage.\n\n` : 'Es gibt noch keine erfolgreiche Sicherung, obwohl die automatische Sicherung eingeschaltet ist.\n\n';
+      betreff = t('meldungen.sicherung.ablago-die-letzte-sicherung');
+      text = z.letzte ? t('meldungen.sicherung.die-letzte-erfolgreiche-sicherung', { wert: new Date(z.letzte.ende).toLocaleString(gebietsschema(), { timeZone: zeitzone() }), ZU_ALT_TAGE }) : t('meldungen.sicherung.es-gibt-noch-keine');
     }
     if (vorfall) return this.meldeVorfall('sicherung_gemeldet', vorfall, betreff, text);
     return this.meldeExtern(z.extern);
@@ -802,14 +804,14 @@ export class Sicherung {
   private async meldeExtern(x: Awaited<ReturnType<Sicherung['externZustand']>>): Promise<string | null> {
     if (!x) return null;
     const zielText = (id: string) => { const z = x.ziele.find((y) => y.id === id); return z ? `${z.name}${z.adresse ? ` (${ohneZugangsdaten(z.adresse)})` : z.ziel ? ` (${z.ziel})` : ''}` : id; };
-    const wann = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone() });
+    const wann = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { timeZone: zeitzone() });
     if (x.fehler?.stand.endgueltig) {
-      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, 'Ablago: Kopie außer Haus fehlgeschlagen',
-        `Die Sicherung vom ${wann(x.fehler.beginn)} ließ sich nicht außer Haus kopieren.\n\nZiel: ${zielText(x.fehler.paket)}\nGrund: ${x.fehler.stand.grund ?? 'unbekannt'}\n\nDie lokale Sicherung ist davon nicht betroffen.\n\n`);
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-fehler:${x.fehler.name}:${x.fehler.paket}`, t('meldungen.sicherung.ablago-kopie-ausser-haus'),
+        t('meldungen.sicherung.die-sicherung-vom-liess', { wann: wann(x.fehler.beginn), zielText: zielText(x.fehler.paket), wert: x.fehler.stand.grund ?? 'unbekannt' }));
     }
     if (x.zuAlt) {
-      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-alt:${x.letzte?.name ?? 'nie'}`, 'Ablago: Die letzte Kopie außer Haus ist zu alt',
-        `${x.letzte ? `Die letzte Kopie außer Haus ist von der Sicherung vom ${wann(x.letzte.beginn)}` : 'Es gibt noch keine Kopie außer Haus'} – neuere Sicherungen sind seit mehr als ${ZU_ALT_TAGE} Tagen nicht dort angekommen.\n\nZiel: ${x.ziele.map((z) => zielText(z.id)).join(', ')}\n${x.fehler?.stand.grund ? `Letzter Fehler: ${x.fehler.stand.grund}\n` : ''}\n`);
+      return this.meldeVorfall('sicherung_extern_gemeldet', `extern-alt:${x.letzte?.name ?? 'nie'}`, t('meldungen.sicherung.ablago-die-letzte-kopie'),
+        t('meldungen.sicherung.neuere-sicherungen-sind-seit', { wert: x.letzte ? t('meldungen.sicherung.die-letzte-kopie-ausser', { wann: wann(x.letzte.beginn) }) : t('meldungen.sicherung.es-gibt-noch-keine-2'), ZU_ALT_TAGE, map: x.ziele.map((z) => zielText(z.id)).join(', '), wert2: x.fehler?.stand.grund ? t('meldungen.sicherung.letzter-fehler', { grund: x.fehler.stand.grund }) : '' }));
     }
     return null;
   }
@@ -818,7 +820,7 @@ export class Sicherung {
     if ((await this.q.einstellungen.lies(schluessel)) === vorfall) return null;
     await this.q.einstellungen.schreibe(schluessel, vorfall);
     log.warn(betreff.replace('Ablago: ', ''), { vorfall });
-    try { await this.q.anAdmins?.(betreff, `${text}Details stehen in der Werkbank unter „Sicherung“ und im Protokoll (Modul sicherung).`); }
+    try { await this.q.anAdmins?.(betreff, t('meldungen.sicherung.details-stehen-in-der', { text })); }
     catch (e) { log.warn('Mail zur Sicherung nicht verschickt', { fehler: (e as Error).message }); }
     return vorfall;
   }

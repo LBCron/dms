@@ -17,6 +17,7 @@ import type { SchwaerzSeite } from '../../../shared/src/schwaerzen';
 import { liesBbox, popplerDrehungen } from './schwaerzen';
 import { eigenerPuffer } from './puffer';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 /** Was der Kern an einem PDF findet – Bewertung und Meldungen macht archivfassung.ts. */
 export interface PdfaBefund {
@@ -95,7 +96,7 @@ export async function liesPdfA(inhalt: Uint8Array): Promise<PdfaBefund> {
     else if (o instanceof PDFStream) {
       pruefe(o.dict);
       // Ein Strom mit /F holt seine Daten aus einer externen Datei.
-      if (o.dict.get(PDFName.of('F')) !== undefined && !(o.dict.get(PDFName.of('F')) instanceof PDFRef)) extern.add(text(o.dict.get(PDFName.of('F'))) ?? 'externe Datei');
+      if (o.dict.get(PDFName.of('F')) !== undefined && !(o.dict.get(PDFName.of('F')) instanceof PDFRef)) extern.add(text(o.dict.get(PDFName.of('F'))) ?? t('meldungen.archiv.externe-datei'));
     }
   }
   // Öffnen-Aktion: Sprungziele sind harmlos, Aktionen nicht.

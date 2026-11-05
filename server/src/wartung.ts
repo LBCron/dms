@@ -3,6 +3,8 @@ import { Fachfehler } from './fehler';
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
 import { zeitzone } from '../../shared/src/region';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Wartungsmodus (#102): Wiederherstellungen und Updates, ohne dass jemand gleichzeitig arbeitet.
@@ -102,8 +104,8 @@ export class Wartung {
 
   /** Meldung für Abgewiesene. */
   meldung(): string {
-    const ende = this.s.ende ? ` Voraussichtlich bis ${new Date(this.s.ende).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' })} Uhr.` : '';
-    return `Ablago wird gerade gewartet${this.s.text ? ` (${this.s.text})` : ''}.${ende} Bitte versuche es später noch einmal.`;
+    const ende = this.s.ende ? t('meldungen.wartung.voraussichtlich-bis-uhr', { wert: new Date(this.s.ende).toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' }) }) : '';
+    return t('meldungen.wartung.ablago-wird-gerade-gewartet', { wert: this.s.text ? ` (${this.s.text})` : '', ende });
   }
 
   async pruefe() {
@@ -144,23 +146,23 @@ export class Wartung {
     const text = typeof e.text === 'string' ? e.text.trim().slice(0, 200) : '';
     let ende: string | null = null;
     if (e.ende !== undefined && e.ende !== null && e.ende !== '') {
-      const t = Date.parse(String(e.ende));
-      if (!Number.isFinite(t)) throw new Fachfehler(422, 'Das erwartete Ende ist kein gültiger Zeitpunkt.');
-      ende = new Date(t).toISOString();
+      const zahl = Date.parse(String(e.ende));
+      if (!Number.isFinite(zahl)) throw new Fachfehler(422, t('meldungen.wartung.das-erwartete-ende-ist'));
+      ende = new Date(zahl).toISOString();
     }
     const sofort = e.sofort === true;
     const jetzt = this.jetzt();
     let beginn: number | null = null;
     if (!sofort && e.beginn !== undefined && e.beginn !== null && e.beginn !== '') {
       beginn = Date.parse(String(e.beginn));
-      if (!Number.isFinite(beginn)) throw new Fachfehler(422, 'Der Beginn ist kein gültiger Zeitpunkt.');
-      if (beginn <= jetzt.getTime()) throw new Fachfehler(422, 'Der Beginn liegt in der Vergangenheit. Für sofort bitte „Jetzt sofort sperren“ nutzen.');
-      if (beginn > jetzt.getTime() + 24 * 3600_000) throw new Fachfehler(422, 'Der Beginn darf höchstens 24 Stunden in der Zukunft liegen – ab der Ankündigung können sich nur noch Personen anmelden, die verwalten dürfen.');
-      if (ende && Date.parse(ende) <= beginn) throw new Fachfehler(422, 'Das erwartete Ende muss nach dem Beginn liegen.');
+      if (!Number.isFinite(beginn)) throw new Fachfehler(422, t('meldungen.wartung.der-beginn-ist-kein'));
+      if (beginn <= jetzt.getTime()) throw new Fachfehler(422, t('meldungen.wartung.der-beginn-liegt-in'));
+      if (beginn > jetzt.getTime() + 24 * 3600_000) throw new Fachfehler(422, t('meldungen.wartung.der-beginn-darf-hoechstens'));
+      if (ende && Date.parse(ende) <= beginn) throw new Fachfehler(422, t('meldungen.wartung.das-erwartete-ende-muss'));
     }
     const vorlauf = sofort ? 0 : beginn !== null ? Math.max(1, Math.round((beginn - jetzt.getTime()) / 60_000))
       : e.vorlauf === undefined || e.vorlauf === null || e.vorlauf === '' ? VORLAUF_STANDARD_MIN : Number(e.vorlauf);
-    if (!Number.isInteger(vorlauf) || vorlauf < 0 || vorlauf > 24 * 60) throw new Fachfehler(422, 'Die Vorlaufzeit muss zwischen 0 und 1440 Minuten liegen.');
+    if (!Number.isInteger(vorlauf) || vorlauf < 0 || vorlauf > 24 * 60) throw new Fachfehler(422, t('meldungen.wartung.die-vorlaufzeit-muss-zwischen'));
     if (this.s.stufe === 'aktiv') {
       this.s = { ...this.s, text, ende };
       await this.speichere();
@@ -182,7 +184,7 @@ export class Wartung {
   async automatisch(ausloeser: 'speicherplatz', text: string, vorlaufMin: number): Promise<boolean> {
     if (this.s.stufe !== 'aus') return false;
     const jetzt = this.jetzt();
-    this.s = { ...AUS, stufe: 'angekuendigt', text, aktivAb: new Date(jetzt.getTime() + vorlaufMin * 60_000).toISOString(), beginn: jetzt.toISOString(), von: 'Ablago (automatisch)', ausloeser };
+    this.s = { ...AUS, stufe: 'angekuendigt', text, aktivAb: new Date(jetzt.getTime() + vorlaufMin * 60_000).toISOString(), beginn: jetzt.toISOString(), von: t('meldungen.wartung.ablago-automatisch'), ausloeser };
     await this.speichere();
     log.warn('Wartungsmodus automatisch angekündigt', { ausloeser, text, aktivAb: this.s.aktivAb, vorlaufMinuten: vorlaufMin });
     if (!vorlaufMin) await this.aktiviere(ausloeser);
@@ -198,7 +200,7 @@ export class Wartung {
       await this.speichere();
       log.warn('Alle anderen Sitzungen beendet', { von: admin.email, beendet });
     } else {
-      await this.aktiviere(`„Alle jetzt abmelden“ von ${admin.email}`);
+      await this.aktiviere(t('meldungen.wartung.alle-jetzt-abmelden-von', { email: admin.email }));
     }
     return this.stand;
   }

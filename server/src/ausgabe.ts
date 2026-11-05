@@ -14,6 +14,7 @@ import { einzeilig, ersetzePlatzhalter, kannStempeln, platzhalterIn, type Gelten
 import { Fachfehler } from './fehler';
 import { bildAlsA4Pdf, seitenInfo, stempelePdf } from './pdf';
 import { mb, verkleinere, type Stufe } from './verkleinern';
+import { t } from './sprache';
 
 export interface Ausgabedatei { name: string; mime: string; inhalt: Buffer }
 /** Was mit der Kopie geschehen soll. Später: `schwaerzen` (#392). */
@@ -45,7 +46,7 @@ export function weitergabeWas(a: Ausgabe[] | null | undefined): string {
   const klein = a.filter((x) => x.verkleinert);
   const vorher = klein.reduce((s, x) => s + x.verkleinert!.vorher, 0), nachher = klein.reduce((s, x) => s + x.verkleinert!.nachher, 0);
   return [
-    gestempelt.length ? `mit Stempel „${text ?? ''}“` : '',
+    gestempelt.length ? t('meldungen.ausgabe.mit-stempel', { wert: text ?? '' }) : '',
     klein.length ? `verkleinert (${mb(vorher)} → ${mb(nachher)})` : '',
   ].filter(Boolean).join(', ');
 }
@@ -82,12 +83,12 @@ export async function fuerAusgabe(d: Ausgabedatei, w: Ausgabewunsch | null | und
       if (streng) throw x;
     }
   }
-  if (!g) return { ...d, stempeltext: null, verkleinert, ...(verkleinert || !w?.verkleinern ? {} : { unveraendert: d.mime === 'application/pdf' ? `„${d.name}“ lässt sich nicht nennenswert verkleinern.` : `„${d.name}“ ist kein PDF und wird nicht verkleinert.` }) };
+  if (!g) return { ...d, stempeltext: null, verkleinert, ...(verkleinert || !w?.verkleinern ? {} : { unveraendert: d.mime === 'application/pdf' ? t('meldungen.ausgabe.laesst-sich-nicht-nennenswert', { name: d.name }) : t('meldungen.ausgabe.ist-kein-pdf-und', { name: d.name }) }) };
   // 2. Stempeln (#394); {seite} und {seiten} ersetzt die PDF-Stelle je Seite (#799).
   const text = ersetzePlatzhalter(g.stempel.text, { datum: k.datum, empfaenger: g.empfaenger, benutzer: k.benutzer, mappe: k.mappe, archivnummer: k.archivnummer ?? null });
   if (!kannStempeln(d.mime)) {
-    const grund = `„${d.name}“ lässt sich nicht stempeln – das geht nur bei PDFs und Bildern (JPEG, PNG).`;
-    if (streng || g.pflicht) throw new Fachfehler(422, g.pflicht ? `${grund} Der Mappentyp verlangt beim Weitergeben einen Stempel.` : grund);
+    const grund = t('meldungen.ausgabe.laesst-sich-nicht-stempeln', { name: d.name });
+    if (streng || g.pflicht) throw new Fachfehler(422, g.pflicht ? t('meldungen.ausgabe.der-mappentyp-verlangt-beim', { grund }) : grund);
     return { ...d, stempeltext: null, unveraendert: grund };
   }
   // Gezeichnet wird in der PDF-Stelle (#541). Nach dem Verkleinern mit Objektströmen speichern, sonst wäre

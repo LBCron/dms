@@ -2,6 +2,8 @@ import { monitorEventLoopDelay } from 'node:perf_hooks';
 import type postgres from 'postgres';
 import { SCHLEIFE_GRENZE_MS, SCHLEIFE_MINUTEN } from '../../shared/src/systemlast';
 import { kontext, protokoll, type Kontext } from './protokoll';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Messung der Datenbankzugriffe (#11, #12).
@@ -153,17 +155,17 @@ export function zeitaufteilung(p: { eingang: number; start: number; ende: number
  * Header Server-Timing: vor, app (Handler), db (Anzahl in desc), rechte, json, gesamt; dazu zs, wenn
  * die Anfrage die Zahlen der Ansichten brauchte (#512): Dauer und in desc „treffer“ oder „neu“.
  */
-export function serverTiming(t: Zeitaufteilung, zs?: { art: string; ms: number }): string {
+export function serverTiming(zeitaufteilung2: Zeitaufteilung, zs?: { art: string; ms: number }): string {
   const d = (x: number) => x.toFixed(1);
-  return `vor;dur=${d(t.vor)}, app;dur=${d(t.app)}, db;dur=${d(t.db)};desc="${t.dbAnzahl}", rechte;dur=${d(t.rechte)}, json;dur=${d(t.json)}, gesamt;dur=${d(t.gesamt)}`
-    + (zs ? `, zs;dur=${d(zs.ms)};desc="${zs.art}"` : '');
+  return t('meldungen.messung.vor-dur-app-dur', { d: d(zeitaufteilung2.vor), d2: d(zeitaufteilung2.app), d3: d(zeitaufteilung2.db), dbAnzahl: zeitaufteilung2.dbAnzahl, d4: d(zeitaufteilung2.rechte), d5: d(zeitaufteilung2.json), d6: d(zeitaufteilung2.gesamt) })
+    + (zs ? t('meldungen.messung.zs-dur-desc', { d: d(zs.ms), art: zs.art }) : '');
 }
 
 /** Kurztext für Langläufer und Protokoll: „1.234 ms gesamt · vor 3 · Datenbank 120 (5) · …“. */
-export function aufteilungText(t: Zeitaufteilung): string {
-  const r = (x: number) => Math.round(x).toLocaleString('de-DE');
-  const aufb = Math.max(0, t.app - t.db - t.rechte);
-  return `${r(t.gesamt)} ms gesamt · Warten vor dem Handler ${r(t.vor)} · Datenbank ${r(t.db)} (${t.dbAnzahl}) · Rechte ${r(t.rechte)} · Aufbereitung ${r(aufb)} · JSON ${r(t.json)}`;
+export function aufteilungText(zeitaufteilung2: Zeitaufteilung): string {
+  const r = (x: number) => Math.round(x).toLocaleString(gebietsschema());
+  const aufb = Math.max(0, zeitaufteilung2.app - zeitaufteilung2.db - zeitaufteilung2.rechte);
+  return t('meldungen.messung.ms-gesamt-warten-vor', { r: r(zeitaufteilung2.gesamt), r2: r(zeitaufteilung2.vor), r3: r(zeitaufteilung2.db), dbAnzahl: zeitaufteilung2.dbAnzahl, r4: r(zeitaufteilung2.rechte), r5: r(aufb), r6: r(zeitaufteilung2.json) });
 }
 
 /* ---------- Auslastung: Verzögerung der Ereignisschleife (#477) ---------- */

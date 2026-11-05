@@ -7,6 +7,8 @@ import { spaltenDerSicht } from '../../shared/src/sichten';
 import type { Zelle } from './xlsx';
 import { mappenPdfZeichnen, type PdfMappenSeite } from './pdf';
 import { zeitzone } from '../../shared/src/region';
+import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 export type Spaltenart = 'liste' | 'alle';
 
@@ -34,8 +36,8 @@ export function spaltenKopf(k: string, typen: Mappentyp[]): string {
   return typen.map((t) => t.felder.find((f) => f.key === k)?.label).find(Boolean) ?? k;
 }
 
-const titelOder = (t: string | null | undefined) => (t && t.trim() ? t : 'Ohne Titel');
-const zeit = (iso: string) => new Date(iso).toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
+const titelOder = (eintrag: string | null | undefined) => (eintrag && eintrag.trim() ? eintrag : t('meldungen.export.ohne-titel'));
+const zeit = (iso: string) => new Date(iso).toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'short', timeStyle: 'short' });
 
 export interface Quelle { typen: Map<string, Mappentyp>; titel(id: string | null | undefined): string }
 
@@ -74,7 +76,7 @@ function wert(f: Feld, v: unknown, text: string): Zelle {
 
 /** Ordner- und Dateinamen ohne verbotene Zeichen. */
 export function sichererName(s: string, max = 80): string {
-  return (s.replace(/[\u0000-\u001f<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+/, '') || 'ohne Namen').slice(0, max).trim();
+  return (s.replace(/[\u0000-\u001f<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+/, '') || t('meldungen.export.ohne-namen')).slice(0, max).trim();
 }
 
 /** Eindeutige Namen: „a.pdf“, „a (2).pdf“ … */
@@ -119,7 +121,7 @@ async function mappenSeite(x: PdfMappe, q: Quelle): Promise<PdfMappenSeite> {
   }
   return {
     titel: titelOder(m.titel),
-    zeile: `${typ?.name ?? ''} · angelegt ${zeit(m.erstellt)}${m.erstelltVon ? ` von ${q.titel(m.erstelltVon)}` : ''} · geändert ${zeit(m.geaendert)}${m.geaendertVon ? ` von ${q.titel(m.geaendertVon)}` : ''}`,
+    zeile: t('meldungen.export.angelegt-geaendert', { wert: typ?.name ?? '', zeit: zeit(m.erstellt), wert2: m.erstelltVon ? t('meldungen.export.von', { titel: q.titel(m.erstelltVon) }) : '', zeit2: zeit(m.geaendert), wert3: m.geaendertVon ? t('meldungen.export.von', { titel: q.titel(m.geaendertVon) }) : '' }),
     register: bloecke, dokumente,
   };
 }
@@ -135,7 +137,7 @@ export async function mappenPdf(titel: string, mappen: PdfMappe[], q: Quelle, ue
   return mappenPdfZeichnen({
     titel,
     uebersicht: uebersicht && mappen.length ? {
-      zeile: `${mappen.length} ${mappen.length === 1 ? 'Mappe' : 'Mappen'} · ${zeit(new Date().toISOString())}`,
+      zeile: t('meldungen.export.mappen', { anzahl: mappen.length, zeit: zeit(new Date().toISOString()) }),
       kopf: uebersicht.spalten.map((k) => spaltenKopf(k, uebersicht.typen)),
       zeilen: mappen.map((m) => zeile(m.mappe, uebersicht.spalten, q).text),
     } : null,

@@ -53,14 +53,14 @@ export function pruefeObjektstroeme(daten: Uint8Array): void {
     const filter = /\/Filter\s*(\[[^\]]*\]|\/[A-Za-z0-9]+)/.exec(dict)?.[1]?.replace(/\s+/g, ' ').trim();
     if (!filter) { pruefeAngaben(dict, ende - start, objektstrom); summe += ende - start; continue; }
     if (filter !== '/FlateDecode' && filter !== '[/FlateDecode]' && filter !== '[ /FlateDecode ]') {
-      throw new Fachfehler(422, 'Das PDF ist ungewöhnlich verpackt (Objektstrom mit anderem Filter als FlateDecode) und wird nicht gelesen.');
+      throw new Fachfehler(422, t('meldungen.laden.das-pdf-ist-ungewoehnlich'));
     }
     let n: number;
     try {
       n = inflateSync(buf.subarray(start, ende), { maxOutputLength: OBJEKTSTROM_MAX, finishFlush: 2 /* Z_SYNC_FLUSH: Rest am Ende erlauben */ }).length;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE' || e instanceof RangeError) {
-        throw new Fachfehler(422, 'Das PDF entpackt sich auf ein Vielfaches seiner Größe und wird zum Schutz des Servers nicht gelesen.');
+        throw new Fachfehler(422, t('meldungen.laden.das-pdf-entpackt-sich'));
       }
       // Kaputt gepackt: pdf-lib entscheidet selbst – unmögliche Angaben lehnen wir trotzdem ab.
       pruefeAngaben(dict, Infinity, objektstrom);
@@ -68,7 +68,7 @@ export function pruefeObjektstroeme(daten: Uint8Array): void {
     }
     pruefeAngaben(dict, n, objektstrom);
     summe += n;
-    if (summe > OBJEKTSTROEME_MAX) throw new Fachfehler(422, 'Das PDF entpackt sich auf ein Vielfaches seiner Größe und wird zum Schutz des Servers nicht gelesen.');
+    if (summe > OBJEKTSTROEME_MAX) throw new Fachfehler(422, t('meldungen.laden.das-pdf-entpackt-sich'));
   }
 }
 

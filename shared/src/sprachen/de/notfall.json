@@ -1,1 +1,10 @@
-{}
+{
+  "notfall.oeffne-diesen-link-bis": "Öffne diesen Link bis {bis} Uhr im Browser und lege ein eigenes Passwort fest:",
+  "notfall.der-link-gilt-nur": "Der Link gilt nur einmal. Diese Datei löscht Ablago nach 15 Minuten selbst.",
+  "notfall.benenne-den-notfall-admin": "Benenne den Notfall-Admin danach in der Werkbank um oder deaktiviere ihn.",
+  "notfall.ablago-notfallzugang-angelegt": "Ablago: Notfallzugang angelegt",
+  "notfall.auf-dem-nas-wurde": "Auf dem NAS wurde eine RESCUE-Datei angelegt. Ablago hat daraufhin „{name}“ mit „Gesamte Verwaltung“ angelegt; der Anmeldelink steht nur in dieser Datei und gilt bis {bis} Uhr.\n\n",
+  "notfall.warst-du-das-nicht": "{wert}Warst du das nicht, deaktiviere den Benutzer sofort in der Werkbank unter „Benutzer“ und prüfe, wer Zugriff auf das NAS hat.",
+  "rescue.fuer": "{kennung} für „{name}“",
+  "rescue.erstellt": "Erstellt: {zeit}"
+}

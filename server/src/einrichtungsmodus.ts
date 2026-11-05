@@ -10,6 +10,7 @@ import { protokoll } from './protokoll';
 import { standKennung } from './system';
 import { hilfeAntwort, hilfeSenden } from './hilfe';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
+import { t } from './sprache';
 
 /**
  * Einrichtungsmodus (#119): Das DMS läuft ohne erreichbare Datenbank und liefert nur den
@@ -55,7 +56,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
     const err = e as Error & { statusCode?: number };
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ fehler: err.message });
     log.error('Fehler im Einrichtungsmodus', { fehler: err.stack ?? String(e) });
-    return reply.code(500).send({ fehler: 'Interner Fehler. Details stehen im Protokoll des Containers.' });
+    return reply.code(500).send({ fehler: t('meldungen.einrichtungsmodus.interner-fehler-details-stehen') });
   });
   app.addHook('onRequest', async (_req, reply) => { reply.header('cache-control', 'no-store'); });
   // Sicherheits-Header wie im Betrieb (#239).
@@ -70,7 +71,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
   const kopf = (req: { headers: Record<string, unknown> }, n: string) => (typeof req.headers[n] === 'string' ? req.headers[n] as string : undefined);
   /** Jede Änderung: Kennung der Oberfläche und Einrichtungscode. */
   const schutz = (req: { headers: Record<string, unknown> }) => {
-    if (kopf(req, 'x-dms') !== '1') throw new Fachfehler(403, 'Anfrage ohne Kennung der Oberfläche abgelehnt.');
+    if (kopf(req, 'x-dms') !== '1') throw new Fachfehler(403, t('meldungen.einrichtungsmodus.anfrage-ohne-kennung-der'));
     o.code.pruefe(kopf(req, 'x-einrichtungscode'));
   };
   const eingabe = (body: unknown) => anbindungAus((body as { anbindung?: unknown } | null)?.anbindung, vorbelegt);
@@ -115,7 +116,7 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
   // Konfigurationsdatei (#806) schon vor der Datenbank: füllt die Anbindung vor, angelegt wird nichts.
   app.post('/api/einrichtung/datei/lesen', async (req) => { schutz(req); return { ...liesEinrichtungsdatei((req.body as { text?: unknown } | null)?.text), hinweise: [] }; });
   // Alles andere: Verweis auf den Assistenten.
-  app.all('/api/*', async (_req, reply) => reply.code(503).header('retry-after', '30').send({ fehler: 'Ablago ist noch nicht eingerichtet: Es fehlt die Verbindung zur Datenbank. Öffne Ablago im Browser, um den Einrichtungsassistenten zu starten.' }));
+  app.all('/api/*', async (_req, reply) => reply.code(503).header('retry-after', '30').send({ fehler: t('meldungen.einrichtungsmodus.ablago-ist-noch-nicht') }));
 
   if (o.webDir && existsSync(o.webDir)) {
     await app.register(fastifyStatic, { root: o.webDir, wildcard: false });

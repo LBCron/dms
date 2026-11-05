@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import postgres from 'postgres';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Anbindung an die Datenbank (#119): eine Datei unter /data/geheim, führend vor DATABASE_URL.
@@ -73,15 +74,15 @@ export const gleicheVerbindung = (a: Anbindung, b: Anbindung) => a.host === b.ho
 /** Eingabe aus dem Formular prüfen; ein leeres Passwort heißt „wie bisher“. */
 export function anbindungAus(x: unknown, bisher: Anbindung | null): Anbindung {
   const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
-  const t = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-  const host = t(o.host), datenbank = t(o.datenbank), benutzer = t(o.benutzer);
+  const eintrag = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const host = eintrag(o.host), datenbank = eintrag(o.datenbank), benutzer = eintrag(o.benutzer);
   const port = Number(o.port ?? 5432);
   const fehler: Record<string, string> = {};
-  if (!host || /[\s/]/.test(host)) fehler.host = 'Rechnername oder IP-Adresse angeben, z. B. db.';
-  if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.port = 'Port zwischen 1 und 65535, meist 5432.';
-  if (!datenbank) fehler.datenbank = 'Name der Datenbank angeben, z. B. dms.';
-  if (!benutzer) fehler.benutzer = 'Benutzer der Datenbank angeben, z. B. dms.';
-  if (Object.keys(fehler).length) throw new Fachfehler(422, 'Bitte die markierten Angaben prüfen.', { felder: fehler });
+  if (!host || /[\s/]/.test(host)) fehler.host = t('meldungen.anbindung.rechnername-oder-ip-adresse');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) fehler.port = t('meldungen.anbindung.port-zwischen-1-und');
+  if (!datenbank) fehler.datenbank = t('meldungen.anbindung.name-der-datenbank-angeben');
+  if (!benutzer) fehler.benutzer = t('meldungen.anbindung.benutzer-der-datenbank-angeben');
+  if (Object.keys(fehler).length) throw new Fachfehler(422, t('meldungen.anbindung.bitte-die-markierten-angaben'), { felder: fehler });
   const passwort = typeof o.passwort === 'string' && o.passwort !== '' ? o.passwort : bisher?.passwort ?? '';
   return { host, port, datenbank, benutzer, passwort, ...(bisher?.mandant ? { mandant: bisher.mandant } : {}) };
 }
@@ -119,12 +120,12 @@ export function deute(e: unknown, a: Pick<Anbindung, 'host' | 'port' | 'datenban
   const x = e as { code?: string; message?: string; errno?: string };
   const code = x.code ?? x.errno ?? '';
   const technisch = `${code ? `${code}: ` : ''}${x.message ?? String(e)}`;
-  if (['ENOTFOUND', 'EAI_AGAIN'].includes(code)) return { art: 'nicht_erreichbar', text: `Den Rechner „${a.host}“ gibt es im Netz nicht. Heißt der Datenbank-Container anders? In der Compose-Vorlage heißt er „db“.`, technisch };
-  if (['ECONNREFUSED', 'ETIMEDOUT', 'CONNECT_TIMEOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'ECONNRESET'].includes(code)) return { art: 'nicht_erreichbar', text: `Der Datenbank-Server ${a.host}:${a.port} ist nicht erreichbar. Läuft der Datenbank-Container, und stimmt der Port (meist 5432)?`, technisch };
-  if (code === '28P01') return { art: 'anmeldung', text: `Das Passwort für den Benutzer „${a.benutzer}“ ist falsch. Es steht in der Compose-Datei bzw. der .env (POSTGRES_PASSWORD bzw. DB_PASSWORD).`, technisch };
-  if (code === '28000') return { art: 'anmeldung', text: `Der Benutzer „${a.benutzer}“ darf sich nicht anmelden (unbekannt oder vom Server nicht zugelassen). In der Compose-Vorlage heißt er „dms“.`, technisch };
-  if (code === '3D000') return { art: 'datenbank_fehlt', text: `Die Datenbank „${a.datenbank}“ gibt es auf dem Server noch nicht.`, technisch };
-  return { art: 'sonst', text: `Die Verbindung ist fehlgeschlagen: ${x.message ?? String(e)}`, technisch };
+  if (['ENOTFOUND', 'EAI_AGAIN'].includes(code)) return { art: 'nicht_erreichbar', text: t('meldungen.anbindung.den-rechner-gibt-es', { host: a.host }), technisch };
+  if (['ECONNREFUSED', 'ETIMEDOUT', 'CONNECT_TIMEOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'ECONNRESET'].includes(code)) return { art: 'nicht_erreichbar', text: t('meldungen.anbindung.der-datenbank-server-ist', { host: a.host, port: a.port }), technisch };
+  if (code === '28P01') return { art: 'anmeldung', text: t('meldungen.anbindung.das-passwort-fuer-den', { benutzer: a.benutzer }), technisch };
+  if (code === '28000') return { art: 'anmeldung', text: t('meldungen.anbindung.der-benutzer-darf-sich', { benutzer: a.benutzer }), technisch };
+  if (code === '3D000') return { art: 'datenbank_fehlt', text: t('meldungen.anbindung.die-datenbank-gibt-es', { datenbank: a.datenbank }), technisch };
+  return { art: 'sonst', text: t('meldungen.anbindung.die-verbindung-ist-fehlgeschlagen', { wert: x.message ?? String(e) }), technisch };
 }
 
 export async function pruefeAnbindung(a: Anbindung, verbinde: Verbinder = kurz): Promise<Pruefung> {
@@ -202,7 +203,7 @@ export class AnbindungVerwaltung {
     if (!p.ok) throw new Fachfehler(422, p.text, { pruefung: p });
     const leer = !p.eingerichtet || p.benutzer === 0;
     if (leer && (x as { leerBestaetigt?: unknown })?.leerBestaetigt !== true) {
-      throw new Fachfehler(409, 'In dieser Datenbank gibt es noch kein DMS. Nach dem Neustart beginnt dort die Einrichtung von vorn – bitte bestätigen.', { pruefung: p, leer: true });
+      throw new Fachfehler(409, t('meldungen.anbindung.in-dieser-datenbank-gibt'), { pruefung: p, leer: true });
     }
     await schreibeAnbindung(this.ordner, { ...a, mandant: leer ? undefined : this.laufend.mandant });
     this.gespeichert = a;

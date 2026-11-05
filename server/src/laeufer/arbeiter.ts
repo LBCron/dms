@@ -8,6 +8,7 @@
 import { parentPort, receiveMessageOnPort, workerData, type MessagePort } from 'node:worker_threads';
 import { SEITE, type Modulpruefung } from './modul';
 import { WasiEnde, wasiImporte } from './wasi';
+import { t } from '../sprache';
 
 export interface ArbeiterDaten {
   modul: WebAssembly.Module;
@@ -103,8 +104,8 @@ function lauf(d: ArbeiterDaten) {
     melde({ art: 'ende', rc, ergebnis, speicher: speicher.buffer.byteLength });
   } catch (e) {
     const fehler = e instanceof WasiEnde ? (e.code === 0 ? '' : e.message)
-      : e instanceof RangeError && /memory|stack/i.test(e.message) ? `Speichergrenze erreicht: ${e.message}`
-      : e instanceof WebAssembly.RuntimeError ? `Abbruch im Modul: ${e.message}` : (e as Error).message;
+      : e instanceof RangeError && /memory|stack/i.test(e.message) ? t('meldungen.arbeiter.speichergrenze-erreicht', { message: e.message })
+      : e instanceof WebAssembly.RuntimeError ? t('meldungen.arbeiter.abbruch-im-modul', { message: e.message }) : (e as Error).message;
     melde({ art: 'ende', rc: e instanceof WasiEnde ? e.code : null, ergebnis, speicher: speicher?.buffer.byteLength ?? 0, ...(fehler ? { fehler } : {}) });
   }
 }

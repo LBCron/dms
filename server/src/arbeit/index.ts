@@ -10,6 +10,7 @@ import { ladeArgumente } from '../laeufer/modul';
 import { dateiLeser, liesCgroup } from '../systemlast';
 import { Arbeiterpool, type PoolStand } from './pool';
 import type { Vorgaenge, Vorgang } from './vorgaenge';
+import { t } from '../sprache';
 
 export const ARBEITER_MAX = 16;
 /** Zeitgrenze je Auftrag. */
@@ -27,7 +28,7 @@ export function arbeiterAus(env: Record<string, string | undefined>, kerne = lie
   const roh = env.DMS_ARBEITER?.trim();
   if (!roh) return { groesse: vorgabeArbeiter(k), quelle: 'vorgabe', kerne: k };
   const n = Number(roh);
-  if (!Number.isInteger(n) || n < 0 || n > ARBEITER_MAX) return { groesse: vorgabeArbeiter(k), quelle: 'vorgabe', kerne: k, fehler: `DMS_ARBEITER=${roh} ist keine Zahl von 0 bis ${ARBEITER_MAX} und wird ignoriert.` };
+  if (!Number.isInteger(n) || n < 0 || n > ARBEITER_MAX) return { groesse: vorgabeArbeiter(k), quelle: 'vorgabe', kerne: k, fehler: t('meldungen.index.dms-arbeiter-ist-keine', { roh, ARBEITER_MAX }) };
   return { groesse: n, quelle: 'umgebung', kerne: k };
 }
 

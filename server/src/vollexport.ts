@@ -18,6 +18,7 @@ import { exportSpalten, sichererName, spaltenKopf, zeile } from './export';
 import { Fachfehler } from './fehler';
 import type { PapierkorbEintrag } from './repo';
 import { alsZeile, LOESCH_SPALTEN, type LoeschEintrag } from '../../shared/src/loeschprotokoll';
+import { t } from './sprache';
 
 /**
  * Vollexport aller Daten in offenen Formaten (#254): ein Ordner, lesbar ohne das DMS.
@@ -32,55 +33,55 @@ export const FORMATVERSION = 1;
  * Tabellen der Datenbank: Eine neue Tabelle ohne Eintrag hier lässt ihn fehlschlagen.
  */
 export const EXPORT_TABELLEN: Record<string, string> = {
-  haushalte: 'manifest.json (Haushalt)',
+  haushalte: t('meldungen.vollexport.manifest-json-haushalt'),
   mappentypen: 'struktur/mappentypen.json',
   sichten: 'struktur/sichten.json',
   nummernkreise: 'struktur/nummernkreise.json',
   pakete: 'struktur/pakete.json',
   designs: 'struktur/designs.json',
-  synonyme: 'struktur/synonyme.json (#356, gleichbedeutende Wörter der Suche)',
-  automatisierungen: 'struktur/automatisierungen.json (#674, Wenn · Und · Dann)',
-  automatisierung_fassungen: 'struktur/automatisierungen.json (#674, Änderungsverlauf je Automatisierung)',
-  automatisierung_laeufe: 'nicht enthalten: Läufe der Automatisierungen (#674, Protokoll, technisch)',
-  benutzer: 'struktur/benutzer.json (ohne Passwort-Hashes)',
-  benutzer_einstellungen: 'struktur/benutzer.json (einstellungen)',
-  mappen: 'daten/<typ>.csv, .jsonl, .xlsx und ablage/',
+  synonyme: t('meldungen.vollexport.struktur-synonyme-json-356'),
+  automatisierungen: t('meldungen.vollexport.struktur-automatisierungen-json-674'),
+  automatisierung_fassungen: t('meldungen.vollexport.struktur-automatisierungen-json-674-2'),
+  automatisierung_laeufe: t('meldungen.vollexport.nicht-enthalten-laeufe-der'),
+  benutzer: t('meldungen.vollexport.struktur-benutzer-json-ohne'),
+  benutzer_einstellungen: t('meldungen.vollexport.struktur-benutzer-json-einstellungen'),
+  mappen: t('meldungen.vollexport.daten-typ-csv-jsonl'),
   verweise: 'daten/verweise.csv',
-  dokumente: 'daten/dokumente.csv und ablage/',
-  dokument_versionen: 'daten/dokumente.csv und ablage/…/Versionen/',
+  dokumente: t('meldungen.vollexport.daten-dokumente-csv-und'),
+  dokument_versionen: t('meldungen.vollexport.daten-dokumente-csv-und-2'),
   notizen: 'daten/notizen.jsonl',
-  aufgaben: 'daten/aufgaben.jsonl und kalender/fristen.ics',
-  erinnerungen: 'daten/erinnerungen.jsonl und kalender/fristen.ics',
+  aufgaben: t('meldungen.vollexport.daten-aufgaben-jsonl-und'),
+  erinnerungen: t('meldungen.vollexport.daten-erinnerungen-jsonl-und'),
   historie: 'daten/historie.jsonl',
   favoriten: 'daten/favoriten.csv',
   papierkorb: 'daten/papierkorb.jsonl',
-  papierkorb_dokumente: 'daten/papierkorb-dokumente.jsonl (ohne Datei)',
-  loeschprotokoll: 'daten/loeschprotokoll.csv (#470, Nachweis gelöschter Mappen und Dokumente ohne Inhalte)',
+  papierkorb_dokumente: t('meldungen.vollexport.daten-papierkorb-dokumente-jsonl'),
+  loeschprotokoll: t('meldungen.vollexport.daten-loeschprotokoll-csv-470'),
   vertretungen: 'daten/vertretungen.jsonl',
-  aufgaben_ohne_leserecht: 'nicht enthalten: Aufgaben bei Personen ohne Leserecht (#798, Übersicht für den Admin; Vergabe und Entzug eines Leserechts auf Zeit stehen in daten/historie.jsonl)',
-  fehlermeldungen: 'nicht enthalten: gemeldete Fehler an die Administratoren (technisch)',
-  langlaeufer: 'nicht enthalten: Messwerte langsamer Datenbankzugriffe (technisch)',
-  einstellungen: 'nicht enthalten: Betriebseinstellungen mit Zugangsdaten (Mail, Postfächer, Schlüssel, Anmeldung); die Region (#726) steht in struktur/region.json',
-  api_schluessel: 'nicht enthalten: Geheimnisse',
-  paket_code: 'nicht enthalten: Code installierter Pakete (#338, steht im Paket selbst)',
-  paket_ereignisse: 'nicht enthalten: Ereignisse für Pakete mit Code (#338, technisch)',
-  passwort_links: 'nicht enthalten: Geheimnisse',
-  notfallcode: 'nicht enthalten: Notfallcode vom Notfallblatt (#815, nur ein Hash)',
-  auskunft_links: 'nicht enthalten: Abruf-Links von Auskünften (#455, Hashes; der Nachweis steht in daten/historie.jsonl)',
-  sitzungen: 'nicht enthalten: Anmeldungen',
-  kurzzustand: 'nicht enthalten: Zustand zwischen Anfragen (Fehlversuche, Sperren, Einmal-Tickets, #744)',
-  erkennungen: 'nicht enthalten: Ergebnis der Erkennung je Post (#336, wird aus dem Volltext neu berechnet)',
-  suchwoerter: 'nicht enthalten: Wörterverzeichnis der Suche (#356, abgeleitet aus Titeln, Werten und Volltexten)',
-  suchwoerter_eingang: 'nicht enthalten: neue Wörter für das Wörterverzeichnis, noch nicht übernommen (#575, abgeleitet)',
-  vektoren: 'nicht enthalten: Vektoren zu Dokumenten (#442, abgeleitet – das Paket mit dms:vektoren rechnet sie neu)',
-  gesehen: 'nicht enthalten: wann ein Benutzer eine Mappe zuletzt geöffnet hat (#422, nur für die Hervorhebung geänderter Mappen)',
-  zaehlerstaende: 'nicht enthalten: Stand der Zahlen je Benutzer für den Zähler-Endpunkt (#625, nur ein Hash der Zahlen, technisch)',
-  haushaltsstand: 'nicht enthalten: Stand der Zwischenspeicher (#741, #742, nur zwei Zahlen, technisch)',
-  webhooks: 'nicht enthalten: Webhooks der Benutzer (#627, Adresse und verschlüsseltes Geheimnis – Zugangsdaten)',
-  webhook_meldungen: 'nicht enthalten: Ausgangskorb der Webhooks (#627, nur Zahlen, technisch)',
-  ereignisse: 'nicht enthalten: Ausgangskorb des Ereigniskatalogs (#670, nur Ids und Feldschlüssel, technisch)',
-  frist_meldungen: 'nicht enthalten: welche Fristen schon als „Frist erreicht“ gemeldet sind (#670, technisch)',
-  schema_migrationen: 'nicht enthalten: Stand der Datenbank (steht als Version im Manifest)',
+  aufgaben_ohne_leserecht: t('meldungen.vollexport.nicht-enthalten-aufgaben-bei'),
+  fehlermeldungen: t('meldungen.vollexport.nicht-enthalten-gemeldete-fehler'),
+  langlaeufer: t('meldungen.vollexport.nicht-enthalten-messwerte-langsamer'),
+  einstellungen: t('meldungen.vollexport.nicht-enthalten'),
+  api_schluessel: t('meldungen.vollexport.nicht-enthalten-geheimnisse'),
+  paket_code: t('meldungen.vollexport.nicht-enthalten-code-installierter'),
+  paket_ereignisse: t('meldungen.vollexport.nicht-enthalten-ereignisse-fuer'),
+  passwort_links: t('meldungen.vollexport.nicht-enthalten-geheimnisse'),
+  notfallcode: t('meldungen.vollexport.nicht-enthalten-notfallcode-vom'),
+  auskunft_links: t('meldungen.vollexport.nicht-enthalten-abruf-links'),
+  sitzungen: t('meldungen.vollexport.nicht-enthalten-anmeldungen'),
+  kurzzustand: t('meldungen.vollexport.nicht-enthalten-zustand-zwischen'),
+  erkennungen: t('meldungen.vollexport.nicht-enthalten-ergebnis-der'),
+  suchwoerter: t('meldungen.vollexport.nicht-enthalten-woerterverzeichnis'),
+  suchwoerter_eingang: t('meldungen.vollexport.nicht-enthalten-neue-woerter'),
+  vektoren: t('meldungen.vollexport.nicht-enthalten-vektoren-zu'),
+  gesehen: t('meldungen.vollexport.nicht-enthalten-wann-ein'),
+  zaehlerstaende: t('meldungen.vollexport.nicht-enthalten-stand-der'),
+  haushaltsstand: t('meldungen.vollexport.nicht-enthalten-stand-der-2'),
+  webhooks: t('meldungen.vollexport.nicht-enthalten-webhooks-der'),
+  webhook_meldungen: t('meldungen.vollexport.nicht-enthalten-ausgangskorb-der'),
+  ereignisse: t('meldungen.vollexport.nicht-enthalten-ausgangskorb-des'),
+  frist_meldungen: t('meldungen.vollexport.nicht-enthalten-welche-fristen'),
+  schema_migrationen: t('meldungen.vollexport.nicht-enthalten-stand-der-3'),
 };
 
 /** Kontaktfelder für vCard (#254): Feldschlüssel je Angabe; vom Administrator bestätigt. */
@@ -313,8 +314,8 @@ export interface ExportErgebnis {
 
 /** Phasen des Auftrags (#364): je Mappe ein Schritt, danach Listen, Kalender und Manifest. */
 export const VOLLEXPORT_PHASEN = [
-  { key: 'mappen', name: 'Mappen exportieren', einheit: 'Mappen' },
-  { key: 'abschluss', name: 'Listen und Prüfwerte schreiben', einheit: 'Schritte' },
+  { key: 'mappen', name: t('meldungen.vollexport.mappen-exportieren'), einheit: 'Mappen' },
+  { key: 'abschluss', name: t('meldungen.vollexport.listen-und-pruefwerte-schreiben'), einheit: 'Schritte' },
 ];
 
 export async function vollexport(q: ExportQuelle, ziel: string, opt: ExportOptionen, fortschritt: (fertig: number, gesamt: number, phase?: string) => void = () => {}, jetzt = new Date()): Promise<ExportErgebnis> {
@@ -395,14 +396,14 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
     await w.schreibe(`${rel}.pdfa.pdf`, a.inhalt);
     return `${rel}.pdfa.pdf`;
   };
-  for (const t of typen) {
-    const ms = jeTyp.get(t.id) ?? [];
-    const dateiname = sichererName(t.schluessel || t.name, 60);
+  for (const mappentyp of typen) {
+    const ms = jeTyp.get(mappentyp.id) ?? [];
+    const dateiname = sichererName(mappentyp.schluessel || mappentyp.name, 60);
     // CSV und JSON Lines: alle Felder, Verweise als Id und Titel.
-    const kopf = ['id', 'titel', 'angelegt', 'angelegt_von', 'geaendert', 'geaendert_von', ...(t.archiv ? ['aufbewahren_bis'] : []),
-      ...t.felder.flatMap((f) => (f.typ === 'referenz' ? [f.key, `${f.key}_titel`] : f.typ === 'betrag' ? [f.key, `${f.key}_waehrung`] : [f.key]))];
-    const csvZeileVon = (m: Mappe) => [m.id, m.titel ?? '', m.erstellt, m.erstelltVon ?? '', m.geaendert, m.geaendertVon ?? '', ...(t.archiv ? [aufbewahrenBis(t.archiv, m) ?? ''] : []),
-      ...t.felder.flatMap((f) => {
+    const kopf = ['id', 'titel', 'angelegt', 'angelegt_von', 'geaendert', 'geaendert_von', ...(mappentyp.archiv ? ['aufbewahren_bis'] : []),
+      ...mappentyp.felder.flatMap((f) => (f.typ === 'referenz' ? [f.key, `${f.key}_titel`] : f.typ === 'betrag' ? [f.key, `${f.key}_waehrung`] : [f.key]))];
+    const csvZeileVon = (m: Mappe) => [m.id, m.titel ?? '', m.erstellt, m.erstelltVon ?? '', m.geaendert, m.geaendertVon ?? '', ...(mappentyp.archiv ? [aufbewahrenBis(mappentyp.archiv, m) ?? ''] : []),
+      ...mappentyp.felder.flatMap((f) => {
         const v = m.werte[f.key];
         if (f.typ === 'passwort') return [istLeer(v) ? '' : '(gesetzt)'];
         if (f.typ === 'referenz') { const ids = Array.isArray(v) ? v.map(String) : v ? [String(v)] : []; return [ids.join(' | '), ids.map(titel).join(' | ')]; }
@@ -415,27 +416,27 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
     for (const m of ms) await c.schreibe(csvZeile(csvZeileVon(m)));
     await w.schliesse(c);
     const j = await w.oeffne(`daten/${dateiname}.jsonl`);
-    for (const m of ms) await j.schreibe(`${JSON.stringify({ ...m, werte: ohnePasswoerter(t, m.werte) })}\n`);
+    for (const m of ms) await j.schreibe(`${JSON.stringify({ ...m, werte: ohnePasswoerter(mappentyp, m.werte) })}\n`);
     await w.schliesse(j);
     // Excel wie beim normalen Export (#542) im Arbeiter: Zeilen mit Pausen aufbereiten und als Strom in eine Arbeitsdatei
     // schreiben, die der Arbeiter liest; sie liegt nur kurz im Export-Ordner, nur für den Dienstbenutzer lesbar (0600),
     // und wird danach gelöscht (bei einem Abbruch geht sie mit dem Ordner).
-    const spalten = exportSpalten([t], 'alle');
+    const spalten = exportSpalten([mappentyp], 'alle');
     const arbeitsdatei = join(ordner, `.tabelle-${dateiname}.jsonl`);
     const tab = new Zeilen('', arbeitsdatei, 0o600);
     try {
-      for (const m of ms) await tab.schreibe(`${JSON.stringify(zeile({ ...m, werte: ohnePasswoerter(t, m.werte) }, spalten, quelle).werte satisfies Zelle[])}\n`);
+      for (const m of ms) await tab.schreibe(`${JSON.stringify(zeile({ ...m, werte: ohnePasswoerter(mappentyp, m.werte) }, spalten, quelle).werte satisfies Zelle[])}\n`);
       await tab.ende();
-      await w.schreibe(`daten/${dateiname}.xlsx`, await arbeite('exportTabelleAusDatei', { titel: t.name, kopf: spalten.map((k) => spaltenKopf(k, [t])), datei: arbeitsdatei, zeitzone: zeitzone() }));
+      await w.schreibe(`daten/${dateiname}.xlsx`, await arbeite('exportTabelleAusDatei', { titel: mappentyp.name, kopf: spalten.map((k) => spaltenKopf(k, [mappentyp])), datei: arbeitsdatei, zeitzone: zeitzone() }));
     } finally {
       tab.abbrechen();
       await rm(arbeitsdatei, { force: true });
     }
-    if (ms.length) await w.schreibe(`uebersicht/${dateiname}.pdf`, () => q.pdf(t.name, ms.map((m) => ({ ...m, werte: ohnePasswoerter(t, m.werte) })), t, true));
+    if (ms.length) await w.schreibe(`uebersicht/${dateiname}.pdf`, () => q.pdf(mappentyp.name, ms.map((m) => ({ ...m, werte: ohnePasswoerter(mappentyp, m.werte) })), mappentyp, true));
 
     // Ablage: je Mappe ein Ordner. Dokumente, Volltexte, Versionen, Notizen, Aufgaben und Historie
     // je Paket von Mappen in einem Zugriff (#367) – nicht je Mappe oder Dokument.
-    const tOrdner = ordnerTyp(t.name);
+    const tOrdner = ordnerTyp(mappentyp.name);
     const mOrdner = namen();
     for (let i = 0; i < ms.length; i += EXPORT_PAKET) {
       const paket = ms.slice(i, i + EXPORT_PAKET);
@@ -450,14 +451,14 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
       const texte = new Map<string, string>();
       for (let j = 0; j < dokIds.length; j += VOLLTEXT_PAKET) for (const [k, v] of await q.volltexte(dokIds.slice(j, j + VOLLTEXT_PAKET))) texte.set(k, v);
       for (const m of paket) {
-        const pfad = `ablage/${tOrdner}/${mOrdner(`${m.titel || 'Ohne Titel'} [${m.id.slice(0, 8)}]`)}`;
+        const pfad = `ablage/${tOrdner}/${mOrdner(`${m.titel || t('meldungen.vollexport.ohne-titel')} [${m.id.slice(0, 8)}]`)}`;
         pfade.mappen.set(m.id, pfad);
-        await w.schreibe(`${pfad}/mappe.json`, json({ ...m, werte: ohnePasswoerter(t, m.werte), typ: t.name, ...(t.archiv ? { aufbewahrenBis: aufbewahrenBis(t.archiv, m) } : {}) }));
-        await w.schreibe(`${pfad}/mappe.pdf`, () => q.pdf(m.titel || t.name, [{ ...m, werte: ohnePasswoerter(t, m.werte) }], t, false));
-        for (const v of verweiseVon(t, m.werte)) { await verweise.schreibe(csvZeile([m.id, t.felder.find((f) => f.key === v.feldKey)?.label ?? v.feldKey, v.feldKey, v.zielId, titel(v.zielId)])); zahl.verweise++; }
+        await w.schreibe(`${pfad}/mappe.json`, json({ ...m, werte: ohnePasswoerter(mappentyp, m.werte), typ: mappentyp.name, ...(mappentyp.archiv ? { aufbewahrenBis: aufbewahrenBis(mappentyp.archiv, m) } : {}) }));
+        await w.schreibe(`${pfad}/mappe.pdf`, () => q.pdf(m.titel || mappentyp.name, [{ ...m, werte: ohnePasswoerter(mappentyp, m.werte) }], mappentyp, false));
+        for (const v of verweiseVon(mappentyp, m.werte)) { await verweise.schreibe(csvZeile([m.id, mappentyp.felder.find((f) => f.key === v.feldKey)?.label ?? v.feldKey, v.feldKey, v.zielId, titel(v.zielId)])); zahl.verweise++; }
         const dateiNamen = new Map<string, ReturnType<typeof namen>>();
         for (const d of dokJe.get(m.id) ?? []) {
-          const reg = t.register.find((r) => r.key === d.registerKey)?.name ?? d.registerKey;
+          const reg = mappentyp.register.find((r) => r.key === d.registerKey)?.name ?? d.registerKey;
           const regName = sichererName(reg, 60);
           if (!dateiNamen.has(regName)) dateiNamen.set(regName, namen());
           const dn = dateiNamen.get(regName)!(d.name);
@@ -481,12 +482,12 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
           if (a.datum && !a.erledigt) termine.push({ id: a.id, datum: a.datum, text: a.text, mappeId: a.mappeId });
         }
         for (const h of historieJe.get(m.id) ?? []) { await historieDatei.schreibe(`${JSON.stringify(h)}\n`); zahl.historie++; }
-        if (opt.passwoerter) for (const f of t.felder.filter((x) => x.typ === 'passwort' && typeof m.werte[x.key] === 'string' && m.werte[x.key] !== '')) {
+        if (opt.passwoerter) for (const f of mappentyp.felder.filter((x) => x.typ === 'passwort' && typeof m.werte[x.key] === 'string' && m.werte[x.key] !== '')) {
           const klar = q.passwort(m.werte[f.key]);
           if (klar === null) continue;
-          const nutzer = t.felder.find((x) => x.typ === 'text' && /benutzer|login|user|e-?mail|konto/i.test(`${x.key} ${x.label}`));
-          const url = t.felder.find((x) => x.typ === 'text' && /url|adresse|web|seite/i.test(`${x.key} ${x.label}`));
-          passwoerter.push([t.name, '', 'login', `${m.titel || 'Ohne Titel'}${t.felder.filter((x) => x.typ === 'passwort').length > 1 ? ` – ${f.label}` : ''}`, '', '', '0',
+          const nutzer = mappentyp.felder.find((x) => x.typ === 'text' && /benutzer|login|user|e-?mail|konto/i.test(`${x.key} ${x.label}`));
+          const url = mappentyp.felder.find((x) => x.typ === 'text' && /url|adresse|web|seite/i.test(`${x.key} ${x.label}`));
+          passwoerter.push([mappentyp.name, '', 'login', `${m.titel || t('meldungen.vollexport.ohne-titel')}${mappentyp.felder.filter((x) => x.typ === 'passwort').length > 1 ? ` – ${f.label}` : ''}`, '', '', '0',
             url ? auswahlText(m.werte[url.key]) : '', nutzer ? auswahlText(m.werte[nutzer.key]) : '', klar, '']);
         }
         weiter();
@@ -494,7 +495,7 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
     }
 
     // vCard (#254): nur mit bestätigter Zuordnung
-    const k = opt.kontakte?.[t.id];
+    const k = opt.kontakte?.[mappentyp.id];
     if (k && ms.length) {
       const wert = (m: Mappe, key?: string) => (key ? auswahlText(m.werte[key]) : '');
       const v = ms.map((m) => [
@@ -504,7 +505,7 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
         ...(wert(m, k.telefon) ? [`TEL:${ics(wert(m, k.telefon))}`] : []),
         ...(wert(m, k.adresse) ? [`ADR:;;${ics(wert(m, k.adresse))};;;;`] : []),
         ...(wert(m, k.notiz) ? [`NOTE:${ics(wert(m, k.notiz))}`] : []),
-        `UID:urn:uuid:${m.id}`, 'END:VCARD',
+        t('meldungen.vollexport.uid-urn-uuid', { id: m.id }), 'END:VCARD',
       ].map(falte).join('\r\n')).join('\r\n') + '\r\n';
       await w.schreibe(`kontakte/${dateiname}.vcf`, Buffer.from(v, 'utf8'));
     }
@@ -529,7 +530,7 @@ async function schreibeExport(q: ExportQuelle, w: Schreiber, name: string, opt: 
   const stempel = jetzt.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
   const ereignisse = [
     ...termine.map((a) => ({ id: a.id, datum: a.datum, titel: `${a.text}${titel(a.mappeId) ? ` – ${titel(a.mappeId)}` : ''}` })),
-    ...erinnerungen.map((e) => ({ id: e.id, datum: e.datum, titel: `${e.text || 'Erinnerung'}${titel(e.mappeId) ? ` – ${titel(e.mappeId)}` : ''}` })),
+    ...erinnerungen.map((e) => ({ id: e.id, datum: e.datum, titel: `${e.text || t('meldungen.vollexport.erinnerung')}${titel(e.mappeId) ? ` – ${titel(e.mappeId)}` : ''}` })),
   ];
   await w.schreibe('kalender/fristen.ics', Buffer.from(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DMS//Vollexport//DE', 'CALSCALE:GREGORIAN',
     ...ereignisse.flatMap((e) => ['BEGIN:VEVENT', `UID:${e.id}@dms`, `DTSTAMP:${stempel}`, `DTSTART;VALUE=DATE:${tag(e.datum)}`, `SUMMARY:${ics(e.titel)}`, 'END:VEVENT']),
@@ -644,14 +645,14 @@ export async function exporteIn(ziel: string, jetzt = new Date()): Promise<Expor
 
 const EXPORTNAME = /^dms-export-[\d-]+$/;
 export function exportOrdner(ziel: string, name: string) {
-  if (!EXPORTNAME.test(name)) throw new Fachfehler(404, 'Diesen Export gibt es nicht.');
+  if (!EXPORTNAME.test(name)) throw new Fachfehler(404, t('meldungen.vollexport.diesen-export-gibt-es'));
   return join(ziel, name);
 }
 
 /** Export prüfen: jede Datei aus dem Manifest gegen Größe und SHA-256. */
 export async function pruefeExport(ordner: string) {
   let m: { dateien: Eintrag[] };
-  try { m = JSON.parse(await readFile(join(ordner, 'manifest.json'), 'utf8')); } catch { throw new Fachfehler(404, 'Diesen Export gibt es nicht oder sein manifest.json fehlt.'); }
+  try { m = JSON.parse(await readFile(join(ordner, 'manifest.json'), 'utf8')); } catch { throw new Fachfehler(404, t('meldungen.vollexport.diesen-export-gibt-es-2')); }
   const fehlend: string[] = [], abweichend: string[] = [];
   for (const d of m.dateien) {
     const p = join(ordner, ...d.pfad.split('/'));

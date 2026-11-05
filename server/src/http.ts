@@ -34,6 +34,7 @@ import type { Wiederherstellung } from './wiederherstellung';
 import { MAX_DATEIGROESSE } from '../../shared/src/model';
 import { WEBDAV_METHODEN, WEBDAV_ZUSATZMETHODEN, type Webdav } from './webdav';
 import { anfrageStufe, dateiKoepfe, leseCookie, modulAus, pruefeZugang, routen, SITZUNG_COOKIE, sitzungsCookie, type Anfrage, type Route } from './routen';
+import { t } from './sprache';
 
 /** zeit (#477): Zeitpunkte der Anfrage (performance.now()) für Server-Timing. */
 type MitKontext = FastifyRequest & { dms?: Kontext; lesend?: boolean; zeit?: { eingang: number; start?: number; ende?: number; senden?: number }; nachher?: () => void };
@@ -56,7 +57,7 @@ export class Nachlauf {
     const p: Promise<void> = gesendet.then(() => kontext.run(k, async () => {
       clearTimeout(zeitgeber);
       for (const f of arbeit) {
-        try { await f(); } catch (e) { protokoll.schreibe('warn', 'http', 'Arbeit nach der Antwort fehlgeschlagen', { fehler: (e as Error).message }); }
+        try { await f(); } catch (e) { protokoll.schreibe('warn', 'http', t('meldungen.http.arbeit-nach-der-antwort'), { fehler: (e as Error).message }); }
       }
     }));
     this.laufend.add(p);
@@ -166,9 +167,9 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     const err = fehler as Error & { statusCode?: number };
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ fehler: err.message });
     const k = (req as MitKontext).dms;
-    const schreibe = () => protokoll.schreibe('error', modulAus(req.url), `Interner Fehler bei ${req.method} ${req.url.split('?')[0]}`, { fehler: err.stack ?? String(err) });
+    const schreibe = () => protokoll.schreibe('error', modulAus(req.url), t('meldungen.http.interner-fehler-bei', { method: req.method, split: req.url.split('?')[0] }), { fehler: err.stack ?? String(err) });
     if (k) kontext.run(k, schreibe); else schreibe();
-    return reply.code(500).send({ fehler: `Interner Fehler (Anfrage ${req.id}). Details stehen im Protokoll.` });
+    return reply.code(500).send({ fehler: t('meldungen.http.interner-fehler-anfrage-details', { id: req.id }) });
   });
 
   // Zeitmessung (#477): Eingang der Anfrage – das Warten bis zum Handler steht in Server-Timing als „vor“.
@@ -247,7 +248,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
           // Eigene Änderungen zeigen die Zahlen sofort (#742).
           k.benutzerId = a.benutzer?.id;
           // Protokoll (#819): jede Anfrage im Verwaltungsmodus mit Person und „im Verwaltungsmodus“.
-          k.benutzer = a.konsole ? `${a.benutzer?.email ?? 'ohne Verwaltungsrecht'} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? ' (im Verwaltungsmodus)' : ''}`;
+          k.benutzer = a.konsole ? `${a.benutzer?.email ?? t('meldungen.http.ohne-verwaltungsrecht')} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? t('meldungen.http.im-verwaltungsmodus') : ''}`;
           // Wartungsmodus (#102): API 503, in der aktiven Stufe nur Administratoren.
           // Die Konsole (#244) arbeitet auch im Wartungsmodus – etwa um ihn zu beenden.
           if (!a.konsole) opt.wartung?.pruefeAnfrage(r, a.benutzer);
@@ -343,7 +344,7 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
     await app.register(fastifyStatic, { root: opt.webDir, wildcard: false });
     // Alle Nicht-API-Pfade liefern die Oberfläche aus (Routing im Browser).
     app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith('/api/')) return reply.code(404).send({ fehler: 'Diese Schnittstelle gibt es nicht.' });
+      if (req.url.startsWith('/api/')) return reply.code(404).send({ fehler: t('meldungen.http.diese-schnittstelle-gibt-es') });
       const hilfe = hilfeAntwort(req.url, opt.webDir);
       if (hilfe) return hilfeSenden(reply, hilfe);
       return reply.sendFile('index.html');

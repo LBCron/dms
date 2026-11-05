@@ -16,7 +16,9 @@ import api from '../../shared/src/sprachen/de/api.json';
 import webhook from '../../shared/src/sprachen/de/webhook.json';
 import automatisierung from '../../shared/src/sprachen/de/automatisierung.json';
 import start from '../../shared/src/sprachen/de/start.json';
+import meldungen from '../../shared/src/sprachen/de/meldungen.json';
+import notfall from '../../shared/src/sprachen/de/notfall.json';
 
-export const t = uebersetzer({ api, anmeldung, einrichtung, konten, mail, mappen, pakete, start, systemzustand, webhook, werkbank });
+export const t = uebersetzer({ api, anmeldung, einrichtung, konten, mail, mappen, meldungen, notfall, pakete, start, systemzustand, webhook, werkbank });
 /** Texte der Automatisierungen (#678: Ergebnis der Dann-Karten, die der Server bereitstellt). */
 export const tAuto = uebersetzer({ automatisierung });

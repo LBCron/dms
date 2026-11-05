@@ -17,6 +17,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Fachfehler } from './fehler';
+import { t } from './sprache';
 
 export const DPI_MIN = 72;
 export const DPI_MAX = 400;
@@ -25,8 +26,8 @@ export const PUNKTE_MAX = 6000 * 6000;
 const ZEIT_MS = 60_000;
 
 export async function graubild(pdf: Buffer, nr: number, dpi: number, farbe = false): Promise<Buffer> {
-  if (!Number.isInteger(nr) || nr < 1) throw new Fachfehler(422, 'Seite: eine ganze Zahl ab 1.');
-  if (!Number.isInteger(dpi) || dpi < DPI_MIN || dpi > DPI_MAX) throw new Fachfehler(422, `dpi: zwischen ${DPI_MIN} und ${DPI_MAX}.`);
+  if (!Number.isInteger(nr) || nr < 1) throw new Fachfehler(422, t('meldungen.graubild.seite-eine-ganze-zahl'));
+  if (!Number.isInteger(dpi) || dpi < DPI_MIN || dpi > DPI_MAX) throw new Fachfehler(422, t('meldungen.graubild.dpi-zwischen-und', { DPI_MIN, DPI_MAX }));
   const dir = await mkdtemp(join(tmpdir(), 'dms-scan-'));
   try {
     await writeFile(join(dir, 'q.pdf'), pdf);
@@ -34,12 +35,12 @@ export async function graubild(pdf: Buffer, nr: number, dpi: number, farbe = fal
       execFile('pdftoppm', [...(farbe ? [] : ['-gray']), '-r', String(dpi), '-f', String(nr), '-l', String(nr), '-singlefile', join(dir, 'q.pdf'), join(dir, 's')],
         { timeout: ZEIT_MS, maxBuffer: 1 << 20 }, (e, _o, err) => {
           if (!e) return ok();
-          if ((e as NodeJS.ErrnoException).code === 'ENOENT') return fehler(new Fachfehler(503, 'pdftoppm fehlt – Seiten lassen sich hier nicht rastern.'));
-          fehler(/Wrong page range|first page/i.test(String(err)) ? new Fachfehler(404, `Seite ${nr} gibt es in diesem PDF nicht.`) : new Fachfehler(422, `Die Seite lässt sich nicht rastern: ${String(err).trim().slice(0, 200) || e.message}`));
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT') return fehler(new Fachfehler(503, t('meldungen.graubild.pdftoppm-fehlt-seiten-lassen')));
+          fehler(/Wrong page range|first page/i.test(String(err)) ? new Fachfehler(404, t('meldungen.graubild.seite-gibt-es-in', { nr })) : new Fachfehler(422, t('meldungen.graubild.die-seite-laesst-sich', { wert: String(err).trim().slice(0, 200) || e.message })));
         });
     });
-    const bild = await readFile(join(dir, farbe ? 's.ppm' : 's.pgm')).catch(() => { throw new Fachfehler(404, `Seite ${nr} gibt es in diesem PDF nicht.`); });
-    if (bild.length > PUNKTE_MAX * (farbe ? 3 : 1) + 64) throw new Fachfehler(422, `Die Seite ist bei ${dpi} dpi zu groß – bitte mit weniger dpi anfragen.`);
+    const bild = await readFile(join(dir, farbe ? 's.ppm' : 's.pgm')).catch(() => { throw new Fachfehler(404, t('meldungen.graubild.seite-gibt-es-in', { nr })); });
+    if (bild.length > PUNKTE_MAX * (farbe ? 3 : 1) + 64) throw new Fachfehler(422, t('meldungen.graubild.die-seite-ist-bei', { dpi }));
     return bild;
   } finally { await rm(dir, { recursive: true, force: true }); }
 }

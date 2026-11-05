@@ -109,7 +109,7 @@ if (lasttest.fehler) log.warn(lasttest.fehler);
 let lasttestAbbruch: string | null = null;
 
 // Unerwartete Fehler außerhalb von Anfragen nicht verschlucken.
-process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', 'Unbehandelter Fehler', { fehler: e instanceof Error ? e.stack : String(e) }));
+process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', t('meldungen.index.unbehandelter-fehler'), { fehler: e instanceof Error ? e.stack : String(e) }));
 
 for (const f of ordnerPruefung.fehler) console.error(f);
 if (ordnerPruefung.fehler.length) {
@@ -313,7 +313,7 @@ try {
   const u = await zieheExporteUm(alterExportOrdner(ordner), exporte.pfad);
   if (u.anzahl || u.uebrig) {
     await merkeUmzug(pgEinstellungen(sql, cfg.haushalt), u);
-    log[u.uebrig ? 'warn' : 'info']('Exporte aus dem Sicherungsordner in den Export-Ordner verschoben (unverschlüsselt, nicht für die Kopie der Sicherung)',
+    log[u.uebrig ? 'warn' : 'info'](t('meldungen.index.exporte-aus-dem-sicherungsordner'),
       { anzahl: u.anzahl, nach: exporte.pfad, ...(u.uebrig ? { uebrig: alterExportOrdner(ordner) } : {}) });
   }
 } catch (e) { log.warn('Exporte nicht aus dem Sicherungsordner verschoben', { fehler: (e as Error).message }); }
@@ -360,7 +360,7 @@ let eingangSperre: Promise<boolean> | null = null;
 const eingangsordner = new Eingangsordner(env.DMS_EINGANG ?? '/eingang', {
   dienst, einstellungen: pgEinstellungen(sql, cfg.haushalt),
   benutzer: () => konten.listeBenutzer(),
-  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? t('meldungen.index.wiederherstellung-laeuft') : null),
   sperre: () => (eingangSperre ??= (async () => {
     // Eine eigene Verbindung hält die Sperre, solange das DMS läuft.
     const v = await sql.reserve();
@@ -378,7 +378,7 @@ betrieb.verbindeOAuth(postfachOAuth);
 const postfaecher = new Postfaecher({
   dienst, einstellungen: pgEinstellungen(sql, cfg.haushalt), verbinde: verbindeImap, lies: liesMail, oauth: postfachOAuth,
   verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
-  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? t('meldungen.index.wiederherstellung-laeuft') : null),
   platz: () => speicherplatz.pruefeHochladen(),
   anAdmins: anVerwaltendeVon('postfaecher'),
   sperre: () => (postSperre ??= (async () => {
@@ -467,7 +467,7 @@ const webhooks = new Webhooks({
   verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
   zahlen: async (b) => { const r = await dienst.zaehlerAbruf(await dienst.zugriff(b)); return { ...r.zahlen, stand: r.stand, geaendert: r.geaendert }; },
   benutzer: (id) => konten.benutzerMitId(id),
-  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? t('meldungen.index.wiederherstellung-laeuft') : null),
   anAdmins: anVerwaltendeVon('webhooks'),
   anBesitzer: async (b, betreff, text) => { const m = betrieb.mailer(); if (m && b.email && !b.email.endsWith('.invalid')) await m.sende(b.email, betreff, text); },
   sperre: () => (webhookSperre ??= (async () => {
@@ -481,7 +481,7 @@ dienst.beiAenderung(() => webhooks.anstossen());
 // Automatisierungen (#674): Wenn · Und · Dann unter dem Systemkonto „Automatisierung“; Läufe je Ereignis genau einmal.
 const automatisierungen = new Automatisierungen({
   dienst, repo: messung.umhuelle(pgAutomatisierungRepo(sql, cfg.haushalt), 'automatisierungen'),
-  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? 'Wiederherstellung läuft' : null),
+  pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? t('meldungen.index.wiederherstellung-laeuft') : null),
 });
 // Fehlermeldungen der Benutzer (#70) – Screenshots getrennt von den Dokumenten.
 const fehlermeldungen = new Fehlermeldungen(pgFehlerRepo(sql, cfg.haushalt), ordnerSpeicher(ordner.dateien, `${cfg.haushalt}/fehlermeldungen`));
@@ -680,7 +680,7 @@ let intern: Server | null = null;
 if (lasttest.wahl) {
   start.schritt('lasttest');
   const skript = lasttestSkript(env, [pfad('../../lasttest/lasttest.mjs'), pfad('../test/lasttest.mjs')]);
-  if (!skript) lasttestAbbruch = 'Das Skript des Lasttests (dms-lasttest) fehlt in diesem Image.';
+  if (!skript) lasttestAbbruch = t('meldungen.index.das-skript-des-lasttests');
   else {
     await app.ready();
     const s = createServer(app.routing);

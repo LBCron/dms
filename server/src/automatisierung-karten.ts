@@ -5,6 +5,7 @@ import { uebersetzer } from '../../shared/src/sprache';
 import texte from '../../shared/src/sprachen/de/automatisierung.json';
 import { DANN_AUSFUEHRER, type KartenKontext } from './automatisierung';
 import { Fachfehler } from './fehler';
+import { t } from './sprache';
 
 /**
  * Dann-Karten der Automatisierungen, Stufe 1 (#676).
@@ -19,7 +20,7 @@ import { Fachfehler } from './fehler';
  *   die Aufgabe trotzdem an der Mappe, sieht aber nur einen Hinweis und die Fälligkeit (#798); der Admin sieht den Fall
  *   in der Werkbank. Der Testlauf nennt, wer etwas nicht sehen darf.
  */
-const t = uebersetzer({ automatisierung: texte });
+const uebersetzer2 = uebersetzer({ automatisierung: texte });
 
 /** Wert für ein Feld: Text mit Platzhaltern, Datum auch relativ zu heute; alles andere unverändert. */
 async function wertFuer(f: Feld, roh: unknown, c: KartenKontext): Promise<unknown> {
@@ -33,8 +34,8 @@ async function wertFuer(f: Feld, roh: unknown, c: KartenKontext): Promise<unknow
 }
 
 DANN_AUSFUEHRER.feld = async (k: DannKarte, c: KartenKontext) => {
-  if (k.art !== 'feld') throw new Fachfehler(500, 'falsche Karte');
-  if (!c.mappe || !c.typ) throw new Fachfehler(422, t('automatisierung.karte.feld.ohne-mappe'));
+  if (k.art !== 'feld') throw new Fachfehler(500, t('meldungen.automatisierungkarten.falsche-karte'));
+  if (!c.mappe || !c.typ) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.feld.ohne-mappe'));
   const werte: Record<string, unknown> = {};
   for (const [key, roh] of Object.entries(k.werte)) {
     const f = c.typ.felder.find((x) => x.key === key);
@@ -42,22 +43,22 @@ DANN_AUSFUEHRER.feld = async (k: DannKarte, c: KartenKontext) => {
     werte[key] = await wertFuer(f, roh, c);
   }
   const zeile = Object.entries(werte).map(([key, v]) => { const f = c.typ!.felder.find((x) => x.key === key)!; return `${f.label} = ${formatiere(f, v as never) || '–'}`; }).join(', ');
-  if (c.trocken) return t('automatisierung.karte.feld.trocken', { felder: zeile });
+  if (c.trocken) return uebersetzer2('automatisierung.karte.feld.trocken', { felder: zeile });
   await c.dienst.aendereMappe(c.mappe.id, { werte }, c.konto.id, c.z, c.anlass);
-  return t('automatisierung.karte.feld.ergebnis', { felder: zeile });
+  return uebersetzer2('automatisierung.karte.feld.ergebnis', { felder: zeile });
 };
 
 DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
-  if (k.art !== 'aufgabe') throw new Fachfehler(500, 'falsche Karte');
-  if (!c.mappe) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.ohne-mappe'));
+  if (k.art !== 'aufgabe') throw new Fachfehler(500, t('meldungen.automatisierungkarten.falsche-karte'));
+  if (!c.mappe) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.aufgabe.ohne-mappe'));
   const text = (await c.fuelle(k.text)).trim();
-  if (!text) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.leer'));
+  if (!text) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.aufgabe.leer'));
   const an = [...new Set((await Promise.all(k.empfaenger.map((e) => c.personen(e)))).flat())];
   // Nur Personen aus dem Ereignis und keine dabei (z. B. Abwesenheit ohne Vertreter): nichts zu tun, kein Fehler.
-  if (!an.length && k.empfaenger.length && k.empfaenger.every((e) => e.art === 'ereignis')) return t('automatisierung.karte.aufgabe.niemand-ereignis');
-  if (!an.length) throw new Fachfehler(422, t('automatisierung.karte.aufgabe.niemand'));
+  if (!an.length && k.empfaenger.length && k.empfaenger.every((e) => e.art === 'ereignis')) return uebersetzer2('automatisierung.karte.aufgabe.niemand-ereignis');
+  if (!an.length) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.aufgabe.niemand'));
   const datum = k.als === 'aufgabe' && k.faellig !== null && k.faellig !== undefined ? verschiebe(heuteIn(), k.faellig) : null;
-  const als = k.als === 'aufgabe' ? t('automatisierung.karte.aufgabe.als-aufgabe') : t('automatisierung.karte.aufgabe.als-benachrichtigung');
+  const als = k.als === 'aufgabe' ? uebersetzer2('automatisierung.karte.aufgabe.als-aufgabe') : uebersetzer2('automatisierung.karte.aufgabe.als-benachrichtigung');
   if (c.trocken) {
     // Testlauf (#795): je Empfänger mit seinen Rechten – wer etwas nicht sehen darf, steht dabei.
     const teils: string[] = []; const gar: string[] = [];
@@ -66,9 +67,9 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
       const f = await c.fuelleFuer(k.text, wer);
       if (!f.mappe) gar.push(await c.dienst.name(wer)); else if (f.verborgen) teils.push(await c.dienst.name(wer));
     }
-    return [t('automatisierung.karte.aufgabe.trocken', { als, anzahl: an.length, text }),
-      ...(teils.length ? [t('automatisierung.karte.aufgabe.trocken.nicht-sichtbar', { anzahl: teils.length, namen: teils.join(', ') })] : []),
-      ...(gar.length ? [t('automatisierung.karte.aufgabe.trocken.ohne-leserecht', { anzahl: gar.length, namen: gar.join(', ') })] : [])].join(' ');
+    return [uebersetzer2('automatisierung.karte.aufgabe.trocken', { als, anzahl: an.length, text }),
+      ...(teils.length ? [uebersetzer2('automatisierung.karte.aufgabe.trocken.nicht-sichtbar', { anzahl: teils.length, namen: teils.join(', ') })] : []),
+      ...(gar.length ? [uebersetzer2('automatisierung.karte.aufgabe.trocken.ohne-leserecht', { anzahl: gar.length, namen: gar.join(', ') })] : [])].join(' ');
   }
   // Anlass (#724): Die Aufgabe erledigt sich selbst, wenn er wegfällt. Aus „Datum erreicht“ wird sie eine Frist.
   const w = c.automatisierung.wenn;
@@ -87,35 +88,35 @@ DANN_AUSFUEHRER.aufgabe = async (k: DannKarte, c: KartenKontext) => {
     if (r.vorhanden) vorhanden++;
     if (!r.an) admins++;
   }
-  return ((an.length - vorhanden ? t('automatisierung.karte.aufgabe.ergebnis', { als, anzahl: an.length - vorhanden }) : '')
-    + (ohneLeserecht ? ` ${t('automatisierung.karte.aufgabe.ohne-leserecht', { anzahl: ohneLeserecht })}` : '')
-    + (vorhanden ? ` ${t('automatisierung.karte.aufgabe.vorhanden', { anzahl: vorhanden })}` : '')
-    + (admins ? ` ${t('automatisierung.karte.aufgabe.an-admins', { anzahl: admins })}` : '')).trim();
+  return ((an.length - vorhanden ? uebersetzer2('automatisierung.karte.aufgabe.ergebnis', { als, anzahl: an.length - vorhanden }) : '')
+    + (ohneLeserecht ? ` ${uebersetzer2('automatisierung.karte.aufgabe.ohne-leserecht', { anzahl: ohneLeserecht })}` : '')
+    + (vorhanden ? ` ${uebersetzer2('automatisierung.karte.aufgabe.vorhanden', { anzahl: vorhanden })}` : '')
+    + (admins ? ` ${uebersetzer2('automatisierung.karte.aufgabe.an-admins', { anzahl: admins })}` : '')).trim();
 };
 
 /* ---------- Benachrichtigungen (#678, Paket „Benachrichtigungen“) ---------- */
 
 DANN_AUSFUEHRER.zusammenfassung = async (k: DannKarte, c: KartenKontext) => {
-  if (k.art !== 'zusammenfassung') throw new Fachfehler(500, 'falsche Karte');
+  if (k.art !== 'zusammenfassung') throw new Fachfehler(500, t('meldungen.automatisierungkarten.falsche-karte'));
   const benutzer = typeof c.daten.benutzer === 'string' ? c.daten.benutzer : null;
-  if (!benutzer) throw new Fachfehler(422, t('automatisierung.karte.zusammenfassung.ohne-benutzer'));
-  if (!c.dienst.zusammenfassungAn) throw new Fachfehler(500, t('automatisierung.karte.zusammenfassung.fehlt'));
+  if (!benutzer) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.zusammenfassung.ohne-benutzer'));
+  if (!c.dienst.zusammenfassungAn) throw new Fachfehler(500, uebersetzer2('automatisierung.karte.zusammenfassung.fehlt'));
   const r = await c.dienst.zusammenfassungAn(benutzer, c.trocken);
   return r.grund;
 };
 
 DANN_AUSFUEHRER.favoriten = async (k: DannKarte, c: KartenKontext) => {
-  if (k.art !== 'favoriten') throw new Fachfehler(500, 'falsche Karte');
-  if (!c.mappe) throw new Fachfehler(422, t('automatisierung.karte.favoriten.ohne-mappe'));
+  if (k.art !== 'favoriten') throw new Fachfehler(500, t('meldungen.automatisierungkarten.falsche-karte'));
+  if (!c.mappe) throw new Fachfehler(422, uebersetzer2('automatisierung.karte.favoriten.ohne-mappe'));
   const von = typeof c.daten.von === 'string' ? c.daten.von : null;
-  if (!von) return t('automatisierung.karte.favoriten.niemand');
-  if (c.trocken) return t('automatisierung.karte.favoriten.trocken');
+  if (!von) return uebersetzer2('automatisierung.karte.favoriten.niemand');
+  if (c.trocken) return uebersetzer2('automatisierung.karte.favoriten.trocken');
   const n = await c.dienst.favoritenMelden(c.mappe.id, von);
-  return n ? t('automatisierung.karte.favoriten.ergebnis', { anzahl: n }) : t('automatisierung.karte.favoriten.niemand');
+  return n ? uebersetzer2('automatisierung.karte.favoriten.ergebnis', { anzahl: n }) : uebersetzer2('automatisierung.karte.favoriten.niemand');
 };
 
 DANN_AUSFUEHRER.anmeldeschutz = async (k: DannKarte, c: KartenKontext) => {
-  if (k.art !== 'anmeldeschutz') throw new Fachfehler(500, 'falsche Karte');
-  if (!c.dienst.anmeldeschutzMelden) throw new Fachfehler(500, t('automatisierung.karte.anmeldeschutz.fehlt'));
+  if (k.art !== 'anmeldeschutz') throw new Fachfehler(500, t('meldungen.automatisierungkarten.falsche-karte'));
+  if (!c.dienst.anmeldeschutzMelden) throw new Fachfehler(500, uebersetzer2('automatisierung.karte.anmeldeschutz.fehlt'));
   return (await c.dienst.anmeldeschutzMelden(k.was, c.daten, c.trocken)).grund;
 };

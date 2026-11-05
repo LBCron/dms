@@ -9,6 +9,7 @@ import { eigenerPuffer } from './puffer';
 import { A4, neuesDokument, PdfSchreiber, RAND } from './schreiber';
 import { groesseText, pdfSicher } from './text';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 export interface PdfMappenSeite {
   titel: string;
@@ -56,10 +57,10 @@ export async function mappenPdfZeichnen(daten: MappenPdfDaten): Promise<Buffer> 
     const hinweis: string[] = [];
     for (const d of m.dokumente) {
       const istBild = d.mime === 'image/jpeg' || d.mime === 'image/png';
-      if (d.mime !== 'application/pdf' && !istBild) { hinweis.push('nicht eingebunden'); continue; }
-      if (!d.inhalt) { hinweis.push('konnte nicht eingebunden werden'); continue; }
-      if (istBild) { bilder.push({ name: d.name, b: d.inhalt, png: d.mime === 'image/png' }); hinweis.push('als Bild eingebunden'); continue; }
-      try { pdfs.push(await ladePdf(d.inhalt, { ignoreEncryption: true, updateMetadata: false })); hinweis.push('eingebunden'); } catch { hinweis.push('konnte nicht eingebunden werden'); }
+      if (d.mime !== 'application/pdf' && !istBild) { hinweis.push(t('meldungen.export.nicht-eingebunden')); continue; }
+      if (!d.inhalt) { hinweis.push(t('meldungen.export.konnte-nicht-eingebunden-werden')); continue; }
+      if (istBild) { bilder.push({ name: d.name, b: d.inhalt, png: d.mime === 'image/png' }); hinweis.push(t('meldungen.export.als-bild-eingebunden')); continue; }
+      try { pdfs.push(await ladePdf(d.inhalt, { ignoreEncryption: true, updateMetadata: false })); hinweis.push('eingebunden'); } catch { hinweis.push(t('meldungen.export.konnte-nicht-eingebunden-werden')); }
     }
     const s = new PdfSchreiber(doc, f);
     s.neueSeite();

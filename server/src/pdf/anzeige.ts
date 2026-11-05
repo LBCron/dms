@@ -11,6 +11,7 @@
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFObject, PDFRef, PDFStream } from 'pdf-lib';
 import { eigenerPuffer } from './puffer';
 import { ladePdf } from './laden';
+import { t } from '../sprache';
 
 /** Aktionen, die beim Ansehen etwas ausführen, nachladen oder senden. URI, GoTo, Named u. a. bleiben. */
 const GEFAEHRLICHE_AKTIONEN = new Set(['JavaScript', 'Launch', 'SubmitForm', 'ImportData', 'GoToR', 'GoToE', 'GoToDp', 'Rendition', 'Sound', 'Movie', 'RichMediaExecute', 'GoTo3DView']);
@@ -76,7 +77,7 @@ export async function bereinigePdf(inhalt: Uint8Array): Promise<Bereinigt> {
   // Eingebettete Dateien (Ströme /Type /EmbeddedFile) sind nach dem Entfernen von /EF nicht mehr erreichbar; save()
   // schreibt trotzdem alle Objekte – deshalb leeren.
   for (const [ref, o] of ctx.enumerateIndirectObjects()) {
-    if (o instanceof PDFStream && name(o.dict.get(PDFName.of('Type'))) === 'EmbeddedFile') { ctx.delete(ref); entfernt.add('eingebettete Datei'); }
+    if (o instanceof PDFStream && name(o.dict.get(PDFName.of('Type'))) === 'EmbeddedFile') { ctx.delete(ref); entfernt.add(t('meldungen.anzeige.eingebettete-datei')); }
   }
   return { pdf: await doc.save({ updateFieldAppearances: false, useObjectStreams: false }), entfernt: [...entfernt].sort() };
 }

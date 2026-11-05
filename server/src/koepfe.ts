@@ -1,3 +1,4 @@
+import { t } from './sprache';
 /**
  * Sicherheits-Header für alle Antworten (#239): Schutz gegen Einbetten (Clickjacking),
  * MIME-Raten, verräterische Referrer; HSTS bei HTTPS; für die Oberfläche eine
@@ -20,19 +21,19 @@ export function einbettenAus(wert: string | undefined): Einbetten {
 
 /** Strenge Richtlinie für die Oberfläche: nur eigene Skripte; Inline-Styles erlaubt (Designs, React). */
 const OBERFLAECHE = [
-  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:",
-  "font-src 'self' data:", "connect-src 'self'", "frame-src 'self' blob:", "worker-src 'self' blob:",
-  "object-src 'none'", "base-uri 'self'", "form-action 'self'",
+  t('meldungen.koepfe.default-src-self'), t('meldungen.koepfe.script-src-self'), t('meldungen.koepfe.style-src-self-unsafe'), t('meldungen.koepfe.img-src-self-data'),
+  t('meldungen.koepfe.font-src-self-data'), t('meldungen.koepfe.connect-src-self'), t('meldungen.koepfe.frame-src-self-blob'), t('meldungen.koepfe.worker-src-self-blob'),
+  t('meldungen.koepfe.object-src-none'), t('meldungen.koepfe.base-uri-self'), t('meldungen.koepfe.form-action-self'),
 ];
 
 export interface Antwort { pfad: string; https: boolean; html: boolean; csp: boolean }
 
 export function sicherheitsKoepfe(a: Antwort, e: Einbetten): Record<string, string> {
-  const vorfahren = `frame-ancestors 'self'${e.urspruenge.map((u) => ` ${u}`).join('')}`;
+  const vorfahren = t('meldungen.koepfe.frame-ancestors-self', { map: e.urspruenge.map((u) => ` ${u}`).join('') });
   const k: Record<string, string> = {
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'same-origin',
-    'permissions-policy': 'geolocation=(), microphone=(), payment=(), usb=()',
+    'permissions-policy': t('meldungen.koepfe.geolocation-microphone-payment-usb'),
   };
   // X-Frame-Options kennt keine Liste – mit erlaubten Ursprüngen gilt nur frame-ancestors.
   if (!e.urspruenge.length) k['x-frame-options'] = 'SAMEORIGIN';

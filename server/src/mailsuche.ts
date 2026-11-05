@@ -2,6 +2,7 @@ import { Resolver } from 'node:dns/promises';
 import { anbieterFuerAdresse, anbieterFuerMx, anbieterFuerServer, domainVon, type MailAnbieterId, type MailVerbindung } from '../../shared/src/mailanbieter';
 import { Fachfehler } from './fehler';
 import { protokoll } from './protokoll';
+import { t } from './sprache';
 
 /**
  * Server und Port für den E-Mail-Versand aus der eigenen Adresse finden (#813) – in dieser Reihenfolge:
@@ -83,20 +84,20 @@ export function ausAutoconfig(xml: string): Omit<MailFund, 'quelle' | 'anbieter'
 
 async function liesDatei(d: SucheDeps, url: string, redirect: 'error' | 'follow', ms: number): Promise<string | null> {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ms);
+  const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    const r = await d.abruf(url, { signal: ctrl.signal, redirect, headers: { accept: 'application/xml, text/xml' } });
+    const r = await d.abruf(url, { signal: ctrl.signal, redirect, headers: { accept: t('meldungen.mailsuche.application-xml-text-xml') } });
     if (!r.ok) return null;
     const text = await r.text();
     return text.length > MAX_ANTWORT ? null : text;
-  } catch { return null; } finally { clearTimeout(t); }
+  } catch { return null; } finally { clearTimeout(timer); }
 }
 
 /** Server zur Adresse suchen. `thunderbird`: nur die Thunderbird-Datenbank fragen (auf Knopfdruck). */
 export async function sucheMailserver(email: unknown, o: { thunderbird?: boolean }, d: SucheDeps): Promise<MailSuche> {
   const adresse = typeof email === 'string' ? email.trim() : '';
   const domain = domainVon(adresse);
-  if (!domain) throw new Fachfehler(422, 'Bitte eine gültige E-Mail-Adresse angeben, z. B. lena@example.org.');
+  if (!domain) throw new Fachfehler(422, t('meldungen.mailsuche.bitte-eine-gueltige-e'));
   const ms = d.zeitMs ?? SUCHE_ZEIT_MS;
   const gefragt: string[] = [];
   const fund = (x: Omit<MailFund, 'anbieter'>, anbieter?: MailAnbieterId | null): MailSuche =>
@@ -115,7 +116,7 @@ export async function sucheMailserver(email: unknown, o: { thunderbird?: boolean
   }
 
   // 2. DNS der eigenen Domain (SRV, dann MX).
-  gefragt.push(`DNS (${domain})`);
+  gefragt.push(t('meldungen.mailsuche.dns', { domain }));
   const [ssl, starttls, mx] = await Promise.all([
     mitZeit(d.srv(`_submissions._tcp.${domain}`), ms), mitZeit(d.srv(`_submission._tcp.${domain}`), ms), mitZeit(d.mx(domain), ms),
   ]);
