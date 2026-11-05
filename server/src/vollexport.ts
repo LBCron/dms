@@ -68,6 +68,7 @@ export const EXPORT_TABELLEN: Record<string, string> = {
   notfallcode: 'nicht enthalten: Notfallcode vom Notfallblatt (#815, nur ein Hash)',
   auskunft_links: 'nicht enthalten: Abruf-Links von Auskünften (#455, Hashes; der Nachweis steht in daten/historie.jsonl)',
   sitzungen: 'nicht enthalten: Anmeldungen',
+  kurzzustand: 'nicht enthalten: Zustand zwischen Anfragen (Fehlversuche, Sperren, Einmal-Tickets, #744)',
   erkennungen: 'nicht enthalten: Ergebnis der Erkennung je Post (#336, wird aus dem Volltext neu berechnet)',
   suchwoerter: 'nicht enthalten: Wörterverzeichnis der Suche (#356, abgeleitet aus Titeln, Werten und Volltexten)',
   suchwoerter_eingang: 'nicht enthalten: neue Wörter für das Wörterverzeichnis, noch nicht übernommen (#575, abgeleitet)',

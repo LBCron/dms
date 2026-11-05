@@ -33,6 +33,7 @@ import type { Dokument } from '../../shared/src/model';
 import type { FassungsAblage } from './dateiumwandlung';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
 import { t } from './sprache';
 
@@ -156,20 +157,27 @@ export interface EntsperrenAnbindung {
   verschluessele?(klartext: string): string;
   entschluessele?(wert: string): string | null;
   jetzt?(): number;
+  /** Zustand zwischen Anfragen (#744: Fehlversuche, Bestätigung je Sitzung); ohne Angabe im Arbeitsspeicher. */
+  zustand?: Kurzzustand;
 }
 
+/** Arten im Kurzzustand (#744). */
+const VERSUCHE = 'pdf-passwort-fehler';
+const BESTAETIGT = 'dokumentpasswort-bestaetigt';
+const BESTAETIG_VERSUCHE = 'dokumentpasswort-fehler';
+
 export class PdfEntsperren {
+  /** Schutz je Prüfwert: hängt nur am Inhalt der Datei, darf je Prozess gemerkt bleiben (#744). */
   private schutzCache = new Map<string, PdfSchutzArt | null>();
-  /** Konto|Prüfwert → Zeitpunkte falscher Versuche. */
-  private versuche = new Map<string, number[]>();
-  /** Sitzung → gültig bis (erneute Bestätigung für „Passwörter für Dokumente“). */
-  private bestaetigt = new Map<string, number>();
-  /** Konto → Zeitpunkte falscher Bestätigungen. */
-  private bestaetigVersuche = new Map<string, number[]>();
-  /** Laufendes Entsperren je Prüfwert (gleiche Datei nicht doppelt). */
+  /**
+   * Im Kurzzustand (#744), für alle Prozesse: falsche Versuche je Konto und Prüfwert, Bestätigung je Sitzung (nur der
+   * Hash der Sitzung) und falsche Bestätigungen je Konto – je ein Zähler mit festem Fenster von `VERSUCHE_MS`.
+   */
+  private zustand: Kurzzustand;
+  /** Laufendes Entsperren je Prüfwert (gleiche Datei nicht doppelt) – nur gegen doppelte Arbeit in diesem Prozess. */
   private laufend = new Map<string, Promise<unknown>>();
 
-  constructor(private o: EntsperrenAnbindung) {}
+  constructor(private o: EntsperrenAnbindung) { this.zustand = o.zustand ?? speicherKurzzustand(() => this.jetzt()); }
 
   private jetzt() { return this.o.jetzt?.() ?? Date.now(); }
 
@@ -215,12 +223,10 @@ export class PdfEntsperren {
     return p;
   }
 
-  private falscheVersuche(schluessel: string, liste: Map<string, number[]>): number[] {
-    const jetzt = this.jetzt();
-    const v = (liste.get(schluessel) ?? []).filter((z) => jetzt - z < VERSUCHE_MS);
-    liste.set(schluessel, v);
-    return v;
-  }
+  /** Falsche Versuche im laufenden Fenster. */
+  private async falscheVersuche(art: string, schluessel: string): Promise<number> { return (await this.zustand.lies(art, schluessel))?.anzahl ?? 0; }
+  /** Einen falschen Versuch zählen (atomar, für alle Prozesse); liefert die Zahl im Fenster. */
+  private async falsch(art: string, schluessel: string): Promise<number> { return (await this.zustand.zaehle(art, schluessel, VERSUCHE_MS)).anzahl; }
 
   /**
    * Mit eingegebenem Passwort entsperren (POST /dokumente/{id}/entsperren). `merken`: zusätzlich im Konto merken.
@@ -237,18 +243,17 @@ export class PdfEntsperren {
         return { pdfSchutz: await this.stand(d), gemerkt: false };
       }
       const schluessel = `${konto}|${d.sha256}`;
-      if (this.falscheVersuche(schluessel, this.versuche).length >= VERSUCHE_MAX) throw new Fachfehler(429, t('mappen.entsperren.zu-viele', { minuten: VERSUCHE_MS / 60_000 }));
+      if ((await this.falscheVersuche(VERSUCHE, schluessel)) >= VERSUCHE_MAX) throw new Fachfehler(429, t('mappen.entsperren.zu-viele', { minuten: VERSUCHE_MS / 60_000 }));
       const pw = passwortAus(passwort);
       let klar: Buffer;
       try { klar = await entsperrePdf(await this.o.datei(d.sha256), pw); } catch (e) {
         if (!(e instanceof FalschesPasswort)) throw e;
-        const v = this.falscheVersuche(schluessel, this.versuche);
-        v.push(this.jetzt());
-        log.info('Falsches Passwort für ein geschütztes PDF', { dokument: d.id, versuch: v.length });
-        const uebrig = VERSUCHE_MAX - v.length;
+        const n = await this.falsch(VERSUCHE, schluessel);
+        log.info('Falsches Passwort für ein geschütztes PDF', { dokument: d.id, versuch: n });
+        const uebrig = VERSUCHE_MAX - n;
         throw new Fachfehler(422, uebrig > 0 ? t('mappen.entsperren.falsch', { anzahl: uebrig }) : t('mappen.entsperren.zu-viele', { minuten: VERSUCHE_MS / 60_000 }));
       }
-      this.versuche.delete(schluessel);
+      await this.zustand.loesche(VERSUCHE, schluessel);
       await this.lege(d.sha256, klar, { art: 'passwort', von: konto });
       log.info('Geschütztes PDF entsperrt', { dokument: d.id });
       let gemerkt = false;
@@ -407,25 +412,24 @@ export class PdfEntsperren {
    */
   async bestaetige(konto: string, sitzung: string | undefined, pruefe: () => Promise<void>): Promise<string> {
     if (!sitzung) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.nur-browser'));
-    if (this.falscheVersuche(konto, this.bestaetigVersuche).length >= VERSUCHE_MAX) throw new Fachfehler(429, t('mappen.entsperren.zu-viele', { minuten: VERSUCHE_MS / 60_000 }));
+    if ((await this.falscheVersuche(BESTAETIG_VERSUCHE, konto)) >= VERSUCHE_MAX) throw new Fachfehler(429, t('mappen.entsperren.zu-viele', { minuten: VERSUCHE_MS / 60_000 }));
     try { await pruefe(); } catch (e) {
-      this.falscheVersuche(konto, this.bestaetigVersuche).push(this.jetzt());
+      await this.falsch(BESTAETIG_VERSUCHE, konto);
       throw e;
     }
-    this.bestaetigVersuche.delete(konto);
+    await this.zustand.loesche(BESTAETIG_VERSUCHE, konto);
     const bis = this.jetzt() + BESTAETIGUNG_MS;
-    for (const [k, v] of this.bestaetigt) if (v < this.jetzt()) this.bestaetigt.delete(k);
-    this.bestaetigt.set(sitzung, bis);
+    await this.zustand.setze(BESTAETIGT, hashe(sitzung), null, bis);
     return new Date(bis).toISOString();
   }
 
   /** Bis wann die Bestätigung dieser Sitzung gilt (null: keine). */
-  bestaetigtBis(sitzung: string | undefined): string | null {
-    const bis = sitzung ? this.bestaetigt.get(sitzung) : undefined;
-    return bis && bis > this.jetzt() ? new Date(bis).toISOString() : null;
+  async bestaetigtBis(sitzung: string | undefined): Promise<string | null> {
+    const x = sitzung ? await this.zustand.lies(BESTAETIGT, hashe(sitzung)) : null;
+    return x?.bis ? new Date(x.bis).toISOString() : null;
   }
 
-  pruefeBestaetigt(sitzung: string | undefined) {
-    if (!this.bestaetigtBis(sitzung)) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.bestaetigen'), { bestaetigen: true });
+  async pruefeBestaetigt(sitzung: string | undefined) {
+    if (!(await this.bestaetigtBis(sitzung))) throw new Fachfehler(403, t('mappen.entsperren.gemerkt.bestaetigen'), { bestaetigen: true });
   }
 }

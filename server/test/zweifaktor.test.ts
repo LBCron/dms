@@ -32,7 +32,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     let t = 1_700_000_000_000;
     const speicher = speicherEinstellungen();
     const z = new Zweifaktor(speicher, ver, ent, () => t);
-    const { geheimnis, uri } = z.beginne({ id: 'u1', email: 'a@x.example' }, 'Mein Ablago');
+    const { geheimnis, uri } = await z.beginne({ id: 'u1', email: 'a@x.example' }, 'Mein Ablago');
     assert.match(uri, /^otpauth:\/\/totp\/Mein%20Ablago%3Aa%40x\.example\?secret=[A-Z2-7]+&issuer=Mein%20Ablago/);
     await assert.rejects(z.bestaetige('u1', '000000', 'a'), status(422));
     const codes = await z.bestaetige('u1', codeZu(geheimnis, t), 'a');
@@ -56,7 +56,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
   it('Wiederherstellungscodes gelten je einmal; neue ersetzen alte; Entwurf verfällt', async () => {
     let t = 1_700_000_000_000;
     const z = new Zweifaktor(speicherEinstellungen(), ver, ent, () => t);
-    const { geheimnis } = z.beginne({ id: 'u1', email: 'a@x.example' });
+    const { geheimnis } = await z.beginne({ id: 'u1', email: 'a@x.example' });
     const codes = await z.bestaetige('u1', codeZu(geheimnis, t), 'a');
     assert.equal(await z.pruefe('u1', codes[3].toLowerCase().replace(/-/g, '')), 'wiederherstellung', 'Groß/klein und Striche egal');
     assert.equal(await z.pruefe('u1', codes[3]), null);
@@ -66,7 +66,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     assert.equal(await z.pruefe('u1', neu[0]), 'wiederherstellung');
     assert.equal(await z.entferne('u1', 'admin'), true);
     assert.equal(await z.aktiv('u1'), false);
-    z.beginne({ id: 'u2', email: 'b@x.example' });
+    await z.beginne({ id: 'u2', email: 'b@x.example' });
     t += 11 * 60_000;
     await assert.rejects(z.bestaetige('u2', '123456', 'b'), status(409));
   });
@@ -104,7 +104,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     await speicher.schreibe('zweifaktor_pflicht_seit', null);
     assert.equal(await z.lage(a, vorher), 'fehlt');
     // Mit eingerichteter Zwei-Faktor-Anmeldung nie.
-    const { geheimnis } = z.beginne({ id: 'a', email: 'a@x.example' });
+    const { geheimnis } = await z.beginne({ id: 'a', email: 'a@x.example' });
     await z.bestaetige('a', codeZu(geheimnis, t), 'a');
     assert.equal(await z.lage(a, nachher), 'ok');
   });
@@ -188,7 +188,7 @@ describe('Zwei-Faktor-Anmeldung (#242)', () => {
     const ohne = await konten.anmelden({ email: 'anna@example.org', passwort: 'ein-langes-passwort' }, '1.1.1.1', '');
     assert.ok('schluessel' in ohne && ohne.schluessel);
 
-    const { geheimnis } = z.beginne(anna);
+    const { geheimnis } = await z.beginne(anna);
     const codes = await z.bestaetige(anna.id, codeZu(geheimnis, Date.now()), 'anna');
     const r = await konten.anmelden({ email: 'anna@example.org', passwort: 'ein-langes-passwort' }, '1.1.1.1', '');
     assert.ok('zweiterSchritt' in r && r.zweiterSchritt);

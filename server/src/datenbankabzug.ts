@@ -13,9 +13,11 @@ export interface Zaehler { mappen: number; dokumente: number; benutzer: number }
 /**
  * Tabellen, deren Inhalt nicht in die Sicherung gehört. Das Wörterverzeichnis der Suche (#356) füllen beim
  * Wiederherstellen die Trigger aus Mappen und Dokumenten neu (über den Eingang, #575). Den Haushaltsstand (#741)
- * legen nach dem Einspielen die Trigger neu an, mit der Uhrzeit als Start – kein gemerkter alter Stand trifft.
+ * legen nach dem Einspielen die Trigger neu an, mit der Uhrzeit als Start – kein gemerkter alter Stand trifft. Der
+ * Zustand zwischen Anfragen (#744: Fehlversuche, Sperren, Einmal-Tickets) gilt wie die Sitzungen nur für die laufende
+ * Installation.
  */
-export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter', 'suchwoerter_eingang', 'haushaltsstand']);
+export const OHNE_INHALT = new Set(['sitzungen', 'schema_migrationen', 'suchwoerter', 'suchwoerter_eingang', 'haushaltsstand', 'kurzzustand']);
 /**
  * Abgeleitete Spalten ohne Sicherung: den Suchindex (#356) berechnet beim Einspielen ein Trigger aus dem Volltext,
  * den gefalteten Suchtext der Mappen (#615) einer aus Titel und Werten.

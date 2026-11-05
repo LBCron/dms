@@ -13,7 +13,7 @@ Nach zu vielen falschen Passwörtern sperrt Ablago die Anmeldung. Unter **Werkba
 
 Die Sperrdauer je IP darf auch **0** sein: Dann bleibt die Adresse gesperrt, bis jemand, der den Anmeldeschutz verwaltet, sie freigibt. Die Fehlversuche je IP zählen innerhalb der Sperrdauer (bei „dauerhaft“ innerhalb einer Stunde).
 
-Sperren stehen in der Datenbank und überstehen einen Neustart. Jede Sperre und jedes Entsperren steht im [Protokoll](fehlersuche.md#protokoll).
+Fehlversuche und Sperren stehen in der Datenbank: Sie überstehen einen Neustart und gelten für alle Prozesse von Ablago an derselben Datenbank. Eine Wiederherstellung aus der Sicherung bringt keine Sperren mit. Jede Sperre und jedes Entsperren steht im [Protokoll](fehlersuche.md#protokoll).
 
 ## Mail an die Verwaltenden { #mail-an-die-administratoren }
 

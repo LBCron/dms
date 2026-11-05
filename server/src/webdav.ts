@@ -12,6 +12,7 @@ import type { Dienst, Zugriff } from './dienst';
 import { MIME } from './eingangsordner';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import type { Konten } from './konten';
 import { protokoll } from './protokoll';
 import { dateiKoepfe } from './routen';
@@ -53,6 +54,9 @@ export const MAX_EINTRAEGE = 1000;
 export const STANDARD_GRENZE = 600;
 const XML_MAX = 64 * 1024;
 const SCHWEBEND_MS = 10 * 60_000;
+const SCHWEBEND = 'webdav-schwebend';
+/** Höchstens so viele schwebende Dateien je Benutzer und Ort zeigt der Ordner. */
+const SCHWEBEND_MAX = 200;
 const SPERRE_SEKUNDEN = 3600;
 const ZUGRIFFE = 50;
 /** Gleichzeitige Uploads (PUT) je Benutzer – jeder belegt bis zu 100 MB (seit #746 als temporäre Datei, nicht im Speicher). */
@@ -110,6 +114,8 @@ export interface WebdavDeps {
   wartung?: { pruefeAnfrage(r: { pfad: string; zugang: string }, b: { verwaltung?: string[]; art?: string } | undefined): void };
   jetzt?: () => number;
   grenze?: number;
+  /** Zustand zwischen Anfragen (#744: Zählfenster, schwebende Dateien); ohne Angabe im Arbeitsspeicher. */
+  zustand?: Kurzzustand;
 }
 
 type Knoten =
@@ -196,7 +202,7 @@ export class Webdav {
   private grenze: Ratenbegrenzung;
   private zugriffe: WebdavZugriff[] = [];
   private anfragen = 0;
-  private schwebend = new Map<string, Schwebend[]>();
+  private zustand: Kurzzustand;
   private cache: { wert: WebdavEinstellung; bis: number } | null = null;
   /** Laufende Uploads je Benutzer-Id (MAX_UPLOADS). */
   private uploads = new Map<string, number>();
@@ -207,7 +213,8 @@ export class Webdav {
 
   constructor(private d: WebdavDeps) {
     this.jetzt = d.jetzt ?? Date.now;
-    this.grenze = new Ratenbegrenzung(d.grenze ?? STANDARD_GRENZE, this.jetzt);
+    this.zustand = d.zustand ?? speicherKurzzustand(this.jetzt);
+    this.grenze = new Ratenbegrenzung(d.grenze ?? STANDARD_GRENZE, this.jetzt, 60_000, this.zustand);
   }
 
   /* ---------- Werkbank ---------- */
@@ -280,7 +287,7 @@ export class Webdav {
       if ('status' in ctx) { verwerfe(a.koerper); antwort = ctx.antwort; wer = ctx.wer; }
       else {
         wer = ctx.b.email;
-        const r = this.grenze.pruefe(ctx.b.id);
+        const r = await this.grenze.pruefe(ctx.b.id);
         if (!r.ok) {
           if (r.erstes) logKonto.warn('WebDAV: zu viele Anfragen, kurz gebremst', { benutzer: ctx.b.email, grenze: this.grenze.grenze });
           verwerfe(a.koerper);
@@ -478,26 +485,25 @@ export class Webdav {
     return (await this.darfRaus(k.mappeId, ctx)) && (await this.auslieferung(k, ctx)).gestempelt;
   }
 
-  private schwebende(ctx: Ctx, ort: string): Schwebend[] {
+  /*
+   * Schwebende Dateien (leer angelegt, Inhalt folgt mit der nächsten Anfrage) im Kurzzustand (#744): Die nächste Anfrage
+   * darf bei einem anderen Prozess landen. Schlüssel „Benutzer|Ort|Name“, gültig SCHWEBEND_MS.
+   */
+  private async schwebende(ctx: Ctx, ort: string): Promise<Schwebend[]> {
+    return (await this.zustand.liste(SCHWEBEND, `${ctx.b.id}|${ort}|`, SCHWEBEND_MAX)).map((x) => x.wert as Schwebend).sort((a, b) => a.zeit.localeCompare(b.zeit));
+  }
+  private async merkeSchwebend(ctx: Ctx, ort: string, name: string, groesse: number) {
     const t = this.jetzt();
-    const liste = (this.schwebend.get(ctx.b.id) ?? []).filter((s) => t - Date.parse(s.zeit) < SCHWEBEND_MS);
-    this.schwebend.set(ctx.b.id, liste);
-    return liste.filter((s) => s.ort === ort);
+    await this.zustand.setze(SCHWEBEND, `${ctx.b.id}|${ort}|${schluessel(name)}`, { ort, name, groesse, zeit: new Date(t).toISOString() } satisfies Schwebend, t + SCHWEBEND_MS);
   }
-  private merkeSchwebend(ctx: Ctx, ort: string, name: string, groesse: number) {
-    const liste = (this.schwebend.get(ctx.b.id) ?? []).filter((s) => !(s.ort === ort && schluessel(s.name) === schluessel(name)));
-    liste.push({ ort, name, groesse, zeit: new Date(this.jetzt()).toISOString() });
-    this.schwebend.set(ctx.b.id, liste.slice(-200));
-  }
-  private vergiss(ctx: Ctx, ort: string, name: string) {
-    const liste = this.schwebend.get(ctx.b.id);
-    if (liste) this.schwebend.set(ctx.b.id, liste.filter((s) => !(s.ort === ort && schluessel(s.name) === schluessel(name))));
+  private async vergiss(ctx: Ctx, ort: string, name: string) {
+    await this.zustand.loesche(SCHWEBEND, `${ctx.b.id}|${ort}|${schluessel(name)}`);
   }
 
   private async kinder(k: Knoten, ctx: Ctx): Promise<Kind[]> {
     switch (k.art) {
       case 'wurzel': return [{ name: NEUE_POST, k: { art: 'post' } }, { name: ABLAGE, k: { art: 'ablage' } }];
-      case 'post': return this.schwebende(ctx, 'post').map((s) => ({ name: s.name, k: { art: 'schwebend', s } }));
+      case 'post': return (await this.schwebende(ctx, 'post')).map((s) => ({ name: s.name, k: { art: 'schwebend', s } }));
       case 'ablage': {
         const sichten = await this.d.dienst.listeSichten(ctx.z);
         // Reihenfolge wie im Baum der Ablage; alle Ansichten auf einer Ebene.
@@ -541,7 +547,7 @@ export class Webdav {
         const namen = eindeutig(doks.map((x) => ({ name: pflicht && x.mime !== 'application/pdf' && kannStempeln(x.mime) ? pdfName(x.name) : x.name, datei: true })));
         const erg: Kind[] = doks.map((x, i) => ({ name: namen[i], k: { art: 'dokument', dok: x, mappeId: k.mappeId, register: k.register } }));
         const belegt = new Set(namen.map(schluessel));
-        for (const s of this.schwebende(ctx, ortVon(k)!)) if (!belegt.has(schluessel(s.name))) erg.push({ name: s.name, k: { art: 'schwebend', s } });
+        for (const s of await this.schwebende(ctx, ortVon(k)!)) if (!belegt.has(schluessel(s.name))) erg.push({ name: s.name, k: { art: 'schwebend', s } });
         return erg;
       }
       default: return [];
@@ -692,7 +698,7 @@ export class Webdav {
     // Leere Datei: Explorer und Finder legen erst eine leere Datei an und schreiben dann den Inhalt.
     if (groesse === 0) {
       if (z.k?.art === 'dokument') return { status: 204, koepfe: {} };
-      this.merkeSchwebend(ctx, z.ort, z.name, 0);
+      await this.merkeSchwebend(ctx, z.ort, z.name, 0);
       return { status: 201, koepfe: { 'content-length': '0' } };
     }
     const typ = MIME[extname(z.name).toLowerCase()];
@@ -701,7 +707,7 @@ export class Webdav {
       const register = (await this.d.dienst.postTyp()).register.find((r) => r.art === 'dokumente')?.key;
       await this.d.dienst.ladeHoch(post.id, { register, name: z.name, typ, herkunft: 'webdav' }, inhalt, ctx.b.id);
       log.info('Post über WebDAV abgelegt', { datei: z.name, groesse, mappe: post.id, von: ctx.b.email });
-      this.merkeSchwebend(ctx, z.ort, z.name, groesse);
+      await this.merkeSchwebend(ctx, z.ort, z.name, groesse);
       return { status: 201, koepfe: { 'content-length': '0' } };
     }
     if (z.eltern.art !== 'register') throw new Fachfehler(403, 'Hier lässt sich nichts ablegen.');
@@ -716,7 +722,7 @@ export class Webdav {
       return { status: 204, koepfe: {} };
     }
     const r = await this.d.dienst.ladeHoch(z.eltern.mappeId, { register: reg.key, name: z.name, typ, gleicherName: 'zaehler', herkunft: 'webdav' }, inhalt, ctx.b.id);
-    this.vergiss(ctx, z.ort, z.name);
+    await this.vergiss(ctx, z.ort, z.name);
     log.info('Dokument über WebDAV abgelegt', { datei: r.dokument.name, groesse, mappe: z.eltern.mappeId, von: ctx.b.email });
     return { status: 201, koepfe: { 'content-length': '0' } };
   }
@@ -731,7 +737,7 @@ export class Webdav {
     let status = 200;
     if (z && !z.k) {
       if (z.eltern.art === 'register') await this.d.dienst.pruefeRecht(ctx.z, z.eltern.mappeId, 'U');
-      this.merkeSchwebend(ctx, z.ort, z.name, 0);
+      await this.merkeSchwebend(ctx, z.ort, z.name, 0);
       status = 201;
     }
     return xmlAntwort(status, sperrAntwort(token, teile, false, SPERRE_SEKUNDEN), { 'lock-token': `<${token}>` });

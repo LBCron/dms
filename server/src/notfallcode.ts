@@ -7,6 +7,7 @@ import { zeitzone } from '../../shared/src/region';
 import { ipBereich, kuerzeIp } from './abruf';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { pruefePasswortRegeln, type Konten } from './konten';
 import type { Mailer } from './mail';
 import { mailtexte } from './mail';
@@ -37,7 +38,15 @@ export const FEHLVERSUCHE_MELDEN = 5;
 const STUNDE = 60 * 60_000;
 /** Das neue Notfallblatt nach dem Einlösen: so lange herunterladbar (nur im Arbeitsspeicher). */
 export const BLATT_MINUTEN = 15;
-const BEREICHE_MAX = 10_000;
+/** Arten im Kurzzustand (#744). */
+const SPERRE = 'notfall-sperre';
+const PRUEFUNG = 'notfall-pruefung';
+const FEHLVERSUCHE = 'notfall-fehlversuche';
+const GEMELDET = 'notfall-gemeldet';
+const BLATT = 'notfall-blatt';
+const BLATT_ERZEUGEN = 'notfall-blatt-erzeugen';
+/** Eine Prüfung (scrypt, Mail) dauert Sekunden; danach gibt die Frist den Bereich frei, falls der Prozess endet. */
+const PRUEFUNG_MS = 60_000;
 const EINSTELLUNG = 'notfallzugang';
 const BENUTZT = 'notfallcode_benutzt';
 
@@ -76,32 +85,30 @@ export function istHeimnetz(a: { ip: string; kopf?: (name: string) => string | u
 
 /* ---------- Sperre je Adressbereich ---------- */
 
-/** 30 Sekunden je Fehleingabe, je Adressbereich; dazu höchstens eine Prüfung gleichzeitig je Bereich. */
+/**
+ * 30 Sekunden je Fehleingabe, je Adressbereich; dazu höchstens eine Prüfung gleichzeitig je Bereich. Seit #744 im
+ * Kurzzustand (Datenbank): Sperre und Belegung gelten für alle Prozesse. Die Belegung hat eine Frist, damit ein
+ * Prozess, der mittendrin endet, den Bereich nicht dauerhaft blockiert.
+ */
 export class NotfallSperre {
-  private bis = new Map<string, number>();
-  private laeuft = new Set<string>();
-  constructor(private jetzt: () => number = Date.now) {}
+  private zustand: Kurzzustand;
+  constructor(private jetzt: () => number = Date.now, zustand?: Kurzzustand) { this.zustand = zustand ?? speicherKurzzustand(jetzt); }
 
   /** Noch gesperrt? Dann die Wartezeit in Sekunden, sonst 0. */
-  rest(bereich: string): number {
-    const b = this.bis.get(bereich);
-    if (!b) return 0;
-    const ms = b - this.jetzt();
-    if (ms <= 0) { this.bis.delete(bereich); return 0; }
-    return Math.ceil(ms / 1000);
+  async rest(bereich: string): Promise<number> {
+    const b = (await this.zustand.lies(SPERRE, bereich))?.bis;
+    return b ? Math.max(1, Math.ceil((b - this.jetzt()) / 1000)) : 0;
   }
 
-  fehlschlag(bereich: string) {
-    while (this.bis.size >= BEREICHE_MAX) this.bis.delete(this.bis.keys().next().value as string);
-    this.bis.set(bereich, this.jetzt() + SPERRE_MS);
+  async fehlschlag(bereich: string) {
+    await this.zustand.setze(SPERRE, bereich, null, this.jetzt() + SPERRE_MS);
   }
 
   /** Platz für eine Prüfung in diesem Bereich (parallele Anfragen kommen sonst an der Sperre vorbei); null = belegt. */
-  belege(bereich: string): (() => void) | null {
-    if (this.laeuft.has(bereich)) return null;
-    this.laeuft.add(bereich);
+  async belege(bereich: string): Promise<(() => Promise<void>) | null> {
+    if (!(await this.zustand.belege(PRUEFUNG, bereich, PRUEFUNG_MS))) return null;
     let frei = false;
-    return () => { if (!frei) { frei = true; this.laeuft.delete(bereich); } };
+    return async () => { if (!frei) { frei = true; await this.zustand.loesche(PRUEFUNG, bereich).catch(() => {}); } };
   }
 }
 
@@ -123,20 +130,26 @@ export interface NotfallDeps {
   /** Nach dem Einlösen: Das Notfallblatt gilt nicht mehr (Hinweis in der Werkbank, bis ein neues da ist). */
   codeBenutzt?: () => Promise<void>;
   jetzt?: () => number;
+  /** Zustand zwischen Anfragen (#744); ohne Angabe im Arbeitsspeicher. */
+  zustand?: Kurzzustand;
+  /** Das neue Notfallblatt nach dem Einlösen liegt bis zum Ablauf verschlüsselt im Kurzzustand (es trägt den Schlüssel). */
+  verschluessele?: (klartext: string) => string;
+  entschluessele?: (wert: string) => string | null;
 }
 
 const datumText = (d: Date) => d.toLocaleString('de-DE', { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
 
 export class Notfallcode {
   readonly sperre: NotfallSperre;
-  private fehlversuche: number[] = [];
-  private gemeldet = 0;
-  private blaetter = new Map<string, { benutzerId: string; name: string; bis: number; pdf?: Buffer }>();
+  private zustand: Kurzzustand;
+  /** Erzeugte Blätter dieses Prozesses, wenn kein Schlüssel zum Verschlüsseln da ist (Tests). */
+  private pdfs = new Map<string, Buffer>();
   private jetzt: () => number;
 
   constructor(private d: NotfallDeps) {
     this.jetzt = d.jetzt ?? Date.now;
-    this.sperre = new NotfallSperre(this.jetzt);
+    this.zustand = d.zustand ?? speicherKurzzustand(this.jetzt);
+    this.sperre = new NotfallSperre(this.jetzt, this.zustand);
   }
 
   async einstellung(): Promise<NotfallEinstellung> {
@@ -158,33 +171,32 @@ export class Notfallcode {
   /** Stand für die Seite /notfall: geht es von hier, und wie lange ist die Eingabe noch gesperrt? Verrät sonst nichts. */
   async stand(a: NotfallAnfrage): Promise<{ erlaubt: boolean; warten: number }> {
     const heimnetz = istHeimnetz(a, this.d.proxy);
-    return { erlaubt: heimnetz || (await this.einstellung()).internet, warten: this.sperre.rest(ipBereich(a.ip)) };
+    return { erlaubt: heimnetz || (await this.einstellung()).internet, warten: await this.sperre.rest(ipBereich(a.ip)) };
   }
 
   /** Vor jeder Prüfung: von hier erlaubt, nicht gesperrt, Anmeldeschutz. Liefert den Bereich und den belegten Platz. */
-  private async vorher(a: NotfallAnfrage): Promise<{ bereich: string; frei: () => void }> {
+  private async vorher(a: NotfallAnfrage): Promise<{ bereich: string; frei: () => Promise<void> }> {
     if (!(await this.stand(a)).erlaubt) throw new Fachfehler(403, t('konten.notfall.fehler.heimnetz'), { heimnetz: false });
     const bereich = ipBereich(a.ip);
-    const warten = this.sperre.rest(bereich);
+    const warten = await this.sperre.rest(bereich);
     if (warten) throw new Fachfehler(429, t('konten.notfall.fehler.warten', { sekunden: warten }), { warten });
     await this.d.konten.sperre.pruefe('notfallzugang', a.ip);
-    const frei = this.sperre.belege(bereich);
+    const frei = await this.sperre.belege(bereich);
     if (!frei) throw new Fachfehler(429, t('konten.notfall.fehler.warten', { sekunden: NOTFALL_SPERRE_SEKUNDEN }), { warten: NOTFALL_SPERRE_SEKUNDEN });
     return { bereich, frei };
   }
 
   /** Falscher Code: 30 s Sperre für den Bereich, Anmeldeschutz, Protokoll, gebündelte Meldung. */
   private async falsch(a: NotfallAnfrage, bereich: string): Promise<never> {
-    this.sperre.fehlschlag(bereich);
+    await this.sperre.fehlschlag(bereich);
     await this.d.konten.sperre.fehlschlag('notfallzugang', a.ip).catch(() => {});
     log.warn('Notfallzugang: falscher Notfallcode', { ip: kuerzeIp(a.ip) });
-    const jetzt = this.jetzt();
-    this.fehlversuche = [...this.fehlversuche.filter((x) => jetzt - x < STUNDE), jetzt].slice(-1000);
-    if (this.fehlversuche.length >= FEHLVERSUCHE_MELDEN && jetzt - this.gemeldet >= STUNDE) {
-      this.gemeldet = jetzt;
-      const m = mailtexte.notfallFehlversuche(this.fehlversuche.length, kuerzeIp(a.ip));
+    // Über alle Prozesse gezählt (#744), festes Fenster von einer Stunde; die Meldung höchstens einmal je Stunde.
+    const { anzahl } = await this.zustand.zaehle(FEHLVERSUCHE, 'alle', STUNDE);
+    if (anzahl >= FEHLVERSUCHE_MELDEN && (await this.zustand.belege(GEMELDET, 'alle', STUNDE))) {
+      const m = mailtexte.notfallFehlversuche(anzahl, kuerzeIp(a.ip));
       await this.anVerwaltende(m).catch((e) => log.warn('Meldung zu Fehlversuchen am Notfallzugang nicht verschickt', { fehler: (e as Error).message }));
-      log.warn('Notfallzugang: viele Fehlversuche gemeldet', { anzahl: this.fehlversuche.length });
+      log.warn('Notfallzugang: viele Fehlversuche gemeldet', { anzahl });
     }
     throw new Fachfehler(403, t('konten.notfall.fehler.falsch'), { warten: NOTFALL_SPERRE_SEKUNDEN });
   }
@@ -197,7 +209,7 @@ export class Notfallcode {
       if (!hash) return await this.falsch(a, bereich);
       log.info('Notfallzugang: Notfallcode richtig, Konto wird gewählt', { ip: kuerzeIp(a.ip) });
       return { konten: (await this.d.konten.notfallKonten()).map((b) => ({ id: b.id, name: b.name || b.email, email: b.email })) };
-    } finally { frei(); }
+    } finally { await frei(); }
   }
 
   /**
@@ -223,8 +235,8 @@ export class Notfallcode {
       const id = randomBytes(6).toString('hex');
       await this.d.einstellungen.schreibe(BENUTZT, [...liste, { id, benutzerId: konto.id, name: konto.name || konto.email, email: konto.email, am: am.toISOString() }].slice(-20));
       await this.d.codeBenutzt?.().catch((x) => log.warn('Notfallblatt nicht als veraltet vermerkt', { fehler: (x as Error).message }));
-      return { email: neu.email, blatt: this.blattSchluessel(konto) };
-    } finally { frei(); }
+      return { email: neu.email, blatt: await this.blattSchluessel(konto) };
+    } finally { await frei(); }
   }
 
   private async meldeBenutzung(konto: Benutzer, am: Date, ip: string) {
@@ -250,24 +262,44 @@ export class Notfallcode {
 
   /* ---------- Neues Notfallblatt nach dem Einlösen ---------- */
 
-  private blattSchluessel(konto: Benutzer): string {
-    const jetzt = this.jetzt();
-    for (const [k, v] of this.blaetter) if (v.bis <= jetzt) this.blaetter.delete(k);
-    while (this.blaetter.size >= 20) this.blaetter.delete(this.blaetter.keys().next().value as string);
+  /** Schlüssel fürs neue Notfallblatt (#744: im Kurzzustand nur sein Hash, gültig `BLATT_MINUTEN`). */
+  private async blattSchluessel(konto: Benutzer): Promise<string> {
     const s = randomBytes(32).toString('base64url');
-    this.blaetter.set(s, { benutzerId: konto.id, name: konto.name || konto.email, bis: jetzt + BLATT_MINUTEN * 60_000 });
+    await this.zustand.setze(BLATT, hashe(s), { benutzerId: konto.id, name: konto.name || konto.email }, this.jetzt() + BLATT_MINUTEN * 60_000);
     return s;
   }
 
   /**
    * Das neue Notfallblatt zum Schlüssel aus `einloesen`: beim ersten Abruf erzeugt (mit neuem Notfallcode), danach
-   * dasselbe Blatt, bis der Schlüssel abläuft – so gilt immer der Code auf dem heruntergeladenen Blatt.
+   * dasselbe Blatt, bis der Schlüssel abläuft – so gilt immer der Code auf dem heruntergeladenen Blatt. Mehrere Prozesse
+   * (#744): Erzeugt wird unter einer Belegung (nur einer); das Blatt liegt verschlüsselt beim Schlüssel, damit auch ein
+   * anderer Prozess genau dieses Blatt ausliefert.
    */
   async blatt(schluessel: unknown, erzeuge: (von: string) => Promise<Buffer>): Promise<Buffer> {
-    const x = typeof schluessel === 'string' ? this.blaetter.get(schluessel) : undefined;
-    if (!x || x.bis <= this.jetzt()) throw new Fachfehler(410, t('konten.notfall.fehler.blatt'));
-    x.pdf ??= await erzeuge(t('konten.notfall.von', { name: x.name }));
-    return x.pdf;
+    const h = typeof schluessel === 'string' && schluessel ? hashe(schluessel) : '';
+    const weg = () => new Fachfehler(410, t('konten.notfall.fehler.blatt'));
+    const x = h ? await this.zustand.lies(BLATT, h) : null;
+    if (!x || x.bis === null) throw weg();
+    const w = x.wert as { benutzerId: string; name: string; pdf?: string };
+    const vorhanden = async (): Promise<Buffer | null> => {
+      const y = await this.zustand.lies(BLATT, h);
+      const pdf = (y?.wert as { pdf?: string } | undefined)?.pdf;
+      if (pdf) { const klar = this.d.entschluessele?.(pdf); return klar ? Buffer.from(klar, 'base64') : null; }
+      return this.pdfs.get(h) ?? null;
+    };
+    const da = await vorhanden();
+    if (da) return da;
+    if (!(await this.zustand.belege(BLATT_ERZEUGEN, h, PRUEFUNG_MS))) {
+      // Ein anderer erzeugt es gerade: kurz warten und dessen Blatt liefern.
+      for (let i = 0; i < 50; i++) { await new Promise((r) => setTimeout(r, 200)); const p = await vorhanden(); if (p) return p; }
+      throw weg();
+    }
+    try {
+      const pdf = await erzeuge(t('konten.notfall.von', { name: w.name }));
+      if (this.d.verschluessele) await this.zustand.setze(BLATT, h, { ...w, pdf: this.d.verschluessele(pdf.toString('base64')) }, x.bis);
+      else this.pdfs.set(h, pdf);
+      return pdf;
+    } finally { await this.zustand.loesche(BLATT_ERZEUGEN, h).catch(() => {}); }
   }
 
   /* ---------- Hinweis in der Werkbank ---------- */

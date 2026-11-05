@@ -234,9 +234,12 @@ export class Texterkennung {
     return this.werkzeuge;
   }
 
-  /** Beim Start: Unterbrochenes wieder einreihen und loslegen. */
-  async start() {
-    const n = await this.repo.ocrZurueckstellen();
+  /**
+   * Beim Start: Unterbrochenes wieder einreihen und loslegen. `zurueckstellen: false` (#744): Laufen schon andere
+   * Prozesse an derselben Datenbank, gehören laufende Aufträge vielleicht ihnen – dann nichts zurückstellen.
+   */
+  async start(o: { zurueckstellen?: boolean } = {}) {
+    const n = o.zurueckstellen === false ? 0 : await this.repo.ocrZurueckstellen();
     if (n) log.info('Unterbrochene Texterkennung wird fortgesetzt', { dokumente: n });
     const w = await this.werkzeugeLaden();
     if (!w.pdftotext) log.warn('poppler (pdftotext) fehlt – PDFs bekommen keinen Volltext.');

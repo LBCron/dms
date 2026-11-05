@@ -39,7 +39,7 @@ const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.statu
 const H = '00000000-0000-4000-8000-000000000001';
 
 describe('Auskunft zustellen: reine Funktionen (#455)', () => {
-  it('Bremse der Abrufseite: eigener Zähler je IP-Bereich (IPv6 je /64), begrenzt gleichzeitige Prüfungen', () => {
+  it('Bremse der Abrufseite: eigener Zähler je IP-Bereich (IPv6 je /64), begrenzt gleichzeitige Prüfungen', async () => {
     assert.equal(ipBereich('203.0.113.7'), '203.0.113.7');
     assert.equal(ipBereich('::ffff:203.0.113.7'), '203.0.113.7');
     assert.equal(ipBereich('2001:db8:1:2:aaaa::1'), '2001:db8:1:2::/64');
@@ -48,11 +48,11 @@ describe('Auskunft zustellen: reine Funktionen (#455)', () => {
     assert.equal(ipBereich('kaputt'), '–');
     let jetzt = 1_000_000;
     const b = new AbrufBremse({ fehlerMax: 3, sperreMs: 60_000, gleichzeitig: 2, jetzt: () => jetzt });
-    for (let i = 0; i < 3; i++) { assert.equal(b.gesperrt('x'), false); b.fehlschlag('x'); }
-    assert.equal(b.gesperrt('x'), true);
-    assert.equal(b.gesperrt('y'), false, 'andere Bereiche bleiben frei');
+    for (let i = 0; i < 3; i++) { assert.equal(await b.gesperrt('x'), false); await b.fehlschlag('x'); }
+    assert.equal(await b.gesperrt('x'), true);
+    assert.equal(await b.gesperrt('y'), false, 'andere Bereiche bleiben frei');
     jetzt += 60_001;
-    assert.equal(b.gesperrt('x'), false, 'Sperre läuft ab');
+    assert.equal(await b.gesperrt('x'), false, 'Sperre läuft ab');
     const p1 = b.belege(), p2 = b.belege();
     assert.ok(p1 && p2);
     assert.equal(b.belege(), null, 'höchstens zwei gleichzeitig');
@@ -105,18 +105,18 @@ describe('Auskunft zustellen: reine Funktionen (#455)', () => {
     assert.equal(kuerzeIp(undefined), '–');
   });
 
-  it('Tickets: genau einmal, nur zwei Minuten, unbekannte und kaputte nie', () => {
+  it('Tickets: genau einmal, nur zwei Minuten, unbekannte und kaputte nie', async () => {
     let t = 1_000_000;
     const k = new AbrufTickets(() => t);
-    const a = k.stelleAus('L1');
+    const a = await k.stelleAus('L1');
     assert.match(a, /^[A-Za-z0-9_-]{43}$/);
-    assert.equal(k.loese(a), 'L1');
-    assert.equal(k.loese(a), null, 'nur einmal');
-    const b = k.stelleAus('L2');
+    assert.equal(await k.loese(a), 'L1');
+    assert.equal(await k.loese(a), null, 'nur einmal');
+    const b = await k.stelleAus('L2');
     t += TICKET_MS + 1;
-    assert.equal(k.loese(b), null, 'abgelaufen');
-    assert.equal(k.loese('x'.repeat(43)), null);
-    assert.equal(k.loese(undefined), null);
+    assert.equal(await k.loese(b), null, 'abgelaufen');
+    assert.equal(await k.loese('x'.repeat(43)), null);
+    assert.equal(await k.loese(undefined), null);
   });
 
   it('E-Mail-Texte: Du-Form, Link ohne Code, Hinweis auf den anderen Weg', () => {

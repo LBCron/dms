@@ -230,12 +230,12 @@ describe('Passwörter für Dokumente merken (#827, Variante A)', { skip: ohneQpd
     assert.ok(!JSON.stringify(liste).includes(PW));
     assert.deepEqual(await x.e.liste(x.jonas.id), [], 'gehört nur Lena');
     // Anzeigen erst nach Bestätigung, je Sitzung; falsche Bestätigung zählt.
-    assert.throws(() => x.e.pruefeBestaetigt('sitzung-1'), (e: Error & { status?: number }) => e.status === 403);
+    await assert.rejects(x.e.pruefeBestaetigt('sitzung-1'), (e: Error & { status?: number }) => e.status === 403);
     await assert.rejects(x.e.bestaetige(x.lena.id, 'sitzung-1', async () => { throw new Error('Das Passwort stimmt nicht.'); }), /stimmt nicht/);
-    assert.equal(x.e.bestaetigtBis('sitzung-1'), null);
+    assert.equal(await x.e.bestaetigtBis('sitzung-1'), null);
     await x.e.bestaetige(x.lena.id, 'sitzung-1', async () => {});
-    assert.doesNotThrow(() => x.e.pruefeBestaetigt('sitzung-1'));
-    assert.throws(() => x.e.pruefeBestaetigt('sitzung-2'), 'andere Sitzung braucht eigene Bestätigung');
+    await assert.doesNotReject(x.e.pruefeBestaetigt('sitzung-1'));
+    await assert.rejects(x.e.pruefeBestaetigt('sitzung-2'), 'andere Sitzung braucht eigene Bestätigung');
     assert.equal(await x.e.zeige(x.lena.id, liste[0].id), PW);
     // Merken in einer Vertretung oder mit API-Schlüssel: abgelehnt.
     const { id: id2 } = await x.ablegen(await geschuetzt('aes', 'Zweites Schreiben fuer Lena', 'anderes-pw'));

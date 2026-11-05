@@ -4,11 +4,12 @@
  * Der Link trägt nur einen zufälligen Schlüssel (256 Bit) im Fragment (`/abruf#<schlüssel>`): Der Browser
  * schickt ihn nie von selbst mit, er steht also in keinem Zugriffsprotokoll und in keinem Referer. Die
  * Seite schickt Schlüssel und Abrufcode per POST; stimmt beides, gibt es ein Ticket für genau einen
- * Download (zwei Minuten gültig, nur im Arbeitsspeicher). In der Datenbank liegen nur Hashes.
+ * Download (zwei Minuten gültig). In der Datenbank liegen nur Hashes (seit #744 auch vom Ticket).
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import { isIP } from 'node:net';
 import { CODE_LAENGE, CODE_ZEICHEN } from '../../shared/src/auskunft';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 
 /** Abrufcode aus gut unterscheidbaren Zeichen (ohne 0/O, 1/I), gleichverteilt. */
 export function neuerAbrufcode(): string {
@@ -33,35 +34,27 @@ export function kuerzeIp(ip: string | undefined): string {
 }
 
 export const TICKET_MS = 2 * 60_000;
-const TICKETS_MAX = 1000;
+const TICKET = 'abruf-ticket';
 
-/** Einmal-Tickets für den Download nach richtig eingegebenem Code. */
+/**
+ * Einmal-Tickets für den Download nach richtig eingegebenem Code. Seit #744 im Kurzzustand (Datenbank): Der Download
+ * darf bei einem anderen Prozess landen. Gespeichert ist nur der Hash des Tickets; Einlösen löscht es (genau einmal).
+ */
 export class AbrufTickets {
-  private tickets = new Map<string, { linkId: string; bis: number }>();
-  constructor(private jetzt: () => number = Date.now) {}
+  private zustand: Kurzzustand;
+  constructor(private jetzt: () => number = Date.now, zustand?: Kurzzustand) { this.zustand = zustand ?? speicherKurzzustand(jetzt); }
 
-  stelleAus(linkId: string): string {
-    this.aufraeumen();
-    // Gegen Fluten des Speichers: die ältesten fallen heraus.
-    while (this.tickets.size >= TICKETS_MAX) this.tickets.delete(this.tickets.keys().next().value as string);
+  async stelleAus(linkId: string): Promise<string> {
     const t = randomBytes(32).toString('base64url');
-    this.tickets.set(t, { linkId, bis: this.jetzt() + TICKET_MS });
+    await this.zustand.setze(TICKET, hashe(t), linkId, this.jetzt() + TICKET_MS);
     return t;
   }
 
   /** Löst ein Ticket ein (nur einmal); liefert die Id des Links oder null. */
-  loese(ticket: unknown): string | null {
-    this.aufraeumen();
+  async loese(ticket: unknown): Promise<string | null> {
     if (typeof ticket !== 'string' || !SCHLUESSEL_MUSTER.test(ticket)) return null;
-    const x = this.tickets.get(ticket);
-    if (!x) return null;
-    this.tickets.delete(ticket);
-    return x.linkId;
-  }
-
-  private aufraeumen() {
-    const t = this.jetzt();
-    for (const [k, v] of this.tickets) if (v.bis <= t) this.tickets.delete(k);
+    const x = await this.zustand.nimm(TICKET, hashe(ticket));
+    return typeof x?.wert === 'string' ? x.wert : null;
   }
 }
 
@@ -85,41 +78,40 @@ export interface BremseOptionen {
   /** Fehlversuche je IP-Bereich, bevor er für `sperreMs` gesperrt ist. */
   fehlerMax: number;
   sperreMs: number;
-  /** Höchstens so viele Code-Prüfungen (scrypt) gleichzeitig über alle Links. */
+  /** Höchstens so viele Code-Prüfungen (scrypt) gleichzeitig über alle Links – je Prozess (Rechenzeit dieses Prozesses). */
   gleichzeitig: number;
   jetzt: () => number;
+  /** Fehlversuche (#744): in der Datenbank, für alle Prozesse; ohne Angabe im Arbeitsspeicher (mit `jetzt`). */
+  zustand?: Kurzzustand;
 }
-const BEREICHE_MAX = 10_000;
+const FEHLER = 'abruf-fehler';
 
 /**
  * Bremse der öffentlichen Abrufseite – getrennt vom Anmeldeschutz der Benutzerkonten. Fehlversuche an
  * Abruf-Links sperren also nie die Anmeldung (auch nicht hinter einem Reverse Proxy, der alle Anfragen
  * mit derselben IP weitergibt), und Ausnahmen des Anmeldeschutzes gelten hier nicht. Dazu begrenzt sie
  * die Zahl gleichzeitiger Code-Prüfungen: Jede kostet einen scrypt-Durchlauf, und parallele Anfragen
- * dürfen weder den Server auslasten noch an den Zählern vorbei raten.
+ * dürfen weder den Server auslasten noch an den Zählern vorbei raten. Die Fehlversuche zählt seit #744 die
+ * Datenbank (atomar, für alle Prozesse); die Zahl gleichzeitiger Prüfungen schützt die Rechenzeit je Prozess.
  */
 export class AbrufBremse {
-  private fehler = new Map<string, { n: number; bis: number }>();
   private laufend = 0;
   private o: BremseOptionen;
+  private zustand: Kurzzustand;
   constructor(o: Partial<BremseOptionen> = {}) {
     this.o = { fehlerMax: 5, sperreMs: 15 * 60_000, gleichzeitig: 2, jetzt: Date.now, ...o };
+    this.zustand = this.o.zustand ?? speicherKurzzustand(this.o.jetzt);
   }
 
   /** Ist der Bereich gerade gesperrt? */
-  gesperrt(bereich: string): boolean {
-    const x = this.fehler.get(bereich);
-    if (!x) return false;
-    if (x.bis <= this.o.jetzt()) { this.fehler.delete(bereich); return false; }
-    return x.n >= this.o.fehlerMax;
+  async gesperrt(bereich: string): Promise<boolean> {
+    const x = await this.zustand.lies(FEHLER, bereich);
+    return !!x && x.anzahl >= this.o.fehlerMax;
   }
 
-  fehlschlag(bereich: string) {
-    const t = this.o.jetzt();
-    const x = this.fehler.get(bereich);
-    if (x && x.bis > t) { x.n++; x.bis = t + this.o.sperreMs; return; }
-    while (this.fehler.size >= BEREICHE_MAX) this.fehler.delete(this.fehler.keys().next().value as string);
-    this.fehler.set(bereich, { n: 1, bis: t + this.o.sperreMs });
+  /** Fehlversuch zählen (atomar); jeder schiebt das Ende der Sperre hinaus. */
+  async fehlschlag(bereich: string) {
+    await this.zustand.zaehle(FEHLER, bereich, this.o.sperreMs, { gleitend: true });
   }
 
   /** Belegt einen Platz für eine Code-Prüfung; null, wenn alle belegt sind. Freigeben genau einmal. */

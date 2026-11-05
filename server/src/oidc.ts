@@ -6,6 +6,7 @@ import { imHeimnetz } from '../../shared/src/heimnetz';
 import type { Rolle } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
 
 /**
@@ -135,12 +136,19 @@ export function identitaetAus(claims: Record<string, unknown>, gruppenClaim: str
 
 /* ---------- Ablauf ---------- */
 
-interface Offen { verifier: string; nonce: string; bindung: string; rueckkehr: string; bis: number }
+interface Offen { verifier: string; nonce: string; bindung: string; rueckkehr: string }
+/**
+ * Offene Anmeldungen (#744): im Kurzzustand, Schlüssel ist der Hash von state, der Wert (Verifier, nonce, Bindung)
+ * mit dem Schlüssel des DMS verschlüsselt. Einlösen löscht (nur einmal).
+ */
+const OFFEN = 'oidc-anmeldung';
+const OFFEN_MS = 10 * 60_000;
+const OFFEN_MAX = 5000;
 
 export class Oidc {
   private disc: { d: Discovery; fuer: string; bis: number } | null = null;
   private jwks: { k: JsonWebKey[]; fuer: string; bis: number; geholt: number } | null = null;
-  private offen = new Map<string, Offen>();
+  private zustand: Kurzzustand;
   private stand: OidcEinstellung | null = null;
   private geladen = 0;
 
@@ -150,7 +158,8 @@ export class Oidc {
     entschluessele: (w: string) => string | null;
     abruf?: Abruf;
     jetzt?: () => number;
-  }) {}
+    zustand?: Kurzzustand;
+  }) { this.zustand = deps.zustand ?? speicherKurzzustand(() => this.jetzt); }
 
   private get jetzt() { return this.deps.jetzt?.() ?? Date.now(); }
   private abruf(url: string, init?: Parameters<Abruf>[1]) {
@@ -243,10 +252,9 @@ export class Oidc {
     if (!e) throw new Fachfehler(404, 'Die Anmeldung über einen Anbieter ist nicht eingeschaltet.');
     const d = await this.discovery(e.aussteller);
     const t = this.jetzt;
-    for (const [k, v] of this.offen) if (v.bis < t) this.offen.delete(k);
-    if (this.offen.size > 5000) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
+    if ((await this.zustand.anzahl(OFFEN)) >= OFFEN_MAX) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
     const state = b64url(randomBytes(24)), nonce = b64url(randomBytes(24)), verifier = b64url(randomBytes(32)), bindung = b64url(randomBytes(24));
-    this.offen.set(state, { verifier, nonce, bindung, rueckkehr, bis: t + 10 * 60_000 });
+    await this.zustand.setze(OFFEN, hashe(state), this.deps.verschluessele(JSON.stringify({ verifier, nonce, bindung, rueckkehr } satisfies Offen)), t + OFFEN_MS);
     const u = new URL(d.authorization_endpoint);
     const q = { response_type: 'code', client_id: e.clientId, redirect_uri: rueckkehr, scope: 'openid email profile', state, nonce, code_challenge: b64url(createHash('sha256').update(verifier).digest()), code_challenge_method: 'S256' };
     for (const [k, v] of Object.entries(q)) u.searchParams.set(k, v);
@@ -257,9 +265,10 @@ export class Oidc {
   async rueckkehr(q: Record<string, string | undefined>, bindung: string | undefined): Promise<AnbieterIdentitaet> {
     const e = await this.bereit();
     if (!e) throw new Fachfehler(404, 'Die Anmeldung über einen Anbieter ist nicht eingeschaltet.');
-    const o = q.state ? this.offen.get(q.state) : undefined;
-    if (q.state) this.offen.delete(q.state);
-    if (!o || o.bis < this.jetzt) throw new Fachfehler(400, 'Die Anmeldung ist abgelaufen. Bitte noch einmal beginnen.');
+    const x = q.state ? await this.zustand.nimm(OFFEN, hashe(q.state)) : null;
+    const klar = typeof x?.wert === 'string' ? this.deps.entschluessele(x.wert) : null;
+    const o = klar ? JSON.parse(klar) as Offen : null;
+    if (!o) throw new Fachfehler(400, 'Die Anmeldung ist abgelaufen. Bitte noch einmal beginnen.');
     if (!bindung || bindung !== o.bindung) throw new Fachfehler(400, 'Die Anmeldung wurde in einem anderen Browser begonnen. Bitte noch einmal beginnen.');
     if (q.error) throw new Fachfehler(401, `Der Anbieter hat die Anmeldung abgelehnt: ${String(q.error_description || q.error).slice(0, 300)}`);
     if (!q.code) throw new Fachfehler(400, 'Der Anbieter hat keinen Code geliefert.');

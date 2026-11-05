@@ -158,14 +158,14 @@ describe('Notfallzugang (#815): 30 Sekunden Sperre je Adressbereich, gebündelte
     assert.ok((await n.pruefe({ ip: 'fd00:1:2:4::10' }, code)).konten.length);
   });
 
-  it('höchstens eine Prüfung gleichzeitig je Bereich – parallele Anfragen kommen nicht an der Sperre vorbei', () => {
+  it('höchstens eine Prüfung gleichzeitig je Bereich – parallele Anfragen kommen nicht an der Sperre vorbei', async () => {
     const s = new NotfallSperre(() => 0);
-    const frei = s.belege('a');
+    const frei = await s.belege('a');
     assert.ok(frei);
-    assert.equal(s.belege('a'), null);
-    assert.ok(s.belege('b'));
-    frei!();
-    assert.ok(s.belege('a'));
+    assert.equal(await s.belege('a'), null);
+    assert.ok(await s.belege('b'));
+    await frei!();
+    assert.ok(await s.belege('a'));
   });
 
   it('viele Fehlversuche: eine gebündelte Meldung an alle mit Verwaltungsrecht, höchstens einmal je Stunde; Protokoll mit gekürzter Adresse', async () => {
@@ -197,7 +197,7 @@ describe('Notfallzugang (#815): Konto wählen, Passwort setzen, einmal gültig',
   it('Meldung zuerst (bisherige Adresse und alle Verwaltenden), dann neues Passwort, Sitzungen weg, Zwei-Faktor zurück; der Code gilt danach nicht mehr', async () => {
     const { n, konten, repo, zf, lena, post, benutzt } = await aufbau();
     // Lena hat Zwei-Faktor und ist angemeldet.
-    const e = zf.beginne(lena, 'Ablago');
+    const e = await zf.beginne(lena, 'Ablago');
     const { totp, ausBase32 } = await import('../src/zweifaktor');
     await zf.bestaetige(lena.id, totp(ausBase32(e.geheimnis), Math.floor(Date.now() / 30_000)), 'test');
     const hashVorher = (await repo.holeHash(lena.email))!.hash;

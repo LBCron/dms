@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { Anmeldesperre, leseSperrEinstellung, pruefeSperrEinstellung, sammelText, SPERRE_STANDARD } from '../src/anmeldesperre';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { Fachfehler } from '../src/fehler';
+import { speicherKurzzustand } from '../src/kurzzustand';
 
 const gesperrt = (p: Promise<unknown>) => assert.rejects(p, (e) => e instanceof Fachfehler && e.status === 429);
 
@@ -22,8 +23,10 @@ describe('Anmeldeschutz (#240)', () => {
 
   it('sperrt eine IP über alle Adressen, auch dauerhaft; Entsperren; übersteht einen Neustart', async () => {
     const speicher = speicherEinstellungen();
+    // Die Sperren liegen seit #744 im Kurzzustand (Datenbank) – ein Neustart behält ihn.
+    const zustand = speicherKurzzustand();
     const mails: string[] = [];
-    const s = new Anmeldesperre(speicher, async (b) => { mails.push(b); });
+    const s = new Anmeldesperre(speicher, async (b) => { mails.push(b); }, Date.now, zustand);
     await s.speichere({ ip: { versuche: 4, minuten: 0 } }, 'test');
     for (let i = 0; i < 4; i++) await s.fehlschlag(`n${i}@x.example`, '::ffff:9.9.9.9');
     await gesperrt(s.pruefe('neu@x.example', '9.9.9.9'));
@@ -31,7 +34,7 @@ describe('Anmeldeschutz (#240)', () => {
     assert.equal(g.ip, '9.9.9.9');
     assert.equal(g.bis, null, 'dauerhaft');
     assert.equal(mails.length, 0, 'im Standard keine Mail (#368)');
-    const nachNeustart = new Anmeldesperre(speicher);
+    const nachNeustart = new Anmeldesperre(speicher, undefined, Date.now, zustand);
     await gesperrt(nachNeustart.pruefe('neu@x.example', '9.9.9.9'));
     assert.equal(await nachNeustart.entsperre('9.9.9.9', 'admin'), true);
     await nachNeustart.pruefe('neu@x.example', '9.9.9.9');

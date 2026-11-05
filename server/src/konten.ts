@@ -14,6 +14,7 @@ import type { Benutzerspiegel } from './dienst';
 import { mailtexte, type Mailer } from './mail';
 import { t } from './sprache';
 import { hashePasswort, hasheSchluessel, neuerSchluessel, pruefePasswort } from './passwort';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { zeitzone } from '../../shared/src/region';
 import { NOTFALLCODE_LAENGE, NOTFALLCODE_ZEICHEN, normiereNotfallcode } from '../../shared/src/notfallcode';
 
@@ -51,6 +52,10 @@ export function pruefeEmail(v: unknown): string {
 /** Gerät und Adresse, von denen eine Anmeldung kommt. */
 export type Geraet = Pick<SitzungsInfo, 'geraet' | 'ip'>;
 const OHNE_GERAET: Geraet = { geraet: '', ip: '' };
+/** Zweiter Anmeldeschritt (#242, seit #744 im Kurzzustand): Schlüssel ist der Hash der Kennung. */
+const ZWEITER_SCHRITT = 'zweiter-schritt';
+const ZWEITER_SCHRITT_MS = 5 * 60_000;
+interface ZweiterSchritt { benutzerId: string; email: string; ip: string; geraet: string }
 /** Letzte Aktivität höchstens einmal je Minute schreiben. */
 const BERUEHREN_MS = 60_000;
 
@@ -70,8 +75,12 @@ export class Konten {
   /** Anmeldung über einen Anbieter (#241): aktive Einstellung, sonst null. */
   private anbieter: () => Promise<OidcEinstellung | null> = async () => null;
   verbindeAnbieter(f: () => Promise<OidcEinstellung | null>) { this.anbieter = f; }
-  /** Nach richtigem Passwort, vor dem Code: kurzlebige Kennung je Anmeldung. */
-  private zweiterSchritt = new Map<string, { benutzerId: string; email: string; ip: string; geraet: string; bis: number; versuche: number }>();
+  /**
+   * Zustand zwischen Anfragen (#744), u. a. der zweite Anmeldeschritt: Nach richtigem Passwort, vor dem Code eine
+   * kurzlebige Kennung je Anmeldung – in der Datenbank nur ihr Hash, gültig 5 Minuten, einmal einlösbar.
+   */
+  private zustand: Kurzzustand = speicherKurzzustand();
+  verbindeZustand(z: Kurzzustand) { this.zustand = z; }
 
   /**
    * `spiegel` hält die Benutzer-Mappen (#26) auf dem Stand der Konten: Das Konto ist führend,
@@ -135,7 +144,7 @@ export class Konten {
   /** Nach Passwort oder Anbieter: Zwei-Faktor (#242) oder gleich die Sitzung. */
   private async nachErstemFaktor(b: Benutzer, g: Geraet) {
     if (this.zweifaktor && (await this.zweifaktor.aktiv(b.id))) {
-      return { zweiterSchritt: this.merkeZweitenSchritt(b.id, b.email, g) } as const;
+      return { zweiterSchritt: await this.merkeZweitenSchritt(b.id, b.email, g) } as const;
     }
     await this.repo.notiereAnmeldung(b.id);
     return { benutzer: b, schluessel: await this.neueSitzung(b.id, { ...g, voll: true }) };
@@ -190,25 +199,28 @@ export class Konten {
   }
 
   /** Zweiter Schritt (#242): Code aus der App oder ein Wiederherstellungscode. */
-  private merkeZweitenSchritt(benutzerId: string, email: string, g: Geraet) {
+  private async merkeZweitenSchritt(benutzerId: string, email: string, g: Geraet) {
     const kennung = neuerSchluessel();
-    const t = Date.now();
-    for (const [k, v] of this.zweiterSchritt) if (v.bis < t) this.zweiterSchritt.delete(k);
-    this.zweiterSchritt.set(kennung, { benutzerId, email, ip: g.ip, geraet: g.geraet, bis: t + 5 * 60_000, versuche: 0 });
+    await this.zustand.setze(ZWEITER_SCHRITT, hashe(kennung), { benutzerId, email, ip: g.ip, geraet: g.geraet } satisfies ZweiterSchritt, Date.now() + ZWEITER_SCHRITT_MS);
     return kennung;
   }
 
   async anmeldenMitCode(e: { kennung?: unknown; code?: unknown }, ip: string) {
-    const k = typeof e.kennung === 'string' ? this.zweiterSchritt.get(e.kennung) : undefined;
-    if (!k || k.bis < Date.now() || k.ip !== ip) throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
+    const schluessel = typeof e.kennung === 'string' && e.kennung ? hashe(e.kennung) : '';
+    const x = schluessel ? await this.zustand.lies(ZWEITER_SCHRITT, schluessel) : null;
+    const k = x?.wert as ZweiterSchritt | undefined;
+    if (!x || !k || k.ip !== ip) throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
     await this.sperre.pruefe(k.email, ip);
     const art = await this.zweifaktor?.pruefe(k.benutzerId, e.code);
     if (!art) {
       await this.sperre.fehlschlag(k.email, ip, true);
-      if (++k.versuche >= 5) this.zweiterSchritt.delete(e.kennung as string);
+      // Atomar gezählt (#744): Nach 5 falschen Codes gilt die Kennung nicht mehr – auch über mehrere Prozesse.
+      const n = await this.zustand.erhoehe(ZWEITER_SCHRITT, schluessel);
+      if (n !== null && n >= 5) await this.zustand.loesche(ZWEITER_SCHRITT, schluessel);
       throw new Fachfehler(401, t('anmeldung.fehler.code'));
     }
-    this.zweiterSchritt.delete(e.kennung as string);
+    // Einmal einlösbar: Von zwei gleichzeitigen Anfragen mit derselben Kennung bekommt nur eine die Sitzung.
+    if (!(await this.zustand.nimm(ZWEITER_SCHRITT, schluessel))) throw new Fachfehler(401, t('anmeldung.fehler.abgelaufen'));
     const benutzer = await this.repo.holeBenutzer(k.benutzerId);
     if (!benutzer || !benutzer.aktiv) throw new Fachfehler(401, t('anmeldung.fehler.falsch'));
     await this.repo.notiereAnmeldung(benutzer.id);
@@ -925,7 +937,7 @@ export class Konten {
     const benutzer = (await this.repo.holeBenutzer(l.benutzerId))!;
     // Zwei-Faktor (#242): Der Link ersetzt nur das Passwort, nicht den zweiten Faktor.
     if (this.zweifaktor && (await this.zweifaktor.aktiv(benutzer.id))) {
-      return { benutzer, zweiterSchritt: this.merkeZweitenSchritt(benutzer.id, benutzer.email, info) };
+      return { benutzer, zweiterSchritt: await this.merkeZweitenSchritt(benutzer.id, benutzer.email, info) };
     }
     await this.repo.notiereAnmeldung(l.benutzerId);
     return { benutzer, schluessel: await this.neueSitzung(l.benutzerId, { ...info, voll: true }) };

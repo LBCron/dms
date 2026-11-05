@@ -2,6 +2,7 @@
  * WebDAV-Laufwerk (#346, Stufe 1): reine Hilfen ohne Datenbank und ohne HTTP – Namen bereinigen und
  * eindeutig machen, Pfade zerlegen, XML erzeugen, Ratenbegrenzung. Die Anbindung steht in webdav.ts.
  */
+import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 
 /** Wurzel des Laufwerks. */
 export const WEBDAV_PFAD = '/webdav';
@@ -226,21 +227,20 @@ export function basic(kopf: string | undefined): { name: string; passwort: strin
   return { name: text.slice(0, i).trim(), passwort: text.slice(i + 1) };
 }
 
-/** Einfache Ratenbegrenzung im Speicher: höchstens `grenze` Anfragen je Schlüssel und Minute (festes Fenster). */
+/**
+ * Einfache Ratenbegrenzung: höchstens `grenze` Anfragen je Schlüssel und Minute (festes Fenster). Mit Kurzzustand in der
+ * Datenbank (#744) zählt das Fenster für alle Prozesse gemeinsam (atomar); ohne im Arbeitsspeicher.
+ */
 export class Ratenbegrenzung {
-  private fenster = new Map<string, { start: number; anzahl: number }>();
-  constructor(public grenze: number, private jetzt: () => number = Date.now, private dauer = 60_000) {}
+  private zustand: Kurzzustand;
+  constructor(public grenze: number, private jetzt: () => number = Date.now, private dauer = 60_000, zustand?: Kurzzustand) {
+    this.zustand = zustand ?? speicherKurzzustand(jetzt);
+  }
   /** true: Anfrage erlaubt. Liefert sonst die Sekunden bis zum nächsten Fenster. */
-  pruefe(k: string): { ok: true } | { ok: false; sekunden: number; erstes: boolean } {
+  async pruefe(k: string): Promise<{ ok: true } | { ok: false; sekunden: number; erstes: boolean }> {
     const t = this.jetzt();
-    let f = this.fenster.get(k);
-    if (!f || t - f.start >= this.dauer) {
-      f = { start: t, anzahl: 0 };
-      this.fenster.set(k, f);
-      if (this.fenster.size > 10_000) for (const [x, v] of this.fenster) if (t - v.start >= this.dauer) this.fenster.delete(x);
-    }
-    f.anzahl++;
+    const f = await this.zustand.zaehle('webdav-fenster', k, this.dauer);
     if (f.anzahl <= this.grenze) return { ok: true };
-    return { ok: false, sekunden: Math.max(1, Math.ceil((f.start + this.dauer - t) / 1000)), erstes: f.anzahl === this.grenze + 1 };
+    return { ok: false, sekunden: Math.max(1, Math.ceil(((f.bis ?? t + this.dauer) - t) / 1000)), erstes: f.anzahl === this.grenze + 1 };
   }
 }
