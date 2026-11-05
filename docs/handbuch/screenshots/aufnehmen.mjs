@@ -835,6 +835,8 @@ async function main() {
   {
     const anm = await fetch(`${BASIS}/api/konto/anmelden`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: ADMIN.email, passwort: ADMIN.passwort }) });
     const adminCookie = (anm.headers.get('set-cookie') ?? '').split(';')[0];
+    // Vertreten gehört zur Verwaltung (#819): erst den Modus beginnen – direkt nach der Anmeldung ohne erneute Abfrage.
+    await fetch(`${BASIS}/api/konto/verwaltung`, { method: 'POST', headers: { 'x-dms': '1', 'content-type': 'application/json', cookie: adminCookie }, body: '{}' });
     const jonas = (await api('GET', '/api/benutzer')).find((b) => b.email === MITGLIED.email);
     const v = await fetch(`${BASIS}/api/benutzer/${jonas.id}/vertreten`, { method: 'POST', headers: { 'x-dms': '1', cookie: adminCookie } });
     const vc = (v.headers.get('set-cookie') ?? adminCookie).split(';')[0];
