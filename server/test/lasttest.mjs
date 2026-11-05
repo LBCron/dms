@@ -117,16 +117,67 @@ async function anfrage(m, pfad, o = {}) {
   return r;
 }
 
+/**
+ * Der Server hat geantwortet, aber nicht mit 2xx (#873). Anders als eine Zeitüberschreitung oder eine abgelehnte
+ * Verbindung heißt das nie „Server nicht erreichbar“.
+ */
+export class Antwortfehler extends Error {
+  constructor(m, pfad, status, text) {
+    super(`${m} ${pfad}: ${status} ${text.slice(0, 300)}`);
+    this.status = status;
+    try { this.details = JSON.parse(text)?.details ?? null; } catch { this.details = null; }
+  }
+}
+
+/**
+ * Anfrage mit JSON-Antwort. Werkbank-Abfragen (#873) gehören zur Mess-Sitzung des Administrators und brauchen den
+ * Verwaltungsmodus (#819): Sie senden `x-dms-aktiv: 1` (wie die Oberfläche bei Aktivität), damit der Modus über den
+ * ganzen Lauf bestehen bleibt. Ist er trotzdem abgelaufen (403 mit `details.verwaltungsmodus`), beginnt der Test ihn
+ * einmal neu und wiederholt die Abfrage. Am Server ändert sich dafür nichts.
+ */
 async function json(m, pfad, o = {}) {
+  const werkbank = pfad.startsWith('/api/werkbank/');
+  const o2 = werkbank ? { ...o, koepfe: { 'x-dms-aktiv': '1', ...(o.koepfe ?? {}) } } : o;
+  try { return await jsonEinmal(m, pfad, o2); } catch (e) {
+    if (!werkbank || !o.cookie || !(e instanceof Antwortfehler) || e.status !== 403 || !e.details?.verwaltungsmodus) throw e;
+    if (!(await verwaltungNeu(o.cookie))) throw e;
+    return jsonEinmal(m, pfad, o2);
+  }
+}
+
+async function jsonEinmal(m, pfad, o) {
   const r = await anfrage(m, pfad, o);
   const t = await r.text();
-  if (!r.ok) throw new Error(`${m} ${pfad}: ${r.status} ${t.slice(0, 300)}`);
+  if (!r.ok) throw new Antwortfehler(m, pfad, r.status, t);
   return { daten: t ? JSON.parse(t) : null, cookie: r.headers.get('set-cookie')?.split(';')[0] };
 }
 
-async function anmelden([email, passwort]) {
+/** Zu welchem Konto des Tests eine Sitzung gehört (für die erneute Anmeldung nach Mitternacht). */
+const kontoDerSitzung = new Map();
+
+/**
+ * Verwaltungsmodus der Mess-Sitzung neu beginnen (#873). Am selben Tag geht das ohne Abfrage (Fall „heute
+ * bestätigt“ in #819). Nach Mitternacht verlangt der Server die erneute Anmeldung – dann mit dem Passwort des
+ * Lasttest-Kontos, wie es jede Person in der Oberfläche täte. Liefert, ob der Modus wieder läuft.
+ */
+async function verwaltungNeu(cookie) {
+  const r = await anfrage('POST', '/api/konto/verwaltung', { cookie, body: {}, zeit: 30_000 }).catch(() => null);
+  if (r?.ok) { await r.arrayBuffer(); console.log('  Verwaltungsmodus der Mess-Sitzung neu begonnen.'); return true; }
+  const t = r ? await r.text() : '';
+  let d = {}; try { d = JSON.parse(t)?.details ?? {}; } catch { /* ohne JSON */ }
+  const konto = kontoDerSitzung.get(cookie);
+  if (r?.status !== 401 || !d.bestaetigen || !konto) return false;
+  const r2 = await anfrage('POST', '/api/konto/verwaltung', { cookie, body: { passwort: konto[1] }, zeit: 30_000 }).catch(() => null);
+  if (!r2?.ok) return false;
+  await r2.arrayBuffer();
+  console.log('  Verwaltungsmodus der Mess-Sitzung nach erneuter Anmeldung neu begonnen.');
+  return true;
+}
+
+export async function anmelden([email, passwort]) {
   const { cookie } = await json('POST', '/api/konto/anmelden', { body: { email, passwort } });
   if (!cookie) throw new Error(`Anmeldung ${email}: kein Sitzungs-Cookie`);
+  kontoDerSitzung.set(cookie, [email, passwort]);
   // Verwaltungsmodus (#819): Wer verwalten darf, wechselt gleich hinein – die Anmeldung ist frisch, also ohne Abfrage.
   // Für alle anderen lehnt der Server ab; das ist hier kein Fehler.
   await anfrage('POST', '/api/konto/verwaltung', { cookie, body: {} }).catch(() => undefined);
@@ -174,6 +225,7 @@ async function einrichten() {
   const [email, passwort] = BENUTZER.admin;
   const c0 = await code();
   const { cookie: admin } = await json('POST', '/api/konto/einrichten', { body: { mandant: HAUSHALT, email, name: 'Lena (Lasttest)', passwort }, koepfe: c0 ? { 'x-einrichtungscode': c0 } : {} });
+  if (admin) kontoDerSitzung.set(admin, BENUTZER.admin);
   const c = { cookie: admin };
   // Den Assistenten schließen (#804): erst mit Schlüssel und heruntergeladenem Notfallblatt.
   await json('POST', '/api/werkbank/tresor/erzeugen', c).catch(() => {});
@@ -486,19 +538,25 @@ async function aufraeumen(v, s) {
 const quantil = (a, q) => { if (!a.length) return null; const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
 const rund = (x) => (x === null || x === undefined ? null : Math.round(x));
 
-/** Werte des Servers (Werkbank → Systemzustand, Datenbank-Anbindung): Ereignisschleife, Speicher, Warten auf Verbindungen. */
-async function serverStand(cookie) {
+/**
+ * Werte des Servers (Werkbank → Systemzustand, Datenbank-Anbindung): Ereignisschleife, Speicher, Warten auf Verbindungen.
+ * `unerreichbar` nur, wenn keine Antwort kam (Zeitüberschreitung, Verbindung abgelehnt). Antwortet der Server ohne
+ * Werte (403, 503 …), ist er erreichbar – das zählt nicht als Ausfall (#873), nur die Werte fehlen.
+ */
+export async function serverStand(cookie) {
   const t0 = performance.now();
+  const ohne = (e) => ({ fehler: e.message, ...(e instanceof Antwortfehler ? { status: e.status } : { unerreichbar: true }), antwortMs: performance.now() - t0 });
   try {
     const { daten: s } = await json('GET', '/api/werkbank/last', { cookie, zeit: 10_000 });
     return { ...s, antwortMs: performance.now() - t0 };
-  } catch {
+  } catch (e) {
+    if (!(e instanceof Antwortfehler) || e.status !== 404) return ohne(e);
     // Ältere Fassungen (vor #544): Systemzustand.
     try {
       const { daten: s } = await json('GET', '/api/werkbank/systemlast', { cookie, zeit: 10_000 });
       const w = s.schleife?.aktuell ?? s.schleife?.vorher;
       return { schleife: w ? { p99: w.p99, max: w.max } : null, speicherMb: s.anteile?.dms ? s.anteile.dms / 1024 ** 2 : null, antwortMs: performance.now() - t0 };
-    } catch (e) { return { fehler: e.message, antwortMs: performance.now() - t0 }; }
+    } catch (e2) { return ohne(e2); }
   }
 }
 
@@ -506,7 +564,7 @@ async function serverStand(cookie) {
  * Ein Durchgang: `n` Personen schicken `dauer` Sekunden lang Anfragen; optional läuft nebenher ein großer
  * Export nach dem anderen (als Administrator).
  */
-async function durchgang(v, { name, n, dauer, mitExport, speichern = null }) {
+export async function durchgang(v, { name, n, dauer, mitExport, speichern = null }) {
   const ende = Date.now() + dauer * 1000;
   const zeiten = []; const jeArt = {};
   const z = { anfragen: 0, ok: 0, abgewiesen: 0, client: 0, fehler: 0, ohneAntwort: 0, retryAfter: 0, status: {} };
@@ -601,7 +659,8 @@ async function durchgang(v, { name, n, dauer, mitExport, speichern = null }) {
     speicherMbStart: rund(sv[0]?.speicherMb), speicherMbMax: rund(max((s) => s.speicherMb)), speicherMbEnde: rund(sv.at(-1)?.speicherMb),
     // Ganzer Container (#696) beim höchsten Stand dieses Durchgangs, mit Aufteilung; null, wenn nicht lesbar.
     container: (() => { const m = sv.filter((s) => typeof s.container?.mb === 'number').sort((a, b) => b.container.mb - a.container.mb)[0]?.container; return m ? { mb: m.mb, programmeMb: m.programmeMb, zwischenspeicherMb: m.zwischenspeicherMb, datenbankMb: m.datenbankMb } : null; })(),
-    serverAusfaelle: server.length - sv.length,
+    // Nur Abfragen ohne Antwort (#873); Antworten ohne Werte stehen getrennt.
+    serverAusfaelle: server.filter((s) => s.unerreichbar).length, zustandOhneWerte: server.filter((s) => s.fehler && !s.unerreichbar).length,
     exporte: exporte.map((e) => ({ ...e, ms: Math.round(e.ms), mb: Math.round(e.mb * 10) / 10 })),
   };
   return ergebnis;
@@ -839,7 +898,7 @@ function bericht(ergebnisse, x) {
 }
 
 /** Was der Server über sich sagt (ohne Adressen und Namen). */
-async function umgebung(cookie) {
+export async function umgebung(cookie) {
   const s = await json('GET', '/api/werkbank/system', { cookie }).then((r) => r.daten, () => null);
   const l = await json('GET', '/api/werkbank/systemlast', { cookie }).then((r) => r.daten, () => null);
   // Das CPU-Modell kennt nur der Rechner, auf dem der Test läuft – also nur, wenn er im selben Container bzw. auf
