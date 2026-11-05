@@ -28,8 +28,9 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --no-audit --no-fund
+      # Erst ohne „apt-get update“ (#905), nur wenn das scheitert mit – das Update dauert mal 10 s, mal über 3 Minuten.
       - name: poppler und qpdf installieren
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null
+        run: sudo apt-get install -y -qq poppler-utils qpdf >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils qpdf >/dev/null; }
       - name: Fuzz-Tests
         working-directory: server
         env:

@@ -14,6 +14,11 @@
  * die Sprachdateien (shared/src/sprachen/<sprache>/). Zeigt die Oberfläche die Sprache noch nicht
  * (<html lang>), endet das Skript ohne Bilder und ohne Fehler – die Handbücher zeigen dann die deutschen.
  *
+ * Nur Daten (#905): DMS_NUR_DATEN=1 richtet Ablago genauso ein und legt dieselben Daten an (dazu Erinnerungen
+ * und eine Post mit Dokument), nimmt aber keine Seiten auf – für die iPhone-, Such- und Gleichzeitig-Prüfung, die
+ * im Workflow in einem eigenen Job neben den Bildschirmfotos laufen. Die Bilder des Assistenten landen dabei
+ * trotzdem in <zielordner>; im Workflow ist das ein Wegwerf-Ordner.
+ *
  * Braucht Playwright mit Chromium (npm install playwright; npx playwright install chromium).
  * Jedes Bild hat einen festen Namen; die Handbücher binden sie über bilder/<name>.png ein.
  */
@@ -28,6 +33,7 @@ const ZIEL = process.argv[2] ?? 'bilder';
 // Sprache der Aufnahme (#730): de (Vorgabe) oder en.
 const SPRACHE = process.env.DMS_SPRACHE ?? 'de';
 const GEBIET = { de: 'de-DE', en: 'en-GB' }[SPRACHE] ?? SPRACHE;
+const NUR_DATEN = !!process.env.DMS_NUR_DATEN;
 
 /* ---------- Texte der Oberfläche je Sprache (#730) ---------- */
 
@@ -294,6 +300,28 @@ async function vorbereiten() {
   };
 }
 
+/**
+ * Kalender in „Zu erledigen“ (#528, #725): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
+ * (steht schon unter „Zu erledigen“); die Kündigungsfristen der Verträge wiederholen sich jährlich.
+ */
+async function erinnerungenAnlegen(d) {
+  const vertrag = d.typ('Vertrag');
+  const tagIn = (n) => new Date(Date.now() + n * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
+  const vertraege = (await api('GET', '/api/mappen')).filter((m) => m.typId === vertrag.id);
+  const wartung = vertraege.find((m) => m.werte.bezeichnung === 'Wartungsvertrag Heizung') ?? d.strom;
+  for (const [n, text, m] of [[-12, 'Zählerstand ablesen und melden', d.strom], [3, 'Termin für die Wartung vereinbaren', wartung], [3, 'Rechnung der Wartung prüfen', wartung],
+    [10, 'Abschlag anpassen lassen', d.strom], [17, 'Unterlagen für die Steuererklärung zusammenstellen', vertraege[2] ?? d.strom], [24, 'Neue Tarife vergleichen', vertraege[3] ?? d.strom]]) {
+    await api('POST', `/api/mappen/${m.id}/erinnerungen`, { datum: tagIn(n), text });
+  }
+}
+
+/** Post (#192): ein neuer Brief mit Dokument in „Neue Post“. */
+async function briefAnlegen() {
+  const brief = await api('POST', '/api/post', { betreff: 'Preisanpassung Strom 2027' });
+  await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent('Preisanpassung 2027.pdf')}&typ=application/pdf`, beispielPdf('Preisanpassung zum 1. Januar 2027'), true);
+  return brief;
+}
+
 /* ---------- Seiten aufnehmen ---------- */
 
 /** Einrichtungscode (#119): aus DMS_EINRICHTUNGSCODE oder der Datei unter DMS_DATENWURZEL/geheim. */
@@ -450,6 +478,14 @@ async function main() {
   }
   await einrichtenImBrowser(browser, bild);
   const d = await vorbereiten();
+  if (NUR_DATEN) {
+    // Nur Daten (#905): dieselben Daten wie für die Bilder, dazu Erinnerungen und eine Post – ohne Seiten aufzunehmen.
+    await erinnerungenAnlegen(d);
+    await briefAnlegen();
+    await browser.close();
+    console.log('Ablago eingerichtet, Daten angelegt – ohne Bildschirmfotos (DMS_NUR_DATEN).');
+    return;
+  }
   const kontext = async (mitCookie = true, breite = 1440, hoehe = 860, adminHinweis = false) => {
     const k = await browser.newContext({ viewport: { width: breite, height: hoehe }, colorScheme: 'light', locale: GEBIET, timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
     if (mitCookie) {
@@ -637,15 +673,7 @@ async function main() {
   await erinnern.getByRole('button', { name: w('Erinnern') }).click();
   await s.locator('.erinnerungen').waitFor();
   await bild(s, 'erinnerung');
-  // Kalender in „Zu erledigen“ (#528, #725): Erinnerungen in den nächsten Wochen und eine überfällige von vor 12 Tagen
-  // (steht schon unter „Zu erledigen“); die Kündigungsfristen der Verträge wiederholen sich jährlich.
-  const tagIn = (n) => new Date(Date.now() + n * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
-  const vertraege = (await api('GET', '/api/mappen')).filter((m) => m.typId === vertrag.id);
-  const wartung = vertraege.find((m) => m.werte.bezeichnung === 'Wartungsvertrag Heizung') ?? d.strom;
-  for (const [n, text, m] of [[-12, 'Zählerstand ablesen und melden', d.strom], [3, 'Termin für die Wartung vereinbaren', wartung], [3, 'Rechnung der Wartung prüfen', wartung],
-    [10, 'Abschlag anpassen lassen', d.strom], [17, 'Unterlagen für die Steuererklärung zusammenstellen', vertraege[2] ?? d.strom], [24, 'Neue Tarife vergleichen', vertraege[3] ?? d.strom]]) {
-    await api('POST', `/api/mappen/${m.id}/erinnerungen`, { datum: tagIn(n), text });
-  }
+  await erinnerungenAnlegen(d);
   await geheZu(s, '/ablage/eingang');
   // Monat über Mitte und rechts, mit offener Mappe in der Mitte, Jahr.
   await s.getByRole('radio', { name: w('Monat') }).click();
@@ -701,8 +729,7 @@ async function main() {
   await loeschBaum.getByRole('button', { name: w('Schließen') }).click();
 
   // Post (#192): neuer Brief in „Neue Post“, Zuordnen zum Stromvertrag
-  const brief = await api('POST', '/api/post', { betreff: 'Preisanpassung Strom 2027' });
-  await api('POST', `/api/mappen/${brief.id}/dokumente?register=dokumente&name=${encodeURIComponent('Preisanpassung 2027.pdf')}&typ=application/pdf`, beispielPdf('Preisanpassung zum 1. Januar 2027'), true);
+  const brief = await briefAnlegen();
   const neuePost = (await api('GET', '/api/sichten')).neuePost ?? brief.typId;
   await geheZu(s, `/ablage/${neuePost}/${brief.id}`);
   await s.locator('.postleiste').waitFor();

@@ -20,7 +20,8 @@
  *    - Notfallzugang /notfall (#815): ohne Anmeldung, Eingabe des Notfallcodes.
  *    Von jeder Seite und jedem Menü entsteht ein Bild im Bilderordner (<breite>/<name>.png).
  *
- * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator).
+ * Läuft im Workflow „Handbuch“ nach aufnehmen.mjs (gleiche Daten, gleicher Administrator) – seit #905 in einem
+ * eigenen Job mit DMS_NUR_DATEN=1, also ohne die Bildschirmfotos davor.
  *
  *   DMS_URL=http://localhost:3000 node docs/handbuch/screenshots/mobil-pruefen.mjs [bilderordner]
  *   MOBIL_BROWSER=chromium …   (lokal ohne WebKit; dann mit iPhone-Größe und Touch in Chromium)
