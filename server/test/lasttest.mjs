@@ -126,6 +126,9 @@ async function json(m, pfad, o = {}) {
 async function anmelden([email, passwort]) {
   const { cookie } = await json('POST', '/api/konto/anmelden', { body: { email, passwort } });
   if (!cookie) throw new Error(`Anmeldung ${email}: kein Sitzungs-Cookie`);
+  // Verwaltungsmodus (#819): Wer verwalten darf, wechselt gleich hinein – die Anmeldung ist frisch, also ohne Abfrage.
+  // Für alle anderen lehnt der Server ab; das ist hier kein Fehler.
+  await anfrage('POST', '/api/konto/verwaltung', { cookie, body: {} }).catch(() => undefined);
   return cookie;
 }
 

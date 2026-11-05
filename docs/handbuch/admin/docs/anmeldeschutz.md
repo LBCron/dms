@@ -11,11 +11,11 @@ Nach zu vielen falschen Passwörtern sperrt Ablago die Anmeldung. Unter **Werkba
 | **Je E-Mail-Adresse und IP** | 5 Fehlversuche → 1 Minute | jemand vertippt sich oder probiert ein Passwort für ein Konto durch |
 | **Je IP-Adresse**, über alle E-Mail-Adressen | 30 Fehlversuche → 60 Minuten | jemand probiert von einer Adresse aus viele Konten durch |
 
-Die Sperrdauer je IP darf auch **0** sein: Dann bleibt die Adresse gesperrt, bis ein Administrator sie freigibt. Die Fehlversuche je IP zählen innerhalb der Sperrdauer (bei „dauerhaft“ innerhalb einer Stunde).
+Die Sperrdauer je IP darf auch **0** sein: Dann bleibt die Adresse gesperrt, bis jemand, der den Anmeldeschutz verwaltet, sie freigibt. Die Fehlversuche je IP zählen innerhalb der Sperrdauer (bei „dauerhaft“ innerhalb einer Stunde).
 
 Sperren stehen in der Datenbank und überstehen einen Neustart. Jede Sperre und jedes Entsperren steht im [Protokoll](fehlersuche.md#protokoll).
 
-## Mail an die Administratoren
+## Mail an die Verwaltenden { #mail-an-die-administratoren }
 
 Ist Ablago aus dem Internet erreichbar, probieren Fremde ständig Passwörter durch. Das ist normal, und die Sperren passieren automatisch. Darum schickt Ablago im Standard **keine Mail**, wenn es sperrt. Was gesperrt ist, siehst du jederzeit unter **Werkbank → Anmeldeschutz** und im Protokoll.
 
@@ -26,7 +26,7 @@ Wer trotzdem Bescheid wissen will, schaltet unter **Werkbank → Ablage aufbauen
 | **Sammelmeldung Anmeldeschutz** (Zeitplan täglich 0:00 → *Anmeldeschutz melden: Sammelmeldung*) | Höchstens eine Mail am Tag, kurz nach Mitternacht, über die Sperren des Vortags: wie viele IP-Adressen und Benutzerkonten gesperrt wurden, dazu die fünf Adressen mit den meisten Fehlversuchen. War Ablago aus, kommt die Meldung beim nächsten Start und fasst die verpassten Tage zusammen. An Tagen ohne Sperre kommt nichts. |
 | **Kontosperre sofort melden** (*Benutzerkonto gesperrt* → *Anmeldeschutz melden: Kontosperre*) | Eine Mail, sobald für ein bestehendes Konto zu viele falsche Passwörter oder Codes kamen. Das ist seltener und wichtiger als eine gesperrte IP: Vielleicht hat jemand das Passwort dieses Kontos im Visier. Je Konto höchstens eine Mail am Tag; Fehlversuche mit unbekannten Adressen lösen keine Mail aus. |
 
-Die Mails gehen an alle aktiven Administratoren mit E-Mail-Adresse und brauchen einen eingerichteten [Mailversand](installation.md#e-mail-und-adresse).
+Die Mails gehen an alle aktiven Personen mit Verwaltungsrecht für *Anmeldeschutz* (oder „Gesamte Verwaltung“) und E-Mail-Adresse und brauchen einen eingerichteten [Mailversand](installation.md#e-mail-und-adresse).
 
 !!! note "Bis Version 0.84.7"
     Früher kam im Standard bei jeder gesperrten IP sofort eine Mail. Mit 0.84.8 ist die Mail im Standard aus – auch in bestehenden Installationen, in denen niemand den Haken selbst umgelegt hat. Wer ihn seit 0.84.8 einschaltet, bekommt die tägliche Sammelmeldung statt einer Mail je Sperre.
@@ -44,12 +44,12 @@ Unter **Nie sperren** stehen Adressen oder Netze, die nie gesperrt werden, z. B.
 
 ## Ausgesperrt?
 
-Bist du selbst gesperrt und kein anderer Administrator kann dich freigeben, hilft der [Befehl `dms`](konsole.md) im Container:
+Bist du selbst gesperrt und niemand sonst, der verwaltet, kann dich freigeben, hilft der [Befehl `dms`](konsole.md) im Container:
 
 - `dms gesperrt` zeigt die gesperrten Adressen,
 - `dms entsperren <ip>` gibt eine Adresse sofort frei.
 
-Ohne Zugriff auf den Container warte die Sperrdauer ab oder melde dich von einem anderen Gerät oder Netz an. Gibt es keinen Administrator mehr, hilft der [Notfallzugang](notfall.md).
+Ohne Zugriff auf den Container warte die Sperrdauer ab oder melde dich von einem anderen Gerät oder Netz an. Kommt niemand mit Verwaltungsrecht mehr hinein, hilft der [Notfallzugang](notfall.md).
 
 Kommst du wegen der [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) nicht weiter – Handy und Wiederherstellungscodes weg –, entfernt `dms zweifaktor-zuruecksetzen <email>` sie bei deinem Benutzer; danach reicht wieder das Passwort. Ist sie vorgeschrieben und du hast sie noch nicht eingerichtet, kannst du die Pflicht unter **Werkbank → Anmeldeschutz** trotzdem jederzeit ausschalten – auch auf der Einrichtungsseite nach der Anmeldung.
 
@@ -57,9 +57,9 @@ Kommst du wegen der [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) nicht weiter
 
 Jeder Benutzer kann unter **Mein Konto → Sicherheit** (oben rechts auf deinen Namen klicken) eine Zwei-Faktor-Anmeldung mit einer Authenticator-App einrichten (TOTP, 6 Stellen, 30 Sekunden) und bekommt dazu zehn Wiederherstellungscodes. Wie das für Benutzer aussieht, beschreibt das [Benutzerhandbuch](https://help.ablago.app/benutzer/aktuell/profil/#zwei-faktor-anmeldung).
 
-Unter **Werkbank → Anmeldeschutz** im Block **Zwei-Faktor-Anmeldung** **schreibst du sie je Systemrolle vor**: mit den Haken **Für Administratoren vorschreiben** und **Für Mitglieder vorschreiben**. Die Pflicht greift **bei der nächsten Anmeldung**: Wer sie dann noch nicht hat, sieht nach der Anmeldung nur die Einrichtung und kommt erst danach weiter. Abschalten kann er sie selbst nicht mehr. Wer gerade angemeldet ist, arbeitet weiter und sieht oben einen Hinweis mit dem Weg zur Einrichtung.
+Unter **Werkbank → Anmeldeschutz** im Block **Zwei-Faktor-Anmeldung** **schreibst du sie je Systemrolle vor**: mit den Haken **Für alle vorschreiben, die verwalten dürfen** und **Für Mitglieder vorschreiben**. Die Pflicht greift **bei der nächsten Anmeldung**: Wer sie dann noch nicht hat, sieht nach der Anmeldung nur die Einrichtung und kommt erst danach weiter. Abschalten kann er sie selbst nicht mehr. Wer gerade angemeldet ist, arbeitet weiter und sieht oben einen Hinweis mit dem Weg zur Einrichtung.
 
-Schreibst du sie für Administratoren vor und hast sie selbst noch nicht, fragt Ablago vorher nach: **Jetzt einrichten** führt dich zu **Mein Konto → Sicherheit**, **Trotzdem vorschreiben** schaltet die Pflicht ein – du richtest sie dann bei deiner nächsten Anmeldung ein. Die Einstellung selbst bleibt für Administratoren immer erreichbar: Ausschalten geht auch, solange du die Einrichtung noch vor dir hast; die Einrichtungsseite nach der Anmeldung bietet dafür **Pflicht für Administratoren ausschalten** an.
+Schreibst du sie für alle vor, die verwalten dürfen, und hast sie selbst noch nicht, fragt Ablago vorher nach: **Jetzt einrichten** führt dich zu **Mein Konto → Sicherheit**, **Trotzdem vorschreiben** schaltet die Pflicht ein – du richtest sie dann bei deiner nächsten Anmeldung ein. Die Einstellung selbst bleibt für Administratoren immer erreichbar: Ausschalten geht auch, solange du die Einrichtung noch vor dir hast; die Einrichtungsseite nach der Anmeldung bietet dafür **Pflicht für Administratoren ausschalten** an.
 
 Falsche Codes zählen wie falsche Passwörter für den [Anmeldeschutz](#zwei-sperren). Ein Link zum Zurücksetzen des Passworts ersetzt nur das Passwort; den Code fragt Ablago trotzdem ab.
 
@@ -105,9 +105,9 @@ Unter **Werkbank → Anmeldeschutz → Anmeldung über einen Anbieter** trägst 
 
 Dann klickst du auf **Verbindung prüfen**. Danach **Eingeschaltet – Knopf auf der Anmeldeseite** ankreuzen und speichern. Das Client-Secret liegt mit dem [Schlüssel von Ablago](verschluesselung.md) verschlüsselt in der Datenbank.
 
-- **Zuordnung:** über die E-Mail-Adresse. Gibt es sie in Ablago nicht, lehnt das Ablago ab – außer **Unbekannte Adressen als neue Benutzer anlegen** ist an; dann entsteht ein Benutzer mit der **Systemrolle neuer Benutzer** (Mitglied oder Administrator). Bei Entra ID dient auch der Anmeldename (UPN) als Adresse.
-- **Gruppe für Administratoren:** Ist sie gesetzt, folgt die Systemrolle bei jeder Anmeldung der Gruppe: Mitglieder der Gruppe sind Administratoren, alle anderen Mitglieder. Der letzte aktive Administrator bleibt Administrator. Aus welchem Claim Ablago die Gruppen liest, steht im Feld **Claim mit den Gruppen** (meist `groups`). Bei Entra ID liefert der Claim `groups` die Objekt-IDs der Gruppen (Anwendung → *Token-Konfiguration* → *Gruppenanspruch hinzufügen*); trage dann die Objekt-ID ein.
-- **Passwort-Anmeldung nur noch für Administratoren:** Mitglieder melden sich nur noch über den Anbieter an. Administratoren behalten ihr Passwort als Notzugang, falls der Anbieter einmal nicht erreichbar ist.
+- **Zuordnung:** über die E-Mail-Adresse. Gibt es sie in Ablago nicht, lehnt das Ablago ab – außer **Unbekannte Adressen als neue Benutzer anlegen** ist an; dann entsteht ein Benutzer – mit „Gesamte Verwaltung“ oder ohne Verwaltungsrecht, je nach **Neue Benutzer verwalten**. Bei Entra ID dient auch der Anmeldename (UPN) als Adresse.
+- **Gruppe für „Gesamte Verwaltung“:** Ist sie gesetzt, folgt „Gesamte Verwaltung“ bei jeder Anmeldung der Gruppe: Wer in der Gruppe ist, bekommt sie, wer nicht mehr dazugehört, verliert sie. Die letzte Person mit „Gesamte Verwaltung“ behält sie. Eine Auswahl einzelner Bereiche bleibt unberührt (siehe [Wer darf Ablago verwalten?](verwalten.md)).
+- **Passwort-Anmeldung nur noch für Personen, die verwalten dürfen:** Alle anderen melden sich nur noch über den Anbieter an. Wer verwalten darf, behält sein Passwort als Notzugang, falls der Anbieter einmal nicht erreichbar ist.
 - **Beim Abmelden auch beim Anbieter abmelden:** Wer sich über den Anbieter angemeldet hat, wird beim Abmelden auch dort abgemeldet (wenn der Anbieter das anbietet).
 - Eine eingerichtete [Zwei-Faktor-Anmeldung](#zwei-faktor-anmeldung) von Ablago gilt auch hier. Verlangt schon der Anbieter einen zweiten Faktor, schreibe sie in Ablago für diese Rollen nicht zusätzlich vor.
 

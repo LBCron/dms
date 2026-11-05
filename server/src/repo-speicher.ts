@@ -339,6 +339,7 @@ export function speicherRepo(): Repo {
       if (m) mappen.set(id, { ...m, geaendert: standWeiter(m.geaendert), geaendertVon: benutzerId });
     },
     async holeSystemMappe(kennung) { const m = [...mappen.values()].find((x) => x.systemKennung === kennung); return m && kopie(m); },
+    async setzeSystemKennung(id, kennung) { const m = mappen.get(id); if (m) m.systemKennung = kennung; },
     async loescheMappe(id) {
       mappen.delete(id); verweise.delete(id);
       for (const [k, n] of notizen) if (n.mappeId === id) notizen.delete(k);
@@ -804,7 +805,7 @@ export function speicherRepo(): Repo {
     async historieAufraeumen(vor) {
       const weg = new Set(historie.filter((h) => h.art === 'endgueltig' && h.zeit < vor && !mappen.has(h.mappeId) && !korb.has(h.mappeId)).map((h) => h.mappeId));
       const vorher = historie.length;
-      for (let i = historie.length - 1; i >= 0; i--) if (weg.has(historie[i].mappeId)) historie.splice(i, 1);
+      for (let i = historie.length - 1; i >= 0; i--) if (weg.has(historie[i].mappeId) && historie[i].art !== 'verwaltungsmodus') historie.splice(i, 1);
       return vorher - historie.length;
     },
 

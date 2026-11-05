@@ -95,6 +95,7 @@ nav:
           - Archivmodus und Aufbewahrung: archiv.md
           - Links über Feldwerte: direktlinks.md
       - Benutzer und Sicherheit:
+          - Wer darf Ablago verwalten?: verwalten.md
           - Benutzer und Rollen: benutzer.md
           - Berechtigungen: berechtigungen.md
           - Datenschutz in Ablago: datenschutz.md

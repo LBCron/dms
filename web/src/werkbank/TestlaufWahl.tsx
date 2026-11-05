@@ -21,7 +21,7 @@ function useBekannt() {
 }
 
 /**
- * Benutzer wählen wie im Verweisfeld; Administratoren und deaktivierte Benutzer sind gekennzeichnet.
+ * Benutzer wählen wie im Verweisfeld; deaktivierte Benutzer sind gekennzeichnet. Es gilt immer der Alltag der Person (#818).
  * `mitKonten` (#710, nur im Testlauf am Mappentyp): zusätzlich die Konten ohne Person – Systemkonten und
  * Paket-Benutzer –, seit #817 als eingeklappte Gruppe über der Auswahl der Personen. Sonst bleiben sie überall ausgeblendet.
  */
@@ -60,7 +60,6 @@ export function TestBenutzerWahl({ id, wert, setze, mitKonten }: { id: string; w
             <button type="button" className="textknopf klein" aria-label={t('werkbank.testlauf.konto.entfernen', { name: name(sonder) })} onClick={() => setze('')}>×</button></span></div>
         : <MappenWahl id={id} ziel={ziel} mehrfach={false} wert={wert || undefined} bekannt={bekannt} merke={merke} ohneAnlegen
             setze={(v) => setze(typeof v === 'string' ? v : '')} />}
-      {konto?.rolle === 'admin' && <span className="chip warn klein">Administrator – für ihn gelten die Regeln nicht</span>}
       {konto && !konto.aktiv && <span className="chip klein">deaktiviert</span>}
     </div>
   );

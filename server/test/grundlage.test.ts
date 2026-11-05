@@ -25,8 +25,8 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'markus@example.org', name: 'Markus', passwort: 'ein-langes-passwort' });
-  const { benutzer: lena } = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena', rolle: 'mitglied' }, admin.id);
-  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, admin.id);
+  const { benutzer: lena } = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena' }, admin.id);
+  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, admin.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   await konten.systemkonto('automatisierung');
   d.systemkonten = (k) => konten.systemkonto(k);
@@ -109,7 +109,7 @@ describe('„Datum erreicht“ (#724)', () => {
     assert.equal(l.zustand, 'abgeschlossen', JSON.stringify(l.schritte));
     const auf = (await d.alleAufgaben()).filter((x) => x.mappeId === m.id && x.feldKey === 'ende');
     assert.deepEqual(auf.map((x) => x.empfaengerId).sort(), [admin.id, null].sort(), 'Ersteller (Markus) und Administratoren statt Lena');
-    assert.match(l.schritte[2].text!, /Administratoren/);
+    assert.match(l.schritte[2].text!, /ohne Empfänger/);
   });
 
   it('keine zweite Frist neben der übernommenen Erinnerung (gleiche Person, gleiches Datum, #712)', async () => {

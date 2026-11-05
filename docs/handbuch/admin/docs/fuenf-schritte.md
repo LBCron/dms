@@ -16,7 +16,7 @@ Mehr: [Sicherung](sicherung.md)
 
 Unter **Werkbank → Benutzer** lädst du deine Familie oder dein Team ein; jeder bekommt eine Mail mit einem Link und legt sein Passwort selbst fest. Jeder ist zunächst **Mitglied**: Er arbeitet in der Ablage und sieht alles. Wer was sehen darf, kannst du später über Rollen und [Berechtigungen](berechtigungen.md) einschränken.
 
-*Schon erledigt für den ersten Benutzer, den du im Assistenten angelegt hast.* Mit diesem Konto arbeitest du selbst in der Ablage – das Administrator-Konto ist nur fürs Einrichten.
+*Schon erledigt für den ersten Benutzer, den du im Assistenten angelegt hast.* Du selbst arbeitest mit deinem eigenen Konto in der Ablage; verwalten tust du es bewusst über **Ablago verwalten** im Benutzermenü. Am besten bekommt noch eine zweite Person das Recht, Ablago zu verwalten.
 
 ![Benutzer in der Werkbank](bilder/werkbank-benutzer.png)
 

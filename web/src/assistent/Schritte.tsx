@@ -228,12 +228,12 @@ function AdminSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => void
   const x = useSenden();
   const merke = () => setzeSammlung((a) => ({ ...a, administrator: { name: name.trim(), email: email.trim() } }));
   return (
-    <Rahmen aktiv={NR.administrator} titel="Administrator" leiste={leiste} unter={<>Der Administrator richtet Ablago ein – Mappentypen, Benutzer, Sicherung. <strong>In der Ablage arbeitet er nicht</strong>; dafür legst du im nächsten Schritt einen normalen Benutzer an, z. B. dich selbst mit einer zweiten Adresse.</>}>
+    <Rahmen aktiv={NR.administrator} titel="Administrator" leiste={leiste} unter={<>Diese Person richtet Ablago ein und darf es verwalten („Gesamte Verwaltung“). <strong>Sie arbeitet ganz normal in der Ablage</strong>; in die Verwaltung wechselt sie bewusst über „Ablago verwalten“ im Benutzermenü.</>}>
       <form className="stapel" onSubmit={(e) => e.preventDefault()}>
         <Probleme liste={probleme} />
         {s.verweise.administrator && <p className="leise klein">{t('einrichtung.administrator.verweis', { verweis: s.verweise.administrator })}</p>}
-        <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="z. B. Admin" autoFocus /></label>
-        <label className="eigenschaft"><span>E-Mail-Adresse <small>damit meldest du dich als Administrator an</small></span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
+        <label className="eigenschaft"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="z. B. Lena" autoFocus /></label>
+        <label className="eigenschaft"><span>E-Mail-Adresse <small>damit meldest du dich an</small></span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
         <label className="eigenschaft"><span>Passwort <small>mindestens {PASSWORT_MINDESTLAENGE} Zeichen</small></span><input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" required /></label>
         <label className="eigenschaft"><span>Passwort wiederholen</span><input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" required /></label>
         <p className="leise klein">{t('einrichtung.administrator.erst')}</p>
@@ -259,11 +259,11 @@ function BenutzerSchritt({ s, zurWahl, leiste }: { s: Sammlung; zurWahl: () => v
   const name = b.name.trim() || b.email.trim();
   const merke = () => setzeSammlung((a) => ({ ...a, benutzer: b }));
   return (
-    <Rahmen aktiv={NR.benutzer} titel="Erster Benutzer" leiste={leiste} unter="Mit diesem Konto arbeitest du in der Ablage. Der Administrator bleibt für die Werkbank – so trennt Ablago Einrichten und Arbeiten.">
+    <Rahmen aktiv={NR.benutzer} titel="Erster Benutzer" leiste={leiste} unter="Gern gleich eine zweite Person, die mit Ablago arbeitet. Verwaltungsrechte bekommt sie dadurch nicht – die vergibst du später unter Werkbank → Benutzer.">
       <form className="stapel" onSubmit={(e) => e.preventDefault()}>
         <Probleme liste={probleme} />
         <label className="eigenschaft"><span>Name</span><input value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} autoComplete="off" autoFocus /></label>
-        <label className="eigenschaft"><span>E-Mail-Adresse <small>eine andere als die des Administrators</small></span><input type="email" value={b.email} onChange={(e) => setB({ ...b, email: e.target.value })} autoComplete="off" /></label>
+        <label className="eigenschaft"><span>E-Mail-Adresse <small>eine andere als im Schritt davor</small></span><input type="email" value={b.email} onChange={(e) => setB({ ...b, email: e.target.value })} autoComplete="off" /></label>
         {b.email.trim() && (
           <label className="haken"><input type="checkbox" checked={b.aufgabenOhneEmpfaenger} onChange={(e) => setB({ ...b, aufgabenOhneEmpfaenger: e.target.checked })} />
             <span>{t('werkbank.aufgabenempfaenger.assistent.haken', { name })}<small className="hilfe">{t('werkbank.aufgabenempfaenger.assistent.hilfe', { name })}</small></span></label>

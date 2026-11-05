@@ -19,9 +19,9 @@ In der Docker-Oberfläche des NAS (Synology Container Manager, QNAP Container St
 
 ## Wer darf das?
 
-Wer Befehle im Container ausführen darf, darf auch `dms` – wie ein Administrator. Der Befehl spricht mit dem **laufenden Ablago**, nicht direkt mit der Datenbank; Sperren, Sitzungen und Protokoll bleiben so stimmig. Jede Aktion steht im [Protokoll](fehlersuche.md#protokoll) mit dem Vermerk **(Konsole)**.
+Wer Befehle im Container ausführen darf, darf auch `dms` – wie eine Person mit „Gesamte Verwaltung“ im Verwaltungsmodus. Der Befehl spricht mit dem **laufenden Ablago**, nicht direkt mit der Datenbank; Sperren, Sitzungen und Protokoll bleiben so stimmig. Jede Aktion steht im [Protokoll](fehlersuche.md#protokoll) mit dem Vermerk **(Konsole)**.
 
-`dms` handelt als der älteste aktive Administrator. Mit `--als <email>` wählst du einen anderen.
+`dms` handelt als die älteste aktive Person mit „Gesamte Verwaltung“. Mit `--als <email>` wählst du einen anderen.
 
 Technisch legt Ablago beim Start eine Datei `/tmp/dms-konsole.json` mit einem zufälligen Schlüssel an, lesbar nur im Container. Einen anderen Ort legt die Umgebungsvariable `DMS_KONSOLE_DATEI` fest; sie muss dann für Ablago und den Befehl `dms` gleich sein. Den Schlüssel nimmt Ablago nur über die Adresse `127.0.0.1` an – über den veröffentlichten Port oder einen Reverse-Proxy funktioniert er nicht.
 
@@ -45,7 +45,7 @@ Der Befehl `dms` funktioniert auch im [Wartungsmodus](wartungsmodus.md). So been
     docker compose exec app dms entsperren 192.168.1.20
     ```
 
-Gibt es gar keinen aktiven Administrator mehr, setzt `dms passwort` trotzdem ein Passwort; die übrigen Befehle brauchen einen. Dann hilft der [Notfallzugang](notfall.md).
+Gibt es gar keine aktive Person mit „Gesamte Verwaltung“ mehr, setzt `dms passwort` trotzdem ein Passwort; die übrigen Befehle brauchen einen. Dann hilft der [Notfallzugang](notfall.md).
 
 ## Betrieb
 

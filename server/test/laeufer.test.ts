@@ -1,5 +1,6 @@
 // Paket-Läufer (#338): Dienstkonten, Rechte aus dem Manifest, Ereignisse, Grenzen – mit kleinen,
 // hier von Hand gebauten WebAssembly-Modulen (kein Compiler in der CI nötig).
+import { imModus } from './hilfen';
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import { PDFDocument } from 'pdf-lib';
@@ -360,8 +361,9 @@ describe('Paket-Läufer (#338): Ablauf', () => {
     // Anmelden mit der Adresse des Dienstkontos geht nicht.
     await assert.rejects(konten.anmelden({ email: blind.email, passwort: 'x' }, '1.2.3.4'), /stimmen nicht/);
     // Verwaltung, Vertretung und Links kennen Dienstkonten nicht – auch nicht für einen Administrator.
-    const admin = (await konten.legeBenutzerAn({ email: 'admin@example.org', name: 'Admin', rolle: 'admin' })).benutzer;
-    await assert.rejects(konten.aendereBenutzer(admin, blind.id, { rolle: 'admin' }), (e: { status?: number }) => e.status === 404);
+    const admin = imModus((await konten.legeBenutzerAn({ email: 'admin@example.org', name: 'Admin', verwaltung: ['*'] })).benutzer);
+    await assert.rejects(konten.aendereBenutzer(admin, blind.id, { aktiv: false }), (e: { status?: number }) => e.status === 404);
+    await assert.rejects(konten.setzeVerwaltung(admin, blind.id, ['*']), (e: { status?: number }) => e.status === 404);
     await assert.rejects(konten.vertrete(admin, undefined, blind.id, { geraet: '', ip: '' }), (e: { status?: number }) => e.status === 404);
     await assert.rejects(konten.neuerLink(blind.id), (e: { status?: number }) => e.status === 404);
     await assert.rejects(konten.loescheBenutzer(admin, blind.id), (e: { status?: number }) => e.status === 404);
@@ -447,7 +449,7 @@ describe('Paket-Läufer (#338): Ablauf', () => {
         await installiere(d, 'trenner', ECHO, '{ lesen: ["dms:post"], schreiben: ["dms:post"], dokumente: schreiben }');
         const konto = await konten.dienstkonto('trenner', 'Trenner');
         const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-        const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' }, anna.id);
+        const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, anna.id);
         const sys = await d.sichereSystem();
         const z = await d.zugriff(konto);
         assert.equal((await d.lesbare(z, [ben.id])).size, 0, 'Pakete sehen keine Benutzer');

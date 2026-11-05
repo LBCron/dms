@@ -1,3 +1,4 @@
+import { hatGesamt } from '../../shared/src/verwaltungsrecht';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { chmod, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -52,16 +53,16 @@ export class Konsolenzugang {
 }
 
 /**
- * Als wer handelt die Konsole? Als der angegebene Administrator (--als) oder als der älteste aktive.
+ * Als wer handelt die Konsole? Als die angegebene Person mit „Gesamte Verwaltung“ (--als, #818) oder als die älteste aktive.
  * So bleiben „angelegt von“ und Protokoll stimmig; das Protokoll vermerkt zusätzlich „Konsole“.
  */
 export function konsolenBenutzer(liste: Benutzer[], als: string | undefined): Benutzer {
-  const admins = liste.filter((b) => b.aktiv && b.rolle === 'admin').sort((x, y) => x.erstellt.localeCompare(y.erstellt));
+  const admins = liste.filter((b) => b.aktiv && hatGesamt(b)).sort((x, y) => x.erstellt.localeCompare(y.erstellt));
   if (als) {
     const b = admins.find((x) => x.email.toLowerCase() === als.trim().toLowerCase());
-    if (!b) throw new Fachfehler(404, `Unter ${als} gibt es keinen aktiven Administrator.`);
+    if (!b) throw new Fachfehler(404, `Unter ${als} gibt es keine aktive Person mit „Gesamte Verwaltung“.`);
     return b;
   }
-  if (!admins.length) throw new Fachfehler(409, 'Es gibt noch keinen aktiven Administrator. Richte Ablago im Browser ein (oder nutze den Notfallzugang).');
+  if (!admins.length) throw new Fachfehler(409, 'Es gibt noch keine aktive Person mit „Gesamte Verwaltung“. Richte Ablago im Browser ein (oder nutze den Notfallzugang).');
   return admins[0];
 }

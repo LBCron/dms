@@ -79,7 +79,7 @@ export function RegelwerkAbschnitt({ rw, setRw, typ, gespeichert, neu, klappe }:
   return (
     <Bereich id="berechtigungen" titel="Berechtigungen" hilfe={<Hilfe ort="werkbank.berechtigungen" />} klappe={klappe}
       kurz={`Standard: ${kurzStandard(Object.fromEntries(RECHTE_LISTE.map((k) => [k, rw.grund[k] && !((k === 'C' && sperre.C) || (k === 'D' && sperre.D))])) as Record<Recht, boolean>)} · ${rw.regeln.length === 1 ? '1 Regel' : `${rw.regeln.length || 'keine'} Regeln`}`}
-      beschreibung={<>Wer Mappen dieses Mappentyps anlegen (C), lesen (R), bearbeiten (U – Felder und Dokumente), löschen (D) und Passwörter sehen (P) darf. Für <strong>Administratoren</strong> gelten die Regeln nicht.</>}>
+      beschreibung={<>Wer Mappen dieses Mappentyps anlegen (C), lesen (R), bearbeiten (U – Felder und Dokumente), löschen (D) und Passwörter sehen (P) darf. Im <strong>Verwaltungsmodus</strong> gelten die Regeln nicht.</>}>
 
       <h3 className="zwischen">Standard <Hilfe ort="berechtigungen.grund" /></h3>
       <p className="leise klein">Gilt, solange keine Regel etwas anderes sagt. Klicken schaltet zwischen ✓ erteilt und ✗ entzogen.</p>
@@ -96,7 +96,7 @@ export function RegelwerkAbschnitt({ rw, setRw, typ, gespeichert, neu, klappe }:
           );
         })}
       </div>
-      {(sperre.C || sperre.D) && <p className="leise klein">{typ.system === 'benutzer' ? 'Benutzer entstehen und verschwinden nur in der Benutzerverwaltung – auch für Administratoren.' : 'E-Mail-Mappen entstehen nur beim Versenden.'}</p>}
+      {(sperre.C || sperre.D) && <p className="leise klein">{typ.system === 'benutzer' ? 'Benutzer entstehen und verschwinden nur in der Benutzerverwaltung – auch im Verwaltungsmodus.' : 'E-Mail-Mappen entstehen nur beim Versenden.'}</p>}
 
       <h3 className="zwischen">Regeln <Hilfe ort="berechtigungen.regeln" /></h3>
       <p className="leise">Von oben nach unten: Jede zutreffende Regel setzt ihre ✓ und ✗, „–“ lässt das Recht, wie es ist; „Stopp“ beendet die Prüfung. Ohne Lesen wirkt nur Anlegen; für Notizen und Aufgaben reicht Lesen. Reihenfolge per Ziehen am Griff oder mit Alt+↑/↓.</p>
@@ -383,7 +383,7 @@ export function WasSiehtBlatt({ benutzerId, admin }: { benutzerId: string; admin
     <section className="blatt" id="was-sieht">
       <h2 className="h3">Was sieht dieser Benutzer? <Hilfe ort="benutzer.wasSieht" /></h2>
       {admin
-        ? <p className="leise">Administratoren sehen alles – für sie gelten die Berechtigungen nicht.</p>
+        ? <p className="leise">{t('konten.verwaltende.berechtigungen.modus')}</p>
         : <>
             <p className="leise">Je Mappentyp: wie viele Mappen er nach den gespeicherten Regeln lesen darf, mit einigen Beispielen.</p>
             {!an && <div className="knoepfe"><button type="button" className="knopf klein" onClick={() => setAn(true)}>Anzeigen</button></div>}

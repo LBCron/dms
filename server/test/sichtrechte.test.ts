@@ -1,5 +1,6 @@
 /** Berechtigungen an Sichten mit Vererbung (#148). */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { after, describe, it } from 'node:test';
 import type { Sicht } from '../../shared/src/sichten';
 import { eigeneSichtRechte, sichtRechte, type SichtRegelwerk } from '../../shared/src/sichtrechte';
@@ -38,7 +39,7 @@ async function aufbau(pg = false) {
   const konten = new Konten(r?.konto ?? speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name, rolle: 'mitglied' }, admin.id)).benutzer;
+  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name }, admin.id)).benutzer;
   const eltern = await neu('Eltern'); const kind = await neu('Kind');
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const rolleTyp = (await d.listeTypen()).find((t) => t.system === 'rolle')!;
@@ -52,7 +53,7 @@ async function aufbau(pg = false) {
   const garten = await d.legeSichtAn({ name: 'Garten', elternId: haus.id, typen: [rechnung.id], bedingungen: nrIst('G') });
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
-  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => tabelle.find((r) => r.methode === m && r.pfad === p)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   const eigene = new Set([haus.id, heizung.id, garten.id]);
   const sichten = async (b: { id: string }) => ((await rufe(b, 'GET', '/api/sichten/definitionen')).body as Sicht[]).filter((s) => eigene.has(s.id));
   const zaehler = async (b: { id: string }) => Object.fromEntries(Object.entries(((await rufe(b, 'GET', '/api/sichten')).body as { sichten: Record<string, number> }).sichten).filter(([k]) => eigene.has(k)));

@@ -119,7 +119,7 @@
   "lauf.pakete.einstellungen": "Die Einstellungen der Pakete sind nach dem Neuladen nicht mehr da (sie bleiben nur im Speicher). Bitte unter „Ändern“ erneut eingeben.",
   "lauf.pakete.teil": "Nicht installiert: {namen}. Das holst du unter Werkbank → Pakete nach.",
   "abschluss.titel": "{ablage} ist eingerichtet",
-  "abschluss.unter": "Noch ein letzter Schritt: das Notfallblatt. Danach geht es als Administrator in der Werkbank weiter; in der Ablage arbeitest du mit dem ersten Benutzer.",
+  "abschluss.unter": "Noch ein letzter Schritt: das Notfallblatt. Danach geht es im Verwaltungsmodus in der Werkbank weiter; mit „Verwaltung beenden“ arbeitest du in der Ablage.",
   "abschluss.unterbrochen": "Die Einrichtung wurde unterbrochen, und in diesem Browser ist nicht mehr bekannt, was gesammelt war. Was fehlt, holst du in der Werkbank nach – die Übersicht erinnert daran.",
   "abschluss.einladung": "Einladung für {name}",
   "abschluss.notfallblatt": "Notfallblatt",

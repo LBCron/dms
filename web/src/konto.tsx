@@ -13,6 +13,10 @@ import { t } from './sprache';
 import { LasttestSeite } from './lasttest';
 import { setzeZeitzone } from '../../shared/src/region';
 import { zielNachAnmeldung } from '../../shared/src/startseite';
+import { darfVerwalten, type Verwaltungsstand } from '../../shared/src/verwaltungsrecht';
+import { Verwaltungsanmeldung, verwaltungBeginnen } from './verwaltungsmodus';
+
+const OHNE_MODUS: Verwaltungsstand = { darf: false, aktiv: false, bis: null, heuteBestaetigt: false, frisch: false, code: false, passwort: true, bereiche: [] };
 
 /** Logo und Schriftzug des Standard-Designs für Anmeldung und Passwortseiten (#72). */
 let MARKE: { schriftzug: string | null; logo: string | null } = { schriftzug: null, logo: null };
@@ -35,6 +39,12 @@ interface Konto {
   ohneEmpfaenger: boolean;
   /** Technische Aufgaben (#719): Für die Verwaltung liegt etwas an (nur ja/nein). */
   verwaltung: boolean;
+  /** Verwaltungsmodus (#819): darf ich verwalten, läuft er, welche Bereiche? */
+  verwaltungsmodus: Verwaltungsstand;
+  /** „Ablago verwalten“: Modus beginnen (wenn nötig mit erneuter Anmeldung) und in die Werkbank. */
+  verwalten(): Promise<void>;
+  /** „Verwaltung beenden“: zurück in die Ablage. */
+  verwaltungBeenden(): Promise<void>;
 }
 const Ctx = createContext<Konto | null>(null);
 
@@ -124,21 +134,34 @@ export function KontoProvider({ children }: { children: ReactNode }) {
     <Karte titel={t('anmeldung.zweifaktor.titel')} unter={t('anmeldung.zweifaktor.text')}>
       <ZweifaktorEinrichten fertig={() => void laden()} />
       <button className="textknopf" onClick={() => void abmelden()}>{t('anmeldung.abmelden')}</button>
-      {status.benutzer.rolle === 'admin' && <PflichtAusschalten fertig={laden} />}
+      {darfVerwalten(status.benutzer) && <PflichtAusschalten fertig={laden} />}
+      <Verwaltungsanmeldung stand={status.verwaltungsmodus ?? null} nachher={() => void laden()} />
     </Karte>
   );
+  const modus = status.verwaltungsmodus ?? OHNE_MODUS;
+  const verwalten = async () => {
+    // Steht man schon auf einer Seite der Werkbank (z. B. Link aus einer E-Mail), bleibt man dort.
+    if (await verwaltungBeginnen()) { if (!location.pathname.startsWith('/werkbank')) geheZu('/werkbank', true); await laden(); }
+  };
+  const verwaltungBeenden = async () => {
+    await api.verwaltungBeenden().catch(() => undefined);
+    if (location.pathname.startsWith('/werkbank')) geheZu('/ablage', true);
+    await laden();
+  };
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
-    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true }}>
-      {/* … danach als Administrator: „Jetzt einrichten“ läuft weiter, dann Notfallblatt und Abschluss (#804). */}
+    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true, verwaltungsmodus: modus, verwalten, verwaltungBeenden }}>
+      {/* … danach mit „Gesamte Verwaltung“ (#818) im Verwaltungsmodus: „Jetzt einrichten“ läuft weiter, dann Notfallblatt und Abschluss (#804). */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
+      <Verwaltungsanmeldung stand={modus} nachher={() => void laden()} />
     </Ctx.Provider>
   );
 }
 
 /**
- * #416: Die Pflicht selbst bleibt für Administratoren immer erreichbar – auch hier, bevor sie eingerichtet ist.
- * Nur ausschalten; der Server lässt in diesem Zustand nichts anderes zu.
+ * #416: Die Pflicht selbst bleibt für alle, die verwalten dürfen, immer erreichbar – auch hier, bevor sie eingerichtet
+ * ist. Nur ausschalten; der Server lässt in diesem Zustand nichts anderes zu. Seit #819 im Verwaltungsmodus: Fehlt er,
+ * fragt der Dialog die erneute Anmeldung ab und schickt die Anfrage danach noch einmal.
  */
 function PflichtAusschalten({ fertig }: { fertig: () => Promise<void> }) {
   const [fehler, setFehler] = useState<string>();

@@ -88,8 +88,8 @@ describe('Zähler-Endpunkt über HTTP (#625)', { skip: echtesFastify ? false : '
     assert.equal(e.statusCode, 201);
     cookie = String(e.headers['set-cookie']).split(';')[0];
     adminId = JSON.parse(e.body).benutzer.id;
-    const l = (await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena', rolle: 'mitglied' }, adminId)).benutzer;
-    const j = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, adminId)).benutzer;
+    const l = (await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena' }, adminId)).benutzer;
+    const j = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, adminId)).benutzer;
     await dienst.gleicheBenutzerAb(await konten.listeBenutzer());
     lena = {
       id: l.id,

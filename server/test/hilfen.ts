@@ -19,3 +19,11 @@ export function pdfMitText(zeilen: string[], groesse = 24, drehung = 0): Buffer 
   text += `trailer\n<< /Size ${objekte.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return Buffer.from(text, 'latin1');
 }
+
+/**
+ * Verwaltungsmodus (#819) für Tests, die Handler direkt aufrufen: Die gespeicherte Person hat nur ihr Verwaltungsrecht;
+ * wie im laufenden Modus wirkt sie mit `rolle: 'admin'`.
+ */
+export const imModus = <T extends { rolle?: string }>(b: T): T & { rolle: 'admin' } => ({ ...b, rolle: 'admin' as const });
+/** Wie früher der Admin: Personen mit Verwaltungsrecht rufen Handler in diesen Tests im Verwaltungsmodus auf. */
+export const wieImModus = <T extends { rolle?: string; verwaltung?: string[] }>(b: T): T => (b?.verwaltung?.length ? imModus(b) : b);

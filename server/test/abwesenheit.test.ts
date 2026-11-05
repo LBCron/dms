@@ -1,5 +1,6 @@
 /** Abwesenheit mit Vertreter (#78) und Deaktivieren nur mit Vertreter (#77). */
 import assert from 'node:assert/strict';
+import { imModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { erwaehnung } from '../../shared/src/markdown';
 import { heuteIn, verschiebe } from '../../shared/src/sichten';
@@ -22,8 +23,8 @@ async function aufbau() {
   const konten = new Konten(kontoRepo, null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: anna } = await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben', rolle: 'mitglied' }, anna.id);
-  const { benutzer: cora } = await konten.legeBenutzerAn({ email: 'cora@example.org', name: 'Cora', rolle: 'mitglied' }, anna.id);
+  const { benutzer: ben } = await konten.legeBenutzerAn({ email: 'ben@example.org', name: 'Ben' }, anna.id);
+  const { benutzer: cora } = await konten.legeBenutzerAn({ email: 'cora@example.org', name: 'Cora' }, anna.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = await d.legeTypAn({ name: 'Vorgang', felder: [
     { key: 'nr', label: 'Nummer', typ: 'text', pflicht: true },
@@ -128,7 +129,7 @@ describe('Abwesenheit mit Vertreter (#78)', () => {
 describe('Deaktivieren nur mit Vertreter und ohne offene Aufgaben (#77)', () => {
   it('verlangt Vertreter und keine Aufgaben; danach wirkt der Vertreter dauerhaft', async () => {
     const { d, konten, anna, ben, cora, t, A, C, ich } = await aufbau();
-    const admin = await ich(anna.id);
+    const admin = imModus(await ich(anna.id));
     const m = await d.legeMappeAn({ typId: t.id, werte: { nr: '3' } }, A.id);
     await d.legeAufgabeAn(m.id, { empfaengerId: ben.id, text: 'Offen' }, A.id);
     await assert.rejects(konten.aendereBenutzer(admin, ben.id, { aktiv: false }), /Vertreter/);

@@ -162,8 +162,10 @@ export interface Mappentyp extends MappentypDaten {
 export const SYSTEMTYPEN = { benutzer: 'Benutzer', rolle: 'Rolle', post: 'Post' } as const;
 export type Systemtyp = keyof typeof SYSTEMTYPEN;
 
-/** Kennung der Mappe einer Systemrolle, z. B. rolle:admin. */
-export const systemrolleKennung = (r: Rolle) => `rolle:${r}`;
+/** Kennung der Mappe einer Systemrolle, z. B. rolle:mitglied. */
+export const systemrolleKennung = (r: keyof typeof ROLLEN) => `rolle:${r}`;
+/** Frühere Systemrolle „Administrator“ (bis #818): wird beim Start zu einer gewöhnlichen Rolle ohne Mitglieder. */
+export const FRUEHERE_ADMINROLLE = 'rolle:admin';
 export const istSystemrolle = (m: Pick<Mappe, 'systemKennung'> | undefined) => !!m?.systemKennung?.startsWith('rolle:');
 
 /** Ziel eines Referenzfelds, das auf Mappen jedes Typs zeigen darf – nur für Systemfelder (Post → Zugeordnet zu, #58, #192). */
@@ -306,7 +308,7 @@ export interface Mappe {
   /** Passt zur aktuellen Definition des Typs (vom Server geprüft); sonst steht in problem der erste Grund. */
   passt?: boolean;
   problem?: string | null;
-  /** Mappen, die das System pflegt: Systemrollen (rolle:admin, rolle:mitglied). */
+  /** Mappen, die das System pflegt: Systemrollen (rolle:mitglied, rolle:systemkonto, rolle:paket). */
   systemKennung?: string | null;
   /** Berechtigungen (#124): im Eingang wegen einer Aufgabe, aber nicht lesbar – ohne Titel und Werte. */
   verborgen?: boolean;
@@ -322,8 +324,15 @@ export function ersterGrund(t: Pick<Mappentyp, 'felder'>, p: Pruefergebnis): str
   return p.allgemein[0] ?? null;
 }
 
+/**
+ * Wirksame Rolle in einer Anfrage (#818, #819): `admin` nur im Verwaltungsmodus einer Person mit Verwaltungsrecht
+ * (oder über den Befehl `dms` im Container) – sonst immer `mitglied`. Gespeichert wird keine Rolle mehr, sondern das
+ * Verwaltungsrecht an der Person (`Benutzer.verwaltung`, siehe verwaltungsrecht.ts). Einen Kontotyp „Administrator“
+ * gibt es nicht mehr.
+ */
 export type Rolle = 'admin' | 'mitglied';
-export const ROLLEN: Record<Rolle, string> = { admin: 'Administrator', mitglied: 'Mitglied' };
+/** Systemrollen als Rollen-Mappen (`rolle:mitglied`); die frühere Systemrolle „Administrator“ ist entfallen (#818). */
+export const ROLLEN: Record<'mitglied', string> = { mitglied: 'Mitglied' };
 
 /**
  * Systemrollen für Konten, die kein Mensch sind (#673): Systemkonto (z. B. „Automatisierung“) und Paket (Dienstkonten
@@ -343,7 +352,10 @@ export interface Benutzer {
   id: string;
   email: string;
   name: string;
+  /** Wirksame Rolle dieser Anfrage: `admin` nur im Verwaltungsmodus (#819). Gespeichert ist immer `mitglied`. */
   rolle: Rolle;
+  /** Verwaltungsrecht an der Person (#818): leer = verwaltet nicht, `['*']` = Gesamte Verwaltung, sonst Bereiche. */
+  verwaltung?: string[];
   aktiv: boolean;
   /** false, solange der Benutzer sein Passwort noch nicht über den Link gesetzt hat. */
   hatPasswort: boolean;
@@ -876,7 +888,11 @@ export const HISTORIENARTEN = {
   archivfassung: 'Archivfassung (PDF/A) abgelegt',
   leserecht: 'Leserecht auf Zeit',
   entsperrt: 'Passwortschutz entfernt',
+  /** #820: im Verwaltungsmodus geöffnet, heruntergeladen, geändert … – nicht löschbar, nie ausgeblendet. */
+  verwaltungsmodus: 'im Verwaltungsmodus',
 } as const;
+/** Was im Verwaltungsmodus mit einer fremden Mappe geschah (#820). */
+export type Modusspur = 'angesehen' | 'heruntergeladen' | 'geaendert' | 'exportiert' | 'versendet';
 export type Historienart = keyof typeof HISTORIENARTEN;
 /** Eine Feldänderung: Werte lesbar zum Zeitpunkt der Änderung; Passwörter nur als „geändert“. */
 export interface Feldaenderung { feld: string; label: string; alt?: string; neu?: string; geheim?: boolean }

@@ -3,21 +3,22 @@ import { protokoll } from './protokoll';
 import { t } from './sprache';
 import { ortszeit } from './sicherung';
 import { einstellungsMerker, laufeFaellige } from './zeitplan';
+import { darfBereich, darfVerwalten, hatGesamt } from '../../shared/src/verwaltungsrecht';
 
 const log = protokoll.modul('werkbank');
 
 /**
- * Technische Aufgaben des Admin-Kontos (#719): was die Verwaltung braucht – Sicherung, Pakete, Automatisierungen,
- * Postfächer, Speicherplatz … Sie bleiben beim Admin-Konto. Weil sich im Alltag kaum jemand als Administrator
- * anmeldet, gibt es zweierlei:
+ * Technische Aufgaben (#719): was die Verwaltung braucht – Sicherung, Pakete, Automatisierungen, Postfächer,
+ * Speicherplatz … Seit #818/#819 gehen sie an die **Personen mit Verwaltungsrecht** für den passenden Werkbank-Bereich
+ * (`Verwaltungspunkt.bereich`; ohne Bereich an „Gesamte Verwaltung“) – im Haushalt also meist an alle, die verwalten:
  *
- * - **E-Mail an die Administratoren**, gebündelt: höchstens eine je Tag (um `UHRZEIT`), nur wenn seit der letzten
- *   etwas Neues dazugekommen ist. Was ohnehin sofort eine eigene Mail schickt (Sicherung fehlgeschlagen oder zu alt,
- *   Speicherplatz, Notfallzugang – die „kritischen“), gilt mit Erscheinen als gemeldet; so kommt nichts doppelt.
- *   Entschieden als feste Meldung, nicht als mitgelieferte Automatisierung (#712): Diese Punkte hängen an keiner
- *   Mappe und an keinem Ereignis, Automatisierungen arbeiten aber mit Mappen und Ereignissen.
- * - **Hinweis ohne Einzelheiten** beim Alltags-Benutzer, der die Aufgaben ohne Empfänger bekommt: nur „ja/nein“,
- *   nie Inhalte. Er verschwindet, sobald nichts mehr offen ist.
+ * - **E-Mail**, gebündelt je Person: höchstens eine je Tag (um `UHRZEIT`), nur wenn seit der letzten etwas Neues
+ *   dazugekommen ist, und nur mit den Punkten ihrer Bereiche. Was ohnehin sofort eine eigene Mail schickt (Sicherung
+ *   fehlgeschlagen oder zu alt, Speicherplatz, Notfallzugang – die „kritischen“), gilt mit Erscheinen als gemeldet; so
+ *   kommt nichts doppelt. Entschieden als feste Meldung, nicht als mitgelieferte Automatisierung (#712): Diese Punkte
+ *   hängen an keiner Mappe und an keinem Ereignis, Automatisierungen arbeiten aber mit Mappen und Ereignissen.
+ * - **Hinweis ohne Einzelheiten** außerhalb des Verwaltungsmodus: nur „ja/nein“, nie Inhalte, mit dem Weg „Ablago
+ *   verwalten“. Er verschwindet, sobald in den eigenen Bereichen nichts mehr offen ist.
  *
  * Mehrere Server: Der Tag der Sammel-Mail wird über den Zeitplan-Baustein beansprucht (genau ein Server schickt sie),
  * die schon gemeldeten Punkte liegen in der Datenbank (`verwaltung_gemeldet`).
@@ -25,11 +26,18 @@ const log = protokoll.modul('werkbank');
 export interface Verwaltungspunkt {
   /** Fest je Sache (z. B. `paket:<id>`), damit er nur einmal gemeldet wird. */
   schluessel: string;
-  /** Für die Mail an die Administratoren – nie für den Alltags-Benutzer. */
+  /** Für die Mail an die Verwaltenden – nie für den Hinweis ohne Einzelheiten. */
   text: string;
-  /** Hat schon eine eigene, sofortige Mail an die Administratoren (Sicherung, Speicherplatz, Notfallzugang). */
+  /** Werkbank-Bereich, zu dem der Punkt gehört (#818); fehlt er, geht er an „Gesamte Verwaltung“. */
+  bereich?: string;
+  /** Hat schon eine eigene, sofortige Mail an die Verwaltenden (Sicherung, Speicherplatz, Notfallzugang). */
   eigeneMail?: boolean;
 }
+
+/** Person, die eine Sammel-Mail bekommen kann. */
+export interface Verwaltende { email: string; aktiv: boolean; verwaltung?: string[]; art?: string }
+/** Gehört der Punkt zu den Bereichen dieser Person? */
+export const fuerPerson = (b: Verwaltende, p: Verwaltungspunkt) => (p.bereich ? darfBereich(b, p.bereich) : hatGesamt(b));
 
 export type Verwaltungsquelle = () => Promise<Verwaltungspunkt[]>;
 
@@ -42,7 +50,10 @@ export interface VerwaltungDeps {
   /** Alle Quellen; eine, die scheitert, zählt als leer (der Rest gilt trotzdem). */
   quellen: Verwaltungsquelle[];
   einstellungen: Einstellungen;
-  anAdmins: (betreff: string, text: string) => Promise<void>;
+  /** Alle Personen; die Mail bekommen die aktiven mit Verwaltungsrecht für die Bereiche der Punkte. */
+  personen: () => Promise<Verwaltende[]>;
+  /** Ohne eingerichteten Versand: nichts tun. */
+  sende: (an: string, betreff: string, text: string) => Promise<void>;
   /** Adresse für den Link in die Werkbank. */
   adresse?: () => string;
   jetzt?: () => Date;
@@ -66,8 +77,8 @@ export class Verwaltung {
     return punkte;
   }
 
-  /** Für den Hinweis beim Alltags-Benutzer: Liegt etwas an? Nur ja/nein. */
-  async offen(): Promise<boolean> { return (await this.punkte()).length > 0; }
+  /** Für den Hinweis außerhalb des Verwaltungsmodus: Liegt in den Bereichen dieser Person etwas an? Nur ja/nein. */
+  async offen(b?: Verwaltende): Promise<boolean> { return (await this.punkte()).some((p) => !b || fuerPerson(b, p)); }
 
   /**
    * Regelmäßig aufrufen (etwa jede Minute): Vergessenes (erledigte Punkte) aufräumen, Punkte mit eigener Mail als
@@ -86,10 +97,19 @@ export class Verwaltung {
     const offen = punkte.filter((p) => !neu.includes(p.schluessel));
     if (!offen.length) return 0;
     await laufeFaellige(einstellungsMerker(this.d.einstellungen, 'verwaltung_mail_tag'), ortszeit(this.jetzt()), { uhrzeit: UHRZEIT }, async () => {
-      await this.d.anAdmins(betreff(offen.length), mailtext(punkte, new Set(offen.map((p) => p.schluessel)), this.d.adresse?.()));
+      const neuSchluessel = new Set(offen.map((p) => p.schluessel));
+      let personen = 0;
+      for (const b of await this.d.personen()) {
+        if (!b.aktiv || !darfVerwalten(b) || !b.email || b.email.endsWith('.invalid')) continue;
+        const seine = punkte.filter((p) => fuerPerson(b, p));
+        const n = seine.filter((p) => neuSchluessel.has(p.schluessel)).length;
+        if (!n) continue;
+        try { await this.d.sende(b.email, betreff(n), mailtext(seine, neuSchluessel, this.d.adresse?.())); personen++; }
+        catch (e) { log.warn('Technische Aufgaben: Mail nicht verschickt', { an: b.email, fehler: (e as Error).message }); }
+      }
       await this.d.einstellungen.schreibe('verwaltung_gemeldet', [...new Set([...neu, ...offen.map((p) => p.schluessel)])].sort());
       gemailt = offen.length;
-      log.info('Technische Aufgaben an die Administratoren gemailt', { neu: offen.length, offen: punkte.length });
+      log.info('Technische Aufgaben an die Verwaltenden gemailt', { neu: offen.length, offen: punkte.length, personen });
     });
     return gemailt;
   }

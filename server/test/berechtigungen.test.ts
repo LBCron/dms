@@ -1,5 +1,6 @@
 /** Berechtigungen (#123–#127, #137): Regeln, Durchsetzung, Testlauf, Aufgaben, Benutzerauswahl. */
 import assert from 'node:assert/strict';
+import { imModus } from './hilfen';
 import { describe, it } from 'node:test';
 import { erwaehnung } from '../../shared/src/markdown';
 import type { Mappentyp } from '../../shared/src/model';
@@ -28,7 +29,7 @@ async function aufbau(repos?: { repo: ReturnType<typeof speicherRepo>; konto: Re
   const konten = new Konten(repos?.konto ?? speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name, rolle: 'mitglied' }, admin.id)).benutzer;
+  const neu = async (name: string) => (await konten.legeBenutzerAn({ email: `${name.toLowerCase()}@example.org`, name }, admin.id)).benutzer;
   const fibu = await neu('Fibu'); const max = await neu('Max'); const prakt = await neu('Prakt'); const api = await neu('Api');
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const typen = await d.listeTypen();
@@ -50,7 +51,8 @@ async function aufbau(repos?: { repo: ReturnType<typeof speicherRepo>; konto: Re
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, {});
   const route = (m: string, p: string) => tabelle.find((r) => r.methode === m && r.pfad === p)!;
-  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  // Der Admin aus der Einrichtung arbeitet hier im Verwaltungsmodus (#819); alle anderen im Alltag.
+  const rufe = async (b: { id: string }, m: string, p: string, x: Partial<Anfrage> = {}) => route(m, p).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: b.id === admin.id ? imModus(await ich(b.id)) : await ich(b.id) });
   return { d, konten, admin, fibu, max, prakt, api, R, mitglied, rechnung, benutzerTyp, rolleTyp, ich, rufe };
 }
 

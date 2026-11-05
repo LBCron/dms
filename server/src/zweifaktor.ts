@@ -1,3 +1,4 @@
+import { darfVerwalten } from '../../shared/src/verwaltungsrecht';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { Rolle } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
@@ -50,6 +51,10 @@ interface Gespeichert { geheimnis: string; seit: string; letzterSchritt: number;
 export interface ZweifaktorStatus { aktiv: boolean; seit: string | null; codesUebrig: number }
 export type Pflicht = Record<Rolle, boolean>;
 
+/** Für die Pflicht zählt das Verwaltungsrecht (#818): Pflicht „admin“ gilt für alle, die verwalten dürfen. */
+export type PflichtPerson = { id: string; verwaltung?: string[]; art?: string };
+export const pflichtRolle = (b: PflichtPerson): Rolle => (darfVerwalten(b) ? 'admin' : 'mitglied');
+
 export class Zweifaktor {
   private entwuerfe = new Map<string, { geheimnis: Buffer; bis: number }>();
   private cache = new Map<string, boolean>();
@@ -95,13 +100,13 @@ export class Zweifaktor {
    * - 'ok': nein.
    * Ohne Sitzungsbeginn (z. B. reine Prüfung) zählt jede Pflicht als 'fehlt'.
    */
-  async lage(b: { id: string; rolle: Rolle }, sitzungSeit?: Date): Promise<'ok' | 'ausstehend' | 'fehlt'> {
-    if (!(await this.pflicht())[b.rolle] || (await this.aktiv(b.id))) return 'ok';
-    const ab = (await this.pflichtSeit())[b.rolle];
+  async lage(b: PflichtPerson, sitzungSeit?: Date): Promise<'ok' | 'ausstehend' | 'fehlt'> {
+    if (!(await this.pflicht())[pflichtRolle(b)] || (await this.aktiv(b.id))) return 'ok';
+    const ab = (await this.pflichtSeit())[pflichtRolle(b)];
     if (sitzungSeit && ab && sitzungSeit.getTime() < Date.parse(ab)) return 'ausstehend';
     return 'fehlt';
   }
-  async fehlt(b: { id: string; rolle: Rolle }, sitzungSeit?: Date): Promise<boolean> { return (await this.lage(b, sitzungSeit)) === 'fehlt'; }
+  async fehlt(b: PflichtPerson, sitzungSeit?: Date): Promise<boolean> { return (await this.lage(b, sitzungSeit)) === 'fehlt'; }
 
   /** Einrichten, Schritt 1: neues Geheimnis (noch nicht gespeichert) und Adresse für den QR-Code. */
   beginne(b: { id: string; email: string }, aussteller = 'Ablago') {

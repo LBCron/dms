@@ -1,5 +1,6 @@
 /** Systemrollen „Systemkonto“ und „Paket“, Konto „Automatisierung“ (#673). */
 import assert from 'node:assert/strict';
+import { imModus } from './hilfen';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,8 +31,8 @@ async function aufbau() {
   const konten = new Konten(kontoRepo, null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   d.systemkonten = (k) => konten.systemkonto(k);
-  const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Lena', passwort: 'ein-langes-passwort' });
-  const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, admin.id)).benutzer;
+  const admin = imModus((await konten.einrichten({ email: 'admin@example.org', name: 'Lena', passwort: 'ein-langes-passwort' })).benutzer);
+  const jonas = (await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const auto = await konten.systemkonto('automatisierung');
   const typen = await d.listeTypen();

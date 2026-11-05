@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   darfErstellen, darfLoeschen, ersterGrund, FELDTYPEN, formatiere, geschuetzteFelder, istLeer, istPasswortWert, istSystemspalte, sortierbar, istOk, leseZahl, MAX_AUSWAHL, MAX_DATEIGROESSE, pruefeMappe, pruefeMappentyp,
-  REGISTERARTEN, ROLLEN, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
+  REGISTERARTEN, ROLLEN, FRUEHERE_ADMINROLLE, type Modusspur, KONTOROLLEN, kontorolleKennung, type Kontorolle, type Systemkonto, freierSchluessel, schluesselAus, standardRegister, systemfelder, systemrolleKennung, titelAus, verweiseVon, verweisAusText,
   AUFGABE_MAX, fotoBetreff, istVersendet, istEmail, NOTIZ_MAX, POST_KANAL, POST_RICHTUNG, POST_STAND, auswahlText, darfPostAnlegen, abwesenheitWirkt, VERTRETER_SCHRITTE, type Abwesenheit, type Aufgabe, type AufgabenAnlass, type FallEnde, type FallOhneLeserecht, type Aufgabenart, type Benutzer, type Dokument, type DokumentVersion, type Herkunft, type Vertretung, type Feld, type Feldaenderung, type Feldkonflikt, type Mappenkonflikt, type Notiz, type Historienart, type Historieneintrag, type Mappe, type Mappentyp, type MappentypDaten, type MappenBezug, type Quelle, type Register, type Trefferliste, trefferlistenVon, standardliste, type Rolle, type Systemtyp, type Werte,
 } from '../../shared/src/model';
 import type { Dateispeicher } from './dateispeicher';
@@ -534,7 +534,7 @@ function bereinigeWerte(typ: Mappentyp, eingabe: unknown, bisher: Werte = {}, ve
 }
 
 const keinSchluessel = (): never => {
-  throw new Fachfehler(409, 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Ein Administrator erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
+  throw new Fachfehler(409, 'Passwörter lassen sich erst speichern, wenn es einen Schlüssel gibt. Wer Ablago verwaltet, erzeugt ihn in der Werkbank unter „Verschlüsselung“.');
 };
 
 /* ---------- Fachlogik ---------- */
@@ -566,12 +566,20 @@ export interface VolltextMeldung {
   original?: string;
 }
 
-/** Alltags-Benutzer für Aufgaben ohne Empfänger (#719): aktiver Mensch ohne Admin-Rechte. */
-export const taugtAlsAufgabenEmpfaenger = (b: Benutzer) => b.aktiv && b.rolle !== 'admin' && !b.art;
+/**
+ * Alltags-Benutzer für Aufgaben ohne Empfänger (#719): aktiver Mensch. Seit #818 auch eine Person mit Verwaltungsrecht –
+ * sie arbeitet im Alltag mit demselben Konto.
+ */
+export const taugtAlsAufgabenEmpfaenger = (b: Benutzer) => b.aktiv && !b.art;
+
+/** Dieselbe fremde Mappe im Verwaltungsmodus innerhalb so vieler Minuten nur einmal in der Historie (#820). */
+export const MODUSSPUR_MINUTEN = 10;
 
 export class Dienst {
   /** Abruf-Links, deren Code gerade geprüft wird (#455): je Link nur eine Prüfung gleichzeitig. */
   private abrufLaufend = new Set<string>();
+  /** Spur im Verwaltungsmodus (#820): zuletzt vermerkt je Person, Mappe und Art – bis wann nicht noch einmal. */
+  private modusspur = new Map<string, number>();
   /** Hintergrundaufträge, z. B. Demo-Daten erzeugen. */
   readonly auftraege = new Auftraege((m) => protokoll.modul('werkbank').info(m));
 
@@ -1723,7 +1731,7 @@ export class Dienst {
 
   /** Anzeigename eines Benutzers (auch für Platzhalter in Automatisierungen, #678). */
   async name(benutzerId: string | null): Promise<string> {
-    if (!benutzerId) return 'Administratoren';
+    if (!benutzerId) return 'ohne Empfänger';
     return (await this.repo.titelVon([benutzerId])).get(benutzerId) || 'unbekannt';
   }
 
@@ -1907,7 +1915,7 @@ export class Dienst {
     const a = await this.repo.holeAufgabe(id);
     if (!a) throw new Fachfehler(404, 'Diese Aufgabe gibt es nicht.');
     const meine = a.empfaengerId === ich.id || (!a.empfaengerId && await this.siehtOhneEmpfaenger(ich));
-    if (!meine && ich.rolle !== 'admin') throw new Fachfehler(403, 'Das ist nicht deine Aufgabe. Weitergeben oder erledigen kann sie nur ihr Empfänger oder ein Administrator.');
+    if (!meine && ich.rolle !== 'admin') throw new Fachfehler(403, 'Das ist nicht deine Aufgabe. Weitergeben oder erledigen kann sie nur ihr Empfänger oder wer im Verwaltungsmodus ist.');
     if (a.erledigt) throw new Fachfehler(409, 'Diese Aufgabe ist schon erledigt.');
     return a;
   }
@@ -2068,7 +2076,7 @@ export class Dienst {
    */
   async faelleAbgleichen(f: { mappeIds?: string[] } = {}): Promise<{ neu: number; beendet: number }> {
     if (!this.konten?.benutzer || (f.mappeIds && !f.mappeIds.length)) return { neu: 0, beendet: 0 };
-    const menschen = new Map((await this.konten.benutzer()).filter((b) => b.rolle !== 'admin').map((b) => [b.id, b] as const));
+    const menschen = new Map((await this.konten.benutzer()).map((b) => [b.id, b] as const));
     const offen = (await this.repo.offeneAufgaben(f.mappeIds ? { mappeIds: f.mappeIds } : {})).filter((a) => a.empfaengerId && menschen.has(a.empfaengerId));
     const jeEmpfaenger = new Map<string, Aufgabe[]>();
     for (const a of offen) jeEmpfaenger.set(a.empfaengerId!, [...(jeEmpfaenger.get(a.empfaengerId!) ?? []), a]);
@@ -2748,28 +2756,28 @@ export class Dienst {
     return { benutzerId: b && taugtAlsAufgabenEmpfaenger(b) ? b.id : null, wirksam: z && taugtAlsAufgabenEmpfaenger(z) ? z.id : null, gesetzt: true, gespeichert };
   }
 
-  /** Werkbank → Benutzer und Sicherheit (#719): Alltags-Benutzer wählen oder `null` (nur Administratoren). */
+  /** Werkbank → Benutzer und Sicherheit (#719): Alltags-Benutzer wählen oder `null` (nur im Verwaltungsmodus). */
   async setzeAufgabenEmpfaenger(eingabe: unknown, von: string | null) {
     if (!this.einstellungen) throw new Fachfehler(404, 'Einstellungen sind nicht eingerichtet.');
     const id = (eingabe as { benutzerId?: unknown } | null)?.benutzerId ?? null;
     if (id !== null) {
       const b = typeof id === 'string' ? (await this.konten?.benutzer?.())?.find((x) => x.id === id) : undefined;
       if (!b) throw new Fachfehler(422, t('werkbank.aufgabenempfaenger.fehler.unbekannt'));
-      if (!taugtAlsAufgabenEmpfaenger(b)) throw new Fachfehler(422, t(b.rolle === 'admin' ? 'werkbank.aufgabenempfaenger.fehler.admin' : 'werkbank.aufgabenempfaenger.fehler.inaktiv'));
+      if (!taugtAlsAufgabenEmpfaenger(b)) throw new Fachfehler(422, t('werkbank.aufgabenempfaenger.fehler.inaktiv'));
     }
     await this.einstellungen.schreibe('aufgaben_empfaenger', { benutzer: id });
     this.stand.erhoehe(); this.fristenstand.erhoehe();
-    protokoll.modul('werkbank').info('Empfänger für Aufgaben ohne Empfänger eingestellt', { von: await this.name(von), an: id ? await this.name(id as string) : 'nur Administratoren' });
+    protokoll.modul('werkbank').info('Empfänger für Aufgaben ohne Empfänger eingestellt', { von: await this.name(von), an: id ? await this.name(id as string) : 'nur im Verwaltungsmodus' });
     return this.alltagsEmpfaenger();
   }
 
-  /** Sieht dieser Benutzer die Aufgaben ohne Empfänger (#719)? Administratoren immer, sonst nur der gewählte Alltags-Benutzer. */
+  /** Sieht dieser Benutzer die Aufgaben ohne Empfänger (#719)? Im Verwaltungsmodus immer, sonst nur der gewählte Alltags-Benutzer. */
   async siehtOhneEmpfaenger(ich: { id: string; rolle: string }): Promise<boolean> {
     if (ich.rolle === 'admin') return true;
     return (await this.alltagsEmpfaenger()).wirksam === ich.id;
   }
 
-  /** Erster Mensch ohne Admin-Rechte (#719): Vorgabe, solange die Werkbank noch nichts gewählt hat. */
+  /** Erster Mensch (#719): Vorgabe, solange die Werkbank noch nichts gewählt hat. */
   private async vorgabeAufgabenEmpfaenger(b: Benutzer) {
     if (!this.einstellungen || !taugtAlsAufgabenEmpfaenger(b) || (await this.alltagsEmpfaenger()).gesetzt) return;
     const neu = { benutzer: b.id };
@@ -3592,9 +3600,9 @@ export class Dienst {
 
   /* ---------- Berechtigungen in der Werkbank (#123, #125) ---------- */
 
-  /** Aktive Benutzer, für die Regeln gelten (keine Administratoren). */
+  /** Aktive Benutzer, für die Regeln gelten – alle; nur der Verwaltungsmodus hebt sie auf (#818). */
   private async regelBenutzer(): Promise<Benutzer[]> {
-    return this.konten?.benutzer ? (await this.konten.benutzer()).filter((b) => b.aktiv && b.rolle !== 'admin') : [];
+    return this.konten?.benutzer ? (await this.konten.benutzer()).filter((b) => b.aktiv) : [];
   }
 
   /** Übersicht: je Mappentyp Grundeinstellung und Anzahl Regeln. */
@@ -3634,7 +3642,7 @@ export class Dienst {
     if (probleme.length) throw new Fachfehler(422, `Berechtigungen: ${probleme.join(' ')}`, { gruende: probleme, berechtigungen: true });
     const niemand = await this.niemandLesbar(typ, rw);
     if (niemand && !bestaetigt) {
-      throw new Fachfehler(409, `${niemand === 1 ? 'Eine Mappe' : `${niemand} Mappen`} vom Typ „${typ.name}“ könnte danach niemand mehr lesen (außer Administratoren). Trotzdem speichern?`, { niemand });
+      throw new Fachfehler(409, `${niemand === 1 ? 'Eine Mappe' : `${niemand} Mappen`} vom Typ „${typ.name}“ könnte danach niemand mehr lesen (außer im Verwaltungsmodus). Trotzdem speichern?`, { niemand });
     }
     return { rw, niemand };
   }
@@ -4832,7 +4840,7 @@ export class Dienst {
    * Export mehrerer Mappen (#152, #153): Tabelle (csv, xlsx), ZIP mit Dokumenten oder ein PDF.
    * Recht E an der Sicht, Lesen je Mappe; Reihenfolge wie in der Liste. Passwörter nie.
    */
-  async exportiere(ich: { id: string; rolle: string; name?: string }, e: unknown, z: Zugriff): Promise<{ name: string; mime: string; inhalt: Buffer | Readable; groesse: number; mappen: number; ausgelassen: number }> {
+  async exportiere(ich: { id: string; rolle: string; name?: string }, e: unknown, z: Zugriff, spur?: (ids: string[]) => Promise<unknown>): Promise<{ name: string; mime: string; inhalt: Buffer | Readable; groesse: number; mappen: number; ausgelassen: number }> {
     const x = (e ?? {}) as Record<string, unknown>;
     const format = String(x.format ?? '');
     if (!['csv', 'xlsx', 'zip', 'pdf'].includes(format)) throw new Fachfehler(422, 'Unbekanntes Format.');
@@ -4857,6 +4865,8 @@ export class Dienst {
       ids = ids.filter((id) => erlaubt.has(id));
       if (!ids.length) throw verboten('export', [], Math.max(2, ausgelassen));
     }
+    // Verwaltungsmodus (#820): fremde Mappen im Export dauerhaft in ihrer Historie.
+    await spur?.(ids);
     const mappen = inReihenfolge(await this.repo.holeMappen(ids), ids);
     const typen = [...new Set(mappen.map((m) => m.typId))].map((t) => z.typen.get(t)).filter((t): t is Mappentyp => !!t);
     const spalten = exportSpalten(typen, x.spalten === 'alle' ? 'alle' : 'liste', sicht?.trefferliste ?? null);
@@ -5200,8 +5210,8 @@ export class Dienst {
     await this.sicherePostSichten(post);
     await this.sichereFavoritenSicht();
     benutzer = await this.ergaenzeSystemfelder(benutzer, rolle.id);
-    const systemrollen = new Map<Rolle, string>();
-    for (const r of Object.keys(ROLLEN) as Rolle[]) {
+    const systemrollen = new Map<keyof typeof ROLLEN, string>();
+    for (const r of Object.keys(ROLLEN) as Array<keyof typeof ROLLEN>) {
       const kennung = systemrolleKennung(r);
       let m = await this.repo.holeSystemMappe(kennung);
       if (!m) {
@@ -5221,8 +5231,57 @@ export class Dienst {
       }
       kontorollen.set(r, m.id);
     }
+    await this.loeseFruehereAdminrolle(benutzer);
     await this.sichereAblageort();
     return { benutzer, rolle, post, systemrollen, kontorollen };
+  }
+
+  /**
+   * Umstellung #818: Die Systemrolle „Administrator“ entfällt. Ihre Mappe verliert die Kennung und wird eine
+   * gewöhnliche Rolle ohne Mitglieder – so bleiben Regeln gültig, die sie nennen; ohne solche Regeln kann man sie
+   * löschen. Einmalig beim ersten Start nach dem Update.
+   */
+  private async loeseFruehereAdminrolle(benutzerTyp: Mappentyp) {
+    const alt = await this.repo.holeSystemMappe(FRUEHERE_ADMINROLLE);
+    if (!alt) return;
+    for (const m of await this.repo.listeMappen(benutzerTyp.id)) {
+      const rollen = alsListe(m.werte.rollen);
+      if (rollen.includes(alt.id)) await this.schreibeSystemMappe(benutzerTyp, m.id, { ...m.werte, rollen: rollen.filter((r) => r !== alt.id) }, null);
+    }
+    await this.repo.setzeSystemKennung(alt.id, null);
+    protokoll.modul('werkbank').warn('Systemrolle „Administrator“ aufgelöst: jetzt eine gewöhnliche Rolle ohne Mitglieder', { rolle: alt.titel || String(alt.werte.name ?? '') });
+  }
+
+  /**
+   * Spur im Verwaltungsmodus (#820): Für jede Mappe, die die Person mit ihren Alltagsrechten (`alltag`, ohne Modus)
+   * nicht lesen dürfte, steht in der Historie „im Verwaltungsmodus“ mit `was` – nicht löschbar. Dieselbe Mappe kurz
+   * hintereinander (`MODUSSPUR_MINUTEN`) nur einmal je Person und Art. Liefert die betroffenen Mappen.
+   */
+  async vermerkeVerwaltungsmodus(alltag: { id: string; rolle: string; name?: string; email?: string }, ids: string[], was: Modusspur): Promise<Set<string>> {
+    const z = await this.zugriff({ id: alltag.id, rolle: 'mitglied' });
+    const lesbar = await this.lesbare(z, ids);
+    const fremd = [...new Set(ids)].filter((id) => !lesbar.has(id));
+    if (!fremd.length) return new Set();
+    const jetzt = Date.now();
+    for (const [k, bis] of this.modusspur) if (bis < jetzt) this.modusspur.delete(k);
+    const neu = fremd.filter((id) => !this.modusspur.has(`${alltag.id}|${id}|${was}`));
+    if (neu.length) {
+      const titel = new Map((await this.repo.holeMappen(neu)).map((m) => [m.id, m.titel ?? '']));
+      await this.repo.historieSchreibe(neu.map((id) => ({ mappeId: id, benutzerId: alltag.id, art: 'verwaltungsmodus' as const, daten: { was, titel: titel.get(id) ?? '' } })));
+      for (const id of neu) this.modusspur.set(`${alltag.id}|${id}|${was}`, jetzt + MODUSSPUR_MINUTEN * 60_000);
+      protokoll.modul('ablage').warn('Im Verwaltungsmodus: fremde Mappe', { was, anzahl: neu.length, von: alltag.email ?? alltag.id, imVerwaltungsmodus: true });
+    }
+    return new Set(fremd);
+  }
+
+  /** Werkbank (#820): „Im Verwaltungsmodus angesehen“ – Person, Mappe, Zeit; neueste zuerst. */
+  async imVerwaltungsmodus(max = 500) {
+    const liste = await this.repo.historieArt('verwaltungsmodus', max);
+    // Typ für den Link in die Ablage; endgültig gelöschte Mappen bleiben in der Liste, nur ohne Link.
+    const typ = new Map((await this.repo.holeMappen([...new Set(liste.map((h) => h.mappeId))])).map((m) => [m.id, m.typId]));
+    return liste.map((h) => ({
+      id: h.id, zeit: h.zeit, mappeId: h.mappeId, typId: typ.get(h.mappeId) ?? null, benutzerId: h.benutzerId, was: String(h.daten.was ?? 'angesehen'), titel: String(h.daten.titel ?? ''),
+    }));
   }
 
   /**
@@ -5623,7 +5682,8 @@ export class Dienst {
     // Abwesenheit (#78): „abwesend“ = wirkt heute; Zeitraum nur, solange sie an ist; der Vertreter auch nach dem Deaktivieren.
     await this.schreibeSystemMappe(typ, b.id, {
       ...(alt?.werte ?? {}),
-      name: b.name || b.email, email: b.email, rollen: [systemrollen.get(b.rolle)!, ...weitere], aktiv: b.aktiv,
+      // Systemrolle ist für jeden Menschen „Mitglied“ (#818: die Systemrolle „Administrator“ ist entfallen).
+      name: b.name || b.email, email: b.email, rollen: [systemrollen.get('mitglied')!, ...weitere], aktiv: b.aktiv,
       abwesend: abwesenheitWirkt(ab, heuteIn()),
       abwesend_von: ab?.an ? ab.von : null, abwesend_bis: ab?.an ? ab.bis : null,
       vertreter: ab?.vertreterId && (ab.an || !b.aktiv) ? ab.vertreterId : null,
@@ -5644,7 +5704,7 @@ export class Dienst {
     const typVon = await this.repo.typenVon(ids.filter(istUuid));
     if (ids.some((id) => typVon.get(id) !== rolle.id)) throw new Fachfehler(422, 'Mindestens eine dieser Rollen gibt es nicht.');
     const system = new Set(systemrollen.values());
-    if (ids.some((id) => system.has(id))) throw new Fachfehler(422, 'Administrator und Mitglied werden über die Rolle des Benutzers vergeben.');
+    if (ids.some((id) => system.has(id))) throw new Fachfehler(422, 'Die Systemrolle „Mitglied“ hat jeder Benutzer; sie wird nicht eigens vergeben.');
     if (ids.some((id) => [...kontorollen.values()].includes(id))) throw new Fachfehler(422, t('konten.fehler.kontorolle'));
     return ids;
   }

@@ -1,5 +1,6 @@
 import type { Readable } from 'node:stream';
 import { t } from './sprache';
+import { darfBereich, hatGesamt } from '../../shared/src/verwaltungsrecht';
 /** Anhang einer E-Mail (#58). */
 export interface MailAnhang { name: string; mime: string; inhalt: Buffer | Readable }
 /** Weitere Angaben einer E-Mail: „Antworten an“ und Anhänge (#58). */
@@ -7,14 +8,15 @@ export interface MailOptionen { antwortAn?: string; anhaenge?: MailAnhang[] }
 export interface Mailer { sende(an: string, betreff: string, text: string, optionen?: MailOptionen): Promise<void> }
 
 /**
- * Mail an alle aktiven Administratoren mit echter Adresse (Notfallzugang #108, Sicherung #105).
- * Ohne eingerichteten Versand geschieht nichts; liefert die Anzahl verschickter Mails.
+ * Mail an Personen mit Verwaltungsrecht und echter Adresse (Notfallzugang #108, Sicherung #105; #818 statt „an die
+ * Administratoren“): mit `bereich` an alle, die diesen Werkbank-Bereich verwalten (auch „Gesamte Verwaltung“), ohne an
+ * alle mit „Gesamte Verwaltung“. Ohne eingerichteten Versand geschieht nichts; liefert die Anzahl verschickter Mails.
  */
-export async function anAlleAdmins(benutzer: Array<{ email: string; rolle: string; aktiv: boolean }>, mailer: Mailer | null, betreff: string, text: string): Promise<number> {
+export async function anVerwaltende(benutzer: Array<{ email: string; aktiv: boolean; verwaltung?: string[]; art?: string }>, mailer: Mailer | null, betreff: string, text: string, bereich?: string): Promise<number> {
   if (!mailer) return 0;
   let n = 0;
   for (const b of benutzer) {
-    if (!b.aktiv || b.rolle !== 'admin' || !b.email || b.email.endsWith('.invalid')) continue;
+    if (!b.aktiv || !(bereich ? darfBereich(b, bereich) : hatGesamt(b)) || !b.email || b.email.endsWith('.invalid')) continue;
     await mailer.sende(b.email, betreff, text);
     n++;
   }
@@ -38,6 +40,11 @@ export const mailtexte = {
     betreff: t('mail.einladung.betreff'),
     text: brief(name || email, t('mail.einladung.text'), t('mail.einladung.mit', { email }),
       `${t('mail.einladung.link', { dauer: t('mail.dauer.tage', { anzahl: tage }) })}\n${link}`),
+  }),
+  /** #818: an alle mit „Gesamte Verwaltung“, wenn sich Verwaltungsrechte ändern. */
+  verwaltungsrecht: (person: string, vorher: string, nachher: string, von: string) => ({
+    betreff: t('mail.verwaltungsrecht.betreff', { person }),
+    text: `${[t('mail.verwaltung.anrede'), t('mail.verwaltungsrecht.text', { person, vorher, nachher, von }), t('mail.nicht-du')].join('\n\n')}\n`,
   }),
   zuruecksetzen: (name: string, email: string, link: string, stunden: number) => ({
     betreff: t('mail.zuruecksetzen.betreff'),

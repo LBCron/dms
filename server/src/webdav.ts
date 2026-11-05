@@ -106,7 +106,7 @@ export interface WebdavDeps {
   /** Adresse des DMS für die Anzeige in der Werkbank. */
   adresse?: () => string;
   /** Wartungsmodus (#102): wie die API – im aktiven Wartungsmodus 503. */
-  wartung?: { pruefeAnfrage(r: { pfad: string; zugang: string }, b: { rolle: string } | undefined): void };
+  wartung?: { pruefeAnfrage(r: { pfad: string; zugang: string }, b: { verwaltung?: string[]; art?: string } | undefined): void };
   jetzt?: () => number;
   grenze?: number;
 }

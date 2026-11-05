@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { useEffect, useState } from 'react';
 import { BUNDESLAENDER, type Bundesland } from '../../../shared/src/feiertage';
 import { api, type Zusammenfassung } from '../api';
@@ -38,7 +39,7 @@ export function ZusammenfassungEinstellen() {
         </fieldset>
         {!z.tage.length && <p className="hinweis warn klein">Kein Wochentag gewählt – die Zusammenfassung kommt dann nie.</p>}
         <label className={`haken ${land ? '' : 'aus'}`}><input type="checkbox" disabled={!land} checked={!!land && z.feiertage} onChange={(e) => void setze({ feiertage: e.target.checked })} />
-          <span>Nicht an Feiertagen<small className="hilfe">{land ? `Gesetzliche Feiertage in ${land}.` : 'Dafür muss ein Administrator in der Werkbank das Bundesland wählen.'}</small></span></label>
+          <span>Nicht an Feiertagen<small className="hilfe">{land ? `Gesetzliche Feiertage in ${land}.` : 'Dafür muss in der Werkbank das Bundesland gewählt sein.'}</small></span></label>
         {!z.versand && <p className="leise klein">Der E-Mail-Versand ist gerade nicht eingerichtet oder ausgeschaltet; deine Einstellung gilt, sobald er läuft.</p>}
       </div>}
       {fehler && <p className="fehlertext">{fehler}</p>}

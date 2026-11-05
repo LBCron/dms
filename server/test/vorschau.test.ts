@@ -3,6 +3,7 @@
  * (in GitHub Actions: ja); sonst prüft ein Ersatz-Erzeuger Warteschlange, Ablage und Rechte.
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -40,7 +41,7 @@ async function aufbau(erzeuger?: Erzeuger) {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const ALLES = { C: true, R: true, U: true, D: true, P: true };
   const typ = await d.legeTypAn({ name: 'Rechnung', felder: [{ key: 'nr', label: 'Nr', typ: 'text' }] });
@@ -48,7 +49,7 @@ async function aufbau(erzeuger?: Erzeuger) {
     berechtigungen: { grund: ALLES, regeln: [{ id: 'anna', name: 'Anna nicht', wenn: [{ art: 'benutzer', benutzer: [anna.id] }], dann: { R: 'entziehen' }, stopp: false }] } } as never);
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, { vorschau: v });
-  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   return { d, v, ablage, typ, geheim, admin, anna, rufe };
 }
 

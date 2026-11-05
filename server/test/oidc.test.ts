@@ -180,16 +180,16 @@ describe('Anmeldung über OpenID Connect (#241)', () => {
     assert.equal((neu as { benutzer: { name: string } }).benutzer.name, 'Neu');
     const mitGruppe = { ...basis, anlegen: true, adminGruppe: 'dms-admins' };
     const it2 = await konten.anmeldenMitAnbieter({ sub: 'z', email: 'it@example.org', name: 'IT', gruppen: ['dms-admins'] }, mitGruppe, g);
-    assert.equal((it2 as { benutzer: { rolle: string } }).benutzer.rolle, 'admin');
-    // Rolle folgt der Gruppe
+    assert.deepEqual((it2 as { benutzer: { verwaltung: string[] } }).benutzer.verwaltung, ['*']);
+    // „Gesamte Verwaltung“ folgt der Gruppe (#818)
     const neu2 = await konten.anmeldenMitAnbieter({ sub: 'y', email: 'neu@example.org', name: 'Neu', gruppen: ['dms-admins'] }, mitGruppe, g);
-    assert.equal((neu2 as { benutzer: { rolle: string } }).benutzer.rolle, 'admin');
+    assert.deepEqual((neu2 as { benutzer: { verwaltung: string[] } }).benutzer.verwaltung, ['*']);
     const it3 = await konten.anmeldenMitAnbieter({ sub: 'z', email: 'it@example.org', name: 'IT', gruppen: [] }, mitGruppe, g);
-    assert.equal((it3 as { benutzer: { rolle: string } }).benutzer.rolle, 'mitglied');
-    // Letzter aktiver Administrator bleibt Administrator
+    assert.deepEqual((it3 as { benutzer: { verwaltung: string[] } }).benutzer.verwaltung, []);
+    // Die letzte Person mit „Gesamte Verwaltung“ behält sie (#818)
     for (const e of ['neu@example.org']) await konten.anmeldenMitAnbieter({ sub: 'y', email: e, name: '', gruppen: [] }, mitGruppe, g);
     const chef2 = await konten.anmeldenMitAnbieter({ sub: 'x', email: 'chef@example.org', name: '', gruppen: [] }, mitGruppe, g);
-    assert.equal((chef2 as { benutzer: { rolle: string } }).benutzer.rolle, 'admin');
+    assert.deepEqual((chef2 as { benutzer: { verwaltung: string[] } }).benutzer.verwaltung, ['*']);
     // Passwort nur für Administratoren
     konten.verbindeAnbieter(async () => ({ ...basis, lokalNurAdmins: true }));
     await konten.anmelden({ email: 'chef@example.org', passwort: 'ein-langes-passwort' }, '1.1.1.1');

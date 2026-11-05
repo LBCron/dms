@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, type DebugStand, type Protokolleintrag, type Stufe } from '../api';
+import { api, type DebugStand, type ModusEintrag, type Protokolleintrag, type Stufe } from '../api';
+import { useKonto } from '../konto';
 import { Link } from '../ort';
 import { Listenkopf } from '../Listenkopf';
 import { istWeg } from '../erreichbar';
@@ -99,7 +100,7 @@ export function ProtokollDetail({ p, nr }: { p: ProtokollZustand; nr?: string })
   const e = nr ? p.eintraege.find((x) => String(x.nr) === nr) : undefined;
   const [kopiert, setKopiert] = useState(false);
   if (nr && !e) return <div className="leer"><p>Dieser Eintrag ist nicht (mehr) in der Liste.</p><Link to="/werkbank/protokoll" className="verweis">Zum Debug-Modus</Link></div>;
-  if (!e) return <DebugPanel p={p} />;
+  if (!e) return <><DebugPanel p={p} /><ImVerwaltungsmodus /></>;
   const text = JSON.stringify(e, null, 2);
   return (
     <div className="einspaltig">
@@ -149,6 +150,39 @@ function DebugPanel({ p }: { p: ProtokollZustand }) {
             ? <><button className="knopf" disabled={laeuft} onClick={() => void schalte(true)}>Um eine Stunde verlängern</button><button className="knopf" disabled={laeuft} onClick={() => void schalte(false)}>Ausschalten</button></>
             : <button className="knopf primaer" disabled={laeuft} onClick={() => void schalte(true)}>Für eine Stunde einschalten</button>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Im Verwaltungsmodus angesehen (#820): wer im Modus welche Mappe geöffnet, heruntergeladen, geändert, exportiert oder
+ * versendet hat, die er sonst nicht sehen dürfte – nicht löschbar. Nur für „Gesamte Verwaltung“.
+ */
+function ImVerwaltungsmodus() {
+  const { verwaltungsmodus } = useKonto();
+  const [liste, setListe] = useState<ModusEintrag[] | null>(null);
+  const [fehler, setFehler] = useState<string>();
+  const gesamt = verwaltungsmodus.bereiche === null;
+  useEffect(() => { if (gesamt) api.imVerwaltungsmodus().then(setListe).catch((x) => setFehler((x as Error).message)); }, [gesamt]);
+  if (!gesamt) return null;
+  return (
+    <div className="einspaltig" id="im-verwaltungsmodus">
+      <div className="blatt">
+        <h2 className="h3">{t('werkbank.verwaltungsmodus.liste.titel')}</h2>
+        <p className="leise">{t('werkbank.verwaltungsmodus.liste.text')}</p>
+        {fehler && <p className="fehlertext">{fehler}</p>}
+        {liste && !liste.length && <p className="leise">{t('werkbank.verwaltungsmodus.liste.leer')}</p>}
+        {liste && liste.length > 0 && (
+          <div className="tabellenrahmen">
+            <table className="tabelle">
+              <thead><tr><th>{t('werkbank.verwaltungsmodus.liste.zeit')}</th><th>{t('werkbank.verwaltungsmodus.liste.person')}</th><th>{t('werkbank.verwaltungsmodus.liste.mappe')}</th><th>{t('werkbank.verwaltungsmodus.liste.was')}</th></tr></thead>
+              <tbody>{liste.map((x) => (
+                <tr key={x.id}><td>{datumUhr(x.zeit)}</td><td>{x.person || '–'}</td><td>{x.typId ? <Link to={`/ablage/${x.typId}/${x.mappeId}`} className="verweis">{x.titel || t('werkbank.verwaltungsmodus.liste.ohneTitel')}</Link> : x.titel || t('werkbank.verwaltungsmodus.liste.ohneTitel')}</td><td>{t.frei(`mappen.historie.verwaltungsmodus.${x.was}`)}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

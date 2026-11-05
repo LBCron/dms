@@ -66,8 +66,8 @@ export class ApiSchluesselDienst {
 
   /** Liefert den vollständigen Schlüssel – nur dieses eine Mal. */
   async lege(ich: Benutzer, e: unknown) {
-    // #128: Über die API arbeitet nur ein normaler Benutzer – für ihn gelten die Berechtigungen.
-    if (ich.rolle === 'admin') throw new Fachfehler(403, 'Administratoren bekommen keine API-Schlüssel. Lege für das Programm einen normalen Benutzer an und erzeuge den Schlüssel mit ihm.');
+    // #128, #818: Über die API arbeitet die Person immer mit ihren Alltagsrechten – ein Schlüssel bekommt nie
+    // Verwaltungsrechte (pruefeZugang), auch wenn sie ihn im Verwaltungsmodus anlegt.
     const d = daten(e);
     if ((await this.repo.liste(ich.id)).length >= 50) throw new Fachfehler(409, 'Höchstens 50 Schlüssel je Benutzer.');
     const schluessel = `${PRAEFIX}${randomBytes(30).toString('base64url')}`;

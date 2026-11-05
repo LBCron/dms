@@ -54,13 +54,13 @@ Der Name deiner Ablage, meist der Name der Familie („Familie Mustermann“) od
 
 ![Administrator](bilder/einrichtung-administrator.png)
 
-Name, E-Mail-Adresse und Passwort des Administrators. **Weiter** prüft Adresse und Passwort gleich, angelegt wird der Administrator aber erst mit **Jetzt einrichten**. Danach bist du als Administrator angemeldet.
+Name, E-Mail-Adresse und Passwort der Person, die Ablago einrichtet. Ein eigenes Konto „Administrator“ gibt es nicht: Diese Person bekommt **Gesamte Verwaltung** und arbeitet ganz normal in der Ablage (siehe [Wer darf Ablago verwalten?](verwalten.md)). **Weiter** prüft Adresse und Passwort gleich, angelegt wird die Person aber erst mit **Jetzt einrichten**. Danach bist du angemeldet, und zwar gleich im [Verwaltungsmodus](verwalten.md#der-verwaltungsmodus).
 
 ### Erster Benutzer
 
 ![Erster Benutzer](bilder/einrichtung-benutzer.png)
 
-Administratoren richten ein, arbeiten aber nicht in der Ablage. Lege deshalb einen normalen Benutzer an, zum Beispiel dich selbst mit einer zweiten Adresse. Das Häkchen darunter bestimmt, ob er die Aufgaben ohne eigenen Empfänger bekommt (vorgeschlagen: ja). Lässt du die Felder leer, legt Ablago keinen ersten Benutzer an. Ohne E-Mail-Versand zeigt die Abschlussseite den Einladungslink zum Kopieren.
+Hier kannst du gleich eine zweite Person anlegen, die mit Ablago arbeitet – Verwaltungsrechte bekommt sie dadurch nicht. Das Häkchen darunter bestimmt, ob er die Aufgaben ohne eigenen Empfänger bekommt (vorgeschlagen: ja). Lässt du die Felder leer, legt Ablago keinen ersten Benutzer an. Ohne E-Mail-Versand zeigt die Abschlussseite den Einladungslink zum Kopieren.
 
 ### Pakete dazuholen
 

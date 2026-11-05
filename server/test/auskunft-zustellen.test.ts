@@ -191,7 +191,7 @@ async function aufbau(pg: boolean, o: { mail?: boolean; adresse?: string } = {})
   const konten = new Konten(r.konto, null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'verwalter@example.org', name: 'Vera Verwalter', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'admin' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', verwaltung: ['*'] }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const reg = [{ key: 'daten', name: 'Daten', art: 'felder' as const }, { key: 'dok', name: 'Unterlagen', art: 'dokumente' as const }];
   const mieterTyp = await d.legeTypAn({ name: 'Mieter', titelVorlage: '{name}', felder: [{ key: 'name', label: 'Name', typ: 'text' }], register: reg });

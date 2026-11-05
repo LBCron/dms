@@ -274,7 +274,7 @@ describe('Webhooks Ende zu Ende: neue Post → Meldung (#627)', { skip: echtesFa
     const r = await app.inject({ method: 'POST', url: '/api/konto/einrichten', headers: { 'x-dms': '1' }, payload: { email: 'markus@example.org', name: 'Markus', passwort: 'ein-langes-passwort' } });
     cookieAdmin = String(r.headers['set-cookie']).split(';')[0];
     adminId = JSON.parse(r.body).benutzer.id;
-    const l = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena', rolle: 'mitglied' }, adminId);
+    const l = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena' }, adminId);
     lenaId = l.benutzer.id;
     await konten.setzePasswortDirekt('lena@example.org', 'noch-ein-langes-passwort');
     await dienst.gleicheBenutzerAb(await konten.listeBenutzer());

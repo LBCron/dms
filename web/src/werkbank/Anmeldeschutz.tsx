@@ -62,7 +62,7 @@ export function AnmeldeschutzPanel({ z }: { z: AnmeldeschutzZustand }) {
         </div>
         <label className="eigenschaft"><span>Nie sperren <small>Adressen oder Netze, z. B. 192.168.0.0/16 – dein Heimnetz</small></span>
           <input id="as-ausnahmen" value={e.ausnahmen} placeholder="192.168.0.0/16, 10.0.0.0/8" onChange={(x) => setE({ ...e, ausnahmen: x.target.value })} /></label>
-        <h2 className="h3">Mail an die Administratoren</h2>
+        <h2 className="h3">{t('konten.verwaltende.anmeldeschutz.mail')}</h2>
         <p className="leise klein">Angriffsversuche aus dem Internet sind normal; Sperren passieren automatisch. Gesperrte Adressen siehst du jederzeit hier und im Protokoll.</p>
         {/* #678: Sammelmeldung und Sofortmeldung sind jetzt Automatisierungen (Paket „Benachrichtigungen“). */}
         <div className="hinweis info hinweiszeile"><p>{t('werkbank.anmeldeschutz.automatisierung')}</p><Link to="/werkbank/automatisierungen" className="knopf klein">{t('werkbank.zusammenfassung.automatisierung.knopf')}</Link></div>
@@ -118,7 +118,7 @@ function ZweifaktorPflichtBlatt() {
       <h2 className="h3">Zwei-Faktor-Anmeldung <Hilfe ort="werkbank.zweifaktor" /></h2>
       <p className="leise">Jeder kann sie unter Mein Konto → Sicherheit für sich einrichten. Hier schreibst du sie für eine Rolle vor: Wer sie noch nicht hat, richtet sie bei der nächsten Anmeldung ein, bevor es weitergeht – wer gerade angemeldet ist, arbeitet weiter und sieht einen Hinweis. Ein verlorenes Handy setzt du unter Benutzer zurück.</p>
       {!p ? !meldung && <p className="leise">Lade …</p> : <>
-        <label className="haken"><input id="zf-admin" type="checkbox" checked={p.admin} disabled={sendet} onChange={(x) => void setze({ admin: x.target.checked })} /><span>Für Administratoren vorschreiben</span></label>
+        <label className="haken"><input id="zf-admin" type="checkbox" checked={p.admin} disabled={sendet} onChange={(x) => void setze({ admin: x.target.checked })} /><span>{t('konten.verwaltende.zweifaktor.pflicht')}</span></label>
         <label className="haken"><input id="zf-mitglied" type="checkbox" checked={p.mitglied} disabled={sendet} onChange={(x) => void setze({ mitglied: x.target.checked })} /><span>Für Mitglieder vorschreiben</span></label>
       </>}
       {meldung && <p className={meldung.art === 'gut' ? 'gutertext' : 'fehlertext'} role="status">{meldung.text}</p>}
@@ -166,13 +166,13 @@ function AnbieterBlatt() {
       </div>
       <label className="haken"><input id="oidc-anlegen" type="checkbox" checked={e.anlegen} onChange={(x) => setE({ ...e, anlegen: x.target.checked })} /><span>Unbekannte Adressen als neue Benutzer anlegen
         <small className="leise">sonst nur Benutzer, die es in Ablago schon gibt</small></span></label>
-      {e.anlegen && <label className="eigenschaft"><span>Systemrolle neuer Benutzer</span>
-        <select id="oidc-rolle" value={e.standardrolle} onChange={(x) => setE({ ...e, standardrolle: x.target.value === 'admin' ? 'admin' : 'mitglied' })}><option value="mitglied">Mitglied</option><option value="admin">Administrator</option></select></label>}
+      {e.anlegen && <label className="eigenschaft"><span>{t('konten.verwaltende.oidc.neu')}</span>
+        <select id="oidc-rolle" value={e.standardrolle} onChange={(x) => setE({ ...e, standardrolle: x.target.value === 'admin' ? 'admin' : 'mitglied' })}><option value="mitglied">{t('konten.verwaltende.oidc.neu.ohne')}</option><option value="admin">{t('konten.verwaltende.oidc.neu.gesamt')}</option></select></label>}
       <div className="raster">
-        {feld('adminGruppe', <>Gruppe für Administratoren <small>leer: Rollen nur in Ablago pflegen</small></>, 'z. B. dms-admins oder Objekt-ID')}
+        {feld('adminGruppe', <>{t('konten.verwaltende.oidc.gruppe')} <small>{t('konten.verwaltende.oidc.gruppe.leer')}</small></>, 'z. B. dms-admins oder Objekt-ID')}
         {feld('gruppenClaim', <>Claim mit den Gruppen <small>meist groups</small></>, 'groups')}
       </div>
-      <label className="haken"><input id="oidc-lokal" type="checkbox" checked={e.lokalNurAdmins} onChange={(x) => setE({ ...e, lokalNurAdmins: x.target.checked })} /><span>Passwort-Anmeldung nur noch für Administratoren
+      <label className="haken"><input id="oidc-lokal" type="checkbox" checked={e.lokalNurAdmins} onChange={(x) => setE({ ...e, lokalNurAdmins: x.target.checked })} /><span>{t('konten.verwaltende.oidc.lokal')}
         <small className="leise">als Notzugang, falls der Anbieter ausfällt</small></span></label>
       <label className="haken"><input id="oidc-abmelden" type="checkbox" checked={e.abmeldenBeimAnbieter} onChange={(x) => setE({ ...e, abmeldenBeimAnbieter: x.target.checked })} /><span>Beim Abmelden auch beim Anbieter abmelden</span></label>
       <label className="haken"><input id="oidc-aktiv" type="checkbox" checked={e.aktiv} onChange={(x) => setE({ ...e, aktiv: x.target.checked })} /><span>Eingeschaltet – Knopf auf der Anmeldeseite</span></label>

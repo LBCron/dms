@@ -854,6 +854,10 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const [r] = await sql`SELECT ${MAP} FROM mappen WHERE haushalt_id = ${haushaltId} AND system_kennung = ${kennung}`;
       return r ? alsMappe(r) : undefined;
     },
+    async setzeSystemKennung(id, kennung) {
+      if (!istUuid(id)) return;
+      await sql`UPDATE mappen SET system_kennung = ${kennung} WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
+    },
     async loescheMappe(id) {
       await sql`DELETE FROM mappen WHERE haushalt_id = ${haushaltId} AND id = ${id}`;
     },
@@ -2063,6 +2067,8 @@ export function pgRepo(sql: Sql, haushaltId: string): Repo {
       const r = await sql`
         DELETE FROM historie WHERE haushalt_id = ${haushaltId} AND mappe_id IN (
           SELECT mappe_id FROM historie WHERE haushalt_id = ${haushaltId} AND art = 'endgueltig' AND zeit < ${vor})
+          -- #820: „Im Verwaltungsmodus angesehen“ ist nicht löschbar und bleibt auch nach dem Aufräumen stehen.
+          AND art <> 'verwaltungsmodus'
           AND NOT EXISTS (SELECT 1 FROM mappen m WHERE m.id = historie.mappe_id)
           AND NOT EXISTS (SELECT 1 FROM papierkorb p WHERE p.id = historie.mappe_id)`;
       return r.count;

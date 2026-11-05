@@ -16,6 +16,7 @@ import { useWebdav, WebdavPanel } from './Webdav';
 import { useWebhooks, webhookWarnungen, WebhooksPanel } from './Webhooks';
 import { AutomatisierungEditor, AutomatisierungenListe, automatisierungWarnungen, useAutomatisierungen } from './Automatisierungen';
 import { useEffect, type ReactNode } from 'react';
+import { useKonto } from '../konto';
 import { Dreiteilung } from '../bereiche';
 import { useDaten } from '../daten';
 import { TypEditor } from '../einrichtung/Einrichtung';
@@ -56,7 +57,8 @@ import { useBeiWiederErreichbar } from '../erreichbar';
  * /werkbank/wiederherstellung → sicherung#wiederherstellen, /werkbank/technik → systemzustand#version,
  * /werkbank/wartungsmodus → wartung#wartungsmodus (`UMGEZOGEN` in werkbankansicht.ts).
  *
- * Werkbank für Administratoren, aufgebaut wie die Ablage:
+ * Werkbank im Verwaltungsmodus (#819), aufgebaut wie die Ablage. Leiste und Seiten nur für die eigenen Bereiche (#818);
+ * der Server prüft dasselbe je Schnittstelle (verwaltungsbereiche.ts):
  *   Bereiche  →  Elemente des Bereichs  →  Bearbeitung
  *
  * /werkbank                        Übersicht: was zu tun ist (#68)
@@ -93,12 +95,15 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const d = useDaten();
   const handbuch = useHandbuch();
   const [, bereich = 'uebersicht', id] = teile;
+  const { verwaltungsmodus } = useKonto();
+  /** Verwaltungsrecht (#818): eigener Bereich? `bereiche: null` = Gesamte Verwaltung; die Übersicht hat jeder. */
+  const darf = (pfad: string) => verwaltungsmodus.bereiche === null || pfad === 'uebersicht' || pfad === 'ansicht' || verwaltungsmodus.bereiche.includes(pfad);
   const benutzer = useBenutzer();
   const protokoll = useProtokoll(bereich === 'protokoll');
   const datenbank = useDatenbank(bereich === 'systemzustand');
   const technik = useTechnik(bereich === 'systemzustand');
   const betrieb = useBetrieb();
-  const tresor = useTresor();
+  const tresor = useTresor(darf('verschluesselung'));
   const papierkorb = usePapierkorb(true, bereich === 'papierkorb');
   // Pakete: Installation über einen Link (?installieren=…) steht rechts, auch ohne gewähltes Paket.
   const installieren = bereich === 'pakete' && !id ? new URLSearchParams(location.search).get('installieren') : null;
@@ -115,7 +120,7 @@ export function Werkbank({ teile }: { teile: string[] }) {
   const systemlast = useSystemlast(bereich === 'systemzustand');
   const eingang = useEingangsordner(bereich === 'eingangsordner');
   const webdav = useWebdav(bereich === 'webdav');
-  const webhooks = useWebhooks(bereich === 'webhooks' || bereich === 'uebersicht');
+  const webhooks = useWebhooks((bereich === 'webhooks' || bereich === 'uebersicht') && darf('webhooks'));
   const automatisierungen = useAutomatisierungen(bereich === 'automatisierungen');
   const postfaecher = usePostfaecher(bereich === 'postfaecher');
   const nummernkreise = useNummernkreise(bereich === 'nummernkreise');
@@ -320,17 +325,23 @@ export function Werkbank({ teile }: { teile: string[] }) {
   if (bereich === 'ansicht') {
     rechts = <AnsichtPanel z={ansicht} zustand={zustand} />;
   }
+  // Ohne Recht auf den Bereich (#818): weder Liste noch Seite – auch nicht über einen alten Link.
+  if (!darf(bereich) && !umleitung) {
+    liste = null;
+    rechts = <div className="leer"><p>{t('konten.verwaltung.fehler.bereich')}</p></div>;
+  }
+  const eigene = eintraege.filter((e) => darf(e.pfad));
 
   return (
     <Dreiteilung ort="werkbank" ebene={werkbankEbene(bereich, id, !!installieren)} mitte={hatMitte(bereich)} offen={id}>
       <aside className="spalte sichten" aria-label="Bereiche">
-        <WerkbankNavigation bereich={bereich} eintraege={eintraege} zeigen={ansicht.zeigen} benutzt={ansicht.stand?.benutzt} />
+        <WerkbankNavigation bereich={bereich} eintraege={eigene} zeigen={ansicht.zeigen} benutzt={ansicht.stand?.benutzt} />
         {/* Freiwillig, ohne Gebühren für beide Seiten (GitHub Sponsors von persönlichen Konten). */}
         <a className="unterstuetzen" href="https://github.com/sponsors/motom001" target="_blank" rel="noreferrer">
           <Symbol name="herz" /> Projekt unterstützen
           <span className="leise klein">freiwillig, Betrag frei wählbar</span>
         </a>
-        <a className="unterstuetzen handbuchlink" href={handbuch('admin')} target="_blank" rel="noreferrer">Administratorhandbuch ↗</a>
+        <a className="unterstuetzen handbuchlink" href={handbuch('admin')} target="_blank" rel="noreferrer">{t('werkbank.handbuch.link')} ↗</a>
       </aside>
       <section className="spalte liste" aria-label="Elemente">{liste}</section>
       <section className="spalte mappe" aria-label="Bearbeitung">

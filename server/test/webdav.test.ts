@@ -28,8 +28,8 @@ async function aufbau(o: { grenze?: number } = {}) {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
-  const bert = (await konten.legeBenutzerAn({ email: 'bert@example.org', name: 'Bert', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
+  const bert = (await konten.legeBenutzerAn({ email: 'bert@example.org', name: 'Bert' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const schluesselRepo = speicherApiSchluesselRepo();
   const schluessel = new ApiSchluesselDienst(schluesselRepo);

@@ -122,7 +122,7 @@ async function ablage(db?: { repo: Repo; konto: KontoRepo }) {
   const konten = new Konten(db?.konto ?? speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: lena } = await konten.einrichten({ email: 'lena@example.org', name: 'Lena', passwort: 'ein-langes-passwort' });
-  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas', rolle: 'mitglied' }, lena.id);
+  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas' }, lena.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const register = [{ key: 'allgemein', name: 'Allgemein', art: 'felder' as const }, { key: 'dokumente', name: 'Dokumente', art: 'dokumente' as const }];
   const vertrag = await d.legeTypAn({ name: 'Vertrag', felder: [{ key: 'titel', label: 'Titel', typ: 'text' }, { key: 'ende', label: 'Läuft aus am', typ: 'datum' }, { key: 'kennwort', label: 'Kennwort', typ: 'passwort' }], register });

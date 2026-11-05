@@ -56,7 +56,7 @@ Betrieb
 
 Verwaltung
   benutzer                               Benutzer auflisten
-  benutzer anlegen <email> <name> [--admin]
+  benutzer anlegen <email> <name> [--admin]   mit --admin: „Gesamte Verwaltung“
   benutzer deaktivieren <email>
   benutzer aktivieren <email>
 
@@ -131,7 +131,9 @@ const tabelle = (zeilen: string[][]) => {
   return zeilen.map((z) => z.map((x, i) => (i === z.length - 1 ? x : x.padEnd(breite[i]))).join('  ').trimEnd());
 };
 
-interface BenutzerZeile { id: string; email: string; name: string; rolle: string; aktiv: boolean; hatPasswort: boolean; letzteAnmeldung: string | null }
+/** Verwaltungsrecht (#818) für die Liste: „Gesamte Verwaltung“, Bereiche oder „–“. */
+const verwaltet = (v?: string[]) => (!v?.length ? '–' : v.includes('*') ? 'Gesamte Verwaltung' : v.join(', '));
+interface BenutzerZeile { id: string; email: string; name: string; verwaltung?: string[]; aktiv: boolean; hatPasswort: boolean; letzteAnmeldung: string | null }
 
 async function benutzerZu(v: Verbindung, email: string | undefined): Promise<BenutzerZeile> {
   if (!email) throw new KonsolenFehler('Bitte die E-Mail-Adresse angeben.', 2);
@@ -242,13 +244,13 @@ export async function fuehreAus(z: Zerlegt, v: Verbindung, ein: Ein, aus: Aus): 
       const [unter, email, ...name] = rest;
       if (!unter) {
         const liste = await v.anfrage<BenutzerZeile[]>('GET', '/api/benutzer');
-        return zeige(liste, () => tabelle([['E-Mail', 'Name', 'Rolle', 'Status', 'Letzte Anmeldung'],
-          ...liste.map((u) => [u.email, u.name, u.rolle, !u.aktiv ? 'deaktiviert' : u.hatPasswort ? 'aktiv' : 'eingeladen', zeit(u.letzteAnmeldung)])]));
+        return zeige(liste, () => tabelle([['E-Mail', 'Name', 'Verwaltung', 'Status', 'Letzte Anmeldung'],
+          ...liste.map((u) => [u.email, u.name, verwaltet(u.verwaltung), !u.aktiv ? 'deaktiviert' : u.hatPasswort ? 'aktiv' : 'eingeladen', zeit(u.letzteAnmeldung)])]));
       }
       if (unter === 'anlegen') {
         if (!email) throw new KonsolenFehler('Aufruf: dms benutzer anlegen <email> <name> [--admin]', 2);
-        const r = await v.anfrage<{ benutzer: BenutzerZeile; mailVerschickt: boolean; link?: string }>('POST', '/api/benutzer', { email, name: name.join(' '), rolle: opt.werte.admin ? 'admin' : 'mitglied' });
-        return zeige(r, () => [`${r.benutzer.email} angelegt (${r.benutzer.rolle}).`, r.mailVerschickt ? 'Die Einladung ist per Mail unterwegs.' : r.link ? `Einladungslink: ${r.link}` : 'Keine Einladung verschickt.']);
+        const r = await v.anfrage<{ benutzer: BenutzerZeile; mailVerschickt: boolean; link?: string }>('POST', '/api/benutzer', { email, name: name.join(' '), ...(opt.werte.admin ? { verwaltung: ['*'] } : {}) });
+        return zeige(r, () => [`${r.benutzer.email} angelegt (${verwaltet(r.benutzer.verwaltung)}).`, r.mailVerschickt ? 'Die Einladung ist per Mail unterwegs.' : r.link ? `Einladungslink: ${r.link}` : 'Keine Einladung verschickt.']);
       }
       if (unter === 'deaktivieren' || unter === 'aktivieren') {
         const u = await benutzerZu(v, email);

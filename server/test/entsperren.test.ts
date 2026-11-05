@@ -67,7 +67,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: lena } = await konten.einrichten({ email: 'lena@example.org', name: 'Lena Beispiel', passwort: 'ein-langes-passwort' });
-  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas Beispiel', rolle: 'mitglied' }, lena.id);
+  const { benutzer: jonas } = await konten.legeBenutzerAn({ email: 'jonas@example.org', name: 'Jonas Beispiel' }, lena.id);
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const t = new Texterkennung(repo, dateien, einstellungen, textebeneEngine, async () => ({ pdftotext: true, pdftoppm: true }));
   d.verbindeTexterkennung(t);

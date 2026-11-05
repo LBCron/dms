@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { MeineAbwesenheit } from './Abwesenheit';
 import { ZusammenfassungEinstellen } from './Zusammenfassung';
-import { geraetText, istGeradeAktiv, PASSWORT_MINDESTLAENGE, ROLLEN, type Sitzung } from '../../../shared/src/model';
+import { geraetText, istGeradeAktiv, PASSWORT_MINDESTLAENGE, type Sitzung } from '../../../shared/src/model';
+import { darfVerwalten, hatGesamt } from '../../../shared/src/verwaltungsrecht';
+import { bereichName } from '../../../shared/src/werkbankansicht';
 import { api } from '../api';
 import { bereicheZuruecksetzen } from '../bereiche';
 import { ApiSchluesselBlatt } from './ApiSchluessel';
@@ -31,7 +33,7 @@ function MeineRechte({ admin }: { admin: boolean }) {
     <section className="blatt">
       <h2 className="h3">Meine Rechte <Hilfe ort="profil.rechte" /></h2>
       {admin
-        ? <p className="leise">Als Administrator siehst und darfst du alles – für dich gelten die Berechtigungen nicht. Benutzer legst du in der Benutzerverwaltung an; versendete E-Mails legt Ablago selbst als Post ab.</p>
+        ? <p className="leise">{t('profil.rechte.verwaltungsmodus')}</p>
         : <p className="leise">Was du je Mappentyp darfst. „Je nach Mappe“ heißt: Es hängt von der Mappe ab, zum Beispiel davon, ob du verantwortlich bist oder eine Aufgabe dazu hast.</p>}
       {!liste ? <p className="leise">Lade …</p> : (
         <div className="tabellenrahmen"><table>
@@ -111,7 +113,7 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
       <div className="mappenkopf">
         <p className="ueber">Mein Konto · {BEREICHE[bereich]}</p>
         <h1>{ich.name || ich.email}</h1>
-        <dl className="index"><div><dt>Systemrolle</dt><dd>{ROLLEN[ich.rolle]}</dd></div><div><dt>E-Mail</dt><dd>{ich.email}</dd></div></dl>
+        <dl className="index">{darfVerwalten(ich) && <div><dt>{t('profil.verwaltung.titel')}</dt><dd>{hatGesamt(ich) ? t('werkbank.verwaltungsrecht.chip.gesamt') : (ich.verwaltung ?? []).map(bereichName).join(', ')}</dd></div>}<div><dt>E-Mail</dt><dd>{ich.email}</dd></div></dl>
       </div>
 
       {bereich === 'konto' && <>
@@ -303,7 +305,7 @@ function MeineGeraete() {
               <div>
                 <strong>{geraetText(s.geraet)}</strong>
                 {s.aktuell && <> <span className="chip">dieses Gerät</span></>}
-                {s.vertretungId && <> <span className="chip warn">Administrator agiert als du</span></>}
+                {s.vertretungId && <> <span className="chip warn">{t('konten.verwaltende.vertretung.chip')}</span></>}
                 {istGeradeAktiv(s.zuletztAktiv) && <> <span className="chip gut punkt">gerade aktiv</span></>}
                 <span className="leise klein blockzeile">Zuletzt aktiv {datumZeit(s.zuletztAktiv)} · angemeldet seit {datumZeit(s.erstellt)}{s.ip ? ` · ${s.ip}` : ''}</span>
               </div>

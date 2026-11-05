@@ -15,7 +15,7 @@ describe('Laufwerk unter Mein Konto (#720)', () => {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen() });
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
     await konten.einrichten({ email: 'anna@example.org', name: 'Anna', passwort: 'ein-langes-passwort' });
-    const { benutzer: lena } = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena', rolle: 'mitglied' });
+    const { benutzer: lena } = await konten.legeBenutzerAn({ email: 'lena@example.org', name: 'Lena' });
     let aktiv = false;
     const webdav = { einstellung: async () => ({ aktiv }), stand: async () => ({ einstellung: { aktiv }, adresse: 'https://ablage.example.org/webdav/', https: true, grenze: 0, anfragen: 0, zugriffe: [] }) };
     const r = routen(d, konten, { webdav: webdav as never });

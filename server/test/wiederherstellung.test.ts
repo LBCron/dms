@@ -198,7 +198,7 @@ describe('Wiederherstellen mit PostgreSQL', { skip: url ? false : 'TEST_DATABASE
     const typ = (await q.dienst.listeTypen()).find((t) => t.name === 'Vertragspartner')!;
     await q.dienst.legeMappeAn({ typId: typ.id, werte: { name: 'Nach der Sicherung GmbH' } });
     const vorher = await zaehle(q.sql);
-    await assert.rejects(q.w.pruefeZugang(false), /Administratorrechte/);
+    await assert.rejects(q.w.pruefeZugang(false), /Verwaltungsmodus/);
     await assert.rejects(q.w.pruefeZugang(true), /Wartungsmodus/);
     q.setzeWartung(true);
     await assert.rejects(q.w.starte({ name: sicherungsName }, { email: 'anna@example.org' }), /bestätigen/);

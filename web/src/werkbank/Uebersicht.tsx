@@ -71,7 +71,6 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   // Export-Ordner (#797): im Sicherungsordner, oder Exporte beim Update von dort verschoben.
   if (u.exporte) for (const x of exportHinweise(u.exporte)) h.push({ ...x, ziel: '/werkbank/vollexport', knopf: t('werkbank.export.knopf') });
   // #128: API-Schlüssel gehören zu normalen Benutzern.
-  if (u.adminSchluessel) h.push({ schluessel: 'api-schluessel-admin', art: 'warn', text: <><strong>{u.adminSchluessel === 1 ? 'Ein API-Schlüssel gehört' : `${u.adminSchluessel} API-Schlüssel gehören`} einem Administrator.</strong> Administratoren bekommen keine neuen Schlüssel mehr. Lege für das Programm einen normalen Benutzer an, erzeuge damit einen neuen Schlüssel und lösche den alten (Mein Konto → API-Schlüssel des Administrators).</>, ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' });
   // Datenbank-Anbindung (#119)
   if (u.anbindung?.umgebung === 'abweichend') h.push({ schluessel: 'anbindung.abweichend', art: 'warn', text: <><strong>DATABASE_URL weicht von der Datenbank-Anbindung ab und wird ignoriert.</strong> Führend ist die Anbindung unter /data/geheim; entferne die Variable aus der Compose-Datei.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
   if (u.anbindung?.neustartNoetig) h.push({ schluessel: 'anbindung.neustart', art: 'warn', text: <><strong>Die Datenbank-Anbindung ist geändert</strong> und gilt erst nach einem Neustart von Ablago.</>, ziel: '/werkbank/anbindung', knopf: 'Zur Anbindung' });
@@ -81,7 +80,7 @@ export function hinweiseAus(u: WerkbankUebersicht): Hinweis[] {
   for (const p of u.paketeEinstellungen ?? []) h.push({ schluessel: `paket-einstellungen:${p.id}`, art: 'warn', text: <><strong>{t('pakete.ablauf.aufgabe', { name: p.name })}</strong> {t('pakete.ablauf.aufgabe.text')}</>, ziel: `/werkbank/pakete/${p.id}?reiter=einstellungen`, knopf: t('pakete.ablauf.aufgabe.knopf') });
   // Im Einrichtungsassistenten übersprungen (#119): hier nachholen.
   const nachholen: Record<string, { text: string; ziel: string; knopf: string }> = {
-    benutzer: { text: 'einen normalen Benutzer für die Ablage anlegen – Administratoren arbeiten nicht in der Ablage', ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' },
+    benutzer: { text: t('werkbank.uebersicht.nachholen.benutzer'), ziel: '/werkbank/benutzer/neu', knopf: 'Benutzer anlegen' },
     optional: { text: 'Adresse, E-Mail-Versand und Bundesland einstellen', ziel: '/werkbank/betrieb', knopf: 'Zu E-Mail und Adresse' },
     pakete: { text: 'Pakete dazuholen, z. B. die Texterkennung, damit gescannte Dokumente durchsuchbar werden', ziel: '/werkbank/pakete', knopf: 'Zu den Paketen' },
   };

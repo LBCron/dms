@@ -21,7 +21,7 @@ describe('Persönlicher Export (#255)', () => {
     const d = new Dienst(speicherRepo(), speicherDateien(), { einstellungen: speicherEinstellungen(), tresor });
     const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
     const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-    const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max', rolle: 'mitglied' }, admin.id)).benutzer;
+    const max = (await konten.legeBenutzerAn({ email: 'max@example.org', name: 'Max' }, admin.id)).benutzer;
     await d.gleicheBenutzerAb(await konten.listeBenutzer());
     const t = await d.legeTypAn({ name: 'Vertrag', schluessel: 'vertrag', titelVorlage: '{name}', felder: [
       { key: 'name', label: 'Name', typ: 'text' }, { key: 'privat', label: 'Privat', typ: 'janein' }, { key: 'pw', label: 'Passwort', typ: 'passwort' },

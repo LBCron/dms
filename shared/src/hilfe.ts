@@ -34,6 +34,8 @@ export const HILFE = {
   'werkbank.titelfilter': admin('mappentypen/', 'Platzhalter formatieren', 'platzhalter-formatieren'),
   'werkbank.sichten': admin('sichten/', 'Ansichten'),
   'werkbank.benutzer': admin('benutzer/', 'Benutzern und Rollen'),
+  // #818: Wer darf Ablago verwalten? Verwaltungsrecht, Bereiche, Verwaltungsmodus.
+  'werkbank.verwaltungsrecht': admin('verwalten/', 'Wer darf Ablago verwalten?'),
   'werkbank.aufgabenempfaenger': admin('benutzer/', 'Aufgaben ohne Empfänger', 'aufgaben-ohne-empfanger'),
   'werkbank.systemkonten': admin('benutzer/', 'Systemkonten', 'systemkonten'),
   'werkbank.berechtigungen': admin('berechtigungen/', 'Berechtigungen'),

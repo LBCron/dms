@@ -1,5 +1,5 @@
 {
-  "favoriten.abgeschaltet": "Die Benachrichtigung bei geänderten Favoriten ist für dich ausgeschaltet – das legt ein Administrator in der Werkbank fest. Deine Einstellung bleibt gespeichert und gilt wieder, sobald er sie erlaubt.",
+  "favoriten.abgeschaltet": "Die Benachrichtigung bei geänderten Favoriten ist für dich ausgeschaltet – das wird in der Werkbank festgelegt. Deine Einstellung bleibt gespeichert und gilt wieder, sobald sie erlaubt ist.",
   "laufwerk.bereich": "Laufwerk",
   "laufwerk.menue": "Als Laufwerk einbinden",
   "laufwerk.lade": "Lade …",
@@ -17,8 +17,6 @@
   "laufwerk.schluessel.anlegen": "Schlüssel für das Laufwerk anlegen",
   "laufwerk.schluessel.alle": "Alle Schlüssel",
   "laufwerk.schluesselname": "Laufwerk",
-  "laufwerk.admin": "Administratoren bekommen keine API-Schlüssel und können das Laufwerk deshalb nicht selbst nutzen. Für den Alltag ist ein normaler Benutzer schnell angelegt.",
-  "laufwerk.admin.link": "Benutzer anlegen",
   "laufwerk.geraete": "So geht es auf deinem Gerät",
   "laufwerk.windows": "Windows",
   "laufwerk.windows.1": "Öffne den Explorer und klicke links auf „Dieser PC“.",
@@ -62,5 +60,7 @@
   "dokpw.bestaetigen.text": "Zum Anzeigen und Ändern bestätige bitte mit deinem Ablago-Passwort. Die Bestätigung gilt 5 Minuten.",
   "dokpw.bestaetigen.mit-code": "Zum Anzeigen und Ändern bestätige bitte mit deinem Ablago-Passwort oder einem Code aus der Authenticator-App. Die Bestätigung gilt 5 Minuten.",
   "dokpw.bestaetigen.feld": "Ablago-Passwort",
-  "dokpw.bestaetigen.feld-code": "Ablago-Passwort oder Code"
+  "dokpw.bestaetigen.feld-code": "Ablago-Passwort oder Code",
+  "rechte.verwaltungsmodus": "Im Verwaltungsmodus siehst und darfst du alles – die Berechtigungen gelten dann nicht. Beende den Modus, dann siehst du hier, was du im Alltag darfst.",
+  "verwaltung.titel": "Verwaltung"
 }

@@ -509,9 +509,16 @@ progress::-moz-progress-bar { background: var(--akzent); border-radius: 999px; }
 .vertretungsbanner, .hinweisbanner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px max(16px, env(safe-area-inset-left)); font-size: calc(13.5px * var(--skala, 1)); }
 .vertretungsbanner { background: var(--warn); color: #fff; }
 .vertretungsbanner .knopf { background: #fff; color: var(--warn); border-color: #fff; }
-.adminbanner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px max(16px, env(safe-area-inset-left)); font-size: calc(13.5px * var(--skala, 1)); background: #A61B1B; color: #fff; }
-.adminbanner p { margin: 0; }
-.adminbanner .knopf { background: #fff; color: #A61B1B; border-color: #fff; }
+/* Verwaltungsmodus (#819): roter Balken in Werkbank und Ablage, solange der Modus läuft. */
+.verwaltungsbalken { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px max(16px, env(safe-area-inset-left)); font-size: calc(13.5px * var(--skala, 1)); background: #A61B1B; color: #fff; }
+.verwaltungsbalken p { margin: 0; flex: 1 1 280px; }
+.verwaltungsbalken .knopf { background: #fff; color: #A61B1B; border-color: #fff; }
+.verwaltungsbalken .knopf:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* Verwaltungsrecht an der Person (#818): Baum der Werkbank-Bereiche unter „Gesamte Verwaltung“. */
+.verwaltungsbaum { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0 26px; }
+.verwaltungsast { border: 0; margin: 4px 0 0; padding: 0 0 0 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 2px 16px; }
+.verwaltungsast legend { padding: 0; margin: 0 0 2px -22px; font-weight: 600; font-size: calc(13px * var(--skala, 1)); color: var(--leise); }
+.verwaltungsast .chip svg { width: 12px; height: 12px; vertical-align: -1px; }
 .hinweisbanner { background: var(--warn-zart); color: var(--tinte); border-bottom: 1px solid var(--linie); }
 .vertretungsbanner p, .hinweisbanner p { margin: 0; }
 .hinweisbanner ul { margin: 4px 0 0; padding-left: 18px; }
@@ -1298,7 +1305,7 @@ dialog.ueber-dms::backdrop { background: rgb(0 0 0 / .35); }
 .ablageflaeche { position: fixed; inset: 0; z-index: 60; display: grid; gap: 16px; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: color-mix(in srgb, var(--flaeche) 82%, transparent); backdrop-filter: blur(2px); }
 .ablageflaeche.zwei { grid-template-columns: 1fr 1fr; }
 .ablageziel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; border: 3px dashed var(--akzent); border-radius: calc(var(--r) * 2); background: var(--akzent-zart); color: var(--tinte); font-size: calc(18px * var(--skala, 1)); padding: 16px; }
-.ablageziel span { font-size: calc(14px * var(--skala, 1)); color: var(--tinte-leise, inherit); }
+.ablageziel span { font-size: calc(14px * var(--skala, 1)); color: var(--leise); }
 .ablageziel.drauf { border-style: solid; filter: brightness(.97); }
 .ablagestatus { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 55; max-width: min(420px, calc(100vw - 32px)); background: var(--flaeche); border: 1px solid var(--linie-stark); border-radius: var(--r); box-shadow: 0 10px 30px rgba(15, 23, 42, .18); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .ablagestatus ul { margin: 0; padding-left: 18px; }

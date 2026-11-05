@@ -17,13 +17,13 @@ Links in der Leiste steht neben dem Wartungsmodus **angekündigt**, solange er n
 3. Optional das **erwartete Ende** – es muss nach dem Beginn liegen.
 4. **Wartung ankündigen**.
 
-Unter den Feldern fasst ein Satz die Wirkung zusammen, z. B. „Ab jetzt sehen alle einen Hinweis mit Countdown; anmelden können sich nur noch Administratoren. Um 12:45 Uhr werden alle anderen abgemeldet. Ende voraussichtlich 13:45 Uhr.“
+Unter den Feldern fasst ein Satz die Wirkung zusammen, z. B. „Ab jetzt sehen alle einen Hinweis mit Countdown; anmelden können sich nur noch Personen, die Ablago verwalten dürfen. Um 12:45 Uhr werden alle anderen abgemeldet. Ende voraussichtlich 13:45 Uhr.“
 
 ## Jetzt sofort sperren
 
 Für Notfälle, z. B. einen **Sicherheitsvorfall** (ein Passwort oder Gerät ist in falsche Hände geraten, du siehst unbekannte Anmeldungen): Der rote Knopf **Jetzt sofort sperren** überspringt die Ankündigung. Nach einer Rückfrage
 
-- werden alle anderen Sitzungen sofort beendet, auch die anderer Administratoren,
+- werden alle anderen Sitzungen sofort beendet, auch die anderer Verwaltender,
 - antwortet die Schnittstelle mit **503**,
 - bleibst du selbst angemeldet.
 
@@ -35,7 +35,7 @@ Danach in Ruhe aufräumen, z. B. betroffene Passwörter ändern, unter **Werkban
 
 - Alle Angemeldeten sehen sofort – ohne die Seite neu zu laden – ein Banner mit Countdown: „Wartung – du wirst in 29 Minuten abgemeldet. Bitte speichere deine Arbeit.“
 - Speichern geht bis zum Schluss.
-- Neu anmelden können sich nur noch Administratoren; die Anmeldeseite zeigt den Hinweis.
+- Neu anmelden können sich nur noch Personen, die verwalten dürfen; die Anmeldeseite zeigt den Hinweis.
 
 ![Banner bei einem Mitglied](bilder/wartung-banner.png)
 
@@ -43,8 +43,8 @@ Danach in Ruhe aufräumen, z. B. betroffene Passwörter ändern, unter **Werkban
 
 Zum gewählten Beginn – oder sofort mit **Alle jetzt abmelden** bzw. [Jetzt sofort sperren](#jetzt-sofort-sperren):
 
-- Alle Sitzungen außer deiner enden, auch die anderer Administratoren (sie können sich wieder anmelden).
-- Die Anmeldeseite zeigt den Wartungshinweis mit Text und erwartetem Ende; anmelden können sich nur Administratoren.
+- Alle Sitzungen außer deiner enden, auch die anderer Verwaltender (sie können sich wieder anmelden).
+- Die Anmeldeseite zeigt den Wartungshinweis mit Text und erwartetem Ende; anmelden können sich nur Personen, die verwalten dürfen.
 - Die [Schnittstelle](api.md) (`/api/v1`) antwortet mit **503** und `Retry-After` (Sekunden bis zum erwarteten Ende, sonst 15 Minuten) – Skripte sollten es später noch einmal versuchen.
 - Die Hintergrundarbeiten pausieren:
     - Texterkennung,

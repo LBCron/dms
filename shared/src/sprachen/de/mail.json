@@ -1,6 +1,6 @@
 {
   "hallo": "Hallo {name},",
-  "nicht-du": "Falls du das nicht warst, wende dich bitte sofort an deinen Administrator.",
+  "nicht-du": "Falls du das nicht warst, wende dich bitte sofort an die Person, die dein Ablago verwaltet.",
   "email-geaendert.betreff": "Deine E-Mail-Adresse in Ablago wurde geändert",
   "email-geaendert.text": "die E-Mail-Adresse deines Zugangs zu Ablago wurde von {alt} auf {neu} geändert. Anmelden kannst du dich ab jetzt nur noch mit der neuen Adresse.",
   "passwort-geaendert.betreff": "Dein Passwort für Ablago wurde geändert",
@@ -19,10 +19,12 @@
   "dauer.stunden_other": "{anzahl} Stunden",
   "verwaltung.betreff_one": "Ablago: Für die Verwaltung liegt etwas Neues an",
   "verwaltung.betreff_other": "Ablago: Für die Verwaltung liegen {anzahl} neue Dinge an",
-  "verwaltung.einleitung": "in der Werkbank wartet Arbeit, die nur ein Administrator erledigen kann:",
+  "verwaltung.einleitung": "in der Werkbank wartet Arbeit, die nur erledigen kann, wer Ablago verwaltet:",
   "verwaltung.neu": "(neu)",
-  "verwaltung.anmelden": "Melde dich als Administrator an und öffne die Werkbank: {link}",
-  "verwaltung.anmelden.ohne-link": "Melde dich als Administrator an und öffne die Werkbank.",
+  "verwaltung.anmelden": "Öffne Ablago, wähle im Benutzermenü „Ablago verwalten“ und dann die Werkbank: {link}",
+  "verwaltung.anmelden.ohne-link": "Öffne Ablago und wähle im Benutzermenü „Ablago verwalten“.",
   "verwaltung.fuss": "Diese Mail kommt höchstens einmal am Tag und nur, wenn etwas Neues dazugekommen ist.",
-  "verwaltung.anrede": "Hallo,"
+  "verwaltung.anrede": "Hallo,",
+  "verwaltungsrecht.betreff": "Ablago: Verwaltungsrechte von {person} geändert",
+  "verwaltungsrecht.text": "die Verwaltungsrechte von {person} wurden geändert.\n\nVorher: {vorher}\nNachher: {nachher}\nGeändert von: {von}\n\n„*“ steht für „Gesamte Verwaltung“."
 }

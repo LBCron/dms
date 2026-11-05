@@ -111,7 +111,7 @@ describe('Einrichtungscode (#119)', () => {
     const e = new Einrichtung({ konten, code: c, einstellungen: speicherEinstellungen(), mandant: { name: async () => name, umbenennen: async (n) => { name = n; } }, schriftzug: async () => {} });
     assert.equal(e.codeNoetig, false);
     const r = await e.einrichten({ mandant: 'Familie Ohne Code', name: 'Admin', email: 'admin@example.org', passwort: 'ein-langes-passwort' }, undefined, { ip: '1', geraet: '' });
-    assert.equal(r.benutzer.rolle, 'admin');
+    assert.deepEqual(r.benutzer.verwaltung, ['*']);
     await assert.rejects(e.einrichten({ mandant: 'X', name: 'B', email: 'b@example.org', passwort: 'ein-langes-passwort' }, undefined, { ip: '1', geraet: '' }), /bereits abgeschlossen/);
   });
 });
@@ -166,7 +166,7 @@ describe('Mandant und Administrator mit Code (#119)', () => {
     await assert.rejects(e.einrichten(daten, 'FALSCH', { ip: '1', geraet: '' }), /stimmt nicht/);
     await assert.rejects(e.einrichten({ ...daten, mandant: '' }, c, { ip: '1', geraet: '' }), /Namen angeben/);
     const r = await e.einrichten(daten, c, { ip: '1', geraet: '' });
-    assert.equal(r.benutzer.rolle, 'admin');
+    assert.deepEqual(r.benutzer.verwaltung, ['*']);
     assert.equal(name, 'Familie Muster');
     assert.equal(schriftzug, 'Familie Muster');
     assert.equal(e.codeNoetig, false);

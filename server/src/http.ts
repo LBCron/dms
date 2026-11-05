@@ -206,7 +206,8 @@ export async function baueApp(dienst: Dienst, konten: Konten, opt: Optionen = {}
         (req as MitKontext).dms = k;
         const antwort = await kontext.run(k, async () => {
           await pruefeZugang(r, a, (n) => req.headers[n] as string | undefined, konten, opt.apiSchluessel, opt.konsole);
-          k.benutzer = a.konsole ? `${a.benutzer?.email ?? 'ohne Administrator'} (Konsole)` : wer(a.benutzer, a.apiSchluessel);
+          // Protokoll (#819): jede Anfrage im Verwaltungsmodus mit Person und „im Verwaltungsmodus“.
+          k.benutzer = a.konsole ? `${a.benutzer?.email ?? 'ohne Verwaltungsrecht'} (Konsole)` : `${wer(a.benutzer, a.apiSchluessel)}${a.verwaltungsmodus ? ' (im Verwaltungsmodus)' : ''}`;
           // Wartungsmodus (#102): API 503, in der aktiven Stufe nur Administratoren.
           // Die Konsole (#244) arbeitet auch im Wartungsmodus – etwa um ihn zu beenden.
           if (!a.konsole) opt.wartung?.pruefeAnfrage(r, a.benutzer);

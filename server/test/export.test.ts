@@ -1,5 +1,6 @@
 /** Export mehrerer Mappen (#152, #153): CSV, Excel, ZIP mit Dokumenten, PDF; Recht E an Sichten. */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -33,7 +34,7 @@ async function aufbau() {
   const konten = new Konten(speicherKontoRepo(), null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'admin@example.org', name: 'Admin', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const partner = await d.legeTypAn({ name: 'Partner', felder: [{ key: 'name', label: 'Name', typ: 'text', pflicht: true }] });
   const vertrag = await d.legeTypAn({ name: 'Vertrag', titelVorlage: '{nr}', felder: [
@@ -53,7 +54,7 @@ async function aufbau() {
   const sicht = (await d.listeSichten()).find((s) => s.id === vertrag.id)!;
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
   const tabelle = routen(d, konten, { tresor });
-  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) });
+  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => tabelle.find((t) => t.methode === m && t.pfad === pf)!.handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) });
   const exportiere = async (b: { id: string }, body: Record<string, unknown>) => {
     const r = await rufe(b, 'POST', '/api/export', { body: { sicht: vertrag.id, ...body } });
     const f = (r as { datei: Datei }).datei;

@@ -1,3 +1,4 @@
+import { t } from '../sprache';
 import { Kopf } from './Kopf';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type WartungWerkbank } from '../api';
@@ -61,10 +62,10 @@ export function zeitschiene(beginn: string, ende: string, jetzt = new Date()): {
   const e = ende ? new Date(ende) : null;
   if (!b || Number.isNaN(b.getTime())) return { fehler: 'Bitte gib den Beginn an.' };
   if (b.getTime() <= jetzt.getTime()) return { fehler: 'Der Beginn liegt in der Vergangenheit. Für sofort bitte „Jetzt sofort sperren“ nutzen.' };
-  if (b.getTime() > jetzt.getTime() + 24 * 3600_000) return { fehler: 'Der Beginn darf höchstens 24 Stunden in der Zukunft liegen – ab der Ankündigung können sich nur noch Administratoren anmelden.' };
+  if (b.getTime() > jetzt.getTime() + 24 * 3600_000) return { fehler: t('konten.verwaltende.wartung.beginn') };
   if (e && e.getTime() <= b.getTime()) return { fehler: 'Das erwartete Ende muss nach dem Beginn liegen.' };
   const ab = wann(b);
-  return { satz: `Ab jetzt sehen alle einen Hinweis mit Countdown; anmelden können sich nur noch Administratoren. ${ab[0].toUpperCase()}${ab.slice(1)} werden alle anderen abgemeldet.${e ? ` Ende voraussichtlich ${uhr(e)} Uhr.` : ''}` };
+  return { satz: `Ab jetzt sehen alle einen Hinweis mit Countdown; anmelden können sich nur noch Personen, die Ablago verwalten dürfen. ${ab[0].toUpperCase()}${ab.slice(1)} werden alle anderen abgemeldet.${e ? ` Ende voraussichtlich ${uhr(e)} Uhr.` : ''}` };
 }
 
 export function WartungsmodusPanel({ w, abschnitt }: { w: WartungsmodusZustand; abschnitt?: boolean }) {
@@ -163,7 +164,7 @@ export function WartungsmodusPanel({ w, abschnitt }: { w: WartungsmodusZustand; 
             <thead><tr><th>Benutzer</th><th>Gerät</th><th>Letzte Aktivität</th></tr></thead>
             <tbody>{s.sitzungen.map((x) => (
               <tr key={x.id}>
-                <td>{x.name || x.email}{x.rolle === 'admin' && <span className="chip">Administrator</span>}{x.aktuell && <span className="chip gut">dieses Gerät</span>}</td>
+                <td>{x.name || x.email}{x.rolle === 'admin' && <span className="chip">{t('konten.verwaltung.menue.darf')}</span>}{x.aktuell && <span className="chip gut">dieses Gerät</span>}</td>
                 <td title={x.geraet}>{geraetKurz(x.geraet)}{x.ip ? <span className="leise"> · {x.ip}</span> : null}</td>
                 <td className="kurz">{zeitpunkt(x.zuletztAktiv)}</td>
               </tr>

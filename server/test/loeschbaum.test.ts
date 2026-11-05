@@ -5,6 +5,7 @@
  * Erfundene Beispieldaten: ein Vertragspartner mit Verträgen und Rechnungen.
  */
 import assert from 'node:assert/strict';
+import { wieImModus } from './hilfen';
 import { after, describe, it } from 'node:test';
 import type { Baum, BaumKnoten } from '../../shared/src/baum';
 import { kennzeichen, liesLoeschAuswahl, loeschErinnerung, loeschVorschlag, loeschZusammenfassung, planeLoeschung, type LoeschVorschau } from '../../shared/src/loeschbaum';
@@ -154,7 +155,7 @@ async function aufbau(pg: boolean) {
   const konten = new Konten(r.konto, null, 'http://nas', d.benutzerspiegel());
   d.verbindeKonten(konten.papierkorbHaken());
   const { benutzer: admin } = await konten.einrichten({ email: 'verwalter@example.org', name: 'Vera Verwalter', passwort: 'ein-langes-passwort' });
-  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna', rolle: 'mitglied' }, admin.id)).benutzer;
+  const anna = (await konten.legeBenutzerAn({ email: 'anna@example.org', name: 'Anna' }, admin.id)).benutzer;
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const reg = [{ key: 'daten', name: 'Daten', art: 'felder' as const }, { key: 'dok', name: 'Unterlagen', art: 'dokumente' as const }];
   const kategorie = await d.legeTypAn({ name: 'Kategorie', titelVorlage: '{name}', felder: [{ key: 'name', label: 'Name', typ: 'text' }] });
@@ -189,7 +190,7 @@ async function aufbau(pg: boolean) {
   const tabelle = routen(d, konten, {});
   const route = (m: string, pf: string) => tabelle.find((x) => x.methode === m && x.pfad === pf)!;
   const ich = async (id: string) => (await konten.listeBenutzer()).find((b) => b.id === id)!;
-  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => route(m, pf).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: await ich(b.id) } as Anfrage);
+  const rufe = async (b: { id: string }, m: string, pf: string, x: Partial<Anfrage> = {}) => route(m, pf).handler({ body: {}, params: {}, query: {}, ip: '1', ...x, benutzer: wieImModus(await ich(b.id)) } as Anfrage);
   return { d, admin, anna, typen: { kategorie, partner, vertrag, rechnung, lieferschein }, m: { k, p, q, v1, v2, vx, r1, r2 }, rufe };
 }
 
