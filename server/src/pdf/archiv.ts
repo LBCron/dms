@@ -8,7 +8,7 @@
  * „nie nachladen“: kein JavaScript, keine Aktionen, keine Verweise auf externe Inhalte. Die volle Konformität prüft
  * das Paket in seiner CI (veraPDF).
  */
-import { execFile } from 'node:child_process';
+import { execFile } from '../hintergrund';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

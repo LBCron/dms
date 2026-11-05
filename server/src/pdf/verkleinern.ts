@@ -19,7 +19,7 @@
  * Farbschlüssel-Maske (/Mask), Sonderfarben (Separation, DeviceN) und Bilder, deren Platzierung sich nicht
  * ermitteln lässt (z. B. nur in Mustern oder Anmerkungen).
  */
-import { execFile } from 'node:child_process';
+import { execFile } from '../hintergrund';
 import { createHash } from 'node:crypto';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

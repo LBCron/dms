@@ -354,6 +354,27 @@ Dazu mit der Vorgabe und `NODE_OPTIONS=--max-old-space-size=1024` ein Durchgang 
 
 **Auf dem NAS nachmessen** (≥ 4 Kerne, für #576): Lasttest-Modus mit `DMS_LASTTEST=alle` je einmal mit `DMS_PROZESSE=1`, `2` und `4` (feste Zahl, nicht `auto`), ohne `DMS_DB_VERBINDUNGEN` – einmal mit `dms-komplett`, einmal `dms` mit PostgreSQL in einem eigenen Container; dazu einmal 4 Prozesse mit `DMS_DB_VERBINDUNGEN=40` (wie vor #874). Wichtig sind die Zeilen „Engpass …“ und „Fehler …“: Gibt es Neustarts (SIGKILL: zu wenig Arbeitsspeicher für den Container), hilft weniger Speicher je Prozess bzw. ein größeres `mem_limit`; ist die CPU von PostgreSQL nahe der Zahl der Kerne, ist die Datenbank der Engpass; wartet man lange auf Verbindungen, obwohl PostgreSQL Luft hat, fehlen Verbindungen; tauchen Sperren auf, warten Speichervorgänge aufeinander.
 
+## Arbeit im Hintergrund mit niedrigerer Priorität (#893) { #hintergrund }
+
+Im Alltag bremsen selten viele Menschen gleichzeitig, sondern große Stapel Scans: Texterkennung und Seitenbilder belegen die Kerne. Darum rechnet die Arbeit im Hintergrund mit einem höheren nice-Wert (`server/src/hintergrund.ts`, `DMS_HINTERGRUND_NICE`, Vorgabe 10, `0` = aus; zusätzlich zur Priorität des Hauptfadens, höchstens 19):
+
+- **Arbeiter-Fäden** (`arbeit/arbeitsfaden.ts`): Jeder Faden senkt beim Start mit `os.setPriority(0, n)` sich selbst – unter Linux gilt die Priorität je Faden (TID), der Hauptfaden bleibt auf seiner.
+- **Paket-Läufer** (`laeufer/verwaltung.ts`, dort läuft z. B. die Texterkennung): gleich nach `fork` der Hauptfaden, bei „bereit“ alle Fäden aus `/proc/<pid>/task` (der Läufer selbst darf `/proc` wegen des Berechtigungsmodells nicht lesen). Die Fäden der Aufrufe erben die Priorität.
+- **Programme** (`pdftoppm`, `pdftotext`, `pdfinfo`, `qpdf`, Ghostscript …): `execFile` und `spawn` kommen aus `hintergrund.ts` statt aus `node:child_process` und senken die Priorität gleich nach dem Start. Ein Kindprozess erbt sonst die Priorität des Fadens, der ihn startet – bei Ablago meist der Hauptfaden.
+- Höher als jetzt setzt Ablago nie (braucht keine Rechte). Scheitert es (EACCES, ENOSYS, z. B. mit Seccomp), steht es einmal im Protokoll (`meldungen.hintergrund.ohne-nice`) und alles läuft normal weiter. `nice` als Programm vor dem Befehl ließe keine Lücke, bräuchte aber `nice` im Image; die Lücke zwischen Start und Senken ist kürzer, als ein Programm bis zu seinem ersten eigenen Kind braucht.
+
+**Messung zu #893** (lokal, 2 Kerne, PostgreSQL 16 und Lasttest auf demselben Rechner, Server aus `dist/`, Stufe klein mit 5.013 Mappen, `--dauer 30 --ohne-speichern`, je drei Läufe abwechselnd): Als Texterkennung nebenher liefen zwei Schleifen „Seitenbilder mit `pdftoppm -r 300`, dann `tesseract` je Seite“ – gestartet über `hintergrund.ts` in **derselben Sitzung** wie der Server, wie die Kindprozesse von Ablago.
+
+| Durchgang | p50 | p95 | p99 | CPU Ablago | Container |
+|---|---|---|---|---|---|
+| ohne Texterkennung | 107 / 102 / 81 ms | 206 / 211 / 145 ms | 270 / 300 / 176 ms | 69–84 % | 167–193 % |
+| Texterkennung mit nice 0 (wie bisher) | 229 / 163 / 135 ms | **441 / 371 / 232 ms** | 557 / 509 / 276 ms | 37–50 % | 199 % |
+| Texterkennung mit nice 10 (neu) | 102 / 105 / 89 ms | **196 / 202 / 156 ms** | 260 / 262 / 189 ms | 63–74 % | 198 % |
+
+**Ergebnis:** Mit nice 0 nahm die Texterkennung dem Server die Hälfte der Rechenzeit; p95 verdoppelte sich und riss zweimal die CI-Grenze von 300 ms. Mit nice 10 ist p95 so gut wie ohne Texterkennung, und die Texterkennung bekommt trotzdem alles, was übrig ist (Container weiter voll ausgelastet). Ein eigener Durchgang „mit Texterkennung nebenher“ im Lasttest fehlt noch: Er bräuchte ein Paket für die Texterkennung in der Test-Ablage; die Messung oben deckt das Kriterium ab.
+
+**Zu beachten – Autogroup:** Linux mit `kernel.sched_autogroup_enabled=1` (viele Desktop-Systeme, auch dieser Rechner) teilt die Rechenzeit zuerst zwischen Sitzungen (`setsid`) und erst darin nach nice. Lief die Last in einer eigenen Sitzung, gab es keinen Unterschied zwischen nice 0 und 10 (p95 204 / 167 bzw. 204 / 170 ms, ohne Last 243 / 127 ms) – die Sitzung bekam ohnehin nur ihren Anteil. Für Ablago ist das gleich: Kindprozesse und Fäden liegen in der Sitzung des Servers, genau dort wirkt nice. PostgreSQL in einem eigenen Container (bzw. eigener Sitzung) teilt sich die Kerne dagegen nach den Regeln des Hosts.
+
 ## Regeln
 
 - **Kein `SELECT *` auf Tabellen mit großen Spalten.** Dokumente immer mit `DOKUMENT_SPALTEN`, Mappen mit `MAPPEN_SPALTEN` (ohne `suchtext`, #615); den Volltext nur über `volltext(id)` oder gebündelt über `volltexte(ids)` lesen. EXPLAIN zeigt das nicht: Der Volltext liegt ausgelagert (TOAST) und wird erst beim Senden an den Server entpackt.

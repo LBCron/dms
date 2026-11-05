@@ -12,7 +12,7 @@
  * pdftoppm -gray liefert dieses Format; tesseract liest es direkt. So braucht das Image kein
  * zusätzliches Bildwerkzeug, um eine auf dem Kopf stehende oder quer liegende Seite aufzurichten.
  */
-import { execFile } from 'node:child_process';
+import { execFile } from './hintergrund';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

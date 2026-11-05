@@ -18,6 +18,7 @@ import type { Konten } from '../konten';
 import type { PaketLaeufer } from '../pakete';
 import { ladeArgumente } from './modul';
 import { protokoll } from '../protokoll';
+import { senkePrioritaet, senkeProzess } from '../hintergrund';
 import type { AnLaeufer, Grenzen, VomLaeufer } from './prozess';
 import type { Hostantwort } from './arbeiter';
 import { t } from '../sprache';
@@ -274,6 +275,8 @@ export class Paketlaeufer implements PaketLaeufer {
     const rechte = ts || process.env.DMS_LAEUFER_OHNE_BERECHTIGUNGEN === '1' ? [] : ['--permission', '--allow-worker', `--allow-fs-read=${dirname(hier)}`, '--disable-warning=SecurityWarning'];
     const kind = fork(pfad, [], { serialization: 'advanced', execArgv: [...ladeArgumente(process.execArgv), ...rechte], stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env: { NODE_ENV: process.env.NODE_ENV ?? 'production', PATH: process.env.PATH ?? '' } });
     this.kind = kind;
+    // Niedrigere Priorität (#893): gleich der Hauptfaden (spätere Fäden erben sie), bei „bereit“ alle Fäden.
+    if (kind.pid) senkePrioritaet(kind.pid);
     this.bereit = false;
     this.gesendet = new Map(); // neuer Prozess: alles laden
     let zuletzt = '';
@@ -302,7 +305,7 @@ export class Paketlaeufer implements PaketLaeufer {
 
   private async verarbeite(m: VomLaeufer) {
     switch (m.art) {
-      case 'bereit': this.bereit = true; this.neustarts = 0; await this.sendePakete(); void this.stelleZu(); return;
+      case 'bereit': if (this.kind?.pid) senkeProzess(this.kind.pid); this.bereit = true; this.neustarts = 0; await this.sendePakete(); void this.stelleZu(); return;
       case 'geladen':
         for (const p of m.pakete) { this.ladefehler.set(p.id, p.fehler); if (p.fehler) log.warn('Paket-Läufer: Modul abgelehnt', { paket: p.id, fehler: p.fehler }); }
         // Vektoren (#442): gleich das Modell erfragen und den Zwischenspeicher laden, nicht erst nach 30 s.

@@ -18,7 +18,7 @@
  * Bilder (JPEG, PNG) werden genauso behandelt (Ausrichtung laut EXIF beachtet) und bleiben Bilder desselben
  * Typs – ohne EXIF-Daten.
  */
-import { execFile } from 'node:child_process';
+import { execFile } from '../hintergrund';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
