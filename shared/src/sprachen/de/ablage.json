@@ -1127,5 +1127,20 @@
   "papierkorb.zusammen-geloescht_one": "Zusammen mit {anzahl} weiteren Mappe gelöscht („mit verknüpften Mappen löschen“)",
   "papierkorb.zusammen-geloescht_other": "Zusammen mit {anzahl} weiteren Mappen gelöscht („mit verknüpften Mappen löschen“)",
   "papierkorb.zusammen-geloescht-von_one": "Zusammen mit {anzahl} weiteren Mappe gelöscht („mit verknüpften Mappen löschen“), ausgehend von „{titel}“",
-  "papierkorb.zusammen-geloescht-von_other": "Zusammen mit {anzahl} weiteren Mappen gelöscht („mit verknüpften Mappen löschen“), ausgehend von „{titel}“"
+  "papierkorb.zusammen-geloescht-von_other": "Zusammen mit {anzahl} weiteren Mappen gelöscht („mit verknüpften Mappen löschen“), ausgehend von „{titel}“",
+  "uebersetzung.anzeigen": "Übersetzung anzeigen",
+  "uebersetzung.knopf.titel": "Übersetzt mit „{paket}“ auf dem Gerät deiner Ablage – der Text verlässt sie nicht.",
+  "uebersetzung.knopf.netz": "Übersetzt mit „{paket}“: Der Text geht dafür an {ziele}.",
+  "uebersetzung.abschnitt": "Wird übersetzt … Abschnitt {teil} von {teile}",
+  "uebersetzung.laeuft": "Wird übersetzt …",
+  "uebersetzung.abbrechen": "Abbrechen",
+  "uebersetzung.gleich": "Der Text ist schon auf {sprache}.",
+  "uebersetzung.ok": "Gut",
+  "uebersetzung.netz": "Übersetzt mit „{paket}“ über {ziele}.",
+  "uebersetzung.gekuerzt": "Übersetzt ist nur der Anfang – der Text ist sehr lang.",
+  "uebersetzung.original": "Original, wie es gespeichert ist:",
+  "uebersetzung.original-zeigen": "Original zeigen",
+  "uebersetzung.original-verbergen": "Original verbergen",
+  "uebersetzung.zurueck": "Zurück zum Original",
+  "uebersetzung.geaendert": "Das Original hat sich gerade geändert. Bitte noch einmal übersetzen."
 }

@@ -83,6 +83,7 @@ const REGELN: Regel[] = [
   R('*', '/api/werkbank/betrieb*', 'betrieb'),
   R('*', '/api/werkbank/region', 'region'),
   R('*', '/api/werkbank/sprachen', 'sprachen'),
+  R('*', '/api/werkbank/uebersetzen', 'sprachen'),
   R('*', '/api/werkbank/aufgaben*', 'aufgaben'),
   R('*', '/api/werkbank/favoriten-freigabe*', 'aufgaben'),
   R('*', '/api/werkbank/anmeldeschutz*', 'anmeldeschutz'),

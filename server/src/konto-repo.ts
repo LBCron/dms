@@ -47,7 +47,7 @@ export interface KontoRepo {
   holeBenutzer(id: string): Promise<Benutzer | undefined>;
   holeHash(email: string): Promise<{ benutzer: Benutzer; hash: string | null } | undefined>;
   legeBenutzerAn(b: NeuerBenutzer): Promise<Benutzer>;
-  aendereBenutzer(id: string, d: Partial<Pick<Benutzer, 'name' | 'aktiv' | 'email' | 'entwicklermodus' | 'sprache'>>): Promise<Benutzer>;
+  aendereBenutzer(id: string, d: Partial<Pick<Benutzer, 'name' | 'aktiv' | 'email' | 'entwicklermodus' | 'sprache' | 'uebersetzen'>>): Promise<Benutzer>;
   /**
    * Verwaltungsrecht setzen oder (de)aktivieren mit Schutzregel (#818): in einer Transaktion mit Sperre über alle
    * Personen; liefert die Prüfung einen Grund, ändert sich nichts und er kommt als Fehler zurück.
@@ -276,6 +276,8 @@ const alsBenutzer = (r: Zeile): Benutzer => ({
   letzteAnmeldung: iso(r.letzte_anmeldung),
   entwicklermodus: !!r.entwicklermodus,
   sprache: (r.sprache as string | null | undefined) ?? null,
+  // Übersetzen (#732): nur, wenn die Person es für sich abgeschaltet hat – sonst gilt die Vorgabe „an“.
+  ...(r.uebersetzen === false ? { uebersetzen: false } : {}),
   abwesenheit: { an: !!r.abwesend, von: tag(r.abwesend_von), bis: tag(r.abwesend_bis), vertreterId: (r.vertreter_id as string | null) ?? null },
   deaktiviert: iso(r.deaktiviert),
   ...(r.art === 'dienst' ? { art: 'dienst' as const, paketId: r.paket_id as string } : {}),
@@ -363,6 +365,7 @@ export function pgKontoRepo(sql: postgres.Sql, haushaltId: string): KontoRepo {
           email = coalesce(${d.email ?? null}, email),
           aktiv = coalesce(${d.aktiv ?? null}::boolean, aktiv),
           entwicklermodus = coalesce(${d.entwicklermodus ?? null}::boolean, entwicklermodus),
+          uebersetzen = coalesce(${d.uebersetzen ?? null}::boolean, uebersetzen),
           sprache = CASE WHEN ${d.sprache !== undefined}::boolean THEN ${d.sprache ?? null}::text ELSE sprache END,
           deaktiviert = CASE WHEN ${d.aktiv ?? null}::boolean IS NULL THEN deaktiviert
             WHEN ${d.aktiv ?? null}::boolean THEN NULL WHEN aktiv THEN now() ELSE deaktiviert END

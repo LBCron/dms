@@ -35,6 +35,19 @@ Weitere Sprachen – etwa Französisch, Niederländisch, Spanisch, Italienisch, 
 
 Bezeichnungen, die du selbst vergibst – Mappentypen, Felder, Register, Ansichten –, übersetzt du je Sprache am jeweiligen Element (Register **Sprachen**).
 
+## Inhalte übersetzen { #inhalte-ubersetzen }
+
+Mit einem Paket, das das Recht [Inhalte übersetzen](pakete.md#recht-uebersetzen) hat, kann jede Person Briefe, Notizen und Felder in einer anderen Sprache **auf Knopfdruck** in ihrer eigenen Sprache lesen – mit dem Knopf **Übersetzung anzeigen** an langen Textfeldern, an Notizen und am Volltext eines Dokuments. Ohne ein solches Paket gibt es den Knopf nicht. Übersetzt wird nie von selbst im Hintergrund, sondern nur, wenn jemand den Knopf drückt; Zielsprache ist die Sprache der Person.
+
+Den Abschnitt **Inhalte übersetzen** findest du auf dieser Seite:
+
+- **„Übersetzung anzeigen“ für alle anbieten** – an, sobald ein Paket installiert ist. Nimmst du den Haken weg, sieht niemand den Knopf. Jede Person kann ihn außerdem für sich unter [Mein Konto → Sprache](https://help.ablago.app/benutzer/aktuell/profil/#ubersetzung-anzeigen) abschalten.
+- **Paket** – *Automatisch* nimmt ein Paket, das **auf dem Gerät** übersetzt (bei mehreren das erste nach Kennung). Ein Paket, das ins Netz darf, nimmt Ablago nie von selbst: Du wählst es ausdrücklich, und Ablago fragt **„Texte an einen Dienst schicken?“**. Erst mit **Bestätigen und wählen** gilt die Wahl; danach steht an jeder Übersetzung, wohin der Text gegangen ist.
+
+**Was das Paket bekommt:** nur den einen Text, den die Person übersetzen lässt – in Abschnitten von höchstens 4 000 Zeichen –, die Zielsprache und, wenn bekannt, die Ausgangssprache (beim Volltext aus der Texterkennung). Keine Mappe, keine Kennungen, keine Rechte an Mappen oder Dokumenten. Übersetzt wird nur, was die Person lesen darf; Passwortfelder und Felder mit Format (E-Mail, IBAN, Telefon …) nie.
+
+**Was gespeichert wird:** immer nur das Original. Die Übersetzung lässt sich nicht als Wert übernehmen. Ablago hält sie 30 Tage im Zwischenspeicher (Prüfwert des Textabschnitts, Sprache, Paket und Version) – nicht an der Mappe und nicht in der [Sicherung](sicherung.md). Ändert sich das Original, gilt die alte Übersetzung nicht mehr; beim Ändern oder Löschen einer Notiz oder Mappe ist sie sofort weg. Die Wahl jeder Person steht an ihrem Konto, die Einstellung für alle in der Einstellung `uebersetzen`.
+
 ## Gut zu wissen
 
 - Fehlt in einer Sprache ein Text, erscheint er auf Englisch, sonst auf Deutsch – es bleibt nie eine leere Stelle.

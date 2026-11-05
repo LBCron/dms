@@ -81,6 +81,7 @@ import type { Lesefilter } from '../../shared/src/rechte';
 import { liesAusDokument, liesFeldErkennung, type AusDokument } from '../../shared/src/erkennung';
 import { gleicheFormateAn, hatVorgaben, HEUTE, pruefeFormate, unpassendeAngaben, type Feldformat } from '../../shared/src/feldformate';
 import { FragenAnDieAblage } from './fragen';
+import { Uebersetzung } from './uebersetzung';
 import { Erkennung, sichereZuordnung, type PostErkennung } from './erkennung';
 import { favoritenErlaubt, freigabeZumSpeichern, liesFavoritenFreigabe, type FavoritenFreigabe } from '../../shared/src/favoritenfreigabe';
 import { t } from './sprache';
@@ -708,6 +709,9 @@ export class Dienst {
     // Erkennung (#336): rechnet, sobald der Volltext eines Dokuments fertig ist – egal, wer ihn geliefert hat.
     this.erkennung = new Erkennung(this, () => this.repo, () => this.einstellungen);
     this.fragen = new FragenAnDieAblage(this, () => this.repo, () => this.einstellungen);
+    // Inhalte übersetzen (#732): auf Knopfdruck; Änderungen am Original lassen die Übersetzungen verfallen.
+    this.uebersetzung = new Uebersetzung(this, () => this.repo, () => this.einstellungen, () => this.kurzzustand);
+    this.ereignisse.abonniere('uebersetzung', (e) => this.uebersetzung.nachEreignis(e));
     this.beiVolltextFertig(async (e) => { await this.erkennung.nachVolltext(e); });
     // Ereigniskatalog (#670): Mappen-Ereignisse und Fristen an die Pakete, die diese Mappentypen abonniert haben.
     this.ereignisse.abonniere('pakete', (e) => this.ereignisAnPakete(e));
@@ -721,6 +725,8 @@ export class Dienst {
   readonly erkennung: Erkennung;
   /** „Frag deine Ablage“ (#444): Ausschnitte suchen, Antwort-Paket fragen, Quellen prüfen. */
   readonly fragen: FragenAnDieAblage;
+  /** Inhalte übersetzen auf Knopfdruck (#732): Paket mit dms:uebersetzen, Zwischenspeicher im Kurzzustand. */
+  readonly uebersetzung: Uebersetzung;
   private volltextHoerer: Array<(e: { dokument: string; mappe: string }) => Promise<void>> = [];
   /** Internes Ereignis „Volltext fertig“ abonnieren (#336). */
   beiVolltextFertig(f: (e: { dokument: string; mappe: string }) => Promise<void>) { this.volltextHoerer.push(f); }
@@ -2777,6 +2783,7 @@ export class Dienst {
     const text2 = Dienst.notiztext(text);
     if (text2 === alt.text) return alt;
     const n = await this.repo.aendereNotiz(id, text2, von);
+    await this.uebersetzung.vergiss(alt.mappeId, `notiz:${id}`);
     await this.notiere(alt.mappeId, von, 'notiz', { text: t('meldungen.dienst.geaendert-2', { vorschau: Dienst.vorschau(text2) }), vorher: Dienst.vorschau(alt.text), alt: alt.text, neu: text2 });
     await this.erwaehnungenAbgleichen(alt.mappeId, { key: `notiz:${id}`, ort: 'in einer Notiz', auszug: Dienst.vorschau(text2) }, alt.text, text2, von);
     return n;
@@ -2786,6 +2793,7 @@ export class Dienst {
     const alt = await this.repo.holeNotiz(id);
     if (!alt) throw new Fachfehler(404, t('meldungen.dienst.diese-notiz-gibt-es'));
     await this.repo.loescheNotiz(id);
+    await this.uebersetzung.vergiss(alt.mappeId, `notiz:${id}`);
     await this.notiere(alt.mappeId, von, 'notiz', { text: t('meldungen.dienst.geloescht', { vorschau: Dienst.vorschau(alt.text) }), voll: alt.text });
   }
 

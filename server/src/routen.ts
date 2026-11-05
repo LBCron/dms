@@ -77,6 +77,7 @@ import { werkbankZahlen } from './werkbankzahlen';
 import { akzeptanzAufheben, akzeptierteMeldungen, meldungAkzeptieren } from './meldungen';
 import { ueberfluessigeVariablen } from '../../shared/src/umgebungsvariablen';
 import { Fotostapel } from './fotostapel';
+import { liesQuelle } from './uebersetzung';
 import { MAIL_STANDARD, pruefeZeit, STANDARD_TAGE, wirksameZeit, type Aufgabenmail, type MailZeit } from './aufgabenmail';
 import { LAENDER, ZEITZONEN, zeitzone } from '../../shared/src/region';
 import { istMaschinell, istVerfuegbar, liesSpracheinstellung, SPRACHEN_STANDARD, spracheAusKopf, wirksameSprache } from '../../shared/src/sprachwahl';
@@ -671,6 +672,8 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       favoritenBenachrichtigung: a.benutzer ? await dienst.favoritenBenachrichtigungErlaubt(a.benutzer.id) : null,
       // Laufwerk (#720): eingeschaltet? Nur dann zeigt die Oberfläche „Als Laufwerk einbinden“.
       laufwerk: a.benutzer && x.webdav ? (await x.webdav.einstellung()).aktiv : false,
+      // Inhalte übersetzen (#732): Knopf „Übersetzung anzeigen“ – Paket, Zielsprache, wohin der Text ggf. geht.
+      uebersetzen: a.benutzer ? await dienst.uebersetzung.angebot(a.benutzer, (await spracheFuer(a)).sprache) : null,
       // Aufgaben ohne Empfänger (#719): Sieht dieser Benutzer sie (Administrator oder gewählter Alltags-Benutzer)?
       aufgabenOhneEmpfaenger: a.benutzer ? await dienst.siehtOhneEmpfaenger(a.benutzer) : false,
       // Technische Aufgaben (#719): nur außerhalb des Verwaltungsmodus, nur ja/nein – nie, was genau anliegt.
@@ -2157,6 +2160,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Sprachen (#729): Werkbank → Sprachen.
     { methode: 'GET', pfad: '/api/werkbank/sprachen', zugang: 'admin', handler: async () => ok(await sprachen().stand()) },
     { methode: 'PUT', pfad: '/api/werkbank/sprachen', zugang: 'admin', handler: async (a) => { await sprachen().speichere(a.body); return ok(await sprachen().stand()); } },
+    // Inhalte übersetzen (#732): an/aus für alle, Paket, Bestätigung des Datenabflusses bei Paketen mit Netz.
+    { methode: 'GET', pfad: '/api/werkbank/uebersetzen', zugang: 'admin', handler: async () => ok(await dienst.uebersetzung.stand()) },
+    { methode: 'PUT', pfad: '/api/werkbank/uebersetzen', zugang: 'admin', handler: async (a) => ok(await dienst.uebersetzung.setze(a.body)) },
     { methode: 'PUT', pfad: '/api/werkbank/aufgaben/mail', zugang: 'admin', handler: async (a) => ok(await mail().speichere(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/aufgaben/mail/senden', zugang: 'admin', handler: async () => ok({ verschickt: await mail().sende() }) },
     // Favoriten benachrichtigen (#506): für alle, je Rolle oder gar nicht; Vorgabe für neue Benutzer.
@@ -2221,6 +2227,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       return ok(await dienst.erkennung.fuerBenutzer(a.params.id, z));
     } },
     // Notizen brauchen nur Lesen (#124).
+    // Übersetzung anzeigen (#732): nur Kennungen – den Text liest der Kern mit den Rechten der Person; je Aufruf ein Abschnitt.
+    // Gespeichert wird nichts an der Mappe; die Übersetzung liegt nur im Zwischenspeicher.
+    { methode: 'POST', pfad: '/api/uebersetzung', zugang: 'angemeldet', lesend: true, handler: async (a) => ok(await dienst.uebersetzung.uebersetze(liesQuelle(b(a).quelle), { teil: b(a).teil, nach: (await spracheFuer(a)).sprache, ich: ich(a), z: await zg(a) })) },
     { methode: 'GET', pfad: '/api/mappen/:id/notizen', zugang: 'angemeldet', handler: async (a) => { await darf(a, a.params.id, 'R'); return ok(await dienst.notizen(a.params.id)); } },
     { methode: 'POST', pfad: '/api/mappen/:id/notizen', zugang: 'angemeldet', handler: async (a) => { await darf(a, a.params.id, 'R'); return ok(await dienst.legeNotizAn(a.params.id, b(a).text, ich(a).id), 201); } },
     { methode: 'PUT', pfad: '/api/notizen/:id', zugang: 'angemeldet', handler: async (a) => { await darf(a, await dienst.mappeVon('notiz', a.params.id), 'R'); return ok(await dienst.aendereNotiz(a.params.id, b(a).text, ich(a).id)); } },

@@ -1622,5 +1622,19 @@
   "sprachpakete.entfernen.personen_other": "{anzahl} Personen haben diese Sprache gewählt. Sie sehen Ablago danach in der Sprache der Installation; Mein Konto weist sie darauf hin.",
   "sprachpakete.entfernen.standard": "Sie ist die Sprache der Installation. Danach gilt wieder Deutsch.",
   "sprachpakete.keine-texte": "Für diese Sprache gibt es hier kein Sprachpaket.",
-  "vollexport.nicht-enthalten-sprachpakete": "nicht enthalten: Texte installierter Sprachpakete (#731, stehen im Paket selbst)"
+  "vollexport.nicht-enthalten-sprachpakete": "nicht enthalten: Texte installierter Sprachpakete (#731, stehen im Paket selbst)",
+  "uebersetzung.quelle-unbekannt": "Was übersetzt werden soll, fehlt oder ist unbekannt (Feld einer Mappe, Notiz oder Volltext eines Dokuments).",
+  "uebersetzung.dienst-adresse": "Dienst-Adresse „{name}“",
+  "uebersetzung.kein-paket": "„{paket}“ ist kein installiertes Paket mit dem Recht „Inhalte übersetzen“.",
+  "uebersetzung.abfluss-bestaetigen": "„{name}“ schickt die Texte zum Übersetzen an {ziele}. Bitte bestätige das ausdrücklich.",
+  "uebersetzung.feld-nicht": "Dieses Feld lässt sich nicht übersetzen (nur Text ohne Format, Langtext und formatierter Text).",
+  "uebersetzung.nur-personen": "Übersetzen gibt es nur für Personen, nicht für Pakete.",
+  "uebersetzung.selbst-aus": "Du hast „Übersetzung anzeigen“ in Mein Konto abgeschaltet.",
+  "uebersetzung.kein-angebot": "Übersetzen geht gerade nicht: Es ist abgeschaltet, oder kein Paket dafür läuft.",
+  "uebersetzung.leer": "Hier gibt es keinen Text zum Übersetzen.",
+  "uebersetzung.abschnitt-unbekannt": "Diesen Abschnitt gibt es nicht (der Text hat {teile}).",
+  "uebersetzung.paket-fehler": "„{name}“ konnte den Text nicht übersetzen: {grund}",
+  "uebersetzung.kein-json": "Die Antwort ist kein JSON-Objekt.",
+  "uebersetzung.ohne-text": "In der Antwort fehlt „text“.",
+  "verwaltung.text-uebersetzt": "Text übersetzt"
 }

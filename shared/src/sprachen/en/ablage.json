@@ -1127,5 +1127,20 @@
   "papierkorb.zusammen-geloescht_one": "Deleted together with {anzahl} other folder (“delete with linked folders”)",
   "papierkorb.zusammen-geloescht_other": "Deleted together with {anzahl} other folders (“delete with linked folders”)",
   "papierkorb.zusammen-geloescht-von_one": "Deleted together with {anzahl} other folder (“delete with linked folders”), starting from “{titel}”",
-  "papierkorb.zusammen-geloescht-von_other": "Deleted together with {anzahl} other folders (“delete with linked folders”), starting from “{titel}”"
+  "papierkorb.zusammen-geloescht-von_other": "Deleted together with {anzahl} other folders (“delete with linked folders”), starting from “{titel}”",
+  "uebersetzung.anzeigen": "Show translation",
+  "uebersetzung.knopf.titel": "Translated with “{paket}” on your library’s device – the text doesn’t leave it.",
+  "uebersetzung.knopf.netz": "Translated with “{paket}”: the text is sent to {ziele} for this.",
+  "uebersetzung.abschnitt": "Translating … section {teil} of {teile}",
+  "uebersetzung.laeuft": "Translating …",
+  "uebersetzung.abbrechen": "Cancel",
+  "uebersetzung.gleich": "The text is already in {sprache}.",
+  "uebersetzung.ok": "OK",
+  "uebersetzung.netz": "Translated with “{paket}” via {ziele}.",
+  "uebersetzung.gekuerzt": "Only the beginning is translated – the text is very long.",
+  "uebersetzung.original": "Original, as stored:",
+  "uebersetzung.original-zeigen": "Show original",
+  "uebersetzung.original-verbergen": "Hide original",
+  "uebersetzung.zurueck": "Back to the original",
+  "uebersetzung.geaendert": "The original has just changed. Please translate it again."
 }

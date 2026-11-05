@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Notiz } from '../../../shared/src/model';
 import { api } from '../api';
 import { Formatiert, FormatiertEingabe } from './Formatiert';
+import { Uebersetzbar } from './Uebersetzung';
 import { Person } from '../Person';
 import { rueckfrage } from '../rueckfrage';
 import { t } from '../sprache';
@@ -42,7 +43,7 @@ export function Notizen({ mappeId, notizen, neuLaden }: { mappeId: string; notiz
                     <button type="button" className="knopf primaer" disabled={laeuft || !bearbeite.text.trim()} onClick={() => void tu(() => api.notizAendern(n.id, bearbeite.text)).then((ok) => { if (ok) setBearbeite(null); })}>{t('ablage.notizen.speichern')}</button>
                   </div>
                 </>
-              : <Formatiert text={n.text} />}
+              : <Uebersetzbar quelle={{ art: 'notiz', notiz: n.id }} original={n.text} darstellen={(x) => <Formatiert text={x} />}><Formatiert text={n.text} /></Uebersetzbar>}
           </li>
         ))}
       </ul>

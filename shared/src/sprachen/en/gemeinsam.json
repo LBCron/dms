@@ -898,5 +898,8 @@
   "sprachpaket.beschriftung-text": "{wo}: a text of at most {max} characters, no angle brackets.",
   "sprachpaket.beschriftung-unbekannt": "{wo} doesn’t exist in labels.",
   "sprachpaket.beschriftung-objekt": "{wo}: expects an object.",
-  "sprachpaket.beschriftung-schluessel": "{wo}: invalid key."
+  "sprachpaket.beschriftung-schluessel": "{wo}: invalid key.",
+  "uebersetzung.kennzeichnung": "Machine-translated – not binding",
+  "uebersetzung.kennzeichnung-aus": "Machine-translated (original in {sprache}) – not binding",
+  "pakete.inhalte-uebersetzen": "Translate content – at the press of a button the package gets a single text (field, note or full text) the person may read and returns the translation; it can’t change or store anything"
 }

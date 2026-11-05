@@ -123,6 +123,16 @@ Wähle je Feld **Meins übernehmen** oder **Wert von Jonas behalten** und klicke
 
 Das gilt für alle Felder, auch für Verweise und Mehrfachauswahl (dort zählt das ganze Feld) und für die Felder, aus denen der Titel entsteht. Eine Sperre („wird gerade bearbeitet“) gibt es nicht; Ablago fragt nur, wenn zwei Änderungen wirklich dasselbe Feld betreffen. Auch Automatiken wie das automatische Zuordnen von Post oder Pakete setzen keine Felder zurück, die du inzwischen geändert hast.
 
+## Inhalte übersetzen { #inhalte-ubersetzen }
+
+Ist ein Brief, eine Notiz oder ein Feld in einer anderen Sprache, drückst du darunter **Übersetzung anzeigen** – den Knopf gibt es an langen Textfeldern (bei einzeiligen erst ab ein paar Wörtern), an Notizen und am Volltext eines Dokuments, sobald deine Ablage ein Paket zum Übersetzen hat. Übersetzt wird in deine Sprache aus [Mein Konto](profil.md#sprache), nur auf Knopfdruck.
+
+- **Gekennzeichnet:** Über der Übersetzung steht **Maschinell übersetzt – nicht verbindlich** (mit der Sprache des Originals, wenn sie bekannt ist). Bei langen Texten siehst du den Fortschritt Abschnitt für Abschnitt.
+- **Original:** Fährst du mit der Maus über die Übersetzung oder tippst du sie am Handy an, erscheint der gespeicherte Originaltext. Mit der Tastatur erreichst du ihn über **Original zeigen**. **Zurück zum Original** blendet die Übersetzung aus.
+- **Nur zum Lesen:** Gespeichert und bearbeitet wird immer nur das Original. Die Übersetzung lässt sich nicht als Wert übernehmen; im Feld steht weiter das Original.
+- **Wohin der Text geht:** Übersetzt das Paket auf dem Gerät deiner Ablage, verlässt der Text es nicht. Nutzt dein Administrator einen Dienst im Netz, steht an der Übersetzung, wohin der Text gegangen ist.
+- Übersetzt wird nur, was du lesen darfst. Brauchst du den Knopf nicht, schaltest du ihn unter [Mein Konto](profil.md#ubersetzung-anzeigen) ab.
+
 ## Verknüpfungen
 
 Das Register **Verknüpfungen** zeigt alle Mappen, die auf diese Mappe verweisen. Beim Vertragspartner siehst du so seine Verträge und Rechnungen, beim Vertrag seine Rechnungen – ohne dass du sie dort eintragen musst.

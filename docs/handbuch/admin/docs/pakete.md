@@ -241,6 +241,10 @@ Will ein Update andere Adressen, fragt Ablago erneut.
 
 **„Felder aus Dokumenten vorschlagen („Aus Dokument ausfüllen“) – nur aus dem Text, den Ablago mitgibt (dms:erkennen)“** – Das Paket kann statt der eingebauten Erkennung die Felder beim Knopf **Aus Dokument ausfüllen** vorschlagen, wenn du es wählst (siehe [Erkennung durch ein Paket](#erkennung-durch-ein-paket)). Es bekommt dabei nur den Text des Dokuments und die Beschreibung der Felder – keine Rechte an Mappen oder Dokumenten. Was es liefert, prüft Ablago und zeigt es nur als Vorschlag.
 
+#### Inhalte übersetzen { #recht-uebersetzen }
+
+**„Inhalte übersetzen – auf Knopfdruck bekommt das Paket einen einzelnen Text (Feld, Notiz oder Volltext), den die Person lesen darf, und gibt die Übersetzung zurück; ändern oder speichern kann es nichts (dms:uebersetzen)“** – Seit Version 0.204. Das Paket übersetzt, wenn jemand **Übersetzung anzeigen** drückt (siehe [Sprachen → Inhalte übersetzen](sprachen.md#inhalte-ubersetzen)). Es bekommt dabei nur diesen einen Text und die Sprachen – keine Rechte an Mappen oder Dokumenten. Darf das Paket außerdem ins Netz, nimmt Ablago es nur, wenn du es ausdrücklich wählst und den Datenabfluss bestätigst.
+
 #### Texterkennung übernehmen { #recht-texterkennung }
 
 **„Texterkennung für Scans und Bilder übernehmen – Ablago meldet Dokumente ohne Text und zeigt „wartet auf Texterkennung“, bis das Paket den Volltext schreibt (dms:texterkennung)“** – Das Paket ist dann die [Texterkennung](texterkennung.md) von Ablago: Der Kern liest selbst nur die Textebene von PDFs und gibt Scans und Bilder an das Paket. Am Dokument steht so lange „wartet auf Texterkennung (Paket …)“. Das Recht allein gibt keinen Zugriff auf Dokumente; den Volltext schreiben darf das Paket nur mit [Dokumente lesen und Volltext schreiben](#recht-dokumente).

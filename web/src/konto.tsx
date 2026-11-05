@@ -3,6 +3,7 @@ import { PASSWORT_MINDESTLAENGE, type Benutzer } from '../../shared/src/model';
 import { ABGEMELDET, api, type KontoStatus, type SprachStatus, type WartungOeffentlich } from './api';
 import { erlaubteSprachen, setzeErlaubteSprachen } from '../../shared/src/beschriftung';
 import { sprache } from '../../shared/src/sprache';
+import type { UebersetzenAngebot } from '../../shared/src/uebersetzung';
 import { WartungsHinweis } from './wartung';
 import { WIEDER_ERREICHBAR } from './erreichbar';
 import { Wiederherstellungsbildschirm } from './wiederherstellen';
@@ -45,6 +46,8 @@ interface Konto {
   verwaltungsmodus: Verwaltungsstand;
   /** Sprachen (#729): erlaubte Sprachen und Sprache der Installation – für Mein Konto. */
   sprachen: SprachStatus;
+  /** Inhalte übersetzen (#732): Angebot (Paket, Zielsprache, Netz) oder null; `aus`, wenn die Person es abgeschaltet hat. */
+  uebersetzen: UebersetzenAngebot | null;
   /** „Ablago verwalten“: Modus beginnen (wenn nötig mit erneuter Anmeldung) und in die Werkbank. */
   verwalten(): Promise<void>;
   /** „Verwaltung beenden“: zurück in die Ablage. */
@@ -167,7 +170,7 @@ export function KontoProvider({ children }: { children: ReactNode }) {
   };
   // key: Beim Wechsel des Benutzers (Vertretung) alles neu aufbauen und laden.
   return (
-    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true, verwaltungsmodus: modus, verwalten, verwaltungBeenden, sprachen: status.sprachen ?? { sprache: sprache(), standard: 'de', erlaubt: erlaubteSprachen(), maschinell: [] } }}>
+    <Ctx.Provider key={status.benutzer.id} value={{ ich: status.benutzer, mail: status.mail, passwoerterMoeglich: status.passwoerterMoeglich ?? false, abmelden, aktualisieren: laden, vertretung: status.vertretung ?? null, hinweise: status.hinweise ?? [], version: status.version ?? null, zweifaktor: { aktiv: !!status.zweifaktor?.aktiv, ausstehend: !!status.zweifaktor?.ausstehend }, favoritenBenachrichtigung: status.favoritenBenachrichtigung !== false, ohneEmpfaenger: !!status.aufgabenOhneEmpfaenger || status.benutzer.rolle === 'admin', verwaltung: !!status.verwaltung, laufwerk: status.laufwerk === true, verwaltungsmodus: modus, verwalten, verwaltungBeenden, sprachen: status.sprachen ?? { sprache: sprache(), standard: 'de', erlaubt: erlaubteSprachen(), maschinell: [] }, uebersetzen: status.uebersetzen ?? null }}>
       {/* … danach mit „Gesamte Verwaltung“ (#818) im Verwaltungsmodus: „Jetzt einrichten“ läuft weiter, dann Notfallblatt und Abschluss (#804). */}
       {status.einrichtung?.assistent ? <AssistentAngemeldet /> : children}
       <Verwaltungsanmeldung stand={modus} nachher={() => void laden()} />

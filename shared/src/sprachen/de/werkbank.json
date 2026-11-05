@@ -3017,5 +3017,19 @@
   "pakete.sprache.vorschau": "Sprachpaket für {sprache}: nur Texte, kein Code. Übersetzung {prozent} % vollständig ({vorhanden} von {gesamt} Texten), gemacht für Ablago {ablago}. Was fehlt, erscheint auf Englisch.",
   "pakete.sprache.beschriftungen": "Bringt Beschriftungen für diese Pakete mit: {pakete}. Sie kommen an deren Mappentypen und Ansichten, soweit dort noch nichts in dieser Sprache steht.",
   "pakete.sprache.erlauben": "Nach der Installation erlaubst du die Sprache unter Werkbank → Sprachen.",
-  "pakete.sprache.entfernen": "Trotzdem entfernen"
+  "pakete.sprache.entfernen": "Trotzdem entfernen",
+  "uebersetzen.titel": "Inhalte übersetzen",
+  "uebersetzen.einleitung": "Mit einem Paket für Übersetzungen liest jede Person Briefe, Notizen und Felder in einer anderen Sprache auf Knopfdruck in ihrer eigenen. Gespeichert wird immer nur das Original.",
+  "uebersetzen.kein-paket": "Dafür braucht es ein Paket mit dem Recht „Inhalte übersetzen“, zum Beispiel aus dem Paketkatalog. Ohne Paket gibt es den Knopf nicht.",
+  "uebersetzen.an": "„Übersetzung anzeigen“ für alle anbieten",
+  "uebersetzen.paket": "Paket",
+  "uebersetzen.automatisch": "Automatisch – ein Paket, das auf dem Gerät übersetzt",
+  "uebersetzen.mit-netz": "{name} (schickt Texte an {ziele})",
+  "uebersetzen.wirksam": "Übersetzt wird gerade mit „{name}“.",
+  "uebersetzen.keins-wirksam": "Gerade übersetzt kein Paket: Es läuft noch nicht, oder es braucht das Netz und ist nicht ausdrücklich gewählt.",
+  "uebersetzen.aus": "Abgeschaltet – niemand sieht den Knopf.",
+  "uebersetzen.gespeichert": "Gespeichert.",
+  "uebersetzen.abfluss.titel": "Texte an einen Dienst schicken?",
+  "uebersetzen.abfluss.text": "„{paket}“ übersetzt nicht auf dem Gerät: Jeder Text, den jemand übersetzen lässt, geht an {ziele}. Wer übersetzt, sieht das am Ergebnis.",
+  "uebersetzen.abfluss.ja": "Bestätigen und wählen"
 }
