@@ -150,6 +150,8 @@ interface Optionen {
   poolmessung?: import('./poolmessung').Poolmessung;
   /** Sitzungen der Datenbank mit Sperren (#874). */
   sitzungen?: () => Promise<import('./poolmessung').Sitzungsstand | null>;
+  /** Teuerste Abfragen für den Lasttest (#894). */
+  abfragen?: import('./routen').Abfragestatistik;
   /** Erweiterungen der Suche (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Arbeit nach der Antwort (#741); Tests geben einen eigenen, um darauf zu warten (`alle`). */

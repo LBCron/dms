@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migriere, NeuereDatenbankFehler, verbinde, VERBINDUNGEN_LEITER_MIN, VERBINDUNGEN_MIN, VERBINDUNGEN_RESERVE, verbindungenAus, verbindungenFuer, verbindungsaufteilung, Verbindungswarten } from './db';
 import { Poolmessung, sitzungsstand } from './poolmessung';
+import { abfragenZuruecksetzen, teuersteAbfragen } from './abfragestatistik';
 import { teileZwischenspeicher } from './zwischenspeicher';
 import { Dienst } from './dienst';
 import { beiFehlenderDatei, mitPruefung, ordnerSpeicher } from './dateispeicher';
@@ -635,6 +636,7 @@ const app = await baueApp(dienst, konten, {
   verbindungen: verbindungswarten,
   poolmessung,
   sitzungen: () => sitzungsstand(sql),
+  abfragen: { stand: (n: number) => teuersteAbfragen(sql, n), zuruecksetzen: () => abfragenZuruecksetzen(sql) },
   erweiterungen: () => liesErweiterungen(sql),
   eingangsordner,
   postfaecher,

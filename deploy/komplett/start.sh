@@ -38,7 +38,11 @@ else
   su-exec postgres initdb -D "$PGDATA" -U postgres -E UTF8 --locale=C --auth-local=trust --auth-host=trust >/dev/null
 fi
 
-su-exec postgres postgres -D "$PGDATA" -c listen_addresses=127.0.0.1 -c unix_socket_directories="$SOCKET" &
+# pg_stat_statements (#894): zählt je Abfrage Anzahl und Rechenzeit – der Lasttest nennt damit die teuersten Abfragen.
+# Über die Befehlszeile, damit es auch für schon bestehende Datenbanken in /data/postgres gilt (ohne postgresql.conf
+# anzufassen). Kostet wenig (rund 1–2 % Rechenzeit je Abfrage, wenige MB Speicher); Ablago liest die Werte nur im Lasttest.
+su-exec postgres postgres -D "$PGDATA" -c listen_addresses=127.0.0.1 -c unix_socket_directories="$SOCKET" \
+  -c shared_preload_libraries=pg_stat_statements &
 PG=$!
 until su-exec postgres pg_isready -q -h 127.0.0.1; do
   kill -0 "$PG" 2>/dev/null || { log "FEHLER: PostgreSQL ist beim Start beendet worden (siehe oben)."; exit 1; }
@@ -48,6 +52,12 @@ done
 abfrage() { su-exec postgres psql -h 127.0.0.1 -U postgres -tAc "$1"; }
 [ "$(abfrage "SELECT 1 FROM pg_roles WHERE rolname = 'dms'")" = 1 ] || { abfrage "CREATE ROLE dms LOGIN SUPERUSER" >/dev/null; log "Rolle dms angelegt."; }
 [ "$(abfrage "SELECT 1 FROM pg_database WHERE datname = 'dms'")" = 1 ] || { abfrage "CREATE DATABASE dms OWNER dms" >/dev/null; log "Datenbank dms angelegt."; }
+# Erweiterung in der Datenbank von Ablago (#894), im eigenen Schema wie pg_trgm und unaccent (übersteht das
+# Wiederherstellen). Gelingt es nicht, startet Ablago trotzdem; der Lasttest nennt dann den Grund.
+su-exec postgres psql -h 127.0.0.1 -U postgres -d dms -qtA -v ON_ERROR_STOP=1 \
+  -c "CREATE SCHEMA IF NOT EXISTS erweiterungen_dms AUTHORIZATION dms" \
+  -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA erweiterungen_dms" >/dev/null 2>&1 \
+  || log "Hinweis: Erweiterung pg_stat_statements nicht angelegt – der Lasttest nennt die teuersten Abfragen dann nicht."
 
 # Anbindung für Ablago: nur im Container, ohne Passwort. Der Einrichtungsassistent überspringt damit den Datenbank-Schritt.
 # Steht DATABASE_URL nicht in der Compose-Datei, setzt erst dieses Skript sie: dann als „vom Image“ kennzeichnen,

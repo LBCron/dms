@@ -56,6 +56,10 @@ import type { Sicherung } from './sicherung';
 import type { Wiederherstellung } from './wiederherstellung';
 import type { Speicherplatz } from './speicherplatz';
 import { KLASSEN_MS, poolZusammen, type PoolStand } from './poolmessung';
+import type { AbfragenStand, Zuruecksetzen } from './abfragestatistik';
+
+/** Teuerste Abfragen (#894): nur auf Anfrage gelesen bzw. zurückgesetzt (Lasttest). */
+export interface Abfragestatistik { stand(anzahl: number): Promise<AbfragenStand>; zuruecksetzen(): Promise<Zuruecksetzen> }
 import { dateiLeser, liesPss, liesRss, type Systemlast } from './systemlast';
 import type { ProzessEinstellung, Verbund } from './prozesse';
 import { PROZESSE_MAX } from './prozesse';
@@ -305,6 +309,8 @@ export interface RoutenExtras {
   poolmessung?: import('./poolmessung').Poolmessung;
   /** Sitzungen der Datenbank mit Sperren (#874). */
   sitzungen?: () => Promise<import('./poolmessung').Sitzungsstand | null>;
+  /** Teuerste Abfragen aus pg_stat_statements für den Lasttest (#894). */
+  abfragen?: Abfragestatistik;
   /** Erweiterungen der Suche, pg_trgm und unaccent (#562). */
   erweiterungen?: () => Promise<import('./erweiterungen').ErweiterungStand[]>;
   /** Datenbankangaben für die Versionsübersicht. */
@@ -2005,7 +2011,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     // Messwerte für den Lasttest (#544): Ereignisschleife, Arbeitsspeicher, Warten auf Verbindungen, Überlastschutz,
     // Arbeiter. Wird vom Überlastschutz nie abgewiesen.
-    { methode: 'GET', pfad: '/api/werkbank/last', zugang: 'admin', lesend: true, handler: async () => {
+    { methode: 'GET', pfad: '/api/werkbank/last', zugang: 'admin', lesend: true, handler: async (a) => {
       const s = messung?.auslastung.stand();
       const w = s ? (s.aktuell && (s.aktuell.seitSekunden >= 5 || !s.vorher) ? s.aktuell : s.vorher ?? s.aktuell) : null;
       const m = process.memoryUsage();
@@ -2025,8 +2031,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
         anfragen: x.ueberlast?.stand() ?? null,
         arbeiter: arbeiterStand(),
         engpass: await engpassStand(x, p),
+        // Teuerste Abfragen (#894): nur mit ?abfragen=<Anzahl> – der Lasttest fragt einmal am Ende eines Durchgangs.
+        ...(a.query.abfragen !== undefined ? { abfragen: x.abfragen ? await x.abfragen.stand(Number(a.query.abfragen) || 10) : null } : {}),
       });
     } },
+    // Vor jedem Durchgang des Lasttests (#894): Werte von pg_stat_statements der eigenen Datenbank zurücksetzen.
+    { methode: 'POST', pfad: '/api/werkbank/last/abfragen-zuruecksetzen', zugang: 'admin', handler: async () => ok(x.abfragen ? await x.abfragen.zuruecksetzen() : { zurueckgesetzt: false, grund: 'fehler', hinweis: null }) },
     { methode: 'PUT', pfad: '/api/werkbank/datenbank', zugang: 'admin', handler: async (a) => {
       if (!messung) throw new Fachfehler(404, t('meldungen.routen.messung-ist-nicht-aktiv'));
       try {

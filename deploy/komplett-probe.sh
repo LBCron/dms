@@ -57,6 +57,10 @@ docker restart "$NAME" >/dev/null; warte
 curl -fsS -X POST "http://127.0.0.1:$PORT/api/konto/anmelden" -H 'x-dms: 1' -H 'content-type: application/json' \
   -d '{"email":"admin@probe.invalid","passwort":"ein-langes-probe-passwort"}' >/dev/null || fehler "Anmeldung nach dem Neustart scheitert"
 docker exec "$NAME" pg_isready -q -h 127.0.0.1 -U dms -d dms || fehler "pg_isready im Container"
+# pg_stat_statements (#894): geladen und in der Datenbank von Ablago angelegt – auch nach dem Neustart mit bestehender Datenbank.
+docker exec "$NAME" psql -h 127.0.0.1 -U dms -d dms -tAc "SHOW shared_preload_libraries" | grep -q pg_stat_statements || fehler "pg_stat_statements nicht geladen"
+[ "$(docker exec "$NAME" psql -h 127.0.0.1 -U dms -d dms -tAc "SELECT count(*) FROM pg_extension WHERE extname = 'pg_stat_statements'")" = 1 ] || fehler "Erweiterung pg_stat_statements fehlt"
+docker exec "$NAME" psql -h 127.0.0.1 -U dms -d dms -tAc "SELECT count(*) FROM erweiterungen_dms.pg_stat_statements" >/dev/null || fehler "pg_stat_statements nicht lesbar"
 # Von außen ist PostgreSQL nicht erreichbar: kein Port 5432 am Container.
 [ -z "$(docker port "$NAME" 5432 2>/dev/null)" ] || fehler "Port 5432 ist nach außen offen"
 echo "::endgroup::"; echo "::notice::dms-komplett: Schritt erledigt"

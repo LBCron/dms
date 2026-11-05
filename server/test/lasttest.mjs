@@ -577,6 +577,23 @@ export async function serverStand(cookie) {
 }
 
 /**
+ * Teuerste Abfragen (#894): Vor jedem Durchgang setzt der Test die Werte von pg_stat_statements der Datenbank von
+ * Ablago zurück, danach liest er die {@link ABFRAGEN_ANZAHL} teuersten. Ohne das Modul steht der Grund mit Abhilfe im
+ * Ergebnis, der Test läuft weiter. null: ältere Fassung ohne diese Angabe oder keine Antwort.
+ */
+export const ABFRAGEN_ANZAHL = 10;
+async function abfragenZuruecksetzen(cookie) {
+  try { return (await json('POST', '/api/werkbank/last/abfragen-zuruecksetzen', { cookie, body: {}, zeit: 30_000 })).daten; } catch { return null; }
+}
+export async function teuersteAbfragen(cookie, zurueck) {
+  let a;
+  try { a = (await json('GET', `/api/werkbank/last?abfragen=${ABFRAGEN_ANZAHL}`, { cookie, zeit: 30_000 })).daten?.abfragen; } catch { return null; }
+  if (!a) return null;
+  if (!a.verfuegbar) return { verfuegbar: false, grund: a.grund, hinweis: a.hinweis };
+  return { verfuegbar: true, zurueckgesetzt: zurueck?.zurueckgesetzt === true, ...(zurueck && !zurueck.zurueckgesetzt ? { hinweis: zurueck.hinweis } : {}), gesamtMs: a.gesamtMs, liste: a.abfragen };
+}
+
+/**
  * Ein Durchgang: `n` Personen schicken `dauer` Sekunden lang Anfragen; optional läuft nebenher ein großer
  * Export nach dem anderen (als Administrator).
  */
@@ -650,6 +667,7 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
     }
   }
 
+  const zurueck = await abfragenZuruecksetzen(v.sitzungen.admin);
   const start = Date.now();
   const mess = messen();
   const ex = mitExport ? exportieren() : Promise.resolve();
@@ -658,6 +676,7 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
   laeuft = false;
   await mess;
   const sek = (Date.now() - start) / 1000;
+  const abfragen = await teuersteAbfragen(v.sitzungen.admin, zurueck);
   const sv = server.filter((s) => !s.fehler);
   const max = (k) => { const w = sv.map(k).filter((x) => typeof x === 'number'); return w.length ? Math.max(...w) : null; };
   const ergebnis = {
@@ -680,6 +699,8 @@ export async function durchgang(v, { name, n, dauer, mitExport, speichern = null
     exporte: exporte.map((e) => ({ ...e, ms: Math.round(e.ms), mb: Math.round(e.mb * 10) / 10 })),
     // Wo es hakt (#874): Verbindungen, Sperren, CPU, Speicher je Prozess – über alle Prozesse; null bei älteren Fassungen.
     engpass: engpassAus(sv),
+    // Teuerste Abfragen (#894) dieses Durchgangs; null bei älteren Fassungen.
+    abfragen,
   };
   return ergebnis;
 }
@@ -768,6 +789,33 @@ export function engpassText(g) {
     `Speicher je Prozess: ${g.speicherJeProzess.length ? g.speicherJeProzess.map((p) => `${p.nr === 0 ? 'Hauptprozess' : `Prozess ${p.nr}:`} ${p.mb} MB${typeof p.haldeMb === 'number' ? ` (Halde ${p.haldeMb})` : ''}`).join(', ') : '–'}`,
   ];
   return teile.join(' · ');
+}
+
+const komma = (x, n = 1) => (x === null || x === undefined ? '–' : Number(x).toLocaleString('de-DE', { maximumFractionDigits: n }));
+const anteilText = (q) => `${Math.round(q * 100)} %`;
+/** Abfrage für die Ausgabe: Leerraum zusammengezogen, auf `max` Zeichen gekürzt (der Server kürzt schon auf 120). */
+export const kurzeAbfrage = (q, max = 120) => { const t = String(q ?? '').replace(/\s+/g, ' ').trim(); return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t; };
+
+/**
+ * Eine Zeile für den Ergebnisblock (#894): die drei teuersten Abfragen knapp – „Teuerste Abfragen: 41 % 12.300× Ø 4,1 ms
+ * SELECT … · 18 % …“; ohne pg_stat_statements der Grund mit Abhilfe. null: keine Angabe (ältere Fassung).
+ */
+export function abfragenZeile(a) {
+  if (!a) return null;
+  if (!a.verfuegbar) return `Teuerste Abfragen: – (${a.hinweis ?? 'pg_stat_statements nicht verfügbar'})`;
+  if (!a.liste.length) return 'Teuerste Abfragen: keine gezählt';
+  return `Teuerste Abfragen: ${a.liste.slice(0, 3).map((q) => `${anteilText(q.anteil)} ${zahl(q.anzahl)}× Ø ${komma(q.mittelMs, 2)} ms ${kurzeAbfrage(q.abfrage, 60)}`).join(' · ')}`;
+}
+
+/** Tabelle für den Bericht (#894): die zehn teuersten Abfragen eines Durchgangs mit Gesamtzeit, Anzahl, Mittel, Zeilen, Anteil. */
+export function abfragenBericht(name, a) {
+  if (!a) return [];
+  if (!a.verfuegbar) return [`Teuerste Abfragen „${name}“: – (${a.hinweis ?? 'pg_stat_statements nicht verfügbar'})`];
+  const kopf = `Teuerste Abfragen „${name}“ (pg_stat_statements, normalisiert; Rechenzeit aller Abfragen ${komma(a.gesamtMs / 1000)} s${a.zurueckgesetzt ? '' : ` – nicht zurückgesetzt, Werte seit dem letzten Zurücksetzen${a.hinweis ? `: ${a.hinweis}` : ''}`}):`;
+  if (!a.liste.length) return [kopf, '', 'Keine Abfragen gezählt.'];
+  const zelle = (q) => `\`${kurzeAbfrage(q).replace(/`/g, "'").replace(/\|/g, '\\|')}\``;
+  return [kopf, '', '| # | Abfrage | Gesamt ms | Anzahl | Mittel ms | Zeilen | Anteil |', '|---:|---|---:|---:|---:|---:|---:|',
+    ...a.liste.slice(0, ABFRAGEN_ANZAHL).map((q, i) => `| ${i + 1} | ${zelle(q.abfrage)} | ${zahl(Math.round(q.gesamtMs))} | ${zahl(q.anzahl)} | ${komma(q.mittelMs, 2)} | ${zahl(q.zeilen)} | ${anteilText(q.anteil)} |`)];
 }
 
 /** Nach der Überlast: wie schnell antwortet das DMS wieder normal? */
@@ -978,6 +1026,8 @@ function bericht(ergebnisse, x) {
     z.push('', 'Engpass je Durchgang (#874, über alle Prozesse; CPU in % eines Kerns):', '');
     for (const l of mitEngpass) z.push(`- ${l.name}: ${engpassText(l.engpass)}${fehlerText(l) ? ` · Fehler: ${fehlerText(l)}` : ''}`);
   }
+  // Teuerste Abfragen (#894): je Durchgang die zehn teuersten.
+  for (const l of x.laeufe.filter((y) => y.abfragen)) z.push('', ...abfragenBericht(l.name, l.abfragen));
   for (const l of x.laeufe.filter((y) => y.exporte.length)) {
     z.push('', `Exporte im Durchgang „${l.name}“: ${l.exporte.map((e) => `${e.art.toUpperCase()} ${e.status} ${(e.ms / 1000).toFixed(1)} s ${e.mb} MB`).join(' · ')}`);
   }
@@ -1064,6 +1114,9 @@ export function ergebnisblock(ergebnisse, x, u, angaben = { geraet: arg('--gerae
       if (abbruch.engpass) kz.push(`  Engpass ${abbruch.name} (Abbruch): ${engpassText(abbruch.engpass)}`);
       if (fehlerText(abbruch)) kz.push(`  Fehler ${abbruch.name} (Abbruch): ${fehlerText(abbruch)}`);
     }
+    // #894: je Stufe die drei teuersten Abfragen (bei groß: an der Grenze, sonst beim ersten Schritt); ausführlich im Bericht.
+    const mitAbfragen = haupt ?? e.schritte?.[0];
+    if (abfragenZeile(mitAbfragen?.abfragen)) kz.push(`  ${abfragenZeile(mitAbfragen.abfragen).replace(/^Teuerste Abfragen/, `Teuerste Abfragen ${mitAbfragen.name}`)}`);
     // #739: neue Zeilen unter der bisherigen – die bisherige bleibt genau so.
     if (e.speichern) kz.push(speichernZeile(e.speichern));
     if (e.speichern?.engpass) kz.push(`  Engpass ${e.speichern.name}: ${engpassText(e.speichern.engpass)}`);
