@@ -315,6 +315,31 @@ Neben Menschen (`benutzer.art = 'person'`) gibt es zwei Arten von Konten, die si
 - **Werkbank:** Systemkonten sind nie `admin`; welche Werkbank-Aktionen eine Karte darf, entscheidet die Karte selbst (#677).
 - **Oberfläche:** Werkbank → Benutzer, Abschnitt „Systemkonten“ (`GET /api/benutzer/systemkonten`, nur Administratoren).
 
+## Zustand zwischen Anfragen (#744) { #kurzzustand }
+
+Bauregel „später mehrere Server möglich halten“: Was zwischen zwei Anfragen gilt, liegt in PostgreSQL – nicht in einer `Map` eines Prozesses. Sonst hätte ein Angreifer mit zwei Prozessen doppelt so viele Versuche, und der zweite Anmeldeschritt landete beim falschen Prozess.
+
+- **Baustein:** `Kurzzustand` (`server/src/kurzzustand.ts`, Tabelle `kurzzustand`, Migration 078): je Eintrag Art, Schlüssel, Zähler, Wert und Ablauf. `pgKurzzustand(sql, haushalt)` im Betrieb, `speicherKurzzustand()` in Tests und Bausteinen ohne Datenbank (dieselben Regeln, ein Prozess). Nicht in der Sicherung, wie die Sitzungen.
+- **Zählen atomar:** `zaehle` ist ein `INSERT … ON CONFLICT … DO UPDATE … RETURNING` mit festem oder gleitendem Fenster – nie lesen-dann-schreiben.
+- **Genau einmal:** `nimm` (`DELETE … RETURNING`) für Tickets und Kennungen; `belege`/`belegeAlle` für Merker „kurz hintereinander nur einmal“ und für Belegungen mit Frist („höchstens eine Prüfung gleichzeitig“ – endet ein Prozess mittendrin, gibt die Frist frei).
+- **Geheimnisse:** Ist der Schlüssel selbst geheim (Ticket, `state`, Kennung, Sitzung), steht nur sein Hash (`hashe`). Geheime Werte (TOTP-Entwurf, PKCE-Verifier, Gerätecode, neues Notfallblatt) verschlüsselt der Aufrufer mit dem Tresor.
+- **Zeitpläne:** `exklusiv(name, f)` nimmt `pg_try_advisory_lock(744, hashtext(haushalt:name))` auf einer eigenen Verbindung; hält ein anderer Prozess sie, läuft der Lauf hier nicht (es wird nie gewartet). In `index.ts` als `nurEiner(…)` für Papierkorb, Abwesenheiten, Fristen (Tag des letzten Laufs ebenfalls im Kurzzustand), technische Aufgaben, Probe-Wiederherstellung, RESCUE-Datei, Speicherplatz-Übergänge und das Aufräumen des Kurzzustands (alle 10 Minuten). Tägliche Läufe mit `laufeFaellige` (Sicherung, Zusammenfassung, Automatisierungen) waren schon über den Merker in den Einstellungen sicher.
+- **Lebenszeichen:** `lebenszeichen(sql, haushalt)` hält je Prozess eine geteilte Sperre. Nur wer beim Start allein ist, stellt „laufende“ Texterkennung als unterbrochen zurück.
+- **Vergleichen und tauschen** statt überschreiben, wo zwei Prozesse denselben Wert ändern: letzter TOTP-Schritt und verbrauchte Wiederherstellungscodes (`zweifaktor.ts`), erneuertes Token der Postfach-Anmeldung (`postfach-oauth.ts`), Umschalten des Wartungsmodus (`wartung.ts`, liest den Stand jetzt bei jeder Prüfung aus der Datenbank).
+
+| Was | Art(en) im Kurzzustand |
+|---|---|
+| Anmeldeschutz: Fehlversuche je Konto und IP, je IP, IP-Sperren, Sammel- und Sofortmeldung | `anmeldung-konto`, `anmeldung-ip`, `anmeldung-ip-sperre`, `anmeldung-meldung`, `anmeldung-sammelmeldung`, `anmeldung-sofortmeldung` |
+| Zweiter Anmeldeschritt, Zwei-Faktor einrichten | `zweiter-schritt`, `zweifaktor-entwurf` |
+| Abrufseite: Tickets, Fehlversuche je Bereich, eine Prüfung je Link | `abruf-ticket`, `abruf-fehler`, `abruf-pruefung` |
+| OIDC, Postfach-OAuth (Rückruf, Gerätecode) | `oidc-anmeldung`, `postfach-oauth-code`, `postfach-oauth-geraet` |
+| WebDAV: Zählfenster, schwebende Dateien | `webdav-fenster`, `webdav-schwebend` |
+| Geschützte PDFs: Fehlversuche, Bestätigung für Dokument-Passwörter | `pdf-passwort-fehler`, `dokumentpasswort-bestaetigt`, `dokumentpasswort-fehler` |
+| Notfallzugang: Sperre und Belegung je Bereich, Meldung, neues Blatt | `notfall-sperre`, `notfall-pruefung`, `notfall-fehlversuche`, `notfall-gemeldet`, `notfall-blatt`, `notfall-blatt-erzeugen` |
+| Spur im Verwaltungsmodus, persönlicher Export, Fristenlauf | `modusspur`, `eigener-export-laeuft`, `eigener-export-fehler`, `fristen-tag` |
+
+**Darf je Prozess bleiben** (macht höchstens langsamer, nie falsch): Zwischenspeicher für Seitenbilder und PDF-Anzeige, gestempelte WebDAV-Fassungen (#722: höchstens 64 MB bzw. 2000 Einträge **je Prozess**), Schutzart je PDF, Discovery und Schlüssel des Anbieters (OIDC), gelesene Einstellungen mit kurzer Frist (Anmeldeschutz 10 s, WebDAV 5 s, OIDC 30 s), Anfragen an Pakete „schon angefordert“, Grenzen gleichzeitiger Arbeit, die die Rechenzeit dieses Prozesses schützen (scrypt an der Abrufseite, Uploads je Benutzer, Fragen), Messwerte und Auslastung. Offen für mehrere Prozesse (#745): Fortschritt laufender Aufträge der Werkbank, hochgeladene Pakete vor dem Installieren, laufende Sicherung und Wiederherstellung, Paket-Läufer.
+
 ## Ereigniskatalog (#670) { #ereigniskatalog }
 
 Was in Ablago passiert, steht an **einer** Stelle: `shared/src/ereignisse.ts` (`EREIGNISKATALOG`), die Texte in `shared/src/sprachen/de/ereignisse.json` (`name.<art>`, `text.<art>` – Unterstrich als Bindestrich –, `gruppe.<gruppe>`). Pakete (`code.ereignisse`, genau die Einträge mit `paket: true` plus die veralteten Namen in `VERALTETE_EREIGNISSE`), Webhooks und Automatisierungen (#674) nehmen ihre Ereignisse aus diesem Katalog. **Der Kern meldet jedes Geschehen genau einmal** (#724) – mit `dienst.ereignis(…)` in den einen Ausgangskorb; einen zweiten Weg für Pakete gibt es nicht mehr. Die Liste zum Nachschlagen steht in der Werkbank beim Paket unter **Welche Ereignisse es gibt**.

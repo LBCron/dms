@@ -1,14 +1,17 @@
+import { randomUUID } from 'node:crypto';
 import { BlockList, isIP } from 'node:net';
 import { heuteIn } from '../../shared/src/sichten';
 import type { Einstellungen } from './einstellungen';
 import { speicherEinstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
 
 /**
  * Anmeldeschutz (#240): nach zu vielen Fehlversuchen sperren – je E-Mail-Adresse und IP (wie bisher)
  * und zusätzlich je IP über alle Adressen, wahlweise dauerhaft bis zum Entsperren. Werte in der
- * Werkbank einstellbar, Sperren in der Datenbank (überstehen einen Neustart), Ausnahmen für eigene Netze.
+ * Werkbank einstellbar, Zähler und Sperren in der Datenbank (überstehen einen Neustart und gelten seit #744 für alle
+ * Prozesse), Ausnahmen für eigene Netze.
  *
  * Mails (#368): Angriffsversuche aus dem Internet sind normal, darum im Standard keine Mail. Eingeschaltet
  * kommt höchstens eine Sammelmeldung am Tag (über die Sperren des Vortags), wahlweise zusätzlich sofort
@@ -73,8 +76,6 @@ export function sammelText(meldungen: Meldung[]): { betreff: string; text: strin
 }
 
 export interface IpSperre { ip: string; seit: string; bis: string | null; grund: string }
-interface Zaehler { anzahl: number; bis: number }
-interface Gespeichert { ips: IpSperre[]; konten: Record<string, Zaehler> }
 
 const log = protokoll.modul('konto');
 const MIN = 60_000;
@@ -120,36 +121,42 @@ export function pruefeSperrEinstellung(x: unknown, alt: SperrEinstellung): Sperr
   };
 }
 
+/** Arten im Kurzzustand (#744). Schlüssel der Konten: „IP|E-Mail“, damit Entsperren einer IP alle ihre Konten trifft. */
+const KONTO = 'anmeldung-konto';
+const IP_ZAEHLER = 'anmeldung-ip';
+const IP_SPERRE = 'anmeldung-ip-sperre';
+const MELDUNG = 'anmeldung-meldung';
+const SAMMEL = 'anmeldung-sammelmeldung';
+const SOFORT = 'anmeldung-sofortmeldung';
+/** Vorgemerkte Sperren für die Sammelmeldung: so lange, falls die Automatisierung länger nicht meldet. */
+const MELDUNG_TAGE = 14;
+/** Einstellung höchstens so lange gemerkt – Änderungen aus einem anderen Prozess gelten danach auch hier. */
+const EINSTELLUNG_MS = 10_000;
+const TAG_MS = 24 * 60 * MIN;
+
+/**
+ * Seit #744 liegen Zähler, Sperren und Meldungen im Kurzzustand (Datenbank): Mit mehreren Prozessen oder Servern zählt
+ * jeder Fehlversuch für alle, und gezählt wird atomar (keine parallelen Anfragen an der Sperre vorbei).
+ */
 export class Anmeldesperre {
-  private konten = new Map<string, Zaehler>();
-  private ipZaehler = new Map<string, Zaehler>();
-  private ips: IpSperre[] = [];
-  private geladen = false;
+  private geladen = 0;
   private e: SperrEinstellung = SPERRE_STANDARD;
   private mailGewaehlt = false;
   private ausnahmen = liste([]);
-  /** Sofortmeldungen je Konto: E-Mail-Adresse → Tag der letzten Mail. */
-  private sofortGemeldet = new Map<string, string>();
+  private zustand: Kurzzustand;
 
   /** Wird ein bestehendes Konto gesperrt, meldet der Start das als Ereignis (#670). */
   beiKontosperre?: (e: { email: string; ip: string; versuche: number; bis: string }) => Promise<void>;
 
-  constructor(private speicher: Einstellungen = speicherEinstellungen(), private anAdmins?: (betreff: string, text: string) => Promise<void>, private jetzt: () => number = Date.now) {}
+  constructor(private speicher: Einstellungen = speicherEinstellungen(), private anAdmins?: (betreff: string, text: string) => Promise<void>, private jetzt: () => number = Date.now, zustand?: Kurzzustand) {
+    this.zustand = zustand ?? speicherKurzzustand(jetzt);
+  }
 
   private async lade() {
-    if (this.geladen) return;
+    if (this.geladen && this.jetzt() - this.geladen < EINSTELLUNG_MS) return;
     ({ e: this.e, mailGewaehlt: this.mailGewaehlt } = leseSperrEinstellung(await this.speicher.lies('anmeldesperre')));
     this.ausnahmen = liste(this.e.ausnahmen);
-    const g = (await this.speicher.lies('anmeldesperren')) as Gespeichert | null;
-    this.ips = g?.ips ?? [];
-    this.konten = new Map(Object.entries(g?.konten ?? {}));
-    this.geladen = true;
-  }
-  private async sichere() {
-    const t = this.jetzt();
-    this.ips = this.ips.filter((s) => s.bis === null || Date.parse(s.bis) > t);
-    const gesperrteKonten = Object.fromEntries([...this.konten].filter(([, z]) => z.anzahl >= this.e.konto.versuche && z.bis > t));
-    await this.speicher.schreibe('anmeldesperren', { ips: this.ips, konten: gesperrteKonten } satisfies Gespeichert);
+    this.geladen = this.jetzt();
   }
 
   private ausgenommen(ip: string) {
@@ -160,6 +167,7 @@ export class Anmeldesperre {
 
   async einstellung(): Promise<SperrEinstellung> { await this.lade(); return this.e; }
   async speichere(x: unknown, von: string): Promise<SperrEinstellung> {
+    this.geladen = 0;
     await this.lade();
     const vorher = this.e.mail;
     this.e = pruefeSperrEinstellung(x, this.e);
@@ -168,28 +176,27 @@ export class Anmeldesperre {
     if (this.e.mail !== vorher) this.mailGewaehlt = true;
     const wert: GespeicherteEinstellung = this.mailGewaehlt ? { ...this.e, mailGewaehlt: true } : { ...this.e };
     await this.speicher.schreibe('anmeldesperre', wert);
-    if (!this.e.mail) await this.speicher.schreibe('anmeldesperre_meldung', null);
+    this.geladen = this.jetzt();
+    if (!this.e.mail) { await this.speicher.schreibe('anmeldesperre_meldung', null); await this.zustand.loesche(MELDUNG); }
     log.info('Anmeldeschutz eingestellt', { von, konto: `${this.e.konto.versuche}×/${this.e.konto.minuten} min`, ip: `${this.e.ip.versuche}×/${this.e.ip.minuten || 'dauerhaft'}`, ausnahmen: this.e.ausnahmen.join(' ') || '–', mail: this.e.mail ? 'täglich' : 'aus', mailKonto: this.e.mailKonto ? 'sofort' : 'aus' });
     return this.e;
   }
 
   /** Gerade gesperrte IPs (abgelaufene fallen heraus). */
   async gesperrt(): Promise<IpSperre[]> {
-    await this.lade();
-    const t = this.jetzt();
-    return this.ips.filter((s) => s.bis === null || Date.parse(s.bis) > t);
+    return (await this.zustand.liste(IP_SPERRE)).map((x) => {
+      const w = (x.wert ?? {}) as { seit?: string; grund?: string };
+      return { ip: x.schluessel, seit: w.seit ?? '', bis: x.bis === null ? null : new Date(x.bis).toISOString(), grund: w.grund ?? '' };
+    }).sort((a, b) => a.seit.localeCompare(b.seit));
   }
 
   async entsperre(ip: string, von: string): Promise<boolean> {
-    await this.lade();
     const a = norm(ip);
-    const vorher = this.ips.length;
-    this.ips = this.ips.filter((s) => s.ip !== a);
-    this.ipZaehler.delete(a);
-    for (const k of [...this.konten.keys()]) if (k.endsWith(`|${a}`)) this.konten.delete(k);
-    await this.sichere();
-    if (this.ips.length < vorher) log.info('IP-Adresse entsperrt', { ip: a, von });
-    return this.ips.length < vorher;
+    const war = (await this.zustand.loesche(IP_SPERRE, a)) > 0;
+    await this.zustand.loesche(IP_ZAEHLER, a);
+    await this.zustand.loesche(KONTO, `${a}|`, { praefix: true });
+    if (war) log.info('IP-Adresse entsperrt', { ip: a, von });
+    return war;
   }
 
   /** Vor der Anmeldung: wirft 429, wenn IP oder Konto gesperrt sind. */
@@ -198,10 +205,10 @@ export class Anmeldesperre {
     const a = norm(ip);
     if (this.ausgenommen(a)) return;
     const t = this.jetzt();
-    const s = this.ips.find((x) => x.ip === a && (x.bis === null || Date.parse(x.bis) > t));
-    if (s) throw new Fachfehler(429, s.bis ? `Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Gesperrt bis ${new Date(s.bis).toLocaleString('de-DE', { timeStyle: 'short', dateStyle: 'short' })}.` : 'Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Sie ist gesperrt, bis ein Administrator sie freigibt.');
-    const k = this.konten.get(`${email}|${a}`);
-    if (k && k.anzahl >= this.e.konto.versuche && k.bis > t) {
+    const s = await this.zustand.lies(IP_SPERRE, a);
+    if (s) throw new Fachfehler(429, s.bis !== null ? `Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Gesperrt bis ${new Date(s.bis).toLocaleString('de-DE', { timeStyle: 'short', dateStyle: 'short' })}.` : 'Von dieser Adresse kamen zu viele fehlgeschlagene Anmeldungen. Sie ist gesperrt, bis ein Administrator sie freigibt.');
+    const k = await this.zustand.lies(KONTO, `${a}|${email}`);
+    if (k && k.anzahl >= this.e.konto.versuche && k.bis !== null) {
       const min = Math.max(1, Math.ceil((k.bis - t) / MIN));
       throw new Fachfehler(429, `Zu viele Fehlversuche. Bitte in ${min === 1 ? 'einer Minute' : `${min} Minuten`} erneut versuchen.`);
     }
@@ -211,9 +218,10 @@ export class Anmeldesperre {
 
   /** Sperre für die tägliche Sammelmeldung vormerken – immer; ob gemeldet wird, entscheidet die Automatisierung (#678). */
   private async vormerken(m: Omit<Meldung, 'tag'>) {
-    const s = ((await this.speicher.lies('anmeldesperre_meldung')) as Meldestand | null) ?? { offen: [] };
-    s.offen = [...s.offen, { tag: this.heute(), ...m }].slice(-MELDUNGEN_HOECHSTENS);
-    await this.speicher.schreibe('anmeldesperre_meldung', s);
+    const t = this.jetzt();
+    const tag = this.heute();
+    // Je Sperre ein eigener Eintrag: Zwei Prozesse überschreiben sich so nie gegenseitig die Liste.
+    await this.zustand.setze(MELDUNG, `${tag}|${String(t).padStart(15, '0')}|${randomUUID()}`, { tag, ...m } satisfies Meldung, t + MELDUNG_TAGE * TAG_MS);
   }
 
   /**
@@ -223,13 +231,19 @@ export class Anmeldesperre {
   async meldeTaeglich(trocken = false): Promise<boolean> {
     await this.lade();
     if (!this.anAdmins) return false;
-    const s = (await this.speicher.lies('anmeldesperre_meldung')) as Meldestand | null;
     const heute = this.heute();
-    if (!s || s.zuletzt === heute) return false;
-    const faellig = s.offen.filter((m) => m.tag < heute);
+    const alt = (await this.speicher.lies('anmeldesperre_meldung')) as Meldestand | null;
+    if (alt?.zuletzt === heute || (await this.zustand.lies(SAMMEL, heute))) return false;
+    const eintraege = (await this.zustand.liste(MELDUNG, '', MELDUNGEN_HOECHSTENS)).filter((x) => (x.wert as Meldung).tag < heute);
+    // Vorgemerkt vor 0.196 (#744): noch in den Einstellungen.
+    const frueher = (alt?.offen ?? []).filter((m) => m.tag < heute);
+    const faellig = [...frueher, ...eintraege.map((x) => x.wert as Meldung)];
     if (!faellig.length) return false;
     if (trocken) return true;
-    await this.speicher.schreibe('anmeldesperre_meldung', { offen: s.offen.filter((m) => m.tag >= heute), zuletzt: heute } satisfies Meldestand);
+    // Nur ein Prozess meldet den Tag (#744).
+    if (!(await this.zustand.belege(SAMMEL, heute, 2 * TAG_MS))) return false;
+    for (const x of eintraege) await this.zustand.loesche(MELDUNG, x.schluessel);
+    if (alt?.offen?.length) await this.speicher.schreibe('anmeldesperre_meldung', { offen: alt.offen.filter((m) => m.tag >= heute), zuletzt: heute } satisfies Meldestand);
     const { betreff, text } = sammelText(faellig);
     await this.anAdmins(betreff, text).catch((e) => log.warn('Sammelmeldung Anmeldeschutz nicht verschickt', { fehler: (e as Error).message }));
     return true;
@@ -244,28 +258,22 @@ export class Anmeldesperre {
     const a = norm(ip);
     if (this.ausgenommen(a)) return;
     const t = this.jetzt();
-    const key = `${email}|${a}`;
-    const k = this.konten.get(key);
-    const n = (k && k.bis > t ? k.anzahl : 0) + 1;
-    this.konten.set(key, { anzahl: n, bis: t + this.e.konto.minuten * MIN });
+    // Atomar gezählt (#744): Jeder Fehlversuch schiebt das Ende der Kontosperre hinaus (wie bisher).
+    const { anzahl: n } = await this.zustand.zaehle(KONTO, `${a}|${email}`, this.e.konto.minuten * MIN, { gleitend: true });
     if (n === this.e.konto.versuche) {
       log.warn('Anmeldung gesperrt (Konto und IP)', { email, ip: a, versuche: n, minuten: this.e.konto.minuten });
-      await this.sichere();
       if (bekannt) await this.kontoGesperrt(email, a, n);
     }
-    // Je IP über alle Adressen; das Zählfenster ist die Sperrdauer (bei „dauerhaft“ eine Stunde).
+    // Je IP über alle Adressen; das Zählfenster ist die Sperrdauer (bei „dauerhaft“ eine Stunde), festes Fenster.
     const fenster = (this.e.ip.minuten || 60) * MIN;
-    const z = this.ipZaehler.get(a);
-    const m = (z && z.bis > t ? z.anzahl : 0) + 1;
-    this.ipZaehler.set(a, { anzahl: m, bis: z && z.bis > t ? z.bis : t + fenster });
-    if (m >= this.e.ip.versuche && !this.ips.some((s) => s.ip === a)) {
-      const sperre: IpSperre = { ip: a, seit: new Date(t).toISOString(), bis: this.e.ip.minuten ? new Date(t + this.e.ip.minuten * MIN).toISOString() : null, grund: `${m} fehlgeschlagene Anmeldungen (zuletzt ${email || 'ohne E-Mail-Adresse'})` };
-      this.ips.push(sperre);
-      this.ipZaehler.delete(a);
-      await this.sichere();
-      log.warn('IP-Adresse gesperrt', { ip: a, versuche: m, bis: sperre.bis ?? 'bis entsperrt' });
-      await this.vormerken({ art: 'ip', wer: a, versuche: m });
-    }
+    const { anzahl: m } = await this.zustand.zaehle(IP_ZAEHLER, a, fenster);
+    if (m < this.e.ip.versuche) return;
+    const grund = `${m} fehlgeschlagene Anmeldungen (zuletzt ${email || 'ohne E-Mail-Adresse'})`;
+    // Nur einer legt die Sperre an (auch bei gleichzeitigen Anfragen in mehreren Prozessen).
+    if (!(await this.zustand.belege(IP_SPERRE, a, this.e.ip.minuten ? this.e.ip.minuten * MIN : null, { seit: new Date(t).toISOString(), grund }))) return;
+    await this.zustand.loesche(IP_ZAEHLER, a);
+    log.warn('IP-Adresse gesperrt', { ip: a, versuche: m, bis: this.e.ip.minuten ? new Date(t + this.e.ip.minuten * MIN).toISOString() : 'bis entsperrt' });
+    await this.vormerken({ art: 'ip', wer: a, versuche: m });
   }
 
   /** Ein bestehendes Konto wurde gesperrt: vormerken und – falls gewünscht – sofort melden, je Konto höchstens einmal am Tag. */
@@ -285,19 +293,17 @@ export class Anmeldesperre {
     await this.lade();
     if (!this.anAdmins) return false;
     const heute = this.heute();
-    if (this.sofortGemeldet.get(email) === heute) return false;
-    if (trocken) return true;
-    this.sofortGemeldet.set(email, heute);
+    const schluessel = `${heute}|${email}`;
+    if (trocken) return !(await this.zustand.lies(SOFORT, schluessel));
+    if (!(await this.zustand.belege(SOFORT, schluessel, 2 * TAG_MS))) return false;
     await this.anAdmins('Ablago: Benutzerkonto nach Fehlversuchen gesperrt', `Für ${email} kamen von ${ip} ${versuche} falsche Passwörter hintereinander. Die Anmeldung von dieser Adresse ist für ${this.e.konto.minuten === 1 ? 'eine Minute' : `${this.e.konto.minuten} Minuten`} gesperrt.\n\nWar das nicht der Benutzer selbst, versucht jemand, das Passwort zu erraten. Heute kommt zu diesem Konto keine weitere Sofortmeldung.\n\nEinstellungen: Werkbank → Ablage aufbauen → Automatisierungen.`);
     return true;
   }
 
   /** Nach erfolgreicher Anmeldung: Zähler für Konto und IP zurücksetzen. */
   async erfolg(email: string, ip: string) {
-    await this.lade();
     const a = norm(ip);
-    const hatte = this.konten.delete(`${email}|${a}`);
-    this.ipZaehler.delete(a);
-    if (hatte) await this.sichere();
+    await this.zustand.loesche(KONTO, `${a}|${email}`);
+    await this.zustand.loesche(IP_ZAEHLER, a);
   }
 }

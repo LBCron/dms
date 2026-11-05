@@ -12,6 +12,7 @@ import { kontext, protokoll } from './protokoll';
 import { beiVerklemmungWiederholen, istVerklemmung } from './db';
 import { fingerabdruck, Haushaltsstand, MINDESTENS_MS, zeitabhaengig, ZAEHLT_FUER_TERMINE, Zaehlerspeicher, type Gueltigkeit } from './zaehlerspeicher';
 import { jeAnfrage } from './lesespeicher';
+import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { rechteMessen } from './messung';
 import { graubild } from './graubild';
 import { Fachfehler } from './fehler';
@@ -418,6 +419,11 @@ export interface DienstOptionen {
   tresor?: Tresor;
   /** Einstellungen des Haushalts (Papierkorb). Ohne: kein Papierkorb (Löschen sofort endgültig). */
   einstellungen?: Einstellungen;
+  /**
+   * Zustand zwischen Anfragen (#744). In PostgreSQL (`pgKurzzustand`) gilt er für alle Prozesse; ohne Angabe im
+   * Arbeitsspeicher dieses Prozesses. (Der Stand des Haushalts liegt seit #741/#742 eigens in der Datenbank.)
+   */
+  zustand?: Kurzzustand;
 }
 
 const SYSTEMSORTIERUNG: Record<string, SortierungIntern['art']> = {
@@ -576,12 +582,18 @@ export const taugtAlsAufgabenEmpfaenger = (b: Benutzer) => b.aktiv && !b.art;
 
 /** Dieselbe fremde Mappe im Verwaltungsmodus innerhalb so vieler Minuten nur einmal in der Historie (#820). */
 export const MODUSSPUR_MINUTEN = 10;
+/** Arten im Kurzzustand (#744). */
+const MODUSSPUR = 'modusspur';
+const ABRUF_PRUEFUNG = 'abruf-pruefung';
+/** Belegung einer Code-Prüfung am Abruf-Link: endet spätestens nach dieser Zeit (scrypt dauert Bruchteile davon). */
+const ABRUF_PRUEFUNG_MS = 60_000;
 
 export class Dienst {
-  /** Abruf-Links, deren Code gerade geprüft wird (#455): je Link nur eine Prüfung gleichzeitig. */
-  private abrufLaufend = new Set<string>();
-  /** Spur im Verwaltungsmodus (#820): zuletzt vermerkt je Person, Mappe und Art – bis wann nicht noch einmal. */
-  private modusspur = new Map<string, number>();
+  /**
+   * Zustand zwischen Anfragen (#744) – in PostgreSQL für alle Prozesse, sonst im Arbeitsspeicher: u. a. Abruf-Links,
+   * deren Code gerade geprüft wird (#455) und die Spur im Verwaltungsmodus (#820).
+   */
+  readonly kurzzustand: Kurzzustand;
   /** Hintergrundaufträge, z. B. Demo-Daten erzeugen. */
   readonly auftraege = new Auftraege((m) => protokoll.modul('werkbank').info(m));
 
@@ -623,6 +635,7 @@ export class Dienst {
       this.stand.verbinde({ lies: () => grundRepo.haushaltsstand!(), erhoehe: () => grundRepo.erhoeheHaushaltsstand!() });
     }
     this.grundRepo = this.stand.umhuelle(grundRepo);
+    this.kurzzustand = opt.zustand ?? speicherKurzzustand();
     this.tresor = opt.tresor;
     this.einstellungen = opt.einstellungen;
     this.tresor?.registriere(() => this.unlesbarePasswoerter());
@@ -5367,13 +5380,13 @@ export class Dienst {
     const lesbar = await this.lesbare(z, ids);
     const fremd = [...new Set(ids)].filter((id) => !lesbar.has(id));
     if (!fremd.length) return new Set();
-    const jetzt = Date.now();
-    for (const [k, bis] of this.modusspur) if (bis < jetzt) this.modusspur.delete(k);
-    const neu = fremd.filter((id) => !this.modusspur.has(`${alltag.id}|${id}|${was}`));
+    // „Kurz hintereinander nur einmal“ (#744): Merker in der Datenbank – wer ihn anlegt, schreibt den Eintrag, auch wenn
+    // dieselbe Person gleichzeitig über zwei Prozesse kommt.
+    const belegt = await this.kurzzustand.belegeAlle(MODUSSPUR, fremd.map((id) => `${alltag.id}|${id}|${was}`), MODUSSPUR_MINUTEN * 60_000);
+    const neu = fremd.filter((id) => belegt.has(`${alltag.id}|${id}|${was}`));
     if (neu.length) {
       const titel = new Map((await this.repo.holeMappen(neu)).map((m) => [m.id, m.titel ?? '']));
       await this.repo.historieSchreibe(neu.map((id) => ({ mappeId: id, benutzerId: alltag.id, art: 'verwaltungsmodus' as const, daten: { was, titel: titel.get(id) ?? '' } })));
-      for (const id of neu) this.modusspur.set(`${alltag.id}|${id}|${was}`, jetzt + MODUSSPUR_MINUTEN * 60_000);
       protokoll.modul('ablage').warn('Im Verwaltungsmodus: fremde Mappe', { was, anzahl: neu.length, von: alltag.email ?? alltag.id, imVerwaltungsmodus: true });
     }
     return new Set(fremd);
@@ -8133,12 +8146,13 @@ export class Dienst {
     if (!link || link.gesperrt || link.fehlversuche >= LINK_FEHLVERSUCHE_MAX) return { art: 'falsch' };
     // Je Link nur eine Prüfung gleichzeitig: Parallele Versuche könnten sonst alle vor dem Hochzählen
     // lesen und so mehr als LINK_FEHLVERSUCHE_MAX Codes ausprobieren.
-    if (this.abrufLaufend.has(link.id)) return { art: 'beschaeftigt' };
     // Und insgesamt nur wenige scrypt-Prüfungen gleichzeitig (Platz vergibt die Bremse der Route).
     const frei = platz();
     if (!frei) return { art: 'beschaeftigt' };
-    this.abrufLaufend.add(link.id);
-    try { return await this.auskunftAbrufCode(link, c); } finally { this.abrufLaufend.delete(link.id); frei(); }
+    // Belegt in der Datenbank (#744), damit auch ein zweiter Prozess wartet; die Frist gibt den Platz frei, falls ein
+    // Prozess mittendrin endet.
+    if (!(await this.kurzzustand.belege(ABRUF_PRUEFUNG, link.id, ABRUF_PRUEFUNG_MS).catch((e) => { frei(); throw e; }))) { frei(); return { art: 'beschaeftigt' }; }
+    try { return await this.auskunftAbrufCode(link, c); } finally { await this.kurzzustand.loesche(ABRUF_PRUEFUNG, link.id).catch(() => {}); frei(); }
   }
 
   private async auskunftAbrufCode(link: AuskunftLinkIntern, c: string): Promise<{ art: 'ok' | 'falsch' | 'ungueltig'; link?: AuskunftLinkIntern }> {

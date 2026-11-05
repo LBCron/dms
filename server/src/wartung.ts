@@ -107,7 +107,22 @@ export class Wartung {
   }
 
   async pruefe() {
-    if (this.s.stufe === 'angekuendigt' && this.s.aktivAb && Date.parse(this.s.aktivAb) <= this.jetzt().getTime()) await this.aktiviere('Vorlaufzeit abgelaufen');
+    // Mehrere Prozesse (#744): den Stand jedes Mal aus der Datenbank lesen – ein anderer Prozess kann die Wartung
+    // inzwischen ein- oder ausgeschaltet haben. Ausgeschaltet woanders: hier die Hintergrundarbeiten wieder anstoßen.
+    const vorher = this.s;
+    const g = (await this.einstellungen.lies('wartung')) as Partial<WartungStand> | null;
+    this.s = g?.stufe && g.stufe !== 'aus' ? { ...AUS, ...g } : { ...AUS };
+    if (vorher.stufe !== 'aus' && this.s.stufe === 'aus') for (const f of this.nachAus) { try { f(); } catch { /* weiter */ } }
+    if (this.s.stufe === 'angekuendigt' && this.s.aktivAb && Date.parse(this.s.aktivAb) <= this.jetzt().getTime()) {
+      // Nur ein Prozess schaltet um (vergleichen und tauschen); die anderen lesen es beim nächsten Mal.
+      const alt = this.s;
+      const neu: WartungStand = { ...alt, stufe: 'aktiv', aktivAb: this.jetzt().toISOString() };
+      if (this.einstellungen.tausche && !(await this.einstellungen.tausche('wartung', g, neu))) return;
+      this.s = neu;
+      if (!this.einstellungen.tausche) await this.speichere();
+      const beendet = await this.konten.beendeAlleSitzungenAusser(this.s.sitzungId);
+      log.warn('Wartungsmodus aktiv: alle anderen Sitzungen beendet', { grund: 'Vorlaufzeit abgelaufen', beendet, von: this.s.von });
+    }
   }
 
   private async speichere() { await this.einstellungen.schreibe('wartung', this.s.stufe === 'aus' ? null : this.s); }

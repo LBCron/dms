@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { hashe, speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { pruefeAussteller, type Abruf } from './oidc';
 import { protokoll } from './protokoll';
 
@@ -86,8 +87,16 @@ export class AnmeldungAbgelaufen extends Fachfehler {
   constructor(text: string) { super(409, text); }
 }
 
-interface OffenCode { postfachId: string; anbieter: OAuthAnbieter; adminId: string; von: string; verifier: string; bindung: string; rueckruf: string; bis: number }
+interface OffenCode { postfachId: string; anbieter: OAuthAnbieter; adminId: string; von: string; verifier: string; bindung: string; rueckruf: string }
 interface OffenGeraet { anbieter: OAuthAnbieter; adminId: string; von: string; deviceCode: string; intervall: number; naechste: number; bis: number }
+/**
+ * Offene Anmeldungen im Kurzzustand (#744), für alle Prozesse: Rückruf mit state (Schlüssel: Hash von state) und
+ * Gerätecode (Schlüssel: Postfach). Die Werte – mit PKCE-Verifier bzw. Gerätecode – mit dem Schlüssel des DMS verschlüsselt.
+ */
+const CODE = 'postfach-oauth-code';
+const GERAET = 'postfach-oauth-geraet';
+const CODE_MS = 10 * 60_000;
+const CODES_MAX = 500;
 
 export interface PostfachOAuthDeps {
   einstellungen: Einstellungen;
@@ -96,6 +105,8 @@ export interface PostfachOAuthDeps {
   abruf?: Abruf;
   jetzt?: () => number;
   anAdmins?: (betreff: string, text: string) => Promise<void>;
+  /** Zustand zwischen Anfragen (#744); ohne Angabe im Arbeitsspeicher. */
+  zustand?: Kurzzustand;
 }
 
 const b64url = (b: Buffer) => b.toString('base64url');
@@ -142,16 +153,22 @@ function pruefeEndpunkt(x: unknown, was: string): string {
 }
 
 export class PostfachOAuth {
-  private codes = new Map<string, OffenCode>();
-  private geraete = new Map<string, OffenGeraet>();
+  private zustand: Kurzzustand;
+  /** Laufende Erneuerung je Postfach in diesem Prozess (gleichzeitige Abrufe warten auf dieselbe). */
   private erneuern = new Map<string, Promise<string>>();
   /** Je Postfach hochgezählt bei Abmelden, Vergessen und neuer Anmeldung: Eine laufende Erneuerung schreibt dann nichts mehr. */
   private generation = new Map<string, number>();
   private gen(id: string) { return this.generation.get(id) ?? 0; }
   private macheUngueltig(id: string) { this.generation.set(id, this.gen(id) + 1); this.erneuern.delete(id); }
 
-  constructor(private d: PostfachOAuthDeps) {}
+  constructor(private d: PostfachOAuthDeps) { this.zustand = d.zustand ?? speicherKurzzustand(() => this.jetzt); }
   private get jetzt() { return this.d.jetzt?.() ?? Date.now(); }
+  private verpacke(w: unknown) { return this.d.verschluessele(JSON.stringify(w)); }
+  private entpacke<T>(w: unknown): T | null {
+    const klar = typeof w === 'string' ? this.d.entschluessele(w) : null;
+    try { return klar ? JSON.parse(klar) as T : null; } catch { return null; }
+  }
+  private async geraet(id: string): Promise<OffenGeraet | null> { return this.entpacke<OffenGeraet>((await this.zustand.lies(GERAET, id))?.wert); }
 
   private async abruf(url: string, felder: Record<string, string>): Promise<{ ok: boolean; status: number; daten: Record<string, unknown> }> {
     const f = this.d.abruf ?? (fetch as unknown as Abruf);
@@ -233,7 +250,7 @@ export class PostfachOAuth {
     this.macheUngueltig(id);
     const t = await this.token(id);
     await this.d.einstellungen.schreibe(this.schluessel(id), null);
-    this.geraete.delete(id);
+    await this.zustand.loesche(GERAET, id);
     if (!t) return;
     const app = (await this.apps())[t.anbieter];
     const w = app ? (() => { try { return endpunkte(t.anbieter, app).widerruf; } catch { return null; } })() : null;
@@ -250,10 +267,9 @@ export class PostfachOAuth {
     if (!rueckrufErlaubt(rueckruf)) throw new Fachfehler(409, 'Für die Anmeldung im Browser braucht Ablago eine https-Adresse (http nur für localhost). Ohne https den Gerätecode nutzen.');
     const { app, e } = await this.app(p.anbieter, zweckVon(p.id));
     const t = this.jetzt;
-    for (const [k, v] of this.codes) if (v.bis < t) this.codes.delete(k);
-    if (this.codes.size > 500) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
+    if ((await this.zustand.anzahl(CODE)) > CODES_MAX) throw new Fachfehler(429, 'Zu viele offene Anmeldungen. Bitte gleich noch einmal.');
     const state = b64url(randomBytes(32)), verifier = b64url(randomBytes(48)), bindung = b64url(randomBytes(24));
-    this.codes.set(state, { postfachId: p.id, anbieter: p.anbieter, adminId: admin.id, von: admin.email, verifier, bindung, rueckruf, bis: t + 10 * 60_000 });
+    await this.zustand.setze(CODE, hashe(state), this.verpacke({ postfachId: p.id, anbieter: p.anbieter, adminId: admin.id, von: admin.email, verifier, bindung, rueckruf } satisfies OffenCode), t + CODE_MS);
     const u = new URL(e.autorisierung);
     const q: Record<string, string> = {
       response_type: 'code', client_id: app.clientId, redirect_uri: rueckruf, scope: e.bereich, state,
@@ -270,9 +286,9 @@ export class PostfachOAuth {
    */
   async rueckruf(q: Record<string, string | undefined>, admin: { id: string } | null, bindung: string | undefined): Promise<{ postfachId: string }> {
     const state = typeof q.state === 'string' ? q.state : '';
-    const o = state ? this.codes.get(state) : undefined;
-    if (state) this.codes.delete(state);
-    if (!o || o.bis < this.jetzt) throw new RueckrufFehler('', 400, 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte in der Werkbank noch einmal beginnen.', 'abgelaufen');
+    // Einmal einlösbar (#744): Von zwei gleichzeitigen Rückrufen mit demselben state kommt nur einer weiter.
+    const o = state ? this.entpacke<OffenCode>((await this.zustand.nimm(CODE, hashe(state)))?.wert) : null;
+    if (!o) throw new RueckrufFehler('', 400, 'Die Anmeldung ist abgelaufen oder unbekannt. Bitte in der Werkbank noch einmal beginnen.', 'abgelaufen');
     if (!admin || admin.id !== o.adminId) throw new RueckrufFehler(o.postfachId, 403, 'Die Anmeldung hat eine andere Person begonnen, die Ablago verwaltet.', 'admin');
     if (!bindung || !gleich(bindung, o.bindung)) throw new RueckrufFehler(o.postfachId, 400, 'Die Anmeldung wurde in einem anderen Browser begonnen. Bitte noch einmal beginnen.', 'browser');
     if (q.error) throw new RueckrufFehler(o.postfachId, 401, `Der Anbieter hat die Anmeldung abgelehnt: ${kurz(q.error_description || q.error)}`, 'abgelehnt');
@@ -314,24 +330,25 @@ export class PostfachOAuth {
     if (!/^https:\/\//.test(adresse)) throw new Fachfehler(502, 'Der Anbieter nennt keine gültige Adresse für den Gerätecode.');
     const intervall = Math.min(Math.max(Number(d.interval) || 5, 1), 60);
     const bis = this.jetzt + Math.min(Math.max(Number(d.expires_in) || 900, 60), 1800) * 1000;
-    this.geraete.set(p.id, { anbieter: p.anbieter, adminId: admin.id, von: admin.email, deviceCode: d.device_code, intervall, naechste: 0, bis });
+    await this.zustand.setze(GERAET, p.id, this.verpacke({ anbieter: p.anbieter, adminId: admin.id, von: admin.email, deviceCode: d.device_code, intervall, naechste: 0, bis } satisfies OffenGeraet), bis);
     log.info('Postfach: Gerätecode angefordert', { von: admin.email, postfach: p.id, anbieter: p.anbieter });
     return { code: kurz(d.user_code, 40), adresse: kurz(adresse, 300), bis: new Date(bis).toISOString(), intervall };
   }
 
   /** Einmal beim Anbieter nachfragen, ob der Code eingegeben ist. */
   async geraetPruefen(id: string, admin: { id: string }): Promise<{ fertig: boolean; text: string }> {
-    const g = this.geraete.get(id);
+    const g = await this.geraet(id);
     if (!g || g.adminId !== admin.id) throw new Fachfehler(404, 'Kein offener Gerätecode für dieses Postfach. Bitte neu anfordern.');
-    if (g.bis < this.jetzt) { this.geraete.delete(id); throw new Fachfehler(410, 'Der Gerätecode ist abgelaufen. Bitte neu anfordern.'); }
+    if (g.bis < this.jetzt) { await this.zustand.loesche(GERAET, id); throw new Fachfehler(410, 'Der Gerätecode ist abgelaufen. Bitte neu anfordern.'); }
     if (g.naechste > this.jetzt) return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
     g.naechste = this.jetzt + g.intervall * 1000;
+    await this.zustand.setze(GERAET, id, this.verpacke(g), g.bis);
     const { app, e } = await this.app(g.anbieter, zweckVon(id));
     const r = await this.abruf(e.token, { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: g.deviceCode, client_id: app.clientId });
     const fehler = String(r.daten.error ?? '');
     if (!r.ok && fehler === 'authorization_pending') return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' };
-    if (!r.ok && fehler === 'slow_down') { g.intervall = Math.min(g.intervall + 5, 60); return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' }; }
-    this.geraete.delete(id);
+    if (!r.ok && fehler === 'slow_down') { g.intervall = Math.min(g.intervall + 5, 60); await this.zustand.setze(GERAET, id, this.verpacke(g), g.bis); return { fertig: false, text: 'Warte auf die Anmeldung beim Anbieter …' }; }
+    await this.zustand.loesche(GERAET, id);
     if (!r.ok) throw new Fachfehler(fehler === 'expired_token' ? 410 : 401, `Anmeldung nicht abgeschlossen: ${kurz(r.daten.error_description || fehler || `HTTP ${r.status}`)}`);
     await this.merke(id, g.anbieter, r, true, g.von);
     log.info('Postfach: per Gerätecode angemeldet', { von: g.von, postfach: id, anbieter: g.anbieter });
@@ -357,6 +374,12 @@ export class PostfachOAuth {
     const jetzt = await this.token(id);
     // Zwischen Prüfen und Schreiben kein await – Abmelden zählt die Generation sofort hoch.
     if (g !== this.gen(id) || !jetzt || !dieselbe(jetzt, alt)) return { ok: false, jetzt: g !== this.gen(id) && jetzt && dieselbe(jetzt, alt) ? null : jetzt };
+    // Mehrere Prozesse (#744): nur schreiben, wenn in der Datenbank noch genau das Gelesene steht (vergleichen und
+    // tauschen) – ein anderer Prozess kann inzwischen abgemeldet, neu angemeldet oder selbst erneuert haben.
+    if (this.d.einstellungen.tausche) {
+      if (!(await this.d.einstellungen.tausche(this.schluessel(id), jetzt, neu))) return { ok: false, jetzt: await this.token(id) };
+      return { ok: true };
+    }
     await this.d.einstellungen.schreibe(this.schluessel(id), neu);
     return { ok: true };
   }
@@ -420,8 +443,8 @@ export class PostfachOAuth {
   async vergiss(id: string) {
     this.macheUngueltig(id);
     await this.d.einstellungen.schreibe(this.schluessel(id), null);
-    this.geraete.delete(id);
-    for (const [k, v] of this.codes) if (v.postfachId === id) this.codes.delete(k);
+    await this.zustand.loesche(GERAET, id);
+    for (const x of await this.zustand.liste(CODE)) if (this.entpacke<OffenCode>(x.wert)?.postfachId === id) await this.zustand.loesche(CODE, x.schluessel);
   }
 }
 

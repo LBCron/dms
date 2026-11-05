@@ -467,8 +467,15 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     if (!p.schnittstellen?.includes('dms:sicherung-lesen')) throw new Fachfehler(403, t('pakete.sicherung.recht'));
     return p.id;
   };
-  /** Persönlicher Export (#255): je Benutzer, ob er gerade läuft. */
-  const eigeneExporte = new Map<string, { laeuft: boolean; fehler: string | null }>();
+  /**
+   * Persönlicher Export (#255): je Benutzer, ob er gerade läuft und woran er zuletzt scheiterte – seit #744 im
+   * Kurzzustand, damit jeder Prozess es weiß. „Läuft“ ist eine Belegung mit Frist (endet ein Prozess mittendrin).
+   */
+  const EXPORT_LAEUFT = 'eigener-export-laeuft', EXPORT_FEHLER = 'eigener-export-fehler';
+  const eigenerExport = async (id: string) => ({
+    laeuft: !!(await dienst.kurzzustand.lies(EXPORT_LAEUFT, id)),
+    fehler: ((await dienst.kurzzustand.lies(EXPORT_FEHLER, id))?.wert as string | undefined) ?? null,
+  });
   // Vollexport (#254), persönliche Exporte (#255) und Auskünfte (#396) im Export-Ordner (#797), nicht bei den Sicherungen.
   // Auskünfte ohne Export-Ordner (Tests) im temporären Ordner.
   const auskunftZiel = () => auskunftOrdner(x.exporte?.pfad);
@@ -482,9 +489,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     loeschprotokoll: { jahre: await dienst.loeschprotokollJahre() },
   });
   /** Auskunft zustellen (#455): Einmal-Tickets der öffentlichen Abrufseite. */
-  const abrufTickets = new AbrufTickets();
+  const abrufTickets = new AbrufTickets(Date.now, dienst.kurzzustand);
   /** Fehlversuche je IP-Bereich über alle Abruf-Links und gleichzeitige Code-Prüfungen – getrennt vom Anmeldeschutz. */
-  const abrufBremse = new AbrufBremse();
+  const abrufBremse = new AbrufBremse({ zustand: dienst.kurzzustand });
   /**
    * Notfallblatt (#106, #814) als PDF – jedes neue Blatt mit neuem Notfallcode (#815): Der bisherige gilt danach nicht
    * mehr, gespeichert ist nur der Hash des neuen. Aus der Werkbank (frische Anmeldung) und nach dem Notfallzugang.
@@ -739,7 +746,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/konsole/ich', zugang: 'offen', konsole: true, handler: async (a) => ok({ als: a.benutzer?.email ?? null, version: eigeneVersion() }) },
     /* ---------- Zwei-Faktor-Anmeldung (#242) ---------- */
     { methode: 'GET', pfad: '/api/konto/zweifaktor', zugang: 'angemeldet', handler: async (a) => ok({ ...(await zf().status(ich(a).id)), pflicht: (await zf().pflicht())[pflichtRolle(ich(a))] }) },
-    { methode: 'POST', pfad: '/api/konto/zweifaktor/beginnen', zugang: 'angemeldet', handler: async (a) => ok(zf().beginne(ich(a), (await x.designs?.marke())?.schriftzug || 'Ablago')) },
+    { methode: 'POST', pfad: '/api/konto/zweifaktor/beginnen', zugang: 'angemeldet', handler: async (a) => ok(await zf().beginne(ich(a), (await x.designs?.marke())?.schriftzug || 'Ablago')) },
     { methode: 'POST', pfad: '/api/konto/zweifaktor/bestaetigen', zugang: 'angemeldet', handler: async (a) => {
       const codes = await zf().bestaetige(ich(a).id, b(a).code, ich(a).email);
       // #819: Zwei-Faktor geändert – Verwaltungsmodus und Tagesmerker gelten nicht mehr.
@@ -902,7 +909,7 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
      */
     { methode: 'GET', pfad: '/api/konto/dokument-passwoerter', zugang: 'angemeldet', handler: async (a) => {
       const e = nurSelbst(a);
-      return ok({ eintraege: await e.liste(ich(a).id), bestaetigtBis: e.bestaetigtBis(a.sitzungsDaten?.id), max: GEMERKT_MAX, zweifaktor: (await zf().status(ich(a).id)).aktiv });
+      return ok({ eintraege: await e.liste(ich(a).id), bestaetigtBis: await e.bestaetigtBis(a.sitzungsDaten?.id), max: GEMERKT_MAX, zweifaktor: (await zf().status(ich(a).id)).aktiv });
     } },
     { methode: 'POST', pfad: '/api/konto/dokument-passwoerter', zugang: 'angemeldet', handler: async (a) => ok(await nurSelbst(a).merke(ich(a).id, b(a).name, b(a).passwort), 201) },
     { methode: 'POST', pfad: '/api/konto/dokument-passwoerter/bestaetigen', zugang: 'angemeldet', handler: async (a) => {
@@ -917,12 +924,12 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     } },
     { methode: 'GET', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => {
       const e = nurSelbst(a);
-      e.pruefeBestaetigt(a.sitzungsDaten?.id);
+      await e.pruefeBestaetigt(a.sitzungsDaten?.id);
       return { status: 200, body: { passwort: await e.zeige(ich(a).id, a.params.id) }, koepfe: { 'cache-control': 'no-store' } };
     } },
     { methode: 'PUT', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => {
       const e = nurSelbst(a);
-      if (b(a).passwort !== undefined) e.pruefeBestaetigt(a.sitzungsDaten?.id);
+      if (b(a).passwort !== undefined) await e.pruefeBestaetigt(a.sitzungsDaten?.id);
       return ok(await e.aendere(ich(a).id, a.params.id, { name: b(a).name, passwort: b(a).passwort }));
     } },
     { methode: 'DELETE', pfad: '/api/konto/dokument-passwoerter/:id', zugang: 'angemeldet', handler: async (a) => { await nurSelbst(a).loesche(ich(a).id, a.params.id); return leer; } },
@@ -1143,19 +1150,20 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const id = ich(a).id;
       const ordner = persoenlicherOrdner(exportZiel(), id);
       const fertig = (await exporteIn(ordner))[0] ?? null;
-      return ok({ erlaubt: await dienst.persoenlicherExportErlaubt(), laeuft: eigeneExporte.get(id)?.laeuft ?? false, fehler: eigeneExporte.get(id)?.fehler ?? null, fertig });
+      return ok({ erlaubt: await dienst.persoenlicherExportErlaubt(), ...(await eigenerExport(id)), fertig });
     } },
     { methode: 'POST', pfad: '/api/konto/export', zugang: 'angemeldet', handler: async (a) => {
       if (!(await dienst.persoenlicherExportErlaubt())) throw new Fachfehler(403, 'Der persönliche Export ist in der Werkbank abgeschaltet.');
       const e = (a.body ?? {}) as { passwoerter?: unknown; passwoerterBestaetigt?: unknown };
       if (e.passwoerter === true && e.passwoerterBestaetigt !== true) throw new Fachfehler(422, 'Passwörter im Klartext nur mit ausdrücklicher Bestätigung.');
       const id = ich(a).id;
-      if (eigeneExporte.get(id)?.laeuft) throw new Fachfehler(409, 'Dein Export läuft schon.');
+      if ((await eigenerExport(id)).laeuft) throw new Fachfehler(409, 'Dein Export läuft schon.');
       if (a.sitzungsDaten?.vertretungId) throw new Fachfehler(403, 'Während jemand in diesem Namen arbeitet, gibt es keinen persönlichen Export.');
       const ziel = persoenlicherOrdner(exportZiel(), id);
       const quelle = await dienst.persoenlicheQuelle(await zg(a), { mandant: (await x.mandantName?.()) ?? '', version: eigeneVersion(), ich: await konten.exportDatenVon(id) });
-      const zustand = { laeuft: true, fehler: null as string | null };
-      eigeneExporte.set(id, zustand);
+      if (!(await dienst.kurzzustand.belege(EXPORT_LAEUFT, id, 12 * 3600_000))) throw new Fachfehler(409, 'Dein Export läuft schon.');
+      await dienst.kurzzustand.loesche(EXPORT_FEHLER, id);
+      const zustand = { fehler: null as string | null };
       L.konto[e.passwoerter === true ? 'warn' : 'info'](e.passwoerter === true ? '„Meine Daten exportieren“ mit Passwörtern gestartet' : '„Meine Daten exportieren“ gestartet', {});
       void (async () => {
         try {
@@ -1163,7 +1171,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
           const r = await vollexport(quelle, ziel, { passwoerter: e.passwoerter === true });
           L.konto.info('„Meine Daten exportieren“ fertig', { benutzer: id, dateien: r.dateien, mb: Math.round(r.bytes / 1024 ** 2) });
         } catch (x2) { zustand.fehler = (x2 as Error).message; L.konto.error('„Meine Daten exportieren“ fehlgeschlagen', { benutzer: id, fehler: zustand.fehler }); }
-        finally { zustand.laeuft = false; }
+        finally {
+          if (zustand.fehler) await dienst.kurzzustand.setze(EXPORT_FEHLER, id, zustand.fehler, Date.now() + 7 * 24 * 3600_000).catch(() => {});
+          await dienst.kurzzustand.loesche(EXPORT_LAEUFT, id).catch(() => {});
+        }
       })();
       return ok({ laeuft: true }, 202);
     } },
@@ -1297,13 +1308,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/abruf', zugang: 'offen', handler: async (a) => {
       const o = (a.body ?? {}) as Record<string, unknown>;
       const bereich = ipBereich(a.ip);
-      if (abrufBremse.gesperrt(bereich)) throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
+      if (await abrufBremse.gesperrt(bereich)) throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
       // Code-Prüfungen (scrypt) nur mit freiem Platz der Bremse: Parallele Anfragen kommen so weder an den
       // Zählern vorbei noch lasten sie den Server aus.
       const r = await dienst.auskunftAbrufPruefen(o.schluessel, o.code, () => abrufBremse.belege());
       if (r.art === 'beschaeftigt') throw new Fachfehler(429, await abrufText('abruf.fehler.zuviele'));
       if (r.art === 'falsch') {
-        abrufBremse.fehlschlag(bereich);
+        await abrufBremse.fehlschlag(bereich);
         L.datenschutz.warn('Abruf einer Auskunft fehlgeschlagen', { ip: kuerzeIp(a.ip), ...(r.link ? { link: r.link.id } : {}) });
         throw new Fachfehler(403, await abrufText('abruf.fehler.falsch'));
       }
@@ -1312,10 +1323,10 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
       const datei = await auskunftDatei(auskunftZiel(), link.auskunftId).catch(() => null);
       if (!datei) throw new Fachfehler(410, await abrufText('abruf.fehler.ungueltig'));
       L.datenschutz.info('Abrufcode einer Auskunft bestätigt', { link: link.id, ip: kuerzeIp(a.ip) });
-      return ok({ ticket: abrufTickets.stelleAus(link.id), groesse: datei.groesse, verschluesselt: datei.stand.verschluesselt, bis: link.ablauf, abrufe: link.abrufe, maxAbrufe: link.maxAbrufe });
+      return ok({ ticket: await abrufTickets.stelleAus(link.id), groesse: datei.groesse, verschluesselt: datei.stand.verschluesselt, bis: link.ablauf, abrufe: link.abrufe, maxAbrufe: link.maxAbrufe });
     } },
     { methode: 'GET', pfad: '/api/abruf/datei', zugang: 'offen', ohneHead: true, handler: async (a) => {
-      const id = abrufTickets.loese(a.query.ticket);
+      const id = await abrufTickets.loese(a.query.ticket);
       const link = id ? await dienst.auskunftLinkMitId(id) : undefined;
       if (!link) throw new Fachfehler(410, await abrufText('abruf.fehler.ticket'));
       const ziel = auskunftZiel();

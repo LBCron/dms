@@ -43,6 +43,11 @@ export interface SpeicherplatzDeps {
   anAdmins?: (betreff: string, text: string) => Promise<void>;
   messer?: Messer;
   jetzt?: () => Date;
+  /**
+   * Mehrere Prozesse (#744): Übergänge (Warnung, Grenze, Mail, Wartungsmodus) nur unter einer Datenbanksperre – sonst
+   * mailten zwei Prozesse dieselbe Warnung. Ohne: wie bisher.
+   */
+  exklusiv?: <T>(name: string, f: () => Promise<T>) => Promise<{ ok: true; wert: T } | { ok: false }>;
 }
 
 export const gbText = (b: number) => `${(b / GB).toFixed(1).replace('.', ',')} GB`;
@@ -118,6 +123,16 @@ export class Speicherplatz {
 
   /** Messen und auf Übergänge reagieren: Warnung, Grenze, wieder genug Platz. */
   async pruefe(): Promise<SpeicherplatzStand> {
+    if (!this.d.exklusiv) return this.uebergaenge();
+    const r = await this.d.exklusiv('speicherplatz', () => this.uebergaenge());
+    if (r.ok) return r.wert;
+    // Ein anderer Prozess prüft gerade die Übergänge: hier nur messen.
+    const s = await this.messe();
+    this.letzte = this.letzte ? { ...s, seit: this.letzte.seit, wartungBeenden: this.letzte.wartungBeenden } : s;
+    return this.letzte;
+  }
+
+  private async uebergaenge(): Promise<SpeicherplatzStand> {
     const s = await this.messe();
     const alt = await this.gemerkt() ?? { zustand: 'ok' as SpZustand, seit: s.gemessen, gewarnt: false, ausgeloest: false };
     const neu: Gemerkt = { ...alt };

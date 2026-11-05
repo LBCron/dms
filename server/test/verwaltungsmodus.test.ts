@@ -276,7 +276,7 @@ describe('Verwaltungsmodus (#819)', () => {
   it('mit Zwei-Faktor gehört der Code zur erneuten Anmeldung; Fehlversuche zählen in den Anmeldeschutz', async () => {
     const x = await aufbau();
     offen.push(() => x.app.close());
-    const { geheimnis } = x.zf.beginne({ id: x.lena.id, email: x.lena.email });
+    const { geheimnis } = await x.zf.beginne({ id: x.lena.id, email: x.lena.email });
     const codes = await x.zf.bestaetige(x.lena.id, totp(ausBase32(geheimnis), Math.floor(Date.now() / 30_000) - 1), x.lena.email);
     // Anmelden mit einem Wiederherstellungscode (der Zeitschritt bleibt für die erneute Anmeldung frei).
     const a = await x.app.inject({ method: 'POST', url: '/api/konto/anmelden', payload: { email: 'lena@example.org', passwort: PW }, headers: { 'x-dms': '1' } });
@@ -378,8 +378,7 @@ describe('Historie: fremde Mappen im Verwaltungsmodus (#820)', () => {
     await x.verwalten(j);
     assert.equal((await x.rufe(j, 'GET', '/api/werkbank/verwaltungsmodus')).statusCode, 403);
     // Nach der Sperrfrist wieder ein Eintrag.
-    const d2 = x.d as unknown as { modusspur: Map<string, number> };
-    d2.modusspur.clear();
+    await x.d.kurzzustand.loesche('modusspur');
     await x.rufe(c, 'GET', `/api/mappen/${m.id}`);
     assert.equal((await x.d.historie(m.id)).filter((e) => e.art === 'verwaltungsmodus' && e.daten.was === 'angesehen').length, 2);
   });

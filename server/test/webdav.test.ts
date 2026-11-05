@@ -111,17 +111,17 @@ describe('WebDAV: reine Hilfen (#346)', () => {
     for (const n of ['desktop.ini', 'Thumbs.db', '.DS_Store', '._Rechnung.pdf', '~$Brief.docx']) assert.ok(istHilfsdatei(n), n);
     assert.ok(!istHilfsdatei('Rechnung.pdf'));
   });
-  it('liest Eigenschaften aus PROPPATCH und begrenzt Anfragen', () => {
+  it('liest Eigenschaften aus PROPPATCH und begrenzt Anfragen', async () => {
     assert.deepEqual(proppatchNamen('<D:propertyupdate xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:"><D:set><D:prop><Z:Win32CreationTime>x</Z:Win32CreationTime><Z:Win32FileAttributes>0</Z:Win32FileAttributes></D:prop></D:set></D:propertyupdate>'),
       [{ ns: 'urn:schemas-microsoft-com:', name: 'Win32CreationTime' }, { ns: 'urn:schemas-microsoft-com:', name: 'Win32FileAttributes' }]);
     let t = 0;
     const r = new Ratenbegrenzung(2, () => t);
-    assert.ok(r.pruefe('a').ok); assert.ok(r.pruefe('a').ok);
-    const n = r.pruefe('a');
+    assert.ok((await r.pruefe('a')).ok); assert.ok((await r.pruefe('a')).ok);
+    const n = await r.pruefe('a');
     assert.ok(!n.ok && n.sekunden === 60 && n.erstes);
-    assert.ok(r.pruefe('b').ok);
+    assert.ok((await r.pruefe('b')).ok);
     t = 60_000;
-    assert.ok(r.pruefe('a').ok);
+    assert.ok((await r.pruefe('a')).ok);
   });
 });
 

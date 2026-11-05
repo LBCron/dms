@@ -31,6 +31,7 @@ import { pgSystemQuelle } from './system';
 import { Designs, pgDesignRepo } from './designs';
 import { ApiSchluesselDienst, pgApiSchluesselRepo } from './apischluessel';
 import { pgRepo } from './repo-pg';
+import { lebenszeichen, pgKurzzustand } from './kurzzustand';
 import { Betrieb, pgBetriebSpeicher } from './betrieb';
 import { Tresor } from './tresor';
 import { pruefeOrdner, SCHLUESSELDATEI } from './ordner';
@@ -201,6 +202,13 @@ const ueberlast = new Ueberlastschutz(ueberlastZahl.max, ueberlastZahl.quelle);
 const mandant = await bestimmeMandant(sql, db, env, (a) => schreibeAnbindung(ordner.geheim, a));
 cfg.haushalt = mandant.id;
 if (mandant.hinweis) log.warn(mandant.hinweis);
+// Zustand zwischen Anfragen (#744): Fehlversuche, Sperren, Einmal-Tickets und Merker für alle Prozesse und Server
+// derselben Datenbank. Das Lebenszeichen sagt, ob dieser Prozess allein an der Datenbank ist (z. B. für die Texterkennung).
+const zustandDb = pgKurzzustand(sql, cfg.haushalt);
+const lebt = await lebenszeichen(sql, cfg.haushalt);
+if (!lebt.allein) log.info('Weitere Prozesse von Ablago an derselben Datenbank: Zeitpläne laufen je Lauf nur in einem davon');
+/** Zeitgesteuerte Arbeit nur in einem Prozess zugleich (#744, Datenbanksperre je Name). */
+const nurEiner = (name: string, f: () => Promise<unknown>) => zustandDb.exklusiv(name, f).then(() => {});
 
 // E-Mail-Versand und Adresse des DMS stehen in der Werkbank (#37); frühere Umgebungsvariablen
 // werden beim ersten Start nach dem Update einmalig übernommen.
@@ -224,7 +232,7 @@ const region = new RegionDienst(pgEinstellungen(sql, cfg.haushalt));
 await region.lade().catch((e) => log.warn(`Region nicht lesbar, es gilt Europe/Berlin: ${(e as Error).message}`));
 region.starte();
 // Speicherplatz (#116): an der Grenze ist das Hochladen gesperrt; Wartung und Mail kommen unten dazu.
-const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt) };
+const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt), exklusiv: (n, f) => zustandDb.exklusiv(n, f) };
 const speicherplatz = new Speicherplatz(ordner, spDeps);
 const hochladen = () => speicherplatz.pruefeHochladen();
 // Hochladen als Strom (#746): temporäre Dateien neben der Ablage (gleiches Laufwerk, nicht in der Sicherung).
@@ -232,11 +240,12 @@ richteHochladenEin({ ordner: join(ordner.dateien, 'hochladen'), vorher: hochlade
 const uebrig = await raeumeHochladenAuf();
 if (uebrig) log.info('Übrig gebliebene temporäre Uploads gelöscht', { anzahl: uebrig });
 const dienst = new Dienst(messung.umhuelle(pgRepo(sql, cfg.haushalt), 'mappen'), mitPruefung(ordnerSpeicher(ordner.dateien, cfg.haushalt), hochladen), {
-  tresor, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt),
+  tresor, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt), zustand: zustandDb,
 });
 // Benutzer erscheinen als Mappen (#26); die Konten halten sie auf dem neuesten Stand.
 const konten = new Konten(messung.umhuelle(pgKontoRepo(sql, cfg.haushalt), 'konto'), () => betrieb.mailer(), () => betrieb.adresseFuerLinks(), dienst.benutzerspiegel());
 dienst.verbindeKonten(konten.papierkorbHaken());
+konten.verbindeZustand(zustandDb);
 // Texterkennung im Hintergrund (#45); dieselbe Datenbank, eigener Messbereich.
 // Wartungsmodus (#102): überdauert einen Neustart; pausiert die Hintergrundarbeiten.
 const wartung = new Wartung(pgBetriebSpeicher(sql, cfg.haushalt), konten);
@@ -249,7 +258,7 @@ const anVerwaltendeVon = (bereich?: string) => async (betreff: string, text: str
 spDeps.wartung = wartung;
 spDeps.anAdmins = anVerwaltendeVon('systemzustand');
 // Anmeldeschutz (#240): Sperren in der Datenbank, einstellbar in der Werkbank.
-const anmeldesperre = new Anmeldesperre(pgEinstellungen(sql, cfg.haushalt), anVerwaltendeVon('anmeldeschutz'));
+const anmeldesperre = new Anmeldesperre(pgEinstellungen(sql, cfg.haushalt), anVerwaltendeVon('anmeldeschutz'), Date.now, zustandDb);
 konten.verbindeSperre(anmeldesperre);
 // Ereigniskatalog (#670): Kontosperre als Ereignis (Id des Benutzers, Zeitpunkt, Fehlversuche, IP gekürzt).
 anmeldesperre.beiKontosperre = async (x) => {
@@ -257,7 +266,7 @@ anmeldesperre.beiKontosperre = async (x) => {
   if (b) await dienst.ereignis('benutzer.gesperrt', { benutzer: b.id, zeitpunkt: new Date().toISOString(), fehlversuche: x.versuche, bis: x.bis, ip: kuerzeIp(x.ip) });
 };
 // Zwei-Faktor-Anmeldung (#242): Geheimnis verschlüsselt mit dem Schlüssel des DMS.
-konten.verbindeZweifaktor(new Zweifaktor(pgEinstellungen(sql, cfg.haushalt), (k) => tresor.verschluessele(k), (w) => tresor.entschluessele(w)));
+konten.verbindeZweifaktor(new Zweifaktor(pgEinstellungen(sql, cfg.haushalt), (k) => tresor.verschluessele(k), (w) => tresor.entschluessele(w), Date.now, zustandDb));
 const notfall = new Notfallzugang(join(dirname(tresor.datei), 'RESCUE'), konten, pgBetriebSpeicher(sql, cfg.haushalt), anVerwaltendeVon());
 // Sicherungen (#103–#105): eigenes Volume, verschlüsselt mit dem Schlüssel der Werkbank.
 const sicherung = new Sicherung(ordner.sicherung, ordner.dateien, cfg.haushalt, {
@@ -315,7 +324,7 @@ dienst.verbindeUmwandlung(umwandlung, vorschau);
 vorschau.fassung = (sha) => umwandlung.lies(sha);
 texterkennung.umwandlung = { lies: (sha) => umwandlung.lies(sha), paketFuer: (m) => umwandlung.paketFuer(m), anfordern: (d) => umwandlung.anfordern(d) };
 // Geschützte PDFs (#827): entsperrte Fassungen (qpdf) neben den umgewandelten; gemerkte Passwörter je Konto verschlüsselt.
-const entsperren = new PdfEntsperren(dienst.entsperrenAnbindung({ ablage: fassungen, speicher: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w) }));
+const entsperren = new PdfEntsperren(dienst.entsperrenAnbindung({ ablage: fassungen, speicher: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), zustand: zustandDb }));
 dienst.verbindeEntsperren(entsperren);
 texterkennung.entsperrt = (sha) => entsperren.fassung(sha);
 // Volltext aus Paketen (#614): Dateitypen, für die ein Paket mit dms:volltext den Text liefert.
@@ -363,7 +372,7 @@ const eingangsordner = new Eingangsordner(env.DMS_EINGANG ?? '/eingang', {
 // Postfächer (#196): Mails per IMAP abholen; nur eine Instanz ruft ab.
 let postSperre: Promise<boolean> | null = null;
 // Anmeldung per OAuth 2.0 (#358): Token verschlüsselt mit dem Schlüssel des DMS.
-const postfachOAuth = new PostfachOAuth({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), anAdmins: anVerwaltendeVon('postfaecher') });
+const postfachOAuth = new PostfachOAuth({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), anAdmins: anVerwaltendeVon('postfaecher'), zustand: zustandDb });
 // E-Mail-Versand über OAuth (#813): dieselbe Anmeldung wie bei den Postfächern.
 betrieb.verbindeOAuth(postfachOAuth);
 const postfaecher = new Postfaecher({
@@ -384,7 +393,7 @@ const anbindungVerwaltung = new AnbindungVerwaltung(ordner.geheim, db, umgebungA
 // Befehl dms im Container (#244).
 const konsole = new Konsolenzugang();
 // Anmeldung über einen Anbieter (#241); Client-Secret verschlüsselt mit dem Schlüssel des DMS.
-const oidc = new Oidc({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w) });
+const oidc = new Oidc({ einstellungen: pgEinstellungen(sql, cfg.haushalt), verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), zustand: zustandDb });
 konten.verbindeAnbieter(() => oidc.bereit());
 // Nach dem Schlüsselwechsel das zwischengespeicherte Client-Secret neu lesen (#410).
 tresor.beimWechsel(async () => oidc.vergiss());
@@ -395,6 +404,7 @@ const notfallcode = new Notfallcode({
   konten, einstellungen: pgBetriebSpeicher(sql, cfg.haushalt), mailer: () => betrieb.mailer(), proxy: cfg.proxy.trust,
   apiSchluessel: async (id) => (await apiSchluessel.liste({ id } as Benutzer)).length,
   codeBenutzt: () => sicherung.notfallcodeBenutzt(),
+  zustand: zustandDb, verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w),
 });
 let appFuerPakete: Awaited<ReturnType<typeof baueApp>> | null = null;
 const paketlaeufer: Paketlaeufer = new Paketlaeufer({
@@ -513,7 +523,7 @@ const verwaltung = new Verwaltung({
   ],
 });
 // WebDAV-Laufwerk (#346): Anmeldung mit API-Schlüssel, im Standard aus (Werkbank → WebDAV-Laufwerk).
-const webdav = new Webdav({ dienst, konten, schluessel: apiSchluessel, einstellungen: pgEinstellungen(sql, cfg.haushalt), adresse: () => betrieb.adresseFuerLinks(), wartung });
+const webdav = new Webdav({ dienst, konten, schluessel: apiSchluessel, einstellungen: pgEinstellungen(sql, cfg.haushalt), adresse: () => betrieb.adresseFuerLinks(), wartung, zustand: zustandDb });
 const app = await baueApp(dienst, konten, {
   webdav,
   webhooks,
@@ -591,11 +601,12 @@ if (geprueft) log.info(`Mappen von ${geprueft} Mappentypen gegen ihre Definition
 // Papierkorb (#43): Abgelaufenes stündlich endgültig löschen.
 // Auskünfte (#396): nach 7 Tagen weg – im selben stündlichen Lauf.
 // Exporte (#797): nach dem Herunterladen bzw. nach 7 Tagen weg – derselbe Lauf wie für die Auskünfte.
+// Zeitpläne (#744): jeder Lauf unter einer Datenbanksperre – mit mehreren Prozessen arbeitet je Lauf nur einer.
 const papierkorb = async () => { if (!wartung.aktiv) await dienst.raeumePapierkorbAuf(); await raeumeExporteAuf(exporte.pfad); };
-const papierkorbLauf = () => papierkorb().catch((e) => log.error('Papierkorb aufräumen fehlgeschlagen', { fehler: (e as Error).message }));
+const papierkorbLauf = () => nurEiner('papierkorb', papierkorb).catch((e) => log.error('Papierkorb aufräumen fehlgeschlagen', { fehler: (e as Error).message }));
 setInterval(papierkorbLauf, 60 * 60 * 1000).unref();
 // Abwesenheit (#78): Abgelaufenes beenden, „abwesend“ an den Benutzer-Mappen nachziehen.
-const abwesenheiten = () => konten.abwesenheitenPruefen().catch((e) => log.error('Abwesenheiten prüfen fehlgeschlagen', { fehler: (e as Error).message }));
+const abwesenheiten = () => nurEiner('abwesenheiten', () => konten.abwesenheitenPruefen()).catch((e) => log.error('Abwesenheiten prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 setInterval(abwesenheiten, 60 * 60 * 1000).unref();
 // Anmeldeschutz (#368) und Tägliche Zusammenfassung (#54): Wann gemeldet wird, entscheiden seit #678 die
 // Automatisierungen (Wenn-Karte „Zeitplan“, Paket „Benachrichtigungen“); die Dann-Karten rufen das hier auf.
@@ -614,22 +625,25 @@ dienst.anmeldeschutzMelden = async (was, daten, trocken) => {
 };
 // Fristen und Erinnerungen (#129, #131): einmal am Tag – gleich nach Mitternacht bzw. beim Start –, vor der Zusammenfassung.
 // Der erste Lauf beim Start (bei vielen Mappen lang) kommt seit #802 erst, wenn Ablago erreichbar ist (unten).
-let fristenTag = '';
-const fristen = async () => {
+// Mehrere Prozesse (#744): Tag des letzten Laufs in der Datenbank, der Lauf selbst unter Sperre.
+const fristen = () => nurEiner('fristen', async () => {
   const heute = heuteIn();
-  if (wartung.aktiv || heute === fristenTag) return;
+  if (wartung.aktiv || (await zustandDb.lies('fristen-tag', 'lauf'))?.wert === heute) return;
   const r = await dienst.fristenLauf(heute);
-  fristenTag = heute;
+  await zustandDb.setze('fristen-tag', 'lauf', heute, null);
   if (r.angelegt || r.erledigt || r.erinnerungen) log.info('Fristen und Erinnerungen geprüft', r);
-};
+});
 setInterval(() => void fristen().catch((e) => log.error('Fristen prüfen fehlgeschlagen', { fehler: (e as Error).message })), 5 * 60 * 1000).unref();
 if (einrichtungNoetig) log.warn(`Noch kein Benutzer vorhanden: Öffne Ablago im Browser (Port ${cfg.port}) und richte es mit dem Einrichtungscode ein.`);
 
 appFuerPakete = app;
 start.schritt('dienste');
-await texterkennung.start();
+await texterkennung.start({ zurueckstellen: lebt.allein });
 await paketlaeufer.start().catch((e: unknown) => log.error('Paket-Läufer startet nicht', { fehler: (e as Error).message }));
-notfall.start();
+// RESCUE-Datei (#108): Sie liegt neben der Schlüsseldatei, also für alle Prozesse dieselbe – prüfen nur unter Sperre.
+const notfallLauf = () => void nurEiner('notfall-datei', () => notfall.pruefe()).catch((e) => log.error('Notfallzugang prüfen fehlgeschlagen', { fehler: (e as Error).message }));
+notfallLauf();
+setInterval(notfallLauf, 30_000).unref();
 sicherung.start();
 speicherplatz.start();
 await eingangsordner.start();
@@ -639,8 +653,10 @@ webhooks.start();
 // Vorher die Aufgaben bei Personen ohne Leserecht abgleichen (#798: Rechte geändert, Erwähnungen, Fristen …).
 setInterval(() => {
   if (wartung.aktiv || wiederherstellung.laeuft()) return;
-  void dienst.faelleAbgleichen().catch((e) => log.warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }))
-    .then(() => verwaltung.tick()).catch((e) => log.error('Technische Aufgaben prüfen fehlgeschlagen', { fehler: (e as Error).message }));
+  void nurEiner('verwaltung', async () => {
+    await dienst.faelleAbgleichen().catch((e) => log.warn('Aufgaben ohne Leserecht nicht abgeglichen', { fehler: (e as Error).message }));
+    await verwaltung.tick();
+  }).catch((e) => log.error('Technische Aufgaben prüfen fehlgeschlagen', { fehler: (e as Error).message }));
 }, 5 * 60 * 1000).unref();
 // Wörterverzeichnis der Suche (#575): neue Wörter aus dem Eingang übernehmen – entkoppelt von Mappen und Texterkennung.
 let woerterFehler = '';
@@ -652,7 +668,9 @@ setInterval(() => {
     woerterFehler = (e as Error).message;
   });
 }, 5000).unref();
-setInterval(() => void wiederherstellung.tick().catch((e) => log.error('Zeitplan der Probe gestört', { fehler: (e as Error).message })), 60_000).unref();
+setInterval(() => void nurEiner('probe', () => wiederherstellung.tick()).catch((e) => log.error('Zeitplan der Probe gestört', { fehler: (e as Error).message })), 60_000).unref();
+// Abgelaufenes aus dem Kurzzustand (#744) wegräumen – Fehlversuche, Tickets, Merker.
+setInterval(() => void nurEiner('kurzzustand', () => zustandDb.raeumeAuf()).catch((e) => log.warn('Kurzzustand nicht aufgeräumt', { fehler: (e as Error).message })), 10 * 60_000).unref();
 
 // Lasttest-Modus (#612): Das DMS läuft nur intern (127.0.0.1, freier Port) – dorthin misst das Skript. Unter dem Port des
 // Containers steht nur die Seite mit Fortschritt und Ergebnis. Vorher prüft das Skript ohne etwas anzulegen, ob dies eine
@@ -700,7 +718,6 @@ const beenden = async () => {
   dienst.ereignisse.stoppe();
   vorschau.stop();
   wartung.stop();
-  notfall.stop();
   sicherung.stop();
   speicherplatz.stop();
   webhooks.stop();
@@ -708,6 +725,7 @@ const beenden = async () => {
   await app.close();
   await beendeArbeiter();
   verbindungswarten.stop();
+  await lebt.ende();
   await sql.end({ timeout: 5 });
   process.exit(0);
 };

@@ -3,6 +3,7 @@ import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 
 import type { Rolle } from '../../shared/src/model';
 import type { Einstellungen } from './einstellungen';
 import { Fachfehler } from './fehler';
+import { speicherKurzzustand, type Kurzzustand } from './kurzzustand';
 import { protokoll } from './protokoll';
 
 /**
@@ -55,19 +56,30 @@ export type Pflicht = Record<Rolle, boolean>;
 export type PflichtPerson = { id: string; verwaltung?: string[]; art?: string };
 export const pflichtRolle = (b: PflichtPerson): Rolle => (darfVerwalten(b) ? 'admin' : 'mitglied');
 
-export class Zweifaktor {
-  private entwuerfe = new Map<string, { geheimnis: Buffer; bis: number }>();
-  private cache = new Map<string, boolean>();
+/** Entwurf beim Einrichten (#744: im Kurzzustand, das Geheimnis mit dem Schlüssel des DMS verschlüsselt). */
+const ENTWURF = 'zweifaktor-entwurf';
+const ENTWURF_MS = 10 * 60_000;
 
-  constructor(private speicher: Einstellungen, private verschluessele: (k: string) => string, private entschluessele: (w: string) => string | null, private jetzt: () => number = Date.now) {}
+export class Zweifaktor {
+  private zustand: Kurzzustand;
+
+  constructor(private speicher: Einstellungen, private verschluessele: (k: string) => string, private entschluessele: (w: string) => string | null, private jetzt: () => number = Date.now, zustand?: Kurzzustand) {
+    this.zustand = zustand ?? speicherKurzzustand(jetzt);
+  }
 
   private async lies(id: string) { return (await this.speicher.lies(`zweifaktor_${id}`)) as Gespeichert | null; }
-  private async schreibe(id: string, g: Gespeichert | null) { await this.speicher.schreibe(`zweifaktor_${id}`, g); this.cache.set(id, !!g); }
-
-  async aktiv(id: string): Promise<boolean> {
-    if (!this.cache.has(id)) this.cache.set(id, !!(await this.lies(id)));
-    return this.cache.get(id)!;
+  private async schreibe(id: string, g: Gespeichert | null) { await this.speicher.schreibe(`zweifaktor_${id}`, g); }
+  /**
+   * Nur schreiben, wenn noch `alt` gespeichert ist (#744): Derselbe Code bzw. Wiederherstellungscode gilt so auch bei
+   * gleichzeitigen Anmeldungen in mehreren Prozessen nur einmal. Ohne `tausche` (Speicher im Arbeitsspeicher) wie bisher.
+   */
+  private async ersetze(id: string, alt: Gespeichert, neu: Gespeichert): Promise<boolean> {
+    if (this.speicher.tausche) return this.speicher.tausche(`zweifaktor_${id}`, alt, neu);
+    await this.schreibe(id, neu); return true;
   }
+
+  /** Eingerichtet? Je Anfrage aus der Datenbank (#744: kein Zwischenspeicher, sonst sähe ein zweiter Prozess es zu spät). */
+  async aktiv(id: string): Promise<boolean> { return !!(await this.lies(id)); }
 
   async status(id: string): Promise<ZweifaktorStatus> {
     const g = await this.lies(id);
@@ -109,23 +121,26 @@ export class Zweifaktor {
   async fehlt(b: PflichtPerson, sitzungSeit?: Date): Promise<boolean> { return (await this.lage(b, sitzungSeit)) === 'fehlt'; }
 
   /** Einrichten, Schritt 1: neues Geheimnis (noch nicht gespeichert) und Adresse für den QR-Code. */
-  beginne(b: { id: string; email: string }, aussteller = 'Ablago') {
+  async beginne(b: { id: string; email: string }, aussteller = 'Ablago') {
     const geheimnis = randomBytes(20);
-    this.entwuerfe.set(b.id, { geheimnis, bis: this.jetzt() + 10 * 60_000 });
     const g = base32(geheimnis);
+    await this.zustand.setze(ENTWURF, b.id, this.verschluessele(g), this.jetzt() + ENTWURF_MS);
     const label = encodeURIComponent(`${aussteller}:${b.email}`);
     return { geheimnis: g.replace(/(.{4})/g, '$1 ').trim(), uri: `otpauth://totp/${label}?secret=${g}&issuer=${encodeURIComponent(aussteller)}&algorithm=SHA1&digits=6&period=30` };
   }
 
   /** Einrichten, Schritt 2: Code aus der App bestätigt das Geheimnis; liefert die Wiederherstellungscodes (einmalig). */
   async bestaetige(id: string, code: unknown, von: string): Promise<string[]> {
-    const e = this.entwuerfe.get(id);
-    if (!e || e.bis < this.jetzt()) throw new Fachfehler(409, 'Bitte die Einrichtung neu beginnen (nach 10 Minuten verfällt der QR-Code).');
-    const schritt = this.passt(e.geheimnis, String(code ?? ''), -1);
+    const neu = () => new Fachfehler(409, 'Bitte die Einrichtung neu beginnen (nach 10 Minuten verfällt der QR-Code).');
+    const e = await this.zustand.lies(ENTWURF, id);
+    const klar = typeof e?.wert === 'string' ? this.entschluessele(e.wert) : null;
+    if (!klar) throw neu();
+    const schritt = this.passt(ausBase32(klar), String(code ?? ''), -1);
     if (schritt === null) throw new Fachfehler(422, 'Der Code stimmt nicht. Uhrzeit von Handy und Ablago prüfen und den aktuellen Code eingeben.');
+    // Einmal einlösbar: Zwei gleichzeitige Bestätigungen legen nicht zweimal Wiederherstellungscodes an.
+    if (!(await this.zustand.nimm(ENTWURF, id))) throw neu();
     const codes = neueCodes();
-    await this.schreibe(id, { geheimnis: this.verschluessele(base32(e.geheimnis)), seit: new Date(this.jetzt()).toISOString(), letzterSchritt: schritt, codes: codes.map(hash) });
-    this.entwuerfe.delete(id);
+    await this.schreibe(id, { geheimnis: this.verschluessele(klar), seit: new Date(this.jetzt()).toISOString(), letzterSchritt: schritt, codes: codes.map(hash) });
     log.info('Zwei-Faktor-Anmeldung eingerichtet', { benutzer: id, von });
     return codes;
   }
@@ -147,13 +162,13 @@ export class Zweifaktor {
     const klar = this.entschluessele(g.geheimnis);
     if (klar) {
       const s = this.passt(ausBase32(klar), c, g.letzterSchritt);
-      if (s !== null) { await this.schreibe(id, { ...g, letzterSchritt: s }); return 'totp'; }
+      if (s !== null) return (await this.ersetze(id, g, { ...g, letzterSchritt: s })) ? 'totp' : null;
     }
     const h = hash(c);
     const i = g.codes.findIndex((x) => x && gleich(x, h));
     if (i >= 0 && c.replace(/[^A-Za-z0-9]/g, '').length >= 8) {
       const codes = [...g.codes]; codes[i] = '';
-      await this.schreibe(id, { ...g, codes });
+      if (!(await this.ersetze(id, g, { ...g, codes }))) return null;
       log.warn('Mit Wiederherstellungscode angemeldet', { benutzer: id, uebrig: codes.filter(Boolean).length });
       return 'wiederherstellung';
     }
