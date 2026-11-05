@@ -55,14 +55,15 @@ import { liesErweiterungen, sichereErweiterungen } from './erweiterungen';
 import { Paketverwaltung } from './pakete';
 import { Aufgabenmail } from './aufgabenmail';
 import { RegionDienst } from './region';
+import { SprachDienst } from './sprachwahl';
 import { Fehlermeldungen, pgFehlerRepo } from './fehlermeldungen';
 import { Fachfehler } from './fehler';
-import { t, tAuto } from './sprache';
+import { mitSpracheVon, t, tAuto, tDe } from './sprache';
 import { Wartung } from './wartung';
 import { Notfallzugang } from './notfall';
 import { Notfallcode } from './notfallcode';
 import type { Benutzer } from '../../shared/src/model';
-import { anVerwaltende } from './mail';
+import { anVerwaltende, mailText } from './mail';
 import { Verwaltung } from './verwaltung';
 import { arch, release, type } from 'node:os';
 import { pgDatenquelle } from './datenbankabzug';
@@ -109,7 +110,7 @@ const verbund = await verbundFuerProzess();
 const { leiter } = verbund;
 if (leiter) log.info(`Ablago startet (Version ${version})`, { node: process.version, port: cfg.port, protokoll: protokoll.stufe, proxy: cfg.proxy.text, ...(verbund.mehrere ? { prozesse: verbund.anzahl } : {}) });
 else log.info(`Prozess ${verbund.nr} für Anfragen startet`, { pid: process.pid });
-if (prozessEinstellung.ungueltig && leiter) log.warn(t('meldungen.prozesse.ungueltig', { roh: prozessEinstellung.ungueltig, max: PROZESSE_MAX }));
+if (prozessEinstellung.ungueltig && leiter) log.warn(tDe('meldungen.prozesse.ungueltig', { roh: prozessEinstellung.ungueltig, max: PROZESSE_MAX }));
 if (cfg.proxy.fehler) log.warn(cfg.proxy.fehler);
 if (cfg.einbetten.fehler) log.warn(cfg.einbetten.fehler);
 // Lasttest-Modus (#612): DMS_LASTTEST=klein|mittel|gross|extrem|alle – nur in einer eigenen Test-Installation (unten geprüft).
@@ -120,7 +121,7 @@ if (lasttest.fehler) log.warn(lasttest.fehler);
 let lasttestAbbruch: string | null = null;
 
 // Unerwartete Fehler außerhalb von Anfragen nicht verschlucken.
-process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', t('meldungen.index.unbehandelter-fehler'), { fehler: e instanceof Error ? e.stack : String(e) }));
+process.on('unhandledRejection', (e) => protokoll.schreibe('error', 'system', tDe('meldungen.index.unbehandelter-fehler'), { fehler: e instanceof Error ? e.stack : String(e) }));
 
 for (const f of ordnerPruefung.fehler) console.error(f);
 if (ordnerPruefung.fehler.length) {
@@ -261,6 +262,10 @@ if (leiter) log.info(arbeiter.groesse ? `Arbeiter für PDF und Exporte: ${arbeit
 const region = new RegionDienst(pgEinstellungen(sql, cfg.haushalt));
 await region.lade().catch((e) => log.warn(`Region nicht lesbar, es gilt Europe/Berlin: ${(e as Error).message}`));
 region.starte();
+// Sprachen (#729): erlaubte Sprachen und Sprache der Installation, jede Minute neu gelesen wie die Region.
+const sprachen = new SprachDienst(pgEinstellungen(sql, cfg.haushalt));
+await sprachen.lade().catch((e) => log.warn(`Sprachen nicht lesbar, es gilt Deutsch: ${(e as Error).message}`));
+sprachen.starte();
 // Speicherplatz (#116): an der Grenze ist das Hochladen gesperrt; Wartung und Mail kommen unten dazu.
 const spDeps: SpeicherplatzDeps = { einstellungen: pgEinstellungen(sql, cfg.haushalt), exklusiv: (n, f) => zustandDb.exklusiv(n, f) };
 const speicherplatz = new Speicherplatz(ordner, spDeps);
@@ -285,7 +290,7 @@ wartung.start();
 // Notfallzugang über eine RESCUE-Datei neben der Schlüsseldatei (#108).
 // Hinweise an die Verwaltenden (#818, statt „an die Administratoren“): je Werkbank-Bereich an alle, die ihn verwalten
 // dürfen (auch „Gesamte Verwaltung“); ohne Bereich an „Gesamte Verwaltung“.
-const anVerwaltendeVon = (bereich?: string) => async (betreff: string, text: string) => { await anVerwaltende(await konten.listeBenutzer(), betrieb.mailer(), betreff, text, bereich); };
+const anVerwaltendeVon = (bereich?: string) => async (betreff: import('./mail').MailText, text: import('./mail').MailText) => { await anVerwaltende(await konten.listeBenutzer(), betrieb.mailer(), betreff, text, bereich); };
 spDeps.wartung = wartung;
 spDeps.anAdmins = anVerwaltendeVon('systemzustand');
 // Anmeldeschutz (#240): Sperren in der Datenbank, einstellbar in der Werkbank.
@@ -509,7 +514,7 @@ const webhooks = new Webhooks({
   benutzer: (id) => konten.benutzerMitId(id),
   pause: () => (wartung.aktiv ? 'Wartungsmodus' : wiederherstellung.laeuft() ? t('meldungen.index.wiederherstellung-laeuft') : null),
   anAdmins: anVerwaltendeVon('webhooks'),
-  anBesitzer: async (b, betreff, text) => { const m = betrieb.mailer(); if (m && b.email && !b.email.endsWith('.invalid')) await m.sende(b.email, betreff, text); },
+  anBesitzer: async (b, betreff, text) => { const m = betrieb.mailer(); if (m && b.email && !b.email.endsWith('.invalid')) { const [bt, tx] = mitSpracheVon(b, () => [mailText(betreff), mailText(text)]); await m.sende(b.email, bt, tx); } },
   sperre: () => (webhookSperre ??= (async () => {
     const v = await sql.reserve();
     const [r] = await v`SELECT pg_try_advisory_lock(4711197) AS ok`;
@@ -590,6 +595,7 @@ const app = await baueApp(dienst, konten, {
   vorschau,
   aufgabenmail,
   region,
+  sprachen,
   // Screenshots der Fehlermeldungen getrennt von den Dokumenten (#70).
   wartung,
   notfall,

@@ -9,7 +9,7 @@
  */
 import du from './sprachen/de/dritte.json';
 import sie from './sprachen/de-formal/dritte.json';
-import { uebersetzer, type OhneMehrzahl, type Sprachdatei, type Werte } from './sprache';
+import { grundsprache, inSprache, uebersetzer, type OhneMehrzahl, type Sprachdatei, type Werte } from './sprache';
 
 export type Anrede = 'du' | 'sie';
 export const ANREDEN: readonly Anrede[] = ['du', 'sie'];
@@ -30,9 +30,11 @@ const T = { du: uebersetzer({ dritte: TEXTE_DRITTE.du }), sie: uebersetzer({ dri
 /**
  * Text für Dritte in der gewählten Anrede; {platzhalter} werden ersetzt (unbekannte bleiben stehen),
  * `werte.anzahl` wählt bei Schlüsseln mit `_one`/`_other` die Mehrzahlform (#473).
+ * Sprache (#729): Unterlagen für Dritte gehen an Personen außerhalb von Ablago – sie stehen in der Sprache der
+ * Installation, nicht in der des Administrators. Englisch kennt nur eine Anrede; beide Formen sind dort gleich.
  */
 export function textDritte(anrede: Anrede, schluessel: TextDritte, werte: Werte = {}): string {
-  return T[anrede].frei(`dritte.${schluessel}`, werte);
+  return inSprache(grundsprache(), () => T[anrede].frei(`dritte.${schluessel}`, werte));
 }
 
 /** Vorschau in der Werkbank: derselbe Satz in beiden Formen. */

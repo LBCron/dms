@@ -7,7 +7,8 @@ import type { Mailer } from './mail';
 import { protokoll } from './protokoll';
 import { einstellungsMerker, laufeFaellige, wochentagVon } from './zeitplan';
 import { datumsformat, liesRegion } from '../../shared/src/region';
-import { t } from './sprache';
+import { mitSpracheVon, t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Tägliche Zusammenfassung der offenen Aufgaben (#54): keine Mail je Aufgabe, sondern einmal
@@ -52,7 +53,7 @@ export interface AufgabenQuelle {
 }
 
 const HEUTE = () => datumsformat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
-const UHR = () => datumsformat('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const UHR = () => datumsformat(gebietsschema(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 export class Aufgabenmail {
   constructor(
@@ -146,7 +147,8 @@ export class Aufgabenmail {
 
   /** Zusammenfassung an einen Benutzer; false, wenn er nichts offen hat, abwesend ist oder der Versand scheitert. */
   private async sendeAn(b: Benutzer, mailer: Mailer): Promise<boolean> {
-    {
+    // In der Sprache der Person (#729).
+    return mitSpracheVon(b, async () => {
       // Abwesende bekommen keine Zusammenfassung (#78); ihr Vertreter sieht die weitergegebenen Aufgaben in seiner.
       if (abwesenheitWirkt(b.abwesenheit, heuteIn())) return false;
       const liste = await this.quelle.aufgabenVon(b);
@@ -161,6 +163,6 @@ export class Aufgabenmail {
         protokoll.modul('mail').warn('Aufgaben-Mail nicht verschickt', { an: b.email, fehler: (e as Error).message });
         return false;
       }
-    }
+    });
   }
 }

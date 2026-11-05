@@ -10,6 +10,7 @@ import { Konten } from '../src/konten';
 import { speicherKontoRepo } from '../src/konto-repo';
 import { absenderPasst, Postfaecher, pruefePostfach, verstaendlich, type GeleseneMail, type ImapSitzung } from '../src/postfach';
 import { speicherRepo } from '../src/repo-speicher';
+import { mailText } from '../src/mail';
 
 /** Eine Mail im Test: die „Quelle“ ist JSON, der Leser macht daraus wieder die Mail. */
 type TestMail = Omit<GeleseneMail, 'anhaenge' | 'datum'> & { datum?: string; anhaenge?: Array<{ name: string; mime: string; text: string; eingebettet?: boolean }> };
@@ -56,7 +57,7 @@ async function aufbau(o: Record<string, unknown> = {}) {
   const pf = new Postfaecher({
     dienst: d, einstellungen, verbinde: server.verbinde, lies,
     verschluessele: (k) => `v1:${Buffer.from(k).toString('base64')}`, entschluessele: (w) => Buffer.from(w.slice(3), 'base64').toString(),
-    anAdmins: async (b) => { meldungen.push(b); },
+    anAdmins: async (b) => { meldungen.push(mailText(b)); },
   });
   const [p] = await pf.speichere({ name: 'Rechnungen', server: 'imap.example.org', port: 993, benutzer: 'dms@example.org', passwort: 'app-passwort', ...o }, null, 'test');
   const posten = async () => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Erreichbarkeit } from '../../shared/src/erreichbarkeit';
 import { t, tn } from './sprache';
+import { sprache } from '../../shared/src/sprache';
 
 /**
  * Erreichbarkeit (#122): Leiste, wenn das DMS weg ist (Update, Neustart), wenn es wieder da ist
@@ -13,7 +14,7 @@ export const NICHT_ERREICHBAR = t('oberflaeche.erreichbar.ablago-ist-gerade-nich
 
 export const erreichbarkeit = new Erreichbarkeit({
   gesundheit: async () => {
-    const r = await fetch('/api/gesundheit', { cache: 'no-store', credentials: 'same-origin', headers: { 'x-dms': '1' } });
+    const r = await fetch('/api/gesundheit', { cache: 'no-store', credentials: 'same-origin', headers: { 'x-dms': '1', 'x-sprache': sprache() } });
     return r.ok ? await r.json().catch(() => null) : null;
   },
   jetzt: () => Date.now(),

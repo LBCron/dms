@@ -108,7 +108,7 @@ export function Schwaerzen({ d, schliessen, fertig }: { d: Dokument; schliessen(
     if (!(await rueckfrage({
       titel: t('ablage.schwaerzen.endgueltig-schwaerzen'),
       text: <>
-        <p>{t('ablage.schwaerzen.werden', { stellenText: stellenText(alle) })}{' '}{zuKopie ? <>{t('ablage.schwaerzen.in-der-kopie', { kopieName: v!.kopieName })}</> : t('ablage.schwaerzen.in-der-neuen-version')} {' '}{t('ablage.schwaerzen.unwiderruflich-entfernt-text-bild')}</p>
+        <p>{zuKopie ? t('ablage.schwaerzen.entfernt-kopie', { stellenText: stellenText(alle), kopieName: v!.kopieName }) : t('ablage.schwaerzen.entfernt-version', { stellenText: stellenText(alle) })}</p>
         <p>{t('ablage.schwaerzen.alle-seiten-werden-dabei', { wert: zuKopie ? t('ablage.schwaerzen.das-original-bleibt-unveraendert') : t('ablage.schwaerzen.die-ungeschwaerzte-fassung-bleibt') })}</p>
       </>,
       ja: t('ablage.schwaerzen.schwaerzen'), gefahr: true,

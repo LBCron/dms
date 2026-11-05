@@ -236,6 +236,10 @@ async function einrichtenImBrowser(browser, bild) {
   const k = await browser.newContext({ viewport: { width: 1100, height: 900 }, colorScheme: 'light', locale: 'de-DE', timezoneId: 'Europe/Berlin', deviceScaleFactor: 1 });
   const s = await k.newPage();
   await s.goto(BASIS + '/');
+  // Erster Schritt (#729): Sprache – vorgeschlagen ist die des Browsers (de-DE), also nur weiter.
+  await s.getByRole('heading', { name: 'Sprache' }).waitFor();
+  await bild(s, 'einrichtung-sprache');
+  await s.getByRole('button', { name: 'Weiter' }).click();
   await s.getByRole('heading', { name: 'Einrichtungscode' }).waitFor();
   await bild(s, 'einrichtung-code');
   await s.getByLabel('Einrichtungscode').fill(await einrichtungscode());

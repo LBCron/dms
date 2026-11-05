@@ -9,6 +9,7 @@
 import { PDFDocument, PDFName, PDFString, rgb, StandardFonts, type PDFFont, type PDFPage, type RGB } from 'pdf-lib';
 import { pdfSicher } from './text';
 import type { NotfallblattPlan } from '../notfallblatt';
+import { gebietsschema } from '../../../shared/src/sprache';
 
 const BLAU = rgb(0x1f / 255, 0x4e / 255, 0x79 / 255);
 const BERNSTEIN = rgb(0xe8 / 255, 0xa3 / 255, 0x3d / 255);
@@ -59,7 +60,7 @@ function logo(seite: PDFPage, s: Schriften, x: number, oben: number, groesse: nu
 
 export async function notfallblattPdf(p: NotfallblattPlan): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  doc.setTitle(pdfSicher(p.dokumenttitel)); doc.setProducer('Ablago'); doc.setCreator('Ablago'); doc.setLanguage('de-DE');
+  doc.setTitle(pdfSicher(p.dokumenttitel)); doc.setProducer('Ablago'); doc.setCreator('Ablago'); doc.setLanguage(gebietsschema());
   const s: Schriften = { normal: await doc.embedFont(StandardFonts.Helvetica), fett: await doc.embedFont(StandardFonts.HelveticaBold), mono: await doc.embedFont(StandardFonts.CourierBold) };
   const seite = doc.addPage([BREITE, HOEHE]);
   let y = HOEHE - RAND;

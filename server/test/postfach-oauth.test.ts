@@ -18,6 +18,7 @@ import { AnmeldungAbgelaufen, endpunkte, pkceChallenge, PostfachOAuth } from '..
 import { speicherRepo } from '../src/repo-speicher';
 import { POSTFACH_BINDUNG_COOKIE, pruefeZugang, routen, type Anfrage } from '../src/routen';
 import { Tresor } from '../src/tresor';
+import { mailText, type MailText } from '../src/mail';
 
 const status = (s: number) => (e: unknown) => e instanceof Fachfehler && e.status === s;
 const MS_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
@@ -81,7 +82,7 @@ async function aufbau() {
   await d.gleicheBenutzerAb(await konten.listeBenutzer());
   const a = anbieter();
   const mails: string[] = [];
-  const anAdmins = async (b: string) => { mails.push(b); };
+  const anAdmins = async (b: MailText) => { mails.push(mailText(b)); };
   const oauth = new PostfachOAuth({ einstellungen, verschluessele: (k) => tresor.verschluessele(k), entschluessele: (w) => tresor.entschluessele(w), abruf: a.abruf, jetzt: () => jetzt, anAdmins });
   const zugaenge: Zugang[] = [];
   let imapFehler: Error | null = null;

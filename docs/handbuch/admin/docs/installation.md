@@ -11,13 +11,19 @@ Ablago läuft – **empfohlen** – als zwei Container: die Anwendung (`ghcr.io/
 
 ## Der Einrichtungsassistent
 
-Beim ersten Aufruf führt ein Assistent in neun Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet.
+Beim ersten Aufruf führt ein Assistent in zehn Schritten durch die Einrichtung. Jeder Schritt hat oben ein **?**, das genau den passenden Abschnitt hier öffnet.
 
-**Erst sammeln, dann einrichten:** Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch nötig sind. Ab „Ablage“ sammelt der Assistent nur: Name der Ablage, dein Konto, Pakete und Optionales. Angelegt wird dabei **nichts**. Mit **Zurück** oder einem Klick in die Schrittleiste kommst du jederzeit zu jedem dieser Schritte. Am Ende zeigt die [Zusammenfassung](#zusammenfassung) alles auf einer Seite, und erst **Jetzt einrichten** legt los. Brichst du vorher ab oder lädst die Seite neu, bleibt keine halbe Einrichtung zurück. Deine Eingaben merkt sich der Browser bis dahin, Passwörter nicht.
+**Erst sammeln, dann einrichten:** Sprache, Code, Datenbank und „Neu oder Sicherung“ wirken sofort, weil sie technisch nötig sind. Ab „Ablage“ sammelt der Assistent nur: Name der Ablage, dein Konto, Pakete und Optionales. Angelegt wird dabei **nichts**. Mit **Zurück** oder einem Klick in die Schrittleiste kommst du jederzeit zu jedem dieser Schritte. Am Ende zeigt die [Zusammenfassung](#zusammenfassung) alles auf einer Seite, und erst **Jetzt einrichten** legt los. Brichst du vorher ab oder lädst die Seite neu, bleibt keine halbe Einrichtung zurück. Deine Eingaben merkt sich der Browser bis dahin, Passwörter nicht.
 
 **Keine einzelnen Speichern-Knöpfe:** In jedem Schritt übernimmt **Weiter** alles, was in den Feldern steht, auch Vorschläge, die du nicht geändert hast (sie tragen den Hinweis „vorgeschlagen – wird mit „Weiter“ übernommen“). Leer gelassene Felder bleiben leer, und es gibt keine versteckten Vorgaben. **Zurück** und **Weiter** stehen in jedem Schritt unten an derselben Stelle.
 
 **Aus Konfigurationsdatei laden:** Oben rechts, klein neben der Hilfe, lädst du eine gespeicherte Einrichtung. Ablago füllt dann alle Schritte vor und springt zur Zusammenfassung, oder zum ersten Schritt, der nicht passt (mit dem Grund). Passwörter stehen nie in der Datei, der Assistent fragt sie ab. Aufbau, Schema und Beispiel: [Einrichtung als Datei](einrichtungsdatei.md).
+
+### Sprache { #sprache }
+
+![Sprache](bilder/einrichtung-sprache.png)
+
+Der erste Schritt fragt, in welcher Sprache Ablago mit dir spricht: **Deutsch** oder **English**. Vorgeschlagen ist die Sprache deines Browsers. Die Wahl gilt sofort für den Assistenten und wird mit **Jetzt einrichten** zur Sprache der Installation und zu deiner eigenen. Später änderst du sie unter [Werkbank → Sprachen](sprachen.md), jede Person ihre eigene unter Mein Konto.
 
 ### Einrichtungscode
 

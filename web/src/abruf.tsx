@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { liesAnrede, textDritte, type Anrede, type TextDritte } from '../../shared/src/anrede';
 import { CODE_LAENGE } from '../../shared/src/auskunft';
 import {  } from './sprache';
+import { sprache } from '../../shared/src/sprache';
 
 /**
  * Öffentliche Abrufseite einer Auskunft (#455): ohne Anmeldung, ohne Menü, ohne Logo oder Namen des
@@ -46,7 +47,7 @@ export function Abrufseite() {
     try {
       const r = await fetch('/api/abruf', {
         method: 'POST', credentials: 'omit', cache: 'no-store',
-        headers: { 'content-type': 'application/json', 'x-dms': '1' },
+        headers: { 'content-type': 'application/json', 'x-dms': '1', 'x-sprache': sprache() },
         body: JSON.stringify({ schluessel, code }),
       });
       const d = await r.json().catch(() => null) as { fehler?: string; ticket?: string; groesse?: number; verschluesselt?: boolean; abrufe?: number; maxAbrufe?: number } | null;

@@ -15,6 +15,7 @@ import { istVersendet } from '../../../shared/src/model';
 import { rueckfrage } from '../rueckfrage';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { typName, registerName } from '../../../shared/src/beschriftung';
 
 /**
  * Post (#192): „+ Post“ in den Sichten mit Post, die Leiste an einer Post-Mappe (Stand, Zuordnen,
@@ -338,7 +339,7 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
       {art === 'vorhanden' && (
         <div className="zuordnen-suche">
           <label className="suche"><span className="sr">{t('ablage.post.mappe-suchen')}</span>
-            <input type="search" placeholder={t('ablage.post.suchen', { wert: zielTyp?.name ?? t('ablage.post.mappe') })} value={suche} onChange={(e) => setSuche(e.target.value)} autoFocus />
+            <input type="search" placeholder={t('ablage.post.suchen', { wert: zielTyp ? typName(zielTyp) : t('ablage.post.mappe') })} value={suche} onChange={(e) => setSuche(e.target.value)} autoFocus />
           </label>
           {treffer === null ? <p className="leise klein">{t('ablage.post.lade')}</p>
             : !treffer.length ? <p className="leise klein">{t('ablage.post.keine-mappe-gefunden')}</p>
@@ -359,14 +360,14 @@ function ZuordnenMaske({ typ, details, neuLaden, schliessen, erkennung }: { typ:
           ))}
           {mitDokumenten && regs.length > 1 && (
             <label className="eigenschaft"><span>{t('ablage.post.in-das-register')}</span>
-              <select value={register} onChange={(e) => setRegister(e.target.value)}>{regs.map((r) => <option key={r.key} value={r.key}>{r.name}</option>)}</select>
+              <select value={register} onChange={(e) => setRegister(e.target.value)}>{regs.map((r) => <option key={r.key} value={r.key}>{registerName(r)}</option>)}</select>
             </label>
           )}
           {mitDokumenten && regs.length === 1 && <p className="leise klein">{t('ablage.post.kommen-ins-register', { name: regs[0].name })}</p>}
           {mitDokumenten && <label className="haken klein"><input type="checkbox" checked={kopieren} onChange={(e) => setKopieren(e.target.checked)} /><span>{t('ablage.post.kopie-in-der-post')}</span></label>}
         </fieldset>
       )}
-      {fehltRegister && <div className="hinweis warn"><p>{tn('ablage.post.hat-kein-dokumentenregister-waehle', { name: zielTyp?.name })}</p></div>}
+      {fehltRegister && <div className="hinweis warn"><p>{tn('ablage.post.hat-kein-dokumentenregister-waehle', { name: zielTyp ? typName(zielTyp) : '' })}</p></div>}
       {fehler && <div className="hinweis schlecht" role="alert"><p>{fehler}</p></div>}
       <div className="knoepfe">
         {art === 'vorhanden'

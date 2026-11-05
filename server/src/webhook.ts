@@ -136,9 +136,9 @@ export interface WebhookDeps {
   /** Nur ein Server macht die regelmäßigen Läufe (pg_try_advisory_lock). Ohne: immer. */
   sperre?: () => Promise<boolean>;
   /** Hinweis an die Administratoren, wenn ein Webhook nach vielen Fehlschlägen abgeschaltet wurde. */
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   /** Mail an den Besitzer eines abgeschalteten Webhooks (Frage 67) – Administratoren bekommen schon die Mail an alle Admins. */
-  anBesitzer?: (b: Benutzer, betreff: string, text: string) => Promise<void>;
+  anBesitzer?: (b: Benutzer, betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   /** Für Tests: kürzere Zeiten (Sekunden). */
   zeiten?: { abstandS?: number; anstossS?: number; wartenS?: readonly number[] };
 }
@@ -379,13 +379,13 @@ export class Webhooks {
     await this.d.repo.fehlgeschlagen(m, e, null, ab);
     log.warn('Webhook nach vielen Fehlschlägen abgeschaltet', { id: m.webhookId, versuche: m.versuch, fehler: e.fehler });
     const b = await this.d.benutzer(m.benutzerId).catch(() => undefined);
-    await this.d.anAdmins?.(t('webhook.abgeschaltet.betreff', { name: m.name }),
-      t('webhook.abgeschaltet.text', { name: m.name, benutzer: b ? b.name || b.email : '–', versuche: m.versuch, fehler: e.fehler ?? '' }))
+    await this.d.anAdmins?.(() => t('webhook.abgeschaltet.betreff', { name: m.name }),
+      () => t('webhook.abgeschaltet.text', { name: m.name, benutzer: b ? b.name || b.email : '–', versuche: m.versuch, fehler: e.fehler ?? '' }))
       .catch((f) => log.warn('Webhooks: Hinweis an die Administratoren nicht gesendet', { fehler: (f as Error).message }));
     // Wer Webhooks verwaltet, hat die Mail an die Verwaltenden schon bekommen (#818).
     if (b && b.aktiv && !darfBereich(b, 'webhooks')) {
-      await this.d.anBesitzer?.(b, t('webhook.abgeschaltet.betreff', { name: m.name }),
-        t('webhook.abgeschaltet.besitzer', { name: b.name || b.email, webhook: m.name, versuche: m.versuch, fehler: e.fehler ?? '' }))
+      await this.d.anBesitzer?.(b, () => t('webhook.abgeschaltet.betreff', { name: m.name }),
+        () => t('webhook.abgeschaltet.besitzer', { name: b.name || b.email, webhook: m.name, versuche: m.versuch, fehler: e.fehler ?? '' }))
         .catch((f) => log.warn('Webhooks: Hinweis an den Besitzer nicht gesendet', { fehler: (f as Error).message }));
     }
   }

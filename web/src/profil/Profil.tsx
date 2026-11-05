@@ -21,7 +21,9 @@ import { useKonto } from '../konto';
 import { Hilfe } from '../Hilfe';
 import { RECHTE, RECHTE_LISTE } from '../../../shared/src/rechte';
 import { rueckfrage } from '../rueckfrage';
-import { t, tn } from '../sprache';
+import { t, tn, wechsleSprache } from '../sprache';
+import { sprachname } from '../../../shared/src/beschriftung';
+import { MITMACHEN_URL } from '../../../shared/src/sprachwahl';
 import { gebietsschema } from '../../../shared/src/sprache';
 
 const STUFE = { immer: t('profil.profil.stufe.immer'), nie: t('profil.profil.stufe.nie'), teils: t('profil.profil.je-nach-mappe') } as const;
@@ -124,6 +126,8 @@ function ProfilBereich({ bereich }: { bereich: keyof typeof BEREICHE }) {
         {fName.anzeige}
         <div className="knoepfe"><button className="knopf primaer" disabled={fName.sendet || !name.trim() || name === ich.name}>{t('profil.profil.speichern')}</button></div>
       </form>
+
+      <SpracheWaehlen />
 
       <form className="blatt" onSubmit={fEmail.absenden}>
         <h2 className="h3">{t('profil.profil.e-mail-adresse')}</h2>
@@ -321,6 +325,39 @@ function MeineGeraete() {
           if (await rueckfrage({ titel: t('profil.profil.auf-allen-anderen-geraeten', { anzahl: andere.length }), ja: t('profil.profil.abmelden'), gefahr: true })) void tu(async () => { const r = await api.andereSitzungenBeenden(); return t('profil.profil.geraete-abgemeldet', { anzahl: r.beendet }); });
         }}>{t('profil.profil.alle-anderen-abmelden')}</button></div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Sprache (#729): Jede Person wählt aus den Sprachen, die der Administrator erlaubt hat; „Wie die Ablage“ folgt der
+ * Sprache der Installation. Die Oberfläche lädt danach neu, damit alle Texte in der neuen Sprache entstehen.
+ */
+function SpracheWaehlen() {
+  const { ich, sprachen } = useKonto();
+  const [wahl, setWahl] = useState(ich.sprache && sprachen.erlaubt.includes(ich.sprache) ? ich.sprache : '');
+  const [fehler, setFehler] = useState<string>();
+  const [sendet, setSendet] = useState(false);
+  const gilt = wahl || sprachen.standard;
+  const name = (s: string) => sprachname(s, s);
+  async function speichern(neu: string) {
+    setWahl(neu); setSendet(true); setFehler(undefined);
+    try { await api.eigeneSprache(neu || null); wechsleSprache(neu || sprachen.standard); }
+    catch (e) { setFehler((e as Error).message); setWahl(ich.sprache ?? ''); }
+    finally { setSendet(false); }
+  }
+  return (
+    <div className="blatt">
+      <h2 className="h3">{tn('profil.sprache.titel', { hilfe: <Hilfe ort="profil.sprache" /> })}</h2>
+      <label className="eigenschaft"><span>{t('profil.sprache.wahl')}</span>
+        <select id="profil-sprache" value={wahl} disabled={sendet} onChange={(e) => void speichern(e.target.value)}>
+          <option value="">{t('profil.sprache.wie-ablage', { sprache: name(sprachen.standard) })}</option>
+          {sprachen.erlaubt.map((s) => <option key={s} value={s} lang={s}>{name(s)}</option>)}
+        </select></label>
+      {sprachen.maschinell.includes(gilt) && (
+        <p className="leise klein">{tn('profil.sprache.maschinell', { link: <a href={MITMACHEN_URL} target="_blank" rel="noreferrer">{t('profil.sprache.mitmachen')}</a> })}</p>
+      )}
+      {fehler && <div className="hinweis schlecht"><p>{fehler}</p></div>}
     </div>
   );
 }

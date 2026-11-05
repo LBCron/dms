@@ -64,7 +64,7 @@ export function WartungsBanner({ admin, abgemeldet }: { admin: boolean; abgemeld
     return (
       <div className="vertretungsbanner wartungsbanner" role="alert">
         <p>
-          <strong>{t('oberflaeche.wartung.wartung-in-abgemeldet', { wert: admin ? t('oberflaeche.wartung.alle-anderen-werden') : t('oberflaeche.wartung.du-wirst'), dauerText: dauerText(rest ?? 0) })}</strong>{' '}
+          <strong>{(admin ? t('oberflaeche.wartung.abmeldung-andere', { dauerText: dauerText(rest ?? 0) }) : t('oberflaeche.wartung.abmeldung-du', { dauerText: dauerText(rest ?? 0) }))}</strong>{' '}
           {admin ? t('konten.verwaltende.wartung.neu') : t('oberflaeche.wartung.bitte-speichere-deine-arbeit')}{zusatz}
         </p>
         {admin && <Link to="/werkbank/wartung#wartungsmodus" className="knopf klein">{t('oberflaeche.wartung.zum-wartungsmodus')}</Link>}
@@ -85,7 +85,7 @@ export function WartungsHinweis({ start }: { start?: WartungOeffentlich | null }
   if (!stand || stand.stufe === 'aus') return null;
   return (
     <div className="hinweis warn stapel" role="status">
-      <p>{tn('oberflaeche.wartung.anmelden-koennen-sich-personen', { b: <strong>{stand.stufe === 'aktiv' ? t('oberflaeche.wartung.ablago-wird-gerade-gewartet') : t('oberflaeche.wartung.gleich-beginnt-eine-wartung')}</strong>, wert: stand.stufe === 'aktiv' ? t('oberflaeche.wartung.nur') : t('oberflaeche.wartung.bis-dahin-nur-noch') })}</p>
+      <p>{(stand.stufe === 'aktiv' ? tn('oberflaeche.wartung.anmelden-aktiv', { b: <strong>{t('oberflaeche.wartung.ablago-wird-gerade-gewartet')}</strong> }) : tn('oberflaeche.wartung.anmelden-bald', { b: <strong>{t('oberflaeche.wartung.gleich-beginnt-eine-wartung')}</strong> }))}</p>
       {(stand.text || stand.ende) && <p>{stand.text}{stand.text && stand.ende ? ' – ' : ''}{stand.ende && <>{t('oberflaeche.wartung.voraussichtlich-bis-uhr-2', { zeitpunkt: zeitpunkt(stand.ende) })}</>}</p>}
     </div>
   );

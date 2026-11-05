@@ -79,6 +79,7 @@ import { ueberfluessigeVariablen } from '../../shared/src/umgebungsvariablen';
 import { Fotostapel } from './fotostapel';
 import { MAIL_STANDARD, pruefeZeit, STANDARD_TAGE, wirksameZeit, type Aufgabenmail, type MailZeit } from './aufgabenmail';
 import { LAENDER, ZEITZONEN, zeitzone } from '../../shared/src/region';
+import { istMaschinell, istVerfuegbar, liesSpracheinstellung, SPRACHEN_STANDARD, spracheAusKopf, wirksameSprache } from '../../shared/src/sprachwahl';
 import { BUNDESLAENDER } from '../../shared/src/feiertage';
 import { RegionDienst } from './region';
 import { gebietsschema } from '../../shared/src/sprache';
@@ -289,6 +290,8 @@ export interface RoutenExtras {
   aufgabenmail?: Aufgabenmail;
   /** Region der Ablage (#726): Land, Bundesland, Zeitzone. */
   region?: import('./region').RegionDienst;
+  /** Sprachen der Ablage (#729): erlaubte Sprachen und Sprache der Installation. */
+  sprachen?: import('./sprachwahl').SprachDienst;
   /** Fehlermeldungen von Benutzern (#70). */
   fehlermeldungen?: Fehlermeldungen;
   /** Technische Aufgaben des Admin-Kontos (#719): Hinweis ohne Einzelheiten beim Alltags-Benutzer. */
@@ -429,6 +432,17 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
   const betrieb = () => { if (!x.betrieb) throw new Fachfehler(404, t('meldungen.routen.betriebseinstellungen-sind-nicht')); return x.betrieb; };
   const mail = () => { if (!x.aufgabenmail) throw new Fachfehler(404, t('meldungen.routen.die-aufgaben-mail-ist')); return x.aufgabenmail; };
   const region = () => { if (!x.region) throw new Fachfehler(404, t('meldungen.routen.die-region-ist-nicht')); return x.region; };
+  const sprachen = () => { if (!x.sprachen) throw new Fachfehler(404, t('meldungen.sprachen.nicht-eingerichtet')); return x.sprachen; };
+  /** Sprache für die Oberfläche (#729): die der Person, sonst die mitgeschickte, sonst die der Installation. */
+  const spracheFuer = async (a: Anfrage) => {
+    const e = x.sprachen ? await x.sprachen.lies() : liesSpracheinstellung(null);
+    const kopf = spracheAusKopf(a.kopf?.('x-sprache'), e.erlaubt);
+    return {
+      sprache: a.benutzer ? wirksameSprache(a.benutzer.sprache ?? kopf, e) : kopf ?? e.standard,
+      standard: e.standard, erlaubt: e.erlaubt,
+      maschinell: e.erlaubt.filter(istMaschinell),
+    };
+  };
   const regionStand = async (r: import('../../shared/src/region').Region) => ({
     region: r, laender: LAENDER, bundeslaender: BUNDESLAENDER, zeitzonen: ZEITZONEN, feiertage: RegionDienst.feiertageIm(r),
   });
@@ -611,8 +625,13 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     // Wartungsmodus (#102): für Banner und Anmeldeseite, auch ohne Anmeldung.
     { methode: 'GET', pfad: '/api/wartung', zugang: 'offen', handler: async () => ok(x.wartung?.oeffentlich() ?? { stufe: 'aus', text: '', ende: null, aktivAb: null, sekunden: null }) },
 
+    // Sprache vor dem ersten Bild (#729): Die Oberfläche lädt damit ihre Texte, bevor sie etwas zeigt.
+    { methode: 'GET', pfad: '/api/sprache', zugang: 'offen', handler: async (a) => ok(await spracheFuer(a)) },
+
     /* ---------- Konto ---------- */
     { methode: 'GET', pfad: '/api/konto/status', zugang: 'offen', handler: async (a) => ok({
+      // Sprache (#729): wirksame Sprache, erlaubte Sprachen, Sprache der Installation.
+      sprachen: await spracheFuer(a),
       einrichtungNoetig: await konten.einrichtungNoetig(),
       // Einrichtungsassistent (#119): Code nötig? Weitere Schritte für den Administrator offen?
       // #818: für Personen mit „Gesamte Verwaltung“; die Schritte selbst brauchen den Verwaltungsmodus.
@@ -718,7 +737,14 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'POST', pfad: '/api/konto/einrichten', zugang: 'offen', handler: async (a) => {
       const r = x.einrichtung ? await x.einrichtung.einrichten(b(a), a.einrichtungscode, info(a)) : await konten.einrichten(b(a), info(a));
       L.konto.info('Erste Person mit „Gesamte Verwaltung“ eingerichtet', { email: r.benutzer.email });
-      return { status: 201, body: { benutzer: r.benutzer }, sitzungSetzen: r.schluessel };
+      // Sprache aus dem ersten Schritt des Assistenten (#729): Sprache der Installation und der Person, die einrichtet.
+      let benutzer = r.benutzer;
+      const spr = b(a).sprache;
+      if (x.sprachen && istVerfuegbar(spr)) {
+        await x.sprachen.speichere({ standard: spr, erlaubt: [...new Set([...SPRACHEN_STANDARD.erlaubt, spr])] });
+        benutzer = await konten.aendereProfil(benutzer, { sprache: spr });
+      }
+      return { status: 201, body: { benutzer }, sitzungSetzen: r.schluessel };
     } },
     { methode: 'POST', pfad: '/api/konto/anmelden', zugang: 'offen', handler: async (a) => {
       let r;
@@ -2120,6 +2146,9 @@ export function routen(dienst: Dienst, konten: Konten, x: RoutenExtras = {}): Ro
     { methode: 'GET', pfad: '/api/werkbank/region', zugang: 'admin', handler: async () => ok(await regionStand(await region().lies())) },
     { methode: 'PUT', pfad: '/api/werkbank/region', zugang: 'admin', handler: async (a) => ok(await regionStand(await region().speichere(a.body))) },
     { methode: 'GET', pfad: '/api/region', zugang: 'angemeldet', handler: async () => ok(await region().lies()) },
+    // Sprachen (#729): Werkbank → Sprachen.
+    { methode: 'GET', pfad: '/api/werkbank/sprachen', zugang: 'admin', handler: async () => ok(await sprachen().stand()) },
+    { methode: 'PUT', pfad: '/api/werkbank/sprachen', zugang: 'admin', handler: async (a) => { await sprachen().speichere(a.body); return ok(await sprachen().stand()); } },
     { methode: 'PUT', pfad: '/api/werkbank/aufgaben/mail', zugang: 'admin', handler: async (a) => ok(await mail().speichere(a.body)) },
     { methode: 'POST', pfad: '/api/werkbank/aufgaben/mail/senden', zugang: 'admin', handler: async () => ok({ verschickt: await mail().sende() }) },
     // Favoriten benachrichtigen (#506): für alle, je Rolle oder gar nicht; Vorgabe für neue Benutzer.

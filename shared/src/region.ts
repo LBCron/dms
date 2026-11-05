@@ -1,4 +1,5 @@
 import { BUNDESLAENDER, istBundesland, type Bundesland } from './feiertage';
+import { gebietsschema } from './sprache';
 
 /**
  * Region der Ablage (#726): Land, Bundesland und Zeitzone an einer Stelle (Werkbank → Einstellungen → Region).
@@ -65,4 +66,4 @@ export function datumsformat(sprache: string, optionen: Intl.DateTimeFormatOptio
 /** Kalendertag JJJJ-MM-TT in der eingestellten Zeitzone. */
 export const tagIn = (d: Date = new Date()) => datumsformat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 /** Wie `Date.toLocaleString` usw., aber in der eingestellten Zeitzone. */
-export const zeitText = (d: Date, optionen: Intl.DateTimeFormatOptions, sprache = 'de-DE') => d.toLocaleString(sprache, { ...optionen, timeZone: aktuell });
+export const zeitText = (d: Date, optionen: Intl.DateTimeFormatOptions, sprache = gebietsschema()) => d.toLocaleString(sprache, { ...optionen, timeZone: aktuell });

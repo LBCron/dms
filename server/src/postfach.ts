@@ -97,7 +97,7 @@ export interface PostfachDeps {
   /** Wirft 507, wenn die Speicherplatz-Grenze erreicht ist. */
   platz?: () => Promise<void>;
   /** Meldung an die Administratoren nach wiederholten Fehlern. */
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   /** Anmeldung per OAuth 2.0 (#358). */
   oauth?: PostfachOAuth;
   jetzt?: () => number;
@@ -359,7 +359,7 @@ export class Postfaecher {
       this.naechster.set(p.id, this.jetzt() + Math.min(p.abstand * 60_000 * 2 ** folge, 6 * 3600_000));
       log.warn('Postfach: Abruf fehlgeschlagen', { postfach: p.name, fehler: text, folge });
       // Abgelaufene OAuth-Anmeldung meldet postfach-oauth.ts selbst, einmal.
-      if (folge === FEHLER_MELDEN_AB && !(e instanceof AnmeldungAbgelaufen)) await this.d.anAdmins?.(t('meldungen.postfach.ablago-postfach-laesst-sich', { name: p.name }), t('meldungen.postfach.der-abruf-des-postfachs', { name: p.name, benutzer: p.benutzer, server: p.server, folge, text })).catch(() => {});
+      if (folge === FEHLER_MELDEN_AB && !(e instanceof AnmeldungAbgelaufen)) await this.d.anAdmins?.(() => t('meldungen.postfach.ablago-postfach-laesst-sich', { name: p.name }), () => t('meldungen.postfach.der-abruf-des-postfachs', { name: p.name, benutzer: p.benutzer, server: p.server, folge, text })).catch(() => {});
       throw e instanceof AnmeldungAbgelaufen ? e : new Fachfehler(502, text);
     } finally { this.laeuft.delete(id); }
   }

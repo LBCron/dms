@@ -11,7 +11,7 @@
  *   die deutsche (`beschriftungen.de.optionen[wert]`), sonst der feste Wert selbst. So kann ein Paket den festen Wert
  *   „strom“ mit „Strom“ und „Electricity“ beschriften.
  */
-import { AUSGANGSSPRACHE, sprache } from './sprache';
+import { AUSGANGSSPRACHE, EINGEBAUTE_SPRACHEN, sprache } from './sprache';
 import type { Feld, MappentypDaten, Register, Trefferliste } from './model';
 import type { SichtDaten } from './sichten';
 
@@ -25,12 +25,18 @@ export interface TypTeile { name?: string; beschreibung?: string }
 export interface FeldTeile { label?: string; hilfe?: string; optionen?: Record<string, string> }
 
 /**
- * Sprachen, in denen sich Beschriftungen pflegen lassen. Fest eingebaut sind Deutsch und Englisch; die Auswahl in der
- * Werkbank (#729) und Sprachpakete (#731) kommen später. Beschriftungen anderer Sprachen (z. B. aus einem Paket)
+ * Sprachen, in denen sich Beschriftungen pflegen lassen: die in der Werkbank erlaubten (#729, Werkbank → Sprachen).
+ * Fest eingebaut sind Deutsch und Englisch, weitere kommen als Sprachpaket (#731). Der Server setzt die Liste nach dem
+ * Lesen der Einstellung, die Oberfläche aus dem Kontostatus. Beschriftungen anderer Sprachen (z. B. aus einem Paket)
  * bleiben trotzdem gespeichert.
  */
-export const EINGEBAUTE_SPRACHEN = [AUSGANGSSPRACHE, 'en'] as const;
-export const erlaubteSprachen = (): string[] => [...EINGEBAUTE_SPRACHEN];
+export { EINGEBAUTE_SPRACHEN };
+let erlaubt: string[] = [...EINGEBAUTE_SPRACHEN];
+export const erlaubteSprachen = (): string[] => [...erlaubt];
+/** Erlaubte Sprachen setzen; die Ausgangssprache ist immer dabei und steht vorn. */
+export function setzeErlaubteSprachen(liste: readonly string[]) {
+  erlaubt = [...new Set([AUSGANGSSPRACHE, ...liste.filter((x) => SPRACHKENNUNG.test(x))])];
+}
 
 /** Gültige Sprachkennung: „en“, „tr“, „pt-BR“. */
 export const SPRACHKENNUNG = /^[a-z]{2,3}(-[A-Z]{2})?$/;

@@ -264,7 +264,10 @@ function dienstFaelle(pg: boolean) {
       const neu = new Dienst(r, speicherDateien(), { einstellungen: speicherEinstellungen() });
       await neu.sichereSystem();
       const nachher = (await neu.listeTypen()).find((t) => t.system === 'post')!;
-      assert.deepEqual(nachher.felder.find((f) => f.key === 'stand')!.beschriftungen, { en: { label: 'Status', optionen: { Neu: 'New' } } });
+      // Eigene Beschriftungen bleiben; Lücken füllt der Start aus den Sprachdateien (#729).
+      const en = nachher.felder.find((f) => f.key === 'stand')!.beschriftungen?.en;
+      assert.equal(en?.label, 'Status');
+      assert.deepEqual(en?.optionen, { Neu: 'New', Zugeordnet: 'Assigned', Erledigt: 'Done' });
       assert.deepEqual(nachher.felder.find((f) => f.key === 'stand')!.optionen, ['Neu', 'Zugeordnet', 'Erledigt']);
     });
   });

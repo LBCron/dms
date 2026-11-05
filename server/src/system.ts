@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type postgres from 'postgres';
 import { t } from './sprache';
+import { gebietsschema } from '../../shared/src/sprache';
 
 /**
  * Technik- und Versionsübersicht (#15): was ist installiert, und – nur auf
@@ -214,7 +215,8 @@ async function mainStand(abruf: Abruf, commit: string | null) {
   return { c, gleich, voraus };
 }
 
-const datumDe = (iso: string) => { const [j, m, t] = iso.slice(0, 10).split('-'); return `${t}.${m}.${j}`; };
+/** Tag in der Sprache der Anfrage (#729), z. B. 05.11.2026 bzw. 05/11/2026. */
+const datumDe = (iso: string) => new Intl.DateTimeFormat(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
 
 /**
  * Das DMS selbst (#206): mit dem neuesten Release auf GitHub vergleichen (Versionsnummer); Änderungen auf main,
@@ -242,7 +244,7 @@ async function dmsSelbst(abruf: Abruf, u: Uebersicht): Promise<Vergleich> {
     try {
       const m = await mainStand(abruf, u.dms.commit ?? null);
       if (!neuer && u.dms.commit && !m.gleich) {
-        hinweise.push(t('meldungen.system.auf-main-gibt-es', { wert: m.voraus ? `${m.voraus} ` : '', wert2: m.voraus === 1 ? '' : t('meldungen.system.en'), wert3: m.voraus === 1 ? t('meldungen.system.ist') : t('meldungen.system.sind'), sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }));
+        hinweise.push(m.voraus ? t('meldungen.system.auf-main-anzahl', { anzahl: m.voraus, sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }) : t('meldungen.system.auf-main', { sha: m.c.sha.slice(0, 7), datumDe: datumDe(m.c.commit.committer.date) }));
       }
     } catch { /* nur Zusatzinfo */ }
     return { komponente: 'Ablago', installiert, aktuell, status: neuer ? 'neuer' : 'aktuell', ...(hinweise.length ? { hinweis: hinweise.join(' ') } : {}), quelle };

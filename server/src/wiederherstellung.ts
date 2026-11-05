@@ -90,7 +90,7 @@ export interface WiederherstellungsQuellen {
   mandantUebernehmen?: (id: string) => Promise<void>;
   /** Einrichtungscode prüfen (frisches System, #119); wirft bei falschem Code. */
   pruefeCode?: (code: unknown) => void;
-  anAdmins?: (betreff: string, text: string) => Promise<void>;
+  anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>;
   jetzt?: () => Date;
 }
 
@@ -626,7 +626,7 @@ export class Wiederherstellung {
       const vorfall = `probe:${eintrag.am}`;
       if ((await e.lies('sicherung_probe_gemeldet')) !== vorfall) {
         await e.schreibe('sicherung_probe_gemeldet', vorfall);
-        try { await this.q.anAdmins?.(t('meldungen.wiederherstellung.ablago-probe-wiederherstellung'), t('meldungen.wiederherstellung.die-probeweise-wiederherstellung-der', { name, info })); }
+        try { await this.q.anAdmins?.(() => t('meldungen.wiederherstellung.ablago-probe-wiederherstellung'), () => t('meldungen.wiederherstellung.die-probeweise-wiederherstellung-der', { name, info })); }
         catch (x) { log.warn('Mail zur Probe nicht verschickt', { fehler: (x as Error).message }); }
       }
     }

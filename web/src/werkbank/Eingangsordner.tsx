@@ -55,7 +55,7 @@ export function EingangsordnerPanel({ z }: { z: EingangZustand }) {
       <div className="mappenkopf">
         <p className="ueber">{t('werkbank.eingangsordner.werkbank')}</p>
         <h1>{t('werkbank.eingangsordner.eingangsordner')}</h1>
-        <p className="leise">{tn('werkbank.eingangsordner.jede-fertige-datei-im', { code: <code>{s.pfad}</code>, code2: <code>{t('werkbank.eingangsordner.eingang-thomas')}</code>, hilfe: <Hilfe ort="werkbank.eingangsordner" /> })}</p>
+        <p className="leise">{tn('werkbank.eingangsordner.jede-fertige-datei-im', { code: <code>{s.pfad}</code>, code2: <code>{t('werkbank.eingangsordner.eingang-lena')}</code>, hilfe: <Hilfe ort="werkbank.eingangsordner" /> })}</p>
       </div>
       {meldung && <div className={`hinweis ${meldung.art}`}><p>{meldung.text}</p></div>}
       {s.pausiert && <div className="hinweis warn"><p>{t('werkbank.eingangsordner.ruht-gerade', { pausiert: s.pausiert })}</p></div>}

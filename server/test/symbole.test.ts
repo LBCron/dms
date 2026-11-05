@@ -44,7 +44,8 @@ const ERSATZ_ERLAUBT_SCHLUESSEL: Record<string, string[]> = {
   '../../shared/src/sprachen/de/oberflaeche.json': ['wiederherstellen.'],
   '../../shared/src/sprachen/de/gemeinsam.json': ['sichtrechte.'],
 };
-const erlaubterSchluessel = (rel: string, zeile: string) => (ERSATZ_ERLAUBT_SCHLUESSEL[rel] ?? []).some((a) => zeile.trimStart().startsWith(`"${a}`));
+// Die Ausnahmen gelten in jeder Sprache (#729): en/werkbank.json wie de/werkbank.json.
+const erlaubterSchluessel = (rel: string, zeile: string) => (ERSATZ_ERLAUBT_SCHLUESSEL[rel.replace(/\/sprachen\/[^/]+\//, '/sprachen/de/')] ?? []).some((a) => zeile.trimStart().startsWith(`"${a}`));
 
 export function ersatzZeichen(text: string): string[] {
   const t = text.trim();

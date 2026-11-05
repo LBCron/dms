@@ -16,6 +16,7 @@ import { istTouch, postFotografieren } from './PostKamera';
 import { AnsichtSymbol, Symbol } from '../Symbol';
 import { darfPostAnlegen } from '../../../shared/src/model';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { sichtName } from '../../../shared/src/beschriftung';
 
 /**
  * Startseite der Ablage (#334): wenige Kacheln mit je einer Zahl und einer Handlung.
@@ -118,7 +119,7 @@ export function Startseite({ offen, breit = false }: { offen?: string; breit?: b
         ) : (
           <div className="kacheln start-raster">
             <Kachel name="eingang" to="/ablage/eingang" art="auffaellig" titel={t('ablage.startseite.zu-erledigen')} anzahl={z(d.zaehler.eingang)} leer={t('ablage.startseite.nichts-zu-erledigen')} unter={t('ablage.startseite.aufgaben-und-mappen-an')} />
-            {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={postSicht.name} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer={t('ablage.startseite.keine-neue-post')} unter={t('ablage.startseite.noch-nicht-zugeordnet')} />}
+            {postSicht && <Kachel name="post" to={`/ablage/${postSicht.id}`} art="post" titel={sichtName(postSicht)} anzahl={z(d.zaehler.sichten?.[postSicht.id] ?? 0)} leer={t('ablage.startseite.keine-neue-post')} unter={t('ablage.startseite.noch-nicht-zugeordnet')} />}
             <TerminKachel z={termin} />
             {lieblings
               ? <Kachel name="wahl" to={`/ablage/${lieblings.id}`} art="ruhig" titel={lieblings.name} symbol={lieblings.symbol} anzahl={z(d.zaehler.sichten?.[lieblings.id] ?? 0)} leer={t('ablage.startseite.leer')} />

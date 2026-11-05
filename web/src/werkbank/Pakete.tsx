@@ -304,7 +304,8 @@ export function PaketLink({ z, wert }: { z: PaketeZustand; wert: string }) {
     return () => { aktuell = false; };
   }, [vorschau]);
   if (!gueltig) return <div className="leer"><p>{tn('werkbank.pakete.dieser-link-ist-ungueltig', { code: <code>{'?installieren=paket@1.0.0'}</code> })}</p></div>;
-  const schon = !!vorschau?.installiert && vorschau.probleme.some((p) => p.includes('schon installiert'));
+  // Fester Fehlercode statt Text des Servers (#729): gilt in jeder Sprache.
+  const schon = !!vorschau?.installiert && !!vorschau.fehlercodes?.includes('schon-installiert');
   return (
     <div className="einspaltig">
       <div className="mappenkopf">

@@ -1,6 +1,6 @@
 import type { Einstellungen } from './einstellungen';
 import { protokoll } from './protokoll';
-import { t } from './sprache';
+import { mitSpracheVon, t } from './sprache';
 import { ortszeit } from './sicherung';
 import { einstellungsMerker, laufeFaellige } from './zeitplan';
 import { darfBereich, darfVerwalten, hatGesamt } from '../../shared/src/verwaltungsrecht';
@@ -35,7 +35,7 @@ export interface Verwaltungspunkt {
 }
 
 /** Person, die eine Sammel-Mail bekommen kann. */
-export interface Verwaltende { email: string; aktiv: boolean; verwaltung?: string[]; art?: string }
+export interface Verwaltende { email: string; aktiv: boolean; verwaltung?: string[]; art?: string; sprache?: string | null }
 /** Gehört der Punkt zu den Bereichen dieser Person? */
 export const fuerPerson = (b: Verwaltende, p: Verwaltungspunkt) => (p.bereich ? darfBereich(b, p.bereich) : hatGesamt(b));
 
@@ -104,7 +104,7 @@ export class Verwaltung {
         const seine = punkte.filter((p) => fuerPerson(b, p));
         const n = seine.filter((p) => neuSchluessel.has(p.schluessel)).length;
         if (!n) continue;
-        try { await this.d.sende(b.email, betreff(n), mailtext(seine, neuSchluessel, this.d.adresse?.())); personen++; }
+        try { const [bt, tx] = mitSpracheVon(b, () => [betreff(n), mailtext(seine, neuSchluessel, this.d.adresse?.())]); await this.d.sende(b.email, bt, tx); personen++; }
         catch (e) { log.warn('Technische Aufgaben: Mail nicht verschickt', { an: b.email, fehler: (e as Error).message }); }
       }
       await this.d.einstellungen.schreibe('verwaltung_gemeldet', [...new Set([...neu, ...offen.map((p) => p.schluessel)])].sort());

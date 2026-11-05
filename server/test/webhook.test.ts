@@ -10,6 +10,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import { WEBHOOK_KOPF, WEBHOOK_VERSUCHE, WEBHOOK_WARTEN_S, ursprung, zielProblem, type WebhookZahlen } from '../../shared/src/webhook';
 import { speicherEinstellungen } from '../src/einstellungen';
 import { GEHEIMNIS_PRAEFIX, pruefeSignatur, signatur, speicherWebhookRepo, Webhooks, type WebhookDeps } from '../src/webhook';
+import { mailText } from '../src/mail';
 
 const echtesFastify = await import('fastify').then((m) => typeof m.default === 'function', () => false);
 const warte = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -89,8 +90,8 @@ describe('Zustellung an einen Empfänger (#627)', () => {
   const baue = (mehr: Partial<WebhookDeps> = {}) => new Webhooks({
     repo: speicherWebhookRepo(), einstellungen: speicherEinstellungen(), verschluessele, entschluessele,
     zahlen: async () => ({ ...zahlen }), benutzer: async (id) => [lena, markus].find((b) => b.id === id),
-    anAdmins: async (betreff) => { admins.push(betreff); },
-    anBesitzer: async (b, _betreff, text) => { besitzer.push({ an: b.email, text }); },
+    anAdmins: async (betreff) => { admins.push(mailText(betreff)); },
+    anBesitzer: async (b, _betreff, text) => { besitzer.push({ an: b.email, text: mailText(text) }); },
     zeiten: { abstandS: 0.3, anstossS: 0.02, wartenS: [0.05, 0.05, 0.05] }, ...mehr,
   });
   before(async () => { e = await empfaenger(); });

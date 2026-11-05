@@ -15,6 +15,7 @@ import type { Stufe } from '../../../shared/src/verkleinern';
 import { FassungWahl, hatArchivfassung, type Fassung } from './FassungWahl';
 import { t, tn } from '../sprache';
 import { gebietsschema } from '../../../shared/src/sprache';
+import { feldLabel } from '../../../shared/src/beschriftung';
 
 /** Aktionen an der Mappe (#58): per E-Mail versenden, als PDF exportieren, Link kopieren (#98). */
 
@@ -171,7 +172,7 @@ export function Druckansicht({ typ, details, fertig }: { typ: Mappentyp; details
             {register.filter((x) => x.art === 'felder').length > 1 && <h2>{r.name}</h2>}
             <table><tbody>
               {felder.map((f) => (
-                <tr key={f.key}><th>{f.label}</th><td>{f.typ === 'formatiert' && mappe.werte[f.key] ? <Formatiert text={String(mappe.werte[f.key])} /> : formatiere(f, mappe.werte[f.key], titelVon) || '–'}</td></tr>
+                <tr key={f.key}><th>{feldLabel(f)}</th><td>{f.typ === 'formatiert' && mappe.werte[f.key] ? <Formatiert text={String(mappe.werte[f.key])} /> : formatiere(f, mappe.werte[f.key], titelVon) || '–'}</td></tr>
               ))}
             </tbody></table>
           </section>

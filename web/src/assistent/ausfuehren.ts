@@ -1,5 +1,6 @@
 import { api, ApiFehler, setzeEinrichtungscode } from '../api';
 import { t } from '../sprache';
+import { sprache } from '../../../shared/src/sprache';
 import { geheim, holeStand, planAus, setzeStand, STUFEN, type Lauf, type Stufe, type StufeStand } from './stand';
 
 /**
@@ -24,7 +25,7 @@ const AUSFUEHREN: Record<Stufe, () => Promise<string | void | 'ausgelassen'>> = 
     const s = holeStand().sammlung;
     if (!geheim.konto) throw new Error(t('einrichtung.lauf.passwort.neu'));
     try {
-      await api.einrichten({ mandant: s.ablage.trim(), name: s.konto.name.trim(), email: s.konto.email.trim(), passwort: geheim.konto });
+      await api.einrichten({ mandant: s.ablage.trim(), name: s.konto.name.trim(), email: s.konto.email.trim(), passwort: geheim.konto, sprache: sprache() });
     } catch (e) {
       // Schon angelegt (etwa Antwort verloren) und angemeldet: dann gilt die Stufe als erledigt.
       if (!(e instanceof ApiFehler && e.status === 409 && await api.einrichtungStand().then(() => true, () => false))) throw e;

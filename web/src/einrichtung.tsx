@@ -5,7 +5,7 @@ import { WiederherstellungsAssistent } from './wiederherstellen';
 import { useKonto } from './konto';
 import { t, tn } from './sprache';
 import { nachDemLaden, nimmDatei, ladeDatei } from './assistent/datei';
-import { Rahmen, Sammelassistent, unterbrochenerLauf, type Leiste } from './assistent/Schritte';
+import { Rahmen, Sammelassistent, SprachSchritt, unterbrochenerLauf, VOR, zurSprache, type Leiste } from './assistent/Schritte';
 import { setzeStand, useAssistent } from './assistent/stand';
 
 /**
@@ -35,8 +35,9 @@ function useSenden() {
 
 /** Vor dem Sammeln: Code und Datenbank sind gesperrt (mit Grund), alles danach noch nicht erreicht. */
 const VORHER: Leiste = {
-  erledigt: (i) => i < 2,
-  gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : i === 1 ? t('einrichtung.gesperrt.datenbank') : null),
+  erledigt: (i) => i < VOR.wahl,
+  klick: (i) => (i === VOR.sprache ? zurSprache : null),
+  gesperrt: (i) => (i === VOR.code ? t('einrichtung.gesperrt.code') : i === VOR.datenbank ? t('einrichtung.gesperrt.datenbank') : null),
 };
 
 /* ---------- Ohne Anmeldung: Code, Datenbank, Neu oder Sicherung, dann sammeln ---------- */
@@ -70,7 +71,9 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
     if (phase === 'konto' && st.sammlung.pruefungOffen) void nachDemLaden().catch(() => {});
   }, [codeOk, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (phase === 'startet') return <Rahmen aktiv={1} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
+  if (phase === 'startet') return <Rahmen aktiv={VOR.datenbank} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
+  // Sprache zuerst (#729).
+  if (!st.spracheGewaehlt && !st.lauf) return <SprachSchritt leiste={{ erledigt: () => false, gesperrt: (i) => (i > VOR.sprache ? t('einrichtung.gesperrt.sprache') : null) }} />;
   if (e?.code && !codeOk) return <CodeSchritt ok={() => { setCodeOk(true); void fertig(); }} />;
   // Bisherige Anbindung und Fehler liefert der Server erst mit Code – dann neu vorbelegen.
   if (phase === 'datenbank') return <DatenbankSchritt key={`${e?.anbindung ? 'mit' : 'ohne'}-${st.sammlung.datenbank ? 'datei' : ''}`} status={status} weiter={fertig} />;
@@ -78,12 +81,12 @@ export function Einrichtungsassistent({ status, fertig }: { status: KontoStatus;
   // Läuft „Jetzt einrichten“ schon, bleibt es bei dieser Oberfläche – auch wenn das eigene Konto schon angelegt ist.
   if (st.neu || st.lauf) return <Sammelassistent zurWahl={zurWahl} abschliessen={fertig} />;
   if (sicherung) return (
-    <Rahmen aktiv={2} titel={t('einrichtung.assistent.aus-sicherung-wiederherstellen')} leiste={VORHER} unter={t('einrichtung.assistent.waehle-eine-sicherung-aus')}>
+    <Rahmen aktiv={VOR.wahl} titel={t('einrichtung.assistent.aus-sicherung-wiederherstellen')} leiste={VORHER} unter={t('einrichtung.assistent.waehle-eine-sicherung-aus')}>
       <WiederherstellungsAssistent frisch gestartet={() => void fertig()} abbrechen={() => setSicherung(false)} />
     </Rahmen>
   );
   return (
-    <Rahmen aktiv={2} titel={t('einrichtung.assistent.neu-einrichten-oder-wiederherstellen')} unter={t('einrichtung.assistent.die-datenbank-ist-verbunden-2')} leiste={VORHER} datei={{}}>
+    <Rahmen aktiv={VOR.wahl} titel={t('einrichtung.assistent.neu-einrichten-oder-wiederherstellen')} unter={t('einrichtung.assistent.die-datenbank-ist-verbunden-2')} leiste={VORHER} datei={{}}>
       <div className="wahlkarten">
         <button type="button" className="wahlkarte" onClick={() => setzeStand((x) => ({ ...x, neu: true }))}>
           <strong>{t('einrichtung.assistent.neu-einrichten')}</strong><span className="leise">{t('einrichtung.wahl.neu')}</span>
@@ -100,7 +103,7 @@ function CodeSchritt({ ok }: { ok: () => void }) {
   const [code, setCode] = useState('');
   const s = useSenden();
   return (
-    <Rahmen aktiv={0} titel={t('einrichtung.assistent.einrichtungscode')} leiste={{ erledigt: () => false }} datei={{ ohneCode: true }} unter={t('einrichtung.assistent.damit-niemand-sonst-im')}>
+    <Rahmen aktiv={VOR.code} titel={t('einrichtung.assistent.einrichtungscode')} leiste={{ erledigt: (i) => i === VOR.sprache, klick: (i) => (i === VOR.sprache ? zurSprache : null) }} datei={{ ohneCode: true }} unter={t('einrichtung.assistent.damit-niemand-sonst-im')}>
       <ol className="anleitung">
         <li>{tn('einrichtung.assistent.in-der-docker-oberflaeche', { b: <strong>{t('einrichtung.assistent.im-protokoll-des-containers')}</strong>, span: <span className="mono">{t('einrichtung.assistent.app')}</span>, i: <em>{t('einrichtung.assistent.docker-container-dms-app')}</em>, i2: <em>{t('einrichtung.assistent.container-manager-container-details')}</em>, span2: <span className="mono">{t('einrichtung.assistent.docker-compose-logs-app')}</span>, span3: <span className="mono">{t('einrichtung.assistent.einrichtungscode-fuer-ablago-xxxx')}</span> })}</li>
         <li>{tn('einrichtung.assistent.namens-im-ordner-fuer', { b: <strong>{t('einrichtung.assistent.in-einer-datei')}</strong>, span: <span className="mono">{t('einrichtung.assistent.einrichtungscode-2')}</span>, span2: <span className="mono">{'/volume1/docker/dms/geheim'}</span> })}</li>
@@ -161,9 +164,9 @@ function DatenbankSchritt({ status, weiter }: { status: KontoStatus; weiter: () 
     setFelder(undefined);
     try { await f(); } catch (x) { if (x instanceof ApiFehler) setFelder((x.details as { felder?: Record<string, string> })?.felder); throw x; }
   });
-  if (startet) return <Rahmen aktiv={1} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
+  if (startet) return <Rahmen aktiv={VOR.datenbank} titel={t('einrichtung.assistent.ablago-startet')} leiste={VORHER}><p className="leise">{t('einrichtung.assistent.die-datenbank-ist-verbunden')}</p></Rahmen>;
   return (
-    <Rahmen aktiv={1} titel={t('einrichtung.assistent.datenbank')} leiste={{ erledigt: (i) => i < 1, gesperrt: (i) => (i === 0 ? t('einrichtung.gesperrt.code') : null) }} datei={{ imEinrichtungsmodus: true }} unter={t('einrichtung.assistent.ablago-speichert-alles-ausser')}>
+    <Rahmen aktiv={VOR.datenbank} titel={t('einrichtung.assistent.datenbank')} leiste={{ erledigt: (i) => i < VOR.datenbank, klick: (i) => (i === VOR.sprache ? zurSprache : null), gesperrt: (i) => (i === VOR.code ? t('einrichtung.gesperrt.code') : null) }} datei={{ imEinrichtungsmodus: true }} unter={t('einrichtung.assistent.ablago-speichert-alles-ausser')}>
       {e.fehler && <div className="hinweis warn"><p><strong>{t('einrichtung.assistent.klappt-es-nicht', { wert: e.quelle === 'umgebung' ? t('einrichtung.assistent.mit-database-url-aus') : e.quelle === 'datei' ? t('einrichtung.assistent.mit-der-gespeicherten-anbindung') : t('einrichtung.assistent.die-verbindung') })}</strong> {e.fehler}</p><p className="leise klein">{t('einrichtung.assistent.korrigiere-die-angaben-hier')}</p></div>}
       <form className="stapel" onSubmit={(ev: FormEvent) => { ev.preventDefault(); void tu(async () => setP(await api.einrichtungDbPruefen(a))); }}>
         {datei && <p className="leise klein">{t('einrichtung.datenbank.datei')}</p>}

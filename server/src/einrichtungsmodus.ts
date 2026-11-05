@@ -11,6 +11,8 @@ import { standKennung } from './system';
 import { hilfeAntwort, hilfeSenden } from './hilfe';
 import { einbettenAus, sicherheitsKoepfe, type Einbetten } from './koepfe';
 import { t } from './sprache';
+import { EINGEBAUTE_SPRACHEN, setzeSprache } from '../../shared/src/sprache';
+import { spracheAusKopf } from '../../shared/src/sprachwahl';
 
 /**
  * Einrichtungsmodus (#119): Das DMS läuft ohne erreichbare Datenbank und liefert nur den
@@ -59,6 +61,16 @@ export async function einrichtungsmodus(o: EinrichtungsmodusOptionen): Promise<A
     return reply.code(500).send({ fehler: t('meldungen.einrichtungsmodus.interner-fehler-details-stehen') });
   });
   app.addHook('onRequest', async (_req, reply) => { reply.header('cache-control', 'no-store'); });
+  // Sprache (#729): Ohne Datenbank gibt es keine Einstellung – es gilt, was der Assistent mitschickt. Im
+  // Einrichtungsmodus richtet nur eine Person ein, deshalb genügt die Sprache des Prozesses.
+  app.addHook('onRequest', async (req) => {
+    const s = spracheAusKopf(typeof req.headers['x-sprache'] === 'string' ? req.headers['x-sprache'] : undefined, [...EINGEBAUTE_SPRACHEN]);
+    if (s) setzeSprache(s);
+  });
+  app.get('/api/sprache', async (req) => {
+    const s = spracheAusKopf(typeof req.headers['x-sprache'] === 'string' ? req.headers['x-sprache'] : undefined, [...EINGEBAUTE_SPRACHEN]) ?? 'de';
+    return { sprache: s, standard: 'de', erlaubt: [...EINGEBAUTE_SPRACHEN], maschinell: [] };
+  });
   // Sicherheits-Header wie im Betrieb (#239).
   app.addHook('onSend', async (req, reply, nutzlast) => {
     const typ = String(reply.getHeader('content-type') ?? '');

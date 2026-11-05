@@ -13,6 +13,7 @@ import { kreisImStandard, kreisVon } from './nummernkreis';
 import { ibanGruppen, pruefeFormatDefinition } from './feldformate';
 import { datumsformat } from './region';
 import { t, t as tx } from './texte';
+import { gebietsschema, registrierteSprachen, textNur } from './sprache';
 import { optionText, type Beschriftungen, type FeldTeile, type NamensTeile, type TypTeile } from './beschriftung';
 export { zeitzone } from './region';
 
@@ -194,8 +195,38 @@ export const auswahlText = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? ''
 /** Eine versendete E-Mail: festgehalten wie verschickt, ihre Felder ändert niemand. */
 export const istVersendet = (w: Werte | undefined) => !!w && auswahlText(w.kanal) === POST_KANAL.email && auswahlText(w.richtung) === POST_RICHTUNG.ausgehend;
 
+/**
+ * Beschriftungen der Systemmappentypen in den eingebauten und installierten Sprachen (#729): aus den Sprachdateien,
+ * nur wo die Sprache den Text selbst hat (kein Rückfall). Leer → undefined.
+ */
+export function systemBeschriftung<T extends object>(teile: Record<string, string | Record<string, string>>): Beschriftungen<T> | undefined {
+  const aus: Record<string, Record<string, unknown>> = {};
+  for (const spr of registrierteSprachen()) {
+    const e: Record<string, unknown> = {};
+    for (const [teil, k] of Object.entries(teile)) {
+      if (typeof k === 'string') { const v = textNur(spr, k); if (v) e[teil] = v; continue; }
+      const o = Object.fromEntries(Object.entries(k).map(([wert, kk]) => [wert, textNur(spr, kk)]).filter(([, v]) => v));
+      if (Object.keys(o).length) e[teil] = o;
+    }
+    if (Object.keys(e).length) aus[spr] = e;
+  }
+  return Object.keys(aus).length ? aus as Beschriftungen<T> : undefined;
+}
+/** Feste Werte der Auswahlfelder von Post mit ihrem Schlüssel in der Sprachdatei. */
+const POST_OPTIONEN: Record<string, Record<string, string>> = { stand: POST_STAND, kanal: POST_KANAL, richtung: POST_RICHTUNG };
+
 /** Systemfelder je Systemtyp. Bezeichnung und Hilfetext darf der Administrator ändern, alles andere ist fest. */
 export function systemfelder(s: Systemtyp, rolleTypId: string, benutzerTypId = ''): Feld[] {
+  return systemfelderRoh(s, rolleTypId, benutzerTypId).map((f) => {
+    // Beschriftungen je Sprache (#729): Bezeichnung, Hilfetext und Optionen der Post auf Englisch und in Sprachpaketen.
+    const k = `gemeinsam.model.%s.${s}.${f.key.replace(/_/g, '-')}`;
+    const optionen = s === 'post' && POST_OPTIONEN[f.key]
+      ? Object.fromEntries(Object.entries(POST_OPTIONEN[f.key]).map(([slug, wert]) => [wert, `gemeinsam.model.systemoption.post.${f.key}.${slug}`])) : null;
+    const b = systemBeschriftung<FeldTeile>({ label: k.replace('%s', 'systemfeld'), ...(f.hilfe ? { hilfe: k.replace('%s', 'systemhilfe') } : {}), ...(optionen ? { optionen } : {}) });
+    return b ? { ...f, beschriftungen: b } : f;
+  });
+}
+function systemfelderRoh(s: Systemtyp, rolleTypId: string, benutzerTypId = ''): Feld[] {
   // Bezeichnungen und Hilfetexte aus der Sprachdatei (#728); die festen Werte der Optionen bleiben, wie sie sind.
   const l = (k: string) => t.frei(`gemeinsam.model.systemfeld.${s}.${k.replace(/_/g, '-')}`);
   const h = (k: string) => t.frei(`gemeinsam.model.systemhilfe.${s}.${k.replace(/_/g, '-')}`);
@@ -382,6 +413,8 @@ export interface Benutzer {
   zuletztAktiv?: string | null;
   /** Zeigt beim Aufruf einer Seite die Dauer der einzelnen Schritte (im eigenen Profil schaltbar). */
   entwicklermodus?: boolean;
+  /** Gewählte Sprache (#729, Mein Konto); leer = die der Installation. Gilt nur, solange sie erlaubt ist. */
+  sprache?: string | null;
   /** Weitere (fachliche) Rollen: Ids der Rollen-Mappen (nur in der Benutzerverwaltung). */
   rollen?: string[];
   /** Abwesenheit mit Vertreter (#78). Der Vertreter bleibt nach dem Deaktivieren hinterlegt und wirkt dann dauerhaft. */
@@ -620,8 +653,8 @@ export function pruefeMappe(pick: Pick<Mappentyp, 'felder'>, werte: Werte, ctx: 
       case 'betrag': {
         const x = f.typ === 'betrag' ? (v as Betrag)?.betrag : v;
         if (typeof x !== 'number' || !Number.isFinite(x)) { fehler(f.key, f.typ === 'betrag' ? t('gemeinsam.model.kein-gueltiger-betrag') : t('gemeinsam.model.keine-gueltige-zahl')); break; }
-        if (typeof f.min === 'number' && x < f.min) fehler(f.key, t('gemeinsam.model.mindestens', { min: f.min.toLocaleString('de-DE') }));
-        else if (typeof f.max === 'number' && x > f.max) fehler(f.key, t('gemeinsam.model.hoechstens', { max: f.max.toLocaleString('de-DE') }));
+        if (typeof f.min === 'number' && x < f.min) fehler(f.key, t('gemeinsam.model.mindestens', { min: f.min.toLocaleString(gebietsschema()) }));
+        else if (typeof f.max === 'number' && x > f.max) fehler(f.key, t('gemeinsam.model.hoechstens', { max: f.max.toLocaleString(gebietsschema()) }));
         else if (f.typ === 'zahl' && f.nachkomma != null && (String(x).split('.')[1] ?? '').length > f.nachkomma)
           fehler(f.key, t('gemeinsam.model.hoechstens-nachkommastellen', { nachkomma: f.nachkomma }));
         if (f.typ === 'betrag' && !p.felder[f.key] && !/^[A-Z]{3}$/.test((v as Betrag).waehrung ?? ''))
@@ -678,16 +711,16 @@ export function verweiseVon(t: Pick<Mappentyp, 'felder'>, werte: Werte): Array<{
 const PLATZHALTER = PLATZHALTER_MIT_FILTERN;
 
 /** Feste Indexwerte, die jede Titel-Vorlage zusätzlich zu den Feldern verwenden kann. */
-export const INDEXPLATZHALTER = { angelegt: 'Angelegt', geaendert: 'Zuletzt geändert' } as const;
+export const INDEXPLATZHALTER = { angelegt: t('gemeinsam.model.index.angelegt'), geaendert: t('gemeinsam.model.index.geaendert') } as const;
 export type Indexplatzhalter = keyof typeof INDEXPLATZHALTER;
 export const istIndexplatzhalter = (k: string): k is Indexplatzhalter => Object.prototype.hasOwnProperty.call(INDEXPLATZHALTER, k);
 export type Indexwerte = Partial<Pick<Mappe, 'erstellt' | 'geaendert'>>;
 
 /** Betreff einer fotografierten Post (#490): „Post vom 01.11.2026, 20:52“ statt des Dateinamens „image“. */
 export function fotoBetreff(d: Date = new Date()): string {
-  return `Post vom ${datumsformat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d)}`;
+  return t('gemeinsam.model.foto-betreff', { zeit: datumsformat(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d) });
 }
-const TAG_FORMAT = () => datumsformat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const TAG_FORMAT = () => datumsformat(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** Tag eines Zeitstempels als TT.MM.JJJJ in der Zeitzone des Haushalts. */
 export function tagVon(zeitstempel: string | undefined): string {
@@ -966,22 +999,22 @@ export const MAX_DATEIGROESSE = 100 * 1024 * 1024;
 /** Höchstens so viele Mappen in einer Auswahl (#149). */
 export const MAX_AUSWAHL = 5000;
 
-/** Wert lesbar formatieren (deutsch; Auswahl als Beschriftung, #728). `titelVon` löst Referenzen auf. */
+/** Wert lesbar formatieren – in der Sprache des Benutzers (#729; Auswahl als Beschriftung, #728). `titelVon` löst Referenzen auf. */
 export function formatiere(f: Feld, v: Wert | undefined, titelVon: (id: string) => string = (id) => id): string {
   if (v == null || v === '') return '';
   switch (f.typ) {
     case 'betrag': {
       const b = v as Betrag;
       if (typeof b.betrag !== 'number') return '';
-      try { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: b.waehrung || 'EUR' }).format(b.betrag); }
-      catch { return `${b.betrag.toLocaleString('de-DE', { minimumFractionDigits: 2 })} ${b.waehrung}`; }
+      try { return new Intl.NumberFormat(gebietsschema(), { style: 'currency', currency: b.waehrung || 'EUR' }).format(b.betrag); }
+      catch { return `${b.betrag.toLocaleString(gebietsschema(), { minimumFractionDigits: 2 })} ${b.waehrung}`; }
     }
     case 'datum': {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v));
-      return m ? `${m[3]}.${m[2]}.${m[1]}` : String(v);
+      return m ? new Intl.DateTimeFormat(gebietsschema(), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))) : String(v);
     }
-    case 'janein': return v ? 'Ja' : 'Nein';
-    case 'zahl': return typeof v === 'number' ? v.toLocaleString('de-DE', { maximumFractionDigits: f.nachkomma ?? 10 }) : String(v);
+    case 'janein': return v ? t('gemeinsam.model.ja') : t('gemeinsam.model.nein');
+    case 'zahl': return typeof v === 'number' ? v.toLocaleString(gebietsschema(), { maximumFractionDigits: f.nachkomma ?? 10 }) : String(v);
     // Fester Wert → Beschriftung in der Sprache des Benutzers (#728); gespeichert bleibt der Wert.
     case 'auswahl': return (Array.isArray(v) ? v : [v]).map((x) => optionText(f, String(x))).join(', ');
     case 'referenz': return (Array.isArray(v) ? v : [String(v)]).map(titelVon).join(', ');

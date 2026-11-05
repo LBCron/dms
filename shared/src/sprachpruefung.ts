@@ -34,9 +34,9 @@ function grundschluessel(datei: Record<string, unknown>): Map<string, string[]> 
 }
 
 /** Schlüssel, die der Code ausdrücklich abruft: `t('bereich.schluessel'` bzw. `t.frei('…'`. */
-const AUFRUF = /\bt(?:\.frei)?\(\s*(['"`])([a-z0-9-]+\.[^'"`$]+)\1/g;
+const AUFRUF = /\b(?:t|tDe)(?:\.frei)?\(\s*(['"`])([a-z0-9-]+\.[^'"`$]+)\1/g;
 /** Aufruf mit Werten: `t('bereich.schluessel', {` bzw. `tn(…, {` – die Werte prüft `werteImAufruf`. */
-const MIT_WERTEN = /\b(?:t|tn)\(\s*'([a-z0-9-]+\.[^'$]+)'\s*,\s*\{/g;
+const MIT_WERTEN = /\b(?:t|tn|tDe)\(\s*'([a-z0-9-]+\.[^'$]+)'\s*,\s*\{/g;
 
 /**
  * Namen der Werte in einem Objekt-Literal ab `start` (Position der öffnenden Klammer): `{ name, wert: x }` →

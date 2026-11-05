@@ -172,7 +172,7 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     assert.deepEqual(je('benutzer'), ['benutzer', 'verschluesselung', 'auskuenfte', 'loeschkonzept', 'aufbewahrung', 'stempel']);
     assert.deepEqual(je('post'), ['postfaecher', 'eingangsordner', 'webdav', 'webhooks', 'texterkennung']);
     assert.deepEqual(je('sichern'), ['sicherung', 'vollexport', 'papierkorb']);
-    assert.deepEqual(je('einstellungen'), ['betrieb', 'region', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung']);
+    assert.deepEqual(je('einstellungen'), ['betrieb', 'region', 'sprachen', 'aufgaben', 'anmeldeschutz', 'designs', 'anbindung']);
     assert.deepEqual(je('wartung'), ['systemzustand', 'protokoll', 'fehlermeldungen', 'wartung', 'demo']);
     for (const g of Object.keys(GRUPPEN)) assert.ok(je(g).length <= 7, g);
     assert.equal(bereichName('texterkennung'), 'Suche und Volltext');
@@ -186,9 +186,9 @@ describe('Werkbank: mittlere Spalte nur für große Sammlungen (#366)', () => {
     const alt = { vorlage: 'haushalt', ein: ['nummernkreise', 'protokoll', 'anmeldeschutz'], aus: ['aufgaben', 'papierkorb'] };
     assert.deepEqual(liesAnsicht(alt), alt);
     for (const p of ['aufgaben', 'verschluesselung', 'papierkorb', 'webdav']) assert.equal(werkbankUmleitung(p), null, p);
-    // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung (dazu die Region, #726).
+    // Vorlagen: Haushalt und Betrieb enthalten dieselben Bereiche wie vor der Neugliederung (dazu Region, #726, und Sprachen, #729).
     assert.deepEqual(BEREICHE.filter((b) => inVorlage('haushalt', b.pfad)).map((b) => b.pfad).sort(),
-      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'stempel', 'systemzustand', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks']);
+      ['aufgaben', 'benutzer', 'betrieb', 'pakete', 'papierkorb', 'region', 'sicherung', 'sichten', 'sprachen', 'stempel', 'systemzustand', 'typen', 'verschluesselung', 'vollexport', 'webdav', 'webhooks']);
   });
 
   it('#354 Nacharbeit, #668: Datenschutz-Auskünfte und Löschkonzept unter „Benutzer und Sicherheit“, alte Adresse leitet um', () => {

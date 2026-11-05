@@ -1,0 +1,19 @@
+{
+  "werkbank.titel": "Fill in from document",
+  "werkbank.text": "Instead of the built-in recognition, this package can suggest fields from documents. It receives the document’s text and the description of the fields (without password fields and fields the user may not edit); Ablago checks every answer and shows it only as a suggestion.",
+  "werkbank.standard": "Use this package as the default for all folder types",
+  "werkbank.standard.hilfe": "Without the tick, the built-in recognition stays the default. You can override the choice on the folder type.",
+  "werkbank.gespeichert": "Saved.",
+  "werkbank.laeuft-nicht": "The package isn’t running right now – until it is, the built-in recognition takes over.",
+  "abfluss.titel": "Send the documents’ text to a service?",
+  "abfluss.text": "“{paket}” may access the network. With this choice it sends the text of the documents someone fills in fields from to a service outside Ablago. If it runs in your own network, the data doesn’t leave the house; with another provider, you are trusting that provider.",
+  "abfluss.ja": "Confirm and choose",
+  "typ.engine": "Recognition",
+  "typ.engine.standard": "Default from the Workbench ({name})",
+  "typ.engine.eingebaut": "built-in (without AI)",
+  "typ.engine.paket": "Package “{name}”",
+  "typ.engine.netz": "Package “{name}” – sends text over the network",
+  "typ.engine.hilfe": "The built-in recognition finds email addresses, phone numbers, dates, amounts and the like using patterns. A package such as an AI assistant also recognises free text and difficult receipts.",
+  "ergebnis.paket": "Recognised with “{name}”.",
+  "ergebnis.gekuerzt": "Document text shortened – the AI service only read the beginning, details further down may be missing."
+}

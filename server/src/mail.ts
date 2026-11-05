@@ -1,5 +1,5 @@
 import type { Readable } from 'node:stream';
-import { t } from './sprache';
+import { mitSpracheVon, t } from './sprache';
 import { darfBereich, hatGesamt } from '../../shared/src/verwaltungsrecht';
 /** Anhang einer E-Mail (#58). */
 export interface MailAnhang { name: string; mime: string; inhalt: Buffer | Readable }
@@ -12,12 +12,17 @@ export interface Mailer { sende(an: string, betreff: string, text: string, optio
  * Administratoren“): mit `bereich` an alle, die diesen Werkbank-Bereich verwalten (auch „Gesamte Verwaltung“), ohne an
  * alle mit „Gesamte Verwaltung“. Ohne eingerichteten Versand geschieht nichts; liefert die Anzahl verschickter Mails.
  */
-export async function anVerwaltende(benutzer: Array<{ email: string; aktiv: boolean; verwaltung?: string[]; art?: string }>, mailer: Mailer | null, betreff: string, text: string, bereich?: string): Promise<number> {
+/** Text einer Mail: fertig oder erst je Empfänger gebildet – dann in dessen Sprache (#729). */
+export type MailText = string | (() => string);
+export const mailText = (x: MailText) => (typeof x === 'function' ? x() : x);
+
+export async function anVerwaltende(benutzer: Array<{ email: string; aktiv: boolean; verwaltung?: string[]; art?: string; sprache?: string | null }>, mailer: Mailer | null, betreff: MailText, text: MailText, bereich?: string): Promise<number> {
   if (!mailer) return 0;
   let n = 0;
   for (const b of benutzer) {
     if (!b.aktiv || !(bereich ? darfBereich(b, bereich) : hatGesamt(b)) || !b.email || b.email.endsWith('.invalid')) continue;
-    await mailer.sende(b.email, betreff, text);
+    const [bt, tx] = mitSpracheVon(b, () => [mailText(betreff), mailText(text)]);
+    await mailer.sende(b.email, bt, tx);
     n++;
   }
   return n;

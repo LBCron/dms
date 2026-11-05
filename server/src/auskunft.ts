@@ -28,8 +28,8 @@ import { istUuid } from './repo';
 import { csv, exportDateien, vollexport, type ExportQuelle } from './vollexport';
 import { ZIP_MAX, zipGroesse, zipStrom, type ZipEintrag } from './zip';
 import { zeitzone } from '../../shared/src/region';
-import { t } from './sprache';
-import { gebietsschema } from '../../shared/src/sprache';
+import { mitSprache, t } from './sprache';
+import { gebietsschema, sprache } from '../../shared/src/sprache';
 
 export interface AuskunftDaten {
   start: { id: string; titel: string; typ: string };
@@ -68,7 +68,16 @@ export const auskunftOrdner = (exportOrdner?: string | null) => (exportOrdner ? 
 const zeit = (d: Date) => d.toLocaleString(gebietsschema(), { timeZone: zeitzone(), dateStyle: 'long', timeStyle: 'short' });
 const tag = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: zeitzone() }).format(d);
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const mehrzahl = (n: number, eins: string, viele: string) => `${n} ${n === 1 ? eins : viele}`;
+/** Umfang als ganzer Satzteil aus der Sprachdatei (#729): „3 Einträge“, „1 Dokument“. */
+const eintraege = (anzahl: number) => t('meldungen.auskunft.eintraege', { anzahl });
+const dokumenteText = (anzahl: number) => t('meldungen.auskunft.dokumente', { anzahl });
+/** Text aus der Sprachdatei als HTML: der Text wird maskiert, die Werte (schon HTML) danach eingesetzt. */
+function htmlText(k: string, werte: Record<string, string> = {}): string {
+  const namen = Object.keys(werte);
+  let s = esc(t.frei(k, Object.fromEntries(namen.map((n, i) => [n, `\u0001${i}\u0001`]))));
+  namen.forEach((n, i) => { s = s.split(`\u0001${i}\u0001`).join(werte[n]); });
+  return s;
+}
 
 /** Felder einer Mappe als lesbare Paare (ohne leere). */
 function felderVon(m: Mappe, t: Mappentyp | undefined, titel: Record<string, string>): Array<[string, string]> {
@@ -78,7 +87,7 @@ function felderVon(m: Mappe, t: Mappentyp | undefined, titel: Record<string, str
 
 /* ---------- Deckblatt ---------- */
 
-export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date; mandant: string }): Promise<Buffer> {
+async function deckblattRoh(d: AuskunftDaten, x: { von: string; jetzt: Date; mandant: string }): Promise<Buffer> {
   // Plan des Textdokuments; gezeichnet wird in der PDF-Stelle (#541).
   const s = planer();
   // Anrede der Person (#474): alle Sätze an sie aus anrede.ts.
@@ -87,8 +96,9 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
   const absender = d.datenschutz.verantwortlicher || x.mandant;
   if (absender) s.text(absender, { groesse: 9, farbe: 0.35 });
   s.text(t('meldungen.auskunft.auskunft-nach-art-15'), { groesse: 18, fett: true, abstand: 14 });
-  s.text(t('meldungen.auskunft.fuer', { wert: d.start.titel || t('meldungen.auskunft.ohne-titel'), wert2: d.start.typ ? ` (${d.start.typ})` : '' }), { groesse: 12, abstand: 2 });
-  s.text(t('meldungen.auskunft.erstellt-am', { zeit: zeit(x.jetzt), wert: x.von ? ` von ${x.von}` : '' }), { groesse: 9, farbe: 0.4, abstand: 2 });
+  const titel = d.start.titel || t('meldungen.auskunft.ohne-titel');
+  s.text(d.start.typ ? t('meldungen.auskunft.fuer-typ', { titel, typ: d.start.typ }) : t('meldungen.auskunft.fuer', { titel }), { groesse: 12, abstand: 2 });
+  s.text(x.von ? t('meldungen.auskunft.erstellt-am-von', { zeit: zeit(x.jetzt), von: x.von }) : t('meldungen.auskunft.erstellt-am', { zeit: zeit(x.jetzt) }), { groesse: 9, farbe: 0.4, abstand: 2 });
   s.linie();
   s.text(eintrag('auskunft.deckblatt.einleitung'), { groesse: 10, abstand: 4 });
 
@@ -101,11 +111,17 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
   for (const m of d.mappen) jeTyp.set(m.typId, (jeTyp.get(m.typId) ?? 0) + 1);
   for (const ty of d.typen) {
     const felder = ty.felder.filter((fd) => d.mappen.some((m) => m.typId === ty.id && !istLeer(m.werte[fd.key]))).map((fd) => fd.label);
-    punkt(`${ty.name}: ${mehrzahl(jeTyp.get(ty.id) ?? 0, 'Eintrag', 'Einträge')}${felder.length ? ` – ${felder.slice(0, 12).join(', ')}${felder.length > 12 ? ' …' : ''}` : ''}`);
+    const anzahl = eintraege(jeTyp.get(ty.id) ?? 0);
+    punkt(felder.length ? t('meldungen.auskunft.typ-felder', { typ: ty.name, anzahl, felder: `${felder.slice(0, 12).join(', ')}${felder.length > 12 ? ' …' : ''}` }) : t('meldungen.auskunft.typ', { typ: ty.name, anzahl }));
   }
-  punkt(t('meldungen.auskunft.im-original', { mehrzahl: mehrzahl(n.dokumente, 'Dokument', 'Dokumente'), wert: n.notizen ? `, ${mehrzahl(n.notizen, 'Notiz', 'Notizen')}` : '', wert2: n.historie ? t('meldungen.auskunft.aenderungshistorie-zu', { mehrzahl: mehrzahl(n.historie, 'Eintrag', 'Einträgen') }) : '' }));
+  // Ganze Satzteile je Angabe (#729), verbunden als Aufzählung der Sprache.
+  punkt(new Intl.ListFormat(gebietsschema(), { type: 'unit' }).format([
+    t('meldungen.auskunft.umfang.dokumente', { anzahl: n.dokumente }),
+    ...(n.notizen ? [t('meldungen.auskunft.umfang.notizen', { anzahl: n.notizen })] : []),
+    ...(n.historie ? [t('meldungen.auskunft.umfang.historie', { anzahl: n.historie })] : []),
+  ]));
   if (d.erwaehnungen.length) {
-    punkt(eintrag('auskunft.deckblatt.erwaehnungen', { anzahl: mehrzahl(d.erwaehnungen.length, t('meldungen.auskunft.weiterem-eintrag'), t('meldungen.auskunft.weiteren-eintraegen')) }));
+    punkt(eintrag('auskunft.deckblatt.erwaehnungen', { anzahl: d.erwaehnungen.length }));
     for (const e of d.erwaehnungen.slice(0, 15)) s.text(`– ${erwaehnungText(e)}`, { groesse: 10, abstand: 1, x: 72 });
     if (d.erwaehnungen.length > 15) s.text(t('meldungen.auskunft.vollstaendig-in-uebersicht-html'), { groesse: 10, abstand: 1, x: 72 });
   }
@@ -124,9 +140,8 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
 
   abschnitt(t('meldungen.auskunft.5-speicherdauer'));
   for (const a of d.aufbewahrung) {
-    punkt(a.archiv
-      ? `${a.typ}: gesetzliche Aufbewahrung ${mehrzahl(a.archiv.jahre, 'Jahr', 'Jahre')} ab ${a.archiv.stichtag ?? t('meldungen.auskunft.anlage')} (bis zum Jahresende)${a.bis ? t('meldungen.auskunft.laengstens-bis', { datumText: datumText(a.bis) }) : ''}`
-      : `${a.typ}: solange für den Zweck nötig; keine feste Frist hinterlegt`);
+    const w = a.archiv ? { typ: a.typ, anzahl: a.archiv.jahre, ab: a.archiv.stichtag ?? t('meldungen.auskunft.anlage'), bis: a.bis ? datumText(a.bis) : '' } : null;
+    punkt(!w ? t('meldungen.auskunft.speicher.ohne', { typ: a.typ }) : a.bis ? t('meldungen.auskunft.speicher.archiv-bis', w) : t('meldungen.auskunft.speicher.archiv', w));
   }
 
   abschnitt(eintrag('auskunft.deckblatt.rechte'));
@@ -144,7 +159,7 @@ export async function deckblatt(d: AuskunftDaten, x: { von: string; jetzt: Date;
 
 /* ---------- Übersicht ---------- */
 
-export function uebersichtCsv(d: AuskunftDaten, pfade: Map<string, string>): Buffer {
+function uebersichtCsvRoh(d: AuskunftDaten, pfade: Map<string, string>): Buffer {
   const typ = new Map(d.typen.map((t) => [t.id, t] as const));
   const zeilen = d.mappen.map((m) => {
     const t = typ.get(m.typId);
@@ -152,15 +167,15 @@ export function uebersichtCsv(d: AuskunftDaten, pfade: Map<string, string>): Buf
   });
   // Erwähnungen (#472): nur Art, Titel und das Feld, über das die Person genannt ist.
   for (const e of d.erwaehnungen) zeilen.push([e.typ, e.titel, erwaehnungText(e), '', '', '', e.mappeId]);
-  return csv(['Art', 'Titel', 'Angaben', 'Angelegt', 'Geändert', 'Ordner', 'Id'], zeilen);
+  return csv(t('meldungen.auskunft.csv.kopf').split('|'), zeilen);
 }
 
-export function uebersichtHtml(d: AuskunftDaten, x: { jetzt: Date; dokumente: Array<{ id: string; mappeId: string; name: string; groesse: number }>; pfade: { mappen: Map<string, string>; dokumente: Map<string, string> } }): Buffer {
+function uebersichtHtmlRoh(d: AuskunftDaten, x: { jetzt: Date; dokumente: Array<{ id: string; mappeId: string; name: string; groesse: number }>; pfade: { mappen: Map<string, string>; dokumente: Map<string, string> } }): Buffer {
   const typ = new Map(d.typen.map((t) => [t.id, t] as const));
   const doks = new Map<string, typeof x.dokumente>();
   for (const dk of x.dokumente) doks.set(dk.mappeId, [...doks.get(dk.mappeId) ?? [], dk]);
   const link = (p: string) => p.split('/').map(encodeURIComponent).join('/');
-  const kb = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1).replace('.', ',')} MB`);
+  const kb = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024)).toLocaleString(gebietsschema())} KB` : `${(b / 1024 / 1024).toLocaleString(gebietsschema(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`);
   const abschnitte = d.typen.map((mappentyp) => {
     const ms = d.mappen.filter((m) => m.typId === mappentyp.id);
     return `<h2>${esc(mappentyp.name)} <small>(${ms.length})</small></h2>\n${ms.map((m) => {
@@ -168,17 +183,17 @@ export function uebersichtHtml(d: AuskunftDaten, x: { jetzt: Date; dokumente: Ar
       const ds = doks.get(m.id) ?? [];
       const ordner = x.pfade.mappen.get(m.id);
       return `<section><h3>${esc(m.titel || t('meldungen.auskunft.ohne-titel'))}</h3>
-<dl>${f.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}<dt>Angelegt</dt><dd>${esc(new Date(m.erstellt).toLocaleDateString(gebietsschema()))}</dd></dl>
+<dl>${f.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}<dt>${htmlText('meldungen.auskunft.html.angelegt')}</dt><dd>${esc(new Date(m.erstellt).toLocaleDateString(gebietsschema()))}</dd></dl>
 ${ds.length ? `<ul>${ds.map((dk) => { const p = x.pfade.dokumente.get(dk.id); return `<li>${p ? `<a href="${esc(link(p))}">${esc(dk.name)}</a>` : esc(dk.name)} <small>${kb(dk.groesse)}</small></li>`; }).join('')}</ul>` : ''}
-${ordner ? `<p><small>Ordner: <a href="${esc(link(ordner))}/">${esc(ordner)}</a></small></p>` : ''}</section>`;
+${ordner ? `<p><small>${htmlText('meldungen.auskunft.html.ordner', { ordner: `<a href="${esc(link(ordner))}/">${esc(ordner)}</a>` })}</small></p>` : ''}</section>`;
     }).join('\n')}`;
   }).join('\n');
   const erwaehnt = d.erwaehnungen.length ? `<h2>${esc(textDritte(d.datenschutz.anrede, 'auskunft.uebersicht.genannt'))} <small>(${d.erwaehnungen.length})</small></h2>
 <p><small>${esc(textDritte(d.datenschutz.anrede, 'auskunft.uebersicht.genannt.hinweis'))}</small></p>
 <ul>${d.erwaehnungen.map((e) => `<li>${esc(erwaehnungText(e))}</li>`).join('')}</ul>` : '';
   return Buffer.from(`<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Auskunft – ${esc(d.start.titel)}</title>
+<html lang="${esc(sprache())}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${htmlText('meldungen.auskunft.html.titel', { titel: esc(d.start.titel) })}</title>
 <style>
 body{font:15px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem;color:#1d2330;background:#fff}
 h1{font-size:1.5rem;margin:0}h2{font-size:1.2rem;margin-top:2rem;border-bottom:1px solid #d6dbe3}h3{font-size:1rem;margin:1rem 0 .3rem}
@@ -186,29 +201,30 @@ small{color:#5d6675}section{border:1px solid #e3e7ee;border-radius:6px;padding:.
 dl{display:grid;grid-template-columns:minmax(8rem,14rem) 1fr;gap:.2rem 1rem;margin:.3rem 0}dt{color:#5d6675}dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 @media (max-width:40rem){dl{grid-template-columns:1fr}dd{margin-bottom:.3rem}}
 </style></head><body>
-<h1>Auskunft nach Art. 15 DSGVO</h1>
-<p>für <strong>${esc(d.start.titel || 'Ohne Titel')}</strong>${d.start.typ ? ` (${esc(d.start.typ)})` : ''} · erstellt am ${esc(zeit(x.jetzt))}<br>
-<small>${mehrzahl(d.anzahl.mappen, 'Eintrag', 'Einträge')}, ${mehrzahl(d.anzahl.dokumente, 'Dokument', 'Dokumente')}. Die Pflichtangaben stehen im Deckblatt (Deckblatt.pdf).</small></p>
+<h1>${htmlText('meldungen.auskunft.auskunft-nach-art-15')}</h1>
+<p>${htmlText(d.start.typ ? 'meldungen.auskunft.html.fuer-typ' : 'meldungen.auskunft.html.fuer', { titel: `<strong>${esc(d.start.titel || t('meldungen.auskunft.ohne-titel'))}</strong>`, typ: esc(d.start.typ ?? ''), zeit: esc(zeit(x.jetzt)) })}<br>
+<small>${htmlText('meldungen.auskunft.html.umfang', { eintraege: esc(eintraege(d.anzahl.mappen)), dokumente: esc(dokumenteText(d.anzahl.dokumente)) })}</small></p>
 ${abschnitte}
 ${erwaehnt}
 </body></html>
 `, 'utf8');
 }
 
-export function liesmichText(d: AuskunftDaten, jetzt: Date): string {
-  return `# Auskunft nach Art. 15 DSGVO
-
-Für ${d.start.titel || t('meldungen.auskunft.ohne-titel')}, erstellt am ${zeit(jetzt)}. ${mehrzahl(d.anzahl.mappen, 'Eintrag', 'Einträge')}, ${mehrzahl(d.anzahl.dokumente, 'Dokument', 'Dokumente')}.
-
-- ${textDritte(d.datenschutz.anrede, 'auskunft.liesmich.deckblatt')}
-- ${textDritte(d.datenschutz.anrede, 'auskunft.liesmich.uebersicht')}
-- **ablage/** – je Eintrag ein Ordner mit den Dokumenten im Original (\`.txt\` = erkannter Text) und \`mappe.pdf\`/\`mappe.json\`.
-- **daten/** – maschinenlesbar: je Art eine Tabelle (\`.csv\`, \`.jsonl\`, \`.xlsx\`), Verweise, Dokumentliste, Notizen, Änderungshistorie (\`.jsonl\`).
-- **struktur/mappentypen.json** – welche Angaben es je Art gibt. **manifest.json** – Größe und SHA-256 jeder Datei.
-
-Format: wie der Vollexport von Ablago (CSV nach RFC 4180 mit BOM, JSON Lines, Datum JJJJ-MM-TT, Zeitpunkte ISO 8601 in UTC).
-`;
+function liesmichTextRoh(d: AuskunftDaten, jetzt: Date): string {
+  return t('meldungen.auskunft.liesmich', {
+    titel: d.start.titel || t('meldungen.auskunft.ohne-titel'), zeit: zeit(jetzt), eintraege: eintraege(d.anzahl.mappen), dokumente: dokumenteText(d.anzahl.dokumente),
+    deckblatt: textDritte(d.datenschutz.anrede, 'auskunft.liesmich.deckblatt'), uebersicht: textDritte(d.datenschutz.anrede, 'auskunft.liesmich.uebersicht'),
+  });
 }
+
+/*
+ * Sprache (#729): Die Auskunft geht an eine Person außerhalb von Ablago – Deckblatt, Übersicht, Liesmich und Tabellen
+ * stehen in der Sprache der Installation, nicht in der des Administrators, der sie erstellt.
+ */
+export const deckblatt = (...a: Parameters<typeof deckblattRoh>) => mitSprache(undefined, () => deckblattRoh(...a));
+export const uebersichtCsv = (...a: Parameters<typeof uebersichtCsvRoh>) => mitSprache(undefined, () => uebersichtCsvRoh(...a));
+export const uebersichtHtml = (...a: Parameters<typeof uebersichtHtmlRoh>) => mitSprache(undefined, () => uebersichtHtmlRoh(...a));
+export const liesmichText = (...a: Parameters<typeof liesmichTextRoh>) => mitSprache(undefined, () => liesmichTextRoh(...a));
 
 /* ---------- Erzeugen ---------- */
 

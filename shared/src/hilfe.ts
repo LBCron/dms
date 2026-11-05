@@ -16,6 +16,7 @@ const benutzer = (seite: string, titel: string, anker?: string): Hilfeziel => ({
 export const HILFE = {
   // Werkbank: Bereiche
   // Einrichtungsassistent (#278): je Schritt der passende Abschnitt – immer online, s. hilfeOnlineUrl.
+  'einrichtung.sprache': admin('installation/', 'Sprache', 'sprache'),
   'einrichtung.code': admin('installation/', 'Einrichtungscode', 'einrichtungscode'),
   'einrichtung.datenbank': admin('installation/', 'Datenbank', 'datenbank'),
   'einrichtung.wahl': admin('installation/', 'Neu einrichten oder wiederherstellen', 'neu-einrichten-oder-wiederherstellen'),
@@ -120,6 +121,7 @@ export const HILFE = {
   'werkbank.nummernkreise.nachtragen': admin('nummernkreise/', 'Nummern nachträglich vergeben', 'nummern-nachtraglich-vergeben'),
   'werkbank.aufkleber': admin('nummernkreise/', 'Aufkleber für Archivnummern', 'archivnummern-und-aufkleber'),
   'werkbank.region': admin('region/', 'Region'),
+  'werkbank.sprachen': admin('sprachen/', 'Sprachen'),
   'werkbank.anmeldeschutz': admin('anmeldeschutz/', 'Anmeldeschutz'),
   'werkbank.anbieter': admin('anmeldeschutz/', 'Anmeldung über einen Anbieter', 'anmeldung-uber-einen-anbieter-openid-connect'),
   'werkbank.zweifaktor': admin('anmeldeschutz/', 'Zwei-Faktor-Anmeldung', 'zwei-faktor-anmeldung'),
@@ -201,6 +203,7 @@ export const HILFE = {
   'dokumente.entsperren': benutzer('dokumente/', 'Passwortgeschützte PDFs', 'passwortgeschuetzte-pdfs'),
   'profil.rechte': benutzer('profil/', 'deinen Rechten', 'meine-rechte'),
   'profil.abwesenheit': benutzer('profil/', 'Abwesenheit', 'abwesenheit'),
+  'profil.sprache': benutzer('profil/', 'Sprache', 'sprache'),
   'profil.export': benutzer('profil/', 'Meine Daten exportieren', 'meine-daten-exportieren'),
   'profil.zweifaktor': benutzer('profil/', 'Zwei-Faktor-Anmeldung', 'zwei-faktor-anmeldung'),
   'profil.dokumentpasswoerter': benutzer('profil/', 'Passwörter für Dokumente', 'passwoerter-fuer-dokumente'),

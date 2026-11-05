@@ -4,7 +4,7 @@
  * abgerufen; ein neuer Bereich wird unten ergänzt. Anleitung: Entwicklerhandbuch → Aufbau → Texte.
  */
 import { createElement, Fragment, type ReactNode } from 'react';
-import { uebersetzer, type Schluessel } from '../../shared/src/sprache';
+import { setzeSprache, sprache, uebersetzer, type Schluessel } from '../../shared/src/sprache';
 import ablage from '../../shared/src/sprachen/de/ablage.json';
 import mappentypen from '../../shared/src/sprachen/de/mappentypen.json';
 import notfall from '../../shared/src/sprachen/de/notfall.json';
@@ -52,4 +52,35 @@ export function tn(schluessel: Schluessel<typeof bereiche>, werte: Readonly<Reco
   }
   if (rest < text.length) teile.push(text.slice(rest));
   return createElement(Fragment, null, ...teile);
+}
+
+/* ---------- Sprache wählen (#729) ---------- */
+
+const GEMERKT = 'ablago:sprache';
+/** Zuletzt benutzte Sprache in diesem Browser (nur Bequemlichkeit: der Server entscheidet). */
+export function gemerkteSprache(): string | null {
+  try { return localStorage.getItem(GEMERKT); } catch { return null; }
+}
+export function merkeSprache(spr: string) {
+  try { localStorage.setItem(GEMERKT, spr); } catch { /* privates Fenster */ }
+}
+/** Sprache des Browsers als Vorschlag, z. B. „en“ aus „en-GB“. */
+export const browserSprache = () => (typeof navigator === 'undefined' ? '' : (navigator.language || '').split('-')[0].toLowerCase());
+
+/**
+ * Lädt die Texte einer Sprache und stellt die Oberfläche darauf um. Englisch ist ein eigener Teil des Bundles und kommt
+ * erst, wenn jemand es braucht. Texte, die Module beim Laden bilden, entstehen erst danach (main.tsx lädt App später).
+ */
+export async function ladeSprache(spr: string) {
+  if (spr === 'en') { const { registriereEnglisch } = await import('../../shared/src/englisch'); registriereEnglisch(); }
+  setzeSprache(spr);
+  merkeSprache(spr);
+  if (typeof document !== 'undefined') document.documentElement.lang = spr;
+}
+
+/** Andere Sprache gewählt (Mein Konto, Anmeldung, Assistent): merken und neu laden – alle Texte entstehen neu. */
+export function wechsleSprache(spr: string) {
+  if (spr === sprache()) return;
+  merkeSprache(spr);
+  location.reload();
 }

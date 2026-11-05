@@ -1,35 +1,23 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { DatenProvider } from './daten';
-import { KontoProvider } from './konto';
 import './styles.css';
-import { starteSammler } from './diagnose';
-import { starteErreichbarkeit } from './erreichbar';
-import { Rueckfragen } from './rueckfrage';
-import { Abrufseite } from './abruf';
-import { Notfallseite } from './notfall';
+import { browserSprache, gemerkteSprache, ladeSprache } from './sprache';
 
-const wurzel = createRoot(document.getElementById('root')!);
-
-if (location.pathname === '/abruf') {
-  // Öffentliche Abrufseite einer Auskunft (#455): eigenständig – ohne Anmeldung, Kontostatus und Diagnose.
-  wurzel.render(<StrictMode><Abrufseite /></StrictMode>);
-} else if (location.pathname === '/notfall') {
-  // Notfallzugang mit dem Notfallcode vom Notfallblatt (#815): eigenständig – ohne Anmeldung, Kontostatus und Diagnose.
-  wurzel.render(<StrictMode><Notfallseite /></StrictMode>);
-} else {
-  starteSammler();
-  starteErreichbarkeit();
-  wurzel.render(
-    <StrictMode>
-      <KontoProvider>
-        <DatenProvider>
-          <App />
-        </DatenProvider>
-      </KontoProvider>
-      {/* Rückfragen (#355) – außerhalb der Anmeldung, damit auch Einrichtung und Wiederherstellen sie haben. */}
-      <Rueckfragen />
-    </StrictMode>,
-  );
+/**
+ * Start der Oberfläche. Zuerst die Sprache (#729): Der Server nennt die der angemeldeten Person, sonst die mitgeschickte
+ * (zuletzt benutzte bzw. die des Browsers), sonst die der Installation. Erst danach kommen die übrigen Module – viele
+ * bilden ihre Texte schon beim Laden.
+ */
+async function sprachwahl(): Promise<string> {
+  const vorschlag = gemerkteSprache() ?? browserSprache();
+  try {
+    const r = await fetch('/api/sprache', { credentials: 'same-origin', cache: 'no-store', headers: { 'x-dms': '1', ...(vorschlag ? { 'x-sprache': vorschlag } : {}) } });
+    if (r.ok) return ((await r.json()) as { sprache: string }).sprache;
+  } catch { /* Server nicht erreichbar: weiter mit dem Gemerkten */ }
+  return gemerkteSprache() ?? 'de';
 }
+
+async function starte() {
+  await ladeSprache(await sprachwahl()).catch(() => {});
+  const { zeige } = await import('./start');
+  zeige();
+}
+void starte();

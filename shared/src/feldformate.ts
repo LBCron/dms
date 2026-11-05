@@ -12,7 +12,7 @@
  */
 import { IBAN_LAENGEN, istIban } from './erkennung';
 import type { Feld, Mappentyp, Wert, Werte } from './model';
-import { uebersetzer } from './sprache';
+import { sprache, uebersetzer } from './sprache';
 import felder from './sprachen/de/felder.json';
 import { datumsformat } from './region';
 
@@ -78,7 +78,7 @@ const ibanKompakt = (s: string) => s.replace(/\s/g, '').toUpperCase();
 /** IBAN in Vierergruppen, z. B. „DE89 3704 0044 0532 0130 00“. */
 export const ibanGruppen = (s: string) => ibanKompakt(s).replace(/(.{4})(?=.)/g, '$1 ');
 const landName = (code: string) => {
-  try { return new Intl.DisplayNames(['de'], { type: 'region' }).of(code) ?? code; } catch { return code; }
+  try { return new Intl.DisplayNames([sprache()], { type: 'region' }).of(code) ?? code; } catch { return code; }
 };
 /** Fehler einer IBAN oder null. Länge je Land, Prüfziffer nach ISO 13616 (aus der Erkennung). */
 export function ibanFehler(s: string): string | null {

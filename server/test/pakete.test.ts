@@ -381,6 +381,7 @@ function faelle(pg: boolean) {
       await assert.rejects(p.installiere({ upload: h.upload, bestaetigt: true }, ICH), /abgelaufen/, 'ein Upload gilt nur einmal');
       await assert.rejects(p.aktualisiere('basis', {}, ICH), /erneutes Hochladen/);
       const gleich = await p.hochladen(archiv(basis), ICH);
+      assert.deepEqual(gleich.vorschau.fehlercodes, ['schon-installiert'], 'Code statt Text für die Oberfläche (#729)');
       await assert.rejects(p.installiere({ upload: gleich.upload, bestaetigt: true }, ICH), /schon installiert/);
       const neu = await p.hochladen(archiv(basis11), ICH);
       assert.equal(neu.vorschau.update, true);

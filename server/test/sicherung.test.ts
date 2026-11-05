@@ -11,6 +11,7 @@ import { protokoll } from '../src/protokoll';
 import { behalten, bereinigePlan, isoWoche, ortszeit, PLAN_STANDARD, Sicherung, type Metadaten } from '../src/sicherung';
 import { liesSicherung, sammle, ZWECK } from '../src/sicherungsformat';
 import { leiteAb, Tresor } from '../src/tresor';
+import { mailText } from '../src/mail';
 
 const HAUSHALT = '00000000-0000-4000-8000-000000000001';
 
@@ -43,7 +44,7 @@ async function aufbau(opt: { jetzt?: () => Date; daten?: Datenquelle; wartung?: 
   const s = new Sicherung(join(wurzel, 'sicherung'), dateien, HAUSHALT, {
     tresor, einstellungen, daten: opt.daten ?? falscheDaten(),
     umgebung: async () => ({ dms: '0.20.0', node: '22', system: 'Linux', architektur: 'x64' }),
-    wartungAktiv: opt.wartung, anAdmins: async (b) => { mails.push(b); }, mountinfo: '/gibt-es-nicht', jetzt: opt.jetzt,
+    wartungAktiv: opt.wartung, anAdmins: async (b) => { mails.push(mailText(b)); }, mountinfo: '/gibt-es-nicht', jetzt: opt.jetzt,
   });
   return { s, tresor, einstellungen, wurzel, mails };
 }

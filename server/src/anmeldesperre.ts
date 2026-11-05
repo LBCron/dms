@@ -150,7 +150,7 @@ export class Anmeldesperre {
   /** Wird ein bestehendes Konto gesperrt, meldet der Start das als Ereignis (#670). */
   beiKontosperre?: (e: { email: string; ip: string; versuche: number; bis: string }) => Promise<void>;
 
-  constructor(private speicher: Einstellungen = speicherEinstellungen(), private anAdmins?: (betreff: string, text: string) => Promise<void>, private jetzt: () => number = Date.now, zustand?: Kurzzustand) {
+  constructor(private speicher: Einstellungen = speicherEinstellungen(), private anAdmins?: (betreff: import('./mail').MailText, text: import('./mail').MailText) => Promise<void>, private jetzt: () => number = Date.now, zustand?: Kurzzustand) {
     this.zustand = zustand ?? speicherKurzzustand(jetzt);
   }
 
@@ -246,8 +246,7 @@ export class Anmeldesperre {
     if (!(await this.zustand.belege(SAMMEL, heute, 2 * TAG_MS))) return false;
     for (const x of eintraege) await this.zustand.loesche(MELDUNG, x.schluessel);
     if (alt?.offen?.length) await this.speicher.schreibe('anmeldesperre_meldung', { offen: alt.offen.filter((m) => m.tag >= heute), zuletzt: heute } satisfies Meldestand);
-    const { betreff, text } = sammelText(faellig);
-    await this.anAdmins(betreff, text).catch((e) => log.warn('Sammelmeldung Anmeldeschutz nicht verschickt', { fehler: (e as Error).message }));
+    await this.anAdmins(() => sammelText(faellig).betreff, () => sammelText(faellig).text).catch((e) => log.warn('Sammelmeldung Anmeldeschutz nicht verschickt', { fehler: (e as Error).message }));
     return true;
   }
 
@@ -298,7 +297,7 @@ export class Anmeldesperre {
     const schluessel = `${heute}|${email}`;
     if (trocken) return !(await this.zustand.lies(SOFORT, schluessel));
     if (!(await this.zustand.belege(SOFORT, schluessel, 2 * TAG_MS))) return false;
-    await this.anAdmins(t('meldungen.anmeldesperre.ablago-benutzerkonto-nach'), t('meldungen.anmeldesperre.fuer-kamen-von-falsche', { anzahl: this.e.konto.minuten, email, ip, versuche }));
+    await this.anAdmins(() => t('meldungen.anmeldesperre.ablago-benutzerkonto-nach'), () => t('meldungen.anmeldesperre.fuer-kamen-von-falsche', { anzahl: this.e.konto.minuten, email, ip, versuche }));
     return true;
   }
 
